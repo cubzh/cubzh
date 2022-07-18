@@ -45,3 +45,8 @@ graph TD
 Cubzh's decentralized ecosystem lives on its own application-specific blockchain, within [Cosmos](https://tutorials.cosmos.network) network.
 
 ...
+
+## Roadmap
+
+... 
+
