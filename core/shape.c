@@ -52,7 +52,7 @@ void chunk_list_free(ChunkList *cl) {
 struct _Shape {
     // list of colors used by the shape model, mapped onto color atlas indices
     ColorPalette *palette;
-
+    
     // points of interest
     MapStringFloat3 *POIs;          // 8 bytes
     MapStringFloat3 *pois_rotation; // 8 bytes
@@ -116,15 +116,15 @@ struct _Shape {
     bool isUnlit;           // 1 byte
     uint8_t layers;         // 1 byte
 
-    bool isMutable;                        // 1 byte
-    bool isResizable;                      // 1 byte
-    bool historyEnabled;                   // 1 byte
+    bool isMutable;      // 1 byte
+    bool isResizable;    // 1 byte
+    bool historyEnabled; // 1 byte
     bool historyKeepingTransactionPending; // 1 byte
 
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    // char pad[1];
+    //char pad[1];
 };
 
 // --------------------------------------------------
@@ -398,15 +398,7 @@ Shape *shape_make_copy(Shape *origin) {
             for (SHAPE_COORDS_INT_T z = 0; z <= origin->maxDepth; z += 1) {
                 b = shape_get_block(origin, x, y, z, false);
                 if (b != NULL && b->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                    shape_add_block_with_color(s,
-                                               b->colorIndex,
-                                               x,
-                                               y,
-                                               z,
-                                               false,
-                                               false,
-                                               false,
-                                               false);
+                    shape_add_block_with_color(s, b->colorIndex, x, y, z, false, false, false, false);
                 }
             }
         }
@@ -1269,6 +1261,8 @@ bool shape_paint_block(Shape *shape,
             if (lighting) {
                 shape_compute_baked_lighting_replaced_block(shape, x, y, z, colorIndex, false);
             }
+
+
         }
     }
 
@@ -1457,8 +1451,9 @@ bool shape_is_within_fixed_bounds(const Shape *shape,
                                   const SHAPE_COORDS_INT_T x,
                                   const SHAPE_COORDS_INT_T y,
                                   const SHAPE_COORDS_INT_T z) {
-    return (x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 &&
-            z < shape->maxDepth);
+    return (x >= 0 && x < shape->maxWidth &&
+            y >= 0 && y < shape->maxHeight &&
+            z >= 0 && z < shape->maxDepth);
 }
 
 void shape_box_to_aabox(const Shape *s,
@@ -1632,13 +1627,7 @@ void shape_shrink_box(Shape *shape) {
     }
     SHAPE_SIZE_INT_T size_x, size_y, size_z;
     SHAPE_COORDS_INT_T origin_x, origin_y, origin_z;
-    shape_compute_size_and_origin(shape,
-                                  &size_x,
-                                  &size_y,
-                                  &size_z,
-                                  &origin_x,
-                                  &origin_y,
-                                  &origin_z);
+    shape_compute_size_and_origin(shape, &size_x, &size_y, &size_z, &origin_x, &origin_y, &origin_z);
 
     shape->box->min.x = origin_x;
     shape->box->min.y = origin_y;
@@ -1707,13 +1696,11 @@ void shape_make_space(Shape *const shape,
     // octree_log(shape->octree);
     // cclog_info("📏 MAKE SPACE | new bounds needed : (%d, %d, %d) -> (%d, %d, %d)",
     //      requiredMinX, requiredMinY, requiredMinZ, requiredMaxX, requiredMaxY, requiredMaxZ);
-    // cclog_info("📏 MAKE SPACE | offset : %d %d %d", shape->offset.x, shape->offset.y,
-    // shape->offset.z);
+    // cclog_info("📏 MAKE SPACE | offset : %d %d %d", shape->offset.x, shape->offset.y, shape->offset.z);
 
     // no need to make space if there is no fixed/allocated size (no octree nor lighting)
     if (_has_fixed_size(shape) == false) {
-        cclog_warning("⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor "
-                      "lighting)");
+        cclog_warning( "⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor lighting)");
         return;
     }
 
@@ -1725,14 +1712,8 @@ void shape_make_space(Shape *const shape,
 
     // Convert provided coordinates from Lua coords into "core" coords if needed.
     if (applyOffset == true) {
-        shape_block_lua_to_internal(shape,
-                                    &requiredMinX,
-                                    &requiredMinY,
-                                    &requiredMinZ); // value += offset
-        shape_block_lua_to_internal(shape,
-                                    &requiredMaxX,
-                                    &requiredMaxY,
-                                    &requiredMaxZ); // value += offset
+        shape_block_lua_to_internal(shape, &requiredMinX, &requiredMinY, &requiredMinZ); // value += offset
+        shape_block_lua_to_internal(shape, &requiredMaxX, &requiredMaxY, &requiredMaxZ); // value += offset
     }
 
     // Check if a resize is needed.
@@ -1814,10 +1795,9 @@ void shape_make_space(Shape *const shape,
     size_t nbChunks = 0;
 
     // largest dimension (among x, y, z)
-    const size_t requiredSizeMax = (size_t)(maximum(maximum(requiredSize.x, requiredSize.y),
-                                                    requiredSize.z));
+    const size_t requiredSizeMax = (size_t)(maximum(maximum(requiredSize.x, requiredSize.y),requiredSize.z));
     size_t octree_size = octree_get_dimension(shape->octree);
-
+    
     int3 delta = int3_zero;
 
     if (requiredSizeMax > octree_size) {
@@ -1941,13 +1921,10 @@ void shape_make_space(Shape *const shape,
     const uint16_t ax = abs(spaceRequiredMin.x) + spaceRequiredMax.x;
     const uint16_t ay = abs(spaceRequiredMin.y) + spaceRequiredMax.y;
     const uint16_t az = abs(spaceRequiredMin.z) + spaceRequiredMax.z;
-
-    if (requiredSize.x > shape->maxWidth)
-        shape->maxWidth = requiredSize.x;
-    if (requiredSize.y > shape->maxHeight)
-        shape->maxHeight = requiredSize.y;
-    if (requiredSize.z > shape->maxDepth)
-        shape->maxDepth = requiredSize.z;
+    
+    if (requiredSize.x > shape->maxWidth) shape->maxWidth = requiredSize.x;
+    if (requiredSize.y > shape->maxHeight) shape->maxHeight = requiredSize.y;
+    if (requiredSize.z > shape->maxDepth) shape->maxDepth = requiredSize.z;
 
     // empty current dirty chunks list, if any
     ChunkList *cl = NULL;
@@ -2991,6 +2968,7 @@ bool shape_box_overlap(const Shape *s, const Box *worldBox, float3 *firstOverlap
             if (firstOverlap != NULL) {
                 float3_copy(firstOverlap, &tmpBox.min);
             }
+            octree_iterator_free(oi);
             return true;
         }
 
@@ -3172,8 +3150,7 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
     }
 
     if (s->lightingData == NULL) {
-        cclog_error(
-            "🔥 shape_compute_baked_lighting_removed_block: shape doesn't have lighting data");
+        cclog_error("🔥 shape_compute_baked_lighting_removed_block: shape doesn't have lighting data");
         return;
     }
 
@@ -3329,8 +3306,7 @@ void shape_compute_baked_lighting_added_block(Shape *s,
 
                 block = shape_get_block(s, i3.x, i3.y, i3.z, false);
                 if (block != NULL && color_palette_is_emissive(s->palette, block->colorIndex)) {
-                    light = color_palette_get_emissive_color_as_light(s->palette,
-                                                                      block->colorIndex);
+                    light = color_palette_get_emissive_color_as_light(s->palette, block->colorIndex);
 
                     light_removal_node_queue_push(lightRemovalQueue,
                                                   &i3,
@@ -3375,8 +3351,7 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
     }
 
     if (s->lightingData == NULL) {
-        cclog_error(
-            "🔥 shape_compute_baked_lighting_replaced_block: shape doesn't have lighting data");
+        cclog_error("🔥 shape_compute_baked_lighting_replaced_block: shape doesn't have lighting data");
         return;
     }
 
@@ -3555,6 +3530,38 @@ void shape_history_redo(Shape *const s) {
     }
 }
 
+//
+
+void shape_enableAnimations(Shape * const s) {
+    if (s == NULL) {
+        return;
+    }
+    if (s->transform == NULL) {
+        return;
+    }
+    transform_setAnimationsEnabled(s->transform, true);
+}
+
+void shape_disableAnimations(Shape * const s) {
+    if (s == NULL) {
+        return;
+    }
+    if (s->transform == NULL) {
+        return;
+    }
+    transform_setAnimationsEnabled(s->transform, false);
+}
+
+bool shape_getIgnoreAnimations(Shape * const s) {
+    if (s == NULL) {
+        return false;
+    }
+    if (s->transform == NULL) {
+        return false;
+    }
+    return transform_getAnimationsEnabled(s->transform) == false;
+}
+
 // --------------------------------------------------
 //
 // MARK: - static functions -
@@ -3574,16 +3581,8 @@ static bool _shape_add_block(Shape *shape,
 
     // make sure block is added within fixed boundaries
     if (_has_fixed_size(shape) && _is_out_of_fixed_size(shape, x, y, z)) {
-        cclog_error("⚠️ trying to add block outside shape's fixed boundaries| %p %d %d %d",
-                    shape,
-                    x,
-                    y,
-                    z);
-        cclog_error("shape fixed size: %d | %d %d %d",
-                    _has_fixed_size(shape),
-                    shape->maxWidth,
-                    shape->maxHeight,
-                    shape->maxDepth);
+        cclog_error("⚠️ trying to add block outside shape's fixed boundaries| %p %d %d %d", shape, x, y, z);
+        cclog_error("shape fixed size: %d | %d %d %d", _has_fixed_size(shape), shape->maxWidth, shape->maxHeight, shape->maxDepth);
         return false;
     }
 
@@ -4038,7 +4037,7 @@ void _light_removal_processNeighbor(Shape *s,
 
     // air and transparent blocks can be reset & further light removal
     if (neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK ||
-        color_palette_is_transparent(s->palette, neighbor->colorIndex)) {
+            color_palette_is_transparent(s->palette, neighbor->colorIndex)) {
         VERTEX_LIGHT_STRUCT_T neighborLight = shape_get_light_without_checking(s,
                                                                                neighborPos->x,
                                                                                neighborPos->y,
@@ -4238,12 +4237,11 @@ void _light_block_propagate(Shape *s,
     // if neighbor emissive, enqueue & store original emission of the block (relevant if first
     // propagation)
     else if (color_palette_is_emissive(s->palette, neighbor->colorIndex)) {
-        shape_set_light(
-            s,
-            neighborPos->x,
-            neighborPos->y,
-            neighborPos->z,
-            color_palette_get_emissive_color_as_light(s->palette, neighbor->colorIndex));
+        shape_set_light(s,
+                        neighborPos->x,
+                        neighborPos->y,
+                        neighborPos->z,
+                        color_palette_get_emissive_color_as_light(s->palette, neighbor->colorIndex));
         light_node_queue_push(lightQueue, neighborPos);
     }
 }
@@ -4492,8 +4490,7 @@ void _light_propagate(Shape *s,
 
         // current node is a solid block with at least one face open
         if (isCurrentAir == false && isCurrentOpen) {
-            currentLight = color_palette_get_emissive_color_as_light(s->palette,
-                                                                     current->colorIndex);
+            currentLight = color_palette_get_emissive_color_as_light(s->palette, current->colorIndex);
 
             if (currentLight.red == 0 && currentLight.green == 0 && currentLight.blue == 0) {
                 light_node_queue_recycle(n);
@@ -4580,8 +4577,7 @@ void _light_removal(Shape *s,
         if (shape_is_within_fixed_bounds(s, i3.x, i3.y, i3.z)) {
 
             // if air or transparent block, proceed with light removal
-            if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK ||
-                color_palette_is_transparent(s->palette, blockID)) {
+            if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK || color_palette_is_transparent(s->palette, blockID)) {
                 // x + 1
                 neighbor = shape_get_block(s, i3.x + 1, i3.y, i3.z, false);
                 if (neighbor != NULL) {
@@ -4900,7 +4896,15 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
             } else if (before->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK &&
                        after->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
                 // replace block
-                shape_paint_block(sh, after->colorIndex, x, y, z, NULL, NULL, true, true);
+                shape_paint_block(sh,
+                                  after->colorIndex,
+                                  x,
+                                  y,
+                                  z,
+                                  NULL,
+                                  NULL,
+                                  true,
+                                  true);
             } else {
                 // a transaction could have been amended from (1) "add" [air>block] to (2) removal
                 // amended into [air>air], but (1) might have been applied already from a
@@ -4978,8 +4982,8 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
                                    y,
                                    z,
                                    NULL,
-                                   true,  // apply offset
-                                   true,  // lighting
+                                   true,   // apply offset
+                                   true,   // lighting
                                    true); // shrink box
 
             } else if (before->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK &&
@@ -4999,7 +5003,15 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
                        after->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
 
                 // replace block
-                shape_paint_block(sh, before->colorIndex, x, y, z, NULL, NULL, true, true);
+                shape_paint_block(sh,
+                                  before->colorIndex,
+                                  x,
+                                  y,
+                                  z,
+                                  NULL,
+                                  NULL,
+                                  true,
+                                  true);
             }
         }
         // select next BlockChange and exit the loop if there is no next BlockChange

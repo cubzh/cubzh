@@ -42,6 +42,8 @@ extern "C" {
 #define PLAYER_ID_NONE 251 // ID to represent no one
 
 #define PLAYER_SCALE 0.5f
+#define PLAYER_AVATAR_BB_SIZE_Y 29.0f // expressed in local space from player root,
+#define PLAYER_AVATAR_BB_SIZE_XZ 9.0f // or in blocks (provided body shapes are scale 1)
 
 // walk animation ramps up from 0 to maximum motion force
 #define PLAYER_WALK_MAX_SPEED 1.8f
@@ -49,7 +51,6 @@ extern "C" {
 #define PLAYER_WAVE_SPEED 4.5f
 #define PLAYER_TALK_SPEED 7.0f
 #define PLAYER_SWING_SPEED 4.0f
-#define PLAYER_BEAM_DURATION .6f
 #define PLAYER_IDLE_SPEED 0.5f
 #define PLAYER_ANIM_SPEED_WALK_RIGHT_ITEM 0.5f
 #define PLAYER_ANIM_SPEED_HOLD_DRINK 0.5f
@@ -201,9 +202,8 @@ typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
 #define SHAPE_COLOR_INDEX_AIR_BLOCK 255
 #define SHAPE_COLOR_INDEX_MAX_COUNT 128
 
-// Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original +
-// complementary colors Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2,
-// unique colors
+// Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original + complementary colors
+// Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2, unique colors
 #define COLOR_ATLAS_SIZE 512
 #define ATLAS_COLOR_INDEX_MAX_COUNT 131072
 #define ATLAS_COLOR_INDEX_ERROR 999999

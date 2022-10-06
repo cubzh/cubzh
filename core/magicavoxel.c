@@ -264,8 +264,8 @@ bool serialization_save_vox(const Shape *const src, FILE *const out) {
 
     const ColorPalette *palette = shape_get_palette(src);
     uint16_t nbColors = palette->count;
-
-    RGBAColor *color = NULL;
+    
+    RGBAColor* color = NULL;
 
     for (int i = 0; i < 256; i++) {
         if (i < nbColors) {
@@ -312,7 +312,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     vx_assert(s != NULL);
     vx_assert(out != NULL);
     vx_assert(*out == NULL);
-
+    
     // read magic bytes
     if (_readExpectedBytes(s, VOX_MAGIC_BYTES, VOX_MAGIC_BYTES_SIZE) == false) {
         return invalid_format;
@@ -353,22 +353,22 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // It really looks like a .vox file
-
+    
     *out = NULL;
 
     // read chunks
 
     char chunkName[CHUNK_HEADER_SIZE_PLUS_ONE]; // chunkNameSize
-    chunkName[CHUNK_HEADER_SIZE] = '\0';        // null termination char
+    chunkName[CHUNK_HEADER_SIZE] = '\0'; // null termination char
 
     uint32_t current_chunk_content_bytes;
     uint32_t current_chunk_children_content_bytes;
     uint32_t sizeX = 0;
     uint32_t sizeY = 0;
     uint32_t sizeZ = 0;
-
+    
     enum serialization_magicavoxel_error err = no_error;
-
+    
     size_t blocksPosition = 0;
     RGBAColor *colors = malloc(sizeof(RGBAColor) * VOX_NB_COLORS);
     for (int i = 0; i < VOX_NB_COLORS; ++i) {
@@ -379,7 +379,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     while (stream_reached_the_end(s) == false) {
-
+        
         if (stream_read(s, chunkName, CHUNK_HEADER_SIZE, 1) == false) {
             cclog_error("could not read chunk name", chunkName);
             err = invalid_format;
@@ -422,13 +422,13 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                 err = invalid_format;
                 break;
             }
-
+            
             if (stream_read_uint32(s, &sizeZ) == false) {
                 cclog_error("could not read sizeZ");
                 err = invalid_format;
                 break;
             }
-
+            
             if (stream_read_uint32(s, &sizeY) == false) {
                 cclog_error("could not read sizeY");
                 err = invalid_format;
@@ -438,19 +438,19 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
         // XYZI
         else if (strcmp(chunkName, "XYZI") == 0) {
             // Found blocks, but palette not loaded, keeping for later
-
+            
             blocksPosition = stream_get_cursor_position(s);
-
+            
             uint32_t nbVoxels;
             if (stream_read_uint32(s, &nbVoxels) == false) {
                 cclog_error("could not read nbVoxels");
                 shape_release(*out);
                 return invalid_format;
             }
-
+            
             stream_skip(s, 4 * nbVoxels);
         }
-
+        
         // RGBA (palette)
         else if (strcmp(chunkName, "RGBA") == 0) {
 
@@ -461,7 +461,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
             }
 
             for (int i = 0; i < VOX_NB_COLORS; i++) {
-
+                
                 if (stream_read_uint8(s, &(colors[i].r)) == false) {
                     cclog_error("could not read r");
                     err = invalid_format;
@@ -493,7 +493,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
             stream_skip(s, current_chunk_content_bytes + current_chunk_children_content_bytes);
         }
     }
-
+    
     if (err != no_error || sizeX == 0 || sizeY == 0 || sizeZ == 0 || blocksPosition == 0) {
         free(colors);
         if (err == no_error) {
@@ -501,62 +501,62 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
         }
         return err;
     }
-
+    
     // create Shape
     *out = shape_make_with_octree(sizeX, sizeY, sizeZ, false, isMutable, true);
     shape_set_palette(*out, color_palette_new(colorAtlas, sharedColors));
-
+    
     stream_set_cursor_position(s, blocksPosition);
-
+    
     uint32_t nbVoxels;
     uint8_t x, y, z;
     SHAPE_COLOR_INDEX_INT_T color_index;
-
+    
     if (stream_read_uint32(s, &nbVoxels) == false) {
         cclog_error("could not read nbVoxels");
         shape_release(*out);
         free(colors);
         return invalid_format;
     }
-
+    
     ColorPalette *palette = shape_get_palette(*out);
     for (uint32_t i = 0; i < nbVoxels; i++) {
-
+        
         // ⚠️ y -> z, z -> y
         if (stream_read_uint8(s, &x) == false) {
             cclog_error("could not read x");
             err = invalid_format;
             break;
         }
-
+        
         if (stream_read_uint8(s, &z) == false) {
             cclog_error("could not read z");
             err = invalid_format;
             break;
         }
-
+        
         if (stream_read_uint8(s, &y) == false) {
             cclog_error("could not read y");
             err = invalid_format;
             break;
         }
-
+        
         if (stream_read_uint8(s, &color_index) == false) {
             cclog_error("could not read color_index");
             err = invalid_format;
             break;
         }
-
+        
         // MV block indexes start at 1, while palette indexes start at 0.
         // We have to shift the color index.
         // It's also done when exporting .vox (+1 instead of -1)
         SHAPE_COLOR_INDEX_INT_T colorIdx = color_index - 1;
-
+        
         // translate & shrink to a shape palette w/ only used colors
         if (color_palette_check_and_add_color(palette, colors[colorIdx], &colorIdx) == false) {
             colorIdx = 0;
         }
-
+        
         shape_add_block_with_color(*out,
                                    colorIdx,
                                    (SHAPE_COORDS_INT_T)x,
@@ -568,7 +568,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                                    false);
     }
     color_palette_clear_lighting_dirty(palette);
-
+    
     if (err != no_error) {
         shape_release(*out);
         free(colors);

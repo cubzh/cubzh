@@ -17,20 +17,18 @@
 #include "utils.h"
 
 #define TRANSFORM_NONE 0
-#define TRANSFORM_MTX                                                                              \
-    1 // local mtx, ltw & wtl matrices are dirty, and children down the hierarchy need refresh
-#define TRANSFORM_LOCAL_POS 2 // local pos getter is dirty
-#define TRANSFORM_LOCAL_ROT 4 // local rot getter is dirty
-#define TRANSFORM_POS 8       // world pos getter is dirty
-#define TRANSFORM_ROT 16      // world rot getter is dirty
-#define TRANSFORM_CHILDREN                                                                         \
-    32 // this transform is up-to-date, but children down the hierarchy need refresh
-#define TRANSFORM_PHYSICS                                                                          \
-    64 // collider-relevant transformations (local AND world scale/pos) have been dirty since last
-       // end-of-frame
-#define TRANSFORM_ANY                                                                              \
-    128 // any transformation has been dirty since last end-of-frame, can be used internally by
-        // higher types
+// local mtx, ltw & wtl matrices are dirty, and children down the hierarchy need refresh
+#define TRANSFORM_MTX 1
+#define TRANSFORM_LOCAL_POS 2
+#define TRANSFORM_LOCAL_ROT 4
+#define TRANSFORM_POS 8
+#define TRANSFORM_ROT 16
+// this transform is up-to-date, but children down the hierarchy need refresh
+#define TRANSFORM_CHILDREN 32
+// collider-relevant transformations (local AND world scale/pos) have been dirty since last end-of-frame
+#define TRANSFORM_PHYSICS 64
+// any transformation has been dirty since last end-of-frame, can be used internally by higher types
+#define TRANSFORM_ANY 128
 
 #if DEBUG_TRANSFORM
 static int debug_transform_refresh_calls = 0;
@@ -94,6 +92,10 @@ struct _Transform {
 
     // can be used to describe the type of the ptr when defined
     uint8_t ptrType;
+
+    bool animationsEnabled;
+
+    char pad[7];
 };
 
 //
@@ -169,6 +171,7 @@ Transform *transform_make(TransformType type) {
     t->type = type;
     t->isHiddenBranch = false;
     t->isHiddenSelf = false;
+    t->animationsEnabled = true;
     t->sceneDirty = false;
     t->isInScene = false;
     t->rigidBody = NULL;
@@ -940,6 +943,20 @@ Weakptr *transform_get_and_retain_weakptr(Transform *t) {
     }
 }
 
+void transform_setAnimationsEnabled(Transform * const t, const bool enabled) {
+    if (t == NULL) {
+        return;
+    }
+    t->animationsEnabled = enabled;
+}
+
+bool transform_getAnimationsEnabled(Transform * const t) {
+    if (t == NULL) {
+        return false;
+    }
+    return t->animationsEnabled;
+}
+
 //
 //
 // MARK: - Private functions -
@@ -947,7 +964,7 @@ Weakptr *transform_get_and_retain_weakptr(Transform *t) {
 //
 
 static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
-    t->dirty |= flag;
+    t->dirty |= (flag | TRANSFORM_ANY);
 }
 
 static void _transform_reset_dirty(Transform *const t, const uint8_t flag) {

@@ -1107,7 +1107,8 @@ void rigidbody_set_collides_with(RigidBody *rb, uint8_t value) {
 }
 
 uint8_t rigidbody_get_simulation_mode(const RigidBody *rb) {
-    return rb != NULL ? _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) : Disabled;
+    return rb != NULL ? _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE)
+                      : Disabled;
 }
 
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value) {

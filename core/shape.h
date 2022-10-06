@@ -16,9 +16,9 @@ extern "C" {
 #include "block.h"
 #include "box.h"
 #include "chunk.h"
+#include "config.h"
 #include "color_atlas.h"
 #include "color_palette.h"
-#include "config.h"
 #include "flood_fill_lighting.h"
 #include "index3d.h"
 #include "map_string_float3.h"
@@ -465,6 +465,17 @@ bool shape_history_canUndo(const Shape *const s);
 bool shape_history_canRedo(const Shape *const s);
 void shape_history_undo(Shape *const s);
 void shape_history_redo(Shape *const s);
+
+//
+
+///
+void shape_enableAnimations(Shape * const s);
+
+///
+void shape_disableAnimations(Shape * const s);
+
+///
+bool shape_getIgnoreAnimations(Shape * const s);
 
 #ifdef __cplusplus
 } // extern "C"
