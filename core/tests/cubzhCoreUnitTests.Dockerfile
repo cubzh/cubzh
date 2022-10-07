@@ -7,7 +7,7 @@ ENV DOCKER_TARGETPLATFORM=$TARGETPLATFORM
 
 RUN apt-get update && apt-get install -y cmake clang
 
-COPY /common/engine /core
+COPY /core /core
 COPY /deps/libz /deps/libz
 
 WORKDIR /core/tests
