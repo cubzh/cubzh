@@ -155,7 +155,7 @@ bool color_palette_check_and_add_color(ColorPalette *p, RGBAColor color, SHAPE_C
 
     p->entries[idx].color = color;
     p->entries[idx].blocksCount = 0;
-    p->entries[idx].atlasIndex = color_atlas_check_and_add_color(a, color, p->sharedColors);
+    p->entries[idx].atlasIndex = ATLAS_COLOR_INDEX_ERROR;
     p->entries[idx].orderedIndex = p->orderedCount;
     p->entries[idx].emissive = false;
 
