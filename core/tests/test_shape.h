@@ -29,11 +29,9 @@ void test_shape_addblock_1(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1,
-                                       1,
-                                       1,
+    Shape *sh = shape_make_with_octree(1, 1, 1,
                                        false, // lighting
-                                       true,  // isMutable
+                                       true, // isMutable
                                        true); // isResizable
     TEST_ASSERT(sh != NULL);
 
@@ -48,7 +46,7 @@ void test_shape_addblock_1(void) {
     TEST_ASSERT(palette != NULL);
 
     { // add color 1
-        RGBAColor color = {.r = 1, .g = 1, .b = 1, .a = 1};
+        RGBAColor color = {.r =  1, .g =  1, .b =  1, .a =  1};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
         ok = color_palette_check_and_add_color(palette, color, &entryIdx);
         TEST_ASSERT(ok);
@@ -56,7 +54,7 @@ void test_shape_addblock_1(void) {
     }
 
     { // add color 2
-        RGBAColor color = {.r = 2, .g = 2, .b = 2, .a = 2};
+        RGBAColor color = {.r =  2, .g =  2, .b =  2, .a =  2};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
         ok = color_palette_check_and_add_color(palette, color, &entryIdx);
         TEST_ASSERT(ok);
@@ -64,7 +62,7 @@ void test_shape_addblock_1(void) {
     }
 
     { // add color 3
-        RGBAColor color = {.r = 3, .g = 3, .b = 3, .a = 3};
+        RGBAColor color = {.r =  3, .g =  3, .b =  3, .a =  3};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
         ok = color_palette_check_and_add_color(palette, color, &entryIdx);
         TEST_ASSERT(ok);
@@ -74,8 +72,7 @@ void test_shape_addblock_1(void) {
     // add block 0
     ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, 0);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, 0, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
@@ -83,8 +80,7 @@ void test_shape_addblock_1(void) {
     // add block 1
     ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
@@ -92,8 +88,7 @@ void test_shape_addblock_1(void) {
     // add block 2
     ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR2);
@@ -101,8 +96,7 @@ void test_shape_addblock_1(void) {
     // remove block 2
     ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
@@ -110,8 +104,7 @@ void test_shape_addblock_1(void) {
     // add block 3
     ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, 1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR3);
@@ -133,11 +126,9 @@ void test_shape_addblock_2(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1,
-                                       1,
-                                       1,
+    Shape *sh = shape_make_with_octree(1, 1, 1,
                                        false, // lighting
-                                       true,  // isMutable
+                                       true, // isMutable
                                        true); // isResizable
     TEST_ASSERT(sh != NULL);
 
@@ -152,7 +143,7 @@ void test_shape_addblock_2(void) {
     TEST_ASSERT(palette != NULL);
 
     { // add color 1
-        RGBAColor color = {.r = 1, .g = 1, .b = 1, .a = 1};
+        RGBAColor color = {.r =  1, .g =  1, .b =  1, .a =  1};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
         ok = color_palette_check_and_add_color(palette, color, &entryIdx);
         TEST_ASSERT(ok);
@@ -160,7 +151,7 @@ void test_shape_addblock_2(void) {
     }
 
     { // add color 2
-        RGBAColor color = {.r = 2, .g = 2, .b = 2, .a = 2};
+        RGBAColor color = {.r =  2, .g =  2, .b =  2, .a =  2};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
         ok = color_palette_check_and_add_color(palette, color, &entryIdx);
         TEST_ASSERT(ok);
@@ -168,7 +159,7 @@ void test_shape_addblock_2(void) {
     }
 
     { // add color 3
-        RGBAColor color = {.r = 3, .g = 3, .b = 3, .a = 3};
+        RGBAColor color = {.r =  3, .g =  3, .b =  3, .a =  3};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
         ok = color_palette_check_and_add_color(palette, color, &entryIdx);
         TEST_ASSERT(ok);
@@ -178,8 +169,7 @@ void test_shape_addblock_2(void) {
     // add block 1
     ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
@@ -187,8 +177,7 @@ void test_shape_addblock_2(void) {
     // add block 2
     ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR2);
@@ -196,8 +185,7 @@ void test_shape_addblock_2(void) {
     // remove block 2
     ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
@@ -205,8 +193,7 @@ void test_shape_addblock_2(void) {
     // add block 3
     ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, 1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR3);
@@ -216,8 +203,9 @@ void test_shape_addblock_2(void) {
     scene_free(sc);
 }
 
+
 // uses pending transaction WITHOUT applying it
-// void test_shape_addblock_1(void) {
+//void test_shape_addblock_1(void) {
 //    // TODO: add colors to shape's palette
 //    const SHAPE_COLOR_INDEX_INT_T COLOR1 = 42;
 //    const SHAPE_COLOR_INDEX_INT_T COLOR2 = 43;

@@ -14,8 +14,8 @@ extern "C" {
 #include <stdio.h>
 
 #include "block.h"
-#include "color_palette.h"
 #include "colors.h"
+#include "color_palette.h"
 #include "config.h"
 #include "function_pointers.h"
 #include "int3.h"

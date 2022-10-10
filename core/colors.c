@@ -4,8 +4,8 @@
 //  Created by Gaetan de Villele on June 25, 2016.
 // -------------------------------------------------------------
 
-#include "colors.h"
 #include <math.h>
+#include "colors.h"
 
 // --------------------------------------------------
 //
@@ -246,8 +246,10 @@ RGBAColor YIQ2RGB(float3 *yiq) {
 // --------------------------------------------------
 
 uint32_t color_as_uint32(const RGBAColor *c) {
-    return (((uint32_t)(c->r)) << 24) + (((uint32_t)(c->g)) << 16) + (((uint32_t)(c->b)) << 8) +
-           ((uint32_t)(c->a));
+    return (((uint32_t)(c->r)) << 24) +
+    (((uint32_t)(c->g)) << 16) +
+    (((uint32_t)(c->b)) << 8) +
+    ((uint32_t)(c->a));
 }
 
 bool colors_are_equal(const RGBAColor *c1, const RGBAColor *c2) {
