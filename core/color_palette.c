@@ -145,10 +145,6 @@ bool color_palette_check_and_add_color(ColorPalette *p, RGBAColor color, SHAPE_C
         idx = p->count++;
     }
 
-    if (color_is_opaque(&color) == false) {
-        p->lighting_dirty = true;
-    }
-
     if (entryOut != NULL) {
         *entryOut = idx;
     }
@@ -207,9 +203,6 @@ void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
     if (p->entries[entry].blocksCount == 0) {
         if (p->entries[entry].atlasIndex == ATLAS_COLOR_INDEX_ERROR) {
             p->entries[entry].atlasIndex = color_atlas_check_and_add_color(a, p->entries[entry].color, p->sharedColors);
-        }
-        if (color_is_opaque(&(p->entries[entry].color)) == false) {
-            p->lighting_dirty = true;
         }
     }
     p->entries[entry].blocksCount++;
@@ -294,8 +287,20 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
         return;
     }
 
-    if (color_is_opaque(&p->entries[entry].color) == false || color_is_opaque(&color) == false) {
+    // baked lighting becomes dirty if,
+    // (1) the color is emissive,
+    // (2) going from opaque to transparent or transparent to opaque color,
+    // (3) both are transparent but different alpha
+    if (p->entries[entry].emissive) { // (1)
         p->lighting_dirty = true;
+    } else {
+        const bool prevOpaque = color_is_opaque(&p->entries[entry].color);
+        const bool newOpaque = color_is_opaque(&color);
+        if (prevOpaque != newOpaque // (2)
+            || prevOpaque == false && newOpaque == false
+               && p->entries[entry].color.a != color.a) { // (3)
+            p->lighting_dirty = true;
+        }
     }
 
     hash_uint32_int_delete(p->colorToIdx, color_as_uint32(&p->entries[entry].color));

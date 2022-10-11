@@ -50,6 +50,7 @@ uint8_t readMagicBytesLegacy(Stream *s) {
 
 /// This does free the Stream
 Shape *serialization_load_shape(Stream *s,
+                                const char *fullname,
                                 bool limitSize,
                                 bool octree,
                                 bool lighting,
@@ -116,8 +117,9 @@ Shape *serialization_load_shape(Stream *s,
     // shrink box once all blocks were added to update box origin
     if (shape != NULL) {
         shape_shrink_box(shape);
+        shape_set_fullname(shape, fullname);
     } else {
-        cclog_error("[serialization_load_shape] transform shape is NULL");
+        cclog_error("[serialization_load_shape] shape is NULL");
     }
 
     // s is NULL if it could not be loaded
