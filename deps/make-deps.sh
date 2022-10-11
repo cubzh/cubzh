@@ -14,8 +14,8 @@ cd "$SCRIPT_LOCATION"
 IMAGES_PREFIX="cubzh-deps"
 TARGET=""
 
-while read -p "linux-debian-x64, linux-ubuntu-x64, linux-ubuntu-arm64 ?" v; do
-    if [ "$v" = "linux-debian-x64" ] || [ "$v" = "linux-ubuntu-x64" ] || [ "$v" = "linux-ubuntu-arm64" ]
+while read -p "linux-debian-x64, linux-ubuntu-amd64, linux-ubuntu-arm64 ?" v; do
+    if [ "$v" = "linux-debian-x64" ] || [ "$v" = "linux-ubuntu-amd64" ] || [ "$v" = "linux-ubuntu-arm64" ]
     then
         TARGET=$v
         break
@@ -46,7 +46,7 @@ then
 	docker run --rm -ti -v $LIBS_DIR:/libs $IMAGE_NAME cp /usr/lib/x86_64-linux-gnu/libz.a /libs/libz.a
 fi
 
-if [ "$TARGET" = "linux-ubuntu-x64" ]
+if [ "$TARGET" = "linux-ubuntu-amd64" ]
 then
 	
 	# ========== libz ==========

@@ -1,16 +1,22 @@
+#
+# /dockerfiles/ubuntu_build_env.Dockerfile
+#
+# Cubzh project
+#
+
 FROM ubuntu:22.04 AS env
 
-# platform of the container itself
-# ex: `linux/arm64`, `linux/amd64`
-ARG TARGETPLATFORM
-ENV DOCKER_TARGETPLATFORM=$TARGETPLATFORM
+# architecture of the container itself
+# ex: `arm64`, `amd64`, ...
+ARG TARGETARCH
+ENV CUBZH_ARCH=$TARGETARCH
 
 RUN apt-get update && apt-get install -y cmake clang
 
 COPY /core /core
-COPY /deps/libz /deps/libz
+COPY /deps/libz/linux-ubuntu-$TARGETARCH /deps/libz/linux-ubuntu-$TARGETARCH
 
-WORKDIR /core/tests
+WORKDIR /
 
 RUN bash
 
