@@ -130,6 +130,8 @@ int stringArray_length(stringArray_t *arr);
 /// Returns a pointer on the array data.
 const char *stringArray_get(const stringArray_t *arr, const int idx);
 
+char *utils_get_baked_fullname(const char *gameID, const char *itemFullname);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

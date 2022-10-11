@@ -206,8 +206,8 @@ bool shape_is_within_fixed_bounds(const Shape *shape,
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider, bool squarify);
 
 // a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
-// therefore is dependant on which space we express it in, (1) in model space, ie. "block
-// coordinates", the AABB itself w/o transformation
+// therefore is dependant on which space we express it in,
+// (1) in model space, ie. "block coordinates", the AABB itself w/o transformation
 const Box *shape_get_model_aabb(const Shape *s);
 // (2) in local space, ie. the model AABB w/ local transformations applied (on-demand)
 void shape_get_local_aabb(const Shape *s, Box *box, bool squarify);
@@ -268,6 +268,9 @@ void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transpare
 
 void shape_set_model_locked(Shape *s, bool toggle);
 bool shape_is_model_locked(Shape *s);
+
+void shape_set_fullname(Shape *s, const char* fullname); // copies fullname
+const char* shape_get_fullname(const Shape *s);
 
 // MARK: - Transform -
 

@@ -90,6 +90,9 @@ struct _Shape {
     /// uses Lua coords
     Transaction *pendingTransaction;
 
+    // name of the original item <username>.<itemname>, used for baked files
+    char *fullname;
+
     // keeping track of total amount of chunks
     size_t nbChunks;
     // keeping track of total amount of blocks
@@ -308,6 +311,7 @@ Shape *shape_make() {
 
     s->needsDisplay = NULL;
     s->history = NULL;
+    s->fullname = NULL;
     s->pendingTransaction = NULL;
     s->nbChunks = 0;
     s->nbBlocks = 0;
@@ -409,6 +413,10 @@ Shape *shape_make_copy(Shape *origin) {
                               sizeof(VERTEX_LIGHT_STRUCT_T);
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
         memcpy(s->lightingData, origin->lightingData, lightingSize);
+    }
+
+    if (origin->fullname != NULL) {
+        s->fullname = string_new_copy(origin->fullname);
     }
 
     return s;
@@ -2210,6 +2218,17 @@ void shape_set_model_locked(Shape *s, bool toggle) {
 
 bool shape_is_model_locked(Shape *s) {
     return s->isBakeLocked;
+}
+
+void shape_set_fullname(Shape *s, const char* fullname) {
+    if (s->fullname != NULL) {
+        free(s->fullname);
+    }
+    s->fullname = string_new_copy(fullname);
+}
+
+const char* shape_get_fullname(const Shape *s) {
+    return s->fullname;
 }
 
 // MARK: - Transform -

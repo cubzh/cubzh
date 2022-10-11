@@ -85,6 +85,7 @@ uint8_t readMagicBytes(Stream *s);
 uint8_t readMagicBytesLegacy(Stream *s);
 
 Shape *serialization_load_shape(Stream *s,
+                                const char *fullname,
                                 bool limitSize,
                                 bool octree,
                                 bool lighting,
