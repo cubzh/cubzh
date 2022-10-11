@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\block.h" />
+    <ClInclude Include="..\..\blockChange.h" />
+    <ClInclude Include="..\..\box.h" />
+    <ClInclude Include="..\..\cclog.h" />
+    <ClInclude Include="..\..\chunk.h" />
+    <ClInclude Include="..\..\colors.h" />
+    <ClInclude Include="..\..\color_atlas.h" />
+    <ClInclude Include="..\..\color_palette.h" />
+    <ClInclude Include="..\..\config.h" />
+    <ClInclude Include="..\..\doubly_linked_list.h" />
+    <ClInclude Include="..\..\doubly_linked_list_uint8.h" />
+    <ClInclude Include="..\..\easings.h" />
+    <ClInclude Include="..\..\fifo_list.h" />
+    <ClInclude Include="..\..\filo_list.h" />
+    <ClInclude Include="..\..\filo_list_float3.h" />
+    <ClInclude Include="..\..\filo_list_int3.h" />
+    <ClInclude Include="..\..\filo_list_uint16.h" />
+    <ClInclude Include="..\..\filo_list_uint32.h" />
+    <ClInclude Include="..\..\float3.h" />
+    <ClInclude Include="..\..\float4.h" />
+    <ClInclude Include="..\..\flood_fill_lighting.h" />
+    <ClInclude Include="..\..\function_pointers.h" />
+    <ClInclude Include="..\..\hash_uint32_int.h" />
+    <ClInclude Include="..\..\history.h" />
+    <ClInclude Include="..\..\index3d.h" />
+    <ClInclude Include="..\..\inputs.h" />
+    <ClInclude Include="..\..\int3.h" />
+    <ClInclude Include="..\..\magicavoxel.h" />
+    <ClInclude Include="..\..\map_string_float3.h" />
+    <ClInclude Include="..\..\matrix4x4.h" />
+    <ClInclude Include="..\..\octree.h" />
+    <ClInclude Include="..\..\quaternion.h" />
+    <ClInclude Include="..\..\ray.h" />
+    <ClInclude Include="..\..\rigidBody.h" />
+    <ClInclude Include="..\..\rtree.h" />
+    <ClInclude Include="..\..\scene.h" />
+    <ClInclude Include="..\..\serialization.h" />
+    <ClInclude Include="..\..\serialization_v5.h" />
+    <ClInclude Include="..\..\serialization_v6.h" />
+    <ClInclude Include="..\..\shape.h" />
+    <ClInclude Include="..\..\stream.h" />
+    <ClInclude Include="..\..\transaction.h" />
+    <ClInclude Include="..\..\transform.h" />
+    <ClInclude Include="..\..\utils.h" />
+    <ClInclude Include="..\..\vertextbuffer.h" />
+    <ClInclude Include="..\..\weakptr.h" />
+    <ClInclude Include="..\acutest.h" />
+    <ClInclude Include="..\test_hash_uint32_int.h" />
+    <ClInclude Include="..\test_shape.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\block.c" />
+    <ClCompile Include="..\..\blockChange.c" />
+    <ClCompile Include="..\..\box.c" />
+    <ClCompile Include="..\..\cclog.c" />
+    <ClCompile Include="..\..\chunk.c" />
+    <ClCompile Include="..\..\colors.c" />
+    <ClCompile Include="..\..\color_atlas.c" />
+    <ClCompile Include="..\..\color_palette.c" />
+    <ClCompile Include="..\..\config.c" />
+    <ClCompile Include="..\..\doubly_linked_list.c" />
+    <ClCompile Include="..\..\doubly_linked_list_uint8.c" />
+    <ClCompile Include="..\..\easings.c" />
+    <ClCompile Include="..\..\fifo_list.c" />
+    <ClCompile Include="..\..\filo_list.c" />
+    <ClCompile Include="..\..\filo_list_float3.c" />
+    <ClCompile Include="..\..\filo_list_int3.c" />
+    <ClCompile Include="..\..\filo_list_uint16.c" />
+    <ClCompile Include="..\..\filo_list_uint32.c" />
+    <ClCompile Include="..\..\float3.c" />
+    <ClCompile Include="..\..\float4.c" />
+    <ClCompile Include="..\..\flood_fill_lighting.c" />
+    <ClCompile Include="..\..\hash_uint32_int.c" />
+    <ClCompile Include="..\..\history.c" />
+    <ClCompile Include="..\..\index3d.c" />
+    <ClCompile Include="..\..\inputs.c" />
+    <ClCompile Include="..\..\int3.c" />
+    <ClCompile Include="..\..\magicavoxel.c" />
+    <ClCompile Include="..\..\map_string_float3.c" />
+    <ClCompile Include="..\..\matrix4x4.c" />
+    <ClCompile Include="..\..\octree.c" />
+    <ClCompile Include="..\..\quaternion.c" />
+    <ClCompile Include="..\..\ray.c" />
+    <ClCompile Include="..\..\rigidBody.c" />
+    <ClCompile Include="..\..\rtree.c" />
+    <ClCompile Include="..\..\scene.c" />
+    <ClCompile Include="..\..\serialization.c" />
+    <ClCompile Include="..\..\serialization_v5.c" />
+    <ClCompile Include="..\..\serialization_v6.c" />
+    <ClCompile Include="..\..\shape.c" />
+    <ClCompile Include="..\..\stream.c" />
+    <ClCompile Include="..\..\transaction.c" />
+    <ClCompile Include="..\..\transform.c" />
+    <ClCompile Include="..\..\utils.c" />
+    <ClCompile Include="..\..\vertextbuffer.c" />
+    <ClCompile Include="..\..\weakptr.c" />
+    <ClCompile Include="..\test_list.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Makefile" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{0fe97bbe-7a61-475f-826e-c4f6bdb97253}</ProjectGuid>
+    <RootNamespace>CubzhCoreUnitTests</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\..\core;..\..\..\core\tests;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\..\core;..\..\..\core\tests;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets" Condition="Exists('packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets')" />
+  </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets'))" />
+  </Target>
+</Project>
