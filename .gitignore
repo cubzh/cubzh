@@ -1,1 +1,7 @@
 .DS_Store
+/core/tests/cmake/CMakeFiles/
+/core/tests/cmake/CMakeCache.txt
+/core/tests/cmake/Makefile
+/core/tests/cmake/cmake_install.cmake
+/core/tests/cmake/unit_tests
+/core/tests/visual_studio/x64/
