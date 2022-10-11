@@ -1426,7 +1426,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 
     // we only have to write blocks that are in the bounding box
     // using boundingBox->min to offset blocks at 0,0,0 when writing
-    // lightingData and POIs are offsetted the same way.
+    // blocks, POIs, and lightingData
     const Box *boundingBox = shape_get_model_aabb(shape);
     box_get_size_int(boundingBox, &shapeSize);
 
@@ -1439,11 +1439,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     int3_set(&end, start.x + shapeSize.x, start.y + shapeSize.y, start.z + shapeSize.z);
 
     uint32_t blockCount = shapeSize.x * shapeSize.y * shapeSize.z;
-    const VERTEX_LIGHT_STRUCT_T *lightingData = NULL;
 
 #if GLOBAL_LIGHTING_BAKE_WRITE_ENABLED
-    bool hasLighting = shape_uses_baked_lighting(shape) &&
-                       (lightingData = shape_get_lighting_data(shape)) != NULL;
+    bool hasLighting = shape_uses_baked_lighting(shape);
 #else
     bool hasLighting = false;
 #endif
@@ -1540,13 +1538,14 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     for (int32_t x = start.x; x < end.x; x++) { // shape blocks
         for (int32_t y = start.y; y < end.y; y++) {
             for (int32_t z = start.z; z < end.z; z++) {
-                // offset (- start) for blocks start at 0,0,0
                 block = shape_get_block(shape, x, y, z, false);
-                if (block == NULL) {
-                    *((uint8_t *)cursor) = SHAPE_COLOR_INDEX_AIR_BLOCK;
-                } else {
+                if (block_is_solid(block)) {
                     *((uint8_t *)cursor) = paletteMapping != NULL ?
-                        paletteMapping[block_get_color_index(block)] : block_get_color_index(block);
+                                           paletteMapping[block_get_color_index(block)] :
+                                           block_get_color_index(block);
+                } else {
+                    *((uint8_t *)cursor) = SHAPE_COLOR_INDEX_AIR_BLOCK;
+                   
                 }
                 cursor = (void *)((uint8_t *)cursor + 1);
             }
@@ -1632,8 +1631,6 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     }
 
     // shape baked lighting sub-chunk
-    // TODO: offset lighting data as well (remove empty space 'start'), will become relevant when
-    // any shape can have baked lighting
     if (hasLighting) {
         // shape baked lighting chunk ID
         const uint8_t chunkIdShapeBakedLighting = P3S_CHUNK_ID_SHAPE_BAKED_LIGHTING;
