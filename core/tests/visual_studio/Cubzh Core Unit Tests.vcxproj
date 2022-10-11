@@ -66,6 +66,7 @@
     <ClInclude Include="..\..\vertextbuffer.h" />
     <ClInclude Include="..\..\weakptr.h" />
     <ClInclude Include="..\acutest.h" />
+    <ClInclude Include="..\test_float3.h" />
     <ClInclude Include="..\test_hash_uint32_int.h" />
     <ClInclude Include="..\test_shape.h" />
   </ItemGroup>
