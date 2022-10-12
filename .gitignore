@@ -1,9 +1,12 @@
+# macOS
 .DS_Store
+# CMake
 /core/tests/cmake/CMakeFiles/
 /core/tests/cmake/CMakeCache.txt
 /core/tests/cmake/Makefile
 /core/tests/cmake/cmake_install.cmake
 /core/tests/cmake/unit_tests
+# Visual Studio
 /core/tests/visual_studio/x64/
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/.suo
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/Browse.VC.db
@@ -11,3 +14,5 @@
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/Browse.VC.db-wal
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/Browse.VC.opendb
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/FileContentIndex/
+# Xcode
+*.xcuserdatad
