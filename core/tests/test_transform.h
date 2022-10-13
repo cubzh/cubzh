@@ -11,10 +11,10 @@
 #include "transform.h"
 
 void test_transform_rotation_position(void) {
-    Transform* t = transform_make_default();
-    TEST_ASSERT(t != NULL);
-
+    // set rotation
     {
+        Transform* t = transform_make_default();
+        TEST_ASSERT(t != NULL);
         Quaternion* q = quaternion_new(1.0f, 2.0f, 3.0f, 0.5f, false);
         transform_set_rotation(t, q);
         Quaternion* r = transform_get_rotation(t);
@@ -22,22 +22,36 @@ void test_transform_rotation_position(void) {
         TEST_CHECK(r->normalized == q->normalized);
 
         quaternion_free(q);
+        transform_release(t);
     }
 
+    // set position
     {
+        Transform* t = transform_make_default();
+        TEST_ASSERT(t != NULL);
         transform_set_position(t, 1.0f, 2.0f, 3.0f);
         const float3* pos1 = transform_get_position(t);
-        const float3 expected1 = { 1.0f, 2.0f, 3.0f };
-        TEST_CHECK(float3_isEqual(pos1, &expected1, EPSILON_ZERO));
-
-        float3* pos2 = float3_new(4.0f, 5.0f, 6.0f);
-        const float3 expected2 = { 4.0f, 5.0f, 6.0f };
-        transform_set_position_vec(t, pos2);
-        TEST_CHECK(float3_isEqual(pos1, &expected2, EPSILON_ZERO));
-
-        float3_free(pos2);
+        const float3 expected = { 1.0f, 2.0f, 3.0f };
+        TEST_CHECK(float3_isEqual(pos1, &expected, EPSILON_ZERO));
+        transform_release(t);
     }
 
+    // set position (with a float3)
+    {
+        Transform* t = transform_make_default();
+        TEST_ASSERT(t != NULL);
+
+        const float3 pos = { 4.0f, 5.0f, 6.0f };
+        transform_set_position_vec(t, &pos);
+
+        const float3* curPos = transform_get_position(t);
+        const float3 expected = { 4.0f, 5.0f, 6.0f };
+        TEST_CHECK(float3_isEqual(curPos, &expected, EPSILON_ZERO));
+
+        transform_release(t);
+    }
+
+    // set child local position
     {
         Transform* p = transform_make_default();
         Transform* c = transform_make_default();
@@ -55,16 +69,14 @@ void test_transform_rotation_position(void) {
         transform_release(p);
         transform_release(c);
     }
-    transform_release(t);
 }
 
 void test_transform_child(void) {
-    Transform* t = transform_make_default();
-    TEST_ASSERT(t != NULL);
-
+    // check local position / rotation
     {
+        Transform* t = transform_make_default();
         Transform* child = transform_make_default();
-        TEST_ASSERT(child != NULL);
+        TEST_ASSERT(t != NULL && child != NULL);
         transform_set_parent(child, t, true);
         TEST_CHECK(transform_get_parent(child) == t);
 
@@ -89,18 +101,20 @@ void test_transform_child(void) {
 
         transform_set_rotation_euler(t, 0.0f, PI_F * 0.25f, 0.0f);
         transform_set_local_rotation_euler(child, 0.0f, PI_F * 0.125f, 0.0f);
-        float3* rot4 = float3_new_zero();
-        transform_get_rotation_euler(child, rot4);
+        float3 rot4 = float3_zero;
+        transform_get_rotation_euler(child, &rot4);
         const float3 expected4 = { 0.0f, PI_F * 0.375f, 0.0f };
-        TEST_CHECK(float3_isEqual(rot4, &expected4, EPSILON_QUATERNION_ERROR));
+        TEST_CHECK(float3_isEqual(&rot4, &expected4, EPSILON_QUATERNION_ERROR));
 
-        float3_free(rot4);
         transform_release(child);
+        transform_release(t);
     }
 
+    // check child position with keepWorld
     {
+        Transform* t = transform_make_default();
         Transform* child = transform_make_default();
-        TEST_ASSERT(child != NULL);
+        TEST_ASSERT(t != NULL && child != NULL);
         transform_set_position(child, 10.0f, 20.0f, 30.0f);
         transform_set_parent(child, t, true);
         const float3* pos = transform_get_position(child);
@@ -108,9 +122,8 @@ void test_transform_child(void) {
         TEST_CHECK(float3_isEqual(pos, &expected, EPSILON_ZERO));
 
         transform_release(child);
+        transform_release(t);
     }
-
-    transform_release(t);
 }
 
 void test_transform_children(void) {
@@ -159,6 +172,7 @@ void test_transform_children(void) {
     transform_remove_parent(c2, false);
     TEST_CHECK(transform_get_children_count(p) == (size_t)0);
 
+    transform_release(p);
     transform_release(c1);
     transform_release(c2);
 }
@@ -217,14 +231,14 @@ void test_transform_flush(void) {
     TEST_CHECK(float3_isEqual(transform_get_local_scale(t), &expected_scale, EPSILON_ZERO));
 
     const float3 expected_rot = { 0.0f, PI_F * 0.25f, 0.0f };
-    float3* rot = float3_new_zero();
-    transform_get_rotation_euler(t, rot);
-    TEST_CHECK(float3_isEqual(rot, &expected_rot, EPSILON_ZERO_RAD));
+    float3 rot = float3_zero;
+    transform_get_rotation_euler(t, &rot);
+    TEST_CHECK(float3_isEqual(&rot, &expected_rot, EPSILON_ZERO_RAD));
 
     const float3 expected_local_rot = { 0.0f, PI_F * 0.25f, 0.0f };
-    float3* local_rot = float3_new_zero();
-    transform_get_local_rotation_euler(t, local_rot);
-    TEST_CHECK(float3_isEqual(local_rot, &expected_local_rot, EPSILON_ZERO_RAD));
+    float3 local_rot = float3_zero;
+    transform_get_local_rotation_euler(t, &local_rot);
+    TEST_CHECK(float3_isEqual(&local_rot, &expected_local_rot, EPSILON_ZERO_RAD));
 
     const float3 expected_pos = { 0.1f, 0.2f, 0.3f };
     TEST_CHECK(float3_isEqual(transform_get_position(t), &expected_pos, EPSILON_ZERO));
@@ -242,9 +256,6 @@ void test_transform_flush(void) {
     TEST_CHECK(transform_is_parented(t) == false);
     TEST_CHECK(transform_get_children_count(t) == (size_t)0);
     TEST_CHECK(transform_is_any_dirty(t) == false);
-
-    float3_free(rot);
-    float3_free(local_rot);
 
     transform_release(t);
     transform_release(c);
