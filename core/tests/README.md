@@ -19,7 +19,7 @@ docker run --rm -ti -v $pwd/core:/core cubzh-core-unit-tests bash
 
 ```shell
 # one liner
-cd /core/tests/cmake && cmake . && cmake --build . --parallel 2 && ./unit_tests
+cd /core/tests/cmake && cmake -G Ninja . && cmake --build . --parallel 4 && ./unit_tests
 
 # cmake .
 # cmake --build .
