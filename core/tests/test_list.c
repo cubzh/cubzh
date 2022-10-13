@@ -8,6 +8,7 @@
 
 #include "test_hash_uint32_int.h"
 #include "test_float3.h"
+#include "test_transform.h"
 #include "test_shape.h"
 
 TEST_LIST = {
@@ -21,6 +22,15 @@ TEST_LIST = {
     { "float3_length", test_float3_length },
     { "float3_min_max", test_float3_min_max },
     { "float3_operations", test_float3_operations },
+    
+    // matrix4x4
+    
+    // transform
+    { "transform_rotation_position", test_transform_rotation_position },
+    { "transform_child", test_transform_child },
+    { "transform_children", test_transform_children },
+    { "transform_retain", test_transform_retain },
+    { "transform_flush", test_transform_flush },
 
     // shape
     { "test_shape_addblock_1", test_shape_addblock_1 },
