@@ -68,6 +68,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		85B78E2828F8084A00AD31DE /* test_transform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_transform.h; path = ../test_transform.h; sourceTree = "<group>"; };
 		85E6382428F74695001FC12F /* unit_tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = unit_tests; sourceTree = BUILT_PRODUCTS_DIR; };
 		85E6383328F7478E001FC12F /* acutest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = acutest.h; path = ../acutest.h; sourceTree = "<group>"; };
 		85E6383428F7478E001FC12F /* test_shape.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = test_shape.h; path = ../test_shape.h; sourceTree = "<group>"; };
@@ -301,6 +302,7 @@
 				85E6383728F7478E001FC12F /* test_hash_uint32_int.h */,
 				85E6383528F7478E001FC12F /* test_list.c */,
 				85E6383428F7478E001FC12F /* test_shape.h */,
+				85B78E2828F8084A00AD31DE /* test_transform.h */,
 			);
 			name = tests;
 			sourceTree = "<group>";
