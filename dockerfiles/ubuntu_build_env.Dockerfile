@@ -11,7 +11,7 @@ FROM ubuntu:22.04 AS env
 ARG TARGETARCH
 ENV CUBZH_ARCH=$TARGETARCH
 
-RUN apt-get update && apt-get install -y cmake clang
+RUN apt-get update && apt-get install -y cmake clang ninja-build
 
 COPY /core /core
 COPY /deps/libz/linux-ubuntu-$TARGETARCH /deps/libz/linux-ubuntu-$TARGETARCH
