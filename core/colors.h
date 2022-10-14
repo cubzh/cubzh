@@ -59,7 +59,8 @@ float CIEDE2000(Lab c1, Lab c2);
 void RGB2YIQ(float3 *yiq, RGBAColor rgb);
 RGBAColor YIQ2RGB(float3 *yiq);
 
-uint32_t color_as_uint32(const RGBAColor *c);
+uint32_t color_to_uint32(const RGBAColor *c);
+RGBAColor uint32_to_color(uint32_t rgba);
 bool colors_are_equal(const RGBAColor *c1, const RGBAColor *c2);
 bool color_is_opaque(const RGBAColor *c);
 RGBAColor color_compute_complementary(RGBAColor c);
