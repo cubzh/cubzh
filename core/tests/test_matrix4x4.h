@@ -50,12 +50,26 @@ void test_matrix4x4_new(void) {
 
 // check if the values are copied and do not depend on the source
 void test_matrix4x4_new_copy(void) {
-    Matrix4x4* source = matrix4x4_new(1.0f, 2.0f, 3.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Matrix4x4* source = matrix4x4_new(1.0f, 2.0f, 3.0f, 0.0f,
+                                      0.0f, 0.0f, 0.0f, 0.0f,
+                                      0.0f, 0.0f, 0.0f, 0.0f,
+                                      0.0f, 0.0f, 0.0f, 0.0f);
     Matrix4x4* copy = matrix4x4_new_copy(source);
+    TEST_CHECK(copy != NULL);
 
-    TEST_CHECK(source->x1y1 == 1.0f && source->x2y1 == 2.0f && source->x3y1 == 3.0f);
+    // memory addresses must be different
+    TEST_CHECK(source != copy);
 
+    // copy values must be identical to source's
+    TEST_CHECK(copy->x1y1 == source->x1y1 &&
+               copy->x2y1 == source->x2y1 &&
+               copy->x3y1 == source->x3y1);
+
+    // modify source's values
     source->x1y1 = 4.0f;
+    TEST_CHECK(source->x1y1 == 4.0f);
+
+    // make sure copy has not changed
     TEST_CHECK(copy->x1y1 == 1.0f);
 
     matrix4x4_free(source);
@@ -256,7 +270,10 @@ void test_matrix4x4_copy(void) {
     source->x1y4 = 40.0f;
 
     matrix4x4_copy(copy, source);
-    TEST_CHECK(copy->x1y1 == 10.0f && copy->x1y2 == 20.0f && copy->x1y3 == 30.0f && copy->x1y4 == 40.0f);
+    TEST_CHECK(copy->x1y1 == 10.0f &&
+               copy->x1y2 == 20.0f &&
+               copy->x1y3 == 30.0f &&
+               copy->x1y4 == 40.0f);
     source->x1y1 = 15.0f;
     TEST_CHECK(copy->x1y1 != 15.0f);
 
