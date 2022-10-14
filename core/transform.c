@@ -43,12 +43,11 @@ struct _Transform {
     Matrix4x4 *mtx;
 
     // transforms hierarchy
-    Transform *parent; // meaningful for transformations, self is retained for hierarchy ref count
-                       // when parent is set
+    Transform *parent; // self is retained for hierarchy ref count when parent is set
     size_t childrenCount;
-    DoublyLinkedList *children; // here only for recursion down hierarchy & for helpers
+    DoublyLinkedList *children; // here for recursion down hierarchy & for helpers
 
-    // defined if the transform needs parcitipates in the physics simulation
+    // defined if the transform is part of the physics simulation
     RigidBody *rigidBody;
 
     // optionally attach a pointer to this transform (eg. to a Shape)
