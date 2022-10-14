@@ -87,7 +87,7 @@ uint8_t utils_axes_mask_swapped(uint8_t mask);
 AxesMaskValue utils_axes_mask_value_swapped(AxesMaskValue v);
 AxesMaskValue utils_axis_index_to_mask_value(AxisIndex idx);
 
-// STRINGS / STRING ARRAYS
+// MARK: - Strings / string arrays -
 
 #define NUMARGS(...) (sizeof((const char *[]){__VA_ARGS__}) / sizeof(const char *))
 #define string_new_join(...) (_string_new_join(NUMARGS(__VA_ARGS__), __VA_ARGS__))
@@ -129,6 +129,8 @@ int stringArray_length(stringArray_t *arr);
 
 /// Returns a pointer on the array data.
 const char *stringArray_get(const stringArray_t *arr, const int idx);
+
+// MARK: -
 
 char *utils_get_baked_fullname(const char *gameID, const char *itemFullname);
 
