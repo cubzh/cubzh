@@ -68,6 +68,7 @@
     <ClInclude Include="..\acutest.h" />
     <ClInclude Include="..\test_float3.h" />
     <ClInclude Include="..\test_hash_uint32_int.h" />
+    <ClInclude Include="..\test_matrix4x4.h" />
     <ClInclude Include="..\test_shape.h" />
     <ClInclude Include="..\test_transform.h" />
   </ItemGroup>
