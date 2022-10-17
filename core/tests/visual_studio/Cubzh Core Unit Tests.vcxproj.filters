@@ -177,6 +177,9 @@
     <ClInclude Include="..\test_matrix4x4.h">
       <Filter>Source Files\tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\test_int3.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test_list.c">
