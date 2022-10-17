@@ -62,7 +62,7 @@ bool float_isZero(const float f, const float epsilon) {
 }
 
 bool utils_is_float_to_coords_inbounds(const float value) {
-    return value >= INT16_MIN && value <= INT16_MAX;
+    return value >= ((float)INT16_MIN) && value <= ((float)INT16_MAX);
 }
 
 bool utils_is_float3_to_coords_inbounds(const float x, const float y, const float z) {

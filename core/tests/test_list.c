@@ -11,6 +11,7 @@
 #include "test_matrix4x4.h"
 #include "test_transform.h"
 #include "test_shape.h"
+#include "test_utils.h"
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
@@ -54,6 +55,20 @@ TEST_LIST = {
     { "transform_children", test_transform_children },
     { "transform_retain", test_transform_retain },
     { "transform_flush", test_transform_flush },
+
+    // utils
+    { "test_utils_float_isEqual", test_utils_float_isEqual },
+    { "test_utils_float_isZero", test_utils_float_isZero },
+    { "test_utils_is_float_to_coords_inbounds", test_utils_is_float_to_coords_inbounds },
+    { "test_utils_is_float3_to_coords_inbounds", test_utils_is_float3_to_coords_inbounds },
+    { "test_utils_axes_mask", test_utils_axes_mask },
+    { "test_utils_string_new_join", test_utils_string_new_join },
+    { "test_utils_string_new_copy", test_utils_string_new_copy },
+    { "test_utils_string_new_substring", test_utils_string_new_substring },
+    { "test_utils_string_new_copy_with_limit", test_utils_string_new_copy_with_limit },
+    { "test_utils_stringArray_new", test_utils_stringArray_new},
+    { "test_utils_stringArray_n_append", test_utils_stringArray_n_append},
+    { "test_utils_string_split", test_utils_string_split},
 
     // shape
     { "test_shape_addblock_1", test_shape_addblock_1 },
