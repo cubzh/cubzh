@@ -1,6 +1,6 @@
 // -------------------------------------------------------------
 //  Cubzh Core Unit Tests
-//  test_filo_list_int3.h
+//  test_filo_list_uint16.h
 //  Created by Nino PLANE on October 18, 2022.
 // -------------------------------------------------------------
 
