@@ -2245,15 +2245,8 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool
     }
 
     if (s->pivot == NULL) {
-        // add a pivot transform as the new Shape final transform
-        // No need to specify the type of the underlying Shape pointer,
-        // and no need to provide a function to free it,
-        // the pivot just keeps a weak reference on the Shape.
+        // add a pivot internal transform, managed by shape
         s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
-
-        // move shape children to pivot, letting them be affected by its translation
-        transform_utils_move_children(s->transform, s->pivot, false);
-
         transform_set_parent(s->pivot, s->transform, false);
     }
 
