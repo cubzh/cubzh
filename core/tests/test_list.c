@@ -18,6 +18,7 @@
 #include "test_utils.h"
 #include "test_filo_list_float3.h"
 #include "test_weakptr.h"
+#include "test_filo_list_uint16.h"
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
@@ -145,6 +146,9 @@ TEST_LIST = {
     { "weakptr_get_or_release", test_weakptr_get_or_release},
     { "weakptr_invalidate", test_weakptr_invalidate},
 
+    // filo_list_uint16
+    { "test_filo_list_uint16_push", test_filo_list_uint16_push },
+    { "test_filo_list_uint16_pop", test_filo_list_uint16_pop },
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
