@@ -28,6 +28,11 @@ int main(int argc, const char * argv[]) {
     options.parse_positional({"command"});
 
     auto result = options.parse(argc, argv);
+    
+    if (result.count("command") == 0) {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
 
     // ---------------------------------------------------------------
     const std::string command = result["command"].as<std::string>();
