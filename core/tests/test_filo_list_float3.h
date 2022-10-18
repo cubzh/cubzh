@@ -36,7 +36,7 @@ void test_filo_list_float3_recycle(void){
     float3_set(b, 1.0f, 2.0f, 3.0f);
 
     filo_list_float3_recycle(float3list, b);
-    filo_list_float3_pop(float3list, c);
+    filo_list_float3_pop(float3list, &c);
     TEST_CHECK(c->x == 1.0f && c->y == 2.0f && c->z == 3.0f);
 
     filo_list_float3_free(float3list);
