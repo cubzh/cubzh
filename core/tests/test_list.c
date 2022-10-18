@@ -9,6 +9,7 @@
 #include "test_hash_uint32_int.h"
 #include "test_float3.h"
 #include "test_int3.h"
+#include "test_filo_list_int3.h"
 #include "test_matrix4x4.h"
 #include "test_transform.h"
 #include "test_shape.h"
@@ -16,6 +17,10 @@
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
+
+    // filo_list_int3
+    { "filo_list_int3_pop", test_filo_list_int3_pop },
+    { "filo_list_int3_recycle", test_filo_list_int3_recycle },
 
     // float3
     { "float3_new(Number3)", test_float3_new },
@@ -27,8 +32,6 @@ TEST_LIST = {
     { "float3_operations", test_float3_operations },
     
     // float4
-
-    // filo_list_int3
 
     // int3
     { "int3_pool_pop", test_int3_pool_pop },
@@ -65,6 +68,11 @@ TEST_LIST = {
     { "matrix4x4_op_multiply_vec_vector", test_matrix4x4_op_multiply_vec_vector },
     { "matrix4x4_op_invert", test_matrix4x4_op_invert },
     { "matrix4x4_op_unscale", test_matrix4x4_op_unscale },
+
+    // shape
+    { "test_shape_addblock_1", test_shape_addblock_1 },
+    // { "test_shape_addblock_2", test_shape_addblock_2 },
+    // { "test_shape_addblock_3", test_shape_addblock_3 },
     
     // transform
     { "transform_rotation_position", test_transform_rotation_position },
@@ -86,11 +94,6 @@ TEST_LIST = {
     { "test_utils_stringArray_new", test_utils_stringArray_new},
     { "test_utils_stringArray_n_append", test_utils_stringArray_n_append},
     { "test_utils_string_split", test_utils_string_split},
-
-    // shape
-    { "test_shape_addblock_1", test_shape_addblock_1 },
-    // { "test_shape_addblock_2", test_shape_addblock_2 },
-    // { "test_shape_addblock_3", test_shape_addblock_3 },
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
