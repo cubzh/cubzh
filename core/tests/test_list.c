@@ -8,6 +8,7 @@
 
 #include "test_hash_uint32_int.h"
 #include "test_float3.h"
+#include "test_int3.h"
 #include "test_matrix4x4.h"
 #include "test_transform.h"
 #include "test_shape.h"
@@ -26,6 +27,22 @@ TEST_LIST = {
     { "float3_operations", test_float3_operations },
     
     // float4
+
+    // filo_list_int3
+
+    // int3
+    { "int3_pool_pop", test_int3_pool_pop },
+    { "int3_pool_recycle", test_int3_pool_recycle },
+    { "int3_new", test_int3_new },
+    { "int3_new_copy", test_int3_new_copy },
+    { "int3_set", test_int3_set },
+    { "int3_copy", test_int3_copy },
+    { "int3_op_add", test_int3_op_add },
+    { "int3_op_add_int", test_int3_op_add_int },
+    { "int3_op_substract_int", test_int3_op_substract_int },
+    { "int3_op_min", test_int3_op_min },
+    { "int3_op_max", test_int3_op_max },
+    { "int3_op_div_ints", test_int3_op_div_ints },
 
     // matrix4x4
     { "matrix4x4_new", test_matrix4x4_new },
