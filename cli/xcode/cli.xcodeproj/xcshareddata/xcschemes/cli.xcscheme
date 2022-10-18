@@ -51,6 +51,12 @@
             ReferencedContainer = "container:cli.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "combine -i /Users/aduermael/Desktop/tmp/head.vox -i /Users/aduermael/Desktop/tmp/hair.vox -o  /Users/aduermael/Desktop/tmp/combined.vox"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
