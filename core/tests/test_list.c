@@ -126,5 +126,14 @@ TEST_LIST = {
     { "test_utils_stringArray_n_append", test_utils_stringArray_n_append},
     { "test_utils_string_split", test_utils_string_split},
 
+    // filo_list_float3
+    { "filo_list_float3_pop", test_filo_list_float3_pop },
+    { "filo_list_float3_recycle", test_filo_list_float3_recycle },
+
+    // shape
+    { "test_shape_addblock_1", test_shape_addblock_1 },
+    // { "test_shape_addblock_2", test_shape_addblock_2 },
+    // { "test_shape_addblock_3", test_shape_addblock_3 },
+
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
