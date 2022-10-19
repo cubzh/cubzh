@@ -150,5 +150,10 @@ TEST_LIST = {
     { "test_filo_list_uint16_push", test_filo_list_uint16_push },
     { "test_filo_list_uint16_pop", test_filo_list_uint16_pop },
 
+    //block
+    { "test_block_new", test_block_new },
+
+
+
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
