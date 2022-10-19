@@ -12,6 +12,7 @@
 #include "test_float3.h"
 #include "test_float4.h"
 #include "test_matrix4x4.h"
+#include "test_quaternion.h"
 #include "test_shape.h"
 #include "test_transform.h"
 #include "test_utils.h"
@@ -70,6 +71,34 @@ TEST_LIST = {
     { "matrix4x4_op_multiply_vec_vector", test_matrix4x4_op_multiply_vec_vector },
     { "matrix4x4_op_invert", test_matrix4x4_op_invert },
     { "matrix4x4_op_unscale", test_matrix4x4_op_unscale },
+
+    // quaternion
+    { "quaternion_new", test_quaternion_new },
+    { "quaternion_new_identity", test_quaternion_new_identity },
+    { "quaternion_set", test_quaternion_set },
+    { "quaternion_set_identity", test_quaternion_set_identity },
+    { "quaternion_square_magnitude", test_quaternion_square_magnitude },
+    { "quaternion_is_zero", test_quaternion_is_zero },
+    { "quaternion_is_equal", test_quaternion_is_equal },
+    { "quaternion_angle_between", test_quaternion_angle_between },
+    { "quaternion_op_scale", test_quaternion_op_scale },
+    { "quaternion_op_unscale", test_quaternion_op_unscale },
+    { "quaternion_op_conjugate", test_quaternion_op_conjugate },
+    { "quaternion_op_normalize", test_quaternion_op_normalize },
+    { "quaternion_op_inverse", test_quaternion_op_inverse },
+    { "quaternion_op_mult", test_quaternion_op_mult },
+    { "quaternion_op_mult_right", test_quaternion_op_mult_right },
+    { "quaternion_op_lerp", test_quaternion_op_lerp },
+    { "quaternion_op_dot", test_quaternion_op_dot },
+    { "quaternion_to_rotation_matrix", test_quaternion_to_rotation_matrix },
+    { "rotation_matrix_to_quaternion", test_rotation_matrix_to_quaternion },
+    { "quaternion_to_axis_angle", test_quaternion_to_axis_angle },
+    { "axis_angle_to_quaternion", test_axis_angle_to_quaternion },
+    { "quaternion_to_euler", test_quaternion_to_euler },
+    { "euler_to_quaternion", test_euler_to_quaternion },
+    { "euler_to_quaternion_vec", test_euler_to_quaternion_vec },
+    { "quaternion_rotate_vector", test_quaternion_rotate_vector },
+    { "quaternion_coherence_check", test_quaternion_coherence_check },
 
     // shape
     { "test_shape_addblock_1", test_shape_addblock_1 },

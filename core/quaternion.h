@@ -81,8 +81,6 @@ void quaternion_op_mult_euler(float3 *euler1, const float3 *euler2);
 float4 *quaternion_to_float4(Quaternion *q);
 Quaternion *quaternion_from_float4(float4 *f);
 
-void quaternion_run_unit_tests(void);
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
