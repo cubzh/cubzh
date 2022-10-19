@@ -24,6 +24,7 @@ void test_filo_list_float3_pop(void) {
     TEST_CHECK(b->x == 0.0f && b->y == 0.0f && b->z == 0.0f);
     TEST_CHECK(filo_list_float3_pop(float3list, &c));
     TEST_CHECK(c->x == 0.0f && c->y == 0.0f && c->z == 0.0f);
+    filo_list_float3_free(float3list);
 }
 
 void test_filo_list_float3_recycle(void){
