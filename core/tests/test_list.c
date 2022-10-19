@@ -17,6 +17,7 @@
 #include "test_transform.h"
 #include "test_utils.h"
 #include "test_filo_list_float3.h"
+#include "test_weakptr.h"
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
@@ -135,6 +136,15 @@ TEST_LIST = {
     { "test_shape_addblock_1", test_shape_addblock_1 },
     // { "test_shape_addblock_2", test_shape_addblock_2 },
     // { "test_shape_addblock_3", test_shape_addblock_3 },
+
+    // weakptr
+    { "weakptr_new", test_weakptr_new },
+    { "weakptr_retain", test_weakptr_retain },
+    { "weakptr_release", test_weakptr_release },
+    { "weakptr_get", test_weakptr_get },
+    { "weakptr_get_or_release", test_weakptr_get_or_release},
+    { "weakptr_invalidate", test_weakptr_invalidate},
+
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
