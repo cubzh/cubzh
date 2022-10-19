@@ -183,6 +183,9 @@
     <ClInclude Include="..\test_filo_list_int3.h">
       <Filter>Source Files\tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\test_float4.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test_list.c">

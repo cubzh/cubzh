@@ -7,12 +7,13 @@
 #include "acutest.h"
 
 #include "test_hash_uint32_int.h"
-#include "test_float3.h"
 #include "test_int3.h"
 #include "test_filo_list_int3.h"
+#include "test_float3.h"
+#include "test_float4.h"
 #include "test_matrix4x4.h"
-#include "test_transform.h"
 #include "test_shape.h"
+#include "test_transform.h"
 #include "test_utils.h"
 
 TEST_LIST = {
@@ -32,6 +33,7 @@ TEST_LIST = {
     { "float3_operations", test_float3_operations },
     
     // float4
+    { "float4_new", test_float4_new },
 
     // int3
     { "int3_pool_pop", test_int3_pool_pop },
