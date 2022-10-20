@@ -25,27 +25,29 @@ void test_weakptr_new(void) {
 void test_weakptr_retain(void) {
 	float3* f3 = float3_new_zero();
 	Weakptr* wp = weakptr_new((void*)f3);     // 1
-	const bool result = weakptr_retain(wp);   // 2
-	weakptr_release(wp);					  // 1
 
-	TEST_CHECK(weakptr_get(wp) != NULL);
-	weakptr_release(wp);					  // 0
+	const bool result = weakptr_retain(wp);   // 2
 	TEST_CHECK(result);
 
+	weakptr_release(wp);					  // 1
+	TEST_CHECK(weakptr_get(wp) != NULL);
+
+	weakptr_release(wp);					  // 0
 	float3_free(f3);
 }
 
 // check return values
 void test_weakptr_release(void) {
 	float3* f3 = float3_new_zero();
-	Weakptr* wp = weakptr_new((void*)f3);     // 1
-	weakptr_retain(wp);						  // 2
-	const bool result1 = weakptr_release(wp); // 1
+	Weakptr* wp = weakptr_new((void*)f3);      // 1
+	weakptr_retain(wp);						   // 2
 
+	bool freed = weakptr_release(wp); // 1
+	TEST_CHECK(freed == false); // released but not freed
 	TEST_CHECK(weakptr_get(wp) != NULL);
-	const bool result2 = weakptr_release(wp); // 0
-	TEST_CHECK(result1 == false);
-	TEST_CHECK(result2);
+
+	freed = weakptr_release(wp);    // 0
+	TEST_CHECK(freed);
 
 	float3_free(f3);
 }
@@ -77,8 +79,8 @@ void test_weakptr_invalidate(void) {
 	Weakptr* wp = weakptr_new(f3);
 	weakptr_retain(wp);				// prevent wp from being freed
 	weakptr_invalidate(wp);
-	void* result = weakptr_get(wp);
 
+	void* result = weakptr_get(wp);
 	TEST_CHECK(result == NULL);
 
 	float3_free(f3);
