@@ -69,6 +69,13 @@
 
 /* Begin PBXFileReference section */
 		8546E54028F9FF69008BDB27 /* test_matrix4x4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_matrix4x4.h; path = ../test_matrix4x4.h; sourceTree = "<group>"; };
+		856811AD290135E400BA8D9F /* test_weakptr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_weakptr.h; path = ../test_weakptr.h; sourceTree = "<group>"; };
+		856811AE2901360600BA8D9F /* test_quaternion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_quaternion.h; path = ../test_quaternion.h; sourceTree = "<group>"; };
+		856811AF2901360600BA8D9F /* test_int3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_int3.h; path = ../test_int3.h; sourceTree = "<group>"; };
+		856811B02901360600BA8D9F /* test_filo_list_float3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_filo_list_float3.h; path = ../test_filo_list_float3.h; sourceTree = "<group>"; };
+		856811B12901360600BA8D9F /* test_filo_list_int3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_filo_list_int3.h; path = ../test_filo_list_int3.h; sourceTree = "<group>"; };
+		856811B22901360600BA8D9F /* test_float4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_float4.h; path = ../test_float4.h; sourceTree = "<group>"; };
+		856811B32901360600BA8D9F /* test_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_utils.h; path = ../test_utils.h; sourceTree = "<group>"; };
 		85B78E2828F8084A00AD31DE /* test_transform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_transform.h; path = ../test_transform.h; sourceTree = "<group>"; };
 		85E6382428F74695001FC12F /* unit_tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = unit_tests; sourceTree = BUILT_PRODUCTS_DIR; };
 		85E6383328F7478E001FC12F /* acutest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = acutest.h; path = ../acutest.h; sourceTree = "<group>"; };
@@ -299,12 +306,19 @@
 			isa = PBXGroup;
 			children = (
 				85E6383328F7478E001FC12F /* acutest.h */,
+				856811B02901360600BA8D9F /* test_filo_list_float3.h */,
+				856811B12901360600BA8D9F /* test_filo_list_int3.h */,
 				85E6383628F7478E001FC12F /* test_float3.h */,
+				856811B22901360600BA8D9F /* test_float4.h */,
 				85E6383728F7478E001FC12F /* test_hash_uint32_int.h */,
+				856811AF2901360600BA8D9F /* test_int3.h */,
 				85E6383528F7478E001FC12F /* test_list.c */,
 				8546E54028F9FF69008BDB27 /* test_matrix4x4.h */,
+				856811AE2901360600BA8D9F /* test_quaternion.h */,
 				85E6383428F7478E001FC12F /* test_shape.h */,
 				85B78E2828F8084A00AD31DE /* test_transform.h */,
+				856811B32901360600BA8D9F /* test_utils.h */,
+				856811AD290135E400BA8D9F /* test_weakptr.h */,
 			);
 			name = tests;
 			sourceTree = "<group>";
