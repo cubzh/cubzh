@@ -121,7 +121,6 @@ TEST_LIST = {
     { "transaction_getNewBounds", test_transaction_getNewBounds },
     { "transaction_getIndex3DIterator", test_transaction_getIndex3DIterator },
     { "transform_rotation_position", test_transform_rotation_position },
-    { "transaction_resetIndex3DIterator", test_transaction_resetIndex3DIterator },
 
     // transform
     { "transform_rotation_position", test_transform_rotation_position },

@@ -21,25 +21,16 @@ void test_transaction_new(void) {
 	transaction_free(t);
 }
 
-// check that the iterator is freed
-void test_transaction_free(void) {
-	Transaction* t = transaction_new();
-	transaction_addBlock(t, 1, 2, 3, 4);
-	const Index3DIterator* it = transaction_getIndex3DIterator(t);
-	transaction_free(t);
-
-	TEST_CHECK(it == NULL);
-}
-
 // add a block and check its color index
 void test_transaction_getCurrentBlockAt(void) {
 	Transaction* t = transaction_new();
 	const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-	const SHAPE_COORDS_INT_T color_index = 1;
+	const SHAPE_COLOR_INDEX_INT_T color_index = 1;
 	const bool ok = transaction_addBlock(t, x, y, z, color_index);
-	const Block* block = transaction_getCurrentBlockAt(t, x, y, z);
 
 	TEST_CHECK(ok);
+
+	const Block* block = transaction_getCurrentBlockAt(t, x, y, z);
 	TEST_CHECK(block->colorIndex == color_index);
 
 	transaction_free(t);
@@ -49,11 +40,12 @@ void test_transaction_getCurrentBlockAt(void) {
 void test_transaction_addBlock(void) {
 	Transaction* t = transaction_new();
 	const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-	const SHAPE_COORDS_INT_T color_index = 1;
+	const SHAPE_COLOR_INDEX_INT_T color_index = 1;
 	const bool ok = transaction_addBlock(t, x, y, z, color_index);
-	const Block* block = transaction_getCurrentBlockAt(t, x, y, z);
 
 	TEST_CHECK(ok);
+
+	const Block* block = transaction_getCurrentBlockAt(t, x, y, z);
 	TEST_CHECK(block->colorIndex == color_index);
 
 	transaction_free(t);
@@ -63,7 +55,7 @@ void test_transaction_addBlock(void) {
 void test_transaction_removeBlock(void) {
 	Transaction* t = transaction_new();
 	const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-	const SHAPE_COORDS_INT_T color_index = 1;
+	const SHAPE_COLOR_INDEX_INT_T color_index = 1;
 	transaction_removeBlock(t, x, y, z, color_index);
 	const Block* block = transaction_getCurrentBlockAt(t, x, y, z);
 
@@ -76,7 +68,7 @@ void test_transaction_removeBlock(void) {
 void test_transaction_replaceBlock(void) {
 	Transaction* t = transaction_new();
 	const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-	const SHAPE_COORDS_INT_T color_index = 2;
+	const SHAPE_COLOR_INDEX_INT_T color_index = 2;
 	transaction_addBlock(t, x, y, z, 1);
 	transaction_replaceBlock(t, x, y, z, 1, color_index);
 	const Block* block = transaction_getCurrentBlockAt(t, x, y, z);
@@ -90,7 +82,7 @@ void test_transaction_replaceBlock(void) {
 void test_transaction_getMustConsiderNewBounds(void) {
 	Transaction* t = transaction_new();
 	const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-	const SHAPE_COORDS_INT_T color_index = 1;
+	const SHAPE_COLOR_INDEX_INT_T color_index = 1;
 	transaction_addBlock(t, x, y, z, color_index);
 
 	TEST_CHECK(transaction_getMustConsiderNewBounds(t));
@@ -101,7 +93,7 @@ void test_transaction_getMustConsiderNewBounds(void) {
 // check new min / max values
 void test_transaction_getNewBounds(void) {
 	Transaction* t = transaction_new();
-	const SHAPE_COORDS_INT_T color_index = 1;
+	const SHAPE_COLOR_INDEX_INT_T color_index = 1;
 	SHAPE_COORDS_INT_T minX, minY, minZ,
 					   maxX, maxY, maxZ;
 	transaction_addBlock(t, 1, 2, 3, color_index);
@@ -129,15 +121,4 @@ void test_transaction_getIndex3DIterator(void) {
 	TEST_CHECK(empty == false);
 
 	transaction_free(t);
-}
-
-void test_transaction_resetIndex3DIterator(void) {
-	//Transaction* t = transaction_new();
-	//transaction_addBlock(t, 1, 2, 3, 4);
-	//const Index3DIterator* it = transaction_getIndex3DIterator(t);
-	//transaction_resetIndex3DIterator(t);
-
-	//TEST_CHECK(it == NULL);
-
-	//transaction_free(t);
 }
