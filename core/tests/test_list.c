@@ -19,6 +19,7 @@
 #include "test_filo_list_float3.h"
 #include "test_weakptr.h"
 #include "test_filo_list_uint16.h"
+#include "test_block.h"
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
@@ -152,6 +153,21 @@ TEST_LIST = {
 
     //block
     { "test_block_new", test_block_new },
+    { "test_block_new_air", test_block_new_air },
+    { "test_block_new_with_color", test_block_new_with_color },
+    { "test_block_new_copy", test_block_new_copy },
+    { "test_block_set_color_index", test_block_set_color_index },
+    { "test_block_get_color_index", test_block_get_color_index },
+    { "test_block_is_solid", test_block_is_solid },
+    { "test_block_equal", test_block_equal },
+    // { "test_block_is_opaque", test_block_is_opaque },
+    // { "test_block_is_transparent", test_block_is_transparent },
+    // { "test_block_is_ao_and_light_caster", test_block_is_ao_and_light_caster },
+    // { "test_block_is_any", test_block_is_any },
+    { "test_aware_block_get", test_aware_block_get },
+    { "test_aware_block_new_copy", test_aware_block_new_copy },
+    { "test_aware_block_set_touched_face", test_aware_block_set_touched_face },
+    { "test_block_getNeighbourBlockCoordinates", test_block_getNeighbourBlockCoordinates },
 
 
 
