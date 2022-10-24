@@ -44,10 +44,9 @@ typedef enum P3sCompressionMethod {
 #define P3S_CHUNK_ID_SHAPE_NAME 18 // lenName, name (optional)
 #define P3S_CHUNK_ID_SHAPE_PARENT_ID 19 // ID of parent
 #define P3S_CHUNK_ID_SHAPE_TRANSFORM 20 // transform (position,rotation,scale) (optional, default 0,0,0, 0,0,0 and 1,1,1)
-#define P3S_CHUNK_ID_NB_SHAPES 21 // number of shapes in the file (optional, default 1)
-#define P3S_CHUNK_ID_SHAPE_PIVOT 22 // pivot
-#define P3S_CHUNK_ID_SHAPE_PALETTE 23 // palette
-#define P3S_CHUNK_ID_MAX 24 // /!\ update this when adding chunks
+#define P3S_CHUNK_ID_SHAPE_PIVOT 21 // pivot
+#define P3S_CHUNK_ID_SHAPE_PALETTE 22 // palette
+#define P3S_CHUNK_ID_MAX 23 // /!\ update this when adding chunks
 
 // size of the chunk header, without chunk ID (it's already read at this point)
 #define CHUNK_V6_HEADER_NO_ID_SIZE (sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t))
@@ -79,9 +78,6 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(ColorPalette *palette,
                                                           uint32_t *compressedSize,
                                                           void **compressedData,
                                                           SHAPE_COLOR_INDEX_INT_T **paletteMapping);
-void _chunk_v6_nb_shapes_create_and_write_buffer(uint32_t nbShapes,
-                                                 uint32_t *size,
-                                                 void **data);
 
 /// Writes full chunk (header + data) in the provided memory buffer.
 /// It compresses the data if requested.
@@ -115,7 +111,6 @@ bool v6_write_size_at(long position, uint32_t size, FILE *fd);
 // Writes full chunk (header + data) to file, compress the data if required, function will free data
 // when done
 bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doCompress, FILE *fd);
-bool chunk_v6_write_nb_shapes(FILE *fd, const Shape *shape);
 bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompress, SHAPE_COLOR_INDEX_INT_T **paletteMapping);
 bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint32_t *shapeId, uint32_t shapeParentId, bool doCompress);
 bool chunk_v6_write_preview_image(FILE *fd, const void *imageData, uint32_t imageDataSize);
@@ -139,8 +134,6 @@ uint32_t chunk_v6_with_v5_header_skip(Stream *s);
 // skips a chunk with v6 header
 uint32_t chunk_v6_skip(Stream *s);
 
-uint32_t chunk_v6_read_nb_shapes(Stream *s, uint32_t *nbShapes);
-
 uint32_t chunk_v6_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette **palette, bool isLegacy);
 
 uint32_t chunk_v6_read_palette_id(Stream *s, uint8_t *paletteID);
@@ -157,7 +150,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 // chunk_v6_read_shape allocates a new Shape if shape != NULL
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
-                             Shape **shapes,
+                             DoublyLinkedList *shapes,
                              const bool fixedSize,
                              const bool octree,
                              const bool lighting,
@@ -173,7 +166,6 @@ uint32_t chunk_v6_read_preview_image(Stream *s, void **imageData, uint32_t *size
 
 static uint32_t getChunkHeaderSize(const uint8_t chunkID);
 static uint32_t compute_preview_chunk_size(const uint32_t previewBytesCount);
-static uint32_t compute_nb_shapes_chunk_size();
 static uint32_t compute_shape_chunk_size(uint32_t shapeBufferDataSize);
 
 typedef struct _ShapeBuffers {
@@ -182,7 +174,7 @@ typedef struct _ShapeBuffers {
     void *shapeCompressedData;
 } ShapeBuffers;
 
-static bool create_shape_buffers(ShapeBuffers *shapeBuffers,
+static bool create_shape_buffers(DoublyLinkedList *shapeBuffers,
                                  Shape const *shape,
                                  uint32_t *shapeId,
                                  uint32_t shapeParentId,
@@ -227,8 +219,6 @@ bool serialization_v6_save_shape(Shape *shape,
     // -------------------
     // CHUNKS
     // -------------------
-
-    chunk_v6_write_nb_shapes(fd, shape);
 
     chunk_v6_write_preview_image(fd, imageData, imageDataSize);
 
@@ -276,21 +266,16 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     size += SERIALIZATION_COMPRESSION_ALGO_SIZE;
     size += SERIALIZATION_TOTAL_SIZE_SIZE;
 
-    // NbShapes
-    uint32_t nbShapes = 1 + shape_count_shape_descendants(shape);
-    size += compute_nb_shapes_chunk_size();
-
     // Preview
     if (hasPreview) {
         const uint32_t chunkSize = compute_preview_chunk_size(previewDataSize);
         size += chunkSize;
     }
 
-    ShapeBuffers* shapesBuffers = malloc(nbShapes * sizeof(ShapeBuffers));
+    DoublyLinkedList *shapesBuffers = doubly_linked_list_new();
     if (shapesBuffers == NULL) {
         return false;
     }
-    memset(shapesBuffers, 0, nbShapes * sizeof(ShapeBuffers));
     
     uint32_t shapeId = 1;
     if (create_shape_buffers(shapesBuffers, shape, &shapeId, 0, &size) == false) {
@@ -337,46 +322,29 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
             return false;
         }
     }
-
-    // write nb shapes
-    {
-        uint32_t nbShapesDataSize = 0;
-        void *nbShapesData = NULL;
-        _chunk_v6_nb_shapes_create_and_write_buffer(nbShapes, &nbShapesDataSize, &nbShapesData);
+    
+    uint32_t i = 0;
+    DoublyLinkedListNode *n = doubly_linked_list_first(shapesBuffers);
+    while (n != NULL) {
+        ShapeBuffers *shapeBuffersCursor = (ShapeBuffers*) doubly_linked_list_node_pointer(n);
 
         ok = write_chunk_in_buffer(buf + cursor,
-                                   P3S_CHUNK_ID_NB_SHAPES,
-                                   false,
-                                   nbShapesData,
-                                   nbShapesDataSize,
-                                   nbShapesDataSize,
+                                   P3S_CHUNK_ID_SHAPE,
+                                   true,
+                                   shapeBuffersCursor->shapeCompressedData,
+                                   shapeBuffersCursor->shapeCompressedDataSize,
+                                   shapeBuffersCursor->shapeUncompressedDataSize,
                                    &cursor);
         if (ok == false) {
             free(buf);
             free(shapesBuffers);
             return false;
         }
-    }
 
-    for (uint32_t i = 0; i < nbShapes; i++) {
-        ShapeBuffers *shapeBuffersCursor = &shapesBuffers[i];
-        // write shape
-        {
-            ok = write_chunk_in_buffer(buf + cursor,
-                                       P3S_CHUNK_ID_SHAPE,
-                                       true,
-                                       shapeBuffersCursor->shapeCompressedData,
-                                       shapeBuffersCursor->shapeCompressedDataSize,
-                                       shapeBuffersCursor->shapeUncompressedDataSize,
-                                       &cursor);
-            if (ok == false) {
-                free(buf);
-                free(shapesBuffers);
-                return false;
-            }
-        }
+        free(shapeBuffersCursor);
+        n = doubly_linked_list_node_next(n);
     }
-    free(shapesBuffers);
+    doubly_linked_list_free(shapesBuffers);
 
     // update total size
     totalSize = cursor - positionBeforeChunks;
@@ -435,7 +403,6 @@ bool serialization_v6_get_preview_data(Stream *s, void **imageData, uint32_t *si
                     return false;
                 }
                 return true;
-            case P3S_CHUNK_ID_NB_SHAPES:
             case P3S_CHUNK_ID_SHAPE:
             case P3S_CHUNK_ID_PALETTE:
             case P3S_CHUNK_ID_PALETTE_LEGACY:
@@ -480,7 +447,6 @@ Shape *serialization_v6_load_shape(Stream *s,
 
     // READ ALL CHUNKS UNTIL DONE
 
-    Shape **shapes = NULL;
     Shape *finalShape = NULL;
 
     uint32_t totalSizeRead = 0;
@@ -500,6 +466,7 @@ Shape *serialization_v6_load_shape(Stream *s,
     uint8_t paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY; // by default, w/o palette ID or palette chunks
 
     uint32_t nbShapes = 1;
+    DoublyLinkedList *shapes = doubly_linked_list_new();
     while (totalSizeRead < totalSize && error == false) {
         chunkID = chunk_v6_read_identifier(s);
         totalSizeRead += 1; // size of chunk id
@@ -508,21 +475,6 @@ Shape *serialization_v6_load_shape(Stream *s,
             case P3S_CHUNK_ID_NONE: {
                 cclog_error("wrong chunk id found");
                 error = true;
-                break;
-            }
-            case P3S_CHUNK_ID_NB_SHAPES: {
-                sizeRead = chunk_v6_read_nb_shapes(s, &nbShapes);
-                if (sizeRead == 0) {
-                    cclog_error("error while reading nb chunks");
-                    error = true;
-                    break;
-                }
-                shapes = malloc(nbShapes * sizeof(Shape *));
-                memset(shapes, 0, nbShapes * sizeof(Shape *));
-                if (!shapes) {
-                    cclog_error("error reading shape, can't allocate memory");
-                }
-                totalSizeRead += sizeRead;
                 break;
             }
             case P3S_CHUNK_ID_PALETTE_LEGACY:
@@ -606,9 +558,8 @@ Shape *serialization_v6_load_shape(Stream *s,
         }
     }
 
-    if (shapes != NULL) {
-        free(shapes);
-    }
+    finalShape = (Shape *)doubly_linked_list_pop_first(shapes);
+    doubly_linked_list_free(shapes);
     
     return finalShape;
 }
@@ -671,26 +622,6 @@ bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doC
     }
 
     free(data);
-    return true;
-}
-
-bool chunk_v6_write_nb_shapes(FILE *fd, const Shape *shape) {
-    uint32_t size = 0;
-    void *data = NULL;
-
-    uint32_t nbShapes = shape_count_shape_descendants(shape) + 1;
-    _chunk_v6_nb_shapes_create_and_write_buffer(nbShapes, &size, &data);
-
-    /// write file
-    if (chunk_v6_write_file(P3S_CHUNK_ID_NB_SHAPES,
-                            size,
-                            data,
-                            false,
-                            fd) == false) {
-        cclog_error("failed to write nbShapes chunk");
-        return false;
-    }
-
     return true;
 }
 
@@ -1020,7 +951,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
-                             Shape **shapes,
+                             DoublyLinkedList *shapes,
                              const bool fixedSize,
                              const bool octree,
                              const bool lighting,
@@ -1387,11 +1318,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
         free(lightingData);
     }
     
+    doubly_linked_list_push_last(shapes, *shape);
     if (shapes) {
-        shapes[shapeId - 1] = *shape;
         int32_t parentIndex = shapeParentId - 1;
-        if (parentIndex >= 0 && shapes[parentIndex]) {
-            shape_set_parent(*shape, shape_get_root_transform(shapes[parentIndex]), false);
+        Shape *parent = (Shape *) doubly_linked_list_node_pointer(doubly_linked_list_node_at_index(shapes, parentIndex));
+        if (parentIndex >= 0 && parent) {
+            shape_set_parent(*shape, shape_get_root_transform(parent), false);
             shape_set_local_position(*shape, localTransform.position.x, localTransform.position.y, localTransform.position.z);
             shape_set_local_rotation_euler(*shape, localTransform.rotation.x, localTransform.rotation.y, localTransform.rotation.z);
             shape_set_local_scale(*shape, localTransform.scale.x, localTransform.scale.y, localTransform.scale.z);
@@ -2033,7 +1965,6 @@ uint32_t getChunkHeaderSize(const uint8_t chunkID) {
             result = sizeof(uint8_t) + sizeof(uint32_t);
             break;
         }
-        case P3S_CHUNK_ID_NB_SHAPES:
         case P3S_CHUNK_ID_PALETTE:
         case P3S_CHUNK_ID_PALETTE_LEGACY:
         case P3S_CHUNK_ID_PALETTE_ID:
@@ -2056,17 +1987,17 @@ uint32_t compute_preview_chunk_size(const uint32_t previewBytesCount) {
     return getChunkHeaderSize(P3S_CHUNK_ID_PREVIEW) + previewBytesCount;
 }
 
-uint32_t compute_nb_shapes_chunk_size() {
-    return getChunkHeaderSize(P3S_CHUNK_ID_NB_SHAPES) + sizeof(uint32_t);
-}
-
 uint32_t compute_shape_chunk_size(uint32_t shapeBufferDataSize) {
     return getChunkHeaderSize(P3S_CHUNK_ID_SHAPE) + shapeBufferDataSize;
 }
 
-bool create_shape_buffers(ShapeBuffers *shapesBuffers, Shape const *shape, uint32_t *shapeId, uint32_t shapeParentId, uint32_t *size) {
-    ShapeBuffers *currentBuffer = &(shapesBuffers[*shapeId - 1]);
-
+bool create_shape_buffers(DoublyLinkedList *shapesBuffers, Shape const *shape, uint32_t *shapeId, uint32_t shapeParentId, uint32_t *size) {
+    ShapeBuffers *currentBuffer = calloc(1, sizeof(ShapeBuffers));
+    if (currentBuffer == NULL) {
+        return false;
+    }
+    doubly_linked_list_push_last(shapesBuffers, currentBuffer);
+    
     if (chunk_v6_shape_create_and_write_compressed_buffer(shape,
                                                           *shapeId,
                                                           shapeParentId,
