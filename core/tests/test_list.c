@@ -20,6 +20,7 @@
 #include "test_weakptr.h"
 #include "test_filo_list_uint16.h"
 #include "test_block.h"
+#include "test_blockChange.h"
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
@@ -170,6 +171,9 @@ TEST_LIST = {
     { "test_block_getNeighbourBlockCoordinates", test_block_getNeighbourBlockCoordinates },
 
 
+    // blockChange
+    { "test_blockChange_get", test_blockChange_get },
+    { "test_blockChange_amend", test_blockChange_amend },
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
