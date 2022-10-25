@@ -22,6 +22,7 @@
 #include "test_filo_list_uint16.h"
 #include "test_block.h"
 #include "test_blockChange.h"
+#include "test_box.h"
 
 TEST_LIST = {
     { "hash_uint32_int", test_hash_uint32_int },
