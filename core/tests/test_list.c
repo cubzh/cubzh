@@ -171,6 +171,9 @@ TEST_LIST = {
     { "test_block_getNeighbourBlockCoordinates", test_block_getNeighbourBlockCoordinates },
 
 
+    // blockChange
+    { "test_blockChange_get", test_blockChange_get },
+    { "test_blockChange_amend", test_blockChange_amend },
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
