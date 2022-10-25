@@ -102,6 +102,7 @@ bool serialization_save_shape(Shape *shape,
 
 /// serialize a shape in a newly created memory buffer
 bool serialization_save_shape_as_buffer(Shape *shape,
+                                        ColorPalette *artistPalette,
                                         const void *previewData,
                                         const uint32_t previewDataSize,
                                         void **outBuffer,

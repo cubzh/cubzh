@@ -47,6 +47,7 @@ bool serialization_v6_save_shape(Shape *shape,
 
 /// Serialize a shape in a newly created memory buffer
 bool serialization_v6_save_shape_as_buffer(const Shape *shape,
+                                           const ColorPalette *artistPalette,
                                            const void *previewData,
                                            const uint32_t previewDataSize,
                                            void **outBuffer,
