@@ -73,7 +73,7 @@ void _chunk_v6_palette_create_and_write_uncompressed_buffer(const ColorPalette *
                                                             void **uncompressedData,
                                                             SHAPE_COLOR_INDEX_INT_T **paletteMapping);
 
-bool _chunk_v6_palette_create_and_write_compressed_buffer(ColorPalette *palette,
+bool _chunk_v6_palette_create_and_write_compressed_buffer(const ColorPalette *palette,
                                                           uint32_t *uncompressedSize,
                                                           uint32_t *compressedSize,
                                                           void **compressedData,
@@ -246,6 +246,7 @@ bool serialization_v6_save_shape(Shape *shape,
 /// - palette (optional)
 /// - imageData (optional)
 bool serialization_v6_save_shape_as_buffer(const Shape *shape,
+                                           const ColorPalette *artistPalette,
                                            const void *previewData,
                                            const uint32_t previewDataSize,
                                            void **outBuffer,
@@ -282,6 +283,21 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
         free(shapesBuffers);
         return false;
     }
+    
+    bool hasArtistPalette = false;
+    uint32_t paletteUncompressedDataSize = 0;
+    uint32_t paletteCompressedDataSize = 0;
+    void *paletteCompressedData = NULL;
+    if (artistPalette != NULL) {
+        if (_chunk_v6_palette_create_and_write_compressed_buffer(artistPalette,
+                                                                 &paletteUncompressedDataSize,
+                                                                 &paletteCompressedDataSize,
+                                                                 &paletteCompressedData, NULL) == false) {
+            return false;
+        }
+        size += getChunkHeaderSize(P3S_CHUNK_ID_PALETTE) + paletteCompressedDataSize;
+        hasArtistPalette = true;
+    }
 
     // allocate buffer
     uint8_t *buf = (uint8_t *)malloc(sizeof(char) * size);
@@ -316,6 +332,22 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     // write preview
     if (hasPreview) {
         ok = write_preview_chunk_in_buffer(buf + cursor, previewData, previewDataSize, &cursor);
+        if (ok == false) {
+            free(buf);
+            free(shapesBuffers);
+            return false;
+        }
+    }
+    
+    // write artist palette
+    if (hasArtistPalette) {
+        ok = write_chunk_in_buffer(buf + cursor,
+                                   P3S_CHUNK_ID_PALETTE,
+                                   true,
+                                   paletteCompressedData,
+                                   paletteCompressedDataSize,
+                                   paletteUncompressedDataSize,
+                                   &cursor);
         if (ok == false) {
             free(buf);
             free(shapesBuffers);
@@ -1919,13 +1951,15 @@ void _chunk_v6_palette_create_and_write_uncompressed_buffer(const ColorPalette *
     free(emissive);
 }
 
-bool _chunk_v6_palette_create_and_write_compressed_buffer(ColorPalette *palette,
+bool _chunk_v6_palette_create_and_write_compressed_buffer(const ColorPalette *palette,
                                                           uint32_t *uncompressedSize,
                                                           uint32_t *compressedSize,
                                                           void **compressedData,
                                                           SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
     void *uncompressedData = NULL;
-    *paletteMapping = NULL;
+    if (paletteMapping != NULL) {
+        *paletteMapping = NULL;
+    }
     _chunk_v6_palette_create_and_write_uncompressed_buffer(palette, uncompressedSize, &uncompressedData, paletteMapping);
 
     // zlib: compressBound estimates size so we can allocate

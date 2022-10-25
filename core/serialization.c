@@ -161,12 +161,14 @@ bool serialization_save_shape(Shape *shape,
 /// - palette (optional)
 /// - imageData (optional)
 bool serialization_save_shape_as_buffer(Shape *shape,
+                                        ColorPalette *artistPalette,
                                         const void *previewData,
                                         const uint32_t previewDataSize,
                                         void **outBuffer,
                                         uint32_t *outBufferSize) {
 
     return serialization_v6_save_shape_as_buffer(shape,
+                                                 artistPalette,
                                                  previewData,
                                                  previewDataSize,
                                                  outBuffer,
