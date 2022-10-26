@@ -5,9 +5,24 @@
 //  Created by Corentin Cailleaud on 25/10/2022.
 //
 
-#ifndef resource_h
-#define resource_h
+#pragma once
 
-#include <stdio.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* resource_h */
+enum ResourceType { // mask
+    TypeUnknown = 0,
+    TypeShape = 1,
+    TypePalette = 2,
+    TypeAll = 3, // update TypeAll when adding a new value
+};
+
+typedef struct _Resource {
+    enum ResourceType type;
+    void              *ptr;
+} Resource;
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
