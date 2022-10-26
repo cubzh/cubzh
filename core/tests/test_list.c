@@ -14,6 +14,7 @@
 #include "test_matrix4x4.h"
 #include "test_quaternion.h"
 #include "test_shape.h"
+#include "test_transaction.h"
 #include "test_transform.h"
 #include "test_utils.h"
 #include "test_filo_list_float3.h"
@@ -110,6 +111,17 @@ TEST_LIST = {
     // { "test_shape_addblock_2", test_shape_addblock_2 },
     // { "test_shape_addblock_3", test_shape_addblock_3 },
     
+    // transaction
+    { "transaction_new", test_transaction_new },
+    { "transaction_getCurrentBlockAt", test_transaction_getCurrentBlockAt },
+    { "transaction_addBlock", test_transaction_addBlock },
+    { "transaction_removeBlock", test_transaction_removeBlock },
+    { "transaction_replaceBlock", test_transaction_replaceBlock },
+    { "transaction_getMustConsiderNewBounds", test_transaction_getMustConsiderNewBounds },
+    { "transaction_getNewBounds", test_transaction_getNewBounds },
+    { "transaction_getIndex3DIterator", test_transaction_getIndex3DIterator },
+    { "transform_rotation_position", test_transform_rotation_position },
+
     // transform
     { "transform_rotation_position", test_transform_rotation_position },
     { "transform_child", test_transform_child },
