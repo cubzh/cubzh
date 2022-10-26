@@ -497,7 +497,6 @@ Shape *serialization_v6_load_shape(Stream *s,
     bool paletteLocked = false; // shouldn't happen
     uint8_t paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY; // by default, w/o palette ID or palette chunks
 
-    uint32_t nbShapes = 1;
     DoublyLinkedList *shapes = doubly_linked_list_new();
     while (totalSizeRead < totalSize && error == false) {
         chunkID = chunk_v6_read_identifier(s);
@@ -839,20 +838,6 @@ uint32_t chunk_v6_with_v5_header_skip(Stream *s) {
 uint32_t chunk_v6_skip(Stream *s) {
     uint32_t chunkSize = chunk_v6_read_size(s);
     stream_skip(s, chunkSize + CHUNK_V6_HEADER_NO_ID_SKIP_SIZE);
-    return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
-}
-
-uint32_t chunk_v6_read_nb_shapes(Stream *s, uint32_t *nbShapes) {
-    /// read file
-    void *chunkData = NULL;
-    uint32_t chunkSize = 0;
-    uint32_t uncompressedSize = 0;
-    if (chunk_v6_read(&chunkData, &chunkSize, &uncompressedSize, s) == false) {
-        cclog_error("failed to read nb shapes");
-        return 0;
-    }
-    *nbShapes = *((uint32_t *)chunkData);
-    free(chunkData);
     return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
 }
 
@@ -1287,7 +1272,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     // process blocks now
-    if (palette != NULL && shapeBlocksCursor != NULL) {
+    if ((paletteID > 0 || palette != NULL) && shapeBlocksCursor != NULL) {
         chunk_v6_read_shape_process_blocks(shapeBlocksCursor,
                                            *shape,
                                            width,
@@ -1981,15 +1966,6 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(const ColorPalette *pa
     return true;
 }
 
-void _chunk_v6_nb_shapes_create_and_write_buffer(uint32_t nbShapes,
-                                                 uint32_t *size,
-                                                 void **data) {
-    *size = sizeof(uint32_t);
-    *data = malloc(*size);
-    uint32_t *cursor = *data;
-    *cursor = nbShapes;
-}
-
 uint32_t getChunkHeaderSize(const uint8_t chunkID) {
     uint32_t result = 0;
     switch (chunkID) {
@@ -2058,4 +2034,148 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers, Shape const *shape, u
         n = doubly_linked_list_node_next(n);
     }
     return true;
+}
+
+DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAtlas, enum ResourceType filterMask) {
+    DoublyLinkedList *list = doubly_linked_list_new();
+    
+    uint8_t i;
+    if (stream_read_uint8(s, &i) == false) {
+        cclog_error("failed to read compression algo");
+        doubly_linked_list_free(list);
+        return NULL;
+    }
+    P3sCompressionMethod compressionAlgo = (P3sCompressionMethod)i;
+
+    if (compressionAlgo >= P3sCompressionMethod_COUNT) {
+        cclog_error("compression algo not supported");
+        doubly_linked_list_free(list);
+        return NULL;
+    }
+
+    uint32_t totalSize = 0;
+
+    if (stream_read_uint32(s, &totalSize) == false) {
+        cclog_error("failed to read total size");
+        doubly_linked_list_free(list);
+        return NULL;
+    }
+
+    // READ ALL CHUNKS UNTIL DONE
+
+    uint32_t totalSizeRead = 0;
+    uint32_t sizeRead = 0;
+
+    uint8_t chunkID;
+
+    bool error = false;
+
+    // Shape octree may have been serialized w/ default or shape palette indices,
+    // - if there is a serialized palette, we consider that the octree was serialized w/ shape
+    // palette indices, nothing to do
+    // - if not, the octree was serialized w/ default palette indices, we'll build a shape palette
+    // from the used default colors
+    ColorPalette *serializedPalette = NULL;
+    bool paletteLocked = false; // shouldn't happen
+    uint8_t paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY; // by default, w/o palette ID or palette chunks
+
+    DoublyLinkedList *shapes = doubly_linked_list_new();
+    while (totalSizeRead < totalSize && error == false) {
+        chunkID = chunk_v6_read_identifier(s);
+        totalSizeRead += 1; // size of chunk id
+
+        switch (chunkID) {
+            case P3S_CHUNK_ID_NONE: {
+                cclog_error("wrong chunk id found");
+                error = true;
+                break;
+            }
+            case P3S_CHUNK_ID_PALETTE_LEGACY:
+            case P3S_CHUNK_ID_PALETTE: {
+                // a shape palette is created w/ each color as "unused", until the octree is built
+                sizeRead = chunk_v6_read_palette(s, colorAtlas, &serializedPalette, chunkID == P3S_CHUNK_ID_PALETTE_LEGACY);
+                paletteID = PALETTE_ID_CUSTOM;
+
+                if (filterMask == TypeAll || (filterMask & TypePalette) > 0) {
+                    Resource *resource = malloc(sizeof(Resource));
+                    resource->ptr = serializedPalette;
+                    resource->type = TypePalette;
+                    doubly_linked_list_push_last(list, resource);
+                }
+                
+                // ignore palette if octree was processed already w/ default palette
+                // Note: shouldn't happen, palette chunk is written before shape chunk
+                if (paletteLocked) {
+                    color_palette_free(serializedPalette);
+                    serializedPalette = NULL;
+                }
+
+                if (sizeRead == 0) {
+                    cclog_error("error while reading palette");
+                    error = true;
+                    break;
+                }
+
+                totalSizeRead += sizeRead;
+                break;
+            }
+            case P3S_CHUNK_ID_PALETTE_ID: {
+                sizeRead = chunk_v6_read_palette_id(s, &paletteID);
+
+                if (sizeRead == 0) {
+                    cclog_error("error while reading palette ID");
+                    error = true;
+                    break;
+                }
+
+                totalSizeRead += sizeRead;
+                break;
+            }
+            case P3S_CHUNK_ID_SHAPE: {
+                paletteLocked = true;
+
+                Shape *shape = NULL;
+                sizeRead = chunk_v6_read_shape(s,
+                                               &shape,
+                                               shapes,
+                                               true, // limitSize
+                                               true, // octree
+                                               false, // lighting
+                                               false, // isMutable
+                                               colorAtlas,
+                                               &serializedPalette,
+                                               paletteID,
+                                               false);
+                
+                if (filterMask == TypeAll || (filterMask & TypeShape) > 0) {
+                    Resource *resource = malloc(sizeof(Resource));
+                    resource->ptr = shape;
+                    resource->type = TypeShape;
+                    doubly_linked_list_push_last(list, resource);
+                }
+
+                if (sizeRead == 0) {
+                    cclog_error("error while reading shape");
+                    error = true;
+                    break;
+                }
+                
+                totalSizeRead += sizeRead;
+                break;
+            }
+            default: {
+                // v5 chunks we don't need to read
+                totalSizeRead += chunk_v6_with_v5_header_skip(s);
+                break;
+            }
+        }
+    }
+    
+    doubly_linked_list_free(shapes);
+
+    if (error) {
+        cclog_error("error reading file");
+    }
+    
+    return list;
 }

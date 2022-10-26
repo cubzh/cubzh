@@ -13,6 +13,7 @@ ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared) {
     p->orderedCount = 0;
     p->lighting_dirty = false;
     p->sharedColors = allowShared;
+    p->wptr = NULL;
     return p;
 }
 
@@ -35,6 +36,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
     p->orderedCount = count;
     p->lighting_dirty = false;
     p->sharedColors = allowShared;
+    p->wptr = NULL;
 
     for (SHAPE_COLOR_INDEX_INT_T i = 0; i < count; ++i) {
         p->entries[i].color = colors[i];
@@ -82,6 +84,7 @@ void color_palette_free(ColorPalette *p) {
         fifo_list_free(p->availableIndices);
     }
     hash_uint32_int_free(p->colorToIdx);
+    weakptr_invalidate(p->wptr);
     free(p);
 }
 
@@ -777,4 +780,22 @@ SHAPE_COLOR_INDEX_INT_T color_palette_ordered_idx_to_entry_idx(const ColorPalett
 
 bool color_palette_needs_ordering(const ColorPalette *p) {
     return p->orderedIndices != NULL;
+}
+
+Weakptr *color_palette_get_weakptr(ColorPalette *p) {
+    if (p->wptr == NULL) {
+        p->wptr = weakptr_new(p);
+    }
+    return p->wptr;
+}
+
+Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p) {
+    if (p->wptr == NULL) {
+        p->wptr = weakptr_new(p);
+    }
+    if (weakptr_retain(p->wptr)) {
+        return p->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
 }

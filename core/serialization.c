@@ -126,6 +126,71 @@ Shape *serialization_load_shape(Stream *s,
     return shape;
 }
 
+DoublyLinkedList *serialization_load_resources(Stream *s,
+                                               const char *fullname,
+                                               ColorAtlas* colorAtlas,
+                                               enum ResourceType filterMask) {
+    if (s == NULL) {
+        cclog_error("can't load asset from NULL Stream");
+        return NULL; // error
+    }
+
+    // read magic bytes
+    if (readMagicBytes(s) != 0) {
+        cclog_error("failed to read magic bytes");
+        stream_free(s);
+        return NULL;
+    }
+
+    // read file format
+    uint32_t fileFormatVersion = 0;
+    if (stream_read_uint32(s, &fileFormatVersion) == false) {
+        cclog_error("failed to read file format version");
+        stream_free(s);
+        return NULL;
+    }
+
+    DoublyLinkedList *list = NULL;
+
+    switch (fileFormatVersion) {
+        case 5: {
+            list = doubly_linked_list_new();
+            Shape *shape = serialization_v5_load_shape(s,
+                                                       true, // limitSize
+                                                       true, // octree
+                                                       false, // lighting
+                                                       false, // isMutable
+                                                       colorAtlas,
+                                                       false);
+            Resource *resource = malloc(sizeof(Resource));
+            resource->ptr = shape;
+            resource->type = TypeShape;
+            DoublyLinkedListNode *node = doubly_linked_list_node_new(resource);
+            doubly_linked_list_push_last(list, node);
+            break;
+        }
+        case 6: {
+            list = serialization_load_resources_v6(s, colorAtlas, filterMask);
+            break;
+        }
+        default: {
+            cclog_error("file format version not supported: %d", fileFormatVersion);
+            break;
+        }
+    }
+
+    stream_free(s);
+
+    // shrink box once all blocks were added to update box origin
+    if (doubly_linked_list_node_count(list) == 0) {
+        doubly_linked_list_free(list);
+        list = NULL;
+        cclog_error("[serialization_load_resources] no resources found");
+    }
+
+    return list;
+}
+
 bool serialization_save_shape(Shape *shape,
                               const void *imageData,
                               const uint32_t imageDataSize,
