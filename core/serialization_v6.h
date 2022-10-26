@@ -15,6 +15,7 @@ extern "C" {
 
 #include "colors.h"
 #include "shape.h"
+#include "resource.h"
 
 typedef struct _Transform Transform;
 typedef struct _Stream Stream;
@@ -38,6 +39,10 @@ Shape *serialization_v6_load_shape(Stream *s,
                                    const bool isMutable,
                                    ColorAtlas *colorAtlas,
                                    bool sharedColors);
+
+DoublyLinkedList *serialization_load_resources_v6(Stream *s,
+                                                  ColorAtlas *colorAtlas,
+                                                  enum ResourceType filterMask);
 
 /// Saves shape in file w/ optional palette
 bool serialization_v6_save_shape(Shape *shape,

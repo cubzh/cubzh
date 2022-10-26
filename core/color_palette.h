@@ -51,6 +51,8 @@ typedef struct ColorPalette {
     bool sharedColors;
 
     char pad[4];
+    
+    Weakptr *wptr;
 } ColorPalette;
 
 ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared);
@@ -102,6 +104,9 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src);
 RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
                                              bool **emissive,
                                              SHAPE_COLOR_INDEX_INT_T **outMapping);
+
+Weakptr *color_palette_get_weakptr(ColorPalette *p);
+Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p);
 
 // MARK: - Default palettes -
 
