@@ -188,5 +188,21 @@ TEST_LIST = {
     { "test_blockChange_get", test_blockChange_get },
     { "test_blockChange_amend", test_blockChange_amend },
 
+    // box
+    { "test_box_new", test_box_new },
+    { "test_box_new_2", test_box_new_2 },
+    { "test_box_new_copy", test_box_new_copy },
+    { "test_box_set_bottom_center_position", test_box_set_bottom_center_position },
+    { "test_box_get_center", test_box_get_center },
+    { "test_box_copy", test_box_copy },
+    { "test_box_collide", test_box_collide },
+    { "test_box_contains", test_box_contains },
+    { "test_box_set_broadphase_box", test_box_set_broadphase_box },
+    { "test_box_get_size", test_box_get_size },
+    { "test_box_is_empty", test_box_is_empty },
+    { "test_box_squarify", test_box_squarify },
+    { "test_box_op_merge", test_box_op_merge },
+    { "test_box_get_volume", test_box_get_volume },
+
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
