@@ -2088,22 +2088,23 @@ DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAt
                 paletteLocked = true;
 
                 Shape *shape = NULL;
+                bool isMutable = (filterMask & TypeMutableShape) > 0 && (filterMask & TypeShape) == 0;
                 sizeRead = chunk_v6_read_shape(s,
                                                &shape,
                                                shapes,
                                                true, // limitSize
                                                true, // octree
                                                false, // lighting
-                                               false, // isMutable
+                                               isMutable, // isMutable
                                                colorAtlas,
                                                &serializedPalette,
                                                paletteID,
                                                false);
                 
-                if (filterMask == TypeAll || (filterMask & TypeShape) > 0) {
+                if (filterMask == TypeAll || (filterMask & TypeShape) > 0 || (filterMask & TypeMutableShape) > 0) {
                     Resource *resource = malloc(sizeof(Resource));
                     resource->ptr = shape;
-                    resource->type = TypeShape;
+                    resource->type = isMutable ? TypeMutableShape : TypeShape;
                     doubly_linked_list_push_last(list, resource);
                 }
 
