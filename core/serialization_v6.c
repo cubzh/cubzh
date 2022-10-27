@@ -79,17 +79,6 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(const ColorPalette *pa
                                                           void **compressedData,
                                                           SHAPE_COLOR_INDEX_INT_T **paletteMapping);
 
-/// Writes full chunk (header + data) in the provided memory buffer.
-/// It compresses the data if requested.
-/// It does NOT free the data.
-/// Return value: true on success, false otherwise.
-static bool compress_and_write_chunk_in_buffer(void *destBuffer,
-                                               uint8_t chunkID,
-                                               const void *chunkData,
-                                               uint32_t chunkDataSize,
-                                               bool doCompress,
-                                               uint32_t *externCursor);
-
 /// Writes chunk header and data
 static bool write_chunk_in_buffer(void *destBuffer,
                                   uint8_t chunkID,
@@ -1389,42 +1378,6 @@ uint32_t chunk_v6_read_preview_image(Stream *s, void **imageData, uint32_t *size
     *imageData = previewData;
 
     return chunkSize + 4;
-}
-
-/// Arguments:
-/// - chunkData : uncompressed data
-///
-/// If externCursor is not NULL, it is incremented by the number of bytes written.
-bool compress_and_write_chunk_in_buffer(void *destBuffer,
-                                        const uint8_t chunkID,
-                                        const void *chunkData,
-                                        const uint32_t chunkDataSize,
-                                        const bool doCompress,
-                                        uint32_t *externCursor) {
-
-    const uint32_t uncompressedSize = chunkDataSize;
-
-    const void *data = chunkData;
-    uint32_t size = chunkDataSize;
-
-    // compress chunk data if requested
-    if (doCompress == true) {
-        uLong compressedSize = compressBound(chunkDataSize);
-        void *compressedData = malloc(compressedSize);
-        if (compress(compressedData, &compressedSize, chunkData, chunkDataSize) != Z_OK) {
-            return false;
-        }
-        data = compressedData;
-        size = (uint32_t)compressedSize;
-    }
-
-    return write_chunk_in_buffer(destBuffer,
-                                 chunkID,
-                                 doCompress,
-                                 data,
-                                 size,
-                                 uncompressedSize,
-                                 externCursor);
 }
 
 static bool write_chunk_in_buffer(void *destBuffer,
