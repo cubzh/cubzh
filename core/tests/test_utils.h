@@ -262,25 +262,28 @@ void test_utils_stringArray_n_append(void){
 }
 
 void test_utils_string_split(void){
-
-    stringArray_t *arr = stringArray_new();
-
     char *str = "Hello World This Is Moon";
     char *delimiters = " ";
     char *check = NULL;
+    stringArray_t* arr = string_split(str, delimiters);
 
-    arr = string_split(str, delimiters);
     check = stringArray_get(arr, 0);
     TEST_CHECK(strcmp(check, "Hello") == 0);
+
     check = stringArray_get(arr, 1);
     TEST_CHECK(strcmp(check, "World") == 0);
+
     check = stringArray_get(arr, 2);
     TEST_CHECK(strcmp(check, "This") == 0);
+
     check = stringArray_get(arr, 3);
     TEST_CHECK(strcmp(check, "Is") == 0);
+
     check = stringArray_get(arr, 4);
     TEST_CHECK(strcmp(check, "Moon") == 0);
+
     check = stringArray_get(arr, 5);
     TEST_CHECK(check == NULL);
+
     stringArray_free(arr);
 }

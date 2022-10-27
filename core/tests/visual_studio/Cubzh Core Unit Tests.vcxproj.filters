@@ -195,6 +195,21 @@
     <ClInclude Include="..\test_transaction.h">
       <Filter>Source Files\tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\test_utils.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_block.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_blockChange.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_filo_list_float3.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_filo_list_uint16.h">
+      <Filter>Source Files\tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test_list.c">
