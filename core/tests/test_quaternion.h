@@ -123,7 +123,8 @@ void test_quaternion_angle_between(void) {
 
 // check that scaling and unscaling does the same thing
 void test_quaternion_op_scale(void) {
-    Quaternion q1 = { 2.0f, 3.0f, 4.0f, 5.0f, false }, q2;
+    Quaternion q1 = { 2.0f, 3.0f, 4.0f, 5.0f, false };
+    Quaternion q2 = quaternion_identity;
     quaternion_set(&q2, &q1);
     quaternion_op_unscale(quaternion_op_scale(&q2, .2f), .2f);
     Quaternion* q3 = quaternion_new(2.0f, 3.0f, 4.0f, 5.0f, false);
@@ -176,7 +177,8 @@ void test_quaternion_op_normalize(void) {
 
 // check that inversing twice gives the same result
 void test_quaternion_op_inverse(void) {
-    Quaternion a = { 2.0f, 3.0f, 4.0f, 5.0f, false }, b;
+    Quaternion a = { 2.0f, 3.0f, 4.0f, 5.0f, false };
+    Quaternion b = quaternion_identity;
     quaternion_set(&b, &a);
     quaternion_op_inverse(quaternion_op_inverse(&b));
 
@@ -185,16 +187,17 @@ void test_quaternion_op_inverse(void) {
 
 // check that q * (1 / q) == q
 void test_quaternion_op_mult(void) {
-    Quaternion a, b, c;
-    float3 f3;
-    float3_set(&f3, 0.1f, 0.3f, 2.1f);
+    const float3 f3 = {.x = 0.1f, .y = 0.3f, .z = 2.1f};
+    Quaternion a = quaternion_identity;
+    Quaternion b = quaternion_identity;
+    Quaternion c = quaternion_identity;
     euler_to_quaternion_vec(&f3, &b);
     c = quaternion_op_mult(&a, &b);
     c = quaternion_op_mult(&c, quaternion_op_inverse(&b));
     Quaternion* d = quaternion_new(2.0f, 3.0f, 4.0f, 5.0f, true);
     Quaternion* e = quaternion_new(-7.0f, 8.0f, 9.0f, 1.0f, true);
-    const Quaternion result = quaternion_op_mult(d, e);
-    const Quaternion expected = { -38.0f, -3.0f, 86.0f, -41.0f, false };
+    Quaternion result = quaternion_op_mult(d, e);
+    Quaternion expected = { -38.0f, -3.0f, 86.0f, -41.0f, false };
 
     TEST_CHECK(quaternion_is_equal(&c, &a, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(quaternion_is_equal(&result, &expected, EPSILON_QUATERNION_ERROR));
@@ -207,7 +210,7 @@ void test_quaternion_op_mult(void) {
 void test_quaternion_op_mult_right(void) {
     Quaternion* a = quaternion_new(2.0f, 3.0f, 4.0f, 5.0f, true);
     Quaternion* b = quaternion_new(-7.0f, 8.0f, 9.0f, 1.0f, true);
-    const Quaternion expected = { -38.0f, -3.0f, 86.0f, -41.0f, false };
+    Quaternion expected = { -38.0f, -3.0f, 86.0f, -41.0f, false };
     quaternion_op_mult_right(a, b);
 
     TEST_CHECK(quaternion_is_equal(b, &expected, EPSILON_QUATERNION_ERROR));
@@ -218,7 +221,10 @@ void test_quaternion_op_mult_right(void) {
 
 // check that 0 gives start value and 1 gives end value
 void test_quaternion_op_lerp(void) {
-    Quaternion a = { -1.0f, 0.0f, 0.5f, 0.25f, false }, b, c, d;
+    Quaternion a = { -1.0f, 0.0f, 0.5f, 0.25f, false };
+    Quaternion b = quaternion_identity;
+    Quaternion c = quaternion_identity;
+    Quaternion d = quaternion_identity;
     float3 f3;
     float3_set(&f3, 0.1f, 0.3f, 2.1f);
     euler_to_quaternion_vec(&f3, &b);
@@ -227,10 +233,10 @@ void test_quaternion_op_lerp(void) {
     Quaternion* e = quaternion_new(1.0f, 2.0f, 3.0f, 0.0f, false);
     Quaternion* f = quaternion_new_identity();
     Quaternion result;
-    const Quaternion expected = { 0.5f, 1.0f, 1.5f, 0.5f, false };
     quaternion_op_lerp(e, f, &result, 0.5f);
+    const Quaternion expected = { 0.5f, 1.0f, 1.5f, 0.5f, false };
 
-     TEST_CHECK(float_isEqual(c.x, a.x, EPSILON_QUATERNION_ERROR));
+    TEST_CHECK(float_isEqual(c.x, a.x, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(float_isEqual(c.y, a.y, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(float_isEqual(c.z, a.z, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(float_isEqual(c.w, a.w, EPSILON_QUATERNION_ERROR));
@@ -259,7 +265,8 @@ void test_quaternion_op_dot(void) {
 
 // check that quaternion -> matrix -> quaternion gives the input value
 void test_quaternion_to_rotation_matrix(void) {
-    Quaternion a, b;
+    Quaternion a = quaternion_identity;
+    Quaternion b = quaternion_identity;
     Matrix4x4* mtx = matrix4x4_new_identity();
     float3 f3 = { 9.2f, 1.5f, 0.8f };
     euler_to_quaternion_vec(&f3, &a);
@@ -276,7 +283,8 @@ void test_quaternion_to_rotation_matrix(void) {
 
 // same tests as before
 void test_rotation_matrix_to_quaternion(void) {
-    Quaternion a, b;
+    Quaternion a = quaternion_identity;
+    Quaternion b = quaternion_identity;
     Matrix4x4* mtx = matrix4x4_new_identity();
     float3 f3 = { 9.2f, 1.5f, 0.8f };
     euler_to_quaternion_vec(&f3, &a);
@@ -290,7 +298,7 @@ void test_rotation_matrix_to_quaternion(void) {
 
 // check that quaternion -> angle -> quaternion gives the input value
 void test_quaternion_to_axis_angle(void) {
-    Quaternion q;
+    Quaternion q = quaternion_identity;
     float f;
     float3 a, b;
     axis_angle_to_quaternion(&a, 0.6f, &q);
@@ -302,7 +310,7 @@ void test_quaternion_to_axis_angle(void) {
 
 // same tests as before
 void test_axis_angle_to_quaternion(void) {
-    Quaternion q;
+    Quaternion q = quaternion_identity;
     float f;
     float3 a, b;
     axis_angle_to_quaternion(&a, 0.6f, &q);
@@ -314,7 +322,7 @@ void test_axis_angle_to_quaternion(void) {
 
 // check that quaternion -> euler -> quaternion gives the input value
 void test_quaternion_to_euler(void) {
-    Quaternion q;
+    Quaternion q = quaternion_identity;
     float3 a, b;
     float3_set(&a, 0.2f, 1.5f, 0.8f);
     euler_to_quaternion_vec(&a, &q);
@@ -325,7 +333,7 @@ void test_quaternion_to_euler(void) {
 
 // same tests as before
 void test_euler_to_quaternion(void) {
-    Quaternion q;
+    Quaternion q = quaternion_identity;
     float3 a, b;
     float3_set(&a, 0.2f, 1.5f, 0.8f);
     euler_to_quaternion(a.x, a.y, a.z, &q);
@@ -336,7 +344,7 @@ void test_euler_to_quaternion(void) {
 
 // same tests as before
 void test_euler_to_quaternion_vec(void) {
-    Quaternion q;
+    Quaternion q = quaternion_identity;
     float3 a, b;
     float3_set(&a, 0.2f, 1.5f, 0.8f);
     euler_to_quaternion_vec(&a, &q);
@@ -359,7 +367,10 @@ void test_quaternion_rotate_vector(void) {
 
 // legacy tests
 void test_quaternion_coherence_check(void) {
-    Quaternion q1, q2, q3, q4;
+    Quaternion q1 = quaternion_identity;
+    Quaternion q2 = quaternion_identity;
+    Quaternion q3 = quaternion_identity;
+    Quaternion q4 = quaternion_identity;
     float f;
     float3 e1, e2, e3, e4;
     float3 v1, v2;
@@ -371,66 +382,66 @@ void test_quaternion_coherence_check(void) {
     float3_set(&v1, 3, -8, 2);
     float3_normalize(&v1);
 
-    //// Redundant checks
-    /// Euler
+    // Redundant checks
+    // Euler
     euler_to_quaternion_vec(&e1, &q1);
     quaternion_to_euler(&q1, &e3);
     TEST_CHECK(float3_isEqual(&e1, &e3, EPSILON_QUATERNION_ERROR));
 
-    /// Rotation matrix
+    // Rotation matrix
     quaternion_to_rotation_matrix(&q1, mtx1);
     rotation_matrix_to_quaternion(mtx1, &q2);
     TEST_CHECK(quaternion_is_equal(&q1, &q2, EPSILON_QUATERNION_ERROR));
 
-    /// Axis-angle
+    // Axis-angle
     axis_angle_to_quaternion(&v1, .6f, &q2);
     quaternion_to_axis_angle(&q2, &v2, &f);
     TEST_CHECK(float3_isEqual(&v1, &v2, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(float_isEqual(f, .6f, EPSILON_QUATERNION_ERROR));
 
-    /// Inverse
+    // Inverse
     quaternion_set(&q2, &q1);
     quaternion_op_inverse(quaternion_op_inverse(&q2));
     TEST_CHECK(quaternion_is_equal(&q1, &q2, EPSILON_QUATERNION_ERROR));
 
-    /// Scale
+    // Scale
     quaternion_set(&q2, &q1);
     quaternion_op_unscale(quaternion_op_scale(&q2, .2f), .2f);
     TEST_CHECK(quaternion_is_equal(&q1, &q2, EPSILON_QUATERNION_ERROR));
 
-    /// Mult
+    // Mult
     euler_to_quaternion_vec(&e2, &q2);
     q3 = quaternion_op_mult(&q1, &q2);
     q3 = quaternion_op_mult(&q3, quaternion_op_inverse(&q2));
     TEST_CHECK(quaternion_is_equal(&q3, &q1, EPSILON_QUATERNION_ERROR));
 
-    /// Lerp
+    // Lerp
     euler_to_quaternion_vec(&e2, &q2);
     quaternion_op_lerp(&q1, &q2, &q3, 0.0f);
     TEST_CHECK(quaternion_is_equal(&q3, &q1, EPSILON_QUATERNION_ERROR));
     quaternion_op_lerp(&q1, &q2, &q3, 1.0f);
     TEST_CHECK(quaternion_is_equal(&q3, &q2, EPSILON_QUATERNION_ERROR));
 
-    /// Rotate
+    // Rotate
     float3_copy(&v2, &v1);
     quaternion_rotate_vector(&q1, &v2);
     quaternion_rotate_vector(quaternion_op_inverse(&q1), &v2);
     TEST_CHECK(float3_isEqual(&v1, &v2, EPSILON_QUATERNION_ERROR));
 
-    //// Singularities checks
+    // Singularities checks
     // TODO check every 90° steps (not sure where our singularities are)
 
-    //// Error tolerance check
-    /// number of calculations could increase with scene depth, how deep can we go without
-    /// normalizing?
+    // Error tolerance check
+    // number of calculations could increase with scene depth, how deep can we go without
+    // normalizing?
     /*quaternion_set(&q2, &q1);
      for (int i = 0; i < 200; ++i) {
      q2 = quaternion_op_mult(&q2, &q1);
      TEST_CHECK(quaternion_is_normalized(&q2, EPSILON_QUATERNION_ERROR) == true)
      }*/
-     /// on Android, answer is: 36 times
+    // on Android, answer is: 36 times
 
-     //// Quaternion & matrix coherence check
+    // Quaternion & matrix coherence check
     q3 = quaternion_op_mult(&q1, &q2);
 
     quaternion_to_rotation_matrix(&q1, mtx1);
