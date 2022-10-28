@@ -33,16 +33,13 @@ typedef struct _LocalTransform {
 /// Load shape from file
 /// Returns NULL if the shape can't be loaded
 Shape *serialization_v6_load_shape(Stream *s,
-                                   bool limitSize,
-                                   bool octree,
-                                   bool lighting,
-                                   const bool isMutable,
-                                   ColorAtlas *colorAtlas,
-                                   bool sharedColors);
+                                   LoadShapeSettings *shapeSettings,
+                                   ColorAtlas *colorAtlas);
 
 DoublyLinkedList *serialization_load_resources_v6(Stream *s,
                                                   ColorAtlas *colorAtlas,
-                                                  enum ResourceType filterMask);
+                                                  enum ResourceType filterMask,
+                                                  LoadShapeSettings *shapeSettings);
 
 /// Saves shape in file w/ optional palette
 bool serialization_v6_save_shape(Shape *shape,
