@@ -26,7 +26,7 @@ File
 -------------------------------------------------------------------------------
 6        | char       | magic bytes 'CUBZH!' : 'C' 'U' 'B' 'Z' 'H' '!', 'C' is first
 4        | int        | version number : 6
-1        | uint8      | p3s compression method : 0 (none), 1 (zip)
+1        | uint8      | compression method : 0 (none), 1 (zip)
 4        | uint32     | total size of data (compressed or not)
 
 
@@ -42,7 +42,7 @@ N or M   |            | chunk content
 -------------------------------------------------------------------------------
 
 
-3. Chunk id 'PREVIEW' : if it is absent, no PNG preview available
+3. Chunk id 'PREVIEW' (1) : if it is absent, no PNG preview available
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -50,13 +50,13 @@ N        |            | PNG bytes
 -------------------------------------------------------------------------------
 
 
-4. Chunk id 'PALETTE' : optional, contains colors. Not related to any shapes in the file (except legacy single shape files, this chunk is the palette of the shape)
+4. Chunk id 'PALETTE' : optional, contains colors. Not related to any shapes
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
 1        | uint8      | color count (N)
-N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
-1 x N    | uint8      | emissive flag
+N x 4    | uint8      | (r, g, b, alpha) : 1 byte for each entry
+N        | uint8      | emissive flag
 -------------------------------------------------------------------------------
 
 
@@ -72,9 +72,11 @@ N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
 }
 
 
-6. Chunk id 'SHAPE'
+6. Chunk id 'SHAPE' (3)
 {
     SubChunk 'OBJECT_ID' : optional (default 1)
+
+    SubChunk 'OBJECT_NAME' : optional
 
     SubChunk 'OBJECT_PARENT' : optional
 
@@ -88,21 +90,10 @@ N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
 
     SubChunk 'SHAPE_BLOCKS'
 
-    // POIs position
-    SubChunk 'SHAPE_POINT' : optional
+    SubChunk 'SHAPE_POINT' : optional, multiple (named point)
 
-    ...
+    SubChunk 'SHAPE_POINT_ROTATION' : optional, multiple (named rotation)
 
-    SubChunk 'SHAPE_POINT' : optional
-
-    // POIs rotation
-    SubChunk 'SHAPE_POINT_ROTATION' : optional
-
-    ...
-
-    SubChunk 'SHAPE_POINT_ROTATION' : optional
-
-    // Baked lighting
     SubChunk 'SHAPE_BAKED_LIGHTING' : optional
 }
 
@@ -116,23 +107,32 @@ N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
 -------------------------------------------------------------------------------
 
 
-8. SubChunk id 'OBJECT_ID' : only for serialization in parent id
+8. SubChunk id 'OBJECT_ID' (17) : only for serialization in parent id
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
-4        | uint32     | id
+2        | uint16     | id
 -------------------------------------------------------------------------------
 
 
-9. SubChunk id 'OBJECT_PARENT' : based on chunk 'OBJECT_ID'
+9. SubChunk id 'OBJECT_NAME' (17) : only for serialization in parent id
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
-4        | uint32     | id
+1        | uint8      | lenName (N)
+N        | string     | name
 -------------------------------------------------------------------------------
 
 
-10. SubChunk id 'OBJECT_TRANSFORM' : local transform, only if chunk 'OBJECT_PARENT' defined
+10. SubChunk id 'OBJECT_PARENT' (19) : based on chunk 'OBJECT_ID'
+-------------------------------------------------------------------------------
+# Bytes  | Type       | Value
+-------------------------------------------------------------------------------
+2        | uint16     | id
+-------------------------------------------------------------------------------
+
+
+11. SubChunk id 'OBJECT_TRANSFORM' (20) : local transform, only if chunk 'OBJECT_PARENT' defined
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -148,7 +148,7 @@ N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
 -------------------------------------------------------------------------------
 
 
-11. SubChunk id 'OBJECT_PIVOT' : optional, default center of shape
+12. SubChunk id 'OBJECT_PIVOT' (21) : optional, default center of shape
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -158,7 +158,7 @@ N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
 -------------------------------------------------------------------------------
 
 
-12. SubChunk id 'SHAPE_SIZE'
+13. SubChunk id 'SHAPE_SIZE' (4)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -168,7 +168,7 @@ N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
 -------------------------------------------------------------------------------
 
 
-13. SubChunk id 'SHAPE_BLOCKS'
+14. SubChunk id 'SHAPE_BLOCKS' (5)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ C * 1    | uint8      | palette index (255 if air block) (C is blockCount)
 -------------------------------------------------------------------------------
 
 
-14. SubChunk id 'SHAPE_POINT'
+15. SubChunk id 'SHAPE_POINT' (6)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -188,7 +188,7 @@ N * 1    | string     | name
 -------------------------------------------------------------------------------
 
 
-15. SubChunk id 'SHAPE_POINT_ROTATION'
+16. SubChunk id 'SHAPE_POINT_ROTATION' (8)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -200,7 +200,7 @@ N * 1    | string     | name
 -------------------------------------------------------------------------------
 
 
-16. SubChunk id 'SHAPE_BAKED_LIGHTING'
+17. SubChunk id 'SHAPE_BAKED_LIGHTING' (7)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -208,11 +208,11 @@ C * 2    | uint8      | light : 2 bytes per block (C is blockCount)
 -------------------------------------------------------------------------------
 
 
-17. SubChunk id 'SHAPE_PALETTE' : optional, contains the colors of the shape
+18. SubChunk id 'SHAPE_PALETTE' (22) : optional, contains the colors of the shape
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
 1        | uint8      | color count (N)
-N        | uint8 x 4  | (r, g, b, alpha) : 1 byte for each entry
-1 x N    | uint8      | emissive flag
+N x 4    | uint8      | (r, g, b, alpha) : 1 byte for each entry
+N        | uint8      | emissive flag
 -------------------------------------------------------------------------------
