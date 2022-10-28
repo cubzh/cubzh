@@ -23,12 +23,8 @@ typedef struct _Stream Stream;
 /// Load shape from file
 /// Returns NULL if the shape can't be loaded
 Shape *serialization_v5_load_shape(Stream *s,
-                                   bool limitSize,
-                                   bool octree,
-                                   bool lighting,
-                                   bool isMutable,
-                                   ColorAtlas *colorAtlas,
-                                   bool sharedColors);
+                                   LoadShapeSettings *shapeSettings,
+                                   ColorAtlas *colorAtlas);
 
 /// get preview data from save file path (caller must free *imageData)
 bool serialization_v5_get_preview_data(Stream *s, void **imageData, uint32_t *size);

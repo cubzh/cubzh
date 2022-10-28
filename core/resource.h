@@ -15,8 +15,7 @@ enum ResourceType { // mask
     TypeUnknown = 0,
     TypeShape = 1,
     TypePalette = 2,
-    TypeMutableShape = 4, // if Shape and MutableShape are in the mask, return Shape
-    TypeAll = 7, // update TypeAll when adding a new value
+    TypeAll = 3, // update TypeAll when adding a new value
 };
 
 typedef struct _Resource {

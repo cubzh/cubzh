@@ -48,88 +48,47 @@ uint8_t readMagicBytesLegacy(Stream *s) {
     return 0; // ok
 }
 
+Shape *resources_get_root_shape(DoublyLinkedList *list) {
+    Shape *shape = NULL;
+    DoublyLinkedListNode *node = doubly_linked_list_first(list);
+    while (node != NULL) {
+        Resource *r = (Resource *) doubly_linked_list_node_pointer(node);
+        if (r->type == TypeShape) {
+            Shape *s = (Shape *) r->ptr;
+            if (transform_get_parent(shape_get_root_transform(s)) == NULL) {
+                shape = s;
+                break;
+            }
+        }
+        node = doubly_linked_list_node_next(node);
+        if (node == doubly_linked_list_first(list)) {
+            node = NULL;
+        }
+    }
+    return shape;
+}
+
 /// This does free the Stream
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
-                                bool limitSize,
-                                bool octree,
-                                bool lighting,
-                                bool isMutable,
                                 ColorAtlas* colorAtlas,
-                                bool sharedColors,
+                                LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
-
-    Shape *shape = NULL;
-
-    if (s == NULL) {
-        cclog_error("can't load shape from NULL Stream");
-        return NULL; // error
-    }
-
-    // read magic bytes
-    if (readMagicBytes(s) != 0) {
-        // go back to the beginning and try the legacy magic bytes
-        stream_set_cursor_position(s, 0);
-        if (allowLegacy == false || readMagicBytesLegacy(s) != 0) {
-            cclog_error("failed to read magic bytes");
-            stream_free(s);
-            return NULL;
-        }
-    }
-
-    // read file format
-    uint32_t fileFormatVersion = 0;
-    if (stream_read_uint32(s, &fileFormatVersion) == false) {
-        cclog_error("failed to read file format version");
-        stream_free(s);
+    DoublyLinkedList *shapes = serialization_load_resources(s, fullname, TypeShape, colorAtlas, shapeSettings);
+    // s is NULL if it could not be loaded
+    if (shapes == NULL) {
         return NULL;
     }
-
-    switch (fileFormatVersion) {
-        case 5: {
-            shape = serialization_v5_load_shape(s,
-                                                limitSize,
-                                                octree,
-                                                lighting,
-                                                isMutable,
-                                                colorAtlas,
-                                                sharedColors);
-            break;
-        }
-        case 6: {
-            shape = serialization_v6_load_shape(s,
-                                                limitSize,
-                                                octree,
-                                                lighting,
-                                                isMutable,
-                                                colorAtlas,
-                                                sharedColors);
-            break;
-        }
-        default: {
-            cclog_error("file format version not supported: %d", fileFormatVersion);
-            break;
-        }
-    }
-
-    stream_free(s);
-
-    // shrink box once all blocks were added to update box origin
-    if (shape != NULL) {
-        shape_shrink_box(shape);
-        shape_set_fullname(shape, fullname);
-    } else {
-        cclog_error("[serialization_load_shape] shape is NULL");
-    }
-
-    // s is NULL if it could not be loaded
+    Shape *shape = resources_get_root_shape(shapes);
+    doubly_linked_list_free(shapes);
     return shape;
 }
 
 DoublyLinkedList *serialization_load_resources(Stream *s,
                                                const char *fullname,
+                                               enum ResourceType filterMask,
                                                ColorAtlas* colorAtlas,
-                                               enum ResourceType filterMask) {
+                                               LoadShapeSettings *shapeSettings) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
         return NULL; // error
@@ -155,13 +114,7 @@ DoublyLinkedList *serialization_load_resources(Stream *s,
     switch (fileFormatVersion) {
         case 5: {
             list = doubly_linked_list_new();
-            Shape *shape = serialization_v5_load_shape(s,
-                                                       true, // limitSize
-                                                       true, // octree
-                                                       false, // lighting
-                                                       false, // isMutable
-                                                       colorAtlas,
-                                                       false);
+            Shape *shape = serialization_v5_load_shape(s, shapeSettings, colorAtlas);
             Resource *resource = malloc(sizeof(Resource));
             resource->ptr = shape;
             resource->type = TypeShape;
@@ -170,7 +123,7 @@ DoublyLinkedList *serialization_load_resources(Stream *s,
             break;
         }
         case 6: {
-            list = serialization_load_resources_v6(s, colorAtlas, filterMask);
+            list = serialization_load_resources_v6(s, colorAtlas, filterMask, shapeSettings);
             break;
         }
         default: {
@@ -186,6 +139,14 @@ DoublyLinkedList *serialization_load_resources(Stream *s,
         doubly_linked_list_free(list);
         list = NULL;
         cclog_error("[serialization_load_resources] no resources found");
+    }
+    
+    // set fullname if containing a root shape
+    Shape *shape = resources_get_root_shape(list);
+    if (shape != NULL) {
+        shape_set_fullname(shape, fullname);
+    } else {
+        cclog_error("[serialization_load_shape] shape is NULL");
     }
 
     return list;
