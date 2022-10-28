@@ -56,14 +56,14 @@ typedef enum P3sCompressionMethod {
 // MARK: Write as buffer -
 
 bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
-                                                         uint32_t shapeId,
-                                                         uint32_t shapeParentId,
+                                                         uint16_t shapeId,
+                                                         uint16_t shapeParentId,
                                                          uint32_t *uncompressedSize,
                                                          void **uncompressedData);
 
 bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
-                                                       uint32_t shapeId,
-                                                       uint32_t shapeParentId,
+                                                       uint16_t shapeId,
+                                                       uint16_t shapeParentId,
                                                        uint32_t *uncompressedSize,
                                                        uint32_t *compressedSize,
                                                        void **compressedData);
@@ -101,7 +101,7 @@ bool v6_write_size_at(long position, uint32_t size, FILE *fd);
 // when done
 bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doCompress, FILE *fd);
 bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompress, SHAPE_COLOR_INDEX_INT_T **paletteMapping);
-bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint32_t *shapeId, uint32_t shapeParentId, bool doCompress);
+bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint16_t *shapeId, uint16_t shapeParentId, bool doCompress);
 bool chunk_v6_write_preview_image(FILE *fd, const void *imageData, uint32_t imageDataSize);
 
 // MARK: Read -
@@ -161,8 +161,8 @@ typedef struct _ShapeBuffers {
 
 static bool create_shape_buffers(DoublyLinkedList *shapeBuffers,
                                  Shape const *shape,
-                                 uint32_t *shapeId,
-                                 uint32_t shapeParentId,
+                                 uint16_t *shapeId,
+                                 uint16_t shapeParentId,
                                  uint32_t *size);
 
 // MARK: - Exposed functions -
@@ -207,7 +207,7 @@ bool serialization_v6_save_shape(Shape *shape,
 
     chunk_v6_write_preview_image(fd, imageData, imageDataSize);
 
-    uint32_t shapeId = 1;
+    uint16_t shapeId = 1;
     chunk_v6_write_shape(fd, shape, &shapeId, 0, true);
 
     // -------------------
@@ -263,7 +263,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
         return false;
     }
     
-    uint32_t shapeId = 1;
+    uint16_t shapeId = 1;
     if (create_shape_buffers(shapesBuffers, shape, &shapeId, 0, &size) == false) {
         free(shapesBuffers);
         return false;
@@ -649,7 +649,7 @@ bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompre
     return true;
 }
 
-bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint32_t *shapeId, uint32_t shapeParentId, bool doCompress) {
+bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint16_t *shapeId, uint16_t shapeParentId, bool doCompress) {
 
     if (fd == NULL) {
         return false;
@@ -992,8 +992,8 @@ uint32_t chunk_v6_read_shape(Stream *s,
     uint16_t height = 0;
     uint16_t depth = 0;
     
-    uint32_t shapeId = 1;
-    uint32_t shapeParentId = 0;
+    uint16_t shapeId = 1;
+    uint16_t shapeParentId = 0;
     LocalTransform localTransform;
     memset(&localTransform, 0, sizeof(LocalTransform));
     localTransform.scale.x = 1;
@@ -1015,16 +1015,16 @@ uint32_t chunk_v6_read_shape(Stream *s,
             case P3S_CHUNK_ID_SHAPE_ID: {
                 memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
-                memcpy(&shapeId, cursor, sizeof(uint32_t));
-                cursor = (void *)((uint32_t *)cursor + 1);
+                memcpy(&shapeId, cursor, sizeof(uint16_t));
+                cursor = (void *)((uint16_t *)cursor + 1);
                 totalSizeRead += sizeRead + sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_PARENT_ID: {
                 memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
-                memcpy(&shapeParentId, cursor, sizeof(uint32_t));
-                cursor = (void *)((uint32_t *)cursor + 1);
+                memcpy(&shapeParentId, cursor, sizeof(uint16_t));
+                cursor = (void *)((uint16_t *)cursor + 1);
                 totalSizeRead += sizeRead + sizeof(uint32_t);
                 break;
             }
@@ -1446,8 +1446,8 @@ bool write_preview_chunk_in_buffer(void *destBuffer,
 }
 
 bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
-                                                         uint32_t shapeId,
-                                                         uint32_t shapeParentId,
+                                                         uint16_t shapeId,
+                                                         uint16_t shapeParentId,
                                                          uint32_t *uncompressedSize,
                                                          void **uncompressedData) {
 
@@ -1499,8 +1499,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     // shape sub-chunks size
     uint32_t subheaderSize = sizeof(uint8_t) + sizeof(uint32_t);
     uint32_t shapeSizeSize = 3 * sizeof(uint16_t);
-    uint32_t shapeIdSize = sizeof(uint32_t);
-    uint32_t shapeParentIdSize = sizeof(uint32_t);
+    uint32_t shapeIdSize = sizeof(uint16_t);
+    uint32_t shapeParentIdSize = sizeof(uint16_t);
     uint32_t shapePivotSize = sizeof(float3);
     uint32_t shapeLocalTransformSize = sizeof(LocalTransform);
     uint32_t shapeBlocksSize = blockCount * sizeof(uint8_t);
@@ -1596,8 +1596,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         memcpy(cursor, &shapeIdSize, sizeof(uint32_t)); // size chunk ID
         cursor = (void *)((uint32_t *)cursor + 1);
 
-        memcpy(cursor, &shapeId, sizeof(uint32_t));
-        cursor = (void *)((uint32_t *)cursor + 1);
+        memcpy(cursor, &shapeId, sizeof(uint16_t));
+        cursor = (void *)((uint16_t *)cursor + 1);
     }
     
     // shape parent id sub-chunk and transform
@@ -1609,8 +1609,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         memcpy(cursor, &shapeParentIdSize, sizeof(uint32_t)); // size chunk parent ID
         cursor = (void *)((uint32_t *)cursor + 1);
 
-        memcpy(cursor, &shapeParentId, sizeof(uint32_t));
-        cursor = (void *)((uint32_t *)cursor + 1);
+        memcpy(cursor, &shapeParentId, sizeof(uint16_t));
+        cursor = (void *)((uint16_t *)cursor + 1);
         
         const uint8_t chunk_id_shape_transform = P3S_CHUNK_ID_SHAPE_TRANSFORM;
         memcpy(cursor, &chunk_id_shape_transform, sizeof(uint8_t)); // shape transform chunk ID
@@ -1786,8 +1786,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 }
 
 bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
-                                                       uint32_t shapeId,
-                                                       uint32_t shapeParentId,
+                                                       uint16_t shapeId,
+                                                       uint16_t shapeParentId,
                                                        uint32_t *uncompressedSize,
                                                        uint32_t *compressedSize,
                                                        void **compressedData) {
@@ -1940,7 +1940,7 @@ uint32_t compute_shape_chunk_size(uint32_t shapeBufferDataSize) {
     return getChunkHeaderSize(P3S_CHUNK_ID_SHAPE) + shapeBufferDataSize;
 }
 
-bool create_shape_buffers(DoublyLinkedList *shapesBuffers, Shape const *shape, uint32_t *shapeId, uint32_t shapeParentId, uint32_t *size) {
+bool create_shape_buffers(DoublyLinkedList *shapesBuffers, Shape const *shape, uint16_t *shapeId, uint16_t shapeParentId, uint32_t *size) {
     ShapeBuffers *currentBuffer = calloc(1, sizeof(ShapeBuffers));
     if (currentBuffer == NULL) {
         return false;
