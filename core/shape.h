@@ -36,6 +36,14 @@ typedef struct _Transform Transform;
 typedef struct _VertexBuffer VertexBuffer;
 typedef struct _Chunk Chunk;
 
+typedef struct _LoadShapeSettings {
+    bool limitSize;
+    bool octree;
+    bool lighting;
+    bool isMutable;
+    bool sharedColors;
+} LoadShapeSettings;
+
 #define POINT_OF_INTEREST_ORIGIN "origin"     // legacy
 #define POINT_OF_INTEREST_HAND "Hand"         //
 #define POINT_OF_INTEREST_HAT "Hat"           // POI in item for wearing it as a hat

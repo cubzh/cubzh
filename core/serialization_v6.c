@@ -140,14 +140,10 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             const bool fixedSize,
-                             const bool octree,
-                             const bool lighting,
-                             const bool isMutable,
+                             LoadShapeSettings *shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette **serializedPalette,
-                             uint8_t paletteID,
-                             bool sharedColors);
+                             uint8_t paletteID);
 
 uint32_t chunk_v6_read_preview_image(Stream *s, void **imageData, uint32_t *size);
 
@@ -440,13 +436,7 @@ bool serialization_v6_get_preview_data(Stream *s, void **imageData, uint32_t *si
     return false;
 }
 
-Shape *serialization_v6_load_shape(Stream *s,
-                                   bool limitSize,
-                                   bool octree,
-                                   bool lighting,
-                                   bool isMutable,
-                                   ColorAtlas *colorAtlas,
-                                   bool sharedColors) {
+Shape *serialization_v6_load_shape(Stream *s, LoadShapeSettings *shapeSettings, ColorAtlas *colorAtlas) {
     uint8_t i;
     if (stream_read_uint8(s, &i) == false) {
         cclog_error("failed to read compression algo");
@@ -538,14 +528,10 @@ Shape *serialization_v6_load_shape(Stream *s,
                 sizeRead = chunk_v6_read_shape(s,
                                                &shape,
                                                shapes,
-                                               limitSize,
-                                               octree,
-                                               lighting,
-                                               isMutable,
+                                               shapeSettings,
                                                colorAtlas,
                                                &serializedPalette,
-                                               paletteID,
-                                               sharedColors);
+                                               paletteID);
                 
                 if (finalShape == NULL) {
                     finalShape = shape;
@@ -958,14 +944,14 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             const bool fixedSize,
-                             const bool octree,
-                             const bool lighting,
-                             const bool isMutable,
+                             LoadShapeSettings *shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette **filePalette,
-                             uint8_t paletteID,
-                             bool sharedColors) {
+                             uint8_t paletteID) {
+    if (shapeSettings == NULL) {
+        cclog_error("tried to load shape without shape settings");
+        return 0;
+    }
 
     /// read file
     void *chunkData = NULL;
@@ -1093,19 +1079,19 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += sizeRead + sizeof(uint32_t);
 
                 // size is known, now is a good time to create the shape
-                if (octree) {
+                if (shapeSettings->octree) {
                     *shape = shape_make_with_octree(width,
                                                     height,
                                                     depth,
-                                                    lighting,
-                                                    isMutable,
-                                                    fixedSize == false);
-                } else if (fixedSize) {
+                                                    shapeSettings->lighting,
+                                                    shapeSettings->isMutable,
+                                                    shapeSettings->limitSize == false);
+                } else if (shapeSettings->limitSize) {
                     *shape = shape_make_with_fixed_size(width,
                                                         height,
                                                         depth,
-                                                        lighting,
-                                                        isMutable);
+                                                        shapeSettings->lighting,
+                                                        shapeSettings->isMutable);
                 } else {
                     *shape = shape_make();
                 }
@@ -1254,10 +1240,10 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (palette != NULL && paletteID == PALETTE_ID_CUSTOM && shrinkPalette == false) {
-        color_palette_set_shared(palette, sharedColors);
+        color_palette_set_shared(palette, shapeSettings->sharedColors);
         shape_set_palette(*shape, palette);
     } else {
-        shape_set_palette(*shape, color_palette_new(colorAtlas, sharedColors));
+        shape_set_palette(*shape, color_palette_new(colorAtlas, shapeSettings->sharedColors));
     }
 
     // process blocks now
@@ -1310,7 +1296,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     if (shape_uses_baked_lighting(*shape)) {
         if (lightingData == NULL) {
             cclog_warning("shape uses lighting but no baked lighting found");
-        } else if (octree == false && fixedSize == false) {
+        } else if (shapeSettings->octree == false && shapeSettings->limitSize == false) {
             cclog_warning("shape uses lighting but does not have a fixed size");
             free(lightingData);
         } else if (lightingDataSizeRead != width * height * depth * sizeof(VERTEX_LIGHT_STRUCT_T)) {
@@ -1989,7 +1975,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers, Shape const *shape, u
     return true;
 }
 
-DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAtlas, enum ResourceType filterMask) {
+DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAtlas, enum ResourceType filterMask, LoadShapeSettings *shapeSettings) {
     DoublyLinkedList *list = doubly_linked_list_new();
     
     uint8_t i;
@@ -2088,30 +2074,26 @@ DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAt
                 paletteLocked = true;
 
                 Shape *shape = NULL;
-                bool isMutable = (filterMask & TypeMutableShape) > 0 && (filterMask & TypeShape) == 0;
                 sizeRead = chunk_v6_read_shape(s,
                                                &shape,
                                                shapes,
-                                               true, // limitSize
-                                               true, // octree
-                                               false, // lighting
-                                               isMutable, // isMutable
+                                               shapeSettings,
                                                colorAtlas,
                                                &serializedPalette,
-                                               paletteID,
-                                               false);
+                                               paletteID);
                 
-                if (filterMask == TypeAll || (filterMask & TypeShape) > 0 || (filterMask & TypeMutableShape) > 0) {
-                    Resource *resource = malloc(sizeof(Resource));
-                    resource->ptr = shape;
-                    resource->type = isMutable ? TypeMutableShape : TypeShape;
-                    doubly_linked_list_push_last(list, resource);
-                }
-
                 if (sizeRead == 0) {
                     cclog_error("error while reading shape");
                     error = true;
                     break;
+                }
+                
+                shape_shrink_box(shape);
+                if (filterMask == TypeAll || (filterMask & TypeShape) > 0) {
+                    Resource *resource = malloc(sizeof(Resource));
+                    resource->ptr = shape;
+                    resource->type = TypeShape;
+                    doubly_linked_list_push_last(list, resource);
                 }
                 
                 totalSizeRead += sizeRead;

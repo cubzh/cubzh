@@ -87,20 +87,17 @@ uint8_t readMagicBytesLegacy(Stream *s);
 
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
-                                bool limitSize,
-                                bool octree,
-                                bool lighting,
-                                bool isMutable,
-                                ColorAtlas *colorAtlas,
-                                bool sharedColors,
+                                ColorAtlas* colorAtlas,
+                                LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy);
+
+Shape *resources_get_root_shape(DoublyLinkedList *list);
 
 DoublyLinkedList *serialization_load_resources(Stream *s,
                                                const char *fullname,
+                                               enum ResourceType filterMask,
                                                ColorAtlas* colorAtlas,
-                                               enum ResourceType filterMask);
-
-bool serialization_load_resources_from_stream(DoublyLinkedList *list, Stream *s, ColorAtlas *colorAtlas);
+                                               LoadShapeSettings *shapeSettings);
 
 /// serialize a shape w/ its palette
 bool serialization_save_shape(Shape *shape,
