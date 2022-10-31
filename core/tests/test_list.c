@@ -203,6 +203,8 @@ TEST_LIST = {
     { "test_box_squarify", test_box_squarify },
     { "test_box_op_merge", test_box_op_merge },
     { "test_box_get_volume", test_box_get_volume },
+    { "test_box_to_aabox_no_rot", test_box_to_aabox_no_rot },
+    { "test_box_to_aabox2", test_box_to_aabox2 },
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };

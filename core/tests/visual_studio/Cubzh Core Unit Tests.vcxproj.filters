@@ -208,6 +208,7 @@
       <Filter>Source Files\tests</Filter>
     </ClInclude>
     <ClInclude Include="..\test_filo_list_uint16.h">
+    <ClInclude Include="..\test_box.h">
       <Filter>Source Files\tests</Filter>
     </ClInclude>
   </ItemGroup>
