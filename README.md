@@ -28,7 +28,7 @@ graph TD
     Core["✅ Cubzh Core (C)"]
     CubzhServer["Cubzh Server (C/C++)"]
     LuaSandbox["Lua Sandbox (C/C++)"]
-    FileFormat["File Format (.3zh)"]
+    FileFormat["✅ File Format (.3zh)"]
     HubClient["Hub Client (C/C++)"]
     XPTools["XPTools (cross-platform API)"]
     Hub["Hub (Go)"]
@@ -42,7 +42,7 @@ graph TD
     HubClient---XPTools
 ```
 
-Coming next: file format & cross-platform API.
+Coming next: cross-platform API.
 
 ### Open Distribution
 
@@ -90,7 +90,4 @@ We'll keep thinking about it and see where it leads us, sharing concerns and cri
 - Marketplace
 - Friends
 - Block Textures
-
-
-
 
