@@ -2088,6 +2088,7 @@ DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAt
                     break;
                 }
                 
+                // shrink box once all blocks were added to update box origin
                 shape_shrink_box(shape);
                 if (filterMask == TypeAll || (filterMask & TypeShape) > 0) {
                     Resource *resource = malloc(sizeof(Resource));

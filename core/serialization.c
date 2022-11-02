@@ -134,7 +134,6 @@ DoublyLinkedList *serialization_load_resources(Stream *s,
 
     stream_free(s);
 
-    // shrink box once all blocks were added to update box origin
     if (doubly_linked_list_node_count(list) == 0) {
         doubly_linked_list_free(list);
         list = NULL;
