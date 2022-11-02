@@ -1328,12 +1328,6 @@ uint32_t chunk_v6_read_shape(Stream *s,
         shape_reset_pivot_to_center(*shape);
     }
 
-    // every lua Shape has a rigidbody
-    shape_ensure_rigidbody(*shape, PHYSICS_GROUP_DEFAULT_OBJECT, PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
-    
-    // by default, lua shapes do not have a shadow decal
-    shape_set_shadow_decal(*shape, false);
-
     return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
 }
 
