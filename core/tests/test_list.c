@@ -22,13 +22,61 @@
 #include "test_filo_list_uint16.h"
 #include "test_block.h"
 #include "test_blockChange.h"
+#include "test_box.h"
 
 TEST_LIST = {
-    { "hash_uint32_int", test_hash_uint32_int },
+
+    // block
+    { "test_block_new", test_block_new },
+    { "test_block_new_air", test_block_new_air },
+    { "test_block_new_with_color", test_block_new_with_color },
+    { "test_block_new_copy", test_block_new_copy },
+    { "test_block_set_color_index", test_block_set_color_index },
+    { "test_block_get_color_index", test_block_get_color_index },
+    { "test_block_is_solid", test_block_is_solid },
+    { "test_block_equal", test_block_equal },
+    // { "test_block_is_opaque", test_block_is_opaque },
+    // { "test_block_is_transparent", test_block_is_transparent },
+    // { "test_block_is_ao_and_light_caster", test_block_is_ao_and_light_caster },
+    // { "test_block_is_any", test_block_is_any },
+    { "test_aware_block_get", test_aware_block_get },
+    { "test_aware_block_new_copy", test_aware_block_new_copy },
+    { "test_aware_block_set_touched_face", test_aware_block_set_touched_face },
+    { "test_block_getNeighbourBlockCoordinates", test_block_getNeighbourBlockCoordinates },
+
+    // blockChange
+    { "test_blockChange_get", test_blockChange_get },
+    { "test_blockChange_amend", test_blockChange_amend },
+
+    // box
+    { "test_box_new", test_box_new },
+    { "test_box_new_2", test_box_new_2 },
+    { "test_box_new_copy", test_box_new_copy },
+    { "test_box_set_bottom_center_position", test_box_set_bottom_center_position },
+    { "test_box_get_center", test_box_get_center },
+    { "test_box_copy", test_box_copy },
+    { "test_box_collide", test_box_collide },
+    { "test_box_contains", test_box_contains },
+    { "test_box_set_broadphase_box", test_box_set_broadphase_box },
+    { "test_box_get_size", test_box_get_size },
+    { "test_box_is_empty", test_box_is_empty },
+    { "test_box_squarify", test_box_squarify },
+    { "test_box_op_merge", test_box_op_merge },
+    { "test_box_get_volume", test_box_get_volume },
+    { "test_box_to_aabox_no_rot", test_box_to_aabox_no_rot },
+    { "test_box_to_aabox2", test_box_to_aabox2 },
+
+    // filo_list_float3
+    { "filo_list_float3_pop", test_filo_list_float3_pop },
+    { "filo_list_float3_recycle", test_filo_list_float3_recycle },
 
     // filo_list_int3
     { "filo_list_int3_pop", test_filo_list_int3_pop },
     { "filo_list_int3_recycle", test_filo_list_int3_recycle },
+
+    // filo_list_uint16
+    { "test_filo_list_uint16_push", test_filo_list_uint16_push },
+    { "test_filo_list_uint16_pop", test_filo_list_uint16_pop },
 
     // float3
     { "float3_new(Number3)", test_float3_new },
@@ -41,6 +89,9 @@ TEST_LIST = {
     
     // float4
     { "float4_new", test_float4_new },
+
+    // hash_uint32
+    { "hash_uint32_int", test_hash_uint32_int },
 
     // int3
     { "int3_pool_pop", test_int3_pool_pop },
@@ -143,15 +194,6 @@ TEST_LIST = {
     { "test_utils_stringArray_n_append", test_utils_stringArray_n_append },
     { "test_utils_string_split", test_utils_string_split },
 
-    // filo_list_float3
-    { "filo_list_float3_pop", test_filo_list_float3_pop },
-    { "filo_list_float3_recycle", test_filo_list_float3_recycle },
-
-    // shape
-    { "test_shape_addblock_1", test_shape_addblock_1 },
-    // { "test_shape_addblock_2", test_shape_addblock_2 },
-    // { "test_shape_addblock_3", test_shape_addblock_3 },
-
     // weakptr
     { "weakptr_new", test_weakptr_new },
     { "weakptr_retain", test_weakptr_retain },
@@ -159,33 +201,6 @@ TEST_LIST = {
     { "weakptr_get", test_weakptr_get },
     { "weakptr_get_or_release", test_weakptr_get_or_release},
     { "weakptr_invalidate", test_weakptr_invalidate},
-
-    // filo_list_uint16
-    { "test_filo_list_uint16_push", test_filo_list_uint16_push },
-    { "test_filo_list_uint16_pop", test_filo_list_uint16_pop },
-
-    //block
-    { "test_block_new", test_block_new },
-    { "test_block_new_air", test_block_new_air },
-    { "test_block_new_with_color", test_block_new_with_color },
-    { "test_block_new_copy", test_block_new_copy },
-    { "test_block_set_color_index", test_block_set_color_index },
-    { "test_block_get_color_index", test_block_get_color_index },
-    { "test_block_is_solid", test_block_is_solid },
-    { "test_block_equal", test_block_equal },
-    // { "test_block_is_opaque", test_block_is_opaque },
-    // { "test_block_is_transparent", test_block_is_transparent },
-    // { "test_block_is_ao_and_light_caster", test_block_is_ao_and_light_caster },
-    // { "test_block_is_any", test_block_is_any },
-    { "test_aware_block_get", test_aware_block_get },
-    { "test_aware_block_new_copy", test_aware_block_new_copy },
-    { "test_aware_block_set_touched_face", test_aware_block_set_touched_face },
-    { "test_block_getNeighbourBlockCoordinates", test_block_getNeighbourBlockCoordinates },
-
-
-    // blockChange
-    { "test_blockChange_get", test_blockChange_get },
-    { "test_blockChange_amend", test_blockChange_amend },
 
     { NULL, NULL }     /* zeroed record marking the end of the list */
 };
