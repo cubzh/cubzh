@@ -197,7 +197,7 @@ VbSnapshot *vertex_buffer_snapshot(const VertexBuffer *vb) {
         if (vbma->chunk != NULL) {
             sprintf(vbs->vbmas[i].chunkID, "%p", (void *)vbma->chunk);
         } else {
-            snprintf(vbs->vbmas[i].chunkID, 3, "GAP");
+            snprintf(vbs->vbmas[i].chunkID, 4, "GAP");
         }
         i++;
         vbma = vbma->_globalListNext;

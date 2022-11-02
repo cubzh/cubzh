@@ -143,7 +143,7 @@ void test_aware_block_get(void) {
     int3* checkChunkPos = NULL;
     int3* checkShapeTargetPos = NULL;
     Block* checkBlock = NULL;
-    SHAPE_COLOR_INDEX_INT_T checkColor = NULL;
+    SHAPE_COLOR_INDEX_INT_T checkColor = 0;
 
     // Get the block of an AwareBlock and check his colorIndex
     checkBlock = aware_block_get_block(aBlock);
@@ -208,7 +208,7 @@ void test_aware_block_new_copy(void) {
     int3* checkChunkPos = NULL;
     int3* checkShapeTargetPos = NULL;
     Block* checkBlock = NULL;
-    SHAPE_COLOR_INDEX_INT_T checkColor = NULL;
+    SHAPE_COLOR_INDEX_INT_T checkColor = 0;
 
     checkBlock = aware_block_get_block(bBlock);
     TEST_CHECK(checkBlock->colorIndex == 0);
@@ -289,9 +289,9 @@ void test_block_getNeighbourBlockCoordinates(void) {
     int3* chunkPos = int3_new(0, 0, 0);
     AwareBlock* aBlock = aware_block_new(a, shapePos, chunkPos, 0);
     int3* checkShapePos = NULL;
-    SHAPE_COORDS_INT_T newx = NULL;
-    SHAPE_COORDS_INT_T newy = NULL;
-    SHAPE_COORDS_INT_T newz = NULL;
+    SHAPE_COORDS_INT_T newx = 0;
+    SHAPE_COORDS_INT_T newy = 0;
+    SHAPE_COORDS_INT_T newz = 0;
 
     checkShapePos = aware_block_get_shape_pos(aBlock);
     block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 0, &newx, &newy, &newz);

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  # push:
+    # branches: 
+      # - dagger
+      # - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  # Core Unit Tests
+  # -------------------------------------------------- 
+  core_unit_tests:
+    name: Core Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          lfs: 'true'
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
+          cache: true
+          cache-dependency-path: ci/core_unit_tests/go.sum
+
+      - name: Build Dagger program
+        working-directory: ./ci/core_unit_tests
+        run: go build -v ./...
+
+      - name: Run Dagger program
+        working-directory: .
+        # run: echo "ERROR=./ci/core_unit_tests/unit_tests" >> $GITHUB_OUTPUT
+        run: ./ci/core_unit_tests/unit_tests
+
+  # other_ci_job:
+  #   ...
+  

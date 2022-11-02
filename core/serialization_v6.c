@@ -220,7 +220,7 @@ bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doC
 bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompress, SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
     uint32_t uncompressedSize = 0;
     void *uncompressedData = NULL;
-    _chunk_v6_palette_create_and_write_uncompressed_buffer(palette, &uncompressedSize, &uncompressedData, paletteMapping);
+    _chunk_v6_palette_create_and_write_uncompressed_buffer((ColorPalette*)palette, &uncompressedSize, &uncompressedData, paletteMapping);
 
     /// write file
     if (chunk_v6_write_file(P3S_CHUNK_ID_PALETTE,

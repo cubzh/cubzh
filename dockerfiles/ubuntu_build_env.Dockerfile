@@ -18,8 +18,6 @@ COPY /deps/libz/linux-ubuntu-$TARGETARCH /deps/libz/linux-ubuntu-$TARGETARCH
 
 WORKDIR /
 
-RUN bash
-
 # -------------------------------------------
 
 # FROM dev-env AS builder

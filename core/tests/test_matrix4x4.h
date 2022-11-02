@@ -362,10 +362,10 @@ void test_matrix4x4_op_invert(void) {
                                  22.0f, -423.0f, 24.0f, 25.0f);
 
     matrix4x4_op_invert(m);
-    TEST_CHECK(float_isEqual(m->x1y1, 0.00510333665, EPSILON_ZERO));
-    TEST_CHECK(float_isEqual(m->x1y2, 0.000382280559, EPSILON_ZERO));
-    TEST_CHECK(float_isEqual(m->x1y3, 7.69150647e-05, EPSILON_ZERO));
-    TEST_CHECK(float_isEqual(m->x1y4, 0.00190341240, EPSILON_ZERO));
+    TEST_CHECK(float_isEqual(m->x1y1, 0.00510333665f, EPSILON_ZERO));
+    TEST_CHECK(float_isEqual(m->x1y2, 0.000382280559f, EPSILON_ZERO));
+    TEST_CHECK(float_isEqual(m->x1y3, 7.69150647e-05f, EPSILON_ZERO));
+    TEST_CHECK(float_isEqual(m->x1y4, 0.00190341240f, EPSILON_ZERO));
 
     matrix4x4_free(m);
 }
