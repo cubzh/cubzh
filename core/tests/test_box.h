@@ -21,27 +21,26 @@
 // Create a new box and check if the min and max are set at a float3_zero
 void test_box_new(void) {
     Box* a = box_new();
-    float3* limitCheck = float3_new(0.0f, 0.0f, 0.0f); 
 
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == true);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == true);
+    float3 limitCheck = {0.0f, 0.0f, 0.0f};
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == true);
 
-    float3_free(limitCheck);
     box_free(a);
 }
 
 // Create a new box and check if the min and max are set at the values we wanted
 void test_box_new_2(void) {
     Box* a = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
-    float3* limitCheck = float3_new(0.0f, 0.0f, 0.0f);
 
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == true);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == false);
-    float3_set(limitCheck, 1.0f, 1.0f, 1.0f);
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == false);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == true);
+    float3 limitCheck = {0.0f, 0.0f, 0.0f};
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == false);
 
-    float3_free(limitCheck);
+    float3_set(&limitCheck, 1.0f, 1.0f, 1.0f);
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == false);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == true);
+
     box_free(a);
 }
 
@@ -49,34 +48,42 @@ void test_box_new_2(void) {
 void test_box_new_copy(void) {
     Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
     Box* b = box_new_copy(a);
-    float3* limitCheck = float3_new(3.0f, 5.0f, 2.0f);
 
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == true);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == false);
-    float3_set(limitCheck, 13.0f, 15.0f, 12.0f);
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == false);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == true);
+    float3 limitCheck = {3.0f, 5.0f, 2.0f};
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
+    TEST_CHECK(float3_isEqual(&b->min, &limitCheck, EPSILON_0_0001_F) == true);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == false);
+    TEST_CHECK(float3_isEqual(&b->max, &limitCheck, EPSILON_0_0001_F) == false);
 
-    float3_free(limitCheck);
+    float3_set(&limitCheck, 13.0f, 15.0f, 12.0f);
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == false);
+    TEST_CHECK(float3_isEqual(&b->min, &limitCheck, EPSILON_0_0001_F) == false);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == true);
+    TEST_CHECK(float3_isEqual(&b->max, &limitCheck, EPSILON_0_0001_F) == true);
+
+    TEST_CHECK(float3_isEqual(&a->min, &b->min, EPSILON_0_0001_F));
+    TEST_CHECK(float3_isEqual(&a->max, &b->max, EPSILON_0_0001_F));
+
     box_free(a);
     box_free(b);
 }
 
-// Create a box with set min and max and set a new center for the box in a float3. We now set the new center of the box and check if the values are corrects
+// Create a box with set min and max and set a new center for the box in a float3.
+// We now set the new center of the box and check if the values are corrects.
 void test_box_set_bottom_center_position(void) {
     Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    float3* setcenter = float3_new(10.0f, 10.0f, 10.0f);
-    float3* limitCheck = float3_new(5.0f, 10.0f, 5.0f);
+    float3 setcenter = {10.0f, 10.0f, 10.0f};
 
-    box_set_bottom_center_position(a, setcenter);
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == true);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == false);
-    float3_set(limitCheck, 15.0f, 20.0f, 15.0f);
-    TEST_CHECK(float3_isEqual(&a->min, limitCheck, EPSILON_0_0001_F) == false);
-    TEST_CHECK(float3_isEqual(&a->max, limitCheck, EPSILON_0_0001_F) == true);
+    box_set_bottom_center_position(a, &setcenter);
 
-    float3_free(limitCheck);
-    float3_free(setcenter);
+    float3 limitCheck = {5.0f, 10.0f, 5.0f};
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == false);
+
+    float3_set(&limitCheck, 15.0f, 20.0f, 15.0f);
+    TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == false);
+    TEST_CHECK(float3_isEqual(&a->max, &limitCheck, EPSILON_0_0001_F) == true);
+
     box_free(a);
 }
 
