@@ -26,7 +26,7 @@ extern "C" {
 #define MAGIC_BYTES_LEGACY "PARTICUBES!"
 #define MAGIC_BYTES_SIZE_LEGACY 11
 
-#define SERIALIZATION_FILE_FORMAT_VERION_SIZE sizeof(uint32_t)
+#define SERIALIZATION_FILE_FORMAT_VERSION_SIZE sizeof(uint32_t)
 #define SERIALIZATION_PREVIEW_BYTE_COUNT_SIZE sizeof(uint32_t)
 
 // =============================================================================

@@ -322,7 +322,7 @@ Quaternion *shape_get_local_rotation(const Shape *s);
 void shape_get_local_rotation_euler(const Shape *s, float3 *euler);
 
 /// scale
-void shape_set_local_scale(Shape *s, const float scale);
+void shape_set_local_scale(Shape *s, const float x, const float y, const float z);
 const float3 *shape_get_local_scale(const Shape *s);
 void shape_get_lossy_scale(const Shape *s, float3 *scale);
 
@@ -337,6 +337,8 @@ bool shape_remove_parent(Shape *s, const bool keepWorld);
 Transform *shape_get_root_transform(const Shape *s);
 Transform *shape_get_pivot_transform(const Shape *s); // corresponds to shape model origin
 void shape_move_children(Shape *from, Shape *to, const bool keepWorld);
+uint32_t shape_count_shape_descendants(const Shape * s);
+DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape * s);
 
 // MARK: - Physics -
 
@@ -471,13 +473,8 @@ void shape_history_redo(Shape *const s);
 
 //
 
-///
 void shape_enableAnimations(Shape * const s);
-
-///
 void shape_disableAnimations(Shape * const s);
-
-///
 bool shape_getIgnoreAnimations(Shape * const s);
 
 #ifdef __cplusplus

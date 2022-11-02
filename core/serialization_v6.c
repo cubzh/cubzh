@@ -40,30 +40,37 @@ typedef enum P3sCompressionMethod {
 //#define P3S_CHUNK_ID_GENERAL_RENDERING_OPTIONS 14
 #define P3S_CHUNK_ID_PALETTE_ID 15
 #define P3S_CHUNK_ID_PALETTE 16
-#define P3S_CHUNK_ID_MAX 17 // not used as a chunk ID, but used to check if chunk ID is known or not
+#define P3S_CHUNK_ID_SHAPE_ID 17 // id used to parent objects and will be used for animations
+#define P3S_CHUNK_ID_SHAPE_NAME 18 // lenName, name (optional)
+#define P3S_CHUNK_ID_SHAPE_PARENT_ID 19 // ID of parent
+#define P3S_CHUNK_ID_SHAPE_TRANSFORM 20 // transform (position,rotation,scale) (optional, default 0,0,0, 0,0,0 and 1,1,1)
+#define P3S_CHUNK_ID_NB_SHAPES 21 // number of shapes in the file (optional, default 1)
+#define P3S_CHUNK_ID_SHAPE_PIVOT 22 // pivot
+#define P3S_CHUNK_ID_MAX 23 // /!\ update this when adding chunks
 
 // size of the chunk header, without chunk ID (it's already read at this point)
 #define CHUNK_V6_HEADER_NO_ID_SIZE (sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t))
 #define CHUNK_V6_HEADER_NO_ID_SKIP_SIZE (sizeof(uint8_t) + sizeof(uint32_t))
 
-// --------------------------------------------------
-//
-// Static functions prototypes
-//
-// --------------------------------------------------
+// MARK: - Private functions prototypes -
+// MARK: Write as buffer -
 
 bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
+                                                         uint32_t shapeId,
+                                                         uint32_t shapeParentId,
                                                          uint32_t *uncompressedSize,
                                                          void **uncompressedData,
                                                          SHAPE_COLOR_INDEX_INT_T *paletteMapping);
 
 bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
+                                                       uint32_t shapeId,
+                                                       uint32_t shapeParentId,
                                                        uint32_t *uncompressedSize,
                                                        uint32_t *compressedSize,
                                                        void **compressedData,
                                                        SHAPE_COLOR_INDEX_INT_T *paletteMapping);
 
-void _chunk_v6_palette_create_and_write_uncompressed_buffer(ColorPalette *palette,
+void _chunk_v6_palette_create_and_write_uncompressed_buffer(const ColorPalette *palette,
                                                             uint32_t *uncompressedSize,
                                                             void **uncompressedData,
                                                             SHAPE_COLOR_INDEX_INT_T **paletteMapping);
@@ -73,42 +80,49 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(ColorPalette *palette,
                                                           uint32_t *compressedSize,
                                                           void **compressedData,
                                                           SHAPE_COLOR_INDEX_INT_T **paletteMapping);
+void _chunk_v6_nb_shapes_create_and_write_buffer(uint32_t nbShapes,
+                                                 uint32_t *size,
+                                                 void **data);
 
 /// Writes full chunk (header + data) in the provided memory buffer.
 /// It compresses the data if requested.
 /// It does NOT free the data.
 /// Return value: true on success, false otherwise.
+static bool compress_and_write_chunk_in_buffer(void *destBuffer,
+                                               uint8_t chunkID,
+                                               const void *chunkData,
+                                               uint32_t chunkDataSize,
+                                               bool doCompress,
+                                               uint32_t *externCursor);
+
+/// Writes chunk header and data
 static bool write_chunk_in_buffer(void *destBuffer,
-                                  const uint8_t chunkID,
-                                  const void *chunkData,
-                                  const uint32_t chunkDataSize,
-                                  const bool doCompress,
+                                  uint8_t chunkID,
+                                  bool isCompressed,
+                                  const void *chunkWriteData,
+                                  uint32_t chunkCompressedDataSize,
+                                  uint32_t chunkUncompressedDataSize,
                                   uint32_t *externCursor);
 
-// Writes chunk that's already compressed.
-static bool write_compressed_chunk_in_buffer(void *destBuffer,
-                                             const uint8_t chunkID,
-                                             const void *chunkCompressedData,
-                                             const uint32_t chunkCompressedDataSize,
-                                             const uint32_t chunkUncompressedDataSize,
-                                             uint32_t *externCursor);
-
-///
 /// Return value: true on success, false otherwise.
 static bool write_preview_chunk_in_buffer(void *destBuffer,
                                           const void *previewBytes,
                                           const uint32_t previewBytesCount,
                                           uint32_t *externCursor);
 
+// MARK: Write as file -
+
 bool v6_write_size_at(long position, uint32_t size, FILE *fd);
 // Writes full chunk (header + data) to file, compress the data if required, function will free data
 // when done
 bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doCompress, FILE *fd);
+bool chunk_v6_write_nb_shapes(FILE *fd, const Shape *shape);
 bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompress, SHAPE_COLOR_INDEX_INT_T **paletteMapping);
-bool chunk_v6_write_shape(FILE *fd, Shape *shape, bool doCompress, SHAPE_COLOR_INDEX_INT_T *paletteMapping);
+bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint32_t *shapeId, uint32_t shapeParentId, bool doCompress, SHAPE_COLOR_INDEX_INT_T *paletteMapping);
 bool chunk_v6_write_preview_image(FILE *fd, const void *imageData, uint32_t imageDataSize);
 
-/// READ
+// MARK: Read -
+
 // all read functions return number of bytes read or 0 if the file can't be read
 uint8_t chunk_v6_read_identifier(Stream *s);
 uint32_t chunk_v6_read_size(Stream *s);
@@ -126,6 +140,8 @@ uint32_t chunk_v6_with_v5_header_skip(Stream *s);
 // skips a chunk with v6 header
 uint32_t chunk_v6_skip(Stream *s);
 
+uint32_t chunk_v6_read_nb_shapes(Stream *s, uint32_t *nbShapes);
+
 uint32_t chunk_v6_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette **palette, bool isLegacy);
 
 uint32_t chunk_v6_read_palette_id(Stream *s, uint8_t *paletteID);
@@ -142,6 +158,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 // chunk_v6_read_shape allocates a new Shape if shape != NULL
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
+                             Shape **shapes,
                              const bool fixedSize,
                              const bool octree,
                              const bool lighting,
@@ -153,10 +170,476 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
 uint32_t chunk_v6_read_preview_image(Stream *s, void **imageData, uint32_t *size);
 
-/// Utils
+//  MARK: Utils -
+
 static uint32_t getChunkHeaderSize(const uint8_t chunkID);
 static uint32_t compute_preview_chunk_size(const uint32_t previewBytesCount);
-uint32_t compute_shape_chunk_size(uint32_t shapeBufferDataSize);
+static uint32_t compute_nb_shapes_chunk_size();
+static uint32_t compute_shape_chunk_size(uint32_t shapeBufferDataSize);
+
+typedef struct _ShapeBuffers {
+    uint32_t paletteUncompressedDataSize;
+    uint32_t paletteCompressedDataSize;
+    void *paletteCompressedData;
+    SHAPE_COLOR_INDEX_INT_T *paletteMapping;
+    uint32_t shapeUncompressedDataSize;
+    uint32_t shapeCompressedDataSize;
+    void *shapeCompressedData;
+} ShapeBuffers;
+
+static bool create_shape_buffers(ShapeBuffers *shapeBuffers,
+                                 Shape const *shape,
+                                 uint32_t *shapeId,
+                                 uint32_t shapeParentId,
+                                 uint32_t *size);
+
+// MARK: - Exposed functions -
+
+bool serialization_v6_save_shape(Shape *shape,
+                                 const void *imageData,
+                                 uint32_t imageDataSize,
+                                 FILE *fd) {
+
+    // -------------------
+    // HEADER
+    // -------------------
+
+    // write file format version
+    uint32_t format = 6;
+    if (fwrite(&format, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("failed to write file format");
+        return false;
+    }
+
+    // write compression algo
+    const P3sCompressionMethod compressionAlgo = P3sCompressionMethod_ZIP;
+    if (fwrite(&compressionAlgo, sizeof(uint8_t), 1, fd) != 1) {
+        cclog_error("failed to write compression algo");
+        return false;
+    }
+
+    long positionBeforeTotalSize = ftell(fd);
+
+    // write total size (will be updated at the end)
+    uint32_t totalSize = 0;
+    if (fwrite(&totalSize, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("failed to write total size");
+        return false;
+    }
+
+    long positionBeforeChunks = ftell(fd);
+
+    // -------------------
+    // CHUNKS
+    // -------------------
+
+    chunk_v6_write_nb_shapes(fd, shape);
+
+    chunk_v6_write_preview_image(fd, imageData, imageDataSize);
+
+    SHAPE_COLOR_INDEX_INT_T *paletteMapping = NULL;
+    chunk_v6_write_palette(fd, shape_get_palette(shape), true, &paletteMapping);
+    uint32_t shapeId = 1;
+    chunk_v6_write_shape(fd, shape, &shapeId, 0, true, paletteMapping);
+
+    // -------------------
+    // END OF FILE
+    // -------------------
+
+    // update total size
+    totalSize = (uint32_t)(ftell(fd) - positionBeforeChunks);
+
+    if (v6_write_size_at(positionBeforeTotalSize, (uint32_t)totalSize, fd) == false) {
+        cclog_error("failed to write compressed file size");
+        return false;
+    }
+
+    return true;
+}
+
+/// serialize a shape in a newly created memory buffer
+/// Arguments:
+/// - shape (mandatory)
+/// - palette (optional)
+/// - imageData (optional)
+bool serialization_v6_save_shape_as_buffer(const Shape *shape,
+                                           const void *previewData,
+                                           const uint32_t previewDataSize,
+                                           void **outBuffer,
+                                           uint32_t *outBufferSize) {
+    if (shape == NULL || outBuffer == NULL || outBufferSize == NULL) {
+        return false;
+    }
+
+    const bool hasPreview = previewData != NULL && previewDataSize > 0;
+
+    // --------------------------------------------------
+    // Compute buffer size
+    // --------------------------------------------------
+
+    // Header
+    uint32_t size = MAGIC_BYTES_SIZE;
+    size += SERIALIZATION_FILE_FORMAT_VERSION_SIZE;
+    size += SERIALIZATION_COMPRESSION_ALGO_SIZE;
+    size += SERIALIZATION_TOTAL_SIZE_SIZE;
+
+    // NbShapes
+    uint32_t nbShapes = 1 + shape_count_shape_descendants(shape);
+    size += compute_nb_shapes_chunk_size();
+
+    // Preview
+    if (hasPreview) {
+        const uint32_t chunkSize = compute_preview_chunk_size(previewDataSize);
+        size += chunkSize;
+    }
+
+    ShapeBuffers* shapesBuffers = malloc(nbShapes * sizeof(ShapeBuffers));
+    if (shapesBuffers == NULL) {
+        return false;
+    }
+    memset(shapesBuffers, 0, nbShapes * sizeof(ShapeBuffers));
+    
+    uint32_t shapeId = 1;
+    if (create_shape_buffers(shapesBuffers, shape, &shapeId, 0, &size) == false) {
+        free(shapesBuffers);
+        return false;
+    }
+
+    // allocate buffer
+    uint8_t *buf = (uint8_t *)malloc(sizeof(char) * size);
+    if (buf == NULL) {
+        free(shapesBuffers);
+        return false;
+    }
+
+    // writing cursor
+    uint32_t cursor = 0;
+    bool ok = false;
+
+    // write magic bytes
+    serialization_utils_writeCString(buf + cursor, MAGIC_BYTES, MAGIC_BYTES_SIZE, &cursor);
+
+    // write file format version
+    const uint32_t formatVersion = 6;
+    serialization_utils_writeUint32(buf + cursor, formatVersion, &cursor);
+
+    // write compression algo
+    const P3sCompressionMethod compressionAlgo = P3sCompressionMethod_ZIP;
+    serialization_utils_writeUint8(buf + cursor, compressionAlgo, &cursor);
+
+    const uint32_t positionBeforeTotalSize = cursor;
+
+    // write total size (will be updated at the end)
+    uint32_t totalSize = 0;
+    serialization_utils_writeUint32(buf + cursor, totalSize, &cursor);
+
+    uint32_t positionBeforeChunks = cursor;
+
+    // write preview
+    if (hasPreview) {
+        ok = write_preview_chunk_in_buffer(buf + cursor, previewData, previewDataSize, &cursor);
+        if (ok == false) {
+            free(buf);
+            free(shapesBuffers);
+            return false;
+        }
+    }
+
+    // write nb shapes
+    {
+        uint32_t nbShapesDataSize = 0;
+        void *nbShapesData = NULL;
+        _chunk_v6_nb_shapes_create_and_write_buffer(nbShapes, &nbShapesDataSize, &nbShapesData);
+
+        ok = write_chunk_in_buffer(buf + cursor,
+                                   P3S_CHUNK_ID_NB_SHAPES,
+                                   false,
+                                   nbShapesData,
+                                   nbShapesDataSize,
+                                   nbShapesDataSize,
+                                   &cursor);
+        if (ok == false) {
+            free(buf);
+            free(shapesBuffers);
+            return false;
+        }
+    }
+
+    for (uint32_t i = 0; i < nbShapes; i++) {
+        ShapeBuffers *shapeBuffersCursor = &shapesBuffers[i];
+        // write palette
+        {
+            ok = write_chunk_in_buffer(buf + cursor,
+                                       P3S_CHUNK_ID_PALETTE,
+                                       true,
+                                       shapeBuffersCursor->paletteCompressedData,
+                                       shapeBuffersCursor->paletteCompressedDataSize,
+                                       shapeBuffersCursor->paletteUncompressedDataSize,
+                                       &cursor);
+            if (ok == false) {
+                free(buf);
+                free(shapesBuffers);
+                return false;
+            }
+        }
+
+        // write shape
+        {
+            ok = write_chunk_in_buffer(buf + cursor,
+                                       P3S_CHUNK_ID_SHAPE,
+                                       true,
+                                       shapeBuffersCursor->shapeCompressedData,
+                                       shapeBuffersCursor->shapeCompressedDataSize,
+                                       shapeBuffersCursor->shapeUncompressedDataSize,
+                                       &cursor);
+            if (ok == false) {
+                free(buf);
+                free(shapesBuffers);
+                return false;
+            }
+        }
+    }
+    free(shapesBuffers);
+
+    // update total size
+    totalSize = cursor - positionBeforeChunks;
+
+    memcpy(&buf[positionBeforeTotalSize], &totalSize, sizeof(uint32_t));
+
+    *outBuffer = buf;
+    *outBufferSize = cursor;
+
+    return true;
+}
+
+/// get preview data from save file path (caller must free *imageData)
+bool serialization_v6_get_preview_data(Stream *s, void **imageData, uint32_t *size) {
+
+    uint8_t i;
+    if (stream_read_uint8(s, &i) == false) {
+        cclog_error("failed to read compression algo");
+        return false;
+    }
+    P3sCompressionMethod compressionAlgo = (P3sCompressionMethod)i;
+
+    // File header may mention a compression algorithm but the preview
+    // chunk is never compressed (as it is already compressed, being a PNG)
+    if (compressionAlgo >= P3sCompressionMethod_COUNT) {
+        cclog_error("compression algo not supported (v6)");
+        return false;
+    }
+
+    uint32_t totalSize = 0;
+
+    if (stream_read_uint32(s, &totalSize) == false) {
+        cclog_error("failed to read total size");
+        return false;
+    }
+
+    // READ ALL CHUNKS UNTIL PREVIEW IMAGE IS FOUND
+
+    uint32_t totalSizeRead = 0;
+    uint32_t sizeRead = 0;
+
+    uint8_t chunkID;
+
+    while (totalSizeRead < totalSize) {
+        chunkID = chunk_v6_read_identifier(s);
+        totalSizeRead += 1; // size of chunk id
+
+        switch (chunkID) {
+            case P3S_CHUNK_ID_NONE:
+                cclog_error("wrong chunk id found");
+                return false;
+            case P3S_CHUNK_ID_PREVIEW:
+                sizeRead = chunk_v6_read_preview_image(s, imageData, size);
+                if (sizeRead == 0) {
+                    cclog_error("error while reading overview image");
+                    return false;
+                }
+                return true;
+            case P3S_CHUNK_ID_NB_SHAPES:
+            case P3S_CHUNK_ID_SHAPE:
+            case P3S_CHUNK_ID_PALETTE:
+            case P3S_CHUNK_ID_PALETTE_LEGACY:
+            case P3S_CHUNK_ID_PALETTE_ID:
+                // v6 chunks we don't need to read
+                totalSizeRead += chunk_v6_skip(s);
+                break;
+            default:
+                // v5 chunks we don't need to read
+                totalSizeRead += chunk_v6_with_v5_header_skip(s);
+                break;
+        }
+    }
+    return false;
+}
+
+Shape *serialization_v6_load_shape(Stream *s,
+                                   bool limitSize,
+                                   bool octree,
+                                   bool lighting,
+                                   bool isMutable,
+                                   ColorAtlas *colorAtlas,
+                                   bool sharedColors) {
+    uint8_t i;
+    if (stream_read_uint8(s, &i) == false) {
+        cclog_error("failed to read compression algo");
+        return NULL;
+    }
+    P3sCompressionMethod compressionAlgo = (P3sCompressionMethod)i;
+
+    if (compressionAlgo >= P3sCompressionMethod_COUNT) {
+        cclog_error("compression algo not supported");
+        return NULL;
+    }
+
+    uint32_t totalSize = 0;
+
+    if (stream_read_uint32(s, &totalSize) == false) {
+        cclog_error("failed to read total size");
+        return NULL;
+    }
+
+    // READ ALL CHUNKS UNTIL DONE
+
+    Shape **shapes = NULL;
+    Shape *finalShape = NULL;
+
+    uint32_t totalSizeRead = 0;
+    uint32_t sizeRead = 0;
+
+    uint8_t chunkID;
+
+    bool error = false;
+
+    // Shape octree may have been serialized w/ default or shape palette indices,
+    // - if there is a serialized palette, we consider that the octree was serialized w/ shape
+    // palette indices, nothing to do
+    // - if not, the octree was serialized w/ default palette indices, we'll build a shape palette
+    // from the used default colors
+    ColorPalette *serializedPalette = NULL;
+    bool paletteLocked = false; // shouldn't happen
+    uint8_t paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY; // by default, w/o palette ID or palette chunks
+
+    uint32_t nbShapes = 1;
+    while (totalSizeRead < totalSize && error == false) {
+        chunkID = chunk_v6_read_identifier(s);
+        totalSizeRead += 1; // size of chunk id
+
+        switch (chunkID) {
+            case P3S_CHUNK_ID_NONE: {
+                cclog_error("wrong chunk id found");
+                error = true;
+                break;
+            }
+            case P3S_CHUNK_ID_NB_SHAPES: {
+                sizeRead = chunk_v6_read_nb_shapes(s, &nbShapes);
+                if (sizeRead == 0) {
+                    cclog_error("error while reading palette");
+                    error = true;
+                    break;
+                }
+                shapes = malloc(nbShapes * sizeof(Shape *));
+                memset(shapes, 0, nbShapes * sizeof(Shape *));
+                if (!shapes) {
+                    cclog_error("error reading shape, can't allocate memory");
+                }
+                totalSizeRead += sizeRead;
+                break;
+            }
+            case P3S_CHUNK_ID_PALETTE_LEGACY:
+            case P3S_CHUNK_ID_PALETTE: {
+                // a shape palette is created w/ each color as "unused", until the octree is built
+                sizeRead = chunk_v6_read_palette(s, colorAtlas, &serializedPalette, chunkID == P3S_CHUNK_ID_PALETTE_LEGACY);
+                paletteID = PALETTE_ID_CUSTOM;
+
+                // ignore palette if octree was processed already w/ default palette
+                // Note: shouldn't happen, palette chunk is written before shape chunk
+                if (paletteLocked) {
+                    color_palette_free(serializedPalette);
+                    serializedPalette = NULL;
+                }
+
+                if (sizeRead == 0) {
+                    cclog_error("error while reading palette");
+                    error = true;
+                    break;
+                }
+
+                totalSizeRead += sizeRead;
+                break;
+            }
+            case P3S_CHUNK_ID_PALETTE_ID: {
+                sizeRead = chunk_v6_read_palette_id(s, &paletteID);
+
+                if (sizeRead == 0) {
+                    cclog_error("error while reading palette ID");
+                    error = true;
+                    break;
+                }
+
+                totalSizeRead += sizeRead;
+                break;
+            }
+            case P3S_CHUNK_ID_SHAPE: {
+                paletteLocked = true;
+
+                Shape *shape = NULL;
+                sizeRead = chunk_v6_read_shape(s,
+                                               &shape,
+                                               shapes,
+                                               limitSize,
+                                               octree,
+                                               lighting,
+                                               isMutable,
+                                               colorAtlas,
+                                               &serializedPalette,
+                                               paletteID,
+                                               sharedColors);
+                
+                if (finalShape == NULL) {
+                    finalShape = shape;
+                }
+
+                if (sizeRead == 0) {
+                    cclog_error("error while reading shape");
+                    error = true;
+                    break;
+                }
+
+                if (serializedPalette != NULL) {
+                    color_palette_free(serializedPalette);
+                }
+                serializedPalette = NULL;
+                paletteLocked = false;
+                paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY;
+                
+                totalSizeRead += sizeRead;
+                break;
+            }
+            default: {
+                // v5 chunks we don't need to read
+                totalSizeRead += chunk_v6_with_v5_header_skip(s);
+                break;
+            }
+        }
+    }
+
+    if (error) {
+        if (finalShape != NULL) {
+            cclog_error("error reading shape, but shape isn't NULL");
+        }
+    }
+
+    if (shapes != NULL) {
+        free(shapes);
+    }
+    
+    return finalShape;
+}
+
+// MARK: - Private functions -
 
 bool v6_write_size_at(long position, uint32_t size, FILE *fd) {
 
@@ -217,6 +700,26 @@ bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doC
     return true;
 }
 
+bool chunk_v6_write_nb_shapes(FILE *fd, const Shape *shape) {
+    uint32_t size = 0;
+    void *data = NULL;
+
+    uint32_t nbShapes = shape_count_shape_descendants(shape) + 1;
+    _chunk_v6_nb_shapes_create_and_write_buffer(nbShapes, &size, &data);
+
+    /// write file
+    if (chunk_v6_write_file(P3S_CHUNK_ID_NB_SHAPES,
+                            size,
+                            data,
+                            false,
+                            fd) == false) {
+        cclog_error("failed to write nbShapes chunk");
+        return false;
+    }
+
+    return true;
+}
+
 bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompress, SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
     uint32_t uncompressedSize = 0;
     void *uncompressedData = NULL;
@@ -235,7 +738,7 @@ bool chunk_v6_write_palette(FILE *fd, const ColorPalette *palette, bool doCompre
     return true;
 }
 
-bool chunk_v6_write_shape(FILE *fd, Shape *shape, bool doCompress,
+bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint32_t *shapeId, uint32_t shapeParentId, bool doCompress,
                           SHAPE_COLOR_INDEX_INT_T *paletteMapping) {
 
     if (fd == NULL) {
@@ -249,6 +752,8 @@ bool chunk_v6_write_shape(FILE *fd, Shape *shape, bool doCompress,
     void *uncompressedData = NULL;
 
     if (chunk_v6_shape_create_and_write_uncompressed_buffer(shape,
+                                                            *shapeId,
+                                                            shapeParentId,
                                                             &uncompressedSize,
                                                             &uncompressedData,
                                                             paletteMapping) == false) {
@@ -267,6 +772,24 @@ bool chunk_v6_write_shape(FILE *fd, Shape *shape, bool doCompress,
         return false;
     }
 
+    shapeParentId = *shapeId;
+    (*shapeId)++;
+
+    DoublyLinkedListNode *n = transform_get_children_iterator(shape_get_root_transform(shape));
+    Transform *child = NULL;
+    
+    while (n != NULL) {
+        child = (Transform*)(doubly_linked_list_node_pointer(n));
+        // hide transforms reserved for engine
+        Shape *childShape = transform_get_shape(child);
+        if (childShape != NULL) {
+            paletteMapping = NULL;
+            chunk_v6_write_palette(fd, shape_get_palette(childShape), true, &paletteMapping);
+            chunk_v6_write_shape(fd, childShape, shapeId, shapeParentId, true, paletteMapping);
+        }
+        n = doubly_linked_list_node_next(n);
+    }
+    
     return true;
 }
 
@@ -292,7 +815,7 @@ bool chunk_v6_write_preview_image(FILE *fd, const void *imageData, uint32_t imag
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -323,7 +846,7 @@ bool chunk_v6_read(void **chunkData,
                    uint32_t *chunkSize,
                    uint32_t *uncompressedSize,
                    Stream *s) {
-    
+
     uint32_t _chunkSize = 0;
     uint8_t _isCompressed = 0;
     uint32_t _uncompressedSize = 0;
@@ -386,406 +909,19 @@ uint32_t chunk_v6_skip(Stream *s) {
     return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
 }
 
-///
-bool serialization_v6_save_shape(Shape *shape,
-                                 const void *imageData,
-                                 uint32_t imageDataSize,
-                                 FILE *fd) {
-
-    // -------------------
-    // HEADER
-    // -------------------
-
-    // write file format version
-    uint32_t format = 6;
-    if (fwrite(&format, sizeof(uint32_t), 1, fd) != 1) {
-        cclog_error("failed to write file format");
-        return false;
+uint32_t chunk_v6_read_nb_shapes(Stream *s, uint32_t *nbShapes) {
+    /// read file
+    void *chunkData = NULL;
+    uint32_t chunkSize = 0;
+    uint32_t uncompressedSize = 0;
+    if (chunk_v6_read(&chunkData, &chunkSize, &uncompressedSize, s) == false) {
+        cclog_error("failed to read nb shapes");
+        return 0;
     }
-
-    // write compression algo
-    const P3sCompressionMethod compressionAlgo = P3sCompressionMethod_ZIP;
-    if (fwrite(&compressionAlgo, sizeof(uint8_t), 1, fd) != 1) {
-        cclog_error("failed to write compression algo");
-        return false;
-    }
-
-    long positionBeforeTotalSize = ftell(fd);
-
-    // write total size (will be updated at the end)
-    uint32_t totalSize = 0;
-    if (fwrite(&totalSize, sizeof(uint32_t), 1, fd) != 1) {
-        cclog_error("failed to write total size");
-        return false;
-    }
-
-    long positionBeforeChunks = ftell(fd);
-
-    // -------------------
-    // CHUNKS
-    // -------------------
-
-    SHAPE_COLOR_INDEX_INT_T *paletteMapping = NULL;
-    chunk_v6_write_palette(fd, shape_get_palette(shape), true, &paletteMapping);
-
-    chunk_v6_write_shape(fd, shape, true, paletteMapping);
-
-    chunk_v6_write_preview_image(fd, imageData, imageDataSize);
-
-    // -------------------
-    // END OF FILE
-    // -------------------
-
-    // update total size
-    totalSize = (uint32_t)(ftell(fd) - positionBeforeChunks);
-
-    if (v6_write_size_at(positionBeforeTotalSize, (uint32_t)totalSize, fd) == false) {
-        cclog_error("failed to write compressed file size");
-        return false;
-    }
-
-    return true;
+    *nbShapes = *((uint32_t *)chunkData);
+    free(chunkData);
+    return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
 }
-
-/// serialize a shape in a newly created memory buffer
-/// Arguments:
-/// - shape (mandatory)
-/// - palette (optional)
-/// - imageData (optional)
-bool serialization_v6_save_shape_as_buffer(const Shape *shape,
-                                           const void *previewData,
-                                           const uint32_t previewDataSize,
-                                           void **outBuffer,
-                                           uint32_t *outBufferSize) {
-    if (shape == NULL || outBuffer == NULL || outBufferSize == NULL) {
-        return false;
-    }
-
-    const bool hasPreview = previewData != NULL && previewDataSize > 0;
-
-    // --------------------------------------------------
-    // Compute buffer size
-    // --------------------------------------------------
-
-    // Header
-    uint32_t size = MAGIC_BYTES_SIZE;
-    size += SERIALIZATION_FILE_FORMAT_VERION_SIZE;
-    size += SERIALIZATION_COMPRESSION_ALGO_SIZE;
-    size += SERIALIZATION_TOTAL_SIZE_SIZE;
-
-    // Preview
-    if (hasPreview) {
-        const uint32_t chunkSize = compute_preview_chunk_size(previewDataSize);
-        size += chunkSize;
-    }
-
-    // Palette
-    uint32_t paletteUncompressedDataSize;
-    uint32_t paletteCompressedDataSize;
-    void *paletteCompressedData = NULL;
-    SHAPE_COLOR_INDEX_INT_T *paletteMapping = NULL;
-    if (_chunk_v6_palette_create_and_write_compressed_buffer(shape_get_palette(shape),
-                                                             &paletteUncompressedDataSize,
-                                                             &paletteCompressedDataSize,
-                                                             &paletteCompressedData,
-                                                             &paletteMapping) == false) {
-        return false;
-    }
-    size += getChunkHeaderSize(P3S_CHUNK_ID_PALETTE) + paletteCompressedDataSize;
-
-    // Shape
-    // create shape buffer now to get its size
-    uint32_t shapeUncompressedDataSize;
-    uint32_t shapeCompressedDataSize;
-    void *shapeCompressedData = NULL;
-    if (chunk_v6_shape_create_and_write_compressed_buffer(shape,
-                                                          &shapeUncompressedDataSize,
-                                                          &shapeCompressedDataSize,
-                                                          &shapeCompressedData,
-                                                          paletteMapping) == false) {
-        return false;
-    }
-    size += compute_shape_chunk_size(shapeCompressedDataSize);
-
-    // allocate buffer
-    uint8_t *buf = (uint8_t *)malloc(sizeof(char) * size);
-    if (buf == NULL) {
-        return false;
-    }
-
-    // writing cursor
-    uint32_t cursor = 0;
-    bool ok = false;
-
-    // write magic bytes
-    serialization_utils_writeCString(buf + cursor, MAGIC_BYTES, MAGIC_BYTES_SIZE, &cursor);
-
-    // write file format version
-    const uint32_t formatVersion = 6;
-    serialization_utils_writeUint32(buf + cursor, formatVersion, &cursor);
-
-    // write compression algo
-    const P3sCompressionMethod compressionAlgo = P3sCompressionMethod_ZIP;
-    serialization_utils_writeUint8(buf + cursor, compressionAlgo, &cursor);
-
-    const uint32_t positionBeforeTotalSize = cursor;
-
-    // write total size (will be updated at the end)
-    uint32_t totalSize = size;
-    serialization_utils_writeUint32(buf + cursor, totalSize, &cursor);
-
-    uint32_t positionBeforeChunks = cursor;
-
-    // write preview
-    if (hasPreview) {
-        ok = write_preview_chunk_in_buffer(buf + cursor, previewData, previewDataSize, &cursor);
-        if (ok == false) {
-            free(buf);
-            free(shapeCompressedData);
-            return false;
-        }
-    }
-
-    // write palette
-    {
-        ok = write_compressed_chunk_in_buffer(buf + cursor,
-                                              P3S_CHUNK_ID_PALETTE,
-                                              paletteCompressedData,
-                                              paletteCompressedDataSize,
-                                              paletteUncompressedDataSize,
-                                              &cursor);
-        if (ok == false) {
-            free(buf);
-            free(shapeCompressedData);
-            return false;
-        }
-    }
-
-    // write shape
-    {
-        ok = write_compressed_chunk_in_buffer(buf + cursor,
-                                              P3S_CHUNK_ID_SHAPE,
-                                              shapeCompressedData,
-                                              shapeCompressedDataSize,
-                                              shapeUncompressedDataSize,
-                                              &cursor);
-        if (ok == false) {
-            free(buf);
-            free(shapeCompressedData);
-            return false;
-        }
-    }
-
-    // update total size
-    totalSize = cursor - positionBeforeChunks;
-
-    memcpy(&buf[positionBeforeTotalSize], &totalSize, sizeof(uint32_t));
-
-    *outBuffer = buf;
-    *outBufferSize = cursor;
-
-    return true;
-}
-
-/// get preview data from save file path (caller must free *imageData)
-bool serialization_v6_get_preview_data(Stream *s, void **imageData, uint32_t *size) {
-
-    uint8_t i;
-    if (stream_read_uint8(s, &i) == false) {
-        cclog_error("failed to read compression algo");
-        return false;
-    }
-    P3sCompressionMethod compressionAlgo = (P3sCompressionMethod)i;
-
-    // File header may mention a compression algorithm but the preview
-    // chunk is never compressed (as it is already compressed, being a PNG)
-    if (compressionAlgo >= P3sCompressionMethod_COUNT) {
-        cclog_error("compression algo not supported (v6)");
-        return false;
-    }
-
-    uint32_t totalSize = 0;
-
-    if (stream_read_uint32(s, &totalSize) == false) {
-        cclog_error("failed to read total size");
-        return false;
-    }
-
-    // READ ALL CHUNKS UNTIL PREVIEW IMAGE IS FOUND
-
-    uint32_t totalSizeRead = 0;
-    uint32_t sizeRead = 0;
-
-    uint8_t chunkID;
-
-    while (totalSizeRead < totalSize) {
-        chunkID = chunk_v6_read_identifier(s);
-        totalSizeRead += 1; // size of chunk id
-
-        switch (chunkID) {
-            case P3S_CHUNK_ID_NONE:
-                cclog_error("wrong chunk id found");
-                return false;
-            case P3S_CHUNK_ID_PREVIEW:
-                sizeRead = chunk_v6_read_preview_image(s, imageData, size);
-                if (sizeRead == 0) {
-                    cclog_error("error while reading overview image");
-                    return false;
-                }
-                return true;
-            case P3S_CHUNK_ID_SHAPE:
-            case P3S_CHUNK_ID_PALETTE:
-            case P3S_CHUNK_ID_PALETTE_LEGACY:
-            case P3S_CHUNK_ID_PALETTE_ID:
-                // v6 chunks we don't need to read
-                totalSizeRead += chunk_v6_skip(s);
-                break;
-            default:
-                // v5 chunks we don't need to read
-                totalSizeRead += chunk_v6_with_v5_header_skip(s);
-                break;
-        }
-    }
-    return false;
-}
-
-Shape *serialization_v6_load_shape(Stream *s,
-                                   bool limitSize,
-                                   bool octree,
-                                   bool lighting,
-                                   bool isMutable,
-                                   ColorAtlas *colorAtlas,
-                                   bool sharedColors) {
-    uint8_t i;
-    if (stream_read_uint8(s, &i) == false) {
-        cclog_error("failed to read compression algo");
-        return NULL;
-    }
-    P3sCompressionMethod compressionAlgo = (P3sCompressionMethod)i;
-
-    if (compressionAlgo >= P3sCompressionMethod_COUNT) {
-        cclog_error("compression algo not supported");
-        return NULL;
-    }
-
-    uint32_t totalSize = 0;
-
-    if (stream_read_uint32(s, &totalSize) == false) {
-        cclog_error("failed to read total size");
-        return NULL;
-    }
-
-    // READ ALL CHUNKS UNTIL DONE
-
-    Shape *shape = NULL;
-
-    uint32_t totalSizeRead = 0;
-    uint32_t sizeRead = 0;
-
-    uint8_t chunkID;
-
-    bool error = false;
-
-    // Shape octree may have been serialized w/ default or shape palette indices,
-    // - if there is a serialized palette, we consider that the octree was serialized w/ shape
-    // palette indices, nothing to do
-    // - if not, the octree was serialized w/ default palette indices, we'll build a shape palette
-    // from the used default colors
-    ColorPalette *serializedPalette = NULL;
-    bool paletteLocked = false; // shouldn't happen
-    uint8_t paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY; // by default, w/o palette ID or palette chunks
-
-    while (totalSizeRead < totalSize && error == false) {
-        chunkID = chunk_v6_read_identifier(s);
-        totalSizeRead += 1; // size of chunk id
-
-        switch (chunkID) {
-            case P3S_CHUNK_ID_NONE: {
-                cclog_error("wrong chunk id found");
-                error = true;
-                break;
-            }
-            case P3S_CHUNK_ID_PALETTE_LEGACY:
-            case P3S_CHUNK_ID_PALETTE: {
-                // a shape palette is created w/ each color as "unused", until the octree is built
-                sizeRead = chunk_v6_read_palette(s, colorAtlas, &serializedPalette, chunkID == P3S_CHUNK_ID_PALETTE_LEGACY);
-                paletteID = PALETTE_ID_CUSTOM;
-
-                // ignore palette if octree was processed already w/ default palette
-                // Note: shouldn't happen, palette chunk is written before shape chunk
-                if (paletteLocked) {
-                    color_palette_free(serializedPalette);
-                    serializedPalette = NULL;
-                }
-
-                if (sizeRead == 0) {
-                    cclog_error("error while reading palette");
-                    error = true;
-                    break;
-                }
-
-                totalSizeRead += sizeRead;
-                break;
-            }
-            case P3S_CHUNK_ID_PALETTE_ID: {
-                sizeRead = chunk_v6_read_palette_id(s, &paletteID);
-
-                if (sizeRead == 0) {
-                    cclog_error("error while reading palette ID");
-                    error = true;
-                    break;
-                }
-
-                totalSizeRead += sizeRead;
-                break;
-            }
-            case P3S_CHUNK_ID_SHAPE: {
-                paletteLocked = true;
-
-                sizeRead = chunk_v6_read_shape(s,
-                                               &shape,
-                                               limitSize,
-                                               octree,
-                                               lighting,
-                                               isMutable,
-                                               colorAtlas,
-                                               &serializedPalette,
-                                               paletteID,
-                                               sharedColors);
-
-                if (sizeRead == 0) {
-                    cclog_error("error while reading shape");
-                    error = true;
-                    break;
-                }
-
-                totalSizeRead += sizeRead;
-                break;
-            }
-            default: {
-                // v5 chunks we don't need to read
-                totalSizeRead += chunk_v6_with_v5_header_skip(s);
-                break;
-            }
-        }
-    }
-    
-    if (serializedPalette != NULL) {
-        color_palette_free(serializedPalette);
-    }
-
-    if (error) {
-        if (shape != NULL) {
-            cclog_error("error reading shape, but shape isn't NULL");
-        }
-    }
-
-    return shape;
-}
-
-// ------------------------------
-// CHUNK READERS
-// ------------------------------
 
 uint32_t chunk_v6_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette **palette, bool isLegacy) {
 
@@ -913,6 +1049,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
+                             Shape **shapes,
                              const bool fixedSize,
                              const bool octree,
                              const bool lighting,
@@ -964,6 +1101,18 @@ uint32_t chunk_v6_read_shape(Stream *s,
     uint16_t width = 0;
     uint16_t height = 0;
     uint16_t depth = 0;
+    
+    uint32_t shapeId = 1;
+    uint32_t shapeParentId = 0;
+    LocalTransform localTransform;
+    memset(&localTransform, 0, sizeof(LocalTransform));
+    localTransform.scale.x = 1;
+    localTransform.scale.y = 1;
+    localTransform.scale.z = 1;
+    char name[256];
+    name[0] = 0;
+    float3 pivot;
+    bool hasPivot = false;
 
     const bool shrinkPalette = *serializedPalette != NULL
         && color_palette_get_count(*serializedPalette) >= SHAPE_COLOR_INDEX_MAX_COUNT;
@@ -973,6 +1122,40 @@ uint32_t chunk_v6_read_shape(Stream *s,
         cursor = (void *)((uint8_t *)cursor + 1);
         totalSizeRead += 1; // size of chunk id
         switch (chunkID) {
+            case P3S_CHUNK_ID_SHAPE_ID: {
+                memcpy(&shapeId, cursor, sizeof(uint32_t));
+                cursor = (void *)((uint32_t *)cursor + 1);
+                totalSizeRead += sizeof(uint32_t);
+                break;
+            }
+            case P3S_CHUNK_ID_SHAPE_PARENT_ID: {
+                memcpy(&shapeParentId, cursor, sizeof(uint32_t));
+                cursor = (void *)((uint32_t *)cursor + 1);
+                totalSizeRead += sizeof(uint32_t);
+                break;
+            }
+            case P3S_CHUNK_ID_SHAPE_TRANSFORM: {
+                memcpy(&localTransform, cursor, sizeof(LocalTransform));
+                cursor = (void *)((LocalTransform *)cursor + 1);
+                totalSizeRead += sizeof(LocalTransform);
+                break;
+            }
+            case P3S_CHUNK_ID_SHAPE_PIVOT: {
+                memcpy(&pivot, cursor, sizeof(float3));
+                cursor = (void *)((float3 *)cursor + 1);
+                totalSizeRead += sizeof(float3);
+                hasPivot = true;
+                break;
+            }
+            case P3S_CHUNK_ID_SHAPE_NAME: {
+                uint8_t nameLen;
+                memcpy(&nameLen, cursor, sizeof(uint8_t));
+                cursor = (void *)((uint8_t *)cursor + 1);
+                memcpy(name, cursor, sizeof(char) * nameLen);
+                name[nameLen] = 0;
+                totalSizeRead += sizeof(uint8_t) + sizeof(char) * nameLen;
+                break;
+            }
             case P3S_CHUNK_ID_SHAPE_SIZE: {
                 memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape size chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
@@ -1233,6 +1416,29 @@ uint32_t chunk_v6_read_shape(Stream *s,
         cclog_warning("shape baked lighting data discarded");
         free(lightingData);
     }
+    
+    if (shapes) {
+        shapes[shapeId - 1] = *shape;
+        int32_t parentIndex = shapeParentId - 1;
+        if (parentIndex >= 0 && shapes[parentIndex]) {
+            shape_set_parent(*shape, shape_get_root_transform(shapes[parentIndex]), false);
+            shape_set_local_position(*shape, localTransform.position.x, localTransform.position.y, localTransform.position.z);
+            shape_set_local_rotation_euler(*shape, localTransform.rotation.x, localTransform.rotation.y, localTransform.rotation.z);
+            shape_set_local_scale(*shape, localTransform.scale.x, localTransform.scale.y, localTransform.scale.z);
+        }
+    }
+    
+    if (hasPivot) {
+        shape_set_pivot(*shape, pivot.x, pivot.y, pivot.z, false);
+    } else {
+        shape_reset_pivot_to_center(*shape);
+    }
+
+    // every lua Shape has a rigidbody
+    shape_ensure_rigidbody(*shape, PHYSICS_GROUP_DEFAULT_OBJECT, PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
+    
+    // by default, lua shapes do not have a shadow decal
+    shape_set_shadow_decal(*shape, false);
 
     return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
 }
@@ -1266,22 +1472,16 @@ uint32_t chunk_v6_read_preview_image(Stream *s, void **imageData, uint32_t *size
     return chunkSize + 4;
 }
 
-// --------------------------------------------------
-//
-// MARK: - Static functions
-//
-// --------------------------------------------------
-
 /// Arguments:
 /// - chunkData : uncompressed data
 ///
 /// If externCursor is not NULL, it is incremented by the number of bytes written.
-bool write_chunk_in_buffer(void *destBuffer,
-                           const uint8_t chunkID,
-                           const void *chunkData,
-                           const uint32_t chunkDataSize,
-                           const bool doCompress,
-                           uint32_t *externCursor) {
+bool compress_and_write_chunk_in_buffer(void *destBuffer,
+                                        const uint8_t chunkID,
+                                        const void *chunkData,
+                                        const uint32_t chunkDataSize,
+                                        const bool doCompress,
+                                        uint32_t *externCursor) {
 
     const uint32_t uncompressedSize = chunkDataSize;
 
@@ -1299,39 +1499,22 @@ bool write_chunk_in_buffer(void *destBuffer,
         size = (uint32_t)compressedSize;
     }
 
-    // write chunk in destination buffer
-    uint8_t *cursor = destBuffer;
-
-    // chunk header
-    memcpy(cursor, &chunkID, sizeof(uint8_t));
-    cursor += sizeof(uint8_t);
-
-    memcpy(cursor, &size, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
-
-    memcpy(cursor, &doCompress, sizeof(uint8_t));
-    cursor += sizeof(uint8_t);
-
-    memcpy(cursor, &uncompressedSize, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
-
-    // chunk data
-    memcpy(cursor, data, size);
-    cursor += size;
-
-    if (externCursor != NULL) {
-        *externCursor += (uint32_t)(cursor - (uint8_t *)destBuffer);
-    }
-
-    return true;
+    return write_chunk_in_buffer(destBuffer,
+                                 chunkID,
+                                 doCompress,
+                                 data,
+                                 size,
+                                 uncompressedSize,
+                                 externCursor);
 }
 
-static bool write_compressed_chunk_in_buffer(void *destBuffer,
-                                             const uint8_t chunkID,
-                                             const void *chunkCompressedData,
-                                             const uint32_t chunkCompressedDataSize,
-                                             const uint32_t chunkUncompressedDataSize,
-                                             uint32_t *externCursor) {
+static bool write_chunk_in_buffer(void *destBuffer,
+                                  const uint8_t chunkID,
+                                  const bool isCompressed,
+                                  const void *chunkWriteData,
+                                  const uint32_t chunkCompressedDataSize,
+                                  const uint32_t chunkUncompressedDataSize,
+                                  uint32_t *externCursor) {
 
     // write chunk in destination buffer
     uint8_t *cursor = destBuffer;
@@ -1343,16 +1526,16 @@ static bool write_compressed_chunk_in_buffer(void *destBuffer,
     memcpy(cursor, &chunkCompressedDataSize, sizeof(uint32_t));
     cursor += sizeof(uint32_t);
 
-    bool compressed = true;
-    memcpy(cursor, &compressed, sizeof(uint8_t));
+    memcpy(cursor, &isCompressed, sizeof(uint8_t));
     cursor += sizeof(uint8_t);
 
     memcpy(cursor, &chunkUncompressedDataSize, sizeof(uint32_t));
     cursor += sizeof(uint32_t);
 
     // chunk data
-    memcpy(cursor, chunkCompressedData, chunkCompressedDataSize);
-    cursor += chunkCompressedDataSize;
+    const uint32_t chunkWriteSize = isCompressed ? chunkCompressedDataSize : chunkUncompressedDataSize;
+    memcpy(cursor, chunkWriteData, chunkWriteSize);
+    cursor += chunkWriteSize;
 
     if (externCursor != NULL) {
         *externCursor += (uint32_t)(cursor - (uint8_t *)destBuffer);
@@ -1405,6 +1588,8 @@ bool write_preview_chunk_in_buffer(void *destBuffer,
 }
 
 bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
+                                                         uint32_t shapeId,
+                                                         uint32_t shapeParentId,
                                                          uint32_t *uncompressedSize,
                                                          void **uncompressedData,
                                                          SHAPE_COLOR_INDEX_INT_T *paletteMapping) {
@@ -1451,6 +1636,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     // shape sub-chunks size
     uint32_t subheaderSize = sizeof(uint8_t) + sizeof(uint32_t);
     uint32_t shapeSizeSize = 3 * sizeof(uint16_t);
+    uint32_t shapeIdSize = sizeof(uint8_t) + sizeof(uint32_t);
+    uint32_t shapeParentIdSize = sizeof(uint8_t) + sizeof(uint32_t);
+    uint32_t shapePivotSize = sizeof(uint8_t) + sizeof(float3);
+    uint32_t shapeLocalTransformSize = sizeof(uint8_t) +  sizeof(LocalTransform);
     uint32_t shapeBlocksSize = blockCount * sizeof(uint8_t);
     uint32_t shapeLightingSize = blockCount * sizeof(VERTEX_LIGHT_STRUCT_T);
 
@@ -1501,7 +1690,11 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     map_string_float3_iterator_free(it);
 
     // allocate for uncompressed data
-    *uncompressedSize = subheaderSize + shapeSizeSize + subheaderSize + shapeBlocksSize +
+    *uncompressedSize = subheaderSize + shapeSizeSize +
+                        (shapeId > 0 ? shapeIdSize : 0) +
+                        (shapeParentId > 0 ? shapeParentIdSize + shapeLocalTransformSize : 0) +
+                        shapePivotSize +
+                        subheaderSize + shapeBlocksSize +
                         shapePointPositionsCount * subheaderSize + shapePointPositionsSize +
                         shapePointRotationsCount * subheaderSize + shapePointRotationsSize +
                         (hasLighting ? subheaderSize + shapeLightingSize : 0);
@@ -1529,6 +1722,51 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 
     memcpy(cursor, &(shapeSize.z), sizeof(uint16_t)); // shape size Z
     cursor = (void *)((uint16_t *)cursor + 1);
+    
+    // shape id sub-chunk
+    if (shapeId != 0) {
+        const uint8_t chunk_id_shape_id = P3S_CHUNK_ID_SHAPE_ID;
+        memcpy(cursor, &chunk_id_shape_id, sizeof(uint8_t)); // shape id chunk ID
+        cursor = (void *)((uint8_t *)cursor + 1);
+
+        memcpy(cursor, &shapeId, sizeof(uint32_t));
+        cursor = (void *)((uint32_t *)cursor + 1);
+    }
+    
+    // shape parent id sub-chunk and transform
+    if (shapeParentId != 0) {
+        const uint8_t chunk_id_shape_parent_id = P3S_CHUNK_ID_SHAPE_PARENT_ID;
+        memcpy(cursor, &chunk_id_shape_parent_id, sizeof(uint8_t)); // shape parent id chunk ID
+        cursor = (void *)((uint8_t *)cursor + 1);
+
+        memcpy(cursor, &shapeParentId, sizeof(uint32_t));
+        cursor = (void *)((uint32_t *)cursor + 1);
+        
+        const uint8_t chunk_id_shape_transform = P3S_CHUNK_ID_SHAPE_TRANSFORM;
+        memcpy(cursor, &chunk_id_shape_transform, sizeof(uint8_t)); // shape transform chunk ID
+        cursor = (void *)((uint8_t *)cursor + 1);
+        
+        LocalTransform localTransform;
+        const float3 *position = shape_get_local_position(shape);
+        localTransform.position.x = position->x;
+        localTransform.position.y = position->y;
+        localTransform.position.z = position->z;
+        shape_get_local_rotation_euler(shape, &localTransform.rotation);
+        const float3 *scale = shape_get_local_scale(shape);
+        localTransform.scale.x = scale->x;
+        localTransform.scale.y = scale->y;
+        localTransform.scale.z = scale->z;
+        memcpy(cursor, &localTransform, sizeof(LocalTransform));
+        cursor = (void *)((LocalTransform *)cursor + 1);
+    }
+    
+    const uint8_t chunk_id_shape_pivot = P3S_CHUNK_ID_SHAPE_PIVOT;
+    memcpy(cursor, &chunk_id_shape_pivot, sizeof(uint8_t)); // shape pivot chunk ID
+    cursor = (void *)((uint8_t *)cursor + 1);
+
+    float3 pivot = shape_get_pivot(shape, false);
+    memcpy(cursor, &pivot, sizeof(float3));
+    cursor = (void *)((float3 *)cursor + 1);
 
     // shape blocks sub-chunk
     *((uint8_t *)cursor) = P3S_CHUNK_ID_SHAPE_BLOCKS; // shape blocks chunk ID
@@ -1660,6 +1898,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 }
 
 bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
+                                                       uint32_t shapeId,
+                                                       uint32_t shapeParentId,
                                                        uint32_t *uncompressedSize,
                                                        uint32_t *compressedSize,
                                                        void **compressedData,
@@ -1688,6 +1928,8 @@ bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
     void *uncompressedData = NULL;
 
     if (chunk_v6_shape_create_and_write_uncompressed_buffer(shape,
+                                                            shapeId,
+                                                            shapeParentId,
                                                             uncompressedSize,
                                                             &uncompressedData,
                                                             paletteMapping) == false) {
@@ -1718,7 +1960,7 @@ bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
     return true;
 }
 
-void _chunk_v6_palette_create_and_write_uncompressed_buffer(ColorPalette *palette,
+void _chunk_v6_palette_create_and_write_uncompressed_buffer(const ColorPalette *palette,
                                                             uint32_t *uncompressedSize,
                                                             void **uncompressedData,
                                                             SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
@@ -1753,6 +1995,7 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(ColorPalette *palette,
                                                           void **compressedData,
                                                           SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
     void *uncompressedData = NULL;
+    *paletteMapping = NULL;
     _chunk_v6_palette_create_and_write_uncompressed_buffer(palette, uncompressedSize, &uncompressedData, paletteMapping);
 
     // zlib: compressBound estimates size so we can allocate
@@ -1774,19 +2017,25 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(ColorPalette *palette,
     return true;
 }
 
-//
-// MARK: - Utils -
-//
+void _chunk_v6_nb_shapes_create_and_write_buffer(uint32_t nbShapes,
+                                                 uint32_t *size,
+                                                 void **data) {
+    *size = sizeof(uint32_t);
+    *data = malloc(*size);
+    uint32_t *cursor = *data;
+    *cursor = nbShapes;
+}
 
 uint32_t getChunkHeaderSize(const uint8_t chunkID) {
     uint32_t result = 0;
     switch (chunkID) {
         case P3S_CHUNK_ID_PREVIEW: {
-            // v5 chunk header
+            // v5 header
             // chunkID | chunkSize
             result = sizeof(uint8_t) + sizeof(uint32_t);
             break;
         }
+        case P3S_CHUNK_ID_NB_SHAPES:
         case P3S_CHUNK_ID_PALETTE:
         case P3S_CHUNK_ID_PALETTE_LEGACY:
         case P3S_CHUNK_ID_PALETTE_ID:
@@ -1809,6 +2058,51 @@ uint32_t compute_preview_chunk_size(const uint32_t previewBytesCount) {
     return getChunkHeaderSize(P3S_CHUNK_ID_PREVIEW) + previewBytesCount;
 }
 
+uint32_t compute_nb_shapes_chunk_size() {
+    return getChunkHeaderSize(P3S_CHUNK_ID_NB_SHAPES) + sizeof(uint32_t);
+}
+
 uint32_t compute_shape_chunk_size(uint32_t shapeBufferDataSize) {
     return getChunkHeaderSize(P3S_CHUNK_ID_SHAPE) + shapeBufferDataSize;
+}
+
+bool create_shape_buffers(ShapeBuffers *shapesBuffers, Shape const *shape, uint32_t *shapeId, uint32_t shapeParentId, uint32_t *size) {
+    ShapeBuffers *currentBuffer = &(shapesBuffers[*shapeId - 1]);
+    
+    if (_chunk_v6_palette_create_and_write_compressed_buffer(shape_get_palette(shape),
+                                                             &currentBuffer->paletteUncompressedDataSize,
+                                                             &currentBuffer->paletteCompressedDataSize,
+                                                             &currentBuffer->paletteCompressedData,
+                                                             &currentBuffer->paletteMapping) == false) {
+        return false;
+    }
+
+    if (chunk_v6_shape_create_and_write_compressed_buffer(shape,
+                                                          *shapeId,
+                                                          shapeParentId,
+                                                          &currentBuffer->shapeUncompressedDataSize,
+                                                          &currentBuffer->shapeCompressedDataSize,
+                                                          &currentBuffer->shapeCompressedData,
+                                                          currentBuffer->paletteMapping) == false) {
+        return false;
+    }
+    *size += getChunkHeaderSize(P3S_CHUNK_ID_PALETTE) + currentBuffer->paletteCompressedDataSize;
+    *size += compute_shape_chunk_size(currentBuffer->shapeCompressedDataSize);
+
+    shapeParentId = *shapeId;
+    (*shapeId)++;
+
+    DoublyLinkedListNode *n = transform_get_children_iterator(shape_get_root_transform(shape));
+    Transform *child = NULL;
+    while (n != NULL) {
+        child = (Transform*)(doubly_linked_list_node_pointer(n));
+        Shape *childShape = transform_get_shape(child);
+        if (childShape != NULL) {
+            if (create_shape_buffers(shapesBuffers, childShape, shapeId, shapeParentId, size) == false) {
+                return false;
+            }
+        }
+        n = doubly_linked_list_node_next(n);
+    }
+    return true;
 }
