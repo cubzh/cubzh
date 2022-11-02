@@ -2431,6 +2431,7 @@ const float3 *shape_get_model_origin(const Shape *s) {
     return transform_get_position(s->pivot != NULL ? s->pivot : s->transform);
 }
 
+
 void shape_set_rotation(Shape *s, Quaternion *q) {
     if (s == NULL)
         return;
@@ -2488,11 +2489,11 @@ void shape_get_local_rotation_euler(const Shape *s, float3 *euler) {
 }
 
 ///
-void shape_set_local_scale(Shape *s, const float scale) {
+void shape_set_local_scale(Shape *s, const float x, const float y, const float z) {
     if (s == NULL) {
         return;
     }
-    transform_set_local_scale(s->transform, scale, scale, scale);
+    transform_set_local_scale(s->transform, x, y, z);
 }
 
 const float3 *shape_get_local_scale(const Shape *s) {
@@ -2564,6 +2565,33 @@ void shape_move_children(Shape *from, Shape *to, const bool keepWorld) {
             transform_utils_move_children(from->pivot, shape_get_pivot_transform(to), keepWorld);
         }
     }
+}
+
+uint32_t shape_count_shape_descendants(const Shape *s) {
+    uint32_t nbDescendants = 0;
+
+    DoublyLinkedListNode *n = shape_get_transform_children_iterator(s);
+    Transform *childTransform = NULL;
+    Shape *child = NULL;
+    while (n != NULL) {
+        childTransform = (Transform *)(doubly_linked_list_node_pointer(n));
+
+        child = transform_get_shape(childTransform);
+        if (child == NULL) { // not a shape
+            n = doubly_linked_list_node_next(n);
+            continue;
+        }
+        nbDescendants += 1;
+
+        // Recursively find descendants of child
+        nbDescendants += shape_count_shape_descendants(child);
+        n = doubly_linked_list_node_next(n);
+    }
+    return nbDescendants;
+}
+
+DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s) {
+    return transform_get_children_iterator(shape_get_root_transform((s)));
 }
 
 // MARK: - Physics -
