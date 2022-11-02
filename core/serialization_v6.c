@@ -46,7 +46,8 @@ typedef enum P3sCompressionMethod {
 #define P3S_CHUNK_ID_SHAPE_TRANSFORM 20 // transform (position,rotation,scale) (optional, default 0,0,0, 0,0,0 and 1,1,1)
 #define P3S_CHUNK_ID_NB_SHAPES 21 // number of shapes in the file (optional, default 1)
 #define P3S_CHUNK_ID_SHAPE_PIVOT 22 // pivot
-#define P3S_CHUNK_ID_MAX 23 // /!\ update this when adding chunks
+#define P3S_CHUNK_ID_SHAPE_PALETTE 23 // palette
+#define P3S_CHUNK_ID_MAX 24 // /!\ update this when adding chunks
 
 // size of the chunk header, without chunk ID (it's already read at this point)
 #define CHUNK_V6_HEADER_NO_ID_SIZE (sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t))
@@ -1123,27 +1124,35 @@ uint32_t chunk_v6_read_shape(Stream *s,
         totalSizeRead += 1; // size of chunk id
         switch (chunkID) {
             case P3S_CHUNK_ID_SHAPE_ID: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&shapeId, cursor, sizeof(uint32_t));
                 cursor = (void *)((uint32_t *)cursor + 1);
-                totalSizeRead += sizeof(uint32_t);
+                totalSizeRead += sizeRead + sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_PARENT_ID: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&shapeParentId, cursor, sizeof(uint32_t));
                 cursor = (void *)((uint32_t *)cursor + 1);
-                totalSizeRead += sizeof(uint32_t);
+                totalSizeRead += sizeRead + sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_TRANSFORM: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&localTransform, cursor, sizeof(LocalTransform));
                 cursor = (void *)((LocalTransform *)cursor + 1);
-                totalSizeRead += sizeof(LocalTransform);
+                totalSizeRead += sizeRead + sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_PIVOT: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&pivot, cursor, sizeof(float3));
                 cursor = (void *)((float3 *)cursor + 1);
-                totalSizeRead += sizeof(float3);
+                totalSizeRead += sizeRead + sizeof(uint32_t);
                 hasPivot = true;
                 break;
             }
@@ -1636,10 +1645,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     // shape sub-chunks size
     uint32_t subheaderSize = sizeof(uint8_t) + sizeof(uint32_t);
     uint32_t shapeSizeSize = 3 * sizeof(uint16_t);
-    uint32_t shapeIdSize = sizeof(uint8_t) + sizeof(uint32_t);
-    uint32_t shapeParentIdSize = sizeof(uint8_t) + sizeof(uint32_t);
-    uint32_t shapePivotSize = sizeof(uint8_t) + sizeof(float3);
-    uint32_t shapeLocalTransformSize = sizeof(uint8_t) +  sizeof(LocalTransform);
+    uint32_t shapeIdSize = sizeof(uint32_t);
+    uint32_t shapeParentIdSize = sizeof(uint32_t);
+    uint32_t shapePivotSize = sizeof(float3);
+    uint32_t shapeLocalTransformSize = sizeof(LocalTransform);
     uint32_t shapeBlocksSize = blockCount * sizeof(uint8_t);
     uint32_t shapeLightingSize = blockCount * sizeof(VERTEX_LIGHT_STRUCT_T);
 
@@ -1691,9 +1700,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 
     // allocate for uncompressed data
     *uncompressedSize = subheaderSize + shapeSizeSize +
-                        (shapeId > 0 ? shapeIdSize : 0) +
-                        (shapeParentId > 0 ? shapeParentIdSize + shapeLocalTransformSize : 0) +
-                        shapePivotSize +
+                        (shapeId > 0 ? subheaderSize + shapeIdSize : 0) +
+                        (shapeParentId > 0 ? subheaderSize + shapeParentIdSize + subheaderSize + shapeLocalTransformSize : 0) +
+                        subheaderSize + shapePivotSize +
                         subheaderSize + shapeBlocksSize +
                         shapePointPositionsCount * subheaderSize + shapePointPositionsSize +
                         shapePointRotationsCount * subheaderSize + shapePointRotationsSize +
@@ -1729,6 +1738,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         memcpy(cursor, &chunk_id_shape_id, sizeof(uint8_t)); // shape id chunk ID
         cursor = (void *)((uint8_t *)cursor + 1);
 
+        memcpy(cursor, &shapeIdSize, sizeof(uint32_t)); // size chunk ID
+        cursor = (void *)((uint32_t *)cursor + 1);
+
         memcpy(cursor, &shapeId, sizeof(uint32_t));
         cursor = (void *)((uint32_t *)cursor + 1);
     }
@@ -1738,6 +1750,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         const uint8_t chunk_id_shape_parent_id = P3S_CHUNK_ID_SHAPE_PARENT_ID;
         memcpy(cursor, &chunk_id_shape_parent_id, sizeof(uint8_t)); // shape parent id chunk ID
         cursor = (void *)((uint8_t *)cursor + 1);
+        
+        memcpy(cursor, &shapeParentIdSize, sizeof(uint32_t)); // size chunk parent ID
+        cursor = (void *)((uint32_t *)cursor + 1);
 
         memcpy(cursor, &shapeParentId, sizeof(uint32_t));
         cursor = (void *)((uint32_t *)cursor + 1);
@@ -1746,6 +1761,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         memcpy(cursor, &chunk_id_shape_transform, sizeof(uint8_t)); // shape transform chunk ID
         cursor = (void *)((uint8_t *)cursor + 1);
         
+        memcpy(cursor, &shapeLocalTransformSize, sizeof(uint32_t)); // size chunk transform
+        cursor = (void *)((uint32_t *)cursor + 1);
+
         LocalTransform localTransform;
         const float3 *position = shape_get_local_position(shape);
         localTransform.position.x = position->x;
@@ -1763,6 +1781,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     const uint8_t chunk_id_shape_pivot = P3S_CHUNK_ID_SHAPE_PIVOT;
     memcpy(cursor, &chunk_id_shape_pivot, sizeof(uint8_t)); // shape pivot chunk ID
     cursor = (void *)((uint8_t *)cursor + 1);
+    
+    memcpy(cursor, &shapePivotSize, sizeof(uint32_t)); // size chunk pivot
+    cursor = (void *)((uint32_t *)cursor + 1);
 
     float3 pivot = shape_get_pivot(shape, false);
     memcpy(cursor, &pivot, sizeof(float3));
