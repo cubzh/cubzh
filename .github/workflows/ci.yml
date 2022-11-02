@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Git checkout
         uses: actions/checkout@v3
+        with:
+          lfs: 'true'
 
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -38,3 +40,4 @@ jobs:
 
   # other_ci_job:
   #   ...
+  

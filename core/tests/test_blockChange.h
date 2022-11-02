@@ -22,9 +22,9 @@ void test_blockChange_get(void) {
     BlockChange* BlockA = blockChange_new(a, c, 0, 0, 0);
     BlockChange* BlockB = blockChange_new(d, b, 3, 5, 2);
     Block* blockCheck = NULL;
-    SHAPE_COORDS_INT_T coordsCheckX = NULL;
-    SHAPE_COORDS_INT_T coordsCheckY = NULL;
-    SHAPE_COORDS_INT_T coordsCheckZ = NULL;
+    SHAPE_COORDS_INT_T coordsCheckX = 0;
+    SHAPE_COORDS_INT_T coordsCheckY = 0;
+    SHAPE_COORDS_INT_T coordsCheckZ = 0;
 
     // Get the block stocked in "before" and check him with his colorIndex
     blockCheck = blockChange_getBefore(BlockA);

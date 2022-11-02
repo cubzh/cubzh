@@ -16,6 +16,7 @@ set(DEPS_PLATFORM_NAME "linux-ubuntu-$ENV{CUBZH_ARCH}")
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_COMPILE_WARNING_AS_ERROR ON) # not available yet
 
 set(CUBZH_CORE_TESTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 set(CUBZH_CORE_ROOT_DIR "${CUBZH_CORE_TESTS_DIR}/..")
@@ -52,6 +53,7 @@ include_directories(
 )
 
 add_executable(unit_tests ${SOURCE_FILES})
+target_compile_options(unit_tests PRIVATE -Werror) # error on warning, more errors: -Wall -Wextra -Wpedantic
 
 target_link_libraries(unit_tests
     ${LIBZ}

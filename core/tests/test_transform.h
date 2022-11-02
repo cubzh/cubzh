@@ -93,7 +93,7 @@ void test_transform_child(void) {
         Quaternion* rot1 = quaternion_new(PI_F * 0.5f, 0.0f, 0.0f, 0.0f, false);
         transform_set_rotation(t, rot1);
         transform_set_local_rotation(child, rot1);
-        const Quaternion* rot2 = transform_get_rotation(child);
+        Quaternion* rot2 = transform_get_rotation(child);
         Quaternion* expected3 = quaternion_new(0.0f, 0.0f, 0.0f, -PI_F, false);
         TEST_CHECK(quaternion_is_equal(rot2, expected3, EPSILON_QUATERNION_ERROR));
         quaternion_free(rot1);
@@ -248,7 +248,7 @@ void test_transform_flush(void) {
     transform_flush(t);
 
     TEST_CHECK(float3_isEqual(transform_get_local_scale(t), &float3_one, EPSILON_ZERO));
-    const Quaternion rot_zero = { 0.0f, 0.0f, 0.0f, 1.0f, false };
+    Quaternion rot_zero = { 0.0f, 0.0f, 0.0f, 1.0f, false };
     TEST_CHECK(quaternion_is_equal(transform_get_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(quaternion_is_equal(transform_get_local_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(float3_isZero(transform_get_position(t), EPSILON_ZERO));

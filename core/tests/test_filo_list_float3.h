@@ -13,7 +13,7 @@
 // filo_list_float3_free
 
 void test_filo_list_float3_pop(void) {
-    FiloListFloat3Node* float3list = filo_list_float3_new(3);
+    FiloListFloat3* float3list = filo_list_float3_new(3);
     float3* a;
     float3* b;
     float3* c;
@@ -28,7 +28,7 @@ void test_filo_list_float3_pop(void) {
 }
 
 void test_filo_list_float3_recycle(void){
-    FiloListFloat3Node* float3list = filo_list_float3_new(3);
+    FiloListFloat3* float3list = filo_list_float3_new(3);
     float3* a;
     float3* b;
     float3* c;
