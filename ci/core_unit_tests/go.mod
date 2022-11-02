@@ -2,7 +2,7 @@ module cu.bzh/core/ci/unit_tests
 
 go 1.18
 
-require dagger.io/dagger v0.3.0
+require dagger.io/dagger v0.3.1
 
 require (
 	github.com/Khan/genqlient v0.5.0 // indirect
