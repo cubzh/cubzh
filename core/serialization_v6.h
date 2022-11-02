@@ -19,7 +19,14 @@ extern "C" {
 typedef struct _Transform Transform;
 typedef struct _Stream Stream;
 
+typedef struct _LocalTransform {
+    float3 position; // 12 bytes
+    float3 rotation; // 12 bytes
+    float3 scale; // 12 bytes
+} LocalTransform; // 36 bytes
+
 #define SERIALIZATION_COMPRESSION_ALGO_SIZE sizeof(uint8_t)
+#define NB_SHAPES_SIZE sizeof(uint32_t)
 #define SERIALIZATION_TOTAL_SIZE_SIZE sizeof(uint32_t)
 
 /// Load shape from file
