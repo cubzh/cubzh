@@ -38,6 +38,8 @@ typedef struct ColorPalette {
     // Reverse mapping for quick search
     HashUInt32Int *colorToIdx;
 
+    Weakptr *wptr;
+
     // Number of colors up to max entry index currently used (possibly includes unused entries)
     uint8_t count;
 
@@ -52,7 +54,6 @@ typedef struct ColorPalette {
 
     char pad[4];
     
-    Weakptr *wptr;
 } ColorPalette;
 
 ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared);
