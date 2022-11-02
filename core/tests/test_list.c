@@ -7,6 +7,7 @@
 #include "acutest.h"
 
 #include "test_box.h"
+#include "test_config.h"
 #include "test_hash_uint32_int.h"
 #include "test_int3.h"
 #include "test_filo_list_float3.h"
@@ -66,6 +67,9 @@ TEST_LIST = {
     { "test_box_get_volume", test_box_get_volume },
     { "test_box_to_aabox_no_rot", test_box_to_aabox_no_rot },
     { "test_box_to_aabox2", test_box_to_aabox2 },
+
+    // config
+    { "test_upper_power_of_two", test_upper_power_of_two },
 
     // filo_list_float3
     { "filo_list_float3_pop", test_filo_list_float3_pop },

@@ -68,6 +68,7 @@
     <ClInclude Include="..\acutest.h" />
     <ClInclude Include="..\test_block.h" />
     <ClInclude Include="..\test_blockChange.h" />
+    <ClInclude Include="..\test_config.h" />
     <ClInclude Include="..\test_filo_list_float3.h" />
     <ClInclude Include="..\test_box.h" />
     <ClInclude Include="..\test_filo_list_int3.h" />
