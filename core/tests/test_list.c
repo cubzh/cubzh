@@ -6,9 +6,13 @@
 
 #include "acutest.h"
 
+#include "test_box.h"
 #include "test_hash_uint32_int.h"
 #include "test_int3.h"
+#include "test_filo_list_float3.h"
 #include "test_filo_list_int3.h"
+#include "test_filo_list_uint16.h"
+#include "test_filo_list_uint32.h"
 #include "test_float3.h"
 #include "test_float4.h"
 #include "test_matrix4x4.h"
@@ -17,12 +21,9 @@
 #include "test_transaction.h"
 #include "test_transform.h"
 #include "test_utils.h"
-#include "test_filo_list_float3.h"
 #include "test_weakptr.h"
-#include "test_filo_list_uint16.h"
 #include "test_block.h"
 #include "test_blockChange.h"
-#include "test_box.h"
 
 TEST_LIST = {
 
@@ -77,6 +78,10 @@ TEST_LIST = {
     // filo_list_uint16
     { "test_filo_list_uint16_push", test_filo_list_uint16_push },
     { "test_filo_list_uint16_pop", test_filo_list_uint16_pop },
+
+    // filo_list_uint32
+    { "test_filo_list_uint32_push", test_filo_list_uint32_push },
+    { "test_filo_list_uint32_pop", test_filo_list_uint32_pop },
 
     // float3
     { "float3_new(Number3)", test_float3_new },
