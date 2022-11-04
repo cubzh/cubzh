@@ -17,7 +17,7 @@ struct _Transaction {
 
     // block changes
     Index3D *index3D; // 8 bytes
-    
+
     // iterator is kept as an internal variable
     // to maintain iterator position when
     // transactions are voluntarily kept pending
@@ -262,12 +262,12 @@ void transaction_getNewBounds(const Transaction *const tr,
     }
 }
 
-//Index3D *transaction_getIndex3D(const Transaction *const tr) {
-//    if (tr == NULL) {
-//        return NULL;
-//    }
-//    return tr->index3D;
-//}
+// Index3D *transaction_getIndex3D(const Transaction *const tr) {
+//     if (tr == NULL) {
+//         return NULL;
+//     }
+//     return tr->index3D;
+// }
 
 Index3DIterator *transaction_getIndex3DIterator(Transaction *tr) {
     if (tr == NULL || tr->index3D == NULL) {

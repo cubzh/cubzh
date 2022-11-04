@@ -16,9 +16,9 @@ extern "C" {
 #include "block.h"
 #include "box.h"
 #include "chunk.h"
-#include "config.h"
 #include "color_atlas.h"
 #include "color_palette.h"
+#include "config.h"
 #include "flood_fill_lighting.h"
 #include "index3d.h"
 #include "map_string_float3.h"
@@ -269,8 +269,8 @@ void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transpare
 void shape_set_model_locked(Shape *s, bool toggle);
 bool shape_is_model_locked(Shape *s);
 
-void shape_set_fullname(Shape *s, const char* fullname); // copies fullname
-const char* shape_get_fullname(const Shape *s);
+void shape_set_fullname(Shape *s, const char *fullname); // copies fullname
+const char *shape_get_fullname(const Shape *s);
 
 // MARK: - Transform -
 
@@ -472,13 +472,13 @@ void shape_history_redo(Shape *const s);
 //
 
 ///
-void shape_enableAnimations(Shape * const s);
+void shape_enableAnimations(Shape *const s);
 
 ///
-void shape_disableAnimations(Shape * const s);
+void shape_disableAnimations(Shape *const s);
 
 ///
-bool shape_getIgnoreAnimations(Shape * const s);
+bool shape_getIgnoreAnimations(Shape *const s);
 
 #ifdef __cplusplus
 } // extern "C"

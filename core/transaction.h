@@ -72,4 +72,3 @@ Index3DIterator *transaction_getIndex3DIterator(Transaction *tr);
 
 /// Resets transaction's Index3DIterator
 void transaction_resetIndex3DIterator(Transaction *tr);
-

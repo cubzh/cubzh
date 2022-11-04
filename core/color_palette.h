@@ -6,9 +6,9 @@ extern "C" {
 
 #include <stdlib.h>
 
-#include "config.h"
-#include "colors.h"
 #include "color_atlas.h"
+#include "colors.h"
+#include "config.h"
 #include "weakptr.h"
 
 typedef struct PaletteEntry {
@@ -22,7 +22,8 @@ typedef struct PaletteEntry {
 /// A color palette is tied to a shape,
 /// - maps shape color index to RGBA color, emissive, and atlas color index
 /// - maximum SHAPE_COLOR_INDEX_MAX_COUNT colors
-/// - currently color atlas is maintained at every palette change TODO: move to end-of-frame if needed
+/// - currently color atlas is maintained at every palette change TODO: move to end-of-frame if
+/// needed
 /// - adding a new color will check first if it exists and insert if new
 typedef struct ColorPalette {
     Weakptr *refAtlas;
@@ -68,29 +69,39 @@ bool color_palette_is_shared(const ColorPalette *p);
 bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut);
 /// @return false for a new color that could NOT be added to palette because it is full,
 ///  true otherwise (whether the color is new and was added or the color exists already)
-bool color_palette_check_and_add_color(ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut);
+bool color_palette_check_and_add_color(ColorPalette *p,
+                                       RGBAColor color,
+                                       SHAPE_COLOR_INDEX_INT_T *entryOut);
 /// @return false for a new color that could NOT be added to palette because it is full,
 /// true otherwise. Always add color even if already in the palette.
-bool color_palette_check_and_add_default_color_2021(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T defaultIdx, SHAPE_COLOR_INDEX_INT_T *entryOut);
-bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T defaultIdx, SHAPE_COLOR_INDEX_INT_T *entryOut);
+bool color_palette_check_and_add_default_color_2021(ColorPalette *p,
+                                                    SHAPE_COLOR_INDEX_INT_T defaultIdx,
+                                                    SHAPE_COLOR_INDEX_INT_T *entryOut);
+bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
+                                                      SHAPE_COLOR_INDEX_INT_T defaultIdx,
+                                                      SHAPE_COLOR_INDEX_INT_T *entryOut);
 void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 uint32_t color_palette_get_color_use_count(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGBAColor color);
-RGBAColor* color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
+RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_set_emissive(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool toggle);
 bool color_palette_is_emissive(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 bool color_palette_is_transparent(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 bool color_palette_is_lighting_dirty(const ColorPalette *p);
 void color_palette_clear_lighting_dirty(ColorPalette *p);
 bool color_palette_get_shape_index(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T *entryOut);
-ATLAS_COLOR_INDEX_INT_T color_palette_get_atlas_index(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
-VERTEX_LIGHT_STRUCT_T color_palette_get_emissive_color_as_light(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
+ATLAS_COLOR_INDEX_INT_T color_palette_get_atlas_index(const ColorPalette *p,
+                                                      SHAPE_COLOR_INDEX_INT_T entry);
+VERTEX_LIGHT_STRUCT_T color_palette_get_emissive_color_as_light(const ColorPalette *p,
+                                                                SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_copy(ColorPalette *dst, const ColorPalette *src);
 /// @param outMapping serialization mapping for index ordering
 /// @return array of colors, must be freed by caller
-RGBAColor* color_palette_get_colors_as_array(const ColorPalette *p, bool **emissive, SHAPE_COLOR_INDEX_INT_T **outMapping);
+RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
+                                             bool **emissive,
+                                             SHAPE_COLOR_INDEX_INT_T **outMapping);
 
 // MARK: - Default palettes -
 
@@ -104,8 +115,10 @@ ColorPalette *color_palette_get_default_pico8p(ColorAtlas *atlas);
 // to and from user-friendly ordered indices eg. when interfacing w/ Lua
 
 uint8_t color_palette_get_ordered_count(const ColorPalette *p);
-SHAPE_COLOR_INDEX_INT_T color_palette_entry_idx_to_ordered_idx(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
-SHAPE_COLOR_INDEX_INT_T color_palette_ordered_idx_to_entry_idx(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T ordered);
+SHAPE_COLOR_INDEX_INT_T color_palette_entry_idx_to_ordered_idx(const ColorPalette *p,
+                                                               SHAPE_COLOR_INDEX_INT_T entry);
+SHAPE_COLOR_INDEX_INT_T color_palette_ordered_idx_to_entry_idx(const ColorPalette *p,
+                                                               SHAPE_COLOR_INDEX_INT_T ordered);
 bool color_palette_needs_ordering(const ColorPalette *p);
 
 #ifdef __cplusplus

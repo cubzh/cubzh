@@ -9,11 +9,11 @@
 #include "filo_list_uint32.h"
 
 // functions that are NOT tested:
-//filo_list_uint32_free
-//filo_list_uint32_new
+// filo_list_uint32_free
+// filo_list_uint32_new
 
 void test_filo_list_uint32_push(void) {
-    FiloListUInt32* uint32list = filo_list_uint32_new();
+    FiloListUInt32 *uint32list = filo_list_uint32_new();
 
     uint32_t a = 0;
     uint32_t b = 0;
@@ -30,7 +30,7 @@ void test_filo_list_uint32_push(void) {
 }
 
 void test_filo_list_uint32_pop(void) {
-    FiloListUInt32* uint32list = filo_list_uint32_new();
+    FiloListUInt32 *uint32list = filo_list_uint32_new();
 
     uint32_t a = 1;
     uint32_t b = 2;

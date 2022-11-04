@@ -209,8 +209,8 @@ RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider);
 Weakptr *transform_get_weakptr(Transform *t);
 Weakptr *transform_get_and_retain_weakptr(Transform *t);
 
-void transform_setAnimationsEnabled(Transform * const t, const bool enabled);
-bool transform_getAnimationsEnabled(Transform * const t);
+void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
+bool transform_getAnimationsEnabled(Transform *const t);
 
 // TEMPORARY
 // Needed while `Player` (defined one level above Cubzh Core)

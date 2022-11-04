@@ -4,7 +4,7 @@
 //  Created by Nino PLANE on November 2, 2022.
 // -------------------------------------------------------------
 
-#pragma once 
+#pragma once
 
 #include "config.h"
 

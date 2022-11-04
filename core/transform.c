@@ -25,7 +25,8 @@
 #define TRANSFORM_ROT 16
 // this transform is up-to-date, but children down the hierarchy need refresh
 #define TRANSFORM_CHILDREN 32
-// collider-relevant transformations (local AND world scale/pos) have been dirty since last end-of-frame
+// collider-relevant transformations (local AND world scale/pos) have been dirty since last
+// end-of-frame
 #define TRANSFORM_PHYSICS 64
 // any transformation has been dirty since last end-of-frame, can be used internally by higher types
 #define TRANSFORM_ANY 128
@@ -943,14 +944,14 @@ Weakptr *transform_get_and_retain_weakptr(Transform *t) {
     }
 }
 
-void transform_setAnimationsEnabled(Transform * const t, const bool enabled) {
+void transform_setAnimationsEnabled(Transform *const t, const bool enabled) {
     if (t == NULL) {
         return;
     }
     t->animationsEnabled = enabled;
 }
 
-bool transform_getAnimationsEnabled(Transform * const t) {
+bool transform_getAnimationsEnabled(Transform *const t) {
     if (t == NULL) {
         return false;
     }

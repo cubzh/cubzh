@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "utils.h"
 #include "config.h"
+#include "utils.h"
 
 void test_utils_float_isEqual(void) {
 
@@ -18,7 +18,6 @@ void test_utils_float_isEqual(void) {
     TEST_CHECK(float_isEqual(0.0f, 0.0f, 0.5f));
     TEST_CHECK(float_isEqual(-1.0f, -1.0f, 1.0f));
     TEST_CHECK(float_isEqual(-5.0f, -10.0f, -1.0f) == false);
-
 }
 
 void test_utils_float_isZero(void) {
@@ -57,7 +56,7 @@ void test_utils_axes_mask(void) {
 
         utils_axes_mask_set(&value2, AxesMaskY, true);
         TEST_CHECK(value2 == 29);
-        
+
         utils_axes_mask_set(&value2, AxesMaskNY, false);
         TEST_CHECK(value2 == 21);
     }
@@ -78,7 +77,7 @@ void test_utils_axes_mask(void) {
         check2 = utils_axes_mask_get(value2, AxesMaskY);
         TEST_CHECK(check == true);
         TEST_CHECK(check2 == false);
-        
+
         check = utils_axes_mask_get(value, AxesMaskZ);
         check2 = utils_axes_mask_get(value2, AxesMaskZ);
         TEST_CHECK(check == true);
@@ -199,7 +198,7 @@ void test_utils_string_new_substring(void) {
     free(res);
 }
 
-void test_utils_string_new_copy_with_limit(void){
+void test_utils_string_new_copy_with_limit(void) {
 
     char *str = "This is a sentance";
     char *res = NULL;
@@ -217,18 +216,18 @@ void test_utils_string_new_copy_with_limit(void){
     free(res);
 }
 
-void test_utils_stringArray_new(void){
+void test_utils_stringArray_new(void) {
 
     stringArray_t *arr = stringArray_new();
     TEST_CHECK(arr != NULL);
     int lenght = stringArray_length(arr);
-    const char *check = stringArray_get((const stringArray_t*)arr, 0);
+    const char *check = stringArray_get((const stringArray_t *)arr, 0);
     TEST_CHECK(check == NULL);
     TEST_CHECK(lenght == 0);
     stringArray_free(arr);
 }
 
-void test_utils_stringArray_n_append(void){
+void test_utils_stringArray_n_append(void) {
 
     bool verif;
     char *str = NULL;
@@ -252,38 +251,38 @@ void test_utils_stringArray_n_append(void){
     length = stringArray_length(arr);
     TEST_CHECK(length == 3);
 
-    char *check = (char*)stringArray_get(arr, 0);
+    char *check = (char *)stringArray_get(arr, 0);
     TEST_CHECK(strcmp(check, "Hello") == 0);
-    check = (char*)stringArray_get(arr, 1);
+    check = (char *)stringArray_get(arr, 1);
     TEST_CHECK(strcmp(check, "01234 _&@/()[]{}") == 0);
-    check = (char*)stringArray_get(arr, 2);
+    check = (char *)stringArray_get(arr, 2);
     TEST_CHECK(strcmp(check, "Hello") == 0);
     stringArray_free(arr);
 }
 
-void test_utils_string_split(void){
+void test_utils_string_split(void) {
     char *str = "Hello World This Is Moon";
     char *delimiters = " ";
     char *check = NULL;
-    const stringArray_t* arr = string_split(str, delimiters);
+    const stringArray_t *arr = string_split(str, delimiters);
 
-    check = (char*)stringArray_get(arr, 0);
+    check = (char *)stringArray_get(arr, 0);
     TEST_CHECK(strcmp(check, "Hello") == 0);
 
-    check = (char*)stringArray_get(arr, 1);
+    check = (char *)stringArray_get(arr, 1);
     TEST_CHECK(strcmp(check, "World") == 0);
 
-    check = (char*)stringArray_get(arr, 2);
+    check = (char *)stringArray_get(arr, 2);
     TEST_CHECK(strcmp(check, "This") == 0);
 
-    check = (char*)stringArray_get(arr, 3);
+    check = (char *)stringArray_get(arr, 3);
     TEST_CHECK(strcmp(check, "Is") == 0);
 
-    check = (char*)stringArray_get(arr, 4);
+    check = (char *)stringArray_get(arr, 4);
     TEST_CHECK(strcmp(check, "Moon") == 0);
 
-    check = (char*)stringArray_get(arr, 5);
+    check = (char *)stringArray_get(arr, 5);
     TEST_CHECK(check == NULL);
 
-    stringArray_free((stringArray_t*)arr);
+    stringArray_free((stringArray_t *)arr);
 }

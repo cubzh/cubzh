@@ -23,10 +23,22 @@
 
 // check if all values are set correctly
 void test_matrix4x4_new(void) {
-    Matrix4x4* m = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
+    Matrix4x4 *m = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
 
     TEST_CHECK(m->x1y1 == 0.0f);
     TEST_CHECK(m->x2y1 == 1.0f);
@@ -50,19 +62,30 @@ void test_matrix4x4_new(void) {
 
 // check if the values are copied and do not depend on the source
 void test_matrix4x4_new_copy(void) {
-    Matrix4x4* source = matrix4x4_new(1.0f, 2.0f, 3.0f, 0.0f,
-                                      0.0f, 0.0f, 0.0f, 0.0f,
-                                      0.0f, 0.0f, 0.0f, 0.0f,
-                                      0.0f, 0.0f, 0.0f, 0.0f);
-    Matrix4x4* copy = matrix4x4_new_copy(source);
+    Matrix4x4 *source = matrix4x4_new(1.0f,
+                                      2.0f,
+                                      3.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f,
+                                      0.0f);
+    Matrix4x4 *copy = matrix4x4_new_copy(source);
     TEST_CHECK(copy != NULL);
 
     // memory addresses must be different
     TEST_CHECK(source != copy);
 
     // copy values must be identical to source's
-    TEST_CHECK(copy->x1y1 == source->x1y1 &&
-               copy->x2y1 == source->x2y1 &&
+    TEST_CHECK(copy->x1y1 == source->x1y1 && copy->x2y1 == source->x2y1 &&
                copy->x3y1 == source->x3y1);
 
     // modify source's values
@@ -78,7 +101,7 @@ void test_matrix4x4_new_copy(void) {
 
 // check that the numbers are correct
 void test_matrix4x4_new_identity(void) {
-    Matrix4x4* m = matrix4x4_new_identity();
+    Matrix4x4 *m = matrix4x4_new_identity();
 
     TEST_CHECK(m->x1y1 == 1.0f && m->x2y2 == 1.0f && m->x3y3 == 1.0f && m->x4y4 == 1.0f);
     TEST_CHECK(m->x2y1 == 0.0f && m->x3y1 == 0.0f && m->x4y1 == 0.0f);
@@ -92,12 +115,12 @@ void test_matrix4x4_new_identity(void) {
 // check that the values are correct
 void test_matrix4x4_new_off_center_orthographic(void) {
     const float l = -2.0f, r = 2.0f, b = 0.0f, t = 8.0f, n = 2.0f, f = 8.0f;
-    Matrix4x4* m = matrix4x4_new_off_center_orthographic(l, r, b, t, n, f);
+    Matrix4x4 *m = matrix4x4_new_off_center_orthographic(l, r, b, t, n, f);
 
     // check constants
-    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f &&
-               m->x2y1 == 0.0f && m->x2y3 == 0.0f && m->x2y4 == 0.0f &&
-               m->x3y1 == 0.0f && m->x3y2 == 0.0f && m->x3y4 == 0.0f && m->x4y4 == 1.0f);
+    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f && m->x2y1 == 0.0f &&
+               m->x2y3 == 0.0f && m->x2y4 == 0.0f && m->x3y1 == 0.0f && m->x3y2 == 0.0f &&
+               m->x3y4 == 0.0f && m->x4y4 == 1.0f);
 
     TEST_CHECK(float_isEqual(m->x1y1, 0.5f, EPSILON_ZERO));
     TEST_CHECK(float_isEqual(m->x2y2, 0.25f, EPSILON_ZERO));
@@ -112,12 +135,12 @@ void test_matrix4x4_new_off_center_orthographic(void) {
 // same tests as for new_off_center_orthographic
 void test_matrix4x4_set_off_center_orthographic(void) {
     const float l = -2.0f, r = 2.0f, b = 0.0f, t = 8.0f, n = 2.0f, f = 8.0f;
-    Matrix4x4* m = matrix4x4_new_identity();
+    Matrix4x4 *m = matrix4x4_new_identity();
     matrix4x4_set_off_center_orthographic(m, l, r, b, t, n, f);
 
-    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f &&
-        m->x2y1 == 0.0f && m->x2y3 == 0.0f && m->x2y4 == 0.0f &&
-        m->x3y1 == 0.0f && m->x3y2 == 0.0f && m->x3y4 == 0.0f && m->x4y4 == 1.0f);
+    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f && m->x2y1 == 0.0f &&
+               m->x2y3 == 0.0f && m->x2y4 == 0.0f && m->x3y1 == 0.0f && m->x3y2 == 0.0f &&
+               m->x3y4 == 0.0f && m->x4y4 == 1.0f);
 
     TEST_CHECK(float_isEqual(m->x1y1, 0.5f, EPSILON_ZERO));
     TEST_CHECK(float_isEqual(m->x2y2, 0.25f, EPSILON_ZERO));
@@ -131,7 +154,7 @@ void test_matrix4x4_set_off_center_orthographic(void) {
 
 // check values
 void test_matrix4x4_new_translate(void) {
-    Matrix4x4* m = matrix4x4_new_translate(55.0f, 66.0f, 77.0f);
+    Matrix4x4 *m = matrix4x4_new_translate(55.0f, 66.0f, 77.0f);
 
     TEST_CHECK(m->x4y1 == 55.0f && m->x4y2 == 66.0f && m->x4y3 == 77.0f);
     // same check as for identity without the above values
@@ -146,10 +169,22 @@ void test_matrix4x4_new_translate(void) {
 
 // same tests as for new_translate
 void test_matrix4x4_set_translation(void) {
-    Matrix4x4* m = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
+    Matrix4x4 *m = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
     matrix4x4_set_translation(m, 55.0f, 66.0f, 77.0f);
 
     TEST_CHECK(m->x4y1 == 55.0f && m->x4y2 == 66.0f && m->x4y3 == 77.0f);
@@ -166,8 +201,8 @@ void test_matrix4x4_set_translation(void) {
 // check values
 void test_matrix4x4_new_scale(void) {
     const float x = 11.0f, y = 22.0f, z = 33.0f;
-    const float3 scale = { x, y, z };
-    Matrix4x4* m = matrix4x4_new_scale(&scale);
+    const float3 scale = {x, y, z};
+    Matrix4x4 *m = matrix4x4_new_scale(&scale);
 
     TEST_CHECK(m->x1y1 == x && m->x2y2 == y && m->x3y3 == z && m->x4y4 == 1.0f);
     TEST_CHECK(m->x2y1 == 0.0f && m->x3y1 == 0.0f && m->x4y1 == 0.0f);
@@ -181,7 +216,7 @@ void test_matrix4x4_new_scale(void) {
 // same tests as for new_scale
 void test_matrix4x4_set_scale(void) {
     const float scale = 13.0f;
-    Matrix4x4* m = matrix4x4_new_identity();
+    Matrix4x4 *m = matrix4x4_new_identity();
     matrix4x4_set_scale(m, scale);
 
     TEST_CHECK(m->x1y1 == scale && m->x2y2 == scale && m->x3y3 == scale && m->x4y4 == 1.0f);
@@ -196,7 +231,7 @@ void test_matrix4x4_set_scale(void) {
 // check the scale values
 void test_matrix4x4_set_scaleXYZ(void) {
     const float x = 11.0f, y = 22.0f, z = 33.0f;
-    Matrix4x4* m = matrix4x4_new_identity();
+    Matrix4x4 *m = matrix4x4_new_identity();
     matrix4x4_set_scaleXYZ(m, x, y, z);
 
     TEST_CHECK(m->x1y1 == x && m->x2y2 == y && m->x3y3 == z && m->x4y4 == 1.0f);
@@ -211,7 +246,7 @@ void test_matrix4x4_set_scaleXYZ(void) {
 // check the scale
 void test_matrix4x4_get_scale(void) {
     const float scale = 13.0f;
-    Matrix4x4* m = matrix4x4_new_identity();
+    Matrix4x4 *m = matrix4x4_new_identity();
     matrix4x4_set_scale(m, scale);
 
     const float result = matrix4x4_get_scale(m);
@@ -222,12 +257,24 @@ void test_matrix4x4_get_scale(void) {
 
 // check the scale values
 void test_matrix4x4_get_scaleXYZ(void) {
-    Matrix4x4* m = matrix4x4_new(3.0f, 4.0f, 12.0f, 3.0f,
-                                 4.0f, 3.0f, 12.0f, 7.0f,
-                                 0.0f, 0.0f, 0.0f, 11.0f,
-                                 -12.0f, -13.0f, -14.0f, -15.0f);
-    float3 f3 = { 1.0f, 2.0f, 3.0f };
-    const float3 expected = { 13.0f, 13.0f, 0.0f };
+    Matrix4x4 *m = matrix4x4_new(3.0f,
+                                 4.0f,
+                                 12.0f,
+                                 3.0f,
+                                 4.0f,
+                                 3.0f,
+                                 12.0f,
+                                 7.0f,
+                                 0.0f,
+                                 0.0f,
+                                 0.0f,
+                                 11.0f,
+                                 -12.0f,
+                                 -13.0f,
+                                 -14.0f,
+                                 -15.0f);
+    float3 f3 = {1.0f, 2.0f, 3.0f};
+    const float3 expected = {13.0f, 13.0f, 0.0f};
 
     matrix4x4_get_scaleXYZ(m, &f3);
     TEST_CHECK(float3_isEqual(&f3, &expected, EPSILON_ZERO));
@@ -237,7 +284,7 @@ void test_matrix4x4_get_scaleXYZ(void) {
 
 // check the trace value
 void test_matrix4x4_get_trace(void) {
-    Matrix4x4* m = matrix4x4_new_identity();
+    Matrix4x4 *m = matrix4x4_new_identity();
     m->x1y1 = 2.0f;
     m->x2y2 = 3.0f;
     m->x3y3 = 4.0f;
@@ -250,9 +297,9 @@ void test_matrix4x4_get_trace(void) {
 
 // find the given angle
 void test_matrix4x4_get_euler(void) {
-    Matrix4x4* m = matrix4x4_new_from_euler_xyz(PI_F * 0.5f, 0.0f, 0.0f);
-    float3 result = { 0.0f, 0.0f, 0.0f };
-    const float3 expected = { PI_F * 0.5f, 0.0f, 0.0f };
+    Matrix4x4 *m = matrix4x4_new_from_euler_xyz(PI_F * 0.5f, 0.0f, 0.0f);
+    float3 result = {0.0f, 0.0f, 0.0f};
+    const float3 expected = {PI_F * 0.5f, 0.0f, 0.0f};
 
     matrix4x4_get_euler(m, &result);
     TEST_CHECK(float3_isEqual(&result, &expected, EPSILON_ZERO_RAD));
@@ -262,17 +309,15 @@ void test_matrix4x4_get_euler(void) {
 
 // check that modifying the source does not affect the copy
 void test_matrix4x4_copy(void) {
-    Matrix4x4* source = matrix4x4_new_identity();
-    Matrix4x4* copy = matrix4x4_new_identity();
+    Matrix4x4 *source = matrix4x4_new_identity();
+    Matrix4x4 *copy = matrix4x4_new_identity();
     source->x1y1 = 10.0f;
     source->x1y2 = 20.0f;
     source->x1y3 = 30.0f;
     source->x1y4 = 40.0f;
 
     matrix4x4_copy(copy, source);
-    TEST_CHECK(copy->x1y1 == 10.0f &&
-               copy->x1y2 == 20.0f &&
-               copy->x1y3 == 30.0f &&
+    TEST_CHECK(copy->x1y1 == 10.0f && copy->x1y2 == 20.0f && copy->x1y3 == 30.0f &&
                copy->x1y4 == 40.0f);
     source->x1y1 = 15.0f;
     TEST_CHECK(copy->x1y1 != 15.0f);
@@ -283,14 +328,38 @@ void test_matrix4x4_copy(void) {
 
 // check abritrary values form result
 void test_matrix4x4_op_multiply_2(void) {
-    Matrix4x4* a = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
-    Matrix4x4* b = matrix4x4_new(10.0f, 11.0f, 12.0f, 13.0f,
-                                 14.0f, 15.0f, 16.0f, 17.0f,
-                                 18.0f, 19.0f, 20.0f, 21.0f,
-                                 22.0f, 23.0f, 24.0f, 25.0f);
+    Matrix4x4 *a = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
+    Matrix4x4 *b = matrix4x4_new(10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f,
+                                 16.0f,
+                                 17.0f,
+                                 18.0f,
+                                 19.0f,
+                                 20.0f,
+                                 21.0f,
+                                 22.0f,
+                                 23.0f,
+                                 24.0f,
+                                 25.0f);
 
     matrix4x4_op_multiply_2(a, b);
     TEST_CHECK(float_isEqual(b->x1y1, 116.0f, EPSILON_ZERO));
@@ -302,14 +371,26 @@ void test_matrix4x4_op_multiply_2(void) {
     matrix4x4_free(b);
 }
 
-//check all result values
+// check all result values
 void test_matrix4x4_op_multiply_vec(void) {
-    Matrix4x4* m = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
-    const float4 multiplier = { 2.0f, 3.0f, 4.0f, 5.0f };
-    float4 result = { 0.0f, 0.0f, 0.0f, 0.0f };
+    Matrix4x4 *m = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
+    const float4 multiplier = {2.0f, 3.0f, 4.0f, 5.0f};
+    float4 result = {0.0f, 0.0f, 0.0f, 0.0f};
 
     matrix4x4_op_multiply_vec(&result, &multiplier, m);
     TEST_CHECK(float_isEqual(result.x, 26.0f, EPSILON_ZERO));
@@ -320,14 +401,26 @@ void test_matrix4x4_op_multiply_vec(void) {
     matrix4x4_free(m);
 }
 
-//check all result values
+// check all result values
 void test_matrix4x4_op_multiply_vec_point(void) {
-    Matrix4x4* m = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
-    const float3 multiplier = { 2.0f, 3.0f, 4.0f };
-    float3 result = { 0.0f, 0.0f, 0.0f };
+    Matrix4x4 *m = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
+    const float3 multiplier = {2.0f, 3.0f, 4.0f};
+    float3 result = {0.0f, 0.0f, 0.0f};
 
     matrix4x4_op_multiply_vec_point(&result, &multiplier, m);
     TEST_CHECK(float_isEqual(result.x, 14.0f, EPSILON_ZERO));
@@ -337,14 +430,26 @@ void test_matrix4x4_op_multiply_vec_point(void) {
     matrix4x4_free(m);
 }
 
-//check all result values
+// check all result values
 void test_matrix4x4_op_multiply_vec_vector(void) {
-    Matrix4x4* m = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
-    const float3 multiplier = { 2.0f, 3.0f, 4.0f };
-    float3 result = { 0.0f, 0.0f, 0.0f };
+    Matrix4x4 *m = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
+    const float3 multiplier = {2.0f, 3.0f, 4.0f};
+    float3 result = {0.0f, 0.0f, 0.0f};
 
     matrix4x4_op_multiply_vec_vector(&result, &multiplier, m);
     TEST_CHECK(float_isEqual(result.x, 11.0f, EPSILON_ZERO));
@@ -356,10 +461,22 @@ void test_matrix4x4_op_multiply_vec_vector(void) {
 
 // check first row
 void test_matrix4x4_op_invert(void) {
-    Matrix4x4* m = matrix4x4_new(10.0f, 11.0f, -412.0f, 513.0f,
-                                 14.0f, -315.0f, 216.0f, 17.0f,
-                                 118.0f, 19.0f, 20.0f, -321.0f,
-                                 22.0f, -423.0f, 24.0f, 25.0f);
+    Matrix4x4 *m = matrix4x4_new(10.0f,
+                                 11.0f,
+                                 -412.0f,
+                                 513.0f,
+                                 14.0f,
+                                 -315.0f,
+                                 216.0f,
+                                 17.0f,
+                                 118.0f,
+                                 19.0f,
+                                 20.0f,
+                                 -321.0f,
+                                 22.0f,
+                                 -423.0f,
+                                 24.0f,
+                                 25.0f);
 
     matrix4x4_op_invert(m);
     TEST_CHECK(float_isEqual(m->x1y1, 0.00510333665f, EPSILON_ZERO));
@@ -372,11 +489,23 @@ void test_matrix4x4_op_invert(void) {
 
 // check second column
 void test_matrix4x4_op_unscale(void) {
-    Matrix4x4* m = matrix4x4_new(0.0f, 1.0f, 2.0f, 3.0f,
-                                 4.0f, 5.0f, 6.0f, 7.0f,
-                                 8.0f, 9.0f, 10.0f, 11.0f,
-                                 12.0f, 13.0f, 14.0f, 15.0f);
-    const float3 scale = { 2.0f, 3.0f, 4.0f };
+    Matrix4x4 *m = matrix4x4_new(0.0f,
+                                 1.0f,
+                                 2.0f,
+                                 3.0f,
+                                 4.0f,
+                                 5.0f,
+                                 6.0f,
+                                 7.0f,
+                                 8.0f,
+                                 9.0f,
+                                 10.0f,
+                                 11.0f,
+                                 12.0f,
+                                 13.0f,
+                                 14.0f,
+                                 15.0f);
+    const float3 scale = {2.0f, 3.0f, 4.0f};
 
     matrix4x4_op_unscale(m, &scale);
     TEST_CHECK(float_isEqual(m->x2y1, 0.5f, EPSILON_ZERO));

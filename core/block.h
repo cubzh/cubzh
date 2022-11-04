@@ -12,8 +12,8 @@ extern "C" {
 
 #include <stdbool.h>
 
-#include "colors.h"
 #include "color_palette.h"
+#include "colors.h"
 #include "int3.h"
 
 // forward declarations

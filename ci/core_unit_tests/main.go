@@ -37,7 +37,7 @@ func buildAnRunCurrentDirectory() error {
 	// Get background context
 	ctx := context.Background()
 	// Initialize dagger client
-	client, err := dagger.Connect(ctx)
+	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
 	if err != nil {
 		return err
 	}
