@@ -11,17 +11,17 @@
 extern "C" {
 #endif
 
-enum AssetType { // mask
-    TypeUnknown = 0,
-    TypeShape = 1,
-    TypePalette = 2,
-    TypeObject = 4,
-    TypeAll = 7, // update TypeAll when adding a new value
-};
+typedef enum {
+    AssetType_Unknown = 0,
+    AssetType_Shape = 1,
+    AssetType_Palette = 2,
+    AssetType_Object = 4,
+    AssetType_Any = 7, // update AssetType_Any when adding a new value
+} AssetType; // mask
 
 typedef struct _Asset {
-    enum AssetType type;
-    void           *ptr;
+    AssetType type;
+    void      *ptr;
 } Asset;
 
 #ifdef __cplusplus
