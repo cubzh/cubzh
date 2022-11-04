@@ -48,12 +48,12 @@ uint8_t readMagicBytesLegacy(Stream *s) {
     return 0; // ok
 }
 
-Shape *resources_get_root_shape(DoublyLinkedList *list) {
+Shape *assets_get_root_shape(DoublyLinkedList *list) {
     Shape *shape = NULL;
     DoublyLinkedListNode *node = doubly_linked_list_first(list);
     while (node != NULL) {
-        Resource *r = (Resource *) doubly_linked_list_node_pointer(node);
-        if (r->type == TypeShape) {
+        Asset *r = (Asset *) doubly_linked_list_node_pointer(node);
+        if (r->type == AssetType_Shape) {
             Shape *s = (Shape *) r->ptr;
             if (transform_get_parent(shape_get_root_transform(s)) == NULL) {
                 shape = s;
@@ -74,21 +74,21 @@ Shape *serialization_load_shape(Stream *s,
                                 ColorAtlas* colorAtlas,
                                 LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
-    DoublyLinkedList *shapes = serialization_load_resources(s, fullname, TypeShape, colorAtlas, shapeSettings);
+    DoublyLinkedList *shapes = serialization_load_assets(s, fullname, AssetType_Shape, colorAtlas, shapeSettings);
     // s is NULL if it could not be loaded
     if (shapes == NULL) {
         return NULL;
     }
-    Shape *shape = resources_get_root_shape(shapes);
+    Shape *shape = assets_get_root_shape(shapes);
     doubly_linked_list_free(shapes);
     return shape;
 }
 
-DoublyLinkedList *serialization_load_resources(Stream *s,
-                                               const char *fullname,
-                                               enum ResourceType filterMask,
-                                               ColorAtlas* colorAtlas,
-                                               LoadShapeSettings *shapeSettings) {
+DoublyLinkedList *serialization_load_assets(Stream *s,
+                                            const char *fullname,
+                                            AssetType filterMask,
+                                            ColorAtlas* colorAtlas,
+                                            LoadShapeSettings *shapeSettings) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
         return NULL; // error
@@ -115,15 +115,15 @@ DoublyLinkedList *serialization_load_resources(Stream *s,
         case 5: {
             list = doubly_linked_list_new();
             Shape *shape = serialization_v5_load_shape(s, shapeSettings, colorAtlas);
-            Resource *resource = malloc(sizeof(Resource));
-            resource->ptr = shape;
-            resource->type = TypeShape;
-            DoublyLinkedListNode *node = doubly_linked_list_node_new(resource);
+            Asset *asset = malloc(sizeof(Asset));
+            asset->ptr = shape;
+            asset->type = AssetType_Shape;
+            DoublyLinkedListNode *node = doubly_linked_list_node_new(asset);
             doubly_linked_list_push_last(list, node);
             break;
         }
         case 6: {
-            list = serialization_load_resources_v6(s, colorAtlas, filterMask, shapeSettings);
+            list = serialization_load_assets_v6(s, colorAtlas, filterMask, shapeSettings);
             break;
         }
         default: {
@@ -137,15 +137,13 @@ DoublyLinkedList *serialization_load_resources(Stream *s,
     if (doubly_linked_list_node_count(list) == 0) {
         doubly_linked_list_free(list);
         list = NULL;
-        cclog_error("[serialization_load_resources] no resources found");
+        cclog_error("[serialization_load_assets] no resources found");
     }
     
     // set fullname if containing a root shape
-    Shape *shape = resources_get_root_shape(list);
+    Shape *shape = assets_get_root_shape(list);
     if (shape != NULL) {
         shape_set_fullname(shape, fullname);
-    } else {
-        cclog_error("[serialization_load_shape] shape is NULL");
     }
 
     return list;
