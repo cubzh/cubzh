@@ -1969,7 +1969,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers, Shape const *shape, u
     return true;
 }
 
-DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAtlas, enum ResourceType filterMask, LoadShapeSettings *shapeSettings) {
+DoublyLinkedList *serialization_load_assets_v6(Stream *s, ColorAtlas *colorAtlas, AssetType filterMask, LoadShapeSettings *shapeSettings) {
     DoublyLinkedList *list = doubly_linked_list_new();
     
     uint8_t i;
@@ -2029,11 +2029,11 @@ DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAt
                 sizeRead = chunk_v6_read_palette(s, colorAtlas, &serializedPalette, chunkID == P3S_CHUNK_ID_PALETTE_LEGACY);
                 paletteID = PALETTE_ID_CUSTOM;
 
-                if (filterMask == TypeAll || (filterMask & TypePalette) > 0) {
-                    Resource *resource = malloc(sizeof(Resource));
-                    resource->ptr = serializedPalette;
-                    resource->type = TypePalette;
-                    doubly_linked_list_push_last(list, resource);
+                if (filterMask == AssetType_Any || (filterMask & AssetType_Palette) > 0) {
+                    Asset *asset = malloc(sizeof(Asset));
+                    asset->ptr = serializedPalette;
+                    asset->type = AssetType_Palette;
+                    doubly_linked_list_push_last(list, asset);
                 }
                 
                 // ignore palette if octree was processed already w/ default palette
@@ -2084,11 +2084,11 @@ DoublyLinkedList *serialization_load_resources_v6(Stream *s, ColorAtlas *colorAt
                 
                 // shrink box once all blocks were added to update box origin
                 shape_shrink_box(shape);
-                if (filterMask == TypeAll || (filterMask & TypeShape) > 0) {
-                    Resource *resource = malloc(sizeof(Resource));
-                    resource->ptr = shape;
-                    resource->type = TypeShape;
-                    doubly_linked_list_push_last(list, resource);
+                if (filterMask == AssetType_Any || (filterMask & (AssetType_Shape + AssetType_Object)) > 0) {
+                    Asset *asset = malloc(sizeof(Asset));
+                    asset->ptr = shape;
+                    asset->type = AssetType_Shape;
+                    doubly_linked_list_push_last(list, asset);
                 }
                 
                 totalSizeRead += sizeRead;
