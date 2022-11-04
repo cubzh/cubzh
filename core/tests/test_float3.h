@@ -16,7 +16,7 @@ void test_float3_new(void) {
     TEST_CHECK(f3->x == 1.0f);
     TEST_CHECK(f3->y == 2.0f);
     TEST_CHECK(f3->z == 3.0f);
-    const float3 expected = { 1.0f, 2.0f, 3.0f };
+    const float3 expected = {1.0f, 2.0f, 3.0f};
     TEST_CHECK(float3_isEqual(f3, &expected, EPSILON_ZERO));
 
     float3 *f0 = float3_new_zero();
@@ -41,13 +41,13 @@ void test_float3_copy(void) {
     float3 *c = float3_new_zero();
     float3_copy(c, f3);
 
-    const float3 expected1 = { 5.0f, 7.0f, 11.0f };
+    const float3 expected1 = {5.0f, 7.0f, 11.0f};
     TEST_CHECK(float3_isEqual(c, &expected1, EPSILON_ZERO));
 
     f3->x = 13.0f;
     f3->y = 17.0f;
     f3->z = 19.0f;
-    const float3 expected2 = { 13.0f, 17.0f, 19.0f };
+    const float3 expected2 = {13.0f, 17.0f, 19.0f};
     TEST_CHECK(float3_isEqual(f3, &expected2, EPSILON_ZERO));
     TEST_CHECK(float3_isEqual(c, &expected1, EPSILON_ZERO));
 
@@ -81,7 +81,7 @@ void test_float3_products(void) {
     float3 *f3 = float3_new_zero();
     float3_copy(f3, f1);
 
-    const float3 expected_cross = { -1.0f, -4.0f, 3.0f};
+    const float3 expected_cross = {-1.0f, -4.0f, 3.0f};
     float3_cross_product(f1, f2);
     TEST_CHECK(float3_isEqual(f1, &expected_cross, EPSILON_ZERO));
 
@@ -128,7 +128,7 @@ void test_float3_length(void) {
         float3 *f1 = float3_new(3.0f, 4.0f, 12.0f);
         float3_normalize(f1);
 
-        const float3 expected_norm = { 3.0f / 13.0f, 4.0f / 13.0f, 12.0f / 13.0f };
+        const float3 expected_norm = {3.0f / 13.0f, 4.0f / 13.0f, 12.0f / 13.0f};
         TEST_CHECK(float3_isEqual(f1, &expected_norm, EPSILON_ZERO));
         float3_free(f1);
     }
@@ -145,11 +145,11 @@ void test_float3_length(void) {
 void test_float3_min_max(void) {
     float3 *f1 = float3_new(-5.0f, 1.0f, 100.0f);
     float3 *f2 = float3_new(2.0f, -50.0f, 6.0f);
-    const float3 expected_max = { 2.0f, 1.0f, 100.0f };
-    const float3 expected_min = { -5.0f, -50.0f, 6.0f };
+    const float3 expected_max = {2.0f, 1.0f, 100.0f};
+    const float3 expected_min = {-5.0f, -50.0f, 6.0f};
     const float3 result_max = float3_mmax2(f1, f2);
     const float3 result_min = float3_mmin2(f1, f2);
-    
+
     TEST_CHECK(float_isEqual(float3_mmax(f1), 100.0f, EPSILON_ZERO));
     TEST_CHECK(float3_isEqual(&result_max, &expected_max, EPSILON_ZERO));
     TEST_CHECK(float_isEqual(float3_mmin(f1), -5.0f, EPSILON_ZERO));
@@ -163,7 +163,7 @@ void test_float3_operations(void) {
     {
         float3 *f1 = float3_new(5.0f, 9.0f, 11.0f);
         float3 *f2 = float3_new(13.0f, 17.0f, 19.0f);
-        const float3 expected = { 18.0f, 26.0f, 30.0f };
+        const float3 expected = {18.0f, 26.0f, 30.0f};
 
         float3_op_add(f1, f2);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
@@ -171,11 +171,11 @@ void test_float3_operations(void) {
         float3_free(f1);
         float3_free(f2);
     }
-    
+
     {
         float3 *f1 = float3_new(5.0f, -9.0f, 11.0f);
         float scalar = 3.0f;
-        const float3 expected = { 8.0f, -6.0f, 14.0f };
+        const float3 expected = {8.0f, -6.0f, 14.0f};
 
         float3_op_add_scalar(f1, scalar);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
@@ -186,7 +186,7 @@ void test_float3_operations(void) {
     {
         float3 *f1 = float3_new(5.0f, 9.0f, 11.0f);
         float3 *f2 = float3_new(13.0f, 17.0f, 11.0f);
-        const float3 expected = { -8.0f, -8.0f, 0.0f };
+        const float3 expected = {-8.0f, -8.0f, 0.0f};
 
         float3_op_substract(f1, f2);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
@@ -194,11 +194,11 @@ void test_float3_operations(void) {
         float3_free(f1);
         float3_free(f2);
     }
-    
+
     {
         float3 *f1 = float3_new(5.0f, -9.0f, 11.0f);
         float scalar = 3.0f;
-        const float3 expected = { 2.0f, -12.0f, 8.0f };
+        const float3 expected = {2.0f, -12.0f, 8.0f};
 
         float3_op_substract_scalar(f1, scalar);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
@@ -209,7 +209,7 @@ void test_float3_operations(void) {
     {
         float3 *f1 = float3_new(-5.0f, 9.0f, -11.0f);
         float3 *f2 = float3_new(13.0f, -17.0f, -19.0f);
-        const float3 expected = { -65.0f, -153.0f, 209.0f };
+        const float3 expected = {-65.0f, -153.0f, 209.0f};
 
         float3_op_mult(f1, f2);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
@@ -217,22 +217,22 @@ void test_float3_operations(void) {
         float3_free(f1);
         float3_free(f2);
     }
-    
+
     {
         float3 *f1 = float3_new(5.0f, -9.0f, 11.0f);
         float scalar = 5.0f;
-        const float3 expected = { 25.0f, -45.0f, 55.0f };
+        const float3 expected = {25.0f, -45.0f, 55.0f};
 
         float3_op_scale(f1, scalar);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
 
         float3_free(f1);
     }
-    
+
     {
         float3 *f1 = float3_new(15.0f, -9.0f, 11.0f);
         float scalar = 3.0f;
-        const float3 expected = { 5.0f, -3.0f, 11.0f / 3.0f };
+        const float3 expected = {5.0f, -3.0f, 11.0f / 3.0f};
 
         float3_op_unscale(f1, scalar);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));
@@ -244,7 +244,7 @@ void test_float3_operations(void) {
         float3 *f1 = float3_new(-105.0f, 56.0f, 30.0f);
         float min = -100.0f;
         float max = 35.0f;
-        const float3 expected = { -100.0f, 35.0f, 30.f };
+        const float3 expected = {-100.0f, 35.0f, 30.f};
 
         float3_op_clamp(f1, min, max);
         TEST_CHECK(float3_isEqual(f1, &expected, EPSILON_ZERO));

@@ -13,8 +13,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "colors.h"
 #include "color_atlas.h"
+#include "colors.h"
 #include "shape.h"
 
 typedef struct _Transform Transform;

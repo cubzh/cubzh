@@ -10,7 +10,7 @@
 
 // Create a new block and check if his colorIndex is 0
 void test_block_new(void) {
-    Block* a = block_new();
+    Block *a = block_new();
 
     TEST_CHECK(a->colorIndex == 0);
     block_free(a);
@@ -18,7 +18,7 @@ void test_block_new(void) {
 
 // Create a new block of air and check if his colorIndex is 255
 void test_block_new_air(void) {
-    Block* a = block_new_air();
+    Block *a = block_new_air();
 
     TEST_CHECK(a->colorIndex == 255);
     block_free(a);
@@ -33,7 +33,8 @@ void test_block_new_with_color(void) {
     block_free(a);
 }
 
-// Create 2 block with different colorIndex and copy them into 2 new blocks. Then we check the colorIndex of the news blocks
+// Create 2 block with different colorIndex and copy them into 2 new blocks. Then we check the
+// colorIndex of the news blocks
 void test_block_new_copy(void) {
     SHAPE_COLOR_INDEX_INT_T color = 152;
     Block *a = block_new_with_color(color);
@@ -51,7 +52,7 @@ void test_block_new_copy(void) {
 
 // Create a normal block, then assign him a color, and check if he have the correct colorIndex
 void test_block_set_color_index(void) {
-    Block* a = block_new();
+    Block *a = block_new();
     SHAPE_COLOR_INDEX_INT_T color = 152;
 
     block_set_color_index(a, color);
@@ -59,10 +60,11 @@ void test_block_set_color_index(void) {
     block_free(a);
 }
 
-// Create 2 block with different colorIndex, then create a colorCheck to get the colorIndex of each of them and check if it's the good value
+// Create 2 block with different colorIndex, then create a colorCheck to get the colorIndex of each
+// of them and check if it's the good value
 void test_block_get_color_index(void) {
-    Block* a = block_new();
-    Block* b = block_new_air();
+    Block *a = block_new();
+    Block *b = block_new_air();
     SHAPE_COLOR_INDEX_INT_T color = 152;
     block_set_color_index(a, color);
 
@@ -77,8 +79,8 @@ void test_block_get_color_index(void) {
 
 // Create 2 block with different colorIndex then check if the colorIndex is != 255
 void test_block_is_solid(void) {
-    Block* a = block_new();
-    Block* b = block_new_air();
+    Block *a = block_new();
+    Block *b = block_new_air();
 
     TEST_CHECK(block_is_solid(a) == true);
     TEST_CHECK(block_is_solid(b) == false);
@@ -88,10 +90,10 @@ void test_block_is_solid(void) {
 
 // Create 4 block with 2 different type and check them with each other to see is they are equal
 void test_block_equal(void) {
-    Block* a = block_new();
-    Block* b = block_new();
-    Block* c = block_new_air();
-    Block* d = block_new_air();
+    Block *a = block_new();
+    Block *b = block_new();
+    Block *c = block_new_air();
+    Block *d = block_new_air();
 
     TEST_CHECK(block_equal(a, b) == true);
     TEST_CHECK(block_equal(c, d) == true);
@@ -131,18 +133,18 @@ void test_block_equal(void) {
 
 // Create 2 AwareBlock and check all the different "get" function
 void test_aware_block_get(void) {
-    Block* a = block_new();
-    int3* shapePosA = int3_new(0, 0, 0);
-    int3* chunkPosA = int3_new(0, 0, 0);
-    AwareBlock* aBlock = aware_block_new(a, shapePosA, chunkPosA, 0);
-    Block* b = block_new_air();
-    int3* shapePosB = int3_new(1, 1, 1);
-    int3* chunkPosB = int3_new(1, 1, 1);
-    AwareBlock* bBlock = aware_block_new(b, shapePosB, chunkPosB, 1);
-    int3* checkShapePos = NULL;
-    int3* checkChunkPos = NULL;
-    int3* checkShapeTargetPos = NULL;
-    Block* checkBlock = NULL;
+    Block *a = block_new();
+    int3 *shapePosA = int3_new(0, 0, 0);
+    int3 *chunkPosA = int3_new(0, 0, 0);
+    AwareBlock *aBlock = aware_block_new(a, shapePosA, chunkPosA, 0);
+    Block *b = block_new_air();
+    int3 *shapePosB = int3_new(1, 1, 1);
+    int3 *chunkPosB = int3_new(1, 1, 1);
+    AwareBlock *bBlock = aware_block_new(b, shapePosB, chunkPosB, 1);
+    int3 *checkShapePos = NULL;
+    int3 *checkChunkPos = NULL;
+    int3 *checkShapeTargetPos = NULL;
+    Block *checkBlock = NULL;
     SHAPE_COLOR_INDEX_INT_T checkColor = 0;
 
     // Get the block of an AwareBlock and check his colorIndex
@@ -177,7 +179,8 @@ void test_aware_block_get(void) {
     TEST_CHECK(checkChunkPos->y == 1);
     TEST_CHECK(checkChunkPos->z == 1);
 
-    // Get the int3 of the ShapeTargetPos inside de AwareBlock and check him with different faceIndex
+    // Get the int3 of the ShapeTargetPos inside de AwareBlock and check him with different
+    // faceIndex
     checkShapeTargetPos = aware_block_get_shape_target_pos(aBlock);
     TEST_CHECK(checkShapeTargetPos->x == 1);
     TEST_CHECK(checkShapeTargetPos->y == 0);
@@ -197,17 +200,18 @@ void test_aware_block_get(void) {
     aware_block_free(bBlock);
 }
 
-// Create a AwareBlock and copy all his information into a second one. Then check all the information of the new AwareBlock
+// Create a AwareBlock and copy all his information into a second one. Then check all the
+// information of the new AwareBlock
 void test_aware_block_new_copy(void) {
-    Block* a = block_new();
-    int3* shapePos = int3_new(1, 1, 1);
-    int3* chunkPos = int3_new(1, 1, 1);
-    AwareBlock* aBlock = aware_block_new(a, shapePos, chunkPos, 3);
-    AwareBlock* bBlock = aware_block_new_copy(aBlock);
-    int3* checkShapePos = NULL;
-    int3* checkChunkPos = NULL;
-    int3* checkShapeTargetPos = NULL;
-    Block* checkBlock = NULL;
+    Block *a = block_new();
+    int3 *shapePos = int3_new(1, 1, 1);
+    int3 *chunkPos = int3_new(1, 1, 1);
+    AwareBlock *aBlock = aware_block_new(a, shapePos, chunkPos, 3);
+    AwareBlock *bBlock = aware_block_new_copy(aBlock);
+    int3 *checkShapePos = NULL;
+    int3 *checkChunkPos = NULL;
+    int3 *checkShapeTargetPos = NULL;
+    Block *checkBlock = NULL;
     SHAPE_COLOR_INDEX_INT_T checkColor = 0;
 
     checkBlock = aware_block_get_block(bBlock);
@@ -234,13 +238,14 @@ void test_aware_block_new_copy(void) {
     aware_block_free(bBlock);
 }
 
-// Create a AwareBlock and change the faceIndex with all possibilities, then check the int3 of his ShapeTargetPos 
+// Create a AwareBlock and change the faceIndex with all possibilities, then check the int3 of his
+// ShapeTargetPos
 void test_aware_block_set_touched_face(void) {
-    Block* a = block_new();
-    int3* shapePos = int3_new(0, 0, 0);
-    int3* chunkPos = int3_new(0, 0, 0);
-    AwareBlock* aBlock = aware_block_new(a, shapePos, chunkPos, 0);
-    int3* checkShapeTargetPos = NULL;
+    Block *a = block_new();
+    int3 *shapePos = int3_new(0, 0, 0);
+    int3 *chunkPos = int3_new(0, 0, 0);
+    AwareBlock *aBlock = aware_block_new(a, shapePos, chunkPos, 0);
+    int3 *checkShapeTargetPos = NULL;
 
     aware_block_set_touched_face(aBlock, 1);
     checkShapeTargetPos = aware_block_get_shape_target_pos(aBlock);
@@ -282,29 +287,66 @@ void test_aware_block_set_touched_face(void) {
     aware_block_free(aBlock);
 }
 
-// Create a AwareBlock and get the neighbours blocks of all his faces then check the int3 of their coords 
+// Create a AwareBlock and get the neighbours blocks of all his faces then check the int3 of their
+// coords
 void test_block_getNeighbourBlockCoordinates(void) {
-    Block* a = block_new();
-    int3* shapePos = int3_new(3, 5, 2);
-    int3* chunkPos = int3_new(0, 0, 0);
-    AwareBlock* aBlock = aware_block_new(a, shapePos, chunkPos, 0);
-    int3* checkShapePos = NULL;
+    Block *a = block_new();
+    int3 *shapePos = int3_new(3, 5, 2);
+    int3 *chunkPos = int3_new(0, 0, 0);
+    AwareBlock *aBlock = aware_block_new(a, shapePos, chunkPos, 0);
+    int3 *checkShapePos = NULL;
     SHAPE_COORDS_INT_T newx = 0;
     SHAPE_COORDS_INT_T newy = 0;
     SHAPE_COORDS_INT_T newz = 0;
 
     checkShapePos = aware_block_get_shape_pos(aBlock);
-    block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 0, &newx, &newy, &newz);
+    block_getNeighbourBlockCoordinates(checkShapePos->x,
+                                       checkShapePos->y,
+                                       checkShapePos->z,
+                                       0,
+                                       &newx,
+                                       &newy,
+                                       &newz);
     TEST_CHECK(newx == 4 && newy == 5 && newz == 2);
-    block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 1, &newx, &newy, &newz);
+    block_getNeighbourBlockCoordinates(checkShapePos->x,
+                                       checkShapePos->y,
+                                       checkShapePos->z,
+                                       1,
+                                       &newx,
+                                       &newy,
+                                       &newz);
     TEST_CHECK(newx == 2 && newy == 5 && newz == 2);
-    block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 2, &newx, &newy, &newz);
+    block_getNeighbourBlockCoordinates(checkShapePos->x,
+                                       checkShapePos->y,
+                                       checkShapePos->z,
+                                       2,
+                                       &newx,
+                                       &newy,
+                                       &newz);
     TEST_CHECK(newx == 3 && newy == 5 && newz == 3);
-    block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 3, &newx, &newy, &newz);
+    block_getNeighbourBlockCoordinates(checkShapePos->x,
+                                       checkShapePos->y,
+                                       checkShapePos->z,
+                                       3,
+                                       &newx,
+                                       &newy,
+                                       &newz);
     TEST_CHECK(newx == 3 && newy == 5 && newz == 1);
-    block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 4, &newx, &newy, &newz);
+    block_getNeighbourBlockCoordinates(checkShapePos->x,
+                                       checkShapePos->y,
+                                       checkShapePos->z,
+                                       4,
+                                       &newx,
+                                       &newy,
+                                       &newz);
     TEST_CHECK(newx == 3 && newy == 6 && newz == 2);
-    block_getNeighbourBlockCoordinates(checkShapePos->x, checkShapePos->y, checkShapePos->z, 5, &newx, &newy, &newz);
+    block_getNeighbourBlockCoordinates(checkShapePos->x,
+                                       checkShapePos->y,
+                                       checkShapePos->z,
+                                       5,
+                                       &newx,
+                                       &newy,
+                                       &newz);
     TEST_CHECK(newx == 3 && newy == 4 && newz == 2);
 
     block_free(a);
@@ -312,4 +354,3 @@ void test_block_getNeighbourBlockCoordinates(void) {
     int3_free(chunkPos);
     aware_block_free(aBlock);
 }
-

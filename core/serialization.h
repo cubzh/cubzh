@@ -90,7 +90,7 @@ Shape *serialization_load_shape(Stream *s,
                                 bool octree,
                                 bool lighting,
                                 bool isMutable,
-                                ColorAtlas* colorAtlas,
+                                ColorAtlas *colorAtlas,
                                 bool sharedColors,
                                 const bool allowLegacy);
 

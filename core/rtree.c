@@ -784,7 +784,7 @@ size_t rtree_query_overlap_box(Rtree *r,
                                     groups,
                                     collidesWith,
                                     _rtree_query_overlap_box_func,
-                                    (void*)aabb,
+                                    (void *)aabb,
                                     results,
                                     epsilon);
 }
@@ -852,7 +852,7 @@ size_t rtree_query_cast_all_ray(Rtree *r,
                                      groups,
                                      collidesWith,
                                      _rtree_query_cast_ray_all_func,
-                                     (void*)worldRay,
+                                     (void *)worldRay,
                                      results);
 }
 

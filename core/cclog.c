@@ -32,7 +32,11 @@ char *_cc_vsnprintf_helper(const char *format, ...) {
     return buffer;
 }
 
-int _cclog(const int severity, const char *filename, const int line, const char *format, va_list args) {
+int _cclog(const int severity,
+           const char *filename,
+           const int line,
+           const char *format,
+           va_list args) {
 
     // create a static memory buffer
     static char bufferPreString[LOG_BUFFER_LENGTH];

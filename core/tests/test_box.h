@@ -17,10 +17,9 @@
 // --- box_to_aabox()
 ////////
 
-
 // Create a new box and check if the min and max are set at a float3_zero
 void test_box_new(void) {
-    Box* a = box_new();
+    Box *a = box_new();
 
     float3 limitCheck = {0.0f, 0.0f, 0.0f};
     TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
@@ -31,7 +30,7 @@ void test_box_new(void) {
 
 // Create a new box and check if the min and max are set at the values we wanted
 void test_box_new_2(void) {
-    Box* a = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+    Box *a = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
     float3 limitCheck = {0.0f, 0.0f, 0.0f};
     TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
@@ -44,10 +43,11 @@ void test_box_new_2(void) {
     box_free(a);
 }
 
-// Create a box with set min and max then copy them into a new box. Then we check the values in the new box
+// Create a box with set min and max then copy them into a new box. Then we check the values in the
+// new box
 void test_box_new_copy(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new_copy(a);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new_copy(a);
 
     float3 limitCheck = {3.0f, 5.0f, 2.0f};
     TEST_CHECK(float3_isEqual(&a->min, &limitCheck, EPSILON_0_0001_F) == true);
@@ -71,7 +71,7 @@ void test_box_new_copy(void) {
 // Create a box with set min and max and set a new center for the box in a float3.
 // We now set the new center of the box and check if the values are corrects.
 void test_box_set_bottom_center_position(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
     float3 setcenter = {10.0f, 10.0f, 10.0f};
 
     box_set_bottom_center_position(a, &setcenter);
@@ -87,10 +87,10 @@ void test_box_set_bottom_center_position(void) {
     box_free(a);
 }
 
-// Create 2 boxes with differents values and check both of their center 
+// Create 2 boxes with differents values and check both of their center
 void test_box_get_center(void) {
-    Box* a = box_new_2(0.0f, 0.0f, 0.0f, 10.0f, 10.0f, 10.0f);
-    Box* b = box_new_2(8.0f, 15.0f, 1.0f, 16.0f, 35.0f, 2.0f);
+    Box *a = box_new_2(0.0f, 0.0f, 0.0f, 10.0f, 10.0f, 10.0f);
+    Box *b = box_new_2(8.0f, 15.0f, 1.0f, 16.0f, 35.0f, 2.0f);
     float3 getcenter = {0.0f, 0.0f, 0.0f};
     float3 centerCheck = {5.0f, 5.0f, 5.0f};
 
@@ -104,10 +104,11 @@ void test_box_get_center(void) {
     box_free(b);
 }
 
-// Create 2 boxes with differents values. We then copy one of the box into the other and check if the value are correctly copied
+// Create 2 boxes with differents values. We then copy one of the box into the other and check if
+// the value are correctly copied
 void test_box_copy(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     float3 limitCheck = {3.0f, 5.0f, 2.0f};
 
     box_copy(b, a);
@@ -123,9 +124,9 @@ void test_box_copy(void) {
 
 // Create 3 differents boxes and check if they are colliding with each others
 void test_box_collide(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    Box* c = box_new_2(2.0f, 4.0f, 1.0f, 14.0f, 16.0f, 13.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Box *c = box_new_2(2.0f, 4.0f, 1.0f, 14.0f, 16.0f, 13.0f);
 
     TEST_CHECK(box_collide(a, b) == false);
     TEST_CHECK(box_collide(c, b) == false);
@@ -140,9 +141,10 @@ void test_box_collide(void) {
     box_free(c);
 }
 
-// Create a box and a point with set coords then set severals times a new point to check if he is in the box
+// Create a box and a point with set coords then set severals times a new point to check if he is in
+// the box
 void test_box_contains(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
     float3 pointCheck = {0.0f, 0.0f, 0.0f};
 
     TEST_CHECK(box_contains(a, &pointCheck) == false);
@@ -172,10 +174,11 @@ void test_box_contains(void) {
     box_free(a);
 }
 
-// Create a box and a float3 with set values then create a broadphase box with it. Check the values of the broadphase box after creating it
+// Create a box and a float3 with set values then create a broadphase box with it. Check the values
+// of the broadphase box after creating it
 void test_box_set_broadphase_box(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new();
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new();
     float3 addToBpBox = {5.0f, 5.0f, 5.0f};
     float3 limitCheck = {3.0f, 5.0f, 2.0f};
 
@@ -201,8 +204,8 @@ void test_box_set_broadphase_box(void) {
 
 // Create 2 boxes and check the sizes of both of them.
 void test_box_get_size(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new();
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new();
     float3 boxSizeFloat = {0.0f, 0.0f, 0.0f};
     float3 boxSizeFloatCheck = {10.0f, 10.0f, 10.0f};
 
@@ -230,9 +233,9 @@ void test_box_get_size(void) {
 
 // Create 3 boxes and check if they are empty are not, if their min and max are equal
 void test_box_is_empty(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    Box* c = box_new_2(-3.0f, -5.0f, -2.0f, -3.0f, -5.0f, -2.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Box *c = box_new_2(-3.0f, -5.0f, -2.0f, -3.0f, -5.0f, -2.0f);
 
     TEST_CHECK(box_is_empty(a) == false);
     TEST_CHECK(box_is_empty(b) == true);
@@ -243,10 +246,11 @@ void test_box_is_empty(void) {
     box_free(c);
 }
 
-// Create 2 boxes that are not square and squarify them with the differents options : NoSquarify, MinSquarify, MaxSquarify
+// Create 2 boxes that are not square and squarify them with the differents options : NoSquarify,
+// MinSquarify, MaxSquarify
 void test_box_squarify(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 8.0f, 7.0f, 10.0f);
-    Box* b = box_new_2(3.0f, 5.0f, 2.0f, 8.0f, 7.0f, 10.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 8.0f, 7.0f, 10.0f);
+    Box *b = box_new_2(3.0f, 5.0f, 2.0f, 8.0f, 7.0f, 10.0f);
     float3 limitCheck = {3.0f, 5.0f, 2.0f};
 
     box_squarify(a, NoSquarify);
@@ -275,11 +279,12 @@ void test_box_squarify(void) {
     box_free(a);
 }
 
-// Create 2 boxes and merge them together to get the min of the a->min and b->min then the max of a->max and b->max
+// Create 2 boxes and merge them together to get the min of the a->min and b->min then the max of
+// a->max and b->max
 void test_box_op_merge(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    Box* result = box_new();
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Box *result = box_new();
     float3 limitCheck = {0.0f, 0.0f, 0.0f};
 
     box_op_merge(a, b, result);
@@ -294,11 +299,11 @@ void test_box_op_merge(void) {
     box_free(result);
 }
 
-// Create 3 boxes and check each of their volumes 
+// Create 3 boxes and check each of their volumes
 void test_box_get_volume(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new();
-    Box* c = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new();
+    Box *c = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
     float result = box_get_volume(a);
     TEST_CHECK(result == 1000.0f);
@@ -312,10 +317,12 @@ void test_box_get_volume(void) {
     box_free(c);
 }
 
-// Create a box, and 3 float3, one for the translation, one for the offset and one for the scale with set values. Then create the aabox of the original box with the 3 float3. Check the values of this new aabox 
+// Create a box, and 3 float3, one for the translation, one for the offset and one for the scale
+// with set values. Then create the aabox of the original box with the 3 float3. Check the values of
+// this new aabox
 void test_box_to_aabox_no_rot(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new();
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new();
     float3 BTranslation = {5.0f, 0.0f, 5.0f};
     float3 BOffset = {0.0f, 0.0f, 0.0f};
     float3 BScale = {1.5f, 1.5f, 1.5f};
@@ -328,7 +335,7 @@ void test_box_to_aabox_no_rot(void) {
     TEST_CHECK(b->max.y == 22.5f);
     TEST_CHECK(b->max.z == 23.0f);
 
-    Box* c = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Box *c = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     box_to_aabox_no_rot(c, b, &BTranslation, &BOffset, &BScale, false);
     TEST_CHECK(b->min.x == 5.0f);
     TEST_CHECK(b->min.y == 0.0f);
@@ -342,12 +349,28 @@ void test_box_to_aabox_no_rot(void) {
     box_free(c);
 }
 
-// Create a box, an offset and a matrix with set values then create the aabox of the original box. Check the values of the new aabox
+// Create a box, an offset and a matrix with set values then create the aabox of the original box.
+// Check the values of the new aabox
 void test_box_to_aabox2(void) {
-    Box* a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
-    Box* b = box_new();
+    Box *a = box_new_2(3.0f, 5.0f, 2.0f, 13.0f, 15.0f, 12.0f);
+    Box *b = box_new();
     float3 BOffset = {1.0f, 1.0f, 1.0f};
-    Matrix4x4* BMatrix = matrix4x4_new(1.0f, 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f, 3.0f, 4.0f, 4.0f, 4.0f, 4.0f);
+    Matrix4x4 *BMatrix = matrix4x4_new(1.0f,
+                                       1.0f,
+                                       1.0f,
+                                       1.0f,
+                                       2.0f,
+                                       2.0f,
+                                       2.0f,
+                                       2.0f,
+                                       3.0f,
+                                       3.0f,
+                                       3.0f,
+                                       3.0f,
+                                       4.0f,
+                                       4.0f,
+                                       4.0f,
+                                       4.0f);
 
     box_to_aabox2(a, b, BMatrix, &BOffset, false);
     TEST_CHECK(b->min.x == 14.0f);

@@ -9,11 +9,11 @@
 #include "filo_list_uint16.h"
 
 // functions that are NOT tested:
-//filo_list_uint16_free
-//filo_list_uint16_new
+// filo_list_uint16_free
+// filo_list_uint16_new
 
 void test_filo_list_uint16_push(void) {
-    FiloListUInt16* uint16list = filo_list_uint16_new();
+    FiloListUInt16 *uint16list = filo_list_uint16_new();
 
     uint16_t a = 0;
     uint16_t b = 0;
@@ -30,7 +30,7 @@ void test_filo_list_uint16_push(void) {
 }
 
 void test_filo_list_uint16_pop(void) {
-    FiloListUInt16* uint16list = filo_list_uint16_new();
+    FiloListUInt16 *uint16list = filo_list_uint16_new();
 
     uint16_t a = 1;
     uint16_t b = 2;

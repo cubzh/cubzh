@@ -12,8 +12,8 @@
 #include "cclog.h"
 #include "serialization_v5.h"
 #include "serialization_v6.h"
-#include "transform.h"
 #include "stream.h"
+#include "transform.h"
 
 // Returns 0 on success, 1 otherwise.
 // This function doesn't close the file descriptor, you probably want to close
@@ -55,7 +55,7 @@ Shape *serialization_load_shape(Stream *s,
                                 bool octree,
                                 bool lighting,
                                 bool isMutable,
-                                ColorAtlas* colorAtlas,
+                                ColorAtlas *colorAtlas,
                                 bool sharedColors,
                                 const bool allowLegacy) {
 
@@ -190,7 +190,7 @@ bool get_preview_data(const char *filepath, void **imageData, uint32_t *size) {
         // cclog_info("ERROR: get_preview_data: opening file");
         return false;
     }
-    
+
     Stream *s = stream_new_file_read(fd);
 
     // read magic bytes

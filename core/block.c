@@ -58,12 +58,11 @@ bool block_is_solid(const Block *const block) {
 
 bool block_is_opaque(Block *block, const ColorPalette *palette) {
     return block_is_solid(block) &&
-            color_palette_is_transparent(palette, block->colorIndex) == false;
+           color_palette_is_transparent(palette, block->colorIndex) == false;
 }
 
 bool block_is_transparent(Block *block, const ColorPalette *palette) {
-    return block_is_solid(block) &&
-            color_palette_is_transparent(palette, block->colorIndex);
+    return block_is_solid(block) && color_palette_is_transparent(palette, block->colorIndex);
 }
 
 void block_is_ao_and_light_caster(Block *block,

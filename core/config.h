@@ -202,8 +202,9 @@ typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
 #define SHAPE_COLOR_INDEX_AIR_BLOCK 255
 #define SHAPE_COLOR_INDEX_MAX_COUNT 128
 
-// Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original + complementary colors
-// Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2, unique colors
+// Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original +
+// complementary colors Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2,
+// unique colors
 #define COLOR_ATLAS_SIZE 512
 #define ATLAS_COLOR_INDEX_MAX_COUNT 131072
 #define ATLAS_COLOR_INDEX_ERROR 999999

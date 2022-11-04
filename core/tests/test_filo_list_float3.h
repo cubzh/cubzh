@@ -13,10 +13,10 @@
 // filo_list_float3_free
 
 void test_filo_list_float3_pop(void) {
-    FiloListFloat3* float3list = filo_list_float3_new(3);
-    float3* a;
-    float3* b;
-    float3* c;
+    FiloListFloat3 *float3list = filo_list_float3_new(3);
+    float3 *a;
+    float3 *b;
+    float3 *c;
 
     TEST_CHECK(filo_list_float3_pop(float3list, &a));
     TEST_CHECK(a->x == 0.0f && a->y == 0.0f && a->z == 0.0f);
@@ -27,11 +27,11 @@ void test_filo_list_float3_pop(void) {
     filo_list_float3_free(float3list);
 }
 
-void test_filo_list_float3_recycle(void){
-    FiloListFloat3* float3list = filo_list_float3_new(3);
-    float3* a;
-    float3* b;
-    float3* c;
+void test_filo_list_float3_recycle(void) {
+    FiloListFloat3 *float3list = filo_list_float3_new(3);
+    float3 *a;
+    float3 *b;
+    float3 *c;
     filo_list_float3_pop(float3list, &a);
     filo_list_float3_pop(float3list, &b);
     float3_set(b, 1.0f, 2.0f, 3.0f);
