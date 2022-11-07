@@ -1,8 +1,10 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cubzh/cubzh/misc/logo_and_name_light.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/cubzh/cubzh/misc/logo_and_name_dark.svg">
-  <img alt="" src="https://raw.githubusercontent.com/cubzh/cubzh/misc/logo_and_name_dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cubzh/cubzh/main/misc/logo_and_name_light.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/cubzh/cubzh/main/misc/logo_and_name_dark.svg">
+  <img alt="" src="https://raw.githubusercontent.com/cubzh/cubzh/main/misc/logo_and_name_dark.svg">
 </picture>
+
+![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg)
 
 Cubzh is a voxel game platform. (*voxel* == *volumetric pixel* == *cube*, in that context)
 
@@ -90,4 +92,3 @@ We'll keep thinking about it and see where it leads us, sharing concerns and cri
 - Marketplace
 - Friends
 - Block Textures
-

@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  # push:
-    # branches: 
-      # - dagger
-      # - main
+  push:
+    branches: 
+      - main
   pull_request:
     branches:
       - main
