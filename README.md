@@ -4,7 +4,7 @@
   <img alt="" src="https://raw.githubusercontent.com/cubzh/cubzh/main/misc/logo_and_name_dark.svg">
 </picture>
 
-![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg?branch=main)
 
 Cubzh is a voxel game platform. (*voxel* == *volumetric pixel* == *cube*, in that context)
 
