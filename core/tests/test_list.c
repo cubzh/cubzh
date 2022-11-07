@@ -9,6 +9,7 @@
 #include "test_block.h"
 #include "test_blockChange.h"
 #include "test_box.h"
+#include "test_chunk.h"
 #include "test_config.h"
 #include "test_filo_list_float3.h"
 #include "test_filo_list_int3.h"
@@ -74,6 +75,11 @@ TEST_LIST = {
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},
     {"filo_list_float3_recycle", test_filo_list_float3_recycle},
+
+    // chunk
+    {"test_chunk_new", test_chunk_new},
+    {"test_chunk_Block", test_chunk_Block},
+    {"test_chunk_needs_display", test_chunk_needs_display},
 
     // filo_list_int3
     {"filo_list_int3_pop", test_filo_list_int3_pop},
