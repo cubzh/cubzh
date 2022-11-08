@@ -1,364 +1,355 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="Source Files\core">
-      <UniqueIdentifier>{fd37452c-232b-4cb3-837a-985229385794}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\tests">
-      <UniqueIdentifier>{c2e399f4-e3d0-4a88-b53d-40d0e342c5bd}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\test_shape.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\acutest.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_hash_uint32_int.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\weakptr.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\block.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\blockChange.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\box.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\cclog.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\chunk.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\color_atlas.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\color_palette.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\colors.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\config.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\doubly_linked_list.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\doubly_linked_list_uint8.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\easings.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\fifo_list.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\filo_list.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\filo_list_float3.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\filo_list_int3.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\filo_list_uint16.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\filo_list_uint32.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\float3.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\float4.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\flood_fill_lighting.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\function_pointers.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\hash_uint32_int.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\history.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\index3d.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inputs.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\int3.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\magicavoxel.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\map_string_float3.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\matrix4x4.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\octree.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\quaternion.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ray.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\rigidBody.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\rtree.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\scene.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\serialization.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\serialization_v5.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\serialization_v6.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\shape.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\stream.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\transaction.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\transform.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\utils.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\vertextbuffer.h">
-      <Filter>Source Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_float3.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_transform.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_matrix4x4.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_int3.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_filo_list_int3.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_float4.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_quaternion.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_weakptr.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_transaction.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_utils.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_block.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_blockChange.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_filo_list_float3.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_filo_list_uint16.h">
-    <ClInclude Include="..\test_box.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_chunk.h">
-      <Filter>Source Files\tests</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\test_list.c">
-      <Filter>Source Files\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\block.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\blockChange.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\box.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\cclog.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\chunk.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\color_atlas.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\color_palette.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\colors.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\config.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\doubly_linked_list.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\doubly_linked_list_uint8.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\easings.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\fifo_list.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\filo_list.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\filo_list_float3.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\filo_list_int3.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\filo_list_uint16.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\filo_list_uint32.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\float3.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\float4.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\flood_fill_lighting.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\hash_uint32_int.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\history.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\index3d.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\inputs.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\int3.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\magicavoxel.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\map_string_float3.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\matrix4x4.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\octree.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\quaternion.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ray.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\rigidBody.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\rtree.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\scene.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\serialization.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\serialization_v5.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\serialization_v6.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\shape.c">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\stream.c">
-      <Filter>Source Files\core</Filter>
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\transaction.c">
-      <Filter>Source Files\core</Filter>
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\transform.c">
-      <Filter>Source Files\core</Filter>
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\block.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\blockChange.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\box.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cclog.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\chunk.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\color_atlas.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\color_palette.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\colors.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\config.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\doubly_linked_list.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\doubly_linked_list_uint8.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\easings.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fifo_list.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\filo_list.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\filo_list_float3.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\filo_list_int3.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\filo_list_uint16.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\filo_list_uint32.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\float3.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\float4.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\flood_fill_lighting.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hash_uint32_int.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\history.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\index3d.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\inputs.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\int3.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\magicavoxel.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\map_string_float3.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\matrix4x4.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\octree.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\quaternion.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ray.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\rigidBody.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\rtree.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\scene.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\serialization.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\serialization_v5.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\serialization_v6.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\shape.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\stream.c">
+      <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\utils.c">
-      <Filter>Source Files\core</Filter>
+      <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\vertextbuffer.c">
-      <Filter>Source Files\core</Filter>
+      <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\weakptr.c">
-      <Filter>Source Files\core</Filter>
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Makefile">
-      <Filter>Source Files\core</Filter>
-    </None>
+    <ClInclude Include="..\..\transform.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_block.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_blockChange.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_box.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_chunk.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_config.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_filo_list_float3.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_filo_list_int3.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_filo_list_uint16.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_float3.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_float4.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_hash_uint32_int.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_int3.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_matrix4x4.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_quaternion.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_shape.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_transaction.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_transform.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_utils.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_weakptr.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\transaction.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\acutest.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\block.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\blockChange.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\box.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cclog.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\chunk.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\color_atlas.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\color_palette.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\colors.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\config.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\doubly_linked_list.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\doubly_linked_list_uint8.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\easings.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fifo_list.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\filo_list.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\filo_list_float3.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\filo_list_int3.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\filo_list_uint16.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\filo_list_uint32.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\float3.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\float4.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\flood_fill_lighting.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\function_pointers.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hash_uint32_int.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\history.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\index3d.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inputs.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\int3.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\magicavoxel.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\octree.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\map_string_float3.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\matrix4x4.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\quaternion.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ray.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rigidBody.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rtree.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\scene.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\serialization.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\serialization_v5.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\serialization_v6.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\shape.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\stream.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\utils.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\vertextbuffer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\weakptr.h">
+      <Filter>core</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Makefile" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="tests">
+      <UniqueIdentifier>{60f83af5-779a-45ae-b365-a5fdeb4f7464}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{04b8777a-5051-4aaa-b606-d259179ebce4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

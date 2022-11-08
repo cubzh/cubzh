@@ -19,6 +19,7 @@
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/Browse.VC.db-wal
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/Browse.VC.opendb
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/FileContentIndex/
+/core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/ipch/AutoPCH/**/*.ipch
 
 # Xcode
 *.xcuserdatad
