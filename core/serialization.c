@@ -215,7 +215,8 @@ bool get_preview_data(const char *filepath, void **imageData, uint32_t *size) {
         // cclog_info("ERROR: get_preview_data: opening file");
         return false;
     }
-    
+
+    // The file descriptor is owned by the stream, which will fclose it in the future.
     Stream *s = stream_new_file_read(fd);
 
     // read magic bytes

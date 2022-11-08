@@ -37,7 +37,8 @@ Stream *stream_new_buffer_read(const char *buf, const size_t size);
 // Expecting a file opened with "wb" flag
 Stream *stream_new_file_write(FILE *fd);
 
-// Expecting a file opened with "rb" flag
+/// Expecting a file opened with "rb" flag.
+/// The file descriptor `fd` is owned by the stream, which will fclose it in the future.
 Stream *stream_new_file_read(FILE *fd);
 
 // READ
