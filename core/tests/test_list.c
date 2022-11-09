@@ -11,6 +11,7 @@
 #include "test_box.h"
 #include "test_chunk.h"
 #include "test_config.h"
+#include "test_doubly_linked_list_uint8.h"
 #include "test_filo_list_float3.h"
 #include "test_filo_list_int3.h"
 #include "test_filo_list_uint16.h"
@@ -71,6 +72,27 @@ TEST_LIST = {
 
     // config
     {"test_upper_power_of_two", test_upper_power_of_two},
+
+    // doubly_linked_list_uint8
+    {"doubly_linked_list_uint8_new", test_doubly_linked_list_uint8_new},
+    {"doubly_linked_list_uint8_node_new", test_doubly_linked_list_uint8_node_new},
+    {"doubly_linked_list_uint8_node_get_value", test_doubly_linked_list_uint8_node_get_value},
+    {"doubly_linked_list_uint8_node_set_value", test_doubly_linked_list_uint8_node_set_value},
+    {"doubly_linked_list_uint8_push_front", test_doubly_linked_list_uint8_push_front},
+    {"doubly_linked_list_uint8_push_back", test_doubly_linked_list_uint8_push_back},
+    {"doubly_linked_list_uint8_node_next", test_doubly_linked_list_uint8_node_next},
+    {"doubly_linked_list_uint8_node_previous", test_doubly_linked_list_uint8_node_previous},
+    {"doubly_linked_list_uint8_node_count", test_doubly_linked_list_uint8_node_count},
+    {"doubly_linked_list_uint8_node_flush", test_doubly_linked_list_uint8_node_flush},
+    {"doubly_linked_list_uint8_contains", test_doubly_linked_list_uint8_contains},
+    {"doubly_linked_list_uint8_pop_front", test_doubly_linked_list_uint8_pop_front},
+    {"doubly_linked_list_uint8_pop_back", test_doubly_linked_list_uint8_pop_back},
+    {"doubly_linked_list_uint8_front", test_doubly_linked_list_uint8_front},
+    {"doubly_linked_list_uint8_back", test_doubly_linked_list_uint8_back},
+    {"doubly_linked_list_uint8_insert_node_before",
+     test_doubly_linked_list_uint8_insert_node_before},
+    {"doubly_linked_list_uint8_insert_node_after", test_doubly_linked_list_uint8_insert_node_after},
+    {"doubly_linked_list_uint8_delete_node", test_doubly_linked_list_uint8_delete_node},
 
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},
@@ -164,8 +186,8 @@ TEST_LIST = {
     {"quaternion_op_dot", test_quaternion_op_dot},
     {"quaternion_to_rotation_matrix", test_quaternion_to_rotation_matrix},
     {"rotation_matrix_to_quaternion", test_rotation_matrix_to_quaternion},
-    {"quaternion_to_axis_angle", test_quaternion_to_axis_angle},
-    {"axis_angle_to_quaternion", test_axis_angle_to_quaternion},
+    // {"quaternion_to_axis_angle", test_quaternion_to_axis_angle},
+    // {"axis_angle_to_quaternion", test_axis_angle_to_quaternion},
     {"quaternion_to_euler", test_quaternion_to_euler},
     {"euler_to_quaternion", test_euler_to_quaternion},
     {"euler_to_quaternion_vec", test_euler_to_quaternion_vec},
