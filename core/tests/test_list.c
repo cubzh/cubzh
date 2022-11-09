@@ -11,6 +11,7 @@
 #include "test_box.h"
 #include "test_chunk.h"
 #include "test_config.h"
+#include "test_doubly_linked_list.h"
 #include "test_doubly_linked_list_uint8.h"
 #include "test_filo_list_float3.h"
 #include "test_filo_list_int3.h"
@@ -93,6 +94,27 @@ TEST_LIST = {
      test_doubly_linked_list_uint8_insert_node_before},
     {"doubly_linked_list_uint8_insert_node_after", test_doubly_linked_list_uint8_insert_node_after},
     {"doubly_linked_list_uint8_delete_node", test_doubly_linked_list_uint8_delete_node},
+    // doubly_linked_list
+    {"doubly_linked_list_new", test_doubly_linked_list_new},
+    {"doubly_linked_list_node_new", test_doubly_linked_list_node_new},
+    {"doubly_linked_list_node_pointer", test_doubly_linked_list_node_pointer},
+    {"doubly_linked_list_node_set_pointer", test_doubly_linked_list_node_set_pointer},
+    {"doubly_linked_list_push_first", test_doubly_linked_list_push_first},
+    {"doubly_linked_list_push_last", test_doubly_linked_list_push_last},
+    {"doubly_linked_list_node_next", test_doubly_linked_list_node_next},
+    {"doubly_linked_list_node_previous", test_doubly_linked_list_node_previous},
+    {"doubly_linked_list_node_count", test_doubly_linked_list_node_count},
+    {"doubly_linked_list_flush", test_doubly_linked_list_flush},
+    {"doubly_linked_list_contains", test_doubly_linked_list_contains},
+    {"doubly_linked_list_pop_first", test_doubly_linked_list_pop_first},
+    {"doubly_linked_list_pop_back", test_doubly_linked_list_pop_last},
+    {"doubly_linked_list_first", test_doubly_linked_list_first},
+    {"doubly_linked_list_last", test_doubly_linked_list_last},
+    {"doubly_linked_list_insert_node_next", test_doubly_linked_list_insert_node_next},
+    {"doubly_linked_list_insert_node_previous", test_doubly_linked_list_insert_node_previous},
+    {"doubly_linked_list_delete_node", test_doubly_linked_list_delete_node},
+    {"doubly_linked_list_node_at_index", test_doubly_linked_list_node_at_index},
+    {"doubly_linked_list_sort_ascending", test_doubly_linked_list_sort_ascending},
 
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},
