@@ -31,8 +31,7 @@ struct _Scene {
     DoublyLinkedList *awakeBoxes;
     Box *mapAwakeBox;
 
-    // constant acceleration for the whole Scene
-    // (gravity usually)
+    // constant acceleration for the whole Scene (gravity usually)
     float3 constantAcceleration;
 };
 
