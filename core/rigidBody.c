@@ -1202,7 +1202,7 @@ bool rigidbody_is_collider_valid(const RigidBody *rb) {
 }
 
 bool rigidbody_is_enabled(const RigidBody *rb) {
-    return rb != NULL && _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != Disabled;
+    return rigidbody_is_dynamic(rb) || rigidbody_is_trigger(rb);
 }
 
 bool rigidbody_is_dynamic(const RigidBody *rb) {
@@ -1210,7 +1210,7 @@ bool rigidbody_is_dynamic(const RigidBody *rb) {
            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyModeDynamic;
 }
 
-bool rigidbody_is_trigger(RigidBody *rb) {
+bool rigidbody_is_trigger(const RigidBody *rb) {
     return rb != NULL &&
            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyModeStatic &&
            (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||

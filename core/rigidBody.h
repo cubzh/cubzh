@@ -106,8 +106,8 @@ bool rigidbody_collides_with_rigidbody(const RigidBody *rb1, const RigidBody *rb
 bool rigidbody_is_collider_valid(const RigidBody *rb);
 bool rigidbody_is_enabled(const RigidBody *rb);
 bool rigidbody_is_dynamic(const RigidBody *rb);
-bool rigidbody_is_trigger(
-    RigidBody *rb); // a static rigidbody w/ collision callback(s) enabled is a trigger
+// a static rigidbody w/ collision callback(s) enabled is a trigger
+bool rigidbody_is_trigger(const RigidBody *rb);
 
 /// MARK: - Utils -
 void rigidbody_set_default_collider(RigidBody *rb);
