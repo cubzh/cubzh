@@ -70,6 +70,7 @@
     <ClInclude Include="..\test_blockChange.h" />
     <ClInclude Include="..\test_config.h" />
     <ClInclude Include="..\test_chunk.h" />
+    <ClInclude Include="..\test_doubly_linked_list_uint8.h" />
     <ClInclude Include="..\test_filo_list_float3.h" />
     <ClInclude Include="..\test_box.h" />
     <ClInclude Include="..\test_filo_list_int3.h" />
