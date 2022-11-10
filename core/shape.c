@@ -2431,7 +2431,6 @@ const float3 *shape_get_model_origin(const Shape *s) {
     return transform_get_position(s->pivot != NULL ? s->pivot : s->transform);
 }
 
-
 void shape_set_rotation(Shape *s, Quaternion *q) {
     if (s == NULL)
         return;

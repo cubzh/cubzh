@@ -345,8 +345,8 @@ bool shape_remove_parent(Shape *s, const bool keepWorld);
 Transform *shape_get_root_transform(const Shape *s);
 Transform *shape_get_pivot_transform(const Shape *s); // corresponds to shape model origin
 void shape_move_children(Shape *from, Shape *to, const bool keepWorld);
-uint32_t shape_count_shape_descendants(const Shape * s);
-DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape * s);
+uint32_t shape_count_shape_descendants(const Shape *s);
+DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
 // MARK: - Physics -
 

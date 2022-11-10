@@ -90,8 +90,10 @@ Weakptr *color_atlas_get_and_retain_weakptr(ColorAtlas *a) {
     }
 }
 
-ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a, RGBAColor color, bool isShared) {
-    
+ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a,
+                                                        RGBAColor color,
+                                                        bool isShared) {
+
     uint32_t uint32Color = color_to_uint32(&color);
 
     // if color can be shared, check in lookup map first

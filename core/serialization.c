@@ -12,8 +12,8 @@
 #include "cclog.h"
 #include "serialization_v5.h"
 #include "serialization_v6.h"
-#include "transform.h"
 #include "stream.h"
+#include "transform.h"
 
 // Returns 0 on success, 1 otherwise.
 // This function doesn't close the file descriptor, you probably want to close
@@ -52,9 +52,9 @@ Shape *assets_get_root_shape(DoublyLinkedList *list) {
     Shape *shape = NULL;
     DoublyLinkedListNode *node = doubly_linked_list_first(list);
     while (node != NULL) {
-        Asset *r = (Asset *) doubly_linked_list_node_pointer(node);
+        Asset *r = (Asset *)doubly_linked_list_node_pointer(node);
         if (r->type == AssetType_Shape) {
-            Shape *s = (Shape *) r->ptr;
+            Shape *s = (Shape *)r->ptr;
             if (transform_get_parent(shape_get_root_transform(s)) == NULL) {
                 shape = s;
                 break;
@@ -71,10 +71,14 @@ Shape *assets_get_root_shape(DoublyLinkedList *list) {
 /// This does free the Stream
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
-                                ColorAtlas* colorAtlas,
+                                ColorAtlas *colorAtlas,
                                 LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
-    DoublyLinkedList *shapes = serialization_load_assets(s, fullname, AssetType_Shape, colorAtlas, shapeSettings);
+    DoublyLinkedList *shapes = serialization_load_assets(s,
+                                                         fullname,
+                                                         AssetType_Shape,
+                                                         colorAtlas,
+                                                         shapeSettings);
     // s is NULL if it could not be loaded
     if (shapes == NULL) {
         return NULL;
@@ -87,7 +91,7 @@ Shape *serialization_load_shape(Stream *s,
 DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
-                                            ColorAtlas* colorAtlas,
+                                            ColorAtlas *colorAtlas,
                                             LoadShapeSettings *shapeSettings) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
@@ -139,7 +143,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
         list = NULL;
         cclog_error("[serialization_load_assets] no resources found");
     }
-    
+
     // set fullname if containing a root shape
     Shape *shape = assets_get_root_shape(list);
     if (shape != NULL) {
@@ -215,7 +219,7 @@ bool get_preview_data(const char *filepath, void **imageData, uint32_t *size) {
         // cclog_info("ERROR: get_preview_data: opening file");
         return false;
     }
-    
+
     Stream *s = stream_new_file_read(fd);
 
     // read magic bytes

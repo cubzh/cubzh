@@ -246,19 +246,15 @@ RGBAColor YIQ2RGB(float3 *yiq) {
 // --------------------------------------------------
 
 uint32_t color_to_uint32(const RGBAColor *c) {
-    return (((uint32_t)(c->r)) << 24) +
-           (((uint32_t)(c->g)) << 16) +
-           (((uint32_t)(c->b)) << 8) +
+    return (((uint32_t)(c->r)) << 24) + (((uint32_t)(c->g)) << 16) + (((uint32_t)(c->b)) << 8) +
            ((uint32_t)(c->a));
 }
 
 RGBAColor uint32_to_color(uint32_t rgba) {
-    RGBAColor result = {
-        (uint8_t)(rgba >> 24),
-        (uint8_t)(rgba >> 16),
-        (uint8_t)(rgba >> 8),
-        (uint8_t)rgba
-    };
+    RGBAColor result = {(uint8_t)(rgba >> 24),
+                        (uint8_t)(rgba >> 16),
+                        (uint8_t)(rgba >> 8),
+                        (uint8_t)rgba};
     return result;
 }
 

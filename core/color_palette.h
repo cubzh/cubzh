@@ -53,7 +53,7 @@ typedef struct ColorPalette {
     bool sharedColors;
 
     char pad[4];
-    
+
 } ColorPalette;
 
 ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared);

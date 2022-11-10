@@ -17,11 +17,11 @@ typedef enum {
     AssetType_Palette = 2,
     AssetType_Object = 4,
     AssetType_Any = 7, // update AssetType_Any when adding a new value
-} AssetType; // mask
+} AssetType;           // mask
 
 typedef struct _Asset {
     AssetType type;
-    void      *ptr;
+    void *ptr;
 } Asset;
 
 #ifdef __cplusplus

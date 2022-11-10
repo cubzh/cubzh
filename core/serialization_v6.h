@@ -13,9 +13,9 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "asset.h"
 #include "colors.h"
 #include "shape.h"
-#include "asset.h"
 
 typedef struct _Transform Transform;
 typedef struct _Stream Stream;
@@ -23,8 +23,8 @@ typedef struct _Stream Stream;
 typedef struct _LocalTransform {
     float3 position; // 12 bytes
     float3 rotation; // 12 bytes
-    float3 scale; // 12 bytes
-} LocalTransform; // 36 bytes
+    float3 scale;    // 12 bytes
+} LocalTransform;    // 36 bytes
 
 #define SERIALIZATION_COMPRESSION_ALGO_SIZE sizeof(uint8_t)
 #define NB_SHAPES_SIZE sizeof(uint32_t)

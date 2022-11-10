@@ -13,9 +13,9 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "asset.h"
 #include "colors.h"
 #include "shape.h"
-#include "asset.h"
 #include "stream.h"
 
 #define MAGIC_BYTES "CUBZH!"
@@ -87,7 +87,7 @@ uint8_t readMagicBytesLegacy(Stream *s);
 
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
-                                ColorAtlas* colorAtlas,
+                                ColorAtlas *colorAtlas,
                                 LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy);
 
@@ -96,7 +96,7 @@ Shape *assets_get_root_shape(DoublyLinkedList *list);
 DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
-                                            ColorAtlas* colorAtlas,
+                                            ColorAtlas *colorAtlas,
                                             LoadShapeSettings *shapeSettings);
 
 /// serialize a shape w/ its palette

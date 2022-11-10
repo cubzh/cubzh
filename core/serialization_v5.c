@@ -12,8 +12,8 @@
 #include "cclog.h"
 #include "map_string_float3.h"
 #include "serialization.h"
-#include "transform.h"
 #include "stream.h"
+#include "transform.h"
 
 #define P3S_COMPRESSION_ALGO_NONE 0
 //#define P3S_COMPRESSION_ALGO_ZIP 1
@@ -62,11 +62,11 @@ uint32_t chunk_v5_read_shape_point(Stream *s, MapStringFloat3 *m);
 
 uint8_t chunk_v5_read_identifier(Stream *s) {
     uint8_t i;
-    
+
     if (stream_read_uint8(s, &i) == false) {
         return P3S_CHUNK_ID_NONE;
     }
-    
+
     if (i > P3S_CHUNK_ID_NONE && i < P3S_CHUNK_ID_MAX) {
         return i;
     }
@@ -321,7 +321,7 @@ uint32_t chunk_v5_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette *
         free(colors);
         return 0;
     }
-    
+
     // read default cube color (just for checks)
     uint8_t discarded;
     if (stream_read_uint8(s, &discarded) == false) {
@@ -337,8 +337,11 @@ uint32_t chunk_v5_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette *
         return 0;
     }
 
-    *palette = color_palette_new_from_data(colorAtlas, minimum(paletteColorCount, UINT8_MAX),
-                                           colors, NULL, true);
+    *palette = color_palette_new_from_data(colorAtlas,
+                                           minimum(paletteColorCount, UINT8_MAX),
+                                           colors,
+                                           NULL,
+                                           true);
 
     free(colors);
 
@@ -442,7 +445,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
         stream_skip(s, shapeChunkSize);
         return 4 + shapeChunkSize;
     }
-    
+
     if (*shape != NULL) {
         shape_release(*shape);
         *shape = NULL;
@@ -497,15 +500,15 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 // size is known, now is a good time to create the shape
                 if (shapeSettings->octree) {
                     *shape = shape_make_with_octree(width,
-                                                   height,
-                                                   depth,
+                                                    height,
+                                                    depth,
                                                     shapeSettings->lighting,
                                                     shapeSettings->isMutable,
                                                     shapeSettings->limitSize == false);
                 } else if (shapeSettings->limitSize) {
                     *shape = shape_make_with_fixed_size(width,
-                                                       height,
-                                                       depth,
+                                                        height,
+                                                        depth,
                                                         shapeSettings->lighting,
                                                         shapeSettings->isMutable);
                 } else {
@@ -515,7 +518,8 @@ uint32_t chunk_v5_read_shape(Stream *s,
                     color_palette_set_shared(serializedPalette, shapeSettings->sharedColors);
                     shape_set_palette(*shape, serializedPalette);
                 } else {
-                    shape_set_palette(*shape, color_palette_new(colorAtlas, shapeSettings->sharedColors));
+                    shape_set_palette(*shape,
+                                      color_palette_new(colorAtlas, shapeSettings->sharedColors));
                 }
 
                 // this means blocks have been found before the size.
@@ -825,13 +829,13 @@ uint32_t chunk_v5_read_preview_image(Stream *s, void **imageData, uint32_t *size
         cclog_error("failed to allocate preview data buffer");
         return 0;
     }
-    
+
     if (stream_read(s, previewData, chunkSize, 1) == false) {
         cclog_error("failed to read preview data");
         free(previewData);
         return 0;
     }
-    
+
     // success
     *size = chunkSize;
     *imageData = previewData;
