@@ -13,24 +13,33 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "asset.h"
 #include "colors.h"
 #include "shape.h"
 
 typedef struct _Transform Transform;
 typedef struct _Stream Stream;
 
+typedef struct _LocalTransform {
+    float3 position; // 12 bytes
+    float3 rotation; // 12 bytes
+    float3 scale;    // 12 bytes
+} LocalTransform;    // 36 bytes
+
 #define SERIALIZATION_COMPRESSION_ALGO_SIZE sizeof(uint8_t)
+#define NB_SHAPES_SIZE sizeof(uint32_t)
 #define SERIALIZATION_TOTAL_SIZE_SIZE sizeof(uint32_t)
 
 /// Load shape from file
 /// Returns NULL if the shape can't be loaded
 Shape *serialization_v6_load_shape(Stream *s,
-                                   bool limitSize,
-                                   bool octree,
-                                   bool lighting,
-                                   const bool isMutable,
-                                   ColorAtlas *colorAtlas,
-                                   bool sharedColors);
+                                   LoadShapeSettings *shapeSettings,
+                                   ColorAtlas *colorAtlas);
+
+DoublyLinkedList *serialization_load_assets_v6(Stream *s,
+                                               ColorAtlas *colorAtlas,
+                                               AssetType filterMask,
+                                               LoadShapeSettings *shapeSettings);
 
 /// Saves shape in file w/ optional palette
 bool serialization_v6_save_shape(Shape *shape,
@@ -40,6 +49,7 @@ bool serialization_v6_save_shape(Shape *shape,
 
 /// Serialize a shape in a newly created memory buffer
 bool serialization_v6_save_shape_as_buffer(const Shape *shape,
+                                           const ColorPalette *artistPalette,
                                            const void *previewData,
                                            const uint32_t previewDataSize,
                                            void **outBuffer,

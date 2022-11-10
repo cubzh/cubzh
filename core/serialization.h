@@ -13,6 +13,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "asset.h"
 #include "colors.h"
 #include "shape.h"
 #include "stream.h"
@@ -26,7 +27,7 @@ extern "C" {
 #define MAGIC_BYTES_LEGACY "PARTICUBES!"
 #define MAGIC_BYTES_SIZE_LEGACY 11
 
-#define SERIALIZATION_FILE_FORMAT_VERION_SIZE sizeof(uint32_t)
+#define SERIALIZATION_FILE_FORMAT_VERSION_SIZE sizeof(uint32_t)
 #define SERIALIZATION_PREVIEW_BYTE_COUNT_SIZE sizeof(uint32_t)
 
 // =============================================================================
@@ -86,13 +87,17 @@ uint8_t readMagicBytesLegacy(Stream *s);
 
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
-                                bool limitSize,
-                                bool octree,
-                                bool lighting,
-                                bool isMutable,
                                 ColorAtlas *colorAtlas,
-                                bool sharedColors,
+                                LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy);
+
+Shape *assets_get_root_shape(DoublyLinkedList *list);
+
+DoublyLinkedList *serialization_load_assets(Stream *s,
+                                            const char *fullname,
+                                            AssetType filterMask,
+                                            ColorAtlas *colorAtlas,
+                                            LoadShapeSettings *shapeSettings);
 
 /// serialize a shape w/ its palette
 bool serialization_save_shape(Shape *shape,
@@ -102,6 +107,7 @@ bool serialization_save_shape(Shape *shape,
 
 /// serialize a shape in a newly created memory buffer
 bool serialization_save_shape_as_buffer(Shape *shape,
+                                        ColorPalette *artistPalette,
                                         const void *previewData,
                                         const uint32_t previewDataSize,
                                         void **outBuffer,

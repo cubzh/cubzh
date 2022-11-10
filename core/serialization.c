@@ -48,33 +48,61 @@ uint8_t readMagicBytesLegacy(Stream *s) {
     return 0; // ok
 }
 
+Shape *assets_get_root_shape(DoublyLinkedList *list) {
+    Shape *shape = NULL;
+    DoublyLinkedListNode *node = doubly_linked_list_first(list);
+    while (node != NULL) {
+        Asset *r = (Asset *)doubly_linked_list_node_pointer(node);
+        if (r->type == AssetType_Shape) {
+            Shape *s = (Shape *)r->ptr;
+            if (transform_get_parent(shape_get_root_transform(s)) == NULL) {
+                shape = s;
+                break;
+            }
+        }
+        node = doubly_linked_list_node_next(node);
+        if (node == doubly_linked_list_first(list)) {
+            node = NULL;
+        }
+    }
+    return shape;
+}
+
 /// This does free the Stream
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
-                                bool limitSize,
-                                bool octree,
-                                bool lighting,
-                                bool isMutable,
                                 ColorAtlas *colorAtlas,
-                                bool sharedColors,
+                                LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
+    DoublyLinkedList *shapes = serialization_load_assets(s,
+                                                         fullname,
+                                                         AssetType_Shape,
+                                                         colorAtlas,
+                                                         shapeSettings);
+    // s is NULL if it could not be loaded
+    if (shapes == NULL) {
+        return NULL;
+    }
+    Shape *shape = assets_get_root_shape(shapes);
+    doubly_linked_list_free(shapes);
+    return shape;
+}
 
-    Shape *shape = NULL;
-
+DoublyLinkedList *serialization_load_assets(Stream *s,
+                                            const char *fullname,
+                                            AssetType filterMask,
+                                            ColorAtlas *colorAtlas,
+                                            LoadShapeSettings *shapeSettings) {
     if (s == NULL) {
-        cclog_error("can't load shape from NULL Stream");
+        cclog_error("can't load asset from NULL Stream");
         return NULL; // error
     }
 
     // read magic bytes
     if (readMagicBytes(s) != 0) {
-        // go back to the beginning and try the legacy magic bytes
-        stream_set_cursor_position(s, 0);
-        if (allowLegacy == false || readMagicBytesLegacy(s) != 0) {
-            cclog_error("failed to read magic bytes");
-            stream_free(s);
-            return NULL;
-        }
+        cclog_error("failed to read magic bytes");
+        stream_free(s);
+        return NULL;
     }
 
     // read file format
@@ -85,25 +113,21 @@ Shape *serialization_load_shape(Stream *s,
         return NULL;
     }
 
+    DoublyLinkedList *list = NULL;
+
     switch (fileFormatVersion) {
         case 5: {
-            shape = serialization_v5_load_shape(s,
-                                                limitSize,
-                                                octree,
-                                                lighting,
-                                                isMutable,
-                                                colorAtlas,
-                                                sharedColors);
+            list = doubly_linked_list_new();
+            Shape *shape = serialization_v5_load_shape(s, shapeSettings, colorAtlas);
+            Asset *asset = malloc(sizeof(Asset));
+            asset->ptr = shape;
+            asset->type = AssetType_Shape;
+            DoublyLinkedListNode *node = doubly_linked_list_node_new(asset);
+            doubly_linked_list_push_last(list, node);
             break;
         }
         case 6: {
-            shape = serialization_v6_load_shape(s,
-                                                limitSize,
-                                                octree,
-                                                lighting,
-                                                isMutable,
-                                                colorAtlas,
-                                                sharedColors);
+            list = serialization_load_assets_v6(s, colorAtlas, filterMask, shapeSettings);
             break;
         }
         default: {
@@ -114,16 +138,19 @@ Shape *serialization_load_shape(Stream *s,
 
     stream_free(s);
 
-    // shrink box once all blocks were added to update box origin
-    if (shape != NULL) {
-        shape_shrink_box(shape);
-        shape_set_fullname(shape, fullname);
-    } else {
-        cclog_error("[serialization_load_shape] shape is NULL");
+    if (doubly_linked_list_node_count(list) == 0) {
+        doubly_linked_list_free(list);
+        list = NULL;
+        cclog_error("[serialization_load_assets] no resources found");
     }
 
-    // s is NULL if it could not be loaded
-    return shape;
+    // set fullname if containing a root shape
+    Shape *shape = assets_get_root_shape(list);
+    if (shape != NULL) {
+        shape_set_fullname(shape, fullname);
+    }
+
+    return list;
 }
 
 bool serialization_save_shape(Shape *shape,
@@ -161,12 +188,14 @@ bool serialization_save_shape(Shape *shape,
 /// - palette (optional)
 /// - imageData (optional)
 bool serialization_save_shape_as_buffer(Shape *shape,
+                                        ColorPalette *artistPalette,
                                         const void *previewData,
                                         const uint32_t previewDataSize,
                                         void **outBuffer,
                                         uint32_t *outBufferSize) {
 
     return serialization_v6_save_shape_as_buffer(shape,
+                                                 artistPalette,
                                                  previewData,
                                                  previewDataSize,
                                                  outBuffer,

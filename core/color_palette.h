@@ -38,6 +38,8 @@ typedef struct ColorPalette {
     // Reverse mapping for quick search
     HashUInt32Int *colorToIdx;
 
+    Weakptr *wptr;
+
     // Number of colors up to max entry index currently used (possibly includes unused entries)
     uint8_t count;
 
@@ -51,6 +53,7 @@ typedef struct ColorPalette {
     bool sharedColors;
 
     char pad[4];
+
 } ColorPalette;
 
 ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared);
@@ -102,6 +105,9 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src);
 RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
                                              bool **emissive,
                                              SHAPE_COLOR_INDEX_INT_T **outMapping);
+
+Weakptr *color_palette_get_weakptr(ColorPalette *p);
+Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p);
 
 // MARK: - Default palettes -
 

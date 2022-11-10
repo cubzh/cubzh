@@ -13,6 +13,7 @@ ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared) {
     p->orderedCount = 0;
     p->lighting_dirty = false;
     p->sharedColors = allowShared;
+    p->wptr = NULL;
     return p;
 }
 
@@ -35,6 +36,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
     p->orderedCount = count;
     p->lighting_dirty = false;
     p->sharedColors = allowShared;
+    p->wptr = NULL;
 
     for (SHAPE_COLOR_INDEX_INT_T i = 0; i < count; ++i) {
         p->entries[i].color = colors[i];
@@ -44,7 +46,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
         if (emissive != NULL) {
             p->entries[i].emissive = emissive[i];
         }
-        hash_uint32_int_set(p->colorToIdx, color_as_uint32(&(colors[i])), i);
+        hash_uint32_int_set(p->colorToIdx, color_to_uint32(&(colors[i])), i);
     }
     for (SHAPE_COLOR_INDEX_INT_T i = count; i < SHAPE_COLOR_INDEX_MAX_COUNT; ++i) {
         p->entries[i].color = (RGBAColor){0, 0, 0, 0};
@@ -82,6 +84,7 @@ void color_palette_free(ColorPalette *p) {
         fifo_list_free(p->availableIndices);
     }
     hash_uint32_int_free(p->colorToIdx);
+    weakptr_invalidate(p->wptr);
     free(p);
 }
 
@@ -103,7 +106,7 @@ bool color_palette_is_shared(const ColorPalette *p) {
 
 bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut) {
     int idx = 0;
-    if (hash_uint32_int_get(p->colorToIdx, color_as_uint32(&color), &idx)) {
+    if (hash_uint32_int_get(p->colorToIdx, color_to_uint32(&color), &idx)) {
         if (entryOut != NULL) {
             *entryOut = (SHAPE_COLOR_INDEX_INT_T)idx;
         }
@@ -157,7 +160,7 @@ bool color_palette_check_and_add_color(ColorPalette *p,
     p->entries[idx].orderedIndex = p->orderedCount;
     p->entries[idx].emissive = false;
 
-    hash_uint32_int_set(p->colorToIdx, color_as_uint32(&color), idx);
+    hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), idx);
 
     if (p->orderedIndices != NULL) {
         p->orderedIndices[p->orderedCount] = idx;
@@ -260,7 +263,7 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
         p->availableIndices = fifo_list_new();
     }
 
-    hash_uint32_int_delete(p->colorToIdx, color_as_uint32(&p->entries[entry].color));
+    hash_uint32_int_delete(p->colorToIdx, color_to_uint32(&p->entries[entry].color));
     // entry becomes available
     SHAPE_COLOR_INDEX_INT_T *push = (SHAPE_COLOR_INDEX_INT_T *)malloc(
         sizeof(SHAPE_COLOR_INDEX_INT_T));
@@ -314,12 +317,12 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
         }
     }
 
-    hash_uint32_int_delete(p->colorToIdx, color_as_uint32(&p->entries[entry].color));
+    hash_uint32_int_delete(p->colorToIdx, color_to_uint32(&p->entries[entry].color));
     p->entries[entry].color = color;
     if (p->entries[entry].atlasIndex != ATLAS_COLOR_INDEX_ERROR) {
         color_atlas_set_color(a, p->entries[entry].atlasIndex, color, p->sharedColors);
     }
-    hash_uint32_int_set(p->colorToIdx, color_as_uint32(&color), entry);
+    hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), entry);
 }
 
 RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
@@ -414,7 +417,7 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
 
     // populate hashmap + increment usage count w/ atlas
     for (int i = 0; i < dst->count; ++i) {
-        hash_uint32_int_set(dst->colorToIdx, color_as_uint32(&(dst->entries[i].color)), i);
+        hash_uint32_int_set(dst->colorToIdx, color_to_uint32(&(dst->entries[i].color)), i);
         if (dst->entries[i].blocksCount > 0) {
             dst->entries[i].atlasIndex = color_atlas_check_and_add_color(a,
                                                                          dst->entries[i].color,
@@ -803,4 +806,22 @@ SHAPE_COLOR_INDEX_INT_T color_palette_ordered_idx_to_entry_idx(const ColorPalett
 
 bool color_palette_needs_ordering(const ColorPalette *p) {
     return p->orderedIndices != NULL;
+}
+
+Weakptr *color_palette_get_weakptr(ColorPalette *p) {
+    if (p->wptr == NULL) {
+        p->wptr = weakptr_new(p);
+    }
+    return p->wptr;
+}
+
+Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p) {
+    if (p->wptr == NULL) {
+        p->wptr = weakptr_new(p);
+    }
+    if (weakptr_retain(p->wptr)) {
+        return p->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
 }

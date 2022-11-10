@@ -47,13 +47,9 @@ uint32_t chunk_v5_read_selected_background_color(Stream *s, uint8_t *color);
 // chunk_v5_read_shape allocates a new Shape if shape != NULL
 uint32_t chunk_v5_read_shape(Stream *s,
                              Shape **shape,
-                             bool fixedSize,
-                             bool octree,
-                             bool lighting,
-                             bool isMutable,
+                             LoadShapeSettings *shapeSettings,
                              ColorAtlas *colorAtlas,
-                             ColorPalette *serializedPalette,
-                             bool sharedColors);
+                             ColorPalette *serializedPalette);
 
 uint32_t chunk_v5_read_shape_size(Stream *s, uint16_t *width, uint16_t *height, uint16_t *depth);
 uint32_t chunk_v5_read_shape_baked_light(Stream *s, VERTEX_LIGHT_STRUCT_T **data);
@@ -166,12 +162,8 @@ bool serialization_v5_get_preview_data(Stream *s, void **imageData, uint32_t *si
 
 ///
 Shape *serialization_v5_load_shape(Stream *s,
-                                   bool limitSize,
-                                   bool octree,
-                                   bool lighting,
-                                   bool isMutable,
-                                   ColorAtlas *colorAtlas,
-                                   bool sharedColors) {
+                                   LoadShapeSettings *shapeSettings,
+                                   ColorAtlas *colorAtlas) {
 
     uint8_t compressionAlgo = P3S_COMPRESSION_ALGO_NONE;
     if (stream_read_uint8(s, &compressionAlgo) == false) {
@@ -241,19 +233,18 @@ Shape *serialization_v5_load_shape(Stream *s,
             case P3S_CHUNK_ID_SHAPE: {
                 sizeRead = chunk_v5_read_shape(s,
                                                &shape,
-                                               limitSize,
-                                               octree,
-                                               lighting,
-                                               isMutable,
+                                               shapeSettings,
                                                colorAtlas,
-                                               serializedPalette,
-                                               sharedColors);
+                                               serializedPalette);
 
                 if (sizeRead == 0) {
                     cclog_error("error while reading shape");
                     error = true;
                     break;
                 }
+                // shrink box once all blocks were added to update box origin
+                shape_shrink_box(shape);
+
                 totalSizeRead += sizeRead;
 
                 break;
@@ -443,18 +434,14 @@ uint32_t chunk_read_shape_process_blocks(Stream *s,
 
 uint32_t chunk_v5_read_shape(Stream *s,
                              Shape **shape,
-                             bool fixedSize,
-                             bool octree,
-                             bool lighting,
-                             bool isMutable,
+                             LoadShapeSettings *shapeSettings,
                              ColorAtlas *colorAtlas,
-                             ColorPalette *serializedPalette,
-                             bool sharedColors) {
+                             ColorPalette *serializedPalette) {
 
     uint32_t shapeChunkSize = chunk_v5_read_size(s);
 
     // no need to read if shape return parameter is NULL
-    if (shape == NULL) {
+    if (shape == NULL || shapeSettings == NULL) {
         stream_skip(s, shapeChunkSize);
         return 4 + shapeChunkSize;
     }
@@ -511,23 +498,28 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 shapeSizeRead = true;
 
                 // size is known, now is a good time to create the shape
-                if (octree) {
+                if (shapeSettings->octree) {
                     *shape = shape_make_with_octree(width,
                                                     height,
                                                     depth,
-                                                    lighting,
-                                                    isMutable,
-                                                    fixedSize == false);
-                } else if (fixedSize) {
-                    *shape = shape_make_with_fixed_size(width, height, depth, lighting, isMutable);
+                                                    shapeSettings->lighting,
+                                                    shapeSettings->isMutable,
+                                                    shapeSettings->limitSize == false);
+                } else if (shapeSettings->limitSize) {
+                    *shape = shape_make_with_fixed_size(width,
+                                                        height,
+                                                        depth,
+                                                        shapeSettings->lighting,
+                                                        shapeSettings->isMutable);
                 } else {
                     *shape = shape_make();
                 }
                 if (serializedPalette != NULL) {
-                    color_palette_set_shared(serializedPalette, sharedColors);
+                    color_palette_set_shared(serializedPalette, shapeSettings->sharedColors);
                     shape_set_palette(*shape, serializedPalette);
                 } else {
-                    shape_set_palette(*shape, color_palette_new(colorAtlas, sharedColors));
+                    shape_set_palette(*shape,
+                                      color_palette_new(colorAtlas, shapeSettings->sharedColors));
                 }
 
                 // this means blocks have been found before the size.
@@ -644,7 +636,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
     if (shape_uses_baked_lighting(*shape)) {
         if (lightingData == NULL) {
             cclog_warning("shape uses lighting but no baked lighting found");
-        } else if (octree == false && fixedSize == false) {
+        } else if (shapeSettings->octree == false && shapeSettings->limitSize == false) {
             cclog_warning("shape uses lighting but does not have a fixed size");
             free(lightingData);
         } else if ((lightingDataSizeRead - 4) !=

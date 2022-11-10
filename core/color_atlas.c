@@ -94,7 +94,7 @@ ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a,
                                                         RGBAColor color,
                                                         bool isShared) {
 
-    uint32_t uint32Color = color_as_uint32(&color);
+    uint32_t uint32Color = color_to_uint32(&color);
 
     // if color can be shared, check in lookup map first
     if (isShared) {
@@ -139,7 +139,7 @@ void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, bool
     a->shapesCount[index]--;
     if (a->shapesCount[index] == 0) {
         if (isShared) {
-            hash_uint32_int_delete(a->colorToIdx, color_as_uint32(&(a->colors[index])));
+            hash_uint32_int_delete(a->colorToIdx, color_to_uint32(&(a->colors[index])));
         }
 
         // index becomes available
@@ -174,8 +174,8 @@ void color_atlas_set_color(ColorAtlas *a,
     }
 
     if (isShared) {
-        hash_uint32_int_delete(a->colorToIdx, color_as_uint32(&(a->colors[index])));
-        hash_uint32_int_set(a->colorToIdx, color_as_uint32(&color), (int)index);
+        hash_uint32_int_delete(a->colorToIdx, color_to_uint32(&(a->colors[index])));
+        hash_uint32_int_set(a->colorToIdx, color_to_uint32(&color), (int)index);
     }
 
     a->colors[index] = color;
