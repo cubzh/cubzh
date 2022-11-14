@@ -13,6 +13,7 @@
 #include "test_config.h"
 #include "test_doubly_linked_list.h"
 #include "test_doubly_linked_list_uint8.h"
+#include "test_fifo_list.h"
 #include "test_filo_list_float3.h"
 #include "test_filo_list_int3.h"
 #include "test_filo_list_uint16.h"
@@ -121,6 +122,14 @@ TEST_LIST = {
     {"doubly_linked_list_delete_node", test_doubly_linked_list_delete_node},
     {"doubly_linked_list_node_at_index", test_doubly_linked_list_node_at_index},
     {"doubly_linked_list_sort_ascending", test_doubly_linked_list_sort_ascending},
+
+    // fifo_list
+    {"fifo_list_new", test_fifo_list_new},
+    {"fifo_list_flush", test_fifo_list_flush},
+    {"fifo_list_get_size", test_fifo_list_get_size},
+    {"fifo_list_pop", test_fifo_list_pop},
+    {"fifo_list_push", test_fifo_list_push},
+    {"fifo_list_new_copy", test_fifo_list_new_copy},
 
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},
