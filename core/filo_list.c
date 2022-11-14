@@ -38,8 +38,9 @@ void filo_list_free(FiloList *list) {
 
 void filo_list_push(FiloList *list, void *ptr) {
     FiloListNode *newNode = filo_list_node_new(ptr);
-    if (list->first != NULL)
-        list->first->next = newNode;
+    if (list->first != NULL) {
+        newNode->next = list->first;
+    }
     list->first = newNode;
 }
 
@@ -49,8 +50,8 @@ void *filo_list_pop(FiloList *list) {
     }
 
     FiloListNode *node = list->first;
-    void *ptr = node->ptr;
     list->first = node->next;
+    void *ptr = node->ptr;
 
     filo_list_node_free(node);
     return ptr;
