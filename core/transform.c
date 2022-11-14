@@ -871,6 +871,7 @@ RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) 
     }
 
     RigidBody *rb = NULL;
+    *collider = box_zero;
 
     // we can use collider cached in rtree leaf whenever possible, otherwise compute it
     switch (transform_get_type(t)) {

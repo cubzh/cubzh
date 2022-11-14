@@ -1202,7 +1202,7 @@ bool rigidbody_is_collider_valid(const RigidBody *rb) {
 }
 
 bool rigidbody_is_enabled(const RigidBody *rb) {
-    return rigidbody_is_dynamic(rb) || rigidbody_is_trigger(rb);
+    return rb != NULL && _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != Disabled;
 }
 
 bool rigidbody_is_dynamic(const RigidBody *rb) {
