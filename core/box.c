@@ -120,9 +120,9 @@ void box_set_broadphase_box(const Box *b, const float3 *v, Box *bpBox) {
 /// - this implies that return value is a rate of dv, not a delta time
 /// - collision checks are a bit broadened from previously (1) to now (2),
 ///     (1) "movingBox is already colliding or going to collide w/ staticBox within collision
-///     tolerance d" (2) "movingBox is already colliding w/ staticBox regardless of collision
-///     tolerance, or going
-///         to collide w/ staticBox within collision tolerance d"
+///     tolerance d"
+///     (2) "movingBox is already colliding w/ staticBox regardless of collision
+///     tolerance, or going to collide w/ staticBox within collision tolerance d"
 ///     this is an important addendum since anything can be changed from Lua, thus
 ///     breaking the assumption that everything moves within their respective velocity
 /// - this allow us to perform a replacement step at the start of all trajectories,

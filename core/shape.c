@@ -19,6 +19,7 @@
 #include "scene.h"
 #include "transaction.h"
 #include "utils.h"
+#include "config.h"
 
 #ifdef DEBUG
 #define SHAPE_LIGHTING_DEBUG false
@@ -125,12 +126,14 @@ struct _Shape {
     uint8_t layers;         // 1 byte
 
     bool isMutable;                        // 1 byte
-    bool isResizable;                      // 1 byte
     bool historyEnabled;                   // 1 byte
     bool historyKeepingTransactionPending; // 1 byte
 
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
+
+    // per-block collisions will be in effect when shape's rigidbody is in static mode
+    bool blockCollisions;
 
     // char pad[1];
 };
@@ -150,7 +153,7 @@ static FiloListUInt16 *availableShapeIds = NULL;
 static Shape **_shapesIndex = NULL;
 static size_t _shapesIndexLength = 0;
 
-// MARK: - private static functions prototypes -
+// MARK: - private functions prototypes -
 
 // returns true if block was added
 static bool _add_block_in_chunks(Index3D *chunks,
@@ -162,12 +165,6 @@ static bool _add_block_in_chunks(Index3D *chunks,
                                  bool *chunkAdded,
                                  Chunk **added_or_existing_chunk,
                                  Block **added_or_existing_block);
-
-// --------------------------------------------------
-//
-// MARK: - static functions prototypes -
-//
-// --------------------------------------------------
 
 /// add a block at (x, y, z) local to shape
 static bool _shape_add_block(Shape *shape,
@@ -192,13 +189,11 @@ static bool _storeShapeInIndex(Shape *s);
 /// removes a shape from the shape index and returns whether the operation succeeded
 static bool _removeShapeFromIndex(const Shape *s);
 
-// MARK: - private functions prototypes -
-
-bool _has_fixed_size(const Shape *s);
-bool _is_out_of_fixed_size(const Shape *s,
-                           const SHAPE_COORDS_INT_T x,
-                           const SHAPE_COORDS_INT_T y,
-                           const SHAPE_COORDS_INT_T z);
+bool _has_allocated_size(const Shape *s);
+bool _is_out_of_allocated_size(const Shape *s,
+                               const SHAPE_COORDS_INT_T x,
+                               const SHAPE_COORDS_INT_T y,
+                               const SHAPE_COORDS_INT_T z);
 Octree *_new_octree(const SHAPE_COORDS_INT_T w,
                     const SHAPE_COORDS_INT_T h,
                     const SHAPE_COORDS_INT_T d);
@@ -207,32 +202,33 @@ void _set_vb_allocation_flag_one_frame(Shape *s);
 bool _lighting_is_enabled(Shape *s);
 
 /// internal functions used to flag the relevant data when lighting has changed
-void _lighting_set_dirty(int3 *bbMin, int3 *bbMax, int x, int y, int z);
-void _lighting_postprocess_dirty(Shape *s, int3 *bbMin, int3 *bbMax);
+void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax, SHAPE_COORDS_INT_T x,
+                         SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z);
+void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax);
 
 //// internal functions used to compute and update light propagation (sun & emission)
 /// check a neighbor air block for light removal upon adding a block
 void _light_removal_processNeighbor(Shape *s,
-                                    int3 *bbMin,
-                                    int3 *bbMax,
+                                    SHAPE_COORDS_INT3_T *bbMin,
+                                    SHAPE_COORDS_INT3_T *bbMax,
                                     VERTEX_LIGHT_STRUCT_T light,
                                     uint8_t srgb,
                                     bool equals,
-                                    int3 *neighborPos,
+                                    SHAPE_COORDS_INT3_T *neighborPos,
                                     Block *neighbor,
                                     LightNodeQueue *lightQueue,
                                     LightRemovalNodeQueue *lightRemovalQueue);
 /// insert light values and if necessary (lightQueue != NULL) add it to the light propagation queue
-void _light_enqueue_source(int3 *pos,
+void _light_enqueue_source(SHAPE_COORDS_INT3_T *pos,
                            Shape *shape,
                            VERTEX_LIGHT_STRUCT_T source,
                            LightNodeQueue *lightQueue);
 /// propagate light values at a given block
 void _light_block_propagate(Shape *s,
-                            int3 *bbMin,
-                            int3 *bbMax,
+                            SHAPE_COORDS_INT3_T *bbMin,
+                            SHAPE_COORDS_INT3_T *bbMax,
                             VERTEX_LIGHT_STRUCT_T current,
-                            int3 *neighborPos,
+                            SHAPE_COORDS_INT3_T *neighborPos,
                             Block *neighbor,
                             bool air,
                             bool transparent,
@@ -241,16 +237,16 @@ void _light_block_propagate(Shape *s,
                             uint8_t stepRGB);
 /// light propagation algorithm
 void _light_propagate(Shape *s,
-                      int3 *bbMin,
-                      int3 *bbMax,
+                      SHAPE_COORDS_INT3_T *bbMin,
+                      SHAPE_COORDS_INT3_T *bbMax,
                       LightNodeQueue *lightQueue,
-                      int srcX,
-                      int srcY,
-                      int srcZ);
+                      SHAPE_COORDS_INT_T srcX,
+                      SHAPE_COORDS_INT_T srcY,
+                      SHAPE_COORDS_INT_T srcZ);
 /// light removal also enqueues back any light source that needs recomputing
 void _light_removal(Shape *s,
-                    int3 *bbMin,
-                    int3 *bbMax,
+                    SHAPE_COORDS_INT3_T *bbMin,
+                    SHAPE_COORDS_INT3_T *bbMax,
                     LightRemovalNodeQueue *lightRemovalQueue,
                     LightNodeQueue *lightQueue);
 /// lighting data realloc used after a shape resize
@@ -300,9 +296,6 @@ Shape *shape_make() {
     s->pivot = NULL;
 
     s->lightingData = NULL;
-    s->usesLighting = false;
-    s->isUnlit = false;
-    s->layers = 1; // CAMERA_LAYERS_0
 
     s->chunks = index3d_new();
 
@@ -322,21 +315,23 @@ Shape *shape_make() {
     s->nbBlocks = 0;
     s->fragmentedVBs = doubly_linked_list_new();
 
-    // shapes's id
     s->id = getValidShapeId();
 
     s->maxWidth = s->maxHeight = s->maxDepth = 0;
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->shadowDecal = false;
+    s->usesLighting = false;
+    s->isUnlit = false;
+    s->layers = 1; // CAMERA_LAYERS_0
 
     s->isMutable = false;
-    s->isResizable = false;
 
     s->historyEnabled = false;
     s->historyKeepingTransactionPending = false;
 
     s->isBakeLocked = false;
+    s->blockCollisions = false;
 
     // store allocated shape in the index
     if (_storeShapeInIndex(s) == false) {
@@ -388,10 +383,13 @@ Shape *shape_make_copy(Shape *origin) {
 
     box_copy(s->box, origin->box);
 
+    s->drawMode = origin->drawMode;
+    s->shadowDecal = origin->shadowDecal;
     s->usesLighting = origin->usesLighting;
     s->isUnlit = origin->isUnlit;
+    s->layers = origin->layers;
     s->isMutable = origin->isMutable;
-    s->isResizable = origin->isResizable;
+    s->blockCollisions = origin->blockCollisions;
 
     if (origin->octree != NULL) {
         s->octree = _new_octree((SHAPE_COORDS_INT_T)origin->maxWidth,
@@ -444,20 +442,19 @@ void shape_set_transform(Shape *const s, Transform *const t) {
     s->transform = t;
 }
 
-Shape *shape_make_with_fixed_size(const uint16_t width,
-                                  const uint16_t height,
-                                  const uint16_t depth,
-                                  bool lighting,
-                                  const bool isMutable) {
+Shape *shape_make_with_size(const uint16_t width,
+                            const uint16_t height,
+                            const uint16_t depth,
+                            bool lighting,
+                            const bool isMutable) {
 
     Shape *s = shape_make();
-
-    s->usesLighting = lighting;
 
     s->maxWidth = width;
     s->maxHeight = height;
     s->maxDepth = depth;
 
+    s->usesLighting = lighting;
     s->isMutable = isMutable;
 
     return s;
@@ -467,24 +464,19 @@ Shape *shape_make_with_octree(const uint16_t width,
                               const uint16_t height,
                               const uint16_t depth,
                               bool lighting,
-                              const bool isMutable,
-                              const bool isResizable) {
+                              const bool isMutable) {
 
     Shape *s = shape_make();
 
     s->octree = _new_octree((SHAPE_COORDS_INT_T)width,
                             (SHAPE_COORDS_INT_T)height,
                             (SHAPE_COORDS_INT_T)depth);
-    s->usesLighting = lighting;
-
-    // NOTE: remove chunks when fully using octree?
-
     s->maxWidth = width;
     s->maxHeight = height;
     s->maxDepth = depth;
 
+    s->usesLighting = lighting;
     s->isMutable = isMutable;
-    s->isResizable = isResizable;
 
     return s;
 }
@@ -687,7 +679,7 @@ void shape_flush(Shape *shape) {
         map_string_float3_free(shape->pois_rotation);
         shape->pois_rotation = map_string_float3_new();
 
-        if (_has_fixed_size(shape)) {
+        if (_has_allocated_size(shape)) {
             if (shape->octree != NULL) {
                 octree_flush(shape->octree);
             }
@@ -840,10 +832,6 @@ void shape_release(Shape *const shape) {
 
 ShapeId shape_get_id(const Shape *shape) {
     return shape->id;
-}
-
-bool shape_is_resizable(const Shape *shape) {
-    return shape->isResizable;
 }
 
 // sets "needs display" to neighbor chunks when updating
@@ -1169,7 +1157,7 @@ bool shape_remove_block(Shape *shape,
     }
 
     // make sure block removed is within fixed boundaries
-    if (_has_fixed_size(shape) && _is_out_of_fixed_size(shape, x, y, z)) {
+    if (_has_allocated_size(shape) && _is_out_of_allocated_size(shape, x, y, z)) {
         cclog_error("⚠️ trying to remove block from outside shape's fixed boundaries");
         return false;
     }
@@ -1368,7 +1356,7 @@ Block *shape_get_block_immediate(const Shape *const shape,
     }
 
     Block *b = NULL;
-    if (shape_is_within_fixed_bounds(shape, x, y, z)) {
+    if (shape_is_within_allocated_bounds(shape, x, y, z)) {
         if (shape->octree != NULL) {
             b = (Block *)
                 octree_get_element_without_checking(shape->octree, (size_t)x, (size_t)y, (size_t)z);
@@ -1488,10 +1476,10 @@ void shape_get_bounding_box_size(const Shape *shape, int3 *size) {
     box_get_size_int(shape->box, size);
 }
 
-void shape_get_fixed_size(const Shape *shape, int3 *size) {
+void shape_get_allocated_size(const Shape *shape, int3 *size) {
     if (size == NULL)
         return;
-    if (_has_fixed_size(shape)) {
+    if (_has_allocated_size(shape)) {
         size->x = shape->maxWidth;
         size->y = shape->maxHeight;
         size->z = shape->maxDepth;
@@ -1500,22 +1488,13 @@ void shape_get_fixed_size(const Shape *shape, int3 *size) {
     }
 }
 
-uint16_t shape_get_max_fixed_size(const Shape *shape) {
-    if (_has_fixed_size(shape)) {
-        return maximum(shape->maxWidth, maximum(shape->maxHeight, shape->maxDepth));
-    } else {
-        return (uint16_t)maximum(
-            shape->box->max.x - shape->box->min.x,
-            maximum(shape->box->max.y - shape->box->min.y, shape->box->max.z - shape->box->min.z));
-    }
-}
-
-bool shape_is_within_fixed_bounds(const Shape *shape,
-                                  const SHAPE_COORDS_INT_T x,
-                                  const SHAPE_COORDS_INT_T y,
-                                  const SHAPE_COORDS_INT_T z) {
-    return (x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 &&
-            z < shape->maxDepth);
+bool shape_is_within_allocated_bounds(const Shape *shape,
+                                      const SHAPE_COORDS_INT_T x,
+                                      const SHAPE_COORDS_INT_T y,
+                                      const SHAPE_COORDS_INT_T z) {
+    return x >= 0 && x < shape->maxWidth &&
+           y >= 0 && y < shape->maxHeight &&
+           z >= 0 && z < shape->maxDepth;
 }
 
 void shape_box_to_aabox(const Shape *s,
@@ -1781,16 +1760,10 @@ void shape_make_space(Shape *const shape,
     // shape->offset.z);
 
     // no need to make space if there is no fixed/allocated size (no octree nor lighting)
-    if (_has_fixed_size(shape) == false) {
+    if (_has_allocated_size(shape) == false) {
         cclog_warning(
             "⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor "
             "lighting)");
-        return;
-    }
-
-    // skip if shape is not allowed to resize
-    if (shape->isResizable == false) {
-        cclog_warning("⚠️ shape_make_space: trying to resize a non-resizable shape");
         return;
     }
 
@@ -1808,8 +1781,8 @@ void shape_make_space(Shape *const shape,
 
     // Check if a resize is needed.
     // If required min/max are within fixed bounds, then extra space is not needed.
-    if (shape_is_within_fixed_bounds(shape, requiredMinX, requiredMinY, requiredMinZ) &&
-        shape_is_within_fixed_bounds(shape, requiredMaxX, requiredMaxY, requiredMaxZ)) {
+    if (shape_is_within_allocated_bounds(shape, requiredMinX, requiredMinY, requiredMinZ) &&
+        shape_is_within_allocated_bounds(shape, requiredMaxX, requiredMaxY, requiredMaxZ)) {
         return;
     }
 
@@ -2347,6 +2320,34 @@ void shape_replace_color_atlas(Shape *s, ColorAtlas *ca) {
     color_palette_replace_color_atlas(s->palette, ca);
 }
 
+bool shape_is_lua_mutable(Shape *s) {
+    if (s == NULL) {
+        return false;
+    }
+    return s->isMutable;
+}
+
+void shape_set_lua_mutable(Shape *s, const bool value) {
+    if (s == NULL) {
+        return;
+    }
+    s->isMutable = value;
+}
+
+bool shape_uses_per_block_collisions(Shape *s) {
+    if (s == NULL) {
+        return false;
+    }
+    return s->blockCollisions;
+}
+
+void shape_set_per_block_collisions(Shape *s, bool value) {
+    if (s == NULL) {
+        return;
+    }
+    s->blockCollisions = value;
+}
+
 // MARK: - Transform -
 
 void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool removeOffset) {
@@ -2609,7 +2610,7 @@ void shape_get_lossy_scale(const Shape *s, float3 *scale) {
 }
 
 /// returns a pointer on the shape's model matrix
-const Matrix4x4 *shape_get_model_matrix(Shape *s) {
+const Matrix4x4 *shape_get_model_matrix(const Shape *s) {
     if (s == NULL) {
         return NULL;
     }
@@ -2710,7 +2711,7 @@ void shape_ensure_rigidbody(Shape *s, const uint8_t groups, const uint8_t collid
     RigidBody *rb = shape_get_rigidbody(s);
 
     if (rb == NULL) {
-        rb = rigidbody_new(RigidbodyModeStatic, groups, collidesWith);
+        rb = rigidbody_new(RigidbodyMode_Static, groups, collidesWith);
         transform_set_rigidbody(s->transform, rb);
         shape_fit_collider_to_bounding_box(s);
     } else {
@@ -2721,14 +2722,14 @@ void shape_ensure_rigidbody(Shape *s, const uint8_t groups, const uint8_t collid
 
 bool shape_get_physics_enabled(const Shape *s) {
     vx_assert(s != NULL);
-    return rigidbody_get_simulation_mode(shape_get_rigidbody(s)) == RigidbodyModeDynamic;
+    return rigidbody_get_simulation_mode(shape_get_rigidbody(s)) == RigidbodyMode_Dynamic;
 }
 
 void shape_set_physics_enabled(const Shape *s, const bool enabled) {
     vx_assert(s != NULL);
     if (shape_get_rigidbody(s) == NULL)
         return;
-    shape_set_physics_simulation_mode(s, enabled ? RigidbodyModeDynamic : RigidbodyModeStatic);
+    shape_set_physics_simulation_mode(s, enabled ? RigidbodyMode_Dynamic : RigidbodyMode_Static);
 }
 
 void shape_fit_collider_to_bounding_box(const Shape *s) {
@@ -2767,8 +2768,8 @@ void shape_set_physics_simulation_mode(const Shape *s, const uint8_t value) {
 
     // reset rigidbody when disabling physics, but keep changes made in Lua prior to enabling
     // physics
-    if (value != RigidbodyModeDynamic &&
-        rigidbody_get_simulation_mode(rb) == RigidbodyModeDynamic) {
+    if (value != RigidbodyMode_Dynamic &&
+        rigidbody_get_simulation_mode(rb) == RigidbodyMode_Dynamic) {
         rigidbody_reset(rb);
     }
     rigidbody_set_simulation_mode(rb, value);
@@ -2843,8 +2844,8 @@ uint8_t shape_get_layers(const Shape *s) {
 // MARK: -
 
 float shape_box_swept(const Shape *s,
-                      const Box *b,
-                      const float3 *v,
+                      const Box *worldBox,
+                      const float3 *worldVector,
                       const bool withReplacement,
                       float3 *swept3,
                       float3 *extraReplacement,
@@ -2859,7 +2860,12 @@ float shape_box_swept(const Shape *s,
 
     Box broadPhaseBox, tmpBox;
 
-    box_set_broadphase_box(b, v, &broadPhaseBox);
+    // world to model
+    const Matrix4x4 *invModel = transform_get_wtl(shape_get_pivot_transform(s));
+    Box modelBox; box_to_aabox2(worldBox, &modelBox, invModel, &float3_zero, false);
+    float3 modelVector; matrix4x4_op_multiply_vec_vector(&modelVector, worldVector, invModel);
+
+    box_set_broadphase_box(&modelBox, &modelVector, &broadPhaseBox);
 
     bool leaf = false;
     bool collides;
@@ -2867,10 +2873,6 @@ float shape_box_swept(const Shape *s,
     float3 tmpNormal, tmpReplacement;
     float minSwept = 1.0f;
     float swept = 1.0f;
-
-    float3 scale;
-    shape_get_lossy_scale(s, &scale);
-    const float3 *modelOrigin = shape_get_model_origin(s);
 
     if (swept3 != NULL) {
         float3_set_one(swept3);
@@ -2886,15 +2888,14 @@ float shape_box_swept(const Shape *s,
     while (octree_iterator_is_done(oi) == false) {
 
         octree_iterator_get_node_box(oi, &tmpBox);
-        box_to_aabox_no_rot(&tmpBox, &tmpBox, modelOrigin, &float3_zero, &scale, false);
 
         collides = box_collide(&tmpBox, &broadPhaseBox);
 
         if (leaf) {
             if (collides) {
                 // nbcubes++;
-                swept = box_swept(b,
-                                  v,
+                swept = box_swept(&modelBox,
+                                  &modelVector,
                                   &tmpBox,
                                   withReplacement,
                                   &tmpNormal,
@@ -3219,15 +3220,15 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
     memset(s->lightingData, 0, lightingSize);
 
     LightNodeQueue *q = light_node_queue_new();
-    int3 i3;
+    SHAPE_COORDS_INT3_T pos;
 
     // Sunlight sources: all blocks on x & z, one block above map limit & beyond the sides
-    i3.y = (int)s->maxHeight;
+    pos.y = (int)s->maxHeight;
     for (SHAPE_COORDS_INT_T x = -1; x <= s->maxWidth; ++x) {
         for (SHAPE_COORDS_INT_T z = -1; z <= s->maxDepth; ++z) {
-            i3.x = x;
-            i3.z = z;
-            light_node_queue_push(q, &i3);
+            pos.x = x;
+            pos.z = z;
+            light_node_queue_push(q, &pos);
         }
     }
 
@@ -3238,10 +3239,10 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
             for (SHAPE_COORDS_INT_T z = 0; z < s->maxDepth; ++z) {
                 b = shape_get_block(s, x, y, z, false);
                 if (color_palette_is_emissive(s->palette, b->colorIndex)) {
-                    i3.x = x;
-                    i3.y = y;
-                    i3.z = z;
-                    light_node_queue_push(q, &i3);
+                    pos.x = x;
+                    pos.y = y;
+                    pos.z = z;
+                    light_node_queue_push(q, &pos);
                 }
             }
         }
@@ -3273,22 +3274,22 @@ void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d) {
     s->lightingData = d;
 }
 
-VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, int x, int y, int z) {
+VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, SHAPE_COORDS_INT_T x,
+                                                       SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z) {
     return s->lightingData[x * s->maxHeight * s->maxDepth + y * s->maxDepth + z];
 }
 
-void shape_set_light(Shape *s, int x, int y, int z, VERTEX_LIGHT_STRUCT_T light) {
+void shape_set_light(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z,
+                     VERTEX_LIGHT_STRUCT_T light) {
     if (x >= 0 && x < s->maxWidth && y >= 0 && y < s->maxHeight && z >= 0 && z < s->maxDepth) {
         s->lightingData[x * s->maxHeight * s->maxDepth + y * s->maxDepth + z] = light;
     }
 }
 
-VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, int x, int y, int z, bool isDefault) {
+VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
+                                                 SHAPE_COORDS_INT_T z, bool isDefault) {
     if (isDefault || s->lightingData == NULL ||
-        shape_is_within_fixed_bounds(s,
-                                     (SHAPE_COORDS_INT_T)x,
-                                     (SHAPE_COORDS_INT_T)y,
-                                     (SHAPE_COORDS_INT_T)z) == false) {
+        shape_is_within_allocated_bounds(s, x, y, z) == false) {
         VERTEX_LIGHT_STRUCT_T light;
         DEFAULT_LIGHT(light)
         return light;
@@ -3297,11 +3298,8 @@ VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, int x, int y, int z, 
     }
 }
 
-void shape_compute_baked_lighting_removed_block(Shape *s,
-                                                const int x,
-                                                const int y,
-                                                const int z,
-                                                SHAPE_COLOR_INDEX_INT_T blockID) {
+void shape_compute_baked_lighting_removed_block(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
+                                                SHAPE_COORDS_INT_T z, SHAPE_COLOR_INDEX_INT_T blockID) {
     if (s == NULL) {
         return;
     }
@@ -3323,11 +3321,11 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
     cclog_debug("☀️☀️☀️ compute light for removed block (%d, %d, %d)", x, y, z);
 #endif
 
-    int3 i3;
+    SHAPE_COORDS_INT3_T coords;
     LightNodeQueue *lightQueue = light_node_queue_new();
 
     // changed values bounding box need to include both removed and added lights
-    int3 min, max;
+    SHAPE_COORDS_INT3_T min, max;
     min.x = max.x = x;
     min.y = max.y = y;
     min.z = max.z = z;
@@ -3339,10 +3337,10 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
     if (existingLight.red > 0 || existingLight.green > 0 || existingLight.blue > 0) {
         LightRemovalNodeQueue *lightRemovalQueue = light_removal_node_queue_new();
 
-        i3.x = x;
-        i3.y = y;
-        i3.z = z;
-        light_removal_node_queue_push(lightRemovalQueue, &i3, existingLight, 15, blockID);
+        coords.x = x;
+        coords.y = y;
+        coords.z = z;
+        light_removal_node_queue_push(lightRemovalQueue, &coords, existingLight, 15, blockID);
 
         // run light removal
         _light_removal(s, &min, &max, lightRemovalQueue, lightQueue);
@@ -3353,40 +3351,40 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
     // add all neighbors to light propagation queue
     {
         // x + 1
-        i3.x = x + 1;
-        i3.y = y;
-        i3.z = z;
-        light_node_queue_push(lightQueue, &i3);
+        coords.x = x + 1;
+        coords.y = y;
+        coords.z = z;
+        light_node_queue_push(lightQueue, &coords);
 
         // x - 1
-        i3.x = x - 1;
-        i3.y = y;
-        i3.z = z;
-        light_node_queue_push(lightQueue, &i3);
+        coords.x = x - 1;
+        coords.y = y;
+        coords.z = z;
+        light_node_queue_push(lightQueue, &coords);
 
         // y + 1
-        i3.x = x;
-        i3.y = y + 1;
-        i3.z = z;
-        light_node_queue_push(lightQueue, &i3);
+        coords.x = x;
+        coords.y = y + 1;
+        coords.z = z;
+        light_node_queue_push(lightQueue, &coords);
 
         // y - 1
-        i3.x = x;
-        i3.y = y - 1;
-        i3.z = z;
-        light_node_queue_push(lightQueue, &i3);
+        coords.x = x;
+        coords.y = y - 1;
+        coords.z = z;
+        light_node_queue_push(lightQueue, &coords);
 
         // z + 1
-        i3.x = x;
-        i3.y = y;
-        i3.z = z + 1;
-        light_node_queue_push(lightQueue, &i3);
+        coords.x = x;
+        coords.y = y;
+        coords.z = z + 1;
+        light_node_queue_push(lightQueue, &coords);
 
         // z - 1
-        i3.x = x;
-        i3.y = y;
-        i3.z = z - 1;
-        light_node_queue_push(lightQueue, &i3);
+        coords.x = x;
+        coords.y = y;
+        coords.z = z - 1;
+        light_node_queue_push(lightQueue, &coords);
     }
 
     // self light values are now 0
@@ -3400,11 +3398,8 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
     light_node_queue_free(lightQueue);
 }
 
-void shape_compute_baked_lighting_added_block(Shape *s,
-                                              const int x,
-                                              const int y,
-                                              const int z,
-                                              SHAPE_COLOR_INDEX_INT_T blockID) {
+void shape_compute_baked_lighting_added_block(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
+                                              SHAPE_COORDS_INT_T z, SHAPE_COLOR_INDEX_INT_T blockID) {
 
     if (s == NULL) {
         return;
@@ -3426,19 +3421,19 @@ void shape_compute_baked_lighting_added_block(Shape *s,
     cclog_debug("☀️☀️☀️ compute light for added block (%d, %d, %d)", x, y, z);
 #endif
 
-    int3 i3;
+    SHAPE_COORDS_INT3_T coords;
     LightNodeQueue *lightQueue = light_node_queue_new();
     LightRemovalNodeQueue *lightRemovalQueue = light_removal_node_queue_new();
 
     // changed values bounding box need to include both removed and added lights
-    int3 min, max;
+    SHAPE_COORDS_INT3_T min, max;
     min.x = max.x = x;
     min.y = max.y = y;
     min.z = max.z = z;
 
-    i3.x = x;
-    i3.y = y;
-    i3.z = z;
+    coords.x = x;
+    coords.y = y;
+    coords.z = z;
 
     // get existing and new light values
     VERTEX_LIGHT_STRUCT_T existingLight = shape_get_light_without_checking(s, x, y, z);
@@ -3448,12 +3443,12 @@ void shape_compute_baked_lighting_added_block(Shape *s,
     // note: we do this since palette may have been changed when running light removal at a later
     // point
     if (newLight.red > 0 || newLight.green > 0 || newLight.blue > 0) {
-        light_node_queue_push(lightQueue, &i3);
+        light_node_queue_push(lightQueue, &coords);
         shape_set_light(s, x, y, z, newLight);
     }
 
     // start light removal from current position as an air block w/ existingLight
-    light_removal_node_queue_push(lightRemovalQueue, &i3, existingLight, 15, 255);
+    light_removal_node_queue_push(lightRemovalQueue, &coords, existingLight, 15, 255);
 
     // check in the vicinity for any emissive block that would be affected by the added block
     Block *block = NULL;
@@ -3465,21 +3460,17 @@ void shape_compute_baked_lighting_added_block(Shape *s,
                     continue;
                 }
 
-                i3.x = x + xo;
-                i3.y = y + yo;
-                i3.z = z + zo;
+                coords.x = x + xo;
+                coords.y = y + yo;
+                coords.z = z + zo;
 
-                block = shape_get_block(s,
-                                        (SHAPE_COORDS_INT_T)i3.x,
-                                        (SHAPE_COORDS_INT_T)i3.y,
-                                        (SHAPE_COORDS_INT_T)i3.z,
-                                        false);
+                block = shape_get_block(s, coords.x, coords.y, coords.z, false);
                 if (block != NULL && color_palette_is_emissive(s->palette, block->colorIndex)) {
                     light = color_palette_get_emissive_color_as_light(s->palette,
                                                                       block->colorIndex);
 
                     light_removal_node_queue_push(lightRemovalQueue,
-                                                  &i3,
+                                                  &coords,
                                                   light,
                                                   15,
                                                   block->colorIndex);
@@ -3582,22 +3573,6 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
     _light_propagate(s, &min, &max, lightQueue, x, y, z);
 
     light_node_queue_free(lightQueue);
-}
-
-// MARK: -
-
-bool shape_is_lua_mutable(Shape *s) {
-    if (s == NULL) {
-        return false;
-    }
-    return s->isMutable;
-}
-
-void shape_set_lua_mutable(Shape *s, const bool value) {
-    if (s == NULL) {
-        return;
-    }
-    s->isMutable = value;
 }
 
 // MARK: - History -
@@ -3771,14 +3746,14 @@ static bool _shape_add_block(Shape *shape,
     }
 
     // make sure block is added within fixed boundaries
-    if (_has_fixed_size(shape) && _is_out_of_fixed_size(shape, x, y, z)) {
+    if (_has_allocated_size(shape) && _is_out_of_allocated_size(shape, x, y, z)) {
         cclog_error("⚠️ trying to add block outside shape's fixed boundaries| %p %d %d %d",
                     shape,
                     x,
                     y,
                     z);
         cclog_error("shape fixed size: %d | %d %d %d",
-                    _has_fixed_size(shape),
+                    _has_allocated_size(shape),
                     shape->maxWidth,
                     shape->maxHeight,
                     shape->maxDepth);
@@ -4114,15 +4089,14 @@ bool _add_block_in_chunks(Index3D *chunks,
     return true;
 }
 
-bool _has_fixed_size(const Shape *s) {
+bool _has_allocated_size(const Shape *s) {
     return s->maxWidth > 0;
 }
 
-bool _is_out_of_fixed_size(const Shape *s,
-                           const SHAPE_COORDS_INT_T x,
-                           const SHAPE_COORDS_INT_T y,
-                           const SHAPE_COORDS_INT_T z) {
-    // note: with fixed size, origin is always 0,0,0
+bool _is_out_of_allocated_size(const Shape *s,
+                               const SHAPE_COORDS_INT_T x,
+                               const SHAPE_COORDS_INT_T y,
+                               const SHAPE_COORDS_INT_T z) {
     return x < 0 || y < 0 || z < 0 || x >= s->maxWidth || y >= s->maxHeight || z >= s->maxDepth;
 }
 
@@ -4195,27 +4169,33 @@ void _set_vb_allocation_flag_one_frame(Shape *s) {
 }
 
 bool _lighting_is_enabled(Shape *s) {
-    return s->usesLighting && _has_fixed_size(s);
+    return s->usesLighting && _has_allocated_size(s);
 }
 
-void _lighting_set_dirty(int3 *bbMin, int3 *bbMax, int x, int y, int z) {
+void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax, SHAPE_COORDS_INT_T x,
+                         SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z) {
     if (vertex_buffer_get_lighting_enabled()) {
-        int3_op_min(bbMin, x, y, z);
-        int3_op_max(bbMax, x, y, z);
+        bbMin->x = minimum(bbMin->x, x);
+        bbMin->y = minimum(bbMin->y, y);
+        bbMin->z = minimum(bbMin->z, z);
+        bbMax->x = maximum(bbMax->x, x);
+        bbMax->y = maximum(bbMax->y, y);
+        bbMax->z = maximum(bbMax->z, z);
     }
 }
 
-void _lighting_postprocess_dirty(Shape *s, int3 *bbMin, int3 *bbMax) {
+void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax) {
     if (vertex_buffer_get_lighting_enabled()) {
-        int3 chunkMin = *bbMin, chunkMax = *bbMax;
+        SHAPE_COORDS_INT3_T chunkMin = *bbMin, chunkMax = *bbMax;
 
         // account for vertex lighting smoothing, values need to be updated on adjacent vertices
-        int3_op_substract_int(&chunkMin, 1);
-        int3_op_add_int(&chunkMax, 1);
+        chunkMin.x -= 1; chunkMin.y -= 1; chunkMin.z -= 1;
+        chunkMax.x += 1; chunkMax.y += 1; chunkMax.z += 1;
 
         // find corresponding chunks and set dirty
-        int3_op_div_ints(&chunkMin, CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_DEPTH);
-        int3_op_div_ints(&chunkMax, CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_DEPTH);
+        chunkMin.x /= CHUNK_WIDTH; chunkMax.x /= CHUNK_WIDTH;
+        chunkMin.y /= CHUNK_HEIGHT; chunkMax.y /= CHUNK_HEIGHT;
+        chunkMin.z /= CHUNK_DEPTH; chunkMax.z /= CHUNK_DEPTH;
 
         Chunk *chunk;
         for (int x = chunkMin.x; x <= chunkMax.x; x++) {
@@ -4232,12 +4212,12 @@ void _lighting_postprocess_dirty(Shape *s, int3 *bbMin, int3 *bbMax) {
 }
 
 void _light_removal_processNeighbor(Shape *s,
-                                    int3 *bbMin,
-                                    int3 *bbMax,
+                                    SHAPE_COORDS_INT3_T *bbMin,
+                                    SHAPE_COORDS_INT3_T *bbMax,
                                     VERTEX_LIGHT_STRUCT_T light,
                                     uint8_t srgb,
                                     bool equals,
-                                    int3 *neighborPos,
+                                    SHAPE_COORDS_INT3_T *neighborPos,
                                     Block *neighbor,
                                     LightNodeQueue *lightQueue,
                                     LightRemovalNodeQueue *lightRemovalQueue) {
@@ -4336,7 +4316,7 @@ void _light_removal_processNeighbor(Shape *s,
     }
 }
 
-void _light_enqueue_source(int3 *pos,
+void _light_enqueue_source(SHAPE_COORDS_INT3_T *pos,
                            Shape *shape,
                            VERTEX_LIGHT_STRUCT_T source,
                            LightNodeQueue *lightQueue) {
@@ -4373,10 +4353,10 @@ void _light_enqueue_source(int3 *pos,
 }
 
 void _light_block_propagate(Shape *s,
-                            int3 *bbMin,
-                            int3 *bbMax,
+                            SHAPE_COORDS_INT3_T *bbMin,
+                            SHAPE_COORDS_INT3_T *bbMax,
                             VERTEX_LIGHT_STRUCT_T current,
-                            int3 *neighborPos,
+                            SHAPE_COORDS_INT3_T *neighborPos,
                             Block *neighbor,
                             bool air,
                             bool transparent,
@@ -4455,50 +4435,49 @@ void _light_block_propagate(Shape *s,
 }
 
 void _light_propagate(Shape *s,
-                      int3 *bbMin,
-                      int3 *bbMax,
+                      SHAPE_COORDS_INT3_T *bbMin,
+                      SHAPE_COORDS_INT3_T *bbMax,
                       LightNodeQueue *lightQueue,
-                      const int srcX,
-                      const int srcY,
-                      const int srcZ) {
+                      SHAPE_COORDS_INT_T srcX,
+                      SHAPE_COORDS_INT_T srcY,
+                      SHAPE_COORDS_INT_T srcZ) {
 
 #if SHAPE_LIGHTING_DEBUG
     cclog_debug("☀️ light propagation started...");
 #endif
 
     // changed values bounding box initialized at source position or using given bounding box
-    int3 *min = bbMin;
-    int3 *max = bbMax;
-    if (min == NULL) {
-        min = int3_new(srcX, srcY, srcZ);
+    SHAPE_COORDS_INT3_T min, max;
+    if (bbMin == NULL) {
+        min = (SHAPE_COORDS_INT3_T){ srcX, srcY, srcZ };
+    } else {
+        min = *bbMin;
     }
-    if (max == NULL) {
-        max = int3_new(srcX, srcY, srcZ);
+    if (bbMax == NULL) {
+        max = (SHAPE_COORDS_INT3_T){ srcX, srcY, srcZ };
+    } else {
+        max = *bbMax;
     }
 
     // set source block dirty
-    _lighting_set_dirty(min, max, srcX, srcY, srcZ);
+    _lighting_set_dirty(&min, &max, srcX, srcY, srcZ);
 
-    int3 i3, insertPos;
-    SHAPE_COORDS_INT_T i3x, i3y, i3z; // i3 individual values
+    SHAPE_COORDS_INT3_T pos, insertPos;
     Block *current = NULL, *neighbor = NULL;
     VERTEX_LIGHT_STRUCT_T currentLight;
     bool isCurrentAir, isCurrentOpen, isCurrentTransparent, isNeighborAir, isNeighborTransparent;
     LightNode *n = light_node_queue_pop(lightQueue);
     uint32_t iCount = 0;
     while (n != NULL) {
-        light_node_get_coords(n, &i3);
-        i3x = (SHAPE_COORDS_INT_T)i3.x;
-        i3y = (SHAPE_COORDS_INT_T)i3.y;
-        i3z = (SHAPE_COORDS_INT_T)i3.z;
+        light_node_get_coords(n, &pos);
 
         // get current light
-        if (_is_out_of_fixed_size(s, i3x, i3y, i3z)) {
+        if (_is_out_of_allocated_size(s, pos.x, pos.y, pos.z)) {
             DEFAULT_LIGHT(currentLight)
             isCurrentAir = true;
             isCurrentTransparent = false;
         } else {
-            current = shape_get_block(s, i3x, i3y, i3z, false);
+            current = shape_get_block(s, pos.x, pos.y, pos.z, false);
             if (current == NULL) {
                 cclog_error("🔥 no element found at index");
                 light_node_queue_recycle(n);
@@ -4506,7 +4485,7 @@ void _light_propagate(Shape *s,
                 continue;
             }
 
-            currentLight = shape_get_light_without_checking(s, i3.x, i3.y, i3.z);
+            currentLight = shape_get_light_without_checking(s, pos.x, pos.y, pos.z);
             isCurrentAir = current->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isCurrentTransparent = color_palette_is_transparent(s->palette, current->colorIndex);
         }
@@ -4516,17 +4495,17 @@ void _light_propagate(Shape *s,
         // note: test this first and individually, because the octree has a POT size ie. most likely
         // higher than fixed width & depth and will return an air block by default to stop
         // propagation
-        if (i3.y > 0 && i3.y <= s->maxHeight &&
-            (i3.x == -1 || i3.z == -1 || i3.x == s->maxWidth || i3.z == s->maxDepth)) {
-            insertPos.x = i3.x;
-            insertPos.y = i3.y - 1;
-            insertPos.z = i3.z;
+        if (pos.y > 0 && pos.y <= s->maxHeight &&
+            (pos.x == -1 || pos.z == -1 || pos.x == s->maxWidth || pos.z == s->maxDepth)) {
+            insertPos.x = pos.x;
+            insertPos.y = pos.y - 1;
+            insertPos.z = pos.z;
             light_node_queue_push(lightQueue, &insertPos);
         }
 
         // for each non-opaque neighbor: flag current node as open & propagate light if current
         // non-opaque for each emissive neighbor: add to light queue if current non-opaque y - 1
-        neighbor = shape_get_block(s, i3x, i3y - 1, i3z, false);
+        neighbor = shape_get_block(s, pos.x, pos.y - 1, pos.z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4536,14 +4515,14 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = i3.x;
-                insertPos.y = i3.y - 1;
-                insertPos.z = i3.z;
+                insertPos.x = pos.x;
+                insertPos.y = pos.y - 1;
+                insertPos.z = pos.z;
 
                 // sunlight propagates infinitely vertically (step = 0)
                 _light_block_propagate(s,
-                                       min,
-                                       max,
+                                       &min,
+                                       &max,
                                        currentLight,
                                        &insertPos,
                                        neighbor,
@@ -4556,7 +4535,7 @@ void _light_propagate(Shape *s,
         }
 
         // y + 1
-        neighbor = shape_get_block(s, i3x, i3y + 1, i3z, false);
+        neighbor = shape_get_block(s, pos.x, pos.y + 1, pos.z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4566,13 +4545,13 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = i3.x;
-                insertPos.y = i3.y + 1;
-                insertPos.z = i3.z;
+                insertPos.x = pos.x;
+                insertPos.y = pos.y + 1;
+                insertPos.z = pos.z;
 
                 _light_block_propagate(s,
-                                       min,
-                                       max,
+                                       &min,
+                                       &max,
                                        currentLight,
                                        &insertPos,
                                        neighbor,
@@ -4585,7 +4564,7 @@ void _light_propagate(Shape *s,
         }
 
         // x + 1
-        neighbor = shape_get_block(s, i3x + 1, i3y, i3z, false);
+        neighbor = shape_get_block(s, pos.x + 1, pos.y, pos.z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4595,13 +4574,13 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = i3.x + 1;
-                insertPos.y = i3.y;
-                insertPos.z = i3.z;
+                insertPos.x = pos.x + 1;
+                insertPos.y = pos.y;
+                insertPos.z = pos.z;
 
                 _light_block_propagate(s,
-                                       min,
-                                       max,
+                                       &min,
+                                       &max,
                                        currentLight,
                                        &insertPos,
                                        neighbor,
@@ -4614,7 +4593,7 @@ void _light_propagate(Shape *s,
         }
 
         // x - 1
-        neighbor = shape_get_block(s, i3x - 1, i3y, i3z, false);
+        neighbor = shape_get_block(s, pos.x - 1, pos.y, pos.z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4624,13 +4603,13 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = i3.x - 1;
-                insertPos.y = i3.y;
-                insertPos.z = i3.z;
+                insertPos.x = pos.x - 1;
+                insertPos.y = pos.y;
+                insertPos.z = pos.z;
 
                 _light_block_propagate(s,
-                                       min,
-                                       max,
+                                       &min,
+                                       &max,
                                        currentLight,
                                        &insertPos,
                                        neighbor,
@@ -4643,7 +4622,7 @@ void _light_propagate(Shape *s,
         }
 
         // z + 1
-        neighbor = shape_get_block(s, i3x, i3y, i3z + 1, false);
+        neighbor = shape_get_block(s, pos.x, pos.y, pos.z + 1, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4653,13 +4632,13 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = i3.x;
-                insertPos.y = i3.y;
-                insertPos.z = i3.z + 1;
+                insertPos.x = pos.x;
+                insertPos.y = pos.y;
+                insertPos.z = pos.z + 1;
 
                 _light_block_propagate(s,
-                                       min,
-                                       max,
+                                       &min,
+                                       &max,
                                        currentLight,
                                        &insertPos,
                                        neighbor,
@@ -4672,7 +4651,7 @@ void _light_propagate(Shape *s,
         }
 
         // z - 1
-        neighbor = shape_get_block(s, i3x, i3y, i3z - 1, false);
+        neighbor = shape_get_block(s, pos.x, pos.y, pos.z - 1, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4682,13 +4661,13 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = i3.x;
-                insertPos.y = i3.y;
-                insertPos.z = i3.z - 1;
+                insertPos.x = pos.x;
+                insertPos.y = pos.y;
+                insertPos.z = pos.z - 1;
 
                 _light_block_propagate(s,
-                                       min,
-                                       max,
+                                       &min,
+                                       &max,
                                        currentLight,
                                        &insertPos,
                                        neighbor,
@@ -4720,19 +4699,12 @@ void _light_propagate(Shape *s,
             for (int xo = -1; xo <= 1; xo++) {
                 for (int yo = -1; yo <= 1; yo++) {
                     for (int zo = -1; zo <= 1; zo++) {
-                        insertPos.x = i3.x + xo;
-                        insertPos.y = i3.y + yo;
-                        insertPos.z = i3.z + zo;
+                        insertPos.x = pos.x + xo;
+                        insertPos.y = pos.y + yo;
+                        insertPos.z = pos.z + zo;
 
-                        if (shape_is_within_fixed_bounds(s,
-                                                         (SHAPE_COORDS_INT_T)insertPos.x,
-                                                         (SHAPE_COORDS_INT_T)insertPos.y,
-                                                         (SHAPE_COORDS_INT_T)insertPos.z)) {
-                            neighbor = shape_get_block(s,
-                                                       (SHAPE_COORDS_INT_T)insertPos.x,
-                                                       (SHAPE_COORDS_INT_T)insertPos.y,
-                                                       (SHAPE_COORDS_INT_T)insertPos.z,
-                                                       false);
+                        if (shape_is_within_allocated_bounds(s, insertPos.x, insertPos.y, insertPos.z)) {
+                            neighbor = shape_get_block(s, insertPos.x, insertPos.y, insertPos.z, false);
                             if (block_is_opaque(neighbor, s->palette) == false) {
                                 _light_enqueue_source(&insertPos, s, currentLight, lightQueue);
                             }
@@ -4747,14 +4719,7 @@ void _light_propagate(Shape *s,
         iCount++;
     }
 
-    _lighting_postprocess_dirty(s, min, max);
-
-    if (bbMin == NULL) {
-        int3_free(min);
-    }
-    if (bbMax == NULL) {
-        int3_free(max);
-    }
+    _lighting_postprocess_dirty(s, &min, &max);
 
 #if SHAPE_LIGHTING_DEBUG
     cclog_debug("☀️ light propagation done with %d iterations", iCount);
@@ -4762,8 +4727,8 @@ void _light_propagate(Shape *s,
 }
 
 void _light_removal(Shape *s,
-                    int3 *bbMin,
-                    int3 *bbMax,
+                    SHAPE_COORDS_INT3_T *bbMin,
+                    SHAPE_COORDS_INT3_T *bbMax,
                     LightRemovalNodeQueue *lightRemovalQueue,
                     LightNodeQueue *lightQueue) {
 
@@ -4776,32 +4741,28 @@ void _light_removal(Shape *s,
     SHAPE_COLOR_INDEX_INT_T blockID;
     Block *neighbor = NULL;
 
-    int3 i3, insertPos;
-    SHAPE_COORDS_INT_T i3x, i3y, i3z; // i3 individual values
+    SHAPE_COORDS_INT3_T pos, insertPos;
     LightRemovalNode *rn = light_removal_node_queue_pop(lightRemovalQueue);
     uint32_t iCount = 0;
     while (rn != NULL) {
         // get coords and light value of the light removal node (rn)
-        light_removal_node_get_coords(rn, &i3);
-        i3x = (SHAPE_COORDS_INT_T)i3.x;
-        i3y = (SHAPE_COORDS_INT_T)i3.y;
-        i3z = (SHAPE_COORDS_INT_T)i3.z;
+        light_removal_node_get_coords(rn, &pos);
         light_removal_node_get_light(rn, &light);
         srgb = light_removal_node_get_srgb(rn);
         blockID = light_removal_node_get_block_id(rn);
 
         // check that the current block is inside the shape bounds
-        if (shape_is_within_fixed_bounds(s, i3x, i3y, i3z)) {
+        if (shape_is_within_allocated_bounds(s, pos.x, pos.y, pos.z)) {
 
             // if air or transparent block, proceed with light removal
             if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK ||
                 color_palette_is_transparent(s->palette, blockID)) {
                 // x + 1
-                neighbor = shape_get_block(s, i3x + 1, i3y, i3z, false);
+                neighbor = shape_get_block(s, pos.x + 1, pos.y, pos.z, false);
                 if (neighbor != NULL) {
-                    insertPos.x = i3.x + 1;
-                    insertPos.y = i3.y;
-                    insertPos.z = i3.z;
+                    insertPos.x = pos.x + 1;
+                    insertPos.y = pos.y;
+                    insertPos.z = pos.z;
 
                     _light_removal_processNeighbor(s,
                                                    bbMin,
@@ -4815,11 +4776,11 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // x - 1
-                neighbor = shape_get_block(s, i3x - 1, i3y, i3z, false);
+                neighbor = shape_get_block(s, pos.x - 1, pos.y, pos.z, false);
                 if (neighbor != NULL) {
-                    insertPos.x = i3.x - 1;
-                    insertPos.y = i3.y;
-                    insertPos.z = i3.z;
+                    insertPos.x = pos.x - 1;
+                    insertPos.y = pos.y;
+                    insertPos.z = pos.z;
 
                     _light_removal_processNeighbor(s,
                                                    bbMin,
@@ -4833,11 +4794,11 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // y + 1
-                neighbor = shape_get_block(s, i3x, i3y + 1, i3z, false);
+                neighbor = shape_get_block(s, pos.x, pos.y + 1, pos.z, false);
                 if (neighbor != NULL) {
-                    insertPos.x = i3.x;
-                    insertPos.y = i3.y + 1;
-                    insertPos.z = i3.z;
+                    insertPos.x = pos.x;
+                    insertPos.y = pos.y + 1;
+                    insertPos.z = pos.z;
 
                     _light_removal_processNeighbor(s,
                                                    bbMin,
@@ -4851,11 +4812,11 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // y - 1
-                neighbor = shape_get_block(s, i3x, i3y - 1, i3z, false);
+                neighbor = shape_get_block(s, pos.x, pos.y - 1, pos.z, false);
                 if (neighbor != NULL) {
-                    insertPos.x = i3.x;
-                    insertPos.y = i3.y - 1;
-                    insertPos.z = i3.z;
+                    insertPos.x = pos.x;
+                    insertPos.y = pos.y - 1;
+                    insertPos.z = pos.z;
 
                     _light_removal_processNeighbor(s,
                                                    bbMin,
@@ -4869,11 +4830,11 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // z + 1
-                neighbor = shape_get_block(s, i3x, i3y, i3z + 1, false);
+                neighbor = shape_get_block(s, pos.x, pos.y, pos.z + 1, false);
                 if (neighbor != NULL) {
-                    insertPos.x = i3.x;
-                    insertPos.y = i3.y;
-                    insertPos.z = i3.z + 1;
+                    insertPos.x = pos.x;
+                    insertPos.y = pos.y;
+                    insertPos.z = pos.z + 1;
 
                     _light_removal_processNeighbor(s,
                                                    bbMin,
@@ -4887,11 +4848,11 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // z - 1
-                neighbor = shape_get_block(s, i3x, i3y, i3z - 1, false);
+                neighbor = shape_get_block(s, pos.x, pos.y, pos.z - 1, false);
                 if (neighbor != NULL) {
-                    insertPos.x = i3.x;
-                    insertPos.y = i3.y;
-                    insertPos.z = i3.z - 1;
+                    insertPos.x = pos.x;
+                    insertPos.y = pos.y;
+                    insertPos.z = pos.z - 1;
 
                     _light_removal_processNeighbor(s,
                                                    bbMin,
@@ -4909,21 +4870,18 @@ void _light_removal(Shape *s,
             // to account for homogeneous self-lighting as well during emissive block removal,
             // process all surrounding emissive block's neighbors instead of the regular 6
             else if (color_palette_is_emissive(s->palette, blockID)) {
-                for (int xo = -1; xo <= 1; xo++) {
-                    for (int yo = -1; yo <= 1; yo++) {
-                        for (int zo = -1; zo <= 1; zo++) {
+                for (SHAPE_COORDS_INT_T xo = -1; xo <= 1; ++xo) {
+                    for (SHAPE_COORDS_INT_T yo = -1; yo <= 1; ++yo) {
+                        for (SHAPE_COORDS_INT_T zo = -1; zo <= 1; ++zo) {
                             if (xo == 0 && yo == 0 && zo == 0) {
                                 continue;
                             }
 
-                            insertPos.x = i3.x + xo;
-                            insertPos.y = i3.y + yo;
-                            insertPos.z = i3.z + zo;
+                            insertPos.x = pos.x + xo;
+                            insertPos.y = pos.y + yo;
+                            insertPos.z = pos.z + zo;
 
-                            neighbor = shape_get_block(s,
-                                                       (SHAPE_COORDS_INT_T)insertPos.x,
-                                                       (SHAPE_COORDS_INT_T)insertPos.y,
-                                                       (SHAPE_COORDS_INT_T)insertPos.z,
+                            neighbor = shape_get_block(s, insertPos.x, insertPos.y, insertPos.z,
                                                        false);
                             if (neighbor != NULL) {
                                 // only first-degree neighbors remove the emissive block's own RGB

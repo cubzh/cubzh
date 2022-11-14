@@ -392,8 +392,7 @@ void test_shape_addblock_1(void) {
                                        1,
                                        1,
                                        false, // lighting
-                                       true,  // isMutable
-                                       true); // isResizable
+                                       true); // isMutable
     TEST_ASSERT(sh != NULL);
 
     {
@@ -495,8 +494,7 @@ void test_shape_addblock_2(void) {
                                        1,
                                        1,
                                        false, // lighting
-                                       true,  // isMutable
-                                       true); // isResizable
+                                       true); // isMutable
     TEST_ASSERT(sh != NULL);
 
     {

@@ -37,7 +37,6 @@ typedef struct _VertexBuffer VertexBuffer;
 typedef struct _Chunk Chunk;
 
 typedef struct _LoadShapeSettings {
-    bool limitSize;
     bool octree;
     bool lighting;
     bool isMutable;
@@ -79,24 +78,22 @@ typedef uint8_t ShapeDrawMode;
 #define SHAPE_DRAWMODE_GREY 4
 #define SHAPE_DRAWMODE_GRID 8
 
-// constructor
-// returns an empty Shape
+// Creates an empty Shape
 Shape *shape_make(void);
-// returns a copy of the given shape
+// Creates a copy of the given shape
 Shape *shape_make_copy(Shape *origin);
-// a shape with fixed size and optional lighting
-Shape *shape_make_with_fixed_size(const uint16_t width,
-                                  const uint16_t height,
-                                  const uint16_t depth,
-                                  bool lighting,
-                                  const bool isMutable);
-// A shape with octree for collision and optional lighting
+// Creates a shape with known size and optional lighting
+Shape *shape_make_with_size(const uint16_t width,
+                            const uint16_t height,
+                            const uint16_t depth,
+                            bool lighting,
+                            const bool isMutable);
+// Creates a shape with octree and optional lighting
 Shape *shape_make_with_octree(const uint16_t width,
                               const uint16_t height,
                               const uint16_t depth,
                               bool lighting,
-                              const bool isMutable,
-                              const bool isResizable);
+                              const bool isMutable);
 
 void shape_set_transform(Shape *const s, Transform *const t);
 
@@ -113,10 +110,6 @@ uint16_t shape_retain_count(const Shape *const s);
 void shape_free(Shape *const shape);
 
 ShapeId shape_get_id(const Shape *shape);
-
-/// This flag controls whether or not a shape can be edited beyond its limits, in which case
-/// a resize will be automatically performed
-bool shape_is_resizable(const Shape *shape);
 
 // removes all blocks from shape and resets its transform(s)
 void shape_flush(Shape *shape);
@@ -208,12 +201,11 @@ void shape_get_chunk_and_position_within(const Shape *shape,
                                          int3 *pos_in_chunk);
 
 void shape_get_bounding_box_size(const Shape *shape, int3 *size);
-void shape_get_fixed_size(const Shape *shape, int3 *size);
-uint16_t shape_get_max_fixed_size(const Shape *shape);
-bool shape_is_within_fixed_bounds(const Shape *shape,
-                                  const SHAPE_COORDS_INT_T x,
-                                  const SHAPE_COORDS_INT_T y,
-                                  const SHAPE_COORDS_INT_T z);
+void shape_get_allocated_size(const Shape *shape, int3 *size);
+bool shape_is_within_allocated_bounds(const Shape *shape,
+                                      const SHAPE_COORDS_INT_T x,
+                                      const SHAPE_COORDS_INT_T y,
+                                      const SHAPE_COORDS_INT_T z);
 
 // converts given box to a world axis-aligned box relative to shape
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider, bool squarify);
@@ -243,17 +235,14 @@ void shape_expand_box(Shape *s,
                       const SHAPE_COORDS_INT_T y,
                       const SHAPE_COORDS_INT_T z);
 
-/// Moves cubes and/or increases Shape size to make space around existing cubes.
-/// Existing cubes + added one will end up centered.
-/// Only works for shapes with fixed sizes (dynamic ones don't need it)
-/// NOTE: offset is supposed to already be applied when calling this.
+/// Increases allocated size and offsets all shape data (blocks, POIs, pivot, baked lighting)
+/// to make space around existing blocks, if needed. A shape w/o allocated size do not need this,
+/// i.e. a shape with no lighting, no octree, only blocks in chunks
 void shape_make_space_for_block(Shape *shape,
                                 SHAPE_COORDS_INT_T x,
                                 SHAPE_COORDS_INT_T y,
                                 SHAPE_COORDS_INT_T z,
                                 const bool applyOffset);
-
-///
 void shape_make_space(Shape *const shape,
                       SHAPE_COORDS_INT_T minX,
                       SHAPE_COORDS_INT_T minY,
@@ -286,6 +275,14 @@ void shape_set_fullname(Shape *s, const char *fullname); // copies fullname
 const char *shape_get_fullname(const Shape *s);
 
 void shape_replace_color_atlas(Shape *s, ColorAtlas *ca);
+
+/// This flag is only used to check from VX whether or not a coder can call MutableShape functions
+bool shape_is_lua_mutable(Shape *s);
+void shape_set_lua_mutable(Shape *s, const bool value);
+
+/// This doesn't do anything if the shape doesn't have an octree
+bool shape_uses_per_block_collisions(Shape *s);
+void shape_set_per_block_collisions(Shape *s, bool value);
 
 // MARK: - Transform -
 
@@ -342,7 +339,7 @@ const float3 *shape_get_local_scale(const Shape *s);
 void shape_get_lossy_scale(const Shape *s, float3 *scale);
 
 /// matrices
-const Matrix4x4 *shape_get_model_matrix(Shape *s);
+const Matrix4x4 *shape_get_model_matrix(const Shape *s);
 
 bool shape_set_parent(Shape *s, Transform *parent, const bool keepWorld);
 /// /!\ shape_remove_parent is INTERNAL use only,
@@ -373,8 +370,8 @@ void shape_set_physics_properties(const Shape *s,
 
 /// note: this uses lossy scale, which can be skewed by shape rotation
 float shape_box_swept(const Shape *s,
-                      const Box *b,
-                      const float3 *v,
+                      const Box *worldBox,
+                      const float3 *worldVector,
                       const bool withReplacement,
                       float3 *swept3,
                       float3 *extraReplacement,
@@ -440,23 +437,26 @@ bool shape_uses_baked_lighting(const Shape *s);
 bool shape_has_baked_lighting_data(const Shape *s);
 const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s);
 void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d);
-VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, int x, int y, int z);
-void shape_set_light(Shape *s, int x, int y, int z, VERTEX_LIGHT_STRUCT_T light);
+VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, SHAPE_COORDS_INT_T x,
+                                                       SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z);
+void shape_set_light(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z,
+                     VERTEX_LIGHT_STRUCT_T light);
 // helper function that returns light or default light if pos out of bounds or if isDefault
-VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, int x, int y, int z, bool isDefault);
+VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
+                                                 SHAPE_COORDS_INT_T z, bool isDefault);
 
 /// Block removal may open up sunlight or emission propagation, and/or remove emission sources
 void shape_compute_baked_lighting_removed_block(Shape *s,
-                                                const int x,
-                                                const int y,
-                                                const int z,
+                                                SHAPE_COORDS_INT_T x,
+                                                SHAPE_COORDS_INT_T y,
+                                                SHAPE_COORDS_INT_T z,
                                                 SHAPE_COLOR_INDEX_INT_T blockID);
 
 /// Block addition may shut sunlight or emission propagation, and/or add emission sources
 void shape_compute_baked_lighting_added_block(Shape *s,
-                                              const int x,
-                                              const int y,
-                                              const int z,
+                                              SHAPE_COORDS_INT_T x,
+                                              SHAPE_COORDS_INT_T y,
+                                              SHAPE_COORDS_INT_T z,
                                               SHAPE_COLOR_INDEX_INT_T blockID);
 
 /// Block replacement may remove or replace emission sources
@@ -466,14 +466,6 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
                                                  SHAPE_COORDS_INT_T z,
                                                  SHAPE_COLOR_INDEX_INT_T blockID,
                                                  bool applyOffset);
-
-// MARK: -
-
-/// Within Cubzh Core all shapes are mutable, but they can have a fixed size or be resizable ;
-/// lua-side, a MutableShape is a resizable shape
-/// This flag is only used to check from VX whether or not a coder can call MutableShape functions
-bool shape_is_lua_mutable(Shape *s);
-void shape_set_lua_mutable(Shape *s, const bool value);
 
 // MARK: - History -
 

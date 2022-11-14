@@ -8,7 +8,6 @@
 
 #include <stdlib.h>
 
-#include "rigidBody.h"
 #include "weakptr.h"
 
 #if DEBUG_SCENE
@@ -533,14 +532,14 @@ const float3 *scene_get_constant_acceleration(const Scene *sc) {
 }
 
 // MARK: - Debug -
-// #if DEBUG_SCENE
-//
-// int debug_scene_get_awake_queries(void) {
-//     return debug_scene_awake_queries;
-// }
-//
-// void debug_scene_reset_calls(void) {
-//     debug_scene_awake_queries = 0;
-// }
-//
-// #endif
+#if DEBUG_SCENE
+
+int debug_scene_get_awake_queries(void) {
+    return debug_scene_awake_queries;
+}
+
+void debug_scene_reset_calls(void) {
+    debug_scene_awake_queries = 0;
+}
+
+#endif

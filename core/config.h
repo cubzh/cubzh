@@ -190,6 +190,9 @@ extern unsigned long upper_power_of_two(unsigned long v);
 
 // coords of block within shape
 typedef int16_t SHAPE_COORDS_INT_T;
+typedef struct {
+    SHAPE_COORDS_INT_T x, y, z;
+} SHAPE_COORDS_INT3_T;
 typedef uint16_t SHAPE_SIZE_INT_T;
 // coords of block within chunk
 typedef int8_t CHUNK_COORDS_INT_T;

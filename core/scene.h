@@ -14,6 +14,7 @@ extern "C" {
 #include "rtree.h"
 #include "shape.h"
 #include "utils.h"
+#include "rigidBody.h"
 
 #if DEBUG
 #define DEBUG_SCENE true
@@ -97,10 +98,10 @@ void scene_set_constant_acceleration_2(Scene *sc, const float *x, const float *y
 const float3 *scene_get_constant_acceleration(const Scene *sc);
 
 /// MARK: - Debug -
-// #if DEBUG_RIGIDBODY
-// int debug_scene_get_awake_queries(void);
-// void debug_scene_reset_calls(void);
-// #endif
+#if DEBUG_RIGIDBODY
+int debug_scene_get_awake_queries(void);
+void debug_scene_reset_calls(void);
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

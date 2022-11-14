@@ -35,13 +35,30 @@ typedef struct _Transform Transform;
 typedef struct _Scene Scene;
 typedef struct float3 float3;
 
+/// These are the three base simulation modes, when combined with other parameters a rigidobdy
+/// can have further distinct states as follows,
+/// CULLED: is fully culled from the r-tree and any simulation if any of the following is true,
+///     - its collider is invalid, eg. a zero-box
+///     - is RigidbodyMode_Disabled
+///     - is RigidbodyMode_Static and its collision/collidesWith groups are empty
+/// STATIC COLLIDER: its collider contributes to collisions
+///     - is RigidbodyMode_Static and per-block collisions disabled
+/// STATIC MESH: its blocks contribute to collisions, not its collider
+///     - is RigidbodyMode_Static and per-block collisions enabled
+/// TRIGGER COLLIDER
+///     - is RigidbodyMode_Static, per-block collisions disabled, collision callbacks set
+/// TRIGGER MESH
+///     - is RigidbodyMode_Static, per-block collisions enabled, collision callbacks set
+/// DYNAMIC: simulated, contribute to collisions, and can act as a trigger collider,
+///  note that a dynamic rb cannot have per-block collisions
+///     - is RigidbodyMode_Dynamic
 typedef enum {
     // this rigidbody does not contribute to any collision and is not simulated
-    Disabled,
+    RigidbodyMode_Disabled,
     // this rigidbody may contribute to collisions but is not simulated
-    RigidbodyModeStatic,
+    RigidbodyMode_Static,
     // this rigibody is simulated
-    RigidbodyModeDynamic
+    RigidbodyMode_Dynamic
 } RigidbodyMode;
 
 typedef void (*pointer_rigidbody_collision_func)(Transform *self,
