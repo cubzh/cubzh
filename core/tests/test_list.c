@@ -24,6 +24,7 @@
 #include "test_matrix4x4.h"
 #include "test_quaternion.h"
 #include "test_shape.h"
+#include "test_stream.h"
 #include "test_transaction.h"
 #include "test_transform.h"
 #include "test_utils.h"
@@ -70,6 +71,11 @@ TEST_LIST = {
     {"test_box_get_volume", test_box_get_volume},
     {"test_box_to_aabox_no_rot", test_box_to_aabox_no_rot},
     {"test_box_to_aabox2", test_box_to_aabox2},
+
+    // chunk
+    {"test_chunk_new", test_chunk_new},
+    {"test_chunk_Block", test_chunk_Block},
+    {"test_chunk_needs_display", test_chunk_needs_display},
 
     // config
     {"test_upper_power_of_two", test_upper_power_of_two},
@@ -119,11 +125,6 @@ TEST_LIST = {
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},
     {"filo_list_float3_recycle", test_filo_list_float3_recycle},
-
-    // chunk
-    {"test_chunk_new", test_chunk_new},
-    {"test_chunk_Block", test_chunk_Block},
-    {"test_chunk_needs_display", test_chunk_needs_display},
 
     // filo_list_int3
     {"filo_list_int3_pop", test_filo_list_int3_pop},
@@ -208,8 +209,8 @@ TEST_LIST = {
     {"quaternion_op_dot", test_quaternion_op_dot},
     {"quaternion_to_rotation_matrix", test_quaternion_to_rotation_matrix},
     {"rotation_matrix_to_quaternion", test_rotation_matrix_to_quaternion},
-    // {"quaternion_to_axis_angle", test_quaternion_to_axis_angle},
-    // {"axis_angle_to_quaternion", test_axis_angle_to_quaternion},
+    {"quaternion_to_axis_angle", test_quaternion_to_axis_angle},
+    {"axis_angle_to_quaternion", test_axis_angle_to_quaternion},
     {"quaternion_to_euler", test_quaternion_to_euler},
     {"euler_to_quaternion", test_euler_to_quaternion},
     {"euler_to_quaternion_vec", test_euler_to_quaternion_vec},
@@ -221,6 +222,20 @@ TEST_LIST = {
     // { "test_shape_addblock_2", test_shape_addblock_2 },
     // { "test_shape_addblock_3", test_shape_addblock_3 },
 
+    // stream
+    {"stream_new_buffer_read", test_stream_new_buffer_read},
+    {"stream_new_file_read", test_stream_new_file_read},
+    {"stream_read", test_stream_read},
+    {"stream_read_uint8", test_stream_read_uint8},
+    {"stream_read_uint16", test_stream_read_uint16},
+    {"stream_read_uint32", test_stream_read_uint32},
+    {"stream_read_float32", test_stream_read_float32},
+    {"stream_read_string", test_stream_read_string},
+    {"stream_skip", test_stream_skip},
+    {"stream_get_cursor_position", test_stream_get_cursor_position},
+    {"stream_set_cursor_position", test_stream_set_cursor_position},
+    {"stream_reached_the_end", test_stream_reached_the_end},
+
     // transaction
     {"transaction_new", test_transaction_new},
     {"transaction_getCurrentBlockAt", test_transaction_getCurrentBlockAt},
@@ -230,7 +245,6 @@ TEST_LIST = {
     {"transaction_getMustConsiderNewBounds", test_transaction_getMustConsiderNewBounds},
     {"transaction_getNewBounds", test_transaction_getNewBounds},
     {"transaction_getIndex3DIterator", test_transaction_getIndex3DIterator},
-    {"transform_rotation_position", test_transform_rotation_position},
 
     // transform
     {"transform_rotation_position", test_transform_rotation_position},

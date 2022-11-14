@@ -4,12 +4,6 @@
     <ClCompile Include="..\test_list.c">
       <Filter>tests</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\transaction.c">
-      <Filter>tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\transform.c">
-      <Filter>tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\block.c">
       <Filter>core</Filter>
     </ClCompile>
@@ -139,11 +133,14 @@
     <ClCompile Include="..\..\weakptr.c">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\transaction.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\transform.c">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\transform.h">
-      <Filter>tests</Filter>
-    </ClInclude>
     <ClInclude Include="..\test_block.h">
       <Filter>tests</Filter>
     </ClInclude>
@@ -199,9 +196,6 @@
       <Filter>tests</Filter>
     </ClInclude>
     <ClInclude Include="..\test_weakptr.h">
-      <Filter>tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\transaction.h">
       <Filter>tests</Filter>
     </ClInclude>
     <ClInclude Include="..\acutest.h">
@@ -339,8 +333,19 @@
     <ClInclude Include="..\..\weakptr.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="..\test_doubly_linked_list_uint8.h" />
     <ClInclude Include="..\test_doubly_linked_list.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\transform.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\transaction.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_stream.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_doubly_linked_list_uint8.h">
       <Filter>tests</Filter>
     </ClInclude>
   </ItemGroup>
