@@ -14,6 +14,7 @@
 #include "test_doubly_linked_list.h"
 #include "test_doubly_linked_list_uint8.h"
 #include "test_fifo_list.h"
+#include "test_filo_list.h"
 #include "test_filo_list_float3.h"
 #include "test_filo_list_int3.h"
 #include "test_filo_list_uint16.h"
@@ -130,6 +131,10 @@ TEST_LIST = {
     {"fifo_list_pop", test_fifo_list_pop},
     {"fifo_list_push", test_fifo_list_push},
     {"fifo_list_new_copy", test_fifo_list_new_copy},
+    // filo_list
+    {"filo_list_new", test_filo_list_new},
+    {"filo_list_push", test_filo_list_push},
+    {"filo_list_pop", test_filo_list_pop},
 
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},
