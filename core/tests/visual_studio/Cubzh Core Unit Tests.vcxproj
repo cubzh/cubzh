@@ -84,6 +84,7 @@
     <ClInclude Include="..\test_int3.h" />
     <ClInclude Include="..\test_matrix4x4.h" />
     <ClInclude Include="..\test_quaternion.h" />
+    <ClInclude Include="..\test_rtree.h" />
     <ClInclude Include="..\test_shape.h" />
     <ClInclude Include="..\test_transaction.h" />
     <ClInclude Include="..\test_stream.h" />

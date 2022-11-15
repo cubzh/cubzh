@@ -1097,3 +1097,7 @@ void debug_rtree_reset_all_aabb(Rtree *r) {
 }
 
 #endif
+
+const bool rtree_node_has_parent(const RtreeNode *const rn) {
+    return rn->parent != NULL;
+}

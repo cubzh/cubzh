@@ -25,6 +25,7 @@
 #include "test_int3.h"
 #include "test_matrix4x4.h"
 #include "test_quaternion.h"
+#include "test_rtree.h"
 #include "test_shape.h"
 #include "test_stream.h"
 #include "test_transaction.h"
@@ -230,6 +231,13 @@ TEST_LIST = {
     {"euler_to_quaternion_vec", test_euler_to_quaternion_vec},
     {"quaternion_rotate_vector", test_quaternion_rotate_vector},
     {"quaternion_coherence_check", test_quaternion_coherence_check},
+
+    // rtree
+    {"rtree_new", test_rtree_new},
+    {"rtree_node_get_aabb", test_rtree_node_get_aabb},
+    {"rtree_node_get_groups", test_rtree_node_get_groups},
+    {"rtree_node_get_collides_with", test_rtree_node_get_collides_with},
+    {"rtree_create_and_insert", test_rtree_create_and_insert},
 
     // shape
     {"test_shape_addblock_1", test_shape_addblock_1},
