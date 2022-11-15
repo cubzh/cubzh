@@ -994,7 +994,6 @@ bool shape_remove_block_from_lua(Shape *const shape,
                                                  true); // xyz are lua coords
 
     if (block_is_solid(existingBlock) == false) {
-        // There is no solid block at those coordinates.
         return false; // block was not removed
     }
 
@@ -1253,6 +1252,10 @@ bool shape_paint_block(Shape *shape,
     // found chunk?
     if (chunk != NULL) {
         Block *block = chunk_get_block(chunk, posInChunk.x, posInChunk.y, posInChunk.z);
+        if (block == NULL) {
+            return false;
+        }
+        
         const uint8_t prevColor = block->colorIndex;
         if (blockBefore != NULL) {
             *blockBefore = block_new_copy(block);
