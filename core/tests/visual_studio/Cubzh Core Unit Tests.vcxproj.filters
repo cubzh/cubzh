@@ -124,6 +124,12 @@
     <ClCompile Include="..\..\stream.c">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\transaction.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\transform.c">
+      <Filter>core</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\utils.c">
       <Filter>core</Filter>
     </ClCompile>
@@ -133,14 +139,14 @@
     <ClCompile Include="..\..\weakptr.c">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\transaction.c">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\transform.c">
-      <Filter>core</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\acutest.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_weakptr.h">
+      <Filter>tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\test_block.h">
       <Filter>tests</Filter>
     </ClInclude>
@@ -154,6 +160,18 @@
       <Filter>tests</Filter>
     </ClInclude>
     <ClInclude Include="..\test_config.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_doubly_linked_list.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_doubly_linked_list_uint8.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_fifo_list.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_filo_list.h">
       <Filter>tests</Filter>
     </ClInclude>
     <ClInclude Include="..\test_filo_list_float3.h">
@@ -183,7 +201,13 @@
     <ClInclude Include="..\test_quaternion.h">
       <Filter>tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\test_rtree.h">
+      <Filter>tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\test_shape.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\test_stream.h">
       <Filter>tests</Filter>
     </ClInclude>
     <ClInclude Include="..\test_transaction.h">
@@ -194,12 +218,6 @@
     </ClInclude>
     <ClInclude Include="..\test_utils.h">
       <Filter>tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_weakptr.h">
-      <Filter>tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\acutest.h">
-      <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\block.h">
       <Filter>core</Filter>
@@ -285,13 +303,13 @@
     <ClInclude Include="..\..\magicavoxel.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\octree.h">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\map_string_float3.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\matrix4x4.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\octree.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\quaternion.h">
@@ -324,6 +342,12 @@
     <ClInclude Include="..\..\stream.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\transaction.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\transform.h">
+      <Filter>core</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\utils.h">
       <Filter>core</Filter>
     </ClInclude>
@@ -333,36 +357,17 @@
     <ClInclude Include="..\..\weakptr.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="..\test_doubly_linked_list.h">
-    <ClInclude Include="..\test_fifo_list.h">
-      <Filter>tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\transform.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\transaction.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_stream.h">
-      <Filter>tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_doubly_linked_list_uint8.h">
-      <Filter>tests</Filter>
-    </ClInclude>
-    <ClInclude Include="..\test_filo_list.h">
-      <Filter>tests</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Makefile" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="tests">
-      <UniqueIdentifier>{60f83af5-779a-45ae-b365-a5fdeb4f7464}</UniqueIdentifier>
-    </Filter>
     <Filter Include="core">
-      <UniqueIdentifier>{04b8777a-5051-4aaa-b606-d259179ebce4}</UniqueIdentifier>
+      <UniqueIdentifier>{92f7f5ad-6e39-42bc-875b-65c9c4dfa24e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tests">
+      <UniqueIdentifier>{c7d28ab4-3f4b-432c-a095-d3140addc270}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

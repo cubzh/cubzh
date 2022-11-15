@@ -175,6 +175,8 @@ bool debug_rtree_integrity_check(Rtree *r);
 void debug_rtree_reset_all_aabb(Rtree *r);
 #endif
 
+const bool rtree_node_has_parent(const RtreeNode *const rn);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
