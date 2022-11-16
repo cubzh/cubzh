@@ -126,12 +126,18 @@ void shape_flush(Shape *shape);
 ColorPalette *shape_get_palette(const Shape *shape);
 void shape_set_palette(Shape *shape, ColorPalette *palette);
 
-///
+/// Gets the block in model OR transactions
 Block *shape_get_block(const Shape *const shape,
                        SHAPE_COORDS_INT_T x,
                        SHAPE_COORDS_INT_T y,
                        SHAPE_COORDS_INT_T z,
-                       const bool xyzAreLuaCoords);
+                       const bool luaCoords);
+/// Gets the block in model at the time of calling
+Block *shape_get_block_immediate(const Shape *const shape,
+                                 SHAPE_COORDS_INT_T x,
+                                 SHAPE_COORDS_INT_T y,
+                                 SHAPE_COORDS_INT_T z,
+                                 const bool luaCoords);
 
 /// Returns whether the block is considered added.
 /// (a block is not added if it is out of bounds of a fixed size shape, or if
