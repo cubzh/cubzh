@@ -19,7 +19,6 @@ struct node {
 
 struct _MapStringFloat3 {
     struct node *list;
-    size_t count;
 };
 
 struct _MapStringFloat3Iterator {
@@ -29,7 +28,6 @@ struct _MapStringFloat3Iterator {
 MapStringFloat3 *map_string_float3_new() {
     MapStringFloat3 *m = (MapStringFloat3 *)malloc(sizeof(MapStringFloat3));
     m->list = NULL;
-    m->count = 0;
     return m;
 }
 
