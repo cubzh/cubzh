@@ -23,6 +23,7 @@
 #include "test_float4.h"
 #include "test_hash_uint32_int.h"
 #include "test_int3.h"
+#include "test_map_string_float3.h"
 #include "test_matrix4x4.h"
 #include "test_quaternion.h"
 #include "test_rtree.h"
@@ -181,6 +182,20 @@ TEST_LIST = {
     {"int3_op_min", test_int3_op_min},
     {"int3_op_max", test_int3_op_max},
     {"int3_op_div_ints", test_int3_op_div_ints},
+
+    // map_string_float3
+    {"map_string_float3_new", test_map_string_float3_new},
+    {"map_string_float3_iterator_new", test_map_string_float3_iterator_new},
+    {"map_string_float3_set_key_value", test_map_string_float3_set_key_value},
+    {"map_string_float3_iterator_next", test_map_string_float3_iterator_next},
+    {"map_string_float3_iterator_current_key", test_map_string_float3_iterator_current_key},
+    {"map_string_float3_iterator_current_value", test_map_string_float3_iterator_current_value},
+    {"map_string_float3_iterator_replace_current_value",
+     test_map_string_float3_iterator_replace_current_value},
+    {"map_string_float3_iterator_is_done", test_map_string_float3_iterator_is_done},
+    {"map_string_float3_value_for_key", test_map_string_float3_value_for_key},
+    {"map_string_mutable_float3_value_for_key", test_map_string_mutable_float3_value_for_key},
+    {"map_string_float3_remove_key", test_map_string_float3_remove_key},
 
     // matrix4x4
     {"matrix4x4_new", test_matrix4x4_new},
