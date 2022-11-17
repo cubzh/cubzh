@@ -11,26 +11,27 @@
 #include "block.h"
 
 typedef struct _BlockChange {
-    Block *before;        // 8 bytes
-    Block *after;         // 8 bytes
-    SHAPE_COORDS_INT_T x; // 2 bytes
-    SHAPE_COORDS_INT_T y; // 2 bytes
-    SHAPE_COORDS_INT_T z; // 2 bytes
+    // a block is used here in order to allow shape_get_block to return a pending block,
+    // it won't be used inside shape and will be freed by transaction_free
+    Block *block; // 8 bytes
+    // once change is applied, stores the color index that was replaced
+    SHAPE_COLOR_INDEX_INT_T previousColor; // 8 bytes
+    SHAPE_COORDS_INT_T x;                  // 2 bytes
+    SHAPE_COORDS_INT_T y;                  // 2 bytes
+    SHAPE_COORDS_INT_T z;                  // 2 bytes
     char pad[2];
 } BlockChange;
 
-BlockChange *blockChange_new(Block *const before,
-                             Block *const after,
+BlockChange *blockChange_new(const SHAPE_COLOR_INDEX_INT_T colorIndex,
                              const SHAPE_COORDS_INT_T x,
                              const SHAPE_COORDS_INT_T y,
                              const SHAPE_COORDS_INT_T z) {
-    // TODO: if before == after then return NULL
     BlockChange *bc = (BlockChange *)malloc(sizeof(BlockChange));
     if (bc == NULL) {
         return NULL;
     }
-    bc->before = before;
-    bc->after = after;
+    bc->block = block_new_with_color(colorIndex);
+    bc->previousColor = SHAPE_COLOR_INDEX_AIR_BLOCK;
     bc->x = x;
     bc->y = y;
     bc->z = z;
@@ -39,8 +40,7 @@ BlockChange *blockChange_new(Block *const before,
 
 void blockChange_free(BlockChange *const bc) {
     if (bc != NULL) {
-        block_free(bc->before);
-        block_free(bc->after);
+        block_free(bc->block);
     }
     free(bc);
 }
@@ -49,20 +49,14 @@ void blockChange_freeFunc(void *bc) {
     blockChange_free((BlockChange *)bc);
 }
 
-void blockChange_amend(BlockChange *const bc, Block *amend) {
+void blockChange_amend(BlockChange *const bc, const SHAPE_COLOR_INDEX_INT_T colorIndex) {
     vx_assert(bc != NULL);
-    block_free(bc->after);
-    bc->after = amend;
+    bc->block->colorIndex = colorIndex;
 }
 
-Block *blockChange_getBefore(const BlockChange *const bc) {
+Block *blockChange_getBlock(const BlockChange *const bc) {
     vx_assert(bc != NULL);
-    return bc->before;
-}
-
-Block *blockChange_getAfter(const BlockChange *const bc) {
-    vx_assert(bc != NULL);
-    return bc->after;
+    return bc->block;
 }
 
 void blockChange_getXYZ(const BlockChange *const bc,
@@ -79,4 +73,12 @@ void blockChange_getXYZ(const BlockChange *const bc,
     if (z != NULL) {
         *z = bc->z;
     }
+}
+
+void blockChange_set_previous_color(BlockChange *bc, const SHAPE_COLOR_INDEX_INT_T colorIndex) {
+    bc->previousColor = colorIndex;
+}
+
+SHAPE_COLOR_INDEX_INT_T blockChange_get_previous_color(const BlockChange *bc) {
+    return bc->previousColor;
 }

@@ -10,7 +10,6 @@
 #include <stdlib.h>
 
 #include "cclog.h"
-#include "doubly_linked_list.h"
 
 // has to be a power of two
 #define INDEX_NODE_SIZE 64
@@ -154,7 +153,11 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
     return NULL;
 }
 
-void *index3d_remove(Index3D *index, const int32_t x, const int32_t y, const int32_t z) {
+void *index3d_remove(Index3D *index,
+                     const int32_t x,
+                     const int32_t y,
+                     const int32_t z,
+                     Index3DIterator *it) {
 
     // only use unsigned integers for bitwise operations:
     uint32_t ux = x;
@@ -241,6 +244,12 @@ void *index3d_remove(Index3D *index, const int32_t x, const int32_t y, const int
             // else, but it's good enough for now.
             void *node = currentNode[INDEX_NODE_ARRAY_SIZE - 1];
             currentNode[INDEX_NODE_ARRAY_SIZE - 1] = NULL;
+
+            // optionally maintain ongoing iterator, if at node being removed
+            if (it != NULL && it->current == node) {
+                it->current = doubly_linked_list_node_previous(it->current);
+            }
+
             void *ptr = doubly_linked_list_node_pointer((const DoublyLinkedListNode *)node);
             doubly_linked_list_delete_node(index->list, (DoublyLinkedListNode *)node);
             return ptr;
@@ -266,7 +275,12 @@ void *index3d_remove(Index3D *index, const int32_t x, const int32_t y, const int
     return NULL;
 }
 
-void index3d_insert(Index3D *index, void *ptr, const int32_t x, const int32_t y, const int32_t z) {
+void index3d_insert(Index3D *index,
+                    void *ptr,
+                    const int32_t x,
+                    const int32_t y,
+                    const int32_t z,
+                    Index3DIterator *it) {
 
     // only use unsigned integers for bitwise operations:
     uint32_t ux = x;
@@ -346,8 +360,13 @@ void index3d_insert(Index3D *index, void *ptr, const int32_t x, const int32_t y,
         // printf("z -- q: %u - m: %u\n", quotient, modulo);
         // found, go to z
         if (quotient == 0 && modulo == 0) {
-            DoublyLinkedListNode *node = doubly_linked_list_push_first(index->list, ptr);
+            DoublyLinkedListNode *node = doubly_linked_list_push_last(index->list, ptr);
             currentNode[INDEX_NODE_ARRAY_SIZE - 1] = node;
+
+            // optionally maintain ongoing iterator, if at the end
+            if (it != NULL && it->current == NULL) {
+                it->current = node;
+            }
             break;
         }
 
@@ -448,12 +467,12 @@ void index3d_flush(Index3D *index, pointer_free_function ptr) {
 
 Index3DIterator *index3d_iterator_new(Index3D *index) {
     Index3DIterator *it = (Index3DIterator *)malloc(sizeof(Index3DIterator));
-    it->current = doubly_linked_list_last(index->list);
+    it->current = doubly_linked_list_first(index->list);
     return it;
 }
 
 void index3d_iterator_free(Index3DIterator *it) {
-    // the list nodes are the list's reponsability
+    // the list nodes are the Index3D's responsibility
     free(it);
 }
 
@@ -462,10 +481,9 @@ void *index3d_iterator_pointer(const Index3DIterator *it) {
 }
 
 void index3d_iterator_next(Index3DIterator *it) {
-    // going toward back
-    it->current = doubly_linked_list_node_previous(it->current);
+    it->current = doubly_linked_list_node_next(it->current);
 }
 
 bool index3d_iterator_is_at_end(const Index3DIterator *it) {
-    return doubly_linked_list_node_previous(it->current) == NULL;
+    return doubly_linked_list_node_next(it->current) == NULL;
 }

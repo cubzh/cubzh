@@ -20,9 +20,8 @@ Transaction *transaction_new(void);
 void transaction_free(Transaction *const tr);
 
 /// x, y, z are Lua coordinates.
-/// Returns a weak pointer. The returned Block is owned by the transaction.
-/// Returns NULL if the transaction doesn't contain any info about the provided
-/// coordinates.
+/// @returns changed block ptr or NULL if there is no block change for given coordinates.
+/// The returned Block is owned by the transaction.
 Block *transaction_getCurrentBlockAt(const Transaction *const tr,
                                      const SHAPE_COORDS_INT_T x,
                                      const SHAPE_COORDS_INT_T y,
@@ -39,16 +38,14 @@ bool transaction_addBlock(Transaction *const tr,
 void transaction_removeBlock(const Transaction *const tr,
                              const SHAPE_COORDS_INT_T x,
                              const SHAPE_COORDS_INT_T y,
-                             const SHAPE_COORDS_INT_T z,
-                             const SHAPE_COLOR_INDEX_INT_T existingColorIndex);
+                             const SHAPE_COORDS_INT_T z);
 
 /// x, y, z are Lua coords
 void transaction_replaceBlock(const Transaction *const tr,
                               const SHAPE_COORDS_INT_T x,
                               const SHAPE_COORDS_INT_T y,
                               const SHAPE_COORDS_INT_T z,
-                              const SHAPE_COLOR_INDEX_INT_T existingColorIndex,
-                              const SHAPE_COLOR_INDEX_INT_T newColorIndex);
+                              const SHAPE_COLOR_INDEX_INT_T colorIndex);
 
 ///
 bool transaction_getMustConsiderNewBounds(const Transaction *const tr);
@@ -61,8 +58,6 @@ void transaction_getNewBounds(const Transaction *const tr,
                               SHAPE_COORDS_INT_T *const maxX,
                               SHAPE_COORDS_INT_T *const maxY,
                               SHAPE_COORDS_INT_T *const maxZ);
-
-// Index3D *transaction_getIndex3D(const Transaction *const tr);
 
 /// Returns iterator at current position
 /// Creating a new one if needed, starting at first operation.
