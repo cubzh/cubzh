@@ -33,36 +33,39 @@ func main() {
 }
 
 func buildAnRunCurrentDirectory() error {
-
 	// Get background context
 	ctx := context.Background()
+
 	// Initialize dagger client
-	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
+	client, err := dagger.Connect(ctx,
+		dagger.WithLogOutput(os.Stdout), // output the logs to the standard output
+		dagger.WithWorkdir("../.."),     // go to cubzh root directory
+	)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	fmt.Println("Getting files...")
-	rootDir := client.Host().Workdir().Read()
-	rootDirID, err := rootDir.ID(ctx)
-	if err != nil {
-		return err
+	// create a reference to host root dir
+	dirOpts := dagger.HostDirectoryOpts{
+		// exclude the following directories
+		Exclude: []string{"./ci", "./misc"},
 	}
+	src := client.Host().Directory(".", dirOpts)
 
-	fmt.Println("Building Docker container...")
 	// build container with correct dockerfile
 	buildOpts := dagger.ContainerBuildOpts{
-		Dockerfile: "./dockerfiles/ubuntu_build_env.Dockerfile",
+		Dockerfile: "dockerfiles/ubuntu_build_env.Dockerfile",
 	}
-	ciContainer := client.Container().Build(rootDirID, buildOpts)
+	ciContainer := client.Container().Build(src, buildOpts)
 
-	fmt.Println("Compiling tests in container...")
-	// set workdir and execute build commands
-	ciContainer = ciContainer.WithWorkdir("/core/tests/cmake")
+	// mount host directory to container and go into it
+	ciContainer = ciContainer.WithMountedDirectory("/project", src)
+	ciContainer = ciContainer.WithWorkdir("/project/core/tests/cmake")
+
+	// execute build commands
 	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
-		// Args: []string{"cmake", "-G", "Ninja", "."},
-		Args: []string{"bash", "-c", "cmake -G Ninja ."},
+		Args: []string{"cmake", "-G", "Ninja", "."},
 	})
 	output, err := ciContainer.Stdout().Contents(ctx)
 	if err != nil {
