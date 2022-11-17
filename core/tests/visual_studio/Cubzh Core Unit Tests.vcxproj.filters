@@ -360,6 +360,9 @@
     <ClInclude Include="..\test_map_string_float3.h">
       <Filter>tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\test_inputs.h">
+      <Filter>tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Makefile" />

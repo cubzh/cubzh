@@ -22,6 +22,7 @@
 #include "test_float3.h"
 #include "test_float4.h"
 #include "test_hash_uint32_int.h"
+#include "test_inputs.h"
 #include "test_int3.h"
 #include "test_map_string_float3.h"
 #include "test_matrix4x4.h"
@@ -168,6 +169,36 @@ TEST_LIST = {
 
     // hash_uint32
     {"hash_uint32_int", test_hash_uint32_int},
+
+    // inputs
+    {"isTouchEventID", test_isTouchEventID},
+    {"isFinger1EventID", test_isFinger1EventID},
+    {"isFinger2EventID", test_isFinger2EventID},
+    {"isMouseLeftButtonID", test_isMouseLeftButtonID},
+    {"isMouseRightButtonID", test_isMouseRightButtonID},
+    {"input_listener_new", test_input_listener_new},
+    {"input_listener_pop_mouse_event", test_input_listener_pop_mouse_event},
+    {"input_listener_pop_touch_event", test_input_listener_pop_touch_event},
+    {"input_listener_pop_key_event", test_input_listener_pop_key_event},
+    {"input_listener_pop_char_event", test_input_listener_pop_char_event},
+    {"input_listener_pop_dir_pad_event", test_input_listener_pop_dir_pad_event},
+    {"input_listener_pop_action_pad_event", test_input_listener_pop_action_pad_event},
+    {"input_listener_pop_analog_pad_event", test_input_listener_pop_analog_pad_event},
+    {"postMouseEvent", test_postMouseEvent},
+    {"postTouchEvent", test_postTouchEvent},
+    {"postKeyEvent", test_postKeyEvent},
+    {"postCharEvent", test_postCharEvent},
+    {"postDirPadEvent", test_postDirPadEvent},
+    {"postActionPadEvent", test_postActionPadEvent},
+    {"postAnalogPadEvent", test_postAnalogPadEvent},
+    {"input_shiftIsOn", test_input_shiftIsOn},
+    {"input_altIsOn", test_input_altIsOn},
+    {"input_ctrlIsOn", test_input_ctrlIsOn},
+    {"input_superIsOn", test_input_superIsOn},
+    {"input_isOn", test_input_isOn},
+    {"input_nbPressedInputsImGui", test_input_nbPressedInputsImGui},
+    {"input_pressedInputsImGui", test_input_pressedInputsImGui},
+    {"input_get_cursor", test_input_get_cursor},
 
     // int3
     {"int3_pool_pop", test_int3_pool_pop},
