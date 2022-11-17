@@ -22,37 +22,31 @@ func main() {
 }
 
 func checkFormat() error {
-	repoRootDir := "../.." // git repository root directory
-	repoRootID := "rootPath"
-
 	// Get background context
 	ctx := context.Background()
 
 	// Initialize dagger client with options
 	client, err := dagger.Connect(ctx,
-		dagger.WithLogOutput(os.Stdout),              // output the logs to the standard output
-		dagger.WithLocalDir(repoRootID, repoRootDir), // map the root dir to the engine
+		dagger.WithLogOutput(os.Stdout), // output the logs to the standard output
+		dagger.WithWorkdir("../.."),     // go to cubzh root directory
 	)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	// configure local directory
-	rootHostDir := client.Host().Directory(dagger.HostDirectoryID(repoRootID))
-	rootDir := rootHostDir.Read()
+	// create a reference to host root dir
+	dirOpts := dagger.HostWorkdirOpts{
+		// exclude the following directories
+		Exclude: []string{"./ci", "./dockerfiles", "./misc"},
+	}
+	src := client.Host().Workdir(dirOpts)
 
 	// get Docker container from hub
 	ciContainer := client.Container().From("gaetan/clang-tools")
 
-	// create a Directory and copy files into it
-	rootDirID, err := rootDir.ID(ctx)
-	if err != nil {
-		// TODO: handle error
-		return err
-	}
-	ciContainer = ciContainer.WithMountedDirectory("/project", rootDirID)
-	ciContainer = ciContainer.WithWorkdir("/project") // go to the directory
+	// mount host directory to container and go into it
+	ciContainer = ciContainer.WithMountedDirectory("/project", src).WithWorkdir("/project")
 
 	// run the clang command on every file
 	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
@@ -77,14 +71,6 @@ func checkFormat() error {
 		fmt.Println("No format errors!")
 		return nil
 	}
-
-	// there was an error, log it
-	output, err := ciContainer.Stdout().Contents(ctx)
-	if err != nil {
-		fmt.Println("error getting the contents")
-		return err
-	}
-	fmt.Println(output)
 
 	return errors.New("incorrect format")
 }
