@@ -97,7 +97,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
                                             ColorAtlas *colorAtlas,
-                                            const LoadShapeSettings * const settings);
+                                            const LoadShapeSettings *const settings);
 
 /// serialize a shape w/ its palette
 bool serialization_save_shape(Shape *shape,

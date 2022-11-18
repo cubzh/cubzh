@@ -149,7 +149,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             const LoadShapeSettings * const shapeSettings,
+                             const LoadShapeSettings *const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette **serializedPalette,
                              uint8_t paletteID);
@@ -976,7 +976,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             const LoadShapeSettings * const shapeSettings,
+                             const LoadShapeSettings *const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette **filePalette,
                              uint8_t paletteID) {
@@ -2030,8 +2030,8 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
                                                AssetType filterMask,
-                                               const LoadShapeSettings * const shapeSettings) {
-    
+                                               const LoadShapeSettings *const shapeSettings) {
+
     uint8_t i;
     if (stream_read_uint8(s, &i) == false) {
         cclog_error("failed to read compression algo");
@@ -2050,7 +2050,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
         cclog_error("failed to read total size");
         return NULL;
     }
-    
+
     DoublyLinkedList *list = doubly_linked_list_new();
 
     // READ ALL CHUNKS UNTIL DONE
@@ -2171,7 +2171,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
     if (serializedPalette != NULL && serializedPaletteAssigned == false) {
         color_palette_free(serializedPalette);
     }
-    
+
     doubly_linked_list_free(shapes);
 
     if (error) {

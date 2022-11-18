@@ -84,7 +84,7 @@ Shape *serialization_load_shape(Stream *s,
         return NULL;
     }
     Shape *shape = assets_get_root_shape(assets);
-    
+
     doubly_linked_list_flush(assets, free);
     doubly_linked_list_free(assets);
     return shape;
@@ -94,7 +94,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
                                             ColorAtlas *colorAtlas,
-                                            const LoadShapeSettings * const shapeSettings) {
+                                            const LoadShapeSettings *const shapeSettings) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
         return NULL; // error
