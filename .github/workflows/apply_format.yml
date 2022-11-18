@@ -28,9 +28,7 @@ jobs:
 
       - name: Run Dagger program
         working-directory: ./ci/format
-        run: ./format
-        args:
-          - '--apply-changes'
+        run: ./format --apply-changes
 
       - name: Commit
         uses: stefanzweifel/git-auto-commit-action@v4
