@@ -74,18 +74,19 @@ Shape *serialization_load_shape(Stream *s,
                                 ColorAtlas *colorAtlas,
                                 LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
-    DoublyLinkedList *shapes = serialization_load_assets(s,
+    DoublyLinkedList *assets = serialization_load_assets(s,
                                                          fullname,
                                                          AssetType_Shape,
                                                          colorAtlas,
                                                          shapeSettings);
     // s is NULL if it could not be loaded
-    if (shapes == NULL) {
+    if (assets == NULL) {
         return NULL;
     }
-    Shape *shape = assets_get_root_shape(shapes);
-    // TODO: if there's more than one root shape, others should be freed, other root shapes and their children
-    doubly_linked_list_free(shapes);
+    Shape *shape = assets_get_root_shape(assets);
+    
+    doubly_linked_list_flush(assets, free);
+    doubly_linked_list_free(assets);
     return shape;
 }
 
