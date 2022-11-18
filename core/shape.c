@@ -802,6 +802,10 @@ void shape_free(Shape *const shape) {
     // free current transaction
     transaction_free(shape->pendingTransaction);
     shape->pendingTransaction = NULL;
+    
+    if (shape->fullname != NULL) {
+        free(shape->fullname);
+    }
 
     free(shape);
 
