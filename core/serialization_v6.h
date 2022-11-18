@@ -39,7 +39,7 @@ Shape *serialization_v6_load_shape(Stream *s,
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
                                                AssetType filterMask,
-                                               LoadShapeSettings *shapeSettings);
+                                               const LoadShapeSettings *const settings);
 
 /// Saves shape in file w/ optional palette
 bool serialization_v6_save_shape(Shape *shape,

@@ -74,17 +74,19 @@ Shape *serialization_load_shape(Stream *s,
                                 ColorAtlas *colorAtlas,
                                 LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
-    DoublyLinkedList *shapes = serialization_load_assets(s,
+    DoublyLinkedList *assets = serialization_load_assets(s,
                                                          fullname,
                                                          AssetType_Shape,
                                                          colorAtlas,
                                                          shapeSettings);
     // s is NULL if it could not be loaded
-    if (shapes == NULL) {
+    if (assets == NULL) {
         return NULL;
     }
-    Shape *shape = assets_get_root_shape(shapes);
-    doubly_linked_list_free(shapes);
+    Shape *shape = assets_get_root_shape(assets);
+
+    doubly_linked_list_flush(assets, free);
+    doubly_linked_list_free(assets);
     return shape;
 }
 
@@ -92,7 +94,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
                                             ColorAtlas *colorAtlas,
-                                            LoadShapeSettings *shapeSettings) {
+                                            const LoadShapeSettings *const shapeSettings) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
         return NULL; // error
@@ -122,8 +124,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
             Asset *asset = malloc(sizeof(Asset));
             asset->ptr = shape;
             asset->type = AssetType_Shape;
-            DoublyLinkedListNode *node = doubly_linked_list_node_new(asset);
-            doubly_linked_list_push_last(list, node);
+            doubly_linked_list_push_last(list, asset);
             break;
         }
         case 6: {
@@ -138,7 +139,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
 
     stream_free(s);
 
-    if (doubly_linked_list_node_count(list) == 0) {
+    if (list != NULL && doubly_linked_list_node_count(list) == 0) {
         doubly_linked_list_free(list);
         list = NULL;
         cclog_error("[serialization_load_assets] no resources found");

@@ -47,7 +47,7 @@ uint32_t chunk_v5_read_selected_background_color(Stream *s, uint8_t *color);
 // chunk_v5_read_shape allocates a new Shape if shape != NULL
 uint32_t chunk_v5_read_shape(Stream *s,
                              Shape **shape,
-                             LoadShapeSettings *shapeSettings,
+                             const LoadShapeSettings *const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette *serializedPalette);
 
@@ -162,7 +162,7 @@ bool serialization_v5_get_preview_data(Stream *s, void **imageData, uint32_t *si
 
 ///
 Shape *serialization_v5_load_shape(Stream *s,
-                                   LoadShapeSettings *shapeSettings,
+                                   const LoadShapeSettings *const shapeSettings,
                                    ColorAtlas *colorAtlas) {
 
     uint8_t compressionAlgo = P3S_COMPRESSION_ALGO_NONE;
@@ -434,7 +434,7 @@ uint32_t chunk_read_shape_process_blocks(Stream *s,
 
 uint32_t chunk_v5_read_shape(Stream *s,
                              Shape **shape,
-                             LoadShapeSettings *shapeSettings,
+                             const LoadShapeSettings *const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette *serializedPalette) {
 

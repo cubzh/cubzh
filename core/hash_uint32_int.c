@@ -73,6 +73,7 @@ void hash_uint32_node_free(HashUInt32IntNode *n) {
                 // don't free nodes above n
                 tmp = NULL;
             }
+            free(cursor->slots);
             free(cursor);
             cursor = tmp;
             continue;

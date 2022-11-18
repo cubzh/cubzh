@@ -86,7 +86,7 @@ func checkFormat(doFormat bool) error {
 	}
 
 	if doFormat {
-		output := ciContainer.Directory("project")
+		output := ciContainer.Directory("/project")
 		_, err = output.Export(ctx, ".")
 		if err != nil {
 			return err
