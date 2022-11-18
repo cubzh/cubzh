@@ -2070,6 +2070,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
     // - if not, the octree was serialized w/ default palette indices, we'll build a shape palette
     // from the used default colors
     ColorPalette *serializedPalette = NULL;
+    bool serializedPaletteAssigned = false;
     bool paletteLocked = false;                            // shouldn't happen
     uint8_t paletteID = PALETTE_ID_IOS_ITEM_EDITOR_LEGACY; // by default, w/o palette ID or palette
                                                            // chunks
@@ -2099,6 +2100,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                     asset->ptr = serializedPalette;
                     asset->type = AssetType_Palette;
                     doubly_linked_list_push_last(list, asset);
+                    serializedPaletteAssigned = true;
                 }
 
                 // ignore palette if octree was processed already w/ default palette
@@ -2168,6 +2170,10 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
         }
     }
 
+    if (serializedPalette != NULL && serializedPaletteAssigned == false) {
+        color_palette_free(serializedPalette);
+    }
+    
     doubly_linked_list_free(shapes);
 
     if (error) {
