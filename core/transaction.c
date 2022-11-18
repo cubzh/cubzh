@@ -85,12 +85,6 @@ Block *transaction_getCurrentBlockAt(const Transaction *const tr,
                                      const SHAPE_COORDS_INT_T z) {
     vx_assert(tr != NULL);
     vx_assert(tr->index3D != NULL);
-    if (tr == NULL) {
-        return NULL;
-    }
-    if (tr->index3D == NULL) {
-        return NULL;
-    }
 
     void *data = index3d_get(tr->index3D, x, y, z);
 
@@ -99,9 +93,8 @@ Block *transaction_getCurrentBlockAt(const Transaction *const tr,
     }
 
     BlockChange *bc = (BlockChange *)data;
-    Block *after = blockChange_getAfter(bc);
 
-    return after;
+    return blockChange_getBlock(bc);
 }
 
 bool transaction_addBlock(Transaction *const tr,
@@ -111,33 +104,23 @@ bool transaction_addBlock(Transaction *const tr,
                           const SHAPE_COLOR_INDEX_INT_T colorIndex) {
     vx_assert(tr != NULL);
     vx_assert(tr->index3D != NULL);
-    if (tr == NULL || tr->index3D == NULL) {
-        return false;
-    }
 
     void *data = index3d_get(tr->index3D, x, y, z);
 
+    BlockChange *bc = NULL;
     if (data == NULL) { // index doesn't contain a BlockChange for those coords
 
-        Block *before = block_new_with_color(SHAPE_COLOR_INDEX_AIR_BLOCK);
-        Block *after = block_new_with_color(colorIndex);
-        BlockChange *bc = blockChange_new(before, after, x, y, z);
-        index3d_insert(tr->index3D, bc, x, y, z);
-
+        bc = blockChange_new(colorIndex, x, y, z);
     } else { // index does contain a BlockChange for those coords already
 
-        BlockChange *bc = (BlockChange *)data;
+        bc = (BlockChange *)data;
+        blockChange_amend(bc, colorIndex);
 
-        const Block *const after = blockChange_getAfter(bc);
-        if (block_is_solid(after)) {
-            // transaction already has a block at those coords
-            // a new block cannot be added here
-            return false; // block has not been added
-        }
-
-        Block *newAfter = block_new_with_color(colorIndex);
-        blockChange_amend(bc, newAfter);
+        // this updates index3d iterator's internal list, remove it to push it again
+        // after transaction cursor
+        index3d_remove(tr->index3D, x, y, z, tr->iterator);
     }
+    index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 
     // update transaction bounds
     if (tr->mustConsiderNewBounds == false) {
@@ -175,29 +158,26 @@ bool transaction_addBlock(Transaction *const tr,
 void transaction_removeBlock(const Transaction *const tr,
                              const SHAPE_COORDS_INT_T x,
                              const SHAPE_COORDS_INT_T y,
-                             const SHAPE_COORDS_INT_T z,
-                             const SHAPE_COLOR_INDEX_INT_T existingColorIndex) {
+                             const SHAPE_COORDS_INT_T z) {
     vx_assert(tr != NULL);
     vx_assert(tr->index3D != NULL);
-    if (tr == NULL || tr->index3D == NULL) {
-        return;
-    }
 
     void *data = index3d_get(tr->index3D, x, y, z);
 
+    BlockChange *bc = NULL;
     if (data == NULL) { // index doesn't contain a BlockChange for those coords
 
-        Block *before = block_new_with_color(existingColorIndex);
-        Block *after = block_new_with_color(SHAPE_COLOR_INDEX_AIR_BLOCK);
-        BlockChange *bc = blockChange_new(before, after, x, y, z);
-        index3d_insert(tr->index3D, bc, x, y, z);
-
+        bc = blockChange_new(SHAPE_COLOR_INDEX_AIR_BLOCK, x, y, z);
     } else { // index does contain a BlockChange for those coords already
 
-        BlockChange *bc = (BlockChange *)data;
-        Block *newAfter = block_new_with_color(SHAPE_COLOR_INDEX_AIR_BLOCK);
-        blockChange_amend(bc, newAfter);
+        bc = (BlockChange *)data;
+        blockChange_amend(bc, SHAPE_COLOR_INDEX_AIR_BLOCK);
+
+        // this updates index3d iterator's internal list, remove it to push it again
+        // after transaction cursor
+        index3d_remove(tr->index3D, x, y, z, tr->iterator);
     }
+    index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 }
 
 // x, y, z are Lua coords
@@ -205,29 +185,26 @@ void transaction_replaceBlock(const Transaction *const tr,
                               const SHAPE_COORDS_INT_T x,
                               const SHAPE_COORDS_INT_T y,
                               const SHAPE_COORDS_INT_T z,
-                              const SHAPE_COLOR_INDEX_INT_T existingColorIndex,
-                              const SHAPE_COLOR_INDEX_INT_T newColorIndex) {
+                              const SHAPE_COLOR_INDEX_INT_T colorIndex) {
     vx_assert(tr != NULL);
     vx_assert(tr->index3D != NULL);
-    if (tr == NULL || tr->index3D == NULL) {
-        return;
-    }
 
     void *data = index3d_get(tr->index3D, x, y, z);
 
+    BlockChange *bc = NULL;
     if (data == NULL) { // index doesn't contain a BlockChange for those coords
 
-        Block *before = block_new_with_color(existingColorIndex);
-        Block *after = block_new_with_color(newColorIndex);
-        BlockChange *bc = blockChange_new(before, after, x, y, z);
-        index3d_insert(tr->index3D, bc, x, y, z);
-
+        bc = blockChange_new(colorIndex, x, y, z);
     } else { // index does contain a BlockChange for those coords already
 
-        BlockChange *bc = (BlockChange *)data;
-        Block *newAfter = block_new_with_color(newColorIndex);
-        blockChange_amend(bc, newAfter);
+        bc = (BlockChange *)data;
+        blockChange_amend(bc, colorIndex);
+
+        // this updates index3d iterator's internal list, remove it to push it again
+        // after transaction cursor
+        index3d_remove(tr->index3D, x, y, z, tr->iterator);
     }
+    index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 }
 
 bool transaction_getMustConsiderNewBounds(const Transaction *const tr) {
@@ -261,13 +238,6 @@ void transaction_getNewBounds(const Transaction *const tr,
         *maxZ = tr->newMaxZ;
     }
 }
-
-// Index3D *transaction_getIndex3D(const Transaction *const tr) {
-//     if (tr == NULL) {
-//         return NULL;
-//     }
-//     return tr->index3D;
-// }
 
 Index3DIterator *transaction_getIndex3DIterator(Transaction *tr) {
     if (tr == NULL || tr->index3D == NULL) {

@@ -15,27 +15,17 @@
 
 // Create 2 different blockChange and check the return values of all the "get" functions
 void test_blockChange_get(void) {
-    Block *a = block_new();
-    Block *b = block_new();
-    Block *c = block_new_air();
-    Block *d = block_new_air();
-    BlockChange *BlockA = blockChange_new(a, c, 0, 0, 0);
-    BlockChange *BlockB = blockChange_new(d, b, 3, 5, 2);
+    BlockChange *BlockA = blockChange_new(255, 0, 0, 0);
+    BlockChange *BlockB = blockChange_new(0, 3, 5, 2);
     Block *blockCheck = NULL;
     SHAPE_COORDS_INT_T coordsCheckX = 0;
     SHAPE_COORDS_INT_T coordsCheckY = 0;
     SHAPE_COORDS_INT_T coordsCheckZ = 0;
 
-    // Get the block stocked in "before" and check him with his colorIndex
-    blockCheck = blockChange_getBefore(BlockA);
-    TEST_CHECK(blockCheck->colorIndex == 0);
-    blockCheck = blockChange_getBefore(BlockB);
+    // Get the block and check it with his colorIndex
+    blockCheck = blockChange_getBlock(BlockA);
     TEST_CHECK(blockCheck->colorIndex == 255);
-
-    // Get the block stocked in "after" and check him with his colorIndex
-    blockCheck = blockChange_getAfter(BlockA);
-    TEST_CHECK(blockCheck->colorIndex == 255);
-    blockCheck = blockChange_getAfter(BlockB);
+    blockCheck = blockChange_getBlock(BlockB);
     TEST_CHECK(blockCheck->colorIndex == 0);
 
     // Get the coords stocked in the x, y, z, values of the BlockChange and check them
@@ -55,17 +45,13 @@ void test_blockChange_get(void) {
 // Create a BlockChange and change his block stocked in the "after" value and check him with his
 // colorIndex
 void test_blockChange_amend(void) {
-    Block *a = block_new();
-    Block *b = block_new();
-    BlockChange *BlockC = blockChange_new(a, b, 0, 0, 0);
+    BlockChange *BlockC = blockChange_new(0, 0, 0, 0);
 
-    Block *c = block_new_with_color(35);
-    blockChange_amend(BlockC, c);
-    Block *blockCheck = blockChange_getAfter(BlockC);
+    blockChange_amend(BlockC, 35);
+    Block *blockCheck = blockChange_getBlock(BlockC);
     TEST_CHECK(blockCheck->colorIndex == 35);
-    Block *d = block_new();
-    blockChange_amend(BlockC, d);
-    blockCheck = blockChange_getAfter(BlockC);
+    blockChange_amend(BlockC, 0);
+    blockCheck = blockChange_getBlock(BlockC);
     TEST_CHECK(blockCheck->colorIndex == 0);
 
     blockChange_free(BlockC);

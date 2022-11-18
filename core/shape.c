@@ -1004,7 +1004,7 @@ bool shape_remove_block_from_lua(Shape *const shape,
         }
     }
 
-    transaction_removeBlock(shape->pendingTransaction, luaX, luaY, luaZ, existingBlock->colorIndex);
+    transaction_removeBlock(shape->pendingTransaction, luaX, luaY, luaZ);
 
     // register awake box for the map
     if (shape_uses_baked_lighting(shape)) {
@@ -1047,12 +1047,7 @@ bool shape_replace_block_from_lua(Shape *const shape,
         }
     }
 
-    transaction_replaceBlock(shape->pendingTransaction,
-                             luaX,
-                             luaY,
-                             luaZ,
-                             existingBlock->colorIndex,
-                             newColorIndex);
+    transaction_replaceBlock(shape->pendingTransaction, luaX, luaY, luaZ, newColorIndex);
 
     return true; // block is considered replaced
 }
@@ -2114,7 +2109,7 @@ void shape_refresh_vertices(Shape *shape) {
                      pos->x >> CHUNK_WIDTH_SQRT,
                      pos->y >> CHUNK_HEIGHT_SQRT,
                      pos->z >> CHUNK_DEPTH_SQRT);
-            index3d_remove(shape->chunks, ldfPos->x, ldfPos->y, ldfPos->z);
+            index3d_remove(shape->chunks, ldfPos->x, ldfPos->y, ldfPos->z, NULL);
             int3_pool_recycle(ldfPos);
 
             shape->nbChunks--;
@@ -3846,7 +3841,7 @@ bool _add_block_in_chunks(Index3D *chunks,
         chunk = chunk_new(chunk_ldfPos.x * CHUNK_WIDTH,
                           chunk_ldfPos.y * CHUNK_HEIGHT,
                           chunk_ldfPos.z * CHUNK_DEPTH);
-        index3d_insert(chunks, chunk, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z);
+        index3d_insert(chunks, chunk, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z, NULL);
 
         // printf("insert chunk at: %d, %d, %d\n", chunk_ldfPos->x, chunk_ldfPos->y,
         // chunk_ldfPos->z);
@@ -4941,49 +4936,39 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
     }
 
     // loop on all the BlockChanges
-    SHAPE_COLOR_INDEX_INT_T before;
-    SHAPE_COLOR_INDEX_INT_T after;
+    SHAPE_COLOR_INDEX_INT_T before, after;
     SHAPE_COORDS_INT_T x, y, z;
     bool shapeShrinkNeeded = false;
 
     while (index3d_iterator_pointer(it) != NULL) {
-        // process current chunk
         BlockChange *bc = (BlockChange *)index3d_iterator_pointer(it);
-        if (bc != NULL) {
-            if (blockChange_getBefore(bc) == NULL || blockChange_getAfter(bc) == NULL) {
-                index3d_iterator_next(it);
-                continue;
-            }
 
-            blockChange_getXYZ(bc, &x, &y, &z);
+        blockChange_getXYZ(bc, &x, &y, &z);
 
-            // /!\ important note: transactions use an index3d therefore when several transactions
-            // happen on the same block, they are amended into 1 unique transaction. This can be
-            // an issue since transactions can be applied from a line-by-line refresh in Lua
-            // (eg. shape.Width), meaning part of an amended transaction could've been applied
-            // already. As a result, we'll ignore the "blockChange_getBefore" that was recorded
-            // and use the CURRENT block,
-            const Block *b = shape_get_block_immediate(sh, x, y, z, true);
-            before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
-            // before = blockChange_getBefore(bc)->colorIndex;
+        // /!\ important note: transactions use an index3d therefore when several transactions
+        // happen on the same block, they are amended into 1 unique transaction. This can be
+        // an issue since transactions can be applied from a line-by-line refresh in Lua
+        // (eg. shape.Width), meaning part of an amended transaction could've been applied
+        // already. As a result, we'll always use the CURRENT block
+        const Block *b = shape_get_block_immediate(sh, x, y, z, true);
+        before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
+        blockChange_set_previous_color(bc, before);
 
-            after = blockChange_getAfter(bc)->colorIndex;
+        after = blockChange_getBlock(bc)->colorIndex;
 
-            // [air>block] = add block
-            if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                shape_add_block_with_color(sh, after, x, y, z, false, true, true, false);
-            }
-            // [block>air] = remove block
-            else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK &&
-                     after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                shape_remove_block(sh, x, y, z, NULL, true, true, false);
-                shapeShrinkNeeded = true;
-            }
-            // [block>block] = paint block
-            else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK &&
-                     after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                shape_paint_block(sh, after, x, y, z, NULL, NULL, true, true);
-            }
+        // [air>block] = add block
+        if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
+            shape_add_block_with_color(sh, after, x, y, z, false, true, true, false);
+        }
+        // [block>air] = remove block
+        else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
+            shape_remove_block(sh, x, y, z, NULL, true, true, false);
+            shapeShrinkNeeded = true;
+        }
+        // [block>block] = paint block
+        else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK &&
+                 before != after) {
+            shape_paint_block(sh, after, x, y, z, NULL, NULL, true, true);
         }
 
         index3d_iterator_next(it);
@@ -5015,60 +5000,40 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
         return false;
     }
 
-    // loop on all the BlockChanges
-    Block *before = NULL;
-    Block *after = NULL;
+    SHAPE_COLOR_INDEX_INT_T before, after;
     SHAPE_COORDS_INT_T x, y, z;
+    bool shapeShrinkNeeded = false;
 
-    // loop on all the BlockChanges
-    while (true) {
-        // process current chunk
+    // loop on all the BlockChanges and revert them
+    while (index3d_iterator_pointer(it) != NULL) {
         BlockChange *bc = (BlockChange *)index3d_iterator_pointer(it);
-        if (bc != NULL) {
-            before = blockChange_getBefore(bc);
-            after = blockChange_getAfter(bc);
-            blockChange_getXYZ(bc, &x, &y, &z);
-            vx_assert(before != NULL);
-            vx_assert(after != NULL);
 
-            if (before->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK &&
-                after->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
+        blockChange_getXYZ(bc, &x, &y, &z);
 
-                // remove block
-                shape_remove_block(sh,
-                                   x,
-                                   y,
-                                   z,
-                                   NULL,
-                                   true,  // apply offset
-                                   true,  // lighting
-                                   true); // shrink box
+        const Block *b = shape_get_block_immediate(sh, x, y, z, true);
+        before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
 
-            } else if (before->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK &&
-                       after->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK) {
+        after = blockChange_get_previous_color(bc);
 
-                // add block
-                shape_add_block_with_color(sh,
-                                           before->colorIndex,
-                                           x,
-                                           y,
-                                           z,
-                                           false,
-                                           true,
-                                           true,
-                                           false);
-            } else if (before->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK &&
-                       after->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-
-                // replace block
-                shape_paint_block(sh, before->colorIndex, x, y, z, NULL, NULL, true, true);
-            }
+        // [air>block] = add block
+        if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
+            shape_add_block_with_color(sh, after, x, y, z, false, true, true, false);
         }
-        // select next BlockChange and exit the loop if there is no next BlockChange
-        if (index3d_iterator_is_at_end(it)) {
-            break;
+        // [block>air] = remove block
+        else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
+            shape_remove_block(sh, x, y, z, NULL, true, true, false);
+            shapeShrinkNeeded = true;
         }
+        // [block>block] = paint block
+        else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
+            shape_paint_block(sh, after, x, y, z, NULL, NULL, true, true);
+        }
+
         index3d_iterator_next(it);
+    }
+
+    if (shapeShrinkNeeded == true) {
+        shape_shrink_box(sh);
     }
 
     return true;

@@ -21,6 +21,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
+#include "doubly_linked_list.h"
 #include "function_pointers.h"
 
 typedef struct _Index3D Index3D;
@@ -46,16 +47,24 @@ bool index3d_is_empty(const Index3D *const index);
 // see world.c/entity_list_with_distance_free to help for implementation
 void index3d_flush(Index3D *index, pointer_free_function ptr);
 
-// index3d_insert inserts pointer at given position
-void index3d_insert(Index3D *index, void *ptr, const int32_t x, const int32_t y, const int32_t z);
+// index3d_insert inserts ptr at given position, optionally maintaining given iterator
+void index3d_insert(Index3D *index,
+                    void *ptr,
+                    const int32_t x,
+                    const int32_t y,
+                    const int32_t z,
+                    Index3DIterator *it);
 
 // index3d_get returns pointer at given position. NULL can be returned
 void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const int32_t z);
 
-// index3d_remove removes pointer from index at given position and returns
-// removed pointers. Its caller's responsibility to free memory.
-// index3d_remove can return NULL
-void *index3d_remove(Index3D *index, const int32_t x, const int32_t y, const int32_t z);
+// index3d_remove removes ptr from index at given position, optionally maintaining given iterator
+// @returns removed pointer or NULL if not found. Its caller's responsibility to free memory.
+void *index3d_remove(Index3D *index,
+                     const int32_t x,
+                     const int32_t y,
+                     const int32_t z,
+                     Index3DIterator *it);
 
 // returns new iterator
 Index3DIterator *index3d_iterator_new(Index3D *index);

@@ -55,8 +55,7 @@ void test_transaction_addBlock(void) {
 void test_transaction_removeBlock(void) {
     Transaction *t = transaction_new();
     const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-    const SHAPE_COLOR_INDEX_INT_T color_index = 1;
-    transaction_removeBlock(t, x, y, z, color_index);
+    transaction_removeBlock(t, x, y, z);
     const Block *block = transaction_getCurrentBlockAt(t, x, y, z);
 
     TEST_CHECK(block->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
@@ -70,7 +69,7 @@ void test_transaction_replaceBlock(void) {
     const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
     const SHAPE_COLOR_INDEX_INT_T color_index = 2;
     transaction_addBlock(t, x, y, z, 1);
-    transaction_replaceBlock(t, x, y, z, 1, color_index);
+    transaction_replaceBlock(t, x, y, z, color_index);
     const Block *block = transaction_getCurrentBlockAt(t, x, y, z);
 
     TEST_CHECK(block->colorIndex == color_index);
