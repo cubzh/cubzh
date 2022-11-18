@@ -149,7 +149,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             LoadShapeSettings *shapeSettings,
+                             const LoadShapeSettings * const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette **serializedPalette,
                              uint8_t paletteID);
@@ -976,7 +976,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             LoadShapeSettings *shapeSettings,
+                             const LoadShapeSettings * const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette **filePalette,
                              uint8_t paletteID) {
@@ -2030,20 +2030,17 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
                                                AssetType filterMask,
-                                               LoadShapeSettings *shapeSettings) {
-    DoublyLinkedList *list = doubly_linked_list_new();
-
+                                               const LoadShapeSettings * const shapeSettings) {
+    
     uint8_t i;
     if (stream_read_uint8(s, &i) == false) {
         cclog_error("failed to read compression algo");
-        doubly_linked_list_free(list);
         return NULL;
     }
     P3sCompressionMethod compressionAlgo = (P3sCompressionMethod)i;
 
     if (compressionAlgo >= P3sCompressionMethod_COUNT) {
         cclog_error("compression algo not supported");
-        doubly_linked_list_free(list);
         return NULL;
     }
 
@@ -2051,9 +2048,10 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
 
     if (stream_read_uint32(s, &totalSize) == false) {
         cclog_error("failed to read total size");
-        doubly_linked_list_free(list);
         return NULL;
     }
+    
+    DoublyLinkedList *list = doubly_linked_list_new();
 
     // READ ALL CHUNKS UNTIL DONE
 

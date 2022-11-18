@@ -84,6 +84,7 @@ Shape *serialization_load_shape(Stream *s,
         return NULL;
     }
     Shape *shape = assets_get_root_shape(shapes);
+    // TODO: if there's more than one root shape, others should be freed, other root shapes and their children
     doubly_linked_list_free(shapes);
     return shape;
 }
@@ -92,7 +93,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
                                             ColorAtlas *colorAtlas,
-                                            LoadShapeSettings *shapeSettings) {
+                                            const LoadShapeSettings * const shapeSettings) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
         return NULL; // error
@@ -122,8 +123,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
             Asset *asset = malloc(sizeof(Asset));
             asset->ptr = shape;
             asset->type = AssetType_Shape;
-            DoublyLinkedListNode *node = doubly_linked_list_node_new(asset);
-            doubly_linked_list_push_last(list, node);
+            doubly_linked_list_push_last(list, asset);
             break;
         }
         case 6: {
@@ -138,7 +138,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
 
     stream_free(s);
 
-    if (doubly_linked_list_node_count(list) == 0) {
+    if (list != NULL && doubly_linked_list_node_count(list) == 0) {
         doubly_linked_list_free(list);
         list = NULL;
         cclog_error("[serialization_load_assets] no resources found");
