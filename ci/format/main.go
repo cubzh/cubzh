@@ -10,7 +10,12 @@ import (
 )
 
 func main() {
-	err := checkFormat()
+	doFormat := false
+	if len(os.Args) >= 2 && os.Args[1] == "--apply-changes" {
+		doFormat = true
+	}
+
+	err := checkFormat(doFormat)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("exit_failure")
@@ -21,7 +26,7 @@ func main() {
 	os.Exit(0)
 }
 
-func checkFormat() error {
+func checkFormat(doFormat bool) error {
 	// Get background context
 	ctx := context.Background()
 
@@ -46,19 +51,28 @@ func checkFormat() error {
 	ciContainer := client.Container().From("gaetan/clang-tools")
 
 	// mount host directory to container and go into it
-	ciContainer = ciContainer.WithMountedDirectory("/project", src).WithWorkdir("/project")
+	ciContainer = ciContainer.WithMountedDirectory("/project", src)
+	ciContainer = ciContainer.WithWorkdir("/project")
 
-	// run the clang command on every file
-	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
-		// ash -c is necessary because piping is used
+	command := ""
+	if doFormat {
 		// set -e: exit on first error
 		// set -o pipefail: keep the last non-0 exit code
 		// -regex: all .h / .hpp / .c / .cpp files
 		// -maxdepth 2: consider the files in /core and /core/tests
-		// --dry-run: do not apply changes
+		// -i: apply changes
 		// --Werror: consider warnings as errors
 		// -style-file: follow the rules from the .clang-format file
-		Args: []string{"ash", "-c", "set -e ; set -o pipefail ; find ./core -maxdepth 2 -regex '^.*\\.\\(cpp\\|hpp\\|c\\|h\\)$' -print0 | xargs -0 clang-format --dry-run --Werror -style=file"},
+		command = "set -e ; set -o pipefail ; find ./core -maxdepth 2 -regex '^.*\\.\\(cpp\\|hpp\\|c\\|h\\)$' -print0 | xargs -0 clang-format -i --Werror -style=file"
+	} else {
+		// --dry-run: do not apply changes
+		command = "set -e ; set -o pipefail ; find ./core -maxdepth 2 -regex '^.*\\.\\(cpp\\|hpp\\|c\\|h\\)$' -print0 | xargs -0 clang-format --dry-run --Werror -style=file"
+	}
+
+	// run the clang command on every file
+	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
+		// ash -c is necessary because piping is used
+		Args: []string{"ash", "-c", command},
 	})
 
 	// get the exit code
@@ -67,10 +81,21 @@ func checkFormat() error {
 		fmt.Println("error getting the exitcode")
 		return err
 	}
-	if code == 0 {
-		fmt.Println("No format errors!")
-		return nil
+	if code != 0 {
+		return errors.New("incorrect format")
 	}
 
-	return errors.New("incorrect format")
+	if doFormat {
+		output := ciContainer.Directory("project")
+		_, err = output.Export(ctx, ".")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Formating done!")
+	} else {
+		fmt.Println("No format errors!")
+	}
+
+	return nil
 }
