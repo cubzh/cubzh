@@ -280,7 +280,7 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
     return true;
 }
 
-uint32_t color_palette_get_color_use_count(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
+uint32_t color_palette_get_color_use_count(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
     if (entry >= p->count) {
         return 0;
     }
@@ -311,8 +311,8 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
         const bool prevOpaque = color_is_opaque(&p->entries[entry].color);
         const bool newOpaque = color_is_opaque(&color);
         if (prevOpaque != newOpaque // (2)
-            || prevOpaque == false && newOpaque == false &&
-                   p->entries[entry].color.a != color.a) { // (3)
+            || (prevOpaque == false && newOpaque == false &&
+                   p->entries[entry].color.a != color.a)) { // (3)
             p->lighting_dirty = true;
         }
     }
