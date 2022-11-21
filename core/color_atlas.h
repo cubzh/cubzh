@@ -57,6 +57,8 @@ RGBAColor *color_atlas_get_color(const ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T in
 void color_atlas_flush_slice(ColorAtlas *a);
 void color_atlas_force_dirty_slice(ColorAtlas *a);
 
+size_t color_atlas_get_color_count(const ColorAtlas *a);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

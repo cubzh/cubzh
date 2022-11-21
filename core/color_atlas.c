@@ -60,6 +60,10 @@ ColorAtlas *color_atlas_new() {
     return color_atlas;
 }
 
+size_t color_atlas_get_color_count(const ColorAtlas *a) {
+    return (size_t)(a->count - fifo_list_get_size(a->availableIndices));
+}
+
 void color_atlas_free(ColorAtlas *a) {
     if (a != NULL) {
         weakptr_invalidate(a->wptr);
@@ -159,7 +163,7 @@ void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
     for (int i = 0; i < nbColors; ++i) {
         idx = color_palette_get_atlas_index(p, i);
         if (idx != ATLAS_COLOR_INDEX_ERROR &&
-            color_palette_get_color_use_count((ColorPalette *)p, i) > 0) {
+            color_palette_get_color_use_count(p, i) > 0) {
             color_atlas_remove_color(a, idx, p->sharedColors);
         }
     }

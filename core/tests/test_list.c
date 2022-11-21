@@ -33,6 +33,7 @@
 #include "test_transform.h"
 #include "test_utils.h"
 #include "test_weakptr.h"
+#include "test_color_atlas.h"
 
 TEST_LIST = {
 
@@ -81,6 +82,9 @@ TEST_LIST = {
     {"test_chunk_Block", test_chunk_Block},
     {"test_chunk_needs_display", test_chunk_needs_display},
 
+    // color_atlas
+    {"test_color_atlas_colors_playing_with_shapes", test_color_atlas_colors_playing_with_shapes},
+    
     // config
     {"test_upper_power_of_two", test_upper_power_of_two},
 
