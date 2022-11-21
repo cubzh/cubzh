@@ -43,7 +43,7 @@ func checkFormat(doFormat bool) error {
 	// create a reference to host root dir
 	dirOpts := dagger.HostWorkdirOpts{
 		// exclude the following directories
-		Exclude: []string{"./ci", "./dockerfiles", "./misc"},
+		Exclude: []string{".git", "ci", "dockerfiles", "misc"},
 	}
 	src := client.Host().Workdir(dirOpts)
 
@@ -81,12 +81,12 @@ func checkFormat(doFormat bool) error {
 		fmt.Println("error getting the exitcode")
 		return err
 	}
-	if code != 0 {
+	if code != 0 && doFormat == false {
 		return errors.New("incorrect format")
 	}
 
 	if doFormat {
-		output := ciContainer.Directory("/project")
+		output := ciContainer.Directory(".")
 		_, err = output.Export(ctx, ".")
 		if err != nil {
 			return err

@@ -37,7 +37,7 @@ func buildAnRunCurrentDirectory() error {
 	// create a reference to host root dir
 	dirOpts := dagger.HostDirectoryOpts{
 		// exclude the following directories
-		Exclude: []string{"./ci", "./misc"},
+		Exclude: []string{".git", "ci", "misc"},
 	}
 	src := client.Host().Directory(".", dirOpts)
 
