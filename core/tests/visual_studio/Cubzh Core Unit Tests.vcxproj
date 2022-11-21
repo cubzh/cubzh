@@ -81,6 +81,7 @@
     <ClInclude Include="..\test_float3.h" />
     <ClInclude Include="..\test_float4.h" />
     <ClInclude Include="..\test_hash_uint32_int.h" />
+    <ClInclude Include="..\test_inputs.h" />
     <ClInclude Include="..\test_int3.h" />
     <ClInclude Include="..\test_map_string_float3.h" />
     <ClInclude Include="..\test_matrix4x4.h" />
