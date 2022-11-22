@@ -90,10 +90,7 @@ Matrix4x4 *matrix4x4_new_look_at(const float3 *eye, const float3 *center, const 
     return m;
 }
 
-void matrix4x4_set_look_at(Matrix4x4 *m,
-                           const float3 *eye,
-                           const float3 *center,
-                           const float3 *up) {
+void matrix4x4_set_look_at(Matrix4x4 *m, const float3 *eye, const float3 *center, const float3 *up) {
     float3_copy(&float4x4_vz, center);
     float3_op_substract(&float4x4_vz, eye);
     float3_normalize(&float4x4_vz);
@@ -241,54 +238,52 @@ Matrix4x4 *matrix4x4_copy(Matrix4x4 *dest, const Matrix4x4 *src) {
 
 Matrix4x4 *matrix4x4_op_multiply(Matrix4x4 *m1, const Matrix4x4 *m2) {
 
-    matrix4x4_set(
-        m1,
-        m1->x1y1 * m2->x1y1 + m1->x2y1 * m2->x1y2 + m1->x3y1 * m2->x1y3 + m1->x4y1 * m2->x1y4,
-        m1->x1y1 * m2->x2y1 + m1->x2y1 * m2->x2y2 + m1->x3y1 * m2->x2y3 + m1->x4y1 * m2->x2y4,
-        m1->x1y1 * m2->x3y1 + m1->x2y1 * m2->x3y2 + m1->x3y1 * m2->x3y3 + m1->x4y1 * m2->x3y4,
-        m1->x1y1 * m2->x4y1 + m1->x2y1 * m2->x4y2 + m1->x3y1 * m2->x4y3 + m1->x4y1 * m2->x4y4,
+    matrix4x4_set(m1,
+                  m1->x1y1 * m2->x1y1 + m1->x2y1 * m2->x1y2 + m1->x3y1 * m2->x1y3 + m1->x4y1 * m2->x1y4,
+                  m1->x1y1 * m2->x2y1 + m1->x2y1 * m2->x2y2 + m1->x3y1 * m2->x2y3 + m1->x4y1 * m2->x2y4,
+                  m1->x1y1 * m2->x3y1 + m1->x2y1 * m2->x3y2 + m1->x3y1 * m2->x3y3 + m1->x4y1 * m2->x3y4,
+                  m1->x1y1 * m2->x4y1 + m1->x2y1 * m2->x4y2 + m1->x3y1 * m2->x4y3 + m1->x4y1 * m2->x4y4,
 
-        m1->x1y2 * m2->x1y1 + m1->x2y2 * m2->x1y2 + m1->x3y2 * m2->x1y3 + m1->x4y2 * m2->x1y4,
-        m1->x1y2 * m2->x2y1 + m1->x2y2 * m2->x2y2 + m1->x3y2 * m2->x2y3 + m1->x4y2 * m2->x2y4,
-        m1->x1y2 * m2->x3y1 + m1->x2y2 * m2->x3y2 + m1->x3y2 * m2->x3y3 + m1->x4y2 * m2->x3y4,
-        m1->x1y2 * m2->x4y1 + m1->x2y2 * m2->x4y2 + m1->x3y2 * m2->x4y3 + m1->x4y2 * m2->x4y4,
+                  m1->x1y2 * m2->x1y1 + m1->x2y2 * m2->x1y2 + m1->x3y2 * m2->x1y3 + m1->x4y2 * m2->x1y4,
+                  m1->x1y2 * m2->x2y1 + m1->x2y2 * m2->x2y2 + m1->x3y2 * m2->x2y3 + m1->x4y2 * m2->x2y4,
+                  m1->x1y2 * m2->x3y1 + m1->x2y2 * m2->x3y2 + m1->x3y2 * m2->x3y3 + m1->x4y2 * m2->x3y4,
+                  m1->x1y2 * m2->x4y1 + m1->x2y2 * m2->x4y2 + m1->x3y2 * m2->x4y3 + m1->x4y2 * m2->x4y4,
 
-        m1->x1y3 * m2->x1y1 + m1->x2y3 * m2->x1y2 + m1->x3y3 * m2->x1y3 + m1->x4y3 * m2->x1y4,
-        m1->x1y3 * m2->x2y1 + m1->x2y3 * m2->x2y2 + m1->x3y3 * m2->x2y3 + m1->x4y3 * m2->x2y4,
-        m1->x1y3 * m2->x3y1 + m1->x2y3 * m2->x3y2 + m1->x3y3 * m2->x3y3 + m1->x4y3 * m2->x3y4,
-        m1->x1y3 * m2->x4y1 + m1->x2y3 * m2->x4y2 + m1->x3y3 * m2->x4y3 + m1->x4y3 * m2->x4y4,
+                  m1->x1y3 * m2->x1y1 + m1->x2y3 * m2->x1y2 + m1->x3y3 * m2->x1y3 + m1->x4y3 * m2->x1y4,
+                  m1->x1y3 * m2->x2y1 + m1->x2y3 * m2->x2y2 + m1->x3y3 * m2->x2y3 + m1->x4y3 * m2->x2y4,
+                  m1->x1y3 * m2->x3y1 + m1->x2y3 * m2->x3y2 + m1->x3y3 * m2->x3y3 + m1->x4y3 * m2->x3y4,
+                  m1->x1y3 * m2->x4y1 + m1->x2y3 * m2->x4y2 + m1->x3y3 * m2->x4y3 + m1->x4y3 * m2->x4y4,
 
-        m1->x1y4 * m2->x1y1 + m1->x2y4 * m2->x1y2 + m1->x3y4 * m2->x1y3 + m1->x4y4 * m2->x1y4,
-        m1->x1y4 * m2->x2y1 + m1->x2y4 * m2->x2y2 + m1->x3y4 * m2->x2y3 + m1->x4y4 * m2->x2y4,
-        m1->x1y4 * m2->x3y1 + m1->x2y4 * m2->x3y2 + m1->x3y4 * m2->x3y3 + m1->x4y4 * m2->x3y4,
-        m1->x1y4 * m2->x4y1 + m1->x2y4 * m2->x4y2 + m1->x3y4 * m2->x4y3 + m1->x4y4 * m2->x4y4);
+                  m1->x1y4 * m2->x1y1 + m1->x2y4 * m2->x1y2 + m1->x3y4 * m2->x1y3 + m1->x4y4 * m2->x1y4,
+                  m1->x1y4 * m2->x2y1 + m1->x2y4 * m2->x2y2 + m1->x3y4 * m2->x2y3 + m1->x4y4 * m2->x2y4,
+                  m1->x1y4 * m2->x3y1 + m1->x2y4 * m2->x3y2 + m1->x3y4 * m2->x3y3 + m1->x4y4 * m2->x3y4,
+                  m1->x1y4 * m2->x4y1 + m1->x2y4 * m2->x4y2 + m1->x3y4 * m2->x4y3 + m1->x4y4 * m2->x4y4);
 
     return m1;
 }
 
 Matrix4x4 *matrix4x4_op_multiply_2(const Matrix4x4 *m1, Matrix4x4 *m2) {
 
-    matrix4x4_set(
-        m2,
-        m1->x1y1 * m2->x1y1 + m1->x2y1 * m2->x1y2 + m1->x3y1 * m2->x1y3 + m1->x4y1 * m2->x1y4,
-        m1->x1y1 * m2->x2y1 + m1->x2y1 * m2->x2y2 + m1->x3y1 * m2->x2y3 + m1->x4y1 * m2->x2y4,
-        m1->x1y1 * m2->x3y1 + m1->x2y1 * m2->x3y2 + m1->x3y1 * m2->x3y3 + m1->x4y1 * m2->x3y4,
-        m1->x1y1 * m2->x4y1 + m1->x2y1 * m2->x4y2 + m1->x3y1 * m2->x4y3 + m1->x4y1 * m2->x4y4,
+    matrix4x4_set(m2,
+                  m1->x1y1 * m2->x1y1 + m1->x2y1 * m2->x1y2 + m1->x3y1 * m2->x1y3 + m1->x4y1 * m2->x1y4,
+                  m1->x1y1 * m2->x2y1 + m1->x2y1 * m2->x2y2 + m1->x3y1 * m2->x2y3 + m1->x4y1 * m2->x2y4,
+                  m1->x1y1 * m2->x3y1 + m1->x2y1 * m2->x3y2 + m1->x3y1 * m2->x3y3 + m1->x4y1 * m2->x3y4,
+                  m1->x1y1 * m2->x4y1 + m1->x2y1 * m2->x4y2 + m1->x3y1 * m2->x4y3 + m1->x4y1 * m2->x4y4,
 
-        m1->x1y2 * m2->x1y1 + m1->x2y2 * m2->x1y2 + m1->x3y2 * m2->x1y3 + m1->x4y2 * m2->x1y4,
-        m1->x1y2 * m2->x2y1 + m1->x2y2 * m2->x2y2 + m1->x3y2 * m2->x2y3 + m1->x4y2 * m2->x2y4,
-        m1->x1y2 * m2->x3y1 + m1->x2y2 * m2->x3y2 + m1->x3y2 * m2->x3y3 + m1->x4y2 * m2->x3y4,
-        m1->x1y2 * m2->x4y1 + m1->x2y2 * m2->x4y2 + m1->x3y2 * m2->x4y3 + m1->x4y2 * m2->x4y4,
+                  m1->x1y2 * m2->x1y1 + m1->x2y2 * m2->x1y2 + m1->x3y2 * m2->x1y3 + m1->x4y2 * m2->x1y4,
+                  m1->x1y2 * m2->x2y1 + m1->x2y2 * m2->x2y2 + m1->x3y2 * m2->x2y3 + m1->x4y2 * m2->x2y4,
+                  m1->x1y2 * m2->x3y1 + m1->x2y2 * m2->x3y2 + m1->x3y2 * m2->x3y3 + m1->x4y2 * m2->x3y4,
+                  m1->x1y2 * m2->x4y1 + m1->x2y2 * m2->x4y2 + m1->x3y2 * m2->x4y3 + m1->x4y2 * m2->x4y4,
 
-        m1->x1y3 * m2->x1y1 + m1->x2y3 * m2->x1y2 + m1->x3y3 * m2->x1y3 + m1->x4y3 * m2->x1y4,
-        m1->x1y3 * m2->x2y1 + m1->x2y3 * m2->x2y2 + m1->x3y3 * m2->x2y3 + m1->x4y3 * m2->x2y4,
-        m1->x1y3 * m2->x3y1 + m1->x2y3 * m2->x3y2 + m1->x3y3 * m2->x3y3 + m1->x4y3 * m2->x3y4,
-        m1->x1y3 * m2->x4y1 + m1->x2y3 * m2->x4y2 + m1->x3y3 * m2->x4y3 + m1->x4y3 * m2->x4y4,
+                  m1->x1y3 * m2->x1y1 + m1->x2y3 * m2->x1y2 + m1->x3y3 * m2->x1y3 + m1->x4y3 * m2->x1y4,
+                  m1->x1y3 * m2->x2y1 + m1->x2y3 * m2->x2y2 + m1->x3y3 * m2->x2y3 + m1->x4y3 * m2->x2y4,
+                  m1->x1y3 * m2->x3y1 + m1->x2y3 * m2->x3y2 + m1->x3y3 * m2->x3y3 + m1->x4y3 * m2->x3y4,
+                  m1->x1y3 * m2->x4y1 + m1->x2y3 * m2->x4y2 + m1->x3y3 * m2->x4y3 + m1->x4y3 * m2->x4y4,
 
-        m1->x1y4 * m2->x1y1 + m1->x2y4 * m2->x1y2 + m1->x3y4 * m2->x1y3 + m1->x4y4 * m2->x1y4,
-        m1->x1y4 * m2->x2y1 + m1->x2y4 * m2->x2y2 + m1->x3y4 * m2->x2y3 + m1->x4y4 * m2->x2y4,
-        m1->x1y4 * m2->x3y1 + m1->x2y4 * m2->x3y2 + m1->x3y4 * m2->x3y3 + m1->x4y4 * m2->x3y4,
-        m1->x1y4 * m2->x4y1 + m1->x2y4 * m2->x4y2 + m1->x3y4 * m2->x4y3 + m1->x4y4 * m2->x4y4);
+                  m1->x1y4 * m2->x1y1 + m1->x2y4 * m2->x1y2 + m1->x3y4 * m2->x1y3 + m1->x4y4 * m2->x1y4,
+                  m1->x1y4 * m2->x2y1 + m1->x2y4 * m2->x2y2 + m1->x3y4 * m2->x2y3 + m1->x4y4 * m2->x2y4,
+                  m1->x1y4 * m2->x3y1 + m1->x2y4 * m2->x3y2 + m1->x3y4 * m2->x3y3 + m1->x4y4 * m2->x3y4,
+                  m1->x1y4 * m2->x4y1 + m1->x2y4 * m2->x4y2 + m1->x3y4 * m2->x4y3 + m1->x4y4 * m2->x4y4);
 
     return m2;
 }
@@ -526,23 +521,22 @@ Matrix4x4 *matrix4x4_new_from_axis_rotation(const float radians,
     float4x4_cosp = 1.0f - float4x4_cos;
     float4x4_sin = sinf(radians);
 
-    Matrix4x4 *m = matrix4x4_new(
-        float4x4_cos + float4x4_cosp * float4x4_v.x * float4x4_v.x,
-        float4x4_cosp * float4x4_v.x * float4x4_v.y - float4x4_v.z * float4x4_sin,
-        float4x4_cosp * float4x4_v.x * float4x4_v.z + float4x4_v.y * float4x4_sin,
-        0.0,
-        float4x4_cosp * float4x4_v.x * float4x4_v.y + float4x4_v.z * float4x4_sin,
-        float4x4_cos + float4x4_cosp * float4x4_v.y * float4x4_v.y,
-        float4x4_cosp * float4x4_v.y * float4x4_v.z - float4x4_v.x * float4x4_sin,
-        0.0,
-        float4x4_cosp * float4x4_v.x * float4x4_v.z - float4x4_v.y * float4x4_sin,
-        float4x4_cosp * float4x4_v.y * float4x4_v.z + float4x4_v.x * float4x4_sin,
-        float4x4_cos + float4x4_cosp * float4x4_v.z * float4x4_v.z,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0);
+    Matrix4x4 *m = matrix4x4_new(float4x4_cos + float4x4_cosp * float4x4_v.x * float4x4_v.x,
+                                 float4x4_cosp * float4x4_v.x * float4x4_v.y - float4x4_v.z * float4x4_sin,
+                                 float4x4_cosp * float4x4_v.x * float4x4_v.z + float4x4_v.y * float4x4_sin,
+                                 0.0,
+                                 float4x4_cosp * float4x4_v.x * float4x4_v.y + float4x4_v.z * float4x4_sin,
+                                 float4x4_cos + float4x4_cosp * float4x4_v.y * float4x4_v.y,
+                                 float4x4_cosp * float4x4_v.y * float4x4_v.z - float4x4_v.x * float4x4_sin,
+                                 0.0,
+                                 float4x4_cosp * float4x4_v.x * float4x4_v.z - float4x4_v.y * float4x4_sin,
+                                 float4x4_cosp * float4x4_v.y * float4x4_v.z + float4x4_v.x * float4x4_sin,
+                                 float4x4_cos + float4x4_cosp * float4x4_v.z * float4x4_v.z,
+                                 0.0,
+                                 0.0,
+                                 0.0,
+                                 0.0,
+                                 1.0);
 
     return m;
 }

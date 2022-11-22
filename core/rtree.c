@@ -365,9 +365,7 @@ RtreeNode *_rtree_split_node_quadratic(Rtree *r, RtreeNode *toSplit) {
 #endif
 #if DEBUG_RTREE_EXTRA_LOGS
     if (heightIncreased) {
-        cclog_debug("🏞 r-tree node split w/ %d reinsertion, height increased to %d",
-                    reinsertCount,
-                    r->h);
+        cclog_debug("🏞 r-tree node split w/ %d reinsertion, height increased to %d", reinsertCount, r->h);
     } else {
         cclog_debug("🏞 r-tree node split w/ %d reinsertion", reinsertCount);
     }
@@ -477,9 +475,7 @@ void _rtree_condense(Rtree *r, RtreeNode *start) {
 #endif
 #if DEBUG_RTREE_EXTRA_LOGS
     if (removalCount > 0 || reinsertCount > 0) {
-        cclog_debug("🏞 r-tree condensed w/ %d removal & %d reinsertion",
-                    removalCount,
-                    reinsertCount);
+        cclog_debug("🏞 r-tree condensed w/ %d removal & %d reinsertion", removalCount, reinsertCount);
     }
 #endif
 }
@@ -541,9 +537,7 @@ uint8_t rtree_node_get_collides_with(const RtreeNode *rn) {
     return rn->collidesWith;
 }
 
-void rtree_node_set_collision_masks(RtreeNode *leaf,
-                                    const uint8_t groups,
-                                    const uint8_t collidesWith) {
+void rtree_node_set_collision_masks(RtreeNode *leaf, const uint8_t groups, const uint8_t collidesWith) {
     // collision masks can be set only on a leaf
     vx_assert(rtree_node_is_leaf(leaf));
 
@@ -657,11 +651,7 @@ void rtree_insert(Rtree *r, RtreeNode *leaf) {
 #endif
 }
 
-RtreeNode *rtree_create_and_insert(Rtree *r,
-                                   Box *aabb,
-                                   uint8_t groups,
-                                   uint8_t collidesWith,
-                                   void *ptr) {
+RtreeNode *rtree_create_and_insert(Rtree *r, Box *aabb, uint8_t groups, uint8_t collidesWith, void *ptr) {
     RtreeNode *newLeaf = _rtree_node_new_leaf(NULL, aabb, groups, collidesWith, ptr);
     rtree_insert(r, newLeaf);
     return newLeaf;
@@ -882,9 +872,8 @@ float rtree_query_cast_box_step_func(Rtree *r,
         hit = fifo_list_pop(broadPhaseResults);
         while (hit != NULL) {
             swept = box_swept(stepOriginBox, step3, hit->aabb, false, &normal, NULL, EPSILON_ZERO);
-            if (swept < minSwept &&
-                (excludeLeafPtrs == NULL ||
-                 doubly_linked_list_contains(excludeLeafPtrs, hit->leaf) == false)) {
+            if (swept < minSwept && (excludeLeafPtrs == NULL ||
+                                     doubly_linked_list_contains(excludeLeafPtrs, hit->leaf) == false)) {
                 *firstHit = hit;
                 minSwept = swept;
             }
@@ -1039,8 +1028,7 @@ bool debug_rtree_integrity_check(Rtree *r) {
                     if (float3_isEqual(&rn->aabb->min, &rbLeaf->aabb->min, EPSILON_ZERO) == false ||
                         float3_isEqual(&rn->aabb->max, &rbLeaf->aabb->max, EPSILON_ZERO) == false) {
 
-                        cclog_debug(
-                            "⚠️⚠️⚠️debug_rtree_integrity_check: mismatched leaf");
+                        cclog_debug("⚠️⚠️⚠️debug_rtree_integrity_check: mismatched leaf");
                         success = false;
                     }
                 } else {
@@ -1068,9 +1056,8 @@ bool debug_rtree_integrity_check(Rtree *r) {
             if (box_contains_epsilon(rn->aabb, &child->aabb->min, EPSILON_ZERO) == false ||
                 box_contains_epsilon(rn->aabb, &child->aabb->max, EPSILON_ZERO) == false) {
 
-                cclog_debug(
-                    "⚠️⚠️⚠️debug_rtree_integrity_check: parent aabb does not contain "
-                    "child aabb");
+                cclog_debug("⚠️⚠️⚠️debug_rtree_integrity_check: parent aabb does not contain "
+                            "child aabb");
                 success = false;
             }
             doubly_linked_list_push_first(toExamine, child);

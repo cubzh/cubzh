@@ -44,15 +44,10 @@ void color_atlas_free(ColorAtlas *a);
 Weakptr *color_atlas_get_weakptr(ColorAtlas *a);
 Weakptr *color_atlas_get_and_retain_weakptr(ColorAtlas *a);
 
-ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a,
-                                                        RGBAColor color,
-                                                        bool isShared);
+ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a, RGBAColor color, bool isShared);
 void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, bool isShared);
 void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p);
-void color_atlas_set_color(ColorAtlas *a,
-                           ATLAS_COLOR_INDEX_INT_T index,
-                           RGBAColor color,
-                           bool isShared);
+void color_atlas_set_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, RGBAColor color, bool isShared);
 RGBAColor *color_atlas_get_color(const ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index);
 void color_atlas_flush_slice(ColorAtlas *a);
 void color_atlas_force_dirty_slice(ColorAtlas *a);

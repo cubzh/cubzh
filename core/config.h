@@ -37,9 +37,8 @@ extern "C" {
 #define PLAYER_ID_SERVER 255       // ID to represent the server
 #define PLAYER_ID_ALL 254          // ID to represent all players
 #define PLAYER_ID_ALL_BUT_SELF 253 // ID to represent all players except the local one
-#define PLAYER_ID_LOCAL_TMP                                                                        \
-    252                    // ID to represent local player on client side before ID is attributed
-#define PLAYER_ID_NONE 251 // ID to represent no one
+#define PLAYER_ID_LOCAL_TMP 252    // ID to represent local player on client side before ID is attributed
+#define PLAYER_ID_NONE 251         // ID to represent no one
 
 #define PLAYER_SCALE 0.5f
 #define PLAYER_AVATAR_BB_SIZE_Y 29.0f // expressed in local space from player root,
@@ -61,8 +60,7 @@ extern "C" {
 #define EVENT_TYPE_SERVER_LOG_INFO 2
 #define EVENT_TYPE_SERVER_LOG_WARNING 3
 #define EVENT_TYPE_SERVER_LOG_ERROR 4
-#define EVENT_TYPE_FROM_SCRIPT_WITH_DEBUG                                                          \
-    5 // sent as EVENT_TYPE_FROM_SCRIPT, with attached debug metadata
+#define EVENT_TYPE_FROM_SCRIPT_WITH_DEBUG 5 // sent as EVENT_TYPE_FROM_SCRIPT, with attached debug metadata
 
 // UNDO MAXIMUM ACTIONS
 #define NB_UNDOABLE_ACTIONS 20
@@ -113,7 +111,7 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Note: M >= 2m to allow for split to not create any under-capacity nodes
 #define RTREE_NODE_MAX_CAPACITY 4
 /// Queries over large distances may be split in steps
-#define RTREE_CAST_STEP_DISTANCE                                                                   \
+#define RTREE_CAST_STEP_DISTANCE                                                                             \
     64.0f // 1/4 of a large-sized map, or "10 frames" of max velocity (PHYSICS_MAX_VELOCITY * .16)
 /// Maximum velocity magnitude in unit/sec for all objects
 #define PHYSICS_MAX_VELOCITY 400.0f
@@ -217,8 +215,8 @@ typedef struct {
     uint8_t green : 4;
     uint8_t blue : 4;
 } VERTEX_LIGHT_STRUCT_T;
-#define DEFAULT_LIGHT(l)                                                                           \
-    l.ambient = 15;                                                                                \
+#define DEFAULT_LIGHT(l)                                                                                     \
+    l.ambient = 15;                                                                                          \
     l.red = l.green = l.blue = 0;
 #define ZERO_LIGHT(l) l.ambient = l.red = l.green = l.blue = 0;
 

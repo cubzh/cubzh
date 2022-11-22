@@ -58,8 +58,7 @@ float easings_circular_out(float v) {
 }
 
 float easings_circular_inout(float v) {
-    return v < 0.5f ? (1 - sqrtf(1 - powf(2 * v, 2))) / 2
-                    : (sqrtf(1 - powf(-2 * v + 2, 2)) + 1) / 2;
+    return v < 0.5f ? (1 - sqrtf(1 - powf(2 * v, 2))) / 2 : (sqrtf(1 - powf(-2 * v + 2, 2)) + 1) / 2;
 }
 
 float easings_bounce_in(float v) {

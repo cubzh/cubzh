@@ -85,8 +85,7 @@ void test_matrix4x4_new_copy(void) {
     TEST_CHECK(source != copy);
 
     // copy values must be identical to source's
-    TEST_CHECK(copy->x1y1 == source->x1y1 && copy->x2y1 == source->x2y1 &&
-               copy->x3y1 == source->x3y1);
+    TEST_CHECK(copy->x1y1 == source->x1y1 && copy->x2y1 == source->x2y1 && copy->x3y1 == source->x3y1);
 
     // modify source's values
     source->x1y1 = 4.0f;
@@ -118,9 +117,8 @@ void test_matrix4x4_new_off_center_orthographic(void) {
     Matrix4x4 *m = matrix4x4_new_off_center_orthographic(l, r, b, t, n, f);
 
     // check constants
-    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f && m->x2y1 == 0.0f &&
-               m->x2y3 == 0.0f && m->x2y4 == 0.0f && m->x3y1 == 0.0f && m->x3y2 == 0.0f &&
-               m->x3y4 == 0.0f && m->x4y4 == 1.0f);
+    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f && m->x2y1 == 0.0f && m->x2y3 == 0.0f &&
+               m->x2y4 == 0.0f && m->x3y1 == 0.0f && m->x3y2 == 0.0f && m->x3y4 == 0.0f && m->x4y4 == 1.0f);
 
     TEST_CHECK(float_isEqual(m->x1y1, 0.5f, EPSILON_ZERO));
     TEST_CHECK(float_isEqual(m->x2y2, 0.25f, EPSILON_ZERO));
@@ -138,9 +136,8 @@ void test_matrix4x4_set_off_center_orthographic(void) {
     Matrix4x4 *m = matrix4x4_new_identity();
     matrix4x4_set_off_center_orthographic(m, l, r, b, t, n, f);
 
-    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f && m->x2y1 == 0.0f &&
-               m->x2y3 == 0.0f && m->x2y4 == 0.0f && m->x3y1 == 0.0f && m->x3y2 == 0.0f &&
-               m->x3y4 == 0.0f && m->x4y4 == 1.0f);
+    TEST_CHECK(m->x1y2 == 0.0f && m->x1y3 == 0.0f && m->x1y4 == 0.0f && m->x2y1 == 0.0f && m->x2y3 == 0.0f &&
+               m->x2y4 == 0.0f && m->x3y1 == 0.0f && m->x3y2 == 0.0f && m->x3y4 == 0.0f && m->x4y4 == 1.0f);
 
     TEST_CHECK(float_isEqual(m->x1y1, 0.5f, EPSILON_ZERO));
     TEST_CHECK(float_isEqual(m->x2y2, 0.25f, EPSILON_ZERO));
@@ -317,8 +314,7 @@ void test_matrix4x4_copy(void) {
     source->x1y4 = 40.0f;
 
     matrix4x4_copy(copy, source);
-    TEST_CHECK(copy->x1y1 == 10.0f && copy->x1y2 == 20.0f && copy->x1y3 == 30.0f &&
-               copy->x1y4 == 40.0f);
+    TEST_CHECK(copy->x1y1 == 10.0f && copy->x1y2 == 20.0f && copy->x1y3 == 30.0f && copy->x1y4 == 40.0f);
     source->x1y1 = 15.0f;
     TEST_CHECK(copy->x1y1 != 15.0f);
 

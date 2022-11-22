@@ -99,8 +99,7 @@ TEST_LIST = {
     {"doubly_linked_list_uint8_pop_back", test_doubly_linked_list_uint8_pop_back},
     {"doubly_linked_list_uint8_front", test_doubly_linked_list_uint8_front},
     {"doubly_linked_list_uint8_back", test_doubly_linked_list_uint8_back},
-    {"doubly_linked_list_uint8_insert_node_before",
-     test_doubly_linked_list_uint8_insert_node_before},
+    {"doubly_linked_list_uint8_insert_node_before", test_doubly_linked_list_uint8_insert_node_before},
     {"doubly_linked_list_uint8_insert_node_after", test_doubly_linked_list_uint8_insert_node_after},
     {"doubly_linked_list_uint8_delete_node", test_doubly_linked_list_uint8_delete_node},
 

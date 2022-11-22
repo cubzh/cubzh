@@ -35,11 +35,7 @@ struct _Quaternion {
 
 static const Quaternion quaternion_identity = {0.0f, 0.0f, 0.0f, 1.0f, true};
 
-Quaternion *quaternion_new(const float x,
-                           const float y,
-                           const float z,
-                           const float w,
-                           const bool normalized);
+Quaternion *quaternion_new(const float x, const float y, const float z, const float w, const bool normalized);
 Quaternion *quaternion_new_identity(void);
 void quaternion_free(Quaternion *q);
 

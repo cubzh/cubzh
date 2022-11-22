@@ -878,8 +878,8 @@ RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) 
         case ColliderTransform: {
             rb = transform_get_rigidbody(t);
             if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
-                    rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+                if (_transform_get_dirty(t, TRANSFORM_PHYSICS) || rigidbody_get_collider_dirty(rb) ||
+                    rigidbody_get_rtree_leaf(rb) == NULL) {
 
                     const bool squarify = rigidbody_get_collider_custom(rb) == false;
                     if (rigidbody_is_dynamic(rb)) {
@@ -887,8 +887,7 @@ RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) 
                                                                 rigidbody_get_collider(rb),
                                                                 collider,
                                                                 NULL,
-                                                                squarify ? MinSquarify
-                                                                         : NoSquarify);
+                                                                squarify ? MinSquarify : NoSquarify);
                     } else {
                         transform_utils_box_to_static_collider(t,
                                                                rigidbody_get_collider(rb),
@@ -907,8 +906,8 @@ RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) 
             if (s != NULL) {
                 rb = transform_get_rigidbody(t);
                 if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                    if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
-                        rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+                    if (_transform_get_dirty(t, TRANSFORM_PHYSICS) || rigidbody_get_collider_dirty(rb) ||
+                        rigidbody_get_rtree_leaf(rb) == NULL) {
 
                         shape_compute_world_collider(s, collider);
                     } else {

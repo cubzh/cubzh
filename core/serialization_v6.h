@@ -32,9 +32,7 @@ typedef struct _LocalTransform {
 
 /// Load shape from file
 /// Returns NULL if the shape can't be loaded
-Shape *serialization_v6_load_shape(Stream *s,
-                                   LoadShapeSettings *shapeSettings,
-                                   ColorAtlas *colorAtlas);
+Shape *serialization_v6_load_shape(Stream *s, LoadShapeSettings *shapeSettings, ColorAtlas *colorAtlas);
 
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
@@ -42,10 +40,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                const LoadShapeSettings *const settings);
 
 /// Saves shape in file w/ optional palette
-bool serialization_v6_save_shape(Shape *shape,
-                                 const void *imageData,
-                                 uint32_t imageDataSize,
-                                 FILE *fd);
+bool serialization_v6_save_shape(Shape *shape, const void *imageData, uint32_t imageDataSize, FILE *fd);
 
 /// Serialize a shape in a newly created memory buffer
 bool serialization_v6_save_shape_as_buffer(const Shape *shape,

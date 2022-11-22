@@ -97,10 +97,7 @@ void *octree_iterator_get_element(const OctreeIterator *oi);
 uint16_t octree_iterator_get_current_node_size(const OctreeIterator *oi);
 
 // Returns iterator's current position
-void octree_iterator_get_current_position(const OctreeIterator *oi,
-                                          uint16_t *x,
-                                          uint16_t *y,
-                                          uint16_t *z);
+void octree_iterator_get_current_position(const OctreeIterator *oi, uint16_t *x, uint16_t *y, uint16_t *z);
 
 // jumps to next element, skipping current branch if skip_current_branch is true.
 void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *found);

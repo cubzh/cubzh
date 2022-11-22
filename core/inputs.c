@@ -326,13 +326,7 @@ InputEventWithHistory *input_pressedInputsImGui(void) {
     return inputContext()->pressedInputsImgui;
 }
 
-void postMouseEvent(float x,
-                    float y,
-                    float dx,
-                    float dy,
-                    MouseButton button,
-                    bool down,
-                    bool move) {
+void postMouseEvent(float x, float y, float dx, float dy, MouseButton button, bool down, bool move) {
 
     InputContext *c = inputContext();
 

@@ -30,8 +30,7 @@
 
 // generate a touch event and check if it is considered as one
 void test_isTouchEventID(void) {
-    InputListener
-        *il = input_listener_new(false, true, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, true, false, false, false, false, false, false, false);
     postTouchEvent(0, 1.0f, 2.0f, 1.0f, 2.0f, TouchStateDown, true);
 
     // has to change if more touches are allowed
@@ -45,8 +44,7 @@ void test_isTouchEventID(void) {
 
 // generate 2 touch events and check that only the 1st one is considered as finger1
 void test_isFinger1EventID(void) {
-    InputListener
-        *il = input_listener_new(false, true, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, true, false, false, false, false, false, false, false);
     postTouchEvent(0, 1.0f, 2.0f, 1.0f, 2.0f, TouchStateDown, true);
     postTouchEvent(1, 3.0f, 1.0f, 2.0f, -1.0f, TouchStateUp, true);
 
@@ -61,8 +59,7 @@ void test_isFinger1EventID(void) {
 
 // generate 2 touch events and check that only the second is considered as finger2
 void test_isFinger2EventID(void) {
-    InputListener
-        *il = input_listener_new(false, true, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, true, false, false, false, false, false, false, false);
     postTouchEvent(0, 1.0f, 2.0f, 1.0f, 2.0f, TouchStateDown, true);
     postTouchEvent(1, 3.0f, 1.0f, 2.0f, -1.0f, TouchStateUp, true);
 
@@ -91,8 +88,7 @@ void test_isMouseRightButtonID(void) {
 
 // create an InputListener  and check that all its lists are empty
 void test_input_listener_new(void) {
-    InputListener
-        *il = input_listener_new(true, false, true, true, false, false, false, false, false);
+    InputListener *il = input_listener_new(true, false, true, true, false, false, false, false, false);
 
     TEST_CHECK(input_listener_pop_mouse_event(il) == NULL);
     TEST_CHECK(input_listener_pop_touch_event(il) == NULL);
@@ -107,8 +103,7 @@ void test_input_listener_new(void) {
 
 // create a MouseEvent and check that the values are the provided ones
 void test_input_listener_pop_mouse_event(void) {
-    InputListener
-        *il = input_listener_new(true, false, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(true, false, false, false, false, false, false, false, false);
     postMouseEvent(1.0f, 2.0f, 1.0f, 2.0f, MouseButtonNone, false, true);
     postMouseEvent(3.0f, 1.0f, 2.0f, -1.0f, MouseButtonNone, false, true);
 
@@ -137,8 +132,7 @@ void test_input_listener_pop_mouse_event(void) {
 
 // create a TouchEvent and check that the values are the provided ones
 void test_input_listener_pop_touch_event(void) {
-    InputListener
-        *il = input_listener_new(false, true, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, true, false, false, false, false, false, false, false);
     postTouchEvent(0, 1.0f, 2.0f, 1.0f, 2.0f, TouchStateDown, true);
     postTouchEvent(1, 3.0f, 1.0f, 2.0f, -1.0f, TouchStateUp, true);
 
@@ -167,8 +161,7 @@ void test_input_listener_pop_touch_event(void) {
 
 // create a KeyEvent and check that the values are the provided ones
 void test_input_listener_pop_key_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
     postKeyEvent(InputKeyA, ModifierNone, KeyStateUp);
 
@@ -189,8 +182,7 @@ void test_input_listener_pop_key_event(void) {
 
 // create a CharEvent and check that the values are the provided ones
 void test_input_listener_pop_char_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, true, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, false, true, false, false, false, false, false);
     postCharEvent(65);
     postCharEvent(66);
 
@@ -207,8 +199,7 @@ void test_input_listener_pop_char_event(void) {
 
 // create a DirPadEvent and check that the values are the provided ones
 void test_input_listener_pop_dir_pad_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, true, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, false, false, true, false, false, false, false);
     postDirPadEvent(1.0f, 0.0f, PadBtnStateDown);
     postDirPadEvent(-1.0f, 0.0f, PadBtnStateUp);
 
@@ -229,8 +220,7 @@ void test_input_listener_pop_dir_pad_event(void) {
 
 // create an ActionPadEvent and check that the values are the provided ones
 void test_input_listener_pop_action_pad_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, true, false, false, false);
+    InputListener *il = input_listener_new(false, false, false, false, false, true, false, false, false);
     postActionPadEvent(ActionPadBtn1, PadBtnStateDown);
     postActionPadEvent(ActionPadBtn1, PadBtnStateUp);
 
@@ -249,8 +239,7 @@ void test_input_listener_pop_action_pad_event(void) {
 
 // create an AnalogPadEvent and check that the values are the provided ones
 void test_input_listener_pop_analog_pad_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, false, true, false, false);
+    InputListener *il = input_listener_new(false, false, false, false, false, false, true, false, false);
     postAnalogPadEvent(1.0f, 0.0f, PadBtnStateDown);
     postAnalogPadEvent(-1.0f, 0.0f, PadBtnStateUp);
 
@@ -271,8 +260,7 @@ void test_input_listener_pop_analog_pad_event(void) {
 
 // same tests as before
 void test_postMouseEvent(void) {
-    InputListener
-        *il = input_listener_new(true, false, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(true, false, false, false, false, false, false, false, false);
     postMouseEvent(1.0f, 2.0f, 1.0f, 2.0f, MouseButtonNone, false, true);
     postMouseEvent(3.0f, 1.0f, 2.0f, -1.0f, MouseButtonNone, false, true);
 
@@ -301,8 +289,7 @@ void test_postMouseEvent(void) {
 
 // same tests as before
 void test_postTouchEvent(void) {
-    InputListener
-        *il = input_listener_new(false, true, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, true, false, false, false, false, false, false, false);
     postTouchEvent(0, 1.0f, 2.0f, 1.0f, 2.0f, TouchStateDown, true);
     postTouchEvent(1, 3.0f, 1.0f, 2.0f, -1.0f, TouchStateUp, true);
 
@@ -331,8 +318,7 @@ void test_postTouchEvent(void) {
 
 // same tests as before
 void test_postKeyEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
     postKeyEvent(InputKeyA, ModifierNone, KeyStateUp);
 
@@ -353,8 +339,7 @@ void test_postKeyEvent(void) {
 
 // same tests as before
 void test_postCharEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, true, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, false, true, false, false, false, false, false);
     postCharEvent(65);
     postCharEvent(66);
 
@@ -371,8 +356,7 @@ void test_postCharEvent(void) {
 
 // same tests as before
 void test_postDirPadEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, true, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, false, false, true, false, false, false, false);
     postDirPadEvent(1.0f, 0.0f, PadBtnStateDown);
     postDirPadEvent(-1.0f, 0.0f, PadBtnStateUp);
 
@@ -393,8 +377,7 @@ void test_postDirPadEvent(void) {
 
 // same tests as before
 void test_postActionPadEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, true, false, false, false);
+    InputListener *il = input_listener_new(false, false, false, false, false, true, false, false, false);
     postActionPadEvent(ActionPadBtn1, PadBtnStateDown);
     postActionPadEvent(ActionPadBtn1, PadBtnStateUp);
 
@@ -413,8 +396,7 @@ void test_postActionPadEvent(void) {
 
 // same tests as before
 void test_postAnalogPadEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, false, true, false, false);
+    InputListener *il = input_listener_new(false, false, false, false, false, false, true, false, false);
     postAnalogPadEvent(1.0f, 0.0f, PadBtnStateDown);
     postAnalogPadEvent(-1.0f, 0.0f, PadBtnStateUp);
 
@@ -435,8 +417,7 @@ void test_postAnalogPadEvent(void) {
 
 // create KeyEvents with and without ModifierShift and check the value of shiftIsOn
 void test_input_shiftIsOn(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     uint8_t modAll = ModifierAlt | ModifierCtrl | ModifierShift | ModifierSuper;
     uint8_t modAllButShift = ModifierAlt | ModifierCtrl | ModifierSuper;
 
@@ -451,8 +432,7 @@ void test_input_shiftIsOn(void) {
 
 // create KeyEvents with and without ModifierAlt and check the value of altIsOn
 void test_input_altIsOn(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     uint8_t modAll = ModifierAlt | ModifierCtrl | ModifierShift | ModifierSuper;
     uint8_t modAllButAlt = ModifierCtrl | ModifierShift | ModifierSuper;
 
@@ -467,8 +447,7 @@ void test_input_altIsOn(void) {
 
 // create KeyEvents with and without ModifierCtrl and check the value of ctrlIsOn
 void test_input_ctrlIsOn(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     uint8_t modAll = ModifierAlt | ModifierCtrl | ModifierShift | ModifierSuper;
     uint8_t modAllButCtrl = ModifierAlt | ModifierShift | ModifierSuper;
 
@@ -483,8 +462,7 @@ void test_input_ctrlIsOn(void) {
 
 // create KeyEvents with and without ModifierSuper and check the value of superIsOn
 void test_input_superIsOn(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     uint8_t modAll = ModifierAlt | ModifierCtrl | ModifierShift | ModifierSuper;
     uint8_t modAllButSuper = ModifierAlt | ModifierCtrl | ModifierShift;
 
@@ -499,8 +477,7 @@ void test_input_superIsOn(void) {
 
 // check if InputKeyA is one before, during and after a press
 void test_input_isOn(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
 
     TEST_CHECK(input_isOn(InputKeyA) == false);
 
@@ -516,8 +493,7 @@ void test_input_isOn(void) {
 
 // press 3 keys and check that we have 3 keys pressed
 void test_input_nbPressedInputsImGui(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, true);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, true);
 
     // reset possible registered inputs
     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
@@ -560,8 +536,7 @@ void test_input_nbPressedInputsImGui(void) {
 
 // press A, B and C and check that the hostory is in the correct order
 void test_input_pressedInputsImGui(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(false, false, true, false, false, false, false, false, false);
     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
     postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
     postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
@@ -589,8 +564,7 @@ void test_input_pressedInputsImGui(void) {
 void test_input_get_cursor(void) {
     float x = 0.0f, y = 0.0f;
     bool b1 = false, b2 = false, b3 = false;
-    InputListener
-        *il = input_listener_new(true, false, false, false, false, false, false, false, false);
+    InputListener *il = input_listener_new(true, false, false, false, false, false, false, false, false);
     inputs_set_nb_pixels_in_one_point(1.0f);
 
     postMouseEvent(1.0f, 2.0f, 1.0f, 2.0f, MouseButtonLeft, true, true);

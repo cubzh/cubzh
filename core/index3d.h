@@ -60,11 +60,7 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
 
 // index3d_remove removes ptr from index at given position, optionally maintaining given iterator
 // @returns removed pointer or NULL if not found. Its caller's responsibility to free memory.
-void *index3d_remove(Index3D *index,
-                     const int32_t x,
-                     const int32_t y,
-                     const int32_t z,
-                     Index3DIterator *it);
+void *index3d_remove(Index3D *index, const int32_t x, const int32_t y, const int32_t z, Index3DIterator *it);
 
 // returns new iterator
 Index3DIterator *index3d_iterator_new(Index3D *index);

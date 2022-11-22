@@ -219,10 +219,7 @@ void _light_removal_processNeighbor(Shape *s,
                                     LightNodeQueue *lightQueue,
                                     LightRemovalNodeQueue *lightRemovalQueue);
 /// insert light values and if necessary (lightQueue != NULL) add it to the light propagation queue
-void _light_enqueue_source(int3 *pos,
-                           Shape *shape,
-                           VERTEX_LIGHT_STRUCT_T source,
-                           LightNodeQueue *lightQueue);
+void _light_enqueue_source(int3 *pos, Shape *shape, VERTEX_LIGHT_STRUCT_T source, LightNodeQueue *lightQueue);
 /// propagate light values at a given block
 void _light_block_propagate(Shape *s,
                             int3 *bbMin,
@@ -402,23 +399,14 @@ Shape *shape_make_copy(Shape *origin) {
             for (SHAPE_COORDS_INT_T z = 0; z <= origin->maxDepth; z += 1) {
                 b = shape_get_block(origin, x, y, z, false);
                 if (b != NULL && b->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                    shape_add_block_with_color(s,
-                                               b->colorIndex,
-                                               x,
-                                               y,
-                                               z,
-                                               false,
-                                               false,
-                                               false,
-                                               false);
+                    shape_add_block_with_color(s, b->colorIndex, x, y, z, false, false, false, false);
                 }
             }
         }
     }
 
     if (s->usesLighting) {
-        size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth *
-                              sizeof(VERTEX_LIGHT_STRUCT_T);
+        size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
         memcpy(s->lightingData, origin->lightingData, lightingSize);
     }
@@ -497,8 +485,7 @@ Shape *shape_make_with_octree(const uint16_t width,
 VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
     // estimate new VB capacity
     size_t capacity;
-    uint8_t *flag = transparency ? &shape->vbAllocationFlag_transparent
-                                 : &shape->vbAllocationFlag_opaque;
+    uint8_t *flag = transparency ? &shape->vbAllocationFlag_transparent : &shape->vbAllocationFlag_opaque;
     switch (*flag) {
         // uninitialized or last buffer capacity was capped (1a)
         case 0: {
@@ -508,17 +495,14 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
             // estimation based on maximum of shape shell vs. shape volume block-occupancy
             size_t shell = (minimum(size->z, 2) * size->x * size->y +
                             minimum(size->y, 2) * size->x * maximum(size->z - 2, 0) +
-                            minimum(size->x, 2) * maximum(size->z - 2, 0) *
-                                maximum(size->y - 2, 0));
+                            minimum(size->x, 2) * maximum(size->z - 2, 0) * maximum(size->y - 2, 0));
             float volume = (float)(size->x * size->y * size->z) * VERTEX_BUFFER_VOLUME_OCCUPANCY;
             if (shell >= volume) {
-                capacity = (size_t)(ceilf(
-                    (float)shell * VERTEX_BUFFER_SHELL_FACTOR *
-                    (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
+                capacity = (size_t)(ceilf((float)shell * VERTEX_BUFFER_SHELL_FACTOR *
+                                          (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
             } else {
-                capacity = (size_t)(ceilf(
-                    volume * VERTEX_BUFFER_VOLUME_FACTOR *
-                    (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
+                capacity = (size_t)(ceilf(volume * VERTEX_BUFFER_VOLUME_FACTOR *
+                                          (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
             }
 
             // if this shape is exceptionally big and caps max VB count, next VB should be created
@@ -830,9 +814,7 @@ bool shape_is_resizable(const Shape *shape) {
 
 // sets "needs display" to neighbor chunks when updating
 // blocks on the edges.
-void shape_chunk_inform_neighbors_about_change(Shape *shape,
-                                               const Chunk *chunk,
-                                               const int3 *block_pos) {
+void shape_chunk_inform_neighbors_about_change(Shape *shape, const Chunk *chunk, const int3 *block_pos) {
 
     if (block_pos->x == 0) { // left side
         shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Left));
@@ -951,10 +933,7 @@ bool shape_add_block_from_lua(Shape *const shape,
     vx_assert(shape != NULL);
 
     // a new block cannot be added if their is an existing block at those coords
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
+    const Block *existingBlock = shape_get_block(shape, luaX, luaY, luaZ,
                                                  true); // xyz are lua coords
 
     if (block_is_solid(existingBlock) == true) {
@@ -991,10 +970,7 @@ bool shape_remove_block_from_lua(Shape *const shape,
     vx_assert(shape != NULL);
 
     // check whether a block already exists at the given coordinates
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
+    const Block *existingBlock = shape_get_block(shape, luaX, luaY, luaZ,
                                                  true); // xyz are lua coords
 
     if (block_is_solid(existingBlock) == false) {
@@ -1028,10 +1004,7 @@ bool shape_replace_block_from_lua(Shape *const shape,
     vx_assert(shape != NULL);
 
     // check whether a block already exists at the given coordinates
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
+    const Block *existingBlock = shape_get_block(shape, luaX, luaY, luaZ,
                                                  true); // xyz are lua coords
 
     if (block_is_solid(existingBlock) == false) {
@@ -1372,48 +1345,42 @@ void shape_get_chunk_neighbors(const Shape *shape,
              (pos->x - CHUNK_WIDTH) >> CHUNK_WIDTH_SQRT,
              pos->y >> CHUNK_HEIGHT_SQRT,
              pos->z >> CHUNK_DEPTH_SQRT);
-    *left = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
+    *left = (Chunk *)index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
 
     // right
     int3_set(&neighbor_ldf_pos,
              (pos->x + CHUNK_WIDTH) >> CHUNK_WIDTH_SQRT,
              pos->y >> CHUNK_HEIGHT_SQRT,
              pos->z >> CHUNK_DEPTH_SQRT);
-    *right = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
+    *right = (Chunk *)index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
 
     // top
     int3_set(&neighbor_ldf_pos,
              pos->x >> CHUNK_WIDTH_SQRT,
              (pos->y + CHUNK_HEIGHT) >> CHUNK_HEIGHT_SQRT,
              pos->z >> CHUNK_DEPTH_SQRT);
-    *top = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
+    *top = (Chunk *)index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
 
     // bottom
     int3_set(&neighbor_ldf_pos,
              pos->x >> CHUNK_WIDTH_SQRT,
              (pos->y - CHUNK_HEIGHT) >> CHUNK_HEIGHT_SQRT,
              pos->z >> CHUNK_DEPTH_SQRT);
-    *bottom = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
+    *bottom = (Chunk *)index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
 
     // front
     int3_set(&neighbor_ldf_pos,
              pos->x >> CHUNK_WIDTH_SQRT,
              pos->y >> CHUNK_HEIGHT_SQRT,
              (pos->z - CHUNK_DEPTH) >> CHUNK_DEPTH_SQRT);
-    *front = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
+    *front = (Chunk *)index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
 
     // back
     int3_set(&neighbor_ldf_pos,
              pos->x >> CHUNK_WIDTH_SQRT,
              pos->y >> CHUNK_HEIGHT_SQRT,
              (pos->z + CHUNK_DEPTH) >> CHUNK_DEPTH_SQRT);
-    *back = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
+    *back = (Chunk *)index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
 }
 
 void shape_get_chunk_and_position_within(const Shape *shape,
@@ -1465,9 +1432,8 @@ uint16_t shape_get_max_fixed_size(const Shape *shape) {
     if (_has_fixed_size(shape)) {
         return maximum(shape->maxWidth, maximum(shape->maxHeight, shape->maxDepth));
     } else {
-        return maximum(
-            shape->box->max.x - shape->box->min.x,
-            maximum(shape->box->max.y - shape->box->min.y, shape->box->max.z - shape->box->min.z));
+        return maximum(shape->box->max.x - shape->box->min.x,
+                       maximum(shape->box->max.y - shape->box->min.y, shape->box->max.z - shape->box->min.z));
     }
 }
 
@@ -1475,15 +1441,10 @@ bool shape_is_within_fixed_bounds(const Shape *shape,
                                   const SHAPE_COORDS_INT_T x,
                                   const SHAPE_COORDS_INT_T y,
                                   const SHAPE_COORDS_INT_T z) {
-    return (x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 &&
-            z < shape->maxDepth);
+    return (x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 && z < shape->maxDepth);
 }
 
-void shape_box_to_aabox(const Shape *s,
-                        const Box *box,
-                        Box *aabox,
-                        bool isCollider,
-                        bool squarify) {
+void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider, bool squarify) {
     if (s == NULL)
         return;
     if (box == NULL)
@@ -1507,11 +1468,7 @@ void shape_box_to_aabox(const Shape *s,
                                                    squarify ? MinSquarify : NoSquarify);
         }
     } else {
-        transform_utils_box_to_aabb(s->transform,
-                                    box,
-                                    aabox,
-                                    offset,
-                                    squarify ? MinSquarify : NoSquarify);
+        transform_utils_box_to_aabb(s->transform, box, aabox, offset, squarify ? MinSquarify : NoSquarify);
     }
 }
 
@@ -1650,13 +1607,7 @@ void shape_shrink_box(Shape *shape) {
     }
     SHAPE_SIZE_INT_T size_x, size_y, size_z;
     SHAPE_COORDS_INT_T origin_x, origin_y, origin_z;
-    shape_compute_size_and_origin(shape,
-                                  &size_x,
-                                  &size_y,
-                                  &size_z,
-                                  &origin_x,
-                                  &origin_y,
-                                  &origin_z);
+    shape_compute_size_and_origin(shape, &size_x, &size_y, &size_z, &origin_x, &origin_y, &origin_z);
 
     shape->box->min.x = origin_x;
     shape->box->min.y = origin_y;
@@ -1730,9 +1681,8 @@ void shape_make_space(Shape *const shape,
 
     // no need to make space if there is no fixed/allocated size (no octree nor lighting)
     if (_has_fixed_size(shape) == false) {
-        cclog_warning(
-            "⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor "
-            "lighting)");
+        cclog_warning("⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor "
+                      "lighting)");
         return;
     }
 
@@ -1744,13 +1694,9 @@ void shape_make_space(Shape *const shape,
 
     // Convert provided coordinates from Lua coords into "core" coords if needed.
     if (applyOffset == true) {
-        shape_block_lua_to_internal(shape,
-                                    &requiredMinX,
-                                    &requiredMinY,
+        shape_block_lua_to_internal(shape, &requiredMinX, &requiredMinY,
                                     &requiredMinZ); // value += offset
-        shape_block_lua_to_internal(shape,
-                                    &requiredMaxX,
-                                    &requiredMaxY,
+        shape_block_lua_to_internal(shape, &requiredMaxX, &requiredMaxY,
                                     &requiredMaxZ); // value += offset
     }
 
@@ -1833,8 +1779,7 @@ void shape_make_space(Shape *const shape,
     size_t nbChunks = 0;
 
     // largest dimension (among x, y, z)
-    const size_t requiredSizeMax = (size_t)(maximum(maximum(requiredSize.x, requiredSize.y),
-                                                    requiredSize.z));
+    const size_t requiredSizeMax = (size_t)(maximum(maximum(requiredSize.x, requiredSize.y), requiredSize.z));
     size_t octree_size = octree_get_dimension(shape->octree);
 
     int3 delta = int3_zero;
@@ -2008,15 +1953,7 @@ void shape_make_space(Shape *const shape,
                     octree_set_element(octree, (const void *)block_copy, ox, oy, oz);
 
                     // block_copy is stored here, its memory is handled by responsible chunk
-                    _add_block_in_chunks(chunks,
-                                         block_copy,
-                                         ox,
-                                         oy,
-                                         oz,
-                                         NULL,
-                                         &chunkAdded,
-                                         &chunk,
-                                         NULL);
+                    _add_block_in_chunks(chunks, block_copy, ox, oy, oz, NULL, &chunkAdded, &chunk, NULL);
 
                     // flag this chunk as dirty (needs display)
                     if (chunkAdded) {
@@ -2667,11 +2604,7 @@ void shape_compute_world_collider(const Shape *s, Box *box) {
     RigidBody *rb = shape_get_rigidbody(s);
     if (rb == NULL)
         return;
-    shape_box_to_aabox(s,
-                       rigidbody_get_collider(rb),
-                       box,
-                       true,
-                       rigidbody_get_collider_custom(rb) == false);
+    shape_box_to_aabox(s, rigidbody_get_collider(rb), box, true, rigidbody_get_collider_custom(rb) == false);
 }
 
 void shape_set_physics_simulation_mode(const Shape *s, const uint8_t value) {
@@ -2682,8 +2615,7 @@ void shape_set_physics_simulation_mode(const Shape *s, const uint8_t value) {
 
     // reset rigidbody when disabling physics, but keep changes made in Lua prior to enabling
     // physics
-    if (value != RigidbodyModeDynamic &&
-        rigidbody_get_simulation_mode(rb) == RigidbodyModeDynamic) {
+    if (value != RigidbodyModeDynamic && rigidbody_get_simulation_mode(rb) == RigidbodyModeDynamic) {
         rigidbody_reset(rb);
     }
     rigidbody_set_simulation_mode(rb, value);
@@ -2808,13 +2740,7 @@ float shape_box_swept(const Shape *s,
         if (leaf) {
             if (collides) {
                 // nbcubes++;
-                swept = box_swept(b,
-                                  v,
-                                  &tmpBox,
-                                  withReplacement,
-                                  &tmpNormal,
-                                  &tmpReplacement,
-                                  epsilon);
+                swept = box_swept(b, v, &tmpBox, withReplacement, &tmpNormal, &tmpReplacement, epsilon);
                 if (swept < minSwept) {
                     minSwept = swept;
                 }
@@ -2835,8 +2761,7 @@ float shape_box_swept(const Shape *s,
                             extraReplacement->x = tmpReplacement.x;
                         }
                         // previous replacement is negative and new replacement is negative & bigger
-                        else if (extraReplacement->x <= 0.0f &&
-                                 tmpReplacement.x < extraReplacement->x) {
+                        else if (extraReplacement->x <= 0.0f && tmpReplacement.x < extraReplacement->x) {
                             extraReplacement->x = tmpReplacement.x;
                         }
                         // previous & new replacements are opposite... this axis is blocked,
@@ -2849,8 +2774,7 @@ float shape_box_swept(const Shape *s,
                     if (tmpReplacement.y != 0.0f && blockedY == false) {
                         if (extraReplacement->y >= 0.0f && tmpReplacement.y > extraReplacement->y) {
                             extraReplacement->y = tmpReplacement.y;
-                        } else if (extraReplacement->y <= 0.0f &&
-                                   tmpReplacement.y < extraReplacement->y) {
+                        } else if (extraReplacement->y <= 0.0f && tmpReplacement.y < extraReplacement->y) {
                             extraReplacement->y = tmpReplacement.y;
                         } else if (extraReplacement->y * tmpReplacement.y < 0.0f) {
                             extraReplacement->y = 0.0f;
@@ -2860,8 +2784,7 @@ float shape_box_swept(const Shape *s,
                     if (tmpReplacement.z != 0.0f && blockedZ == false) {
                         if (extraReplacement->z >= 0.0f && tmpReplacement.z > extraReplacement->z) {
                             extraReplacement->z = tmpReplacement.z;
-                        } else if (extraReplacement->z <= 0.0f &&
-                                   tmpReplacement.z < extraReplacement->z) {
+                        } else if (extraReplacement->z <= 0.0f && tmpReplacement.z < extraReplacement->z) {
                             extraReplacement->z = tmpReplacement.z;
                         } else if (extraReplacement->z * tmpReplacement.z < 0.0f) {
                             extraReplacement->z = 0.0f;
@@ -3223,8 +3146,7 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
     }
 
     if (s->lightingData == NULL) {
-        cclog_error(
-            "🔥 shape_compute_baked_lighting_removed_block: shape doesn't have lighting data");
+        cclog_error("🔥 shape_compute_baked_lighting_removed_block: shape doesn't have lighting data");
         return;
     }
 
@@ -3380,14 +3302,9 @@ void shape_compute_baked_lighting_added_block(Shape *s,
 
                 block = shape_get_block(s, i3.x, i3.y, i3.z, false);
                 if (block != NULL && color_palette_is_emissive(s->palette, block->colorIndex)) {
-                    light = color_palette_get_emissive_color_as_light(s->palette,
-                                                                      block->colorIndex);
+                    light = color_palette_get_emissive_color_as_light(s->palette, block->colorIndex);
 
-                    light_removal_node_queue_push(lightRemovalQueue,
-                                                  &i3,
-                                                  light,
-                                                  15,
-                                                  block->colorIndex);
+                    light_removal_node_queue_push(lightRemovalQueue, &i3, light, 15, block->colorIndex);
                 }
             }
         }
@@ -3426,8 +3343,7 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
     }
 
     if (s->lightingData == NULL) {
-        cclog_error(
-            "🔥 shape_compute_baked_lighting_replaced_block: shape doesn't have lighting data");
+        cclog_error("🔥 shape_compute_baked_lighting_replaced_block: shape doesn't have lighting data");
         return;
     }
 
@@ -3771,8 +3687,7 @@ static bool _storeShapeInIndex(Shape *s) {
             }
         }
         if (found == false) {
-            Shape **newPtr = (Shape **)realloc(_shapesIndex,
-                                               sizeof(Shape *) * (_shapesIndexLength + 1));
+            Shape **newPtr = (Shape **)realloc(_shapesIndex, sizeof(Shape *) * (_shapesIndexLength + 1));
             if (newPtr == NULL) {
                 // realloc failed, we simple don't add the shape in the index
                 cclog_error(">>> realloc failed");
@@ -3870,7 +3785,7 @@ bool _add_block_in_chunks(Index3D *chunks,
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x - 1,
                                  chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z), // topLeft
+                                 chunk_ldfPos.z),                                             // topLeft
             (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y + 1, chunk_ldfPos.z), // top
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x + 1,
@@ -3903,9 +3818,8 @@ bool _add_block_in_chunks(Index3D *chunks,
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x - 1,
                                  chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z), // bottomLeft
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y - 1, chunk_ldfPos.z), // bottom
+                                 chunk_ldfPos.z),                                             // bottomLeft
+            (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y - 1, chunk_ldfPos.z), // bottom
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x + 1,
                                  chunk_ldfPos.y - 1,
@@ -3925,23 +3839,19 @@ bool _add_block_in_chunks(Index3D *chunks,
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x - 1,
                                  chunk_ldfPos.y,
-                                 chunk_ldfPos.z + 1), // LeftBack
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z + 1), // Back
+                                 chunk_ldfPos.z + 1),                                         // LeftBack
+            (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z + 1), // Back
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x + 1,
                                  chunk_ldfPos.y,
-                                 chunk_ldfPos.z + 1), // RightBack
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x - 1, chunk_ldfPos.y, chunk_ldfPos.z), // Left
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x + 1, chunk_ldfPos.y, chunk_ldfPos.z), // Right
+                                 chunk_ldfPos.z + 1),                                         // RightBack
+            (Chunk *)index3d_get(chunks, chunk_ldfPos.x - 1, chunk_ldfPos.y, chunk_ldfPos.z), // Left
+            (Chunk *)index3d_get(chunks, chunk_ldfPos.x + 1, chunk_ldfPos.y, chunk_ldfPos.z), // Right
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x - 1,
                                  chunk_ldfPos.y,
-                                 chunk_ldfPos.z - 1), // LeftFront
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z - 1), // Front
+                                 chunk_ldfPos.z - 1),                                         // LeftFront
+            (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z - 1), // Front
             (Chunk *)index3d_get(chunks,
                                  chunk_ldfPos.x + 1,
                                  chunk_ldfPos.y,
@@ -3957,10 +3867,7 @@ bool _add_block_in_chunks(Index3D *chunks,
         *added_or_existing_chunk = chunk;
     }
 
-    int3_set(&block_ldfPos,
-             x & CHUNK_WIDTH_MINUS_ONE,
-             y & CHUNK_HEIGHT_MINUS_ONE,
-             z & CHUNK_DEPTH_MINUS_ONE);
+    int3_set(&block_ldfPos, x & CHUNK_WIDTH_MINUS_ONE, y & CHUNK_HEIGHT_MINUS_ONE, z & CHUNK_DEPTH_MINUS_ONE);
 
     if (block_ldfPos_out != NULL) {
         int3_set(block_ldfPos_out, block_ldfPos.x, block_ldfPos.y, block_ldfPos.z);
@@ -4177,11 +4084,7 @@ void _light_removal_processNeighbor(Shape *s,
             _lighting_set_dirty(s, bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
 
             // enqueue neighbor for removal
-            light_removal_node_queue_push(lightRemovalQueue,
-                                          neighborPos,
-                                          insertLight,
-                                          insertSRGB,
-                                          255);
+            light_removal_node_queue_push(lightRemovalQueue, neighborPos, insertLight, insertSRGB, 255);
         }
         // 2) concurrently, if any of the neighbor's light channel still being removed, is higher
         // (but non-zero) than current node, then add the neighbor in the light propagation queue
@@ -4217,11 +4120,7 @@ void _light_enqueue_source(int3 *pos,
                            Shape *shape,
                            VERTEX_LIGHT_STRUCT_T source,
                            LightNodeQueue *lightQueue) {
-    VERTEX_LIGHT_STRUCT_T current = shape_get_light_or_default(shape,
-                                                               pos->x,
-                                                               pos->y,
-                                                               pos->z,
-                                                               false);
+    VERTEX_LIGHT_STRUCT_T current = shape_get_light_or_default(shape, pos->x, pos->y, pos->z, false);
     const bool s = current.ambient < source.ambient;
     const bool r = current.red < source.red;
     const bool g = current.green < source.green;
@@ -4321,12 +4220,11 @@ void _light_block_propagate(Shape *s,
     // if neighbor emissive, enqueue & store original emission of the block (relevant if first
     // propagation)
     else if (color_palette_is_emissive(s->palette, neighbor->colorIndex)) {
-        shape_set_light(
-            s,
-            neighborPos->x,
-            neighborPos->y,
-            neighborPos->z,
-            color_palette_get_emissive_color_as_light(s->palette, neighbor->colorIndex));
+        shape_set_light(s,
+                        neighborPos->x,
+                        neighborPos->y,
+                        neighborPos->z,
+                        color_palette_get_emissive_color_as_light(s->palette, neighbor->colorIndex));
         light_node_queue_push(lightQueue, neighborPos);
     }
 }
@@ -4575,8 +4473,7 @@ void _light_propagate(Shape *s,
 
         // current node is a solid block with at least one face open
         if (isCurrentAir == false && isCurrentOpen) {
-            currentLight = color_palette_get_emissive_color_as_light(s->palette,
-                                                                     current->colorIndex);
+            currentLight = color_palette_get_emissive_color_as_light(s->palette, current->colorIndex);
 
             if (currentLight.red == 0 && currentLight.green == 0 && currentLight.blue == 0) {
                 light_node_queue_recycle(n);
@@ -4597,15 +4494,8 @@ void _light_propagate(Shape *s,
                         insertPos.y = i3.y + yo;
                         insertPos.z = i3.z + zo;
 
-                        if (shape_is_within_fixed_bounds(s,
-                                                         insertPos.x,
-                                                         insertPos.y,
-                                                         insertPos.z)) {
-                            neighbor = shape_get_block(s,
-                                                       insertPos.x,
-                                                       insertPos.y,
-                                                       insertPos.z,
-                                                       false);
+                        if (shape_is_within_fixed_bounds(s, insertPos.x, insertPos.y, insertPos.z)) {
+                            neighbor = shape_get_block(s, insertPos.x, insertPos.y, insertPos.z, false);
                             if (block_is_opaque(neighbor, s->palette) == false) {
                                 _light_enqueue_source(&insertPos, s, currentLight, lightQueue);
                             }
@@ -4663,8 +4553,7 @@ void _light_removal(Shape *s,
         if (shape_is_within_fixed_bounds(s, i3.x, i3.y, i3.z)) {
 
             // if air or transparent block, proceed with light removal
-            if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK ||
-                color_palette_is_transparent(s->palette, blockID)) {
+            if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK || color_palette_is_transparent(s->palette, blockID)) {
                 // x + 1
                 neighbor = shape_get_block(s, i3.x + 1, i3.y, i3.z, false);
                 if (neighbor != NULL) {
@@ -4789,11 +4678,7 @@ void _light_removal(Shape *s,
                             insertPos.y = i3.y + yo;
                             insertPos.z = i3.z + zo;
 
-                            neighbor = shape_get_block(s,
-                                                       insertPos.x,
-                                                       insertPos.y,
-                                                       insertPos.z,
-                                                       false);
+                            neighbor = shape_get_block(s, insertPos.x, insertPos.y, insertPos.z, false);
                             if (neighbor != NULL) {
                                 // only first-degree neighbors remove the emissive block's own RGB
                                 // values (passing equals=true)
@@ -4841,8 +4726,7 @@ void _light_realloc(Shape *s,
     // in that new space
     // TODO: only if it's a light block ; need to manually start light propagation otherwise
 
-    const size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth *
-                                sizeof(VERTEX_LIGHT_STRUCT_T);
+    const size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
     VERTEX_LIGHT_STRUCT_T *lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
     const SHAPE_SIZE_INT_T srcWidth = s->maxWidth - dx;
     const SHAPE_SIZE_INT_T srcHeight = s->maxHeight - dy;
@@ -4869,8 +4753,7 @@ void _light_realloc(Shape *s,
 
                 // set reminder to 0
                 if (dz > offsetZ) {
-                    memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth + offsetZ +
-                               srcDepth,
+                    memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth + offsetZ + srcDepth,
                            0,
                            dz - offsetZ);
                 }
@@ -4885,14 +4768,13 @@ void _light_realloc(Shape *s,
     s->lightingData = lightingData;
 
 #if SHAPE_LIGHTING_DEBUG
-    cclog_debug(
-        "☀️☀️☀️lighting data reallocated w/ delta (%d, %d, %d) offset (%d, %d, %d)",
-        dx,
-        dy,
-        dz,
-        offsetX,
-        offsetY,
-        offsetZ);
+    cclog_debug("☀️☀️☀️lighting data reallocated w/ delta (%d, %d, %d) offset (%d, %d, %d)",
+                dx,
+                dy,
+                dz,
+                offsetX,
+                offsetY,
+                offsetZ);
 #endif
 }
 

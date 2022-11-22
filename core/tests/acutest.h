@@ -97,15 +97,15 @@
  * effects to the outside world (e.g. communicating with some server, inserting
  * into a database etc.).
  */
-#define TEST_ASSERT_(cond, ...)                                                                    \
-    do {                                                                                           \
-        if (!acutest_check_((cond), __FILE__, __LINE__, __VA_ARGS__))                              \
-            acutest_abort_();                                                                      \
+#define TEST_ASSERT_(cond, ...)                                                                              \
+    do {                                                                                                     \
+        if (!acutest_check_((cond), __FILE__, __LINE__, __VA_ARGS__))                                        \
+            acutest_abort_();                                                                                \
     } while (0)
-#define TEST_ASSERT(cond)                                                                          \
-    do {                                                                                           \
-        if (!acutest_check_((cond), __FILE__, __LINE__, "%s", #cond))                              \
-            acutest_abort_();                                                                      \
+#define TEST_ASSERT(cond)                                                                                    \
+    do {                                                                                                     \
+        if (!acutest_check_((cond), __FILE__, __LINE__, "%s", #cond))                                        \
+            acutest_abort_();                                                                                \
     } while (0)
 
 #ifdef __cplusplus
@@ -123,37 +123,37 @@
  * If the function throws anything incompatible with ExpectedExceptionType
  * (or if it does not thrown an exception at all), the check fails.
  */
-#define TEST_EXCEPTION(code, exctype)                                                              \
-    do {                                                                                           \
-        bool exc_ok_ = false;                                                                      \
-        const char *msg_ = NULL;                                                                   \
-        try {                                                                                      \
-            code;                                                                                  \
-            msg_ = "No exception thrown.";                                                         \
-        } catch (exctype const &) {                                                                \
-            exc_ok_ = true;                                                                        \
-        } catch (...) {                                                                            \
-            msg_ = "Unexpected exception thrown.";                                                 \
-        }                                                                                          \
-        acutest_check_(exc_ok_, __FILE__, __LINE__, #code " throws " #exctype);                    \
-        if (msg_ != NULL)                                                                          \
-            acutest_message_("%s", msg_);                                                          \
+#define TEST_EXCEPTION(code, exctype)                                                                        \
+    do {                                                                                                     \
+        bool exc_ok_ = false;                                                                                \
+        const char *msg_ = NULL;                                                                             \
+        try {                                                                                                \
+            code;                                                                                            \
+            msg_ = "No exception thrown.";                                                                   \
+        } catch (exctype const &) {                                                                          \
+            exc_ok_ = true;                                                                                  \
+        } catch (...) {                                                                                      \
+            msg_ = "Unexpected exception thrown.";                                                           \
+        }                                                                                                    \
+        acutest_check_(exc_ok_, __FILE__, __LINE__, #code " throws " #exctype);                              \
+        if (msg_ != NULL)                                                                                    \
+            acutest_message_("%s", msg_);                                                                    \
     } while (0)
-#define TEST_EXCEPTION_(code, exctype, ...)                                                        \
-    do {                                                                                           \
-        bool exc_ok_ = false;                                                                      \
-        const char *msg_ = NULL;                                                                   \
-        try {                                                                                      \
-            code;                                                                                  \
-            msg_ = "No exception thrown.";                                                         \
-        } catch (exctype const &) {                                                                \
-            exc_ok_ = true;                                                                        \
-        } catch (...) {                                                                            \
-            msg_ = "Unexpected exception thrown.";                                                 \
-        }                                                                                          \
-        acutest_check_(exc_ok_, __FILE__, __LINE__, __VA_ARGS__);                                  \
-        if (msg_ != NULL)                                                                          \
-            acutest_message_("%s", msg_);                                                          \
+#define TEST_EXCEPTION_(code, exctype, ...)                                                                  \
+    do {                                                                                                     \
+        bool exc_ok_ = false;                                                                                \
+        const char *msg_ = NULL;                                                                             \
+        try {                                                                                                \
+            code;                                                                                            \
+            msg_ = "No exception thrown.";                                                                   \
+        } catch (exctype const &) {                                                                          \
+            exc_ok_ = true;                                                                                  \
+        } catch (...) {                                                                                      \
+            msg_ = "Unexpected exception thrown.";                                                           \
+        }                                                                                                    \
+        acutest_check_(exc_ok_, __FILE__, __LINE__, __VA_ARGS__);                                            \
+        if (msg_ != NULL)                                                                                    \
+            acutest_message_("%s", msg_);                                                                    \
     } while (0)
 #endif /* #ifdef __cplusplus */
 
@@ -487,8 +487,7 @@ static void acutest_timer_print_diff_(void) {}
 #define ACUTEST_COLOR_GREEN_INTENSIVE_ 4
 #define ACUTEST_COLOR_RED_INTENSIVE_ 5
 
-static int ACUTEST_ATTRIBUTE_(format(printf, 2, 3))
-    acutest_colored_printf_(int color, const char *fmt, ...) {
+static int ACUTEST_ATTRIBUTE_(format(printf, 2, 3)) acutest_colored_printf_(int color, const char *fmt, ...) {
     va_list args;
     char buffer[256];
     int n;
@@ -580,9 +579,7 @@ static void acutest_begin_test_line_(const struct acutest_test_ *test) {
             int n;
             char spaces[48];
 
-            n = acutest_colored_printf_(ACUTEST_COLOR_DEFAULT_INTENSIVE_,
-                                        "Test %s... ",
-                                        test->name);
+            n = acutest_colored_printf_(ACUTEST_COLOR_DEFAULT_INTENSIVE_, "Test %s... ", test->name);
             memset(spaces, ' ', sizeof(spaces));
             if (n < (int)sizeof(spaces))
                 printf("%.*s", (int)sizeof(spaces) - n, spaces);
@@ -661,9 +658,7 @@ int ACUTEST_ATTRIBUTE_(format(printf, 4, 5))
 
         if (!acutest_case_already_logged_ && acutest_case_name_[0]) {
             acutest_line_indent_(1);
-            acutest_colored_printf_(ACUTEST_COLOR_DEFAULT_INTENSIVE_,
-                                    "Case %s:\n",
-                                    acutest_case_name_);
+            acutest_colored_printf_(ACUTEST_COLOR_DEFAULT_INTENSIVE_, "Case %s:\n", acutest_case_name_);
             acutest_test_already_logged_++;
             acutest_case_already_logged_++;
         }
@@ -1148,16 +1143,7 @@ static void acutest_run_(const struct acutest_test_ *test, int index, int master
                   test->name);
         memset(&startupInfo, 0, sizeof(startupInfo));
         startupInfo.cb = sizeof(STARTUPINFO);
-        if (CreateProcessA(NULL,
-                           buffer,
-                           NULL,
-                           NULL,
-                           FALSE,
-                           0,
-                           NULL,
-                           NULL,
-                           &startupInfo,
-                           &processInfo)) {
+        if (CreateProcessA(NULL, buffer, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             GetExitCodeProcess(processInfo.hProcess, &exitCode);
             CloseHandle(processInfo.hThread);
@@ -1235,8 +1221,7 @@ typedef struct acutest_test_CMDLINE_OPTION_ {
 
 static int acutest_cmdline_handle_short_opt_group_(const ACUTEST_CMDLINE_OPTION_ *options,
                                                    const char *arggroup,
-                                                   int (*callback)(int /*optval*/,
-                                                                   const char * /*arg*/)) {
+                                                   int (*callback)(int /*optval*/, const char * /*arg*/)) {
     const ACUTEST_CMDLINE_OPTION_ *opt;
     int i;
     int ret = 0;
@@ -1336,9 +1321,7 @@ static int acutest_cmdline_read_(const ACUTEST_CMDLINE_OPTION_ *options,
                             /* There might be more (argument-less) short options
                              * grouped together. */
                             if (ret == 0 && argv[i][2] != '\0')
-                                ret = acutest_cmdline_handle_short_opt_group_(options,
-                                                                              argv[i] + 2,
-                                                                              callback);
+                                ret = acutest_cmdline_handle_short_opt_group_(options, argv[i] + 2, callback);
                             break;
                         }
                     }
@@ -1458,10 +1441,7 @@ static int acutest_cmdline_callback_(int id, const char *arg) {
             } else if (strcmp(arg, "auto") == 0) {
                 /*noop*/
             } else {
-                fprintf(stderr,
-                        "%s: Unrecognized argument '%s' for option --exec.\n",
-                        acutest_argv0_,
-                        arg);
+                fprintf(stderr, "%s: Unrecognized argument '%s' for option --exec.\n", acutest_argv0_, arg);
                 fprintf(stderr, "Try '%s --help' for more information.\n", acutest_argv0_);
                 acutest_exit_(2);
             }
@@ -1480,10 +1460,7 @@ static int acutest_cmdline_callback_(int id, const char *arg) {
                 acutest_timer_ = 2;
 #endif
             } else {
-                fprintf(stderr,
-                        "%s: Unrecognized argument '%s' for option --time.\n",
-                        acutest_argv0_,
-                        arg);
+                fprintf(stderr, "%s: Unrecognized argument '%s' for option --time.\n", acutest_argv0_, arg);
                 fprintf(stderr, "Try '%s --help' for more information.\n", acutest_argv0_);
                 acutest_exit_(2);
             }
@@ -1519,10 +1496,7 @@ static int acutest_cmdline_callback_(int id, const char *arg) {
             } else if (strcmp(arg, "auto") == 0) {
                 /*noop*/
             } else {
-                fprintf(stderr,
-                        "%s: Unrecognized argument '%s' for option --color.\n",
-                        acutest_argv0_,
-                        arg);
+                fprintf(stderr, "%s: Unrecognized argument '%s' for option --color.\n", acutest_argv0_, arg);
                 fprintf(stderr, "Try '%s --help' for more information.\n", acutest_argv0_);
                 acutest_exit_(2);
             }
@@ -1763,8 +1737,7 @@ int main(int argc, char **argv) {
             printf("  Count of all unit tests:     %4d\n", (int)acutest_list_size_);
             printf("  Count of run unit tests:     %4d\n", acutest_stat_run_units_);
             printf("  Count of failed unit tests:  %4d\n", acutest_stat_failed_units_);
-            printf("  Count of skipped unit tests: %4d\n",
-                   (int)acutest_list_size_ - acutest_stat_run_units_);
+            printf("  Count of skipped unit tests: %4d\n", (int)acutest_list_size_ - acutest_stat_run_units_);
         }
 
         if (acutest_stat_failed_units_ == 0) {
@@ -1807,8 +1780,7 @@ int main(int argc, char **argv) {
                     details->duration);
             if (details->flags & ACUTEST_FLAG_FAILURE_)
                 fprintf(acutest_xml_output_, "    <failure />\n");
-            if (!(details->flags & ACUTEST_FLAG_FAILURE_) &&
-                !(details->flags & ACUTEST_FLAG_SUCCESS_))
+            if (!(details->flags & ACUTEST_FLAG_FAILURE_) && !(details->flags & ACUTEST_FLAG_SUCCESS_))
                 fprintf(acutest_xml_output_, "    <skipped />\n");
             fprintf(acutest_xml_output_, "  </testcase>\n");
         }

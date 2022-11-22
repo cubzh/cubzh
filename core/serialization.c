@@ -154,10 +154,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
     return list;
 }
 
-bool serialization_save_shape(Shape *shape,
-                              const void *imageData,
-                              const uint32_t imageDataSize,
-                              FILE *fd) {
+bool serialization_save_shape(Shape *shape, const void *imageData, const uint32_t imageDataSize, FILE *fd) {
 
     if (shape == NULL) {
         cclog_error("shape pointer is NULL");
@@ -261,10 +258,7 @@ bool get_preview_data(const char *filepath, void **imageData, uint32_t *size) {
 // Memory buffer writing
 // --------------------------------------------------
 
-void serialization_utils_writeCString(void *dest,
-                                      const char *src,
-                                      const size_t n,
-                                      uint32_t *cursor) {
+void serialization_utils_writeCString(void *dest, const char *src, const size_t n, uint32_t *cursor) {
     RETURN_IF_NULL(dest);
     RETURN_IF_NULL(src);
     memcpy(dest, src, n);

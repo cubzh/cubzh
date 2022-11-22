@@ -100,11 +100,7 @@ void box_to_aabox(const Box *b,
                   const float3 *scale,
                   SquarifyType squarify);
 
-void box_to_aabox2(const Box *b,
-                   Box *aab,
-                   const Matrix4x4 *mtx,
-                   const float3 *offset,
-                   SquarifyType squarify);
+void box_to_aabox2(const Box *b, Box *aab, const Matrix4x4 *mtx, const float3 *offset, SquarifyType squarify);
 
 void box_op_merge(const Box *b1, const Box *b2, Box *result);
 

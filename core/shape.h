@@ -392,8 +392,7 @@ bool shape_ray_cast(const Shape *s,
                     uint16_t *z);
 
 bool shape_point_overlap(const Shape *s, const float3 *world);
-bool shape_box_overlap(const Shape *s,
-                       const Box *worldBox,
+bool shape_box_overlap(const Shape *s, const Box *worldBox,
                        float3 *firstOverlap); // note: uses lossy scale
 
 // MARK: - Graphics -

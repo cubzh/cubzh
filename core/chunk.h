@@ -53,9 +53,7 @@ enum Neighbor {
     BottomLeftFront = 25 // bottom
 };
 
-Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
-                 const SHAPE_COORDS_INT_T y,
-                 const SHAPE_COORDS_INT_T z);
+Chunk *chunk_new(const SHAPE_COORDS_INT_T x, const SHAPE_COORDS_INT_T y, const SHAPE_COORDS_INT_T z);
 
 void chunk_destroy(Chunk *chunk);
 

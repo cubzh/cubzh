@@ -185,8 +185,7 @@ Transaction *history_getTransactionToUndo(History *const h) {
 }
 
 bool history_can_redo(const History *const h) {
-    return (h->cursor == NULL && h->oldest != NULL) ||
-           (h->cursor != NULL && h->cursor->nextAction != NULL);
+    return (h->cursor == NULL && h->oldest != NULL) || (h->cursor != NULL && h->cursor->nextAction != NULL);
 }
 
 Transaction *history_getTransactionToRedo(History *const h) {

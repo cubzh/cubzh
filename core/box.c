@@ -60,10 +60,9 @@ void box_get_center(const Box *b, float3 *center) {
 }
 
 bool box_collide(const Box *b1, const Box *b2) {
-    return (
-        b1->max.x > b2->min.x + EPSILON_COLLISION && b1->min.x < b2->max.x - EPSILON_COLLISION &&
-        b1->max.y > b2->min.y + EPSILON_COLLISION && b1->min.y < b2->max.y - EPSILON_COLLISION &&
-        b1->max.z > b2->min.z + EPSILON_COLLISION && b1->min.z < b2->max.z - EPSILON_COLLISION);
+    return (b1->max.x > b2->min.x + EPSILON_COLLISION && b1->min.x < b2->max.x - EPSILON_COLLISION &&
+            b1->max.y > b2->min.y + EPSILON_COLLISION && b1->min.y < b2->max.y - EPSILON_COLLISION &&
+            b1->max.z > b2->min.z + EPSILON_COLLISION && b1->min.z < b2->max.z - EPSILON_COLLISION);
 }
 
 bool box_collide_epsilon(const Box *b1, const Box *b2, const float epsilon) {
@@ -78,9 +77,8 @@ bool box_contains(const Box *b, const float3 *f3) {
 }
 
 bool box_contains_epsilon(const Box *b, const float3 *f3, float epsilon) {
-    return (b->min.x <= f3->x + epsilon && b->max.x >= f3->x - epsilon &&
-            b->min.y <= f3->y + epsilon && b->max.y >= f3->y - epsilon &&
-            b->min.z <= f3->z + epsilon && b->max.z >= f3->z - epsilon);
+    return (b->min.x <= f3->x + epsilon && b->max.x >= f3->x - epsilon && b->min.y <= f3->y + epsilon &&
+            b->max.y >= f3->y - epsilon && b->min.z <= f3->z + epsilon && b->max.z >= f3->z - epsilon);
 }
 
 void box_copy(Box *dest, const Box *src) {

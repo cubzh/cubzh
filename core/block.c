@@ -57,18 +57,14 @@ bool block_is_solid(const Block *const block) {
 }
 
 bool block_is_opaque(Block *block, const ColorPalette *palette) {
-    return block_is_solid(block) &&
-           color_palette_is_transparent(palette, block->colorIndex) == false;
+    return block_is_solid(block) && color_palette_is_transparent(palette, block->colorIndex) == false;
 }
 
 bool block_is_transparent(Block *block, const ColorPalette *palette) {
     return block_is_solid(block) && color_palette_is_transparent(palette, block->colorIndex);
 }
 
-void block_is_ao_and_light_caster(Block *block,
-                                  const ColorPalette *palette,
-                                  bool *ao,
-                                  bool *light) {
+void block_is_ao_and_light_caster(Block *block, const ColorPalette *palette, bool *ao, bool *light) {
 #if ENABLE_TRANSPARENCY_AO_CASTER
     *ao = block_is_solid(block);
     *light = ((*ao) == false);

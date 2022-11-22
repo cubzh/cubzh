@@ -34,10 +34,10 @@ static const int startIndexForLevel[11] =
 
 ///
 struct _Octree {
-    void *nodes;         // memory area containing all nodes // 4/8 bytes
-    void *elements;      // memory area for all elements (kind of a flat 3d array based on octree
-                         // indexes) // 4/8 bytes
-    size_t element_size; // size of one element, small + power of two is ideal // 4/8 bytes
+    void *nodes;                    // memory area containing all nodes // 4/8 bytes
+    void *elements;                 // memory area for all elements (kind of a flat 3d array based on octree
+                                    // indexes) // 4/8 bytes
+    size_t element_size;            // size of one element, small + power of two is ideal // 4/8 bytes
     size_t nodes_size_in_memory;    // 4/8 bytes
     size_t elements_size_in_memory; // 4/8 bytes
     size_t width_height_depth;      // 4/8 bytes
@@ -552,8 +552,7 @@ void *octree_get_element_without_checking(const Octree *octree,
         z >= octree->width_height_depth) {
         return NULL;
     }
-    return ((char *)octree->elements +
-            octree->element_size * octree_element_index_1d(octree, x, y, z));
+    return ((char *)octree->elements + octree->element_size * octree_element_index_1d(octree, x, y, z));
 }
 
 void octree_log(const Octree *octree) {
@@ -582,7 +581,7 @@ void octree_non_recursive_iteration(const Octree *octree) {
                                    // exploring the tree
     int node_index_in_level[11];   // index of node in its own level (global index minus start of
                                    // level)
-    int branch_index[10]; // index of first child for node at given level (8 children for each node)
+    int branch_index[10];          // index of first child for node at given level (8 children for each node)
     uint8_t child_index_processed[11]; // child index being processed for each level
 
     int current_level = 0;          // level being processed
@@ -694,21 +693,17 @@ void octree_non_recursive_iteration(const Octree *octree) {
             switch (child_index_processed[current_level]) {
                 case 0:
                     if (current_nodes[current_level]->n000 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 0;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 0;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
                     }
                     break;
                 case 1:
                     if (current_nodes[current_level]->n100 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 1;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 1;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -716,11 +711,9 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     break;
                 case 2:
                     if (current_nodes[current_level]->n101 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 2;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 2;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -729,11 +722,9 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     break;
                 case 3:
                     if (current_nodes[current_level]->n001 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 3;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 3;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         z |= 1 << (octree->levels - current_level_plus_one);
@@ -741,11 +732,9 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     break;
                 case 4:
                     if (current_nodes[current_level]->n010 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 4;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 4;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         y |= 1 << (octree->levels - current_level_plus_one);
@@ -753,11 +742,9 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     break;
                 case 5:
                     if (current_nodes[current_level]->n110 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 5;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 5;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -766,11 +753,9 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     break;
                 case 6:
                     if (current_nodes[current_level]->n111 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 6;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 6;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -780,11 +765,9 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     break;
                 case 7:
                     if (current_nodes[current_level]->n011 == 1) {
-                        node_index_in_level[current_level +
-                                            1] = 8 * node_index_in_level[current_level] + 7;
+                        node_index_in_level[current_level + 1] = 8 * node_index_in_level[current_level] + 7;
                         branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
+                                                          8 * node_index_in_level[current_level + 1];
                         goingToNextLevel = true;
 
                         y |= 1 << (octree->levels - current_level_plus_one);
@@ -809,12 +792,8 @@ void octree_non_recursive_iteration(const Octree *octree) {
     }
 }
 
-size_t octree_element_index_1d(const Octree *octree,
-                               const size_t x,
-                               const size_t y,
-                               const size_t z) {
-    return (octree->width_height_depth * octree->width_height_depth * z +
-            octree->width_height_depth * y + x);
+size_t octree_element_index_1d(const Octree *octree, const size_t x, const size_t y, const size_t z) {
+    return (octree->width_height_depth * octree->width_height_depth * z + octree->width_height_depth * y + x);
 }
 
 // getters
@@ -851,7 +830,7 @@ struct _OctreeIterator {
                                    // exploring the tree
     int node_index_in_level[11];   // index of node in its own level (global index minus start of
                                    // level)
-    int branch_index[10]; // index of first child for node at given level (8 children for each node)
+    int branch_index[10];          // index of first child for node at given level (8 children for each node)
 
     uint8_t child_index_processed[11]; // child index being processed for each level
     char pad[1];
@@ -926,10 +905,7 @@ uint16_t octree_iterator_get_current_node_size(const OctreeIterator *oi) {
     return oi->current_node_size;
 }
 
-void octree_iterator_get_current_position(const OctreeIterator *oi,
-                                          uint16_t *x,
-                                          uint16_t *y,
-                                          uint16_t *z) {
+void octree_iterator_get_current_position(const OctreeIterator *oi, uint16_t *x, uint16_t *y, uint16_t *z) {
     *x = oi->current_node_x;
     *y = oi->current_node_y;
     *z = oi->current_node_z;
@@ -1000,60 +976,48 @@ void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *fo
                     break;
                 case 1:
                     if (oi->current_nodes[oi->current_level]->n100 == 1) {
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
                 case 2:
                     if (oi->current_nodes[oi->current_level]->n101 == 1) {
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
                 case 3:
                     if (oi->current_nodes[oi->current_level]->n001 == 1) {
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
                 case 4:
                     if (oi->current_nodes[oi->current_level]->n010 == 1) {
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
                 case 5:
                     if (oi->current_nodes[oi->current_level]->n110 == 1) {
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
                 case 6:
                     if (oi->current_nodes[oi->current_level]->n111 == 1) {
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
                 case 7:
                     if (oi->current_nodes[oi->current_level]->n011 == 1) {
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                         oi->foundLeaf = true;
                     }
                     break;
@@ -1079,9 +1043,8 @@ void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *fo
             switch (oi->child_index_processed[oi->current_level]) {
                 case 0:
                     if (oi->current_nodes[oi->current_level]->n000 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 0;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 0;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
@@ -1090,110 +1053,91 @@ void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *fo
                     break;
                 case 1:
                     if (oi->current_nodes[oi->current_level]->n100 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 1;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 1;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 case 2:
                     if (oi->current_nodes[oi->current_level]->n101 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 2;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 2;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 case 3:
                     if (oi->current_nodes[oi->current_level]->n001 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 3;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 3;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 case 4:
                     if (oi->current_nodes[oi->current_level]->n010 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 4;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 4;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 case 5:
                     if (oi->current_nodes[oi->current_level]->n110 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 5;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 5;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 case 6:
                     if (oi->current_nodes[oi->current_level]->n111 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 6;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 6;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_x |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_x |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 case 7:
                     if (oi->current_nodes[oi->current_level]->n011 == 1) {
-                        oi->node_index_in_level
-                            [oi->current_level +
-                             1] = 8 * oi->node_index_in_level[oi->current_level] + 7;
+                        oi->node_index_in_level[oi->current_level +
+                                                1] = 8 * oi->node_index_in_level[oi->current_level] + 7;
                         oi->branch_index[oi->current_level +
                                          1] = startIndexForLevel[oi->current_level + 2] +
                                               8 * oi->node_index_in_level[oi->current_level + 1];
                         goingToNextLevel = true;
 
-                        oi->current_node_y |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
-                        oi->current_node_z |= 1
-                                              << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_y |= 1 << (oi->octree->levels - oi->current_level_plus_one);
+                        oi->current_node_z |= 1 << (oi->octree->levels - oi->current_level_plus_one);
                     }
                     break;
                 default:
@@ -1206,9 +1150,8 @@ void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *fo
             if (goingToNextLevel) {
                 oi->current_level += 1;
                 oi->current_level_plus_one += 1;
-                oi->current_nodes
-                    [oi->current_level] = &allNodes[startIndexForLevel[oi->current_level] +
-                                                    oi->node_index_in_level[oi->current_level]];
+                oi->current_nodes[oi->current_level] = &allNodes[startIndexForLevel[oi->current_level] +
+                                                                 oi->node_index_in_level[oi->current_level]];
                 oi->child_index_processed[oi->current_level] = 0;
                 oi->current_node_size = oi->current_node_size >> 1;
                 return; // return now for collisions to be tested with the node

@@ -165,9 +165,8 @@ float CIEDE2000(Lab c1, Lab c2) {
         h_2_prime += 360.0;
     }
 
-    double H_angle_prime = fabs(h_1_prime - h_2_prime) > 180.0
-                               ? (h_1_prime + h_2_prime + 360.0) / 2.0
-                               : (h_1_prime + h_2_prime) / 2.0;
+    double H_angle_prime = fabs(h_1_prime - h_2_prime) > 180.0 ? (h_1_prime + h_2_prime + 360.0) / 2.0
+                                                               : (h_1_prime + h_2_prime) / 2.0;
 
     double T = 1 - 0.17 * cos((H_angle_prime - 30.0) / 180.0 * PI) +
                0.24 * cos((2 * H_angle_prime) / 180.0 * PI) +
@@ -193,8 +192,7 @@ float CIEDE2000(Lab c1, Lab c2) {
                            sin((delta_h_prime / 2.0) / 180.0 *
                                PI); // Divide by 180 and multiply by pi to convert degree to radian
 
-    double S_L = 1.0 + ((0.015 * pow(L_bar_prime - 50.0, 2.0)) /
-                        sqrt(20.0 + pow(L_bar_prime - 50.0, 2.0)));
+    double S_L = 1.0 + ((0.015 * pow(L_bar_prime - 50.0, 2.0)) / sqrt(20.0 + pow(L_bar_prime - 50.0, 2.0)));
 
     double S_C = 1 + (0.045 * C_bar_prime);
 
@@ -212,11 +210,10 @@ float CIEDE2000(Lab c1, Lab c2) {
     double K_C = 1.0;
     double K_H = 1.0;
 
-    double Delta_E = sqrt(
-        ((delta_L_prime) / (K_L * S_L)) * ((delta_L_prime) / (K_L * S_L)) +
-        ((delta_C_prime) / (K_C * S_C)) * ((delta_C_prime) / (K_C * S_C)) +
-        ((delta_H_prime) / (K_H * S_H)) * ((delta_H_prime) / (K_H * S_H)) +
-        (((delta_C_prime) / (K_C * S_C)) * ((delta_H_prime) / (K_H * S_H)) * R_T));
+    double Delta_E = sqrt(((delta_L_prime) / (K_L * S_L)) * ((delta_L_prime) / (K_L * S_L)) +
+                          ((delta_C_prime) / (K_C * S_C)) * ((delta_C_prime) / (K_C * S_C)) +
+                          ((delta_H_prime) / (K_H * S_H)) * ((delta_H_prime) / (K_H * S_H)) +
+                          (((delta_C_prime) / (K_C * S_C)) * ((delta_H_prime) / (K_H * S_H)) * R_T));
 
     return Delta_E;
 }
@@ -251,10 +248,7 @@ uint32_t color_to_uint32(const RGBAColor *c) {
 }
 
 RGBAColor uint32_to_color(uint32_t rgba) {
-    RGBAColor result = {(uint8_t)rgba,
-                        (uint8_t)(rgba >> 8),
-                        (uint8_t)(rgba >> 16),
-                        (uint8_t)(rgba >> 24)};
+    RGBAColor result = {(uint8_t)rgba, (uint8_t)(rgba >> 8), (uint8_t)(rgba >> 16), (uint8_t)(rgba >> 24)};
     return result;
 }
 
@@ -299,18 +293,15 @@ RGBAColor _rotateHue(RGBAColor rgb, float hue) {
     float vsw = sinf(hue);
 
     RGBAColor ret;
-    ret.r = CLAMP((.299f + .701f * vsu + .168f * vsw) * rgb.r +
-                      (.587f - .587f * vsu + .330f * vsw) * rgb.g +
+    ret.r = CLAMP((.299f + .701f * vsu + .168f * vsw) * rgb.r + (.587f - .587f * vsu + .330f * vsw) * rgb.g +
                       (.114f - .114f * vsu - .497f * vsw) * rgb.b,
                   0.0f,
                   255.0f);
-    ret.g = CLAMP((.299f - .299f * vsu - .328f * vsw) * rgb.r +
-                      (.587f + .413f * vsu + .035f * vsw) * rgb.g +
+    ret.g = CLAMP((.299f - .299f * vsu - .328f * vsw) * rgb.r + (.587f + .413f * vsu + .035f * vsw) * rgb.g +
                       (.114f - .114f * vsu + .292f * vsw) * rgb.b,
                   0.0f,
                   255.0f);
-    ret.b = CLAMP((.299f - .300f * vsu + 1.25f * vsw) * rgb.r +
-                      (.587f - .588f * vsu - 1.05f * vsw) * rgb.g +
+    ret.b = CLAMP((.299f - .300f * vsu + 1.25f * vsw) * rgb.r + (.587f - .588f * vsu - 1.05f * vsw) * rgb.g +
                       (.114f + .886f * vsu - .203f * vsw) * rgb.b,
                   0.0f,
                   255.0f);

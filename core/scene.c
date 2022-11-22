@@ -91,8 +91,7 @@ void _scene_refresh_rtree_collision_masks(RigidBody *rb) {
     if (rbLeaf != NULL) {
         const uint8_t groups = rigidbody_get_groups(rb);
         const uint8_t collidesWith = rigidbody_get_collides_with(rb);
-        if (groups != rtree_node_get_groups(rbLeaf) ||
-            collidesWith != rtree_node_get_collides_with(rbLeaf)) {
+        if (groups != rtree_node_get_groups(rbLeaf) || collidesWith != rtree_node_get_collides_with(rbLeaf)) {
 
             rtree_node_set_collision_masks(rbLeaf, groups, collidesWith);
         }
@@ -256,11 +255,7 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
     cclog_debug("🏞 physics step");
 #endif
-    _scene_refresh_recurse(sc,
-                           sc->root,
-                           transform_is_hierarchy_dirty(sc->root),
-                           dt,
-                           opaqueUserData);
+    _scene_refresh_recurse(sc, sc->root, transform_is_hierarchy_dirty(sc->root), dt, opaqueUserData);
 }
 
 void scene_end_of_frame_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {

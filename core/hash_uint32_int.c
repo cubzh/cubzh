@@ -54,8 +54,7 @@ void hash_uint32_node_free(HashUInt32IntNode *n) {
     HashUInt32IntNode **slots;
 
     while (cursor != NULL) {
-        if (slotCursor == HASH_UINT32_CHILDREN_PER_NODE ||
-            cursor->level == HASH_TREE_LEVELS_MINUS_ONE) {
+        if (slotCursor == HASH_UINT32_CHILDREN_PER_NODE || cursor->level == HASH_TREE_LEVELS_MINUS_ONE) {
             // done freeing all children, or reached last level
             tmp = cursor->parent;
             slotCursor = cursor->index + 1;

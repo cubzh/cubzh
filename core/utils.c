@@ -84,14 +84,14 @@ bool utils_axes_mask_get(const uint8_t mask, const uint8_t value) {
 
 void utils_axes_mask_set_from_vector(uint8_t *mask, const float3 *v) {
     *mask = *mask | (v->x > 0.0f ? AxesMaskX : 0) | (v->x < 0.0f ? AxesMaskNX : 0) |
-            (v->y > 0.0f ? AxesMaskY : 0) | (v->y < 0.0f ? AxesMaskNY : 0) |
-            (v->z > 0.0f ? AxesMaskZ : 0) | (v->z < 0.0f ? AxesMaskNZ : 0);
+            (v->y > 0.0f ? AxesMaskY : 0) | (v->y < 0.0f ? AxesMaskNY : 0) | (v->z > 0.0f ? AxesMaskZ : 0) |
+            (v->z < 0.0f ? AxesMaskNZ : 0);
 }
 
 void utils_axes_mask_set_from_normal(uint8_t *mask, const float3 *n) {
     *mask = *mask | (n->x > 0.0f ? AxesMaskNX : 0) | (n->x < 0.0f ? AxesMaskX : 0) |
-            (n->y > 0.0f ? AxesMaskNY : 0) | (n->y < 0.0f ? AxesMaskY : 0) |
-            (n->z > 0.0f ? AxesMaskNZ : 0) | (n->z < 0.0f ? AxesMaskZ : 0);
+            (n->y > 0.0f ? AxesMaskNY : 0) | (n->y < 0.0f ? AxesMaskY : 0) | (n->z > 0.0f ? AxesMaskNZ : 0) |
+            (n->z < 0.0f ? AxesMaskZ : 0);
 }
 
 FACE_INDEX_INT_T utils_axes_mask_value_to_face(AxesMaskValue v) {

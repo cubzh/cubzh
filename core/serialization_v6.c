@@ -43,7 +43,7 @@ typedef enum P3sCompressionMethod {
 #define P3S_CHUNK_ID_SHAPE_ID 17        // id used to parent objects and will be used for animations
 #define P3S_CHUNK_ID_SHAPE_NAME 18      // lenName, name (optional)
 #define P3S_CHUNK_ID_SHAPE_PARENT_ID 19 // ID of parent
-#define P3S_CHUNK_ID_SHAPE_TRANSFORM                                                               \
+#define P3S_CHUNK_ID_SHAPE_TRANSFORM                                                                         \
     20 // transform (position,rotation,scale) (optional, default 0,0,0, 0,0,0 and 1,1,1)
 #define P3S_CHUNK_ID_SHAPE_PIVOT 21   // pivot
 #define P3S_CHUNK_ID_SHAPE_PALETTE 22 // palette
@@ -69,11 +69,10 @@ bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
                                                        uint32_t *compressedSize,
                                                        void **compressedData);
 
-void _chunk_v6_palette_create_and_write_uncompressed_buffer(
-    const ColorPalette *palette,
-    uint32_t *uncompressedSize,
-    void **uncompressedData,
-    SHAPE_COLOR_INDEX_INT_T **paletteMapping);
+void _chunk_v6_palette_create_and_write_uncompressed_buffer(const ColorPalette *palette,
+                                                            uint32_t *uncompressedSize,
+                                                            void **uncompressedData,
+                                                            SHAPE_COLOR_INDEX_INT_T **paletteMapping);
 
 bool _chunk_v6_palette_create_and_write_compressed_buffer(const ColorPalette *palette,
                                                           uint32_t *uncompressedSize,
@@ -106,11 +105,7 @@ bool chunk_v6_write_palette(FILE *fd,
                             const ColorPalette *palette,
                             bool doCompress,
                             SHAPE_COLOR_INDEX_INT_T **paletteMapping);
-bool chunk_v6_write_shape(FILE *fd,
-                          Shape *shape,
-                          uint16_t *shapeId,
-                          uint16_t shapeParentId,
-                          bool doCompress);
+bool chunk_v6_write_shape(FILE *fd, Shape *shape, uint16_t *shapeId, uint16_t shapeParentId, bool doCompress);
 bool chunk_v6_write_preview_image(FILE *fd, const void *imageData, uint32_t imageDataSize);
 
 // MARK: Read -
@@ -129,10 +124,7 @@ uint32_t chunk_v6_with_v5_header_skip(Stream *s);
 // skips a chunk with v6 header
 uint32_t chunk_v6_skip(Stream *s);
 
-uint32_t chunk_v6_read_palette(Stream *s,
-                               ColorAtlas *colorAtlas,
-                               ColorPalette **palette,
-                               bool isLegacy);
+uint32_t chunk_v6_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette **palette, bool isLegacy);
 
 uint32_t chunk_v6_read_palette_id(Stream *s, uint8_t *paletteID);
 
@@ -176,10 +168,7 @@ static bool create_shape_buffers(DoublyLinkedList *shapeBuffers,
 
 // MARK: - Exposed functions -
 
-bool serialization_v6_save_shape(Shape *shape,
-                                 const void *imageData,
-                                 uint32_t imageDataSize,
-                                 FILE *fd) {
+bool serialization_v6_save_shape(Shape *shape, const void *imageData, uint32_t imageDataSize, FILE *fd) {
 
     // -------------------
     // HEADER
@@ -446,9 +435,7 @@ bool serialization_v6_get_preview_data(Stream *s, void **imageData, uint32_t *si
     return false;
 }
 
-Shape *serialization_v6_load_shape(Stream *s,
-                                   LoadShapeSettings *shapeSettings,
-                                   ColorAtlas *colorAtlas) {
+Shape *serialization_v6_load_shape(Stream *s, LoadShapeSettings *shapeSettings, ColorAtlas *colorAtlas) {
     uint8_t i;
     if (stream_read_uint8(s, &i) == false) {
         cclog_error("failed to read compression algo");
@@ -659,11 +646,8 @@ bool chunk_v6_write_palette(FILE *fd,
                                                            paletteMapping);
 
     /// write file
-    if (chunk_v6_write_file(P3S_CHUNK_ID_PALETTE,
-                            uncompressedSize,
-                            uncompressedData,
-                            doCompress,
-                            fd) == false) {
+    if (chunk_v6_write_file(P3S_CHUNK_ID_PALETTE, uncompressedSize, uncompressedData, doCompress, fd) ==
+        false) {
         cclog_error("failed to write palette chunk");
         return false;
     }
@@ -698,11 +682,8 @@ bool chunk_v6_write_shape(FILE *fd,
 
     /// write file
     // uncompressedData freed within chunk_v6_write_file
-    if (chunk_v6_write_file(P3S_CHUNK_ID_SHAPE,
-                            uncompressedSize,
-                            uncompressedData,
-                            doCompress,
-                            fd) == false) {
+    if (chunk_v6_write_file(P3S_CHUNK_ID_SHAPE, uncompressedSize, uncompressedData, doCompress, fd) ==
+        false) {
         cclog_error("failed to write shape chunk");
         return false;
     }
@@ -873,10 +854,7 @@ ColorPalette *chunk_v6_read_palette_data(void *cursor, ColorAtlas *colorAtlas, b
     return palette;
 }
 
-uint32_t chunk_v6_read_palette(Stream *s,
-                               ColorAtlas *colorAtlas,
-                               ColorPalette **palette,
-                               bool isLegacy) {
+uint32_t chunk_v6_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette **palette, bool isLegacy) {
 
     if (palette == NULL) {
         cclog_error("can't read palette without pointer to store it");
@@ -1211,8 +1189,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
             }
 #if GLOBAL_LIGHTING_BAKE_READ_ENABLED
             case P3S_CHUNK_ID_SHAPE_BAKED_LIGHTING: {
-                memcpy(&lightingDataSizeRead,
-                       cursor,
+                memcpy(&lightingDataSizeRead, cursor,
                        sizeof(uint32_t)); // shape baked lighting chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
 
@@ -1428,8 +1405,7 @@ static bool write_chunk_in_buffer(void *destBuffer,
     cursor += sizeof(uint32_t);
 
     // chunk data
-    const uint32_t chunkWriteSize = isCompressed ? chunkCompressedDataSize
-                                                 : chunkUncompressedDataSize;
+    const uint32_t chunkWriteSize = isCompressed ? chunkCompressedDataSize : chunkUncompressedDataSize;
     memcpy(cursor, chunkWriteData, chunkWriteSize);
     cursor += chunkWriteSize;
 
@@ -1594,16 +1570,14 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     map_string_float3_iterator_free(it);
 
     // allocate for uncompressed data
-    *uncompressedSize = subheaderSize + shapeSizeSize +
-                        (shapeId > 0 ? subheaderSize + shapeIdSize : 0) +
-                        (shapeParentId > 0 ? subheaderSize + shapeParentIdSize + subheaderSize +
-                                                 shapeLocalTransformSize
-                                           : 0) +
-                        subheaderSize + shapePivotSize + subheaderSize + shapeBlocksSize +
-                        subheaderSize + shapePaletteSize +
-                        shapePointPositionsCount * subheaderSize + shapePointPositionsSize +
-                        shapePointRotationsCount * subheaderSize + shapePointRotationsSize +
-                        (hasLighting ? subheaderSize + shapeLightingSize : 0);
+    *uncompressedSize = subheaderSize + shapeSizeSize + (shapeId > 0 ? subheaderSize + shapeIdSize : 0) +
+                        (shapeParentId > 0
+                             ? subheaderSize + shapeParentIdSize + subheaderSize + shapeLocalTransformSize
+                             : 0) +
+                        subheaderSize + shapePivotSize + subheaderSize + shapeBlocksSize + subheaderSize +
+                        shapePaletteSize + shapePointPositionsCount * subheaderSize +
+                        shapePointPositionsSize + shapePointRotationsCount * subheaderSize +
+                        shapePointRotationsSize + (hasLighting ? subheaderSize + shapeLightingSize : 0);
 
     *uncompressedData = malloc(*uncompressedSize);
     if (*uncompressedData == NULL) {
@@ -1813,10 +1787,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         for (int32_t x = start.x; x < end.x; x++) { // shape blocks
             for (int32_t y = start.y; y < end.y; y++) {
                 for (int32_t z = start.z; z < end.z; z++) {
-                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_without_checking(shape,
-                                                                                          x,
-                                                                                          y,
-                                                                                          z);
+                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_without_checking(shape, x, y, z);
                     cursor = (void *)((VERTEX_LIGHT_STRUCT_T *)cursor + 1);
                 }
             }
@@ -1887,11 +1858,10 @@ bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
     return true;
 }
 
-void _chunk_v6_palette_create_and_write_uncompressed_buffer(
-    const ColorPalette *palette,
-    uint32_t *uncompressedSize,
-    void **uncompressedData,
-    SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
+void _chunk_v6_palette_create_and_write_uncompressed_buffer(const ColorPalette *palette,
+                                                            uint32_t *uncompressedSize,
+                                                            void **uncompressedData,
+                                                            SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
 
     // apply internal mapping to re-order palette, get serialization mapping
     bool *emissive;
@@ -1899,8 +1869,7 @@ void _chunk_v6_palette_create_and_write_uncompressed_buffer(
     uint8_t colorCount = color_palette_get_ordered_count(palette);
 
     // prepare palette chunk uncompressed data
-    *uncompressedSize = sizeof(uint8_t) + sizeof(RGBAColor) * colorCount +
-                        sizeof(bool) * colorCount;
+    *uncompressedSize = sizeof(uint8_t) + sizeof(RGBAColor) * colorCount + sizeof(bool) * colorCount;
     *uncompressedData = malloc(*uncompressedSize);
     void *cursor = *uncompressedData;
 
@@ -1917,12 +1886,11 @@ void _chunk_v6_palette_create_and_write_uncompressed_buffer(
     free(emissive);
 }
 
-bool _chunk_v6_palette_create_and_write_compressed_buffer(
-    const ColorPalette *palette,
-    uint32_t *uncompressedSize,
-    uint32_t *compressedSize,
-    void **compressedData,
-    SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
+bool _chunk_v6_palette_create_and_write_compressed_buffer(const ColorPalette *palette,
+                                                          uint32_t *uncompressedSize,
+                                                          uint32_t *compressedSize,
+                                                          void **compressedData,
+                                                          SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
     void *uncompressedData = NULL;
     if (paletteMapping != NULL) {
         *paletteMapping = NULL;
@@ -2002,8 +1970,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
                                                           shapeParentId,
                                                           &currentBuffer->shapeUncompressedDataSize,
                                                           &currentBuffer->shapeCompressedDataSize,
-                                                          &currentBuffer->shapeCompressedData) ==
-        false) {
+                                                          &currentBuffer->shapeCompressedData) == false) {
         return false;
     }
     *size += compute_shape_chunk_size(currentBuffer->shapeCompressedDataSize);
@@ -2017,8 +1984,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
         child = (Transform *)(doubly_linked_list_node_pointer(n));
         Shape *childShape = transform_get_shape(child);
         if (childShape != NULL) {
-            if (create_shape_buffers(shapesBuffers, childShape, shapeId, shapeParentId, size) ==
-                false) {
+            if (create_shape_buffers(shapesBuffers, childShape, shapeId, shapeParentId, size) == false) {
                 return false;
             }
         }
@@ -2149,8 +2115,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
 
                 // shrink box once all blocks were added to update box origin
                 shape_shrink_box(shape);
-                if (filterMask == AssetType_Any ||
-                    (filterMask & (AssetType_Shape + AssetType_Object)) > 0) {
+                if (filterMask == AssetType_Any || (filterMask & (AssetType_Shape + AssetType_Object)) > 0) {
                     Asset *asset = malloc(sizeof(Asset));
                     asset->ptr = shape;
                     asset->type = AssetType_Shape;

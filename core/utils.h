@@ -21,16 +21,16 @@ extern "C" {
 
 #if defined(DEBUG)
 
-#define RETURN_IF_NULL(PTR)                                                                        \
-    if (PTR == NULL) {                                                                             \
-        cclog_warning("pointer is NULL - %sL%d", __FILE__, __LINE__);                              \
-        return;                                                                                    \
+#define RETURN_IF_NULL(PTR)                                                                                  \
+    if (PTR == NULL) {                                                                                       \
+        cclog_warning("pointer is NULL - %sL%d", __FILE__, __LINE__);                                        \
+        return;                                                                                              \
     }
 
-#define RETURN_VALUE_IF_NULL(PTR, RETURN_VALUE)                                                    \
-    if (PTR == NULL) {                                                                             \
-        cclog_warning("pointer is NULL - %sL%d", __FILE__, __LINE__);                              \
-        return RETURN_VALUE;                                                                       \
+#define RETURN_VALUE_IF_NULL(PTR, RETURN_VALUE)                                                              \
+    if (PTR == NULL) {                                                                                       \
+        cclog_warning("pointer is NULL - %sL%d", __FILE__, __LINE__);                                        \
+        return RETURN_VALUE;                                                                                 \
     }
 
 #else

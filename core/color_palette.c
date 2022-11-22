@@ -119,9 +119,7 @@ bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDE
     }
 }
 
-bool color_palette_check_and_add_color(ColorPalette *p,
-                                       RGBAColor color,
-                                       SHAPE_COLOR_INDEX_INT_T *entryOut) {
+bool color_palette_check_and_add_color(ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut) {
     ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
     if (a == NULL) {
         return false; // no atlas, palette is inactive waiting to be freed
@@ -173,9 +171,8 @@ bool color_palette_check_and_add_color(ColorPalette *p,
 bool color_palette_check_and_add_default_color_2021(ColorPalette *p,
                                                     SHAPE_COLOR_INDEX_INT_T defaultIdx,
                                                     SHAPE_COLOR_INDEX_INT_T *entryOut) {
-    RGBAColor *color = color_palette_get_color(
-        color_palette_get_default_2021(weakptr_get(p->refAtlas)),
-        defaultIdx);
+    RGBAColor *color = color_palette_get_color(color_palette_get_default_2021(weakptr_get(p->refAtlas)),
+                                               defaultIdx);
     if (color == NULL) {
         if (entryOut != NULL) {
             *entryOut = SHAPE_COLOR_INDEX_AIR_BLOCK;
@@ -188,9 +185,8 @@ bool color_palette_check_and_add_default_color_2021(ColorPalette *p,
 bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
                                                       SHAPE_COLOR_INDEX_INT_T defaultIdx,
                                                       SHAPE_COLOR_INDEX_INT_T *entryOut) {
-    RGBAColor *color = color_palette_get_color(
-        color_palette_get_default_pico8p(weakptr_get(p->refAtlas)),
-        defaultIdx);
+    RGBAColor *color = color_palette_get_color(color_palette_get_default_pico8p(weakptr_get(p->refAtlas)),
+                                               defaultIdx);
     if (color == NULL) {
         if (entryOut != NULL) {
             *entryOut = SHAPE_COLOR_INDEX_AIR_BLOCK;
@@ -265,8 +261,7 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
 
     hash_uint32_int_delete(p->colorToIdx, color_to_uint32(&p->entries[entry].color));
     // entry becomes available
-    SHAPE_COLOR_INDEX_INT_T *push = (SHAPE_COLOR_INDEX_INT_T *)malloc(
-        sizeof(SHAPE_COLOR_INDEX_INT_T));
+    SHAPE_COLOR_INDEX_INT_T *push = (SHAPE_COLOR_INDEX_INT_T *)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
     *push = entry;
     fifo_list_push(p->availableIndices, push);
 
@@ -310,9 +305,8 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
     } else {
         const bool prevOpaque = color_is_opaque(&p->entries[entry].color);
         const bool newOpaque = color_is_opaque(&color);
-        if (prevOpaque != newOpaque // (2)
-            || prevOpaque == false && newOpaque == false &&
-                   p->entries[entry].color.a != color.a) { // (3)
+        if (prevOpaque != newOpaque                                                                 // (2)
+            || prevOpaque == false && newOpaque == false && p->entries[entry].color.a != color.a) { // (3)
             p->lighting_dirty = true;
         }
     }
@@ -364,8 +358,7 @@ void color_palette_clear_lighting_dirty(ColorPalette *p) {
     p->lighting_dirty = false;
 }
 
-ATLAS_COLOR_INDEX_INT_T color_palette_get_atlas_index(const ColorPalette *p,
-                                                      SHAPE_COLOR_INDEX_INT_T entry) {
+ATLAS_COLOR_INDEX_INT_T color_palette_get_atlas_index(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
     if (entry == SHAPE_COLOR_INDEX_AIR_BLOCK || entry >= p->count) {
         return ATLAS_COLOR_INDEX_ERROR;
     }
@@ -407,8 +400,7 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
 
     // copy transient indices states
     if (src->orderedIndices != NULL) {
-        dst->orderedIndices = (SHAPE_COLOR_INDEX_INT_T *)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T) *
-                                                                size);
+        dst->orderedIndices = (SHAPE_COLOR_INDEX_INT_T *)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T) * size);
         memcpy(dst->orderedIndices, src->orderedIndices, size);
     }
     if (src->availableIndices != NULL) {
@@ -462,9 +454,7 @@ RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
 
 // MARK: - Default palettes -
 
-void _color_palette_default_add_color(RGBAColor *colors,
-                                      SHAPE_COLOR_INDEX_INT_T *index,
-                                      RGBAColor color) {
+void _color_palette_default_add_color(RGBAColor *colors, SHAPE_COLOR_INDEX_INT_T *index, RGBAColor color) {
     colors[*index] = color;
     vx_assert(*index >= 0 && *index < 255);
     *index += 1;
@@ -733,9 +723,7 @@ RGBAColor *color_palette_get_default_colors_2021(ColorAtlas *atlas) {
     static RGBAColor *colors = NULL;
 
     if (colors == NULL) {
-        colors = color_palette_get_colors_as_array(color_palette_get_default_2021(atlas),
-                                                   NULL,
-                                                   NULL);
+        colors = color_palette_get_colors_as_array(color_palette_get_default_2021(atlas), NULL, NULL);
     }
 
     return colors;
@@ -758,9 +746,7 @@ RGBAColor *color_palette_get_default_colors_pico8p(ColorAtlas *atlas) {
     static RGBAColor *colors = NULL;
 
     if (colors == NULL) {
-        colors = color_palette_get_colors_as_array(color_palette_get_default_pico8p(atlas),
-                                                   NULL,
-                                                   NULL);
+        colors = color_palette_get_colors_as_array(color_palette_get_default_pico8p(atlas), NULL, NULL);
     }
 
     return colors;

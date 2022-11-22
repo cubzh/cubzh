@@ -134,10 +134,7 @@ bool duplicate_world(const char *src, const char *dst);
 
 /// Arguments
 /// - cursor (optional) will be incremented if not NULL
-void serialization_utils_writeCString(void *dest,
-                                      const char *src,
-                                      const size_t n,
-                                      uint32_t *cursor);
+void serialization_utils_writeCString(void *dest, const char *src, const size_t n, uint32_t *cursor);
 
 ///
 void serialization_utils_writeUint8(void *dest, const uint8_t src, uint32_t *cursor);

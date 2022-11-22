@@ -117,8 +117,7 @@ void _rigidbody_fire_reciprocal_callbacks(RigidBody *selfRb,
     }
 
     // (2) fire reciprocal callback if applicable
-    if (isOtherDynamic &&
-        _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_CALLBACK_ENABLED)) {
+    if (isOtherDynamic && _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_CALLBACK_ENABLED)) {
         rigidbody_collision_callback(otherTr,
                                      otherRb,
                                      selfTr,
@@ -129,8 +128,7 @@ void _rigidbody_fire_reciprocal_callbacks(RigidBody *selfRb,
 
     // (3) register collision couple for end-of-contact callback if applicable
     if (_rigidbody_get_simulation_flag(selfRb, SIMULATIONFLAG_END_CALLBACK_ENABLED) ||
-        (isOtherDynamic &&
-         _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_END_CALLBACK_ENABLED))) {
+        (isOtherDynamic && _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_END_CALLBACK_ENABLED))) {
 
         rigidbody_collision_couple_callback(selfTr, selfRb, otherTr, otherRb, axis, opaqueUserData);
     }
@@ -245,8 +243,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     // number of solver iterations
 
     size_t solverCount = 0;
-    while (float3_isZero(&dv, EPSILON_COLLISION) == false &&
-           solverCount < PHYSICS_MAX_SOLVER_ITERATIONS) {
+    while (float3_isZero(&dv, EPSILON_COLLISION) == false && solverCount < PHYSICS_MAX_SOLVER_ITERATIONS) {
         minSwept = 1.0f;
         swept3 = float3_one;
         extraReplacement3 = float3_zero;
@@ -409,8 +406,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
             if (rigidbody_is_dynamic(contactX) && rb->mass > contactX->mass) {
                 // apply push force to contact rigidbody velocity relative to colliding masses,
                 // along the remainder of the trajectory
-                const float push = minimum(rigidbody_get_mass_push_ratio(rb, contactX) *
-                                               (1.0f - swept3.x),
+                const float push = minimum(rigidbody_get_mass_push_ratio(rb, contactX) * (1.0f - swept3.x),
                                            1.0f);
 
                 push3.x = dv.x * push / dt_f;
@@ -423,8 +419,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         }
         if (contactY != NULL && float_isEqual(minSwept, swept3.y, EPSILON_ZERO)) {
             if (rigidbody_is_dynamic(contactY) && rb->mass > contactY->mass) {
-                const float push = minimum(rigidbody_get_mass_push_ratio(rb, contactY) *
-                                               (1.0f - swept3.y),
+                const float push = minimum(rigidbody_get_mass_push_ratio(rb, contactY) * (1.0f - swept3.y),
                                            1.0f);
                 push3.x = dv.x * push / dt_f;
                 push3.y = dv.y * push / dt_f;
@@ -436,8 +431,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         }
         if (contactZ != NULL && float_isEqual(minSwept, swept3.z, EPSILON_ZERO)) {
             if (rigidbody_is_dynamic(contactZ) && rb->mass > contactZ->mass) {
-                const float push = minimum(rigidbody_get_mass_push_ratio(rb, contactZ) *
-                                               (1.0f - swept3.z),
+                const float push = minimum(rigidbody_get_mass_push_ratio(rb, contactZ) * (1.0f - swept3.z),
                                            1.0f);
                 push3.x = dv.x * push / dt_f;
                 push3.y = dv.y * push / dt_f;
@@ -517,34 +511,19 @@ bool _rigidbody_dynamic_tick(Scene *scene,
             if (contactX != NULL && float_isEqual(minSwept, swept3.x, EPSILON_ZERO)) {
                 const AxesMaskValue axis = dv.x > 0 ? AxesMaskX : AxesMaskNX;
                 if (utils_axes_mask_get(rb->contact, axis) == false) {
-                    _rigidbody_fire_reciprocal_callbacks(rb,
-                                                         t,
-                                                         contactX,
-                                                         contactXTr,
-                                                         axis,
-                                                         opaqueUserData);
+                    _rigidbody_fire_reciprocal_callbacks(rb, t, contactX, contactXTr, axis, opaqueUserData);
                 }
             }
             if (contactY != NULL && float_isEqual(minSwept, swept3.y, EPSILON_ZERO)) {
                 const AxesMaskValue axis = dv.y > 0 ? AxesMaskY : AxesMaskNY;
                 if (utils_axes_mask_get(rb->contact, axis) == false) {
-                    _rigidbody_fire_reciprocal_callbacks(rb,
-                                                         t,
-                                                         contactY,
-                                                         contactYTr,
-                                                         axis,
-                                                         opaqueUserData);
+                    _rigidbody_fire_reciprocal_callbacks(rb, t, contactY, contactYTr, axis, opaqueUserData);
                 }
             }
             if (contactZ != NULL && float_isEqual(minSwept, swept3.z, EPSILON_ZERO)) {
                 const AxesMaskValue axis = dv.z > 0 ? AxesMaskZ : AxesMaskNZ;
                 if (utils_axes_mask_get(rb->contact, axis) == false) {
-                    _rigidbody_fire_reciprocal_callbacks(rb,
-                                                         t,
-                                                         contactZ,
-                                                         contactZTr,
-                                                         axis,
-                                                         opaqueUserData);
+                    _rigidbody_fire_reciprocal_callbacks(rb, t, contactZ, contactZTr, axis, opaqueUserData);
                 }
             }
         }
@@ -597,10 +576,10 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 }
 
                 // (2) apply combined friction
-                const float combined = contactX != NULL ? rigidbody_get_combined_friction(
-                                                              rb,
-                                                              rigidbody_get_friction(contactX))
-                                                        : rb->friction;
+                const float combined = contactX != NULL
+                                           ? rigidbody_get_combined_friction(rb,
+                                                                             rigidbody_get_friction(contactX))
+                                           : rb->friction;
                 dv.x *= combined;
                 rb->velocity->x *= combined;
             }
@@ -616,8 +595,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                               rigidbody_get_bounciness(contactY))
                                                         : rb->bounciness;
                 if (utils_axes_mask_get(rb->contact, AxesMaskY | AxesMaskNY) ||
-                    float_isZero(dv.y, PHYSICS_BOUNCE_THRESHOLD) ||
-                    float_isZero(combined, EPSILON_ZERO)) {
+                    float_isZero(dv.y, PHYSICS_BOUNCE_THRESHOLD) || float_isZero(combined, EPSILON_ZERO)) {
 
                     dv.y = 0.0f;
                     rb->velocity->y = contactY != NULL && rb->mass < contactY->mass
@@ -633,10 +611,10 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     utils_axes_mask_set(&rb->contact, AxesMaskY | AxesMaskNY, false);
                 }
 
-                const float combined = contactY != NULL ? rigidbody_get_combined_friction(
-                                                              rb,
-                                                              rigidbody_get_friction(contactY))
-                                                        : rb->friction;
+                const float combined = contactY != NULL
+                                           ? rigidbody_get_combined_friction(rb,
+                                                                             rigidbody_get_friction(contactY))
+                                           : rb->friction;
                 dv.y *= combined;
                 rb->velocity->y *= combined;
             }
@@ -652,8 +630,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                               rigidbody_get_bounciness(contactZ))
                                                         : rb->bounciness;
                 if (utils_axes_mask_get(rb->contact, AxesMaskZ | AxesMaskNZ) ||
-                    float_isZero(dv.z, PHYSICS_BOUNCE_THRESHOLD) ||
-                    float_isZero(combined, EPSILON_ZERO)) {
+                    float_isZero(dv.z, PHYSICS_BOUNCE_THRESHOLD) || float_isZero(combined, EPSILON_ZERO)) {
 
                     dv.z = 0.0f;
                     rb->velocity->z = contactZ != NULL && rb->mass < contactZ->mass
@@ -669,10 +646,10 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     utils_axes_mask_set(&rb->contact, AxesMaskZ | AxesMaskNZ, false);
                 }
 
-                const float combined = contactZ != NULL ? rigidbody_get_combined_friction(
-                                                              rb,
-                                                              rigidbody_get_friction(contactZ))
-                                                        : rb->friction;
+                const float combined = contactZ != NULL
+                                           ? rigidbody_get_combined_friction(rb,
+                                                                             rigidbody_get_friction(contactZ))
+                                           : rb->friction;
                 dv.z *= combined;
                 rb->velocity->z *= combined;
             }
@@ -908,12 +885,7 @@ void _rigidbody_trigger_tick(Scene *scene,
             const AxesMaskValue axis = utils_axis_index_to_mask_value((AxisIndex)i);
             if (axesRb[i] != NULL) {
                 if (utils_axes_mask_get(rb->contact, axis) == false) {
-                    _rigidbody_fire_reciprocal_callbacks(rb,
-                                                         t,
-                                                         axesRb[i],
-                                                         axesTr[i],
-                                                         axis,
-                                                         opaqueUserData);
+                    _rigidbody_fire_reciprocal_callbacks(rb, t, axesRb[i], axesTr[i], axis, opaqueUserData);
                     utils_axes_mask_set(&rb->contact, axis, true);
                 }
             } else {
@@ -998,14 +970,7 @@ bool rigidbody_tick(Scene *scene,
     // a dynamic rigidbody is fully simulated - movement, mass push, replacement, callbacks,
     // collision responses
     if (rigidbody_is_dynamic(rb)) {
-        return _rigidbody_dynamic_tick(scene,
-                                       rb,
-                                       t,
-                                       worldCollider,
-                                       r,
-                                       dt,
-                                       sceneQuery,
-                                       opaqueUserData);
+        return _rigidbody_dynamic_tick(scene, rb, t, worldCollider, r, dt, sceneQuery, opaqueUserData);
     }
     // a trigger rigidbody only checks for overlaps to fire callbacks
     else if (rigidbody_is_trigger(rb)) {
@@ -1231,20 +1196,17 @@ bool rigidbody_check_velocity_contact(const RigidBody *rb, const float3 *velocit
     }
     const bool x = utils_axes_mask_get(rb->contact, AxesMaskX);
     const bool nx = utils_axes_mask_get(rb->contact, AxesMaskNX);
-    if ((velocity->x == 0.0f && (x || nx)) || (velocity->x < 0.0f && nx) ||
-        (velocity->x > 0.0f && x)) {
+    if ((velocity->x == 0.0f && (x || nx)) || (velocity->x < 0.0f && nx) || (velocity->x > 0.0f && x)) {
         return true;
     }
     const bool y = utils_axes_mask_get(rb->contact, AxesMaskY);
     const bool ny = utils_axes_mask_get(rb->contact, AxesMaskNY);
-    if ((velocity->y == 0.0f && (y || ny)) || (velocity->y < 0.0f && ny) ||
-        (velocity->y > 0.0f && y)) {
+    if ((velocity->y == 0.0f && (y || ny)) || (velocity->y < 0.0f && ny) || (velocity->y > 0.0f && y)) {
         return true;
     }
     const bool z = utils_axes_mask_get(rb->contact, AxesMaskZ);
     const bool nz = utils_axes_mask_get(rb->contact, AxesMaskNZ);
-    if ((velocity->z == 0.0f && (z || nz)) || (velocity->z < 0.0f && nz) ||
-        (velocity->z > 0.0f && z)) {
+    if ((velocity->z == 0.0f && (z || nz)) || (velocity->z < 0.0f && nz) || (velocity->z > 0.0f && z)) {
         return true;
     }
     return false;
@@ -1314,8 +1276,7 @@ bool rigidbody_collision_masks_reciprocal_match(const uint8_t groups1,
                                                 const uint8_t groups2,
                                                 const uint8_t collidesWith2) {
 
-    return (collidesWith1 & groups2) != PHYSICS_GROUP_NONE ||
-           (collidesWith2 & groups1) != PHYSICS_GROUP_NONE;
+    return (collidesWith1 & groups2) != PHYSICS_GROUP_NONE || (collidesWith2 & groups1) != PHYSICS_GROUP_NONE;
 }
 
 float rigidbody_get_combined_friction(const RigidBody *rb1, const float friction2) {
@@ -1352,16 +1313,13 @@ void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value) {
 
 void rigidbody_apply_push(RigidBody *rb, const float3 *value) {
     // a PUSH ensures a given velocity at minimum and is not additive to avoid snow-balling
-    if ((value->x > 0 && value->x > rb->velocity->x) ||
-        (value->x < 0 && value->x < rb->velocity->x)) {
+    if ((value->x > 0 && value->x > rb->velocity->x) || (value->x < 0 && value->x < rb->velocity->x)) {
         rb->velocity->x = value->x;
     }
-    if ((value->y > 0 && value->y > rb->velocity->y) ||
-        (value->y < 0 && value->y < rb->velocity->y)) {
+    if ((value->y > 0 && value->y > rb->velocity->y) || (value->y < 0 && value->y < rb->velocity->y)) {
         rb->velocity->y = value->y;
     }
-    if ((value->z > 0 && value->z > rb->velocity->z) ||
-        (value->z < 0 && value->z < rb->velocity->z)) {
+    if ((value->z > 0 && value->z > rb->velocity->z) || (value->z < 0 && value->z < rb->velocity->z)) {
         rb->velocity->z = value->z;
     }
 }
@@ -1401,8 +1359,7 @@ bool rigidbody_check_end_of_contact(Transform *t1,
             return true; // (3)
         } else if ((isValid1 && utils_axes_mask_get(rb1->contact, axis) == false) ||
                    (isValid2 &&
-                    utils_axes_mask_get(rb2->contact, utils_axes_mask_value_swapped(axis)) ==
-                        false)) {
+                    utils_axes_mask_get(rb2->contact, utils_axes_mask_value_swapped(axis)) == false)) {
 
             if (_rigidbody_get_simulation_flag(rb1, SIMULATIONFLAG_END_CALLBACK_ENABLED)) {
                 rigidbody_collision_callback(t1, rb1, t2, rb2, AxesMaskNone, opaqueUserData);

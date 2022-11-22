@@ -439,6 +439,5 @@ bool float3_isEqual(const float3 *f3_1, const float3 *f3_2, const float epsilon)
 }
 
 bool float3_isZero(const float3 *f3, const float epsilon) {
-    return float_isZero(f3->x, epsilon) && float_isZero(f3->y, epsilon) &&
-           float_isZero(f3->z, epsilon);
+    return float_isZero(f3->x, epsilon) && float_isZero(f3->y, epsilon) && float_isZero(f3->z, epsilon);
 }

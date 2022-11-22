@@ -76,10 +76,7 @@ void matrix4x4_get_scaleXYZ(const Matrix4x4 *m, float3 *scale);
 
 float matrix4x4_get_trace(const Matrix4x4 *m);
 
-Matrix4x4 *matrix4x4_new_from_axis_rotation(const float radians,
-                                            const float x,
-                                            const float y,
-                                            const float z);
+Matrix4x4 *matrix4x4_new_from_axis_rotation(const float radians, const float x, const float y, const float z);
 void matrix4x4_set_from_axis_rotation(Matrix4x4 *m,
                                       const float radians,
                                       const float x,

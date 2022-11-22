@@ -153,11 +153,7 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
     return NULL;
 }
 
-void *index3d_remove(Index3D *index,
-                     const int32_t x,
-                     const int32_t y,
-                     const int32_t z,
-                     Index3DIterator *it) {
+void *index3d_remove(Index3D *index, const int32_t x, const int32_t y, const int32_t z, Index3DIterator *it) {
 
     // only use unsigned integers for bitwise operations:
     uint32_t ux = x;
@@ -396,10 +392,7 @@ bool index3d_is_empty(const Index3D *const index) {
     return true;
 }
 
-void index3d_flush_node(Index3D *index,
-                        void **node,
-                        uint8_t dimension,
-                        pointer_free_function freePtr) {
+void index3d_flush_node(Index3D *index, void **node, uint8_t dimension, pointer_free_function freePtr) {
     if (node == NULL)
         return;
 
@@ -420,8 +413,7 @@ void index3d_flush_node(Index3D *index,
             free(node[lastIndex]);
             node[lastIndex] = NULL;
         } else {
-            void *ptr = doubly_linked_list_node_pointer(
-                (const DoublyLinkedListNode *)(node[lastIndex]));
+            void *ptr = doubly_linked_list_node_pointer((const DoublyLinkedListNode *)(node[lastIndex]));
             if (freePtr != NULL) {
                 freePtr(ptr);
             }

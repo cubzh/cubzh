@@ -137,8 +137,7 @@ FACE_INDEX_INT_T ray_impacted_block_face(const float3 *impact, const float3 *ldf
     // (1) check plane crossing center, ldf, and ltf which normal is (0.5, 0.0, -0.5)
     float3_set(&n, 0.5f, 0.0f, -0.5f);
 
-    if (float3_dot_product(&n, &_impact) >
-        0) { // could be FACE_BACK, FACE_RIGHT, or FACE_TOP/FACE_DOWN
+    if (float3_dot_product(&n, &_impact) > 0) { // could be FACE_BACK, FACE_RIGHT, or FACE_TOP/FACE_DOWN
         // (2) check plane crossing center, rdf, and rtf which normal is (0.5, 0.0, 0.5)
         float3_set(&n, 0.5f, 0.0f, 0.5f);
 

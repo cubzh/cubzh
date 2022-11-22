@@ -438,8 +438,7 @@ void test_shape_addblock_1(void) {
     // add block 0
     ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, 0);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, 0, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
@@ -447,8 +446,7 @@ void test_shape_addblock_1(void) {
     // add block 1
     ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
@@ -456,8 +454,7 @@ void test_shape_addblock_1(void) {
     // add block 2
     ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR2);
@@ -465,8 +462,7 @@ void test_shape_addblock_1(void) {
     // remove block 2
     ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
@@ -474,8 +470,7 @@ void test_shape_addblock_1(void) {
     // add block 3
     ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, 1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR3);
@@ -542,8 +537,7 @@ void test_shape_addblock_2(void) {
     // add block 1
     ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
@@ -551,8 +545,7 @@ void test_shape_addblock_2(void) {
     // add block 2
     ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR2);
@@ -560,8 +553,7 @@ void test_shape_addblock_2(void) {
     // remove block 2
     ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
@@ -569,8 +561,7 @@ void test_shape_addblock_2(void) {
     // add block 3
     ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
     TEST_ASSERT(ok);
-    shape_apply_current_transaction(sh,
-                                    false /* false means transaction is pushed into the history */);
+    shape_apply_current_transaction(sh, false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, 1, true);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR3);

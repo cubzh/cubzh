@@ -61,23 +61,20 @@ void doubly_linked_list_uint8_delete_node(DoublyLinkedListUint8 *const list,
                                           DoublyLinkedListUint8Node *const node);
 
 ///
-DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_before(
-    DoublyLinkedListUint8 *const list,
-    DoublyLinkedListUint8Node *const node,
-    const uint8_t value);
+DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_before(DoublyLinkedListUint8 *const list,
+                                                                       DoublyLinkedListUint8Node *const node,
+                                                                       const uint8_t value);
 
 ///
-DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_after(
-    DoublyLinkedListUint8 *const list,
-    DoublyLinkedListUint8Node *const node,
-    const uint8_t value);
+DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_after(DoublyLinkedListUint8 *const list,
+                                                                      DoublyLinkedListUint8Node *const node,
+                                                                      const uint8_t value);
 
 /// iterates over nodes to return list count
 size_t doubly_linked_list_uint8_node_count(const DoublyLinkedListUint8 *const list);
 
 ///
-bool doubly_linked_list_uint8_contains(const DoublyLinkedListUint8 *const list,
-                                       const uint8_t value);
+bool doubly_linked_list_uint8_contains(const DoublyLinkedListUint8 *const list, const uint8_t value);
 
 //--------------------
 // MARK: - DoublyLinkedListUint8Node -
@@ -94,15 +91,13 @@ DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_previous(
     const DoublyLinkedListUint8Node *const node);
 
 /// returns next node (can be NULL)
-DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_next(
-    const DoublyLinkedListUint8Node *const node);
+DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_next(const DoublyLinkedListUint8Node *const node);
 
 /// returns stored value
 uint8_t doubly_linked_list_uint8_node_get_value(const DoublyLinkedListUint8Node *const node);
 
 /// sets stored value
-void doubly_linked_list_uint8_node_set_value(DoublyLinkedListUint8Node *const node,
-                                             const uint8_t value);
+void doubly_linked_list_uint8_node_set_value(DoublyLinkedListUint8Node *const node, const uint8_t value);
 
 #ifdef __cplusplus
 } // extern "C"

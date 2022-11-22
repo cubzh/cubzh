@@ -231,11 +231,7 @@ Shape *serialization_v5_load_shape(Stream *s,
                 break;
             }
             case P3S_CHUNK_ID_SHAPE: {
-                sizeRead = chunk_v5_read_shape(s,
-                                               &shape,
-                                               shapeSettings,
-                                               colorAtlas,
-                                               serializedPalette);
+                sizeRead = chunk_v5_read_shape(s, &shape, shapeSettings, colorAtlas, serializedPalette);
 
                 if (sizeRead == 0) {
                     cclog_error("error while reading shape");
@@ -390,9 +386,7 @@ uint32_t chunk_read_shape_process_blocks(Stream *s,
     uint32_t expectedSize = cubeCount * sizeof(uint8_t);
 
     if (chunkSize != expectedSize) {
-        cclog_error("wrong size for shape blocks chunk, expected %u, found %u.",
-                    expectedSize,
-                    chunkSize);
+        cclog_error("wrong size for shape blocks chunk, expected %u, found %u.", expectedSize, chunkSize);
         return 0;
     }
 
@@ -518,8 +512,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
                     color_palette_set_shared(serializedPalette, shapeSettings->sharedColors);
                     shape_set_palette(*shape, serializedPalette);
                 } else {
-                    shape_set_palette(*shape,
-                                      color_palette_new(colorAtlas, shapeSettings->sharedColors));
+                    shape_set_palette(*shape, color_palette_new(colorAtlas, shapeSettings->sharedColors));
                 }
 
                 // this means blocks have been found before the size.
@@ -639,8 +632,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
         } else if (shapeSettings->octree == false && shapeSettings->limitSize == false) {
             cclog_warning("shape uses lighting but does not have a fixed size");
             free(lightingData);
-        } else if ((lightingDataSizeRead - 4) !=
-                   width * height * depth * sizeof(VERTEX_LIGHT_STRUCT_T)) {
+        } else if ((lightingDataSizeRead - 4) != width * height * depth * sizeof(VERTEX_LIGHT_STRUCT_T)) {
             cclog_warning("shape uses lighting but does not match lighting data size");
             free(lightingData);
         } else {
@@ -774,8 +766,7 @@ uint32_t chunk_v5_read_general_rendering_options(Stream *s,
                                                  bool *ambientOcclusion) {
     uint32_t chunkSize = chunk_v5_read_size(s);
     if (chunkSize != 3) {
-        cclog_error("wrong size for general rendering options chunk, expected 3, found %u.",
-                    chunkSize);
+        cclog_error("wrong size for general rendering options chunk, expected 3, found %u.", chunkSize);
         return 0;
     }
 

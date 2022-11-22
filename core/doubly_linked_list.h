@@ -61,10 +61,8 @@ DoublyLinkedListNode *doubly_linked_list_insert_node_previous(DoublyLinkedList *
                                                               DoublyLinkedListNode *node,
                                                               void *ptr);
 
-typedef bool (*pointer_doubly_linked_list_sort_func)(DoublyLinkedListNode *n1,
-                                                     DoublyLinkedListNode *n2);
-void doubly_linked_list_sort_ascending(DoublyLinkedList *list,
-                                       pointer_doubly_linked_list_sort_func func);
+typedef bool (*pointer_doubly_linked_list_sort_func)(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2);
+void doubly_linked_list_sort_ascending(DoublyLinkedList *list, pointer_doubly_linked_list_sort_func func);
 
 // iterates over nodes to return list count
 size_t doubly_linked_list_node_count(const DoublyLinkedList *list);

@@ -250,8 +250,7 @@ void test_transform_flush(void) {
     TEST_CHECK(float3_isEqual(transform_get_local_scale(t), &float3_one, EPSILON_ZERO));
     Quaternion rot_zero = {0.0f, 0.0f, 0.0f, 1.0f, false};
     TEST_CHECK(quaternion_is_equal(transform_get_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
-    TEST_CHECK(
-        quaternion_is_equal(transform_get_local_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
+    TEST_CHECK(quaternion_is_equal(transform_get_local_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(float3_isZero(transform_get_position(t), EPSILON_ZERO));
     TEST_CHECK(float3_isZero(transform_get_local_position(t), EPSILON_ZERO));
     TEST_CHECK(transform_is_parented(t) == false);

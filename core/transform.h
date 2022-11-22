@@ -92,8 +92,7 @@ bool transform_is_hierarchy_dirty(Transform *t); // on-demand dirty for intra-fr
 void transform_refresh(Transform *t, bool hierarchyDirty, bool refreshParents);
 void transform_refresh_children_done(Transform *t);
 void transform_reset_physics_dirty(Transform *t);
-bool transform_is_physics_dirty(
-    Transform *t); // end-of-frame dirty for physics-relevant transformations
+bool transform_is_physics_dirty(Transform *t); // end-of-frame dirty for physics-relevant transformations
 void transform_reset_any_dirty(Transform *t);
 bool transform_is_any_dirty(Transform *t); // set but not reset by transform, can be used internally
                                            // by higher types as custom flag

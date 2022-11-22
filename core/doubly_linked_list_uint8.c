@@ -77,8 +77,7 @@ DoublyLinkedListUint8Node *doubly_linked_list_uint8_push_back(DoublyLinkedListUi
     return newNode;
 }
 
-bool doubly_linked_list_uint8_pop_front(DoublyLinkedListUint8 *const list,
-                                        uint8_t *const valuePtr) {
+bool doubly_linked_list_uint8_pop_front(DoublyLinkedListUint8 *const list, uint8_t *const valuePtr) {
     if (list->front == NULL) {
         return false;
     }
@@ -168,10 +167,9 @@ void doubly_linked_list_uint8_delete_node(DoublyLinkedListUint8 *const list,
     doubly_linked_list_uint8_node_free(node);
 }
 
-DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_before(
-    DoublyLinkedListUint8 *const list,
-    DoublyLinkedListUint8Node *const node,
-    const uint8_t value) {
+DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_before(DoublyLinkedListUint8 *const list,
+                                                                       DoublyLinkedListUint8Node *const node,
+                                                                       const uint8_t value) {
     DoublyLinkedListUint8Node *newNode = doubly_linked_list_uint8_node_new(value);
 
     if (node->previous != NULL) {
@@ -186,10 +184,9 @@ DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_before(
     return newNode;
 }
 
-DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_after(
-    DoublyLinkedListUint8 *const list,
-    DoublyLinkedListUint8Node *const node,
-    const uint8_t value) {
+DoublyLinkedListUint8Node *doubly_linked_list_uint8_insert_node_after(DoublyLinkedListUint8 *const list,
+                                                                      DoublyLinkedListUint8Node *const node,
+                                                                      const uint8_t value) {
 
     DoublyLinkedListUint8Node *newNode = doubly_linked_list_uint8_node_new(value);
 
@@ -221,8 +218,7 @@ size_t doubly_linked_list_uint8_node_count(const DoublyLinkedListUint8 *const li
     return count;
 }
 
-bool doubly_linked_list_uint8_contains(const DoublyLinkedListUint8 *const list,
-                                       const uint8_t value) {
+bool doubly_linked_list_uint8_contains(const DoublyLinkedListUint8 *const list, const uint8_t value) {
     DoublyLinkedListUint8Node *node = list->front;
     while (node != NULL) {
         if (node->value == value) {
@@ -238,8 +234,7 @@ bool doubly_linked_list_uint8_contains(const DoublyLinkedListUint8 *const list,
 //---------------------
 
 DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_new(const uint8_t value) {
-    DoublyLinkedListUint8Node *node = (DoublyLinkedListUint8Node *)malloc(
-        sizeof(DoublyLinkedListUint8Node));
+    DoublyLinkedListUint8Node *node = (DoublyLinkedListUint8Node *)malloc(sizeof(DoublyLinkedListUint8Node));
     node->previous = NULL;
     node->next = NULL;
     node->value = value;
@@ -264,8 +259,7 @@ DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_previous(
     return node->previous;
 }
 
-DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_next(
-    const DoublyLinkedListUint8Node *const node) {
+DoublyLinkedListUint8Node *doubly_linked_list_uint8_node_next(const DoublyLinkedListUint8Node *const node) {
     if (node == NULL) {
         return NULL;
     }
@@ -279,8 +273,7 @@ uint8_t doubly_linked_list_uint8_node_get_value(const DoublyLinkedListUint8Node 
     return node->value;
 }
 
-void doubly_linked_list_uint8_node_set_value(DoublyLinkedListUint8Node *const node,
-                                             const uint8_t value) {
+void doubly_linked_list_uint8_node_set_value(DoublyLinkedListUint8Node *const node, const uint8_t value) {
     if (node != NULL) {
         node->value = value;
     }

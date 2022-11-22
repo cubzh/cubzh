@@ -193,8 +193,7 @@ DoublyLinkedListNode *doubly_linked_list_insert_node_next(DoublyLinkedList *list
     return newNode;
 }
 
-void doubly_linked_list_sort_ascending(DoublyLinkedList *list,
-                                       pointer_doubly_linked_list_sort_func func) {
+void doubly_linked_list_sort_ascending(DoublyLinkedList *list, pointer_doubly_linked_list_sort_func func) {
     DoublyLinkedListNode *last = list->last;
     DoublyLinkedListNode *current = NULL;
     void *ptr = NULL;

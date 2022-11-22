@@ -65,9 +65,7 @@ void chunk_set_needs_display(Chunk *chunk, bool b) {
     chunk->needsDisplay = b;
 }
 
-Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
-                 const SHAPE_COORDS_INT_T y,
-                 const SHAPE_COORDS_INT_T z) {
+Chunk *chunk_new(const SHAPE_COORDS_INT_T x, const SHAPE_COORDS_INT_T y, const SHAPE_COORDS_INT_T z) {
 
     Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
     chunk->pos = int3_new(x, y, z);
@@ -344,10 +342,7 @@ Block *chunk_get_block_including_neighbors(const Chunk *chunk,
                                        y - CHUNK_HEIGHT,
                                        z + CHUNK_DEPTH);
             } else { // TopLeft
-                return chunk_get_block(chunk->neighbors[TopLeft],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[TopLeft], x + CHUNK_WIDTH, y - CHUNK_HEIGHT, z);
             }
         } else if (x > CHUNK_WIDTH - 1) {
             if (z > CHUNK_DEPTH - 1) { // TopRightBack
@@ -361,22 +356,13 @@ Block *chunk_get_block_including_neighbors(const Chunk *chunk,
                                        y - CHUNK_HEIGHT,
                                        z + CHUNK_DEPTH);
             } else { // TopRight
-                return chunk_get_block(chunk->neighbors[TopRight],
-                                       x - CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[TopRight], x - CHUNK_WIDTH, y - CHUNK_HEIGHT, z);
             }
         } else {
             if (z > CHUNK_DEPTH - 1) { // TopBack
-                return chunk_get_block(chunk->neighbors[TopBack],
-                                       x,
-                                       y - CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[TopBack], x, y - CHUNK_HEIGHT, z - CHUNK_DEPTH);
             } else if (z < 0) { // TopFront
-                return chunk_get_block(chunk->neighbors[TopFront],
-                                       x,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[TopFront], x, y - CHUNK_HEIGHT, z + CHUNK_DEPTH);
             } else { // Top
                 return chunk_get_block(chunk->neighbors[Top], x, y - CHUNK_HEIGHT, z);
             }
@@ -394,10 +380,7 @@ Block *chunk_get_block_including_neighbors(const Chunk *chunk,
                                        y + CHUNK_HEIGHT,
                                        z + CHUNK_DEPTH);
             } else { // BottomLeft
-                return chunk_get_block(chunk->neighbors[BottomLeft],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[BottomLeft], x + CHUNK_WIDTH, y + CHUNK_HEIGHT, z);
             }
         } else if (x > CHUNK_WIDTH - 1) {
             if (z > CHUNK_DEPTH - 1) { // BottomRightBack
@@ -411,22 +394,13 @@ Block *chunk_get_block_including_neighbors(const Chunk *chunk,
                                        y + CHUNK_HEIGHT,
                                        z + CHUNK_DEPTH);
             } else { // BottomRight
-                return chunk_get_block(chunk->neighbors[BottomRight],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[BottomRight], x - CHUNK_WIDTH, y + CHUNK_HEIGHT, z);
             }
         } else {
             if (z > CHUNK_DEPTH - 1) { // BottomBack
-                return chunk_get_block(chunk->neighbors[BottomBack],
-                                       x,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[BottomBack], x, y + CHUNK_HEIGHT, z - CHUNK_DEPTH);
             } else if (z < 0) { // BottomFront
-                return chunk_get_block(chunk->neighbors[BottomFront],
-                                       x,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[BottomFront], x, y + CHUNK_HEIGHT, z + CHUNK_DEPTH);
             } else { // Bottom
                 return chunk_get_block(chunk->neighbors[Bottom], x, y + CHUNK_HEIGHT, z);
             }
@@ -434,29 +408,17 @@ Block *chunk_get_block_including_neighbors(const Chunk *chunk,
     } else { // 8 cases (y is within chunk)
         if (x < 0) {
             if (z > CHUNK_DEPTH - 1) { // LeftBack
-                return chunk_get_block(chunk->neighbors[LeftBack],
-                                       x + CHUNK_WIDTH,
-                                       y,
-                                       z - CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[LeftBack], x + CHUNK_WIDTH, y, z - CHUNK_DEPTH);
             } else if (z < 0) { // LeftFront
-                return chunk_get_block(chunk->neighbors[LeftFront],
-                                       x + CHUNK_WIDTH,
-                                       y,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[LeftFront], x + CHUNK_WIDTH, y, z + CHUNK_DEPTH);
             } else { // Left
                 return chunk_get_block(chunk->neighbors[Left], x + CHUNK_WIDTH, y, z);
             }
         } else if (x > CHUNK_WIDTH - 1) {
             if (z > CHUNK_DEPTH - 1) { // RightBack
-                return chunk_get_block(chunk->neighbors[RightBack],
-                                       x - CHUNK_WIDTH,
-                                       y,
-                                       z - CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[RightBack], x - CHUNK_WIDTH, y, z - CHUNK_DEPTH);
             } else if (z < 0) { // RightFront
-                return chunk_get_block(chunk->neighbors[RightFront],
-                                       x - CHUNK_WIDTH,
-                                       y,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[RightFront], x - CHUNK_WIDTH, y, z + CHUNK_DEPTH);
             } else { // Right
                 return chunk_get_block(chunk->neighbors[Right], x - CHUNK_WIDTH, y, z);
             }
@@ -519,11 +481,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                 chunk->vbma_opaque,
                                                                                 false);
 #if ENABLE_TRANSPARENCY
-    VertexBufferMemAreaWriter *transparentWriter = vertex_buffer_mem_area_writer_new(
-        shape,
-        chunk,
-        chunk->vbma_transparent,
-        true);
+    VertexBufferMemAreaWriter *transparentWriter = vertex_buffer_mem_area_writer_new(shape,
+                                                                                     chunk,
+                                                                                     chunk->vbma_transparent,
+                                                                                     true);
 #else
     VertexBufferMemAreaWriter *transparentWriter = opaqueWriter;
 #endif
@@ -556,22 +517,21 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
     // - only non-solid blocks (null or air) are light casters
     // this property is what allow us to let light go through & be absorbed by transparent blocks,
     // without dimming the light values sampled for vertices adjacent to the transparent block
-    static bool ao_topLeftBack, ao_topBack, ao_topRightBack, ao_topLeft, ao_topRight,
-        ao_topLeftFront, ao_topFront, ao_topRightFront, ao_leftBack, ao_rightBack, ao_leftFront,
-        ao_rightFront, ao_bottomLeftBack, ao_bottomBack, ao_bottomRightBack, ao_bottomLeft,
-        ao_bottomRight, ao_bottomLeftFront, ao_bottomFront, ao_bottomRightFront;
+    static bool ao_topLeftBack, ao_topBack, ao_topRightBack, ao_topLeft, ao_topRight, ao_topLeftFront,
+        ao_topFront, ao_topRightFront, ao_leftBack, ao_rightBack, ao_leftFront, ao_rightFront,
+        ao_bottomLeftBack, ao_bottomBack, ao_bottomRightBack, ao_bottomLeft, ao_bottomRight,
+        ao_bottomLeftFront, ao_bottomFront, ao_bottomRightFront;
     static bool light_topLeftBack, light_topBack, light_topRightBack, light_topLeft, light_topRight,
         light_topLeftFront, light_topFront, light_topRightFront, light_leftBack, light_rightBack,
-        light_leftFront, light_rightFront, light_bottomLeftBack, light_bottomBack,
-        light_bottomRightBack, light_bottomLeft, light_bottomRight, light_bottomLeftFront,
-        light_bottomFront, light_bottomRightFront;
+        light_leftFront, light_rightFront, light_bottomLeftBack, light_bottomBack, light_bottomRightBack,
+        light_bottomLeft, light_bottomRight, light_bottomLeftFront, light_bottomFront, light_bottomRightFront;
     // cache the vertex light values
     static VERTEX_LIGHT_STRUCT_T vlight_left, vlight_right, vlight_front, vlight_back, vlight_top,
         vlight_bottom, vlight_topLeftBack, vlight_topBack, vlight_topRightBack, vlight_topLeft,
-        vlight_topRight, vlight_topLeftFront, vlight_topFront, vlight_topRightFront,
-        vlight_leftBack, vlight_rightBack, vlight_leftFront, vlight_rightFront,
-        vlight_bottomLeftBack, vlight_bottomBack, vlight_bottomRightBack, vlight_bottomLeft,
-        vlight_bottomRight, vlight_bottomLeftFront, vlight_bottomFront, vlight_bottomRightFront;
+        vlight_topRight, vlight_topLeftFront, vlight_topFront, vlight_topRightFront, vlight_leftBack,
+        vlight_rightBack, vlight_leftFront, vlight_rightFront, vlight_bottomLeftBack, vlight_bottomBack,
+        vlight_bottomRightBack, vlight_bottomLeft, vlight_bottomRight, vlight_bottomLeftFront,
+        vlight_bottomFront, vlight_bottomRightFront;
     // should self be rendered with transparency
     bool selfTransparent;
 
@@ -589,16 +549,11 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                     // get axis-aligned neighbouring blocks
                     if (octree != NULL) {
-                        left = (Block *)
-                            octree_get_element_without_checking(octree, pos.x - 1, pos.y, pos.z);
-                        right = (Block *)
-                            octree_get_element_without_checking(octree, pos.x + 1, pos.y, pos.z);
-                        front = (Block *)
-                            octree_get_element_without_checking(octree, pos.x, pos.y, pos.z - 1);
-                        back = (Block *)
-                            octree_get_element_without_checking(octree, pos.x, pos.y, pos.z + 1);
-                        top = (Block *)
-                            octree_get_element_without_checking(octree, pos.x, pos.y + 1, pos.z);
+                        left = (Block *)octree_get_element_without_checking(octree, pos.x - 1, pos.y, pos.z);
+                        right = (Block *)octree_get_element_without_checking(octree, pos.x + 1, pos.y, pos.z);
+                        front = (Block *)octree_get_element_without_checking(octree, pos.x, pos.y, pos.z - 1);
+                        back = (Block *)octree_get_element_without_checking(octree, pos.x, pos.y, pos.z + 1);
+                        top = (Block *)octree_get_element_without_checking(octree, pos.x, pos.y + 1, pos.z);
                         bottom = (Block *)
                             octree_get_element_without_checking(octree, pos.x, pos.y - 1, pos.z);
                     } else {
@@ -613,44 +568,14 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                     // get their opacity properties
                     bool solid_left, opaque_left, transparent_left, solid_right, opaque_right,
                         transparent_right, solid_front, opaque_front, transparent_front, solid_back,
-                        opaque_back, transparent_back, solid_top, opaque_top, transparent_top,
-                        solid_bottom, opaque_bottom, transparent_bottom;
+                        opaque_back, transparent_back, solid_top, opaque_top, transparent_top, solid_bottom,
+                        opaque_bottom, transparent_bottom;
 
-                    block_is_any(left,
-                                 palette,
-                                 &solid_left,
-                                 &opaque_left,
-                                 &transparent_left,
-                                 NULL,
-                                 NULL);
-                    block_is_any(right,
-                                 palette,
-                                 &solid_right,
-                                 &opaque_right,
-                                 &transparent_right,
-                                 NULL,
-                                 NULL);
-                    block_is_any(front,
-                                 palette,
-                                 &solid_front,
-                                 &opaque_front,
-                                 &transparent_front,
-                                 NULL,
-                                 NULL);
-                    block_is_any(back,
-                                 palette,
-                                 &solid_back,
-                                 &opaque_back,
-                                 &transparent_back,
-                                 NULL,
-                                 NULL);
-                    block_is_any(top,
-                                 palette,
-                                 &solid_top,
-                                 &opaque_top,
-                                 &transparent_top,
-                                 NULL,
-                                 NULL);
+                    block_is_any(left, palette, &solid_left, &opaque_left, &transparent_left, NULL, NULL);
+                    block_is_any(right, palette, &solid_right, &opaque_right, &transparent_right, NULL, NULL);
+                    block_is_any(front, palette, &solid_front, &opaque_front, &transparent_front, NULL, NULL);
+                    block_is_any(back, palette, &solid_back, &opaque_back, &transparent_back, NULL, NULL);
+                    block_is_any(top, palette, &solid_top, &opaque_top, &transparent_top, NULL, NULL);
                     block_is_any(bottom,
                                  palette,
                                  &solid_bottom,
@@ -735,68 +660,35 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
                         if (octree != NULL) { // use octree to check neighbors if possible
-                            topLeftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                       pos.x - 1,
-                                                                                       pos.y + 1,
-                                                                                       pos.z + 1);
-                            topLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                   pos.x - 1,
-                                                                                   pos.y + 1,
-                                                                                   pos.z);
-                            topLeftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                        pos.x - 1,
-                                                                                        pos.y + 1,
-                                                                                        pos.z - 1);
+                            topLeftBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y + 1, pos.z + 1);
+                            topLeft = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y + 1, pos.z);
+                            topLeftFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y + 1, pos.z - 1);
 
-                            leftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                    pos.x - 1,
-                                                                                    pos.y,
-                                                                                    pos.z + 1);
-                            leftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                     pos.x - 1,
-                                                                                     pos.y,
-                                                                                     pos.z - 1);
+                            leftBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y, pos.z + 1);
+                            leftFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y, pos.z - 1);
 
-                            bottomLeftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                          pos.x - 1,
-                                                                                          pos.y - 1,
-                                                                                          pos.z +
-                                                                                              1);
-                            bottomLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                      pos.x - 1,
-                                                                                      pos.y - 1,
-                                                                                      pos.z);
-                            bottomLeftFront = (Block *)octree_get_element_without_checking(
-                                octree,
-                                pos.x - 1,
-                                pos.y - 1,
-                                pos.z - 1);
+                            bottomLeftBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y - 1, pos.z + 1);
+                            bottomLeft = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y - 1, pos.z);
+                            bottomLeftFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x - 1, pos.y - 1, pos.z - 1);
                         } else {
-                            topLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                              x - 1,
-                                                                              y + 1,
-                                                                              z + 1);
+                            topLeftBack = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z + 1);
                             topLeft = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
-                            topLeftFront = chunk_get_block_including_neighbors(chunk,
-                                                                               x - 1,
-                                                                               y + 1,
-                                                                               z - 1);
+                            topLeftFront = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z - 1);
 
                             leftBack = chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
                             leftFront = chunk_get_block_including_neighbors(chunk, x - 1, y, z - 1);
 
-                            bottomLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                 x - 1,
-                                                                                 y - 1,
-                                                                                 z + 1);
-                            bottomLeft = chunk_get_block_including_neighbors(chunk,
-                                                                             x - 1,
-                                                                             y - 1,
-                                                                             z);
-                            bottomLeftFront = chunk_get_block_including_neighbors(chunk,
-                                                                                  x - 1,
-                                                                                  y - 1,
-                                                                                  z - 1);
+                            bottomLeftBack = chunk_get_block_including_neighbors(chunk, x - 1, y - 1, z + 1);
+                            bottomLeft = chunk_get_block_including_neighbors(chunk, x - 1, y - 1, z);
+                            bottomLeftFront = chunk_get_block_including_neighbors(chunk, x - 1, y - 1, z - 1);
                         }
 
                         // get their light values & properties
@@ -973,67 +865,34 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
                         if (octree != NULL) { // use octree to check neighbors if possible
-                            topRightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                        pos.x + 1,
-                                                                                        pos.y + 1,
-                                                                                        pos.z + 1);
-                            topRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                    pos.x + 1,
-                                                                                    pos.y + 1,
-                                                                                    pos.z);
-                            topRightFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                         pos.x + 1,
-                                                                                         pos.y + 1,
-                                                                                         pos.z - 1);
+                            topRightBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y + 1, pos.z + 1);
+                            topRight = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y + 1, pos.z);
+                            topRightFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y + 1, pos.z - 1);
 
-                            rightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                     pos.x + 1,
-                                                                                     pos.y,
-                                                                                     pos.z + 1);
-                            rightFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                      pos.x + 1,
-                                                                                      pos.y,
-                                                                                      pos.z - 1);
+                            rightBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y, pos.z + 1);
+                            rightFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y, pos.z - 1);
 
-                            bottomRightBack = (Block *)octree_get_element_without_checking(
-                                octree,
-                                pos.x + 1,
-                                pos.y - 1,
-                                pos.z + 1);
-                            bottomRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                       pos.x + 1,
-                                                                                       pos.y - 1,
-                                                                                       pos.z);
-                            bottomRightFront = (Block *)octree_get_element_without_checking(
-                                octree,
-                                pos.x + 1,
-                                pos.y - 1,
-                                pos.z - 1);
+                            bottomRightBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y - 1, pos.z + 1);
+                            bottomRight = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y - 1, pos.z);
+                            bottomRightFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x + 1, pos.y - 1, pos.z - 1);
                         } else {
-                            topRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                               x + 1,
-                                                                               y + 1,
-                                                                               z + 1);
+                            topRightBack = chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z + 1);
                             topRight = chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
-                            topRightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                x + 1,
-                                                                                y + 1,
-                                                                                z - 1);
+                            topRightFront = chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z - 1);
 
                             rightBack = chunk_get_block_including_neighbors(chunk, x + 1, y, z + 1);
-                            rightFront = chunk_get_block_including_neighbors(chunk,
-                                                                             x + 1,
-                                                                             y,
-                                                                             z - 1);
+                            rightFront = chunk_get_block_including_neighbors(chunk, x + 1, y, z - 1);
 
-                            bottomRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                  x + 1,
-                                                                                  y - 1,
-                                                                                  z + 1);
-                            bottomRight = chunk_get_block_including_neighbors(chunk,
-                                                                              x + 1,
-                                                                              y - 1,
-                                                                              z);
+                            bottomRightBack = chunk_get_block_including_neighbors(chunk, x + 1, y - 1, z + 1);
+                            bottomRight = chunk_get_block_including_neighbors(chunk, x + 1, y - 1, z);
                             bottomRightFront = chunk_get_block_including_neighbors(chunk,
                                                                                    x + 1,
                                                                                    y - 1,
@@ -1216,58 +1075,42 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         // left/right blocks may have been retrieved already
                         if (octree != NULL) { // use octree to check neighbors if possible
                             if (renderRight == false) {
-                                topRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y + 1,
-                                    pos.z - 1);
-                                rightFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                          pos.x + 1,
-                                                                                          pos.y,
-                                                                                          pos.z -
-                                                                                              1);
-                                bottomRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y - 1,
-                                    pos.z - 1);
+                                topRightFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                             pos.x + 1,
+                                                                                             pos.y + 1,
+                                                                                             pos.z - 1);
+                                rightFront = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x + 1, pos.y, pos.z - 1);
+                                bottomRightFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                                pos.x + 1,
+                                                                                                pos.y - 1,
+                                                                                                pos.z - 1);
                             }
 
                             if (renderLeft == false) {
-                                topLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y + 1,
-                                    pos.z - 1);
-                                leftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                         pos.x - 1,
-                                                                                         pos.y,
-                                                                                         pos.z - 1);
-                                bottomLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y - 1,
-                                    pos.z - 1);
+                                topLeftFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                            pos.x - 1,
+                                                                                            pos.y + 1,
+                                                                                            pos.z - 1);
+                                leftFront = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x - 1, pos.y, pos.z - 1);
+                                bottomLeftFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                               pos.x - 1,
+                                                                                               pos.y - 1,
+                                                                                               pos.z - 1);
                             }
 
-                            topFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                    pos.x,
-                                                                                    pos.y + 1,
-                                                                                    pos.z - 1);
-                            bottomFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                       pos.x,
-                                                                                       pos.y - 1,
-                                                                                       pos.z - 1);
+                            topFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x, pos.y + 1, pos.z - 1);
+                            bottomFront = (Block *)
+                                octree_get_element_without_checking(octree, pos.x, pos.y - 1, pos.z - 1);
                         } else {
                             if (renderRight == false) {
                                 topRightFront = chunk_get_block_including_neighbors(chunk,
                                                                                     x + 1,
                                                                                     y + 1,
                                                                                     z - 1);
-                                rightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                 x + 1,
-                                                                                 y,
-                                                                                 z - 1);
+                                rightFront = chunk_get_block_including_neighbors(chunk, x + 1, y, z - 1);
                                 bottomRightFront = chunk_get_block_including_neighbors(chunk,
                                                                                        x + 1,
                                                                                        y - 1,
@@ -1279,10 +1122,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                    x - 1,
                                                                                    y + 1,
                                                                                    z - 1);
-                                leftFront = chunk_get_block_including_neighbors(chunk,
-                                                                                x - 1,
-                                                                                y,
-                                                                                z - 1);
+                                leftFront = chunk_get_block_including_neighbors(chunk, x - 1, y, z - 1);
                                 bottomLeftFront = chunk_get_block_including_neighbors(chunk,
                                                                                       x - 1,
                                                                                       y - 1,
@@ -1290,10 +1130,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
 
                             topFront = chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
-                            bottomFront = chunk_get_block_including_neighbors(chunk,
-                                                                              x,
-                                                                              y - 1,
-                                                                              z - 1);
+                            bottomFront = chunk_get_block_including_neighbors(chunk, x, y - 1, z - 1);
                         }
 
                         // get their light values & properties
@@ -1474,57 +1311,42 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         // left/right blocks may have been retrieved already
                         if (octree != NULL) { // use octree to check neighbors if possible
                             if (renderRight == false) {
-                                topRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y + 1,
-                                    pos.z + 1);
-                                rightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                         pos.x + 1,
-                                                                                         pos.y,
-                                                                                         pos.z + 1);
-                                bottomRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y - 1,
-                                    pos.z + 1);
+                                topRightBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                            pos.x + 1,
+                                                                                            pos.y + 1,
+                                                                                            pos.z + 1);
+                                rightBack = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x + 1, pos.y, pos.z + 1);
+                                bottomRightBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                               pos.x + 1,
+                                                                                               pos.y - 1,
+                                                                                               pos.z + 1);
                             }
 
                             if (renderLeft == false) {
-                                topLeftBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y + 1,
-                                    pos.z + 1);
-                                leftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                        pos.x - 1,
-                                                                                        pos.y,
-                                                                                        pos.z + 1);
-                                bottomLeftBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y - 1,
-                                    pos.z + 1);
+                                topLeftBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                           pos.x - 1,
+                                                                                           pos.y + 1,
+                                                                                           pos.z + 1);
+                                leftBack = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x - 1, pos.y, pos.z + 1);
+                                bottomLeftBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                              pos.x - 1,
+                                                                                              pos.y - 1,
+                                                                                              pos.z + 1);
                             }
 
-                            topBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                   pos.x,
-                                                                                   pos.y + 1,
-                                                                                   pos.z + 1);
-                            bottomBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                      pos.x,
-                                                                                      pos.y - 1,
-                                                                                      pos.z + 1);
+                            topBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x, pos.y + 1, pos.z + 1);
+                            bottomBack = (Block *)
+                                octree_get_element_without_checking(octree, pos.x, pos.y - 1, pos.z + 1);
                         } else {
                             if (renderRight == false) {
                                 topRightBack = chunk_get_block_including_neighbors(chunk,
                                                                                    x + 1,
                                                                                    y + 1,
                                                                                    z + 1);
-                                rightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                x + 1,
-                                                                                y,
-                                                                                z + 1);
+                                rightBack = chunk_get_block_including_neighbors(chunk, x + 1, y, z + 1);
                                 bottomRightBack = chunk_get_block_including_neighbors(chunk,
                                                                                       x + 1,
                                                                                       y - 1,
@@ -1532,14 +1354,8 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
 
                             if (renderLeft == false) {
-                                topLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                  x - 1,
-                                                                                  y + 1,
-                                                                                  z + 1);
-                                leftBack = chunk_get_block_including_neighbors(chunk,
-                                                                               x - 1,
-                                                                               y,
-                                                                               z + 1);
+                                topLeftBack = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z + 1);
+                                leftBack = chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
                                 bottomLeftBack = chunk_get_block_including_neighbors(chunk,
                                                                                      x - 1,
                                                                                      y - 1,
@@ -1547,10 +1363,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
 
                             topBack = chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
-                            bottomBack = chunk_get_block_including_neighbors(chunk,
-                                                                             x,
-                                                                             y - 1,
-                                                                             z + 1);
+                            bottomBack = chunk_get_block_including_neighbors(chunk, x, y - 1, z + 1);
                         }
 
                         // get their light values & properties
@@ -1731,62 +1544,44 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         // left/right/back/front blocks may have been retrieved already
                         if (octree != NULL) { // use octree to check neighbors if possible
                             if (renderLeft == false) {
-                                topLeftBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y + 1,
-                                    pos.z + 1);
-                                topLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                       pos.x - 1,
-                                                                                       pos.y + 1,
-                                                                                       pos.z);
-                                topLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y + 1,
-                                    pos.z - 1);
+                                topLeftBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                           pos.x - 1,
+                                                                                           pos.y + 1,
+                                                                                           pos.z + 1);
+                                topLeft = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x - 1, pos.y + 1, pos.z);
+                                topLeftFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                            pos.x - 1,
+                                                                                            pos.y + 1,
+                                                                                            pos.z - 1);
                             }
 
                             if (renderRight == false) {
-                                topRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y + 1,
-                                    pos.z + 1);
-                                topRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                        pos.x + 1,
-                                                                                        pos.y + 1,
-                                                                                        pos.z);
-                                topRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y + 1,
-                                    pos.z - 1);
+                                topRightBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                            pos.x + 1,
+                                                                                            pos.y + 1,
+                                                                                            pos.z + 1);
+                                topRight = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x + 1, pos.y + 1, pos.z);
+                                topRightFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                             pos.x + 1,
+                                                                                             pos.y + 1,
+                                                                                             pos.z - 1);
                             }
 
                             if (renderBack == false) {
-                                topBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                       pos.x,
-                                                                                       pos.y + 1,
-                                                                                       pos.z + 1);
+                                topBack = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x, pos.y + 1, pos.z + 1);
                             }
 
                             if (renderFront == false) {
-                                topFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                        pos.x,
-                                                                                        pos.y + 1,
-                                                                                        pos.z - 1);
+                                topFront = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x, pos.y + 1, pos.z - 1);
                             }
                         } else {
                             if (renderLeft == false) {
-                                topLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                  x - 1,
-                                                                                  y + 1,
-                                                                                  z + 1);
-                                topLeft = chunk_get_block_including_neighbors(chunk,
-                                                                              x - 1,
-                                                                              y + 1,
-                                                                              z);
+                                topLeftBack = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z + 1);
+                                topLeft = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
                                 topLeftFront = chunk_get_block_including_neighbors(chunk,
                                                                                    x - 1,
                                                                                    y + 1,
@@ -1798,10 +1593,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                    x + 1,
                                                                                    y + 1,
                                                                                    z + 1);
-                                topRight = chunk_get_block_including_neighbors(chunk,
-                                                                               x + 1,
-                                                                               y + 1,
-                                                                               z);
+                                topRight = chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
                                 topRightFront = chunk_get_block_including_neighbors(chunk,
                                                                                     x + 1,
                                                                                     y + 1,
@@ -1809,17 +1601,11 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
 
                             if (renderBack == false) {
-                                topBack = chunk_get_block_including_neighbors(chunk,
-                                                                              x,
-                                                                              y + 1,
-                                                                              z + 1);
+                                topBack = chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
                             }
 
                             if (renderFront == false) {
-                                topFront = chunk_get_block_including_neighbors(chunk,
-                                                                               x,
-                                                                               y + 1,
-                                                                               z - 1);
+                                topFront = chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
                             }
                         }
 
@@ -2005,54 +1791,39 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         // left/right/back/front blocks may have been retrieved already
                         if (octree != NULL) { // use octree to check neighbors if possible
                             if (renderLeft == false) {
-                                bottomLeftBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y - 1,
-                                    pos.z + 1);
-                                bottomLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                          pos.x - 1,
-                                                                                          pos.y - 1,
-                                                                                          pos.z);
-                                bottomLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x - 1,
-                                    pos.y - 1,
-                                    pos.z - 1);
+                                bottomLeftBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                              pos.x - 1,
+                                                                                              pos.y - 1,
+                                                                                              pos.z + 1);
+                                bottomLeft = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x - 1, pos.y - 1, pos.z);
+                                bottomLeftFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                               pos.x - 1,
+                                                                                               pos.y - 1,
+                                                                                               pos.z - 1);
                             }
 
                             if (renderRight == false) {
-                                bottomRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y - 1,
-                                    pos.z + 1);
-                                bottomRight = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y - 1,
-                                    pos.z);
-                                bottomRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x + 1,
-                                    pos.y - 1,
-                                    pos.z - 1);
+                                bottomRightBack = (Block *)octree_get_element_without_checking(octree,
+                                                                                               pos.x + 1,
+                                                                                               pos.y - 1,
+                                                                                               pos.z + 1);
+                                bottomRight = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x + 1, pos.y - 1, pos.z);
+                                bottomRightFront = (Block *)octree_get_element_without_checking(octree,
+                                                                                                pos.x + 1,
+                                                                                                pos.y - 1,
+                                                                                                pos.z - 1);
                             }
 
                             if (renderBack == false) {
-                                bottomBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                          pos.x,
-                                                                                          pos.y - 1,
-                                                                                          pos.z +
-                                                                                              1);
+                                bottomBack = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x, pos.y - 1, pos.z + 1);
                             }
 
                             if (renderFront == false) {
-                                bottomFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    pos.x,
-                                    pos.y - 1,
-                                    pos.z - 1);
+                                bottomFront = (Block *)
+                                    octree_get_element_without_checking(octree, pos.x, pos.y - 1, pos.z - 1);
                             }
                         } else {
                             if (renderLeft == false) {
@@ -2060,10 +1831,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                      x - 1,
                                                                                      y - 1,
                                                                                      z + 1);
-                                bottomLeft = chunk_get_block_including_neighbors(chunk,
-                                                                                 x - 1,
-                                                                                 y - 1,
-                                                                                 z);
+                                bottomLeft = chunk_get_block_including_neighbors(chunk, x - 1, y - 1, z);
                                 bottomLeftFront = chunk_get_block_including_neighbors(chunk,
                                                                                       x - 1,
                                                                                       y - 1,
@@ -2075,10 +1843,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                       x + 1,
                                                                                       y - 1,
                                                                                       z + 1);
-                                bottomRight = chunk_get_block_including_neighbors(chunk,
-                                                                                  x + 1,
-                                                                                  y - 1,
-                                                                                  z);
+                                bottomRight = chunk_get_block_including_neighbors(chunk, x + 1, y - 1, z);
                                 bottomRightFront = chunk_get_block_including_neighbors(chunk,
                                                                                        x + 1,
                                                                                        y - 1,
@@ -2086,17 +1851,11 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
 
                             if (renderBack == false) {
-                                bottomBack = chunk_get_block_including_neighbors(chunk,
-                                                                                 x,
-                                                                                 y - 1,
-                                                                                 z + 1);
+                                bottomBack = chunk_get_block_including_neighbors(chunk, x, y - 1, z + 1);
                             }
 
                             if (renderFront == false) {
-                                bottomFront = chunk_get_block_including_neighbors(chunk,
-                                                                                  x,
-                                                                                  y - 1,
-                                                                                  z - 1);
+                                bottomFront = chunk_get_block_including_neighbors(chunk, x, y - 1, z - 1);
                             }
                         }
 

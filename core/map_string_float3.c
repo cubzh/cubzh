@@ -85,8 +85,7 @@ float3 *map_string_float3_iterator_current_value(const MapStringFloat3Iterator *
     return NULL;
 }
 
-void map_string_float3_iterator_replace_current_value(const MapStringFloat3Iterator *i,
-                                                      float3 *f3) {
+void map_string_float3_iterator_replace_current_value(const MapStringFloat3Iterator *i, float3 *f3) {
     if (i->currentNode != NULL) {
         float3_free(i->currentNode->value);
         i->currentNode->value = f3;
