@@ -70,10 +70,7 @@ func checkFormat(doFormat bool) error {
 	}
 
 	// run the clang command on every file
-	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
-		// ash -c is necessary because piping is used
-		Args: []string{"ash", "-c", command},
-	})
+	ciContainer = ciContainer.WithExec([]string{"ash", "-c", command})
 
 	// get the exit code
 	code, err := ciContainer.ExitCode(ctx)
