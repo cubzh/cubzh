@@ -100,7 +100,6 @@ void hash_uint32_int_free(HashUInt32Int *h) {
     free(h);
 }
 
-// inserts value, doesn't do anything if already inserted
 void hash_uint32_int_set(HashUInt32Int *h, uint32_t key, int value) {
     int level = 1;
     HashUInt32IntNode *n = h->rootNode;
@@ -134,7 +133,6 @@ void hash_uint32_int_set(HashUInt32Int *h, uint32_t key, int value) {
     }
 }
 
-// returns true if the value is found
 bool hash_uint32_int_get(HashUInt32Int *h, uint32_t key, int *outValue) {
     int level = 1;
     HashUInt32IntNode *n = h->rootNode;

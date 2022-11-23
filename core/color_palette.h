@@ -1,3 +1,9 @@
+// -------------------------------------------------------------
+//  Cubzh Core
+//  color_palette.c
+//  Created by Arthur Cormerais on August 11, 2022.
+// -------------------------------------------------------------
+
 #pragma once
 
 #ifdef __cplusplus
@@ -22,9 +28,10 @@ typedef struct PaletteEntry {
 /// A color palette is tied to a shape,
 /// - maps shape color index to RGBA color, emissive, and atlas color index
 /// - maximum SHAPE_COLOR_INDEX_MAX_COUNT colors
-/// - currently color atlas is maintained at every palette change TODO: move to end-of-frame if
-/// needed
-/// - adding a new color will check first if it exists and insert if new
+/// - currently color atlas is maintained at every palette change
+/// - adding a new color can be done either,
+///     by checking first if it exists and insert if new (allowDuplicates=false)
+///     by inserting a new color even if it is a duplicate (allowDuplicates=true)
 typedef struct ColorPalette {
     Weakptr *refAtlas;
     PaletteEntry *entries;
@@ -49,32 +56,27 @@ typedef struct ColorPalette {
     // Is true if any alpha or emission values changed since last clear
     bool lighting_dirty;
 
-    // If true, any new color may use shared color atlas slots
-    bool sharedColors;
-
-    char pad[4];
+    char pad[5];
 
 } ColorPalette;
 
-ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared);
+ColorPalette *color_palette_new(ColorAtlas *atlas);
 ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
                                           uint8_t count,
                                           const RGBAColor *colors,
-                                          const bool *emissive,
-                                          bool allowShared);
+                                          const bool *emissive);
 ColorPalette *color_palette_new_copy(const ColorPalette *src);
 void color_palette_free(ColorPalette *p);
 
 uint8_t color_palette_get_count(const ColorPalette *p);
 ColorAtlas *color_palette_get_atlas(const ColorPalette *p);
-void color_palette_set_shared(ColorPalette *p, bool toggle);
-bool color_palette_is_shared(const ColorPalette *p);
 bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut);
 /// @return false for a new color that could NOT be added to palette because it is full,
 ///  true otherwise (whether the color is new and was added or the color exists already)
 bool color_palette_check_and_add_color(ColorPalette *p,
                                        RGBAColor color,
-                                       SHAPE_COLOR_INDEX_INT_T *entryOut);
+                                       SHAPE_COLOR_INDEX_INT_T *entryOut,
+                                       bool allowDuplicates);
 /// @return false for a new color that could NOT be added to palette because it is full,
 /// true otherwise. Always add color even if already in the palette.
 bool color_palette_check_and_add_default_color_2021(ColorPalette *p,

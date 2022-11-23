@@ -13,13 +13,13 @@
 typedef struct _BlockChange {
     // a block is used here in order to allow shape_get_block to return a pending block,
     // it won't be used inside shape and will be freed by transaction_free
-    Block *block; // 8 bytes
+    Block *block;         // 8 bytes
+    SHAPE_COORDS_INT_T x; // 2 bytes
+    SHAPE_COORDS_INT_T y; // 2 bytes
+    SHAPE_COORDS_INT_T z; // 2 bytes
     // once change is applied, stores the color index that was replaced
-    SHAPE_COLOR_INDEX_INT_T previousColor; // 8 bytes
-    SHAPE_COORDS_INT_T x;                  // 2 bytes
-    SHAPE_COORDS_INT_T y;                  // 2 bytes
-    SHAPE_COORDS_INT_T z;                  // 2 bytes
-    char pad[2];
+    SHAPE_COLOR_INDEX_INT_T previousColor; // 1 byte
+    char pad[1];
 } BlockChange;
 
 BlockChange *blockChange_new(const SHAPE_COLOR_INDEX_INT_T colorIndex,

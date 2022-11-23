@@ -868,8 +868,7 @@ ColorPalette *chunk_v6_read_palette_data(void *cursor, ColorAtlas *colorAtlas, b
     ColorPalette *palette = color_palette_new_from_data(colorAtlas,
                                                         minimum(colorCount, UINT8_MAX),
                                                         colors,
-                                                        emissive,
-                                                        true);
+                                                        emissive);
     return palette;
 }
 
@@ -957,7 +956,10 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
                 else if (shrinkPalette != NULL) {
                     RGBAColor *color = color_palette_get_color(shrinkPalette, colorIndex);
                     if (color != NULL) {
-                        success = color_palette_check_and_add_color(palette, *color, &colorIndex);
+                        success = color_palette_check_and_add_color(palette,
+                                                                    *color,
+                                                                    &colorIndex,
+                                                                    false);
                     }
                 }
                 if (success == false) {
@@ -1273,10 +1275,9 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (palette != NULL && paletteID == PALETTE_ID_CUSTOM && shrinkPalette == false) {
-        color_palette_set_shared(palette, shapeSettings->sharedColors);
         shape_set_palette(*shape, palette);
     } else {
-        shape_set_palette(*shape, color_palette_new(colorAtlas, shapeSettings->sharedColors));
+        shape_set_palette(*shape, color_palette_new(colorAtlas));
     }
 
     // process blocks now

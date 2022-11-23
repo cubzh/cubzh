@@ -340,8 +340,7 @@ uint32_t chunk_v5_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette *
     *palette = color_palette_new_from_data(colorAtlas,
                                            minimum(paletteColorCount, UINT8_MAX),
                                            colors,
-                                           NULL,
-                                           true);
+                                           NULL);
 
     free(colors);
 
@@ -515,11 +514,9 @@ uint32_t chunk_v5_read_shape(Stream *s,
                     *shape = shape_make();
                 }
                 if (serializedPalette != NULL) {
-                    color_palette_set_shared(serializedPalette, shapeSettings->sharedColors);
                     shape_set_palette(*shape, serializedPalette);
                 } else {
-                    shape_set_palette(*shape,
-                                      color_palette_new(colorAtlas, shapeSettings->sharedColors));
+                    shape_set_palette(*shape, color_palette_new(colorAtlas));
                 }
 
                 // this means blocks have been found before the size.

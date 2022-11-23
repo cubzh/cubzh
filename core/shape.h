@@ -41,7 +41,6 @@ typedef struct _LoadShapeSettings {
     bool octree;
     bool lighting;
     bool isMutable;
-    bool sharedColors;
 } LoadShapeSettings;
 
 #define POINT_OF_INTEREST_ORIGIN "origin"     // legacy
