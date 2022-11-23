@@ -34,6 +34,7 @@
 #include "test_transaction.h"
 #include "test_transform.h"
 #include "test_utils.h"
+#include "test_vertexbuffer.h"
 #include "test_weakptr.h"
 
 TEST_LIST = {
@@ -207,6 +208,36 @@ TEST_LIST = {
     {"test_utils_stringArray_new", test_utils_stringArray_new},
     {"test_utils_stringArray_n_append", test_utils_stringArray_n_append},
     {"test_utils_string_split", test_utils_string_split},
+
+    // vertexbuffer
+    { "vertex_buffer_pop_destroyed_id", test_vertex_buffer_pop_destroyed_id },
+    { "vertex_buffer_mem_area_writer_new", test_vertex_buffer_mem_area_writer_new },
+    { "vertex_buffer_mem_area_writer_write", test_vertex_buffer_mem_area_writer_write },
+    { "vertex_buffer_mem_area_writer_done", test_vertex_buffer_mem_area_writer_done },
+    { "vertex_buffer_new_with_max_count", test_vertex_buffer_new_with_max_count },
+    { "vertex_buffer_free_all", test_vertex_buffer_free_all },
+    { "vertex_buffer_is_not_full", test_vertex_buffer_is_not_full },
+    { "vertex_buffer_insert_after", test_vertex_buffer_insert_after },
+    { "vertex_buffer_get_next", test_vertex_buffer_get_next },
+    { "vertex_buffer_get_id", test_vertex_buffer_get_id },
+    { "vertex_buffer_get_draw_buffers", test_vertex_buffer_get_draw_buffers },
+    { "vertex_buffer_get_draw_slices", test_vertex_buffer_get_draw_slices },
+    { "vertex_buffer_add_draw_slice", test_vertex_buffer_add_draw_slice },
+    { "vertex_buffer_fill_draw_slices", test_vertex_buffer_fill_draw_slices },
+    { "vertex_buffer_flush_draw_slices", test_vertex_buffer_flush_draw_slices },
+    { "vertex_buffer_get_nb_draw_slices", test_vertex_buffer_get_nb_draw_slices },
+    { "vertex_buffer_get_nb_vertices", test_vertex_buffer_get_nb_vertices },
+    { "vertex_buffer_get_max_length", test_vertex_buffer_get_max_length },
+    { "vertex_buffer_is_fragmented", test_vertex_buffer_is_fragmented },
+    { "vertex_buffer_is_enlisted", test_vertex_buffer_is_enlisted },
+    { "vertex_buffer_set_enlisted", test_vertex_buffer_set_enlisted },
+    { "vertex_buffer_fill_gaps", test_vertex_buffer_fill_gaps },
+    { "vertex_buffer_mem_area_make_gap", test_vertex_buffer_mem_area_make_gap },
+    { "vertex_buffer_mem_area_flush", test_vertex_buffer_mem_area_flush },
+    { "vertex_buffer_has_dirty_mem_areas", test_vertex_buffer_has_dirty_mem_areas },
+    { "vertex_buffer_log_mem_areas", test_vertex_buffer_log_mem_areas },
+    { "vertex_buffer_set_lighting_enabled", test_vertex_buffer_set_lighting_enabled },
+    { "vertex_buffer_get_lighting_enabled", test_vertex_buffer_get_lighting_enabled },
 
     // filo_list_float3
     {"filo_list_float3_pop", test_filo_list_float3_pop},

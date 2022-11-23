@@ -94,6 +94,7 @@
     <ClInclude Include="..\test_transform.h" />
     <ClInclude Include="..\test_utils.h" />
     <ClInclude Include="..\test_weakptr.h" />
+    <ClInclude Include="..\test_vertexbuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\block.c" />
