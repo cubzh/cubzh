@@ -9,6 +9,370 @@
 
 #include "scene.h"
 #include "shape.h"
+#include "transform.h"
+
+// functions that are NOT tested:
+// shape_add_vertex_buffer
+// shape_retain_count
+// shape_free
+// shape_is_resizable
+// shape_flush
+// shape_set_palette
+// shape_get_block
+// shape_get_block_immediate
+// shape_add_block_from_lua
+// shape_remove_block_from_lua
+// shape_replace_block_from_lua
+// shape_apply_current_transaction
+// shape_add_block_with_color
+// shape_paint_block
+// shape_get_chunk_and_position_within
+// shape_get_max_fixed_size
+// shape_box_to_aabox
+// shape_get_local_aabb
+// shape_get_world_aabb
+// shape_compute_size_and_origin
+// shape_shrink_box
+// shape_expand_box
+// shape_make_space_for_block
+// shape_make_space
+// shape_refresh_vertices
+// shape_refresh_all_vertices
+// shape_get_first_vertex_buffer
+// shape_new_chunk_iterator
+// shape_get_nb_chunks
+// shape_get_nb_blocks
+// shape_get_octree
+// shape_log_vertex_buffers
+// shape_set_model_locked
+// shape_is_model_locked
+// shape_set_pivot
+// shape_get_pivot
+// shape_reset_pivot_to_center
+// shape_block_to_local
+// shape_block_to_world
+// shape_local_to_block
+// shape_world_to_block
+// shape_block_lua_to_internal
+// shape_block_internal_to_lua
+// shape_block_lua_to_internal_float
+// shape_block_internal_to_lua_float
+// shape_set_position
+// shape_set_local_position
+// shape_get_position
+// shape_get_local_position
+// shape_get_model_origin
+// shape_set_rotation
+// shape_set_rotation_euler
+// shape_set_local_rotation
+// shape_set_local_rotation_euler
+// shape_get_rotation
+// shape_get_rotation_euler
+// shape_get_local_rotation
+// shape_get_local_rotation_euler
+// shape_set_local_scale
+// shape_get_local_scale
+// shape_get_lossy_scale
+// shape_get_model_matrix
+// shape_set_parent
+// shape_remove_parent
+// shape_get_root_transform
+// shape_get_pivot_transform
+// shape_move_children
+// shape_count_shape_descendants
+// shape_get_transform_children_iterator
+// shape_get_rigidbody
+// shape_get_collision_groups
+// shape_ensure_rigidbody
+// shape_get_physics_enabled
+// shape_set_physics_enabled
+// shape_fit_collider_to_bounding_box
+// shape_get_local_collider
+// shape_compute_world_collider
+// shape_set_physics_simulation_mode
+// shape_set_physics_properties
+// shape_box_swept
+// shape_ray_cast
+// shape_point_overlap
+// shape_box_overlap
+// shape_is_hidden
+// shape_set_draw_mode
+// shape_get_draw_mode
+// shape_set_shadow_decal
+// shape_has_shadow_decal
+// shape_set_unlit
+// shape_is_unlit
+// shape_set_layers
+// shape_get_layers
+// shape_debug_points_of_interest
+// shape_get_poi_iterator
+// shape_get_point_of_interest
+// shape_set_point_of_interest
+// shape_get_point_rotation_iterator
+// shape_set_point_rotation
+// shape_get_point_rotation
+// shape_remove_point
+// shape_clear_baked_lighting
+// shape_compute_baked_lighting
+// shape_uses_baked_lighting
+// shape_has_baked_lighting_data
+// shape_get_lighting_data
+// shape_set_lighting_data
+// shape_get_light_without_checking
+// shape_set_light
+// shape_get_light_or_default
+// shape_compute_baked_lighting_removed_block
+// shape_compute_baked_lighting_added_block
+// shape_compute_baked_lighting_replaced_block
+// shape_is_lua_mutable
+// shape_set_lua_mutable
+// shape_history_setEnabled
+// shape_history_getEnabled
+// shape_history_setKeepTransactionPending
+// shape_history_getKeepTransactionPending
+// shape_history_canUndo
+// shape_history_canRedo
+// shape_history_undo
+// shape_history_redo
+// shape_enableAnimations
+// shape_disableAnimations
+// shape_getIgnoreAnimations
+
+// check default values
+void test_shape_make(void) {
+    Shape *s = shape_make();
+    int3 box_size = {1, 1, 1};
+
+    TEST_CHECK(shape_get_palette((const Shape *)s) == NULL);
+    shape_get_bounding_box_size(s, &box_size);
+    TEST_CHECK(box_size.x == 0);
+    TEST_CHECK(box_size.y == 0);
+    TEST_CHECK(box_size.z == 0);
+    TEST_CHECK(shape_get_layers((const Shape *)s) == 1);
+    TEST_CHECK(shape_get_draw_mode((const Shape *)s) == SHAPE_DRAWMODE_DEFAULT);
+    TEST_CHECK(shape_is_lua_mutable(s) == false);
+
+    shape_free((Shape *const)s);
+}
+
+// check that the copy is independant from the source
+void test_shape_make_copy(void) {
+    Shape *src = shape_make();
+    shape_set_lua_mutable(src, true);
+    {
+        ColorAtlas *atlas = color_atlas_new();
+        TEST_ASSERT(atlas != NULL);
+        const bool sharedColors = true;
+        shape_set_palette(src, color_palette_new(atlas, sharedColors));
+    }
+    Shape *copy = shape_make_copy(src);
+
+    TEST_CHECK(shape_is_lua_mutable(copy));
+
+    shape_set_lua_mutable(src, false);
+    TEST_CHECK(shape_is_lua_mutable(copy));
+
+    shape_free((Shape *const)src);
+    shape_free((Shape *const)copy);
+}
+
+// check fixed size
+void test_shape_make_with_fixed_size(void) {
+    Shape *s = shape_make_with_fixed_size(10, 20, 30, true, true);
+    int3 result = {0, 0, 0};
+    shape_get_fixed_size((const Shape *)s, &result);
+
+    TEST_CHECK(result.x == 10);
+    TEST_CHECK(result.y == 20);
+    TEST_CHECK(result.z == 30);
+    TEST_CHECK(shape_uses_baked_lighting((const Shape *)s));
+    TEST_CHECK(shape_is_lua_mutable(s));
+
+    shape_free((Shape *const)s);
+}
+
+// octree must have the correct dimension
+void test_shape_make_with_octree(void) {
+    Shape *s = shape_make_with_octree(10, 20, 30, false, false, false);
+    const Octree *o = shape_get_octree((const Shape *)s);
+
+    TEST_CHECK(octree_get_dimension(o) == 32);
+
+    shape_free((Shape *const)s);
+}
+
+// check that the transform is the one provided
+void test_shape_set_transform(void) {
+    Shape *s = shape_make();
+    Transform *t = transform_make_default();
+    shape_set_transform((Shape *const)s, (Transform *const)t);
+
+    TEST_CHECK(shape_get_root_transform((const Shape *)s) == t);
+
+    shape_free((Shape *const)s);
+    transform_release(t);
+}
+
+// check that we can retain a shape
+void test_shape_retain(void) {
+    Shape *s = shape_make();
+    Transform *t = transform_make_with_shape(s);
+
+    bool ok = shape_retain((Shape *const)s);
+    TEST_CHECK(ok);
+
+    ok = shape_retain((Shape *const)s);
+    TEST_CHECK(ok);
+
+    shape_release((Shape *const)s);
+    shape_release((Shape *const)s);
+    shape_free((Shape *const)s);
+}
+
+// check that shape_release does not crash
+void test_shape_release(void) {
+    Shape *s = shape_make();
+    Transform *t = transform_make_with_shape(s);
+    shape_retain((Shape *const)s);
+
+    shape_release((Shape *const)s);
+    shape_release((Shape *const)s);
+}
+
+// check for coherent id
+void test_shape_get_id(void) {
+    const Shape *s = shape_make();
+    const ShapeId id = shape_get_id(s);
+
+    TEST_CHECK(id < 1000);
+
+    shape_free((Shape *const)s);
+}
+
+// check that shape's palette atlas is the one provided
+void test_shape_get_palette(void) {
+    Shape *s = shape_make();
+    const SHAPE_COLOR_INDEX_INT_T idx = 5;
+    const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
+    ColorAtlas *atlas = color_atlas_new();
+    TEST_ASSERT(atlas != NULL);
+    const bool sharedColors = true;
+    shape_set_palette(s, color_palette_new(atlas, sharedColors));
+    ColorPalette *p = shape_get_palette((const Shape *)s);
+
+    TEST_CHECK(color_palette_get_atlas((const ColorPalette *)p) == atlas);
+
+    shape_free((Shape *const)s);
+}
+
+// check that the block is removed (air)
+void test_shape_remove_block(void) {
+    Shape *s = shape_make();
+    const SHAPE_COLOR_INDEX_INT_T idx = 5;
+    const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
+    {
+        ColorAtlas *atlas = color_atlas_new();
+        TEST_ASSERT(atlas != NULL);
+        const bool sharedColors = true;
+        shape_set_palette(s, color_palette_new(atlas, sharedColors));
+    }
+    shape_add_block_with_color(s, idx, x, y, z, true, false, false, true);
+    const bool ok = shape_remove_block(s, x, y, z, NULL, false, false, true);
+
+    TEST_CHECK(ok);
+
+    shape_apply_current_transaction(s, false);
+    TEST_CHECK(block_is_solid(shape_get_block(s, x, y, z, false)) == false);
+
+    shape_free((Shape *const)s);
+}
+
+// check that the box is coherent
+void test_shape_get_bounding_box_size(void) {
+    Shape *s = shape_make();
+    {
+        ColorAtlas *atlas = color_atlas_new();
+        TEST_ASSERT(atlas != NULL);
+        const bool sharedColors = true;
+        shape_set_palette(s, color_palette_new(atlas, sharedColors));
+    }
+    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, false, true);
+    int3 result = {0, 0, 0};
+    shape_get_bounding_box_size(s, &result);
+
+    TEST_CHECK(result.x == 1);
+    TEST_CHECK(result.y == 1);
+    TEST_CHECK(result.z == 1);
+
+    shape_free((Shape *const)s);
+}
+
+// check that we get the values we provided
+void test_shape_get_fixed_size(void) {
+    Shape *s = shape_make_with_fixed_size(10, 20, 30, false, false);
+    int3 result = {0, 0, 0};
+    shape_get_fixed_size(s, &result);
+
+    TEST_CHECK(result.x == 10);
+    TEST_CHECK(result.y == 20);
+    TEST_CHECK(result.z == 30);
+
+    shape_free((Shape *const)s);
+}
+
+// check with a correct and an incorrect value
+void test_shape_is_within_fixed_bounds(void) {
+    Shape *s = shape_make_with_fixed_size(10, 20, 30, false, false);
+
+    TEST_CHECK(shape_is_within_fixed_bounds(s, 5, 10, 10));
+    TEST_CHECK(shape_is_within_fixed_bounds(s, 50, 10, 10) == false);
+
+    shape_free((Shape *const)s);
+}
+
+// same tests as test_shape_get_bounding_box_size
+void test_shape_get_model_aabb(void) {
+    Shape *s = shape_make();
+    {
+        ColorAtlas *atlas = color_atlas_new();
+        TEST_ASSERT(atlas != NULL);
+        const bool sharedColors = true;
+        shape_set_palette(s, color_palette_new(atlas, sharedColors));
+    }
+    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, false, true);
+    int3 result = {0, 0, 0};
+    const Box *aabb = shape_get_model_aabb(s);
+    box_get_size_int(aabb, &result);
+
+    TEST_CHECK(result.x == 1);
+    TEST_CHECK(result.y == 1);
+    TEST_CHECK(result.z == 1);
+
+    shape_free((Shape *const)s);
+}
+
+// check that the fullname is the one we provided
+void test_shape_set_fullname(void) {
+    Shape *s = shape_make();
+    const char *name = "shape_name";
+    shape_set_fullname(s, name);
+
+    TEST_CHECK(strcmp(shape_get_fullname(s), name) == 0);
+    TEST_CHECK(shape_get_fullname(s) != name);
+
+    shape_free((Shape *const)s);
+}
+
+// same test as test_shape_set_fullname
+void test_shape_get_fullname(void) {
+    Shape *s = shape_make();
+    const char *name = "shape_name";
+    shape_set_fullname(s, name);
+
+    TEST_CHECK(strcmp(shape_get_fullname(s), name) == 0);
+
+    shape_free((Shape *const)s);
+}
 
 //
 // history : used
@@ -117,7 +481,7 @@ void test_shape_addblock_1(void) {
     TEST_ASSERT(b->colorIndex == COLOR3);
 
     // free resources
-    shape_free(sh);
+    shape_free((Shape *const)sh);
     scene_free(sc);
 }
 
@@ -212,54 +576,54 @@ void test_shape_addblock_2(void) {
     TEST_ASSERT(b->colorIndex == COLOR3);
 
     // free resources
-    shape_free(sh);
+    shape_free((Shape *const)sh);
     scene_free(sc);
 }
 
 // uses pending transaction WITHOUT applying it
-// void test_shape_addblock_1(void) {
-//    // TODO: add colors to shape's palette
-//    const SHAPE_COLOR_INDEX_INT_T COLOR1 = 42;
-//    const SHAPE_COLOR_INDEX_INT_T COLOR2 = 43;
-//    const SHAPE_COLOR_INDEX_INT_T COLOR3 = 44;
-//    bool ok = false;
-//    Block *b = NULL;
-//
-//    Scene *sc = scene_new();
-//    TEST_CHECK(sc != NULL);
-//
-//    Shape *sh = shape_make();
-//    TEST_CHECK(sh != NULL);
-//
-//    // add block 1
-//    ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
-//    TEST_CHECK(ok);
-//    b = shape_get_block(sh, 0, 0, -1, true);
-//    TEST_CHECK(b != NULL);
-//    TEST_CHECK(b->colorIndex == COLOR1);
-//
-//    // add block 2
-//    ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
-//    TEST_CHECK(ok);
-//    b = shape_get_block(sh, 0, 0, -2, true);
-//    TEST_CHECK(b != NULL);
-//    TEST_CHECK(b->colorIndex == COLOR2);
-//
-//    // remove block 2
-//    ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
-//    TEST_CHECK(ok);
-//    b = shape_get_block(sh, 0, 0, -2, true);
-//    TEST_CHECK(b != NULL);
-//    TEST_CHECK(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
-//
-//    // add block 3
-//    ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
-//    TEST_CHECK(ok);
-//    b = shape_get_block(sh, 0, 0, 1, true);
-//    TEST_CHECK(b != NULL);
-//    TEST_CHECK(b->colorIndex == COLOR3);
-//
-//    // free resources
-//    shape_free(sh);
-//    scene_free(sc);
-//}
+void test_shape_addblock_3(void) {
+    // TODO: add colors to shape's palette
+    const SHAPE_COLOR_INDEX_INT_T COLOR1 = 42;
+    const SHAPE_COLOR_INDEX_INT_T COLOR2 = 43;
+    const SHAPE_COLOR_INDEX_INT_T COLOR3 = 44;
+    bool ok = false;
+    Block *b = NULL;
+
+    Scene *sc = scene_new();
+    TEST_CHECK(sc != NULL);
+
+    Shape *sh = shape_make();
+    TEST_CHECK(sh != NULL);
+
+    // add block 1
+    ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
+    TEST_CHECK(ok);
+    b = shape_get_block(sh, 0, 0, -1, true);
+    TEST_CHECK(b != NULL);
+    TEST_CHECK(b->colorIndex == COLOR1);
+
+    // add block 2
+    ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
+    TEST_CHECK(ok);
+    b = shape_get_block(sh, 0, 0, -2, true);
+    TEST_CHECK(b != NULL);
+    TEST_CHECK(b->colorIndex == COLOR2);
+
+    // remove block 2
+    ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
+    TEST_CHECK(ok);
+    b = shape_get_block(sh, 0, 0, -2, true);
+    TEST_CHECK(b != NULL);
+    TEST_CHECK(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
+
+    // add block 3
+    ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
+    TEST_CHECK(ok);
+    b = shape_get_block(sh, 0, 0, 1, true);
+    TEST_CHECK(b != NULL);
+    TEST_CHECK(b->colorIndex == COLOR3);
+
+    // free resources
+    shape_free((Shape *const)sh);
+    scene_free(sc);
+}
