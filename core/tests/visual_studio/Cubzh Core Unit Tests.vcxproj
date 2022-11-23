@@ -80,6 +80,7 @@
     <ClInclude Include="..\test_filo_list_uint16.h" />
     <ClInclude Include="..\test_float3.h" />
     <ClInclude Include="..\test_float4.h" />
+    <ClInclude Include="..\test_flood_fill_lighting.h" />
     <ClInclude Include="..\test_hash_uint32_int.h" />
     <ClInclude Include="..\test_inputs.h" />
     <ClInclude Include="..\test_int3.h" />

@@ -21,6 +21,7 @@
 #include "test_filo_list_uint32.h"
 #include "test_float3.h"
 #include "test_float4.h"
+#include "test_flood_fill_lighting.h"
 #include "test_hash_uint32_int.h"
 #include "test_inputs.h"
 #include "test_int3.h"
@@ -166,6 +167,18 @@ TEST_LIST = {
 
     // float4
     {"float4_new", test_float4_new},
+
+    // light_flood_fill_lighting
+    {"light_node_queue_new", test_light_node_queue_new},
+    {"light_node_get_coords", test_light_node_get_coords},
+    {"light_node_queue_push", test_light_node_queue_push},
+    {"light_node_queue_pop", test_light_node_queue_pop},
+    {"light_removal_node_queue_new", test_light_removal_node_queue_new},
+    {"light_removal_node_queue_push", test_light_removal_node_queue_push},
+    {"light_removal_node_queue_pop", test_light_removal_node_queue_pop},
+    {"light_removal_node_get_coords", test_light_removal_node_get_coords},
+    {"light_removal_node_get_srgb", test_light_removal_node_get_srgb},
+    {"light_removal_node_get_block_id", test_light_removal_node_get_block_id},
 
     // hash_uint32
     {"hash_uint32_int", test_hash_uint32_int},

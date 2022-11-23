@@ -363,6 +363,9 @@
     <ClInclude Include="..\test_inputs.h">
       <Filter>tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\test_flood_fill_lighting.h">
+      <Filter>tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Makefile" />
