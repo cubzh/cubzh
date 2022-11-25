@@ -28,7 +28,17 @@ jobs:
           cache: true
           cache-dependency-path: ci/core_unit_tests/go.sum
 
-      - name: Build Dagger program
+      - name: Cache Go executable
+        id: cache-unit-tests
+        uses: actions/cache@v3
+        with:
+          path: ./ci/core_unit_tests # path to store keys
+          # match the os, the main file and its depedencies
+          key: ${{ runner.os }}-unit_tests-${{ hashFiles('./ci/format/main.go') }}-${{ hashFiles('./ci/format/go.mod') }}
+
+      - if: steps.cache-unit-tests.outputs.cache-hit != 'true'
+        # Build only if necessary
+        name: Build Dagger program
         working-directory: ./ci/core_unit_tests
         run: go build -v ./...
 
@@ -55,7 +65,16 @@ jobs:
           cache: true
           cache-dependency-path: ci/format/go.sum
 
-      - name: Build Dagger program
+      - name: Cache Go executable
+        id: cache-format
+        uses: actions/cache@v3
+        with:
+          path: ./ci/format
+          # match the os, the main file and its depedencies
+          key: ${{ runner.os }}-format-${{ hashFiles('./ci/format/main.go') }}-${{ hashFiles('./ci/format/go.mod') }}
+
+      - if: steps.cache-format.outputs.cache-hit != 'true'
+        name: Build Dagger program        
         working-directory: ./ci/format
         run: go build -v ./...
 
