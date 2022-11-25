@@ -20,9 +20,9 @@ extern "C" {
 #include "weakptr.h"
 
 #if DEBUG
-    #define DEBUG_MARK_OPERATIONS false
+#define DEBUG_MARK_OPERATIONS false
 #else
-    #define DEBUG_MARK_OPERATIONS false
+#define DEBUG_MARK_OPERATIONS false
 #endif
 
 typedef struct ColorPalette ColorPalette;
@@ -39,8 +39,7 @@ typedef struct ColorAtlas {
     FifoList *availableIndices; // pool of available indices below count
     uint32_t count;
     uint32_t size; // atlas dimension
-    ATLAS_COLOR_INDEX_INT_T dirty_slice_origin_x, dirty_slice_origin_y;
-    ATLAS_COLOR_INDEX_INT_T dirty_slice_width, dirty_slice_height;
+    ATLAS_COLOR_INDEX_INT_T dirty_slice_min, dirty_slice_max;
 } ColorAtlas;
 
 ColorAtlas *color_atlas_new(void);

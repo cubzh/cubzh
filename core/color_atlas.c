@@ -15,26 +15,12 @@
 #include <string.h>
 
 void _color_atlas_add_index_to_dirty_slice(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index) {
-    const ATLAS_COLOR_INDEX_INT_T x = index % a->size;
-    const ATLAS_COLOR_INDEX_INT_T y = index / a->size;
-    if (a->dirty_slice_width > 0 && a->dirty_slice_height > 0) {
-        const ATLAS_COLOR_INDEX_INT_T fromX = minimum(a->dirty_slice_origin_x, x);
-        const ATLAS_COLOR_INDEX_INT_T fromY = minimum(a->dirty_slice_origin_y, y);
-        const ATLAS_COLOR_INDEX_INT_T toX = maximum(a->dirty_slice_origin_x + a->dirty_slice_width -
-                                                        1,
-                                                    x);
-        const ATLAS_COLOR_INDEX_INT_T toY = maximum(a->dirty_slice_origin_y +
-                                                        a->dirty_slice_height - 1,
-                                                    y);
-
-        a->dirty_slice_origin_x = fromX;
-        a->dirty_slice_origin_y = fromY;
-        a->dirty_slice_width = toX - fromX + 1;
-        a->dirty_slice_height = toY - fromY + 1;
+    if (a->dirty_slice_min != ATLAS_COLOR_INDEX_ERROR &&
+        a->dirty_slice_max != ATLAS_COLOR_INDEX_ERROR) {
+        a->dirty_slice_min = minimum(a->dirty_slice_min, index);
+        a->dirty_slice_max = maximum(a->dirty_slice_max, index);
     } else {
-        a->dirty_slice_origin_x = x;
-        a->dirty_slice_origin_y = y;
-        a->dirty_slice_width = a->dirty_slice_height = 1;
+        a->dirty_slice_min = a->dirty_slice_max = index;
     }
 }
 
@@ -45,10 +31,8 @@ ColorAtlas *color_atlas_new() {
     color_atlas->availableIndices = fifo_list_new();
     color_atlas->count = 0;
     color_atlas->size = COLOR_ATLAS_SIZE;
-    color_atlas->dirty_slice_origin_x = 0;
-    color_atlas->dirty_slice_origin_y = 0;
-    color_atlas->dirty_slice_width = 0;
-    color_atlas->dirty_slice_height = 0;
+    color_atlas->dirty_slice_min = ATLAS_COLOR_INDEX_ERROR;
+    color_atlas->dirty_slice_max = ATLAS_COLOR_INDEX_ERROR;
 
     // color + complementary : half as many unique colors
     const uint32_t nbColors = color_atlas->size * color_atlas->size / 2;
@@ -101,8 +85,8 @@ ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a, RGBAColor
 
     // add color + complementary
 #if DEBUG_MARK_OPERATIONS
-    a->colors[index] = (RGBAColor){ 0, 255, 0, 255 };
-    a->complementaryColors[index] = (RGBAColor){ 0, 0, 255, 255 };
+    a->colors[index] = (RGBAColor){0, 255, 0, 255};
+    a->complementaryColors[index] = (RGBAColor){0, 0, 255, 255};
 #else
     a->colors[index] = color;
     a->complementaryColors[index] = color_compute_complementary(color);
@@ -128,8 +112,8 @@ void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index) {
     // used in the meantime
 
 #if DEBUG_MARK_OPERATIONS
-    a->colors[index] = (RGBAColor){ 255, 0, 0, 255 };
-    a->complementaryColors[index] = (RGBAColor){ 255, 0, 255, 255 };
+    a->colors[index] = (RGBAColor){255, 0, 0, 255};
+    a->complementaryColors[index] = (RGBAColor){255, 0, 255, 255};
 
     _color_atlas_add_index_to_dirty_slice(a, index);
 #endif
@@ -153,8 +137,8 @@ void color_atlas_set_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, RGBACol
     }
 
 #if DEBUG_MARK_OPERATIONS
-    a->colors[index] = (RGBAColor){ 0, 128, 0, 255 };
-    a->complementaryColors[index] = (RGBAColor){ 0, 0, 128, 255 };
+    a->colors[index] = (RGBAColor){0, 128, 0, 255};
+    a->complementaryColors[index] = (RGBAColor){0, 0, 128, 255};
 #else
     a->colors[index] = color;
     a->complementaryColors[index] = color_compute_complementary(color);
@@ -171,12 +155,16 @@ RGBAColor *color_atlas_get_color(const ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T in
 }
 
 void color_atlas_force_dirty_slice(ColorAtlas *a) {
-    a->dirty_slice_origin_x = a->dirty_slice_origin_y = 0;
-    a->dirty_slice_width = a->count % a->size;
-    a->dirty_slice_height = maximum(a->count / a->size, 1);
+    if (a->count > 0) {
+        a->dirty_slice_min = 0;
+        a->dirty_slice_max = a->count - 1;
+    } else {
+        a->dirty_slice_min = ATLAS_COLOR_INDEX_ERROR;
+        a->dirty_slice_max = ATLAS_COLOR_INDEX_ERROR;
+    }
 }
 
 void color_atlas_flush_slice(ColorAtlas *a) {
-    a->dirty_slice_origin_x = a->dirty_slice_origin_y = 0;
-    a->dirty_slice_width = a->dirty_slice_height = 0;
+    a->dirty_slice_min = ATLAS_COLOR_INDEX_ERROR;
+    a->dirty_slice_max = ATLAS_COLOR_INDEX_ERROR;
 }
