@@ -19,6 +19,12 @@ extern "C" {
 #include "hash_uint32_int.h"
 #include "weakptr.h"
 
+#if DEBUG
+#define DEBUG_MARK_OPERATIONS false
+#else
+#define DEBUG_MARK_OPERATIONS false
+#endif
+
 typedef struct ColorPalette ColorPalette;
 
 /// Flat array representation of the data mounted into a color atlas renderer-side,
@@ -33,8 +39,7 @@ typedef struct ColorAtlas {
     FifoList *availableIndices; // pool of available indices below count
     uint32_t count;
     uint32_t size; // atlas dimension
-    ATLAS_COLOR_INDEX_INT_T dirty_slice_origin_x, dirty_slice_origin_y;
-    ATLAS_COLOR_INDEX_INT_T dirty_slice_width, dirty_slice_height;
+    ATLAS_COLOR_INDEX_INT_T dirty_slice_min, dirty_slice_max;
 } ColorAtlas;
 
 ColorAtlas *color_atlas_new(void);
