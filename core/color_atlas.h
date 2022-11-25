@@ -19,6 +19,12 @@ extern "C" {
 #include "hash_uint32_int.h"
 #include "weakptr.h"
 
+#if DEBUG
+    #define DEBUG_MARK_OPERATIONS false
+#else
+    #define DEBUG_MARK_OPERATIONS false
+#endif
+
 typedef struct ColorPalette ColorPalette;
 
 /// Flat array representation of the data mounted into a color atlas renderer-side,

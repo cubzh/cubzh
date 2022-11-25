@@ -100,8 +100,13 @@ ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a, RGBAColor
     }
 
     // add color + complementary
+#if DEBUG_MARK_OPERATIONS
+    a->colors[index] = (RGBAColor){ 0, 255, 0, 255 };
+    a->complementaryColors[index] = (RGBAColor){ 0, 0, 255, 255 };
+#else
     a->colors[index] = color;
     a->complementaryColors[index] = color_compute_complementary(color);
+#endif
 
     _color_atlas_add_index_to_dirty_slice(a, index);
 
@@ -121,6 +126,13 @@ void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index) {
 
     // note: removed color do not need to be set dirty, it simply becomes available and won't be
     // used in the meantime
+
+#if DEBUG_MARK_OPERATIONS
+    a->colors[index] = (RGBAColor){ 255, 0, 0, 255 };
+    a->complementaryColors[index] = (RGBAColor){ 255, 0, 255, 255 };
+
+    _color_atlas_add_index_to_dirty_slice(a, index);
+#endif
 }
 
 void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
@@ -140,8 +152,13 @@ void color_atlas_set_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, RGBACol
         return;
     }
 
+#if DEBUG_MARK_OPERATIONS
+    a->colors[index] = (RGBAColor){ 0, 128, 0, 255 };
+    a->complementaryColors[index] = (RGBAColor){ 0, 0, 128, 255 };
+#else
     a->colors[index] = color;
     a->complementaryColors[index] = color_compute_complementary(color);
+#endif
 
     _color_atlas_add_index_to_dirty_slice(a, index);
 }
