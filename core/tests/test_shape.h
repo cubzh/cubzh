@@ -162,8 +162,7 @@ void test_shape_make_copy(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        const bool sharedColors = true;
-        shape_set_palette(src, color_palette_new(atlas, sharedColors));
+        shape_set_palette(src, color_palette_new(atlas));
     }
     Shape *copy = shape_make_copy(src);
 
@@ -256,8 +255,7 @@ void test_shape_get_palette(void) {
     const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
     ColorAtlas *atlas = color_atlas_new();
     TEST_ASSERT(atlas != NULL);
-    const bool sharedColors = true;
-    shape_set_palette(s, color_palette_new(atlas, sharedColors));
+    shape_set_palette(s, color_palette_new(atlas));
     ColorPalette *p = shape_get_palette((const Shape *)s);
 
     TEST_CHECK(color_palette_get_atlas((const ColorPalette *)p) == atlas);
@@ -273,8 +271,7 @@ void test_shape_remove_block(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        const bool sharedColors = true;
-        shape_set_palette(s, color_palette_new(atlas, sharedColors));
+        shape_set_palette(s, color_palette_new(atlas));
     }
     shape_add_block_with_color(s, idx, x, y, z, true, false, false, true);
     const bool ok = shape_remove_block(s, x, y, z, NULL, false, false, true);
@@ -293,8 +290,7 @@ void test_shape_get_bounding_box_size(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        const bool sharedColors = true;
-        shape_set_palette(s, color_palette_new(atlas, sharedColors));
+        shape_set_palette(s, color_palette_new(atlas));
     }
     shape_add_block_with_color(s, 1, 1, 2, 3, true, false, false, true);
     int3 result = {0, 0, 0};
@@ -336,8 +332,7 @@ void test_shape_get_model_aabb(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        const bool sharedColors = true;
-        shape_set_palette(s, color_palette_new(atlas, sharedColors));
+        shape_set_palette(s, color_palette_new(atlas));
     }
     shape_add_block_with_color(s, 1, 1, 2, 3, true, false, false, true);
     int3 result = {0, 0, 0};
@@ -404,8 +399,7 @@ void test_shape_addblock_1(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        const bool sharedColors = true;
-        shape_set_palette(sh, color_palette_new(atlas, sharedColors));
+        shape_set_palette(sh, color_palette_new(atlas));
     }
 
     ColorPalette *palette = shape_get_palette(sh);
@@ -414,7 +408,7 @@ void test_shape_addblock_1(void) {
     { // add color 1
         RGBAColor color = {.r = 1, .g = 1, .b = 1, .a = 1};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
-        ok = color_palette_check_and_add_color(palette, color, &entryIdx);
+        ok = color_palette_check_and_add_color(palette, color, &entryIdx, false);
         TEST_ASSERT(ok);
         COLOR1 = color_palette_entry_idx_to_ordered_idx(palette, entryIdx);
     }
@@ -422,7 +416,7 @@ void test_shape_addblock_1(void) {
     { // add color 2
         RGBAColor color = {.r = 2, .g = 2, .b = 2, .a = 2};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
-        ok = color_palette_check_and_add_color(palette, color, &entryIdx);
+        ok = color_palette_check_and_add_color(palette, color, &entryIdx, false);
         TEST_ASSERT(ok);
         COLOR2 = color_palette_entry_idx_to_ordered_idx(palette, entryIdx);
     }
@@ -430,7 +424,7 @@ void test_shape_addblock_1(void) {
     { // add color 3
         RGBAColor color = {.r = 3, .g = 3, .b = 3, .a = 3};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
-        ok = color_palette_check_and_add_color(palette, color, &entryIdx);
+        ok = color_palette_check_and_add_color(palette, color, &entryIdx, false);
         TEST_ASSERT(ok);
         COLOR3 = color_palette_entry_idx_to_ordered_idx(palette, entryIdx);
     }
@@ -508,8 +502,7 @@ void test_shape_addblock_2(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        const bool sharedColors = true;
-        shape_set_palette(sh, color_palette_new(atlas, sharedColors));
+        shape_set_palette(sh, color_palette_new(atlas));
     }
 
     ColorPalette *palette = shape_get_palette(sh);
@@ -518,7 +511,7 @@ void test_shape_addblock_2(void) {
     { // add color 1
         RGBAColor color = {.r = 1, .g = 1, .b = 1, .a = 1};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
-        ok = color_palette_check_and_add_color(palette, color, &entryIdx);
+        ok = color_palette_check_and_add_color(palette, color, &entryIdx, false);
         TEST_ASSERT(ok);
         COLOR1 = color_palette_entry_idx_to_ordered_idx(palette, entryIdx);
     }
@@ -526,7 +519,7 @@ void test_shape_addblock_2(void) {
     { // add color 2
         RGBAColor color = {.r = 2, .g = 2, .b = 2, .a = 2};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
-        ok = color_palette_check_and_add_color(palette, color, &entryIdx);
+        ok = color_palette_check_and_add_color(palette, color, &entryIdx, false);
         TEST_ASSERT(ok);
         COLOR2 = color_palette_entry_idx_to_ordered_idx(palette, entryIdx);
     }
@@ -534,7 +527,7 @@ void test_shape_addblock_2(void) {
     { // add color 3
         RGBAColor color = {.r = 3, .g = 3, .b = 3, .a = 3};
         SHAPE_COLOR_INDEX_INT_T entryIdx;
-        ok = color_palette_check_and_add_color(palette, color, &entryIdx);
+        ok = color_palette_check_and_add_color(palette, color, &entryIdx, false);
         TEST_ASSERT(ok);
         COLOR3 = color_palette_entry_idx_to_ordered_idx(palette, entryIdx);
     }

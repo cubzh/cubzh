@@ -23,7 +23,7 @@ typedef struct _HashUInt32Int HashUInt32Int;
 HashUInt32Int *hash_uint32_int_new(void);
 void hash_uint32_int_free(HashUInt32Int *h);
 
-// inserts value, doesn't do anything if already inserted
+// inserts or update value
 void hash_uint32_int_set(HashUInt32Int *h, uint32_t key, int value);
 
 // returns true if the value is found, setting outValue

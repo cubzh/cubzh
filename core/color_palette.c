@@ -1,8 +1,40 @@
+// -------------------------------------------------------------
+//  Cubzh Core
+//  color_palette.c
+//  Created by Arthur Cormerais on August 11, 2022.
+// -------------------------------------------------------------
+
 #include "color_palette.h"
 
 #include <string.h>
 
-ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared) {
+// MARK: - Private functions -
+
+void _color_palette_unmap_entry_and_remap_duplicate(ColorPalette *p,
+                                                    SHAPE_COLOR_INDEX_INT_T entry) {
+    int idx;
+    uint32_t rgba = color_to_uint32(&p->entries[entry].color);
+    if (hash_uint32_int_get(p->colorToIdx, rgba, &idx)) {
+        // this entry was the one used for mapping index, unmap it
+        hash_uint32_int_delete(p->colorToIdx, rgba);
+
+        // remap first duplicate if any
+        RGBAColor color;
+        for (SHAPE_COLOR_INDEX_INT_T i = 0; i < p->orderedCount; ++i) {
+            if (i != entry) {
+                color = p->entries[p->orderedIndices != NULL ? p->orderedIndices[i] : i].color;
+                if (colors_are_equal(&color, &p->entries[entry].color)) {
+                    hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), i);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+// MARK: -
+
+ColorPalette *color_palette_new(ColorAtlas *atlas) {
     ColorPalette *p = (ColorPalette *)malloc(sizeof(ColorPalette));
     p->refAtlas = color_atlas_get_and_retain_weakptr(atlas);
     p->entries = (PaletteEntry *)malloc(sizeof(PaletteEntry) * SHAPE_COLOR_INDEX_MAX_COUNT);
@@ -12,7 +44,6 @@ ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared) {
     p->count = 0;
     p->orderedCount = 0;
     p->lighting_dirty = false;
-    p->sharedColors = allowShared;
     p->wptr = NULL;
     return p;
 }
@@ -20,8 +51,7 @@ ColorPalette *color_palette_new(ColorAtlas *atlas, bool allowShared) {
 ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
                                           uint8_t count,
                                           const RGBAColor *colors,
-                                          const bool *emissive,
-                                          bool allowShared) {
+                                          const bool *emissive) {
     // Shape runtime palettes have a definite number of colors, but we allow loading palettes of any
     // capacity eg. default palette or legacy palette
     const uint8_t size = maximum(count, SHAPE_COLOR_INDEX_MAX_COUNT);
@@ -35,7 +65,6 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
     p->count = count;
     p->orderedCount = count;
     p->lighting_dirty = false;
-    p->sharedColors = allowShared;
     p->wptr = NULL;
 
     for (SHAPE_COLOR_INDEX_INT_T i = 0; i < count; ++i) {
@@ -62,7 +91,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
 }
 
 ColorPalette *color_palette_new_copy(const ColorPalette *src) {
-    ColorPalette *dst = color_palette_new(weakptr_get(src->refAtlas), src->sharedColors);
+    ColorPalette *dst = color_palette_new(weakptr_get(src->refAtlas));
     color_palette_copy(dst, src);
     return dst;
 }
@@ -96,14 +125,6 @@ ColorAtlas *color_palette_get_atlas(const ColorPalette *p) {
     return weakptr_get(p->refAtlas);
 }
 
-void color_palette_set_shared(ColorPalette *p, bool toggle) {
-    p->sharedColors = toggle;
-}
-
-bool color_palette_is_shared(const ColorPalette *p) {
-    return p->sharedColors;
-}
-
 bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut) {
     int idx = 0;
     if (hash_uint32_int_get(p->colorToIdx, color_to_uint32(&color), &idx)) {
@@ -121,14 +142,15 @@ bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDE
 
 bool color_palette_check_and_add_color(ColorPalette *p,
                                        RGBAColor color,
-                                       SHAPE_COLOR_INDEX_INT_T *entryOut) {
+                                       SHAPE_COLOR_INDEX_INT_T *entryOut,
+                                       bool allowDuplicates) {
     ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
     if (a == NULL) {
         return false; // no atlas, palette is inactive waiting to be freed
     }
 
     SHAPE_COLOR_INDEX_INT_T idx;
-    if (color_palette_find(p, color, &idx)) {
+    if (allowDuplicates == false && color_palette_find(p, color, &idx)) {
         if (entryOut != NULL) {
             *entryOut = (SHAPE_COLOR_INDEX_INT_T)idx;
         }
@@ -160,6 +182,7 @@ bool color_palette_check_and_add_color(ColorPalette *p,
     p->entries[idx].orderedIndex = p->orderedCount;
     p->entries[idx].emissive = false;
 
+    // for duplicates, keep latest color index
     hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), idx);
 
     if (p->orderedIndices != NULL) {
@@ -182,7 +205,7 @@ bool color_palette_check_and_add_default_color_2021(ColorPalette *p,
         }
         return false; // color not found and should not be used
     }
-    return color_palette_check_and_add_color(p, *color, entryOut);
+    return color_palette_check_and_add_color(p, *color, entryOut, false);
 }
 
 bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
@@ -197,7 +220,7 @@ bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
         }
         return false; // color not found and should not be used
     }
-    return color_palette_check_and_add_color(p, *color, entryOut);
+    return color_palette_check_and_add_color(p, *color, entryOut, false);
 }
 
 void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
@@ -214,8 +237,7 @@ void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
     if (p->entries[entry].blocksCount == 0) {
         if (p->entries[entry].atlasIndex == ATLAS_COLOR_INDEX_ERROR) {
             p->entries[entry].atlasIndex = color_atlas_check_and_add_color(a,
-                                                                           p->entries[entry].color,
-                                                                           p->sharedColors);
+                                                                           p->entries[entry].color);
         }
     }
     p->entries[entry].blocksCount++;
@@ -236,7 +258,7 @@ void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
 
         // color becomes unused
         if (p->entries[entry].blocksCount == 0) {
-            color_atlas_remove_color(a, p->entries[entry].atlasIndex, p->sharedColors);
+            color_atlas_remove_color(a, p->entries[entry].atlasIndex);
             p->entries[entry].atlasIndex = ATLAS_COLOR_INDEX_ERROR;
         }
     }
@@ -263,16 +285,16 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
         p->availableIndices = fifo_list_new();
     }
 
-    hash_uint32_int_delete(p->colorToIdx, color_to_uint32(&p->entries[entry].color));
     // entry becomes available
-    SHAPE_COLOR_INDEX_INT_T *push = (SHAPE_COLOR_INDEX_INT_T *)malloc(
-        sizeof(SHAPE_COLOR_INDEX_INT_T));
+    SHAPE_COLOR_INDEX_INT_T *push = malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
     *push = entry;
     fifo_list_push(p->availableIndices, push);
 
+    _color_palette_unmap_entry_and_remap_duplicate(p, entry);
+
     // remove from ordered indices mapping (by offseting array from removed orderedIndex)
     p->orderedCount--;
-    for (uint8_t i = p->entries[entry].orderedIndex; i < p->orderedCount; ++i) {
+    for (SHAPE_COLOR_INDEX_INT_T i = p->entries[entry].orderedIndex; i < p->orderedCount; ++i) {
         p->orderedIndices[i] = p->orderedIndices[i + 1];
         p->entries[p->orderedIndices[i]].orderedIndex = i;
     }
@@ -317,10 +339,10 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
         }
     }
 
-    hash_uint32_int_delete(p->colorToIdx, color_to_uint32(&p->entries[entry].color));
+    _color_palette_unmap_entry_and_remap_duplicate(p, entry);
     p->entries[entry].color = color;
     if (p->entries[entry].atlasIndex != ATLAS_COLOR_INDEX_ERROR) {
-        color_atlas_set_color(a, p->entries[entry].atlasIndex, color, p->sharedColors);
+        color_atlas_set_color(a, p->entries[entry].atlasIndex, color);
     }
     hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), entry);
 }
@@ -399,7 +421,6 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
 
     dst->count = src->count;
     dst->orderedCount = src->orderedCount;
-    dst->sharedColors = src->sharedColors;
 
     // copy entries
     const uint8_t size = maximum(src->count, SHAPE_COLOR_INDEX_MAX_COUNT);
@@ -419,9 +440,7 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
     for (int i = 0; i < dst->count; ++i) {
         hash_uint32_int_set(dst->colorToIdx, color_to_uint32(&(dst->entries[i].color)), i);
         if (dst->entries[i].blocksCount > 0) {
-            dst->entries[i].atlasIndex = color_atlas_check_and_add_color(a,
-                                                                         dst->entries[i].color,
-                                                                         dst->sharedColors);
+            dst->entries[i].atlasIndex = color_atlas_check_and_add_color(a, dst->entries[i].color);
         }
     }
 }
@@ -747,7 +766,7 @@ ColorPalette *color_palette_get_default_2021(ColorAtlas *atlas) {
     if (palette == NULL) {
         uint8_t count;
         RGBAColor *colors = _color_palette_create_default_colors_2021(&count);
-        palette = color_palette_new_from_data(atlas, count, colors, NULL, true);
+        palette = color_palette_new_from_data(atlas, count, colors, NULL);
         free(colors);
     }
 
@@ -772,7 +791,7 @@ ColorPalette *color_palette_get_default_pico8p(ColorAtlas *atlas) {
     if (palette == NULL) {
         uint8_t count;
         RGBAColor *colors = _color_palette_create_default_colors_pico8p(&count);
-        palette = color_palette_new_from_data(atlas, count, colors, NULL, true);
+        palette = color_palette_new_from_data(atlas, count, colors, NULL);
         free(colors);
     }
 

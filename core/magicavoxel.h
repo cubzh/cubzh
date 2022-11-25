@@ -35,8 +35,7 @@ bool serialization_save_vox(const Shape *const src, FILE *const out);
 enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                                                                 Shape **out,
                                                                 const bool isMutable,
-                                                                ColorAtlas *colorAtlas,
-                                                                bool sharedColors);
+                                                                ColorAtlas *colorAtlas);
 
 #ifdef __cplusplus
 } // extern "C"

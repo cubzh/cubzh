@@ -306,8 +306,7 @@ bool serialization_save_vox(const Shape *const src, FILE *const out) {
 enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                                                                 Shape **out,
                                                                 const bool isMutable,
-                                                                ColorAtlas *colorAtlas,
-                                                                bool sharedColors) {
+                                                                ColorAtlas *colorAtlas) {
 
     vx_assert(s != NULL);
     vx_assert(out != NULL);
@@ -504,7 +503,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
 
     // create Shape
     *out = shape_make_with_octree(sizeX, sizeY, sizeZ, false, isMutable, true);
-    shape_set_palette(*out, color_palette_new(colorAtlas, sharedColors));
+    shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);
 
@@ -553,7 +552,8 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
         SHAPE_COLOR_INDEX_INT_T colorIdx = color_index - 1;
 
         // translate & shrink to a shape palette w/ only used colors
-        if (color_palette_check_and_add_color(palette, colors[colorIdx], &colorIdx) == false) {
+        if (color_palette_check_and_add_color(palette, colors[colorIdx], &colorIdx, false) ==
+            false) {
             colorIdx = 0;
         }
 

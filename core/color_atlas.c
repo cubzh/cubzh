@@ -42,7 +42,6 @@ ColorAtlas *color_atlas_new() {
     ColorAtlas *color_atlas = (ColorAtlas *)malloc(sizeof(ColorAtlas));
 
     color_atlas->wptr = NULL;
-    color_atlas->colorToIdx = hash_uint32_int_new();
     color_atlas->availableIndices = fifo_list_new();
     color_atlas->count = 0;
     color_atlas->size = COLOR_ATLAS_SIZE;
@@ -55,7 +54,6 @@ ColorAtlas *color_atlas_new() {
     const uint32_t nbColors = color_atlas->size * color_atlas->size / 2;
     color_atlas->colors = (RGBAColor *)malloc(sizeof(RGBAColor) * nbColors);
     color_atlas->complementaryColors = (RGBAColor *)malloc(sizeof(RGBAColor) * nbColors);
-    color_atlas->shapesCount = (uint16_t *)calloc(nbColors, sizeof(uint16_t));
 
     return color_atlas;
 }
@@ -65,9 +63,7 @@ void color_atlas_free(ColorAtlas *a) {
         weakptr_invalidate(a->wptr);
         free(a->colors);
         free(a->complementaryColors);
-        hash_uint32_int_free(a->colorToIdx);
         fifo_list_free(a->availableIndices);
-        free(a->shapesCount);
     }
     free(a);
 }
@@ -90,21 +86,7 @@ Weakptr *color_atlas_get_and_retain_weakptr(ColorAtlas *a) {
     }
 }
 
-ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a,
-                                                        RGBAColor color,
-                                                        bool isShared) {
-
-    uint32_t uint32Color = color_to_uint32(&color);
-
-    // if color can be shared, check in lookup map first
-    if (isShared) {
-        int index;
-        if (hash_uint32_int_get(a->colorToIdx, uint32Color, &index)) {
-            a->shapesCount[index]++;
-            return (ATLAS_COLOR_INDEX_INT_T)index;
-        }
-    }
-
+ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a, RGBAColor color) {
     // get an available index below count, or expand
     ATLAS_COLOR_INDEX_INT_T index;
     void *pop = fifo_list_pop(a->availableIndices);
@@ -120,37 +102,25 @@ ATLAS_COLOR_INDEX_INT_T color_atlas_check_and_add_color(ColorAtlas *a,
     // add color + complementary
     a->colors[index] = color;
     a->complementaryColors[index] = color_compute_complementary(color);
-    a->shapesCount[index] = 1;
-
-    if (isShared) {
-        hash_uint32_int_set(a->colorToIdx, uint32Color, (int)index);
-    }
 
     _color_atlas_add_index_to_dirty_slice(a, index);
 
     return index;
 }
 
-void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, bool isShared) {
-    if (index >= ATLAS_COLOR_INDEX_MAX_COUNT || a->shapesCount[index] == 0) {
+void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index) {
+    if (index >= ATLAS_COLOR_INDEX_MAX_COUNT) {
         return;
     }
 
-    a->shapesCount[index]--;
-    if (a->shapesCount[index] == 0) {
-        if (isShared) {
-            hash_uint32_int_delete(a->colorToIdx, color_to_uint32(&(a->colors[index])));
-        }
+    // index becomes available
+    ATLAS_COLOR_INDEX_INT_T *push = (ATLAS_COLOR_INDEX_INT_T *)malloc(
+        sizeof(ATLAS_COLOR_INDEX_INT_T));
+    *push = index;
+    fifo_list_push(a->availableIndices, push);
 
-        // index becomes available
-        ATLAS_COLOR_INDEX_INT_T *push = (ATLAS_COLOR_INDEX_INT_T *)malloc(
-            sizeof(ATLAS_COLOR_INDEX_INT_T));
-        *push = index;
-        fifo_list_push(a->availableIndices, push);
-
-        // note: removed color do not need to be set dirty, it simply becomes available and won't be
-        // used in the meantime
-    }
+    // note: removed color do not need to be set dirty, it simply becomes available and won't be
+    // used in the meantime
 }
 
 void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
@@ -160,22 +130,14 @@ void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
         idx = color_palette_get_atlas_index(p, i);
         if (idx != ATLAS_COLOR_INDEX_ERROR &&
             color_palette_get_color_use_count((ColorPalette *)p, i) > 0) {
-            color_atlas_remove_color(a, idx, p->sharedColors);
+            color_atlas_remove_color(a, idx);
         }
     }
 }
 
-void color_atlas_set_color(ColorAtlas *a,
-                           ATLAS_COLOR_INDEX_INT_T index,
-                           RGBAColor color,
-                           bool isShared) {
+void color_atlas_set_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index, RGBAColor color) {
     if (index >= ATLAS_COLOR_INDEX_MAX_COUNT || colors_are_equal(&(a->colors[index]), &color)) {
         return;
-    }
-
-    if (isShared) {
-        hash_uint32_int_delete(a->colorToIdx, color_to_uint32(&(a->colors[index])));
-        hash_uint32_int_set(a->colorToIdx, color_to_uint32(&color), (int)index);
     }
 
     a->colors[index] = color;
