@@ -9,10 +9,10 @@
 #include "cclog.h"
 #include <stdio.h>
 
-#define HASH_UINT32_BIT_SHIFT 4
-// 32 / 4 = 8 levels
-#define HASH_TREE_LEVELS 8
-#define HASH_TREE_LEVELS_MINUS_ONE 7
+#define HASH_UINT32_BIT_SHIFT 2
+// 32 / 2 = 16 levels
+#define HASH_TREE_LEVELS 16
+#define HASH_TREE_LEVELS_MINUS_ONE 15
 #define HASH_UINT32_CHILDREN_PER_NODE 16
 // % 16 (modulo) == & 15 (binary operation)
 #define HASH_UINT32_BIN_MODULO 15 // 1111
