@@ -105,8 +105,7 @@ void _scene_refresh_recurse(Scene *sc,
                             const TICK_DELTA_SEC_T dt,
                             void *opaqueUserData) {
 
-    // Refresh transform (top-first) after hierarchy changes
-    bool dirty = transform_is_hierarchy_dirty(t);
+    // Refresh transform (top-first) after sandbox changes
     transform_refresh(t, hierarchyDirty, false);
 
     // Get rigidbody, compute world collider
@@ -121,7 +120,6 @@ void _scene_refresh_recurse(Scene *sc,
     }
 
     // Refresh transform (top-first) after changes
-    dirty = transform_is_hierarchy_dirty(t) || dirty;
     transform_refresh(t, false, false);
 
     // Update r-tree (top-first) after changes
@@ -136,7 +134,7 @@ void _scene_refresh_recurse(Scene *sc,
     while (n != NULL) {
         _scene_refresh_recurse(sc,
                                (Transform *)doubly_linked_list_node_pointer(n),
-                               hierarchyDirty || dirty,
+                               hierarchyDirty || transform_is_hierarchy_dirty(t),
                                dt,
                                opaqueUserData);
         n = doubly_linked_list_node_next(n);
@@ -147,17 +145,12 @@ void _scene_refresh_recurse(Scene *sc,
     transform_refresh_children_done(t);
 }
 
-void _scene_end_of_frame_refresh_recurse(Scene *sc,
-                                         Transform *t,
-                                         bool hierarchyDirty,
-                                         const TICK_DELTA_SEC_T dt) {
-
+void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchyDirty) {
     // Transform ends the frame inside scene hierarchy
     transform_set_scene_dirty(t, false);
     transform_set_is_in_scene(t, true);
 
     // Refresh transform (top-first) after sandbox changes
-    bool dirty = transform_is_hierarchy_dirty(t);
     transform_refresh(t, hierarchyDirty, false);
 
     // Apply shape current transaction (top-first), this may change BB & collider
@@ -179,8 +172,7 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc,
     while (n != NULL) {
         _scene_end_of_frame_refresh_recurse(sc,
                                             (Transform *)doubly_linked_list_node_pointer(n),
-                                            hierarchyDirty || dirty,
-                                            dt);
+                                            hierarchyDirty || transform_is_hierarchy_dirty(t));
         n = doubly_linked_list_node_next(n);
     }
     // ⬇ anything after recursion is executed DEEP-FIRST
@@ -263,12 +255,12 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {
                            opaqueUserData);
 }
 
-void scene_end_of_frame_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {
+void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
     if (sc == NULL) {
         return;
     }
 
-    _scene_end_of_frame_refresh_recurse(sc, sc->root, transform_is_hierarchy_dirty(sc->root), dt);
+    _scene_end_of_frame_refresh_recurse(sc, sc->root, transform_is_hierarchy_dirty(sc->root));
 
 #if DEBUG_RTREE_CHECK
     vx_assert(debug_rtree_integrity_check(sc->rtree));

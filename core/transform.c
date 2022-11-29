@@ -441,8 +441,7 @@ void transform_set_local_scale(Transform *t, const float x, const float y, const
         return;
     }
     float3_set(&t->localScale, x, y, z);
-    _transform_set_dirty(t, TRANSFORM_MTX);
-    _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_MTX | TRANSFORM_PHYSICS);
 }
 
 void transform_set_local_scale_vec(Transform *t, const float3 *scale) {
@@ -467,9 +466,7 @@ void transform_set_local_position(Transform *t, const float x, const float y, co
     }
     float3_set(&t->localPosition, x, y, z);
     _transform_reset_dirty(t, TRANSFORM_LOCAL_POS);
-    _transform_set_dirty(t, TRANSFORM_POS);
-    _transform_set_dirty(t, TRANSFORM_MTX);
-    _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_MTX | TRANSFORM_PHYSICS);
 }
 
 void transform_set_local_position_vec(Transform *t, const float3 *pos) {
@@ -483,9 +480,7 @@ void transform_set_position(Transform *t, const float x, const float y, const fl
     }
     float3_set(&t->position, x, y, z);
     _transform_reset_dirty(t, TRANSFORM_POS);
-    _transform_set_dirty(t, TRANSFORM_LOCAL_POS);
-    _transform_set_dirty(t, TRANSFORM_MTX);
-    _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX | TRANSFORM_PHYSICS);
 }
 
 void transform_set_position_vec(Transform *t, const float3 *pos) {
@@ -513,8 +508,7 @@ void transform_set_local_rotation(Transform *t, Quaternion *q) {
     }
     quaternion_set(t->localRotation, q);
     _transform_reset_dirty(t, TRANSFORM_LOCAL_ROT);
-    _transform_set_dirty(t, TRANSFORM_ROT);
-    _transform_set_dirty(t, TRANSFORM_MTX);
+    _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX);
 }
 
 void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
@@ -539,8 +533,7 @@ void transform_set_rotation(Transform *t, Quaternion *q) {
     }
     quaternion_set(t->rotation, q);
     _transform_reset_dirty(t, TRANSFORM_ROT);
-    _transform_set_dirty(t, TRANSFORM_LOCAL_ROT);
-    _transform_set_dirty(t, TRANSFORM_MTX);
+    _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX);
 }
 
 void transform_set_rotation_vec(Transform *t, const float4 *v) {
@@ -990,9 +983,7 @@ static bool _transform_check_and_refresh_parents(Transform *const t) {
     while (it != NULL) {
         if (hierarchyDirty || _transform_get_dirty(it, TRANSFORM_MTX)) {
             transform_refresh(it, hierarchyDirty, false);
-            if (hierarchyDirty == false) {
-                hierarchyDirty = true;
-            }
+            hierarchyDirty = true;
         }
         it = doubly_linked_list_pop_last(parents);
     }
@@ -1108,13 +1099,9 @@ static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
         matrix4x4_copy(t->wtl, t->ltw);
         matrix4x4_op_invert(t->wtl);
 
-        // parent ltw changed, world pos/rot will need to be refreshed when necessary
         if (hierarchyDirty) {
-            _transform_set_dirty(t, TRANSFORM_POS);
-            _transform_set_dirty(t, TRANSFORM_ROT);
-
-            // any world transformations may have changed from the ancestors (we don't know which)
-            _transform_set_dirty(t, TRANSFORM_PHYSICS);
+            // parent ltw changed, any world transformations may have changed from the ancestors
+            _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT | TRANSFORM_PHYSICS);
         }
 
 #if DEBUG_TRANSFORM_REFRESH_CALLS
@@ -1138,16 +1125,13 @@ static void _transform_set_all_dirty(Transform *t, bool keepWorld) {
     if (keepWorld) {
         _transform_refresh_position(t);
         _transform_refresh_rotation(t);
-        _transform_set_dirty(t, TRANSFORM_LOCAL_POS);
-        _transform_set_dirty(t, TRANSFORM_LOCAL_ROT);
+        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_LOCAL_ROT);
     } else {
         _transform_refresh_local_position(t);
         _transform_refresh_local_rotation(t);
-        _transform_set_dirty(t, TRANSFORM_POS);
-        _transform_set_dirty(t, TRANSFORM_ROT);
+        _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT);
     }
-    _transform_set_dirty(t, TRANSFORM_MTX);
-    _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_MTX | TRANSFORM_PHYSICS);
 }
 
 static void _transform_unit_to_rotation(const float3 *right,

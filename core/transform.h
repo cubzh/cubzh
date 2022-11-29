@@ -172,7 +172,7 @@ const Matrix4x4 *transform_get_mtx(Transform *t);
 
 /// MARK: - Utils -
 /// Utils function do not refresh matrices, so that the caller may decide whether or not it's
-/// necessary Typically, you may call a refresh if you are in an intra-frame computation context
+/// necessary. Typically, you may call a refresh if you are in an intra-frame computation context
 /// (eg. Lua functions)
 void transform_utils_position_ltw(Transform *t, const float3 *pos, float3 *result);
 void transform_utils_position_wtl(Transform *t, const float3 *pos, float3 *result);
