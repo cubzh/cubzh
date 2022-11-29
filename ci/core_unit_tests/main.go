@@ -52,43 +52,37 @@ func buildAnRunCurrentDirectory() error {
 	ciContainer = ciContainer.WithWorkdir("/project/core/tests/cmake")
 
 	// execute build commands
-	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
-		Args: []string{"cmake", "-G", "Ninja", "."},
-	})
-	output, err := ciContainer.Stdout().Contents(ctx)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
+	ciContainer = ciContainer.WithExec([]string{"cmake", "-G", "Ninja", "."})
 	code, err := ciContainer.ExitCode(ctx)
 	if err != nil {
 		return err
 	}
 	if code != 0 {
+		outErr, err := ciContainer.Stderr(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(outErr)
 		return errors.New("cmake error")
 	}
 
 	fmt.Println("Running tests in container...")
-	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
-		Args: []string{"cmake", "--build", ".", "--clean-first"},
-	})
-	output, err = ciContainer.Stdout().Contents(ctx)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
+	ciContainer = ciContainer.WithExec([]string{"cmake", "--build", ".", "--clean-first"})
 	code, err = ciContainer.ExitCode(ctx)
 	if err != nil {
 		return err
 	}
 	if code != 0 {
+		outErr, err := ciContainer.Stderr(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(outErr)
 		return errors.New("cmake --build error")
 	}
 
-	ciContainer = ciContainer.Exec(dagger.ContainerExecOpts{
-		Args: []string{"./unit_tests"},
-	})
-	output, err = ciContainer.Stdout().Contents(ctx)
+	ciContainer = ciContainer.WithExec([]string{"./unit_tests"})
+	output, err := ciContainer.Stdout(ctx)
 	if err != nil {
 		return err
 	}

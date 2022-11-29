@@ -17,7 +17,6 @@ Checks the format of the code for Core and its tests following the format rules 
 
 ```bash
 cd ci/format
-go build -o format main.go
-./format --apply-changes
+go run main.go --apply-changes
 ```
 Modifies the code so it complies with the format rules.
