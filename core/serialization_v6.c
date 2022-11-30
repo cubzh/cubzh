@@ -350,7 +350,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
         }
     }
 
-    uint32_t i = 0;
+    // uint32_t i = 0;
     DoublyLinkedListNode *n = doubly_linked_list_first(shapesBuffers);
     while (n != NULL) {
         ShapeBuffers *shapeBuffersCursor = (ShapeBuffers *)doubly_linked_list_node_pointer(n);

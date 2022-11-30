@@ -215,7 +215,7 @@ void test_shape_set_transform(void) {
 // check that we can retain a shape
 void test_shape_retain(void) {
     Shape *s = shape_make();
-    Transform *t = transform_make_with_shape(s);
+    // Transform *t = transform_make_with_shape(s);
 
     bool ok = shape_retain((Shape *const)s);
     TEST_CHECK(ok);
@@ -231,7 +231,7 @@ void test_shape_retain(void) {
 // check that shape_release does not crash
 void test_shape_release(void) {
     Shape *s = shape_make();
-    Transform *t = transform_make_with_shape(s);
+    // Transform *t = transform_make_with_shape(s);
     shape_retain((Shape *const)s);
 
     shape_release((Shape *const)s);
@@ -251,8 +251,8 @@ void test_shape_get_id(void) {
 // check that shape's palette atlas is the one provided
 void test_shape_get_palette(void) {
     Shape *s = shape_make();
-    const SHAPE_COLOR_INDEX_INT_T idx = 5;
-    const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
+    // const SHAPE_COLOR_INDEX_INT_T idx = 5;
+    // const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
     ColorAtlas *atlas = color_atlas_new();
     TEST_ASSERT(atlas != NULL);
     shape_set_palette(s, color_palette_new(atlas));
