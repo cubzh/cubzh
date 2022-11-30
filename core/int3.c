@@ -6,6 +6,7 @@
 
 #include "int3.h"
 
+// C
 #include <stdlib.h>
 
 #include "config.h"
@@ -17,12 +18,12 @@ static FiloListInt3 *int3_pool(void) {
 }
 
 int3 *int3_pool_pop(void) {
-    int3 *i3;
+    int3 *i3 = NULL;
     filo_list_int3_pop(int3_pool(), &i3);
     return i3;
 }
 
-void int3_pool_recycle(int3 *i3) {
+void int3_pool_recycle(int3 *const i3) {
     filo_list_int3_recycle(int3_pool(), i3);
 }
 

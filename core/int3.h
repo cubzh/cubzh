@@ -22,7 +22,7 @@ static const int3 int3_zero = {0, 0, 0};
 
 // shared int3 pool to avoid allocations
 int3 *int3_pool_pop(void);
-void int3_pool_recycle(int3 *i3);
+void int3_pool_recycle(int3 *const i3);
 
 ///
 int3 *int3_new(const int32_t x, const int32_t y, const int32_t z);

@@ -333,8 +333,8 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
         const bool prevOpaque = color_is_opaque(&p->entries[entry].color);
         const bool newOpaque = color_is_opaque(&color);
         if (prevOpaque != newOpaque // (2)
-            || prevOpaque == false && newOpaque == false &&
-                   p->entries[entry].color.a != color.a) { // (3)
+            || (prevOpaque == false && newOpaque == false &&
+                p->entries[entry].color.a != color.a)) { // (3)
             p->lighting_dirty = true;
         }
     }

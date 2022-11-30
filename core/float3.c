@@ -157,22 +157,23 @@ FiloListFloat3 *float3_pool(void) {
 }
 
 float3 *float3_pool_pop(void) {
-    float3 *f3;
+    float3 *f3 = NULL;
     filo_list_float3_pop(float3_pool(), &f3);
     return f3;
 }
 
 float3 *float3_pool_pop_and_set(const float x, const float y, const float z) {
-    float3 *f3;
+    float3 *f3 = NULL;
     filo_list_float3_pop(float3_pool(), &f3);
     float3_set(f3, x, y, z);
     return f3;
 }
 
 float3 *float3_pool_pop_and_copy(const float3 *src) {
-    if (src == NULL)
+    if (src == NULL) {
         return NULL;
-    float3 *f3;
+    }
+    float3 *f3 = NULL;
     filo_list_float3_pop(float3_pool(), &f3);
     float3_copy(f3, src);
     return f3;
@@ -185,9 +186,11 @@ void float3_pool_recycle(float3 *f3) {
 /// allocates a float3 structure
 float3 *float3_new(const float x, const float y, const float z) {
     float3 *f = (float3 *)malloc(sizeof(float3));
-    f->x = x;
-    f->y = y;
-    f->z = z;
+    if (f != NULL) {
+        f->x = x;
+        f->y = y;
+        f->z = z;
+    }
     return f;
 }
 
@@ -201,8 +204,9 @@ float3 *float3_new_one() {
 
 /// allocates a float3 structure
 float3 *float3_new_copy(const float3 *f) {
-    if (f == NULL)
+    if (f == NULL) {
         return NULL;
+    }
     return float3_new(f->x, f->y, f->z);
 }
 
