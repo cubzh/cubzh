@@ -149,7 +149,6 @@ bool serialization_v5_get_preview_data(Stream *s, void **imageData, uint32_t *si
                     cclog_error("error while reading oreview image");
                     return false;
                 }
-                totalSizeRead += sizeRead;
                 return true;
             default:
                 // chunks we don't need to read

@@ -377,9 +377,9 @@ void postMouseEvent(float x,
         InputListener *il = (InputListener *)doubly_linked_list_node_pointer(node);
 
         if (il->acceptsMouseEvents) {
-
             MouseEvent *me2 = recycle_mouse_event();
             if (me2 == NULL) {
+                fifo_list_push(c->mouseEventPool, me);
                 return;
             }
 
@@ -495,6 +495,7 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
 
             TouchEvent *te2 = recycle_touch_event();
             if (te2 == NULL) {
+                fifo_list_push(c->touchEventPool, te);
                 return;
             }
 
@@ -637,6 +638,7 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
 
             KeyEvent *ke2 = recycle_key_event();
             if (ke2 == NULL) {
+                fifo_list_push(c->keyEventPool, ke);
                 return;
             }
 
@@ -674,6 +676,7 @@ void postCharEvent(unsigned int inputChar) {
 
             CharEvent *ce2 = recycle_char_event();
             if (ce2 == NULL) {
+                fifo_list_push(c->charEventPool, ce);
                 return;
             }
 
@@ -713,6 +716,7 @@ void postDirPadEvent(float dx, float dy, PadBtnState state) {
 
             DirPadEvent *de2 = recycle_dirpad_event();
             if (de2 == NULL) {
+                fifo_list_push(c->dirPadEventPool, de);
                 return;
             }
 
@@ -751,6 +755,7 @@ void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
 
             ActionPadEvent *ae2 = recycle_actionpad_event();
             if (ae2 == NULL) {
+                fifo_list_push(c->actionPadEventPool, ae);
                 return;
             }
 
@@ -790,6 +795,7 @@ void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
 
             AnalogPadEvent *ce2 = recycle_analogpad_event();
             if (ce2 == NULL) {
+                fifo_list_push(c->analogPadEventPool, ce);
                 return;
             }
 
