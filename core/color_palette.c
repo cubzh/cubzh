@@ -290,14 +290,14 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
     *push = entry;
     fifo_list_push(p->availableIndices, push);
 
-    _color_palette_unmap_entry_and_remap_duplicate(p, entry);
-
     // remove from ordered indices mapping (by offseting array from removed orderedIndex)
     p->orderedCount--;
     for (SHAPE_COLOR_INDEX_INT_T i = p->entries[entry].orderedIndex; i < p->orderedCount; ++i) {
         p->orderedIndices[i] = p->orderedIndices[i + 1];
         p->entries[p->orderedIndices[i]].orderedIndex = i;
     }
+
+    _color_palette_unmap_entry_and_remap_duplicate(p, entry);
 
     return true;
 }
