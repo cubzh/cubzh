@@ -113,7 +113,7 @@ void color_palette_free(ColorPalette *p) {
         free(p->orderedIndices);
     }
     if (p->availableIndices != NULL) {
-        fifo_list_free(p->availableIndices);
+        fifo_list_free(p->availableIndices, free);
     }
     hash_uint32_int_free(p->colorToIdx);
     weakptr_invalidate(p->wptr);
@@ -305,7 +305,7 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
     return true;
 }
 
-uint32_t color_palette_get_color_use_count(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
+uint32_t color_palette_get_color_use_count(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
     if (entry >= p->count) {
         return 0;
     }

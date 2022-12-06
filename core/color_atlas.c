@@ -47,7 +47,7 @@ void color_atlas_free(ColorAtlas *a) {
         weakptr_invalidate(a->wptr);
         free(a->colors);
         free(a->complementaryColors);
-        fifo_list_free(a->availableIndices);
+        fifo_list_free(a->availableIndices, free);
     }
     free(a);
 }
@@ -125,7 +125,7 @@ void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
     for (int i = 0; i < nbColors; ++i) {
         idx = color_palette_get_atlas_index(p, i);
         if (idx != ATLAS_COLOR_INDEX_ERROR &&
-            color_palette_get_color_use_count((ColorPalette *)p, i) > 0) {
+            color_palette_get_color_use_count(p, i) > 0) {
             color_atlas_remove_color(a, idx);
         }
     }
