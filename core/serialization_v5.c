@@ -146,10 +146,9 @@ bool serialization_v5_get_preview_data(Stream *s, void **imageData, uint32_t *si
             case P3S_CHUNK_ID_PREVIEW:
                 sizeRead = chunk_v5_read_preview_image(s, imageData, size);
                 if (sizeRead == 0) {
-                    cclog_error("error while reading oreview image");
+                    cclog_error("error while reading preview image");
                     return false;
                 }
-                totalSizeRead += sizeRead;
                 return true;
             default:
                 // chunks we don't need to read

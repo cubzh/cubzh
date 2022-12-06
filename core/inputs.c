@@ -370,6 +370,7 @@ void postMouseEvent(float x,
     me->button = button;
     me->down = down;
     me->move = move;
+    fifo_list_push(c->mouseEventPool, me);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -377,7 +378,6 @@ void postMouseEvent(float x,
         InputListener *il = (InputListener *)doubly_linked_list_node_pointer(node);
 
         if (il->acceptsMouseEvents) {
-
             MouseEvent *me2 = recycle_mouse_event();
             if (me2 == NULL) {
                 return;
@@ -390,8 +390,6 @@ void postMouseEvent(float x,
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->mouseEventPool, me);
 }
 
 void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState state, bool move) {
@@ -425,6 +423,7 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
     te->dy = dy / inputContext()->nbPixelsInOnePoint;
     te->state = state;
     te->move = move;
+    fifo_list_push(c->touchEventPool, te);
 
     // NOTE: aduermael: This is temporary
     // We consider first finger touch events to be mouse events
@@ -505,8 +504,6 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->touchEventPool, te);
 }
 
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
@@ -524,6 +521,7 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
     ke->input = input;
     ke->modifiers = modifiers;
     ke->state = state;
+    fifo_list_push(c->keyEventPool, ke);
 
     // update context
 
@@ -647,8 +645,6 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->keyEventPool, ke);
 }
 
 void postCharEvent(unsigned int inputChar) {
@@ -664,6 +660,7 @@ void postCharEvent(unsigned int inputChar) {
     }
 
     ce->inputChar = inputChar;
+    fifo_list_push(c->charEventPool, ce);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -684,8 +681,6 @@ void postCharEvent(unsigned int inputChar) {
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->charEventPool, ce);
 }
 
 void postDirPadEvent(float dx, float dy, PadBtnState state) {
@@ -703,6 +698,7 @@ void postDirPadEvent(float dx, float dy, PadBtnState state) {
     de->state = state;
     de->dx = dx;
     de->dy = dy;
+    fifo_list_push(c->dirPadEventPool, de);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -723,8 +719,6 @@ void postDirPadEvent(float dx, float dy, PadBtnState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->dirPadEventPool, de);
 }
 
 void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
@@ -741,6 +735,7 @@ void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
 
     ae->state = state;
     ae->button = button;
+    fifo_list_push(c->actionPadEventPool, ae);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -761,8 +756,6 @@ void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->actionPadEventPool, ae);
 }
 
 void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
@@ -780,6 +773,7 @@ void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
     ce->state = state;
     ce->dx = dx;
     ce->dy = dy;
+    fifo_list_push(c->analogPadEventPool, ce);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -799,8 +793,6 @@ void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
-
-    fifo_list_push(c->analogPadEventPool, ce);
 }
 
 // casts event to MouseEvent, returns NULL if event is not a MouseEvent

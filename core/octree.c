@@ -257,13 +257,17 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
             if (_y >= half_size_at_level) {
                 if (_z >= half_size_at_level) {
                     if (node->n111 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 6;
                     _z = _z ^ half_size_at_level; // diff
                 } else {
                     if (node->n110 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 5;
                 }
@@ -271,13 +275,17 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
             } else {
                 if (_z >= half_size_at_level) {
                     if (node->n101 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 2;
                     _z = _z ^ half_size_at_level; // diff
                 } else {
                     if (node->n100 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 1;
                 }
@@ -287,13 +295,17 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
             if (_y >= half_size_at_level) {
                 if (_z >= half_size_at_level) {
                     if (node->n011 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 7;
                     _z = _z ^ half_size_at_level; // diff
                 } else {
                     if (node->n010 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 4;
                 }
@@ -301,14 +313,18 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
             } else {
                 if (_z >= half_size_at_level) {
                     if (node->n001 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                     index_in_branch = 3;
                     _z = _z ^ half_size_at_level; // diff
                 } else {
                     index_in_branch = 0;
                     if (node->n000 == 0) {
-                        return NULL;
+                        free(index_in_branch_at_level);
+                        free(node_index_at_level);
+                        return false;
                     }
                 }
             }
@@ -343,9 +359,6 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
     // no need to check for (current_level >= 0) because current_level is
     // unsigned, so condition is always true.
     while (true) {
-
-        half_size_at_level = size_at_level >> 1;
-
         switch (index_in_branch) {
             case 0:
                 node->n000 = 0;
