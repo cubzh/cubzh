@@ -295,7 +295,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     }
 
     // allocate buffer
-    uint8_t *buf = (uint8_t *)malloc(sizeof(char) * size);
+    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t) * size);
     if (buf == NULL) {
         free(shapesBuffers);
         return false;
@@ -1160,6 +1160,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 if (nameStr == NULL) {
                     cclog_error("malloc failed");
                     // TODO: handle error
+                    // (if `nameStr` is NULL, we cannot let the function continue)
                 }
                 memcpy(nameStr, cursor, nameLen); // shape POI name
                 nameStr[nameLen] = 0;             // add null terminator
@@ -1871,8 +1872,12 @@ bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
     // _compressedSize here is not final, it will be known after compression.
     uLong _compressedSize = compressBound(*uncompressedSize);
     void *_compressedData = malloc(_compressedSize);
+    if (_compressedData == NULL) {
+        return false; // malloc failed
+    }
 
     if (compress(_compressedData, &_compressedSize, uncompressedData, *uncompressedSize) != Z_OK) {
+        free(_compressedData);
         return false;
     }
 
@@ -1936,8 +1941,12 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(
     // zlib: compressBound estimates size so we can allocate
     uLong _compressedSize = compressBound(*uncompressedSize);
     void *_compressedData = malloc(_compressedSize);
+    if (_compressedData == NULL) {
+        return false; // malloc failed
+    }
 
     if (compress(_compressedData, &_compressedSize, uncompressedData, *uncompressedSize) != Z_OK) {
+        free(_compressedData);
         return false;
     }
     free(uncompressedData);

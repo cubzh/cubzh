@@ -36,6 +36,9 @@ void _color_palette_unmap_entry_and_remap_duplicate(ColorPalette *p,
 
 ColorPalette *color_palette_new(ColorAtlas *atlas) {
     ColorPalette *p = (ColorPalette *)malloc(sizeof(ColorPalette));
+    if (p == NULL) {
+        return NULL;
+    }
     p->refAtlas = color_atlas_get_and_retain_weakptr(atlas);
     p->entries = (PaletteEntry *)malloc(sizeof(PaletteEntry) * SHAPE_COLOR_INDEX_MAX_COUNT);
     p->orderedIndices = NULL;
