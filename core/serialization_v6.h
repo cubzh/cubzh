@@ -27,14 +27,7 @@ typedef struct _LocalTransform {
 } LocalTransform;    // 36 bytes
 
 #define SERIALIZATION_COMPRESSION_ALGO_SIZE sizeof(uint8_t)
-#define NB_SHAPES_SIZE sizeof(uint32_t)
 #define SERIALIZATION_TOTAL_SIZE_SIZE sizeof(uint32_t)
-
-/// Load shape from file
-/// Returns NULL if the shape can't be loaded
-Shape *serialization_v6_load_shape(Stream *s,
-                                   LoadShapeSettings *shapeSettings,
-                                   ColorAtlas *colorAtlas);
 
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
