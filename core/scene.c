@@ -223,10 +223,14 @@ void scene_free(Scene *sc) {
         return;
     }
 
+    Transform *t = (Transform *)fifo_list_pop(sc->removed);
+    while (t != NULL) {
+        transform_release(t); // from scene_register_removed_transform
+        t = (Transform *)fifo_list_pop(sc->removed);
+    }
+
     transform_release(sc->root);
     rtree_free(sc->rtree);
-    // TODO: review this
-    vx_assert(fifo_list_get_size(sc->removed) == 0);
     fifo_list_free(sc->removed, NULL);
     doubly_linked_list_free(sc->collisions);
     doubly_linked_list_flush(sc->awakeBoxes, (pointer_free_function)box_free);

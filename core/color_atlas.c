@@ -124,8 +124,7 @@ void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
     ATLAS_COLOR_INDEX_INT_T idx;
     for (int i = 0; i < nbColors; ++i) {
         idx = color_palette_get_atlas_index(p, i);
-        if (idx != ATLAS_COLOR_INDEX_ERROR &&
-            color_palette_get_color_use_count(p, i) > 0) {
+        if (idx != ATLAS_COLOR_INDEX_ERROR && color_palette_get_color_use_count(p, i) > 0) {
             color_atlas_remove_color(a, idx);
         }
     }
