@@ -223,9 +223,15 @@ void scene_free(Scene *sc) {
         return;
     }
 
+    Transform *t = (Transform *)fifo_list_pop(sc->removed);
+    while (t != NULL) {
+        transform_release(t); // from scene_register_removed_transform
+        t = (Transform *)fifo_list_pop(sc->removed);
+    }
+
     transform_release(sc->root);
     rtree_free(sc->rtree);
-    fifo_list_free(sc->removed);
+    fifo_list_free(sc->removed, NULL);
     doubly_linked_list_free(sc->collisions);
     doubly_linked_list_flush(sc->awakeBoxes, (pointer_free_function)box_free);
     doubly_linked_list_free(sc->awakeBoxes);
@@ -363,7 +369,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
         box_free(awakeBox);
     }
     sc->mapAwakeBox = NULL;
-    fifo_list_free(awakeQuery);
+    fifo_list_free(awakeQuery, NULL);
 
     // physics layers mask changes take effect in the rtree at the end of each frame
     rtree_refresh_collision_masks(sc->rtree);

@@ -24,7 +24,7 @@ typedef struct _FifoList FifoList;
 FifoList *fifo_list_new(void);
 FifoList *fifo_list_new_copy(const FifoList *list);
 // ! \\ stored pointers won't be released
-void fifo_list_free(FifoList *list);
+void fifo_list_free(FifoList *list, pointer_free_function freeFunc);
 void fifo_list_push(FifoList *list, void *ptr);
 void *fifo_list_pop(FifoList *list);
 void fifo_list_flush(FifoList *list, pointer_free_function freeFunc);

@@ -48,9 +48,12 @@ FifoList *fifo_list_new_copy(const FifoList *list) {
     return copy;
 }
 
-void fifo_list_free(FifoList *list) {
+void fifo_list_free(FifoList *list, pointer_free_function freeFunc) {
     while (list->first != NULL) {
-        fifo_list_pop(list);
+        void *storedPtr = fifo_list_pop(list);
+        if (freeFunc != NULL) {
+            freeFunc(storedPtr);
+        }
     }
     free(list);
 }

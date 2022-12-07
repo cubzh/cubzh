@@ -955,13 +955,13 @@ void input_listener_free(InputListener *il) {
     while (input_listener_pop_analog_pad_event(il) != NULL)
         ;
 
-    fifo_list_free(il->mouseEvents);
-    fifo_list_free(il->touchEvents);
-    fifo_list_free(il->keyEvents);
-    fifo_list_free(il->charEvents);
-    fifo_list_free(il->dirPadEvents);
-    fifo_list_free(il->actionPadEvents);
-    fifo_list_free(il->analogPadEvents);
+    fifo_list_free(il->mouseEvents, NULL);
+    fifo_list_free(il->touchEvents, NULL);
+    fifo_list_free(il->keyEvents, NULL);
+    fifo_list_free(il->charEvents, NULL);
+    fifo_list_free(il->dirPadEvents, NULL);
+    fifo_list_free(il->actionPadEvents, NULL);
+    fifo_list_free(il->analogPadEvents, NULL);
 
     if (il->poppedMouseEvent != NULL) {
         fifo_list_push(c->mouseEventPool, il->poppedMouseEvent);

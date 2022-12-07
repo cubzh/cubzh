@@ -406,7 +406,7 @@ RtreeNode *_rtree_find_leaf(Rtree *r, RtreeNode *start, Box *aabb, void *ptr, bo
         rn = fifo_list_pop(toExamine);
     }
 
-    fifo_list_free(toExamine);
+    fifo_list_free(toExamine, NULL);
 
     return NULL;
 }
@@ -470,7 +470,7 @@ void _rtree_condense(Rtree *r, RtreeNode *start) {
         rn1 = fifo_list_pop(toRemove);
     }
 
-    fifo_list_free(toRemove);
+    fifo_list_free(toRemove, NULL);
 
 #if DEBUG_RTREE_CALLS
     debug_rtree_condense_calls++;
@@ -764,7 +764,7 @@ size_t rtree_query_overlap_func(Rtree *r,
         rn = (RtreeNode *)fifo_list_pop(toExamine);
     }
 
-    fifo_list_free(toExamine);
+    fifo_list_free(toExamine, NULL);
 
     return hits;
 }
@@ -833,7 +833,7 @@ size_t rtree_query_cast_all_func(Rtree *r,
         rn = (RtreeNode *)fifo_list_pop(toExamine);
     }
 
-    fifo_list_free(toExamine);
+    fifo_list_free(toExamine, NULL);
 
     return hits;
 }
@@ -967,7 +967,7 @@ bool rtree_utils_broadphase_steps(Rtree *r,
         float3_op_add(&stepOriginBox.max, &step3);
     }
 
-    fifo_list_free(broadphaseResults);
+    fifo_list_free(broadphaseResults, NULL);
 
     if (minSwept < 1.0f) {
         if (firstHit != NULL) {
@@ -1098,6 +1098,6 @@ void debug_rtree_reset_all_aabb(Rtree *r) {
 
 #endif
 
-const bool rtree_node_has_parent(const RtreeNode *const rn) {
+bool rtree_node_has_parent(const RtreeNode *const rn) {
     return rn->parent != NULL;
 }

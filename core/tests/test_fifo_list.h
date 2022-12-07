@@ -23,7 +23,7 @@ void test_fifo_list_new(void) {
     sizeCheck = fifo_list_get_size(list);
     TEST_CHECK(sizeCheck == 0);
 
-    fifo_list_free(list);
+    fifo_list_free(list, NULL);
 }
 
 // Create a list and insert into it 3 differents nodes. Flush the list and check if the list is now
@@ -48,7 +48,7 @@ void test_fifo_list_flush(void) {
     sizeCheck = fifo_list_get_size(list);
     TEST_CHECK(sizeCheck == 0);
 
-    fifo_list_free(list);
+    fifo_list_free(list, NULL);
 }
 
 // Create a empty list and check the size of it. Add a node to the list and recheck it size.
@@ -68,7 +68,7 @@ void test_fifo_list_get_size(void) {
     sizeCheck = fifo_list_get_size(list);
     TEST_CHECK(sizeCheck == 0);
 
-    fifo_list_free(list);
+    fifo_list_free(list, NULL);
 }
 
 // Create a list and push 3 differents nodes into it. After that we pop, one by one the nodes.
@@ -102,7 +102,7 @@ void test_fifo_list_pop(void) {
     sizeCheck = fifo_list_get_size(list);
     TEST_CHECK(sizeCheck == 0);
 
-    fifo_list_free(list);
+    fifo_list_free(list, NULL);
 }
 
 // Create a list and push a node into it. Then check the size and pop the node
@@ -120,7 +120,7 @@ void test_fifo_list_push(void) {
     ptrCheck = (int *)fifo_list_pop(list);
     TEST_CHECK(*ptrCheck == 10);
 
-    fifo_list_free(list);
+    fifo_list_free(list, NULL);
 }
 
 // Create a new list and add some node into it. Then copy the list into a new one.
@@ -144,6 +144,6 @@ void test_fifo_list_new_copy(void) {
     ptrCheck = (int *)fifo_list_pop(listCopy);
     TEST_CHECK(*ptrCheck == 10);
 
-    fifo_list_free(listCopy);
-    fifo_list_free(list);
+    fifo_list_free(listCopy, NULL);
+    fifo_list_free(list, NULL);
 }
