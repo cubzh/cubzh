@@ -53,6 +53,8 @@ void chunk_list_free(ChunkList *cl) {
 }
 
 struct _Shape {
+    Weakptr *wptr;
+
     // list of colors used by the shape model, mapped onto color atlas indices
     ColorPalette *palette;
 
@@ -283,6 +285,7 @@ Shape *shape_make() {
 
     int3_set(&s->offset, 0, 0, 0);
 
+    s->wptr = NULL;
     s->palette = NULL;
 
     s->POIs = map_string_float3_new();
@@ -745,6 +748,8 @@ void shape_free(Shape *const shape) {
     if (shape == NULL) {
         return;
     }
+
+    weakptr_invalidate(shape->wptr);
 
     if (shape->palette != NULL) {
         color_palette_free(shape->palette);
@@ -2332,16 +2337,23 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool
         return;
     }
 
-    // avoid unnecessary pivot
-    if (s->pivot == NULL && float_isZero(x, EPSILON_ZERO) && float_isZero(y, EPSILON_ZERO) &&
-        float_isZero(z, EPSILON_ZERO)) {
-        return;
-    }
+    const bool isZero = float_isZero(x, EPSILON_ZERO) && float_isZero(y, EPSILON_ZERO) &&
+                        float_isZero(z, EPSILON_ZERO);
 
     if (s->pivot == NULL) {
-        // add a pivot internal transform, managed by shape
-        s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
-        transform_set_parent(s->pivot, s->transform, false);
+        // avoid unnecessary pivot
+        if (isZero) {
+            return;
+        } else {
+            // add a pivot internal transform, managed by shape
+            s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
+            transform_set_parent(s->pivot, s->transform, false);
+        }
+    } else if (isZero) {
+        // remove unnecessary pivot
+        transform_release(s->pivot);
+        s->pivot = NULL;
+        return;
     }
 
     if (removeOffset) {
@@ -2628,10 +2640,6 @@ void shape_move_children(Shape *from, Shape *to, const bool keepWorld) {
                 }
             }
             free(children);
-        }
-        // if anything was parented to pivot, move them too
-        if (transform_get_children_count(from->pivot) > 0) {
-            transform_utils_move_children(from->pivot, shape_get_pivot_transform(to), keepWorld);
         }
     }
 }
@@ -3706,6 +3714,26 @@ bool shape_getIgnoreAnimations(Shape *const s) {
         return false;
     }
     return transform_getAnimationsEnabled(s->transform) == false;
+}
+
+// MARK: - Weak ptr -
+
+Weakptr *shape_get_weakptr(Shape *s) {
+    if (s->wptr == NULL) {
+        s->wptr = weakptr_new(s);
+    }
+    return s->wptr;
+}
+
+Weakptr *shape_get_and_retain_weakptr(Shape *s) {
+    if (s->wptr == NULL) {
+        s->wptr = weakptr_new(s);
+    }
+    if (weakptr_retain(s->wptr)) {
+        return s->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
 }
 
 // --------------------------------------------------
