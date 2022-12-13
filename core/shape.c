@@ -53,6 +53,8 @@ void chunk_list_free(ChunkList *cl) {
 }
 
 struct _Shape {
+    Weakptr *wptr;
+
     // list of colors used by the shape model, mapped onto color atlas indices
     ColorPalette *palette;
 
@@ -283,6 +285,7 @@ Shape *shape_make() {
 
     int3_set(&s->offset, 0, 0, 0);
 
+    s->wptr = NULL;
     s->palette = NULL;
 
     s->POIs = map_string_float3_new();
@@ -745,6 +748,8 @@ void shape_free(Shape *const shape) {
     if (shape == NULL) {
         return;
     }
+
+    weakptr_invalidate(shape->wptr);
 
     if (shape->palette != NULL) {
         color_palette_free(shape->palette);
@@ -3706,6 +3711,26 @@ bool shape_getIgnoreAnimations(Shape *const s) {
         return false;
     }
     return transform_getAnimationsEnabled(s->transform) == false;
+}
+
+// MARK: - Weak ptr -
+
+Weakptr *shape_get_weakptr(Shape *s) {
+    if (s->wptr == NULL) {
+        s->wptr = weakptr_new(s);
+    }
+    return s->wptr;
+}
+
+Weakptr *shape_get_and_retain_weakptr(Shape *s) {
+    if (s->wptr == NULL) {
+        s->wptr = weakptr_new(s);
+    }
+    if (weakptr_retain(s->wptr)) {
+        return s->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
 }
 
 // --------------------------------------------------

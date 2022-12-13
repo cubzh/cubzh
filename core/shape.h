@@ -484,7 +484,12 @@ bool shape_history_canRedo(const Shape *const s);
 void shape_history_undo(Shape *const s);
 void shape_history_redo(Shape *const s);
 
-//
+// MARK: - Weak ptr -
+
+Weakptr *shape_get_weakptr(Shape *s);
+Weakptr *shape_get_and_retain_weakptr(Shape *s);
+
+// MARK: -
 
 void shape_enableAnimations(Shape *const s);
 void shape_disableAnimations(Shape *const s);
