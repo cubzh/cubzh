@@ -164,7 +164,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
 
     float3_copy(&f3, scene_get_constant_acceleration(scene));
     float3_op_add(&f3, rb->constantAcceleration);
-    float3_op_scale(&f3, dt);
+    float3_op_scale(&f3, (const float)dt);
     float3_op_add(rb->velocity, &f3);
 
     // ------------------------
@@ -227,7 +227,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
 
     // initial frame delta translation
     float3_copy(&dv, &f3);
-    float3_op_scale(&dv, dt);
+    float3_op_scale(&dv, (const float)dt);
 
     // retrieve the map AABB
     Shape *mapShape = transform_get_shape(scene_get_map(scene));
@@ -515,8 +515,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
             // fire reciprocal callbacks on the component(s, if tie) causing a new collision
 
             if (contactX != NULL && float_isEqual(minSwept, swept3.x, EPSILON_ZERO)) {
-                const AxesMaskValue axis = dv.x > 0 ? AxesMaskX : AxesMaskNX;
-                if (utils_axes_mask_get(rb->contact, axis) == false) {
+                const AxesMaskValue axis = dv.x > 0.0f ? AxesMaskX : AxesMaskNX;
+                if (utils_axes_mask_get(rb->contact, (uint8_t)axis) == false) {
                     _rigidbody_fire_reciprocal_callbacks(rb,
                                                          t,
                                                          contactX,
@@ -526,8 +526,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 }
             }
             if (contactY != NULL && float_isEqual(minSwept, swept3.y, EPSILON_ZERO)) {
-                const AxesMaskValue axis = dv.y > 0 ? AxesMaskY : AxesMaskNY;
-                if (utils_axes_mask_get(rb->contact, axis) == false) {
+                const AxesMaskValue axis = dv.y > 0.0f ? AxesMaskY : AxesMaskNY;
+                if (utils_axes_mask_get(rb->contact, (uint8_t)axis) == false) {
                     _rigidbody_fire_reciprocal_callbacks(rb,
                                                          t,
                                                          contactY,
@@ -537,8 +537,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 }
             }
             if (contactZ != NULL && float_isEqual(minSwept, swept3.z, EPSILON_ZERO)) {
-                const AxesMaskValue axis = dv.z > 0 ? AxesMaskZ : AxesMaskNZ;
-                if (utils_axes_mask_get(rb->contact, axis) == false) {
+                const AxesMaskValue axis = dv.z > 0.0f ? AxesMaskZ : AxesMaskNZ;
+                if (utils_axes_mask_get(rb->contact, (uint8_t)axis) == false) {
                     _rigidbody_fire_reciprocal_callbacks(rb,
                                                          t,
                                                          contactZ,
@@ -698,7 +698,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         solverCount++;
     }
 #if DEBUG_RIGIDBODY_CALLS
-    debug_rigidbody_solver_iterations += solverCount;
+    debug_rigidbody_solver_iterations += (int)solverCount;
 #endif
 
     if (solverCount > 0 && float3_isEqual(&pos, transform_get_position(t), EPSILON_ZERO) == false) {
@@ -716,7 +716,6 @@ void _rigidbody_trigger_tick(Scene *scene,
                              Transform *t,
                              Box *worldCollider,
                              Rtree *r,
-                             const TICK_DELTA_SEC_T dt,
                              FifoList *sceneQuery,
                              void *opaqueUserData) {
 
@@ -907,17 +906,17 @@ void _rigidbody_trigger_tick(Scene *scene,
         for (int i = 0; i < 6; ++i) {
             const AxesMaskValue axis = utils_axis_index_to_mask_value((AxisIndex)i);
             if (axesRb[i] != NULL) {
-                if (utils_axes_mask_get(rb->contact, axis) == false) {
+                if (utils_axes_mask_get(rb->contact, (uint8_t)axis) == false) {
                     _rigidbody_fire_reciprocal_callbacks(rb,
                                                          t,
                                                          axesRb[i],
                                                          axesTr[i],
                                                          axis,
                                                          opaqueUserData);
-                    utils_axes_mask_set(&rb->contact, axis, true);
+                    utils_axes_mask_set(&rb->contact, (uint8_t)axis, true);
                 }
             } else {
-                utils_axes_mask_set(&rb->contact, axis, false);
+                utils_axes_mask_set(&rb->contact, (uint8_t)axis, false);
             }
         }
     }
@@ -925,6 +924,9 @@ void _rigidbody_trigger_tick(Scene *scene,
 
 RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t collidesWith) {
     RigidBody *b = (RigidBody *)malloc(sizeof(RigidBody));
+    if (b == NULL) {
+        return NULL;
+    }
 
     b->collider = box_new();
     b->rtreeLeaf = NULL;
@@ -1009,7 +1011,7 @@ bool rigidbody_tick(Scene *scene,
     }
     // a trigger rigidbody only checks for overlaps to fire callbacks
     else if (rigidbody_is_trigger(rb)) {
-        _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, dt, sceneQuery, opaqueUserData);
+        _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, opaqueUserData);
     }
 
     return false;
@@ -1399,10 +1401,10 @@ bool rigidbody_check_end_of_contact(Transform *t1,
             return true; // (2)
         } else if (*frames > PHYSICS_DISCARD_COLLISION_COUPLE) {
             return true; // (3)
-        } else if ((isValid1 && utils_axes_mask_get(rb1->contact, axis) == false) ||
+        } else if ((isValid1 && utils_axes_mask_get(rb1->contact, (uint8_t)axis) == false) ||
                    (isValid2 &&
-                    utils_axes_mask_get(rb2->contact, utils_axes_mask_value_swapped(axis)) ==
-                        false)) {
+                    utils_axes_mask_get(rb2->contact,
+                                        (uint8_t)utils_axes_mask_value_swapped(axis)) == false)) {
 
             if (_rigidbody_get_simulation_flag(rb1, SIMULATIONFLAG_END_CALLBACK_ENABLED)) {
                 rigidbody_collision_callback(t1, rb1, t2, rb2, AxesMaskNone, opaqueUserData);

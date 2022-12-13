@@ -122,7 +122,7 @@ void color_atlas_remove_color(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_T index) {
 void color_atlas_remove_palette(ColorAtlas *a, const ColorPalette *p) {
     const uint8_t nbColors = color_palette_get_count(p);
     ATLAS_COLOR_INDEX_INT_T idx;
-    for (int i = 0; i < nbColors; ++i) {
+    for (SHAPE_COLOR_INDEX_INT_T i = 0; i < nbColors; ++i) {
         idx = color_palette_get_atlas_index(p, i);
         if (idx != ATLAS_COLOR_INDEX_ERROR && color_palette_get_color_use_count(p, i) > 0) {
             color_atlas_remove_color(a, idx);

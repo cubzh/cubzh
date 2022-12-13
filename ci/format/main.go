@@ -43,7 +43,7 @@ func checkFormat(doFormat bool) error {
 	// create a reference to host root dir
 	dirOpts := dagger.HostWorkdirOpts{
 		// exclude the following directories
-		Exclude: []string{".git", "ci", "dockerfiles", "misc"},
+		Exclude: []string{".git", "ci", "dockerfiles", "misc", "core/tests/visual_studio", "core/tests/xcode", "core/tests/cmake"},
 	}
 	src := client.Host().Workdir(dirOpts)
 

@@ -56,7 +56,7 @@ double LabFunction(double value);
 xyz RGB2XYZ(rgb color);
 Lab XYZ2Lab(xyz XYZColor);
 float CIEDE2000(Lab c1, Lab c2);
-void RGB2YIQ(float3 *yiq, RGBAColor rgb);
+void RGB2YIQ(float3 *yiq, RGBAColor rgbIn);
 RGBAColor YIQ2RGB(float3 *yiq);
 
 uint32_t color_to_uint32(const RGBAColor *c);

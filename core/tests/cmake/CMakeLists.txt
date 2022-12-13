@@ -6,6 +6,10 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
+# define compilers
+set(CMAKE_C_COMPILER "clang")
+set(CMAKE_CXX_COMPILER "clang++")
+
 project("Cubzh Core - Unit Tests")
 
 # validate environment
@@ -53,7 +57,15 @@ include_directories(
 )
 
 add_executable(unit_tests ${SOURCE_FILES})
-target_compile_options(unit_tests PRIVATE -Werror) # error on warning, more errors: -Wall -Wextra -Wpedantic
+
+# more info here: https://releases.llvm.org/14.0.0/tools/clang/docs/DiagnosticsReference.html
+# -Werror: process warnings as errors
+# -Wshadow: same variable created twice
+# -Wdouble-promotion: avoid using a float as a double
+# -Wundef: undefined macro
+# -Wconversion: implicit casts
+# -Wunused-parameter: to be avoided, useful in callbacks
+target_compile_options(unit_tests PRIVATE -Werror -Wall -Wshadow -Wdouble-promotion -Wundef -Wconversion -Wno-unused-parameter)
 
 target_link_libraries(unit_tests
     ${LIBZ}

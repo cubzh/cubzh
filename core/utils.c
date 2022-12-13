@@ -16,11 +16,11 @@
 #include "config.h"
 
 int8_t utils_radians_to_int8(float radians) {
-    return radians * 128.0f / PI_F;
+    return (int8_t)(radians * 128.0f / PI_F);
 }
 
 float utils_int8_to_radians(float i) {
-    return ((float)i) * PI_F / 128.0f;
+    return i * PI_F / 128.0f;
 }
 
 float utils_radians_normalize(float radians) {
@@ -155,6 +155,8 @@ AxesMaskValue utils_axis_index_to_mask_value(AxisIndex idx) {
             return AxesMaskZ;
         case AxisIndexNZ:
             return AxesMaskNZ;
+        default:
+            return AxesMaskX; // should not happen
     }
 }
 
@@ -219,9 +221,12 @@ char *string_new_substring(const char *start, const char *end) {
         return NULL;
     }
 
-    size_t len = end - start;
+    size_t len = (size_t)(end - start);
 
     char *buffer = (char *)malloc(sizeof(char) * (len + 1)); //  + 1: null termination char */;
+    if (buffer == NULL) {
+        return NULL;
+    }
     strncpy(buffer, start, len);
     buffer[len] = '\0';
     return buffer;
@@ -254,7 +259,7 @@ stringArray_t *string_split(const char *path, const char *delimiters) {
 
     int i = 1; // there's at least one component
 
-    unsigned long len, pos;
+    size_t len, pos;
 
     while (true) {
         len = strlen(cursor);
@@ -330,7 +335,10 @@ bool stringArray_n_append(stringArray_t *arr, const char *str, size_t length) {
     if (str == NULL) {
         return false;
     }
-    arr->strings = (char **)realloc(arr->strings, sizeof(char *) * (arr->length + 1));
+    arr->strings = (char **)realloc(arr->strings, sizeof(char *) * (size_t)(arr->length + 1));
+    if (arr->strings == NULL) {
+        return false;
+    }
     arr->length += 1;
     arr->strings[arr->length - 1] = string_new_copy_with_limit(str, length);
     return true;

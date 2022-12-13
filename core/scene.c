@@ -446,6 +446,9 @@ void scene_register_collision_couple(Scene *sc, Transform *t1, Transform *t2, Ax
     }
 
     _CollisionCouple *cc = (_CollisionCouple *)malloc(sizeof(_CollisionCouple));
+    if (cc == NULL) {
+        return;
+    }
     cc->t1 = transform_get_and_retain_weakptr(t1);
     cc->t2 = transform_get_and_retain_weakptr(t2);
     cc->axis = axis;
@@ -530,14 +533,14 @@ const float3 *scene_get_constant_acceleration(const Scene *sc) {
 }
 
 // MARK: - Debug -
-#if DEBUG_SCENE
-
-int debug_scene_get_awake_queries(void) {
-    return debug_scene_awake_queries;
-}
-
-void debug_scene_reset_calls(void) {
-    debug_scene_awake_queries = 0;
-}
-
-#endif
+// #if DEBUG_SCENE
+//
+// int debug_scene_get_awake_queries(void) {
+//     return debug_scene_awake_queries;
+// }
+//
+// void debug_scene_reset_calls(void) {
+//     debug_scene_awake_queries = 0;
+// }
+//
+// #endif

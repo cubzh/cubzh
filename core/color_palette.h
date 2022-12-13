@@ -21,7 +21,7 @@ typedef struct PaletteEntry {
     RGBAColor color;
     uint32_t blocksCount;
     ATLAS_COLOR_INDEX_INT_T atlasIndex;
-    SHAPE_COORDS_INT_T orderedIndex;
+    SHAPE_COLOR_INDEX_INT_T orderedIndex;
     bool emissive;
 } PaletteEntry;
 

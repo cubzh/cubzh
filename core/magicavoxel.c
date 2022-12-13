@@ -139,22 +139,22 @@ bool serialization_save_vox(const Shape *const src, FILE *const out) {
     // blocks
 
     // x
-    uint32_t x = (uint32_t)shape_size.x;
-    if (fwrite(&x, sizeof(uint32_t), 1, out) != 1) {
+    uint32_t sizeX = (uint32_t)shape_size.x;
+    if (fwrite(&sizeX, sizeof(uint32_t), 1, out) != 1) {
         cclog_error("failed to write SIZE x");
         return false;
     }
 
     // y
-    uint32_t y = (uint32_t)shape_size.z;
-    if (fwrite(&y, sizeof(uint32_t), 1, out) != 1) {
+    uint32_t sizeY = (uint32_t)shape_size.z;
+    if (fwrite(&sizeY, sizeof(uint32_t), 1, out) != 1) {
         cclog_error("failed to write SIZE y");
         return false;
     }
 
     // z
-    uint32_t z = (uint32_t)shape_size.y;
-    if (fwrite(&z, sizeof(uint32_t), 1, out) != 1) {
+    uint32_t sizeZ = (uint32_t)shape_size.y;
+    if (fwrite(&sizeZ, sizeof(uint32_t), 1, out) != 1) {
         cclog_error("failed to write SIZE x");
         return false;
     }
@@ -190,6 +190,10 @@ bool serialization_save_vox(const Shape *const src, FILE *const out) {
     int3 *shapePos = int3_new(0, 0, 0);
     int3 *posInChunk = int3_new(0, 0, 0);
     Block *b = NULL;
+    uint8_t x;
+    uint8_t y;
+    uint8_t z;
+    uint8_t c;
 
     for (int k = 0; k < shape_size.z; k++) {
         for (int j = 0; j < shape_size.y; j++) {
@@ -209,10 +213,10 @@ bool serialization_save_vox(const Shape *const src, FILE *const out) {
                     uint16_t bci = block_get_color_index(b);
 
                     // ⚠️ y -> z, z -> y
-                    uint8_t x = (uint8_t)shapePos->x + shift_x;
-                    uint8_t y = (uint8_t)shapePos->z + shift_z;
-                    uint8_t z = (uint8_t)shapePos->y + shift_y;
-                    uint8_t c = (uint8_t)bci + 1;
+                    x = (uint8_t)shapePos->x + (uint8_t)shift_x;
+                    y = (uint8_t)shapePos->z + (uint8_t)shift_z;
+                    z = (uint8_t)shapePos->y + (uint8_t)shift_y;
+                    c = (uint8_t)bci + 1;
 
                     // printf("block : %d, %d, %d - color: %d\n", x, y, z, c);
 
@@ -269,7 +273,7 @@ bool serialization_save_vox(const Shape *const src, FILE *const out) {
 
     for (int i = 0; i < 256; i++) {
         if (i < nbColors) {
-            color = color_palette_get_color(palette, i);
+            color = color_palette_get_color(palette, (SHAPE_COLOR_INDEX_INT_T)i);
             // r
             if (fwrite(&color->r, sizeof(uint8_t), 1, out) != 1) {
                 cclog_error("failed to write r");
@@ -502,7 +506,12 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_octree(sizeX, sizeY, sizeZ, false, isMutable, true);
+    *out = shape_make_with_octree((uint16_t)sizeX,
+                                  (uint16_t)sizeY,
+                                  (uint16_t)sizeZ,
+                                  false,
+                                  isMutable,
+                                  true);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);

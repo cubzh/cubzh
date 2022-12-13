@@ -24,7 +24,9 @@ Block *block_new_air(void) {
 
 Block *block_new_with_color(const SHAPE_COLOR_INDEX_INT_T colorIndex) {
     Block *b = (Block *)malloc(sizeof(Block));
-    b->colorIndex = colorIndex;
+    if (b != NULL) {
+        b->colorIndex = colorIndex;
+    }
     return b;
 }
 
@@ -33,7 +35,9 @@ Block *block_new_copy(const Block *block) {
         return NULL;
     }
     Block *newBlock = (Block *)malloc(sizeof(Block));
-    newBlock->colorIndex = block->colorIndex;
+    if (newBlock != NULL) {
+        newBlock->colorIndex = block->colorIndex;
+    }
     return newBlock;
 }
 
@@ -182,6 +186,9 @@ AwareBlock *aware_block_new(const Block *block,
                             FACE_INDEX_INT_T faceIndex) {
 
     AwareBlock *aBlock = (AwareBlock *)malloc(sizeof(AwareBlock));
+    if (aBlock == NULL) {
+        return NULL;
+    }
     aBlock->block = block_new_copy(block);
 
     aBlock->shapePos = NULL;
@@ -209,6 +216,9 @@ AwareBlock *aware_block_new_copy(const AwareBlock *aBlockSource) {
     }
 
     AwareBlock *aBlock = (AwareBlock *)malloc(sizeof(AwareBlock));
+    if (aBlock == NULL) {
+        return NULL;
+    }
     aBlock->block = block_new_copy(aBlockSource->block);
 
     aBlock->shapePos = NULL;

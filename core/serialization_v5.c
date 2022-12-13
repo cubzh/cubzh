@@ -35,6 +35,9 @@
 #define P3S_CHUNK_ID_SHAPE_BAKED_LIGHTING 14
 #define P3S_CHUNK_ID_MAX 15 // not used as a chunk ID, but used to check if chunk ID is known or not
 
+// takes the 4 low bits of a and casts into uint8_t
+#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+
 // private functions
 // all chunk_v5_read_* functions return number of bytes read.
 // If 0 is returned, it means the file is corrupted, it can't be read.
@@ -337,7 +340,7 @@ uint32_t chunk_v5_read_palette(Stream *s, ColorAtlas *colorAtlas, ColorPalette *
     }
 
     *palette = color_palette_new_from_data(colorAtlas,
-                                           minimum(paletteColorCount, UINT8_MAX),
+                                           (uint8_t)minimum(paletteColorCount, UINT8_MAX),
                                            colors,
                                            NULL);
 
@@ -409,17 +412,17 @@ uint32_t chunk_read_shape_process_blocks(Stream *s,
             continue;
         }
         c = i;
-        block_z_pos = c / (w * h);
-        c -= (block_z_pos * (w * h));
-        block_y_pos = c / w;
-        c -= (block_y_pos * w);
-        block_x_pos = c;
+        block_z_pos = (uint16_t)(c / (w * h));
+        c -= (uint32_t)(block_z_pos * (w * h));
+        block_y_pos = (uint16_t)(c / w);
+        c -= (uint32_t)(block_y_pos * w);
+        block_x_pos = (uint16_t)c;
 
         shape_add_block_with_color(shape,
                                    colorIndex,
-                                   block_x_pos,
-                                   block_y_pos,
-                                   block_z_pos,
+                                   (SHAPE_COORDS_INT_T)block_x_pos,
+                                   (SHAPE_COORDS_INT_T)block_y_pos,
+                                   (SHAPE_COORDS_INT_T)block_z_pos,
                                    false, // resize if needed
                                    false, // apply offset
                                    false,
@@ -460,7 +463,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
     uint16_t height = 0;
     uint16_t depth = 0;
 
-    long shapeBlocksPosition = 0;
+    size_t shapeBlocksPosition = 0;
 
     MapStringFloat3 *pois = map_string_float3_new();
     VERTEX_LIGHT_STRUCT_T *lightingData = NULL;
@@ -521,7 +524,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 // this means blocks have been found before the size.
                 // it's now possible to process them!
                 if (shapeBlocksPosition != 0) {
-                    long currentPosition = stream_get_cursor_position(s);
+                    size_t currentPosition = stream_get_cursor_position(s);
                     stream_set_cursor_position(s, shapeBlocksPosition);
 
                     sizeRead = chunk_read_shape_process_blocks(s,
@@ -636,7 +639,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
             cclog_warning("shape uses lighting but does not have a fixed size");
             free(lightingData);
         } else if ((lightingDataSizeRead - 4) !=
-                   width * height * depth * sizeof(VERTEX_LIGHT_STRUCT_T)) {
+                   (uint32_t)(width * height * depth * (uint16_t)sizeof(VERTEX_LIGHT_STRUCT_T))) {
             cclog_warning("shape uses lighting but does not match lighting data size");
             free(lightingData);
         } else {
@@ -660,6 +663,9 @@ uint32_t chunk_v5_read_shape_point(Stream *s, MapStringFloat3 *m) {
     }
 
     char *name = (char *)malloc(nameLen + 1);
+    if (name == NULL) {
+        return 0;
+    }
     if (stream_read_string(s, nameLen, name) == false) {
         cclog_error("failed to read shape POI's name.");
         free(name);
@@ -743,6 +749,9 @@ uint32_t chunk_v5_read_shape_baked_light(Stream *s, VERTEX_LIGHT_STRUCT_T **data
     }
 
     *data = (VERTEX_LIGHT_STRUCT_T *)malloc(chunkSize);
+    if (*data == NULL) {
+        return 0;
+    }
 
     uint8_t v1, v2;
     for (int i = 0; i < (int)dataCount; i++) {
@@ -755,10 +764,10 @@ uint32_t chunk_v5_read_shape_baked_light(Stream *s, VERTEX_LIGHT_STRUCT_T **data
             return 0;
         }
 
-        (*data)[i].red = v1 / 16;
-        (*data)[i].ambient = v1 - (*data)[i].red * 16;
-        (*data)[i].blue = v2 / 16;
-        (*data)[i].green = v2 - (*data)[i].blue * 16;
+        (*data)[i].red = TO_UINT4(v1 / 16);
+        (*data)[i].ambient = TO_UINT4(v1 - (*data)[i].red * 16);
+        (*data)[i].blue = TO_UINT4(v2 / 16);
+        (*data)[i].green = TO_UINT4(v2 - (*data)[i].blue * 16);
     }
 
     return chunkSize + 4;
