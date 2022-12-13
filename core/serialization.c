@@ -122,6 +122,9 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
             list = doubly_linked_list_new();
             Shape *shape = serialization_v5_load_shape(s, shapeSettings, colorAtlas);
             Asset *asset = malloc(sizeof(Asset));
+            if (asset == NULL) {
+                return NULL;
+            }
             asset->ptr = shape;
             asset->type = AssetType_Shape;
             doubly_linked_list_push_last(list, asset);
@@ -269,7 +272,7 @@ void serialization_utils_writeCString(void *dest,
     RETURN_IF_NULL(src);
     memcpy(dest, src, n);
     if (cursor != NULL) {
-        *cursor += n;
+        *cursor += (uint32_t)n;
     }
     return;
 }

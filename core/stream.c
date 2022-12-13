@@ -138,7 +138,7 @@ bool stream_buffer_unload(Stream *s, char **buf, size_t *written, size_t *bufSiz
 
     StreamData_BUFFER_WRITE *data = (StreamData_BUFFER_WRITE *)(s->data);
     *buf = data->buffer;
-    *written = data->cursor - data->buffer;
+    *written = (size_t)(data->cursor - data->buffer);
     *bufSize = data->bufferSize;
 
     data->buffer = NULL;
@@ -153,7 +153,7 @@ bool stream_read(Stream *s, void *outValue, size_t itemSize, size_t nbItems) {
         case STREAM_TYPE_BUFFER_READ: {
             size_t toRead = itemSize * nbItems;
             StreamData_BUFFER_READ *data = (StreamData_BUFFER_READ *)(s->data);
-            if (data->cursor - data->buffer + toRead > data->bufferSize) {
+            if ((size_t)(data->cursor - data->buffer) + toRead > data->bufferSize) {
                 return false;
             }
             memcpy(outValue, data->cursor, toRead);
@@ -198,7 +198,7 @@ bool stream_skip(Stream *s, size_t bytesToSkip) {
     switch (s->type) {
         case STREAM_TYPE_BUFFER_READ: {
             StreamData_BUFFER_READ *data = (StreamData_BUFFER_READ *)(s->data);
-            if (data->cursor - data->buffer + bytesToSkip > data->bufferSize) {
+            if ((size_t)(data->cursor - data->buffer) + bytesToSkip > data->bufferSize) {
                 return false;
             }
             data->cursor += bytesToSkip;
@@ -206,7 +206,7 @@ bool stream_skip(Stream *s, size_t bytesToSkip) {
         }
         case STREAM_TYPE_FILE_READ: {
             StreamData_FILE *data = (StreamData_FILE *)(s->data);
-            if (fseek(data->file, bytesToSkip, SEEK_CUR) != 0) {
+            if (fseek(data->file, (long)bytesToSkip, SEEK_CUR) != 0) {
                 return false;
             }
             return true;
@@ -221,11 +221,11 @@ size_t stream_get_cursor_position(Stream *s) {
     switch (s->type) {
         case STREAM_TYPE_BUFFER_READ: {
             StreamData_BUFFER_READ *data = (StreamData_BUFFER_READ *)(s->data);
-            return data->cursor - data->buffer;
+            return (size_t)(data->cursor - data->buffer);
         }
         case STREAM_TYPE_FILE_READ: {
             StreamData_FILE *data = (StreamData_FILE *)(s->data);
-            return ftell(data->file);
+            return (size_t)ftell(data->file);
         }
         default:
             break;
@@ -242,7 +242,7 @@ void stream_set_cursor_position(Stream *s, size_t pos) {
         }
         case STREAM_TYPE_FILE_READ: {
             StreamData_FILE *data = (StreamData_FILE *)(s->data);
-            fseek(data->file, pos, SEEK_SET);
+            fseek(data->file, (long)pos, SEEK_SET);
             break;
         }
         default:

@@ -408,9 +408,12 @@ VERTEX_LIGHT_STRUCT_T color_palette_get_emissive_color_as_light(const ColorPalet
 
     if (p->entries[entry].emissive) {
         RGBAColor *c = &p->entries[entry].color;
-        l.red = c->r >> 4;
-        l.green = c->g >> 4;
-        l.blue = c->b >> 4;
+        uint8_t temp = c->r >> 4;
+        l.red = (uint8_t)(temp & 0x0F);
+        temp = c->g >> 4;
+        l.green = (uint8_t)(temp & 0x0F);
+        temp = c->b >> 4;
+        l.blue = (uint8_t)(temp & 0x0F);
     }
 
     return l;

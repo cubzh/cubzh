@@ -65,6 +65,9 @@ void _rtree_node_free(RtreeNode *rn);
 
 RtreeNode *_rtree_node_new_root(Rtree *r) {
     RtreeNode *rn = (RtreeNode *)malloc(sizeof(RtreeNode));
+    if (rn == NULL) {
+        return NULL;
+    }
     rn->parent = NULL;
     rn->children = doubly_linked_list_new();
     rn->aabb = NULL;
@@ -89,6 +92,9 @@ RtreeNode *_rtree_node_new_leaf(RtreeNode *parent,
                                 uint8_t collidesWith,
                                 void *ptr) {
     RtreeNode *rn = (RtreeNode *)malloc(sizeof(RtreeNode));
+    if (rn == NULL) {
+        return NULL;
+    }
     rn->parent = parent;
     rn->children = doubly_linked_list_new();
     rn->aabb = box_new_copy(aabb);
@@ -107,6 +113,9 @@ RtreeNode *_rtree_node_new_leaf(RtreeNode *parent,
 
 RtreeNode *_rtree_node_new_branch(RtreeNode *parent, RtreeNode *child) {
     RtreeNode *rn = (RtreeNode *)malloc(sizeof(RtreeNode));
+    if (rn == NULL) {
+        return NULL;
+    }
     rn->parent = parent;
     rn->children = doubly_linked_list_new();
     rn->aabb = NULL;
@@ -376,7 +385,7 @@ RtreeNode *_rtree_split_node_quadratic(Rtree *r, RtreeNode *toSplit) {
     return rnSplit1->parent;
 }
 
-RtreeNode *_rtree_find_leaf(Rtree *r, RtreeNode *start, Box *aabb, void *ptr, bool check) {
+RtreeNode *_rtree_find_leaf(RtreeNode *start, Box *aabb, void *ptr, bool check) {
     FifoList *toExamine = fifo_list_new();
     DoublyLinkedListNode *n;
     RtreeNode *rn, *child;
@@ -488,6 +497,9 @@ void _rtree_condense(Rtree *r, RtreeNode *start) {
 
 Rtree *rtree_new(uint8_t m, uint8_t M) {
     Rtree *r = (Rtree *)malloc(sizeof(Rtree));
+    if (r == NULL) {
+        return NULL;
+    }
     r->root = NULL;
     r->h = 0;
     r->m = m;
@@ -707,7 +719,7 @@ void rtree_remove(Rtree *r, RtreeNode *leaf) {
 }
 
 void rtree_find_and_remove(Rtree *r, Box *aabb, void *ptr) {
-    RtreeNode *leaf = _rtree_find_leaf(r, r->root, aabb, ptr, false);
+    RtreeNode *leaf = _rtree_find_leaf(r->root, aabb, ptr, false);
     if (leaf != NULL) {
         rtree_remove(r, leaf);
     }
@@ -821,10 +833,12 @@ size_t rtree_query_cast_all_func(Rtree *r,
                     fifo_list_push(toExamine, child);
                 } else {
                     result = malloc(sizeof(RtreeCastResult));
-                    result->rtreeLeaf = child;
-                    result->distance = dist;
-                    fifo_list_push(results, result);
-                    hits++;
+                    if (result != NULL) {
+                        result->rtreeLeaf = child;
+                        result->distance = dist;
+                        fifo_list_push(results, result);
+                        hits++;
+                    }
                 }
             }
 
@@ -865,7 +879,6 @@ float rtree_query_cast_box_step_func(Rtree *r,
                                      const uint8_t collidesWith,
                                      FifoList *broadPhaseResults,
                                      RtreeNode **firstHit,
-                                     void *optionalPtr,
                                      const DoublyLinkedList *excludeLeafPtrs) {
 
     float swept, minSwept = 1.0f;
@@ -914,7 +927,6 @@ bool rtree_query_cast_box(Rtree *r,
                                         firstHit,
                                         distance,
                                         rtree_query_cast_box_step_func,
-                                        NULL,
                                         excludeLeafPtrs);
 }
 
@@ -929,7 +941,6 @@ bool rtree_utils_broadphase_steps(Rtree *r,
                                   RtreeNode **firstHit,
                                   float *distance,
                                   pointer_rtree_broadphase_step_func func,
-                                  void *optionalPtr,
                                   const DoublyLinkedList *excludeLeafPtrs) {
 
     FifoList *broadphaseResults = fifo_list_new();
@@ -960,7 +971,6 @@ bool rtree_utils_broadphase_steps(Rtree *r,
                         collidesWith,
                         broadphaseResults,
                         &_firstHit,
-                        optionalPtr,
                         excludeLeafPtrs);
 
         float3_op_add(&stepOriginBox.min, &step3);

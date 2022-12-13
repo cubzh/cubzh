@@ -4,7 +4,13 @@
 //  Created by Adrien Duermael on August 28, 2022.
 // -------------------------------------------------------------
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconversion"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
 #include "acutest.h"
+#pragma clang diagnostic pop // ignored "-Wsign-conversion"
+#pragma clang diagnostic pop // ignored "-Wconversion"
 
 #include "test_block.h"
 #include "test_blockChange.h"

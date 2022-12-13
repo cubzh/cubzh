@@ -50,7 +50,6 @@ typedef float (*pointer_rtree_broadphase_step_func)(Rtree *r,
                                                     const uint8_t collidesWith,
                                                     FifoList *broadPhaseResults,
                                                     RtreeNode **firstHit,
-                                                    void *optionalPtr,
                                                     const DoublyLinkedList *excludeLeafPtrs);
 
 struct RtreeCastResult {
@@ -139,7 +138,6 @@ float rtree_query_cast_box_step_func(Rtree *r,
                                      const uint8_t collidesWith,
                                      FifoList *broadPhaseResults,
                                      RtreeNode **firstHit,
-                                     void *optionalPtr,
                                      const DoublyLinkedList *excludeLeafPtrs);
 bool rtree_query_cast_box(Rtree *r,
                           const Box *aabb,
@@ -161,7 +159,6 @@ bool rtree_utils_broadphase_steps(Rtree *r,
                                   RtreeNode **firstHit,
                                   float *distance,
                                   pointer_rtree_broadphase_step_func func,
-                                  void *optionalPtr,
                                   const DoublyLinkedList *excludeLeafPtrs);
 
 /// MARK: - Debug -

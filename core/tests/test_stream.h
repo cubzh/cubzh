@@ -109,14 +109,14 @@ void test_stream_read_uint16(void) {
 // we should have the same value on both ends
 void test_stream_read_uint32(void) {
     const size_t len = 4;
-    char *content = (char *)malloc(len * sizeof(char));
+    uint8_t *content = (uint8_t *)malloc(len * sizeof(uint8_t));
     const uint32_t value = 400000; // 400 k / 0x061A80
     uint32_t result = 0;
     content[3] = 0x00;
     content[2] = 0x06;
     content[1] = 0x1A;
     content[0] = 0x80;
-    Stream *s = stream_new_buffer_read(content, len);
+    Stream *s = stream_new_buffer_read((const char *)content, len);
     const bool ok = stream_read_uint32(s, &result);
 
     TEST_CHECK(ok);
@@ -130,14 +130,14 @@ void test_stream_read_uint32(void) {
 void test_stream_read_float32(void) {
     // -200 <=> 0b11000011 0b01001000 0b00000000 0b00000000
     const size_t len = 4;
-    char *content = (char *)malloc(len * sizeof(char));
+    uint8_t *content = (uint8_t *)malloc(len * sizeof(uint8_t));
     const float value = -200.0f;
     float result = 0;
     content[3] = 0b11000011;
     content[2] = 0b01001000;
     content[1] = 0b00000000;
     content[0] = 0b00000000;
-    Stream *s = stream_new_buffer_read(content, len);
+    Stream *s = stream_new_buffer_read((const char *)content, len);
     const bool ok = stream_read_float32(s, &result);
 
     TEST_CHECK(ok);

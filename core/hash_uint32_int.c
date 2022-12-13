@@ -101,7 +101,7 @@ void hash_uint32_int_free(HashUInt32Int *h) {
 }
 
 void hash_uint32_int_set(HashUInt32Int *h, uint32_t key, int value) {
-    int level = 1;
+    uint8_t level = 1;
     HashUInt32IntNode *n = h->rootNode;
     vx_assert(n != NULL);
     uint8_t modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);

@@ -24,6 +24,9 @@
 #define SHAPE_LIGHTING_DEBUG false
 #endif
 
+// takes the 4 low bits of a and casts into uint8_t
+#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+
 // --------------------------------------------------
 //
 // MARK: - Types -
@@ -194,8 +197,7 @@ bool _is_out_of_fixed_size(const Shape *s,
                            const SHAPE_COORDS_INT_T x,
                            const SHAPE_COORDS_INT_T y,
                            const SHAPE_COORDS_INT_T z);
-Octree *_new_octree(Shape *s,
-                    const SHAPE_COORDS_INT_T w,
+Octree *_new_octree(const SHAPE_COORDS_INT_T w,
                     const SHAPE_COORDS_INT_T h,
                     const SHAPE_COORDS_INT_T d);
 void _set_vb_allocation_flag_one_frame(Shape *s);
@@ -203,7 +205,7 @@ void _set_vb_allocation_flag_one_frame(Shape *s);
 bool _lighting_is_enabled(Shape *s);
 
 /// internal functions used to flag the relevant data when lighting has changed
-void _lighting_set_dirty(Shape *s, int3 *bbMin, int3 *bbMax, int x, int y, int z);
+void _lighting_set_dirty(int3 *bbMin, int3 *bbMax, int x, int y, int z);
 void _lighting_postprocess_dirty(Shape *s, int3 *bbMin, int3 *bbMax);
 
 //// internal functions used to compute and update light propagation (sun & emission)
@@ -389,7 +391,9 @@ Shape *shape_make_copy(Shape *origin) {
     s->isResizable = origin->isResizable;
 
     if (origin->octree != NULL) {
-        s->octree = _new_octree(s, origin->maxWidth, origin->maxHeight, origin->maxDepth);
+        s->octree = _new_octree((SHAPE_COORDS_INT_T)origin->maxWidth,
+                                (SHAPE_COORDS_INT_T)origin->maxHeight,
+                                (SHAPE_COORDS_INT_T)origin->maxDepth);
 
         s->maxWidth = origin->maxWidth;
         s->maxHeight = origin->maxHeight;
@@ -417,9 +421,12 @@ Shape *shape_make_copy(Shape *origin) {
     }
 
     if (s->usesLighting) {
-        size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth *
+        size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
                               sizeof(VERTEX_LIGHT_STRUCT_T);
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
+        if (s->lightingData == NULL) {
+            return NULL;
+        }
         memcpy(s->lightingData, origin->lightingData, lightingSize);
     }
 
@@ -462,7 +469,9 @@ Shape *shape_make_with_octree(const uint16_t width,
 
     Shape *s = shape_make();
 
-    s->octree = _new_octree(s, width, height, depth);
+    s->octree = _new_octree((SHAPE_COORDS_INT_T)width,
+                            (SHAPE_COORDS_INT_T)height,
+                            (SHAPE_COORDS_INT_T)depth);
     s->usesLighting = lighting;
 
     // NOTE: remove chunks when fully using octree?
@@ -506,12 +515,12 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
             shape_get_bounding_box_size(shape, size);
 
             // estimation based on maximum of shape shell vs. shape volume block-occupancy
-            size_t shell = (minimum(size->z, 2) * size->x * size->y +
-                            minimum(size->y, 2) * size->x * maximum(size->z - 2, 0) +
-                            minimum(size->x, 2) * maximum(size->z - 2, 0) *
-                                maximum(size->y - 2, 0));
+            size_t shell = (size_t)(minimum(size->z, 2) * size->x * size->y +
+                                    minimum(size->y, 2) * size->x * maximum(size->z - 2, 0) +
+                                    minimum(size->x, 2) * maximum(size->z - 2, 0) *
+                                        maximum(size->y - 2, 0));
             float volume = (float)(size->x * size->y * size->z) * VERTEX_BUFFER_VOLUME_OCCUPANCY;
-            if (shell >= volume) {
+            if (shell >= (size_t)volume) {
                 capacity = (size_t)(ceilf(
                     (float)shell * VERTEX_BUFFER_SHELL_FACTOR *
                     (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
@@ -543,7 +552,7 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
                 return shape_add_vertex_buffer(shape, transparency);
             }
 
-            capacity = CLAMP((size_t)(ceilf(prev * VERTEX_BUFFER_INIT_SCALE_RATE)),
+            capacity = CLAMP((size_t)(ceilf((float)prev * VERTEX_BUFFER_INIT_SCALE_RATE)),
                              VERTEX_BUFFER_MIN_COUNT,
                              VERTEX_BUFFER_MAX_COUNT);
             break;
@@ -558,7 +567,7 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
         case 3: {
             size_t prev = vertex_buffer_get_max_length(transparency ? shape->lastVB_transparent
                                                                     : shape->lastVB_opaque);
-            capacity = CLAMP((size_t)(ceilf(prev * VERTEX_BUFFER_RUNTIME_SCALE_RATE)),
+            capacity = CLAMP((size_t)(ceilf((float)prev * VERTEX_BUFFER_RUNTIME_SCALE_RATE)),
                              VERTEX_BUFFER_MIN_COUNT,
                              VERTEX_BUFFER_MAX_COUNT);
             break;
@@ -570,7 +579,7 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
     }
 
     // ensure VB capacity is a multiple of 2 for texture size
-    size_t texSize = (size_t)(ceilf(sqrtf(capacity)));
+    size_t texSize = (size_t)(ceilf(sqrtf((float)capacity)));
 #if VERTEX_BUFFER_TEX_UPPER_POT
     texSize = upper_power_of_two(texSize);
 #endif
@@ -610,6 +619,9 @@ void shape_chunk_needs_display(Shape *shape, Chunk *c) {
         ChunkList *cl;
         if (shape->needsDisplay == NULL) {
             cl = (ChunkList *)malloc(sizeof(ChunkList));
+            if (cl == NULL) {
+                return;
+            }
             cl->chunk = c;
             cl->next = NULL;
         } else {
@@ -677,7 +689,8 @@ void shape_flush(Shape *shape) {
                 octree_flush(shape->octree);
             }
             if (shape->lightingData != NULL) {
-                size_t lightingSize = shape->maxWidth * shape->maxHeight * shape->maxDepth *
+                size_t lightingSize = (size_t)(shape->maxWidth * shape->maxHeight *
+                                               shape->maxDepth) *
                                       sizeof(VERTEX_LIGHT_STRUCT_T);
                 memset(shape->lightingData, 0, lightingSize);
             }
@@ -1119,7 +1132,7 @@ bool shape_add_block_with_color(Shape *shape,
 
         block_set_color_index(block, colorIndex);
         if (shape->octree != NULL) {
-            octree_set_element(shape->octree, (void *)block, x, y, z);
+            octree_set_element(shape->octree, (void *)block, (size_t)x, (size_t)y, (size_t)z);
         }
 
         if (lighting) {
@@ -1172,7 +1185,10 @@ bool shape_remove_block(Shape *shape,
 
     // found chunk?
     if (chunk != NULL) {
-        Block *block = chunk_get_block(chunk, posInChunk.x, posInChunk.y, posInChunk.z);
+        Block *block = chunk_get_block(chunk,
+                                       (CHUNK_COORDS_INT_T)posInChunk.x,
+                                       (CHUNK_COORDS_INT_T)posInChunk.y,
+                                       (CHUNK_COORDS_INT_T)posInChunk.z);
         if (block == NULL) {
             return false;
         }
@@ -1181,7 +1197,10 @@ bool shape_remove_block(Shape *shape,
         if (blockBefore != NULL) {
             *blockBefore = block_new_copy(block);
         }
-        removed = chunk_removeBlock(chunk, posInChunk.x, posInChunk.y, posInChunk.z);
+        removed = chunk_removeBlock(chunk,
+                                    (CHUNK_COORDS_INT_T)posInChunk.x,
+                                    (CHUNK_COORDS_INT_T)posInChunk.y,
+                                    (CHUNK_COORDS_INT_T)posInChunk.z);
 
         if (removed) {
             shape->nbBlocks--;
@@ -1201,7 +1220,7 @@ bool shape_remove_block(Shape *shape,
             }
             if (shape->octree != NULL) {
                 Block *air = block_new_air();
-                octree_remove_element(shape->octree, x, y, z, air);
+                octree_remove_element(shape->octree, (size_t)x, (size_t)y, (size_t)z, air);
                 block_free((Block *)air);
             }
 
@@ -1250,7 +1269,10 @@ bool shape_paint_block(Shape *shape,
 
     // found chunk?
     if (chunk != NULL) {
-        Block *block = chunk_get_block(chunk, posInChunk.x, posInChunk.y, posInChunk.z);
+        Block *block = chunk_get_block(chunk,
+                                       (CHUNK_COORDS_INT_T)posInChunk.x,
+                                       (CHUNK_COORDS_INT_T)posInChunk.y,
+                                       (CHUNK_COORDS_INT_T)posInChunk.z);
         if (block == NULL) {
             return false;
         }
@@ -1264,7 +1286,11 @@ bool shape_paint_block(Shape *shape,
 
         color_palette_increment_color(shape->palette, colorIndex);
 
-        painted = chunk_paint_block(chunk, posInChunk.x, posInChunk.y, posInChunk.z, colorIndex);
+        painted = chunk_paint_block(chunk,
+                                    (CHUNK_COORDS_INT_T)posInChunk.x,
+                                    (CHUNK_COORDS_INT_T)posInChunk.y,
+                                    (CHUNK_COORDS_INT_T)posInChunk.z,
+                                    colorIndex);
         if (blockAfter != NULL) {
             *blockAfter = block_new_copy(block);
         }
@@ -1273,7 +1299,11 @@ bool shape_paint_block(Shape *shape,
 
             // Note: block in chunk index and block in octree are 2 different copies
             if (shape->octree != NULL) {
-                octree_set_element(shape->octree, (const void *)(&colorIndex), x, y, z);
+                octree_set_element(shape->octree,
+                                   (const void *)(&colorIndex),
+                                   (size_t)x,
+                                   (size_t)y,
+                                   (size_t)z);
             }
 
             if (lighting) {
@@ -1335,7 +1365,8 @@ Block *shape_get_block_immediate(const Shape *const shape,
     Block *b = NULL;
     if (shape_is_within_fixed_bounds(shape, x, y, z)) {
         if (shape->octree != NULL) {
-            b = (Block *)octree_get_element_without_checking(shape->octree, x, y, z);
+            b = (Block *)
+                octree_get_element_without_checking(shape->octree, (size_t)x, (size_t)y, (size_t)z);
         } else {
             static int3 globalPos;
             static int3 posInChunk;
@@ -1348,7 +1379,10 @@ Block *shape_get_block_immediate(const Shape *const shape,
 
             // found chunk?
             if (chunk != NULL) {
-                b = chunk_get_block(chunk, posInChunk.x, posInChunk.y, posInChunk.z);
+                b = chunk_get_block(chunk,
+                                    (CHUNK_COORDS_INT_T)posInChunk.x,
+                                    (CHUNK_COORDS_INT_T)posInChunk.y,
+                                    (CHUNK_COORDS_INT_T)posInChunk.z);
             }
         }
     }
@@ -1465,7 +1499,7 @@ uint16_t shape_get_max_fixed_size(const Shape *shape) {
     if (_has_fixed_size(shape)) {
         return maximum(shape->maxWidth, maximum(shape->maxHeight, shape->maxDepth));
     } else {
-        return maximum(
+        return (uint16_t)maximum(
             shape->box->max.x - shape->box->min.x,
             maximum(shape->box->max.y - shape->box->min.y, shape->box->max.z - shape->box->min.z));
     }
@@ -1632,13 +1666,13 @@ bool shape_compute_size_and_origin(const Shape *shape,
 
     index3d_iterator_free(it);
 
-    *size_x = (uint32_t)(max_x - min_x);
-    *size_y = (uint32_t)(max_y - min_y);
-    *size_z = (uint32_t)(max_z - min_z);
+    *size_x = (SHAPE_SIZE_INT_T)(max_x - min_x);
+    *size_y = (SHAPE_SIZE_INT_T)(max_y - min_y);
+    *size_z = (SHAPE_SIZE_INT_T)(max_z - min_z);
 
-    *origin_x = min_x;
-    *origin_y = min_y;
-    *origin_z = min_z;
+    *origin_x = (SHAPE_COORDS_INT_T)min_x;
+    *origin_y = (SHAPE_COORDS_INT_T)min_y;
+    *origin_z = (SHAPE_COORDS_INT_T)min_z;
 
     return true; // non-empty shape
 }
@@ -1674,28 +1708,31 @@ void shape_expand_box(Shape *shape,
                       const SHAPE_COORDS_INT_T x,
                       const SHAPE_COORDS_INT_T y,
                       const SHAPE_COORDS_INT_T z) {
+    const float xf = (const float)x;
+    const float yf = (const float)y;
+    const float zf = (const float)z;
 
     if (box_is_empty(shape->box)) {
-        float3_set(&shape->box->min, x, y, z);
-        float3_set(&shape->box->max, x + 1, y + 1, z + 1);
+        float3_set(&shape->box->min, xf, yf, zf);
+        float3_set(&shape->box->max, xf + 1.0f, yf + 1.0f, zf + 1.0f);
     } else {
-        if (x < shape->box->min.x) {
-            shape->box->min.x = x;
+        if (xf < shape->box->min.x) {
+            shape->box->min.x = xf;
         }
-        if (y < shape->box->min.y) {
-            shape->box->min.y = y;
+        if (yf < shape->box->min.y) {
+            shape->box->min.y = yf;
         }
-        if (z < shape->box->min.z) {
-            shape->box->min.z = z;
+        if (zf < shape->box->min.z) {
+            shape->box->min.z = zf;
         }
-        if (x >= shape->box->max.x) {
-            shape->box->max.x = x + 1;
+        if (xf >= shape->box->max.x) {
+            shape->box->max.x = xf + 1.0f;
         }
-        if (y >= shape->box->max.y) {
-            shape->box->max.y = y + 1;
+        if (yf >= shape->box->max.y) {
+            shape->box->max.y = yf + 1.0f;
         }
-        if (z >= shape->box->max.z) {
-            shape->box->max.z = z + 1;
+        if (zf >= shape->box->max.z) {
+            shape->box->max.z = zf + 1.0f;
         }
     }
 
@@ -1766,10 +1803,16 @@ void shape_make_space(Shape *const shape,
     // current shape's bounding box limits
 
     int3 min; // inclusive
-    int3_set(&min, shape->box->min.x, shape->box->min.y, shape->box->min.z);
+    int3_set(&min,
+             (int32_t)shape->box->min.x,
+             (int32_t)shape->box->min.y,
+             (int32_t)shape->box->min.z);
 
     int3 max; // non inclusive
-    int3_set(&max, shape->box->max.x, shape->box->max.y, shape->box->max.z);
+    int3_set(&max,
+             (int32_t)shape->box->max.x,
+             (int32_t)shape->box->max.y,
+             (int32_t)shape->box->max.z);
 
     // cclog_trace("📏 CURRENT BOUNDING BOX: (%d,%d,%d) -> (%d,%d,%d)",
     //       min.x, min.y, min.z, max.x, max.y, max.z);
@@ -1842,7 +1885,9 @@ void shape_make_space(Shape *const shape,
     if (requiredSizeMax > octree_size) {
 
         // cclog_info("📏 OCTREE NOT BIG ENOUGH");
-        octree = _new_octree(shape, requiredSize.x, requiredSize.y, requiredSize.z);
+        octree = _new_octree((SHAPE_COORDS_INT_T)requiredSize.x,
+                             (SHAPE_COORDS_INT_T)requiredSize.y,
+                             (SHAPE_COORDS_INT_T)requiredSize.z);
         chunks = index3d_new();
 
         octree_size = octree_get_dimension(octree);
@@ -1917,7 +1962,8 @@ void shape_make_space(Shape *const shape,
             // for operation to be the same as when copying cubes to a larger octree.
             // It would be more lines of code but better optimized to
             // just move blocks within the octree in that case.
-            octree = _new_octree(shape, octree_size, octree_size, octree_size);
+            SHAPE_COORDS_INT_T size = (SHAPE_COORDS_INT_T)octree_size;
+            octree = _new_octree(size, size, size);
             chunks = index3d_new();
 
         } else {
@@ -1933,18 +1979,18 @@ void shape_make_space(Shape *const shape,
             //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
 
             if (requiredMaxX >= shape->maxWidth) {
-                shape->maxWidth = requiredMaxX + 1;
+                shape->maxWidth = (uint16_t)requiredMaxX + 1;
             }
             if (requiredMaxY >= shape->maxHeight) {
-                shape->maxHeight = requiredMaxY + 1;
+                shape->maxHeight = (uint16_t)requiredMaxY + 1;
             }
             if (requiredMaxZ >= shape->maxDepth) {
-                shape->maxDepth = requiredMaxZ + 1;
+                shape->maxDepth = (uint16_t)requiredMaxZ + 1;
             }
 
-            const uint16_t ax = abs(spaceRequiredMin.x) + spaceRequiredMax.x;
-            const uint16_t ay = abs(spaceRequiredMin.y) + spaceRequiredMax.y;
-            const uint16_t az = abs(spaceRequiredMin.z) + spaceRequiredMax.z;
+            const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
+            const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
+            const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
 
             _light_realloc(shape, ax, ay, az, 0, 0, 0);
 
@@ -1957,16 +2003,16 @@ void shape_make_space(Shape *const shape,
     }
 
     // NOTE: see if we could do this for all 3 cases
-    const uint16_t ax = abs(spaceRequiredMin.x) + spaceRequiredMax.x;
-    const uint16_t ay = abs(spaceRequiredMin.y) + spaceRequiredMax.y;
-    const uint16_t az = abs(spaceRequiredMin.z) + spaceRequiredMax.z;
+    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
+    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
+    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
 
     if (requiredSize.x > shape->maxWidth)
-        shape->maxWidth = requiredSize.x;
+        shape->maxWidth = (uint16_t)requiredSize.x;
     if (requiredSize.y > shape->maxHeight)
-        shape->maxHeight = requiredSize.y;
+        shape->maxHeight = (uint16_t)requiredSize.y;
     if (requiredSize.z > shape->maxDepth)
-        shape->maxDepth = requiredSize.z;
+        shape->maxDepth = (uint16_t)requiredSize.z;
 
     // empty current dirty chunks list, if any
     ChunkList *cl = NULL;
@@ -1980,21 +2026,25 @@ void shape_make_space(Shape *const shape,
     // copy with offsets to blocks position
     Block *block = NULL;
     Block *block_copy = NULL;
-    int ox, oy, oz;
+    SHAPE_COORDS_INT_T ox, oy, oz;
     Chunk *chunk = NULL;
     bool chunkAdded = false;
 
-    for (SHAPE_SIZE_INT_T xx = min.x; xx < max.x; ++xx) {
-        for (SHAPE_SIZE_INT_T yy = min.y; yy < max.y; ++yy) {
-            for (SHAPE_SIZE_INT_T zz = min.z; zz < max.z; ++zz) {
+    for (SHAPE_SIZE_INT_T xx = (SHAPE_SIZE_INT_T)min.x; xx < max.x; ++xx) {
+        for (SHAPE_SIZE_INT_T yy = (SHAPE_SIZE_INT_T)min.y; yy < max.y; ++yy) {
+            for (SHAPE_SIZE_INT_T zz = (SHAPE_SIZE_INT_T)min.z; zz < max.z; ++zz) {
 
-                block = shape_get_block(shape, xx, yy, zz, false);
+                block = shape_get_block(shape,
+                                        (SHAPE_COORDS_INT_T)xx,
+                                        (SHAPE_COORDS_INT_T)yy,
+                                        (SHAPE_COORDS_INT_T)zz,
+                                        false);
 
                 if (block_is_solid(block)) {
                     // get offseted position
-                    ox = xx + delta.x;
-                    oy = yy + delta.y;
-                    oz = zz + delta.z;
+                    ox = (SHAPE_COORDS_INT_T)(xx + delta.x);
+                    oy = (SHAPE_COORDS_INT_T)(yy + delta.y);
+                    oz = (SHAPE_COORDS_INT_T)(zz + delta.z);
 
                     // check if it is within new bounds
                     vx_assert(ox >= 0 && oy >= 0 && oz >= 0 && ox < shape->maxWidth &&
@@ -2005,7 +2055,11 @@ void shape_make_space(Shape *const shape,
                     block_copy = block_new_copy(block);
 
                     // block is again copied within octree_set_element
-                    octree_set_element(octree, (const void *)block_copy, ox, oy, oz);
+                    octree_set_element(octree,
+                                       (const void *)block_copy,
+                                       (size_t)ox,
+                                       (size_t)oy,
+                                       (size_t)oz);
 
                     // block_copy is stored here, its memory is handled by responsible chunk
                     _add_block_in_chunks(chunks,
@@ -2068,7 +2122,13 @@ void shape_make_space(Shape *const shape,
                     false); // remove offset
 
     // offset lighting data
-    _light_realloc(shape, ax, ay, az, delta.x, delta.y, delta.z);
+    _light_realloc(shape,
+                   ax,
+                   ay,
+                   az,
+                   (SHAPE_SIZE_INT_T)delta.x,
+                   (SHAPE_SIZE_INT_T)delta.y,
+                   (SHAPE_SIZE_INT_T)delta.z);
 
     octree_free(shape->octree);
 
@@ -2315,9 +2375,9 @@ void shape_reset_pivot_to_center(Shape *s) {
     int3 size;
     shape_get_bounding_box_size(s, &size);
     shape_set_pivot(s,
-                    s->box->min.x + size.x * .5f,
-                    s->box->min.y + size.y * .5f,
-                    s->box->min.z + size.z * .5f,
+                    s->box->min.x + (float)size.x * 0.5f,
+                    s->box->min.y + (float)size.y * 0.5f,
+                    s->box->min.z + (float)size.z * 0.5f,
                     false);
 }
 
@@ -2371,9 +2431,9 @@ void shape_block_lua_to_internal(const Shape *s,
         return;
     }
 
-    *x += s->offset.x;
-    *y += s->offset.y;
-    *z += s->offset.z;
+    *x += (SHAPE_COORDS_INT_T)s->offset.x;
+    *y += (SHAPE_COORDS_INT_T)s->offset.y;
+    *z += (SHAPE_COORDS_INT_T)s->offset.z;
 }
 
 void shape_block_internal_to_lua(const Shape *s,
@@ -2383,27 +2443,27 @@ void shape_block_internal_to_lua(const Shape *s,
     if (s == NULL || x == NULL || y == NULL || z == NULL)
         return;
 
-    *x -= s->offset.x;
-    *y -= s->offset.y;
-    *z -= s->offset.z;
+    *x -= (SHAPE_COORDS_INT_T)s->offset.x;
+    *y -= (SHAPE_COORDS_INT_T)s->offset.y;
+    *z -= (SHAPE_COORDS_INT_T)s->offset.z;
 }
 
 void shape_block_lua_to_internal_float(const Shape *s, float *x, float *y, float *z) {
     if (s == NULL || x == NULL || y == NULL || z == NULL)
         return;
 
-    *x += s->offset.x;
-    *y += s->offset.y;
-    *z += s->offset.z;
+    *x += (float)s->offset.x;
+    *y += (float)s->offset.y;
+    *z += (float)s->offset.z;
 }
 
 void shape_block_internal_to_lua_float(const Shape *s, float *x, float *y, float *z) {
     if (s == NULL || x == NULL || y == NULL || z == NULL)
         return;
 
-    *x -= s->offset.x;
-    *y -= s->offset.y;
-    *z -= s->offset.z;
+    *x -= (float)s->offset.x;
+    *y -= (float)s->offset.y;
+    *z -= (float)s->offset.z;
 }
 
 void shape_set_position(Shape *s, const float x, const float y, const float z) {
@@ -3104,7 +3164,8 @@ void shape_clear_baked_lighting(Shape *s) {
         return;
     }
 
-    size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
+    size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
+                          sizeof(VERTEX_LIGHT_STRUCT_T);
     memset(s->lightingData, 0, lightingSize);
 }
 
@@ -3125,7 +3186,8 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
         }
     }
 
-    size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
+    size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
+                          sizeof(VERTEX_LIGHT_STRUCT_T);
     if (s->lightingData == NULL) {
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
     }
@@ -3197,7 +3259,11 @@ void shape_set_light(Shape *s, int x, int y, int z, VERTEX_LIGHT_STRUCT_T light)
 }
 
 VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, int x, int y, int z, bool isDefault) {
-    if (isDefault || s->lightingData == NULL || shape_is_within_fixed_bounds(s, x, y, z) == false) {
+    if (isDefault || s->lightingData == NULL ||
+        shape_is_within_fixed_bounds(s,
+                                     (SHAPE_COORDS_INT_T)x,
+                                     (SHAPE_COORDS_INT_T)y,
+                                     (SHAPE_COORDS_INT_T)z) == false) {
         VERTEX_LIGHT_STRUCT_T light;
         DEFAULT_LIGHT(light)
         return light;
@@ -3378,7 +3444,11 @@ void shape_compute_baked_lighting_added_block(Shape *s,
                 i3.y = y + yo;
                 i3.z = z + zo;
 
-                block = shape_get_block(s, i3.x, i3.y, i3.z, false);
+                block = shape_get_block(s,
+                                        (SHAPE_COORDS_INT_T)i3.x,
+                                        (SHAPE_COORDS_INT_T)i3.y,
+                                        (SHAPE_COORDS_INT_T)i3.z,
+                                        false);
                 if (block != NULL && color_palette_is_emissive(s->palette, block->colorIndex)) {
                     light = color_palette_get_emissive_color_as_light(s->palette,
                                                                       block->colorIndex);
@@ -3759,6 +3829,9 @@ static bool _storeShapeInIndex(Shape *s) {
         // if index is nil, then initialize it and store the shape pointer in it
         _shapesIndexLength = 1;
         _shapesIndex = (Shape **)malloc(sizeof(Shape *) * _shapesIndexLength);
+        if (_shapesIndex == NULL) {
+            return false;
+        }
         _shapesIndex[0] = s;
         // cclog_trace(">>> length %d", _shapesIndexLength);
         return true;
@@ -3842,9 +3915,9 @@ bool _add_block_in_chunks(Index3D *chunks,
     if (chunk == NULL) {
         // it's necessary to store chunk position, as a chunk should be able
         // to generate its face vertices without external context
-        chunk = chunk_new(chunk_ldfPos.x * CHUNK_WIDTH,
-                          chunk_ldfPos.y * CHUNK_HEIGHT,
-                          chunk_ldfPos.z * CHUNK_DEPTH);
+        chunk = chunk_new((SHAPE_COORDS_INT_T)chunk_ldfPos.x * CHUNK_WIDTH,
+                          (SHAPE_COORDS_INT_T)chunk_ldfPos.y * CHUNK_HEIGHT,
+                          (SHAPE_COORDS_INT_T)chunk_ldfPos.z * CHUNK_DEPTH);
         index3d_insert(chunks, chunk, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z, NULL);
 
         // printf("insert chunk at: %d, %d, %d\n", chunk_ldfPos->x, chunk_ldfPos->y,
@@ -3966,7 +4039,10 @@ bool _add_block_in_chunks(Index3D *chunks,
         int3_set(block_ldfPos_out, block_ldfPos.x, block_ldfPos.y, block_ldfPos.z);
     }
 
-    Block *block = chunk_get_block(chunk, block_ldfPos.x, block_ldfPos.y, block_ldfPos.z);
+    Block *block = chunk_get_block(chunk,
+                                   (CHUNK_COORDS_INT_T)block_ldfPos.x,
+                                   (CHUNK_COORDS_INT_T)block_ldfPos.y,
+                                   (CHUNK_COORDS_INT_T)block_ldfPos.z);
 
     // there's already a block, we can't add one
     if (block != NULL) {
@@ -3977,11 +4053,14 @@ bool _add_block_in_chunks(Index3D *chunks,
     }
 
     block = newBlock != NULL ? newBlock : block_new();
-    chunk_addBlock(chunk,
-                   block,
-                   block_ldfPos.x,
-                   block_ldfPos.y,
-                   block_ldfPos.z); // returns whether the operation succeeded
+    bool ok = chunk_addBlock(chunk,
+                             block,
+                             (CHUNK_COORDS_INT_T)block_ldfPos.x,
+                             (CHUNK_COORDS_INT_T)block_ldfPos.y,
+                             (CHUNK_COORDS_INT_T)block_ldfPos.z);
+    if (ok == false) {
+        return false;
+    }
 
     if (added_or_existing_block != NULL) {
         *added_or_existing_block = block;
@@ -4002,12 +4081,11 @@ bool _is_out_of_fixed_size(const Shape *s,
     return x < 0 || y < 0 || z < 0 || x >= s->maxWidth || y >= s->maxHeight || z >= s->maxDepth;
 }
 
-Octree *_new_octree(Shape *s,
-                    const SHAPE_COORDS_INT_T w,
+Octree *_new_octree(const SHAPE_COORDS_INT_T w,
                     const SHAPE_COORDS_INT_T h,
                     const SHAPE_COORDS_INT_T d) {
     // enforcing power of 2 for the octree
-    uint16_t size = maximum(maximum(w, h), d);
+    uint16_t size = (uint16_t)(maximum(maximum(w, h), d));
     unsigned long upPow2Size = upper_power_of_two(size);
 
     Block *air = block_new_air();
@@ -4075,7 +4153,7 @@ bool _lighting_is_enabled(Shape *s) {
     return s->usesLighting && _has_fixed_size(s);
 }
 
-void _lighting_set_dirty(Shape *s, int3 *bbMin, int3 *bbMax, int x, int y, int z) {
+void _lighting_set_dirty(int3 *bbMin, int3 *bbMax, int x, int y, int z) {
     if (vertex_buffer_get_lighting_enabled()) {
         int3_op_min(bbMin, x, y, z);
         int3_op_max(bbMax, x, y, z);
@@ -4174,7 +4252,7 @@ void _light_removal_processNeighbor(Shape *s,
                 insertSRGB |= (uint8_t)1;
             }
             shape_set_light(s, neighborPos->x, neighborPos->y, neighborPos->z, neighborLight);
-            _lighting_set_dirty(s, bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
+            _lighting_set_dirty(bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
 
             // enqueue neighbor for removal
             light_removal_node_queue_push(lightRemovalQueue,
@@ -4284,10 +4362,10 @@ void _light_block_propagate(Shape *s,
             float absorbRGB = 1.0f - a;
             float absorbS = 1.0f - a;
 #endif
-            current.red = (uint8_t)((float)current.red * absorbRGB);
-            current.green = (uint8_t)((float)current.green * absorbRGB);
-            current.blue = (uint8_t)((float)current.blue * absorbRGB);
-            current.ambient = (uint8_t)((float)current.ambient * absorbS);
+            current.red = TO_UINT4((uint8_t)((float)current.red * absorbRGB));
+            current.green = TO_UINT4((uint8_t)((float)current.green * absorbRGB));
+            current.blue = TO_UINT4((uint8_t)((float)current.blue * absorbRGB));
+            current.ambient = TO_UINT4((uint8_t)((float)current.ambient * absorbS));
         }
 
         VERTEX_LIGHT_STRUCT_T neighborLight = shape_get_light_or_default(s,
@@ -4301,21 +4379,21 @@ void _light_block_propagate(Shape *s,
         const bool propagateB = neighborLight.blue < current.blue - stepRGB;
         if (propagateS || propagateR || propagateG || propagateB) {
             if (propagateS) {
-                neighborLight.ambient = current.ambient - stepS;
+                neighborLight.ambient = TO_UINT4(current.ambient - stepS);
             }
             if (propagateR) {
-                neighborLight.red = current.red - stepRGB;
+                neighborLight.red = TO_UINT4(current.red - stepRGB);
             }
             if (propagateG) {
-                neighborLight.green = current.green - stepRGB;
+                neighborLight.green = TO_UINT4(current.green - stepRGB);
             }
             if (propagateB) {
-                neighborLight.blue = current.blue - stepRGB;
+                neighborLight.blue = TO_UINT4(current.blue - stepRGB);
             }
             shape_set_light(s, neighborPos->x, neighborPos->y, neighborPos->z, neighborLight);
 
             light_node_queue_push(lightQueue, neighborPos);
-            _lighting_set_dirty(s, bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
+            _lighting_set_dirty(bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
         }
     }
     // if neighbor emissive, enqueue & store original emission of the block (relevant if first
@@ -4354,9 +4432,10 @@ void _light_propagate(Shape *s,
     }
 
     // set source block dirty
-    _lighting_set_dirty(s, min, max, srcX, srcY, srcZ);
+    _lighting_set_dirty(min, max, srcX, srcY, srcZ);
 
     int3 i3, insertPos;
+    SHAPE_COORDS_INT_T i3x, i3y, i3z; // i3 individual values
     Block *current = NULL, *neighbor = NULL;
     VERTEX_LIGHT_STRUCT_T currentLight;
     bool isCurrentAir, isCurrentOpen, isCurrentTransparent, isNeighborAir, isNeighborTransparent;
@@ -4364,14 +4443,17 @@ void _light_propagate(Shape *s,
     uint32_t iCount = 0;
     while (n != NULL) {
         light_node_get_coords(n, &i3);
+        i3x = (SHAPE_COORDS_INT_T)i3.x;
+        i3y = (SHAPE_COORDS_INT_T)i3.y;
+        i3z = (SHAPE_COORDS_INT_T)i3.z;
 
         // get current light
-        if (_is_out_of_fixed_size(s, i3.x, i3.y, i3.z)) {
+        if (_is_out_of_fixed_size(s, i3x, i3y, i3z)) {
             DEFAULT_LIGHT(currentLight)
             isCurrentAir = true;
             isCurrentTransparent = false;
         } else {
-            current = shape_get_block(s, i3.x, i3.y, i3.z, false);
+            current = shape_get_block(s, i3x, i3y, i3z, false);
             if (current == NULL) {
                 cclog_error("🔥 no element found at index");
                 light_node_queue_recycle(n);
@@ -4399,7 +4481,7 @@ void _light_propagate(Shape *s,
 
         // for each non-opaque neighbor: flag current node as open & propagate light if current
         // non-opaque for each emissive neighbor: add to light queue if current non-opaque y - 1
-        neighbor = shape_get_block(s, i3.x, i3.y - 1, i3.z, false);
+        neighbor = shape_get_block(s, i3x, i3y - 1, i3z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4429,7 +4511,7 @@ void _light_propagate(Shape *s,
         }
 
         // y + 1
-        neighbor = shape_get_block(s, i3.x, i3.y + 1, i3.z, false);
+        neighbor = shape_get_block(s, i3x, i3y + 1, i3z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4458,7 +4540,7 @@ void _light_propagate(Shape *s,
         }
 
         // x + 1
-        neighbor = shape_get_block(s, i3.x + 1, i3.y, i3.z, false);
+        neighbor = shape_get_block(s, i3x + 1, i3y, i3z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4487,7 +4569,7 @@ void _light_propagate(Shape *s,
         }
 
         // x - 1
-        neighbor = shape_get_block(s, i3.x - 1, i3.y, i3.z, false);
+        neighbor = shape_get_block(s, i3x - 1, i3y, i3z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4516,7 +4598,7 @@ void _light_propagate(Shape *s,
         }
 
         // z + 1
-        neighbor = shape_get_block(s, i3.x, i3.y, i3.z + 1, false);
+        neighbor = shape_get_block(s, i3x, i3y, i3z + 1, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4545,7 +4627,7 @@ void _light_propagate(Shape *s,
         }
 
         // z - 1
-        neighbor = shape_get_block(s, i3.x, i3.y, i3.z - 1, false);
+        neighbor = shape_get_block(s, i3x, i3y, i3z - 1, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
@@ -4598,13 +4680,13 @@ void _light_propagate(Shape *s,
                         insertPos.z = i3.z + zo;
 
                         if (shape_is_within_fixed_bounds(s,
-                                                         insertPos.x,
-                                                         insertPos.y,
-                                                         insertPos.z)) {
+                                                         (SHAPE_COORDS_INT_T)insertPos.x,
+                                                         (SHAPE_COORDS_INT_T)insertPos.y,
+                                                         (SHAPE_COORDS_INT_T)insertPos.z)) {
                             neighbor = shape_get_block(s,
-                                                       insertPos.x,
-                                                       insertPos.y,
-                                                       insertPos.z,
+                                                       (SHAPE_COORDS_INT_T)insertPos.x,
+                                                       (SHAPE_COORDS_INT_T)insertPos.y,
+                                                       (SHAPE_COORDS_INT_T)insertPos.z,
                                                        false);
                             if (block_is_opaque(neighbor, s->palette) == false) {
                                 _light_enqueue_source(&insertPos, s, currentLight, lightQueue);
@@ -4650,23 +4732,27 @@ void _light_removal(Shape *s,
     Block *neighbor = NULL;
 
     int3 i3, insertPos;
+    SHAPE_COORDS_INT_T i3x, i3y, i3z; // i3 individual values
     LightRemovalNode *rn = light_removal_node_queue_pop(lightRemovalQueue);
     uint32_t iCount = 0;
     while (rn != NULL) {
         // get coords and light value of the light removal node (rn)
         light_removal_node_get_coords(rn, &i3);
+        i3x = (SHAPE_COORDS_INT_T)i3.x;
+        i3y = (SHAPE_COORDS_INT_T)i3.y;
+        i3z = (SHAPE_COORDS_INT_T)i3.z;
         light_removal_node_get_light(rn, &light);
         srgb = light_removal_node_get_srgb(rn);
         blockID = light_removal_node_get_block_id(rn);
 
         // check that the current block is inside the shape bounds
-        if (shape_is_within_fixed_bounds(s, i3.x, i3.y, i3.z)) {
+        if (shape_is_within_fixed_bounds(s, i3x, i3y, i3z)) {
 
             // if air or transparent block, proceed with light removal
             if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK ||
                 color_palette_is_transparent(s->palette, blockID)) {
                 // x + 1
-                neighbor = shape_get_block(s, i3.x + 1, i3.y, i3.z, false);
+                neighbor = shape_get_block(s, i3x + 1, i3y, i3z, false);
                 if (neighbor != NULL) {
                     insertPos.x = i3.x + 1;
                     insertPos.y = i3.y;
@@ -4684,7 +4770,7 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // x - 1
-                neighbor = shape_get_block(s, i3.x - 1, i3.y, i3.z, false);
+                neighbor = shape_get_block(s, i3x - 1, i3y, i3z, false);
                 if (neighbor != NULL) {
                     insertPos.x = i3.x - 1;
                     insertPos.y = i3.y;
@@ -4702,7 +4788,7 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // y + 1
-                neighbor = shape_get_block(s, i3.x, i3.y + 1, i3.z, false);
+                neighbor = shape_get_block(s, i3x, i3y + 1, i3z, false);
                 if (neighbor != NULL) {
                     insertPos.x = i3.x;
                     insertPos.y = i3.y + 1;
@@ -4720,7 +4806,7 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // y - 1
-                neighbor = shape_get_block(s, i3.x, i3.y - 1, i3.z, false);
+                neighbor = shape_get_block(s, i3x, i3y - 1, i3z, false);
                 if (neighbor != NULL) {
                     insertPos.x = i3.x;
                     insertPos.y = i3.y - 1;
@@ -4738,7 +4824,7 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // z + 1
-                neighbor = shape_get_block(s, i3.x, i3.y, i3.z + 1, false);
+                neighbor = shape_get_block(s, i3x, i3y, i3z + 1, false);
                 if (neighbor != NULL) {
                     insertPos.x = i3.x;
                     insertPos.y = i3.y;
@@ -4756,7 +4842,7 @@ void _light_removal(Shape *s,
                                                    lightRemovalQueue);
                 }
                 // z - 1
-                neighbor = shape_get_block(s, i3.x, i3.y, i3.z - 1, false);
+                neighbor = shape_get_block(s, i3x, i3y, i3z - 1, false);
                 if (neighbor != NULL) {
                     insertPos.x = i3.x;
                     insertPos.y = i3.y;
@@ -4790,9 +4876,9 @@ void _light_removal(Shape *s,
                             insertPos.z = i3.z + zo;
 
                             neighbor = shape_get_block(s,
-                                                       insertPos.x,
-                                                       insertPos.y,
-                                                       insertPos.z,
+                                                       (SHAPE_COORDS_INT_T)insertPos.x,
+                                                       (SHAPE_COORDS_INT_T)insertPos.y,
+                                                       (SHAPE_COORDS_INT_T)insertPos.z,
                                                        false);
                             if (neighbor != NULL) {
                                 // only first-degree neighbors remove the emissive block's own RGB
@@ -4841,9 +4927,12 @@ void _light_realloc(Shape *s,
     // in that new space
     // TODO: only if it's a light block ; need to manually start light propagation otherwise
 
-    const size_t lightingSize = s->maxWidth * s->maxHeight * s->maxDepth *
-                                sizeof(VERTEX_LIGHT_STRUCT_T);
+    const size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth *
+                                         (uint16_t)sizeof(VERTEX_LIGHT_STRUCT_T));
     VERTEX_LIGHT_STRUCT_T *lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
+    if (lightingData == NULL) {
+        return;
+    }
     const SHAPE_SIZE_INT_T srcWidth = s->maxWidth - dx;
     const SHAPE_SIZE_INT_T srcHeight = s->maxHeight - dy;
     const SHAPE_SIZE_INT_T srcDepth = s->maxDepth - dz;

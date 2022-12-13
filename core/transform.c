@@ -149,6 +149,9 @@ static void _transform_free(Transform *const t);
 
 Transform *transform_make(TransformType type) {
     Transform *t = (Transform *)malloc(sizeof(Transform));
+    if (t == NULL) {
+        return NULL;
+    }
 
     t->refCount = 1;
     t->ltw = matrix4x4_new_identity();

@@ -300,49 +300,49 @@ void test_block_getNeighbourBlockCoordinates(void) {
     SHAPE_COORDS_INT_T newz = 0;
 
     checkShapePos = aware_block_get_shape_pos(aBlock);
-    block_getNeighbourBlockCoordinates(checkShapePos->x,
-                                       checkShapePos->y,
-                                       checkShapePos->z,
+    block_getNeighbourBlockCoordinates((SHAPE_COORDS_INT_T)checkShapePos->x,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->y,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->z,
                                        0,
                                        &newx,
                                        &newy,
                                        &newz);
     TEST_CHECK(newx == 4 && newy == 5 && newz == 2);
-    block_getNeighbourBlockCoordinates(checkShapePos->x,
-                                       checkShapePos->y,
-                                       checkShapePos->z,
+    block_getNeighbourBlockCoordinates((SHAPE_COORDS_INT_T)checkShapePos->x,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->y,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->z,
                                        1,
                                        &newx,
                                        &newy,
                                        &newz);
     TEST_CHECK(newx == 2 && newy == 5 && newz == 2);
-    block_getNeighbourBlockCoordinates(checkShapePos->x,
-                                       checkShapePos->y,
-                                       checkShapePos->z,
+    block_getNeighbourBlockCoordinates((SHAPE_COORDS_INT_T)checkShapePos->x,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->y,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->z,
                                        2,
                                        &newx,
                                        &newy,
                                        &newz);
     TEST_CHECK(newx == 3 && newy == 5 && newz == 3);
-    block_getNeighbourBlockCoordinates(checkShapePos->x,
-                                       checkShapePos->y,
-                                       checkShapePos->z,
+    block_getNeighbourBlockCoordinates((SHAPE_COORDS_INT_T)checkShapePos->x,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->y,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->z,
                                        3,
                                        &newx,
                                        &newy,
                                        &newz);
     TEST_CHECK(newx == 3 && newy == 5 && newz == 1);
-    block_getNeighbourBlockCoordinates(checkShapePos->x,
-                                       checkShapePos->y,
-                                       checkShapePos->z,
+    block_getNeighbourBlockCoordinates((SHAPE_COORDS_INT_T)checkShapePos->x,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->y,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->z,
                                        4,
                                        &newx,
                                        &newy,
                                        &newz);
     TEST_CHECK(newx == 3 && newy == 6 && newz == 2);
-    block_getNeighbourBlockCoordinates(checkShapePos->x,
-                                       checkShapePos->y,
-                                       checkShapePos->z,
+    block_getNeighbourBlockCoordinates((SHAPE_COORDS_INT_T)checkShapePos->x,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->y,
+                                       (SHAPE_COORDS_INT_T)checkShapePos->z,
                                        5,
                                        &newx,
                                        &newy,

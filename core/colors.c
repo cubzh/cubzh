@@ -29,7 +29,7 @@ rgb hsv2rgb(hsv in) {
         hh = 0.0;
     hh /= 60.0;
     i = (long)(hh);
-    ff = hh - i;
+    ff = hh - (double)i;
     p = in.v * (1.0 - in.s);
     q = in.v * (1.0 - (in.s * ff));
     t = in.v * (1.0 - (in.s * (1.0 - ff)));
@@ -218,25 +218,25 @@ float CIEDE2000(Lab c1, Lab c2) {
         ((delta_H_prime) / (K_H * S_H)) * ((delta_H_prime) / (K_H * S_H)) +
         (((delta_C_prime) / (K_C * S_C)) * ((delta_H_prime) / (K_H * S_H)) * R_T));
 
-    return Delta_E;
+    return (float)Delta_E;
 }
 
-void RGB2YIQ(float3 *yiq, RGBAColor rgb) {
-    float r = (float)rgb.r;
-    float g = (float)rgb.g;
-    float b = (float)rgb.b;
+void RGB2YIQ(float3 *yiq, RGBAColor rgbIn) {
+    float r = (float)rgbIn.r;
+    float g = (float)rgbIn.g;
+    float b = (float)rgbIn.b;
     yiq->x = .299f * r + .587f * g + .114f * b;
     yiq->y = .595716f * r - .274453f * g - .321263f * b;
     yiq->z = .211456f * r - .522591f * g + .311135f * b;
 }
 
 RGBAColor YIQ2RGB(float3 *yiq) {
-    RGBAColor rgb;
-    rgb.r = (uint8_t)(CLAMP(1.0f * yiq->x + .9563f * yiq->y + .6210f * yiq->z, 0.0f, 255.0f));
-    rgb.g = (uint8_t)(CLAMP(1.0f * yiq->x - .2721f * yiq->y - .6474f * yiq->z, 0.0f, 255.0f));
-    rgb.b = (uint8_t)(CLAMP(1.0f * yiq->x - 1.1070f * yiq->y + 1.7046f * yiq->z, 0.0f, 255.0f));
-    rgb.a = 255;
-    return rgb;
+    RGBAColor rgbOut;
+    rgbOut.r = (uint8_t)(CLAMP(1.0f * yiq->x + .9563f * yiq->y + .6210f * yiq->z, 0.0f, 255.0f));
+    rgbOut.g = (uint8_t)(CLAMP(1.0f * yiq->x - .2721f * yiq->y - .6474f * yiq->z, 0.0f, 255.0f));
+    rgbOut.b = (uint8_t)(CLAMP(1.0f * yiq->x - 1.1070f * yiq->y + 1.7046f * yiq->z, 0.0f, 255.0f));
+    rgbOut.a = 255;
+    return rgbOut;
 }
 
 // --------------------------------------------------
@@ -294,25 +294,25 @@ RGBAColor color_compute_complementary(RGBAColor c) {
 /// Performs a fixed rotation by provided hue in radians,
 /// used to validate palette_compute_complementary_color results
 /// full transformation here: https://beesbuzz.biz/code/16-hsv-color-transforms
-RGBAColor _rotateHue(RGBAColor rgb, float hue) {
+RGBAColor _rotateHue(RGBAColor rgbIn, float hue) {
     float vsu = cosf(hue);
     float vsw = sinf(hue);
 
     RGBAColor ret;
-    ret.r = CLAMP((.299f + .701f * vsu + .168f * vsw) * rgb.r +
-                      (.587f - .587f * vsu + .330f * vsw) * rgb.g +
-                      (.114f - .114f * vsu - .497f * vsw) * rgb.b,
-                  0.0f,
-                  255.0f);
-    ret.g = CLAMP((.299f - .299f * vsu - .328f * vsw) * rgb.r +
-                      (.587f + .413f * vsu + .035f * vsw) * rgb.g +
-                      (.114f - .114f * vsu + .292f * vsw) * rgb.b,
-                  0.0f,
-                  255.0f);
-    ret.b = CLAMP((.299f - .300f * vsu + 1.25f * vsw) * rgb.r +
-                      (.587f - .588f * vsu - 1.05f * vsw) * rgb.g +
-                      (.114f + .886f * vsu - .203f * vsw) * rgb.b,
-                  0.0f,
-                  255.0f);
+    ret.r = (uint8_t)CLAMP((.299f + .701f * vsu + .168f * vsw) * rgbIn.r +
+                               (.587f - .587f * vsu + .330f * vsw) * rgbIn.g +
+                               (.114f - .114f * vsu - .497f * vsw) * rgbIn.b,
+                           0.0f,
+                           255.0f);
+    ret.g = (uint8_t)CLAMP((.299f - .299f * vsu - .328f * vsw) * rgbIn.r +
+                               (.587f + .413f * vsu + .035f * vsw) * rgbIn.g +
+                               (.114f - .114f * vsu + .292f * vsw) * rgbIn.b,
+                           0.0f,
+                           255.0f);
+    ret.b = (uint8_t)CLAMP((.299f - .300f * vsu + 1.25f * vsw) * rgbIn.r +
+                               (.587f - .588f * vsu - 1.05f * vsw) * rgbIn.g +
+                               (.114f + .886f * vsu - .203f * vsw) * rgbIn.b,
+                           0.0f,
+                           255.0f);
     return ret;
 }

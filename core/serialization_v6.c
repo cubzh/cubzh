@@ -53,6 +53,9 @@ typedef enum P3sCompressionMethod {
 #define CHUNK_V6_HEADER_NO_ID_SIZE (sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t))
 #define CHUNK_V6_HEADER_NO_ID_SKIP_SIZE (sizeof(uint8_t) + sizeof(uint32_t))
 
+// takes the 4 low bits of a and casts into uint8_t
+#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+
 // MARK: - Private functions prototypes -
 // MARK: Write as buffer -
 
@@ -726,7 +729,7 @@ ColorPalette *chunk_v6_read_palette_data(void *cursor, ColorAtlas *colorAtlas, b
     bool *emissive = (bool *)cursor;
 
     ColorPalette *palette = color_palette_new_from_data(colorAtlas,
-                                                        minimum(colorCount, UINT8_MAX),
+                                                        minimum((uint8_t)colorCount, UINT8_MAX),
                                                         colors,
                                                         emissive);
     return palette;
@@ -790,9 +793,9 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
     cursor = (void *)((uint32_t *)cursor + 1);
     SHAPE_COLOR_INDEX_INT_T colorIndex;
     ColorPalette *palette = shape_get_palette(shape);
-    for (uint32_t x = 0; x < w; x++) { // shape blocks
-        for (uint32_t y = 0; y < h; y++) {
-            for (uint32_t z = 0; z < d; z++) {
+    for (SHAPE_COORDS_INT_T x = 0; x < w; x++) { // shape blocks
+        for (SHAPE_COORDS_INT_T y = 0; y < h; y++) {
+            for (SHAPE_COORDS_INT_T z = 0; z < d; z++) {
                 colorIndex = *((SHAPE_COLOR_INDEX_INT_T *)cursor);
                 cursor = (void *)((SHAPE_COLOR_INDEX_INT_T *)cursor + 1);
 
@@ -895,7 +898,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     localTransform.scale.z = 1;
     char name[256];
     name[0] = 0;
-    float3 pivot;
+    float3 pivot = {0.0f, 0.0f, 0.0f};
     bool hasPivot = false;
 
     while (totalSizeRead < uncompressedSize) {
@@ -908,7 +911,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&shapeId, cursor, sizeof(uint16_t));
                 cursor = (void *)((uint16_t *)cursor + 1);
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_PARENT_ID: {
@@ -916,7 +919,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&shapeParentId, cursor, sizeof(uint16_t));
                 cursor = (void *)((uint16_t *)cursor + 1);
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_TRANSFORM: {
@@ -924,7 +927,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&localTransform, cursor, sizeof(LocalTransform));
                 cursor = (void *)((LocalTransform *)cursor + 1);
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_PIVOT: {
@@ -932,7 +935,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 cursor = (void *)((uint32_t *)cursor + 1);
                 memcpy(&pivot, cursor, sizeof(float3));
                 cursor = (void *)((float3 *)cursor + 1);
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 hasPivot = true;
                 break;
             }
@@ -945,7 +948,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
                 paletteID = PALETTE_ID_CUSTOM;
 
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_NAME: {
@@ -954,7 +957,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 cursor = (void *)((uint8_t *)cursor + 1);
                 memcpy(name, cursor, sizeof(char) * nameLen);
                 name[nameLen] = 0;
-                totalSizeRead += sizeof(uint8_t) + sizeof(char) * nameLen;
+                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) * nameLen);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_SIZE: {
@@ -967,7 +970,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 memcpy(&depth, cursor, sizeof(uint16_t)); // shape size Y
                 cursor = (void *)((uint16_t *)cursor + 1);
 
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
 
                 // size is known, now is a good time to create the shape
                 if (shapeSettings->octree) {
@@ -999,7 +1002,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
                 // skip chunk for now
                 cursor = (void *)((uint8_t *)cursor + sizeRead);
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_POINT: {
@@ -1035,7 +1038,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 map_string_float3_set_key_value(pois, nameStr, poi);
                 free(nameStr);
 
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_POINT_ROTATION: {
@@ -1050,8 +1053,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 cursor = (void *)((uint8_t *)cursor + 1);
 
                 nameStr = (char *)malloc(nameLen + 1); // +1 for null terminator
-                memcpy(nameStr, cursor, nameLen);      // shape POI name
-                nameStr[nameLen] = 0;                  // add null terminator
+                if (nameStr == NULL) {
+                    totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
+                    continue;
+                }
+                memcpy(nameStr, cursor, nameLen); // shape POI name
+                nameStr[nameLen] = 0;             // add null terminator
                 cursor = (void *)((char *)cursor + nameLen);
 
                 memcpy(&(poi->x), cursor, sizeof(float)); // shape POI X
@@ -1066,7 +1073,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 map_string_float3_set_key_value(pois_rotation, nameStr, poi);
                 free(nameStr);
 
-                totalSizeRead += sizeRead + sizeof(uint32_t);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
 #if GLOBAL_LIGHTING_BAKE_READ_ENABLED
@@ -1079,11 +1086,15 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 uint32_t dataCount = lightingDataSizeRead / sizeof(VERTEX_LIGHT_STRUCT_T);
                 if (dataCount == 0) {
                     cclog_error("baked light data count cannot be 0, skipping");
-                    totalSizeRead += lightingDataSizeRead + sizeof(uint32_t);
+                    totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
                     break;
                 }
 
                 lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingDataSizeRead);
+                if (lightingData == NULL) {
+                    totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
+                    continue;
+                }
 
                 uint8_t v1, v2;
                 for (int i = 0; i < (int)dataCount; i++) {
@@ -1093,13 +1104,13 @@ uint32_t chunk_v6_read_shape(Stream *s,
                     memcpy(&v2, cursor, sizeof(uint8_t)); // shape baked lighting v2
                     cursor = (void *)((uint8_t *)cursor + 1);
 
-                    lightingData[i].red = v1 / 16;
-                    lightingData[i].ambient = v1 - lightingData[i].red * 16;
-                    lightingData[i].blue = v2 / 16;
-                    lightingData[i].green = v2 - lightingData[i].blue * 16;
+                    lightingData[i].red = TO_UINT4(v1 / 16);
+                    lightingData[i].ambient = TO_UINT4(v1 - lightingData[i].red * 16);
+                    lightingData[i].blue = TO_UINT4(v2 / 16);
+                    lightingData[i].green = TO_UINT4(v2 - lightingData[i].blue * 16);
                 }
 
-                totalSizeRead += lightingDataSizeRead + sizeof(uint32_t);
+                totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
             }
 #endif
             default: // shape sub chunks we don't need to read
@@ -1198,7 +1209,8 @@ uint32_t chunk_v6_read_shape(Stream *s,
         } else if (shapeSettings->octree == false && shapeSettings->limitSize == false) {
             cclog_warning("shape uses lighting but does not have a fixed size");
             free(lightingData);
-        } else if (lightingDataSizeRead != width * height * depth * sizeof(VERTEX_LIGHT_STRUCT_T)) {
+        } else if (lightingDataSizeRead !=
+                   (uint32_t)(width * height * depth * (uint16_t)sizeof(VERTEX_LIGHT_STRUCT_T))) {
             cclog_warning("shape uses lighting but does not match lighting data size");
             free(lightingData);
         } else {
@@ -1213,7 +1225,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     if (shapes) {
         int32_t parentIndex = shapeParentId - 1;
         Shape *parent = (Shape *)doubly_linked_list_node_pointer(
-            doubly_linked_list_node_at_index(shapes, parentIndex));
+            doubly_linked_list_node_at_index(shapes, (size_t)parentIndex));
         if (parentIndex >= 0 && parent) {
             shape_set_parent(*shape, shape_get_root_transform(parent), false);
             shape_set_local_position(*shape,
@@ -1384,7 +1396,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
              (int32_t)(boundingBox->min.z));
     int3_set(&end, start.x + shapeSize.x, start.y + shapeSize.y, start.z + shapeSize.z);
 
-    uint32_t blockCount = shapeSize.x * shapeSize.y * shapeSize.z;
+    uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
 #if GLOBAL_LIGHTING_BAKE_WRITE_ENABLED
     bool hasLighting = shape_uses_baked_lighting(shape);
@@ -1429,7 +1441,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         uint32_t nameLen = (uint32_t)strlen(key);
         nameLen = nameLen > 255 ? 255 : (uint8_t)nameLen;
 
-        shapePointPositionsSize += sizeof(uint8_t) + nameLen + 3 * sizeof(float);
+        shapePointPositionsSize += (uint32_t)sizeof(uint8_t) + nameLen +
+                                   3 * (uint32_t)sizeof(float);
         shapePointPositionsCount++;
 
         map_string_float3_iterator_next(it);
@@ -1452,7 +1465,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         uint32_t nameLen = (uint32_t)strlen(key);
         nameLen = nameLen > 255 ? 255 : (uint8_t)nameLen;
 
-        shapePointRotationsSize += sizeof(uint8_t) + nameLen + 3 * sizeof(float);
+        shapePointRotationsSize += (uint32_t)sizeof(uint8_t) + nameLen +
+                                   3 * (uint32_t)sizeof(float);
         shapePointRotationsCount++;
 
         map_string_float3_iterator_next(it);
@@ -1572,7 +1586,11 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     for (int32_t x = start.x; x < end.x; x++) { // shape blocks
         for (int32_t y = start.y; y < end.y; y++) {
             for (int32_t z = start.z; z < end.z; z++) {
-                block = shape_get_block(shape, x, y, z, false);
+                block = shape_get_block(shape,
+                                        (SHAPE_COORDS_INT_T)x,
+                                        (SHAPE_COORDS_INT_T)y,
+                                        (SHAPE_COORDS_INT_T)z,
+                                        false);
                 if (block_is_solid(block)) {
                     *((uint8_t *)cursor) = paletteMapping != NULL
                                                ? paletteMapping[block_get_color_index(block)]
@@ -1608,7 +1626,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
             cursor = (void *)((uint8_t *)cursor + 1);
             *((uint32_t *)cursor) = chunkSize; // shape POI chunk size
             cursor = (void *)((uint32_t *)cursor + 1);
-            *((uint8_t *)cursor) = nameLen; // shape POI name length
+            *((uint8_t *)cursor) = (uint8_t)nameLen; // shape POI name length
             cursor = (void *)((uint8_t *)cursor + 1);
             memcpy(cursor, key, nameLen); // shape POI name
             cursor = (void *)((char *)cursor + nameLen);
@@ -1647,7 +1665,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
             cursor = (void *)((uint8_t *)cursor + 1);
             *((uint32_t *)cursor) = chunkSize; // shape POI chunk size
             cursor = (void *)((uint32_t *)cursor + 1);
-            *((uint8_t *)cursor) = nameLen; // shape POI name length
+            *((uint8_t *)cursor) = (uint8_t)nameLen; // shape POI name length
             cursor = (void *)((uint8_t *)cursor + 1);
             memcpy(cursor, key, nameLen); // shape POI name
             cursor = (void *)((char *)cursor + nameLen);
@@ -1750,6 +1768,10 @@ bool chunk_v6_shape_create_and_write_compressed_buffer(const Shape *shape,
     // now we have the final compressed size and data, we can pass it to our outputs.
     *compressedSize = (uint32_t)_compressedSize;
     *compressedData = malloc(*compressedSize);
+    if (*compressedData == NULL) {
+        free(_compressedData);
+        return false;
+    }
     memcpy(*compressedData, _compressedData, *compressedSize);
 
     free(_compressedData);
@@ -1769,9 +1791,12 @@ void _chunk_v6_palette_create_and_write_uncompressed_buffer(
     uint8_t colorCount = color_palette_get_ordered_count(palette);
 
     // prepare palette chunk uncompressed data
-    *uncompressedSize = sizeof(uint8_t) + sizeof(RGBAColor) * colorCount +
-                        sizeof(bool) * colorCount;
+    *uncompressedSize = (uint32_t)(sizeof(uint8_t) + sizeof(RGBAColor) * colorCount +
+                                   sizeof(bool) * colorCount);
     *uncompressedData = malloc(*uncompressedSize);
+    if (*uncompressedData == NULL) {
+        return;
+    }
     void *cursor = *uncompressedData;
 
     // number of colors
@@ -1977,6 +2002,11 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
 
                 if (filterMask == AssetType_Any || (filterMask & AssetType_Palette) > 0) {
                     Asset *asset = malloc(sizeof(Asset));
+                    if (asset == NULL) {
+                        cclog_error("error while reading palette");
+                        error = true;
+                        break;
+                    }
                     asset->ptr = serializedPalette;
                     asset->type = AssetType_Palette;
                     doubly_linked_list_push_last(list, asset);

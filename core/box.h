@@ -24,8 +24,8 @@ typedef struct {
     float3 max;
 } Box;
 
-static const Box box_zero = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-static const Box box_one = {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+static const Box box_zero = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
+static const Box box_one = {{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}};
 
 Box *box_new(void);
 

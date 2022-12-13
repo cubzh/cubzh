@@ -18,7 +18,7 @@ void test_upper_power_of_two(void) {
     unsigned long f = 31;
     unsigned long g = 63;
     unsigned long h = 127;
-    unsigned long i = -127;
+    unsigned long i = (unsigned long)(-127);
 
     a = upper_power_of_two(a);
     b = upper_power_of_two(b);

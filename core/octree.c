@@ -77,10 +77,10 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
                                         const void *element,
                                         const size_t elementSize) {
     Octree *tree = _octree_new();
-    tree->levels = levels;
+    tree->levels = (uint8_t)levels;
     tree->nb_nodes = nb_nodes_for_levels(levels);
     tree->nb_elements = nb_elements_for_levels(levels);
-    tree->width_height_depth = cbrt(tree->nb_elements);
+    tree->width_height_depth = (size_t)cbrt(tree->nb_elements);
 
     //    if (tree->width_height_depth == upper_power_of_two(tree->width_height_depth)) {
     //        cclog_info("👍 octree size is a power of 2");
@@ -95,12 +95,21 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
     tree->nodes_size_in_memory = tree->nb_nodes * sizeof(OctreeNode);
 
     tree->nodes = malloc(tree->nodes_size_in_memory);
+    if (tree->nodes == false) {
+        octree_free(tree);
+        return NULL;
+    }
 
     memset(tree->nodes, 0, tree->nb_nodes); // setting everything to 0
 
     tree->elements_size_in_memory = tree->nb_elements * tree->element_size;
 
     tree->elements = malloc(tree->elements_size_in_memory);
+    if (tree->elements == NULL) {
+        free(tree->nodes);
+        octree_free(tree);
+        return NULL;
+    }
 
     void *cursor = tree->elements;
     for (uint32_t i = 0; i < tree->nb_elements; i++) {
@@ -129,17 +138,17 @@ void octree_free(Octree *tree) {
 // utils
 
 uint32_t nb_nodes_for_levels(const size_t levels) {
-    uint8_t currentLevel = levels;
+    uint8_t currentLevel = (uint8_t)levels;
     uint32_t nodes = 0;
     while (currentLevel > 0) {
-        nodes += pow(8, currentLevel - 1);
+        nodes += (uint32_t)pow(8.0, (double)currentLevel - 1.0);
         currentLevel--;
     }
     return nodes;
 }
 
 uint32_t nb_elements_for_levels(const size_t levels) {
-    return pow(8, levels);
+    return (uint32_t)pow(8.0, (double)levels);
 }
 
 bool octree_set_element(const Octree *octree, const void *element, size_t x, size_t y, size_t z) {
@@ -155,7 +164,7 @@ bool octree_set_element(const Octree *octree, const void *element, size_t x, siz
     const size_t original_z = z;
 
     uint8_t current_level = 0;
-    uint16_t size_at_level = octree->width_height_depth;
+    uint16_t size_at_level = (uint16_t)octree->width_height_depth;
     uint16_t half_size_at_level;
 
     OctreeNode *node = (OctreeNode *)octree->nodes;
@@ -237,7 +246,7 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
     size_t _z = z;
 
     uint8_t current_level = 0;
-    uint16_t size_at_level = octree->width_height_depth;
+    uint16_t size_at_level = (uint16_t)octree->width_height_depth;
     uint16_t half_size_at_level;
 
     OctreeNode *node = (OctreeNode *)octree->nodes;
@@ -245,7 +254,14 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
     int node_index = 0;
 
     int *index_in_branch_at_level = (int *)malloc(sizeof(int) * octree->levels);
+    if (index_in_branch_at_level == NULL) {
+        return false;
+    }
     int *node_index_at_level = (int *)malloc(sizeof(int) * octree->levels);
+    if (node_index_at_level == NULL) {
+        free(index_in_branch_at_level);
+        return false;
+    }
 
     node_index_at_level[0] = node_index;
 
@@ -348,7 +364,7 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
     // reaching this point means the node is found
     // set bit to 0 and propagate to parent nodes if node == 0
 
-    size_at_level = size_at_level << 1;
+    size_at_level = (uint16_t)(size_at_level << 1);
     current_level -= 1;
 
     index_in_branch = index_in_branch_at_level[current_level];
@@ -391,7 +407,7 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
         OctreeNodeValue *nv = (OctreeNodeValue *)node;
 
         if (nv->v == 0 && current_level > 0) {
-            size_at_level = size_at_level << 1;
+            size_at_level = (uint16_t)(size_at_level << 1);
             current_level -= 1;
 
             index_in_branch = index_in_branch_at_level[current_level];
@@ -428,7 +444,7 @@ void *octree_get_element(const Octree *octree, const size_t x, const size_t y, c
     size_t _z = z;
 
     uint8_t current_level = 0;
-    uint16_t size_at_level = octree->width_height_depth;
+    uint16_t size_at_level = (uint16_t)octree->width_height_depth;
     uint16_t half_size_at_level;
 
     OctreeNode *node = (OctreeNode *)octree->nodes;
@@ -595,7 +611,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                                    // exploring the tree
     int node_index_in_level[11];   // index of node in its own level (global index minus start of
                                    // level)
-    int branch_index[10]; // index of first child for node at given level (8 children for each node)
     uint8_t child_index_processed[11]; // child index being processed for each level
 
     int current_level = 0;          // level being processed
@@ -604,7 +619,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
     current_nodes[current_level] = &allNodes[0];
     node_index_in_level[current_level] = 0;
     child_index_processed[current_level] = 0;
-    branch_index[current_level] = 1;
 
     bool goingToNextLevel = false;
     bool found = false;
@@ -620,7 +634,7 @@ void octree_non_recursive_iteration(const Octree *octree) {
             current_level -= 1;
             current_level_plus_one -= 1;
 
-            uint16_t mask = ~(1 << (octree->levels - current_level_plus_one));
+            uint16_t mask = (uint16_t)(~(1 << (octree->levels - current_level_plus_one)));
             x &= mask;
             y &= mask;
             z &= mask;
@@ -692,7 +706,7 @@ void octree_non_recursive_iteration(const Octree *octree) {
             if (found) {
                 cclog_info("element: %d, %d, %d", x, y, z);
 
-                uint16_t mask = ~(1 << (octree->levels - current_level_plus_one));
+                uint16_t mask = (uint16_t)(~(1 << (octree->levels - current_level_plus_one)));
                 x &= mask;
                 y &= mask;
                 z &= mask;
@@ -709,9 +723,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n000 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 0;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
                     }
                     break;
@@ -719,9 +730,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n100 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 1;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -731,9 +739,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n101 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 2;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -744,9 +749,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n001 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 3;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         z |= 1 << (octree->levels - current_level_plus_one);
@@ -756,9 +758,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n010 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 4;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         y |= 1 << (octree->levels - current_level_plus_one);
@@ -768,9 +767,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n110 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 5;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -781,9 +777,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n111 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 6;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         x |= 1 << (octree->levels - current_level_plus_one);
@@ -795,9 +788,6 @@ void octree_non_recursive_iteration(const Octree *octree) {
                     if (current_nodes[current_level]->n011 == 1) {
                         node_index_in_level[current_level +
                                             1] = 8 * node_index_in_level[current_level] + 7;
-                        branch_index[current_level + 1] = startIndexForLevel[current_level + 2] +
-                                                          8 * node_index_in_level[current_level +
-                                                                                  1];
                         goingToNextLevel = true;
 
                         y |= 1 << (octree->levels - current_level_plus_one);
@@ -884,6 +874,9 @@ struct _OctreeIterator {
 
 OctreeIterator *octree_iterator_new(const Octree *octree) {
     OctreeIterator *oi = (OctreeIterator *)malloc(sizeof(OctreeIterator));
+    if (oi == NULL) {
+        return NULL;
+    }
 
     oi->octree = octree;
 
@@ -969,22 +962,23 @@ void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *fo
 
             // if found leaf during last iteration
             if (oi->foundLeaf) {
-                uint16_t mask = ~(1 << (oi->octree->levels - oi->current_level_plus_one));
+                uint16_t mask = (uint16_t)(~(1
+                                             << (oi->octree->levels - oi->current_level_plus_one)));
                 oi->current_node_x &= mask;
                 oi->current_node_y &= mask;
                 oi->current_node_z &= mask;
-                oi->current_node_size = oi->current_node_size << 1;
+                oi->current_node_size = (uint16_t)(oi->current_node_size << 1);
                 oi->foundLeaf = false;
             }
 
             oi->current_level -= 1;
             oi->current_level_plus_one -= 1;
 
-            uint16_t mask = ~(1 << (oi->octree->levels - oi->current_level_plus_one));
+            uint16_t mask = (uint16_t)(~(1 << (oi->octree->levels - oi->current_level_plus_one)));
             oi->current_node_x &= mask;
             oi->current_node_y &= mask;
             oi->current_node_z &= mask;
-            oi->current_node_size = oi->current_node_size << 1;
+            oi->current_node_size = (uint16_t)(oi->current_node_size << 1);
 
             // do not skip all branches!
             skip_current_branch = false;
@@ -997,11 +991,12 @@ void octree_iterator_next(OctreeIterator *oi, bool skip_current_branch, bool *fo
 
             // if found leaf during last iteration
             if (oi->foundLeaf) {
-                uint16_t mask = ~(1 << (oi->octree->levels - oi->current_level_plus_one));
+                uint16_t mask = (uint16_t)(~(1
+                                             << (oi->octree->levels - oi->current_level_plus_one)));
                 oi->current_node_x &= mask;
                 oi->current_node_y &= mask;
                 oi->current_node_z &= mask;
-                oi->current_node_size = oi->current_node_size << 1;
+                oi->current_node_size = (uint16_t)(oi->current_node_size << 1);
                 oi->foundLeaf = false;
             }
 
@@ -1245,6 +1240,9 @@ bool octree_iterator_is_done(const OctreeIterator *oi) {
 /// Allocates an Octree structure and return its address.
 static Octree *_octree_new(void) {
     Octree *o = (Octree *)malloc(sizeof(Octree));
+    if (o == NULL) {
+        return NULL;
+    }
     o->nodes = NULL;
     o->elements = NULL;
     o->element_size = 0;

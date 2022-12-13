@@ -21,6 +21,9 @@
 #define VERTEX_BUFFER_DEBUG 0
 #endif
 
+// takes the 4 low bits of a and casts into uint8_t
+#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+
 // Vertex buffers are used from outside Cubzh Core
 // when implementing renderers (like Swift/Metal renderer)
 // Giving each vertex buffer a proper ID is useful to know when
@@ -103,7 +106,9 @@ void vertex_buffer_mem_area_leave_group_list(VertexBufferMemArea *vbma, bool tra
 void vertex_buffer_mem_area_leave_global_list(VertexBufferMemArea *vbma);
 
 // debug
-void vertex_buffer_check_mem_area_chain(const VertexBuffer *vb);
+#if VERTEX_BUFFER_DEBUG == 1
+void vertex_buffer_check_mem_area_chain();
+#endif // VERTEX_BUFFER_DEBUG == 1
 
 //---------------------
 // MARK: VertexBuffer
@@ -249,6 +254,9 @@ VertexBuffer *vertex_buffer_new(bool lighting, bool transparent) {
 
 VertexBuffer *vertex_buffer_new_with_max_count(size_t n, bool lighting, bool transparent) {
     VertexBuffer *vb = (VertexBuffer *)malloc(sizeof(VertexBuffer));
+    if (vb == NULL) {
+        return NULL;
+    }
     vb->id = vertex_buffer_get_new_id();
 
     vb->enlisted = false;
@@ -404,10 +412,12 @@ void vertex_buffer_add_draw_slice(VertexBuffer *vb, uint32_t start, uint32_t cou
         vb->nbDrawSlices--;
     } else if (leftMerged == NULL && rightMerged == NULL) {
         DrawBufferWriteSlice *node = (DrawBufferWriteSlice *)malloc(sizeof(DrawBufferWriteSlice));
-        node->from = value.from;
-        node->to = value.to;
-        doubly_linked_list_push_last(vb->drawSlices, node);
-        vb->nbDrawSlices++;
+        if (node != NULL) {
+            node->from = value.from;
+            node->to = value.to;
+            doubly_linked_list_push_last(vb->drawSlices, node);
+            vb->nbDrawSlices++;
+        }
     }
 }
 
@@ -792,6 +802,9 @@ bool vertex_buffer_mem_area_is_null_or_empty(const VertexBufferMemArea *vbma) {
 // creates new VertexBufferMemArea
 VertexBufferMemArea *vertex_buffer_mem_area_new(VertexBuffer *vb, DrawBufferPtrs start) {
     VertexBufferMemArea *vbma = (VertexBufferMemArea *)malloc(sizeof(VertexBufferMemArea));
+    if (vbma == NULL) {
+        return NULL;
+    }
     vbma->vb = vb;
     vbma->_globalListNext = NULL;
     vbma->_globalListPrevious = NULL;
@@ -893,7 +906,7 @@ void vertex_buffer_new_empty_gap_at_end(VertexBuffer *vb) {
     if (vb->firstMemArea == NULL) {
         vb->firstMemArea = memArea;
         vb->lastMemArea = memArea;
-    } else { // add as last mem area
+    } else if (vb->lastMemArea != NULL) { // add as last mem area
         vb->lastMemArea->_globalListNext = memArea;
         memArea->_globalListPrevious = vb->lastMemArea;
         vb->lastMemArea = memArea;
@@ -1124,8 +1137,8 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
     // Check for triangle shift
 #if TRIANGLE_SHIFT_MODE == 3
     // sunlight delta
-    float diag13 = abs(vlight1.ambient - vlight3.ambient);
-    float diag24 = abs(vlight2.ambient - vlight4.ambient);
+    float diag13 = (float)abs(vlight1.ambient - vlight3.ambient);
+    float diag24 = (float)abs(vlight2.ambient - vlight4.ambient);
     bool aoShift;
     if (diag13 > TRIANGLE_SHIFT_MIXED_THRESHOLD || diag24 > TRIANGLE_SHIFT_MIXED_THRESHOLD) {
         aoShift = diag13 > diag24;
@@ -1183,10 +1196,14 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
     // Vertex global lighting as RG8 [sun+r:g+b] if enabled
     if (vbmaw->cursor.lighting != NULL) {
         // Dim global lighting ambient value with AO
-        vlight1.ambient = maximum(0, (vlight1.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao1]);
-        vlight2.ambient = maximum(0, (vlight2.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao2]);
-        vlight3.ambient = maximum(0, (vlight3.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao3]);
-        vlight4.ambient = maximum(0, (vlight4.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao4]);
+        vlight1.ambient = TO_UINT4(
+            maximum(0, (uint8_t)(vlight1.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao1]));
+        vlight2.ambient = TO_UINT4(
+            maximum(0, (uint8_t)(vlight2.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao2]));
+        vlight3.ambient = TO_UINT4(
+            maximum(0, (uint8_t)(vlight3.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao3]));
+        vlight4.ambient = TO_UINT4(
+            maximum(0, (uint8_t)(vlight4.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao4]));
 
         uint32_t vbma_idxLighting = vbma_idxFace * DRAWBUFFER_LIGHTING_PER_FACE;
 
@@ -1259,6 +1276,9 @@ VertexBufferMemAreaWriter *vertex_buffer_mem_area_writer_new(Shape *s,
                                                              bool transparent) {
     VertexBufferMemAreaWriter *vbmaw = (VertexBufferMemAreaWriter *)malloc(
         sizeof(VertexBufferMemAreaWriter));
+    if (vbmaw == NULL) {
+        return NULL;
+    }
     vbmaw->s = s;
     vbmaw->c = c;
     vbmaw->isTransparent = transparent;
@@ -1431,8 +1451,8 @@ void vertex_buffer_log_mem_areas(const VertexBuffer *vb) {
     }
 }
 
-void vertex_buffer_check_mem_area_chain(const VertexBuffer *vb) {
 #if VERTEX_BUFFER_DEBUG == 1
+void vertex_buffer_check_mem_area_chain(VertexBuffer *vb) {
     VertexBufferMemArea *vbma = vb->firstMemArea;
     VertexBufferMemArea *previousVbma = NULL;
 
@@ -1461,9 +1481,8 @@ void vertex_buffer_check_mem_area_chain(const VertexBuffer *vb) {
 
     //    printf("|\n");
     //    printf("=============================================\n");
-
-#endif
 }
+#endif // VERTEX_BUFFER_DEBUG == 1
 
 void vertex_buffer_set_lighting_enabled(bool value) {
     vertex_buffer_lighting_enabled = value;
