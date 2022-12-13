@@ -2337,16 +2337,23 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool
         return;
     }
 
-    // avoid unnecessary pivot
-    if (s->pivot == NULL && float_isZero(x, EPSILON_ZERO) && float_isZero(y, EPSILON_ZERO) &&
-        float_isZero(z, EPSILON_ZERO)) {
-        return;
-    }
+    const bool isZero = float_isZero(x, EPSILON_ZERO) && float_isZero(y, EPSILON_ZERO) &&
+                        float_isZero(z, EPSILON_ZERO);
 
     if (s->pivot == NULL) {
-        // add a pivot internal transform, managed by shape
-        s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
-        transform_set_parent(s->pivot, s->transform, false);
+        // avoid unnecessary pivot
+        if (isZero) {
+            return;
+        } else {
+            // add a pivot internal transform, managed by shape
+            s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
+            transform_set_parent(s->pivot, s->transform, false);
+        }
+    } else if (isZero) {
+        // remove unnecessary pivot
+        transform_release(s->pivot);
+        s->pivot = NULL;
+        return;
     }
 
     if (removeOffset) {
@@ -2633,10 +2640,6 @@ void shape_move_children(Shape *from, Shape *to, const bool keepWorld) {
                 }
             }
             free(children);
-        }
-        // if anything was parented to pivot, move them too
-        if (transform_get_children_count(from->pivot) > 0) {
-            transform_utils_move_children(from->pivot, shape_get_pivot_transform(to), keepWorld);
         }
     }
 }
