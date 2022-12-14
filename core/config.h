@@ -24,7 +24,6 @@ extern "C" {
 // GENERAL
 
 #define MAP_DEFAULT_SCALE 5.0f
-#define DEFAULT_USERNAME "noob" // used for display when player has no username
 
 // FRAMES
 
