@@ -893,6 +893,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
     uint16_t shapeId = 1;
     uint16_t shapeParentId = 0;
+    
+    bool hasCustomCollisionBox = false;
+    float3 collisionBoxMin = float3_zero;
+    float3 collisionBoxMax = float3_zero;
+    uint8_t isHiddenSelf = false;
+    
     LocalTransform localTransform;
     memset(&localTransform, 0, sizeof(LocalTransform));
     localTransform.scale.x = 1;
