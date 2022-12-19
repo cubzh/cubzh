@@ -47,7 +47,9 @@ typedef enum P3sCompressionMethod {
     20 // transform (position,rotation,scale) (optional, default 0,0,0, 0,0,0 and 1,1,1)
 #define P3S_CHUNK_ID_SHAPE_PIVOT 21   // pivot
 #define P3S_CHUNK_ID_SHAPE_PALETTE 22 // palette
-#define P3S_CHUNK_ID_MAX 23           // /!\ update this when adding chunks
+#define P3S_CHUNK_ID_OBJECT_COLLISION_BOX 23 // collision box
+#define P3S_CHUNK_ID_OBJECT_IS_HIDDEN 24 // isHidden
+#define P3S_CHUNK_ID_MAX 25           // /!\ update this when adding chunks
 
 // size of the chunk header, without chunk ID (it's already read at this point)
 #define CHUNK_V6_HEADER_NO_ID_SIZE (sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t))
