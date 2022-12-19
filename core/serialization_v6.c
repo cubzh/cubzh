@@ -953,15 +953,34 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
-            case P3S_CHUNK_ID_SHAPE_NAME: {
-                uint8_t nameLen;
-                memcpy(&nameLen, cursor, sizeof(uint8_t));
-                cursor = (void *)((uint8_t *)cursor + 1);
-                memcpy(name, cursor, sizeof(char) * nameLen);
-                name[nameLen] = 0;
-                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) * nameLen);
+            case P3S_CHUNK_ID_OBJECT_COLLISION_BOX: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
+                memcpy(&collisionBoxMin, cursor, sizeof(float3));
+                cursor = (void *)((float3 *)cursor + 1);
+                memcpy(&collisionBoxMax, cursor, sizeof(float3));
+                cursor = (void *)((float3 *)cursor + 1);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
+                hasCustomCollisionBox = true;
                 break;
             }
+            case P3S_CHUNK_ID_OBJECT_IS_HIDDEN: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // object is hidden chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
+                memcpy(&isHiddenSelf, cursor, sizeof(uint8_t));
+                cursor = (void *)((uint8_t *)cursor + 1);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
+                break;
+            }
+                //            case P3S_CHUNK_ID_SHAPE_NAME: {
+                //                uint8_t nameLen;
+                //                memcpy(&nameLen, cursor, sizeof(uint8_t));
+                //                cursor = (void *)((uint8_t *)cursor + 1);
+                //                memcpy(name, cursor, sizeof(char) * nameLen);
+                //                name[nameLen] = 0;
+                //                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) * nameLen);
+                //                break;
+                //            }
             case P3S_CHUNK_ID_SHAPE_SIZE: {
                 memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape size chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
@@ -1249,6 +1268,25 @@ uint32_t chunk_v6_read_shape(Stream *s,
         shape_set_pivot(*shape, pivot.x, pivot.y, pivot.z, false);
     } else {
         shape_reset_pivot_to_center(*shape);
+    }
+    
+    if (hasCustomCollisionBox) {
+        RigidBody *rb = rigidbody_new(RigidbodyModeStatic, PHYSICS_GROUP_DEFAULT_OBJECT, PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
+
+        // construct new box value
+        Box newCollider = *rigidbody_get_collider(rb);
+        newCollider.min = collisionBoxMin;
+        newCollider.max = collisionBoxMax;
+
+        // set the new box using
+        rigidbody_set_collider(rb, &newCollider);
+
+        transform_set_rigidbody(shape_get_root_transform(*shape), rb);
+    }
+    
+    Transform *root = shape_get_root_transform(*shape);
+    if (root) {
+        transform_set_hidden_self(root, isHiddenSelf == 1);
     }
 
     return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
