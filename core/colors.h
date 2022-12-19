@@ -50,6 +50,7 @@ typedef struct {
 } Lab;
 
 // color conversions
+hsv rgb2hsv(rgb in);
 rgb hsv2rgb(hsv in);
 double sRGBCompoundingValue(double value);
 double LabFunction(double value);
