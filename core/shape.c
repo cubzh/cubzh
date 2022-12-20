@@ -1221,7 +1221,7 @@ bool shape_remove_block(Shape *shape,
                                         z >= (SHAPE_COORDS_INT_T)shape->box->max.z - 1;
 
             if (shouldUpdateBB && shrinkBox) {
-                shape_shrink_box(shape);
+                shape_shrink_box(shape, true);
             }
             if (shape->octree != NULL) {
                 Block *air = block_new_air();
@@ -1682,7 +1682,7 @@ bool shape_compute_size_and_origin(const Shape *shape,
     return true; // non-empty shape
 }
 
-void shape_shrink_box(Shape *shape) {
+void shape_shrink_box(Shape *shape, bool forceColliderResize) {
     if (shape == NULL) {
         cclog_error("[shape_shrink_box] shape arg is NULL. Abort.");
         return;
@@ -1706,7 +1706,16 @@ void shape_shrink_box(Shape *shape) {
     shape->box->max.z = (float)(origin_z + size_z);
 
     _shape_clear_cached_world_aabb(shape);
-    shape_fit_collider_to_bounding_box(shape);
+    
+    // fit collider only if not already set in deserialization
+    const RigidBody* rb = shape_get_rigidbody(shape);
+    if (rb == NULL) {
+        return;
+    }
+    const Box* collider = rigidbody_get_collider(rb);
+    if (forceColliderResize || (float3_isZero(&collider->min, EPSILON_ZERO) && float3_isZero(&collider->max, EPSILON_ZERO))) {
+        shape_fit_collider_to_bounding_box(shape);
+    }
 }
 
 void shape_expand_box(Shape *shape,
@@ -5096,7 +5105,7 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
     }
 
     if (shapeShrinkNeeded == true) {
-        shape_shrink_box(sh);
+        shape_shrink_box(sh, true);
     }
 
     return true;
@@ -5154,7 +5163,7 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
     }
 
     if (shapeShrinkNeeded == true) {
-        shape_shrink_box(sh);
+        shape_shrink_box(sh, true);
     }
 
     return true;

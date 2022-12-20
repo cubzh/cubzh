@@ -59,6 +59,10 @@ void box_get_center(const Box *b, float3 *center) {
                b->min.z + (b->max.z - b->min.z) * .5f);
 }
 
+bool box_equals(const Box *b1, const Box *b2, const float epsilon) {
+    return float3_isEqual(&b1->min, &b2->min, epsilon) && float3_isEqual(&b1->max, &b2->max, epsilon);
+}
+
 bool box_collide(const Box *b1, const Box *b2) {
     return (
         b1->max.x > b2->min.x + EPSILON_COLLISION && b1->min.x < b2->max.x - EPSILON_COLLISION &&

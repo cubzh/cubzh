@@ -236,7 +236,7 @@ bool shape_compute_size_and_origin(const Shape *shape,
                                    SHAPE_COORDS_INT_T *origin_y,
                                    SHAPE_COORDS_INT_T *origin_z);
 // recomputes box from scratch, necessary after block removal
-void shape_shrink_box(Shape *shape);
+void shape_shrink_box(Shape *shape, bool forceColliderResize);
 // expand box to include given coordinates
 void shape_expand_box(Shape *s,
                       const SHAPE_COORDS_INT_T x,
