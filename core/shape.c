@@ -1706,14 +1706,15 @@ void shape_shrink_box(Shape *shape, bool forceColliderResize) {
     shape->box->max.z = (float)(origin_z + size_z);
 
     _shape_clear_cached_world_aabb(shape);
-    
+
     // fit collider only if not already set in deserialization
-    const RigidBody* rb = shape_get_rigidbody(shape);
+    const RigidBody *rb = shape_get_rigidbody(shape);
     if (rb == NULL) {
         return;
     }
-    const Box* collider = rigidbody_get_collider(rb);
-    if (forceColliderResize || (float3_isZero(&collider->min, EPSILON_ZERO) && float3_isZero(&collider->max, EPSILON_ZERO))) {
+    const Box *collider = rigidbody_get_collider(rb);
+    if (forceColliderResize || (float3_isZero(&collider->min, EPSILON_ZERO) &&
+                                float3_isZero(&collider->max, EPSILON_ZERO))) {
         shape_fit_collider_to_bounding_box(shape);
     }
 }
