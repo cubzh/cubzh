@@ -45,9 +45,11 @@ typedef enum P3sCompressionMethod {
 #define P3S_CHUNK_ID_SHAPE_PARENT_ID 19 // ID of parent
 #define P3S_CHUNK_ID_SHAPE_TRANSFORM                                                               \
     20 // transform (position,rotation,scale) (optional, default 0,0,0, 0,0,0 and 1,1,1)
-#define P3S_CHUNK_ID_SHAPE_PIVOT 21   // pivot
-#define P3S_CHUNK_ID_SHAPE_PALETTE 22 // palette
-#define P3S_CHUNK_ID_MAX 23           // /!\ update this when adding chunks
+#define P3S_CHUNK_ID_SHAPE_PIVOT 21          // pivot
+#define P3S_CHUNK_ID_SHAPE_PALETTE 22        // palette
+#define P3S_CHUNK_ID_OBJECT_COLLISION_BOX 23 // collision box
+#define P3S_CHUNK_ID_OBJECT_IS_HIDDEN 24     // isHidden
+#define P3S_CHUNK_ID_MAX 25                  // /!\ update this when adding chunks
 
 // size of the chunk header, without chunk ID (it's already read at this point)
 #define CHUNK_V6_HEADER_NO_ID_SIZE (sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t))
@@ -891,6 +893,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
     uint16_t shapeId = 1;
     uint16_t shapeParentId = 0;
+
+    bool hasCustomCollisionBox = false;
+    float3 collisionBoxMin = float3_zero;
+    float3 collisionBoxMax = float3_zero;
+    uint8_t isHiddenSelf = false;
+
     LocalTransform localTransform;
     memset(&localTransform, 0, sizeof(LocalTransform));
     localTransform.scale.x = 1;
@@ -951,15 +959,34 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
-            case P3S_CHUNK_ID_SHAPE_NAME: {
-                uint8_t nameLen;
-                memcpy(&nameLen, cursor, sizeof(uint8_t));
-                cursor = (void *)((uint8_t *)cursor + 1);
-                memcpy(name, cursor, sizeof(char) * nameLen);
-                name[nameLen] = 0;
-                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) * nameLen);
+            case P3S_CHUNK_ID_OBJECT_COLLISION_BOX: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape id chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
+                memcpy(&collisionBoxMin, cursor, sizeof(float3));
+                cursor = (void *)((float3 *)cursor + 1);
+                memcpy(&collisionBoxMax, cursor, sizeof(float3));
+                cursor = (void *)((float3 *)cursor + 1);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
+                hasCustomCollisionBox = true;
                 break;
             }
+            case P3S_CHUNK_ID_OBJECT_IS_HIDDEN: {
+                memcpy(&sizeRead, cursor, sizeof(uint32_t)); // object is hidden chunk size
+                cursor = (void *)((uint32_t *)cursor + 1);
+                memcpy(&isHiddenSelf, cursor, sizeof(uint8_t));
+                cursor = (void *)((uint8_t *)cursor + 1);
+                totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
+                break;
+            }
+                //            case P3S_CHUNK_ID_SHAPE_NAME: {
+                //                uint8_t nameLen;
+                //                memcpy(&nameLen, cursor, sizeof(uint8_t));
+                //                cursor = (void *)((uint8_t *)cursor + 1);
+                //                memcpy(name, cursor, sizeof(char) * nameLen);
+                //                name[nameLen] = 0;
+                //                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) *
+                //                nameLen); break;
+                //            }
             case P3S_CHUNK_ID_SHAPE_SIZE: {
                 memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape size chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
@@ -1249,6 +1276,26 @@ uint32_t chunk_v6_read_shape(Stream *s,
         shape_reset_pivot_to_center(*shape);
     }
 
+    if (hasCustomCollisionBox) {
+        RigidBody *rb = rigidbody_new(RigidbodyModeStatic,
+                                      PHYSICS_GROUP_DEFAULT_OBJECT,
+                                      PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
+        transform_set_rigidbody(shape_get_root_transform(*shape), rb);
+
+        // construct new box value
+        Box newCollider = *rigidbody_get_collider(rb);
+        newCollider.min = collisionBoxMin;
+        newCollider.max = collisionBoxMax;
+
+        // set the new box using
+        rigidbody_set_collider(rb, &newCollider);
+    }
+
+    Transform *root = shape_get_root_transform(*shape);
+    if (root) {
+        transform_set_hidden_self(root, isHiddenSelf == 1);
+    }
+
     return CHUNK_V6_HEADER_NO_ID_SIZE + chunkSize;
 }
 
@@ -1404,6 +1451,15 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     bool hasLighting = false;
 #endif
 
+    // hasCustomCollisionBox
+    RigidBody *rb = shape_get_rigidbody(shape);
+    const Box *collider = rigidbody_get_collider(rb);
+    bool hasCustomCollisionBox = !box_equals(collider, boundingBox, EPSILON_ZERO);
+
+    // is hidden
+    Transform *t = shape_get_root_transform(shape);
+    uint8_t isHidden = transform_is_hidden_self(t) ? 1 : 0;
+
     // get palette chunk
     uint32_t shapePaletteSize;
     void *shapePaletteData = NULL;
@@ -1421,6 +1477,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t shapeIdSize = sizeof(uint16_t);
     uint32_t shapeParentIdSize = sizeof(uint16_t);
     uint32_t shapePivotSize = sizeof(float3);
+    uint32_t objectCollisionBoxSize = sizeof(float3) * 2;
+    uint32_t objectIsHiddenSelfSize = sizeof(uint8_t);
     uint32_t shapeLocalTransformSize = sizeof(LocalTransform);
     uint32_t shapeBlocksSize = blockCount * sizeof(uint8_t);
     uint32_t shapeLightingSize = blockCount * sizeof(VERTEX_LIGHT_STRUCT_T);
@@ -1481,6 +1539,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                                            : 0) +
                         subheaderSize + shapePivotSize + subheaderSize + shapeBlocksSize +
                         subheaderSize + shapePaletteSize +
+                        (hasCustomCollisionBox ? subheaderSize + objectCollisionBoxSize : 0) +
+                        (isHidden == 1 ? subheaderSize + objectIsHiddenSelfSize : 0) +
                         shapePointPositionsCount * subheaderSize + shapePointPositionsSize +
                         shapePointRotationsCount * subheaderSize + shapePointRotationsSize +
                         (hasLighting ? subheaderSize + shapeLightingSize : 0);
@@ -1565,6 +1625,34 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     float3 pivot = shape_get_pivot(shape, false);
     memcpy(cursor, &pivot, sizeof(float3));
     cursor = (void *)((float3 *)cursor + 1);
+
+    if (hasCustomCollisionBox) {
+        const uint8_t chunk_id_object_collision_box = P3S_CHUNK_ID_OBJECT_COLLISION_BOX;
+        memcpy(cursor,
+               &chunk_id_object_collision_box,
+               sizeof(uint8_t)); // object collision box chunk ID
+        cursor = (void *)((uint8_t *)cursor + 1);
+
+        memcpy(cursor, &objectCollisionBoxSize, sizeof(uint32_t)); // size chunk collision box
+        cursor = (void *)((uint32_t *)cursor + 1);
+
+        memcpy(cursor, &collider->min, sizeof(float3));
+        cursor = (void *)((float3 *)cursor + 1);
+        memcpy(cursor, &collider->max, sizeof(float3));
+        cursor = (void *)((float3 *)cursor + 1);
+    }
+
+    if (isHidden) {
+        const uint8_t chunk_id_object_is_hidden = P3S_CHUNK_ID_OBJECT_IS_HIDDEN;
+        memcpy(cursor, &chunk_id_object_is_hidden, sizeof(uint8_t)); // object is hidden chunk ID
+        cursor = (void *)((uint8_t *)cursor + 1);
+
+        memcpy(cursor, &objectIsHiddenSelfSize, sizeof(uint32_t)); // size chunk is hidden
+        cursor = (void *)((uint32_t *)cursor + 1);
+
+        memcpy(cursor, &isHidden, sizeof(uint8_t));
+        cursor = (void *)((uint8_t *)cursor + 1);
+    }
 
     // shape palette sub-chunk
     const uint8_t chunk_id_shape_palette = P3S_CHUNK_ID_SHAPE_PALETTE;
@@ -2052,7 +2140,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                 }
 
                 // shrink box once all blocks were added to update box origin
-                shape_shrink_box(shape);
+                shape_shrink_box(shape, false);
 
                 if (filterMask == AssetType_Any ||
                     (filterMask & (AssetType_Shape + AssetType_Object)) > 0) {

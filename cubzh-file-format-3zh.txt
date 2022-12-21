@@ -84,6 +84,10 @@ N        | uint8      | emissive flag
 
     SubChunk 'OBJECT_PIVOT' : optional
 
+    SubChunk 'OBJECT_COLLISION_BOX' : optional
+
+    SubChunk 'OBJECT_IS_HIDDEN' : optional
+
     SubChunk 'SHAPE_PALETTE' : optional
 
     SubChunk 'SHAPE_SIZE'
@@ -157,8 +161,26 @@ N        | string     | name
 4        | float      | position z
 -------------------------------------------------------------------------------
 
+13. SubChunk id 'OBJECT_COLLISION_BOX' (23) : optional, default is a box containing the whole shape
+-------------------------------------------------------------------------------
+# Bytes  | Type       | Value
+-------------------------------------------------------------------------------
+4        | float      | position min x
+4        | float      | position min y
+4        | float      | position min z
+4        | float      | position max x
+4        | float      | position max y
+4        | float      | position max z
+-------------------------------------------------------------------------------
 
-13. SubChunk id 'SHAPE_SIZE' (4)
+14. SubChunk id 'OBJECT_IS_HIDDEN' (24) : optional, visible by default
+-------------------------------------------------------------------------------
+# Bytes  | Type       | Value
+-------------------------------------------------------------------------------
+1        | uint8      | 0 if visible, 1 if hidden 
+-------------------------------------------------------------------------------
+
+15. SubChunk id 'SHAPE_SIZE' (4)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -168,7 +190,7 @@ N        | string     | name
 -------------------------------------------------------------------------------
 
 
-14. SubChunk id 'SHAPE_BLOCKS' (5)
+16. SubChunk id 'SHAPE_BLOCKS' (5)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -176,7 +198,7 @@ C * 1    | uint8      | palette index (255 if air block) (C is blockCount)
 -------------------------------------------------------------------------------
 
 
-15. SubChunk id 'SHAPE_POINT' (6)
+17. SubChunk id 'SHAPE_POINT' (6)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -188,7 +210,7 @@ N * 1    | string     | name
 -------------------------------------------------------------------------------
 
 
-16. SubChunk id 'SHAPE_POINT_ROTATION' (8)
+18. SubChunk id 'SHAPE_POINT_ROTATION' (8)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -200,7 +222,7 @@ N * 1    | string     | name
 -------------------------------------------------------------------------------
 
 
-17. SubChunk id 'SHAPE_BAKED_LIGHTING' (7)
+19. SubChunk id 'SHAPE_BAKED_LIGHTING' (7)
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
@@ -208,7 +230,7 @@ C * 2    | uint8      | light : 2 bytes per block (C is blockCount)
 -------------------------------------------------------------------------------
 
 
-18. SubChunk id 'SHAPE_PALETTE' (22) : optional, contains the colors of the shape
+20. SubChunk id 'SHAPE_PALETTE' (22) : optional, contains the colors of the shape
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
