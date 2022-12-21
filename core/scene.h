@@ -47,7 +47,7 @@ Rtree *scene_get_rtree(Scene *sc);
 /// - physics and core tick+refresh (this function)
 /// - scripting tick
 /// - end-of-frame refresh
-void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData);
+void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData);
 
 /// End-of-frame refresh performs a final refresh after sandbox changes, enqueues transform for
 /// sync, and refreshes shape buffers to be ready for rendering

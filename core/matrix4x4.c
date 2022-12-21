@@ -315,22 +315,10 @@ void matrix4x4_op_multiply_vec_vector(float3 *result, const float3 *vec, const M
 Matrix4x4 *matrix4x4_op_transpose(Matrix4x4 *m) {
 
     matrix4x4_set(m,
-                  m->x1y1,
-                  m->x1y2,
-                  m->x1y3,
-                  m->x1y4,
-                  m->x2y1,
-                  m->x2y2,
-                  m->x2y3,
-                  m->x2y4,
-                  m->x3y1,
-                  m->x3y2,
-                  m->x3y3,
-                  m->x3y4,
-                  m->x4y1,
-                  m->x4y2,
-                  m->x4y3,
-                  m->x4y4);
+                  m->x1y1, m->x1y2, m->x1y3, m->x1y4,
+                  m->x2y1, m->x2y2, m->x2y3, m->x2y4,
+                  m->x3y1, m->x3y2, m->x3y3, m->x3y4,
+                  m->x4y1, m->x4y2, m->x4y3, m->x4y4);
 
     return m;
 }

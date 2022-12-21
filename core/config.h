@@ -113,12 +113,14 @@ extern unsigned long upper_power_of_two(unsigned long v);
 #define RTREE_NODE_MAX_CAPACITY 4
 /// Queries over large distances may be split in steps
 #define RTREE_CAST_STEP_DISTANCE                                                                   \
-    64.0f // 1/4 of a large-sized map, or "10 frames" of max velocity (PHYSICS_MAX_VELOCITY * .16)
+    64.0f // 1/4 of a large-sized map, or "10 frames" of max velocity (PHYSICS_MAX_VELOCITY * .016)
 /// Maximum velocity magnitude in unit/sec for all objects
 #define PHYSICS_MAX_VELOCITY 400.0f
 #define PHYSICS_MAX_SQR_VELOCITY 160000.0f
-/// Threshold in world units under which bounce is muffled
-#define PHYSICS_BOUNCE_THRESHOLD .7f
+/// Threshold under which bounce is muffled
+#define PHYSICS_BOUNCE_SQR_THRESHOLD 100.0f
+/// Threshold of mass push ratio under which it is ignored
+#define PHYSICS_MASS_PUSH_THRESHOLD 0.01f // if pushing object mass is 1% or less of pushed object mass
 /// Multiple collision responses may fall within the same simulation frame, up to max iterations
 #define PHYSICS_MAX_SOLVER_ITERATIONS 4
 /// How to combine friction/bounciness of 2 rigidbodies in contact, min (0), max (1), or average (2)
@@ -138,8 +140,9 @@ extern unsigned long upper_power_of_two(unsigned long v);
 #define PHYSICS_IMPACT_FACE_MODE 2
 /// Replacement happens backwards along the trajectory of a moving rigidbody (false),
 /// or in any direction solely based on whether or not the boxes are already colliding (true)
-/// Note: extra replacements only used against the map
 #define PHYSICS_EXTRA_REPLACEMENTS false
+/// Replacement happens for moving object only (false), or prioritizes replacing inferior mass object (true)
+#define PHYSICS_MASS_REPLACEMENTS false
 /// Box sweep is checked in order of X, Y, Z and stops on first-in-order collision (false),
 /// or checks every axes and ensures to return the minimum collision (true)
 #define PHYSICS_FULL_BOX_SWEPT false

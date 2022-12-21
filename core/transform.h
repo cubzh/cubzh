@@ -39,10 +39,10 @@ typedef struct _Transform Transform;
 /// 2: transform box as if there was no rotation along the hierarchy ; use (0) if no rotation
 /// cheaper than (1), but rotation along non-center pivots will result in an offseted box from model
 /// 3: use fully transformed world box, then select new box min/max ; use (0) if no rotation
-/// most expensive method but this returns the real world bounding box
+/// most expensive method but this returns the real world-aligned box
 #define TRANSFORM_AABOX_AABB_MODE 3
-#define TRANSFORM_AABOX_STATIC_COLLIDER_MODE 1
-#define TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE 2
+#define TRANSFORM_AABOX_STATIC_COLLIDER_MODE 3
+#define TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE 1
 
 #if DEBUG
 #define DEBUG_TRANSFORM true
@@ -205,7 +205,7 @@ Transform *transform_make_with_shape(Shape *ptr);
 Shape *transform_get_shape(Transform *t);
 void transform_set_rigidbody(Transform *t, RigidBody *rb);
 RigidBody *transform_get_rigidbody(Transform *const t);
-RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider);
+RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);
 Weakptr *transform_get_weakptr(Transform *t);
 Weakptr *transform_get_and_retain_weakptr(Transform *t);
 

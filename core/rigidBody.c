@@ -136,6 +136,16 @@ void _rigidbody_fire_reciprocal_callbacks(RigidBody *selfRb,
     }
 }
 
+void _rigidbody_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, Box *outBox,
+                               const float3 *worldVector, float3 *outVector, float epsilon,
+                               float3 *outEpsilon3) {
+
+    box_to_aabox2(worldBox, outBox, invModel, &float3_zero, NoSquarify);
+    matrix4x4_op_multiply_vec_vector(outVector, worldVector, invModel);
+    const float3 epsilon3 = (float3){ epsilon, epsilon, epsilon };
+    matrix4x4_op_multiply_vec_vector(outEpsilon3, &epsilon3, invModel);
+}
+
 bool _rigidbody_dynamic_tick(Scene *scene,
                              RigidBody *rb,
                              Transform *t,
@@ -143,7 +153,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                              Rtree *r,
                              const TICK_DELTA_SEC_T dt,
                              FifoList *sceneQuery,
-                             void *opaqueUserData) {
+                             void *callbackData) {
 
 #if DEBUG_RIGIDBODY_CALLS
 #define INC_REPLACEMENTS debug_rigidbody_replacements++;
@@ -162,9 +172,13 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     // APPLY CONSTANT ACCELERATION
     // ------------------------
 
-    float3_copy(&f3, scene_get_constant_acceleration(scene));
-    float3_op_add(&f3, rb->constantAcceleration);
-    float3_op_scale(&f3, dt_f);
+    const float3 constantAcceleration = *scene_get_constant_acceleration(scene);
+
+    f3 = (float3){
+        (constantAcceleration.x + rb->constantAcceleration->x) * dt_f,
+        (constantAcceleration.y + rb->constantAcceleration->y) * dt_f,
+        (constantAcceleration.z + rb->constantAcceleration->z) * dt_f
+    };
     float3_op_add(rb->velocity, &f3);
 
     // ------------------------
@@ -218,13 +232,19 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     // PREPARE COLLISION TESTING
     // ------------------------
 
-    float3 dv, swept3, minSwept3, push3, extraReplacement3;
+    float3 dv, normal, push3, extraReplacement3, modelDv, modelEpsilon;
     float minSwept, swept;
     float3 pos = *transform_get_position(t);
-    Box mapAABB, broadPhaseBox;
-    bool isContact[3];
-    RigidBody *contactX, *contactY, *contactZ;
-    Transform *contactXTr, *contactYTr, *contactZTr;
+    Box mapAABB, broadphase, modelBox, modelBroadphase;
+    Shape *shape;
+
+    typedef struct {
+        Transform *t;
+        RigidBody *rb;
+        const Matrix4x4 *model;
+        float3 normal;
+    } ContactData;
+    ContactData contact; // TODO: list of contacts to handle contact ties
 
     // initial frame delta translation
     float3_copy(&dv, &f3);
@@ -250,16 +270,12 @@ bool _rigidbody_dynamic_tick(Scene *scene,
            solverCount < PHYSICS_MAX_SOLVER_ITERATIONS) {
 
         minSwept = 1.0f;
-        minSwept3 = float3_one;
         extraReplacement3 = float3_zero;
-        contactX = NULL;
-        contactY = NULL;
-        contactZ = NULL;
-        contactXTr = NULL;
-        contactYTr = NULL;
-        contactZTr = NULL;
+        contact.t = NULL;
+        contact.rb = NULL;
+        contact.model = NULL;
 
-        box_set_broadphase_box(worldCollider, &dv, &broadPhaseBox);
+        box_set_broadphase_box(worldCollider, &dv, &broadphase);
 
         // ----------------------
         // MAP COLLISIONS
@@ -267,29 +283,24 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // reduce the trajectory (broadphase box) to a smaller form by testing against the map first
         // TODO: remove this case
 
-        if (rigidbody_collides_with_any(rb, mapRb->groups) && box_collide(&mapAABB, &broadPhaseBox)) {
+        if (rigidbody_collides_with_any(rb, mapRb->groups) && box_collide(&mapAABB, &broadphase)) {
+            const Matrix4x4 *invModel = transform_get_wtl(shape_get_pivot_transform(mapShape));
+            _rigidbody_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv, EPSILON_COLLISION, &modelEpsilon);
+
             minSwept = shape_box_swept(mapShape,
-                                       worldCollider,
-                                       &dv,
+                                       &modelBox,
+                                       &modelDv,
+                                       &modelEpsilon,
                                        true,
-                                       &swept3,
-                                       &extraReplacement3,
-                                       EPSILON_ZERO);
+                                       &normal,
+                                       &extraReplacement3); // TODO update or remove extra replacements
 
             // not a free movement
             if (minSwept < 1.0f) {
-                if (swept3.x < 1.0f) {
-                    contactX = mapRb;
-                    contactXTr = shape_get_root_transform(mapShape);
-                }
-                if (swept3.y < 1.0f) {
-                    contactY = mapRb;
-                    contactYTr = shape_get_root_transform(mapShape);
-                }
-                if (swept3.z < 1.0f) {
-                    contactZ = mapRb;
-                    contactZTr = shape_get_root_transform(mapShape);
-                }
+                contact.t = shape_get_root_transform(mapShape);
+                contact.rb = mapRb;
+                contact.model = shape_get_model_matrix(mapShape);
+                contact.normal = normal;
 
                 // already in contact (==0) or colliding (<0)
                 if (minSwept <= 0.0f) {
@@ -299,9 +310,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 else {
                     float3_copy(&f3, &dv);
                     float3_op_scale(&f3, minSwept);
-                    box_set_broadphase_box(worldCollider, &f3, &broadPhaseBox);
-                }
-                minSwept3 = swept3;
+                    box_set_broadphase_box(worldCollider, &f3, &broadphase);
+                } // TODO: can shorten trajectory be re-introduced in main loop?
             }
         }
 
@@ -319,7 +329,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
 
         // run collision query in r-tree w/ default inner epsilon
         if (rtree_query_overlap_box(r,
-                                    &broadPhaseBox,
+                                    &broadphase,
                                     rb->groups,
                                     rb->collidesWith,
                                     sceneQuery,
@@ -327,12 +337,11 @@ bool _rigidbody_dynamic_tick(Scene *scene,
             RtreeNode *hit = fifo_list_pop(sceneQuery);
             Transform *hitLeaf = NULL;
             RigidBody *hitRb = NULL;
-            float3 normal;
             while (hit != NULL) {
                 hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
                 vx_assert(rtree_node_is_leaf(hit));
 
-                // currently, we do not remove self from r-tree before query
+                // self isn't removed from r-tree before query
                 if (hitLeaf == t) {
                     hit = fifo_list_pop(sceneQuery);
                     continue;
@@ -346,67 +355,45 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     continue;
                 }
 
-                // shapes may enable per-block collisions
-                if (transform_get_type(hitLeaf) == ShapeTransform
-                    && shape_uses_per_block_collisions(transform_get_shape(hitLeaf))) {
+                shape = transform_get_shape(hitLeaf);
 
-                    swept = shape_box_swept(transform_get_shape(hitLeaf),
-                                            worldCollider,
-                                            &dv,
-                                            true,
-                                            &swept3,
-                                            &extraReplacement3,
-                                            EPSILON_ZERO);
+                const Box *collider = rigidbody_get_collider(hitRb);
+                const Matrix4x4 *invModel = transform_get_wtl(shape != NULL ?
+                                                              shape_get_pivot_transform(shape) :
+                                                              hitLeaf);
+                _rigidbody_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv, EPSILON_COLLISION, &modelEpsilon);
 
-                    // not a free movement
-                    if (swept < 1.0f) {
-                        if (swept3.x < minSwept3.x) {
-                            minSwept3.x = swept3.x;
-                            contactX = hitRb;
-                            contactXTr = hitLeaf;
-                        }
-                        if (swept3.y < minSwept3.y) {
-                            minSwept3.y = swept3.y;
-                            contactY = hitRb;
-                            contactYTr = hitLeaf;
-                        }
-                        if (swept3.z < minSwept3.z) {
-                            minSwept3.z = swept3.z;
-                            contactZ = hitRb;
-                            contactZTr = hitLeaf;
-                        }
-                        minSwept = minimum(swept, minSwept);
+                box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
+                if (box_collide(&modelBroadphase, collider)) {
+                    // shapes may enable per-block collisions
+                    if (shape != NULL && shape_uses_per_block_collisions(shape)) {
+                        swept = shape_box_swept(shape,
+                                                &modelBox,
+                                                &modelDv,
+                                                &modelEpsilon,
+                                                true,
+                                                &normal,
+                                                &extraReplacement3); // TODO update or remove extra replacements
+                    } else {
+                        swept = box_swept(&modelBox,
+                                          &modelDv,
+                                          rigidbody_get_collider(hitRb),
+                                          &modelEpsilon,
+                                          true,
+                                          &normal,
+                                          NULL);
                     }
-                } else {
-                    swept = box_swept(worldCollider,
-                                      &dv,
-                                      rtree_node_get_aabb(hit),
-                                      true,
-                                      &normal,
-                                      NULL,
-                                      EPSILON_ZERO);
 
-                    if (normal.x != 0.0f) {
-                        if (swept < minSwept3.x) {
-                            minSwept3.x = swept;
-                            contactX = hitRb;
-                            contactXTr = hitLeaf;
-                        }
-                    } else if (normal.y != 0.0f) {
-                        if (swept < minSwept3.y) {
-                            minSwept3.y = swept;
-                            contactY = hitRb;
-                            contactYTr = hitLeaf;
-                        }
-                    } else if (normal.z != 0.0f) {
-                        if (swept < minSwept3.z) {
-                            minSwept3.z = swept;
-                            contactZ = hitRb;
-                            contactZTr = hitLeaf;
-                        }
+                    // earlier contact found
+                    if (swept < minSwept) {
+                        contact.t = hitLeaf;
+                        contact.rb = hitRb;
+                        contact.model = transform_get_ltw(shape != NULL ?
+                                                          shape_get_pivot_transform(shape) : hitLeaf);
+                        contact.normal = normal;
                     }
+                    minSwept = minimum(swept, minSwept);
                 }
-                minSwept = minimum(swept, minSwept);
 
                 hit = fifo_list_pop(sceneQuery);
             }
@@ -418,80 +405,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // remove superfluous movement or accumulated errors
 
         if (float_isZero(minSwept, PHYSICS_STOP_MOTION_THRESHOLD)) {
-            if (float_isZero(minSwept3.x, PHYSICS_STOP_MOTION_THRESHOLD)) {
-                minSwept3.x = 0.0f;
-            }
-            if (float_isZero(minSwept3.y, PHYSICS_STOP_MOTION_THRESHOLD)) {
-                minSwept3.y = 0.0f;
-            }
-            if (float_isZero(minSwept3.z, PHYSICS_STOP_MOTION_THRESHOLD)) {
-                minSwept3.z = 0.0f;
-            }
             minSwept = 0.0f;
-        }
-
-        // ----------------------
-        // CONTACTS
-        // ----------------------
-        // a contact occurs on axes within tolerance
-
-        isContact[0] = float_isEqual(minSwept, minSwept3.x, EPSILON_COLLISION);
-        isContact[1] = float_isEqual(minSwept, minSwept3.y, EPSILON_COLLISION);
-        isContact[2] = float_isEqual(minSwept, minSwept3.z, EPSILON_COLLISION);
-
-        // ----------------------
-        // SUPERIOR MASS PUSH
-        // ----------------------
-        // check for push from superior mass vs. dynamic rigibodies in contact
-        //
-        // Notes:
-        // - we use a strict > test to reduce superfluous movement from collisions,
-        // to not awake rigidbodies as often
-        // - self is flagged as awake, to permit pushing against contact
-
-        if (contactX != NULL && isContact[0]) {
-            if (rigidbody_is_dynamic(contactX) && rb->mass > contactX->mass) {
-                // apply push force to contact rigidbody velocity relative to colliding masses,
-                // along the remainder of the trajectory
-                const float push = minimum(
-                    rigidbody_get_mass_push_ratio(rb, contactX) * (1.0f - minSwept3.x),
-                    1.0f);
-
-                push3.x = dv.x * push / dt_f;
-                push3.y = dv.y * push / dt_f;
-                push3.z = dv.z * push / dt_f;
-
-                rigidbody_apply_push(contactX, &push3);
-                rigidbody_set_awake(rb);
-            }
-        }
-        if (contactY != NULL && isContact[1]) {
-            if (rigidbody_is_dynamic(contactY) && rb->mass > contactY->mass) {
-                const float push = minimum(
-                    rigidbody_get_mass_push_ratio(rb, contactY) * (1.0f - minSwept3.y),
-                    1.0f);
-
-                push3.x = dv.x * push / dt_f;
-                push3.y = dv.y * push / dt_f;
-                push3.z = dv.z * push / dt_f;
-
-                rigidbody_apply_push(contactY, &push3);
-                rigidbody_set_awake(rb);
-            }
-        }
-        if (contactZ != NULL && isContact[2]) {
-            if (rigidbody_is_dynamic(contactZ) && rb->mass > contactZ->mass) {
-                const float push = minimum(
-                    rigidbody_get_mass_push_ratio(rb, contactZ) * (1.0f - minSwept3.z),
-                    1.0f);
-
-                push3.x = dv.x * push / dt_f;
-                push3.y = dv.y * push / dt_f;
-                push3.z = dv.z * push / dt_f;
-
-                rigidbody_apply_push(contactZ, &push3);
-                rigidbody_set_awake(rb);
-            }
         }
 
         // ----------------------
@@ -499,27 +413,29 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // ----------------------
         // a replaced component will become "in contact" after replacement (setting swept to 0)
 
-        if (minSwept < 0.0f || float3_isZero(&extraReplacement3, EPSILON_ZERO) == false) {
-            float3 replacement = extraReplacement3;
-            if (minSwept3.x < 0.0f) {
-                replacement.x = dv.x * minSwept3.x;
-                minSwept3.x = 0.0f;
-            }
-            if (minSwept3.y < 0.0f) {
-                replacement.y = dv.y * minSwept3.y;
-                minSwept3.y = 0.0f;
-            }
-            if (minSwept3.z < 0.0f) {
-                replacement.z = dv.z * minSwept3.z;
-                minSwept3.z = 0.0f;
-            }
+        if (minSwept < 0.0f /*|| float3_isZero(&extraReplacement3, EPSILON_ZERO) == false*/) {
+            f3 = dv;//extraReplacement3;
+            float3_op_scale(&f3, minSwept);
             minSwept = 0.0f;
 
-            rb->contact = AxesMaskNone;
-
-            float3_op_add(&pos, &replacement);
-            float3_op_add(&worldCollider->min, &replacement);
-            float3_op_add(&worldCollider->max, &replacement);
+#if PHYSICS_MASS_REPLACEMENTS
+            // prioritize replacing inferior mass rigidbody
+            if (contact.rb != NULL && rigidbody_is_dynamic(contact.rb) && contact.rb->mass < rb->mass) {
+                float3_op_scale(&f3, -1.0f);
+                float3_op_add(contact.rb->velocity, &f3);
+                rigidbody_non_kinematic_reset(contact.rb);
+            } else {
+                float3_op_add(&pos, &f3);
+                float3_op_add(&worldCollider->min, &f3);
+                float3_op_add(&worldCollider->max, &f3);
+                rigidbody_non_kinematic_reset(rb);
+            }
+#else
+            float3_op_add(&pos, &f3);
+            float3_op_add(&worldCollider->min, &f3);
+            float3_op_add(&worldCollider->max, &f3);
+            rigidbody_non_kinematic_reset(rb);
+#endif
             INC_REPLACEMENTS
 
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
@@ -540,58 +456,12 @@ bool _rigidbody_dynamic_tick(Scene *scene,
 
         // not in contact already
         if (minSwept > 0.0f) {
-            float3_copy(&f3, &dv);
+            f3 = dv;
             float3_op_scale(&f3, minimum(minSwept, 1.0f));
 
             float3_op_add(&pos, &f3);
             float3_op_add(&worldCollider->min, &f3);
             float3_op_add(&worldCollider->max, &f3);
-        } else {
-            float3_set_zero(&f3);
-        }
-
-        // ----------------------
-        // COLLISION CALLBACK
-        // ----------------------
-
-        if (rigidbody_collision_callback != NULL && rigidbody_collision_couple_callback != NULL) {
-            // collision or contact on at least one component
-            if (minSwept < 1.0f) {
-                // fire reciprocal callbacks on the component(s, if tie) causing a new collision
-                if (contactX != NULL && isContact[0]) {
-                    const AxesMaskValue axis = dv.x > 0 ? AxesMaskX : AxesMaskNX;
-                    if (utils_axes_mask_get(rb->contact, axis) == false) {
-                        _rigidbody_fire_reciprocal_callbacks(rb,
-                                                             t,
-                                                             contactX,
-                                                             contactXTr,
-                                                             axis,
-                                                             opaqueUserData);
-                    }
-                }
-                if (contactY != NULL && isContact[1]) {
-                    const AxesMaskValue axis = dv.y > 0 ? AxesMaskY : AxesMaskNY;
-                    if (utils_axes_mask_get(rb->contact, axis) == false) {
-                        _rigidbody_fire_reciprocal_callbacks(rb,
-                                                             t,
-                                                             contactY,
-                                                             contactYTr,
-                                                             axis,
-                                                             opaqueUserData);
-                    }
-                }
-                if (contactZ != NULL && isContact[2]) {
-                    const AxesMaskValue axis = dv.z > 0 ? AxesMaskZ : AxesMaskNZ;
-                    if (utils_axes_mask_get(rb->contact, axis) == false) {
-                        _rigidbody_fire_reciprocal_callbacks(rb,
-                                                             t,
-                                                             contactZ,
-                                                             contactZTr,
-                                                             axis,
-                                                             opaqueUserData);
-                    }
-                }
-            }
         }
 
         // ----------------------
@@ -602,117 +472,156 @@ bool _rigidbody_dynamic_tick(Scene *scene,
 
         // collision or contact on at least one component
         if (minSwept < 1.0f) {
-            // on the component(s, if tie) causing collision,
-            if (isContact[0]) {
-                // (1) update contact mask if blocking collision was caused this frame
-                if (dv.x > 0.0f) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskX, true);
-                } else if (dv.x < 0.0f) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskNX, true);
-                }
+            // remainder of the trajectory after contact
+            float3 remainder = dv;
+            float3_op_scale(&remainder, 1.0f - minSwept);
 
-                // (2a) if in contact on both sides (2a.1), if displacement below bounciness
-                // threshold (2a.2), or if combined bounciness is zero (2a.3), stop solver (2a.4)
-                // and inherit contact velocity if inferior mass (2a.5)
-                const float combined = contactX != NULL ?
-                    rigidbody_get_combined_bounciness(rb, rigidbody_get_bounciness(contactX))
-                    : rb->bounciness;
-                if (utils_axes_mask_get(rb->contact, AxesMaskX | AxesMaskNX) // (2a.1)
-                    || float_isZero(dv.x, PHYSICS_BOUNCE_THRESHOLD)          // (2a.2)
-                    || float_isZero(combined, EPSILON_ZERO)) {               // (2a.3)
-
-                    dv.x = 0.0f; // (2a.4)
-                    rb->velocity->x = contactX != NULL && rb->mass < contactX->mass ?
-                        rigidbody_get_mass_push_ratio(contactX, rb)
-                            * contactX->velocity->x // (2a.5)
-                        : 0.0f;
-                }
-                // (2b) apply bounciness
-                else {
-                    dv.x *= -combined;
-                    rb->velocity->x *= -combined;
-                }
+            // contact world normal
+            float3 wNormal;
+            if (contact.model != NULL) {
+                matrix4x4_op_multiply_vec_vector(&wNormal, &contact.normal, contact.model);
+                float3_normalize(&wNormal);
+            } else {
+                wNormal = contact.normal;
             }
-            // on the component(s) tangential to collision,
-            else {
-                // (1) reset contact mask if there was any motion
-                if (dv.x != 0.0f) {
+
+            // split intruding & tangential displacements
+            const float intruding_mag = float3_dot_product(&remainder, &wNormal);
+            const float vIntruding_mag = float3_dot_product(rb->velocity, &wNormal);
+            const float3 intruding = (float3) {
+                wNormal.x * intruding_mag,
+                wNormal.y * intruding_mag,
+                wNormal.z * intruding_mag
+            };
+            const float3 tangential = (float3) {
+                remainder.x - intruding.x,
+                remainder.y - intruding.y,
+                remainder.z - intruding.z
+            };
+            const float3 vIntruding = (float3) {
+                wNormal.x * vIntruding_mag,
+                wNormal.y * vIntruding_mag,
+                wNormal.z * vIntruding_mag
+            };
+
+            // combined friction & bounciness
+            const float friction = contact.rb != NULL ?
+                                   rigidbody_get_combined_friction(rb, contact.rb) : rb->friction;
+            const float bounciness = contact.rb != NULL ?
+                                     rigidbody_get_combined_bounciness(rb, contact.rb) : rb->bounciness;
+
+            // (1) apply combined friction on tangential displacement, assign tangential push if displacement
+            // originated at least partly from own velocity, not only motion or scene constant
+            dv = tangential;
+            float3_op_substract(rb->velocity, &vIntruding);
+
+            float3_op_scale(&dv, friction);
+            float3_op_scale(rb->velocity, friction);
+
+            if (float3_isZero(rb->velocity, EPSILON_ZERO) == false) {
+                push3 = tangential;
+                //float3_op_scale(&push3, 1.0f - friction);
+            } else {
+                push3 = float3_zero;
+            }
+
+            // (2) apply combined bounciness on intruding displacement, add leftover to push ;
+            // minor bounce responses are muffled forecasting w/ approximate contribution from accelerations
+            const float3 vBounce = (float3){
+                -vIntruding.x * bounciness,
+                -vIntruding.y * bounciness,
+                -vIntruding.z * bounciness
+            };
+            if (float3_sqr_length(&vBounce) > PHYSICS_BOUNCE_SQR_THRESHOLD) {
+                const float3 bounce = (float3){
+                    -intruding.x * bounciness,
+                    -intruding.y * bounciness,
+                    -intruding.z * bounciness
+                };
+
+                float3_op_add(&dv, &bounce);
+                float3_op_add(rb->velocity, &vBounce);
+
+                push3.x += intruding.x * (1.0f - bounciness);
+                push3.y += intruding.y * (1.0f - bounciness);
+                push3.z += intruding.z * (1.0f - bounciness);
+            } else {
+                float3_op_add(&push3, &intruding);
+            }
+
+            // (3) apply push relative to colliding masses
+            if (contact.rb != NULL && rigidbody_is_dynamic(contact.rb)) {
+                const float push = rigidbody_get_mass_push_ratio(rb, contact.rb);
+
+                push3.x *= push / dt_f;
+                push3.y *= push / dt_f;
+                push3.z *= push / dt_f;
+
+                rigidbody_apply_push(contact.rb, &push3);
+
+                // self is flagged as awake, since contact will move from push
+                rigidbody_set_awake(rb);
+
+                // TODO: inherit velocity from contact rigidbody
+                /*const float inherit_push = rigidbody_get_mass_push_ratio(contact.rb, rb);
+                const float inherit_mag = float3_dot_product(contact.rb->velocity, &tangential);
+                const float3 inherit = (float3){
+                    tangential.x * inherit_mag * (1.0f - friction),
+                    tangential.y * inherit_mag * (1.0f - friction),
+                    tangential.z * inherit_mag * (1.0f - friction)
+                };
+                rigidbody_apply_push(contact.rb, &push3);*/
+            }
+
+            // (4) reset contact mask if there was any motion, then update new contact along self's box
+            if (minSwept > 0.0f) {
+                if (float_isZero(dv.x, EPSILON_ZERO) != false) {
                     utils_axes_mask_set(&rb->contact, AxesMaskX | AxesMaskNX, false);
                 }
-
-                // (2) apply combined friction
-                const float combined = contactX != NULL ?
-                    rigidbody_get_combined_friction(rb, rigidbody_get_friction(contactX))
-                    : rb->friction;
-                dv.x *= combined;
-                rb->velocity->x *= combined;
-            }
-            if (isContact[1]) {
-                if (dv.y > 0.0f) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskY, true);
-                } else if (dv.y < 0.0f) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskNY, true);
-                }
-
-                const float combined = contactY != NULL ?
-                    rigidbody_get_combined_bounciness(rb, rigidbody_get_bounciness(contactY))
-                    : rb->bounciness;
-                if (utils_axes_mask_get(rb->contact, AxesMaskY | AxesMaskNY)
-                    || float_isZero(dv.y, PHYSICS_BOUNCE_THRESHOLD)
-                    || float_isZero(combined, EPSILON_ZERO)) {
-
-                    dv.y = 0.0f;
-                    rb->velocity->y = contactY != NULL && rb->mass < contactY->mass ?
-                        rigidbody_get_mass_push_ratio(contactY, rb) * contactY->velocity->y
-                        : 0.0f;
-                } else {
-                    dv.y *= -combined;
-                    rb->velocity->y *= -combined;
-                }
-            } else {
-                if (dv.y != 0.0f) {
+                if (float_isZero(dv.y, EPSILON_ZERO) != false) {
                     utils_axes_mask_set(&rb->contact, AxesMaskY | AxesMaskNY, false);
                 }
-
-                const float combined = contactY != NULL ?
-                    rigidbody_get_combined_friction(rb, rigidbody_get_friction(contactY))
-                    : rb->friction;
-                dv.y *= combined;
-                rb->velocity->y *= combined;
-            }
-            if (isContact[2]) {
-                if (dv.z > 0.0f) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskZ, true);
-                } else if (dv.z < 0.0f) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskNZ, true);
-                }
-
-                const float combined = contactZ != NULL ?
-                    rigidbody_get_combined_friction(rb, rigidbody_get_bounciness(contactZ))
-                    : rb->bounciness;
-                if (utils_axes_mask_get(rb->contact, AxesMaskZ | AxesMaskNZ)
-                    || float_isZero(dv.z, PHYSICS_BOUNCE_THRESHOLD)
-                    || float_isZero(combined, EPSILON_ZERO)) {
-
-                    dv.z = 0.0f;
-                    rb->velocity->z = contactZ != NULL && rb->mass < contactZ->mass ?
-                        rigidbody_get_mass_push_ratio(contactZ, rb) * contactZ->velocity->z
-                        : 0.0f;
-                } else {
-                    dv.z *= -combined;
-                    rb->velocity->z *= -combined;
-                }
-            } else {
-                if (dv.z != 0.0f) {
+                if (float_isZero(dv.z, EPSILON_ZERO) != false) {
                     utils_axes_mask_set(&rb->contact, AxesMaskZ | AxesMaskNZ, false);
                 }
-
-                const float combined = contactZ != NULL ?
-                    rigidbody_get_combined_friction(rb, rigidbody_get_friction(contactZ))
-                    : rb->friction;
-                dv.z *= combined;
-                rb->velocity->z *= combined;
             }
+            AxesMaskValue selfBoxSide = AxesMaskNone; // side of the world box sent to Lua callback
+            if (fabsf(wNormal.x) >= fabsf(wNormal.y) && fabsf(wNormal.x) >= fabsf(wNormal.z)) {
+                if (wNormal.x > 0.0f) {
+                    utils_axes_mask_set(&rb->contact, AxesMaskNX, true);
+                    selfBoxSide = AxesMaskNX;
+                } else if (wNormal.x < 0.0f) {
+                    utils_axes_mask_set(&rb->contact, AxesMaskX, true);
+                    selfBoxSide = AxesMaskX;
+                }
+            }
+            if (fabsf(wNormal.y) >= fabsf(wNormal.x) && fabsf(wNormal.y) >= fabsf(wNormal.z)) {
+                if (wNormal.y > 0.0f) {
+                    utils_axes_mask_set(&rb->contact, AxesMaskNY, true);
+                    selfBoxSide = AxesMaskNY;
+                } else if (wNormal.y < 0.0f) {
+                    utils_axes_mask_set(&rb->contact, AxesMaskY, true);
+                    selfBoxSide = AxesMaskY;
+                }
+            }
+            if (fabsf(wNormal.z) >= fabsf(wNormal.x) && fabsf(wNormal.z) >= fabsf(wNormal.y)) {
+                if (wNormal.z > 0.0f) {
+                    utils_axes_mask_set(&rb->contact, AxesMaskNZ, true);
+                    selfBoxSide = AxesMaskNZ;
+                } else if (wNormal.z < 0.0f) {
+                    utils_axes_mask_set(&rb->contact, AxesMaskZ, true);
+                    selfBoxSide = AxesMaskZ;
+                }
+            }
+
+            // (5) fire reciprocal callbacks
+            _rigidbody_fire_reciprocal_callbacks(rb,
+                                                 t,
+                                                 contact.rb,
+                                                 contact.t,
+                                                 selfBoxSide,
+                                                 callbackData);
+
             INC_COLLISIONS
         }
         // no collision,
@@ -754,7 +663,7 @@ void _rigidbody_trigger_tick(Scene *scene,
                              Box *worldCollider,
                              Rtree *r,
                              FifoList *sceneQuery,
-                             void *opaqueUserData) {
+                             void *callbackData) {
 
     // ------------------------
     // PREPARE OVERLAP TESTING
@@ -929,6 +838,8 @@ void _rigidbody_trigger_tick(Scene *scene,
                 }
             }
 
+            // TODO: per-block collision shapes
+
             hit = fifo_list_pop(sceneQuery);
         }
     }
@@ -949,7 +860,7 @@ void _rigidbody_trigger_tick(Scene *scene,
                                                          axesRb[i],
                                                          axesTr[i],
                                                          axis,
-                                                         opaqueUserData);
+                                                         callbackData);
                     utils_axes_mask_set(&rb->contact, (uint8_t)axis, true);
                 }
             } else {
@@ -1023,7 +934,7 @@ bool rigidbody_tick(Scene *scene,
                     Box *worldCollider,
                     Rtree *r,
                     const TICK_DELTA_SEC_T dt,
-                    void *opaqueUserData) {
+                    void *callbackData) {
 
     if (dt <= 0.0) {
         return false;
@@ -1044,11 +955,11 @@ bool rigidbody_tick(Scene *scene,
                                        r,
                                        dt,
                                        sceneQuery,
-                                       opaqueUserData);
+                                       callbackData);
     }
     // a trigger rigidbody only checks for overlaps to fire callbacks
     else if (rigidbody_is_trigger(rb)) {
-        _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, opaqueUserData);
+        _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, callbackData);
     }
 
     return false;
@@ -1357,29 +1268,28 @@ bool rigidbody_collision_masks_reciprocal_match(const uint8_t groups1,
            (collidesWith2 & groups1) != PHYSICS_GROUP_NONE;
 }
 
-float rigidbody_get_combined_friction(const RigidBody *rb1, const float friction2) {
+float rigidbody_get_combined_friction(const RigidBody *rb1, const RigidBody *rb2) {
 #if PHYSICS_COMBINE_FRICTION_FUNC == 0
-    return minimum(rb1->friction, friction2);
+    return minimum(rb1->friction, rb2->friction);
 #elif PHYSICS_COMBINE_FRICTION_FUNC == 1
-    return maximum(rb1->friction, friction2);
+    return maximum(rb1->friction, rb2->friction);
 #elif PHYSICS_COMBINE_FRICTION_FUNC == 2
-    return (rb1->friction + friction2) * .5f;
+    return (rb1->friction + rb2->friction) * .5f;
 #endif
 }
 
-float rigidbody_get_combined_bounciness(const RigidBody *rb1, const float bounciness2) {
+float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *rb2) {
 #if PHYSICS_COMBINE_BOUNCINESS_FUNC == 0
-    return minimum(rb1->bounciness, bounciness2);
+    return minimum(rb1->bounciness, rb2->bounciness);
 #elif PHYSICS_COMBINE_BOUNCINESS_FUNC == 1
-    return maximum(rb1->bounciness, bounciness2);
+    return maximum(rb1->bounciness, rb2->bounciness);
 #elif PHYSICS_COMBINE_BOUNCINESS_FUNC == 2
-    return (rb1->bounciness + bounciness2) * .5f;
+    return (rb1->bounciness + rb2->bounciness) * .5f;
 #endif
 }
 
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed) {
-    // no push from 1x mass to full push at 2x mass or more
-    return CLAMP01((rb->mass - pushed->mass) / pushed->mass);
+    return CLAMP01(rb->mass / pushed->mass - PHYSICS_MASS_PUSH_THRESHOLD);
 }
 
 void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value) {
@@ -1390,7 +1300,8 @@ void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value) {
 }
 
 void rigidbody_apply_push(RigidBody *rb, const float3 *value) {
-    // a PUSH ensures a given velocity at minimum and is not additive to avoid snow-balling
+    // a PUSH ensures a given velocity at minimum and is not additive, to emulate the principle of both
+    // objects possibly moving already in the same direction
     if ((value->x > 0 && value->x > rb->velocity->x) ||
         (value->x < 0 && value->x < rb->velocity->x)) {
         rb->velocity->x = value->x;

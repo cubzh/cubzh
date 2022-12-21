@@ -102,18 +102,18 @@ void _scene_refresh_recurse(Scene *sc,
                             Transform *t,
                             bool hierarchyDirty,
                             const TICK_DELTA_SEC_T dt,
-                            void *opaqueUserData) {
+                            void *callbackData) {
 
     // Refresh transform (top-first) after sandbox changes
     transform_refresh(t, hierarchyDirty, false);
 
     // Get rigidbody, compute world collider
     Box collider;
-    RigidBody *rb = transform_get_or_compute_world_collider(t, &collider);
+    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider);
 
     // Step physics (top-first), collider is kept up-to-date
     if (rb != NULL) {
-        if (rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, opaqueUserData)) {
+        if (rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, callbackData)) {
             scene_register_awake_rigidbody_contacts(sc, rb);
         }
     }
@@ -123,7 +123,7 @@ void _scene_refresh_recurse(Scene *sc,
 
     // Update r-tree (top-first) after changes
     if (rb != NULL) {
-        transform_get_or_compute_world_collider(t, &collider);
+        transform_get_or_compute_world_aligned_collider(t, &collider);
         _scene_update_rtree(sc, rb, t, &collider);
     }
 
@@ -135,7 +135,7 @@ void _scene_refresh_recurse(Scene *sc,
                                (Transform *)doubly_linked_list_node_pointer(n),
                                hierarchyDirty || transform_is_hierarchy_dirty(t),
                                dt,
-                               opaqueUserData);
+                               callbackData);
         n = doubly_linked_list_node_next(n);
     }
     // ⬇ anything after recursion is executed DEEP-FIRST
@@ -159,7 +159,7 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 
     // Update r-tree (top-first) after sandbox changes
     Box collider;
-    RigidBody *rb = transform_get_or_compute_world_collider(t, &collider);
+    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider);
     if (rb != NULL) {
         _scene_update_rtree(sc, rb, t, &collider);
         _scene_refresh_rtree_collision_masks(rb);
@@ -246,7 +246,7 @@ Rtree *scene_get_rtree(Scene *sc) {
     return sc->rtree;
 }
 
-void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {
+void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData) {
     if (sc == NULL) {
         return;
     }
@@ -257,7 +257,7 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {
                            sc->root,
                            transform_is_hierarchy_dirty(sc->root),
                            dt,
-                           opaqueUserData);
+                           callbackData);
 }
 
 void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {

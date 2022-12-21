@@ -1271,7 +1271,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (hasCustomCollisionBox) {
-        RigidBody *rb = rigidbody_new(RigidbodyModeStatic,
+        RigidBody *rb = rigidbody_new(RigidbodyMode_Static,
                                       PHYSICS_GROUP_DEFAULT_OBJECT,
                                       PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
         transform_set_rigidbody(shape_get_root_transform(*shape), rb);

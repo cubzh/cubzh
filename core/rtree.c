@@ -895,7 +895,7 @@ float rtree_query_cast_box_step_func(Rtree *r,
                                 -EPSILON_COLLISION) > 0) {
         hit = fifo_list_pop(broadPhaseResults);
         while (hit != NULL) {
-            swept = box_swept(stepOriginBox, step3, hit->aabb, false, &normal, NULL, EPSILON_ZERO);
+            swept = box_swept(stepOriginBox, step3, hit->aabb, &float3_epsilon_collision, false, &normal, NULL);
             if (swept < minSwept &&
                 (excludeLeafPtrs == NULL ||
                  doubly_linked_list_contains(excludeLeafPtrs, hit->leaf) == false)) {

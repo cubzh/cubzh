@@ -35,6 +35,9 @@ typedef struct _Transform Transform;
 typedef struct _Scene Scene;
 typedef struct float3 float3;
 
+static const float3 float3_epsilon_zero = { EPSILON_ZERO, EPSILON_ZERO, EPSILON_ZERO };
+static const float3 float3_epsilon_collision = { EPSILON_COLLISION, EPSILON_COLLISION, EPSILON_COLLISION };
+
 /// These are the three base simulation modes, when combined with other parameters a rigidobdy
 /// can have further distinct states as follows,
 /// CULLED: is fully culled from the r-tree and any simulation if any of the following is true,
@@ -79,7 +82,7 @@ bool rigidbody_tick(Scene *scene,
                     Box *worldCollider,
                     Rtree *r,
                     const TICK_DELTA_SEC_T dt,
-                    void *opaqueUserData);
+                    void *callbackData);
 
 /// MARK: - Accessors -
 const Box *rigidbody_get_collider(const RigidBody *rb);
@@ -137,8 +140,8 @@ bool rigidbody_collision_masks_reciprocal_match(const uint8_t groups1,
                                                 const uint8_t collidesWith1,
                                                 const uint8_t groups2,
                                                 const uint8_t collidesWith2);
-float rigidbody_get_combined_friction(const RigidBody *rb1, const float friction2);
-float rigidbody_get_combined_bounciness(const RigidBody *rb1, const float bounciness2);
+float rigidbody_get_combined_friction(const RigidBody *rb1, const RigidBody *rb2);
+float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *rb2);
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed);
 void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value);
 void rigidbody_apply_push(RigidBody *rb, const float3 *value);

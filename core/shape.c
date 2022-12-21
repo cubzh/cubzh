@@ -1510,26 +1510,16 @@ void shape_box_to_aabox(const Shape *s,
         return;
 
     const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
+    const SquarifyType type = squarify && shape_uses_per_block_collisions(s) == false ?
+                              MinSquarify : NoSquarify;
     if (isCollider) {
         if (rigidbody_is_dynamic(shape_get_rigidbody(s))) {
-            transform_utils_box_to_dynamic_collider(s->transform,
-                                                    box,
-                                                    aabox,
-                                                    offset,
-                                                    squarify ? MinSquarify : NoSquarify);
+            transform_utils_box_to_dynamic_collider(s->transform, box, aabox, offset, type);
         } else {
-            transform_utils_box_to_static_collider(s->transform,
-                                                   box,
-                                                   aabox,
-                                                   offset,
-                                                   squarify ? MinSquarify : NoSquarify);
+            transform_utils_box_to_static_collider(s->transform, box, aabox, offset, type);
         }
     } else {
-        transform_utils_box_to_aabb(s->transform,
-                                    box,
-                                    aabox,
-                                    offset,
-                                    squarify ? MinSquarify : NoSquarify);
+        transform_utils_box_to_aabb(s->transform, box, aabox, offset, type);
     }
 }
 
@@ -2334,7 +2324,7 @@ void shape_set_lua_mutable(Shape *s, const bool value) {
     s->isMutable = value;
 }
 
-bool shape_uses_per_block_collisions(Shape *s) {
+bool shape_uses_per_block_collisions(const Shape *s) {
     if (s == NULL) {
         return false;
     }
@@ -2609,7 +2599,6 @@ void shape_get_lossy_scale(const Shape *s, float3 *scale) {
     transform_get_lossy_scale(s->transform, scale);
 }
 
-/// returns a pointer on the shape's model matrix
 const Matrix4x4 *shape_get_model_matrix(const Shape *s) {
     if (s == NULL) {
         return NULL;
@@ -2844,12 +2833,12 @@ uint8_t shape_get_layers(const Shape *s) {
 // MARK: -
 
 float shape_box_swept(const Shape *s,
-                      const Box *worldBox,
-                      const float3 *worldVector,
+                      const Box *modelBox,
+                      const float3 *modelVector,
+                      const float3 *epsilon,
                       const bool withReplacement,
-                      float3 *swept3,
-                      float3 *extraReplacement,
-                      const float epsilon) {
+                      float3 *normal,
+                      float3 *extraReplacement) {
 
     if (s->octree == NULL) {
         cclog_error("shape_box_swept can't be used if octree is NULL.");
@@ -2859,13 +2848,7 @@ float shape_box_swept(const Shape *s,
     OctreeIterator *oi = octree_iterator_new(s->octree);
 
     Box broadPhaseBox, tmpBox;
-
-    // world to model
-    const Matrix4x4 *invModel = transform_get_wtl(shape_get_pivot_transform(s));
-    Box modelBox; box_to_aabox2(worldBox, &modelBox, invModel, &float3_zero, false);
-    float3 modelVector; matrix4x4_op_multiply_vec_vector(&modelVector, worldVector, invModel);
-
-    box_set_broadphase_box(&modelBox, &modelVector, &broadPhaseBox);
+    box_set_broadphase_box(modelBox, modelVector, &broadPhaseBox);
 
     bool leaf = false;
     bool collides;
@@ -2874,8 +2857,8 @@ float shape_box_swept(const Shape *s,
     float minSwept = 1.0f;
     float swept = 1.0f;
 
-    if (swept3 != NULL) {
-        float3_set_one(swept3);
+    if (normal != NULL) {
+        float3_set_one(normal);
     }
 
     if (extraReplacement != NULL) {
@@ -2894,23 +2877,17 @@ float shape_box_swept(const Shape *s,
         if (leaf) {
             if (collides) {
                 // nbcubes++;
-                swept = box_swept(&modelBox,
-                                  &modelVector,
+                swept = box_swept(modelBox,
+                                  modelVector,
                                   &tmpBox,
+                                  epsilon,
                                   withReplacement,
                                   &tmpNormal,
-                                  &tmpReplacement,
-                                  epsilon);
+                                  &tmpReplacement);
                 if (swept < minSwept) {
                     minSwept = swept;
-                }
-                if (swept3 != NULL) {
-                    if (tmpNormal.x != 0.0f) {
-                        swept3->x = minimum(swept, swept3->x);
-                    } else if (tmpNormal.y != 0.0f) {
-                        swept3->y = minimum(swept, swept3->y);
-                    } else if (tmpNormal.z != 0.0f) {
-                        swept3->z = minimum(swept, swept3->z);
+                    if (normal != NULL) {
+                        *normal = tmpNormal;
                     }
                 }
 #if PHYSICS_EXTRA_REPLACEMENTS

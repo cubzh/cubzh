@@ -59,7 +59,7 @@ struct _Transform {
 
     // TEMPORARY, NULL in most cases.
     // See comment where transform_get_or_compute_world_collider_function is defined
-    transform_get_or_compute_world_collider_function ptr_get_or_compute_world_collider;
+    transform_get_or_compute_world_collider_function ptr_get_or_compute_world_aligned_collider;
 
     // optionally create a weak ptr for this transform
     Weakptr *wptr;
@@ -90,7 +90,7 @@ struct _Transform {
     bool isHiddenBranch; /* 1 byte */
     bool isHiddenSelf;   /* 1 byte */
 
-    // can be used to describe the type of the ptr when defined
+    // can be used to describe anonymous ptr types TODO: review this vs. which TransformType to set for those
     uint8_t ptrType;
 
     bool animationsEnabled;
@@ -169,7 +169,7 @@ Transform *transform_make(TransformType type) {
     t->ptr = NULL;
     t->ptrType = 0;
     t->ptr_free = NULL;
-    t->ptr_get_or_compute_world_collider = NULL;
+    t->ptr_get_or_compute_world_aligned_collider = NULL;
     t->wptr = NULL;
     t->type = type;
     t->isHiddenBranch = false;
@@ -196,7 +196,7 @@ Transform *transform_make_with_ptr(TransformType type,
 void transform_assign_get_or_compute_world_collider_function(
     Transform *t,
     transform_get_or_compute_world_collider_function f) {
-    t->ptr_get_or_compute_world_collider = f;
+    t->ptr_get_or_compute_world_aligned_collider = f;
 }
 
 Transform *transform_make_default() {
@@ -860,10 +860,9 @@ RigidBody *transform_get_rigidbody(Transform *const t) {
     return t->rigidBody;
 }
 
-RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) {
-
-    if (t->ptr_get_or_compute_world_collider != NULL && t->ptr != NULL) {
-        return t->ptr_get_or_compute_world_collider(t->ptr, collider);
+RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider) {
+    if (t->ptr_get_or_compute_world_aligned_collider != NULL && t->ptr != NULL) {
+        return t->ptr_get_or_compute_world_aligned_collider(t->ptr, collider);
     }
 
     RigidBody *rb = NULL;
@@ -885,8 +884,7 @@ RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) 
                                                                 rigidbody_get_collider(rb),
                                                                 collider,
                                                                 NULL,
-                                                                squarify ? MinSquarify
-                                                                         : NoSquarify);
+                                                                squarify ? MinSquarify : NoSquarify);
                     } else {
                         transform_utils_box_to_static_collider(t,
                                                                rigidbody_get_collider(rb),

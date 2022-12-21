@@ -281,7 +281,7 @@ bool shape_is_lua_mutable(Shape *s);
 void shape_set_lua_mutable(Shape *s, const bool value);
 
 /// This doesn't do anything if the shape doesn't have an octree
-bool shape_uses_per_block_collisions(Shape *s);
+bool shape_uses_per_block_collisions(const Shape *s);
 void shape_set_per_block_collisions(Shape *s, bool value);
 
 // MARK: - Transform -
@@ -368,14 +368,20 @@ void shape_set_physics_properties(const Shape *s,
                                   const float friction,
                                   const float bounciness);
 
-/// note: this uses lossy scale, which can be skewed by shape rotation
+/// @param s shape model used as obstacle against a moving object
+/// @param modelBox moving object collider aligned with shape model space
+/// @param modelVector moving object velocity vector in shape model space
+/// @param epsilon collision tolerance in shape model space
+/// @param withReplacement typically true if used for simulation, false if used for cast/overlap
+/// @param normal axis where the first collision will occur
+/// @param extraReplacement filled only if PHYSICS_EXTRA_REPLACEMENTS is enabled
 float shape_box_swept(const Shape *s,
-                      const Box *worldBox,
-                      const float3 *worldVector,
+                      const Box *modelBox,
+                      const float3 *modelVector,
+                      const float3 *epsilon,
                       const bool withReplacement,
-                      float3 *swept3,
-                      float3 *extraReplacement,
-                      const float epsilon);
+                      float3 *normal,
+                      float3 *extraReplacement);
 
 /// Casts a world ray against given shape. World distance, local impact, block & block octree
 /// coordinates can be returned through pointer parameters
