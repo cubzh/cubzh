@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"dagger.io/dagger"
 )
@@ -81,13 +82,17 @@ func buildAnRunCurrentDirectory() error {
 		return errors.New("cmake --build error")
 	}
 
+	// exec compiled unit tests program
 	ciContainer = ciContainer.WithExec([]string{"./unit_tests"})
 	output, err := ciContainer.Stdout(ctx)
+	time.Sleep(time.Second * 1) // sleep needed when tests fail (race condition?)
 	if err != nil {
 		return err
 	}
 	fmt.Println(output)
+
 	code, err = ciContainer.ExitCode(ctx)
+	time.Sleep(time.Second * 1) // sleep needed when tests fail (race condition?)
 	if err != nil {
 		return err
 	}

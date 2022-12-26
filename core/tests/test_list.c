@@ -248,7 +248,7 @@ TEST_LIST = {
 
     // matrix4x4
     {"matrix4x4_new", test_matrix4x4_new},
-    {"matrix4x4_copy", test_matrix4x4_new_copy},
+    {"matrix4x4_new_copy", test_matrix4x4_new_copy},
     {"matrix4x4_identity", test_matrix4x4_new_identity},
     {"matrix4x4_new_off_center_orthographic", test_matrix4x4_new_off_center_orthographic},
     {"matrix4x4_new_transate", test_matrix4x4_new_translate},

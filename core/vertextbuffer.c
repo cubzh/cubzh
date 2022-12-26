@@ -107,7 +107,7 @@ void vertex_buffer_mem_area_leave_global_list(VertexBufferMemArea *vbma);
 
 // debug
 #if VERTEX_BUFFER_DEBUG == 1
-void vertex_buffer_check_mem_area_chain();
+void vertex_buffer_check_mem_area_chain(VertexBuffer *vb);
 #endif // VERTEX_BUFFER_DEBUG == 1
 
 //---------------------
