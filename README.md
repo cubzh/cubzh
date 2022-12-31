@@ -5,7 +5,7 @@
 </picture>
 
 ![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg?branch=main)
-[![Join the chat at https://discord.gg/SG9cd3g7](https://img.shields.io/discord/355905150528913409?color=%237289DA&label=cubzh&logo=discord&logoColor=white)](https://discord.gg/SG9cd3g7)
+[![Join the chat at https://cu.bzh/discord](https://img.shields.io/discord/355905150528913409?color=%237289DA&label=cubzh&logo=discord&logoColor=white)](https://cu.bzh/discord)
 
 Cubzh is a voxel game platform. (*voxel* == *volumetric pixel* == *cube*, in that context)
 
