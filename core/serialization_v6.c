@@ -731,7 +731,7 @@ ColorPalette *chunk_v6_read_palette_data(void *cursor, ColorAtlas *colorAtlas, b
     bool *emissive = (bool *)cursor;
 
     ColorPalette *palette = color_palette_new_from_data(colorAtlas,
-                                                        minimum((uint8_t)colorCount, UINT8_MAX),
+                                                        (uint8_t)minimum(colorCount, UINT8_MAX),
                                                         colors,
                                                         emissive);
     return palette;
