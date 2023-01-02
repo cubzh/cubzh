@@ -1,2 +1,5 @@
-ci/core_unit_tests/go.sum filter=lfs diff=lfs merge=lfs -text
-ci/format/go.sum filter=lfs diff=lfs merge=lfs -text
+# CI
+ci/**/go.sum filter=lfs diff=lfs merge=lfs -text
+# Lua documentation
+lua/docs/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
+lua/docs/**/*.mp4 filter=lfs diff=lfs merge=lfs -text

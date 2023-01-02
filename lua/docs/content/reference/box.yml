@@ -1,0 +1,51 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Box"
+description: |
+    A Box represents a volume axis-aligned to a given space : it is defined with only two [Number3], a minimum and a maximum, which represent the extents of the box along the axes of that space.
+
+    For example, a [Shape].[BoundingBox](/reference/shape#property-boundingbox) is axis-aligned to the model space of that shape, pertaining to its blocks.
+    However, an [Object].[CollisionBox](/reference/object#property-collisionbox) is axis-aligned to the world space of the scene, like most physics-related boxes.
+
+    When using or creating an axis-aligned Box, be mindful of what space it is relevant to.
+constructors: 
+  - description: "Creates a default Box with no volume."
+    argument-sets:
+      -
+      -
+        - name: "min"
+          type: "Number3"
+        - name: "max"
+          type: "Number3"
+    samples:
+      - code: |
+          -- creates a box with both min & max = {0,0,0}
+          local box = Box()
+
+          box = Box({0,0,0}, {10,10,10})
+
+properties:
+  - name: "Min"
+    type: "Number3"
+    description: |
+        [This] minimum point representing the lower extent along the axes.
+
+  - name: "Max"
+    type: "Number3"
+    description: |
+        [This] maximum point representing the upper extent along the axes.
+
+  - name: "Center"
+    type: "Number3"
+    read-only: true
+    description: |
+        [This] geometric center point.
+    
+functions:
+  - name: "Copy"
+    return: 
+        - type: "Box" 
+    arguments: 
+      - name: "b"
+        type: "Box"
+    description: |
+        Returns a copy of the [Box].

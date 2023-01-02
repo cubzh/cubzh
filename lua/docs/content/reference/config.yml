@@ -1,0 +1,89 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Config"
+description: "Config holds the configuration for your game. The items it depends on, the map that should be used and other important things."
+blocks:
+  - text: |
+      Config holds the configuration for your game. The items it depends on, the map that should be used and other important things.
+
+      You'll usually see it defined at the top of most game scripts.
+
+  - code: |
+      Config = {
+        Items = {"aduermael.pumpkin", "aduermael.tomato"},
+        Map = "gdevillele.pirate_ship"
+      }
+
+      -- also works this way:
+      Config.Items = {"aduermael.pumpkin", "aduermael.tomato"}
+      Config.Map = "gdevillele.pirate_ship"
+
+properties:
+    - name: "ChatAvailable"
+      type: "boolean"
+      description: |
+          When set to `true`, the users are able to use the chat. If set to `false` they cannot talk.
+
+          `true` by default.
+
+    - name: "ConstantAcceleration"
+      type: "Number3"
+      description: |
+          Acceleration applied to all physically simulated [Object]s in the scene. 
+
+          By default, it represents the gravity.
+
+      samples:
+        - code: |
+            -- turn off gravity:
+            Config.ConstantAcceleration = {0, 0, 0}
+            -- or
+            Config.ConstantAcceleration.Y = 0
+        - code: |
+           -- turn off gravity for one Object only:
+           myObject.Acceleration = -Config.ConstantAcceleration
+           -- myObject's acceleration is now the invert of 
+           -- Config.ConstantAcceleration, cancelling it.
+
+    - name: "Map"
+      type: "string"
+      description: "Indicates the map that should be loaded."
+
+    - name: "Items"
+      type: "array"
+      description: |
+          A list of items ([string] references) that should be loaded.
+
+          You'll be able to use thoses items to create [Shape]s, [MutableShape]s and other things.
+
+          See [Items] for more details.
+
+    - name: "MapPaletteOverrides"
+      type: "table"
+      description: |
+          A collection of [Map] [Palette] indexes that you want to override in the game.
+
+      samples:
+        code: |
+          -- override Block properties at index 3 in map's palette
+          Config.MapPaletteOverrides[3].Color = Color(255, 0, 0)
+          Config.MapPaletteOverrides[3].Light = true
+
+    - name: "PointerToggleAvailable"
+      type: "boolean"
+      description: |
+          Allows the users to change the pointer mode by pressing on TAB or clicking on the pointer mode button.
+
+          The function `[Pointer]:Show()` and `[Pointer]:Hide()` can still be used.
+
+          `false` by default.
+
+      samples:
+        code: |
+          Config.PointerToggleAvailable = false -- disable TAB / pointer button
+          Client.Action2 = function()
+            Pointer:Show() -- enables the pointer mode
+          end
+
+    # - name: "Gravity"
+    #   type: "number"
+    #   description: "Overrides default gravity if set."

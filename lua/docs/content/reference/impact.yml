@@ -1,0 +1,55 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Impact"
+
+creatable: true
+
+blocks: 
+  - text: |
+      An Impact object can be returned when casting a ray. (see [Camera].[CastRay](/reference/camera#functions-castray), [Player].[CastRay](/reference/player#functions-castray), [PointerEvent].[CastRay](/reference/pointerevent#functions-castray))
+
+properties:
+    - name: "Block"
+      type: "Block"
+      read-only: true
+      description: "Block touched by the ray. Not `nil` if the [Impact] represents a [Block]."
+      samples:
+        - code: |
+            local impact = Player:CastRay()
+            print(impact.Block)	-- prints hit block's id
+
+    - name: "Distance"
+      type: "number"
+      read-only: true
+      description: "Distance to impact when casting a ray. (see [Camera].[CastRay](/reference/camera#functions-castray), [Player].[CastRay](/reference/player#functions-castray), [PointerEvent].[CastRay](/reference/pointerevent#functions-castray))"
+    
+    
+    - name: "FaceTouched"
+      type: "Face"
+      description: |
+          Not `nil` if the [Impact] represents a [Block].
+          
+          Indicates what block face has been touched.
+
+    - name: "Object"
+      type: "Object"
+      description: "Object touched by the ray."
+      samples:
+        - code: |
+            Pointer.Down = function(event)
+              local impact = event:CastRay()
+              print(impact.Object) -- can be nil if no Object has been touched
+            end
+
+    - name: "Player"
+      type: "Player"
+      description: "Player touched by the ray."
+      samples:
+        - code: |
+            Pointer.Down = function(event)
+              local impact = event:CastRay()
+              print(impact.Player) -- can be nil if no Player has been touched
+            end
+
+    - name: "Shape"
+      type: "Shape"
+      description: "Shape touched by the ray. Not `nil` if the [Impact] represents a [Shape]."

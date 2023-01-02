@@ -1,0 +1,23 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "integer"
+basic-type: true
+description: |
+    Integers are numbers with no fractional part. A number can be considered as an integer as soon as it does not have the period decimal separator.
+blocks:
+  - text: |
+        Integers are numbers with no fractional part. A [number] can be considered as an [integer] as soon as it does not have the period decimal separator.
+
+  - code: |
+        local a = 10 -- integer (can also be considered as a number)
+        local b = 10.5 -- number only 
+        local c = 10.0 -- number only, even if the fractional part is equal to 0
+
+  - text: |
+        You can convert numbers with a fractional part equal to 0 into integers by using the standard function `math.tointeger`.
+
+  - code: |
+        local a = math.tointeger(10) -- 10, conversion successful
+        local b1 = math.tointeger(10.5) -- nil, conversion fails
+        local b2 = math.tointeger(math.floor(10.5 + 0.5)) -- 11, converted from 11.0
+        local c = math.tointeger(10.0) -- 10, conversion successful
+

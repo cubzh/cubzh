@@ -1,0 +1,18 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Snippets > UI"
+blocks:
+    - title: "Toggling between the in-game and UI pointers"
+
+    - text: |
+        To toggle on the in-game pointer (with its "crosshair" rendering):
+
+    - code: |
+        Pointer:Hide()
+        UI:Crosshair = true
+
+    - text: |
+        To toggle on the UI normal pointer (with its default rendering):
+
+    - code: |
+        Pointer:Show()
+        UI:Crosshair = false

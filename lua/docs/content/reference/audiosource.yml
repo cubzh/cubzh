@@ -1,0 +1,97 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "AudioSource"
+extends: "Object"
+creatable: true
+description: |
+    An `AudioSource` is a component you can attach to an object in your scene to play back a sound in your world. It allows you to pick one of the built-in Cubzh sound files and play it with or without spatialization.
+
+    Each `AudioSource` can play one and only one audio file at a time. Moreover, every source can be spatialized or not (note that it is by default), meaning that it can be either a 3D or a 2D sound source. So, when it is spatialized, an `AudioSource` will sound differently depending on where it is relative to the [`AudioListener`](/reference/audiolistener) in the game.
+
+    ⚠️ The full list of built-in sounds is available in the [Adding sounds to your game](/guides/quick/adding-sounds.yml) quick guide.
+constructors: 
+  - description: "Creates a default AudioSource with no sound clip."
+    samples:
+      - code: |
+          -- creates a sound source using the
+          -- "gun_shot_1" sound file reference
+          local as = AudioSource()
+          as.Sound = "gun_shot_1"
+
+properties:
+    - name: "Pan"
+      type: "number"
+      description: |
+          `AudioSource`'s left/right pan (from `-1`: full left ear, to `1`: full right ear, with a default of `0`: both ears at equal volume).
+
+          ⚠️ This has no effect if the source is spatialized.
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "big_explosion_1"
+              as.Pan = 0.2 -- "move the sound" slightly to the right
+    - name: "Pitch"
+      type: "number"
+      description: |
+          `AudioSource`'s pitch (`1.0` by default). If you set it to a number above `1.0`, then the frequency of the sound will be increased and it will sound "higher"; else if you set it to a number below `1.0`, the frequency will be reduced and the sound will be "lower". The pitch cannot be `0.0`, but it can technically go up to `+infinity`.
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "big_explosion_3"
+              as.Pitch = 1.2 -- pitch the sound up
+    - name: "Sound"
+      type: "string"
+      description: |
+          `AudioSource`'s sound file reference. It must be in the list of available built-in sounds.
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "rain_1"
+    - name: "Spatialized"
+      type: "boolean"
+      description: |
+          Whether the `AudioSource` uses spatialization or not (`true` by default).
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "drinking_1"
+              as.Spatialized = false
+    - name: "StartAt"
+      type: "integer"
+      description: |
+          `AudioSource`'s start time (in milliseconds).
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "wood_impact_1"
+              as.StartAt = 200
+    - name: "StopAt"
+      type: "integer"
+      description: |
+          `AudioSource`'s end time (in milliseconds).
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "gun_reload_1"
+              as.StopAt = 800
+    - name: "Volume"
+      type: "number"
+      description: |
+          `AudioSource`'s volume (from `0`: no sound, to `1`: full sound).
+      samples:
+          - code: |
+              local as = AudioSource()
+              as.Sound = "metal_clanging_1"
+              as.Volume = 0.8
+
+functions:
+    - name: "Pause"
+      description: |
+          Temporarily interrupts the `AudioSource` playback, while keeping track of the current playback time. If you call [`Play`](#functions-play) afterwards, the sound will resume where it was stopped.
+
+    - name: "Play"
+      description: |
+          Starts the `AudioSource` playback.
+
+    - name: "Stop"
+      description: |
+          Stops the `AudioSource` playback and resets the current playback time. If you call [`Play`](#functions-play) afterwards, the sound will restart from the beginning of the audio clip.

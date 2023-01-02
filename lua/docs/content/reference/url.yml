@@ -1,0 +1,21 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "URL"
+description: "URL allows to open web pages from the Lua script."
+blocks:
+  - text: |
+      URL allows to open web pages from the Lua script.
+
+functions:
+    - name: "Open"
+      description: |
+          Opens the given URL.
+
+      arguments:
+        - name: URL
+          type: string
+          optional: false
+      samples:
+          - code: |
+              -- opens the documentation
+              -- `https://` is put in front of it if not provided
+              URL:Open("docs.cu.bzh/reference")

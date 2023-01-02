@@ -1,0 +1,84 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Light"
+extends: "Object"
+description: |
+    A `Light` is an object that can be placed in the scene to act as a light source.
+
+    There are currently 3 types of light: point, spot, and directional.
+
+    A code example of `Light`'s various fields can be found in the world `Lights Tests`.
+
+    Note: shadow features are under development and will be available soon.
+
+constructors: 
+  - description: "Creates a Light with default properties."
+    samples:
+      - code: |
+          local l = Light()
+
+          -- change light properties
+          l.Radius = 50
+          l.Color = Color(1.0, 1.0, 0.5)
+
+          -- use it as a normal object in the scene
+          l:SetParent(World)
+          l.Position = { x, y, z }
+
+properties:
+    - name: "Type"
+      type: "LightType"
+      description: |
+          The light type can be one of `LightType.Point` (by default), `LightType.Spot`, or `LightType.Directional`.
+
+          Note that it can be changed at any time.
+
+    - name: "Color"
+      type: "Color"
+      description: |
+          Color of the light, white by default.
+
+    - name: "Range"
+      type: "number"
+      description: |
+          Range of the light, `30` by default. Has no effect for directional lights.
+
+    - name: "Radius"
+      type: "number"
+      description: |
+          Radius of a point light. Alias to [This].[Range] for convenience.
+
+    - name: "Hardness"
+      type: "number"
+      description: |
+          The hardness of a light source represents the core intensity of the emitted light.
+
+          At the minimum value of `0`, the lit area will appear diffuse with smooth edges. At its maximum value of `1`, it will appear bright with clear sharp edges.
+
+          Default hardness is `0.5`.
+
+    - name: "Angle"
+      type: "number"
+      description: |
+          Angle of the cone of a spot light, default is `0.7` radians. Has no effect on other light types.
+
+    - name: "On"
+      type: "boolean"
+      description: |
+          Toggles the light source on and off.
+
+    - name: "PriorityGroup"
+      type: "integer"
+      description: |
+          `PriorityGroup` is a way to create light groups in order of importance from `0` to `255` (default group).
+
+          If your world is played on a mobile or lower-end device, the maximum number of simultaneaous lights on screen may vary based on hardware capabilities.
+
+          If you want to ensure a smooth gameplay on your world for all users, a good practice is to prioritize all gameplay-essential lights.
+          For example, if your game features a light torch that the player carries, you could place it in `PriorityGroup` `0` to ensure it is always rendered first and leave other lights that are part of the environment in a lower group.
+
+          You can assign as many lights as you want per group, however only groups order is garanteed, lights within a given group are rendered unordered.
+
+    - name: "Layers"
+      type: "table"
+      description: |
+          Integer or table of integers between 1 and 8. The light will affect other objects in the rendering camera's layers.

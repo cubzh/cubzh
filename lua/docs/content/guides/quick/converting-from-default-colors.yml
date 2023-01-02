@@ -1,0 +1,30 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Quick know-how > Converting from default colors (0.0.46 > 0.0.47)"
+blocks:
+    - text: |
+        Starting from the version 0.0.47, Cubzh uses custom colors instead of default references to a fixed palette. This is why recent scripts will define colors based on the [`Color`](/reference/color) object, rather than a simple integer reference.
+
+        If you need to update one of your scripts to obey this new system, you have two solutions:
+
+        1. quick and easy: just replace your reference by `DefaultColors[<your reference>]`
+           
+           For example:
+
+    - code: |
+        -- 0.0.46
+        local BLUE = 181
+        -- 0.0.47
+        local BLUE = DefaultColors[181]
+
+    - text: |
+        2. custom and efficient: define the variable with a specific RGB(A) tint by using the `Color` API and passing it 3 (RGB) or 4 (RGBA) values
+           
+           For example:
+
+    - code: |
+        local BLUE = Color(76, 215, 255)
+    
+    - text: |
+        As a reminder, here's the fixed palette that versions before 0.0.46 used:
+
+    - image: "/images/guides/pcubes-palette.png"

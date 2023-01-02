@@ -1,0 +1,50 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Guides"
+blocks:
+    - text: |
+        Are you more of a hands-on learner? Then this section is for you!
+
+        Here, you'll find step-by-step tutorials of to learn the basics of Cubzh by making small games.
+
+        If you haven't installed Cubzh yet, checkout [the download page](https://cu.bzh/download).
+
+    - subtitle: "Quick know-hows"
+
+    - text: |
+        - [Testing a multi-player game](/guides/quick/testing-multiplayer-game)
+        - [Adding sounds to your game (0.0.47+)](/guides/quick/adding-sounds)
+        - [Converting from default colors (0.0.46 > 0.0.47)](/guides/quick/converting-from-default-colors)
+
+    - subtitle: "Tutorials"
+
+    - text: |
+        - [<b>Tutorial n°1: Tutoworld</b>](/guides/tutorials/tutoworld) - Discover the fundamentals of coding a Cubzh game with this 10-minutes tutorial!
+        - [<b>Tutorial n°2: Lone Scoundrel</b>](/guides/tutorials/lone-scoundrel) - Learn more advanced techniques in this intermediate tutorial, like procedural generation or object pooling
+        - [<b>Tutorial n°3: Space Race</b>](/guides/tutorials/space-race) - Discover how to turn your Cubzh game multiplayer :)
+
+    - subtitle: "Handy Lua Snippets"
+
+    - text: |
+        <b>Scene setup</b>
+
+        - [Setting a fixed in-game daytime](/guides/snippets/setup-scene#setting-a-fixed-in-game-daytime)
+        - [Instantiating an item](/guides/snippets/setup-scene#instantiating-an-item)
+
+        <b>User actions</b>
+
+        - [Disable movement](/guides/snippets/user-actions#disable-movement)
+ 
+        <b>Collisions/Triggers</b>
+
+        - [Setting the groups the player collides with](/guides/snippets/collisions-triggers#setting-the-groups-the-player-collides-with)
+        - [Detecting a collision between the player and an object](/guides/snippets/collisions-triggers#detecting-a-collision-between-the-player-and-an-object)
+        - [Basic raycasting (from player)](/guides/snippets/collisions-triggers#basic-raycasting-from-player)
+ 
+        <b>UI</b>
+
+        - [Toggling between the in-game and UI pointers](/guides/snippets/ui#toggling-between-the-in-game-and-ui-pointers)
+ 
+        <b>Miscellaneous</b>
+
+        - [Getting a random number in a range](/guides/snippets/misc#getting-a-random-number-in-a-range)
+    

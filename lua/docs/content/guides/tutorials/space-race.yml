@@ -1,0 +1,2084 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Tutorials > Tutorial n°3: Space Race"
+blocks:
+    - text: |
+        In the previous tutorials (["Tutoworld"](/guides/tutorials/tutoworld) and ["Lone Scoundrel"](/guides/tutorials/lone-scoundrel)), we learned the basic features of the [Cubzh](https://cu.bzh) engine and we discussed a few common dev patterns. Today, we're going to continue our journey and talk about multi-player :)
+
+        We are going to make a simple 2-or more-player game called "Space Race"!
+        
+        In this game, you have a spaceship locked on a road and you have to shoot bullets to destroy the bullets that pop in front of you; "special" red walls require "special" red bullets, and the others just requires normal bullets... but if you ever hit a wall, it's game over!
+
+        The ships get faster and faster as time passes, and after a while walls will start to pop more and more often...
+
+    - media: "/media/guides/03-space-race_demo-final.mp4"
+
+    - title: "The original solo game"
+
+    - text: |
+        Because in this post I want to focus on multi-player concepts, I'm going to start off with an already valid solo-game code. The script is a bit long but it uses things we've already seen in the other tutorials, and we're going to go through it slowly to make sure we're are on the same page! To start us off, here is a demo of the solo version of the game:
+
+    - media: "/media/guides/03-space-race_demo-solo.mp4"
+
+    - text: |
+        <strong>If you're already familiar with programming in Lua, you can just have a look at the script below and then skip to the [multi-player part](#making-a-multi-player-game) :)</strong>
+
+        So let's have a look at the starting script:
+
+    - code: |
+        Config = {
+            Map = "minadune.empty",
+            Items = {
+                "minadune.spaceship",
+                "minadune.race_start",
+            },
+        }
+
+        ---------------------------------
+        local COLOR_BLACK = Color(0, 0, 0)
+        local COLOR_WHITE = Color(255, 255, 255)
+        local COLOR_RED = Color(255, 50, 50)
+        local COLOR_RED_DARK = Color(150, 5, 5)
+        local COLOR_GRAY = Color(180, 180, 180)
+        local COLOR_GRAY_DARK = Color(60, 60, 60)
+        local PLAYER_COLORS = {
+            Color(255, 0, 255),
+            Color(150, 0, 180),
+            Color(10, 235, 10),
+            Color(255, 255, 0),
+            Color(255, 0, 0),
+            Color(80, 80, 255),
+            Color(120, 180, 255),
+            Color(255, 50, 50)
+        }
+        local SHIP_SPEED = 240
+        local BULLET_RELATIVE_SPEED = 100
+        ---------------------------------
+        local ASCII_NUMBERS = {
+            [1] = ".----------------. \n| .--------------. |\n| |     __       | |\n| |    /  |      | |\n| |    `| |      | |\n| |     | |      | |\n| |    _| |_     | |\n| |   |_____|    | |\n| |              | |\n| '--------------' |\n'----------------' \n",
+            [2] = ".----------------. \n| .--------------. |\n| |    _____     | |\n| |   / ___ `.   | |\n| |  |_/___) |   | |\n| |   .'____.'   | |\n| |  / /____     | |\n| |  |_______|   | |\n| |              | |\n| '--------------' |\n'----------------' \n",
+            [3] = ".----------------. \n| .--------------. |\n| |    ______    | |\n| |   / ____ `.  | |\n| |   `'  __) |  | |\n| |   _  |__ '.  | |\n| |  | \\____) |  | |\n| |   \\______.'  | |\n| |              | |\n| '--------------' |\n'----------------' \n",
+        }
+        ---------------------------------
+        local walls = {}
+        local bullets = {}
+        local shipSpeed = SHIP_SPEED
+        local minSpawnTime = 2
+        local maxSpawnTime = 4
+
+        local countdown = 4
+        local runCountdown
+        local acceleratorTimer = nil
+        local spawnTimer = nil
+
+        Client.OnStart = function()
+            Map.IsHidden = true
+
+            TimeCycle.On = false
+            Time.Current = Time.Noon
+        
+            UI.Crosshair = false
+
+            initPlayer(Player)
+            spawnPlayer(Player)
+
+            countdownLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+
+            runCountdown = function()
+                countdown = countdown - 1
+                if countdown > -1 then
+                    updateCountdown(countdown)
+                    Timer(1, runCountdown)
+                else
+                    Timer(2, makeWalls)
+                    acceleratorTimer = Timer(5, true, function()
+                        shipSpeed = shipSpeed + 10
+                        minSpawnTime = minSpawnTime - 0.5
+                        if minSpawnTime < 1 then minSpawnTime = 1 end
+                        maxSpawnTime = maxSpawnTime - 0.5
+                        if maxSpawnTime < 2 then maxSpawnTime = 2 end
+                    end)
+                end
+            end
+            runCountdown()
+        end
+
+        Client.AnalogPad = function(dx,dy)
+            if not Player.init then initPlayer(Player) end
+            cameraOrbit.LocalRotation.Y = cameraOrbit.LocalRotation.Y + dx * 0.01
+        end
+
+        Client.Tick = function(dt)
+            if not Player.alive then return end
+            gameUpdate(dt)
+        end
+
+        Client.Action2 = function()
+            if not Player.alive then return end
+            spawnBullet(Player, false)
+        end
+
+        Client.Action3 = function()
+            if not Player.alive then return end
+            spawnBullet(Player, true)
+        end
+
+        Client.AnalogPad = function(dx,dy)
+            if not Player.init then initPlayer(Player) end
+            cameraOrbit.LocalRotation.Y = cameraOrbit.LocalRotation.Y + dx * 0.01
+        end
+
+        -------------------
+        -- INITIALIZATION
+        -------------------
+        function initPlayer(p)
+            if p.init then return end
+            p.color = PLAYER_COLORS[math.floor(p.ID % #PLAYER_COLORS) + 1]
+            p.Physics = false
+            p.IsHidden = true
+            World:AddChild(p, true) -- keep world
+
+            p.avatar = spawnPlayerShip(p)
+            World:AddChild(p.avatar)
+            if p == Player then
+                Camera:SetModeFree()
+                cameraOrbit = Object()
+                Player:AddChild(cameraOrbit)
+                cameraOrbit:AddChild(Camera)
+                Camera.LocalPosition = { 0, 15, -40 }
+                Camera.LocalRotation = { 0.35, 0, 0 }
+            end
+
+            p.init = true
+        end
+
+        -------------------
+        -- SPAWNERS
+        -------------------
+        function spawnPlayer(p)
+            if not p.init then initPlayer(p) end
+
+            p.Position = getPlayerPosition(p.ID)
+            p.avatar.Position = p.Position
+            p.alive = true
+            p.avatar:ClearTextBubble()
+
+            -- add race start
+            if p.start == nil then
+                local start = Shape(Items.minadune.race_start)
+                start.Position = Number3(p.Position.X, 0, 0)
+                start.Scale = Number3(2, 0.5, 2)
+                p.start = start
+                World:AddChild(start)
+            end
+            -- add race road
+            local road = MutableShape()
+            road:AddBlock(COLOR_BLACK, 0, 0, 0)
+            road.Scale = Number3(3, 0.5, 300) * Map.LossyScale
+            road.Position = Number3(p.Position.X - 7.5, -2.5, -150 * Map.LossyScale.Z)
+            World:AddChild(road)
+            p.road = road
+        end
+
+        function spawnPlayerShip(p)
+            local ship = Shape(Items.minadune.spaceship)
+            ship.LocalRotation.Y = math.pi
+
+            -- Add light on ship
+            local l = Light()
+            l.Type = LightType.Spot
+            ship:AddChild(l)
+            l.LocalRotation = { math.pi / 2, 0, 0 }
+            l.Angle = 0.65
+            l.Range = 100
+            l.Hardness = 0.75
+            l.Color = Map.LocalPalette[p.color].Color
+
+            return ship
+        end
+
+        function spawnWall(wallData)
+            local wall = MutableShape()
+            wall.isSpecial = wallData.isSpecial
+            wall:AddBlock(wallData.isSpecial and COLOR_RED_DARK or COLOR_GRAY, 0, 0, 0)
+            wall.Scale = Number3(3, 3, 0.5) * Map.LossyScale
+            wall.Position = Number3(wallData.pos[1], wallData.pos[2], wallData.pos[3]) + Number3(-1.5, -0.5, wallData.d) * Map.LossyScale
+            wall.CollisionGroups = 2
+            wall.Physics = false
+            wall.CollisionBox = Box(
+                { -1.5, -0.5, wall.Position.Z - 0.25 },
+                { 1.5, 0.5, wall.Position.Z + 0.25 })
+            World:AddChild(wall)
+            if walls[wallData.pID] == nil then walls[wallData.pID] = {} end
+            table.insert(walls[wallData.pID], wall)
+        end
+
+        function spawnBullet(p, isSpecial)
+            -- prevent bullet spamming
+            if #bullets == 3 then return end
+
+            local bullet = MutableShape()
+            bullet.isSpecial = isSpecial
+            bullet.pID = p.ID
+            bullet.Physics = false
+            bullet:AddBlock(isSpecial and COLOR_RED or COLOR_WHITE, 0, 0, 0)
+            bullet.Scale = 1.5
+            World:AddChild(bullet)
+            bullet.Position = p.Position - Number3(0.5, 0.5, 0)
+            bullet.Forward = p.Forward
+            table.insert(bullets, bullet)
+        end
+
+        ---------------
+        -- GAME
+        ---------------
+        function killPlayer(p)
+            p.alive = false
+            p.avatar:TextBubble(p.Username .. " ☠")
+
+            clearPlayerLine(p)
+        end
+
+        function clearPlayerLine(p)
+            bulletIDsToRemove = {}
+            for i, b in pairs(bullets) do
+                if b.pID == p.ID then
+                    b:RemoveFromParent()
+                    table.insert(bulletIDsToRemove, i)
+                end
+            end
+            for _, i in pairs(bulletIDsToRemove) do
+                table.remove(bullets, i)
+            end
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w:RemoveFromParent()
+                end
+                walls[p.ID] = nil
+            end
+        end
+
+        function prepareWalls()
+            local wallsData = {}
+            for _, p in pairs(Players) do
+                local pos = getPlayerPosition(p.ID)
+                for i = 1, math.floor(randomBetween(1, 3)) do
+                    table.insert(wallsData, {
+                        pID = p.ID,
+                        isSpecial = math.random() < 0.3,
+                        pos = { pos.X, pos.Y, pos.Z },
+                        d = randomBetween(65, 90) + (i - 1) * 40,
+                    })
+                end
+            end
+            return wallsData
+        end
+
+        function makeWalls()
+            local wallsData = prepareWalls()
+            for _, w in ipairs(wallsData) do
+                spawnWall(w)
+            end
+
+            spawnTimer = Timer(randomBetween(minSpawnTime, maxSpawnTime), makeWalls)
+        end
+
+        -------------------
+        -- UI
+        -------------------
+        function updateCountdown(countdown)
+            if countdown == 0 then
+                countdownLabel:Remove()
+                -- remove "start race" player child objects
+                for _, p in pairs(Players) do
+                    p.start:RemoveFromParent()
+                    p.start = nil
+                end
+            elseif countdownLabel ~= nil then
+                countdownLabel.Text = ASCII_NUMBERS[countdown]
+                countdownLabel:Add()
+            end
+        end
+
+        ---------------
+        -- GAME STATE
+        ---------------
+        function updatePlayerWalls(dt, p)
+            if not p.init then return end
+            if not p.alive then return end
+
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w.Position = w.Position + p.Backward * shipSpeed * dt
+                    if collides(p.avatar, w) then
+                        die()
+                    end
+                end
+            end
+        end
+
+        function updateBullets(dt, p)
+            for i, b in ipairs(bullets) do
+                b.Position = b.Position + b.Forward * BULLET_RELATIVE_SPEED * dt
+
+                -- if hits wall: destroy wall and bullet
+                local destroyed = false
+                if walls[b.pID] ~= nil then
+                    for j, w in pairs(walls[b.pID]) do
+                        if collides(b, w) then
+                            if b.isSpecial == w.isSpecial then
+                                if Player.playSolo then
+                                    score = score + 1
+                                    waitingLabel.Text = "Score: " .. score
+                                end
+                                w:RemoveFromParent()
+                                table.remove(walls[b.pID], j)
+                            end
+                            b:RemoveFromParent()
+                            table.remove(bullets, i)
+                            destroyed = true
+                        end
+                    end
+                end
+
+                if not destroyed then
+                    -- if too far in front: destroy bullet
+                    if (b.Position - Player.Position).Length > 300 then
+                        b:RemoveFromParent()
+                        table.remove(bullets, i)
+                    end
+                end
+            end
+        end
+
+        function gameUpdate(dt)
+            for _, p in pairs(Players) do
+                updatePlayerWalls(dt, p)
+            end
+            updateBullets()
+        end
+
+        die = function()
+            killPlayer(Player)
+
+            spawnTimer:Cancel()
+            acceleratorTimer:Cancel()
+            shipSpeed = SHIP_SPEED
+            countdown = 4
+            Timer(1, function()
+                spawnPlayer(Player)
+                runCountdown()
+            end)
+        end
+
+        -------------------
+        -- MISC
+        -------------------
+        function getPlayerIndex(id)
+            local idx = 1
+            for _, p in pairs(Players) do
+                if p.ID == id then return idx end
+                idx = idx + 1
+            end
+            return idx
+        end
+
+        function getPlayerPosition(id)
+            local idx = getPlayerIndex(id)
+            local x = 3 * (idx - 1)
+            return Number3(x, 1.5, 0) * Map.LossyScale
+        end
+
+        function randomBetween(a, b)
+            return math.random() * (b - a) + a
+        end
+
+        function collides(shape1, shape2)
+            local halfSize1 = (
+                shape1.Width > shape1.Depth
+                and shape1.Width * 0.5
+                or shape1.Depth * 0.5) * shape1.LocalScale.X
+            local halfSize2 = (
+                shape2.Width > shape2.Depth
+                and shape2.Width * 0.5
+                or shape2.Depth * 0.5) * shape2.LocalScale.X
+            local shape1Min = Number3(
+                shape1.Position.X - halfSize1,
+                shape1.Position.Y,
+                shape1.Position.Z - halfSize1)
+            local shape1Max = Number3(
+                shape1.Position.X + halfSize1,
+                shape1.Position.Y + shape1.Height * shape1.LocalScale.X,
+                shape1.Position.Z + halfSize1)
+            local shape2Min = Number3(
+                shape2.Position.X - halfSize2,
+                shape2.Position.Y,
+                shape2.Position.Z - halfSize2)
+            local shape2Max = Number3(
+                shape2.Position.X + halfSize2,
+                shape2.Position.Y + shape2.Height * shape2.LocalScale.X,
+                shape2.Position.Z + halfSize2)
+            if shape1Max.X > shape2Min.X and
+                shape1Min.X < shape2Max.X and
+                shape1Max.Y > shape2Min.Y and
+                shape1Min.Y < shape2Max.Y and
+                shape1Max.Z > shape2Min.Z and
+                shape1Min.Z < shape2Max.Z then
+                return true
+            end
+            return false
+        end
+
+    - text: |
+        Pfiou, that's a lot of code! But don't worry, it's actually quite straight-forward overall :)
+
+    - subtitle: "The Client.OnStart()"
+
+    - text: |
+        First, let's focus on the `Client.OnStart()` function:
+
+    - code: |
+        Client.OnStart = function()
+            Map.IsHidden = true
+
+            TimeCycle.On = false
+            Time.Current = Time.Noon
+        
+            UI.Crosshair = false
+
+            initPlayer(Player)
+            spawnPlayer(Player)
+
+            countdownLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+
+            runCountdown = function()
+                countdown = countdown - 1
+                if countdown > -1 then
+                    updateCountdown(countdown)
+                    Timer(1, runCountdown)
+                else
+                    Timer(2, makeWalls)
+                    acceleratorTimer = Timer(5, true, function()
+                        shipSpeed = shipSpeed + 10
+                        minSpawnTime = minSpawnTime - 0.5
+                        if minSpawnTime < 1 then minSpawnTime = 1 end
+                        maxSpawnTime = maxSpawnTime - 0.5
+                        if maxSpawnTime < 2 then maxSpawnTime = 2 end
+                    end)
+                end
+            end
+            runCountdown()
+        end
+
+    - text: |
+        When we first launch the game, you see that we hide the map (because we're going to spawn our own roads to ride), we fix the daytime to noon and we hide the in-game cursor.
+        
+        Then, we init and spawn our player. Those two functions allow us to prepare our player's avatar, place it properly in the world, and also add the race start line and the road beneath the spaceship.
+        
+        Finally, we run the countdown to warn the player the race is about to start - to get a more visible countdown in the middle of the screen, I'm using ASCII art to show large numbers (you can find one converter [here](https://patorjk.com/software/taag/#p=display&f=Blocks&t=1), for example).
+
+        The code also reads and sets various global variables declared before the function (like the recursive function `runCountdown()`, the `acceleratorTimer` or the `countdown` number).
+
+    - subtitle: "Initialising/Spawning the player"
+
+    - text: |
+        If you look carefully, you'll see that contrary to the code of the ["Lone Scoundrel"](/guides/tutorials/lone-scoundrel) tutorial, our `initPlayer()` and `spawnPlayer()` functions take in a [`Player`](/reference/player) instance: this is how we'll easily apply them to multiple players when we've added them! For now, we call them with our own instance, stored in the built-in `Player` variable, but later on we'll be able to prepare all the clients the same.
+
+        Other than that, the script simply prepares an orbital camera and a specific avatar for our player, just like in this other tutorial. I've also added a spot light under the spaceship to indicate the colour of the player for this game (based on [their unique `ID`s](/reference/player#property-id))
+
+    - subtitle: "Making/Moving walls"
+
+    - text: |
+        Then, we have various functions to periodically add walls on the road for the player to destroy: `prepareWalls()`, `makeWalls()` and `spawnWall()`. In short, altogether they generate 1 to 3 walls in the distance in front of each player (for now, it's just us) and adds them to the `walls` table so we can update them later on. However, to make the update easier afterwards, we store the walls in a table of table: `walls` contain one table per connected player, and each sub-table contains the walls on the line of this player. So it has a shape that looks something like this:
+
+    - code: |
+        {
+            [0]: { [wall 0], [wall 1] },
+            [1]: { [wall 2], [wall 3], [wall 4] },
+            [2]: { [wall 5] },
+        }
+    
+    - text: |
+        <i>Note: in this example, we have three players with IDs `0`, `1` and `2`, and they each have walls on their lines: 2 for the player `0`, 3 for the player `1` and 1 for the player `2` :)</i>
+
+        The way the logic is separated in the three functions may seem a bit arbitrary for now, but it will make it easier to turn it multi-player in a while. The important part is to understand that the "entry-point" of this generation process is the `makeWalls()` function that call the other two at the right time, and is regularly run by our `spawnTimer` (the one we set in the `Client.OnStart()`).
+
+        Once our walls have been generated, we use our `Client.Tick()` function (and more precisely the `gameUpdate()` and `updatePlayerWalls()` functions we indirectly call in it) to move those walls in the reverse direction from the one of the player:
+        
+    - code: |
+        function updatePlayerWalls(dt, p)
+            if not p.init then return end
+            if not p.alive then return end
+
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w.Position = w.Position + p.Backward * shipSpeed * dt
+                    if collides(p.avatar, w) then
+                        die()
+                    end
+                end
+            end
+        end
+
+    - text: |
+        It's the same technique as the one we used in the ["Lone Scoundrel"](/guides/tutorials/lone-scoundrel) episode: we're simulating the ship moving forward by having everything else move backwards!
+
+    - subtitle: "Shooting bullets"
+
+    - text: |
+        Each player can shoot bullets (on their own line) to destroy the walls in front of them: if the wall is gray, you have to shoot a "normal" (white) bullet with the `Action2` input, and if the wall is red, you have to shoot a "special" (red) bullet with the `Action1` input:
+
+    - code: |
+        Client.Action2 = function()
+            if not Player.alive then return end
+            spawnBullet(Player, false)
+        end
+
+        Client.Action3 = function()
+            if not Player.alive then return end
+            spawnBullet(Player, true)
+        end
+
+    - text: |
+        Once again, we pass the [`Player`](/reference/player) instance to the `spawnBullet()` function so we can re-use in the multi-player version more easily. The bullet is a simple procedural cube that is spawned at the position of the player that shot it, and is then moved during the `gameUpdate()` process, with the `updateBullets()` function:
+
+    - code: |
+        function updateBullets(dt, p)
+            for i, b in ipairs(bullets) do
+                b.Position = b.Position + b.Forward * BULLET_RELATIVE_SPEED * dt
+
+                -- if hits wall: destroy wall and bullet
+                local destroyed = false
+                if walls[b.pID] ~= nil then
+                    for j, w in pairs(walls[b.pID]) do
+                        if collides(b, w) and b.isSpecial == w.isSpecial then
+                            w:RemoveFromParent()
+                            table.remove(walls[b.pID], j)
+                            b:RemoveFromParent()
+                            table.remove(bullets, i)
+                            destroyed = true
+                        end
+                    end
+                end
+
+                if not destroyed then
+                    -- if too far in front: destroy bullet
+                    if (b.Position - Player.Position).Length > 300 then
+                        b:RemoveFromParent()
+                        table.remove(bullets, i)
+                    end
+                end
+            end
+        end
+
+    - text: |
+        This method relies on concepts we already saw in previous episodes, like looping through all the instances in a table (here: `bullets`) to update their position and move them in the world, or checking for collisions with a `collides()` function, or even remove the objects if they are too far away. We could of course do some object pooling, as discussed in ["Lone Scoundrel"](/guides/tutorials/lone-scoundrel), but this would make the code more complex and potentially divert us from the multi-player parts ;)
+
+    - subtitle: "Ending the game & respawning"
+
+    - text: |
+        Finally, our solo-game script contains some logic to trigger the game over and respawn the player automatically for a new game. Basically, whenever we move the walls, we also check if there isn't one that collides with the player on the line and, if there is, then we "kill" that player. Since, at the moment, we're the only one playing, it's only the game over, and we have a little timer to auto-respawn one second later:
+
+    - code: |
+        function updatePlayerWalls(dt, p)
+            if not p.init then return end
+            if not p.alive then return end
+
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w.Position = w.Position + p.Backward * shipSpeed * dt
+                    if collides(p.avatar, w) then
+                        die()
+                    end
+                end
+            end
+        end
+
+        die = function()
+            killPlayer(Player)
+
+            spawnTimer:Cancel()
+            acceleratorTimer:Cancel()
+            shipSpeed = SHIP_SPEED
+            countdown = 4
+            Timer(1, function()
+                spawnPlayer(Player)
+                runCountdown()
+            end)
+        end
+
+    - text: |
+        "Killing" a player mostly means turning some flag to `false` to update their state, clearing the walls on their line and showing a [`TextBubble`](/reference/player#functions-textbubble) to tell the others this player is out!
+
+    - title: "Making a multi-player game"
+
+    - text: |
+        <i><strong>Important note: if you want to test your multi-player game, make sure you take a look at the quick ["Testing a multi-player game"](/guides/quick/testing-multiplayer-game) guide :)</strong></i>
+
+        Now that we've seen how the solo version of this game works, let's discuss how we can turn it into a multi-player one!
+
+        Before we code anything, we need to talk a bit about the structure we have to build to do that.
+
+    - subtitle: "Sharing a world, all united..."
+
+    - text: |
+        A multi-player game is, you guessed it, a game that allows multiple players to play at the same time, either against each other or in cooperation, and usually offers a shared world to everyone. This is crucial, and it can be one of the first problem you encounter when you first dive into multi-player programming: players expect their opponents and friends to see the same thing as them (the point of view will obviously be different, since each player has its own camera, but all cameras should show a consistent world).
+
+        To do this, we'll have to maintain a reference to the current state of the game, among four: "Waiting", "Starting", "Running" or "End".
+
+        - the "Waiting" state is the initial state for all players: it's when you're still waiting for more players to actually start a game
+        - the "Starting" state is the next state: it starts when there are enough players to start a game, and the countdown is running for everyone
+        - then, the "Running" state is the game the state is in most of the time: it starts when the countdown is finished and ends when there is just 1 or 0 players alive (1 player alive makes this one the winner, 0 players alived results in a tie)
+        - finally, the "End" state is a short transitional state that starts as soon as the last or last-but-one player dies and ends when a new game starts (if there are still enough players)
+
+        When you start to design more complex games with states like this, it can be interesting to draw a diagram of the "lifecycle" of your game:
+
+    - image: "/images/guides/03-space-race_lifecycle.jpg"
+
+    - text: |
+        This helps you quickly check in which state your game should be at any point in time :)
+
+    - subtitle: "Server & clients"
+
+    - text: |
+        This notion of "sharing a world" also directly leads to another fundamental multi-player programming concept: the notion of client and server.
+
+        As a Cubzh player, when you edit or launch a game from the menu and get teleported in the world as your avatar, you exist in a world that is stored somewhere on a server. You yourself are a client, i.e. a "user" of this world: you can act upon it and modify it to some extent, but the data is not actually on your computer.
+
+        Now, suppose other players connect into the same world - they will be registered as other clients of your server.
+
+    - image: "/images/guides/server-client_00.jpg"
+
+    - text: |
+        By default, they'll get the same world as you: they'll have the same map, and they'll be spawned in the same location as you. But they won't be able to see you, or you them. And if you start to spawn some objects (like walls or bullets) in your world, you'll quickly realise that you're just updating your version of the world.
+
+        That's the difference between running code on the "server side" and the "client side": what happens on the server is shared between all clients connected to it, but what happens on a client is not known by the other clients:
+
+    - image: "/images/guides/server-client_01.jpg"
+
+    - text: |
+        What we'd like for our multi-player "Space Race" is to have a unique world common to all players:
+
+    - image: "/images/guides/server-client_02.jpg"
+
+    - text: |
+        To get this unique consistent shared instance of the world, we basically have two types of data transfer:
+
+        - we can compute and/or store things on the server, and then send them to all the clients. This is useful when you have a game-related data to share that should be perfectly synced between all clients and can be precisely timed by the server. In that case, the data is computed on the shared server and is then "interpreted" by each client in the same way to reproduce equivalent states everywhere. For example, the server could tell each client to "spawn a wall" at a specific position: each client will receive this message and interpret it to instantiate a wall in its version of the world. In the end, all clients will have a new wall in the same position, and will therefore share a consistent world state.
+
+    - image: "/images/guides/server-client_03.jpg"
+
+    - text: |
+        - we can also compute things on one client, and then send it to the other clients. Typically, if the result of a user action (like `Action1` or `Action2`) changes the world (for example, by spawning a new bullet somewhere), then the server can't know about it in advance; instead, it makes more sense to have the client performing the action directly tell the rest of the clients what happened so they can update their own world and get a consistent state.
+
+        In that case, the client performing the action takes care of updating the world on its own first, and then sends the info to the other clients so they can change their versions too.
+
+    - image: "/images/guides/server-client_04.jpg"
+
+    - text: |
+        - we could even have some info that is computed by a player but is useful to the server; for example, if a player dies, the server should know it to re-update its list of active players and properly assess whether the game should end or not.
+
+    - image: "/images/guides/server-client_05.jpg"
+
+    - text: |
+        The server or the client that wants to communicate some info can obviously want to do so to multiple recipients at once (typically: if the player dies, the server should be informed but the other players too, because they'll need to update the dead player's avatar and/or state in their own version of the world).
+
+        But now the question is of course: how can we actually transfer this data between our server and clients? For now, we've seen various Cubzh APIs to communicate between our client and the server, but we don't know how to make the server talk to the client(s), or the clients talk to each other! The solution is to use events! :)
+
+    - subtitle: "Events: the crux of data sharing"
+
+    - text: |
+        Basically, events are like messages. They are created by the "sender", can be filled with extra properties to carry some data, and transferred to one or more "receivers". You can send and receive events whichever way you'd like: from/to the server and from/to the client(s).
+
+        Long story short: the events are the Lua objects we need to create to make the green, blue and purple arrows in our last three diagrams:
+
+    - image: "/images/guides/server-client_06.jpg"
+
+    - text: |
+        Creating events is very easy thanks to Cubzh's [`Event`](/reference/event) API:
+
+    - code: |
+        e = Event()
+        -- set a property to define the "action"
+        -- to trigger with this event
+        e.action = "displayText"
+        -- set extra properties
+        e.text = "Hello world"
+        e.toUpper = false
+
+        -- send to all clients = players
+        e:SendTo(Players)
+        -- send to the server
+        e:SendTo(Server)
+
+    - text: |
+        You can send events to 4 types of "people": the server (`Server`), all the players (`Players`), all the players but the sender (`OtherPlayers`) or a client in particular (i.e. an instance of [`Player`](/reference/player)).
+
+        Then, you'll need to tell your recipients to listen to events and have a callback process; this is done in the `Client.DidReceiveEvent()` or `Server.DidReceiveEvent()` functions:
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            local s = e.Sender
+            print("Received event from: " .. s)
+            if e.action == "displayText" then
+                if e.toUpper then
+                    print(e.text.upper())
+                else
+                    print(e.text)
+                end
+            end
+        end
+
+        Server.DidReceiveEvent = function(e)
+            local s = e.Sender
+            print("Received event from: " .. s)
+            if e.action == "displayText" then
+                print("(I am the server - I don't react to do this event)")
+            end
+        end
+
+    - text: |
+        All the clients that receive an event (no matter who sent it) will react to it in their `Client.DidReceiveEvent()` function - here, if the event has an action of "displayText", they'll (optionally format and) print the text in the event. The server also checks events, but it won't actually do anything receiving an event with this action.
+
+    - title: "Turning \"Space Race\" into a multi-player game!"
+
+    - text: |
+        Alright - enough talking! Time to use all these concepts and theories to make our game multi-player :)
+
+        <i><strong>Important note: in all this code, we'll use the following convention: all the variables and functions that are on the server side are prefixed with the word "server", while the ones on the client side don't have any specific prefix.</strong></i>
+
+        First of all, let's prepare our 4 game states, and some functions to update the current value:
+
+    - code: |
+        ---------------------------------
+        local GAME_STATES = {
+            Waiting = 0,
+            Starting = 1,
+            Running = 2,
+            End = 3
+        }
+        local gameState = GAME_STATES.Waiting
+        local serverGameState = GAME_STATES.Waiting
+
+        function setGameState(newState)
+            -- perform special actions on state transitions
+            -- (client side)
+
+            -- update the state on the client side
+            gameState = newState
+        end
+
+        function serverSetGameState(newState)
+            -- perform special actions on state transitions
+            -- (server side)
+
+            -- update the state on the server side
+            serverGameState = newState
+        end
+
+    - text: |
+        Even if they will always be the same, it's better to define a variable for the current game state both on the client side and the server side because:
+        
+        - the server variable is the real source of truth: it keeps everyone in sync and insures our game is robust
+        - the client variable cannot change on its own: it can only be set via an event from the server - but it gives us a quicker access to the value and makes our game more optimised (because the client doesn't have to ask the server for the value - it's like a local "caching" of the server value)
+
+        Now let's go to through each of game states one by one, without forgetting to implement the logic of the state transitions (for example, how to update the UI when switching from "Waiting" to "Starting" states).
+
+    - subtitle: "Implementing the \"Waiting\" state"
+
+    - text: |
+        We said before that the "Waiting" state is the one the clients and the server start in: that's why I set the default value of the `gameState` and `serverGameState` values to `GAME_STATES.Waiting`.
+
+        What we need to do is keep checking if there are enough players for a new game, and if there are switch to the "Starting" state. In other words, if our current `nPlayers` count is at least equal to our `MIN_PLAYERS` arbitrary value (the minimum number of players required to start a game), we'll want to switch to the "Starting" state on the server side, and communicate this update to the clients with a specific "setGameState" event. And we'll need to run this check regularly on the server side, so we should use the `Server.Tick()`:
+
+    - code: |
+        ---------------------------------
+        local MIN_PLAYERS = 2
+        local nPlayers = 0
+
+        Server.Tick = function(dt)
+            if serverGameState == GAME_STATES.Waiting then
+                if nPlayers >= MIN_PLAYERS then
+                    serverSetGameState(GAME_STATES.Starting)
+                end
+            end
+        end
+
+        function serverSetGameState(newState)
+            local e = Event()
+            e.action = "setGameState"
+            e.state = newState
+            e:SendTo(Players)
+
+            serverGameState = newState
+        end
+
+    - text: |
+        To actually keep track of the current number of players, we have to increment or decrement our `nPlayers` counter whenever a new player joins the game, or leaves it; this can be done easily via the cleverly named `Server.OnPlayerJoin()` and `Server.OnPlayerLeave()` functions ;)
+
+    - code: |
+        Server.OnPlayerJoin = function(p)
+            nPlayers = nPlayers + 1
+        end
+
+        Server.OnPlayerLeave = function(p)
+            nPlayers = nPlayers - 1
+            p.alive = false
+        end
+
+    - text: |
+        Of course, we also want to do a few things on the client side. Namely, we want to init the avatar of the player that just joined and instantiate it in this client's version of the world. That's where our `initPlayer()` function and its [`Player`](/reference/player) instance parameter will come in handy! We can implement our logic in the client-equivalent of the functions we just saw, that are named `Client.OnPlayerJoin()` and `Client.OnPlayerLeave()`:
+
+    - code: |
+        Client.OnPlayerJoin = function(p)
+            print(p.Username .. " just joined")
+            initPlayer(p)
+        end
+
+        Client.OnPlayerLeave = function(p)
+            killPlayer(p)
+            p.avatar:RemoveFromParent()
+        end
+
+    - text: |
+        And when we receive the "setGameState" event, we should update our local `gameState` variable, and spawn the players we initialised previously:
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            if e.action == "setGameState" then
+                setGameState(e.state)
+            end
+        end
+
+        function setGameState(newState)
+            if newState == GAME_STATES.Starting then
+                Camera.LocalPosition.Y = 20
+            
+                for _, p in pairs(Players) do
+                    spawnPlayer(p)
+                end
+            end
+
+            gameState = newState
+        end
+
+    - text: |
+        If you run the game and ask friends to join in, you'll see that the other player(s) now spawn next to you:
+
+    - media: "/media/guides/03-space-race_spawn-players.mp4"
+
+    - text: |
+        The only problem is that, for now, most of the game state is still computed on the client side. For example, the countdown is actually different from one player to another, depending on when they joined! So let's keep going and take care of our "Starting" phase :)
+
+    - subtitle: "Fixing the \"Starting\" state"
+
+    - text: |
+        The nice thing is that, overall, we've already coded the countdown logic we need. All we have to do is move to the server side, and send the current countdown value to all the clients via a new "countdown" event:
+
+    - code: |
+        local serverSpawnTimer = nil
+        local serverAcceleratorTimer = nil
+
+        --------------
+        -- CLIENT
+        --------------
+        Client.DidReceiveEvent = function(e)
+            if e.action == "setGameState" then
+                setGameState(e.state)
+            elseif e.action == "countdown" then
+                updateCountdown(e.countdown)
+            end
+        end
+
+        --------------
+        -- SERVER
+        --------------
+        function serverSetGameState(newState)
+            local e = Event()
+            e.action = "setGameState"
+            e.state = newState
+            e:SendTo(Players)
+
+            if newState == GAME_STATES.Starting and serverGameState == GAME_STATES.Waiting then
+                for _, p in pairs(Players) do
+                    p.alive = true
+                end
+
+                -- reset ship speed to default
+                shipSpeed = SHIP_SPEED
+
+                local countdown = 3 -- in seconds
+                local e = Event()
+                e.action = "countdown"
+                local serverUpdateCountdown
+                serverUpdateCountdown = function()
+                    e.countdown = countdown
+                    e:SendTo(Players)
+                    countdown = countdown - 1
+                    if countdown > -1 then
+                        Timer(1, serverUpdateCountdown)
+                    else
+                        Timer(2, serverSendWalls)
+                        serverAcceleratorTimer = Timer(5, true, function()
+                            shipSpeed = shipSpeed + 10
+                            minSpawnTime = minSpawnTime - 0.5
+                            if minSpawnTime < 1 then minSpawnTime = 1 end
+                            maxSpawnTime = maxSpawnTime - 0.5
+                            if maxSpawnTime < 2 then maxSpawnTime = 2 end
+                        end)
+                        serverSetGameState(GAME_STATES.Running)
+                    end
+                end
+                serverUpdateCountdown()
+            end
+
+            serverGameState = newState
+        end
+    
+    - text: |
+        <i>Note: I've also renamed some of our variables like the timers with the "server" prefix since they are now stored on the server side :)</i>
+
+        Of course, don't forget to remove all the obsolete code from the `Client.OnStart()` function:
+
+    - code: |
+        Client.OnStart = function()
+            Map.IsHidden = true
+
+            TimeCycle.On = false
+            Time.Current = Time.Noon
+        
+            UI.Crosshair = false
+
+            countdownLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+            countdownLabel:Remove()
+        end
+
+    - text: |
+        Now, our countdown is handled by the server and perfectly synced between all the currently connected players!
+    
+    - subtitle: "Coding up the \"Running\" state"
+
+    - text: |
+        The next step is to update the logic for our main state: the "Running" phase. Luckily, our code is structured with these changes in mind so it shouldn't be too hard. We just have to be careful what the server knows, what the client knows and what the other clients know...
+
+        First of all: let's fix the walls. For now, if you ask your friend on the other end of the second avatar, they'll probably tell you that something's wrong: they apparently don't have the same playground as you!
+
+        That's because, as you might remember, those walls are spawned and positioned randomly... and, up to this point, we kept all this code on the client side so, basically, each player just had its own random walls generated each time. Again, we need to move the code to the server; but remember how we cut the logic in multiple functions before, with our `prepareWalls()`, `makeWalls()` and `spawnWall()`? Now, this preparation will shine :)
+
+        What we want to do is take the `prepareWalls()` and `makeWalls()` functions and move with the rest of the server code; then, we'll rename them `serverPrepareWalls()` and `serverSendWalls()`, and we'll modify the second one a bit to send the result of the computation as an event to all the clients. However, as of today, Cubzh [`Event`](/reference/event)s can't transfer Lua tables directly: they only support strings, numbers or booleans. So the trick is to encode our data using the built-in [`JSON`](/reference/json) encoder to turn it into a formatted string:
+
+    - code: |
+        function serverSpawnWalls()
+            local wallsData = {}
+            for _, p in pairs(Players) do
+                local pos = getPlayerPosition(p.ID)
+                for i = 1, math.floor(randomBetween(1, 3)) do
+                    table.insert(wallsData, {
+                        pID = p.ID,
+                        isSpecial = math.random() < 0.3,
+                        pos = { pos.X, pos.Y, pos.Z },
+                        d = randomBetween(65, 90) + (i - 1) * 40,
+                    })
+                end
+            end
+            return wallsData
+        end
+
+        function serverSendWalls()
+            local e = Event()
+            e.action = "walls"
+            e.walls = JSON:Encode(serverSpawnWalls())
+            e:SendTo(Players)
+
+            serverSpawnTimer = Timer(randomBetween(minSpawnTime, maxSpawnTime), serverSendWalls)
+        end
+
+    - text: |
+        Then, on the client side, we'll listen to this event and, if need be, call our `spawnWall()` function from before with the decoded data from the event:
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            if e.action == "setGameState" then
+                setGameState(e.state)
+            elseif e.action == "countdown" then
+                updateCountdown(e.countdown)
+            elseif e.action == "walls" then
+                local wallsData = JSON:Decode(e.walls)
+                for _, w in ipairs(wallsData) do
+                    spawnWall(w)
+                end
+            end
+        end
+
+    - text: |
+        Try to publish and re-run the game: you'll see that all the players now have the same walls in front of them - thanks to a "server-to-client" event, we've made our world consistent :)
+
+        Except that we have the exact same issue with the bullets: at the moment, they are spawned solely on the client side and the others have no idea there is currently a bullet moving in front of their opponent to hit the wall. This time, we'll want to trigger a "client-to-client" event so that whenever a client spawns a bullet, the other know about it and "copy" this bullet in their own version of the world.
+
+        To do this, let's update our `spawnBullet()` function so that, at the end, it calls a `sendEventBulletSpawned()` method that, in turns, tells all the `OtherPlayers` about the new bullet. And then, we'll add this new type of event to our `Client.DidReceiveEvent()` if-else checks:
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            -- get event sender
+            local p = e.Sender
+            
+            if e.action == "setGameState" then
+                ...
+            elseif e.action == "countdown" then
+                ...
+            elseif e.action == "walls" then
+                ...
+            elseif e.action == "bulletSpawned" then
+                spawnBullet(p, e.isSpecial)
+            end
+        end
+
+        function spawnBullet(p, isSpecial)
+            ...
+            if p == Player then
+                sendEventBulletSpawned(isSpecial)
+            return
+        end
+
+        sendEventBulletSpawned = function(isSpecial)
+            local e = Event()
+            e.action = "bulletSpawned"
+            e.isSpecial = isSpecial
+            e:SendTo(OtherPlayers)
+        end
+
+    - text: |
+        <strong>Be careful</strong>: you must insure that only the current player sends the event, and that it sends it only to the other players - otherwise, you risk having an infinite loop of events that keep calling themselves and spawn bullets endlessly!
+
+        A last improvement is to check if the game state is `GAME_STATES.Running` to cancel the firing of bullets, or the movement of the walls:
+
+    - code: |
+        Client.Tick = function(dt)
+            if gameState == GAME_STATES.Running then
+                if not Player.alive then return end
+                gameUpdate(dt)
+            end
+        end
+
+        Client.Action2 = function()
+            if not Player.alive then return end
+            if gameState == GAME_STATES.Running then
+                spawnBullet(Player, false)
+            end
+        end
+
+        Client.Action3 = function()
+            if not Player.alive then return end
+            if gameState == GAME_STATES.Running then
+                spawnBullet(Player, true)
+            end
+        end
+
+    - text: |
+        With all those fixes, the bullets are now properly shared between the two screens along with the walls and the rest of the world:
+
+    - media: "/media/guides/03-space-race_sync.mp4"
+
+    - subtitle: "Setting up the end game"
+
+    - text: |
+        Last but not least, we have to fix the transition to the "End" phase, and handle the auto-reload for a new game. For now, our code will crash if we hit a wall because the `die()` function we coded for the solo-game references some invalid timers:
+
+    - code: |
+        die = function()
+            killPlayer(Player)
+
+            spawnTimer:Cancel()
+            acceleratorTimer:Cancel()
+            shipSpeed = SHIP_SPEED
+            countdown = 4
+            Timer(1, function()
+                spawnPlayer(Player)
+                runCountdown()
+            end)
+        end
+
+    - text: |
+        What we want to do is, instead of having this `die()` function, replace it with a `sendEventDied()` function that broadcasts a "died" event to all players and the server:
+
+    - code: |
+        function updatePlayerWalls(dt, p)
+            if not p.init then return end
+            if not p.alive then return end
+
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w.Position = w.Position + p.Backward * shipSpeed * dt
+                    if collides(p.avatar, w) then
+                        sendEventDied()
+                    end
+                end
+            end
+        end
+
+        sendEventDied = function()
+            local e = Event()
+            e.action = "died"
+            killPlayer(Player)
+            e:SendTo(OtherPlayers)
+            e:SendTo(Server)
+        end
+
+    - text: |
+        We'll have to catch and respond to this event on the client side, by "killing" the player (this will clean the avatar and the line of the dead player):
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            -- get event sender
+            local p = e.Sender
+            
+            if e.action == "setGameState" then
+                ...
+            elseif e.action == "countdown" then
+                ...
+            elseif e.action == "walls" then
+                ...
+            elseif e.action == "bulletSpawned" then
+                ...
+            elseif e.action == "died" then
+                killPlayer(p)
+            end
+        end
+
+    - text: |
+        Then, we'll also have to get the event on the server side to properly handle the transition to the "End" phase. Basically, we just have to check how many players are still alive - I'll also make sure to handle a solo-game case (i.e. with `MIN_PLAYERS = 1`):
+
+        - if we are in multi and there are 0 players still alive, we end the game with a tie
+        - if we are in multi and there is 1 player still alive, we end the game with a win for the alive player
+        - if we are in solo, we simply end the game with a "Game over!" message
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            -- get event sender
+            local p = e.Sender
+            
+            if e.action == "setGameState" then
+                ...
+            elseif e.action == "clearLine" then
+                clearPlayerLine(Players[e.player])
+            end
+        end
+
+        Server.DidReceiveEvent = function(e)
+            if e.action == "died" and serverGameState == GAME_STATES.Running then
+                if not e.Sender.alive then return end
+                e.Sender.alive = false
+                local playersAlive = {}
+                for _, p in pairs(Players) do
+                    if p.alive then
+                        table.insert(playersAlive, p)
+                    end
+                end
+                local nPlayersAlive = #playersAlive
+                if MIN_PLAYERS > 1 then
+                    if nPlayersAlive == 0 then
+                        serverEndGame("Tie")
+                    end
+                    if nPlayersAlive == 1 then
+                        local winner = playersAlive[1]
+                        serverEndGame(winner.Username .. " won!")
+
+                        local e = Event()
+                        e.action = "clearLine"
+                        e.player = winner.ID
+                        e:SendTo(Players)
+                    end
+                else
+                    serverEndGame("Game over!")
+                end
+            end
+        end
+
+        function serverEndGame(text)
+            local e = Event()
+            e.action = "endGame"
+            e.text = text
+            e:SendTo(Players)
+
+            serverSpawnTimer:Cancel()
+            serverAcceleratorTimer:Cancel()
+
+            serverSetGameState(GAME_STATES.End)
+        end
+
+    - text: |
+        By the way, we can also make sure that if everyone leaves and there isn't enough players to continue playing, we switch back to "Waiting":
+
+    - code: |
+        Server.Tick = function(dt)
+            if serverGameState == GAME_STATES.Waiting then
+                if nPlayers >= MIN_PLAYERS then
+                    serverSetGameState(GAME_STATES.Starting)
+                end
+            end
+            if serverGameState == GAME_STATES.Starting or serverGameState == GAME_STATES.Running then
+                if nPlayers < MIN_PLAYERS then
+                    print("All the other players left. Waiting for a new player...")
+                    serverSetGameState(GAME_STATES.Waiting)
+                end
+            end
+        end
+
+    - text: |
+        And create a [`Timer`](/reference/timer) as soon as the game ends to restart a new one 3 seconds later:
+
+    - code: |
+        function serverSetGameState(newState)
+            local e = Event()
+            e.action = "setGameState"
+            e.state = newState
+            e:SendTo(Players)
+
+            if newState == GAME_STATES.Starting and serverGameState == GAME_STATES.Waiting then
+                ...
+            elseif newState == GAME_STATES.End and serverGameState == GAME_STATES.Running then
+                Timer(3, function()
+                    serverSetGameState(GAME_STATES.Waiting)
+                end)
+            end
+
+            serverGameState = newState
+        end
+
+    - subtitle: "Adding a few UI labels"
+
+    - text: |
+        I'll wrap up this tutorial by adding a "Waiting" label (that will also be used to show the number of remaining players), and an "End" label for the win/game over screen. We can create them in the `Client.OnStart()`:
+
+    - code: |
+        Client.OnStart = function()
+            Map.IsHidden = true
+
+            TimeCycle.On = false
+            Time.Current = Time.Noon
+        
+            UI.Crosshair = false
+
+            -- UI variables
+            waitingLabel = UI.Label("Waiting for more players...", Anchor.HCenter, Anchor.Top)
+            countdownLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+            endLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+
+            countdownLabel:Remove()
+            endLabel:Remove()
+        end
+
+    - text: |
+        Then:
+        - if we're in the "Waiting" state, we'll set the "Waiting" label's message and we'll hide the "End" label
+        - if we're in the "Starting" state, we'll change the "Waiting" label to show "Ready?"
+        - if we're in the "End" state, we'll update and show the "End" label when the client receives an "endGame" event
+
+    - code: |
+        Client.DidReceiveEvent = function(e)
+            -- get event sender
+            local p = e.Sender
+            
+            if e.action == "setGameState" then
+                ...
+            elseif e.action == "endGame" then
+                endLabel.Text = e.text
+                endLabel:Add()
+            end
+        end
+
+        function setGameState(newState)
+            if newState == GAME_STATES.Waiting then
+                waitingLabel.Text = "Waiting for more players..."
+                endLabel:Remove()
+            elseif newState == GAME_STATES.Starting then
+                if waitingLabel ~= nil then
+                    waitingLabel.Text = "Ready?"
+                end
+
+                Camera.LocalPosition.Y = 20
+            
+                for _, p in pairs(Players) do
+                    spawnPlayer(p)
+                end
+            end
+
+            gameState = newState
+        end
+                
+    - text: |
+        - and all throughout the game, we'll use the "Waiting" label to show how many players are still alive:
+
+    - code: |
+        function setGameState(newState)
+            if newState == GAME_STATES.Waiting then
+                ...
+            elseif newState == GAME_STATES.Starting then
+                ...
+            elseif newState == GAME_STATES.Running then
+                updateRemainingPlayers()
+            end
+
+            gameState = newState
+        end
+
+        function updateRemainingPlayers()
+            local nPlayers = 0
+            for _, p in pairs(Players) do
+                if p.alive then
+                    nPlayers = nPlayers + 1
+                end
+            end
+            if waitingLabel ~= nil then
+                waitingLabel.Text = "Remaining players: " .. nPlayers
+            end
+        end
+
+        sendEventDied = function()
+            local e = Event()
+            e.action = "died"
+            killPlayer(Player)
+            updateRemainingPlayers()
+            e:SendTo(OtherPlayers)
+            e:SendTo(Server)
+        end
+
+    - title: "Bonus: Adding some road markers to help fake the movement"
+
+    - text: |
+        We've now successfully "converted" our solo-game to a multi-player version: we can have several clients join and spawn their ships next to each while always maintaining a consistent shared state of the world (thanks to the server that allows robust synchronisation).
+        
+        But if you play the game at this point, you might feel like it's a bit off - once you and your friends have destroyed all the walls on the lines, then everything gets totally still until new ones pop. That's not ideal, cause it makes our feeling of motion constantly come and go!
+
+        To fix this, we can spawn some plots on the side of the road to keep this motion going; and this time, I'll re-use the object pooling technique we saw in the [previous tutorial](/guides/tutorials/lone-scoundrel) :)
+
+    - code: |
+        ---------------------------------
+        local PLOTS_SPACING = 30
+        local PLOTS_N_HALF = 5
+        local roadPlots = {}
+
+        function spawnPlayer(p)
+            ...
+
+            -- if first or last player: add road plots
+            local idx = getPlayerIndex(p.ID)
+            local plotsSpawnSides = {}
+            if idx == 1 then table.insert(plotsSpawnSides, -1) end
+            if idx == #Players then table.insert(plotsSpawnSides, 1) end
+            
+            for _, side in pairs(plotsSpawnSides) do
+                for i = -PLOTS_N_HALF, PLOTS_N_HALF do
+                    local plot = MutableShape()
+                    plot:AddBlock(COLOR_BLACK, 0, 0, 0)
+                    plot.Scale = Number3(0.5, 2, 0.5) * Map.LossyScale
+                    local x = p.Position.X + side * 2 * Map.LossyScale.X
+                    if side == -1 then x = x - 0.5 * Map.LossyScale.X end
+                    plot.Position = Number3(x, -1, i * PLOTS_SPACING * Map.LossyScale.Z)
+                    World:AddChild(plot)
+                    table.insert(roadPlots, plot)
+                end
+            end
+        end
+
+        function setGameState(newState)
+            if newState == GAME_STATES.Waiting then
+                waitingLabel.Text = "Waiting for more players..."
+                endLabel:Remove()
+
+                for _, p in pairs(roadPlots) do
+                    p:RemoveFromParent()
+                end
+                roadPlots = {}
+            elseif newState == GAME_STATES.Starting then
+                ...
+            elseif newState == GAME_STATES.Running then
+                ...
+            end
+
+            gameState = newState
+        end
+
+        function updateRoadPlots(dt)
+            for _, p in pairs(roadPlots) do
+                p.Position = p.Position + Player.Backward * shipSpeed * dt
+                if p.Position.Z < -PLOTS_N_HALF * PLOTS_SPACING * Map.LossyScale.Z then
+                    p.Position.Z = PLOTS_N_HALF * PLOTS_SPACING * Map.LossyScale.Z
+                end
+            end
+        end
+
+        function gameUpdate(dt)
+            for _, p in pairs(Players) do
+                updatePlayerWalls(dt, p)
+            end
+            updateBullets(dt)
+            updateRoadPlots(dt)
+        end
+
+    - title: "Conclusion"
+
+    - text: |
+        In this third tutorial, we made our first multi-player game: "Space Race"! This time, we re-used the Cubzh's features we saw before, and discovered how to turn a solo-game into a multi-player one :)
+        
+        You can find the game on Cubzh (by going to the worlds list and searching for "Space Race") or re-create your own and then tweak it to your liking: feel free to share all your creations with us, we'd love to hear from you!
+
+    - media: "/media/guides/03-space-race_demo-final.mp4"
+
+    - title: "Resources & links"
+
+    - subtitle: "API objects used in this tutorial:"
+
+    - text: |
+        - [`Button`](/reference/button)
+        - [`Camera`](/reference/camera)
+        - [`Client`](/reference/client)
+        - [`Color`](/reference/color)
+        - [`Config`](/reference/config)
+        - [`Fog`](/reference/fog)
+        - [`Items`](/reference/items)
+        - [`Label`](/reference/label)
+        - [`Light`](/reference/light)
+        - [`MutableShape`](/reference/mutableshape)
+        - [`Number3`](/reference/number3)
+        - [`Object`](/reference/object) (indirectly)
+        - [`Palette`](/reference/palette) (indirectly)
+        - [`Player`](/reference/player)
+        - [`Pointer`](/reference/pointer)
+        - [`UI`](/reference/ui)
+        - [`World`](/reference/world)
+
+    - subtitle: "Final code"
+
+    - text : |
+        As a reference, here is the final code of "Space Race" - remember that you can also check it out directly on Cubzh by playing the game and clicking the "Read the code" button!
+
+    - code: |
+        Config = {
+            Map = "minadune.empty",
+            Items = {
+                "minadune.spaceship",
+                "minadune.race_start",
+            },
+        }
+
+        ---------------------------------
+        local COLOR_BLACK = Color(0, 0, 0)
+        local COLOR_WHITE = Color(255, 255, 255)
+        local COLOR_RED = Color(255, 50, 50)
+        local COLOR_RED_DARK = Color(150, 5, 5)
+        local COLOR_GRAY = Color(180, 180, 180)
+        local COLOR_GRAY_DARK = Color(60, 60, 60)
+        local PLAYER_COLORS = {
+            Color(255, 0, 255),
+            Color(150, 0, 180),
+            Color(10, 235, 10),
+            Color(255, 255, 0),
+            Color(255, 0, 0),
+            Color(80, 80, 255),
+            Color(120, 180, 255),
+            Color(255, 50, 50)
+        }
+        local SHIP_SPEED = 210
+        local BULLET_RELATIVE_SPEED = 100
+        ---------------------------------
+        local GAME_STATES = {
+            Waiting = 0,
+            Starting = 1,
+            Running = 2,
+            End = 3
+        }
+        local gameState = GAME_STATES.Waiting
+        local serverGameState = GAME_STATES.Waiting
+        ---------------------------------
+        local MIN_PLAYERS = 1
+        local nPlayers = 0
+        ---------------------------------
+        local PLOTS_SPACING = 30
+        local PLOTS_N_HALF = 5
+        local roadPlots = {}
+        ---------------------------------
+        local ASCII_NUMBERS = {
+            [1] = ".----------------. \n| .--------------. |\n| |     __       | |\n| |    /  |      | |\n| |    `| |      | |\n| |     | |      | |\n| |    _| |_     | |\n| |   |_____|    | |\n| |              | |\n| '--------------' |\n'----------------' \n",
+            [2] = ".----------------. \n| .--------------. |\n| |    _____     | |\n| |   / ___ `.   | |\n| |  |_/___) |   | |\n| |   .'____.'   | |\n| |  / /____     | |\n| |  |_______|   | |\n| |              | |\n| '--------------' |\n'----------------' \n",
+            [3] = ".----------------. \n| .--------------. |\n| |    ______    | |\n| |   / ____ `.  | |\n| |   `'  __) |  | |\n| |   _  |__ '.  | |\n| |  | \\____) |  | |\n| |   \\______.'  | |\n| |              | |\n| '--------------' |\n'----------------' \n",
+        }
+        ---------------------------------
+        local walls = {}
+        local bullets = {}
+        local shipSpeed = SHIP_SPEED
+        local minSpawnTime = 2
+        local maxSpawnTime = 4
+
+        local serverSpawnTimer = nil
+        local serverAcceleratorTimer = nil
+
+        Client.OnStart = function()
+            Map.IsHidden = true
+
+            TimeCycle.On = false
+            Time.Current = Time.Noon
+        
+            UI.Crosshair = false
+
+            -- UI variables
+            waitingLabel = UI.Label("Waiting for more players...", Anchor.HCenter, Anchor.Top)
+            countdownLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+            endLabel = UI.Label("", Anchor.HCenter, Anchor.VCenter)
+
+            countdownLabel:Remove()
+            endLabel:Remove()
+        end
+
+        Client.OnPlayerJoin = function(p)
+            print(p.Username .. " just joined")
+            initPlayer(p)
+        end
+
+        Client.OnPlayerLeave = function(p)
+            killPlayer(p)
+            p.avatar:RemoveFromParent()
+        end
+
+        Client.AnalogPad = function(dx,dy)
+            if not Player.init then initPlayer(Player) end
+            cameraOrbit.LocalRotation.Y = cameraOrbit.LocalRotation.Y + dx * 0.01
+        end
+
+        Client.Tick = function(dt)
+            if gameState == GAME_STATES.Running then
+                if not Player.alive then return end
+                gameUpdate(dt)
+            end
+        end
+
+        Client.DidReceiveEvent = function(e)
+            -- get event sender
+            local p = e.Sender
+            
+            if e.action == "setGameState" then
+                setGameState(e.state)
+            elseif e.action == "countdown" then
+                updateCountdown(e.countdown)
+            elseif e.action == "walls" then
+                local wallsData = JSON:Decode(e.walls)
+                for _, w in ipairs(wallsData) do
+                    spawnWall(w)
+                end
+            elseif e.action == "bulletSpawned" then
+                spawnBullet(p, e.isSpecial)
+            elseif e.action == "died" then
+                killPlayer(p)
+            elseif e.action == "clearLine" then
+                clearPlayerLine(Players[e.player])
+            elseif e.action == "endGame" then
+                endLabel.Text = e.text
+                endLabel:Add()
+            end
+        end
+
+        Client.Action2 = function()
+            if not Player.alive then return end
+            if gameState == GAME_STATES.Running then
+                spawnBullet(Player, false)
+            end
+        end
+
+        Client.Action3 = function()
+            if not Player.alive then return end
+            if gameState == GAME_STATES.Running then
+                spawnBullet(Player, true)
+            end
+        end
+
+        Client.AnalogPad = function(dx,dy)
+            if not Player.init then initPlayer(Player) end
+            cameraOrbit.LocalRotation.Y = cameraOrbit.LocalRotation.Y + dx * 0.01
+        end
+
+        -------------------
+        -- INITIALIZATION
+        -------------------
+        function initPlayer(p)
+            if p.init then return end
+            p.color = PLAYER_COLORS[math.floor(p.ID % #PLAYER_COLORS) + 1]
+            p.Physics = false
+            p.IsHidden = true
+            World:AddChild(p, true) -- keep world
+
+            p.avatar = spawnPlayerShip(p)
+            World:AddChild(p.avatar)
+            if p == Player then
+                Camera:SetModeFree()
+                cameraOrbit = Object()
+                Player:AddChild(cameraOrbit)
+                cameraOrbit:AddChild(Camera)
+                Camera.LocalPosition = { 0, 15, -40 }
+                Camera.LocalRotation = { 0.35, 0, 0 }
+            end
+
+            p.init = true
+        end
+
+        -------------------
+        -- SPAWNERS
+        -------------------
+        function spawnPlayer(p)
+            if not p.init then initPlayer(p) end
+
+            p.Position = getPlayerPosition(p.ID)
+            p.avatar.Position = p.Position
+            p.alive = true
+            p.avatar:ClearTextBubble()
+
+            -- add race start
+            if p.start == nil then
+                local start = Shape(Items.minadune.race_start)
+                start.Position = Number3(p.Position.X, 0, 0)
+                start.Scale = Number3(2, 0.5, 2)
+                p.start = start
+                World:AddChild(start)
+            end
+            -- add race road
+            local road = MutableShape()
+            road:AddBlock(COLOR_BLACK, 0, 0, 0)
+            road.Scale = Number3(3, 0.5, 300) * Map.LossyScale
+            road.Position = Number3(p.Position.X - 7.5, -2.5, -150 * Map.LossyScale.Z)
+            World:AddChild(road)
+            p.road = road
+
+            -- if first or last player: add road plots
+            local idx = getPlayerIndex(p.ID)
+            local plotsSpawnSides = {}
+            if idx == 1 then table.insert(plotsSpawnSides, -1) end
+            if idx == #Players then table.insert(plotsSpawnSides, 1) end
+            
+            for _, side in pairs(plotsSpawnSides) do
+                for i = -PLOTS_N_HALF, PLOTS_N_HALF do
+                    local plot = MutableShape()
+                    plot:AddBlock(COLOR_BLACK, 0, 0, 0)
+                    plot.Scale = Number3(0.5, 2, 0.5) * Map.LossyScale
+                    local x = p.Position.X + side * 2 * Map.LossyScale.X
+                    if side == -1 then x = x - 0.5 * Map.LossyScale.X end
+                    plot.Position = Number3(x, -1, i * PLOTS_SPACING * Map.LossyScale.Z)
+                    World:AddChild(plot)
+                    table.insert(roadPlots, plot)
+                end
+            end
+        end
+
+        function spawnPlayerShip(p)
+            local ship = Shape(Items.minadune.spaceship)
+            ship.LocalRotation.Y = math.pi
+
+            -- Add light on ship
+            local l = Light()
+            l.Type = LightType.Spot
+            ship:AddChild(l)
+            l.LocalRotation = { math.pi / 2, 0, 0 }
+            l.Angle = 0.65
+            l.Range = 100
+            l.Hardness = 0.75
+            l.Color = Map.LocalPalette[p.color].Color
+
+            return ship
+        end
+
+        function spawnWall(wallData)
+            local wall = MutableShape()
+            wall.isSpecial = wallData.isSpecial
+            wall:AddBlock(wallData.isSpecial and COLOR_RED_DARK or COLOR_GRAY, 0, 0, 0)
+            wall.Scale = Number3(3, 3, 0.5) * Map.LossyScale
+            wall.Position = Number3(wallData.pos[1], wallData.pos[2], wallData.pos[3]) + Number3(-1.5, -0.5, wallData.d) * Map.LossyScale
+            wall.Physics = false
+            World:AddChild(wall)
+            if walls[wallData.pID] == nil then walls[wallData.pID] = {} end
+            table.insert(walls[wallData.pID], wall)
+        end
+
+        function spawnBullet(p, isSpecial)
+            if #bullets == 3 then return end
+
+            local bullet = MutableShape()
+            bullet.isSpecial = isSpecial
+            bullet.pID = p.ID
+            bullet.Physics = false
+            bullet:AddBlock(isSpecial and COLOR_RED or COLOR_WHITE, 0, 0, 0)
+            bullet.Scale = 1.5
+            World:AddChild(bullet)
+            bullet.Position = p.Position - Number3(0.5, 0.5, 0)
+            bullet.Forward = p.Forward
+            table.insert(bullets, bullet)
+            if p == Player then
+                sendEventBulletSpawned(isSpecial)
+            end
+        end
+
+        ---------------
+        -- GAME
+        ---------------
+        function killPlayer(p)
+            p.alive = false
+            p.avatar:TextBubble(p.Username .. " ☠")
+
+            clearPlayerLine(p)
+        end
+
+        function clearPlayerLine(p)
+            bulletIDsToRemove = {}
+            for i, b in pairs(bullets) do
+                if b.pID == p.ID then
+                    b:RemoveFromParent()
+                    table.insert(bulletIDsToRemove, i)
+                end
+            end
+            for _, i in pairs(bulletIDsToRemove) do
+                table.remove(bullets, i)
+            end
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w:RemoveFromParent()
+                end
+                walls[p.ID] = nil
+            end
+        end
+
+        -------------------
+        -- UI
+        -------------------
+        function updateCountdown(countdown)
+            if countdown == 0 then
+                countdownLabel:Remove()
+                -- remove "start race" player child objects
+                for _, p in pairs(Players) do
+                    if p.start ~= nil then
+                        p.start:RemoveFromParent()
+                        p.start = nil
+                    end
+                end
+            elseif countdownLabel ~= nil then
+                countdownLabel.Text = ASCII_NUMBERS[countdown]
+                countdownLabel:Add()
+            end
+        end
+
+        ---------------
+        -- GAME STATE
+        ---------------
+        function setGameState(newState)
+            if newState == GAME_STATES.Waiting then
+                waitingLabel.Text = "Waiting for more players..."
+                endLabel:Remove()
+
+                for _, p in pairs(roadPlots) do
+                    p:RemoveFromParent()
+                end
+                roadPlots = {}
+            elseif newState == GAME_STATES.Starting then
+                if waitingLabel ~= nil then
+                    waitingLabel.Text = "Ready?"
+                end
+
+                Camera.LocalPosition.Y = 20
+            
+                for _, p in pairs(Players) do
+                    spawnPlayer(p)
+                end
+            elseif newState == GAME_STATES.Running then
+                updateRemainingPlayers()
+            end
+
+            gameState = newState
+        end
+
+        function updateRemainingPlayers()
+            local nPlayers = 0
+            for _, p in pairs(Players) do
+                if p.alive then
+                    nPlayers = nPlayers + 1
+                end
+            end
+            if waitingLabel ~= nil then
+                waitingLabel.Text = "Remaining players: " .. nPlayers
+            end
+        end
+
+        function updatePlayerWalls(dt, p)
+            if not p.init then return end
+            if not p.alive then return end
+
+            if walls[p.ID] ~= nil then
+                for _, w in pairs(walls[p.ID]) do
+                    w.Position = w.Position + p.Backward * shipSpeed * dt
+                    if collides(p.avatar, w) then
+                        sendEventDied()
+                    end
+                end
+            end
+        end
+
+        function updateBullets(dt)
+            for i, b in ipairs(bullets) do
+                b.Position = b.Position + b.Forward * BULLET_RELATIVE_SPEED * dt
+
+                -- if hits wall: destroy wall and bullet
+                local destroyed = false
+                if walls[b.pID] ~= nil then
+                    for j, w in pairs(walls[b.pID]) do
+                        if collides(b, w) then
+                            if b.isSpecial == w.isSpecial then
+                                if Player.playSolo then
+                                    score = score + 1
+                                    waitingLabel.Text = "Score: " .. score
+                                end
+                                w:RemoveFromParent()
+                                table.remove(walls[b.pID], j)
+                            end
+                            b:RemoveFromParent()
+                            table.remove(bullets, i)
+                            destroyed = true
+                        end
+                    end
+                end
+
+                if not destroyed then
+                    -- if too far in front: destroy bullet
+                    if (b.Position - Player.Position).Length > 300 then
+                        b:RemoveFromParent()
+                        table.remove(bullets, i)
+                    end
+                end
+            end
+        end
+
+        function updateRoadPlots(dt)
+            for _, p in pairs(roadPlots) do
+                p.Position = p.Position + Player.Backward * shipSpeed * dt
+                if p.Position.Z < -PLOTS_N_HALF * PLOTS_SPACING * Map.LossyScale.Z then
+                    p.Position.Z = PLOTS_N_HALF * PLOTS_SPACING * Map.LossyScale.Z
+                end
+            end
+        end
+
+        function gameUpdate(dt)
+            for _, p in pairs(Players) do
+                updatePlayerWalls(dt, p)
+            end
+            updateBullets(dt)
+            updateRoadPlots(dt)
+        end
+
+        ---------------
+        -- EVENTS
+        ---------------
+        sendEventBulletSpawned = function(isSpecial)
+            local e = Event()
+            e.action = "bulletSpawned"
+            e.isSpecial = isSpecial
+            e:SendTo(OtherPlayers)
+        end
+
+        sendEventDied = function()
+            local e = Event()
+            e.action = "died"
+            killPlayer(Player)
+            updateRemainingPlayers()
+            e:SendTo(OtherPlayers)
+            e:SendTo(Server)
+        end
+
+        -------------------
+        -- SERVER
+        -------------------
+        Server.Tick = function(dt)
+            if serverGameState == GAME_STATES.Waiting then
+                if nPlayers >= MIN_PLAYERS then
+                    serverSetGameState(GAME_STATES.Starting)
+                end
+            end
+            if serverGameState == GAME_STATES.Starting or serverGameState == GAME_STATES.Running then
+                if nPlayers < MIN_PLAYERS then
+                    print("All the other players left. Waiting for a new player...")
+                    serverSetGameState(GAME_STATES.Waiting)
+                end
+            end
+        end
+
+        Server.DidReceiveEvent = function(e)
+            if e.action == "died" and serverGameState == GAME_STATES.Running then
+                if not e.Sender.alive then return end
+                e.Sender.alive = false
+                local playersAlive = {}
+                for _, p in pairs(Players) do
+                    if p.alive then
+                        table.insert(playersAlive, p)
+                    end
+                end
+                local nPlayersAlive = #playersAlive
+                if MIN_PLAYERS > 1 then
+                    if nPlayersAlive == 0 then
+                        serverEndGame("Tie")
+                    end
+                    if nPlayersAlive == 1 then
+                        local winner = playersAlive[1]
+                        serverEndGame(winner.Username .. " won!")
+
+                        local e = Event()
+                        e.action = "clearLine"
+                        e.player = winner.ID
+                        e:SendTo(Players)
+                    end
+                else
+                    serverEndGame("Game over!")
+                end
+            end
+        end
+
+        Server.OnPlayerJoin = function(p)
+            nPlayers = nPlayers + 1
+        end
+
+        Server.OnPlayerLeave = function(p)
+            nPlayers = nPlayers - 1
+            p.alive = false
+        end
+
+        function serverSetGameState(newState)
+            local e = Event()
+            e.action = "setGameState"
+            e.state = newState
+            e:SendTo(Players)
+
+            if newState == GAME_STATES.Starting and serverGameState == GAME_STATES.Waiting then
+                for _, p in pairs(Players) do
+                    p.alive = true
+                end
+
+                -- reset ship speed to default
+                shipSpeed = SHIP_SPEED
+
+                local countdown = 3 -- in seconds
+                local e = Event()
+                e.action = "countdown"
+                local serverUpdateCountdown
+                serverUpdateCountdown = function()
+                    e.countdown = countdown
+                    e:SendTo(Players)
+                    countdown = countdown - 1
+                    if countdown > -1 then
+                        Timer(1, serverUpdateCountdown)
+                    else
+                        Timer(2, serverSendWalls)
+                        serverAcceleratorTimer = Timer(5, true, function()
+                            shipSpeed = shipSpeed + 10
+                            minSpawnTime = minSpawnTime - 0.5
+                            if minSpawnTime < 1 then minSpawnTime = 1 end
+                            maxSpawnTime = maxSpawnTime - 0.5
+                            if maxSpawnTime < 2 then maxSpawnTime = 2 end
+                        end)
+                        serverSetGameState(GAME_STATES.Running)
+                    end
+                end
+                serverUpdateCountdown()
+            elseif newState == GAME_STATES.End and serverGameState == GAME_STATES.Running then
+                Timer(3, function()
+                    serverSetGameState(GAME_STATES.Waiting)
+                end)
+            end
+
+            serverGameState = newState
+        end
+
+        function serverSpawnWalls()
+            local wallsData = {}
+            for _, p in pairs(Players) do
+                local pos = getPlayerPosition(p.ID)
+                for i = 1, math.floor(randomBetween(1, 3)) do
+                    table.insert(wallsData, {
+                        pID = p.ID,
+                        isSpecial = math.random() < 0.3,
+                        pos = { pos.X, pos.Y, pos.Z },
+                        d = randomBetween(65, 90) + (i - 1) * 40,
+                    })
+                end
+            end
+            return wallsData
+        end
+
+        function serverSendWalls()
+            local e = Event()
+            e.action = "walls"
+            e.walls = JSON:Encode(serverSpawnWalls())
+            e:SendTo(Players)
+
+            serverSpawnTimer = Timer(randomBetween(minSpawnTime, maxSpawnTime), serverSendWalls)
+        end
+
+        function serverEndGame(text)
+            local e = Event()
+            e.action = "endGame"
+            e.text = text
+            e:SendTo(Players)
+
+            serverSpawnTimer:Cancel()
+            serverAcceleratorTimer:Cancel()
+
+            serverSetGameState(GAME_STATES.End)
+        end
+
+        -------------------
+        -- MISC
+        -------------------
+        function getPlayerIndex(id)
+            local idx = 1
+            for _, p in pairs(Players) do
+                if p.ID == id then return idx end
+                idx = idx + 1
+            end
+            return idx
+        end
+
+        function getPlayerPosition(id)
+            local idx = getPlayerIndex(id)
+            local x = 3 * (idx - 1)
+            return Number3(x, 1.5, 0) * Map.LossyScale
+        end
+
+        function randomBetween(a, b)
+            return math.random() * (b - a) + a
+        end
+
+        function collides(shape1, shape2)
+            local halfSize1 = (
+                shape1.Width > shape1.Depth
+                and shape1.Width * 0.5
+                or shape1.Depth * 0.5) * shape1.LocalScale.X
+            local halfSize2 = (
+                shape2.Width > shape2.Depth
+                and shape2.Width * 0.5
+                or shape2.Depth * 0.5) * shape2.LocalScale.X
+            local shape1Min = Number3(
+                shape1.Position.X - halfSize1,
+                shape1.Position.Y,
+                shape1.Position.Z - halfSize1)
+            local shape1Max = Number3(
+                shape1.Position.X + halfSize1,
+                shape1.Position.Y + shape1.Height * shape1.LocalScale.X,
+                shape1.Position.Z + halfSize1)
+            local shape2Min = Number3(
+                shape2.Position.X - halfSize2,
+                shape2.Position.Y,
+                shape2.Position.Z - halfSize2)
+            local shape2Max = Number3(
+                shape2.Position.X + halfSize2,
+                shape2.Position.Y + shape2.Height * shape2.LocalScale.X,
+                shape2.Position.Z + halfSize2)
+            if shape1Max.X > shape2Min.X and
+                shape1Min.X < shape2Max.X and
+                shape1Max.Y > shape2Min.Y and
+                shape1Min.Y < shape2Max.Y and
+                shape1Max.Z > shape2Min.Z and
+                shape1Min.Z < shape2Max.Z then
+                return true
+            end
+            return false
+        end

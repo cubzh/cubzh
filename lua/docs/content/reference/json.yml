@@ -1,0 +1,42 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "json"]
+type: "JSON"
+
+creatable: false
+description: |
+    [JSON] allows you to encode Lua table as JSON string and decode JSON string as Lua table.
+
+functions:
+    - name: "Encode"
+      description: |
+          Takes a Lua table as parameter and returns an encoded string.
+          This function handles basic types (number, string, boolean, tables) and skip functions.
+      argument-sets: 
+        -
+          - name: "data"
+            type: "table"
+      return:
+        - type: "string"
+      samples:
+          - code: |
+              local playerInfo = {}
+              playerInfo.hp = 100
+              playerInfo.name = "Bob"
+              local encoded = JSON:Encode(playerInfo)
+              print(encoded)
+              -- prints the string {"hp":100,"name":"Bob"}
+
+    - name: "Decode"
+      description: |
+          Takes a string as parameter and returns a Lua table.
+      argument-sets: 
+        -
+          - name: "encodedString"
+            type: "string"
+      return:
+        - type: "table"
+      samples:
+          - code: |
+              local jsonstring = "{\"body\":\"A message.\",\"status_code\":200}"
+              local data = JSON:Decode(jsonstring)
+              print(data.status_code, data.body)
+              -- prints "200.0 A message."

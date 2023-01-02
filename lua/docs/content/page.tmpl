@@ -1,0 +1,567 @@
+<html>
+	<head>
+		<title>Cubzh - Scripting Documentation</title>
+		{{ if .Keywords }}<meta name="keywords" content='{{ Join .Keywords ", " }}'>{{ end }}
+		{{ if .Description }}<meta name="description" content="{{ .MetaDescription }}">{{ end }}
+
+		<!-- CSS -->
+  		<link rel="stylesheet" href="/style/css/style.css">
+  		<link rel="stylesheet" href="/style/highlight/atom-one-dark.css">
+
+  		 <!-- Mobile Specific Metas -->
+  		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+  		<!-- FAVICON -->
+		<link rel="apple-touch-icon" sizes="180x180" href="/style/img/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="/style/img/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="/style/img/favicon-16x16.png">
+		<link rel="manifest" href="/style/img/site.webmanifest">
+		
+		<!-- JS -->
+		<script src="/js/highlight.pack.js"></script>
+		<script>
+			document.addEventListener('DOMContentLoaded', (event) => {
+				document.querySelectorAll('pre').forEach((block) => {
+					hljs.highlightBlock(block);
+				});
+
+				document.querySelectorAll('.toggle').forEach((toggleLink) => {
+					toggleLink.onclick = function() {
+
+						if (toggleLink.nextSibling.style.display != "none") {
+
+							toggleLink.innerHTML = "Show"
+							toggleLink.parentElement.style.paddingBottom = 0
+							toggleLink.nextSibling.style.display = "none";
+
+						} else {
+
+							toggleLink.innerHTML = "Hide"
+							toggleLink.parentElement.style.paddingBottom = "10px"
+							toggleLink.nextSibling.style.display = "block";
+
+						}	
+					}
+				});
+			});
+		</script>
+	</head>
+	<body>
+	    
+		<div id="container">
+			<div id="header">
+				<table>
+					<tr>
+						<td class="icon">
+							<a href="/"><img src="/style/img/icon.png" srcset="/style/img/icon@2x.png 2x" /></a>
+						</td>
+						<td>
+							<h1><a href="/">Cubzh</a></h1>
+							<p>Scripting Documentation</p>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div id="menu">
+				<nav>
+					<ul>
+						<li><a href="/">Home</a></li>
+						<li><a href="/guides">Guides</a></li>
+						<li><a href="/reference">Reference</a></li>
+					</ul>
+				</nav>
+			</div>
+
+			<div id="content">
+
+				{{ $type := .Type }}
+
+				<h1>{{ GetTitle . }}</h1>
+
+				{{ if .Extends }}
+					<div class="extension">
+						<a href="{{ GetTypeRoute .Type }}">{{.Type}}</a> extends <a href="{{ GetTypeRoute .Extends }}">{{.Extends}}</a>, adding functions and properties to it.
+					</div>
+				{{ end }}
+
+				{{ if IsNotCreatableObject . }}
+					<div class="notCreatableNotice">
+						{{ .Type }} is <b>not creatable</b>, there's only one instance of it. It can only be accessed through its globally exposed variable.
+					</div>
+				{{ end }}
+
+				{{ if .Blocks }}
+					{{ range .Blocks }}
+						{{ if .Text }}
+							<p>{{ .Text }}</p>
+						{{ else if .Title }}
+							<h2><a id="{{ GetAnchorLink .Title }}" href="#{{ GetAnchorLink .Title }}">{{ .Title }}</a></h2>
+						{{ else if .Subtitle }}
+							<h3><a id="{{ GetAnchorLink .Subtitle }}" href="#{{ GetAnchorLink .Subtitle }}">{{ .Subtitle }}</a></h3>
+						{{ else if .Image }}
+							<div class="centeredImage">
+								<img src="{{ .Image }}" style="width:100%;"></img>
+							</div>
+						{{ else if .Media }}
+							<div class="centeredVideo">
+								<video style="width:100%;" autoplay loop muted playsinline>
+								  <source src="{{ .Media }}" type="video/mp4" />
+								Your browser does not support the video tag.
+								</video>
+							</div>
+						{{ else if .Audio }}
+							<div class="audioPlayer">
+								<audio controls src="{{ .Audio.file }}"></audio>
+								{{ .Audio.title }}
+							</div>
+						{{ else if .AudioList }}
+							{{ range .AudioList }}
+								<div class="audioPlayer">
+									<audio controls src="{{ .file }}"></audio>
+									{{ .title }}
+								</div>
+							{{ end }}
+						{{ else if .Code }}
+							<pre>{{ .Code }}</pre>
+						{{ else if .List }}
+							<ul>
+							{{ range .List }}
+								<li>{{ . }}</li>
+							{{ end }}
+							</ul>
+						{{ end }}
+					{{ end }}
+				{{ else if .Description }}
+					<p>{{ .Description }}</p>
+				{{ end }}
+
+				{{ if .Constructors }}
+				<h2><a id="constructors" href="#constructors">Constructors</a></h2>
+					{{ range $i, $constructor := .Constructors }}
+						<a id="constructor-{{ $i }}"></a>
+						<div class="object-element-tbl">
+							<div class="object-element-header">
+								<a href="#constructor-{{ $i }}"><span class="name">{{ $type }}</span></a> ( <!--
+								-->{{ range $index, $element := .Arguments }}<!--
+								-->{{if $index}}, {{end}}<!--
+								-->{{ $route := GetTypeRoute .Type }}<!--
+								-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+								-->{{ .Type }}<!--
+								-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+								--> {{ .Name }}<!--
+								-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+								-->{{ end }} )
+							</div>
+							<div class="object-element-row">
+								{{ if .Description }}
+									<p>{{ .Description }}</p>
+								{{ end }}
+								{{ range .Samples }}
+									{{ if SampleHasCodeAndMedia . }}
+										<div>
+											<div class="floatLeft60Pct">
+												<pre>{{ .Code }}</pre>
+											</div>
+											<div class="floatLeft40Pct">
+												<video style="width:100%;" autoplay loop muted playsinline>
+												  <source src="{{ .Media }}" type="video/mp4" />
+												Your browser does not support the video tag.
+												</video>
+											</div>
+											<div class="clear"></div>
+										</div>
+									{{ else if .Code }}
+										<pre>{{ .Code }}</pre>
+									{{ end }}
+								{{ end }}
+							</div>
+						</div>
+					{{ end }}
+				{{ end }}
+
+				{{ if .BuiltIns }}
+				<h2><a id="properties" href="#properties">Built-in instances</a></h2>
+					{{ range $index, $property := .BuiltIns }}
+						<a id="property-{{ GetAnchorLink .Name }}"></a>
+						<div class="object-element-tbl">
+							<div class="object-element-header">
+								{{ $route := GetTypeRoute .Type }}<!--
+								-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+								-->{{ .Type }}<!--
+								-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+								--> <a href="#property-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a><!--
+								-->{{ if .ReadOnly }} <span class="read-only">read-only</span>{{ end }}<!--
+								-->{{ if .ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}
+							</div>
+							<div class="object-element-row">
+								{{ if .Description }}
+									<p>{{ .Description }}</p>
+								{{ end }}
+								{{ range .Samples }}
+									{{ if SampleHasCodeAndMedia . }}
+										<div>
+											<div class="floatLeft60Pct">
+												<pre>{{ .Code }}</pre>
+											</div>
+											<div class="floatLeft40Pct">
+												<video style="width:100%;" autoplay loop muted playsinline>
+												  <source src="{{ .Media }}" type="video/mp4" />
+												Your browser does not support the video tag.
+												</video>
+											</div>
+											<div class="clear"></div>
+										</div>
+									{{ else if .Code }}
+										<pre>{{ .Code }}</pre>
+									{{ end }}
+								{{ end }}
+							</div>
+						</div>
+					{{ end }}
+				{{ end }}
+
+				{{ if or .Functions .BaseFunctions}} 
+				<h2><a id="functions" href="#functions">Functions</a></h2>
+					
+					{{ range $index, $function := .Functions }}
+						{{ if not $function.Hide }}
+							<a id="functions-{{ GetAnchorLink .Name }}"></a>
+							<div class="object-element-tbl">
+								<div class="object-element-header">
+									{{ if .ArgumentSets}} 
+										<!-- display several lines for function prototype 
+											when different sets of arguments are accepted. -->
+										{{ range $index, $arguments := .ArgumentSets }}<!--
+											--><div class="set-of-arguments"><!--
+												-->{{ if $index }}<span class="variation">{{ end}}<!--
+												-->{{ if $function.Return }}<!--
+													-->{{ range $index, $value := $function.Return }}<!--
+														-->{{ $route := GetTypeRoute .Type }}<!--
+														-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+														-->{{ .Type }}<!--
+														-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+													-->{{ end }}<!--
+												-->{{ else }}<!--
+													--><a href="{{ GetTypeRoute `nil` }}" class="type">nil</a><!--
+												-->{{ end }}<!--
+												--> <a href="#functions-{{ GetAnchorLink $function.Name }}"><span class="name">{{ $function.Name }}</span></a><!--
+												-->{{ if $index }}</span>{{ end}} ( <!--
+												-->{{ range $index, $element := $arguments }}<!--
+												-->{{if $index}}, {{end}}<!--
+													-->{{ $route := GetTypeRoute .Type }}<!--
+													-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+													-->{{ .Type }}<!--
+													-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+														--> {{ .Name }}<!--
+													-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+												-->{{ end }} )<!--
+												-->{{if not $index}}<!--
+													-->{{ if $function.ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}<!--
+												-->{{ end }}<!--
+											--></div><!--
+										-->{{ end }}<!--
+									-->{{ else }}<!--
+										-->{{ if .Return }}<!--
+											-->{{ range $index, $value := .Return }}<!--
+												-->{{ $route := GetTypeRoute .Type }}<!--
+												-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+												-->{{ .Type }}<!--
+												-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+											-->{{ end }}<!--
+										-->{{ else }}<!--
+											--><a href="{{ GetTypeRoute `nil` }}" class="type">nil</a><!--
+										-->{{ end }}<!--
+										--> <a href="#functions-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a> ( <!--
+										-->{{ range $index, $element := .Arguments }}<!--
+										-->{{if $index}}, {{end}}<!--
+											-->{{ $route := GetTypeRoute .Type }}<!--
+											-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+											-->{{ .Type }}<!--
+											-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+											--> {{ .Name }}<!--
+											-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+										-->{{ end }} )<!--
+										-->{{ if .ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}<!--
+									-->{{ end }}<!--
+								--></div>
+								<div class="object-element-row">
+									{{ if .Description }}
+										<p>{{ .Description }}</p>
+									{{ end }}
+									{{ range .Samples }}
+										{{ if SampleHasCodeAndMedia . }}
+											<div>
+												<div class="floatLeft60Pct">
+													<pre>{{ .Code }}</pre>
+												</div>
+												<div class="floatLeft40Pct">
+													<video style="width:100%;" autoplay loop muted playsinline>
+													  <source src="{{ .Media }}" type="video/mp4" />
+													Your browser does not support the video tag.
+													</video>
+												</div>
+												<div class="clear"></div>
+											</div>
+										{{ else if .Code }}
+											<pre>{{ .Code }}</pre>
+										{{ end }}
+									{{ end }}
+								</div>
+							</div>
+						{{ end }}
+					{{ end }}
+
+					{{ range $base, $functions := .BaseFunctions }} <!-- Bases -->
+
+						<div class="inherited">
+
+							<h3>Inherited from <!--
+							-->{{ $route := GetTypeRoute $base }}<!--
+							-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+							-->{{ $base }}<!--
+							-->{{ if $route }}</a>{{ else }}</span>{{ end }}</h3>
+
+							<a class="toggle">Hide</p>
+
+							<div class="inherited-content">
+
+							{{ range $index, $function := $functions }}
+							{{ if not $function.Hide }}
+								<a id="functions-{{ GetAnchorLink .Name }}"></a>
+								<div class="object-element-tbl">
+									<div class="object-element-header">
+										{{ if .ArgumentSets}} 
+											<!-- display several lines for function prototype 
+												when different sets of arguments are accepted. -->
+											{{ range $index, $arguments := .ArgumentSets }}<!--
+												--><div class="set-of-arguments"><!--
+													-->{{ if $index }}<span class="variation">{{ end}}<!--
+													-->{{ if $function.Return }}<!--
+														-->{{ range $index, $value := $function.Return }}<!--
+															-->{{ $route := GetTypeRoute .Type }}<!--
+															-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+															-->{{ .Type }}<!--
+															-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+														-->{{ end }}<!--
+													-->{{ else }}<!--
+														--><a href="{{ GetTypeRoute `nil` }}" class="type">nil</a><!--
+													-->{{ end }}<!--
+													--> <a href="#functions-{{ GetAnchorLink $function.Name }}"><span class="name">{{ $function.Name }}</span></a><!--
+													-->{{ if $index }}</span>{{ end}} ( <!--
+													-->{{ range $index, $element := $arguments }}<!--
+													-->{{if $index}}, {{end}}<!--
+														-->{{ $route := GetTypeRoute .Type }}<!--
+														-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+														-->{{ .Type }}<!--
+														-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+															--> {{ .Name }}<!--
+														-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+													-->{{ end }} )<!--
+													-->{{if not $index}}<!--
+														-->{{ if $function.ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}<!--
+													-->{{ end }}<!--
+												--></div><!--
+											-->{{ end }}<!--
+										-->{{ else }}<!--
+											-->{{ if .Return }}<!--
+												-->{{ range $index, $value := .Return }}<!--
+													-->{{ $route := GetTypeRoute .Type }}<!--
+													-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+													-->{{ .Type }}<!--
+													-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+												-->{{ end }}<!--
+											-->{{ else }}<!--
+												--><a href="{{ GetTypeRoute `nil` }}" class="type">nil</a><!--
+											-->{{ end }}<!--
+											--> <a href="#functions-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a> ( <!--
+											-->{{ range $index, $element := .Arguments }}<!--
+											-->{{if $index}}, {{end}}<!--
+												-->{{ $route := GetTypeRoute .Type }}<!--
+												-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+												-->{{ .Type }}<!--
+												-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+												--> {{ .Name }}<!--
+												-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+											-->{{ end }} )<!--
+											-->{{ if .ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}<!--
+										-->{{ end }}<!--
+									--></div>
+									<div class="object-element-row">
+										{{ if .Description }}
+											<p>{{ .Description }}</p>
+										{{ end }}
+										{{ range .Samples }}
+											{{ if SampleHasCodeAndMedia . }}
+												<div>
+													<div class="floatLeft60Pct">
+														<pre>{{ .Code }}</pre>
+													</div>
+													<div class="floatLeft40Pct">
+														<video style="width:100%;" autoplay loop muted playsinline>
+														  <source src="{{ .Media }}" type="video/mp4" />
+														Your browser does not support the video tag.
+														</video>
+													</div>
+													<div class="clear"></div>
+												</div>
+											{{ else if .Code }}
+												<pre>{{ .Code }}</pre>
+											{{ end }}
+										{{ end }}
+									</div>
+								</div>
+							{{ end }}
+						{{ end }} <!-- end Base Functions -->
+						</div> <!-- inherited-content -->
+					</div>
+
+					{{ end }} <!-- end Bases -->
+
+				{{ end }} <!-- if Functions -->
+
+
+				{{ if or .Properties .BaseProperties }}
+				<h2><a id="properties" href="#properties">Properties</a></h2>
+
+					{{ range $index, $property := .Properties }}
+						{{ if not $property.Hide }}
+							<a id="property-{{ GetAnchorLink .Name }}"></a>
+							<div class="object-element-tbl">
+								<div class="object-element-header">
+									{{ if .Type }}<!--
+										-->{{ $route := GetTypeRoute .Type }}<!--
+										-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+										-->{{ .Type }}<!--
+										-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+									-->{{ else }}{{ if .Types }}<!--
+											-->{{ range $i, $type := .Types }}<!--
+												-->{{ if gt $i 0 }}<!--
+													--><span> or </span><!--
+												-->{{ end }}<!--
+												-->{{ $route := GetTypeRoute $type }}<!--
+												-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+												-->{{ $type }}<!--
+												-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+											-->{{ end }}<!--
+									-->{{ end }}{{ end }}<!--
+									--> <a href="#property-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a><!--
+									-->{{ if .ReadOnly }} <span class="read-only">read-only</span>{{ end }}<!--
+									-->{{ if .ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}
+								</div>
+								<div class="object-element-row">
+									{{ if .Description }}
+										<p>{{ .Description }}</p>
+									{{ end }}
+									{{ range .Samples }}
+										{{ if SampleHasCodeAndMedia . }}
+											<div>
+												<div class="floatLeft60Pct">
+													<pre>{{ .Code }}</pre>
+												</div>
+												<div class="floatLeft40Pct">
+													<video style="width:100%;" autoplay loop muted playsinline>
+													  <source src="{{ .Media }}" type="video/mp4" />
+													Your browser does not support the video tag.
+													</video>
+												</div>
+												<div class="clear"></div>
+											</div>
+										{{ else if .Code }}
+											<pre>{{ .Code }}</pre>
+										{{ end }}
+									{{ end }}
+								</div>
+							</div>
+						{{ end }}
+					{{ end }}
+
+					{{ range $base, $properties := .BaseProperties }} <!-- Bases -->
+
+						<div class="inherited">
+
+							<h3>Inherited from <!--
+							-->{{ $route := GetTypeRoute $base }}<!--
+							-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+							-->{{ $base }}<!--
+							-->{{ if $route }}</a>{{ else }}</span>{{ end }}</h3>
+
+							<a class="toggle">Hide</p>
+
+							<div class="inherited-content">
+
+							{{ range $index, $property := $properties }}
+								{{ if not $property.Hide }}
+									<a id="property-{{ GetAnchorLink .Name }}"></a>
+									<div class="object-element-tbl">
+										<div class="object-element-header">
+											{{ if .Type }}<!--
+												-->{{ $route := GetTypeRoute .Type }}<!--
+												-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+												-->{{ .Type }}<!--
+												-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+											-->{{ else }}{{ if .Types }}<!--
+													-->{{ range $i, $type := .Types }}<!--
+														-->{{ if gt $i 0 }}<!--
+															--><span> or </span><!--
+														-->{{ end }}<!--
+														-->{{ $route := GetTypeRoute $type }}<!--
+														-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+														-->{{ $type }}<!--
+														-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+													-->{{ end }}<!--
+											-->{{ end }}{{ end }}<!--
+											--> <a href="#property-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a><!--
+											-->{{ if .ReadOnly }} <span class="read-only">read-only</span>{{ end }}<!--
+											-->{{ if .ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}
+										</div>
+										<div class="object-element-row">
+											{{ if .Description }}
+												<p>{{ .Description }}</p>
+											{{ end }}
+											{{ range .Samples }}
+												{{ if SampleHasCodeAndMedia . }}
+													<div>
+														<div class="floatLeft60Pct">
+															<pre>{{ .Code }}</pre>
+														</div>
+														<div class="floatLeft40Pct">
+															<video style="width:100%;" autoplay loop muted playsinline>
+															  <source src="{{ .Media }}" type="video/mp4" />
+															Your browser does not support the video tag.
+															</video>
+														</div>
+														<div class="clear"></div>
+													</div>
+												{{ else if .Code }}
+													<pre>{{ .Code }}</pre>
+												{{ end }}
+											{{ end }}
+										</div>
+									</div>
+								{{ end }}
+							{{ end }} <!-- end Base Properties -->
+
+							</div> <!-- inherited-content -->
+						</div>
+
+					{{ end }} <!-- end Bases -->
+
+				{{ end }} <!-- end properties -->
+
+				<div id="edit-label">✏️ <a href="https://github.com/cubzh/cubzh/edit/master/lua-docs/content{{ .ResourcePath }}">Edit this page</a></div>
+
+			</div>
+
+			<div id="footer">
+				<ul>
+					<li><a href="https://cu.bzh">cu.bzh</a></li><!--
+					--><li><a href="https://twitter.com/cubzh_">Follow us on Twitter</a></li><!--
+					--><li><a href="https://www.instagram.com/cubzh_/">Follow us on Instagram</a></li><!--
+					--><li><a href="https://cu.bzh/discord">Join us on Discord</a></li>
+				</ul>
+			</div>
+		</div>
+
+    </body>
+</html>

@@ -1,0 +1,19 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Quick know-how > Testing a multi-player game"
+blocks:
+    - text: |
+        If you want to test a multi-player game and connect several clients to it, you'll have to:
+        
+        - launch the "Cubzh" app multiple times (either on the same computer or on different ones)
+        - make sure that all the app you start use the same version of "Cubzh" (e.g. "0.0.45")
+        - on one of the instances, connect with the account you created the game with
+        - (optionally, connect with other accounts on the other instances: this is not required but it will help you debug - otherwise, all players will have the same username)
+        - with the creator account, go to the "Build" menu and edit the world you want to work on
+        - with the other accounts, go to the "Explore" menu and search for the world you're editing; then, instead of clicking on the "Launch" button as usual, click on the "Servers" button:
+        
+    - image: "/images/test-multiplayer_list-servers.png"
+
+    - text: |
+        - finally, choose the server that was started by your editing account in the list:
+
+    - image: "/images/test-multiplayer_pick-server.png"

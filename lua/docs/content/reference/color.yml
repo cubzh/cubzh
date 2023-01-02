@@ -1,0 +1,50 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Color"
+description: Represents a RGBA color (Red, Green, Blue, Alpha)
+
+constructors: 
+  - description: |
+      Creates a Color with given red, green, blue and (optional) alpha values.
+
+      Parameters can be between 0.0 and 1.0 or between 0 and 255.
+    arguments:
+    - name: "red"
+      type: "number"
+    - name: "green"
+      type: "number"
+    - name: "blue"
+      type: "number"
+    - name: "alpha"
+      type: "number"
+      optional: true
+    samples:
+        - code: |
+            local red = Color(255, 0, 0)
+            local alsoRed = Color(1.0, 0.0, 0.0)
+            local semiTransparentRed = Color(1.0, 0.0, 0.0, 0.5)
+
+properties:
+    - name: "Alpha"
+      type: "number"
+      description: "Color's alpha component."
+    - name: "A"
+      type: "number"
+      description: "Color's alpha component. (shortcut to [Alpha](#property-alpha))"
+    - name: "Blue"
+      type: "number"
+      description: "Color's blue component."
+    - name: "B"
+      type: "number"
+      description: "Color's blue component. (shortcut to [Blue](#property-blue))"
+    - name: "Green"
+      type: "number"
+      description: "Color's green component."
+    - name: "G"
+      type: "number"
+      description: "Color's green component. (shortcut to [Green](#property-green))"
+    - name: "Red"
+      type: "number"
+      description: "Color's red component."
+    - name: "R"
+      type: "number"
+      description: "Color's red component. (shortcut to [Red](#property-red))"

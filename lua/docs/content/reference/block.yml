@@ -1,0 +1,178 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Block"
+description: |
+    A `Block` represents one block in a [Shape] or [MutableShape] (like the [Map]).
+
+    A `Block` can be built with one of the [constructors](/reference/block#constructors), but it can also be obtained from a [Shape] or [MutableShape] with [Shape.GetBlock](/reference/shape#functions-getblock) or [MutableShape.GetBlock](/reference/mutableshape#functions-getblock).
+
+    ⚠️ A `Block` obtained from an immutable object (like [Shape]) is in fact `read-only`, none of its properties can be set in that case.
+
+constructors: 
+  - description: |
+      Creates a `Block` with given color and optional coordinates, `{ 0, 0, 0 }` by default.
+
+    argument-sets:
+    -
+      - name: "color"
+        type: "Color"
+      - name: "coordinates"
+        type: "Number3"
+        optional: true
+    -
+      - name: "color"
+        type: "Color"
+      - name: "x"
+        type: "number"
+      - name: "y"
+        type: "number"
+      - name: "z"
+        type: "number"
+    -
+
+properties:
+    - name: "PaletteIndex"
+      type: "integer"
+      description: |
+          Block's [Palette] index in its original [Shape]. (first index is `1`)
+
+          ⚠️ This has no effect if the block does not belong to a [Shape] or [MutableShape].
+      samples:
+          - code: |
+              local b = someMutableShape:GetBlock(1, 2, 3)
+              if b ~= nil then
+                -- changes block's properties
+                -- using different palette index
+                b.PaletteIndex = 10 
+              end
+    - name: "Coordinates"
+      read-only: true
+      type: "Number3"
+      description: |
+          Block's coordinates in the [Shape] or [MutableShape] model. Block's origin is its bottom-left-down corner.
+      samples:
+          - code: |
+              local b = someShape:GetBlock(1, 2, 3)
+              if b ~= nil then
+                print(b.Coordinates) -- prints "[Number3 X: 1 Y: 2 Z: 3]"
+              end
+
+    - name: "Coords"
+      read-only: true
+      type: "Number3"
+      description: |
+          Shortcut to [Coordinates](/reference/block#property-coordinates).
+
+    - name: "Position"
+      read-only: true
+      type: "Number3"
+      description: |
+          [Block]'s coordinates converted in world space.
+      samples:
+          - code: |
+              local b = someShape:GetBlock(1, 2, 3)
+              if b ~= nil then
+                print(b.Position)
+              end
+
+    - name: "Pos"
+      read-only: true
+      type: "Number3"
+      description: |
+          Shortcut to [Position](/reference/block#property-position).
+
+    - name: "LocalPosition"
+      read-only: true
+      type: "Number3"
+      description: |
+          [Block]'s coordinates converted in local space, i.e. relative to the [Shape]'s or [MutableShape]'s parent.
+      samples:
+          - code: |
+              local b = someShape:GetBlock(1, 2, 3)
+              if b ~= nil then
+                print(b.LocalPosition)
+              end
+
+functions:
+    - name: "AddNeighbor"
+      description: |
+          Adds a [Block] to the [This] adjacent to the face passed as parameter. You may provide a [Block], a palette index to an existing color in the original [Shape]'s [Palette], or any color which will be added automatically to the [Shape]'s [Palette] if needed.
+
+          Returns `true` if a block was successfully added.
+
+          ⚠️ Won't work with `read-only` Blocks.
+
+      argument-sets:
+        -
+          - name: "block"
+            type: "Block"
+          - name: "face"
+            type: "Face"
+        -
+          - name: "paletteIndex"
+            type: "integer"
+          - name: "face"
+            type: "Face"
+        -
+          - name: "color"
+            type: "Color"
+          - name: "face"
+            type: "Face"
+        -
+      return: 
+        - type: "boolean"
+      samples:
+        - code: |
+            -- add block when Action2 is triggered
+            Client.Action2 = function()
+              -- cast a ray, see if it touches a block
+              local impact = Player:CastRay()
+              if impact.Block ~= nil then
+                -- add block, adjacent to the face that's been touched
+                impact.Block:AddNeighbor(Color(200, 0, 200), impact.FaceTouched)
+              end
+            end
+          media: "/media/block-add-neighbor.mp4"
+
+    - name: "Remove"
+      description: |
+          Removes the `Block` from its parent [MutableShape].
+
+          ⚠️ Won't work with `read-only` Blocks.
+      samples:
+        - code: |
+            -- remove block when Action2 is triggered
+            Client.Action2 = function()
+              -- cast a ray, see if it touches a block
+              local impact = Player:CastRay()
+              -- won't do anything if impact.Block is nil
+              impact.Block:Remove()
+            end
+
+    - name: "Replace"
+      blocks:
+      description: |
+          Replaces the `Block` visual properties to be either: identical to the ones from the given [Block], to the given [Color], or to the ones located at given palette index.
+        
+          The position remains the same.
+
+          ⚠️ Only works with blocks from a [MutableShape], not [Shape].
+      argument-sets:
+        -
+          - name: "block"
+            type: "Block"
+        -
+          - name: "color"
+            type: "Color"
+        -
+          - name: "paletteIndex"
+            type: "integer"
+      samples:
+        - code: |
+            -- replace block when Action2 is triggered
+            Client.Action2 = function()
+              -- cast a ray, see if it touches a block
+              local impact = Player:CastRay()
+              -- won't do anything if impact.Block is nil
+              impact.Block:Replace(Block(1)) -- make it a block with PaletteIndex == 1
+            end
+

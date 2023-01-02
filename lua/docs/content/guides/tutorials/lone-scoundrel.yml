@@ -1,0 +1,1449 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Tutorials > Tutorial n°2: Lone Scoundrel"
+blocks:
+    - text: |
+        The [first tutorial](/guides/tutorials/tutoworld) was a quick peek at several important features of [Cubzh](https://cu.bzh): we talked about the world, the map and the items; we discussed how to instantiate things from a reference, how to detect collisions with raycasts and how to create a simple UI. Today, we are going to go in further: we'll build on these concepts and introduce more advanced scripting techniques to make a more complex game: "Lone Scoundrel".
+
+        In this game, you steer a small ship on an infinite sea and your goal is to scavenge as many coins and chests as possible to increase your score without shipwrecking on an island:
+
+    - media: "/media/guides/02-lone-scoundrel_demo.mp4"
+
+    - title: "Foreword"
+
+    - text: |
+        Just before we dive in, I need to point out something: in this game, I'm not using a map as we normally do in Cubzh game; instead, I'll create it procedurally, "on the fly" when my game first starts. Also, I won't need any physics, be it for gravity or collisions, so I'll just disable it on all my objects. That's why, at the very beginning, we'll just have our little avatar floating in the sky, completely still, and why we'll start with an empty [`Config`](/reference/config) object in our script!
+
+    - code: |
+        Config = {}
+
+        Client.OnStart = function()
+        end
+
+    - text: |
+        Also, the various hardcoded values I show in the scripts like the ship speed, the number of coins and chests to generate, etc., are what we often call "magic numbers", because they are "magically" chosen by the programmer, totally arbitrarily. This means that you can tweak them to your liking to see how the game reacts, and that the live code on the Cubzh server might have slightly different values compared to the snippets copied here... but don't panic, the overall behaviour will remain the same ;)
+
+    - title: "Setting up the player camera"
+
+    - text: |
+        One of the first things you might notice is that, in this game, we're not using the default third-person camera. Instead, we want to decouple the rotation of our avatar (the ship) from the camera's. This will let players better explore their surroundings and plan ahead their bearing without the ship instantly following the new trajectory.
+
+        To do this, the idea is basically to:
+
+        - use the "free" camera mode
+        - parent the camera to an invisible anchor, the `cameraOrbit`
+        - rotate this anchor when the player uses the `Client.AnalogPad` action
+
+        We can do all of that in just a few lines of code (also, I'm disabling the physics on the player as discussed before):
+
+    - code: |
+        Config = {}
+
+        Client.OnStart = function()
+            -- Add player to game
+            initPlayer()
+            World:AddChild(Player, true)
+        end
+
+        Client.AnalogPad = function(dx,dy)
+            if not Player.init then initPlayer() end
+            cameraOrbit.LocalRotation.Y = cameraOrbit.LocalRotation.Y + dx * 0.01
+        end
+
+        function initPlayer()
+            -- Setup camera
+            Camera:SetModeFree()
+
+            cameraOrbit = Object()
+            Player:AddChild(cameraOrbit)
+
+            cameraOrbit:AddChild(Camera)
+            Camera.LocalPosition = { 0, 0, -60 }
+            Camera.LocalRotation = { 0, 0, 0 }
+
+            -- Remove gravity
+            Player.Physics = false
+
+            Player.init = true
+        end
+
+    - text: |
+        We'll also mark the `Player` object as "initialised" (by adding the `init` property on the spot) to enable the camera movement: this avoids running updates if there is nothing to see! :)
+
+        If you re-publish the game at this point, you'll get a basic orbital camera centered around the origin of the world (which is also where our avatar is standing) that rotates whenever you move the mouse (on a computer) or use the top-left analog-axis button (on mobiles):
+
+    - media: "/media/guides/02-lone-scoundrel_orbital-camera-00.mp4"
+
+    - text: |
+        Of course, we actually want our camera to be a bit higher and look down at the player to we get a more "strategy-game" view, so let's set the camera's `LocalPosition` and `LocalRotation`:
+
+    - code: |
+        function initPlayer()
+            -- Setup camera
+            Camera:SetModeFree()
+
+            cameraOrbit = Object()
+            Player:AddChild(cameraOrbit)
+
+            cameraOrbit:AddChild(Camera)
+            Camera.LocalPosition = { 0, 90, -60 }
+            Camera.LocalRotation = { 0.7, 0, 0 }
+
+            -- Remove gravity
+            Player.Physics = false
+
+            Player.init = true
+        end
+
+    - media: "/media/guides/02-lone-scoundrel_orbital-camera-01.mp4"
+
+    - title: "Instantiating our ship avatar"
+
+    - text: |
+        In this Cubzh game, we're not going to show the usual humanoid avatar of the player; instead, the players will control a basic ship - I made this item in the voxel editor, and as usual you should feel free to import it and re-use it if your games if you want :)
+
+    - image: "/images/guides/02-lone-scoundrel_ship.jpg"
+
+    - text: |
+        Ok - we want this ship to essentially become our avatar in "Lone Scoundrel". In other words, once it's been instantiated and parented in the world, it should follow the position of the player exactly to act as a real controllable thing. There are two ways we can do that:
+        
+        1. either we use the `Client.Tick` function to continuously update the translation or rotation of the ship and have it match the ones of the default avatar
+        2. or we parent the ship to the [`Player`](/reference/player) object and then cleverly move the original one out of sight
+
+        The advantage of parenting is that we won't have to worry about recomputing the position or the rotation of the avatar: it will directly inherit it from the `Player` node. This is pretty nice because it makes it intuitive to think about and retrieve (we can still use our `Player` reference for many things like we're used to).
+
+        So let's go ahead and naively instantiate our new item, link it as a child of the `Player` and add a little light at the top of the mast to help spot it when the night has fallen:
+
+    - code: |
+        Config = {
+            Items = {
+                "minadune.boat",
+            }
+        }
+
+        function initPlayer()
+            -- Setup camera
+            Camera:SetModeFree()
+
+            cameraOrbit = Object()
+            Player:AddChild(cameraOrbit)
+
+            cameraOrbit:AddChild(Camera)
+            Camera.LocalPosition = { 0, 90, -60 }
+            Camera.LocalRotation = { 0.7, 0, 0 }
+
+            -- Remove gravity
+            Player.Physics = false
+
+            -- Setup ship avatar
+            Player.avatar = Shape(Items.minadune.boat)
+            Player:AddChild(Player.avatar)
+
+            -- Add light on ship
+            local l = Light()
+            Player.avatar:AddChild(l)
+            l.Position = Player.avatar.Position + { 0, 5, -1 }
+            l.Range = 5
+            l.Hardness = 0.1
+            l.Color = Color(255, 255, 200)
+
+            Player.init = true
+        end
+
+    - text: |
+        If you try this out, you'll see that this isn't quite we want...
+
+    - media: "/media/guides/02-lone-scoundrel_avatar-00.mp4"
+
+    - text: |
+        The original avatar and the ship are completely mixed up! That's because, when we parent an object to another, it will by default go to the same position in the world. Here, however, what we're going to do is the following: to "hide" our default avatar and only get the ship on the screen, we're going to push the default one down under the ground (well, the sea) and re-translate the ship back up. This will give us a pair of objects that move together but are separated in the space, like this:
+
+    - media: "/media/guides/02-lone-scoundrel_avatar-01.mp4"
+
+    - text: |
+        The code is quite straight-forward - we'll apply a shift on the Y-axis to the `Player` object, and then the reverse one on the `ship`:
+
+    - code: |
+        function initPlayer()
+            -- Setup camera...
+            -- Remove gravity...
+            -- Setup ship avatar...
+
+            -- Move normal avatar to hide it under the map,
+            -- then re-add matching offset to ship
+            Player.Position = Number3(0, -5, 0) * Map.LossyScale
+            Player.avatar.Position = Player.Position + { 0, 5 * Map.LossyScale.Y, 0 }
+
+            -- Add light on ship
+            local l = Light()
+            Player.avatar:AddChild(l)
+            l.Position = Player.avatar.Position + { 0, 5, -1 }
+            l.Range = 5
+            l.Hardness = 0.1
+            l.Color = Color(255, 255, 200)
+
+            Player.init = true
+        end
+
+    - text: |
+        We'll see in just a second that, when we start to add the sea, this set up will make it easy to hide the original avatar but still control the ship :)
+
+    - title: "Making a procedural sea"
+
+    - text: |
+        In this second section, we're going to step up our game and learn about a common content creation technique: procedural generation.
+
+        Roughly put, procedural generation is about defining a set of rules and an algorithm that uses those rules to automatically create valid instances. The big advantage is that, once you're done coding the creation engine, you can make as many instances as you want! Moreover, this generation can be pretty quick, dynamic depending on given conditions and infinite (for example for never-ending games like runners, or for our scavenging game here).
+
+        In our case, we're going to use procedural generation for the sea and for the islands, later on.
+
+        Why? Well:
+
+        - for the sea, it will allow us to easily change its size during our tests and ultimately produce a limited (= not too heavy on the memory) set of "water patches" that create a seamless landscape. <i>A natural instinct could be to create (or load) just one block and scale it but this will create lighting artifacts when we add the fog effect!</i>
+        - for the islands, it will allow us to create diversity without having to manually prepare dozens of island shapes
+
+        For now, let's focus on creating this sea. We will generate it as a grid of square patches, with our ship in the middle. Each patch will be just a single voxel stretched as a horizontal plane:
+
+    - image: "/images/guides/02-lone-scoundrel_sea-patches.jpg"
+
+    - text: |
+        Here is the Lua snippet that will produce a unique patch of water at the origin point and tint it blue:
+
+    - code: |
+        Config = { ... }
+
+        -- -----------------------
+        local BLUE = Color(76, 215, 255)
+        -- -----------------------
+        local N_SEA_PATCH_X = 1
+        local N_SEA_PATCH_Y = 1
+        local SEA_PATCH_W = 1
+        local SEA_PATCH_H = 1
+
+        Client.OnStart = function()
+            -- Add player to game
+            initPlayer()
+            World:AddChild(Player, true)
+
+            -- Set up world
+            makeSea()
+        end
+
+        function makeSea()
+            local makeSeaPatch = function (ox, oy)
+                patch = MutableShape()
+                patch:AddBlock(BLUE, 0, 0, 0)
+                patch.Scale = Number3(SEA_PATCH_W, 0.1, SEA_PATCH_H) * Map.LossyScale
+                patch.Physics = false
+                patch.Position = Number3(
+                    (ox - 0.5) * SEA_PATCH_W,
+                    -1,
+                    (oy - 0.5) * SEA_PATCH_H) * Map.LossyScale
+                World:AddChild(patch)
+            end
+            for y = -N_SEA_PATCH_Y, N_SEA_PATCH_Y do
+                for x = -N_SEA_PATCH_X, N_SEA_PATCH_X do
+                    makeSeaPatch(x, y)
+                end
+            end
+        end
+
+    - text: |
+        The code to generate this grid is fairly short and simple overall, but it does use a few new Cubzh features that need explaining:
+
+        - instead of using the [`Shape`](/reference/shape) API like in [the "Tutoworld" tutorial](/guides/tutorials/tutoworld), we use the [`MutableShape`](/reference/mutableshape): this other type of object allows us to dynamically add, remove or re-color voxels of an item. It can optionally take in an item reference - this lets you load an item and edit in your game for futher customisation.
+        - when we add the block of our patch, we give it a `BLUE` colour
+
+    - text: |
+        Re-publish the game and you'll get a little blue patch in the middle of the screen, between the avatar and the ship:
+    
+    - media: "/media/guides/02-lone-scoundrel_sea-patch.mp4"
+
+    - text: |
+        Now, we can easily re-scale this sea by changing the variables at the top of the script:
+    
+    - code: |
+        local N_SEA_PATCH_X = 1
+        local N_SEA_PATCH_Y = 1
+        local SEA_PATCH_W = 1
+        local SEA_PATCH_H = 1
+
+    - text: |
+        But before we do, there is another feature we should take care of while we still have a manageable tiling: making the `Client.DirectionalPad` action rotate the ship!
+
+    - title: "Rotating our ship avatar"
+
+    - text: |
+        This feature is a quick one: we just need to store the current value of the X-axis of the `Client.DirectionalPad` (i.e. the left/right keys on a computer or the horizontal slides on the directional-button input on mobiles) and re-use it in the update method, the `Client.Tick`, to rotate the `Player` (and therefore the avatar linked to it) at a given speed:
+    
+    - code: |
+        local SHIP_ROTATION_SPEED = 0.65
+        local shipDirection = 0
+
+        Client.Tick = function(dt)
+            if shipDirection ~= 0 then
+                Player.LocalRotation.Y = Player.LocalRotation.Y + shipDirection * SHIP_ROTATION_SPEED * dt
+            end
+        end
+
+        Client.DirectionalPad = function(x, y)
+            shipDirection = x
+        end
+
+    - text: |
+        Try to relaunch the game and you'll be able to rotate the ship avatar on the sea patch independently from the camera :)
+
+    - media: "/media/guides/02-lone-scoundrel_ship-rotation.mp4"
+
+    - title: "Adding some fog to hide the map borders"
+
+    - text: |
+        Now that we've prepared all of our player motion logic, we can extend the sea patches to fill the entire screen... and add another cool effect: a fog! This fog will be useful for two reasons: one, it will emphasise the feeling that you're playing on an infinite map; two, it will help us as developers hide the objects spawning point and maintain the illusion ;)
+
+        With Cubzh, it's just two lines of code to call the [`Fog`](/reference/fog) API:
+
+    - code: |
+        local N_SEA_PATCH_X = 10
+        local N_SEA_PATCH_Y = 10
+        local SEA_PATCH_W = 10
+        local SEA_PATCH_H = 10
+
+        Client.OnStart = function()
+            -- Add fog to hide map borders
+            Fog.Near, Fog.Far = 80, 100
+            Fog.LightAbsorption = 1
+
+            -- Add player to game
+            initPlayer()
+            World:AddChild(Player, true)
+
+            -- Set up world
+            makeSea()
+        end
+
+    - title: "Spawning collectibles"
+    
+    - text: |
+        Okay, we've now set up the game environment - that's nice, but if you try to play, this new world is gonna feel both pretty empty and pretty endless! So how are we going to get this nicer look from the demo above, with all these coins and chests floating about that you can pick up to increase your score?
+
+        Since we saw last time how to add and remove objects from a Cubzh world, you technically have all the tools you need to do something like this. But there are still several questions to answer, such as: where do we spawn the objects? how many can we/should we spawn? do we need to keep all of them, even when they've gotten out of sight?
+
+        We're going to discuss all of this, step-by-step.
+
+    - subtitle: "Optimising the object spawning"
+
+    - text: |
+        From a player point of view, "Lone Scoundrel" is a game that uses an infinite map. However, you've probably guessed that the notion of "infinite" isn't really something we can code. Even if they are pretty powerful beasts, our modern computers have their limitations. They might be hard to reach, but give it enough time and a badly designed script will eventually flood the memory or CPU processing power of your machine...
+
+        So what can we do to trick the players into thinking there is an endless sea of coins and chests before them with a computer-friendly usage of the memory? Should we keep on instantiating and destroying objects like we did in the last tutorial?
+
+        In fact, the better solution is to use a common game dev pattern: the object pooling technique.
+        To put it simply, this pattern is meant to counteract an irritating problem: overall, creating and destroying objects is costly. Continuously re-instantiating and deleting stuff means that you're doing a lot of memory allocations, deallocations and re-allocations which is always inefficient. This is mostly due to caching and the way that computers sort objects in memory: they always prefer to have objects in neatly consecutive chunks of memory, but destroying an object means deleting a chunk, which leaves a hole - this is the problem of memory fragmentation.
+
+    - image: ""
+
+    - text: |
+        It's usually way more optimised to keep the same objects as much as possible, and simply move them around your scene to "fake" the apparition of new ones. This way you don't create holes in your memory lines: once an object has reserved a spot, it keeps it until the end of the process and doesn't collide with the rest of the objects in memory. So the object pool pattern relies on switching objects from an "alive" to a "dead" state periodically, but never re-creating new ones or destroying them completely. We just simulate their appearance or disappearance via various tricks, but the memory manager is happy because we ask for one big chunk of contiguous memory at the very beginning and then that's it: we keep working with the same objects in memory over and over again.
+
+        To use object pooling in our code, we have to:
+        
+        - prepare a pool of collectibles (coins and chests) that are all in the "dead" state to begin with: the size of this pool determines how many instances can be "alive" at the same time
+        - when we spawn one or more, make all those instances (temporarily) "alive"
+        - when we decide they're useless (for example, when they've exited the screen), turn them back to the "dead" state
+
+        We can naturally have several pools of objects if we have different object types - like, here, the coins and the chests.
+
+        Let's build our object pools slowly. First, I'll define my pools sizes and create some function skeletons to stucture my code:
+
+    - code: |
+        -- -----------------------
+        local COINS_POOL_SIZE = 20
+        -- -----------------------
+        local CHESTS_POOL_SIZE = 10
+
+        Client.OnStart = function()
+            ...
+            -- Set up collectibles
+            prepareCollectibles()
+        end
+
+        function prepareCollectibles()
+            -- Prepare object instances for
+            -- object pooling
+            for i = 1, COINS_POOL_SIZE do
+                prepareCollectible(false)
+            end
+            for i = 1, CHESTS_POOL_SIZE do
+                prepareCollectible(true)
+            end
+        end
+
+        function prepareCollectible(isChest)
+            -- instantiate the object: coin
+            -- or chest depending on isChest
+
+            -- set properties
+
+            -- set as "dead"
+
+            -- add to a list of items for future references
+        end
+
+    - text: |
+        The `prepareCollectible` method is self-explanatory but we have to be careful to properly handle both item types (the coins and the chests) and track them in the right Lua table (`coins` or `chests`). Note that I'll also add a global `collectibles` list that holds a reference to all the items in both pools and that I'll initially "hide" our objects under the sea, next to our original avatar:
+
+    - code: |
+        Config = {
+            Items = {
+                "claire.stunfest_coin_small",
+                "minadune.boat",
+                "minadune.chest",
+            }
+        }
+
+        -- -----------------------
+        local COINS_POOL_SIZE = 20
+        local coins = {}
+        -- -----------------------
+        local CHESTS_POOL_SIZE = 10
+        local chests = {}
+        -- -----------------------
+        local collectibles = {}
+
+        function prepareCollectible(isChest)
+            local collectible = Shape(
+                isChest and
+                Items.minadune.chest or
+                Items.claire.stunfest_coin_small)
+            World:AddChild(collectible)
+            -- (Hide under the map + rescale)
+            collectible.Position = Number3(0, -5, 0) * Map.LossyScale
+            collectible.Scale = 0.4
+            -- Set collectible as inactive in object pool
+            collectible.active = false
+            -- Mark chest flag + add random rotation if need be
+            -- and add to proper pool
+            if isChest then
+                collectible.isChest = true
+                table.insert(chests, collectible)
+            else
+                table.insert(coins, collectible)
+            end
+            table.insert(collectibles, collectible)
+        end
+
+    - text: |
+        For now, however, we aren't actually showing any item since we made sure to hide them. This is the second step of the object pooling technique: taking objects from the pool and making them "alive" for our game. In our case, this means turning on their `active` property, but mostly this means giving them some random position above the sea in the map so we can see them!
+
+        That's where we need to answer one of the questions listed previously: where should we "spawn" our coins and chests? How can we get random and yet controlled positions?
+
+        Well, if you think about it, the part of the sea we're most interested in is the cone currently in front of the ship - ideally, we should spawn our collectibles somewhere in-between this two diagonals:
+
+    - image: "/images/guides/02-lone-scoundrel_spawn-cone.jpg"
+
+    - text: |
+        If you're a math-lover, you might already know where this is headed: we're going to use some trigonometry! In short, what we want is to pick a random distance and a random angle between these two limits, and then find the coordinates matching this point in the space.
+
+        I won't go into too much detail here as it's not the heart of this tutorial, but there are lots of resources on the net if you want to better understand radiuses, angles, and coordinate systems. If you just want to go on, here is the code that will find a random spawning point somewhere in this cone before the ship, take the first non-"alive" coin in the `coins` list and move it there, and finally update the current object pool tracker for next time:
+
+    - code: |
+        function randomBetween(a, b)
+            return math.random() * (b - a) + a
+        end
+
+        function spawnCoins()
+            for _ = 1, math.floor(randomBetween(3, 7)) do
+                spawnCoin()
+            end
+        end
+
+        function spawnCoin()
+            if activeCoins == #coins then
+                unspawnCollectible(coins[1])
+            end
+
+            local newSpawnIndex = coinLastSpawnIndex + 1
+            if newSpawnIndex == COINS_POOL_SIZE then
+                newSpawnIndex = 1
+            end
+            local coin = coins[newSpawnIndex]
+            coin.active = true
+
+            -- Set at random position around center
+            -- using intermediate radial coordinates
+            local r = 15 + randomBetween(0, 20)
+            local a = randomBetween(math.pi / 3, 2 * math.pi / 3)
+            a = a - Player.LocalRotation.Y
+            coin.Position = Player.avatar.Position + Number3(
+                r * math.cos(a),
+                0,
+                r * math.sin(a)) * Map.LossyScale
+
+            coinLastSpawnIndex = newSpawnIndex
+
+            activeCoins = activeCoins + 1
+        end
+
+    - text: |
+        To sum up, every time we call `spawnCoin()`, we'll do the following:
+
+        - first, we check if the all the objects in the pool are currently in use; if so, since we can't create any more, we'll "unspawn" the oldest one (that should be almost out of sight anyway). This shouldn't actually happen if you properly tweak the pool size according to your ship speed and the camera field, because collectibles should always disappear (and therefore be "unspawned") far before you reach the end of you pool, but you never know :)
+        - then, we take a new coin out of the unused ("dead") pool and make it "alive"
+        - we also set its position using randomness and trigonometry
+        - and finally, we update our `coinLastSpawnIndex` so that, next time we call the function, we don't try to re-use the same coin
+        - at the end, we also increase the `activeCoins` counter: this is a handy variable that allows us to quickly check if all the pool is currently in use. We could recompute it by going through each element in the list and checking if its `active` property is on, but it's faster and easier to just keep this count alongside the table.
+
+        For the chests, we have the exact same logic except we use the chest-related variables, and I'm moving them down slightly so they look like they're floating at the surface:
+
+    - code: |
+        function spawnChests()
+            for _ = 1, math.floor(randomBetween(0, 2)) do
+                spawnChest()
+            end
+        end
+
+        function spawnChest()
+            if activeChests == #chests then
+                unspawnCollectible(chests[1])
+            end
+
+            local newSpawnIndex = chestLastSpawnIndex + 1
+            if newSpawnIndex == CHESTS_POOL_SIZE then
+                newSpawnIndex = 1
+            end
+            local chest = chests[newSpawnIndex]
+            chest.active = true
+
+            -- Set at random position around center
+            -- using intermediate radial coordinates
+            local r = 15 + randomBetween(0, 20)
+            local a = randomBetween(math.pi / 3, 2 * math.pi / 3)
+            a = a - Player.LocalRotation.Y
+            chest.Position = Player.avatar.Position + Number3(
+                r * math.cos(a),
+                -0.6,
+                r * math.sin(a)) * Map.LossyScale
+
+            chestLastSpawnIndex = newSpawnIndex
+
+            activeChests = activeChests + 1
+        end
+
+    - text: |
+        Finally, we need to define the `unspawnCollectible()` function we used here. It is really short - all it has to do is reset the `active` property of the item to `false`, stick it back under the sea with the rest of the unused pool and decrease the associated counter of "alive" items:
+
+    - code: |
+        function unspawnCollectible(collectible)
+            collectible.active = false
+            collectible.Position = Number3(0, -5, 0) * Map.LossyScale
+            if collectible.isChest then activeChests = activeChests - 1
+            else activeCoins = activeCoins - 1
+            end
+        end
+
+    - text: |
+        Now, we can use the `spawnCoins()` and `spawnChests()` functions after our pool initialisation, and we'll get some items "spawned" in the world when the game starts:
+
+    - code: |
+        Client.OnStart = function()
+            ...
+            -- Set up collectibles
+            prepareCollectibles()
+
+            spawnCoins()
+            spawnChests()
+        end
+
+    - image: "/images/guides/02-lone-scoundrel_collectible-too-far.jpg"
+
+    - title: "Moving the ship... or not?"
+
+    - text: |
+        We now have a way to add collectibles on the map, and we can steer in their direction... but wait - we aren't actually moving, right? Up to this point, we haven't coded anything to translate the ship?
+
+        And that's the real trick: we are not going to move the ship.
+
+        Yes, you heard me: we are going to dupe the players and give them the illusion of movement, but the ship will stay totally fixed to the origin point :)
+
+        It's the same idea as when you're in a train that is starting to move, and you feel like it's the train station that is gliding away. Movement is relative to anchors and visual points of reference, so if you don't have anything else telling you what is static and what is moving, you can't tell the difference between a ship sailing towards an island, and an island translating towards a ship.
+
+        This is how we are going to simulate an endless movement: we will move everything but the ship opposite its direction, which will look like the ship is sailing forward.
+
+    - media: "/media/guides/02-lone-scoundrel_moving-items.mp4"
+
+    - text: |
+        This is done by looking at the collectibles in our `collectibles` list, ignoring the ones that are "dead", and moving all the others in the [`Player.Backward`](/reference/player#property-backward) direction at an arbitrary speed every tick. While we're at it, we'll also handle the "exiting the screen" disappearance. We just have to check if the item is behind the player and far away - if it is, then we'll "unspawn" it and re-spawn a new one of the same type in front of the ship, in the distance:
+
+    - code: |
+        local SHIP_MOVE_SPEED = 12
+
+        Client.Tick = function(dt)
+            if shipDirection ~= 0 then
+                Player.LocalRotation.Y = Player.LocalRotation.Y + shipDirection * SHIP_ROTATION_SPEED * dt
+            end
+
+            for _, c in ipairs(collectibles) do
+                if c.active then
+                    -- Move on the map
+                    c.Position = c.Position + SHIP_MOVE_SPEED * Player.Backward * dt
+
+                    -- If item is behind the player and far away,
+                    -- remove it (= unspawn + re-spawn)
+                    local d = c.Position - Player.Position
+                    if Player.Forward:Dot(d) < 0 and d.Length > 100 then
+                        if c.isChest then spawnChest() else spawnCoin() end
+                        unspawnCollectible(c)
+                    end
+                end
+            end
+        end
+
+    - text: |
+        To check if the item is behind the player, we compute the dot product of the forward direction of the player with the direction of the item to the player. This mathematical quantity is positive when the two directions are roughly the same and negative when they are opposite to one another:
+
+    - image: "/images/guides/02-lone-scoundrel_dot-product.jpg"
+
+    - title: "Looting coins and chests"
+
+    - text: |
+        Now that we can actually get close to these items, let's add some logic to collect them when our ship avatar collides with their bounding box!
+
+        The loot process will be triggered from the `Client.Tick` in the loop we just wrote if the `collides()` calls checks out:
+
+    - code: |
+        Client.OnStart = function()
+            ...
+            score = 0
+        end
+
+        Client.Tick = function(dt)
+            if shipDirection ~= 0 then
+                Player.LocalRotation.Y = Player.LocalRotation.Y + shipDirection * SHIP_ROTATION_SPEED * dt
+            end
+
+            for _, c in ipairs(collectibles) do
+                if c.active then
+                    -- Move on the map
+                    c.Position = c.Position + SHIP_MOVE_SPEED * Player.Backward * dt
+
+                    -- If player collides with collectible: loot and remove
+                    if collides(c) then
+                        loot(c.isChest and 10 or 1)
+                        unspawnCollectible(c)
+                    end
+
+                    -- If item is behind the player and far away,
+                    -- remove it (= unspawn + re-spawn)
+                    local d = c.Position - Player.Position
+                    if Player.Forward:Dot(d) < 0 and d.Length > 100 then
+                        if c.isChest then spawnChest() else spawnCoin() end
+                        unspawnCollectible(c)
+                    end
+                end
+            end
+        end
+
+        function loot(points)
+            score = score + points
+            Player.avatar:TextBubble("+" .. points)
+        end
+
+    - text: |
+        <i>Note: in the `loot()` function, I used the [`Player`](/reference/player).[`TextBubble`](/reference/player#functions-textbubble) method to pop a little text above the "head" of the ship with the points the item gave the player.</i>
+
+        The `collides()` utility is very similar to the one we used in the [first tutorial](/guides/tutorials/tutoworld), but this time we have to compute our player's bounding box around the ship avatar's position:
+
+    - code: |
+        Client.OnStart = function()
+            ...
+            -- Global variables
+            kPlayerHeight = 10
+            kPlayerHalfWidth = 2.0
+            kPlayerHalfDepth = 2.0
+        end
+
+        function collides(shape)
+            local playerMin = Number3(
+                Player.Position.X - kPlayerHalfWidth,
+                Player.Position.Y + 20,
+                Player.Position.Z - kPlayerHalfDepth)
+            local playerMax = Number3(
+                Player.Position.X + kPlayerHalfWidth,
+                Player.Position.Y + 20 + kPlayerHeight,
+                Player.Position.Z + kPlayerHalfDepth)
+            local halfSize = (
+                shape.Width > shape.Depth
+                and shape.Width * 0.5
+                or shape.Depth * 0.5) * shape.LocalScale.X
+            local shapeMin = Number3(
+                shape.Position.X - halfSize,
+                shape.Position.Y,
+                shape.Position.Z - halfSize)
+            local shapeMax = Number3(
+                shape.Position.X + halfSize,
+                shape.Position.Y + shape.Height * shape.LocalScale.X,
+                shape.Position.Z + halfSize)
+            if playerMax.X > shapeMin.X and
+                playerMin.X < shapeMax.X and
+                playerMax.Y > shapeMin.Y and
+                playerMin.Y < shapeMax.Y and
+                playerMax.Z > shapeMin.Z and
+                playerMin.Z < shapeMax.Z then
+                return true
+            end
+            return false
+        end
+
+    - text: |
+        We can now scavenge this precious cargo, yay!
+
+    - media: "/media/guides/02-lone-scoundrel_loot.mp4"
+
+    - title: "Creating procedural islands"
+
+    - text: |
+        We've already done a lot, and learnt plenty in this tutorial... in this section, we're going to re-use previous concepts to add the "enemies" of our game: the islands!
+
+        Basically, the idea is to:
+
+        - use procedural generation (i.e. a [`MutableShape`](/reference/mutableshape) to which we add voxels) with some randomness
+        - then move the islands just like the items
+
+        Even if they behave the same and we will indeed need to create and remove them as the game runs, I decided not to do object pooling for the islands because we'd have needed to "regenerate" their shape whenever they come "alive" anywawy, and because it would complicate the script even more :)
+
+        So we'll just add some functions to generate an island in the world somewhere in the cone in front of the ship, just as we did with the collectibles, and we'll keep a list of all the `islands` to be able to access them in the `Client.Tick` and move them towards the player:
+
+    - code: |
+        -- -----------------------
+        local BROWN = Color(50, 65, 0)
+        local GREEN = Color(20, 160, 17)
+        local BLUE = Color(76, 215, 255)
+        -- -----------------------
+        local islands = {}
+
+        function makeIslands()
+            local n = math.floor(randomBetween(0, 4))
+            for _ = 1, 4 + n do
+                local r = 10 + randomBetween(0, 20)
+                local a = randomBetween(math.pi / 5, 4 * math.pi / 5)
+                a = a - Player.LocalRotation.Y
+                local p = Player.avatar.Position + Number3(
+                r * math.cos(a),
+                0,
+                r * math.sin(a))
+                makeIsland(p.X, p.Z)
+            end
+        end
+
+        function makeIsland(cx, cy)
+            island = MutableShape()
+            local W = math.floor(randomBetween(3, 6))
+            local H = math.floor(randomBetween(3, 6))
+            for z = 0, H - 1 do
+                for x = 0, W - 1 do
+                    if math.random() < 0.75 then
+                        island:AddBlock(BROWN, x, 0, z)
+                        if math.random() < 0.5 then
+                            island:AddBlock(GREEN, x, 1, z)
+                            if math.random() < 0.2 then
+                                island:AddBlock(GREEN, x, 2, z)
+                            end
+                        end
+                    end
+                end
+            end
+            island.Scale = 0.35 * Map.LossyScale
+            island.Physics = false
+            island.Position = Number3(cx, -1, cy) * Map.LossyScale
+            World:AddChild(island)
+            table.insert(islands, island)
+        end
+
+    - text: |
+        The islands are made of one to three "floors", with less and less chance of blocks appearing as you go higher - the algorithm never puts a block on an empty space and it uses either a `BROWN` or a `GREEN` colour depending on the "floor" level.
+
+        After they've been generated, we can move the islands like the coins and chests, and if they exit the screen, remove them from the game. Also, if the player collides with one, we'll trigger the `gameOver()` function that we'll fill in a second:
+
+    - code: |
+        Client.Tick = function(dt)
+            if shipDirection ~= 0 then ... end
+            
+            for i, island in ipairs(islands) do
+                -- Move on the map
+                island.Position = island.Position + SHIP_MOVE_SPEED * Player.Backward * dt
+                
+                -- On hit: game over!
+                if collides(island) then
+                    gameOver()
+                end
+                
+                -- If island is behind the player and far away,
+                -- remove it from the world
+                local d = island.Position - Player.Position
+                if Player.Forward:Dot(d) < 0 and d.Length > 100 then
+                    island:RemoveFromParent()
+                    table.remove(islands, i)
+                end
+            end
+            for _, c in ipairs(collectibles) do ... end
+        end
+
+        function gameOver()
+        end
+
+    - title: "Setting up the UI & game over logic"
+
+    - text: |
+        We're almost done - time to add a score label to tell the players how many points they have, and prepare an end screen for the game over. If you're not yet familiar with Cubzh's [`UI`](/reference/ui) API, don't hesitate to have a look at [the end of the "Tutoworld" tutorial](/guides/tutorials/tutoworld#adding-a-basic-ui-and-handling-the-end-of-the-game). I'll also take this opportunity to regroup all of my initialisation code in a dedicated function, `initGame()`, so I can use it as a callback for my "Replay" button:
+
+    - code: |
+        Client.OnStart = function()
+            ...
+            
+            -- UI variables
+            ui = {
+                scoreLabel = UI.Label("Score: 0", Anchor.HCenter, Anchor.Bottom),
+                gameover = {
+                    message = UI.Label("Game Over!"),
+                    score = UI.Label(""),
+                    restartBtn = UI.Button("Replay :)"),
+                }
+            }
+            ui.scoreLabel.TextColor = Color(255, 255, 255)
+            ui.gameover.restartBtn.Color = Color(37, 232, 156)
+            ui.gameover.restartBtn.OnRelease = initGame
+            
+            -- Start!
+            initGame()
+        end
+
+        Client.Tick = function(dt)
+            if paused then return end
+            ...
+        end
+
+        function initGame()
+            -- Setup UI
+            ui.scoreLabel:Add(Anchor.HCenter, Anchor.Bottom)
+            ui.gameover.message:Remove()
+            ui.gameover.score:Remove()
+            ui.gameover.restartBtn:Remove()
+            
+            paused = false
+            time = 0
+            score = 0
+            
+            makeIslands()
+            spawnCoins()
+            spawnChests()
+            
+            Pointer:Hide()
+            UI.Crosshair = true
+        end
+
+        function gameOver()
+            paused = true
+            
+            -- Reset islands and collectibles
+            for _, i in ipairs(islands) do
+                i:RemoveFromParent()
+            end
+            islands = {}
+            for _, c in ipairs(collectibles) do
+                unspawnCollectible(c)
+            end
+            
+            -- Show game over screen
+            ui.gameover.message:Add(Anchor.HCenter, Anchor.VCenter)
+            ui.gameover.score.Text = "Final Score: " .. score
+            ui.gameover.score:Add(Anchor.HCenter, Anchor.VCenter)
+            ui.gameover.restartBtn:Add(Anchor.HCenter, Anchor.VCenter)
+            
+            Pointer:Show()
+            UI.Crosshair = false
+        end
+
+    - text: |
+        And, by the way: to truly fill the world with collectibles and islands, just re-spawning them once in a while won't be enough! So let's use a [`Timer`](/reference/timer) (with its `repeat` option set to `true`) to regularly call our spawning methods and "re-populate" our game with coins, chests and evil deathly rocks:
+
+    - code: |
+        function initGame()
+            -- Setup UI...
+            
+            -- Start spawners
+            makeIslands()
+            spawnerIslands = Timer(10.0, true, function()
+                makeIslands()
+            end)
+            spawnCoins()
+            spawnChests()
+            spawnerCollectibles = Timer(20.0, true, function()
+                spawnCoins()
+                spawnChests()
+            end)
+            
+            Pointer:Hide()
+            UI.Crosshair = true
+        end
+
+        function gameOver()
+            paused = true
+            
+            -- Stop spawners
+            spawnerIslands:Cancel()
+            spawnerCollectibles:Cancel()
+        end
+
+    - title: "Adding some randomness and animations on the collectibles"
+
+    - text: |
+        As a last subtle touch, we're going to give our coins and chests some idle movement to grasp our attention, and we'll also set a random rotation on our chests to make them more "scavengy" looking.
+
+        This rotation is easy to set in our pool initialisation:
+
+    - code: |
+        function prepareCollectible(isChest)
+            ...
+            if isChest then
+                collectible.isChest = true
+                collectible.LocalRotation.X = randomBetween(-math.pi / 6, math.pi / 6)
+                collectible.LocalRotation.Y = randomBetween(-math.pi / 2, math.pi / 2)
+                table.insert(chests, collectible)
+            else
+                table.insert(coins, collectible)
+            end
+            table.insert(collectibles, collectible)
+        end
+
+    - text: |
+        For the animations, I'll do the same as in the "Tutoworld" tutorial and keep track of the current in-game time so I can apply a periodic function to my chests vertical position, and I'll rotate the coins continuously along the Y-axis:
+
+    - code: |
+        Client.OnStart = function()
+            ...
+            time = 0
+        end
+
+        Client.Tick = function(dt)
+            if time == nil then return end
+
+            if paused then return end
+            
+            if shipDirection ~= 0 then ... end
+            
+            time = time + dt
+            for i, island in ipairs(islands) do ... end
+            for _, c in ipairs(collectibles) do
+                if c.active then
+                    -- Move on the map...
+
+                    -- If player collides with collectible: loot and remove...
+
+                    -- If item is behind the player and far away,
+                    -- remove it (= unspawn + re-spawn)...
+                    
+                    -- Add nice animation
+                    if c.isChest then
+                        c.Position.Y = (-1 + 0.2 * math.sin(time)) * Map.LossyScale.Y
+                    else
+                        c.LocalRotation.Y = c.LocalRotation.Y + dt
+                    end
+                 end
+            end
+        end
+
+    - title: "Conclusion"
+
+    - text: |
+        In this second tutorial, we made a more advanced solo-game, "Lone Scoundrel", and we discovered various dev patterns like procedural generation or object pooling!
+        
+        You can find the game on Cubzh (by going to the worlds list and searching for "Lone Scoundrel") or re-create your own and then tweak it to your liking: feel free to share all your creations with us, we'd love to hear from you! :)
+
+    - media: "/media/guides/02-lone-scoundrel_demo.mp4"
+
+    - title: "Resources & links"
+
+    - subtitle: "API objects used in this tutorial:"
+
+    - text: |
+        - [`Button`](/reference/button)
+        - [`Camera`](/reference/camera)
+        - [`Client`](/reference/client)
+        - [`Color`](/reference/color)
+        - [`Config`](/reference/config)
+        - [`Fog`](/reference/fog)
+        - [`Items`](/reference/items)
+        - [`Label`](/reference/label)
+        - [`Light`](/reference/light)
+        - [`MutableShape`](/reference/mutableshape)
+        - [`Number3`](/reference/number3)
+        - [`Object`](/reference/object) (indirectly)
+        - [`Palette`](/reference/palette) (indirectly)
+        - [`Player`](/reference/player)
+        - [`Pointer`](/reference/pointer)
+        - [`UI`](/reference/ui)
+        - [`World`](/reference/world)
+
+    - subtitle: "Final code"
+
+    - text : |
+        As a reference, here is the final code of "Lone Scoundrel" - remember that you can also check it out directly on Cubzh by playing the game and clicking the "Read the code" button!
+
+    - code: |
+        Config = {
+            Items = {
+                "claire.stunfest_coin_small",
+                "minadune.boat",
+                "minadune.chest",
+            }
+        }
+
+        -- -----------------------
+        local BROWN = Color(50, 65, 0)
+        local GREEN = Color(20, 160, 17)
+        local BLUE = Color(76, 215, 255)
+        -- -----------------------
+        local N_SEA_PATCH_X = 10
+        local N_SEA_PATCH_Y = 10
+        local SEA_PATCH_W = 10
+        local SEA_PATCH_H = 10
+        -- -----------------------
+        local SHIP_MOVE_SPEED = 12
+        local SHIP_ROTATION_SPEED = 0.65
+        local shipDirection = 0
+        -- -----------------------
+        local COINS_POOL_SIZE = 20
+        local coins = {}
+        local activeCoins = 0
+        local coinLastSpawnIndex = 0
+        -- -----------------------
+        local CHESTS_POOL_SIZE = 10
+        local chests = {}
+        local activeChests = 0
+        local chestLastSpawnIndex = 0
+        -- -----------------------
+        local collectibles = {}
+        local islands = {}
+
+        -- -----------------------
+        -- Base client functions
+        -- -----------------------
+        Client.OnStart = function()    
+            -- Add fog to hide map borders
+            Fog.Near, Fog.Far = 80, 100
+            Fog.LightAbsorption = 1
+            
+            -- Add player to game
+            initPlayer()
+            World:AddChild(Player, true)
+            
+            makeSea()
+            
+            prepareCollectibles()
+            
+            -- Global variables
+            kPlayerHeight = 10
+            kPlayerHalfWidth = 2.0
+            kPlayerHalfDepth = 2.0
+            
+            -- UI variables
+            ui = {
+                scoreLabel = UI.Label("Score: 0", Anchor.HCenter, Anchor.Bottom),
+                gameover = {
+                    message = UI.Label("Game Over!"),
+                    score = UI.Label(""),
+                    restartBtn = UI.Button("Replay :)"),
+                }
+            }
+            ui.scoreLabel.TextColor = Color(255, 255, 255)
+            ui.gameover.restartBtn.Color = Color(37, 232, 156)
+            ui.gameover.restartBtn.OnRelease = initGame
+            
+            -- Start!
+            initGame()
+        end
+
+        Client.Tick = function(dt)
+            if paused then return end
+            if time == nil then return end
+            
+            if shipDirection ~= 0 then
+                Player.LocalRotation.Y = Player.LocalRotation.Y + shipDirection * SHIP_ROTATION_SPEED * dt
+            end
+
+            time = time + dt
+            for i, island in ipairs(islands) do
+                -- Move on the map
+                island.Position = island.Position + SHIP_MOVE_SPEED * Player.Backward * dt
+                
+                -- On hit: game over!
+                if collides(island) then
+                    gameOver()
+                end
+                
+                -- If island is behind the player and far away,
+                -- remove it from the world
+                local d = island.Position - Player.Position
+                if Player.Forward:Dot(d) < 0 and d.Length > 100 then
+                    island:RemoveFromParent()
+                    table.remove(islands, i)
+                end
+            end
+            for _, c in ipairs(collectibles) do
+                if c.active then
+                    -- Move on the map
+                    c.Position = c.Position + SHIP_MOVE_SPEED * Player.Backward * dt
+                    
+                    -- Add nice animation
+                    if c.isChest then
+                        c.Position.Y = (-1 + 0.2 * math.sin(time)) * Map.LossyScale.Y
+                    else
+                        c.LocalRotation.Y = c.LocalRotation.Y + dt
+                    end
+                    
+                    -- If player collides with collectible: loot and remove
+                    if collides(c) then
+                        loot(c.isChest and 10 or 1)
+                        unspawnCollectible(c)
+                    end
+                    
+                    -- If item is behind the player and far away,
+                    -- remove it (= unspawn + re-spawn)
+                    local d = c.Position - Player.Position
+                    if Player.Forward:Dot(d) < 0 and d.Length > 100 then
+                        if c.isChest then spawnChest() else spawnCoin() end
+                        unspawnCollectible(c)
+                    end
+                end
+            end
+        end
+
+        Client.DirectionalPad = function(x, y)
+            shipDirection = x
+        end
+
+        Client.AnalogPad = function(dx,dy)
+            if not Player.init then initPlayer() end
+            cameraOrbit.LocalRotation.Y = cameraOrbit.LocalRotation.Y + dx * 0.01
+        end
+
+        -- ----------------------
+        -- INITIALIZATION / GAME
+        -- ----------------------
+        function initGame()
+            -- Setup UI
+            ui.scoreLabel:Add(Anchor.HCenter, Anchor.Bottom)
+            ui.gameover.message:Remove()
+            ui.gameover.score:Remove()
+            ui.gameover.restartBtn:Remove()
+            
+            paused = false
+            time = 0
+            score = 0
+            
+            -- Start spawners
+            makeIslands()
+            spawnerIslands = Timer(10.0, true, function()
+                makeIslands()
+            end)
+            spawnCoins()
+            spawnChests()
+            spawnerCollectibles = Timer(20.0, true, function()
+                spawnCoins()
+                spawnChests()
+            end)
+            
+            Pointer:Hide()
+            UI.Crosshair = true
+        end
+
+        function initPlayer()
+            -- Setup camera
+            Camera:SetModeFree()
+            
+            cameraOrbit = Object()
+            Player:AddChild(cameraOrbit)
+            
+            cameraOrbit:AddChild(Camera)
+            Camera.LocalPosition = { 0, 90, -60 }
+            Camera.LocalRotation = { 0.7, 0, 0 }
+            
+            -- Remove gravity
+            Player.Physics = false
+            
+            -- Setup ship avatar
+            Player.avatar = Shape(Items.minadune.boat)
+            Player:AddChild(Player.avatar)
+            
+            -- Move normal avatar to hide it under the map,
+            -- then re-add matching offset to ship
+            Player.Position = Number3(0, -5, 0) * Map.LossyScale
+            Player.avatar.Position = Player.Position + { 0, 5 * Map.LossyScale.Y, 0 }
+            
+            -- Add light on ship
+            local l = Light()
+            Player.avatar:AddChild(l)
+            l.Position = Player.avatar.Position + { 0, 5, -1 }
+            l.Range = 5
+            l.Hardness = 0.1
+            l.Color = Color(255, 255, 200)
+            
+            Player.init = true
+        end
+
+        function loot(points)
+            score = score + points
+            ui.scoreLabel.Text = "Score: " .. score
+            Player.avatar:TextBubble("+" .. points)
+        end
+
+        function gameOver()
+            paused = true
+            
+            -- Stop spawners
+            spawnerIslands:Cancel()
+            spawnerCollectibles:Cancel()
+            
+            -- Reset islands and collectibles
+            for _, i in ipairs(islands) do
+                i:RemoveFromParent()
+            end
+            islands = {}
+            for _, c in ipairs(collectibles) do
+                unspawnCollectible(c)
+            end
+            
+            -- Show game over screen
+            ui.gameover.message:Add(Anchor.HCenter, Anchor.VCenter)
+            ui.gameover.score.Text = "Final Score: " .. score
+            ui.gameover.score:Add(Anchor.HCenter, Anchor.VCenter)
+            ui.gameover.restartBtn:Add(Anchor.HCenter, Anchor.VCenter)
+            
+            Pointer:Show()
+            UI.Crosshair = false
+        end
+
+        -- ---------------
+        -- MAP GENERATION
+        -- ---------------
+        function makeSea()
+            local makeSeaPatch = function (ox, oy)
+                patch = MutableShape()
+                patch:AddBlock(BLUE, 0, 0, 0)
+                patch.Scale = Number3(SEA_PATCH_W, 0.1, SEA_PATCH_H) * Map.LossyScale
+                patch.Physics = false
+                patch.Position = Number3(
+                    (ox - 0.5) * SEA_PATCH_W,
+                    -1,
+                    (oy - 0.5) * SEA_PATCH_H) * Map.LossyScale
+                World:AddChild(patch)
+            end
+            for y = -N_SEA_PATCH_Y, N_SEA_PATCH_Y do
+                for x = -N_SEA_PATCH_X, N_SEA_PATCH_X do
+                    makeSeaPatch(x, y)
+                end
+            end
+        end
+
+        function makeIslands()
+            local n = math.floor(randomBetween(0, 4))
+            for _ = 1, 4 + n do
+                local r = 10 + randomBetween(0, 20)
+                local a = randomBetween(math.pi / 5, 4 * math.pi / 5)
+                a = a - Player.LocalRotation.Y
+                local p = Player.avatar.Position + Number3(
+                    r * math.cos(a),
+                    0,
+                    r * math.sin(a))
+                makeIsland(p.X, p.Z)
+            end
+        end
+
+        function makeIsland(cx, cy)
+            island = MutableShape()
+            local W = math.floor(randomBetween(3, 6))
+            local H = math.floor(randomBetween(3, 6))
+            for z = 0, H - 1 do
+                for x = 0, W - 1 do
+                    if math.random() < 0.75 then
+                        island:AddBlock(BROWN, x, 0, z)
+                        if math.random() < 0.5 then
+                            island:AddBlock(GREEN, x, 1, z)
+                            if math.random() < 0.2 then
+                                island:AddBlock(GREEN, x, 2, z)
+                            end
+                        end
+                    end
+                end
+            end
+            island.Scale = 0.35 * Map.LossyScale
+            island.Physics = false
+            island.Position = Number3(cx, -1, cy) * Map.LossyScale
+            World:AddChild(island)
+            table.insert(islands, island)
+        end
+
+        -- ---------------
+        -- SPAWNERS
+        -- ---------------
+        function prepareCollectibles()
+            -- Prepare object instances for
+            -- object pooling
+            for i = 1, COINS_POOL_SIZE do
+                prepareCollectible(false)
+            end
+            for i = 1, CHESTS_POOL_SIZE do
+                prepareCollectible(true)
+            end
+        end
+
+        function prepareCollectible(isChest)
+            local collectible = Shape(
+            isChest and
+            Items.minadune.chest or
+            Items.claire.stunfest_coin_small)
+            World:AddChild(collectible)
+            -- (Hide under the map + rescale)
+            collectible.Position = Number3(0, -5, 0) * Map.LossyScale
+            collectible.Scale = 0.4
+            -- Set collectible as inactive in object pool
+            collectible.active = false
+            -- Mark chest flag + add random rotation if need be
+            -- and add to proper pool
+            if isChest then
+                collectible.isChest = true
+                collectible.LocalRotation.X = randomBetween(-math.pi / 6, math.pi / 6)
+                collectible.LocalRotation.Y = randomBetween(-math.pi / 2, math.pi / 2)
+                table.insert(chests, collectible)
+            else
+                table.insert(coins, collectible)
+            end
+            table.insert(collectibles, collectible)
+        end
+
+        function prepareCoin()
+            local chest = Shape(Items.minadune.chest)
+            World:AddChild(chest)
+            -- (Hide under the map + rescale)
+            chest.Position = Number3(0, -5, 0) * Map.LossyScale
+            chest.Scale = 0.5
+            -- Set chest as inactive in object pool
+            chest.active = false
+            -- Add to chests pool
+            table.insert(chests, chest)
+        end
+
+        function spawnCoins()
+            for _ = 1, math.floor(randomBetween(3, 7)) do
+                spawnCoin()
+            end
+        end
+
+        function spawnChests()
+            for _ = 1, math.floor(randomBetween(0, 2)) do
+                spawnChest()
+            end
+        end
+
+        function spawnCoin()
+            if activeCoins == #coins then
+                unspawnCollectible(coins[1])
+            end
+            
+            local newSpawnIndex = coinLastSpawnIndex + 1
+            if newSpawnIndex == COINS_POOL_SIZE then
+                newSpawnIndex = 1
+            end
+            local coin = coins[newSpawnIndex]
+            coin.active = true
+            
+            -- Set at random position around center
+            -- using intermediate radial coordinates
+            local r = 15 + randomBetween(0, 20)
+            local a = randomBetween(math.pi / 3, 2 * math.pi / 3)
+            a = a - Player.LocalRotation.Y
+            coin.Position = Player.avatar.Position + Number3(
+                r * math.cos(a),
+                0,
+                r * math.sin(a)) * Map.LossyScale
+            
+            coinLastSpawnIndex = newSpawnIndex
+            
+            activeCoins = activeCoins + 1
+        end
+
+        function spawnChest()
+            if activeChests == #chests then
+                unspawnCollectible(chests[1])
+            end
+            
+            local newSpawnIndex = chestLastSpawnIndex + 1
+            if newSpawnIndex == CHESTS_POOL_SIZE then
+                newSpawnIndex = 1
+            end
+            local chest = chests[newSpawnIndex]
+            chest.active = true
+            
+            -- Set at random position around center
+            -- using intermediate radial coordinates
+            local r = 15 + randomBetween(0, 20)
+            local a = randomBetween(math.pi / 3, 2 * math.pi / 3)
+            a = a - Player.LocalRotation.Y
+            chest.Position = Player.avatar.Position + Number3(
+                r * math.cos(a),
+                -0.6,
+                r * math.sin(a)) * Map.LossyScale
+            
+            chestLastSpawnIndex = newSpawnIndex
+            
+            activeChests = activeChests + 1
+        end
+
+        function unspawnCollectible(collectible)
+            collectible.active = false
+            collectible.Position = Number3(0, -5, 0) * Map.LossyScale
+            if collectible.isChest then activeChests = activeChests - 1
+            else activeCoins = activeCoins - 1
+            end
+        end
+
+        -- ---------------
+        -- MISC
+        -- ---------------
+        function randomBetween(a, b)
+            return math.random() * (b - a) + a
+        end
+
+        -- the engine can't report collisions yet (but it will)
+        -- implementing simple collision test for this game in
+        -- the meantime...
+        function collides(shape)
+            local playerMin = Number3(
+            Player.Position.X - kPlayerHalfWidth,
+            Player.Position.Y + 20,
+            Player.Position.Z - kPlayerHalfDepth)
+            local playerMax = Number3(
+            Player.Position.X + kPlayerHalfWidth,
+            Player.Position.Y + 20 + kPlayerHeight,
+            Player.Position.Z + kPlayerHalfDepth)
+            local halfSize = (
+            shape.Width > shape.Depth
+            and shape.Width * 0.5
+            or shape.Depth * 0.5) * shape.LocalScale.X
+            local shapeMin = Number3(
+            shape.Position.X - halfSize,
+            shape.Position.Y,
+            shape.Position.Z - halfSize)
+            local shapeMax = Number3(
+            shape.Position.X + halfSize,
+            shape.Position.Y + shape.Height * shape.LocalScale.X,
+            shape.Position.Z + halfSize)
+            if playerMax.X > shapeMin.X and
+            playerMin.X < shapeMax.X and
+            playerMax.Y > shapeMin.Y and
+            playerMin.Y < shapeMax.Y and
+            playerMax.Z > shapeMin.Z and
+            playerMin.Z < shapeMax.Z then
+                return true
+            end
+            return false
+        end

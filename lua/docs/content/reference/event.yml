@@ -1,0 +1,96 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Event"
+description: |
+    Events are useful to establish communication between the [Server] and all connected [Player]s. 
+blocks:
+    - text: |
+        Events are useful to establish communication between the [Server] and all connected [Player]s. 
+
+        Here's a simple example:
+
+    - code: |
+        local e = Event()
+        e.someMessage = "Something I'd like to say!"
+        e.someNumber = 42
+        e:SendTo(Server) -- send to Server
+
+        -- other possible recipients:
+        e:SendTo(Players) -- send to all players
+        e:SendTo(Players[2]) -- send to player 2
+        e:SendTo(OtherPlayers) -- send to all players but self
+
+    - text: |
+        Events trigger the `DidReceiveEvent` function for each recipient (see [Client.DidReceiveEvent](/reference/client#property-didreceiveevent) & [Server.DidReceiveEvent](/reference/server#property-didreceiveevent)).
+
+    - code: |
+        Server.DidReceiveEvent = function(event)
+          -- `action` here is a custom field set by the developer
+          if event.action == "ping" then
+
+            local response = Event()
+            response.action = "pong"
+            response:SendTo(event.Sender)
+
+          end
+        end
+    
+constructors: 
+  - description: |
+      Creates an empty event.
+
+      Custom fields can then be set with [string], [number] and [boolean] values. (more value types will be supported soon)
+    samples:
+      - code: |
+          local e = Event()
+          e.someMessage = "Something I'd like to say!"
+          e.someNumber = 42
+          e:SendTo(OtherPlayers)
+
+
+properties:
+  - name: "Sender"
+    read-only: true
+    types:
+        - "Server"
+        - "Player"
+    description: |
+        Who sent the event. A useful property when you want to send a response: 
+    samples:
+      - code: |
+          Server.DidReceiveEvent = function(event)
+            -- `action` here is a custom field set by the developer
+            if event.action == "ping" then
+
+              local response = Event()
+              response.action = "pong"
+              response:SendTo(event.Sender)
+
+            end
+          end
+
+  - name: "Recipients"
+    read-only: true
+    type: "array"
+    description: |
+        An array containing all recipients for that event.
+        Recipients can contain individual [Player]s, [OtherPlayers], [Players] or [Server].
+
+    
+functions:
+  - name: "SendTo"
+    argument-sets: 
+      -
+        - name: "..."
+          type: "recipients"
+    description: |
+        Sends the [Event] to recipients in parameters.
+
+        Recipients can be individual [Player]s, [OtherPlayers], [Players] or [Server].
+    samples:
+      - code: |
+          local e = Event()
+          e.someMessage = "Something I'd like to say!"
+          e:SendTo(Player[2], Player[3]) -- send to player 2 & 3
+
+
+

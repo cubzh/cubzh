@@ -1,0 +1,53 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "table"
+basic-type: true
+description: |
+    A table is a basic Lua type, it implements associative arrays.
+blocks:
+  - text: |
+      A table is a basic Lua type, it implements associative arrays.
+
+      An associative array is an array that can be indexed not only with [number]s, but also with [string]s or any other value of the language, except [nil].
+
+  - code: |
+      local t = {} -- create an empty table
+
+      t["x"] = 10 -- set value == 10 for "x" key
+      t.x = 10 -- does the exact same thing
+
+      -- ⚠️ --
+      local x = "aKey"
+      t[x] = 10 -- this sets a value for the "aKey" key
+
+
+  - text: |
+     A table may store values with different types of indices and it grows as it needs to accommodate new entries:
+
+  - code: |
+      local t = {} 
+      t.foo = "bar"
+      t[2] = 10
+      t["test"] = true
+
+      -- go through all key/value pairs of t
+      for key, value in pairs(t) do
+        print(key, value)
+      end
+      -- prints "foo bar", "2 10", "test true" in an unspecified order
+
+  - text: |
+      A table can be initialized with values:
+
+  - code: |
+      local days = {"Sunday", "Monday", "Tuesday",
+      "Wednesday", "Thursday", "Friday", "Saturday"}
+      -- days[1] == "Sunday"
+      -- days[2] == "Monday"
+      -- ...
+
+      local position = {x=1, y=2}
+      -- position.x == 1
+      -- position.y == 2
+      
+
+  

@@ -1,0 +1,97 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "MutableShape"
+extends: "Shape"
+description: A [MutableShape] is an [Object] that carries and displays a set of [Block]s. The difference with [Shape] is that [MutableShape] [Block]s can be modified.
+
+constructors: 
+  - description: |
+        Creates a MutableShape which model can be empty, loaded from an imported [Item], or copied from an 
+      existing [Shape] or [MutableShape].
+    argument-sets:
+      -
+
+      -
+        - name: "item"
+          type: "Item"
+      -
+        - name: "copiedShape"
+          type: "Shape"
+      -
+        - name: "copiedMutableShape"
+          type: "MutableShape"
+      -
+    samples:
+      - code: local s = MutableShape(R.username.itemName)
+
+properties:
+
+functions:
+    - name: "AddBlock"
+      description: |
+          Adds a [Block] to the [This]. You may provide a [Block], a palette index to an existing color in [This]'s [Palette], or any color which will be added automatically to the [This]'s [Palette] if needed.
+          
+          Returns `true` if a block was successfully added.
+      argument-sets:
+        -
+          - name: "block"
+            type: "Block"
+        -
+          - name: "paletteIndex"
+            type: "integer"
+          - name: "position"
+            type: "Number3"
+        -
+          - name: "paletteIndex"
+            type: "integer"
+          - name: "X"
+            type: "number"
+          - name: "Y"
+            type: "number"
+          - name: "Z"
+            type: "number"
+        -
+          - name: "color"
+            type: "Color"
+          - name: "position"
+            type: "Number3"
+        -
+          - name: "color"
+            type: "Color"
+          - name: "X"
+            type: "number"
+          - name: "Y"
+            type: "number"
+          - name: "Z"
+            type: "number"
+        -
+      return: 
+        - type: "boolean"
+      samples:
+      - code: |
+          local block = Block(Color(200, 0, 200), 10, 10, 10)
+          someMutableShape:AddBlock(block)
+
+          -- AddBlock can also be called using
+          -- block's palette index and coordinates:
+          someMutableShape:AddBlock(1, 10, 10, 10)
+
+          -- returns whether the block was added or not:
+          local added = someMutableShape:AddBlock(1, 10, 10, 10)
+          if added ~= false then
+            -- block successfully created!
+          end
+
+    - name: "GetBlock"
+      description: |
+          Gets a [Block] from the [This]. 
+          Returns [nil] if there is no [Block] at the given coordinates (i. e. if it's "air").
+
+      arguments: 
+        - name: "X"
+          type: "number"
+        - name: "Y"
+          type: "number"
+        - name: "Z"
+          type: "number"
+      return: 
+        - type: "Block"

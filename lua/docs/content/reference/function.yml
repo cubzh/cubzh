@@ -1,0 +1,60 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "function"
+basic-type: true
+description: |
+    A function is a basic Lua type. A function is a module of code that accomplishes a specific task.
+blocks:
+  - text: "A function is a basic Lua type. A function is a module of code that accomplishes a specific task."
+
+  - code: |
+      Client.Action1 = function()
+        -- everything in this function is executed when action 1 is triggered
+        if Player.IsOnGround then
+          Player.Velocity.Y = 30
+        end
+      end
+
+  - text: "A function can return one or several values:"
+
+  - code: |
+      -- a function that returns one value
+      local f1 = function()
+        return "hello"
+      end
+
+      -- call f1
+      local value = f1()
+      print(value) -- prints "hello"
+
+      -- a function that returns two values
+      local f2 = function()
+        return "hello", "world"
+      end
+
+      -- call f2
+      local v1, v2 = f2()
+      print(v1 .. " " .. v2) -- prints "hello world"
+
+  - text: "A function can take parameters:"
+
+  - code: |
+      -- a function that takes 1 argument
+      local f3 = function(message)
+        print(message)
+      end
+
+      -- call f3
+      f3("hello world") -- prints "hello world"
+
+      -- a function that takes 2 arguments
+      local f4 = function(message, count)
+        local str = ""
+        for i = 1, count do
+          str = str .. message .. " "
+        end
+        print(str)
+      end
+
+      -- call f4
+      f4("hello", 2) -- prints "hello hello "
+

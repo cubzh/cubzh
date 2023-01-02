@@ -1,0 +1,24 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "string"
+basic-type: true
+description: |
+    A string is a basic Lua type, it represents a sequence of characters.
+blocks:
+  - text: |
+      A string is a basic Lua type, it represents a sequence of characters. They are initialized with double quotes framing characters. 
+
+  - code: |
+      local s = "hello world"
+
+      print(s) -- prints "hello world"
+
+  - text: |
+      Strings can be concatenated with the `..` operator.
+
+  - code: |
+      local a = "hello"
+      local b = "world"
+      local c = a .. " " .. b
+
+      print(c) -- prints "hello world"
+      

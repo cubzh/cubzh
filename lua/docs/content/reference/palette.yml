@@ -1,0 +1,31 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Palette"
+creatable: true # indicates that instances can be created, even if there's no constructor
+description: |
+    A `Palette` is a list of [BlockProperties] entries describing the visual properties of its owner [Shape]'s blocks.
+    
+    The entries of a palette can be changed at runtime with a few specific caveats:
+    - only colors that are unused by the shape can be removed from its palette,
+    - changing a color from opaque to/from transparent will require a call to `shape:RefreshModel()` to be reflected on the existing shape blocks,
+    - changing the [BlockProperties.Light] or [BlockProperties.Color]'s alpha values will only be reflected on the baked lighting after calling `shape:ComputeBakedLight` (as of 0.0.47, only relevant for [Map])
+    
+properties:
+    - name: "MaximumEntries"
+      type: "integer"
+      description: "Maximum number of [BlockProperties] entries in a [This]. Imported shapes or shapes from previous versions may exceed this limit but no new entry can be added."
+
+functions:
+    - name: "AddColor"
+      description: "Adds a new [BlockProperties] entry with the given color. Returns palette index at which it was added."
+      return:
+        - type: "integer"
+
+    - name: "RemoveColor"
+      description: "Removes the [BlockProperties] entry at given index, if it is unused. Returns `true` if it was removed."
+      return:
+        - type: "boolean"
+
+    - name: "GetIndex"
+      description: "Returns the palette index of the latest entry corresponding to given color, `nil` if not found."
+      return:
+        - type: "integer"

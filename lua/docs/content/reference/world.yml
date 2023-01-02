@@ -1,0 +1,88 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "World"
+extends: "Object"
+description: |
+    [World] is the [Object] at the root of the 3D scene.
+
+properties:
+
+    - name: "LocalScale"
+      hide: true
+    - name: "Physics"
+      hide: true
+    - name: "Velocity"
+      hide: true
+    - name: "Motion"
+      hide: true
+    - name: "Acceleration"
+      hide: true
+    - name: "IsOnGround"
+      hide: true
+    - name: "CollisionBox"
+      hide: true
+    - name: "OnCollision"
+      hide: true
+    - name: "Pivot"
+      hide: true
+    - name: "Rotation"
+      hide: true
+    - name: "LocalRotation"
+      hide: true
+    - name: "Position"
+      hide: true
+    - name: "LocalPosition"
+      hide: true
+    - name: "Right"
+      hide: true
+    - name: "Left"
+      hide: true
+    - name: "Backward"
+      hide: true
+    - name: "Up"
+      hide: true
+    - name: "Down"
+      hide: true
+    - name: "Forward"
+      hide: true
+    - name: "CollisionGroups"
+      hide: true
+    - name: "CollidesWithGroups"
+      hide: true
+    - name: "IsHidden"
+      hide: true
+    - name: "Mass"
+      hide: true
+    - name: "Friction"
+      hide: true
+    - name: "Bounciness"
+      hide: true
+    - name: "Scale"
+      hide: true
+    - name: "LossyScale"
+      hide: true
+
+functions:
+    - name: "RemoveFromParent"
+      hide: true
+    - name: "SetParent"
+      hide: true
+    - name: "RotationWorldToLocal"
+      hide: true
+    - name: "RotationLocalToWorld"
+      hide: true
+    - name: "PositionWorldToLocal"
+      hide: true
+    - name: "PositionLocalToWorld"
+      hide: true
+    - name: "RotateLocal"
+      hide: true
+    - name: "RotateWorld"
+      hide: true
+    - name: "TextBubble"
+      hide: true
+    - name: "ClearTextBubble"
+      hide: true
+    - name: "ApplyForce"
+      hide: true
+    - name: "CollidesWith"
+      hide: true

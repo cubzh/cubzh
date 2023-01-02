@@ -1,0 +1,29 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Snippets > User actions"
+blocks:
+    - title: "Disable movement"
+
+    - text: |
+        If you need to conditionally block the player's movement depending on some variable (for example, here, `blocked`):
+
+    - code: |
+        Client.DirectionalPad = function(x, y)
+            -- storing globals here for AnalogPad
+            -- to update Player.Motion
+            dpadX = x 
+            dpadY = y
+            if not blocked then
+                Player.Motion = (Player.Forward * y + Player.Right * x) * 50
+            end
+        end
+
+        Client.AnalogPad = function(dx, dy)
+            Player.LocalRotation.Y = Player.LocalRotation.Y + dx * 0.01
+            Player.LocalRotation.X = Player.LocalRotation.X + -dy * 0.01
+
+            if dpadX ~= nil and dpadY ~= nil then
+                if not blocked then
+                    Player.Motion = (Player.Forward * dpadY + Player.Right * dpadX) * 50
+                end
+            end
+        end

@@ -1,0 +1,224 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Shape"
+extends: "Object"
+description: |
+  A [Shape] is an [Object] that carries a voxel model made of [Block]s.
+
+  It introduces an additionnal coordinate system called model space i.e. relative to model origin.
+  Any point can be expressed in model space. If the point is expressed with integers, then it may represent a [Block] coordinates.
+
+  Note that under certain conditions, namely if the [This],
+  - is not mutable or is mutable but its model has not been changed,
+  - has a pivot set to zero,
+  then model space and local space become equivalent.
+
+constructors: 
+  - description: |
+        Creates a Shape which model can be empty, loaded from an imported [Item], or copied from an existing [Shape] or [MutableShape].
+    argument-sets:
+      -
+        
+      -
+        - name: "item"
+          type: "Item"
+      -
+        - name: "copiedShape"
+          type: "Shape"
+      -
+        - name: "copiedMutableShape"
+          type: "MutableShape"
+      -
+    samples:
+      - code: |
+          local myShape = Shape(Items.someuser.someitem)
+          myShape.Position = { Map.Width * 0.5, Map.Height, Map.Depth * 0.5 }
+          Map:AddChild(myShape) -- adds created shape in the map
+
+properties:
+
+    - name: "Pivot"
+      type: "Number3"
+      description: |
+          [This]'s pivot is a local point that acts as a reference for its transformations:
+          - translation is applied from its parent's pivot to its own pivot
+          - rotation is applied around the pivot
+
+          It is set by default to [This]'s geometric center.
+
+          You can override it with any point, even outside of the [This]'s bounding box, as a way to modify how transformations are applied.
+          Note that setting the pivot to zero effectively means you are using the [This]'s model origin as reference point for transformations.
+      samples:
+        - code: |
+            -- set it to any arbitrary point
+            myShape.Pivot = { 2.3, 5.0, 1.5 }
+            -- set it to a specific block, it will use block's center (*)
+            myShape.Pivot = myShape:GetBlock(1, 1, 1)
+            -- doing this resets pivot to its default value (*)
+            myShape.Pivot = { myShape.Width * 0.5, myShape.Height * 0.5, myShape.Depth * 0.5 }
+            -- (*) both these use-cases are valid only if myShape is not mutable or is mutable but has not been changed,
+            -- otherwise, it is still possible: pivot must first be set to zero, then convert with myShape:BlockToLocal
+
+    - name: "Depth"
+      read-only: true
+      type: "number"
+      description: "Returns [This]'s depth, measured in blocks."
+
+    - name: "Height"
+      read-only: true
+      type: "number"
+      description: "Returns [This]'s height, measured in blocks."
+
+    - name: "Width"
+      read-only: true
+      type: "number"
+      description: "Returns [This]'s width, measured in blocks."
+
+    - name: "BoundingBox"
+      read-only: true
+      type: Box
+      description: |
+          The bounding box represents the bounds of the [This] in model space.
+
+          It is the smallest axis-aligned box that encompasses all of [This]'s blocks.
+
+    - name: "Min"
+      read-only: true
+      type: Number3
+      description: |
+          The minimum point of the [This]'s BoundingBox.
+
+    - name: "Center"
+      read-only: true
+      type: Number3
+      description: |
+          The center of the [This]'s BoundingBox.
+
+    - name: "Max"
+      read-only: true
+      type: Number3
+      description: |
+          The maximum point of the [This]'s BoundingBox.
+
+    - name: "BlocksCount"
+      read-only: true
+      type: integer
+      description: |
+        The number of blocks in [This]'s model.
+
+    - name: "Shadow"
+      type: boolean
+      description: |
+          Whether or not [This] should have a square shadow projected on the map, default is `false`.
+          The size of the shadow is based off [This]'s collision box.
+
+    - name: "Layers"
+      type: "table"
+      description: |
+          Integer or table of integers between 1 and 8. Cameras only render objects corresponding to their layers.
+
+    - name: "IsUnlit"
+      type: "boolean"
+      description: |
+          Whether or not the [This] should ignore scene lighting, `false` by default.
+
+functions:
+    - name: "GetBlock"
+      description: |
+          Gets a [Block] from the [Shape].
+          Returned [Block] is read-only because [Shape] is immutable, unlike [MutableShape].
+          Returns [nil] if there is no [Block] at those coordinates (i. e. if it's "air").
+
+      argument-sets: 
+        -
+          - name: "X"
+            type: "number"
+          - name: "Y"
+            type: "number"
+          - name: "Z"
+            type: "number"
+        -
+          - name: coordinates
+            type: "Number3"
+      return: 
+        - type: "Block"
+
+    - name: "BlockToWorld"
+      description: "Converts Block coordinates from model space to world space."
+      argument-sets: 
+        -
+          - name: "b"
+            type: "Block"
+        -
+          - name: "n"
+            type: "Number3"
+      return:
+        - type: "Number3"
+
+    - name: "BlockToLocal"
+      description: "Converts Block coordinates from model space to local space."
+      argument-sets: 
+        -
+          - name: "b"
+            type: "Block"
+        -
+          - name: "n"
+            type: "Number3"
+      return:
+        - type: "Number3"
+
+    - name: "WorldToBlock"
+      description: "Converts a point from world space to model space."
+      arguments: 
+        - name: "n"
+          type: "Number3"
+      return:
+        - type: "Number3"
+
+    - name: "LocalToBlock"
+      description: "Converts a point from local space to model space."
+      arguments: 
+        - name: "n"
+          type: "Number3"
+      return:
+        - type: "Number3"
+
+    - name: "ComputeLocalBoundingBox"
+      description: |
+        Computes and returns the smallest axis-aligned box that encompasses all of [This]'s blocks, in local space.
+      return:
+        - type: "Box"
+
+    - name: "ComputeWorldBoundingBox"
+      description: |
+        Computes and returns the smallest axis-aligned box that encompasses all of [This]'s blocks, in world space.
+      return:
+        - type: "Box"
+
+    - name: "ComputeBakedLight"
+      description: |
+        Computes the shape baked lighting. Note that if the shape is then saved, the current baked lighting will be saved with it and used everywhere by default.
+        
+        This function can also be used to update the shape baked lighting, after changing by code some of the shape's [Palette] entries properties.
+        
+        You may want to call this function only if:
+        - setting light property i.e. `shape.Palette[i].Light = true/false` of existing shape blocks
+        - setting transparency i.e. `shape.Palette[i].Color.A = newValue` of existing shape blocks
+        
+        It is NOT necessary to call this function if:
+        - ANY blocks, including light and transparent blocks, are added/removed at runtime
+        
+        In other words, only changes to transparency and light properties of _existing_ blocks will require a call to this function in order to see the effects on the shape.
+        
+        NOTE as of 0.0.47: only the [Map] can have baked lighting.
+
+      arguments:
+        - name: "callback"
+          type: "function"
+      samples:
+        - code: |
+            Client.OnStart = function()
+              Map.Palette[1].Light = true
+  
+              -- refresh baked lighting for existing blocks
+              Map:ComputeBakedLight(function() print("Map baked lighting done!") end)
+            end

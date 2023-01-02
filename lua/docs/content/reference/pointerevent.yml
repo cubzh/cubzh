@@ -1,0 +1,91 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "PointerEvent"
+creatable: true
+blocks: 
+  - text: |
+      An event that's generated when using the [Pointer]. (see [Pointer].[Down](/reference/pointer#property-down) or [Pointer].[Up](/reference/pointer#property-up))
+
+functions:
+    - name: "CastRay"
+      argument-sets: 
+        -
+        -
+          - name: "filterIn"
+            type: "CollisionGroups"
+        -
+          - name: "filterIn"
+            type: "Shape"
+        -
+          - name: "filterIn"
+            type: "nil"
+          - name: "filterOut"
+            type: "Object"
+        -
+          - name: "filterIn"
+            type: "CollisionGroups"
+          - name: "filterOut"
+            type: "Object"
+        -
+          - name: "filterIn"
+            type: "Shape"
+          - name: "filterOut"
+            type: "Object"
+      return: 
+        - type: "Impact" 
+      description: |
+          Casts a ray from [PointerEvent] screen coordinates and returns an [Impact] (can be [nil]).
+
+          The [Impact] contains information about the kind of thing that's been hit.
+
+          💡 Calls [Ray].[Cast](/reference/ray#functions-cast) under the hood. See [Ray].[Cast](/reference/ray#functions-cast) definition for more details about possible filters.
+      samples:
+        - code: |
+            Pointer.Down = function( pointerEvent )
+                local impact = pointerEvent:CastRay()
+                if impact.Block ~= nil then
+                  print("block hit:", impact.Block)
+                end
+
+                -- this can also be done using a Ray object:
+                local ray = Ray(pointerEvent.Position, pointerEvent.Direction)
+                impact = ray:Cast()
+                if impact.Block ~= nil then
+                  print("block hit:", impact.Block)
+                end
+            end
+            
+properties:
+  - name: "X"
+    type: "number"
+    description: |
+        Horizontal position of the pointer when the event happens, in screen coordinates. `{0,0}` represents the bottom left of the screen, and `{1,1}` the top right. `X` is close to `0.5` when pointing the horizontal center.
+
+  - name: "Y"
+    type: "number"
+    description: |
+        Vertical position of the pointer when the event happens, in screen coordinates. `{0,0}` represents the bottom left of the screen, and `{1,1}` the top right. `Y` is close to `0.5` when pointing the vertical center.
+
+  - name: "DX"
+    type: "number"
+    description: |
+        Horizontal delta, not `0` when moving the pointer (see [Pointer].[Drag](/reference/pointer#property-drag) or [Pointer].[Drag2](/reference/pointer#property-drag2))
+
+  - name: "DY"
+    type: "number"
+    description: |
+        Vertical delta, not `0` when moving the pointer (see [Pointer].[Drag](/reference/pointer#property-drag) or [Pointer].[Drag2](/reference/pointer#property-drag2))
+
+  - name: "Position"
+    type: "Number3"
+    description: |
+        The world space origin of the ray cast from the screen. This is equivalent to [Camera].[Position].
+
+  - name: "Direction"
+    type: "Number3"
+    description: |
+        The direction of the ray cast from screen space [PointerEvent].[X] and [PointerEvent].[Y] into world space.
+
+  - name: "Down"
+    type: "boolean"
+    description: |
+        Indicates whether the [This] represents a touch/click "down" event. If false, it represents a "up" event.

@@ -1,0 +1,9 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Snippets > Misc"
+blocks:
+    - title: "Getting a random number in a range"
+
+    - code: |
+        function randomBetween(min, max)
+            return math.random() * (max - min) + min
+        end
