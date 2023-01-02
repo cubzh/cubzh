@@ -1,0 +1,17 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "OtherPlayers"
+description: "OtherPlayers is an array of Players that contains all players except the local one."
+blocks:
+  - text: |
+      [OtherPlayers] is a table containing all [Player]s except the local one.
+    
+      [OtherPlayers] is not available to the [Server], because it just wouldn't make sense! 🙂
+
+      [Player]s are indexed by their "player ID". Player IDs range from 0 to 15.
+
+      ⚠️ Don't use `ipairs` for iterating over `OtherPlayers`, but only `pairs`.
+  - code: |
+      for id, player in pairs(OtherPlayers) do
+        -- id and player.ID have the same value here
+        print(id, player.ID, player.Username)
+      end

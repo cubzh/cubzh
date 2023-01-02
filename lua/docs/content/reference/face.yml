@@ -1,0 +1,75 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Face"
+
+creatable: true
+
+description: |
+    A `Face` represents the face of a [Block].
+
+    It can be returned when casting a ray, to know which block face has been touched. (see [Impact.FaceTouched](/reference/impact#property-facetouched))
+
+    It's also a useful parameter to functions like [Block.AddNeighbor](/reference/block#functions-addneighbor), to indicate where to place a [Block] next to another.
+
+    Builtin `Face` instances can be used, there's no way to create custom Faces.
+
+built-ins:
+
+# properties:
+  - name: "Top"
+    type: "Face"
+    read-only: true
+    description: "Top face."
+    samples:
+      - code: |
+          local blockToAdd = Block(1) -- block with PaletteIndex == 1
+          someMutableShape:GetBlock(4,5,6):AddNeighbor(blockToAdd, Face.Top)
+
+  - name: "Bottom"
+    type: "Face"
+    read-only: true
+    description: "Bottom face."
+    samples:
+      - code: |
+          local blockToAdd = Block(1) -- block with PaletteIndex == 1
+          someMutableShape:GetBlock(4,5,6):AddNeighbor(blockToAdd, Face.Bottom)
+
+  - name: "Front"
+    type: "Face"
+    read-only: true
+    description: "Front face."
+    samples:
+      - code: |
+          local blockToAdd = Block(1) -- block with PaletteIndex == 1
+          someMutableShape:GetBlock(4,5,6):AddNeighbor(blockToAdd, Face.Front)
+
+  - name: "Back"
+    type: "Face"
+    read-only: true
+    description: "Back face."
+    samples:
+      - code: |
+          local blockToAdd = Block(1) -- block with PaletteIndex == 1
+          someMutableShape:GetBlock(4,5,6):AddNeighbor(blockToAdd, Face.Back)
+
+  - name: "Left"
+    type: "Face"
+    read-only: true
+    description: "Left face."
+    samples:
+      - code: |
+          local blockToAdd = Block(1) -- block with PaletteIndex == 1
+          someMutableShape:GetBlock(4,5,6):AddNeighbor(blockToAdd, Face.Left)
+
+  - name: "Right"
+    type: "Face"
+    read-only: true
+    description: "Right face."
+    samples:
+      - code: |
+          local blockToAdd = Block(1) -- block with PaletteIndex == 1
+          someMutableShape:GetBlock(4,5,6):AddNeighbor(blockToAdd, Face.Right)
+
+
+
+    
+      

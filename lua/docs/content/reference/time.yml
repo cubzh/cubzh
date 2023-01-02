@@ -1,0 +1,138 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Time"
+description: |
+    Time represents a ingame time of day.
+
+constructors: 
+
+  - description: "Creates a Time object with given hours and minutes."
+    arguments:
+    - name: "hours"
+      type: "integer"
+    - name: "minutes"
+      type: "integer"
+
+  - description: "Creates a Time object with given hours."
+    arguments:
+    - name: "hours"
+      type: "integer"
+
+  - description: "Creates a Time object with given hours, minutes and seconds."
+    arguments:
+    - name: "hours"
+      type: "integer"
+    - name: "minutes"
+      type: "integer"
+    - name: "seconds"
+      type: "integer"
+    samples:
+      - code: local myTime = Time(12, 30)
+
+built-ins:
+
+    - name: "Current"
+      type: "Time"
+      description: |
+          Current ingame day time.
+          Shortcut to [TimeCycle].[CurrentTime](/reference/timecycle#property-currenttime).
+      samples: 
+        - code: |
+            -- sets time to noon for everyone
+            Time.Current = Time.Noon
+            -- same as:
+            CurrentTime.CurrentTime = Time.Noon
+
+    - name: "Dawn"
+      type: "Time"
+      description: "Dawn time."
+
+    - name: "Dusk"
+      type: "Time"
+      description: "Dusk time."
+
+    - name: "Midnight"
+      type: "Time"
+      description: "Midnight time."
+
+    - name: "Noon"
+      type: "Time"
+      description: "Noon time."
+
+functions:
+  - name: "Unix"
+    description: |
+      Returns elapsed seconds since January 1, 1970 UTC.
+    return:
+      - type: "integer"
+    samples:
+        - code: |
+            Client.Action2 = function()
+              print("time:", Time.Unix(), "s")
+            end
+
+  - name: "UnixMilli"
+    description: |
+      Returns elapsed milliseconds since January 1, 1970 UTC.
+    return:
+      - type: "integer"
+    samples:
+        - code: |
+            Client.Action2 = function()
+              print("time:", Time.UnixMilli(), "ms")
+            end
+
+properties:
+    
+    - name: "Hour"
+      type: "integer"
+      description: |
+          Hour represents the hour within [Time], in the range [0,23].
+      samples:
+        - code: |
+            local t = Time.Noon
+            print(t.Hours) -- prints "12"
+    - name: "H"
+      type: "integer"
+      description: |
+          `H` is a shortcut to [Hour](/reference/time#property-hour).
+      samples:
+        - code: |
+            local t = Time.Noon
+            print(t.H) -- prints "12"
+
+
+    - name: "Minute"
+      type: "integer"
+      description: |
+          Minute represents the minute offset within the hour of [Time], in the range [0,59].
+      samples:
+        - code: |
+            local t = Time(12, 30, 45)
+            print(t.Minute) -- prints "30"
+    - name: "M"
+      type: "integer"
+      description: |
+          `M` is a shortcut to [Minute](/reference/time#property-minute).
+      samples:
+        - code: |
+            local t = Time(12, 30, 45)
+            print(t.M) -- prints "30"
+
+
+    - name: "Second"
+      type: "integer"
+      description: |
+          Second represents the second within the minute of [Time], in the range [0,59].
+      samples:
+        - code: |
+            local t = Time(12, 30, 45)
+            print(t.Second) -- prints "45"
+    - name: "S"
+      type: "integer"
+      description: |
+          `S` is a shortcut to [Second](/reference/time#property-second).
+      samples:
+        - code: |
+            local t = Time(12, 30, 45)
+            print(t.S) -- prints "45"
+

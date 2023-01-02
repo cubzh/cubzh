@@ -1,0 +1,23 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Clouds"
+description: |
+    Clouds is a shortcut to [Client].[Clouds].
+
+    Clouds gives control over cloud settings.
+
+properties:
+    - name: "On"
+      type: "boolean"
+      description: "Set to false to remove the coulds."
+      samples: 
+        - code: |
+            -- show clouds
+            Clouds.On = true
+            -- hide them
+            Clouds.On = false
+
+          media: "/media/clouds-on.mp4"
+
+    - name: "Altitude"
+      type: "number"
+      description: "Altitude of the clouds in blocks"

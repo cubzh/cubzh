@@ -1,0 +1,121 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Text"
+extends: "Object"
+description: |
+    A `Text` is an object with a text and optional background frame attached.
+  
+    It may be used in two different display modes by setting its [Text.Type](#property-type) field,
+    - as a `TextType.World`, it will behave exactly like any other object in the scene, great for creating postsigns;
+    - as a `TextType.Screen`, it will be displayed from its position in the scene always facing the camera, like an UI element - great for text bubbles.
+  
+    By default, a [This] is set to `TextType.World`.
+  
+    If you were using the deprecated `Object:TextBubble` and `Object:ClearTextBubble` functions prior to 0.0.48, you may use the "textbubble.lua" module. It contains the following functions which use [This] objects instead,
+    - import the module with `tb = require("textbubble.lua")`
+    - `tb.set(object, text, duration, offset, color, backgroundColor, tail)`
+    - `tb.clear(object)`
+
+constructors: 
+  - description: "Creates a Text with default properties."
+    samples:
+      - code: |
+          local t = Text()
+
+          -- change text properties
+          t.Text = "Hello world!"
+          t.Type = TextType.Screen
+          t.IsUnlit = true
+          t.Tail = true
+
+          -- use it as a normal object in the scene
+          t:SetParent(Player)
+          t.LocalPosition = { 0, 34, 0 }
+
+properties:
+    - name: "Type"
+      type: "TextType"
+      description: |
+          The text type can be set to `TextType.World` (default) or `TextType.Screen`.
+        
+          As a `TextType.World`, the text will be translated, rotated, and scaled like any other object in the scene, eg. a signpost.
+          As a `TextType.Screen`, the text will be displayed in front of everything else, facing the camera from its position in the scene, eg. a text bubble above a player's head.
+        
+          Note that it can be changed at any time. Some [This] fields are automatically expressed in world units or points based on the text type.
+
+    - name: "Text"
+      type: "string"
+      description: |
+          The text to be displayed, set an empty string to hide it.
+
+    - name: "Color"
+      type: "Color"
+      description: |
+          Color of the text, black by default.
+
+    - name: "BackgroundColor"
+      type: "Color"
+      description: |
+          Color of the background frame, white by default. Set alpha to zero to disable.
+
+    - name: "Anchor"
+      type: "Number2"
+      description: |
+          Anchor of the text, `(0.5, 0.5)` by default.
+
+    - name: "MaxDistance"
+      type: "number"
+      description: |
+          Maximum distance in world units beyond which the text will disappear, `350.0` by default.
+
+    - name: "Tail"
+      type: "boolean"
+      description: |
+          Whether to display a tail under the background frame, like a text bubble, `false` by default.
+
+    - name: "Width"
+      type: "number"
+      read-only: true
+      description: |
+          Width of the [This] in points. Expressed in world units if the text type is `TextType.World`.
+        
+          This accounts for the total size including background frame, padding, and tail.
+
+    - name: "Height"
+      type: "number"
+      read-only: true
+      description: |
+          Height of the [This] in points. Expressed in world units if the text type is `TextType.World`.
+        
+          This accounts for the total size including background frame, padding, and tail.
+
+    - name: "Padding"
+      type: "number"
+      description: |
+          Text padding over background in points, `8` by default. Expressed in world units if the text type is `TextType.World`.
+
+    - name: "FontSize"
+      type: "number"
+      description: |
+          Font size in points, `22.0` by default. Expressed in world units if the text type is `TextType.World`.
+
+    - name: "Layers"
+      type: "table"
+      description: |
+          Integer or table of integers between 1 and 8. Cameras only render objects corresponding to their layers.
+
+    - name: "MaxWidth"
+      type: "number"
+      description: |
+          Maximum width in points beyond which the text will automatically break line, `0` by default (disabled). Expressed in world units if the text type is `TextType.World`.
+
+    - name: "IsUnlit"
+      type: "boolean"
+      description: |
+          Whether or not the [This] should ignore scene lighting, `false` by default.
+
+    - name: "ScreenToWorldFactor"
+      type: "number"
+      description: |
+        The factor applied to convert [This] fields from screen points to world units when swapping [Text.Type](#property-type).
+        
+        Note that this is not an instance field. It is accessible through [This] globally exposed variable: `Text.ScreenToWorldFactor`.

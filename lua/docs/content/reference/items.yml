@@ -1,0 +1,46 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Items"
+description: |
+    Items is a shortcut to [Config].Items.
+
+blocks:
+  - text: |
+      Items is a shortcut to [Config].Items.
+
+      It's basically an [array] of of [string]s, indexed in different ways once items are loaded.
+
+      Items can be used to instanciate [Shape]s and [MutableShape]s.
+
+      An item is always identified by its repository and its name: `repo_name.item_name`.
+
+      The repository name usually corresponds to the author's username.
+
+      NOTE: The repository name can be ommited for official items: `Items.official.sword == Items.sword`.
+
+  - subtitle: How to load items for your game?
+
+  - code: |
+      Config = {
+        Items = {"aduermael.pumpkin", "aduermael.tomato"}
+      }
+      -- also works this way:
+      Config.Items = {"aduermael.pumpkin", "aduermael.tomato"}
+      -- or 
+      Items = {"aduermael.pumpkin", "aduermael.tomato"}
+
+  - text: |
+      (See [Config] for more details) 
+
+  - subtitle: How to use loaded items?
+
+  - text: |
+      Once the game is loaded (after [Client].[OnStart](/reference/client#property-onstart) has been called), [Items] can be used to instanciate [Shape]s or [MutableShape]s:
+
+  - code: |
+      local s = Shape(Items.aduermael.pumpkin)
+      -- or
+      local s = Shape(Items["aduermael.pumpkin"])
+      -- or even this way, if you know the index:
+      local s = Shape(Items[1])
+
+

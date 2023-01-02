@@ -1,0 +1,39 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Timer"
+description: Calls a [function] after a given time.
+
+constructors: 
+  - description: |
+      Creates a [Timer].
+    arguments:
+    - name: "time"
+      type: "number"
+    - name: "repeat"
+      type: "boolean"
+      optional: true
+    - name: "callback"
+      type: "function"
+    samples:
+        - code: |
+            -- prints "2 seconds" each 2 seconds
+            local myTimer = Timer(2.0, true, function()
+              print("2 seconds")
+            end)
+
+            local callback = function()
+              Player.Velocity.Y = 50
+            end
+            -- after 5 seconds the Player will jump
+            local myTimer2 = Timer(5.0, callback)
+
+properties:
+    - name: "RemainingTime"
+      type: "number"
+      description: "Time remaining before the function is called."
+    - name: "Time"
+      type: "number"
+      description: "Time since the start of the [Timer]."
+
+functions:
+    - name: "Cancel"
+      description: "Cancels the [Timer]."

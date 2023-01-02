@@ -1,0 +1,25 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Screen"
+description: |
+    Screen represents the area on which the app is rendered.
+
+properties:
+    - name: "Width"
+      type: "number"
+      description: "Screen's width, in points."
+
+    - name: "Height"
+      type: "number"
+      description: "Screen's height, in points."
+
+    - name: "DidResize"
+      type: "function"
+      description: |
+          Triggered when the Screen is resized.
+      samples:
+        - code: |
+            Screen.DidResize = function(width, height)
+              print("SCREEN SIZE:", width, height)
+            end
+
+    

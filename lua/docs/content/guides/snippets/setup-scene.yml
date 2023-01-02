@@ -1,0 +1,40 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Snippets > Scene setup"
+blocks:
+    - title: "Setting a fixed in-game daytime"
+
+    - text: |
+        To disable the passing of the time in your game and keep it fixed at a given hour (see the [`Time`](/reference/time) API for the possible values):
+
+    - code: |
+        TimeCycle.On = false
+        Time.Current = Time.Noon
+
+    - title: "Instantiating an item"
+
+    - text: |
+        Check out the API Reference to see all the available properties for a new [`Shape`](/reference/shape) object.
+
+        <b>Make sure to adapt this code with your item reference and properties:</b>
+
+    - code: |
+        Config {
+            Map: ...,
+            Items: {
+                "my_login.my_item"
+            }
+        }
+
+        function instantiate()
+            -- create the instance
+            local item = Shape(Items.my_login.my_item)
+
+            -- set properties (optional)
+            item.Position = Number3(1, 0, 1) * Map.Scale
+            item.Scale = 0.6
+            item.Physics = false
+            item.CollisionGroups = 2
+
+            -- add to the world's hierarchy
+            World:AddChild(item) -- or: Map:AddChild(item)
+        end

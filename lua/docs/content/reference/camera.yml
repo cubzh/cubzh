@@ -1,0 +1,264 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Camera"
+extends: "Object"
+description: |
+  A `Camera` is an object that can be placed in the scene to render all or select elements based on their layers.
+
+  The global instance `Camera` corresponds to the default main camera that renders to fullscreen. Additional cameras are rendered on top, according to their view order. Their output can optionally be displayed inside a custom screen rectangle, called a target.
+
+  All camera modes listed on this page are implemented in Lua, it's totally possible to implement custom ones.
+
+  Code examples of `Camera`'s various fields can be found in the following worlds,
+  - `Camera Projection Modes`
+  - `Radar FX Example`
+  - `Multi Camera UI Example`
+  - `Minimap Example`
+
+properties:
+    - name: "FieldOfView"
+      type: "number"
+      description: |
+          Can be set to change Camera's vertical field of view.
+
+          The default value is 60 degrees.
+
+      samples:
+        - code: |
+            Camera.FieldOfView = 40.0
+
+    - name: "FOV"
+      type: "number"
+      description: |
+          Shortcut to [Camera.FieldOfView](#property-fieldofview).
+
+    - name: "Layers"
+      type: "table"
+      description: |
+          Integer or table of integers between 1 and 8. Only objects in one of the specified layers are rendered by the camera.
+
+    - name: "Width"
+      type: "number"
+      description: |
+          Width of the camera projection.
+
+    - name: "Height"
+      type: "number"
+      description: |
+          Height of the camera projection.
+
+    - name: "Near"
+      type: "number"
+      description: |
+          Near plane of the camera projection.
+
+    - name: "Far"
+      type: "number"
+      description: |
+          Far plane of the camera projection.
+
+    - name: "Projection"
+      type: "ProjectionMode"
+      description: |
+          The projection mode can be one of `ProjectionMode.Perspective` (by default) or `ProjectionMode.Orthographic`.
+
+          Note that it can be changed at any time.
+
+    - name: "TargetX"
+      type: "number"
+      description: |
+          X component of the camera screen target bottom-left corner, expressed in screen points.
+
+    - name: "TargetY"
+      type: "number"
+      description: |
+          Y component of the camera screen target bottom-left corner, expressed in screen points.
+
+    - name: "TargetWidth"
+      type: "number"
+      description: |
+          Width of the camera screen target, expressed in screen points.
+
+    - name: "TargetHeight"
+      type: "number"
+      description: |
+          Height of the camera screen target, expressed in screen points.
+
+    - name: "Color"
+      type: "Color"
+      description: |
+          Multiplicative color applied on camera final render.
+
+    - name: "Alpha"
+      type: "number"
+      description: |
+          Shortcut to [Camera.Color](#property-color) alpha.
+
+    - name: "ViewOrder"
+      type: "integer"
+      description: |
+          Integer between 1 and 255 used to order multiple cameras.
+
+    - name: "On"
+      type: "boolean"
+      description: |
+          Whether the camera is active or not.
+
+functions:
+    - name: "CastRay"
+      argument-sets: 
+        -
+        -
+          - name: "filterIn"
+            type: "CollisionGroups"
+        -
+          - name: "filterIn"
+            type: "Shape"
+        -
+          - name: "filterIn"
+            type: "nil"
+          - name: "filterOut"
+            type: "Object"
+        -
+          - name: "filterIn"
+            type: "CollisionGroups"
+          - name: "filterOut"
+            type: "Object"
+        -
+          - name: "filterIn"
+            type: "Shape"
+          - name: "filterOut"
+            type: "Object"
+      return: 
+        - type: "Impact" 
+      description: |
+          Casts a ray and returns an [Impact] (can be [nil]).
+
+          The [Impact] contains information about the kind of thing that's been hit.
+
+          💡 Calls [Ray].[Cast](/reference/ray#functions-cast) under the hood. See [Ray].[Cast](/reference/ray#functions-cast) definition for more details about possible filters.
+      samples:
+        - code: |
+            local impact = Camera:CastRay()
+            if impact.Block ~= nil then
+              print("block hit:", impact.Block)
+            end
+
+    - name: "SetModeFirstPerson"
+      argument-sets: 
+        -
+        -
+          - name: "target"
+            type: "Object"
+        -
+          - name: "target"
+            type: "Object"
+          - name: "offset"
+            type: "number"
+        -
+          - name: "target"
+            type: "Object"
+          - name: "offset"
+            type: "Number3"
+      description: |
+          Puts Camera in "first person" mode. Looking at the world from `target`'s perspective.
+
+          When calling `SetModeFirstPerson` without parameters, the target defaults to [Player] (local player).
+
+          When `offset` is set to an [number], the offset is set on the vertical axis only, (`Number3(0, offset, 0)`) 
+
+      samples:
+        - code: |
+            Camera:SetModeFirstPerson(Player, 3.0)
+
+    - name: "SetModeThirdPerson"
+      argument-sets: 
+        -
+        -
+          - name: "target"
+            type: "Object"
+        -
+          - name: "target"
+            type: "Object"
+          - name: "minDist"
+            type: "number"
+          - name: "maxDist"
+            type: "number"
+          - name: "offset"
+            type: "number"
+        -
+          - name: "target"
+            type: "Object"
+          - name: "minDist"
+            type: "number"
+          - name: "maxDist"
+            type: "number"
+          - name: "offset"
+            type: "Number3"
+      description: |
+          Puts Camera in "third person" mode. (looking at Camera's target, from a behind-the-shoulder perspective)
+
+          When calling `SetModeThirdPerson` without parameters, the target defaults to [Player] (local player).
+
+          By default, the Camera is placed beind its target. But it's then possible to change its [LocalRotation](#property-localrotation) to look at the target from a different angle.
+
+          `minDist`, `maxDist` and `offset` settings are optional but can be provided to tweak positioning.
+
+      samples:
+        - code: |
+            Camera:SetModeThirdPerson()
+
+            Camera:SetModeThirdPerson(someShape)
+
+    - name: "SetModeSatellite"
+      argument-sets: 
+          -
+          -
+            - name: "target"
+              type: "Object"
+          -
+            - name: "target"
+              type: "Number3"
+          -
+            - name: "target"
+              type: "Object"
+            - name: "distance"
+              type: "number"
+          -
+            - name: "target"
+              type: "Number3"
+            - name: "distance"
+              type: "number"
+      description: |
+          When in that mode, the camera rotates around its target, maintaining its distance from it.
+
+          When calling `SetModeSatellite` without parameters, the target defaults the current position of the camera.
+
+          `SetModeSatellite` can be called several time to update the `distance`.
+
+          Once the "satellite mode" is set, [Camera.LocalRotation](#property-localrotation) can be used to rotate around the target.
+
+      samples:
+        - code: |
+            Camera:SetModeSatellite(Player, 10.0)
+
+    - name: "FitToScreen"
+      description: |
+          Fits the target to the screen.
+
+          `screenRatio` indicates the percentage of the screen that should be covered by the target.
+
+          When `spherize` is `true`, a sphere that contains the target is used to place the camera.
+      arguments:
+        - name: "target"
+          type: "Shape"
+        - name: "screenRatio"
+          type: "number"
+        - name: "spherize"
+          type: "boolean"
+      samples:
+        - code: |
+            local myShape = Shape(R.usename.myShape)
+            Map:AddChild(myShape)
+            Camera:FitToScreen(myShape, 0.6, false)
+            -- the shape now covers 60% of the screen
+

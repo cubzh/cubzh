@@ -1,0 +1,252 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Quick know-how > Adding sounds to your game"
+blocks:
+    - text: |
+        Starting from the version 0.0.47, [Cubzh](https://cu.bzh/) has implemented a sound system to help you improve the ambience of your games. You can now pick from a library of built-in musics and sound effects to bring your worlds to life!
+
+        In a nutshell, the sound system works as follows:
+
+        - First, you have to place a listener somewhere in your scene: this is basically a microphone-like object that captures the sounds from all the sources around it and outputs the result to your speakers. It is unique and readily available using the `AudioListener` variable.
+        - Then, to add a new sound source in the game, you have to create a new instance of the `AudioSource` class, assign it a reference to a sound file (among the list of built-in ones, see below) and parent it somewhere in the world's hierarchy.
+
+        All this can be done via a code snippet like this one:
+
+    - code: |
+        Client.OnStart = function()
+            -- add the AudioListener to the player's head
+            -- to "glue the microphone" to this object
+            Player.Head:AddChild(AudioListener)
+
+            -- create a new source
+            as = AudioSource()
+            as.Sound = "death_scream_guy_1"
+            as:SetParent(Player.Head)
+        end
+
+    - text: |
+        You can create as many sources as you want, keeping in mind that one source can only play one sound at a time. And since both the `AudioListener` and `AudioSource` classes inherit from the [`Object`](/reference/object) base, you can set their transform and parent-dependencies like you're used to :)
+
+        Once initialized like this, your `AudioSource` instance can be turned on by calling its `Play` method, and off by calling its `Stop` method:
+
+    - code: |
+        gameOver = function()
+            as:Play()
+
+            Timer(2, false, function()
+                as:Stop()
+            end)
+        end
+
+    - text: |
+        The whole trick is then to properly choose your sounds and musics, and to tweak their parameters to better integrate them to the context! Let's see some additional tricks!
+
+    - title: Changing the volume of your AudioSource
+
+    - text: |
+        The most commonly used option is the `Volume`. This value goes from 0 (full silence) to 1 (full volume) and makes it easy to level the various sources according to one another.
+
+    - code: |
+        as = AudioSource()
+        as.Sound = "gun_shot_1"
+        as:SetParent(gun)
+
+        as.Volume = 0.3
+
+    - title: Taking an excerpt of the sound
+
+    - text: |
+        Our most creative contributors have already managed to go above and beyond and make their own sounds by playing around with the existing ones and chopping them up in clever ways! If you too want to try and remix the raw material, have some fun with the `StartAt` and `StopAt` properties of your `AudioSource` (both expressed in milliseconds):
+
+    - code: |
+        as = AudioSource()
+        as.Sound = "waterdrop_1"
+        as:SetParent(gun)
+
+        as.StartAt = 200
+        as.StopAt = 1000
+
+    - title: Playing around with the pitch
+
+    - text: |
+        To expand the audio library, you can also tweak the pitch of the sound file, i.e. how "high" or "low" it is perceived. This property works like this:
+
+        - `1.0` keeps the normal frequency, meaning the sound is as-is
+        - `0.5` halves the frequency, so the audio will sound lower
+        - `2.0` doubles the frequency, so the audio will sound higher
+
+        The pitch cannot be 0, but it can technically go up to +infinity. To change it, just set the `Pitch` option of the source:
+
+    - code: |
+        as = AudioSource()
+        as.Sound = "waterdrop_1"
+        as:SetParent(gun)
+
+        as.Pitch = 0.5 -- lower the sound
+
+    - title: Tweaking or disabling spatialization
+
+    - text: |
+        Another interesting features of the sounds in Cubzh is that, by default, they are spatialized. This means that you won't hear your `AudioSource` the same depending on where the listener is. For example, the sound will be louder when the listener is closer to it, and you will get a left/right pan effect as the angle between the source and the listener changes. This is a great way to make really believable positional sound source in your world in a flash!
+
+        But of course, sometimes, you might want one of your `AudioSource` instances to be just some ambient sound, or a background music. In that case, the sound should not be spatialized, because it is independent of the position of the listener. This is easy to setup: just turn the `Spatialized` property off like this:
+
+    - code: |
+        as = AudioSource()
+        as.Sound = "gun_shot_1"
+        as:SetParent(gun)
+
+        as.Spatialized = False
+
+    - text: |
+        If you want to keep the spatialization but customize it in more details, you can force its pan to be more in the left or the right ear using the `Pan` setting.
+
+        The `Pan` value goes from -1 (left ear only) to 1 (right ear only), with a default of 0 (equal in both ears):
+
+    - code: |
+        as = AudioSource()
+        as.Sound = "gun_shot_1"
+        as:SetParent(gun)
+
+        as.Pan = -0.5 -- "move the sound" slightly on the left
+    
+    - title: List of available sounds
+    
+    - text: |
+        Here is a list of all the sounds currently available in Cubzh (they should be pretty self-explanatory, but don't hesitate to try out some "surprising" effects to give a unique style to your world!):
+    
+    - audiolist:
+        - {file: "/audio/440hz.mp3", title: 440hz}
+        - {file: "/audio/big_explosion_1.mp3", title: big_explosion_1}
+        - {file: "/audio/big_explosion_2.mp3", title: big_explosion_2}
+        - {file: "/audio/big_explosion_3.mp3", title: big_explosion_3}
+        - {file: "/audio/broken_glass_1.mp3", title: broken_glass_1}
+        - {file: "/audio/broken_glass_2.mp3", title: broken_glass_2}
+        - {file: "/audio/broken_glass_3.mp3", title: broken_glass_3}
+        - {file: "/audio/broken_glass_4.mp3", title: broken_glass_4}
+        - {file: "/audio/broken_glass_5.mp3", title: broken_glass_5}
+        - {file: "/audio/death_scream_guy_1.mp3", title: death_scream_guy_1}
+        - {file: "/audio/death_scream_guy_2.mp3", title: death_scream_guy_2}
+        - {file: "/audio/death_scream_guy_3.mp3", title: death_scream_guy_3}
+        - {file: "/audio/death_scream_guy_4.mp3", title: death_scream_guy_4}
+        - {file: "/audio/death_scream_guy_5.mp3", title: death_scream_guy_5}
+        - {file: "/audio/death_scream_lady_1.mp3", title: death_scream_lady_1}
+        - {file: "/audio/death_scream_lady_2.mp3", title: death_scream_lady_2}
+        - {file: "/audio/death_scream_lady_3.mp3", title: death_scream_lady_3}
+        - {file: "/audio/death_scream_lady_4.mp3", title: death_scream_lady_4}
+        - {file: "/audio/death_scream_lady_5.mp3", title: death_scream_lady_5}
+        - {file: "/audio/drinking_1.mp3", title: drinking_1}
+        - {file: "/audio/drinking_2.mp3", title: drinking_2}
+        - {file: "/audio/drinking_3.mp3", title: drinking_3}
+        - {file: "/audio/eating_1.mp3", title: eating_1}
+        - {file: "/audio/eating_2.mp3", title: eating_2}
+        - {file: "/audio/eating_3.mp3", title: eating_3}
+        - {file: "/audio/eating_4.mp3", title: eating_4}
+        - {file: "/audio/eating_5.mp3", title: eating_5}
+        - {file: "/audio/fireworks_fireworks — child_1.mp3", title: fireworks_fireworks — child_1}
+        - {file: "/audio/fireworks_fireworks — child_2.mp3", title: fireworks_fireworks — child_2}
+        - {file: "/audio/fireworks_fireworks — child_3.mp3", title: fireworks_fireworks — child_3}
+        - {file: "/audio/ground_digging_1.mp3", title: ground_digging_1}
+        - {file: "/audio/ground_digging_2.mp3", title: ground_digging_2}
+        - {file: "/audio/ground_digging_3.mp3", title: ground_digging_3}
+        - {file: "/audio/gun_reload_1.mp3", title: gun_reload_1}
+        - {file: "/audio/gun_reload_2.mp3", title: gun_reload_2}
+        - {file: "/audio/gun_reload_3.mp3", title: gun_reload_3}
+        - {file: "/audio/gun_shot_1.mp3", title: gun_shot_1}
+        - {file: "/audio/gun_shot_2.mp3", title: gun_shot_2}
+        - {file: "/audio/hurt_scream_female_1.mp3", title: hurt_scream_female_1}
+        - {file: "/audio/hurt_scream_female_2.mp3", title: hurt_scream_female_2}
+        - {file: "/audio/hurt_scream_female_3.mp3", title: hurt_scream_female_3}
+        - {file: "/audio/hurt_scream_female_4.mp3", title: hurt_scream_female_4}
+        - {file: "/audio/hurt_scream_female_5.mp3", title: hurt_scream_female_5}
+        - {file: "/audio/hurt_scream_male_1.mp3", title: hurt_scream_male_1}
+        - {file: "/audio/hurt_scream_male_2.mp3", title: hurt_scream_male_2}
+        - {file: "/audio/hurt_scream_male_3.mp3", title: hurt_scream_male_3}
+        - {file: "/audio/hurt_scream_male_4.mp3", title: hurt_scream_male_4}
+        - {file: "/audio/hurt_scream_male_5.mp3", title: hurt_scream_male_5}
+        - {file: "/audio/laser_gun_shot_1.mp3", title: laser_gun_shot_1}
+        - {file: "/audio/metal_clanging_1.mp3", title: metal_clanging_1}
+        - {file: "/audio/metal_clanging_2.mp3", title: metal_clanging_2}
+        - {file: "/audio/metal_clanging_3.mp3", title: metal_clanging_3}
+        - {file: "/audio/metal_clanging_4.mp3", title: metal_clanging_4}
+        - {file: "/audio/metal_clanging_5.mp3", title: metal_clanging_5}
+        - {file: "/audio/metal_clanging_6.mp3", title: metal_clanging_6}
+        - {file: "/audio/metal_clanging_7.mp3", title: metal_clanging_7}
+        - {file: "/audio/metal_clanging_8.mp3", title: metal_clanging_8}
+        - {file: "/audio/punch_1.mp3", title: punch_1}
+        - {file: "/audio/punch_2.mp3", title: punch_2}
+        - {file: "/audio/rain_1.mp3", title: rain_1}
+        - {file: "/audio/rain_2.mp3", title: rain_2}
+        - {file: "/audio/rain_3.mp3", title: rain_3}
+        - {file: "/audio/river_1.mp3", title: river_1}
+        - {file: "/audio/small_explosion_1.mp3", title: small_explosion_1}
+        - {file: "/audio/small_explosion_2.mp3", title: small_explosion_2}
+        - {file: "/audio/small_explosion_3.mp3", title: small_explosion_3}
+        - {file: "/audio/sword_impact_1.mp3", title: sword_impact_1}
+        - {file: "/audio/sword_impact_2.mp3", title: sword_impact_2}
+        - {file: "/audio/sword_impact_3.mp3", title: sword_impact_3}
+        - {file: "/audio/sword_impact_4.mp3", title: sword_impact_4}
+        - {file: "/audio/sword_impact_5.mp3", title: sword_impact_5}
+        - {file: "/audio/sword_impact_6.mp3", title: sword_impact_6}
+        - {file: "/audio/sword_impact_alt_1.mp3", title: sword_impact_alt_1}
+        - {file: "/audio/sword_impact_alt_2.mp3", title: sword_impact_alt_2}
+        - {file: "/audio/sword_impact_alt_3.mp3", title: sword_impact_alt_3}
+        - {file: "/audio/sword_impact_alt_4.mp3", title: sword_impact_alt_4}
+        - {file: "/audio/sword_impact_alt_5.mp3", title: sword_impact_alt_5}
+        - {file: "/audio/sword_impact_alt_6.mp3", title: sword_impact_alt_6}
+        - {file: "/audio/thunder_1.mp3", title: thunder_1}
+        - {file: "/audio/thunder_2.mp3", title: thunder_2}
+        - {file: "/audio/thunder_3.mp3", title: thunder_3}
+        - {file: "/audio/twang_1.mp3", title: twang_1}
+        - {file: "/audio/twang_2.mp3", title: twang_2}
+        - {file: "/audio/twang_3.mp3", title: twang_3}
+        - {file: "/audio/twang_4.mp3", title: twang_4}
+        - {file: "/audio/walk_concrete_1.mp3", title: walk_concrete_1}
+        - {file: "/audio/walk_concrete_2.mp3", title: walk_concrete_2}
+        - {file: "/audio/walk_concrete_3.mp3", title: walk_concrete_3}
+        - {file: "/audio/walk_concrete_4.mp3", title: walk_concrete_4}
+        - {file: "/audio/walk_concrete_5.mp3", title: walk_concrete_5}
+        - {file: "/audio/walk_grass_1.mp3", title: walk_grass_1}
+        - {file: "/audio/walk_grass_2.mp3", title: walk_grass_2}
+        - {file: "/audio/walk_grass_3.mp3", title: walk_grass_3}
+        - {file: "/audio/walk_grass_4.mp3", title: walk_grass_4}
+        - {file: "/audio/walk_grass_5.mp3", title: walk_grass_5}
+        - {file: "/audio/walk_gravel_1.mp3", title: walk_gravel_1}
+        - {file: "/audio/walk_gravel_2.mp3", title: walk_gravel_2}
+        - {file: "/audio/walk_gravel_3.mp3", title: walk_gravel_3}
+        - {file: "/audio/walk_gravel_4.mp3", title: walk_gravel_4}
+        - {file: "/audio/walk_gravel_5.mp3", title: walk_gravel_5}
+        - {file: "/audio/walk_sand_1.mp3", title: walk_sand_1}
+        - {file: "/audio/walk_sand_2.mp3", title: walk_sand_2}
+        - {file: "/audio/walk_sand_3.mp3", title: walk_sand_3}
+        - {file: "/audio/walk_sand_4.mp3", title: walk_sand_4}
+        - {file: "/audio/walk_sand_5.mp3", title: walk_sand_5}
+        - {file: "/audio/walk_snow_1.mp3", title: walk_snow_1}
+        - {file: "/audio/walk_snow_2.mp3", title: walk_snow_2}
+        - {file: "/audio/walk_snow_3.mp3", title: walk_snow_3}
+        - {file: "/audio/walk_snow_4.mp3", title: walk_snow_4}
+        - {file: "/audio/walk_snow_5.mp3", title: walk_snow_5}
+        - {file: "/audio/walk_wood_1.mp3", title: walk_wood_1}
+        - {file: "/audio/walk_wood_2.mp3", title: walk_wood_2}
+        - {file: "/audio/walk_wood_3.mp3", title: walk_wood_3}
+        - {file: "/audio/walk_wood_4.mp3", title: walk_wood_4}
+        - {file: "/audio/walk_wood_5.mp3", title: walk_wood_5}
+        - {file: "/audio/water_impact_1.mp3", title: water_impact_1}
+        - {file: "/audio/water_impact_2.mp3", title: water_impact_2}
+        - {file: "/audio/water_impact_3.mp3", title: water_impact_3}
+        - {file: "/audio/waterdrop_1.mp3", title: waterdrop_1}
+        - {file: "/audio/waterdrop_2.mp3", title: waterdrop_2}
+        - {file: "/audio/waterdrop_3.mp3", title: waterdrop_3}
+        - {file: "/audio/waterdrop_4.mp3", title: waterdrop_4}
+        - {file: "/audio/whooshes_medium_1.mp3", title: whooshes_medium_1}
+        - {file: "/audio/whooshes_medium_2.mp3", title: whooshes_medium_2}
+        - {file: "/audio/whooshes_medium_3.mp3", title: whooshes_medium_3}
+        - {file: "/audio/whooshes_small_1.mp3", title: whooshes_small_1}
+        - {file: "/audio/whooshes_small_2.mp3", title: whooshes_small_2}
+        - {file: "/audio/whooshes_small_3.mp3", title: whooshes_small_3}
+        - {file: "/audio/whooshes_small_4.mp3", title: whooshes_small_4}
+        - {file: "/audio/wind_wind_child_1.mp3", title: wind_wind_child_1}
+        - {file: "/audio/wood_impact_1.mp3", title: wood_impact_1}
+        - {file: "/audio/wood_impact_2.mp3", title: wood_impact_2}
+        - {file: "/audio/wood_impact_3.mp3", title: wood_impact_3}
+        - {file: "/audio/wood_impact_4.mp3", title: wood_impact_4}
+        - {file: "/audio/wood_impact_5.mp3", title: wood_impact_5}

@@ -1,0 +1,46 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Fog"
+description: |
+    Fog is a shortcut to [Client].[Fog].
+    
+    Fog gives control over distance fog settings.
+
+properties:
+    - name: "On"
+      type: "boolean"
+      description: "Enables or disables Fog."
+      samples:
+        - code: Fog.On = true
+        - code: Fog.On = false
+        - code: | 
+            -- toggles fog
+            Fog.On = not Fog.On
+    - name: "Distance"
+      type: "number"
+      description: |
+          Sets [Fog].[Near](#property-near) while maintaining offset between [Fog].[Near](#property-near) & [Fog].[Far](#property-far)
+      samples:
+        - code: Fog.Distance = 100
+    - name: "Near"
+      type: "number"
+      description: "Distance at which Fog starts. (in blocks)"
+      samples:
+        - code: Fog.Near = 50
+    - name: "Far"
+      type: "number"
+      description: "Distance at which Fog ends. (in blocks)"
+      samples:
+        - code: Fog.Far = 100
+        - code: |
+            -- both near and far can be set at once this way
+            Fog.Near, Fog.Far = 50, 100
+
+    - name: "LightAbsorption"
+      type: "number"
+      description: |
+          Fog absorption factor regarding light emissive blocks.
+
+          0.0 ➡️ the color can 100% be seen through the fog.
+          1.0 ➡️ the color is totally absorbed, like any other block.
+      samples:
+        - code: Fog.LightAbsorption = 0.1

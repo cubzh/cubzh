@@ -1,0 +1,67 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "array"
+basic-type: true
+description: |
+    Arrays in Lua simply are [table]s indexed with [integer]s.
+    
+blocks:
+  - text: |
+      Arrays in Lua simply are [table]s indexed with [integer]s. Therefore, arrays do not have a fixed size, they grow as needed.
+
+  - code: |
+      local arr = {} -- new array, same as empty table
+
+
+  - text: |
+     An array can be initialized with values: 
+
+  - code: |
+      local days = {"Sunday", "Monday", "Tuesday",
+      "Wednesday", "Thursday", "Friday", "Saturday"}
+
+      print(days[1]) -- prints "Sunday"
+
+  - text: |
+      You can use `#` prefix to return the size of an array:
+
+  - code: |
+      print(#days) -- prints "7"
+
+  - text: |
+      ⚠️ In Lua, array indexes start at `1` !
+
+  - code: |
+      local arr = {}
+      arr[1] = "hello"
+      arr[2] = "world" -- or table.insert(arr, "world")
+
+      print(#arr) -- prints "2"
+
+      arr[0] = "something"
+
+      print(#arr) -- still prints "2", because index 0 is not considered
+
+  - text: |
+      This is how you can you loop over all values in an array: 
+
+  - code: |
+      local arr = {"hello", "world", "!"}
+
+      for index in pairs(arr) do
+        print(arr[index])
+      end
+      -- prints "hello", "world" & "!"
+
+      -- OR
+
+      for index, value in ipairs(arr) do -- using ipairs to get index & value
+        print(value)
+      end
+      -- also prints "hello", "world" & "!"
+
+
+
+
+
+
+  

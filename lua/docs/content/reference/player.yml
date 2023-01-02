@@ -1,0 +1,219 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Player"
+extends: "Object"
+description: |
+  Player is a shortcut to `Client.Player`.
+  Represents the local Player.
+
+properties:
+  - name: "Head"
+    type: "Shape"
+    description: "The [Shape] of the [Player]'s head."
+  - name: "Body"
+    type: "Shape"
+    description: "The [Shape] of the [Player]'s body."
+  - name: "LeftArm"
+    type: "Shape"
+    description: "The [Shape] of the [Player]'s left arm."
+  - name: "RightArm"
+    type: "Shape"
+    description: "The [Shape] of the [Player]'s right arm."
+  - name: "LeftLeg"
+    type: "Shape"
+    description: "The [Shape] of the [Player]'s left leg."
+  - name: "RightLeg"
+    type: "Shape"
+    description: "The [Shape] of the [Player]'s right leg."
+  - name: "BlockUnderneath"
+    type: "Block"
+    description: "Returns the block on which the Player is standing on."
+  - name: "BlocksUnderneath"
+    type: "array"
+    description: "Returns an [array] of [Block]s the player is standing on"
+    samples:
+      - code: |
+          local blocks = Player.BlocksUnderneath
+          for index, value in ipairs(blocks) do 
+              -- greenColorIndex is a block previously defined
+              local newBlock = Block(10) -- 10: BlockerProperties index
+              value:Replace(newBlock)
+          end
+  - name: "ID"
+    type: "number"
+    description: "Unique player ID for played game. A different ID can be attributed after reconnection."
+  - name: "Username"
+    type: "string"
+    description: "Player's account username. Usernames are unique."
+  - name: "UserID"
+    type: "string"
+    description: "Player's account identifier (ID). Identifiers are unique."
+  - name: "Position"
+    type: "Number3"
+    description: "Absolute world position of the Player."
+  - name: "Rotation"
+    type: "Number3"
+    description: "Player's rotation. (Y value is not considered)"
+  - name: "Velocity"
+    type: "Number3"
+    description: "Player's velocity (speed + direction)."
+  - name: "IsLocal"
+    type: "boolean"
+    description: |
+      Indicates whether the [Player] object is the local `Player`.
+      This is only valid on the [Client], not on the [Server].
+  - name: "Shadow"
+    type: boolean
+    description: |
+        Whether or not the [Player] should have a square shadow projected on the map, default is `true`.
+        The size of the shadow is based off [Player]'s collision box.
+  - name: "Layers"
+    type: "table"
+    description: |
+        Integer or table of integers between 1 and 8. Cameras only render objects corresponding to their layers.
+
+functions:
+  - name: "CastRay"
+    argument-sets: 
+      -
+      -
+        - name: "filterIn"
+          type: "CollisionGroups"
+      -
+        - name: "filterIn"
+          type: "Shape"
+      -
+        - name: "filterIn"
+          type: "nil"
+        - name: "filterOut"
+          type: "Object"
+      -
+        - name: "filterIn"
+          type: "CollisionGroups"
+        - name: "filterOut"
+          type: "Object"
+      -
+        - name: "filterIn"
+          type: "Shape"
+        - name: "filterOut"
+          type: "Object"
+    description: |
+      Casts a ray from player's position, returns an [Impact] if it hits something, [nil] otherwise.
+
+      💡 Calls [Ray].[Cast](/reference/ray#functions-cast) under the hood. See [Ray].[Cast](/reference/ray#functions-cast) definition for more details about possible filters.
+    return:
+      - type: "Impact"
+    samples:
+      - code: |
+          local impact = Player:CastRay()
+          if impact ~= nil then
+            print(impact)
+          end
+      - code: |
+          local box = Shape(Items.gaetan.gift_box)
+          Map:AddChild(box)
+
+          -- When a single Shape is considered, 
+          -- the Shape's internal block touched is provided
+          -- as part of the Impact object:
+          local impact = Player:CastRay(box)
+          -- example:
+          -- impact.Block is Number3(0, 5, 12)
+          -- impact.Distance is 42,72234
+          -- impact.Object is the `box` Shape
+
+  - name: "EquipBackpack"
+    coming-soon: true
+    description: |
+      Equips an [Item], [Shape] or [MutableShape] on the back of the [Player].
+      You can remove what's been equiped using [nil] argument
+    argument-sets:
+      -
+        - name: "item"
+          type: "Item"
+      -
+        - name: "shape"
+          type: "Shape"
+      -
+        - name: "shape"
+          type: "MutableShape"
+      -
+        - type: "nil"
+
+  - name: "EquipHat"
+    coming-soon: true
+    description: |
+      Equips an Item, Shape or MutableShape on [Player]'s head.
+      You can remove what's been equiped using [nil] argument
+    argument-sets:
+      -
+        - name: "Item"
+          type: "Item"
+      -
+        - name: "shape"
+          type: "Shape"
+      -
+        - name: "shape"
+          type: "MutableShape"
+      -
+        - type: "nil"
+
+  - name: "EquipLeftHand"
+    description: |
+      Puts an [Item], [Shape] or [MutableShape] in [Player]'s left hand.
+      You can remove what's been equiped using [nil] argument
+    argument-sets:
+      -
+        - name: "item"
+          type: "Item"
+      -
+        - name: "shape"
+          type: "Shape"
+      -
+        - name: "shape"
+          type: "MutableShape"
+      -
+        - type: "nil"
+          
+  - name: "EquipRightHand"
+    description: |
+      Puts an [Item], [Shape] or [MutableShape] in [Player]'s right hand.
+      You can remove what's been equiped using [nil] argument
+    argument-sets:
+      -
+        - name: "item"
+          type: "Item"
+      -
+        - name: "shape"
+          type: "Shape"
+      -
+        - name: "shape"
+          type: "MutableShape"
+      -
+        - type: "nil"
+    samples:
+      - code: |
+          Config = {
+            Items = { "aduermael.rainbow_sword" }
+          }
+          
+          Client.OnStart = function()
+            Player:EquipRightHand(Items.aduermael.rainbow_sword)
+            -- or
+            local s = Shape(Items.aduermael.rainbow_sword)
+            Player:EquipRightHand(s)
+
+            Player:EquipRightHand(nil) -- unequips the sword
+          end
+
+  - name: "SwapHands"
+    description: |
+      Swaps [Player]'s hand held items.
+      If one hand holds nothing, the [Item] switches hands.
+
+  - name: "SwingRight"
+    description: |
+      Make [Player]'s right hand swing.
+
+  - name: "SwingLeft"
+    description: |
+      Make [Player]'s left hand swing.

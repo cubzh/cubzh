@@ -1,0 +1,35 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "BlockProperties"
+creatable: true # indicates that instances can be created, even if there's no constructor
+description: |
+    A `BlockProperties` entry describes the visual properties of a [Block]. It is stored in a [Shape]'s [Palette] where it can be referred to by its palette index.
+
+    A `BlockProperties` entry can only be removed from its palette if it is currently not used by any blocks in its owner shape.
+
+properties:
+    - name: "Color"
+      type: "Color"
+      description: "Color of the blocks using this [This]."
+
+    - name: "Light"
+      type: "boolean"
+      description: "Indicates if blocks using this [This] emit light. Light color is tied to [BlockProperties.Color](#property-color)."
+
+    - name: "PaletteIndex"
+      type: "number"
+      description: "[This]' index in the [Palette] it belongs to."
+
+    - name: "BlocksCount"
+      type: "number"
+      description: "How many blocks are currently using [This]."
+
+functions:
+    - name: "IsUsed"
+      description: "Returns whether or not [This] is currently used by its owner shape."
+      return:
+        - type: "boolean"
+
+    - name: "Remove"
+      description: "Removes the [This] entry from its palette, if it is unused. Returns `true` if it was removed."
+      return:
+        - type: "boolean"

@@ -1,0 +1,23 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "nil"
+basic-type: true
+description: |
+    Nil is a type with a single value, nil.
+blocks:
+  - text: |
+      Nil is a type with a single value, nil.
+
+      A variable has a nil value by default.
+
+  - code: |
+      local a
+      print(a) -- prints: nil
+
+  - code: |
+      local f = function()
+        -- do not return anything
+      end
+
+      local a = f()
+      -- nothing returned, a == nil
+      print(a)

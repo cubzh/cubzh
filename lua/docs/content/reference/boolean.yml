@@ -1,0 +1,12 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "boolean"
+basic-type: true
+description: |
+    A boolean is a basic Lua type. It has 2 possible values: true or false.
+blocks:
+  - text: "A boolean is a basic Lua type. It has 2 possible values: `true` or `false`."
+
+  - code: |
+      local b = true
+      b = not b -- now b == false
+

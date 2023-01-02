@@ -1,0 +1,23 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "number"
+basic-type: true
+description: |
+    A number is a basic Lua type, it represents real numbers.
+blocks:
+  - text: |
+      A number is a basic Lua type, it represents real numbers.
+
+  - code: |
+      local a = 10
+      local b = 10
+      local c = a + b
+
+      print(c) -- prints 20
+
+  - code: |
+      local a = 10
+      local b = 1.5
+      local c = a * b
+
+      print(c) -- prints 15.0
+      

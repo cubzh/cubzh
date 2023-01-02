@@ -1,0 +1,5 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "AudioListener"
+extends: "Object"
+description: |
+    The `AudioListener` is a microphone-like global variable that can hear the sounds from the various sources in the world and output them in the speakers.
