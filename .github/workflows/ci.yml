@@ -19,7 +19,7 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@v3
         with:
-          lfs: 'true'
+          lfs: 'false'
 
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -46,7 +46,7 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@v3
         with:
-          lfs: 'true'
+          lfs: 'false'
 
       - name: Setup Go
         uses: actions/setup-go@v3
