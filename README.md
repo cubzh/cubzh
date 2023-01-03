@@ -63,10 +63,14 @@ We'll keep thinking about it and see where it leads us, sharing concerns and cri
 
 ### Features & to-do list
 
+⚠️ Features not listed in any particular order.
+
 #### Done
 
-- ✅ Supported platforms: iOS, Android, Windows, macOS
+- ✅ Supported platforms: iOS, Android, Windows, macOS, web browsers (Chrome & Firefox)
 - ✅ Item Editor
+    - ✅ Custom color palettes
+    - ✅ Items made out of multiple shapes
 - ✅ File Import / Export (.3zh, .vox)
 - ✅ Lua Scripting Environment
 	- ✅ Physics / Collisions
@@ -75,21 +79,16 @@ We'll keep thinking about it and see where it leads us, sharing concerns and cri
 	- ✅ Multiple cameras
 	- ✅ HTTP client
 - ✅ Anonymous Accounts
+- ✅ Sounds
+- ✅ Lights (point, spot, directional)
 
-#### In progress
+#### Todo
 
-- ⚙️ Web Browser support (Chrome & Firefox)
-- ⚙️ World Editor
+- ⚙️ Item gallery
 - ⚙️ Avatar Editor
-- ⚙️ Items made out of multiple shapes
+- ⚙️ World Editor
 - ⚙️ Animation Editor
-- ⚙️ Custom Color Palettes
-- ⚙️ Sounds
-- ⚙️ Lights / Shadows
-
-#### To-do
-
-- Currency
-- Marketplace
-- Friends
-- Block Textures
+- ⚙️ Shadows (directional lights not casting them yet)
+- ⚙️ Marketplace / currency
+- ⚙️ Friends (social features in general)
+- ⚙️ Textured blocks
