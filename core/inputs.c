@@ -370,7 +370,6 @@ void postMouseEvent(float x,
     me->button = button;
     me->down = down;
     me->move = move;
-    fifo_list_push(c->mouseEventPool, me);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -380,7 +379,7 @@ void postMouseEvent(float x,
         if (il->acceptsMouseEvents) {
             MouseEvent *me2 = recycle_mouse_event();
             if (me2 == NULL) {
-                return;
+                break; // exit the while loop
             }
 
             mouse_event_copy(me, me2);
@@ -390,6 +389,10 @@ void postMouseEvent(float x,
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `me` mouse event back into the recycle pool
+    fifo_list_push(c->mouseEventPool, me);
+    me = NULL;
 }
 
 void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState state, bool move) {
@@ -423,7 +426,6 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
     te->dy = dy / inputContext()->nbPixelsInOnePoint;
     te->state = state;
     te->move = move;
-    fifo_list_push(c->touchEventPool, te);
 
     // NOTE: aduermael: This is temporary
     // We consider first finger touch events to be mouse events
@@ -494,7 +496,7 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
 
             TouchEvent *te2 = recycle_touch_event();
             if (te2 == NULL) {
-                return;
+                break; // exit the while loop
             }
 
             touch_event_copy(te, te2);
@@ -504,6 +506,10 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `te` touch event back into the recycle pool
+    fifo_list_push(c->touchEventPool, te);
+    te = NULL;
 }
 
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
@@ -521,7 +527,6 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
     ke->input = input;
     ke->modifiers = modifiers;
     ke->state = state;
-    fifo_list_push(c->keyEventPool, ke);
 
     // update context
 
@@ -635,7 +640,7 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
 
             KeyEvent *ke2 = recycle_key_event();
             if (ke2 == NULL) {
-                return;
+                break;
             }
 
             key_event_copy(ke, ke2);
@@ -645,6 +650,10 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `ke` key event back into the recycle pool
+    fifo_list_push(c->keyEventPool, ke);
+    ke = NULL;
 }
 
 void postCharEvent(unsigned int inputChar) {
@@ -660,7 +669,6 @@ void postCharEvent(unsigned int inputChar) {
     }
 
     ce->inputChar = inputChar;
-    fifo_list_push(c->charEventPool, ce);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -671,7 +679,7 @@ void postCharEvent(unsigned int inputChar) {
 
             CharEvent *ce2 = recycle_char_event();
             if (ce2 == NULL) {
-                return;
+                break;
             }
 
             char_event_copy(ce, ce2);
@@ -681,6 +689,10 @@ void postCharEvent(unsigned int inputChar) {
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `ce` char event back into the recycle pool
+    fifo_list_push(c->charEventPool, ce);
+    ce = NULL;
 }
 
 void postDirPadEvent(float dx, float dy, PadBtnState state) {
@@ -698,7 +710,6 @@ void postDirPadEvent(float dx, float dy, PadBtnState state) {
     de->state = state;
     de->dx = dx;
     de->dy = dy;
-    fifo_list_push(c->dirPadEventPool, de);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -709,7 +720,7 @@ void postDirPadEvent(float dx, float dy, PadBtnState state) {
 
             DirPadEvent *de2 = recycle_dirpad_event();
             if (de2 == NULL) {
-                return;
+                break; // exit the while loop
             }
 
             dir_pad_event_copy(de, de2);
@@ -719,6 +730,10 @@ void postDirPadEvent(float dx, float dy, PadBtnState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `de` dirpad event back into the recycle pool
+    fifo_list_push(c->dirPadEventPool, de);
+    de = NULL;
 }
 
 void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
@@ -735,7 +750,6 @@ void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
 
     ae->state = state;
     ae->button = button;
-    fifo_list_push(c->actionPadEventPool, ae);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -746,7 +760,7 @@ void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
 
             ActionPadEvent *ae2 = recycle_actionpad_event();
             if (ae2 == NULL) {
-                return;
+                break;
             }
 
             action_pad_event_copy(ae, ae2);
@@ -756,6 +770,10 @@ void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `ae` actionPad event back into the recycle pool
+    fifo_list_push(c->actionPadEventPool, ae);
+    ae = NULL;
 }
 
 void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
@@ -773,7 +791,6 @@ void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
     ce->state = state;
     ce->dx = dx;
     ce->dy = dy;
-    fifo_list_push(c->analogPadEventPool, ce);
 
     DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
     while (node != NULL) {
@@ -784,7 +801,7 @@ void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
 
             AnalogPadEvent *ce2 = recycle_analogpad_event();
             if (ce2 == NULL) {
-                return;
+                break;
             }
 
             analog_pad_event_copy(ce, ce2);
@@ -793,6 +810,10 @@ void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
 
         node = doubly_linked_list_node_previous(node);
     }
+
+    // put `ce` analogPad event back into the recycle pool
+    fifo_list_push(c->analogPadEventPool, ce);
+    ce = NULL;
 }
 
 // casts event to MouseEvent, returns NULL if event is not a MouseEvent
