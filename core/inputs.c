@@ -334,10 +334,11 @@ void postMouseEvent(float x,
                     bool down,
                     bool move) {
 
-    InputContext *c = inputContext();
+    InputContext * const c = inputContext();
 
-    if (c->acceptInputs == false)
+    if (c->acceptInputs == false) {
         return;
+    }
 
     MouseEvent *me = recycle_mouse_event();
     if (me == NULL) {
@@ -346,8 +347,8 @@ void postMouseEvent(float x,
 
     if (button != MouseButtonScroll) {
         // update context
-        c->mouse.x = x / inputContext()->nbPixelsInOnePoint;
-        c->mouse.y = y / inputContext()->nbPixelsInOnePoint;
+        c->mouse.x = x / c->nbPixelsInOnePoint;
+        c->mouse.y = y / c->nbPixelsInOnePoint;
         switch (button) {
             case MouseButtonLeft:
                 c->mouse.leftButtonDown = down;
@@ -363,10 +364,10 @@ void postMouseEvent(float x,
         }
     }
 
-    me->x = x / inputContext()->nbPixelsInOnePoint;
-    me->y = y / inputContext()->nbPixelsInOnePoint;
-    me->dx = dx / inputContext()->nbPixelsInOnePoint;
-    me->dy = dy / inputContext()->nbPixelsInOnePoint;
+    me->x = x / c->nbPixelsInOnePoint;
+    me->y = y / c->nbPixelsInOnePoint;
+    me->dx = dx / c->nbPixelsInOnePoint;
+    me->dy = dy / c->nbPixelsInOnePoint;
     me->button = button;
     me->down = down;
     me->move = move;
@@ -377,7 +378,7 @@ void postMouseEvent(float x,
         InputListener *il = (InputListener *)doubly_linked_list_node_pointer(node);
 
         if (il->acceptsMouseEvents) {
-            MouseEvent *me2 = recycle_mouse_event();
+            MouseEvent * const me2 = recycle_mouse_event();
             if (me2 == NULL) {
                 break; // exit the while loop
             }
