@@ -34,8 +34,10 @@ ENTRYPOINT ["./website"]
 
 FROM --platform=linux/amd64 alpine:3.12 AS website
 
-COPY --from=builder /go/src/website/website /website
+# first copy the resources
 COPY --from=builder /www /www
+# then the executable
+COPY --from=builder /go/src/website/website /website
 
 EXPOSE 80
 WORKDIR /
