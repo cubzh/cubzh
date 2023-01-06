@@ -5,8 +5,7 @@ description: A [MutableShape] is an [Object] that carries and displays a set of 
 
 constructors: 
   - description: |
-        Creates a MutableShape which model can be empty, loaded from an imported [Item], or copied from an 
-      existing [Shape] or [MutableShape].
+        Creates a MutableShape which model can be empty, loaded from an imported [Item], or copied from an existing [Shape] or [MutableShape].
     argument-sets:
       -
 
