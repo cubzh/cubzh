@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 
 	"dagger.io/dagger"
 	"golang.org/x/crypto/ssh"
@@ -23,13 +24,16 @@ const (
 )
 
 var (
-	LUA_DOCS_DOCKER_IMAGE_NAME  string = os.Getenv("LUA_DOCS_DOCKER_IMAGE_NAME")
-	LUA_DOCS_SRV_SSH_URL        string = os.Getenv("LUA_DOCS_SRV_SSH_URL")
-	LUA_DOCS_SRV_SSH_PRIVATEKEY string = os.Getenv("LUA_DOCS_SRV_SSH_PRIVATEKEY")
-	LUA_DOCS_SRV_SSH_KNOWNHOSTS string = os.Getenv("LUA_DOCS_SRV_SSH_KNOWNHOSTS")
-	LUA_DOCS_SRV_SSH_USER       string
-	LUA_DOCS_SRV_SSH_HOST       string
-	LUA_DOCS_SRV_SSH_PORT       string
+	DIGITALOCEAN_REGISTRY_URL      string = os.Getenv("DIGITALOCEAN_REGISTRY_URL")
+	DIGITALOCEAN_REGISTRY_TOKEN    string = os.Getenv("DIGITALOCEAN_REGISTRY_TOKEN")
+	LUA_DOCS_DOCKER_IMAGE_NAME     string = os.Getenv("LUA_DOCS_DOCKER_IMAGE_NAME")
+	LUA_DOCS_SRV_SSH_URL           string = os.Getenv("LUA_DOCS_SRV_SSH_URL")
+	LUA_DOCS_SRV_SSH_PRIVATEKEY    string = os.Getenv("LUA_DOCS_SRV_SSH_PRIVATEKEY")
+	LUA_DOCS_SRV_SSH_KNOWNHOSTS    string = os.Getenv("LUA_DOCS_SRV_SSH_KNOWNHOSTS")
+	LUA_DOCS_DOCKER_IMAGE_FULLNAME string
+	LUA_DOCS_SRV_SSH_USER          string
+	LUA_DOCS_SRV_SSH_HOST          string
+	LUA_DOCS_SRV_SSH_PORT          string
 )
 
 func main() {
@@ -38,6 +42,12 @@ func main() {
 	// Check all environment variables are present
 	{
 		missingEnvarName := ""
+		if len(DIGITALOCEAN_REGISTRY_URL) == 0 {
+			missingEnvarName = "DIGITALOCEAN_REGISTRY_URL"
+		}
+		if len(DIGITALOCEAN_REGISTRY_TOKEN) == 0 {
+			missingEnvarName = "DIGITALOCEAN_REGISTRY_TOKEN"
+		}
 		if len(LUA_DOCS_DOCKER_IMAGE_NAME) == 0 {
 			missingEnvarName = "LUA_DOCS_DOCKER_IMAGE_NAME"
 		}
@@ -55,6 +65,9 @@ func main() {
 			os.Exit(1) // failure
 		}
 	}
+
+	// Construct docker image fullname
+	LUA_DOCS_DOCKER_IMAGE_FULLNAME = DIGITALOCEAN_REGISTRY_URL + "/" + LUA_DOCS_DOCKER_IMAGE_NAME
 
 	// Parse SSH connection URL
 	{
@@ -86,7 +99,29 @@ func main() {
 	os.Exit(0) // success
 }
 
+func dockerRegistryLogin() error {
+	cmd := exec.Command(
+		"docker", "login", DIGITALOCEAN_REGISTRY_URL,
+		"--username", DIGITALOCEAN_REGISTRY_TOKEN,
+		"--password", DIGITALOCEAN_REGISTRY_TOKEN)
+	return cmd.Run()
+}
+
+func dockerRegistryLogout() error {
+	cmd := exec.Command(
+		"docker", "logout", DIGITALOCEAN_REGISTRY_URL)
+	return cmd.Run()
+}
+
 func deployLuaDocs() error {
+	var err error
+
+	// login to docker registry
+	if err = dockerRegistryLogin(); err != nil {
+		return err
+	}
+	defer dockerRegistryLogout()
+
 	// Get background context
 	ctx := context.Background()
 
@@ -129,7 +164,7 @@ func deployLuaDocs() error {
 	// --------------------------------------------------
 	{
 		publishOpts := dagger.ContainerPublishOpts{}
-		ref, err := docsContainer.Publish(ctx, LUA_DOCS_DOCKER_IMAGE_NAME, publishOpts)
+		ref, err := docsContainer.Publish(ctx, LUA_DOCS_DOCKER_IMAGE_FULLNAME, publishOpts)
 		if err != nil {
 			fmt.Println("❌ docker image publish failed")
 			return err
@@ -155,7 +190,7 @@ func deployLuaDocs() error {
 			LUA_DOCS_SRV_SSH_PORT,
 			LUA_DOCS_SRV_SSH_PRIVATEKEY,
 			KNOWNHOSTS_LOCAL_FILEPATH,
-			"docker service update --image registry.particubes.com/lua-docs:latest lua-docs",
+			"docker service update --with-registry-auth --image "+LUA_DOCS_DOCKER_IMAGE_FULLNAME+" lua-docs",
 		)
 		if err != nil {
 			fmt.Println("❌ ssh call failed:", err.Error())
