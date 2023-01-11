@@ -68,6 +68,8 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
 ColorPalette *color_palette_new_copy(const ColorPalette *src);
 void color_palette_free(ColorPalette *p);
 
+void color_palette_replace_color_atlas(ColorPalette *p, ColorAtlas *atlas);
+
 uint8_t color_palette_get_count(const ColorPalette *p);
 ColorAtlas *color_palette_get_atlas(const ColorPalette *p);
 bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut);

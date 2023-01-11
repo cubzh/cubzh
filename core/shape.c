@@ -2340,6 +2340,11 @@ const char *shape_get_fullname(const Shape *s) {
     return s->fullname;
 }
 
+void shape_replace_color_atlas(Shape *s, ColorAtlas *ca) {
+    if (s->palette == NULL) { return; }
+    color_palette_replace_color_atlas(s->palette, ca);
+}
+
 // MARK: - Transform -
 
 void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool removeOffset) {
