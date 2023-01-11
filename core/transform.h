@@ -20,6 +20,8 @@ extern "C" {
 #include "weakptr.h"
 
 typedef struct _Transform Transform;
+typedef struct _Scene Scene;
+typedef struct _RigidBody RigidBody;
 
 /// Select the computing mode for transforms utils euler functions (transform_utils_*)
 /// Note: internal & other functions rotations always use quaternions regardless of this mode
@@ -56,9 +58,6 @@ typedef struct _Transform Transform;
 #define DEBUG_TRANSFORM_REFRESH_CALLS false
 #endif
 
-typedef struct _Scene Scene;
-typedef struct _RigidBody RigidBody;
-
 typedef enum {
     /// default type, only contributes to the transformations down the hierarchy
     /// /!\ only used by internal objects
@@ -73,13 +72,11 @@ typedef void (*pointer_transform_recurse_func)(Transform *t, void *ptr);
 typedef Transform **Transform_Array;
 
 /// MARK: - Lifecycle -
-
 Transform *transform_make(TransformType type);
 Transform *transform_make_with_ptr(TransformType type,
                                    void *ptr,
                                    const uint8_t ptrType,
                                    pointer_free_function ptrFreeFn);
-
 Transform *transform_make_default(void);
 /// Increases ref count and returns false if the retain count can't be increased
 bool transform_retain(Transform *const t);
@@ -88,15 +85,21 @@ uint16_t transform_retain_count(const Transform *const t);
 /// Returns true if the Transform has been freed, false otherwise.
 bool transform_release(Transform *t);
 void transform_flush(Transform *t);
-bool transform_is_hierarchy_dirty(Transform *t); // on-demand dirty for intra-frame calculations
+Weakptr *transform_get_weakptr(Transform *t);
+Weakptr *transform_get_and_retain_weakptr(Transform *t);
+bool transform_is_hierarchy_dirty(Transform *t);
 void transform_refresh(Transform *t, bool hierarchyDirty, bool refreshParents);
 void transform_refresh_children_done(Transform *t);
-void transform_reset_physics_dirty(Transform *t);
-bool transform_is_physics_dirty(
-    Transform *t); // end-of-frame dirty for physics-relevant transformations
 void transform_reset_any_dirty(Transform *t);
-bool transform_is_any_dirty(Transform *t); // set but not reset by transform, can be used internally
-                                           // by higher types as custom flag
+/// set, but not reset by transform, can be used internally by higher types as custom flag
+bool transform_is_any_dirty(Transform *t);
+
+/// MARK: - Physics -
+void transform_reset_physics_dirty(Transform *t);
+bool transform_is_physics_dirty(Transform *t);
+bool transform_ensure_rigidbody(Transform *t, uint8_t mode, uint8_t groups, uint8_t collidesWith, RigidBody **out);
+RigidBody *transform_get_rigidbody(Transform *const t);
+RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);
 
 /// MARK: - Hierarchy -
 bool transform_set_parent(Transform *const t, Transform *parent, bool keepWorld);
@@ -110,7 +113,6 @@ void *transform_get_ptr(Transform *const t);
 void transform_set_type(Transform *t, TransformType type);
 TransformType transform_get_type(const Transform *t);
 uint8_t transform_get_underlying_ptr_type(const Transform *t);
-
 void transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst);
 bool transform_is_hidden_branch(Transform *t);
 void transform_set_hidden_branch(Transform *t, bool value);
@@ -201,14 +203,10 @@ void transform_utils_box_to_dynamic_collider(Transform *t,
                                              const float3 *offset,
                                              SquarifyType squarify);
 
-Transform *transform_make_with_shape(Shape *ptr);
-Shape *transform_get_shape(Transform *t);
-void transform_set_rigidbody(Transform *t, RigidBody *rb);
-RigidBody *transform_get_rigidbody(Transform *const t);
-RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);
-Weakptr *transform_get_weakptr(Transform *t);
-Weakptr *transform_get_and_retain_weakptr(Transform *t);
+Transform *transform_utils_make_with_shape(Shape *ptr);
+Shape *transform_utils_get_shape(Transform *t);
 
+// MARK: - Misc. -
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
 bool transform_getAnimationsEnabled(Transform *const t);
 

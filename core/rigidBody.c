@@ -13,11 +13,11 @@
 #include "scene.h"
 
 #define SIMULATIONFLAG_NONE 0
-#define SIMULATIONFLAG_MODE 3
-#define SIMULATIONFLAG_COLLIDER_DIRTY 4
-#define SIMULATIONFLAG_CALLBACK_ENABLED 8
-#define SIMULATIONFLAG_END_CALLBACK_ENABLED 16
-#define SIMULATIONFLAG_CUSTOM_COLLIDER 32
+#define SIMULATIONFLAG_MODE 7 // first 3 bits
+#define SIMULATIONFLAG_COLLIDER_DIRTY 8
+#define SIMULATIONFLAG_CALLBACK_ENABLED 16
+#define SIMULATIONFLAG_END_CALLBACK_ENABLED 32
+#define SIMULATIONFLAG_CUSTOM_COLLIDER 64
 
 #if DEBUG_RIGIDBODY
 static int debug_rigidbody_solver_iterations = 0;
@@ -29,10 +29,8 @@ static int debug_rigidbody_awakes = 0;
 
 struct _RigidBody {
     // collider axis-aligned box, may be arbitrary or similar to the axis-aligned bounding box
-    // (aabb)
     Box *collider;
-    // pointer to r-rtree leaf, its aabb represents the space in the scene last occupied by this
-    // rigidbody
+    // pointer to r-rtree leaf, its aabb represents the space last occupied in the scene
     RtreeNode *rtreeLeaf;
 
     // Motion is an enforced force delta in world units, added every tick & not applied to velocity
@@ -146,14 +144,20 @@ void _rigidbody_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, B
     matrix4x4_op_multiply_vec_vector(outEpsilon3, &epsilon3, invModel);
 }
 
-bool _rigidbody_dynamic_tick(Scene *scene,
-                             RigidBody *rb,
-                             Transform *t,
-                             Box *worldCollider,
-                             Rtree *r,
-                             const TICK_DELTA_SEC_T dt,
-                             FifoList *sceneQuery,
-                             void *callbackData) {
+typedef enum {
+    SimulationResult_Errored,
+    SimulationResult_Moved,
+    SimulationResult_Stayed,
+    SimulationResult_Slept
+} SimulationResult;
+SimulationResult _rigidbody_dynamic_tick(Scene *scene,
+                                         RigidBody *rb,
+                                         Transform *t,
+                                         Box *worldCollider,
+                                         Rtree *r,
+                                         const TICK_DELTA_SEC_T dt,
+                                         FifoList *sceneQuery,
+                                         void *callbackData) {
 
 #if DEBUG_RIGIDBODY_CALLS
 #define INC_REPLACEMENTS debug_rigidbody_replacements++;
@@ -207,7 +211,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     if (rigidbody_check_velocity_sleep(rb, &f3)) {
         float3_set_zero(rb->velocity);
         INC_SLEEPS
-        return false;
+        return SimulationResult_Slept;
     }
 
     // ------------------------
@@ -235,7 +239,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     float3 dv, normal, push3, extraReplacement3, modelDv, modelEpsilon;
     float minSwept, swept;
     float3 pos = *transform_get_position(t);
-    Box mapAABB, broadphase, modelBox, modelBroadphase;
+    Box broadphase, modelBox, modelBroadphase;
     Shape *shape;
 
     typedef struct {
@@ -249,15 +253,6 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     // initial frame delta translation
     float3_copy(&dv, &f3);
     float3_op_scale(&dv, dt_f);
-
-    // retrieve the map AABB
-    Shape *mapShape = transform_get_shape(scene_get_map(scene));
-    if (mapShape == NULL) {
-        return false;
-    }
-    shape_get_world_aabb(mapShape, &mapAABB, false);
-
-    RigidBody *mapRb = shape_get_rigidbody(mapShape);
 
     // ----------------------
     // SOLVER ITERATIONS
@@ -276,44 +271,6 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         contact.model = NULL;
 
         box_set_broadphase_box(worldCollider, &dv, &broadphase);
-
-        // ----------------------
-        // MAP COLLISIONS
-        // ----------------------
-        // reduce the trajectory (broadphase box) to a smaller form by testing against the map first
-        // TODO: remove this case
-
-        if (rigidbody_collides_with_any(rb, mapRb->groups) && box_collide(&mapAABB, &broadphase)) {
-            const Matrix4x4 *invModel = transform_get_wtl(shape_get_pivot_transform(mapShape));
-            _rigidbody_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv, EPSILON_COLLISION, &modelEpsilon);
-
-            minSwept = shape_box_swept(mapShape,
-                                       &modelBox,
-                                       &modelDv,
-                                       &modelEpsilon,
-                                       true,
-                                       &normal,
-                                       &extraReplacement3); // TODO update or remove extra replacements
-
-            // not a free movement
-            if (minSwept < 1.0f) {
-                contact.t = shape_get_root_transform(mapShape);
-                contact.rb = mapRb;
-                contact.model = shape_get_model_matrix(mapShape);
-                contact.normal = normal;
-
-                // already in contact (==0) or colliding (<0)
-                if (minSwept <= 0.0f) {
-                    // continue sweep vs. scene to check for full replacement & response
-                }
-                // collision will occur with the map, shorten trajectory
-                else {
-                    float3_copy(&f3, &dv);
-                    float3_op_scale(&f3, minSwept);
-                    box_set_broadphase_box(worldCollider, &f3, &broadphase);
-                } // TODO: can shorten trajectory be re-introduced in main loop?
-            }
-        }
 
         // ----------------------
         // SCENE COLLISIONS
@@ -355,44 +312,91 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     continue;
                 }
 
-                shape = transform_get_shape(hitLeaf);
+                const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+                const bool isTrigger = mode == RigidbodyMode_Trigger || mode == RigidbodyMode_TriggerPerBlock;
+                vx_assert(mode > RigidbodyMode_Disabled);
 
-                const Box *collider = rigidbody_get_collider(hitRb);
-                const Matrix4x4 *invModel = transform_get_wtl(shape != NULL ?
-                                                              shape_get_pivot_transform(shape) :
-                                                              hitLeaf);
-                _rigidbody_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv, EPSILON_COLLISION, &modelEpsilon);
+                if (isTrigger && rigidbody_has_callbacks(hitRb) == false) {
+                    hit = fifo_list_pop(sceneQuery);
+                    continue;
+                }
 
-                box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
-                if (box_collide(&modelBroadphase, collider)) {
-                    // shapes may enable per-block collisions
-                    if (shape != NULL && shape_uses_per_block_collisions(shape)) {
-                        swept = shape_box_swept(shape,
-                                                &modelBox,
-                                                &modelDv,
-                                                &modelEpsilon,
-                                                true,
-                                                &normal,
-                                                &extraReplacement3); // TODO update or remove extra replacements
+                const Matrix4x4 *model = NULL;
+                if (mode == RigidbodyMode_Dynamic) {
+                    swept = box_swept(worldCollider,
+                                      &dv,
+                                      rtree_node_get_aabb(hit),
+                                      &float3_epsilon_collision,
+                                      true,
+                                      &normal,
+                                      NULL);
+                } else {
+                    shape = transform_utils_get_shape(hitLeaf);
+
+                    const Box *collider = rigidbody_get_collider(hitRb);
+                    const Matrix4x4 *invModel = transform_get_wtl(shape != NULL ?
+                                                                  shape_get_pivot_transform(shape) :
+                                                                  hitLeaf);
+                    _rigidbody_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv, EPSILON_COLLISION, &modelEpsilon);
+
+                    box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
+                    if (box_collide(&modelBroadphase, collider)) {
+                        // shapes may enable per-block collisions
+                        if (shape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                            swept = shape_box_swept(shape,
+                                                    &modelBox,
+                                                    &modelDv,
+                                                    &modelEpsilon,
+                                                    true,
+                                                    &normal,
+                                                    &extraReplacement3); // TODO update or remove extra replacements
+                        } else {
+                            swept = box_swept(&modelBox,
+                                              &modelDv,
+                                              rigidbody_get_collider(hitRb),
+                                              &modelEpsilon,
+                                              true,
+                                              &normal,
+                                              NULL);
+                        }
+
+                        model = transform_get_ltw(shape != NULL ?
+                                                  shape_get_pivot_transform(shape) : hitLeaf);
                     } else {
-                        swept = box_swept(&modelBox,
-                                          &modelDv,
-                                          rigidbody_get_collider(hitRb),
-                                          &modelEpsilon,
-                                          true,
-                                          &normal,
-                                          NULL);
+                        swept = 1.0f;
                     }
+                }
+                // earlier contact found
+                if (swept < minSwept) {
+                    if (isTrigger) {
+                        // side of the world box sent to Lua callback
+                        AxesMaskValue selfBoxSide = AxesMaskNone;
 
-                    // earlier contact found
-                    if (swept < minSwept) {
+                        float3 wNormal;
+                        matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
+                        float3_normalize(&wNormal);
+
+                        if (fabsf(wNormal.x) >= fabsf(wNormal.y) && fabsf(wNormal.x) >= fabsf(wNormal.z)) {
+                            selfBoxSide = wNormal.x > 0.0f ? AxesMaskNX : AxesMaskX;
+                        }else if (fabsf(wNormal.y) >= fabsf(wNormal.x) && fabsf(wNormal.y) >= fabsf(wNormal.z)) {
+                            selfBoxSide = wNormal.y > 0.0f ? AxesMaskNY : AxesMaskY;
+                        } else if (fabsf(wNormal.z) >= fabsf(wNormal.x) && fabsf(wNormal.z) >= fabsf(wNormal.y)) {
+                            selfBoxSide = wNormal.z > 0.0f ? AxesMaskNZ : AxesMaskZ;
+                        }
+
+                        _rigidbody_fire_reciprocal_callbacks(rb,
+                                                             t,
+                                                             hitRb,
+                                                             hitLeaf,
+                                                             selfBoxSide,
+                                                             callbackData);
+                    } else {
                         contact.t = hitLeaf;
                         contact.rb = hitRb;
-                        contact.model = transform_get_ltw(shape != NULL ?
-                                                          shape_get_pivot_transform(shape) : hitLeaf);
+                        contact.model = model;
                         contact.normal = normal;
+                        minSwept = swept;
                     }
-                    minSwept = minimum(swept, minSwept);
                 }
 
                 hit = fifo_list_pop(sceneQuery);
@@ -651,9 +655,9 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // apply final position to transform
         transform_set_position(t, pos.x, pos.y, pos.z);
 
-        return true;
+        return SimulationResult_Moved;
     } else {
-        return false;
+        return SimulationResult_Stayed;
     }
 }
 
@@ -676,7 +680,7 @@ void _rigidbody_trigger_tick(Scene *scene,
     // at most new contacts on 3 axes, trigger rigidbodies are not and may have new contacts on all
     // 6 axes
 
-    Shape *mapShape = transform_get_shape(scene_get_map(scene));
+    Shape *mapShape = transform_utils_get_shape(scene_get_map(scene));
     if (mapShape == NULL) {
         return;
     }
@@ -876,7 +880,7 @@ RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t
         return NULL;
     }
 
-    b->collider = box_new();
+    b->collider = box_new_copy(&box_one);
     b->rtreeLeaf = NULL;
     b->motion = float3_new_zero();
     b->velocity = float3_new_zero();
@@ -945,22 +949,26 @@ bool rigidbody_tick(Scene *scene,
         sceneQuery = fifo_list_new();
     }
 
-    // a dynamic rigidbody is fully simulated - movement, mass push, replacement, callbacks,
-    // collision responses
+    // attempt to simulate first if dynamic rb
+    SimulationResult simulated = SimulationResult_Errored;
     if (rigidbody_is_dynamic(rb)) {
-        return _rigidbody_dynamic_tick(scene,
-                                       rb,
-                                       t,
-                                       worldCollider,
-                                       r,
-                                       dt,
-                                       sceneQuery,
-                                       callbackData);
+        simulated = _rigidbody_dynamic_tick(scene,
+                                            rb,
+                                            t,
+                                            worldCollider,
+                                            r,
+                                            dt,
+                                            sceneQuery,
+                                            callbackData);
     }
-    // a trigger rigidbody only checks for overlaps to fire callbacks
-    else if (rigidbody_is_trigger(rb)) {
+    //if (simulated == SimulationResult_Moved || simulated == SimulationResult_Stayed) {
+        return simulated == SimulationResult_Moved;
+    //}
+
+    // check for overlaps to fire callbacks
+    /*if (rigidbody_is_active_trigger(rb)) {
         _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, callbackData);
-    }
+    }*/
 
     return false;
 }
@@ -1061,7 +1069,11 @@ uint8_t rigidbody_get_simulation_mode(const RigidBody *rb) {
 }
 
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value) {
-    if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != value) {
+    const uint8_t mode = _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE);
+    if (mode != value) {
+        if (mode == RigidbodyMode_Dynamic) {
+            rigidbody_reset(rb); // reset rigidbody when disabling simulation
+        }
         _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, value);
 #if TRANSFORM_AABOX_STATIC_COLLIDER_MODE != TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE
         if (value == RigidbodyMode_Static || value == RigidbodyMode_Dynamic) {
@@ -1155,24 +1167,30 @@ bool rigidbody_is_enabled(const RigidBody *rb) {
     return rb != NULL && _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled;
 }
 
+bool rigidbody_has_callbacks(const RigidBody *rb) {
+    return rb != NULL &&
+           (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||
+            _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED));
+}
+
+bool rigidbody_is_active_trigger(const RigidBody *rb) {
+    return rb != NULL &&
+           _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) >= RigidbodyMode_Trigger &&
+           rigidbody_has_callbacks(rb);
+}
+
 bool rigidbody_is_dynamic(const RigidBody *rb) {
     return rb != NULL &&
            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Dynamic;
 }
 
-bool rigidbody_is_trigger(const RigidBody *rb) {
+bool rigidbody_uses_per_block_collisions(const RigidBody *rb) {
     return rb != NULL &&
-           _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Static &&
-           (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||
-            _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED));
+           (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_TriggerPerBlock ||
+            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_StaticPerBlock);
 }
 
 // MARK: - Utils -
-
-void rigidbody_set_default_collider(RigidBody *rb) {
-    box_copy(rb->collider, &box_one);
-    _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
-}
 
 /// Returns whether or not the rigidbody can be considered in contact at the start of its movement
 bool rigidbody_check_velocity_contact(const RigidBody *rb, const float3 *velocity) {
@@ -1343,8 +1361,8 @@ bool rigidbody_check_end_of_contact(Transform *t1,
     if (rb1 == NULL || rb2 == NULL) {
         return true; // (1)
     } else {
-        const bool isValid1 = rigidbody_is_dynamic(rb1) || rigidbody_is_trigger(rb1);
-        const bool isValid2 = rigidbody_is_dynamic(rb2) || rigidbody_is_trigger(rb2);
+        const bool isValid1 = rigidbody_is_dynamic(rb1) || rigidbody_is_active_trigger(rb1);
+        const bool isValid2 = rigidbody_is_dynamic(rb2) || rigidbody_is_active_trigger(rb2);
         if (isValid1 == false && isValid2 == false) {
             return true; // (2)
         } else if (*frames > PHYSICS_DISCARD_COLLISION_COUPLE) {

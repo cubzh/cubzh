@@ -280,10 +280,6 @@ void shape_replace_color_atlas(Shape *s, ColorAtlas *ca);
 bool shape_is_lua_mutable(Shape *s);
 void shape_set_lua_mutable(Shape *s, const bool value);
 
-/// This doesn't do anything if the shape doesn't have an octree
-bool shape_uses_per_block_collisions(const Shape *s);
-void shape_set_per_block_collisions(Shape *s, bool value);
-
 // MARK: - Transform -
 
 /// optional pivot
@@ -356,17 +352,10 @@ DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
 RigidBody *shape_get_rigidbody(const Shape *s);
 uint8_t shape_get_collision_groups(const Shape *s);
-void shape_ensure_rigidbody(Shape *s, const uint8_t groups, const uint8_t collidesWith);
-bool shape_get_physics_enabled(const Shape *s);
-void shape_set_physics_enabled(const Shape *s, const bool enabled);
+bool shape_ensure_rigidbody(Shape *s, const uint8_t groups, const uint8_t collidesWith, RigidBody **out);
 void shape_fit_collider_to_bounding_box(const Shape *s);
 const Box *shape_get_local_collider(const Shape *s);
 void shape_compute_world_collider(const Shape *s, Box *box);
-void shape_set_physics_simulation_mode(const Shape *s, const uint8_t value);
-void shape_set_physics_properties(const Shape *s,
-                                  const float mass,
-                                  const float friction,
-                                  const float bounciness);
 
 /// @param s shape model used as obstacle against a moving object
 /// @param modelBox moving object collider aligned with shape model space

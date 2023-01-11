@@ -132,10 +132,7 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    // per-block collisions will be in effect when shape's rigidbody is in static mode
-    bool blockCollisions;
-
-    // char pad[1];
+    char pad[1];
 };
 
 // --------------------------------------------------
@@ -331,14 +328,13 @@ Shape *shape_make() {
     s->historyKeepingTransactionPending = false;
 
     s->isBakeLocked = false;
-    s->blockCollisions = false;
 
     // store allocated shape in the index
     if (_storeShapeInIndex(s) == false) {
         cclog_warning("🔥 failed to store shape in index 1");
     }
 
-    transform_make_with_shape(s);
+    transform_utils_make_with_shape(s);
     return s;
 }
 
@@ -389,7 +385,6 @@ Shape *shape_make_copy(Shape *origin) {
     s->isUnlit = origin->isUnlit;
     s->layers = origin->layers;
     s->isMutable = origin->isMutable;
-    s->blockCollisions = origin->blockCollisions;
 
     if (origin->octree != NULL) {
         s->octree = _new_octree((SHAPE_COORDS_INT_T)origin->maxWidth,
@@ -1510,16 +1505,15 @@ void shape_box_to_aabox(const Shape *s,
         return;
 
     const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
-    const SquarifyType type = squarify && shape_uses_per_block_collisions(s) == false ?
-                              MinSquarify : NoSquarify;
+
     if (isCollider) {
         if (rigidbody_is_dynamic(shape_get_rigidbody(s))) {
-            transform_utils_box_to_dynamic_collider(s->transform, box, aabox, offset, type);
+            transform_utils_box_to_dynamic_collider(s->transform, box, aabox, offset, squarify ? MinSquarify : NoSquarify);
         } else {
-            transform_utils_box_to_static_collider(s->transform, box, aabox, offset, type);
+            transform_utils_box_to_static_collider(s->transform, box, aabox, offset, NoSquarify);
         }
     } else {
-        transform_utils_box_to_aabb(s->transform, box, aabox, offset, type);
+        transform_utils_box_to_aabb(s->transform, box, aabox, offset, NoSquarify);
     }
 }
 
@@ -2324,20 +2318,6 @@ void shape_set_lua_mutable(Shape *s, const bool value) {
     s->isMutable = value;
 }
 
-bool shape_uses_per_block_collisions(const Shape *s) {
-    if (s == NULL) {
-        return false;
-    }
-    return s->blockCollisions;
-}
-
-void shape_set_per_block_collisions(Shape *s, bool value) {
-    if (s == NULL) {
-        return;
-    }
-    s->blockCollisions = value;
-}
-
 // MARK: - Transform -
 
 void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool removeOffset) {
@@ -2660,7 +2640,7 @@ uint32_t shape_count_shape_descendants(const Shape *s) {
     while (n != NULL) {
         childTransform = (Transform *)(doubly_linked_list_node_pointer(n));
 
-        child = transform_get_shape(childTransform);
+        child = transform_utils_get_shape(childTransform);
         if (child == NULL) { // not a shape
             n = doubly_linked_list_node_next(n);
             continue;
@@ -2694,31 +2674,14 @@ uint8_t shape_get_collision_groups(const Shape *s) {
     return rigidbody_get_groups(rb);
 }
 
-void shape_ensure_rigidbody(Shape *s, const uint8_t groups, const uint8_t collidesWith) {
+bool shape_ensure_rigidbody(Shape *s, uint8_t groups, uint8_t collidesWith, RigidBody **out) {
     vx_assert(s != NULL);
 
-    RigidBody *rb = shape_get_rigidbody(s);
-
-    if (rb == NULL) {
-        rb = rigidbody_new(RigidbodyMode_Static, groups, collidesWith);
-        transform_set_rigidbody(s->transform, rb);
+    bool isNew = transform_ensure_rigidbody(s->transform, RigidbodyMode_Static, groups, collidesWith, out);
+    if (isNew) {
         shape_fit_collider_to_bounding_box(s);
-    } else {
-        rigidbody_set_groups(rb, groups);
-        rigidbody_set_collides_with(rb, collidesWith);
     }
-}
-
-bool shape_get_physics_enabled(const Shape *s) {
-    vx_assert(s != NULL);
-    return rigidbody_get_simulation_mode(shape_get_rigidbody(s)) == RigidbodyMode_Dynamic;
-}
-
-void shape_set_physics_enabled(const Shape *s, const bool enabled) {
-    vx_assert(s != NULL);
-    if (shape_get_rigidbody(s) == NULL)
-        return;
-    shape_set_physics_simulation_mode(s, enabled ? RigidbodyMode_Dynamic : RigidbodyMode_Static);
+    return isNew;
 }
 
 void shape_fit_collider_to_bounding_box(const Shape *s) {
@@ -2747,34 +2710,6 @@ void shape_compute_world_collider(const Shape *s, Box *box) {
                        box,
                        true,
                        rigidbody_get_collider_custom(rb) == false);
-}
-
-void shape_set_physics_simulation_mode(const Shape *s, const uint8_t value) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
-    if (rb == NULL)
-        return;
-
-    // reset rigidbody when disabling physics, but keep changes made in Lua prior to enabling
-    // physics
-    if (value != RigidbodyMode_Dynamic &&
-        rigidbody_get_simulation_mode(rb) == RigidbodyMode_Dynamic) {
-        rigidbody_reset(rb);
-    }
-    rigidbody_set_simulation_mode(rb, value);
-}
-
-void shape_set_physics_properties(const Shape *s,
-                                  const float mass,
-                                  const float friction,
-                                  const float bounciness) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
-    if (rb == NULL)
-        return;
-    rigidbody_set_mass(rb, mass);
-    rigidbody_set_friction(rb, friction);
-    rigidbody_set_bounciness(rb, bounciness);
 }
 
 // MARK: - Graphics -

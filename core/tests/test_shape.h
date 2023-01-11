@@ -175,24 +175,9 @@ void test_shape_make_copy(void) {
     shape_free((Shape *const)copy);
 }
 
-// check fixed size
-void test_shape_make_with_fixed_size(void) {
-    Shape *s = shape_make_with_fixed_size(10, 20, 30, true, true);
-    int3 result = {0, 0, 0};
-    shape_get_fixed_size((const Shape *)s, &result);
-
-    TEST_CHECK(result.x == 10);
-    TEST_CHECK(result.y == 20);
-    TEST_CHECK(result.z == 30);
-    TEST_CHECK(shape_uses_baked_lighting((const Shape *)s));
-    TEST_CHECK(shape_is_lua_mutable(s));
-
-    shape_free((Shape *const)s);
-}
-
 // octree must have the correct dimension
 void test_shape_make_with_octree(void) {
-    Shape *s = shape_make_with_octree(10, 20, 30, false, false, false);
+    Shape *s = shape_make_with_octree(10, 20, 30, false, false);
     const Octree *o = shape_get_octree((const Shape *)s);
 
     TEST_CHECK(octree_get_dimension(o) == 32);
@@ -215,7 +200,7 @@ void test_shape_set_transform(void) {
 // check that we can retain a shape
 void test_shape_retain(void) {
     Shape *s = shape_make();
-    // Transform *t = transform_make_with_shape(s);
+    // Transform *t = transform_utils_make_with_shape(s);
 
     bool ok = shape_retain((Shape *const)s);
     TEST_CHECK(ok);
@@ -231,7 +216,7 @@ void test_shape_retain(void) {
 // check that shape_release does not crash
 void test_shape_release(void) {
     Shape *s = shape_make();
-    // Transform *t = transform_make_with_shape(s);
+    // Transform *t = transform_utils_make_with_shape(s);
     shape_retain((Shape *const)s);
 
     shape_release((Shape *const)s);
@@ -299,29 +284,6 @@ void test_shape_get_bounding_box_size(void) {
     TEST_CHECK(result.x == 1);
     TEST_CHECK(result.y == 1);
     TEST_CHECK(result.z == 1);
-
-    shape_free((Shape *const)s);
-}
-
-// check that we get the values we provided
-void test_shape_get_fixed_size(void) {
-    Shape *s = shape_make_with_fixed_size(10, 20, 30, false, false);
-    int3 result = {0, 0, 0};
-    shape_get_fixed_size(s, &result);
-
-    TEST_CHECK(result.x == 10);
-    TEST_CHECK(result.y == 20);
-    TEST_CHECK(result.z == 30);
-
-    shape_free((Shape *const)s);
-}
-
-// check with a correct and an incorrect value
-void test_shape_is_within_fixed_bounds(void) {
-    Shape *s = shape_make_with_fixed_size(10, 20, 30, false, false);
-
-    TEST_CHECK(shape_is_within_fixed_bounds(s, 5, 10, 10));
-    TEST_CHECK(shape_is_within_fixed_bounds(s, 50, 10, 10) == false);
 
     shape_free((Shape *const)s);
 }

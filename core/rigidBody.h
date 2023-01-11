@@ -38,29 +38,26 @@ typedef struct float3 float3;
 static const float3 float3_epsilon_zero = { EPSILON_ZERO, EPSILON_ZERO, EPSILON_ZERO };
 static const float3 float3_epsilon_collision = { EPSILON_COLLISION, EPSILON_COLLISION, EPSILON_COLLISION };
 
-/// These are the three base simulation modes, when combined with other parameters a rigidobdy
-/// can have further distinct states as follows,
-/// CULLED: is fully culled from the r-tree and any simulation if any of the following is true,
-///     - its collider is invalid, eg. a zero-box
-///     - is RigidbodyMode_Disabled
-///     - is RigidbodyMode_Static and its collision/collidesWith groups are empty
-/// STATIC COLLIDER: its collider contributes to collisions
-///     - is RigidbodyMode_Static and per-block collisions disabled
-/// STATIC MESH: its blocks contribute to collisions, not its collider
-///     - is RigidbodyMode_Static and per-block collisions enabled
-/// TRIGGER COLLIDER
-///     - is RigidbodyMode_Static, per-block collisions disabled, collision callbacks set
-/// TRIGGER MESH
-///     - is RigidbodyMode_Static, per-block collisions enabled, collision callbacks set
-/// DYNAMIC: simulated, contribute to collisions, and can act as a trigger collider,
-///  note that a dynamic rb cannot have per-block collisions
-///     - is RigidbodyMode_Dynamic
+/// A rigidobdy is fully culled from the r-tree and any simulation if any of the following is true,
+/// - is RigidbodyMode_Disabled
+/// - its collider is invalid, eg. a zero-box
+/// - its collision/collidesWith groups are empty
+///
+/// Default state,
+/// - players are RigidbodyMode_Dynamic
+/// - map is RigidbodyMode_StaticPerBlock
+/// - shapes are RigidbodyMode_Static
+/// - other objects are RigidbodyMode_Disabled
 typedef enum {
-    // this rigidbody does not contribute to any collision and is not simulated
+    // completely excluded from physics
     RigidbodyMode_Disabled,
-    // this rigidbody may contribute to collisions but is not simulated
+    // casts receiver, collision callbacks
+    RigidbodyMode_Trigger,
+    RigidbodyMode_TriggerPerBlock,
+    // obstacle, casts receiver, collision callbacks
     RigidbodyMode_Static,
-    // this rigibody is simulated
+    RigidbodyMode_StaticPerBlock,
+    // simulated, obstacle, casts receiver, collision callbacks
     RigidbodyMode_Dynamic
 } RigidbodyMode;
 
@@ -125,12 +122,12 @@ bool rigidbody_collides_with_any(const RigidBody *rb, uint8_t groups);
 bool rigidbody_collides_with_rigidbody(const RigidBody *rb1, const RigidBody *rb2);
 bool rigidbody_is_collider_valid(const RigidBody *rb);
 bool rigidbody_is_enabled(const RigidBody *rb);
+bool rigidbody_has_callbacks(const RigidBody *rb);
+bool rigidbody_is_active_trigger(const RigidBody *rb);
 bool rigidbody_is_dynamic(const RigidBody *rb);
-// a static rigidbody w/ collision callback(s) enabled is a trigger
-bool rigidbody_is_trigger(const RigidBody *rb);
+bool rigidbody_uses_per_block_collisions(const RigidBody *rb);
 
 /// MARK: - Utils -
-void rigidbody_set_default_collider(RigidBody *rb);
 bool rigidbody_check_velocity_contact(const RigidBody *rb, const float3 *velocity);
 bool rigidbody_check_velocity_sleep(RigidBody *rb, const float3 *velocity);
 void rigidbody_toggle_groups(RigidBody *rb, uint8_t groups, bool toggle);

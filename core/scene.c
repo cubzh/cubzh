@@ -154,7 +154,7 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 
     // Apply shape current transaction (top-first), this may change BB & collider
     if (transform_get_type(t) == ShapeTransform) {
-        shape_apply_current_transaction(transform_get_shape(t), false);
+        shape_apply_current_transaction(transform_utils_get_shape(t), false);
     }
 
     // Update r-tree (top-first) after sandbox changes
@@ -182,7 +182,7 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 #ifndef P3S_CLIENT_HEADLESS
     // Refresh shape buffers (deep-first)
     if (transform_get_type(t) == ShapeTransform) {
-        shape_refresh_vertices(transform_get_shape(t));
+        shape_refresh_vertices(transform_utils_get_shape(t));
     }
 #endif
 }
@@ -195,7 +195,7 @@ void _scene_shapes_iterator_func(Transform *t, void *ptr) {
 
 void _scene_standalone_refresh_func(Transform *t, void *ptr) {
     if (transform_get_type(t) == ShapeTransform) {
-        shape_apply_current_transaction(transform_get_shape(t), true);
+        shape_apply_current_transaction(transform_utils_get_shape(t), true);
     }
     transform_refresh(t, true, false);
 }

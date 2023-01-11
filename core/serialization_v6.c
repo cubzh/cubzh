@@ -581,7 +581,7 @@ bool chunk_v6_write_shape(FILE *fd,
     while (n != NULL) {
         child = (Transform *)(doubly_linked_list_node_pointer(n));
         // hide transforms reserved for engine
-        Shape *childShape = transform_get_shape(child);
+        Shape *childShape = transform_utils_get_shape(child);
         if (childShape != NULL) {
             chunk_v6_write_shape(fd, childShape, shapeId, shapeParentId, true);
         }
@@ -1271,10 +1271,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (hasCustomCollisionBox) {
-        RigidBody *rb = rigidbody_new(RigidbodyMode_Static,
-                                      PHYSICS_GROUP_DEFAULT_OBJECT,
-                                      PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
-        transform_set_rigidbody(shape_get_root_transform(*shape), rb);
+        RigidBody *rb;
+        transform_ensure_rigidbody(shape_get_root_transform(*shape),
+                                   RigidbodyMode_Static,
+                                   PHYSICS_GROUP_DEFAULT_OBJECT,
+                                   PHYSICS_COLLIDESWITH_DEFAULT_OBJECT,
+                                   &rb);
 
         // construct new box value
         Box newCollider = *rigidbody_get_collider(rb);
@@ -1997,7 +1999,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
     Transform *child = NULL;
     while (n != NULL) {
         child = (Transform *)(doubly_linked_list_node_pointer(n));
-        Shape *childShape = transform_get_shape(child);
+        Shape *childShape = transform_utils_get_shape(child);
         if (childShape != NULL) {
             if (create_shape_buffers(shapesBuffers, childShape, shapeId, shapeParentId, size) ==
                 false) {
