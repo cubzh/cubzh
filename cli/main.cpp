@@ -13,6 +13,14 @@
 
 // cli
 #include "combine.hpp"
+#include "shape_point.hpp"
+
+// 1 2 3 are position xyz
+// 4 5 6 are rotation xyz
+//
+// cli setpoint -i wizard_hair.3zh <point name> posX posY posZ rotX rotY rotZ
+
+// cli setpoint -i wizard_hair.3zh -o wizard_hair.3zh origin 5 5 7 0 0 0
 
 int main(int argc, const char * argv[]) {
 
@@ -41,6 +49,8 @@ int main(int argc, const char * argv[]) {
 
     if (command == "combine") {
         success = command_combine(result, err);
+    } else if (command == "setpoint") {
+        success = commandSetPoint(result, err);
     } else {
         err = "command not supported.";
     }

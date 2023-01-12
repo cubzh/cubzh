@@ -53,8 +53,12 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "combine -i /Users/aduermael/Desktop/tmp/head.vox -i /Users/aduermael/Desktop/tmp/hair.vox -o  /Users/aduermael/Desktop/tmp/combined.vox"
+            argument = "setpoint -i /Users/gaetan/Desktop/wizard_hair.3zh -o /Users/gaetan/Desktop/wizard_hair2.3zh origin 11 4.5 9.5 0 0 0"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "combine -i /Users/aduermael/Desktop/tmp/head.vox -i /Users/aduermael/Desktop/tmp/hair.vox -o  /Users/aduermael/Desktop/tmp/combined.vox"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

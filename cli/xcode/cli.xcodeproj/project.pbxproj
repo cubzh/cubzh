@@ -55,6 +55,7 @@
 		85AA0A0228F86CE900801372 /* doubly_linked_list_uint8.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA09D328F86CE900801372 /* doubly_linked_list_uint8.c */; };
 		85AA0A0328F86CE900801372 /* filo_list_uint32.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA09D428F86CE900801372 /* filo_list_uint32.c */; };
 		85AA0A0428F86CE900801372 /* inputs.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA09D528F86CE900801372 /* inputs.c */; };
+		85D07F7A297061BE003818F3 /* shape_point.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85D07F78297061BE003818F3 /* shape_point.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -167,6 +168,8 @@
 		85AA09D428F86CE900801372 /* filo_list_uint32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = filo_list_uint32.c; path = ../../core/filo_list_uint32.c; sourceTree = "<group>"; };
 		85AA09D528F86CE900801372 /* inputs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = inputs.c; path = ../../core/inputs.c; sourceTree = "<group>"; };
 		85AA09D628F86CE900801372 /* magicavoxel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = magicavoxel.h; path = ../../core/magicavoxel.h; sourceTree = "<group>"; };
+		85D07F78297061BE003818F3 /* shape_point.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = shape_point.cpp; path = ../shape_point.cpp; sourceTree = "<group>"; };
+		85D07F79297061BE003818F3 /* shape_point.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = shape_point.hpp; path = ../shape_point.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +207,8 @@
 				85AA097728F8649B00801372 /* combine.cpp */,
 				85AA097828F8649B00801372 /* combine.hpp */,
 				850CDB7F28F854C000D81015 /* main.cpp */,
+				85D07F78297061BE003818F3 /* shape_point.cpp */,
+				85D07F79297061BE003818F3 /* shape_point.hpp */,
 			);
 			name = cli;
 			sourceTree = "<group>";
@@ -416,6 +421,7 @@
 				85AA09DB28F86CE900801372 /* filo_list_float3.c in Sources */,
 				85AA09F528F86CE900801372 /* octree.c in Sources */,
 				85AA09F228F86CE900801372 /* serialization_v5.c in Sources */,
+				85D07F7A297061BE003818F3 /* shape_point.cpp in Sources */,
 				85AA0A0228F86CE900801372 /* doubly_linked_list_uint8.c in Sources */,
 				85AA09E328F86CE900801372 /* stream.c in Sources */,
 				85AA09FF28F86CE900801372 /* easings.c in Sources */,
