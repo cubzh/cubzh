@@ -50,26 +50,21 @@ void _scene_add_rigidbody_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *col
 }
 
 void _scene_update_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
-    // register awake volume here for new and removed colliders, NOT for transformations change
+    // register awake volume here for new and removed colliders, and for transformations change
     if (rigidbody_is_enabled(rb) && rigidbody_is_collider_valid(rb)) {
         // insert valid collider as a new leaf
         if (rigidbody_get_rtree_leaf(rb) == NULL) {
             _scene_add_rigidbody_rtree(sc, rb, t, collider);
             scene_register_awake_rigidbody_contacts(sc, rb);
         }
-        // update leaf due to collider change
-        else if (rigidbody_get_collider_dirty(rb)) {
+        // update leaf due to collider or transformations change
+        else if (rigidbody_get_collider_dirty(rb) || transform_is_physics_dirty(t)) {
             scene_register_awake_rigidbody_contacts(sc, rb);
             rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
             rigidbody_set_rtree_leaf(rb, NULL);
 
             _scene_add_rigidbody_rtree(sc, rb, t, collider);
             scene_register_awake_rigidbody_contacts(sc, rb);
-        }
-        // update leaf due to transformations change
-        else if (transform_is_physics_dirty(t)) {
-            rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
-            _scene_add_rigidbody_rtree(sc, rb, t, collider);
         }
     }
     // remove disabled rigidbody or invalid collider from rtree
@@ -113,9 +108,7 @@ void _scene_refresh_recurse(Scene *sc,
 
     // Step physics (top-first), collider is kept up-to-date
     if (rb != NULL) {
-        if (rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, callbackData)) {
-            scene_register_awake_rigidbody_contacts(sc, rb);
-        }
+        rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, callbackData);
     }
 
     // Refresh transform (top-first) after changes

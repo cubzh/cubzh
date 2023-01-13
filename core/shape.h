@@ -208,16 +208,16 @@ bool shape_is_within_allocated_bounds(const Shape *shape,
                                       const SHAPE_COORDS_INT_T z);
 
 // converts given box to a world axis-aligned box relative to shape
-void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider, bool squarify);
+void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider);
 
 // a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
 // therefore is dependant on which space we express it in,
 // (1) in model space, ie. "block coordinates", the AABB itself w/o transformation
 const Box *shape_get_model_aabb(const Shape *s);
 // (2) in local space, ie. the model AABB w/ local transformations applied (on-demand)
-void shape_get_local_aabb(const Shape *s, Box *box, bool squarify);
+void shape_get_local_aabb(const Shape *s, Box *box);
 // (3) in world space, ie. the model AABB w/ world transformations applied (cached)
-void shape_get_world_aabb(Shape *s, Box *box, bool squarify);
+void shape_get_world_aabb(Shape *s, Box *box);
 
 // iterates over chunks and blocks to obtain size and origin
 bool shape_compute_size_and_origin(const Shape *shape,

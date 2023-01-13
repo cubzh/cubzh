@@ -1492,23 +1492,16 @@ bool shape_is_within_allocated_bounds(const Shape *shape,
            z >= 0 && z < shape->maxDepth;
 }
 
-void shape_box_to_aabox(const Shape *s,
-                        const Box *box,
-                        Box *aabox,
-                        bool isCollider,
-                        bool squarify) {
-    if (s == NULL)
-        return;
-    if (box == NULL)
-        return;
-    if (aabox == NULL)
+void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider) {
+    if (s == NULL || box == NULL || aabox == NULL)
         return;
 
     const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
 
     if (isCollider) {
         if (rigidbody_is_dynamic(shape_get_rigidbody(s))) {
-            transform_utils_box_to_dynamic_collider(s->transform, box, aabox, offset, squarify ? MinSquarify : NoSquarify);
+            transform_utils_box_to_dynamic_collider(s->transform, box, aabox, offset,
+                                                    PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify);
         } else {
             transform_utils_box_to_static_collider(s->transform, box, aabox, offset, NoSquarify);
         }
@@ -1521,18 +1514,18 @@ const Box *shape_get_model_aabb(const Shape *shape) {
     return shape->box;
 }
 
-void shape_get_local_aabb(const Shape *s, Box *box, bool squarify) {
+void shape_get_local_aabb(const Shape *s, Box *box) {
     if (s == NULL || box == NULL)
         return;
 
     const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
     transform_refresh(s->transform, false, true); // refresh mtx for intra-frame calculations
-    box_to_aabox2(s->box, box, transform_get_mtx(s->transform), offset, squarify);
+    box_to_aabox2(s->box, box, transform_get_mtx(s->transform), offset, false);
 }
 
-void shape_get_world_aabb(Shape *s, Box *box, bool squarify) {
+void shape_get_world_aabb(Shape *s, Box *box) {
     if (s->worldAABB == NULL || transform_is_any_dirty(s->transform)) {
-        shape_box_to_aabox(s, s->box, box, false, false);
+        shape_box_to_aabox(s, s->box, box, false);
         if (s->worldAABB == NULL) {
             s->worldAABB = box_new_copy(box);
         } else {
@@ -1541,9 +1534,6 @@ void shape_get_world_aabb(Shape *s, Box *box, bool squarify) {
         transform_reset_any_dirty(s->transform);
     } else {
         box_copy(box, s->worldAABB);
-    }
-    if (squarify) {
-        box_squarify(box, MinSquarify);
     }
 }
 
@@ -2705,11 +2695,7 @@ void shape_compute_world_collider(const Shape *s, Box *box) {
     RigidBody *rb = shape_get_rigidbody(s);
     if (rb == NULL)
         return;
-    shape_box_to_aabox(s,
-                       rigidbody_get_collider(rb),
-                       box,
-                       true,
-                       rigidbody_get_collider_custom(rb) == false);
+    shape_box_to_aabox(s, rigidbody_get_collider(rb), box, true);
 }
 
 // MARK: - Graphics -

@@ -17,7 +17,6 @@
 #define SIMULATIONFLAG_COLLIDER_DIRTY 8
 #define SIMULATIONFLAG_CALLBACK_ENABLED 16
 #define SIMULATIONFLAG_END_CALLBACK_ENABLED 32
-#define SIMULATIONFLAG_CUSTOM_COLLIDER 64
 
 #if DEBUG_RIGIDBODY
 static int debug_rigidbody_solver_iterations = 0;
@@ -67,8 +66,7 @@ struct _RigidBody {
     // [2] collider dirty
     // [3] callback enabled
     // [4] end callback enabled
-    // [5] custom-set collider
-    // [6-7] <unused>
+    // [5-7] <unused>
     uint8_t simulationFlags;
     uint8_t awakeFlag;
 
@@ -97,6 +95,10 @@ void _rigidbody_set_simulation_flag_value(RigidBody *rb, uint8_t flag, uint8_t v
 
 uint8_t _rigidbody_get_simulation_flag_value(const RigidBody *rb, uint8_t flag) {
     return rb->simulationFlags & flag;
+}
+
+void _rigidbody_reset_state(RigidBody *rb) {
+    rb->contact = AxesMaskNone;
 }
 
 void _rigidbody_fire_reciprocal_callbacks(RigidBody *selfRb,
@@ -580,13 +582,13 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
             // (4) reset contact mask if there was any motion, then update new contact along self's box
             if (minSwept > 0.0f) {
                 if (float_isZero(dv.x, EPSILON_ZERO) != false) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskX | AxesMaskNX, false);
+                    utils_axes_mask_set(&rb->contact, dv.x ? AxesMaskNX : AxesMaskX, false);
                 }
                 if (float_isZero(dv.y, EPSILON_ZERO) != false) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskY | AxesMaskNY, false);
+                    utils_axes_mask_set(&rb->contact, dv.y ? AxesMaskNY : AxesMaskY, false);
                 }
                 if (float_isZero(dv.z, EPSILON_ZERO) != false) {
-                    utils_axes_mask_set(&rb->contact, AxesMaskZ | AxesMaskNZ, false);
+                    utils_axes_mask_set(&rb->contact, dv.z ? AxesMaskNZ : AxesMaskZ, false);
                 }
             }
             AxesMaskValue selfBoxSide = AxesMaskNone; // side of the world box sent to Lua callback
@@ -685,7 +687,7 @@ void _rigidbody_trigger_tick(Scene *scene,
         return;
     }
     Box mapAABB;
-    shape_get_world_aabb(mapShape, &mapAABB, false);
+    shape_get_world_aabb(mapShape, &mapAABB);
     RigidBody *mapRb = shape_get_rigidbody(mapShape);
 
     float3 f3, center, maxContactsArea, maxContactsAreaN;
@@ -899,37 +901,37 @@ RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t
     return b;
 }
 
-void rigidbody_free(RigidBody *b) {
-    if (b == NULL) {
+void rigidbody_free(RigidBody *rb) {
+    if (rb == NULL) {
         return;
     }
 
-    box_free(b->collider);
-    float3_free(b->motion);
-    float3_free(b->velocity);
-    float3_free(b->constantAcceleration);
+    box_free(rb->collider);
+    float3_free(rb->motion);
+    float3_free(rb->velocity);
+    float3_free(rb->constantAcceleration);
 
-    free(b);
+    free(rb);
 }
 
-void rigidbody_reset(RigidBody *b) {
-    if (b == NULL) {
+void rigidbody_reset(RigidBody *rb) {
+    if (rb == NULL) {
         return;
     }
 
     // note: rigidbody properties are persistent
-    float3_set_zero(b->motion);
-    float3_set_zero(b->velocity);
+    float3_set_zero(rb->motion);
+    float3_set_zero(rb->velocity);
 
-    rigidbody_non_kinematic_reset(b);
+    _rigidbody_reset_state(rb);
 }
 
-void rigidbody_non_kinematic_reset(RigidBody *b) {
-    if (b == NULL) {
+void rigidbody_non_kinematic_reset(RigidBody *rb) {
+    if (rb == NULL) {
         return;
     }
 
-    b->contact = AxesMaskNone;
+    _rigidbody_reset_state(rb);
 }
 
 bool rigidbody_tick(Scene *scene,
@@ -961,14 +963,14 @@ bool rigidbody_tick(Scene *scene,
                                             sceneQuery,
                                             callbackData);
     }
-    //if (simulated == SimulationResult_Moved || simulated == SimulationResult_Stayed) {
+    if (simulated == SimulationResult_Moved || simulated == SimulationResult_Stayed) {
         return simulated == SimulationResult_Moved;
-    //}
+    }
 
     // check for overlaps to fire callbacks
-    /*if (rigidbody_is_active_trigger(rb)) {
+    if (rigidbody_is_active_trigger(rb)) {
         _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, callbackData);
-    }*/
+    }
 
     return false;
 }
@@ -981,7 +983,11 @@ const Box *rigidbody_get_collider(const RigidBody *rb) {
 
 void rigidbody_set_collider(RigidBody *rb, const Box *value) {
     box_copy(rb->collider, value);
-    _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
+    if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled &&
+        rigidbody_uses_per_block_collisions(rb) == false) {
+
+        _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
+    }
 }
 
 RtreeNode *rigidbody_get_rtree_leaf(const RigidBody *rb) {
@@ -1044,10 +1050,6 @@ uint8_t rigidbody_get_contact_mask(const RigidBody *rb) {
     return rb->contact;
 }
 
-void rigidbody_set_contact_mask(RigidBody *rb, const uint8_t value) {
-    rb->contact = value;
-}
-
 uint8_t rigidbody_get_groups(const RigidBody *rb) {
     return rb->groups;
 }
@@ -1076,7 +1078,7 @@ void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value) {
         }
         _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, value);
 #if TRANSFORM_AABOX_STATIC_COLLIDER_MODE != TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE
-        if (value == RigidbodyMode_Static || value == RigidbodyMode_Dynamic) {
+        if (value != RigidbodyMode_Disabled) {
             _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
         }
 #endif
@@ -1111,22 +1113,10 @@ void rigidbody_set_awake(RigidBody *rb) {
     rb->awakeFlag = PHYSICS_AWAKE_FRAMES;
 }
 
-bool rigidbody_get_collider_custom(RigidBody *rb) {
-    return _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CUSTOM_COLLIDER);
-}
-
-void rigidbody_set_collider_custom(RigidBody *rb) {
-    _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_CUSTOM_COLLIDER);
-}
-
-void rigidbody_reset_collider_custom(RigidBody *rb) {
-    _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_CUSTOM_COLLIDER);
-}
-
 // MARK: - State -
 
-bool rigidbody_is_on_ground(const RigidBody *rb) {
-    return rb != NULL && utils_axes_mask_get(rb->contact, AxesMaskNY);
+bool rigidbody_has_contact(const RigidBody *rb, uint8_t value) {
+    return rb != NULL && utils_axes_mask_get(rb->contact, value);
 }
 
 bool rigidbody_is_in_contact(const RigidBody *rb) {
@@ -1179,6 +1169,12 @@ bool rigidbody_is_active_trigger(const RigidBody *rb) {
            rigidbody_has_callbacks(rb);
 }
 
+bool rigidbody_is_rotation_dependent(const RigidBody *rb) {
+    return rb != NULL &&
+        _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled &&
+        _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Dynamic;
+}
+
 bool rigidbody_is_dynamic(const RigidBody *rb) {
     return rb != NULL &&
            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Dynamic;
@@ -1227,7 +1223,7 @@ bool rigidbody_check_velocity_sleep(RigidBody *rb, const float3 *velocity) {
     }
     if (rb->awakeFlag > 0) {
         rb->awakeFlag--;
-        rigidbody_non_kinematic_reset(rb);
+        _rigidbody_reset_state(rb);
 #if DEBUG_RIGIDBODY_CALLS
         debug_rigidbody_awakes++;
 #endif

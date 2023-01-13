@@ -340,19 +340,18 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *co
                 if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
                     rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
 
-                    const bool squarify = rigidbody_get_collider_custom(rb) == false;
                     if (rigidbody_is_dynamic(rb)) {
                         transform_utils_box_to_dynamic_collider(t,
                                                                 rigidbody_get_collider(rb),
                                                                 collider,
                                                                 NULL,
-                                                                squarify ? MinSquarify : NoSquarify);
+                                                                PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify);
                     } else {
                         transform_utils_box_to_static_collider(t,
                                                                rigidbody_get_collider(rb),
                                                                collider,
                                                                NULL,
-                                                               squarify ? MinSquarify : NoSquarify);
+                                                               false);
                     }
                 } else {
                     box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
@@ -615,6 +614,9 @@ void transform_set_local_rotation(Transform *t, Quaternion *q) {
     quaternion_set(t->localRotation, q);
     _transform_reset_dirty(t, TRANSFORM_LOCAL_ROT);
     _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX);
+    if (rigidbody_is_rotation_dependent(t->rigidBody)) {
+        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    }
 }
 
 void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
@@ -640,6 +642,9 @@ void transform_set_rotation(Transform *t, Quaternion *q) {
     quaternion_set(t->rotation, q);
     _transform_reset_dirty(t, TRANSFORM_ROT);
     _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX);
+    if (rigidbody_is_rotation_dependent(t->rigidBody)) {
+        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    }
 }
 
 void transform_set_rotation_vec(Transform *t, const float4 *v) {

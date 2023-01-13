@@ -153,6 +153,8 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Number of frames during which an awaken rigidbody will skip sleep conditions, max 255 (uint8)
 #define PHYSICS_AWAKE_FRAMES 6
 #define PHYSICS_AWAKE_DISTANCE EPSILON_COLLISION * 2
+/// Should dynamic rigidbodies' collider be squarified?
+#define PHYSICS_SQUARIFY_DYNAMIC_COLLIDER false
 
 /// Physics collision masks default values
 #define PHYSICS_GROUP_NONE 0

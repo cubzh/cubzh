@@ -70,9 +70,9 @@ typedef void (*pointer_rigidbody_collision_func)(Transform *self,
 
 /// MARK: - Lifecycle -
 RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t collidesWith);
-void rigidbody_free(RigidBody *b);
-void rigidbody_reset(RigidBody *b);
-void rigidbody_non_kinematic_reset(RigidBody *b);
+void rigidbody_free(RigidBody *rb);
+void rigidbody_reset(RigidBody *rb);
+void rigidbody_non_kinematic_reset(RigidBody *rb);
 bool rigidbody_tick(Scene *scene,
                     RigidBody *rb,
                     Transform *t,
@@ -99,7 +99,6 @@ void rigidbody_set_friction(RigidBody *rb, const float value);
 float rigidbody_get_bounciness(const RigidBody *rb);
 void rigidbody_set_bounciness(RigidBody *rb, const float value);
 uint8_t rigidbody_get_contact_mask(const RigidBody *rb);
-void rigidbody_set_contact_mask(RigidBody *rb, const uint8_t value);
 uint8_t rigidbody_get_groups(const RigidBody *rb);
 void rigidbody_set_groups(RigidBody *rb, const uint8_t value);
 uint8_t rigidbody_get_collides_with(const RigidBody *rb);
@@ -110,12 +109,9 @@ bool rigidbody_get_collider_dirty(const RigidBody *rb);
 void rigidbody_reset_collider_dirty(RigidBody *rb);
 void rigidbody_toggle_collision_callback(RigidBody *rb, bool value, bool end);
 void rigidbody_set_awake(RigidBody *rb);
-bool rigidbody_get_collider_custom(RigidBody *rb);
-void rigidbody_set_collider_custom(RigidBody *rb);
-void rigidbody_reset_collider_custom(RigidBody *rb);
 
 /// MARK: - State -
-bool rigidbody_is_on_ground(const RigidBody *rb);
+bool rigidbody_has_contact(const RigidBody *rb, uint8_t value);
 bool rigidbody_is_in_contact(const RigidBody *rb);
 bool rigidbody_belongs_to_any(const RigidBody *rb, uint8_t groups);
 bool rigidbody_collides_with_any(const RigidBody *rb, uint8_t groups);
@@ -124,6 +120,7 @@ bool rigidbody_is_collider_valid(const RigidBody *rb);
 bool rigidbody_is_enabled(const RigidBody *rb);
 bool rigidbody_has_callbacks(const RigidBody *rb);
 bool rigidbody_is_active_trigger(const RigidBody *rb);
+bool rigidbody_is_rotation_dependent(const RigidBody *rb);
 bool rigidbody_is_dynamic(const RigidBody *rb);
 bool rigidbody_uses_per_block_collisions(const RigidBody *rb);
 
