@@ -141,7 +141,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     // the same ColorAtlas, getting it from first shape:
     
     ColorAtlas *colorAtlas = color_palette_get_atlas(shape_get_palette(shapes[0]));
-    ColorPalette *combinedPalette = color_palette_new(colorAtlas, true);
+    ColorPalette *combinedPalette = color_palette_new(colorAtlas);
     
     HashUInt32Int **paletteConversionMaps = (HashUInt32Int **)malloc(sizeof(HashUInt32Int*) * nbShapes);
     
@@ -169,9 +169,9 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             // Currently, some colors are lost if the total amount of colors in combined shapes is over 128.
             // TODO: Use 2 palettes to support up to 255 colors? Or a palette with a higher limit.
             // TODO: Find closest color
-            color_palette_check_and_add_color(combinedPalette, *color, &index);
+            color_palette_check_and_add_color(combinedPalette, *color, &index, false);
             
-            colorAsUint32 = color_as_uint32(color);
+            colorAsUint32 = color_to_uint32(color);
             hash_uint32_int_set(paletteConversionMaps[i], colorAsUint32, index);
         }
     }
@@ -292,7 +292,7 @@ return false;
                     } else {
                         SHAPE_COLOR_INDEX_INT_T bci = block_get_color_index(b);
                         color = color_palette_get_color(palette, bci);
-                        if (hash_uint32_int_get(paletteConversionMap, color_as_uint32(color), &colorIndexInCombinedPalette) == false) {
+                        if (hash_uint32_int_get(paletteConversionMap, color_to_uint32(color), &colorIndexInCombinedPalette) == false) {
                             colorIndexInCombinedPalette = 0;
                         }
                         
@@ -592,8 +592,7 @@ return false;
 enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                                                                 Shape **out,
                                                                 const bool isMutable,
-                                                                ColorAtlas *colorAtlas,
-                                                                bool sharedColors) {
+                                                                ColorAtlas *colorAtlas) {
 
     vx_assert(s != NULL);
     vx_assert(out != NULL);
@@ -790,7 +789,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     
     // create Shape
     *out = shape_make_with_octree(sizeX, sizeY, sizeZ, false, isMutable, true);
-    shape_set_palette(*out, color_palette_new(colorAtlas, sharedColors));
+    shape_set_palette(*out, color_palette_new(colorAtlas));
     
     stream_set_cursor_position(s, blocksPosition);
     
@@ -839,7 +838,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
         SHAPE_COLOR_INDEX_INT_T colorIdx = color_index - 1;
         
         // translate & shrink to a shape palette w/ only used colors
-        if (color_palette_check_and_add_color(palette, colors[colorIdx], &colorIdx) == false) {
+        if (color_palette_check_and_add_color(palette, colors[colorIdx], &colorIdx, false) == false) {
             colorIdx = 0;
         }
         

@@ -63,10 +63,9 @@ bool command_combine(cxxopts::ParseResult parseResult, std::string& err) {
         Shape *shape = nullptr;
         
         enum serialization_magicavoxel_error error = serialization_vox_to_shape(s,
-                                                                              &shape,
-                                                                              true,
-                                                                              colorAtlas,
-                                                                              true);
+                                                                                &shape,
+                                                                                true,
+                                                                                colorAtlas);
         
         if (shape != nullptr) {
             shapes[index] = shape;
