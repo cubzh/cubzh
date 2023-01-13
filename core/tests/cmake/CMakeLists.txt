@@ -65,7 +65,8 @@ add_executable(unit_tests ${SOURCE_FILES})
 # -Wundef: undefined macro
 # -Wconversion: implicit casts
 # -Wunused-parameter: to be avoided, useful in callbacks
-target_compile_options(unit_tests PRIVATE -Werror -Wall -Wshadow -Wdouble-promotion -Wundef -Wconversion -Wno-unused-parameter)
+# -Wshadow: warns of shadowed variables (same name in lower scope)
+target_compile_options(unit_tests PRIVATE -Werror -Wall -Wshadow -Wdouble-promotion -Wundef -Wconversion -Wno-unused-parameter -Wno-shadow)
 
 target_link_libraries(unit_tests
     ${LIBZ}

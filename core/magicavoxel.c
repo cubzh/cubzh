@@ -157,7 +157,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         paletteConversionMaps[i] = hash_uint32_int_new();
         palette = shape_get_palette(shapes[i]);
         uint8_t count = color_palette_get_count(palette);
-        for (int c = 0; c < count; ++c) {
+        for (SHAPE_COLOR_INDEX_INT_T c = 0; c < count; ++c) {
             if (color_palette_get_color_use_count(palette, c) == 0) {
                 continue; // skip unused colors
             }
@@ -222,11 +222,11 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     uint32_t size_bytes = 12;
     uint32_t rgba_bytes = 256 * 4;
 
-    uint32_t total_xyzi_bytes = 0;
-    for (int i = 0; i < nbShapes; ++i) {
-        size_t nb_blocks = shape_get_nb_blocks(shapes[i]);
-        total_xyzi_bytes += 4 + 4 * (uint32_t)(nb_blocks);
-    }
+    // uint32_t total_xyzi_bytes = 0; // warning : this variable is never read
+    // for (int i = 0; i < nbShapes; ++i) {
+    // size_t nb_blocks = shape_get_nb_blocks(shapes[i]); // warning : this variable is never read
+    // total_xyzi_bytes += 4 + 4 * (uint32_t)(nb_blocks);
+    // }
 
     uint32_t nTRN_bytes = 28; // transform chunk, for one frame
     uint32_t nGRP_bytes = 12 + 4 * _nbShapes;
@@ -351,7 +351,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     // S node ID for shape: nbShapes + shapeNumber + 1 (shapeNumber starting at 1)
 
     uint32_t one = 1;
-    uint32_t minusOne = -1;
+    uint32_t minusOne = (uint32_t)-1;
 
     // top level transform
     {
@@ -423,12 +423,12 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             int3 size = {0, 0, 0};
             shape_get_bounding_box_size(shapes[i], &size);
             char *translationStr = (char *)malloc(255 * sizeof(char));
-            size_t written = snprintf(translationStr,
-                                      255,
-                                      "%d %d %d",
-                                      -(size.x / 2 + size.x % 2 + xOffset),
-                                      size.z / 2,
-                                      size.y / 2);
+            int written = snprintf(translationStr,
+                                   255,
+                                   "%d %d %d",
+                                   -(size.x / 2 + size.x % 2 + xOffset),
+                                   size.z / 2,
+                                   size.y / 2);
 
             xOffset += size.x + 2;
 
@@ -555,7 +555,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
 
         for (int i = 0; i < 256; i++) {
             if (i < nbColors) {
-                color = color_palette_get_color(palette, i);
+                color = color_palette_get_color(palette, (SHAPE_COLOR_INDEX_INT_T)i);
                 // r
                 if (fwrite(&color->r, sizeof(uint8_t), 1, out) != 1) {
                     _shapes_to_vox_error("failed to write r")
@@ -585,7 +585,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     // Write MAIN children size
     {
         uint32_t mainChildrenSize = (uint32_t)(ftell(out) - mainChunkChildrenSize -
-                                               sizeof(uint32_t));
+                                               (long)sizeof(uint32_t));
         long currentPosition = ftell(out);
         fseek(out, mainChunkChildrenSize, SEEK_SET);
         if (fwrite(&mainChildrenSize, sizeof(uint32_t), 1, out) != 1) {
@@ -802,7 +802,12 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_octree(sizeX, sizeY, sizeZ, false, isMutable, true);
+    *out = shape_make_with_octree((uint16_t)sizeX,
+                                  (uint16_t)sizeY,
+                                  (uint16_t)sizeZ,
+                                  false,
+                                  isMutable,
+                                  true);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);
