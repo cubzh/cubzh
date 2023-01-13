@@ -29,7 +29,11 @@ enum serialization_magicavoxel_error {
 
 /// Saves Shape in .vox format (Magicavoxel)
 /// Returns true on success
-bool serialization_save_vox(const Shape *const src, FILE *const out);
+bool serialization_save_vox(Shape *src, FILE *const out);
+
+/// Saves several shapes as one .vox.
+/// Automatically combines Shape colors to obtain .vox's palette.
+bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *const out);
 
 /// converts raw data from src to a Shape
 enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
