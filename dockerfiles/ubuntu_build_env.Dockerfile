@@ -4,14 +4,12 @@
 # Cubzh project
 #
 
-FROM ubuntu:22.04 AS env
+FROM voxowl/cpp-build-env:14.0.0
 
 # architecture of the container itself
 # ex: `arm64`, `amd64`, ...
 ARG TARGETARCH
 ENV CUBZH_ARCH=$TARGETARCH
-
-RUN apt-get update && apt-get install -y cmake clang ninja-build
 
 COPY /core /core
 COPY /deps/libz/linux-ubuntu-$TARGETARCH /deps/libz/linux-ubuntu-$TARGETARCH
