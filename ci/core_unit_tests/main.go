@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"dagger.io/dagger"
@@ -35,18 +36,27 @@ func buildAnRunCurrentDirectory() error {
 	}
 	defer client.Close()
 
+	// create container with source files
+	ciContainer := client.Container().From("voxowl/cpp-build-env:14.0.0")
+
+	// retrieve container architecture and provide it as ENVAR inside the container
+	{
+		platform, err := ciContainer.Platform(ctx)
+		if err != nil {
+			return err
+		}
+		// platform is of the form "linux/arm64"
+		// architecture is the second par of the platform string, after the '/'
+		architecture := strings.Split(string(platform), "/")[1]
+		ciContainer = ciContainer.WithEnvVariable("CUBZH_ARCH", architecture)
+	}
+
 	// create a reference to host root dir
 	dirOpts := dagger.HostDirectoryOpts{
-		// exclude the following directories
-		Exclude: []string{".git", "ci", "misc"},
+		// include only the following directories
+		Include: []string{"core", "deps/libz"},
 	}
 	src := client.Host().Directory(".", dirOpts)
-
-	// build container with correct dockerfile
-	buildOpts := dagger.ContainerBuildOpts{
-		Dockerfile: "dockerfiles/ubuntu_build_env.Dockerfile",
-	}
-	ciContainer := client.Container().Build(src, buildOpts)
 
 	// mount host directory to container and go into it
 	ciContainer = ciContainer.WithMountedDirectory("/project", src)
