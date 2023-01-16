@@ -1454,7 +1454,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     // hasCustomCollisionBox
     RigidBody *rb = shape_get_rigidbody(shape);
     const Box *collider = rb != NULL ? rigidbody_get_collider(rb) : NULL;
-    bool hasCustomCollisionBox = collider != NULL && !box_equals(collider, boundingBox, EPSILON_ZERO);
+    bool hasCustomCollisionBox = collider != NULL &&
+                                 !box_equals(collider, boundingBox, EPSILON_ZERO);
 
     // is hidden
     Transform *t = shape_get_root_transform(shape);
