@@ -1446,15 +1446,15 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
 #if GLOBAL_LIGHTING_BAKE_WRITE_ENABLED
-    bool hasLighting = shape_uses_baked_lighting(shape);
+    bool hasLighting = shape_uses_baked_lighting(shape) && shape_has_baked_lighting_data(shape);
 #else
     bool hasLighting = false;
 #endif
 
     // hasCustomCollisionBox
     RigidBody *rb = shape_get_rigidbody(shape);
-    const Box *collider = rigidbody_get_collider(rb);
-    bool hasCustomCollisionBox = !box_equals(collider, boundingBox, EPSILON_ZERO);
+    const Box *collider = rb != NULL ? rigidbody_get_collider(rb) : NULL;
+    bool hasCustomCollisionBox = collider != NULL && !box_equals(collider, boundingBox, EPSILON_ZERO);
 
     // is hidden
     Transform *t = shape_get_root_transform(shape);

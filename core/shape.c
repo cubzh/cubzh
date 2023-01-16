@@ -3254,7 +3254,7 @@ bool shape_uses_baked_lighting(const Shape *s) {
     return s->usesLighting;
 }
 
-bool shape_has_baked_lighting_data(Shape *s) {
+bool shape_has_baked_lighting_data(const Shape *s) {
     return s->lightingData != NULL;
 }
 
