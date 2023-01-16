@@ -17,6 +17,7 @@ blocks:
         - "<a href=\"/reference/collisiongroups\">CollisionGroups</a>"
         - "<a href=\"/reference/color\">Color</a>"
         - "<a href=\"/reference/config\">Config</a>"
+        - "<a href=\"/reference/data\">Data</a>"
         - "<a href=\"/reference/dev\">Dev</a>"
         - "<a href=\"/reference/event\">Event</a>"
         - "<a href=\"/reference/face\">Face</a>"
