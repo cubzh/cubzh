@@ -435,7 +435,7 @@ void shape_clear_baked_lighting(Shape *s);
 void shape_compute_baked_lighting(Shape *s, bool overwrite);
 
 bool shape_uses_baked_lighting(const Shape *s);
-bool shape_has_baked_lighting_data(Shape *s);
+bool shape_has_baked_lighting_data(const Shape *s);
 const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s);
 void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d);
 VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, int x, int y, int z);
