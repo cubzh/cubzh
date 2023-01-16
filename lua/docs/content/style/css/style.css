@@ -23,6 +23,13 @@
     font-style: normal;
 }
 
+@font-face {
+  font-family: m6x11;
+  src: url(/style/fonts/m6x11.woff2) format('woff2'), url(/style/fonts/m6x11.woff) format('woff');
+  font-weight: 400;
+  font-style:normal
+}
+
 * {
   font-size: 15px;
   padding: 0;
@@ -210,6 +217,7 @@ img {
   padding: 20px;
   border-bottom: thin dashed #aaa;
   height: 50px;
+  justify-content: space-between;
 }
 
 #container #header img {
@@ -448,4 +456,119 @@ pre {
 
 .hljs-literal {
   color: rgb(215, 57 , 148) !important;
+}
+
+.logo-discord {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: 10px;
+  height: 25px !important;
+  margin-right: 10px !important;
+  margin-left: 5px !important;
+}
+
+.discord-div {
+  width: 100%;
+  border-radius: 15px;
+  background-color: #5865F2 !important;
+  padding: 1px;
+  padding-right: 2px;
+  color: #FFFFFF !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.discord-link {
+  font-weight: 1000;
+  text-decoration: none !important;
+}
+
+.discord-div:hover {
+  background-color: #4F5BD5 !important;
+}
+
+#header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.button {
+  display: inline-block;
+  background-color: #00DC06;
+  width: auto;
+  border-top: 4px solid #0BFA12;
+  border-bottom: 4px solid #03B608;
+  padding: 0;
+  margin: 0;
+  box-shadow: 0 3px 2px 0 rgba(0, 0, 0, 0.3);
+  /*filter: drop-shadow(0px 3px 0px rgba(0, 0, 0, 0.3));*/
+}
+
+.button .button-content {
+  border-right: 4px solid #0BFA12;
+  border-left: 4px solid #03B608;
+  padding: 5px;
+  padding-left: 7px;
+  padding-right: 7px;
+  width: 17vw;
+  min-width: 120px;
+  height: 27px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.button .button-content p {
+  color: #fff;
+  font-family: m6x11, sans-serif;
+  letter-spacing: 1.4px;
+  font-size: calc(12px + 0.8vw);
+  line-height: 32px;
+  margin-top: 3px;
+}
+
+.button.discord {
+  border-top: 4px solid #838CF5;
+  border-bottom: 4px solid #3F4BC5;
+  background-color: #5865F2;
+}
+
+.button.discord .button-content {
+  border-right: 4px solid #838CF5;
+  border-left: 4px solid #3F4BC5;
+}
+
+.discord_logo {
+  height: 20px !important;
+  margin-right: 10px !important;
+}
+
+svg{
+  fill: #FFF;
+  height: 23px;
+  width: 3vw;
+  min-width: 20px;
+  margin-right: 7px;
+}
+
+.header-table {
+  width: 100%;
+}
+
+.header-td {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  margin-top: 5px !important;
+}
+
+.header-tr {
+  width: 30vw;
+}
+
+.script {
+  font-size: calc(12px + 0.4vw);
 }
