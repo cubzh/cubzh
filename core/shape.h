@@ -364,13 +364,17 @@ void shape_compute_world_collider(const Shape *s, Box *box);
 /// @param withReplacement typically true if used for simulation, false if used for cast/overlap
 /// @param normal axis where the first collision will occur
 /// @param extraReplacement filled only if PHYSICS_EXTRA_REPLACEMENTS is enabled
+/// @param block ptr to first hit block, convenient to grab here
+/// @param blockCoords coordinates of block param
 float shape_box_swept(const Shape *s,
                       const Box *modelBox,
                       const float3 *modelVector,
                       const float3 *epsilon,
                       const bool withReplacement,
                       float3 *normal,
-                      float3 *extraReplacement);
+                      float3 *extraReplacement,
+                      Block **block,
+                      SHAPE_COORDS_INT3_T *blockCoords);
 
 /// Casts a world ray against given shape. World distance, local impact, block & block octree
 /// coordinates can be returned through pointer parameters
@@ -380,9 +384,7 @@ bool shape_ray_cast(const Shape *s,
                     float *worldDistance,
                     float3 *localImpact,
                     Block **block,
-                    uint16_t *x,
-                    uint16_t *y,
-                    uint16_t *z);
+                    SHAPE_COORDS_INT3_T *coords);
 
 bool shape_point_overlap(const Shape *s, const float3 *world);
 bool shape_box_overlap(const Shape *s,

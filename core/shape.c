@@ -2759,7 +2759,9 @@ float shape_box_swept(const Shape *s,
                       const float3 *epsilon,
                       const bool withReplacement,
                       float3 *normal,
-                      float3 *extraReplacement) {
+                      float3 *extraReplacement,
+                      Block **block,
+                      SHAPE_COORDS_INT3_T *blockCoords) {
 
     if (s->octree == NULL) {
         cclog_error("shape_box_swept can't be used if octree is NULL.");
@@ -2809,6 +2811,16 @@ float shape_box_swept(const Shape *s,
                     minSwept = swept;
                     if (normal != NULL) {
                         *normal = tmpNormal;
+                    }
+                    if (block != NULL) {
+                        *block = (Block*)octree_iterator_get_element(oi);
+                    }
+                    if (blockCoords != NULL) {
+                        uint16_t x, y, z;
+                        octree_iterator_get_current_position(oi, &x, &y, &z);
+                        blockCoords->x = x;
+                        blockCoords->y = y;
+                        blockCoords->z = z;
                     }
                 }
 #if PHYSICS_EXTRA_REPLACEMENTS
@@ -2867,15 +2879,12 @@ float shape_box_swept(const Shape *s,
     return minSwept;
 }
 
-///
 bool shape_ray_cast(const Shape *sh,
                     const Ray *worldRay,
                     float *worldDistance,
                     float3 *localImpact,
                     Block **block,
-                    uint16_t *x,
-                    uint16_t *y,
-                    uint16_t *z) {
+                    SHAPE_COORDS_INT3_T *coords) {
 
     if (sh == NULL) {
         return false;
@@ -2902,18 +2911,14 @@ bool shape_ray_cast(const Shape *sh,
     uint16_t _y = 0;
     uint16_t _z = 0;
 
-    // we want a local ray to intersect with octree coordinates
+    // we want a ray in model space to intersect with octree coordinates
     Transform *t = shape_get_pivot_transform(sh); // octree coordinates use model origin
-    float3 localRayPoint, localRayDir;
-    transform_utils_position_wtl(t, worldRay->origin, &localRayPoint);
-    transform_utils_vector_wtl(t, worldRay->dir, &localRayDir);
-    float3_normalize(&localRayDir);
-    Ray *localRay = ray_new(&localRayPoint, &localRayDir);
+    Ray *modelRay = ray_world_to_local(worldRay, t);
 
     while (octree_iterator_is_done(oi) == false) {
         octree_iterator_get_node_box(oi, &tmpBox);
 
-        collides = ray_intersect_with_box(localRay, &tmpBox.min, &tmpBox.max, &d);
+        collides = ray_intersect_with_box(modelRay, &tmpBox.min, &tmpBox.max, &d);
         if (d > minDistance) {
             collides = false; // skip, collision already found closer
         }
@@ -2935,14 +2940,14 @@ bool shape_ray_cast(const Shape *sh,
     oi = NULL;
 
     if (b == NULL) {
-        ray_destroy(localRay);
+        ray_free(modelRay);
 
         return false;
     }
 
     if (worldDistance != NULL || localImpact != NULL) {
         float3 _localImpact;
-        ray_impact_point(localRay, minDistance, &_localImpact);
+        ray_impact_point(modelRay, minDistance, &_localImpact);
         if (localImpact != NULL) {
             *localImpact = _localImpact;
         }
@@ -2959,19 +2964,13 @@ bool shape_ray_cast(const Shape *sh,
         *block = b;
     }
 
-    if (x != NULL) {
-        *x = _x;
+    if (coords != NULL) {
+        coords->x = _x;
+        coords->y = _y;
+        coords->z = _z;
     }
 
-    if (y != NULL) {
-        *y = _y;
-    }
-
-    if (z != NULL) {
-        *z = _z;
-    }
-
-    ray_destroy(localRay);
+    ray_free(modelRay);
 
     return true;
 }

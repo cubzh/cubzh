@@ -15,6 +15,7 @@ extern "C" {
 #include "shape.h"
 #include "utils.h"
 #include "rigidBody.h"
+#include "camera.h"
 
 #if DEBUG
 #define DEBUG_SCENE true
@@ -80,6 +81,11 @@ void scene_remove_transform(Scene *sc, Transform *p);
 void scene_register_removed_transform(Scene *sc, Transform *t);
 void scene_register_collision_couple(Scene *sc, Transform *t1, Transform *t2, AxesMaskValue axis);
 
+// MARK: - Physics -
+
+void scene_set_constant_acceleration(Scene *sc, const float *x, const float *y, const float *z);
+const float3 *scene_get_constant_acceleration(const Scene *sc);
+
 /// Register a volume that will be processed during the awake phase
 void scene_register_awake_box(Scene *sc, Box *b);
 void scene_register_awake_rigidbody_contacts(Scene *sc, RigidBody *rb);
@@ -88,16 +94,31 @@ void scene_register_awake_map_box(Scene *sc,
                                   const SHAPE_COORDS_INT_T y,
                                   const SHAPE_COORDS_INT_T z);
 
-/// Sets Scene's constant acceleration
-void scene_set_constant_acceleration(Scene *sc, const float3 *f3);
+typedef enum {
+    CastHit_None,
+    CastHit_Block,
+    CastHit_CollisionBox
+} CastHitType;
 
-///
-void scene_set_constant_acceleration_2(Scene *sc, const float *x, const float *y, const float *z);
+typedef struct {
+    Transform *hitTr;
+    Block *block;
+    float distance;
+    CastHitType type;
+    SHAPE_COORDS_INT3_T blockCoords;
+    FACE_INDEX_INT_T faceTouched; // of the block if any (model), or of the object's box (world)
 
-/// Returns Scene's constant acceleration
-const float3 *scene_get_constant_acceleration(const Scene *sc);
+    char pad[1];
+} CastResult;
+CastResult scene_cast_result_default();
 
-/// MARK: - Debug -
+CastHitType scene_cast_ray(Scene *sc, const Ray *worldRay, uint8_t groups,
+                           const DoublyLinkedList *filterOutTransforms, CastResult *result);
+Block *scene_cast_ray_shape_only(Scene *sc, const Shape *sh, const Ray *worldRay, CastResult *result);
+CastHitType scene_cast_box(Scene *sc, const Box *aabb, const float3 *unit, float maxDist, uint8_t groups,
+                           const DoublyLinkedList *filterOutTransforms, CastResult *result);
+
+// MARK: - Debug -
 #if DEBUG_RIGIDBODY
 int debug_scene_get_awake_queries(void);
 void debug_scene_reset_calls(void);

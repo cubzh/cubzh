@@ -139,6 +139,9 @@ float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *r
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed);
 void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value);
 void rigidbody_apply_push(RigidBody *rb, const float3 *value);
+void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, Box *outBox,
+                                         const float3 *worldVector, float3 *outVector, float epsilon,
+                                         float3 *outEpsilon3);
 
 /// MARK: - Callbacks -
 void rigidbody_set_collision_callback(pointer_rigidbody_collision_func f);

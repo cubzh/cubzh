@@ -136,16 +136,6 @@ void _rigidbody_fire_reciprocal_callbacks(RigidBody *selfRb,
     }
 }
 
-void _rigidbody_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, Box *outBox,
-                               const float3 *worldVector, float3 *outVector, float epsilon,
-                               float3 *outEpsilon3) {
-
-    box_to_aabox2(worldBox, outBox, invModel, &float3_zero, NoSquarify);
-    matrix4x4_op_multiply_vec_vector(outVector, worldVector, invModel);
-    const float3 epsilon3 = (float3){ epsilon, epsilon, epsilon };
-    matrix4x4_op_multiply_vec_vector(outEpsilon3, &epsilon3, invModel);
-}
-
 typedef enum {
     SimulationResult_Errored,
     SimulationResult_Moved,
@@ -335,11 +325,13 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                 } else {
                     shape = transform_utils_get_shape(hitLeaf);
 
+                    // solve non-dynamic rigidbodies in their model space (rotated collider)
                     const Box *collider = rigidbody_get_collider(hitRb);
                     const Matrix4x4 *invModel = transform_get_wtl(shape != NULL ?
                                                                   shape_get_pivot_transform(shape) :
                                                                   hitLeaf);
-                    _rigidbody_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv, EPSILON_COLLISION, &modelEpsilon);
+                    rigidbody_broadphase_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv,
+                                                        EPSILON_COLLISION, &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
                     if (box_collide(&modelBroadphase, collider)) {
@@ -351,7 +343,9 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                                                     &modelEpsilon,
                                                     true,
                                                     &normal,
-                                                    &extraReplacement3); // TODO update or remove extra replacements
+                                                    &extraReplacement3,
+                                                    NULL,
+                                                    NULL);
                         } else {
                             swept = box_swept(&modelBox,
                                               &modelDv,
@@ -1329,6 +1323,18 @@ void rigidbody_apply_push(RigidBody *rb, const float3 *value) {
         rb->velocity->z = value->z;
     }
 }
+
+void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, Box *outBox,
+                                         const float3 *worldVector, float3 *outVector, float epsilon,
+                                         float3 *outEpsilon3) {
+
+    box_to_aabox2(worldBox, outBox, invModel, &float3_zero, NoSquarify);
+    matrix4x4_op_multiply_vec_vector(outVector, worldVector, invModel);
+    const float3 epsilon3 = (float3){ epsilon, epsilon, epsilon };
+    matrix4x4_op_multiply_vec_vector(outEpsilon3, &epsilon3, invModel);
+}
+
+// MARK: - Callbacks -
 
 void rigidbody_set_collision_callback(pointer_rigidbody_collision_func f) {
     rigidbody_collision_callback = f;
