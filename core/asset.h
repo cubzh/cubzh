@@ -1,9 +1,8 @@
-//
+// -------------------------------------------------------------
+//  Cubzh Core
 //  asset.h
-//  Particubes
-//
-//  Created by Corentin Cailleaud on 25/10/2022.
-//
+//  Created by Corentin Cailleaud on October 25, 2022.
+// -------------------------------------------------------------
 
 #pragma once
 
