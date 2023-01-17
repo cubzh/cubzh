@@ -34,7 +34,7 @@ extern "C" {
 // Cubzh file format (.3zh)
 // =============================================================================
 //
-// 11 bytes | char[11] | particubes magic bytes
+// 11 bytes |  char[6] | cubzh magic bytes
 //  4 bytes |   uint32 | file format version
 //
 //  4 bytes |   uint32 | preview byte count

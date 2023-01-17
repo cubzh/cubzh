@@ -1,4 +1,4 @@
-keywords: ["particubes", "game", "mobile", "scripting", "cube", "voxel", "world", "data"]
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "data"]
 type: "Data"
 
 creatable: false 
@@ -34,7 +34,7 @@ functions:
                 -- result type is Data
                 local data = result
                 local str = data:ToString()
-                if string.sub(str, 1, 11) == "PARTICUBES!" then
+                if string.sub(str, 1, 6) == "CUBZH!" then
                   print("It's a pcubes file!")
                 end
               end)
