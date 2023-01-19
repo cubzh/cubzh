@@ -120,6 +120,19 @@ void color_palette_free(ColorPalette *p) {
     free(p);
 }
 
+void color_palette_replace_color_atlas(ColorPalette *p, ColorAtlas *atlas) {
+    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
+    if (a != NULL) {
+        color_atlas_remove_palette(a, p);
+    }
+    weakptr_release(p->refAtlas);
+    p->refAtlas = color_atlas_get_and_retain_weakptr(atlas);
+
+    for (SHAPE_COLOR_INDEX_INT_T i = 0; i < p->count; ++i) {
+        p->entries[i].atlasIndex = color_atlas_check_and_add_color(atlas, p->entries[i].color);
+    }
+}
+
 uint8_t color_palette_get_count(const ColorPalette *p) {
     return p->count;
 }

@@ -285,6 +285,8 @@ bool shape_is_model_locked(Shape *s);
 void shape_set_fullname(Shape *s, const char *fullname); // copies fullname
 const char *shape_get_fullname(const Shape *s);
 
+void shape_replace_color_atlas(Shape *s, ColorAtlas *ca);
+
 // MARK: - Transform -
 
 /// optional pivot
