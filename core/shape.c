@@ -2341,7 +2341,9 @@ const char *shape_get_fullname(const Shape *s) {
 }
 
 void shape_replace_color_atlas(Shape *s, ColorAtlas *ca) {
-    if (s->palette == NULL) { return; }
+    if (s->palette == NULL) {
+        return;
+    }
     color_palette_replace_color_atlas(s->palette, ca);
 }
 
