@@ -29,7 +29,6 @@ struct _Scene {
 
     // awake volumes can be registered for end-of-frame awake phase
     DoublyLinkedList *awakeBoxes;
-    Box *mapAwakeBox;
 
     // constant acceleration for the whole Scene (gravity usually)
     float3 constantAcceleration;
@@ -209,7 +208,6 @@ Scene *scene_new(void) {
         sc->removed = fifo_list_new();
         sc->collisions = doubly_linked_list_new();
         sc->awakeBoxes = doubly_linked_list_new();
-        sc->mapAwakeBox = NULL;
         float3_set(&sc->constantAcceleration, 0.0f, 0.0f, 0.0f);
     }
     return sc;
@@ -365,7 +363,6 @@ void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
         n = next;
         box_free(awakeBox);
     }
-    sc->mapAwakeBox = NULL;
     fifo_list_free(awakeQuery, NULL);
 
     // physics layers mask changes take effect in the rtree at the end of each frame
@@ -482,7 +479,7 @@ void scene_register_awake_box(Scene *sc, Box *b) {
         Box *awakeBox;
         while (n != NULL) {
             awakeBox = doubly_linked_list_node_pointer(n);
-            if (awakeBox != sc->mapAwakeBox && box_collide_epsilon(awakeBox, b, EPSILON_ZERO)) {
+            if (box_collide_epsilon(awakeBox, b, EPSILON_ZERO)) {
                 box_op_merge(awakeBox, b, awakeBox);
                 box_free(b);
                 return;
@@ -502,26 +499,28 @@ void scene_register_awake_rigidbody_contacts(Scene *sc, RigidBody *rb) {
     }
 }
 
-void scene_register_awake_map_box(Scene *sc,
-                                  const SHAPE_COORDS_INT_T x,
-                                  const SHAPE_COORDS_INT_T y,
-                                  const SHAPE_COORDS_INT_T z) {
-    float3 scale;
-    transform_get_lossy_scale(sc->map, &scale);
-    Box *worldBox = box_new_2(((float)x) * scale.x - PHYSICS_AWAKE_DISTANCE,
-                              ((float)y) * scale.y - PHYSICS_AWAKE_DISTANCE,
-                              ((float)z) * scale.z - PHYSICS_AWAKE_DISTANCE,
-                              ((float)(x + 1)) * scale.x + PHYSICS_AWAKE_DISTANCE,
-                              ((float)(y + 1)) * scale.y + PHYSICS_AWAKE_DISTANCE,
-                              ((float)(z + 1)) * scale.z + PHYSICS_AWAKE_DISTANCE);
+void scene_register_awake_block_box(Scene *sc,
+                                    const Shape *shape,
+                                    const SHAPE_COORDS_INT_T x,
+                                    const SHAPE_COORDS_INT_T y,
+                                    const SHAPE_COORDS_INT_T z) {
 
-    if (sc->mapAwakeBox == NULL) {
-        sc->mapAwakeBox = worldBox;
-        doubly_linked_list_push_last(sc->awakeBoxes, sc->mapAwakeBox);
-    } else {
-        box_op_merge(sc->mapAwakeBox, worldBox, sc->mapAwakeBox);
-        box_free(worldBox);
-    }
+    const Transform *t = shape_get_pivot_transform(shape);
+
+    const float3 modelPoint = { x + 0.5f, y + 0.5f, z + 0.5f };
+    float3 worldPoint;
+    matrix4x4_op_multiply_vec_point(&worldPoint, &modelPoint, transform_get_ltw(t));
+
+    float3 scale2; transform_get_lossy_scale(sc->map, &scale2);
+    float3_op_scale(&scale2, 0.5f);
+    Box *worldBox = box_new_2((float)worldPoint.x - scale2.x - PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.y - scale2.y - PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.z - scale2.z - PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.x + scale2.x + PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.y + scale2.y + PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.z + scale2.z + PHYSICS_AWAKE_DISTANCE);
+
+    scene_register_awake_box(sc, worldBox);
 }
 
 CastResult scene_cast_result_default() {

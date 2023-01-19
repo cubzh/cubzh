@@ -972,11 +972,11 @@ bool shape_add_block_from_lua(Shape *const shape,
     }
 
     if (transaction_addBlock(shape->pendingTransaction, luaX, luaY, luaZ, colorIndex)) {
-        // register awake box for the map
-        if (shape_uses_baked_lighting(shape)) {
+        // register awake box if using per-block collisions
+        if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
             SHAPE_COORDS_INT_T x = luaX, y = luaY, z = luaZ;
             shape_block_lua_to_internal(shape, &x, &y, &z);
-            scene_register_awake_map_box(scene, x, y, z);
+            scene_register_awake_block_box(scene, shape, x, y, z);
         }
         return true;
     } else {
@@ -999,7 +999,7 @@ bool shape_remove_block_from_lua(Shape *const shape,
                                                  true); // xyz are lua coords
 
     if (block_is_solid(existingBlock) == false) {
-        return false; // block was not removed
+        return false; // no block here
     }
 
     if (shape->pendingTransaction == NULL) {
@@ -1011,11 +1011,11 @@ bool shape_remove_block_from_lua(Shape *const shape,
 
     transaction_removeBlock(shape->pendingTransaction, luaX, luaY, luaZ);
 
-    // register awake box for the map
-    if (shape_uses_baked_lighting(shape)) {
+    // register awake box is using per-block collisions
+    if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
         SHAPE_COORDS_INT_T x = luaX, y = luaY, z = luaZ;
         shape_block_lua_to_internal(shape, &x, &y, &z);
-        scene_register_awake_map_box(scene, x, y, z);
+        scene_register_awake_block_box(scene, shape, x, y, z);
     }
 
     return true; // block is considered removed
@@ -2108,10 +2108,13 @@ void shape_make_space(Shape *const shape,
 void shape_refresh_vertices(Shape *shape) {
     // to improve efficiency, write into buffers only if shape was fully initialized,
     // if light is computed later, we would need to rewrite the entire buffer
-    if (shape_uses_baked_lighting(shape) && shape_has_baked_lighting_data(shape) == false) {
-        // cclog_trace("⚠   shape_refresh_vertices: shape lighting not initialized, skipping...");
+    // TODO: this is temporarily disabled, waiting to have baked files support for generic shapes
+    /*if (shape_uses_baked_lighting(shape) && shape_has_baked_lighting_data(shape) == false) {
+#if SHAPE_LIGHTING_DEBUG
+        cclog_trace("⚠   shape_refresh_vertices: shape lighting not initialized, skipping...");
+#endif
         return;
-    }
+    }*/
 
     if (shape->isBakeLocked) {
         _shape_fill_draw_slices(shape->firstVB_opaque);

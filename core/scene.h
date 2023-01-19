@@ -89,10 +89,11 @@ const float3 *scene_get_constant_acceleration(const Scene *sc);
 /// Register a volume that will be processed during the awake phase
 void scene_register_awake_box(Scene *sc, Box *b);
 void scene_register_awake_rigidbody_contacts(Scene *sc, RigidBody *rb);
-void scene_register_awake_map_box(Scene *sc,
-                                  const SHAPE_COORDS_INT_T x,
-                                  const SHAPE_COORDS_INT_T y,
-                                  const SHAPE_COORDS_INT_T z);
+void scene_register_awake_block_box(Scene *sc,
+                                    const Shape *shape,
+                                    const SHAPE_COORDS_INT_T x,
+                                    const SHAPE_COORDS_INT_T y,
+                                    const SHAPE_COORDS_INT_T z);
 
 typedef enum {
     CastHit_None,
