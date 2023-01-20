@@ -11,6 +11,11 @@ import (
 	"dagger.io/dagger"
 )
 
+const (
+	// Max number of files compiled by Ninja if there are compilation errors
+	NB_MAX_BUILD_ERRORS string = "999"
+)
+
 func main() {
 	err := buildAnRunCurrentDirectory()
 	if err != nil {
@@ -78,7 +83,10 @@ func buildAnRunCurrentDirectory() error {
 	}
 
 	fmt.Println("Running tests in container...")
-	ciContainer = ciContainer.WithExec([]string{"cmake", "--build", ".", "--clean-first"})
+
+	// Flags after `--` are transmitted as-is to the build system (Ninja, here)
+	// Ninja will stop if this number of errors is reached : NB_MAX_BUILD_ERRORS
+	ciContainer = ciContainer.WithExec([]string{"cmake", "--build", ".", "--clean-first", "--", "-k", NB_MAX_BUILD_ERRORS})
 	code, err = ciContainer.ExitCode(ctx)
 	if err != nil {
 		return err
