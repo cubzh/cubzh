@@ -97,18 +97,19 @@ void test_chunk_Block(void) {
     TEST_CHECK(NBBlocks == 3);
 
     // chunk_get_block_pos()
-    chunk_get_block_pos(chunk, 4, 4, 4, &pos);
-    TEST_CHECK(pos.x == 14);
-    TEST_CHECK(pos.y == 12);
-    TEST_CHECK(pos.z == 9);
-    chunk_get_block_pos(chunk, 5, 5, 5, &pos);
-    TEST_CHECK(pos.x == 15);
-    TEST_CHECK(pos.y == 13);
-    TEST_CHECK(pos.z == 10);
-    chunk_get_block_pos(chunk, 6, 6, 6, &pos);
-    TEST_CHECK(pos.x == 16);
-    TEST_CHECK(pos.y == 14);
-    TEST_CHECK(pos.z == 11);
+    SHAPE_COORDS_INT3_T coords = {11, 9, 6};
+    chunk_get_block_pos(chunk, 4, 4, 4, &coords);
+    TEST_CHECK(coords.x == 14);
+    TEST_CHECK(coords.y == 12);
+    TEST_CHECK(coords.z == 9);
+    chunk_get_block_pos(chunk, 5, 5, 5, &coords);
+    TEST_CHECK(coords.x == 15);
+    TEST_CHECK(coords.y == 13);
+    TEST_CHECK(coords.z == 10);
+    chunk_get_block_pos(chunk, 6, 6, 6, &coords);
+    TEST_CHECK(coords.x == 16);
+    TEST_CHECK(coords.y == 14);
+    TEST_CHECK(coords.z == 11);
 
     // chunk_get_inner_bounds()
     CHUNK_COORDS_INT_T minX = 0;

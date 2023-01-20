@@ -578,13 +578,19 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
             // box
             if (minSwept > 0.0f) {
                 if (float_isZero(dv.x, EPSILON_ZERO) != false) {
-                    utils_axes_mask_set(&rb->contact, (uint8_t)(dv.x > 0.0f ? AxesMaskNX : AxesMaskX), false);
+                    utils_axes_mask_set(&rb->contact,
+                                        (uint8_t)(dv.x > 0.0f ? AxesMaskNX : AxesMaskX),
+                                        false);
                 }
                 if (float_isZero(dv.y, EPSILON_ZERO) != false) {
-                    utils_axes_mask_set(&rb->contact, (uint8_t)(dv.y > 0.0f ? AxesMaskNY : AxesMaskY), false);
+                    utils_axes_mask_set(&rb->contact,
+                                        (uint8_t)(dv.y > 0.0f ? AxesMaskNY : AxesMaskY),
+                                        false);
                 }
                 if (float_isZero(dv.z, EPSILON_ZERO) != false) {
-                    utils_axes_mask_set(&rb->contact, (uint8_t)(dv.z > 0.0f ? AxesMaskNZ : AxesMaskZ), false);
+                    utils_axes_mask_set(&rb->contact,
+                                        (uint8_t)(dv.z > 0.0f ? AxesMaskNZ : AxesMaskZ),
+                                        false);
                 }
             }
             AxesMaskValue selfBoxSide = AxesMaskNone; // side of the world box sent to Lua callback
