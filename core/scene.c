@@ -557,19 +557,21 @@ CastHitType scene_cast_ray(Scene *sc,
                                  sceneQuery) > 0) {
         // sort query results by distance
         doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
-        // TODO: re-enable optim to only evaluate hits based on distance relevance vs. per-block
-        // shapes
 
-        // process query results in order, this function only returns first hit block or collision
-        // box
+        // process query results in order, to return first hit block or collision box
         DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
         RtreeCastResult *rtreeHit;
         Transform *hitTr;
         RigidBody *hitRb;
-        while (n != NULL /*&& hit.type == CastHit_None*/) {
+        while (n != NULL) {
             rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
             hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
             hitRb = transform_get_rigidbody(hitTr);
+
+            // re-examine closer hits after updating hit.distance vs. per-block or rotated collider
+            if (rtreeHit->distance >= hit.distance) {
+                break;
+            }
 
             const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
 
