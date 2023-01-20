@@ -581,7 +581,7 @@ bool chunk_v6_write_shape(FILE *fd,
     while (n != NULL) {
         child = (Transform *)(doubly_linked_list_node_pointer(n));
         // hide transforms reserved for engine
-        Shape *childShape = transform_get_shape(child);
+        Shape *childShape = transform_utils_get_shape(child);
         if (childShape != NULL) {
             chunk_v6_write_shape(fd, childShape, shapeId, shapeParentId, true);
         }
@@ -1005,16 +1005,13 @@ uint32_t chunk_v6_read_shape(Stream *s,
                                                     height,
                                                     depth,
                                                     shapeSettings->lighting,
-                                                    shapeSettings->isMutable,
-                                                    shapeSettings->limitSize == false);
-                } else if (shapeSettings->limitSize) {
-                    *shape = shape_make_with_fixed_size(width,
-                                                        height,
-                                                        depth,
-                                                        shapeSettings->lighting,
-                                                        shapeSettings->isMutable);
+                                                    shapeSettings->isMutable);
                 } else {
-                    *shape = shape_make();
+                    *shape = shape_make_with_size(width,
+                                                  height,
+                                                  depth,
+                                                  shapeSettings->lighting,
+                                                  shapeSettings->isMutable);
                 }
                 break;
             }
@@ -1233,9 +1230,6 @@ uint32_t chunk_v6_read_shape(Stream *s,
     if (shape_uses_baked_lighting(*shape)) {
         if (lightingData == NULL) {
             cclog_warning("shape uses lighting but no baked lighting found");
-        } else if (shapeSettings->octree == false && shapeSettings->limitSize == false) {
-            cclog_warning("shape uses lighting but does not have a fixed size");
-            free(lightingData);
         } else if (lightingDataSizeRead !=
                    (uint32_t)(width * height * depth * (uint16_t)sizeof(VERTEX_LIGHT_STRUCT_T))) {
             cclog_warning("shape uses lighting but does not match lighting data size");
@@ -1277,10 +1271,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (hasCustomCollisionBox) {
-        RigidBody *rb = rigidbody_new(RigidbodyModeStatic,
-                                      PHYSICS_GROUP_DEFAULT_OBJECT,
-                                      PHYSICS_COLLIDESWITH_DEFAULT_OBJECT);
-        transform_set_rigidbody(shape_get_root_transform(*shape), rb);
+        RigidBody *rb;
+        transform_ensure_rigidbody(shape_get_root_transform(*shape),
+                                   RigidbodyMode_Static,
+                                   PHYSICS_GROUP_DEFAULT_OBJECT,
+                                   PHYSICS_COLLIDESWITH_DEFAULT_OBJECT,
+                                   &rb);
 
         // construct new box value
         Box newCollider = *rigidbody_get_collider(rb);
@@ -1786,10 +1782,11 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         for (int32_t x = start.x; x < end.x; x++) { // shape blocks
             for (int32_t y = start.y; y < end.y; y++) {
                 for (int32_t z = start.z; z < end.z; z++) {
-                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_without_checking(shape,
-                                                                                          x,
-                                                                                          y,
-                                                                                          z);
+                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_without_checking(
+                        shape,
+                        (SHAPE_COORDS_INT_T)x,
+                        (SHAPE_COORDS_INT_T)y,
+                        (SHAPE_COORDS_INT_T)z);
                     cursor = (void *)((VERTEX_LIGHT_STRUCT_T *)cursor + 1);
                 }
             }
@@ -2003,7 +2000,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
     Transform *child = NULL;
     while (n != NULL) {
         child = (Transform *)(doubly_linked_list_node_pointer(n));
-        Shape *childShape = transform_get_shape(child);
+        Shape *childShape = transform_utils_get_shape(child);
         if (childShape != NULL) {
             if (create_shape_buffers(shapesBuffers, childShape, shapeId, shapeParentId, size) ==
                 false) {

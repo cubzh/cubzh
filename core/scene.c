@@ -6,9 +6,9 @@
 
 #include "scene.h"
 
+#include <float.h>
 #include <stdlib.h>
 
-#include "rigidBody.h"
 #include "weakptr.h"
 
 #if DEBUG_SCENE
@@ -29,7 +29,6 @@ struct _Scene {
 
     // awake volumes can be registered for end-of-frame awake phase
     DoublyLinkedList *awakeBoxes;
-    Box *mapAwakeBox;
 
     // constant acceleration for the whole Scene (gravity usually)
     float3 constantAcceleration;
@@ -51,26 +50,21 @@ void _scene_add_rigidbody_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *col
 }
 
 void _scene_update_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
-    // register awake volume here for new and removed colliders, NOT for transformations change
+    // register awake volume here for new and removed colliders, and for transformations change
     if (rigidbody_is_enabled(rb) && rigidbody_is_collider_valid(rb)) {
         // insert valid collider as a new leaf
         if (rigidbody_get_rtree_leaf(rb) == NULL) {
             _scene_add_rigidbody_rtree(sc, rb, t, collider);
             scene_register_awake_rigidbody_contacts(sc, rb);
         }
-        // update leaf due to collider change
-        else if (rigidbody_get_collider_dirty(rb)) {
+        // update leaf due to collider or transformations change
+        else if (rigidbody_get_collider_dirty(rb) || transform_is_physics_dirty(t)) {
             scene_register_awake_rigidbody_contacts(sc, rb);
             rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
             rigidbody_set_rtree_leaf(rb, NULL);
 
             _scene_add_rigidbody_rtree(sc, rb, t, collider);
             scene_register_awake_rigidbody_contacts(sc, rb);
-        }
-        // update leaf due to transformations change
-        else if (transform_is_physics_dirty(t)) {
-            rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
-            _scene_add_rigidbody_rtree(sc, rb, t, collider);
         }
     }
     // remove disabled rigidbody or invalid collider from rtree
@@ -103,20 +97,18 @@ void _scene_refresh_recurse(Scene *sc,
                             Transform *t,
                             bool hierarchyDirty,
                             const TICK_DELTA_SEC_T dt,
-                            void *opaqueUserData) {
+                            void *callbackData) {
 
     // Refresh transform (top-first) after sandbox changes
     transform_refresh(t, hierarchyDirty, false);
 
     // Get rigidbody, compute world collider
     Box collider;
-    RigidBody *rb = transform_get_or_compute_world_collider(t, &collider);
+    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider);
 
     // Step physics (top-first), collider is kept up-to-date
     if (rb != NULL) {
-        if (rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, opaqueUserData)) {
-            scene_register_awake_rigidbody_contacts(sc, rb);
-        }
+        rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, callbackData);
     }
 
     // Refresh transform (top-first) after changes
@@ -124,7 +116,7 @@ void _scene_refresh_recurse(Scene *sc,
 
     // Update r-tree (top-first) after changes
     if (rb != NULL) {
-        transform_get_or_compute_world_collider(t, &collider);
+        transform_get_or_compute_world_aligned_collider(t, &collider);
         _scene_update_rtree(sc, rb, t, &collider);
     }
 
@@ -136,7 +128,7 @@ void _scene_refresh_recurse(Scene *sc,
                                (Transform *)doubly_linked_list_node_pointer(n),
                                hierarchyDirty || transform_is_hierarchy_dirty(t),
                                dt,
-                               opaqueUserData);
+                               callbackData);
         n = doubly_linked_list_node_next(n);
     }
     // ⬇ anything after recursion is executed DEEP-FIRST
@@ -155,12 +147,12 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 
     // Apply shape current transaction (top-first), this may change BB & collider
     if (transform_get_type(t) == ShapeTransform) {
-        shape_apply_current_transaction(transform_get_shape(t), false);
+        shape_apply_current_transaction(transform_utils_get_shape(t), false);
     }
 
     // Update r-tree (top-first) after sandbox changes
     Box collider;
-    RigidBody *rb = transform_get_or_compute_world_collider(t, &collider);
+    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider);
     if (rb != NULL) {
         _scene_update_rtree(sc, rb, t, &collider);
         _scene_refresh_rtree_collision_masks(rb);
@@ -183,7 +175,7 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 #ifndef P3S_CLIENT_HEADLESS
     // Refresh shape buffers (deep-first)
     if (transform_get_type(t) == ShapeTransform) {
-        shape_refresh_vertices(transform_get_shape(t));
+        shape_refresh_vertices(transform_utils_get_shape(t));
     }
 #endif
 }
@@ -196,9 +188,14 @@ void _scene_shapes_iterator_func(Transform *t, void *ptr) {
 
 void _scene_standalone_refresh_func(Transform *t, void *ptr) {
     if (transform_get_type(t) == ShapeTransform) {
-        shape_apply_current_transaction(transform_get_shape(t), true);
+        shape_apply_current_transaction(transform_utils_get_shape(t), true);
     }
     transform_refresh(t, true, false);
+}
+
+bool _scene_cast_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2) {
+    return ((RtreeCastResult *)doubly_linked_list_node_pointer(n1))->distance >
+           ((RtreeCastResult *)doubly_linked_list_node_pointer(n2))->distance;
 }
 
 // MARK: -
@@ -212,7 +209,6 @@ Scene *scene_new(void) {
         sc->removed = fifo_list_new();
         sc->collisions = doubly_linked_list_new();
         sc->awakeBoxes = doubly_linked_list_new();
-        sc->mapAwakeBox = NULL;
         float3_set(&sc->constantAcceleration, 0.0f, 0.0f, 0.0f);
     }
     return sc;
@@ -247,18 +243,14 @@ Rtree *scene_get_rtree(Scene *sc) {
     return sc->rtree;
 }
 
-void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *opaqueUserData) {
+void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData) {
     if (sc == NULL) {
         return;
     }
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
     cclog_debug("🏞 physics step");
 #endif
-    _scene_refresh_recurse(sc,
-                           sc->root,
-                           transform_is_hierarchy_dirty(sc->root),
-                           dt,
-                           opaqueUserData);
+    _scene_refresh_recurse(sc, sc->root, transform_is_hierarchy_dirty(sc->root), dt, callbackData);
 }
 
 void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
@@ -368,7 +360,6 @@ void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
         n = next;
         box_free(awakeBox);
     }
-    sc->mapAwakeBox = NULL;
     fifo_list_free(awakeQuery, NULL);
 
     // physics layers mask changes take effect in the rtree at the end of each frame
@@ -456,6 +447,27 @@ void scene_register_collision_couple(Scene *sc, Transform *t1, Transform *t2, Ax
     doubly_linked_list_push_last(sc->collisions, cc);
 }
 
+// MARK: - Physics -
+
+void scene_set_constant_acceleration(Scene *sc, const float *x, const float *y, const float *z) {
+    vx_assert(sc != NULL);
+
+    if (x != NULL) {
+        sc->constantAcceleration.x = *x;
+    }
+    if (y != NULL) {
+        sc->constantAcceleration.y = *y;
+    }
+    if (z != NULL) {
+        sc->constantAcceleration.x = *z;
+    }
+}
+
+const float3 *scene_get_constant_acceleration(const Scene *sc) {
+    vx_assert(sc != NULL);
+    return &sc->constantAcceleration;
+}
+
 void scene_register_awake_box(Scene *sc, Box *b) {
     float3 size;
     box_get_size_float(b, &size);
@@ -464,7 +476,7 @@ void scene_register_awake_box(Scene *sc, Box *b) {
         Box *awakeBox;
         while (n != NULL) {
             awakeBox = doubly_linked_list_node_pointer(n);
-            if (awakeBox != sc->mapAwakeBox && box_collide_epsilon(awakeBox, b, EPSILON_ZERO)) {
+            if (box_collide_epsilon(awakeBox, b, EPSILON_ZERO)) {
                 box_op_merge(awakeBox, b, awakeBox);
                 box_free(b);
                 return;
@@ -484,63 +496,291 @@ void scene_register_awake_rigidbody_contacts(Scene *sc, RigidBody *rb) {
     }
 }
 
-void scene_register_awake_map_box(Scene *sc,
-                                  const SHAPE_COORDS_INT_T x,
-                                  const SHAPE_COORDS_INT_T y,
-                                  const SHAPE_COORDS_INT_T z) {
-    float3 scale;
-    transform_get_lossy_scale(sc->map, &scale);
-    Box *worldBox = box_new_2(((float)x) * scale.x - PHYSICS_AWAKE_DISTANCE,
-                              ((float)y) * scale.y - PHYSICS_AWAKE_DISTANCE,
-                              ((float)z) * scale.z - PHYSICS_AWAKE_DISTANCE,
-                              ((float)(x + 1)) * scale.x + PHYSICS_AWAKE_DISTANCE,
-                              ((float)(y + 1)) * scale.y + PHYSICS_AWAKE_DISTANCE,
-                              ((float)(z + 1)) * scale.z + PHYSICS_AWAKE_DISTANCE);
+void scene_register_awake_block_box(Scene *sc,
+                                    const Shape *shape,
+                                    const SHAPE_COORDS_INT_T x,
+                                    const SHAPE_COORDS_INT_T y,
+                                    const SHAPE_COORDS_INT_T z) {
 
-    if (sc->mapAwakeBox == NULL) {
-        sc->mapAwakeBox = worldBox;
-        doubly_linked_list_push_last(sc->awakeBoxes, sc->mapAwakeBox);
-    } else {
-        box_op_merge(sc->mapAwakeBox, worldBox, sc->mapAwakeBox);
-        box_free(worldBox);
-    }
+    Transform *t = shape_get_pivot_transform(shape);
+
+    const float3 modelPoint = {x + 0.5f, y + 0.5f, z + 0.5f};
+    float3 worldPoint;
+    matrix4x4_op_multiply_vec_point(&worldPoint, &modelPoint, transform_get_ltw(t));
+
+    float3 scale2;
+    transform_get_lossy_scale(sc->map, &scale2);
+    float3_op_scale(&scale2, 0.5f);
+    Box *worldBox = box_new_2((float)worldPoint.x - scale2.x - PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.y - scale2.y - PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.z - scale2.z - PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.x + scale2.x + PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.y + scale2.y + PHYSICS_AWAKE_DISTANCE,
+                              (float)worldPoint.z + scale2.z + PHYSICS_AWAKE_DISTANCE);
+
+    scene_register_awake_box(sc, worldBox);
 }
 
-void scene_set_constant_acceleration(Scene *sc, const float3 *f3) {
-    vx_assert(sc != NULL);
-    vx_assert(f3 != NULL);
-
-    float3_copy(&sc->constantAcceleration, f3);
+CastResult scene_cast_result_default() {
+    CastResult hit;
+    hit.hitTr = NULL;
+    hit.block = NULL;
+    hit.blockCoords = (SHAPE_COORDS_INT3_T){0, 0, 0};
+    hit.distance = FLT_MAX;
+    hit.type = CastHit_None;
+    hit.faceTouched = FACE_NONE;
+    return hit;
 }
 
-void scene_set_constant_acceleration_2(Scene *sc, const float *x, const float *y, const float *z) {
-    vx_assert(sc != NULL);
+CastHitType scene_cast_ray(Scene *sc,
+                           const Ray *worldRay,
+                           uint8_t groups,
+                           const DoublyLinkedList *filterOutTransforms,
+                           CastResult *result) {
 
-    if (x != NULL) {
-        sc->constantAcceleration.x = *x;
+    CastResult hit = scene_cast_result_default();
+
+    if (result != NULL) {
+        *result = hit;
     }
-    if (y != NULL) {
-        sc->constantAcceleration.y = *y;
+
+    if (worldRay == NULL || groups == PHYSICS_GROUP_NONE) {
+        return CastHit_None;
     }
-    if (z != NULL) {
-        sc->constantAcceleration.x = *z;
+
+    DoublyLinkedList *sceneQuery = doubly_linked_list_new();
+    if (rtree_query_cast_all_ray(sc->rtree,
+                                 worldRay,
+                                 PHYSICS_GROUP_NONE,
+                                 groups,
+                                 filterOutTransforms,
+                                 sceneQuery) > 0) {
+        // sort query results by distance
+        doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
+        // TODO: re-enable optim to only evaluate hits based on distance relevance vs. per-block
+        // shapes
+
+        // process query results in order, this function only returns first hit block or collision
+        // box
+        DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
+        RtreeCastResult *rtreeHit;
+        Transform *hitTr;
+        RigidBody *hitRb;
+        while (n != NULL /*&& hit.type == CastHit_None*/) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+            hitRb = transform_get_rigidbody(hitTr);
+
+            const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+
+            if (mode == RigidbodyMode_Dynamic) {
+                if (rtreeHit->distance < hit.distance) {
+                    hit.hitTr = hitTr;
+                    hit.distance = rtreeHit->distance;
+                    hit.type = CastHit_CollisionBox;
+                }
+            } else if (transform_get_type(hitTr) == ShapeTransform &&
+                       rigidbody_uses_per_block_collisions(transform_get_rigidbody(hitTr))) {
+
+                CastResult blockHit;
+                Block *b = scene_cast_ray_shape_only(sc,
+                                                     transform_utils_get_shape(hitTr),
+                                                     worldRay,
+                                                     &blockHit);
+                if (b != NULL && blockHit.distance < hit.distance) {
+                    hit = blockHit;
+                }
+            } else {
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                const Box *collider = rigidbody_get_collider(hitRb);
+                Transform *modelTr = transform_get_type(hitTr) == ShapeTransform
+                                         ? shape_get_pivot_transform(
+                                               transform_utils_get_shape(hitTr))
+                                         : hitTr;
+                Ray *modelRay = ray_world_to_local(worldRay, modelTr);
+
+                float distance;
+                if (ray_intersect_with_box(modelRay, &collider->min, &collider->max, &distance)) {
+                    const float3 modelVector = {modelRay->dir->x * distance,
+                                                modelRay->dir->y * distance,
+                                                modelRay->dir->z * distance};
+                    float3 worldVector;
+                    transform_utils_vector_ltw(modelTr, &modelVector, &worldVector);
+
+                    distance = float3_length(&worldVector);
+                    if (distance < hit.distance) {
+                        hit.hitTr = hitTr;
+                        hit.distance = distance;
+                        hit.type = CastHit_CollisionBox;
+                    }
+                }
+
+                ray_free(modelRay);
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
     }
+    doubly_linked_list_flush(sceneQuery, free);
+    doubly_linked_list_free(sceneQuery);
+
+    if (result != NULL) {
+        *result = hit;
+    }
+
+    return hit.type;
 }
 
-const float3 *scene_get_constant_acceleration(const Scene *sc) {
-    vx_assert(sc != NULL);
-    return &sc->constantAcceleration;
+Block *scene_cast_ray_shape_only(Scene *sc,
+                                 const Shape *sh,
+                                 const Ray *worldRay,
+                                 CastResult *result) {
+    CastResult hit = scene_cast_result_default();
+
+    if (result != NULL) {
+        *result = hit;
+    }
+
+    if (sh == NULL)
+        return NULL;
+
+    float3 localImpact;
+    shape_ray_cast(sh, worldRay, &hit.distance, &localImpact, &hit.block, &hit.blockCoords);
+
+    if (hit.block != NULL) {
+        // find which side local impact is relative to touched block
+        float3 ldf = {hit.blockCoords.x, hit.blockCoords.y, hit.blockCoords.z};
+        const FACE_INDEX_INT_T face = ray_impacted_block_face(&localImpact, &ldf);
+
+        hit.hitTr = shape_get_root_transform(sh);
+        hit.type = CastHit_Block;
+        hit.faceTouched = face;
+    }
+
+    if (result != NULL) {
+        *result = hit;
+    }
+
+    return hit.block;
+}
+
+CastHitType scene_cast_box(Scene *sc,
+                           const Box *aabb,
+                           const float3 *unit,
+                           float maxDist,
+                           uint8_t groups,
+                           const DoublyLinkedList *filterOutTransforms,
+                           CastResult *result) {
+
+    CastResult hit = scene_cast_result_default();
+
+    if (result != NULL) {
+        *result = hit;
+    }
+
+    if (aabb == NULL || unit == NULL || groups == PHYSICS_GROUP_NONE) {
+        return CastHit_None;
+    }
+
+    // TODO: box cast needs to return all hits, so that we can evaluate based on distance relevance
+    // vs. per-block shapes
+    RtreeCastResult firstHit = {NULL, FLT_MAX};
+    if (rtree_query_cast_box(sc->rtree,
+                             aabb,
+                             unit,
+                             maxDist,
+                             PHYSICS_GROUP_NONE,
+                             groups,
+                             filterOutTransforms,
+                             &firstHit)) {
+
+        vx_assert(firstHit.rtreeLeaf != NULL);
+
+        Transform *hitTr = (Transform *)rtree_node_get_leaf_ptr(firstHit.rtreeLeaf);
+        RigidBody *hitRb = transform_get_rigidbody(hitTr);
+        const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+
+        if (mode == RigidbodyMode_Dynamic) {
+            hit.hitTr = hitTr;
+            hit.distance = firstHit.distance;
+            hit.type = CastHit_CollisionBox;
+        } else {
+            Box modelBox, modelBroadphase;
+            float3 modelVector, modelEpsilon;
+            Shape *hitShape = transform_utils_get_shape(hitTr);
+
+            float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
+
+            // solve non-dynamic rigidbodies in their model space (rotated collider)
+            const Box *collider = rigidbody_get_collider(hitRb);
+            const Matrix4x4 *invModel = transform_get_wtl(
+                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
+            rigidbody_broadphase_world_to_model(invModel,
+                                                aabb,
+                                                &modelBox,
+                                                &vector,
+                                                &modelVector,
+                                                EPSILON_COLLISION,
+                                                &modelEpsilon);
+
+            box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
+            if (box_collide(&modelBroadphase, collider)) {
+                // shapes may enable per-block collisions
+                if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                    Block *block = NULL;
+                    SHAPE_COORDS_INT3_T blockCoords;
+                    float3 normal;
+                    const float swept = shape_box_swept(hitShape,
+                                                        &modelBox,
+                                                        &modelVector,
+                                                        &modelEpsilon,
+                                                        false,
+                                                        &normal,
+                                                        NULL,
+                                                        &block,
+                                                        &blockCoords);
+                    if (swept < 1.0f) {
+                        hit.hitTr = hitTr;
+                        hit.block = block;
+                        hit.distance = swept * maxDist;
+                        hit.type = CastHit_Block;
+                        hit.blockCoords = blockCoords;
+                        hit.faceTouched = utils_aligned_normal_to_face(&normal);
+                    }
+                } else {
+                    const float swept = box_swept(&modelBox,
+                                                  &modelVector,
+                                                  rigidbody_get_collider(hitRb),
+                                                  &modelEpsilon,
+                                                  true,
+                                                  NULL,
+                                                  NULL);
+                    if (swept < 1.0f) {
+                        hit.hitTr = hitTr;
+                        hit.distance = swept * maxDist;
+                        hit.type = CastHit_CollisionBox;
+                    }
+                }
+            }
+        }
+    }
+
+    if (result != NULL) {
+        *result = hit;
+    }
+
+    return hit.type;
 }
 
 // MARK: - Debug -
-// #if DEBUG_SCENE
-//
-// int debug_scene_get_awake_queries(void) {
-//     return debug_scene_awake_queries;
-// }
-//
-// void debug_scene_reset_calls(void) {
-//     debug_scene_awake_queries = 0;
-// }
-//
-// #endif
+#if DEBUG_SCENE
+
+int debug_scene_get_awake_queries(void) {
+    return debug_scene_awake_queries;
+}
+
+void debug_scene_reset_calls(void) {
+    debug_scene_awake_queries = 0;
+}
+
+#endif

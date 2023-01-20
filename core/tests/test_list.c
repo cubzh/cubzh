@@ -306,7 +306,6 @@ TEST_LIST = {
     // shape
     {"shape_make", test_shape_make},
     {"shape_make_copy", test_shape_make_copy},
-    {"shape_make_with_fixed_size", test_shape_make_with_fixed_size},
     {"shape_make_with_octree", test_shape_make_with_octree},
     {"shape_set_transform", test_shape_set_transform},
     {"shape_retain", test_shape_retain},
@@ -315,8 +314,6 @@ TEST_LIST = {
     {"shape_get_palette", test_shape_get_palette},
     {"shape_remove_block", test_shape_remove_block},
     {"shape_get_bounding_box_size", test_shape_get_bounding_box_size},
-    {"shape_get_fixed_size", test_shape_get_fixed_size},
-    {"shape_is_within_fixed_bounds", test_shape_is_within_fixed_bounds},
     {"shape_get_model_aabb", test_shape_get_model_aabb},
     {"shape_set_fullname", test_shape_set_fullname},
     {"shape_get_fullname", test_shape_get_fullname},

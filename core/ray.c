@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "transform.h"
 #include "utils.h"
 
 enum DrivingAxis {
@@ -439,7 +440,15 @@ FACE_INDEX_INT_T ray_impacted_block_face(const float3 *impact, const float3 *ldf
 #endif
 }
 
-void ray_destroy(Ray *ray) {
+Ray *ray_world_to_local(const Ray *ray, Transform *t) {
+    float3 origin, dir;
+    transform_utils_position_wtl(t, ray->origin, &origin);
+    transform_utils_vector_wtl(t, ray->dir, &dir);
+    float3_normalize(&dir);
+    return ray_new(&origin, &dir);
+}
+
+void ray_free(Ray *ray) {
     if (ray != NULL) {
         free(ray->origin);
         free(ray->dir);

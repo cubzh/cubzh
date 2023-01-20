@@ -56,6 +56,8 @@ bool float_isZero(const float f, const float epsilon);
 bool utils_is_float_to_coords_inbounds(const float value);
 bool utils_is_float3_to_coords_inbounds(const float x, const float y, const float z);
 
+FACE_INDEX_INT_T utils_aligned_normal_to_face(const float3 *normal);
+
 // MARK: - Axes mask -
 
 typedef enum {

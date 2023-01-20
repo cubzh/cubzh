@@ -183,6 +183,7 @@
 		85E6389128F747A5001FC12F /* map_string_float3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = map_string_float3.h; path = ../../map_string_float3.h; sourceTree = "<group>"; };
 		85E6389228F747A5001FC12F /* rigidBody.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rigidBody.c; path = ../../rigidBody.c; sourceTree = "<group>"; };
 		85E6389328F747A5001FC12F /* serialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = serialization.h; path = ../../serialization.h; sourceTree = "<group>"; };
+		85EAE9FC297AB146004EB623 /* test_flood_fill_lighting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = test_flood_fill_lighting.h; path = ../test_flood_fill_lighting.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -326,6 +327,7 @@
 				85B30ECA29191DF10066E826 /* test_filo_list_uint32.h */,
 				85E6383628F7478E001FC12F /* test_float3.h */,
 				856811B22901360600BA8D9F /* test_float4.h */,
+				85EAE9FC297AB146004EB623 /* test_flood_fill_lighting.h */,
 				85E6383728F7478E001FC12F /* test_hash_uint32_int.h */,
 				856811AF2901360600BA8D9F /* test_int3.h */,
 				85E6383528F7478E001FC12F /* test_list.c */,

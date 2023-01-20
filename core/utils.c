@@ -70,6 +70,18 @@ bool utils_is_float3_to_coords_inbounds(const float x, const float y, const floa
            utils_is_float_to_coords_inbounds(z);
 }
 
+FACE_INDEX_INT_T utils_aligned_normal_to_face(const float3 *normal) {
+    // note: we use comparison between components instead of checking for 1's, to make sure we
+    // always return something even if it's an approximation, never return FACE_NONE
+    if (fabsf(normal->x) >= fabsf(normal->y) && fabsf(normal->x) >= fabsf(normal->z)) {
+        return normal->x > 0.0f ? FACE_RIGHT : FACE_LEFT;
+    } else if (fabsf(normal->y) >= fabsf(normal->x) && fabsf(normal->y) >= fabsf(normal->z)) {
+        return normal->y > 0.0f ? FACE_TOP : FACE_DOWN;
+    } else {
+        return normal->z > 0.0f ? FACE_FRONT : FACE_BACK;
+    }
+}
+
 void utils_axes_mask_set(uint8_t *mask, const uint8_t value, const bool toggle) {
     if (toggle) {
         *mask = *mask | value;

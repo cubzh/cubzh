@@ -59,7 +59,7 @@ struct _Transform {
 
     // TEMPORARY, NULL in most cases.
     // See comment where transform_get_or_compute_world_collider_function is defined
-    transform_get_or_compute_world_collider_function ptr_get_or_compute_world_collider;
+    transform_get_or_compute_world_collider_function ptr_get_or_compute_world_aligned_collider;
 
     // optionally create a weak ptr for this transform
     Weakptr *wptr;
@@ -90,7 +90,8 @@ struct _Transform {
     bool isHiddenBranch; /* 1 byte */
     bool isHiddenSelf;   /* 1 byte */
 
-    // can be used to describe the type of the ptr when defined
+    // can be used to describe anonymous ptr types TODO: review this vs. which TransformType to set
+    // for those
     uint8_t ptrType;
 
     bool animationsEnabled;
@@ -147,6 +148,8 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
                                                SquarifyType squarify);
 static void _transform_free(Transform *const t);
 
+// MARK: - Lifecycle -
+
 Transform *transform_make(TransformType type) {
     Transform *t = (Transform *)malloc(sizeof(Transform));
     if (t == NULL) {
@@ -169,7 +172,7 @@ Transform *transform_make(TransformType type) {
     t->ptr = NULL;
     t->ptrType = 0;
     t->ptr_free = NULL;
-    t->ptr_get_or_compute_world_collider = NULL;
+    t->ptr_get_or_compute_world_aligned_collider = NULL;
     t->wptr = NULL;
     t->type = type;
     t->isHiddenBranch = false;
@@ -196,7 +199,7 @@ Transform *transform_make_with_ptr(TransformType type,
 void transform_assign_get_or_compute_world_collider_function(
     Transform *t,
     transform_get_or_compute_world_collider_function f) {
-    t->ptr_get_or_compute_world_collider = f;
+    t->ptr_get_or_compute_world_aligned_collider = f;
 }
 
 Transform *transform_make_default() {
@@ -238,6 +241,24 @@ void transform_flush(Transform *t) {
     // note: keep t->ptr
 }
 
+Weakptr *transform_get_weakptr(Transform *t) {
+    if (t->wptr == NULL) {
+        t->wptr = weakptr_new(t);
+    }
+    return t->wptr;
+}
+
+Weakptr *transform_get_and_retain_weakptr(Transform *t) {
+    if (t->wptr == NULL) {
+        t->wptr = weakptr_new(t);
+    }
+    if (weakptr_retain(t->wptr)) {
+        return t->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
+}
+
 bool transform_is_hierarchy_dirty(Transform *t) {
     return _transform_get_dirty(t, TRANSFORM_MTX) || _transform_get_dirty(t, TRANSFORM_CHILDREN);
 }
@@ -264,6 +285,16 @@ void transform_refresh_children_done(Transform *t) {
     _transform_reset_dirty(t, TRANSFORM_CHILDREN);
 }
 
+void transform_reset_any_dirty(Transform *t) {
+    _transform_reset_dirty(t, TRANSFORM_ANY);
+}
+
+bool transform_is_any_dirty(Transform *t) {
+    return _transform_get_dirty(t, TRANSFORM_ANY);
+}
+
+// MARK: - Physics -
+
 void transform_reset_physics_dirty(Transform *t) {
     _transform_reset_dirty(t, TRANSFORM_PHYSICS);
 }
@@ -272,12 +303,89 @@ bool transform_is_physics_dirty(Transform *t) {
     return _transform_get_dirty(t, TRANSFORM_PHYSICS);
 }
 
-void transform_reset_any_dirty(Transform *t) {
-    _transform_reset_dirty(t, TRANSFORM_ANY);
+bool transform_ensure_rigidbody(Transform *t,
+                                uint8_t mode,
+                                uint8_t groups,
+                                uint8_t collidesWith,
+                                RigidBody **out) {
+    bool isNew = false;
+    if (t->rigidBody == NULL) {
+        t->rigidBody = rigidbody_new(mode, groups, collidesWith);
+        isNew = true;
+    } else {
+        rigidbody_set_simulation_mode(t->rigidBody, mode);
+        rigidbody_set_groups(t->rigidBody, groups);
+        rigidbody_set_collides_with(t->rigidBody, collidesWith);
+    }
+    if (out != NULL) {
+        *out = t->rigidBody;
+    }
+    return isNew;
 }
 
-bool transform_is_any_dirty(Transform *t) {
-    return _transform_get_dirty(t, TRANSFORM_ANY);
+RigidBody *transform_get_rigidbody(Transform *const t) {
+    return t->rigidBody;
+}
+
+RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider) {
+    if (t->ptr_get_or_compute_world_aligned_collider != NULL && t->ptr != NULL) {
+        return t->ptr_get_or_compute_world_aligned_collider(t->ptr, collider);
+    }
+
+    RigidBody *rb = NULL;
+    if (collider != NULL) {
+        *collider = box_zero;
+    }
+
+    // we can use collider cached in rtree leaf whenever possible, otherwise compute it
+    switch (transform_get_type(t)) {
+        case ColliderTransform: {
+            rb = transform_get_rigidbody(t);
+            if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
+                if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
+                    rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+
+                    if (rigidbody_is_dynamic(rb)) {
+                        transform_utils_box_to_dynamic_collider(
+                            t,
+                            rigidbody_get_collider(rb),
+                            collider,
+                            NULL,
+                            PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify);
+                    } else {
+                        transform_utils_box_to_static_collider(t,
+                                                               rigidbody_get_collider(rb),
+                                                               collider,
+                                                               NULL,
+                                                               false);
+                    }
+                } else {
+                    box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
+                }
+            }
+            break;
+        }
+        case ShapeTransform: {
+            Shape *s = (Shape *)transform_get_ptr(t);
+            if (s != NULL) {
+                rb = transform_get_rigidbody(t);
+                if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
+                    if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
+                        rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+
+                        shape_compute_world_collider(s, collider);
+                    } else {
+                        box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    return rb;
 }
 
 // MARK: - Hierarchy -
@@ -512,6 +620,9 @@ void transform_set_local_rotation(Transform *t, Quaternion *q) {
     quaternion_set(t->localRotation, q);
     _transform_reset_dirty(t, TRANSFORM_LOCAL_ROT);
     _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX);
+    if (rigidbody_is_rotation_dependent(t->rigidBody)) {
+        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    }
 }
 
 void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
@@ -537,6 +648,9 @@ void transform_set_rotation(Transform *t, Quaternion *q) {
     quaternion_set(t->rotation, q);
     _transform_reset_dirty(t, TRANSFORM_ROT);
     _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX);
+    if (rigidbody_is_rotation_dependent(t->rigidBody)) {
+        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    }
 }
 
 void transform_set_rotation_vec(Transform *t, const float4 *v) {
@@ -833,13 +947,13 @@ void transform_utils_box_to_dynamic_collider(Transform *t,
 #endif
 }
 
-Transform *transform_make_with_shape(Shape *ptr) {
+Transform *transform_utils_make_with_shape(Shape *ptr) {
     Transform *t = transform_make_with_ptr(ShapeTransform, ptr, 0, NULL);
     shape_set_transform(ptr, t);
     return t;
 }
 
-Shape *transform_get_shape(Transform *t) {
+Shape *transform_utils_get_shape(Transform *t) {
     if (t == NULL) {
         return NULL;
     }
@@ -849,96 +963,7 @@ Shape *transform_get_shape(Transform *t) {
     return (Shape *)t->ptr;
 }
 
-void transform_set_rigidbody(Transform *t, RigidBody *rb) {
-    if (t->rigidBody != NULL) {
-        rigidbody_free(t->rigidBody);
-    }
-    t->rigidBody = rb;
-}
-
-RigidBody *transform_get_rigidbody(Transform *const t) {
-    return t->rigidBody;
-}
-
-RigidBody *transform_get_or_compute_world_collider(Transform *t, Box *collider) {
-
-    if (t->ptr_get_or_compute_world_collider != NULL && t->ptr != NULL) {
-        return t->ptr_get_or_compute_world_collider(t->ptr, collider);
-    }
-
-    RigidBody *rb = NULL;
-    *collider = box_zero;
-
-    // we can use collider cached in rtree leaf whenever possible, otherwise compute it
-    switch (transform_get_type(t)) {
-        case ColliderTransform: {
-            rb = transform_get_rigidbody(t);
-            if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
-                    rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
-
-                    const bool squarify = rigidbody_get_collider_custom(rb) == false;
-                    if (rigidbody_is_dynamic(rb)) {
-                        transform_utils_box_to_dynamic_collider(t,
-                                                                rigidbody_get_collider(rb),
-                                                                collider,
-                                                                NULL,
-                                                                squarify ? MinSquarify
-                                                                         : NoSquarify);
-                    } else {
-                        transform_utils_box_to_static_collider(t,
-                                                               rigidbody_get_collider(rb),
-                                                               collider,
-                                                               NULL,
-                                                               squarify ? MinSquarify : NoSquarify);
-                    }
-                } else {
-                    box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
-                }
-            }
-            break;
-        }
-        case ShapeTransform: {
-            Shape *s = (Shape *)transform_get_ptr(t);
-            if (s != NULL) {
-                rb = transform_get_rigidbody(t);
-                if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                    if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
-                        rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
-
-                        shape_compute_world_collider(s, collider);
-                    } else {
-                        box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
-                    }
-                }
-            }
-            break;
-        }
-        default:
-            break;
-    }
-
-    return rb;
-}
-
-Weakptr *transform_get_weakptr(Transform *t) {
-    if (t->wptr == NULL) {
-        t->wptr = weakptr_new(t);
-    }
-    return t->wptr;
-}
-
-Weakptr *transform_get_and_retain_weakptr(Transform *t) {
-    if (t->wptr == NULL) {
-        t->wptr = weakptr_new(t);
-    }
-    if (weakptr_retain(t->wptr)) {
-        return t->wptr;
-    } else { // this can only happen if weakptr ref count is at max
-        // weak pointer could not be retained, return NULL not to reference it.
-        return NULL;
-    }
-}
+// MARK: - Misc. -
 
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled) {
     if (t == NULL) {
@@ -954,11 +979,7 @@ bool transform_getAnimationsEnabled(Transform *const t) {
     return t->animationsEnabled;
 }
 
-//
-//
 // MARK: - Private functions -
-//
-//
 
 static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
     t->dirty |= (flag | TRANSFORM_ANY);
@@ -1213,6 +1234,9 @@ static void _transform_remove_from_hierarchy(Transform *t, const bool keepWorld)
     }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+
 static void _transform_utils_box_to_aabox_lossy(Transform *t,
                                                 const Box *b,
                                                 Box *aab,
@@ -1326,6 +1350,8 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
     transform_refresh(t, false, true); // refresh ltw for intra-frame calculations
     box_to_aabox2(b, aab, transform_get_ltw(t), offset, squarify);
 }
+
+#pragma clang diagnostic pop
 
 static void _transform_free(Transform *const t) {
     if (t == NULL) {

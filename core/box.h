@@ -68,10 +68,10 @@ void box_set_broadphase_box(const Box *b, const float3 *v, Box *bpBox);
 float box_swept(const Box *movingBox,
                 const float3 *dv,
                 const Box *staticBox,
+                const float3 *epsilon,
                 const bool withReplacement,
                 float3 *normal,
-                float3 *extraReplacement,
-                const float epsilon);
+                float3 *extraReplacement);
 
 void box_get_size_int(const Box *b, int3 *i3);
 

@@ -112,17 +112,17 @@ void box_set_broadphase_box(const Box *b, const float3 *v, Box *bpBox) {
 
 /// Broadphase box hit test should be done before calling box_swept to avoid useless tests
 ///
-/// taken from Minetest
+/// Based on function from Minetest:
 /// https://github.com/minetest/minetest/blob/e2f8f4da83206d551f9acebd14d574ea37ca214a/src/collision.cpp#L62
 ///
-/// Notes on changes:
+/// Heavily modified for Cubzh engine, notes on changes:
 /// - parameter 'speed' is pre-multiplied by dt and corresponds to 'dv'
 /// - this implies that return value is a rate of dv, not a delta time
 /// - collision checks are a bit broadened from previously (1) to now (2),
 ///     (1) "movingBox is already colliding or going to collide w/ staticBox within collision
-///     tolerance d" (2) "movingBox is already colliding w/ staticBox regardless of collision
-///     tolerance, or going
-///         to collide w/ staticBox within collision tolerance d"
+///     tolerance d"
+///     (2) "movingBox is already colliding w/ staticBox regardless of collision
+///     tolerance, or going to collide w/ staticBox within collision tolerance d"
 ///     this is an important addendum since anything can be changed from Lua, thus
 ///     breaking the assumption that everything moves within their respective velocity
 /// - this allow us to perform a replacement step at the start of all trajectories,
@@ -135,10 +135,10 @@ void box_set_broadphase_box(const Box *b, const float3 *v, Box *bpBox) {
 float box_swept(const Box *movingBox,
                 const float3 *dv,
                 const Box *staticBox,
+                const float3 *epsilon,
                 const bool withReplacement,
                 float3 *normal,
-                float3 *extraReplacement,
-                const float epsilon) {
+                float3 *extraReplacement) {
 
     Box relBox;
     relBox.min.x = movingBox->min.x - staticBox->min.x;
@@ -170,12 +170,12 @@ float box_swept(const Box *movingBox,
         // if (relBox.max.x <= d                                             // note (1)
         //     || relBox.min.x <= staticBoxSize.x && relBox.max.x >= 0.0f) { // note (2)
         //  Which can be simplified to: relBox.min.x <= staticBoxSize.x
-        if (relBox.min.x + allowance.x < staticBoxSize.x - epsilon) { // note (3)
+        if (relBox.min.x + allowance.x < staticBoxSize.x - epsilon->x) { // note (3)
             const float swept = -relBox.max.x / dv->x;
-            if ((relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon) &&
-                (relBox.max.y + dv->y * swept > epsilon) &&
-                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon) &&
-                (relBox.max.z + dv->z * swept > epsilon)) {
+            if ((relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon->y) &&
+                (relBox.max.y + dv->y * swept > epsilon->y) &&
+                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon->z) &&
+                (relBox.max.z + dv->z * swept > epsilon->z)) {
 
                 if (normal != NULL) {
                     normal->x = -1.0f;
@@ -193,12 +193,12 @@ float box_swept(const Box *movingBox,
         // if (relBox.min.x >= staticBoxSize.x - d                           // note (1)
         //     || relBox.min.x <= staticBoxSize.x && relBox.max.x >= 0.0f) { // note (2)
         //  Which can be simplified to: relBox.max.x >= 0.0f
-        if (relBox.max.x + allowance.x > epsilon) { // note (3)
+        if (relBox.max.x + allowance.x > epsilon->x) { // note (3)
             const float swept = (staticBoxSize.x - relBox.min.x) / dv->x;
-            if ((relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon) &&
-                (relBox.max.y + dv->y * swept > epsilon) &&
-                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon) &&
-                (relBox.max.z + dv->z * swept > epsilon)) {
+            if ((relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon->y) &&
+                (relBox.max.y + dv->y * swept > epsilon->y) &&
+                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon->z) &&
+                (relBox.max.z + dv->z * swept > epsilon->z)) {
 
                 if (normal != NULL) {
                     normal->x = 1.0f;
@@ -231,12 +231,12 @@ float box_swept(const Box *movingBox,
 
     // Check for collision with Y- plane
     if (continueSweep && dv->y > 0.0f) {
-        if (relBox.min.y + allowance.y < staticBoxSize.y - epsilon) {
+        if (relBox.min.y + allowance.y < staticBoxSize.y - epsilon->y) {
             const float swept = -relBox.max.y / dv->y;
-            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon) &&
-                (relBox.max.x + dv->x * swept > epsilon) &&
-                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon) &&
-                (relBox.max.z + dv->z * swept > epsilon)) {
+            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon->x) &&
+                (relBox.max.x + dv->x * swept > epsilon->x) &&
+                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon->z) &&
+                (relBox.max.z + dv->z * swept > epsilon->z)) {
 
                 if (swept < result) {
                     if (normal != NULL) {
@@ -253,12 +253,12 @@ float box_swept(const Box *movingBox,
     }
     // Check for collision with Y+ plane
     else if (continueSweep && dv->y < 0.0f) {
-        if (relBox.max.y + allowance.y >= epsilon) {
+        if (relBox.max.y + allowance.y >= epsilon->y) {
             const float swept = (staticBoxSize.y - relBox.min.y) / dv->y;
-            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon) &&
-                (relBox.max.x + dv->x * swept > epsilon) &&
-                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon) &&
-                (relBox.max.z + dv->z * swept > epsilon)) {
+            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon->x) &&
+                (relBox.max.x + dv->x * swept > epsilon->x) &&
+                (relBox.min.z + dv->z * swept < staticBoxSize.z - epsilon->z) &&
+                (relBox.max.z + dv->z * swept > epsilon->z)) {
 
                 if (swept < result) {
                     if (normal != NULL) {
@@ -292,12 +292,12 @@ float box_swept(const Box *movingBox,
 
     // Check for collision with Z- plane
     if (continueSweep && dv->z > 0.0f) {
-        if (relBox.min.z + allowance.z <= staticBoxSize.z - epsilon) {
+        if (relBox.min.z + allowance.z <= staticBoxSize.z - epsilon->z) {
             const float swept = -relBox.max.z / dv->z;
-            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon) &&
-                (relBox.max.x + dv->x * swept > epsilon) &&
-                (relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon) &&
-                (relBox.max.y + dv->y * swept > epsilon)) {
+            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon->x) &&
+                (relBox.max.x + dv->x * swept > epsilon->x) &&
+                (relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon->y) &&
+                (relBox.max.y + dv->y * swept > epsilon->y)) {
 
                 if (swept < result) {
                     if (normal != NULL) {
@@ -312,12 +312,12 @@ float box_swept(const Box *movingBox,
     }
     // Check for collision with Z+ plane
     else if (continueSweep && dv->z < 0.0f) {
-        if (relBox.max.z + allowance.z >= epsilon) {
+        if (relBox.max.z + allowance.z >= epsilon->z) {
             const float swept = (staticBoxSize.z - relBox.min.z) / dv->z;
-            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon) &&
-                (relBox.max.x + dv->x * swept > epsilon) &&
-                (relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon) &&
-                (relBox.max.y + dv->y * swept > epsilon)) {
+            if ((relBox.min.x + dv->x * swept < staticBoxSize.x - epsilon->x) &&
+                (relBox.max.x + dv->x * swept > epsilon->x) &&
+                (relBox.min.y + dv->y * swept < staticBoxSize.y - epsilon->y) &&
+                (relBox.max.y + dv->y * swept > epsilon->y)) {
 
                 if (swept < result) {
                     if (normal != NULL) {

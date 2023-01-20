@@ -25,27 +25,27 @@ typedef struct Ray {
 } Ray;
 
 typedef struct _BresenhamIterator BresenhamIterator;
+typedef struct _Transform Transform;
 
 Ray *ray_new(const float3 *origin, const float3 *dir);
-
-// ray_destroy should be used instead of free() to avoid memory leak
-// because Ray allocates memory for invdir (Vect3D)
-void ray_destroy(Ray *ray);
+void ray_free(Ray *ray);
 
 // ray_intersect_with_box returns if given ray intersects with box
 // identified by ldf and rtb corners.
 // ldf: left-down-front
 // rtb: right-top-back
-// distance and face can be NULL
+// distance can be NULL
 bool ray_intersect_with_box(const Ray *ray, const float3 *ldf, const float3 *rtb, float *distance);
 
 void ray_impact_point(const Ray *ray, const float impactDistance, float3 *f3);
 
-/// /!\ Assumption in this function: impact & ldf are points in the same local space, so that we
-/// don't need to compute everything eg. we know the planes normal in a 1-block, no need to use
+/// /!\ Assumption in this function: impact & ldf are points in the same space as the block, so that
+/// we don't need to compute everything eg. we know the planes normal in a 1-block, no need to use
 /// cross products to get them
 /// @returns block face touched by impact point
 FACE_INDEX_INT_T ray_impacted_block_face(const float3 *impact, const float3 *ldf);
+
+Ray *ray_world_to_local(const Ray *ray, Transform *t);
 
 #ifdef __cplusplus
 } // extern "C"

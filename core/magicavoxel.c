@@ -132,7 +132,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             cclog_error("at least of the given shapes is NULL");
             return false;
         }
-        shape_get_fixed_size(shapes[i], &shape_size);
+        shape_get_allocated_size(shapes[i], &shape_size);
         if (shape_size.x > 256 || shape_size.y > 256 || shape_size.z > 256) {
             cclog_error("shape is too big, can't export for magicavoxel");
             return false;
@@ -239,7 +239,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         palette = shape_get_palette(src);
         paletteConversionMap = paletteConversionMaps[i];
 
-        shape_get_fixed_size(src, &shape_size);
+        shape_get_allocated_size(src, &shape_size);
 
         _writeVoxChunkHeader("SIZE", size_bytes, 0, out);
 
@@ -802,12 +802,11 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_octree((uint16_t)sizeX,
-                                  (uint16_t)sizeY,
-                                  (uint16_t)sizeZ,
+    *out = shape_make_with_octree((SHAPE_SIZE_INT_T)sizeX,
+                                  (SHAPE_SIZE_INT_T)sizeY,
+                                  (SHAPE_SIZE_INT_T)sizeZ,
                                   false,
-                                  isMutable,
-                                  true);
+                                  isMutable);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);

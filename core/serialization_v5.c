@@ -504,16 +504,13 @@ uint32_t chunk_v5_read_shape(Stream *s,
                                                     height,
                                                     depth,
                                                     shapeSettings->lighting,
-                                                    shapeSettings->isMutable,
-                                                    shapeSettings->limitSize == false);
-                } else if (shapeSettings->limitSize) {
-                    *shape = shape_make_with_fixed_size(width,
-                                                        height,
-                                                        depth,
-                                                        shapeSettings->lighting,
-                                                        shapeSettings->isMutable);
+                                                    shapeSettings->isMutable);
                 } else {
-                    *shape = shape_make();
+                    *shape = shape_make_with_size(width,
+                                                  height,
+                                                  depth,
+                                                  shapeSettings->lighting,
+                                                  shapeSettings->isMutable);
                 }
                 if (serializedPalette != NULL) {
                     shape_set_palette(*shape, serializedPalette);
@@ -635,9 +632,6 @@ uint32_t chunk_v5_read_shape(Stream *s,
     if (shape_uses_baked_lighting(*shape)) {
         if (lightingData == NULL) {
             cclog_warning("shape uses lighting but no baked lighting found");
-        } else if (shapeSettings->octree == false && shapeSettings->limitSize == false) {
-            cclog_warning("shape uses lighting but does not have a fixed size");
-            free(lightingData);
         } else if ((lightingDataSizeRead - 4) !=
                    (uint32_t)(width * height * depth * (uint16_t)sizeof(VERTEX_LIGHT_STRUCT_T))) {
             cclog_warning("shape uses lighting but does not match lighting data size");
