@@ -1783,9 +1783,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
             for (int32_t y = start.y; y < end.y; y++) {
                 for (int32_t z = start.z; z < end.z; z++) {
                     *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_without_checking(shape,
-                                                                                          x,
-                                                                                          y,
-                                                                                          z);
+                                                                                          (SHAPE_COORDS_INT_T)x,
+                                                                                          (SHAPE_COORDS_INT_T)y,
+                                                                                          (SHAPE_COORDS_INT_T)z);
                     cursor = (void *)((VERTEX_LIGHT_STRUCT_T *)cursor + 1);
                 }
             }

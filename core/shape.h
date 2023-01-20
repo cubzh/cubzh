@@ -83,15 +83,15 @@ Shape *shape_make(void);
 // Creates a copy of the given shape
 Shape *shape_make_copy(Shape *origin);
 // Creates a shape with known size and optional lighting
-Shape *shape_make_with_size(const uint16_t width,
-                            const uint16_t height,
-                            const uint16_t depth,
+Shape *shape_make_with_size(const SHAPE_SIZE_INT_T width,
+                            const SHAPE_SIZE_INT_T height,
+                            const SHAPE_SIZE_INT_T depth,
                             bool lighting,
                             const bool isMutable);
 // Creates a shape with octree and optional lighting
-Shape *shape_make_with_octree(const uint16_t width,
-                              const uint16_t height,
-                              const uint16_t depth,
+Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
+                              const SHAPE_SIZE_INT_T height,
+                              const SHAPE_SIZE_INT_T depth,
                               bool lighting,
                               const bool isMutable);
 

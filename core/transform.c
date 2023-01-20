@@ -1234,6 +1234,9 @@ static void _transform_remove_from_hierarchy(Transform *t, const bool keepWorld)
     }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+
 static void _transform_utils_box_to_aabox_lossy(Transform *t,
                                                 const Box *b,
                                                 Box *aab,
@@ -1347,6 +1350,8 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
     transform_refresh(t, false, true); // refresh ltw for intra-frame calculations
     box_to_aabox2(b, aab, transform_get_ltw(t), offset, squarify);
 }
+
+#pragma clang diagnostic pop
 
 static void _transform_free(Transform *const t) {
     if (t == NULL) {

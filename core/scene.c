@@ -502,7 +502,7 @@ void scene_register_awake_block_box(Scene *sc,
                                     const SHAPE_COORDS_INT_T y,
                                     const SHAPE_COORDS_INT_T z) {
 
-    const Transform *t = shape_get_pivot_transform(shape);
+    Transform *t = shape_get_pivot_transform(shape);
 
     const float3 modelPoint = {x + 0.5f, y + 0.5f, z + 0.5f};
     float3 worldPoint;

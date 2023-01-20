@@ -802,7 +802,8 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_octree(sizeX, sizeY, sizeZ, false, isMutable);
+    *out = shape_make_with_octree((SHAPE_SIZE_INT_T)sizeX, (SHAPE_SIZE_INT_T)sizeY,
+                                  (SHAPE_SIZE_INT_T)sizeZ, false, isMutable);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);

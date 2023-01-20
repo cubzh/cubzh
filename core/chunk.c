@@ -44,9 +44,9 @@ struct _Chunk {
 void _vertex_light_get(Shape *transformWithShape,
                        Block *block,
                        const ColorPalette *palette,
-                       int x,
-                       int y,
-                       int z,
+                       SHAPE_COORDS_INT_T x,
+                       SHAPE_COORDS_INT_T y,
+                       SHAPE_COORDS_INT_T z,
                        VERTEX_LIGHT_STRUCT_T *vlight,
                        bool *aoCaster,
                        bool *lightCaster);
@@ -495,9 +495,10 @@ void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T x,
                          const CHUNK_COORDS_INT_T y,
                          const CHUNK_COORDS_INT_T z,
-                         int3 *pos) {
-    int3_set(pos, x, y, z);
-    int3_op_add(pos, chunk->pos);
+                         SHAPE_COORDS_INT3_T *pos) {
+    pos->x = x + (CHUNK_COORDS_INT_T)chunk->pos->x;
+    pos->y = y + (CHUNK_COORDS_INT_T)chunk->pos->y;
+    pos->z = z + (CHUNK_COORDS_INT_T)chunk->pos->z;
 }
 
 int chunk_get_nb_blocks(const Chunk *chunk) {
@@ -535,7 +536,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 #endif
 
     static Block *b;
-    static int3 pos; // block local position in shape
+    static SHAPE_COORDS_INT3_T pos; // block local position in shape
     static SHAPE_COLOR_INDEX_INT_T shapeColorIdx;
     static ATLAS_COLOR_INDEX_INT_T atlasColorIdx;
 
@@ -2345,9 +2346,9 @@ void chunk_get_inner_bounds(const Chunk *chunk,
 void _vertex_light_get(Shape *shape,
                        Block *block,
                        const ColorPalette *palette,
-                       int x,
-                       int y,
-                       int z,
+                       SHAPE_COORDS_INT_T x,
+                       SHAPE_COORDS_INT_T y,
+                       SHAPE_COORDS_INT_T z,
                        VERTEX_LIGHT_STRUCT_T *vlight,
                        bool *aoCaster,
                        bool *lightCaster) {

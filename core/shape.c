@@ -458,9 +458,9 @@ Shape *shape_make_with_size(const uint16_t width,
     return s;
 }
 
-Shape *shape_make_with_octree(const uint16_t width,
-                              const uint16_t height,
-                              const uint16_t depth,
+Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
+                              const SHAPE_SIZE_INT_T height,
+                              const SHAPE_SIZE_INT_T depth,
                               bool lighting,
                               const bool isMutable) {
 
@@ -2831,9 +2831,9 @@ float shape_box_swept(const Shape *s,
                     if (blockCoords != NULL) {
                         uint16_t x, y, z;
                         octree_iterator_get_current_position(oi, &x, &y, &z);
-                        blockCoords->x = x;
-                        blockCoords->y = y;
-                        blockCoords->z = z;
+                        blockCoords->x = (SHAPE_COORDS_INT_T)x;
+                        blockCoords->y = (SHAPE_COORDS_INT_T)y;
+                        blockCoords->z = (SHAPE_COORDS_INT_T)z;
                     }
                 }
 #if PHYSICS_EXTRA_REPLACEMENTS
@@ -2978,9 +2978,9 @@ bool shape_ray_cast(const Shape *sh,
     }
 
     if (coords != NULL) {
-        coords->x = _x;
-        coords->y = _y;
-        coords->z = _z;
+        coords->x = (SHAPE_COORDS_INT_T)_x;
+        coords->y = (SHAPE_COORDS_INT_T)_y;
+        coords->z = (SHAPE_COORDS_INT_T)_z;
     }
 
     ray_free(modelRay);
@@ -3133,7 +3133,7 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
     SHAPE_COORDS_INT3_T pos;
 
     // Sunlight sources: all blocks on x & z, one block above map limit & beyond the sides
-    pos.y = (int)s->maxHeight;
+    pos.y = (SHAPE_COORDS_INT_T)s->maxHeight;
     for (SHAPE_COORDS_INT_T x = -1; x <= s->maxWidth; ++x) {
         for (SHAPE_COORDS_INT_T z = -1; z <= s->maxDepth; ++z) {
             pos.x = x;
@@ -3159,7 +3159,7 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
     }
 
     // Then we run the regular light propagation algorithm
-    _light_propagate(s, NULL, NULL, q, -1, s->maxHeight, -1);
+    _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->maxHeight, -1);
 
     light_node_queue_free(q);
 
@@ -3377,9 +3377,9 @@ void shape_compute_baked_lighting_added_block(Shape *s,
     // check in the vicinity for any emissive block that would be affected by the added block
     Block *block = NULL;
     VERTEX_LIGHT_STRUCT_T light;
-    for (int xo = -1; xo <= 1; xo++) {
-        for (int yo = -1; yo <= 1; yo++) {
-            for (int zo = -1; zo <= 1; zo++) {
+    for (SHAPE_COORDS_INT_T xo = -1; xo <= 1; xo++) {
+        for (SHAPE_COORDS_INT_T yo = -1; yo <= 1; yo++) {
+            for (SHAPE_COORDS_INT_T zo = -1; zo <= 1; zo++) {
                 if (xo == 0 && yo == 0 && zo == 0) {
                     continue;
                 }
@@ -3455,11 +3455,11 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
         return;
     }
 
-    int3 i3;
+    SHAPE_COORDS_INT3_T i3;
     LightNodeQueue *lightQueue = light_node_queue_new();
 
     // changed values bounding box need to include both removed and added lights
-    int3 min, max;
+    SHAPE_COORDS_INT3_T min, max;
     min.x = max.x = x;
     min.y = max.y = y;
     min.z = max.z = z;
@@ -4630,9 +4630,9 @@ void _light_propagate(Shape *s,
             // 3x3x3-1=26) instead of the 6 that would occur on first propagation iteration, for
             // homogeneous self-lighting this is equivalent to simulating the first iteration
             // manually, to alter the way it initially spreads
-            for (int xo = -1; xo <= 1; xo++) {
-                for (int yo = -1; yo <= 1; yo++) {
-                    for (int zo = -1; zo <= 1; zo++) {
+            for (SHAPE_COORDS_INT_T xo = -1; xo <= 1; xo++) {
+                for (SHAPE_COORDS_INT_T yo = -1; yo <= 1; yo++) {
+                    for (SHAPE_COORDS_INT_T zo = -1; zo <= 1; zo++) {
                         insertPos.x = pos.x + xo;
                         insertPos.y = pos.y + yo;
                         insertPos.z = pos.z + zo;

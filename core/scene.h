@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-#include "camera.h"
 #include "fifo_list.h"
 #include "rigidBody.h"
 #include "rtree.h"
