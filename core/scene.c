@@ -551,13 +551,14 @@ CastHitType scene_cast_ray(Scene *sc, const Ray *worldRay, uint8_t groups,
     if (rtree_query_cast_all_ray(sc->rtree, worldRay, PHYSICS_GROUP_NONE, groups, filterOutTransforms, sceneQuery) > 0) {
         // sort query results by distance
         doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
+        // TODO: re-enable optim to only evaluate hits based on distance relevance vs. per-block shapes
 
         // process query results in order, this function only returns first hit block or collision box
         DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
         RtreeCastResult *rtreeHit;
         Transform *hitTr;
         RigidBody *hitRb;
-        while (n != NULL && hit.type == CastHit_None) {
+        while (n != NULL /*&& hit.type == CastHit_None*/) {
             rtreeHit = (RtreeCastResult*) doubly_linked_list_node_pointer(n);
             hitTr = (Transform *) rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
             hitRb = transform_get_rigidbody(hitTr);
@@ -565,15 +566,17 @@ CastHitType scene_cast_ray(Scene *sc, const Ray *worldRay, uint8_t groups,
             const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
 
             if (mode == RigidbodyMode_Dynamic) {
-                hit.hitTr = hitTr;
-                hit.distance = rtreeHit->distance;
-                hit.type = CastHit_CollisionBox;
+                if (rtreeHit->distance < hit.distance) {
+                    hit.hitTr = hitTr;
+                    hit.distance = rtreeHit->distance;
+                    hit.type = CastHit_CollisionBox;
+                }
             } else if (transform_get_type(hitTr) == ShapeTransform &&
                        rigidbody_uses_per_block_collisions(transform_get_rigidbody(hitTr))) {
 
                 CastResult blockHit;
                 Block *b = scene_cast_ray_shape_only(sc, transform_utils_get_shape(hitTr), worldRay, &blockHit);
-                if (b != NULL) {
+                if (b != NULL && blockHit.distance < hit.distance) {
                     hit = blockHit;
                 }
             } else {
@@ -594,9 +597,12 @@ CastHitType scene_cast_ray(Scene *sc, const Ray *worldRay, uint8_t groups,
                     float3 worldVector; transform_utils_vector_ltw(modelTr, &modelVector,
                                                                    &worldVector);
 
-                    hit.hitTr = hitTr;
-                    hit.distance = float3_length(&worldVector);
-                    hit.type = CastHit_CollisionBox;
+                    distance = float3_length(&worldVector);
+                    if (distance < hit.distance) {
+                        hit.hitTr = hitTr;
+                        hit.distance = distance;
+                        hit.type = CastHit_CollisionBox;
+                    }
                 }
 
                 ray_free(modelRay);
@@ -658,6 +664,7 @@ CastHitType scene_cast_box(Scene *sc, const Box *aabb, const float3 *unit, float
         return CastHit_None;
     }
 
+    // TODO: box cast needs to return all hits, so that we can evaluate based on distance relevance vs. per-block shapes
     RtreeCastResult firstHit = { NULL, FLT_MAX };
     if (rtree_query_cast_box(sc->rtree, aabb, unit, maxDist, PHYSICS_GROUP_NONE, groups,
                              filterOutTransforms, &firstHit)) {
