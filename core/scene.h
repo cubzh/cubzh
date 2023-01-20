@@ -10,12 +10,12 @@
 extern "C" {
 #endif
 
+#include "camera.h"
 #include "fifo_list.h"
+#include "rigidBody.h"
 #include "rtree.h"
 #include "shape.h"
 #include "utils.h"
-#include "rigidBody.h"
-#include "camera.h"
 
 #if DEBUG
 #define DEBUG_SCENE true
@@ -113,11 +113,22 @@ typedef struct {
 } CastResult;
 CastResult scene_cast_result_default();
 
-CastHitType scene_cast_ray(Scene *sc, const Ray *worldRay, uint8_t groups,
-                           const DoublyLinkedList *filterOutTransforms, CastResult *result);
-Block *scene_cast_ray_shape_only(Scene *sc, const Shape *sh, const Ray *worldRay, CastResult *result);
-CastHitType scene_cast_box(Scene *sc, const Box *aabb, const float3 *unit, float maxDist, uint8_t groups,
-                           const DoublyLinkedList *filterOutTransforms, CastResult *result);
+CastHitType scene_cast_ray(Scene *sc,
+                           const Ray *worldRay,
+                           uint8_t groups,
+                           const DoublyLinkedList *filterOutTransforms,
+                           CastResult *result);
+Block *scene_cast_ray_shape_only(Scene *sc,
+                                 const Shape *sh,
+                                 const Ray *worldRay,
+                                 CastResult *result);
+CastHitType scene_cast_box(Scene *sc,
+                           const Box *aabb,
+                           const float3 *unit,
+                           float maxDist,
+                           uint8_t groups,
+                           const DoublyLinkedList *filterOutTransforms,
+                           CastResult *result);
 
 // MARK: - Debug -
 #if DEBUG_RIGIDBODY

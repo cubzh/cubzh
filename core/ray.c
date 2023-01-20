@@ -9,8 +9,8 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "utils.h"
 #include "transform.h"
+#include "utils.h"
 
 enum DrivingAxis {
     XDrivingAxis = 0,

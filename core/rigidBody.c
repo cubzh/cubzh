@@ -170,11 +170,9 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
 
     const float3 constantAcceleration = *scene_get_constant_acceleration(scene);
 
-    f3 = (float3){
-        (constantAcceleration.x + rb->constantAcceleration->x) * dt_f,
-        (constantAcceleration.y + rb->constantAcceleration->y) * dt_f,
-        (constantAcceleration.z + rb->constantAcceleration->z) * dt_f
-    };
+    f3 = (float3){(constantAcceleration.x + rb->constantAcceleration->x) * dt_f,
+                  (constantAcceleration.y + rb->constantAcceleration->y) * dt_f,
+                  (constantAcceleration.z + rb->constantAcceleration->z) * dt_f};
     float3_op_add(rb->velocity, &f3);
 
     // ------------------------
@@ -305,7 +303,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                 }
 
                 const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
-                const bool isTrigger = mode == RigidbodyMode_Trigger || mode == RigidbodyMode_TriggerPerBlock;
+                const bool isTrigger = mode == RigidbodyMode_Trigger ||
+                                       mode == RigidbodyMode_TriggerPerBlock;
                 vx_assert(mode > RigidbodyMode_Disabled);
 
                 if (isTrigger && rigidbody_has_callbacks(hitRb) == false) {
@@ -327,11 +326,15 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
 
                     // solve non-dynamic rigidbodies in their model space (rotated collider)
                     const Box *collider = rigidbody_get_collider(hitRb);
-                    const Matrix4x4 *invModel = transform_get_wtl(shape != NULL ?
-                                                                  shape_get_pivot_transform(shape) :
-                                                                  hitLeaf);
-                    rigidbody_broadphase_world_to_model(invModel, worldCollider, &modelBox, &dv, &modelDv,
-                                                        EPSILON_COLLISION, &modelEpsilon);
+                    const Matrix4x4 *invModel = transform_get_wtl(
+                        shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
+                    rigidbody_broadphase_world_to_model(invModel,
+                                                        worldCollider,
+                                                        &modelBox,
+                                                        &dv,
+                                                        &modelDv,
+                                                        EPSILON_COLLISION,
+                                                        &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
                     if (box_collide(&modelBroadphase, collider)) {
@@ -356,8 +359,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                                               NULL);
                         }
 
-                        model = transform_get_ltw(shape != NULL ?
-                                                  shape_get_pivot_transform(shape) : hitLeaf);
+                        model = transform_get_ltw(shape != NULL ? shape_get_pivot_transform(shape)
+                                                                : hitLeaf);
                     } else {
                         swept = 1.0f;
                     }
@@ -372,11 +375,14 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                         matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
                         float3_normalize(&wNormal);
 
-                        if (fabsf(wNormal.x) >= fabsf(wNormal.y) && fabsf(wNormal.x) >= fabsf(wNormal.z)) {
+                        if (fabsf(wNormal.x) >= fabsf(wNormal.y) &&
+                            fabsf(wNormal.x) >= fabsf(wNormal.z)) {
                             selfBoxSide = wNormal.x > 0.0f ? AxesMaskNX : AxesMaskX;
-                        }else if (fabsf(wNormal.y) >= fabsf(wNormal.x) && fabsf(wNormal.y) >= fabsf(wNormal.z)) {
+                        } else if (fabsf(wNormal.y) >= fabsf(wNormal.x) &&
+                                   fabsf(wNormal.y) >= fabsf(wNormal.z)) {
                             selfBoxSide = wNormal.y > 0.0f ? AxesMaskNY : AxesMaskY;
-                        } else if (fabsf(wNormal.z) >= fabsf(wNormal.x) && fabsf(wNormal.z) >= fabsf(wNormal.y)) {
+                        } else if (fabsf(wNormal.z) >= fabsf(wNormal.x) &&
+                                   fabsf(wNormal.z) >= fabsf(wNormal.y)) {
                             selfBoxSide = wNormal.z > 0.0f ? AxesMaskNZ : AxesMaskZ;
                         }
 
@@ -414,13 +420,14 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
         // a replaced component will become "in contact" after replacement (setting swept to 0)
 
         if (minSwept < 0.0f /*|| float3_isZero(&extraReplacement3, EPSILON_ZERO) == false*/) {
-            f3 = dv;//extraReplacement3;
+            f3 = dv; // extraReplacement3;
             float3_op_scale(&f3, minSwept);
             minSwept = 0.0f;
 
 #if PHYSICS_MASS_REPLACEMENTS
             // prioritize replacing inferior mass rigidbody
-            if (contact.rb != NULL && rigidbody_is_dynamic(contact.rb) && contact.rb->mass < rb->mass) {
+            if (contact.rb != NULL && rigidbody_is_dynamic(contact.rb) &&
+                contact.rb->mass < rb->mass) {
                 float3_op_scale(&f3, -1.0f);
                 float3_op_add(contact.rb->velocity, &f3);
                 rigidbody_non_kinematic_reset(contact.rb);
@@ -488,30 +495,27 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
             // split intruding & tangential displacements
             const float intruding_mag = float3_dot_product(&remainder, &wNormal);
             const float vIntruding_mag = float3_dot_product(rb->velocity, &wNormal);
-            const float3 intruding = (float3) {
-                wNormal.x * intruding_mag,
-                wNormal.y * intruding_mag,
-                wNormal.z * intruding_mag
-            };
-            const float3 tangential = (float3) {
-                remainder.x - intruding.x,
-                remainder.y - intruding.y,
-                remainder.z - intruding.z
-            };
-            const float3 vIntruding = (float3) {
-                wNormal.x * vIntruding_mag,
-                wNormal.y * vIntruding_mag,
-                wNormal.z * vIntruding_mag
-            };
+            const float3 intruding = (float3){wNormal.x * intruding_mag,
+                                              wNormal.y * intruding_mag,
+                                              wNormal.z * intruding_mag};
+            const float3 tangential = (float3){remainder.x - intruding.x,
+                                               remainder.y - intruding.y,
+                                               remainder.z - intruding.z};
+            const float3 vIntruding = (float3){wNormal.x * vIntruding_mag,
+                                               wNormal.y * vIntruding_mag,
+                                               wNormal.z * vIntruding_mag};
 
             // combined friction & bounciness
-            const float friction = contact.rb != NULL ?
-                                   rigidbody_get_combined_friction(rb, contact.rb) : rb->friction;
-            const float bounciness = contact.rb != NULL ?
-                                     rigidbody_get_combined_bounciness(rb, contact.rb) : rb->bounciness;
+            const float friction = contact.rb != NULL
+                                       ? rigidbody_get_combined_friction(rb, contact.rb)
+                                       : rb->friction;
+            const float bounciness = contact.rb != NULL
+                                         ? rigidbody_get_combined_bounciness(rb, contact.rb)
+                                         : rb->bounciness;
 
-            // (1) apply combined friction on tangential displacement, assign tangential push if displacement
-            // originated at least partly from own velocity, not only motion or scene constant
+            // (1) apply combined friction on tangential displacement, assign tangential push if
+            // displacement originated at least partly from own velocity, not only motion or scene
+            // constant
             dv = tangential;
             float3_op_substract(rb->velocity, &vIntruding);
 
@@ -520,24 +524,21 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
 
             if (float3_isZero(rb->velocity, EPSILON_ZERO) == false) {
                 push3 = tangential;
-                //float3_op_scale(&push3, 1.0f - friction);
+                // float3_op_scale(&push3, 1.0f - friction);
             } else {
                 push3 = float3_zero;
             }
 
             // (2) apply combined bounciness on intruding displacement, add leftover to push ;
-            // minor bounce responses are muffled forecasting w/ approximate contribution from accelerations
-            const float3 vBounce = (float3){
-                -vIntruding.x * bounciness,
-                -vIntruding.y * bounciness,
-                -vIntruding.z * bounciness
-            };
+            // minor bounce responses are muffled forecasting w/ approximate contribution from
+            // accelerations
+            const float3 vBounce = (float3){-vIntruding.x * bounciness,
+                                            -vIntruding.y * bounciness,
+                                            -vIntruding.z * bounciness};
             if (float3_sqr_length(&vBounce) > PHYSICS_BOUNCE_SQR_THRESHOLD) {
-                const float3 bounce = (float3){
-                    -intruding.x * bounciness,
-                    -intruding.y * bounciness,
-                    -intruding.z * bounciness
-                };
+                const float3 bounce = (float3){-intruding.x * bounciness,
+                                               -intruding.y * bounciness,
+                                               -intruding.z * bounciness};
 
                 float3_op_add(&dv, &bounce);
                 float3_op_add(rb->velocity, &vBounce);
@@ -573,7 +574,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                 rigidbody_apply_push(contact.rb, &push3);*/
             }
 
-            // (4) reset contact mask if there was any motion, then update new contact along self's box
+            // (4) reset contact mask if there was any motion, then update new contact along self's
+            // box
             if (minSwept > 0.0f) {
                 if (float_isZero(dv.x, EPSILON_ZERO) != false) {
                     utils_axes_mask_set(&rb->contact, dv.x ? AxesMaskNX : AxesMaskX, false);
@@ -1061,7 +1063,8 @@ void rigidbody_set_collides_with(RigidBody *rb, uint8_t value) {
 }
 
 uint8_t rigidbody_get_simulation_mode(const RigidBody *rb) {
-    return rb != NULL ? _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) : RigidbodyMode_Disabled;
+    return rb != NULL ? _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE)
+                      : RigidbodyMode_Disabled;
 }
 
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value) {
@@ -1148,13 +1151,13 @@ bool rigidbody_is_collider_valid(const RigidBody *rb) {
 }
 
 bool rigidbody_is_enabled(const RigidBody *rb) {
-    return rb != NULL && _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled;
+    return rb != NULL &&
+           _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled;
 }
 
 bool rigidbody_has_callbacks(const RigidBody *rb) {
-    return rb != NULL &&
-           (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||
-            _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED));
+    return rb != NULL && (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||
+                          _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED));
 }
 
 bool rigidbody_is_active_trigger(const RigidBody *rb) {
@@ -1165,8 +1168,9 @@ bool rigidbody_is_active_trigger(const RigidBody *rb) {
 
 bool rigidbody_is_rotation_dependent(const RigidBody *rb) {
     return rb != NULL &&
-        _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled &&
-        _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Dynamic;
+           _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) !=
+               RigidbodyMode_Disabled &&
+           _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Dynamic;
 }
 
 bool rigidbody_is_dynamic(const RigidBody *rb) {
@@ -1175,9 +1179,10 @@ bool rigidbody_is_dynamic(const RigidBody *rb) {
 }
 
 bool rigidbody_uses_per_block_collisions(const RigidBody *rb) {
-    return rb != NULL &&
-           (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_TriggerPerBlock ||
-            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_StaticPerBlock);
+    return rb != NULL && (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) ==
+                              RigidbodyMode_TriggerPerBlock ||
+                          _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) ==
+                              RigidbodyMode_StaticPerBlock);
 }
 
 // MARK: - Utils -
@@ -1308,8 +1313,8 @@ void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value) {
 }
 
 void rigidbody_apply_push(RigidBody *rb, const float3 *value) {
-    // a PUSH ensures a given velocity at minimum and is not additive, to emulate the principle of both
-    // objects possibly moving already in the same direction
+    // a PUSH ensures a given velocity at minimum and is not additive, to emulate the principle of
+    // both objects possibly moving already in the same direction
     if ((value->x > 0 && value->x > rb->velocity->x) ||
         (value->x < 0 && value->x < rb->velocity->x)) {
         rb->velocity->x = value->x;
@@ -1324,13 +1329,17 @@ void rigidbody_apply_push(RigidBody *rb, const float3 *value) {
     }
 }
 
-void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, Box *outBox,
-                                         const float3 *worldVector, float3 *outVector, float epsilon,
+void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel,
+                                         const Box *worldBox,
+                                         Box *outBox,
+                                         const float3 *worldVector,
+                                         float3 *outVector,
+                                         float epsilon,
                                          float3 *outEpsilon3) {
 
     box_to_aabox2(worldBox, outBox, invModel, &float3_zero, NoSquarify);
     matrix4x4_op_multiply_vec_vector(outVector, worldVector, invModel);
-    const float3 epsilon3 = (float3){ epsilon, epsilon, epsilon };
+    const float3 epsilon3 = (float3){epsilon, epsilon, epsilon};
     matrix4x4_op_multiply_vec_vector(outEpsilon3, &epsilon3, invModel);
 }
 

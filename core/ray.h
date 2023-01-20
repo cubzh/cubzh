@@ -39,8 +39,8 @@ bool ray_intersect_with_box(const Ray *ray, const float3 *ldf, const float3 *rtb
 
 void ray_impact_point(const Ray *ray, const float impactDistance, float3 *f3);
 
-/// /!\ Assumption in this function: impact & ldf are points in the same space as the block, so that we
-/// don't need to compute everything eg. we know the planes normal in a 1-block, no need to use
+/// /!\ Assumption in this function: impact & ldf are points in the same space as the block, so that
+/// we don't need to compute everything eg. we know the planes normal in a 1-block, no need to use
 /// cross products to get them
 /// @returns block face touched by impact point
 FACE_INDEX_INT_T ray_impacted_block_face(const float3 *impact, const float3 *ldf);

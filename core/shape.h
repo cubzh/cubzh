@@ -352,7 +352,10 @@ DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
 RigidBody *shape_get_rigidbody(const Shape *s);
 uint8_t shape_get_collision_groups(const Shape *s);
-bool shape_ensure_rigidbody(Shape *s, const uint8_t groups, const uint8_t collidesWith, RigidBody **out);
+bool shape_ensure_rigidbody(Shape *s,
+                            const uint8_t groups,
+                            const uint8_t collidesWith,
+                            RigidBody **out);
 void shape_fit_collider_to_bounding_box(const Shape *s);
 const Box *shape_get_local_collider(const Shape *s);
 void shape_compute_world_collider(const Shape *s, Box *box);
@@ -434,13 +437,21 @@ bool shape_uses_baked_lighting(const Shape *s);
 bool shape_has_baked_lighting_data(const Shape *s);
 const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s);
 void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d);
-VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, SHAPE_COORDS_INT_T x,
-                                                       SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z);
-void shape_set_light(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z,
+VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s,
+                                                       SHAPE_COORDS_INT_T x,
+                                                       SHAPE_COORDS_INT_T y,
+                                                       SHAPE_COORDS_INT_T z);
+void shape_set_light(Shape *s,
+                     SHAPE_COORDS_INT_T x,
+                     SHAPE_COORDS_INT_T y,
+                     SHAPE_COORDS_INT_T z,
                      VERTEX_LIGHT_STRUCT_T light);
 // helper function that returns light or default light if pos out of bounds or if isDefault
-VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
-                                                 SHAPE_COORDS_INT_T z, bool isDefault);
+VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s,
+                                                 SHAPE_COORDS_INT_T x,
+                                                 SHAPE_COORDS_INT_T y,
+                                                 SHAPE_COORDS_INT_T z,
+                                                 bool isDefault);
 
 /// Block removal may open up sunlight or emission propagation, and/or remove emission sources
 void shape_compute_baked_lighting_removed_block(Shape *s,

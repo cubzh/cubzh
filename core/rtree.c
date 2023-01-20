@@ -736,9 +736,13 @@ void rtree_refresh_collision_masks(Rtree *r) {
 
 // MARK: Queries
 
-size_t rtree_query_overlap_func(Rtree *r, uint8_t groups, uint8_t collidesWith,
-                                pointer_rtree_query_overlap_func func, void *ptr,
-                                FifoList *results, float epsilon) {
+size_t rtree_query_overlap_func(Rtree *r,
+                                uint8_t groups,
+                                uint8_t collidesWith,
+                                pointer_rtree_query_overlap_func func,
+                                void *ptr,
+                                FifoList *results,
+                                float epsilon) {
 
     FifoList *toExamine = fifo_list_new();
     DoublyLinkedListNode *n;
@@ -781,8 +785,12 @@ bool _rtree_query_overlap_box_func(RtreeNode *rn, void *ptr, float epsilon) {
     return box_collide_epsilon(rn->aabb, (Box *)ptr, epsilon);
 }
 
-size_t rtree_query_overlap_box(Rtree *r, const Box *aabb, uint8_t groups, uint8_t collidesWith,
-                               FifoList *results, float epsilon) {
+size_t rtree_query_overlap_box(Rtree *r,
+                               const Box *aabb,
+                               uint8_t groups,
+                               uint8_t collidesWith,
+                               FifoList *results,
+                               float epsilon) {
 
     return rtree_query_overlap_func(r,
                                     groups,
@@ -793,9 +801,13 @@ size_t rtree_query_overlap_box(Rtree *r, const Box *aabb, uint8_t groups, uint8_
                                     epsilon);
 }
 
-size_t rtree_query_cast_all_func(Rtree *r, uint8_t groups, uint8_t collidesWith,
-                                 pointer_rtree_query_cast_all_func func, void *ptr,
-                                 const DoublyLinkedList *excludeLeafPtrs, DoublyLinkedList *results) {
+size_t rtree_query_cast_all_func(Rtree *r,
+                                 uint8_t groups,
+                                 uint8_t collidesWith,
+                                 pointer_rtree_query_cast_all_func func,
+                                 void *ptr,
+                                 const DoublyLinkedList *excludeLeafPtrs,
+                                 DoublyLinkedList *results) {
 
     FifoList *toExamine = fifo_list_new();
     DoublyLinkedListNode *n;
@@ -847,16 +859,32 @@ bool _rtree_query_cast_ray_all_func(RtreeNode *rn, void *ptr, float *distance) {
     return ray_intersect_with_box((Ray *)ptr, &rn->aabb->min, &rn->aabb->max, distance);
 }
 
-size_t rtree_query_cast_all_ray(Rtree *r, const Ray *worldRay, uint8_t groups, uint8_t collidesWith,
-                                const DoublyLinkedList *excludeLeafPtrs, DoublyLinkedList *results) {
+size_t rtree_query_cast_all_ray(Rtree *r,
+                                const Ray *worldRay,
+                                uint8_t groups,
+                                uint8_t collidesWith,
+                                const DoublyLinkedList *excludeLeafPtrs,
+                                DoublyLinkedList *results) {
 
-    return rtree_query_cast_all_func(r, groups, collidesWith, _rtree_query_cast_ray_all_func,
-                                     (void *)worldRay, excludeLeafPtrs, results);
+    return rtree_query_cast_all_func(r,
+                                     groups,
+                                     collidesWith,
+                                     _rtree_query_cast_ray_all_func,
+                                     (void *)worldRay,
+                                     excludeLeafPtrs,
+                                     results);
 }
 
-float rtree_query_cast_box_step_func(Rtree *r, const Box *stepOriginBox, float step, const float3 *step3,
-                                     const Box *broadPhaseBox, uint8_t groups, uint8_t collidesWith,
-                                     FifoList *broadPhaseResults, RtreeNode **firstHit, void *optionalPtr,
+float rtree_query_cast_box_step_func(Rtree *r,
+                                     const Box *stepOriginBox,
+                                     float step,
+                                     const float3 *step3,
+                                     const Box *broadPhaseBox,
+                                     uint8_t groups,
+                                     uint8_t collidesWith,
+                                     FifoList *broadPhaseResults,
+                                     RtreeNode **firstHit,
+                                     void *optionalPtr,
                                      const DoublyLinkedList *excludeLeafPtrs) {
 
     float swept, minSwept = 1.0f;
@@ -872,7 +900,13 @@ float rtree_query_cast_box_step_func(Rtree *r, const Box *stepOriginBox, float s
                                 -EPSILON_COLLISION) > 0) {
         hit = fifo_list_pop(broadPhaseResults);
         while (hit != NULL) {
-            swept = box_swept(stepOriginBox, step3, hit->aabb, &float3_epsilon_collision, false, &normal, NULL);
+            swept = box_swept(stepOriginBox,
+                              step3,
+                              hit->aabb,
+                              &float3_epsilon_collision,
+                              false,
+                              &normal,
+                              NULL);
             if (swept < minSwept &&
                 (excludeLeafPtrs == NULL ||
                  doubly_linked_list_contains(excludeLeafPtrs, hit->leaf) == false)) {
@@ -887,20 +921,37 @@ float rtree_query_cast_box_step_func(Rtree *r, const Box *stepOriginBox, float s
     return minSwept;
 }
 
-bool rtree_query_cast_box(Rtree *r, const Box *aabb, const float3 *unit, float maxDist, uint8_t groups,
-                          uint8_t collidesWith, const DoublyLinkedList *excludeLeafPtrs,
+bool rtree_query_cast_box(Rtree *r,
+                          const Box *aabb,
+                          const float3 *unit,
+                          float maxDist,
+                          uint8_t groups,
+                          uint8_t collidesWith,
+                          const DoublyLinkedList *excludeLeafPtrs,
                           RtreeCastResult *result) {
 
-    return rtree_utils_broadphase_steps(r, aabb, unit, maxDist, groups, collidesWith,
-                                        rtree_query_cast_box_step_func, NULL, excludeLeafPtrs,
+    return rtree_utils_broadphase_steps(r,
+                                        aabb,
+                                        unit,
+                                        maxDist,
+                                        groups,
+                                        collidesWith,
+                                        rtree_query_cast_box_step_func,
+                                        NULL,
+                                        excludeLeafPtrs,
                                         result);
 }
 
 // MARK: Utils
 
-bool rtree_utils_broadphase_steps(Rtree *r, const Box *originBox, const float3 *unit, float maxDist,
-                                  uint8_t groups, uint8_t collidesWith,
-                                  pointer_rtree_broadphase_step_func func, void *optionalPtr,
+bool rtree_utils_broadphase_steps(Rtree *r,
+                                  const Box *originBox,
+                                  const float3 *unit,
+                                  float maxDist,
+                                  uint8_t groups,
+                                  uint8_t collidesWith,
+                                  pointer_rtree_broadphase_step_func func,
+                                  void *optionalPtr,
                                   const DoublyLinkedList *excludeLeafPtrs,
                                   RtreeCastResult *result) {
 

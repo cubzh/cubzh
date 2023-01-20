@@ -120,7 +120,8 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Threshold under which bounce is muffled
 #define PHYSICS_BOUNCE_SQR_THRESHOLD 100.0f
 /// Threshold of mass push ratio under which it is ignored
-#define PHYSICS_MASS_PUSH_THRESHOLD 0.01f // if pushing object mass is 1% or less of pushed object mass
+#define PHYSICS_MASS_PUSH_THRESHOLD                                                                \
+    0.01f // if pushing object mass is 1% or less of pushed object mass
 /// Multiple collision responses may fall within the same simulation frame, up to max iterations
 #define PHYSICS_MAX_SOLVER_ITERATIONS 4
 /// How to combine friction/bounciness of 2 rigidbodies in contact, min (0), max (1), or average (2)
@@ -141,7 +142,8 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Replacement happens backwards along the trajectory of a moving rigidbody (false),
 /// or in any direction solely based on whether or not the boxes are already colliding (true)
 #define PHYSICS_EXTRA_REPLACEMENTS false
-/// Replacement happens for moving object only (false), or prioritizes replacing inferior mass object (true)
+/// Replacement happens for moving object only (false), or prioritizes replacing inferior mass
+/// object (true)
 #define PHYSICS_MASS_REPLACEMENTS false
 /// Box sweep is checked in order of X, Y, Z and stops on first-in-order collision (false),
 /// or checks every axes and ensures to return the minimum collision (true)

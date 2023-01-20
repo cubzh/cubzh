@@ -35,8 +35,10 @@ typedef struct _Transform Transform;
 typedef struct _Scene Scene;
 typedef struct float3 float3;
 
-static const float3 float3_epsilon_zero = { EPSILON_ZERO, EPSILON_ZERO, EPSILON_ZERO };
-static const float3 float3_epsilon_collision = { EPSILON_COLLISION, EPSILON_COLLISION, EPSILON_COLLISION };
+static const float3 float3_epsilon_zero = {EPSILON_ZERO, EPSILON_ZERO, EPSILON_ZERO};
+static const float3 float3_epsilon_collision = {EPSILON_COLLISION,
+                                                EPSILON_COLLISION,
+                                                EPSILON_COLLISION};
 
 /// A rigidobdy is fully culled from the r-tree and any simulation if any of the following is true,
 /// - is RigidbodyMode_Disabled
@@ -139,8 +141,12 @@ float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *r
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed);
 void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value);
 void rigidbody_apply_push(RigidBody *rb, const float3 *value);
-void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel, const Box *worldBox, Box *outBox,
-                                         const float3 *worldVector, float3 *outVector, float epsilon,
+void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel,
+                                         const Box *worldBox,
+                                         Box *outBox,
+                                         const float3 *worldVector,
+                                         float3 *outVector,
+                                         float epsilon,
                                          float3 *outEpsilon3);
 
 /// MARK: - Callbacks -

@@ -12,6 +12,7 @@
 
 #include "blockChange.h"
 #include "cclog.h"
+#include "config.h"
 #include "easings.h"
 #include "filo_list_uint16.h"
 #include "history.h"
@@ -19,7 +20,6 @@
 #include "scene.h"
 #include "transaction.h"
 #include "utils.h"
-#include "config.h"
 
 #ifdef DEBUG
 #define SHAPE_LIGHTING_DEBUG false
@@ -199,8 +199,11 @@ void _set_vb_allocation_flag_one_frame(Shape *s);
 bool _lighting_is_enabled(Shape *s);
 
 /// internal functions used to flag the relevant data when lighting has changed
-void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax, SHAPE_COORDS_INT_T x,
-                         SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z);
+void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin,
+                         SHAPE_COORDS_INT3_T *bbMax,
+                         SHAPE_COORDS_INT_T x,
+                         SHAPE_COORDS_INT_T y,
+                         SHAPE_COORDS_INT_T z);
 void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax);
 
 //// internal functions used to compute and update light propagation (sun & emission)
@@ -1487,9 +1490,8 @@ bool shape_is_within_allocated_bounds(const Shape *shape,
                                       const SHAPE_COORDS_INT_T x,
                                       const SHAPE_COORDS_INT_T y,
                                       const SHAPE_COORDS_INT_T z) {
-    return x >= 0 && x < shape->maxWidth &&
-           y >= 0 && y < shape->maxHeight &&
-           z >= 0 && z < shape->maxDepth;
+    return x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 &&
+           z < shape->maxDepth;
 }
 
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider) {
@@ -1500,8 +1502,12 @@ void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isColli
 
     if (isCollider) {
         if (rigidbody_is_dynamic(shape_get_rigidbody(s))) {
-            transform_utils_box_to_dynamic_collider(s->transform, box, aabox, offset,
-                                                    PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify);
+            transform_utils_box_to_dynamic_collider(s->transform,
+                                                    box,
+                                                    aabox,
+                                                    offset,
+                                                    PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify
+                                                                                      : NoSquarify);
         } else {
             transform_utils_box_to_static_collider(s->transform, box, aabox, offset, NoSquarify);
         }
@@ -2670,7 +2676,11 @@ uint8_t shape_get_collision_groups(const Shape *s) {
 bool shape_ensure_rigidbody(Shape *s, uint8_t groups, uint8_t collidesWith, RigidBody **out) {
     vx_assert(s != NULL);
 
-    bool isNew = transform_ensure_rigidbody(s->transform, RigidbodyMode_Static, groups, collidesWith, out);
+    bool isNew = transform_ensure_rigidbody(s->transform,
+                                            RigidbodyMode_Static,
+                                            groups,
+                                            collidesWith,
+                                            out);
     if (isNew) {
         shape_fit_collider_to_bounding_box(s);
     }
@@ -2816,7 +2826,7 @@ float shape_box_swept(const Shape *s,
                         *normal = tmpNormal;
                     }
                     if (block != NULL) {
-                        *block = (Block*)octree_iterator_get_element(oi);
+                        *block = (Block *)octree_iterator_get_element(oi);
                     }
                     if (blockCoords != NULL) {
                         uint16_t x, y, z;
@@ -3174,20 +3184,28 @@ void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d) {
     s->lightingData = d;
 }
 
-VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s, SHAPE_COORDS_INT_T x,
-                                                       SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z) {
+VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s,
+                                                       SHAPE_COORDS_INT_T x,
+                                                       SHAPE_COORDS_INT_T y,
+                                                       SHAPE_COORDS_INT_T z) {
     return s->lightingData[x * s->maxHeight * s->maxDepth + y * s->maxDepth + z];
 }
 
-void shape_set_light(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z,
+void shape_set_light(Shape *s,
+                     SHAPE_COORDS_INT_T x,
+                     SHAPE_COORDS_INT_T y,
+                     SHAPE_COORDS_INT_T z,
                      VERTEX_LIGHT_STRUCT_T light) {
     if (x >= 0 && x < s->maxWidth && y >= 0 && y < s->maxHeight && z >= 0 && z < s->maxDepth) {
         s->lightingData[x * s->maxHeight * s->maxDepth + y * s->maxDepth + z] = light;
     }
 }
 
-VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
-                                                 SHAPE_COORDS_INT_T z, bool isDefault) {
+VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s,
+                                                 SHAPE_COORDS_INT_T x,
+                                                 SHAPE_COORDS_INT_T y,
+                                                 SHAPE_COORDS_INT_T z,
+                                                 bool isDefault) {
     if (isDefault || s->lightingData == NULL ||
         shape_is_within_allocated_bounds(s, x, y, z) == false) {
         VERTEX_LIGHT_STRUCT_T light;
@@ -3198,8 +3216,11 @@ VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s, SHAPE_COORDS_INT_T x,
     }
 }
 
-void shape_compute_baked_lighting_removed_block(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
-                                                SHAPE_COORDS_INT_T z, SHAPE_COLOR_INDEX_INT_T blockID) {
+void shape_compute_baked_lighting_removed_block(Shape *s,
+                                                SHAPE_COORDS_INT_T x,
+                                                SHAPE_COORDS_INT_T y,
+                                                SHAPE_COORDS_INT_T z,
+                                                SHAPE_COLOR_INDEX_INT_T blockID) {
     if (s == NULL) {
         return;
     }
@@ -3298,8 +3319,11 @@ void shape_compute_baked_lighting_removed_block(Shape *s, SHAPE_COORDS_INT_T x, 
     light_node_queue_free(lightQueue);
 }
 
-void shape_compute_baked_lighting_added_block(Shape *s, SHAPE_COORDS_INT_T x, SHAPE_COORDS_INT_T y,
-                                              SHAPE_COORDS_INT_T z, SHAPE_COLOR_INDEX_INT_T blockID) {
+void shape_compute_baked_lighting_added_block(Shape *s,
+                                              SHAPE_COORDS_INT_T x,
+                                              SHAPE_COORDS_INT_T y,
+                                              SHAPE_COORDS_INT_T z,
+                                              SHAPE_COLOR_INDEX_INT_T blockID) {
 
     if (s == NULL) {
         return;
@@ -4072,8 +4096,11 @@ bool _lighting_is_enabled(Shape *s) {
     return s->usesLighting && _has_allocated_size(s);
 }
 
-void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax, SHAPE_COORDS_INT_T x,
-                         SHAPE_COORDS_INT_T y, SHAPE_COORDS_INT_T z) {
+void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin,
+                         SHAPE_COORDS_INT3_T *bbMax,
+                         SHAPE_COORDS_INT_T x,
+                         SHAPE_COORDS_INT_T y,
+                         SHAPE_COORDS_INT_T z) {
     if (vertex_buffer_get_lighting_enabled()) {
         bbMin->x = minimum(bbMin->x, x);
         bbMin->y = minimum(bbMin->y, y);
@@ -4089,13 +4116,20 @@ void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COO
         SHAPE_COORDS_INT3_T chunkMin = *bbMin, chunkMax = *bbMax;
 
         // account for vertex lighting smoothing, values need to be updated on adjacent vertices
-        chunkMin.x -= 1; chunkMin.y -= 1; chunkMin.z -= 1;
-        chunkMax.x += 1; chunkMax.y += 1; chunkMax.z += 1;
+        chunkMin.x -= 1;
+        chunkMin.y -= 1;
+        chunkMin.z -= 1;
+        chunkMax.x += 1;
+        chunkMax.y += 1;
+        chunkMax.z += 1;
 
         // find corresponding chunks and set dirty
-        chunkMin.x /= CHUNK_WIDTH; chunkMax.x /= CHUNK_WIDTH;
-        chunkMin.y /= CHUNK_HEIGHT; chunkMax.y /= CHUNK_HEIGHT;
-        chunkMin.z /= CHUNK_DEPTH; chunkMax.z /= CHUNK_DEPTH;
+        chunkMin.x /= CHUNK_WIDTH;
+        chunkMax.x /= CHUNK_WIDTH;
+        chunkMin.y /= CHUNK_HEIGHT;
+        chunkMax.y /= CHUNK_HEIGHT;
+        chunkMin.z /= CHUNK_DEPTH;
+        chunkMax.z /= CHUNK_DEPTH;
 
         Chunk *chunk;
         for (int x = chunkMin.x; x <= chunkMax.x; x++) {
@@ -4349,12 +4383,12 @@ void _light_propagate(Shape *s,
     // changed values bounding box initialized at source position or using given bounding box
     SHAPE_COORDS_INT3_T min, max;
     if (bbMin == NULL) {
-        min = (SHAPE_COORDS_INT3_T){ srcX, srcY, srcZ };
+        min = (SHAPE_COORDS_INT3_T){srcX, srcY, srcZ};
     } else {
         min = *bbMin;
     }
     if (bbMax == NULL) {
-        max = (SHAPE_COORDS_INT3_T){ srcX, srcY, srcZ };
+        max = (SHAPE_COORDS_INT3_T){srcX, srcY, srcZ};
     } else {
         max = *bbMax;
     }
@@ -4603,8 +4637,15 @@ void _light_propagate(Shape *s,
                         insertPos.y = pos.y + yo;
                         insertPos.z = pos.z + zo;
 
-                        if (shape_is_within_allocated_bounds(s, insertPos.x, insertPos.y, insertPos.z)) {
-                            neighbor = shape_get_block(s, insertPos.x, insertPos.y, insertPos.z, false);
+                        if (shape_is_within_allocated_bounds(s,
+                                                             insertPos.x,
+                                                             insertPos.y,
+                                                             insertPos.z)) {
+                            neighbor = shape_get_block(s,
+                                                       insertPos.x,
+                                                       insertPos.y,
+                                                       insertPos.z,
+                                                       false);
                             if (block_is_opaque(neighbor, s->palette) == false) {
                                 _light_enqueue_source(&insertPos, s, currentLight, lightQueue);
                             }
@@ -4781,7 +4822,10 @@ void _light_removal(Shape *s,
                             insertPos.y = pos.y + yo;
                             insertPos.z = pos.z + zo;
 
-                            neighbor = shape_get_block(s, insertPos.x, insertPos.y, insertPos.z,
+                            neighbor = shape_get_block(s,
+                                                       insertPos.x,
+                                                       insertPos.y,
+                                                       insertPos.z,
                                                        false);
                             if (neighbor != NULL) {
                                 // only first-degree neighbors remove the emissive block's own RGB

@@ -24,7 +24,7 @@ struct _LightNodeQueue {
 LightNode *light_node_new(void) {
     LightNode *ln = (LightNode *)malloc(sizeof(LightNode));
     ln->next = NULL;
-    ln->coords = (SHAPE_COORDS_INT3_T){ 0, 0, 0 };
+    ln->coords = (SHAPE_COORDS_INT3_T){0, 0, 0};
     return ln;
 }
 
@@ -92,7 +92,7 @@ void light_node_queue_recycle(LightNode *n) {
 
 struct _LightRemovalNode {
     LightRemovalNode *next;
-    SHAPE_COORDS_INT3_T coords; /* 6 bytes */
+    SHAPE_COORDS_INT3_T coords;  /* 6 bytes */
     VERTEX_LIGHT_STRUCT_T light; /* 2 bytes */
     // 4 first bits used to flag in which channel [sunlight:R:G:B] removal should propagate
     uint8_t srgb; /* 1 byte */
@@ -108,7 +108,7 @@ struct _LightRemovalNodeQueue {
 LightRemovalNode *light_removal_node_new(void) {
     LightRemovalNode *ln = (LightRemovalNode *)malloc(sizeof(LightRemovalNode));
     ln->next = NULL;
-    ln->coords = (SHAPE_COORDS_INT3_T){ 0, 0, 0 };
+    ln->coords = (SHAPE_COORDS_INT3_T){0, 0, 0};
     ln->light.ambient = 0;
     ln->light.red = 0;
     ln->light.green = 0;

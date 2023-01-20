@@ -90,7 +90,8 @@ struct _Transform {
     bool isHiddenBranch; /* 1 byte */
     bool isHiddenSelf;   /* 1 byte */
 
-    // can be used to describe anonymous ptr types TODO: review this vs. which TransformType to set for those
+    // can be used to describe anonymous ptr types TODO: review this vs. which TransformType to set
+    // for those
     uint8_t ptrType;
 
     bool animationsEnabled;
@@ -302,7 +303,11 @@ bool transform_is_physics_dirty(Transform *t) {
     return _transform_get_dirty(t, TRANSFORM_PHYSICS);
 }
 
-bool transform_ensure_rigidbody(Transform *t, uint8_t mode, uint8_t groups, uint8_t collidesWith, RigidBody **out) {
+bool transform_ensure_rigidbody(Transform *t,
+                                uint8_t mode,
+                                uint8_t groups,
+                                uint8_t collidesWith,
+                                RigidBody **out) {
     bool isNew = false;
     if (t->rigidBody == NULL) {
         t->rigidBody = rigidbody_new(mode, groups, collidesWith);
@@ -341,11 +346,12 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *co
                     rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
 
                     if (rigidbody_is_dynamic(rb)) {
-                        transform_utils_box_to_dynamic_collider(t,
-                                                                rigidbody_get_collider(rb),
-                                                                collider,
-                                                                NULL,
-                                                                PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify);
+                        transform_utils_box_to_dynamic_collider(
+                            t,
+                            rigidbody_get_collider(rb),
+                            collider,
+                            NULL,
+                            PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify);
                     } else {
                         transform_utils_box_to_static_collider(t,
                                                                rigidbody_get_collider(rb),
