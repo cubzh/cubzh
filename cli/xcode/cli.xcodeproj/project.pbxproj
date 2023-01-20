@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		10F28337297AA811004AA9F2 /* blocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10F28335297AA811004AA9F2 /* blocks.cpp */; };
 		850CDB8028F854C000D81015 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 850CDB7F28F854C000D81015 /* main.cpp */; };
 		85AA097928F8649B00801372 /* combine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097728F8649B00801372 /* combine.cpp */; };
-		85AA09D728F86CE900801372 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097B28F86CE800801372 /* Makefile */; };
 		85AA09D828F86CE900801372 /* rtree.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097D28F86CE800801372 /* rtree.c */; };
 		85AA09D928F86CE900801372 /* scene.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097E28F86CE800801372 /* scene.c */; };
 		85AA09DA28F86CE900801372 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097F28F86CE800801372 /* utils.c */; };
@@ -70,12 +70,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		10F28335297AA811004AA9F2 /* blocks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = blocks.cpp; path = ../blocks.cpp; sourceTree = "<group>"; };
+		10F28336297AA811004AA9F2 /* blocks.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = blocks.hpp; path = ../blocks.hpp; sourceTree = "<group>"; };
 		850CDB7428F853ED00D81015 /* cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cli; sourceTree = BUILT_PRODUCTS_DIR; };
 		850CDB7F28F854C000D81015 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../main.cpp; sourceTree = "<group>"; };
 		850CDB8228F85F7600D81015 /* cxxopts.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = cxxopts.hpp; path = ../../deps/cxxopts/darwin/include/cxxopts.hpp; sourceTree = "<group>"; };
 		85AA097728F8649B00801372 /* combine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = combine.cpp; path = ../combine.cpp; sourceTree = "<group>"; };
 		85AA097828F8649B00801372 /* combine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = combine.hpp; path = ../combine.hpp; sourceTree = "<group>"; };
-		85AA097B28F86CE800801372 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = ../../core/Makefile; sourceTree = "<group>"; };
 		85AA097C28F86CE800801372 /* rigidBody.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rigidBody.h; path = ../../core/rigidBody.h; sourceTree = "<group>"; };
 		85AA097D28F86CE800801372 /* rtree.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rtree.c; path = ../../core/rtree.c; sourceTree = "<group>"; };
 		85AA097E28F86CE800801372 /* scene.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = scene.c; path = ../../core/scene.c; sourceTree = "<group>"; };
@@ -203,6 +204,8 @@
 			children = (
 				85AA097728F8649B00801372 /* combine.cpp */,
 				85AA097828F8649B00801372 /* combine.hpp */,
+				10F28335297AA811004AA9F2 /* blocks.cpp */,
+				10F28336297AA811004AA9F2 /* blocks.hpp */,
 				850CDB7F28F854C000D81015 /* main.cpp */,
 			);
 			name = cli;
@@ -274,7 +277,6 @@
 				85AA099E28F86CE800801372 /* int3.h */,
 				85AA09D028F86CE900801372 /* magicavoxel.c */,
 				85AA09D628F86CE900801372 /* magicavoxel.h */,
-				85AA097B28F86CE800801372 /* Makefile */,
 				85AA09A628F86CE800801372 /* map_string_float3.c */,
 				85AA099328F86CE800801372 /* map_string_float3.h */,
 				85AA098428F86CE800801372 /* matrix4x4.c */,
@@ -378,7 +380,6 @@
 				85AA09EA28F86CE900801372 /* ray.c in Sources */,
 				85AA09DF28F86CE900801372 /* color_atlas.c in Sources */,
 				85AA0A0028F86CE900801372 /* color_palette.c in Sources */,
-				85AA09D728F86CE900801372 /* Makefile in Sources */,
 				85AA09D928F86CE900801372 /* scene.c in Sources */,
 				850CDB8028F854C000D81015 /* main.cpp in Sources */,
 				85AA09DA28F86CE900801372 /* utils.c in Sources */,
@@ -416,6 +417,7 @@
 				85AA09DB28F86CE900801372 /* filo_list_float3.c in Sources */,
 				85AA09F528F86CE900801372 /* octree.c in Sources */,
 				85AA09F228F86CE900801372 /* serialization_v5.c in Sources */,
+				10F28337297AA811004AA9F2 /* blocks.cpp in Sources */,
 				85AA0A0228F86CE900801372 /* doubly_linked_list_uint8.c in Sources */,
 				85AA09E328F86CE900801372 /* stream.c in Sources */,
 				85AA09FF28F86CE900801372 /* easings.c in Sources */,

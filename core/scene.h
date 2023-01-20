@@ -110,7 +110,7 @@ typedef struct {
 
     char pad[1];
 } CastResult;
-CastResult scene_cast_result_default();
+CastResult scene_cast_result_default(void);
 
 CastHitType scene_cast_ray(Scene *sc,
                            const Ray *worldRay,

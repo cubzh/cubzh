@@ -13,6 +13,7 @@
 
 // cli
 #include "combine.hpp"
+#include "blocks.hpp"
 
 int main(int argc, const char * argv[]) {
 
@@ -41,6 +42,8 @@ int main(int argc, const char * argv[]) {
 
     if (command == "combine") {
         success = command_combine(result, err);
+    } else if (command == "blocks") {
+        success = count_blocks(result, err);
     } else {
         err = "command not supported.";
     }

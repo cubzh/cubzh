@@ -53,8 +53,12 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "combine -i /Users/aduermael/Desktop/tmp/head.vox -i /Users/aduermael/Desktop/tmp/hair.vox -o  /Users/aduermael/Desktop/tmp/combined.vox"
+            argument = "blocks -i  /Users/aduermael/Desktop/ld52_arena.3zh"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "combine -i /Users/aduermael/Desktop/tmp/head.vox -i /Users/aduermael/Desktop/tmp/hair.vox -o  /Users/aduermael/Desktop/tmp/combined.vox"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>
