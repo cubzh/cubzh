@@ -37,7 +37,7 @@ bool command_combine(cxxopts::ParseResult parseResult, std::string& err) {
     // processing
 
     std::vector<std::string> input_paths = parseResult["input"].as<std::vector<std::string>>();
-    std::string output_path = parseResult["output"].as<std::string>();;
+    std::string output_path = parseResult["output"].as<std::string>();
 
     std::cout << "* Combining voxel files..." << std::endl;
     for (std::string input_path : input_paths) {
