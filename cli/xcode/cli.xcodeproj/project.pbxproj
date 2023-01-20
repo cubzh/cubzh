@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		10F28337297AA811004AA9F2 /* blocks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10F28335297AA811004AA9F2 /* blocks.cpp */; };
 		850CDB8028F854C000D81015 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 850CDB7F28F854C000D81015 /* main.cpp */; };
+		85A6C2AC297AE92E00F12D17 /* shape_point.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85A6C2AA297AE92E00F12D17 /* shape_point.cpp */; };
 		85AA097928F8649B00801372 /* combine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097728F8649B00801372 /* combine.cpp */; };
 		85AA09D828F86CE900801372 /* rtree.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097D28F86CE800801372 /* rtree.c */; };
 		85AA09D928F86CE900801372 /* scene.c in Sources */ = {isa = PBXBuildFile; fileRef = 85AA097E28F86CE800801372 /* scene.c */; };
@@ -75,6 +76,8 @@
 		850CDB7428F853ED00D81015 /* cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cli; sourceTree = BUILT_PRODUCTS_DIR; };
 		850CDB7F28F854C000D81015 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../main.cpp; sourceTree = "<group>"; };
 		850CDB8228F85F7600D81015 /* cxxopts.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = cxxopts.hpp; path = ../../deps/cxxopts/darwin/include/cxxopts.hpp; sourceTree = "<group>"; };
+		85A6C2AA297AE92E00F12D17 /* shape_point.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = shape_point.cpp; path = ../shape_point.cpp; sourceTree = "<group>"; };
+		85A6C2AB297AE92E00F12D17 /* shape_point.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = shape_point.hpp; path = ../shape_point.hpp; sourceTree = "<group>"; };
 		85AA097728F8649B00801372 /* combine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = combine.cpp; path = ../combine.cpp; sourceTree = "<group>"; };
 		85AA097828F8649B00801372 /* combine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = combine.hpp; path = ../combine.hpp; sourceTree = "<group>"; };
 		85AA097C28F86CE800801372 /* rigidBody.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rigidBody.h; path = ../../core/rigidBody.h; sourceTree = "<group>"; };
@@ -202,11 +205,13 @@
 		850CDB7E28F854A600D81015 /* cli */ = {
 			isa = PBXGroup;
 			children = (
-				85AA097728F8649B00801372 /* combine.cpp */,
-				85AA097828F8649B00801372 /* combine.hpp */,
 				10F28335297AA811004AA9F2 /* blocks.cpp */,
 				10F28336297AA811004AA9F2 /* blocks.hpp */,
+				85AA097728F8649B00801372 /* combine.cpp */,
+				85AA097828F8649B00801372 /* combine.hpp */,
 				850CDB7F28F854C000D81015 /* main.cpp */,
+				85A6C2AA297AE92E00F12D17 /* shape_point.cpp */,
+				85A6C2AB297AE92E00F12D17 /* shape_point.hpp */,
 			);
 			name = cli;
 			sourceTree = "<group>";
@@ -418,6 +423,7 @@
 				85AA09F528F86CE900801372 /* octree.c in Sources */,
 				85AA09F228F86CE900801372 /* serialization_v5.c in Sources */,
 				10F28337297AA811004AA9F2 /* blocks.cpp in Sources */,
+				85A6C2AC297AE92E00F12D17 /* shape_point.cpp in Sources */,
 				85AA0A0228F86CE900801372 /* doubly_linked_list_uint8.c in Sources */,
 				85AA09E328F86CE900801372 /* stream.c in Sources */,
 				85AA09FF28F86CE900801372 /* easings.c in Sources */,

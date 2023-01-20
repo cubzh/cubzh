@@ -12,8 +12,9 @@
 #include <cxxopts.hpp>
 
 // cli
-#include "combine.hpp"
 #include "blocks.hpp"
+#include "combine.hpp"
+#include "shape_point.hpp"
 
 int main(int argc, const char * argv[]) {
 
@@ -40,10 +41,12 @@ int main(int argc, const char * argv[]) {
     bool success = false;
     std::string err = "";
 
-    if (command == "combine") {
-        success = command_combine(result, err);
-    } else if (command == "blocks") {
+    if (command == "blocks") {
         success = count_blocks(result, err);
+    } else if (command == "combine") {
+        success = command_combine(result, err);
+    } else if (command == "setpoint") {
+        success = commandSetPoint(result, err);
     } else {
         err = "command not supported.";
     }
