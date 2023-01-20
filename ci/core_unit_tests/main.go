@@ -65,16 +65,16 @@ func buildAnRunCurrentDirectory() error {
 	// execute build commands
 	ciContainer = ciContainer.WithExec([]string{"cmake", "-G", "Ninja", "."})
 	code, err := ciContainer.ExitCode(ctx)
-	if err != nil {
-		return err
-	}
-	if code != 0 {
+	if err != nil || code != 0 {
 		outErr, err := ciContainer.Stderr(ctx)
 		if err != nil {
 			return err
 		}
 		fmt.Println(outErr)
-		return errors.New("cmake error")
+		if err == nil {
+			return errors.New("cmake error")
+		}
+		return err
 	}
 
 	fmt.Println("Running tests in container...")
