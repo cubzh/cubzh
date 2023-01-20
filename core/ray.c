@@ -440,7 +440,7 @@ FACE_INDEX_INT_T ray_impacted_block_face(const float3 *impact, const float3 *ldf
 #endif
 }
 
-Ray *ray_world_to_local(const Ray *ray, const Transform *t) {
+Ray *ray_world_to_local(const Ray *ray, Transform *t) {
     float3 origin, dir;
     transform_utils_position_wtl(t, ray->origin, &origin);
     transform_utils_vector_wtl(t, ray->dir, &dir);

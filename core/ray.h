@@ -45,7 +45,7 @@ void ray_impact_point(const Ray *ray, const float impactDistance, float3 *f3);
 /// @returns block face touched by impact point
 FACE_INDEX_INT_T ray_impacted_block_face(const float3 *impact, const float3 *ldf);
 
-Ray *ray_world_to_local(const Ray *ray, const Transform *t);
+Ray *ray_world_to_local(const Ray *ray, Transform *t);
 
 #ifdef __cplusplus
 } // extern "C"

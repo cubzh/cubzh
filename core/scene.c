@@ -579,15 +579,23 @@ CastHitType scene_cast_ray(Scene *sc, const Ray *worldRay, uint8_t groups,
             } else {
                 // solve non-dynamic rigidbodies in their model space (rotated collider)
                 const Box *collider = rigidbody_get_collider(hitRb);
-                Ray *modelRay = ray_world_to_local(worldRay,
-                                                   transform_get_type(hitTr) == ShapeTransform ?
-                                                   shape_get_pivot_transform(transform_utils_get_shape(hitTr)) :
-                                                   hitTr);
+                Transform *modelTr = transform_get_type(hitTr) == ShapeTransform ?
+                                           shape_get_pivot_transform(transform_utils_get_shape(hitTr)) :
+                                           hitTr;
+                Ray *modelRay = ray_world_to_local(worldRay, modelTr);
 
                 float distance;
                 if (ray_intersect_with_box(modelRay, &collider->min, &collider->max, &distance)) {
+                    const float3 modelVector = {
+                        modelRay->dir->x * distance,
+                        modelRay->dir->y * distance,
+                        modelRay->dir->z * distance
+                    };
+                    float3 worldVector; transform_utils_vector_ltw(modelTr, &modelVector,
+                                                                   &worldVector);
+
                     hit.hitTr = hitTr;
-                    hit.distance = distance;
+                    hit.distance = float3_length(&worldVector);
                     hit.type = CastHit_CollisionBox;
                 }
 
