@@ -275,7 +275,6 @@ void test_light_removal_node_get_srgb(void) {
     TEST_CHECK(checkSrgb == srgbA);
 
     light_removal_node_queue_free(q);
-    light_node_free(check);
 }
 
 // Create a new removal queue and insert 2 different nodes in it. Then we pop them one by one from
