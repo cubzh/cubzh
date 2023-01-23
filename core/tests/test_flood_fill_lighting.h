@@ -39,7 +39,8 @@ void test_light_node_get_coords(void) {
     light_node_queue_push(q, &coords1);
     check = light_node_queue_pop(q);
     light_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords1.x);
     TEST_CHECK(int3Check.y == coords1.y);
@@ -48,7 +49,8 @@ void test_light_node_get_coords(void) {
     light_node_queue_push(q, &coords2);
     check = light_node_queue_pop(q);
     light_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords2.x);
     TEST_CHECK(int3Check.y == coords2.y);
@@ -67,7 +69,8 @@ void test_light_node_queue_push(void) {
 
     LightNode *check = light_node_queue_pop(q);
     light_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords.x);
     TEST_CHECK(int3Check.y == coords.y);
@@ -93,7 +96,8 @@ void test_light_node_queue_pop(void) {
 
     check = light_node_queue_pop(q); // [coordsB, coordsA]
     light_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsC.x);
     TEST_CHECK(int3Check.y == coordsC.y);
@@ -101,7 +105,8 @@ void test_light_node_queue_pop(void) {
 
     check = light_node_queue_pop(q); // [coordsA]
     light_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsB.x);
     TEST_CHECK(int3Check.y == coordsB.y);
@@ -109,7 +114,8 @@ void test_light_node_queue_pop(void) {
 
     check = light_node_queue_pop(q); // []
     light_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsA.x);
     TEST_CHECK(int3Check.y == coordsA.y);
@@ -147,7 +153,8 @@ void test_light_removal_node_queue_push(void) {
 
     check = light_removal_node_queue_pop(q);
     TEST_CHECK(check != NULL);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
 
     light_removal_node_queue_free(q);
@@ -170,7 +177,8 @@ void test_light_removal_node_queue_pop(void) {
     check = light_removal_node_queue_pop(q);
     TEST_CHECK(check != NULL);
     light_removal_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords.x);
     TEST_CHECK(int3Check.y == coords.y);
@@ -206,7 +214,8 @@ void test_light_removal_node_get_coords(void) {
     // Check for Node B
     check = light_removal_node_queue_pop(q);
     light_removal_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsB.x);
     TEST_CHECK(int3Check.y == coordsB.y);
@@ -215,7 +224,8 @@ void test_light_removal_node_get_coords(void) {
     // Check for Node A
     check = light_removal_node_queue_pop(q);
     light_removal_node_get_coords(check, &int3Check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsA.x);
     TEST_CHECK(int3Check.y == coordsA.y);
@@ -251,14 +261,16 @@ void test_light_removal_node_get_srgb(void) {
     // Check for Node B
     check = light_removal_node_queue_pop(q);
     checkSrgb = light_removal_node_get_srgb(check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkSrgb == srgbB);
 
     // Check for Node A
     check = light_removal_node_queue_pop(q);
     checkSrgb = light_removal_node_get_srgb(check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkSrgb == srgbA);
 
@@ -292,14 +304,16 @@ void test_light_removal_node_get_block_id(void) {
     // Check for Node B
     check = light_removal_node_queue_pop(q);
     checkBlockID = light_removal_node_get_block_id(check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkBlockID == blockIDB);
 
     // Check for Node A
     check = light_removal_node_queue_pop(q);
     checkBlockID = light_removal_node_get_block_id(check);
-    // TODO: free `check`
+
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkBlockID == blockIDA);
 

@@ -23,6 +23,8 @@ typedef struct _LightRemovalNodeQueue LightRemovalNodeQueue;
 void light_node_get_coords(const LightNode *n, SHAPE_COORDS_INT3_T *coords);
 
 LightNodeQueue *light_node_queue_new(void);
+void light_node_free(LightNode *n);
+void light_removal_node_free(LightRemovalNode *n);
 void light_node_queue_free(LightNodeQueue *q);
 LightNode *light_node_queue_pop(LightNodeQueue *q);
 void light_node_queue_push(LightNodeQueue *q, const SHAPE_COORDS_INT3_T *coords);
