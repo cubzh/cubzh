@@ -369,8 +369,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                             swept = rtreeSwept;
                             normal = rtreeNormal;
                         } else {
-                            model = transform_get_ltw(shape != NULL ? shape_get_pivot_transform(shape)
-                                                                    : hitLeaf);
+                            model = transform_get_ltw(
+                                shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
                         }
                     } else {
                         swept = 1.0f;
@@ -458,7 +458,10 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
 
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
             cclog_debug("🏞 rigidbody of type %d replaced w/ (%.3f, %.3f, %.3f)",
-                        transform_get_type(t), f3.x, f3.y, f3.z);
+                        transform_get_type(t),
+                        f3.x,
+                        f3.y,
+                        f3.z);
 #endif
         }
 
