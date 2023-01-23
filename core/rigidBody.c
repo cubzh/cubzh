@@ -226,8 +226,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
     // PREPARE COLLISION TESTING
     // ------------------------
 
-    float3 dv, normal, push3, extraReplacement3, modelDv, modelEpsilon;
-    float minSwept, swept;
+    float3 dv, normal, push3, extraReplacement3, modelDv, modelEpsilon, rtreeNormal;
+    float minSwept, swept, rtreeSwept;
     float3 pos = *transform_get_position(t);
     Box broadphase, modelBox, modelBroadphase;
     Shape *shape;
@@ -312,15 +312,19 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                     continue;
                 }
 
+                // TODO: optim, this should become retrievable from rtree query
+                rtreeSwept = box_swept(worldCollider,
+                                       &dv,
+                                       rtree_node_get_aabb(hit),
+                                       &float3_epsilon_collision,
+                                       true,
+                                       &rtreeNormal,
+                                       NULL);
+
                 const Matrix4x4 *model = NULL;
                 if (mode == RigidbodyMode_Dynamic) {
-                    swept = box_swept(worldCollider,
-                                      &dv,
-                                      rtree_node_get_aabb(hit),
-                                      &float3_epsilon_collision,
-                                      true,
-                                      &normal,
-                                      NULL);
+                    swept = rtreeSwept;
+                    normal = rtreeNormal;
                 } else {
                     shape = transform_utils_get_shape(hitLeaf);
 
@@ -359,8 +363,15 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                                               NULL);
                         }
 
-                        model = transform_get_ltw(shape != NULL ? shape_get_pivot_transform(shape)
-                                                                : hitLeaf);
+                        // if replacement, solve collision using shortest replacement between
+                        // world-aligned & model-aligned
+                        if (swept < 0.0f && rtreeSwept > swept) {
+                            swept = rtreeSwept;
+                            normal = rtreeNormal;
+                        } else {
+                            model = transform_get_ltw(
+                                shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
+                        }
                     } else {
                         swept = 1.0f;
                     }
@@ -448,9 +459,9 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
             cclog_debug("🏞 rigidbody of type %d replaced w/ (%.3f, %.3f, %.3f)",
                         transform_get_type(t),
-                        replacement.x,
-                        replacement.y,
-                        replacement.z);
+                        f3.x,
+                        f3.y,
+                        f3.z);
 #endif
         }
 
