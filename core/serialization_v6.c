@@ -302,6 +302,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     // allocate buffer
     uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t) * size);
     if (buf == NULL) {
+        free(paletteCompressedData);
         free(shapesBuffers);
         return false;
     }
@@ -348,6 +349,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
                                    paletteCompressedDataSize,
                                    paletteUncompressedDataSize,
                                    &cursor);
+        free(paletteCompressedData);
         if (ok == false) {
             free(buf);
             free(shapesBuffers);
@@ -1544,6 +1546,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 
     *uncompressedData = malloc(*uncompressedSize);
     if (*uncompressedData == NULL) {
+        free(shapePaletteData);
         return false;
     }
 
@@ -1916,11 +1919,13 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(
     // zlib: compressBound estimates size so we can allocate
     uLong _compressedSize = compressBound(*uncompressedSize);
     void *_compressedData = malloc(_compressedSize);
-    if (_compressedData == NULL) {
-        return false; // malloc failed
+    if (_compressedData == NULL) { // malloc failed
+        free(uncompressedData);
+        return false;
     }
 
     if (compress(_compressedData, &_compressedSize, uncompressedData, *uncompressedSize) != Z_OK) {
+        free(uncompressedData);
         free(_compressedData);
         return false;
     }
@@ -1929,6 +1934,10 @@ bool _chunk_v6_palette_create_and_write_compressed_buffer(
     // now we have the final compressed size and data
     *compressedSize = (uint32_t)_compressedSize;
     *compressedData = malloc(*compressedSize);
+    if (compressedData == NULL) { // mem alloc failed
+        free(_compressedData);
+        return false;
+    }
     memcpy(*compressedData, _compressedData, *compressedSize);
 
     free(_compressedData);
