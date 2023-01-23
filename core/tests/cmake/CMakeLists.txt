@@ -12,15 +12,41 @@ set(CMAKE_CXX_COMPILER "clang++")
 
 project("Cubzh Core - Unit Tests")
 
-# validate environment
-if(NOT DEFINED ENV{CUBZH_ARCH})
-    message(FATAL_ERROR "env var CUBZH_ARCH is not defined, CMake will exit.")
-endif()
-set(DEPS_PLATFORM_NAME "linux-ubuntu-$ENV{CUBZH_ARCH}")
-
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set(CMAKE_COMPILE_WARNING_AS_ERROR ON) # not available yet
+
+# --------------------------------------------------
+# TARGET SYSTEM & ARCH
+# --------------------------------------------------
+
+# CZH_SYSTEM : "linux", "darwin", "windows", ...
+string(TOLOWER ${CMAKE_SYSTEM_NAME} CZH_SYSTEM)
+message("CZH_SYSTEM: " ${CZH_SYSTEM})
+
+# CZH_ARCH : "arm64", ...
+set(CZH_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+message("CZH_ARCH: " ${CZH_ARCH})
+
+# --------------------------------------------------
+# PATHS
+# --------------------------------------------------
+
+# CZH_ROOT_DIR: Git repo root directory
+file(REAL_PATH "../../.." CZH_ROOT_DIR) # relative to ${CMAKE_CURRENT_SOURCE_DIR}
+# message("CZH_ROOT_DIR: " ${CZH_ROOT_DIR})
+
+# --------------------------------------------------
+# Deps : zlib
+# --------------------------------------------------
+# CZH_DEPS_LIBZ: libz directory for target system/arch
+file(REAL_PATH "./deps/libz/${CZH_SYSTEM}-${CZH_ARCH}" CZH_DEPS_LIBZ BASE_DIRECTORY ${CZH_ROOT_DIR})
+file(REAL_PATH "./include" CZH_DEPS_LIBZ_INC BASE_DIRECTORY ${CZH_DEPS_LIBZ})
+file(REAL_PATH "./lib" CZH_DEPS_LIBZ_LIB BASE_DIRECTORY ${CZH_DEPS_LIBZ})
+message("CZH_DEPS_LIBZ_INC: " ${CZH_DEPS_LIBZ_INC})
+message("CZH_DEPS_LIBZ_LIB: " ${CZH_DEPS_LIBZ_LIB})
+
+
 
 set(CUBZH_CORE_TESTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 set(CUBZH_CORE_ROOT_DIR "${CUBZH_CORE_TESTS_DIR}/..")
@@ -40,8 +66,8 @@ file(GLOB CUBZH_CORE_TESTS_SOURCES
 set(SOURCE_FILES ${SOURCE_FILES} ${CUBZH_CORE_TESTS_SOURCES})
 
 # zlib
-set(LIBZ_INC_DIR "${CUBZH_DEPS_DIR}/libz/${DEPS_PLATFORM_NAME}/include")
-set(LIBZ_LIB_DIR "${CUBZH_DEPS_DIR}/libz/${DEPS_PLATFORM_NAME}/libs")
+set(LIBZ_INC_DIR "${CZH_DEPS_LIBZ_INC}")
+set(LIBZ_LIB_DIR "${CZH_DEPS_LIBZ_LIB}")
 # pre-compiled lib
 find_library(LIBZ z ${LIBZ_LIB_DIR})
 
