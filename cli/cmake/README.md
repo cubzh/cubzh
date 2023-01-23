@@ -19,3 +19,10 @@ cmake --build .
 # alternative to force a rebuild
 cmake --build . --clean-first
 ```
+
+## Using Docker
+
+```shell
+# From repo root directory
+docker build -t cli-build -f ./cli/cmake/Dockerfile .
+```
