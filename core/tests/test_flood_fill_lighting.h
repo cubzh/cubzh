@@ -40,6 +40,7 @@ void test_light_node_get_coords(void) {
     check = light_node_queue_pop(q);
     light_node_get_coords(check, &int3Check);
 
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords1.x);
     TEST_CHECK(int3Check.y == coords1.y);
@@ -49,13 +50,13 @@ void test_light_node_get_coords(void) {
     check = light_node_queue_pop(q);
     light_node_get_coords(check, &int3Check);
 
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords2.x);
     TEST_CHECK(int3Check.y == coords2.y);
     TEST_CHECK(int3Check.z == coords2.z);
 
     light_node_queue_free(q);
-    light_node_free(check);
 }
 
 // Create a queue and insert in it a node. Pop the node and check if this is the good one.
@@ -69,13 +70,13 @@ void test_light_node_queue_push(void) {
     LightNode *check = light_node_queue_pop(q);
     light_node_get_coords(check, &int3Check);
 
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords.x);
     TEST_CHECK(int3Check.y == coords.y);
     TEST_CHECK(int3Check.z == coords.z);
 
     light_node_queue_free(q);
-    light_node_free(check);
 }
 
 // Create a queue and insert in it 3 different nodes. To check if the pop is done correctly, we pop
@@ -96,6 +97,7 @@ void test_light_node_queue_pop(void) {
     check = light_node_queue_pop(q); // [coordsB, coordsA]
     light_node_get_coords(check, &int3Check);
 
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsC.x);
     TEST_CHECK(int3Check.y == coordsC.y);
@@ -104,6 +106,7 @@ void test_light_node_queue_pop(void) {
     check = light_node_queue_pop(q); // [coordsA]
     light_node_get_coords(check, &int3Check);
 
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsB.x);
     TEST_CHECK(int3Check.y == coordsB.y);
@@ -112,6 +115,7 @@ void test_light_node_queue_pop(void) {
     check = light_node_queue_pop(q); // []
     light_node_get_coords(check, &int3Check);
 
+    light_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsA.x);
     TEST_CHECK(int3Check.y == coordsA.y);
@@ -121,7 +125,6 @@ void test_light_node_queue_pop(void) {
     TEST_CHECK(check == NULL);
 
     light_node_queue_free(q);
-    light_node_free(check);
 }
 
 // MARK: - LightRemovalQueue -
@@ -151,10 +154,10 @@ void test_light_removal_node_queue_push(void) {
     check = light_removal_node_queue_pop(q);
     TEST_CHECK(check != NULL);
 
+    light_removal_node_free(check);
     check = NULL;
 
     light_removal_node_queue_free(q);
-    light_node_free(check);
 }
 
 // Create a new removal queue and insert a node in it. Then we pop the node and check if the queue
@@ -175,13 +178,13 @@ void test_light_removal_node_queue_pop(void) {
     TEST_CHECK(check != NULL);
     light_removal_node_get_coords(check, &int3Check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coords.x);
     TEST_CHECK(int3Check.y == coords.y);
     TEST_CHECK(int3Check.z == coords.z);
 
     light_removal_node_queue_free(q);
-    light_node_free(check);
 }
 
 // Create a new removal queue and insert 2 different nodes in it. Then we pop them one by one from
@@ -212,6 +215,7 @@ void test_light_removal_node_get_coords(void) {
     check = light_removal_node_queue_pop(q);
     light_removal_node_get_coords(check, &int3Check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsB.x);
     TEST_CHECK(int3Check.y == coordsB.y);
@@ -221,13 +225,13 @@ void test_light_removal_node_get_coords(void) {
     check = light_removal_node_queue_pop(q);
     light_removal_node_get_coords(check, &int3Check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(int3Check.x == coordsA.x);
     TEST_CHECK(int3Check.y == coordsA.y);
     TEST_CHECK(int3Check.z == coordsA.z);
 
     light_removal_node_queue_free(q);
-    light_node_free(check);
 }
 
 // Create a new removal queue and insert 2 different nodes in it. Then we pop them one by one from
@@ -258,6 +262,7 @@ void test_light_removal_node_get_srgb(void) {
     check = light_removal_node_queue_pop(q);
     checkSrgb = light_removal_node_get_srgb(check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkSrgb == srgbB);
 
@@ -265,6 +270,7 @@ void test_light_removal_node_get_srgb(void) {
     check = light_removal_node_queue_pop(q);
     checkSrgb = light_removal_node_get_srgb(check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkSrgb == srgbA);
 
@@ -300,6 +306,7 @@ void test_light_removal_node_get_block_id(void) {
     check = light_removal_node_queue_pop(q);
     checkBlockID = light_removal_node_get_block_id(check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkBlockID == blockIDB);
 
@@ -307,9 +314,9 @@ void test_light_removal_node_get_block_id(void) {
     check = light_removal_node_queue_pop(q);
     checkBlockID = light_removal_node_get_block_id(check);
 
+    light_removal_node_free(check);
     check = NULL;
     TEST_CHECK(checkBlockID == blockIDA);
 
     light_removal_node_queue_free(q);
-    light_node_free(check);
 }

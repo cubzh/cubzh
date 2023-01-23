@@ -32,6 +32,10 @@ void light_node_free(LightNode *n) {
     free(n);
 }
 
+void light_removal_node_free(LightRemovalNode *n) {
+    free(n);
+}
+
 void light_node_get_coords(const LightNode *n, SHAPE_COORDS_INT3_T *coords) {
     *coords = n->coords;
 }
