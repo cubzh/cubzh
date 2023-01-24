@@ -47,11 +47,12 @@ struct _RigidBody {
     float mass;
 
     // combined friction of 2 surfaces in contact represents how much force is absorbed,
-    // it is a rate between 0 (full stop on contact) and 1 (full slide, no friction)
+    // it is a rate between 0 (full stop on contact) and 1 (full slide, no friction), or
+    // below 0 (inverted movement) and above 1 (amplified movement)
     float friction;
 
     // bounciness represents how much force is produced in response to a collision,
-    // it is a rate between 0 (no bounce) and 1 (100% of the force bounced)
+    // it is a rate between 0 (no bounce) and 1 (100% of the force bounced) or above
     float bounciness;
 
     // per-axes mask where blocking contact occurred as of last physics frame
@@ -975,13 +976,10 @@ bool rigidbody_tick(Scene *scene,
                                             dt,
                                             sceneQuery,
                                             callbackData);
-    }
-    if (simulated == SimulationResult_Moved || simulated == SimulationResult_Stayed) {
         return simulated == SimulationResult_Moved;
     }
-
     // check for overlaps to fire callbacks
-    if (rigidbody_is_active_trigger(rb)) {
+    else if (rigidbody_is_active_trigger(rb)) {
         _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, callbackData);
     }
 
@@ -1056,7 +1054,7 @@ float rigidbody_get_bounciness(const RigidBody *rb) {
 }
 
 void rigidbody_set_bounciness(RigidBody *rb, const float value) {
-    rb->bounciness = value;
+    rb->bounciness = maximum(value, 0.0f);
 }
 
 uint8_t rigidbody_get_contact_mask(const RigidBody *rb) {
