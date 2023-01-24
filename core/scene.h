@@ -106,7 +106,7 @@ typedef struct {
     float distance;
     CastHitType type;
     SHAPE_COORDS_INT3_T blockCoords;
-    FACE_INDEX_INT_T faceTouched; // of the block if any (model), or of the object's box (world)
+    FACE_INDEX_INT_T faceTouched; // of the block if any (model space)
 
     char pad[1];
 } CastResult;

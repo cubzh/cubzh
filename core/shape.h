@@ -95,8 +95,6 @@ Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
                               bool lighting,
                               const bool isMutable);
 
-void shape_set_transform(Shape *const s, Transform *const t);
-
 VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency);
 
 /// Returns false if retain fails

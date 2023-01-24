@@ -292,7 +292,7 @@ Shape *shape_make() {
 
     s->octree = NULL;
 
-    s->transform = NULL;
+    s->transform = transform_make_with_ptr(ShapeTransform, s, 0, NULL);
     s->pivot = NULL;
 
     s->lightingData = NULL;
@@ -337,7 +337,6 @@ Shape *shape_make() {
         cclog_warning("🔥 failed to store shape in index 1");
     }
 
-    transform_utils_make_with_shape(s);
     return s;
 }
 
@@ -434,10 +433,6 @@ Shape *shape_make_copy(Shape *origin) {
     }
 
     return s;
-}
-
-void shape_set_transform(Shape *const s, Transform *const t) {
-    s->transform = t;
 }
 
 Shape *shape_make_with_size(const uint16_t width,

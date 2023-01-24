@@ -54,8 +54,6 @@ struct _RtreeNode {
     char pad[4];
 };
 
-// TODO: node / query result pool
-
 // MARK: - Private functions prototypes -
 
 void _rtree_node_assign(RtreeNode *parent, RtreeNode *child, bool merge);
@@ -808,6 +806,7 @@ size_t rtree_query_cast_all_func(Rtree *r,
                                  void *ptr,
                                  const DoublyLinkedList *excludeLeafPtrs,
                                  DoublyLinkedList *results) {
+    vx_assert(results != NULL);
 
     FifoList *toExamine = fifo_list_new();
     DoublyLinkedListNode *n;
@@ -815,8 +814,6 @@ size_t rtree_query_cast_all_func(Rtree *r,
     size_t hits = 0;
     float dist;
     RtreeCastResult *result;
-
-    vx_assert(results != NULL);
 
     rn = r->root;
     while (rn != NULL) {
@@ -875,60 +872,64 @@ size_t rtree_query_cast_all_ray(Rtree *r,
                                      results);
 }
 
-float rtree_query_cast_box_step_func(Rtree *r,
-                                     const Box *stepOriginBox,
-                                     float step,
-                                     const float3 *step3,
-                                     const Box *broadPhaseBox,
-                                     uint8_t groups,
-                                     uint8_t collidesWith,
-                                     FifoList *broadPhaseResults,
-                                     RtreeNode **firstHit,
-                                     void *optionalPtr,
-                                     const DoublyLinkedList *excludeLeafPtrs) {
+size_t rtree_query_cast_all_box_step_func(Rtree *r,
+                                          const Box *stepOriginBox,
+                                          float stepStartDistance,
+                                          const float3 *step3,
+                                          const Box *broadPhaseBox,
+                                          uint8_t groups,
+                                          uint8_t collidesWith,
+                                          void *optionalPtr,
+                                          const DoublyLinkedList *excludeLeafPtrs,
+                                          DoublyLinkedList *results) {
 
-    float swept, minSwept = 1.0f;
-    float3 normal;
+    float swept;
     RtreeNode *hit;
+    FifoList *query = fifo_list_new();
+    RtreeCastResult *result;
+    size_t hits = 0;
 
-    // sweep the results, if any, and keep the closest hit
-    if (rtree_query_overlap_box(r,
-                                broadPhaseBox,
-                                groups,
-                                collidesWith,
-                                broadPhaseResults,
-                                -EPSILON_COLLISION) > 0) {
-        hit = fifo_list_pop(broadPhaseResults);
+    if (rtree_query_overlap_box(r, broadPhaseBox, groups, collidesWith, query, -EPSILON_COLLISION) >
+        0) {
+        hit = fifo_list_pop(query);
         while (hit != NULL) {
             swept = box_swept(stepOriginBox,
                               step3,
                               hit->aabb,
                               &float3_epsilon_collision,
                               false,
-                              &normal,
+                              NULL,
                               NULL);
-            if (swept < minSwept &&
-                (excludeLeafPtrs == NULL ||
+
+            if ((excludeLeafPtrs == NULL ||
                  doubly_linked_list_contains(excludeLeafPtrs, hit->leaf) == false)) {
 
-                *firstHit = hit;
-                minSwept = swept;
+                result = malloc(sizeof(RtreeCastResult));
+                if (result != NULL) {
+                    result->rtreeLeaf = hit;
+                    result->distance = stepStartDistance + swept * float3_length(step3);
+                    doubly_linked_list_push_last(results, result);
+                    hits++;
+                }
             }
-            hit = fifo_list_pop(broadPhaseResults);
+            hit = fifo_list_pop(query);
         }
     }
 
-    return minSwept;
+    vx_assert(fifo_list_get_size(query) == 0);
+    fifo_list_free(query, NULL);
+
+    return hits;
 }
 
-bool rtree_query_cast_box(Rtree *r,
-                          const Box *aabb,
-                          const float3 *unit,
-                          float maxDist,
-                          uint8_t groups,
-                          uint8_t collidesWith,
-                          const DoublyLinkedList *excludeLeafPtrs,
-                          RtreeCastResult *result) {
+size_t rtree_query_cast_all_box(Rtree *r,
+                                const Box *aabb,
+                                const float3 *unit,
+                                float maxDist,
+                                uint8_t groups,
+                                uint8_t collidesWith,
+                                const DoublyLinkedList *excludeLeafPtrs,
+                                DoublyLinkedList *results) {
 
     return rtree_utils_broadphase_steps(r,
                                         aabb,
@@ -936,72 +937,55 @@ bool rtree_query_cast_box(Rtree *r,
                                         maxDist,
                                         groups,
                                         collidesWith,
-                                        rtree_query_cast_box_step_func,
+                                        rtree_query_cast_all_box_step_func,
                                         NULL,
                                         excludeLeafPtrs,
-                                        result);
+                                        results);
 }
 
 // MARK: Utils
 
-bool rtree_utils_broadphase_steps(Rtree *r,
-                                  const Box *originBox,
-                                  const float3 *unit,
-                                  float maxDist,
-                                  uint8_t groups,
-                                  uint8_t collidesWith,
-                                  pointer_rtree_broadphase_step_func func,
-                                  void *optionalPtr,
-                                  const DoublyLinkedList *excludeLeafPtrs,
-                                  RtreeCastResult *result) {
+size_t rtree_utils_broadphase_steps(Rtree *r,
+                                    const Box *originBox,
+                                    const float3 *unit,
+                                    float maxDist,
+                                    uint8_t groups,
+                                    uint8_t collidesWith,
+                                    pointer_rtree_broadphase_step_func func,
+                                    void *optionalPtr,
+                                    const DoublyLinkedList *excludeLeafPtrs,
+                                    DoublyLinkedList *results) {
+    vx_assert(results != NULL);
 
-    FifoList *broadphaseResults = fifo_list_new();
     Box broadPhaseBox, stepOriginBox = *originBox;
     float d = 0.0f, step = 0.0f;
-    float minSwept = 1.0f;
-    RtreeNode *firstHit = NULL;
-
-    if (result != NULL) {
-        result->rtreeLeaf = NULL;
-        result->distance = FLT_MAX;
-    }
+    size_t hits = 0;
 
     // broadphase query w/ a nominal step, since max distance can at worst be arbitrarily large,
-    // and the broadphase would under-perform
-    while (d < maxDist && minSwept == 1.0f) {
+    // and the broadphase aligned box would under-perform
+    while (d < maxDist) {
         d += step;
         step = minimum(maxDist - d, RTREE_CAST_STEP_DISTANCE);
 
         const float3 step3 = {unit->x * step, unit->y * step, unit->z * step};
         box_set_broadphase_box(&stepOriginBox, &step3, &broadPhaseBox);
 
-        minSwept = func(r,
-                        &stepOriginBox,
-                        step,
-                        &step3,
-                        &broadPhaseBox,
-                        groups,
-                        collidesWith,
-                        broadphaseResults,
-                        &firstHit,
-                        optionalPtr,
-                        excludeLeafPtrs);
+        hits += func(r,
+                     &stepOriginBox,
+                     d,
+                     &step3,
+                     &broadPhaseBox,
+                     groups,
+                     collidesWith,
+                     optionalPtr,
+                     excludeLeafPtrs,
+                     results);
 
         float3_op_add(&stepOriginBox.min, &step3);
         float3_op_add(&stepOriginBox.max, &step3);
     }
 
-    fifo_list_free(broadphaseResults, NULL);
-
-    if (minSwept < 1.0f) {
-        if (result != NULL) {
-            result->rtreeLeaf = firstHit;
-            result->distance = d + step * minSwept;
-        }
-        return true;
-    }
-
-    return false;
+    return hits;
 }
 
 // MARK: - Debug functions -
