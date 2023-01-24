@@ -12,13 +12,13 @@
 
 #include "config.h"
 #include "filo_list_int3.h"
-#include "shape.h"
+#include   "shape.h"
 
 Block *block_new() {
-    return block_new_with_color(0);
+    return block_new_with_color(0 ) ;
 }
 
-Block *block_new_air(void) {
+Block *block_new_air ( void ) {
     return block_new_with_color(SHAPE_COLOR_INDEX_AIR_BLOCK);
 }
 
@@ -34,7 +34,7 @@ Block *block_new_copy(const Block *block) {
     if (block == NULL) {
         return NULL;
     }
-    Block *newBlock = (Block *)malloc(sizeof(Block));
+    Block * newBlock = (Block *)malloc(sizeof(Block));
     if (newBlock != NULL) {
         newBlock->colorIndex = block->colorIndex;
     }
