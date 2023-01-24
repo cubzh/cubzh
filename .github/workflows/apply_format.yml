@@ -22,7 +22,17 @@ jobs:
           cache: true
           cache-dependency-path: ci/format/go.sum
 
-      - name: Build Dagger program
+      # same as for the ci
+      - name: Cache Go executable
+        id: cache-format
+        uses: actions/cache@v3
+        with:
+          path: ./ci/format
+          # match the os, the main file and its depedencies
+          key: ${{ runner.os }}-format-${{ hashFiles('./ci/format/main.go') }}-${{ hashFiles('./ci/format/go.mod') }}
+
+      - if: ${{ steps.cache-format.outputs.cache-hit == 'false' }}
+        name: Build Dagger program
         working-directory: ./ci/format
         run: go build -v ./...
 
