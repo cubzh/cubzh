@@ -872,6 +872,89 @@ size_t rtree_query_cast_all_ray(Rtree *r,
                                      results);
 }
 
+typedef struct _SphereCastData {
+    const Ray *worldRay;
+    uint32_t radius;
+} SphereCastData;
+
+bool _rtree_line_intersect_plane(const float3 *S, const float3 *V,, const float3 *N, float D, float *distance) {
+    const float NdotV = float3_dot_product(N, V);
+    if (float_isZero(NdotV, EPSILON_ZERO)) {
+        return false;
+    } else {
+        *distance = -(float3_dot_product(N, S) + D) / NdotV;
+        return true;
+    }
+}
+
+bool _rtree_query_cast_sphere_all_func(RtreeNode *rn, void *ptr, float *distance) {
+    const SphereCastData *data = (SphereCastData*)ptr;
+    const float3 size2 = {
+        (rn->aabb->max.x - rn->aabb->min.x) * 0.5f,
+        (rn->aabb->max.y - rn->aabb->min.y) * 0.5f,
+        (rn->aabb->max.z - rn->aabb->min.z) * 0.5f
+    };
+    const float3 S = {
+        data->worldRay->origin->x - (size2.x + rn->aabb->min.x),
+        data->worldRay->origin->y - (size2.y + rn->aabb->min.y),
+        data->worldRay->origin->z - (size2.z + rn->aabb->min.z)
+    };
+    float d;
+
+    // 1) intersect sphere center with box planes offseted by sphere radius
+    // TODO: check point inside face
+    if (_rtree_line_intersect_plane(&S, data->worldRay->dir, &float3_right, size2.x, &d)) {
+        return true;
+    }
+    if (_rtree_line_intersect_plane(&S, data->worldRay->dir, &float3_left, -size2.x, &d)) {
+        return true;
+    }
+    if (_rtree_line_intersect_plane(&S, data->worldRay->dir, &float3_up, size2.y, &d)) {
+        return true;
+    }
+    if (_rtree_line_intersect_plane(&S, data->worldRay->dir, &float3_down, -size2.y, &d)) {
+        return true;
+    }
+    if (_rtree_line_intersect_plane(&S, data->worldRay->dir, &float3_forward, size2.z, &d)) {
+        return true;
+    }
+    if (_rtree_line_intersect_plane(&S, data->worldRay->dir, &float3_backward, -size2.z, &d)) {
+        return true;
+    }
+
+    // 2) intersect sphere center with edge cylinders
+    // TODO
+
+    // 3) intersect sphere center with corner spheres
+    // TODO 
+
+    return false;
+}
+
+size_t rtree_query_cast_all_sphere(Rtree *r,
+                                   const Ray *worldRay,
+                                   uint32_t radius,
+                                   uint8_t groups,
+                                   uint8_t collidesWith,
+                                   const DoublyLinkedList *excludeLeafPtrs,
+                                   DoublyLinkedList *results) {
+
+    SphereCastData *data = malloc(sizeof(SphereCastData));
+    data->worldRay = worldRay;
+    data->radius = radius;
+
+    size_t hits = rtree_query_cast_all_func(r,
+                                     groups,
+                                     collidesWith,
+                                     _rtree_query_cast_sphere_all_func,
+                                     (void *)data,
+                                     excludeLeafPtrs,
+                                     results);
+
+    free(data);
+    return hits;
+}
+
 size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                           const Box *stepOriginBox,
                                           float stepStartDistance,

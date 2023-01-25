@@ -131,6 +131,13 @@ size_t rtree_query_cast_all_ray(Rtree *r,
                                 uint8_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 DoublyLinkedList *results);
+size_t rtree_query_cast_all_sphere(Rtree *r,
+                                   const Ray *worldRay,
+                                   uint32_t radius,
+                                   uint8_t groups,
+                                   uint8_t collidesWith,
+                                   const DoublyLinkedList *excludeLeafPtrs,
+                                   DoublyLinkedList *results);
 size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                           const Box *stepOriginBox,
                                           float stepStartDistance,
