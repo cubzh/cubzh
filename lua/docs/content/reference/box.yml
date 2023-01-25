@@ -8,7 +8,7 @@ description: |
 
     When using or creating an axis-aligned Box, be mindful of what space it is relevant to.
 constructors: 
-  - description: "Creates a default Box with no volume."
+  - description: "Creates a default Box with no volume, or with given minimum and maximum points."
     argument-sets:
       -
       -
@@ -34,6 +34,11 @@ properties:
     description: |
         [This] maximum point representing the upper extent along the axes.
 
+  - name: "Size"
+    type: "Number3"
+    description: |
+        Size of the box from its minimum point. This automatically sets [This.Max](/reference/box#property-max).
+
   - name: "Center"
     type: "Number3"
     read-only: true
@@ -42,10 +47,27 @@ properties:
     
 functions:
   - name: "Copy"
-    return: 
-        - type: "Box" 
-    arguments: 
+    return:
+        - type: "Box"
+    arguments:
       - name: "b"
         type: "Box"
     description: |
         Returns a copy of the [Box].
+
+  - name: "Fit"
+    arguments:
+      - name: "target"
+        type: "Object"
+      - name: "recursive"
+        type: "boolean"
+        optional: true
+    description: |
+        Sets the box to a bounding box fitting the given target's model and all its descendants if the optional parameter `recursive` is `true`.
+
+  - name: "Merge"
+    arguments:
+      - name: "b"
+        type: "Box"
+    description: |
+        Sets the box to the combination of both boxes.
