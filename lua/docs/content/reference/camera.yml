@@ -243,18 +243,30 @@ functions:
 
     - name: "FitToScreen"
       description: |
-          Fits the target to the screen.
+          Fits the given [Shape] or [Box] to the screen.
 
-          `screenRatio` indicates the percentage of the screen that should be covered by the target.
-
-          When `spherize` is `true`, a sphere that contains the target is used to place the camera.
-      arguments:
-        - name: "target"
-          type: "Shape"
-        - name: "screenRatio"
-          type: "number"
-        - name: "spherize"
-          type: "boolean"
+          Optional parameters:
+          - `screenRatio` indicates the percentage of the screen that should be covered by the target.
+          - `spherize` switches between box fit (false) and sphere fit (true), spherize can be useful if the function is used every frame on a moving object, for smoother motion, but the fit will be wider.
+      argument-sets:
+        -
+          - name: "target"
+            type: "Shape"
+          - name: "screenRatio"
+            type: "number"
+            optional: true
+          - name: "spherize"
+            type: "boolean"
+            optional: true
+        -
+          - name: "box"
+            type: "Box"
+          - name: "screenRatio"
+            type: "number"
+            optional: true
+          - name: "spherize"
+            type: "boolean"
+            optional: true
       samples:
         - code: |
             local myShape = Shape(R.usename.myShape)
