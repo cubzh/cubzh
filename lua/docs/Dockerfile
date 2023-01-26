@@ -1,41 +1,24 @@
-FROM --platform=linux/amd64 golang:1.15.3-alpine3.12 AS build-env
-
-RUN apk update && apk add --no-cache \ 
-	git \
-	&& rm -rf /var/cache/apk/*
+FROM --platform=linux/amd64 golang:1.19.5-alpine3.17 AS build-env
 
 COPY go /go
-COPY content /www
 
 WORKDIR /go/src/website
 
 EXPOSE 80
-ENTRYPOINT ["ash"]
 
 #################################
 
-FROM --platform=linux/amd64 golang:1.15.3-alpine3.12 AS builder
-
-RUN apk update && apk add --no-cache \ 
-	git \
-	&& rm -rf /var/cache/apk/*
-
-COPY --from=build-env /go /go
-COPY --from=build-env /www /www
-
-EXPOSE 80
-WORKDIR /go/src/website
+FROM --platform=linux/amd64 build-env AS builder
 
 RUN go build
 
-ENTRYPOINT ["./website"]
-
 #################################
 
-FROM --platform=linux/amd64 alpine:3.12 AS website
+FROM --platform=linux/amd64 alpine:3.17 AS website
 
 # first copy the resources
-COPY --from=builder /www /www
+COPY content /www 
+
 # then the executable
 COPY --from=builder /go/src/website/website /website
 
@@ -45,4 +28,3 @@ WORKDIR /
 ENV RELEASE=1
 
 ENTRYPOINT ["/website"]
-
