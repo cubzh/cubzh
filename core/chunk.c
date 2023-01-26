@@ -496,9 +496,9 @@ void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T y,
                          const CHUNK_COORDS_INT_T z,
                          SHAPE_COORDS_INT3_T *pos) {
-    pos->x = x + (CHUNK_COORDS_INT_T)chunk->pos->x;
-    pos->y = y + (CHUNK_COORDS_INT_T)chunk->pos->y;
-    pos->z = z + (CHUNK_COORDS_INT_T)chunk->pos->z;
+    pos->x = x + (SHAPE_COORDS_INT_T)chunk->pos->x;
+    pos->y = y + (SHAPE_COORDS_INT_T)chunk->pos->y;
+    pos->z = z + (SHAPE_COORDS_INT_T)chunk->pos->z;
 }
 
 int chunk_get_nb_blocks(const Chunk *chunk) {
