@@ -8,3 +8,5 @@ ci/lua_docs_deploy_prod/vendor/** filter=lfs diff=lfs merge=lfs -text
 # Lua documentation
 lua/docs/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
 lua/docs/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+# Lua documentation - webserver dependencies
+lua/docs/webserver/vendor/** filter=lfs diff=lfs merge=lfs -text

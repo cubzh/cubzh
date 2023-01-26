@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-	"util/fsutil"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -32,12 +31,10 @@ var (
 	typeRoutes map[string]string
 )
 
-//
 func redirectTLS(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "https://docs.cu.bzh:443"+r.RequestURI, http.StatusMovedPermanently)
 }
 
-//
 func main() {
 
 	// --------------------------------------------------
@@ -149,7 +146,7 @@ func parseContent() error {
 	pages = make(map[string]*Page)
 	typeRoutes = make(map[string]string)
 
-	if !fsutil.DirectoryExists(contentDirectory) {
+	if !directoryExists(contentDirectory) {
 		return errors.New("content directory is missing")
 	}
 
@@ -179,7 +176,7 @@ func parseContent() error {
 		if strings.HasSuffix(walkPath, ".yml") { // YML FILE
 
 			// check if path points to a regular file
-			exists := fsutil.RegularFileExists(walkPath)
+			exists := regularFileExists(walkPath)
 			if exists {
 
 				var page Page
