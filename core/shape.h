@@ -386,11 +386,10 @@ bool shape_ray_cast(const Shape *s,
                     float3 *localImpact,
                     Block **block,
                     SHAPE_COORDS_INT3_T *coords);
-
 bool shape_point_overlap(const Shape *s, const float3 *world);
-bool shape_box_overlap(const Shape *s,
-                       const Box *worldBox,
-                       float3 *firstOverlap); // note: uses lossy scale
+/// Overlaps a box in shape's model space against its blocks
+/// @return true if there is an overlap
+bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out);
 
 // MARK: - Graphics -
 

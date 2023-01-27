@@ -206,8 +206,8 @@ void transform_utils_box_to_dynamic_collider(Transform *t,
                                              Box *aab,
                                              const float3 *offset,
                                              SquarifyType squarify);
-
 Shape *transform_utils_get_shape(Transform *t);
+Transform *transform_utils_get_model_transform(Transform *t);
 
 // MARK: - Misc. -
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled);

@@ -73,6 +73,11 @@ size_t doubly_linked_list_node_count(const DoublyLinkedList *list);
 DoublyLinkedListNode *doubly_linked_list_node_at_index(const DoublyLinkedList *list, size_t i);
 
 bool doubly_linked_list_contains(const DoublyLinkedList *list, void *ptr);
+typedef bool (*pointer_doubly_linked_list_contains_func)(void *nodePtr, void *data);
+bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
+                                      pointer_doubly_linked_list_contains_func func,
+                                      void *ptr,
+                                      void **out);
 
 //--------------------
 // MARK: - DoublyLinkedListNode -

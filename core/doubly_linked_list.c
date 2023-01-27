@@ -253,6 +253,24 @@ bool doubly_linked_list_contains(const DoublyLinkedList *list, void *ptr) {
     return false;
 }
 
+bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
+                                      pointer_doubly_linked_list_contains_func func,
+                                      void *ptr,
+                                      void **out) {
+    DoublyLinkedListNode *n = list->first;
+    while (n != NULL) {
+        if (func(n->ptr, ptr)) {
+            if (out != NULL) {
+                *out = n->ptr;
+            }
+            return true;
+        }
+        n = n->next;
+    }
+
+    return false;
+}
+
 //---------------------
 // DoublyLinkedNode
 //---------------------

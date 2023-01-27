@@ -56,7 +56,7 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData);
 /// - physics and core tick+refresh
 /// - scripting tick
 /// - end-of-frame refresh (this function)
-void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData);
+void scene_end_of_frame_refresh(Scene *sc, void *callbackData);
 /// A standalone refresh can be called to solely refresh transforms in special cases where waiting
 /// for end-of-frame isn't an option, overall it should be avoided
 void scene_standalone_refresh(Scene *sc);
@@ -78,7 +78,15 @@ void scene_remove_transform(Scene *sc, Transform *p);
 /// and if the transform is re-added to the hierarchy in the same frame, removal is cancelled
 /// Note: remember to call this before any operation triggering a possible last transform_release
 void scene_register_removed_transform(Scene *sc, Transform *t);
-void scene_register_collision_couple(Scene *sc, Transform *t1, Transform *t2, AxesMaskValue axis);
+typedef enum CollisionCoupleStatus {
+    CollisionCoupleStatus_Begin,
+    CollisionCoupleStatus_Tick,
+    CollisionCoupleStatus_Discard
+} CollisionCoupleStatus;
+CollisionCoupleStatus scene_register_collision_couple(Scene *sc,
+                                                      Transform *t1,
+                                                      Transform *t2,
+                                                      float3 *wNormal);
 
 // MARK: - Physics -
 

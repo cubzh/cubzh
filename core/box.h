@@ -108,6 +108,13 @@ void box_to_aabox2(const Box *b,
                    const float3 *offset,
                    SquarifyType squarify);
 
+void box_model1_to_model2_aabox(const Box *b,
+                                Box *aab,
+                                const Matrix4x4 *model1,
+                                const Matrix4x4 *invModel2,
+                                const float3 *offset,
+                                SquarifyType squarify);
+
 void box_op_merge(const Box *b1, const Box *b2, Box *result);
 
 float box_get_volume(const Box *b);

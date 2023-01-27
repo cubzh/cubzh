@@ -961,6 +961,10 @@ Shape *transform_utils_get_shape(Transform *t) {
     return (Shape *)t->ptr;
 }
 
+Transform *transform_utils_get_model_transform(Transform *t) {
+    return transform_get_type(t) == ShapeTransform ? shape_get_pivot_transform((Shape *)t->ptr) : t;
+}
+
 // MARK: - Misc. -
 
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled) {
