@@ -384,8 +384,12 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                         AxesMaskValue selfBoxSide = AxesMaskNone;
 
                         float3 wNormal;
-                        matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
-                        float3_normalize(&wNormal);
+                        if (model != NULL) {
+                            matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
+                            float3_normalize(&wNormal);
+                        } else {
+                            wNormal = normal;
+                        }
 
                         if (fabsf(wNormal.x) >= fabsf(wNormal.y) &&
                             fabsf(wNormal.x) >= fabsf(wNormal.z)) {
