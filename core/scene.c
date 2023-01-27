@@ -555,30 +555,31 @@ CastHitType scene_cast_ray(Scene *sc,
                                  groups,
                                  filterOutTransforms,
                                  sceneQuery) > 0) {
+
         // sort query results by distance
         doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
-        // TODO: re-enable optim to only evaluate hits based on distance relevance vs. per-block
-        // shapes
 
-        // process query results in order, this function only returns first hit block or collision
-        // box
+        // process query results in order, to return first hit block or collision box
         DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
         RtreeCastResult *rtreeHit;
         Transform *hitTr;
         RigidBody *hitRb;
-        while (n != NULL /*&& hit.type == CastHit_None*/) {
+        while (n != NULL) {
             rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
             hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
             hitRb = transform_get_rigidbody(hitTr);
 
+            // re-examine closer hits after updating hit.distance vs. per-block or rotated collider
+            if (rtreeHit->distance >= hit.distance) {
+                break;
+            }
+
             const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
 
             if (mode == RigidbodyMode_Dynamic) {
-                if (rtreeHit->distance < hit.distance) {
-                    hit.hitTr = hitTr;
-                    hit.distance = rtreeHit->distance;
-                    hit.type = CastHit_CollisionBox;
-                }
+                hit.hitTr = hitTr;
+                hit.distance = rtreeHit->distance;
+                hit.type = CastHit_CollisionBox;
             } else if (transform_get_type(hitTr) == ShapeTransform &&
                        rigidbody_uses_per_block_collisions(transform_get_rigidbody(hitTr))) {
 
@@ -682,88 +683,130 @@ CastHitType scene_cast_box(Scene *sc,
         return CastHit_None;
     }
 
-    // TODO: box cast needs to return all hits, so that we can evaluate based on distance relevance
-    // vs. per-block shapes
-    RtreeCastResult firstHit = {NULL, FLT_MAX};
-    if (rtree_query_cast_box(sc->rtree,
-                             aabb,
-                             unit,
-                             maxDist,
-                             PHYSICS_GROUP_NONE,
-                             groups,
-                             filterOutTransforms,
-                             &firstHit)) {
+    DoublyLinkedList *sceneQuery = doubly_linked_list_new();
+    if (rtree_query_cast_all_box(sc->rtree,
+                                 aabb,
+                                 unit,
+                                 maxDist,
+                                 PHYSICS_GROUP_NONE,
+                                 groups,
+                                 filterOutTransforms,
+                                 sceneQuery)) {
 
-        vx_assert(firstHit.rtreeLeaf != NULL);
+        // sort query results by distance
+        doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
 
-        Transform *hitTr = (Transform *)rtree_node_get_leaf_ptr(firstHit.rtreeLeaf);
-        RigidBody *hitRb = transform_get_rigidbody(hitTr);
-        const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+        // process query results in order, to return first hit block or collision box
+        DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
+        RtreeCastResult *rtreeHit;
+        Transform *hitTr;
+        RigidBody *hitRb;
+        while (n != NULL) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+            hitRb = transform_get_rigidbody(hitTr);
 
-        if (mode == RigidbodyMode_Dynamic) {
-            hit.hitTr = hitTr;
-            hit.distance = firstHit.distance;
-            hit.type = CastHit_CollisionBox;
-        } else {
-            Box modelBox, modelBroadphase;
-            float3 modelVector, modelEpsilon;
-            Shape *hitShape = transform_utils_get_shape(hitTr);
+            // re-examine closer hits after updating hit.distance vs. per-block or rotated collider
+            if (rtreeHit->distance >= hit.distance) {
+                break;
+            }
 
-            float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
+            const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
 
-            // solve non-dynamic rigidbodies in their model space (rotated collider)
-            const Box *collider = rigidbody_get_collider(hitRb);
-            const Matrix4x4 *invModel = transform_get_wtl(
-                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
-            rigidbody_broadphase_world_to_model(invModel,
-                                                aabb,
-                                                &modelBox,
-                                                &vector,
-                                                &modelVector,
-                                                EPSILON_COLLISION,
-                                                &modelEpsilon);
+            if (mode == RigidbodyMode_Dynamic) {
+                hit.hitTr = hitTr;
+                hit.distance = rtreeHit->distance;
+                hit.type = CastHit_CollisionBox;
+            } else {
+                Box modelBox, modelBroadphase;
+                float3 modelVector, modelEpsilon;
+                Shape *hitShape = transform_utils_get_shape(hitTr);
 
-            box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
-            if (box_collide(&modelBroadphase, collider)) {
-                // shapes may enable per-block collisions
-                if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
-                    Block *block = NULL;
-                    SHAPE_COORDS_INT3_T blockCoords;
-                    float3 normal;
-                    const float swept = shape_box_swept(hitShape,
-                                                        &modelBox,
-                                                        &modelVector,
-                                                        &modelEpsilon,
-                                                        false,
-                                                        &normal,
-                                                        NULL,
-                                                        &block,
-                                                        &blockCoords);
-                    if (swept < 1.0f) {
-                        hit.hitTr = hitTr;
-                        hit.block = block;
-                        hit.distance = swept * maxDist;
-                        hit.type = CastHit_Block;
-                        hit.blockCoords = blockCoords;
-                        hit.faceTouched = utils_aligned_normal_to_face(&normal);
-                    }
-                } else {
-                    const float swept = box_swept(&modelBox,
-                                                  &modelVector,
-                                                  rigidbody_get_collider(hitRb),
-                                                  &modelEpsilon,
-                                                  true,
-                                                  NULL,
-                                                  NULL);
-                    if (swept < 1.0f) {
-                        hit.hitTr = hitTr;
-                        hit.distance = swept * maxDist;
-                        hit.type = CastHit_CollisionBox;
+                float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
+
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                const Box *collider = rigidbody_get_collider(hitRb);
+                const Matrix4x4 *invModel = transform_get_wtl(
+                    hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
+                rigidbody_broadphase_world_to_model(invModel,
+                                                    aabb,
+                                                    &modelBox,
+                                                    &vector,
+                                                    &modelVector,
+                                                    EPSILON_COLLISION,
+                                                    &modelEpsilon);
+
+                box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
+                if (box_collide(&modelBroadphase, collider)) {
+                    // shapes may enable per-block collisions
+                    if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                        Block *block = NULL;
+                        SHAPE_COORDS_INT3_T blockCoords;
+                        float3 normal;
+                        const float swept = shape_box_swept(hitShape,
+                                                            &modelBox,
+                                                            &modelVector,
+                                                            &modelEpsilon,
+                                                            false,
+                                                            &normal,
+                                                            NULL,
+                                                            &block,
+                                                            &blockCoords);
+                        if (swept < 1.0f) {
+                            float3_op_scale(&modelVector, swept);
+
+                            float3 worldVector, worldNormal;
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &modelVector,
+                                                       &worldVector);
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &normal,
+                                                       &worldNormal);
+
+                            const float distance = float3_length(&worldVector);
+
+                            if (distance < hit.distance) {
+                                hit.hitTr = hitTr;
+                                hit.block = block;
+                                hit.distance = distance;
+                                hit.type = CastHit_Block;
+                                hit.blockCoords = blockCoords;
+                                hit.faceTouched = utils_aligned_normal_to_face(&worldNormal);
+                            }
+                        }
+                    } else {
+                        const float swept = box_swept(&modelBox,
+                                                      &modelVector,
+                                                      rigidbody_get_collider(hitRb),
+                                                      &modelEpsilon,
+                                                      true,
+                                                      NULL,
+                                                      NULL);
+                        if (swept < 1.0f) {
+                            float3_op_scale(&modelVector, swept);
+
+                            float3 worldVector;
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &modelVector,
+                                                       &worldVector);
+
+                            const float distance = float3_length(&worldVector);
+
+                            if (distance < hit.distance) {
+                                hit.hitTr = hitTr;
+                                hit.distance = distance;
+                                hit.type = CastHit_CollisionBox;
+                            }
+                        }
                     }
                 }
             }
+
+            n = doubly_linked_list_node_next(n);
         }
     }
+    doubly_linked_list_flush(sceneQuery, free);
+    doubly_linked_list_free(sceneQuery);
 
     if (result != NULL) {
         *result = hit;

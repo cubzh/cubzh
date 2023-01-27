@@ -947,12 +947,6 @@ void transform_utils_box_to_dynamic_collider(Transform *t,
 #endif
 }
 
-Transform *transform_utils_make_with_shape(Shape *ptr) {
-    Transform *t = transform_make_with_ptr(ShapeTransform, ptr, 0, NULL);
-    shape_set_transform(ptr, t);
-    return t;
-}
-
 Shape *transform_utils_get_shape(Transform *t) {
     if (t == NULL) {
         return NULL;

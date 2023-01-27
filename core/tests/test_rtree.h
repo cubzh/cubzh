@@ -26,8 +26,8 @@
 // rtree_query_overlap_box
 // rtree_query_cast_all_func
 // rtree_query_cast_all_ray
-// rtree_query_cast_box_step_func
-// rtree_query_cast_box
+// rtree_query_cast_all_box_step_func
+// rtree_query_cast_all_box
 // rtree_utils_broadphase_steps
 // debug_rtree_get_insert_calls
 // debug_rtree_get_split_calls

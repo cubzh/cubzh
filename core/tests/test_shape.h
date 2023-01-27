@@ -185,18 +185,6 @@ void test_shape_make_with_octree(void) {
     shape_free((Shape *const)s);
 }
 
-// check that the transform is the one provided
-void test_shape_set_transform(void) {
-    Shape *s = shape_make();
-    Transform *t = transform_make_default();
-    shape_set_transform((Shape *const)s, (Transform *const)t);
-
-    TEST_CHECK(shape_get_root_transform((const Shape *)s) == t);
-
-    shape_free((Shape *const)s);
-    transform_release(t);
-}
-
 // check that we can retain a shape
 void test_shape_retain(void) {
     Shape *s = shape_make();
