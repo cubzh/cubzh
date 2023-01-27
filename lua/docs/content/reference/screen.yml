@@ -12,6 +12,8 @@ properties:
       type: "number"
       description: "Screen's height, in points."
 
+
+functions:
     - name: "DidResize"
       type: "function"
       description: |
@@ -21,5 +23,3 @@ properties:
             Screen.DidResize = function(width, height)
               print("SCREEN SIZE:", width, height)
             end
-
-    

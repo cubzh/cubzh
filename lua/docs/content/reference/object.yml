@@ -124,11 +124,21 @@ properties:
 
 
     - name: "Physics"
-      type: "boolean"
+      type: "PhysicsMode"
       description: |
-          Turns physic simulation on/off when set.
+          Sets the simulation mode for this object, it can be one of the following:
+          - `PhysicsMode.Disabled`: excluded from all physics features.
+          - `PhysicsMode.Trigger`: [This]'s collision box is available for casts and collision callbacks, and is passed through by other dynamic objects.
+          - `PhysicsMode.TriggerPerBlock`: if [This] is a [Shape], its model blocks are available for casts and collision callbacks, and is passed through by other dynamic objects.
+          - `PhysicsMode.Static`: [This]'s collision box is available for casts, collision callbacks, and acts as an obstacle for other dynamic objects.
+          - `PhysicsMode.StaticPerBlock`: if [This] is a [Shape], its model blocks are available for casts, collision callbacks, and act as obstacles for other dynamic objects.
+          - `PhysicsMode.Dynamic`: [This]'s world-aligned collision box is available for casts, collision callbacks, may act as obstacles for other dynamic objects, and is itself fully simulated.
 
-          ⚠️ When turned off, [This].[Velocity](#property-velocity) & [This].[Motion](#property-motion) are set to `{0,0,0}`.
+          By default, objects are set to `PhysicsMode.Static`.
+        
+          You may use `Dev.DisplayColliders` to visualize each object's collision settings.
+
+          ⚠️ When set to `PhysicsMode.Disabled`, [This].[Velocity](#property-velocity) & [This].[Motion](#property-motion) are set to `{0,0,0}`.
 
     - name: "OnCollision"
       type: "function"
@@ -312,7 +322,7 @@ properties:
     - name: Friction
       type: "number"
       description: |
-          The combined friction of 2 [Object]s in contact represents how much the moving [Object] will be able to slide along the colliding [Object]. It is a rate between 0 (full stop on contact) and 1 (full slide, no friction), values higher than 1 are allowed and will create an increasing momentum, like sliding on ice.
+          The combined friction of 2 [Object]s in contact represents how much the moving [Object] will be able to slide along the colliding [Object]. It is a rate between 0 (full slide, no friction) and 1 (full stop on contact), values lower than 0 or higher than 1 are allowed and will create an increasing or inverted momentum, like sliding on ice.
 
     - name: Bounciness
       type: "number"
@@ -549,3 +559,6 @@ functions:
           type: "Object"
         - name: "value"
           type: "Number3"
+
+    - name: "ResetCollisionBox"
+      description: "Resets to [This]'s original collision box. For example, [Player] and [Shape] objects will revert to fitting their model bounding box."

@@ -8,7 +8,7 @@ description: |
 properties:
     - name: "On"
       type: "boolean"
-      description: "Set to false to remove the coulds."
+      description: "Set to false to remove the clouds."
       samples: 
         - code: |
             -- show clouds
@@ -21,3 +21,8 @@ properties:
     - name: "Altitude"
       type: "number"
       description: "Altitude of the clouds in blocks"
+
+    - name: "IsUnlit"
+      type: "boolean"
+      description: |
+        Whether or not the [This] should ignore scene lighting, `false` by default.

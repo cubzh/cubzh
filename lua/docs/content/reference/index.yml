@@ -45,6 +45,7 @@ blocks:
         - "<a href=\"/reference/screen\">Screen</a>"
         - "<a href=\"/reference/server\">Server</a>"
         - "<a href=\"/reference/shape\">Shape</a>"
+        - "<a href=\"/reference/text\">Text</a>"
         - "<a href=\"/reference/time\">Time</a>"
         - "<a href=\"/reference/timecycle\">TimeCycle</a>"
         - "<a href=\"/reference/timecyclemark\">TimeCycleMark</a>"
@@ -52,7 +53,6 @@ blocks:
         - "<a href=\"/reference/ui\">UI</a>"
         - "<a href=\"/reference/url\">URL</a>"
         - "<a href=\"/reference/world\">World</a>"
-        - "<a href=\"/reference/text\">Text</a>"
 
     - text: "Lua basic types:"
 
