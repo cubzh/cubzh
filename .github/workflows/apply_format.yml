@@ -7,42 +7,52 @@ on:
 jobs:
   do-format:
     name: Format Core
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/format'}}
+    # Check that the comment comes from a Pull Request, and not from a regular Issue.
+    # Also look for "/format" command in comment body.
+    if: ${{ github.event.issue.pull_request }} && contains(github.event.comment.body, '/format')
     runs-on: ubuntu-latest
     steps:
-      - name: Git checkout
+      - 
+        name: Git checkout
         uses: actions/checkout@v3
         with:
+          # Checkout pull request HEAD commit (instead of merge commit)
+          ref: ${{ github.event.pull_request.head.sha }}
           lfs: 'true'
-
-      - name: Setup Go
+      - 
+        name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.18'
-          cache: true
-          cache-dependency-path: ci/format/go.sum
-
-      - name: Build Dagger program
+          go-version: '>=1.18'
+      - 
+        name: Build Dagger program
         working-directory: ./ci/format
-        run: go build -v ./...
-
-      - name: Run Dagger program
+        run: go build -o format -v ./...
+      - 
+        name: Run Dagger program
         working-directory: ./ci/format
-        run: ./format --apply-changes
-
-      - name: Commit
+        # after execution, we remove the executable so it doesn't get committed on the next step
+        run: ./format --apply-changes; rm ./format
+      - 
+        name: Commit
+        id: auto-commit
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Automated format
+          commit_message: Automated C/C++ code formatting
           commit_options: '--no-verify --signoff'
-          commit_user_name: Format bot
+          commit_user_name: Cubzh Bot
+          commit_user_email: bot@cu.bzh
+          commit_author: Cubzh Bot <bot@cu.bzh>
+          skip_dirty_check: true
           skip_fetch: true
           skip_checkout: true
-
-      - name: Format done
-        if: steps.auto-commit-action.outputs.changes_detected == 'true'
-        run: echo "Format done!"
-        
-      - name: No need to format
-        if: steps.auto-commit-action.outputs.changes_detected == 'false'
-        run: echo "No need to format!"
+          create_branch: false
+          branch: ${{ github.ref_name }} # "fix-apply-format" 
+      - 
+        name: Format done
+        if: steps.auto-commit.outputs.changes_detected == 'true'
+        run: echo "Format done."
+      - 
+        name: No need to format
+        if: steps.auto-commit.outputs.changes_detected == 'false'
+        run: echo "No need to format."

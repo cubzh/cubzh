@@ -41,11 +41,11 @@ func checkFormat(doFormat bool) error {
 	defer client.Close()
 
 	// create a reference to host root dir
-	dirOpts := dagger.HostWorkdirOpts{
+	dirOpts := dagger.HostDirectoryOpts{
 		// exclude the following directories
 		Exclude: []string{".git", "ci", "dockerfiles", "misc", "core/tests/visual_studio", "core/tests/xcode", "core/tests/cmake"},
 	}
-	src := client.Host().Workdir(dirOpts)
+	src := client.Host().Directory(".", dirOpts)
 
 	// get Docker container from hub
 	ciContainer := client.Container().From("gaetan/clang-tools")
@@ -78,7 +78,7 @@ func checkFormat(doFormat bool) error {
 		fmt.Println("error getting the exitcode")
 		return err
 	}
-	if code != 0 && doFormat == false {
+	if code != 0 && !doFormat {
 		return errors.New("incorrect format")
 	}
 
