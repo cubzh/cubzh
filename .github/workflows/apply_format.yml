@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           # Checkout pull request HEAD commit (instead of merge commit)
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.issue.pull_request.headRef }}
           lfs: 'true'
       - 
         name: Setup Go
@@ -47,7 +47,7 @@ jobs:
           skip_fetch: true
           skip_checkout: true
           create_branch: false
-          branch: ${{ github.ref_name }} # "fix-apply-format" 
+          branch: ${{ github.event.issue.pull_request.headRefName }} # name of branch
       - 
         name: Format done
         if: steps.auto-commit.outputs.changes_detected == 'true'

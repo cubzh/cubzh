@@ -1,6 +1,7 @@
 # CI
 # --------------------
 # Go vendor directories
+ci/core_unit_tests/vendor/** filter=lfs diff=lfs merge=lfs -text
 ci/format/vendor/** filter=lfs diff=lfs merge=lfs -text
 
 # Lua documentation
