@@ -1,0 +1,49 @@
+{{define "head"}}
+<head>
+	<title>Cubzh - Scripting Documentation</title>
+	{{ if .Keywords }}<meta name="keywords" content='{{ Join .Keywords ", " }}'>{{ end }}
+	{{ if .MetaDescription }}<meta name="description" content="{{ .MetaDescription }}">{{ end }}
+
+	<!-- CSS -->
+		<link rel="stylesheet" href="/style/css/style.css">
+		<link rel="stylesheet" href="/style/highlight/atom-one-dark.css">
+
+		 <!-- Mobile Specific Metas -->
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<!-- FAVICON -->
+	<link rel="apple-touch-icon" sizes="180x180" href="/style/img/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/style/img/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/style/img/favicon-16x16.png">
+	<link rel="manifest" href="/style/img/site.webmanifest">
+	
+	<!-- JS -->
+	<script src="/js/highlight.pack.js"></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', (event) => {
+			document.querySelectorAll('pre').forEach((block) => {
+				hljs.highlightBlock(block);
+			});
+
+			document.querySelectorAll('.toggle').forEach((toggleLink) => {
+				toggleLink.onclick = function() {
+
+					if (toggleLink.nextSibling.style.display != "none") {
+
+						toggleLink.innerHTML = "Show"
+						toggleLink.parentElement.style.paddingBottom = 0
+						toggleLink.nextSibling.style.display = "none";
+
+					} else {
+
+						toggleLink.innerHTML = "Hide"
+						toggleLink.parentElement.style.paddingBottom = "10px"
+						toggleLink.nextSibling.style.display = "block";
+
+					}	
+				}
+			});
+		});
+	</script>
+</head>
+{{end}}

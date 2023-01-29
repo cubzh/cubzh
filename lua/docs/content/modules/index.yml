@@ -1,0 +1,7 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "modules", "lua"]
+title: "Modules"
+description: "This page documents all objects, functions and properties available in Cubzh scripting environment."
+blocks:
+    - text: "Here's a list of modules available in Cubzh:"
+    - list:
+        - "<a href=\"/modules/uikit\">uikit</a>"

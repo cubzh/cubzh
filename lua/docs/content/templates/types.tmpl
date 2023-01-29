@@ -1,0 +1,11 @@
+{{define "types"}}
+	{{ if . }}
+		{{ range $index, $type := . }}
+			{{ $route := GetTypeRoute $type }}<!--
+			-->{{if $index}}|{{end}}<!--
+			-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+			-->{{ $type }}<!--
+			-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+		{{ end }}
+	{{ end }}
+{{end}}

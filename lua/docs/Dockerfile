@@ -1,9 +1,18 @@
 FROM --platform=linux/amd64 golang:1.20.1-alpine3.17 AS build-env
 
-# Go code
-COPY webserver /webserver
+RUN apk update && apk add --no-cache \ 
+	git \
+	lua5.3 \
+	&& rm -rf /var/cache/apk/*
 
-WORKDIR /webserver
+COPY lua/docs/go /go
+COPY lua/docs/content /www
+COPY lua/docs/parser /parser
+COPY lua/modules /modules
+
+RUN cd /parser && ./parse.sh
+
+WORKDIR /go/src/website
 
 EXPOSE 80
 

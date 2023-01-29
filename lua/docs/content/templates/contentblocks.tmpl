@@ -1,0 +1,44 @@
+{{define "contentblocks"}}
+	{{ if . }}
+		{{ range . }}
+			{{ if .Text }}
+				<p>{{ .Text }}</p>
+			{{ else if .Title }}
+				<h2><a id="{{ GetAnchorLink .Title }}" href="#{{ GetAnchorLink .Title }}">{{ .Title }}</a></h2>
+			{{ else if .Subtitle }}
+				<h3><a id="{{ GetAnchorLink .Subtitle }}" href="#{{ GetAnchorLink .Subtitle }}">{{ .Subtitle }}</a></h3>
+			{{ else if .Image }}
+				<div class="centeredImage">
+					<img src="{{ .Image }}" style="width:100%;"></img>
+				</div>
+			{{ else if .Media }}
+				<div class="centeredVideo">
+					<video style="width:100%;" autoplay loop muted playsinline>
+					  <source src="{{ .Media }}" type="video/mp4" />
+					Your browser does not support the video tag.
+					</video>
+				</div>
+			{{ else if .Audio }}
+				<div class="audioPlayer">
+					<audio controls src="{{ .Audio.file }}"></audio>
+					{{ .Audio.title }}
+				</div>
+			{{ else if .AudioList }}
+				{{ range .AudioList }}
+					<div class="audioPlayer">
+						<audio controls src="{{ .file }}"></audio>
+						{{ .title }}
+					</div>
+				{{ end }}
+			{{ else if .Code }}
+				<pre>{{ .Code }}</pre>
+			{{ else if .List }}
+				<ul>
+				{{ range .List }}
+					<li>{{ . }}</li>
+				{{ end }}
+				</ul>
+			{{ end }}
+		{{ end }}
+	{{ end }}
+{{end}}

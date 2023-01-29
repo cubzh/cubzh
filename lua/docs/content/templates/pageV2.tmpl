@@ -1,0 +1,112 @@
+<html>
+	{{ template "head" . }}
+	<body>
+		<div id="container">
+			
+			{{ template "sidemenu" . }}
+			{{ template "header" . }}
+			{{ template "menu" . }}
+
+			<div id="content">
+				<div id="content-container">
+
+				<h1>{{ GetTitle . }}</h1>
+
+				{{ template "contentblocks" .Description }}
+
+				{{ if .Types }}
+					{{ range .Types }}
+
+						<div class="type-container">
+
+							<h1><a id="functions" href="#type-{{ .Name }}">{{ .Name }}</a></h1>
+				
+							{{ if .Functions }} 
+							<h2><a id="functions" href="#functions">Functions</a></h2>
+								
+								{{ range $index, $function := .Functions }}
+										<a id="functions-{{ GetAnchorLink .Name }}"></a>
+										<div class="object-element-tbl">
+											<div class="object-element-header">
+												{{ if .ParameterSets }}
+													<!-- display several lines for function prototype 
+														when different sets of arguments are accepted. -->
+													{{ range $index, $parameters := .ParameterSets }}<!--
+														--><div class="set-of-arguments"><!--
+															-->{{ if $index }}<span class="variation">{{ end}}<!--
+
+															--> <a href="#functions-{{ GetAnchorLink $function.Name }}"><span class="name">{{ $function.Name }}</span></a><!--
+															-->{{ if $index }}</span>{{ end}} ( <!--
+
+															-->{{ range $index, $element := $parameters }}<!--
+																-->{{if $index}}, {{end}}<!--
+																-->{{ template "types" $element.Types }}<!--
+																	--> {{ .Name }}<!--
+																-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+															-->{{ end }} )<!--
+
+															-->{{ if $function.Return }} → <!--
+																-->{{ range $index, $value := $function.Return }}<!--
+																	-->{{ template "types" $value.Types }}<!--
+																-->{{ end }}<!--
+															-->{{ end }}<!--
+														--></div><!--
+													-->{{ end }}<!--
+												-->{{ else }}<!--
+													--> <a href="#functions-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a> ( ) <!--
+													-->{{ if .Return }} → <!--
+														-->{{ range $index, $value := .Return }}<!--
+															-->{{ template "types" $value.Types }}<!--
+														-->{{ end }}<!--
+													-->{{ end }}<!--
+												-->{{ end }}<!--
+											--></div>
+											<div class="object-element-row">
+												{{ template "contentblocks" .Description }}
+											</div>
+										</div>
+								{{ end }}
+
+							{{ end }} <!-- if Functions -->
+
+
+							{{ if .Properties }}
+							<h2><a id="properties" href="#properties">Properties</a></h2>
+
+								{{ range $index, $property := .Properties }}
+										<a id="property-{{ GetAnchorLink .Name }}"></a>
+										<div class="object-element-tbl">
+											<div class="object-element-header">
+												{{ if .Types }}<!--
+														-->{{ range $i, $type := .Types }}<!--
+															-->{{ if gt $i 0 }}<!--
+																--><span> or </span><!--
+															-->{{ end }}<!--
+															-->{{ $route := GetTypeRoute $type }}<!--
+															-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+															-->{{ $type }}<!--
+															-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+														-->{{ end }}<!--
+												-->{{ end }}<!--
+												--> <a href="#property-{{ GetAnchorLink .Name }}"><span class="name">{{ .Name }}</span></a><!--
+												-->{{ if .ReadOnly }} <span class="read-only">read-only</span>{{ end }}
+											</div>
+											<div class="object-element-row">
+												{{ template "contentblocks" .Description }}
+											</div>
+										</div>
+								{{ end }}
+
+							{{ end }} <!-- end properties -->
+
+						</div>
+
+					{{ end }} <!-- end range .Types -->
+				{{ end }} <!-- end if .Types -->
+				</div>
+			</div>
+			{{ template "footer" . }}
+		</div>
+
+    </body>
+</html>
