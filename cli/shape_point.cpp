@@ -80,7 +80,8 @@ bool commandSetPoint(cxxopts::ParseResult parseResult, std::string& err) {
         return false;
     }
 
-    bool ok = serialization_save_shape(shape, nullptr /*preview data*/, 0, outfd);
+    // bool ok =
+    serialization_save_shape(shape, nullptr /*preview data*/, 0, outfd);
     // printf("Write file: %s\n", ok ? "OK" : "FAILED");
 
     color_atlas_free(colorAtlas);
