@@ -39,7 +39,7 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
                                         const size_t elementSize);
 
 // destructor
-void octree_free(Octree * const tree);
+void octree_free(Octree *const tree);
 
 void octree_flush(Octree *tree);
 

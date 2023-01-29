@@ -124,7 +124,7 @@ void octree_flush(Octree *tree) {
     memset(tree->elements, 0, tree->nb_elements * tree->element_size);
 }
 
-void octree_free(Octree * const tree) {
+void octree_free(Octree *const tree) {
     if (tree != NULL) {
         free(tree->nodes);
         tree->nodes = NULL;

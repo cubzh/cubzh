@@ -463,7 +463,7 @@ Transform_Array transform_get_children_copy(Transform *t, size_t *count) {
         return NULL;
     }
     // to be safe, we fill the memory buffer with zeros
-    memset((void*)children, 0 /* NULL */, byteCount);
+    memset((void *)children, 0 /* NULL */, byteCount);
 
     size_t i = 0;
     DoublyLinkedListNode *n = transform_get_children_iterator(t);
