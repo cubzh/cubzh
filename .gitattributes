@@ -3,6 +3,7 @@
 # Go vendor directories
 ci/core_unit_tests/vendor/** filter=lfs diff=lfs merge=lfs -text
 ci/format/vendor/** filter=lfs diff=lfs merge=lfs -text
+ci/lua_docs_deploy_prod/vendor/** filter=lfs diff=lfs merge=lfs -text
 
 # Lua documentation
 lua/docs/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
