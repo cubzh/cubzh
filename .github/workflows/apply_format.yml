@@ -12,47 +12,91 @@ jobs:
     if: ${{ github.event.issue.pull_request }} && contains(github.event.comment.body, '/format')
     runs-on: ubuntu-latest
     steps:
-      - 
+
+      - # retrieve PR info
+        name: Request PR data from GitHub API
+        uses: octokit/request-action@v2.x
+        id: get_PR
+        with:
+          route: GET /repos/:repo/pulls/:pull_number
+          repo: ${{ github.repository }}
+          pull_number: ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - # get PR HEAD commit sha 
+        # output is 'sha'
+        name: Set PR HEAD commit to output
+        id: get_commit
+        run: | 
+           prsha=$(echo $response | jq '.head.sha' | tr -d '"')
+           echo "::set-output name=sha::$prsha" 
+        env: 
+          response: ${{ steps.get_PR.outputs.data }}
+      
+      - # get PR branch name
+        # output is 'ref'
+        name: Set PR branch name to output
+        id: get_branch
+        run: | 
+           prref=$(echo $response | jq '.head.ref' | tr -d '"')
+           echo "::set-output name=ref::$prref" 
+        env: 
+          response: ${{ steps.get_PR.outputs.data }}
+
+      - # Checkout PR HEAD commit (not the merge commit!)
         name: Git checkout
         uses: actions/checkout@v3
         with:
-          # Checkout pull request HEAD commit (instead of merge commit)
-          ref: ${{ github.event.issue.pull_request.headRef }}
+          ref: ${{ steps.get_commit.outputs.sha }}
           lfs: 'true'
+      
       - 
         name: Setup Go
         uses: actions/setup-go@v3
         with:
           go-version: '>=1.18'
+      
       - 
         name: Build Dagger program
         working-directory: ./ci/format
         run: go build -o format -v ./...
+      
       - 
         name: Run Dagger program
         working-directory: ./ci/format
         # after execution, we remove the executable so it doesn't get committed on the next step
         run: ./format --apply-changes; rm ./format
-      - 
-        name: Commit
-        id: auto-commit
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: Automated C/C++ code formatting
-          commit_options: '--no-verify --signoff'
-          commit_user_name: Cubzh Bot
-          commit_user_email: bot@cu.bzh
-          commit_author: Cubzh Bot <bot@cu.bzh>
-          skip_dirty_check: true
-          skip_fetch: true
-          skip_checkout: true
-          create_branch: false
-          branch: ${{ github.event.issue.pull_request.headRefName }} # name of branch
-      - 
-        name: Format done
-        if: steps.auto-commit.outputs.changes_detected == 'true'
-        run: echo "Format done."
-      - 
-        name: No need to format
-        if: steps.auto-commit.outputs.changes_detected == 'false'
-        run: echo "No need to format."
+      
+      -
+        name: Debug
+        run: |
+          echo "steps.get_branch.outputs.ref :" $p1
+          echo "github.event.issue.pull_request.headRefName :" $p2
+        env:
+          p1: ${{ steps.get_branch.outputs.ref }}
+          p2: ${{ github.event.issue.pull_request.headRefName }}
+
+      # - 
+      #   name: Commit
+      #   id: auto-commit
+      #   uses: stefanzweifel/git-auto-commit-action@v4
+      #   with:
+      #     commit_message: Automated C/C++ code formatting
+      #     commit_options: '--no-verify --signoff'
+      #     commit_user_name: Cubzh Bot
+      #     commit_user_email: bot@cu.bzh
+      #     commit_author: Cubzh Bot <bot@cu.bzh>
+      #     skip_dirty_check: true
+      #     skip_fetch: true
+      #     skip_checkout: true
+      #     create_branch: false
+      #     branch: ${{ github.event.issue.pull_request.headRefName }} # name of branch
+      # - 
+      #   name: Format done
+      #   if: steps.auto-commit.outputs.changes_detected == 'true'
+      #   run: echo "Format done."
+      # - 
+      #   name: No need to format
+      #   if: steps.auto-commit.outputs.changes_detected == 'false'
+      #   run: echo "No need to format."
