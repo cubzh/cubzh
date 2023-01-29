@@ -95,7 +95,7 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
     tree->nodes_size_in_memory = tree->nb_nodes * sizeof(OctreeNode);
 
     tree->nodes = malloc(tree->nodes_size_in_memory);
-    if (tree->nodes == false) {
+    if (tree->nodes == NULL) {
         octree_free(tree);
         return NULL;
     }
