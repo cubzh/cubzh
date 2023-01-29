@@ -67,36 +67,27 @@ jobs:
         working-directory: ./ci/format
         # after execution, we remove the executable so it doesn't get committed on the next step
         run: ./format --apply-changes; rm ./format
-      
-      -
-        name: Debug
-        run: |
-          echo "steps.get_branch.outputs.ref :" $p1
-          echo "github.event.issue.pull_request.headRefName :" $p2
-        env:
-          p1: ${{ steps.get_branch.outputs.ref }}
-          p2: ${{ github.event.issue.pull_request.headRefName }}
 
-      # - 
-      #   name: Commit
-      #   id: auto-commit
-      #   uses: stefanzweifel/git-auto-commit-action@v4
-      #   with:
-      #     commit_message: Automated C/C++ code formatting
-      #     commit_options: '--no-verify --signoff'
-      #     commit_user_name: Cubzh Bot
-      #     commit_user_email: bot@cu.bzh
-      #     commit_author: Cubzh Bot <bot@cu.bzh>
-      #     skip_dirty_check: true
-      #     skip_fetch: true
-      #     skip_checkout: true
-      #     create_branch: false
-      #     branch: ${{ github.event.issue.pull_request.headRefName }} # name of branch
-      # - 
-      #   name: Format done
-      #   if: steps.auto-commit.outputs.changes_detected == 'true'
-      #   run: echo "Format done."
-      # - 
-      #   name: No need to format
-      #   if: steps.auto-commit.outputs.changes_detected == 'false'
-      #   run: echo "No need to format."
+      - # Create new commit with the changes
+        name: Commit
+        id: auto-commit
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Automated C/C++ code formatting
+          commit_options: '--no-verify --signoff'
+          commit_user_name: Cubzh Bot
+          commit_user_email: bot@cu.bzh
+          commit_author: Cubzh Bot <bot@cu.bzh>
+          skip_dirty_check: true
+          skip_fetch: true
+          skip_checkout: true
+          create_branch: false
+          branch: ${{ steps.get_branch.outputs.ref }} # name of branch
+      - 
+        name: Format done
+        if: steps.auto-commit.outputs.changes_detected == 'true'
+        run: echo "Format done."
+      - 
+        name: No need to format
+        if: steps.auto-commit.outputs.changes_detected == 'false'
+        run: echo "No need to format."
