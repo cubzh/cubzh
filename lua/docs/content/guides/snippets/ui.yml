@@ -8,11 +8,11 @@ blocks:
 
     - code: |
         Pointer:Hide()
-        UI:Crosshair = true
+        UI.Crosshair = true
 
     - text: |
         To toggle on the UI normal pointer (with its default rendering):
 
     - code: |
         Pointer:Show()
-        UI:Crosshair = false
+        UI.Crosshair = false
