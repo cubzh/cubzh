@@ -123,6 +123,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
             Shape *shape = serialization_v5_load_shape(s, shapeSettings, colorAtlas);
             Asset *asset = malloc(sizeof(Asset));
             if (asset == NULL) {
+                stream_free(s);
                 return NULL;
             }
             asset->ptr = shape;
@@ -141,6 +142,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
     }
 
     stream_free(s);
+    s = NULL;
 
     if (list != NULL && doubly_linked_list_node_count(list) == 0) {
         doubly_linked_list_free(list);

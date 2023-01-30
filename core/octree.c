@@ -95,7 +95,7 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
     tree->nodes_size_in_memory = tree->nb_nodes * sizeof(OctreeNode);
 
     tree->nodes = malloc(tree->nodes_size_in_memory);
-    if (tree->nodes == false) {
+    if (tree->nodes == NULL) {
         octree_free(tree);
         return NULL;
     }
@@ -106,7 +106,6 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
 
     tree->elements = malloc(tree->elements_size_in_memory);
     if (tree->elements == NULL) {
-        free(tree->nodes);
         octree_free(tree);
         return NULL;
     }
@@ -125,7 +124,7 @@ void octree_flush(Octree *tree) {
     memset(tree->elements, 0, tree->nb_elements * tree->element_size);
 }
 
-void octree_free(Octree *tree) {
+void octree_free(Octree *const tree) {
     if (tree != NULL) {
         free(tree->nodes);
         tree->nodes = NULL;

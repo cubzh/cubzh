@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cclog.h"
 #include "config.h"
@@ -455,11 +456,14 @@ Transform_Array transform_get_children_copy(Transform *t, size_t *count) {
         return NULL;
     }
 
-    Transform_Array children = (Transform_Array)malloc(t->childrenCount * sizeof(Transform *));
+    const size_t byteCount = t->childrenCount * sizeof(Transform *);
+    Transform_Array children = (Transform_Array)malloc(byteCount);
     if (children == NULL) {
         *count = 0;
         return NULL;
     }
+    // to be safe, we fill the memory buffer with zeros
+    memset((void *)children, 0 /* NULL */, byteCount);
 
     size_t i = 0;
     DoublyLinkedListNode *n = transform_get_children_iterator(t);
