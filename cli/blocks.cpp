@@ -34,37 +34,45 @@ bool count_blocks(cxxopts::ParseResult parseResult, std::string& err) {
 
     // processing
 
-    std::string input_path = parseResult["input"].as<std::vector<std::string>>()[0];
+    const std::string input_path = parseResult["input"].as<std::vector<std::string>>()[0];
     
-    FILE *fd = fopen(input_path.c_str(), "rw");
+    FILE * const fd = fopen(input_path.c_str(), "rb");
     if (fd == nullptr) {
-        err = std::string("can't open ") + input_path;
+        err.assign("can't open input file: " + input_path);
         return false;
     }
-    
-    ColorAtlas *colorAtlas = color_atlas_new();
-    Stream *s = stream_new_file_read(fd);
-    
-    LoadShapeSettings shapeSettings;
-    shapeSettings.octree = true;
-    shapeSettings.lighting = false;
-    shapeSettings.isMutable = false;
-    
-    DoublyLinkedList *assets = serialization_load_assets(s, "", AssetType_Shape, colorAtlas, &shapeSettings);
+
+    ColorAtlas * const colorAtlas = color_atlas_new();
+    Stream * const stream = stream_new_file_read(fd); // Stream is responsible for fclose-ing the file descriptor
+
+    const LoadShapeSettings shapeSettings = {
+        .octree = true,
+        .lighting = false,
+        .isMutable = false
+    };
+
+    const bool allowLegacy = true; // support .pcubes files
+    DoublyLinkedList *assets = serialization_load_assets(stream,
+                                                         "",
+                                                         AssetType_Shape,
+                                                         colorAtlas,
+                                                         &shapeSettings,
+                                                         allowLegacy);
+    // `stream` is freed here (done by `serialization_load_assets`)
+    // `stream` took care of fclose-ing `fd`
     if (assets == NULL) {
-        fclose(fd);
         color_atlas_free(colorAtlas);
         err.assign("can't load assets");
         return false;
     }
     
-    size_t n = 0;
+    size_t blockCount = 0;
     
     DoublyLinkedListNode *node = doubly_linked_list_first(assets);
     while (node != NULL) {
-        Asset *r = (Asset *)doubly_linked_list_node_pointer(node);
+        Asset * const r = (Asset *)doubly_linked_list_node_pointer(node);
         if (r->type == AssetType_Shape) {
-            n += shape_get_nb_blocks((Shape *)r->ptr);
+            blockCount += shape_get_nb_blocks((Shape *)r->ptr);
             shape_free((Shape *)r->ptr);
         }
         node = doubly_linked_list_node_next(node);
@@ -73,8 +81,9 @@ bool count_blocks(cxxopts::ParseResult parseResult, std::string& err) {
     doubly_linked_list_free(assets);
     
     color_atlas_free(colorAtlas);
-    
-    std::cout << n << std::endl;
+
+    // Don't print a new line ('\n') character since this command is used by another program (the Hub CLI)
+    std::cout << blockCount;
     
     return true;
 }

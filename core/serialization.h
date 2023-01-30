@@ -93,11 +93,20 @@ Shape *serialization_load_shape(Stream *s,
 
 Shape *assets_get_root_shape(DoublyLinkedList *list);
 
+/// Load assets (shapes) from Stream and return it as a list
+/// - Parameters:
+///   - s: the input stream
+///   - fullname: the fullname of the item represented by the stream (optional)
+///   - filterMask: ...
+///   - colorAtlas: ...
+///   - shapeSettings: ...
+///   - allowLegacy: if true, .pcubes files will be supported as well
 DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
                                             ColorAtlas *colorAtlas,
-                                            const LoadShapeSettings *const settings);
+                                            const LoadShapeSettings *const settings,
+                                            const bool allowLegacy);
 
 /// serialize a shape w/ its palette
 bool serialization_save_shape(Shape *shape,

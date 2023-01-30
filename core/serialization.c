@@ -78,7 +78,8 @@ Shape *serialization_load_shape(Stream *s,
                                                          fullname,
                                                          AssetType_Shape,
                                                          colorAtlas,
-                                                         shapeSettings);
+                                                         shapeSettings,
+                                                         allowLegacy);
     // s is NULL if it could not be loaded
     if (assets == NULL) {
         return NULL;
@@ -94,7 +95,8 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
                                             const char *fullname,
                                             AssetType filterMask,
                                             ColorAtlas *colorAtlas,
-                                            const LoadShapeSettings *const shapeSettings) {
+                                            const LoadShapeSettings *const shapeSettings,
+                                            const bool allowLegacy) {
     if (s == NULL) {
         cclog_error("can't load asset from NULL Stream");
         return NULL; // error
@@ -102,9 +104,16 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
 
     // read magic bytes
     if (readMagicBytes(s) != 0) {
-        cclog_error("failed to read magic bytes");
-        stream_free(s);
-        return NULL;
+        if (allowLegacy) {
+            stream_set_cursor_position(s, 0);
+            if (readMagicBytesLegacy(s) != 0) {
+                stream_free(s);
+                return NULL;
+            }
+        } else {
+            stream_free(s);
+            return NULL;
+        }
     }
 
     // read file format
