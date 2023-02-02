@@ -2920,7 +2920,7 @@ bool shape_ray_cast(const Shape *sh,
     uint16_t _z = 0;
 
     // we want a ray in model space to intersect with octree coordinates
-    Transform *t = shape_get_pivot_transform(sh); // octree coordinates use model origin
+    Transform *t = shape_get_pivot_transform(sh);
     Ray *modelRay = ray_world_to_local(worldRay, t);
 
     while (octree_iterator_is_done(oi) == false) {
@@ -3009,7 +3009,7 @@ bool shape_point_overlap(const Shape *s, const float3 *world) {
     return false;
 }
 
-bool shape_box_overlap(const Shape *s, const Box *worldBox, float3 *firstOverlap) {
+bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
     if (s->octree == NULL) {
         cclog_error("shape_box_overlap can't be used if octree is NULL.");
         return false;
@@ -3017,20 +3017,14 @@ bool shape_box_overlap(const Shape *s, const Box *worldBox, float3 *firstOverlap
 
     Box tmpBox;
     bool leaf = false, collides;
-
-    float3 scale;
-    shape_get_lossy_scale(s, &scale);
-    const float3 *modelOrigin = shape_get_model_origin(s);
-
     OctreeIterator *oi = octree_iterator_new(s->octree);
     while (octree_iterator_is_done(oi) == false) {
         octree_iterator_get_node_box(oi, &tmpBox);
-        box_to_aabox_no_rot(&tmpBox, &tmpBox, modelOrigin, &float3_zero, &scale, false);
 
-        collides = box_collide(&tmpBox, worldBox);
+        collides = box_collide(&tmpBox, modelBox);
         if (leaf && collides) {
-            if (firstOverlap != NULL) {
-                float3_copy(firstOverlap, &tmpBox.min);
+            if (out != NULL) {
+                *out = tmpBox;
             }
             octree_iterator_free(oi);
             return true;

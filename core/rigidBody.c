@@ -15,8 +15,9 @@
 #define SIMULATIONFLAG_NONE 0
 #define SIMULATIONFLAG_MODE 7 // first 3 bits
 #define SIMULATIONFLAG_COLLIDER_DIRTY 8
-#define SIMULATIONFLAG_CALLBACK_ENABLED 16
-#define SIMULATIONFLAG_END_CALLBACK_ENABLED 32
+#define SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED 16
+#define SIMULATIONFLAG_CALLBACK_ENABLED 32
+#define SIMULATIONFLAG_END_CALLBACK_ENABLED 64
 
 #if DEBUG_RIGIDBODY
 static int debug_rigidbody_solver_iterations = 0;
@@ -75,7 +76,6 @@ struct _RigidBody {
 };
 
 static pointer_rigidbody_collision_func rigidbody_collision_callback = NULL;
-static pointer_rigidbody_collision_func rigidbody_collision_couple_callback = NULL;
 
 void _rigidbody_set_simulation_flag(RigidBody *rb, uint8_t flag) {
     rb->simulationFlags |= flag;
@@ -102,55 +102,97 @@ void _rigidbody_reset_state(RigidBody *rb) {
     rb->contact = AxesMaskNone;
 }
 
-void _rigidbody_fire_reciprocal_callbacks(RigidBody *selfRb,
+void _rigidbody_fire_reciprocal_callbacks(Scene *sc,
+                                          RigidBody *selfRb,
                                           Transform *selfTr,
                                           RigidBody *otherRb,
                                           Transform *otherTr,
-                                          AxesMaskValue axis,
-                                          void *opaqueUserData) {
+                                          float3 wNormal,
+                                          void *callbackData) {
 
-    // Reciprocal call only for dynamic rb, trigger rb each check for their own overlaps
-    const bool isOtherDynamic = rigidbody_is_dynamic(otherRb);
+    const bool selfBegin = _rigidbody_get_simulation_flag(selfRb,
+                                                          SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED);
+    const bool selfTick = _rigidbody_get_simulation_flag(selfRb, SIMULATIONFLAG_CALLBACK_ENABLED);
+    const bool selfEnd = _rigidbody_get_simulation_flag(selfRb,
+                                                        SIMULATIONFLAG_END_CALLBACK_ENABLED);
+    const bool otherBegin = _rigidbody_get_simulation_flag(otherRb,
+                                                           SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED);
+    const bool otherTick = _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_CALLBACK_ENABLED);
+    const bool otherEnd = _rigidbody_get_simulation_flag(otherRb,
+                                                         SIMULATIONFLAG_END_CALLBACK_ENABLED);
 
-    // (1) fire direct callback if enabled
-    if (_rigidbody_get_simulation_flag(selfRb, SIMULATIONFLAG_CALLBACK_ENABLED)) {
-        rigidbody_collision_callback(selfTr, selfRb, otherTr, otherRb, axis, opaqueUserData);
+    // Skip if collision couple has no callback
+    if ((selfBegin || selfTick || selfEnd || otherBegin || otherTick || otherEnd) == false) {
+        return;
+    }
+
+    // Register collision couple and queue callbacks if first instance of the frame
+    float3 wNormalCache = wNormal;
+    const CollisionCoupleStatus status = scene_register_collision_couple(sc,
+                                                                         selfTr,
+                                                                         otherTr,
+                                                                         &wNormalCache);
+
+    // Preferably keep world normal from own trajectory if self dynamic, rather than trigger
+    // overlaps
+    if (rigidbody_is_dynamic(selfRb)) {
+        wNormalCache = wNormal;
+    }
+
+    // (1) fire direct callbacks if enabled
+    if (selfBegin || selfTick) {
+        if (status == CollisionCoupleStatus_Begin) {
+            rigidbody_collision_callback(CollisionCallbackType_Begin,
+                                         selfTr,
+                                         selfRb,
+                                         otherTr,
+                                         otherRb,
+                                         wNormalCache,
+                                         callbackData);
+        } else if (status == CollisionCoupleStatus_Tick) {
+            rigidbody_collision_callback(CollisionCallbackType_Tick,
+                                         selfTr,
+                                         selfRb,
+                                         otherTr,
+                                         otherRb,
+                                         wNormalCache,
+                                         callbackData);
+        }
     }
 
     // (2) fire reciprocal callback if applicable
-    if (isOtherDynamic &&
-        _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_CALLBACK_ENABLED)) {
-        rigidbody_collision_callback(otherTr,
-                                     otherRb,
-                                     selfTr,
-                                     selfRb,
-                                     axis == AxesMaskX ? AxesMaskNX : AxesMaskX,
-                                     opaqueUserData);
-    }
+    if (otherBegin || otherTick) {
+        float3 negated = wNormalCache;
+        float3_op_scale(&negated, -1.0f);
 
-    // (3) register collision couple for end-of-contact callback if applicable
-    if (_rigidbody_get_simulation_flag(selfRb, SIMULATIONFLAG_END_CALLBACK_ENABLED) ||
-        (isOtherDynamic &&
-         _rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_END_CALLBACK_ENABLED))) {
-
-        rigidbody_collision_couple_callback(selfTr, selfRb, otherTr, otherRb, axis, opaqueUserData);
+        if (status == CollisionCoupleStatus_Begin) {
+            rigidbody_collision_callback(CollisionCallbackType_Begin,
+                                         otherTr,
+                                         otherRb,
+                                         selfTr,
+                                         selfRb,
+                                         negated,
+                                         callbackData);
+        } else if (status == CollisionCoupleStatus_Tick) {
+            rigidbody_collision_callback(CollisionCallbackType_Tick,
+                                         otherTr,
+                                         otherRb,
+                                         selfTr,
+                                         selfRb,
+                                         negated,
+                                         callbackData);
+        }
     }
 }
 
-typedef enum {
-    SimulationResult_Errored,
-    SimulationResult_Moved,
-    SimulationResult_Stayed,
-    SimulationResult_Slept
-} SimulationResult;
-SimulationResult _rigidbody_dynamic_tick(Scene *scene,
-                                         RigidBody *rb,
-                                         Transform *t,
-                                         Box *worldCollider,
-                                         Rtree *r,
-                                         const TICK_DELTA_SEC_T dt,
-                                         FifoList *sceneQuery,
-                                         void *callbackData) {
+bool _rigidbody_dynamic_tick(Scene *scene,
+                             RigidBody *rb,
+                             Transform *t,
+                             Box *worldCollider,
+                             Rtree *r,
+                             const TICK_DELTA_SEC_T dt,
+                             FifoList *sceneQuery,
+                             void *callbackData) {
 
 #if DEBUG_RIGIDBODY_CALLS
 #define INC_REPLACEMENTS debug_rigidbody_replacements++;
@@ -202,7 +244,7 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
     if (rigidbody_check_velocity_sleep(rb, &f3)) {
         float3_set_zero(rb->velocity);
         INC_SLEEPS
-        return SimulationResult_Slept;
+        return false;
     }
 
     // ------------------------
@@ -283,8 +325,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                                     sceneQuery,
                                     -EPSILON_COLLISION) > 0) {
             RtreeNode *hit = fifo_list_pop(sceneQuery);
-            Transform *hitLeaf = NULL;
-            RigidBody *hitRb = NULL;
+            Transform *hitLeaf;
+            RigidBody *hitRb;
             while (hit != NULL) {
                 hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
                 vx_assert(rtree_node_is_leaf(hit));
@@ -313,7 +355,6 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                     continue;
                 }
 
-                // TODO: optim, this should become retrievable from rtree query
                 rtreeSwept = box_swept(worldCollider,
                                        &dv,
                                        rtree_node_get_aabb(hit),
@@ -323,6 +364,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                                        NULL);
 
                 const Matrix4x4 *model = NULL;
+                normal = float3_zero;
+
                 if (mode == RigidbodyMode_Dynamic) {
                     swept = rtreeSwept;
                     normal = rtreeNormal;
@@ -380,9 +423,8 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                 // earlier contact found
                 if (swept < minSwept) {
                     if (isTrigger) {
-                        // side of the world box sent to Lua callback
-                        AxesMaskValue selfBoxSide = AxesMaskNone;
-
+                        // consider triggers here too, in case dynamic rb passes through in one
+                        // frame
                         float3 wNormal;
                         if (model != NULL) {
                             matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
@@ -391,22 +433,12 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                             wNormal = normal;
                         }
 
-                        if (fabsf(wNormal.x) >= fabsf(wNormal.y) &&
-                            fabsf(wNormal.x) >= fabsf(wNormal.z)) {
-                            selfBoxSide = wNormal.x > 0.0f ? AxesMaskNX : AxesMaskX;
-                        } else if (fabsf(wNormal.y) >= fabsf(wNormal.x) &&
-                                   fabsf(wNormal.y) >= fabsf(wNormal.z)) {
-                            selfBoxSide = wNormal.y > 0.0f ? AxesMaskNY : AxesMaskY;
-                        } else if (fabsf(wNormal.z) >= fabsf(wNormal.x) &&
-                                   fabsf(wNormal.z) >= fabsf(wNormal.y)) {
-                            selfBoxSide = wNormal.z > 0.0f ? AxesMaskNZ : AxesMaskZ;
-                        }
-
-                        _rigidbody_fire_reciprocal_callbacks(rb,
+                        _rigidbody_fire_reciprocal_callbacks(scene,
+                                                             rb,
                                                              t,
                                                              hitRb,
                                                              hitLeaf,
-                                                             selfBoxSide,
+                                                             wNormal,
                                                              callbackData);
                     } else {
                         contact.t = hitLeaf;
@@ -546,8 +578,7 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
             }
 
             // (2) apply combined bounciness on intruding displacement, add leftover to push ;
-            // minor bounce responses are muffled forecasting w/ approximate contribution from
-            // accelerations
+            // minor bounce responses are muffled
             const float3 vBounce = (float3){-vIntruding.x * bounciness,
                                             -vIntruding.y * bounciness,
                                             -vIntruding.z * bounciness};
@@ -609,41 +640,35 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
                                         false);
                 }
             }
-            AxesMaskValue selfBoxSide = AxesMaskNone; // side of the world box sent to Lua callback
             if (fabsf(wNormal.x) >= fabsf(wNormal.y) && fabsf(wNormal.x) >= fabsf(wNormal.z)) {
                 if (wNormal.x > 0.0f) {
                     utils_axes_mask_set(&rb->contact, AxesMaskNX, true);
-                    selfBoxSide = AxesMaskNX;
                 } else if (wNormal.x < 0.0f) {
                     utils_axes_mask_set(&rb->contact, AxesMaskX, true);
-                    selfBoxSide = AxesMaskX;
                 }
             }
             if (fabsf(wNormal.y) >= fabsf(wNormal.x) && fabsf(wNormal.y) >= fabsf(wNormal.z)) {
                 if (wNormal.y > 0.0f) {
                     utils_axes_mask_set(&rb->contact, AxesMaskNY, true);
-                    selfBoxSide = AxesMaskNY;
                 } else if (wNormal.y < 0.0f) {
                     utils_axes_mask_set(&rb->contact, AxesMaskY, true);
-                    selfBoxSide = AxesMaskY;
                 }
             }
             if (fabsf(wNormal.z) >= fabsf(wNormal.x) && fabsf(wNormal.z) >= fabsf(wNormal.y)) {
                 if (wNormal.z > 0.0f) {
                     utils_axes_mask_set(&rb->contact, AxesMaskNZ, true);
-                    selfBoxSide = AxesMaskNZ;
                 } else if (wNormal.z < 0.0f) {
                     utils_axes_mask_set(&rb->contact, AxesMaskZ, true);
-                    selfBoxSide = AxesMaskZ;
                 }
             }
 
             // (5) fire reciprocal callbacks
-            _rigidbody_fire_reciprocal_callbacks(rb,
+            _rigidbody_fire_reciprocal_callbacks(scene,
+                                                 rb,
                                                  t,
                                                  contact.rb,
                                                  contact.t,
-                                                 selfBoxSide,
+                                                 wNormal,
                                                  callbackData);
 
             INC_COLLISIONS
@@ -675,9 +700,9 @@ SimulationResult _rigidbody_dynamic_tick(Scene *scene,
         // apply final position to transform
         transform_set_position(t, pos.x, pos.y, pos.z);
 
-        return SimulationResult_Moved;
+        return true;
     } else {
-        return SimulationResult_Stayed;
+        return false;
     }
 }
 
@@ -688,90 +713,6 @@ void _rigidbody_trigger_tick(Scene *scene,
                              Rtree *r,
                              FifoList *sceneQuery,
                              void *callbackData) {
-
-    // ------------------------
-    // PREPARE OVERLAP TESTING
-    // ------------------------
-    // On an overlap, we consider the face w/ the most overlap to be the dominant overlap axis,
-    // it matters only to have some deterministic way of assigning an overlap to an axis mask value
-    // as this is currently how we register collision callbacks
-    //
-    // Note: contrary to dynamic rigidbodies which are always tied to a velocity and can only have
-    // at most new contacts on 3 axes, trigger rigidbodies are not and may have new contacts on all
-    // 6 axes
-
-    Shape *mapShape = transform_utils_get_shape(scene_get_map(scene));
-    if (mapShape == NULL) {
-        return;
-    }
-    Box mapAABB;
-    shape_get_world_aabb(mapShape, &mapAABB);
-    RigidBody *mapRb = shape_get_rigidbody(mapShape);
-
-    float3 f3, center, maxContactsArea, maxContactsAreaN;
-    RigidBody *axesRb[6];
-    Transform *axesTr[6];
-
-    float3_set_zero(&maxContactsArea);
-    float3_set_zero(&maxContactsAreaN);
-    box_get_center(worldCollider, &center);
-    for (int i = 0; i < 6; ++i) {
-        axesRb[i] = NULL;
-        axesTr[i] = NULL;
-    }
-
-    // ----------------------
-    // MAP OVERLAP
-    // ----------------------
-
-    if (rigidbody_collides_with_any(rb, mapRb->groups) && box_collide(&mapAABB, worldCollider)) {
-        if (shape_box_overlap(mapShape, worldCollider, &f3)) {
-            Transform *mapTr = shape_get_root_transform(mapShape);
-            float3 lossyScale;
-            transform_get_lossy_scale(mapTr, &lossyScale);
-
-            // find the most overlapping edges to determine overlap axis & store it
-            const float dx = minimum(worldCollider->max.x, f3.x + lossyScale.x) -
-                             maximum(worldCollider->min.x, f3.x);
-            const float dy = minimum(worldCollider->max.y, f3.y + lossyScale.y) -
-                             maximum(worldCollider->min.y, f3.y);
-            const float dz = minimum(worldCollider->max.z, f3.z + lossyScale.z) -
-                             maximum(worldCollider->min.z, f3.z);
-            if (dx <= dy && dx <= dz) { // colliders height & depth overlap the most = X or NX
-                                        // (right or left face)
-                if (f3.x < center.x) {  // overlap axis is NX (left)
-                    maxContactsAreaN.x = dy * dz;
-                    axesRb[AxisIndexNX] = mapRb;
-                    axesTr[AxisIndexNX] = shape_get_root_transform(mapShape);
-                } else { // overlap axis is X (right)
-                    maxContactsArea.x = dy * dz;
-                    axesRb[AxisIndexX] = mapRb;
-                    axesTr[AxisIndexX] = shape_get_root_transform(mapShape);
-                }
-            } else if (dy <= dx && dy <= dz) { // colliders width & depth overlap the most = Y or NY
-                                               // (top or bottom face)
-                if (f3.y < center.y) {         // overlap axis is NY (bottom)
-                    maxContactsAreaN.y = dx * dz;
-                    axesRb[AxisIndexNY] = mapRb;
-                    axesTr[AxisIndexNY] = shape_get_root_transform(mapShape);
-                } else { // overlap axis is Y (top)
-                    maxContactsArea.y = dx * dz;
-                    axesRb[AxisIndexY] = mapRb;
-                    axesTr[AxisIndexY] = shape_get_root_transform(mapShape);
-                }
-            } else { // colliders width & height overlap the most = Z or NZ (back or front face)
-                if (f3.z < center.z) { // overlap axis is NZ (front)
-                    maxContactsAreaN.z = dx * dy;
-                    axesRb[AxisIndexNZ] = mapRb;
-                    axesTr[AxisIndexNZ] = shape_get_root_transform(mapShape);
-                } else { // overlap axis is Z (back)
-                    maxContactsArea.z = dx * dy;
-                    axesRb[AxisIndexZ] = mapRb;
-                    axesTr[AxisIndexZ] = shape_get_root_transform(mapShape);
-                }
-            }
-        }
-    }
 
     // ----------------------
     // SCENE OVERLAP
@@ -789,14 +730,23 @@ void _rigidbody_trigger_tick(Scene *scene,
                                 rb->collidesWith,
                                 sceneQuery,
                                 EPSILON_COLLISION) > 0) {
+
+        const Shape *s = transform_utils_get_shape(t);
+
+        const Box *selfCollider = rigidbody_get_collider(rb);
+        Transform *selfModelTr = transform_utils_get_model_transform(t);
+        const Matrix4x4 *selfModel = transform_get_ltw(selfModelTr);
+        const Matrix4x4 *selfInvModel = transform_get_wtl(selfModelTr);
+
         RtreeNode *hit = fifo_list_pop(sceneQuery);
-        Transform *hitLeaf = NULL;
-        RigidBody *hitRb = NULL;
+        Transform *hitLeaf;
+        RigidBody *hitRb;
+        Box box;
         while (hit != NULL) {
             hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
             vx_assert(rtree_node_is_leaf(hit));
 
-            // currently, we do not remove self from r-tree before query
+            // self isn't removed from r-tree before query
             if (hitLeaf == t) {
                 hit = fifo_list_pop(sceneQuery);
                 continue;
@@ -810,86 +760,77 @@ void _rigidbody_trigger_tick(Scene *scene,
                 continue;
             }
 
-            Box *hitCollider = rtree_node_get_aabb(hit);
+            const Shape *hitShape = transform_utils_get_shape(hitLeaf);
 
-            // find dominant overlap axis and update it if closer
-            const float dx = minimum(worldCollider->max.x, hitCollider->max.x) -
-                             maximum(worldCollider->min.x, hitCollider->min.x);
-            const float dy = minimum(worldCollider->max.y, hitCollider->max.y) -
-                             maximum(worldCollider->min.y, hitCollider->min.y);
-            const float dz = minimum(worldCollider->max.z, hitCollider->max.z) -
-                             maximum(worldCollider->min.z, hitCollider->min.z);
-            if (dx <= dy && dx <= dz) { // colliders height & depth overlap the most = X or NX
-                // (right or left face)
-                const float contactArea = dy * dz;
-                if (hitCollider->min.x < center.x) { // overlap axis is NX (left)
-                    if (contactArea > maxContactsAreaN.x) {
-                        maxContactsAreaN.x = contactArea;
-                        axesRb[AxisIndexNX] = hitRb;
-                        axesTr[AxisIndexNX] = hitLeaf;
-                    }
-                } else if (contactArea > maxContactsArea.x) { // overlap axis is X (right)
-                    maxContactsArea.x = contactArea;
-                    axesRb[AxisIndexX] = hitRb;
-                    axesTr[AxisIndexX] = hitLeaf;
-                }
-            } else if (dy <= dx && dy <= dz) { // colliders width & depth overlap the most = Y or NY
-                // (top or bottom face)
-                const float contactArea = dx * dz;
-                if (hitCollider->min.y < center.y) { // overlap axis is NY (bottom)
-                    if (contactArea > maxContactsAreaN.y) {
-                        maxContactsAreaN.y = contactArea;
-                        axesRb[AxisIndexNY] = hitRb;
-                        axesTr[AxisIndexNY] = hitLeaf;
-                    }
-                } else if (contactArea > maxContactsArea.y) { // overlap axis is Y (top)
-                    maxContactsArea.y = contactArea;
-                    axesRb[AxisIndexY] = hitRb;
-                    axesTr[AxisIndexY] = hitLeaf;
-                }
-            } else { // colliders width & height overlap the most = Z or NZ (back or front face)
-                const float contactArea = dx * dy;
-                if (hitCollider->min.z < center.z) { // overlap axis is NZ (front)
-                    if (contactArea > maxContactsAreaN.z) {
-                        maxContactsAreaN.z = contactArea;
-                        axesRb[AxisIndexNZ] = hitRb;
-                        axesTr[AxisIndexNZ] = hitLeaf;
-                    }
-                } else if (contactArea > maxContactsArea.z) { // overlap axis is Z (back)
-                    maxContactsArea.z = contactArea;
-                    axesRb[AxisIndexZ] = hitRb;
-                    axesTr[AxisIndexZ] = hitLeaf;
-                }
+            Box hitCollider = *rigidbody_get_collider(hitRb);
+            Transform *hitModelTr = transform_utils_get_model_transform(hitLeaf);
+            const Matrix4x4 *hitModel = transform_get_ltw(hitModelTr);
+            const Matrix4x4 *hitInvModel = transform_get_wtl(hitModelTr);
+
+            // 1) check for overlap in self model space (ignoring hit shape per-block quality)
+            box_model1_to_model2_aabox(&hitCollider,
+                                       &box,
+                                       hitModel,
+                                       selfInvModel,
+                                       &float3_zero,
+                                       NoSquarify);
+
+            bool overlap1;
+            if (s != NULL && rigidbody_uses_per_block_collisions(rb)) {
+                overlap1 = shape_box_overlap(s, &box, NULL);
+            } else {
+                overlap1 = box_collide_epsilon(&box, selfCollider, EPSILON_COLLISION);
             }
 
-            // TODO: per-block collision shapes
+            // 2) check for overlap in hit model space (ignoring self shape per-block quality)
+            box_model1_to_model2_aabox(selfCollider,
+                                       &box,
+                                       selfModel,
+                                       hitInvModel,
+                                       &float3_zero,
+                                       NoSquarify);
+
+            bool overlap2;
+            if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                overlap2 = shape_box_overlap(hitShape, &box, &hitCollider); // out: block box
+            } else {
+                overlap2 = box_collide_epsilon(&box, &hitCollider, EPSILON_COLLISION);
+            }
+
+            // 3) if overlap in both spaces, trigger callbacks
+            // Note: this can trigger false positives for per-block vs. per-block triggers, an
+            // improvement will be to add shape vs. shape overlap
+            if (overlap1 && overlap2) {
+                // approximate a world normal based on boxes most overlapped axis
+                const float3 overlaps = {
+                    minimum(box.max.x, hitCollider.max.x) - maximum(box.min.x, hitCollider.min.x),
+                    minimum(box.max.y, hitCollider.max.y) - maximum(box.min.y, hitCollider.min.y),
+                    minimum(box.max.z, hitCollider.max.z) - maximum(box.min.z, hitCollider.min.z)};
+                const float3 areas = {overlaps.y * overlaps.z,
+                                      overlaps.x * overlaps.z,
+                                      overlaps.x * overlaps.y};
+
+                float3 normal = float3_zero;
+                if (areas.x > areas.y && areas.x > areas.z) {
+                    normal.x = box.max.x > hitCollider.min.x ? -1.0f : 1.0f;
+                } else if (areas.y > areas.x && areas.y > areas.z) {
+                    normal.y = box.max.y > hitCollider.min.y ? -1.0f : 1.0f;
+                } else {
+                    normal.z = box.max.z > hitCollider.min.z ? -1.0f : 1.0f;
+                }
+                float3 wNormal;
+                matrix4x4_op_multiply_vec_vector(&wNormal, &normal, hitModel);
+
+                _rigidbody_fire_reciprocal_callbacks(scene,
+                                                     rb,
+                                                     t,
+                                                     hitRb,
+                                                     hitLeaf,
+                                                     wNormal,
+                                                     callbackData);
+            }
 
             hit = fifo_list_pop(sceneQuery);
-        }
-    }
-
-    // ----------------------
-    // COLLISION CALLBACK
-    // ----------------------
-    // For trigger rigidbodies, we use axes mask solely to keep track of collision callbacks
-
-    if (rigidbody_collision_callback != NULL && rigidbody_collision_couple_callback != NULL) {
-        // fire reciprocal callbacks on the component(s, if tie) causing a new collision
-        for (int i = 0; i < 6; ++i) {
-            const AxesMaskValue axis = utils_axis_index_to_mask_value((AxisIndex)i);
-            if (axesRb[i] != NULL) {
-                if (utils_axes_mask_get(rb->contact, (uint8_t)axis) == false) {
-                    _rigidbody_fire_reciprocal_callbacks(rb,
-                                                         t,
-                                                         axesRb[i],
-                                                         axesTr[i],
-                                                         axis,
-                                                         callbackData);
-                    utils_axes_mask_set(&rb->contact, (uint8_t)axis, true);
-                }
-            } else {
-                utils_axes_mask_set(&rb->contact, (uint8_t)axis, false);
-            }
         }
     }
 }
@@ -969,20 +910,19 @@ bool rigidbody_tick(Scene *scene,
         sceneQuery = fifo_list_new();
     }
 
-    // attempt to simulate first if dynamic rb
-    SimulationResult simulated = SimulationResult_Errored;
+    // dynamic rigidbodies are fully simulated, their callbacks are evaluated in this loop
+    // vs. other dynamic rigidbodies only
     if (rigidbody_is_dynamic(rb)) {
-        simulated = _rigidbody_dynamic_tick(scene,
-                                            rb,
-                                            t,
-                                            worldCollider,
-                                            r,
-                                            dt,
-                                            sceneQuery,
-                                            callbackData);
-        return simulated == SimulationResult_Moved;
+        return _rigidbody_dynamic_tick(scene,
+                                       rb,
+                                       t,
+                                       worldCollider,
+                                       r,
+                                       dt,
+                                       sceneQuery,
+                                       callbackData);
     }
-    // check for overlaps to fire callbacks
+    // check for overlaps to fire callbacks for trigger and static rigidbodies
     else if (rigidbody_is_active_trigger(rb)) {
         _rigidbody_trigger_tick(scene, rb, t, worldCollider, r, sceneQuery, callbackData);
     }
@@ -1107,22 +1047,6 @@ bool rigidbody_get_collider_dirty(const RigidBody *rb) {
 
 void rigidbody_reset_collider_dirty(RigidBody *rb) {
     _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
-}
-
-void rigidbody_toggle_collision_callback(RigidBody *rb, bool value, bool end) {
-    if (end) {
-        if (value) {
-            _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED);
-        } else {
-            _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED);
-        }
-    } else {
-        if (value) {
-            _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED);
-        } else {
-            _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED);
-        }
-    }
 }
 
 void rigidbody_set_awake(RigidBody *rb) {
@@ -1368,51 +1292,60 @@ void rigidbody_set_collision_callback(pointer_rigidbody_collision_func f) {
     rigidbody_collision_callback = f;
 }
 
-void rigidbody_set_collision_couple_callback(pointer_rigidbody_collision_func f) {
-    rigidbody_collision_couple_callback = f;
+void rigidbody_fire_reciprocal_collision_end_callback(Transform *self,
+                                                      Transform *other,
+                                                      void *callbackData) {
+    if (rigidbody_collision_callback == NULL) {
+        return;
+    }
+
+    RigidBody *selfRb = transform_get_rigidbody(self);
+    RigidBody *otherRb = transform_get_rigidbody(other);
+    vx_assert(selfRb != NULL && otherRb != NULL);
+
+    if (_rigidbody_get_simulation_flag(selfRb, SIMULATIONFLAG_END_CALLBACK_ENABLED)) {
+        rigidbody_collision_callback(CollisionCallbackType_End,
+                                     self,
+                                     selfRb,
+                                     other,
+                                     otherRb,
+                                     float3_zero,
+                                     callbackData);
+    }
+    if (_rigidbody_get_simulation_flag(otherRb, SIMULATIONFLAG_END_CALLBACK_ENABLED)) {
+        rigidbody_collision_callback(CollisionCallbackType_End,
+                                     other,
+                                     otherRb,
+                                     self,
+                                     selfRb,
+                                     float3_zero,
+                                     callbackData);
+    }
 }
 
-bool rigidbody_check_end_of_contact(Transform *t1,
-                                    Transform *t2,
-                                    AxesMaskValue axis,
-                                    uint32_t *frames,
-                                    void *opaqueUserData) {
-
-    // we drop any collision couple as soon as,
-    // (1) one of the rigidbody is null (NO CALLBACK)
-    // (2) both rigidbodies are non-dynamic non-trigger (NO CALLBACK)
-    // (3) a max delay has passed (NO CALLBACK)
-    // (4) one of the rigidbody is dynamic or trigger w/ no more contact on collision axis (CALLBACK
-    // CALLED) Note: simplistic & often inaccurate but rather cost-free, and safe since obsolete or
-    // impossible to resolve callbacks are just dropped
-    // TODO: we can revise this later w/ more usage
-    RigidBody *rb1 = transform_get_rigidbody(t1);
-    RigidBody *rb2 = transform_get_rigidbody(t2);
-    if (rb1 == NULL || rb2 == NULL) {
-        return true; // (1)
-    } else {
-        const bool isValid1 = rigidbody_is_dynamic(rb1) || rigidbody_is_active_trigger(rb1);
-        const bool isValid2 = rigidbody_is_dynamic(rb2) || rigidbody_is_active_trigger(rb2);
-        if (isValid1 == false && isValid2 == false) {
-            return true; // (2)
-        } else if (*frames > PHYSICS_DISCARD_COLLISION_COUPLE) {
-            return true; // (3)
-        } else if ((isValid1 && utils_axes_mask_get(rb1->contact, (uint8_t)axis) == false) ||
-                   (isValid2 &&
-                    utils_axes_mask_get(rb2->contact,
-                                        (uint8_t)utils_axes_mask_value_swapped(axis)) == false)) {
-
-            if (_rigidbody_get_simulation_flag(rb1, SIMULATIONFLAG_END_CALLBACK_ENABLED)) {
-                rigidbody_collision_callback(t1, rb1, t2, rb2, AxesMaskNone, opaqueUserData);
+void rigidbody_toggle_collision_callback(RigidBody *rb, CollisionCallbackType type, bool value) {
+    switch (type) {
+        case CollisionCallbackType_Begin:
+            if (value) {
+                _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED);
+            } else {
+                _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED);
             }
-            if (_rigidbody_get_simulation_flag(rb2, SIMULATIONFLAG_END_CALLBACK_ENABLED)) {
-                rigidbody_collision_callback(t2, rb2, t1, rb1, AxesMaskNone, opaqueUserData);
+            break;
+        case CollisionCallbackType_Tick:
+            if (value) {
+                _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED);
+            } else {
+                _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED);
             }
-            return true; // (4)
-        } else {
-            *frames += 1;
-            return false;
-        }
+            break;
+        case CollisionCallbackType_End:
+            if (value) {
+                _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED);
+            } else {
+                _rigidbody_reset_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED);
+            }
+            break;
     }
 }
 

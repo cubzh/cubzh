@@ -36,8 +36,8 @@ struct _Scene {
 
 typedef struct {
     Weakptr *t1, *t2;
-    AxesMaskValue axis;
-    uint32_t frames;
+    float3 wNormal;
+    bool flag;
 } _CollisionCouple;
 
 void _scene_add_rigidbody_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
@@ -253,7 +253,7 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData) {
     _scene_refresh_recurse(sc, sc->root, transform_is_hierarchy_dirty(sc->root), dt, callbackData);
 }
 
-void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
+void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
     if (sc == NULL) {
         return;
     }
@@ -300,15 +300,18 @@ void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
 
     // process collision couples for end-of-contact callback
     n = doubly_linked_list_first(sc->collisions);
-    _CollisionCouple *cc = NULL;
-    Transform *t2 = NULL;
+    _CollisionCouple *cc;
+    Transform *t2;
     while (n != NULL) {
         cc = (_CollisionCouple *)doubly_linked_list_node_pointer(n);
         t = weakptr_get(cc->t1);
         t2 = weakptr_get(cc->t2);
 
-        if (t == NULL || t2 == NULL ||
-            rigidbody_check_end_of_contact(t, t2, cc->axis, &cc->frames, opaqueUserData)) {
+        if (t == NULL || t2 == NULL || cc->flag == false) {
+            if (t != NULL && t2 != NULL) {
+                rigidbody_fire_reciprocal_collision_end_callback(t, t2, callbackData);
+            }
+
             weakptr_release(cc->t1);
             weakptr_release(cc->t2);
             free(cc);
@@ -317,6 +320,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *opaqueUserData) {
             doubly_linked_list_delete_node(sc->collisions, n);
             n = next;
         } else {
+            cc->flag = false;
             n = doubly_linked_list_node_next(n);
         }
     }
@@ -431,20 +435,51 @@ void scene_register_removed_transform(Scene *sc, Transform *t) {
     fifo_list_push(sc->removed, t);
 }
 
-void scene_register_collision_couple(Scene *sc, Transform *t1, Transform *t2, AxesMaskValue axis) {
+bool _scene_register_collision_couple_func(void *ptr, void *data) {
+    const _CollisionCouple *cc1 = (_CollisionCouple *)ptr;
+    const _CollisionCouple *cc2 = (_CollisionCouple *)data;
+    return (weakptr_get(cc1->t1) == weakptr_get(cc2->t1) &&
+            weakptr_get(cc1->t2) == weakptr_get(cc2->t2)) ||
+           (weakptr_get(cc1->t1) == weakptr_get(cc2->t2) &&
+            weakptr_get(cc1->t2) == weakptr_get(cc2->t1));
+}
+
+CollisionCoupleStatus scene_register_collision_couple(Scene *sc,
+                                                      Transform *t1,
+                                                      Transform *t2,
+                                                      float3 *wNormal) {
     if (sc == NULL || t1 == NULL || t2 == NULL) {
-        return;
+        return CollisionCoupleStatus_Discard;
+    }
+    vx_assert(wNormal != NULL);
+
+    _CollisionCouple *newCC = (_CollisionCouple *)malloc(sizeof(_CollisionCouple));
+    if (newCC == NULL) {
+        return CollisionCoupleStatus_Discard;
+    }
+    newCC->t1 = transform_get_and_retain_weakptr(t1);
+    newCC->t2 = transform_get_and_retain_weakptr(t2);
+    newCC->wNormal = *wNormal;
+    newCC->flag = true;
+
+    _CollisionCouple *existingCC;
+    if (doubly_linked_list_contains_func(sc->collisions,
+                                         _scene_register_collision_couple_func,
+                                         newCC,
+                                         (void **)&existingCC)) {
+        free(newCC);
+        *wNormal = existingCC->wNormal;
+        if (existingCC->flag) {
+            return CollisionCoupleStatus_Discard;
+        } else {
+            existingCC->flag = true;
+            return CollisionCoupleStatus_Tick;
+        }
     }
 
-    _CollisionCouple *cc = (_CollisionCouple *)malloc(sizeof(_CollisionCouple));
-    if (cc == NULL) {
-        return;
-    }
-    cc->t1 = transform_get_and_retain_weakptr(t1);
-    cc->t2 = transform_get_and_retain_weakptr(t2);
-    cc->axis = axis;
-    cc->frames = 0;
-    doubly_linked_list_push_last(sc->collisions, cc);
+    doubly_linked_list_push_last(sc->collisions, newCC);
+
+    return CollisionCoupleStatus_Begin;
 }
 
 // MARK: - Physics -

@@ -7,6 +7,7 @@
 #include "box.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 Box *box_new() {
     Box *b = (Box *)malloc(sizeof(Box));
@@ -439,6 +440,16 @@ void box_to_aabox2(const Box *b,
                    const Matrix4x4 *mtx,
                    const float3 *offset,
                    SquarifyType squarify) {
+
+    box_model1_to_model2_aabox(b, aab, mtx, NULL, offset, squarify);
+}
+
+void box_model1_to_model2_aabox(const Box *b,
+                                Box *aab,
+                                const Matrix4x4 *model1,
+                                const Matrix4x4 *invModel2,
+                                const float3 *offset,
+                                SquarifyType squarify) {
     float3 min = b->min;
     float3 max = b->max;
 
@@ -459,14 +470,25 @@ void box_to_aabox2(const Box *b,
     float3 transformed[8];
 
     // transform all 8 box points
-    matrix4x4_op_multiply_vec_point(&transformed[0], &points[0], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[1], &points[1], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[2], &points[2], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[3], &points[3], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[4], &points[4], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[5], &points[5], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[6], &points[6], mtx);
-    matrix4x4_op_multiply_vec_point(&transformed[7], &points[7], mtx);
+    matrix4x4_op_multiply_vec_point(&transformed[0], &points[0], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[1], &points[1], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[2], &points[2], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[3], &points[3], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[4], &points[4], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[5], &points[5], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[6], &points[6], model1);
+    matrix4x4_op_multiply_vec_point(&transformed[7], &points[7], model1);
+    if (invModel2 != NULL) {
+        memcpy(points, transformed, sizeof(float3) * 8);
+        matrix4x4_op_multiply_vec_point(&transformed[0], &points[0], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[1], &points[1], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[2], &points[2], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[3], &points[3], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[4], &points[4], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[5], &points[5], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[6], &points[6], invModel2);
+        matrix4x4_op_multiply_vec_point(&transformed[7], &points[7], invModel2);
+    }
 
     // get box min/max in that new space
     aab->min = transformed[0];

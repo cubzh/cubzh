@@ -63,12 +63,18 @@ typedef enum {
     RigidbodyMode_Dynamic
 } RigidbodyMode;
 
-typedef void (*pointer_rigidbody_collision_func)(Transform *self,
+typedef enum CollisionCallbackType {
+    CollisionCallbackType_Begin,
+    CollisionCallbackType_Tick,
+    CollisionCallbackType_End
+} CollisionCallbackType;
+typedef void (*pointer_rigidbody_collision_func)(CollisionCallbackType type,
+                                                 Transform *self,
                                                  RigidBody *selfRb,
                                                  Transform *other,
                                                  RigidBody *otherRb,
-                                                 AxesMaskValue selfAxis,
-                                                 void *opaqueUserData);
+                                                 float3 wNormal,
+                                                 void *callbackData);
 
 /// MARK: - Lifecycle -
 RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t collidesWith);
@@ -109,7 +115,6 @@ uint8_t rigidbody_get_simulation_mode(const RigidBody *rb);
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value);
 bool rigidbody_get_collider_dirty(const RigidBody *rb);
 void rigidbody_reset_collider_dirty(RigidBody *rb);
-void rigidbody_toggle_collision_callback(RigidBody *rb, bool value, bool end);
 void rigidbody_set_awake(RigidBody *rb);
 
 /// MARK: - State -
@@ -151,12 +156,10 @@ void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel,
 
 /// MARK: - Callbacks -
 void rigidbody_set_collision_callback(pointer_rigidbody_collision_func f);
-void rigidbody_set_collision_couple_callback(pointer_rigidbody_collision_func f);
-bool rigidbody_check_end_of_contact(Transform *t1,
-                                    Transform *t2,
-                                    AxesMaskValue axis,
-                                    uint32_t *frames,
-                                    void *opaqueUserData);
+void rigidbody_fire_reciprocal_collision_end_callback(Transform *self,
+                                                      Transform *other,
+                                                      void *callbackData);
+void rigidbody_toggle_collision_callback(RigidBody *rb, CollisionCallbackType type, bool value);
 
 /// MARK: - Debug -
 #if DEBUG_RIGIDBODY
