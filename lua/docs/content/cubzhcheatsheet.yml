@@ -1,0 +1,566 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
+title: "Cubzh Cheat Sheet"
+blocks:
+    - text: |
+        The goal of this document is to show you in a single page most of the attributes and functions available.
+
+        This list is not exaustive but is a great start to learn Cubzh if you are already an experienced developer.
+
+    - title: "Base Functions"
+
+    - code: |
+        Client.OnStart = function()
+            -- trigger once on start
+        end
+
+        Client.Tick = function(dt)
+            -- tick at each frame
+        end
+
+        Client.OnPlayerJoin = function(p)
+            print(p.Username.." joins the game.")
+        end
+
+        Client.OnPlayerLeave = function(p)
+            print(p.Username.." lefts the game.")
+        end
+
+    - title: "World / Object"
+
+    - subtitle: "Map"
+
+    - code: |
+        Config = {
+          Map = "aduermael.rockies"
+        }
+        Config.Map = "aduermael.rockies"
+
+        Client.OnStart = function()
+            Map.Scale = 5 -- default
+
+            Map:AddBlock(Color.White,0,0,0) -- bottom left corner
+
+            local b = Map:GetBlock(0,0,0)
+            b:Replace(Color.Red)
+            b:Remove()
+        end
+
+    - subtitle: "Shapes"
+
+    - code: |
+        Config = {
+          Map = "aduermael.rockies",
+          Items = { "aduermael.rainbow_sword" }
+        }
+
+        Client.OnStart = function()
+            local shape = Shape(Items.aduermael.rainbow_sword)
+            shape:SetParent(Map) -- adds created shape in the map
+            shape.Position = Number3(Map.Width * 0.5, Map.Height, Map.Depth * 0.5) * Map.Scale
+            shape.LocalPosition = { Map.Width * 0.5, Map.Height, Map.Depth * 0.5 }
+            shape.IsHidden = true -- false by default
+
+            shape:SetParent(World) -- adds created shape in the world
+            shape.LocalPosition = Number3(Map.Width * 0.5, Map.Height, Map.Depth * 0.5) * Map.Scale
+
+            shape.LocalRotation = Number3(0, math.pi / 2, 0)
+            shape.LocalScale = 3
+
+            shape.Tick = function(object, dt)
+                shape.Position.Y = shape.Position.Y + dt
+            end
+
+            -- You can also load shapes asynchronously without adding them in Config.Items
+            Object:Load("caillef.basicaxe", function(axe)
+                if not axe then return end
+                Player:EquipRightHand(axe)
+            end)
+
+            -- MutableShape
+            local mutableShape = MutableShape(Items.aduermael.rainbow_sword)
+            mutableShape:AddBlock(Color(0,255,0), 10, 10, 10)
+
+            local block = mutableShape:GetBlock(10, 10, 10)
+            if block then
+                block:Remove()
+            end
+
+            Player:EquipRightHand(mutableShape)
+        end
+
+    - subtitle: "Physics / Collision"
+
+    - code: |
+        shape.Physics = PhysicsMode.Disabled -- excluded from all physics features.
+        shape.Physics = PhysicsMode.Trigger -- casts, collision callbacks, passed through by other dynamic objects.
+        shape.Physics = PhysicsMode.Static -- casts, collision callbacks, obstacle for other dynamic objects.
+        shape.Physics = PhysicsMode.Dynamic -- fall and has Velocity, world-aligned collision box, casts, collision callbacks, may act as obstacles for other dynamic objects, fully simulated
+
+        shape.OnCollision = function(shape, other) end
+        shape.OnCollisionBegin = function(shape, other) end
+        shape.OnCollisionEnd = function(shape, other) end
+
+        local object1 = Object()
+        local object2 = Object()
+
+        -- making sure 2 objects collide with each other
+        -- NOTE: by default:
+        -- Map.CollisionGroups == {1},
+        -- Player.CollisionGroups == {2},
+        -- Object.CollisionGroups == {3}
+        object1.CollisionGroups = {5}
+        object2.CollisionGroups = {5}
+        object1.CollidesWithGroups = {1, 5} -- collides with Map + objects in group 5
+        object2.CollidesWithGroups = {1, 5} -- collides with Map + objects in group 5
+        -- OR
+        object1.CollidesWithGroups = Map.CollisionGroups + {5}
+        object2.CollidesWithGroups = Map.CollisionGroups + {5}
+
+        -- making an object collides with the Map and Players
+        local object = Object()
+        object.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
+
+        -- for Player (local player) to collide with other players and the Map
+        Player.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
+
+    - title: "Camera"
+
+    - code: |
+        Camera:SetModeFirstPerson(Player)
+        Camera:SetModeThirdPerson(Player)
+        Camera:SetModeSatellite(Player, 10.0)
+        Camera:SetModeFree()
+
+        Camera:FitToScreen(myShape, 0.6)
+
+        Camera.FOV = 40.0
+
+    - title: "Player"
+
+    - code: |
+        Player.Scale = 0.5 -- default
+        Player.Head.Scale = 2
+        Player.RightArm.IsHidden = true
+
+    - subtitle: "Equipments"
+
+    - code: |
+        Config = {
+          Items = { "aduermael.rainbow_sword" }
+        }
+
+        Client.OnStart = function()
+            Player:EquipRightHand(Items.aduermael.rainbow_sword)
+            -- or
+            local s = Shape(Items.aduermael.rainbow_sword)
+            Player:EquipRightHand(s)
+
+            Player:EquipRightHand(nil) -- unequips the sword
+
+            -- other socket
+            Player:EquipLeftHand(Items.aduermael.rainbow_sword)
+            Player:EquipBackpack(Items.aduermael.rainbow_sword)
+
+            Player:SwapHands() -- swap items
+
+            -- Animation, can be used in Action2
+            Player:SwingRight()
+            Player:SwingLeft()
+        end
+
+    - title: "Raycast"
+
+    - code: |
+        Pointer.Down = function( pointerEvent )
+            local impact = pointerEvent:CastRay()
+            -- or
+            local ray = Ray(pointerEvent.Position, pointerEvent.Direction)
+            local impact = ray:Cast()
+
+            if impact.Block ~= nil then
+                local position = pointer.Position + pointerEvent.Direction * impact.Distance
+                print("block hit:", impact.Block)
+            end
+        end
+
+        -- cast rays from Camera's position to remove cubes in the map
+        Client.Action2 = function()
+            local impact = Camera:CastRay(Map.CollisionGroups) -- only consider the map for collisions
+            -- or
+            local ray = Ray(Camera.Position, Camera.Forward)
+            local impact = ray:Cast(Map.CollisionGroups) -- only consider the map for collisions
+            if impact.Block ~= nil then
+                impact.Block:Remove()
+            end
+        end
+
+        -- cast ray down from Player's position to see
+        -- if there's something under it:
+        Client.Action3 = function()
+            local ray = Ray(Player.Position, {0, -1, 0})
+            local impact = ray:Cast(nil, Player) -- filter out Player to avoid direct impacts with it
+            if impact ~= nil then
+                print("found something under the player, distance:", impact.Distance)
+            end
+        end
+
+            - title: "Controls"
+
+            - subtitle: "Inputs"
+            - code: |
+        Client.Action1 = function()
+            print("Press Space or button on mobile")
+        end
+
+        Client.Action1Release = function()
+            print("Press Space or button on mobile")
+        end
+
+        Client.Action2 = function()
+            print("Press Left Click or button on mobile")
+            local impact = Player:CastRay()
+            if impact.Block ~= nil then
+              print("block hit:", impact.Block)
+            end
+
+            local impact = Camera:CastRay()
+            if impact.Block ~= nil then
+              print("block hit:", impact.Block)
+            end
+        end
+
+        Client.Action2Release = function()
+            print("Release Left Click or button on mobile")
+        end
+
+        Client.Action3 = function()
+            print("Press Right Click or button on mobile")
+        end
+
+        Client.Action3Release = function()
+            print("Release Right Click or button on mobile")
+        end
+
+    - subtitle: "Movements"
+
+    - code: |
+        -- DEFAULT IMPLEMENTATION
+        -- (those functions can be redefined)
+
+        Client.AnalogPad = function(dx, dy)
+            Player.LocalRotation.Y = Player.LocalRotation.Y + dx * 0.01
+            Player.LocalRotation.X = Player.LocalRotation.X + -dy * 0.01
+
+            if dpadX ~= nil and dpadY ~= nil then
+                Player.Motion = (Player.Forward * dpadY + Player.Right * dpadX) * 50
+            end
+        end
+
+        Client.DirectionalPad = function(x, y)
+            -- storing globals here for AnalogPad
+            -- to update Player.Motion
+            dpadX = x dpadY = y
+            Player.Motion = (Player.Forward * y + Player.Right * x) * 50
+        end
+
+    - subtitle: "Pointer / TouchScreen"
+
+    - text: |
+        More info on [PointerEvent](https://docs.cu.bzh/reference/pointerevent)
+
+    - code: |
+        Client.OnStart = function()
+            Pointer:Show() -- if third person, hold click to move the camera
+            UI.Crosshair = false
+        end
+
+        Pointer.Zoom = function(zoomValue)
+            -- for example, move the camera back and forth
+            Camera.Position = Camera.Position + Camera.Forward * zoomSpeed * zoomValue
+            -- we could also play with Camera.FieldOfView for a more convincing zoom effect,
+            -- use a velocity-based zoom to have a smooth motion, or any other custom logic
+        end
+
+        Pointer.Up = function(pointerEvent)
+            local impact = pointerEvent:CastRay()
+            if impact.Block ~= nil then
+              print("block hit:", impact.Block)
+            end
+
+            -- this can also be done using a Ray object:
+            local ray = Ray(pointerEvent.Position, pointerEvent.Direction)
+            impact = ray:Cast(Map) -- filter in Map
+            if impact.Block ~= nil then
+              print("block hit:", impact.Block)
+            end
+        end
+
+        Pointer.Down = function(pointerEvent)
+            print(pointerEvent.X, pointerEvent.Y)
+        end
+
+        Pointer.Drag = function(pointerEvent)
+            print(pointerEvent.DX, pointerEvent.DY)
+        end
+        Pointer.DragBegin = function(pointerEvent) end
+        Pointer.DragEnd = function(pointerEvent) end
+
+        -- right click or 2 fingers drag
+        Pointer.Drag2 = function(pointerEvent) end
+        Pointer.Drag2Begin = function(pointerEvent) end
+        Pointer.Drag2End = function(pointerEvent) end
+
+    - title: "Colors"
+
+    - code: |
+        local blue = Color(0,0,255) -- integers 0-255
+        -- or
+        local blue = Color(0.0, 0.0, 1.0) -- decimals 0.0-1.0
+
+    - title: "Sounds and Music"
+
+    - text: |
+        List of all the sounds available here: [https://docs.cu.bzh/guides/quick/adding-sounds#list-of-available-sounds](https://docs.cu.bzh/guides/quick/adding-sounds#list-of-available-sounds)
+
+    - code: |
+        Client.OnStart = function()
+            -- add the AudioListener to the player's head
+            -- to "glue the microphone" to this object
+            Player.Head:AddChild(AudioListener)
+
+            -- create a new source
+            as = AudioSource()
+            as.Sound = "death_scream_guy_1"
+            as:SetParent(Player.Head)
+            as.Volume = 0.3
+            as.StartAt = 200
+            as.StopAt = 1000
+            as.Pitch = 0.5
+            as.Spatialized = False -- if true, the closer you are from the source, the louder it will be
+
+            as:Play()
+            Timer(2, false, function()
+                as:Stop()
+            end)
+        end
+
+    - title: "Delay and Clock"
+
+    - code: |
+        Timer(5, function()
+            print("5 seconds")
+        end)
+
+        Timer(2, true, function()
+            print("tick every 2 seconds")
+        end)
+
+        object.Tick = function(o, dt)
+            print("Tick of an object")
+        end
+
+    - title: "Lights"
+
+    - code: |
+        local l = Light()
+
+        -- change light properties
+        l.Radius = 50
+        l.Hardness = 0.5 -- Default 0.5, core intensity of the emitted light
+        l.Color = Color(1.0, 1.0, 0.5)
+        l.On = true
+
+        -- use it as a normal object in the scene
+        l:SetParent(World)
+        l.Position = { x, y, z }
+
+    - title: "Text"
+
+    - code: |
+        local t = Text()
+
+        -- change text properties
+        t.Text = "Hello world!"
+        t.Type = TextType.Screen -- The text type can be set to TextType.World (default) or TextType.Screen.
+        t.IsUnlit = true
+        t.Tail = true
+        t.Color = Color.White
+        t.BackgroundColor = Color.Red
+        t.FontSize = 30 -- Font size in points, 22.0 by default
+
+        -- use it as a normal object in the scene
+        t:SetParent(Player)
+        t.LocalPosition = { 0, 34, 0 }
+
+    - title: "UI (internal module)"
+
+    - subtitle: "Setup"
+
+    - code: |
+        Client.OnStart = function()
+            ui = require("uikit")
+            ui:init()
+        end
+
+        Pointer.Down = function(pe)
+            ui:pointerDown(pe)
+        end
+
+        Pointer.Up = function(pe)
+            ui:pointerUp(pe)
+        end
+
+        Client.ScreenDidResize = function()
+            ui:fitScreen()
+        end
+
+    - subtitle: "Elements"
+
+    - code: |
+        Client.OnStart = function()
+            ui = require("uikit")
+            ui:init()
+
+            local frame = ui:createFrame(Color.Red)
+            frame:setParent(ui.rootFrame)
+            frame.Width = 200
+            frame.Height = 100
+            frame.LocalPosition = Number3(50,50,0) -- Z cannot be set like that, it must be set independently
+
+            local text = ui:createText("HP", Color.White, "small") -- size can be "small", "default", "big"
+            text:setParent(frame)
+            text.object.Anchor = { 0.5, 0.5 } -- place anchor in the middle of the text
+            text.LocalPosition.Z = -1 -- place the frame in front of the parent
+            text.parentDidResize = function() -- called if the window is resized (responsiveness)
+                text.LocalPosition = Number3(frame.Width / 2, frame.Height / 2, 0)
+            end
+            text:parentDidResize()
+
+            -- after 5 seconds, update frame height
+            Timer(5, function()
+                frame.Height = 200
+            end)
+
+            local button = ui:createButton("Click here")
+            button:setParent(ui.rootFrame) -- must be set to ui.rootFrame or another ui element
+            button:setColor(Color.Blue, Color.White) -- set background color and text color
+            button.LocalPosition = Number3(Screen.Width - button.Width - 5, 100, 0)
+            button.onRelease = function()
+                print("Click")
+            end
+        end
+
+    - title: "Chat"
+
+    - code: |
+        Client:OpenChatInput()
+
+        Client.OnChat = function(message)
+            print(message) -- shows the message only for this client, not synced, see Events
+        end
+
+    - title: "HTTP / External API"
+
+    - code: |
+        local url = "https://mybestapi.com/api/users" -- replace with the URL you want to request
+        local headers = {}
+        headers["Content-Type"] = "application/json"
+        headers["Authorization"] = "Bearer 298H3298H329839823" -- if the API requires authentication
+
+        -- GET
+        HTTP:Get(url, headers, function(res)
+          if res.StatusCode ~= 200 then
+            print("Error " .. res.StatusCode)
+            return
+          end
+          -- body is [{"id": 289733, "name": "Mike", "age": 15}]
+          users,err = JSON:Decode(res.Body)
+          local user = users[1]
+          print(user.id, user.name, user.age)
+          -- prints 289734 Mike 15.0
+        end)
+
+        -- POST
+        local body = {}
+        body.name = "Bob"
+        body.age = 28
+        HTTP:Post(url, headers, body, function(res)
+          if res.StatusCode ~= 200 then
+            print("Error " .. res.StatusCode)
+            return
+          end
+          -- body is {"id": 289734, "name": "Bob", "age": 28}
+          user,err = JSON:Decode(res.Body)
+          print(user.id, user.name, user.age)
+          -- prints 289734 Bob 28.0
+        end)
+
+    - title: "Events / Multiplayer"
+
+    - subtitle: "Send Events"
+
+    - code: |
+        local e = Event()
+        e.action = "ping"
+        e.someMessage = "Something I'd like to say!"
+        e.someNumber = 42
+        e:SendTo(Server) -- send to Server
+
+        -- other possible recipients:
+        e:SendTo(Players) -- send to all players
+        e:SendTo(Players[2]) -- send to player 2
+        e:SendTo(OtherPlayers) -- send to all players but self
+
+    - subtitle: "Receive Events"
+
+    - code: |
+        Client.DidReceiveEvent = function(event)
+          if event.action == "pong" then
+            print("received pong")
+          end
+        end
+
+        Server.DidReceiveEvent = function(event)
+          if event.action == "ping" then
+            local response = Event()
+            response.action = "pong"
+            response:SendTo(event.Sender)
+          end
+        end
+
+    - title: "Storage"
+
+    - text: |
+        To save data between two sessions or to save highscores, you can use KeyValueStore
+    
+    - code: |
+        Server.DidReceiveEvent = function(event)
+            if event.action == "getXP" then
+
+                -- retrieve and return player's experience:
+                local store = KeyValueStore(event.Sender.UserID) -- use UserID as store name
+
+                -- get value for "xp" key
+                store:Get("xp", function(success, results)
+                    if success then
+                    local response = Event()
+                    response.xp = results.xp
+                    response:SendTo(event.Sender)
+                    end
+                end)
+            end
+        end
+
+        local store = KeyValueStore("settings")
+        store:Set("currentChallenge", "halloween", "jumpStrength", 10, function(success)
+            if success then
+                -- operation was successful
+            end
+        end)
+
+        store:Get("currentChallenge", "jumpStrength", function(success, results)
+            if success then
+            -- do something with results.currentChallenge
+            -- and results.jumpStrength
+            end
+        end)
