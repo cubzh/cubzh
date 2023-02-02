@@ -132,6 +132,9 @@ void _rigidbody_fire_reciprocal_callbacks(Scene *sc,
                                                                          selfTr,
                                                                          otherTr,
                                                                          &wNormalCache);
+    if (status == CollisionCoupleStatus_Discard) {
+        return;
+    }
 
     // Preferably keep world normal from own trajectory if self dynamic, rather than trigger
     // overlaps
@@ -149,15 +152,14 @@ void _rigidbody_fire_reciprocal_callbacks(Scene *sc,
                                          otherRb,
                                          wNormalCache,
                                          callbackData);
-        } else if (status == CollisionCoupleStatus_Tick) {
-            rigidbody_collision_callback(CollisionCallbackType_Tick,
-                                         selfTr,
-                                         selfRb,
-                                         otherTr,
-                                         otherRb,
-                                         wNormalCache,
-                                         callbackData);
         }
+        rigidbody_collision_callback(CollisionCallbackType_Tick,
+                                     selfTr,
+                                     selfRb,
+                                     otherTr,
+                                     otherRb,
+                                     wNormalCache,
+                                     callbackData);
     }
 
     // (2) fire reciprocal callback if applicable
@@ -173,15 +175,14 @@ void _rigidbody_fire_reciprocal_callbacks(Scene *sc,
                                          selfRb,
                                          negated,
                                          callbackData);
-        } else if (status == CollisionCoupleStatus_Tick) {
-            rigidbody_collision_callback(CollisionCallbackType_Tick,
-                                         otherTr,
-                                         otherRb,
-                                         selfTr,
-                                         selfRb,
-                                         negated,
-                                         callbackData);
         }
+        rigidbody_collision_callback(CollisionCallbackType_Tick,
+                                     otherTr,
+                                     otherRb,
+                                     selfTr,
+                                     selfRb,
+                                     negated,
+                                     callbackData);
     }
 }
 
