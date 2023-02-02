@@ -364,6 +364,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                        NULL);
 
                 const Matrix4x4 *model = NULL;
+                normal = float3_zero;
+
                 if (mode == RigidbodyMode_Dynamic) {
                     swept = rtreeSwept;
                     normal = rtreeNormal;
