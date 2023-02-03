@@ -528,6 +528,53 @@ blocks:
           end
         end
 
+    - subtitle: "Multi (internal module)"
+
+    - text: |
+        This module will sync the movement of all the players so that you can see other players in the World.
+        You can also use playerAction to play an animation when a player press a key for example.
+
+    - code: |
+        Client.OnStart = function()
+            multi = require("multi")
+            multi.teleportTriggerDistance = 100
+
+            onFire = function(player, data)
+                print(data.name)
+                player:SwingRight()
+            end
+
+            multi:registerPlayerAction("fire", onFire)
+
+            -- rest of the code ...
+        end
+
+        Client.OnPlayerJoin = function(p)
+            multi:initPlayer(p)
+        end
+
+        Client.OnPlayerLeave = function(p)
+            multi:removePlayer(p)
+        end
+
+        Client.DidReceiveEvent = function(e)
+            multi:receive(e)
+        end
+
+        -- jump function, triggered with Action1
+        Client.Action1 = function()
+            if Player.IsOnGround then
+                Player.Velocity.Y = 100 -- This is synced by default by the module because all the movements are synchronised
+            end
+        end
+
+        Client.Action2 = function()
+            -- send action to other players
+            multi:playerAction("fire", { name=Player.Username })
+            -- play action locally
+            onFire(Player, { name=Player.Username })
+        end
+
     - title: "Storage"
 
     - text: |
