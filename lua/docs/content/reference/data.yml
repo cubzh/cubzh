@@ -21,6 +21,14 @@ properties:
     - name: "Len"
       type: "number"
       description: "Number of bytes the [Data] contains."
+      samples:
+        - code: |
+            HTTP:Get("cu.bzh", function(result)
+            -- result type is Data
+              for i = 1, result.Len do
+                -- goes through every byte of the provided Data
+              end
+            end)
 
 functions:
     - name: "ToString"
@@ -35,6 +43,6 @@ functions:
                 local data = result
                 local str = data:ToString()
                 if string.sub(str, 1, 6) == "CUBZH!" then
-                  print("It's a pcubes file!")
+                  print("It's a Cubzh file!")
                 end
               end)

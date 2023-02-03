@@ -2,7 +2,7 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
 type: "Palette"
 creatable: true # indicates that instances can be created, even if there's no constructor
 description: |
-    A `Palette` is a list of [BlockProperties] entries describing the visual properties of its owner [Shape]'s blocks.
+    A `Palette` is an [array] of [BlockProperties] entries describing the visual properties of its owner [Shape]'s blocks.
     
     The entries of a palette can be changed at runtime with a few specific caveats:
     - only colors that are unused by the shape can be removed from its palette,
@@ -17,15 +17,36 @@ properties:
 functions:
     - name: "AddColor"
       description: "Adds a new [BlockProperties] entry with the given color. Returns palette index at which it was added."
+      arguments:
+        - name: newColor
+          type: Color
       return:
         - type: "integer"
-
-    - name: "RemoveColor"
-      description: "Removes the [BlockProperties] entry at given index, if it is unused. Returns `true` if it was removed."
-      return:
-        - type: "boolean"
+      samples:
+        - code: |
+            -- add red Color to the shape
+            myShape.Palette:AddColor(Color(255, 0, 0))
 
     - name: "GetIndex"
       description: "Returns the palette index of the latest entry corresponding to given color, `nil` if not found."
+      arguments:
+        - name: color
+          type: Color
       return:
         - type: "integer"
+      samples:
+        - code: |
+            -- get myShape's red Color index
+            local idx = myShape.Palette:GetIndex(Color(255, 0, 0))
+
+    - name: "RemoveColor"
+      description: "Removes the [BlockProperties] entry at given index, if it is unused. Returns `true` if it was removed."
+      arguments:
+        - name: colorToRemove
+          type: Color
+      return:
+        - type: "boolean"
+      samples:
+        - code: |
+            -- remove red Color from the shape if not used
+            local removed = myShape.Palette:RemoveColor(Color(255, 0, 0))

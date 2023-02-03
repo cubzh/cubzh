@@ -36,6 +36,11 @@ constructors:
 
 properties:
 
+    - name: "Palette"
+      type: "array"
+      description: |
+          Palette is an [array] of [Color]s, with each entry corresponding to a [Color] used by the [This].
+
     - name: "Pivot"
       type: "Number3"
       description: |

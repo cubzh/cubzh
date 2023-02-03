@@ -1,0 +1,58 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Number2"
+description: A Number2 contains 3 [number] values (X & Y). It can represent different things in 2D space, like points or positions.
+
+constructors: 
+  - description: "Creates a Number2 with values x and y."
+    arguments:
+    - name: "x"
+      type: "number"
+    - name: "y"
+      type: "number"
+    samples:
+      - code: |
+          local myNumber2 = Number2(1, 2)
+
+properties:
+  - name: "Height"
+    type: "number"
+    description: "Same as Y property."
+    
+  - name: "Width"
+    type: "number"
+    description: "Same as X property."
+
+  - name: "X"
+    type: "number"
+    description: "X value of the Number2."
+    samples:
+      - code: |
+          myNumber2.X = 42
+          print(myNumber2.X)
+
+  - name: "Y"
+    type: "number"
+    description: "Y value of the Number2."
+    samples:
+      - code: |
+          myNumber2.Y = 42
+          print(myNumber2.Y)
+
+functions:
+  - name: "Copy"
+    return: 
+      - type: "Number2" 
+    description: |
+      Returns a copy of the [Number2].
+    samples:
+      - code: |
+          local n1 = Number2(1, 0, 0)
+          local n2 = n1 -- n2 is not a copy but a direct reference to n1
+          n2.X = 10
+          print(n1.X) -- now n1.X == 10
+
+          -- using Copy:
+          local n1 = Number2(1, 0, 0)
+          local n2 = n1:Copy() -- n2 is a copy of n1, they're not the same Number2
+          n2.X = 10
+          print(n1.X) -- n1.X is still 1

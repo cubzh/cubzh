@@ -49,9 +49,6 @@ functions:
   - name: "Copy"
     return:
         - type: "Box"
-    arguments:
-      - name: "b"
-        type: "Box"
     description: |
         Returns a copy of the [Box].
 

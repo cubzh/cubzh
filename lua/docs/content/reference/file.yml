@@ -20,6 +20,13 @@ functions:
             -- success is a boolean
             if not success then
               print("Could not read file")
+              return
+            end
+
+            -- the user has cancelled the file selection
+            if result == nil then
+              print("No file selected")
+              return
             end
 
             -- result is a Data instance
