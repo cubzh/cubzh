@@ -503,7 +503,7 @@ functions:
             local pInLocalCoords = myObject:PositionWorldToLocal(p)
 
     - name: "RotateLocal"
-      description: "Object:RotateLocal(number3) -- euler angles\nObject:RotateLocal(number3, number) -- axis angle"
+      description: "Rotates the [This] in its own coordinates system."
       argument-sets:
         - 
           - name: "angles"
@@ -513,9 +513,17 @@ functions:
             type: "Number3"
           - name: "angle"
             type: "number"
+      samples:
+        - code: |
+            o = Object()
+            -- rotate with provided Euler angle
+            o:RotateLocal({0, 0, math.pi / 2.0})
+
+            -- rotate along specified axis
+            o:RotateLocal(o.Forward, math.pi / 2.0)
 
     - name: "RotateWorld"
-      description: "Object:RotateWorld(number3) -- euler angles\nObject:RotateWorld(number3, number) -- axis angle"
+      description: "Rotate the [This] in the [World] coordinates system."
       argument-sets:
         - 
           - name: "angles"
@@ -525,6 +533,15 @@ functions:
             type: "Number3"
           - name: "angle"
             type: "number"
+      samples:
+        - code: |
+            o = Object()
+            -- rotate with provided Euler angles
+            o:RotateWorld({0, 0, math.pi / 2.0})
+
+            -- rotate along specified axis
+            o:RotateWorld(o.Forward, math.pi / 2.0)
+            -- same as o:RotateLocal({0, 0, 1}, math.pi / 2.0)
 
     - name: "RotationLocalToWorld"
       description: "Converts a local rotation to world coordinate system."

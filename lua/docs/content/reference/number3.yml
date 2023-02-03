@@ -74,9 +74,6 @@ functions:
   - name: "Copy"
     return: 
         - type: "Number3" 
-    arguments: 
-      - name: "n"
-        type: "Number3"
     description: |
         Returns a copy of the [Number3].
     samples:

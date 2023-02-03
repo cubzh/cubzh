@@ -142,10 +142,12 @@ functions:
         - code: |
             -- remove block when Action2 is triggered
             Client.Action2 = function()
-              -- cast a ray, see if it touches a block
+              -- cast a ray and see if it touches a block
               local impact = Player:CastRay()
-              -- won't do anything if impact.Block is nil
-              impact.Block:Remove()
+              if impact.Block ~= nil then
+                -- a Block has been found, remove it
+                impact.Block:Remove()
+              end
             end
 
     - name: "Replace"
@@ -170,9 +172,11 @@ functions:
         - code: |
             -- replace block when Action2 is triggered
             Client.Action2 = function()
-              -- cast a ray, see if it touches a block
+              -- cast a ray and, see if it touches a block
               local impact = Player:CastRay()
-              -- won't do anything if impact.Block is nil
-              impact.Block:Replace(Block(1)) -- make it a block with PaletteIndex == 1
+              if impact.Block ~= nil then
+                -- a Block has been found, replace it
+                impact.Block:Replace(Color(255, 0, 0)) -- make it a red block
+              end
             end
 

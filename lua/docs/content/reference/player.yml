@@ -39,28 +39,35 @@ properties:
               value:Replace(newBlock)
           end
   - name: "ID"
-    type: "number"
-    description: "Unique player ID for played game. A different ID can be attributed after reconnection."
+    type: "integer"
+    description: "Unique player ID for played game. A different ID can be attributed after reconnection. Can be any [integer] from 0 to 15, both included."
+
   - name: "Username"
     type: "string"
     description: "Player's account username. Usernames are unique."
+
   - name: "UserID"
     type: "string"
     description: "Player's account identifier (ID). Identifiers are unique."
+
   - name: "Position"
     type: "Number3"
     description: "Absolute world position of the Player."
+
   - name: "Rotation"
     type: "Number3"
     description: "Player's rotation. (Y value is not considered)"
+
   - name: "Velocity"
     type: "Number3"
     description: "Player's velocity (speed + direction)."
+
   - name: "IsLocal"
     type: "boolean"
     description: |
-      Indicates whether the [Player] object is the local `Player`.
-      This is only valid on the [Client], not on the [Server].
+        Indicates whether the [Player] object is the local `Player`.
+        This is only valid on the [Client], not on the [Server].
+
   - name: "Shadow"
     type: boolean
     description: |
@@ -122,7 +129,6 @@ functions:
           -- impact.Object is the `box` Shape
 
   - name: "EquipBackpack"
-    coming-soon: true
     description: |
       Equips an [Item], [Shape] or [MutableShape] on the back of the [Player].
       You can remove what's been equiped using [nil] argument
@@ -140,7 +146,6 @@ functions:
         - type: "nil"
 
   - name: "EquipHat"
-    coming-soon: true
     description: |
       Equips an Item, Shape or MutableShape on [Player]'s head.
       You can remove what's been equiped using [nil] argument

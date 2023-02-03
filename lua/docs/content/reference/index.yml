@@ -32,6 +32,7 @@ blocks:
         - "<a href=\"/reference/light\">Light</a>"
         - "<a href=\"/reference/map\">Map</a>"
         - "<a href=\"/reference/mutableshape\">MutableShape</a>"
+        - "<a href=\"/reference/number2\">Number2</a>"
         - "<a href=\"/reference/number3\">Number3</a>"
         - "<a href=\"/reference/object\">Object</a>"
         - "<a href=\"/reference/otherplayers\">OtherPlayers</a>"

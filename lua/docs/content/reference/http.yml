@@ -40,26 +40,37 @@ functions:
     - name: "Post"
       description: |
           Sends a POST HTTP request to the specified url. The request is asynchronous.
+          If body is a table, it is JSON encoded before being sent. Otherwise it is sent as a string or raw [Data].
           The callback is called after receiving a response from the server.
       argument-sets: 
         -
           - name: "url"
             type: "string"
-          - name: "body"
-            type: "table"
           - name: "headers"
             type: "table"
             optional: true  
+          - name: "body"
+            type: "table"
           - name: "callback"
             type: "function"
         -
           - name: "url"
             type: "string"
+          - name: "headers"
+            type: "table"
+            optional: true
           - name: "body"
+            type: "string"
+          - name: "callback"
+            type: "function"
+        -
+          - name: "url"
             type: "string"
           - name: "headers"
             type: "table"
             optional: true
+          - name: "body"
+            type: "Data"
           - name: "callback"
             type: "function"
       samples:

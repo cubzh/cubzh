@@ -24,7 +24,7 @@ blocks:
 
         When the pointer is shown, users can activate UI buttons.
 
-        [Pointer.Down](/reference/pointer#property-down) and [Pointer.Up](/reference/pointer#property-up) functions are called on left clicks or one finger touches (when the action is not cached by a button or other UI input first).
+        [Pointer.Down](/reference/pointer#property-down) and [Pointer.Up](/reference/pointer#property-up) functions are called on left clicks or one finger touches (when the action is not caught by a button or other UI input first).
 
         [Pointer.Drag](/reference/pointer#property-drag) is called when moving the mouse or finger between `down` and `up` events.
 
@@ -34,7 +34,7 @@ blocks:
 
         Some actions are disabled when the pointer is shown (like [Client.AnalogPad](/reference/client#property-analogpad), [Client.Action2](/reference/client#property-action2), [Client.Action2Release](/reference/client#property-action2release), [Client.Action3](/reference/client#property-action3), [Client.Action3Release](/reference/client#property-action3release))
 
-        But [Client.DirectionalPad](/reference/client#property-directionalpad), [Client.Action1](/reference/client#property-action1) & [Client.Action1](/reference/client#property-action1release) remain available.
+        But [Client.DirectionalPad](/reference/client#property-directionalpad), [Client.Action1](/reference/client#property-action1) & [Client.Action1Release](/reference/client#property-action1release) remain available.
 
     - subtitle: "Pointer hidden"
 

@@ -5,8 +5,6 @@ description: |
 
   For example, if your game requires a minimum amount of players, it's a good idea to use the [Server] to count and trigger game start.
 
-  ⚠️ Multiplayer has been turned off in the first beta versions. It will be back soon, and this page will be updated with more details.
-
 properties:
   - name: "DidReceiveEvent"
     type: "function"
@@ -18,10 +16,45 @@ properties:
           Server.DidReceiveEvent = function(event)
             print("event received:", event)
           end
+
+  - name: "OnPlayerJoin"
+    type: "function"
+    description: |
+        Executed when a [Player] joins the Server.
+    samples:
+      - code: |
+          Server.OnPlayerJoin = function(newPlayer)
+            print("Welcome", newPlayer.Username)
+          end
+
+  - name: "OnPlayerLeave"
+    type: "function"
+    description: |
+        Executed when a [Player] leaves the Server.
+    samples:
+      - code: |
+          Server.OnPlayerLeave = function(leavingPlayer)
+            print(leavingPlayer.Username, "has left")
+          end
+
+  - name: "OnStart"
+    type: "function"
+    description: |
+        Executed when the Server starts.
+    samples:
+      - code: |
+          Server.OnStart = function()
+            -- initialize Server
+            scores = {} -- Server-only variable
+            for i = 0, 15 do 
+              scores[i] = 0
+            end
+          end
+
   - name: "Tick"
     type: "function"
     description: |
-      Executed ~30 times per second. Provides the elapsed time in seconds as parameter.
+        Executed ~30 times per second. Provides the elapsed time in seconds as parameter.
     samples:
       - code: |
           -- executed ~30 times per second on each user device

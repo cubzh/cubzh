@@ -59,13 +59,6 @@ properties:
     - name: "Forward"
       hide: true
 
-    - name: "LocalPalette"
-      type: "Palette"
-      description: |
-          Returns an [array] of [BlockProperties] ([Palette])
-
-          Note: non-opaque and light emissive block colors can't be changed after game start. 
-
 functions:
     - name: "RemoveFromParent"
       hide: true
