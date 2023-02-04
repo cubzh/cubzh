@@ -60,7 +60,7 @@ properties:
     - name: "Anchor"
       type: "Number2"
       description: |
-          Anchor of the text, `(0.5, 0.5)` by default.
+          Anchor of the text, `text.Anchor = { 0.5, 0.5 }` by default.
 
     - name: "MaxDistance"
       type: "number"
