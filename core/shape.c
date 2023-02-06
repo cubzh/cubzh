@@ -191,6 +191,9 @@ bool _is_out_of_allocated_size(const Shape *s,
                                const SHAPE_COORDS_INT_T x,
                                const SHAPE_COORDS_INT_T y,
                                const SHAPE_COORDS_INT_T z);
+bool _is_out_of_maximum_shape_size(const SHAPE_COORDS_INT_T x,
+                                   const SHAPE_COORDS_INT_T y,
+                                   const SHAPE_COORDS_INT_T z);
 Octree *_new_octree(const SHAPE_COORDS_INT_T w,
                     const SHAPE_COORDS_INT_T h,
                     const SHAPE_COORDS_INT_T d);
@@ -458,6 +461,12 @@ Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
                               const SHAPE_SIZE_INT_T depth,
                               bool lighting,
                               const bool isMutable) {
+
+    if (_is_out_of_maximum_shape_size((SHAPE_COORDS_INT_T)width,
+                                      (SHAPE_COORDS_INT_T)height,
+                                      (SHAPE_COORDS_INT_T)depth)) {
+        return NULL;
+    }
 
     Shape *s = shape_make();
 
@@ -950,11 +959,7 @@ bool shape_add_block_from_lua(Shape *const shape,
     vx_assert(shape != NULL);
 
     // a new block cannot be added if their is an existing block at those coords
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
-                                                 true); // xyz are lua coords
+    const Block *existingBlock = shape_get_block(shape, luaX, luaY, luaZ, true);
 
     if (block_is_solid(existingBlock) == true) {
         // There is already a solid block at the given coordinates, we cannot
@@ -1734,6 +1739,11 @@ void shape_make_space(Shape *const shape,
     // cclog_info("📏 MAKE SPACE | offset : %d %d %d", shape->offset.x, shape->offset.y,
     // shape->offset.z);
 
+    if (shape->octree == NULL) {
+        cclog_error("shape_make_space not implemented for shape with no octree yet.");
+        return;
+    }
+
     // no need to make space if there is no fixed/allocated size (no octree nor lighting)
     if (_has_allocated_size(shape) == false) {
         cclog_warning(
@@ -1815,22 +1825,19 @@ void shape_make_space(Shape *const shape,
     vx_assert(spaceRequiredMax.y >= 0);
     vx_assert(spaceRequiredMax.z >= 0);
 
-    int3 requiredSize;
-    int3_set(&requiredSize,
-             boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x,
-             boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y,
-             boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z);
+    SHAPE_COORDS_INT3_T requiredSize = {
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x),
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y),
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z)};
+    if (_is_out_of_maximum_shape_size(requiredSize.x, requiredSize.y, requiredSize.z)) {
+        return;
+    }
 
     // cclog_info("📏 REQUIRED SIZE: (%d,%d,%d)",
     //       requiredSize.x, requiredSize.y, requiredSize.z);
     // cclog_info("📏 SPACE REQUIRED: min(%d, %d, %d) max(%d, %d, %d)",
     //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
     //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
-
-    if (shape->octree == NULL) {
-        cclog_error("shape_make_space not implemented for shape with no octree yet.");
-        return;
-    }
 
     // see if octree is big enough, if not we have to create a new one
     // In that case, chunks will have to be recomputed too.
@@ -1848,9 +1855,8 @@ void shape_make_space(Shape *const shape,
     if (requiredSizeMax > octree_size) {
 
         // cclog_info("📏 OCTREE NOT BIG ENOUGH");
-        octree = _new_octree((SHAPE_COORDS_INT_T)requiredSize.x,
-                             (SHAPE_COORDS_INT_T)requiredSize.y,
-                             (SHAPE_COORDS_INT_T)requiredSize.z);
+        octree = _new_octree(requiredSize.x, requiredSize.y, requiredSize.z);
+        vx_assert(octree != NULL); // shouldn't happen, here within octree max
         chunks = index3d_new();
 
         octree_size = octree_get_dimension(octree);
@@ -1927,6 +1933,7 @@ void shape_make_space(Shape *const shape,
             // just move blocks within the octree in that case.
             SHAPE_COORDS_INT_T size = (SHAPE_COORDS_INT_T)octree_size;
             octree = _new_octree(size, size, size);
+            vx_assert(octree != NULL); // shouldn't happen, here within octree max
             chunks = index3d_new();
 
         } else {
@@ -3658,6 +3665,10 @@ static bool _shape_add_block(Shape *shape,
         *added_or_existing_block = NULL;
     }
 
+    if (_is_out_of_maximum_shape_size(x, y, z)) {
+        return false;
+    }
+
     // make sure block is added within fixed boundaries
     if (_has_allocated_size(shape) && _is_out_of_allocated_size(shape, x, y, z)) {
         cclog_error("⚠️ trying to add block outside shape's fixed boundaries| %p %d %d %d",
@@ -4011,6 +4022,13 @@ bool _is_out_of_allocated_size(const Shape *s,
                                const SHAPE_COORDS_INT_T y,
                                const SHAPE_COORDS_INT_T z) {
     return x < 0 || y < 0 || z < 0 || x >= s->maxWidth || y >= s->maxHeight || z >= s->maxDepth;
+}
+
+bool _is_out_of_maximum_shape_size(const SHAPE_COORDS_INT_T x,
+                                   const SHAPE_COORDS_INT_T y,
+                                   const SHAPE_COORDS_INT_T z) {
+    return x < 0 || y < 0 || z < 0 || x >= SHAPE_OCTREE_MAX || y >= SHAPE_OCTREE_MAX ||
+           z >= SHAPE_OCTREE_MAX;
 }
 
 Octree *_new_octree(const SHAPE_COORDS_INT_T w,
