@@ -92,6 +92,11 @@ properties:
                 print(b.LocalPosition)
               end
 
+    - name: "Color"
+      type: "Color"
+      description: |
+          Color of the block.
+
 functions:
     - name: "AddNeighbor"
       description: |
