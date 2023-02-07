@@ -1,0 +1,45 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "condition"
+basic-type: true
+description: |
+    A condition is a statement that allow you to know if an action is `true` or `false`.
+blocks:
+  - text: "A condition is a statement that allow you to know if an action is `true` or `false`."
+
+  - code: |
+      local number = 1
+      if number == 1 then -- if number is equal to 1
+        print("ok")
+      end
+
+      if number ~= 1 then -- if number is not equal to 1
+        print("ok")
+      end
+
+  - text: "A condition can be follow by a `else` if the action is `false`."
+
+  - code: |
+      local name = "bob"
+      if name == "bob" then
+        print("welcome")
+      else
+        print("you can't enter")
+      end
+
+  - text: "A condition can be use with specials operators with integers like `>` or `<`."
+
+  - code: |
+      local n1 = 5
+      local n2 = 6
+      if n1 > n2 then -- here the condition is false
+        print("hello")
+      end
+
+      if n1 < n2 then -- here the condition is true
+        print("hello")
+      end
+
+      if n1 => 5 then -- here n1 is equal to 5, the condition is true
+        print("hello")
+      end
+
