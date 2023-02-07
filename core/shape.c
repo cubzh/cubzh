@@ -435,6 +435,12 @@ Shape *shape_make_copy(Shape *origin) {
         s->fullname = string_new_copy(origin->fullname);
     }
 
+    // set the same parent as origin
+    Transform *parent = transform_get_parent(origin->transform);
+    if (parent != NULL) {
+        transform_set_parent(shape_get_root_transform(s), parent, true);
+    }
+
     return s;
 }
 

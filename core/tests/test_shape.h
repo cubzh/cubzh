@@ -157,7 +157,9 @@ void test_shape_make(void) {
 
 // check that the copy is independant from the source
 void test_shape_make_copy(void) {
+    Shape *parent = shape_make();
     Shape *src = shape_make();
+    shape_set_parent(src, shape_get_root_transform(parent), true);
     shape_set_lua_mutable(src, true);
     {
         ColorAtlas *atlas = color_atlas_new();
@@ -165,11 +167,18 @@ void test_shape_make_copy(void) {
         shape_set_palette(src, color_palette_new(atlas));
     }
     Shape *copy = shape_make_copy(src);
+    Transform *parent_transform = shape_get_root_transform(parent);
+    Transform *copy_transform = shape_get_root_transform(copy);
 
     TEST_CHECK(shape_is_lua_mutable(copy));
+    TEST_CHECK(transform_get_parent(copy_transform) == parent_transform);
 
     shape_set_lua_mutable(src, false);
     TEST_CHECK(shape_is_lua_mutable(copy));
+
+    // remove src's parent
+    shape_set_parent(src, NULL, false);
+    TEST_CHECK(transform_get_parent(copy_transform) == parent_transform);
 
     shape_free((Shape *const)src);
     shape_free((Shape *const)copy);
