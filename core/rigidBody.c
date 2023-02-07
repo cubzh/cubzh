@@ -1100,8 +1100,10 @@ bool rigidbody_is_enabled(const RigidBody *rb) {
 }
 
 bool rigidbody_has_callbacks(const RigidBody *rb) {
-    return rb != NULL && (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||
-                          _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED));
+    return rb != NULL &&
+           (_rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED) ||
+            _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_CALLBACK_ENABLED) ||
+            _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_END_CALLBACK_ENABLED));
 }
 
 bool rigidbody_is_active_trigger(const RigidBody *rb) {
