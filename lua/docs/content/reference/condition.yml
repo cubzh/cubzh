@@ -39,7 +39,7 @@ blocks:
         print("hello")
       end
 
-      if n1 => 5 then -- here n1 is equal to 5, the condition is true
+      if n1 >= 5 then -- here n1 is equal to 5, the condition is true
         print("hello")
       end
 
