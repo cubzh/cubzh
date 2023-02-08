@@ -1775,13 +1775,13 @@ void shape_make_space(Shape *const shape,
 
     // current shape's bounding box limits
 
-    int3 min; // inclusive
+    // NOTE: the bounding box origin can't be below {0,0,0}
+    // But shape->offset can be used to represent blocks with negative coordinates
+    int3 min, max;
     int3_set(&min,
              (int32_t)shape->box->min.x,
              (int32_t)shape->box->min.y,
              (int32_t)shape->box->min.z);
-
-    int3 max; // non inclusive
     int3_set(&max,
              (int32_t)shape->box->max.x,
              (int32_t)shape->box->max.y,
@@ -1794,31 +1794,48 @@ void shape_make_space(Shape *const shape,
     int3 spaceRequiredMin = int3_zero;
     int3 spaceRequiredMax = int3_zero;
 
-    if (requiredMinX < min.x) {
-        spaceRequiredMin.x = requiredMinX - min.x; // negative, space on the left required
+    const bool isEmpty = shape->nbBlocks == 0;
+    if (isEmpty) {
+        // /!\ special case on an empty shape,
+        // we will set its origin to newly added blocks, to avoid allocating huge
+        // octrees when setting first block at arbitrary coordinates
+
+        // let's have the initial model start at requested min
+        spaceRequiredMin.x = 0.0f;
+        spaceRequiredMin.y = 0.0f;
+        spaceRequiredMin.z = 0.0f;
+
+        // and expand on the positive side
+        spaceRequiredMax.x = requiredMaxX + 1 - requiredMinX;
+        spaceRequiredMax.y = requiredMaxY + 1 - requiredMinY;
+        spaceRequiredMax.z = requiredMaxZ + 1 - requiredMinZ;
+    } else {
+        if (requiredMinX < min.x) {
+            spaceRequiredMin.x = requiredMinX - min.x; // negative, space on the left required
+        }
+
+        if (requiredMaxX + 1 > max.x) {
+            spaceRequiredMax.x = requiredMaxX + 1 - max.x;
+        }
+
+        if (requiredMinY < min.y) {
+            spaceRequiredMin.y = requiredMinY - min.y;
+        }
+
+        if (requiredMaxY + 1 > max.y) {
+            spaceRequiredMax.y = requiredMaxY + 1 - max.y;
+        }
+
+        if (requiredMinZ < min.z) {
+            spaceRequiredMin.z = requiredMinZ - min.z;
+        }
+
+        if (requiredMaxZ + 1 > max.z) {
+            spaceRequiredMax.z = requiredMaxZ + 1 - max.z;
+        }
     }
 
-    if (requiredMaxX + 1 > max.x) {
-        spaceRequiredMax.x = requiredMaxX + 1 - max.x;
-    }
-
-    if (requiredMinY < min.y) {
-        spaceRequiredMin.y = requiredMinY - min.y;
-    }
-
-    if (requiredMaxY + 1 > max.y) {
-        spaceRequiredMax.y = requiredMaxY + 1 - max.y;
-    }
-
-    if (requiredMinZ < min.z) {
-        spaceRequiredMin.z = requiredMinZ - min.z;
-    }
-
-    if (requiredMaxZ + 1 > max.z) {
-        spaceRequiredMax.z = requiredMaxZ + 1 - max.z;
-    }
-
-    int3 boundingBoxSize; // size of current bounding box
+    int3 boundingBoxSize;
     shape_get_bounding_box_size(shape, &boundingBoxSize);
 
     vx_assert(spaceRequiredMax.x >= 0);
@@ -1839,8 +1856,6 @@ void shape_make_space(Shape *const shape,
     //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
     //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
 
-    // see if octree is big enough, if not we have to create a new one
-    // In that case, chunks will have to be recomputed too.
     Octree *octree = NULL;
     Index3D *chunks = NULL;
     size_t nbChunks = 0;
@@ -1859,10 +1874,8 @@ void shape_make_space(Shape *const shape,
         vx_assert(octree != NULL); // shouldn't happen, here within octree max
         chunks = index3d_new();
 
+        // newly allocated octree size
         octree_size = octree_get_dimension(octree);
-
-        // min/max is shape's current bounding box
-        // `octree_size` is the new octree size
 
         if (spaceRequiredMin.x < 0 && min.x + spaceRequiredMin.x < 0) {
             delta.x = -(min.x + spaceRequiredMin.x);
@@ -1885,15 +1898,7 @@ void shape_make_space(Shape *const shape,
     } else {
 
         // octree is big enough, let's see if there's enough room around the
-        // bounding box to just change its size.
-
-        // NOTE: the bounding box origin can't be below {0,0,0}
-        // But shape->offset can be used to represent blocks with negative coordinates
-
-        // When shape_make_space_for_block is called, the offset is already applied.
-        // But a block with x == -3 could be offsetted to -1, and that means
-        // the bounding box needs to move to be able to contain it.
-        // The offset is updated as we move the bounding box.
+        // bounding box, if not we'll need to offset model
 
         if (spaceRequiredMin.x < 0 && min.x + spaceRequiredMin.x < 0) {
             delta.x = -(min.x + spaceRequiredMin.x);
@@ -1914,68 +1919,38 @@ void shape_make_space(Shape *const shape,
         }
 
         if (delta.x != 0 || delta.y != 0 || delta.z != 0) {
-            // octree is big enough, but there's no room around the bounding box
-            // it needs to be moved to make space for new block.
-            // delta is the minimum movement to be applied.
-            // But if putting the bounding box at the center satisfies the constraint
-            // then it's a preferable option.
-            // Let's see for each axis.
+            // octree is big enough, but there's no room around the bounding box:
+            // model needs to be moved to make space for new blocks
 
             // cclog_info("📏 NO ROOM AROUND BOUNDING BOX");
             // cclog_info("📏 DELTA: (%d, %d, %d)", delta.x, delta.y, delta.z);
 
-            // let's simply recreate the octree in that case
-            // but maybe it could be better optimized to just move the blocks
-
-            // NOTE: aduermael: allocating an octree with the same size
-            // for operation to be the same as when copying cubes to a larger octree.
-            // It would be more lines of code but better optimized to
-            // just move blocks within the octree in that case.
+            // TODO: could it be more optimized to move blocks inside octree?
             SHAPE_COORDS_INT_T size = (SHAPE_COORDS_INT_T)octree_size;
             octree = _new_octree(size, size, size);
             vx_assert(octree != NULL); // shouldn't happen, here within octree max
             chunks = index3d_new();
 
         } else {
-            // octree is big enough AND there's enough room around the bounding box.
-            // Let's just make it larger.
-            // offset doesn't even have to be changed.
-            // The bounding box increases by itself when adding cubes.
-            // So we just change the max size.
+            // octree is big enough AND there's enough room around the bounding box:
+            // nothing to do other than updating shape size & offset
 
             // cclog_info("📏 THERE'S ROOM AROUND THE BOUNDING BOX");
             // cclog_info("📏 SPACE REQUIRED: (%d, %d, %d) / (%d, %d, %d)",
             //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
             //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
-
-            if (requiredMaxX >= shape->maxWidth) {
-                shape->maxWidth = (uint16_t)requiredMaxX + 1;
-            }
-            if (requiredMaxY >= shape->maxHeight) {
-                shape->maxHeight = (uint16_t)requiredMaxY + 1;
-            }
-            if (requiredMaxZ >= shape->maxDepth) {
-                shape->maxDepth = (uint16_t)requiredMaxZ + 1;
-            }
-
-            const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
-            const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
-            const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
-
-            _light_realloc(shape, ax, ay, az, 0, 0, 0);
-
-            return;
         }
     }
 
-    if (chunks == NULL && octree == NULL) {
-        return;
-    }
+    // from here, there may or may not be newly allocated octree/chunks to fill,
+    // but we'll always apply offset to pivot, BB, etc.
 
-    // NOTE: see if we could do this for all 3 cases
-    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
-    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
-    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
+    // /!\ special case: empty shape arbitrary model origin (see comment at the start of function)
+    if (isEmpty) {
+        delta.x -= requiredMinX;
+        delta.y -= requiredMinY;
+        delta.z -= requiredMinZ;
+    }
 
     if (requiredSize.x > shape->maxWidth)
         shape->maxWidth = (uint16_t)requiredSize.x;
@@ -1993,59 +1968,61 @@ void shape_make_space(Shape *const shape,
     }
     // shape->needsDisplay is now NULL
 
-    // copy with offsets to blocks position
-    Block *block = NULL;
-    Block *block_copy = NULL;
-    SHAPE_COORDS_INT_T ox, oy, oz;
-    Chunk *chunk = NULL;
-    bool chunkAdded = false;
+    if (chunks != NULL) {
+        // copy with offsets to blocks position
+        Block *block = NULL;
+        Block *block_copy = NULL;
+        SHAPE_COORDS_INT_T ox, oy, oz;
+        Chunk *chunk = NULL;
+        bool chunkAdded = false;
 
-    for (SHAPE_SIZE_INT_T xx = (SHAPE_SIZE_INT_T)min.x; xx < max.x; ++xx) {
-        for (SHAPE_SIZE_INT_T yy = (SHAPE_SIZE_INT_T)min.y; yy < max.y; ++yy) {
-            for (SHAPE_SIZE_INT_T zz = (SHAPE_SIZE_INT_T)min.z; zz < max.z; ++zz) {
+        for (SHAPE_SIZE_INT_T xx = (SHAPE_SIZE_INT_T)min.x; xx < max.x; ++xx) {
+            for (SHAPE_SIZE_INT_T yy = (SHAPE_SIZE_INT_T)min.y; yy < max.y; ++yy) {
+                for (SHAPE_SIZE_INT_T zz = (SHAPE_SIZE_INT_T)min.z; zz < max.z; ++zz) {
 
-                block = shape_get_block(shape,
-                                        (SHAPE_COORDS_INT_T)xx,
-                                        (SHAPE_COORDS_INT_T)yy,
-                                        (SHAPE_COORDS_INT_T)zz,
-                                        false);
+                    block = shape_get_block(shape,
+                                            (SHAPE_COORDS_INT_T)xx,
+                                            (SHAPE_COORDS_INT_T)yy,
+                                            (SHAPE_COORDS_INT_T)zz,
+                                            false);
 
-                if (block_is_solid(block)) {
-                    // get offseted position
-                    ox = (SHAPE_COORDS_INT_T)(xx + delta.x);
-                    oy = (SHAPE_COORDS_INT_T)(yy + delta.y);
-                    oz = (SHAPE_COORDS_INT_T)(zz + delta.z);
+                    if (block_is_solid(block)) {
+                        // get offseted position
+                        ox = (SHAPE_COORDS_INT_T)(xx + delta.x);
+                        oy = (SHAPE_COORDS_INT_T)(yy + delta.y);
+                        oz = (SHAPE_COORDS_INT_T)(zz + delta.z);
 
-                    // check if it is within new bounds
-                    vx_assert(ox >= 0 && oy >= 0 && oz >= 0 && ox < shape->maxWidth &&
-                              oy < shape->maxHeight && oz < shape->maxDepth);
+                        // check if it is within new bounds
+                        vx_assert(ox >= 0 && oy >= 0 && oz >= 0 && ox < shape->maxWidth &&
+                                  oy < shape->maxHeight && oz < shape->maxDepth);
 
-                    vx_assert(octree != NULL);
+                        vx_assert(octree != NULL);
 
-                    block_copy = block_new_copy(block);
+                        block_copy = block_new_copy(block);
 
-                    // block is again copied within octree_set_element
-                    octree_set_element(octree,
-                                       (const void *)block_copy,
-                                       (size_t)ox,
-                                       (size_t)oy,
-                                       (size_t)oz);
+                        // block is again copied within octree_set_element
+                        octree_set_element(octree,
+                                           (const void *)block_copy,
+                                           (size_t)ox,
+                                           (size_t)oy,
+                                           (size_t)oz);
 
-                    // block_copy is stored here, its memory is handled by responsible chunk
-                    _add_block_in_chunks(chunks,
-                                         block_copy,
-                                         ox,
-                                         oy,
-                                         oz,
-                                         NULL,
-                                         &chunkAdded,
-                                         &chunk,
-                                         NULL);
+                        // block_copy is stored here, its memory is handled by responsible chunk
+                        _add_block_in_chunks(chunks,
+                                             block_copy,
+                                             ox,
+                                             oy,
+                                             oz,
+                                             NULL,
+                                             &chunkAdded,
+                                             &chunk,
+                                             NULL);
 
-                    // flag this chunk as dirty (needs display)
-                    if (chunkAdded) {
-                        nbChunks++;
-                        shape_chunk_needs_display(shape, chunk);
+                        // flag this chunk as dirty (needs display)
+                        if (chunkAdded) {
+                            nbChunks++;
+                            shape_chunk_needs_display(shape, chunk);
+                        }
                     }
                 }
             }
@@ -2092,6 +2069,9 @@ void shape_make_space(Shape *const shape,
                     false); // remove offset
 
     // offset lighting data
+    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
+    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
+    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
     _light_realloc(shape,
                    ax,
                    ay,
@@ -2100,14 +2080,16 @@ void shape_make_space(Shape *const shape,
                    (SHAPE_SIZE_INT_T)delta.y,
                    (SHAPE_SIZE_INT_T)delta.z);
 
-    octree_free(shape->octree);
+    if (octree != NULL) {
+        octree_free(shape->octree);
+        shape->octree = octree;
+    }
+    if (chunks != NULL) {
+        index3d_flush(shape->chunks, shape_chunk_free);
+        index3d_free(shape->chunks);
 
-    index3d_flush(shape->chunks, shape_chunk_free);
-    index3d_free(shape->chunks);
-
-    shape->octree = octree;
-    shape->chunks = chunks;
-    // cclog_info("-- assign new chunks");
+        shape->chunks = chunks;
+    }
 
     // update offset
     int3_op_add(&shape->offset, &delta);
@@ -3671,12 +3653,12 @@ static bool _shape_add_block(Shape *shape,
 
     // make sure block is added within fixed boundaries
     if (_has_allocated_size(shape) && _is_out_of_allocated_size(shape, x, y, z)) {
-        cclog_error("⚠️ trying to add block outside shape's fixed boundaries| %p %d %d %d",
+        cclog_error("⚠️ trying to add block outside shape's allocated boundaries| %p %d %d %d",
                     shape,
                     x,
                     y,
                     z);
-        cclog_error("shape fixed size: %d | %d %d %d",
+        cclog_error("shape allocated size: %d | %d %d %d",
                     _has_allocated_size(shape),
                     shape->maxWidth,
                     shape->maxHeight,
