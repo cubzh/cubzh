@@ -106,7 +106,7 @@ struct _Shape {
 
     // shape's id
     ShapeId id; // 2 bytes
-    // shape fixed size if applicable, else 0
+    // shape allocated size, going below 0 or past this limit requires a shape resize
     uint16_t maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
 
     // octree resize offset, default zero until a resize occurs, is used to convert internal to Lua
@@ -1764,8 +1764,7 @@ void shape_make_space(Shape *const shape,
                                     &requiredMaxZ); // value += offset
     }
 
-    // Check if a resize is needed.
-    // If required min/max are within fixed bounds, then extra space is not needed.
+    // If required min/max are within allocated bounds, then extra space is not needed.
     if (shape_is_within_allocated_bounds(shape, requiredMinX, requiredMinY, requiredMinZ) &&
         shape_is_within_allocated_bounds(shape, requiredMaxX, requiredMaxY, requiredMaxZ)) {
         return;
@@ -1843,9 +1842,10 @@ void shape_make_space(Shape *const shape,
     vx_assert(spaceRequiredMax.z >= 0);
 
     SHAPE_COORDS_INT3_T requiredSize = {
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z)};
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x + 1),
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y + 1),
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z + 1)};
+
     if (_is_out_of_maximum_shape_size(requiredSize.x, requiredSize.y, requiredSize.z)) {
         return;
     }
@@ -1952,6 +1952,7 @@ void shape_make_space(Shape *const shape,
         delta.z -= requiredMinZ;
     }
 
+    // update allocated size, adding blocks < 0 or > this size will require another resize
     if (requiredSize.x > shape->maxWidth)
         shape->maxWidth = (uint16_t)requiredSize.x;
     if (requiredSize.y > shape->maxHeight)
