@@ -60,13 +60,17 @@ blocks:
     - list:
         - "<a href=\"/reference/array\">array</a>"
         - "<a href=\"/reference/boolean\">boolean</a>"
-        - "<a href=\"/reference/condition\">condition</a>"
         - "<a href=\"/reference/function\">function</a>"
         - "<a href=\"/reference/integer\">integer</a>"
         - "<a href=\"/reference/nil\">nil</a>"
         - "<a href=\"/reference/number\">number</a>"
         - "<a href=\"/reference/string\">string</a>"
         - "<a href=\"/reference/table\">table</a>"
+
+    - text: "Lua concepts:"
+
+    - list:
+        - "<a href=\"/reference/condition\">condition</a>"
             
             
             
