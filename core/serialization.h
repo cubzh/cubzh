@@ -138,7 +138,7 @@ bool update_preview_data(const void *imageData, uint32_t imageDataSize, const ch
 bool duplicate_world(const char *src, const char *dst);
 
 // --------------------------------------------------
-// Memory buffer writing
+// MARK: - Memory buffer writing -
 // --------------------------------------------------
 
 /// Arguments
@@ -156,6 +156,11 @@ void serialization_utils_writeUint16(void *dest, const uint16_t src, uint32_t *c
 
 ///
 void serialization_utils_writeUint32(void *dest, const uint32_t src, uint32_t *cursor);
+
+// MARK: - Baked files -
+
+bool serialization_save_baked_file(const Shape *s, FILE *fd); // does not close fd
+bool serialization_load_baked_file(Shape *s, FILE *fd); // does not close fd
 
 #ifdef __cplusplus
 } // extern "C"

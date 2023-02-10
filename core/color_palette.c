@@ -394,14 +394,6 @@ bool color_palette_is_transparent(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T
     return p->entries[entry].color.a < 255;
 }
 
-bool color_palette_is_lighting_dirty(const ColorPalette *p) {
-    return p->lighting_dirty;
-}
-
-void color_palette_clear_lighting_dirty(ColorPalette *p) {
-    p->lighting_dirty = false;
-}
-
 ATLAS_COLOR_INDEX_INT_T color_palette_get_atlas_index(const ColorPalette *p,
                                                       SHAPE_COLOR_INDEX_INT_T entry) {
     if (entry == SHAPE_COLOR_INDEX_AIR_BLOCK || entry >= p->count) {
@@ -496,6 +488,96 @@ RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
         }
     }
     return colors;
+}
+
+bool color_palette_needs_ordering(const ColorPalette *p) {
+    return p->orderedIndices != NULL;
+}
+
+Weakptr *color_palette_get_weakptr(ColorPalette *p) {
+    if (p->wptr == NULL) {
+        p->wptr = weakptr_new(p);
+    }
+    return p->wptr;
+}
+
+Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p) {
+    if (p->wptr == NULL) {
+        p->wptr = weakptr_new(p);
+    }
+    if (weakptr_retain(p->wptr)) {
+        return p->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
+}
+
+// MARK: - Baked lighting -
+
+bool color_palette_is_lighting_dirty(const ColorPalette *p) {
+    return p->lighting_dirty;
+}
+
+void color_palette_clear_lighting_dirty(ColorPalette *p) {
+    p->lighting_dirty = false;
+}
+
+uint32_t color_palette_get_lighting_hash(const ColorPalette *p) {
+    // hash should only include colors affecting lighting (emissive and/or transparent)
+    // note: this hash passes consecutive batches of ~100000 calls to debug_color_palette_test_hash
+    uint32_t hash = p->count * PRIME_NUMBERS130[0];
+    for (int i = 0; i < p->count; ++i) {
+        if (p->entries[i].emissive || p->entries[i].color.a < 255) {
+            hash += color_to_uint32(&p->entries[i].color) * PRIME_NUMBERS130[i + 1];
+        }
+    }
+    return hash;
+}
+
+bool debug_color_palette_test_hash(ColorPalette **p1Out, ColorPalette **p2Out) {
+    srand(rand());
+
+    // generate 2 random palettes
+    ColorPalette *p1 = color_palette_new(NULL);
+    ColorPalette *p2 = color_palette_new(NULL);
+    SHAPE_COLOR_INDEX_INT_T idx;
+    RGBAColor color1, color2;
+    bool allEqual = true;
+    for (int i = 0; i < SHAPE_COLOR_INDEX_MAX_COUNT; ++i) {
+        color1 = (RGBAColor){
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255)
+        };
+        color2 = (RGBAColor){
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
+            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255)
+        };
+
+        color_palette_check_and_add_color(p1, color1, &idx, true);
+        color_palette_set_emissive(p1, idx, (float)rand()/(float)RAND_MAX > 0.5f);
+
+        color_palette_check_and_add_color(p2, color2, &idx, true);
+        color_palette_set_emissive(p2, idx, (float)rand()/(float)RAND_MAX > 0.5f);
+
+        allEqual &= colors_are_equal(&color1, &color2);
+    }
+
+    // compare their hash
+    const uint32_t hash1 = color_palette_get_lighting_hash(p1);
+    const uint32_t hash2 = color_palette_get_lighting_hash(p2);
+
+    if (p1Out != NULL) {
+        *p1Out = p1;
+    }
+    if (p2Out != NULL) {
+        *p2Out = p2;
+    }
+
+    return allEqual && hash1 == hash2 || allEqual == false && hash1 != hash2;
 }
 
 // MARK: - Default palettes -
@@ -839,27 +921,5 @@ SHAPE_COLOR_INDEX_INT_T color_palette_ordered_idx_to_entry_idx(const ColorPalett
         return ordered;
     } else {
         return p->orderedIndices[ordered];
-    }
-}
-
-bool color_palette_needs_ordering(const ColorPalette *p) {
-    return p->orderedIndices != NULL;
-}
-
-Weakptr *color_palette_get_weakptr(ColorPalette *p) {
-    if (p->wptr == NULL) {
-        p->wptr = weakptr_new(p);
-    }
-    return p->wptr;
-}
-
-Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p) {
-    if (p->wptr == NULL) {
-        p->wptr = weakptr_new(p);
-    }
-    if (weakptr_retain(p->wptr)) {
-        return p->wptr;
-    } else { // this can only happen if weakptr ref count is at max
-        return NULL;
     }
 }

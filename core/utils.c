@@ -374,11 +374,7 @@ const char *stringArray_get(const stringArray_t *arr, const int idx) {
 }
 
 char *utils_get_baked_fullname(const char *gameID, const char *itemFullname) {
-    vx_assert(gameID != NULL);
-    vx_assert(itemFullname != NULL);
-
-    if (strlen(gameID) == 0) {
-        // no gameID, no baked file
+    if (gameID == NULL || strlen(gameID) == 0 || itemFullname == NULL) {
         return NULL;
     }
 
