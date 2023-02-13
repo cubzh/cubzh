@@ -21,15 +21,22 @@ const (
 	// path of Lua docs files from repo root directory
 	LUA_DOCS_FILES_PATH       string = "./lua/docs"
 	KNOWNHOSTS_LOCAL_FILEPATH string = "./known_hosts"
+	// environment variables names
+	DOCKER_REGISTRY_URL_ENVAR_NAME         string = "DOCKER_REGISTRY_URL"
+	DOCKER_REGISTRY_TOKEN_ENVAR_NAME       string = "DOCKER_REGISTRY_TOKEN"
+	LUA_DOCS_DOCKER_IMAGE_NAME_ENVAR_NAME  string = "LUA_DOCS_DOCKER_IMAGE_NAME"
+	LUA_DOCS_SRV_SSH_URL_ENVAR_NAME        string = "LUA_DOCS_SRV_SSH_URL"
+	LUA_DOCS_SRV_SSH_PRIVATEKEY_ENVAR_NAME string = "LUA_DOCS_SRV_SSH_PRIVATEKEY"
+	LUA_DOCS_SRV_SSH_KNOWNHOSTS_ENVAR_NAME string = "LUA_DOCS_SRV_SSH_KNOWNHOSTS"
 )
 
 var (
-	DIGITALOCEAN_REGISTRY_URL      string = os.Getenv("DIGITALOCEAN_REGISTRY_URL")
-	DIGITALOCEAN_REGISTRY_TOKEN    string = os.Getenv("DIGITALOCEAN_REGISTRY_TOKEN")
-	LUA_DOCS_DOCKER_IMAGE_NAME     string = os.Getenv("LUA_DOCS_DOCKER_IMAGE_NAME")
-	LUA_DOCS_SRV_SSH_URL           string = os.Getenv("LUA_DOCS_SRV_SSH_URL")
-	LUA_DOCS_SRV_SSH_PRIVATEKEY    string = os.Getenv("LUA_DOCS_SRV_SSH_PRIVATEKEY")
-	LUA_DOCS_SRV_SSH_KNOWNHOSTS    string = os.Getenv("LUA_DOCS_SRV_SSH_KNOWNHOSTS")
+	DOCKER_REGISTRY_URL            string = os.Getenv(DOCKER_REGISTRY_URL_ENVAR_NAME)
+	DOCKER_REGISTRY_TOKEN          string = os.Getenv(DOCKER_REGISTRY_TOKEN_ENVAR_NAME)
+	LUA_DOCS_DOCKER_IMAGE_NAME     string = os.Getenv(LUA_DOCS_DOCKER_IMAGE_NAME_ENVAR_NAME)
+	LUA_DOCS_SRV_SSH_URL           string = os.Getenv(LUA_DOCS_SRV_SSH_URL_ENVAR_NAME)
+	LUA_DOCS_SRV_SSH_PRIVATEKEY    string = os.Getenv(LUA_DOCS_SRV_SSH_PRIVATEKEY_ENVAR_NAME)
+	LUA_DOCS_SRV_SSH_KNOWNHOSTS    string = os.Getenv(LUA_DOCS_SRV_SSH_KNOWNHOSTS_ENVAR_NAME)
 	LUA_DOCS_DOCKER_IMAGE_FULLNAME string
 	LUA_DOCS_SRV_SSH_USER          string
 	LUA_DOCS_SRV_SSH_HOST          string
@@ -42,23 +49,23 @@ func main() {
 	// Check all environment variables are present
 	{
 		missingEnvarName := ""
-		if len(DIGITALOCEAN_REGISTRY_URL) == 0 {
-			missingEnvarName = "DIGITALOCEAN_REGISTRY_URL"
+		if len(DOCKER_REGISTRY_URL) == 0 {
+			missingEnvarName = DOCKER_REGISTRY_URL_ENVAR_NAME
 		}
-		if len(DIGITALOCEAN_REGISTRY_TOKEN) == 0 {
-			missingEnvarName = "DIGITALOCEAN_REGISTRY_TOKEN"
+		if len(DOCKER_REGISTRY_TOKEN) == 0 {
+			missingEnvarName = DOCKER_REGISTRY_TOKEN_ENVAR_NAME
 		}
 		if len(LUA_DOCS_DOCKER_IMAGE_NAME) == 0 {
-			missingEnvarName = "LUA_DOCS_DOCKER_IMAGE_NAME"
+			missingEnvarName = LUA_DOCS_DOCKER_IMAGE_NAME_ENVAR_NAME
 		}
 		if len(LUA_DOCS_SRV_SSH_URL) == 0 {
-			missingEnvarName = "LUA_DOCS_SRV_SSH_URL"
+			missingEnvarName = LUA_DOCS_SRV_SSH_URL_ENVAR_NAME
 		}
 		if len(LUA_DOCS_SRV_SSH_PRIVATEKEY) == 0 {
-			missingEnvarName = "LUA_DOCS_SRV_SSH_PRIVATEKEY"
+			missingEnvarName = LUA_DOCS_SRV_SSH_PRIVATEKEY_ENVAR_NAME
 		}
 		if len(LUA_DOCS_SRV_SSH_KNOWNHOSTS) == 0 {
-			missingEnvarName = "LUA_DOCS_SRV_SSH_KNOWNHOSTS"
+			missingEnvarName = LUA_DOCS_SRV_SSH_KNOWNHOSTS_ENVAR_NAME
 		}
 		if len(missingEnvarName) > 0 {
 			fmt.Println("❌ Error: missing envar", missingEnvarName)
@@ -67,7 +74,7 @@ func main() {
 	}
 
 	// Construct docker image fullname
-	LUA_DOCS_DOCKER_IMAGE_FULLNAME = DIGITALOCEAN_REGISTRY_URL + "/" + LUA_DOCS_DOCKER_IMAGE_NAME
+	LUA_DOCS_DOCKER_IMAGE_FULLNAME = DOCKER_REGISTRY_URL + "/" + LUA_DOCS_DOCKER_IMAGE_NAME
 
 	// Parse SSH connection URL
 	{
@@ -101,15 +108,15 @@ func main() {
 
 func dockerRegistryLogin() error {
 	cmd := exec.Command(
-		"docker", "login", DIGITALOCEAN_REGISTRY_URL,
-		"--username", DIGITALOCEAN_REGISTRY_TOKEN,
-		"--password", DIGITALOCEAN_REGISTRY_TOKEN)
+		"docker", "login", DOCKER_REGISTRY_URL,
+		"--username", DOCKER_REGISTRY_TOKEN,
+		"--password", DOCKER_REGISTRY_TOKEN)
 	return cmd.Run()
 }
 
 func dockerRegistryLogout() error {
 	cmd := exec.Command(
-		"docker", "logout", DIGITALOCEAN_REGISTRY_URL)
+		"docker", "logout", DOCKER_REGISTRY_URL)
 	return cmd.Run()
 }
 
