@@ -91,6 +91,7 @@ properties:
               local as = AudioSource()
               as.Sound = "drinking_1"
               as.Loop = true
+              as:Play()
 
 functions:
     - name: "Pause"
