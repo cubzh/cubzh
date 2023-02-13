@@ -336,7 +336,7 @@ blocks:
             as.StartAt = 200
             as.StopAt = 1000
             as.Pitch = 0.5
-            as.Spatialized = False -- if true, the closer you are from the source, the louder it will be
+            as.Spatialized = false -- if true, the closer you are from the source, the louder it will be
 
             as:Play()
             Timer(2, false, function()
