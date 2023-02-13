@@ -84,17 +84,19 @@ properties:
 
           By default:
           - [Object]s collide with the [Map] and other [Object]s
-          - [Player]s collide with the [Map] only
+          - [Player]s collide with the [Map] and the [Object]s
 
-          That can all be configured differently depening on your needs.
+          That can all be configured differently depending on your needs.
 
       samples:
         - code: |
             local object = Object()
-            -- It's not mandatory to set Physics to true
-            -- An object with Physics set to false contributes to the
-            -- physics simulation as a static item (can't be moved)
-            object.Physics = true
+            
+            -- It's not mandatory to change Physics value.
+            -- (default value is PhysicsMode.Static)
+            -- An object with Physics set to PhysicsMode.Static contributes 
+            -- to the physics simulation as a static item (can't be moved)
+            object.Physics = PhysicsMode.Dynamic
 
             -- making an object collide with the Map and Players
             object.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
