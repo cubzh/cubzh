@@ -2282,11 +2282,11 @@ const char *shape_get_fullname(const Shape *s) {
     return s->fullname;
 }
 
-void shape_replace_color_atlas(Shape *s, ColorAtlas *ca) {
+void shape_set_color_palette_atlas(Shape *s, ColorAtlas *ca) {
     if (s->palette == NULL) {
         return;
     }
-    color_palette_replace_color_atlas(s->palette, ca);
+    color_palette_set_atlas(s->palette, ca);
 }
 
 bool shape_is_lua_mutable(Shape *s) {

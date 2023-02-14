@@ -8,6 +8,8 @@
 
 #include <string.h>
 
+#include "cclog.h"
+
 // MARK: - Private functions -
 
 void _color_palette_unmap_entry_and_remap_duplicate(ColorPalette *p,
@@ -39,7 +41,7 @@ ColorPalette *color_palette_new(ColorAtlas *atlas) {
     if (p == NULL) {
         return NULL;
     }
-    p->refAtlas = color_atlas_get_and_retain_weakptr(atlas);
+    p->refAtlas = atlas != NULL ? color_atlas_get_and_retain_weakptr(atlas) : NULL;
     p->entries = (PaletteEntry *)malloc(sizeof(PaletteEntry) * SHAPE_COLOR_INDEX_MAX_COUNT);
     p->orderedIndices = NULL;
     p->availableIndices = NULL;
@@ -60,7 +62,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
     const uint8_t size = maximum(count, SHAPE_COLOR_INDEX_MAX_COUNT);
 
     ColorPalette *p = (ColorPalette *)malloc(sizeof(ColorPalette));
-    p->refAtlas = color_atlas_get_and_retain_weakptr(atlas);
+    p->refAtlas = atlas != NULL ? color_atlas_get_and_retain_weakptr(atlas) : NULL;
     p->entries = (PaletteEntry *)malloc(sizeof(PaletteEntry) * size);
     p->orderedIndices = NULL;
     p->availableIndices = NULL;
@@ -120,21 +122,25 @@ void color_palette_free(ColorPalette *p) {
     free(p);
 }
 
-void color_palette_replace_color_atlas(ColorPalette *p, ColorAtlas *atlas) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a != NULL) {
-        color_atlas_remove_palette(a, p);
+uint8_t color_palette_get_count(const ColorPalette *p) {
+    return p->count;
+}
+
+void color_palette_set_atlas(ColorPalette *p, ColorAtlas *atlas) {
+    if (p->refAtlas != NULL) {
+        cclog_warning(" ️⚠️ color_palette_set_atlas: replacing existing atlas will affect loaded shapes");
+
+        ColorAtlas *a = (ColorAtlas *) weakptr_get(p->refAtlas);
+        if (a != NULL) {
+            color_atlas_remove_palette(a, p);
+        }
+        weakptr_release(p->refAtlas);
     }
-    weakptr_release(p->refAtlas);
     p->refAtlas = color_atlas_get_and_retain_weakptr(atlas);
 
     for (SHAPE_COLOR_INDEX_INT_T i = 0; i < p->count; ++i) {
         p->entries[i].atlasIndex = color_atlas_check_and_add_color(atlas, p->entries[i].color);
     }
-}
-
-uint8_t color_palette_get_count(const ColorPalette *p) {
-    return p->count;
 }
 
 ColorAtlas *color_palette_get_atlas(const ColorPalette *p) {
@@ -160,11 +166,6 @@ bool color_palette_check_and_add_color(ColorPalette *p,
                                        RGBAColor color,
                                        SHAPE_COLOR_INDEX_INT_T *entryOut,
                                        bool allowDuplicates) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a == NULL) {
-        return false; // no atlas, palette is inactive waiting to be freed
-    }
-
     SHAPE_COLOR_INDEX_INT_T idx;
     if (allowDuplicates == false && color_palette_find(p, color, &idx)) {
         if (entryOut != NULL) {
@@ -240,17 +241,13 @@ bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
 }
 
 void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a == NULL) {
-        return; // no atlas, palette is inactive waiting to be freed
-    }
-
     if (entry >= p->count) {
         return;
     }
 
     // color is now in use
-    if (p->entries[entry].blocksCount == 0) {
+    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
+    if (a != NULL && p->entries[entry].blocksCount == 0) {
         if (p->entries[entry].atlasIndex == ATLAS_COLOR_INDEX_ERROR) {
             p->entries[entry].atlasIndex = color_atlas_check_and_add_color(a,
                                                                            p->entries[entry].color);
@@ -260,11 +257,6 @@ void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
 }
 
 void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a == NULL) {
-        return; // no atlas, palette is inactive waiting to be freed
-    }
-
     if (entry >= p->count) {
         return;
     }
@@ -273,7 +265,8 @@ void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
         p->entries[entry].blocksCount--;
 
         // color becomes unused
-        if (p->entries[entry].blocksCount == 0) {
+        ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
+        if (a != NULL && p->entries[entry].blocksCount == 0) {
             color_atlas_remove_color(a, p->entries[entry].atlasIndex);
             p->entries[entry].atlasIndex = ATLAS_COLOR_INDEX_ERROR;
         }
@@ -281,11 +274,6 @@ void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
 }
 
 bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a == NULL) {
-        return false; // no atlas, palette is inactive waiting to be freed
-    }
-
     if (entry >= p->count || p->entries[entry].blocksCount != 0) {
         return false;
     }
@@ -326,11 +314,6 @@ uint32_t color_palette_get_color_use_count(const ColorPalette *p, SHAPE_COLOR_IN
 }
 
 void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGBAColor color) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a == NULL) {
-        return; // no atlas, palette is inactive waiting to be freed
-    }
-
     if (entry >= p->count) {
         return;
     }
@@ -355,9 +338,11 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
         }
     }
 
+    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
+
     _color_palette_unmap_entry_and_remap_duplicate(p, entry);
     p->entries[entry].color = color;
-    if (p->entries[entry].atlasIndex != ATLAS_COLOR_INDEX_ERROR) {
+    if (a != NULL && p->entries[entry].atlasIndex != ATLAS_COLOR_INDEX_ERROR) {
         color_atlas_set_color(a, p->entries[entry].atlasIndex, color);
     }
     hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), entry);
@@ -425,11 +410,6 @@ VERTEX_LIGHT_STRUCT_T color_palette_get_emissive_color_as_light(const ColorPalet
 }
 
 void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(src->refAtlas);
-    if (a == NULL) {
-        return; // no atlas, palette is inactive waiting to be freed
-    }
-
     dst->count = src->count;
     dst->orderedCount = src->orderedCount;
 
@@ -448,9 +428,10 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
     }
 
     // populate hashmap + increment usage count w/ atlas
+    ColorAtlas *a = (ColorAtlas *)weakptr_get(src->refAtlas);
     for (int i = 0; i < dst->count; ++i) {
         hash_uint32_int_set(dst->colorToIdx, color_to_uint32(&(dst->entries[i].color)), i);
-        if (dst->entries[i].blocksCount > 0) {
+        if (dst->entries[i].blocksCount > 0 && a != NULL) {
             dst->entries[i].atlasIndex = color_atlas_check_and_add_color(a, dst->entries[i].color);
         }
     }

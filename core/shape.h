@@ -272,7 +272,7 @@ bool shape_is_model_locked(Shape *s);
 void shape_set_fullname(Shape *s, const char *fullname); // copies fullname
 const char *shape_get_fullname(const Shape *s);
 
-void shape_replace_color_atlas(Shape *s, ColorAtlas *ca);
+void shape_set_color_palette_atlas(Shape *s, ColorAtlas *ca);
 
 /// This flag is only used to check from VX whether or not a coder can call MutableShape functions
 bool shape_is_lua_mutable(Shape *s);
