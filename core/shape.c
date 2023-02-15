@@ -3481,6 +3481,13 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
     light_node_queue_free(lightQueue);
 }
 
+uint64_t shape_get_baked_lighting_hash(const Shape *s) {
+    if (s == NULL || s->octree == NULL || s->palette == NULL) {
+        return 0;
+    }
+    return octree_get_hash(s->octree, (uint64_t)color_palette_get_lighting_hash(s->palette));
+}
+
 // MARK: - History -
 
 void shape_history_setEnabled(Shape *s, const bool enable) {

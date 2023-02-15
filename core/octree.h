@@ -74,6 +74,7 @@ void *octree_get_elements(const Octree *octree);
 size_t octree_get_elements_size(const Octree *octree);
 uint8_t octree_get_levels(const Octree *octree);
 size_t octree_get_dimension(const Octree *octree);
+uint64_t octree_get_hash(const Octree *octree, uint64_t crc);
 
 // MARK: Octree iterator
 

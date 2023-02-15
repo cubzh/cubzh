@@ -472,6 +472,8 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
                                                  SHAPE_COLOR_INDEX_INT_T blockID,
                                                  bool applyOffset);
 
+uint64_t shape_get_baked_lighting_hash(const Shape *s);
+
 // MARK: - History -
 
 void shape_history_setEnabled(Shape *s, const bool enable);
