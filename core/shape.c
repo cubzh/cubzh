@@ -107,7 +107,6 @@ struct _Shape {
     // shape's id
     ShapeId id; // 2 bytes
     // shape allocated size, going below 0 or past this limit requires a shape resize
-    // note: lighting data uses this to allocate exactly what we need, instead of POT like the octree
     uint16_t maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
 
     // octree resize offset, default zero until a resize occurs, is used to convert internal to Lua

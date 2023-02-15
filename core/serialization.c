@@ -315,7 +315,7 @@ void serialization_utils_writeUint32(void *dest, const uint32_t src, uint32_t *c
 
 // MARK: - Baked files -
 
-bool serialization_save_baked_file(const Shape *s, FILE *fd) {
+bool serialization_save_baked_file(const Shape *s, uint32_t paletteHash, FILE *fd) {
     if (shape_has_baked_lighting_data(s) == false) {
         return false;
     }
@@ -328,15 +328,16 @@ bool serialization_save_baked_file(const Shape *s, FILE *fd) {
     }
 
     // write palette hash
-    uint32_t hash = color_palette_get_lighting_hash(shape_get_palette(s));
-    if (fwrite(&hash, sizeof(uint32_t), 1, fd) != 1) {
+    if (fwrite(&paletteHash, sizeof(uint32_t), 1, fd) != 1) {
         cclog_error("baked file: failed to write palette hash");
         return false;
     }
 
     // write lighting data uncompressed size
-    int3 shape_size; shape_get_allocated_size(s, &shape_size);
-    uint32_t size = (size_t)(shape_size.x * shape_size.y * shape_size.z * sizeof(VERTEX_LIGHT_STRUCT_T));
+    int3 shape_size;
+    shape_get_allocated_size(s, &shape_size);
+    uint32_t size = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
+                    sizeof(VERTEX_LIGHT_STRUCT_T);
     if (fwrite(&size, sizeof(uint32_t), 1, fd) != 1) {
         cclog_error("baked file: failed to write lighting data uncompressed size");
         return false;
@@ -344,7 +345,7 @@ bool serialization_save_baked_file(const Shape *s, FILE *fd) {
 
     // compress lighting data
     uLong compressedSize = compressBound(size);
-    const void* uncompressedData = shape_get_lighting_data(s);
+    const void *uncompressedData = shape_get_lighting_data(s);
     void *compressedData = malloc(compressedSize);
     if (compress(compressedData, &compressedSize, uncompressedData, size) != Z_OK) {
         cclog_error("baked file: failed to compress lighting data");
@@ -370,7 +371,7 @@ bool serialization_save_baked_file(const Shape *s, FILE *fd) {
     return true;
 }
 
-bool serialization_load_baked_file(Shape *s, FILE *fd) {
+bool serialization_load_baked_file(Shape *s, uint32_t paletteHash, FILE *fd) {
     // read baked file version
     uint32_t version;
     if (fread(&version, sizeof(uint32_t), 1, fd) != 1) {
@@ -378,7 +379,7 @@ bool serialization_load_baked_file(Shape *s, FILE *fd) {
         return false;
     }
 
-    switch(version) {
+    switch (version) {
         case 1: {
             // read palette hash
             uint32_t hash;
@@ -388,8 +389,7 @@ bool serialization_load_baked_file(Shape *s, FILE *fd) {
             }
 
             // match with shape's current palette hash
-            uint32_t currentHash = color_palette_get_lighting_hash(shape_get_palette(s));
-            if (hash != currentHash) {
+            if (hash != paletteHash) {
                 cclog_info("baked file: mismatched palette hash, skip");
                 return false;
             }
@@ -402,8 +402,10 @@ bool serialization_load_baked_file(Shape *s, FILE *fd) {
             }
 
             // sanity check
-            int3 shape_size; shape_get_allocated_size(s, &shape_size);
-            uint32_t expectedSize = (size_t)(shape_size.x * shape_size.y * shape_size.z) * sizeof(VERTEX_LIGHT_STRUCT_T);
+            int3 shape_size;
+            shape_get_allocated_size(s, &shape_size);
+            uint32_t expectedSize = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
+                                    sizeof(VERTEX_LIGHT_STRUCT_T);
             if (size != expectedSize) {
                 cclog_info("baked file: mismatched lighting data size, skip");
                 return false;

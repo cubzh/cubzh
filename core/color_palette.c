@@ -128,9 +128,10 @@ uint8_t color_palette_get_count(const ColorPalette *p) {
 
 void color_palette_set_atlas(ColorPalette *p, ColorAtlas *atlas) {
     if (p->refAtlas != NULL) {
-        cclog_warning(" ️⚠️ color_palette_set_atlas: replacing existing atlas will affect loaded shapes");
+        cclog_warning(" ️⚠️ color_palette_set_atlas: replacing existing atlas will affect "
+                      "loaded shapes");
 
-        ColorAtlas *a = (ColorAtlas *) weakptr_get(p->refAtlas);
+        ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
         if (a != NULL) {
             color_atlas_remove_palette(a, p);
         }
@@ -516,7 +517,7 @@ uint32_t color_palette_get_lighting_hash(const ColorPalette *p) {
 }
 
 bool debug_color_palette_test_hash(ColorPalette **p1Out, ColorPalette **p2Out) {
-    srand(rand());
+    srand((uint32_t)rand());
 
     // generate 2 random palettes
     ColorPalette *p1 = color_palette_new(NULL);
@@ -525,24 +526,20 @@ bool debug_color_palette_test_hash(ColorPalette **p1Out, ColorPalette **p2Out) {
     RGBAColor color1, color2;
     bool allEqual = true;
     for (int i = 0; i < SHAPE_COLOR_INDEX_MAX_COUNT; ++i) {
-        color1 = (RGBAColor){
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255)
-        };
-        color2 = (RGBAColor){
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255),
-            (uint8_t)(((float)rand()/(float)RAND_MAX) * 255)
-        };
+        color1 = (RGBAColor){(uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
+                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
+                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
+                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255)};
+        color2 = (RGBAColor){(uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
+                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
+                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
+                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255)};
 
         color_palette_check_and_add_color(p1, color1, &idx, true);
-        color_palette_set_emissive(p1, idx, (float)rand()/(float)RAND_MAX > 0.5f);
+        color_palette_set_emissive(p1, idx, (float)rand() / (float)RAND_MAX > 0.5f);
 
         color_palette_check_and_add_color(p2, color2, &idx, true);
-        color_palette_set_emissive(p2, idx, (float)rand()/(float)RAND_MAX > 0.5f);
+        color_palette_set_emissive(p2, idx, (float)rand() / (float)RAND_MAX > 0.5f);
 
         allEqual &= colors_are_equal(&color1, &color2);
     }
@@ -558,7 +555,7 @@ bool debug_color_palette_test_hash(ColorPalette **p1Out, ColorPalette **p2Out) {
         *p2Out = p2;
     }
 
-    return allEqual && hash1 == hash2 || allEqual == false && hash1 != hash2;
+    return (allEqual && hash1 == hash2) || (allEqual == false && hash1 != hash2);
 }
 
 // MARK: - Default palettes -

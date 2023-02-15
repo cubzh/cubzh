@@ -373,8 +373,8 @@ const char *stringArray_get(const stringArray_t *arr, const int idx) {
     return arr->strings[idx];
 }
 
-char *utils_get_baked_fullname(const char *gameID, const char *itemFullname) {
-    if (gameID == NULL || strlen(gameID) == 0 || itemFullname == NULL) {
+char *utils_get_baked_fullname(const char *id, const char *itemFullname) {
+    if (id == NULL || strlen(id) == 0 || itemFullname == NULL) {
         return NULL;
     }
 
@@ -385,9 +385,9 @@ char *utils_get_baked_fullname(const char *gameID, const char *itemFullname) {
     if (len == 2) { // itemFullname is of the form <username>.<file>
         const char *user = stringArray_get(arr, 0);
         const char *file = stringArray_get(arr, 1);
-        bakedFullname = string_new_join(user, ".baked_", file, "_", gameID);
+        bakedFullname = string_new_join(user, ".baked_", file, "_", id);
     } else {
-        bakedFullname = string_new_join("baked_", itemFullname, "_", gameID);
+        bakedFullname = string_new_join("baked_", itemFullname, "_", id);
     }
     stringArray_free(arr);
     return bakedFullname;

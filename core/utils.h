@@ -134,7 +134,7 @@ const char *stringArray_get(const stringArray_t *arr, const int idx);
 
 // MARK: -
 
-char *utils_get_baked_fullname(const char *gameID, const char *itemFullname);
+char *utils_get_baked_fullname(const char *id, const char *itemFullname);
 
 #ifdef __cplusplus
 } // extern "C"
