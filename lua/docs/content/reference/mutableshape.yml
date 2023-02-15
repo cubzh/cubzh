@@ -6,19 +6,23 @@ description: A [MutableShape] is an [Object] that carries and displays a set of 
 constructors: 
   - description: |
         Creates a MutableShape which model can be empty, loaded from an imported [Item], or copied from an existing [Shape] or [MutableShape].
+      
+        The optional parameter `loadBakedLight`, by default `false`, determines whether or not the shape should be loaded with baked lighting. If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none.
     argument-sets:
       -
 
       -
         - name: "item"
           type: "Item"
+        - name: "loadBakedLight"
+          type: "boolean"
+          optional: true
       -
         - name: "copiedShape"
           type: "Shape"
       -
         - name: "copiedMutableShape"
           type: "MutableShape"
-      -
     samples:
       - code: local s = MutableShape(R.username.itemName)
 
