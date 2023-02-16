@@ -2190,6 +2190,7 @@ void shape_refresh_all_vertices(Shape *s) {
     Index3DIterator *it = index3d_iterator_new(s->chunks);
     while (index3d_iterator_pointer(it) != NULL) {
         chunk_write_vertices(s, index3d_iterator_pointer(it));
+        chunk_set_needs_display(index3d_iterator_pointer(it), false);
         index3d_iterator_next(it);
     }
 
