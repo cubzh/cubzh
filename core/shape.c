@@ -1800,9 +1800,9 @@ void shape_make_space(Shape *const shape,
         // octrees when setting first block at arbitrary coordinates
 
         // let's have the initial model start at requested min
-        spaceRequiredMin.x = 0.0f;
-        spaceRequiredMin.y = 0.0f;
-        spaceRequiredMin.z = 0.0f;
+        spaceRequiredMin.x = 0;
+        spaceRequiredMin.y = 0;
+        spaceRequiredMin.z = 0;
 
         // and expand on the positive side
         spaceRequiredMax.x = requiredMaxX + 1 - requiredMinX;

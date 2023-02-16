@@ -32,6 +32,9 @@ void fifo_list_node_free(FifoListNode *node);
 
 FifoList *fifo_list_new(void) {
     FifoList *list = (FifoList *)malloc(sizeof(FifoList));
+    if (list == NULL) {
+        return NULL;
+    }
     list->first = NULL;
     list->last = NULL;
     list->size = 0;
@@ -106,6 +109,9 @@ void fifo_list_flush(FifoList *list, pointer_free_function freeFunc) {
 
 FifoListNode *fifo_list_node_new(void *ptr) {
     FifoListNode *node = (FifoListNode *)malloc(sizeof(FifoListNode));
+    if (node == NULL) {
+        return NULL;
+    }
     node->next = NULL;
     node->ptr = ptr;
     return node;

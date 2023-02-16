@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "acutest.h"
+
 #include "scene.h"
 #include "shape.h"
 #include "transform.h"
