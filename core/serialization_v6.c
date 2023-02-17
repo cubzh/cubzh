@@ -1006,13 +1006,11 @@ uint32_t chunk_v6_read_shape(Stream *s,
                     *shape = shape_make_with_octree(width,
                                                     height,
                                                     depth,
-                                                    shapeSettings->lighting,
                                                     shapeSettings->isMutable);
                 } else {
                     *shape = shape_make_with_size(width,
                                                   height,
                                                   depth,
-                                                  shapeSettings->lighting,
                                                   shapeSettings->isMutable);
                 }
                 break;
@@ -1104,36 +1102,37 @@ uint32_t chunk_v6_read_shape(Stream *s,
             }
 #if GLOBAL_LIGHTING_BAKE_READ_ENABLED
             case P3S_CHUNK_ID_SHAPE_BAKED_LIGHTING: {
-                memcpy(&lightingDataSizeRead,
-                       cursor,
-                       sizeof(uint32_t)); // shape baked lighting chunk size
+                // shape baked lighting chunk size
+                memcpy(&lightingDataSizeRead, cursor, sizeof(uint32_t));
                 cursor = (void *)((uint32_t *)cursor + 1);
 
-                uint32_t dataCount = lightingDataSizeRead / sizeof(VERTEX_LIGHT_STRUCT_T);
-                if (dataCount == 0) {
-                    cclog_error("baked light data count cannot be 0, skipping");
-                    totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
-                    break;
-                }
+                if (shapeSettings->lighting) {
+                    uint32_t dataCount = lightingDataSizeRead / sizeof(VERTEX_LIGHT_STRUCT_T);
+                    if (dataCount == 0) {
+                        cclog_error("baked light data count cannot be 0, skipping");
+                        totalSizeRead += lightingDataSizeRead + (uint32_t) sizeof(uint32_t);
+                        break;
+                    }
 
-                lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingDataSizeRead);
-                if (lightingData == NULL) {
-                    totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
-                    continue;
-                }
+                    lightingData = (VERTEX_LIGHT_STRUCT_T *) malloc(lightingDataSizeRead);
+                    if (lightingData == NULL) {
+                        totalSizeRead += sizeRead + (uint32_t) sizeof(uint32_t);
+                        continue;
+                    }
 
-                uint8_t v1, v2;
-                for (int i = 0; i < (int)dataCount; i++) {
-                    memcpy(&v1, cursor, sizeof(uint8_t)); // shape baked lighting v1
-                    cursor = (void *)((uint8_t *)cursor + 1);
+                    uint8_t v1, v2;
+                    for (int i = 0; i < (int) dataCount; i++) {
+                        memcpy(&v1, cursor, sizeof(uint8_t)); // shape baked lighting v1
+                        cursor = (void *) ((uint8_t *) cursor + 1);
 
-                    memcpy(&v2, cursor, sizeof(uint8_t)); // shape baked lighting v2
-                    cursor = (void *)((uint8_t *)cursor + 1);
+                        memcpy(&v2, cursor, sizeof(uint8_t)); // shape baked lighting v2
+                        cursor = (void *) ((uint8_t *) cursor + 1);
 
-                    lightingData[i].red = TO_UINT4(v1 / 16);
-                    lightingData[i].ambient = TO_UINT4(v1 - lightingData[i].red * 16);
-                    lightingData[i].blue = TO_UINT4(v2 / 16);
-                    lightingData[i].green = TO_UINT4(v2 - lightingData[i].blue * 16);
+                        lightingData[i].red = TO_UINT4(v1 / 16);
+                        lightingData[i].ambient = TO_UINT4(v1 - lightingData[i].red * 16);
+                        lightingData[i].blue = TO_UINT4(v2 / 16);
+                        lightingData[i].green = TO_UINT4(v2 - lightingData[i].blue * 16);
+                    }
                 }
 
                 totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
@@ -1229,7 +1228,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     map_string_float3_free(pois_rotation);
 
     // set shape lighting data
-    if (shape_uses_baked_lighting(*shape)) {
+    if (shapeSettings->lighting) {
         if (lightingData == NULL) {
             cclog_warning("shape uses lighting but no baked lighting found");
         } else if (lightingDataSizeRead !=
@@ -1444,7 +1443,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
 #if GLOBAL_LIGHTING_BAKE_WRITE_ENABLED
-    bool hasLighting = shape_uses_baked_lighting(shape) && shape_has_baked_lighting_data(shape);
+    bool hasLighting = shape_has_baked_lighting_data(shape);
 #else
     bool hasLighting = false;
 #endif

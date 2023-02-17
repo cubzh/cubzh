@@ -47,25 +47,18 @@ typedef struct _LoadShapeSettings {
 #define POINT_OF_INTEREST_HAT "Hat"           // POI in item for wearing it as a hat
 #define POINT_OF_INTEREST_BACKPACK "Backpack" // POI in item for equipping it as a backpack
 
-// A shape is a list of chunks that can be rendered at a given position
-// and orientation.
+// A shape is a model made out of blocks. A list of chunks & an octree are used as
+// datastructures respectively to allocate memory for rendering buffers and to
+// perform physics queries.
+// TODO: currently (feb. 2023), all shapes have an octree and block data is duplicated
+//  in octree & chunks, ideally, we need to refacto the writing of VBs so that chunks
+//  can be removed and VB writing uses octree underlying data
 //
-// Basically a shape stores a transformation matrix and a collection of vertices
-// The goal is to use a minimum amount of draws without consuming too much
-// memory. Also allocated size should be a power of 2 with a minimum of
-// minimum 4096 bytes.
-//
-// To avoid fragmentation, room is reserved for all cubes in a chunk, even if
-// the chunk only contains one cube. As long as a chunk exists, it should be
-// able to keep a pointer to it's shape area to write directly to it.
-// When a chunk is destroyed, the last chunk in the shape takes its place.
-//
-// When a shape is created, memory is reserved for SHAPE_CONSEQUENT_CHUNKS
-// amount of chunks (DrawUnit). If the shape requires no more than SHAPE_CONSEQUENT_CHUNKS
-// chunks, it will require one draw to be displayed. Otherwise several areas
-// will be reserved, and more draws will be required.
-//
-// ++ metadata to store amount of blocks in each chunk...
+// Memory allocation for rendering buffers (loosely called here vertex buffers) is meant
+// to minimize memory usage and maximize buffer occupancy in order to draw the shape
+// in a minimum number of drawcalls. The initial buffer is relatively small, and each
+// subsequent buffer is allocated on-demand with increased capacity, to account for the
+// common case of a scene filled with many small shapes.
 
 /// ShapeId type
 typedef uint16_t ShapeId;
@@ -82,17 +75,15 @@ typedef uint8_t ShapeDrawMode;
 Shape *shape_make(void);
 // Creates a copy of the given shape
 Shape *shape_make_copy(Shape *origin);
-// Creates a shape with known size and optional lighting
+// Creates a shape without octree, with a known size
 Shape *shape_make_with_size(const SHAPE_SIZE_INT_T width,
                             const SHAPE_SIZE_INT_T height,
                             const SHAPE_SIZE_INT_T depth,
-                            bool lighting,
                             const bool isMutable);
-// Creates a shape with octree and optional lighting
+// Creates a shape with octree i.e. allowing per-block physics
 Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
                               const SHAPE_SIZE_INT_T height,
                               const SHAPE_SIZE_INT_T depth,
-                              bool lighting,
                               const bool isMutable);
 
 VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency);
@@ -168,7 +159,6 @@ bool shape_add_block_with_color(Shape *shape,
                                 SHAPE_COORDS_INT_T z,
                                 const bool resizeIfNeeded,
                                 const bool applyOffset,
-                                const bool lighting,
                                 bool useDefaultColor);
 
 // removes block, returns true if the block has been removed, false otherwise
@@ -178,7 +168,6 @@ bool shape_remove_block(Shape *shape,
                         SHAPE_COORDS_INT_T z,
                         Block **blockBefore, // this is never used
                         const bool applyOffset,
-                        const bool lighting,
                         const bool shrinkBox);
 
 // paints block, returns 1 if the block has been painted, 0 otherwise
@@ -189,8 +178,7 @@ bool shape_paint_block(Shape *shape,
                        SHAPE_COORDS_INT_T z,
                        Block **blockBefore,
                        Block **blockAfter,
-                       const bool applyOffset,
-                       const bool lighting);
+                       const bool applyOffset);
 
 void shape_get_chunk_and_position_within(const Shape *shape,
                                          const int3 *pos,
@@ -423,14 +411,13 @@ void shape_remove_point(Shape *s, const char *key);
 
 // MARK: - Baked lighting -
 
-void shape_clear_baked_lighting(Shape *s);
-
-//// Shape lighting may be initialized from baked lighting, or by calling this function directly
+/// Shape lighting may be initialized from baked lighting, or by calling this function directly.
 /// If lighting was already computed from either way, this function will not overwrite unless
-/// overwrite=true
+/// overwrite=true.
+/// Calling this function will enable the use of baked lighting for the shape i.e. adding or
+/// removing blocks will now update baked lighting
 void shape_compute_baked_lighting(Shape *s, bool overwrite);
 
-bool shape_uses_baked_lighting(const Shape *s);
 bool shape_has_baked_lighting_data(const Shape *s);
 const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s);
 void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d);

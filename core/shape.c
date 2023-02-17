@@ -121,7 +121,6 @@ struct _Shape {
 
     ShapeDrawMode drawMode; // 1 byte
     bool shadowDecal;       // 1 byte
-    bool usesLighting;      // 1 byte
     bool isUnlit;           // 1 byte
     uint8_t layers;         // 1 byte
 
@@ -132,7 +131,7 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    char pad[1];
+    char pad[2];
 };
 
 // --------------------------------------------------
@@ -199,8 +198,6 @@ Octree *_new_octree(const SHAPE_COORDS_INT_T w,
                     const SHAPE_COORDS_INT_T d);
 void _set_vb_allocation_flag_one_frame(Shape *s);
 
-bool _lighting_is_enabled(Shape *s);
-
 /// internal functions used to flag the relevant data when lighting has changed
 void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin,
                          SHAPE_COORDS_INT3_T *bbMax,
@@ -261,6 +258,7 @@ void _light_realloc(Shape *s,
                     const SHAPE_SIZE_INT_T offsetY,
                     const SHAPE_SIZE_INT_T offsetZ);
 void _shape_check_all_vb_fragmented(Shape *s, VertexBuffer *first);
+void _shape_flush_all_vb(Shape *s);
 void _shape_fill_draw_slices(VertexBuffer *vb);
 
 ///
@@ -324,7 +322,6 @@ Shape *shape_make() {
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->shadowDecal = false;
-    s->usesLighting = false;
     s->isUnlit = false;
     s->layers = 1; // CAMERA_LAYERS_0
 
@@ -386,7 +383,6 @@ Shape *shape_make_copy(Shape *origin) {
 
     s->drawMode = origin->drawMode;
     s->shadowDecal = origin->shadowDecal;
-    s->usesLighting = origin->usesLighting;
     s->isUnlit = origin->isUnlit;
     s->layers = origin->layers;
     s->isMutable = origin->isMutable;
@@ -414,14 +410,13 @@ Shape *shape_make_copy(Shape *origin) {
                                                z,
                                                false,
                                                false,
-                                               false,
                                                false);
                 }
             }
         }
     }
 
-    if (s->usesLighting) {
+    if (origin->lightingData != NULL) {
         size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
                               sizeof(VERTEX_LIGHT_STRUCT_T);
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
@@ -441,7 +436,6 @@ Shape *shape_make_copy(Shape *origin) {
 Shape *shape_make_with_size(const uint16_t width,
                             const uint16_t height,
                             const uint16_t depth,
-                            bool lighting,
                             const bool isMutable) {
 
     Shape *s = shape_make();
@@ -450,7 +444,6 @@ Shape *shape_make_with_size(const uint16_t width,
     s->maxHeight = height;
     s->maxDepth = depth;
 
-    s->usesLighting = lighting;
     s->isMutable = isMutable;
 
     return s;
@@ -459,7 +452,6 @@ Shape *shape_make_with_size(const uint16_t width,
 Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
                               const SHAPE_SIZE_INT_T height,
                               const SHAPE_SIZE_INT_T depth,
-                              bool lighting,
                               const bool isMutable) {
 
     if (_is_out_of_maximum_shape_size((SHAPE_COORDS_INT_T)width,
@@ -477,7 +469,6 @@ Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
     s->maxHeight = height;
     s->maxDepth = depth;
 
-    s->usesLighting = lighting;
     s->isMutable = isMutable;
 
     return s;
@@ -493,7 +484,8 @@ Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
 // - a) if it's the first buffer, it should ideally fit the entire shape at once (estimation)
 // - b) if more space is required, subsequent buffers are scaled using VERTEX_BUFFER_INIT_SCALE_RATE
 // this makes it possible to fit a worst-case scenario "cheese" map even if we know it practically
-// won't happen 2) for a shape that has been drawn before:
+// won't happen
+// 2) for a shape that has been drawn before:
 // - a) first buffer should be of a minimal size to fit a few runtime structural changes
 // (estimation)
 // - b) subsequent buffers are scaled using VERTEX_BUFFER_RUNTIME_SCALE_RATE
@@ -583,7 +575,7 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
     capacity = texSize * texSize;
 
     // create and add new VB to the appropriate chain
-    const bool lighting = vertex_buffer_get_lighting_enabled() && shape_uses_baked_lighting(shape);
+    const bool lighting = vertex_buffer_get_lighting_enabled() && shape->lightingData != NULL;
     VertexBuffer *vb = vertex_buffer_new_with_max_count(capacity, lighting, transparency);
     if (transparency) {
         if (shape->lastVB_transparent != NULL) {
@@ -707,6 +699,8 @@ void shape_flush(Shape *shape) {
         vertex_buffer_free_all(shape->firstVB_transparent);
         shape->firstVB_transparent = NULL;
         shape->lastVB_transparent = NULL;
+        shape->vbAllocationFlag_opaque = 0;
+        shape->vbAllocationFlag_transparent = 0;
 
         // flush needsDisplay list
         ChunkList *cl;
@@ -1094,7 +1088,6 @@ bool shape_add_block_with_color(Shape *shape,
                                 SHAPE_COORDS_INT_T z,
                                 const bool resizeIfNeeded,
                                 const bool applyOffset,
-                                const bool lighting,
                                 bool useDefaultColor) {
     Block *block = NULL;
 
@@ -1126,7 +1119,7 @@ bool shape_add_block_with_color(Shape *shape,
             octree_set_element(shape->octree, (void *)block, (size_t)x, (size_t)y, (size_t)z);
         }
 
-        if (lighting) {
+        if (shape->lightingData != NULL) {
             shape_compute_baked_lighting_added_block(shape, x, y, z, colorIndex);
         }
     }
@@ -1143,7 +1136,6 @@ bool shape_remove_block(Shape *shape,
                         SHAPE_COORDS_INT_T z,
                         Block **blockBefore,
                         const bool applyOffset,
-                        const bool lighting,
                         const bool shrinkBox) {
 
     if (shape == NULL) {
@@ -1215,7 +1207,7 @@ bool shape_remove_block(Shape *shape,
                 block_free((Block *)air);
             }
 
-            if (lighting) {
+            if (shape->lightingData != NULL) {
                 shape_compute_baked_lighting_removed_block(shape, x, y, z, colorIdx);
             }
 
@@ -1239,8 +1231,7 @@ bool shape_paint_block(Shape *shape,
                        SHAPE_COORDS_INT_T z,
                        Block **blockBefore,
                        Block **blockAfter,
-                       const bool applyOffset,
-                       const bool lighting) {
+                       const bool applyOffset) {
 
     if (applyOffset) {
         shape_block_lua_to_internal(shape, &x, &y, &z);
@@ -1297,7 +1288,7 @@ bool shape_paint_block(Shape *shape,
                                    (size_t)z);
             }
 
-            if (lighting) {
+            if (shape->lightingData != NULL) {
                 shape_compute_baked_lighting_replaced_block(shape, x, y, z, colorIndex, false);
             }
         }
@@ -2097,16 +2088,6 @@ void shape_make_space(Shape *const shape,
 }
 
 void shape_refresh_vertices(Shape *shape) {
-    // to improve efficiency, write into buffers only if shape was fully initialized,
-    // if light is computed later, we would need to rewrite the entire buffer
-    // TODO: this is temporarily disabled, waiting to have baked files support for generic shapes
-    /*if (shape_uses_baked_lighting(shape) && shape_has_baked_lighting_data(shape) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_trace("⚠   shape_refresh_vertices: shape lighting not initialized, skipping...");
-#endif
-        return;
-    }*/
-
     if (shape->isBakeLocked) {
         _shape_fill_draw_slices(shape->firstVB_opaque);
         _shape_fill_draw_slices(shape->firstVB_transparent);
@@ -2188,9 +2169,13 @@ void shape_refresh_vertices(Shape *shape) {
 void shape_refresh_all_vertices(Shape *s) {
     // refresh all chunks
     Index3DIterator *it = index3d_iterator_new(s->chunks);
+    Chunk *chunk;
     while (index3d_iterator_pointer(it) != NULL) {
-        chunk_write_vertices(s, index3d_iterator_pointer(it));
-        chunk_set_needs_display(index3d_iterator_pointer(it), false);
+        chunk = index3d_iterator_pointer(it);
+
+        chunk_write_vertices(s, chunk);
+        chunk_set_needs_display(chunk, false);
+
         index3d_iterator_next(it);
     }
 
@@ -3065,30 +3050,10 @@ void shape_remove_point(Shape *s, const char *key) {
 
 // MARK: - Baked lighting -
 
-void shape_clear_baked_lighting(Shape *s) {
-    if (_lighting_is_enabled(s) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_clear_baked_lighting: baked lighting disabled");
-#endif
-        return;
-    }
-
-    if (s->lightingData == NULL) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_error("🔥 shape_clear_baked_lighting: shape doesn't have lighting data");
-#endif
-        return;
-    }
-
-    size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
-                          sizeof(VERTEX_LIGHT_STRUCT_T);
-    memset(s->lightingData, 0, lightingSize);
-}
-
 void shape_compute_baked_lighting(Shape *s, bool overwrite) {
-    if (_lighting_is_enabled(s) == false) {
+    if (_has_allocated_size(s) == false) {
 #if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_compute_baked_lighting: baked lighting disabled");
+        cclog_debug("🔥 shape_compute_baked_lighting: no allocated size");
 #endif
         return;
     }
@@ -3106,6 +3071,7 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
                           sizeof(VERTEX_LIGHT_STRUCT_T);
     if (s->lightingData == NULL) {
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
+        _shape_flush_all_vb(s); // let VBs be realloc w/ lighting buffers
     }
     memset(s->lightingData, 0, lightingSize);
 
@@ -3148,10 +3114,6 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
 #endif
 }
 
-bool shape_uses_baked_lighting(const Shape *s) {
-    return s->usesLighting;
-}
-
 bool shape_has_baked_lighting_data(const Shape *s) {
     return s->lightingData != NULL;
 }
@@ -3163,6 +3125,11 @@ const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s) {
 void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d) {
     if (s->lightingData != NULL) {
         free(s->lightingData);
+        if (d == NULL) {
+            _shape_flush_all_vb(s);  // let VBs be realloc w/o lighting buffers
+        }
+    } else if (d != NULL) {
+        _shape_flush_all_vb(s); // let VBs be realloc w/ lighting buffers
     }
     s->lightingData = d;
 }
@@ -3205,13 +3172,6 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
                                                 SHAPE_COORDS_INT_T z,
                                                 SHAPE_COLOR_INDEX_INT_T blockID) {
     if (s == NULL) {
-        return;
-    }
-
-    if (_lighting_is_enabled(s) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_compute_baked_lighting_removed_block: baked lighting disabled");
-#endif
         return;
     }
 
@@ -3312,13 +3272,6 @@ void shape_compute_baked_lighting_added_block(Shape *s,
         return;
     }
 
-    if (_lighting_is_enabled(s) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_compute_baked_lighting_added_block: baked lighting disabled");
-#endif
-        return;
-    }
-
     if (s->lightingData == NULL) {
         cclog_error("🔥 shape_compute_baked_lighting_added_block: shape doesn't have lighting data");
         return;
@@ -3409,13 +3362,6 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
 
     if (applyOffset) {
         shape_block_lua_to_internal(s, &x, &y, &z);
-    }
-
-    if (_lighting_is_enabled(s) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_computeLightForReplacedBlockCoords: baked lighting disabled");
-#endif
-        return;
     }
 
     if (s->lightingData == NULL) {
@@ -4091,10 +4037,6 @@ void _set_vb_allocation_flag_one_frame(Shape *s) {
     if (s->vbAllocationFlag_transparent <= 1) {
         s->vbAllocationFlag_transparent = 2;
     }
-}
-
-bool _lighting_is_enabled(Shape *s) {
-    return s->usesLighting && _has_allocated_size(s);
 }
 
 void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin,
@@ -4866,8 +4808,8 @@ void _light_realloc(Shape *s,
                     const SHAPE_SIZE_INT_T offsetY,
                     const SHAPE_SIZE_INT_T offsetZ) {
 
-    // skip if this shape doesn't use light, or if it is not computed yet
-    if (shape_uses_baked_lighting(s) == false || s->lightingData == NULL)
+    // skip if this shape cannot use baked light, or if it is not computed yet
+    if (_has_allocated_size(s) == false || s->lightingData == NULL)
         return;
 
     // - keep existing data and apply offset,
@@ -4944,6 +4886,31 @@ void _shape_check_all_vb_fragmented(Shape *s, VertexBuffer *first) {
     }
 }
 
+void _shape_flush_all_vb(Shape *s) {
+    // unbind all chunks from current vertex buffers and set them dirty
+    Index3DIterator *it = index3d_iterator_new(s->chunks);
+    Chunk *c;
+    while (index3d_iterator_pointer(it) != NULL) {
+        c = index3d_iterator_pointer(it);
+
+        chunk_set_vbma(c, NULL, false);
+        chunk_set_vbma(c, NULL, true);
+        shape_chunk_needs_display(s, c);
+
+        index3d_iterator_next(it);
+    }
+
+    // free all vertex buffers
+    vertex_buffer_free_all(s->firstVB_opaque);
+    s->firstVB_opaque = NULL;
+    s->lastVB_opaque = NULL;
+    vertex_buffer_free_all(s->firstVB_transparent);
+    s->firstVB_transparent = NULL;
+    s->lastVB_transparent = NULL;
+    s->vbAllocationFlag_opaque = 0;
+    s->vbAllocationFlag_transparent = 0;
+}
+
 void _shape_fill_draw_slices(VertexBuffer *vb) {
     while (vb != NULL) {
         vertex_buffer_fill_draw_slices(vb);
@@ -4999,17 +4966,17 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
 
         // [air>block] = add block
         if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_add_block_with_color(sh, after, x, y, z, false, true, true, false);
+            shape_add_block_with_color(sh, after, x, y, z, false, true, false);
         }
         // [block>air] = remove block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_remove_block(sh, x, y, z, NULL, true, true, false);
+            shape_remove_block(sh, x, y, z, NULL, true, false);
             shapeShrinkNeeded = true;
         }
         // [block>block] = paint block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK &&
                  before != after) {
-            shape_paint_block(sh, after, x, y, z, NULL, NULL, true, true);
+            shape_paint_block(sh, after, x, y, z, NULL, NULL, true);
         }
 
         index3d_iterator_next(it);
@@ -5058,16 +5025,16 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
 
         // [air>block] = add block
         if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_add_block_with_color(sh, after, x, y, z, false, true, true, false);
+            shape_add_block_with_color(sh, after, x, y, z, false, true, false);
         }
         // [block>air] = remove block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_remove_block(sh, x, y, z, NULL, true, true, false);
+            shape_remove_block(sh, x, y, z, NULL, true, false);
             shapeShrinkNeeded = true;
         }
         // [block>block] = paint block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_paint_block(sh, after, x, y, z, NULL, NULL, true, true);
+            shape_paint_block(sh, after, x, y, z, NULL, NULL, true);
         }
 
         index3d_iterator_next(it);

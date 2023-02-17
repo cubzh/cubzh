@@ -179,7 +179,7 @@ void test_shape_make_copy(void) {
 
 // octree must have the correct dimension
 void test_shape_make_with_octree(void) {
-    Shape *s = shape_make_with_octree(10, 20, 30, false, false);
+    Shape *s = shape_make_with_octree(10, 20, 30, false);
     const Octree *o = shape_get_octree((const Shape *)s);
 
     TEST_CHECK(octree_get_dimension(o) == 32);
@@ -343,7 +343,6 @@ void test_shape_addblock_1(void) {
     Shape *sh = shape_make_with_octree(1,
                                        1,
                                        1,
-                                       false, // lighting
                                        true); // isMutable
     TEST_ASSERT(sh != NULL);
 
@@ -445,7 +444,6 @@ void test_shape_addblock_2(void) {
     Shape *sh = shape_make_with_octree(1,
                                        1,
                                        1,
-                                       false, // lighting
                                        true); // isMutable
     TEST_ASSERT(sh != NULL);
 

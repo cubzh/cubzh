@@ -503,13 +503,11 @@ uint32_t chunk_v5_read_shape(Stream *s,
                     *shape = shape_make_with_octree(width,
                                                     height,
                                                     depth,
-                                                    shapeSettings->lighting,
                                                     shapeSettings->isMutable);
                 } else {
                     *shape = shape_make_with_size(width,
                                                   height,
                                                   depth,
-                                                  shapeSettings->lighting,
                                                   shapeSettings->isMutable);
                 }
                 if (serializedPalette != NULL) {
@@ -586,16 +584,20 @@ uint32_t chunk_v5_read_shape(Stream *s,
             }
 #if GLOBAL_LIGHTING_BAKE_READ_ENABLED
             case P3S_CHUNK_ID_SHAPE_BAKED_LIGHTING: {
-                lightingDataSizeRead = chunk_v5_read_shape_baked_light(s, &lightingData);
-                if (sizeRead == 0) {
-                    cclog_error("error while reading shape baked lighting");
-                    if (lightingData != NULL) {
-                        free(lightingData);
+                if (shapeSettings->lighting) {
+                    lightingDataSizeRead = chunk_v5_read_shape_baked_light(s, &lightingData);
+                    if (sizeRead == 0) {
+                        cclog_error("error while reading shape baked lighting");
+                        if (lightingData != NULL) {
+                            free(lightingData);
+                        }
+                        map_string_float3_free(pois);
+                        return 0;
                     }
-                    map_string_float3_free(pois);
-                    return 0;
+                    totalSizeRead += lightingDataSizeRead;
+                } else {
+                    totalSizeRead += chunk_v5_skip(s);
                 }
-                totalSizeRead += lightingDataSizeRead;
                 break;
             }
 #endif
@@ -629,7 +631,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
     map_string_float3_free(pois);
 
     // set shape lighting data
-    if (shape_uses_baked_lighting(*shape)) {
+    if (shapeSettings->lighting) {
         if (lightingData == NULL) {
             cclog_warning("shape uses lighting but no baked lighting found");
         } else if ((lightingDataSizeRead - 4) !=
