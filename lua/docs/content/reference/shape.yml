@@ -4,7 +4,7 @@ extends: "Object"
 description: |
   A [Shape] is an [Object] that carries a voxel model made of [Block]s.
 
-  It introduces an additionnal coordinate system called model space i.e. relative to model origin.
+  It introduces an additional coordinate system called model space i.e. relative to model origin.
   Any point can be expressed in model space. If the point is expressed with integers, then it may represent a [Block] coordinates.
 
   Note that under certain conditions, namely if the [This],
@@ -16,7 +16,7 @@ constructors:
   - description: |
         Creates a Shape which model can be empty, loaded from an imported [Item], or copied from an existing [Shape] or [MutableShape].
       
-        The optional parameter `loadBakedLight`, by default `false`, determines whether or not the shape should be loaded with baked lighting. If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none.
+        The optional parameter `loadBakedLight`, by default `false`, determines whether or not the shape should be loaded with baked lighting. If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none. Any subsequent changes to the shape's blocks will automatically maintain its baked lighting.
     argument-sets:
       -
 
@@ -205,20 +205,26 @@ functions:
 
     - name: "ComputeBakedLight"
       description: |
-        Computes the shape baked lighting. Note that if the shape is then saved, the current baked lighting will be saved with it and used everywhere by default.
+        Computes the shape baked lighting. It is a combination of a white ambient light and all blocks that were set as light sources. Other shapes entering inside this shape's bounding box will be affected by its baked lighting.
         
-        This function can also be used to update the shape baked lighting, after changing by code some of the shape's [Palette] entries properties.
+        This is an efficient way of applying lighting to shapes without affecting performance. The baked lighting of a shape is cached to speed up subsequent loads.
         
+        Once a shape has baked lighting, it will be automatically maintained when changing its blocks.
+        
+        However, directly changing the transparency or light properties of shape's [Palette] entries of _existing_ blocks will not be reflected on the shape immediately, and will require another call to this function.
+                
         You may want to call this function only if:
-        - setting light property i.e. `shape.Palette[i].Light = true/false` of existing shape blocks
-        - setting transparency i.e. `shape.Palette[i].Color.A = newValue` of existing shape blocks
+        - activating baked lighting on a shape for the first time
+        - setting light property i.e. `shape.Palette[i].Light = true/false` of _existing_ shape blocks
+        - setting transparency i.e. `shape.Palette[i].Color.A = newValue` of _existing_ shape blocks
         
-        It is NOT necessary to call this function if:
+        You _do not_ need to call this function if:
         - ANY blocks, including light and transparent blocks, are added/removed at runtime
-        
-        In other words, only changes to transparency and light properties of _existing_ blocks will require a call to this function in order to see the effects on the shape.
-        
-        NOTE as of 0.0.47: only the [Map] can have baked lighting.
+        - setting light or transparent property of an unused palette entry first, before adding blocks using that entry
+
+    - name: "ClearBakedLight"
+      description: |
+        Removes the shape baked lighting and frees up any memory used. It could be an optimization step for scenes pooling a large amount of shapes.
 
       arguments:
         - name: "callback"

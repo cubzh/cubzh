@@ -425,7 +425,6 @@ uint32_t chunk_read_shape_process_blocks(Stream *s,
                                    (SHAPE_COORDS_INT_T)block_z_pos,
                                    false, // resize if needed
                                    false, // apply offset
-                                   false,
                                    useDefaultPalette);
     }
     color_palette_clear_lighting_dirty(shape_get_palette(shape));
@@ -500,15 +499,9 @@ uint32_t chunk_v5_read_shape(Stream *s,
 
                 // size is known, now is a good time to create the shape
                 if (shapeSettings->octree) {
-                    *shape = shape_make_with_octree(width,
-                                                    height,
-                                                    depth,
-                                                    shapeSettings->isMutable);
+                    *shape = shape_make_with_octree(width, height, depth, shapeSettings->isMutable);
                 } else {
-                    *shape = shape_make_with_size(width,
-                                                  height,
-                                                  depth,
-                                                  shapeSettings->isMutable);
+                    *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
                 }
                 if (serializedPalette != NULL) {
                     shape_set_palette(*shape, serializedPalette);

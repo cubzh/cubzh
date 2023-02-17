@@ -1,13 +1,13 @@
 keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
 type: "MutableShape"
 extends: "Shape"
-description: A [MutableShape] is an [Object] that carries and displays a set of [Block]s. The difference with [Shape] is that [MutableShape] [Block]s can be modified.
+description: A [MutableShape] is a [Shape] which [Block]s can be modified.
 
 constructors: 
   - description: |
         Creates a MutableShape which model can be empty, loaded from an imported [Item], or copied from an existing [Shape] or [MutableShape].
       
-        The optional parameter `loadBakedLight`, by default `false`, determines whether or not the shape should be loaded with baked lighting. If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none.
+        The optional parameter `loadBakedLight`, by default `false`, determines whether or not the shape should be loaded with baked lighting. If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none. Any subsequent changes to the shape's blocks will automatically maintain its baked lighting.
     argument-sets:
       -
 

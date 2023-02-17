@@ -833,7 +833,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
                     colorIndex = 0;
                 }
 
-                shape_add_block_with_color(shape, colorIndex, x, y, z, false, false, false, false);
+                shape_add_block_with_color(shape, colorIndex, x, y, z, false, false, false);
             }
         }
     }
@@ -1003,15 +1003,9 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
                 // size is known, now is a good time to create the shape
                 if (shapeSettings->octree) {
-                    *shape = shape_make_with_octree(width,
-                                                    height,
-                                                    depth,
-                                                    shapeSettings->isMutable);
+                    *shape = shape_make_with_octree(width, height, depth, shapeSettings->isMutable);
                 } else {
-                    *shape = shape_make_with_size(width,
-                                                  height,
-                                                  depth,
-                                                  shapeSettings->isMutable);
+                    *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
                 }
                 break;
             }
@@ -1110,23 +1104,23 @@ uint32_t chunk_v6_read_shape(Stream *s,
                     uint32_t dataCount = lightingDataSizeRead / sizeof(VERTEX_LIGHT_STRUCT_T);
                     if (dataCount == 0) {
                         cclog_error("baked light data count cannot be 0, skipping");
-                        totalSizeRead += lightingDataSizeRead + (uint32_t) sizeof(uint32_t);
+                        totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
                         break;
                     }
 
-                    lightingData = (VERTEX_LIGHT_STRUCT_T *) malloc(lightingDataSizeRead);
+                    lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingDataSizeRead);
                     if (lightingData == NULL) {
-                        totalSizeRead += sizeRead + (uint32_t) sizeof(uint32_t);
+                        totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                         continue;
                     }
 
                     uint8_t v1, v2;
-                    for (int i = 0; i < (int) dataCount; i++) {
+                    for (int i = 0; i < (int)dataCount; i++) {
                         memcpy(&v1, cursor, sizeof(uint8_t)); // shape baked lighting v1
-                        cursor = (void *) ((uint8_t *) cursor + 1);
+                        cursor = (void *)((uint8_t *)cursor + 1);
 
                         memcpy(&v2, cursor, sizeof(uint8_t)); // shape baked lighting v2
-                        cursor = (void *) ((uint8_t *) cursor + 1);
+                        cursor = (void *)((uint8_t *)cursor + 1);
 
                         lightingData[i].red = TO_UINT4(v1 / 16);
                         lightingData[i].ambient = TO_UINT4(v1 - lightingData[i].red * 16);

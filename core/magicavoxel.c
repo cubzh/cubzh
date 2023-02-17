@@ -876,7 +876,6 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                                    (SHAPE_COORDS_INT_T)z,
                                    false,
                                    false,
-                                   false,
                                    false);
     }
     color_palette_clear_lighting_dirty(palette);

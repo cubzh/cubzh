@@ -403,14 +403,7 @@ Shape *shape_make_copy(Shape *origin) {
             for (SHAPE_COORDS_INT_T z = 0; z <= origin->maxDepth; z += 1) {
                 b = shape_get_block(origin, x, y, z, false);
                 if (b != NULL && b->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                    shape_add_block_with_color(s,
-                                               b->colorIndex,
-                                               x,
-                                               y,
-                                               z,
-                                               false,
-                                               false,
-                                               false);
+                    shape_add_block_with_color(s, b->colorIndex, x, y, z, false, false, false);
                 }
             }
         }
@@ -3126,7 +3119,7 @@ void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d) {
     if (s->lightingData != NULL) {
         free(s->lightingData);
         if (d == NULL) {
-            _shape_flush_all_vb(s);  // let VBs be realloc w/o lighting buffers
+            _shape_flush_all_vb(s); // let VBs be realloc w/o lighting buffers
         }
     } else if (d != NULL) {
         _shape_flush_all_vb(s); // let VBs be realloc w/ lighting buffers
