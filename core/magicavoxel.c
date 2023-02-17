@@ -100,6 +100,9 @@ bool _writeDictEntry(const char *key, const char *value, FILE *const out) {
 
 bool serialization_save_vox(Shape *src, FILE *const out) {
     Shape **shapes = (Shape **)malloc(sizeof(Shape *));
+    if (shapes == NULL) {
+        return false;
+    }
     shapes[0] = src;
 
     bool success = serialization_shapes_to_vox(shapes, 1, out);
@@ -127,7 +130,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         return false;
     }
 
-    for (int i = 0; i < nbShapes; ++i) {
+    for (unsigned int i = 0; i < nbShapes; ++i) {
         if (shapes[i] == NULL) {
             cclog_error("at least of the given shapes is NULL");
             return false;
@@ -153,7 +156,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     ColorPalette *palette;
     HashUInt32Int *paletteConversionMap;
 
-    for (int i = 0; i < nbShapes; ++i) {
+    for (unsigned int i = 0; i < nbShapes; ++i) {
         paletteConversionMaps[i] = hash_uint32_int_new();
         palette = shape_get_palette(shapes[i]);
         uint8_t count = color_palette_get_count(palette);
@@ -184,7 +187,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
 #define _shapes_to_vox_error(msg)                                                                  \
     cclog_error(msg);                                                                              \
     color_palette_free(combinedPalette);                                                           \
-    for (int i = 0; i < nbShapes; ++i) {                                                           \
+    for (unsigned int i = 0; i < nbShapes; ++i) {                                                  \
         hash_uint32_int_free(paletteConversionMaps[i]);                                            \
     }                                                                                              \
     free(paletteConversionMaps);                                                                   \
@@ -233,7 +236,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     uint32_t nSHP_bytes = 12 + 8 * 1; // one model per nSHP
 
     // SIZE & XYZI chunk couples for each shape
-    for (int i = 0; i < nbShapes; ++i) {
+    for (unsigned int i = 0; i < nbShapes; ++i) {
 
         const Shape *src = shapes[i];
         palette = shape_get_palette(src);
@@ -404,7 +407,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
 
         // child ids
         uint32_t child_node_id = 1;
-        for (int i = 0; i < nbShapes; ++i) {
+        for (unsigned int i = 0; i < nbShapes; ++i) {
             ++child_node_id;
             if (fwrite(&child_node_id, sizeof(uint32_t), 1, out) != 1) {
                 _shapes_to_vox_error("failed to write nGRP child id")
@@ -417,12 +420,15 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         uint32_t node_id = 1;
         int xOffset = 0;
 
-        for (int i = 0; i < nbShapes; ++i) {
+        for (unsigned int i = 0; i < nbShapes; ++i) {
             ++node_id;
 
             int3 size = {0, 0, 0};
             shape_get_bounding_box_size(shapes[i], &size);
             char *translationStr = (char *)malloc(255 * sizeof(char));
+            if (translationStr == NULL) {
+                _shapes_to_vox_error("failed to allocate translationStr");
+            }
             int written = snprintf(translationStr,
                                    255,
                                    "%d %d %d",
@@ -500,7 +506,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         uint32_t node_id = 1 + _nbShapes;
         uint32_t model_id = 0;
 
-        for (int i = 0; i < nbShapes; ++i) {
+        for (unsigned int i = 0; i < nbShapes; ++i) {
             ++node_id;
 
             _writeVoxChunkHeader("nSHP", nSHP_bytes, 0, out);
@@ -595,7 +601,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     }
 
     color_palette_free(combinedPalette);
-    for (int i = 0; i < nbShapes; ++i) {
+    for (unsigned int i = 0; i < nbShapes; ++i) {
         hash_uint32_int_free(paletteConversionMaps[i]);
     }
     free(paletteConversionMaps);
@@ -670,6 +676,9 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
 
     size_t blocksPosition = 0;
     RGBAColor *colors = malloc(sizeof(RGBAColor) * VOX_NB_COLORS);
+    if (colors == NULL) {
+        return unknown_chunk;
+    }
     for (int i = 0; i < VOX_NB_COLORS; ++i) {
         colors[i].r = 0;
         colors[i].g = 0;

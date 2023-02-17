@@ -182,6 +182,9 @@ typedef struct {
 VbSnapshot *vertex_buffer_snapshot(const VertexBuffer *vb) {
 
     VbSnapshot *vbs = (VbSnapshot *)malloc(sizeof(VbSnapshot));
+    if (vbs == NULL) {
+        return NULL;
+    }
     vbs->n = 0;
 
     // determine number of mem areas
@@ -192,6 +195,9 @@ VbSnapshot *vertex_buffer_snapshot(const VertexBuffer *vb) {
     }
 
     vbs->vbmas = (VbmaRepresentation *)malloc(sizeof(VbmaRepresentation) * vbs->n);
+    if (vbs->vbmas == NULL) {
+        return NULL;
+    }
 
     //
     vbma = vb->firstMemArea;
