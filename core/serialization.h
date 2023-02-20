@@ -159,10 +159,8 @@ void serialization_utils_writeUint32(void *dest, const uint32_t src, uint32_t *c
 
 // MARK: - Baked files -
 
-bool serialization_save_baked_file(const Shape *s,
-                                   uint32_t paletteHash,
-                                   FILE *fd);                                 // does not close fd
-bool serialization_load_baked_file(Shape *s, uint32_t paletteHash, FILE *fd); // does not close fd
+bool serialization_save_baked_file(const Shape *s, uint64_t hash, FILE *fd);   // does not close fd
+bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd); // does not close fd
 
 #ifdef __cplusplus
 } // extern "C"

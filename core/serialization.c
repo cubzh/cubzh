@@ -315,7 +315,7 @@ void serialization_utils_writeUint32(void *dest, const uint32_t src, uint32_t *c
 
 // MARK: - Baked files -
 
-bool serialization_save_baked_file(const Shape *s, uint32_t paletteHash, FILE *fd) {
+bool serialization_save_baked_file(const Shape *s, uint64_t hash, FILE *fd) {
     if (shape_has_baked_lighting_data(s) == false) {
         return false;
     }
@@ -328,7 +328,7 @@ bool serialization_save_baked_file(const Shape *s, uint32_t paletteHash, FILE *f
     }
 
     // write palette hash
-    if (fwrite(&paletteHash, sizeof(uint32_t), 1, fd) != 1) {
+    if (fwrite(&hash, sizeof(uint64_t), 1, fd) != 1) {
         cclog_error("baked file: failed to write palette hash");
         return false;
     }
@@ -371,7 +371,7 @@ bool serialization_save_baked_file(const Shape *s, uint32_t paletteHash, FILE *f
     return true;
 }
 
-bool serialization_load_baked_file(Shape *s, uint32_t paletteHash, FILE *fd) {
+bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
     // read baked file version
     uint32_t version;
     if (fread(&version, sizeof(uint32_t), 1, fd) != 1) {
@@ -382,14 +382,14 @@ bool serialization_load_baked_file(Shape *s, uint32_t paletteHash, FILE *fd) {
     switch (version) {
         case 1: {
             // read palette hash
-            uint32_t hash;
-            if (fread(&hash, sizeof(uint32_t), 1, fd) != 1) {
+            uint64_t hash;
+            if (fread(&hash, sizeof(uint64_t), 1, fd) != 1) {
                 cclog_error("baked file: failed to read palette hash");
                 return false;
             }
 
             // match with shape's current palette hash
-            if (hash != paletteHash) {
+            if (hash != expectedHash) {
                 cclog_info("baked file: mismatched palette hash, skip");
                 return false;
             }
