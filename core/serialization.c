@@ -14,6 +14,7 @@
 #include "serialization_v6.h"
 #include "stream.h"
 #include "transform.h"
+#include "zlib.h"
 
 // Returns 0 on success, 1 otherwise.
 // This function doesn't close the file descriptor, you probably want to close
@@ -272,7 +273,7 @@ bool get_preview_data(const char *filepath, void **imageData, uint32_t *size) {
 }
 
 // --------------------------------------------------
-// Memory buffer writing
+// MARK: - Memory buffer writing -
 // --------------------------------------------------
 
 void serialization_utils_writeCString(void *dest,
@@ -309,5 +310,146 @@ void serialization_utils_writeUint32(void *dest, const uint32_t src, uint32_t *c
     memcpy(dest, (const void *)(&src), sizeof(uint32_t));
     if (cursor != NULL) {
         *cursor += sizeof(uint32_t);
+    }
+}
+
+// MARK: - Baked files -
+
+bool serialization_save_baked_file(const Shape *s, uint64_t hash, FILE *fd) {
+    if (shape_has_baked_lighting_data(s) == false) {
+        return false;
+    }
+
+    // write baked file version
+    uint32_t version = 1;
+    if (fwrite(&version, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("baked file: failed to write version");
+        return false;
+    }
+
+    // write palette hash
+    if (fwrite(&hash, sizeof(uint64_t), 1, fd) != 1) {
+        cclog_error("baked file: failed to write palette hash");
+        return false;
+    }
+
+    // write lighting data uncompressed size
+    int3 shape_size;
+    shape_get_allocated_size(s, &shape_size);
+    uint32_t size = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
+                    sizeof(VERTEX_LIGHT_STRUCT_T);
+    if (fwrite(&size, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("baked file: failed to write lighting data uncompressed size");
+        return false;
+    }
+
+    // compress lighting data
+    uLong compressedSize = compressBound(size);
+    const void *uncompressedData = shape_get_lighting_data(s);
+    void *compressedData = malloc(compressedSize);
+    if (compress(compressedData, &compressedSize, uncompressedData, size) != Z_OK) {
+        cclog_error("baked file: failed to compress lighting data");
+        free(compressedData);
+        return false;
+    }
+
+    // write lighting data compressed size
+    if (fwrite(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("baked file: failed to write lighting data compressed size");
+        free(compressedData);
+        return false;
+    }
+
+    // write compressed lighting data
+    if (fwrite(compressedData, compressedSize, 1, fd) != 1) {
+        cclog_error("baked file: failed to write compressed lighting data");
+        free(compressedData);
+        return false;
+    }
+
+    free(compressedData);
+    return true;
+}
+
+bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
+    // read baked file version
+    uint32_t version;
+    if (fread(&version, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("baked file: failed to read version");
+        return false;
+    }
+
+    switch (version) {
+        case 1: {
+            // read palette hash
+            uint64_t hash;
+            if (fread(&hash, sizeof(uint64_t), 1, fd) != 1) {
+                cclog_error("baked file: failed to read palette hash");
+                return false;
+            }
+
+            // match with shape's current palette hash
+            if (hash != expectedHash) {
+                cclog_info("baked file: mismatched palette hash, skip");
+                return false;
+            }
+
+            // read lighting data uncompressed size
+            uint32_t size;
+            if (fread(&size, sizeof(uint32_t), 1, fd) != 1) {
+                cclog_error("baked file: failed to read lighting data uncompressed size");
+                return false;
+            }
+
+            // sanity check
+            int3 shape_size;
+            shape_get_allocated_size(s, &shape_size);
+            uint32_t expectedSize = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
+                                    sizeof(VERTEX_LIGHT_STRUCT_T);
+            if (size != expectedSize) {
+                cclog_info("baked file: mismatched lighting data size, skip");
+                return false;
+            }
+
+            // read lighting data compressed size
+            uint32_t compressedSize;
+            if (fread(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
+                cclog_error("baked file: failed to read lighting data compressed size");
+                return false;
+            }
+
+            // read compressed lighting data
+            void *compressedData = malloc(compressedSize);
+            if (fread(compressedData, compressedSize, 1, fd) != 1) {
+                cclog_error("baked file: failed to read compressed lighting data");
+                free(compressedData);
+                return false;
+            }
+
+            // uncompress lighting data
+            uLong resultSize = size;
+            void *uncompressedData = malloc(size);
+            if (uncompress(uncompressedData, &resultSize, compressedData, compressedSize) != Z_OK) {
+                cclog_error("baked file: failed to uncompress lighting data");
+                free(uncompressedData);
+                free(compressedData);
+                return false;
+            }
+            free(compressedData);
+
+            // sanity check
+            if (resultSize != size) {
+                cclog_info("baked file: mismatched lighting data uncompressed size, skip");
+                return false;
+            }
+
+            shape_set_lighting_data(s, uncompressedData);
+
+            return true;
+        }
+        default: {
+            cclog_error("baked file: unsupported version");
+            return false;
+        }
     }
 }

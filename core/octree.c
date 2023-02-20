@@ -13,6 +13,7 @@
 
 #include "cclog.h"
 #include "config.h"
+#include "zlib.h"
 
 // memory blocks are ordered this way:
 // 000, 001, 100, 101, 010, 011, 110, 111
@@ -843,6 +844,10 @@ uint8_t octree_get_levels(const Octree *octree) {
 
 size_t octree_get_dimension(const Octree *octree) {
     return octree->width_height_depth;
+}
+
+uint64_t octree_get_hash(const Octree *octree, uint64_t crc) {
+    return crc32(crc, octree->elements, (uInt)octree->elements_size_in_memory);
 }
 
 // MARK: Octree iterator

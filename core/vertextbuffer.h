@@ -78,7 +78,6 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                          ATLAS_COLOR_INDEX_INT_T color,
                                          FACE_INDEX_INT_T index,
                                          FACE_AMBIENT_OCCLUSION_STRUCT_T ao,
-                                         // vertex lighting ie. smooth lighting
                                          VERTEX_LIGHT_STRUCT_T vlight1,
                                          VERTEX_LIGHT_STRUCT_T vlight2,
                                          VERTEX_LIGHT_STRUCT_T vlight3,

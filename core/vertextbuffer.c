@@ -1141,45 +1141,49 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
 #endif
 
     // Check for triangle shift
-#if TRIANGLE_SHIFT_MODE == 3
-    // sunlight delta
-    float diag13 = (float)abs(vlight1.ambient - vlight3.ambient);
-    float diag24 = (float)abs(vlight2.ambient - vlight4.ambient);
     bool aoShift;
-    if (diag13 > TRIANGLE_SHIFT_MIXED_THRESHOLD || diag24 > TRIANGLE_SHIFT_MIXED_THRESHOLD) {
-        aoShift = diag13 > diag24;
-    } else {
-        // luminance at each vertex
-        float lum1 = 0.299f * vlight1.red + 0.587f * vlight1.green + 0.114f * vlight1.blue;
-        float lum2 = 0.299f * vlight2.red + 0.587f * vlight2.green + 0.114f * vlight2.blue;
-        float lum3 = 0.299f * vlight3.red + 0.587f * vlight3.green + 0.114f * vlight3.blue;
-        float lum4 = 0.299f * vlight4.red + 0.587f * vlight4.green + 0.114f * vlight4.blue;
+    const bool vLighting = vbmaw->cursor.lighting != NULL;
+    if (vLighting) {
+#if TRIANGLE_SHIFT_MODE == 3
+        // sunlight delta
+        float diag13 = (float)abs(vlight1.ambient - vlight3.ambient);
+        float diag24 = (float)abs(vlight2.ambient - vlight4.ambient);
+        if (diag13 > TRIANGLE_SHIFT_MIXED_THRESHOLD || diag24 > TRIANGLE_SHIFT_MIXED_THRESHOLD) {
+            aoShift = diag13 > diag24;
+        } else {
+            // luminance at each vertex
+            float lum1 = 0.299f * vlight1.red + 0.587f * vlight1.green + 0.114f * vlight1.blue;
+            float lum2 = 0.299f * vlight2.red + 0.587f * vlight2.green + 0.114f * vlight2.blue;
+            float lum3 = 0.299f * vlight3.red + 0.587f * vlight3.green + 0.114f * vlight3.blue;
+            float lum4 = 0.299f * vlight4.red + 0.587f * vlight4.green + 0.114f * vlight4.blue;
 
-        // luminance delta
-        float diag13_lum = fabsf(lum1 - lum3);
-        float diag24_lum = fabsf(lum2 - lum4);
+            // luminance delta
+            float diag13_lum = fabsf(lum1 - lum3);
+            float diag24_lum = fabsf(lum2 - lum4);
 
-        if (diag13_lum > TRIANGLE_SHIFT_MIXED_THRESHOLD_LUMA ||
-            diag24_lum > TRIANGLE_SHIFT_MIXED_THRESHOLD_LUMA) {
-            aoShift = diag13_lum > diag24_lum;
+            if (diag13_lum > TRIANGLE_SHIFT_MIXED_THRESHOLD_LUMA ||
+                diag24_lum > TRIANGLE_SHIFT_MIXED_THRESHOLD_LUMA) {
+                aoShift = diag13_lum > diag24_lum;
+            } else {
+                aoShift = ao.ao1 + ao.ao3 > ao.ao2 + ao.ao4;
+            }
+        }
+#elif TRIANGLE_SHIFT_MODE == 2
+        uint8_t diag13 = abs(vlight1.ambient - vlight3.ambient);
+        uint8_t diag24 = abs(vlight2.ambient - vlight4.ambient);
+        if (diag13 > TRIANGLE_SHIFT_MIXED_THRESHOLD || diag24 > TRIANGLE_SHIFT_MIXED_THRESHOLD) {
+            aoShift = diag13 > diag24;
         } else {
             aoShift = ao.ao1 + ao.ao3 > ao.ao2 + ao.ao4;
         }
-    }
-#elif TRIANGLE_SHIFT_MODE == 2
-    uint8_t diag13 = abs(vlight1.ambient - vlight3.ambient);
-    uint8_t diag24 = abs(vlight2.ambient - vlight4.ambient);
-    bool aoShift;
-    if (diag13 > TRIANGLE_SHIFT_MIXED_THRESHOLD || diag24 > TRIANGLE_SHIFT_MIXED_THRESHOLD) {
-        aoShift = diag13 > diag24;
+#elif TRIANGLE_SHIFT_MODE == 1
+        aoShift = abs(vlight1.ambient - vlight3.ambient) > abs(vlight2.ambient - vlight4.ambient);
+#else
+        aoShift = ao.ao1 + ao.ao3 > ao.ao2 + ao.ao4;
+#endif
     } else {
         aoShift = ao.ao1 + ao.ao3 > ao.ao2 + ao.ao4;
     }
-#elif TRIANGLE_SHIFT_MODE == 1
-    bool aoShift = abs(vlight1.ambient - vlight3.ambient) > abs(vlight2.ambient - vlight4.ambient);
-#else
-    bool aoShift = ao.ao1 + ao.ao3 > ao.ao2 + ao.ao4;
-#endif
 
     // ready to write
 
@@ -1200,7 +1204,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
     vbmaw->cursor.metadata[vbma_idxMeta + 1] = (uint8_t)(faceIndex + (aoShift ? 0 : 8));
 
     // Vertex global lighting as RG8 [sun+r:g+b] if enabled
-    if (vbmaw->cursor.lighting != NULL) {
+    if (vLighting) {
         // Dim global lighting ambient value with AO
         vlight1.ambient = TO_UINT4(
             maximum(0, (uint8_t)(vlight1.ambient * 0.9f + 0.1f) - AO_GRADIENT[ao.ao1]));

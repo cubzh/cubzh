@@ -17,6 +17,8 @@ extern "C" {
 #include "config.h"
 #include "weakptr.h"
 
+#define DEBUG_PALETTE_RUN_TESTS false
+
 typedef struct PaletteEntry {
     RGBAColor color;
     uint32_t blocksCount;
@@ -68,7 +70,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
 ColorPalette *color_palette_new_copy(const ColorPalette *src);
 void color_palette_free(ColorPalette *p);
 
-void color_palette_replace_color_atlas(ColorPalette *p, ColorAtlas *atlas);
+void color_palette_set_atlas(ColorPalette *p, ColorAtlas *atlas);
 
 uint8_t color_palette_get_count(const ColorPalette *p);
 ColorAtlas *color_palette_get_atlas(const ColorPalette *p);
@@ -96,8 +98,6 @@ RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_
 void color_palette_set_emissive(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool toggle);
 bool color_palette_is_emissive(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 bool color_palette_is_transparent(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
-bool color_palette_is_lighting_dirty(const ColorPalette *p);
-void color_palette_clear_lighting_dirty(ColorPalette *p);
 bool color_palette_get_shape_index(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T *entryOut);
 ATLAS_COLOR_INDEX_INT_T color_palette_get_atlas_index(const ColorPalette *p,
                                                       SHAPE_COLOR_INDEX_INT_T entry);
@@ -109,9 +109,15 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src);
 RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
                                              bool **emissive,
                                              SHAPE_COLOR_INDEX_INT_T **outMapping);
-
 Weakptr *color_palette_get_weakptr(ColorPalette *p);
 Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p);
+
+// MARK: - Baked lighting -
+
+bool color_palette_is_lighting_dirty(const ColorPalette *p);
+void color_palette_clear_lighting_dirty(ColorPalette *p);
+uint32_t color_palette_get_lighting_hash(const ColorPalette *p);
+bool debug_color_palette_test_hash(ColorPalette **p1Out, ColorPalette **p2Out);
 
 // MARK: - Default palettes -
 

@@ -179,7 +179,7 @@ void test_shape_make_copy(void) {
 
 // octree must have the correct dimension
 void test_shape_make_with_octree(void) {
-    Shape *s = shape_make_with_octree(10, 20, 30, false, false);
+    Shape *s = shape_make_with_octree(10, 20, 30, false);
     const Octree *o = shape_get_octree((const Shape *)s);
 
     TEST_CHECK(octree_get_dimension(o) == 32);
@@ -248,8 +248,8 @@ void test_shape_remove_block(void) {
         TEST_ASSERT(atlas != NULL);
         shape_set_palette(s, color_palette_new(atlas));
     }
-    shape_add_block_with_color(s, idx, x, y, z, true, false, false, true);
-    const bool ok = shape_remove_block(s, x, y, z, NULL, false, false, true);
+    shape_add_block_with_color(s, idx, x, y, z, true, false, true);
+    const bool ok = shape_remove_block(s, x, y, z, NULL, false, true);
 
     TEST_CHECK(ok);
 
@@ -267,7 +267,7 @@ void test_shape_get_bounding_box_size(void) {
         TEST_ASSERT(atlas != NULL);
         shape_set_palette(s, color_palette_new(atlas));
     }
-    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, false, true);
+    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, true);
     int3 result = {0, 0, 0};
     shape_get_bounding_box_size(s, &result);
 
@@ -286,7 +286,7 @@ void test_shape_get_model_aabb(void) {
         TEST_ASSERT(atlas != NULL);
         shape_set_palette(s, color_palette_new(atlas));
     }
-    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, false, true);
+    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, true);
     int3 result = {0, 0, 0};
     const Box *aabb = shape_get_model_aabb(s);
     box_get_size_int(aabb, &result);
@@ -340,10 +340,7 @@ void test_shape_addblock_1(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1,
-                                       1,
-                                       1,
-                                       false, // lighting
+    Shape *sh = shape_make_with_octree(1, 1, 1,
                                        true); // isMutable
     TEST_ASSERT(sh != NULL);
 
@@ -442,10 +439,7 @@ void test_shape_addblock_2(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1,
-                                       1,
-                                       1,
-                                       false, // lighting
+    Shape *sh = shape_make_with_octree(1, 1, 1,
                                        true); // isMutable
     TEST_ASSERT(sh != NULL);
 
