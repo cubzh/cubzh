@@ -4892,6 +4892,7 @@ void _shape_flush_all_vb(Shape *s) {
 
         index3d_iterator_next(it);
     }
+    index3d_iterator_free(it);
 
     // free all vertex buffers
     vertex_buffer_free_all(s->firstVB_opaque);
