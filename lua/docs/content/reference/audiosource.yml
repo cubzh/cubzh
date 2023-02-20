@@ -9,8 +9,12 @@ description: |
 
     ⚠️ The full list of built-in sounds is available in the [Adding sounds to your game](/guides/quick/adding-sounds.yml) quick guide.
 constructors: 
-  - description: "Creates a default AudioSource with no sound clip."
+  - description: "Creates an AudioSource. If a sound name is provided, the AudioSource is initialized with the sound."
     samples:
+      - code: |
+          -- creates a sound source using the
+          -- "gun_shot_1" sound file reference
+          local as = AudioSource("gun_shot_1")
       - code: |
           -- creates a sound source using the
           -- "gun_shot_1" sound file reference
