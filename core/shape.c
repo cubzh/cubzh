@@ -107,7 +107,7 @@ struct _Shape {
     // shape's id
     ShapeId id; // 2 bytes
     // shape allocated size, going below 0 or past this limit requires a shape resize
-    uint16_t maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
+    SHAPE_SIZE_INT_T maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
 
     // octree resize offset, default zero until a resize occurs, is used to convert internal to Lua
     // coords in order to maintain consistent coordinates in a play session
@@ -410,8 +410,8 @@ Shape *shape_make_copy(Shape *origin) {
     }
 
     if (origin->lightingData != NULL) {
-        size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
-                              sizeof(VERTEX_LIGHT_STRUCT_T);
+        const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight *
+                                    (size_t)s->maxDepth * (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
         if (s->lightingData == NULL) {
             return NULL;
@@ -671,9 +671,9 @@ void shape_flush(Shape *shape) {
                 octree_flush(shape->octree);
             }
             if (shape->lightingData != NULL) {
-                size_t lightingSize = (size_t)(shape->maxWidth * shape->maxHeight *
-                                               shape->maxDepth) *
-                                      sizeof(VERTEX_LIGHT_STRUCT_T);
+                const size_t lightingSize = (size_t)shape->maxWidth * (size_t)shape->maxHeight *
+                                            (size_t)shape->maxDepth *
+                                            (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
                 memset(shape->lightingData, 0, lightingSize);
             }
         }
@@ -1942,9 +1942,12 @@ void shape_make_space(Shape *const shape,
     const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
 
     // update allocated size, adding blocks < 0 or > this size will require another resize
-    if (ax > 0) shape->maxWidth += ax;
-    if (ay > 0) shape->maxHeight += ay;
-    if (az > 0) shape->maxDepth += az;
+    if (ax > 0)
+        shape->maxWidth += ax;
+    if (ay > 0)
+        shape->maxHeight += ay;
+    if (az > 0)
+        shape->maxDepth += az;
 
     // empty current dirty chunks list, if any
     ChunkList *cl = NULL;
@@ -3059,8 +3062,8 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
         }
     }
 
-    size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth) *
-                          sizeof(VERTEX_LIGHT_STRUCT_T);
+    const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight * (size_t)s->maxDepth *
+                                (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
     if (s->lightingData == NULL) {
         s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
         _shape_flush_all_vb(s); // let VBs be realloc w/ lighting buffers
@@ -4809,8 +4812,8 @@ void _light_realloc(Shape *s,
     // in that new space
     // TODO: only if it's a light block ; need to manually start light propagation otherwise
 
-    const size_t lightingSize = (size_t)(s->maxWidth * s->maxHeight * s->maxDepth *
-                                         (uint16_t)sizeof(VERTEX_LIGHT_STRUCT_T));
+    const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight * (size_t)s->maxDepth *
+                                (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
     VERTEX_LIGHT_STRUCT_T *lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
     if (lightingData == NULL) {
         return;
@@ -4818,8 +4821,8 @@ void _light_realloc(Shape *s,
     const SHAPE_SIZE_INT_T srcWidth = s->maxWidth - dx;
     const SHAPE_SIZE_INT_T srcHeight = s->maxHeight - dy;
     const SHAPE_SIZE_INT_T srcDepth = s->maxDepth - dz;
-    const SHAPE_SIZE_INT_T srcSlicePitch = srcHeight * srcDepth;
-    const SHAPE_SIZE_INT_T dstSlicePitch = s->maxHeight * s->maxDepth;
+    const size_t srcSlicePitch = srcHeight * srcDepth;
+    const size_t dstSlicePitch = s->maxHeight * s->maxDepth;
 
     const size_t offsetZSize = offsetZ * sizeof(VERTEX_LIGHT_STRUCT_T);
     const size_t srcDepthSize = srcDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
@@ -4836,7 +4839,9 @@ void _light_realloc(Shape *s,
 
         // set to 0 empty row of data at the beginning (from offsetY)
         if (offsetY > 0) {
-            memset(lightingData + xx * dstSlicePitch, 0, offsetY * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T));
+            memset(lightingData + xx * dstSlicePitch,
+                   0,
+                   offsetY * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T));
         }
 
         for (SHAPE_SIZE_INT_T yy = 0; yy < s->maxHeight; ++yy) {
