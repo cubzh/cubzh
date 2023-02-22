@@ -4822,6 +4822,11 @@ void _light_realloc(Shape *s,
     const SHAPE_SIZE_INT_T srcSlicePitch = srcHeight * srcDepth;
     const SHAPE_SIZE_INT_T dstSlicePitch = s->maxHeight * s->maxDepth;
 
+    const size_t offsetZSize = offsetZ * sizeof(VERTEX_LIGHT_STRUCT_T);
+    const size_t srcDepthSize = srcDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
+    const size_t dstDepthSize = s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
+    const size_t reminderSize = (dz - offsetZ) * sizeof(VERTEX_LIGHT_STRUCT_T);
+
     SHAPE_SIZE_INT_T ox, oy;
     for (SHAPE_SIZE_INT_T xx = 0; xx < s->maxWidth; ++xx) {
         for (SHAPE_SIZE_INT_T yy = 0; yy < s->maxHeight; ++yy) {
@@ -4831,24 +4836,24 @@ void _light_realloc(Shape *s,
             if (xx < srcWidth && yy < srcHeight) {
                 // set offseted data to 0
                 if (offsetZ > 0) {
-                    memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth, 0, offsetZ);
+                    memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth, 0, offsetZSize);
                 }
 
                 // copy existing row data
                 memcpy(lightingData + ox * dstSlicePitch + oy * s->maxDepth + offsetZ,
                        s->lightingData + xx * srcSlicePitch + yy * srcDepth,
-                       srcDepth);
+                       srcDepthSize);
 
                 // set reminder to 0
                 if (dz > offsetZ) {
                     memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth + offsetZ +
                                srcDepth,
                            0,
-                           dz - offsetZ);
+                           reminderSize);
                 }
             } else {
                 // set new row to 0
-                memset(lightingData + xx * dstSlicePitch + yy * s->maxDepth, 0, s->maxDepth);
+                memset(lightingData + xx * dstSlicePitch + yy * s->maxDepth, 0, dstDepthSize);
             }
         }
     }
