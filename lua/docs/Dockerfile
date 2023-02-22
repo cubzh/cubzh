@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:1.19.5-alpine3.17 AS build-env
+FROM --platform=linux/amd64 golang:1.20.1-alpine3.17 AS build-env
 
 # Go code
 COPY webserver /webserver
