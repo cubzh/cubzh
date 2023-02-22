@@ -4827,14 +4827,25 @@ void _light_realloc(Shape *s,
     const size_t dstDepthSize = s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
     const size_t reminderSize = (dz - offsetZ) * sizeof(VERTEX_LIGHT_STRUCT_T);
 
+    // set to 0 empty slice of data at the beginning (from offsetX)
+    if (offsetX > 0) {
+        memset(lightingData, 0, offsetX * dstSlicePitch * sizeof(VERTEX_LIGHT_STRUCT_T));
+    }
+
     SHAPE_SIZE_INT_T ox, oy;
     for (SHAPE_SIZE_INT_T xx = 0; xx < s->maxWidth; ++xx) {
+
+        // set to 0 empty row of data at the beginning (from offsetY)
+        if (offsetY > 0) {
+            memset(lightingData + xx * dstSlicePitch, 0, offsetY * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T));
+        }
+
         for (SHAPE_SIZE_INT_T yy = 0; yy < s->maxHeight; ++yy) {
             ox = xx + offsetX;
             oy = yy + offsetY;
 
             if (xx < srcWidth && yy < srcHeight) {
-                // set offseted data to 0
+                // set to 0 empty data at the beginning (from offsetZ)
                 if (offsetZ > 0) {
                     memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth, 0, offsetZSize);
                 }
