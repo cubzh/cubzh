@@ -34,7 +34,7 @@ properties:
     - name: "Pivot"
       type: "Number3"
       description: |
-          [This]'s pivot point in local space. The [Object] will rotate around this point and setting, its position moves this pivot point to the given location.
+          [This]'s pivot point in local space. The [Object] will rotate around this point.
 
       samples:
         - code: |
