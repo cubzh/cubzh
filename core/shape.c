@@ -1826,9 +1826,9 @@ void shape_make_space(Shape *const shape,
     vx_assert(spaceRequiredMax.z >= 0);
 
     SHAPE_COORDS_INT3_T requiredSize = {
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x + 1),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y + 1),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z + 1)};
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x),
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y),
+        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z)};
 
     if (_is_out_of_maximum_shape_size(requiredSize.x, requiredSize.y, requiredSize.z)) {
         return;
@@ -1936,13 +1936,15 @@ void shape_make_space(Shape *const shape,
         delta.z -= requiredMinZ;
     }
 
+    // added space
+    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
+    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
+    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
+
     // update allocated size, adding blocks < 0 or > this size will require another resize
-    if (requiredSize.x > shape->maxWidth)
-        shape->maxWidth = (uint16_t)requiredSize.x;
-    if (requiredSize.y > shape->maxHeight)
-        shape->maxHeight = (uint16_t)requiredSize.y;
-    if (requiredSize.z > shape->maxDepth)
-        shape->maxDepth = (uint16_t)requiredSize.z;
+    if (ax > 0) shape->maxWidth += ax;
+    if (ay > 0) shape->maxHeight += ay;
+    if (az > 0) shape->maxDepth += az;
 
     // empty current dirty chunks list, if any
     ChunkList *cl = NULL;
@@ -2054,9 +2056,6 @@ void shape_make_space(Shape *const shape,
                     false); // remove offset
 
     // offset lighting data
-    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
-    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
-    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
     _light_realloc(shape,
                    ax,
                    ay,
