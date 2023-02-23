@@ -30,19 +30,6 @@ properties:
             myObject.Acceleration = -Config.ConstantAcceleration
             -- myObject's acceleration is now the invert of 
             -- Config.ConstantAcceleration, cancelling it.
-            
-    - name: "Pivot"
-      type: "Number3"
-      description: |
-          [This]'s pivot point in local space. The [Object] will rotate around this point.
-
-      samples:
-        - code: |
-            -- Setting the pivot point of the object:
-            myObject.Pivot = Number3(0, 0, 0)
-            -- myObject's pivot point is now
-            -- set to the corner of the object
-
 
     - name: "CollisionGroups"
       type: "CollisionGroups"
