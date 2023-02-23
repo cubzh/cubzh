@@ -219,10 +219,15 @@ void _light_removal_processNeighbor(Shape *s,
                                     LightNodeQueue *lightQueue,
                                     LightRemovalNodeQueue *lightRemovalQueue);
 /// insert light values and if necessary (lightQueue != NULL) add it to the light propagation queue
-void _light_enqueue_source(SHAPE_COORDS_INT3_T *pos,
-                           Shape *shape,
-                           VERTEX_LIGHT_STRUCT_T source,
-                           LightNodeQueue *lightQueue);
+void _light_set_and_enqueue_source(SHAPE_COORDS_INT3_T *pos,
+                                   Shape *shape,
+                                   VERTEX_LIGHT_STRUCT_T source,
+                                   LightNodeQueue *lightQueue);
+void _light_enqueue_ambient_and_block_sources(Shape *s,
+                                              LightNodeQueue *q,
+                                              SHAPE_COORDS_INT3_T from,
+                                              SHAPE_COORDS_INT3_T to,
+                                              bool enqueueAir);
 /// propagate light values at a given block
 void _light_block_propagate(Shape *s,
                             SHAPE_COORDS_INT3_T *bbMin,
@@ -2058,15 +2063,6 @@ void shape_make_space(Shape *const shape,
                     pivot.z + fDelta.z,
                     false); // remove offset
 
-    // offset lighting data
-    _light_realloc(shape,
-                   ax,
-                   ay,
-                   az,
-                   (SHAPE_SIZE_INT_T)delta.x,
-                   (SHAPE_SIZE_INT_T)delta.y,
-                   (SHAPE_SIZE_INT_T)delta.z);
-
     if (octree != NULL) {
         octree_free(shape->octree);
         shape->octree = octree;
@@ -2080,6 +2076,15 @@ void shape_make_space(Shape *const shape,
 
     // update offset
     int3_op_add(&shape->offset, &delta);
+
+    // offset lighting data
+    _light_realloc(shape,
+                   ax,
+                   ay,
+                   az,
+                   (SHAPE_SIZE_INT_T)delta.x,
+                   (SHAPE_SIZE_INT_T)delta.y,
+                   (SHAPE_SIZE_INT_T)delta.z);
 }
 
 void shape_refresh_vertices(Shape *shape) {
@@ -3071,35 +3076,12 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
     memset(s->lightingData, 0, lightingSize);
 
     LightNodeQueue *q = light_node_queue_new();
-    SHAPE_COORDS_INT3_T pos;
 
-    // Sunlight sources: all blocks on x & z, one block above map limit & beyond the sides
-    pos.y = (SHAPE_COORDS_INT_T)s->maxHeight;
-    for (SHAPE_COORDS_INT_T x = -1; x <= s->maxWidth; ++x) {
-        for (SHAPE_COORDS_INT_T z = -1; z <= s->maxDepth; ++z) {
-            pos.x = x;
-            pos.z = z;
-            light_node_queue_push(q, &pos);
-        }
-    }
+    const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
+                                    (SHAPE_COORDS_INT_T)s->maxHeight,
+                                    (SHAPE_COORDS_INT_T)s->maxDepth};
+    _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, false);
 
-    // Block sources: need to loop over the whole model to discover all emissive blocks
-    Block *b;
-    for (SHAPE_COORDS_INT_T x = 0; x < s->maxWidth; ++x) {
-        for (SHAPE_COORDS_INT_T y = 0; y < s->maxHeight; ++y) {
-            for (SHAPE_COORDS_INT_T z = 0; z < s->maxDepth; ++z) {
-                b = shape_get_block(s, x, y, z, false);
-                if (color_palette_is_emissive(s->palette, b->colorIndex)) {
-                    pos.x = x;
-                    pos.y = y;
-                    pos.z = z;
-                    light_node_queue_push(q, &pos);
-                }
-            }
-        }
-    }
-
-    // Then we run the regular light propagation algorithm
     _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->maxHeight, -1);
 
     light_node_queue_free(q);
@@ -4188,10 +4170,10 @@ void _light_removal_processNeighbor(Shape *s,
     }
 }
 
-void _light_enqueue_source(SHAPE_COORDS_INT3_T *pos,
-                           Shape *shape,
-                           VERTEX_LIGHT_STRUCT_T source,
-                           LightNodeQueue *lightQueue) {
+void _light_set_and_enqueue_source(SHAPE_COORDS_INT3_T *pos,
+                                   Shape *shape,
+                                   VERTEX_LIGHT_STRUCT_T source,
+                                   LightNodeQueue *lightQueue) {
     VERTEX_LIGHT_STRUCT_T current = shape_get_light_or_default(shape,
                                                                pos->x,
                                                                pos->y,
@@ -4220,6 +4202,51 @@ void _light_enqueue_source(SHAPE_COORDS_INT3_T *pos,
         // enqueue as a new light source if any value was higher
         if (lightQueue != NULL) {
             light_node_queue_push(lightQueue, pos);
+        }
+    }
+}
+
+void _light_enqueue_ambient_and_block_sources(Shape *s,
+                                              LightNodeQueue *q,
+                                              SHAPE_COORDS_INT3_T from,
+                                              SHAPE_COORDS_INT3_T to,
+                                              bool enqueueAir) {
+    // Ambient sources: blocks along plane (x,z) from top of the map
+    SHAPE_COORDS_INT3_T pos = {0, (SHAPE_COORDS_INT_T)s->maxHeight, 0};
+    for (SHAPE_COORDS_INT_T x = from.x - 1; x <= to.x; ++x) {
+        for (SHAPE_COORDS_INT_T z = from.z - 1; z <= to.z; ++z) {
+            pos.x = x;
+            pos.z = z;
+            light_node_queue_push(q, &pos);
+        }
+    }
+
+    // Block sources: enqueue all emissive blocks (and air if requested) around the given area
+    Block *b;
+    for (SHAPE_COORDS_INT_T x = from.x - 1; x <= to.x; ++x) {
+        for (SHAPE_COORDS_INT_T y = from.y - 1; y <= to.y; ++y) {
+            for (SHAPE_COORDS_INT_T z = from.z - 1; z <= to.z; ++z) {
+                b = shape_get_block(s, x, y, z, false);
+                if (b != NULL) {
+                    if (color_palette_is_emissive(s->palette, b->colorIndex)) {
+                        pos.x = x;
+                        pos.y = y;
+                        pos.z = z;
+                        light_node_queue_push(q, &pos);
+                    } else if (block_is_solid(b) == false && enqueueAir) {
+                        const VERTEX_LIGHT_STRUCT_T light = shape_get_light_without_checking(s,
+                                                                                             x,
+                                                                                             y,
+                                                                                             z);
+                        if (light.blue > 0 || light.green > 0 || light.red > 0) {
+                            pos.x = x;
+                            pos.y = y;
+                            pos.z = z;
+                            light_node_queue_push(q, &pos);
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -4376,7 +4403,9 @@ void _light_propagate(Shape *s,
         }
 
         // for each non-opaque neighbor: flag current node as open & propagate light if current
-        // non-opaque for each emissive neighbor: add to light queue if current non-opaque y - 1
+        // non-opaque
+        // for each emissive neighbor: add to light queue if current non-opaque
+        // y - 1
         neighbor = shape_get_block(s, pos.x, pos.y - 1, pos.z, false);
         if (neighbor != NULL) {
             isNeighborAir = neighbor->colorIndex == 255;
@@ -4585,7 +4614,10 @@ void _light_propagate(Shape *s,
                                                        insertPos.z,
                                                        false);
                             if (block_is_opaque(neighbor, s->palette) == false) {
-                                _light_enqueue_source(&insertPos, s, currentLight, lightQueue);
+                                _light_set_and_enqueue_source(&insertPos,
+                                                              s,
+                                                              currentLight,
+                                                              lightQueue);
                             }
                         }
                     }
@@ -4807,10 +4839,10 @@ void _light_realloc(Shape *s,
     if (_has_allocated_size(s) == false || s->lightingData == NULL)
         return;
 
-    // - keep existing data and apply offset,
-    // - set reminder lighting data to 0, the newly added block should trigger a light propagation
-    // in that new space
-    // TODO: only if it's a light block ; need to manually start light propagation otherwise
+    // - keep existing data, copy it and apply offset
+    // - set newly allocated lighting data to 0
+    // - propagate from ambient & light blocks sources located on each side where new space was
+    // appended
 
     const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight * (size_t)s->maxDepth *
                                 (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
@@ -4875,6 +4907,49 @@ void _light_realloc(Shape *s,
 
     free(s->lightingData);
     s->lightingData = lightingData;
+
+    LightNodeQueue *q = light_node_queue_new();
+
+    // enqueue ambient & light block & air sources within range, on each side w/ newly empty data
+    if (offsetX > 0) {
+        const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)offsetX,
+                                        (SHAPE_COORDS_INT_T)s->maxHeight,
+                                        (SHAPE_COORDS_INT_T)s->maxDepth};
+        _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, true);
+    }
+    if (offsetY > 0) {
+        const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
+                                        (SHAPE_COORDS_INT_T)offsetY,
+                                        (SHAPE_COORDS_INT_T)s->maxDepth};
+        _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, true);
+    }
+    if (offsetZ > 0) {
+        const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
+                                        (SHAPE_COORDS_INT_T)s->maxHeight,
+                                        (SHAPE_COORDS_INT_T)offsetZ};
+        _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, true);
+    }
+    const SHAPE_COORDS_INT3_T max = {(SHAPE_COORDS_INT_T)s->maxWidth,
+                                     (SHAPE_COORDS_INT_T)s->maxHeight,
+                                     (SHAPE_COORDS_INT_T)s->maxDepth};
+    // note: dx and not reminder (dx - offsetX), to include empty data previously inside model then
+    // offseted
+    if (dx > 0) {
+        const SHAPE_COORDS_INT3_T from = {(SHAPE_COORDS_INT_T)(s->maxWidth - dx), 0, 0};
+        _light_enqueue_ambient_and_block_sources(s, q, from, max, true);
+    }
+    if (dy > 0) {
+        const SHAPE_COORDS_INT3_T from = {0, (SHAPE_COORDS_INT_T)(s->maxHeight - dy), 0};
+        _light_enqueue_ambient_and_block_sources(s, q, from, max, true);
+    }
+    if (dz > 0) {
+        const SHAPE_COORDS_INT3_T from = {0, 0, (SHAPE_COORDS_INT_T)(s->maxDepth - dz)};
+        _light_enqueue_ambient_and_block_sources(s, q, from, max, true);
+    }
+
+    _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->maxHeight, -1);
+
+    light_node_queue_free(q);
 
 #if SHAPE_LIGHTING_DEBUG
     cclog_debug(
