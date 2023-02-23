@@ -939,9 +939,7 @@ const Box *rigidbody_get_collider(const RigidBody *rb) {
 
 void rigidbody_set_collider(RigidBody *rb, const Box *value) {
     box_copy(rb->collider, value);
-    if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled &&
-        rigidbody_uses_per_block_collisions(rb) == false) {
-
+    if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled) {
         _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
     }
 }
