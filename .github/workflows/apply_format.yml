@@ -9,7 +9,7 @@ jobs:
     name: Format Core
     # Check that the comment comes from a Pull Request, and not from a regular Issue.
     # Also look for "/format" command in comment body.
-    if: ${{ github.event.issue.pull_request }} && contains(${{ github.event.comment.body }}, '/format')
+    if: ${{ github.event.issue.pull_request && (github.event.comment.body == '/format') }}
     runs-on: ubuntu-latest
     permissions:
       # Give the default GITHUB_TOKEN write permission to commit and push the
