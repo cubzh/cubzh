@@ -14,6 +14,7 @@ extern "C" {
 #include <stdint.h>
 
 #include "fifo_list.h"
+#include "function_pointers.h"
 
 typedef enum {
     mouseEvent,
@@ -283,6 +284,17 @@ typedef struct _InputContext InputContext;
 // event and the other to miss it.
 typedef struct _InputListener InputListener;
 
+// Similar to _InputListener but:
+// - only for keyboard inputs
+// - does not pull events
+// C function callback triggered right away when an input comes in.
+typedef struct _KeyboardInputListener KeyboardInputListener;
+typedef void (*keyboard_input_callback_ptr)(void *userdata,
+                                            uint32_t charCode,
+                                            Input input,
+                                            uint8_t modifiers,
+                                            KeyState state);
+
 ///
 typedef struct {
     Input input;
@@ -290,6 +302,13 @@ typedef struct {
     KeyState stateSecond;
     bool seenByImGui;
 } InputEventWithHistory;
+
+//
+KeyboardInputListener *input_keyboard_listener_new(void *userdata,
+                                                   keyboard_input_callback_ptr callback);
+
+//
+void input_keyboard_listener_free(KeyboardInputListener *il, pointer_free_function userdata_free);
 
 //
 InputListener *input_listener_new(bool mouseEvents,
@@ -343,8 +362,16 @@ const AnalogPadEvent *input_listener_pop_analog_pad_event(InputListener *il);
 void postMouseEvent(float x, float y, float dx, float dy, MouseButton button, bool down, bool move);
 
 void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState state, bool move);
+
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state);
 void postCharEvent(unsigned int inputChar);
+
+void postKeyboardInput(uint32_t charCode, Input input, uint8_t modifiers, KeyState state);
+
+// buf should have enough room (5 bytes),
+// NULL char at 5th position for 4 bytes long.
+uint8_t input_char_code_to_string(char *buf, uint32_t charCode);
+
 void postDirPadEvent(float dx, float dy, PadBtnState state);
 void postActionPadEvent(ActionPadBtn button, PadBtnState state);
 void postAnalogPadEvent(float dx, float dy, PadBtnState state);

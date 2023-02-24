@@ -61,6 +61,7 @@ struct _InputContext {
 
     // Input event listeners
     DoublyLinkedList *listeners;
+    DoublyLinkedList *keyboardInputListeners;
 
     InputEventWithHistory pressedInputsImgui[10]; // more than 10 pressed inputs is not supported...
     uint8_t nbPressedInputsImgui;                 // max = 10
@@ -116,6 +117,11 @@ struct _InputListener {
     bool acceptsRepeatedChar;
 };
 
+struct _KeyboardInputListener {
+    void *userdata;                                      // weak ref
+    keyboard_input_callback_ptr keyboard_input_callback; // weak ref
+};
+
 InputContext *inputContext(void) {
 
     static InputContext *c = NULL;
@@ -155,6 +161,7 @@ InputContext *inputContext(void) {
         c->analogPadEventPool = fifo_list_new();
 
         c->listeners = doubly_linked_list_new();
+        c->keyboardInputListeners = doubly_linked_list_new();
 
         c->nbPressedInputsImgui = 0;
 
@@ -695,6 +702,52 @@ void postCharEvent(unsigned int inputChar) {
     ce = NULL;
 }
 
+void postKeyboardInput(uint32_t charCode, Input input, uint8_t modifiers, KeyState state) {
+    InputContext *c = inputContext();
+    if (c->acceptInputs == false)
+        return;
+
+    DoublyLinkedListNode *node = doubly_linked_list_last(c->keyboardInputListeners);
+    while (node != NULL) {
+        KeyboardInputListener *l = (KeyboardInputListener *)doubly_linked_list_node_pointer(node);
+        l->keyboard_input_callback(l->userdata, charCode, input, modifiers, state);
+        node = doubly_linked_list_node_previous(node);
+    }
+}
+
+uint8_t input_char_code_to_string(char *buf, uint32_t c) {
+    // considering buf size if 5 (at least)
+    if (c < 0x80) {
+        buf[0] = (char)(c);
+        buf[1] = '\0';
+        return 1;
+    }
+    if (c < 0x800) {
+        buf[0] = (char)(0xc0 + (c >> 6));
+        buf[1] = (char)(0x80 + (c & 0x3f));
+        buf[2] = '\0';
+        return 2;
+    }
+    if (c < 0x10000) {
+        buf[0] = (char)(0xe0 + (c >> 12));
+        buf[1] = (char)(0x80 + ((c >> 6) & 0x3f));
+        buf[2] = (char)(0x80 + ((c)&0x3f));
+        buf[3] = '\0';
+        return 3;
+    }
+    if (c <= 0x10FFFF) {
+        buf[0] = (char)(0xf0 + (c >> 18));
+        buf[1] = (char)(0x80 + ((c >> 12) & 0x3f));
+        buf[2] = (char)(0x80 + ((c >> 6) & 0x3f));
+        buf[3] = (char)(0x80 + ((c)&0x3f));
+        buf[4] = '\0';
+        return 4;
+    }
+    // Invalid code point, the max unicode is 0x10FFFF
+    buf[0] = '\0';
+    return 0;
+}
+
 void postDirPadEvent(float dx, float dy, PadBtnState state) {
 
     InputContext *c = inputContext();
@@ -894,6 +947,47 @@ AnalogPadEvent *input_event_to_AnalogPadEvent(void *e) {
 }
 
 // ----------------------
+// KeyboardInputListener
+// ----------------------
+
+KeyboardInputListener *input_keyboard_listener_new(void *userdata,
+                                                   keyboard_input_callback_ptr callback) {
+    KeyboardInputListener *l = (KeyboardInputListener *)malloc(sizeof(KeyboardInputListener));
+    if (l == NULL) {
+        return NULL;
+    }
+
+    l->userdata = userdata;
+    l->keyboard_input_callback = callback;
+
+    doubly_linked_list_push_first(inputContext()->keyboardInputListeners, (void *)l);
+
+    return l;
+}
+
+void input_keyboard_listener_free(KeyboardInputListener *l, pointer_free_function userdata_free) {
+
+    InputContext *c = inputContext();
+
+    DoublyLinkedList *listeners = c->keyboardInputListeners;
+    DoublyLinkedListNode *node = doubly_linked_list_last(listeners);
+    while (node != NULL) {
+        void *ptr = doubly_linked_list_node_pointer(node);
+
+        if (l == ptr) {
+            doubly_linked_list_delete_node(listeners, node);
+            break;
+        }
+        node = doubly_linked_list_node_previous(node);
+    }
+
+    if (userdata_free != NULL) {
+        userdata_free(l->userdata);
+    }
+    free(l); // only weak refs in listener
+}
+
+// ----------------------
 // InputListener
 // ----------------------
 
@@ -908,6 +1002,9 @@ InputListener *input_listener_new(bool mouseEvents,
                                   bool acceptsRepeatedChar) {
 
     InputListener *il = (InputListener *)malloc(sizeof(InputListener));
+    if (il == NULL) {
+        return NULL;
+    }
 
     il->mouseEvents = fifo_list_new();
     il->touchEvents = fifo_list_new();
@@ -936,9 +1033,7 @@ InputListener *input_listener_new(bool mouseEvents,
     il->acceptsRepeatedKeyDown = acceptsRepeatedKeyDown;
     il->acceptsRepeatedChar = acceptsRepeatedChar;
 
-    if (il != NULL) {
-        doubly_linked_list_push_first(inputContext()->listeners, (void *)il);
-    }
+    doubly_linked_list_push_first(inputContext()->listeners, (void *)il);
 
     return il;
 }
