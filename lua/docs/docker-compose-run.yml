@@ -2,7 +2,7 @@ version: '3.1'
 services:
   lua-docs:
     build:
-      target: builder
+      target: website-dev
     ports:
       - 80
     volumes:
