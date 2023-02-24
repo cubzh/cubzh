@@ -347,9 +347,13 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 }
 
                 const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+                if (mode == RigidbodyMode_Disabled) {
+                    hit = fifo_list_pop(sceneQuery);
+                    continue;
+                }
+
                 const bool isTrigger = mode == RigidbodyMode_Trigger ||
                                        mode == RigidbodyMode_TriggerPerBlock;
-                vx_assert(mode > RigidbodyMode_Disabled);
 
                 if (isTrigger && rigidbody_has_callbacks(hitRb) == false) {
                     hit = fifo_list_pop(sceneQuery);
