@@ -54,6 +54,7 @@ jobs:
         with:
           ref: ${{ steps.get_commit.outputs.sha }}
           lfs: 'true'
+          token: ${{ secrets.BUZZZH_GITHUB_TOKEN }}
       
       - 
         name: Setup Go
