@@ -11,8 +11,12 @@ jobs:
     # Also look for "/format" command in comment body.
     if: ${{ github.event.issue.pull_request }} && contains(github.event.comment.body, '/format')
     runs-on: ubuntu-latest
-    steps:
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
 
+    steps:
       - # retrieve PR info
         name: Request PR data from GitHub API
         uses: octokit/request-action@v2.x
@@ -73,20 +77,22 @@ jobs:
         id: auto-commit
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Automated C/C++ code formatting
-          commit_options: '--no-verify --signoff'
-          commit_user_name: Cubzh Bot
-          commit_user_email: bot@cu.bzh
-          commit_author: Cubzh Bot <bot@cu.bzh>
+          commit_message: Automated code formatting
+          # commit_options: '--no-verify --signoff'
+          commit_user_name: Buzzh Bot
+          commit_user_email: buzzh@cu.bzh
+          commit_author: Buzzh Bot <buzzh@cu.bzh>
           skip_dirty_check: true
           skip_fetch: true
           skip_checkout: true
           create_branch: false
           branch: ${{ steps.get_branch.outputs.ref }} # name of branch
+
       - 
         name: Format done
         if: steps.auto-commit.outputs.changes_detected == 'true'
         run: echo "Format done."
+        
       - 
         name: No need to format
         if: steps.auto-commit.outputs.changes_detected == 'false'
