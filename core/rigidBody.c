@@ -347,9 +347,13 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 }
 
                 const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+                if (mode == RigidbodyMode_Disabled) {
+                    hit = fifo_list_pop(sceneQuery);
+                    continue;
+                }
+
                 const bool isTrigger = mode == RigidbodyMode_Trigger ||
                                        mode == RigidbodyMode_TriggerPerBlock;
-                vx_assert(mode > RigidbodyMode_Disabled);
 
                 if (isTrigger && rigidbody_has_callbacks(hitRb) == false) {
                     hit = fifo_list_pop(sceneQuery);
@@ -939,9 +943,7 @@ const Box *rigidbody_get_collider(const RigidBody *rb) {
 
 void rigidbody_set_collider(RigidBody *rb, const Box *value) {
     box_copy(rb->collider, value);
-    if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled &&
-        rigidbody_uses_per_block_collisions(rb) == false) {
-
+    if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled) {
         _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
     }
 }

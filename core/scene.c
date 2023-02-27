@@ -544,7 +544,7 @@ void scene_register_awake_block_box(Scene *sc,
     matrix4x4_op_multiply_vec_point(&worldPoint, &modelPoint, transform_get_ltw(t));
 
     float3 scale2;
-    transform_get_lossy_scale(sc->map, &scale2);
+    transform_get_lossy_scale(t, &scale2);
     float3_op_scale(&scale2, 0.5f);
     Box *worldBox = box_new_2((float)worldPoint.x - scale2.x - PHYSICS_AWAKE_DISTANCE,
                               (float)worldPoint.y - scale2.y - PHYSICS_AWAKE_DISTANCE,
