@@ -561,10 +561,89 @@ blocks:
             multi:receive(e)
         end
 
+        Client.Tick = function(dt)
+            multi:tick(dt)
+        end
+
         -- jump function, triggered with Action1
         Client.Action1 = function()
             if Player.IsOnGround then
                 Player.Velocity.Y = 100 -- This is synced by default by the module because all the movements are synchronised
+            end
+        end
+
+        Client.Action2 = function()
+            -- send action to other players
+            multi:playerAction("fire", { name=Player.Username })
+            -- play action locally
+            onFire(Player, { name=Player.Username })
+        end
+
+    - subtitle: "Multiplayer game example"
+
+    - text: |
+        This is an example of a minimalist multiplayer game. It is the default game script, with multiplayer capability added.
+        You can use this script as a base for your multiplayer game.
+
+    - code: |
+        Config = {
+            Map = "aduermael.hills"
+        }
+
+        Client.OnStart = function()
+
+            multi = require("multi")
+            multi.teleportTriggerDistance = 100
+
+            onFire = function(player, data)
+                print(data.name)
+                player:SwingRight()
+            end
+
+            multi:registerPlayerAction("fire", onFire)
+
+            -- Defines a function to drop
+            -- the player above the map.
+            dropPlayer = function()
+                Player.Position = Number3(Map.Width * 0.5, Map.Height + 10, Map.Depth * 0.5) * Map.Scale
+                Player.Rotation = { 0, 0, 0 }
+                Player.Velocity = { 0, 0, 0 }
+            end
+
+            World:AddChild(Player)
+
+            -- Call dropPlayer function:
+            dropPlayer()
+        end
+
+        Client.OnPlayerJoin = function(p)
+            multi:initPlayer(p)
+        end
+
+        Client.OnPlayerLeave = function(p)
+            multi:removePlayer(p)
+        end
+
+        Client.DidReceiveEvent = function(e)
+            multi:receive(e)
+        end
+
+        Client.Tick = function(dt)
+            multi:tick(dt)
+            -- Game loop, executed ~30 times per second on each client.
+
+            -- Detect if player is falling,
+            -- drop it above the map when it happens.
+            if Player.Position.Y < -500 then
+                dropPlayer()
+                Player:TextBubble("💀 Oops!")
+            end
+        end
+
+        -- jump function, triggered with Action1
+        Client.Action1 = function()
+            if Player.IsOnGround then
+                Player.Velocity.Y = 100
             end
         end
 
