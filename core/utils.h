@@ -132,9 +132,11 @@ int stringArray_length(stringArray_t *arr);
 /// Returns a pointer on the array data.
 const char *stringArray_get(const stringArray_t *arr, const int idx);
 
-// MARK: -
-
 char *utils_get_baked_fullname(const char *id, const char *itemFullname);
+
+void utils_rgba_to_uint8(uint32_t rgba, uint8_t *out);
+uint32_t utils_uint8_to_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+void utils_rgba_to_float(uint32_t rgba, float *out);
 
 #ifdef __cplusplus
 } // extern "C"
