@@ -397,3 +397,21 @@ char *utils_get_baked_fullname(const char *id, const char *itemFullname) {
 
     return bakedFullname;
 }
+
+void utils_rgba_to_uint8(uint32_t rgba, uint8_t *out) {
+    *out = (uint8_t)(rgba & 0xff);
+    *(out + 1) = (uint8_t)((rgba >> 8) & 0xff);
+    *(out + 2) = (uint8_t)((rgba >> 16) & 0xff);
+    *(out + 3) = (uint8_t)((rgba >> 24) & 0xff);
+}
+
+uint32_t utils_uint8_to_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    return (uint32_t)r + ((uint32_t)g << 8) + ((uint32_t)b << 16) + ((uint32_t)a << 24);
+}
+
+void utils_rgba_to_float(uint32_t rgba, float *out) {
+    *out = (float)(rgba & 0xff) / 255.0f;
+    *(out + 1) = (float)((rgba >> 8) & 0xff) / 255.0f;
+    *(out + 2) = (float)((rgba >> 16) & 0xff) / 255.0f;
+    *(out + 3) = (float)((rgba >> 24) & 0xff) / 255.0f;
+}
