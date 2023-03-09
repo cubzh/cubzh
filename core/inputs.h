@@ -178,10 +178,10 @@ typedef enum {
     InputKeyT,
     InputKeyU,
     InputKeyV,
-    InputKeyW,
+    InputKeyW, // 113
     InputKeyX,
     InputKeyY,
-    InputKeyZ,
+    InputKeyZ, // 116
     InputSpace,
     
     InputCount // not an input, used to get max value
