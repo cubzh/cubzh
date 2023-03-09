@@ -702,6 +702,11 @@ void postCharEvent(unsigned int inputChar) {
     ce = NULL;
 }
 
+bool inputs_is_key_printable(Input i) {
+    // InputPlus is first printable Input enum
+    return i >= InputPlus && i < InputCount;
+}
+
 void postKeyboardInput(uint32_t charCode, Input input, uint8_t modifiers, KeyState state) {
     InputContext *c = inputContext();
     if (c->acceptInputs == false)

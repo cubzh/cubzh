@@ -62,12 +62,12 @@ typedef enum {
 
 // possible input keys
 typedef enum {
+    // starting with non printable inputs
     InputNone = 0,
     InputEsc,
     InputReturn,
     InputReturnKP,
     InputTab,
-    InputSpace,
     InputBackspace,
     InputUp,
     InputDown,
@@ -80,25 +80,7 @@ typedef enum {
     InputPageUp,
     InputPageDown,
     InputPrint,
-    InputPlus,
-    InputNumPadPlus,
-    InputMinus,
-    InputNumPadMinus,
-    InputDivide,
-    InputMultiply,
     InputClear,
-    InputDecimal,
-    InputEqual,
-    InputNumPadEqual,
-    InputLeftBracket,
-    InputRightBracket,
-    InputSemicolon,
-    InputQuote,
-    InputComma,
-    InputPeriod,
-    InputSlash,
-    InputBackslash,
-    InputTilde,
     InputF1,
     InputF2,
     InputF3,
@@ -119,6 +101,41 @@ typedef enum {
     InputF18,
     InputF19,
     InputF20,
+    InputGamepadA,
+    InputGamepadB,
+    InputGamepadX,
+    InputGamepadY,
+    InputGamepadThumbL,
+    InputGamepadThumbR,
+    InputGamepadShoulderL,
+    InputGamepadShoulderR,
+    InputGamepadUp,
+    InputGamepadDown,
+    InputGamepadLeft,
+    InputGamepadRight,
+    InputGamepadBack,
+    InputGamepadStart,
+    InputGamepadGuide,
+    
+    // printable inputs
+    InputPlus,
+    InputNumPadPlus,
+    InputMinus,
+    InputNumPadMinus,
+    InputDivide,
+    InputMultiply,
+    InputDecimal,
+    InputEqual,
+    InputNumPadEqual,
+    InputLeftBracket,
+    InputRightBracket,
+    InputSemicolon,
+    InputQuote,
+    InputComma,
+    InputPeriod,
+    InputSlash,
+    InputBackslash,
+    InputTilde,
     InputNumPad0,
     InputNumPad1,
     InputNumPad2,
@@ -165,22 +182,9 @@ typedef enum {
     InputKeyX,
     InputKeyY,
     InputKeyZ,
-    InputGamepadA,
-    InputGamepadB,
-    InputGamepadX,
-    InputGamepadY,
-    InputGamepadThumbL,
-    InputGamepadThumbR,
-    InputGamepadShoulderL,
-    InputGamepadShoulderR,
-    InputGamepadUp,
-    InputGamepadDown,
-    InputGamepadLeft,
-    InputGamepadRight,
-    InputGamepadBack,
-    InputGamepadStart,
-    InputGamepadGuide,
-    InputCount
+    InputSpace,
+    
+    InputCount // not an input, used to get max value
 } Input;
 
 // /!\ ALL values in MouseEvent are in points
@@ -365,6 +369,8 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
 
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state);
 void postCharEvent(unsigned int inputChar);
+
+bool inputs_is_key_printable(Input i);
 
 void postKeyboardInput(uint32_t charCode, Input input, uint8_t modifiers, KeyState state);
 
