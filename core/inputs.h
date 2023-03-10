@@ -116,7 +116,7 @@ typedef enum {
     InputGamepadBack,
     InputGamepadStart,
     InputGamepadGuide,
-    
+
     // printable inputs
     InputPlus,
     InputNumPadPlus,
@@ -183,7 +183,7 @@ typedef enum {
     InputKeyY,
     InputKeyZ, // 116
     InputSpace,
-    
+
     InputCount // not an input, used to get max value
 } Input;
 
