@@ -38,6 +38,8 @@ typedef struct _Scene Scene;
 
 Scene *scene_new(void);
 void scene_free(Scene *sc);
+Weakptr *scene_get_weakptr(Scene *sc);
+Weakptr *scene_get_and_retain_weakptr(Scene *sc);
 
 /// Get the scene hierarchy root transform for more specific usages
 Transform *scene_get_root(Scene *sc);
