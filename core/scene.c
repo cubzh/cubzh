@@ -19,6 +19,7 @@ struct _Scene {
     Transform *root;
     Transform *map; // weak ref to Map transform (Shape retained by parent)
     Rtree *rtree;
+    Weakptr *wptr;
 
     // transforms potentially removed from scene since last end-of-frame,
     // relevant for physics & sync, internal transforms do not need to be accounted for here
@@ -206,6 +207,7 @@ Scene *scene_new(void) {
         sc->root = transform_make(HierarchyTransform);
         sc->map = NULL;
         sc->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
+        sc->wptr = NULL;
         sc->removed = fifo_list_new();
         sc->collisions = doubly_linked_list_new();
         sc->awakeBoxes = doubly_linked_list_new();
@@ -227,12 +229,31 @@ void scene_free(Scene *sc) {
 
     transform_release(sc->root);
     rtree_free(sc->rtree);
+    weakptr_invalidate(sc->wptr);
     fifo_list_free(sc->removed, NULL);
     doubly_linked_list_free(sc->collisions);
     doubly_linked_list_flush(sc->awakeBoxes, (pointer_free_function)box_free);
     doubly_linked_list_free(sc->awakeBoxes);
 
     free(sc);
+}
+
+Weakptr *scene_get_weakptr(Scene *sc) {
+    if (sc->wptr == NULL) {
+        sc->wptr = weakptr_new(sc);
+    }
+    return sc->wptr;
+}
+
+Weakptr *scene_get_and_retain_weakptr(Scene *sc) {
+    if (sc->wptr == NULL) {
+        sc->wptr = weakptr_new(sc);
+    }
+    if (weakptr_retain(sc->wptr)) {
+        return sc->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
 }
 
 Transform *scene_get_root(Scene *sc) {
