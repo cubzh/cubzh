@@ -233,12 +233,12 @@ void test_transform_flush(void) {
     const float3 expected_rot = {0.0f, PI_F * 0.25f, 0.0f};
     float3 rot = float3_zero;
     transform_get_rotation_euler(t, &rot);
-    TEST_CHECK(float3_isEqual(&rot, &expected_rot, EPSILON_ZERO_RAD));
+    TEST_CHECK(float3_isEqual(&rot, &expected_rot, EPSILON_ZERO));
 
     const float3 expected_local_rot = {0.0f, PI_F * 0.25f, 0.0f};
     float3 local_rot = float3_zero;
     transform_get_local_rotation_euler(t, &local_rot);
-    TEST_CHECK(float3_isEqual(&local_rot, &expected_local_rot, EPSILON_ZERO_RAD));
+    TEST_CHECK(float3_isEqual(&local_rot, &expected_local_rot, EPSILON_ZERO));
 
     const float3 expected_pos = {0.1f, 0.2f, 0.3f};
     TEST_CHECK(float3_isEqual(transform_get_position(t), &expected_pos, EPSILON_ZERO));

@@ -302,7 +302,7 @@ void test_matrix4x4_get_euler(void) {
     const float3 expected = {PI_F * 0.5f, 0.0f, 0.0f};
 
     matrix4x4_get_euler(m, &result);
-    TEST_CHECK(float3_isEqual(&result, &expected, EPSILON_ZERO_RAD));
+    TEST_CHECK(float3_isEqual(&result, &expected, EPSILON_ZERO));
 
     matrix4x4_free(m);
 }
