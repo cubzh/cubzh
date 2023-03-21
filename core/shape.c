@@ -121,6 +121,7 @@ struct _Shape {
 
     ShapeDrawMode drawMode; // 1 byte
     bool shadowDecal;       // 1 byte
+    bool shadow;            // 1 byte
     bool isUnlit;           // 1 byte
     uint8_t layers;         // 1 byte
 
@@ -131,7 +132,7 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    char pad[2];
+    char pad[1];
 };
 
 // --------------------------------------------------
@@ -327,6 +328,7 @@ Shape *shape_make() {
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->shadowDecal = false;
+    s->shadow = true;
     s->isUnlit = false;
     s->layers = 1; // CAMERA_LAYERS_0
 
@@ -2717,6 +2719,20 @@ bool shape_has_shadow_decal(const Shape *s) {
         return false;
     }
     return s->shadowDecal;
+}
+
+void shape_set_shadow(Shape *s, const bool toggle) {
+    if (s == NULL) {
+        return;
+    }
+    s->shadow = toggle;
+}
+
+bool shape_has_shadow(const Shape *s) {
+    if (s == NULL) {
+        return false;
+    }
+    return s->shadow;
 }
 
 void shape_set_unlit(Shape *s, const bool value) {

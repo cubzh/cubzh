@@ -389,6 +389,9 @@ ShapeDrawMode shape_get_draw_mode(const Shape *s);
 void shape_set_shadow_decal(Shape *s, const bool toggle);
 bool shape_has_shadow_decal(const Shape *s);
 
+void shape_set_shadow(Shape *s, const bool toggle);
+bool shape_has_shadow(const Shape *s);
+
 void shape_set_unlit(Shape *s, const bool value);
 bool shape_is_unlit(const Shape *s);
 
