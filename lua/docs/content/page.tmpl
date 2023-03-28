@@ -155,16 +155,38 @@
 						<a id="constructor-{{ $i }}"></a>
 						<div class="object-element-tbl">
 							<div class="object-element-header">
-								<a href="#constructor-{{ $i }}"><span class="name">{{ $type }}</span></a> ( <!--
-								-->{{ range $index, $element := .Arguments }}<!--
-								-->{{if $index}}, {{end}}<!--
-								-->{{ $route := GetTypeRoute .Type }}<!--
-								-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
-								-->{{ .Type }}<!--
-								-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
-								--> {{ .Name }}<!--
-								-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
-								-->{{ end }} )
+									{{ if .ArgumentSets}}<!--
+										-->{{ range $index, $arguments := .ArgumentSets }}<!--
+											--><div class="set-of-arguments"><!--
+												-->{{ if $index }}<span class="variation">{{ end}}<!--
+												--><a href="#constructor-{{ $i }}"><span class="name">{{ $type }}</span></a><!--
+												-->{{ if $index }}</span>{{ end}} ( <!--
+												-->{{ range $index, $element := $arguments }}<!--
+												-->{{if $index}}, {{end}}<!--
+													-->{{ $route := GetTypeRoute .Type }}<!--
+													-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+													-->{{ .Type }}<!--
+													-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+														--> {{ .Name }}<!--
+													-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+												-->{{ end }} )<!--
+												-->{{if not $index}}<!--
+													-->{{ if $constructor.ComingSoon }} <span class="coming-soon">coming soon</span>{{ end }}<!--
+												-->{{ end }}<!--
+											--></div><!--
+										-->{{ end }}<!--
+								-->{{ else }}<!--
+									--><a href="#constructor-{{ $i }}"><span class="name">{{ $type }}</span></a> ( <!--
+									-->{{ range $index, $element := .Arguments }}<!--
+									-->{{if $index}}, {{end}}<!--
+									-->{{ $route := GetTypeRoute .Type }}<!--
+									-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
+									-->{{ .Type }}<!--
+									-->{{ if $route }}</a>{{ else }}</span>{{ end }}<!--
+									--> {{ .Name }}<!--
+									-->{{ if .Optional }} <span class="optional">optional</span>{{ end }}<!--
+									-->{{ end }} )<!--
+								-->{{ end }}
 							</div>
 							<div class="object-element-row">
 								{{ if .Description }}
