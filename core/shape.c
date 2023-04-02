@@ -144,12 +144,6 @@ struct _Shape {
 static ShapeId nextShapeId = 1;
 static FiloListUInt16 *availableShapeIds = NULL;
 
-/// array referencing all the shapes allocated
-// TODO: use mutex when accessing or modifying _shapesIndex
-// TODO: use a List instead of a buffer for _shapesIndex
-static Shape **_shapesIndex = NULL;
-static size_t _shapesIndexLength = 0;
-
 // MARK: - private functions prototypes -
 
 // returns true if block was added
@@ -175,16 +169,6 @@ static ShapeId getValidShapeId(void);
 
 ///
 static void recycleShapeId(const ShapeId shapeId);
-
-///
-static bool _storeShapeInIndex(Shape *s);
-
-// CURRENTLY UNUSED
-/// Finds and returns a Shape by its id.
-// static Shape* _getShapeFromIndexWithId(const ShapeId id);
-
-/// removes a shape from the shape index and returns whether the operation succeeded
-static bool _removeShapeFromIndex(const Shape *s);
 
 bool _has_allocated_size(const Shape *s);
 bool _is_out_of_allocated_size(const Shape *s,
@@ -283,7 +267,7 @@ void _shape_clear_cached_world_aabb(Shape *s);
 //
 
 // Shape allocator
-Shape *shape_make() {
+Shape *shape_make(void) {
     Shape *s = (Shape *)malloc(sizeof(Shape));
 
     int3_set(&s->offset, 0, 0, 0);
@@ -322,7 +306,7 @@ Shape *shape_make() {
     s->nbBlocks = 0;
     s->fragmentedVBs = doubly_linked_list_new();
 
-    s->id = getValidShapeId();
+    s->id = getValidShapeId(); // TODO: use mutex - leads to random crashes otherwise
 
     s->maxWidth = s->maxHeight = s->maxDepth = 0;
 
@@ -338,11 +322,6 @@ Shape *shape_make() {
     s->historyKeepingTransactionPending = false;
 
     s->isBakeLocked = false;
-
-    // store allocated shape in the index
-    if (_storeShapeInIndex(s) == false) {
-        cclog_warning("🔥 failed to store shape in index 1");
-    }
 
     return s;
 }
@@ -790,7 +769,6 @@ void shape_free(Shape *const shape) {
     doubly_linked_list_free(shape->fragmentedVBs);
     shape->fragmentedVBs = NULL;
 
-    _removeShapeFromIndex(shape);
     const ShapeId shapeId = shape->id;
 
     // free needsDisplay list
@@ -1849,7 +1827,6 @@ void shape_make_space(Shape *const shape,
 
     Octree *octree = NULL;
     Index3D *chunks = NULL;
-    size_t nbChunks = 0;
 
     // largest dimension (among x, y, z)
     const size_t requiredSizeMax = (size_t)(maximum(maximum(requiredSize.x, requiredSize.y),
@@ -2017,7 +1994,6 @@ void shape_make_space(Shape *const shape,
 
                         // flag this chunk as dirty (needs display)
                         if (chunkAdded) {
-                            nbChunks++;
                             shape_chunk_needs_display(shape, chunk);
                         }
                     }
@@ -3680,13 +3656,12 @@ static bool _shape_add_block(Shape *shape,
 }
 
 ///
-static ShapeId getValidShapeId() {
+static ShapeId getValidShapeId(void) {
     ShapeId resultId = 0;
     if (availableShapeIds == NULL || filo_list_uint16_pop(availableShapeIds, &resultId) == false) {
         resultId = nextShapeId;
         nextShapeId += 1;
     }
-    // printf("🌟🔴 getValidShapeId: %d\n", resultId);
     return resultId;
 }
 
@@ -3697,72 +3672,6 @@ static void recycleShapeId(const ShapeId shapeId) {
         availableShapeIds = filo_list_uint16_new();
     }
     filo_list_uint16_push(availableShapeIds, shapeId);
-}
-
-/// adds a shape to the shape index
-static bool _storeShapeInIndex(Shape *s) {
-    // cclog_trace(">>> store shape in index: %p", s);
-    if (_shapesIndex == NULL) {
-        // if index is nil, then initialize it and store the shape pointer in it
-        _shapesIndexLength = 1;
-        _shapesIndex = (Shape **)malloc(sizeof(Shape *) * _shapesIndexLength);
-        if (_shapesIndex == NULL) {
-            return false;
-        }
-        _shapesIndex[0] = s;
-        // cclog_trace(">>> length %d", _shapesIndexLength);
-        return true;
-    } else {
-        // shape index already exists, we insert the shape if it is not a duplicate
-        bool found = false;
-        for (uint32_t i = 0; i < _shapesIndexLength; i++) {
-            if (_shapesIndex[i] == s) {
-                found = true;
-            }
-        }
-        if (found == false) {
-            Shape **newPtr = (Shape **)realloc(_shapesIndex,
-                                               sizeof(Shape *) * (_shapesIndexLength + 1));
-            if (newPtr == NULL) {
-                // realloc failed, we simple don't add the shape in the index
-                cclog_error(">>> realloc failed");
-                return false;
-            }
-            _shapesIndex = newPtr;
-            _shapesIndexLength += 1;
-            _shapesIndex[_shapesIndexLength - 1] = s;
-            // cclog_trace("%s %d", ">>> length", _shapesIndexLength);
-            return true;
-        }
-    }
-    return false;
-}
-
-/// removes a shape from the shape index and returns whether the operation succeeded
-static bool _removeShapeFromIndex(const Shape *s) {
-    // cclog_trace(">>> remove shape %p", s);
-    for (uint32_t i = 0; i < _shapesIndexLength; i++) {
-        if (_shapesIndex[i] == s) {
-            _shapesIndex[i] = _shapesIndex[_shapesIndexLength - 1];
-            _shapesIndex[_shapesIndexLength - 1] = NULL;
-            _shapesIndexLength -= 1;
-            if (_shapesIndexLength == 0) {
-                free(_shapesIndex);
-                _shapesIndex = NULL;
-                // cclog_trace(">>> new size after remove %d", _shapesIndexLength);
-                return true;
-            }
-            Shape **newPtr = (Shape **)realloc(_shapesIndex, sizeof(Shape *) * _shapesIndexLength);
-            if (newPtr == NULL) {
-                cclog_error("realloc failed");
-                return false;
-            }
-            _shapesIndex = newPtr;
-            // cclog_trace(">>> new size after remove: %d", _shapesIndexLength);
-            return true;
-        }
-    }
-    return false;
 }
 
 // MARK: - private functions -
@@ -4382,7 +4291,6 @@ void _light_propagate(Shape *s,
     VERTEX_LIGHT_STRUCT_T currentLight;
     bool isCurrentAir, isCurrentOpen, isCurrentTransparent, isNeighborAir, isNeighborTransparent;
     LightNode *n = light_node_queue_pop(lightQueue);
-    uint32_t iCount = 0;
     while (n != NULL) {
         light_node_get_coords(n, &pos);
 
@@ -4643,7 +4551,6 @@ void _light_propagate(Shape *s,
 
         light_node_queue_recycle(n);
         n = light_node_queue_pop(lightQueue);
-        iCount++;
     }
 
     _lighting_postprocess_dirty(s, &min, &max);
@@ -4670,7 +4577,6 @@ void _light_removal(Shape *s,
 
     SHAPE_COORDS_INT3_T pos, insertPos;
     LightRemovalNode *rn = light_removal_node_queue_pop(lightRemovalQueue);
-    uint32_t iCount = 0;
     while (rn != NULL) {
         // get coords and light value of the light removal node (rn)
         light_removal_node_get_coords(rn, &pos);
@@ -4835,7 +4741,6 @@ void _light_removal(Shape *s,
 
         light_removal_node_queue_recycle(rn);
         rn = light_removal_node_queue_pop(lightRemovalQueue);
-        iCount++;
     }
 
 #if SHAPE_LIGHTING_DEBUG
