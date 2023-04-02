@@ -14,8 +14,8 @@ extern "C" {
 
 typedef pthread_mutex_t Mutex;
 
-//Mutex* mutex_new(void);
-//void mutex_free(Mutex *m);
+// Mutex* mutex_new(void);
+// void mutex_free(Mutex *m);
 
 void mutex_lock(Mutex *m);
 void mutex_unlock(Mutex *m);

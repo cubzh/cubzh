@@ -16,11 +16,11 @@
 #include "easings.h"
 #include "filo_list_uint16.h"
 #include "history.h"
+#include "mutex.h"
 #include "rigidBody.h"
 #include "scene.h"
 #include "transaction.h"
 #include "utils.h"
-#include "mutex.h"
 
 #ifdef DEBUG
 #define SHAPE_LIGHTING_DEBUG false
