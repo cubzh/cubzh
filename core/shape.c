@@ -3670,24 +3670,24 @@ static bool _shape_add_block(Shape *shape,
 ///
 static ShapeId getValidShapeId(void) {
     ShapeId resultId = 0;
-    mutex_lock(&shapeIDMutex);
+    mutex_lock(shapeIDMutex);
     if (availableShapeIds == NULL || filo_list_uint16_pop(availableShapeIds, &resultId) == false) {
         resultId = nextShapeId;
         nextShapeId += 1;
     }
-    mutex_unlock(&shapeIDMutex);
+    mutex_unlock(shapeIDMutex);
     return resultId;
 }
 
 ///
 static void recycleShapeId(const ShapeId shapeId) {
     // if list is nil, then initialize it
-    mutex_lock(&shapeIDMutex);
+    mutex_lock(shapeIDMutex);
     if (availableShapeIds == NULL) {
         availableShapeIds = filo_list_uint16_new();
     }
     filo_list_uint16_push(availableShapeIds, shapeId);
-    mutex_unlock(&shapeIDMutex);
+    mutex_unlock(shapeIDMutex);
 }
 
 // MARK: - private functions -
