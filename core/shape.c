@@ -141,9 +141,20 @@ struct _Shape {
 // MARK: - static variables -
 //
 // --------------------------------------------------
-static Mutex shapeIDMutex;
+static Mutex *shapeIDMutex = NULL;
 static ShapeId nextShapeId = 1;
 static FiloListUInt16 *availableShapeIds = NULL;
+
+void shape_initThreadSafety(void) {
+    if (shapeIDMutex != NULL) {
+        cclog_error("shape: thread safety initialized more than once");
+        return;
+    }
+    shapeIDMutex = mutex_new();
+    if (shapeIDMutex == NULL) {
+        cclog_error("shape: failed to init thread safety");
+    }
+}
 
 // MARK: - private functions prototypes -
 
