@@ -28,13 +28,13 @@ typedef pthread_mutex_t Mutex;
 Mutex *mutex_new(void);
 
 /// Free a Mutex
-void mutex_free(Mutex * const m);
+void mutex_free(Mutex *const m);
 
 /// Locks a Mutex
-void mutex_lock(Mutex * const m);
+void mutex_lock(Mutex *const m);
 
 /// Unlocks a Mutex
-void mutex_unlock(Mutex * const m);
+void mutex_unlock(Mutex *const m);
 
 #ifdef __cplusplus
 } // extern "C"

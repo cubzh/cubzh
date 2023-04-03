@@ -7,8 +7,8 @@
 #include "mutex.h"
 
 // C
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 // Core
 #include "cclog.h"
@@ -35,7 +35,7 @@ Mutex *mutex_new(void) {
 }
 
 /// Free a Mutex
-void mutex_free(Mutex* const m) {
+void mutex_free(Mutex *const m) {
     if (m == NULL) {
         cclog_error("mutex_free: mutex is NULL");
         return;
@@ -47,9 +47,8 @@ void mutex_free(Mutex* const m) {
     free(m);
 }
 
-void mutex_lock(Mutex * const m) {
+void mutex_lock(Mutex *const m) {
     if (m == NULL) {
-        cclog_error("mutex_lock: mutex is NULL");
         return;
     }
     DWORD waitResult = WaitForSingleObject(*m, INFINITE);
@@ -65,9 +64,8 @@ void mutex_lock(Mutex * const m) {
     }
 }
 
-void mutex_unlock(Mutex * const m) {
+void mutex_unlock(Mutex *const m) {
     if (m == NULL) {
-        cclog_error("mutex_unlock: mutex is NULL");
         return;
     }
     const bool ok = ReleaseMutex(*m);
@@ -95,7 +93,7 @@ Mutex *mutex_new(void) {
     return mtx;
 }
 
-void mutex_free(Mutex * const m) {
+void mutex_free(Mutex *const m) {
     if (m == NULL) {
         cclog_error("mutex_free: mutex is NULL");
         return;
@@ -107,11 +105,17 @@ void mutex_free(Mutex * const m) {
     free(m);
 }
 
-void mutex_lock(Mutex * const m) {
+void mutex_lock(Mutex *const m) {
+    if (m == NULL) {
+        return;
+    }
     pthread_mutex_lock((pthread_mutex_t *)m);
 }
 
-void mutex_unlock(Mutex * const m) {
+void mutex_unlock(Mutex *const m) {
+    if (m == NULL) {
+        return;
+    }
     pthread_mutex_unlock((pthread_mutex_t *)m);
 }
 
