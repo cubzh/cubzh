@@ -204,10 +204,11 @@ blocks:
             end
         end
 
-            - title: "Controls"
+    - title: "Controls"
 
-            - subtitle: "Inputs"
-            - code: |
+    - subtitle: "Inputs"
+
+    - code: |
         Client.Action1 = function()
             print("Press Space or button on mobile")
         end
