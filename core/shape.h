@@ -71,6 +71,11 @@ typedef uint8_t ShapeDrawMode;
 #define SHAPE_DRAWMODE_GREY 4
 #define SHAPE_DRAWMODE_GRID 8
 
+/// Initializes mutex for shape thread safety.
+/// This is to be called before using the shape API.
+/// This is optional. If not called, the shape API is not thread-safe.
+void shape_initThreadSafety(void);
+
 // Creates an empty Shape
 Shape *shape_make(void);
 // Creates a copy of the given shape
