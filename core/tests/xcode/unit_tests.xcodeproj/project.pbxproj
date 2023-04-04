@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		85DD9D3E29DC291700C6A5D4 /* mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 85DD9D3C29DC291700C6A5D4 /* mutex.c */; };
 		85E6383828F7478E001FC12F /* test_list.c in Sources */ = {isa = PBXBuildFile; fileRef = 85E6383528F7478E001FC12F /* test_list.c */; };
 		85E6389428F747A5001FC12F /* magicavoxel.c in Sources */ = {isa = PBXBuildFile; fileRef = 85E6383928F747A4001FC12F /* magicavoxel.c */; };
 		85E6389528F747A5001FC12F /* color_palette.c in Sources */ = {isa = PBXBuildFile; fileRef = 85E6383A28F747A4001FC12F /* color_palette.c */; };
@@ -86,6 +87,8 @@
 		85B30EC929191DF10066E826 /* test_filo_list_uint16.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_filo_list_uint16.h; path = ../test_filo_list_uint16.h; sourceTree = "<group>"; };
 		85B30ECA29191DF10066E826 /* test_filo_list_uint32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_filo_list_uint32.h; path = ../test_filo_list_uint32.h; sourceTree = "<group>"; };
 		85B78E2828F8084A00AD31DE /* test_transform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_transform.h; path = ../test_transform.h; sourceTree = "<group>"; };
+		85DD9D3C29DC291700C6A5D4 /* mutex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mutex.c; path = ../../mutex.c; sourceTree = "<group>"; };
+		85DD9D3D29DC291700C6A5D4 /* mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mutex.h; path = ../../mutex.h; sourceTree = "<group>"; };
 		85E6382428F74695001FC12F /* unit_tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = unit_tests; sourceTree = BUILT_PRODUCTS_DIR; };
 		85E6383328F7478E001FC12F /* acutest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = acutest.h; path = ../acutest.h; sourceTree = "<group>"; };
 		85E6383428F7478E001FC12F /* test_shape.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = test_shape.h; path = ../test_shape.h; sourceTree = "<group>"; };
@@ -276,6 +279,8 @@
 				85E6389128F747A5001FC12F /* map_string_float3.h */,
 				85E6387D28F747A5001FC12F /* matrix4x4.c */,
 				85E6388428F747A5001FC12F /* matrix4x4.h */,
+				85DD9D3C29DC291700C6A5D4 /* mutex.c */,
+				85DD9D3D29DC291700C6A5D4 /* mutex.h */,
 				85E6384728F747A4001FC12F /* octree.c */,
 				85E6388028F747A5001FC12F /* octree.h */,
 				85E6384F28F747A4001FC12F /* quaternion.c */,
@@ -421,6 +426,7 @@
 				85E638A628F747A5001FC12F /* scene.c in Sources */,
 				85E638B628F747A5001FC12F /* serialization_v5.c in Sources */,
 				85E6389A28F747A5001FC12F /* octree.c in Sources */,
+				85DD9D3E29DC291700C6A5D4 /* mutex.c in Sources */,
 				85E6389628F747A5001FC12F /* utils.c in Sources */,
 				85E6389F28F747A5001FC12F /* filo_list_float3.c in Sources */,
 				85E638BA28F747A5001FC12F /* colors.c in Sources */,

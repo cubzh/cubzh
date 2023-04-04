@@ -318,7 +318,7 @@ Shape *shape_make(void) {
     s->nbBlocks = 0;
     s->fragmentedVBs = doubly_linked_list_new();
 
-    s->id = getValidShapeId(); // TODO: use mutex - leads to random crashes otherwise
+    s->id = getValidShapeId();
 
     s->maxWidth = s->maxHeight = s->maxDepth = 0;
 
