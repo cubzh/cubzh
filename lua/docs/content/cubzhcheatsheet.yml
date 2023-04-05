@@ -549,6 +549,10 @@ blocks:
 
             -- rest of the code ...
         end
+        
+        Client.Tick = function(dt)
+               multi:tick(dt)
+        end
 
         Client.OnPlayerJoin = function(p)
             multi:initPlayer(p)
