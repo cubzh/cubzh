@@ -525,7 +525,7 @@ pre {
   color: #fff;
   font-family: "Montserrat";
   letter-spacing: 1.4px;
-  "font-size", calc(9px + 0.8vw)
+  font-size, calc(9px + 0.8vw)
   line-height: 32px;
   margin-top: 3px;
 }
