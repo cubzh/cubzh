@@ -287,7 +287,7 @@ img {
   background-color: #888888;
   right: 10px;
   top: 10px;
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 #edit-label a {
