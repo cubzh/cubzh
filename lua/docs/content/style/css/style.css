@@ -44,7 +44,7 @@
 
 html {
   line-height: 22px;
-  font-family: "open-sans-light", sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 body {
@@ -523,9 +523,9 @@ pre {
 
 .button .button-content p {
   color: #fff;
-  font-family: m6x11, sans-serif;
+  font-family: 'Montserrat', sans-serif;
   letter-spacing: 1.4px;
-  font-size: calc(12px + 0.8vw);
+  font-size: calc(9px + 0.8vw);
   line-height: 32px;
   margin-top: 3px;
 }
