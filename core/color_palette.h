@@ -91,7 +91,8 @@ bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
                                                       SHAPE_COLOR_INDEX_INT_T *entryOut);
 void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
-bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
+bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool remap);
+void color_palette_remove_all_unused_colors(ColorPalette *p, bool remap);
 uint32_t color_palette_get_color_use_count(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGBAColor color);
 RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
