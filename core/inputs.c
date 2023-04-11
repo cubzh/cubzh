@@ -129,6 +129,10 @@ InputContext *inputContext(void) {
     if (c == NULL) {
 
         c = (InputContext *)malloc(sizeof(InputContext));
+        if (c == NULL) {
+            return c;
+        }
+        memset(c, 0, sizeof(InputContext)); // fill memory buffer with zeros
 
         c->touches[0].x = 0.0f;
         c->touches[0].y = 0.0f;
