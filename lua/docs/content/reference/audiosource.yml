@@ -25,7 +25,7 @@ properties:
     - name: "Pan"
       type: "number"
       description: |
-          `AudioSource`'s left/right pan (from `-1`: full left ear, to `1`: full right ear, with a default of `0`: both ears at equal volume).
+          `AudioSource`'s left/right pan (from `-1.0`: full left ear, to `1.0`: full right ear, with a default of `0.0`: both ears at equal volume).
 
           ⚠️ This has no effect if the source is spatialized.
       samples:
@@ -60,39 +60,46 @@ properties:
               as.Sound = "drinking_1"
               as.Spatialized = false
     - name: "StartAt"
-      type: "integer"
+      type: "number"
       description: |
-          `AudioSource`'s start time (in milliseconds).
+          `AudioSource`'s start time (in seconds).
       samples:
           - code: |
               local as = AudioSource()
               as.Sound = "wood_impact_1"
-              as.StartAt = 200
+              as.StartAt = 0.2
     - name: "StopAt"
-      type: "integer"
+      type: "number"
       description: |
-          `AudioSource`'s end time (in milliseconds).
+          `AudioSource`'s end time (in seconds).
       samples:
           - code: |
               local as = AudioSource()
               as.Sound = "gun_reload_1"
-              as.StopAt = 800
+              as.StopAt = 0.8
     - name: "Volume"
       type: "number"
       description: |
-          `AudioSource`'s volume (from `0`: no sound, to `1`: full sound).
+          `AudioSource`'s volume (from `0.0`: no sound, to `1.0`: full sound).
       samples:
           - code: |
               local as = AudioSource()
               as.Sound = "metal_clanging_1"
               as.Volume = 0.8
+
+    - name: "Length"
+      type: "number"
+      read-only: true
+      description: |
+          Length of the original sound in seconds. It does not take into account [Pitch], [StartAt] or [StopAt].
+
     - name: "Loop"
       type: "boolean"
       description: |
           Automatically restart the `AudioSource` playback at the end of this one.
       samples:
           - code: |
-              local as = AudioSource()
+              as = AudioSource()
               as.Sound = "drinking_1"
               as.Loop = true
               as:Play()
@@ -105,6 +112,21 @@ functions:
     - name: "Play"
       description: |
           Starts the `AudioSource` playback.
+
+          If you want to play a sound that has already been played, you must use 2 AudioSources to avoid having a blank between the playbacks.
+      samples:
+        - code: |
+            Client.Action2 = function()
+              if a1 == nil then
+                a1 = AudioSource("gun_reload_1")
+                a1:Play()
+                a2 = nil -- stops the playback
+              else
+                a2 = AudioSource("gun_reload_1")
+                a2:Play()
+                a1 = nil
+              end
+            end
 
     - name: "Stop"
       description: |

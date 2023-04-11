@@ -107,10 +107,6 @@ bool v6_write_size_at(long position, uint32_t size, FILE *fd);
 // Writes full chunk (header + data) to file, compress the data if required, function will free data
 // when done
 bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doCompress, FILE *fd);
-bool chunk_v6_write_palette(FILE *fd,
-                            const ColorPalette *palette,
-                            bool doCompress,
-                            SHAPE_COLOR_INDEX_INT_T **paletteMapping);
 bool chunk_v6_write_shape(FILE *fd,
                           Shape *shape,
                           uint16_t *shapeId,
@@ -288,11 +284,12 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     uint32_t paletteCompressedDataSize = 0;
     void *paletteCompressedData = NULL;
     if (artistPalette != NULL) {
+        SHAPE_COLOR_INDEX_INT_T *fakePaletteMapping;
         if (_chunk_v6_palette_create_and_write_compressed_buffer(artistPalette,
                                                                  &paletteUncompressedDataSize,
                                                                  &paletteCompressedDataSize,
                                                                  &paletteCompressedData,
-                                                                 NULL) == false) {
+                                                                 &fakePaletteMapping) == false) {
             return false;
         }
         size += getChunkHeaderSize(P3S_CHUNK_ID_PALETTE) + paletteCompressedDataSize;
@@ -511,30 +508,6 @@ bool chunk_v6_write_file(uint8_t chunkID, uint32_t size, void *data, uint8_t doC
     }
 
     free(data);
-    return true;
-}
-
-bool chunk_v6_write_palette(FILE *fd,
-                            const ColorPalette *palette,
-                            bool doCompress,
-                            SHAPE_COLOR_INDEX_INT_T **paletteMapping) {
-    uint32_t uncompressedSize = 0;
-    void *uncompressedData = NULL;
-    _chunk_v6_palette_create_and_write_uncompressed_buffer(palette,
-                                                           &uncompressedSize,
-                                                           &uncompressedData,
-                                                           paletteMapping);
-
-    /// write file
-    if (chunk_v6_write_file(P3S_CHUNK_ID_PALETTE,
-                            uncompressedSize,
-                            uncompressedData,
-                            doCompress,
-                            fd) == false) {
-        cclog_error("failed to write palette chunk");
-        return false;
-    }
-
     return true;
 }
 
@@ -1456,6 +1429,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t shapePaletteSize;
     void *shapePaletteData = NULL;
     SHAPE_COLOR_INDEX_INT_T *paletteMapping = NULL;
+    color_palette_remove_all_unused_colors(shape_get_palette(shape), false);
     _chunk_v6_palette_create_and_write_uncompressed_buffer(shape_get_palette(shape),
                                                            &shapePaletteSize,
                                                            &shapePaletteData,

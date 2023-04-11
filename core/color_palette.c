@@ -274,7 +274,7 @@ void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
     }
 }
 
-bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
+bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool remap) {
     if (entry >= p->count || p->entries[entry].blocksCount != 0) {
         return false;
     }
@@ -301,10 +301,22 @@ bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T 
         p->orderedIndices[i] = p->orderedIndices[i + 1];
         p->entries[p->orderedIndices[i]].orderedIndex = i;
     }
+    p->entries[entry].orderedIndex = SHAPE_COLOR_INDEX_MAX_COUNT;
 
-    _color_palette_unmap_entry_and_remap_duplicate(p, entry);
+    if (remap) {
+        _color_palette_unmap_entry_and_remap_duplicate(p, entry);
+    }
 
     return true;
+}
+
+void color_palette_remove_all_unused_colors(ColorPalette *p, bool remap) {
+    for (uint8_t i = 0; i < p->count; ++i) {
+        if (p->entries[i].orderedIndex < SHAPE_COLOR_INDEX_MAX_COUNT &&
+            p->entries[i].blocksCount == 0) {
+            color_palette_remove_unused_color(p, i, remap);
+        }
+    }
 }
 
 uint32_t color_palette_get_color_use_count(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
