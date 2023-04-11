@@ -284,11 +284,12 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     uint32_t paletteCompressedDataSize = 0;
     void *paletteCompressedData = NULL;
     if (artistPalette != NULL) {
+        SHAPE_COLOR_INDEX_INT_T *fakePaletteMapping;
         if (_chunk_v6_palette_create_and_write_compressed_buffer(artistPalette,
                                                                  &paletteUncompressedDataSize,
                                                                  &paletteCompressedDataSize,
                                                                  &paletteCompressedData,
-                                                                 NULL) == false) {
+                                                                 &fakePaletteMapping) == false) {
             return false;
         }
         size += getChunkHeaderSize(P3S_CHUNK_ID_PALETTE) + paletteCompressedDataSize;
