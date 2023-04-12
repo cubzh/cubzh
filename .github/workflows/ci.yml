@@ -23,14 +23,11 @@ jobs:
         with:
           go-version: '>=1.18'
 
-      - name: Build Dagger program
+      - name: Build & Run Dagger program
         working-directory: ./ci/core_unit_tests
-        run: go build -v ./...
-
-      - name: Run Dagger program
-        working-directory: ./ci/core_unit_tests
-        run: ./unit_tests
-
+        env:
+          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+        run: go run ./...
 
   # Format
   # -------------------------------------------------- 
@@ -48,13 +45,11 @@ jobs:
         with:
           go-version: '>=1.18'
 
-      - name: Build Dagger program
+      - name: Build & Run Dagger program
         working-directory: ./ci/format
-        run: go build -v ./...
-
-      - name: Run Dagger program
-        working-directory: ./ci/format
-        run: ./format
+        env:
+          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+        run: go run ./...
 
   # other_ci_job:
   #   ...
