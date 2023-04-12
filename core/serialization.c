@@ -429,6 +429,14 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
             // uncompress lighting data
             uLong resultSize = size;
             void *uncompressedData = malloc(size);
+
+            if (uncompressedData == NULL) {
+                // memory allocation failed
+                cclog_error("baked file: failed to uncompress lighting data (memory alloc)");
+                free(compressedData);
+                return false;
+            }
+
             if (uncompress(uncompressedData, &resultSize, compressedData, compressedSize) != Z_OK) {
                 cclog_error("baked file: failed to uncompress lighting data");
                 free(uncompressedData);
@@ -436,10 +444,12 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
                 return false;
             }
             free(compressedData);
+            compressedData = NULL;
 
             // sanity check
             if (resultSize != size) {
                 cclog_info("baked file: mismatched lighting data uncompressed size, skip");
+                free(uncompressedData);
                 return false;
             }
 
