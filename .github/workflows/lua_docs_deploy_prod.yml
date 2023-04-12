@@ -31,6 +31,7 @@ jobs:
 
       - name: Run Dagger program
         env: # Or as an environment variable
+          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
           DOCKER_REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
           DOCKER_REGISTRY_TOKEN: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
           LUA_DOCS_DOCKER_IMAGE_NAME: ${{ secrets.LUA_DOCS_DOCKER_IMAGE_NAME }}
