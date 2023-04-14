@@ -1429,7 +1429,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t shapePaletteSize;
     void *shapePaletteData = NULL;
     SHAPE_COLOR_INDEX_INT_T *paletteMapping = NULL;
-    color_palette_remove_all_unused_colors(shape_get_palette(shape), false);
+    color_palette_remove_all_unused_colors(shape_get_palette(shape), true);
     _chunk_v6_palette_create_and_write_uncompressed_buffer(shape_get_palette(shape),
                                                            &shapePaletteSize,
                                                            &shapePaletteData,
