@@ -5,26 +5,48 @@ description: A [MutableShape] is a [Shape] which [Block]s can be modified.
 
 constructors: 
   - description: |
-        Creates a MutableShape which model can be empty, loaded from an imported [Item], or copied from an existing [Shape] or [MutableShape].
-      
-        The optional parameter `loadBakedLight`, by default `false`, determines whether or not the shape should be loaded with baked lighting. If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none. Any subsequent changes to the shape's blocks will automatically maintain its baked lighting.
+        Creates a [MutableShape] which model can be empty, loaded from an imported [Item] (see [Items]), or copied from an existing [Shape] or [MutableShape].
+
+        The optional [table] parameter can be used to override default configuration:
+        `{includeChildren = false, bakedLight = false}`.
+
+        `bakedLight` (false by default) determines whether or not the shape should be loaded with baked lighting.  If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none. Any subsequent changes to the shape's blocks will automatically maintain its baked lighting.
+
+        When copying a [Shape], `includeChildren` (false by default) determines if children should be copied as well.
     argument-sets:
       -
-
+        - name: "config"
+          type: "table"
+          optional: true
       -
         - name: "item"
           type: "Item"
-        - name: "loadBakedLight"
-          type: "boolean"
+        - name: "config"
+          type: "table"
           optional: true
       -
         - name: "copiedShape"
           type: "Shape"
+        - name: "config"
+          type: "table"
+          optional: true
       -
         - name: "copiedMutableShape"
           type: "MutableShape"
+        - name: "config"
+          type: "table"
+          optional: true
+
     samples:
-      - code: local s = MutableShape(R.username.itemName)
+      - code: |
+          -- CREATE SHAPE FROM LOADED ITEM
+          local myMutableShape = MutableShape(Items.someuser.someitem)
+          World:AddChild(myMutableShape) -- adds created MutableShape to the World
+      - 
+        code: |
+          -- COPY SHAPE, INCLUDING CHILDREN:
+          local s2 = MutableShape(s1, {includeChildren = true})
+          World:AddChild(s2) -- adds copied MutableShape to the World
 
 properties:
 
