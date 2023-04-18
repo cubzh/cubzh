@@ -186,6 +186,9 @@ a {
 }
 
 #header h1 a {
+  font-family: m6x11, sans-serif;
+  font-size: 24px;
+  letter-spacing: 1px;
   color: #000;
 }
 
@@ -270,19 +273,44 @@ img {
   position: fixed;
   height: 100%;
   width: 260px;
+  max-width: 260px;
   left:0;
   top:0;
   margin: 0;
-  padding: 20px;
-  padding-top: 100px;
-  background-color: #FFFFFF;
+  padding: 0;
+  background-color: #f7f7f7;
   border-right: thin dashed #aaa;
+}
+
+#container #sidemenu-header {
+  height: 60px;
+  padding: 15px;
+  padding-left: 20px;
+  padding-right: 20px;
+  background-color: #ddd;
+  border-bottom: thin dashed #aaa;
+}
+
+#container #sidemenu-header img {
+  display: block;
+  height: 60px;
+/*  width: auto;*/
+  margin-right: auto;
+  margin-left: auto;
+}
+
+#container #sidemenu-content {
+  padding: 20px;
+}
+
+#container #sidemenu-content ul li {
+  margin-bottom: 8px;
 }
 
 #container #content {
   position: relative;
   padding-bottom: 20px;
-  margin-left: 300px;
+  margin-left: 260px;
 }
 
 #container #content #content-container {
@@ -297,35 +325,20 @@ img {
   background-color: #f7f7f7;
   margin: 0;
   padding: 0;
-  margin-left: 300px;
+  margin-left: 260px;
   border-left: thin dashed #aaa;
 }
 
-@media (max-width: 800px) {
-  #container #menu {
-      display: block;
-  }
-
-  #container #sidemenu {
-      display: none;
-  }
-
-  #container #content {
-    margin-left: 0;
-  }
-
-  #container #footer {
-    margin-left: 0;
-    border-left: none;
-  }
+#container #menu, #container #footer {
+  padding-bottom: 20px;
 }
 
 #container #menu ul li, #container #footer ul li {
   display: inline-block;
   margin: 0;
+  margin-top: 20px;
   padding: 0;
   margin-left: 20px;
-  line-height: 50px;
 }
 
 #container #sidemenu ul li {
@@ -555,34 +568,36 @@ pre {
   padding: 0;
   margin: 0;
   box-shadow: 0 3px 2px 0 rgba(0, 0, 0, 0.3);
-  /*filter: drop-shadow(0px 3px 0px rgba(0, 0, 0, 0.3));*/
 }
 
 .button .button-content {
+  display: table;
   border-right: 4px solid #0BFA12;
   border-left: 4px solid #03B608;
   padding: 10px;
   padding-top: 6px;
   padding-bottom: 6px;
-  min-width: 120px;
-  height: 27px;
-  justify-content: center;
-  align-items: center;
+}
+
+.button .button-content .cell {
+  display: table-cell;
+  vertical-align: middle;
 }
 
 .button .button-content p {
   display: inline-block;
   color: #FFFFFF;
   font-family: m6x11, sans-serif;
-  letter-spacing: 1.4px;
+  letter-spacing: 1px;
   font-size: 24px;
-  line-height: 32px;
+  padding-top: 4px;
 }
 
 .button .button-content svg {
   display: inline-block;
-  margin-top:2px;
-  float: left;
+  fill: #FFF;
+  height: 24px;
+  margin-right: 10px;
 }
 
 .button.discord {
@@ -601,18 +616,38 @@ pre {
   margin-right: 10px !important;
 }
 
-svg{
-  fill: #FFF;
-  height: 23px;
-  width: 3vw;
-  min-width: 20px;
-  margin-right: 7px;
-}
-
 .header-table {
   width: 100%;
 }
 
-.script {
-  font-size: calc(12px + 0.4vw);
+@media (max-width: 800px) {
+  #container #menu {
+      display: block;
+  }
+
+  #container #sidemenu {
+      display: none;
+  }
+
+  #container #content {
+    margin-left: 0;
+  }
+
+  #container #footer {
+    margin-left: 0;
+    border-left: none;
+  }
+
+  .button .button-content svg {
+    margin-right: 0;
+  }
+
+  .button .button-content p {
+    display: none;
+  }
+
+  .button .button-content {
+    min-width: 0;
+    padding: 6px;
+  }
 }
