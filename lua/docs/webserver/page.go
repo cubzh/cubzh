@@ -265,6 +265,9 @@ func getTypeLink(str string) string {
 
 	if route, ok := typeRoutes[str]; ok {
 		str = "<a class=\"type\" href=\"" + route + "\">" + str + "</a>"
+	} else {
+		// fallback to local type anchor (may not work)
+		str = "<a class=\"type\" href=\"#type-" + slug.Make(str) + "\">" + str + "</a>"
 	}
 
 	return str

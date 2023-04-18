@@ -268,10 +268,11 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 		currentType.functions = {}
 		currentType.properties = {}
 
-		currentDescription = nil
+		currentDescription = currentType.description
+		currentDescriptionBlockType = "text"
+
 		currentFunction = nil
 		currentProperty = nil
-		currentField = nil
 
 		name, line = parseName(line)
 		if name == nil then error("a type needs a name") end

@@ -203,6 +203,8 @@ func (m *Module) Sanitize() {
 
 	for _, mType := range m.Types {
 
+		sanitizeBlocks(mType.Description)
+
 		for _, f := range mType.Functions {
 			sanitizeBlocks(f.Description)
 		}

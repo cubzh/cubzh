@@ -20,6 +20,12 @@
 						<div class="type-container">
 
 							<h1><a id="type-{{ GetAnchorLink .Name }}" href="#type-{{ GetAnchorLink .Name }}">{{ .Name }}</a></h1>
+
+							{{ if .Description }}
+								<div class="object-element-row">
+									{{ template "contentblocks" .Description }}
+								</div>
+							{{ end }}
 				
 							{{ if .Functions }} 
 							<h2><a id="type-{{ GetAnchorLink .Name }}-functions" href="#type-{{ GetAnchorLink .Name }}-functions">Functions</a></h2>

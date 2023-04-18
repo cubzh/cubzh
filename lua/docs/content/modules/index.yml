@@ -14,7 +14,8 @@ blocks:
         - When required, a module returns a single table
         - Global variables can't be defined within modules (only local ones)
         - When a module is required several times, the returned table is always the exact same reference
-    - text: "Currently, only modules packaged with the application can be used, they're all open-source and documented on this page."
+    - text: |
+        Currently, only modules packaged with the application can be used, they're all [open-source](https://github.com/cubzh/cubzh/tree/main/lua/modules) and documented on this page.
     - subtitle: "Featured modules:"
     - list:
         - "<a href=\"/modules/ease\">ease</a>"

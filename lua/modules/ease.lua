@@ -243,6 +243,7 @@ ease.inElastic = function(self, object, duration, config)
 end
 
 ---@type easeInstance
+--- An [easeInstance] is a [table] returned by all ease functions to provide control over the ongoing animation.
 
 ---@function cancel Cancels easing when called.
 ---@code local instance = ease:outBack(someObject, 1.0).Position = {10, 10, 10}
