@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -297,6 +298,8 @@ func parseContent() error {
 							Text: err.Error(),
 						},
 					}
+				} else {
+					module.Name = path.Base(cleanPath)
 				}
 
 				fmt.Println("cleanPath:", cleanPath)

@@ -10,7 +10,7 @@
 			<div id="content">
 				<div id="content-container">
 
-				<h1>{{ GetTitle . }}</h1>
+				<h1>Module: {{ .Name }}</h1>
 
 				{{ template "contentblocks" .Description }}
 
@@ -103,6 +103,7 @@
 
 					{{ end }} <!-- end range .Types -->
 				{{ end }} <!-- end if .Types -->
+				<div id="edit-label">📃 <a href="https://github.com/cubzh/cubzh/blob/main/lua/modules/{{ .Name }}.lua">Source</a></div>
 				</div>
 			</div>
 			{{ template "footer" . }}

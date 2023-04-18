@@ -163,6 +163,7 @@ br {
   border: 1px solid #eee;
   padding: 10px;
   box-shadow: 0px 2px 2px #eee;
+  margin-top: 20px;
 }
 
 .name {

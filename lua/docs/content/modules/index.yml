@@ -1,7 +1,41 @@
 keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "modules", "lua"]
 title: "Modules"
-description: "This page documents all objects, functions and properties available in Cubzh scripting environment."
+description: "A list of modules available in Cubzh."
 blocks:
-    - text: "Here's a list of modules available in Cubzh:"
+    - text: "A module is a script that can be loaded using `require`."
+    - code: |
+        -- uikit is a module that can be used to build user interfaces.
+        -- Here's how you can use it to display a button:
+        uikit = require("uikit")
+        local btn = uikit:createButton("this is a button")
+        btn.onRelease = function() print("clicked") end
+    - text: "All modules follow these simple rules:"
     - list:
+        - When required, a module returns a single table
+        - Global variables can't be defined within modules (only local ones)
+        - When a module is required several times, the returned table is always the exact same reference
+    - text: "Currently, only modules packaged with the application can be used, they're all open-source and documented on this page."
+    - subtitle: "Featured modules:"
+    - list:
+        - "<a href=\"/modules/ease\">ease</a>"
+        - "<a href=\"/modules/explode\">explode</a>"
+        - "<a href=\"/modules/localevent\">localevent</a>"
+        - "<a href=\"/modules/multi\">multi</a>"
+        - "<a href=\"/modules/particles\">particles</a>"
+        - "<a href=\"/modules/sfx\">sfx</a>"
         - "<a href=\"/modules/uikit\">uikit</a>"
+        - "<a href=\"/modules/uitheme\">uitheme</a>"
+
+    - subtitle: "Other available modules:"
+
+    - list:
+        - "<a href=\"/modules/alert\">alert</a>"
+        - "<a href=\"/modules/api\">api</a>"
+        - "<a href=\"/modules/cleanup\">cleanup</a>"
+        - "<a href=\"/modules/colorpicker\">colorpicker</a>"
+        - "<a href=\"/modules/equipments\">equipments</a>"
+        - "<a href=\"/modules/orientationcube\">orientationcube</a>"
+        - "<a href=\"/modules/palette\">palette</a>"
+        - "<a href=\"/modules/plane\">plane</a>"
+        - "<a href=\"/modules/time\">time</a>"
+
