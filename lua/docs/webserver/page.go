@@ -1,11 +1,10 @@
 package main
 
 import (
+	"github.com/gosimple/slug"
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/gosimple/slug"
 )
 
 // Page describes possible content for one page

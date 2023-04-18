@@ -19,10 +19,10 @@
 
 						<div class="type-container">
 
-							<h1><a id="functions" href="#type-{{ .Name }}">{{ .Name }}</a></h1>
+							<h1><a id="type-{{ GetAnchorLink .Name }}" href="#type-{{ GetAnchorLink .Name }}">{{ .Name }}</a></h1>
 				
 							{{ if .Functions }} 
-							<h2><a id="functions" href="#functions">Functions</a></h2>
+							<h2><a id="type-{{ GetAnchorLink .Name }}-functions" href="#type-{{ GetAnchorLink .Name }}-functions">Functions</a></h2>
 								
 								{{ range $index, $function := .Functions }}
 										<a id="functions-{{ GetAnchorLink .Name }}"></a>

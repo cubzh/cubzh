@@ -1,10 +1,10 @@
 package main
 
 import (
-// "regexp"
-// "sort"
-// "strings"
-// "github.com/gosimple/slug"
+	"regexp"
+	"sort"
+	"strings"
+	// "github.com/gosimple/slug"
 )
 
 // Module documents a module,
@@ -170,61 +170,50 @@ func (m *Module) GetTitle() string {
 	return "Module"
 }
 
-func (m *Module) Sanitize() {
+func sanitizeBlocks(blocks []*ContentBlock) {
+	if blocks == nil {
+		return
+	}
 
-	// currentType = m.Type
-
-	// reInlineCode := regexp.MustCompile("`([^`]+)`")
-	// inlineCodeReplacement := `<span class="code">$1</span>`
+	reInlineCode := regexp.MustCompile("`([^`]+)`")
+	inlineCodeReplacement := `<span class="code">$1</span>`
 	// inlineCodeReplacementMetaDescription := `$1`
 
-	// reLink := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
-	// linkReplacement := `<a href="$2">$1</a>`
+	reLink := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+	linkReplacement := `<a href="$2">$1</a>`
 	// linkReplacementMetaDescription := `$1`
 
-	// reTypeLink := regexp.MustCompile(`\[([A-Za-z0-9]+)\]`)
+	reTypeLink := regexp.MustCompile(`\[([A-Za-z0-9]+)\]`)
 	// typeLinkReplacementMetaDescription := `$1`
 
-	// if m.Description != "" {
-	// 	// p.Description = strings.TrimSpace(p.Description)
-	// 	// p.MetaDescription = p.Description
-	// 	// p.Description = strings.ReplaceAll(p.Description, "\n", "<br>")
-	// 	// p.Description = reInlineCode.ReplaceAllString(p.Description, inlineCodeReplacement)
-	// 	// p.Description = reLink.ReplaceAllString(p.Description, linkReplacement)
-	// 	// p.Description = reTypeLink.ReplaceAllStringFunc(p.Description, getTypeLink)
+	for _, b := range blocks {
+		if b.Text != "" {
+			b.Text = strings.TrimSpace(b.Text)
+			b.Text = strings.ReplaceAll(b.Text, "\n", "<br>")
+			b.Text = reInlineCode.ReplaceAllString(b.Text, inlineCodeReplacement)
+			b.Text = reLink.ReplaceAllString(b.Text, linkReplacement)
+			b.Text = reTypeLink.ReplaceAllStringFunc(b.Text, getTypeLink)
+		}
+	}
+}
 
-	// 	// p.MetaDescription = strings.ReplaceAll(p.MetaDescription, "\n", " ")
-	// 	// p.MetaDescription = reInlineCode.ReplaceAllString(p.MetaDescription, inlineCodeReplacementMetaDescription)
-	// 	// p.MetaDescription = reLink.ReplaceAllString(p.MetaDescription, linkReplacementMetaDescription)
-	// 	// p.MetaDescription = reTypeLink.ReplaceAllString(p.MetaDescription, typeLinkReplacementMetaDescription)
-	// }
+func (m *Module) Sanitize() {
 
-	// if m.Functions != nil {
-	// 	for _, f := range m.Functions {
-	// 		if f.Description != "" {
-	// 			f.Description = strings.TrimSpace(f.Description)
-	// 			f.Description = strings.ReplaceAll(f.Description, "\n", "<br>")
-	// 			f.Description = reInlineCode.ReplaceAllString(f.Description, inlineCodeReplacement)
-	// 			f.Description = reLink.ReplaceAllString(f.Description, linkReplacement)
-	// 			f.Description = reTypeLink.ReplaceAllStringFunc(f.Description, getTypeLink)
-	// 		}
-	// 	}
-	// }
+	sanitizeBlocks(m.Description)
 
-	// if m.Properties != nil {
-	// 	for _, prop := range m.Properties {
-	// 		if prop.Description != "" {
-	// 			prop.Description = strings.TrimSpace(prop.Description)
-	// 			prop.Description = strings.ReplaceAll(prop.Description, "\n", "<br>")
-	// 			prop.Description = reInlineCode.ReplaceAllString(prop.Description, inlineCodeReplacement)
-	// 			prop.Description = reLink.ReplaceAllString(prop.Description, linkReplacement)
-	// 			prop.Description = reTypeLink.ReplaceAllStringFunc(prop.Description, getTypeLink)
-	// 		}
-	// 	}
-	// }
+	for _, mType := range m.Types {
 
-	// sort.Sort(ModuleFunctionsByName(m.Functions))
-	// sort.Sort(ModulePropertiesByName(m.Properties))
+		for _, f := range mType.Functions {
+			sanitizeBlocks(f.Description)
+		}
+
+		for _, p := range mType.Properties {
+			sanitizeBlocks(p.Description)
+		}
+
+		sort.Sort(ModuleFunctionsByName(mType.Functions))
+		sort.Sort(ModulePropertiesByName(mType.Properties))
+	}
 }
 
 // sort.Interface implementations

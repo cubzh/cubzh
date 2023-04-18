@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gosimple/slug"
+	yaml "gopkg.in/yaml.v2"
 	"log"
 	"net/http"
 	"os"
@@ -12,8 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -172,7 +172,7 @@ func GetTypeRoute(typeName string) string {
 	if route, ok := typeRoutes[typeName]; ok {
 		return route
 	}
-	return ""
+	return "#type-" + slug.Make(typeName) // local type
 }
 
 // parseContent is only done once at startup in RELEASE mode.
