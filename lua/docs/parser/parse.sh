@@ -5,7 +5,7 @@ OUTPUT_DIR="/www/modules"
 
 rm -f "$OUTPUT_DIR"/*.json
 
-for file in "$INPUT_DIR"/*
+for file in "$INPUT_DIR"/*.lua
 do
   name="$(basename -- $file)"
   extension="${name##*.}"
