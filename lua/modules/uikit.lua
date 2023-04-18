@@ -1,35 +1,35 @@
---- This module can be used to implement user interfaces.
+--[[
+UI module used to implement default user interfaces in Cubzh. 
+
+//!\\ Still a work in progress. Your scripts may break in the future if you use it now. 
+
+]]--
 
 local ui = {
-
 	-- CONSTANTS
-
-	---@property kUILayer integer The camera layer used by the UI.
 	kUILayer = 2,
-
 	kUIFar = 1000,
-	kLayerStep = -0.01, -- children offset
-
-	---@property kUICollisionGroup integer Collision group for ui elements
+	kLayerStep = -0.1, -- children offset
 	kUICollisionGroup = 7,
-	kShapeScale = 5, -- default scale for shapes
+	kShapeScale = 5,
+
 	kPadding = 4,
 	kButtonPadding = 4,
 	kButtonBorder = 3,
 
-	ButtonState = {
+	State = {
 		Idle = 0,
 		Pressed = 1,
-		Disabled = 3
+		Focused = 2,
+		Disabled = 3,
+		Selected = 4,
 	},
 
+	-- Note: NodeType will be removed
 	NodeType = {
 		None = 0,
-		Node = 1,
-		Frame = 2,
-		-- Shape = 3,
-		Button = 4,
-		Text = 5,
+		Frame = 1,
+		Button = 2,
 	},
 
 	------------
@@ -53,6 +53,9 @@ local ui = {
 	-- Orthographic camera, to render UI
 	_camera = nil,
 
+	-- Node with focus (not all nodes are focusable)
+	_focused = nil,
+
 	 -- Node that's currently being pressed
 	_pressed = nil,
 	_pressedIsPrecise = false,
@@ -75,10 +78,52 @@ local ui = {
 	--
 	_cleanup = require("cleanup"),
 	_hierarchyActions = require("hierarchyactions"),
+	_sfx = require("sfx"),
 }
 
----@function fitScreen Should be called within Screen.DidResize,
---- for module to be noticed about screen size changes.
+-- install listeners to adapt ui considering
+-- virtual keyboard presence.
+ui.keyboardShownListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown,
+												function(keyboardHeight)
+													if ui._focused ~= nil then
+														local theme = require("uitheme").current
+														local rootPos = ui._focused.pos
+														local parent = ui._focused.parent
+														while parent ~= nil do
+															rootPos = rootPos + parent.pos
+															parent = parent.parent
+														end
+														if rootPos.Y - theme.paddingBig < keyboardHeight then
+															local diff = keyboardHeight - (rootPos.Y - theme.paddingBig)
+
+															local ease = require("ease")
+															ease:cancel(ui.rootFrame)
+															ease:inOutSine(ui.rootFrame,0.2).LocalPosition = {
+																-Screen.Width * 0.5,
+																diff - Screen.Height * 0.5,
+																ui.kUIFar
+															}
+														end
+													end
+												end)
+
+ui.keyboardHiddenListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden,
+												function()
+													if ui._focused ~= nil then
+														if ui._focused._unfocus ~= nil then
+															ui._focused:_unfocus()
+														end
+														ui._focused = nil
+													end
+													local ease = require("ease")
+													ease:cancel(ui.rootFrame)
+													ease:inOutSine(ui.rootFrame,0.2).LocalPosition = {
+														-Screen.Width * 0.5,
+														-Screen.Height * 0.5,
+														ui.kUIFar
+													}
+												end)
+
 ui.fitScreen = function(self)
 
 	if self._camera == nil then return end
@@ -108,9 +153,7 @@ ui.fitScreen = function(self)
 				end
 			end
 
-			if node.parent.contentDidResize ~= nil then
-				node.parent:contentDidResize()
-			end
+			if node.parent.contentDidResizeWrapper ~= nil then node.parent:contentDidResizeWrapper() end
 		end
 	end
 
@@ -143,11 +186,17 @@ ui.init = function(self)
 	self.rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, self.kUIFar }
 end
 
----@function pointerDown Should be called within Pointer.Down
---- for module to be noticed about pointer down events.
+-- returns true if the UI catches the event, false otherwise
 ui.pointerDown = function(self, pointerEvent)
 	local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 	local direction = { 0, 0, 1 }
+
+	if self._focused ~= nil then
+		if self._focused._unfocus ~= nil then
+			self._focused:_unfocus()
+		end
+		self._focused = nil
+	end
 
 	for _,node in pairs(self._onPressShapes) do
 		local impact = Ray(origin, direction):Cast(node.shape)
@@ -170,14 +219,15 @@ ui.pointerDown = function(self, pointerEvent)
 		if impact.Shape._node._onPress then
 			impact.Shape._node:_onPress()
 		end
+		if self._pressed.config.sound and self._pressed.config.sound ~= "" then
+			self._sfx(self._pressed.config.sound, {Spatialized = false})
+		end
 		return true
 	end
 
 	return false
 end
 
----@function pointerUp Should be called within Pointer.Up
---- for module to be noticed about pointer up events.
 ui.pointerUp = function(self, pointerEvent)
 	local pressed = self._pressed
 	if pressed then
@@ -216,8 +266,6 @@ ui.pointerUp = function(self, pointerEvent)
 	return false
 end
 
----@function pointerDrag Should be called within Pointer.Drag
---- for module to be noticed about pointer drag events.
 ui.pointerDrag = function(self, pointerEvent)
 	local pressed = self._pressed
 	if pressed._onDrag then
@@ -229,39 +277,31 @@ ui._setupUIShape = function(self, shape, collides)
 	self._hierarchyActions:applyToDescendants(shape,  { includeRoot = true }, function(s)
 		s.Layers = ui.kUILayer
 		s.IsUnlit = true
+
+		s.CollidesWithGroups = {}
+		s.CollisionGroups = {}
+		s.Physics = PhysicsMode.Disabled
 	end)
 
-	-- shape.Pivot = {0, 0, 0}
 	if collides then
+		shape.Physics = PhysicsMode.Trigger
 		shape.CollisionGroups = {self.kUICollisionGroup}
 		shape.CollisionBox = Box({ 0, 0, 0 }, { shape.Width, shape.Height, 1 })
-	else
-		shape.CollisionGroups = {}
 	end
 end
 
----@function createNode Creates a node ui component and returns it.
----@param self uikit
----@return table
----@code -- creates an empty node
---- local node = uikit:createNode()
 ui.createNode = function(self)
 	local node = self:_nodeCreate()
-	node.type = self.NodeType.Node
 	node.object = Object()
 	node.object.LocalPosition = {0, 0, 0}
+
+	node:setParent(self.rootFrame)
 	return node
 end
 
----@function createFrame Creates a frame ui component and returns it.
----@param self uikit
----@param color Color frame color (transparent by default)
----@return table
----@code -- creates a red frame
---- local uiFrame = uikit:createFrame(Color(255,0,0))
 ui.createFrame = function(self, color)
 	if color ~= nil and type(color) ~= "Color" then
-		error("ui:createFrame(color) expects a color parameter")
+		error("ui:createFrame(color) expects a color parameter", 2)
 	end
 
 	color = color or Color(0,0,0,0) -- default transparent frame
@@ -269,16 +309,31 @@ ui.createFrame = function(self, color)
 	node.type = self.NodeType.Frame
 	node.object = Object()
 
-	local background = MutableShape(false)
-	background.CollisionGroups = {}
+	local background = MutableShape()
 	background:AddBlock(color,0,0,0)
 	self:_setupUIShape(background)
 	node.object:AddChild(background)
 	background._node = node
 	node.background = background
 
+	node._color = function(self)
+		return self.background.Palette[1].Color
+	end
+	
+	node._setColor = function(self, color)
+		self.background.Palette[1].Color = color
+	end
+
+	node._width = function(self) return self.background.LocalScale.X end
+	node._height = function(self) return self.background.LocalScale.Y end
+	node._depth = function(self) return self.background.LocalScale.Z end
+
+	node._setWidth = function(self, v) self.background.LocalScale.X = v end
+	node._setHeight = function(self, v) self.background.LocalScale.Y = v end
+
 	node.object.LocalPosition = {0, 0, 0}
 
+	node:setParent(ui.rootFrame)
 	return node
 end
 
@@ -347,24 +402,20 @@ ui._refreshShapeNode = function(node)
 	node.object.LocalScale = backupScale
 end
 
----@function createShape Creates a ui node that contains a Shape.
----@param self uikit
----@param shape Shape
----@param config table
----@return table
----@code local shape = Shape(Items.aduermael.apple)
---- local uiShape = uikit:createShape(shape)
----@text By default, the shape is flipped to face the camera, and there's no margin around it. 
----The optional `config` parameter can be used to override that:
----@code local config = {
----    spherized = true, -- makes space arouns shape, useful if you plan to rotate it
----    doNotFlip = true, -- does not flip the shape, keeps original rotation
---- }
---- local uiShape = uikit:createShape(shape, config)
+-- NOTES (needs proper documentation)
+-- When the shapeNode needs to be rotated, prefer node.size accessor
+-- Otherwise and when it's required to rely on precize (sharp edge) width & height, use node.width * node.height
+-- But the item can't be rotated when doing to. 
+-- It could be improved at some point, computing onscreen bounding box when rotating the item.
+--[[ 
+-- Returns a UI node displaying a regular Shape or MutableShape.
+-- @param shape {Shape,MutableShape} -
+-- @param config {table} - 
+]]
 ui.createShape = function(self, shape, config)
 
 	if shape == nil or (type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then 
-		error("ui:createShape(shape) expects a non-nil Shape or MutableShape")
+		error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
 	end
 
 	local node = ui:_nodeCreate()
@@ -390,11 +441,6 @@ ui.createShape = function(self, shape, config)
 	node.pivot = Object()
 
 	node.object:AddChild(node.pivot)
-
-	ui:_setupUIShape(shape)
-
-	node.shape = shape
-	shape._node = node
 
 	node.refresh = ui._refreshShapeNode
 
@@ -456,19 +502,44 @@ ui.createShape = function(self, shape, config)
 		end
 	end
 
+	node.setShape = function(self, shape, doNotRefresh)
+		local w = nil
+		local h = nil
+
+		if self.shape ~= nil then
+			w = self.Width
+			h = self.Height
+			self.shape:RemoveFromParent()
+			self.shape._node = nil
+			self.shape = nil
+		end
+
+		ui:_setupUIShape(shape)
+		self.shape = shape
+		shape._node = self
+
+		if not doNotrefresh == true then
+			self:refresh()
+			if w ~= nil then self.Width = w end
+			if h ~= nil then self.Height = h end
+		end
+	end	
+
+	node:setShape(shape, true)
+
 	node:refresh()
 
+	node:setParent(self.rootFrame)
 	return node
 end
 
 ui.createText = function(self, str, color, size) -- "default" (default), "small", "big"
 
 	if str == nil then
-		error("ui:createText(string, <color>, <align>) expects a non-nil string")
+		error("ui:createText(string, <color>, <align>) expects a non-nil string", 2)
 	end
 
 	local node = ui:_nodeCreate()
-	node.type = self.NodeType.Text
 	self._texts[node._id] = node
 
 	node.fontsize = size
@@ -513,13 +584,371 @@ ui.createText = function(self, str, color, size) -- "default" (default), "small"
 	end
 
 	t.IsUnlit = true
+	t.Physics = PhysicsMode.Disabled
 	t.CollisionGroups = {}
 	t.CollidesWithGroups = {}
 	t.LocalPosition = {0, 0, 0}
 
 	node.object = t
 
+	node:setParent(self.rootFrame)
 	return node
+end
+
+-- ui:createTextInput(<string>, <placeholder>, <size>)
+ui.createTextInput = function(self, str, placeholder, size) -- "default" (default), "small", "big"
+
+	local theme = require("uitheme").current
+
+	local node = self:_nodeCreate()
+
+	node.onTextChange = function(self) end
+
+	node.onEnter = function(self) end
+
+	node.disabled = false
+
+	node._refresh = self._textInputRefresh
+
+	node.state = self.State.Idle
+	node.object = Object()
+
+	node.border = self:createFrame()
+	node.border:setParent(node)
+
+	node.background = self:createFrame()
+	node.background:setParent(node)
+	node.background.pos = {theme.textInputBorderSize, theme.textInputBorderSize, 0}
+
+	node.placeholder = ui:createText(placeholder or "", Color.White, size) -- color replaced later on
+	node.placeholder:setParent(node)
+
+	node.string = ui:createText(str or "", Color.White, size) -- color replaced later on
+	node.string:setParent(node)
+
+	node.cursor = self:createFrame(Color.White)
+	node.cursor.Width = theme.textInputCursorWidth
+	node.cursor:setParent(node)
+
+	node._width = function(self) return self.border.Width end
+	node._height = function(self) return self.border.Height end
+	node._depth = function(self) return self.border.Depth end
+
+	node._setWidth = function(self, newWidth)
+		self.border.Width = newWidth
+		self.background.Width = newWidth - theme.textInputBorderSize * 2
+	end
+
+	node.Width = theme.textInputDefaultWidth
+
+	node._setHeight = function(self, newHeight)
+		-- self.border.Height = newHeight
+		-- self.background.Height = newHeight - theme.textInputBorderSize * 2
+	end
+
+	node._text = function(self)
+		return self.string.Text
+	end
+
+	node._setText = function(self, str)
+		self.string.Text = str
+		if self.onTextChange then
+			self:onTextChange()
+		end
+	end
+
+	node._color = function(self)
+		return self.colors[1]
+	end
+
+	node._setOnRelease = function(self, callback)
+		local activeArea = self.border
+		if callback == nil and self._onPress == nil then
+			activeArea.Physics = PhysicsMode.Disabled
+			activeArea.CollisionGroups = {}
+			self._onRelease = nil
+		elseif v ~= nil then
+			activeArea.Physics = PhysicsMode.Trigger
+			activeArea.CollisionGroups = {ui.kUICollisionGroup}
+			activeArea.CollisionBox = Box({ 0, 0, 0 }, { activeArea.Width, activeArea.Height, 1 })
+			self._onRelease = function()
+				if v ~= nil then v() end
+			end
+		end
+	end
+
+	node.enable = function(self)
+		if self.disabled == false then return end
+		self.disabled = false
+		ui:_textInputRefreshColor(self)
+	end
+
+	node.disable = function(self)
+		if self.disabled then return end
+		self.disabled = true
+		ui:_textInputRefreshColor(self)
+	end
+
+	node.Width = 200
+
+	node.setColor = function(self, background, text, placeholder, doNotrefresh)
+		if background ~= nil then
+			node.colors = { Color(background), Color(background)}
+			node.colors[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+		end
+		if text ~= nil then
+			node.textColor = Color(text)
+		end
+		if placeholder ~= nil then
+			node.placeholderColor = Color(placeholder)
+		end
+		if not doNotrefresh then ui:_textInputRefreshColor(self) end
+	end
+
+	node.setColorPressed = function(self, background, text, placeholder, doNotrefresh)
+		if background ~= nil then
+			node.colorsPressed = { Color(background), Color(background) }
+			node.colorsPressed[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+		end
+		if text ~= nil then
+			node.textColorPressed = Color(text)
+		end
+		if placeholder ~= nil then
+			node.placeholderColorPressed = Color(placeholder)
+		end
+		if not doNotrefresh then ui:_textInputRefreshColor(self) end
+	end
+
+	node.setColorFocused = function(self, background, text, placeholder, doNotrefresh)
+		if background ~= nil then
+			node.colorsFocused = { Color(background), Color(background) }
+			node.colorsFocused[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+		end
+		if text ~= nil then
+			node.textColorFocused = Color(text)
+		end
+		if placeholder ~= nil then
+			node.placeholderColorFocused = Color(placeholder)
+		end
+		if not doNotrefresh then ui:_textInputRefreshColor(self) end
+	end
+
+	node.setColorDisabled = function(self, background, text, placeholder, doNotrefresh)
+		if background ~= nil then
+			node.colorsDisabled = { Color(background), Color(background) }
+			node.colorsDisabled[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+		end
+		if text ~= nil then
+			node.textColorDisabled = Color(text)
+		end
+		if placeholder ~= nil then
+			node.placeholderColorDisabled = Color(placeholder)
+		end
+		if not doNotrefresh then ui:_textInputRefreshColor(self) end
+	end
+
+	node:setColor(
+					theme.textInputBackgroundColor,
+					theme.textInputTextColor,
+					theme.textInputPlaceholderColor,
+					true
+				)
+	node:setColorPressed(
+							theme.textInputBackgroundColorPressed,
+							theme.textInputTextColorPressed,
+							theme.textInputPlaceholderColorPressed,
+							true
+						)
+	node:setColorFocused(
+							theme.textInputBackgroundColorFocused,
+							theme.textInputTextColorFocused,
+							theme.textInputPlaceholderColorFocused,
+							true
+						)
+	node:setColorDisabled(
+							theme.textInputBackgroundColorDisabled,
+							theme.textInputTextColorDisabled,
+							theme.textInputPlaceholderColorDisabled,
+							true
+						)
+
+	node:_refresh()
+	ui:_textInputRefreshColor(node) -- apply initial colors
+
+	node.contentDidResizeSystem = function(self)
+		if self._refresh then self:_refresh() end
+	end
+
+	node.border.onPress = function()
+		if node.disabled == true then return end
+		node.state = self.State.Pressed
+		ui:_textInputRefreshColor(node)
+	end
+
+	node.border.onCancel = function()
+		if node.disabled == true then return end
+		node.state = self.State.Idle
+		ui:_textInputRefreshColor(node)
+	end
+
+	node.border.onRelease = function() 
+		if node.disabled == true then return end
+		node:focus()
+	end
+
+	node.onFocus = nil
+	node.onFocusLost = nil
+
+	-- function to delete last UTF8 char
+	local deleteLastCharacter = function(str)
+		return(str:gsub("[%z\1-\127\194-\244][\128-\191]*$", ""))
+	end
+
+	node.focus = function(self)
+		if self.state == ui.State.Focused then return end
+		self.state = ui.State.Focused
+		ui._focused = self
+		
+		ui:_textInputRefreshColor(self)
+		self:_refresh()
+
+		Client:ShowVirtualKeyboard()
+		self.keyboardListener = LocalEvent:Listen(
+												LocalEvent.Name.KeyboardInput,
+												function(char, keycode, modifiers, down)
+													if down == false then return end
+													-- print("char:", char, "key:", keycode, "mod:", modifiers)
+													-- we need an enum for key codes (value could change)
+													if keycode == 5 then
+														local str = self.string.Text
+														if #str > 0 then
+															str = deleteLastCharacter(str)
+															self.string.Text = str
+														end
+													elseif char ~= "" then
+														self.string.Text = self.string.Text .. char
+													end
+													self:_refresh()
+
+													ui._sfx("keydown_" .. math.random(1,4), {Spatialized = false})
+
+													if self.onTextChange then 
+														self:onTextChange()
+													end
+
+													return true -- capture event
+												end,
+												{ topPriority = true })
+
+		self.dt = 0
+		self.cursor.shown = true
+		self.object.Tick = function(o, dt)
+			self.dt = self.dt + dt
+			if self.dt >= theme.textInputCursorBlinkTime then
+				self.dt = self.dt % 0.3
+				self.cursor.shown = not self.cursor.shown
+				local backup = self.contentDidResizeSystem
+				self.contentDidResizeSystem = nil
+				self.cursor.Width = self.cursor.shown and theme.textInputCursorWidth or 0
+				self.contentDidResizeSystem = backup
+			end
+		end
+
+		if self.onFocus ~= nil then
+			self:onFocus()
+		end
+	end
+
+	node._unfocus = function(self)
+		if self.state ~= ui.State.Focused then return end
+		self.state = ui.State.Idle
+
+		if self.keyboardListener ~= nil then
+			Client:HideVirtualKeyboard()
+			self.keyboardListener:Remove() 
+			self.keyboardListener = nil
+		end
+		ui:_textInputRefreshColor(self)
+		self:_refresh()
+
+		if self.onFocusLost ~= nil then
+			self:onFocusLost()
+		end
+	end
+
+	node:setParent(self.rootFrame)
+	return node
+end
+
+ui._textInputRefreshColor = function(self, node)
+	local state = node.state
+	local colors
+	local textColor
+	local placeholderColor
+
+	if state == self.State.Pressed then 
+		colors = node.colorsPressed
+		textColor = node.textColorPressed
+		placeholderColor = node.placeholderColorPressed
+	else
+		if node.disabled then
+			colors = node.colorsDisabled
+			textColor = node.textColorDisabled
+			placeholderColor = node.placeholderColorDisabled
+		elseif state == self.State.Focused then
+			colors = node.colorsFocused
+			textColor = node.textColorFocused
+			placeholderColor = node.placeholderColorFocused
+		else
+			colors = node.colors
+			textColor = node.textColor
+			placeholderColor = node.placeholderColor
+		end
+	end
+
+	node.background.Color = colors[1]
+	node.border.Color = colors[2]
+	node.string.Color = textColor
+	node.placeholder.Color = placeholderColor
+
+end
+
+ui._textInputRefresh = function(self)
+	-- to avoid refresh triggering a call to itself
+	local backup = self._refresh
+	self._refresh = nil
+
+	local theme = require("uitheme").current
+
+	local paddingAndBorder = theme.padding + theme.textInputBorderSize
+
+	local placeholder = self.placeholder
+	local str = self.string
+	local cursor = self.cursor
+
+	if #str.Text > 0 then 
+		placeholder:hide()
+	else
+		placeholder:show()
+	end
+
+	local h
+	h = str.Height + paddingAndBorder * 2
+	self.border.Height = h
+	self.background.Height = h - theme.textInputBorderSize * 2
+
+	placeholder.LocalPosition = {paddingAndBorder, self.Height * 0.5 - placeholder.Height * 0.5, 0}
+	str.LocalPosition = {paddingAndBorder, self.Height * 0.5 - str.Height * 0.5, 0}
+
+	if self.state == ui.State.Focused then
+		cursor:show()
+		cursor.Height = str.Height
+		cursor.pos = str.pos + {str.Width, 0, 0}
+	else
+		cursor:hide()
+	end
+
+	self._refresh = backup
 end
 
 ui._buttonRefreshColor = function(self, node)
@@ -527,7 +956,7 @@ ui._buttonRefreshColor = function(self, node)
 	local colors
 	local textColor
 
-	if state == self.ButtonState.Pressed then 
+	if state == self.State.Pressed then 
 		colors = node.colorsPressed
 		textColor = node.textColorPressed
 	else
@@ -544,10 +973,12 @@ ui._buttonRefreshColor = function(self, node)
 	end
 
 	node.background.Palette[1].Color = colors[1]
-	node.borders[1].Palette[1].Color = colors[2]
-	node.borders[2].Palette[1].Color = colors[2]
-	node.borders[3].Palette[1].Color = colors[3]
-	node.borders[4].Palette[1].Color = colors[3]
+	if #node.borders > 0 then
+		node.borders[1].Palette[1].Color = colors[2]
+		node.borders[2].Palette[1].Color = colors[2]
+		node.borders[3].Palette[1].Color = colors[3]
+		node.borders[4].Palette[1].Color = colors[3]
+	end
 	node.content.Color = textColor -- doesn't seem to be working
 end
 
@@ -555,73 +986,134 @@ ui._buttonOnPress = function(self, callback)
 	if self.disabled == true then return end
 
 	-- print("_buttonOnPress")
-	self.state = ui.ButtonState.Pressed
+	self.state = ui.State.Pressed
 	ui:_buttonRefreshColor(self)
 	if callback ~= nil then
 		callback(self)
 	end
+
+	Client:HapticFeedback()
 end
 
 ui._buttonOnRelease = function(self, callback)
 	if self.disabled == true then return end
 
 	-- print("_buttonOnRelease")
-	self.state = ui.ButtonState.Idle
+	self.state = ui.State.Idle
 	ui:_buttonRefreshColor(self)
 	if callback ~= nil then
 		callback(self)
 	end
 end
 
-ui._buttonOnCancel = function(self)
-	self.state = ui.ButtonState.Idle
+ui._buttonOnCancel = function(self, callback)
+	if self.disabled == true then return end
+
+	self.state = ui.State.Idle
 	ui:_buttonRefreshColor(self)
+	if callback ~= nil then
+		callback(self)
+	end
 end
 
 ui._buttonRefresh = function(self)
+	if self.content == nil then return end
+
 	local paddingAndBorder = ui.kButtonPadding + ui.kButtonBorder
 
-	local content = self.content if content == nil then return end
+	local content = self.content
 
-	content.LocalPosition = {paddingAndBorder, paddingAndBorder, 0}
+	local paddingLeft = paddingAndBorder
+	local paddingBottom = paddingAndBorder
+	local totalWidth
+	local totalHeight
+
+	if self.fixedWidth ~= nil then
+		totalWidth = self.fixedWidth
+		paddingLeft = (totalWidth - content.Width) * 0.5
+	else
+		totalWidth = content.Width + paddingAndBorder * 2
+	end
+
+	if self.fixedHeight ~= nil then
+		totalHeight = self.fixedHeight
+		paddingBottom = (totalHeight - content.Height) * 0.5
+	else
+		totalHeight = content.Height + paddingAndBorder * 2
+	end
 
 	local background = self.background if background == nil then return end
 
-	background.Scale.X = content.Width + ui.kButtonPadding * 2
-	background.Scale.Y = content.Height + ui.kButtonPadding * 2
+	background.Scale.X = totalWidth
+	background.Scale.Y = totalHeight
+	
 	background.LocalPosition = {ui.kButtonBorder, ui.kButtonBorder, 0}
 
-	local top = self.borders[1] local right = self.borders[2]
-	local bottom = self.borders[3] local left = self.borders[4]
+	content.LocalPosition = {paddingLeft * 1.5, paddingBottom * 1.5, 0}
 
-	top.Scale.X = content.Width + paddingAndBorder * 2
-	top.Scale.Y = ui.kButtonBorder
-	top.LocalPosition = {0, content.Height + ui.kButtonPadding * 2 + ui.kButtonBorder, 0}
+	if #self.borders > 0 then
+		content.LocalPosition = {paddingLeft, paddingBottom, 0}
+		background.Scale.X = totalWidth - ui.kButtonBorder * 2
+		background.Scale.Y = totalHeight - ui.kButtonBorder * 2
+		local top = self.borders[1] local right = self.borders[2]
+		local bottom = self.borders[3] local left = self.borders[4]
 
-	right.Scale.X = ui.kButtonBorder
-	right.Scale.Y = content.Height + ui.kButtonPadding * 2
-	right.LocalPosition = {content.Width + ui.kButtonPadding * 2 + ui.kButtonBorder, ui.kButtonBorder, 0}
+		top.Scale.X = totalWidth
+		top.Scale.Y = ui.kButtonBorder
+		top.LocalPosition = {0, totalHeight - ui.kButtonBorder, 0}
 
-	bottom.Scale.X = content.Width + paddingAndBorder * 2
-	bottom.Scale.Y = ui.kButtonBorder
-	bottom.LocalPosition = {0, 0, 0}
+		right.Scale.X = ui.kButtonBorder
+		right.Scale.Y = totalHeight - ui.kButtonBorder * 2
+		right.LocalPosition = {totalWidth - ui.kButtonBorder, ui.kButtonBorder, 0}
 
-	left.Scale.X = ui.kButtonBorder
-	left.Scale.Y = content.Height + ui.kButtonPadding * 2
-	left.LocalPosition = {0, ui.kButtonBorder, 0}
+		bottom.Scale.X = totalWidth
+		bottom.Scale.Y = ui.kButtonBorder
+		bottom.LocalPosition = {0, 0, 0}
 
-	self.shadow.Scale.X = content.Width + ui.kButtonPadding * 2
-	self.shadow.Scale.Y = ui.kButtonBorder
-	self.shadow.LocalPosition = {ui.kButtonBorder, -ui.kButtonBorder, 0}
+		left.Scale.X = ui.kButtonBorder
+		left.Scale.Y = totalHeight - ui.kButtonBorder * 2
+		left.LocalPosition = {0, ui.kButtonBorder, 0}
+	end
+
+	if self.shadow then
+		self.shadow.Scale.X = totalWidth - ui.kButtonBorder * 2
+		self.shadow.Scale.Y = ui.kButtonBorder
+		self.shadow.LocalPosition = {ui.kButtonBorder, -ui.kButtonBorder, 0}
+	end
 end
 	
-ui.createButton = function(self,stringOrShape,size)
+ui.createButton = function(self,stringOrShape,config)
 	
+	local _config = {
+		-- toggle borders
+		borders = true,
+		-- toggle shadow
+		shadow = true,
+		textSize = "default",
+		sound = "button_1",
+	}
+
+	if config then
+		if config.borders ~= nil then _config.borders = config.borders end
+		if config.shadow ~= nil then _config.shadow = config.shadow end
+		if config.textSize ~= nil then _config.textSize = config.textSize end
+		if config.sound ~= nil then _config.sound = config.sound end
+	end
+	config = _config
+
+	local theme = require("uitheme").current
+
 	if stringOrShape == nil then 
-		error("ui:createButton(stringOrShape, <callback>) expects a non-nil string or Shape")
+		error("ui:createButton(stringOrShape, config) expects a non-nil string or Shape", 2)
 	end
 
 	local node = self:_nodeCreate()
+
+	node.config = config
+
+	node.contentDidResizeSystem = function(self)
+		self:_refresh()
+	end
 
 	node.selected = false
 	node.disabled = false
@@ -629,8 +1121,21 @@ ui.createButton = function(self,stringOrShape,size)
 	node.type = self.NodeType.Button
 	node._onCancel = self._buttonOnCancel
 	node._refresh = self._buttonRefresh
-	node.state = self.ButtonState.Idle
+	node.state = self.State.Idle
 	node.object = Object()
+
+	node.fixedWidth = nil
+	node.fixedHeight = nil
+
+	node._setWidth = function(self, newWidth)
+		self.fixedWidth = newWidth
+		self:_refresh()
+	end
+
+	node._setHeight = function(self, newHeight)
+		self.fixedHeight = newHeight
+		self:_refresh()
+	end
 
 	node._text = function(self)
 		return self.content.Text
@@ -638,17 +1143,14 @@ ui.createButton = function(self,stringOrShape,size)
 
 	node._setText = function(self, str)
 		self.content.Text = str
-		self:contentDidResize()
+		self:contentDidResizeWrapper()
 	end
-
-	node._borderBrightnessDiff = 0.18
-	node._borderDarkDiff = -0.15
 
 	node.setColor = function(self, background, text, doNotrefresh)
 		if background ~= nil then
 			node.colors = { Color(background), Color(background), Color(background) }
-			node.colors[2]:ApplyBrightnessDiff(self._borderBrightnessDiff)
-			node.colors[3]:ApplyBrightnessDiff(self._borderDarkDiff)
+			node.colors[2]:ApplyBrightnessDiff(theme.buttonTopBorderBrightnessDiff)
+			node.colors[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 		end
 		if text ~= nil then
 			node.textColor = Color(text)
@@ -659,8 +1161,8 @@ ui.createButton = function(self,stringOrShape,size)
 	node.setColorPressed = function(self, background, text, doNotrefresh)
 		if background ~= nil then
 			node.colorsPressed = { Color(background), Color(background), Color(background) }
-			node.colorsPressed[2]:ApplyBrightnessDiff(self._borderBrightnessDiff)
-			node.colorsPressed[3]:ApplyBrightnessDiff(self._borderDarkDiff)
+			node.colorsPressed[2]:ApplyBrightnessDiff(theme.buttonTopBorderBrightnessDiff)
+			node.colorsPressed[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 		end
 		if text ~= nil then
 			node.textColorPressed = Color(text)
@@ -671,8 +1173,8 @@ ui.createButton = function(self,stringOrShape,size)
 	node.setColorSelected = function(self, background, text, doNotrefresh)
 		if background ~= nil then
 			node.colorsSelected = { Color(background), Color(background), Color(background) }
-			node.colorsSelected[2]:ApplyBrightnessDiff(self._borderBrightnessDiff)
-			node.colorsSelected[3]:ApplyBrightnessDiff(self._borderDarkDiff)
+			node.colorsSelected[2]:ApplyBrightnessDiff(theme.buttonTopBorderBrightnessDiff)
+			node.colorsSelected[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 		end
 		if text ~= nil then
 			node.textColorSelected = Color(text)
@@ -683,8 +1185,8 @@ ui.createButton = function(self,stringOrShape,size)
 	node.setColorDisabled = function(self, background, text, doNotrefresh)
 		if background ~= nil then
 			node.colorsDisabled = { Color(background), Color(background), Color(background) }
-			node.colorsDisabled[2]:ApplyBrightnessDiff(self._borderBrightnessDiff)
-			node.colorsDisabled[3]:ApplyBrightnessDiff(self._borderDarkDiff)
+			node.colorsDisabled[2]:ApplyBrightnessDiff(theme.buttonTopBorderBrightnessDiff)
+			node.colorsDisabled[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 		end
 		if text ~= nil then
 			node.textColorDisabled = Color(text)
@@ -692,13 +1194,12 @@ ui.createButton = function(self,stringOrShape,size)
 		if not doNotrefresh then ui:_buttonRefreshColor(self) end
 	end
 
-	node:setColor(Color.LightGrey, Color.DarkGrey, true)
-	node:setColorPressed(Color.DarkGrey, Color.LightGrey, true)
-	node:setColorSelected(Color(67,206,188), Color.White, true)
-	node:setColorDisabled(Color.LightGrey, Color.DarkGrey, true)
+	node:setColor(theme.buttonColor, theme.buttonTextColor, true)
+	node:setColorPressed(theme.buttonColorPressed, theme.buttonTextColorPressed, true)
+	node:setColorSelected(theme.buttonColorSelected, theme.buttonTextColorSelected, true)
+	node:setColorDisabled(theme.buttonColorDisabled, theme.buttonTextColorDisabled, true)
 
-
-	local background = MutableShape(false)
+	local background = MutableShape()
 	background:AddBlock(node.colors[1],0,0,0)
 	self:_setupUIShape(background, true)
 	node.object:AddChild(background)
@@ -707,46 +1208,53 @@ ui.createButton = function(self,stringOrShape,size)
 	node.background = background
 	node.borders = {}
 
-	local borderTop = MutableShape(false)
-	borderTop:AddBlock(node.colors[2],0,0,0)
-	self:_setupUIShape(borderTop)
-	borderTop.CollisionGroups = {} borderTop.CollidesWithGroups = {}
-	node.object:AddChild(borderTop)
-	table.insert(node.borders, borderTop)
+	if config.borders then
+		local borderTop = MutableShape()
+		borderTop:AddBlock(node.colors[2],0,0,0)
+		self:_setupUIShape(borderTop)
+		borderTop.CollisionGroups = {} borderTop.CollidesWithGroups = {}
+		node.object:AddChild(borderTop)
+		table.insert(node.borders, borderTop)
 
-	local borderRight = MutableShape(false)
-	borderRight:AddBlock(node.colors[2],0,0,0)
-	self:_setupUIShape(borderRight)
-	borderRight.CollisionGroups = {} borderRight.CollidesWithGroups = {}
-	node.object:AddChild(borderRight)
-	table.insert(node.borders, borderRight)
+		local borderRight = MutableShape()
+		borderRight:AddBlock(node.colors[2],0,0,0)
+		self:_setupUIShape(borderRight)
+		borderRight.CollisionGroups = {} borderRight.CollidesWithGroups = {}
+		node.object:AddChild(borderRight)
+		table.insert(node.borders, borderRight)
 
-	local borderBottom = MutableShape(false)
-	borderBottom:AddBlock(node.colors[3],0,0,0)
-	self:_setupUIShape(borderBottom)
-	borderBottom.CollisionGroups = {} borderBottom.CollidesWithGroups = {}
-	node.object:AddChild(borderBottom)
-	table.insert(node.borders, borderBottom)
+		local borderBottom = MutableShape()
+		borderBottom:AddBlock(node.colors[3],0,0,0)
+		self:_setupUIShape(borderBottom)
+		borderBottom.CollisionGroups = {} borderBottom.CollidesWithGroups = {}
+		node.object:AddChild(borderBottom)
+		table.insert(node.borders, borderBottom)
 
-	local borderLeft = MutableShape(false)
-	borderLeft:AddBlock(node.colors[3],0,0,0)
-	self:_setupUIShape(borderLeft)
-	borderLeft.CollisionGroups = {} borderLeft.CollidesWithGroups = {}
-	node.object:AddChild(borderLeft)
-	table.insert(node.borders, borderLeft)
+		local borderLeft = MutableShape()
+		borderLeft:AddBlock(node.colors[3],0,0,0)
+		self:_setupUIShape(borderLeft)
+		borderLeft.CollisionGroups = {} borderLeft.CollidesWithGroups = {}
+		node.object:AddChild(borderLeft)
+		table.insert(node.borders, borderLeft)
+	end
 
-	local shadow = MutableShape(false)
-	shadow:AddBlock(Color(0,0,0,20),0,0,0)
-	self:_setupUIShape(shadow)
-	shadow.CollisionGroups = {} shadow.CollidesWithGroups = {}
-	node.object:AddChild(shadow)
-	node.shadow = shadow
+	if config.shadow then
+		local shadow = MutableShape()
+		shadow:AddBlock(Color(0,0,0,20),0,0,0)
+		self:_setupUIShape(shadow)
+		shadow.CollisionGroups = {} shadow.CollidesWithGroups = {}
+		node.object:AddChild(shadow)
+		node.shadow = shadow
+	end
 
-	local paddingAndBorder = self.kButtonPadding + self.kButtonBorder
+	local paddingAndBorder = self.kButtonPadding
+	if config.borders then
+		paddingAndBorder = paddingAndBorder + self.kButtonBorder
+	end
 
 	-- TODO: test stringOrShape type
 
-	local t = ui:createText(stringOrShape, color, size)
+	local t = ui:createText(stringOrShape, nil, type(stringOrShape) == "string" and config.textSize or size) -- color is nil here
 	t:setParent(node)
 	node.content = t
 
@@ -755,10 +1263,6 @@ ui.createButton = function(self,stringOrShape,size)
 
 	node.onPress = function(self) end
 	node.onRelease = function(self) end
-
-	node.contentDidResize = function(self)
-		self:_refresh()
-	end
 
 	node.select = function(self)
 		if self.selected then return end
@@ -784,6 +1288,7 @@ ui.createButton = function(self,stringOrShape,size)
 		ui:_buttonRefreshColor(self)
 	end
 
+	node:setParent(self.rootFrame)
 	return node
 
 end -- createButton
@@ -800,22 +1305,27 @@ ui._nodeCreate = function(self)
 			type = self.NodeType.None,
 			children = {},
 			parentDidResize = nil,
-			contentDidResize = nil,
+			contentDidResize = nil, -- user defined
+			contentDidResizeSystem = nil,
+			contentDidResizeWrapper = function(self)
+				if self.contentDidResizeSystem ~= nil then self:contentDidResizeSystem() end
+				if self.contentDidResize ~= nil then self:contentDidResize() end
+			end,
 			setParent = self._nodeSetParent,
 			hasParent = self._nodeHasParent,
 			remove = self._nodeRemove,
 			show = function(self)
 				if not self.object then return end
-				if self._savedParent then
-					self.object:SetParent(self._savedParent)
+				if self.parent.object then
+					self.object:SetParent(self.parent.object)
+				else
+					self.object:SetParent(ui.rootFrame)
+					-- self:setParent(ui.rootFrame)
 				end
 				self.object.IsHidden = false
 			end,
 			hide = function(self)
 				if not self.object then return end
-				if self.object:GetParent() ~= nil then
-					self._savedParent =	self.object:GetParent()
-				end
 				self.object:RemoveFromParent()
 				self.object.IsHidden = true
 			end,
@@ -976,34 +1486,28 @@ ui._nodeRemove = function(t)
 end
 
 ui._nodeSetParent = function(self, parent)
-	-- if calling from an herited type, get the frame attribute
-	if getmetatable(self).__attrs.frame then
-		getmetatable(self).__attrs.frame:setParent(parent)
-		return
-	end
-
 	local attr = getmetatable(self).attr
-	if parent ~= nil and attr.parent ~= nil then
-		error("node already has a parent")
-		return
+
+	-- setting same parent, nothing to do
+	if parent ~= nil then
+		if parent.object ~= nil and attr.parent == parent then return end
 	end
 
-	if parent == nil then -- removing from parent
-		if attr.object ~= nil then attr.object:SetParent(nil) end
-		if attr.parent.children ~= nil then
-			attr.parent.children[self._id] = nil
-		end
-		-- in case node parent was root
-		ui._rootChildren[self._id] = nil
-		attr.parent = nil
-		return
+	-- remove from current parent
+	if attr.object ~= nil then attr.object:SetParent(nil) end
+	if attr.parent.children ~= nil then
+		attr.parent.children[self._id] = nil
 	end
+	-- in case node parent was root
+	ui._rootChildren[self._id] = nil
+	attr.parent = nil
+
+	if parent == nil then return end
 
 	local parentObject
 
 	if parent.object ~= nil then
 		attr.parent = parent
-		ui._rootChildren[self._id] = nil
 		parent.children[self._id] = self
 		parentObject = parent.object
 	else
@@ -1029,6 +1533,10 @@ ui._nodeSetParent = function(self, parent)
 		-- to decrease chances of clipping. This is not ideal...
 		attr.object.LocalPosition.Z = -ui.kUIFar * 0.5
 	end
+
+	if self.parentDidResize then
+		self:parentDidResize()
+	end
 end
 
 ui._nodeHasParent = function(self) 
@@ -1047,10 +1555,8 @@ ui._nodeIndex = function(t, k)
 			-- TODO: keeping this to avoid breaking scripts, but right name should be _width
 			if type(t.width) == "function" then return t:width()
 			else return t.width end
-		elseif t.type == ui.NodeType.Frame then
-			return t.background.LocalScale.X
 		elseif t.type == ui.NodeType.Button then
-			return t.background.LocalScale.X + t.borders[2].LocalScale.X * 2
+			return t.background.LocalScale.X + (#t.borders > 0 and t.borders[2].LocalScale.X * 2 or 0)
 		else
 			return m.attr.object.Width * m.attr.object.LocalScale.X
 		end
@@ -1064,10 +1570,8 @@ ui._nodeIndex = function(t, k)
 			-- TODO: keeping this to avoid breaking scripts, but right name should be _height
 			if type(t.height) == "function" then return t:height()
 			else return t.height end
-		elseif t.type == ui.NodeType.Frame then
-			return t.background.LocalScale.Y
 		elseif t.type == ui.NodeType.Button then
-			return t.background.LocalScale.Y + t.borders[1].LocalScale.Y * 2
+			return t.background.LocalScale.Y + (#t.borders > 0 and t.borders[1].LocalScale.Y * 2 or 0)
 		else
 			return m.attr.object.Height * m.attr.object.LocalScale.Y
 		end
@@ -1077,8 +1581,6 @@ ui._nodeIndex = function(t, k)
 		if t._depth ~= nil then
 			if type(t._depth) == "function" then return t:_depth()
 			else return t._depth end
-		elseif t.type == ui.NodeType.Frame then
-			return t.background.LocalScale.Z
 		elseif t.type == ui.NodeType.Button then
 			return t.background.LocalScale.Z
 		else
@@ -1093,10 +1595,7 @@ ui._nodeIndex = function(t, k)
 		if t._text ~= nil then
 			if type(t._text) == "function" then return t:_text()
 			else return t._text end
-		else
-			return nil
 		end
-
 	elseif k == "color" or k == "Color" then
 		if t._color ~= nil then
 			if type(t._color) == "function" then return t:_color()
@@ -1108,6 +1607,8 @@ ui._nodeIndex = function(t, k)
 		return t._onRelease
 	elseif k == "onPress" then 
 		return t._onPress
+	elseif k == "onCancel" then 
+		return t._onCancel
 	end
 
 	local v = m.attr[k]
@@ -1122,13 +1623,8 @@ ui._nodeNewindex = function(t, k, v)
 
 	if k == "color" or k == "Color" then
 		attr.color = v
-
 		if t._setColor ~= nil then
 			t:_setColor(v)
-		elseif type(attr.object) == "MutableShape" then
-			if #attr.object.Palette > 0 then
-				attr.object.Palette[1].Color = v
-			end
 		end
 	elseif k == "onPress" then
 		if t.type == ui.NodeType.Button then
@@ -1138,9 +1634,11 @@ ui._nodeNewindex = function(t, k, v)
 		elseif t.type == ui.NodeType.Frame then
 			local background = t.background
 			if v == nil and t._onRelease == nil then
+				background.Physics = PhysicsMode.Disabled
 				background.CollisionGroups = {}
 				t._onPress = nil
 			elseif v ~= nil then
+				background.Physics = PhysicsMode.Trigger
 				background.CollisionGroups = {ui.kUICollisionGroup}
 				background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 1 })
 				t._onPress = function()
@@ -1160,9 +1658,11 @@ ui._nodeNewindex = function(t, k, v)
 		elseif t.type == ui.NodeType.Frame then
 			local background = t.background
 			if v == nil and t._onPress == nil then
+				background.Physics = PhysicsMode.Disabled
 				background.CollisionGroups = {}
 				t._onRelease = nil
 			elseif v ~= nil then
+				background.Physics = PhysicsMode.Trigger
 				background.CollisionGroups = {ui.kUICollisionGroup}
 				background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 1 })
 				t._onRelease = function()
@@ -1171,6 +1671,16 @@ ui._nodeNewindex = function(t, k, v)
 			end
 		else
 			t._onRelease = function()
+				if v ~= nil then v() end
+			end
+		end
+	elseif k == "onCancel" then 
+		if t.type == ui.NodeType.Button then
+			t._onCancel = function(self)
+				ui._buttonOnCancel(self, v)
+			end
+		else
+			t._onCancel = function()
 				if v ~= nil then v() end
 			end
 		end
@@ -1231,49 +1741,40 @@ ui._nodeNewindex = function(t, k, v)
 
 		if t._setWidth ~= nil then
 			t:_setWidth(v)
-		elseif t.type == ui.NodeType.Frame then
-			local background = t.object:GetChild(1)
-			background.LocalScale.X = v
-		end
 
-		for nodeID, child in pairs(t.children) do
-			if child.parentDidResize ~= nil then
-				child:parentDidResize()
+			for nodeID, child in pairs(t.children) do
+				if child.parentDidResize ~= nil then
+					child:parentDidResize()
+				end
 			end
-		end
 
-		if t.parent.contentDidResize ~= nil then
-			t.parent:contentDidResize()
+			if t.parent ~= nil then t.parent:contentDidResizeWrapper() end
 		end
-
 	elseif k == "Height" then
 		if t.Height == v then return end -- don't do anything if setting same Height
 
 		if t._setHeight ~= nil then
 			t:_setHeight(v)
-		elseif t.type == ui.NodeType.Frame then
-			local background = t.object:GetChild(1)
-			background.LocalScale.Y = v
-		end
 
-		for nodeID, child in pairs(t.children) do
-			if child.parentDidResize ~= nil then
-				child:parentDidResize()
+			for nodeID, child in pairs(t.children) do
+				if child.parentDidResize ~= nil then
+					child:parentDidResize()
+				end
 			end
-		end
 
-		if t.parent.contentDidResize ~= nil then
-			t.parent:contentDidResize()
+			if t.parent ~= nil then t.parent:contentDidResizeWrapper() end
 		end
 	elseif k == "text" or k == "Text" then
 		if t._setText ~= nil then
 			if type(t._setText) == "function" then return t:_setText(v) end
 		else
-			return nil
+			attr[k] = v	
 		end
 	else
-		attr[k] = v
+		attr[k] = v	
 	end
 end
+
+ui:init()
 
 return ui
