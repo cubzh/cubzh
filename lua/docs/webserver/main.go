@@ -271,7 +271,7 @@ func parseContent() error {
 		} else if strings.HasSuffix(walkPath, ".json") { // JSON FILE
 
 			// check if path points to a regular file
-			exists := fsutil.RegularFileExists(walkPath)
+			exists := regularFileExists(walkPath)
 			if exists {
 
 				var module Module

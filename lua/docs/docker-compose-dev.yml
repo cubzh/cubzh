@@ -9,5 +9,5 @@ services:
       - ./content:/www
       - ./parser:/parser
       - ../modules:/modules
-      - ./go:/go
+      - ./webserver:/webserver
       

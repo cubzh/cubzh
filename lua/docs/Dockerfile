@@ -5,14 +5,14 @@ RUN apk update && apk add --no-cache \
 	lua5.3 \
 	&& rm -rf /var/cache/apk/*
 
-COPY lua/docs/go /go
+COPY lua/docs/webserver /webserver
 COPY lua/docs/content /www
 COPY lua/docs/parser /parser
 COPY lua/modules /modules
 
 RUN cd /parser && ./parse.sh
 
-WORKDIR /go/src/website
+WORKDIR /webserver
 
 EXPOSE 80
 
