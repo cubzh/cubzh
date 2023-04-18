@@ -28,11 +28,10 @@ RUN go build
 
 FROM --platform=linux/amd64 alpine:3.17 AS website-dev
 
-# first copy the resources
-COPY content /www 
-
 # then the executable
 COPY --from=builder /webserver/webserver /webserver
+COPY --from=builder /www /www
+COPY --from=builder /modules /modules
 
 EXPOSE 80
 WORKDIR /
