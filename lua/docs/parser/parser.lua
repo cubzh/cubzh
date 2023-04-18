@@ -81,10 +81,10 @@ local doc =  {
 -- returns name & remaining string 
 -- or nil if can't parse name
 function parseName(s)
-	prefix, name = string.match(s, "([%s]*)([a-zA-Z][a-zA-Z0-9]*)")
+	prefix, name, optional = string.match(s, "([%s]*)([a-zA-Z][a-zA-Z0-9]*)([?]?)")
 	if name ~= nil then
 		s = s:sub(prefix:len() + name:len() + 1)
-		return name, s
+		return name, s, optional == "?"
 	end
 end
 
@@ -140,6 +140,16 @@ end
 -- returns true if found & remaining string
 function parseParamToken(s)
 	token = string.match(s, "^(@param)")
+	if token ~= nil then
+		s = s:sub(token:len() + 1)
+		return true, s
+	end
+	return false, s
+end
+
+-- returns true if found & remaining string
+function parseTypeToken(s)
+	token = string.match(s, "^(@type)")
 	if token ~= nil then
 		s = s:sub(token:len() + 1)
 		return true, s
@@ -249,6 +259,26 @@ lines = {}
 for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 
 	table.insert(lines, prefix .. line)
+	typeToken, line = parseTypeToken(line)
+	if typeToken then
+
+		currentType = {}
+		table.insert(doc.types, currentType)
+		currentType.description = {}
+		currentType.functions = {}
+		currentType.properties = {}
+
+		currentDescription = nil
+		currentFunction = nil
+		currentProperty = nil
+		currentField = nil
+
+		name, line = parseName(line)
+		if name == nil then error("a type needs a name") end
+		currentType.name = name
+
+		goto continue
+	end
 
 	functionToken, line = parseFunctionToken(line)
 	if functionToken then
@@ -309,8 +339,9 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 		table.insert(currentSet, currentField)
 
 
-		name, line = parseName(line)
+		name, line, optional = parseName(line)
 		if name ~= nil then
+			currentField.optional = optional
 			currentField.name = name
 
 			types, line = parseTypes(line)
