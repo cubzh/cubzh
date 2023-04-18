@@ -1,7 +1,16 @@
 FROM --platform=linux/amd64 golang:1.20.1-alpine3.17 AS build-env
 
-# Go code
-COPY webserver /webserver
+RUN apk update && apk add --no-cache \ 
+	git \
+	lua5.3 \
+	&& rm -rf /var/cache/apk/*
+
+COPY lua/docs/webserver /webserver
+COPY lua/docs/content /www
+COPY lua/docs/parser /parser
+COPY lua/modules /modules
+
+RUN cd /parser && ./parse.sh
 
 WORKDIR /webserver
 
@@ -19,11 +28,10 @@ RUN go build
 
 FROM --platform=linux/amd64 alpine:3.17 AS website-dev
 
-# first copy the resources
-COPY content /www 
-
 # then the executable
 COPY --from=builder /webserver/webserver /webserver
+COPY --from=builder /www /www
+COPY --from=builder /modules /modules
 
 EXPOSE 80
 WORKDIR /

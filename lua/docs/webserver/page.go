@@ -1,11 +1,10 @@
 package main
 
 import (
+	"github.com/gosimple/slug"
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/gosimple/slug"
 )
 
 // Page describes possible content for one page
@@ -214,24 +213,24 @@ func (p *Property) SetExtensionBase(baseProperty *Property) {
 // Only one attribute can be set, others will
 // be ignored if set.
 type ContentBlock struct {
-	Text string `yaml:"text,omitempty"`
+	Text string `yaml:"text,omitempty" json:"text,omitempty"`
 	// Lua code
-	Code     string   `yaml:"code,omitempty"`
-	List     []string `yaml:"list,omitempty"`
-	Title    string   `yaml:"title,omitempty"`
-	Subtitle string   `yaml:"subtitle,omitempty"`
+	Code     string   `yaml:"code,omitempty" json:"code,omitempty"`
+	List     []string `yaml:"list,omitempty" json:"list,omitempty"`
+	Title    string   `yaml:"title,omitempty" json:"title,omitempty"`
+	Subtitle string   `yaml:"subtitle,omitempty" json:"subtitle,omitempty"`
 	// Can be a relative link to an image (png / jpeg)
-	Image string `yaml:"image,omitempty"`
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 	// Can be a relative link to a movie, a link to a youtube video...
-	Media string `yaml:"media,omitempty"`
+	Media string `yaml:"media,omitempty" json:"media,omitempty"`
 	// Keys couple:
 	//  title: Display name for the audio player
 	//  file: Relative link to a sound file (.mp3)
-	Audio map[string]string `yaml:"audio,omitempty"`
+	Audio map[string]string `yaml:"audio,omitempty" json:"audio,omitempty"`
 	// List of key couples:
 	//  title: Display name for the audio player
 	//  file: Relative link to a sound file (.mp3)
-	AudioList []map[string]string `yaml:"audiolist,omitempty"`
+	AudioList []map[string]string `yaml:"audiolist,omitempty" json:"audiolist,omitempty"`
 }
 
 // Returns best possible title for page
@@ -266,6 +265,9 @@ func getTypeLink(str string) string {
 
 	if route, ok := typeRoutes[str]; ok {
 		str = "<a class=\"type\" href=\"" + route + "\">" + str + "</a>"
+	} else {
+		// fallback to local type anchor (may not work)
+		str = "<a class=\"type\" href=\"#type-" + slug.Make(str) + "\">" + str + "</a>"
 	}
 
 	return str
