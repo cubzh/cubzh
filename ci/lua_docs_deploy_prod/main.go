@@ -19,7 +19,7 @@ const (
 	// path of repo root directory from local directory
 	REPO_ROOT_PATH string = "../.."
 	// path of Lua docs files from repo root directory
-	LUA_DOCS_FILES_PATH       string = "./lua/docs"
+	LUA_FILES_PATH            string = "./lua"
 	KNOWNHOSTS_LOCAL_FILEPATH string = "./known_hosts"
 	// environment variables names
 	DOCKER_REGISTRY_URL_ENVAR_NAME         string = "DOCKER_REGISTRY_URL"
@@ -147,14 +147,15 @@ func deployLuaDocs() error {
 	// 	// exclude the following directories
 	// 	Exclude: []string{".git", ".github"},
 	// }
-	src := client.Host().Directory(LUA_DOCS_FILES_PATH, dagger.HostDirectoryOpts{})
+	src := client.Host().Directory(LUA_FILES_PATH, dagger.HostDirectoryOpts{})
 
 	// build container with correct dockerfile
 	containerOpts := dagger.ContainerOpts{
 		Platform: "linux/amd64",
 	}
 	buildOpts := dagger.ContainerBuildOpts{
-		Dockerfile: "./Dockerfile",
+		Dockerfile: "./docs/Dockerfile",
+		Target:     "website",
 	}
 	docsContainer := client.Container(containerOpts).Build(src, buildOpts)
 	if docsContainer == nil {
