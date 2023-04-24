@@ -1,6 +1,23 @@
+--- This module helps you creating popups.
+---@code alert = require("alert")
+--- local done = alert:create("Done!")
+
+---@type alert
+
 local alert = {}
 
+
+---@function create Creates an alert
+---@param text string
+---@return alertInstance
+---@code alert:create("Done!")
 alert.create = function(self, text)
+	if self ~= alert then
+		error("alert:create(text): use `:`", 2)
+	end
+	if type(text) ~= Type.string then
+		error("alert:create(text): text should be a string", 2)
+	end
 		
 	local uikit = require("uikit")
 	local modal = require("modal")
@@ -119,9 +136,27 @@ alert.create = function(self, text)
 		end
 	end
 
-	--- Sets label and callback for positive action.
-	--- Passing nil callback removes the button.
+---@type alertInstance
+--- An [alertInstance] can be used to personalize its buttons.
+
+	---@function setPositiveCallback Sets the text and the callback for positive button. Using nil for the callback removes the button.
+	---@param text string
+	---@param callback? function
+	---@code local instance = alert:create("Are you sure?")
+	--- instance:setPositiveCallback("Yes!", function()
+	--- -- add your code here
+	--- end)
 	popup.setPositiveCallback = function(self, text, callback)
+		if self ~= popup then
+			error("alert:setPositiveCallback(text, callback): use `:`", 2)
+		end
+		if text == nil or type(text) ~= Type.string then
+			error("alert:setPositiveCallback(text, callback): text should be a string", 2)
+		end
+		if callback ~= nil and type(callback) ~= Type["function"] then
+			error("alert:setPositiveCallback(text, callback): callback should be a function or nil", 2)
+		end
+
 		node.positiveCallback = callback
 
 		if callback == nil then
@@ -152,9 +187,27 @@ alert.create = function(self, text)
 		self:refresh()
 	end
 
-	--- Sets label and callback for negative action.
-	--- Passing nil callback removes the button.
+	---@function setNegativeCallback Creates, sets the text and callback of a negative button in the [alertInstance].
+	--- Using nil for the callback will remove the button
+	--- Buttons are displayed in that order: NEUTRAL, NEGATIVE, POSITIVE.
+	---@param text string
+	---@param callback? function
+	---@code local instance = alert:create("Are you sure?")
+	--- instance:setNegativeCallback("No", function()
+	--- -- add your code here
+	--- end)
+	--- instance:setNegativeCallback("No", nil) -- removes the button
 	popup.setNegativeCallback = function(self, text, callback)
+		if self ~= popup then
+			error("alert:setNegativeCallback(text, callback): use `:`", 2)
+		end
+		if text == nil or type(text) ~= Type.string then
+			error("alert:setNegativeCallback(text, callback): text should be a string", 2)
+		end
+		if callback ~= nil and type(callback) ~= Type["function"] then
+			error("alert:setNegativeCallback(text, callback): callback should be a function or nil", 2)
+		end
+
 		node.negativeCallback = callback
 
 		if callback == nil then
@@ -185,9 +238,26 @@ alert.create = function(self, text)
 		self:refresh()
 	end
 
-	--- Sets label and callback for neutral action.
-	--- Passing nil callback removes the button.
+	---@function setNeutralCallback Creates, sets the text and callback of a neutral button in the [alertInstance].
+	--- Using nil for the callback will remove the button
+	--- Buttons are displayed in that order: NEUTRAL, NEGATIVE, POSITIVE.
+	---@param text string
+	---@param callback? function
+	---@code local instance = alert:create("Are you sure?")
+	--- instance:setNeutralCallback("Cancel", function()
+	--- -- add your code here
+	--- end)
 	popup.setNeutralCallback = function(self, text, callback)
+		if self ~= popup then
+			error("alert:setNeutralCallback(text, callback): use `:`", 2)
+		end
+		if text == nil or type(text) ~= Type.string then
+			error("alert:setNeutralCallback(text, callback): text should be a string", 2)
+		end
+		if callback ~= nil and type(callback) ~= Type["function"] then
+			error("alert:setNeutralCallback(text, callback): callback should be a function or nil", 2)
+		end
+		
 		node.neutralCallback = callback
 
 		if callback == nil then
