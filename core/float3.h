@@ -54,6 +54,8 @@ void float3_copy(float3 *dest, const float3 *src);
 
 /// f1 = f1 X f2 (f1 is modified)
 void float3_cross_product(float3 *f1, const float3 *f2);
+void float3_cross_product2(const float3 *f1, float3 *f2);
+float3 float3_cross_product3(const float3 *f1, const float3 *f2);
 
 /// f1 • f2 dot product
 float float3_dot_product(const float3 *const f1, const float3 *const f2);

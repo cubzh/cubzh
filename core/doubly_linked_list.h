@@ -36,19 +36,14 @@ void doubly_linked_list_flush(DoublyLinkedList *list, pointer_free_function ptr)
 //!\\ stored pointers won't be released
 void doubly_linked_list_free(DoublyLinkedList *list);
 
-// pushes pointer to the front of the list, returns pointer to created node
+// push to last/first and return pointer to created node
 DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *list, void *ptr);
-// pushes pointer to the back of the list, returns pointer to created node
 DoublyLinkedListNode *doubly_linked_list_push_first(DoublyLinkedList *list, void *ptr);
 
-// pops front and returns popped pointer
 void *doubly_linked_list_pop_last(DoublyLinkedList *list);
-// pops back and returns popped pointer
 void *doubly_linked_list_pop_first(DoublyLinkedList *list);
 
-// returns front node
 DoublyLinkedListNode *doubly_linked_list_last(const DoublyLinkedList *list);
-// returns back node
 DoublyLinkedListNode *doubly_linked_list_first(const DoublyLinkedList *list);
 
 // removes node from list
@@ -78,6 +73,8 @@ bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
                                       pointer_doubly_linked_list_contains_func func,
                                       void *ptr,
                                       void **out);
+
+bool doubly_linked_list_is_empty(const DoublyLinkedList *list);
 
 //--------------------
 // MARK: - DoublyLinkedListNode -

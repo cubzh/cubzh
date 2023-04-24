@@ -271,6 +271,10 @@ bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
     return false;
 }
 
+bool doubly_linked_list_is_empty(const DoublyLinkedList *list) {
+    return list->first == NULL && list->last == NULL;
+}
+
 //---------------------
 // DoublyLinkedNode
 //---------------------

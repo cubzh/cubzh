@@ -6,6 +6,7 @@
 
 #include "box.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -58,6 +59,13 @@ void box_get_center(const Box *b, float3 *center) {
                b->min.x + (b->max.x - b->min.x) * .5f,
                b->min.y + (b->max.y - b->min.y) * .5f,
                b->min.z + (b->max.z - b->min.z) * .5f);
+}
+
+float box_get_diagonal(const Box *b) {
+    const float w = b->max.x - b->min.x;
+    const float h = b->max.y - b->min.y;
+    const float d = b->max.z - b->min.z;
+    return sqrtf(w * w + h * h + d * d);
 }
 
 bool box_equals(const Box *b1, const Box *b2, const float epsilon) {
