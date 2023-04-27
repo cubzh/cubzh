@@ -317,6 +317,8 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 			node.pages:setPage(page)
 		end
 
+		self.cells = {}
+
 		local usr, cell, removeBtn, joinBtn, chatBtn, btnAccept, btnAdd
 		local line = 0
 		for i=from,total do
@@ -324,29 +326,30 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 			if line > maxLines then break end
 			local p = i - from
 			usr = list[i]
+			self.cells[i] = {}
 
 			if list == self.data.friends then
-				cell, removeBtn, joinBtn, chatBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "🌎", "💬")
+				self.cells[i].cell, self.cells[i].removeBtn, self.cells[i].joinBtn, self.cells[i].chatBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "🌎", "💬")
 			elseif list == self.data.sent then
-				cell, removeBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌")
+				self.cells[i].cell, self.cells[i].removeBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌")
 
-				removeBtn.userID = usr.id
-				removeBtn.onRelease = function(self)
+				self.cells[i].removeBtn.userID = usr.id
+				self.cells[i].removeBtn.onRelease = function(btn)
 					-- 1st arg is recipient
-					api:cancelFriendRequest(self.userID, function(ok, errMsg)
+					api:cancelFriendRequest(btn.userID, function(ok, errMsg)
 						if ok == false then return end
 						-- trigger click on "Sent" tab
 						node.sentBtn:onRelease()
 					end)
 				end
 			elseif list == self.data.received then
-				cell, removeBtn, btnAccept = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "✅")
+				self.cells[i].cell, self.cells[i].removeBtn, self.cells[i].btnAccept = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "✅")
 
-				removeBtn.userID = usr.id
-				btnAccept.userID = usr.id
+				self.cells[i].removeBtn.userID = usr.id
+				self.cells[i].btnAccept.userID = usr.id
 
-				btnAccept.onRelease = function(self)
-					api:replyToFriendRequest(self.userID, true, function(ok, errMsg)
+				self.cells[i].btnAccept.onRelease = function(btn)
+					api:replyToFriendRequest(btn.userID, true, function(ok, errMsg)
 						if not ok then return end
 						node.data:refreshReceivedFriendRequests(function(ok)
 							if not ok then return  end
@@ -356,8 +359,8 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 					end)
 				end
 
-				removeBtn.onRelease = function(self)
-					api:replyToFriendRequest(self.userID, false, function(ok, errMsg)
+				self.cells[i].removeBtn.onRelease = function(btn)
+					api:replyToFriendRequest(btn.userID, false, function(ok, errMsg)
 						if not ok then return end
 						node.data:refreshReceivedFriendRequests(function(ok)
 							if not ok then return end
@@ -367,26 +370,26 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 					end)
 				end
 			elseif list == self.data.search then
-				cell, btnAdd = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "➕")
+				self.cells[i].cell, self.cells[i].btnAdd = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "➕")
 
-				btnAdd.userID = usr.id
-				btnAdd.sending = false
-				btnAdd.onRelease = function(self)
-					if btnAdd.sending then return end
-					btnAdd.sending = true
-					api:sendFriendRequest(self.userID, function(ok)
+				self.cells[i].btnAdd.userID = usr.id
+				self.cells[i].btnAdd.sending = false
+				self.cells[i].btnAdd.onRelease = function(btn)
+					if btn.sending then return end
+					btn.sending = true
+					api:sendFriendRequest(btn.userID, function(ok)
 						if not ok then 
-							btnAdd.sending = false
+							btn.sending = false
 							return 
 						end
-						btnAdd.Text = "✅"
+						btn.Text = "✅"
 					end)
 				end
 			else 
 				break
 			end
 		
-			cell.pos.Y = top - (p + 1) * cell.Height - p * theme.padding
+			self.cells[i].cell.pos.Y = top - (p + 1) * self.cells[i].cell.Height - p * theme.padding
 		end
 	end
 
