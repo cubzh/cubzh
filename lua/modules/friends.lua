@@ -18,6 +18,18 @@ local friendsWindow = {
 }
 
 friendsWindow.create = function(self, maxWidth, maxHeight, position)
+	if self ~= friendsWindow then
+		error("friends:create(maxWidth, maxHeight, position): use `:`", 2)
+	end
+	if type(maxWidth) ~= "function" then
+		error("friends:create(maxWidth, maxHeight, position): maxWidth should be a function", 2)
+	end
+	if type(maxHeight) ~= "function" then
+		error("friends:create(maxWidth, maxHeight, position): maxHeight should be a function", 2)
+	end
+	if type(position) ~= "function" then
+		error("friends:create(maxWidth, maxHeight, position): position should be a function", 2)
+	end
 
 	local uikit = require("uikit")
 	local theme = require("uitheme").current
