@@ -232,6 +232,23 @@ void float3_cross_product(float3 *f1, const float3 *f2) {
     f1->z = _z;
 }
 
+void float3_cross_product2(const float3 *f1, float3 *f2) {
+    _x = f1->y * f2->z - f1->z * f2->y;
+    _y = f1->z * f2->x - f1->x * f2->z;
+    _z = f1->x * f2->y - f1->y * f2->x;
+    f2->x = _x;
+    f2->y = _y;
+    f2->z = _z;
+}
+
+float3 float3_cross_product3(const float3 *f1, const float3 *f2) {
+    float3 result;
+    result.x = f1->y * f2->z - f1->z * f2->y;
+    result.y = f1->z * f2->x - f1->x * f2->z;
+    result.z = f1->x * f2->y - f1->y * f2->x;
+    return result;
+}
+
 /// f1 • f2 dot product
 float float3_dot_product(const float3 *const f1, const float3 *const f2) {
     return f1->x * f2->x + f1->y * f2->y + f1->z * f2->z;

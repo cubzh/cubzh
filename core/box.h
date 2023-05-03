@@ -44,6 +44,8 @@ void box_set_bottom_center_position(Box *b, const float3 *position);
 
 void box_get_center(const Box *b, float3 *center);
 
+float box_get_diagonal(const Box *b);
+
 void box_copy(Box *dest, const Box *src);
 
 bool box_equals(const Box *b1, const Box *b2, const float epsilon);

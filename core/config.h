@@ -391,7 +391,7 @@ static uint8_t AO_GRADIENT[4] = {0,
 /// false : reduce by absorption, then apply step
 #define TRANSPARENCY_ABSORPTION_MAX_STEP true
 /// Whether transparent inner faces between 2 blocks of a different color should be drawn
-#define ENABLE_TRANSPARENCY_INNER_FACES true
+#define ENABLE_TRANSPARENCY_INNER_FACES false
 
 // MARK: - Touch events -
 
