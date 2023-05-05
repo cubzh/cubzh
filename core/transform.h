@@ -62,10 +62,12 @@ typedef enum {
     /// default type, only contributes to the transformations down the hierarchy
     /// /!\ only used by internal objects
     HierarchyTransform,
-    /// collider transform, carries RigidBody* and may be considered for physics
-    ColliderTransform,
-    /// root transform of a Shape, carries Shape* and may be considered for rendering & physics
+    /// a point in space, optional ptr RigidBody*, may be considered for physics
+    PointTransform,
+    /// rendering primitives, ptr to their respective type, may be considered for rendering &
+    /// physics
     ShapeTransform,
+    QuadTransform
 } TransformType;
 
 typedef void (*pointer_transform_recurse_func)(Transform *t, void *ptr);
