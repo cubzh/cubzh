@@ -10,12 +10,13 @@
 
 struct _Quad {
     Transform *transform;
-    float width, height; /* 2x4 bytes */
-    uint32_t abgr;       /* 4 bytes */
-    uint8_t layers;      /* 1 byte */
-    bool doublesided;    /* 1 byte */
-    bool shadow;         /* 1 byte */
-    bool isUnlit;        /* 1 byte */
+    float width, height;    /* 2x4 bytes */
+    float anchorX, anchorY; /* 2x4 bytes */
+    uint32_t abgr;          /* 4 bytes */
+    uint8_t layers;         /* 1 byte */
+    bool doublesided;       /* 1 byte */
+    bool shadow;            /* 1 byte */
+    bool isUnlit;           /* 1 byte */
 
     // char pad[1];
 };
@@ -30,16 +31,14 @@ Quad *quad_new(void) {
     q->transform = transform_make_with_ptr(QuadTransform, q, 0, &_quad_void_free);
     q->width = 1.0f;
     q->height = 1.0f;
+    q->anchorX = 0.0f;
+    q->anchorY = 0.0f;
     q->abgr = 0xff000000;
     q->layers = 1; // CAMERA_LAYERS_0
     q->doublesided = true;
     q->shadow = false;
     q->isUnlit = false;
     return q;
-}
-
-void quad_release(Quad *q) {
-    transform_release(q->transform);
 }
 
 void quad_free(Quad *q) {
@@ -64,6 +63,22 @@ void quad_set_height(Quad *q, float value) {
 
 float quad_get_height(const Quad *q) {
     return q->height;
+}
+
+void quad_set_anchor_x(Quad *q, float value) {
+    q->anchorX = value;
+}
+
+float quad_get_anchor_x(const Quad *q) {
+    return q->anchorX;
+}
+
+void quad_set_anchor_y(Quad *q, float value) {
+    q->anchorY = value;
+}
+
+float quad_get_anchor_y(const Quad *q) {
+    return q->anchorY;
 }
 
 void quad_set_color(Quad *q, uint32_t color) {
