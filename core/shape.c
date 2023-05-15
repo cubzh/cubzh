@@ -121,10 +121,14 @@ struct _Shape {
     uint8_t vbAllocationFlag_transparent; // 1 byte
 
     ShapeDrawMode drawMode; // 1 byte
-    bool shadowDecal;       // 1 byte
-    bool shadow;            // 1 byte
-    bool isUnlit;           // 1 byte
-    uint8_t layers;         // 1 byte
+
+    // Whether transparent inner faces between 2 blocks of a different color should be drawn
+    bool innerTransparentFaces; // 1 byte
+
+    bool shadowDecal; // 1 byte
+    bool shadow;      // 1 byte
+    bool isUnlit;     // 1 byte
+    uint8_t layers;   // 1 byte
 
     bool isMutable;                        // 1 byte
     bool historyEnabled;                   // 1 byte
@@ -133,7 +137,7 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    char pad[1];
+    // char pad[1];
 };
 
 // --------------------------------------------------
@@ -323,6 +327,7 @@ Shape *shape_make(void) {
     s->maxWidth = s->maxHeight = s->maxDepth = 0;
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
+    s->innerTransparentFaces = true;
     s->shadowDecal = false;
     s->shadow = true;
     s->isUnlit = false;
@@ -380,6 +385,7 @@ Shape *shape_make_copy(Shape *origin) {
     box_copy(s->box, origin->box);
 
     s->drawMode = origin->drawMode;
+    s->innerTransparentFaces = origin->innerTransparentFaces;
     s->shadowDecal = origin->shadowDecal;
     s->isUnlit = origin->isUnlit;
     s->layers = origin->layers;
@@ -2693,6 +2699,20 @@ ShapeDrawMode shape_get_draw_mode(const Shape *s) {
         return SHAPE_DRAWMODE_DEFAULT;
     }
     return s->drawMode;
+}
+
+void shape_set_inner_transparent_faces(Shape *s, const bool toggle) {
+    if (s == NULL) {
+        return;
+    }
+    s->innerTransparentFaces = toggle;
+}
+
+bool shape_draw_inner_transparent_faces(const Shape *s) {
+    if (s == NULL) {
+        return false;
+    }
+    return s->innerTransparentFaces;
 }
 
 void shape_set_shadow_decal(Shape *s, const bool toggle) {
