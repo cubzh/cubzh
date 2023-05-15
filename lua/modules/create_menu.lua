@@ -35,6 +35,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		local categories = {"null"} 
 		local categoryShapes = {"one_cube_template"}
 		local buttonLabels = {"✨ Create Item ⚔️"}
+		local inputLabel = "Item Name?"
 
 		local textWithEmptyInput = "An Item needs a name, coders will use it as a reference within world scripts. Choose wisely, it cannot be changed!"
 
@@ -48,9 +49,10 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 							"✨ Create Shoes 👞"
 							}
 		elseif what == "world" then
-			categories = {"null"} 
+			categories = {"null"}
 			categoryShapes = {"world_icon"}
 			buttonLabels = {"✨ Create World 🌎"}
+			inputLabel = "World Name?"
 			textWithEmptyInput = "A World needs a name! No pressure, this can be changed later on."
 		end
 
@@ -90,7 +92,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		local nextTemplateBtn
 		local previousTemplateBtn
 
-		local input = ui:createTextInput("", "Item Name?")
+		local input = ui:createTextInput("", inputLabel)
 		input:setParent(node)
 
 		local text = ui:createText(textWithEmptyInput, theme.textColor)

@@ -340,7 +340,8 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *co
 
     // we can use collider cached in rtree leaf whenever possible, otherwise compute it
     switch (transform_get_type(t)) {
-        case ColliderTransform: {
+        case PointTransform:
+        case QuadTransform: {
             rb = transform_get_rigidbody(t);
             if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
                 if (_transform_get_dirty(t, TRANSFORM_PHYSICS) ||
