@@ -707,27 +707,28 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                     // transparent: if neighbor is non-solid or, if enabled, transparent with a
                     // different color
                     if (selfTransparent) {
-#if ENABLE_TRANSPARENCY_INNER_FACES
-                        renderLeft = (solid_left == false) ||
-                                     (transparent_left && b->colorIndex != left->colorIndex);
-                        renderRight = (solid_right == false) ||
-                                      (transparent_right && b->colorIndex != right->colorIndex);
-                        renderFront = (solid_front == false) ||
-                                      (transparent_front && b->colorIndex != front->colorIndex);
-                        renderBack = (solid_back == false) ||
-                                     (transparent_back && b->colorIndex != back->colorIndex);
-                        renderTop = (solid_top == false) ||
-                                    (transparent_top && b->colorIndex != top->colorIndex);
-                        renderBottom = (solid_bottom == false) ||
-                                       (transparent_bottom && b->colorIndex != bottom->colorIndex);
-#else
-                        renderLeft = (solid_left == false);
-                        renderRight = (solid_right == false);
-                        renderFront = (solid_front == false);
-                        renderBack = (solid_back == false);
-                        renderTop = (solid_top == false);
-                        renderBottom = (solid_bottom == false);
-#endif
+                        if (shape_draw_inner_transparent_faces(shape)) {
+                            renderLeft = (solid_left == false) ||
+                                         (transparent_left && b->colorIndex != left->colorIndex);
+                            renderRight = (solid_right == false) ||
+                                          (transparent_right && b->colorIndex != right->colorIndex);
+                            renderFront = (solid_front == false) ||
+                                          (transparent_front && b->colorIndex != front->colorIndex);
+                            renderBack = (solid_back == false) ||
+                                         (transparent_back && b->colorIndex != back->colorIndex);
+                            renderTop = (solid_top == false) ||
+                                        (transparent_top && b->colorIndex != top->colorIndex);
+                            renderBottom = (solid_bottom == false) ||
+                                           (transparent_bottom &&
+                                            b->colorIndex != bottom->colorIndex);
+                        } else {
+                            renderLeft = (solid_left == false);
+                            renderRight = (solid_right == false);
+                            renderFront = (solid_front == false);
+                            renderBack = (solid_back == false);
+                            renderTop = (solid_top == false);
+                            renderBottom = (solid_bottom == false);
+                        }
                     }
                     // opaque: if neighbor is non-opaque
                     else {
