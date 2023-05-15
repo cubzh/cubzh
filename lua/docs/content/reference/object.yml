@@ -183,8 +183,9 @@ properties:
           ([nil] by default)
       samples:
         - code: |
-            myObject.OnPointerDrag = function(pointerEvent)
-              print("dx:", pointerEvent.DX, "dy:", pointerEvent.DY)
+            myObject.OnPointerDrag = function(object, pointerEvent)
+              -- `object` is `myObject`
+              object.Position.Y = object.Position.Y + pointerEvent.DY
             end
 
     - name: "Position"
