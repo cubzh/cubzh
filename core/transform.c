@@ -100,11 +100,7 @@ struct _Transform {
     char pad[7];
 };
 
-//
-//
 // MARK: - Private functions' prototypes -
-//
-//
 
 static void _transform_set_dirty(Transform *const t, const uint8_t flag);
 static void _transform_reset_dirty(Transform *const t, const uint8_t flag);
