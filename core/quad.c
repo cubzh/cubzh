@@ -7,19 +7,39 @@
 #include "quad.h"
 
 #include <stdlib.h>
+#include <string.h>
+
+#define QUAD_FLAG_NONE 0
+#define QUAD_FLAG_DOUBLESIDED 1
+#define QUAD_FLAG_SHADOW 2
+#define QUAD_FLAG_UNLIT 4
 
 struct _Quad {
     Transform *transform;
+    void *data;
+    size_t size;            /* 8 bytes */
     float width, height;    /* 2x4 bytes */
     float anchorX, anchorY; /* 2x4 bytes */
+    float tilingU, tilingV; /* 2x4 bytes */
+    float offsetU, offsetV; /* 2x4 bytes */
     uint32_t abgr;          /* 4 bytes */
     uint8_t layers;         /* 1 byte */
-    bool doublesided;       /* 1 byte */
-    bool shadow;            /* 1 byte */
-    bool isUnlit;           /* 1 byte */
+    uint8_t flags;          /* 1 byte */
 
-    // char pad[1];
+    char pad[2];
 };
+
+void _quad_toggle_flag(Quad *q, uint8_t flag, bool toggle) {
+    if (toggle) {
+        q->flags |= flag;
+    } else {
+        q->flags &= ~flag;
+    }
+}
+
+bool _quad_get_flag(const Quad *q, uint8_t flag) {
+    return flag == (q->flags & flag);
+}
 
 void _quad_void_free(void *o) {
     Quad *q = (Quad *)o;
@@ -29,24 +49,52 @@ void _quad_void_free(void *o) {
 Quad *quad_new(void) {
     Quad *q = (Quad *)malloc(sizeof(Quad));
     q->transform = transform_make_with_ptr(QuadTransform, q, 0, &_quad_void_free);
+    q->data = NULL;
+    q->size = 0;
     q->width = 1.0f;
     q->height = 1.0f;
     q->anchorX = 0.0f;
     q->anchorY = 0.0f;
-    q->abgr = 0xff000000;
+    q->tilingU = 1.0f;
+    q->tilingV = 1.0f;
+    q->offsetU = 0.0f;
+    q->offsetV = 0.0f;
+    q->abgr = 0xffffffff;
     q->layers = 1; // CAMERA_LAYERS_0
-    q->doublesided = true;
-    q->shadow = false;
-    q->isUnlit = false;
+    q->flags = QUAD_FLAG_DOUBLESIDED;
     return q;
 }
 
 void quad_free(Quad *q) {
+    if (q->data != NULL) {
+        free(q->data);
+    }
     free(q);
 }
 
 Transform *quad_get_transform(const Quad *q) {
     return q->transform;
+}
+
+void quad_copy_data(Quad *q, const void *data, size_t size) {
+    if (q->data != NULL) {
+        free(q->data);
+    }
+    if (data != NULL && size > 0) {
+        q->data = malloc(size);
+        memcpy(q->data, data, size);
+    } else {
+        q->data = NULL;
+    }
+    q->size = size;
+}
+
+void *quad_get_data(const Quad *q) {
+    return q->data;
+}
+
+size_t quad_get_data_size(const Quad *q) {
+    return q->size;
 }
 
 void quad_set_width(Quad *q, float value) {
@@ -81,6 +129,38 @@ float quad_get_anchor_y(const Quad *q) {
     return q->anchorY;
 }
 
+void quad_set_tiling_u(Quad *q, float value) {
+    q->tilingU = value;
+}
+
+float quad_get_tiling_u(const Quad *q) {
+    return q->tilingU;
+}
+
+void quad_set_tiling_v(Quad *q, float value) {
+    q->tilingV = value;
+}
+
+float quad_get_tiling_v(const Quad *q) {
+    return q->tilingV;
+}
+
+void quad_set_offset_u(Quad *q, float value) {
+    q->offsetU = value;
+}
+
+float quad_get_offset_u(const Quad *q) {
+    return q->offsetU;
+}
+
+void quad_set_offset_v(Quad *q, float value) {
+    q->offsetV = value;
+}
+
+float quad_get_offset_v(const Quad *q) {
+    return q->offsetV;
+}
+
 void quad_set_color(Quad *q, uint32_t color) {
     q->abgr = color;
 }
@@ -98,27 +178,27 @@ uint8_t quad_get_layers(const Quad *q) {
 }
 
 void quad_set_doublesided(Quad *q, bool toggle) {
-    q->doublesided = toggle;
+    _quad_toggle_flag(q, QUAD_FLAG_DOUBLESIDED, toggle);
 }
 
 bool quad_is_doublesided(const Quad *q) {
-    return q->doublesided;
+    return _quad_get_flag(q, QUAD_FLAG_DOUBLESIDED);
 }
 
 void quad_set_shadow(Quad *q, bool toggle) {
-    q->shadow = toggle;
+    _quad_toggle_flag(q, QUAD_FLAG_SHADOW, toggle);
 }
 
 bool quad_has_shadow(const Quad *q) {
-    return q->shadow;
+    return _quad_get_flag(q, QUAD_FLAG_SHADOW);
 }
 
-void quad_set_unlit(Quad *q, bool value) {
-    q->isUnlit = value;
+void quad_set_unlit(Quad *q, bool toggle) {
+    _quad_toggle_flag(q, QUAD_FLAG_UNLIT, toggle);
 }
 
 bool quad_is_unlit(const Quad *q) {
-    return q->isUnlit;
+    return _quad_get_flag(q, QUAD_FLAG_UNLIT);
 }
 
 // MARK: - Utils -
