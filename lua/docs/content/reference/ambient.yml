@@ -1,0 +1,13 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Ambient"
+extends: ""
+description: |
+    `Ambient` defines a number of general lighting and color properties.
+
+properties:
+    - name: "Intensity"
+      type: "number"
+      description: |
+          Intensity of shapes baked lighting, default is `1.0`.
+        
+          This acts as multiplier for baked lighting values inside of all the shapes of the scene.
