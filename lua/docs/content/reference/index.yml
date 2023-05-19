@@ -42,6 +42,7 @@ blocks:
         - "<a href=\"/reference/players\">Players</a>"
         - "<a href=\"/reference/pointer\">Pointer</a>"
         - "<a href=\"/reference/pointerevent\">PointerEvent</a>"
+        - "<a href=\"/reference/quad\">Quad</a>"
         - "<a href=\"/reference/ray\">Ray</a>"
         - "<a href=\"/reference/rootnode\">RootNode</a>"
         - "<a href=\"/reference/screen\">Screen</a>"
