@@ -149,7 +149,7 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. Cameras only render objects corresponding to their layers.
+          Integer or table of integers between 1 and 8. Cameras only render shapes corresponding to their layers, and lights only affect shapes in matching layers.
 
     - name: "IsUnlit"
       type: "boolean"

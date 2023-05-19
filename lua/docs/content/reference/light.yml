@@ -96,4 +96,4 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. The light will affect other objects in the rendering camera's layers.
+          Integer or table of integers between 1 and 8. The light will affect other objects in matching layers.
