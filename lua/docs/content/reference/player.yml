@@ -71,8 +71,14 @@ properties:
   - name: "Shadow"
     type: boolean
     description: |
-        Whether or not the [Player] should have a square shadow projected on the map, default is `true`.
-        The size of the shadow is based off [Player]'s collision box.
+        Whether or not the player shapes should be affected by light shadow casters in matching layers.
+
+  - name: "ShadowCookie"
+    type: boolean
+    description: |
+        Whether or not [This] should have a square shadow projected on the map, default is `false`.
+        The size of the shadow is based off [This]'s collision box.
+
   - name: "Layers"
     type: "table"
     description: |
