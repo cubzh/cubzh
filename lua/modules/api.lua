@@ -14,24 +14,42 @@ local errorMT = {
 	__tostring = function(t) return t.message or "" end
 }
 
+-- creates an error
+-- statusCode: integer
+-- message: string
 mod.error = function(self, statusCode, message)
+	if self ~= mod then
+		error("api:error(statusCode, message): use `:`", 2)
+	end
+	if type(statusCode) ~= Type.integer then
+		error("api:error(statusCode, message): statusCode should be an integer", 2)
+	end
+	if type(message) ~= Type.string then
+		error("api:error(statusCode, message): message should be a string", 2)
+	end
+
 	local err = {statusCode = statusCode, message = message}
 	setmetatable(err, errorMT)
 	return err
 end
 
 
--- postSecret ...
--- callback(ok, errMsg)
+-- posts secret to the /secret path
+-- secret: string
+-- callback: function(boolean: ok, string: msg)
+-- 		ok: boolean
+--		msg: string
 mod.postSecret = function(self, secret, callback)
-	if type(secret) ~= "string" then
-		callback(false, "1st arg must be a string")
-		return
+	if self ~= mod then
+		error("api:postSecret(secret, callback): use `:`", 2)
+	end
+	if type(secret) ~= type.string then
+		error("api:postSecret(secret, callback): secret should be a string", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, "2nd arg must be a function")
-		return
+		error("api:postSecret(secret, callback): callback should be a function (boolean, string)", 2)
 	end
+
 	local url = mod.kApiAddr .. "/secret"
 	local body = {
 		secret = secret,
@@ -47,20 +65,22 @@ mod.postSecret = function(self, secret, callback)
 end
 
 -- search Users by username substring
--- callback(ok, users, errMsg)
--- ok: boolean
--- users: []User
--- errMsg: string
+-- searchText: string
+-- callback: function(ok, users, errMsg)
+-- 		ok: boolean
+-- 		users: []User or nil
+-- 		errMsg: string or nil
 mod.searchUser = function(self, searchText, callback)
-	-- validate arguments
-	if type(searchText) ~= "string" then
-		callback(false, nil, "1st arg must be a string")
-		return
+	if self ~= mod then
+		error("api:searchUser(searchText, callback): use `:`", 2)
+	end
+	if type(searchText) ~= type.string then
+		error("api:searchUser(searchText, callback): searchText should be a string", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, nil, "2nd arg must be a function")
-		return
+		error("api:searchUser(searchText, callback): callback should be a function (boolean, []User, string)", 2)
 	end
+
 	HTTP:Get(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
@@ -75,13 +95,19 @@ mod.searchUser = function(self, searchText, callback)
 	end)
 end
 
--- getFriends ...
--- callback(ok, friends, errMsg)
+-- gets User's friends
+-- callback: function(ok, friends, errMsg)
+-- 		ok: boolean
+-- 		friends: []User or nil
+-- 		errMsg: string or nil
 mod.getFriends = function(self, callback)
-	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
-		return
+	if self ~= mod then
+		error("api:getFriends(callback): use `:`", 2)
 	end
+	if type(callback) ~= "function" then
+		error("api:getFriends(callback): callback should be a function (boolean, []User, string)", 2)
+	end
+
 	HTTP:Get(mod.kApiAddr .. "/friend-relations", function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200: " .. resp.StatusCode)
@@ -96,33 +122,44 @@ mod.getFriends = function(self, callback)
 	end)
 end
 
--- getFriendCount ...
--- callback(ok, count, errMsg)
+-- returns how manu friends the local User has
+-- callback: function(ok, count, errMsg)
+--		ok: boolean
+--		count: integer
+--		errMsg: string or nil
 mod.getFriendCount = function(self, callback)
-	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
-		return
+	if self ~= mod then
+		error("api:getFriendCount(callback): use `:`", 2)
 	end
-	self:getFriends(function(ok, friends)
+	if type(callback) ~= "function" then
+		error("api:getFriendCount(callback): callback should be a function (boolean, integer, string)", 2)
+	end
+
+	self:getFriends(function(ok, friends, errMsg)
 		local count = 0
 		if friends ~= nil then
 			count = #friends
 		end
-		callback(ok, count, nil)
+		callback(ok, count, errMsg)
 	end)
 end
 
--- sendFriendRequest ...
--- callback(ok, errMsg)
+-- sends a friend request to the specified user
+-- userID: string
+-- callback: function(ok, errMsg)
+--		ok: boolean
+--		errMsg: string or nil
 mod.sendFriendRequest = function(self, userID, callback)
-	if type(userID) ~= "string" then
-		callback(false, "1st arg must be a string")
-		return
+	if self ~= mod then
+		error("api:sendFriendRequest(userID, callback): use `:`", 2)
+	end
+	if type(userID) ~= Type.string then
+		error("api:sendFriendRequest(userID, callback): userID should be a string", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, "2nd arg must be a function")
-		return
+		error("api:sendFriendRequest(userID, callback): callback should be a function (boolean, string)", 2)
 	end
+
 	local url = mod.kApiAddr .. "/friend-request"
 	local body = {
 		senderID = Player.UserID,
@@ -137,17 +174,22 @@ mod.sendFriendRequest = function(self, userID, callback)
 	end)
 end
 
--- cancelFriendRequest ...
--- callback(ok, errMsg)
+-- cancels the friend request to the specified user
+-- recipientID: string
+-- callback: function(ok, errMsg)
+--		ok: boolean
+--		errMsg: string or nil
 mod.cancelFriendRequest = function(self, recipientID, callback)
-	if type(recipientID) ~= "string" then
-		callback(false, "1st arg must be a string")
-		return
+	if self ~= mod then
+		error("api:cancelFriendRequest(recipientID, callback): use `:`", 2)
+	end
+	if type(recipientID) ~= Type.string then
+		error("api:cancelFriendRequest(recipientID, callback): recipientID should be a string", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, "2nd arg must be a function")
-		return
+		error("api:cancelFriendRequest(recipientID, callback): callback should be a function (boolean, string)", 2)
 	end
+
 	local url = mod.kApiAddr .. "/friend-request-cancel"
 	local body = {
 		senderID = Player.UserID,
@@ -162,13 +204,19 @@ mod.cancelFriendRequest = function(self, recipientID, callback)
 	end)
 end
 
--- getSentFriendRequests ...
--- callback(ok, reqs, errMsg)
+-- returns the userIDs for which the local user sent a friend request
+-- callback: function(ok, reqs, errMsg)
+--		ok: boolean
+--		reqs: []string (userIDs) or nil
+--		errMsg: string or nil
 mod.getSentFriendRequests = function(self, callback)
-	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
-		return
+	if self ~= mod then
+		error("api:getSentFriendRequests(callback): use `:`", 2)
 	end
+	if type(callback) ~= "function" then
+		error("api:getSentFriendRequests(callback): callback should be a function (boolean, []string, string)", 2)
+	end
+
 	local url = mod.kApiAddr .. "/friend-requests-sent"
 	HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
@@ -185,13 +233,19 @@ mod.getSentFriendRequests = function(self, callback)
 	end)
 end
 
--- getReceivedFriendRequests ...
--- callback(ok, reqs, errMsg)
+-- returns the userIDs of users that sent a friend request to the local user 
+-- callback: function(ok, reqs, errMsg)
+--		ok: boolean
+--		reqs: []string (userIDs) or nil
+--		errMsg: string or nil
 mod.getReceivedFriendRequests = function(self, callback)
-	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
-		return
+	if self ~= mod then
+		error("api:getReceivedFriendRequests(callback): use `:`", 2)
 	end
+	if type(callback) ~= "function" then
+		error("api:getReceivedFriendRequests(callback): callback should be a function (boolean, []string, string)", 2)
+	end
+
 	local url = mod.kApiAddr .. "/friend-requests-received"
 	HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
@@ -208,17 +262,23 @@ mod.getReceivedFriendRequests = function(self, callback)
 end
 
 -- getUserInfo gets a user by its ID
--- callback(ok, user, errMsg)
+-- id: string
+-- callback: function(ok, user, errMsg)
+--		ok: boolean
+--		user: table or nil
+--		errMsg: string or nil
 mod.getUserInfo = function(self, id, callback)
 	-- validate arguments
-	if type(id) ~= "string" then
-		callback(false, nil, "1st arg must be a string")
-		return
+	if self ~= mod then
+		error("api:getUserInfo(id, callback): use `:`", 2)
+	end
+	if type(id) ~= Type.string then
+		error("api:getUserInfo(id, callback): id should be a string", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, nil, "2nd arg must be a function")
-		return
+		error("api:getUserInfo(id, callback): callback should be a function (boolean, table, string)", 2)
 	end
+	
 	local url = mod.kApiAddr .. "/user/" .. id
 	HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
@@ -235,21 +295,26 @@ mod.getUserInfo = function(self, id, callback)
 end
 
 -- replyToFriendRequest accepts or rejects a received friend request
--- callback(ok, errMsg)
+-- usrID: string
+-- accept: boolean
+-- callback: function(ok, errMsg)
+--		ok: boolean
+--		errMsg: string or nil
 mod.replyToFriendRequest = function(self, usrID, accept, callback)
 	-- validate arguments
-	if type(usrID) ~= "string" then
-		callback(false, "1st arg must be a string")
-		return
+	if self ~= mod then
+		error("api:replyToFriendRequest(id, usrID, accept, callback): use `:`", 2)
 	end
-	if type(accept) ~= "boolean" then
-		callback(false, "2nd arg must be a boolean")
-		return
+	if type(usrID) ~= Type.string then
+		error("api:replyToFriendRequest(id, usrID, accept, callback): usrID should be a string", 2)
+	end
+	if type(accept) ~= Type.boolean then
+		error("api:replyToFriendRequest(id, usrID, accept, callback): accept should be a boolean", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, "3rd arg must be a function")
-		return
+		error("api:replyToFriendRequest(id, usrID, accept, callback): callback should be a function (boolean, string)", 2)
 	end
+
 	local url = mod.kApiAddr .. "/friend-request-reply"
 	local body = {
 		senderID = usrID,
@@ -269,48 +334,54 @@ end
 -- --------------------------------------------------
 
 -- Lists items using filter.
---
+-- filer: table
+-- example:
 -- filter = {
 --   category = "hat",
 --   repo = "caillef",
 -- }
 --
--- callback(error string or nil, items []Item or nil)
---
+-- callback: function(error, items)
+--		error: string or nil
+--		items: []Item or nil
 mod.getItems = function(self, filter, callback)
 	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
-
+	
 	-- validate arguments
+	if self ~= mod then
+		error("api:getItems(filter, callback): use `:`", 2)
+	end
 	if type(filter) ~= "table" then
-		callback("1st arg must be a table", nil)
-		return
+		error("api:getItems(filter, callback): filter should be a table", 2)
 	end
 	if type(callback) ~= "function" then
-		callback("2nd arg must be a function", nil)
-		return
+		error("api:getItems(filter, callback): callback should be a function (string, []Item)", 2)
 	end
 
 	local filterIsValid = function (k, v)
-		if type(k) == "string" then
-			if k == "search" and type(v) == "string" and v ~= "" then
-				return true
-			end
-			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
-				return true
-			end
-			if k == "page" or k == "perpage" then
-				return true
-			end
-			if k == "category" then
-				return true
-			end
-			if k == "repo" then
-				return true
-			end
-			if k == "minBlock" then
-				return true
-			end
+		if type(k) ~= "string" then
+			return false
 		end
+
+		if k == "search" and type(v) == "string" and v ~= "" then
+			return true
+		end
+		if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
+			return true
+		end
+		if k == "page" or k == "perpage" then
+			return true
+		end
+		if k == "category" then
+			return true
+		end
+		if k == "repo" then
+			return true
+		end
+		if k == "minBlock" then
+			return true
+		end
+
 		return false
 	end
 
@@ -364,25 +435,30 @@ mod.getItems = function(self, filter, callback)
 end
 
 -- Lists world drafts using filter.
---
+-- filer: table
+-- example:
 -- filter = {
 --   repo = "caillef",
 --   category = "fps",
 -- }
 -- NOTE: categories are not in place yet, but they would be useful,
 -- keeping filter in place client side, waiting for backend to support it.
--- callback(error string or nil, items []World or nil)
+--
+-- callback:function(error, items)
+--		error: string or nil
+--		items: []World or nil
 mod.getWorlds = function(self, filter, callback)
 	-- GET /worlddrafts?search=banana,gdevillele&page=1&perPage=100
 
 	-- validate arguments
-	if type(filter) ~= "table" then
-		callback("1st arg must be a table", nil)
-		return
+	if self ~= mod then
+		error("api:getWorlds(filter, callback): use `:`", 2)
+	end
+	if type(filter) ~= Type.table then
+		error("api:getWorlds(filter, callback): filter should be a table", 2)
 	end
 	if type(callback) ~= "function" then
-		callback("2nd arg must be a function", nil)
-		return
+		error("api:getWorlds(filter, callback): callback should be a function (string, []World)", 2)
 	end
 
 	local filterIsValid = function (k, v)
@@ -457,11 +533,20 @@ mod.getWorlds = function(self, filter, callback)
 	end)
 end
 
--- callback(error string or nil, World or nil)
+-- returns World associated with the provided worldID
+-- worldID: string
+-- callback: function(error, world)
+--		error: string or nil
+--		world: World or nil
 mod.getWorld = function(self, worldID, callback)
+	if self ~= mod then
+		error("api:getWorld(worldID, callback): use `:`", 2)
+	end
+	if type(worldID) ~= Type.string then
+		error("api:getWorld(worldID, callback): worldID should be a string", 2)
+	end
 	if type(callback) ~= "function" then
-		callback("2nd arg must be a function", nil)
-		return
+		error("api:getWorld(worldID, callback): callback should be a function (string, World)", 2)
 	end
 
 	local url = mod.kApiAddr .. "/worlds/" .. worldID
@@ -492,9 +577,23 @@ mod.getWorld = function(self, worldID, callback)
 	end)
 end
 
-
+-- creates a World with the provided data, example:
 -- api:createWorld({title = "banana", category = nil, original = nil}, function(err, world))
-mod.createWorld = function(self, data, callback) 
+-- data: table
+-- callback: function(err, world)
+--		err: api.error instance
+--		world: World
+mod.createWorld = function(self, data, callback)
+	if self ~= mod then
+		error("api:createWorld(data, callback): use `:`", 2)
+	end
+	if type(data) ~= Type.table then
+		error("api:createWorld(data, callback): data should be a table", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:createWorld(data, callback): callback should be a function (api.error, world)", 2)
+	end
+
 	local url = self.kApiAddr .. "/worlddrafts"
 	HTTP:Post(url, data, function(res)
 		if res.StatusCode ~= 200 then
@@ -517,8 +616,27 @@ mod.createWorld = function(self, data, callback)
 	end)
 end
 
+-- modifies the world with given worldID with provided data, example:
 -- api:patchWorld("world-id", {title = "something", description = "banana"}, function(err, world))
-mod.patchWorld = function(self, worldID, data, callback) 
+-- worldID: string
+-- data: table
+-- callback: function(err, world)
+--		err: api.error instance
+--		world: World
+mod.patchWorld = function(self, worldID, data, callback)
+	if self ~= mod then
+		error("api:patchWorld(worldID, data, callback): use `:`", 2)
+	end
+	if type(worldID) ~= Type.string then
+		error("api:patchWorld(worldID, data, callback): worldID should be a string", 2)
+	end
+	if type(data) ~= Type.table then
+		error("api:patchWorld(worldID, data, callback): data should be a table", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:patchWorld(worldID, data, callback): callback should be a function (api.error, world)", 2)
+	end
+
 	local url = self.kApiAddr .. "/worlddrafts/" .. worldID
 	HTTP:Patch(url, data, function(res)
 		if res.StatusCode ~= 200 then
@@ -541,8 +659,24 @@ mod.patchWorld = function(self, worldID, data, callback)
 	end)
 end
 
+-- creates an Item with the provided data, example:
 -- api:createItem({name = "banana", category = nil, original = nil}, function(err, item))
-mod.createItem = function(self, data, callback) 
+-- data: table
+-- callback: function(err, item)
+--		err: api.error instance
+--		item: Item
+-- api:createItem({name = "banana", category = nil, original = nil}, function(err, item))
+mod.createItem = function(self, data, callback)
+	if self ~= mod then
+		error("api:createItem(data, callback): use `:`", 2)
+	end
+	if type(data) ~= Type.table then
+		error("api:createItem(data, callback): data should be a table", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:createItem(data, callback): callback should be a function (api.error, item)", 2)
+	end
+
 	local url = self.kApiAddr .. "/itemdrafts"
 	HTTP:Post(url, data, function(res)
 		if res.StatusCode ~= 200 then
@@ -565,8 +699,27 @@ mod.createItem = function(self, data, callback)
 	end)
 end
 
+-- modifies the Item with given worldID with provided data, example:
 -- api:patchItem("item-id", {description = "banana"}, function(err, item))
-mod.patchItem = function(self, itemID, data, callback) 
+-- itemID: string
+-- data: table
+-- callback: function(err, item)
+--		err: api.error instance
+--		item: Item
+mod.patchItem = function(self, itemID, data, callback)
+	if self ~= mod then
+		error("api:patchItem(worldID, data, callback): use `:`", 2)
+	end
+	if type(worldID) ~= Type.string then
+		error("api:patchItem(worldID, data, callback): worldID should be a string", 2)
+	end
+	if type(data) ~= Type.table then
+		error("api:patchItem(worldID, data, callback): data should be a table", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:patchItem(worldID, data, callback): callback should be a function (api.error, item)", 2)
+	end
+
 	local url = self.kApiAddr .. "/itemdrafts/" .. itemID
 	HTTP:Patch(url, data, function(res)
 		if res.StatusCode ~= 200 then
