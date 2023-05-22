@@ -23,12 +23,12 @@ properties:
         - code: Fog.Distance = 100
     - name: "Near"
       type: "number"
-      description: "Distance at which Fog starts. (in blocks)"
+      description: "Distance at which Fog starts, in world units"
       samples:
         - code: Fog.Near = 50
     - name: "Far"
       type: "number"
-      description: "Distance at which Fog ends. (in blocks)"
+      description: "Distance at which Fog ends, in world units."
       samples:
         - code: Fog.Far = 100
         - code: |
@@ -38,9 +38,14 @@ properties:
     - name: "LightAbsorption"
       type: "number"
       description: |
-          Fog absorption factor regarding light emissive blocks.
+          Fog absorption factor regarding light blocks and light objects, default is `0.4`.
 
           0.0 ➡️ the color can 100% be seen through the fog.
           1.0 ➡️ the color is totally absorbed, like any other block.
       samples:
         - code: Fog.LightAbsorption = 0.1
+
+    - name: "Layers"
+      type: "table"
+      description: |
+          Integer or table of integers between 1 and 8. Cameras only render the fog if it corresponds to their layers.

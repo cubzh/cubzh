@@ -104,6 +104,11 @@ properties:
               as.Loop = true
               as:Play()
 
+    - name: "IsPlaying"
+      type: "boolean"
+      description: |
+          Returns `true` if the audio source is currently playing a sound.
+
 functions:
     - name: "Pause"
       description: |

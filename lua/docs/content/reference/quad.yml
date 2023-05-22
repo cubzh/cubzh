@@ -1,0 +1,87 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Quad"
+extends: "Object"
+description: |
+    A `Quad` is an object which model has four vertices, forming a square. It can be filled with a color or an image.
+
+    It has many uses in creating UI, building a 2D world, or creating special effects.
+
+constructors: 
+  - description: "Creates a Quad with default properties."
+    samples:
+      - code: |
+          local q = Quad()
+
+          -- set quad properties
+          q.Height = 2
+          q.Color = Color(1.0, 1.0, 0.5)
+
+          -- use it as a normal object in the scene
+          q:SetParent(World)
+          q.Position = { x, y, z }
+
+properties:
+    - name: "Color"
+      type: "Color"
+      description: |
+          Color of the quad, white by default.
+
+    - name: "Image"
+      type: "Data"
+      description: |
+          Assign with a compatible image `Data` to display it on the quad. Set it to `false` or `nil` to clear it.
+        
+          When getting this value, it returns `true` if the quad is currently textured.
+
+    - name: "Width"
+      type: "number"
+      description: |
+          Width of the quad model, `1.0` by default.
+
+    - name: "Height"
+      type: "number"
+      description: |
+          Height of the quad model, `1.0` by default.
+
+    - name: "Anchor"
+      type: "Number2"
+      description: |
+          Anchor of the quad, `{ 0.0, 0.0 }` by default, which corresponds to the lower left corner.
+        
+          For example, `{ 0.5, 0.0 }` would correspond to the middle of the bottom edge of the quad.
+
+    - name: "Tiling"
+      type: "Number2"
+      description: |
+          Tiling of the texture on this quad. Has no effect if the quad isn't textured.
+          
+          This can be used to repeat a pattern over the quad's surface.
+
+    - name: "Offset"
+      type: "Number2"
+      description: |
+          Offset of the texture on this quad. Has no effect if the quad isn't textured.
+          
+          This can be use to select an area of the texture to display, or to create scrolling effects.
+
+    - name: "IsDoubleSided"
+      type: "boolean"
+      description: |
+          If `true`, both sides of the quad are rendered, `true` by default.
+        
+          Setting this to `false` can be done as an optimization when using quads for UI or 2D games.
+
+    - name: "Shadow"
+      type: boolean
+      description: |
+          Whether or not the quad should be affected by light shadow casters in matching layers.
+
+    - name: "Layers"
+      type: "table"
+      description: |
+          Integer or table of integers between 1 and 8. Cameras only render quads corresponding to their layers, and lights only affect shapes in matching layers.
+
+    - name: "IsUnlit"
+      type: "boolean"
+      description: |
+          Whether or not the [This] should ignore scene lighting, `false` by default.

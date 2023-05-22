@@ -133,9 +133,14 @@ properties:
       read-only: true
       type: integer
       description: |
-        The number of blocks in [This]'s model.
+          The number of blocks in [This]'s model.
 
     - name: "Shadow"
+      type: boolean
+      description: |
+          Whether or not the shape should be affected by light shadow casters in matching layers.
+
+    - name: "ShadowCookie"
       type: boolean
       description: |
           Whether or not [This] should have a square shadow projected on the map, default is `false`.
@@ -144,12 +149,17 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. Cameras only render objects corresponding to their layers.
+          Integer or table of integers between 1 and 8. Cameras only render shapes corresponding to their layers, and lights only affect shapes in matching layers.
 
     - name: "IsUnlit"
       type: "boolean"
       description: |
           Whether or not the [This] should ignore scene lighting, `false` by default.
+
+    - name: "InnerTransparentFaces"
+      type: "boolean"
+      description: |
+          Whether or not inner faces between blocks of different colors should be drawn for this shape, `true` by default.
 
 functions:
     - name: "GetBlock"

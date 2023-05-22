@@ -8,8 +8,6 @@ description: |
 
     A code example of `Light`'s various fields can be found in the world `Lights Tests`.
 
-    Note: shadow features are under development and will be available soon.
-
 constructors: 
   - description: "Creates a Light with default properties."
     samples:
@@ -61,10 +59,27 @@ properties:
       description: |
           Angle of the cone of a spot light, default is `0.7` radians. Has no effect on other light types.
 
+    - name: "Intensity"
+      type: "number"
+      description: |
+          Intensity of the light, default is `1.8`. A value between `0.0` and `1.0` dims illumination of the scene, whereas values higher than `1.0` adds light color over the scene.
+
+          This can be set on global `Light` object to control all lights' intensity at once, or on a light instance to override its individual intensity.
+
+    - name: "Ambient"
+      type: "Ambient"
+      description: |
+          A collection of general lighting and color properties. This can only be accessed on global `Light` object.
+
     - name: "On"
       type: "boolean"
       description: |
           Toggles the light source on and off.
+
+    - name: "CastsShadows"
+      type: "boolean"
+      description: |
+          Enables the light source as a shadow caster. Cubzh may limit the number of light shadow casters in a scene based on each player's device.
 
     - name: "PriorityGroup"
       type: "integer"
@@ -81,4 +96,4 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. The light will affect other objects in the rendering camera's layers.
+          Integer or table of integers between 1 and 8. The light will affect other objects in matching layers.

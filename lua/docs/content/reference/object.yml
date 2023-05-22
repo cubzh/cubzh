@@ -142,25 +142,29 @@ properties:
 
           ⚠️ When set to `PhysicsMode.Disabled`, [This].[Velocity](#property-velocity) & [This].[Motion](#property-motion) are set to `{0,0,0}`.
 
+    - name: "OnCollisionBegin"
+      type: "function"
+      description: |
+          [nil] by default. Can be set to a function that will be triggered when this object begins a collision with another object.
+          
+          The function is called with 3 parameters:
+          - the object the callback was set for,
+          - the other actor in the collision,
+          - the world normal of the hit surface.
+          
+          Note: it's not necessary to use all 3 parameters.
+      samples:
+        - code: |
+            object.OnCollisionBegin = function(self, other, normal)
+              print("collision began between", self, " and ", other, " with world normal ", normal)
+            end
+
     - name: "OnCollision"
       type: "function"
       description: |
-          [nil] by default. Can be set to a function that will be triggered when the [This] collides with another [Object].
+          [nil] by default. Can be set to a function that will be triggered every frame where this object remains in contact with another object.
 
-          The function is called with 3 parameters: the object the callback was set for, the other actor in the collision and the [Face] of the first actor that's in contact.
-
-          Note: it's not necessary to do use all 3 parameters.
-      samples:
-        - code: |
-            object.OnCollision = function(o1, o2)
-              -- `o1` is `object` here
-              print("collision detected between", o1, "and", o2)
-            end
-
-            object.OnCollision = function(o1, o2, face)
-              -- `o1` is `object` here
-              print("collision detected between", o1, "'s", face, "and", o2)
-            end
+          Like `OnCollisionBegin`, this function has 3 arguments: `self`, `other`, `normal`.
 
     - name: "OnCollisionEnd"
       type: "function"
@@ -170,9 +174,8 @@ properties:
           The function is called with 2 parameters: the object the callback was set for and the other actor in the collision. 
       samples:
         - code: |
-            object.OnCollisionEnd = function(o1, o2)
-              -- `o1` is `object` here
-              print("collision ended between", o1, "and", o2)
+            object.OnCollisionEnd = function(self, other)
+              print("collision ended between", self, "and", other)
             end
 
     - name: "OnPointerDrag"
