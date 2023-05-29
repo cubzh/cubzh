@@ -62,6 +62,7 @@ struct _InputContext {
     // Input event listeners
     DoublyLinkedList *listeners;
     DoublyLinkedList *keyboardInputListeners;
+    DoublyLinkedList *pointerEventListeners; // for mouse and touch events
 
     InputEventWithHistory pressedInputsImgui[10]; // more than 10 pressed inputs is not supported...
     uint8_t nbPressedInputsImgui;                 // max = 10
@@ -88,15 +89,6 @@ struct _InputListener {
     // last popped CharEvent
     CharEvent *poppedCharEvent;
 
-    // last popped DirPadEvent
-    DirPadEvent *poppedDirPadEvent;
-
-    // last popped ActionPadEvent
-    ActionPadEvent *poppedActionPadEvent;
-
-    // last popped ActionPadEvent
-    AnalogPadEvent *poppedAnalogPadEvent;
-
     FifoList *mouseEvents;
     FifoList *touchEvents;
     FifoList *keyEvents;
@@ -120,6 +112,11 @@ struct _InputListener {
 struct _KeyboardInputListener {
     void *userdata;                                      // weak ref
     keyboard_input_callback_ptr keyboard_input_callback; // weak ref
+};
+
+struct _PointerEventListener {
+    void *userdata;                                    // weak ref
+    pointer_event_callback_ptr pointer_event_callback; // weak ref
 };
 
 InputContext *inputContext(void) {
@@ -166,6 +163,7 @@ InputContext *inputContext(void) {
 
         c->listeners = doubly_linked_list_new();
         c->keyboardInputListeners = doubly_linked_list_new();
+        c->pointerEventListeners = doubly_linked_list_new();
 
         c->nbPressedInputsImgui = 0;
 
@@ -232,46 +230,6 @@ CharEvent *recycle_char_event(void) {
             cclog_error("🔥 can't alloc CharEvent");
         } else {
             ce->eventType = charEvent;
-        }
-    }
-    return ce;
-}
-
-DirPadEvent *recycle_dirpad_event(void) {
-    DirPadEvent *de = (DirPadEvent *)fifo_list_pop(inputContext()->dirPadEventPool);
-    if (de == NULL) { // if no event available, create one
-        de = (DirPadEvent *)malloc(sizeof(DirPadEvent));
-        if (de == NULL) {
-            cclog_error("🔥 can't alloc DirPadEvent");
-        } else {
-            de->eventType = dirPadEvent;
-        }
-    }
-    return de;
-}
-
-ActionPadEvent *recycle_actionpad_event(void) {
-    ActionPadEvent *ae = (ActionPadEvent *)fifo_list_pop(inputContext()->actionPadEventPool);
-    if (ae == NULL) { // if no event available, create one
-        ae = (ActionPadEvent *)malloc(sizeof(ActionPadEvent));
-        if (ae == NULL) {
-            cclog_error("🔥 can't alloc ActionPadEvent");
-        } else {
-            ae->eventType = actionPadEvent;
-        }
-    }
-    return ae;
-}
-
-AnalogPadEvent *recycle_analogpad_event(void) {
-    AnalogPadEvent *ce = (AnalogPadEvent *)fifo_list_pop(inputContext()->analogPadEventPool);
-
-    if (ce == NULL) { // if no event available, create one
-        ce = (AnalogPadEvent *)malloc(sizeof(AnalogPadEvent));
-        if (ce == NULL) {
-            cclog_error("🔥 can't alloc AnalogPadEvent");
-        } else {
-            ce->eventType = analogPadEvent;
         }
     }
     return ce;
@@ -724,6 +682,19 @@ void postKeyboardInput(uint32_t charCode, Input input, uint8_t modifiers, KeySta
     }
 }
 
+void postPointerEvent(PointerID ID, PointerEventType type, float x, float y, float dx, float dy) {
+    InputContext *c = inputContext();
+    if (c->acceptInputs == false)
+        return;
+
+    DoublyLinkedListNode *node = doubly_linked_list_last(c->pointerEventListeners);
+    while (node != NULL) {
+        PointerEventListener *l = (PointerEventListener *)doubly_linked_list_node_pointer(node);
+        l->pointer_event_callback(l->userdata, ID, type, x, y, dx, dy);
+        node = doubly_linked_list_node_previous(node);
+    }
+}
+
 uint8_t input_char_code_to_string(char *buf, uint32_t c) {
     // considering buf size if 5 (at least)
     if (c < 0x80) {
@@ -755,127 +726,6 @@ uint8_t input_char_code_to_string(char *buf, uint32_t c) {
     // Invalid code point, the max unicode is 0x10FFFF
     buf[0] = '\0';
     return 0;
-}
-
-void postDirPadEvent(float dx, float dy, PadBtnState state) {
-
-    InputContext *c = inputContext();
-
-    if (c->acceptInputs == false)
-        return;
-
-    DirPadEvent *de = recycle_dirpad_event();
-    if (de == NULL) {
-        return;
-    }
-
-    de->state = state;
-    de->dx = dx;
-    de->dy = dy;
-
-    DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
-    while (node != NULL) {
-
-        InputListener *il = (InputListener *)doubly_linked_list_node_pointer(node);
-
-        if (il->acceptsDirPadEvents) {
-
-            DirPadEvent *de2 = recycle_dirpad_event();
-            if (de2 == NULL) {
-                break; // exit the while loop
-            }
-
-            dir_pad_event_copy(de, de2);
-
-            fifo_list_push(il->dirPadEvents, de2);
-        }
-
-        node = doubly_linked_list_node_previous(node);
-    }
-
-    // put `de` dirpad event back into the recycle pool
-    fifo_list_push(c->dirPadEventPool, de);
-    de = NULL;
-}
-
-void postActionPadEvent(ActionPadBtn button, PadBtnState state) {
-
-    InputContext *c = inputContext();
-
-    if (c->acceptInputs == false)
-        return;
-
-    ActionPadEvent *ae = recycle_actionpad_event();
-    if (ae == NULL) {
-        return;
-    }
-
-    ae->state = state;
-    ae->button = button;
-
-    DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
-    while (node != NULL) {
-
-        InputListener *il = (InputListener *)doubly_linked_list_node_pointer(node);
-
-        if (il->acceptsActionPadEvents) {
-
-            ActionPadEvent *ae2 = recycle_actionpad_event();
-            if (ae2 == NULL) {
-                break;
-            }
-
-            action_pad_event_copy(ae, ae2);
-
-            fifo_list_push(il->actionPadEvents, ae2);
-        }
-
-        node = doubly_linked_list_node_previous(node);
-    }
-
-    // put `ae` actionPad event back into the recycle pool
-    fifo_list_push(c->actionPadEventPool, ae);
-    ae = NULL;
-}
-
-void postAnalogPadEvent(float dx, float dy, PadBtnState state) {
-
-    InputContext *c = inputContext();
-
-    if (c->acceptInputs == false)
-        return;
-
-    AnalogPadEvent *ce = recycle_analogpad_event();
-    if (ce == NULL) {
-        return;
-    }
-
-    ce->state = state;
-    ce->dx = dx;
-    ce->dy = dy;
-
-    DoublyLinkedListNode *node = doubly_linked_list_last(c->listeners);
-    while (node != NULL) {
-
-        InputListener *il = (InputListener *)doubly_linked_list_node_pointer(node);
-
-        if (il->acceptsAnalogPadEvents) {
-
-            AnalogPadEvent *ce2 = recycle_analogpad_event();
-            if (ce2 == NULL) {
-                break;
-            }
-
-            analog_pad_event_copy(ce, ce2);
-            fifo_list_push(il->analogPadEvents, ce2);
-        }
-
-        node = doubly_linked_list_node_previous(node);
-    }
-
-    // put `ce` analogPad event back into the recycle pool
-    fifo_list_push(c->analogPadEventPool, ce);
-    ce = NULL;
 }
 
 // casts event to MouseEvent, returns NULL if event is not a MouseEvent
@@ -922,39 +772,6 @@ CharEvent *input_event_to_CharEvent(void *e) {
     return NULL;
 }
 
-// casts event to DirPadEvent, returns NULL if event is not a DirPadEvent
-DirPadEvent *input_event_to_DirPadEvent(void *e) {
-    if (e == NULL) {
-        return NULL;
-    }
-    if (*(EventType *)e == dirPadEvent) {
-        return (DirPadEvent *)e;
-    }
-    return NULL;
-}
-
-// casts event to ActionPadEvent, returns NULL if event is not a ActionPadEvent
-ActionPadEvent *input_event_to_ActionPadEvent(void *e) {
-    if (e == NULL) {
-        return NULL;
-    }
-    if (*(EventType *)e == actionPadEvent) {
-        return (ActionPadEvent *)e;
-    }
-    return NULL;
-}
-
-// casts event to AnalogPadEvent, returns NULL if event is not a AnalogPadEvent
-AnalogPadEvent *input_event_to_AnalogPadEvent(void *e) {
-    if (e == NULL) {
-        return NULL;
-    }
-    if (*(EventType *)e == analogPadEvent) {
-        return (AnalogPadEvent *)e;
-    }
-    return NULL;
-}
-
 // ----------------------
 // KeyboardInputListener
 // ----------------------
@@ -979,6 +796,46 @@ void input_keyboard_listener_free(KeyboardInputListener *l, pointer_free_functio
     InputContext *c = inputContext();
 
     DoublyLinkedList *listeners = c->keyboardInputListeners;
+    DoublyLinkedListNode *node = doubly_linked_list_last(listeners);
+    while (node != NULL) {
+        void *ptr = doubly_linked_list_node_pointer(node);
+
+        if (l == ptr) {
+            doubly_linked_list_delete_node(listeners, node);
+            break;
+        }
+        node = doubly_linked_list_node_previous(node);
+    }
+
+    if (userdata_free != NULL) {
+        userdata_free(l->userdata);
+    }
+    free(l); // only weak refs in listener
+}
+
+// ----------------------
+// PointerEventListener
+// ----------------------
+
+PointerEventListener *pointer_event_listener_new(void *userdata,
+                                                 pointer_event_callback_ptr callback) {
+    PointerEventListener *l = (PointerEventListener *)malloc(sizeof(PointerEventListener));
+    if (l == NULL) {
+        return NULL;
+    }
+
+    l->userdata = userdata;
+    l->pointer_event_callback = callback;
+
+    doubly_linked_list_push_first(inputContext()->pointerEventListeners, (void *)l);
+
+    return l;
+}
+
+void pointer_event_listener_free(PointerEventListener *l, pointer_free_function userdata_free) {
+    InputContext *c = inputContext();
+
+    DoublyLinkedList *listeners = c->pointerEventListeners;
     DoublyLinkedListNode *node = doubly_linked_list_last(listeners);
     while (node != NULL) {
         void *ptr = doubly_linked_list_node_pointer(node);
@@ -1027,9 +884,6 @@ InputListener *input_listener_new(bool mouseEvents,
     il->poppedTouchEvent = NULL;
     il->poppedKeyEvent = NULL;
     il->poppedCharEvent = NULL;
-    il->poppedDirPadEvent = NULL;
-    il->poppedActionPadEvent = NULL;
-    il->poppedAnalogPadEvent = NULL;
 
     il->acceptsMouseEvents = mouseEvents;
     il->acceptsTouchEvents = touchEvents;
@@ -1073,12 +927,6 @@ void input_listener_free(InputListener *il) {
         ;
     while (input_listener_pop_char_event(il) != NULL)
         ;
-    while (input_listener_pop_dir_pad_event(il) != NULL)
-        ;
-    while (input_listener_pop_action_pad_event(il) != NULL)
-        ;
-    while (input_listener_pop_analog_pad_event(il) != NULL)
-        ;
 
     fifo_list_free(il->mouseEvents, NULL);
     fifo_list_free(il->touchEvents, NULL);
@@ -1106,21 +954,6 @@ void input_listener_free(InputListener *il) {
     if (il->poppedCharEvent != NULL) {
         fifo_list_push(c->charEventPool, il->poppedCharEvent);
         il->poppedCharEvent = NULL;
-    }
-
-    if (il->poppedDirPadEvent != NULL) {
-        fifo_list_push(c->dirPadEventPool, il->poppedDirPadEvent);
-        il->poppedDirPadEvent = NULL;
-    }
-
-    if (il->poppedActionPadEvent != NULL) {
-        fifo_list_push(c->actionPadEventPool, il->poppedActionPadEvent);
-        il->poppedActionPadEvent = NULL;
-    }
-
-    if (il->poppedAnalogPadEvent != NULL) {
-        fifo_list_push(c->analogPadEventPool, il->poppedAnalogPadEvent);
-        il->poppedAnalogPadEvent = NULL;
     }
 
     free(il);
@@ -1164,36 +997,6 @@ const CharEvent *input_listener_pop_char_event(InputListener *il) {
 
     il->poppedCharEvent = input_event_to_CharEvent(fifo_list_pop(il->charEvents));
     return il->poppedCharEvent;
-}
-
-const DirPadEvent *input_listener_pop_dir_pad_event(InputListener *il) {
-
-    if (il->poppedDirPadEvent != NULL) {
-        fifo_list_push(inputContext()->dirPadEventPool, il->poppedDirPadEvent);
-    }
-
-    il->poppedDirPadEvent = input_event_to_DirPadEvent(fifo_list_pop(il->dirPadEvents));
-    return il->poppedDirPadEvent;
-}
-
-const ActionPadEvent *input_listener_pop_action_pad_event(InputListener *il) {
-
-    if (il->poppedActionPadEvent != NULL) {
-        fifo_list_push(inputContext()->actionPadEventPool, il->poppedActionPadEvent);
-    }
-
-    il->poppedActionPadEvent = input_event_to_ActionPadEvent(fifo_list_pop(il->actionPadEvents));
-    return il->poppedActionPadEvent;
-}
-
-const AnalogPadEvent *input_listener_pop_analog_pad_event(InputListener *il) {
-
-    if (il->poppedAnalogPadEvent != NULL) {
-        fifo_list_push(inputContext()->analogPadEventPool, il->poppedAnalogPadEvent);
-    }
-
-    il->poppedAnalogPadEvent = input_event_to_AnalogPadEvent(fifo_list_pop(il->analogPadEvents));
-    return il->poppedAnalogPadEvent;
 }
 
 // ----------------------
@@ -1248,21 +1051,4 @@ void key_event_copy(const KeyEvent *src, KeyEvent *dst) {
 
 void char_event_copy(const CharEvent *src, CharEvent *dst) {
     dst->inputChar = src->inputChar;
-}
-
-void dir_pad_event_copy(const DirPadEvent *src, DirPadEvent *dst) {
-    dst->state = src->state;
-    dst->dx = src->dx;
-    dst->dy = src->dy;
-}
-
-void action_pad_event_copy(const ActionPadEvent *src, ActionPadEvent *dst) {
-    dst->state = src->state;
-    dst->button = src->button;
-}
-
-void analog_pad_event_copy(const AnalogPadEvent *src, AnalogPadEvent *dst) {
-    dst->state = src->state;
-    dst->dx = src->dx;
-    dst->dy = src->dy;
 }
