@@ -142,22 +142,24 @@ func deployLuaDocs() error {
 	}
 	defer client.Close()
 
-	// create a reference to host root dir
-	// dirOpts := dagger.HostDirectoryOpts{
-	// 	// exclude the following directories
-	// 	Exclude: []string{".git", ".github"},
-	// }
-	src := client.Host().Directory(LUA_FILES_PATH, dagger.HostDirectoryOpts{})
+	// get repo root directory
+	// (including only the /lua directory, and excluding everything else)
+	rootDir := client.Host().Directory(".", dagger.HostDirectoryOpts{
+		Include: []string{"./lua"},
+	})
+	if rootDir == nil {
+		return errors.New("root directory not found")
+	}
 
 	// build container with correct dockerfile
 	containerOpts := dagger.ContainerOpts{
 		Platform: "linux/amd64",
 	}
 	buildOpts := dagger.ContainerBuildOpts{
-		Dockerfile: "./docs/Dockerfile",
+		Dockerfile: "./lua/docs/Dockerfile",
 		Target:     "website",
 	}
-	docsContainer := client.Container(containerOpts).Build(src, buildOpts)
+	docsContainer := client.Container(containerOpts).Build(rootDir, buildOpts)
 	if docsContainer == nil {
 		fmt.Println("❌ docker image build failed")
 		return errors.New("docker build failed")
