@@ -69,6 +69,14 @@ struct _Transform {
     // unflag itself
     Quaternion *localRotation;
     Quaternion *rotation;
+
+    // NULL by default
+    // Stores rotation when set as Euler angles to be able to return
+    // the same value then when accessed.
+    // If the rotation is affected in any other way,
+    // the cache is invalidated (set back to NULL).
+    float3 *eulerRotationCache;
+
     float3 localPosition;
     float3 position;
     float3 localScale; /* + 4 bytes here */
@@ -97,7 +105,10 @@ struct _Transform {
 
     bool animationsEnabled;
 
-    char pad[7];
+    // Means euler rotation cache represents a local rotation when true.
+    bool eulerRotationCacheIsLocal;
+
+    char pad[6];
 };
 
 // MARK: - Private functions' prototypes -
@@ -159,6 +170,7 @@ Transform *transform_make(TransformType type) {
     t->mtx = matrix4x4_new_identity();
     t->localRotation = quaternion_new_identity();
     t->rotation = quaternion_new_identity();
+    t->eulerRotationCache = NULL;
     float3_set_zero(&t->localPosition);
     float3_set_zero(&t->position);
     float3_set_one(&t->localScale);
@@ -631,10 +643,31 @@ void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
     transform_set_local_rotation(t, &q);
 }
 
+void _transform_set_euler_rotation_cache(Transform *t,
+                                         const float x,
+                                         const float y,
+                                         const float z,
+                                         bool isLocal) {
+    t->eulerRotationCacheIsLocal = isLocal;
+    if (t->eulerRotationCache != NULL) {
+        float3_set(t->eulerRotationCache, x, y, z);
+    } else {
+        t->eulerRotationCache = float3_new(x, y, z);
+    }
+}
+
+void _transform_invalidate_euler_rotation_cache(Transform *t) {
+    if (t->eulerRotationCache != NULL) {
+        float3_free(t->eulerRotationCache);
+        t->eulerRotationCache = NULL;
+    }
+}
+
 void transform_set_local_rotation_euler(Transform *t, const float x, const float y, const float z) {
     Quaternion q;
     euler_to_quaternion(x, y, z, &q);
     transform_set_local_rotation(t, &q);
+    _transform_set_euler_rotation_cache(t, x, y, z, true);
 }
 
 void transform_set_local_rotation_euler_vec(Transform *t, const float3 *euler) {
@@ -663,6 +696,7 @@ void transform_set_rotation_euler(Transform *t, const float x, const float y, co
     Quaternion q;
     euler_to_quaternion(x, y, z, &q);
     transform_set_rotation(t, &q);
+    _transform_set_euler_rotation_cache(t, x, y, z, false);
 }
 
 void transform_set_rotation_euler_vec(Transform *t, const float3 *euler) {
@@ -675,6 +709,10 @@ Quaternion *transform_get_local_rotation(Transform *t) {
 }
 
 void transform_get_local_rotation_euler(Transform *t, float3 *euler) {
+    if (t->eulerRotationCache != NULL && t->eulerRotationCacheIsLocal) {
+        float3_copy(euler, t->eulerRotationCache);
+        return;
+    }
     quaternion_to_euler(transform_get_local_rotation(t), euler);
 }
 
@@ -684,6 +722,10 @@ Quaternion *transform_get_rotation(Transform *t) {
 }
 
 void transform_get_rotation_euler(Transform *t, float3 *euler) {
+    if (t->eulerRotationCache != NULL && t->eulerRotationCacheIsLocal == false) {
+        float3_copy(euler, t->eulerRotationCache);
+        return;
+    }
     quaternion_to_euler(transform_get_rotation(t), euler);
 }
 
@@ -981,6 +1023,11 @@ bool transform_getAnimationsEnabled(Transform *const t) {
 // MARK: - Private functions -
 
 static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
+    if ((flag & TRANSFORM_ROT) && t->eulerRotationCacheIsLocal == false) {
+        _transform_invalidate_euler_rotation_cache(t);
+    } else if ((flag & TRANSFORM_LOCAL_ROT) && t->eulerRotationCacheIsLocal) {
+        _transform_invalidate_euler_rotation_cache(t);
+    }
     t->dirty |= (flag | TRANSFORM_ANY);
 }
 
@@ -1389,6 +1436,8 @@ static void _transform_free(Transform *const t) {
 
     quaternion_free(t->localRotation);
     quaternion_free(t->rotation);
+
+    _transform_invalidate_euler_rotation_cache(t);
 
     weakptr_invalidate(t->wptr);
 
