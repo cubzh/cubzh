@@ -69,14 +69,14 @@ struct _Transform {
     // unflag itself
     Quaternion *localRotation;
     Quaternion *rotation;
-    
+
     // NULL by default
     // Stores rotation when set as Euler angles to be able to return
     // the same value then when accessed.
     // If the rotation is affected in any other way,
     // the cache is invalidated (set back to NULL).
     float3 *eulerRotationCache;
-    
+
     float3 localPosition;
     float3 position;
     float3 localScale; /* + 4 bytes here */
@@ -104,7 +104,7 @@ struct _Transform {
     uint8_t ptrType;
 
     bool animationsEnabled;
-    
+
     // Means euler rotation cache represents a local rotation when true.
     bool eulerRotationCacheIsLocal;
 
@@ -643,7 +643,11 @@ void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
     transform_set_local_rotation(t, &q);
 }
 
-void _transform_set_euler_rotation_cache(Transform *t, const float x, const float y, const float z, bool isLocal) {
+void _transform_set_euler_rotation_cache(Transform *t,
+                                         const float x,
+                                         const float y,
+                                         const float z,
+                                         bool isLocal) {
     t->eulerRotationCacheIsLocal = isLocal;
     if (t->eulerRotationCache != NULL) {
         float3_set(t->eulerRotationCache, x, y, z);
@@ -706,7 +710,8 @@ Quaternion *transform_get_local_rotation(Transform *t) {
 
 void transform_get_local_rotation_euler(Transform *t, float3 *euler) {
     if (t->eulerRotationCache != NULL && t->eulerRotationCacheIsLocal) {
-        float3_copy(euler, t->eulerRotationCache); return;
+        float3_copy(euler, t->eulerRotationCache);
+        return;
     }
     quaternion_to_euler(transform_get_local_rotation(t), euler);
 }
@@ -718,7 +723,8 @@ Quaternion *transform_get_rotation(Transform *t) {
 
 void transform_get_rotation_euler(Transform *t, float3 *euler) {
     if (t->eulerRotationCache != NULL && t->eulerRotationCacheIsLocal == false) {
-        float3_copy(euler, t->eulerRotationCache); return;
+        float3_copy(euler, t->eulerRotationCache);
+        return;
     }
     quaternion_to_euler(transform_get_rotation(t), euler);
 }
@@ -1430,7 +1436,7 @@ static void _transform_free(Transform *const t) {
 
     quaternion_free(t->localRotation);
     quaternion_free(t->rotation);
-    
+
     _transform_invalidate_euler_rotation_cache(t);
 
     weakptr_invalidate(t->wptr);
