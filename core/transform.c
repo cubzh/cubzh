@@ -32,6 +32,10 @@
 // any transformation has been dirty since last end-of-frame, can be used internally by higher types
 #define TRANSFORM_ANY 128
 
+#define EULER_CACHE_NONE 0
+#define EULER_CACHE_LOCAL 1
+#define EULER_CACHE_WORLD 2
+
 #if DEBUG_TRANSFORM
 static int debug_transform_refresh_calls = 0;
 #endif
@@ -70,11 +74,10 @@ struct _Transform {
     Quaternion *localRotation;
     Quaternion *rotation;
 
-    // NULL by default
     // Stores rotation when set as Euler angles to be able to return
     // the same value then when accessed.
     // If the rotation is affected in any other way,
-    // the cache is invalidated (set back to NULL).
+    // the cache is invalidated (flag set to EULER_CACHE_NONE).
     float3 *eulerRotationCache;
 
     float3 localPosition;
@@ -105,8 +108,8 @@ struct _Transform {
 
     bool animationsEnabled;
 
-    // Means euler rotation cache represents a local rotation when true.
-    bool eulerRotationCacheIsLocal;
+    // euler cache flag: none, local, world
+    uint8_t eulerCacheFlag;
 
     char pad[6];
 };
@@ -155,6 +158,7 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
                                                const float3 *offset,
                                                SquarifyType squarify);
 static void _transform_free(Transform *const t);
+void _transform_set_euler_rotation_cache(Transform *t, float x, float y, float z, bool isLocal);
 
 // MARK: - Lifecycle -
 
@@ -171,6 +175,7 @@ Transform *transform_make(TransformType type) {
     t->localRotation = quaternion_new_identity();
     t->rotation = quaternion_new_identity();
     t->eulerRotationCache = NULL;
+    t->eulerCacheFlag = EULER_CACHE_NONE;
     float3_set_zero(&t->localPosition);
     float3_set_zero(&t->position);
     float3_set_one(&t->localScale);
@@ -636,31 +641,12 @@ void transform_set_local_rotation(Transform *t, Quaternion *q) {
     if (rigidbody_is_rotation_dependent(t->rigidBody)) {
         _transform_set_dirty(t, TRANSFORM_PHYSICS);
     }
+    t->eulerCacheFlag = EULER_CACHE_NONE;
 }
 
 void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
     Quaternion q = {v->x, v->y, v->z, v->w, false};
     transform_set_local_rotation(t, &q);
-}
-
-void _transform_set_euler_rotation_cache(Transform *t,
-                                         const float x,
-                                         const float y,
-                                         const float z,
-                                         bool isLocal) {
-    t->eulerRotationCacheIsLocal = isLocal;
-    if (t->eulerRotationCache != NULL) {
-        float3_set(t->eulerRotationCache, x, y, z);
-    } else {
-        t->eulerRotationCache = float3_new(x, y, z);
-    }
-}
-
-void _transform_invalidate_euler_rotation_cache(Transform *t) {
-    if (t->eulerRotationCache != NULL) {
-        float3_free(t->eulerRotationCache);
-        t->eulerRotationCache = NULL;
-    }
 }
 
 void transform_set_local_rotation_euler(Transform *t, const float x, const float y, const float z) {
@@ -685,6 +671,7 @@ void transform_set_rotation(Transform *t, Quaternion *q) {
     if (rigidbody_is_rotation_dependent(t->rigidBody)) {
         _transform_set_dirty(t, TRANSFORM_PHYSICS);
     }
+    t->eulerCacheFlag = EULER_CACHE_NONE;
 }
 
 void transform_set_rotation_vec(Transform *t, const float4 *v) {
@@ -709,11 +696,11 @@ Quaternion *transform_get_local_rotation(Transform *t) {
 }
 
 void transform_get_local_rotation_euler(Transform *t, float3 *euler) {
-    if (t->eulerRotationCache != NULL && t->eulerRotationCacheIsLocal) {
+    if (t->eulerCacheFlag == EULER_CACHE_LOCAL) {
         float3_copy(euler, t->eulerRotationCache);
-        return;
+    } else {
+        quaternion_to_euler(transform_get_local_rotation(t), euler);
     }
-    quaternion_to_euler(transform_get_local_rotation(t), euler);
 }
 
 Quaternion *transform_get_rotation(Transform *t) {
@@ -722,11 +709,11 @@ Quaternion *transform_get_rotation(Transform *t) {
 }
 
 void transform_get_rotation_euler(Transform *t, float3 *euler) {
-    if (t->eulerRotationCache != NULL && t->eulerRotationCacheIsLocal == false) {
+    if (t->eulerCacheFlag == EULER_CACHE_WORLD) {
         float3_copy(euler, t->eulerRotationCache);
-        return;
+    } else {
+        quaternion_to_euler(transform_get_rotation(t), euler);
     }
-    quaternion_to_euler(transform_get_rotation(t), euler);
 }
 
 // MARK: - Unit vectors -
@@ -1023,11 +1010,6 @@ bool transform_getAnimationsEnabled(Transform *const t) {
 // MARK: - Private functions -
 
 static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
-    if ((flag & TRANSFORM_ROT) && t->eulerRotationCacheIsLocal == false) {
-        _transform_invalidate_euler_rotation_cache(t);
-    } else if ((flag & TRANSFORM_LOCAL_ROT) && t->eulerRotationCacheIsLocal) {
-        _transform_invalidate_euler_rotation_cache(t);
-    }
     t->dirty |= (flag | TRANSFORM_ANY);
 }
 
@@ -1172,6 +1154,9 @@ static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
         if (hierarchyDirty) {
             // parent ltw changed, any world transformations may have changed from the ancestors
             _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT | TRANSFORM_PHYSICS);
+            if (t->eulerCacheFlag == EULER_CACHE_WORLD) {
+                t->eulerCacheFlag = EULER_CACHE_NONE;
+            }
         }
 
 #if DEBUG_TRANSFORM_REFRESH_CALLS
@@ -1437,11 +1422,26 @@ static void _transform_free(Transform *const t) {
     quaternion_free(t->localRotation);
     quaternion_free(t->rotation);
 
-    _transform_invalidate_euler_rotation_cache(t);
+    if (t->eulerRotationCache != NULL) {
+        float3_free(t->eulerRotationCache);
+    }
 
     weakptr_invalidate(t->wptr);
 
     free(t);
+}
+
+void _transform_set_euler_rotation_cache(Transform *t,
+                                         const float x,
+                                         const float y,
+                                         const float z,
+                                         bool isLocal) {
+    t->eulerCacheFlag = isLocal ? EULER_CACHE_LOCAL : EULER_CACHE_WORLD;
+    if (t->eulerRotationCache != NULL) {
+        float3_set(t->eulerRotationCache, x, y, z);
+    } else {
+        t->eulerRotationCache = float3_new(x, y, z);
+    }
 }
 
 // MARK: - Debug -
