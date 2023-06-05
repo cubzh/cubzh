@@ -53,6 +53,8 @@ void quad_set_shadow(Quad *q, bool toggle);
 bool quad_has_shadow(const Quad *q);
 void quad_set_unlit(Quad *q, bool toggle);
 bool quad_is_unlit(const Quad *q);
+void quad_set_mask(Quad *q, bool toggle);
+bool quad_is_mask(const Quad *q);
 
 // MARK: - Utils -
 

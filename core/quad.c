@@ -14,6 +14,7 @@
 #define QUAD_FLAG_SHADOW 2
 #define QUAD_FLAG_UNLIT 4
 #define QUAD_FLAG_DATA_DIRTY 8
+#define QUAD_FLAG_MASK 16
 
 struct _Quad {
     Transform *transform;
@@ -210,6 +211,14 @@ void quad_set_unlit(Quad *q, bool toggle) {
 
 bool quad_is_unlit(const Quad *q) {
     return _quad_get_flag(q, QUAD_FLAG_UNLIT);
+}
+
+void quad_set_mask(Quad *q, bool toggle) {
+    _quad_toggle_flag(q, QUAD_FLAG_MASK, toggle);
+}
+
+bool quad_is_mask(const Quad *q) {
+    return _quad_get_flag(q, QUAD_FLAG_MASK);
 }
 
 // MARK: - Utils -
