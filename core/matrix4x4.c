@@ -80,7 +80,7 @@ Matrix4x4 *matrix4x4_new_copy(const Matrix4x4 *m) {
 
 const Matrix4x4 matrix4x4_identity = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
-Matrix4x4 *matrix4x4_new_identity() {
+Matrix4x4 *matrix4x4_new_identity(void) {
     return matrix4x4_new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 }
 

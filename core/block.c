@@ -14,7 +14,7 @@
 #include "filo_list_int3.h"
 #include "shape.h"
 
-Block *block_new() {
+Block *block_new(void) {
     return block_new_with_color(0);
 }
 

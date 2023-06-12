@@ -31,7 +31,7 @@
 static uint32_t vertex_buffer_next_id = 0;
 static FiloListUInt32 *vertex_buffer_destroyed_ids = NULL;
 
-static uint32_t vertex_buffer_get_new_id() {
+static uint32_t vertex_buffer_get_new_id(void) {
     uint32_t i = vertex_buffer_next_id;
     vertex_buffer_next_id++;
     return i;
@@ -759,7 +759,7 @@ void draw_buffers_free(DrawBufferPtrs ptrs) {
     }
 }
 
-DrawBufferPtrs draw_buffers_null() {
+DrawBufferPtrs draw_buffers_null(void) {
     DrawBufferPtrs ptrs;
     ptrs.faces = NULL;
     ptrs.metadata = NULL;
@@ -1146,8 +1146,8 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
     if (vLighting) {
 #if TRIANGLE_SHIFT_MODE == 3
         // sunlight delta
-        float diag13 = (float)abs(vlight1.ambient - vlight3.ambient);
-        float diag24 = (float)abs(vlight2.ambient - vlight4.ambient);
+        float diag13 = (float)(abs(vlight1.ambient - vlight3.ambient));
+        float diag24 = (float)(abs(vlight2.ambient - vlight4.ambient));
         if (diag13 > TRIANGLE_SHIFT_MIXED_THRESHOLD || diag24 > TRIANGLE_SHIFT_MIXED_THRESHOLD) {
             aoShift = diag13 > diag24;
         } else {
@@ -1498,6 +1498,6 @@ void vertex_buffer_set_lighting_enabled(bool value) {
     vertex_buffer_lighting_enabled = value;
 }
 
-bool vertex_buffer_get_lighting_enabled() {
+bool vertex_buffer_get_lighting_enabled(void) {
     return vertex_buffer_lighting_enabled;
 }

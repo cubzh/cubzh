@@ -25,7 +25,7 @@ struct _MapStringFloat3Iterator {
     struct node *currentNode;
 };
 
-MapStringFloat3 *map_string_float3_new() {
+MapStringFloat3 *map_string_float3_new(void) {
     MapStringFloat3 *m = (MapStringFloat3 *)malloc(sizeof(MapStringFloat3));
     m->list = NULL;
     return m;

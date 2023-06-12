@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Box *box_new() {
+Box *box_new(void) {
     Box *b = (Box *)malloc(sizeof(Box));
     b->min = float3_zero;
     b->max = float3_zero;

@@ -1357,27 +1357,27 @@ void rigidbody_toggle_collision_callback(RigidBody *rb, CollisionCallbackType ty
 // MARK: - Debug -
 #if DEBUG_RIGIDBODY
 
-int debug_rigidbody_get_solver_iterations() {
+int debug_rigidbody_get_solver_iterations(void) {
     return debug_rigidbody_solver_iterations;
 }
 
-int debug_rigidbody_get_replacements() {
+int debug_rigidbody_get_replacements(void) {
     return debug_rigidbody_replacements;
 }
 
-int debug_rigidbody_get_collisions() {
+int debug_rigidbody_get_collisions(void) {
     return debug_rigidbody_collisions;
 }
 
-int debug_rigidbody_get_sleeps() {
+int debug_rigidbody_get_sleeps(void) {
     return debug_rigidbody_sleeps;
 }
 
-int debug_rigidbody_get_awakes() {
+int debug_rigidbody_get_awakes(void) {
     return debug_rigidbody_awakes;
 }
 
-void debug_rigidbody_reset_calls() {
+void debug_rigidbody_reset_calls(void) {
     debug_rigidbody_solver_iterations = 0;
     debug_rigidbody_replacements = 0;
     debug_rigidbody_collisions = 0;

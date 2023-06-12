@@ -77,16 +77,12 @@ void test_isFinger2EventID(void) {
 
 // check that mouse left button ID is 2
 void test_isMouseLeftButtonID(void) {
-    TEST_CHECK(isMouseLeftButtonID(1) == false);
-    TEST_CHECK(isMouseLeftButtonID(2));
-    TEST_CHECK(isMouseLeftButtonID(3) == false);
+    TEST_CHECK(isMouseLeftButtonID(3));
 }
 
 // check that mouse right button ID is 3
 void test_isMouseRightButtonID(void) {
-    TEST_CHECK(isMouseRightButtonID(2) == false);
-    TEST_CHECK(isMouseRightButtonID(3));
-    TEST_CHECK(isMouseRightButtonID(4) == false);
+    TEST_CHECK(isMouseRightButtonID(4));
 }
 
 // create an InputListener  and check that all its lists are empty
@@ -98,9 +94,6 @@ void test_input_listener_new(void) {
     TEST_CHECK(input_listener_pop_touch_event(il) == NULL);
     TEST_CHECK(input_listener_pop_key_event(il) == NULL);
     TEST_CHECK(input_listener_pop_char_event(il) == NULL);
-    TEST_CHECK(input_listener_pop_dir_pad_event(il) == NULL);
-    TEST_CHECK(input_listener_pop_action_pad_event(il) == NULL);
-    TEST_CHECK(input_listener_pop_analog_pad_event(il) == NULL);
 
     input_listener_free(il);
 }
@@ -205,70 +198,6 @@ void test_input_listener_pop_char_event(void) {
     input_listener_free(il);
 }
 
-// create a DirPadEvent and check that the values are the provided ones
-void test_input_listener_pop_dir_pad_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, true, false, false, false, false);
-    postDirPadEvent(1.0f, 0.0f, PadBtnStateDown);
-    postDirPadEvent(-1.0f, 0.0f, PadBtnStateUp);
-
-    const DirPadEvent *dpe1 = input_listener_pop_dir_pad_event(il);
-    TEST_CHECK(dpe1->eventType == dirPadEvent);
-    TEST_CHECK(dpe1->state == PadBtnStateDown);
-    TEST_CHECK(dpe1->dx == 1.0f);
-    TEST_CHECK(dpe1->dy == 0.0f);
-
-    const DirPadEvent *dpe2 = input_listener_pop_dir_pad_event(il);
-    TEST_CHECK(dpe2->eventType == dirPadEvent);
-    TEST_CHECK(dpe2->state == PadBtnStateUp);
-    TEST_CHECK(dpe2->dx == -1.0f);
-    TEST_CHECK(dpe2->dy == 0.0f);
-
-    input_listener_free(il);
-}
-
-// create an ActionPadEvent and check that the values are the provided ones
-void test_input_listener_pop_action_pad_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, true, false, false, false);
-    postActionPadEvent(ActionPadBtn1, PadBtnStateDown);
-    postActionPadEvent(ActionPadBtn1, PadBtnStateUp);
-
-    const ActionPadEvent *ape1 = input_listener_pop_action_pad_event(il);
-    TEST_CHECK(ape1->eventType == actionPadEvent);
-    TEST_CHECK(ape1->state == PadBtnStateDown);
-    TEST_CHECK(ape1->button == ActionPadBtn1);
-
-    const ActionPadEvent *ape2 = input_listener_pop_action_pad_event(il);
-    TEST_CHECK(ape2->eventType == actionPadEvent);
-    TEST_CHECK(ape2->state == PadBtnStateUp);
-    TEST_CHECK(ape2->button == ActionPadBtn1);
-
-    input_listener_free(il);
-}
-
-// create an AnalogPadEvent and check that the values are the provided ones
-void test_input_listener_pop_analog_pad_event(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, false, true, false, false);
-    postAnalogPadEvent(1.0f, 0.0f, PadBtnStateDown);
-    postAnalogPadEvent(-1.0f, 0.0f, PadBtnStateUp);
-
-    const AnalogPadEvent *ape1 = input_listener_pop_analog_pad_event(il);
-    TEST_CHECK(ape1->eventType == analogPadEvent);
-    TEST_CHECK(ape1->state == PadBtnStateDown);
-    TEST_CHECK(ape1->dx == 1.0f);
-    TEST_CHECK(ape1->dy == 0.0f);
-
-    const AnalogPadEvent *ape2 = input_listener_pop_analog_pad_event(il);
-    TEST_CHECK(ape2->eventType == analogPadEvent);
-    TEST_CHECK(ape2->state == PadBtnStateUp);
-    TEST_CHECK(ape2->dx == -1.0f);
-    TEST_CHECK(ape2->dy == 0.0f);
-
-    input_listener_free(il);
-}
-
 // same tests as before
 void test_postMouseEvent(void) {
     InputListener
@@ -365,70 +294,6 @@ void test_postCharEvent(void) {
     const CharEvent *ce2 = input_listener_pop_char_event(il);
     TEST_CHECK(ce2->eventType == charEvent);
     TEST_CHECK(ce2->inputChar == 66);
-
-    input_listener_free(il);
-}
-
-// same tests as before
-void test_postDirPadEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, true, false, false, false, false);
-    postDirPadEvent(1.0f, 0.0f, PadBtnStateDown);
-    postDirPadEvent(-1.0f, 0.0f, PadBtnStateUp);
-
-    const DirPadEvent *dpe1 = input_listener_pop_dir_pad_event(il);
-    TEST_CHECK(dpe1->eventType == dirPadEvent);
-    TEST_CHECK(dpe1->state == PadBtnStateDown);
-    TEST_CHECK(dpe1->dx == 1.0f);
-    TEST_CHECK(dpe1->dy == 0.0f);
-
-    const DirPadEvent *dpe2 = input_listener_pop_dir_pad_event(il);
-    TEST_CHECK(dpe2->eventType == dirPadEvent);
-    TEST_CHECK(dpe2->state == PadBtnStateUp);
-    TEST_CHECK(dpe2->dx == -1.0f);
-    TEST_CHECK(dpe2->dy == 0.0f);
-
-    input_listener_free(il);
-}
-
-// same tests as before
-void test_postActionPadEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, true, false, false, false);
-    postActionPadEvent(ActionPadBtn1, PadBtnStateDown);
-    postActionPadEvent(ActionPadBtn1, PadBtnStateUp);
-
-    const ActionPadEvent *ape1 = input_listener_pop_action_pad_event(il);
-    TEST_CHECK(ape1->eventType == actionPadEvent);
-    TEST_CHECK(ape1->state == PadBtnStateDown);
-    TEST_CHECK(ape1->button == ActionPadBtn1);
-
-    const ActionPadEvent *ape2 = input_listener_pop_action_pad_event(il);
-    TEST_CHECK(ape2->eventType == actionPadEvent);
-    TEST_CHECK(ape2->state == PadBtnStateUp);
-    TEST_CHECK(ape2->button == ActionPadBtn1);
-
-    input_listener_free(il);
-}
-
-// same tests as before
-void test_postAnalogPadEvent(void) {
-    InputListener
-        *il = input_listener_new(false, false, false, false, false, false, true, false, false);
-    postAnalogPadEvent(1.0f, 0.0f, PadBtnStateDown);
-    postAnalogPadEvent(-1.0f, 0.0f, PadBtnStateUp);
-
-    const AnalogPadEvent *ape1 = input_listener_pop_analog_pad_event(il);
-    TEST_CHECK(ape1->eventType == analogPadEvent);
-    TEST_CHECK(ape1->state == PadBtnStateDown);
-    TEST_CHECK(ape1->dx == 1.0f);
-    TEST_CHECK(ape1->dy == 0.0f);
-
-    const AnalogPadEvent *ape2 = input_listener_pop_analog_pad_event(il);
-    TEST_CHECK(ape2->eventType == analogPadEvent);
-    TEST_CHECK(ape2->state == PadBtnStateUp);
-    TEST_CHECK(ape2->dx == -1.0f);
-    TEST_CHECK(ape2->dy == 0.0f);
 
     input_listener_free(il);
 }

@@ -45,7 +45,7 @@ LightNodeQueue *light_node_recycle_pool(void) {
     return &p;
 }
 
-LightNodeQueue *light_node_queue_new() {
+LightNodeQueue *light_node_queue_new(void) {
     LightNodeQueue *q = (LightNodeQueue *)malloc(sizeof(LightNodeQueue));
     q->first = NULL;
     return q;
@@ -164,7 +164,7 @@ LightRemovalNodeQueue *light_removal_node_recycle_pool(void) {
     return &p;
 }
 
-LightRemovalNodeQueue *light_removal_node_queue_new() {
+LightRemovalNodeQueue *light_removal_node_queue_new(void) {
     LightRemovalNodeQueue *q = (LightRemovalNodeQueue *)malloc(sizeof(LightRemovalNodeQueue));
     q->first = NULL;
     return q;
