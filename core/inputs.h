@@ -33,18 +33,6 @@ typedef enum {
     MouseButtonRight,
     MouseButtonScroll
 } MouseButton;
-typedef enum {
-    ActionPadBtnNone,
-    ActionPadBtn1,
-    ActionPadBtn2,
-    ActionPadBtn3
-} ActionPadBtn;
-typedef enum {
-    PadBtnStateNone,
-    PadBtnStateDown,
-    PadBtnStateUp,
-    PadBtnStateCanceled
-} PadBtnState;
 
 typedef enum {
     ModifierNone = 0,
@@ -72,7 +60,7 @@ typedef enum {
     InputUp,
     InputDown,
     InputLeft,
-    InputRight,
+    InputRight, // 9
     InputInsert,
     InputDelete,
     InputHome,
@@ -80,7 +68,7 @@ typedef enum {
     InputPageUp,
     InputPageDown,
     InputPrint,
-    InputClear,
+    InputClear, // 17
     InputF1,
     InputF2,
     InputF3,
@@ -100,7 +88,7 @@ typedef enum {
     InputF17,
     InputF18,
     InputF19,
-    InputF20,
+    InputF20, // 37
     InputGamepadA,
     InputGamepadB,
     InputGamepadX,
@@ -121,7 +109,7 @@ typedef enum {
     InputPlus,
     InputNumPadPlus,
     InputMinus,
-    InputNumPadMinus,
+    InputNumPadMinus, // 56
     InputDivide,
     InputMultiply,
     InputDecimal,
@@ -130,7 +118,7 @@ typedef enum {
     InputLeftBracket,
     InputRightBracket,
     InputSemicolon,
-    InputQuote,
+    InputQuote, // 65
     InputComma,
     InputPeriod,
     InputSlash,
@@ -145,7 +133,7 @@ typedef enum {
     InputNumPad6,
     InputNumPad7,
     InputNumPad8,
-    InputNumPad9,
+    InputNumPad9, // 80
     InputKey0,
     InputKey1,
     InputKey2,
@@ -155,7 +143,7 @@ typedef enum {
     InputKey6,
     InputKey7,
     InputKey8,
-    InputKey9,
+    InputKey9, // 90
     InputKeyA,
     InputKeyB,
     InputKeyC,
@@ -213,6 +201,29 @@ typedef enum {
     TouchStateCanceled
 } TouchState;
 
+typedef enum {
+    PointerIDTouch1 = 1,
+    PointerIDTouch2 = 2,
+    PointerIDTouch3 = 3,
+    PointerIDTouchMax = 3,
+    PointerIDMouseButtonLeft = 4,
+    PointerIDMouseButtonRight = 5,
+    PointerIDMouseButtonMax = 5,
+    PointerIDWheel = 6,
+    // Identifying mouse with no specific button
+    PointerIDMouse = 7,
+    // Identifying touch with no specific finger
+    PointerIDTouch = 8,
+} PointerID;
+
+typedef enum {
+    PointerEventTypeDown,
+    PointerEventTypeUp,
+    PointerEventTypeMove,
+    PointerEventTypeCancel,
+    PointerEventTypeWheel
+} PointerEventType;
+
 // /!\ ALL values in TouchEvent are in points
 typedef struct {
     EventType eventType;
@@ -235,32 +246,6 @@ bool isMouseLeftButtonID(const uint8_t ID);
 bool isMouseRightButtonID(const uint8_t ID);
 
 void touch_event_copy(const TouchEvent *src, TouchEvent *dst);
-
-typedef struct {
-    EventType eventType;
-    PadBtnState state;
-    float dx;
-    float dy;
-} DirPadEvent;
-
-void dir_pad_event_copy(const DirPadEvent *src, DirPadEvent *dst);
-
-typedef struct {
-    EventType eventType;
-    PadBtnState state;
-    ActionPadBtn button;
-} ActionPadEvent;
-
-void action_pad_event_copy(const ActionPadEvent *src, ActionPadEvent *dst);
-
-typedef struct {
-    EventType eventType;
-    PadBtnState state;
-    float dx;
-    float dy;
-} AnalogPadEvent;
-
-void analog_pad_event_copy(const AnalogPadEvent *src, AnalogPadEvent *dst);
 
 typedef struct {
     EventType eventType;
@@ -292,12 +277,27 @@ typedef struct _InputListener InputListener;
 // - only for keyboard inputs
 // - does not pull events
 // C function callback triggered right away when an input comes in.
+// /!\ make sure to call it in the main thread
 typedef struct _KeyboardInputListener KeyboardInputListener;
 typedef void (*keyboard_input_callback_ptr)(void *userdata,
                                             uint32_t charCode,
                                             Input input,
                                             uint8_t modifiers,
                                             KeyState state);
+
+// Similar to _InputListener but:
+// - only for pointer events (mouse and touch events)
+// - does not pull events
+// C function callback triggered right away when an input comes in.
+// /!\ make sure to call it in the main thread
+typedef struct _PointerEventListener PointerEventListener;
+typedef void (*pointer_event_callback_ptr)(void *userdata,
+                                           PointerID ID,
+                                           PointerEventType type,
+                                           float x,
+                                           float y,
+                                           float dx,
+                                           float dy);
 
 ///
 typedef struct {
@@ -313,6 +313,13 @@ KeyboardInputListener *input_keyboard_listener_new(void *userdata,
 
 //
 void input_keyboard_listener_free(KeyboardInputListener *il, pointer_free_function userdata_free);
+
+//
+PointerEventListener *pointer_event_listener_new(void *userdata,
+                                                 pointer_event_callback_ptr callback);
+
+//
+void pointer_event_listener_free(PointerEventListener *il, pointer_free_function userdata_free);
 
 //
 InputListener *input_listener_new(bool mouseEvents,
@@ -348,21 +355,6 @@ const KeyEvent *input_listener_pop_key_event(InputListener *il);
 //!\\ when popping next item, the previous one is released.
 const CharEvent *input_listener_pop_char_event(InputListener *il);
 
-// Returns pointer to DirPadEvent or NULL if there's no DirPadEvent to return
-// The pointer is managed by the input listener itself, no need to release it.
-//!\\ when popping next item, the previous one is released.
-const DirPadEvent *input_listener_pop_dir_pad_event(InputListener *il);
-
-// Returns pointer to ActionPadEvent or NULL if there's no ActionPadEvent to return
-// The pointer is managed by the input listener itself, no need to release it.
-//!\\ when popping next item, the previous one is released.
-const ActionPadEvent *input_listener_pop_action_pad_event(InputListener *il);
-
-// Returns pointer to AnalogPadEvent or NULL if there's no AnalogPadEvent to return
-// The pointer is managed by the input listener itself, no need to release it.
-//!\\ when popping next item, the previous one is released.
-const AnalogPadEvent *input_listener_pop_analog_pad_event(InputListener *il);
-
 void postMouseEvent(float x, float y, float dx, float dy, MouseButton button, bool down, bool move);
 
 void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState state, bool move);
@@ -374,13 +366,11 @@ bool inputs_is_key_printable(Input i);
 
 void postKeyboardInput(uint32_t charCode, Input input, uint8_t modifiers, KeyState state);
 
+void postPointerEvent(PointerID ID, PointerEventType type, float x, float y, float dx, float dy);
+
 // buf should have enough room (5 bytes),
 // NULL char at 5th position for 4 bytes long.
 uint8_t input_char_code_to_string(char *buf, uint32_t charCode);
-
-void postDirPadEvent(float dx, float dy, PadBtnState state);
-void postActionPadEvent(ActionPadBtn button, PadBtnState state);
-void postAnalogPadEvent(float dx, float dy, PadBtnState state);
 
 // casts event to MouseEvent, returns NULL if event is not a MouseEvent
 MouseEvent *input_event_to_MouseEvent(void *e);
@@ -393,15 +383,6 @@ KeyEvent *input_event_to_KeyEvent(void *e);
 
 // casts event to CharEvent, returns NULL if event is not a CharEvent
 CharEvent *input_event_to_CharEvent(void *e);
-
-// casts event to DirPadEvent, returns NULL if event is not a DirPadEvent
-DirPadEvent *input_event_to_DirPadEvent(void *e);
-
-// casts event to ActionPadEvent, returns NULL if event is not a ActionPadEvent
-ActionPadEvent *input_event_to_ActionPadEvent(void *e);
-
-// casts event to AnalogPadEvent, returns NULL if event is not a AnalogPadEvent
-AnalogPadEvent *input_event_to_AnalogPadEvent(void *e);
 
 bool input_shiftIsOn(void);
 bool input_altIsOn(void);

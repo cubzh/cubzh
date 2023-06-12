@@ -991,23 +991,23 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
 // MARK: - Debug functions -
 #if DEBUG_RTREE
 
-int debug_rtree_get_insert_calls() {
+int debug_rtree_get_insert_calls(void) {
     return debug_rtree_insert_calls;
 }
 
-int debug_rtree_get_split_calls() {
+int debug_rtree_get_split_calls(void) {
     return debug_rtree_split_calls;
 }
 
-int debug_rtree_get_remove_calls() {
+int debug_rtree_get_remove_calls(void) {
     return debug_rtree_remove_calls;
 }
 
-int debug_rtree_get_condense_calls() {
+int debug_rtree_get_condense_calls(void) {
     return debug_rtree_condense_calls;
 }
 
-void debug_rtree_reset_calls() {
+void debug_rtree_reset_calls(void) {
     debug_rtree_insert_calls = 0;
     debug_rtree_split_calls = 0;
     debug_rtree_remove_calls = 0;

@@ -431,7 +431,7 @@ void index3d_flush_node(Index3D *index,
     }
 }
 
-Index3D *index3d_new() {
+Index3D *index3d_new(void) {
     Index3D *index = (Index3D *)malloc(sizeof(Index3D));
     index->topLevelNode = _new_node();
     index->list = doubly_linked_list_new();

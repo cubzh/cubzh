@@ -577,7 +577,7 @@ void scene_register_awake_block_box(Scene *sc,
     scene_register_awake_box(sc, worldBox);
 }
 
-CastResult scene_cast_result_default() {
+CastResult scene_cast_result_default(void) {
     CastResult hit;
     hit.hitTr = NULL;
     hit.block = NULL;

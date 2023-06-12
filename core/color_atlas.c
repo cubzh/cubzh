@@ -24,7 +24,7 @@ void _color_atlas_add_index_to_dirty_slice(ColorAtlas *a, ATLAS_COLOR_INDEX_INT_
     }
 }
 
-ColorAtlas *color_atlas_new() {
+ColorAtlas *color_atlas_new(void) {
     ColorAtlas *color_atlas = (ColorAtlas *)malloc(sizeof(ColorAtlas));
 
     color_atlas->wptr = NULL;

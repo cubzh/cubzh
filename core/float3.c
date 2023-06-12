@@ -194,11 +194,11 @@ float3 *float3_new(const float x, const float y, const float z) {
     return f;
 }
 
-float3 *float3_new_zero() {
+float3 *float3_new_zero(void) {
     return float3_new(0.0f, 0.0f, 0.0f);
 }
 
-float3 *float3_new_one() {
+float3 *float3_new_one(void) {
     return float3_new(1.0f, 1.0f, 1.0f);
 }
 

@@ -17,7 +17,7 @@ float4 *float4_new(const float x, const float y, const float z, const float w) {
     return f;
 }
 
-float4 *float4_new_zero() {
+float4 *float4_new_zero(void) {
     return float4_new(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
