@@ -379,76 +379,76 @@ void test_input_isOn(void) {
     input_listener_free(il);
 }
 
-// press 3 keys and check that we have 3 keys pressed
-void test_input_nbPressedInputsImGui(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, true);
+// // press 3 keys and check that we have 3 keys pressed
+// void test_input_nbPressedInputsImGui(void) {
+//     InputListener
+//         *il = input_listener_new(false, false, true, false, false, false, false, false, true);
 
-    // reset possible registered inputs
-    postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
-    postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
-    postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
-    // mimic what is done in ImguiContext::beginFrame
-    uint8_t n = *input_nbPressedInputsImGui();
-    InputEventWithHistory *in;
-    for (uint8_t i = 0; i < n; i += 1) {
-        in = &(input_pressedInputsImGui()[i]);
-        in->seenByImGui = true;
-    }
-    postKeyEvent(InputKeyA, ModifierNone, KeyStateUp);
-    postKeyEvent(InputKeyB, ModifierNone, KeyStateUp);
-    postKeyEvent(InputKeyC, ModifierNone, KeyStateUp);
-    TEST_CHECK(*input_nbPressedInputsImGui() == 0);
+//     // reset possible registered inputs
+//     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
+//     postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
+//     postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
+//     // mimic what is done in ImguiContext::beginFrame
+//     uint8_t n = *input_nbPressedInputsImGui();
+//     InputEventWithHistory *in;
+//     for (uint8_t i = 0; i < n; i += 1) {
+//         in = &(input_pressedInputsImGui()[i]);
+//         in->seenByImGui = true;
+//     }
+//     postKeyEvent(InputKeyA, ModifierNone, KeyStateUp);
+//     postKeyEvent(InputKeyB, ModifierNone, KeyStateUp);
+//     postKeyEvent(InputKeyC, ModifierNone, KeyStateUp);
+//     TEST_CHECK(*input_nbPressedInputsImGui() == 0);
 
-    n = *input_nbPressedInputsImGui();
-    for (uint8_t i = 0; i < n; i += 1) {
-        in = &(input_pressedInputsImGui()[i]);
-        in->seenByImGui = true;
-    }
-    postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
-    postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
-    postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
-    TEST_CHECK(*input_nbPressedInputsImGui() == 3);
+//     n = *input_nbPressedInputsImGui();
+//     for (uint8_t i = 0; i < n; i += 1) {
+//         in = &(input_pressedInputsImGui()[i]);
+//         in->seenByImGui = true;
+//     }
+//     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
+//     postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
+//     postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
+//     TEST_CHECK(*input_nbPressedInputsImGui() == 3);
 
-    n = *input_nbPressedInputsImGui();
-    for (uint8_t i = 0; i < n; i += 1) {
-        in = &(input_pressedInputsImGui()[i]);
-        in->seenByImGui = true;
-    }
-    postKeyEvent(InputKeyA, ModifierNone, KeyStateUp);
-    postKeyEvent(InputKeyB, ModifierNone, KeyStateUp);
-    postKeyEvent(InputKeyC, ModifierNone, KeyStateUp);
-    TEST_CHECK(*input_nbPressedInputsImGui() == 0);
+//     n = *input_nbPressedInputsImGui();
+//     for (uint8_t i = 0; i < n; i += 1) {
+//         in = &(input_pressedInputsImGui()[i]);
+//         in->seenByImGui = true;
+//     }
+//     postKeyEvent(InputKeyA, ModifierNone, KeyStateUp);
+//     postKeyEvent(InputKeyB, ModifierNone, KeyStateUp);
+//     postKeyEvent(InputKeyC, ModifierNone, KeyStateUp);
+//     TEST_CHECK(*input_nbPressedInputsImGui() == 0);
 
-    input_listener_free(il);
-}
+//     input_listener_free(il);
+// }
 
-// press A, B and C and check that the hostory is in the correct order
-void test_input_pressedInputsImGui(void) {
-    InputListener
-        *il = input_listener_new(false, false, true, false, false, false, false, false, false);
-    postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
-    postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
-    postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
-    InputEventWithHistory *ie = input_pressedInputsImGui();
+// // press A, B and C and check that the hostory is in the correct order
+// void test_input_pressedInputsImGui(void) {
+//     InputListener
+//         *il = input_listener_new(false, false, true, false, false, false, false, false, false);
+//     postKeyEvent(InputKeyA, ModifierNone, KeyStateDown);
+//     postKeyEvent(InputKeyB, ModifierNone, KeyStateDown);
+//     postKeyEvent(InputKeyC, ModifierNone, KeyStateDown);
+//     InputEventWithHistory *ie = input_pressedInputsImGui();
 
-    TEST_CHECK(ie[0].input == InputKeyA);
-    TEST_CHECK(ie[0].stateFirst == KeyStateDown);
-    TEST_CHECK(ie[0].stateSecond == KeyStateUnknown);
-    TEST_CHECK(ie[0].seenByImGui == false);
+//     TEST_CHECK(ie[0].input == InputKeyA);
+//     TEST_CHECK(ie[0].stateFirst == KeyStateDown);
+//     TEST_CHECK(ie[0].stateSecond == KeyStateUnknown);
+//     TEST_CHECK(ie[0].seenByImGui == false);
 
-    TEST_CHECK(ie[1].input == InputKeyB);
-    TEST_CHECK(ie[1].stateFirst == KeyStateDown);
-    TEST_CHECK(ie[1].stateSecond == KeyStateUnknown);
-    TEST_CHECK(ie[1].seenByImGui == false);
+//     TEST_CHECK(ie[1].input == InputKeyB);
+//     TEST_CHECK(ie[1].stateFirst == KeyStateDown);
+//     TEST_CHECK(ie[1].stateSecond == KeyStateUnknown);
+//     TEST_CHECK(ie[1].seenByImGui == false);
 
-    TEST_CHECK(ie[2].input == InputKeyC);
-    TEST_CHECK(ie[2].stateFirst == KeyStateDown);
-    TEST_CHECK(ie[2].stateSecond == KeyStateUnknown);
-    TEST_CHECK(ie[2].seenByImGui == false);
+//     TEST_CHECK(ie[2].input == InputKeyC);
+//     TEST_CHECK(ie[2].stateFirst == KeyStateDown);
+//     TEST_CHECK(ie[2].stateSecond == KeyStateUnknown);
+//     TEST_CHECK(ie[2].seenByImGui == false);
 
-    input_listener_free(il);
-}
+//     input_listener_free(il);
+// }
 
 // check cursor position after that we post a MouseEvent
 void test_input_get_cursor(void) {

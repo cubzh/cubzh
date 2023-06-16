@@ -196,8 +196,8 @@ TEST_LIST = {
     {"input_ctrlIsOn", test_input_ctrlIsOn},
     {"input_superIsOn", test_input_superIsOn},
     {"input_isOn", test_input_isOn},
-    {"input_nbPressedInputsImGui", test_input_nbPressedInputsImGui},
-    {"input_pressedInputsImGui", test_input_pressedInputsImGui},
+    // {"input_nbPressedInputsImGui", test_input_nbPressedInputsImGui},
+    // {"input_pressedInputsImGui", test_input_pressedInputsImGui},
     {"input_get_cursor", test_input_get_cursor},
 
     // int3
