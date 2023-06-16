@@ -299,14 +299,6 @@ typedef void (*pointer_event_callback_ptr)(void *userdata,
                                            float dx,
                                            float dy);
 
-///
-typedef struct {
-    Input input;
-    KeyState stateFirst;
-    KeyState stateSecond;
-    bool seenByImGui;
-} InputEventWithHistory;
-
 //
 KeyboardInputListener *input_keyboard_listener_new(void *userdata,
                                                    keyboard_input_callback_ptr callback);
@@ -393,10 +385,6 @@ bool input_isOn(Input input);
 int input_nb_pressed_inputs(void);
 const Input *input_pressed_inputs(void);
 
-uint8_t *input_nbPressedInputsImGui(void);
-InputEventWithHistory *input_pressedInputsImGui(void);
-
-//
 void input_get_cursor(float *x, float *y, bool *btn1, bool *btn2, bool *btn3);
 
 #ifdef __cplusplus

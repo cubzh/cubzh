@@ -64,9 +64,6 @@ struct _InputContext {
     DoublyLinkedList *keyboardInputListeners;
     DoublyLinkedList *pointerEventListeners; // for mouse and touch events
 
-    InputEventWithHistory pressedInputsImgui[10]; // more than 10 pressed inputs is not supported...
-    uint8_t nbPressedInputsImgui;                 // max = 10
-
     // All events are posted in pixel coords, but we do use points then everywhere
     // Knowing the scale factor allows us to do the conversion when events are posted.
     float nbPixelsInOnePoint;
@@ -164,8 +161,6 @@ InputContext *inputContext(void) {
         c->listeners = doubly_linked_list_new();
         c->keyboardInputListeners = doubly_linked_list_new();
         c->pointerEventListeners = doubly_linked_list_new();
-
-        c->nbPressedInputsImgui = 0;
 
         c->nbPixelsInOnePoint = 1.0f;
 
@@ -287,14 +282,6 @@ const Input *input_pressed_inputs(void) {
     return inputContext()->pressedInputs;
 }
 
-uint8_t *input_nbPressedInputsImGui(void) {
-    return &(inputContext()->nbPressedInputsImgui);
-}
-
-InputEventWithHistory *input_pressedInputsImGui(void) {
-    return inputContext()->pressedInputsImgui;
-}
-
 void postMouseEvent(float x,
                     float y,
                     float dx,
@@ -365,7 +352,6 @@ void postMouseEvent(float x,
 }
 
 void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState state, bool move) {
-
     InputContext *c = inputContext();
 
     if (c->acceptInputs == false)
@@ -395,31 +381,6 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
     te->dy = dy / inputContext()->nbPixelsInOnePoint;
     te->state = state;
     te->move = move;
-
-    // NOTE: aduermael: This is temporary
-    // We consider first finger touch events to be mouse events
-    // so that imgui can work with our current "mouse only" implementation.
-    // We should get rid of this at some point.
-    if (ID == 0) {
-        switch (state) {
-            case TouchStateDown:
-                c->mouse.x = te->x;
-                c->mouse.y = te->y;
-                c->mouse.leftButtonDown = true;
-                break;
-            case TouchStateUp:
-                c->mouse.x = te->x;
-                c->mouse.y = te->y;
-                c->mouse.leftButtonDown = false;
-                break;
-            case TouchStateCanceled:
-                c->mouse.leftButtonDown = false;
-            case TouchStateNone: // move
-                c->mouse.x = te->x;
-                c->mouse.y = te->y;
-                break;
-        }
-    }
 
     // Store touch state
     if (ID == 0 || ID == 1) {
@@ -482,7 +443,6 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
 }
 
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
-
     InputContext *c = inputContext();
 
     if (c->acceptInputs == false)
@@ -541,55 +501,6 @@ void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
                 c->pressedInputs[indexToRemove] = c->pressedInputs[c->nbPressedInputs - 1];
             }
             c->nbPressedInputs--;
-        }
-    }
-
-    //
-    // process event for ImGui
-    //
-    if (ke->state == KeyStateDown) { // add to array
-        if (c->nbPressedInputsImgui < 10) {
-            bool insert = true;
-            // make sure input is not already registered
-            for (uint8_t i = 0; i < c->nbPressedInputsImgui; i++) {
-                if (c->pressedInputsImgui[i].input == ke->input) {
-                    c->pressedInputsImgui[i].stateFirst = KeyStateDown;
-                    c->pressedInputsImgui[i].stateSecond = KeyStateUnknown;
-                    c->pressedInputsImgui[i].seenByImGui = false;
-                    insert = false;
-                    break;
-                }
-            }
-            if (insert) {
-                c->pressedInputsImgui[c->nbPressedInputsImgui].input = ke->input;
-                c->pressedInputsImgui[c->nbPressedInputsImgui].stateFirst = KeyStateDown;
-                c->pressedInputsImgui[c->nbPressedInputsImgui].stateSecond = KeyStateUnknown;
-                c->pressedInputsImgui[c->nbPressedInputsImgui].seenByImGui = false;
-                c->nbPressedInputsImgui++;
-            }
-        } // else, ignore the 11th event
-    } else if (ke->state == KeyStateUp) {
-        int index = -1;
-        for (uint8_t i = 0; i < c->nbPressedInputsImgui; i++) {
-            if (c->pressedInputsImgui[i].input == ke->input) {
-                index = i;
-                break;
-            }
-        }
-        if (index > -1) {
-            if (c->pressedInputsImgui[index].seenByImGui == true) {
-                // remove from array
-                c->pressedInputsImgui[index] = c->pressedInputsImgui[c->nbPressedInputsImgui - 1];
-                c->nbPressedInputsImgui--;
-            } else {
-                if (c->pressedInputsImgui[index].stateFirst == KeyStateDown) {
-                    c->pressedInputsImgui[index].stateSecond = KeyStateUp;
-                } else {
-                    cclog_warning("this should not be");
-                }
-            }
-        } else {
-            cclog_error("input not found (for down)");
         }
     }
 
