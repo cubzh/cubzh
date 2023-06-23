@@ -190,8 +190,8 @@ extern unsigned long upper_power_of_two(unsigned long v);
 
 /// Physics properties default values
 #define PHYSICS_MASS_DEFAULT 1.0f
-#define PHYSICS_FRICTION_DEFAULT .2f
-#define PHYSICS_BOUNCINESS_DEFAULT .3f
+#define PHYSICS_FRICTION_DEFAULT .95f
+#define PHYSICS_BOUNCINESS_DEFAULT 0.0f
 #define PHYSICS_MASS_PLAYER 1.0f
 #define PHYSICS_FRICTION_PLAYER .95f
 #define PHYSICS_BOUNCINESS_PLAYER 0.0f
