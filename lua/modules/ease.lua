@@ -57,6 +57,8 @@ ease._startIfNeeded = function(self)
 					instance.object[k] = p
 				end
 
+				if instance.onUpdate then instance.onUpdate(instance.object) end
+
 				if done then
 					if instance.onDone then instance.onDone() end
 					self.instances[instance.id] = nil
@@ -82,6 +84,9 @@ ease._common = function(self,object,duration, config)
 	if config ~= nil then
 		if config.onDone ~= nil and type(config.onDone) == "function" then
 			instance.onDone = config.onDone
+		end
+		if config.onUpdate ~= nil and type(config.onUpdate) == "function" then
+			instance.onUpdate = config.onUpdate
 		end
 	end
 

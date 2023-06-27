@@ -1,55 +1,191 @@
 Config = {
-	Map = "land_map",
 	Items = { 
-				"official.cubzh",
-				"official.alpha",
-				"aduermael.coin",
-				"world_icon",
-				"one_cube_template",
-				"jacket_template",
-				"hair_template",
-				"pants_template",
-				"shoes_template"
-			}
+		"official.cubzh",
+		"official.alpha",
+		"aduermael.coin",
+		"world_icon",
+		"one_cube_template",
+		"jacket_template",
+		"hair_template",
+		"pants_template",
+		"shoes_template",
+		"hub_collosseum_chunk",
+		"hub_scifi_chunk",
+		"hub_medieval_chunk",
+		"hub_floating_islands_chunk",
+		"hub_volcano_chunk"
+	}
 }
+
+-- CONSTANTS
+
+local WATER_ALPHA = 220
+local MAP_SCALE = 5.5
+
+directionalPad = Client.DirectionalPad
+action1 = function()
+	if Player.IsOnGround then
+		Player.Velocity.Y = 100
+	end
+end
+
+Client.DirectionalPad = nil
+Client.Action1 = nil
+
+Client.Action2 = function() end
 
 Client.OnStart = function()
 
+	debugEvent("APP_LAUNCH")
+
+	local ambience = require("ambience") 
+	ambience:set(ambience.noon)
+
+	controls = require("controls")
+	controls:setButtonIcon("action1", "⬆️")
+
 	-- AMBIENCE --
 
-	sun = Light()
-	if sun.CastsShadows ~= nil then sun.CastsShadows = true end
-    sun.On = true
-	sun.Color = Color(50,40,30)
-	sun.Type = LightType.Directional
-	World:AddChild(sun)
-	sun.Rotation = {math.pi * 0.26, math.pi * 1.5, 0}
-
-	-- Dev.DisplayColliders = true
-
 	camera2 = Camera()
-	camera2.Layers = 5
+	camera2.Layers = {5}
 	camera2:SetParent(World)
 	camera2.On = true	
+	camera2.TargetY = Screen.Height
 	
-	ease = require("ease")
+	-- IMPORT MODULES
+	
 	ui = require("uikit")
+	ease = require("ease")
 	api = require("api")
-	messenger = require("local_messenger")
 	palette = require("palette")
 	friends = require("friends")
 	alert = require("alert")
 	modal = require("modal")
 	pezhUIModule = require("pezh_modal")
-
 	theme = require("uitheme").current
 
 	menu:init()
 	menu:refreshFriends()
 
+	-- MAP
+
+	function setChunkPos(chunk, x,y,z) chunk.Position = Number3(x,y,z) * MAP_SCALE end
+
+	function setWaterTransparency(chunk)
+		-- local i = chunk.Palette:GetIndex(Color(48, 192, 204, 255))
+		-- if i ~= nil then
+		-- 	chunk.Palette[i].Color.A = WATER_ALPHA
+		-- end
+		-- i = chunk.Palette:GetIndex(Color(252, 252, 252, 255))
+		-- if i ~= nil then
+		-- 	chunk.Palette[i].Color.A = WATER_ALPHA
+		-- end
+	end
+
+	function setLights(chunk)
+		-- local i = chunk.Palette:GetIndex(Color(252, 240, 176, 255))
+		-- if i ~= nil then
+		-- 	chunk.Palette[i].Color.A = 230
+		-- 	chunk.Palette[i].Light = true
+		-- end
+	end
+
+	collosseumChunk = Shape(Items.hub_collosseum_chunk)
+    collosseumChunk.InnerTransparentFaces = false
+	collosseumChunk.Physics = PhysicsMode.StaticPerBlock
+	collosseumChunk.CollisionGroups = Map.CollisionGroups
+	collosseumChunk.Scale = MAP_SCALE
+	collosseumChunk.Pivot = {0,0,0}
+	collosseumChunk.Friction = Map.Friction
+	collosseumChunk.Bounciness = Map.Bounciness
+	World:AddChild(collosseumChunk)
+	collosseumChunk.Position = {0,0,0}
+	setWaterTransparency(collosseumChunk)
+	setLights(collosseumChunk)
+
+	scifiChunk = MutableShape(Items.hub_scifi_chunk)
+	scifiChunk.InnerTransparentFaces = false
+	scifiChunk.Physics = PhysicsMode.StaticPerBlock
+	scifiChunk.CollisionGroups = Map.CollisionGroups
+	scifiChunk.Scale = MAP_SCALE
+	scifiChunk.Pivot = {0,0,0}
+	scifiChunk.Friction = Map.Friction
+	scifiChunk.Bounciness = Map.Bounciness
+	World:AddChild(scifiChunk)
+	setChunkPos(scifiChunk, 8, 20, -100)
+	setWaterTransparency(scifiChunk)
+	setLights(scifiChunk)
+
+	medievalChunk = Shape(Items.hub_medieval_chunk)
+	medievalChunk.InnerTransparentFaces = false
+	medievalChunk.Physics = PhysicsMode.StaticPerBlock
+	medievalChunk.CollisionGroups = Map.CollisionGroups
+	medievalChunk.Scale = MAP_SCALE
+	medievalChunk.Pivot = {0,0,0}
+	medievalChunk.Friction = Map.Friction
+	medievalChunk.Bounciness = Map.Bounciness
+	World:AddChild(medievalChunk)
+	setChunkPos(medievalChunk, -10, -6, 92)
+	setWaterTransparency(medievalChunk)
+	setLights(medievalChunk)
+
+	floatingIslandsChunks = Shape(Items.hub_floating_islands_chunk)
+	floatingIslandsChunks.InnerTransparentFaces = false
+	floatingIslandsChunks.Physics = PhysicsMode.StaticPerBlock
+	floatingIslandsChunks.CollisionGroups = Map.CollisionGroups
+	floatingIslandsChunks.Scale = MAP_SCALE
+	floatingIslandsChunks.Pivot = {0,0,0}
+	floatingIslandsChunks.Friction = Map.Friction
+	floatingIslandsChunks.Bounciness = Map.Bounciness
+	World:AddChild(floatingIslandsChunks)
+	setChunkPos(floatingIslandsChunks, 141, -4, 0)
+	setWaterTransparency(floatingIslandsChunks)
+	setLights(floatingIslandsChunks)
+
+	volcanoChunk = Shape(Items.hub_volcano_chunk)
+	volcanoChunk.Physics = PhysicsMode.StaticPerBlock
+	volcanoChunk.CollisionGroups = Map.CollisionGroups
+	volcanoChunk.Scale = MAP_SCALE
+	volcanoChunk.Pivot = {0,0,0}
+	volcanoChunk.Friction = Map.Friction
+	volcanoChunk.Bounciness = Map.Bounciness
+	World:AddChild(volcanoChunk)
+	volcanoChunk.Position = {800,18,-500}
+	setChunkPos(volcanoChunk, 116, 13, -76)
+	setWaterTransparency(volcanoChunk)
+	setLights(volcanoChunk)
+
+	-- Using a function because this is called by the engine when logging out.
+	-- It's safe if the engine doesn't have to know how this table is formed.
+	function resetAccountInfo()
+		accountInfo = {
+			hasUsername = false,
+			hasEmail = false,
+			hasPassword = false,
+			hasDOB = false,
+			hasAcceptedTerms = false,
+			isUnder13 = false,
+		}
+	end
+	resetAccountInfo()
+
+	function dropPlayer(p)
+		World:AddChild(p)
+		p.Position = Number3(139, 75, 68) * MAP_SCALE
+		p.Rotation = Number3(0.06, math.pi * -0.75, 0)
+		p.Velocity = {0,0,0}
+		p.Physics = true
+	end
+
 	-- TITLE SCREEN
 	function displayTitleScreen()
 		if titleScreen ~= nil then return end
+
+		Client.DirectionalPad = nil
+		Client.Action1 = nil
+
+		account:hideAvatar()
+		hideLoading()
 		menu:hide()
 
 		titleScreen = ui:createFrame()
@@ -67,7 +203,7 @@ Client.OnStart = function()
 
 		alpha.shape.rot = alpha.shape.Rotation:Copy()
 
-		version = ui:createText(Environment.version, Color.White)
+		version = ui:createText(Client.AppVersion .. " (alpha) #" .. Client.BuildNumber, Color.White)
 		version:setParent(titleScreen)
 		copyright = ui:createText("© Voxowl INC", Color.White)
 		copyright:setParent(titleScreen)
@@ -107,6 +243,9 @@ Client.OnStart = function()
 
 		end
 		titleScreen:parentDidResize()
+
+		controls:turnOn()
+		ui:turnOn()
 	end
 
 	function hideTitleScreen()
@@ -115,7 +254,28 @@ Client.OnStart = function()
 		titleScreen = nil
 	end
 
-	displayTitleScreen()
+	function displayLoading(text)
+		if loadingModal ~= nil then
+			loadingModal:setText(text)
+			return
+		end
+
+		closeModals()
+		
+		loadingModal = require("loading_modal"):create(text)
+
+		loadingModal.didClose = function()
+			loadingModal = nil
+			refreshMenuDisplayMode()
+		end
+		refreshMenuDisplayMode()
+	end
+
+	function hideLoading()
+		if loadingModal == nil then return end
+		loadingModal:close()
+		loadingModal = nil
+	end
 
 	function maxModalWidth()
 		local computed = Screen.Width - Screen.SafeArea.Left - Screen.SafeArea.Right - menu.windowPadding * 2
@@ -154,10 +314,18 @@ Client.OnStart = function()
 	coinsModal = nil
 
 	refreshMenuDisplayMode = function()
-		if friendsModal == nil and shopModal == nil and avatarEditor == nil and createModal == nil and coinsModal == nil and alertModal == nil and secretModal == nil then
+		if friendsModal == nil and shopModal == nil and 
+			avatarEditor == nil and exploreModal == nil and 
+			createModal == nil and coinsModal == nil and
+			alertModal == nil and secretModal == nil and
+			settingsModal == nil then
+
 			menu:maximize()
+			controls:turnOn()
+			ui:turnOn()
 		else
 			menu:minimize()
+			controls:turnOff()
 		end
 	end
 
@@ -181,6 +349,10 @@ Client.OnStart = function()
 			avatarEditor:close()
 			avatarEditor = nil
 		end
+		if exploreModal ~= nil then
+			exploreModal:close()
+			exploreModal = nil
+		end
 		if createModal ~= nil then
 			createModal:close()
 			createModal = nil
@@ -194,12 +366,16 @@ Client.OnStart = function()
 			secretModal:close()
 			secretModal = nil
 		end
+		if loadingModal ~= nil then
+			loadingModal:close()
+			loadingModal = nil
+		end
+		if settingsModal ~= nil then
+			settingsModal:close()
+			settingsModal = nil
+		end
 
 		secretCount = nil
-	end
-
-	menu.inventoryAction = function(self)
-		self:showAlert("⚠️ Work in progress!")
 	end
 
 	menu.shopAction = function(self)
@@ -207,6 +383,8 @@ Client.OnStart = function()
 			updateModalPosition(shopModal, true) -- make it bounce
 			return
 		end
+
+		debugEvent("MAIN_MENU_GALLERY_BUTTON")
 
 		closeModals()
 
@@ -238,9 +416,9 @@ Client.OnStart = function()
 							api:postSecret(text, function(success, message) 
 								if success then
 									if message ~= nil and message ~= "" then
-										self:showAlert(message)
+										self:showAlert({message = message})
 									else
-										self:showAlert("✅")
+										self:showAlert({message = "✅"})
 									end
 									api.getBalance(function(err, balance)
 										if err then return end
@@ -248,7 +426,7 @@ Client.OnStart = function()
 										menu:refresh()
 									end)
 								else
-									self:showAlert("❌ Error")
+									self:showAlert({message = "❌ Error"})
 								end
 							end)
 						end
@@ -265,6 +443,8 @@ Client.OnStart = function()
 			updateModalPosition(coinsModal, true) -- make it bounce
 			return
 		end
+
+		debugEvent("MAIN_MENU_COINS_BUTTON")
 
 		closeModals()
 
@@ -300,6 +480,8 @@ Client.OnStart = function()
 			avatarEditorPosition(avatarEditor, true) -- make it bounce
 			return
 		end
+
+		debugEvent("MAIN_MENU_PROFILE_BUTTON")
 
 		closeModals()
 
@@ -350,18 +532,43 @@ Client.OnStart = function()
 			camera2.TargetHeight = Screen.Height
 
 			if not modal.updatedPosition or forceBounce then
+
 				modal.LocalPosition = p - {0,100,0}
 				ease:cancel(modal) -- cancel modal ease animations if any
 				ease:outBack(modal, 0.22).LocalPosition = p
 
+				if portrait then
+					camera2.TargetX = 0
+					camera2.TargetY = Screen.Height
+				else
+					camera2.TargetX = Screen.Width * 0.25 - camera2.Width * 0.5
+					camera2.TargetY = Screen.Height
+				end
+
 				-- also size / position avatar camera
 				-- (not when just bounding modal)
 				if not modal.updatedPosition then
-					camera2.Position = Camera.Position
-					camera2.Rotation = Camera.Rotation
-
 					Camera.Color = Color(100,100,100)
 					Player.Layers = camera2.Layers
+					require("hierarchyactions"):applyToDescendants(Player.Body,{includeRoot = true},function(o)
+						o.IsUnlit = true
+					end)
+					camera2:SetParent(Player)
+					camera2.rot = Number3(0, math.pi, 0)
+					camera2.LocalRotation = camera2.rot
+					camera2.Position = Player.Position + {0,8,0} + camera2.Backward * 30
+					-- can't make it work...
+					-- camera2:FitToScreen(Player.Body:ComputeWorldBoundingBox(), 1.0)
+
+					avatarEditorDragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pointerEvent)
+						camera2.rot.Y = camera2.rot.Y + pointerEvent.DX * 0.02
+						camera2.rot.X = camera2.rot.X - pointerEvent.DY * 0.02
+						if camera2.rot.X > math.pi * 0.4 then camera2.rot.X = math.pi * 0.4 end
+						if camera2.rot.X < -math.pi * 0.4 then camera2.rot.X = -math.pi * 0.4 end
+
+						camera2.LocalRotation = camera2.rot
+						camera2.Position = Player.Position + {0,8,0} + camera2.Backward * 30
+					end)
 				end
 
 				modal.updatedPosition = true
@@ -386,21 +593,30 @@ Client.OnStart = function()
 		avatarEditor = require("avatar_editor"):create(avatarEditorMaxWidth, avatarEditorMaxHeight, avatarEditorPosition)
 
 		avatarEditor.didClose = function()
+			if avatarEditorDragListener then avatarEditorDragListener:Remove() avatarEditorDragListener = nil end
 			menu.profileBtn:unselect()
 			avatarEditor = nil
 			refreshMenuDisplayMode()
 
-			local anim = ease:outBack(camera2, 0.22, {
+			local anim = ease:outBack(camera2, 0.4, {
 				onDone = function()
 					Player.Layers = Camera.Layers
 				end,
 			})
+
+			local layers = {}
+			for _, l in ipairs(Camera.Layers) do table.insert(layers, l) end
+			for _, l in ipairs(camera2.Layers) do table.insert(layers, l) end
+			Player.Layers = layers
+			require("hierarchyactions"):applyToDescendants(Player.Body,{includeRoot = true},function(o)
+				o.IsUnlit = false
+			end)
 			anim.TargetWidth = Screen.Width
 			anim.Width = Screen.Width
 			anim.TargetHeight = Screen.Height
 			anim.Height = Screen.Height
-			anim.TargetX = 0
-			anim.TargetY = 0
+			-- anim.TargetX = 0
+			anim.TargetY = Screen.Height
 
 			Camera.Color = Color(255,255,255)
 		end
@@ -414,6 +630,8 @@ Client.OnStart = function()
 			return
 		end
 
+		debugEvent("MAIN_MENU_FRIENDS_BUTTON")
+
 		closeModals()
 
 		menu.friendsBtn:select()
@@ -425,12 +643,16 @@ Client.OnStart = function()
 			menu.friendsBtn:unselect()
 			friendsModal = nil
 			refreshMenuDisplayMode()
+			menu:refreshFriends()
 		end
 		
 		refreshMenuDisplayMode()
 	end
 
-	menu.showAlert = function(self, message)
+	-- config: {message = "",
+	--  		positiveCallback = function() end, positiveLabel = "yes",
+	--          negativeCallback = function() end, negativeLabel = "no"}
+	menu.showAlert = function(self, config)
 		if alertModal ~= nil then
 			alertModal:bounce()
 			return
@@ -438,9 +660,16 @@ Client.OnStart = function()
 
 		closeModals()
 		
-		alertModal = alert:create(message)
-		-- alertModal:setNegativeCallback("No", function() end)
-		-- alertModal:setNeutralCallback("Hmmm...", function() end)
+		alertModal = alert:create(config.message or "")
+		if config.positiveCallback then
+			alertModal:setPositiveCallback(config.positiveLabel or "OK", config.positiveCallback)
+		end
+		if config.negativeCallback then
+			alertModal:setNegativeCallback(config.negativeLabel or "No", config.negativeCallback)
+		end
+		if config.neutralCallback then
+			alertModal:setNeutralCallback(config.neutralLabel or "...", config.neutralCallback)
+		end
 
 		alertModal.didClose = function()
 			alertModal = nil
@@ -450,19 +679,50 @@ Client.OnStart = function()
 	end
 
 	menu.settingsAction = function()
+		if settingsModal ~= nil then
+			updateModalPosition(settingsModal, true) -- make it bounce
+			return
+		end
+
 		closeModals()
-		openSettings()
+		menu:minimize()
+
+		settingsModal = require("settings"):create(updateModalPosition, { clearCache = true, logout = true })
+
+		settingsModal.didClose = function()
+			settingsModal = nil
+			refreshMenuDisplayMode()
+		end
+
+		refreshMenuDisplayMode()
+
+		-- controls:turnOff()
+		-- ui:turnOff()
+		-- openSettings()
 	end
 
-	menu.exploreAction = function()
+	menu.exploreAction = function(self)
+		if exploreModal ~= nil then
+			updateModalPosition(exploreModal, true) -- make it bounce
+			return
+		end
+
 		closeModals()
-		gotoExplore()
-		hideUI()
+		menu:minimize()
+
+		exploreModal = require("explore_menu"):create(maxModalWidth, maxModalHeight, updateModalPosition)
+
+		exploreModal.didClose = function()
+			exploreModal = nil
+			refreshMenuDisplayMode()
+		end
+
+		refreshMenuDisplayMode()
 	end
 
 	menu.createAction = function(self)
-		if isAnonymous ~= nil and isAnonymous() then -- Account actions (login, username, password)
-			self:showAlert("💬 You need a username to create!")
+		if accountInfo.hasUsername == false then -- Account actions (login, username, password)
+			self:showAlert({message = "💬 You need a username to create!"})
 			return
 		end
 
@@ -490,16 +750,13 @@ Client.OnStart = function()
 
 	pi2 = math.pi * 2
 	moveDT = 0.0
-	kCameraPositionY = 80
+	kCameraPositionY = 90
 	yaw = -1.4 -- initial camera yaw value
 
-	kCameraPositionRotating = Number3(Map.Width * 0.5, kCameraPositionY, Map.Depth * 0.4) * Map.Scale
-	kCameraPositionRewardChest = Number3(Map.Width * 0.5, 75, Map.Depth * 0.4) * Map.Scale
+	kCameraPositionRotating = Number3(139, kCameraPositionY, 68) * MAP_SCALE
 
 	UI.Crosshair = false
-	Client.DirectionalPad = nil
-	Client.Action1 = nil
-	Config.ChatAvailable = false
+
 	Private.PauseAvailable = false
 
 	Camera:SetModeFree()
@@ -509,10 +766,10 @@ Client.OnStart = function()
 
 	-- Called by C++ code when from within C++ UI.
 	function backFromCPP()
-		menu:show()
 		showUI()
-		ui:fitScreen() -- necessary when coming back from launched experience
+		LocalEvent:Send(LocalEvent.Name.ScreenDidResize, Screen.Width, Screen.Height) -- necessary when coming back from launched experience
 		menu:refresh()
+		refreshMenuDisplayMode()
 	end
 
 	-- hides all UI elements
@@ -528,32 +785,26 @@ Client.OnStart = function()
 	end
 
 	Screen.DidResize = function(width, height)
-		ui:fitScreen()
 		menu:refresh()
 	end
 
-	ui:fitScreen()
+	displayTitleScreen()
+	if hasEnvironmentToLaunch() then
+		skipTitleScreen()
+	end
 end
 
 Client.OnPlayerJoin = function(p)
 	if p ~= Player then return end
-	-- place Player
-	Player:RemoveFromParent()
-	World:AddChild(Player)
-
-	Player.Position = Number3(360, 350, 186)
-	Player.Rotation = Number3(0.06, 2.37, 0)
-	Player.Velocity.Y = 5
-	Player.Physics = true
-	Player:Wave(true)
+	dropPlayer(p)
 end
 
 Client.Tick = function(dt)
-	-- ambiance manager has its own tick
-	ambiance:tick()
 
 	if account.shown then
-		-- nothing for now
+		if Player.Position.Y < -500 then
+			dropPlayer(Player)
+		end
 	else
 		-- UP/DOWN MOVEMENT
 		moveDT = moveDT + dt * 0.2
@@ -561,7 +812,7 @@ Client.Tick = function(dt)
 		while moveDT > math.pi do
 			moveDT = moveDT - pi2
 		end
-		Camera.Position.Y = (kCameraPositionY + math.sin(moveDT) * 5.0) * Map.Scale.Y
+		Camera.Position.Y = (kCameraPositionY + math.sin(moveDT) * 5.0) * MAP_SCALE
 
 		-- ROTATION
 		yaw = yaw + 0.1 * dt
@@ -582,7 +833,214 @@ Client.Tick = function(dt)
 end
 
 Pointer.Down = function(pointerEvent)
-	uiCaptured = ui:pointerDown(pointerEvent)
+	skipTitleScreen()
+end
+
+function parseVersion(versionStr)
+	local maj, min, patch = versionStr:match("(%d+)%.(%d+)%.(%d+)")
+	maj = math.floor(tonumber(maj))
+	min = math.floor(tonumber(min))
+	patch = math.floor(tonumber(patch))
+	return maj, min, patch
+end
+
+function skipTitleScreen()
+	if titleScreen == nil then return end
+
+	debugEvent("SKIP_SPLASHSCREEN")
+
+	hideTitleScreen()
+	menu:hide()
+
+	local function done()
+		if dobModal ~= nil then
+			dobModal.didClose = nil
+			dobModal:close()
+			dobModal = nil
+		end
+		closeModals()
+		hideLoading()
+
+		debugEvent("MAIN_MENU")
+
+		Client.DirectionalPad = directionalPad
+		Client.Action1 = action1
+
+		menu:refresh()
+		menu:show()
+		account:showAvatar()
+		
+		if hasEnvironmentToLaunch() then
+			hideUI()
+			launchEnvironment()
+		end
+	end
+
+	local function checkUserInfo()
+
+		displayLoading("Checking user info")
+
+		if hasCredentials() == false then
+
+			debugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
+
+			closeModals()
+
+			local helpBtn = ui:createButton("👾 Need help?", {textSize = "small"})
+			helpBtn:setColor(theme.colorDiscord, Color.White)
+			helpBtn.onRelease = function()
+				URL:Open("https://cu.bzh/discord")
+			end
+			helpBtn.parentDidResize = function(self)
+				self.pos = {Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right, Screen.Height - self.Height - theme.padding - Screen.SafeArea.Top, 0}
+			end
+			helpBtn:parentDidResize()
+
+			local loginBtn = ui:createButton("Login", {textSize = "small"})
+			loginBtn.parentDidResize = function(self)
+				self.pos = {Screen.SafeArea.Left + theme.padding, Screen.Height - self.Height - theme.padding - Screen.SafeArea.Top, 0}
+			end
+			loginBtn.onRelease = function()
+				login(function(success, info)
+					if success then
+						accountInfo = info
+						helpBtn:remove()
+						loginBtn:remove()
+						done()
+					end
+				end)
+			end
+			loginBtn:parentDidResize()
+
+			dobModal = require("dob_modal"):create()
+	
+			dobModal.onDone = function(year, month, day)
+				debugEvent("BIRTHDATE_SUBMIT")
+				loginBtn:remove()
+				helpBtn:remove()
+				dobModal.didClose = nil
+				dobModal:close()
+				dobModal = nil
+				refreshMenuDisplayMode()
+
+				local function _createAccount(onError)
+					displayLoading("Connecting")
+					createAccount(string.format("%02d-%02d-%04d", month, day, year), function(err)
+						if err ~= nil then
+							if onError ~= nil then onError(onError) end
+							return
+						else
+							debugEvent("ACCOUNT_CREATED")
+							done()
+						end
+					end)
+				end
+
+				local function onError(onError)
+					menu:showAlert({
+						message = "❌ Sorry, something went wrong.",
+						positiveCallback = function() _createAccount(onError) end,
+						positiveLabel = "Retry",
+						neutralCallback = function() displayTitleScreen() end,
+						neutralLabel = "Cancel",
+					})
+				end
+
+				_createAccount(onError)
+			end
+
+			dobModal.didClose = function()
+				loginBtn:remove()
+				helpBtn:remove()
+				displayTitleScreen()
+				dobModal = nil
+				refreshMenuDisplayMode()
+			end
+			refreshMenuDisplayMode()
+		else
+			-- Fetches account info
+			-- it's ok to continue if err == nil
+			-- (info updated at the engine level)
+			getAccountInfo(function(err, res)
+				if err ~= nil then
+					menu:showAlert({
+						message = "❌ Sorry, something went wrong.",
+						positiveCallback = function() displayTitleScreen() end,
+						positiveLabel = "OK",
+					})
+					return
+				end
+
+				accountInfo = res
+				
+				-- if accountInfo.hasDOB == false then
+				-- 	-- This is not supposed to happen, as DOB is required to create an account
+				-- 	return
+				-- end
+
+				done()
+			end)
+		end
+	end
+
+	local function preliminaryChecks()
+		if hasCredentials() == false and askedForMagicKey() then
+			checkMagicKey(
+				function(error, info)
+					if error ~= nil then
+						displayTitleScreen()
+					else
+						accountInfo = info
+						done()
+					end
+				end,
+				function(keyIsValid)
+					if keyIsValid then
+						closeModals()
+					else
+						checkUserInfo()
+					end
+				end
+			)
+			return
+		else
+			checkUserInfo()
+		end
+	end
+
+	displayLoading("Checking app version")
+
+	api:getMinAppVersion(function(error, minVersion)
+		-- print("checking min app version...")
+		if error ~= nil then
+			menu:showAlert({
+				message = "❌ Network error ❌ ",
+				positiveCallback = function() displayTitleScreen() end,
+				positiveLabel = "OK",
+			})
+			return
+		end
+
+		local major, minor, patch = parseVersion(Client.AppVersion)
+		local minMajor, minMinor, minPatch = parseVersion(minVersion)
+
+		-- minPatch = 51 -- force trigger, for tests
+		if major < minMajor or
+			(major == minMajor and minor < minMinor) or 
+			(minor == minMinor and patch < minPatch) then
+			
+			hideLoading()
+			menu:showAlert({
+				message = string.format("Sorry but this app needs to be updated!\nminimum: %d.%d.%d\ninstalled: %d.%d.%d", 
+					minMajor, minMinor, minPatch,
+					major, minor, patch),
+				positiveCallback = function() displayTitleScreen() end,
+				positiveLabel = "I'll do it!",
+			})
+		else 
+			preliminaryChecks()
+		end
+	end)
 end
 
 Pointer.Drag = function(pointerEvent)
@@ -618,148 +1076,6 @@ Pointer.Drag = function(pointerEvent)
 	end
 end
 
-Pointer.Up = function(pointerEvent)
-
-	ui:pointerUp(pointerEvent)
-	-- if not uiCaptured then
-	
-	-- end
-
-	uiCaptured = false
-end
-
--- AMBIANCE TRANSITIONS
-
-ambiance = {
-	fadingToCustom = false, -- normal -> custom
-	fadingToTimeCycle = false, -- custom -> normal
-	customColor = {
-		abyss = nil,
-		ambientLight = nil,
-		horizonColor = nil,
-		skyColor = nil,
-		skyLightColor = nil,
-	},
-
-	save = {
-		timeCycleDuration = nil,
-		timeCycleNoon = nil,
-		timeCycleDusk = nil,
-	},
-	
-	tick = function(self, dt)
-		if self.fadingToCustom == true then
-			-- TimeCyle is currently cycling between Noon & Dusk
-			if Time.Current.H >= 18 then -- Dusk has been reached (18h)
-				Time.Current = Time.Dusk
-				TimeCycle.On = false
-				self.fadingToCustom = false
-			end
-
-		elseif self.fadingToTimeCycle == true then
-			if Time.Current.H >= 18 then
-				
-				TimeCycle.Marks.Noon.AbyssColor = self.save.timeCycleNoon.AbyssColor
-				TimeCycle.Marks.Noon.AmbientLightColor = self.save.timeCycleNoon.AmbientLightColor
-				TimeCycle.Marks.Noon.HorizonColor = self.save.timeCycleNoon.HorizonColor
-				TimeCycle.Marks.Noon.SkyColor = self.save.timeCycleNoon.SkyColor
-				TimeCycle.Marks.Noon.SkyLightColor = self.save.timeCycleNoon.SkyLightColor
-
-				Time.Current = Time.Noon
-
-				TimeCycle.Marks.Dusk.AbyssColor = self.save.timeCycleDusk.AbyssColor
-				TimeCycle.Marks.Dusk.AmbientLightColor = self.save.timeCycleDusk.AmbientLightColor
-				TimeCycle.Marks.Dusk.HorizonColor = self.save.timeCycleDusk.HorizonColor
-				TimeCycle.Marks.Dusk.SkyColor = self.save.timeCycleDusk.SkyColor
-				TimeCycle.Marks.Dusk.SkyLightColor = self.save.timeCycleDusk.SkyLightColor
-				
-				TimeCycle.Duration = self.save.timeCycleDuration
-				TimeCycle.On = true
-	
-				self.fadingToTimeCycle = false
-			end
-		end
-	end,
-
-	explore = function(self)
-
-		self:fadeToCustomAmbiance(0.5,
-								  Color(95, 151, 228),
-								  Color(95, 151, 228),
-								  Color(95, 151, 228),
-								  Color(95, 151, 228),
-								  Color(95, 151, 228))
-
-	end,
-
-	build = function(self)
-
-		self:fadeToCustomAmbiance(0.5,
-								  Color(220, 160, 88),
-								  Color(220, 160, 88),
-								  Color(220, 160, 88),
-								  Color(220, 160, 88),
-								  Color(220, 160, 88))
-
-	end,
-
-	clear = function(self)
-
-		self:fadeToCustomAmbiance(0.5,
-								  Color(0, 93, 127),
-								  Color(0, 95, 139),
-								  Color(153, 242, 255),
-								  Color(0, 174, 255),
-								  Color(255, 255, 234))
-
-	end,
-
-	fadeToCustomAmbiance = function(self, durationSec, abyss, ambientLight, horizonColor, skyColor, skyLightColor)
-		if self.fadingToTimeCycle == true then 
-			self.fadingToTimeCycle = false
-		end
-				
-		self.customColor.abyss = abyss
-		self.customColor.ambientLight = ambientLight
-		self.customColor.horizonColor = horizonColor
-		self.customColor.skyColor = skyColor
-		self.customColor.skyLightColor = skyLightColor
-
-		self.fadingToCustom = true
-		
-		-- get current ambiance
-		local currentMark = TimeCycleMark(Time.Current)
-		
-		-- modify Noon (set new value of TimeCycle.Marks.Noon to currentMark colors)
-		TimeCycle.Marks.Noon.AbyssColor = currentMark.AbyssColor
-		TimeCycle.Marks.Noon.AmbientLightColor = currentMark.AmbientLightColor
-		TimeCycle.Marks.Noon.HorizonColor = currentMark.HorizonColor
-		TimeCycle.Marks.Noon.SkyColor = currentMark.SkyColor
-		TimeCycle.Marks.Noon.SkyLightColor = currentMark.SkyLightColor
-
-		-- Set current time to Noon
-		Time.Current = Time.Noon
-
-		-- remove currentMark from the TimeCycle
-		if #TimeCycle.Marks > 4 then
-			TimeCycle:RemoveMark(currentMark)
-		end
-
-		-- modify Dusk (with custom colors)
-		TimeCycle.Marks.Dusk.AbyssColor = self.customColor.abyss
-		TimeCycle.Marks.Dusk.AmbientLightColor = self.customColor.ambientLight
-		TimeCycle.Marks.Dusk.HorizonColor = self.customColor.horizonColor
-		TimeCycle.Marks.Dusk.SkyColor = self.customColor.skyColor
-		TimeCycle.Marks.Dusk.SkyLightColor = self.customColor.skyLightColor
-
-		-- Set custom TimeCycle duration
-		TimeCycle.Duration = durationSec * 4.0
-
-		-- Make sure the TimeCycle is ON
-		TimeCycle.On = true
-	end,
-}
-
 -- //////////////////////////////////////////////////
 -- ///
 -- /// ACCOUNT MENU
@@ -775,25 +1091,15 @@ account = {
 		-- reload avatar
 		Client.__loadAvatar(Player.ID, true)
 
-		-- place Camera
-		Camera.Rotation = {0.05, 5.5, 0}
-		Camera.Position = Number3(380, 300, 165)
+		Camera:SetModeThirdPerson()
 
-		-- place Player
-		Player:RemoveFromParent()
-		World:AddChild(Player)
-
-		Player.Position = Number3(360, 350, 186)
-		Player.Rotation = Number3(0.06, 2.37, 0)
-		Player.Velocity.Y = 5
-		Player.Physics = true
-		Player:Wave(true)
+		dropPlayer(Player)
 	end,
 	hideAvatar = function(self)
 		if not self.shown then return end
 		self.shown = false
 		
-		Player:Wave(false)
+		Camera:SetModeFree()
 		Player:RemoveFromParent()
 	end,
 }
@@ -811,7 +1117,6 @@ menu = {
 	profileAction = nil,
 	settingsAction = nil,
 	friendsAction = nil,
-	inventoryAction = nil,
 	coinAction = nil,
 	shopAction = nil,
 	exploreAction = nil,
@@ -879,15 +1184,14 @@ menu = {
 		self.minimized = true
 
 		self:refreshProfileBtn()
-		self.friendsBtn.Text = "❤️"
-		if self.nbFriends > 0 then
-			self.friendsBtn.Text = self.friendsBtn.Text .. "(" .. self.nbFriends .. ")"
-		end
-		self.inventoryBtn.Text = "🎒"
+
+		self:setNbFriends(self.nbFriends)
 
 		self.shopBtn.Text = "✨"
 
 		self.discordBtn:setParent(nil)
+		self.createButton:setParent(nil)
+		self.exploreBtn:setParent(nil)
 
 		self:refresh()
 	end,
@@ -899,17 +1203,17 @@ menu = {
 		self.minimized = false
 
 		self:refreshProfileBtn()
-		self.friendsBtn.Text = "❤️ Friends"
-		if self.nbFriends > 0 then
-			self.friendsBtn.Text = self.friendsBtn.Text .. "(" .. self.nbFriends .. ")"
-		end
+
+		self:setNbFriends(self.nbFriends)
 
 		self.shopBtn.Text = "Gallery ✨"
-		self.inventoryBtn.Text = "Inventory 🎒"
 
 		if not self.discordBtn.parent then 
 			self.discordBtn:setParent(self.topRight)
 		end
+
+		if not self.createButton.parent then  self.createButton:setParent(self.topLeft) end
+		if not self.exploreBtn.parent then  self.exploreBtn:setParent(self.topLeft) end
 
 		self:refresh()
 	end,
@@ -941,57 +1245,57 @@ menu = {
 			self.settingsBtn.LocalPosition = { self.profileBtn.Width + self.padding, 0, 0}
 			self.friendsBtn.LocalPosition = { self.settingsBtn.LocalPosition.X + self.settingsBtn.Width + self.padding, 0, 0}
 
-			self.inventoryBtn.LocalPosition = {0, 0, 0}
-			self.shopBtn.LocalPosition = {self.inventoryBtn.Width + self.padding, 0, 0}
+			self.shopBtn.LocalPosition = {0, 0, 0}
 			self.coinsBtn.LocalPosition = {self.shopBtn.LocalPosition.X + self.shopBtn.Width + self.padding, 0, 0}
 		else
 			if self.hidden == false and self.bottom.object:GetParent() == nil then self.bottom:setParent(ui.rootFrame) end
 
-			local accountBtnsTotalHeight = 0
-			-- at the beginning, Lua functions are nil
-			if isAnonymous ~= nil then -- Account actions (login, username, password)
-				if isAnonymous() then -- show a frame with 2 buttons (login & set password)
-					self.accountFrame:setParent(self.topLeft)
-					self.accountFrame:parentDidResize()
-					accountBtnsTotalHeight = accountBtnsTotalHeight + self.accountFrame.Height + self.padding
-				else -- not anonymous
-					local _hasPassword = hasPassword()
-					local _hasEmail = hasEmail()
-					local _isUnder13 = isUnder13()
-					accountBtnsTotalHeight = self.padding
-					if _hasPassword == false then
-						-- show button to set password
-						self.setPasswordBtn:setParent(self.topLeft)
-						self.setPasswordBtn.LocalPosition.Y = accountBtnsTotalHeight
-						accountBtnsTotalHeight = accountBtnsTotalHeight + self.setPasswordBtn.Height + self.padding
-					end
-					if _hasEmail == false and _isUnder13 == false then
-						-- show button to set email
-						self.setEmailBtn:setParent(self.topLeft)
-						self.setEmailBtn.LocalPosition.Y = accountBtnsTotalHeight
-						accountBtnsTotalHeight = accountBtnsTotalHeight + self.setEmailBtn.Height + self.padding
-					end
-				end
-			end
-
-			self.friendsBtn.LocalPosition = {0, accountBtnsTotalHeight, 0}
+			self.exploreBtn.LocalPosition = {0, 0, 0}
+			self.createButton.LocalPosition = {0, self.exploreBtn.LocalPosition.Y + self.exploreBtn.Height + self.padding, 0}
+			self.friendsBtn.LocalPosition = {0, self.createButton.LocalPosition.Y + self.createButton.Height + self.padding, 0}
 			self.profileBtn.LocalPosition = {0, self.friendsBtn.LocalPosition.Y + self.friendsBtn.Height + self.padding, 0}
+
 			self.settingsBtn.LocalPosition = {self.profileBtn.Width + self.padding, self.profileBtn.LocalPosition.Y, 0}
 
 			local w = self.topRight.Width
 
-			self.discordBtn.LocalPosition = {w - self.discordBtn.Width, 0, 0}
-			-- TEST
-			-- ease:outQuad(self.discordBtn,1.0).LocalPosition = Number3(w - self.discordBtn.Width, 0, 0)
 
-			self.inventoryBtn.LocalPosition = {w - self.inventoryBtn.Width, self.discordBtn.LocalPosition.Y + self.discordBtn.Height + self.padding, 0}
-			self.shopBtn.LocalPosition = {w - self.shopBtn.Width, self.inventoryBtn.LocalPosition.Y + self.inventoryBtn.Height + self.padding, 0}
+			local accountBtnsTotalHeight = 0
+			
+			if accountInfo.hasUsername == false then -- show a frame with 2 buttons (login & set username)
+				self.accountFrame:setParent(self.topRight)
+				self.accountFrame:parentDidResize()
+				w = self.topRight.Width
+				accountBtnsTotalHeight = accountBtnsTotalHeight + self.accountFrame.Height + self.padding
+			else -- not anonymous
+				if accountInfo.hasPassword == false then
+					-- show button to set password
+					self.setPasswordBtn:setParent(self.topRight)
+					self.setPasswordBtn.LocalPosition.Y = accountBtnsTotalHeight
+					w = self.topRight.Width
+					accountBtnsTotalHeight = accountBtnsTotalHeight + self.setPasswordBtn.Height + self.padding
+				end
+				if accountInfo.hasEmail == false and accountInfo.isUnder13 == false then
+					-- show button to set email
+					self.setEmailBtn:setParent(self.topRight)
+					self.setEmailBtn.LocalPosition.Y = accountBtnsTotalHeight
+					w = self.topRight.Width
+					accountBtnsTotalHeight = accountBtnsTotalHeight + self.setEmailBtn.Height + self.padding
+				end
+			end
+
+			if self.accountFrame.parent ~= nil then self.accountFrame.pos = {w - self.accountFrame.Width, 0, 0} end
+			local y = 0
+			if self.setPasswordBtn.parent ~= nil then 
+				self.setPasswordBtn.pos = {w - self.setPasswordBtn.Width, 0, 0} 
+				y = self.setPasswordBtn.Height + self.padding 
+			end
+			if self.setEmailBtn.parent ~= nil then self.setEmailBtn.pos = {w - self.setEmailBtn.Width, y, 0} end
+
+			self.discordBtn.LocalPosition = {w - self.discordBtn.Width, accountBtnsTotalHeight, 0}
+
+			self.shopBtn.LocalPosition = {w - self.shopBtn.Width, self.discordBtn.LocalPosition.Y + self.discordBtn.Height + self.padding, 0}
 			self.coinsBtn.LocalPosition = {w - self.coinsBtn.Width, self.shopBtn.LocalPosition.Y + self.shopBtn.Height + self.padding, 0}
-
-			local w = self.exploreBtn.Width + self.padding + self.createButton.Width
-			self.exploreBtn.LocalPosition = {-(w * 0.5), 0, 0}
-			self.createButton.LocalPosition = {self.exploreBtn.LocalPosition.X + self.padding + self.exploreBtn.Width, 0, 0}
-
 		end
 
 		self.topLeft.LocalPosition = {self.padding + Screen.SafeArea.Left, Screen.Height - self.topLeft.Height - self.padding - Screen.SafeArea.Top, 0}
@@ -1048,57 +1352,48 @@ menu = {
 		self.friendsBtn = ui:createButton("❤️ Friends")
 		self.friendsBtn:setParent(self.topLeft)
 		self.friendsBtn.onRelease = function()
-			-- print(self.friendsAction, self.friendsBtn, self.friendsBtn.select)
 			if self.friendsAction ~= nil then self.friendsAction() end
 		end
-		-- TODO: remove recipient when it is removed/destroyed
-		messenger:addRecipient(self.friendsBtn, friends.kNotifFriendsUpdated, function(r,n,d)
-			self.nbFriends = #d
-			if self.minimized then
-				r.Text = "❤️"
-			else
-				r.Text = "❤️ Friends"
-			end
-			if self.nbFriends > 0 then
-				r.Text = r.Text .. "(" .. self.nbFriends .. ")"
-			end
-			self:refresh()
-		end)
 
 		-- Frame box buttons for account actions (login/username)
 		self.accountFrame = ui:createFrame(Color(0, 0, 0, 128))
 		self.accountFrame.LocalPosition.Z = 0
 		self.accountFrame.parentDidResize = function(frame)
-			frame.Width = math.max(self.accountAnonText.Width, self.pickUsernameBtn.Width) + (2 * self.padding)
-			frame.Height = self.accountAnonText.Height + self.pickUsernameBtn.Height + self.loginBtn.Height + (4 * self.padding)
-		end
-
-		self.accountAnonText = ui:createText("You are a guest")
-		self.accountAnonText.Color = Color(255, 255, 255, 255)
-		self.accountAnonText:setParent(self.accountFrame)
-		self.accountAnonText.parentDidResize = function(selfText)
-			selfText.LocalPosition.X = self.padding
-			selfText.LocalPosition.Y = selfText.parent.Height - selfText.Height - self.padding
+			frame.Width = math.max(self.loginBtn.Width, self.pickUsernameBtn.Width) + (2 * self.padding)
+			frame.Height = self.pickUsernameBtn.Height + self.loginBtn.Height + (3 * self.padding)
 		end
 
 		self.pickUsernameBtn = ui:createButton("🧪 Pick username")
+		self.pickUsernameBtn:setColor(theme.colorPositive, Color(23,30,14))
 		self.pickUsernameBtn:setParent(self.accountFrame)
 		self.pickUsernameBtn.parentDidResize = function(selfBtn)
-			selfBtn.LocalPosition.X = self.padding
-			selfBtn.LocalPosition.Y = selfBtn.parent.Height - self.accountAnonText.Height - selfBtn.Height - (2 * self.padding)
+			selfBtn.LocalPosition.X = selfBtn.parent.Width - selfBtn.Width - self.padding
+			selfBtn.LocalPosition.Y = selfBtn.parent.Height - selfBtn.Height - self.padding
 		end
 		self.pickUsernameBtn.onRelease = function()
+			debugEvent("PICK_USERNAME_REQUEST")
+			controls:turnOff()
+			ui:turnOff()
 			promptForUsername()
 		end
 
 		self.loginBtn = ui:createButton("🔑 Login")
 		self.loginBtn:setParent(self.accountFrame)
 		self.loginBtn.parentDidResize = function(selfBtn)
-			selfBtn.LocalPosition.X = self.padding
+			selfBtn.LocalPosition.X = selfBtn.parent.Width - selfBtn.Width - self.padding
 			selfBtn.LocalPosition.Y = self.padding
 		end
 		self.loginBtn.onRelease = function()
-			login()
+			controls:turnOff()
+			ui:turnOff()
+			login(function(success, info)
+				controls:turnOn()
+				ui:turnOn()
+				if success then
+					accountInfo = info
+					menu:refresh()
+				end
+			end)
 		end
 
 		self.accountFrame:parentDidResize()
@@ -1106,10 +1401,16 @@ menu = {
 		-- Buttons for email/password
 		self.setPasswordBtn = ui:createButton("🔑 Set password")
 		self.setPasswordBtn.onRelease = function()
+			debugEvent("SET_PASSWORD_REQUEST")
+			controls:turnOff()
+			ui:turnOff()
 			promptForPassword()
 		end
-		self.setEmailBtn = ui:createButton("Set email")
+		self.setEmailBtn = ui:createButton("✉️ Set email")
 		self.setEmailBtn.onRelease = function()
+			debugEvent("SET_EMAIL_REQUEST")
+			controls:turnOff()
+			ui:turnOff()
 			promptForEmail()
 		end
 
@@ -1135,34 +1436,36 @@ menu = {
 			if self.shopAction ~= nil then self:shopAction() end
 		end
 
-		self.inventoryBtn = ui:createButton("🎒 Inventory")
-		self.inventoryBtn:setParent(self.topRight)
-		self.inventoryBtn.onRelease = function()
-			if self.inventoryAction ~= nil then self:inventoryAction() end
-		end
-
 		self.discordBtn = ui:createButton("👾 Need help?")
 		self.discordBtn:setColor(theme.colorDiscord, Color.White)
 		self.discordBtn:setParent(self.topRight)
 		self.discordBtn.onRelease = function()
-			-- if self.discordBtn ~= nil then self:shopAction() end
+			debugEvent("MAIN_MENU_DISCORD_BUTTON")
 			URL:Open("https://cu.bzh/discord")
 		end
 
 		-- BOTTOM
 
-		self.exploreBtn = ui:createButton("🌎 Explore", {textSize ="big"})
-		self.exploreBtn:setParent(self.bottom)
+		self.exploreBtn = ui:createButton("🌎 Explore")
+		-- self.exploreBtn:setParent(self.bottom)
+		self.exploreBtn:setParent(self.topLeft)
 		self.exploreBtn:setColor(theme.colorExplore, Color.White)
 		self.exploreBtn.onRelease = function()
-			if self.exploreAction ~= nil then self:exploreAction() end
+			if self.exploreAction ~= nil then 
+				debugEvent("MAIN_MENU_EXPLORE_BUTTON")
+				self:exploreAction() 
+			end
 		end
 
-		self.createButton = ui:createButton("🏗️ Create", {textSize ="big"})
-		self.createButton:setParent(self.bottom)
+		self.createButton = ui:createButton("🏗️ Build")
+		-- self.createButton:setParent(self.bottom)
+		self.createButton:setParent(self.topLeft)
 		self.createButton:setColor(theme.colorCreate, Color.White)
 		self.createButton.onRelease = function()
-			if self.createAction ~= nil then self:createAction() end
+			if self.createAction ~= nil then
+				debugEvent("MAIN_MENU_CREATE_BUTTON")
+				self:createAction()
+			end
 		end
 
 		self:maximize() -- start with maximized ui

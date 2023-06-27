@@ -3,25 +3,41 @@ Friends module handles friend relations.
 //!\\ Still a work in progress. Your scripts may break in the future if you use it now. 
 ]]--
 
-local friendsWindow = {
-	eList = {
-		friends = 0,
-		sent = 1,
-		received = 2,
-		search = 3,
-	},
+local friendsWindow = {}
 
-	-- Constants
-	kNotifFriendsUpdated = "friends_friends_updated",
-	kNotifSentUpdated = "friends_sent_updated",
-	kNotifReceivedUpdated = "friends_received_updated",
+local mt = {
+    __index = {},
+    __newindex = function(t,k,v) error("friends module is read-only", 2) end,
+    __metatable = false,
 }
+setmetatable(friendsWindow, mt)
 
-friendsWindow.create = function(self, maxWidth, maxHeight, position)
+local uikit = require("uikit")
+local uiAvatar = require("ui_avatar")
+local theme = require("uitheme").current
+local modal = require("modal")
 
-	local uikit = require("uikit")
-	local theme = require("uitheme").current
-	local modal = require("modal")
+local lists = { friends = 0, sent = 1, received = 2, search = 3 }
+
+mt.__index.create = function(self, maxWidth, maxHeight, position)
+
+	local displayedList = lists.friends
+	local displayedCells = 0
+	local responses = {} -- list of friends, requests (sent or received), or search
+	local requests = {}
+	local countRequests = {}
+
+	local cancelRequests = function()
+		for _, r in ipairs(requests) do 
+			r:Cancel()
+		end
+		requests = {}
+	end
+
+	local cancelCountRequests = function()
+		for _, r in ipairs(countRequests) do r:Cancel() end
+		countRequests = {}
+	end
 
 	local idealReducedContentSize = function(content, width, height)
 		width = math.min(width, 500)
@@ -35,18 +51,6 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 	local node = uikit:createFrame(Color(0,0,0,0))
 
-	node.getDisplayedList = function(self)
-		if self.displayedList == friendsWindow.eList.friends then
-			return self.data.friends
-		elseif self.displayedList == friendsWindow.eList.sent then
-			return  self.data.sent
-		elseif self.displayedList == friendsWindow.eList.received then
-			return self.data.received
-		elseif self.displayedList == friendsWindow.eList.search then
-			return self.data.search
-		end
-	end
-
 	local pages = require("pages"):create()
 	pages:setPageDidChange(function(page) 
 		node:refreshList((page - 1) * node.displayedCells + 1)
@@ -57,39 +61,22 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 	content.node = node
 	content.idealReducedContentSize = idealReducedContentSize
-
-	node.displayedCells = 0
-	node.displayedList = friendsWindow.eList.friends
-
-	-- Data
-	node.data = {}
 	
-	node.data.friends = {} -- friends collection
-	node.data.friendsRequestFlying = false
-	node.data.updateFriends = function(self, callback) -- callback(bool success)
-		-- Prevent multiple "search friends" requests 
-		if self.friendsRequestFlying == true then return end
-		self.friendsRequestFlying = true-------9
-		-- request friends
-		api:getFriends(function(ok, frRelations, errMsg)
-			if not ok then -- API request failed
-				if callback ~= nil then callback(false) end
-				self.friendsRequestFlying = false
-				return
+	local updateFriends = function(callback) -- callback(bool success)
+		cancelRequests() responses = {} node:flushLines()
+
+		requests[#requests + 1] = api:getFriends(function(ok, friends, errMsg)
+			if not ok then
+				if callback ~= nil then callback(false) end return
 			end
-			self.friends = {}
-			if #frRelations == 0 then
+			if #friends == 0 then
 				if callback ~= nil then callback(true) end
-				messenger:send(friendsWindow.kNotifFriendsUpdated, self.friends)
-				self.friendsRequestFlying = false
 			else
-				for i, usrID in ipairs(frRelations) do
-					api:getUserInfo(usrID, function(ok, usr)
-						table.insert(self.friends, usr)
-						if #self.friends == #frRelations then
+				for i, usrID in ipairs(friends) do
+					requests[#requests + 1] = api:getUserInfo(usrID, function(ok, usr)
+						table.insert(responses, usr)
+						if #responses == #friends then
 							if callback ~= nil then callback(true) end
-							messenger:send(friendsWindow.kNotifFriendsUpdated, self.friends)
-							self.friendsRequestFlying = false
 						end
 					end)
 				end
@@ -97,32 +84,21 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 		end)
 	end
 
-	node.data.sent = {} -- sent collection
-	node.data.sentRequestFlying = false
-	node.data.refreshSentFriendRequests = function(self, callback) -- callback(bool success)
-		-- Prevent multiple "sent requests" requests 
-		if self.sentRequestFlying == true then return end
-		self.sentRequestFlying = true
-		-- request sent friend requests
-		api:getSentFriendRequests(function(ok, sentReqs, errMsg)
-			if not ok then -- API request failed
-				if callback ~= nil then callback(false) end
-				self.sentRequestFlying = false
-				return
+	local refreshSentFriendRequests = function(callback) -- callback(bool success)
+		cancelRequests() responses = {} node:flushLines()
+
+		requests[#requests + 1] = api:getSentFriendRequests(function(ok, sentReqs, errMsg)
+			if not ok then
+				if callback ~= nil then callback(false) end return
 			end
-			self.sent = {}
 			if #sentReqs == 0 then
 				if callback ~= nil then callback(true) end
-				messenger:send(friendsWindow.kNotifSentUpdated)
-				self.sentRequestFlying = false
 			else
 				for i, usrID in ipairs(sentReqs) do
-					api:getUserInfo(usrID, function(ok, usr)
-						table.insert(self.sent, usr)
-						if #self.sent == #sentReqs then
+					requests[#requests + 1] = api:getUserInfo(usrID, function(ok, usr)
+						table.insert(responses, usr)
+						if #responses == #sentReqs then
 							if callback ~= nil then callback(true) end
-							messenger:send(friendsWindow.kNotifSentUpdated)
-							self.sentRequestFlying = false
 						end
 					end)
 				end
@@ -130,32 +106,21 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 		end)
 	end
 
-	node.data.received = {} -- received collection
-	node.data.receivedRequestFlying = false
-	node.data.refreshReceivedFriendRequests = function(self, callback) -- callback(bool success)
-		-- Prevent multiple "sent requests" requests 
-		if self.receivedRequestFlying == true then return end
-		self.receivedRequestFlying = true
-		-- request received friend requests
-		api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
-			if not ok then -- API request failed
-				if callback ~= nil then callback(false) end
-				self.receivedRequestFlying = false
-				return
+	local refreshReceivedFriendRequests = function(callback) -- callback(bool success)
+		cancelRequests() responses = {} node:flushLines()
+
+		requests[#requests + 1] = api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
+			if not ok then
+				if callback ~= nil then callback(false) end return
 			end
-			self.received = {}
 			if #receivedReqs == 0 then
 				if callback ~= nil then callback(true) end
-				messenger:send(friendsWindow.kNotifReceivedUpdated)
-				self.receivedRequestFlying = false
 			else
 				for i, usrID in ipairs(receivedReqs) do
-					api:getUserInfo(usrID, function(ok, usr)
-						table.insert(self.received, usr)
-						if #self.received == #receivedReqs then
+					requests[#requests + 1] = api:getUserInfo(usrID, function(ok, usr)
+						table.insert(responses, usr)
+						if #responses == #receivedReqs then
 							if callback ~= nil then callback(true) end
-							messenger:send(friendsWindow.kNotifReceivedUpdated)
-							self.receivedRequestFlying = false
 						end
 					end)
 				end
@@ -163,31 +128,40 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 		end)
 	end
 
-	node.data.search = {} -- search request
-	node.data.searchRequestFlying = false
-	node.data.searchFriends = function(self, searchText, callback)
-		-- Prevent multiple "search friends" requests 
-		if self.searchRequestFlying == true then return end
-		self.searchRequestFlying = true
-		-- request friends
-		api:searchUser(searchText, function(ok, users, errMsg)
-			if not ok then -- API request failed
-				if callback ~= nil then callback(false) end
-				self.searchRequestFlying = false
-				return
+	local searchFriends = function(searchText, callback)
+		cancelRequests()
+		responses = {}
+		node:flushLines()
+
+		requests[#requests + 1] = api:searchUser(searchText, function(ok, users, errMsg)
+			if not ok then
+				if callback ~= nil then callback(false) end return
 			end
-			self.search = users
+			responses = users
 			if callback ~= nil then callback(true) end
-			self.searchRequestFlying = false
+		end)
+	end
+
+	local refreshSentAndReceivedCounts = function()
+		cancelCountRequests()
+
+		countRequests[#countRequests + 1] = api:getSentFriendRequests(function(ok, sentReqs, errMsg)
+			if not ok then return end
+			local count = #sentReqs
+			node.sentBtn.Text = "Sent" .. (count > 0 and " (" .. count .. ")" or "")
+		end)
+
+		countRequests[#countRequests + 1] = api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
+			if not ok then return end
+			local count = #receivedReqs
+			node.receivedBtn.Text = "Received" .. (count > 0 and " (" .. count .. ")" or "")
 		end)
 	end
 
 	-- Lines
 	node.lines = {}
 	node.flushLines = function(self)
-		for i, v in ipairs(node.lines) do
-			v:remove()
-		end
+		for i, v in ipairs(node.lines) do v:remove() end
 		node.lines = {}
 	end
 
@@ -203,13 +177,16 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 		end
 
 		node.searchTimer = Timer(0.3, function()
+			cancelRequests()
+			responses = {}
+			node:flushLines()
+
 			local text = node.textInput.Text
 
 			if text == "" then
-				node.data.search = {}
 				node:refreshList()
 			else
-				node.data:searchFriends(text, function(ok)
+				searchFriends(text, function(ok)
 					if not ok then return end
 					node:refreshList()
 				end)
@@ -257,13 +234,29 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 		local vPos = cell.Height * 0.5
 
+		local head = nil
 		local name = ""
-		if uname then name = "🙂 " .. uname else name = "⚠️ <guest>" end
+		if uname then 
+			name = uname 
+			head = uiAvatar:getHead(uname, cellHeight - theme.padding * 2)
+			head:setParent(cell)
+		else
+			name = "⚠️ <guest>" 
+		end
 
 		local username = ui:createText(name, Color(20,20,20))
 		username:setParent(cell)
-		username.pos.X = theme.padding * 2
-		username.pos.Y = vPos - username.Height * 0.5
+
+		if head then
+			head.pos.X = theme.padding * 2
+			head.pos.Y = vPos - head.Height * 0.5
+
+			username.pos.X = head.pos.X + head.Width + theme.padding * 2
+			username.pos.Y = vPos - username.Height * 0.5
+		else
+			username.pos.X = theme.padding * 2
+			username.pos.Y = vPos - username.Height * 0.5
+		end
 
 		local ret = {cell}
 
@@ -287,8 +280,6 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 	end
 
 	node.refreshList = function(self, from)
-		local list = self:getDisplayedList()
-		if list == nil then return end
 
 		local top = self.Height
 		if self.textInput:isVisible() then
@@ -302,7 +293,7 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 		self.displayedCells = maxLines -- update number of displayed cells
 
-		local total = #list
+		local total = #responses
 		local from = from or 1
 
 		if maxLines > 1 and (from % maxLines ~= 1 or from > total) then
@@ -317,56 +308,60 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 			node.pages:setPage(page)
 		end
 
-		local usr, cell, removeBtn, joinBtn, chatBtn, btnAccept, btnAdd
+		local usr, cell
 		local line = 0
 		for i=from,total do
 			line = line + 1
 			if line > maxLines then break end
 			local p = i - from
-			usr = list[i]
+			usr = responses[i]
 
-			if list == self.data.friends then
-				cell, removeBtn, joinBtn, chatBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "🌎", "💬")
-			elseif list == self.data.sent then
+			if displayedList == lists.friends then
+				local joinBtn, chatBtn
+				cell, joinBtn, chatBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "🌎", "💬")
+				joinBtn:disable()
+				chatBtn:disable()
+			elseif displayedList == lists.sent then
+				local removeBtn
 				cell, removeBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌")
-
 				removeBtn.userID = usr.id
 				removeBtn.onRelease = function(self)
-					-- 1st arg is recipient
-					api:cancelFriendRequest(self.userID, function(ok, errMsg)
-						if ok == false then return end
-						-- trigger click on "Sent" tab
+					requests[#requests + 1] = api:cancelFriendRequest(self.userID, function(ok, errMsg)
+						if not ok then return end
+						refreshSentAndReceivedCounts()
 						node.sentBtn:onRelease()
 					end)
 				end
-			elseif list == self.data.received then
+			elseif displayedList == lists.received then
+				local removeBtn, btnAccept
 				cell, removeBtn, btnAccept = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "✅")
 
 				removeBtn.userID = usr.id
 				btnAccept.userID = usr.id
 
 				btnAccept.onRelease = function(self)
-					api:replyToFriendRequest(self.userID, true, function(ok, errMsg)
+					requests[#requests + 1] = api:replyToFriendRequest(self.userID, true, function(ok, errMsg)
 						if not ok then return end
-						node.data:refreshReceivedFriendRequests(function(ok)
+						refreshSentAndReceivedCounts()
+						refreshReceivedFriendRequests(function(ok)
 							if not ok then return  end
-							-- node.data.received has been updated
 							node:refreshList()
 						end)
 					end)
 				end
 
 				removeBtn.onRelease = function(self)
-					api:replyToFriendRequest(self.userID, false, function(ok, errMsg)
+					requests[#requests + 1] = api:replyToFriendRequest(self.userID, false, function(ok, errMsg)
 						if not ok then return end
-						node.data:refreshReceivedFriendRequests(function(ok)
+						refreshSentAndReceivedCounts()
+						refreshReceivedFriendRequests(function(ok)
 							if not ok then return end
-							-- node.data.received has been updated
 							node:refreshList()
 						end)
 					end)
 				end
-			elseif list == self.data.search then
+			elseif displayedList == lists.search then
+				local btnAdd
 				cell, btnAdd = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "➕")
 
 				btnAdd.userID = usr.id
@@ -374,11 +369,11 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 				btnAdd.onRelease = function(self)
 					if btnAdd.sending then return end
 					btnAdd.sending = true
-					api:sendFriendRequest(self.userID, function(ok)
+					requests[#requests + 1] = api:sendFriendRequest(self.userID, function(ok)
 						if not ok then 
-							btnAdd.sending = false
-							return 
+							btnAdd.sending = false return 
 						end
+						refreshSentAndReceivedCounts()
 						btnAdd.Text = "✅"
 					end)
 				end
@@ -411,17 +406,21 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 			node.textInput:show()
 			node.textInput:focus()
 
-			node.displayedList = friendsWindow.eList.search
+
+			displayedList = lists.search
+			
+			cancelRequests()
+			responses = {}
+			node:flushLines()
 			node:refreshList()
+
 		end
 
-		node.displayedList = friendsWindow.eList.friends
-		node:refreshList()
+		displayedList = lists.friends
 
-		node.data:updateFriends(function(ok)
+		updateFriends(function(ok)
 			if not ok then return end
-			-- node.data.friends has been updated !
-			if node.displayedList == friendsWindow.eList.friends then
+			if displayedList == lists.friends then
 				node:refreshList()
 			end
 		end)
@@ -437,25 +436,15 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 		content.bottomRight = {}
 
-		node.displayedList = friendsWindow.eList.sent
-		node:refreshList()
+		displayedList = lists.sent
 
-		node.data:refreshSentFriendRequests(function(ok)
+		refreshSentFriendRequests(function(ok)
 			if not ok then return end
-			-- node.data.sent has been updated !
-			if node.displayedList == friendsWindow.eList.sent then
+			if displayedList == lists.sent then
 				node:refreshList()
 			end
 		end)
 	end
-	
-	messenger:addRecipient(node.sentBtn, friendsWindow.kNotifSentUpdated, function(recipient, name, data)
-		local count = #node.data.sent
-		recipient.Text = "Sent"
-		if count > 0 then
-			recipient.Text = recipient.Text .. "(" .. count .. ")"
-		end
-	end)
 
 	node.receivedBtn = uikit:createButton("Received")
 	node.receivedBtn.onRelease = function(self)
@@ -467,13 +456,11 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 		content.bottomRight = {}
 
-		node.displayedList = friendsWindow.eList.received
-		node:refreshList()
+		displayedList = lists.received
 
-		node.data:refreshReceivedFriendRequests(function(ok)
+		refreshReceivedFriendRequests(function(ok)
 			if not ok then return end
-			-- node.data.received has been updated
-			if node.displayedList == friendsWindow.eList.received then
+			if displayedList == lists.received then
 				node:refreshList()
 			end
 		end)
@@ -481,25 +468,13 @@ friendsWindow.create = function(self, maxWidth, maxHeight, position)
 
 	content.topLeft = {node.friendsBtn, node.sentBtn, node.receivedBtn}
 
-	messenger:addRecipient(node.receivedBtn, friendsWindow.kNotifReceivedUpdated, function(recipient, name, data)
-		local count = #node.data.received
-		recipient.Text = "Received"
-		if count > 0 then
-			recipient.Text = recipient.Text .. "(" .. count .. ")"
-		end
-	end)
-
 	node.onClose = function(self)
-		-- remove messenger recipients
-		messenger:removeRecipient(node.sentBtn)
-		messenger:removeRecipient(node.receivedBtn)
+		cancelCountRequests()
+		cancelRequests()
 	end
 
-	-- trigger click on "Friends" tab
 	node.friendsBtn:onRelease()
-
-	node.data:refreshSentFriendRequests(nil)
-	node.data:refreshReceivedFriendRequests(nil)
+	refreshSentAndReceivedCounts()
 
 	local _modal = modal:create(content, maxWidth, maxHeight, position)
 	return _modal

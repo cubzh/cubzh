@@ -111,6 +111,7 @@ alert.create = function(self, text)
 	end
 
 	node.refresh = function(self)
+		self.label.object.MaxWidth = Screen.Width * 0.7
 		self.label.LocalPosition = { self.Width * 0.5 - self.label.Width * 0.5, self.Height - self.label.Height - theme.padding, 0 }
 
 		local buttons = {}
@@ -173,7 +174,7 @@ alert.create = function(self, text)
 				okButton:setParent(node)
 				okButton.onRelease = function(self)
 					node.positiveCallback()
-					popup:close()
+					if popup.close then popup:close() end
 				end
 				node.okButton = okButton
 			end
@@ -224,7 +225,7 @@ alert.create = function(self, text)
 				negativeButton:setParent(node)
 				negativeButton.onRelease = function(self)
 					node.negativeCallback()
-					popup:close()
+					if popup.close then popup:close() end
 				end
 				node.negativeButton = negativeButton
 			end
@@ -273,7 +274,7 @@ alert.create = function(self, text)
 				neutralButton:setParent(node)
 				neutralButton.onRelease = function(self)
 					node.neutralCallback()
-					popup:close()
+					if popup.close then popup:close() end
 				end
 				node.neutralButton = neutralButton
 			end

@@ -25,7 +25,11 @@ local mt = {
 	    	recycled.Position = config.Position or self.defaultConfig.Position
 	        recycled.Volume = config.Volume or self.defaultConfig.Volume
 		    recycled.Radius = config.Radius or self.defaultConfig.Radius
-		    recycled.Spatialized = config.Spatialized or self.defaultConfig.Spatialized
+			if config.Spatialized ~= nil then
+				recycled.Spatialized = config.Spatialized
+			else
+				recycled.Spatialized = self.defaultConfig.Spatialized
+			end
 		    recycled.Pitch = config.Pitch or self.defaultConfig.Pitch
 	        recycled:Play()
 	        Timer(recycled.Length + 0.1, function()
@@ -39,7 +43,11 @@ local mt = {
 	    as.Position = config.Position or self.defaultConfig.Position
 	    as.Volume = config.Volume or self.defaultConfig.Volume
 	    as.Radius = config.Radius or self.defaultConfig.Radius
-	    as.Spatialized = config.Spatialized or self.defaultConfig.Spatialized
+	    if config.Spatialized ~= nil then
+			as.Spatialized = config.Spatialized
+		else
+			as.Spatialized = self.defaultConfig.Spatialized
+		end
 	    as.Pitch = config.Pitch or self.defaultConfig.Pitch
 	    as:SetParent(World)
 	    as:Play()

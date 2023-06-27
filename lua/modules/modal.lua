@@ -145,6 +145,18 @@ modal.createContent = function(self)
 					error("pushAndRemoveSelf: can't get modal", 2)
 				end
 			end,
+			push = function(self, content)
+				local modal = self:getModalIfContentIsActive()
+				if modal ~= nil then
+					modal:push(content)
+				end
+			end,
+			pop = function(self, content)
+				local modal = self:getModalIfContentIsActive()
+				if modal ~= nil then 
+					modal:pop()
+				end
+			end,
 		}
 	}
 
@@ -612,16 +624,22 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 			self.bottomBar.Height = 0
 		end
 
+		local totalTopWidth = topLeftElementsWidth + topCenterElementsWidth + self.closeBtn.Width + theme.padding * 4
+
 		-- Start from max size
 		local borderSize = Number2(self:_computeWidth(), self:_computeHeight())
+		if borderSize.Width < totalTopWidth then borderSize.Width = totalTopWidth end
+
 		local backgroundSize = borderSize - Number2(theme.modalBorder * 2, theme.modalBorder * 2)
 		local contentSize = backgroundSize - Number2(theme.padding * 2, (theme.padding * 2) + self.topBar.Height + self.bottomBar.Height)
 
 		if modalContent.idealReducedContentSize ~= nil then 
 			local reducedContentSize = modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height)
 			if reducedContentSize ~= nil and reducedContentSize ~= contentSize then
-				local diff = reducedContentSize - contentSize
 
+				if reducedContentSize.X < totalTopWidth then reducedContentSize.X = totalTopWidth end
+
+				local diff = reducedContentSize - contentSize
 				borderSize = borderSize + diff
 				backgroundSize = backgroundSize + diff
 				contentSize = contentSize + diff
@@ -643,7 +661,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 		self._content.Width = contentSize.Width
 		self._content.Height = contentSize.Height
 
-		self._content.pos = {theme.modalBorder + theme.padding, theme.modalBorder + theme.padding, 0}
+		self._content.pos = {self.background.Width * 0.5 - self._content.Width * 0.5, theme.modalBorder + theme.padding, 0}
 		if self.bottomBar.Height > 0 then
 			self._content.pos.Y = self._content.pos.Y + self.bottomBar.Height
 		end
@@ -680,7 +698,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 				if previous then
 					element.pos.X = previous.pos.X - element.Width - theme.padding
 				else
-					element.pos.X = self.bottomBar.Width - bottomRightElementsWidth - theme.padding
+					element.pos.X = self.bottomBar.Width - element.Width - theme.padding
 				end
 				previous = element
 			end
