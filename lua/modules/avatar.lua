@@ -1,22 +1,7 @@
---- This module allows you to change the colors of an avatar.
----@code avatar = require("avatar")
---- local newEyesColor = Color(200, 0, 0)
----
---- -- changes the eyes' color to red
---- avatar:setEyesColor(Player, newEyesColor)
----
---- -- other colors are available:
---- local c = avatar.eyesColors[1]
----
---- -- sets of color are also available:
---- local set = skinColors[1]
---- avatar:setSkinColor(Player, set.skin1, set.skin2, set.nose, set.mouth)
-
----@type avatar
-
 local avatar = {}
 local avatarMetatable = {
     __index = {
+        _bodyParts = {},
         eyesColors = { Color(166, 142, 163), Color(68, 172,229), Color(61, 204,141), Color(127, 80,51), Color(51, 38,29), Color(229, 114,189) },
         skinColors = {
         	{skin1=Color(246, 227, 208), skin2=Color(246, 216, 186), nose=Color(246, 210, 175), mouth=Color(220, 188, 157)},
@@ -27,155 +12,123 @@ local avatarMetatable = {
 			{skin1=Color(140, 96, 64), skin2=Color(124, 82, 52), nose=Color(119, 76, 45), mouth=Color(104, 68, 43)},
 			{skin1=Color(59, 46, 37), skin2=Color(53, 41, 33), nose=Color(47, 33, 25), mouth=Color(47, 36, 29)}
         },
-
-        ---@function setEyesColor Modifies the player's eye color.
-        ---@param player Player
-        ---@param c Color
-        ---@code local newEyesColor = Color(200, 0, 0)
-        --- avatar:setEyesColor(Player, newEyesColor)
-        setEyesColor = function(self, player, c)
-            if self ~= avatar then
-                error("avatar:setEyesColor(player, c): use `:`", 2)
+        setEyesColor = function(self, playerOrHead, c)
+            local head = playerOrHead
+            if type(playerOrHead) == "Player" then
+                head = playerOrHead.Head
             end
-            if type(player) ~= Type.Player then
-                error("avatar:setEyesColor(player, c): player should be a Player", 2)
-            end
-            if type(c) ~= Type.Color then
-                error("avatar:setEyesColor(player, c): c should be a Color", 2)
-            end
-
-            local head = player.Head
             head.Palette[6].Color = c
             head.Palette[8].Color = c
             head.Palette[8].Color:ApplyBrightnessDiff(-0.15)
         end,
-
-        ---@function getEyesColor Returns the current eyes' color.
-        ---@param player Player
-        ---@return Color
-        getEyesColor = function(self, player)
-            if self ~= avatar then
-                error("avatar:getEyesColor(player, c): use `:`", 2)
+        getEyesColor = function(self, playerOrHead)
+            local head = playerOrHead
+            if type(playerOrHead) == "Player" then
+                head = playerOrHead.Head
             end
-            if type(player) ~= Type.Player then
-                error("avatar:getEyesColor(player, c): player should be a Player", 2)
-            end
-
-        	return player.Head.Palette[6].Color
+            return head.Palette[6].Color
         end,
+        setBodyPartColor = function(self, name, shape, skin1, skin2)
+            local skin1key = 1
+            if name == "LeftHand" or name == "Body" or name == "RightArm" then skin1key = 2 end
+            if shape.Palette[skin1key] then
+                shape.Palette[skin1key].Color = skin1
+            end
 
-        ---@function setSkinColor Modifies the skin, nose and mouth colors.
-        ---@param player Player
-        ---@param skin1 Color
-        ---@param skin2 Color
-        ---@param nose Color
-        ---@param mouth Color
-        ---@code local newColor = Color(200, 0, 0)
-        --- avatar:setSkinColor(Player, newColor, newColor, newColor, newColor)
+            if name ~= "Body" then
+                local skin2key = 2
+                if name == "LeftHand" or name == "RightArm" then skin2key = 1 end
+                if shape.Palette[skin2key] then
+                    shape.Palette[skin2key].Color = skin2
+                end
+            end
+        end,
         setSkinColor = function(self, player, skin1, skin2, nose, mouth)
-            if self ~= avatar then
-                error("avatar:setSkinColor(player, skin1, skin2, nose, mouth): use `:`", 2)
-            end
-            if type(player) ~= Type.Player then
-                error("avatar:setSkinColor(player, skin1, skin2, nose, mouth): player should be a Player", 2)
-            end
-            if type(skin1) ~= Type.Color then
-                error("avatar:setSkinColor(player, skin1, skin2, nose, mouth): skin1 should be a Color", 2)
-            end
-            if type(skin2) ~= Type.Color then
-                error("avatar:setSkinColor(player, skin1, skin2, nose, mouth): skin2 should be a Color", 2)
-            end
-            if type(nose) ~= Type.Color then
-                error("avatar:setSkinColor(player, skin1, skin2, nose, mouth): nose should be a Color", 2)
-            end
-            if type(mouth) ~= Type.Color then
-                error("avatar:setSkinColor(player, skin1, skin2, nose, mouth): mouth should be a Color", 2)
-            end
-
             local bodyParts = { "Head", "Body", "RightArm", "RightHand", "LeftArm", "LeftHand", "RightLeg", "LeftLeg", "RightFoot", "LeftFoot" }
             for _,name in ipairs(bodyParts) do
-                local skin1key = 1
-                if name == "LeftHand" or name == "Body" or name == "RightArm" then skin1key = 2 end
-                if player[name].Palette[skin1key] then
-                    player[name].Palette[skin1key].Color = skin1
-                end
-        
-                if name ~= "Body" then
-                    local skin2key = 2
-                    if name == "LeftHand" or name == "RightArm" then skin2key = 1 end
-                    if player[name].Palette[skin2key] then
-                        player[name].Palette[skin2key].Color = skin2
-                    end
-                end
+                self:setBodyPartColor(name, player[name], skin1, skin2)
             end
             self:setNoseColor(player, nose)
             self:setMouthColor(player, mouth)
         end,
-
-        ---@function getNoseColor Returns the players's nose color.
-        ---@param player Player
-        ---@return Color
-        getNoseColor = function(self, player)
-            if self ~= avatar then
-                error("avatar:getNoseColor(player): use `:`", 2)
+        getNoseColor = function(self, playerOrHead)
+            local head = playerOrHead
+            if type(playerOrHead) == "Player" then
+                head = playerOrHead.Head
             end
-            if type(player) ~= Type.Player then
-                error("avatar:getNoseColor(player): player should be a Player", 2)
-            end
-
-        	return player.Head.Palette[7].Color
+            return head.Palette[7].Color
         end,
+        setNoseColor = function(self, playerOrHead, color)
+            if not color or type(color) ~= "Color" then
+                print("Error: setNoseColor second argument must be of type Color.")
+                return
+            end
 
-        ---@function setNoseColor Modifies the player's nose color.
-        ---@param player Player
-        ---@param color Color
-        ---@code local newNoseColor = Color(0, 200, 0)
-        --- avatar:setNoseColor(Player, newNoseColor)
-        setNoseColor = function(self, player, color)
-            if self ~= avatar then
-                error("avatar:setNoseColor(player, color): use `:`", 2)
+            local head = playerOrHead
+            if type(playerOrHead) == "Player" then
+                head = playerOrHead.Head
             end
-            if type(player) ~= Type.Player then
-                error("avatar:setNoseColor(player, color): player should be a Player", 2)
-            end
-            if type(color) ~= Type.Color then
-                error("avatar:setNoseColor(player, color): color should be a Color", 2)
-            end
-            
-            player.Head.Palette[7].Color = color
+            head.Palette[7].Color = color
         end,
-
-        ---@function getMouthColor Returns the players's mouth color.
-        ---@param player Player
-        ---@return Color
-        getMouthColor = function(self, player)
-            if self ~= avatar then
-                error("avatar:getMouthColor(player): use `:`", 2)
+        getMouthColor = function(self, playerOrHead)
+            local head = playerOrHead
+            if type(playerOrHead) == "Player" then
+                head = playerOrHead.Head
             end
-            if type(player) ~= Type.Player then
-                error("avatar:getMouthColor(player): player should be a Player", 2)
-            end
-
-        	return player.Head.Palette[4].Color
+            return head.Palette[4].Color
         end,
+        setMouthColor = function(self, playerOrHead, color)
+            if not color or type(color) ~= "Color" then
+                print("Error: setMouthColor second argument must be of type Color.")
+                return
+            end
 
-        ---@function setMouthColor Modifies the player's mouth color.
-        ---@param player Player
-        ---@param color Color
-        ---@code local newMouthColor = Color(0, 0, 200)
-        --- avatar:setMouthColor(Player, newMouthColor)
-        setMouthColor = function(self, player, color)
-            if self ~= avatar then
-                error("avatar:setMouthColor(player, color): use `:`", 2)
+            local head = playerOrHead
+            if type(playerOrHead) == "Player" then
+                head = playerOrHead.Head
             end
-            if type(player) ~= Type.Player then
-                error("avatar:setMouthColor(player, color): player should be a Player", 2)
+            head.Palette[4].Color = color
+        end,
+        _tableToColor = function(self, table)
+            return Color(math.floor(table.r),math.floor(table.g),math.floor(table.b))
+        end,
+        prepareHead = function(self, head, usernameOrId, callback)
+            local api = require("api")
+            api.getAvatar(usernameOrId, function(err, data)
+                if err then callback(err) return end
+                if data.skinColor then
+                    local skinColor = self:_tableToColor(data.skinColor)
+                    local skinColor2 = self:_tableToColor(data.skinColor2)
+                    self:setBodyPartColor("Head", head, skinColor, skinColor2)
+                end
+                if data.eyesColor then
+                    self:setEyesColor(head, self:_tableToColor(data.eyesColor))
+                end
+                if data.noseColor then
+                    self:setNoseColor(head, self:_tableToColor(data.noseColor))
+                end
+                if data.mouthColor then
+                    self:setMouthColor(head, self:_tableToColor(data.mouthColor))
+                end
+
+                Object:Load(data.hair, function(shape)
+                    if shape == nil then return callback("Error: can't find hair '"..data.hair.."'.") end
+                    require("equipments"):attachEquipmentToBodyPart(shape, head)
+                    callback(nil, head)
+                end)
+            end)
+        end,
+        getPlayerHead = function(self, usernameOrId, callback)
+            -- Save the head in cache to make it faster to load next heads
+            if not self._bodyParts.head then
+                Object:Load("aduermael.head_skin2_v2", function(head)
+                    self._bodyParts.head = head
+                    self:getPlayerHead(usernameOrId, callback)
+                end)
+                return
             end
-            if type(color) ~= Type.Color then
-                error("avatar:setMouthColor(player, color): color should be a Color", 2)
-            end
-            
-            player.Head.Palette[4].Color = color
+            local head = MutableShape(self._bodyParts.head)
+            self:prepareHead(head, usernameOrId, callback)
         end
     }
 }

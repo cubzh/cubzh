@@ -36,7 +36,7 @@ mod.postSecret = function(self, secret, callback)
 	local body = {
 		secret = secret,
 	}
-	HTTP:Post(url, body, function(resp)
+	local req = HTTP:Post(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, "http status not 200")
 			return
@@ -44,6 +44,7 @@ mod.postSecret = function(self, secret, callback)
 		local response, err = JSON:Decode(resp.Body)
 		callback(true, response.message) -- success
 	end)
+	return req
 end
 
 -- search Users by username substring
@@ -54,14 +55,14 @@ end
 mod.searchUser = function(self, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
-		callback(false, nil, "1st arg must be a string")
+		error("api:getFriends(searchText, callback) - searchText must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		callback(false, nil, "2nd arg must be a function")
+		error("api:getFriends(searchText, callback) - callback must be a function", 2)
 		return
 	end
-	HTTP:Get(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
+	local req = HTTP:Get(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
 			return
@@ -73,16 +74,17 @@ mod.searchUser = function(self, searchText, callback)
 		end
 		callback(true, users, nil) -- success
 	end)
+	return req
 end
 
 -- getFriends ...
 -- callback(ok, friends, errMsg)
 mod.getFriends = function(self, callback)
 	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
+		error("api:getFriends(callback) - callback must be a function", 2)
 		return
 	end
-	HTTP:Get(mod.kApiAddr .. "/friend-relations", function(resp)
+	local req = HTTP:Get(mod.kApiAddr .. "/friend-relations", function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200: " .. resp.StatusCode)
 			return
@@ -94,22 +96,24 @@ mod.getFriends = function(self, callback)
 		end
 		callback(true, friends, nil) -- success
 	end)
+	return req
 end
 
 -- getFriendCount ...
 -- callback(ok, count, errMsg)
 mod.getFriendCount = function(self, callback)
 	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
+		error("api:getFriendCount(callback) - callback must be a function", 2)
 		return
 	end
-	self:getFriends(function(ok, friends)
+	local req = self:getFriends(function(ok, friends)
 		local count = 0
 		if friends ~= nil then
 			count = #friends
 		end
 		callback(ok, count, nil)
 	end)
+	return req
 end
 
 -- sendFriendRequest ...
@@ -117,10 +121,11 @@ end
 mod.sendFriendRequest = function(self, userID, callback)
 	if type(userID) ~= "string" then
 		callback(false, "1st arg must be a string")
+		error("api:sendFriendRequest(userID, callback) - userID must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		callback(false, "2nd arg must be a function")
+		error("api:sendFriendRequest(userID, callback) - callback must be a function", 2)
 		return
 	end
 	local url = mod.kApiAddr .. "/friend-request"
@@ -128,13 +133,14 @@ mod.sendFriendRequest = function(self, userID, callback)
 		senderID = Player.UserID,
 		recipientID = userID,
 	}
-	HTTP:Post(url, body, function(resp)
+	local req = HTTP:Post(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, "http status not 200")
 			return
 		end
 		callback(true, nil) -- success
 	end)
+	return req
 end
 
 -- cancelFriendRequest ...
@@ -153,13 +159,14 @@ mod.cancelFriendRequest = function(self, recipientID, callback)
 		senderID = Player.UserID,
 		recipientID = recipientID,
 	}
-	HTTP:Post(url, body, function(resp)
+	local req = HTTP:Post(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, "http status not 200")
 			return
 		end
 		callback(true, nil) -- success
 	end)
+	return req
 end
 
 -- getSentFriendRequests ...
@@ -170,7 +177,7 @@ mod.getSentFriendRequests = function(self, callback)
 		return
 	end
 	local url = mod.kApiAddr .. "/friend-requests-sent"
-	HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
 			return
@@ -183,6 +190,7 @@ mod.getSentFriendRequests = function(self, callback)
 		-- success
 		callback(true, requests, nil)
 	end)
+	return req
 end
 
 -- getReceivedFriendRequests ...
@@ -193,7 +201,7 @@ mod.getReceivedFriendRequests = function(self, callback)
 		return
 	end
 	local url = mod.kApiAddr .. "/friend-requests-received"
-	HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
 			return
@@ -205,6 +213,7 @@ mod.getReceivedFriendRequests = function(self, callback)
 		end
 		callback(true, requests, nil) -- success
 	end)
+	return req
 end
 
 -- getUserInfo gets a user by its ID
@@ -219,8 +228,8 @@ mod.getUserInfo = function(self, id, callback)
 		callback(false, nil, "2nd arg must be a function")
 		return
 	end
-	local url = mod.kApiAddr .. "/user/" .. id
-	HTTP:Get(url, function(resp)
+	local url = mod.kApiAddr .. "/users/" .. id
+	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
 			return
@@ -232,6 +241,34 @@ mod.getUserInfo = function(self, id, callback)
 		end
 		callback(true, usr, nil) -- success
 	end)
+	return req
+end
+
+-- getMinAppVersion gets minimum app version
+-- callback(error string or nil, minVersion string)
+mod.getMinAppVersion = function(self, callback)
+	if type(callback) ~= "function" then
+		callback("1st arg must be a function", nil)
+		return
+	end
+	local url = mod.kApiAddr .. "/min-version"
+	local req = HTTP:Get(url, function(resp)
+		if resp.StatusCode ~= 200 then
+			callback("http status not 200", nil)
+			return
+		end
+		local r, err = JSON:Decode(resp.Body)
+		if err ~= nil then
+			callback("decode error:" .. err, nil)
+			return
+		end
+		if not r.version or type(r.version) ~= "string" then
+			callback("version field missing", nil)
+			return
+		end
+		callback(nil, r.version) -- success
+	end)
+	return req
 end
 
 -- replyToFriendRequest accepts or rejects a received friend request
@@ -255,13 +292,14 @@ mod.replyToFriendRequest = function(self, usrID, accept, callback)
 		senderID = usrID,
 		accept = accept,
 	}
-	HTTP:Post(url, body, function(resp)
+	local req = HTTP:Post(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, "http status not 200")
 			return
 		end
 		callback(true, nil) -- success
 	end)
+	return req
 end
 
 -- --------------------------------------------------
@@ -340,7 +378,7 @@ mod.getItems = function(self, filter, callback)
 	end
 
 	-- send request
-	HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, function(resp)
 		-- check status code
 		if resp.StatusCode ~= 200 then
 			callback("http status not 200", nil)
@@ -361,6 +399,7 @@ mod.getItems = function(self, filter, callback)
 		end
 		callback(nil, items.results) -- success
 	end)
+	return req
 end
 
 -- Lists world drafts using filter.
@@ -432,7 +471,7 @@ mod.getWorlds = function(self, filter, callback)
 	end
 
 	-- send request
-	HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, function(resp)
 		-- check status code
 		if resp.StatusCode ~= 200 then
 			callback("http status not 200", nil)
@@ -455,6 +494,67 @@ mod.getWorlds = function(self, filter, callback)
 		
 		callback(nil, data.worlds) -- success
 	end)
+	return req
+end
+
+--- returns the published worlds in the specified category
+--- config: table
+--- 	list: string ("recent", "featured"...)
+--- 	search: string
+--- callback: function(err, worlds)
+---		err: string
+---		worlds: []worlds
+mod.getPublishedWorlds = function(self, config, callback)
+	if self ~= mod then error("api:getPublishedWorlds(config, callback): use `:`", 2) end
+	if type(config) ~= Type.table then error("api:getPublishedWorlds(config, callback): config should be a table", 2) end
+	if type(callback) ~= "function" then error("api:getPublishedWorlds(config, callback): callback should be a function", 2) end
+
+	if config.list ~= nil and type(config.list) == Type.string and config.list ~= "featured" and config.list ~= "recent" then
+		error("api:getPublishedWorlds(config, callback): config.list should be \"featured\" or \"recent\"", 2)
+	end
+
+    -- construct query params string
+    local queryParams = ""
+
+	local category = "recent"
+	if config.list ~= nil and type(config.list) == Type.string then
+		category = config.list
+	end
+    queryParams = queryParams .. "category=" .. category
+
+	if config.search ~= nil and type(config.search) == Type.string and #config.search > 0 then
+        -- if this isn't the 1st query param, we need to use a '&' separator
+        if #queryParams > 0 then
+            queryParams = queryParams .. "&"
+        end
+        queryParams = queryParams .. "search=" .. config.search
+	end
+
+    -- url example : https://api.cu.bzh/worlds?category=featured&search=monster
+	local url = mod.kApiAddr .. "/worlds?" .. queryParams
+	local req = HTTP:Get(url, function(res)
+		if res.StatusCode ~= 200 then
+			callback("http status not 200", nil)
+			return
+		end
+		
+		-- decode body
+		local data, err = JSON:Decode(res.Body)
+		if err ~= nil then
+			callback("json decode error:" .. err, nil) -- failure
+			return
+		end
+
+		for k, v in ipairs(data.worlds) do
+			if v.created then v.created = mod.time.iso8601_to_os_time(v.created) end
+			if v.updated then v.updated = mod.time.iso8601_to_os_time(v.updated) end
+			if v.likes ~= nil then v.likes = math.floor(v.likes) else v.likes = 0 end
+			if v.views ~= nil then v.views = math.floor(v.views) else v.views = 0 end
+		end
+	
+		callback(nil, data.worlds)
+	end)
+	return req
 end
 
 -- callback(error string or nil, World or nil)
@@ -467,7 +567,7 @@ mod.getWorld = function(self, worldID, callback)
 	local url = mod.kApiAddr .. "/worlds/" .. worldID
 
 	-- send request
-	HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, function(resp)
 		-- check status code
 		if resp.StatusCode ~= 200 then
 			callback("http status not 200", nil)
@@ -487,16 +587,38 @@ mod.getWorld = function(self, worldID, callback)
 		if world.updated then world.updated = mod.time.iso8601_to_os_time(world.updated) end
 		if world.likes ~= nil then world.likes = math.floor(world.likes) else world.likes = 0 end
 		if world.views ~= nil then world.views = math.floor(world.views) else world.views = 0 end
-		
+		-- `liked` field is omitted if value is false
+		if world.liked == nil then world.liked = false end
+
 		callback(nil, world) -- success
 	end)
+	return req
 end
 
+mod.getWorldThumbnail = function(self, worldID, callback)
+	if self ~= mod then error("api:getWorldThumbnail(worldID, callback): use `:`", 2) end
+	if type(worldID) ~= Type.string then error("api:getWorldThumbnail(worldID, callback): worldID should be a string", 2) end
+	if type(callback) ~= "function" then error("api:getWorldThumbnail(worldID, callback): callback should be a function", 2) end
+
+	local url = mod.kApiAddr .. "/world-thumbnail/" .. worldID
+
+	local req = HTTP:Get(url, function(res)
+		if res.StatusCode == 200 then
+			callback(nil, res.Body)
+		elseif res.StatusCode == 400 then
+			callback("This world has no thumnail", nil)
+		else
+			callback("Error " .. res.StatusCode .. ": " .. res.Body:ToString(), nil)
+		end
+	end)
+
+	return req
+end
 
 -- api:createWorld({title = "banana", category = nil, original = nil}, function(err, world))
 mod.createWorld = function(self, data, callback) 
 	local url = self.kApiAddr .. "/worlddrafts"
-	HTTP:Post(url, data, function(res)
+	local req = HTTP:Post(url, data, function(res)
 		if res.StatusCode ~= 200 then
 			callback(self:error(res.StatusCode, "could not create world"), nil)
 			return
@@ -515,12 +637,13 @@ mod.createWorld = function(self, data, callback)
 
 		callback(nil, world)
 	end)
+	return req
 end
 
 -- api:patchWorld("world-id", {title = "something", description = "banana"}, function(err, world))
 mod.patchWorld = function(self, worldID, data, callback) 
 	local url = self.kApiAddr .. "/worlddrafts/" .. worldID
-	HTTP:Patch(url, data, function(res)
+	local req = HTTP:Patch(url, data, function(res)
 		if res.StatusCode ~= 200 then
 			callback(self:error(res.StatusCode, "could not modify world"), nil)
 			return
@@ -539,12 +662,70 @@ mod.patchWorld = function(self, worldID, data, callback)
 
 		callback(nil, world)
 	end)
+	return req
+end
+
+mod.likeWorld = function(self, worldID, addLike, callback)
+	local url = self.kApiAddr .. "/worlds/" .. worldID .. "/likes"
+	local t = {value = addLike}
+	local body = JSON:Encode(t)
+	local req = HTTP:Patch(url, body, function(res)
+		if res.StatusCode ~= 200 then
+			callback(self.error(statusCode, "could not modify world's likes"), nil)
+			return
+		end
+		callback(nil, nil)
+	end)
+	return req
+end
+
+mod.getServers = function(self, worldID, callback)
+	local url = self.kApiAddr .. "/servers?worldID=" .. worldID .. "&tag=" .. Private.ServerTag
+
+	local req = HTTP:Get(url, function(res)
+		if res.StatusCode ~= 200 then
+			callback(self.error(statusCode, "could not get servers"), nil)
+			return
+		end
+
+		local t = JSON:Decode(res.Body)
+		if t.servers == nil then
+			t = {}
+			callback(nil, t)
+			return
+		end
+		-- take care of omitempty fields
+		local hasPlayers
+		local hasMaxPlayers
+		local hasDevMode
+		for _, s in pairs(t.servers) do
+			hasPlayers = false
+ 			hasMaxPlayers = false
+ 			hasDevMode = false
+			for k, v in pairs(s) do
+				if k == "players" then
+					hasPlayers = true
+				end
+				if k == "max-players" then
+					hasMaxPlayers = true
+				end
+				if k == "dev-mode" then
+					hasDevMode = true
+				end
+			end
+			if not hasPlayers then s.players = 0 end
+			if not hasMaxPlayers then s["max-players"] = 0 end
+			if not hasDevMode then s["dev-mode"] = 0 end
+		end
+		callback(nil, t.servers)
+	end)
+	return req
 end
 
 -- api:createItem({name = "banana", category = nil, original = nil}, function(err, item))
 mod.createItem = function(self, data, callback) 
 	local url = self.kApiAddr .. "/itemdrafts"
-	HTTP:Post(url, data, function(res)
+	local req = HTTP:Post(url, data, function(res)
 		if res.StatusCode ~= 200 then
 			callback(self:error(res.StatusCode, "could not create item"), nil)
 			return
@@ -563,12 +744,13 @@ mod.createItem = function(self, data, callback)
 
 		callback(nil, item)
 	end)
+	return req
 end
 
 -- api:patchItem("item-id", {description = "banana"}, function(err, item))
 mod.patchItem = function(self, itemID, data, callback) 
 	local url = self.kApiAddr .. "/itemdrafts/" .. itemID
-	HTTP:Patch(url, data, function(res)
+	local req = HTTP:Patch(url, data, function(res)
 		if res.StatusCode ~= 200 then
 			callback(self:error(res.StatusCode, "could not modify item"), nil)
 			return
@@ -587,17 +769,19 @@ mod.patchItem = function(self, itemID, data, callback)
 
 		callback(nil, item)
 	end)
+	return req
 end
 
 mod.updateAvatar = function(data, cb) -- data = { jacket="caillef.jacket", eyescolor={r=255, g=0, b=30} }
 	local url = mod.kApiAddr .. "/users/self/avatar"
-	HTTP:Patch(url, {}, data, function(res)
+	local req = HTTP:Patch(url, {}, data, function(res)
 		if res.StatusCode ~= 200 then
 			cb("Error (" .. res.StatusCode .. "): can't update avatar.", false)
 			return
 		end
 		cb(nil, true)
 	end)
+	return req
 end
 
 mod.getUserId = function(username, cb)
@@ -605,28 +789,43 @@ mod.getUserId = function(username, cb)
 		return cb("Error: first parameter of getUserId must be a username.")
 	end
 	local url = mod.kApiAddr.."/users?username="..username
-	HTTP:Get(url, function(res)
+	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
 			return cb("Error (" .. res.StatusCode .. "): can't find user "..username..".")
 		end
 		cb(nil, JSON:Decode(res.Body).id)
 	end)
+	return req
 end
 
-mod.getAvatar = function(username, cb)
-	mod.getUserId(username, function(err, id)
-		if err then
-			return cb(err)
-		end
+mod.getAvatar = function(usernameOrId, cb)
+	local callAvatarEndpoint = function(id)
 		local url = mod.kApiAddr .. "/users/"..id.."/avatar"
 		HTTP:Get(url, function(res)
 			if res.StatusCode ~= 200 then
 				cb("Error (" .. res.StatusCode .. "): can't get avatar.")
 				return
 			end
-			cb(nil, JSON:Decode(res.Body))
+			local data = JSON:Decode(res.Body)
+			data.hair = #data.hair > 0 and data.hair or "official.hair"
+			data.jacket = #data.jacket > 0 and data.jacket or "official.jacket"
+			data.pants = #data.pants > 0 and data.pants or "official.pants"
+			data.boots = #data.boots > 0 and data.boots or "official.boots"
+			cb(nil, data)
 		end)
-	end)
+	end
+
+	local isUsername = #usernameOrId < 36 -- UserID UUID is 36 characters
+	if isUsername then
+		mod.getUserId(usernameOrId, function(err, id)
+			if err then
+				return cb(err)
+			end
+			callAvatarEndpoint(id)
+		end)
+	else
+		callAvatarEndpoint(usernameOrId)
+	end
 end
 
 mod.getBalance = function(usernameOrCb, cb)
@@ -810,6 +1009,76 @@ mod.checkWorldName = function(worldName)
 	local sanitized = worldName
 
 	return sanitized, nil
+end
+
+mod.aiChatCompletions = function(messages, temperatureOrCb, cb)
+	if not messages then cb("Error: api.aiChatCompletions takes messages as a first parameter.") return end
+	if type(temperatureOrCb) == "function" then
+		cb = temperatureOrCb
+	end
+	local temperature = type(temperatureOrCb) == "number" and temperatureOrCb or 0.7
+
+	local url = mod.kApiAddr .. "/ai/chatcompletions"
+    local headers = {}
+    headers["Content-Type"] = "application/json"
+
+    local body = {}
+    body.model = "gpt-3.5-turbo-0613"
+    body.messages = messages
+    body.temperature = temperature
+    HTTP:Post(url, headers, body, function(res)
+        if res.StatusCode ~= 200 then
+            return cb("Error (" .. tostring(res.StatusCode) .. "): " .. res.Body:ToString())
+        end
+        local body = JSON:Decode(res.Body:ToString())
+        local message = body.choices[1].message
+        cb(nil, message)
+    end)
+end
+
+mod.aiImageGenerations = function(prompt, optionsOrCallback, callback)
+    local options = type(optionsOrCallback) == "table" and optionsOrCallback or {}
+    local cb = type(optionsOrCallback) == "function" and optionsOrCallback or callback
+
+	local url = mod.kApiAddr .. "/ai/imagegenerations"
+    local headers = {}
+    headers["Content-Type"] = "application/json"
+
+    local body = {
+		prompt = prompt,
+		size = options.size or 256,
+		output = options.output or "Quad",
+		pixelart = options.pixelart or false,
+		asURL = options.asURL or false
+	}
+	if body.output ~= "Shape" and body.output ~= "Quad" then
+		return cb("Error: output can only be \"Shape\" or \"Quad\".")
+	end
+	local req = HTTP:Post(url, headers, body, function(res)
+        if res.StatusCode ~= 200 then
+            return cb("Error (" .. tostring(res.StatusCode) .. "): " .. res.Body:ToString())
+        end
+		local outputObj
+		if body.output == "Quad" and not body.asURL then
+			outputObj = Quad()
+			outputObj.Width = 50
+			outputObj.Height = 50
+			outputObj.Image = res.Body
+		elseif body.output == "Shape" and not body.asURL then
+			outputObj = Shape(res.Body)
+			local collisionBoxMin = outputObj.CollisionBox.Min
+			local center = outputObj.CollisionBox.Center:Copy()
+			center.Y = outputObj.CollisionBox.Min.Y
+			outputObj.Pivot = { outputObj.Width * 0.5,
+								collisionBoxMin.Y,
+								outputObj.Depth * 0.5}
+			outputObj.CollisionBox = Box(center - {0.5, 0, 0.5}, center + {0.5, 1, 0.5})
+		elseif body.asURL then
+			outputObj = JSON:Decode(res.Body).url
+		end
+        cb(nil, outputObj)
+    end)
+    return req
 end
 
 return mod

@@ -26,13 +26,17 @@ itemGrid.create = function(self, config)
 		repo = nil,
 		-- mode
 		minBlocks = 5,
+		-- filters for new or featured
+		worldsFilter = nil,
 	}
-	if config ~= nil then
+	if config ~= nil and type(config) == Type.table then
 		if config.searchBar ~= nil then _config.searchBar = config.searchBar end
 		if config.advancedFilters ~= nil then _config.advancedFilters = config.advancedFilters end
 		if config.categories ~= nil then _config.categories = config.categories end
+		if config.type ~= nil then _config.type = config.type end
 		if config.repo ~= nil then _config.repo = config.repo end
 		if config.minBlocks ~= nil then _config.minBlocks = config.minBlocks end
+		if config.worldsFilter ~= nil and type(config.worldsFilter) == Type.string then _config.worldsFilter = config.worldsFilter end
 	end
 	config = _config
 
@@ -43,6 +47,7 @@ itemGrid.create = function(self, config)
 	local grid = ui:createFrame() -- Color(255,0,0)
 	grid.search = ""
 	grid.config = config
+	grid.currentThumbnailRequests = {}
 
 	grid.setCategories = function(self, categories, type)
 		if self.config == nil or self.getItems == nil then return end
@@ -50,6 +55,18 @@ itemGrid.create = function(self, config)
 			self.config.type = type
 		end
 		self.config.categories = categories
+		self:cancelThumbnailRequests()
+		self:getItems()
+	end
+
+	grid.setWorldsFilter = function(self, filter)
+		if self.config == nil or self.getItems == nil then return end
+		if filter == nil or type(filter) ~= Type.string then
+			error("item_grid:setWorldsFilter(filter): filter should be a string", 2)
+		end
+
+		self.config.worldsFilter = filter
+		self:cancelThumbnailRequests()
 		self:getItems()
 	end
 
@@ -118,6 +135,9 @@ itemGrid.create = function(self, config)
 	end
 
 	grid.setPage = function(self, page)
+		if self ~= grid then
+			error("item_grid:setPage(page): use `:`", 2)
+		end
 		self.page = page
 		if self.page < 1 then
 			self.page = 1
@@ -125,7 +145,21 @@ itemGrid.create = function(self, config)
 			self.page = self.nbPages
 		end
 		self.firstPageCell = (self.page - 1) * self.nbCells + 1
+
+		self:cancelThumbnailRequests()
+
 		self:refresh()
+	end
+
+	grid.cancelThumbnailRequests = function(self)
+		for _, r in pairs(self.currentThumbnailRequests) do
+			r:Cancel()
+		end
+		self.currentThumbnailRequests = {}
+	end
+
+	grid.onRemove = function(self)
+		self:cancelThumbnailRequests()
 	end
 
 	grid._createCell = function(grid, size)
@@ -136,17 +170,21 @@ itemGrid.create = function(self, config)
 		cell.Height = size
 
 		cell.onPress = function()
+			-- don't update the color if there's a thumbnail
+			if cell.thumbnail ~= nil then return end
 			cell.Color = theme.gridCellColorPressed
 		end
 
 		cell.onRelease = function()
-			cell.Color = idleColor
 			if cell.loaded then
 				if grid.onOpen then grid:onOpen(cell) end
 			end
+			if cell.thumbnail ~= nil then return end
+			cell.Color = idleColor
 		end
 
 		cell.onCancel = function()
+			if cell.thumbnail ~= nil then return end
 			cell.Color = idleColor
 		end
 
@@ -156,31 +194,39 @@ itemGrid.create = function(self, config)
 
 		local tName = ui:createText("", Color.White, "small")
 		tName:setParent(textFrame)
+		tName.parentFrame = textFrame
+		tName.updateParentHeight = function(self)
+			self.parentFrame.Height = self.Height + theme.padding * 2
+		end
 
 		tName.LocalPosition = Number3(theme.padding, theme.padding, 0)
 		textFrame.Width = cell.Width
-		textFrame.Height = tName.Height + theme.padding * 2
+		tName:updateParentHeight()
 
 		tName.LocalPosition = Number3(theme.padding, theme.padding, 0)
 		cell.tName = tName
 
-		local loadingCube = ui:createFrame(Color.White)
-		cell.loadingCube = loadingCube
-		loadingCube:setParent(cell)
-		loadingCube.Width = 10
-		loadingCube.Height = 10
-		loadingCube.LocalPosition = Number3(cell.Width / 2, cell.Height / 2, 0)
-		loadingCube.t = 0
-		local obj = loadingCube.object
-		obj.Tick = function(o, dt)
-			if not loadingCube.LocalPosition then
-				obj.Tick = nil
-				return
-			end
-			if not loadingCube.IsHidden then
-				loadingCube.t = loadingCube.t + dt * 4
-				loadingCube.LocalPosition = Number3(cell.Width / 2 + math.cos(loadingCube.t) * 20, cell.Height / 2 - math.sin(loadingCube.t) * 20, 0)
-				return
+		if cell.loadingCube == nil and grid.config.type == "items" then
+			local loadingCube = ui:createFrame(Color.White)
+			cell.loadingCube = loadingCube
+			loadingCube:setParent(cell)
+			loadingCube.Width = 10
+			loadingCube.Height = 10
+			loadingCube.LocalPosition = Number3(cell.Width / 2, cell.Height / 2, 0)
+			loadingCube.t = 0
+			local obj = loadingCube.object
+			obj.loadingCube = loadingCube
+			obj.cell = cell
+			obj.Tick = function(o, dt)
+				if not o.loadingCube.LocalPosition then
+					o.Tick = nil
+					return
+				end
+				if not o.loadingCube.IsHidden then
+					o.loadingCube.t = o.loadingCube.t + dt * 4
+					o.loadingCube.LocalPosition = Number3(o.cell.Width / 2 + math.cos(o.loadingCube.t) * 20, o.cell.Height / 2 - math.sin(o.loadingCube.t) * 20, 0)
+					return
+				end
 			end
 		end
 
@@ -247,11 +293,13 @@ itemGrid.create = function(self, config)
 
 				item.pivot.LocalRotation = {-0.1,0,-0.2}
 				cell.t = 0
+				cell.item.object.cell = cell
 				cell.item.object.Tick = function(o, dt)
-					if cell.t ~= nil then
-						cell.t = cell.t + dt
-						cell.item.pivot.LocalRotation= {-0.1,cell.t,-0.2}
+					if o.cell.t == nil or o.cell.item.pivot == nil then
+						return
 					end
+					o.cell.t = o.cell.t + dt
+					o.cell.item.pivot.LocalRotation= {-0.1, o.cell.t, -0.2}
 				end
 
 				cell.id = id
@@ -273,48 +321,54 @@ itemGrid.create = function(self, config)
 				end
 
 				if cell.tName then
-					cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
+					cell.tName.object.MaxWidth = (grid.cellSize or itemGrid.minCellSize) - 2 * theme.padding
 					local betterName = transform_string(name)
 					cell.tName.Text = betterName
+					cell.tName:updateParentHeight()
 				end
 
 				-- setting Width sets Height & Depth as well when spherized
-				item.Width = grid.cellSize 
+				item.Width = grid.cellSize or itemGrid.minCellSize
 
 				cell.loaded = true
 			end)
 
 		elseif cell.type == "world" then
-			if cell.item then
-				cell.item:remove()
-				cell.item = nil
-			end
 
 			if cell.loadingCube then
 				cell.loadingCube:hide()
 			end
 
-			local shape = Shape(Items.world_icon)
-			local item = ui:createShape(shape, {spherized = true})
-			cell.item = item
-			item:setParent(cell)
+			if entry.thumbnail == nil and cell.item == nil then
+				-- no thumbnail, display default world icon
+				local shape = Shape(Items.world_icon)
+				local item = ui:createShape(shape, {spherized = true})
+				cell.item = item
+				item:setParent(cell)
 
-			item.pivot.LocalRotation = {-0.1,0,-0.2}
-			cell.t = 0
-			cell.item.object.Tick = function(o, dt)
-				if cell.t ~= nil then
-					cell.t = cell.t + dt
-					cell.item.pivot.LocalRotation= {-0.1,cell.t,-0.2}
+				item.pivot.LocalRotation = {-0.1,0,-0.2}
+				cell.t = 0
+				cell.item.object.cell = cell
+				cell.item.object.Tick = function(o, dt)
+					if o.cell.t ~= nil and o.cell.item ~= nil and o.cell.item.pivot ~= nil then
+						o.cell.t = cell.t + dt
+						o.cell.item.pivot.LocalRotation= {-0.1, o.cell.t, -0.2}
+					end
 				end
+
+				-- setting Width sets Height & Depth as well when spherized
+				item.Width = grid.cellSize
 			end
 
 			cell.title = entry.title
 			cell.description = entry.description
+			cell.thumbnail = entry.thumbnail
 
 			cell.likes = entry.likes
 			cell.views = entry.views
 
 			cell.id = entry.id
+			cell.entry = entry
 
 			cell.created = entry.created
 			cell.updated = entry.updated
@@ -322,10 +376,8 @@ itemGrid.create = function(self, config)
 			if cell.tName then
 				cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
 				cell.tName.Text = cell.title
+				cell.tName:updateParentHeight()
 			end
-
-			-- setting Width sets Height & Depth as well when spherized
-			item.Width = grid.cellSize
 
 			cell.loaded = true
 		end
@@ -337,34 +389,75 @@ itemGrid.create = function(self, config)
 		local cells = self.cells
 		local nbCells = self.nbCells
 		local k = (self.page - 1) * nbCells
+		local req
+
 		for i=1, nbCells do
 			local cell = cells[i]
 			local entry = self.entries[k + i]
 			cell.IsHidden = entry == nil
-			if entry then
-				cell.loadingCube.t = math.random() -- start loading randomly
-				Timer((i-1) * 0.05, function()
+
+			if entry ~= nil then
+				if cell.loadingCube then
+					cell.loadingCube.t = math.random() -- start loading randomly
+				end
+				
+				Timer((i-1) * 0.02, function()
 					if self._setEntry then
 						self:_setEntry(cell, entry)
 					end
 				end)
+
+				if self.config.type == "worlds" then
+					if entry.id ~= nil then
+						req = api:getWorldThumbnail(entry.id, function(err, img)
+							if err == nil then
+								entry.thumbnail = img
+								entry.hasThumbnail = true
+								if type(entry.onThumbnailUpdate) == "function" then
+									entry.onThumbnailUpdate(img)
+								end
+							else
+								entry.thumbnail = nil
+								entry.hasThumbnail = false
+							end
+						end)
+						table.insert(self.currentThumbnailRequests, req)
+					end
+
+					cell.object.cell = cell
+					cell.object.entry = entry
+					cell.object.Tick = function(o, dt)
+						local cell = o.cell
+						local entry = o.entry
+						if entry.hasThumbnail == nil or entry.id ~= cell.id then
+							-- the api request is not done yet
+							return
+						end
+						if entry.hasThumbnail then
+							if cell.item ~= nil then
+								cell.item:remove()
+								cell.item = nil
+							end
+
+							cell.thumbnail = entry.thumbnail
+							cell:setImage(entry.thumbnail)
+						end
+						o.Tick = nil
+					end
+				end
 			end
 		end
+
 		collectgarbage("collect")
 	end
 
     -- remove all items and destroy each cell (resizing screen)
 	grid._removeCells = function(grid)
-		grid:_emptyCells()
-		for k,cell in ipairs(grid.cells) do
-			if cell.tName ~= nil then
-				cell.tName:remove()
-				cell.tName = nil
-			end
-			if cell.remove then cell:remove() end
-            grid.cells[k] = nil
+		local nbCells = #grid.cells
+		for n = 1, nbCells do
+			if grid.cells[n].remove then grid.cells[n]:remove() end
 		end
-        grid.cells = nil
+        grid.cells = {}
 	end
 
     -- remove items in cells, keep cells
@@ -384,6 +477,9 @@ itemGrid.create = function(self, config)
 	end
 
 	grid.refresh = function(self)
+		if self ~= grid then
+			error("item_grid:refresh(): use `:`", 2)
+		end
 		if self.needsToRefreshEntries then
 			self.needsToRefreshEntries = false
 			self:getItems()
@@ -474,22 +570,41 @@ itemGrid.create = function(self, config)
 					return
 				end
 				for _, i in ipairs(items) do i.type = "item" end
-				if self.setGridEntries ~= nil and grid.config.type == "items" then self:setGridEntries(items) end			
+				if self.setGridEntries ~= nil and grid.config.type == "items" then self:setGridEntries(items) end
 			end)
 
 		elseif grid.config.type == "worlds" then
-			api:getWorlds({ repo=self.config.repo, category=grid.config.categories , page=1, perpage=250, search=self.search }, function(err,worlds)
+			local requestType = nil
+			local apiCallback = function(err, worlds)
+				if requestType ~= nil and self.config.worldsFilter ~= requestType then return end
 				if err then
 					print("Error: "..err)
 					return
 				end
-				for _, w in ipairs(worlds) do w.type = "world" end
-				if self.setGridEntries ~= nil and grid.config.type == "worlds" then self:setGridEntries(worlds) end			
-			end)
+				for _, w in ipairs(worlds) do
+					w.type = "world"
+					w.hasThumbnail = nil
+				end
+				if self.setGridEntries ~= nil and self.config.type == "worlds" then self:setGridEntries(worlds) end
+			end
+
+			if grid.config.worldsFilter == nil then
+				local conf = { repo=self.config.repo, category=grid.config.categories , page=1, perpage=250, search=self.search }
+				api:getWorlds(conf, apiCallback)
+
+			else
+				local conf = {list = self.config.worldsFilter, search = self.search}
+				requestType = self.config.worldsFilter
+				api:getPublishedWorlds(conf, apiCallback)
+			end
 		end
 	end
 
 	grid.setGridEntries = function(self, entries)
+		if self ~= grid then
+			error("item_grid:setGridEntries(entries): use `:`", 2)
+		end
+		
 		self.firstPageCell = 1
 		self.page = 1
 		self.entries = entries or {}

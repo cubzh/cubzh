@@ -49,7 +49,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 							"✨ Create Shoes 👞"
 							}
 		elseif what == "world" then
-			categories = {"null"}
+			categories = {"null"} 
 			categoryShapes = {"world_icon"}
 			buttonLabels = {"✨ Create World 🌎"}
 			inputLabel = "World Name?"
@@ -185,7 +185,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						if grid ~= nil then grid.needsToRefreshEntries = true end
 
 						local worldDetailsContent = modal:createContent()
-						worldDetailsContent.title = "World"
+						worldDetailsContent.title = world.title
 						worldDetailsContent.icon = "🌎"
 
 						local worldDetails = worldDetails:create({mode = "create"})
@@ -201,7 +201,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						worldDetails:loadCell(cell)
 						worldDetailsContent.node = worldDetails
 
-						local btnEdit = ui:createButton("✏️ Edit", "big")
+						local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 						btnEdit:setColor(theme.colorCreate)
 						worldDetailsContent.bottomCenter = {btnEdit}
 						btnEdit.onRelease = function()
@@ -260,7 +260,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						itemDetails:loadCell(cell)
 						itemDetailsContent.node = itemDetails
 
-						local btnEdit = ui:createButton("✏️ Edit", "big")
+						local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
 							hideUI()
@@ -276,14 +276,16 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 							launchItemEditor(itemFullName, category) -- global function exposed by engine
 						end
 
-						local btnDuplicate = ui:createButton("📑 Duplicate", "big")
+						local btnDuplicate = ui:createButton("📑 Duplicate", {textSize="default"})
 						btnDuplicate.onRelease = function()
 							-- no need to pass grid, it's already marked
 							-- for refresh at this point
 							itemDetailsContent.modal:push(createNewContent("item", itemFullName))
 						end
 
-						itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit}
+						-- itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit}
+						itemDetailsContent.bottomRight = {btnEdit}
+						itemDetailsContent.bottomLeft = {btnDuplicate}
 
 						itemDetailsContent.idealReducedContentSize = function(content, width, height)
 							content.Width = width
@@ -473,7 +475,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 				itemDetails:loadCell(cell)
 				itemDetailsContent.node = itemDetails
 
-				local btnEdit = ui:createButton("✏️ Edit", "big")
+				local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					-- forces grid to refresh when coming back,
@@ -493,12 +495,24 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 					launchItemEditor(itemFullName, category) -- global function exposed by engine
 				end
 
-				local btnDuplicate = ui:createButton("📑 Duplicate", "big")
+				local btnDuplicate = ui:createButton("📑 Duplicate", {textSize="default"})
 				btnDuplicate.onRelease = function()
 					itemDetailsContent.modal:push(createNewContent("item", itemFullName, grid))
 				end
 
-				itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit}
+				local btnExport = ui:createButton("📤", {textSize="default"})
+				btnExport.onRelease = function()
+					File:ExportItem(cell.repo, cell.name, "vox", function(err, message)
+						if err then
+							print("Error: " .. message)
+							return
+						end
+					end)
+				end
+
+				--itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit, btnExport}
+				itemDetailsContent.bottomLeft = {btnDuplicate, btnExport}
+				itemDetailsContent.bottomRight = {btnEdit}
 
 				itemDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width
@@ -511,14 +525,14 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 			elseif cell.type == "world" then
 
 				local worldDetailsContent = modal:createContent()
-				worldDetailsContent.title = "World"
+				worldDetailsContent.title = cell.title
 				worldDetailsContent.icon = "🌎"
 
 				local worldDetails = worldDetails:create({mode = "create"})
 				worldDetails:loadCell(cell)
 				worldDetailsContent.node = worldDetails
 
-				local btnEdit = ui:createButton("✏️ Edit", "big")
+				local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 				btnEdit:setColor(theme.colorCreate)
 				worldDetailsContent.bottomCenter = {btnEdit}
 				btnEdit.onRelease = function()
@@ -550,11 +564,11 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		local label = ui:createText("What do you want to create?", theme.textColor)
 		label:setParent(node)
 
-		local itemButton = ui:createButton("⚔️ Item", "big")
+		local itemButton = ui:createButton("⚔️ Item", {textSize="big"})
 		itemButton:setParent(node)
-		local wearableButton = ui:createButton("👕 Wearable", "big")
+		local wearableButton = ui:createButton("👕 Wearable", {textSize="big"})
 		wearableButton:setParent(node)
-		local worldButton = ui:createButton("🌎 World", "big")
+		local worldButton = ui:createButton("🌎 World", {textSize="big"})
 		worldButton:setParent(node)
 
 		local itemShape = ui:createShape(Shape(Items.one_cube_template), {spherized = true})

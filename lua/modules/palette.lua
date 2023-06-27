@@ -160,7 +160,7 @@ palette.create = function(self, uikit, btnColor)
 		self.colors = colors
 		self.colorsShape = colorsShape
 
-		colors.onPressPrecise = function(self, shape, block)
+		colors.onPress = function(self, shape, block)
 			local index = self.parent:_indexFromBlock(block)
 			self.parent:_selectIndex(index)
 		end

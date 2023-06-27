@@ -4,12 +4,13 @@ Config = {
 }
 
 Client.OnStart = function()
+	
+	controls = require("controls")
 
-	messenger = require("local_messenger")
 	box_outline = require("box_outline")
 	ui = require("uikit")
 
-	max_total_nb_shapes = 8
+	max_total_nb_shapes = 32
 
 	colliderMinGizmo = require("gizmo"):create()
 	colliderMinGizmo:setLayer(4)
@@ -147,7 +148,7 @@ Client.OnStart = function()
 	cameraDistThreshold = 15 -- distance under which scaling is 1
 	zoomSpeed = 7 -- unit/sec
 	zoomSpeedMax = 200
-	dPadZoomSpeed = 1.2 -- unit/sec
+	dPadMoveSpeed = 5.0 -- unit/sec
 	zoomVelocityDrag = 0.92 -- ratio of carry-over zoom velocity per frame
 	zoomMin = 5 -- unit, minimum zoom distance allowed
 	angularSpeed = 0.4 -- rad/sec per screen point
@@ -176,17 +177,14 @@ Client.OnStart = function()
     -- AMBIANCE
     ----------------------------
 
-    TimeCycle.On = false
-    Time.Current = Time.Noon
-    local mark = TimeCycleMark(Time.Current)
     local gradientStart = 120
     local gradientStep = 40
 
-    mark.AbyssColor = Color(gradientStart, gradientStart, gradientStart)
-    mark.HorizonColor = Color(gradientStart + gradientStep,
+    Sky.AbyssColor = Color(gradientStart, gradientStart, gradientStart)
+    Sky.HorizonColor = Color(gradientStart + gradientStep,
     						gradientStart + gradientStep,
     						gradientStart + gradientStep)
-    mark.SkyColor = Color(gradientStart + gradientStep * 2,
+    Sky.SkyColor = Color(gradientStart + gradientStep * 2,
     						gradientStart + gradientStep * 2,
     						gradientStart + gradientStep * 2)
     Clouds.On = false
@@ -456,6 +454,9 @@ tick = function(dt)
 		autoSaveDT = autoSaveDT + dt
 		if autoSaveDT > saveTrigger then
 			save()
+		else
+			local remaining = math.floor(saveTrigger - autoSaveDT)
+			saveBtn.label.Text = (remaining < 10 and " " or "") .. remaining
 		end
 	end
 
@@ -464,26 +465,27 @@ tick = function(dt)
         refreshBlockHighlight()
     end
 
-	-- up/down directional pad can be used as an alternative to mousewheel on desktop
-	if dPad.y ~= 0 then
-	    zoomVelocity = zoomVelocity - dPad.y * dPadZoomSpeed * getCameraDistanceFactor()
-	end
-	-- right/left directional pad maps to lateral camera pan
-	if dPad.x ~= 0 then
-	    cameraVelocity = cameraVelocity + Camera.Right * dPad.x * cameraDPadSpeed
-	end
-
     if cameraFree then
         -- consume camera angular velocity
         cameraRotation = cameraRotation + angularVelocity * dt * dPadAngularFactor
         angularVelocity = dragging and Number3(0, 0, 0) or (angularVelocity * angularVelocityDrag)
         Camera.Rotation = cameraRotation
 
-        -- in free mode, set camera position directly
-        Camera.Position = Camera.Position + (cameraVelocity + Camera.Backward * zoomVelocity) * dt
-        cameraVelocity = dragging2 and Number3(0, 0, 0) or (cameraVelocity * cameraVelocityDrag)
-        zoomVelocity = zoomVelocity * zoomVelocityDrag
+        -- up/down directional pad can be used as an alternative to mousewheel
+		if dPad.y ~= 0 then
+			Camera.Position = Camera.Position + Camera.Forward * dPad.y * dPadMoveSpeed * dt 
+		end
+		-- right/left directional pad maps to lateral camera pan
+		if dPad.x ~= 0 then
+		    Camera.Position = Camera.Position + Camera.Right * dPad.x * dPadMoveSpeed * dt 
+		end
+
+        if zoomSum then
+			Camera.Position = Camera.Position + Camera.Backward * zoomSum
+			zoomSum = nil
+		end
 	else
+
         -- consume camera angular velocity
         local rotation = cameraRotation + angularVelocity * dt
         angularVelocity = dragging and Number3(0, 0, 0) or (angularVelocity * angularVelocityDrag)
@@ -497,7 +499,15 @@ tick = function(dt)
             blockHighlightDirty = n3Equals(target, Camera.target, 0.001) == false
 
             -- consume camera zoom velocity
-            distance = math.max(zoomMin, Camera.distance + zoomVelocity * dt)
+            -- distance = math.max(zoomMin, Camera.distance + zoomVelocity * dt)
+            distance = Camera.distance
+
+			if zoomSum then
+				distance = math.max(zoomMin, Camera.distance + zoomSum * getCameraDistanceFactor())
+				-- distance = math.max(zoomMin, Camera.distance + zoomSum)
+				zoomSum = nil
+			end
+
             zoomVelocity = zoomVelocity * zoomVelocityDrag
         else -- execute autosnap
             autosnapTimer = autosnapTimer - dt
@@ -526,15 +536,11 @@ end
 
 Pointer.Zoom = function() end
 zoom = function(zoomValue)
-    zoomVelocity = clamp(zoomVelocity + zoomValue * zoomSpeed * getCameraDistanceFactor(), -zoomSpeedMax, zoomSpeedMax)
+	if not zoomSum then zoomSum = zoomValue else zoomSum = zoomSum + zoomValue end
 end
 
 Pointer.Down = function() end
 down = function(e)
-	if ui:pointerDown(e) then 
-		uiCapturedPointer = true
-		return
-	end
 	if gizmo:down(e) then
 		gizmoCapturedPointer = true
 		return
@@ -559,11 +565,6 @@ end
 
 Pointer.Up = function() end
 up = function(e)
-	if uiCapturedPointer then 
-		ui:pointerUp(e)
-		uiCapturedPointer = false
-		return
-	end
 	if gizmoCapturedPointer then
 		gizmoCapturedPointer = false
 		gizmo:up(e)
@@ -705,7 +706,7 @@ end
 
 Pointer.LongPress = function() end
 longPress = function(e)
-	if uiCapturedPointer or gizmoCapturedPointer then return end
+	if gizmoCapturedPointer then return end
 
 	if currentMode == mode.edit then
 
@@ -757,16 +758,12 @@ end
 
 Pointer.DragBegin = function() end
 dragBegin = function()
-	if uiCapturedPointer then return end
-
 	dragging = true
 	editBlockedUntilUp = not continuousEdition
 end
 
 Pointer.Drag = function() end
 drag = function(e)
-	if uiCapturedPointer then return end
-
 	if gizmoCapturedPointer then
 		gizmo:drag(e)
 		return
@@ -833,16 +830,12 @@ end
 
 Pointer.DragEnd = nil
 dragEnd = function()
-	if uiCapturedPointer then return end
-
 	dragging = false
 	blocksAddedWithDrag = {}
 end
 
 Pointer.Drag2Begin = function() end
 drag2Begin = function()
-	if uiCapturedPointer then return end
-
     if currentMode == mode.edit then
         dragging2 = true
 		editBlockedUntilUp = true
@@ -853,8 +846,6 @@ end
 
 Pointer.Drag2 = function() end
 drag2 = function(e)
-	if uiCapturedPointer then return end
-
 	-- in edit mode, Drag2 performs camera pan
 	if currentMode == mode.edit then
 		local dx = e.DX * cameraSpeed * getCameraDistanceFactor()
@@ -873,8 +864,6 @@ end
 
 Pointer.Drag2End = function() end
 drag2End = function()
-	if uiCapturedPointer then return end
-
 	-- snaps to nearby block center after drag2 (camera pan)
 	if dragging2 then
 
@@ -973,11 +962,11 @@ initClientFunctions = function()
                 item.LocalRotation = { 0, 0, 0 }
 
                 -- in edit mode, using dPad will set camera free
-                Client.DirectionalPad = function(x, y)
-                    dPad.x = x
-                    dPad.y = y
-                    setFreeCamera()
-                end
+				-- Client.DirectionalPad = function(x, y)
+				--     dPad.x = x
+				--     dPad.y = y
+				--     setFreeCamera()
+				-- end
 
 			else -- place item points / preview
 				-- make player appear in front of camera with item in hand
@@ -1005,6 +994,7 @@ initClientFunctions = function()
 				end
 
 				Client.DirectionalPad = nil
+				cameraFree = false
 			end
 
 			refreshUndoRedoButtons()
@@ -1043,11 +1033,11 @@ initClientFunctions = function()
 		end
 
 		if updatingMode then
-			messenger:send("modeDidChange")
+			LocalEvent:Send("modeDidChange")
 		end
 
 		if updatingMode or updatingSubMode then
-			messenger:send("modeOrSubmodeDidChange")
+			LocalEvent:Send("modeOrSubmodeDidChange")
 		end
 	end
 
@@ -1068,6 +1058,8 @@ initClientFunctions = function()
 
 		changesSinceLastSave = false
 		autoSaveDT = 0.0
+
+		saveBtn.label.Text = "✅"
 	end
 
 	addBlockWithImpact = function(impact, facemode, shape)
@@ -1372,7 +1364,7 @@ initClientFunctions = function()
     	if prePickEditSubmode then setMode(nil, prePickEditSubmode) end
     	if prePickSelectedBtn then editMenuToggleSelect(prePickSelectedBtn) end
 
-		messenger:send("selectedColorDidChange")
+		LocalEvent:Send("selectedColorDidChange")
 	end
 
 	selectFocusShape = function(shape)
@@ -1789,7 +1781,7 @@ function ui_init()
 		return btn
 	end
 
-	messenger:addRecipient(ui.rootFrame, "modeDidChange", function(self, name)
+	LocalEvent:Listen("modeDidChange", function()
 		 -- update pivot when switching from one mode to the other
 		if not item:GetPoint("origin") then -- if not an equipment, update Pivot
 			item.Pivot = Number3(item.Width / 2, item.Height / 2, item.Depth / 2)
@@ -1833,7 +1825,7 @@ function ui_init()
 		end
 	end)
 
-	messenger:addRecipient(ui.rootFrame, "modeOrSubmodeDidChange", function(self, name)
+	LocalEvent:Listen("modeOrSubmodeDidChange", function()
 		refreshToolsDisplay()
 		-- NOTE: it may not always be necessary to call these too,
 		-- playing it safe, could be improved.
@@ -2018,6 +2010,16 @@ function ui_init()
 		end)
 	end
 
+	saveBtn = createButton("💾", btnColor, btnColorSelected)
+	saveBtn:setParent(modeMenu)
+	saveBtn.label = ui:createText("✅", Color.Black, {fontSize="small"})
+	saveBtn.label:setParent(saveBtn)
+	-- saveBtn.label.object.BackgroundColor = Color(0,0,0,200)
+
+	saveBtn.onRelease = function()
+		save()
+	end
+
 	if isWearable then
 		placeModeBtn:disable()
 		importBtn:disable()
@@ -2025,7 +2027,11 @@ function ui_init()
 
 	modeMenu.parentDidResize = function(self)
 		
-		screenshotBtn.LocalPosition = {padding, padding, 0}
+		saveBtn.LocalPosition = {padding, padding, 0}
+		saveBtn.label.pos = {saveBtn.Width - saveBtn.label.Width - 1, 1, 0}
+
+		screenshotBtn.LocalPosition = {padding, saveBtn.LocalPosition.Y + saveBtn.Height + padding, 0}
+
 		importBtn.LocalPosition = {padding, screenshotBtn.LocalPosition.Y + screenshotBtn.Height + padding, 0}
 		placeModeBtn.LocalPosition = {padding, importBtn.LocalPosition.Y + importBtn.Height + padding, 0}
 		editModeBtn.LocalPosition = {padding, placeModeBtn.LocalPosition.Y + placeModeBtn.Height, 0}
@@ -2135,7 +2141,7 @@ function ui_init()
 		refreshToolsDisplay()
 	end
 
-	messenger:addRecipient(paletteBtn, "selectedColorDidChange", function(self, name)
+	LocalEvent:Listen("selectedColorDidChange", function()
 		paletteBtn:setColor(palette:getCurrentColor())
 	end)
 
@@ -2704,8 +2710,10 @@ function computeContentHeight(self)
 	local max = nil
 	local min = nil
 	for _, child in pairs(self.children) do
-		if min == nil or min > child.LocalPosition.Y then min = child.LocalPosition.Y end
-		if max == nil or max < child.LocalPosition.Y + child.Height then max = child.LocalPosition.Y + child.Height end
+		if child:isVisible() then
+			if min == nil or min > child.LocalPosition.Y then min = child.LocalPosition.Y end
+			if max == nil or max < child.LocalPosition.Y + child.Height then max = child.LocalPosition.Y + child.Height end
+		end
 	end
 	if max == nil then return 0 end
 	return max - min
@@ -2715,8 +2723,10 @@ function computeContentWidth(self)
 	local max = nil
 	local min = nil
 	for _, child in pairs(self.children) do
-		if min == nil or min > child.LocalPosition.X then min = child.LocalPosition.X end
-		if max == nil or max < child.LocalPosition.X + child.Width then max = child.LocalPosition.X + child.Width end
+		if child:isVisible() then
+			if min == nil or min > child.LocalPosition.X then min = child.LocalPosition.X end
+			if max == nil or max < child.LocalPosition.X + child.Width then max = child.LocalPosition.X + child.Width end
+		end
 	end
 	if max == nil then return 0 end
 	return max - min
@@ -2849,7 +2859,7 @@ function post_item_load()
 	end
 
 	palette.didChangeSelection = function(self, color)
-		messenger:send("selectedColorDidChange")
+		LocalEvent:Send("selectedColorDidChange")
 		colorPicker:setColor(color)
 		prevColor = color
 	end
@@ -2871,7 +2881,7 @@ function post_item_load()
 		palette:setColors(itemPalette)
 	end
 
-	messenger:send("selectedColorDidChange")
+	LocalEvent:Send("selectedColorDidChange")
 	updatePalettePosition()
 
 	setMode(mode.edit, editSubmode.add)

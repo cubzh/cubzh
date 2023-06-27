@@ -42,23 +42,18 @@ local ui = {
 	--
 	_rootChildren = {},
 
-	-- A list of Shapes with onPress callback set
-	-- Meaning we want to know if the pointer event ray
-	-- touches them with block precision.
-	-- indexed by node._id
-	-- NOTE: shapes with onRelease callbacks are also stored here
-	-- because onPress event needs to be considered first.
-	_onPressShapes = {},
-
 	-- Orthographic camera, to render UI
 	_camera = nil,
 
 	-- Node with focus (not all nodes are focusable)
 	_focused = nil,
 
+	-- The pointer index that's currently being used to interract with the UI.
+	-- UI won't accept other pointer down events while this is not nil.
+	_pointerIndex = nil,
+
 	 -- Node that's currently being pressed
 	_pressed = nil,
-	_pressedIsPrecise = false,
 
 	-- keeping a reference on all text items,
 	-- to update fontsize when needed
@@ -81,51 +76,55 @@ local ui = {
 	_sfx = require("sfx"),
 }
 
+local codes = require("inputcodes")
+
 -- install listeners to adapt ui considering
 -- virtual keyboard presence.
-ui.keyboardShownListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown,
-												function(keyboardHeight)
-													if ui._focused ~= nil then
-														local theme = require("uitheme").current
-														local rootPos = ui._focused.pos
-														local parent = ui._focused.parent
-														while parent ~= nil do
-															rootPos = rootPos + parent.pos
-															parent = parent.parent
-														end
-														if rootPos.Y - theme.paddingBig < keyboardHeight then
-															local diff = keyboardHeight - (rootPos.Y - theme.paddingBig)
+local keyboardShownListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown,
+function(keyboardHeight)
+	if ui._focused ~= nil then
+		local theme = require("uitheme").current
+		local rootPos = ui._focused.pos
+		local parent = ui._focused.parent
+		while parent ~= nil do
+			rootPos = rootPos + parent.pos
+			parent = parent.parent
+		end
+		if rootPos.Y - theme.paddingBig < keyboardHeight then
+			local diff = keyboardHeight - (rootPos.Y - theme.paddingBig)
 
-															local ease = require("ease")
-															ease:cancel(ui.rootFrame)
-															ease:inOutSine(ui.rootFrame,0.2).LocalPosition = {
-																-Screen.Width * 0.5,
-																diff - Screen.Height * 0.5,
-																ui.kUIFar
-															}
-														end
-													end
-												end)
+			local ease = require("ease")
+			ease:cancel(ui.rootFrame)
+			ease:inOutSine(ui.rootFrame,0.2).LocalPosition = {
+				-Screen.Width * 0.5,
+				diff - Screen.Height * 0.5,
+				ui.kUIFar
+			}
+		end
+	end
+end)
 
-ui.keyboardHiddenListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden,
-												function()
-													if ui._focused ~= nil then
-														if ui._focused._unfocus ~= nil then
-															ui._focused:_unfocus()
-														end
-														ui._focused = nil
-													end
-													local ease = require("ease")
-													ease:cancel(ui.rootFrame)
-													ease:inOutSine(ui.rootFrame,0.2).LocalPosition = {
-														-Screen.Width * 0.5,
-														-Screen.Height * 0.5,
-														ui.kUIFar
-													}
-												end)
+local keyboardHiddenListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden,
+function()
+	if ui._focused ~= nil then
+		if ui._focused._unfocus ~= nil then
+			ui._focused:_unfocus()
+		end
+		ui._focused = nil
+	end
+	local ease = require("ease")
+	ease:cancel(ui.rootFrame)
+	ease:inOutSine(ui.rootFrame,0.2).LocalPosition = {
+		-Screen.Width * 0.5,
+		-Screen.Height * 0.5,
+		ui.kUIFar
+	}
+end)
 
-ui.fitScreen = function(self)
 
+local screenDidResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize,
+function(width, height)
+	local self = ui
 	if self._camera == nil then return end
 	self._camera.Width = Screen.Width
 	self._camera.Height = Screen.Height
@@ -162,6 +161,125 @@ ui.fitScreen = function(self)
 			child:parentDidResize()
 		end
 	end
+end)
+
+local pointerDownListener = LocalEvent:Listen(LocalEvent.Name.PointerDown,
+function(pointerEvent)
+	if ui._pointerIndex ~= nil then return end
+	-- TODO: only accept some indexed (no right mouse for example)
+	
+	local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
+	local direction = { 0, 0, 1 }
+
+	if ui._focused ~= nil then
+		if ui._focused._unfocus ~= nil then
+			ui._focused:_unfocus()
+		end
+		ui._focused = nil
+	end
+
+	local impact = Ray(origin, direction):Cast({ ui.kUICollisionGroup })
+	local hitObject = impact.Shape or impact.Object
+	if hitObject._node._onPress or hitObject._node._onRelease then
+		ui._pressed = hitObject._node
+		if hitObject._node._onPress then
+
+			local pressed = ui._pressed
+			local pressedX = pressed.pos.X
+			local pressedY = pressed.pos.Y
+
+			local p = pressed.parent
+			while p ~= nil do
+				pressedX = pressedX + p.pos.X
+				pressedY = pressedY + p.pos.Y
+				p = p.parent
+			end
+
+			local x = pointerEvent.X * Screen.Width
+			local y = pointerEvent.Y * Screen.Height
+
+			hitObject._node:_onPress(hitObject, impact.Block, x - pressedX, y - pressedY)
+		end
+		if ui._pressed.config.sound and ui._pressed.config.sound ~= "" then
+			ui._sfx(ui._pressed.config.sound, {Spatialized = false})
+		end
+
+		ui._pointerIndex = pointerEvent.Index
+		return true -- capture event, other listeners won't get it
+	end
+end)
+
+local pointerUpListener = LocalEvent:Listen(LocalEvent.Name.PointerUp,
+function(pointerEvent)
+	if ui._pointerIndex == nil or ui._pointerIndex ~= pointerEvent.Index then return end
+	ui._pointerIndex = nil
+	
+	local pressed = ui._pressed
+	if pressed then
+		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
+		local direction = { 0, 0, 1 }
+
+		local impact = Ray(origin, direction):Cast({ ui.kUICollisionGroup })
+		local hitObject = impact.Shape or impact.Object
+		if hitObject._node == pressed and hitObject._node._onRelease then
+			pressed:_onRelease(hitObject, impact.Block)
+			ui._pressed = nil
+			return true
+		end
+
+		if pressed._onCancel then
+			pressed:_onCancel()
+		end
+		ui._pressed = nil
+		return true
+	end
+	ui._pressed = nil
+end)
+
+local pointerDragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag,
+function(pointerEvent)
+	if ui._pointerIndex == nil or ui._pointerIndex ~= pointerEvent.Index then return end
+	
+	local pressed = ui._pressed
+	if pressed then
+		if pressed._onDrag then
+			local pressedX = pressed.pos.X
+			local pressedY = pressed.pos.Y
+
+			local p = pressed.parent
+			while p ~= nil do
+				pressedX = pressedX + p.pos.X
+				pressedY = pressedY + p.pos.Y
+				p = p.parent
+			end
+
+			local x = pointerEvent.X * Screen.Width
+			local y = pointerEvent.Y * Screen.Height
+
+			pressed:_onDrag(x - pressedX, y - pressedY)
+		end
+	end
+
+	return true
+end)
+
+
+
+-- TODO: PointerCancel
+-- TODO: PointerMove
+
+ui.turnOff = function(self)
+	pointerDownListener:Pause()
+	pointerUpListener:Pause()
+end
+
+ui.turnOn = function(self)
+	pointerDownListener:Resume()
+	pointerUpListener:Resume()
+end
+
+ui.fitScreen = function(self)
+	-- legacy, don't do anything
 end
 
 ui.init = function(self)
@@ -186,107 +304,36 @@ ui.init = function(self)
 	self.rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, self.kUIFar }
 end
 
--- returns true if the UI catches the event, false otherwise
+local pointerDownWarningDisplayed = false
 ui.pointerDown = function(self, pointerEvent)
-	local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
-	local direction = { 0, 0, 1 }
-
-	if self._focused ~= nil then
-		if self._focused._unfocus ~= nil then
-			self._focused:_unfocus()
-		end
-		self._focused = nil
+	if not pointerDownWarningDisplayed then
+		print("⚠️ uikit.pointerDown is deprecated, no need to call it anymore!")
+		pointerDownWarningDisplayed = true
 	end
-
-	for _,node in pairs(self._onPressShapes) do
-		local impact = Ray(origin, direction):Cast(node.shape)
-		if impact ~= nil and impact.Block ~= nil then
-			if node._onPressPrecise or node._onReleasePrecise then
-				self._pressed = node
-				self._pressedIsPrecise = true
-				if node._onPressPrecise then
-					node:_onPressPrecise(node.shape, impact.Block)
-				end
-				return true
-			end
-		end
-	end
-
-	local impact = Ray(origin, direction):Cast({ self.kUICollisionGroup })
-	if impact.Shape._node._onPress or impact.Shape._node._onRelease then
-		self._pressed = impact.Shape._node
-		self._pressedIsPrecise = false
-		if impact.Shape._node._onPress then
-			impact.Shape._node:_onPress()
-		end
-		if self._pressed.config.sound and self._pressed.config.sound ~= "" then
-			self._sfx(self._pressed.config.sound, {Spatialized = false})
-		end
-		return true
-	end
-
-	return false
 end
 
+local pointerUpWarningDisplayed = false
 ui.pointerUp = function(self, pointerEvent)
-	local pressed = self._pressed
-	if pressed then
-		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
-		local direction = { 0, 0, 1 }
-
-		local releasedOnTarget = false
-
-		if self._pressedIsPrecise then
-			local impact = Ray(origin, direction):Cast(pressed.shape)
-			if impact ~= nil and impact.Block ~= nil then
-				if pressed._onReleasePrecise then
-					pressed:_onReleasePrecise(pressed.shape, impact.Block)
-					self._pressed = nil
-					return true
-				end
-			end
-		else
-			local impact = Ray(origin, direction):Cast({ self.kUICollisionGroup })
-			if impact.Shape._node == pressed and impact.Shape._node._onRelease then
-				-- print("_onRelease")
-				pressed:_onRelease()
-				self._pressed = nil
-				return true
-			end
-		end
-
-		if pressed._onCancel then
-			-- print("_onCancel")
-			pressed:_onCancel()
-		end
-		self._pressed = nil
-		return true
-	end
-	self._pressed = nil
-	return false
-end
-
-ui.pointerDrag = function(self, pointerEvent)
-	local pressed = self._pressed
-	if pressed._onDrag then
-		pressed:_onDrag(pointerEvent)
+	if not pointerUpWarningDisplayed then
+		print("⚠️ uikit.pointerUp is deprecated, no need to call it anymore!")
+		pointerUpWarningDisplayed = true
 	end
 end
 
-ui._setupUIShape = function(self, shape, collides)
-	self._hierarchyActions:applyToDescendants(shape,  { includeRoot = true }, function(s)
-		s.Layers = ui.kUILayer
-		s.IsUnlit = true
+ui._setupUIObject = function(self, object, collides)
+	self._hierarchyActions:applyToDescendants(object,  { includeRoot = true }, function(o)
+		o.Layers = ui.kUILayer
+		o.IsUnlit = true
 
-		s.CollidesWithGroups = {}
-		s.CollisionGroups = {}
-		s.Physics = PhysicsMode.Disabled
+		o.CollidesWithGroups = {}
+		o.CollisionGroups = {}
+		o.Physics = PhysicsMode.Disabled
 	end)
 
-	if collides then
-		shape.Physics = PhysicsMode.Trigger
-		shape.CollisionGroups = {self.kUICollisionGroup}
-		shape.CollisionBox = Box({ 0, 0, 0 }, { shape.Width, shape.Height, 1 })
+	if collides and object.Width ~= nil and object.Height ~= nil then
+		object.Physics = PhysicsMode.Trigger
+		object.CollisionGroups = {self.kUICollisionGroup}
+		object.CollisionBox = Box({ 0, 0, 0 }, { object.Width, object.Height, 0.1 })
 	end
 end
 
@@ -299,9 +346,34 @@ ui.createNode = function(self)
 	return node
 end
 
-ui.createFrame = function(self, color)
-	if color ~= nil and type(color) ~= "Color" then
-		error("ui:createFrame(color) expects a color parameter", 2)
+---@function createImage Creates a frame
+---@param color? color
+---@param config? uikitNodeConfig
+---@code -- nodes can have an image if provided image Data (PNG or JPEG)
+--- local url = "https://cu.bzh/img/pen.png"
+--- HTTP:Get(url, function(response)
+---		local f = uikit:createFrame(Color.Black, {image = response.Data})
+---		f:setParent(uikit.rootFrame)
+---		f.LocalPosition = {50, 50, 0}
+--- end)
+ui.createFrame = function(self, color, config)
+	if self ~= ui then
+		error("ui:createFrame(color, config): use `:`", 2)
+	end
+	if color ~= nil and type(color) ~= Type.Color then
+		error("ui:createFrame(color, config): color should be a Color or nil", 2)
+	end
+	if config ~= nil and type(config) ~= Type.table then
+		error("ui:createFrame(color, config): config should be a table", 2)
+	end
+
+	local image
+	if config ~= nil and config.image ~= nil then
+		if type(config.image) ~= Type.Data then
+			error("ui:createFrame(color, config): config.image should be a Data instance", 2)
+		end
+		print("image taken into account")
+		image = config.image
 	end
 
 	color = color or Color(0,0,0,0) -- default transparent frame
@@ -309,27 +381,63 @@ ui.createFrame = function(self, color)
 	node.type = self.NodeType.Frame
 	node.object = Object()
 
-	local background = MutableShape()
-	background:AddBlock(color,0,0,0)
-	self:_setupUIShape(background)
+	local background = Quad()
+	if image == nil then
+		background.Color = color
+		background.IsDoubleSided = false
+	else
+		background.Image = image
+		background.IsDoubleSided = true
+	end
+	self:_setupUIObject(background)
 	node.object:AddChild(background)
 	background._node = node
 	node.background = background
 
 	node._color = function(self)
-		return self.background.Palette[1].Color
+		return self.background.Color
 	end
 	
 	node._setColor = function(self, color)
-		self.background.Palette[1].Color = color
+		self.background.Color = color
 	end
 
-	node._width = function(self) return self.background.LocalScale.X end
-	node._height = function(self) return self.background.LocalScale.Y end
-	node._depth = function(self) return self.background.LocalScale.Z end
+	node.setColor = function(self, color)
+		if self ~= node then
+			error("frame:setColor(color): use `:`", 2)
+		end
+		if type(color) ~= Type.Color then
+			error("frame:setColor(color): color should be a Color", 2)
+		end
+		self:_setColor(color)
+	end
 
-	node._setWidth = function(self, v) self.background.LocalScale.X = v end
-	node._setHeight = function(self, v) self.background.LocalScale.Y = v end
+	node.setImage = function(self, image)
+		if self ~= node then
+			error("frame:setImage(image): use `:`", 2)
+		end
+		if image == nil or type(image) ~= Type.Data then
+			error("frame:setImage(image): image should be a Data instance", 2)
+		end
+
+		self.background.Image = image
+		self.background.Color = Color.White
+		self.background.IsDoubleSided = true
+	end
+
+	node._width = function(self) return self.background.Width end
+	node._height = function(self) return self.background.Height end
+	node._depth = function(self) return 0 end
+
+	node._setWidth = function(self, v) 
+		self.background.Width = v 
+		self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+	end
+
+	node._setHeight = function(self, v)
+		self.background.Height = v
+		self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+	end
 
 	node.object.LocalPosition = {0, 0, 0}
 
@@ -427,7 +535,7 @@ ui.createShape = function(self, shape, config)
 
 	if config ~= nil then
 		if type(config) == "boolean" then
-			-- legacy, `config` paramameter used to be `doNotFlip`
+			-- legacy, `config` parameter used to be `doNotFlip`
 			node._config.doNotFlip = config
 		else
 			if config.spherized ~= nil then node._config.spherized = config.spherized end
@@ -472,7 +580,19 @@ ui.createShape = function(self, shape, config)
 
 	-- setters
 
+	node._setCollider = function(self, b)
+		if self.shape == nil then return end
+		if b then
+			self.shape.Physics = PhysicsMode.TriggerPerBlock
+			self.shape.CollisionGroups = {ui.kUICollisionGroup}
+		else
+			self.shape.Physics = PhysicsMode.Disabled
+			self.shape.CollisionGroups = {}
+		end
+	end
+
 	node._setWidth = function(self, newWidth)
+		if newWidth == nil then return end
 		if node._config.spherized then
 			if self._diameter == 0 then return end
 			self.object.LocalScale = newWidth / self._diameter
@@ -483,6 +603,7 @@ ui.createShape = function(self, shape, config)
 	end
 
 	node._setHeight = function(self, newHeight)
+		if newHeight == nil then return end
 		if node._config.spherized then
 			if self._diameter == 0 then return end
 			self.object.LocalScale = newHeight / self._diameter
@@ -514,7 +635,7 @@ ui.createShape = function(self, shape, config)
 			self.shape = nil
 		end
 
-		ui:_setupUIShape(shape)
+		ui:_setupUIObject(shape)
 		self.shape = shape
 		shape._node = self
 
@@ -655,6 +776,7 @@ ui.createTextInput = function(self, str, placeholder, size) -- "default" (defaul
 		if self.onTextChange then
 			self:onTextChange()
 		end
+		self:_refresh()
 	end
 
 	node._color = function(self)
@@ -670,7 +792,7 @@ ui.createTextInput = function(self, str, placeholder, size) -- "default" (defaul
 		elseif v ~= nil then
 			activeArea.Physics = PhysicsMode.Trigger
 			activeArea.CollisionGroups = {ui.kUICollisionGroup}
-			activeArea.CollisionBox = Box({ 0, 0, 0 }, { activeArea.Width, activeArea.Height, 1 })
+			activeArea.CollisionBox = Box({ 0, 0, 0 }, { activeArea.Width, activeArea.Height, 0.1 })
 			self._onRelease = function()
 				if v ~= nil then v() end
 			end
@@ -798,6 +920,7 @@ ui.createTextInput = function(self, str, placeholder, size) -- "default" (defaul
 
 	node.onFocus = nil
 	node.onFocusLost = nil
+	node.onSubmit = nil
 
 	-- function to delete last UTF8 char
 	local deleteLastCharacter = function(str)
@@ -819,18 +942,51 @@ ui.createTextInput = function(self, str, placeholder, size) -- "default" (defaul
 													if down == false then return end
 													-- print("char:", char, "key:", keycode, "mod:", modifiers)
 													-- we need an enum for key codes (value could change)
-													if keycode == 5 then
-														local str = self.string.Text
-														if #str > 0 then
-															str = deleteLastCharacter(str)
-															self.string.Text = str
-														end
-													elseif char ~= "" then
-														self.string.Text = self.string.Text .. char
-													end
-													self:_refresh()
 
-													ui._sfx("keydown_" .. math.random(1,4), {Spatialized = false})
+													local cmd = (modifiers & codes.modifiers.Cmd) > 0
+													local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
+													local option = (modifiers & codes.modifiers.Option) > 0
+													local shift = (modifiers & codes.modifiers.Shift) > 0
+
+
+													if cmd or ctrl then
+
+														if keycode == codes.KEY_C then
+
+															Dev:CopyToClipboard(self.string.Text)
+
+														elseif keycode == codes.KEY_V then
+
+															local s = Dev:GetFromClipboard()
+															self.string.Text = self.string.Text .. s
+															
+															ui._sfx("keydown_" .. math.random(1,4), {Spatialized = false})
+
+														elseif keycode == codes.KEY_X then
+
+															Dev:CopyToClipboard(self.string.Text)
+															self.string.Text = ""
+
+														end
+													else
+														if keycode == codes.BACKSPACE then
+															local str = self.string.Text
+															if #str > 0 then
+																str = deleteLastCharacter(str)
+																self.string.Text = str
+															end
+														elseif keycode == codes.RETURN or keycode == codes.NUMPAD_RETURN then
+															if self.onSubmit then
+																self:onSubmit() 
+																return true
+															end
+														elseif char ~= "" then
+															self.string.Text = self.string.Text .. char
+															ui._sfx("keydown_" .. math.random(1,4), {Spatialized = false})
+														end
+													end
+
+													self:_refresh()
 
 													if self.onTextChange then 
 														self:onTextChange()
@@ -843,6 +999,7 @@ ui.createTextInput = function(self, str, placeholder, size) -- "default" (defaul
 		self.dt = 0
 		self.cursor.shown = true
 		self.object.Tick = function(o, dt)
+			if not self.dt then return end
 			self.dt = self.dt + dt
 			if self.dt >= theme.textInputCursorBlinkTime then
 				self.dt = self.dt % 0.3
@@ -972,12 +1129,12 @@ ui._buttonRefreshColor = function(self, node)
 		end
 	end
 
-	node.background.Palette[1].Color = colors[1]
+	node.background.Color = colors[1]
 	if #node.borders > 0 then
-		node.borders[1].Palette[1].Color = colors[2]
-		node.borders[2].Palette[1].Color = colors[2]
-		node.borders[3].Palette[1].Color = colors[3]
-		node.borders[4].Palette[1].Color = colors[3]
+		node.borders[1].Color = colors[2]
+		node.borders[2].Color = colors[2]
+		node.borders[3].Color = colors[3]
+		node.borders[4].Color = colors[3]
 	end
 	node.content.Color = textColor -- doesn't seem to be working
 end
@@ -985,7 +1142,6 @@ end
 ui._buttonOnPress = function(self, callback)
 	if self.disabled == true then return end
 
-	-- print("_buttonOnPress")
 	self.state = ui.State.Pressed
 	ui:_buttonRefreshColor(self)
 	if callback ~= nil then
@@ -998,7 +1154,6 @@ end
 ui._buttonOnRelease = function(self, callback)
 	if self.disabled == true then return end
 
-	-- print("_buttonOnRelease")
 	self.state = ui.State.Idle
 	ui:_buttonRefreshColor(self)
 	if callback ~= nil then
@@ -1148,11 +1303,13 @@ ui.createButton = function(self,stringOrShape,config)
 
 	node.setColor = function(self, background, text, doNotrefresh)
 		if background ~= nil then
+			if type(background) ~= "Color" then error("setColor - first parameter (background color) should be a Color", 2) end
 			node.colors = { Color(background), Color(background), Color(background) }
 			node.colors[2]:ApplyBrightnessDiff(theme.buttonTopBorderBrightnessDiff)
 			node.colors[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 		end
 		if text ~= nil then
+			if type(text) ~= "Color" then error("setColor - second parameter (text color) should be a Color", 2) end
 			node.textColor = Color(text)
 		end
 		if not doNotrefresh then ui:_buttonRefreshColor(self) end
@@ -1199,9 +1356,10 @@ ui.createButton = function(self,stringOrShape,config)
 	node:setColorSelected(theme.buttonColorSelected, theme.buttonTextColorSelected, true)
 	node:setColorDisabled(theme.buttonColorDisabled, theme.buttonTextColorDisabled, true)
 
-	local background = MutableShape()
-	background:AddBlock(node.colors[1],0,0,0)
-	self:_setupUIShape(background, true)
+	local background = Quad()
+	background.Color = node.colors[1]
+	background.IsDoubleSided = false
+	self:_setupUIObject(background, true)
 	node.object:AddChild(background)
 	background._node = node
 
@@ -1209,40 +1367,40 @@ ui.createButton = function(self,stringOrShape,config)
 	node.borders = {}
 
 	if config.borders then
-		local borderTop = MutableShape()
-		borderTop:AddBlock(node.colors[2],0,0,0)
-		self:_setupUIShape(borderTop)
-		borderTop.CollisionGroups = {} borderTop.CollidesWithGroups = {}
+		local borderTop = Quad()
+		borderTop.Color = node.colors[2]
+		borderTop.IsDoubleSided = false
+		self:_setupUIObject(borderTop)
 		node.object:AddChild(borderTop)
 		table.insert(node.borders, borderTop)
 
-		local borderRight = MutableShape()
-		borderRight:AddBlock(node.colors[2],0,0,0)
-		self:_setupUIShape(borderRight)
-		borderRight.CollisionGroups = {} borderRight.CollidesWithGroups = {}
+		local borderRight = Quad()
+		borderRight.Color = node.colors[2]
+		borderRight.IsDoubleSided = false
+		self:_setupUIObject(borderRight)
 		node.object:AddChild(borderRight)
 		table.insert(node.borders, borderRight)
 
-		local borderBottom = MutableShape()
-		borderBottom:AddBlock(node.colors[3],0,0,0)
-		self:_setupUIShape(borderBottom)
-		borderBottom.CollisionGroups = {} borderBottom.CollidesWithGroups = {}
+		local borderBottom = Quad()
+		borderBottom.Color = node.colors[3]
+		borderBottom.IsDoubleSided = false
+		self:_setupUIObject(borderBottom)
 		node.object:AddChild(borderBottom)
 		table.insert(node.borders, borderBottom)
 
-		local borderLeft = MutableShape()
-		borderLeft:AddBlock(node.colors[3],0,0,0)
-		self:_setupUIShape(borderLeft)
-		borderLeft.CollisionGroups = {} borderLeft.CollidesWithGroups = {}
+		local borderLeft = Quad()
+		borderLeft.Color = node.colors[3]
+		borderLeft.IsDoubleSided = false
+		self:_setupUIObject(borderLeft)
 		node.object:AddChild(borderLeft)
 		table.insert(node.borders, borderLeft)
 	end
 
 	if config.shadow then
-		local shadow = MutableShape()
-		shadow:AddBlock(Color(0,0,0,20),0,0,0)
-		self:_setupUIShape(shadow)
-		shadow.CollisionGroups = {} shadow.CollidesWithGroups = {}
+		local shadow = Quad()
+		shadow.Color = Color(0,0,0,20)
+		shadow.IsDoubleSided = false
+		self:_setupUIObject(shadow)
 		node.object:AddChild(shadow)
 		node.shadow = shadow
 	end
@@ -1458,6 +1616,9 @@ ui._computeDescendantsBoundingBox = function(root)
 end
 
 ui._nodeRemove = function(t)
+	if type(t.onRemove) == "function" then
+		t:onRemove()
+	end
 
 	t:setParent(nil)
 
@@ -1469,11 +1630,6 @@ ui._nodeRemove = function(t)
 	if t.object then
 		t.object:RemoveFromParent()
 		t.object = nil
-	end
-
-	if t.onPressPrecise then
-		t.onPressPrecise = nil
-		ui._onPressShapes[t._id] = nil
 	end
 	
 	for nodeID, child in pairs(t.children) do
@@ -1609,6 +1765,8 @@ ui._nodeIndex = function(t, k)
 		return t._onPress
 	elseif k == "onCancel" then 
 		return t._onCancel
+	elseif k == "onDrag" then 
+		return t._onDrag
 	end
 
 	local v = m.attr[k]
@@ -1620,6 +1778,14 @@ end
 ui._nodeNewindex = function(t, k, v)
 	local m = getmetatable(t)
 	local attr = m.attr
+
+	if k == "onPressPrecise" then 
+		k = "onPress" 
+		print("⚠️ onPressPrecise is deprecated, use onPress")
+	elseif k == "onReleasePrecise" then
+		k = "onRelease" 
+		print("⚠️ onReleasePrecise is deprecated, use onRelease")
+	end
 
 	if k == "color" or k == "Color" then
 		attr.color = v
@@ -1640,14 +1806,15 @@ ui._nodeNewindex = function(t, k, v)
 			elseif v ~= nil then
 				background.Physics = PhysicsMode.Trigger
 				background.CollisionGroups = {ui.kUICollisionGroup}
-				background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 1 })
+				background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 				t._onPress = function()
 					if v ~= nil then v() end
 				end	
 			end
 		else
-			t._onPress = function()
-				if v ~= nil then v() end
+			if t._setCollider then t:_setCollider(v ~= nil) end
+			t._onPress = function(self, object, block, x, y)
+				if v ~= nil then v(self, object, block, x, y) end
 			end
 		end
 	elseif k == "onRelease" then
@@ -1664,14 +1831,15 @@ ui._nodeNewindex = function(t, k, v)
 			elseif v ~= nil then
 				background.Physics = PhysicsMode.Trigger
 				background.CollisionGroups = {ui.kUICollisionGroup}
-				background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 1 })
+				background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 				t._onRelease = function()
 					if v ~= nil then v() end
 				end	
 			end
 		else
-			t._onRelease = function()
-				if v ~= nil then v() end
+			if t._setCollider then t:_setCollider(v ~= nil) end
+			t._onRelease = function(self, object, block)
+				if v ~= nil then v(self, object, block) end
 			end
 		end
 	elseif k == "onCancel" then 
@@ -1680,54 +1848,31 @@ ui._nodeNewindex = function(t, k, v)
 				ui._buttonOnCancel(self, v)
 			end
 		else
-			t._onCancel = function()
-				if v ~= nil then v() end
+			t._onCancel = function(self)
+				if v ~= nil then v(self) end
 			end
 		end
-	elseif k == "onPressPrecise" then
-		if t.object == nil then return end
-
-		if v == nil then -- remove from list
-			for k,o in ipairs(ui._onPressShapes) do
-				if o == t then
-					t._onPressPrecise = nil
-					if t._onReleasePrecise == nil then ui._onPressShapes[t._id] = nil end
-					return
-				end
-			end
-		else -- add to list
-			ui._onPressShapes[t._id] = t
-			t._onPressPrecise = v
-		end
-	elseif k == "onReleasePrecise" then
-		if t.object == nil then return end
-
-		if v == nil then -- remove from list
-			for k,o in ipairs(ui._onPressShapes) do
-				if o == t then
-					t._onReleasePrecise = nil
-					if t._onPressPrecise == nil then ui._onPressShapes[t._id] = nil end
-					return
-				end
-			end
-		else -- add to list
-			ui._onPressShapes[t._id] = t
-			t._onReleasePrecise = v
+	elseif k == "onDrag" then
+		t._onDrag = function(self, x, y)
+			if v ~= nil then v(self, x, y) end
 		end
 	elseif k == "Pivot" then
-		if t.background ~= nil then
+		if t.background ~= nil and t.background.Pivot ~= nil then
 			t.background.Pivot = v
-		else
-			if type(t.object) == "Text" then
-				-- TODO ? 
-			else
-				t.object.Pivot = v
-			end
-		end			
+        elseif t.object.Pivot ~= nil then
+            t.object.Pivot = v
+        elseif t.object.Anchor ~= nil then
+            if type(v) == "table" then
+                t.object.Anchor = Number2(v[1], v[2])
+            elseif type(v) == "Number3" then
+                t.object.Anchor = Number2(v.X, v.Y)
+            end
+		end
+		-- TODO: node could use a separate internal object when it needs a pivot, to be type-agnostic
 	elseif k == "pos" or k == "position" or k == "LocalPosition" then
 		local obj = t.object
 		local z = obj.LocalPosition.Z
-		obj.LocalPosition = v
+		if not pcall(function() obj.LocalPosition = v end) then error(k .. " can't be set", 2) end
 		obj.LocalPosition.Z = z -- restore Z (layer)
 
 	elseif k == "rot" or k == "rotation" or k == "LocalRotation" then
@@ -1766,7 +1911,11 @@ ui._nodeNewindex = function(t, k, v)
 		end
 	elseif k == "text" or k == "Text" then
 		if t._setText ~= nil then
-			if type(t._setText) == "function" then return t:_setText(v) end
+			if type(t._setText) == "function" then 
+				local r = t:_setText(v)
+				t:contentDidResizeWrapper()
+				return r
+			end
 		else
 			attr[k] = v	
 		end

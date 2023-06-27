@@ -25,7 +25,7 @@ local metatable = {
 				-- clean metatable
 				meta = getmetatable(current.t)
 
-				if meta ~= nil then 
+				if meta ~= nil and type(meta) == Type.table then 
 					current.m = meta
 					current.step = 1
 					-- goto continue

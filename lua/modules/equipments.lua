@@ -33,6 +33,12 @@ equipments.unloadAll = function(player)
     if player.equipments == nil then return end
 
     for name, shape in pairs(player.equipments) do
+        if shape.attachedParts then
+            for _,subshape in ipairs(shape.attachedParts) do
+                subshape:RemoveFromParent()
+                shape.attachedParts = nil
+            end
+        end
         shape:RemoveFromParent()
         player.equipments[name] = nil
     end
@@ -103,6 +109,34 @@ equipments.load = function(equipmentName, itemRepoName, player, mutable, abortIf
     end)
 end
 
+equipments.attachEquipmentToBodyPart = function(self, equipment, bodyPart, options)
+    local layer = options.layer or 1
+    local isPant = options.isPant or false
+
+    equipment.Physics = PhysicsMode.Disabled
+    equipment:SetParent(bodyPart)
+    equipment.IsUnlit = bodyPart.IsUnlit
+    equipment.Layers = layer
+    equipment.LocalRotation = {0,0,0}
+    local coords = bodyPart:GetPoint("origin").Coords
+    if coords == nil then
+        print("can't get parent coords for equipment")
+        return
+    end
+    local localPos = bodyPart:BlockToLocal(coords)
+    local origin = Number3(0,0,0)
+    local point = equipment:GetPoint("origin")
+    if point ~= nil then
+        origin = point.Coords
+    end
+    equipment.Pivot = origin
+    equipment.LocalPosition = localPos
+    equipment.Scale = 1
+    if isPant then
+        equipment.Scale = 1.05
+    end
+ end
+
 equipments.place = function(self, player, shape)
     if shape == nil then
         return
@@ -114,51 +148,24 @@ equipments.place = function(self, player, shape)
         return
     end
 
-    local setEquipment = function(s, parent)
-        s.Physics = PhysicsMode.Disabled
-
-        s:SetParent(parent)
-        s.Layers = player.Layers
-        s.LocalRotation = {0,0,0}
-    
-        local coords = parent:GetPoint("origin").Coords
-        if coords == nil then
-            print("can't get parent coords for equipment")
-            return
-        end
-    
-        local localPos = parent:BlockToLocal(coords)
-    
-        local origin = Number3(0,0,0)
-    
-        local point = s:GetPoint("origin")
-        if point ~= nil then
-            origin = point.Coords
-        end
-    
-        s.Pivot = origin
-        s.LocalPosition = localPos
-        
-        s.Scale = 1
-        if shape.equipmentName == "pants" or shape.equipmentName == "rpant" or shape.equipmentName == "lpant" then
-            s.Scale = 1.05
-        end    
-    end
-
+    local options = {
+        layer = player.Layers,
+        isPant = shape.equipmentName == "pants" or shape.equipmentName == "lpant" or shape.equipmentName == "rpant" 
+    }
     if type(parent) == "table" then -- multiple shape equipment
-        setEquipment(shape, parent[1], shape.equipmentName)
+        self:attachEquipmentToBodyPart(shape, parent[1], options)
 
         local shape2 = shape:GetChild(1)
         shape.attachedParts = { shape2 }
-        setEquipment(shape2, parent[2], shape.equipmentName)
+        self:attachEquipmentToBodyPart(shape2, parent[2], options)
 
         local shape3 = shape2:GetChild(1)
         if shape3 then
             shape.attachedParts = { shape2, shape3 }
-            setEquipment(shape3, parent[3], shape.equipmentName)
+            self:attachEquipmentToBodyPart(shape3, parent[3], options)
         end
     else
-        setEquipment(shape, parent)
+        self:attachEquipmentToBodyPart(shape, parent, options)
     end
 end
 
