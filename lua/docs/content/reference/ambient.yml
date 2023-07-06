@@ -5,9 +5,19 @@ description: |
     `Ambient` defines a number of general lighting and color properties.
 
 properties:
-    - name: "Intensity"
+    - name: "SkyLightFactor"
       type: "number"
       description: |
-          Intensity of shapes baked lighting, default is `1.0`.
-        
-          This acts as multiplier for baked lighting values inside of all the shapes of the scene.
+          Factor representing what fraction of sky light color [Sky.SkyLightColor](/reference/sky#property-skylightcolor) will contribute to dynamic ambient color, default `0.1`.
+
+    - name: "DirectionalLightFactor"
+      type: "number"
+      description: |
+          Factor representing what fraction of the scene's directional lights color [Light.Color](/reference/light#property-color) will contribute to dynamic ambient color, default `0.2`.
+
+    - name: "Color"
+      type: "Color"
+      description: |
+          Overrides the ambient color to the given value, setting this disables dynamic ambient color.
+
+          Set back to `nil` to switch back to dynamic ambient color which is based on scene lighting.
