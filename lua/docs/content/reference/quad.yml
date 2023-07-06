@@ -79,9 +79,16 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. Cameras only render quads corresponding to their layers, and lights only affect shapes in matching layers.
+          Integer or table of integers between 1 and 8. Cameras only render quads corresponding to their layers, and lights only affect quads in matching layers.
 
     - name: "IsUnlit"
       type: "boolean"
       description: |
           Whether or not the [This] should ignore scene lighting, `false` by default.
+    
+    - name: "IsMask"
+      type: "boolean"
+      description: |
+          Activates masking for this quad. Any children of a quad mask will only be visible within the quad's area on screen.
+
+          Nested masks are supported to a maximum depth of 7. Up to 31 individual masks can be active at a time, nested masks do not count towards this limit.
