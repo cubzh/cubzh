@@ -1,0 +1,26 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Sky"
+extends: ""
+description: |
+    `Sky` defines properties of the scene global lighting and colouring.
+
+properties:
+    - name: "SkyLightColor"
+      type: "Color"
+      description: |
+          Global scene lighting color, default RGB `(255, 255, 234)`.
+
+    - name: "SkyColor"
+      type: "Color"
+      description: |
+          Top color of the scene background gradient, default RGB `(0, 174, 255)`.
+    
+    - name: "HorizonColor"
+      type: "Color"
+      description: |
+          Middle color of the scene background gradient, default RGB `(153, 242, 255)`.
+    
+    - name: "AbyssColor"
+      type: "Color"
+      description: |
+          Bottom color of the scene background gradient, default RGB `(0, 93, 127)`.
