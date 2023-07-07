@@ -55,6 +55,9 @@ struct _Transform {
     // optionally attach a pointer to this transform (eg. to a Shape)
     void *ptr;
 
+    // optional, name in the world, not unique
+    char *name;
+
     // function pointer, to free ptr when defined
     pointer_free_function ptr_free;
 
@@ -178,6 +181,7 @@ Transform *transform_make(TransformType type) {
     t->sceneDirty = false;
     t->isInScene = false;
     t->rigidBody = NULL;
+    t->name = NULL;
 
     return t;
 }
@@ -544,6 +548,17 @@ bool transform_is_in_scene(Transform *t) {
 
 void transform_set_is_in_scene(Transform *t, bool value) {
     t->isInScene = value;
+}
+
+const char *transform_get_name(const Transform *t) {
+    return t->name;
+}
+
+void transform_set_name(Transform *t, const char *name) {
+    if (t->name != NULL) {
+        free(t->name);
+    }
+    t->name = string_new_copy(name);
 }
 
 // MARK: - Scale -
@@ -1378,6 +1393,11 @@ static void _transform_free(Transform *const t) {
     if (t->rigidBody != NULL) {
         rigidbody_free(t->rigidBody);
         t->rigidBody = NULL;
+    }
+
+    if (t->name != NULL) {
+        free(t->name);
+        t->name = NULL;
     }
 
     _transform_remove_from_hierarchy(t, true);
