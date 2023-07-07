@@ -427,6 +427,12 @@ Shape *shape_make_copy(Shape *origin) {
         s->fullname = string_new_copy(origin->fullname);
     }
 
+    Transform *t = shape_get_root_transform(origin);
+    const char *name = transform_get_name(t);
+    if (name != NULL) {
+        transform_set_name(shape_get_root_transform(s), name);
+    }
+
     return s;
 }
 
