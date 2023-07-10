@@ -36,7 +36,6 @@ typedef enum P3sCompressionMethod {
 //#define P3S_CHUNK_ID_CAMERA 10
 //#define P3S_CHUNK_ID_DIRECTIONAL_LIGHT 11
 //#define P3S_CHUNK_ID_SOURCE_METADATA 12
-//#define P3S_CHUNK_ID_SHAPE_NAME 13
 //#define P3S_CHUNK_ID_GENERAL_RENDERING_OPTIONS 14
 #define P3S_CHUNK_ID_PALETTE_ID 15
 #define P3S_CHUNK_ID_PALETTE 16
@@ -879,8 +878,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     localTransform.scale.x = 1;
     localTransform.scale.y = 1;
     localTransform.scale.z = 1;
-    char name[256];
-    name[0] = 0;
+    char *name = NULL;
     float3 pivot = {0.0f, 0.0f, 0.0f};
     bool hasPivot = false;
 
@@ -953,15 +951,21 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
             }
-                //            case P3S_CHUNK_ID_SHAPE_NAME: {
-                //                uint8_t nameLen;
-                //                memcpy(&nameLen, cursor, sizeof(uint8_t));
-                //                cursor = (void *)((uint8_t *)cursor + 1);
-                //                memcpy(name, cursor, sizeof(char) * nameLen);
-                //                name[nameLen] = 0;
-                //                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) *
-                //                nameLen); break;
-                //            }
+            case P3S_CHUNK_ID_SHAPE_NAME: {
+                uint8_t nameLen;
+                memcpy(&nameLen, cursor, sizeof(uint8_t));
+                name = malloc(nameLen + 1);
+                if (name == NULL) {
+                    cclog_error("malloc failed");
+                    // TODO: handle error
+                    // (if `nameStr` is NULL, we cannot let the function continue)
+                }
+                cursor = (void *)((uint8_t *)cursor + 1);
+                memcpy(name, cursor, sizeof(char) * nameLen);
+                name[nameLen] = 0;
+                totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) * nameLen);
+                break;
+            }
             case P3S_CHUNK_ID_SHAPE_SIZE: {
                 memcpy(&sizeRead, cursor, sizeof(uint32_t)); // shape size chunk size
                 cursor = (void *)((uint32_t *)cursor + 1);
@@ -1113,7 +1117,6 @@ uint32_t chunk_v6_read_shape(Stream *s,
                  #define P3S_CHUNK_ID_CAMERA 10
                  #define P3S_CHUNK_ID_DIRECTIONAL_LIGHT 11
                  #define P3S_CHUNK_ID_SOURCE_METADATA 12
-                 #define P3S_CHUNK_ID_SHAPE_NAME 13
                  #define P3S_CHUNK_ID_GENERAL_RENDERING_OPTIONS 14
                  */
                 // sub chunk header size + sub chunk data size
@@ -1236,6 +1239,10 @@ uint32_t chunk_v6_read_shape(Stream *s,
         shape_set_pivot(*shape, pivot.x, pivot.y, pivot.z, false);
     } else {
         shape_reset_pivot_to_center(*shape);
+    }
+
+    if (name != NULL) {
+        transform_set_name(shape_get_root_transform(*shape), name);
     }
 
     if (hasCustomCollisionBox) {
@@ -1435,6 +1442,12 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                                                            &shapePaletteData,
                                                            &paletteMapping);
 
+    const char *name = transform_get_name(shape_get_root_transform(shape));
+    uint8_t nameLen = 0;
+    if (name != NULL) {
+        nameLen = (uint8_t)strlen(name);
+    }
+
     // prepare buffer with shape chunk uncompressed data
 
     // shape sub-chunks size
@@ -1448,6 +1461,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t shapeLocalTransformSize = sizeof(LocalTransform);
     uint32_t shapeBlocksSize = blockCount * sizeof(uint8_t);
     uint32_t shapeLightingSize = blockCount * sizeof(VERTEX_LIGHT_STRUCT_T);
+    uint32_t nameLenSize = sizeof(uint8_t);
 
     // Point positions sub-chunks collective size /!\ the name length can vary
     // TODO store this in a list to avoid recomputing it later
@@ -1509,7 +1523,8 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                         (isHidden == 1 ? subheaderSize + objectIsHiddenSelfSize : 0) +
                         shapePointPositionsCount * subheaderSize + shapePointPositionsSize +
                         shapePointRotationsCount * subheaderSize + shapePointRotationsSize +
-                        (hasLighting ? subheaderSize + shapeLightingSize : 0);
+                        (hasLighting ? subheaderSize + shapeLightingSize : 0) +
+                        (nameLen > 0 ? subheaderSize + nameLenSize + nameLen : 0);
 
     *uncompressedData = malloc(*uncompressedSize);
     if (*uncompressedData == NULL) {
@@ -1761,6 +1776,18 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                 }
             }
         }
+    }
+
+    if (nameLen > 0) {
+        const uint8_t chunkIdName = P3S_CHUNK_ID_SHAPE_NAME;
+        memcpy(cursor, &chunkIdName, sizeof(uint8_t));
+        cursor = (void *)((uint8_t *)cursor + 1);
+
+        memcpy(cursor, &nameLen, sizeof(uint8_t));
+        cursor = (void *)((uint8_t *)cursor + 1);
+
+        memcpy(cursor, name, nameLen * sizeof(char));
+        cursor = (void *)((uint8_t *)cursor + nameLen);
     }
 
     return true;
