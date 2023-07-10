@@ -1445,7 +1445,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     const char *name = transform_get_name(shape_get_root_transform(shape));
     uint8_t nameLen = 0;
     if (name != NULL) {
-        nameLen = (uint8_t) strlen(name);
+        nameLen = (uint8_t)strlen(name);
     }
 
     // prepare buffer with shape chunk uncompressed data
