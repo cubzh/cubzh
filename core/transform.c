@@ -498,20 +498,21 @@ uint8_t transform_get_underlying_ptr_type(const Transform *t) {
     return t->ptrType;
 }
 
-void transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst) {
+bool transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst) {
     DoublyLinkedListNode *n = transform_get_children_iterator(t);
     Transform *child = NULL;
     while (n != NULL) {
         child = (Transform *)doubly_linked_list_node_pointer(n);
         if (deepFirst) {
-            transform_recurse(child, f, ptr, deepFirst);
-            f(child, ptr);
+            if (transform_recurse(child, f, ptr, deepFirst) || f(child, ptr))
+                return true;
         } else {
-            f(child, ptr);
-            transform_recurse(child, f, ptr, deepFirst);
+            if (f(child, ptr) || transform_recurse(child, f, ptr, deepFirst))
+                return true;
         }
         n = doubly_linked_list_node_next(n);
     }
+    return false;
 }
 
 bool transform_is_hidden_branch(Transform *t) {

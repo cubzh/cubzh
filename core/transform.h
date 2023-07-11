@@ -70,7 +70,7 @@ typedef enum {
     QuadTransform
 } TransformType;
 
-typedef void (*pointer_transform_recurse_func)(Transform *t, void *ptr);
+typedef bool (*pointer_transform_recurse_func)(Transform *t, void *ptr);
 typedef Transform **Transform_Array;
 
 /// MARK: - Lifecycle -
@@ -119,7 +119,7 @@ void *transform_get_ptr(Transform *const t);
 void transform_set_type(Transform *t, TransformType type);
 TransformType transform_get_type(const Transform *t);
 uint8_t transform_get_underlying_ptr_type(const Transform *t);
-void transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst);
+bool transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst);
 bool transform_is_hidden_branch(Transform *t);
 void transform_set_hidden_branch(Transform *t, bool value);
 bool transform_is_hidden_self(Transform *t);
