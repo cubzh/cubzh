@@ -181,17 +181,19 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 #endif
 }
 
-void _scene_shapes_iterator_func(Transform *t, void *ptr) {
+bool _scene_shapes_iterator_func(Transform *t, void *ptr) {
     if (transform_get_type(t) == ShapeTransform) {
         doubly_linked_list_push_last((DoublyLinkedList *)ptr, (Shape *)transform_get_ptr(t));
     }
+    return false;
 }
 
-void _scene_standalone_refresh_func(Transform *t, void *ptr) {
+bool _scene_standalone_refresh_func(Transform *t, void *ptr) {
     if (transform_get_type(t) == ShapeTransform) {
         shape_apply_current_transaction(transform_utils_get_shape(t), true);
     }
     transform_refresh(t, true, false);
+    return false;
 }
 
 bool _scene_cast_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2) {
