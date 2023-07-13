@@ -172,6 +172,8 @@ typedef enum {
     InputKeyZ, // 116
     InputSpace,
 
+    InputISOSection, // AZERTY macOS: kVK_ISO_Section
+
     InputCount // not an input, used to get max value
 } Input;
 
