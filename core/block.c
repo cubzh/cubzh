@@ -60,7 +60,7 @@ bool block_is_solid(const Block *const block) {
     return block != NULL && block->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK;
 }
 
-bool block_is_opaque(Block *block, const ColorPalette *palette) {
+bool block_is_opaque(const Block *block, const ColorPalette *palette) {
     return block_is_solid(block) &&
            color_palette_is_transparent(palette, block->colorIndex) == false;
 }

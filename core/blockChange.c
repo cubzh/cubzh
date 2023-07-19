@@ -13,7 +13,7 @@
 typedef struct _BlockChange {
     // a block is used here in order to allow shape_get_block to return a pending block,
     // it won't be used inside shape and will be freed by transaction_free
-    Block *block;         // 8 bytes
+    Block block;
     SHAPE_COORDS_INT_T x; // 2 bytes
     SHAPE_COORDS_INT_T y; // 2 bytes
     SHAPE_COORDS_INT_T z; // 2 bytes
@@ -30,7 +30,7 @@ BlockChange *blockChange_new(const SHAPE_COLOR_INDEX_INT_T colorIndex,
     if (bc == NULL) {
         return NULL;
     }
-    bc->block = block_new_with_color(colorIndex);
+    bc->block.colorIndex = colorIndex;
     bc->previousColor = SHAPE_COLOR_INDEX_AIR_BLOCK;
     bc->x = x;
     bc->y = y;
@@ -39,9 +39,6 @@ BlockChange *blockChange_new(const SHAPE_COLOR_INDEX_INT_T colorIndex,
 }
 
 void blockChange_free(BlockChange *const bc) {
-    if (bc != NULL) {
-        block_free(bc->block);
-    }
     free(bc);
 }
 
@@ -51,12 +48,12 @@ void blockChange_freeFunc(void *bc) {
 
 void blockChange_amend(BlockChange *const bc, const SHAPE_COLOR_INDEX_INT_T colorIndex) {
     vx_assert(bc != NULL);
-    bc->block->colorIndex = colorIndex;
+    bc->block.colorIndex = colorIndex;
 }
 
-Block *blockChange_getBlock(const BlockChange *const bc) {
+const Block *blockChange_getBlock(const BlockChange *const bc) {
     vx_assert(bc != NULL);
-    return bc->block;
+    return &(bc->block);
 }
 
 void blockChange_getXYZ(const BlockChange *const bc,

@@ -334,7 +334,7 @@ void test_shape_addblock_1(void) {
     SHAPE_COLOR_INDEX_INT_T COLOR2 = 0;
     SHAPE_COLOR_INDEX_INT_T COLOR3 = 0;
     bool ok = false;
-    Block *b = NULL;
+    const Block *b = NULL;
 
     Scene *sc = scene_new();
     TEST_ASSERT(sc != NULL);
@@ -433,7 +433,7 @@ void test_shape_addblock_2(void) {
     SHAPE_COLOR_INDEX_INT_T COLOR2 = 0;
     SHAPE_COLOR_INDEX_INT_T COLOR3 = 0;
     bool ok = false;
-    Block *b = NULL;
+    const Block *b = NULL;
 
     Scene *sc = scene_new();
     TEST_ASSERT(sc != NULL);
@@ -524,7 +524,7 @@ void test_shape_addblock_3(void) {
     const SHAPE_COLOR_INDEX_INT_T COLOR2 = 43;
     const SHAPE_COLOR_INDEX_INT_T COLOR3 = 44;
     bool ok = false;
-    Block *b = NULL;
+    const Block *b = NULL;
 
     Scene *sc = scene_new();
     TEST_CHECK(sc != NULL);

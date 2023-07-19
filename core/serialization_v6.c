@@ -1396,7 +1396,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         free(*uncompressedData);
     }
 
-    Block *block = NULL;
+    const Block *block = NULL;
     MapStringFloat3Iterator *it = NULL;
     int3 shapeSize;
 

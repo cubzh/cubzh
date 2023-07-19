@@ -139,6 +139,9 @@
     <ClCompile Include="..\..\weakptr.c">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\mutex.c">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\acutest.h">
@@ -368,6 +371,9 @@
     </ClInclude>
     <ClInclude Include="..\test_vertexbuffer.h">
       <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mutex.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

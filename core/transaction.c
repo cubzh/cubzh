@@ -79,10 +79,10 @@ void transaction_free(Transaction *const tr) {
     free(tr);
 }
 
-Block *transaction_getCurrentBlockAt(const Transaction *const tr,
-                                     const SHAPE_COORDS_INT_T x,
-                                     const SHAPE_COORDS_INT_T y,
-                                     const SHAPE_COORDS_INT_T z) {
+const Block *transaction_getCurrentBlockAt(const Transaction *const tr,
+                                           const SHAPE_COORDS_INT_T x,
+                                           const SHAPE_COORDS_INT_T y,
+                                           const SHAPE_COORDS_INT_T z) {
     vx_assert(tr != NULL);
     vx_assert(tr->index3D != NULL);
 
@@ -92,9 +92,7 @@ Block *transaction_getCurrentBlockAt(const Transaction *const tr,
         return NULL;
     }
 
-    BlockChange *bc = (BlockChange *)data;
-
-    return blockChange_getBlock(bc);
+    return blockChange_getBlock((BlockChange *)data);
 }
 
 bool transaction_addBlock(Transaction *const tr,
@@ -118,7 +116,12 @@ bool transaction_addBlock(Transaction *const tr,
 
         // this updates index3d iterator's internal list, remove it to push it again
         // after transaction cursor
+#ifdef DEBUG
+        void *ptr = index3d_remove(tr->index3D, x, y, z, tr->iterator);
+        vx_assert(ptr == data);
+#else
         index3d_remove(tr->index3D, x, y, z, tr->iterator);
+#endif
     }
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 
@@ -175,7 +178,12 @@ void transaction_removeBlock(const Transaction *const tr,
 
         // this updates index3d iterator's internal list, remove it to push it again
         // after transaction cursor
+#ifdef DEBUG
+        void *ptr = index3d_remove(tr->index3D, x, y, z, tr->iterator);
+        vx_assert(ptr == data);
+#else
         index3d_remove(tr->index3D, x, y, z, tr->iterator);
+#endif
     }
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 }
@@ -202,7 +210,12 @@ void transaction_replaceBlock(const Transaction *const tr,
 
         // this updates index3d iterator's internal list, remove it to push it again
         // after transaction cursor
+#ifdef DEBUG
+        void *ptr = index3d_remove(tr->index3D, x, y, z, tr->iterator);
+        vx_assert(ptr == data);
+#else
         index3d_remove(tr->index3D, x, y, z, tr->iterator);
+#endif
     }
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 }

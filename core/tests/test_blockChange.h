@@ -17,7 +17,7 @@
 void test_blockChange_get(void) {
     BlockChange *BlockA = blockChange_new(255, 0, 0, 0);
     BlockChange *BlockB = blockChange_new(0, 3, 5, 2);
-    Block *blockCheck = NULL;
+    const Block *blockCheck = NULL;
     SHAPE_COORDS_INT_T coordsCheckX = 0;
     SHAPE_COORDS_INT_T coordsCheckY = 0;
     SHAPE_COORDS_INT_T coordsCheckZ = 0;
@@ -48,7 +48,7 @@ void test_blockChange_amend(void) {
     BlockChange *BlockC = blockChange_new(0, 0, 0, 0);
 
     blockChange_amend(BlockC, 35);
-    Block *blockCheck = blockChange_getBlock(BlockC);
+    const Block *blockCheck = blockChange_getBlock(BlockC);
     TEST_CHECK(blockCheck->colorIndex == 35);
     blockChange_amend(BlockC, 0);
     blockCheck = blockChange_getBlock(BlockC);
