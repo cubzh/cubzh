@@ -114,10 +114,10 @@ void shape_set_palette(Shape *shape, ColorPalette *palette);
 
 /// Gets the block in model OR transactions
 const Block *shape_get_block(const Shape *const shape,
-                       SHAPE_COORDS_INT_T x,
-                       SHAPE_COORDS_INT_T y,
-                       SHAPE_COORDS_INT_T z,
-                       const bool luaCoords);
+                             SHAPE_COORDS_INT_T x,
+                             SHAPE_COORDS_INT_T y,
+                             SHAPE_COORDS_INT_T z,
+                             const bool luaCoords);
 /// Gets the block in model at the time of calling
 Block *shape_get_block_immediate(const Shape *const shape,
                                  SHAPE_COORDS_INT_T x,

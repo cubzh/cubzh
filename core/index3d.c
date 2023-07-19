@@ -15,7 +15,7 @@
 #define INDEX_NODE_SIZE 64
 #define INDEX_NODE_BITWISE_MODULO 63 // INDEX_NODE_SIZE - 1
 // the extra slot is used to go from x > y and y > z or store the actual pointer
-#define INDEX_NODE_ARRAY_SIZE 65 // INDEX_NODE_SIZE + 1
+#define INDEX_NODE_ARRAY_SIZE 65           // INDEX_NODE_SIZE + 1
 #define INDEX_NODE_ARRAY_SIZE_MINUS_ONE 64 // INDEX_NODE_ARRAY_SIZE_MINUS_ONE
 #define INDEX_DIVIDE_BYTES 6
 

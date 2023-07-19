@@ -49,6 +49,7 @@
     <ClInclude Include="..\..\magicavoxel.h" />
     <ClInclude Include="..\..\map_string_float3.h" />
     <ClInclude Include="..\..\matrix4x4.h" />
+    <ClInclude Include="..\..\mutex.h" />
     <ClInclude Include="..\..\octree.h" />
     <ClInclude Include="..\..\quaternion.h" />
     <ClInclude Include="..\..\ray.h" />
@@ -126,6 +127,7 @@
     <ClCompile Include="..\..\magicavoxel.c" />
     <ClCompile Include="..\..\map_string_float3.c" />
     <ClCompile Include="..\..\matrix4x4.c" />
+    <ClCompile Include="..\..\mutex.c" />
     <ClCompile Include="..\..\octree.c" />
     <ClCompile Include="..\..\quaternion.c" />
     <ClCompile Include="..\..\ray.c" />
@@ -232,7 +234,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__VX_PLATFORM_WINDOWS;DEBUG;_DEBUG;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\..\..\core;..\..\..\core\tests;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
@@ -249,7 +251,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__VX_PLATFORM_WINDOWS;NDEBUG;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\..\..\core;..\..\..\core\tests;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc11</LanguageStandard_C>

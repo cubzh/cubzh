@@ -847,7 +847,7 @@ size_t octree_get_dimension(const Octree *octree) {
 }
 
 uint64_t octree_get_hash(const Octree *octree, uint64_t crc) {
-    return crc32(crc, octree->elements, (uInt)octree->elements_size_in_memory);
+    return crc32((uLong)crc, octree->elements, (uInt)octree->elements_size_in_memory);
 }
 
 // MARK: Octree iterator

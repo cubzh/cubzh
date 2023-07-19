@@ -80,9 +80,9 @@ void transaction_free(Transaction *const tr) {
 }
 
 const Block *transaction_getCurrentBlockAt(const Transaction *const tr,
-                                     const SHAPE_COORDS_INT_T x,
-                                     const SHAPE_COORDS_INT_T y,
-                                     const SHAPE_COORDS_INT_T z) {
+                                           const SHAPE_COORDS_INT_T x,
+                                           const SHAPE_COORDS_INT_T y,
+                                           const SHAPE_COORDS_INT_T z) {
     vx_assert(tr != NULL);
     vx_assert(tr->index3D != NULL);
 
@@ -104,7 +104,7 @@ bool transaction_addBlock(Transaction *const tr,
     vx_assert(tr->index3D != NULL);
 
     void *data = index3d_get(tr->index3D, x, y, z);
-    
+
     BlockChange *bc = NULL;
     if (data == NULL) { // index doesn't contain a BlockChange for those coords
 

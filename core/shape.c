@@ -1735,7 +1735,7 @@ void shape_make_space(Shape *const shape,
     // shape->offset.z);
 
     if (shape->octree == NULL) {
-        cclog_error("shape_make_space not implemented for shape with no octree yet.");
+        cclog_warning("shape_make_space not implemented for shape with no octree yet.");
         return;
     }
 
