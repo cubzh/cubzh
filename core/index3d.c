@@ -13,9 +13,10 @@
 
 // has to be a power of two
 #define INDEX_NODE_SIZE 64
-#define INDEX_NODE_BITWISE_MODULO (INDEX_NODE_SIZE - 1)
+#define INDEX_NODE_BITWISE_MODULO 63 // INDEX_NODE_SIZE - 1
 // the extra slot is used to go from x > y and y > z or store the actual pointer
-#define INDEX_NODE_ARRAY_SIZE (INDEX_NODE_SIZE + 1)
+#define INDEX_NODE_ARRAY_SIZE 65 // INDEX_NODE_SIZE + 1
+#define INDEX_NODE_ARRAY_SIZE_MINUS_ONE 64 // INDEX_NODE_ARRAY_SIZE_MINUS_ONE
 #define INDEX_DIVIDE_BYTES 6
 
 struct _Index3D {
@@ -33,7 +34,7 @@ struct _Index3DIterator {
 
 static void **_new_node(void) {
     void **arr = (void **)malloc(INDEX_NODE_ARRAY_SIZE * sizeof(void *));
-    for (int i = 0; i < INDEX_NODE_ARRAY_SIZE; i++) {
+    for (int i = 0; i < INDEX_NODE_ARRAY_SIZE; ++i) {
         arr[i] = NULL;
     }
     return arr;
@@ -57,7 +58,7 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
     while (1) {
         // found, go to y
         if (quotient == 0 && modulo == 0) {
-            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE - 1];
+            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
             if (currentNode == NULL) {
                 // not found
                 return NULL;
@@ -90,7 +91,7 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
     while (1) {
         // found, go to z
         if (quotient == 0 && modulo == 0) {
-            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE - 1];
+            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
             if (currentNode == NULL) {
                 // not found
                 return NULL;
@@ -124,7 +125,7 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
         // found!!!!
         if (quotient == 0 && modulo == 0) {
             return doubly_linked_list_node_pointer(
-                (const DoublyLinkedListNode *)currentNode[INDEX_NODE_ARRAY_SIZE - 1]);
+                (const DoublyLinkedListNode *)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE]);
         }
 
         currentNode = (void **)currentNode[modulo];
@@ -168,7 +169,7 @@ void *index3d_remove(Index3D *index,
     while (1) {
         // found, go to y
         if (quotient == 0 && modulo == 0) {
-            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE - 1];
+            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
             if (currentNode == NULL) {
                 // not found
                 return NULL;
@@ -201,7 +202,7 @@ void *index3d_remove(Index3D *index,
     while (1) {
         // found, go to z
         if (quotient == 0 && modulo == 0) {
-            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE - 1];
+            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
             if (currentNode == NULL) {
                 // not found
                 return NULL;
@@ -236,8 +237,8 @@ void *index3d_remove(Index3D *index,
         if (quotient == 0 && modulo == 0) {
             // Note: maybe the node itself can be destroyed if contains nothing
             // else, but it's good enough for now.
-            void *node = currentNode[INDEX_NODE_ARRAY_SIZE - 1];
-            currentNode[INDEX_NODE_ARRAY_SIZE - 1] = NULL;
+            void *node = currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
+            currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE] = NULL;
 
             // optionally maintain ongoing iterator, if at node being removed
             if (it != NULL && it->current == node) {
@@ -292,10 +293,10 @@ void index3d_insert(Index3D *index,
         // printf("x -- q: %u - m: %u\n", quotient, modulo);
         // found, go to y
         if (quotient == 0 && modulo == 0) {
-            if (currentNode[INDEX_NODE_ARRAY_SIZE - 1] == NULL) {
-                currentNode[INDEX_NODE_ARRAY_SIZE - 1] = _new_node();
+            if (currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE] == NULL) {
+                currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE] = _new_node();
             }
-            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE - 1];
+            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
             break;
         }
 
@@ -323,10 +324,10 @@ void index3d_insert(Index3D *index,
         // printf("y -- q: %u - m: %u\n", quotient, modulo);
         // found, go to z
         if (quotient == 0 && modulo == 0) {
-            if (currentNode[INDEX_NODE_ARRAY_SIZE - 1] == NULL) {
-                currentNode[INDEX_NODE_ARRAY_SIZE - 1] = _new_node();
+            if (currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE] == NULL) {
+                currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE] = _new_node();
             }
-            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE - 1];
+            currentNode = (void **)currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
             break;
         }
 
@@ -355,7 +356,7 @@ void index3d_insert(Index3D *index,
         // found, go to z
         if (quotient == 0 && modulo == 0) {
             DoublyLinkedListNode *node = doubly_linked_list_push_last(index->list, ptr);
-            currentNode[INDEX_NODE_ARRAY_SIZE - 1] = node;
+            currentNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE] = node;
 
             // optionally maintain ongoing iterator, if at the end
             if (it != NULL && it->current == NULL) {
@@ -397,9 +398,9 @@ void index3d_flush_node(Index3D *index,
     if (node == NULL)
         return;
 
-    int lastIndex = INDEX_NODE_ARRAY_SIZE - 1;
+    int lastIndex = INDEX_NODE_ARRAY_SIZE_MINUS_ONE;
 
-    for (int i = 0; i < lastIndex; i++) {
+    for (int i = 0; i < lastIndex; ++i) {
         if (node[i] != NULL) {
             index3d_flush_node(index, (void **)(node[i]), dimension, freePtr);
             free(node[i]);

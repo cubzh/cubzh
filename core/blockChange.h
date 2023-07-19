@@ -31,7 +31,7 @@ void blockChange_freeFunc(void *bc);
 void blockChange_amend(BlockChange *const bc, const SHAPE_COLOR_INDEX_INT_T colorIndex);
 
 ///
-Block *blockChange_getBlock(const BlockChange *const bc);
+const Block *blockChange_getBlock(const BlockChange *const bc);
 
 ///
 void blockChange_getXYZ(const BlockChange *const bc,

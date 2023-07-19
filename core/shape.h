@@ -113,7 +113,7 @@ ColorPalette *shape_get_palette(const Shape *shape);
 void shape_set_palette(Shape *shape, ColorPalette *palette);
 
 /// Gets the block in model OR transactions
-Block *shape_get_block(const Shape *const shape,
+const Block *shape_get_block(const Shape *const shape,
                        SHAPE_COORDS_INT_T x,
                        SHAPE_COORDS_INT_T y,
                        SHAPE_COORDS_INT_T z,

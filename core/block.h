@@ -46,7 +46,7 @@ SHAPE_COLOR_INDEX_INT_T block_get_color_index(const Block *block);
 bool block_is_solid(const Block *const block);
 
 // a solid non-transparent block is an opaque block
-bool block_is_opaque(Block *block, const ColorPalette *palette);
+bool block_is_opaque(const Block *block, const ColorPalette *palette);
 
 // a solid block w/ alpha < 255 is a transparent block
 bool block_is_transparent(Block *block, const ColorPalette *palette);

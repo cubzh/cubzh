@@ -22,7 +22,7 @@ void transaction_free(Transaction *const tr);
 /// x, y, z are Lua coordinates.
 /// @returns changed block ptr or NULL if there is no block change for given coordinates.
 /// The returned Block is owned by the transaction.
-Block *transaction_getCurrentBlockAt(const Transaction *const tr,
+const Block *transaction_getCurrentBlockAt(const Transaction *const tr,
                                      const SHAPE_COORDS_INT_T x,
                                      const SHAPE_COORDS_INT_T y,
                                      const SHAPE_COORDS_INT_T z);

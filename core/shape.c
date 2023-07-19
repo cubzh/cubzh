@@ -216,7 +216,7 @@ void _light_removal_processNeighbor(Shape *s,
                                     uint8_t srgb,
                                     bool equals,
                                     SHAPE_COORDS_INT3_T *neighborPos,
-                                    Block *neighbor,
+                                    const Block *neighbor,
                                     LightNodeQueue *lightQueue,
                                     LightRemovalNodeQueue *lightRemovalQueue);
 /// insert light values and if necessary (lightQueue != NULL) add it to the light propagation queue
@@ -235,7 +235,7 @@ void _light_block_propagate(Shape *s,
                             SHAPE_COORDS_INT3_T *bbMax,
                             VERTEX_LIGHT_STRUCT_T current,
                             SHAPE_COORDS_INT3_T *neighborPos,
-                            Block *neighbor,
+                            const Block *neighbor,
                             bool air,
                             bool transparent,
                             LightNodeQueue *lightQueue,
@@ -324,7 +324,9 @@ Shape *shape_make(void) {
 
     s->id = getValidShapeId();
 
-    s->maxWidth = s->maxHeight = s->maxDepth = 0;
+    s->maxWidth = 0;
+    s->maxHeight = 0;
+    s->maxDepth = 0;
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->innerTransparentFaces = true;
@@ -401,7 +403,7 @@ Shape *shape_make_copy(Shape *origin) {
         s->maxDepth = origin->maxDepth;
     }
 
-    Block *b = NULL;
+    const Block *b = NULL;
     for (SHAPE_COORDS_INT_T x = 0; x <= origin->maxWidth; x += 1) {
         for (SHAPE_COORDS_INT_T y = 0; y <= origin->maxHeight; y += 1) {
             for (SHAPE_COORDS_INT_T z = 0; z <= origin->maxDepth; z += 1) {
@@ -1206,7 +1208,7 @@ bool shape_remove_block(Shape *shape,
             if (shape->octree != NULL) {
                 Block *air = block_new_air();
                 octree_remove_element(shape->octree, (size_t)x, (size_t)y, (size_t)z, air);
-                block_free((Block *)air);
+                block_free(air);
             }
 
             if (shape->lightingData != NULL) {
@@ -1310,12 +1312,12 @@ void shape_set_palette(Shape *shape, ColorPalette *palette) {
     shape->palette = palette;
 }
 
-Block *shape_get_block(const Shape *const shape,
-                       SHAPE_COORDS_INT_T x,
-                       SHAPE_COORDS_INT_T y,
-                       SHAPE_COORDS_INT_T z,
-                       const bool luaCoords) {
-    Block *b = NULL;
+const Block *shape_get_block(const Shape *const shape,
+                             SHAPE_COORDS_INT_T x,
+                             SHAPE_COORDS_INT_T y,
+                             SHAPE_COORDS_INT_T z,
+                             const bool luaCoords) {
+    const Block *b = NULL;
 
     // look for the block in the current transaction
     if (shape->pendingTransaction != NULL) {
@@ -1968,7 +1970,7 @@ void shape_make_space(Shape *const shape,
 
     if (chunks != NULL) {
         // copy with offsets to blocks position
-        Block *block = NULL;
+        const Block *block = NULL;
         Block *block_copy = NULL;
         SHAPE_COORDS_INT_T ox, oy, oz;
         Chunk *chunk = NULL;
@@ -3318,7 +3320,7 @@ void shape_compute_baked_lighting_added_block(Shape *s,
     light_removal_node_queue_push(lightRemovalQueue, &coords, existingLight, 15, 255);
 
     // check in the vicinity for any emissive block that would be affected by the added block
-    Block *block = NULL;
+    const Block *block = NULL;
     VERTEX_LIGHT_STRUCT_T light;
     for (SHAPE_COORDS_INT_T xo = -1; xo <= 1; xo++) {
         for (SHAPE_COORDS_INT_T yo = -1; yo <= 1; yo++) {
@@ -3965,7 +3967,7 @@ Octree *_new_octree(const SHAPE_COORDS_INT_T w,
             break;
     }
 
-    block_free((Block *)air);
+    block_free(air);
 
     return o;
 }
@@ -4039,7 +4041,7 @@ void _light_removal_processNeighbor(Shape *s,
                                     uint8_t srgb,
                                     bool equals,
                                     SHAPE_COORDS_INT3_T *neighborPos,
-                                    Block *neighbor,
+                                    const Block *neighbor,
                                     LightNodeQueue *lightQueue,
                                     LightRemovalNodeQueue *lightRemovalQueue) {
 
@@ -4189,7 +4191,7 @@ void _light_enqueue_ambient_and_block_sources(Shape *s,
     }
 
     // Block sources: enqueue all emissive blocks (and air if requested) around the given area
-    Block *b;
+    const Block *b;
     for (SHAPE_COORDS_INT_T x = from.x - 1; x <= to.x; ++x) {
         for (SHAPE_COORDS_INT_T y = from.y - 1; y <= to.y; ++y) {
             for (SHAPE_COORDS_INT_T z = from.z - 1; z <= to.z; ++z) {
@@ -4223,7 +4225,7 @@ void _light_block_propagate(Shape *s,
                             SHAPE_COORDS_INT3_T *bbMax,
                             VERTEX_LIGHT_STRUCT_T current,
                             SHAPE_COORDS_INT3_T *neighborPos,
-                            Block *neighbor,
+                            const Block *neighbor,
                             bool air,
                             bool transparent,
                             LightNodeQueue *lightQueue,
@@ -4329,7 +4331,8 @@ void _light_propagate(Shape *s,
     _lighting_set_dirty(&min, &max, srcX, srcY, srcZ);
 
     SHAPE_COORDS_INT3_T pos, insertPos;
-    Block *current = NULL, *neighbor = NULL;
+    const Block *current = NULL;
+    const Block *neighbor = NULL;
     VERTEX_LIGHT_STRUCT_T currentLight;
     bool isCurrentAir, isCurrentOpen, isCurrentTransparent, isNeighborAir, isNeighborTransparent;
     LightNode *n = light_node_queue_pop(lightQueue);
@@ -4615,7 +4618,7 @@ void _light_removal(Shape *s,
     VERTEX_LIGHT_STRUCT_T light;
     uint8_t srgb;
     SHAPE_COLOR_INDEX_INT_T blockID;
-    Block *neighbor = NULL;
+    const Block *neighbor = NULL;
 
     SHAPE_COORDS_INT3_T pos, insertPos;
     LightRemovalNode *rn = light_removal_node_queue_pop(lightRemovalQueue);
@@ -5000,8 +5003,10 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
     SHAPE_COORDS_INT_T x, y, z;
     bool shapeShrinkNeeded = false;
 
+    BlockChange *bc;
+    const Block *b;
     while (index3d_iterator_pointer(it) != NULL) {
-        BlockChange *bc = (BlockChange *)index3d_iterator_pointer(it);
+        bc = (BlockChange *)index3d_iterator_pointer(it);
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
@@ -5010,7 +5015,7 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
         // an issue since transactions can be applied from a line-by-line refresh in Lua
         // (eg. shape.Width), meaning part of an amended transaction could've been applied
         // already. As a result, we'll always use the CURRENT block
-        const Block *b = shape_get_block_immediate(sh, x, y, z, true);
+        b = shape_get_block_immediate(sh, x, y, z, true);
         before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
         blockChange_set_previous_color(bc, before);
 
@@ -5065,12 +5070,14 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
     bool shapeShrinkNeeded = false;
 
     // loop on all the BlockChanges and revert them
+    BlockChange *bc;
+    const Block *b;
     while (index3d_iterator_pointer(it) != NULL) {
-        BlockChange *bc = (BlockChange *)index3d_iterator_pointer(it);
+        bc = (BlockChange *)index3d_iterator_pointer(it);
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
-        const Block *b = shape_get_block_immediate(sh, x, y, z, true);
+        b = shape_get_block_immediate(sh, x, y, z, true);
         before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
 
         after = blockChange_get_previous_color(bc);
