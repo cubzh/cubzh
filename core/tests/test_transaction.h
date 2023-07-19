@@ -113,8 +113,8 @@ void test_transaction_getIndex3DIterator(void) {
     Transaction *t = transaction_new();
     transaction_addBlock(t, 1, 2, 3, 4);
     const Index3DIterator *it = transaction_getIndex3DIterator(t);
-    const BlockChange *bc = (const BlockChange*)index3d_iterator_pointer(it);
-    
+    const BlockChange *bc = (const BlockChange *)index3d_iterator_pointer(it);
+
     TEST_CHECK(bc != NULL);
     transaction_free(t);
 }
