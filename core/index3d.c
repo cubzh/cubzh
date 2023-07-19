@@ -42,21 +42,15 @@ static void **_new_node(void) {
 void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const int32_t z) {
 
     // only use unsigned integers for bitwise operations:
-    static uint32_t ux;
-    static uint32_t uy;
-    static uint32_t uz;
-
-    ux = (uint32_t)x;
-    uy = (uint32_t)y;
-    uz = (uint32_t)z;
+    uint32_t ux = (uint32_t)x;
+    uint32_t uy = (uint32_t)y;
+    uint32_t uz = (uint32_t)z;
 
     //    static void** currentNode;
     void **currentNode = index->topLevelNode;
 
-    static uint32_t modulo;
-    static uint32_t quotient;
-    modulo = ux & INDEX_NODE_BITWISE_MODULO;
-    quotient = ux >> INDEX_DIVIDE_BYTES;
+    uint32_t modulo = ux & INDEX_NODE_BITWISE_MODULO;
+    uint32_t quotient = ux >> INDEX_DIVIDE_BYTES;
 
     // look for x
 
