@@ -2723,20 +2723,6 @@ bool shape_draw_inner_transparent_faces(const Shape *s) {
     return s->innerTransparentFaces;
 }
 
-void shape_set_shadow_decal(Shape *s, const bool toggle) {
-    if (s == NULL) {
-        return;
-    }
-    s->shadowDecal = toggle;
-}
-
-bool shape_has_shadow_decal(const Shape *s) {
-    if (s == NULL) {
-        return false;
-    }
-    return s->shadowDecal;
-}
-
 void shape_set_shadow(Shape *s, const bool toggle) {
     if (s == NULL) {
         return;

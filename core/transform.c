@@ -101,6 +101,8 @@ struct _Transform {
     bool animationsEnabled;
 
     char pad[7];
+
+    uint8_t shadowDecalSize;
 };
 
 // MARK: - Private functions' prototypes -
@@ -182,6 +184,7 @@ Transform *transform_make(TransformType type) {
     t->isInScene = false;
     t->rigidBody = NULL;
     t->name = NULL;
+    t->shadowDecalSize = 0;
 
     return t;
 }
@@ -238,6 +241,7 @@ void transform_flush(Transform *t) {
     float3_set_zero(&t->position);
     float3_set_one(&t->localScale);
     _transform_remove_from_hierarchy(t, true);
+    t->shadowDecalSize = 0;
     t->dirty = 0;
     // note: keep t->ptr
 }
@@ -560,6 +564,14 @@ void transform_set_name(Transform *t, const char *name) {
         free(t->name);
     }
     t->name = string_new_copy(name);
+}
+
+uint8_t transform_get_shadow_decal(Transform *t) {
+    return t->shadowDecalSize;
+}
+
+void transform_set_shadow_decal(Transform *t, uint8_t size) {
+    t->shadowDecalSize = size;
 }
 
 // MARK: - Scale -
