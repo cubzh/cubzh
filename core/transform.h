@@ -131,8 +131,6 @@ bool transform_is_in_scene(Transform *t);
 void transform_set_is_in_scene(Transform *t, bool value);
 const char *transform_get_name(const Transform *t);
 void transform_set_name(Transform *t, const char *value);
-uint8_t transform_get_shadow_decal(Transform *t);
-void transform_set_shadow_decal(Transform *t, uint8_t size);
 
 /// MARK: - Scale -
 void transform_set_local_scale(Transform *t, const float x, const float y, const float z);
@@ -218,6 +216,8 @@ Transform *transform_utils_get_model_transform(Transform *t);
 // MARK: - Misc. -
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
 bool transform_getAnimationsEnabled(Transform *const t);
+float transform_get_shadow_decal(Transform *t);
+void transform_set_shadow_decal(Transform *t, float size);
 
 // TEMPORARY
 // Needed while `Player` (defined one level above Cubzh Core)
