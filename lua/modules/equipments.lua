@@ -112,28 +112,32 @@ end
 equipments.attachEquipmentToBodyPart = function(self, equipment, bodyPart, options)
     local layer = options.layer or 1
     local isPant = options.isPant or false
-
-    equipment.Physics = PhysicsMode.Disabled
-    equipment:SetParent(bodyPart)
-    equipment.IsUnlit = bodyPart.IsUnlit
-    equipment.Layers = layer
-    equipment.LocalRotation = {0,0,0}
-    local coords = bodyPart:GetPoint("origin").Coords
-    if coords == nil then
-        print("can't get parent coords for equipment")
+    if equipment ~= nil then
+        equipment.Physics = PhysicsMode.Disabled
+        equipment:SetParent(bodyPart)
+        equipment.IsUnlit = bodyPart.IsUnlit
+        equipment.Layers = layer
+        equipment.LocalRotation = {0,0,0}
+        local coords = bodyPart:GetPoint("origin").Coords
+        if coords == nil then
+            print("can't get parent coords for equipment")
+            return
+        end
+        local localPos = bodyPart:BlockToLocal(coords)
+        local origin = Number3(0,0,0)
+        local point = equipment:GetPoint("origin")
+        if point ~= nil then
+            origin = point.Coords
+        end
+        equipment.Pivot = origin
+        equipment.LocalPosition = localPos
+        equipment.Scale = 1
+        if isPant then
+            equipment.Scale = 1.05
+        end
+    else
+        print('the equipment you are trying to attach is nil')
         return
-    end
-    local localPos = bodyPart:BlockToLocal(coords)
-    local origin = Number3(0,0,0)
-    local point = equipment:GetPoint("origin")
-    if point ~= nil then
-        origin = point.Coords
-    end
-    equipment.Pivot = origin
-    equipment.LocalPosition = localPos
-    equipment.Scale = 1
-    if isPant then
-        equipment.Scale = 1.05
     end
  end
 
