@@ -14,6 +14,8 @@
 
 #include "cclog.h"
 #include "config.h"
+#include "filo_list_uint16.h"
+#include "mutex.h"
 #include "scene.h"
 #include "utils.h"
 
@@ -84,6 +86,8 @@ struct _Transform {
     // Transforms are managed with reference counting.
     uint16_t refCount; /* 2 bytes */
 
+    uint16_t id; /* 2 bytes */
+
     // dirty flag per transformation type, use the TRANSFORM_* defines
     // GET a dirty transformation will refresh what is necessary to compute it
     uint8_t dirty; /* 1 byte */
@@ -102,11 +106,17 @@ struct _Transform {
 
     bool animationsEnabled;
 
-    char pad[3];
+    char pad[1];
 };
+
+static Mutex *_IDMutex = NULL;
+static uint16_t _nextID = 1;
+static FiloListUInt16 *_availableIDs = NULL;
 
 // MARK: - Private functions' prototypes -
 
+static uint16_t _transform_get_valid_id(void);
+static void _transform_recycle_id(const uint16_t id);
 static void _transform_set_dirty(Transform *const t, const uint8_t flag);
 static void _transform_reset_dirty(Transform *const t, const uint8_t flag);
 static bool _transform_get_dirty(Transform *const t, const uint8_t flag);
@@ -158,6 +168,7 @@ Transform *transform_make(TransformType type) {
         return NULL;
     }
 
+    t->id = _transform_get_valid_id();
     t->refCount = 1;
     t->ltw = matrix4x4_new_identity();
     t->wtl = matrix4x4_new_identity();
@@ -208,6 +219,21 @@ void transform_assign_get_or_compute_world_collider_function(
 
 Transform *transform_make_default() {
     return transform_make(HierarchyTransform);
+}
+
+void transform_init_thread_safety(void) {
+    if (_IDMutex != NULL) {
+        cclog_error("transform: thread safety initialized more than once");
+        return;
+    }
+    _IDMutex = mutex_new();
+    if (_IDMutex == NULL) {
+        cclog_error("transform: failed to init thread safety");
+    }
+}
+
+uint16_t transform_get_id(const Transform *t) {
+    return t->id;
 }
 
 bool transform_retain(Transform *const t) {
@@ -1008,6 +1034,26 @@ void transform_set_shadow_decal(Transform *t, float size) {
 
 // MARK: - Private functions -
 
+static uint16_t _transform_get_valid_id(void) {
+    uint16_t resultId = 0;
+    mutex_lock(_IDMutex);
+    if (_availableIDs == NULL || filo_list_uint16_pop(_availableIDs, &resultId) == false) {
+        resultId = _nextID;
+        _nextID += 1;
+    }
+    mutex_unlock(_IDMutex);
+    return resultId;
+}
+
+static void _transform_recycle_id(const uint16_t id) {
+    mutex_lock(_IDMutex);
+    if (_availableIDs == NULL) {
+        _availableIDs = filo_list_uint16_new();
+    }
+    filo_list_uint16_push(_availableIDs, id);
+    mutex_unlock(_IDMutex);
+}
+
 static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
     t->dirty |= (flag | TRANSFORM_ANY);
 }
@@ -1425,6 +1471,7 @@ static void _transform_free(Transform *const t) {
 
     weakptr_invalidate(t->wptr);
 
+    _transform_recycle_id(t->id);
     free(t);
 }
 
