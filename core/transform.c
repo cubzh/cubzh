@@ -79,6 +79,8 @@ struct _Transform {
     // optionally set a type to this transform
     TransformType type; /* 4 bytes */
 
+    float shadowDecalSize; /* 4 bytes */
+
     // Transforms are managed with reference counting.
     uint16_t refCount; /* 2 bytes */
 
@@ -100,7 +102,7 @@ struct _Transform {
 
     bool animationsEnabled;
 
-    char pad[7];
+    char pad[3];
 };
 
 // MARK: - Private functions' prototypes -
@@ -182,6 +184,7 @@ Transform *transform_make(TransformType type) {
     t->isInScene = false;
     t->rigidBody = NULL;
     t->name = NULL;
+    t->shadowDecalSize = 0;
 
     return t;
 }
@@ -238,6 +241,7 @@ void transform_flush(Transform *t) {
     float3_set_zero(&t->position);
     float3_set_one(&t->localScale);
     _transform_remove_from_hierarchy(t, true);
+    t->shadowDecalSize = 0;
     t->dirty = 0;
     // note: keep t->ptr
 }
@@ -992,6 +996,14 @@ bool transform_getAnimationsEnabled(Transform *const t) {
         return false;
     }
     return t->animationsEnabled;
+}
+
+float transform_get_shadow_decal(Transform *t) {
+    return t->shadowDecalSize;
+}
+
+void transform_set_shadow_decal(Transform *t, float size) {
+    t->shadowDecalSize = size;
 }
 
 // MARK: - Private functions -

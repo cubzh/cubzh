@@ -216,6 +216,8 @@ Transform *transform_utils_get_model_transform(Transform *t);
 // MARK: - Misc. -
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
 bool transform_getAnimationsEnabled(Transform *const t);
+float transform_get_shadow_decal(Transform *t);
+void transform_set_shadow_decal(Transform *t, float size);
 
 // TEMPORARY
 // Needed while `Player` (defined one level above Cubzh Core)

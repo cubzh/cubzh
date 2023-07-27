@@ -125,10 +125,9 @@ struct _Shape {
     // Whether transparent inner faces between 2 blocks of a different color should be drawn
     bool innerTransparentFaces; // 1 byte
 
-    bool shadowDecal; // 1 byte
-    bool shadow;      // 1 byte
-    bool isUnlit;     // 1 byte
-    uint8_t layers;   // 1 byte
+    bool shadow;    // 1 byte
+    bool isUnlit;   // 1 byte
+    uint8_t layers; // 1 byte
 
     bool isMutable;                        // 1 byte
     bool historyEnabled;                   // 1 byte
@@ -137,7 +136,7 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    // char pad[1];
+    char pad[1];
 };
 
 // --------------------------------------------------
@@ -330,7 +329,6 @@ Shape *shape_make(void) {
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->innerTransparentFaces = true;
-    s->shadowDecal = false;
     s->shadow = true;
     s->isUnlit = false;
     s->layers = 1; // CAMERA_LAYERS_0
@@ -388,7 +386,6 @@ Shape *shape_make_copy(Shape *origin) {
 
     s->drawMode = origin->drawMode;
     s->innerTransparentFaces = origin->innerTransparentFaces;
-    s->shadowDecal = origin->shadowDecal;
     s->isUnlit = origin->isUnlit;
     s->layers = origin->layers;
     s->isMutable = origin->isMutable;
@@ -2721,20 +2718,6 @@ bool shape_draw_inner_transparent_faces(const Shape *s) {
         return false;
     }
     return s->innerTransparentFaces;
-}
-
-void shape_set_shadow_decal(Shape *s, const bool toggle) {
-    if (s == NULL) {
-        return;
-    }
-    s->shadowDecal = toggle;
-}
-
-bool shape_has_shadow_decal(const Shape *s) {
-    if (s == NULL) {
-        return false;
-    }
-    return s->shadowDecal;
 }
 
 void shape_set_shadow(Shape *s, const bool toggle) {
