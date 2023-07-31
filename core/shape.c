@@ -14,9 +14,7 @@
 #include "cclog.h"
 #include "config.h"
 #include "easings.h"
-#include "filo_list_uint16.h"
 #include "history.h"
-#include "mutex.h"
 #include "rigidBody.h"
 #include "scene.h"
 #include "transaction.h"
@@ -105,16 +103,14 @@ struct _Shape {
     // keeping track of total amount of blocks
     size_t nbBlocks;
 
-    // shape's id
-    ShapeId id; // 2 bytes
-    // shape allocated size, going below 0 or past this limit requires a shape resize
-    SHAPE_SIZE_INT_T maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
-
     // octree resize offset, default zero until a resize occurs, is used to convert internal to Lua
     // coords in order to maintain consistent coordinates in a play session
     // /!\ nowhere in Cubzh Core should this be used, it should be used when
     // input/outputting values to Lua
     int3 offset; // 3 * 4 bytes
+
+    // shape allocated size, going below 0 or past this limit requires a shape resize
+    SHAPE_SIZE_INT_T maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
 
     // internal flag used for variable-size VB allocation, see shape_add_vertex_buffer
     uint8_t vbAllocationFlag_opaque;      // 1 byte
@@ -136,28 +132,8 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    char pad[1];
+    char pad[3];
 };
-
-// --------------------------------------------------
-//
-// MARK: - static variables -
-//
-// --------------------------------------------------
-static Mutex *shapeIDMutex = NULL;
-static ShapeId nextShapeId = 1;
-static FiloListUInt16 *availableShapeIds = NULL;
-
-void shape_initThreadSafety(void) {
-    if (shapeIDMutex != NULL) {
-        cclog_error("shape: thread safety initialized more than once");
-        return;
-    }
-    shapeIDMutex = mutex_new();
-    if (shapeIDMutex == NULL) {
-        cclog_error("shape: failed to init thread safety");
-    }
-}
 
 // MARK: - private functions prototypes -
 
@@ -178,12 +154,6 @@ static bool _shape_add_block(Shape *shape,
                              SHAPE_COORDS_INT_T y,
                              SHAPE_COORDS_INT_T z,
                              Block **added_or_existing_block);
-
-/// returns a valid shape id, either a new one or a recycled one
-static ShapeId getValidShapeId(void);
-
-///
-static void recycleShapeId(const ShapeId shapeId);
 
 bool _has_allocated_size(const Shape *s);
 bool _is_out_of_allocated_size(const Shape *s,
@@ -320,8 +290,6 @@ Shape *shape_make(void) {
     s->nbChunks = 0;
     s->nbBlocks = 0;
     s->fragmentedVBs = doubly_linked_list_new();
-
-    s->id = getValidShapeId();
 
     s->maxWidth = 0;
     s->maxHeight = 0;
@@ -792,8 +760,6 @@ void shape_free(Shape *const shape) {
     doubly_linked_list_free(shape->fragmentedVBs);
     shape->fragmentedVBs = NULL;
 
-    const ShapeId shapeId = shape->id;
-
     // free needsDisplay list
     ChunkList *cl = NULL;
     while (shape->needsDisplay != NULL) {
@@ -815,9 +781,6 @@ void shape_free(Shape *const shape) {
     }
 
     free(shape);
-
-    // recycle shape id
-    recycleShapeId(shapeId);
 }
 
 void shape_release(Shape *const shape) {
@@ -827,8 +790,8 @@ void shape_release(Shape *const shape) {
     transform_release(shape->transform);
 }
 
-ShapeId shape_get_id(const Shape *shape) {
-    return shape->id;
+uint16_t shape_get_id(const Shape *shape) {
+    return transform_get_id(shape->transform);
 }
 
 // sets "needs display" to neighbor chunks when updating
@@ -3676,29 +3639,6 @@ static bool _shape_add_block(Shape *shape,
     }
 
     return blockAdded;
-}
-
-///
-static ShapeId getValidShapeId(void) {
-    ShapeId resultId = 0;
-    mutex_lock(shapeIDMutex);
-    if (availableShapeIds == NULL || filo_list_uint16_pop(availableShapeIds, &resultId) == false) {
-        resultId = nextShapeId;
-        nextShapeId += 1;
-    }
-    mutex_unlock(shapeIDMutex);
-    return resultId;
-}
-
-///
-static void recycleShapeId(const ShapeId shapeId) {
-    // if list is nil, then initialize it
-    mutex_lock(shapeIDMutex);
-    if (availableShapeIds == NULL) {
-        availableShapeIds = filo_list_uint16_new();
-    }
-    filo_list_uint16_push(availableShapeIds, shapeId);
-    mutex_unlock(shapeIDMutex);
 }
 
 // MARK: - private functions -

@@ -60,9 +60,6 @@ typedef struct _LoadShapeSettings {
 // subsequent buffer is allocated on-demand with increased capacity, to account for the
 // common case of a scene filled with many small shapes.
 
-/// ShapeId type
-typedef uint16_t ShapeId;
-
 /// Shape draw mode
 typedef uint8_t ShapeDrawMode;
 #define SHAPE_DRAWMODE_DEFAULT 0
@@ -103,7 +100,7 @@ uint16_t shape_retain_count(const Shape *const s);
 /// /!\ Only called by `transform_release` to free shape-specific resources
 void shape_free(Shape *const shape);
 
-ShapeId shape_get_id(const Shape *shape);
+uint16_t shape_get_id(const Shape *shape);
 
 // removes all blocks from shape and resets its transform(s)
 void shape_flush(Shape *shape);

@@ -216,7 +216,7 @@ void test_shape_release(void) {
 // check for coherent id
 void test_shape_get_id(void) {
     const Shape *s = shape_make();
-    const ShapeId id = shape_get_id(s);
+    const uint16_t id = shape_get_id(s);
 
     TEST_CHECK(id < 1000);
 

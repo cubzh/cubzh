@@ -80,6 +80,8 @@ Transform *transform_make_with_ptr(TransformType type,
                                    const uint8_t ptrType,
                                    pointer_free_function ptrFreeFn);
 Transform *transform_make_default(void);
+void transform_init_thread_safety(void);
+uint16_t transform_get_id(const Transform *t);
 /// Increases ref count and returns false if the retain count can't be increased
 bool transform_retain(Transform *const t);
 uint16_t transform_retain_count(const Transform *const t);
