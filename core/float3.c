@@ -463,3 +463,7 @@ bool float3_isZero(const float3 *f3, const float epsilon) {
     return float_isZero(f3->x, epsilon) && float_isZero(f3->y, epsilon) &&
            float_isZero(f3->z, epsilon);
 }
+
+bool float3_is_valid(const float3 *f3) {
+    return float_is_valid(f3->x) && float_is_valid(f3->y) && float_is_valid(f3->z);
+}

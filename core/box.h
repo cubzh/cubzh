@@ -121,6 +121,8 @@ void box_op_merge(const Box *b1, const Box *b2, Box *result);
 
 float box_get_volume(const Box *b);
 
+bool box_is_valid(const Box *b, float epsilon);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

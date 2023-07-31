@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
+
 Box *box_new(void) {
     Box *b = (Box *)malloc(sizeof(Box));
     b->min = float3_zero;
@@ -527,4 +529,15 @@ void box_op_merge(const Box *b1, const Box *b2, Box *result) {
 
 float box_get_volume(const Box *b) {
     return (b->max.x - b->min.x) * (b->max.y - b->min.y) * (b->max.z - b->min.z);
+}
+
+bool box_is_valid(const Box *b, float epsilon) {
+    if (float3_is_valid(&b->min) == false || float3_is_valid(&b->max) == false) {
+        return false;
+    }
+    const float3 size = {b->max.x - b->min.x, b->max.y - b->min.y, b->max.z - b->min.z};
+    if (float3_isZero(&size, epsilon) || float3_is_valid(&size) == false) {
+        return false;
+    }
+    return float_is_valid(size.x * size.y * size.z);
 }

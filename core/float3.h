@@ -119,6 +119,7 @@ void float3_lerp(const float3 *a, const float3 *b, const float t, float3 *res);
 ///
 bool float3_isEqual(const float3 *f3_1, const float3 *f3_2, const float epsilon);
 bool float3_isZero(const float3 *f3, const float epsilon);
+bool float3_is_valid(const float3 *f3);
 
 #ifdef __cplusplus
 } // extern "C"
