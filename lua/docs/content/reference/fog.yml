@@ -15,17 +15,20 @@ properties:
         - code: | 
             -- toggles fog
             Fog.On = not Fog.On
+    
     - name: "Distance"
       type: "number"
       description: |
           Sets [Fog].[Near](#property-near) while maintaining offset between [Fog].[Near](#property-near) & [Fog].[Far](#property-far)
       samples:
         - code: Fog.Distance = 100
+    
     - name: "Near"
       type: "number"
       description: "Distance at which Fog starts, in world units"
       samples:
         - code: Fog.Near = 50
+    
     - name: "Far"
       type: "number"
       description: "Distance at which Fog ends, in world units."
@@ -34,6 +37,11 @@ properties:
         - code: |
             -- both near and far can be set at once this way
             Fog.Near, Fog.Far = 50, 100
+    
+    - name: "Color"
+      type: "Color"
+      description: |
+          Color of the fog, default is RGB `(0, 95, 139)`.
 
     - name: "LightAbsorption"
       type: "number"

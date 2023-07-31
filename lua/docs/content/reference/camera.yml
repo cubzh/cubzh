@@ -243,7 +243,9 @@ functions:
 
     - name: "FitToScreen"
       description: |
-          Fits the given [Shape] or [Box] to the screen.
+          Fits the given [Shape] or [Box] to the screen. This function moves the camera back until the target fits on screen.
+
+          For example, to fit an object at the center of the screen, first have the camera look at the target (`camera.Forward = target.Position - camera.Position`) before calling this function.
 
           Optional parameters:
           - `screenRatio` indicates the percentage of the screen that should be covered by the target.

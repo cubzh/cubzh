@@ -26,3 +26,8 @@ properties:
       type: "boolean"
       description: |
           Displays collision boxes when set to `true`. (`false` by default)
+    
+    - name: "DisplayFPS"
+      type: "boolean"
+      description: |
+          Displays a framerate counter when set to `true`. (`false` by default)

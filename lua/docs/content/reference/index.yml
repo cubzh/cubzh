@@ -44,6 +44,7 @@ blocks:
         - "<a href=\"/reference/screen\">Screen</a>"
         - "<a href=\"/reference/server\">Server</a>"
         - "<a href=\"/reference/shape\">Shape</a>"
+        - "<a href=\"/reference/sky\">Sky</a>"
         - "<a href=\"/reference/text\">Text</a>"
         - "<a href=\"/reference/time\">Time</a>"
         - "<a href=\"/reference/timer\">Timer</a>"
