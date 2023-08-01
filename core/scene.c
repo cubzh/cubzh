@@ -52,7 +52,8 @@ void _scene_add_rigidbody_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *col
 
 void _scene_update_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
     // register awake volume here for new and removed colliders, and for transformations change
-    if (rigidbody_is_enabled(rb) && rigidbody_is_collider_valid(rb)) {
+    if (rigidbody_is_enabled(rb) && rigidbody_is_collider_valid(rb) &&
+        box_is_valid(collider, EPSILON_COLLISION)) {
         // insert valid collider as a new leaf
         if (rigidbody_get_rtree_leaf(rb) == NULL) {
             _scene_add_rigidbody_rtree(sc, rb, t, collider);

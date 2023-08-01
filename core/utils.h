@@ -52,6 +52,7 @@ float utils_rad2Deg(float rad);
 
 bool float_isEqual(const float f1, const float f2, const float epsilon);
 bool float_isZero(const float f, const float epsilon);
+bool float_is_valid(float f);
 
 bool utils_is_float_to_coords_inbounds(const float value);
 bool utils_is_float3_to_coords_inbounds(const float x, const float y, const float z);

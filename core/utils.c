@@ -61,6 +61,10 @@ bool float_isZero(const float f, const float epsilon) {
     return fabsf(f) < epsilon;
 }
 
+bool float_is_valid(float f) {
+    return isnan(f) == false && isinf(f) == false;
+}
+
 bool utils_is_float_to_coords_inbounds(const float value) {
     return value >= ((float)INT16_MIN) && value <= ((float)INT16_MAX);
 }

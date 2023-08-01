@@ -1091,9 +1091,7 @@ bool rigidbody_is_collider_valid(const RigidBody *rb) {
         return false;
     }
 
-    float3 size;
-    box_get_size_float(rb->collider, &size);
-    return float3_isZero(&size, EPSILON_COLLISION) == false;
+    return box_is_valid(rb->collider, EPSILON_COLLISION);
 }
 
 bool rigidbody_is_enabled(const RigidBody *rb) {
