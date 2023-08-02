@@ -257,14 +257,14 @@ void _rtree_insert_choose_node(Box *aabb,
     if (vol < *selectedRnVol) {
         *selectedRn = rn;
         *selectedRnVol = vol;
-    } else if (float_isEqual(vol, *selectedRnVol, EPSILON_ZERO)) {
+    } else if (float_isEqual(vol, *selectedRnVol, EPSILON_COLLISION)) {
         // tie: choose the node w/ the smallest existing box
         const float boxVol = box_get_volume(rn->aabb);
         const float selectedBoxVol = box_get_volume((*selectedRn)->aabb);
         if (boxVol < selectedBoxVol) {
             *selectedRn = rn;
             *selectedRnVol = vol;
-        } else if (float_isEqual(boxVol, selectedBoxVol, EPSILON_ZERO)) {
+        } else if (float_isEqual(boxVol, selectedBoxVol, EPSILON_COLLISION)) {
             // tie: choose the node w/ the smaller number of entries
             if (rn->count < (*selectedRn)->count) {
                 *selectedRn = rn;
