@@ -18,6 +18,7 @@ static int debug_rtree_insert_calls = 0;
 static int debug_rtree_split_calls = 0;
 static int debug_rtree_remove_calls = 0;
 static int debug_rtree_condense_calls = 0;
+static int debug_rtree_update_calls = 0;
 #endif
 
 /// Ref: https://books.google.fr/books?id=1mu099DN9UwC&pg=PR5&redir_esc=y#v=onepage&q&f=false
@@ -677,7 +678,7 @@ RtreeNode *rtree_create_and_insert(Rtree *r,
     return newLeaf;
 }
 
-void rtree_remove(Rtree *r, RtreeNode *leaf) {
+void rtree_remove(Rtree *r, RtreeNode *leaf, bool freeLeaf) {
 #if DEBUG_RTREE_EXTRA_LOGS
     bool heightDecreased = false;
 
@@ -691,7 +692,9 @@ void rtree_remove(Rtree *r, RtreeNode *leaf) {
 
     RtreeNode *parent = leaf->parent;
     if (_rtree_node_remove_child(parent, leaf)) {
-        _rtree_node_free(leaf);
+        if (freeLeaf) {
+            _rtree_node_free(leaf);
+        }
         _rtree_condense(r, parent);
 
         // reduce height if root has only one non-leaf child
@@ -719,13 +722,51 @@ void rtree_remove(Rtree *r, RtreeNode *leaf) {
 void rtree_find_and_remove(Rtree *r, Box *aabb, void *ptr) {
     RtreeNode *leaf = _rtree_find_leaf(r->root, aabb, ptr, false);
     if (leaf != NULL) {
-        rtree_remove(r, leaf);
+        rtree_remove(r, leaf, true);
     }
 #if DEBUG_RTREE_EXTRA_LOGS
     else {
         cclog_debug("⚠️⚠️⚠️rtree_remove: leaf not found");
     }
 #endif
+}
+
+void rtree_update(Rtree *r, RtreeNode *leaf, Box *aabb) {
+    Box tmpBox;
+    DoublyLinkedListNode *n;
+    RtreeNode *child;
+
+    // simulate node volume w/ updated leaf aabb
+    box_copy(&tmpBox, aabb);
+    n = doubly_linked_list_first(leaf->parent->children);
+    while (n != NULL) {
+        child = (RtreeNode *)doubly_linked_list_node_pointer(n);
+        if (child != leaf) {
+            box_op_merge(&tmpBox, child->aabb, &tmpBox);
+        }
+        n = doubly_linked_list_node_next(n);
+    }
+    const float vol = box_get_volume(&tmpBox);
+
+    // if volume difference is within threshold, keep leaf in place
+    if (fabsf(vol - box_get_volume(leaf->parent->aabb)) < RTREE_LEAF_UPDATE_THRESHOLD) {
+        box_copy(leaf->aabb, aabb);
+        box_copy(leaf->parent->aabb, &tmpBox);
+
+        // propagate aabb update upwards
+        RtreeNode *rn = leaf->parent->parent;
+        while (rn != NULL) {
+            _rtree_node_reset_aabb(rn);
+            rn = rn->parent;
+        }
+#if DEBUG_RTREE_CALLS
+        debug_rtree_update_calls++;
+#endif
+    } else {
+        rtree_remove(r, leaf, false);
+        box_copy(leaf->aabb, aabb);
+        rtree_insert(r, leaf);
+    }
 }
 
 void rtree_refresh_collision_masks(Rtree *r) {
@@ -1007,11 +1048,16 @@ int debug_rtree_get_condense_calls(void) {
     return debug_rtree_condense_calls;
 }
 
+int debug_rtree_get_update_calls(void) {
+    return debug_rtree_update_calls;
+}
+
 void debug_rtree_reset_calls(void) {
     debug_rtree_insert_calls = 0;
     debug_rtree_split_calls = 0;
     debug_rtree_remove_calls = 0;
     debug_rtree_condense_calls = 0;
+    debug_rtree_update_calls = 0;
 }
 
 bool debug_rtree_integrity_check(Rtree *r) {
