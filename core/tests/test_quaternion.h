@@ -15,7 +15,7 @@
 // quaternion_op_mult_left
 // quaternion_op_mult_euler
 // quaternion_to_float4
-// quaternion_from_float4
+// float4_to_quaternion
 
 // test that the the values are set
 void test_quaternion_new(void) {
