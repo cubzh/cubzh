@@ -78,7 +78,6 @@ void rtree_node_set_collision_masks(RtreeNode *leaf,
                                     const uint8_t collidesWith);
 
 /// MARK: - Operations -
-///
 // NOTE: rtree_recurse is always "deep first"
 void rtree_recurse(RtreeNode *rn, pointer_rtree_recurse_func f);
 void rtree_insert(Rtree *r, RtreeNode *leaf);
@@ -87,8 +86,9 @@ RtreeNode *rtree_create_and_insert(Rtree *r,
                                    uint8_t groups,
                                    uint8_t collidesWith,
                                    void *ptr);
-void rtree_remove(Rtree *r, RtreeNode *leaf);
+void rtree_remove(Rtree *r, RtreeNode *leaf, bool freeLeaf);
 void rtree_find_and_remove(Rtree *r, Box *aabb, void *ptr);
+void rtree_update(Rtree *r, RtreeNode *leaf, Box *aabb);
 void rtree_refresh_collision_masks(Rtree *r);
 
 /// MARK: - Queries -
@@ -168,6 +168,7 @@ int debug_rtree_get_insert_calls(void);
 int debug_rtree_get_split_calls(void);
 int debug_rtree_get_remove_calls(void);
 int debug_rtree_get_condense_calls(void);
+int debug_rtree_get_update_calls(void);
 void debug_rtree_reset_calls(void);
 bool debug_rtree_integrity_check(Rtree *r);
 void debug_rtree_reset_all_aabb(Rtree *r);

@@ -41,38 +41,32 @@ typedef struct {
     bool flag;
 } _CollisionCouple;
 
-void _scene_add_rigidbody_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
-    rigidbody_set_rtree_leaf(rb,
-                             rtree_create_and_insert(sc->rtree,
-                                                     collider,
-                                                     rigidbody_get_groups(rb),
-                                                     rigidbody_get_collides_with(rb),
-                                                     t));
-}
-
 void _scene_update_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
     // register awake volume here for new and removed colliders, and for transformations change
     if (rigidbody_is_enabled(rb) && rigidbody_is_collider_valid(rb) &&
         box_is_valid(collider, EPSILON_COLLISION)) {
+
         // insert valid collider as a new leaf
         if (rigidbody_get_rtree_leaf(rb) == NULL) {
-            _scene_add_rigidbody_rtree(sc, rb, t, collider);
+            rigidbody_set_rtree_leaf(rb,
+                                     rtree_create_and_insert(sc->rtree,
+                                                             collider,
+                                                             rigidbody_get_groups(rb),
+                                                             rigidbody_get_collides_with(rb),
+                                                             t));
             scene_register_awake_rigidbody_contacts(sc, rb);
         }
         // update leaf due to collider or transformations change
         else if (rigidbody_get_collider_dirty(rb) || transform_is_physics_dirty(t)) {
             scene_register_awake_rigidbody_contacts(sc, rb);
-            rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
-            rigidbody_set_rtree_leaf(rb, NULL);
-
-            _scene_add_rigidbody_rtree(sc, rb, t, collider);
+            rtree_update(sc->rtree, rigidbody_get_rtree_leaf(rb), collider);
             scene_register_awake_rigidbody_contacts(sc, rb);
         }
     }
     // remove disabled rigidbody or invalid collider from rtree
     else if (rigidbody_get_rtree_leaf(rb) != NULL) {
         scene_register_awake_rigidbody_contacts(sc, rb);
-        rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
+        rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb), true);
         rigidbody_set_rtree_leaf(rb, NULL);
     }
 
@@ -310,7 +304,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
             // r-tree leaf removal
             rb = transform_get_rigidbody(t);
             if (rb != NULL && rigidbody_get_rtree_leaf(rb) != NULL) {
-                rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb));
+                rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb), true);
                 rigidbody_set_rtree_leaf(rb, NULL);
             }
 

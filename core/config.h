@@ -129,6 +129,8 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Queries over large distances may be split in steps
 #define RTREE_CAST_STEP_DISTANCE                                                                   \
     64.0f // 1/4 of a large-sized map, or "10 frames" of max velocity (PHYSICS_MAX_VELOCITY * .016)
+/// When updating a leaf, stick to current node if volume expansion is below threshold
+#define RTREE_LEAF_UPDATE_THRESHOLD 25.0f
 /// Maximum velocity magnitude in unit/sec for all objects
 #define PHYSICS_MAX_VELOCITY 400.0f
 #define PHYSICS_MAX_SQR_VELOCITY 160000.0f
