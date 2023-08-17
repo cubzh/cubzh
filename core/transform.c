@@ -661,7 +661,7 @@ const float3 *transform_get_position(Transform *t) {
 
 void transform_set_local_rotation(Transform *t, Quaternion *q) {
     if (_transform_get_dirty(t, TRANSFORM_LOCAL_ROT) == false &&
-        quaternion_is_equal(t->localRotation, q, EPSILON_ZERO_RAD)) {
+        quaternion_is_equal(t->localRotation, q, EPSILON_ZERO_TRANSFORM_RAD)) {
         return;
     }
     quaternion_set(t->localRotation, q);
@@ -689,7 +689,7 @@ void transform_set_local_rotation_euler_vec(Transform *t, const float3 *euler) {
 
 void transform_set_rotation(Transform *t, Quaternion *q) {
     if (_transform_get_dirty(t, TRANSFORM_ROT) == false &&
-        quaternion_is_equal(t->rotation, q, EPSILON_ZERO_RAD)) {
+        quaternion_is_equal(t->rotation, q, EPSILON_ZERO_TRANSFORM_RAD)) {
         return;
     }
     quaternion_set(t->rotation, q);
@@ -1126,7 +1126,7 @@ static void _transform_refresh_local_rotation(Transform *t) {
     if (_transform_get_dirty(t, TRANSFORM_LOCAL_ROT)) {
         if (t->parent != NULL) {
             Quaternion *parentRot = transform_get_rotation(t->parent);
-            if (quaternion_is_zero(parentRot, EPSILON_ZERO_RAD) == false) {
+            if (quaternion_is_zero(parentRot, EPSILON_ZERO_TRANSFORM_RAD) == false) {
                 Quaternion qwtl;
                 quaternion_set(&qwtl, parentRot);
                 quaternion_op_inverse(&qwtl);
@@ -1147,7 +1147,7 @@ static void _transform_refresh_rotation(Transform *t) {
     if (_transform_get_dirty(t, TRANSFORM_ROT)) {
         if (t->parent != NULL) {
             Quaternion *parentRot = transform_get_rotation(t->parent);
-            if (quaternion_is_zero(parentRot, EPSILON_ZERO_RAD) == false) {
+            if (quaternion_is_zero(parentRot, EPSILON_ZERO_TRANSFORM_RAD) == false) {
                 *t->rotation = quaternion_op_mult(parentRot, t->localRotation);
             } else {
                 quaternion_set(t->rotation, t->localRotation);
@@ -1331,7 +1331,7 @@ static void _transform_utils_box_to_aabox_inverse_rot(Transform *t,
                                                       const float3 *offset,
                                                       SquarifyType squarify) {
     // if no world rotation, call cheaper function using lossy scale
-    if (quaternion_is_zero(transform_get_rotation(t), EPSILON_ZERO_RAD)) {
+    if (quaternion_is_zero(transform_get_rotation(t), EPSILON_ZERO_TRANSFORM_RAD)) {
         _transform_utils_box_to_aabox_lossy(t, b, aab, offset, squarify);
     }
 
@@ -1378,7 +1378,7 @@ static void _transform_utils_box_to_aabox_ignore_rot(Transform *t,
                                                      const float3 *offset,
                                                      SquarifyType squarify) {
     // if no world rotation, call cheaper function using lossy scale
-    if (quaternion_is_zero(transform_get_rotation(t), EPSILON_ZERO_RAD)) {
+    if (quaternion_is_zero(transform_get_rotation(t), EPSILON_ZERO_TRANSFORM_RAD)) {
         _transform_utils_box_to_aabox_lossy(t, b, aab, offset, squarify);
     }
 
@@ -1416,7 +1416,7 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
                                                const float3 *offset,
                                                SquarifyType squarify) {
     // if no world rotation, call cheaper function using lossy scale
-    if (quaternion_is_zero(transform_get_rotation(t), EPSILON_ZERO_RAD)) {
+    if (quaternion_is_zero(transform_get_rotation(t), EPSILON_ZERO_TRANSFORM_RAD)) {
         _transform_utils_box_to_aabox_lossy(t, b, aab, offset, squarify);
     }
 

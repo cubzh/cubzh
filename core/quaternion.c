@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include "config.h"
+#include "float3.h"
 #include "utils.h"
 
 /// Internal epsilon for quaternion normalization, best leave it as low as possible to remove
@@ -83,15 +84,6 @@ bool quaternion_is_normalized(Quaternion *q, float epsilon) {
 bool quaternion_is_equal(Quaternion *q1, Quaternion *q2, float epsilon) {
     const float angle = quaternion_angle_between(q1, q2);
     return float_isZero(angle, epsilon) || float_isEqual(angle, PI2_F, epsilon);
-}
-
-float quaternion_angle_between(Quaternion *q1, Quaternion *q2) {
-    quaternion_op_normalize(q1);
-    quaternion_op_normalize(q2);
-    return 2.0f * acosf(CLAMP(quaternion_op_dot(q1, q2), -1.0f, 1.0f));
-    // The following is equivalent but more expensive:
-    /*Quaternion q = quaternion_op_mult(quaternion_op_conjugate(q1), q2);
-    return quaternion_angle(&q);*/
 }
 
 // MARK: - Operations -
@@ -173,9 +165,52 @@ Quaternion *quaternion_op_lerp(const Quaternion *from,
     return lerped;
 }
 
+Quaternion *quaternion_op_slerp(const Quaternion *from,
+                                const Quaternion *to,
+                                Quaternion *lerped,
+                                const float t) {
+
+    float d = quaternion_op_dot(from, to); // cos(angle)
+
+    // from/to are more than 90° apart, invert one to reduce spinning
+    Quaternion _to = *to;
+    if (d < 0.0f) {
+        d = -d;
+        quaternion_op_scale(&_to, -1.0f);
+    }
+
+    // use linear interpolation for small angles
+    if (fabsf(d) >= 0.95f) {
+        quaternion_op_lerp(from, &_to, lerped, t);
+    } else {
+        const float v = CLAMP01(t);
+        const float angle = acosf(d);
+        const float sina = sinf(angle);
+
+        // use linear interpolation to avoid anomaly, from/to are 180° apart so shortest path is
+        // undefined
+        if (fabsf(sina) < EPSILON_ZERO_TRANSFORM_RAD) {
+            quaternion_op_lerp(from, &_to, lerped, t);
+        } else {
+            const float div = 1.0f / sina;
+            const float sinav = sinf(angle * v);
+            const float sinaomv = sinf(angle * (1.0f - v));
+            lerped->x = (from->x * sinaomv + _to.x * sinav) * div;
+            lerped->y = (from->y * sinaomv + _to.y * sinav) * div;
+            lerped->z = (from->z * sinaomv + _to.z * sinav) * div;
+            lerped->w = (from->w * sinaomv + _to.w * sinav) * div;
+            lerped->normalized = false;
+        }
+    }
+
+    return lerped;
+}
+
 float quaternion_op_dot(const Quaternion *q1, const Quaternion *q2) {
     return q1->w * q2->w + q1->x * q2->x + q1->y * q2->y + q1->z * q2->z;
 }
+
+// MARK: - Conversions -
 
 /// Ref: http://www.opengl-tutorial.org/assets/faq_quaternions/index.html#Q54
 /// For rotation matrix conversion, handedness & axes convention matters,
@@ -258,7 +293,7 @@ void quaternion_to_axis_angle(Quaternion *q, float3 *axis, float *angle) {
     *angle = acosf(cos_a) * 2.0f;
 
     float sin_a = sqrtf(1.0f - cos_a * cos_a);
-    if (fabsf(sin_a) < EPSILON_ZERO_RAD) {
+    if (fabsf(sin_a) < EPSILON_ZERO_TRANSFORM_RAD) {
         sin_a = 1.0f;
     }
 
@@ -409,7 +444,24 @@ void euler_to_quaternion_vec(const float3 *euler, Quaternion *q) {
     euler_to_quaternion(euler->x, euler->y, euler->z, q);
 }
 
+float4 *quaternion_to_float4(Quaternion *q) {
+    return float4_new(q->x, q->y, q->z, q->w);
+}
+
+Quaternion *float4_to_quaternion(float4 *f) {
+    return quaternion_new(f->x, f->y, f->z, f->w, false);
+}
+
 // MARK: - Utils -
+
+float quaternion_angle_between(Quaternion *q1, Quaternion *q2) {
+    quaternion_op_normalize(q1);
+    quaternion_op_normalize(q2);
+    return 2.0f * acosf(CLAMP(quaternion_op_dot(q1, q2), -1.0f, 1.0f));
+    // The following is equivalent but more expensive:
+    /*Quaternion q = quaternion_op_mult(quaternion_op_conjugate(q1), q2);
+    return quaternion_angle(&q);*/
+}
 
 void quaternion_rotate_vector(Quaternion *q, float3 *v) {
     quaternion_op_normalize(q);
@@ -436,10 +488,31 @@ void quaternion_op_mult_euler(float3 *euler1, const float3 *euler2) {
     quaternion_to_euler(&q1, euler1);
 }
 
-float4 *quaternion_to_float4(Quaternion *q) {
-    return float4_new(q->x, q->y, q->z, q->w);
-}
+Quaternion *quaternion_from_to_vectors(const float3 *from, const float3 *to) {
+    float3 nfrom = *from, nto = *to;
+    float3_normalize(&nfrom);
+    float3_normalize(&nto);
 
-Quaternion *quaternion_from_float4(float4 *f) {
-    return quaternion_new(f->x, f->y, f->z, f->w, false);
+    const float d = float3_dot_product(from, to);
+    Quaternion *q = quaternion_new_identity();
+
+    // from/to represent the same rotation, return identity
+    if (float_isEqual(d, 1.0f, EPSILON_ZERO)) {
+        return q;
+    }
+    // from/to are 180° apart, shortest path is undefined, return rotation around arbitrary axis
+    else if (float_isEqual(d, -1.0f, EPSILON_ZERO)) {
+        float3 axis = float3_cross_product3(from, &float3_right);
+        if (float_isZero(float3_sqr_length(&axis), EPSILON_ZERO)) {
+            axis = float3_cross_product3(from, &float3_up);
+        }
+        float3_normalize(&axis);
+        axis_angle_to_quaternion(&axis, PI_F, q);
+        return q;
+    } else {
+        float3 axis = float3_cross_product3(from, to);
+        float3_normalize(&axis);
+        axis_angle_to_quaternion(&axis, acosf(d), q);
+        return q;
+    }
 }
