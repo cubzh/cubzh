@@ -189,7 +189,7 @@ Quaternion *quaternion_op_slerp(const Quaternion *from,
 
         // use linear interpolation to avoid anomaly, from/to are 180° apart so shortest path is
         // undefined
-        if (fabsf(sina) < EPSILON_ZERO_TRANSFORM_RAD) {
+        if (fabsf(sina) < EPSILON_ZERO_RAD) {
             quaternion_op_lerp(from, &_to, lerped, t);
         } else {
             const float div = 1.0f / sina;
@@ -293,7 +293,7 @@ void quaternion_to_axis_angle(Quaternion *q, float3 *axis, float *angle) {
     *angle = acosf(cos_a) * 2.0f;
 
     float sin_a = sqrtf(1.0f - cos_a * cos_a);
-    if (fabsf(sin_a) < EPSILON_ZERO_TRANSFORM_RAD) {
+    if (fabsf(sin_a) < EPSILON_ZERO_RAD) {
         sin_a = 1.0f;
     }
 
