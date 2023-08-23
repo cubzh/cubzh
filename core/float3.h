@@ -98,11 +98,9 @@ void float3_op_unscale(float3 *f, const float scale);
 
 void float3_op_clamp(float3 *f, const float min, const float max);
 
-/// rotates float3
 void float3_rotate(float3 *f, const float rx, const float ry, const float rz);
-
-/// rotates float3 around axis
 void float3_rotate_around_axis(float3 *f, float3 *axis, const float angle);
+float float3_angle_between(float3 *v1, float3 *v2);
 
 /// changes value of a float3
 void float3_set(float3 *f, const float x, const float y, const float z);

@@ -359,18 +359,23 @@ void float3_op_clamp(float3 *f, const float min, const float max) {
     f->z = CLAMP(f->z, min, max);
 }
 
-/// rotates a vector by given euler rotation
 void float3_rotate(float3 *f, const float rx, const float ry, const float rz) {
     Quaternion q;
     euler_to_quaternion(rx, ry, rz, &q);
     quaternion_rotate_vector(&q, f);
 }
 
-/// rotates a vector by given axis angle
 void float3_rotate_around_axis(float3 *f, float3 *axis, const float angle) {
     Quaternion q;
     axis_angle_to_quaternion(axis, angle, &q);
     quaternion_rotate_vector(&q, f);
+}
+
+float float3_angle_between(float3 *v1, float3 *v2) {
+    const float dot = v1->x * v2->x + v1->y * v2->y + v1->z * v2->z;
+    const float m1 = sqrtf(v1->x * v1->x + v1->y * v1->y + v1->z * v1->z);
+    const float m2 = sqrtf(v2->x * v2->x + v2->y * v2->y + v2->z * v2->z);
+    return acosf(dot / m1 * m2);
 }
 
 /// changes value of a float3

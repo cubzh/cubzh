@@ -108,7 +108,7 @@ extern unsigned long upper_power_of_two(unsigned long v);
 // generic epsilon-zero, eg. distances, scales, translations & forces (non-angular)
 #define EPSILON_ZERO 1e-5f
 
-// angular epsilon-zero for radian values, should ideally be set,
+// angular epsilon-zero for transform radian values, should ideally be set,
 // - low enough to allow small angular moves eg. sun shadows, or camera rotations
 // - high enough to eliminate superfluous refreshes
 // - not too high to avoid jittering
@@ -116,6 +116,8 @@ extern unsigned long upper_power_of_two(unsigned long v);
 // setting it to 0 allows for smoother angular moves, especially the camera, at the cost
 // of causing superfluous refreshes as soon as an object's rotation is touched
 #define EPSILON_ZERO_TRANSFORM_RAD 0.0f
+// angular epsilon-zero for general & external use, must support big approximations from frequent
+// degrees/radians conversions, using PI approximate, euler/quaternions conversions, etc.
 #define EPSILON_ZERO_RAD 1e-3f
 
 #define EPSILON_COLLISION 1e-3f
