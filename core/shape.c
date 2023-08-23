@@ -112,6 +112,8 @@ struct _Shape {
     // shape allocated size, going below 0 or past this limit requires a shape resize
     SHAPE_SIZE_INT_T maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
 
+    uint16_t layers; // 2 bytes
+
     // internal flag used for variable-size VB allocation, see shape_add_vertex_buffer
     uint8_t vbAllocationFlag_opaque;      // 1 byte
     uint8_t vbAllocationFlag_transparent; // 1 byte
@@ -121,9 +123,8 @@ struct _Shape {
     // Whether transparent inner faces between 2 blocks of a different color should be drawn
     bool innerTransparentFaces; // 1 byte
 
-    bool shadow;    // 1 byte
-    bool isUnlit;   // 1 byte
-    uint8_t layers; // 1 byte
+    bool shadow;  // 1 byte
+    bool isUnlit; // 1 byte
 
     bool isMutable;                        // 1 byte
     bool historyEnabled;                   // 1 byte
@@ -132,7 +133,7 @@ struct _Shape {
     // no automatic refresh, no model changes until unlocked
     bool isBakeLocked; // 1 byte
 
-    char pad[3];
+    char pad[2];
 };
 
 // MARK: - private functions prototypes -
@@ -299,7 +300,7 @@ Shape *shape_make(void) {
     s->innerTransparentFaces = true;
     s->shadow = true;
     s->isUnlit = false;
-    s->layers = 1; // CAMERA_LAYERS_0
+    s->layers = 1; // CAMERA_LAYERS_DEFAULT
 
     s->isMutable = false;
 
@@ -2705,11 +2706,11 @@ bool shape_is_unlit(const Shape *s) {
     return s->isUnlit;
 }
 
-void shape_set_layers(Shape *s, const uint8_t value) {
+void shape_set_layers(Shape *s, const uint16_t value) {
     s->layers = value;
 }
 
-uint8_t shape_get_layers(const Shape *s) {
+uint16_t shape_get_layers(const Shape *s) {
     return s->layers;
 }
 
