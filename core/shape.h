@@ -397,8 +397,8 @@ bool shape_has_shadow(const Shape *s);
 void shape_set_unlit(Shape *s, const bool value);
 bool shape_is_unlit(const Shape *s);
 
-void shape_set_layers(Shape *s, const uint8_t value);
-uint8_t shape_get_layers(const Shape *s);
+void shape_set_layers(Shape *s, const uint16_t value);
+uint16_t shape_get_layers(const Shape *s);
 
 // MARK: -
 

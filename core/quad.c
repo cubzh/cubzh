@@ -25,10 +25,10 @@ struct _Quad {
     float tilingU, tilingV; /* 2x4 bytes */
     float offsetU, offsetV; /* 2x4 bytes */
     uint32_t abgr;          /* 4 bytes */
-    uint8_t layers;         /* 1 byte */
+    uint16_t layers;        /* 2 bytes */
     uint8_t flags;          /* 1 byte */
 
-    char pad[2];
+    char pad[1];
 };
 
 void _quad_toggle_flag(Quad *q, uint8_t flag, bool toggle) {
@@ -62,7 +62,7 @@ Quad *quad_new(void) {
     q->offsetU = 0.0f;
     q->offsetV = 0.0f;
     q->abgr = 0xffffffff;
-    q->layers = 1; // CAMERA_LAYERS_0
+    q->layers = 1; // CAMERA_LAYERS_DEFAULT
     q->flags = QUAD_FLAG_DOUBLESIDED;
     return q;
 }
@@ -181,11 +181,11 @@ uint32_t quad_get_color(const Quad *q) {
     return q->abgr;
 }
 
-void quad_set_layers(Quad *q, uint8_t value) {
+void quad_set_layers(Quad *q, uint16_t value) {
     q->layers = value;
 }
 
-uint8_t quad_get_layers(const Quad *q) {
+uint16_t quad_get_layers(const Quad *q) {
     return q->layers;
 }
 
