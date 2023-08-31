@@ -215,6 +215,41 @@ char *_string_new_join(int nbArgs, ...) {
     return ret;
 }
 
+char *string_new_join2(const char *elem, ...) {
+
+    va_list ap;
+    size_t len = 0;
+
+    if (elem == NULL) {
+        return NULL;
+    }
+
+    // First, measure the total length required.
+    va_start(ap, elem);
+    for (const char *s = elem; s != NULL; s = va_arg(ap, char *)) {
+        len += strlen(s);
+    }
+    va_end(ap);
+
+    // Allocate return buffer.
+    char *ret = (char *)malloc(len + 1); // +1 is for NULL terminator
+    if (ret == NULL)
+        return NULL;
+
+    // Concatenate all the strings into the return buffer.
+    char *dst = ret;
+    va_start(ap, elem);
+    for (const char *s = elem; s != NULL; s = va_arg(ap, char *)) {
+        strcpy(dst, s);
+        dst += strlen(s);
+    }
+    va_end(ap);
+
+    ret[len] = '\0';
+
+    return ret;
+}
+
 ///
 char *string_new_copy(const char *src) {
     if (src == NULL) {

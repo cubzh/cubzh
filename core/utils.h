@@ -103,6 +103,11 @@ typedef struct _stringArray_t stringArray_t;
 /// Note: use the macro for nbArgs to be defined automatically
 char *_string_new_join(int nbArgs, ...);
 
+/// Aim to replace the `_string_new_join` function.
+/// Instead of taking a `nbArgs` argument, the last argument must be `NULL`.
+/// example: string_new_join2("str1", "str2", NULL)
+char *string_new_join2(const char *elem, ...);
+
 /// Allocates and returns a new string, copy of provided NULL-terminated string.
 char *string_new_copy(const char *src);
 
