@@ -493,7 +493,7 @@ Quaternion *quaternion_from_to_vectors(const float3 *from, const float3 *to) {
     float3_normalize(&nfrom);
     float3_normalize(&nto);
 
-    const float d = float3_dot_product(from, to);
+    const float d = float3_dot_product(&nfrom, &nto);
     Quaternion *q = quaternion_new_identity();
 
     // from/to represent the same rotation, return identity
@@ -502,15 +502,15 @@ Quaternion *quaternion_from_to_vectors(const float3 *from, const float3 *to) {
     }
     // from/to are 180° apart, shortest path is undefined, return rotation around arbitrary axis
     else if (float_isEqual(d, -1.0f, EPSILON_ZERO)) {
-        float3 axis = float3_cross_product3(from, &float3_right);
+        float3 axis = float3_cross_product3(&nfrom, &float3_right);
         if (float_isZero(float3_sqr_length(&axis), EPSILON_ZERO)) {
-            axis = float3_cross_product3(from, &float3_up);
+            axis = float3_cross_product3(&nfrom, &float3_up);
         }
         float3_normalize(&axis);
         axis_angle_to_quaternion(&axis, PI_F, q);
         return q;
     } else {
-        float3 axis = float3_cross_product3(from, to);
+        float3 axis = float3_cross_product3(&nfrom, &nto);
         float3_normalize(&axis);
         axis_angle_to_quaternion(&axis, acosf(d), q);
         return q;
