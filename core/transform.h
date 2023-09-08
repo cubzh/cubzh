@@ -103,8 +103,8 @@ void transform_reset_physics_dirty(Transform *t);
 bool transform_is_physics_dirty(Transform *t);
 bool transform_ensure_rigidbody(Transform *t,
                                 uint8_t mode,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 RigidBody **out);
 RigidBody *transform_get_rigidbody(Transform *const t);
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);

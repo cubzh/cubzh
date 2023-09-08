@@ -339,10 +339,9 @@ DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 // MARK: - Physics -
 
 RigidBody *shape_get_rigidbody(const Shape *s);
-uint8_t shape_get_collision_groups(const Shape *s);
 bool shape_ensure_rigidbody(Shape *s,
-                            const uint8_t groups,
-                            const uint8_t collidesWith,
+                            const uint16_t groups,
+                            const uint16_t collidesWith,
                             RigidBody **out);
 void shape_fit_collider_to_bounding_box(const Shape *s);
 const Box *shape_get_local_collider(const Shape *s);

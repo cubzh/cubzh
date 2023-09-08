@@ -44,15 +44,15 @@ struct _RtreeNode {
     Box *aabb;
     // a leaf node carries a pointer to the corresponding object
     void *leaf;
+    // collision masks may be used to filter out queries,
+    uint16_t groups;       // standalone queries may filter w/ groups only (cast functions)
+    uint16_t collidesWith; // reciprocal queries may use both masks (collision checks)
     // children count
     uint8_t count;
-    // collision masks may be used to filter out queries,
-    uint8_t groups;       // standalone queries may filter w/ groups only (cast functions)
-    uint8_t collidesWith; // reciprocal queries may use both masks (collision checks)
     // non-leaf node layers need to be refreshed
     bool layersDirty;
 
-    char pad[4];
+    char pad[2];
 };
 
 // MARK: - Private functions prototypes -
@@ -72,8 +72,8 @@ RtreeNode *_rtree_node_new_root(Rtree *r) {
     rn->aabb = NULL;
     rn->leaf = NULL;
     rn->count = 0;
-    rn->groups = PHYSICS_GROUP_ALL;
-    rn->collidesWith = PHYSICS_GROUP_ALL;
+    rn->groups = PHYSICS_GROUP_ALL_SYSTEM;
+    rn->collidesWith = PHYSICS_GROUP_ALL_SYSTEM;
     rn->layersDirty = false;
 
     if (r->root != NULL) {
@@ -87,8 +87,8 @@ RtreeNode *_rtree_node_new_root(Rtree *r) {
 
 RtreeNode *_rtree_node_new_leaf(RtreeNode *parent,
                                 Box *aabb,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 void *ptr) {
     RtreeNode *rn = (RtreeNode *)malloc(sizeof(RtreeNode));
     if (rn == NULL) {
@@ -120,8 +120,8 @@ RtreeNode *_rtree_node_new_branch(RtreeNode *parent, RtreeNode *child) {
     rn->aabb = NULL;
     rn->leaf = NULL;
     rn->count = 0;
-    rn->groups = PHYSICS_GROUP_ALL;
-    rn->collidesWith = PHYSICS_GROUP_ALL;
+    rn->groups = PHYSICS_GROUP_ALL_SYSTEM;
+    rn->collidesWith = PHYSICS_GROUP_ALL_SYSTEM;
     rn->layersDirty = false;
 
     if (child != NULL) {
@@ -544,17 +544,17 @@ bool rtree_node_is_leaf(const RtreeNode *rn) {
     return rn != NULL && rn->parent != NULL && rn->leaf != NULL && rn->aabb != NULL;
 }
 
-uint8_t rtree_node_get_groups(const RtreeNode *rn) {
+uint16_t rtree_node_get_groups(const RtreeNode *rn) {
     return rn->groups;
 }
 
-uint8_t rtree_node_get_collides_with(const RtreeNode *rn) {
+uint16_t rtree_node_get_collides_with(const RtreeNode *rn) {
     return rn->collidesWith;
 }
 
 void rtree_node_set_collision_masks(RtreeNode *leaf,
-                                    const uint8_t groups,
-                                    const uint8_t collidesWith) {
+                                    const uint16_t groups,
+                                    const uint16_t collidesWith) {
     // collision masks can be set only on a leaf
     vx_assert(rtree_node_is_leaf(leaf));
 
@@ -670,8 +670,8 @@ void rtree_insert(Rtree *r, RtreeNode *leaf) {
 
 RtreeNode *rtree_create_and_insert(Rtree *r,
                                    Box *aabb,
-                                   uint8_t groups,
-                                   uint8_t collidesWith,
+                                   uint16_t groups,
+                                   uint16_t collidesWith,
                                    void *ptr) {
     RtreeNode *newLeaf = _rtree_node_new_leaf(NULL, aabb, groups, collidesWith, ptr);
     rtree_insert(r, newLeaf);
@@ -776,8 +776,8 @@ void rtree_refresh_collision_masks(Rtree *r) {
 // MARK: Queries
 
 size_t rtree_query_overlap_func(Rtree *r,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 pointer_rtree_query_overlap_func func,
                                 void *ptr,
                                 FifoList *results,
@@ -826,8 +826,8 @@ bool _rtree_query_overlap_box_func(RtreeNode *rn, void *ptr, float epsilon) {
 
 size_t rtree_query_overlap_box(Rtree *r,
                                const Box *aabb,
-                               uint8_t groups,
-                               uint8_t collidesWith,
+                               uint16_t groups,
+                               uint16_t collidesWith,
                                FifoList *results,
                                float epsilon) {
 
@@ -841,8 +841,8 @@ size_t rtree_query_overlap_box(Rtree *r,
 }
 
 size_t rtree_query_cast_all_func(Rtree *r,
-                                 uint8_t groups,
-                                 uint8_t collidesWith,
+                                 uint16_t groups,
+                                 uint16_t collidesWith,
                                  pointer_rtree_query_cast_all_func func,
                                  void *ptr,
                                  const DoublyLinkedList *excludeLeafPtrs,
@@ -899,8 +899,8 @@ bool _rtree_query_cast_ray_all_func(RtreeNode *rn, void *ptr, float *distance) {
 
 size_t rtree_query_cast_all_ray(Rtree *r,
                                 const Ray *worldRay,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 DoublyLinkedList *results) {
 
@@ -918,8 +918,8 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                           float stepStartDistance,
                                           const float3 *step3,
                                           const Box *broadPhaseBox,
-                                          uint8_t groups,
-                                          uint8_t collidesWith,
+                                          uint16_t groups,
+                                          uint16_t collidesWith,
                                           void *optionalPtr,
                                           const DoublyLinkedList *excludeLeafPtrs,
                                           DoublyLinkedList *results) {
@@ -967,8 +967,8 @@ size_t rtree_query_cast_all_box(Rtree *r,
                                 const Box *aabb,
                                 const float3 *unit,
                                 float maxDist,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 DoublyLinkedList *results) {
 
@@ -990,8 +990,8 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
                                     const Box *originBox,
                                     const float3 *unit,
                                     float maxDist,
-                                    uint8_t groups,
-                                    uint8_t collidesWith,
+                                    uint16_t groups,
+                                    uint16_t collidesWith,
                                     pointer_rtree_broadphase_step_func func,
                                     void *optionalPtr,
                                     const DoublyLinkedList *excludeLeafPtrs,
