@@ -46,8 +46,8 @@ typedef size_t (*pointer_rtree_broadphase_step_func)(Rtree *r,
                                                      float stepStartDistance,
                                                      const float3 *step3,
                                                      const Box *broadPhaseBox,
-                                                     uint8_t groups,
-                                                     uint8_t collidesWith,
+                                                     uint16_t groups,
+                                                     uint16_t collidesWith,
                                                      void *optionalPtr,
                                                      const DoublyLinkedList *excludeLeafPtrs,
                                                      DoublyLinkedList *results);
@@ -71,11 +71,11 @@ uint8_t rtree_node_get_children_count(const RtreeNode *rn);
 DoublyLinkedListNode *rtree_node_get_children_iterator(const RtreeNode *rn);
 void *rtree_node_get_leaf_ptr(const RtreeNode *rn);
 bool rtree_node_is_leaf(const RtreeNode *rn);
-uint8_t rtree_node_get_groups(const RtreeNode *rn);
-uint8_t rtree_node_get_collides_with(const RtreeNode *rn);
+uint16_t rtree_node_get_groups(const RtreeNode *rn);
+uint16_t rtree_node_get_collides_with(const RtreeNode *rn);
 void rtree_node_set_collision_masks(RtreeNode *leaf,
-                                    const uint8_t groups,
-                                    const uint8_t collidesWith);
+                                    const uint16_t groups,
+                                    const uint16_t collidesWith);
 
 /// MARK: - Operations -
 // NOTE: rtree_recurse is always "deep first"
@@ -83,8 +83,8 @@ void rtree_recurse(RtreeNode *rn, pointer_rtree_recurse_func f);
 void rtree_insert(Rtree *r, RtreeNode *leaf);
 RtreeNode *rtree_create_and_insert(Rtree *r,
                                    Box *aabb,
-                                   uint8_t groups,
-                                   uint8_t collidesWith,
+                                   uint16_t groups,
+                                   uint16_t collidesWith,
                                    void *ptr);
 void rtree_remove(Rtree *r, RtreeNode *leaf, bool freeLeaf);
 void rtree_find_and_remove(Rtree *r, Box *aabb, void *ptr);
@@ -106,29 +106,29 @@ void rtree_refresh_collision_masks(Rtree *r);
 /// - standalone queries like cast functions may filter w/ 'collidesWith' only (no groups)
 /// - reciprocal queries like collision checks may filter w/ both masks
 size_t rtree_query_overlap_func(Rtree *r,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 pointer_rtree_query_overlap_func func,
                                 void *ptr,
                                 FifoList *results,
                                 float epsilon);
 size_t rtree_query_overlap_box(Rtree *r,
                                const Box *aabb,
-                               uint8_t groups,
-                               uint8_t collidesWith,
+                               uint16_t groups,
+                               uint16_t collidesWith,
                                FifoList *results,
                                float epsilon);
 size_t rtree_query_cast_all_func(Rtree *r,
-                                 uint8_t groups,
-                                 uint8_t collidesWith,
+                                 uint16_t groups,
+                                 uint16_t collidesWith,
                                  pointer_rtree_query_cast_all_func func,
                                  void *ptr,
                                  const DoublyLinkedList *excludeLeafPtrs,
                                  DoublyLinkedList *results);
 size_t rtree_query_cast_all_ray(Rtree *r,
                                 const Ray *worldRay,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 DoublyLinkedList *results);
 size_t rtree_query_cast_all_box_step_func(Rtree *r,
@@ -136,8 +136,8 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                           float stepStartDistance,
                                           const float3 *step3,
                                           const Box *broadPhaseBox,
-                                          uint8_t groups,
-                                          uint8_t collidesWith,
+                                          uint16_t groups,
+                                          uint16_t collidesWith,
                                           void *optionalPtr,
                                           const DoublyLinkedList *excludeLeafPtrs,
                                           DoublyLinkedList *results);
@@ -145,8 +145,8 @@ size_t rtree_query_cast_all_box(Rtree *r,
                                 const Box *aabb,
                                 const float3 *unit,
                                 float maxDist,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 DoublyLinkedList *results);
 
@@ -155,8 +155,8 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
                                     const Box *originBox,
                                     const float3 *unit,
                                     float maxDist,
-                                    uint8_t groups,
-                                    uint8_t collidesWith,
+                                    uint16_t groups,
+                                    uint16_t collidesWith,
                                     pointer_rtree_broadphase_step_func func,
                                     void *optionalPtr,
                                     const DoublyLinkedList *excludeLeafPtrs,

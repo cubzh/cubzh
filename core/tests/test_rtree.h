@@ -43,8 +43,8 @@ void test_rtree_new(void) {
 
     TEST_CHECK(rtree_get_height(r) == 1);
     TEST_CHECK(root != NULL);
-    TEST_CHECK(rtree_node_get_groups(root) == PHYSICS_GROUP_ALL);
-    TEST_CHECK(rtree_node_get_collides_with(root) == PHYSICS_GROUP_ALL);
+    TEST_CHECK(rtree_node_get_groups(root) == PHYSICS_GROUP_ALL_SYSTEM);
+    TEST_CHECK(rtree_node_get_collides_with(root) == PHYSICS_GROUP_ALL_SYSTEM);
 
     rtree_free(r);
 }
@@ -52,7 +52,7 @@ void test_rtree_new(void) {
 void test_rtree_node_get_aabb(void) {
     Rtree *r = rtree_new(2, 4);
     Box *b = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 3.0f);
-    uint8_t groups = 4, collidesWith = 3;
+    uint16_t groups = 4, collidesWith = 3;
     Transform *t = transform_make_default();
     rtree_create_and_insert(r, b, groups, collidesWith, (void *)t);
     RtreeNode *root = rtree_get_root(r);
@@ -72,7 +72,7 @@ void test_rtree_node_get_groups(void) {
 
     TEST_CHECK(rtree_get_height(r) == 1);
     TEST_CHECK(root != NULL);
-    TEST_CHECK(rtree_node_get_groups(root) == PHYSICS_GROUP_ALL);
+    TEST_CHECK(rtree_node_get_groups(root) == PHYSICS_GROUP_ALL_SYSTEM);
 
     rtree_free(r);
 }
@@ -83,7 +83,7 @@ void test_rtree_node_get_collides_with(void) {
 
     TEST_CHECK(rtree_get_height(r) == 1);
     TEST_CHECK(root != NULL);
-    TEST_CHECK(rtree_node_get_collides_with(root) == PHYSICS_GROUP_ALL);
+    TEST_CHECK(rtree_node_get_collides_with(root) == PHYSICS_GROUP_ALL_SYSTEM);
 
     rtree_free(r);
 }
@@ -91,7 +91,7 @@ void test_rtree_node_get_collides_with(void) {
 void test_rtree_create_and_insert(void) {
     Rtree *r = rtree_new(2, 4);
     Box *b = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 3.0f);
-    uint8_t groups = 4, collidesWith = 3;
+    uint16_t groups = 4, collidesWith = 3;
     Transform *t = transform_make_default();
     rtree_create_and_insert(r, b, groups, collidesWith, (void *)t);
     RtreeNode *root = rtree_get_root(r);

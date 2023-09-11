@@ -2601,15 +2601,7 @@ RigidBody *shape_get_rigidbody(const Shape *s) {
     return transform_get_rigidbody(s->transform);
 }
 
-uint8_t shape_get_collision_groups(const Shape *s) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
-    if (rb == NULL)
-        return PHYSICS_GROUP_NONE;
-    return rigidbody_get_groups(rb);
-}
-
-bool shape_ensure_rigidbody(Shape *s, uint8_t groups, uint8_t collidesWith, RigidBody **out) {
+bool shape_ensure_rigidbody(Shape *s, uint16_t groups, uint16_t collidesWith, RigidBody **out) {
     vx_assert(s != NULL);
 
     bool isNew = transform_ensure_rigidbody(s->transform,

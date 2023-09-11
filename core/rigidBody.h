@@ -77,7 +77,7 @@ typedef void (*pointer_rigidbody_collision_func)(CollisionCallbackType type,
                                                  void *callbackData);
 
 /// MARK: - Lifecycle -
-RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t collidesWith);
+RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16_t collidesWith);
 void rigidbody_free(RigidBody *rb);
 void rigidbody_reset(RigidBody *rb);
 void rigidbody_non_kinematic_reset(RigidBody *rb);
@@ -107,10 +107,10 @@ void rigidbody_set_friction(RigidBody *rb, const float value);
 float rigidbody_get_bounciness(const RigidBody *rb);
 void rigidbody_set_bounciness(RigidBody *rb, const float value);
 uint8_t rigidbody_get_contact_mask(const RigidBody *rb);
-uint8_t rigidbody_get_groups(const RigidBody *rb);
-void rigidbody_set_groups(RigidBody *rb, const uint8_t value);
-uint8_t rigidbody_get_collides_with(const RigidBody *rb);
-void rigidbody_set_collides_with(RigidBody *rb, const uint8_t value);
+uint16_t rigidbody_get_groups(const RigidBody *rb);
+void rigidbody_set_groups(RigidBody *rb, const uint16_t value);
+uint16_t rigidbody_get_collides_with(const RigidBody *rb);
+void rigidbody_set_collides_with(RigidBody *rb, const uint16_t value);
 uint8_t rigidbody_get_simulation_mode(const RigidBody *rb);
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value);
 bool rigidbody_get_collider_dirty(const RigidBody *rb);
@@ -120,8 +120,8 @@ void rigidbody_set_awake(RigidBody *rb);
 /// MARK: - State -
 bool rigidbody_has_contact(const RigidBody *rb, uint8_t value);
 bool rigidbody_is_in_contact(const RigidBody *rb);
-bool rigidbody_belongs_to_any(const RigidBody *rb, uint8_t groups);
-bool rigidbody_collides_with_any(const RigidBody *rb, uint8_t groups);
+bool rigidbody_belongs_to_any(const RigidBody *rb, uint16_t groups);
+bool rigidbody_collides_with_any(const RigidBody *rb, uint16_t groups);
 bool rigidbody_collides_with_rigidbody(const RigidBody *rb1, const RigidBody *rb2);
 bool rigidbody_is_collider_valid(const RigidBody *rb);
 bool rigidbody_is_enabled(const RigidBody *rb);
@@ -134,13 +134,13 @@ bool rigidbody_uses_per_block_collisions(const RigidBody *rb);
 /// MARK: - Utils -
 bool rigidbody_check_velocity_contact(const RigidBody *rb, const float3 *velocity);
 bool rigidbody_check_velocity_sleep(RigidBody *rb, const float3 *velocity);
-void rigidbody_toggle_groups(RigidBody *rb, uint8_t groups, bool toggle);
-void rigidbody_toggle_collides_with(RigidBody *rb, uint8_t groups, bool toggle);
-bool rigidbody_collision_mask_match(const uint8_t m1, const uint8_t m2);
-bool rigidbody_collision_masks_reciprocal_match(const uint8_t groups1,
-                                                const uint8_t collidesWith1,
-                                                const uint8_t groups2,
-                                                const uint8_t collidesWith2);
+void rigidbody_toggle_groups(RigidBody *rb, uint16_t groups, bool toggle);
+void rigidbody_toggle_collides_with(RigidBody *rb, uint16_t groups, bool toggle);
+bool rigidbody_collision_mask_match(const uint16_t m1, const uint16_t m2);
+bool rigidbody_collision_masks_reciprocal_match(const uint16_t groups1,
+                                                const uint16_t collidesWith1,
+                                                const uint16_t groups2,
+                                                const uint16_t collidesWith2);
 float rigidbody_get_combined_friction(const RigidBody *rb1, const RigidBody *rb2);
 float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *rb2);
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed);

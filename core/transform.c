@@ -336,8 +336,8 @@ bool transform_is_physics_dirty(Transform *t) {
 
 bool transform_ensure_rigidbody(Transform *t,
                                 uint8_t mode,
-                                uint8_t groups,
-                                uint8_t collidesWith,
+                                uint16_t groups,
+                                uint16_t collidesWith,
                                 RigidBody **out) {
     bool isNew = false;
     if (t->rigidBody == NULL) {

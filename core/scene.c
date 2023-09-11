@@ -79,8 +79,8 @@ void _scene_refresh_rtree_collision_masks(RigidBody *rb) {
 
     // refresh collision masks if in the rtree
     if (rbLeaf != NULL) {
-        const uint8_t groups = rigidbody_get_groups(rb);
-        const uint8_t collidesWith = rigidbody_get_collides_with(rb);
+        const uint16_t groups = rigidbody_get_groups(rb);
+        const uint16_t collidesWith = rigidbody_get_collides_with(rb);
         if (groups != rtree_node_get_groups(rbLeaf) ||
             collidesWith != rtree_node_get_collides_with(rbLeaf)) {
 
@@ -354,8 +354,8 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
         vx_assert(fifo_list_pop(awakeQuery) == NULL);
         if (rtree_query_overlap_box(sc->rtree,
                                     awakeBox,
-                                    PHYSICS_GROUP_ALL,
-                                    PHYSICS_GROUP_ALL,
+                                    PHYSICS_GROUP_ALL_SYSTEM,
+                                    PHYSICS_GROUP_ALL_SYSTEM,
                                     awakeQuery,
                                     EPSILON_COLLISION) > 0) {
             RtreeNode *hit = fifo_list_pop(awakeQuery);

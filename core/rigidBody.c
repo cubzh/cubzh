@@ -56,12 +56,12 @@ struct _RigidBody {
     // it is a rate between 0 (no bounce) and 1 (100% of the force bounced) or above
     float bounciness;
 
+    // collision masks
+    uint16_t groups;
+    uint16_t collidesWith;
+
     // per-axes mask where blocking contact occurred as of last physics frame
     uint8_t contact;
-
-    // collision masks
-    uint8_t groups;
-    uint8_t collidesWith;
 
     // combines various simulation flags,
     // [0-1] simulation modes (2 bits)
@@ -72,7 +72,7 @@ struct _RigidBody {
     uint8_t simulationFlags;
     uint8_t awakeFlag;
 
-    char pad[7];
+    char pad[5];
 };
 
 static pointer_rigidbody_collision_func rigidbody_collision_callback = NULL;
@@ -840,7 +840,7 @@ void _rigidbody_trigger_tick(Scene *scene,
     }
 }
 
-RigidBody *rigidbody_new(const uint8_t mode, const uint8_t groups, const uint8_t collidesWith) {
+RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16_t collidesWith) {
     RigidBody *b = (RigidBody *)malloc(sizeof(RigidBody));
     if (b == NULL) {
         return NULL;
@@ -1008,19 +1008,19 @@ uint8_t rigidbody_get_contact_mask(const RigidBody *rb) {
     return rb->contact;
 }
 
-uint8_t rigidbody_get_groups(const RigidBody *rb) {
+uint16_t rigidbody_get_groups(const RigidBody *rb) {
     return rb->groups;
 }
 
-void rigidbody_set_groups(RigidBody *rb, uint8_t value) {
+void rigidbody_set_groups(RigidBody *rb, uint16_t value) {
     rb->groups = value;
 }
 
-uint8_t rigidbody_get_collides_with(const RigidBody *rb) {
+uint16_t rigidbody_get_collides_with(const RigidBody *rb) {
     return rb->collidesWith;
 }
 
-void rigidbody_set_collides_with(RigidBody *rb, uint8_t value) {
+void rigidbody_set_collides_with(RigidBody *rb, uint16_t value) {
     rb->collidesWith = value;
 }
 
@@ -1066,11 +1066,11 @@ bool rigidbody_is_in_contact(const RigidBody *rb) {
     return rb != NULL && rb->contact != AxesMaskNone;
 }
 
-bool rigidbody_belongs_to_any(const RigidBody *rb, uint8_t groups) {
+bool rigidbody_belongs_to_any(const RigidBody *rb, uint16_t groups) {
     return rb != NULL && rigidbody_collision_mask_match(rb->groups, groups);
 }
 
-bool rigidbody_collides_with_any(const RigidBody *rb, uint8_t groups) {
+bool rigidbody_collides_with_any(const RigidBody *rb, uint16_t groups) {
     return rb != NULL && rigidbody_collision_mask_match(rb->collidesWith, groups);
 }
 
@@ -1198,7 +1198,7 @@ bool rigidbody_check_velocity_sleep(RigidBody *rb, const float3 *velocity) {
     return true;
 }
 
-void rigidbody_toggle_groups(RigidBody *rb, uint8_t groups, bool toggle) {
+void rigidbody_toggle_groups(RigidBody *rb, uint16_t groups, bool toggle) {
     if (toggle) {
         rb->groups = rb->groups | groups;
     } else {
@@ -1206,7 +1206,7 @@ void rigidbody_toggle_groups(RigidBody *rb, uint8_t groups, bool toggle) {
     }
 }
 
-void rigidbody_toggle_collides_with(RigidBody *rb, uint8_t groups, bool toggle) {
+void rigidbody_toggle_collides_with(RigidBody *rb, uint16_t groups, bool toggle) {
     if (toggle) {
         rb->collidesWith = rb->collidesWith | groups;
     } else {
@@ -1214,14 +1214,14 @@ void rigidbody_toggle_collides_with(RigidBody *rb, uint8_t groups, bool toggle) 
     }
 }
 
-bool rigidbody_collision_mask_match(const uint8_t m1, const uint8_t m2) {
+bool rigidbody_collision_mask_match(const uint16_t m1, const uint16_t m2) {
     return (m1 & m2) != PHYSICS_GROUP_NONE;
 }
 
-bool rigidbody_collision_masks_reciprocal_match(const uint8_t groups1,
-                                                const uint8_t collidesWith1,
-                                                const uint8_t groups2,
-                                                const uint8_t collidesWith2) {
+bool rigidbody_collision_masks_reciprocal_match(const uint16_t groups1,
+                                                const uint16_t collidesWith1,
+                                                const uint16_t groups2,
+                                                const uint16_t collidesWith2) {
 
     return (collidesWith1 & groups2) != PHYSICS_GROUP_NONE ||
            (collidesWith2 & groups1) != PHYSICS_GROUP_NONE;

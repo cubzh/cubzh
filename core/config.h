@@ -180,7 +180,10 @@ extern unsigned long upper_power_of_two(unsigned long v);
 
 /// Physics collision masks default values
 #define PHYSICS_GROUP_NONE 0
-#define PHYSICS_GROUP_ALL 255
+#define PHYSICS_GROUP_ALL_API 2047
+#define PHYSICS_GROUP_ALL_SYSTEM 65535
+#define PHYSICS_GROUP_MASK_API_BITS 12
+#define PHYSICS_GROUP_MASK_SYSTEM_BITS 4
 #define PHYSICS_GROUP_DEFAULT_MAP 1
 #define PHYSICS_COLLIDESWITH_DEFAULT_MAP PHYSICS_GROUP_NONE
 #define PHYSICS_GROUP_DEFAULT_PLAYER 2
