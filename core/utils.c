@@ -172,8 +172,8 @@ AxesMaskValue utils_axis_index_to_mask_value(AxisIndex idx) {
             return AxesMaskZ;
         case AxisIndexNZ:
             return AxesMaskNZ;
-        // default:
-        //     return AxesMaskX; // should not happen
+            // default:
+            //     return AxesMaskX; // should not happen
     }
 }
 
