@@ -34,7 +34,7 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. Only objects in one of the specified layers are rendered by the camera.
+          Integer or table of integers between 1 and 12. Only objects in one of the specified layers are rendered by the camera.
 
     - name: "Width"
       type: "number"
@@ -275,4 +275,22 @@ functions:
             Map:AddChild(myShape)
             Camera:FitToScreen(myShape, 0.6, false)
             -- the shape now covers 60% of the screen
+    
+    - name: "WorldToScreen"
+      description: |
+          Converts a world point to a screen point through this camera projection.
+      arguments: 
+        - name: "point"
+          type: "Number3"
+      return:
+        - type: "Number2"
+    
+    - name: "ScreenToRay"
+      description: |
+          Converts a screen point into a world [Ray] through this camera projection.
+      arguments: 
+        - name: "point"
+          type: "Number2"
+      return:
+        - type: "Ray"
 
