@@ -43,6 +43,7 @@ Weakptr *scene_get_and_retain_weakptr(Scene *sc);
 
 /// Get the scene hierarchy root transform for more specific usages
 Transform *scene_get_root(Scene *sc);
+Transform *scene_get_system_root(Scene *sc);
 Rtree *scene_get_rtree(Scene *sc);
 
 /// FRAME REFRESH ORDER:

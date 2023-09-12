@@ -17,7 +17,8 @@ static int debug_scene_awake_queries = 0;
 
 struct _Scene {
     Transform *root;
-    Transform *map; // weak ref to Map transform (Shape retained by parent)
+    Transform *map;    // weak ref to Map transform (Shape retained by parent)
+    Transform *system; // private hierarchy
     Rtree *rtree;
     Weakptr *wptr;
 
@@ -201,7 +202,8 @@ bool _scene_cast_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode
 Scene *scene_new(void) {
     Scene *sc = (Scene *)malloc(sizeof(Scene));
     if (sc != NULL) {
-        sc->root = transform_make(HierarchyTransform);
+        sc->root = transform_make(PointTransform);
+        sc->system = transform_make(HierarchyTransform);
         sc->map = NULL;
         sc->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
         sc->wptr = NULL;
@@ -209,6 +211,8 @@ Scene *scene_new(void) {
         sc->collisions = doubly_linked_list_new();
         sc->awakeBoxes = doubly_linked_list_new();
         float3_set(&sc->constantAcceleration, 0.0f, 0.0f, 0.0f);
+
+        transform_set_parent(sc->system, sc->root, false);
     }
     return sc;
 }
@@ -225,6 +229,7 @@ void scene_free(Scene *sc) {
     }
 
     transform_release(sc->root);
+    transform_release(sc->system);
     rtree_free(sc->rtree);
     weakptr_invalidate(sc->wptr);
     fifo_list_free(sc->removed, NULL);
@@ -255,6 +260,10 @@ Weakptr *scene_get_and_retain_weakptr(Scene *sc) {
 
 Transform *scene_get_root(Scene *sc) {
     return sc->root;
+}
+
+Transform *scene_get_system_root(Scene *sc) {
+    return sc->system;
 }
 
 Rtree *scene_get_rtree(Scene *sc) {
