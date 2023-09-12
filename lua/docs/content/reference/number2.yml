@@ -38,6 +38,16 @@ properties:
           myNumber2.Y = 42
           print(myNumber2.Y)
 
+  - name: "Length"
+    type: "number"
+    description: |
+        Magnitude of the `Number2`.
+
+  - name: "SquaredLength"
+    type: "number"
+    description: |
+      Squared magnitude of the `Number2`.
+
 functions:
   - name: "Copy"
     return: 
@@ -56,3 +66,31 @@ functions:
           local n2 = n1:Copy() -- n2 is a copy of n1, they're not the same Number2
           n2.X = 10
           print(n1.X) -- n1.X is still 1
+  
+  - name: "Normalize"
+    description: |
+      Normalizes the `Number2` so that its magnitude becomes `1.0`.
+  
+  - name: "Lerp"
+    description: |
+        Sets this `Number2` to the linear interpolation between two given `Number2` at a given ratio.
+    arguments: 
+      - name: "from"
+        type: "Number2"
+      - name: "to"
+        type: "Number2"
+      - name: "ratio"
+        type: "number"
+  
+  - name: "Set"
+    description: |
+        Sets this `Number2`'s components to the given values.
+    argument-sets:
+        - 
+          - name: "xy"
+            type: "Number2"
+        - 
+          - name: "x"
+            type: "number"
+          - name: "y"
+            type: "number"
