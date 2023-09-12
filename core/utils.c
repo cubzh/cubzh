@@ -6,6 +6,7 @@
 
 #include "utils.h"
 
+// C
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -171,8 +172,8 @@ AxesMaskValue utils_axis_index_to_mask_value(AxisIndex idx) {
             return AxesMaskZ;
         case AxisIndexNZ:
             return AxesMaskNZ;
-        default:
-            return AxesMaskX; // should not happen
+        // default:
+        //     return AxesMaskX; // should not happen
     }
 }
 
@@ -273,7 +274,7 @@ stringArray_t *string_split(const char *path, const char *delimiters) {
 
     const char *cursor = path;
 
-    int i = 1; // there's at least one component
+    // int i = 1; // there's at least one component
 
     size_t len, pos;
 
@@ -284,7 +285,7 @@ stringArray_t *string_split(const char *path, const char *delimiters) {
             break;
         } // not found
         if (pos > 0) {
-            i++;
+            // i++;
         } // do not consider empty components
         if (pos + 1 >= len) {
             break;
@@ -418,4 +419,9 @@ void utils_rgba_to_float(uint32_t rgba, float *out) {
     *(out + 1) = (float)((rgba >> 8) & 0xff) / 255.0f;
     *(out + 2) = (float)((rgba >> 16) & 0xff) / 255.0f;
     *(out + 3) = (float)((rgba >> 24) & 0xff) / 255.0f;
+}
+
+float frand(void) {
+    const int r = rand();
+    return (float)r / (float)RAND_MAX;
 }
