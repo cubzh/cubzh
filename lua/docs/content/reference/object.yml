@@ -222,6 +222,18 @@ properties:
 
           Nothing else changes, the [This] remains in the scene and it keeps being affected by the simulation (collisions, etc.).
 
+    - name: "ShadowCookie"
+      type: number
+      description: |
+          Size in world units of the shadow cookie projected under the [This], default is `0.0` (disabled).
+          The shadow cookie, also called blob shadow, is a square texture acting as a cheap alternative to projected shadows.
+
+          If this value is strictly positive, shadow cookies will be displayed when:
+          - the scene has no light source,
+          - the scene has light sources, but they are disabled because the client is using lower quality settings
+
+          Shadow cookies can be used as a fallback to your scene shadows for players with low quality settings, of course, you can also use them instead of shadows as a design choice.
+
     - name: "LocalPosition"
       type: "Number3"
       description: |
@@ -511,8 +523,18 @@ functions:
       description: "Rotates the [This] in its own coordinates system."
       argument-sets:
         - 
-          - name: "angles"
+          - name: "eulerAnglesXYZ"
             type: "Number3"
+        - 
+          - name: "eulerAngleX"
+            type: "number"
+          - name: "eulerAngleY"
+            type: "number"
+          - name: "eulerAngleZ"
+            type: "number"
+        - 
+          - name: "rotation"
+            type: "Rotation"
         - 
           - name: "axis"
             type: "Number3"
@@ -531,8 +553,18 @@ functions:
       description: "Rotate the [This] in the [World] coordinates system."
       argument-sets:
         - 
-          - name: "angles"
+          - name: "eulerAnglesXYZ"
             type: "Number3"
+        - 
+          - name: "eulerAngleX"
+            type: "number"
+          - name: "eulerAngleY"
+            type: "number"
+          - name: "eulerAngleZ"
+            type: "number"
+        - 
+          - name: "rotation"
+            type: "Rotation"
         - 
           - name: "axis"
             type: "Number3"
@@ -549,20 +581,42 @@ functions:
             -- same as o:RotateLocal({0, 0, 1}, math.pi / 2.0)
 
     - name: "RotationLocalToWorld"
-      description: "Converts a local rotation to world coordinate system."
-      arguments: 
-        - name: "p"
-          type: "Number3"
+      description: "Converts a rotation from local to world relative to this object."
+      argument-sets:
+        - 
+          - name: "eulerAnglesXYZ"
+            type: "Number3"
+        - 
+          - name: "eulerAngleX"
+            type: "number"
+          - name: "eulerAngleY"
+            type: "number"
+          - name: "eulerAngleZ"
+            type: "number"
+        - 
+          - name: "rotation"
+            type: "Rotation"
       return:
-        - type: "Number3"
+        - type: "Rotation"
 
     - name: "RotationWorldToLocal"
-      description: "Converts a world rotation to local coordinate system."
-      arguments: 
-        - name: "p"
-          type: "Number3"
+      description: "Converts a rotation from world to local relative to this object."
+      argument-sets:
+        - 
+          - name: "eulerAnglesXYZ"
+            type: "Number3"
+        - 
+          - name: "eulerAngleX"
+            type: "number"
+          - name: "eulerAngleY"
+            type: "number"
+          - name: "eulerAngleZ"
+            type: "number"
+        - 
+          - name: "rotation"
+            type: "Rotation"
       return:
-        - type: "Number3"
+        - type: "Rotation"
 
     - name: "CollidesWith"
       description: "Returns `true` if the two [Object]s may collide with each other."
