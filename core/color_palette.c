@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "cclog.h"
+#include "utils.h"
 
 // MARK: - Private functions -
 
@@ -538,20 +539,20 @@ bool debug_color_palette_test_hash(ColorPalette **p1Out, ColorPalette **p2Out) {
     RGBAColor color1, color2;
     bool allEqual = true;
     for (int i = 0; i < SHAPE_COLOR_INDEX_MAX_COUNT; ++i) {
-        color1 = (RGBAColor){(uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
-                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
-                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
-                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255)};
-        color2 = (RGBAColor){(uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
-                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
-                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255),
-                             (uint8_t)(((float)rand() / (float)RAND_MAX) * 255)};
+        color1 = (RGBAColor){(uint8_t)(frand() * 255.0f),
+                             (uint8_t)(frand() * 255.0f),
+                             (uint8_t)(frand() * 255.0f),
+                             (uint8_t)(frand() * 255.0f)};
+        color2 = (RGBAColor){(uint8_t)(frand() * 255.0f),
+                             (uint8_t)(frand() * 255.0f),
+                             (uint8_t)(frand() * 255.0f),
+                             (uint8_t)(frand() * 255.0f)};
 
         color_palette_check_and_add_color(p1, color1, &idx, true);
-        color_palette_set_emissive(p1, idx, (float)rand() / (float)RAND_MAX > 0.5f);
+        color_palette_set_emissive(p1, idx, frand() > 0.5f);
 
         color_palette_check_and_add_color(p2, color2, &idx, true);
-        color_palette_set_emissive(p2, idx, (float)rand() / (float)RAND_MAX > 0.5f);
+        color_palette_set_emissive(p2, idx, frand() > 0.5f);
 
         allEqual &= colors_are_equal(&color1, &color2);
     }

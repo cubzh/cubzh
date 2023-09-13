@@ -6,6 +6,7 @@
 
 #include "utils.h"
 
+// C
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -171,8 +172,8 @@ AxesMaskValue utils_axis_index_to_mask_value(AxisIndex idx) {
             return AxesMaskZ;
         case AxisIndexNZ:
             return AxesMaskNZ;
-        default:
-            return AxesMaskX; // should not happen
+            // default:
+            //     return AxesMaskX; // should not happen
     }
 }
 
@@ -260,9 +261,12 @@ char *string_new_copy_with_limit(const char *src, const size_t len) {
         srcLen = len;
     }
 
-    char *buffer = (char *)malloc(sizeof(char) * (srcLen + 1)); //  + 1: null termination char */;
-    strncpy(buffer, src, srcLen);
-    buffer[srcLen] = '\0';
+    char *buffer = (char *)malloc(sizeof(char) * (srcLen + 1)); // + 1: null termination char
+    if (buffer != NULL) {
+        strncpy(buffer, src, srcLen);
+        buffer[srcLen] = '\0';
+    }
+
     return buffer;
 }
 
@@ -273,7 +277,7 @@ stringArray_t *string_split(const char *path, const char *delimiters) {
 
     const char *cursor = path;
 
-    int i = 1; // there's at least one component
+    // int i = 1; // there's at least one component
 
     size_t len, pos;
 
@@ -284,7 +288,7 @@ stringArray_t *string_split(const char *path, const char *delimiters) {
             break;
         } // not found
         if (pos > 0) {
-            i++;
+            // i++;
         } // do not consider empty components
         if (pos + 1 >= len) {
             break;
@@ -351,10 +355,11 @@ bool stringArray_n_append(stringArray_t *arr, const char *str, size_t length) {
     if (str == NULL) {
         return false;
     }
-    arr->strings = (char **)realloc(arr->strings, sizeof(char *) * (size_t)(arr->length + 1));
-    if (arr->strings == NULL) {
+    void *newArrStrings = realloc(arr->strings, sizeof(char *) * (size_t)(arr->length + 1));
+    if (newArrStrings == NULL) {
         return false;
     }
+    arr->strings = (char **)newArrStrings;
     arr->length += 1;
     arr->strings[arr->length - 1] = string_new_copy_with_limit(str, length);
     return true;
@@ -418,4 +423,9 @@ void utils_rgba_to_float(uint32_t rgba, float *out) {
     *(out + 1) = (float)((rgba >> 8) & 0xff) / 255.0f;
     *(out + 2) = (float)((rgba >> 16) & 0xff) / 255.0f;
     *(out + 3) = (float)((rgba >> 24) & 0xff) / 255.0f;
+}
+
+float frand(void) {
+    const int r = rand();
+    return (float)r / (float)RAND_MAX;
 }
