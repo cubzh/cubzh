@@ -143,7 +143,7 @@ functions:
   
   - name: "Angle"
     description: |
-        Returns the angle in radian between this and given `Number3`.
+        Returns the angle in radians between this and given `Number3`.
     argument-sets:
         - 
           - name: "eulerAnglesXYZ"

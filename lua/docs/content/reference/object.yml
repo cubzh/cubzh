@@ -242,7 +242,7 @@ properties:
           All of [This]'s ancestors local transformations are combined to obtain the [This] "world position" ([Object.Position](#property-position)), the [Object]'s final position.
 
     - name: "Rotation"
-      type: "Number3"
+      type: "Rotation"
       description: |
           Rotation of the [This] in the world (as seen on screen).
 
@@ -271,7 +271,7 @@ properties:
             end
 
     - name: "LocalRotation"
-      type: "Number3"
+      type: "Rotation"
       description: |
           Local rotation of the [This] relative to its parent.
 

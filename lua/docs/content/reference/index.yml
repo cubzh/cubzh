@@ -41,6 +41,7 @@ blocks:
         - "<a href=\"/reference/pointerevent\">PointerEvent</a>"
         - "<a href=\"/reference/quad\">Quad</a>"
         - "<a href=\"/reference/ray\">Ray</a>"
+        - "<a href=\"/reference/rotation\">Rotation</a>"
         - "<a href=\"/reference/screen\">Screen</a>"
         - "<a href=\"/reference/server\">Server</a>"
         - "<a href=\"/reference/shape\">Shape</a>"

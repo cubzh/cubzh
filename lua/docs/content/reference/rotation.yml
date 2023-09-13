@@ -1,0 +1,156 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Rotation"
+description: |
+    A [Rotation] is a transformation that can be applied to an `Object`, a `Number3` or another `Rotation`.
+    
+    It can be created from euler angles, an axis-angle, or from vectors, and can be used as a safe way to store, manipulate, and apply rotations in your scene.
+
+    A table of three numbers can be used in place of an expected [Rotation] argument in all of its functions and most operations.
+
+    Internally, a quaternion is used to represent a [Rotation]. All of its functions as well as the `*` operator use this form. It allows rotations to be applied in a scene of any complexity.
+    However, the `+` and `-` operators are performed on the euler angles form, which may be used on simpler use-cases.
+
+    You can access the euler representation at any time using [Rotation].[X](#property-x), [Rotation].[Y](#property-y) and [Rotation].[Z](#property-z).
+    Note that the euler angles may change despite representing the same rotation, that is because there are several sequences of X, Y, Z rotations leading to the same transformation. This can also be due to euler angles being snapped back into the range 0 to 2PI.
+
+    ⚠️ If you are having issues with rotations in your scene, try to avoid performing calculations using euler angles and instead,
+    - to safely combine rotations, use the `*` operator instead of the `+` / `-` euler operators,
+        - `rotA + rotB` can be replaced by `rotB * rotA`
+        - `rotA - rotB` can be replaced by `-rotB * rotA`
+    - leverage the built-in [Rotation] alternate set functions,
+      [rotation:SetAxisAngle](/reference/rotation#functions-setaxisangle)
+      [rotation:SetLookRotation](/reference/rotation#functions-setlookrotation)
+      [rotation:SetFromToRotation](/reference/rotation#functions-setfromtorotation)
+    - leverage the built-in [Object] rotate functions,
+      [object:RotateLocal](/reference/object#functions-rotatelocal)
+      [object:RotateWorld](/reference/object#functions-rotateworld)
+      [object:RotationLocalToWorld](/reference/object#functions-rotationlocaltoworld)
+      [object:RotationWorldToLocal](/reference/object#functions-rotationworldtolocal)
+    - leverage the built-in [Number3] rotate function,
+      [number3:Rotate](/reference/number3#functions-rotate)
+
+constructors: 
+  - description: |
+        A rotation can be created,
+        - without parameter, rotation will be identity
+        - with euler angles
+        - with axis-angle
+
+        Either way, a quaternion is created and used internally to safely represent that rotation.
+
+    argument-sets:
+      -
+      -
+        - name: "eulerAnglesXYZ"
+          type: "Number3"
+      -
+        - name: "eulerAngleX"
+          type: "number"
+        - name: "eulerAngleY"
+          type: "number"
+        - name: "eulerAngleZ"
+          type: "number"
+      -
+        - name: "axis"
+          type: "Number3"
+        - name: "angle"
+          type: "number"
+
+properties:
+  - name: "X"
+    type: "number"
+    description: "Euler angle around the X axis."
+    
+  - name: "Y"
+    type: "number"
+    description: "Euler angle around the Y axis."
+    
+  - name: "Z"
+    type: "number"
+    description: "Euler angle around the Z axis."
+
+functions:
+  - name: "Copy"
+    return: 
+        - type: "Rotation" 
+    description: |
+        Returns a new [Rotation] as a copy of this rotation.
+          
+  - name: "Inverse"
+    description: |
+        Inverse the rotation. This is safer than negating euler angles.
+        
+        Note that negating a [Rotation] by writing `-myRot` is performing the inverse and returning it.
+
+  - name: "Lerp"
+    description: |
+        Sets this `Rotation` to the linear interpolation between two given rotations at a given ratio.
+
+        This is faster than Slerp, but may not always be appropriate. Use Slerp instead if Lerp doesn't give satisfactory results.
+    arguments:
+      - name: "from"
+        type: "Rotation"
+      - name: "to"
+        type: "Rotation"
+      - name: "ratio"
+        type: "number"
+  
+  - name: "Slerp"
+    description: |
+        Sets this `Rotation` to the spherical interpolation between two given rotations at a given ratio.
+    arguments:
+      - name: "from"
+        type: "Rotation"
+      - name: "to"
+        type: "Rotation"
+      - name: "ratio"
+        type: "number"
+  
+  - name: "Angle"
+    description: |
+        Returns the angle in radians between this rotation and another rotation.
+    arguments:
+      - name: "otherRot"
+        type: "Rotation"
+    return: 
+        - type: "number"
+  
+  - name: "Set"
+    description: |
+        Sets this `Rotation` from euler angles.
+    argument-sets:
+      -
+        - name: "eulerAnglesXYZ"
+          type: "Number3"
+      -
+        - name: "eulerAngleX"
+          type: "number"
+        - name: "eulerAngleY"
+          type: "number"
+        - name: "eulerAngleZ"
+          type: "number"
+
+  - name: "SetAxisAngle"
+    description: |
+        Sets this `Rotation` from axis-angle.
+    arguments:
+      - name: "axis"
+        type: "Number3"
+      - name: "angle"
+        type: "number"
+
+  - name: "SetLookRotation"
+    description: |
+        Sets this `Rotation` from a direction vector. It will be set to the rotation between identity and the given vector.
+    arguments:
+      - name: "vector"
+        type: "Number3"
+
+  - name: "SetFromToRotation"
+    description: |
+        Sets this `Rotation` from two vectors. It will be set to the rotation going from the first vector to the second vector.
+    arguments:
+      - name: "fromVector"
+        type: "Number3"
+      - name: "toVector"
+        type: "Number3"
