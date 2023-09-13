@@ -261,9 +261,12 @@ char *string_new_copy_with_limit(const char *src, const size_t len) {
         srcLen = len;
     }
 
-    char *buffer = (char *)malloc(sizeof(char) * (srcLen + 1)); //  + 1: null termination char */;
-    strncpy(buffer, src, srcLen);
-    buffer[srcLen] = '\0';
+    char *buffer = (char *)malloc(sizeof(char) * (srcLen + 1)); // + 1: null termination char
+    if (buffer != NULL) {
+        strncpy(buffer, src, srcLen);
+        buffer[srcLen] = '\0';
+    }
+
     return buffer;
 }
 
