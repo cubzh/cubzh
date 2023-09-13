@@ -355,10 +355,11 @@ bool stringArray_n_append(stringArray_t *arr, const char *str, size_t length) {
     if (str == NULL) {
         return false;
     }
-    arr->strings = (char **)realloc(arr->strings, sizeof(char *) * (size_t)(arr->length + 1));
-    if (arr->strings == NULL) {
+    void *newArrStrings = realloc(arr->strings, sizeof(char *) * (size_t)(arr->length + 1));
+    if (newArrStrings == NULL) {
         return false;
     }
+    arr->strings = (char **)newArrStrings;
     arr->length += 1;
     arr->strings[arr->length - 1] = string_new_copy_with_limit(str, length);
     return true;
