@@ -110,6 +110,10 @@ void _rigidbody_fire_reciprocal_callbacks(Scene *sc,
                                           float3 wNormal,
                                           void *callbackData) {
 
+    if (rigidbody_collision_callback == NULL) {
+        return;
+    }
+
     const bool selfBegin = _rigidbody_get_simulation_flag(selfRb,
                                                           SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED);
     const bool selfTick = _rigidbody_get_simulation_flag(selfRb, SIMULATIONFLAG_CALLBACK_ENABLED);

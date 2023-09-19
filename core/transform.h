@@ -71,6 +71,7 @@ typedef enum {
 } TransformType;
 
 typedef bool (*pointer_transform_recurse_func)(Transform *t, void *ptr);
+typedef void (*pointer_transform_destroyed_func)(const uint16_t id);
 typedef Transform **Transform_Array;
 
 /// MARK: - Lifecycle -
@@ -97,6 +98,7 @@ void transform_refresh_children_done(Transform *t);
 void transform_reset_any_dirty(Transform *t);
 /// set, but not reset by transform, can be used internally by higher types as custom flag
 bool transform_is_any_dirty(Transform *t);
+void transform_set_destroy_callback(pointer_transform_destroyed_func f);
 
 /// MARK: - Physics -
 void transform_reset_physics_dirty(Transform *t);

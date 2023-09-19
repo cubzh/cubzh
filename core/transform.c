@@ -113,6 +113,8 @@ static Mutex *_IDMutex = NULL;
 static uint16_t _nextID = 1;
 static FiloListUInt16 *_availableIDs = NULL;
 
+static pointer_transform_destroyed_func transform_destroyed_callback = NULL;
+
 // MARK: - Private functions' prototypes -
 
 static uint16_t _transform_get_valid_id(void);
@@ -322,6 +324,10 @@ void transform_reset_any_dirty(Transform *t) {
 
 bool transform_is_any_dirty(Transform *t) {
     return _transform_get_dirty(t, TRANSFORM_ANY);
+}
+
+void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
+    transform_destroyed_callback = f;
 }
 
 // MARK: - Physics -
@@ -1429,6 +1435,10 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
 static void _transform_free(Transform *const t) {
     if (t == NULL) {
         return;
+    }
+
+    if (transform_destroyed_callback != NULL) {
+        transform_destroyed_callback(t->id);
     }
 
     // free pointers for transforms that were created in Lua
