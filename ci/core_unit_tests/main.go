@@ -69,16 +69,18 @@ func buildAnRunCurrentDirectory() error {
 
 	// execute build commands
 	ciContainer = ciContainer.WithExec([]string{"cmake", "-G", "Ninja", "."})
-	code, err := ciContainer.ExitCode(ctx)
-	if err != nil || code != 0 {
-		outErr, err := ciContainer.Stderr(ctx)
-		if err != nil {
-			return err
-		}
-		fmt.Println(outErr)
-		if err == nil {
+
+	// To know wether the execution succeeded, we need to force the evaluation
+	// of the pipeline after an using Sync, and then
+	ciContainer, err = ciContainer.Sync(ctx)
+	if err != nil {
+		var execErr *dagger.ExecError
+		if errors.As(err, &execErr) {
+			// err is an ExecError
+			fmt.Println(execErr.Stderr)
 			return errors.New("cmake error")
 		}
+		fmt.Println("error syncing the pipeline after exec")
 		return err
 	}
 
@@ -87,17 +89,19 @@ func buildAnRunCurrentDirectory() error {
 	// Flags after `--` are transmitted as-is to the build system (Ninja, here)
 	// Ninja will stop if this number of errors is reached : NB_MAX_BUILD_ERRORS
 	ciContainer = ciContainer.WithExec([]string{"cmake", "--build", ".", "--clean-first", "--", "-k", NB_MAX_BUILD_ERRORS})
-	code, err = ciContainer.ExitCode(ctx)
+
+	// To know wether the execution succeeded, we need to force the evaluation
+	// of the pipeline after an using Sync, and then
+	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {
-		return err
-	}
-	if code != 0 {
-		outErr, err := ciContainer.Stderr(ctx)
-		if err != nil {
-			return err
+		var execErr *dagger.ExecError
+		if errors.As(err, &execErr) {
+			// err is an ExecError
+			fmt.Println(execErr.Stderr)
+			return errors.New("cmake --build error")
 		}
-		fmt.Println(outErr)
-		return errors.New("cmake --build error")
+		fmt.Println("error syncing the pipeline after exec")
+		return err
 	}
 
 	// exec compiled unit tests program
@@ -109,13 +113,20 @@ func buildAnRunCurrentDirectory() error {
 	}
 	fmt.Println(output)
 
-	code, err = ciContainer.ExitCode(ctx)
-	time.Sleep(time.Second * 1) // sleep needed when tests fail (race condition?)
+	// time.Sleep(time.Second * 1) // sleep needed when tests fail (race condition?)
+
+	// To know wether the execution succeeded, we need to force the evaluation
+	// of the pipeline after an using Sync, and then
+	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {
+		var execErr *dagger.ExecError
+		if errors.As(err, &execErr) {
+			// err is an ExecError
+			fmt.Println(execErr.Stderr)
+			return errors.New("running error")
+		}
+		fmt.Println("error syncing the pipeline after exec")
 		return err
-	}
-	if code != 0 {
-		return errors.New("running error")
 	}
 
 	fmt.Println("Tests done!")
