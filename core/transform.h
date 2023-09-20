@@ -216,6 +216,12 @@ void transform_utils_box_to_dynamic_collider(Transform *t,
                                              SquarifyType squarify);
 Shape *transform_utils_get_shape(Transform *t);
 Transform *transform_utils_get_model_transform(Transform *t);
+void transform_utils_get_backward(Transform *t, float3 *backward);
+void transform_utils_get_left(Transform *t, float3 *left);
+void transform_utils_get_down(Transform *t, float3 *down);
+const float3 *transform_utils_get_velocity(Transform *t);
+const float3 *transform_utils_get_motion(Transform *t);
+const float3 *transform_utils_get_acceleration(Transform *t);
 
 // MARK: - Misc. -
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
