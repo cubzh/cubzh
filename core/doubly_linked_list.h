@@ -48,7 +48,8 @@ DoublyLinkedListNode *doubly_linked_list_first(const DoublyLinkedList *list);
 
 // removes node from list
 //!\\ stored pointer won't be released
-void doubly_linked_list_delete_node(DoublyLinkedList *list, DoublyLinkedListNode *node);
+DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *list,
+                                                     DoublyLinkedListNode *node);
 DoublyLinkedListNode *doubly_linked_list_insert_node_next(DoublyLinkedList *list,
                                                           DoublyLinkedListNode *node,
                                                           void *ptr);
@@ -67,6 +68,7 @@ size_t doubly_linked_list_node_count(const DoublyLinkedList *list);
 // iterates over nodes to return node at index
 DoublyLinkedListNode *doubly_linked_list_node_at_index(const DoublyLinkedList *list, size_t i);
 
+DoublyLinkedListNode *doubly_linked_list_find(const DoublyLinkedList *list, void *ptr);
 bool doubly_linked_list_contains(const DoublyLinkedList *list, void *ptr);
 typedef bool (*pointer_doubly_linked_list_contains_func)(void *nodePtr, void *data);
 bool doubly_linked_list_contains_func(const DoublyLinkedList *list,

@@ -113,6 +113,8 @@ static Mutex *_IDMutex = NULL;
 static uint16_t _nextID = 1;
 static FiloListUInt16 *_availableIDs = NULL;
 
+static pointer_transform_destroyed_func transform_destroyed_callback = NULL;
+
 // MARK: - Private functions' prototypes -
 
 static uint16_t _transform_get_valid_id(void);
@@ -322,6 +324,10 @@ void transform_reset_any_dirty(Transform *t) {
 
 bool transform_is_any_dirty(Transform *t) {
     return _transform_get_dirty(t, TRANSFORM_ANY);
+}
+
+void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
+    transform_destroyed_callback = f;
 }
 
 // MARK: - Physics -
@@ -1008,6 +1014,51 @@ Transform *transform_utils_get_model_transform(Transform *t) {
     return transform_get_type(t) == ShapeTransform ? shape_get_pivot_transform((Shape *)t->ptr) : t;
 }
 
+void transform_utils_get_backward(Transform *t, float3 *backward) {
+    transform_get_forward(t, backward);
+    backward->x *= -1;
+    backward->y *= -1;
+    backward->z *= -1;
+}
+
+void transform_utils_get_left(Transform *t, float3 *left) {
+    transform_get_right(t, left);
+    left->x *= -1;
+    left->y *= -1;
+    left->z *= -1;
+}
+
+void transform_utils_get_down(Transform *t, float3 *down) {
+    transform_get_up(t, down);
+    down->x *= -1;
+    down->y *= -1;
+    down->z *= -1;
+}
+
+const float3 *transform_utils_get_velocity(Transform *t) {
+    if (t->rigidBody != NULL) {
+        return rigidbody_get_velocity(t->rigidBody);
+    } else {
+        return NULL;
+    }
+}
+
+const float3 *transform_utils_get_motion(Transform *t) {
+    if (t->rigidBody != NULL) {
+        return rigidbody_get_motion(t->rigidBody);
+    } else {
+        return NULL;
+    }
+}
+
+const float3 *transform_utils_get_acceleration(Transform *t) {
+    if (t->rigidBody != NULL) {
+        return rigidbody_get_constant_acceleration(t->rigidBody);
+    } else {
+        return NULL;
+    }
+}
+
 // MARK: - Misc. -
 
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled) {
@@ -1429,6 +1480,10 @@ static void _transform_utils_box_to_aabox_full(Transform *t,
 static void _transform_free(Transform *const t) {
     if (t == NULL) {
         return;
+    }
+
+    if (transform_destroyed_callback != NULL) {
+        transform_destroyed_callback(t->id);
     }
 
     // free pointers for transforms that were created in Lua

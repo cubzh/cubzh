@@ -130,10 +130,12 @@ DoublyLinkedListNode *doubly_linked_list_first(const DoublyLinkedList *list) {
     return list->first;
 }
 
-void doubly_linked_list_delete_node(DoublyLinkedList *list, DoublyLinkedListNode *node) {
-
+DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *list,
+                                                     DoublyLinkedListNode *node) {
+    DoublyLinkedListNode *next = NULL;
     if (node->next != NULL) {
         node->next->previous = node->previous;
+        next = node->next;
     }
 
     if (node->previous != NULL) {
@@ -155,6 +157,8 @@ void doubly_linked_list_delete_node(DoublyLinkedList *list, DoublyLinkedListNode
     }
 
     doubly_linked_list_node_free(node);
+
+    return next;
 }
 
 DoublyLinkedListNode *doubly_linked_list_insert_node_previous(DoublyLinkedList *list,
@@ -235,6 +239,18 @@ DoublyLinkedListNode *doubly_linked_list_node_at_index(const DoublyLinkedList *l
             return n;
         }
         ++count;
+        n = n->next;
+    }
+
+    return NULL;
+}
+
+DoublyLinkedListNode *doubly_linked_list_find(const DoublyLinkedList *list, void *ptr) {
+    DoublyLinkedListNode *n = list->first;
+    while (n != NULL) {
+        if (n->ptr == ptr) {
+            return n;
+        }
         n = n->next;
     }
 
