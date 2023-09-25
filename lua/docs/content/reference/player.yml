@@ -73,18 +73,10 @@ properties:
     description: |
         Whether or not the player shapes should be affected by light shadow casters in matching layers.
 
-  - name: "ShadowCookie"
-    type: boolean
-    description: |
-        Whether or not [This] should have a square shadow projected on the map, default is `false`.
-        The size of this shadow is based off [This]'s world bounding box.
-
-        Note that this is a write-only shortcut to the individual player shapes' `shape.ShadowCookie` field.
-
   - name: "Layers"
     type: "table"
     description: |
-        Integer or table of integers between 1 and 8. Cameras only render objects corresponding to their layers.
+        Integer or table of integers between 1 and 12. Cameras only render objects corresponding to their layers.
 
 functions:
   - name: "CastRay"

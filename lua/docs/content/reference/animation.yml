@@ -1,0 +1,125 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "Animation"
+description: |
+    An [Animation] is a set of keyframes groups that can be used to animate any object or group of objects, such as animating a character or creating a cutscene.
+
+    Each keyframes group is bound to animating one object, it can be toggled on or off individually to disable part of an animation.
+    For example, a running animation could temporarily toggle off the keyframes group bound to an arm to simultaneously play a wave animation on that arm.
+constructors: 
+  - description: |
+        When created, an [Animation] can be given a name and a set of optional configuration `{ duration, mode, speed, count}`.
+        They are used to initialize the corresponding properties [Duration](#property-duration), [Mode](#property-mode), [Speed](#property-speed) and [Count](#property-count).
+
+    arguments:
+      - name: "name"
+        type: "string"
+        optional: true
+      - name: "config"
+        type: "table"
+        optional: true
+
+properties:
+  - name: "Mode"
+    type: "AnimationMode"
+    description: |
+        An [Animation] can function in three modes,
+        - `AnimationMode.Once` the animation plays one cycle and stops at the end of its duration.
+        - `AnimationMode.Loop` the animation will repeat at the end of each cycle until [Stop](#functions-stop) is called or, if [Count](#property-count) is set, for a specific number of cycles
+        - `AnimationMode.Mirror` the animation will repeat and reverse at the end of each cycle until [Stop](#functions-stop) is called or, if [Count](#property-count) is set, for a specific number of cycles
+    
+  - name: "Duration"
+    type: "number"
+    description: "Duration in seconds of one animation cycle."
+    
+  - name: "Speed"
+    type: "number"
+    description: "Speed of one animation cycle. This is the inverse of [Duration](#property-duration), you can choose to set one or the other."
+
+  - name: "Count"
+    type: "number"
+    description: "Number of cycles to repeat if using [AnimationMode].[Loop](reference/animationmode#property-loop) or [AnimationMode].[Mirror](reference/animationmode#property-mirror)."
+
+  - name: "IsPlaying"
+    type: "boolean"
+    description: "Whether or not the animation is currently playing."
+
+functions:
+  - name: "Play"
+    description: "Starts or resumes the animation."
+  
+  - name: "PlayReverse"
+    description: "Reverse, then starts or resumes the animation."
+
+  - name: "Stop"
+    description: "Stops and resets the animation."
+  
+  - name: "Pause"
+    description: "Pauses the animation."
+  
+  - name: "Tick"
+    description: |
+        Steps the animation one tick. This is typically to be called inside [Client].[Tick](/reference/client#functions-tick) or [Object].[Tick](/reference/object#functions-tick).
+
+        ⚠️ This needs to be called manually currently. In a future version, it may be done automatically.
+  
+  - name: "AddFrameInGroup"
+    description: |
+        Add a keyframe to the group identified by its name, at a given weight, for a transformation of any or all of position, rotation and scale through the last parameter `{ position, rotation, scale }`.
+
+        The weight can be any number, allowing you to organize keyframes relative to each others' weight.
+        Keyframes are then played in order of increasing weight.
+
+        Note that when the animation is played for the first time, keyframes weights are automatically normalized.
+    arguments:
+      - name: "name"
+        type: "string"
+      - name: "weight"
+        type: "number"
+      - name: "transform"
+        type: "table"
+
+  - name: "Bind"
+    description: |
+        Binds a keyframes group identified by its name to the given object. It means whenever this animation is played, that particular group of keyframes will modify the bound object.
+    arguments:
+      - name: "name"
+        type: "string"
+      - name: "target"
+        type: "Object"
+  
+  - name: "Toggle"
+    description: |
+        Toggles a keyframes group identified by its name. Whenever this animation is played, that particular group of keyframes will not be used until toggled back on.
+    arguments:
+      - name: "name"
+        type: "string"
+      - name: "toggle"
+        type: "boolean"
+  
+  - name: "AddOnPlayCallback"
+    description: |
+        Register a function to be called any time the animation is played.
+    arguments:
+      - name: "callback"
+        type: "function"
+
+  - name: "RemoveOnPlayCallback"
+    description: |
+        Unregister a function that was previously registered with [AddOnPlayCallback](#functions-addonplaycallback).
+    arguments:
+      - name: "callback"
+        type: "function"
+  
+  - name: "AddOnStopCallback"
+    description: |
+        Register a function to be called any time the animation is stopped.
+    arguments:
+      - name: "callback"
+        type: "function"
+
+  - name: "RemoveOnStopCallback"
+    description: |
+        Unregister a function that was previously registered with [AddOnStopCallback](#functions-addonplaycallback).
+    arguments:
+      - name: "callback"
+        type: "function"

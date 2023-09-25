@@ -5,6 +5,7 @@ blocks:
     - text: "Here's a list of all top level objects in Cubzh scripting environment:"
     - list:
         - "<a href=\"/reference/ambient\">Ambient</a>"
+        - "<a href=\"/reference/animation\">Animation</a>"
         - "<a href=\"/reference/audiolistener\">AudioListener</a>"
         - "<a href=\"/reference/audiosource\">AudioSource</a>"
         - "<a href=\"/reference/block\">Block</a>"
@@ -41,6 +42,7 @@ blocks:
         - "<a href=\"/reference/pointerevent\">PointerEvent</a>"
         - "<a href=\"/reference/quad\">Quad</a>"
         - "<a href=\"/reference/ray\">Ray</a>"
+        - "<a href=\"/reference/rotation\">Rotation</a>"
         - "<a href=\"/reference/screen\">Screen</a>"
         - "<a href=\"/reference/server\">Server</a>"
         - "<a href=\"/reference/shape\">Shape</a>"

@@ -64,7 +64,7 @@ properties:
     - name: "Palette"
       type: "array"
       description: |
-          Palette is an [array] of [Color]s, with each entry corresponding to a [Color] used by the [This].
+          Palette is an [array] of [BlockProperties], with each entry corresponding to a style of block used by the [This]'s model.
 
     - name: "Pivot"
       type: "Number3"
@@ -102,6 +102,11 @@ properties:
       read-only: true
       type: "number"
       description: "Returns [This]'s width, measured in blocks."
+    
+    - name: "Size"
+      read-only: true
+      type: "Number3"
+      description: "Returns [This]'s model bounding box size, measured in blocks. Equivalent to `Number3(shape.Width, shape.Height, shape.Depth)`."
 
     - name: "BoundingBox"
       read-only: true
@@ -140,16 +145,10 @@ properties:
       description: |
           Whether or not the shape should be affected by light shadow casters in matching layers.
 
-    - name: "ShadowCookie"
-      type: boolean
-      description: |
-          Whether or not [This] should have a square shadow projected on the map, default is `false`.
-          The size of the shadow is based off [This]'s collision box.
-
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. Cameras only render shapes corresponding to their layers, and lights only affect shapes in matching layers.
+          Integer or table of integers between 1 and 12. Cameras only render shapes corresponding to their layers, and lights only affect shapes in matching layers.
 
     - name: "IsUnlit"
       type: "boolean"

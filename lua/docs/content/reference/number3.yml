@@ -41,7 +41,7 @@ properties:
   - name: "Length"
     type: "number"
     description: |
-        `Number3`'s length.
+        Magnitude of the `Number3`.
         Technically, the square root of the sum of [X](/reference/number3#property-x), [Y](/reference/number3#property-y) & [Z](/reference/number3#property-z) components.
     samples:
       - code: |
@@ -117,24 +117,76 @@ functions:
           local n2 = Number3(1, 0, 0)
           local dot = n1:Dot(n2)
 
-
   - name: "Rotate"
     description: |
-      Rotates the `Number3` using euler angles in parameters (in radians).
-    arguments: 
-      - name: "angles"
-        type: "Number3"
+        Rotates the `Number3` using euler angles in parameters (in radians).
+    argument-sets:
+        - 
+          - name: "eulerAnglesXYZ"
+            type: "Number3"
+        - 
+          - name: "eulerAngleX"
+            type: "number"
+          - name: "eulerAngleY"
+            type: "number"
+          - name: "eulerAngleZ"
+            type: "number"
+        - 
+          - name: "rotation"
+            type: "Rotation"
     samples:
       - code: |
           local someNumber3 = Number3(0,0,1)
           local pi = 3.1415
           someNumber3:Rotate(Number3(0,pi,0))
           -- someNumber3 == Number3(0,0,-1), after a PI rotation around Y axis (180°)
+  
+  - name: "Angle"
+    description: |
+        Returns the angle in radians between this and given `Number3`.
+    argument-sets:
+        - 
+          - name: "eulerAnglesXYZ"
+            type: "Number3"
+        - 
+          - name: "eulerAngleX"
+            type: "number"
+          - name: "eulerAngleY"
+            type: "number"
+          - name: "eulerAngleZ"
+            type: "number"
+    return: 
+        - type: "number" 
+  
+  - name: "Lerp"
+    description: |
+        Sets this `Number3` to the linear interpolation between two given `Number3` at a given ratio.
+    arguments: 
+      - name: "from"
+        type: "Number3"
+      - name: "to"
+        type: "Number3"
+      - name: "ratio"
+        type: "number"
+  
+  - name: "Set"
+    description: |
+        Sets this `Number3`'s components to the given values.
+    argument-sets:
+        - 
+          - name: "xyz"
+            type: "Number3"
+        - 
+          - name: "x"
+            type: "number"
+          - name: "y"
+            type: "number"
+          - name: "z"
+            type: "number"
 
   - name: "Normalize"
     description: |
-      Normalizes the `Number3`.
-      Scales [X](/reference/number3#property-x), [Y](/reference/number3#property-y) & [Z](/reference/number3#property-z) for the [Length](/reference/number3#property-length) to be `1.0`.
+      Normalizes the `Number3` so that its magnitude(/reference/number3#property-length) becomes `1.0`.
     samples:
       - code: |
           local someNumber3 = Number3(10,0,0)

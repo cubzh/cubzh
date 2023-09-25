@@ -48,3 +48,32 @@ properties:
     - name: "R"
       type: "number"
       description: "Color's red component. (shortcut to [Red](#property-red))"
+
+functions:
+  - name: "Lerp"
+    description: |
+        Sets this `Color` to the linear interpolation between two given `Color` at a given ratio.
+    arguments: 
+      - name: "from"
+        type: "Color"
+      - name: "to"
+        type: "Color"
+      - name: "ratio"
+        type: "number"
+  
+  - name: "Set"
+    description: |
+        Sets this `Color`'s components to the given values.
+    arguments:
+      - name: "r"
+        type: "number"
+      - name: "g"
+        type: "number"
+      - name: "b"
+        type: "number"
+      - name: "a"
+        type: "number"
+        optional: true
+      - name: "light"
+        type: "boolean"
+        optional: true

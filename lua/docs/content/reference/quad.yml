@@ -42,6 +42,10 @@ properties:
       type: "number"
       description: |
           Height of the quad model, `1.0` by default.
+    
+    - name: "Size"
+      type: "Number2"
+      description: "Returns the size of the quad model. Equivalent to `Number2(quad.Width, quad.Height)`."
 
     - name: "Anchor"
       type: "Number2"
@@ -79,7 +83,7 @@ properties:
     - name: "Layers"
       type: "table"
       description: |
-          Integer or table of integers between 1 and 8. Cameras only render quads corresponding to their layers, and lights only affect quads in matching layers.
+          Integer or table of integers between 1 and 12. Cameras only render quads corresponding to their layers, and lights only affect quads in matching layers.
 
     - name: "IsUnlit"
       type: "boolean"

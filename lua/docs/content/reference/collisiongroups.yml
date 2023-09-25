@@ -2,11 +2,11 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
 type: "CollisionGroups"
 
 description: |
-    `CollisionGroups` represents an [array] of collision group numbers.
+    `CollisionGroups` represents an [array] of collision group numbers between `1` and `12`.
 
     Collision groups are used to define how objects in the world collide with each others.
-
-    Group numbers go from `1` to `8`. The [Map] by default is in group `1`, and by default, all [Object]s collide with that group, but that behavior can be changed.
+    
+    By default, the [Map] is in group `1`, [Player]s in group `2` any other objects in group `3` ; players and objects collide with other objects and the map. This behavior can be changed by setting different collision groups.
 
 constructors:
   - description: |
