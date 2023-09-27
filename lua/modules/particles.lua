@@ -1,4 +1,4 @@
--- WORLK IN PROGRESS
+-- WORK IN PROGRESS
 
 local particles = {
 	pool = {},
@@ -6,25 +6,30 @@ local particles = {
 	initialized = false,
 	n = 0,
 	fromConfigOrDefault = function(f,default)
-		if f then return f() else return default end
+		if f then
+			if type(f) == "function" then return f() else return f end
+		else
+			return default
+		end
 	end
 }
 
 --[[
 Config fields can be nil, default values used in that case
+Also fields can be just values
 
 config = {
-	velocity = function() return Number3(0,0,0) end,
+	velocity = function() return Number3(0,0,0) end, -- start velocity
 	position = function() return Number3(0,0,0) end, -- start position
-	scale = function() return Number3(0,0,0) end, -- start position
-	mass = function() return 1 end, -- should return a number
-	physics = function() return true end, -- should return a boolean
-	acceleration = function() return Number3(0,0,0) end, -- should return a Number3
-	life = function() return 1.5 end, -- should return time in seconds
-	collidesWithGroups = function return nil end -- should return collision groups
-	collisionGroups = function return nil end -- should return collision groups
-	color = function return Color.White end -- should return a Color
-	pps = function return nil end -- should return number of spawned particles per second, if nil, all spawned at once
+	scale = function() return Number3(0,0,0) end, -- start scale
+	mass = function() return 1 end, -- should be or return a number
+	physics = true, -- should be or return a boolean
+	acceleration = function() return Number3(0,0,0) end, -- should be or return a Number3
+	life = function() return 1.5 end, -- should be or return time in seconds
+	collidesWithGroups = function return nil end -- should be or return collision groups
+	collisionGroups = function return nil end -- should be or return collision groups
+	color = function return Color.White end -- should be or return a Color
+	pps = function return nil end -- should be or return number of spawned particles per second, if nil, all spawned at once
 }
 
 --]]
