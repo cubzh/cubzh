@@ -25,7 +25,7 @@ end
 local mt = {
 	-- __index returns empty table to avoid errors to happen down the road:
 	-- print(emptyTable.foo) -- message displayed, but no error
-	-- emptyTable.foo = "coucou" -- message didplayed, but would raise an error on set
+	-- emptyTable.foo = "coucou" -- message displayed, but would raise an error on set
 	-- if foo was not returned as am empty table itself.
 	__index = function(t,k) printMessageOnFirstAccess(t) return t end,
 	__newindex = function(t,k,v) printMessageOnFirstAccess(t) end,
