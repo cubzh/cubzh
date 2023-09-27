@@ -378,11 +378,6 @@ end)
 
 LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
 	require("ui_avatar"):preloadHeads(p)
-	LocalEvent:Send(LocalEvent.Name.InfoMessage, p.Username .. " joined the game.")
-end)
-
-LocalEvent:Listen(LocalEvent.Name.OnPlayerLeave, function(p)
-	LocalEvent:Send(LocalEvent.Name.InfoMessage, p.Username .. " left the game.")
 end)
 
 LocalEvent:Listen(LocalEvent.Name.InfoMessage, function(msg)
