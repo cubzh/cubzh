@@ -47,7 +47,6 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
     uint32_t uy = (uint32_t)y;
     uint32_t uz = (uint32_t)z;
 
-    //    static void** currentNode;
     void **currentNode = index->topLevelNode;
 
     uint32_t modulo = ux & INDEX_NODE_BITWISE_MODULO;
@@ -146,6 +145,70 @@ void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const 
     }
 
     return NULL;
+}
+
+void index3d_batch_get_reset(const Index3D *index, void ***batchedNode) {
+    *batchedNode = index->topLevelNode;
+}
+
+bool index3d_batch_get_advance(const int32_t value, void ***batchedNode) {
+    uint32_t modulo = (uint32_t)value & INDEX_NODE_BITWISE_MODULO;
+    uint32_t quotient = (uint32_t)value >> INDEX_DIVIDE_BYTES;
+
+    while (1) {
+        if (quotient == 0 && modulo == 0) {
+            *batchedNode = (void **)(*batchedNode)[INDEX_NODE_ARRAY_SIZE_MINUS_ONE];
+            if (*batchedNode == NULL) {
+                return false; // not found
+            }
+            break;
+        }
+
+        *batchedNode = (void **)(*batchedNode)[modulo];
+
+        if (*batchedNode == NULL) {
+            return false; // not found
+        }
+
+        if (quotient == 0) {
+            // making sure we're going to stop next loop
+            modulo = 0;
+        } else {
+            // go deeper
+            modulo = quotient & INDEX_NODE_BITWISE_MODULO;
+            quotient = quotient >> INDEX_DIVIDE_BYTES;
+        }
+    }
+
+    return true;
+}
+
+void *index3d_batch_get(const int32_t z, void **batchedNode) {
+    uint32_t modulo = (uint32_t)z & INDEX_NODE_BITWISE_MODULO;
+    uint32_t quotient = (uint32_t)z >> INDEX_DIVIDE_BYTES;
+
+    while (1) {
+        // found!!!!
+        if (quotient == 0 && modulo == 0) {
+            return doubly_linked_list_node_pointer(
+                (const DoublyLinkedListNode *)batchedNode[INDEX_NODE_ARRAY_SIZE_MINUS_ONE]);
+        }
+
+        batchedNode = (void **)batchedNode[modulo];
+
+        if (batchedNode == NULL) {
+            return NULL; // not found
+        }
+
+        if (quotient == 0) {
+            // making sure we're going to stop next loop
+            modulo = 0;
+        } else {
+            // go deeper
+            modulo = quotient & INDEX_NODE_BITWISE_MODULO;
+            quotient = quotient >> INDEX_DIVIDE_BYTES;
+        }
+    }
 }
 
 void *index3d_remove(Index3D *index,

@@ -57,6 +57,9 @@ void index3d_insert(Index3D *index,
 
 // index3d_get returns pointer at given position. NULL can be returned
 void *index3d_get(const Index3D *index, const int32_t x, const int32_t y, const int32_t z);
+void index3d_batch_get_reset(const Index3D *index, void ***batchedNode);
+bool index3d_batch_get_advance(const int32_t value, void ***batchedNode);
+void *index3d_batch_get(const int32_t z, void **batchedNode);
 
 // index3d_remove removes ptr from index at given position, optionally maintaining given iterator
 // @returns removed pointer or NULL if not found. Its caller's responsibility to free memory.

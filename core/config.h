@@ -39,21 +39,6 @@ extern "C" {
 #define PLAYER_ID_NOT_ATTRIBUTED 252 // value before ID is attributed
 #define PLAYER_ID_NONE 251           // ID to represent no one
 
-#define PLAYER_SCALE 0.5f
-#define PLAYER_AVATAR_BB_SIZE_Y 29.0f // expressed in local space from player root,
-#define PLAYER_AVATAR_BB_SIZE_XZ 9.0f // or in blocks (provided body shapes are scale 1)
-
-// walk animation ramps up from 0 to maximum motion force
-#define PLAYER_WALK_MAX_SPEED 1.8f
-#define PLAYER_WALK_MAX_MOTION_MAG 2500.0f
-#define PLAYER_WAVE_SPEED 4.5f
-#define PLAYER_TALK_SPEED 7.0f
-#define PLAYER_SWING_SPEED 4.0f
-#define PLAYER_IDLE_SPEED 0.5f
-#define PLAYER_ANIM_SPEED_WALK_RIGHT_ITEM 0.5f
-#define PLAYER_ANIM_SPEED_HOLD_DRINK 0.5f
-#define PLAYER_ANIM_SPEED_DRINK 2.0f
-
 // EVENTS
 #define EVENT_TYPE_FROM_SCRIPT 1
 #define EVENT_TYPE_SERVER_LOG_INFO 2
@@ -286,12 +271,7 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 #define FACE_SIZE_CTC 6
 #define FACE_NONE_CTC 7
 
-// CHUNKS
-// In Minecraft, a chunk is a column. (i.e. 16x16x128)
-// It may be better to use cubes and don't limit
-// world height depending on chunk height. It should
-// be an othet variable, and we should be able to display
-// fog vertically as well (depending on view distance)
+// SHAPE CHUNKS
 #define CHUNK_HEIGHT 16
 #define CHUNK_WIDTH 16
 #define CHUNK_DEPTH 16
@@ -306,7 +286,8 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 
 // VERTEX BUFFERS
 // Note (disambiguation): Cubzh Core's "VB" hold face data and is NOT equivalent to the "VB" that
-// drives drawcalls Maximum allowed capacity for a single vertex buffer, this should be matched by
+// drives drawcalls
+// Maximum allowed capacity for a single vertex buffer, this should be matched by
 // renderer max texture size
 #define VERTEX_BUFFER_MAX_COUNT 1048576
 #define VERTEX_BUFFER_MIN_COUNT 4096

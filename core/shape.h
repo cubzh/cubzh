@@ -42,17 +42,14 @@ typedef struct _LoadShapeSettings {
     bool isMutable;
 } LoadShapeSettings;
 
-#define POINT_OF_INTEREST_ORIGIN "origin"     // legacy
-#define POINT_OF_INTEREST_HAND "Hand"         //
-#define POINT_OF_INTEREST_HAT "Hat"           // POI in item for wearing it as a hat
-#define POINT_OF_INTEREST_BACKPACK "Backpack" // POI in item for equipping it as a backpack
+#define POINT_OF_INTEREST_ORIGIN "origin" // legacy
+#define POINT_OF_INTEREST_HAND "Hand"     //
 
-// A shape is a model made out of blocks. A list of chunks & an octree are used as
-// datastructures respectively to allocate memory for rendering buffers and to
-// perform physics queries.
-// TODO: currently (feb. 2023), all shapes have an octree and block data is duplicated
-//  in octree & chunks, ideally, we need to refacto the writing of VBs so that chunks
-//  can be removed and VB writing uses octree underlying data
+// Latest revision: sept. 2023
+//
+// A shape is a model made out of blocks. A list of chunks is used to partition
+// model space for rendering buffers. Each chunk has an octree onto which physics
+// queries can be performed.
 //
 // Memory allocation for rendering buffers (loosely called here vertex buffers) is meant
 // to minimize memory usage and maximize buffer occupancy in order to draw the shape
@@ -67,11 +64,6 @@ typedef uint8_t ShapeDrawMode;
 #define SHAPE_DRAWMODE_HIGHLIGHT 2
 #define SHAPE_DRAWMODE_GREY 4
 #define SHAPE_DRAWMODE_GRID 8
-
-/// Initializes mutex for shape thread safety.
-/// This is to be called before using the shape API.
-/// This is optional. If not called, the shape API is not thread-safe.
-void shape_initThreadSafety(void);
 
 // Creates an empty Shape
 Shape *shape_make(void);
@@ -96,9 +88,11 @@ bool shape_retain(Shape *const shape);
 /// Convenience function to release the shape's Transform
 /// /!\ `transform_release` is the function responsible for freeing resources
 void shape_release(Shape *const shape);
-uint16_t shape_retain_count(const Shape *const s);
 /// /!\ Only called by `transform_release` to free shape-specific resources
 void shape_free(Shape *const shape);
+
+Weakptr *shape_get_weakptr(Shape *s);
+Weakptr *shape_get_and_retain_weakptr(Shape *s);
 
 uint16_t shape_get_id(const Shape *shape);
 
@@ -182,12 +176,6 @@ bool shape_paint_block(Shape *shape,
                        Block **blockAfter,
                        const bool applyOffset);
 
-void shape_get_chunk_and_position_within(const Shape *shape,
-                                         const int3 *pos,
-                                         Chunk **chunk,
-                                         int3 *chunk_pos,
-                                         int3 *pos_in_chunk);
-
 void shape_get_bounding_box_size(const Shape *shape, int3 *size);
 void shape_get_allocated_size(const Shape *shape, int3 *size);
 bool shape_is_within_allocated_bounds(const Shape *shape,
@@ -240,21 +228,9 @@ void shape_make_space(Shape *const shape,
                       SHAPE_COORDS_INT_T maxZ,
                       const bool applyOffset);
 
-/// Updates a shape's vertex buffers.
-void shape_refresh_vertices(Shape *shape);
-void shape_refresh_all_vertices(Shape *s);
-
-VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent);
-
-// it's caller responsability to release created Index3DIterator
-Index3DIterator *shape_new_chunk_iterator(const Shape *shape);
-
-size_t shape_get_nb_chunks(const Shape *shape);
 size_t shape_get_nb_blocks(const Shape *shape);
 
 const Octree *shape_get_octree(const Shape *shape);
-
-void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent);
 
 void shape_set_model_locked(Shape *s, bool toggle);
 bool shape_is_model_locked(Shape *s);
@@ -263,10 +239,6 @@ void shape_set_fullname(Shape *s, const char *fullname); // copies fullname
 const char *shape_get_fullname(const Shape *s);
 
 void shape_set_color_palette_atlas(Shape *s, ColorAtlas *ca);
-
-/// This flag is only used to check from VX whether or not a coder can call MutableShape functions
-bool shape_is_lua_mutable(Shape *s);
-void shape_set_lua_mutable(Shape *s, const bool value);
 
 // MARK: - Transform -
 
@@ -336,6 +308,20 @@ void shape_move_children(Shape *from, Shape *to, const bool keepWorld);
 uint32_t shape_count_shape_descendants(const Shape *s);
 DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
+// MARK: - Chunks & buffers -
+
+Index3D *shape_get_chunks(const Shape *shape);
+size_t shape_get_nb_chunks(const Shape *shape);
+void shape_get_chunk_and_position_within(const Shape *shape,
+                                         const int3 *pos,
+                                         Chunk **chunk,
+                                         int3 *chunk_pos,
+                                         int3 *pos_in_chunk);
+void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent);
+void shape_refresh_vertices(Shape *shape);
+void shape_refresh_all_vertices(Shape *s);
+VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent);
+
 // MARK: - Physics -
 
 RigidBody *shape_get_rigidbody(const Shape *s);
@@ -399,7 +385,7 @@ bool shape_is_unlit(const Shape *s);
 void shape_set_layers(Shape *s, const uint16_t value);
 uint16_t shape_get_layers(const Shape *s);
 
-// MARK: -
+// MARK: - POI -
 
 void shape_debug_points_of_interest(const Shape *s);
 
@@ -476,13 +462,11 @@ bool shape_history_canRedo(const Shape *const s);
 void shape_history_undo(Shape *const s);
 void shape_history_redo(Shape *const s);
 
-// MARK: - Weak ptr -
+// MARK: - Lua flags -
+// These flags are only used to check from VX whether or not some Lua features should be enabled
 
-Weakptr *shape_get_weakptr(Shape *s);
-Weakptr *shape_get_and_retain_weakptr(Shape *s);
-
-// MARK: -
-
+bool shape_is_lua_mutable(Shape *s);
+void shape_set_lua_mutable(Shape *s, const bool value);
 void shape_enableAnimations(Shape *const s);
 void shape_disableAnimations(Shape *const s);
 bool shape_getIgnoreAnimations(Shape *const s);

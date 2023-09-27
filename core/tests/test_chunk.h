@@ -35,7 +35,7 @@ void test_chunk_new(void) {
     TEST_CHECK(GetPos->z == -10);
     TEST_CHECK(NBBlocks == 0);
 
-    chunk_destroy(chunk);
+    chunk_free(chunk, false);
 }
 
 // Create a chunk and 3 differents blocks and place them in the chunk at different coords. Check if
@@ -45,7 +45,7 @@ void test_chunk_new(void) {
 // --- chunk_get_block()
 // --- chunk_get_block_2()
 // --- chunk_get_block_pos()
-// --- chunk_get_inner_bounds()
+// --- chunk_get_bounding_box()
 // --- chunk_removeBlock()
 /////
 void test_chunk_Block(void) {
@@ -111,14 +111,14 @@ void test_chunk_Block(void) {
     TEST_CHECK(coords.y == 14);
     TEST_CHECK(coords.z == 11);
 
-    // chunk_get_inner_bounds()
+    // chunk_get_bounding_box()
     CHUNK_COORDS_INT_T minX = 0;
     CHUNK_COORDS_INT_T minY = 0;
     CHUNK_COORDS_INT_T minZ = 0;
     CHUNK_COORDS_INT_T maxX = 0;
     CHUNK_COORDS_INT_T maxY = 0;
     CHUNK_COORDS_INT_T maxZ = 0;
-    chunk_get_inner_bounds(chunk, &minX, &maxX, &minY, &maxY, &minZ, &maxZ);
+    chunk_get_bounding_box(chunk, &minX, &maxX, &minY, &maxY, &minZ, &maxZ);
     TEST_CHECK(minX == 4 && minY == 4 && minZ == 4 && maxX == 7 && maxY == 7 && maxZ == 7);
 
     // chunk_removeBlock()
@@ -139,19 +139,19 @@ void test_chunk_Block(void) {
     TEST_CHECK(NBBlocks == 0);
     TEST_CHECK(chunk_removeBlock(chunk, 0, 0, 0) == false);
 
-    chunk_destroy(chunk);
+    chunk_free(chunk, false);
 }
 
-// Create a chunk and set diffrents values on the "display bool" of this chunk.
+// Create a chunk and set differents values on the "display bool" of this chunk.
 // Then check if the bool is set with the good values
 void test_chunk_needs_display(void) {
     Chunk *chunk = chunk_new(10, 10, 10);
 
-    TEST_CHECK(chunk_needs_display(chunk) == false);
-    chunk_set_needs_display(chunk, true);
-    TEST_CHECK(chunk_needs_display(chunk) == true);
-    chunk_set_needs_display(chunk, false);
-    TEST_CHECK(chunk_needs_display(chunk) == false);
+    TEST_CHECK(chunk_is_dirty(chunk) == false);
+    chunk_set_dirty(chunk, true);
+    TEST_CHECK(chunk_is_dirty(chunk) == true);
+    chunk_set_dirty(chunk, false);
+    TEST_CHECK(chunk_is_dirty(chunk) == false);
 
-    chunk_destroy(chunk);
+    chunk_free(chunk, false);
 }

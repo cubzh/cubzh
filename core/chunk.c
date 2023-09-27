@@ -13,32 +13,40 @@
 #include "index3d.h"
 #include "vertextbuffer.h"
 
-static int nbNeighbors = 26;
+#define CHUNK_NEIGHBORS_COUNT 26
 
 // chunk structure definition
 struct _Chunk {
-    // 26 possible chunk neighbors
-    // it's a little heavy to store that many pointers...
-    // but it means not having to look for all 26 neighbors
+    // 26 possible chunk neighbors used for fast access
     // when updating chunk data/vertices
-    Chunk *neighbors[26]; /* 8 bytes */
+    Chunk *neighbors[CHUNK_NEIGHBORS_COUNT]; /* 8 bytes */
     // position of chunk in world's grid
     int3 *pos; /* 8 bytes */
     // 3d grid containing blocks contained in chunk
-    Block *blocks[CHUNK_WIDTH][CHUNK_DEPTH][CHUNK_HEIGHT]; /* 8 bytes */
+    Block *blocks[CHUNK_WIDTH][CHUNK_DEPTH][CHUNK_HEIGHT]; /* 8 bytes */ // TODO: octree
     // first opaque/transparent vbma reserved for that chunk, this can be chained across several vb
     VertexBufferMemArea *vbma_opaque;      /* 8 bytes */
     VertexBufferMemArea *vbma_transparent; /* 8 bytes */
     // number of blocks in that chunk
     int nbBlocks; /* 4 bytes */
-    // wether vertices need to be displayed or not
-    bool needsDisplay; /* 1 byte */
+    // wether vertices need to be refreshed
+    bool dirty; /* 1 byte */
 
     // padding
     char pad[3];
 };
 
 // MARK: private functions prototypes
+
+void _chunk_hello_neighbor(Chunk *newcomer,
+                           Neighbor newcomerLocation,
+                           Chunk *neighbor,
+                           Neighbor neighborLocation);
+void _chunk_good_bye_neighbor(Chunk *chunk, Neighbor location);
+Block *_chunk_get_block_including_neighbors(const Chunk *chunk,
+                                            const CHUNK_COORDS_INT_T x,
+                                            const CHUNK_COORDS_INT_T y,
+                                            const CHUNK_COORDS_INT_T z);
 
 /// used to gather vertex lighting values & properties in chunk_write_vertices
 void _vertex_light_get(Shape *transformWithShape,
@@ -61,10 +69,6 @@ void _vertex_light_smoothing(VERTEX_LIGHT_STRUCT_T *base,
 
 // MARK: public functions
 
-void chunk_set_needs_display(Chunk *chunk, bool b) {
-    chunk->needsDisplay = b;
-}
-
 Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
                  const SHAPE_COORDS_INT_T y,
                  const SHAPE_COORDS_INT_T z) {
@@ -74,7 +78,7 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
         return NULL;
     }
     chunk->pos = int3_new(x, y, z);
-    chunk->needsDisplay = false;
+    chunk->dirty = false;
     chunk->nbBlocks = 0;
 
     for (int xi = 0; xi < CHUNK_WIDTH; xi++) {
@@ -85,7 +89,7 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
         }
     }
 
-    for (int i = 0; i < nbNeighbors; i++) {
+    for (int i = 0; i < CHUNK_NEIGHBORS_COUNT; i++) {
         chunk->neighbors[i] = NULL;
     }
 
@@ -95,146 +99,10 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
     return chunk;
 }
 
-void _chunk_hello_neighbor(Chunk *newcomer,
-                           enum Neighbor newcomerLocation,
-                           Chunk *neighbor,
-                           enum Neighbor neighborLocation) {
-    if (neighbor == NULL)
-        return;
-
-    newcomer->neighbors[neighborLocation] = neighbor;
-    neighbor->neighbors[newcomerLocation] = newcomer;
-}
-
-Chunk *chunk_get_neighbor(const Chunk *chunk, enum Neighbor location) {
-    return chunk->neighbors[location];
-}
-
-// register as new neighbor in the grid
-// where chunk is inserted
-void chunk_move_in_neighborhood(Chunk *chunk,
-                                Chunk *topLeftBack,
-                                Chunk *topBack,
-                                Chunk *topRightBack, // top
-                                Chunk *topLeft,
-                                Chunk *top,
-                                Chunk *topRight,
-                                Chunk *topLeftFront,
-                                Chunk *topFront,
-                                Chunk *topRightFront,
-                                Chunk *bottomLeftBack,
-                                Chunk *bottomBack,
-                                Chunk *bottomRightBack, // bottom
-                                Chunk *bottomLeft,
-                                Chunk *bottom,
-                                Chunk *bottomRight,
-                                Chunk *bottomLeftFront,
-                                Chunk *bottomFront,
-                                Chunk *bottomRightFront,
-                                Chunk *leftBack,
-                                Chunk *back,
-                                Chunk *rightBack, // middle
-                                Chunk *left,
-                                /* self */ Chunk *right,
-                                Chunk *leftFront,
-                                Chunk *front,
-                                Chunk *rightFront) {
-    if (chunk == NULL)
-        return;
-
-    // top
-    _chunk_hello_neighbor(chunk, BottomRightFront, topLeftBack, TopLeftBack);
-    _chunk_hello_neighbor(chunk, BottomFront, topBack, TopBack);
-    _chunk_hello_neighbor(chunk, BottomLeftFront, topRightBack, TopRightBack);
-
-    _chunk_hello_neighbor(chunk, BottomRight, topLeft, TopLeft);
-    _chunk_hello_neighbor(chunk, Bottom, top, Top);
-    _chunk_hello_neighbor(chunk, BottomLeft, topRight, TopRight);
-
-    _chunk_hello_neighbor(chunk, BottomRightBack, topLeftFront, TopLeftFront);
-    _chunk_hello_neighbor(chunk, BottomBack, topFront, TopFront);
-    _chunk_hello_neighbor(chunk, BottomLeftBack, topRightFront, TopRightFront);
-
-    // bottom
-    _chunk_hello_neighbor(chunk, TopRightFront, bottomLeftBack, BottomLeftBack);
-    _chunk_hello_neighbor(chunk, TopFront, bottomBack, BottomBack);
-    _chunk_hello_neighbor(chunk, TopLeftFront, bottomRightBack, BottomRightBack);
-
-    _chunk_hello_neighbor(chunk, TopRight, bottomLeft, BottomLeft);
-    _chunk_hello_neighbor(chunk, Top, bottom, Bottom);
-    _chunk_hello_neighbor(chunk, TopLeft, bottomRight, BottomRight);
-
-    _chunk_hello_neighbor(chunk, TopRightBack, bottomLeftFront, BottomLeftFront);
-    _chunk_hello_neighbor(chunk, TopBack, bottomFront, BottomFront);
-    _chunk_hello_neighbor(chunk, TopLeftBack, bottomRightFront, BottomRightFront);
-
-    // middle
-    _chunk_hello_neighbor(chunk, RightFront, leftBack, LeftBack);
-    _chunk_hello_neighbor(chunk, Front, back, Back);
-    _chunk_hello_neighbor(chunk, LeftFront, rightBack, RightBack);
-
-    _chunk_hello_neighbor(chunk, Right, left, Left);
-    /* self */
-    _chunk_hello_neighbor(chunk, Left, right, Right);
-
-    _chunk_hello_neighbor(chunk, RightBack, leftFront, LeftFront);
-    _chunk_hello_neighbor(chunk, Back, front, Front);
-    _chunk_hello_neighbor(chunk, LeftBack, rightFront, RightFront);
-}
-
-// removes relation with given neighbor
-// given its location
-void _chunk_good_bye_neighbor(Chunk *chunk, enum Neighbor location) {
-    if (chunk == NULL)
-        return;
-    chunk->neighbors[location] = NULL;
-}
-
-// removes relations with all neighbors
-void chunk_leave_neighborhood(Chunk *chunk) {
-    if (chunk == NULL)
-        return;
-
-    // top
-    _chunk_good_bye_neighbor(chunk->neighbors[TopLeftBack], BottomRightFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopBack], BottomFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopRightBack], BottomLeftFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopRight], BottomLeft);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopRightFront], BottomLeftBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopFront], BottomBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopLeftFront], BottomRightBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[TopLeft], BottomRight);
-    _chunk_good_bye_neighbor(chunk->neighbors[Top], Bottom);
-
-    // middle
-    _chunk_good_bye_neighbor(chunk->neighbors[LeftBack], RightFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[Back], Front);
-    _chunk_good_bye_neighbor(chunk->neighbors[RightBack], LeftFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[Right], Left);
-    _chunk_good_bye_neighbor(chunk->neighbors[RightFront], LeftBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[Front], Back);
-    _chunk_good_bye_neighbor(chunk->neighbors[LeftFront], RightBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[Left], Right);
-
-    // bottom
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomLeftBack], TopRightFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomBack], TopFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomRightBack], TopLeftFront);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomRight], TopLeft);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomRightFront], TopLeftBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomFront], TopBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomLeftFront], TopRightBack);
-    _chunk_good_bye_neighbor(chunk->neighbors[BottomLeft], TopRight);
-    _chunk_good_bye_neighbor(chunk->neighbors[Bottom], Top);
-
-    for (int i = 0; i < nbNeighbors; i++) {
-        chunk->neighbors[i] = NULL;
+void chunk_free(Chunk *chunk, bool updateNeighbors) {
+    if (updateNeighbors) {
+        chunk_leave_neighborhood(chunk);
     }
-}
-
-void chunk_destroy(Chunk *chunk) {
-    // saying good bye to neighbors
-    chunk_leave_neighborhood(chunk);
 
     if (chunk->vbma_opaque != NULL) {
         vertex_buffer_mem_area_flush(chunk->vbma_opaque);
@@ -260,6 +128,26 @@ void chunk_destroy(Chunk *chunk) {
     int3_free(chunk->pos);
 
     free(chunk);
+}
+
+void chunk_free_func(void *c) {
+    chunk_free((Chunk *)c, false);
+}
+
+void chunk_set_dirty(Chunk *chunk, bool b) {
+    chunk->dirty = b;
+}
+
+bool chunk_is_dirty(const Chunk *chunk) {
+    return chunk->dirty;
+}
+
+const int3 *chunk_get_pos(const Chunk *chunk) {
+    return chunk->pos;
+}
+
+int chunk_get_nb_blocks(const Chunk *chunk) {
+    return chunk->nbBlocks;
 }
 
 bool chunk_addBlock(Chunk *chunk,
@@ -327,168 +215,11 @@ Block *chunk_get_block(const Chunk *chunk,
     return chunk->blocks[x][z][y];
 }
 
-// returns block positioned within chunk
-// and from neighbor chunks also if necessary
-//!\\ can't look past direct neighbors
-Block *chunk_get_block_including_neighbors(const Chunk *chunk,
-                                           const CHUNK_COORDS_INT_T x,
-                                           const CHUNK_COORDS_INT_T y,
-                                           const CHUNK_COORDS_INT_T z) {
-    if (y > CHUNK_HEIGHT - 1) { // Top (9 cases)
-        if (x < 0) {
-            if (z > CHUNK_DEPTH - 1) { // TopLeftBack
-                return chunk_get_block(chunk->neighbors[TopLeftBack],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // TopLeftFront
-                return chunk_get_block(chunk->neighbors[TopLeftFront],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
-            } else { // TopLeft
-                return chunk_get_block(chunk->neighbors[TopLeft],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z);
-            }
-        } else if (x > CHUNK_WIDTH - 1) {
-            if (z > CHUNK_DEPTH - 1) { // TopRightBack
-                return chunk_get_block(chunk->neighbors[TopRightBack],
-                                       x - CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // TopRightFront
-                return chunk_get_block(chunk->neighbors[TopRightFront],
-                                       x - CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
-            } else { // TopRight
-                return chunk_get_block(chunk->neighbors[TopRight],
-                                       x - CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z);
-            }
-        } else {
-            if (z > CHUNK_DEPTH - 1) { // TopBack
-                return chunk_get_block(chunk->neighbors[TopBack],
-                                       x,
-                                       y - CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // TopFront
-                return chunk_get_block(chunk->neighbors[TopFront],
-                                       x,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
-            } else { // Top
-                return chunk_get_block(chunk->neighbors[Top], x, y - CHUNK_HEIGHT, z);
-            }
-        }
-    } else if (y < 0) { // Bottom (9 cases)
-        if (x < 0) {
-            if (z > CHUNK_DEPTH - 1) { // BottomLeftBack
-                return chunk_get_block(chunk->neighbors[BottomLeftBack],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // BottomLeftFront
-                return chunk_get_block(chunk->neighbors[BottomLeftFront],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
-            } else { // BottomLeft
-                return chunk_get_block(chunk->neighbors[BottomLeft],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z);
-            }
-        } else if (x > CHUNK_WIDTH - 1) {
-            if (z > CHUNK_DEPTH - 1) { // BottomRightBack
-                return chunk_get_block(chunk->neighbors[BottomRightBack],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // BottomRightFront
-                return chunk_get_block(chunk->neighbors[BottomRightFront],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
-            } else { // BottomRight
-                return chunk_get_block(chunk->neighbors[BottomRight],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z);
-            }
-        } else {
-            if (z > CHUNK_DEPTH - 1) { // BottomBack
-                return chunk_get_block(chunk->neighbors[BottomBack],
-                                       x,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // BottomFront
-                return chunk_get_block(chunk->neighbors[BottomFront],
-                                       x,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
-            } else { // Bottom
-                return chunk_get_block(chunk->neighbors[Bottom], x, y + CHUNK_HEIGHT, z);
-            }
-        }
-    } else { // 8 cases (y is within chunk)
-        if (x < 0) {
-            if (z > CHUNK_DEPTH - 1) { // LeftBack
-                return chunk_get_block(chunk->neighbors[LeftBack],
-                                       x + CHUNK_WIDTH,
-                                       y,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // LeftFront
-                return chunk_get_block(chunk->neighbors[LeftFront],
-                                       x + CHUNK_WIDTH,
-                                       y,
-                                       z + CHUNK_DEPTH);
-            } else { // Left
-                return chunk_get_block(chunk->neighbors[Left], x + CHUNK_WIDTH, y, z);
-            }
-        } else if (x > CHUNK_WIDTH - 1) {
-            if (z > CHUNK_DEPTH - 1) { // RightBack
-                return chunk_get_block(chunk->neighbors[RightBack],
-                                       x - CHUNK_WIDTH,
-                                       y,
-                                       z - CHUNK_DEPTH);
-            } else if (z < 0) { // RightFront
-                return chunk_get_block(chunk->neighbors[RightFront],
-                                       x - CHUNK_WIDTH,
-                                       y,
-                                       z + CHUNK_DEPTH);
-            } else { // Right
-                return chunk_get_block(chunk->neighbors[Right], x - CHUNK_WIDTH, y, z);
-            }
-        } else {
-            if (z > CHUNK_DEPTH - 1) { // Back
-                return chunk_get_block(chunk->neighbors[Back], x, y, z - CHUNK_DEPTH);
-            } else if (z < 0) { // Front
-                return chunk_get_block(chunk->neighbors[Front], x, y, z + CHUNK_DEPTH);
-            }
-        }
-    }
-
-    // looking for block within chunk
-    return chunk_get_block(chunk, x, y, z);
-}
-
 Block *chunk_get_block_2(const Chunk *chunk, const int3 *pos) {
     return chunk_get_block(chunk,
                            (CHUNK_COORDS_INT_T)pos->x,
                            (CHUNK_COORDS_INT_T)pos->y,
                            (CHUNK_COORDS_INT_T)pos->z);
-}
-
-bool chunk_needs_display(const Chunk *chunk) {
-    return chunk->needsDisplay;
-}
-
-const int3 *chunk_get_pos(const Chunk *chunk) {
-    return chunk->pos;
 }
 
 void chunk_get_block_pos(const Chunk *chunk,
@@ -501,9 +232,234 @@ void chunk_get_block_pos(const Chunk *chunk,
     pos->z = z + (SHAPE_COORDS_INT_T)chunk->pos->z;
 }
 
-int chunk_get_nb_blocks(const Chunk *chunk) {
-    return chunk->nbBlocks;
+// TODO: should be cached & maintained, will be used for physics queries
+void chunk_get_bounding_box(const Chunk *chunk,
+                            CHUNK_COORDS_INT_T *min_x,
+                            CHUNK_COORDS_INT_T *max_x,
+                            CHUNK_COORDS_INT_T *min_y,
+                            CHUNK_COORDS_INT_T *max_y,
+                            CHUNK_COORDS_INT_T *min_z,
+                            CHUNK_COORDS_INT_T *max_z) {
+
+    *min_x = CHUNK_WIDTH - 1;
+    *min_y = CHUNK_HEIGHT - 1;
+    *min_z = CHUNK_DEPTH - 1;
+    *max_x = 0;
+    *max_y = 0;
+    *max_z = 0;
+
+    Block *b;
+    bool at_least_one_block = false;
+
+    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_WIDTH; x++) {
+        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_DEPTH; z++) {
+            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_HEIGHT; y++) {
+                b = chunk_get_block(chunk, x, y, z);
+                if (b != NULL) {
+                    at_least_one_block = true;
+                    *min_x = x < *min_x ? x : *min_x;
+                    *min_y = y < *min_y ? y : *min_y;
+                    *min_z = z < *min_z ? z : *min_z;
+                    *max_x = x > *max_x ? x : *max_x;
+                    *max_y = y > *max_y ? y : *max_y;
+                    *max_z = z > *max_z ? z : *max_z;
+                }
+            }
+        }
+    }
+
+    // no block: all values should be set to 0
+    if (at_least_one_block == false) {
+        cclog_warning("chunk_get_bounding_box called on empty chunk");
+        *min_x = 0;
+        *min_y = 0;
+        *min_z = 0;
+    } else {
+        // otherwise, max values should be incremented
+        *max_x += 1;
+        *max_y += 1;
+        *max_z += 1;
+    }
 }
+
+// MARK: - Neighbors -
+
+Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location) {
+    return chunk->neighbors[location];
+}
+
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk) {
+    void **batchedNode_X = NULL, **batchedNode_Y = NULL;
+
+    // Batch Index3D search for all neighbors on the right (x+1)
+    Chunk *x = NULL, *x_y = NULL, *x_y_z = NULL, *x_y_nz = NULL, *x_ny = NULL, *x_ny_z = NULL,
+          *x_ny_nz = NULL, *x_z = NULL, *x_nz = NULL;
+
+    index3d_batch_get_reset(chunks, &batchedNode_X);
+    if (index3d_batch_get_advance(chunk->pos->x + 1, &batchedNode_X)) {
+        // y batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y, &batchedNode_Y)) {
+            x = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            x_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            x_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+
+        // y+1 batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y + 1, &batchedNode_Y)) {
+            x_y = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            x_y_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            x_y_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+
+        // y-1 batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y - 1, &batchedNode_Y)) {
+            x_ny = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            x_ny_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            x_ny_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+    }
+
+    _chunk_hello_neighbor(chunk, NX, x, X);
+    _chunk_hello_neighbor(chunk, NX_NZ, x_z, X_Z);
+    _chunk_hello_neighbor(chunk, NX_Z, x_nz, X_NZ);
+
+    _chunk_hello_neighbor(chunk, NX_NY, x_y, X_Y);
+    _chunk_hello_neighbor(chunk, NX_NY_NZ, x_y_z, X_Y_Z);
+    _chunk_hello_neighbor(chunk, NX_NY_Z, x_y_nz, X_Y_NZ);
+
+    _chunk_hello_neighbor(chunk, NX_Y, x_ny, X_NY);
+    _chunk_hello_neighbor(chunk, NX_Y_NZ, x_ny_z, X_NY_Z);
+    _chunk_hello_neighbor(chunk, NX_Y_Z, x_ny_nz, X_NY_NZ);
+
+    // Batch Index3D search for all neighbors on the left (x-1)
+    Chunk *nx = NULL, *nx_y = NULL, *nx_y_z = NULL, *nx_y_nz = NULL, *nx_ny = NULL, *nx_ny_z = NULL,
+          *nx_ny_nz = NULL, *nx_z = NULL, *nx_nz = NULL;
+
+    index3d_batch_get_reset(chunks, &batchedNode_X);
+    if (index3d_batch_get_advance(chunk->pos->x - 1, &batchedNode_X)) {
+        // y batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y, &batchedNode_Y)) {
+            nx = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            nx_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            nx_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+
+        // y+1 batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y + 1, &batchedNode_Y)) {
+            nx_y = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            nx_y_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            nx_y_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+
+        // y-1 batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y - 1, &batchedNode_Y)) {
+            nx_ny = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            nx_ny_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            nx_ny_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+    }
+
+    _chunk_hello_neighbor(chunk, X, nx, NX);
+    _chunk_hello_neighbor(chunk, X_NZ, nx_z, NX_Z);
+    _chunk_hello_neighbor(chunk, X_Z, nx_nz, NX_NZ);
+
+    _chunk_hello_neighbor(chunk, X_NY, nx_y, NX_Y);
+    _chunk_hello_neighbor(chunk, X_NY_NZ, nx_y_z, NX_Y_Z);
+    _chunk_hello_neighbor(chunk, X_NY_Z, nx_y_nz, NX_Y_NZ);
+
+    _chunk_hello_neighbor(chunk, X_Y, nx_ny, NX_NY);
+    _chunk_hello_neighbor(chunk, X_Y_NZ, nx_ny_z, NX_NY_Z);
+    _chunk_hello_neighbor(chunk, X_Y_Z, nx_ny_nz, NX_NY_NZ);
+
+    // Batch Index3D search for remaining neighbors (same x)
+    Chunk *y = NULL, *y_z = NULL, *y_nz = NULL, *ny = NULL, *ny_z = NULL, *ny_nz = NULL, *z = NULL,
+          *nz = NULL;
+
+    index3d_batch_get_reset(chunks, &batchedNode_X);
+    if (index3d_batch_get_advance(chunk->pos->x, &batchedNode_X)) {
+        // y batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y, &batchedNode_Y)) {
+            z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+
+        // y+1 batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y + 1, &batchedNode_Y)) {
+            y = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            y_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            y_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+
+        // y-1 batch
+        batchedNode_Y = batchedNode_X;
+        if (index3d_batch_get_advance(chunk->pos->y - 1, &batchedNode_Y)) {
+            ny = index3d_batch_get(chunk->pos->z, batchedNode_Y);
+            ny_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
+            ny_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        }
+    }
+
+    _chunk_hello_neighbor(chunk, NZ, z, Z);
+    _chunk_hello_neighbor(chunk, Z, nz, NZ);
+
+    _chunk_hello_neighbor(chunk, NY, y, Y);
+    _chunk_hello_neighbor(chunk, NY_NZ, y_z, Y_Z);
+    _chunk_hello_neighbor(chunk, NY_Z, y_nz, Y_NZ);
+
+    _chunk_hello_neighbor(chunk, Y, ny, NY);
+    _chunk_hello_neighbor(chunk, Y_NZ, ny_z, NY_Z);
+    _chunk_hello_neighbor(chunk, Y_Z, ny_nz, NY_NZ);
+}
+
+void chunk_leave_neighborhood(Chunk *chunk) {
+    if (chunk == NULL)
+        return;
+
+    _chunk_good_bye_neighbor(chunk->neighbors[X], NX);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_Y], NX_NY);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_Y_Z], NX_NY_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_Y_NZ], NX_NY_Z);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_NY], NX_Y);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_NY_Z], NX_Y_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_NY_NZ], NX_Y_Z);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_Z], NX_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[X_NZ], NX_Z);
+
+    _chunk_good_bye_neighbor(chunk->neighbors[NX], X);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_Y], X_NY);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_Y_Z], X_NY_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_Y_NZ], X_NY_Z);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_NY], X_Y);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_NY_Z], X_Y_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_NY_NZ], X_Y_Z);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_Z], X_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[NX_NZ], X_Z);
+
+    _chunk_good_bye_neighbor(chunk->neighbors[Y], NY);
+    _chunk_good_bye_neighbor(chunk->neighbors[Y_Z], NY_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[Y_NZ], NY_Z);
+
+    _chunk_good_bye_neighbor(chunk->neighbors[NY], Y);
+    _chunk_good_bye_neighbor(chunk->neighbors[NY_Z], Y_NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[NY_NZ], Y_Z);
+
+    _chunk_good_bye_neighbor(chunk->neighbors[Z], NZ);
+    _chunk_good_bye_neighbor(chunk->neighbors[NZ], Z);
+
+    for (int i = 0; i < CHUNK_NEIGHBORS_COUNT; i++) {
+        chunk->neighbors[i] = NULL;
+    }
+}
+
+// MARK: - Buffers -
 
 void *chunk_get_vbma(const Chunk *chunk, bool transparent) {
     return transparent ? chunk->vbma_transparent : chunk->vbma_opaque;
@@ -614,12 +570,12 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         bottom = (Block *)
                             octree_get_element_without_checking(octree, posX, posY - 1, posZ);
                     } else {
-                        left = chunk_get_block_including_neighbors(chunk, x - 1, y, z);
-                        right = chunk_get_block_including_neighbors(chunk, x + 1, y, z);
-                        front = chunk_get_block_including_neighbors(chunk, x, y, z - 1);
-                        back = chunk_get_block_including_neighbors(chunk, x, y, z + 1);
-                        top = chunk_get_block_including_neighbors(chunk, x, y + 1, z);
-                        bottom = chunk_get_block_including_neighbors(chunk, x, y - 1, z);
+                        left = _chunk_get_block_including_neighbors(chunk, x - 1, y, z);
+                        right = _chunk_get_block_including_neighbors(chunk, x + 1, y, z);
+                        front = _chunk_get_block_including_neighbors(chunk, x, y, z - 1);
+                        back = _chunk_get_block_including_neighbors(chunk, x, y, z + 1);
+                        top = _chunk_get_block_including_neighbors(chunk, x, y + 1, z);
+                        bottom = _chunk_get_block_including_neighbors(chunk, x, y - 1, z);
                     }
 
                     // get their opacity properties
@@ -784,31 +740,34 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                            posZ -
                                                                                                1);
                         } else {
-                            topLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                              x - 1,
-                                                                              y + 1,
-                                                                              z + 1);
-                            topLeft = chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
-                            topLeftFront = chunk_get_block_including_neighbors(chunk,
+                            topLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                                x - 1,
                                                                                y + 1,
-                                                                               z - 1);
+                                                                               z + 1);
+                            topLeft = _chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
+                            topLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                x - 1,
+                                                                                y + 1,
+                                                                                z - 1);
 
-                            leftBack = chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
-                            leftFront = chunk_get_block_including_neighbors(chunk, x - 1, y, z - 1);
-
-                            bottomLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                 x - 1,
-                                                                                 y - 1,
-                                                                                 z + 1);
-                            bottomLeft = chunk_get_block_including_neighbors(chunk,
+                            leftBack = _chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
+                            leftFront = _chunk_get_block_including_neighbors(chunk,
                                                                              x - 1,
-                                                                             y - 1,
-                                                                             z);
-                            bottomLeftFront = chunk_get_block_including_neighbors(chunk,
+                                                                             y,
+                                                                             z - 1);
+
+                            bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                                   x - 1,
                                                                                   y - 1,
-                                                                                  z - 1);
+                                                                                  z + 1);
+                            bottomLeft = _chunk_get_block_including_neighbors(chunk,
+                                                                              x - 1,
+                                                                              y - 1,
+                                                                              z);
+                            bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x - 1,
+                                                                                   y - 1,
+                                                                                   z - 1);
                         }
 
                         // get their light values & properties
@@ -1022,34 +981,37 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                 posY - 1,
                                 posZ - 1);
                         } else {
-                            topRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                               x + 1,
-                                                                               y + 1,
-                                                                               z + 1);
-                            topRight = chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
-                            topRightFront = chunk_get_block_including_neighbors(chunk,
+                            topRightBack = _chunk_get_block_including_neighbors(chunk,
                                                                                 x + 1,
                                                                                 y + 1,
-                                                                                z - 1);
+                                                                                z + 1);
+                            topRight = _chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
+                            topRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                 x + 1,
+                                                                                 y + 1,
+                                                                                 z - 1);
 
-                            rightBack = chunk_get_block_including_neighbors(chunk, x + 1, y, z + 1);
-                            rightFront = chunk_get_block_including_neighbors(chunk,
+                            rightBack = _chunk_get_block_including_neighbors(chunk,
                                                                              x + 1,
                                                                              y,
-                                                                             z - 1);
-
-                            bottomRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                  x + 1,
-                                                                                  y - 1,
-                                                                                  z + 1);
-                            bottomRight = chunk_get_block_including_neighbors(chunk,
+                                                                             z + 1);
+                            rightFront = _chunk_get_block_including_neighbors(chunk,
                                                                               x + 1,
-                                                                              y - 1,
-                                                                              z);
-                            bottomRightFront = chunk_get_block_including_neighbors(chunk,
+                                                                              y,
+                                                                              z - 1);
+
+                            bottomRightBack = _chunk_get_block_including_neighbors(chunk,
                                                                                    x + 1,
                                                                                    y - 1,
-                                                                                   z - 1);
+                                                                                   z + 1);
+                            bottomRight = _chunk_get_block_including_neighbors(chunk,
+                                                                               x + 1,
+                                                                               y - 1,
+                                                                               z);
+                            bottomRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x + 1,
+                                                                                    y - 1,
+                                                                                    z - 1);
                         }
 
                         // get their light values & properties
@@ -1271,40 +1233,40 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                        posZ - 1);
                         } else {
                             if (renderRight == false) {
-                                topRightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                    x + 1,
+                                topRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                     x + 1,
+                                                                                     y + 1,
+                                                                                     z - 1);
+                                rightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                  x + 1,
+                                                                                  y,
+                                                                                  z - 1);
+                                bottomRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                        x + 1,
+                                                                                        y - 1,
+                                                                                        z - 1);
+                            }
+
+                            if (renderLeft == false) {
+                                topLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x - 1,
                                                                                     y + 1,
                                                                                     z - 1);
-                                rightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                 x + 1,
+                                leftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                 x - 1,
                                                                                  y,
                                                                                  z - 1);
-                                bottomRightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                       x + 1,
+                                bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                       x - 1,
                                                                                        y - 1,
                                                                                        z - 1);
                             }
 
-                            if (renderLeft == false) {
-                                topLeftFront = chunk_get_block_including_neighbors(chunk,
-                                                                                   x - 1,
-                                                                                   y + 1,
-                                                                                   z - 1);
-                                leftFront = chunk_get_block_including_neighbors(chunk,
-                                                                                x - 1,
-                                                                                y,
-                                                                                z - 1);
-                                bottomLeftFront = chunk_get_block_including_neighbors(chunk,
-                                                                                      x - 1,
-                                                                                      y - 1,
-                                                                                      z - 1);
-                            }
-
-                            topFront = chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
-                            bottomFront = chunk_get_block_including_neighbors(chunk,
-                                                                              x,
-                                                                              y - 1,
-                                                                              z - 1);
+                            topFront = _chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
+                            bottomFront = _chunk_get_block_including_neighbors(chunk,
+                                                                               x,
+                                                                               y - 1,
+                                                                               z - 1);
                         }
 
                         // get their light values & properties
@@ -1528,40 +1490,40 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                                                       posZ + 1);
                         } else {
                             if (renderRight == false) {
-                                topRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                   x + 1,
+                                topRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x + 1,
+                                                                                    y + 1,
+                                                                                    z + 1);
+                                rightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                 x + 1,
+                                                                                 y,
+                                                                                 z + 1);
+                                bottomRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                       x + 1,
+                                                                                       y - 1,
+                                                                                       z + 1);
+                            }
+
+                            if (renderLeft == false) {
+                                topLeftBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x - 1,
                                                                                    y + 1,
                                                                                    z + 1);
-                                rightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                x + 1,
+                                leftBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                x - 1,
                                                                                 y,
                                                                                 z + 1);
-                                bottomRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                      x + 1,
+                                bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                      x - 1,
                                                                                       y - 1,
                                                                                       z + 1);
                             }
 
-                            if (renderLeft == false) {
-                                topLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                  x - 1,
-                                                                                  y + 1,
-                                                                                  z + 1);
-                                leftBack = chunk_get_block_including_neighbors(chunk,
-                                                                               x - 1,
-                                                                               y,
-                                                                               z + 1);
-                                bottomLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                     x - 1,
-                                                                                     y - 1,
-                                                                                     z + 1);
-                            }
-
-                            topBack = chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
-                            bottomBack = chunk_get_block_including_neighbors(chunk,
-                                                                             x,
-                                                                             y - 1,
-                                                                             z + 1);
+                            topBack = _chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
+                            bottomBack = _chunk_get_block_including_neighbors(chunk,
+                                                                              x,
+                                                                              y - 1,
+                                                                              z + 1);
                         }
 
                         // get their light values & properties
@@ -1790,47 +1752,47 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
                         } else {
                             if (renderLeft == false) {
-                                topLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                  x - 1,
-                                                                                  y + 1,
-                                                                                  z + 1);
-                                topLeft = chunk_get_block_including_neighbors(chunk,
-                                                                              x - 1,
-                                                                              y + 1,
-                                                                              z);
-                                topLeftFront = chunk_get_block_including_neighbors(chunk,
+                                topLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                                    x - 1,
                                                                                    y + 1,
-                                                                                   z - 1);
-                            }
-
-                            if (renderRight == false) {
-                                topRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                   x + 1,
-                                                                                   y + 1,
                                                                                    z + 1);
-                                topRight = chunk_get_block_including_neighbors(chunk,
-                                                                               x + 1,
+                                topLeft = _chunk_get_block_including_neighbors(chunk,
+                                                                               x - 1,
                                                                                y + 1,
                                                                                z);
-                                topRightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                    x + 1,
+                                topLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x - 1,
                                                                                     y + 1,
                                                                                     z - 1);
                             }
 
+                            if (renderRight == false) {
+                                topRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x + 1,
+                                                                                    y + 1,
+                                                                                    z + 1);
+                                topRight = _chunk_get_block_including_neighbors(chunk,
+                                                                                x + 1,
+                                                                                y + 1,
+                                                                                z);
+                                topRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                     x + 1,
+                                                                                     y + 1,
+                                                                                     z - 1);
+                            }
+
                             if (renderBack == false) {
-                                topBack = chunk_get_block_including_neighbors(chunk,
-                                                                              x,
-                                                                              y + 1,
-                                                                              z + 1);
+                                topBack = _chunk_get_block_including_neighbors(chunk,
+                                                                               x,
+                                                                               y + 1,
+                                                                               z + 1);
                             }
 
                             if (renderFront == false) {
-                                topFront = chunk_get_block_including_neighbors(chunk,
-                                                                               x,
-                                                                               y + 1,
-                                                                               z - 1);
+                                topFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                x,
+                                                                                y + 1,
+                                                                                z - 1);
                             }
                         }
 
@@ -2065,47 +2027,47 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             }
                         } else {
                             if (renderLeft == false) {
-                                bottomLeftBack = chunk_get_block_including_neighbors(chunk,
-                                                                                     x - 1,
-                                                                                     y - 1,
-                                                                                     z + 1);
-                                bottomLeft = chunk_get_block_including_neighbors(chunk,
-                                                                                 x - 1,
-                                                                                 y - 1,
-                                                                                 z);
-                                bottomLeftFront = chunk_get_block_including_neighbors(chunk,
+                                bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                                       x - 1,
                                                                                       y - 1,
-                                                                                      z - 1);
-                            }
-
-                            if (renderRight == false) {
-                                bottomRightBack = chunk_get_block_including_neighbors(chunk,
-                                                                                      x + 1,
-                                                                                      y - 1,
                                                                                       z + 1);
-                                bottomRight = chunk_get_block_including_neighbors(chunk,
-                                                                                  x + 1,
+                                bottomLeft = _chunk_get_block_including_neighbors(chunk,
+                                                                                  x - 1,
                                                                                   y - 1,
                                                                                   z);
-                                bottomRightFront = chunk_get_block_including_neighbors(chunk,
-                                                                                       x + 1,
+                                bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                       x - 1,
                                                                                        y - 1,
                                                                                        z - 1);
                             }
 
+                            if (renderRight == false) {
+                                bottomRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                       x + 1,
+                                                                                       y - 1,
+                                                                                       z + 1);
+                                bottomRight = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x + 1,
+                                                                                   y - 1,
+                                                                                   z);
+                                bottomRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                        x + 1,
+                                                                                        y - 1,
+                                                                                        z - 1);
+                            }
+
                             if (renderBack == false) {
-                                bottomBack = chunk_get_block_including_neighbors(chunk,
-                                                                                 x,
-                                                                                 y - 1,
-                                                                                 z + 1);
+                                bottomBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                  x,
+                                                                                  y - 1,
+                                                                                  z + 1);
                             }
 
                             if (renderFront == false) {
-                                bottomFront = chunk_get_block_including_neighbors(chunk,
-                                                                                  x,
-                                                                                  y - 1,
-                                                                                  z - 1);
+                                bottomFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x,
+                                                                                   y - 1,
+                                                                                   z - 1);
                             }
                         }
 
@@ -2293,56 +2255,155 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 #endif
 }
 
-void chunk_get_inner_bounds(const Chunk *chunk,
-                            CHUNK_COORDS_INT_T *min_x,
-                            CHUNK_COORDS_INT_T *max_x,
-                            CHUNK_COORDS_INT_T *min_y,
-                            CHUNK_COORDS_INT_T *max_y,
-                            CHUNK_COORDS_INT_T *min_z,
-                            CHUNK_COORDS_INT_T *max_z) {
+// MARK: private functions
 
-    *min_x = CHUNK_WIDTH - 1;
-    *min_y = CHUNK_HEIGHT - 1;
-    *min_z = CHUNK_DEPTH - 1;
-    *max_x = 0;
-    *max_y = 0;
-    *max_z = 0;
+void _chunk_hello_neighbor(Chunk *newcomer,
+                           Neighbor newcomerLocation,
+                           Chunk *neighbor,
+                           Neighbor neighborLocation) {
+    if (neighbor == NULL)
+        return;
 
-    Block *b;
-    bool at_least_one_block = false;
+    newcomer->neighbors[neighborLocation] = neighbor;
+    neighbor->neighbors[newcomerLocation] = newcomer;
+}
 
-    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_WIDTH; x++) {
-        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_DEPTH; z++) {
-            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_HEIGHT; y++) {
-                b = chunk_get_block(chunk, x, y, z);
-                if (b != NULL) {
-                    at_least_one_block = true;
-                    *min_x = x < *min_x ? x : *min_x;
-                    *min_y = y < *min_y ? y : *min_y;
-                    *min_z = z < *min_z ? z : *min_z;
-                    *max_x = x > *max_x ? x : *max_x;
-                    *max_y = y > *max_y ? y : *max_y;
-                    *max_z = z > *max_z ? z : *max_z;
-                }
+void _chunk_good_bye_neighbor(Chunk *chunk, Neighbor location) {
+    if (chunk == NULL)
+        return;
+    chunk->neighbors[location] = NULL;
+}
+
+Block *_chunk_get_block_including_neighbors(const Chunk *chunk,
+                                            const CHUNK_COORDS_INT_T x,
+                                            const CHUNK_COORDS_INT_T y,
+                                            const CHUNK_COORDS_INT_T z) {
+    if (y > CHUNK_HEIGHT - 1) { // Top (9 cases)
+        if (x < 0) {
+            if (z > CHUNK_DEPTH - 1) { // TopLeftBack
+                return chunk_get_block(chunk->neighbors[NX_Y_Z],
+                                       x + CHUNK_WIDTH,
+                                       y - CHUNK_HEIGHT,
+                                       z - CHUNK_DEPTH);
+            } else if (z < 0) { // TopLeftFront
+                return chunk_get_block(chunk->neighbors[NX_Y_NZ],
+                                       x + CHUNK_WIDTH,
+                                       y - CHUNK_HEIGHT,
+                                       z + CHUNK_DEPTH);
+            } else { // TopLeft
+                return chunk_get_block(chunk->neighbors[NX_Y],
+                                       x + CHUNK_WIDTH,
+                                       y - CHUNK_HEIGHT,
+                                       z);
+            }
+        } else if (x > CHUNK_WIDTH - 1) {
+            if (z > CHUNK_DEPTH - 1) { // TopRightBack
+                return chunk_get_block(chunk->neighbors[X_Y_Z],
+                                       x - CHUNK_WIDTH,
+                                       y - CHUNK_HEIGHT,
+                                       z - CHUNK_DEPTH);
+            } else if (z < 0) { // TopRightFront
+                return chunk_get_block(chunk->neighbors[X_Y_NZ],
+                                       x - CHUNK_WIDTH,
+                                       y - CHUNK_HEIGHT,
+                                       z + CHUNK_DEPTH);
+            } else { // TopRight
+                return chunk_get_block(chunk->neighbors[X_Y], x - CHUNK_WIDTH, y - CHUNK_HEIGHT, z);
+            }
+        } else {
+            if (z > CHUNK_DEPTH - 1) { // TopBack
+                return chunk_get_block(chunk->neighbors[Y_Z], x, y - CHUNK_HEIGHT, z - CHUNK_DEPTH);
+            } else if (z < 0) { // TopFront
+                return chunk_get_block(chunk->neighbors[Y_NZ],
+                                       x,
+                                       y - CHUNK_HEIGHT,
+                                       z + CHUNK_DEPTH);
+            } else { // Top
+                return chunk_get_block(chunk->neighbors[Y], x, y - CHUNK_HEIGHT, z);
+            }
+        }
+    } else if (y < 0) { // Bottom (9 cases)
+        if (x < 0) {
+            if (z > CHUNK_DEPTH - 1) { // BottomLeftBack
+                return chunk_get_block(chunk->neighbors[NX_NY_Z],
+                                       x + CHUNK_WIDTH,
+                                       y + CHUNK_HEIGHT,
+                                       z - CHUNK_DEPTH);
+            } else if (z < 0) { // BottomLeftFront
+                return chunk_get_block(chunk->neighbors[NX_NY_NZ],
+                                       x + CHUNK_WIDTH,
+                                       y + CHUNK_HEIGHT,
+                                       z + CHUNK_DEPTH);
+            } else { // BottomLeft
+                return chunk_get_block(chunk->neighbors[NX_NY],
+                                       x + CHUNK_WIDTH,
+                                       y + CHUNK_HEIGHT,
+                                       z);
+            }
+        } else if (x > CHUNK_WIDTH - 1) {
+            if (z > CHUNK_DEPTH - 1) { // BottomRightBack
+                return chunk_get_block(chunk->neighbors[X_NY_Z],
+                                       x - CHUNK_WIDTH,
+                                       y + CHUNK_HEIGHT,
+                                       z - CHUNK_DEPTH);
+            } else if (z < 0) { // BottomRightFront
+                return chunk_get_block(chunk->neighbors[X_NY_NZ],
+                                       x - CHUNK_WIDTH,
+                                       y + CHUNK_HEIGHT,
+                                       z + CHUNK_DEPTH);
+            } else { // BottomRight
+                return chunk_get_block(chunk->neighbors[X_NY],
+                                       x - CHUNK_WIDTH,
+                                       y + CHUNK_HEIGHT,
+                                       z);
+            }
+        } else {
+            if (z > CHUNK_DEPTH - 1) { // BottomBack
+                return chunk_get_block(chunk->neighbors[NY_Z],
+                                       x,
+                                       y + CHUNK_HEIGHT,
+                                       z - CHUNK_DEPTH);
+            } else if (z < 0) { // BottomFront
+                return chunk_get_block(chunk->neighbors[NY_NZ],
+                                       x,
+                                       y + CHUNK_HEIGHT,
+                                       z + CHUNK_DEPTH);
+            } else { // Bottom
+                return chunk_get_block(chunk->neighbors[NY], x, y + CHUNK_HEIGHT, z);
+            }
+        }
+    } else { // 8 cases (y is within chunk)
+        if (x < 0) {
+            if (z > CHUNK_DEPTH - 1) { // LeftBack
+                return chunk_get_block(chunk->neighbors[NX_Z], x + CHUNK_WIDTH, y, z - CHUNK_DEPTH);
+            } else if (z < 0) { // LeftFront
+                return chunk_get_block(chunk->neighbors[NX_NZ],
+                                       x + CHUNK_WIDTH,
+                                       y,
+                                       z + CHUNK_DEPTH);
+            } else { // NX
+                return chunk_get_block(chunk->neighbors[NX], x + CHUNK_WIDTH, y, z);
+            }
+        } else if (x > CHUNK_WIDTH - 1) {
+            if (z > CHUNK_DEPTH - 1) { // RightBack
+                return chunk_get_block(chunk->neighbors[X_Z], x - CHUNK_WIDTH, y, z - CHUNK_DEPTH);
+            } else if (z < 0) { // RightFront
+                return chunk_get_block(chunk->neighbors[X_NZ], x - CHUNK_WIDTH, y, z + CHUNK_DEPTH);
+            } else { // Right
+                return chunk_get_block(chunk->neighbors[X], x - CHUNK_WIDTH, y, z);
+            }
+        } else {
+            if (z > CHUNK_DEPTH - 1) { // Back
+                return chunk_get_block(chunk->neighbors[Z], x, y, z - CHUNK_DEPTH);
+            } else if (z < 0) { // Front
+                return chunk_get_block(chunk->neighbors[NZ], x, y, z + CHUNK_DEPTH);
             }
         }
     }
 
-    // no block: all values should be set to 0
-    if (at_least_one_block == false) {
-        cclog_warning("chunk_get_inner_bounds called on empty chunk");
-        *min_x = 0;
-        *min_y = 0;
-        *min_z = 0;
-    } else {
-        // otherwise, max values should be incremented
-        *max_x += 1;
-        *max_y += 1;
-        *max_z += 1;
-    }
+    // here: block is within chunk
+    return chunk != NULL ? chunk->blocks[x][z][y] : NULL;
 }
-
-// MARK: private functions
 
 void _vertex_light_get(Shape *shape,
                        Block *block,

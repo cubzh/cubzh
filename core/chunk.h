@@ -18,91 +18,68 @@ extern "C" {
 #include "colors.h"
 #include "config.h"
 #include "function_pointers.h"
+#include "index3d.h"
 #include "int3.h"
 #include "octree.h"
 #include "shape.h"
 
 typedef struct _Chunk Chunk;
 
-enum Neighbor {
-    Left = 0,
-    LeftBack = 1,
-    Back = 2,
-    RightBack = 3,
-    Right = 4,
-    RightFront = 5,
-    Front = 6,
-    LeftFront = 7, // middle
-    Top = 8,
-    TopLeft = 9,
-    TopLeftBack = 10,
-    TopBack = 11,
-    TopRightBack = 12,
-    TopRight = 13,
-    TopRightFront = 14,
-    TopFront = 15,
-    TopLeftFront = 16, // top
-    Bottom = 17,
-    BottomLeft = 18,
-    BottomLeftBack = 19,
-    BottomBack = 20,
-    BottomRightBack = 21,
-    BottomRight = 22,
-    BottomRightFront = 23,
-    BottomFront = 24,
-    BottomLeftFront = 25 // bottom
-};
+// Enum used to index all 26 neighbors
+typedef enum {
+    X = 0,
+    X_Y = 1,
+    X_Y_Z = 2,
+    X_Y_NZ = 3,
+    X_NY = 4,
+    X_NY_Z = 5,
+    X_NY_NZ = 6,
+    X_Z = 7,
+    X_NZ = 8,
+
+    NX = 9,
+    NX_Y = 10,
+    NX_Y_Z = 11,
+    NX_Y_NZ = 12,
+    NX_NY = 13,
+    NX_NY_Z = 14,
+    NX_NY_NZ = 15,
+    NX_Z = 16,
+    NX_NZ = 17,
+
+    Y = 18,
+    Y_Z = 19,
+    Y_NZ = 20,
+
+    NY = 21,
+    NY_Z = 22,
+    NY_NZ = 23,
+
+    Z = 24,
+    NZ = 25
+} Neighbor;
 
 Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
                  const SHAPE_COORDS_INT_T y,
                  const SHAPE_COORDS_INT_T z);
+void chunk_free(Chunk *chunk, bool updateNeighbors);
+void chunk_free_func(void *c);
+void chunk_set_dirty(Chunk *chunk, bool b);
+bool chunk_is_dirty(const Chunk *chunk);
+const int3 *chunk_get_pos(const Chunk *chunk);
+int chunk_get_nb_blocks(const Chunk *chunk);
 
-void chunk_destroy(Chunk *chunk);
-
-Chunk *chunk_get_neighbor(const Chunk *chunk, enum Neighbor location);
-void chunk_leave_neighborhood(Chunk *chunk);
-void chunk_move_in_neighborhood(Chunk *chunk,
-                                Chunk *topLeftBack,
-                                Chunk *topBack,
-                                Chunk *topRightBack, // top
-                                Chunk *topLeft,
-                                Chunk *top,
-                                Chunk *topRight,
-                                Chunk *topLeftFront,
-                                Chunk *topFront,
-                                Chunk *topRightFront,
-                                Chunk *bottomLeftBack,
-                                Chunk *bottomBack,
-                                Chunk *bottomRightBack, // bottom
-                                Chunk *bottomLeft,
-                                Chunk *bottom,
-                                Chunk *bottomRight,
-                                Chunk *bottomLeftFront,
-                                Chunk *bottomFront,
-                                Chunk *bottomRightFront,
-                                Chunk *leftBack,
-                                Chunk *back,
-                                Chunk *rightBack, // middle
-                                Chunk *left,
-                                /* self */ Chunk *right,
-                                Chunk *leftFront,
-                                Chunk *front,
-                                Chunk *rightFront);
-
-// add block un chunk at given position
 bool chunk_addBlock(Chunk *chunk,
                     Block *block,
                     const CHUNK_COORDS_INT_T x,
                     const CHUNK_COORDS_INT_T y,
                     const CHUNK_COORDS_INT_T z);
 
-// return true if the block has been removed, false otherwise
 bool chunk_removeBlock(Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,
                        const CHUNK_COORDS_INT_T y,
                        const CHUNK_COORDS_INT_T z);
 
-// return 1 if the block has been painted, 0 otherwise
 bool chunk_paint_block(Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,
                        const CHUNK_COORDS_INT_T y,
@@ -116,36 +93,31 @@ Block *chunk_get_block(const Chunk *chunk,
 
 Block *chunk_get_block_2(const Chunk *chunk, const int3 *pos);
 
-// return true if chunk needs to be displayed
-bool chunk_needs_display(const Chunk *chunk);
-
-void chunk_set_needs_display(Chunk *chunk, bool b);
-
-const int3 *chunk_get_pos(const Chunk *chunk);
-
 void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T x,
                          const CHUNK_COORDS_INT_T y,
                          const CHUNK_COORDS_INT_T z,
                          SHAPE_COORDS_INT3_T *pos);
 
-int chunk_get_nb_blocks(const Chunk *chunk);
-
-void *chunk_get_vbma(const Chunk *chunk, bool transparent);
-void chunk_set_vbma(Chunk *chunk, void *vbma, bool transparent);
-
-// octree will be used if not NULL, ignored otherwise
-void chunk_write_vertices(Shape *shape, Chunk *chunk);
-
-// returns min/max limits defined by blocks within the chunk
-// can be used to precisely define bounds around the cubes.
-void chunk_get_inner_bounds(const Chunk *chunk,
+void chunk_get_bounding_box(const Chunk *chunk,
                             CHUNK_COORDS_INT_T *min_x,
                             CHUNK_COORDS_INT_T *max_x,
                             CHUNK_COORDS_INT_T *min_y,
                             CHUNK_COORDS_INT_T *max_y,
                             CHUNK_COORDS_INT_T *min_z,
                             CHUNK_COORDS_INT_T *max_z);
+
+// MARK: - Neighbors -
+
+Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location);
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk);
+void chunk_leave_neighborhood(Chunk *chunk);
+
+// MARK: - Buffers -
+
+void *chunk_get_vbma(const Chunk *chunk, bool transparent);
+void chunk_set_vbma(Chunk *chunk, void *vbma, bool transparent);
+void chunk_write_vertices(Shape *shape, Chunk *chunk);
 
 #ifdef __cplusplus
 } // extern "C"
