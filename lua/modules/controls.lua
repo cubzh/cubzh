@@ -86,50 +86,53 @@ local LONG_PRESS_DELAY_1 = 0.2
 -- before Pointer.LongPress is actually triggered
 local LONG_PRESS_DELAY_2 = 0.2 
 
-local controls = {
-	config = {
-		pressScale = 0.95,
-		iconOnColor = Color(255,255,255),
-		iconOffColor = Color(160,160,160),
-		frameColor = Color(200,200,200, 180),
-		fillColor = Color(255,255,255,180),
-		layout = {
-			indicator = {
-				size = TOUCH_INDICATOR_SIZE,
-			},
-			dirpad = {
-				size = 23,
-				pos = {DIR_PAD_SCREEN_PADDING, DIR_PAD_SCREEN_PADDING}
-			},
-			analogpad = {
-				mode = "drag" -- pad,drag
-			},
-			action1 = {
-				size = ACTION_1_BTN_SIZE,
-				pos = {-ACTION_BTN_SCREEN_PADDING, ACTION_BTN_SCREEN_PADDING}
-			},
-			action2 = {
-				size = 16,
-				pos = {
-						- ACTION_BTN_SCREEN_PADDING - ACTION_1_BTN_SIZE - SPACE_BETWEEN_BTNS,
-						ACTION_BTN_SCREEN_PADDING + ACTION_1_BTN_SIZE - ACTION_2_BTN_SIZE + SPACE_BETWEEN_BTNS
-					}
-			},
-			action3 = {
-				size = 16,
-				pos = {
-						- ACTION_BTN_SCREEN_PADDING - ACTION_1_BTN_SIZE + ACTION_3_BTN_SIZE - SPACE_BETWEEN_BTNS,
-						ACTION_BTN_SCREEN_PADDING + ACTION_1_BTN_SIZE + SPACE_BETWEEN_BTNS
-					},
-			}
+local controls = {}
+local index = {}
+
+local config = {
+	pressScale = 0.95,
+	iconOnColor = Color(255,255,255),
+	iconOffColor = Color(160,160,160),
+	frameColor = Color(200,200,200, 180),
+	fillColor = Color(255,255,255,180),
+	layout = {
+		indicator = {
+			size = TOUCH_INDICATOR_SIZE,
 		},
-	},
+		dirpad = {
+			size = 23,
+			pos = {DIR_PAD_SCREEN_PADDING, DIR_PAD_SCREEN_PADDING}
+		},
+		analogpad = {
+			mode = "drag" -- pad,drag
+		},
+		action1 = {
+			size = ACTION_1_BTN_SIZE,
+			pos = {-ACTION_BTN_SCREEN_PADDING, ACTION_BTN_SCREEN_PADDING}
+		},
+		action2 = {
+			size = 16,
+			pos = {
+					- ACTION_BTN_SCREEN_PADDING - ACTION_1_BTN_SIZE - SPACE_BETWEEN_BTNS,
+					ACTION_BTN_SCREEN_PADDING + ACTION_1_BTN_SIZE - ACTION_2_BTN_SIZE + SPACE_BETWEEN_BTNS
+				}
+		},
+		action3 = {
+			size = 16,
+			pos = {
+					- ACTION_BTN_SCREEN_PADDING - ACTION_1_BTN_SIZE + ACTION_3_BTN_SIZE - SPACE_BETWEEN_BTNS,
+					ACTION_BTN_SCREEN_PADDING + ACTION_1_BTN_SIZE + SPACE_BETWEEN_BTNS
+				},
+		}
+	}
 }
 
 local ui = require("uikit")
 local codes = require("inputcodes")
 local ease = require("ease")
 local theme = require("uitheme")
+local menu = require("menu")
+require("chat")
 
 local _isMobile = Client.IsMobile
 local _isPC = Client.IsPC
@@ -144,10 +147,12 @@ end
 
 local _state = {
 	on = true, -- controls can be turned on / off
-	isHomeMenuOpened = Client.IsHomeMenuOpened,
 
 	-- remember what key is down, to avoid considering repeated down events
 	keysDown = {},
+
+	sensitivity = Pointer.Sensitivity,
+	zoomSensitivity = Pointer.ZoomSensitivity,
 
 	pointersDown = {},
 	nbPointersDown = 0,
@@ -196,13 +201,11 @@ local _state = {
 	clickPointerIndex = nil,
 	clickPointerStartPosition = nil,
 
-	chatUnsubmittedCache = "",
-	commandCache = {},
-	chatInput = nil,
+	virtualKeyboardShown = false,
 }
 
 local _isActive = function()
-	return _state.on and _state.isHomeMenuOpened == false and _state.chatInput == nil
+	return _state.on and menu:IsActive() == false
 end
 
 local _diffuseLongPressTimer = function()
@@ -213,80 +216,19 @@ local _diffuseLongPressTimer = function()
 	end
 end
 
-local _isChatInputDisplayed = function() return _state.chatInput ~= nil end
-
-local _closeChatInput = function()
-	if _state.chatInput == nil then return end
-	local input = _state.chatInput
-
-	input:_unfocus()
-end
-
-local _submitChatMessage = function()
-	if _state.chatInput == nil then return end
-	local input = _state.chatInput
-
-	if input.Text ~= "" then 
-		local str = input.Text
-		local isCommand = false
-		if string.sub(str, 1, 1) == "/" then
-			isCommand = true
-			str = string.sub(str, 2)
-		end
-
-		if isCommand then
-			table.insert(_state.commandCache, input.Text)
-			if Dev.CanRunCommands then
-				dostring(str)
-			else
-				print("⚠️ not authorized to run commands")
-			end
-		else
-			if Client.OnChat ~= nil then Client.OnChat(str) end
-		end
-
-		_state.chatUnsubmittedCache = ""
-		input.Text = ""
-	end
-
-	_closeChatInput()
-end
-
-local _displayChatInput = function(isCommand)
-	if _state.chatInput ~= nil then return end
-
-	local cache = _state.chatUnsubmittedCache
-
-	local input = ui:createTextInput(cache, "What's on your mind?")
-	_state.chatInput = input
-	input.parentDidResize = function()
-		input.Width = math.min(800, Screen.Width - math.max(Screen.SafeArea.Right,Screen.SafeArea.Left) * 2 - theme.paddingBig * 2)
-		input.pos = {Screen.Width * 0.5 - input.Width * 0.5, theme.paddingBig, 0}
-	end
-	input:parentDidResize()
-
-	input.onSubmit = function()
-		_submitChatMessage()
-	end
-	input.onFocusLost = function()
-		_state.chatUnsubmittedCache = input.Text
-		input:remove()
-		_state.chatInput = nil
-		controls.refresh()
-	end
-
-	input:focus()
-	controls.refresh()
+local _toggleChatModal = function(prefix)
+	LocalEvent:Send(LocalEvent.Name.OpenChat, prefix)
+	index.refresh()
 end
 
 local _createDirpad = function()
 	local dirpadShape = MutableShape()
 	dirpadShape.InnerTransparentFaces = false
-	local layout = controls.config.layout.dirpad
+	local layout = config.layout.dirpad
 	local size = layout.size
 	local sizeMinusOne = size - 1
-	local framePaletteIndex = dirpadShape.Palette:AddColor(controls.config.frameColor)
-	local fillPaletteIndex = dirpadShape.Palette:AddColor(controls.config.fillColor)
+	local framePaletteIndex = dirpadShape.Palette:AddColor(config.frameColor)
+	local fillPaletteIndex = dirpadShape.Palette:AddColor(config.fillColor)
 
 	for x = 0, sizeMinusOne do
 		for y = 0, sizeMinusOne do
@@ -309,7 +251,7 @@ local _createDirpad = function()
 	dirpadShape:GetBlock(sizeMinusOne-1,sizeMinusOne-1,0):Replace(framePaletteIndex)
 
 	local arrow = MutableShape()
-	local colorIndex = arrow.Palette:AddColor(controls.config.iconOffColor)
+	local colorIndex = arrow.Palette:AddColor(config.iconOffColor)
 	arrow:AddBlock(colorIndex, 0, 0, 0)
 	arrow:AddBlock(colorIndex, 1, 0, 0)
 	arrow:AddBlock(colorIndex, 2, 0, 0)
@@ -352,12 +294,12 @@ local _getOrCreateIndicator = function(index)
 
 	local indicatorShape = MutableShape()
 
-	local layout = controls.config.layout.indicator
+	local layout = config.layout.indicator
 	local size = layout.size
 	local sizeMinusOne = size - 1
 
-	local c1 = controls.config.frameColor c1.Alpha = 200
-	local c2 = controls.config.fillColor c2.Alpha = 200
+	local c1 = config.frameColor c1.Alpha = 200
+	local c2 = config.fillColor c2.Alpha = 200
 
 	local framePaletteIndex = indicatorShape.Palette:AddColor(c1)
 	local fillPaletteIndex = indicatorShape.Palette:AddColor(c2)
@@ -405,12 +347,12 @@ local _getPCLongPressIndicator = function(createIfNeeded)
 
 	local indicatorShape = MutableShape()
 
-	local layout = controls.config.layout.indicator
+	local layout = config.layout.indicator
 	local size = layout.size
 	local sizeMinusOne = size - 1
 
-	local c1 = controls.config.frameColor c1.Alpha = 200
-	local c2 = controls.config.fillColor c2.Alpha = 200
+	local c1 = config.frameColor c1.Alpha = 200
+	local c2 = config.fillColor c2.Alpha = 200
 
 	local framePaletteIndex = indicatorShape.Palette:AddColor(c1)
 
@@ -450,12 +392,12 @@ local _createActionBtn = function(number)
 	local btnShape = MutableShape()
 	local n = math.floor(number)
 	if n < 1 or n > 3 then error("button number should from 1 to 3") end
-	local layout = controls.config.layout["action" .. n]
+	local layout = config.layout["action" .. n]
 
 	local size = layout.size
 	local sizeMinusOne = size - 1
-	local framePaletteIndex = btnShape.Palette:AddColor(controls.config.frameColor)
-	local fillPaletteIndex = btnShape.Palette:AddColor(controls.config.fillColor)
+	local framePaletteIndex = btnShape.Palette:AddColor(config.frameColor)
+	local fillPaletteIndex = btnShape.Palette:AddColor(config.fillColor)
 
 	for x = 0, sizeMinusOne do
 		for y = 0, sizeMinusOne do
@@ -478,7 +420,7 @@ local _createActionBtn = function(number)
 	btnShape:GetBlock(sizeMinusOne-1,sizeMinusOne-1,0):Replace(framePaletteIndex)
 
 	local icon = MutableShape()
-	local colorIndex = icon.Palette:AddColor(controls.config.iconOffColor)
+	local colorIndex = icon.Palette:AddColor(config.iconOffColor)
 	local offset = 0
 	for i = 1,n do
 		for y = 0, 3 do
@@ -627,10 +569,13 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 				end
 			}).dirPadRot = {0,0,0}
 
-			_state.dirpad.arrowLeft.Palette[1].Color = controls.config.iconOffColor
-			_state.dirpad.arrowRight.Palette[1].Color = controls.config.iconOffColor
-			_state.dirpad.arrowDown.Palette[1].Color = controls.config.iconOffColor
-			_state.dirpad.arrowUp.Palette[1].Color = controls.config.iconOffColor
+			_state.dirpad.arrowLeft.Palette[1].Color = config.iconOffColor
+			_state.dirpad.arrowRight.Palette[1].Color = config.iconOffColor
+			_state.dirpad.arrowDown.Palette[1].Color = config.iconOffColor
+			_state.dirpad.arrowUp.Palette[1].Color = config.iconOffColor
+
+			_state.dirpadInput = Number2(0,0)
+			_state.dirpadPreviousInput = nil
 
 			return true -- capture
 		end
@@ -648,16 +593,16 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 	if not checkIfWithinRadius or sqrPointerDistance < sqrRadius then
 		local radius = math.sqrt(sqrRadius)
 
-		local dirpadInput = Number2(0,0)
+		local dirpadInput = _state.dirpadInput
 		local rot = Number3(0,0,0)
+
+		if eventType == "down" then
+			_state.inputPointers.dirpad = pointerEventIndex
+		end
 
 		if sqrPointerDistance <= minSqrRadius then
 			-- Too close from pad center to define direction,
 			-- keep current _state.dirpadInput.
-			if eventType == "down" then
-				_state.inputPointers.dirpad = pointerEventIndex
-			end
-			_state.dirpadPreviousInput = dirpadInput
 			return true
 		else
 
@@ -722,29 +667,30 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 			Client:HapticFeedback()
 
 			if dirpadInput.X < 0 then
-				dirpad.arrowLeft.Palette[1].Color = controls.config.iconOnColor
-				dirpad.arrowRight.Palette[1].Color = controls.config.iconOffColor
+				dirpad.arrowLeft.Palette[1].Color = config.iconOnColor
+				dirpad.arrowRight.Palette[1].Color = config.iconOffColor
 			elseif dirpadInput.X > 0 then
-				dirpad.arrowLeft.Palette[1].Color = controls.config.iconOffColor
-				dirpad.arrowRight.Palette[1].Color = controls.config.iconOnColor
+				dirpad.arrowLeft.Palette[1].Color = config.iconOffColor
+				dirpad.arrowRight.Palette[1].Color = config.iconOnColor
 			else
-				dirpad.arrowLeft.Palette[1].Color = controls.config.iconOffColor
-				dirpad.arrowRight.Palette[1].Color = controls.config.iconOffColor
+				dirpad.arrowLeft.Palette[1].Color = config.iconOffColor
+				dirpad.arrowRight.Palette[1].Color = config.iconOffColor
 			end
 
 			if dirpadInput.Y < 0 then
-				dirpad.arrowDown.Palette[1].Color = controls.config.iconOnColor
-				dirpad.arrowUp.Palette[1].Color = controls.config.iconOffColor
+				dirpad.arrowDown.Palette[1].Color = config.iconOnColor
+				dirpad.arrowUp.Palette[1].Color = config.iconOffColor
 			elseif dirpadInput.Y > 0 then
-				dirpad.arrowDown.Palette[1].Color = controls.config.iconOffColor
-				dirpad.arrowUp.Palette[1].Color = controls.config.iconOnColor
+				dirpad.arrowDown.Palette[1].Color = config.iconOffColor
+				dirpad.arrowUp.Palette[1].Color = config.iconOnColor
 			else
-				dirpad.arrowDown.Palette[1].Color = controls.config.iconOffColor
-				dirpad.arrowUp.Palette[1].Color = controls.config.iconOffColor
+				dirpad.arrowDown.Palette[1].Color = config.iconOffColor
+				dirpad.arrowUp.Palette[1].Color = config.iconOffColor
 			end
+
+			_state.dirpadPreviousInput = dirpadInput:Copy()
 		end
 
-		_state.dirpadPreviousInput = dirpadInput
 		return true
 	end
 end
@@ -765,13 +711,13 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 			and y >= btn.pos.Y and y <= btn.pos.Y + btn.Height then
 
 			_state.inputPointers["action" .. n] = pointerEventIndex
-			btn.pivot.Scale = controls.config.pressScale
+			btn.pivot.Scale = config.pressScale
 
 			if btn.icon ~= nil then
 				if btn.icon.Color then
-					btn.icon.Color = controls.config.iconOnColor
+					btn.icon.Color = config.iconOnColor
 				else
-					btn.icon.Palette[1].Color = controls.config.iconOnColor
+					btn.icon.Palette[1].Color = config.iconOnColor
 				end
 			end
 
@@ -796,9 +742,9 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 
 		if btn.icon ~= nil then
 			if btn.icon.Color then
-				btn.icon.Color = controls.config.iconOffColor
+				btn.icon.Color = config.iconOffColor
 			else
-				btn.icon.Palette[1].Color = controls.config.iconOffColor
+				btn.icon.Palette[1].Color = config.iconOffColor
 			end
 		end
 
@@ -926,13 +872,13 @@ function(pointerEvent)
 			end
 		end
 	end
-end)
+end, { system = System })
 
 _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag,
 function(pointerEvent)
 	if not _isActive() then return end
 	if not _pointerIsDown(pointerEvent.Index) then return end
-
+	
 	local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
 
 	if Pointer.IsHidden == false then -- Pointer shown
@@ -972,8 +918,6 @@ function(pointerEvent)
 					end
 
 					if Pointer.Drag ~= nil then Pointer.Drag(pointerEvent) end
-
-					if Camera.OnPointerDrag ~= nil then Camera:OnPointerDrag(pointerEvent) end
 
 				elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT then
 
@@ -1034,12 +978,6 @@ function(pointerEvent)
 
 				if Pointer.Drag ~= nil then Pointer.Drag(pointerEvent) end
 
-				-- TODO: OnPointerDrag callbacks should not be handled here
-				-- IDEA: add AnalogPad event, notify here
-				-- Client.AnalogPad would register to it, same for Camera.
-				if Camera.OnPointerDrag ~= nil then
-					Camera:OnPointerDrag(pointerEvent)
-				end
 			elseif _state.touchZoomAndDrag2Pointers ~= nil then
 				if pointerEvent.Index == _state.touchZoomAndDrag2Pointers[1].index or pointerEvent.Index == _state.touchZoomAndDrag2Pointers[2].index then
 					local prevX
@@ -1114,7 +1052,7 @@ function(pointerEvent)
 						local distanceFromApex = (distanceBetweenTouches * 0.5) / TAN_TOUCH_ZOOM_ANGLE
 						_state.previousDistanceBetweenTouches = distanceBetweenTouches
 
-						Pointer.Zoom(previousDistanceFromApex - distanceFromApex)
+						Pointer.Zoom((previousDistanceFromApex - distanceFromApex) * _state.zoomSensitivity)
 					end
 				end
 			end
@@ -1132,10 +1070,18 @@ function(pointerEvent)
 		end
 
 		if Client.AnalogPad ~= nil then
-			Client.AnalogPad(pointerEvent.DX, pointerEvent.DY)
+			local dx = pointerEvent.DX * _state.sensitivity
+			local dy = pointerEvent.DY * _state.sensitivity
+			Client.AnalogPad(dx, dy)
 		end
 	end
-end)
+end, { system = System })
+
+_state.sensitivityListener = LocalEvent:Listen(LocalEvent.Name.SensitivityUpdated,
+function()
+	_state.sensitivity = Pointer.Sensitivity
+	_state.zoomSensitivity = Pointer.ZoomSensitivity
+end, { system = System })
 
 _state.moveListener = LocalEvent:Listen(LocalEvent.Name.PointerMove,
 function(pointerEvent)
@@ -1144,18 +1090,20 @@ function(pointerEvent)
 
 	else
 		if Client.AnalogPad ~= nil then
-			Client.AnalogPad(pointerEvent.DX, pointerEvent.DY)
+			local dx = pointerEvent.DX * _state.sensitivity
+			local dy = pointerEvent.DY * _state.sensitivity
+			Client.AnalogPad(dx, dy)
 		end
 	end
-end)
+end, { system = System })
 
-_state.moveListener = LocalEvent:Listen(LocalEvent.Name.PointerWheel,
+_state.zoomListener = LocalEvent:Listen(LocalEvent.Name.PointerWheel,
 function(delta)
 	if not _isActive() then return end
 	if Pointer.IsHidden == false then -- Pointer shown
-		if Pointer.Zoom ~= nil then Pointer.Zoom(delta) end
+		if Pointer.Zoom ~= nil then Pointer.Zoom(delta * _state.zoomSensitivity) end
 	end
-end)
+end, { system = System })
 
 _state.upListener = LocalEvent:Listen(LocalEvent.Name.PointerUp,
 function(pointerEvent)
@@ -1168,6 +1116,11 @@ function(pointerEvent)
 
 		if _isPC then
 
+			if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
+				if Pointer.Click ~= nil then Pointer.Click(pointerEvent) end
+				_state.clickPointerIndex = nil
+			end
+
 			if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT and Pointer.Up ~= nil then Pointer.Up(pointerEvent) end
 
 		elseif _isMobile then
@@ -1175,18 +1128,21 @@ function(pointerEvent)
 			local indicator = _getOrCreateIndicator(pointerEvent.Index)
 			indicator:_hide()
 
-			if pointerEvent.Index == touchDragPointer and Pointer.Up ~= nil then
-				Pointer.Up(pointerEvent)
+			if pointerEvent.Index == touchDragPointer then
+
+				if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
+					if Pointer.Click ~= nil then Pointer.Click(pointerEvent) end
+					_state.clickPointerIndex = nil
+				end
+				
+				if Pointer.Up ~= nil then
+					Pointer.Up(pointerEvent)
+				end
 
 			elseif _activate(x, y, pointerEvent.Index, "up") == true then
 				return true
 			end
 		end 
-
-		if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
-			if Pointer.Click ~= nil then Pointer.Click(pointerEvent) end
-			_state.clickPointerIndex = nil
-		end
 
 	else -- Pointer hidden
 
@@ -1210,7 +1166,7 @@ function(pointerEvent)
 			end
 		end 
 	end
-end)
+end, { system = System })
 
 _state.cancelListener = LocalEvent:Listen(LocalEvent.Name.PointerCancel,
 function(pointerIndex)
@@ -1226,29 +1182,9 @@ function(pointerIndex)
 			return true
 		end
 	end
-end)
+end, { system = System })
 
-_state.openChatListener = LocalEvent:Listen(LocalEvent.Name.OpenChat,
-function()
-	if _isChatInputDisplayed() then
-		_closeChatInput()
-	else
-		_displayChatInput(false)
-	end
-end)
-
-_state.keyboardListener = LocalEvent:Listen(LocalEvent.Name.KeyboardInput,
-function(char, keyCode, modifiers, down)
-	if not _isActive() then return end
-	if down then
-		if _state.keysDown[keyCode] then 
-			return
-		else
-			_state.keysDown[keyCode] = true
-		end
-	else
-		_state.keysDown[keyCode] = nil
-	end
+function applyKey(keyCode, down)
 
 	local updateDirPad = false
 	local dirpadInput = _state.dirpadInput
@@ -1262,12 +1198,12 @@ function(char, keyCode, modifiers, down)
 
 	elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
 		if down then
-			_displayChatInput(false)
+			_toggleChatModal()
 		end
 
 	elseif keyCode == codes.SLASH then
 		if down then
-			_displayChatInput(true)
+			_toggleChatModal("/")
 		end
 
 	elseif keyCode == codes.KEY_W or keyCode == codes.UP then
@@ -1300,19 +1236,59 @@ function(char, keyCode, modifiers, down)
 		dirpadInput:Normalize()
 		Client.DirectionalPad(dirpadInput.X, dirpadInput.Y)
 	end
-end)
+end
 
-controls.pointerShownListener = LocalEvent:Listen(LocalEvent.Name.PointerShown,
+_state.keyboardShownListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown,
+function(keyboardHeight)
+	_state.virtualKeyboardShown = true
+	controls:refresh()
+end, { system = System })
+
+
+_state.keyboardHiddenListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden,
 function()
-	controls.refresh()
-end)
+	_state.virtualKeyboardShown = false
+	controls:refresh()
+end, { system = System })
 
-controls.pointerHiddenListener = LocalEvent:Listen(LocalEvent.Name.PointerHidden,
+
+_state.keyboardListener = LocalEvent:Listen(LocalEvent.Name.KeyboardInput,
+function(char, keyCode, modifiers, down)
+	if not _isActive() then return end
+	if down then
+		if _state.keysDown[keyCode] then 
+			return
+		else
+			_state.keysDown[keyCode] = true
+		end
+	else
+		_state.keysDown[keyCode] = nil
+	end
+
+	applyKey(keyCode, down)
+end, { system = System })
+
+function releaseAllInputs()
+	for keyCode, _ in pairs(_state.keysDown) do
+		_state.keysDown[keyCode] = nil
+		applyKey(keyCode, false)
+	end
+	-- TODO: also release pointer events
+end
+
+index.pointerShownListener = LocalEvent:Listen(LocalEvent.Name.PointerShown,
 function()
-	controls.refresh()
-end)
+	_state.clickPointerStartPosition = nil
+	index.refresh()
+end, { system = System })
 
-controls.refresh = function()
+index.pointerHiddenListener = LocalEvent:Listen(LocalEvent.Name.PointerHidden,
+function()
+	_state.clickPointerStartPosition = nil
+	index.refresh()
+end, { system = System })
+
+index.refresh = function()
 
 	if not _state.dirpad then _createDirpad() end
 	if not _state.action1 then _createActionBtn(1) end
@@ -1324,7 +1300,7 @@ controls.refresh = function()
 	_state.action2:hide()
 	_state.action3:hide()
 	
-	if _state.on then
+	if _state.on and _state.virtualKeyboardShown == false then
 		if _isMobile and _state.chatInput == nil then
 			if Client.DirectionalPad ~= nil then _state.dirpad:show() end
 			if Client.Action1 ~= nil or Client.Action1Release ~= nil then _state.action1:show() end
@@ -1343,7 +1319,7 @@ controls.refresh = function()
 		local btn = _state[elementName]
 		if btn == nil then goto continue end
 
-		local layout = controls.config.layout[elementName]
+		local layout = config.layout[elementName]
 		if layout == nil then goto continue end
 
 		if layout.pos[1] < 0 then 
@@ -1411,35 +1387,36 @@ controls.refresh = function()
 	end
 end
 
-controls.screenDidResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, controls.refresh)
-controls.action1Listener = LocalEvent:Listen(LocalEvent.Name.DirPadSet, controls.refresh)
-controls.action2Listener = LocalEvent:Listen(LocalEvent.Name.Action1Set, controls.refresh)
-controls.action3Listener = LocalEvent:Listen(LocalEvent.Name.Action2Set, controls.refresh)
-controls.dirPadListener = LocalEvent:Listen(LocalEvent.Name.Action3Set, controls.refresh)
-controls.homeMenuOpenedListener = LocalEvent:Listen(LocalEvent.Name.HomeMenuOpened, function()
-	_state.isHomeMenuOpened = true
-	controls.refresh()
-end)
-controls.homeMenuClosedListener = LocalEvent:Listen(LocalEvent.Name.HomeMenuClosed, function()
-	_state.isHomeMenuOpened = false
-	controls.refresh()
+index.screenDidResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, index.refresh, { system = System })
+index.action1Listener = LocalEvent:Listen(LocalEvent.Name.DirPadSet, index.refresh, { system = System })
+index.action2Listener = LocalEvent:Listen(LocalEvent.Name.Action1Set, index.refresh, { system = System })
+index.action3Listener = LocalEvent:Listen(LocalEvent.Name.Action2Set, index.refresh, { system = System })
+index.dirPadListener = LocalEvent:Listen(LocalEvent.Name.Action3Set, index.refresh, { system = System })
+
+menu:AddDidBecomeActiveCallback(function()
+	releaseAllInputs()
+	index.refresh()
 end)
 
-controls.turnOn = function(self)
+menu:AddDidResignActiveCallback(function()
+	index.refresh()
+end)
+
+index.turnOn = function(self)
 	if self ~= controls then error("controls:turnOn should be called with `:`", 2) end
 	if _state.on == true then return end -- already on
 	_state.on = true
 	self:refresh()
 end
 
-controls.turnOff = function(self)
+index.turnOff = function(self)
 	if self ~= controls then error("controls:turnOff should be called with `:`", 2) end
 	if _state.on == false then return end -- already off
 	_state.on = false
 	self:refresh()
 end
 
-controls.setButtonIcon = function(self, buttonName, shapeOrString)
+index.setButtonIcon = function(self, buttonName, shapeOrString)
 	buttonName = string.lower(buttonName)
 
 	local btn = _state[buttonName]
@@ -1455,13 +1432,26 @@ controls.setButtonIcon = function(self, buttonName, shapeOrString)
 		icon.BackgroundColor = Color(0,0,0,0) 
 		icon.IsUnlit = true
 		icon.Layers = btn.shape.Layers
-		icon.Scale = 3
+		icon.Scale = 5
 		btn.shape:AddChild(icon)
 		icon.LocalPosition = {btn.shape.Width * 0.5, btn.shape.Height * 0.5, -50}
 	end
 
 	btn.icon = icon
 end
+
+local metatable = {
+	__index = function(t, k)
+		if k == "DirectionalPadValues" then
+			return _state.dirpadInput
+		elseif k == "config" then
+			return config
+		end
+		return index[k]
+	end,
+	__metatable = false
+}
+setmetatable(controls, metatable)
 
 controls:refresh()
 

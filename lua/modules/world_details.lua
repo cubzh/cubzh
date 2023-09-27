@@ -1,29 +1,70 @@
---[[
-	...
-]]--
+worldDetailsMod = {}
 
-local worldDetails = {}
-
-worldDetails.create = function(self, config)
+worldDetailsMod.create = function(self, config)
 
 	local _config = {
-		mode = "explore" -- "explore" / "create"
+		title = "",
+		mode = "explore", -- "explore" / "create"
+		uikit = require("uikit"),
 	}
-	if config ~= nil then
-		if config.mode ~= nil and type(config.mode) == "string" then _config.mode = config.mode end
+
+	if config then
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
 	end
+
 	local config = _config
 
 	local time = require("time")
 	local theme = require("uitheme").current
-	local itemCopyMarketModule = require("item_copy_market")
-	local ui = require("uikit")
+	local ui = config.uikit
+	local api = require("system_api", System)
+
+	local createMode = config.mode == "create"
 
 	local worldDetails = ui:createNode()
 
+	-- becomes true when itemDetails is removed
+	-- callbacks may capture this as upvalue to early return.
+	local removed = false 
+	local requests = {}
+	local listeners = {}
+
+	worldDetails.onRemove = function(self)
+		removed = true
+
+		for _, req in ipairs(requests) do
+			req:Cancel()
+		end
+		requests = {}
+
+		for _, listener in ipairs(listeners) do
+			listener:Remove()
+		end
+		listeners = {}
+	end
+
+	local content = require("modal"):createContent()
+	content.title = config.title
+	content.icon = "🌎"
+	content.node = worldDetails
+
+	content.didBecomeActive = function()
+		for _, listener in ipairs(listeners) do
+			listener:Resume()
+		end
+	end
+
+	content.willResignActive = function()
+		for _, listener in ipairs(listeners) do
+			listener:Pause()
+		end
+	end
+
 	local name
 	local editNameBtn
-	if config.mode == "create" then
+	if createMode then
 		local nameArea = ui:createFrame(Color(0,0,0))
 		nameArea:setParent(worldDetails)
 		worldDetails.nameArea = nameArea
@@ -43,9 +84,18 @@ worldDetails.create = function(self, config)
 		local function submit()
 			local sanitized, err = api.checkWorldName(name.Text)
 			if err == nil then
-				api:patchWorld(worldDetails.id, {title = sanitized}, function(err, world)
-					-- not handling response yet
+				local req = api:patchWorld(worldDetails.id, {title = sanitized}, function(err, world)
+					if removed then return end
+					-- print("PATCHED", err, world.id, world.title, world.description)
+					if err == nil then
+						-- World update succeeded.
+						-- Notify that the content has changed.
+						if content.onContentUpdate then
+							content.onContentUpdate(world)
+						end
+					end
 				end)
+				table.insert(requests, req)
 			end
 
 			editNameBtn.Text = "✏️"
@@ -79,17 +129,26 @@ worldDetails.create = function(self, config)
 	worldDetails.publishDate = publishDate
 	publishDate.LocalPosition = {theme.padding, theme.padding, 0}
 
-	local by = ui:createText("by", Color.White)
-	by:setParent(infoArea)
-	worldDetails.by = by
-	by.LocalPosition = publishDate.LocalPosition + {0, publishDate.Height + theme.padding, 0}
+	local byBtn = nil
 
-	local author = ui:createText(" @repo", Color.Green)
-	author:setParent(infoArea)
-	worldDetails.author = author
-	author.LocalPosition = by.LocalPosition + {by.Width, 0, 0}
+	if createMode then
+		local by = ui:createText("by", Color.White)
+		by:setParent(infoArea)
+		worldDetails.by = by
+		by.LocalPosition = publishDate.LocalPosition + {0, publishDate.Height + theme.padding, 0}
+
+		local author = ui:createText(" @repo", Color.Green)
+		author:setParent(infoArea)
+		worldDetails.author = author
+		author.LocalPosition = by.LocalPosition + {by.Width, 0, 0}
+	else
+		byBtn = ui:createButton("by @…")
+		byBtn:setParent(infoArea)
+		byBtn.pos = publishDate.LocalPosition + {0, publishDate.Height + theme.padding, 0}
+	end
 
 	local descriptionArea = ui:createFrame(Color(0,0,0))
+	descriptionArea.IsMask = true
 	descriptionArea:setParent(worldDetails)
 	worldDetails.descriptionArea = descriptionArea
 
@@ -107,59 +166,72 @@ worldDetails.create = function(self, config)
 	local likes
 	local editDescriptionBtn
 
-	local views = ui:createText("👁 ...")
+	local views = ui:createText("👁 …")
 	views.Color = theme.textColor
 	views:setParent(worldDetails)
 
 	if config.mode == "explore" then
 		signalBtn = ui:createButton("⚠️")
+		signalBtn:disable()
 		signalBtn:setParent(worldDetails)
 
-		likeBtn = ui:createButton("❤️ ...")
+		likeBtn = ui:createButton("❤️ …")
 		likeBtn:setParent(worldDetails)
 	elseif config.mode == "create" then
-		likes = ui:createText("❤️ ...", theme.textColor)
+		likes = ui:createText("❤️ …", theme.textColor)
 		likes:setParent(worldDetails)
 
 		editDescriptionBtn = ui:createButton("✏️")
 		editDescriptionBtn:setParent(descriptionArea)
 		editDescriptionBtn.onRelease = function()
-			if multilineInput and worldDetails.description then
+			if System.MultilineInput ~= nil and worldDetails.description then
 				local description = worldDetails.description
 				if description.empty == true then description = "" end
-				-- multilineInput is globally exposed by the engine
-				-- for the main menu script, not available within other worlds.
-				-- Will be replaced by Lua multiline input once it's available!
-				multilineInput(	description.Text,
-								"Description",
-								"How would you describe that World?",
-								"", -- regex
-								10000, -- max chars
-								function(text) -- done
-									local description = worldDetails.description
-									if text == "" then 
-										description.empty = true
-										description.Text = "Worlds are easier to find with a description!"
-										description.Color = theme.textColorSecondary
-										api:patchWorld(worldDetails.id, {description = ""}, function(err, world)
-											-- not handling response yet
-										end)
-									else
-										description.empty = false
-										description.Text = text
-										description.Color = theme.textColor
-										api:patchWorld(worldDetails.id, {description = text}, function(err, world)
-											-- not handling response yet
-										end)
-									end
-								end,
-								nil -- cancel
-								)
+				System.MultilineInput(
+					description.Text,
+					"Description",
+					"How would you describe that World?",
+					"", -- regex
+					10000, -- max chars
+					function(text) -- done
+						ui:turnOn()
+						local description = worldDetails.description
+						if text == "" then 
+							description.empty = true
+							description.Text = "Worlds are easier to find with a description!"
+							description.Color = theme.textColorSecondary
+							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
+							local req = api:patchWorld(worldDetails.id, {description = ""}, function(err, world)
+								if removed then return end
+								-- not handling response yet
+							end)
+							table.insert(requests, req)
+						else
+							description.empty = false
+							description.Text = text
+							description.Color = theme.textColor
+							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
+							local req = api:patchWorld(worldDetails.id, {description = text}, function(err, world)
+								if removed then return end
+								-- not handling response yet
+							end)
+							table.insert(requests, req)
+						end
+					end,
+					function() -- cancel
+						ui:turnOn()
+					end
+				)
+				ui:turnOff()
 			end
 		end
 	end
 
 	worldDetails.shape = nil
+
+	content.loadCell = function(self, cell)
+		worldDetails:loadCell(cell)
+	end
 
 	worldDetails.loadCell = function(self, cell)
 		if self.shape then self.shape:remove() end
@@ -191,15 +263,25 @@ worldDetails.create = function(self, config)
 			self.shape.Height = 350
 		end
 
-		self.author.Text = " @..." -- .. cell.repo
+		local req = api:getWorld(cell.id, function(err, world)
+			if removed then return end
 
-		require("api"):getWorld(cell.id, function(err, world)
+			local authorName = world["author-name"]
+			local authorID = world["author-id"]
+
 			if err == nil and world ~= nil then
 				if self.author ~= nil then
-					self.author.Text = " @" .. (world["author-name"] or "...")
+					self.author.Text = " @" .. (authorName or "…")
+				elseif byBtn and authorName then
+					byBtn.Text = "by @" .. authorName
+					byBtn.onRelease = function(btn)
+						local profileConfig = {isLocal = false, username = authorName, userID = authorID, uikit = ui}
+						local profileContent = require("profile"):create(profileConfig)
+						content:push(profileContent)
+					end
 				end
 			end
-			
+
 			local liked = world.liked
 			self.liked = liked
 			self.originalLike = liked
@@ -207,6 +289,7 @@ worldDetails.create = function(self, config)
 				likeBtn:setColor(theme.colorPositive)
 			end
 		end)
+		table.insert(requests, req)
 
 		if self.name then
 			self.name.Text = cell.title
@@ -233,7 +316,10 @@ worldDetails.create = function(self, config)
 			
 			likeBtn.onRelease = function()
 				self.liked = not self.liked
-				api:likeWorld(cell.id, self.liked, function(err) end)
+				local req = api:likeWorld(cell.id, self.liked, function(err) 
+					if removed then return end 
+				end)
+				table.insert(requests, req)
 
 				if self.liked then
 					likeBtn:setColor(theme.colorPositive)
@@ -275,14 +361,14 @@ worldDetails.create = function(self, config)
 			self.publishDate.Text = "🌎 " .. n .. " " .. unitType .. " ago"
 		end
 
-
-		self.object.dt = 0
-		self.object.Tick = function(o, dt)
-			o.dt = o.dt + dt
+		local t = 0
+		local listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			t = t + dt
 			if self.shape ~= nil then
-				self.shape.pivot.LocalRotation.Y = o.dt
+				self.shape.pivot.LocalRotation.Y = t
 			end
-		end
+		end)
+		table.insert(listeners, listener)
 
 		if self.shape ~= nil then
 			self.shape.pivot.Rotation = Number3(-0.1,-math.pi * 0.2,-0.2)
@@ -406,14 +492,16 @@ worldDetails.create = function(self, config)
 				elseif likes then
 					self.nameArea.pos = {0, likes.LocalPosition.Y - self.nameArea.Height - theme.padding, 0}
 				end
-			end
 
-			self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
-			self.infoArea.Width = self.Width
-			if createMode then
+				self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
+				self.infoArea.Width = self.Width
+				
 				self.infoArea.pos = self.nameArea.pos - {0, self.infoArea.Height + theme.padding, 0}
 				self.descriptionArea.Height = detailsHeight - self.nameArea.Height - self.infoArea.Height - theme.padding * 2
 			else
+				self.infoArea.Height = byBtn.Height + self.publishDate.Height + theme.padding * 3
+				self.infoArea.Width = self.Width
+
 				self.infoArea.pos = {0, signalBtn.pos.Y - self.infoArea.Height - theme.padding, 0}
 				self.descriptionArea.Height = detailsHeight - self.infoArea.Height - theme.padding * 2
 			end
@@ -513,9 +601,11 @@ worldDetails.create = function(self, config)
 				self.editNameBtn.pos.X = self.nameArea.Width - self.editNameBtn.Width
 
 				self.nameArea.LocalPosition = {0, self.Height - self.nameArea.Height, 0}
+				
+				self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
+			else
+				self.infoArea.Height = byBtn.Height + self.publishDate.Height + theme.padding * 3
 			end
-
-			self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
 			self.infoArea.Width = detailsWidth
 
 			if createMode then
@@ -543,7 +633,7 @@ worldDetails.create = function(self, config)
 		end
 	end
 
-	return worldDetails
+	return content
 end
 
-return worldDetails
+return worldDetailsMod

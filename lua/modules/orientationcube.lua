@@ -37,7 +37,9 @@ local orientationCubeMetatable = {
 		setRotation = function(self, cameraRotation)
 			local camera = self.camera
 			if not camera then self:init() end
-			self.camera.Rotation = cameraRotation
+			
+			self.camera.Rotation:Set(cameraRotation)
+
 			for _,t in ipairs(self.texts) do
 				local visible = t.Forward:Dot(self.camera.Forward) > -0.3
 				if visible then
@@ -91,7 +93,7 @@ local orientationCubeMetatable = {
 				cube.CollisionGroups = 3
 				cube.Pivot = { cube.Width * 0.5, cube.Height * 0.5, cube.Depth * 0.5 }
 
-				camera:SetModeSatellite(cube, 17)
+				camera:SetModeSatellite(cube,17)
 				
 				local textsInfo = {
 					{

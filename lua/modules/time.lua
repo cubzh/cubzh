@@ -1,3 +1,5 @@
+---@type time
+
 local time = {}
 
 -- `iso8601` argument is a string
@@ -59,6 +61,34 @@ time.ago = function(t)
 	else
 		return seconds, "seconds"
 	end
+end
+
+---@function monthToString Converts an integer into its string representation
+---@param self time
+---@param month integer
+---@return string
+time.monthToString = function(self, month)
+	if self ~= time then error("time:monthToString(month): use `:`", 2) end
+	if type(month) ~= Type.integer then error("time:monthToString(month): month should be an integer", 2) end
+
+	local months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	return months[month]
+end
+
+
+---@function iso8601ToTable Converts iso8601 time into a table with year, month and other fields
+---@param self time
+---@param isoTime string
+---@return table
+time.iso8601ToTable = function(self, isoTime)
+	if self ~= time then error("time:iso8601ToTable(isoTime): use `:`", 2) end
+	if type(isoTime) ~= Type.string then error("time:iso8601ToTable(isoTime): isoTime should be an string", 2) end
+
+	-- Parse time which is in string format
+	local year, month, day, hour, minute, seconds = isoTime:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
+
+	local table = {year = year, month = month, day = day, hour = hour, minute = minute, second = math.floor(seconds)}
+	return table
 end
 
 return time

@@ -1,6 +1,7 @@
-local create_menu = {}
 
-create_menu.create = function(self, maxWidth, maxHeight, position, config)
+creations = {}
+
+creations.createModalContent = function(self, config)
 
 	local itemGrid = require("item_grid")
 	local itemDetails = require("item_details")
@@ -8,9 +9,21 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 	local pages = require("pages")
 	local theme = require("uitheme").current
 	local modal = require("modal")
-	local ui = require("uikit")
-	local parent = ui.rootFrame
-	local api = require("api")
+	local api = require("system_api", System)
+	local gridNeedRefresh = false
+
+	-- default config
+	local _config = {
+		uikit = require("uikit"), -- allows to provide specific instance of uikit
+	}
+
+	if config then
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
+	end
+
+	local ui = _config.uikit
 
 	-- if original isn't nil, it means we're duplicating an entity
 	-- original: name of copied entity
@@ -33,7 +46,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		local node = ui:createNode()
 
 		local categories = {"null"} 
-		local categoryShapes = {"one_cube_template"}
+		local categoryShapes = {"official.one_cube_template"}
 		local buttonLabels = {"✨ Create Item ⚔️"}
 		local inputLabel = "Item Name?"
 
@@ -41,7 +54,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 
 		if what == "wearable" and original == nil then
 			categories = {"hair", "jacket", "pants", "boots"}
-			categoryShapes = {"hair_template", "jacket_template", "pants_template", "shoes_template"}
+			categoryShapes = {"official.hair_template", "official.jacket_template", "official.pants_template", "official.shoes_template"}
 			buttonLabels = {
 							"✨ Create Hair 🙂",
 							"✨ Create Jacket 👕",
@@ -50,7 +63,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 							}
 		elseif what == "world" then
 			categories = {"null"} 
-			categoryShapes = {"world_icon"}
+			categoryShapes = {"official.world_icon"}
 			buttonLabels = {"✨ Create World 🌎"}
 			inputLabel = "World Name?"
 			textWithEmptyInput = "A World needs a name! No pressure, this can be changed later on."
@@ -69,7 +82,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		btnCreate:setColor(theme.colorPositive)
 		newContent.bottomCenter = {btnCreate}
 
-		local templatePreview = ui:createShape(Shape(Items[categoryShapes[currentCategory]]), {spherized = true})
+		local templatePreview = ui:createShape(System.ShapeFromBundle(categoryShapes[currentCategory]), {spherized = true})
 		templatePreview:setParent(node)
 
 		templatePreview.pivot.LocalRotation = {-0.1,0,-0.2}
@@ -113,7 +126,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 				text.Color = theme.textColor
 				text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
 
-				templatePreview:setShape(Shape(Items[categoryShapes[currentCategory]]))
+				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
 			end
 
 			previousTemplateBtn = ui:createButton("⬅️")
@@ -130,7 +143,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 				text.Color = theme.textColor
 				text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
 
-				templatePreview:setShape(Shape(Items[categoryShapes[currentCategory]]))
+				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
 			end
 		end
 
@@ -184,11 +197,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						-- forces grid to refresh when coming back
 						if grid ~= nil then grid.needsToRefreshEntries = true end
 
-						local worldDetailsContent = modal:createContent()
-						worldDetailsContent.title = world.title
-						worldDetailsContent.icon = "🌎"
-
-						local worldDetails = worldDetails:create({mode = "create"})
+						local worldDetailsContent = worldDetails:create({mode = "create", title = world.title, uikit = ui })
 
 						local cell = {}
 
@@ -196,19 +205,22 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						cell.title = world.title
 						cell.description = ""
 						cell.created = world.created
-						cell.item = {shape = Shape(Items.world_icon)}
+						cell.item = {shape = System.ShapeFromBundle("official.world_icon")}
 
-						worldDetails:loadCell(cell)
-						worldDetailsContent.node = worldDetails
+						worldDetailsContent:loadCell(cell)
+
+						local btnEditCode = ui:createButton("🤓 Code", {textSize="default"})
+						btnEditCode.onRelease = function()
+							System.EditWorldCode(cell.id)
+						end
 
 						local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 						btnEdit:setColor(theme.colorCreate)
-						worldDetailsContent.bottomCenter = {btnEdit}
 						btnEdit.onRelease = function()
-							hideUI()
-
-							editWorld(cell.id) -- global function exposed by engine
+							System.EditWorld(cell.id)
 						end
+
+						worldDetailsContent.bottomRight = {btnEdit, btnEditCode}
 
 						worldDetailsContent.idealReducedContentSize = function(content, width, height)
 							content.Width = width
@@ -242,11 +254,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						local itemFullName = item.repo .. "." .. item.name
 						-- local category = cell.category
 
-						local itemDetailsContent = modal:createContent()
-						itemDetailsContent.title = "Item"
-						itemDetailsContent.icon = "⚔️"
-
-						local itemDetails = itemDetails:create({mode = "create"})
+						local itemDetailsContent = itemDetails:createModalContent({mode = "create", uikit = ui})
 
 						local cell = {}
 
@@ -257,30 +265,22 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 						cell.itemFullName = itemFullName
 						cell.created = item.created
 
-						itemDetails:loadCell(cell)
-						itemDetailsContent.node = itemDetails
+                        itemDetailsContent:loadCell(cell)
 
 						local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
-							hideUI()
-							itemDetails.backFromEditorListener = LocalEvent:Listen("uishown", function()
-								if itemDetails.reloadShape then
-									itemDetails:reloadShape()
-									itemDetails:reloadInfo()
-								end
-								if itemDetails.backFromEditorListener then
-									itemDetails.backFromEditorListener:Remove()
-								end
-							end)
-							launchItemEditor(itemFullName, category) -- global function exposed by engine
+							System.LaunchItemEditor(itemFullName, category)
 						end
 
 						local btnDuplicate = ui:createButton("📑 Duplicate", {textSize="default"})
 						btnDuplicate.onRelease = function()
 							-- no need to pass grid, it's already marked
 							-- for refresh at this point
-							itemDetailsContent.modal:push(createNewContent("item", itemFullName))
+							local m = itemDetailsContent:getModalIfContentIsActive()
+							if m ~= nil then
+								m:push(createNewContent("item", itemFullName))
+							end
 						end
 
 						-- itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit}
@@ -384,13 +384,33 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 
 	local createCreationsContent = function()
 		local creationsContent = modal:createContent()
-		creationsContent.title = "Create"
+		creationsContent.title = "Creations"
 		creationsContent.icon = "🏗️"
 
-		local grid = itemGrid:create({minBlocks = 1, repo = Player.Username, categories = {"null"}})
+		local grid = itemGrid:create({	minBlocks = 1, 
+										repo = Player.Username, 
+										categories = {"null"},
+										uikit = ui,
+									})
+
 		creationsContent.node = grid
 
-		local pages = pages:create()
+		creationsContent.willResignActive = function(self)
+			grid:cancelRequestsAndTimers()
+		end
+
+		creationsContent.didBecomeActive = function(self)
+			if gridNeedRefresh then
+				-- re-download grid content
+				if grid.getItems then grid:getItems() end
+				gridNeedRefresh = false
+			else
+				-- simply display the grid (same content)
+				if grid.refresh then grid:refresh() end
+			end
+		end
+
+		local pages = pages:create(ui)
 		creationsContent.bottomCenter = {pages}
 
 		local btnNew = ui:createButton("✨ New ⚔️")
@@ -398,15 +418,24 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		creationsContent.bottomRight = {btnNew}
 
 		local newItem = function()
-			creationsContent.modal:push(createNewContent("item", nil, grid))
+			local m = creationsContent:getModalIfContentIsActive()
+			if m ~= nil then
+				m:push(createNewContent("item", nil, grid))
+			end
 		end
 
 		local newWearable = function()
-			creationsContent.modal:push(createNewContent("wearable", nil, grid))
+			local m = creationsContent:getModalIfContentIsActive()
+			if m ~= nil then
+				m:push(createNewContent("wearable", nil, grid))
+			end
 		end
 
 		local newWorld = function()
-			creationsContent.modal:push(createNewContent("world", nil, grid))
+			local m = creationsContent:getModalIfContentIsActive()
+			if m ~= nil then
+				m:push(createNewContent("world", nil, grid))
+			end
 		end
 
 		btnNew.onRelease = newItem
@@ -467,37 +496,21 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 				local itemFullName = cell.itemFullName
 				local category = cell.category
 
-				local itemDetailsContent = modal:createContent()
-				itemDetailsContent.title = "Item"
-				itemDetailsContent.icon = "⚔️"
-
-				local itemDetails = itemDetails:create({mode = "create"})
-				itemDetails:loadCell(cell)
-				itemDetailsContent.node = itemDetails
+				local itemDetailsContent = itemDetails:createModalContent({mode = "create", uikit = ui})
+                itemDetailsContent:loadCell(cell)
 
 				local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
-					-- forces grid to refresh when coming back,
-					-- this is not perfect as it goes back to page 1
-					grid.needsToRefreshEntries = true
-
-					hideUI()
-					itemDetails.backFromEditorListener = LocalEvent:Listen("uishown", function()
-						if itemDetails.reloadShape then
-							itemDetails:reloadShape()
-							itemDetails:reloadInfo()
-						end
-						if itemDetails.backFromEditorListener then
-							itemDetails.backFromEditorListener:Remove()
-						end
-					end)
-					launchItemEditor(itemFullName, category) -- global function exposed by engine
+					System.LaunchItemEditor(itemFullName, category)
 				end
 
 				local btnDuplicate = ui:createButton("📑 Duplicate", {textSize="default"})
 				btnDuplicate.onRelease = function()
-					itemDetailsContent.modal:push(createNewContent("item", itemFullName, grid))
+					local m = itemDetailsContent:getModalIfContentIsActive()
+					if m ~= nil then
+						m:push(createNewContent("item", itemFullName, grid))
+					end
 				end
 
 				local btnExport = ui:createButton("📤", {textSize="default"})
@@ -520,26 +533,34 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 					return Number2(content.Width, content.Height)
 				end
 
-				creationsContent.modal:push(itemDetailsContent)
+				local m = creationsContent:getModalIfContentIsActive()
+				if m ~= nil then
+					m:push(itemDetailsContent)
+				end
 
 			elseif cell.type == "world" then
 
-				local worldDetailsContent = modal:createContent()
-				worldDetailsContent.title = cell.title
-				worldDetailsContent.icon = "🌎"
+				local worldDetailsContent = worldDetails:create({mode = "create", title = cell.title, uikit = ui})
+				worldDetailsContent.onContentUpdate = function(updatedWorld)
+					gridNeedRefresh = true
+					worldDetailsContent.title = updatedWorld.title
+					if worldDetailsContent.refreshModal then worldDetailsContent:refreshModal() end
+				end
 
-				local worldDetails = worldDetails:create({mode = "create"})
-				worldDetails:loadCell(cell)
-				worldDetailsContent.node = worldDetails
+				worldDetailsContent:loadCell(cell)
+
+				local btnEditCode = ui:createButton("🤓 Code", {textSize="default"})
+				btnEditCode.onRelease = function()
+					System.EditWorldCode(cell.id)
+				end
 
 				local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
 				btnEdit:setColor(theme.colorCreate)
-				worldDetailsContent.bottomCenter = {btnEdit}
 				btnEdit.onRelease = function()
-					hideUI()
-
-					editWorld(cell.id) -- global function exposed by engine
+					System.EditWorld(cell.id)
 				end
+
+				worldDetailsContent.bottomRight = {btnEdit, btnEditCode}
 
 				worldDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width
@@ -547,7 +568,10 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 					return Number2(content.Width, content.Height)
 				end
 
-				creationsContent.modal:push(worldDetailsContent)
+				local m = creationsContent:getModalIfContentIsActive()
+				if m ~= nil then
+					m:push(worldDetailsContent)
+				end
 			end
 		end
 
@@ -571,13 +595,13 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		local worldButton = ui:createButton("🌎 World", {textSize="big"})
 		worldButton:setParent(node)
 
-		local itemShape = ui:createShape(Shape(Items.one_cube_template), {spherized = true})
+		local itemShape = ui:createShape(System.ShapeFromBundle("official.one_cube_template"), {spherized = true})
 		itemShape:setParent(node)
 
-		local wearableShape = ui:createShape(Shape(Items.jacket_template), {spherized = true})
+		local wearableShape = ui:createShape(System.ShapeFromBundle("official.jacket_template"), {spherized = true})
 		wearableShape:setParent(node)
 
-		local worldShape = ui:createShape(Shape(Items.world_icon), {spherized = true})
+		local worldShape = ui:createShape(System.ShapeFromBundle("official.world_icon"), {spherized = true})
 		worldShape:setParent(node)
 
 		itemShape.pivot.Rotation = Number3(-0.1,-math.pi * 0.2,-0.2)
@@ -681,24 +705,7 @@ create_menu.create = function(self, maxWidth, maxHeight, position, config)
 		return pickCategoryContent
 	end
 
-	-- local loadingContent = require("modal_loading_content"):create()
-	
-	-- api:getItems({repo=Player.Username, page=1, perpage=20, minBlock=1}, function(err, items)
-	-- 	-- print("err:", err)
-	-- 	-- print("items:", #items)
-	-- 	if err == nil then
-	-- 		if #items == 0 then
-	-- 			loadingContent:pushAndRemoveSelf(createPickCategoryContent())
-	-- 		else
-	-- 			loadingContent:pushAndRemoveSelf(createCreationsContent())
-	-- 		end
-	-- 	else
-
-	-- 	end
-	-- end)
-
-	local _modal = modal:create(createCreationsContent(), maxWidth, maxHeight, position)
-	return _modal
+	return createCreationsContent()
 end
 
-return create_menu
+return creations

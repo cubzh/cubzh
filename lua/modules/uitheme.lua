@@ -3,12 +3,17 @@ local uitheme = {
 	_themes = {
 		dark = {
 			textColor = Color.White,
+			errorTextColor = Color(225,59,58),
+			warningTextColor = Color(251,206,0),
+
 			textColorSecondary = Color(80,80,80),
+			paddingTiny = 3,
 			padding = 6,
 			paddingBig = 12,
 			gridSpacing = 4,
 			gridCellColor = Color(0,0,0,0.6),
 			gridCellColorPressed = Color(255,255,255,0.6),
+            gridCellFrameColor = Color(0,0,0,0.8),
 			buttonColor = Color(63,63,63),
 			buttonColorSecondary = Color(63,63,63,0.8),
 			buttonTextColor = Color(240,240,240),
@@ -24,6 +29,9 @@ local uitheme = {
 			textInputBorderSize = 2,
 
 			modalBorder = 0,
+			modalTopBarPadding = 3,
+			modalContentPadding = 6,
+			modalBottomBarPadding = 3,
 			modalMargin = 12, -- minimum space around modal
 			modalTabSpace = 3,
 			modalTopBarColor = Color(63,63,63),

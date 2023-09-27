@@ -1,18 +1,37 @@
+-- server list is a modal content
 
-local serverList = {}
+serverList = {}
 
-serverList.create = function(self, maxWidth, maxHeight, position, config)
-	if type(config) ~= Type.table then
-		error("server_list:create(maxWidth, maxHeight, position, config): config should be a table", 2)
+serverList.create = function(self, config)
+	
+	if config ~= nil and type(config) ~= Type.table then
+		error("server_list:create(config): config should be a table", 2)
 	end
-	if type(config.worldID) ~= Type.string then
-		error("server_list:create(maxWidth, maxHeight, position, config): config.worldID should be a string", 2)
-	end
 
-	local uikit = require("uikit")
 	local theme = require("uitheme").current
 	local modal = require("modal")
 	local api = require ("api")
+
+	local _config = {
+		title = "",
+		worldID = "",
+		uikit = require("uikit"),
+	}
+
+	if config then
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
+	end
+
+	local config = _config
+
+	local ui = config.uikit
+
+	local joinAndHideUI = function(worldID, address)
+		-- joinWorld is exposed by the engine when in main menu
+		System.JoinWorld(worldID, address)
+	end
 
 	local idealReducedContentSize = function(content, width, height)
 		width = math.min(width, 500)
@@ -24,15 +43,33 @@ serverList.create = function(self, maxWidth, maxHeight, position, config)
 
 	local content = modal:createContent()
 
-	local node = uikit:createFrame(Color(0,0,0,0))
+	local node = ui:createFrame(Color(0,0,0,0))
+
+	local noServerText = ui:createText("No server", Color.White)
+	noServerText:setParent(node)
+	noServerText:hide()
+
+	local noServerBtn = ui:createButton("Create one")
+	noServerBtn:setColor(theme.colorPositive, Color.White)
+	noServerBtn:setParent(node)
+	noServerBtn:hide()
+
+	local loadingCube = ui:createFrame(Color.White)
+	loadingCube:setParent(node)
+	loadingCube.Width = 10
+	loadingCube.Height = 10
+	loadingCube:hide()
+	
+	noServerBtn.onRelease = function(btn)
+		joinAndHideUI(config.worldID)
+	end
 
 	local pages = require("pages"):create()
 	pages:setPageDidChange(function(page) 
 		node:refreshList((page - 1) * node.displayedCells + 1)
 	end)
 
-	node.pages = pages
-	content.bottomLeft = {node.pages}
+	content.bottomLeft = {pages}
 
 	content.node = node
 	content.idealReducedContentSize = idealReducedContentSize
@@ -40,76 +77,43 @@ serverList.create = function(self, maxWidth, maxHeight, position, config)
 	node.displayedCells = 0
 
 	-- Data
-	node.data = {}
-
-	node.data.worldID = config.worldID
+	local data = {}
+	data.worldID = config.worldID
+	data.servers = {} -- servers collection
+	data.request = nil
 	
-	node.data.servers = {} -- servers collection
-	node.data.requestFlying = false
-	node.data.node = node
-	node.data.updateServers = function(self)
-		-- Prevent multiple requests
-		if self.requestFlying == true then return end
-		self.requestFlying = true
+	data.updateServers = function(self)
+		if data.request ~= nil then data.request:Cancel() data.request = nil end
 
 		node:flushLines()
-		node.data.servers = {}
-		if self.noServerText ~= nil then
-			self.noServerText:remove()
-			self.noServerText = nil
-		end
-		if self.noServerBtn ~= nil then
-			self.noServerBtn:remove()
-			self.noServerBtn = nil
-		end
-		self.launchBtn.IsHidden = true
+		data.servers = {}
 
-		local loadingCube = ui:createFrame(Color.White)
-		loadingCube:setParent(self.node)
-		loadingCube.Width = 10
-		loadingCube.Height = 10
-		loadingCube.LocalPosition = Number3(self.node.Width / 2, self.node.Height / 2, 0)
+		noServerBtn:hide()
+		noServerText:hide()
+
+		loadingCube:show()
 		loadingCube.t = 0
 		loadingCube.object.Tick = function(o, dt)
-			if not loadingCube.LocalPosition then
-				o.Tick = nil
-				return
-			end
+			if not loadingCube.pos then o.Tick = nil return end
 			loadingCube.t = loadingCube.t + dt * 4
-			loadingCube.LocalPosition = Number3(self.node.Width / 2 + math.cos(loadingCube.t) * 20, self.node.Height / 2 - math.sin(loadingCube.t) * 20, 0)
+			loadingCube.pos = {node.Width * 0.5 + math.cos(loadingCube.t) * 20, node.Height * 0.5 - math.sin(loadingCube.t) * 20, 0}
 		end
 
-		api:getServers(self.worldID, function(err, servers)
-			loadingCube:remove()
-			self.requestFlying = false
-			if err or self.node == nil or self.node.refreshList == nil then
+		data.request = api:getServers(self.worldID, function(err, servers)
+
+			loadingCube:hide()
+			loadingCube.object.Tick = nil
+
+			if err or node.refreshList == nil then
 				return
 			end
 			self.servers = servers
 
-			if #servers ~= 0 then
-				self.launchBtn.IsHidden = false
-				self.node:refreshList()
-				return
-			end
-
-			-- no server, create UI to create an join server
-			self.noServerText = ui:createText("No server", Color.White)
-			self.noServerText:setParent(self.node)
-			self.noServerText.pos.X = self.node.pos.X + self.node.Width / 2 - self.noServerText.Width / 2
-			self.noServerText.pos.Y = self.node.pos.Y + self.node.Height / 2 + theme.padding / 2
-
-			self.noServerBtn = ui:createButton("Create one")
-			self.noServerBtn:setColor(theme.colorPositive, Color.White)
-			self.noServerBtn:setParent(self.node)
-			self.noServerBtn.pos.X = self.node.pos.X + self.node.Width / 2 - self.noServerBtn.Width / 2
-			self.noServerBtn.pos.Y = self.node.pos.Y + self.node.Height / 2 - self.noServerBtn.Height - theme.padding / 2
-			self.noServerBtn.onRelease = function(btn)
-				self.noServerText:remove()
-				self.noServerBtn:remove()
-				self.noServerText = nil
-				self.noServerBtn = nil
-				self.joinAndHideUI(config.worldID)
+			if #servers > 0 then
+				node:refreshList()
+			else
+				noServerText:show()
+				noServerBtn:show()
 			end
 		end)
 	end
@@ -181,21 +185,22 @@ serverList.create = function(self, maxWidth, maxHeight, position, config)
 		cellText.pos.Y = vPos - cellText.Height * 0.5
 
 		local btn = ui:createButton("Join")
+		btn:setColor(theme.colorPositive, Color.White)
 		btn:setParent(cell)
 		btn.pos.Y = vPos - btn.Height * 0.5
 		btn.pos.X = cell.Width - btn.Width - theme.padding * 2
 
-		btn.worldID = self.data.worldID
+		btn.worldID = data.worldID
 		btn.address = server.address
 		btn.onRelease = function(b)
-			self.data.joinAndHideUI(b.worldID, b.address)
+			joinAndHideUI(b.worldID, b.address)
 		end
 
 		return cell
 	end
 
 	node.refreshList = function(self, from)
-		local list = self.data.servers
+		local list = data.servers
 		if list == nil then return end
 
 		local top = self.Height
@@ -215,10 +220,8 @@ serverList.create = function(self, maxWidth, maxHeight, position, config)
 
 		local page = math.floor(from / maxLines) + 1
 		local totalPages = math.floor(total / maxLines) + 1
-		if node.pages ~= nil then
-			node.pages:setNbPages(totalPages)
-			node.pages:setPage(page)
-		end
+		pages:setNbPages(totalPages)
+		pages:setPage(page)
 
 		local server, cell
 		local line = 0
@@ -238,55 +241,29 @@ serverList.create = function(self, maxWidth, maxHeight, position, config)
 
 	node.parentDidResize = function(self)
 		node:refreshList()
-	end
+		noServerText.pos.X = (self.Width - noServerText.Width) * 0.5
+		noServerText.pos.Y = self.Height * 0.5 + theme.padding * 0.5
 
-	node.onClose = function(self)
-		if self.preventRefresh then return end
-		-- refresh whole menu
-		closeModals()
-		refreshMenuDisplayMode()
-	end
+		noServerBtn.pos.X = (self.Width - noServerBtn.Width) * 0.5
+		noServerBtn.pos.Y = self.Height * 0.5 - noServerBtn.Height - theme.padding * 0.5
 
-	local _modal = modal:create(content, maxWidth, maxHeight, position)
-
-	local backBtn = ui:createButton("⬅️")
-	backBtn:setColor(theme.colorNegative)
-	backBtn.onRelease = function(b)
-		config.parentModal.IsHidden = false
-		node.preventRefresh = true
-		_modal:close()
+		loadingCube.pos = {self.Width * 0.5, self.Height * 0.5, 0}
 	end
 
 	local titleStr = config.title .. "'s servers"
 	local titleText = ui:createText(titleStr, Color.White)
 
-	local refreshBtn = ui:createButton("🔃")
+	local refreshBtn = ui:createButton("🔁 Refresh")
 	refreshBtn.onRelease = function(b)
-		node.data:updateServers()
-	end
-
-	local launchBtn = ui:createButton("Launch")
-	launchBtn:setColor(theme.colorPositive)
-	launchBtn.onRelease = function(b)
-		node.data.joinAndHideUI(config.worldID)
-	end
-	node.data.launchBtn = launchBtn
-
-	node.data.joinAndHideUI = function(worldID, address)
-		config.parentModal.IsHidden = false
-		hideUI()
-		joinWorld(worldID, address)
-		node.preventRefresh = true
-		_modal:close()
+		data:updateServers()
 	end
 	
-	content.topLeft = { backBtn }
 	content.topCenter = { titleText }
-	content.bottomRight = { refreshBtn, launchBtn }
+	content.bottomRight = { refreshBtn }
 
-	node.data:updateServers()
+	data:updateServers()
 
-	return _modal
+	return content
 end
 
 return serverList

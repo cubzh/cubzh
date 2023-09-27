@@ -4,17 +4,11 @@ wip_modal module handles the "Work in Progress" modal.
 
 local modal = {}
 
-local mt = {
-	__gc = function(t)
-	end,
-}
-setmetatable(modal, mt)
-
 local modalContentMT = {
 	__index = function(t,k)
 		if k == "cleanup" then
 			return function(self)
-				self.modal = nil
+				self._attr.modal = nil
 				for _, element in ipairs(self.topLeft) do if element.remove then element:remove() end end
 				for _, element in ipairs(self.topCenter) do if element.remove then element:remove() end end
 				for _, element in ipairs(self.bottomLeft) do if element.remove then element:remove() end end
@@ -24,16 +18,25 @@ local modalContentMT = {
 					self.node:remove()
 					self.node = nil
 				end
-				self.topLeft = {}
-				self.topCenter = {}
-				self.bottomLeft = {}
-				self.bottomCenter = {}
-				self.bottomRight = {}
+				
+				-- go through attr not to trigger __newindex
+				local attr = t._attr
+				if attr ~= nil then
+					attr.topLeft = {}
+					attr.topCenter = {}
+					attr.bottomLeft = {}
+					attr.bottomCenter = {}
+					attr.bottomRight = {}
+				end
+
 				self.title = nil
 				self.icon = nil
 				self.idealReducedContentSize = nil
 				self.tabs = {}
 			end
+		elseif k == "modal" then
+			error("modalContent.modal is private")
+			return nil -- modal is not exposed			
 		end
 		return t._attr[k]
 	end,
@@ -44,11 +47,14 @@ local modalContentMT = {
 			k == "bottomLeft" or k == "bottomCenter" or k == "bottomRight" then
 			if type(v) ~= "table" then error("modalContent." .. k .. " can only be a table", 2) end
 			
-			-- remove all current bottomRight elements
 			local elements = attr[k]
+			local ok, err
 			for _, element in ipairs(elements) do
-				if element.remove ~= nil then
+				ok, err = pcall(function()
 					element:remove()
+				end)
+				if ok == false then
+					print("⚠️ modal: can't remove " .. k .. " element")
 				end
 			end
 
@@ -67,7 +73,8 @@ local modalContentMT = {
 			if modal ~= nil then modal:refreshContent() end
 
 		elseif k == "modal" then
-			attr[k] = v
+			-- attr[k] = v
+			error("modalContent.modal is not settable")
 		else
 			rawset(t,k,v)
 		end
@@ -80,7 +87,7 @@ local modalContentMT = {
 }
 
 modal.createContent = function(self)
-	
+
 	-- modalContent describes content modals can load
 	-- pushing content into a modal automatically manages
 	-- navigation (back buttons)
@@ -112,6 +119,13 @@ modal.createContent = function(self)
 		-- and should return the same size or smaller one.
 		idealReducedContentSize = nil, -- function(content, width, height)
 
+		-- called right after modal content did become active
+		didBecomeActive = nil, -- function(content)
+
+		-- called right before modal content resigns active 
+		-- (when popped or when content pushed replacing it)
+		willResignActive = nil, -- function(content)
+
 		-- attributes that need to be controlled by metatable
 		_attr = {
 			topLeft = {},
@@ -122,21 +136,26 @@ modal.createContent = function(self)
 			bottomRight = {},
 			modal = nil,
 			getModalIfContentIsActive = function(self)
-				local modal = self.modal
-				if modal ~= nil then 
-					if modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
-						return modal
-					end
+				local modal = self._attr.modal
+				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
+					return modal
 				end
+				return nil
 			end,
 			pushAndRemoveSelf = function(self, content)
-				local modal = self.modal
+				local modal = self._attr.modal
 				if modal ~= nil then 
 					if modal.contentStack[#modal.contentStack] == self then
+						if self.willResignActive ~= nil then
+							self:willResignActive()
+						end
 						local toRemove = #modal.contentStack
 						modal:push(content, true)
 						modal:pop(toRemove)
 						modal:refreshContent()
+						if content.didBecomeActive ~= nil then
+							content:didBecomeActive()
+						end
 					else
 						error("pushAndRemoveSelf: caller is not active content", 2)
 						return
@@ -155,6 +174,12 @@ modal.createContent = function(self)
 				local modal = self:getModalIfContentIsActive()
 				if modal ~= nil then 
 					modal:pop()
+				end
+			end,
+			refreshModal = function(self)
+				local modal = self:getModalIfContentIsActive()
+				if modal ~= nil then
+					modal:refresh()
 				end
 			end,
 		}
@@ -181,10 +206,12 @@ end
 
 ]]--
 
-modal.create = function(self, content, maxWidth, maxHeight, position)
+-- uikit: optional, allows to provide specific instance of uikit
+modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 
 	local theme = require("uitheme").current
-	local uikit = require("uikit")
+
+	local ui = uikit or require("uikit")
 
 	if content == nil then error("modal needs content to display", 2) end
 	if content.isModalContent ~= true then error("modal content should be of modalContent type", 2) end
@@ -193,9 +220,9 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 	if position == nil or type(position) ~= "function" then error("modal needs a position function", 2) end
 
 	-- a modal is always placed at top level when created
-	local node = uikit:createNode()
+	local node = ui:createNode()
 
-	content.modal = node
+	content._attr.modal = node
 	node.contentStack = {content}
 	node.shouldRefreshContent = true
 
@@ -253,11 +280,22 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 
 	-- push new content page
 	node.push = function(self, content, skipRefresh)
+		if content == nil then error("can't push nil content", 2) end
+		
 		self:_hideAllDisplayedElements()
-		content.modal = self
-		table.insert(self.contentStack, content)		
+		content._attr.modal = self
+
+		local active = self.contentStack[#self.contentStack]
+		if active ~= nil and active.willResignActive ~= nil then
+			active:willResignActive()
+		end
+
+		table.insert(self.contentStack, content)
 		if not skipRefresh then
 			self:refreshContent()
+			if content.didBecomeActive ~= nil then
+				content:didBecomeActive()
+			end
 		end
 	end
 
@@ -278,12 +316,22 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 		if #self.contentStack < 2 then return end
 		self:_hideAllDisplayedElements()
 		local content = self.contentStack[#self.contentStack]
+
+		if content.willResignActive ~= nil then
+			content:willResignActive()
+		end
+
 		table.remove(self.contentStack)
 		content:cleanup()
 		content = nil
 		self._content = nil
 		self:refreshContent()
 		collectgarbage("collect")
+
+		content = self.contentStack[#self.contentStack]
+		if content ~= nil and content.didBecomeActive ~= nil then
+			content:didBecomeActive()
+		end
 	end
 
 	-- accessors
@@ -437,8 +485,9 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 			end
 
 			if modalContent.icon ~= nil and type(modalContent.icon) == "string" then
+
 				local icon = ui:createFrame(Color(0,0,0,0))
-				local iconTxt = ui:createText(modalContent.icon)
+				local iconTxt = ui:createText(modalContent.icon, Color(255,255,255,254))
 				iconTxt:setParent(icon)
 				local padding = ui.kButtonPadding + ui.kButtonBorder
 				icon.Width = iconTxt.Width + padding * 2
@@ -562,7 +611,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 			self.shouldRefreshContent = false
 		end
 
-		if self._content == nil then return end
+		if self._content == nil or self._content.pos == nil then return end
 
 		-- COMPUTE TOP BAR SIZES
 
@@ -584,7 +633,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 
 		self.topBar.Height = topbarHeight
 		if self.topBar.Height > 0 then
-			self.topBar.Height = self.topBar.Height + theme.padding * 2
+			self.topBar.Height = self.topBar.Height + theme.modalTopBarPadding * 2
 		end
 
 		-- COMPUTE TABS BAR SIZES
@@ -619,16 +668,18 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 		end
 
 		if bottomBarHeight > 0 then
-			self.bottomBar.Height = bottomBarHeight + theme.padding * 2
+			self.bottomBar.Height = bottomBarHeight + theme.modalBottomBarPadding * 2
 		else
 			self.bottomBar.Height = 0
 		end
 
 		local totalTopWidth = topLeftElementsWidth + topCenterElementsWidth + self.closeBtn.Width + theme.padding * 4
+		local totalBottomWidth = bottomRightElementsWidth + bottomCenterElementsWidth + bottomLeftElementsWidth + theme.padding * 4
 
 		-- Start from max size
 		local borderSize = Number2(self:_computeWidth(), self:_computeHeight())
 		if borderSize.Width < totalTopWidth then borderSize.Width = totalTopWidth end
+		if borderSize.Width < totalBottomWidth then borderSize.Width = totalBottomWidth end
 
 		local backgroundSize = borderSize - Number2(theme.modalBorder * 2, theme.modalBorder * 2)
 		local contentSize = backgroundSize - Number2(theme.padding * 2, (theme.padding * 2) + self.topBar.Height + self.bottomBar.Height)
@@ -638,7 +689,8 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 			if reducedContentSize ~= nil and reducedContentSize ~= contentSize then
 
 				if reducedContentSize.X < totalTopWidth then reducedContentSize.X = totalTopWidth end
-
+				if reducedContentSize.X < totalBottomWidth then reducedContentSize.X = totalBottomWidth end
+				
 				local diff = reducedContentSize - contentSize
 				borderSize = borderSize + diff
 				backgroundSize = backgroundSize + diff
@@ -676,7 +728,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 				if previous then
 					element.pos.X = previous.pos.X + previous.Width + theme.padding
 				else
-					element.pos.X = theme.padding
+					element.pos.X = theme.modalBottomBarPadding
 				end
 				previous = element
 			end
@@ -698,7 +750,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 				if previous then
 					element.pos.X = previous.pos.X - element.Width - theme.padding
 				else
-					element.pos.X = self.bottomBar.Width - element.Width - theme.padding
+					element.pos.X = self.bottomBar.Width - element.Width - theme.modalBottomBarPadding
 				end
 				previous = element
 			end
@@ -709,21 +761,21 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 		self.topBar.Width = self.background.Width
 		self.topBar.pos.Y = self.background.Height - self.topBar.Height
 
-		self.closeBtn.pos.X = self.topBar.Width - self.closeBtn.Width - theme.padding
-		self.closeBtn.pos.Y = self.topBar.Height - self.closeBtn.Height - theme.padding
+		self.closeBtn.pos.X = self.topBar.Width - self.closeBtn.Width - theme.modalTopBarPadding
+		self.closeBtn.pos.Y = self.topBar.Height - self.closeBtn.Height - theme.modalTopBarPadding
 
 		previous = nil
 		for _, element in ipairs(self._topLeft) do
 			if self.closeBtn:isVisible() and element.Height < self.closeBtn.Height then
 				element.pos.Y = self.closeBtn.pos.Y + self.closeBtn.Height * 0.5 - element.Height * 0.5
 			else
-				element.pos.Y = self.topBar.Height - element.Height - theme.padding
+				element.pos.Y = self.topBar.Height - element.Height - theme.modalTopBarPadding
 			end
 
 			if previous then
 				element.pos.X = previous.pos.X + previous.Width + theme.padding
 			else
-				element.pos.X = self.topBar.pos.X + theme.padding
+				element.pos.X = self.topBar.pos.X + theme.modalTopBarPadding
 			end
 			previous = element
 		end
@@ -733,7 +785,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 			if self.closeBtn:isVisible() and element.Height < self.closeBtn.Height then
 				element.pos.Y = self.closeBtn.pos.Y + self.closeBtn.Height * 0.5 - element.Height * 0.5
 			else
-				element.pos.Y = self.topBar.Height - element.Height - theme.padding
+				element.pos.Y = self.topBar.Height - element.Height - theme.modalTopBarPadding
 			end
 			if previous then
 				element.pos.X = previous.pos.X + previous.Width + theme.padding
@@ -756,9 +808,15 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 	node.didClose = nil
 
 	node.close = function(self)
-		if self._content.onClose ~= nil then
-			self._content:onClose()
+
+		local active = self.contentStack[#self.contentStack]
+		if active ~= nil and active.willResignActive ~= nil then
+			active:willResignActive()
 		end
+
+		-- if self._content.onClose ~= nil then
+		-- 	self._content:onClose()
+		-- end
 		self:setParent(nil)
 		if self.didClose ~= nil then
 			self:didClose()
@@ -775,33 +833,33 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 		collectgarbage("collect")
 	end
 
-	local border = uikit:createFrame(Color(120,120,120,0))
+	local border = ui:createFrame(Color(120,120,120,0))
 	border:setParent(node)
 	node.border = border
 
-	local shadow = uikit:createFrame(Color(0,0,0,20))
+	local shadow = ui:createFrame(Color(0,0,0,20))
 	shadow:setParent(node)
 	shadow.LocalPosition = {theme.padding, -theme.padding, 0}
 	node.shadow = shadow
 
 	-- background
-	local background = uikit:createFrame(Color(0,0,0,0.8))
+	local background = ui:createFrame(Color(0,0,0,0.8))
 	background:setParent(node)
 	background.LocalPosition = {theme.modalBorder, theme.modalBorder, 0}
 	node.background = background
 
 	-- top bar
-	local topBar = uikit:createFrame(theme.modalTopBarColor)
+	local topBar = ui:createFrame(theme.modalTopBarColor)
 	topBar:setParent(background)
 	node.topBar = topBar
 
 	-- bottom bar
-	local bottomBar = uikit:createFrame(theme.modalTopBarColor)
+	local bottomBar = ui:createFrame(theme.modalTopBarColor)
 	bottomBar:setParent(background)
 	node.bottomBar = bottomBar
 
 	-- close button
-	node.closeBtn = uikit:createButton("❌")
+	node.closeBtn = ui:createButton("❌")
 	node.closeBtn:setParent(topBar)
 	node.closeBtn.onRelease = function(self)
 		node:close()
@@ -812,6 +870,10 @@ modal.create = function(self, content, maxWidth, maxHeight, position)
 	-- do not refresh right away, as users could still be updating 
 	-- content right after creating the modal.
 	node:_scheduleRefresh()
+
+	if content.didBecomeActive then
+		content:didBecomeActive()
+	end
 
 	node.LocalPosition.Y = -10000 -- out of screen by default
 	return node

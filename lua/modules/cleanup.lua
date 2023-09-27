@@ -1,4 +1,13 @@
-local cleanup = {}
+cleanup = {}
+
+-- when true, raises error whenever accessing cleaned up table
+local ERROR_ON_ACCESS_AFTER_CLEANUP = false
+
+errorOnAccessMetatable = {}
+errorOnAccessMetatable.__call = function(t) error("cleaned up table call", 2) end
+errorOnAccessMetatable.__index = function(t,k)  error("cleaned up table, can't get key: " .. k, 2) end
+errorOnAccessMetatable.__newindex = function(t,k,v) error("cleaned up table, can't set key: " .. k, 2) end
+errorOnAccessMetatable.__metatable = false
 
 local metatable = {
 
@@ -25,7 +34,7 @@ local metatable = {
 				-- clean metatable
 				meta = getmetatable(current.t)
 
-				if meta ~= nil and type(meta) == Type.table then 
+				if meta ~= nil and type(meta) == "table" then 
 					current.m = meta
 					current.step = 1
 					-- goto continue
@@ -124,6 +133,10 @@ local metatable = {
 			end
 
 			::continue::
+		end
+
+		if ERROR_ON_ACCESS_AFTER_CLEANUP then
+			setmetatable(t, errorOnAccessMetatable)
 		end
 	end
 }

@@ -1,24 +1,56 @@
---[[
-	...
-]]--
+itemDetails = {}
 
-local itemDetails = {}
-
-itemDetails.create = function(self, config)
+itemDetails.createModalContent = function(self, config)
 
 	local _config = {
-		mode = "explore" -- "explore" / "create"
+		title = "Item",
+		mode = "explore", -- "explore" / "create"
+		uikit = require("uikit"),
 	}
-	if config ~= nil then
-		if config.mode ~= nil and type(config.mode) == "string" then _config.mode = config.mode end
+
+	if config then
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
 	end
+
 	local config = _config
 
+	local ui = config.uikit
+
+	local api = require("system_api", System)
 	local time = require("time")
 	local theme = require("uitheme").current
-	local itemCopyMarketModule = require("item_copy_market")
 
 	local itemDetails = ui:createNode()
+
+	local createMode = config.mode == "create"
+	local authorID
+
+	-- becomes true when itemDetails is removed
+	-- callbacks may capture this as upvalue to early return.
+	local removed = false 
+	local requests = {}
+	local listeners = {}
+
+	itemDetails.onRemove = function(self)
+		removed = true
+		
+		for _, req in ipairs(requests) do
+			req:Cancel()
+		end
+		requests = {}
+
+		for _, listener in ipairs(listeners) do
+			listener:Remove()
+		end
+		listeners = {}
+	end
+
+	local content = require("modal"):createContent()
+	content.title = config.title
+	content.icon = "⚔️"
+	content.node = itemDetails
 
 	local nameArea = ui:createFrame(Color(0,0,0))
 	nameArea:setParent(itemDetails)
@@ -38,17 +70,26 @@ itemDetails.create = function(self, config)
 	itemDetails.publishDate = publishDate
 	publishDate.LocalPosition = {theme.padding, theme.padding, 0}
 
-	local by = ui:createText("by", Color.White)
+	local by
+	if createMode then
+		by = ui:createText("by", Color.White, "small")
+	else
+		by = ui:createButton("by...", {textSize = "small"})
+	end
 	by:setParent(infoArea)
 	itemDetails.by = by
 	by.LocalPosition = publishDate.LocalPosition + {0, publishDate.Height + theme.padding, 0}
 
-	local author = ui:createText(" @repo", Color.Green)
-	author:setParent(infoArea)
-	itemDetails.author = author
-	author.LocalPosition = by.LocalPosition + {by.Width, 0, 0}
+	local author
+	if createMode then
+		author = ui:createText(" @repo", Color.Green)
+		author:setParent(infoArea)
+		itemDetails.author = author
+		author.LocalPosition = by.LocalPosition + {by.Width, 0, 0}
+	end
 
 	local descriptionArea = ui:createFrame(Color(0,0,0))
+	descriptionArea.IsMask = true
 	descriptionArea:setParent(itemDetails)
 	itemDetails.descriptionArea = descriptionArea
 
@@ -61,10 +102,12 @@ itemDetails.create = function(self, config)
 	shapeArea:setParent(itemDetails)
 	itemDetails.shapeArea = shapeArea
 
-	-- local versionsBtn = ui:createButton("💾 Versions")
-	-- versionsBtn:setParent(itemDetails)
+	local commentsBtn = ui:createButton("💬 0")
+	commentsBtn:disable()
+	commentsBtn:setParent(itemDetails)
+	commentsBtn.onRelease = function() end
 
-	local copyNameBtn = ui:createButton("📑 Copy Name")
+	local copyNameBtn = ui:createButton("📑 Copy Name", {textSize = "small"})
 	copyNameBtn:setParent(itemDetails)
 	copyNameBtn.onRelease = function()
 		Dev:CopyToClipboard(copyNameBtn.itemFullName or "")
@@ -86,67 +129,74 @@ itemDetails.create = function(self, config)
 
 	if config.mode == "explore" then
 		signalBtn = ui:createButton("⚠️")
+		signalBtn:disable()
 		signalBtn:setParent(itemDetails)
 
-		likeBtn = ui:createButton("❤️ ...")
+		likeBtn = ui:createButton("❤️ …")
 		likeBtn:setParent(itemDetails)
+		itemDetails.likeBtn = likeBtn
+
+		itemDetails.liked = false
+		itemDetails.originalLiked = false
+
 	elseif config.mode == "create" then
-		likes = ui:createText("❤️ ...", theme.textColor)
+		likes = ui:createText("❤️ …", theme.textColor)
 		likes:setParent(itemDetails)
+		itemDetails.likes = likes
 
 		editDescriptionBtn = ui:createButton("✏️")
 		editDescriptionBtn:setParent(descriptionArea)
 		editDescriptionBtn.onRelease = function()
-			if multilineInput and itemDetails.description then
+			if System.MultilineInput ~= nil and itemDetails.description then
 				local description = itemDetails.description
 				if description.empty == true then description = "" end
-				-- multilineInput is globally exposed by the engine
-				-- for the main menu script, not available within other worlds.
-				-- Will be replaced by Lua multiline input once it's available!
-				multilineInput(	description.Text,
-								"Description",
-								"How would you describe that Item?",
-								"", -- regex
-								10000, -- max chars
-								function(text) -- done
-									local description = itemDetails.description
-									if text == "" then 
-										description.empty = true
-										description.Text = "Items are easier to find with a description!"
-										description.Color = theme.textColorSecondary
-										api:patchItem(itemDetails.id, {description = ""}, function(err, item)
-											-- not handling response yet
-										end)
-									else
-										description.empty = false
-										description.Text = text
-										description.Color = theme.textColor
-										api:patchItem(itemDetails.id, {description = text}, function(err, item)
-											-- not handling response yet
-										end)
-									end
-								end,
-								nil -- cancel
-								)
+				System.MultilineInput(
+					description.Text,
+					"Description",
+					"How would you describe that Item?",
+					"", -- regex
+					10000, -- max chars
+					function(text) -- done
+						ui:turnOn()
+						local description = itemDetails.description
+						if text == "" then 
+							description.empty = true
+							description.Text = "Items are easier to find with a description!"
+							description.Color = theme.textColorSecondary
+							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
+							local req = api:patchItem(itemDetails.id, {description = ""}, function(err, item)
+								if removed then return end
+								-- not handling response yet
+							end)
+							table.insert(requests, req)
+						else
+							description.empty = false
+							description.Text = text
+							description.Color = theme.textColor
+							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
+							local req = api:patchItem(itemDetails.id, {description = text}, function(err, item)
+								if removed then return end
+								-- not handling response yet
+							end)
+							table.insert(requests, req)
+						end
+					end,
+					function() -- cancel
+						ui:turnOn()
+					end
+				)
+				ui:turnOff()
 			end
 		end
 	end
 
 	itemDetails.shape = nil
 
-	itemDetails.reloadInfo = function(self)
-		if self.created then
-			local n, unitType = time.ago(self.created)
-			if n == 1 then
-				unitType = unitType:sub(1,#unitType - 1)
-			end
-			self.publishDate.Text = "🌎 " .. n .. " " .. unitType .. " ago"
-		end
-	end
-
 	itemDetails.reloadShape = function(self)
 		if self.cell.itemFullName == nil then return end
-		Object:Load(self.cell.itemFullName, function(obj)
+		local req = Object:Load(self.cell.itemFullName, function(obj)
+			if removed then return end
+
 			if obj == nil then return end
 			if self.cell == nil then return end
 
@@ -173,14 +223,64 @@ itemDetails.create = function(self, config)
 			self.shape:setParent(self)
 			self.shape.pos = {x, y, 0}
 		end)
+		table.insert(requests, req)
 	end
 
-	itemDetails.loadCell = function(self, cell)
+	content.loadCell = function(self, cell)
+		if removed then return end
+		local self = itemDetails
+
 		if self.shape then self.shape:remove() self.shape = nil end
 		self.cell = cell
 
 		self.id = cell.id
-		self.author.Text = " @" .. cell.repo
+		if createMode then
+			self.author.Text = " @" .. cell.repo
+			
+		else
+			-- Retrieve user data. We need their UserID.
+			local req = api:searchUser(cell.repo, function(success, users)
+				if removed then return end
+
+				by.Text = "by @" .. cell.repo
+
+				for _, u in pairs(users) do
+					if u.username == cell.repo then
+						authorID = u.id
+						break
+					end
+				end
+
+				by.onRelease = function(btn)
+					local profileConfig = {isLocal = false, username = cell.repo, userID = authorID, uikit = ui}
+					local profileContent = require("profile"):create(profileConfig)
+					content:push(profileContent)
+				end
+			end)
+			table.insert(requests, req)
+		end
+		
+		-- Retrieve item info. We need its number of likes.
+		-- (cell.id is Item UUID)
+		local req = api:getItem(cell.id, function (err, item)
+			if removed then return end
+
+			if self.likes then
+				self.likes.Text = "❤️ " .. math.floor(item.likes) -- force integer format
+			elseif self.likeBtn then
+				local likeBtn = self.likeBtn
+				likeBtn.Text = "❤️ " .. math.floor(item.likes) -- force integer format
+				self.liked = item.liked
+				self.originalLiked = item.liked
+				self.originalLikes = item.likes
+				if item.liked == true and likeBtn.setColor then
+					likeBtn:setColor(theme.colorPositive)
+				end
+			end
+			self:refresh() -- refresh layout
+		end)
+		table.insert(requests, req)
+		
 		self.name.Text = cell.name
 
 		if config.mode == "create" then
@@ -196,7 +296,41 @@ itemDetails.create = function(self, config)
 			self.description.Text = cell.description or ""
 			self.description.Color = theme.textColor
 		end
-		
+
+		if self.likes then 
+			self.likes.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
+
+		elseif self.likeBtn then
+			self.likeBtn.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
+			self.likeBtn.onRelease = function()
+				self.liked = not self.liked
+				local req = api:likeItem(cell.id, self.liked, function(err) 
+					if removed then return end
+				end)
+				table.insert(requests, req)
+
+				if self.liked then
+					likeBtn:setColor(theme.colorPositive)
+				else
+					likeBtn:setColor(theme.buttonColor)
+				end
+
+				local nbLikes = self.originalLikes
+				if self.liked ~= self.originalLiked then
+					if self.liked then
+						nbLikes = nbLikes + 1
+					else
+						nbLikes = nbLikes - 1
+					end
+				end
+				if nbLikes < 0 then
+					nbLikes = 0
+				end
+				likeBtn.Text = "❤️ " .. math.floor(nbLikes)
+
+				self:refresh() -- refresh layout
+			end
+		end
 
 		self.created = cell.created
 		if self.created then
@@ -225,13 +359,14 @@ itemDetails.create = function(self, config)
 
 		self.shape.pivot.LocalRotation = {-0.1,0,-0.2}
 
-		self.object.dt = 0
-		self.object.Tick = function(o, dt)
-			o.dt = o.dt + dt
+		local t = 0
+		local listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			t = t + dt
 			if self.shape ~= nil then
-				self.shape.pivot.LocalRotation.Y = o.dt
+				self.shape.pivot.LocalRotation.Y = t
 			end
-		end
+		end)
+		table.insert(listeners, listener)
 
 		self.shape:setParent(self)
 
@@ -286,12 +421,9 @@ itemDetails.create = function(self, config)
 
 			local availableWidth = self.Width - theme.padding * 2
 			local availableHeight = self.Height - copyNameBtn.Height - theme.padding * 2
-			if likeBtn ~= nil then
-				availableHeight = availableHeight - likeBtn.Height - theme.padding
-			end
-			if likes ~= nil then
-				availableHeight = availableHeight - likes.Height - theme.padding
-			end
+
+			local h = math.max(likeBtn and likeBtn.Height or 0, likes and likes.Height or 0, commentsBtn.Height)
+			availableHeight = availableHeight - h - theme.padding
 
 			local detailsHeight = availableHeight * detailsHeightRatio
 			if detailsHeight < detailsMinHeight then
@@ -309,29 +441,42 @@ itemDetails.create = function(self, config)
 			self.shapeArea.Height = self.shape.Height
 			self.shapeArea.LocalPosition = self.shape.LocalPosition
 
+			local w = (likes and likes.Width + theme.padding or 0) 
+					+ (likeBtn and likeBtn.Width + theme.padding or 0)
+					+ (signalBtn and signalBtn.Width + theme.padding or 0)
+					+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
+					- theme.padding
+
+			local startX = availableWidth * 0.5 - w * 0.5
+
+			if signalBtn then
+				signalBtn.pos.X = startX
+				startX = startX + signalBtn.Width + theme.padding
+				signalBtn.pos.Y = self.shape.pos.Y - signalBtn.Height - theme.padding
+			end
+
+			if commentsBtn then
+				commentsBtn.pos.X = startX
+				startX = startX + commentsBtn.Width + theme.padding
+				commentsBtn.pos.Y = self.shape.pos.Y - commentsBtn.Height - theme.padding
+			end
+
 			if likes then
-				likes.LocalPosition.X = self.shape.LocalPosition.X + self.shape.Width - likes.Width
-				likes.LocalPosition.Y = self.shape.LocalPosition.Y - likes.Height - theme.padding
+				likes.pos.X = startX
+				startX = startX + likes.Width + theme.padding
+				likes.pos.Y = self.shape.pos.Y - h + (h - likes.Height) * 0.5 - theme.padding
 			end
 
 			if likeBtn then
-				likeBtn.LocalPosition.X = self.shape.LocalPosition.X + self.shape.Width - likeBtn.Width
-				likeBtn.LocalPosition.Y = self.shape.LocalPosition.Y - likeBtn.Height - theme.padding
-			end
-
-			if signalBtn then
-				signalBtn.LocalPosition.X = self.shape.LocalPosition.X
-				signalBtn.LocalPosition.Y = self.shape.LocalPosition.Y - signalBtn.Height - theme.padding
+				likeBtn.pos.X = startX
+				startX = startX + likeBtn.Width + theme.padding
+				likeBtn.pos.Y = self.shape.pos.Y - h + (h - likeBtn.Height) * 0.5 - theme.padding
 			end
 
 			self.nameArea.Height = self.name.Height + theme.padding * 2
 			self.nameArea.Width = self.Width
 
-			if signalBtn then
-				self.nameArea.LocalPosition = {0, signalBtn.LocalPosition.Y - self.nameArea.Height - theme.padding, 0}
-			elseif likes then
-				self.nameArea.LocalPosition = {0, likes.LocalPosition.Y - self.nameArea.Height - theme.padding, 0}
-			end
+			self.nameArea.pos = {0, self.shape.pos.Y - h - self.nameArea.Height - theme.padding * 2}
 
 			self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
 			self.infoArea.Width = self.nameArea.Width
@@ -353,11 +498,18 @@ itemDetails.create = function(self, config)
 
 			self.description.LocalPosition.Y = self.descriptionArea.Height - self.description.Height - theme.padding
 
-			copyNameBtn.LocalPosition.Y = self.descriptionArea.LocalPosition.Y - copyNameBtn.Height - theme.padding
+			copyNameBtn.pos.Y = self.descriptionArea.pos.Y - copyNameBtn.Height - theme.padding
 
 		else
 			-- min width to display details, buttons, etc.
 			-- remaining width can be used for the preview
+
+			local w = (likes and likes.Width + theme.padding or 0) 
+					+ (likeBtn and likeBtn.Width + theme.padding or 0)
+					+ (signalBtn and signalBtn.Width + theme.padding or 0)
+					+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
+					- theme.padding
+
 			local detailsMinWidth = 200
 			local detailsWidthRatio = 0.66
 
@@ -391,16 +543,43 @@ itemDetails.create = function(self, config)
 			self.shapeArea.Height = self.shape.Height
 			self.shapeArea.LocalPosition = self.shape.LocalPosition
 
+			local h = math.max(likeBtn and likeBtn.Height or 0, likes and likes.Height or 0, commentsBtn.Height)
+
 			if likeBtn then
-				likeBtn.LocalPosition.X = self.shape.LocalPosition.X + self.shape.Width - likeBtn.Width
-				likeBtn.LocalPosition.Y = self.shape.LocalPosition.Y - likeBtn.Height - theme.padding
-				copyNameBtn.LocalPosition.Y = likeBtn.LocalPosition.Y - copyNameBtn.Height - theme.padding
+				likeBtn.pos.X = self.shape.pos.X + self.shape.Width - likeBtn.Width
+				likeBtn.pos.Y = self.shape.pos.Y - h + (h - likeBtn.Height) * 0.5 - theme.padding
+				copyNameBtn.pos.Y = likeBtn.pos.Y - copyNameBtn.Height - theme.padding
 			end
 
 			if likes then
-				likes.LocalPosition.X = self.shape.LocalPosition.X + self.shape.Width - likes.Width
-				likes.LocalPosition.Y = self.shape.LocalPosition.Y - likes.Height - theme.padding
-				copyNameBtn.LocalPosition.Y = likes.LocalPosition.Y - copyNameBtn.Height - theme.padding
+				likes.pos.X = self.shape.pos.X + self.shape.Width - likes.Width
+				likes.pos.Y = self.shape.pos.Y - h + (h - likes.Height) * 0.5 - theme.padding
+				copyNameBtn.pos.Y = likes.pos.Y - copyNameBtn.Height - theme.padding
+			end
+
+			if commentsBtn then
+				if w <= self.shape.Width then
+					if likeBtn then
+						commentsBtn.pos.X = likeBtn.pos.X - commentsBtn.Width - theme.padding
+					elseif likes then
+						commentsBtn.pos.X = likes.pos.X - commentsBtn.Width - theme.padding
+					else
+						commentsBtn.pos.X = self.shape.pos.X + self.shape.Width - commentsBtn.Width
+					end
+					commentsBtn.pos.Y = self.shape.pos.Y - commentsBtn.Height - theme.padding
+				else
+					commentsBtn.pos.X = self.shape.pos.X + self.shape.Width - commentsBtn.Width
+
+					if likeBtn then
+						commentsBtn.pos.Y = likeBtn.pos.Y - copyNameBtn.Height - theme.padding
+					elseif likes then
+						commentsBtn.pos.Y = likes.pos.Y - copyNameBtn.Height - theme.padding
+					else
+						commentsBtn.pos.Y = self.shape.pos.Y - commentsBtn.Height - theme.padding
+					end
+				end
+
+				copyNameBtn.pos.Y = commentsBtn.pos.Y - copyNameBtn.Height - theme.padding
 			end
 
 			if signalBtn then
@@ -434,11 +613,10 @@ itemDetails.create = function(self, config)
 			self.description.LocalPosition.Y = self.descriptionArea.Height - self.description.Height - theme.padding
 		end
 
-		copyNameBtn.LocalPosition.X = self.Width - copyNameBtn.Width
-		-- versionsBtn.LocalPosition.X = copyNameBtn.LocalPosition.X - versionsBtn.Width - theme.padding
+		copyNameBtn.pos.X = self.Width - copyNameBtn.Width
 	end
 
-	return itemDetails
+	return content
 end
 
 return itemDetails
