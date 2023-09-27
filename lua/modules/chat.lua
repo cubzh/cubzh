@@ -376,15 +376,6 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	return true
 end)
 
-LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
-	require("ui_avatar"):preloadHeads(p)
-	LocalEvent:Send(LocalEvent.Name.InfoMessage, p.Username .. " joined the game.")
-end)
-
-LocalEvent:Listen(LocalEvent.Name.OnPlayerLeave, function(p)
-	LocalEvent:Send(LocalEvent.Name.InfoMessage, p.Username .. " left the game.")
-end)
-
 LocalEvent:Listen(LocalEvent.Name.InfoMessage, function(msg)
 	if not msg then return end
 	pushFormattedMessage({ type = channels.Info, message = msg, date = getCurrentDate() })
