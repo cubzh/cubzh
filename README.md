@@ -81,6 +81,7 @@ We'll keep thinking about it and see where it leads us, sharing concerns and cri
 - ✅ Anonymous Accounts
 - ✅ Sounds
 - ✅ Lights (point, spot, directional)
+- ✅ Shadows (directional lights casting them now)
 
 #### Todo
 
@@ -88,7 +89,6 @@ We'll keep thinking about it and see where it leads us, sharing concerns and cri
 - ⚙️ Avatar Editor
 - ⚙️ World Editor
 - ⚙️ Animation Editor
-- ⚙️ Shadows (directional lights not casting them yet)
 - ⚙️ Marketplace / currency
 - ⚙️ Friends (social features in general)
 - ⚙️ Textured blocks
