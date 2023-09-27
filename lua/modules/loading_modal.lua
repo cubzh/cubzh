@@ -1,11 +1,23 @@
-local loading = {}
+loading = {}
 
-loading.create = function(self, text)
+loading.create = function(self, text, config)
 		
-	local uikit = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
+
+	-- default config
+	local _config = {
+		uikit = require("uikit"), -- allows to provide specific instance of uikit
+	}
+
+	if config then
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
+	end
+
+	local ui = _config.uikit
 
 	local minWidth = 200
 	local animationHeight = 20
@@ -35,16 +47,17 @@ loading.create = function(self, text)
 			modal.updatedPosition = true
 			ease:outElastic(modal, 0.3).LocalPosition = p
 		else
+			ease:cancel(modal)
 			modal.LocalPosition = p
 		end
 	end
 
-	local node = uikit:createFrame(Color(0,0,0,0))
+	local node = ui:createFrame(Color(0,0,0,0))
 	content.node = node
 
-	local popup = modal:create(content, maxWidth, maxHeight, position)
+	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
 
-	local label = uikit:createText(text, Color.White)
+	local label = ui:createText(text, Color.White)
 	label:setParent(node)
 	node.label = label
 
@@ -52,14 +65,18 @@ loading.create = function(self, text)
 	cube:AddBlock(Color.White,0,0,0)
 	cube.Pivot = {0.5, 0.5, 0.5}
 
-	local c1 = uikit:createShape(Shape(cube))
+	local c1 = ui:createShape(Shape(cube))
 	c1:setParent(node)
-
-	local c2 = uikit:createShape(Shape(cube))
+	
+	local c2 = ui:createShape(Shape(cube))
 	c2:setParent(node)
 
-	local c3 = uikit:createShape(Shape(cube))
+	local c3 = ui:createShape(Shape(cube))
 	c3:setParent(node)
+
+	c1.object.Position.Z = 20
+	c2.object.Position.Z = 20
+	c3.object.Position.Z = 20
 
 	local speed = 6
 	local tDiff = 0.5
@@ -100,6 +117,10 @@ loading.create = function(self, text)
 		c1.pos = { self.Width * 0.5 - c1.Width * 0.5 - animationCubeOffset, theme.padding + animationHeight * 0.5 - c1.Height * 0.5, 0 }
 		c2.pos = { self.Width * 0.5 - c1.Width * 0.5, theme.padding + animationHeight * 0.5 - c1.Height * 0.5, 0 }
 		c3.pos = { self.Width * 0.5 - c1.Width * 0.5 + animationCubeOffset, theme.padding + animationHeight * 0.5 - c1.Height * 0.5, 0 }
+
+		c1.object.Position.Z = 20
+		c2.object.Position.Z = 20
+		c3.object.Position.Z = 20
 	end
 
 	popup.bounce = function(self)
@@ -108,9 +129,10 @@ loading.create = function(self, text)
 
 	popup.setText = function(self, text)
 		label.Text = text
-		node:refresh()
-		self:refresh()
-		position(popup, false)
+		-- node:refresh()
+		-- self:refresh()
+		-- position(popup, false)
+		self:refreshContent()
 	end
 
 	return popup

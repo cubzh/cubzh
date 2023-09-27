@@ -53,14 +53,21 @@ ease._startIfNeeded = function(self)
 
 				for k,from in pairs(instance.from) do
 					to = instance.to[k]
-					local p = from + (to - from) * percent
+					local p = from
+					if type(p) == "Rotation" then
+						p:Lerp(from, to, percent)
+					elseif type(p) == "Color" then
+						p:Lerp(from, to, percent)
+					else
+						p = from + (to - from) * percent
+					end
 					instance.object[k] = p
 				end
 
 				if instance.onUpdate then instance.onUpdate(instance.object) end
 
 				if done then
-					if instance.onDone then instance.onDone() end
+					if instance.onDone then instance.onDone(instance.object) end
 					self.instances[instance.id] = nil
 				end
 			end
@@ -112,17 +119,25 @@ ease._common = function(self,object,duration, config)
 				type(v) == "table" and #v == 3 and
 				ease.isNumber(v[1]) and ease.isNumber(v[2]) and ease.isNumber(v[3]) then
 				v = Number3(v[1], v[2], v[3])
+			elseif fieldType == "Rotation" and -- see if value can be turned into Rotation
+				type(v) == "table" and #v == 3 and
+				ease.isNumber(v[1]) and ease.isNumber(v[2]) and ease.isNumber(v[3]) then
+				v = Rotation(v[1], v[2], v[3])
 			else
 				error("ease: can't ease from " .. fieldType .. " to " .. type(v))	
 			end
 		end
 
-		if fieldType == "Number3" then
+		if fieldType == "Number3" or fieldType == "Rotation" then
 			t.from[k] = t.object[k]:Copy()
 			t.to[k] = v:Copy()
 		elseif fieldType == "number" then
 			t.from[k] = t.object[k]
 			t.to[k] = v
+		elseif fieldType == "Color" then
+			local c = t.object[k]
+			t.from[k] = Color(c.R, c.G, c.B, c.A)
+			t.to[k] = Color(v.R, v.G, v.B, v.A)
 		else
 			error("ease: type not supported")
 		end
@@ -132,6 +147,14 @@ ease._common = function(self,object,duration, config)
 
 	setmetatable(instance, m)
 
+	return instance
+end
+
+---@function linear Go to target value(s) following linear curve.
+---@code ease:linear(someObject, 1.0).Position = {10, 10, 10}
+ease.linear = function(self, object, duration, config)
+	local instance = self:_common(object, duration, config)
+	instance.fn = function(self, v) return v end
 	return instance
 end
 

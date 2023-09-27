@@ -41,6 +41,9 @@ p:addColor(Color(255,0,0))
 
 local palette = {}
 
+uikit = require("uikit")
+theme = require("uitheme").current
+
 palette.create = function(self, uikit, btnColor) 
 
 	local node = uikit:createNode()
@@ -49,7 +52,7 @@ palette.create = function(self, uikit, btnColor)
 	node.nbColumns = 6
 	node.maxSquareSize = 40
 	node.maxHeight = 200 -- max total height for component
-	node.padding = uikit.kPadding
+	node.padding = theme.padding
 	node._selectedIndex = 0
 	node._squareSize = 0
 	node._maxScreenWidthFactor = 0.5
@@ -66,11 +69,11 @@ palette.create = function(self, uikit, btnColor)
 	bg:setParent(node)
 	node.background = bg
 
-	node.width = function(self)
+	node._width = function(self)
 		return self.background.Width
 	end
 
-	node.height = function(self)
+	node._height = function(self)
 		return self.background.Height
 	end
 

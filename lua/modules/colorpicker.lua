@@ -3,7 +3,6 @@ local colorPicker = {}
 
 colorPicker.create = function(self, config)
 
-	local uikit = require("uikit")
 	local theme = require("uitheme").current
 
 	local _config = { -- default config
@@ -17,6 +16,7 @@ colorPicker.create = function(self, config)
 		maxWidth = 500,
 		maxHeight = 300,
 		extraPadding = false, -- adds padding all around components
+		uikit = require("uikit"),
 	}
 	if config ~= nil then
 		if config.closeBtnColor ~= nil then _config.closeBtnColor = config.closeBtnColor end
@@ -28,8 +28,11 @@ colorPicker.create = function(self, config)
 		if config.maxWidth ~= nil then _config.maxWidth = config.maxWidth end
 		if config.maxHeight ~= nil then _config.maxHeight = config.maxHeight end
 		if config.extraPadding ~= nil then _config.extraPadding = config.extraPadding end
+		if config.uikit ~= nil then _config.uikit = config.uikit end
 	end
 	config = _config
+
+	local uikit = config.uikit
 
 	local node = uikit:createNode()
 	node.config = config
@@ -74,7 +77,7 @@ colorPicker.create = function(self, config)
 
 	node.currentAlpha = 255
 	node.previousColor = nil
-	node.currentColor = nil
+	node.currentColor = Color(255,0,0)
 
 	node.nbAlphaSteps = 6.0
 
@@ -119,11 +122,11 @@ colorPicker.create = function(self, config)
 		-- node:close()
 	end
 
-	node.width = function(self)
+	node._width = function(self)
 		return self.background.Width
 	end
 
-	node.height = function(self)
+	node._height = function(self)
 		return self.background.Height
 	end
 
@@ -154,16 +157,16 @@ colorPicker.create = function(self, config)
 		local currentColor = node.currentColor
 
 		if x < 0 then 
-			currentColor.S = 0 
-		elseif x > uiPaletteShape.Width then 
+			currentColor.S = 0
+		elseif x > uiPaletteShape.Width then
 			currentColor.S = 1.0
 		else
 			currentColor.S = x / uiPaletteShape.Width
 		end
 
 		if y < 0 then 
-			currentColor.V = 0 
-		elseif y > uiPaletteShape.Height then 
+			currentColor.V = 0
+		elseif y > uiPaletteShape.Height then
 			currentColor.V = 1.0
 		else
 			currentColor.V = y / uiPaletteShape.Height
@@ -613,10 +616,8 @@ colorPicker.create = function(self, config)
 	end
 
 	node._didPickColor = function(self)
-		if node.didPickColor then
-			local c = Color(self.currentColor)
-			c.Alpha = self.currentAlpha
-			node:didPickColor(c)
+		if self.didPickColor ~= nil then
+			self:didPickColor(self:getColor())
 		end
 	end
 
@@ -625,8 +626,14 @@ colorPicker.create = function(self, config)
 		self:_refreshColor()
 	end
 
+	node.getColor = function(self)
+		local c = Color(node.currentColor)
+		c.Alpha = node.currentAlpha
+		return c
+	end
+
 	node:_refresh()
-	
+
 	return node
 end
 

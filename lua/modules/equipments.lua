@@ -9,7 +9,7 @@ local equipments = {
     	if partName == "hair" then
             return player.Head
         elseif partName == "jacket" then
-            return { player.Body, player.RightArm, player.LeftArm }
+            return { player.Body or player, player.RightArm, player.LeftArm }
         elseif partName == "pants" then
             return { player.RightLeg, player.LeftLeg }
         elseif partName == "boots" then
@@ -70,7 +70,7 @@ equipments.load = function(equipmentName, itemRepoName, player, mutable, abortIf
         return
     end
 
-    Object:Load(itemRepoName, function(shape)
+    local req = Object:Load(itemRepoName, function(shape)
         if abortIfSet and player.equipments[equipmentName] ~= nil then return end
 
         -- remove previous equipment no matter what
@@ -107,39 +107,37 @@ equipments.load = function(equipmentName, itemRepoName, player, mutable, abortIf
             callback(shape)
         end
     end)
+
+    return req
 end
 
 equipments.attachEquipmentToBodyPart = function(self, equipment, bodyPart, options)
     local layer = options.layer or 1
     local isPant = options.isPant or false
-    if equipment ~= nil then
-        equipment.Physics = PhysicsMode.Disabled
-        equipment:SetParent(bodyPart)
-        equipment.IsUnlit = bodyPart.IsUnlit
-        equipment.Layers = layer
-        equipment.LocalRotation = {0,0,0}
-        local coords = bodyPart:GetPoint("origin").Coords
-        if coords == nil then
-            print("can't get parent coords for equipment")
-            return
-        end
-        local localPos = bodyPart:BlockToLocal(coords)
-        local origin = Number3(0,0,0)
-        local point = equipment:GetPoint("origin")
-        if point ~= nil then
-            origin = point.Coords
-        end
-        equipment.Pivot = origin
-        equipment.LocalPosition = localPos
-        equipment.Scale = 1
-        if isPant then
-            equipment.Scale = 1.05
-        end
-    else
-        print('the equipment you are trying to attach is nil')
+
+    equipment.Physics = PhysicsMode.Disabled
+    equipment:SetParent(bodyPart)
+    equipment.IsUnlit = bodyPart.IsUnlit
+    equipment.Layers = layer
+    equipment.LocalRotation = {0,0,0}
+    local coords = bodyPart:GetPoint("origin").Coords
+    if coords == nil then
+        print("can't get parent coords for equipment")
         return
     end
- end
+    local localPos = bodyPart:BlockToLocal(coords)
+    local origin = Number3(0,0,0)
+    local point = equipment:GetPoint("origin")
+    if point ~= nil then
+        origin = point.Coords
+    end
+    equipment.Pivot = origin
+    equipment.LocalPosition = localPos
+    equipment.Scale = 1
+    if isPant then
+        equipment.Scale = 1.05
+    end
+end
 
 equipments.place = function(self, player, shape)
     if shape == nil then

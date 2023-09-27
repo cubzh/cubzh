@@ -9,6 +9,7 @@ Client.OnStart = function()
 
 	box_outline = require("box_outline")
 	ui = require("uikit")
+	theme = require("uitheme").current
 
 	max_total_nb_shapes = 32
 
@@ -110,10 +111,22 @@ Client.OnStart = function()
 		else
 			mirrorControls:hide()
 		end
+
+		-- Pivot
+		if isModeChangePivot then
+			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
+				s.IsHiddenSelf = false
+			end)
+			gizmo.activeGizmo.onDrag = nil
+			gizmo:setObject(nil)
+			changePivotBtn.Text = "Change Pivot"
+			isModeChangePivot = false
+		end
 	end
 
 	refreshDrawMode = function(forcedDrawMode)
 		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+			if not s or type(s) == "Object" then return end
 			if forcedDrawMode ~= nil then
 				s.PrivateDrawMode = forcedDrawMode
 			else
@@ -139,9 +152,35 @@ Client.OnStart = function()
 	-- SETTINGS
 	----------------------------
 
+	local _settings = {
+		cameraStartRotation = Number3(0.32, -0.81, 0.0),
+		cameraStartPreviewRotationHand = Number3(0, math.rad(-130), 0),
+		cameraStartPreviewRotationHat = Number3(math.rad(20), math.rad(180), 0),
+		cameraStartPreviewRotationBackpack = Number3(0, 0, 0),
+		cameraStartPreviewDistance = 15,
+		cameraThumbnailRotation = Number3(0.32, 3.9, 0.0), --- other option for Y: 2.33
+
+		zoomMin = 5, -- unit, minimum zoom distance allowed
+	}
+	settingsMT = {
+		__index = function(t, k)
+			local v = _settings[k]
+			if v == nil then return nil end
+			local ret
+			pcall(function() ret = v:Copy() end)
+			if ret ~= nil then
+				return ret
+			else
+				return v
+			end
+		end,
+		__newindex = function() error("settings are read-only") end,
+	}
+	settings = {}
+	setmetatable(settings, settingsMT)
+
 	Dev.DisplayBoxes = false
 
-	cameraSpeed = 1.4 -- unit/sec per screen point
 	cameraVelocityDrag = 0.6 -- ratio of carry-over camera velocity per frame
 	cameraDPadSpeed = 6 -- unit/sec
 	cameraDistFactor = 0.05 -- additive factor per distance unit above threshold
@@ -150,16 +189,10 @@ Client.OnStart = function()
 	zoomSpeedMax = 200
 	dPadMoveSpeed = 5.0 -- unit/sec
 	zoomVelocityDrag = 0.92 -- ratio of carry-over zoom velocity per frame
-	zoomMin = 5 -- unit, minimum zoom distance allowed
 	angularSpeed = 0.4 -- rad/sec per screen point
 	angularVelocityDrag = 0.91 -- ratio of carry-over angular velocity per frame
 	dPadAngularFactor = 0.7 -- in free mode (triggered after using dPad), this multiplies angular velocity
 	autosnapDuration = 0.3 -- seconds
-
-	cameraStartRotation = Number3(0.32, -0.81, 0.0)
-	cameraStartPreviewRotation = Number3(0, math.pi * -0.75, 0)
-	cameraStartPreviewDistance = 15
-	cameraThumbnailRotation = Number3(0.32, 3.9, 0.0) --- other option for Y: 2.33
 
 	saveTrigger = 60 -- seconds
 
@@ -195,7 +228,7 @@ Client.OnStart = function()
 	----------------------------
 
     Pointer:Show()
-	UI.Crosshair = false
+	require("crosshair"):hide()
 
 	----------------------------
 	-- STATE VALUES
@@ -203,17 +236,18 @@ Client.OnStart = function()
 
 	-- item editor modes
 
+	cameraModes = { FREE = 1, SATELLITE = 2 }
 	mode = { edit = 1, points = 2, max = 2 }
-    modeName = { "EDIT", "POINTS" }
+	modeName = { "EDIT", "POINTS" }
 
-    editSubmode = { add = 1, remove = 2, paint = 3, pick = 4, mirror = 5, select = 6, max = 6}
-    editSubmodeName = { "add", "remove", "paint", "pick", "mirror", "import", "select" }
+	editSubmode = { add = 1, remove = 2, paint = 3, pick = 4, mirror = 5, select = 6, max = 6}
+	editSubmodeName = { "add", "remove", "paint", "pick", "mirror", "import", "select" }
 
-    pointsSubmode = { move = 1, rotate = 2, max = 2}
-    pointsSubmodeName = { "Move", "Rotate"}
+	pointsSubmode = { move = 1, rotate = 2, max = 2}
+	pointsSubmodeName = { "Move", "Rotate"}
 
-    focusMode = { othersVisible = 1, othersTransparent = 2, othersHidden = 3, max = 3 }
-    focusModeName = { "Others Visible", "Others Transparent", "Others Hidden" }
+	focusMode = { othersVisible = 1, othersTransparent = 2, othersHidden = 3, max = 3 }
+	focusModeName = { "Others Visible", "Others Transparent", "Others Hidden" }
 
 	wearablePreviewMode = { hide = 1, bodyPart = 2, fullBody = 3 }
 	currentWearablePreviewMode = wearablePreviewMode.hide
@@ -231,7 +265,6 @@ Client.OnStart = function()
 
     -- camera
 
-	cameraRotation = cameraStartRotation
 	zoomVelocity = 0.0
 	angularVelocity = Number3(0, 0, 0)
 	cameraVelocity = Number3(0, 0, 0)
@@ -241,29 +274,52 @@ Client.OnStart = function()
 	autosnapToTarget = Number3(0, 0, 0)
 	autosnapToDistance = 0
 	autosnapTimer = -1.0
-	cameraFree = false -- used with dPad to rotate camera freely
 
 	cameraStates = {
 		item = {
-		    -- initialized at the end of OnStart
-		    target = nil,
-		    distance = 0,
-		    rotation = nil
+			target = nil,
+			cameraDistance = 0,
+			cameraMode = cameraModes.SATELLITE,
+			cameraRotation = settings.cameraStartRotation,
+			cameraPosition = Number3(0,0,0),
 		},
 		preview = {
-			distance = cameraStartPreviewDistance,
-			rotation = cameraStartPreviewRotation
+			target = nil,
+			cameraDistance = 0,
+			cameraMode = cameraModes.SATELLITE,
+			cameraRotation = settings.cameraStartPreviewRotationHand,
+			cameraPosition = Number3(0,0,0),
 		}
 	}
-	cameraCurrentState = cameraStates.item
+
+	cameraRefresh = function(r)
+		-- clamp rotation between 90° and -90° on X
+		cameraCurrentState.cameraRotation.X = clamp(cameraCurrentState.cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
+
+		Camera.Rotation = cameraCurrentState.cameraRotation
+
+		if cameraCurrentState.cameraMode == cameraModes.FREE then
+			Camera.Position = cameraCurrentState.cameraPosition
+		elseif cameraCurrentState.cameraMode == cameraModes.SATELLITE then
+			if cameraCurrentState.target == nil then return end
+			Camera:SetModeSatellite(cameraCurrentState.target, cameraCurrentState.cameraDistance)
+		end
+
+		if orientationCube ~= nil then
+			orientationCube:setRotation(Camera.Rotation)
+		end
+	end
+
+	cameraAddRotation = function(r)
+		cameraCurrentState.cameraRotation = cameraCurrentState.cameraRotation + r
+		cameraRefresh()
+	end
 	
 	-- input
 
 	dragging = false -- drag motion active
     dragging2 = false -- drag2 motion active
     editBlockedUntilUp = false
-
-    dPad = { x = 0.0, y = 0.0 }
 
     -- mirror mode
 
@@ -374,6 +430,7 @@ Client.OnStart = function()
     	Pointer.Zoom = zoom
     	Pointer.Down = down
     	Pointer.Up = up
+    	Pointer.Click = click
     	Pointer.LongPress = longPress
     	Pointer.DragBegin = dragBegin
     	Pointer.Drag = drag
@@ -429,9 +486,6 @@ Client.OnStart = function()
 	blockHighlight:SetParent(World)
 	blockHighlight.IsHidden = true
 
-	-- item info: blocks counter
-	blocksCounterNeedsRefresh = true
-
 end -- OnStart end
 
 Client.Action1 = nil
@@ -460,142 +514,37 @@ tick = function(dt)
 		end
 	end
 
-	-- if camera target moved last frame, refresh block highlight
 	if blockHighlightDirty then
         refreshBlockHighlight()
     end
-
-    if cameraFree then
-        -- consume camera angular velocity
-        cameraRotation = cameraRotation + angularVelocity * dt * dPadAngularFactor
-        angularVelocity = dragging and Number3(0, 0, 0) or (angularVelocity * angularVelocityDrag)
-        Camera.Rotation = cameraRotation
-
-        -- up/down directional pad can be used as an alternative to mousewheel
-		if dPad.y ~= 0 then
-			Camera.Position = Camera.Position + Camera.Forward * dPad.y * dPadMoveSpeed * dt 
-		end
-		-- right/left directional pad maps to lateral camera pan
-		if dPad.x ~= 0 then
-		    Camera.Position = Camera.Position + Camera.Right * dPad.x * dPadMoveSpeed * dt 
-		end
-
-        if zoomSum then
-			Camera.Position = Camera.Position + Camera.Backward * zoomSum
-			zoomSum = nil
-		end
-	else
-
-        -- consume camera angular velocity
-        local rotation = cameraRotation + angularVelocity * dt
-        angularVelocity = dragging and Number3(0, 0, 0) or (angularVelocity * angularVelocityDrag)
-
-        local target = nil
-        local distance = nil
-        if autosnapTimer < 0 then
-            -- consume camera target velocity and refresh block highlight
-            target = Camera.target + cameraVelocity * dt
-            cameraVelocity = dragging2 and Number3(0, 0, 0) or (cameraVelocity * cameraVelocityDrag)
-            blockHighlightDirty = n3Equals(target, Camera.target, 0.001) == false
-
-            -- consume camera zoom velocity
-            -- distance = math.max(zoomMin, Camera.distance + zoomVelocity * dt)
-            distance = Camera.distance
-
-			if zoomSum then
-				distance = math.max(zoomMin, Camera.distance + zoomSum * getCameraDistanceFactor())
-				-- distance = math.max(zoomMin, Camera.distance + zoomSum)
-				zoomSum = nil
-			end
-
-            zoomVelocity = zoomVelocity * zoomVelocityDrag
-        else -- execute autosnap
-            autosnapTimer = autosnapTimer - dt
-            if autosnapTimer <= 0.0 then
-                target = autosnapToTarget
-                distance = autosnapToDistance
-                autosnapTimer = -1.0
-            else
-                local v = easingQuadOut(1.0 - autosnapTimer / autosnapDuration)
-                target = lerp(autosnapFromTarget, autosnapToTarget, v)
-                distance = lerp(autosnapFromDistance, autosnapToDistance, v)
-            end
-            cameraVelocity = Number3(0, 0, 0)
-            zoomVelocity = 0
-        end
-
-        setSatelliteCamera(rotation, target, distance, false)
-    end
-
-    if blocksCounterNeedsRefresh then
-    	blocksCounterNeedsRefresh = false
-    	-- local count = getSelfAndDescendantsBlocksCount(item)
-    	-- blocksCounterLabel.Text = "⚀ " .. count
-	end
 end
 
 Pointer.Zoom = function() end
 zoom = function(zoomValue)
-	if not zoomSum then zoomSum = zoomValue else zoomSum = zoomSum + zoomValue end
-end
+	local factor = 0.5
 
-Pointer.Down = function() end
-down = function(e)
-	if gizmo:down(e) then
-		gizmoCapturedPointer = true
-		return
-	end
-	if mirrorGizmo:down(e) then
-		mirrorGizmoCapturedPointer = true
-		return
-	end
-	if placeGizmo:down(e) then
-		placeGizmoCapturedPointer = true
-		return
-	end
-	if colliderMinGizmo:down(e) then
-		colliderMinGizmoCapturedPointer = true
-		return
-	end
-	if colliderMaxGizmo:down(e) then
-		colliderMaxGizmoCapturedPointer = true
-		return
+	if cameraCurrentState.cameraMode == cameraModes.FREE then
+		cameraCurrentState.cameraPosition = cameraCurrentState.cameraPosition + (zoomValue * Camera.Backward * factor)
+		cameraRefresh()
+	elseif cameraCurrentState.cameraMode == cameraModes.SATELLITE then
+		cameraCurrentState.cameraDistance = math.max(
+			settings.zoomMin,
+			cameraCurrentState.cameraDistance + zoomValue * factor * getCameraDistanceFactor())
+		cameraRefresh()
 	end
 end
 
-Pointer.Up = function() end
-up = function(e)
-	if gizmoCapturedPointer then
-		gizmoCapturedPointer = false
-		gizmo:up(e)
-	end
-	if mirrorGizmoCapturedPointer then
-		mirrorGizmoCapturedPointer = false
-		mirrorGizmo:up(e)
-		return
-	end
-	if placeGizmoCapturedPointer then
-		placeGizmoCapturedPointer = false
-		placeGizmo:up(e)
-		return
-	end
-	if colliderMinGizmoCapturedPointer then
-		colliderMinGizmoCapturedPointer = false
-		colliderMinGizmo:up(e)
-		return
-	end
-	if colliderMaxGizmoCapturedPointer then
-		colliderMaxGizmoCapturedPointer = false
-		colliderMaxGizmo:up(e)
+Pointer.Click = function() end
+click = function(e)
+	if gizmoCapturedPointer 
+		or mirrorGizmoCapturedPointer
+		or placeGizmoCapturedPointer
+		or colliderMinGizmoCapturedPointer
+		or colliderMaxGizmoCapturedPointer then
 		return
 	end
 
-	if blockerShape ~= nil then
-		blockerShape:RemoveFromParent()
-		blockerShape = nil
-	end
-
-	if currentMode == mode.edit and not editBlockedUntilUp then
+	if currentMode == mode.edit then
 		local impact
 		local shape
 		local impactDistance = 1000000000
@@ -686,10 +635,65 @@ up = function(e)
 		if impact ~= nil then
 			checkAutoSave()
 			refreshUndoRedoButtons()
-		end
+		end		
+	end
 
-	elseif currentMode == mode.points then
-		
+end
+
+Pointer.Down = function() end
+down = function(e)
+	if gizmo:down(e) then
+		gizmoCapturedPointer = true
+		return
+	end
+	if mirrorGizmo:down(e) then
+		mirrorGizmoCapturedPointer = true
+		return
+	end
+	if placeGizmo:down(e) then
+		placeGizmoCapturedPointer = true
+		return
+	end
+	if colliderMinGizmo:down(e) then
+		colliderMinGizmoCapturedPointer = true
+		return
+	end
+	if colliderMaxGizmo:down(e) then
+		colliderMaxGizmoCapturedPointer = true
+		return
+	end
+end
+
+Pointer.Up = function() end
+up = function(e)
+	if gizmoCapturedPointer then
+		gizmoCapturedPointer = false
+		gizmo:up(e)
+	end
+	if mirrorGizmoCapturedPointer then
+		mirrorGizmoCapturedPointer = false
+		mirrorGizmo:up(e)
+		return
+	end
+	if placeGizmoCapturedPointer then
+		placeGizmoCapturedPointer = false
+		placeGizmo:up(e)
+		return
+	end
+	if colliderMinGizmoCapturedPointer then
+		colliderMinGizmoCapturedPointer = false
+		colliderMinGizmo:up(e)
+		return
+	end
+	if colliderMaxGizmoCapturedPointer then
+		colliderMaxGizmoCapturedPointer = false
+		colliderMaxGizmo:up(e)
+		return
+	end
+
+	if blockerShape ~= nil then
+		blockerShape:RemoveFromParent()
+		blockerShape = nil
 	end
 
 	local shape = selectedShape or focusShape
@@ -764,6 +768,7 @@ end
 
 Pointer.Drag = function() end
 drag = function(e)
+
 	if gizmoCapturedPointer then
 		gizmo:drag(e)
 		return
@@ -786,7 +791,8 @@ drag = function(e)
 	end
 
 	if not continuousEdition then
-		angularVelocity = angularVelocity + Number3(-e.DY * angularSpeed, e.DX * angularSpeed, 0)
+		local angularSpeed = 0.01
+		cameraAddRotation({-e.DY * angularSpeed, e.DX * angularSpeed, 0})
 	end
 
 	if continuousEdition and currentMode == mode.edit then
@@ -839,7 +845,8 @@ drag2Begin = function()
     if currentMode == mode.edit then
         dragging2 = true
 		editBlockedUntilUp = true
-        UI.Crosshair = true
+		setFreeCamera()
+        require("crosshair"):show()
 		refreshDrawMode()
     end
 end
@@ -848,17 +855,14 @@ Pointer.Drag2 = function() end
 drag2 = function(e)
 	-- in edit mode, Drag2 performs camera pan
 	if currentMode == mode.edit then
-		local dx = e.DX * cameraSpeed * getCameraDistanceFactor()
-		local dy = e.DY * cameraSpeed * getCameraDistanceFactor()
-		cameraVelocity = cameraVelocity - Camera.Right * dx - Camera.Up * dy
+		local factor = 0.1
+		local dx = e.DX * factor * getCameraDistanceFactor()
+		local dy = e.DY * factor * getCameraDistanceFactor()
 
-		-- restore satellite mode if dPad was in use
-		if cameraFree then
-			cameraFree = false
-			blockHighlightDirty = true
-			Camera.target = Camera.Position + Camera.Forward * Camera.distance
-			Camera:SetModeSatellite(Camera.target, Camera.distance)
-		end
+		cameraCurrentState.cameraPosition = cameraCurrentState.cameraPosition - Camera.Right * dx - Camera.Up * dy
+		cameraRefresh()
+
+		refreshBlockHighlight()
 	end
 end
 
@@ -882,25 +886,26 @@ drag2End = function()
 	    if shape ~= nil then impact = Camera:CastRay(shape) end
 
         if impact.Block ~= nil then
-            autosnapFromTarget = Camera.target
-            autosnapFromDistance = Camera.distance
-
-            -- both distance & target will need to be animated to emulate a camera translation
-            autosnapToTarget = impact.Block.Position + halfVoxel
-            autosnapToDistance = (autosnapToTarget - Camera.Position).Length
-
-            autosnapTimer = autosnapDuration
+        	local target = impact.Block.Position + halfVoxel
+        	cameraCurrentState.cameraMode = cameraModes.SATELLITE
+        	cameraCurrentState.target = target
+        	cameraCurrentState.cameraDistance = (target - Camera.Position).Length
+        	cameraRefresh()
+        else 
+        	cameraCurrentState.cameraMode = cameraModes.FREE
+        	cameraCurrentState.cameraPosition = Camera.Position
+        	-- cameraCurrentState.cameraRotation = Camera.Rotation
+        	cameraRefresh()
         end
 
         dragging2 = false
-        UI.Crosshair = false
+        require("crosshair"):hide()
 		refreshDrawMode()
     end
 end
 
 Screen.DidResize = function() end
 didResize = function(width, height)
-	ui:fitScreen()
 	-- 
 	-- Camera.FOV = (width / height) * 60.0
 	if orientationCube ~= nil then
@@ -910,8 +915,8 @@ didResize = function(width, height)
 	end
 
 	if colorPicker ~= nil then
-		local maxW = math.min(Screen.Width * 0.5 - ui.kPadding * 3, 400)
-		local maxH = math.min(Screen.Height * 0.4 - ui.kPadding * 3, 300)
+		local maxW = math.min(Screen.Width * 0.5 - theme.padding * 3, 400)
+		local maxH = math.min(Screen.Height * 0.4 - theme.padding * 3, 300)
 		colorPicker:setMaxSize(maxW, maxH)
 	end
 
@@ -940,11 +945,10 @@ initClientFunctions = function()
 				return
 			end
 
-			cameraStateSave()
-
 			currentMode = newMode
 
 			if currentMode == mode.edit then
+				cameraCurrentState = cameraStates.item
 				-- unequip Player
 				if poiActiveName == poiNameHand then
 					Player:EquipRightHand(nil)
@@ -961,14 +965,10 @@ initClientFunctions = function()
                 item.LocalPosition = { 0, 0, 0 }
                 item.LocalRotation = { 0, 0, 0 }
 
-                -- in edit mode, using dPad will set camera free
-				-- Client.DirectionalPad = function(x, y)
-				--     dPad.x = x
-				--     dPad.y = y
-				--     setFreeCamera()
-				-- end
+                Client.DirectionalPad = nil
 
 			else -- place item points / preview
+				cameraCurrentState = cameraStates.preview
 				-- make player appear in front of camera with item in hand
 
 				Player.Head.IgnoreAnimations = true
@@ -987,18 +987,29 @@ initClientFunctions = function()
 				
 				if poiActiveName == poiNameHand then
 					Player:EquipRightHand(item)
+					cameraCurrentState.target = getEquipmentAttachPointWorldPosition("handheld")
+					cameraCurrentState.cameraRotation = settings.cameraStartPreviewRotationHand
+					cameraCurrentState.cameraDistance = 20
+
 				elseif poiActiveName == poiNameHat then
 					Player:EquipHat(item)
+					cameraCurrentState.target = getEquipmentAttachPointWorldPosition("hat")
+					cameraCurrentState.cameraRotation = settings.cameraStartPreviewRotationHat
+					cameraCurrentState.cameraDistance = 20
+
 				elseif poiActiveName == poiNameBackpack then
 					Player:EquipBackpack(item)
+					cameraCurrentState.target = getEquipmentAttachPointWorldPosition("backpack")
+					cameraCurrentState.cameraRotation = settings.cameraStartPreviewRotationBackpack
+					cameraCurrentState.cameraDistance = 20
+
 				end
 
 				Client.DirectionalPad = nil
-				cameraFree = false
 			end
 
 			refreshUndoRedoButtons()
-			cameraStateSetToExpected()
+			cameraRefresh()
 		end -- end updating node
 
 		-- see if submode needs to be changed
@@ -1054,7 +1065,19 @@ initClientFunctions = function()
 			item.CollisionBox = customCollisionBox
 		end
 
+		if isModeChangePivot then
+			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
+				s.IsHiddenSelf = false
+			end)
+		end
+
 		item:Save(Environment.itemFullname, palette.colorsShape.Palette)
+
+		if isModeChangePivot then
+			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
+				s.IsHiddenSelf = s ~= focusShape
+			end)
+		end
 
 		changesSinceLastSave = false
 		autoSaveDT = 0.0
@@ -1065,7 +1088,6 @@ initClientFunctions = function()
 	addBlockWithImpact = function(impact, facemode, shape)
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then return end
 		if type(facemode) ~= Type.boolean then return end
-		blocksCounterNeedsRefresh = true
 
 		-- always add the first block
 		local addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape)
@@ -1184,7 +1206,6 @@ initClientFunctions = function()
 		if shape.BlocksCount == 1 then return end
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then return end
 		if type(facemode) ~= Type.boolean then return end
-		blocksCounterNeedsRefresh = true
 
 		-- always remove the first block
 		local removed = removeSingleBlock(impact.Block, shape)
@@ -1524,75 +1545,19 @@ initClientFunctions = function()
 		return dx * dx + dy * dy
 	end
 
-	cameraStateSave = function()
-	    if cameraFree then
-	        cameraCurrentState.target = Camera.Position:Copy()
-	    else
-            cameraCurrentState.target = Camera.target:Copy()
-            cameraCurrentState.distance = Camera.distance
-        end
-        cameraCurrentState.rotation = cameraRotation:Copy()
-	end
-
-	cameraStateSet = function(state)
-		if state == cameraStates.preview then
-		    setSatelliteCamera(state.rotation, Player.Head.Position, state.distance, false)
-
-			blockHighlight.IsHidden = true
-            Pointer:Show()
-            UI.Crosshair = false
-        elseif cameraFree then
-            Camera.Position = state.target:Copy()
-            setCameraRotation(state.rotation)
-
-            setFreeCamera()
-		else
-            setSatelliteCamera(state.rotation, state.target, state.distance, true) -- refresh camera immediately...
-            blockHighlightDirty = true -- so that highlight block can be refreshed asap
-		end
-		cameraCurrentState = state
-	end
-
-	cameraStateSetToExpected = function(alwaysRefresh)
-	    local state = cameraStates.item
-		if currentMode == mode.points then
-            state = cameraStates.preview
-        end
-		if alwaysRefresh == nil or alwaysRefresh or state ~= cameraCurrentState then
-			cameraStateSet(state)
-		end
-	end
-
-	setSatelliteCamera = function(rotation, target, distance, immediate)
-	    if rotation ~= nil then
-	        setCameraRotation(rotation)
-        end
-
-        -- store variables used for satellite mode, we need them to handle zoom&drag
-        if target ~= nil then
-            Camera.target = target:Copy()
-        end
-        if distance ~= nil then
-            Camera.distance = distance
-        end
-        Camera:SetModeSatellite(Camera.target, Camera.distance)
-
-        if immediate then
-            Camera.Position = target + Camera.Backward * distance
-        end
-	end
-
 	setFreeCamera = function()
         blockHighlight.IsHidden = true
-        Camera.distance = cameraDistThreshold -- reset distance, make dist scaling neutral
-        cameraFree = true
+        cameraCurrentState.cameraMode = cameraModes.FREE
+        cameraCurrentState.cameraPosition = Camera.Position
         Camera:SetModeFree()
+        cameraRefresh()
     end
 
 	fitObjectToScreen = function(object, rotation)
 	    -- set camera positioning using FitToScreen
         local targetPoint = object:BlockToWorld(object.Center)
         Camera.Position = targetPoint
+        
         if rotation ~= nil then
             Camera.Rotation = rotation
         end
@@ -1603,11 +1568,18 @@ initClientFunctions = function()
 
         -- maintain camera satellite mode
         local distance = (Camera.Position - targetPoint).Length
-        setSatelliteCamera(rotation, targetPoint, distance, false)
+
+        cameraCurrentState.cameraMode = cameraModes.SATELLITE
+        cameraCurrentState.target = targetPoint
+        cameraCurrentState.cameraDistance = distance
+        if rotation ~= nil then
+        	cameraCurrentState.rotation = rotation
+    	end
+        cameraRefresh()
 	end
 
 	getCameraDistanceFactor = function()
-	    return 1 + math.max(0, cameraDistFactor * (Camera.distance - cameraDistThreshold))
+	    return 1 + math.max(0, cameraDistFactor * (cameraCurrentState.cameraDistance - cameraDistThreshold))
 	end
 
 	applyDrag = function(velocity, drag, isZero)
@@ -1616,19 +1588,6 @@ initClientFunctions = function()
         else
             velocity = velocity * drag
         end
-	end
-
-	setCameraRotation = function(rotation)
-	    cameraRotation = rotation:Copy()
-
-        -- clamp rotation between 90° and -90° on X
-        cameraRotation.X = clamp(cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
-
-        Camera.Rotation = cameraRotation
-
-		if orientationCube ~= nil then
-			orientationCube:setRotation(cameraRotation)
-		end
 	end
 
 	refreshBlockHighlight = function()
@@ -1685,6 +1644,37 @@ targetBlockDeltaFromTouchedFace = function(faceTouched)
 	return targetNeighbor
 end
 
+function getEquipmentAttachPointWorldPosition(equipmentType)
+
+	-- body parts have a point stored in model space (block coordinates), where item must be attached
+    -- we can use it to find the corresponding item block
+	local worldBodyPoint = Number3(0, 0, 0)
+
+	if equipmentType == "handheld" then
+		worldBodyPoint = Player.RightHand:GetPoint(poiAvatarRightHandPalm).Position
+		if worldBodyPoint == nil then
+			-- default value
+			worldBodyPoint = Player.RightHand:BlockToWorld(poiAvatarRightHandPalmDefaultValue)
+		end
+	elseif equipmentType == "hat" then
+		-- TODO: review this
+		worldBodyPoint = Player.Head:GetPoint(poiNameHat).Position
+		if worldBodyPoint == nil then
+			-- default value
+			worldBodyPoint = Player.Head:PositionLocalToWorld({ -0.5, 8.5, -0.5 })
+		end
+	elseif equipmentType == "backpack" then
+		-- TODO: review this
+		worldBodyPoint = Player.Body:GetPoint(poiNameBackpack).Position
+		if worldBodyPoint == nil then
+			 -- default value
+			worldBodyPoint = Player.Body:PositionLocalToWorld({ 0.5, 2.5, -1.5 })
+		end
+	end
+
+	return worldBodyPoint
+end
+
 function savePOI()
     if poiActiveName == nil or poiActiveName == "" then
         return
@@ -1695,25 +1685,11 @@ function savePOI()
 	local worldBodyPoint = Number3(0, 0, 0)
 
 	if poiActiveName == poiNameHand then
-		worldBodyPoint = Player.RightHand:GetPoint(poiAvatarRightHandPalm).Position
-		if worldBodyPoint == nil then
-			-- default value
-			worldBodyPoint = Player.RightHand:BlockToWorld(poiAvatarRightHandPalmDefaultValue)
-		end
+		worldBodyPoint = getEquipmentAttachPointWorldPosition("handheld")
 	elseif poiActiveName == poiNameHat then
-		-- TODO: review this
-		worldBodyPoint = Player.Head:GetPoint(poiNameHat).Position
-		if worldBodyPoint == nil then
-			-- default value
-			worldBodyPoint = Player.Head:PositionLocalToWorld({ -0.5, 8.5, -0.5 })
-		end
+		worldBodyPoint = getEquipmentAttachPointWorldPosition("hat")
 	elseif poiActiveName == poiNameBackpack then
-		-- TODO: review this
-		worldBodyPoint = Player.Body:GetPoint(poiNameBackpack).Position
-		if worldBodyPoint == nil then
-			 -- default value
-			worldBodyPoint = Player.Body:PositionLocalToWorld({ 0.5, 2.5, -1.5 })
-		end
+		worldBodyPoint = getEquipmentAttachPointWorldPosition("backpack")
 	end
 
     -- item POI is stored in model space (block coordinates)
@@ -1790,14 +1766,14 @@ function ui_init()
 			editModeBtn:select()
 			placeModeBtn:unselect()
 			if orientationCube ~= nil then orientationCube:show() end
-			editMenu:setParent(ui.rootFrame)
-			editSubMenu:setParent(ui.rootFrame)
-			recenterBtn:setParent(ui.rootFrame)
-			placeMenu:setParent(nil)
-			placeSubMenu:setParent(nil)
+			editMenu:show()
+			editSubMenu:show()
+			recenterBtn:show()
+			placeMenu:hide()
+			placeSubMenu:hide()
 			placeGizmo:setObject(nil)
 
-			palette:setParent(ui.rootFrame)
+			palette:show()
 			if currentEditSubmode ~= editSubmode.mirror then
 				removeMirror()
 				mirrorControls:hide()
@@ -1809,13 +1785,13 @@ function ui_init()
 			editModeBtn:unselect()
 			placeModeBtn:select()
 			if orientationCube ~= nil then orientationCube:hide() end
-			editMenu:setParent(nil)
-			editSubMenu:setParent(nil)
-			recenterBtn:setParent(nil)
-			placeMenu:setParent(ui.rootFrame)
-			placeSubMenu:setParent(ui.rootFrame)
-			palette:setParent(nil)
-			colorPicker:setParent(nil)
+			editMenu:hide()
+			editSubMenu:hide()
+			recenterBtn:hide()
+			placeMenu:show()
+			placeSubMenu:show()
+			palette:hide()
+			colorPicker:hide()
 			mirrorControls:hide()
 			selectControls:hide()
 			mirrorGizmo:setObject(nil)
@@ -1916,8 +1892,6 @@ function ui_init()
 			gridEnabled = false
 			refreshUndoRedoButtons()
 			changesSinceLastSave = true
-
-			blocksCounterNeedsRefresh = true
 		end)
 	end
 
@@ -1961,7 +1935,7 @@ function ui_init()
 			local paletteIsVisible = palette:isVisible()
 			palette:hide()
 
-			ui.rootFrame:RemoveFromParent()
+			ui:hide()
 			if isWearable then
 				Player.IsHidden = true
 				for _,v in ipairs(copies) do
@@ -1988,7 +1962,7 @@ function ui_init()
 					palette:show()
 				end
 				
-				ui.rootFrame:SetParent(World)
+				ui:show()
 
 				if orientationCubeDisplayed then orientationCube:show() end
 
@@ -2054,11 +2028,11 @@ function ui_init()
 	recenterBtn.onRelease = function()
 		if currentMode == mode.edit then
             fitObjectToScreen(item, nil)
-            if cameraFree == false then
+            -- if cameraFree == false then
                 blockHighlightDirty = true
-            end
+            -- end
         else
-            setSatelliteCamera(cameraStartPreviewRotation, nil, cameraStartPreviewDistance, false)
+            -- setSatelliteCamera(settings.cameraStartPreviewRotation, nil, settings.cameraStartPreviewDistance, false)
         end
 	end
 
@@ -2195,7 +2169,6 @@ function ui_init()
 			updateMirror()
 			checkAutoSave()
 			refreshUndoRedoButtons()
-			blocksCounterNeedsRefresh = true
 		end
 	end
 
@@ -2210,7 +2183,6 @@ function ui_init()
 			updateMirror()
 			checkAutoSave()
 			refreshUndoRedoButtons()
-			blocksCounterNeedsRefresh = true
 		end
 	end
 
@@ -2260,6 +2232,11 @@ function ui_init()
 		Player:EquipHat(nil)
 		Player:EquipBackpack(nil)
 		Player:EquipRightHand(item)
+
+		cameraCurrentState.target = getEquipmentAttachPointWorldPosition("handheld")
+		cameraCurrentState.cameraRotation = settings.cameraStartPreviewRotationHand
+		cameraCurrentState.cameraDistance = 20
+		cameraRefresh()
 	end
 	placeInHandBtn:select()
 
@@ -2272,6 +2249,11 @@ function ui_init()
 		Player:EquipRightHand(nil)
 		Player:EquipBackpack(nil)
 		Player:EquipHat(item)
+
+		cameraCurrentState.target = getEquipmentAttachPointWorldPosition("hat")
+		cameraCurrentState.cameraRotation = settings.cameraStartPreviewRotationHat
+		cameraCurrentState.cameraDistance = 20
+		cameraRefresh()
 	end
 
 	placeAsBackpack = createButton("🎒", btnColor, btnColorSelected)
@@ -2283,6 +2265,11 @@ function ui_init()
 		Player:EquipRightHand(nil)
 		Player:EquipHat(nil)
 		Player:EquipBackpack(item)
+
+		cameraCurrentState.target = getEquipmentAttachPointWorldPosition("backpack")
+		cameraCurrentState.cameraRotation = settings.cameraStartPreviewRotationBackpack
+		cameraCurrentState.cameraDistance = 20
+		cameraRefresh()
 	end
 
 	placeMenu.parentDidResize = function(self)
@@ -2428,8 +2415,6 @@ function ui_init()
 			gridEnabled = false
 			refreshUndoRedoButtons()
 			changesSinceLastSave = true
-
-			blocksCounterNeedsRefresh = true
 		end)
 	end
 
@@ -2445,6 +2430,55 @@ function ui_init()
 		focusShape:RemoveFromParent()
 		selectFocusShape()
 		removeShapeBtn:hide()
+	end
+
+	local nameInput = ui:createTextInput("", "Object Name")
+	nameInput:setParent(selectControls)
+	nameInput.onTextChange = function(o)
+		focusShape.Name = o.Text
+	end
+
+	changePivotBtn = createButton("Change Pivot", ui_config.btnColor, ui_config.btnColorSelected)
+	changePivotBtn:setParent(selectControls)
+	local pivotObject = Object()
+	local prevGizmoMode
+	changePivotBtn.onRelease = function()
+		if not isModeChangePivot then
+			pivotObject:SetParent(focusShape)
+			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
+				s.IsHiddenSelf = s ~= focusShape -- hide all except focus shape
+			end)
+
+			prevGizmoMode = gizmo.mode
+			gizmo:setMode(gizmo.Mode.Move)
+
+			gizmo:setOrientation(colliderMinGizmo.Orientation.Local)
+
+			local pivot = focusShape.Pivot
+			changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", pivot.X, pivot.Y, pivot.Z)
+			gizmo.activeGizmo.onDrag = function(pos)
+				local diffPos = pivotObject.Position - focusShape.Position
+				local newPivot = focusShape.Pivot + diffPos
+				changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", newPivot.X, newPivot.Y, newPivot.Z)
+			end
+			pivotObject.Position = focusShape.Position
+			gizmo:setObject(pivotObject)
+		else
+			local diffPos = pivotObject.Position - focusShape.Position
+			local newPivot = focusShape.Pivot + diffPos
+			focusShape.Position = pivotObject.Position
+			focusShape.Pivot = newPivot
+
+			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
+				s.IsHiddenSelf = false
+			end)
+			gizmo.activeGizmo.onDrag = nil
+			gizmo:setObject(focusShape)
+			gizmo:setMode(prevGizmoMode)
+			gizmo:setOrientation(colliderMinGizmo.Orientation.World)
+			changePivotBtn.Text = "Change Pivot"
+		end
+		isModeChangePivot = not isModeChangePivot
 	end
 
 	moveShapeBtn = createButton("⇢", ui_config.btnColor, ui_config.btnColorSelected)
@@ -2556,6 +2590,8 @@ function ui_init()
 			removeShapeBtn:hide()
 			moveShapeBtn:hide()
 			rotateShapeBtn:hide()
+			nameInput:hide()
+			changePivotBtn:hide()
 			selectControls:parentDidResize()
 			return
 		end
@@ -2570,6 +2606,7 @@ function ui_init()
 		-- if root, can't remove, move or rotate
 		local funcSubShapesControls = focusShape == item and "hide" or "show"
 		if funcSubShapesControls == "show" then
+			nameInput.Text = focusShape.Name or ""
 			-- gizmo:setObject(focusShape)
 			if gizmo.mode == gizmo.Mode.Move then
 				selectToggleBtnsSelect(moveShapeBtn)
@@ -2580,6 +2617,8 @@ function ui_init()
 		removeShapeBtn[funcSubShapesControls](removeShapeBtn)
 		moveShapeBtn[funcSubShapesControls](moveShapeBtn)
 		rotateShapeBtn[funcSubShapesControls](rotateShapeBtn)
+		nameInput[funcSubShapesControls](nameInput)
+		changePivotBtn[funcSubShapesControls](changePivotBtn)
 
 		selectControls:parentDidResize()
 	end
@@ -2594,6 +2633,8 @@ function ui_init()
 		moveShapeBtn.LocalPosition = Number3(padding, addBlockChildBtn.LocalPosition.Y + addBlockChildBtn.Height + padding, 0)
 		rotateShapeBtn.LocalPosition = Number3(moveShapeBtn.LocalPosition.X + moveShapeBtn.Width, moveShapeBtn.LocalPosition.Y, 0)
 		removeShapeBtn.LocalPosition = Number3(rotateShapeBtn.LocalPosition.X + rotateShapeBtn.Width + padding, rotateShapeBtn.LocalPosition.Y, 0)
+		nameInput.LocalPosition = Number3(padding, moveShapeBtn.LocalPosition.Y + moveShapeBtn.Height + padding, 0)
+		changePivotBtn.LocalPosition = Number3(padding, nameInput.LocalPosition.Y + nameInput.Height + padding, 0)
 
 		local width = 0
 		local height = padding
@@ -2607,9 +2648,11 @@ function ui_init()
 		end
 		if moveShapeBtn:isVisible() then
 			width = math.max(width,removeShapeBtn.Width + moveShapeBtn.Width + rotateShapeBtn.Width + padding)
-			height = height + moveShapeBtn.Height + padding
+			height = height + moveShapeBtn.Height + nameInput.Height + changePivotBtn.Height + 3 * padding
 		end
 
+		nameInput.Width = width
+		changePivotBtn.Width = width
 		width = width + 2 * padding
 		selectControls.Width = width
 		selectControls.Height = height
@@ -2624,7 +2667,7 @@ function ui_init()
 	function placeSubMenuToggleSelect(target)
 		for _,btn in ipairs(placeSubMenuToggleBtns) do btn:unselect() end
 		if target then
-			target:select()		
+			target:select()
 		end
 	end
 
@@ -2739,16 +2782,11 @@ function post_item_load()
 	refreshUndoRedoButtons()
 
 	-- gizmos
-	orientationCube = require("orientationcube.lua")
+	orientationCube = require("orientationcube")
 	orientationCube:init()
 	orientationCube:setLayer(6)
 
-	fitObjectToScreen(item, cameraStartRotation)
-
-	refreshBlockHighlight()
-	cameraStateSave()
-
-	setCameraRotation(cameraThumbnailRotation)
+	cameraCurrentState = cameraStates.item
 
 	initShapes = function()
 		shapes = {}
@@ -2807,6 +2845,7 @@ function post_item_load()
 				-- selecting same color, nothing to do
 				return
 			end
+			
 			-- check if new color is not already use in shape
 			local colorAlreadyUsed = false
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
@@ -3026,4 +3065,8 @@ function post_item_load()
 		itemPlusAvatarBtn:onRelease()
 		Timer(0.1, updateWearableSubShapesPosition)
 	end)
+
+
+	fitObjectToScreen(item, settings.cameraStartRotation) -- sets cameraCurrentState.target
+	refreshBlockHighlight()
 end

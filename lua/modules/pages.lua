@@ -8,23 +8,23 @@
 
 local pages = {}
 
-pages.create = function(self) 
+pages.create = function(self, uikit) 
 
 	local theme = require("uitheme").current
-	local uikit = require("uikit")
+	local ui = uikit or require("uikit")
 
-	local node = uikit:createNode()
+	local node = ui:createNode()
 	node.nbPages = 1
 	node.page = 1
 	node.pageDidChange = nil
 
-	local nextBtn = uikit:createButton("➡️")
+	local nextBtn = ui:createButton("➡️")
 	nextBtn:setParent(node)
 	
-	local prevBtn = uikit:createButton("⬅️")
+	local prevBtn = ui:createButton("⬅️")
 	prevBtn:setParent(node)
 
-	local label = uikit:createText("1/1", theme.textColor)
+	local label = ui:createText("1/1", theme.textColor)
 	label:setParent(node)
 
 	node._width = function()

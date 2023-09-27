@@ -1,41 +1,42 @@
 
-local settings = {}
+settings = {}
 
--- MODULES
-local modal = require("modal")
-local uikit = require("uikit")
-local theme = require("uitheme")
-
--- CONSTANTS
-local SENSITIVITY_STEP = 0.1
-local MIN_SENSITIVITY = 0.1
-local MAX_SENSITIVITY = 3.0
-
---- Creates a settings modal
---- positionCallback(function): position of the popup
+--- Creates modal content for app settings
 --- config(table): contents "cache" and "logout" keys, set either of these to true to display associated buttons
 --- returns: modal
-settings.create = function(self, positionCallback, config)
+settings.createModalContent = function(self, config)
 
-	if type(positionCallback) ~= "function" then
-		error("setting:create(positionCallback, <config>): positionCallback should be a function", 2)
-	end
+	-- MODULES
+	local modal = require("modal")
+	local theme = require("uitheme")
+
+	-- CONSTANTS
+	local SENSITIVITY_STEP = 0.1
+	local MIN_SENSITIVITY = 0.1
+	local MAX_SENSITIVITY = 3.0
+
 	if config ~= nil and type(config) ~= "table" then
-		error("setting:create(positionCallback, <config>): config should be a table", 2)
+		error("setting:create(<config>): config should be a table", 2)
 	end
 
 	-- default config
 	local _config = {
 		clearCache = false,
 		logout = false,
+		uikit = require("uikit")
 	}
 
 	if config then
-		if type(config.clearCache) == "boolean" then _config.clearCache = config.clearCache end
-		if type(config.logout) == "boolean" then _config.logout = config.logout end
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
 	end
 
-	local settingsNode = uikit:createFrame()
+	local config = _config
+
+	local ui = config.uikit
+
+	local settingsNode = ui:createFrame()
 
 	local content = modal:createContent()
 	content.title = "Settings"
@@ -46,45 +47,57 @@ settings.create = function(self, positionCallback, config)
 	
 	-- SENSITIVITY
 
-	local sensitivityLabel = uikit:createText("", Color.White)
+	local sensitivityLabel = ui:createText("", Color.White)
 	local function refreshSensitivityLabel()
-		sensitivityLabel.Text = string.format("Sensitivity: %.1f ", getSensitivity())
+		sensitivityLabel.Text = string.format("Sensitivity: %.1f ", System.Sensitivity)
 	end
 	refreshSensitivityLabel()
 
-	local sensitivityMinus = uikit:createButton("➖")
+	local sensitivityMinus = ui:createButton("➖")
 	sensitivityMinus.label = sensitivityLabel
 	sensitivityMinus.onRelease = function(self)
-		local sensitivity = math.max(getSensitivity() - SENSITIVITY_STEP, MIN_SENSITIVITY)
-        setSensitivity(sensitivity)
+		System.Sensitivity = math.max(System.Sensitivity - SENSITIVITY_STEP, MIN_SENSITIVITY)
 		refreshSensitivityLabel()
 	end
 
-	local sensitivityPlus = uikit:createButton("➕")
+	local sensitivityPlus = ui:createButton("➕")
 	sensitivityPlus.label = sensitivityLabel
 	sensitivityPlus.onRelease = function(self)
-        local sensitivity = math.min(getSensitivity() + SENSITIVITY_STEP, MAX_SENSITIVITY)
-        setSensitivity(sensitivity)
+        System.Sensitivity = math.min(System.Sensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
 		refreshSensitivityLabel()
 	end
 
 	table.insert(rows, {sensitivityLabel, sensitivityMinus, sensitivityPlus})
+	
+	-- ZOOM SENSITIVITY
+
+	local zoomSensitivityLabel = ui:createText("", Color.White)
+	local function refreshZoomSensitivityLabel()
+		zoomSensitivityLabel.Text = string.format("Zoom sensitivity: %.1f ", System.ZoomSensitivity)
+	end
+	refreshZoomSensitivityLabel()
+
+	local zoomSensitivityMinus = ui:createButton("➖")
+	zoomSensitivityMinus.label = zoomSensitivityLabel
+	zoomSensitivityMinus.onRelease = function(self)
+		System.ZoomSensitivity = math.max(System.ZoomSensitivity - SENSITIVITY_STEP, MIN_SENSITIVITY)
+		refreshZoomSensitivityLabel()
+	end
+
+	local zoomSensitivityPlus = ui:createButton("➕")
+	zoomSensitivityPlus.label = zoomSensitivityLabel
+	zoomSensitivityPlus.onRelease = function(self)
+        System.ZoomSensitivity = math.min(System.ZoomSensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
+		refreshZoomSensitivityLabel()
+	end
+
+	table.insert(rows, {zoomSensitivityLabel, zoomSensitivityMinus, zoomSensitivityPlus})
 
 	-- RENDER QUALITY
 
-	local restartLabel = uikit:createText("⚠️ App restart required! ⚠️", Color.Yellow)
-	local renderQualityRestartRow = {restartLabel}
-	renderQualityRestartRow.hidden = true
-
-	local renderQualityLabel = uikit:createText("", Color.White)
+	local renderQualityLabel = ui:createText("", Color.White)
 	local function refreshRenderQualityLabel()
-		renderQualityLabel.Text = string.format("Render Quality: %d/%d ", requestedRenderQualityTier(), maxRenderQualityTier())
-
-		if requestedRenderQualityTier() ~= currentRenderQualityTier() then
-			renderQualityRestartRow.hidden = false
-		else 
-			renderQualityRestartRow.hidden = true
-		end
+		renderQualityLabel.Text = string.format("Render Quality: %d/%d ", System.RenderQualityTier, System.MaxRenderQualityTier)
 
 		local modal = content:getModalIfContentIsActive()
 		if modal then
@@ -93,38 +106,34 @@ settings.create = function(self, positionCallback, config)
 	end
 	refreshRenderQualityLabel()
 
-	local rqMinus = uikit:createButton("➖")
+	local rqMinus = ui:createButton("➖")
 	rqMinus.label = sensitivityLabel
 	rqMinus.onRelease = function(self)
-		local rq = math.max(requestedRenderQualityTier() - 1, 1)
-        setRenderQualityTier(rq)
+		System.RenderQualityTier = math.max(System.RenderQualityTier - 1, System.MinRenderQualityTier)
 		refreshRenderQualityLabel()
 	end
 
-	local rqPlus = uikit:createButton("➕")
+	local rqPlus = ui:createButton("➕")
 	rqPlus.label = sensitivityLabel
 	rqPlus.onRelease = function(self)
-        local rq = math.min(requestedRenderQualityTier() + 1, maxRenderQualityTier())
-        setRenderQualityTier(rq)
+        System.RenderQualityTier = math.min(System.RenderQualityTier + 1, System.MaxRenderQualityTier)
 		refreshRenderQualityLabel()
 	end
 
-	if areRenderQualityTiersAvailable() == false then
+	if System.RenderQualityTiersAvailable == false then
 		rqMinus:disable()
 		rqPlus:disable()
 	end
 
 	table.insert(rows, {renderQualityLabel, rqMinus, rqPlus})
 
-	table.insert(rows, renderQualityRestartRow)
-
 	-- HAPTIC FEEDBACK
 	local hapticFeedbackToggle
 	if Client.IsMobile then
-		local hapticFeedbackLabel = uikit:createText("Haptic Feedback:", Color.White)
+		local hapticFeedbackLabel = ui:createText("Haptic Feedback:", Color.White)
 
-		hapticFeedbackToggle = uikit:createButton("ON")
-		if isHapticFeedbackOn() then
+		hapticFeedbackToggle = ui:createButton("ON")
+		if System.HapticFeedbackEnabled then
 			hapticFeedbackToggle.Text = "ON"
 			hapticFeedbackToggle:setColor(theme.colorPositive)
 		else
@@ -133,9 +142,9 @@ settings.create = function(self, positionCallback, config)
 		end
 
 		hapticFeedbackToggle.onRelease = function(self)
-			toggleHapticFeedback()
+			System.HapticFeedbackEnabled = not SystemHapticFeedbackEnabled
 
-			if isHapticFeedbackOn() then
+			if System.HapticFeedbackEnabled then
 				hapticFeedbackToggle.Text = "ON"
 				hapticFeedbackToggle:setColor(theme.colorPositive)
 			else
@@ -150,10 +159,10 @@ settings.create = function(self, positionCallback, config)
 	-- FULLSCREEN
 	local fullscreenToggle
 	if Client.OSName == "Windows" then
-		local fullscreenLabel = uikit:createText("Fullscreen:", Color.White)
+		local fullscreenLabel = ui:createText("Fullscreen:", Color.White)
 
-		fullscreenToggle = uikit:createButton("ON")
-		if isFullscreenOn() then
+		fullscreenToggle = ui:createButton("ON")
+		if System.Fullscreen then
 			fullscreenToggle.Text = "ON"
 			fullscreenToggle:setColor(theme.colorPositive)
 		else
@@ -162,9 +171,9 @@ settings.create = function(self, positionCallback, config)
 		end
 
 		fullscreenToggle.onRelease = function(self)
-			toggleFullscreen()
+			System.Fullscreen = not System.Fullscreen
 
-			if isFullscreenOn() then
+			if System.Fullscreen then
 				fullscreenToggle.Text = "ON"
 				fullscreenToggle:setColor(theme.colorPositive)
 			else
@@ -179,16 +188,16 @@ settings.create = function(self, positionCallback, config)
 	-- CACHE
 
 	if _config.clearCache == true then
-		local cacheButton = uikit:createButton("Clear cache")
+		local cacheButton = ui:createButton("Clear cache")
 		cacheButton.onRelease = function(self)
 			local clearCacheContent = modal:createContent()
 			clearCacheContent.title = "Settings"
 			clearCacheContent.icon = "⚙️"
 			
-			local node = uikit:createFrame()
+			local node = ui:createFrame()
 			clearCacheContent.node = node
 
-			local text = uikit:createText("⚠️ Clearing all cached data from visited experiences, are you sure about this?", Color.White)
+			local text = ui:createText("⚠️ Clearing all cached data from visited experiences, are you sure about this?", Color.White)
 			text.pos.X = theme.padding
 			text.pos.Y = theme.padding
 			text:setParent(node)
@@ -200,10 +209,10 @@ settings.create = function(self, positionCallback, config)
 				return Number2(w, h)
 			end
 
-			local yes = uikit:createButton("Yes, delete cache! 💀")
+			local yes = ui:createButton("Yes, delete cache! 💀")
 			yes.onRelease = function()
-				clearCache()
-				local done = uikit:createText("✅ Done!", Color.White)
+				System.ClearCache()
+				local done = ui:createText("✅ Done!", Color.White)
 				clearCacheContent.bottomCenter = {done}
 			end
 			clearCacheContent.bottomCenter = {yes}
@@ -216,7 +225,7 @@ settings.create = function(self, positionCallback, config)
 	-- LOGOUT
 
 	if _config.logout == true then
-		local logoutButton = uikit:createButton("Logout")
+		local logoutButton = ui:createButton("Logout")
 		logoutButton:setColor(theme.colorNegative)
 
 		logoutButton.onRelease = function(self)
@@ -224,10 +233,10 @@ settings.create = function(self, positionCallback, config)
 			logoutContent.title = "Settings"
 			logoutContent.icon = "⚙️"
 			
-			local node = uikit:createFrame()
+			local node = ui:createFrame()
 			logoutContent.node = node
 
-			local text = uikit:createText("Are you sure you want to logout now?", Color.White)
+			local text = ui:createText("Are you sure you want to logout now?", Color.White)
 			text.pos.X = theme.padding
 			text.pos.Y = theme.padding
 			text:setParent(node)
@@ -239,11 +248,11 @@ settings.create = function(self, positionCallback, config)
 				return Number2(w, h)
 			end
 
-			local yes = uikit:createButton("Yes! 🙂")
+			local yes = ui:createButton("Yes! 🙂")
 			yes.onRelease = function()
 				local modal = logoutContent:getModalIfContentIsActive()
 				if modal then modal:close() end
-				logout()
+				System:LogoutAndExit()
 			end
 			logoutContent.bottomCenter = {yes}
 
@@ -263,7 +272,7 @@ settings.create = function(self, positionCallback, config)
 	local refresh = function()
 
 		-- button only used as a min width reference for some buttons
-		local btn = uikit:createButton("OFF")
+		local btn = ui:createButton("OFF")
 		local toggleWidth = btn.Width + theme.padding * 2
 		btn.Text = "➕"
 		local oneEmojiWidth = btn.Width + theme.padding
@@ -273,6 +282,8 @@ settings.create = function(self, positionCallback, config)
 		if fullscreenToggle ~= nil then fullscreenToggle.Width = toggleWidth end
 		sensitivityMinus.Width = oneEmojiWidth
 		sensitivityPlus.Width = oneEmojiWidth
+		zoomSensitivityMinus.Width = oneEmojiWidth
+		zoomSensitivityPlus.Width = oneEmojiWidth
 		rqMinus.Width = oneEmojiWidth
 		rqPlus.Width = oneEmojiWidth
 		
@@ -325,24 +336,12 @@ settings.create = function(self, positionCallback, config)
 		return totalWidth, totalHeight
 	end
 
-	local maxWidth = function()
-		return Screen.Width * 0.5
-	end
-
-	local maxHeight = function()
-		return Screen.Height * 0.5
-	end
-
 	content.idealReducedContentSize  = function(content, width, height)
 		local w, h = refresh()
 		return Number2(w, h)
 	end
 
-	local settingsModal = modal:create(content, maxWidth, maxHeight, positionCallback)
-
-	settings.modal = settingsModal
-
-	return settingsModal
+	return content
 end
 
 return settings

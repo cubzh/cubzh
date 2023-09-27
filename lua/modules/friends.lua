@@ -12,22 +12,41 @@ local mt = {
 }
 setmetatable(friendsWindow, mt)
 
-local uikit = require("uikit")
+local ui = require("uikit")
 local uiAvatar = require("ui_avatar")
 local theme = require("uitheme").current
 local modal = require("modal")
+local api = require("system_api", System)
 
 local lists = { friends = 0, sent = 1, received = 2, search = 3 }
 
-mt.__index.create = function(self, maxWidth, maxHeight, position)
+-- uikit: optional, allows to provide specific instance of uikit
+mt.__index.create = function(self, maxWidth, maxHeight, position, uikit)
+	
+	local ui = uikit or require("uikit")
 
 	local displayedList = lists.friends
 	local displayedCells = 0
 	local responses = {} -- list of friends, requests (sent or received), or search
 	local requests = {}
 	local countRequests = {}
+	local avatarRequestGroups = {}
+
+	local function cancelAvatarRequests()
+		for _, requestGroup in ipairs(avatarRequestGroups) do 
+			for _, r in ipairs(requestGroup) do 
+				r:Cancel()
+			end
+		end
+		avatarRequestGroups = {}
+	end
+
+	local function addAvatarRequests(reqs)
+		table.insert(avatarRequestGroups, reqs)
+	end
 
 	local cancelRequests = function()
+		cancelAvatarRequests()
 		for _, r in ipairs(requests) do 
 			r:Cancel()
 		end
@@ -48,10 +67,19 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 	end
 
 	local content = modal:createContent()
+	local node = ui:createFrame(Color(0,0,0,0))
 
-	local node = uikit:createFrame(Color(0,0,0,0))
+	node.onRemove = function()
+		cancelCountRequests()
+		cancelRequests()
+	end
 
-	local pages = require("pages"):create()
+	content.willResignActive = function(self)
+		cancelCountRequests()
+		cancelRequests()
+	end
+
+	local pages = require("pages"):create(ui)
 	pages:setPageDidChange(function(page) 
 		node:refreshList((page - 1) * node.displayedCells + 1)
 	end)
@@ -65,7 +93,7 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 	local updateFriends = function(callback) -- callback(bool success)
 		cancelRequests() responses = {} node:flushLines()
 
-		requests[#requests + 1] = api:getFriends(function(ok, friends, errMsg)
+		local req = api:getFriends(function(ok, friends, errMsg)
 			if not ok then
 				if callback ~= nil then callback(false) end return
 			end
@@ -73,21 +101,26 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 				if callback ~= nil then callback(true) end
 			else
 				for i, usrID in ipairs(friends) do
-					requests[#requests + 1] = api:getUserInfo(usrID, function(ok, usr)
+					local req = api:getUserInfo(usrID, function(ok, usr)
 						table.insert(responses, usr)
 						if #responses == #friends then
+                            -- sort responses alphabetically
+                            table.sort(responses, function(a, b) return a.username < b.username end)
+                            -- call callback
 							if callback ~= nil then callback(true) end
 						end
 					end)
+					table.insert(requests, req)
 				end
 			end
 		end)
+		table.insert(requests, req)
 	end
 
 	local refreshSentFriendRequests = function(callback) -- callback(bool success)
 		cancelRequests() responses = {} node:flushLines()
 
-		requests[#requests + 1] = api:getSentFriendRequests(function(ok, sentReqs, errMsg)
+		local req = api:getSentFriendRequests(function(ok, sentReqs, errMsg)
 			if not ok then
 				if callback ~= nil then callback(false) end return
 			end
@@ -95,21 +128,23 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 				if callback ~= nil then callback(true) end
 			else
 				for i, usrID in ipairs(sentReqs) do
-					requests[#requests + 1] = api:getUserInfo(usrID, function(ok, usr)
+					local req = api:getUserInfo(usrID, function(ok, usr)
 						table.insert(responses, usr)
 						if #responses == #sentReqs then
 							if callback ~= nil then callback(true) end
 						end
 					end)
+					table.insert(requests, req)
 				end
 			end
 		end)
+		table.insert(requests, req)
 	end
 
 	local refreshReceivedFriendRequests = function(callback) -- callback(bool success)
 		cancelRequests() responses = {} node:flushLines()
 
-		requests[#requests + 1] = api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
+		local req = api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
 			if not ok then
 				if callback ~= nil then callback(false) end return
 			end
@@ -117,15 +152,17 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 				if callback ~= nil then callback(true) end
 			else
 				for i, usrID in ipairs(receivedReqs) do
-					requests[#requests + 1] = api:getUserInfo(usrID, function(ok, usr)
+					local req = api:getUserInfo(usrID, function(ok, usr)
 						table.insert(responses, usr)
 						if #responses == #receivedReqs then
 							if callback ~= nil then callback(true) end
 						end
 					end)
+					table.insert(requests, req)
 				end
 			end
 		end)
+		table.insert(requests, req)
 	end
 
 	local searchFriends = function(searchText, callback)
@@ -133,29 +170,32 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 		responses = {}
 		node:flushLines()
 
-		requests[#requests + 1] = api:searchUser(searchText, function(ok, users, errMsg)
+		local req = api:searchUser(searchText, function(ok, users, errMsg)
 			if not ok then
 				if callback ~= nil then callback(false) end return
 			end
 			responses = users
 			if callback ~= nil then callback(true) end
 		end)
+		table.insert(requests, req)
 	end
 
 	local refreshSentAndReceivedCounts = function()
 		cancelCountRequests()
 
-		countRequests[#countRequests + 1] = api:getSentFriendRequests(function(ok, sentReqs, errMsg)
+		local req = api:getSentFriendRequests(function(ok, sentReqs, errMsg)
 			if not ok then return end
 			local count = #sentReqs
 			node.sentBtn.Text = "Sent" .. (count > 0 and " (" .. count .. ")" or "")
 		end)
+		table.insert(countRequests, req)
 
-		countRequests[#countRequests + 1] = api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
+		req = api:getReceivedFriendRequests(function(ok, receivedReqs, errMsg)
 			if not ok then return end
 			local count = #receivedReqs
 			node.receivedBtn.Text = "Received" .. (count > 0 and " (" .. count .. ")" or "")
 		end)
+		table.insert(countRequests, req)
 	end
 
 	-- Lines
@@ -237,8 +277,10 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 		local head = nil
 		local name = ""
 		if uname then 
-			name = uname 
-			head = uiAvatar:getHead(uname, cellHeight - theme.padding * 2)
+			name = uname
+			local requests 
+			head, requests = uiAvatar:getHead(uname, cellHeight - theme.padding * 2, uikit)
+			addAvatarRequests(requests)
 			head:setParent(cell)
 		else
 			name = "⚠️ <guest>" 
@@ -250,6 +292,7 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 		if head then
 			head.pos.X = theme.padding * 2
 			head.pos.Y = vPos - head.Height * 0.5
+			head.LocalPosition.Z = -20 -- fix layering
 
 			username.pos.X = head.pos.X + head.Width + theme.padding * 2
 			username.pos.Y = vPos - username.Height * 0.5
@@ -318,19 +361,26 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 
 			if displayedList == lists.friends then
 				local joinBtn, chatBtn
-				cell, joinBtn, chatBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "🌎", "💬")
+				local cellUsername = usr.username
+				cell, joinBtn, chatBtn = self:createCellWithUsernameAndButtons(cellHeight, cellUsername, "🌎", "💬")
 				joinBtn:disable()
-				chatBtn:disable()
+				-- chatBtn:disable()
+				chatBtn.onRelease = function(self)
+					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+					-- print("sending poke...")
+					-- api:pokeUser(cellUsername)
+				end
 			elseif displayedList == lists.sent then
 				local removeBtn
 				cell, removeBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌")
 				removeBtn.userID = usr.id
 				removeBtn.onRelease = function(self)
-					requests[#requests + 1] = api:cancelFriendRequest(self.userID, function(ok, errMsg)
+					local req = api:cancelFriendRequest(self.userID, function(ok, errMsg)
 						if not ok then return end
 						refreshSentAndReceivedCounts()
 						node.sentBtn:onRelease()
 					end)
+					table.insert(requests, req)
 				end
 			elseif displayedList == lists.received then
 				local removeBtn, btnAccept
@@ -340,7 +390,7 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 				btnAccept.userID = usr.id
 
 				btnAccept.onRelease = function(self)
-					requests[#requests + 1] = api:replyToFriendRequest(self.userID, true, function(ok, errMsg)
+					local req = api:replyToFriendRequest(self.userID, true, function(ok, errMsg)
 						if not ok then return end
 						refreshSentAndReceivedCounts()
 						refreshReceivedFriendRequests(function(ok)
@@ -348,10 +398,11 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 							node:refreshList()
 						end)
 					end)
+					table.insert(requests, req)
 				end
 
 				removeBtn.onRelease = function(self)
-					requests[#requests + 1] = api:replyToFriendRequest(self.userID, false, function(ok, errMsg)
+					local req = api:replyToFriendRequest(self.userID, false, function(ok, errMsg)
 						if not ok then return end
 						refreshSentAndReceivedCounts()
 						refreshReceivedFriendRequests(function(ok)
@@ -359,23 +410,28 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 							node:refreshList()
 						end)
 					end)
+					table.insert(requests, req)
 				end
 			elseif displayedList == lists.search then
 				local btnAdd
-				cell, btnAdd = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "➕")
+				local logo = usr.hasBeenSentARequest and "✅" or "➕"
+				cell, btnAdd = self:createCellWithUsernameAndButtons(cellHeight, usr.username, logo)
 
+				btnAdd.usr = usr
 				btnAdd.userID = usr.id
 				btnAdd.sending = false
-				btnAdd.onRelease = function(self)
-					if btnAdd.sending then return end
-					btnAdd.sending = true
-					requests[#requests + 1] = api:sendFriendRequest(self.userID, function(ok)
+				btnAdd.onRelease = function(btn)
+					if btn.sending then return end
+					btn.sending = true
+					local req = api:sendFriendRequest(btn.userID, function(ok)
 						if not ok then 
-							btnAdd.sending = false return 
+							btn.sending = false return 
 						end
 						refreshSentAndReceivedCounts()
-						btnAdd.Text = "✅"
+						btn.Text = "✅"
 					end)
+					table.insert(requests, req)
+					btn.usr.hasBeenSentARequest = true
 				end
 			else 
 				break
@@ -390,7 +446,7 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 	end
 
 	-- buttons
-	node.friendsBtn = uikit:createButton("Friends")
+	node.friendsBtn = ui:createButton("Friends")
 	node.friendsBtn.onRelease = function(self)
 		
 		node.friendsBtn:select()
@@ -400,7 +456,8 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 		
 		-- "add friend" button
 		local addFriendBtn = ui:createButton("🔎 Add friend ")
-		addFriendBtn:setColor(theme.colorPositive)
+		addFriendBtn:setColor(theme.colorPositive, Color(255,255,255,254))
+        addFriendBtn:setColorPressed(nil, Color(255,255,255,254))
 		content.bottomRight = {addFriendBtn}
 		addFriendBtn.onRelease = function(self)
 			node.textInput:show()
@@ -426,7 +483,7 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 		end)
 	end
 
-	node.sentBtn = uikit:createButton("Sent")
+	node.sentBtn = ui:createButton("Sent")
 	node.sentBtn.onRelease = function(self)
 
 		node.friendsBtn:unselect()
@@ -446,7 +503,7 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 		end)
 	end
 
-	node.receivedBtn = uikit:createButton("Received")
+	node.receivedBtn = ui:createButton("Received")
 	node.receivedBtn.onRelease = function(self)
 
 		node.friendsBtn:unselect()
@@ -468,15 +525,10 @@ mt.__index.create = function(self, maxWidth, maxHeight, position)
 
 	content.topLeft = {node.friendsBtn, node.sentBtn, node.receivedBtn}
 
-	node.onClose = function(self)
-		cancelCountRequests()
-		cancelRequests()
-	end
-
 	node.friendsBtn:onRelease()
 	refreshSentAndReceivedCounts()
 
-	local _modal = modal:create(content, maxWidth, maxHeight, position)
+	local _modal = modal:create(content, maxWidth, maxHeight, position, uikit)
 	return _modal
 end
 

@@ -5,13 +5,17 @@ A listener callback can return true to capture an event,
 and avoid triggering following ones on the same even name.
 ]]--
 
-local localevent = {
-	-- indexed by event name,
-	-- each entry contains listeners in insertion order
-	listeners = {},
-}
+-- indexed by event name,
+-- each entry contains listeners in insertion order
+listeners = {}
 
-local mt = {
+-- indexed by event name,
+-- each entry contains listeners in insertion order
+systemListeners = {}
+
+localevent = {}
+
+mt = {
 	__tostring = function() return "[LocalEvent]" end,
 	__type = "LocalEvent",
 }
@@ -55,6 +59,15 @@ localevent.name = {
 	OnPlayerJoin = 33,
 	OnPlayerLeave = 34,
 	DidReceiveEvent = 35,
+	InfoMessage = 36,
+	WarningMessage = 37,
+	ErrorMessage = 38,
+	SensitivityUpdated = 39,
+	OnChat = 40,
+	SetChatTextInput = 41,
+	CppMenuStateChanged = 42, -- needed while Cubzh still uses a few C++ menus (code editor & multiline inputs)
+	LocalAvatarUpdate = 43,
+	ReceivedEnvironmentToLaunch = 44,
 }
 localevent.Name = localevent.name
 
@@ -94,9 +107,17 @@ limited[localevent.name.CloseChat] = true
 limited[localevent.name.OnPlayerJoin] = true
 limited[localevent.name.OnPlayerLeave] = true
 limited[localevent.name.DidReceiveEvent] = true
--- limited[localevent.name.InfoMessage] = true
--- limited[localevent.name.WarningMessage] = true
--- limited[localevent.name.ErrorMessage] = true
+limited[localevent.name.InfoMessage] = true
+limited[localevent.name.WarningMessage] = true
+limited[localevent.name.ErrorMessage] = true
+limited[localevent.name.OnChat] = true
+limited[localevent.name.SetChatTextInput] = true
+limited[localevent.name.CppMenuStateChanged] = true
+limited[localevent.name.LocalAvatarUpdate] = true
+
+reservedToSystem = {}
+reservedToSystem[localevent.name.KeyboardInput] = true
+reservedToSystem[localevent.name.LocalAvatarUpdate] = true
 
 mt = {
 	__tostring = function() return "[LocalEventName]" end,
@@ -104,21 +125,45 @@ mt = {
 }
 setmetatable(localevent.name, mt)
 
-localevent.Send = function(self, name, ...)
-	if self ~= localevent then error("LocalEvent:Send should be called with `:`", 2) end
+-- returns true if event has been consumed, false otherwise
+local sendEventToListeners = function(self, listenersArray, name, ...)
+	if self ~= localevent then error("LocalEvent.sendEventToListeners must receive module as 1st argument") end
 
-	local listeners = self.listeners[name]
-	if listeners == nil then return end
+	local listeners = listenersArray[name]
+	if listeners == nil then
+		-- Not a single listener for this event name,
+		-- so the event could not have been consumed.
+		return false
+	end
 
 	local args = {...}
-	local captured
+	local captured = false
 	local listener
 	local err = nil
 	local listenersToRemove = {}
-	for i = 1,#listeners do
+	local isSystemProvided = false
+
+	-- extract `System` from `args` if present
+	if args[1] == System then
+		isSystemProvided = true
+		local newArgs = {}
+		for i, v in ipairs(args) do
+			if i > 1 then
+				table.insert(newArgs, v)
+			end
+		end
+		args = newArgs
+	end
+
+	-- check if System is required to notify listeners
+	if reservedToSystem[name] == true and isSystemProvided == false then
+		error("not allowed to send this localevent without access to System", 3)
+	end
+
+	for i = 1, #listeners do -- why not using ipairs?
 		listener = listeners[i]
 		if not listener.paused then
-			if listener.callback then
+			if listener.callback ~= nil then
 
 				if limited[name] then
 
@@ -129,9 +174,12 @@ localevent.Send = function(self, name, ...)
 
 					if err then
 						-- remove listener + display error
-						-- ⚠️ flag for removal, but remove after loop
-						print("❌", err, "(function disabled)")
-						table.insert(listenersToRemove, listener)
+						if listenersArray ~= systemListeners then
+							table.insert(listenersToRemove, listener)
+							print("❌", err, "(function disabled)")
+						else
+							print("❌", err)
+						end
 						goto continue -- continue for loop
 					end
 
@@ -153,19 +201,43 @@ localevent.Send = function(self, name, ...)
 		listener:Remove()
 	end
 
+	return captured
+end
+
+-- 
+localevent.Send = function(self, name, ...)
+	if self ~= localevent then error("LocalEvent:Send should be called with `:`", 2) end
+
+	local args = {...}
+	local captured = false
+
+	-- dispatch event to SYSTEM listeners
+	captured = sendEventToListeners(self, systemListeners, name, table.unpack(args))
+	if captured == true then
+		return captured
+	end
+
+	-- dispatch event to REGULAR listeners
+	captured = sendEventToListeners(self, listeners, name, table.unpack(args))
+
+	return captured
 end
 localevent.send = localevent.Send
+
+-- ------------------------------
+-- (REGULAR) LISTENER
+-- ------------------------------
 
 local listenerMT = {
 	__tostring = function(t) return "[LocalEventListener]" end,
 	__type = "LocalEventListener",
 	__index = {
-		Remove = function(self) 
-			local listeners = localevent.listeners[self.name]
-			if listeners ~= nil then
-				for i, listener in ipairs(listeners) do 
-					if listener == self then	
-						table.remove(listeners, i)
+		Remove = function(self)
+			local matchingListeners = listeners[self.name]
+			if matchingListeners ~= nil then
+				for i, listener in ipairs(matchingListeners) do 
+					if listener == self then
+						table.remove(matchingListeners, i)
 						break
 					end
 				end
@@ -183,25 +255,69 @@ listenerMT.__index.remove = listenerMT.__index.Remove
 listenerMT.__index.pause = listenerMT.__index.Pause
 listenerMT.__index.resume = listenerMT.__index.Resume
 
+-- metatable for System listeners
+local systemListenerMT = {
+	__tostring = function(t) return "[LocalEventSystemListener]" end,
+	__type = "LocalEventSystemListener",
+	__index = {
+		Remove = function(self)
+			local matchingListeners = systemListeners[self.name]
+			if matchingListeners ~= nil then
+				for i, listener in ipairs(matchingListeners) do 
+					if listener == self then	
+						table.remove(matchingListeners, i)
+						break
+					end
+				end
+			end
+		end,
+		Pause = function(self)
+			self.paused = true
+		end,
+		Resume = function(self)
+			self.paused = false
+		end,
+	},
+}
+systemListenerMT.__index.remove = systemListenerMT.__index.Remove
+systemListenerMT.__index.pause = systemListenerMT.__index.Pause
+systemListenerMT.__index.resume = systemListenerMT.__index.Resume
+
 -- config is optional
 -- config.topPriority can be used to insert listener in front of others
 -- (can't prevent other top priority listeners to be added in front afterwards)
 -- LocalEvent:Listen("eventName", callback, { topPriority = true })
+-- config.system can be set to System table to register listener as "system listener".
 localevent.Listen = function(self, name, callback, config)
 	if self ~= localevent then error("LocalEvent:Listen should be called with `:`", 2) end
 	if type(callback) ~= "function" then error("LocalEvent:Listen - callback should be a function", 2) end
 
 	local listener = {name = name, callback = callback}
-	setmetatable(listener, listenerMT)
 
-	if self.listeners[name] == nil then
-		self.listeners[name] = {}
-	end
+	if config.system == System then
+		setmetatable(listener, systemListenerMT)
 
-	if config.topPriority == true then
-		table.insert(self.listeners[name], 1, listener)
-	else
-		table.insert(self.listeners[name], listener)
+		if systemListeners[name] == nil then
+			systemListeners[name] = {}
+		end
+
+		if config.topPriority == true then
+			table.insert(systemListeners[name], 1, listener)
+		else
+			table.insert(systemListeners[name], listener)
+		end
+	else	
+		setmetatable(listener, listenerMT)
+
+		if listeners[name] == nil then
+			listeners[name] = {}
+		end
+
+		if config.topPriority == true then
+			table.insert(listeners[name], 1, listener)
+		else
+			table.insert(listeners[name], listener)
+		end
 	end
 
 	return listener

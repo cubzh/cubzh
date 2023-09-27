@@ -4,14 +4,14 @@
 
 ---@type alert
 
-local alert = {}
+alert = {}
 
 
 ---@function create Creates an alert
 ---@param text string
 ---@return alertInstance
 ---@code alert:create("Done!")
-alert.create = function(self, text)
+alert.create = function(self, text, config)
 	if self ~= alert then
 		error("alert:create(text): use `:`", 2)
 	end
@@ -19,10 +19,22 @@ alert.create = function(self, text)
 		error("alert:create(text): text should be a string", 2)
 	end
 		
-	local uikit = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
+
+	-- default config
+	local _config = {
+		uikit = require("uikit"), -- allows to provide specific instance of uikit
+	}
+
+	if config then
+		for k, v in pairs(_config) do
+			if type(config[k]) == type(v) then _config[k] = config[k] end
+		end
+	end
+
+	local ui = _config.uikit
 
 	local minButtonWidth = 100
 
@@ -50,74 +62,78 @@ alert.create = function(self, text)
 			modal.updatedPosition = true
 			ease:outElastic(modal, 0.3).LocalPosition = p
 		else
+			ease:cancel(modal)
 			modal.LocalPosition = p
 		end
 	end
 
-	local node = uikit:createFrame(Color(0,0,0,0))
+	local node = ui:createFrame(Color(0,0,0))
 	content.node = node
 
-	local popup = modal:create(content, maxWidth, maxHeight, position)
+	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
 
-	local label = uikit:createText(text, Color.White)
+	local label = ui:createText(text, Color.White)
 	label:setParent(node)
-	node.label = label
 
 	-- buttons are displayed in that order: 
 	-- NEUTRAL, NEGATIVE, POSITIVE
 	-- POSITIVE one is displayed by default but can be hidden setting callback to nil
 
-	node.positiveCallback = nil
-	node.negativeCallback = nil
-	node.neutralCallback = nil
+	local positiveCallback = nil
+	local negativeCallback = nil
+	local neutralCallback = nil
 
-	node.okButton = nil
-	node.negativeButton = nil
-	node.neutralButton = nil
+	local okButton = nil
+	local negativeButton = nil
+	local neutralButton = nil
 
-	node._width = function(self)
+	local computeWidth = function(self)
 		local buttonsWidth = 0
-		if self.okButton then buttonsWidth = self.okButton.Width end
-		if self.negativeButton then 
+		if okButton then buttonsWidth = okButton.Width end
+		if negativeButton then 
 			if buttonsWidth > 0 then buttonsWidth = buttonsWidth + theme.padding end
-			buttonsWidth = buttonsWidth + self.negativeButton.Width
+			buttonsWidth = buttonsWidth + negativeButton.Width
 		end
-		if self.neutralButton then 
+		if neutralButton then 
 			if buttonsWidth > 0 then buttonsWidth = buttonsWidth + theme.padding end
-			buttonsWidth = buttonsWidth + self.neutralButton.Width
+			buttonsWidth = buttonsWidth + neutralButton.Width
 		end
 
 		local width = theme.padding
 
-		if buttonsWidth > self.label.Width + theme.padding * 2 then
+		if buttonsWidth > label.Width + theme.padding * 2 then
 			width = width + buttonsWidth
 		else
-			width = width + self.label.Width + theme.padding * 2
+			width = width + label.Width + theme.padding * 2
 		end
 
 		return width
 	end
 
-	node._height = function(self)
-		if self.okButton ~= nil then
-			return self.label.Height + theme.padding * 2 + self.okButton.Height + theme.paddingBig
-		elseif self.negativeButton then
-			return self.label.Height + theme.padding * 2 + self.negativeButton.Height + theme.paddingBig
-		elseif self.neutralButton then
-			return self.label.Height + theme.padding * 2 + self.neutralButton.Height + theme.paddingBig
+	local computeHeight = function(self)
+		if okButton ~= nil then
+			return label.Height + theme.padding * 2 + okButton.Height + theme.paddingBig
+		elseif negativeButton then
+			return label.Height + theme.padding * 2 + negativeButton.Height + theme.paddingBig
+		elseif neutralButton then
+			return label.Height + theme.padding * 2 + neutralButton.Height + theme.paddingBig
 		else
-			return self.label.Height + theme.padding * 2
+			return label.Height + theme.padding * 2
 		end
 	end
 
 	node.refresh = function(self)
-		self.label.object.MaxWidth = Screen.Width * 0.7
-		self.label.LocalPosition = { self.Width * 0.5 - self.label.Width * 0.5, self.Height - self.label.Height - theme.padding, 0 }
+		label.object.MaxWidth = math.min(500, Screen.Width * 0.7)
+
+		self.Width = computeWidth()
+		self.Height = computeHeight()
+
+		label.LocalPosition = { self.Width * 0.5 - label.Width * 0.5, self.Height - label.Height - theme.padding, 0 }
 
 		local buttons = {}
-		if self.neutralButton then table.insert(buttons, self.neutralButton) end
-		if self.negativeButton then table.insert(buttons, self.negativeButton) end
-		if self.okButton then table.insert(buttons, self.okButton) end
+		if neutralButton then table.insert(buttons, neutralButton) end
+		if negativeButton then table.insert(buttons, negativeButton) end
+		if okButton then table.insert(buttons, okButton) end
 
 		local buttonsWidth = 0
 		for i, button in ipairs(buttons) do
@@ -137,8 +153,8 @@ alert.create = function(self, text)
 		end
 	end
 
----@type alertInstance
---- An [alertInstance] can be used to personalize its buttons.
+	---@type alertInstance
+	--- An [alertInstance] can be used to personalize its buttons.
 
 	---@function setPositiveCallback Sets the text and the callback for positive button. Using nil for the callback removes the button.
 	---@param text string
@@ -158,33 +174,32 @@ alert.create = function(self, text)
 			error("alert:setPositiveCallback(text, callback): callback should be a function or nil", 2)
 		end
 
-		node.positiveCallback = callback
+		positiveCallback = callback
 
 		if callback == nil then
-			if node.okButton ~= nil then
-				node.okButton:remove()
-				node.okButton = nil
+			if okButton ~= nil then
+				okButton:remove()
+				okButton = nil
 			end
 		else
-			if node.okButton then 
-				node.okButton.Text = text
+			if okButton then 
+				okButton.Text = text
 			else
-				local okButton = uikit:createButton(text)
+				okButton = ui:createButton(text)
 				okButton:setColor(Color(161,217,0), Color(45,57,17), false)
 				okButton:setParent(node)
 				okButton.onRelease = function(self)
-					node.positiveCallback()
+					positiveCallback()
 					if popup.close then popup:close() end
 				end
-				node.okButton = okButton
 			end
 
-			node.okButton.Width = nil
-			if node.okButton.Width < minButtonWidth then
-				node.okButton.Width = minButtonWidth
+			okButton.Width = nil
+			if okButton.Width < minButtonWidth then
+				okButton.Width = minButtonWidth
 			end
 		end
-		
+
 		self:refresh()
 	end
 
@@ -209,30 +224,29 @@ alert.create = function(self, text)
 			error("alert:setNegativeCallback(text, callback): callback should be a function or nil", 2)
 		end
 
-		node.negativeCallback = callback
+		negativeCallback = callback
 
 		if callback == nil then
-			if node.negativeButton ~= nil then
-				node.negativeButton:remove()
-				node.negativeButton = nil
+			if negativeButton ~= nil then
+				negativeButton:remove()
+				negativeButton = nil
 			end
 		else
-			if node.negativeButton then 
-				node.negativeButton.Text = text
+			if negativeButton then 
+				negativeButton.Text = text
 			else
-				local negativeButton = uikit:createButton(text)
+				negativeButton = ui:createButton(text)
 				negativeButton:setColor(Color(227,52,55), Color.White, false)
 				negativeButton:setParent(node)
 				negativeButton.onRelease = function(self)
-					node.negativeCallback()
+					negativeCallback()
 					if popup.close then popup:close() end
 				end
-				node.negativeButton = negativeButton
 			end
 
-			node.negativeButton.Width = nil
-			if node.negativeButton.Width < minButtonWidth then
-				node.negativeButton.Width = minButtonWidth
+			negativeButton.Width = nil
+			if negativeButton.Width < minButtonWidth then
+				negativeButton.Width = minButtonWidth
 			end
 		end
 
@@ -259,29 +273,28 @@ alert.create = function(self, text)
 			error("alert:setNeutralCallback(text, callback): callback should be a function or nil", 2)
 		end
 		
-		node.neutralCallback = callback
+		neutralCallback = callback
 
 		if callback == nil then
-			if node.neutralButton ~= nil then
-				node.neutralButton:remove()
-				node.neutralButton = nil
+			if neutralButton ~= nil then
+				neutralButton:remove()
+				neutralButton = nil
 			end
 		else
-			if node.neutralButton then 
-				node.neutralButton.Text = text
+			if neutralButton then 
+				neutralButton.Text = text
 			else
-				local neutralButton = uikit:createButton(text)
+				neutralButton = ui:createButton(text)
 				neutralButton:setParent(node)
 				neutralButton.onRelease = function(self)
-					node.neutralCallback()
+					neutralCallback()
 					if popup.close then popup:close() end
 				end
-				node.neutralButton = neutralButton
 			end
 
-			node.neutralButton.Width = nil
-			if node.neutralButton.Width < minButtonWidth then
-				node.neutralButton.Width = minButtonWidth
+			neutralButton.Width = nil
+			if neutralButton.Width < minButtonWidth then
+				neutralButton.Width = minButtonWidth
 			end
 		end
 

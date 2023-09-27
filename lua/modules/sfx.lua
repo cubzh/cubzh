@@ -60,7 +60,7 @@ local mt = {
 
 setmetatable(sfx, mt)
 
-if AudioListener:GetParent() == nil then
+if AudioListener.GetParent ~= nil and AudioListener:GetParent() == nil then
 	AudioListener:SetParent(Camera)
 end
 
