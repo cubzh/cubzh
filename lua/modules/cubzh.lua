@@ -1,3 +1,12 @@
+--[[
+
+Welcome to the cubzh hub script!
+
+Want to create something like this?
+Go to https://docs.cu.bzh/
+
+]]--
+
 Config = {
 	Items = { 
 		"hub_collosseum_chunk",
