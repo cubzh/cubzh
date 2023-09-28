@@ -3,7 +3,7 @@
 Welcome to the cubzh hub script!
 
 Want to create something like this?
-Goto https://docs.cu.bzh/
+Go to https://docs.cu.bzh/
 
 ]]--
 
