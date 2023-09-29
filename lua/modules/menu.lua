@@ -1,4 +1,3 @@
-
 local menu = {}
 
 ui = require("uikit").systemUI(System)
@@ -867,10 +866,11 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 
 		if avatar.head.shape then
 			avatarModule:setHeadColors(avatar.head.shape,
-										updates.skinColors.skin1,
-										updates.skinColors.skin2,
-										updates.skinColors.nose,
-										updates.skinColors.mouth)
+				updates.skinColors.skin1,
+				updates.skinColors.skin2,
+				updates.skinColors.nose,
+				updates.skinColors.mouth
+			)
 		end
 	end
 
