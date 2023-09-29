@@ -1,6 +1,4 @@
---[[
-wip_modal module handles the "Work in Progress" modal.
-]]--
+-- wip_modal module handles the "Work in Progress" modal.
 
 local modal = {}
 
