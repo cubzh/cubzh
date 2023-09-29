@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gosimple/slug"
-	yaml "gopkg.in/yaml.v2"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/gosimple/slug"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -21,8 +22,8 @@ const (
 	templateDir      = "/www/templates"
 	templateFile     = "page.tmpl"
 	templateFileV2   = "pageV2.tmpl"
-	serverCertFile   = "/certs/server-cert-and-ca.pem"
-	serverKeyFile    = "/certs/server-key.pem"
+	serverCertFile   = "/cubzh/certs/cu.bzh.chained.crt"
+	serverKeyFile    = "/cubzh/certs/cu.bzh.key"
 )
 
 var (

@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:1.20.4-alpine3.18 AS build-env
+FROM --platform=linux/amd64 golang:1.21.1-alpine3.18 AS build-env
 
 RUN apk update && apk add --no-cache \ 
 	git \

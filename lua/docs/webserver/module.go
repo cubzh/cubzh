@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	// "github.com/gosimple/slug"
 )
 
 // Module documents a module,

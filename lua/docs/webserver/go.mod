@@ -1,6 +1,6 @@
 module cu.bzh/lua/docs/webserver
 
-go 1.18
+go 1.20
 
 require (
 	github.com/gosimple/slug v1.13.1
