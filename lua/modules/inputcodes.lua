@@ -120,6 +120,7 @@ local inputCodes = {
 	SPACE = 117,
 	modifiers = {
 		Option = 1,
+		Alt = 1, --Same as options, for windows coders
 		Ctrl = 2,
 		Shift = 4,
 		Cmd = 8
