@@ -69,16 +69,16 @@ bool chunk_is_dirty(const Chunk *chunk);
 const int3 *chunk_get_pos(const Chunk *chunk);
 int chunk_get_nb_blocks(const Chunk *chunk);
 
-bool chunk_addBlock(Chunk *chunk,
-                    Block *block,
-                    const CHUNK_COORDS_INT_T x,
-                    const CHUNK_COORDS_INT_T y,
-                    const CHUNK_COORDS_INT_T z);
+bool chunk_add_block(Chunk *chunk,
+                     const Block block,
+                     const CHUNK_COORDS_INT_T x,
+                     const CHUNK_COORDS_INT_T y,
+                     const CHUNK_COORDS_INT_T z);
 
-bool chunk_removeBlock(Chunk *chunk,
-                       const CHUNK_COORDS_INT_T x,
-                       const CHUNK_COORDS_INT_T y,
-                       const CHUNK_COORDS_INT_T z);
+bool chunk_remove_block(Chunk *chunk,
+                        const CHUNK_COORDS_INT_T x,
+                        const CHUNK_COORDS_INT_T y,
+                        const CHUNK_COORDS_INT_T z);
 
 bool chunk_paint_block(Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,

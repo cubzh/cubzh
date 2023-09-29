@@ -141,16 +141,16 @@ struct _Shape {
 void _shape_chunk_enqueue_refresh(Shape *shape, Chunk *c);
 void _shape_chunk_check_neighbors_dirty(Shape *shape, const Chunk *chunk, const int3 *block_pos);
 static bool _shape_add_block(Shape *shape,
+                             const Block block,
                              SHAPE_COORDS_INT_T x,
                              SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             Block **added_or_existing_block);
+                             SHAPE_COORDS_INT_T z);
 static bool _add_block_in_chunks(Index3D *chunks,
-                                 Block *newBlock,
+                                 const Block block,
                                  const SHAPE_COORDS_INT_T x,
                                  const SHAPE_COORDS_INT_T y,
                                  const SHAPE_COORDS_INT_T z,
-                                 int3 *block_ldfPos,
+                                 int3 *block_coords_out,
                                  bool *chunkAdded,
                                  Chunk **added_or_existing_chunk,
                                  Block **added_or_existing_block);
@@ -889,7 +889,6 @@ bool shape_add_block_with_color(Shape *shape,
                                 const bool resizeIfNeeded,
                                 const bool applyOffset,
                                 bool useDefaultColor) {
-    Block *block = NULL;
 
     if (resizeIfNeeded) {
         // returns if no need to make space
@@ -904,19 +903,19 @@ bool shape_add_block_with_color(Shape *shape,
         shape_block_lua_to_internal(shape, &x, &y, &z);
     }
 
-    const bool added = _shape_add_block(shape, x, y, z, &block);
+    // if caller wants to express colorIndex as a default color, we translate it here
+    if (useDefaultColor) {
+        color_palette_check_and_add_default_color_2021(shape->palette, colorIndex, &colorIndex);
+    }
+
+    Block block = (Block){colorIndex};
+    const bool added = _shape_add_block(shape, block, x, y, z);
 
     if (added) {
-        // if caller wants to express colorIndex as a default color, we translate it here
-        if (useDefaultColor) {
-            color_palette_check_and_add_default_color_2021(shape->palette, colorIndex, &colorIndex);
-        } else {
-            color_palette_increment_color(shape->palette, colorIndex);
-        }
+        color_palette_increment_color(shape->palette, colorIndex);
 
-        block_set_color_index(block, colorIndex);
         if (shape->octree != NULL) {
-            octree_set_element(shape->octree, (void *)block, (size_t)x, (size_t)y, (size_t)z);
+            octree_set_element(shape->octree, (void *)&block, (size_t)x, (size_t)y, (size_t)z);
         }
 
         if (shape->lightingData != NULL) {
@@ -980,10 +979,10 @@ bool shape_remove_block(Shape *shape,
         if (blockBefore != NULL) {
             *blockBefore = block_new_copy(block);
         }
-        removed = chunk_removeBlock(chunk,
-                                    (CHUNK_COORDS_INT_T)posInChunk.x,
-                                    (CHUNK_COORDS_INT_T)posInChunk.y,
-                                    (CHUNK_COORDS_INT_T)posInChunk.z);
+        removed = chunk_remove_block(chunk,
+                                     (CHUNK_COORDS_INT_T)posInChunk.x,
+                                     (CHUNK_COORDS_INT_T)posInChunk.y,
+                                     (CHUNK_COORDS_INT_T)posInChunk.z);
 
         if (removed) {
             shape->nbBlocks--;
@@ -1679,7 +1678,6 @@ void shape_make_space(Shape *const shape,
     if (chunks != NULL) {
         // copy with offsets to blocks position
         const Block *block = NULL;
-        Block *block_copy = NULL;
         SHAPE_COORDS_INT_T ox, oy, oz;
         Chunk *chunk = NULL;
         bool chunkAdded = false;
@@ -1706,18 +1704,13 @@ void shape_make_space(Shape *const shape,
 
                         vx_assert(octree != NULL);
 
-                        block_copy = block_new_copy(block);
-
-                        // block is again copied within octree_set_element
                         octree_set_element(octree,
-                                           (const void *)block_copy,
+                                           (const void *)block,
                                            (size_t)ox,
                                            (size_t)oy,
                                            (size_t)oz);
-
-                        // block_copy is stored here, its memory is handled by responsible chunk
                         _add_block_in_chunks(chunks,
-                                             block_copy,
+                                             *block,
                                              ox,
                                              oy,
                                              oz,
@@ -2191,9 +2184,9 @@ void shape_get_chunk_and_position_within(const Shape *shape,
     static int3 chunk_ldfPos;
 
     int3_set(&chunk_ldfPos,
-             pos->x >> CHUNK_WIDTH_SQRT,
-             pos->y >> CHUNK_HEIGHT_SQRT,
-             pos->z >> CHUNK_DEPTH_SQRT);
+             pos->x >> CHUNK_SIZE_SQRT,
+             pos->y >> CHUNK_SIZE_SQRT,
+             pos->z >> CHUNK_SIZE_SQRT);
 
     if (chunk_pos != NULL) {
         chunk_pos->x = chunk_ldfPos.x;
@@ -2202,9 +2195,9 @@ void shape_get_chunk_and_position_within(const Shape *shape,
     }
 
     if (pos_in_chunk != NULL) {
-        pos_in_chunk->x = pos->x & CHUNK_WIDTH_MINUS_ONE;
-        pos_in_chunk->y = pos->y & CHUNK_HEIGHT_MINUS_ONE;
-        pos_in_chunk->z = pos->z & CHUNK_DEPTH_MINUS_ONE;
+        pos_in_chunk->x = pos->x & CHUNK_SIZE_MINUS_ONE;
+        pos_in_chunk->y = pos->y & CHUNK_SIZE_MINUS_ONE;
+        pos_in_chunk->z = pos->z & CHUNK_SIZE_MINUS_ONE;
     }
 
     *chunk = (Chunk *)index3d_get(shape->chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z);
@@ -2265,9 +2258,9 @@ void shape_refresh_vertices(Shape *shape) {
             const int3 *pos = chunk_get_pos(c);
             int3 *ldfPos = int3_pool_pop();
             int3_set(ldfPos,
-                     pos->x >> CHUNK_WIDTH_SQRT,
-                     pos->y >> CHUNK_HEIGHT_SQRT,
-                     pos->z >> CHUNK_DEPTH_SQRT);
+                     pos->x >> CHUNK_SIZE_SQRT,
+                     pos->y >> CHUNK_SIZE_SQRT,
+                     pos->z >> CHUNK_SIZE_SQRT);
             index3d_remove(shape->chunks, ldfPos->x, ldfPos->y, ldfPos->z, NULL);
             int3_pool_recycle(ldfPos);
 
@@ -2632,20 +2625,12 @@ bool shape_point_overlap(const Shape *s, const float3 *world) {
     float3 model;
     transform_utils_position_wtl(t, world, &model);
 
-    void *element = NULL;
+    Block *b = (Block *)octree_get_element_without_checking(s->octree,
+                                                            (size_t)model.x,
+                                                            (size_t)model.y,
+                                                            (size_t)model.z);
 
-    octree_get_element_or_empty_value(s->octree,
-                                      (size_t)model.x,
-                                      (size_t)model.y,
-                                      (size_t)model.z,
-                                      &element,
-                                      NULL);
-
-    if (element != NULL) {
-        return true; // collides!
-    }
-
-    return false;
+    return block_is_solid(b);
 }
 
 bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
@@ -3320,32 +3305,28 @@ void _shape_chunk_check_neighbors_dirty(Shape *shape, const Chunk *chunk, const 
 
     if (block_pos->x == 0) {
         _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, NX));
-    } else if (block_pos->x == CHUNK_WIDTH_MINUS_ONE) {
+    } else if (block_pos->x == CHUNK_SIZE_MINUS_ONE) {
         _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, X));
     }
 
     if (block_pos->y == 0) {
         _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, NY));
-    } else if (block_pos->y == CHUNK_HEIGHT_MINUS_ONE) {
+    } else if (block_pos->y == CHUNK_SIZE_MINUS_ONE) {
         _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, Y));
     }
 
     if (block_pos->z == 0) {
         _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, NZ));
-    } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
+    } else if (block_pos->z == CHUNK_SIZE_MINUS_ONE) {
         _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, Z));
     }
 }
 
 static bool _shape_add_block(Shape *shape,
+                             const Block block,
                              SHAPE_COORDS_INT_T x,
                              SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             Block **added_or_existing_block) {
-
-    if (added_or_existing_block != NULL) {
-        *added_or_existing_block = NULL;
-    }
+                             SHAPE_COORDS_INT_T z) {
 
     if (_is_out_of_maximum_shape_size(x, y, z)) {
         return false;
@@ -3366,18 +3347,18 @@ static bool _shape_add_block(Shape *shape,
         return false;
     }
 
-    int3 block_ldfPos;
+    int3 block_coords;
     Chunk *chunk = NULL;
     bool chunkAdded = false;
     bool blockAdded = _add_block_in_chunks(shape->chunks,
-                                           NULL,
+                                           block,
                                            x,
                                            y,
                                            z,
-                                           &block_ldfPos,
+                                           &block_coords,
                                            &chunkAdded,
                                            &chunk,
-                                           added_or_existing_block);
+                                           NULL);
 
     if (chunkAdded) {
         shape->nbChunks++;
@@ -3386,7 +3367,7 @@ static bool _shape_add_block(Shape *shape,
     if (blockAdded) {
         shape->nbBlocks++;
         _shape_chunk_enqueue_refresh(shape, chunk);
-        _shape_chunk_check_neighbors_dirty(shape, chunk, &block_ldfPos);
+        _shape_chunk_check_neighbors_dirty(shape, chunk, &block_coords);
 
         shape_expand_box(shape, x, y, z);
     }
@@ -3395,39 +3376,32 @@ static bool _shape_add_block(Shape *shape,
 }
 
 bool _add_block_in_chunks(Index3D *chunks,
-                          Block *newBlock,
+                          const Block block,
                           const SHAPE_COORDS_INT_T x,
                           const SHAPE_COORDS_INT_T y,
                           const SHAPE_COORDS_INT_T z,
-                          int3 *block_ldfPos_out,
+                          int3 *block_coords_out,
                           bool *chunkAdded,
                           Chunk **added_or_existing_chunk,
                           Block **added_or_existing_block) {
 
-    // declaring variables here instead of using pool because
-    // of multi thread access issues.
-    int3 chunk_ldfPos;
-    // position within chunk
-    int3 block_ldfPos;
+    int3 chunk_coords;
+    int3 block_coords;
 
-    // see if there's a chunk ready for that block (ldf: left-down-front)
-    int3_set(&chunk_ldfPos, x >> CHUNK_WIDTH_SQRT, y >> CHUNK_HEIGHT_SQRT, z >> CHUNK_DEPTH_SQRT);
-
-    Chunk *chunk = (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z);
+    // see if there's a chunk ready for that block
+    int3_set(&chunk_coords, x >> CHUNK_SIZE_SQRT, y >> CHUNK_SIZE_SQRT, z >> CHUNK_SIZE_SQRT);
+    Chunk *chunk = (Chunk *)index3d_get(chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z);
 
     // insert new chunk if needed
     if (chunk == NULL) {
-        // it's necessary to store chunk position, as a chunk should be able
-        // to generate its face vertices without external context
-        chunk = chunk_new((SHAPE_COORDS_INT_T)chunk_ldfPos.x * CHUNK_WIDTH,
-                          (SHAPE_COORDS_INT_T)chunk_ldfPos.y * CHUNK_HEIGHT,
-                          (SHAPE_COORDS_INT_T)chunk_ldfPos.z * CHUNK_DEPTH);
-        index3d_insert(chunks, chunk, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z, NULL);
-
-        // printf("insert chunk at: %d, %d, %d\n", chunk_ldfPos->x, chunk_ldfPos->y,
-        // chunk_ldfPos->z);
-
+        chunk = chunk_new((SHAPE_COORDS_INT_T)chunk_coords.x * CHUNK_SIZE,
+                          (SHAPE_COORDS_INT_T)chunk_coords.y * CHUNK_SIZE,
+                          (SHAPE_COORDS_INT_T)chunk_coords.z * CHUNK_SIZE);
+        index3d_insert(chunks, chunk, chunk_coords.x, chunk_coords.y, chunk_coords.z, NULL);
         chunk_move_in_neighborhood(chunks, chunk);
+
+        // printf("insert chunk at: %d, %d, %d\n", chunk_coords->x, chunk_coords->y,
+        // chunk_coords->z);
 
         *chunkAdded = true;
     } else {
@@ -3438,43 +3412,26 @@ bool _add_block_in_chunks(Index3D *chunks,
         *added_or_existing_chunk = chunk;
     }
 
-    int3_set(&block_ldfPos,
-             x & CHUNK_WIDTH_MINUS_ONE,
-             y & CHUNK_HEIGHT_MINUS_ONE,
-             z & CHUNK_DEPTH_MINUS_ONE);
+    int3_set(&block_coords,
+             x & CHUNK_SIZE_MINUS_ONE,
+             y & CHUNK_SIZE_MINUS_ONE,
+             z & CHUNK_SIZE_MINUS_ONE);
 
-    if (block_ldfPos_out != NULL) {
-        int3_set(block_ldfPos_out, block_ldfPos.x, block_ldfPos.y, block_ldfPos.z);
+    if (block_coords_out != NULL) {
+        int3_set(block_coords_out, block_coords.x, block_coords.y, block_coords.z);
     }
 
-    Block *block = chunk_get_block(chunk,
-                                   (CHUNK_COORDS_INT_T)block_ldfPos.x,
-                                   (CHUNK_COORDS_INT_T)block_ldfPos.y,
-                                   (CHUNK_COORDS_INT_T)block_ldfPos.z);
-
-    // there's already a block, we can't add one
-    if (block != NULL) {
-        if (added_or_existing_block != NULL) {
-            *added_or_existing_block = block;
-        }
-        return false;
-    }
-
-    block = newBlock != NULL ? newBlock : block_new();
-    bool ok = chunk_addBlock(chunk,
-                             block,
-                             (CHUNK_COORDS_INT_T)block_ldfPos.x,
-                             (CHUNK_COORDS_INT_T)block_ldfPos.y,
-                             (CHUNK_COORDS_INT_T)block_ldfPos.z);
-    if (ok == false) {
-        return false;
-    }
+    bool added = chunk_add_block(chunk,
+                                 block,
+                                 (CHUNK_COORDS_INT_T)block_coords.x,
+                                 (CHUNK_COORDS_INT_T)block_coords.y,
+                                 (CHUNK_COORDS_INT_T)block_coords.z);
 
     if (added_or_existing_block != NULL) {
-        *added_or_existing_block = block;
+        *added_or_existing_block = chunk_get_block_2(chunk, &block_coords);
     }
 
-    return true;
+    return added;
 }
 
 bool _has_allocated_size(const Shape *s) {
@@ -3591,12 +3548,12 @@ void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COO
         chunkMax.z += 1;
 
         // find corresponding chunks and set dirty
-        chunkMin.x /= CHUNK_WIDTH;
-        chunkMax.x /= CHUNK_WIDTH;
-        chunkMin.y /= CHUNK_HEIGHT;
-        chunkMax.y /= CHUNK_HEIGHT;
-        chunkMin.z /= CHUNK_DEPTH;
-        chunkMax.z /= CHUNK_DEPTH;
+        chunkMin.x /= CHUNK_SIZE;
+        chunkMax.x /= CHUNK_SIZE;
+        chunkMin.y /= CHUNK_SIZE;
+        chunkMax.y /= CHUNK_SIZE;
+        chunkMin.z /= CHUNK_SIZE;
+        chunkMax.z /= CHUNK_SIZE;
 
         Chunk *chunk;
         for (int x = chunkMin.x; x <= chunkMax.x; x++) {

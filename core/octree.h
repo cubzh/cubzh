@@ -50,7 +50,7 @@ void *octree_get_element_without_checking(const Octree *octree,
                                           const size_t y,
                                           const size_t z);
 
-// Useful when storing values in empty nodes.
+// Useful if using octree to store arbitrary values in empty nodes ;
 // if node is empty, *element will be set to NULL and *empty will point
 // to what's currently stored at (x, y, z).
 void octree_get_element_or_empty_value(const Octree *octree,

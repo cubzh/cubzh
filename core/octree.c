@@ -434,11 +434,10 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
         _octree_set_element(octree, emptyElement, x, y, z);
     }
 
-    // printf("🔥 octree_remove_element not implemented\n");
     return true;
 }
 
-// looks level per level to see if the element and returns it if it does, NULL otherwise.
+// looks level per level to see if the element exists and returns it if it does, NULL otherwise.
 void *octree_get_element(const Octree *octree, const size_t x, const size_t y, const size_t z) {
 
     // check if element exists

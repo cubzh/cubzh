@@ -40,13 +40,13 @@ void test_chunk_new(void) {
 
 // Create a chunk and 3 differents blocks and place them in the chunk at different coords. Check if
 // the function is played and if the block is at the right spot Also check all of these function :
-// --- chunk_addBlock()
+// --- chunk_add_block()
 // --- chunk_paint_block()
 // --- chunk_get_block()
 // --- chunk_get_block_2()
 // --- chunk_get_block_pos()
 // --- chunk_get_bounding_box()
-// --- chunk_removeBlock()
+// --- chunk_remove_block()
 /////
 void test_chunk_Block(void) {
     Chunk *chunk = chunk_new(10, 8, 5);
@@ -54,16 +54,20 @@ void test_chunk_Block(void) {
     Block *BBlock = block_new_air();
     Block *CBlock = block_new_with_color(155);
 
-    // chunk_addBlock()
-    TEST_CHECK(chunk_addBlock(chunk, ABlock, 4, 4, 4) == true);
-    TEST_CHECK(chunk_addBlock(chunk, BBlock, 5, 5, 5) == true);
-    TEST_CHECK(chunk_addBlock(chunk, CBlock, 6, 6, 6) == true);
-    TEST_CHECK(chunk_addBlock(chunk, ABlock, 5, 5, 5) == false);
+    // chunk_add_block()
+    TEST_CHECK(chunk_add_block(chunk, *ABlock, 4, 4, 4) == true);
+    TEST_CHECK(chunk_add_block(chunk, *BBlock, 5, 5, 5) ==
+               false); // adding an air block should do nothing
+    TEST_CHECK(chunk_add_block(chunk, *CBlock, 6, 6, 6) == true);
+    TEST_CHECK(chunk_add_block(chunk, *ABlock, 4, 4, 4) == false);
+
+    block_free(ABlock);
+    block_free(BBlock);
+    block_free(CBlock);
 
     // chunk_paint_block()
     // Paint the blocks with differents colors
     TEST_CHECK(chunk_paint_block(chunk, 4, 4, 4, 1) == true);
-    TEST_CHECK(chunk_paint_block(chunk, 5, 5, 5, 2) == true);
     TEST_CHECK(chunk_paint_block(chunk, 6, 6, 6, 3) == true);
     TEST_CHECK(chunk_paint_block(chunk, 0, 0, 0, 0) == false);
 
@@ -72,8 +76,6 @@ void test_chunk_Block(void) {
     // Also check if the previous function of paint worked
     Block *check = chunk_get_block(chunk, 4, 4, 4);
     TEST_CHECK(check->colorIndex == 1);
-    check = chunk_get_block(chunk, 5, 5, 5);
-    TEST_CHECK(check->colorIndex == 2);
     check = chunk_get_block(chunk, 6, 6, 6);
     TEST_CHECK(check->colorIndex == 3);
     check = chunk_get_block(chunk, 11, 9, 6);
@@ -83,9 +85,6 @@ void test_chunk_Block(void) {
     int3 pos = {4, 4, 4};
     check = chunk_get_block_2(chunk, &pos);
     TEST_CHECK(check->colorIndex == 1);
-    int3_set(&pos, 5, 5, 5);
-    check = chunk_get_block_2(chunk, &pos);
-    TEST_CHECK(check->colorIndex == 2);
     int3_set(&pos, 6, 6, 6);
     check = chunk_get_block_2(chunk, &pos);
     TEST_CHECK(check->colorIndex == 3);
@@ -94,7 +93,7 @@ void test_chunk_Block(void) {
     TEST_CHECK(check == NULL);
 
     int NBBlocks = chunk_get_nb_blocks(chunk);
-    TEST_CHECK(NBBlocks == 3);
+    TEST_CHECK(NBBlocks == 2);
 
     // chunk_get_block_pos()
     SHAPE_COORDS_INT3_T coords = {11, 9, 6};
@@ -121,23 +120,18 @@ void test_chunk_Block(void) {
     chunk_get_bounding_box(chunk, &minX, &maxX, &minY, &maxY, &minZ, &maxZ);
     TEST_CHECK(minX == 4 && minY == 4 && minZ == 4 && maxX == 7 && maxY == 7 && maxZ == 7);
 
-    // chunk_removeBlock()
-    TEST_CHECK(chunk_removeBlock(chunk, 4, 4, 4) == true);
+    // chunk_remove_block()
+    TEST_CHECK(chunk_remove_block(chunk, 4, 4, 4) == true);
     check = chunk_get_block(chunk, 4, 4, 4);
     TEST_CHECK(check == NULL);
     NBBlocks = chunk_get_nb_blocks(chunk);
-    TEST_CHECK(NBBlocks == 2);
-    TEST_CHECK(chunk_removeBlock(chunk, 5, 5, 5) == true);
-    check = chunk_get_block(chunk, 5, 5, 5);
-    TEST_CHECK(check == NULL);
-    NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 1);
-    TEST_CHECK(chunk_removeBlock(chunk, 6, 6, 6) == true);
+    TEST_CHECK(chunk_remove_block(chunk, 6, 6, 6) == true);
     check = chunk_get_block(chunk, 6, 6, 6);
     TEST_CHECK(check == NULL);
     NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 0);
-    TEST_CHECK(chunk_removeBlock(chunk, 0, 0, 0) == false);
+    TEST_CHECK(chunk_remove_block(chunk, 0, 0, 0) == false);
 
     chunk_free(chunk, false);
 }

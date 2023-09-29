@@ -22,8 +22,8 @@ struct _Chunk {
     Chunk *neighbors[CHUNK_NEIGHBORS_COUNT]; /* 8 bytes */
     // position of chunk in world's grid
     int3 *pos; /* 8 bytes */
-    // 3d grid containing blocks contained in chunk
-    Block *blocks[CHUNK_WIDTH][CHUNK_DEPTH][CHUNK_HEIGHT]; /* 8 bytes */ // TODO: octree
+    // octree partitioning this chunk's blocks
+    Octree *octree; /* 8 bytes */
     // first opaque/transparent vbma reserved for that chunk, this can be chained across several vb
     VertexBufferMemArea *vbma_opaque;      /* 8 bytes */
     VertexBufferMemArea *vbma_transparent; /* 8 bytes */
@@ -37,6 +37,8 @@ struct _Chunk {
 };
 
 // MARK: private functions prototypes
+
+Octree *_chunk_new_octree(void);
 
 void _chunk_hello_neighbor(Chunk *newcomer,
                            Neighbor newcomerLocation,
@@ -77,17 +79,10 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
     if (chunk == NULL) {
         return NULL;
     }
+    chunk->octree = _chunk_new_octree();
     chunk->pos = int3_new(x, y, z);
     chunk->dirty = false;
     chunk->nbBlocks = 0;
-
-    for (int xi = 0; xi < CHUNK_WIDTH; xi++) {
-        for (int zi = 0; zi < CHUNK_DEPTH; zi++) {
-            for (int yi = 0; yi < CHUNK_HEIGHT; yi++) {
-                chunk->blocks[xi][zi][yi] = NULL;
-            }
-        }
-    }
 
     for (int i = 0; i < CHUNK_NEIGHBORS_COUNT; i++) {
         chunk->neighbors[i] = NULL;
@@ -104,6 +99,8 @@ void chunk_free(Chunk *chunk, bool updateNeighbors) {
         chunk_leave_neighborhood(chunk);
     }
 
+    octree_free(chunk->octree);
+
     if (chunk->vbma_opaque != NULL) {
         vertex_buffer_mem_area_flush(chunk->vbma_opaque);
     }
@@ -113,17 +110,6 @@ void chunk_free(Chunk *chunk, bool updateNeighbors) {
         vertex_buffer_mem_area_flush(chunk->vbma_transparent);
     }
     chunk->vbma_transparent = NULL;
-
-    // free blocks
-    Block *b;
-    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_WIDTH; x++) {
-        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_DEPTH; z++) {
-            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_HEIGHT; y++) {
-                b = chunk_get_block(chunk, x, y, z);
-                block_free(b);
-            }
-        }
-    }
 
     int3_free(chunk->pos);
 
@@ -150,36 +136,41 @@ int chunk_get_nb_blocks(const Chunk *chunk) {
     return chunk->nbBlocks;
 }
 
-bool chunk_addBlock(Chunk *chunk,
-                    Block *block,
-                    const CHUNK_COORDS_INT_T x,
-                    const CHUNK_COORDS_INT_T y,
-                    const CHUNK_COORDS_INT_T z) {
-    if (block == NULL) {
+bool chunk_add_block(Chunk *chunk,
+                     const Block block,
+                     const CHUNK_COORDS_INT_T x,
+                     const CHUNK_COORDS_INT_T y,
+                     const CHUNK_COORDS_INT_T z) {
+    if (block_is_solid(&block) == false) {
         return false;
     }
-    if (chunk->blocks[x][z][y] != NULL) {
-        // if chunk already contains a block at the given coordinates,
-        // do nothing and return false
-        return false;
-    }
-    chunk->blocks[x][z][y] = block;
-    chunk->nbBlocks += 1;
-    return true;
-}
 
-bool chunk_removeBlock(Chunk *chunk,
-                       const CHUNK_COORDS_INT_T x,
-                       const CHUNK_COORDS_INT_T y,
-                       const CHUNK_COORDS_INT_T z) {
-    Block *block = chunk->blocks[x][z][y];
-    if (block != NULL) {
-        free(block);
-        chunk->blocks[x][z][y] = NULL;
-        chunk->nbBlocks -= 1;
+    Block *b = (Block *)
+        octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
+    if (block_is_solid(b)) {
+        return false;
+    } else {
+        octree_set_element(chunk->octree, &block, (size_t)x, (size_t)y, (size_t)z);
+        chunk->nbBlocks++;
         return true;
     }
-    return false;
+}
+
+bool chunk_remove_block(Chunk *chunk,
+                        const CHUNK_COORDS_INT_T x,
+                        const CHUNK_COORDS_INT_T y,
+                        const CHUNK_COORDS_INT_T z) {
+
+    Block *b = (Block *)
+        octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
+    if (block_is_solid(b)) {
+        block_set_color_index(b, SHAPE_COLOR_INDEX_AIR_BLOCK);
+        octree_remove_element(chunk->octree, (size_t)x, (size_t)y, (size_t)z, NULL);
+        chunk->nbBlocks--;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool chunk_paint_block(Chunk *chunk,
@@ -187,16 +178,17 @@ bool chunk_paint_block(Chunk *chunk,
                        const CHUNK_COORDS_INT_T y,
                        const CHUNK_COORDS_INT_T z,
                        const SHAPE_COLOR_INDEX_INT_T colorIndex) {
-    Block *block = chunk->blocks[x][z][y];
-    if (block != NULL) {
-        block_set_color_index(block, colorIndex);
+
+    Block *b = (Block *)
+        octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
+    if (block_is_solid(b)) {
+        block_set_color_index(b, colorIndex);
         return true;
+    } else {
+        return false;
     }
-    return false;
 }
 
-// returns block positioned within chunk
-// looking for a block outside will return NULL
 Block *chunk_get_block(const Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,
                        const CHUNK_COORDS_INT_T y,
@@ -205,14 +197,16 @@ Block *chunk_get_block(const Chunk *chunk,
         return NULL;
     }
 
-    if (x < 0 || x > CHUNK_WIDTH - 1)
+    if (x < 0 || x > CHUNK_SIZE_MINUS_ONE)
         return NULL;
-    if (y < 0 || y > CHUNK_HEIGHT - 1)
+    if (y < 0 || y > CHUNK_SIZE_MINUS_ONE)
         return NULL;
-    if (z < 0 || z > CHUNK_DEPTH - 1)
+    if (z < 0 || z > CHUNK_SIZE_MINUS_ONE)
         return NULL;
 
-    return chunk->blocks[x][z][y];
+    Block *b = (Block *)
+        octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
+    return block_is_solid(b) ? b : NULL;
 }
 
 Block *chunk_get_block_2(const Chunk *chunk, const int3 *pos) {
@@ -241,9 +235,9 @@ void chunk_get_bounding_box(const Chunk *chunk,
                             CHUNK_COORDS_INT_T *min_z,
                             CHUNK_COORDS_INT_T *max_z) {
 
-    *min_x = CHUNK_WIDTH - 1;
-    *min_y = CHUNK_HEIGHT - 1;
-    *min_z = CHUNK_DEPTH - 1;
+    *min_x = CHUNK_SIZE_MINUS_ONE;
+    *min_y = CHUNK_SIZE_MINUS_ONE;
+    *min_z = CHUNK_SIZE_MINUS_ONE;
     *max_x = 0;
     *max_y = 0;
     *max_z = 0;
@@ -251,9 +245,9 @@ void chunk_get_bounding_box(const Chunk *chunk,
     Block *b;
     bool at_least_one_block = false;
 
-    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_WIDTH; x++) {
-        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_DEPTH; z++) {
-            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_HEIGHT; y++) {
+    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_SIZE; x++) {
+        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_SIZE; z++) {
+            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_SIZE; y++) {
                 b = chunk_get_block(chunk, x, y, z);
                 if (b != NULL) {
                     at_least_one_block = true;
@@ -540,9 +534,9 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
     size_t posX = 0, posY = 0, posZ = 0;
 
-    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_WIDTH; x++) {
-        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_DEPTH; z++) {
-            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_HEIGHT; y++) {
+    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_SIZE; x++) {
+        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_SIZE; z++) {
+            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_SIZE; y++) {
                 b = chunk_get_block(chunk, x, y, z);
                 if (block_is_solid(b)) {
 
@@ -2257,6 +2251,55 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
 // MARK: private functions
 
+Octree *_chunk_new_octree(void) {
+    unsigned long upPow2Size = upper_power_of_two(CHUNK_SIZE);
+    Block *defaultBlock = block_new_air();
+
+    Octree *o = NULL;
+    switch (upPow2Size) {
+        case 1:
+            o = octree_new_with_default_element(octree_1x1x1, defaultBlock, sizeof(Block));
+            break;
+        case 2:
+            o = octree_new_with_default_element(octree_2x2x2, defaultBlock, sizeof(Block));
+            break;
+        case 4:
+            o = octree_new_with_default_element(octree_4x4x4, defaultBlock, sizeof(Block));
+            break;
+        case 8:
+            o = octree_new_with_default_element(octree_8x8x8, defaultBlock, sizeof(Block));
+            break;
+        case 16:
+            o = octree_new_with_default_element(octree_16x16x16, defaultBlock, sizeof(Block));
+            break;
+        case 32:
+            o = octree_new_with_default_element(octree_32x32x32, defaultBlock, sizeof(Block));
+            break;
+        case 64:
+            o = octree_new_with_default_element(octree_64x64x64, defaultBlock, sizeof(Block));
+            break;
+        case 128:
+            o = octree_new_with_default_element(octree_128x128x128, defaultBlock, sizeof(Block));
+            break;
+        case 256:
+            o = octree_new_with_default_element(octree_256x256x256, defaultBlock, sizeof(Block));
+            break;
+        case 512:
+            o = octree_new_with_default_element(octree_512x512x512, defaultBlock, sizeof(Block));
+            break;
+        case 1024:
+            o = octree_new_with_default_element(octree_1024x1024x1024, defaultBlock, sizeof(Block));
+            break;
+        default:
+            cclog_error("🔥 chunk is too big to use an octree.");
+            break;
+    }
+
+    block_free(defaultBlock);
+
+    return o;
+}
+
 void _chunk_hello_neighbor(Chunk *newcomer,
                            Neighbor newcomerLocation,
                            Chunk *neighbor,
@@ -2278,131 +2321,114 @@ Block *_chunk_get_block_including_neighbors(const Chunk *chunk,
                                             const CHUNK_COORDS_INT_T x,
                                             const CHUNK_COORDS_INT_T y,
                                             const CHUNK_COORDS_INT_T z) {
-    if (y > CHUNK_HEIGHT - 1) { // Top (9 cases)
+    if (y > CHUNK_SIZE_MINUS_ONE) { // Top (9 cases)
         if (x < 0) {
-            if (z > CHUNK_DEPTH - 1) { // TopLeftBack
+            if (z > CHUNK_SIZE_MINUS_ONE) { // TopLeftBack
                 return chunk_get_block(chunk->neighbors[NX_Y_Z],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+                                       x + CHUNK_SIZE,
+                                       y - CHUNK_SIZE,
+                                       z - CHUNK_SIZE);
             } else if (z < 0) { // TopLeftFront
                 return chunk_get_block(chunk->neighbors[NX_Y_NZ],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                                       x + CHUNK_SIZE,
+                                       y - CHUNK_SIZE,
+                                       z + CHUNK_SIZE);
             } else { // TopLeft
-                return chunk_get_block(chunk->neighbors[NX_Y],
-                                       x + CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[NX_Y], x + CHUNK_SIZE, y - CHUNK_SIZE, z);
             }
-        } else if (x > CHUNK_WIDTH - 1) {
-            if (z > CHUNK_DEPTH - 1) { // TopRightBack
+        } else if (x > CHUNK_SIZE_MINUS_ONE) {
+            if (z > CHUNK_SIZE_MINUS_ONE) { // TopRightBack
                 return chunk_get_block(chunk->neighbors[X_Y_Z],
-                                       x - CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+                                       x - CHUNK_SIZE,
+                                       y - CHUNK_SIZE,
+                                       z - CHUNK_SIZE);
             } else if (z < 0) { // TopRightFront
                 return chunk_get_block(chunk->neighbors[X_Y_NZ],
-                                       x - CHUNK_WIDTH,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                                       x - CHUNK_SIZE,
+                                       y - CHUNK_SIZE,
+                                       z + CHUNK_SIZE);
             } else { // TopRight
-                return chunk_get_block(chunk->neighbors[X_Y], x - CHUNK_WIDTH, y - CHUNK_HEIGHT, z);
+                return chunk_get_block(chunk->neighbors[X_Y], x - CHUNK_SIZE, y - CHUNK_SIZE, z);
             }
         } else {
-            if (z > CHUNK_DEPTH - 1) { // TopBack
-                return chunk_get_block(chunk->neighbors[Y_Z], x, y - CHUNK_HEIGHT, z - CHUNK_DEPTH);
+            if (z > CHUNK_SIZE_MINUS_ONE) { // TopBack
+                return chunk_get_block(chunk->neighbors[Y_Z], x, y - CHUNK_SIZE, z - CHUNK_SIZE);
             } else if (z < 0) { // TopFront
-                return chunk_get_block(chunk->neighbors[Y_NZ],
-                                       x,
-                                       y - CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[Y_NZ], x, y - CHUNK_SIZE, z + CHUNK_SIZE);
             } else { // Top
-                return chunk_get_block(chunk->neighbors[Y], x, y - CHUNK_HEIGHT, z);
+                return chunk_get_block(chunk->neighbors[Y], x, y - CHUNK_SIZE, z);
             }
         }
     } else if (y < 0) { // Bottom (9 cases)
         if (x < 0) {
-            if (z > CHUNK_DEPTH - 1) { // BottomLeftBack
+            if (z > CHUNK_SIZE_MINUS_ONE) { // BottomLeftBack
                 return chunk_get_block(chunk->neighbors[NX_NY_Z],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+                                       x + CHUNK_SIZE,
+                                       y + CHUNK_SIZE,
+                                       z - CHUNK_SIZE);
             } else if (z < 0) { // BottomLeftFront
                 return chunk_get_block(chunk->neighbors[NX_NY_NZ],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                                       x + CHUNK_SIZE,
+                                       y + CHUNK_SIZE,
+                                       z + CHUNK_SIZE);
             } else { // BottomLeft
-                return chunk_get_block(chunk->neighbors[NX_NY],
-                                       x + CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[NX_NY], x + CHUNK_SIZE, y + CHUNK_SIZE, z);
             }
-        } else if (x > CHUNK_WIDTH - 1) {
-            if (z > CHUNK_DEPTH - 1) { // BottomRightBack
+        } else if (x > CHUNK_SIZE_MINUS_ONE) {
+            if (z > CHUNK_SIZE_MINUS_ONE) { // BottomRightBack
                 return chunk_get_block(chunk->neighbors[X_NY_Z],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+                                       x - CHUNK_SIZE,
+                                       y + CHUNK_SIZE,
+                                       z - CHUNK_SIZE);
             } else if (z < 0) { // BottomRightFront
                 return chunk_get_block(chunk->neighbors[X_NY_NZ],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                                       x - CHUNK_SIZE,
+                                       y + CHUNK_SIZE,
+                                       z + CHUNK_SIZE);
             } else { // BottomRight
-                return chunk_get_block(chunk->neighbors[X_NY],
-                                       x - CHUNK_WIDTH,
-                                       y + CHUNK_HEIGHT,
-                                       z);
+                return chunk_get_block(chunk->neighbors[X_NY], x - CHUNK_SIZE, y + CHUNK_SIZE, z);
             }
         } else {
-            if (z > CHUNK_DEPTH - 1) { // BottomBack
-                return chunk_get_block(chunk->neighbors[NY_Z],
-                                       x,
-                                       y + CHUNK_HEIGHT,
-                                       z - CHUNK_DEPTH);
+            if (z > CHUNK_SIZE_MINUS_ONE) { // BottomBack
+                return chunk_get_block(chunk->neighbors[NY_Z], x, y + CHUNK_SIZE, z - CHUNK_SIZE);
             } else if (z < 0) { // BottomFront
-                return chunk_get_block(chunk->neighbors[NY_NZ],
-                                       x,
-                                       y + CHUNK_HEIGHT,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[NY_NZ], x, y + CHUNK_SIZE, z + CHUNK_SIZE);
             } else { // Bottom
-                return chunk_get_block(chunk->neighbors[NY], x, y + CHUNK_HEIGHT, z);
+                return chunk_get_block(chunk->neighbors[NY], x, y + CHUNK_SIZE, z);
             }
         }
     } else { // 8 cases (y is within chunk)
         if (x < 0) {
-            if (z > CHUNK_DEPTH - 1) { // LeftBack
-                return chunk_get_block(chunk->neighbors[NX_Z], x + CHUNK_WIDTH, y, z - CHUNK_DEPTH);
+            if (z > CHUNK_SIZE_MINUS_ONE) { // LeftBack
+                return chunk_get_block(chunk->neighbors[NX_Z], x + CHUNK_SIZE, y, z - CHUNK_SIZE);
             } else if (z < 0) { // LeftFront
-                return chunk_get_block(chunk->neighbors[NX_NZ],
-                                       x + CHUNK_WIDTH,
-                                       y,
-                                       z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[NX_NZ], x + CHUNK_SIZE, y, z + CHUNK_SIZE);
             } else { // NX
-                return chunk_get_block(chunk->neighbors[NX], x + CHUNK_WIDTH, y, z);
+                return chunk_get_block(chunk->neighbors[NX], x + CHUNK_SIZE, y, z);
             }
-        } else if (x > CHUNK_WIDTH - 1) {
-            if (z > CHUNK_DEPTH - 1) { // RightBack
-                return chunk_get_block(chunk->neighbors[X_Z], x - CHUNK_WIDTH, y, z - CHUNK_DEPTH);
+        } else if (x > CHUNK_SIZE_MINUS_ONE) {
+            if (z > CHUNK_SIZE_MINUS_ONE) { // RightBack
+                return chunk_get_block(chunk->neighbors[X_Z], x - CHUNK_SIZE, y, z - CHUNK_SIZE);
             } else if (z < 0) { // RightFront
-                return chunk_get_block(chunk->neighbors[X_NZ], x - CHUNK_WIDTH, y, z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[X_NZ], x - CHUNK_SIZE, y, z + CHUNK_SIZE);
             } else { // Right
-                return chunk_get_block(chunk->neighbors[X], x - CHUNK_WIDTH, y, z);
+                return chunk_get_block(chunk->neighbors[X], x - CHUNK_SIZE, y, z);
             }
         } else {
-            if (z > CHUNK_DEPTH - 1) { // Back
-                return chunk_get_block(chunk->neighbors[Z], x, y, z - CHUNK_DEPTH);
+            if (z > CHUNK_SIZE_MINUS_ONE) { // Back
+                return chunk_get_block(chunk->neighbors[Z], x, y, z - CHUNK_SIZE);
             } else if (z < 0) { // Front
-                return chunk_get_block(chunk->neighbors[NZ], x, y, z + CHUNK_DEPTH);
+                return chunk_get_block(chunk->neighbors[NZ], x, y, z + CHUNK_SIZE);
             }
         }
     }
 
     // here: block is within chunk
-    return chunk != NULL ? chunk->blocks[x][z][y] : NULL;
+    return chunk != NULL ? (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                        (size_t)x,
+                                                                        (size_t)y,
+                                                                        (size_t)z)
+                         : NULL;
 }
 
 void _vertex_light_get(Shape *shape,

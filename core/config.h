@@ -272,17 +272,9 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 #define FACE_NONE_CTC 7
 
 // SHAPE CHUNKS
-#define CHUNK_HEIGHT 16
-#define CHUNK_WIDTH 16
-#define CHUNK_DEPTH 16
-// used to divide
-#define CHUNK_HEIGHT_SQRT 4
-#define CHUNK_WIDTH_SQRT 4
-#define CHUNK_DEPTH_SQRT 4
-// used to get modulo
-#define CHUNK_HEIGHT_MINUS_ONE 15
-#define CHUNK_WIDTH_MINUS_ONE 15
-#define CHUNK_DEPTH_MINUS_ONE 15
+#define CHUNK_SIZE 16
+#define CHUNK_SIZE_SQRT 4
+#define CHUNK_SIZE_MINUS_ONE 15
 
 // VERTEX BUFFERS
 // Note (disambiguation): Cubzh Core's "VB" hold face data and is NOT equivalent to the "VB" that
