@@ -1,4 +1,3 @@
-
 local colorPicker = {}
 
 colorPicker.create = function(self, config)
@@ -229,7 +228,7 @@ colorPicker.create = function(self, config)
 	end
 
 	local parseHexaColor = function(input)
-		input = input:gsub("[%[%]()#]", "")
+	    input = input:gsub("[%[%]()#]", "")
 	    
 	    -- Convert hex color components to numbers
 	    local r = tonumber(input:sub(1, 2), 16)
@@ -295,7 +294,6 @@ colorPicker.create = function(self, config)
 			colorCode.Text = "(" .. math.floor(node.currentColor.R) .. "," .. math.floor(node.currentColor.G) .. "," .. math.floor(node.currentColor.B) .. ")"
 		end
 		colorCode.onSubmit = function()
-
 			local ok, r, g, b = parseRGBColor(colorCode.Text)
 			if ok then
 				node:setColor(Color(r,g,b))
@@ -353,7 +351,6 @@ colorPicker.create = function(self, config)
     node._setColor = function(self,color)
     	if color == nil then return end
     	local c = Color(color) -- temporary, to access HSV
-
 		if self.currentColor == nil then self.currentColor = Color(255,255,255,255) end
 
 		self.currentColor.Hue = c.Hue
@@ -362,7 +359,6 @@ colorPicker.create = function(self, config)
 	end
 
 	node._refresh = function(self)
-
 		local maxHeight
 		if type(self.config.maxHeight) == "function" then
 			maxHeight = self.config.maxHeight()
@@ -477,9 +473,7 @@ colorPicker.create = function(self, config)
 
 		uiHueShape.Width = columnWidth
 		uiHueShape.Height = colorAreaSize
-		uiHueShape.pos = Number3(colorAreaSize + padding,
-								bottomBarHeight + padding,
-									0)
+		uiHueShape.pos = Number3(colorAreaSize + padding, bottomBarHeight + padding, 0)
 		if config.extraPadding then
 			uiHueShape.pos = uiHueShape.pos + {padding, padding, 0}
 		end
@@ -509,8 +503,7 @@ colorPicker.create = function(self, config)
 		if config.transparency then
 			bgAlpha.Width = columnWidth
 			bgAlpha.Height = colorAreaSize
-			bgAlpha.LocalPosition = Number3(colorAreaSize + columnWidth + padding,
-											bottomBarHeight + padding * 2, 0)
+			bgAlpha.LocalPosition = Number3(colorAreaSize + columnWidth + padding, bottomBarHeight + padding * 2, 0)
 
 			if config.extraPadding then
 				bgAlpha.LocalPosition.X = bgAlpha.LocalPosition.X + padding * 2
