@@ -21,7 +21,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '>=1.18'
+          go-version: '>=1.21'
 
       - name: Build & Run Dagger program
         working-directory: ./ci/core_unit_tests
@@ -43,7 +43,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '>=1.18'
+          go-version: '>=1.21'
 
       - name: Build & Run Dagger program
         working-directory: ./ci/format
