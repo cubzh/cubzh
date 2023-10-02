@@ -642,6 +642,8 @@ void transform_set_local_position_vec(Transform *t, const float3 *pos) {
 void transform_set_position(Transform *t, const float x, const float y, const float z) {
     if (_transform_get_dirty(t, TRANSFORM_POS) == false &&
         _transform_vec_equals(&t->position, x, y, z, EPSILON_ZERO)) {
+        _transform_reset_dirty(t, TRANSFORM_POS);
+        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX);
         return;
     }
     float3_set(&t->position, x, y, z);
