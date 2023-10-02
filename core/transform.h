@@ -229,8 +229,6 @@ bool transform_getAnimationsEnabled(Transform *const t);
 float transform_get_shadow_decal(Transform *t);
 void transform_set_shadow_decal(Transform *t, float size);
 
-void transform_setDebugEnabled(Transform *const t, const bool enabled);
-
 // TEMPORARY
 // Needed while `Player` (defined one level above Cubzh Core)
 // needs to maintain a special way to compute its world collider.
@@ -245,6 +243,7 @@ void transform_assign_get_or_compute_world_collider_function(
 int debug_transform_get_refresh_calls(void);
 void debug_transform_reset_refresh_calls(void);
 #endif
+void transform_setDebugEnabled(Transform *const t, const bool enabled);
 
 #ifdef __cplusplus
 } // extern "C"
