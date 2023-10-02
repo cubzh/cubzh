@@ -1439,26 +1439,10 @@ initClientFunctions = function()
 
 				mirrorShape.Debug = true
 
-				mirrorShape.Position:AddOnSetCallback(function()
-					print("-- mirrorShape.Position ON SET:", mirrorShape.Position)
-				end)
-
-				mirrorShape.LocalPosition:AddOnSetCallback(function()
-					print("-- mirrorShape.LocalPosition ON SET:", mirrorShape.Position)
-				end)
-
 				-- Anchor at the shape position because the mirror is not attached to the shape
 				mirrorAnchor = Object()
 				mirrorAnchor:SetParent(World)
 				mirrorShape:SetParent(mirrorAnchor)
-
-				mirrorAnchor.Position:AddOnSetCallback(function()
-					print("-- mirrorAnchor.Position ON SET:", mirrorAnchor.Position)
-				end)
-
-				mirrorAnchor.LocalPosition:AddOnSetCallback(function()
-					print("-- mirrorAnchor.LocalPosition ON SET:", mirrorAnchor.Position)
-				end)
 
 				-- only set rotation creating the mirror
 				-- moving it should not affect initial rotation
@@ -1513,7 +1497,6 @@ initClientFunctions = function()
 
 	-- updates the dimension of the mirror when adding/removing cubes
 	updateMirror = function()
-		print("--------- UPDATE MIRROR --------- ")
 		if mirrorShape ~= nil and mirrorAnchor ~= nil then
 
 			local shape = mirrorAnchor.selectedShape
@@ -1522,48 +1505,29 @@ initClientFunctions = function()
 			local width = shape.Width + mirrorMargin
 			local height = shape.Height + mirrorMargin
 			local depth = shape.Depth + mirrorMargin
-			
-			print("-- shape.Center:", shape.Center)	
-			print("-- mirrorAnchor.coords:", mirrorAnchor.coords)
-
-			print("-- mirrorAnchor Position PRE-SET:", mirrorAnchor.Position)
 
 			mirrorAnchor.Position = shape:BlockToWorld(mirrorAnchor.coords + {0.5, 0.5, 0.5})
 			mirrorAnchor.Rotation = shape.Rotation
 
-			print("-- anchor Position POST-SET:", mirrorAnchor.Position)
-
 			local shapeCenter = shape:BlockToWorld(shape.Center)
 
-			print("-- shapeCenter:", shapeCenter)
-			print("-- mirrorShape Position PRE-SET:", mirrorShape.Position)
-
 			mirrorShape.Position = shapeCenter
-
-			print("-- mirrorShape Position POST-SET (1):", mirrorShape.Position)
 
 			if currentMirrorAxis == mirrorAxes.x then
 				mirrorShape.LocalScale = { mirrorThickness, height, depth }
 				mirrorShape.LocalPosition.X = 0
 				mirrorGizmo:setAxisVisibility(true, false, false)
-				print("-- mirrorShape.LocalPosition.X:", mirrorShape.LocalPosition.X)
 			elseif currentMirrorAxis == mirrorAxes.y then
 				mirrorShape.LocalScale = { width, mirrorThickness, depth }
 				mirrorShape.LocalPosition.Y = 0
 				mirrorGizmo:setAxisVisibility(false, true, false)
-				print("-- mirrorShape.LocalPosition.Y:", mirrorShape.LocalPosition.Y)
 			elseif currentMirrorAxis == mirrorAxes.z then
 				mirrorShape.LocalScale = { width, height, mirrorThickness }
 				mirrorShape.LocalPosition.Z = 0
 				mirrorGizmo:setAxisVisibility(false, false, true)
-				print("-- mirrorShape.LocalPosition.Z:", mirrorShape.LocalPosition.Z)
 			end
 
-			print("-- mirrorShape Position POST-SET (2):", mirrorShape.Position)
-
 			mirrorGizmo:setObject(mirrorShape)
-
-			print("-- mirrorShape Position POST-SET (3):", mirrorShape.Position)
 		end
 	end
 
