@@ -626,13 +626,15 @@ void transform_get_lossy_scale(Transform *t, float3 *scale) {
 // MARK: - Position -
 
 void transform_set_local_position(Transform *t, const float x, const float y, const float z) {
-    if (_transform_get_dirty(t, TRANSFORM_LOCAL_POS) == false &&
-        _transform_vec_equals(&t->localPosition, x, y, z, EPSILON_ZERO)) {
-        return;
-    }
-    float3_set(&t->localPosition, x, y, z);
     _transform_reset_dirty(t, TRANSFORM_LOCAL_POS);
-    _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_MTX | TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_MTX);
+
+    if (_transform_get_dirty(t, TRANSFORM_LOCAL_POS) ||
+        _transform_vec_equals(&t->localPosition, x, y, z, EPSILON_ZERO) == false) {
+
+        float3_set(&t->localPosition, x, y, z);
+        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+    }
 }
 
 void transform_set_local_position_vec(Transform *t, const float3 *pos) {
@@ -640,19 +642,14 @@ void transform_set_local_position_vec(Transform *t, const float3 *pos) {
 }
 
 void transform_set_position(Transform *t, const float x, const float y, const float z) {
-    if (_transform_get_dirty(t, TRANSFORM_POS) == false &&
-        _transform_vec_equals(&t->position, x, y, z, EPSILON_ZERO)) {
-        _transform_reset_dirty(t, TRANSFORM_POS);
-        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX);
-        return;
-    }
-    float3_set(&t->position, x, y, z);
     _transform_reset_dirty(t, TRANSFORM_POS);
-    _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX | TRANSFORM_PHYSICS);
-    
-    if (t->debug) {
-        printf("-- TRANSFORM_POS dirty: %s\n", _transform_get_dirty(t, TRANSFORM_POS) ? "TRUE" : "FALSE");
-        printf("-- transform_set_position %.2f, %.2f, %.2f\n", t->position.x, t->position.y, t->position.z);
+    _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX);
+
+    if (_transform_get_dirty(t, TRANSFORM_POS) ||
+        _transform_vec_equals(&t->position, x, y, z, EPSILON_ZERO) == false) {
+
+        float3_set(&t->position, x, y, z);
+        _transform_set_dirty(t, TRANSFORM_PHYSICS);
     }
 }
 
@@ -675,15 +672,16 @@ const float3 *transform_get_position(Transform *t) {
 // MARK: - Rotation -
 
 void transform_set_local_rotation(Transform *t, Quaternion *q) {
-    if (_transform_get_dirty(t, TRANSFORM_LOCAL_ROT) == false &&
-        quaternion_is_equal(t->localRotation, q, EPSILON_ZERO_TRANSFORM_RAD)) {
-        return;
-    }
-    quaternion_set(t->localRotation, q);
     _transform_reset_dirty(t, TRANSFORM_LOCAL_ROT);
     _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX);
-    if (rigidbody_is_rotation_dependent(t->rigidBody)) {
-        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+
+    if (_transform_get_dirty(t, TRANSFORM_LOCAL_ROT) ||
+        quaternion_is_equal(t->localRotation, q, EPSILON_ZERO_TRANSFORM_RAD) == false) {
+
+        quaternion_set(t->localRotation, q);
+        if (rigidbody_is_rotation_dependent(t->rigidBody)) {
+            _transform_set_dirty(t, TRANSFORM_PHYSICS);
+        }
     }
 }
 
@@ -703,15 +701,16 @@ void transform_set_local_rotation_euler_vec(Transform *t, const float3 *euler) {
 }
 
 void transform_set_rotation(Transform *t, Quaternion *q) {
-    if (_transform_get_dirty(t, TRANSFORM_ROT) == false &&
-        quaternion_is_equal(t->rotation, q, EPSILON_ZERO_TRANSFORM_RAD)) {
-        return;
-    }
-    quaternion_set(t->rotation, q);
     _transform_reset_dirty(t, TRANSFORM_ROT);
     _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX);
-    if (rigidbody_is_rotation_dependent(t->rigidBody)) {
-        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+
+    if (_transform_get_dirty(t, TRANSFORM_ROT) ||
+        quaternion_is_equal(t->rotation, q, EPSILON_ZERO_TRANSFORM_RAD) == false) {
+
+        quaternion_set(t->rotation, q);
+        if (rigidbody_is_rotation_dependent(t->rigidBody)) {
+            _transform_set_dirty(t, TRANSFORM_PHYSICS);
+        }
     }
 }
 
@@ -1092,10 +1091,6 @@ void transform_set_shadow_decal(Transform *t, float size) {
     t->shadowDecalSize = size;
 }
 
-void transform_setDebugEnabled(Transform *const t, const bool enabled) {
-    t->debug = enabled;
-}
-
 // MARK: - Private functions -
 
 static uint16_t _transform_get_valid_id(void) {
@@ -1119,14 +1114,27 @@ static void _transform_recycle_id(const uint16_t id) {
 }
 
 static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
+#if DEBUG_TRANSFORM
     if (t->debug) {
+        printf("---- BEGIN transform dirty flags\n");
         if ((flag & TRANSFORM_POS) > 0) {
             printf("-- _transform_set_dirty TRANSFORM_POS\n");
         }
         if ((flag & TRANSFORM_LOCAL_POS) > 0) {
             printf("-- _transform_set_dirty TRANSFORM_LOCAL_POS\n");
         }
+        if ((flag & TRANSFORM_ROT) > 0) {
+            printf("-- _transform_set_dirty TRANSFORM_ROT\n");
+        }
+        if ((flag & TRANSFORM_LOCAL_ROT) > 0) {
+            printf("-- _transform_set_dirty TRANSFORM_LOCAL_ROT\n");
+        }
+        if ((flag & TRANSFORM_PHYSICS) > 0) {
+            printf("-- _transform_set_dirty TRANSFORM_PHYSICS\n");
+        }
+        printf("---- END transform dirty flags\n");
     }
+#endif
     t->dirty |= (flag | TRANSFORM_ANY);
 }
 
@@ -1187,10 +1195,6 @@ static void _transform_refresh_position(Transform *t) {
             }
         } else {
             float3_copy(&t->position, &t->localPosition);
-        }
-        
-        if (t->debug) {
-            printf("-- _transform_refresh_position %.2f, %.2f, %.2f\n", t->position.x, t->position.y, t->position.z);
         }
         
         _transform_reset_dirty(t, TRANSFORM_POS);
@@ -1568,3 +1572,7 @@ void debug_transform_reset_refresh_calls(void) {
 }
 
 #endif
+
+void transform_setDebugEnabled(Transform *const t, const bool enabled) {
+    t->debug = enabled;
+}
