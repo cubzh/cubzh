@@ -81,7 +81,8 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
     tree->levels = (uint8_t)levels;
     tree->nb_nodes = nb_nodes_for_levels(levels);
     tree->nb_elements = nb_elements_for_levels(levels);
-    tree->width_height_depth = (size_t)cbrt(tree->nb_elements);
+    const double cubicRoot = cbrt(tree->nb_elements);
+    tree->width_height_depth = (size_t)cubicRoot;
 
     //    if (tree->width_height_depth == upper_power_of_two(tree->width_height_depth)) {
     //        cclog_info("👍 octree size is a power of 2");
@@ -141,14 +142,16 @@ uint32_t nb_nodes_for_levels(const size_t levels) {
     uint8_t currentLevel = (uint8_t)levels;
     uint32_t nodes = 0;
     while (currentLevel > 0) {
-        nodes += (uint32_t)pow(8.0, (double)currentLevel - 1.0);
+        const double power = pow(8.0, (double)currentLevel - 1.0);
+        nodes += (uint32_t)power;
         currentLevel--;
     }
     return nodes;
 }
 
 uint32_t nb_elements_for_levels(const size_t levels) {
-    return (uint32_t)pow(8.0, (double)levels);
+    const double power = pow(8.0, (double)levels);
+    return (uint32_t)power;
 }
 
 bool octree_set_element(const Octree *octree, const void *element, size_t x, size_t y, size_t z) {

@@ -44,6 +44,10 @@ void box_free(Box *b) {
     }
 }
 
+void box_free_std(void *b) {
+    box_free((Box *)b);
+}
+
 void box_set_bottom_center_position(Box *b, const float3 *position) {
     float3 size;
     box_get_size_float(b, &size);
