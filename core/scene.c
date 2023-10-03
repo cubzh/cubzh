@@ -234,7 +234,7 @@ void scene_free(Scene *sc) {
     weakptr_invalidate(sc->wptr);
     fifo_list_free(sc->removed, NULL);
     doubly_linked_list_free(sc->collisions);
-    doubly_linked_list_flush(sc->awakeBoxes, (pointer_free_function)box_free);
+    doubly_linked_list_flush(sc->awakeBoxes, box_free_std);
     doubly_linked_list_free(sc->awakeBoxes);
 
     free(sc);

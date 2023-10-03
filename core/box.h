@@ -39,6 +39,7 @@ Box *box_new_2(const float minX,
 Box *box_new_copy(const Box *src);
 
 void box_free(Box *b);
+void box_free_std(void *b);
 
 void box_set_bottom_center_position(Box *b, const float3 *position);
 
