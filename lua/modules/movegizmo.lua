@@ -9,6 +9,13 @@ plane = require("plane")
 
 local functions = {}
 
+functions.setLayer = function(self, layer)
+	self.camera.Layers = layer
+	self.handles[moveGizmo.Axis.X].Layers = layer
+	self.handles[moveGizmo.Axis.Y].Layers = layer
+	self.handles[moveGizmo.Axis.Z].Layers = layer
+end
+
 functions.up = function(self, pe)
 	if self.selectedHandle then
 		self.selectedHandle = nil
@@ -93,18 +100,12 @@ end
 
 functions.setObject = function(self, object)
 	if self.object == object then return end
-	if self.object ~= nil then
-		-- REMOVE CALLBACKS
-	end
-
 	self.object = object
 	if object == nil then
 		self.gizmoObject:RemoveFromParent()
 		return
 	end
-
 	self.gizmoObject:SetParent(World)
-
 	self:updateHandles()
 end
 
@@ -124,7 +125,6 @@ functions.updateHandles = function(self)
 
 	local checktype = type(self.object)
 
-	-- TODO
 	if checktype == "Object" or checktype == "Player" then
 		self.gizmoObject.Position = self.object.Position
 	else
@@ -177,6 +177,7 @@ mt = {
 		updateHandles = functions.updateHandles,
 		setAxisVisibility = functions.setAxisVisibility,
 		setScale = functions.setScale,
+		setLayer = functions.setLayer,
 	},
 	__metatable = false,
 }
@@ -205,6 +206,7 @@ moveGizmo.create = function(self, config)
 		orientation = movegizmo.Orientation.World,
 		snap = 0.0,
 		scale = scale,
+		camera = camera,
 	}
 
 	local function sameType(a, b)
@@ -227,16 +229,16 @@ moveGizmo.create = function(self, config)
 		orientation = _config.orientation,
 		handles = {},
 		snap = _config.snap,
-		remove = functions.remove,
 		listeners = {},
 		onDrag = nil,
+		camera = _config.camera,
 	}
 	setmetatable(moveGizmo, mt)
 
 	moveGizmo.gizmoObject = Object()
 	moveGizmo.gizmoObject.Scale = _config.scale
 
-	local axisColors = { Color.Red, Color.Blue, Color.Green }
+	local axisColors = { Color.Red, Color.Green, Color.Blue }
 
 	for axis,color in ipairs(axisColors) do
 		local handle = MutableShape()

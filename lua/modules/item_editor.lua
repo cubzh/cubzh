@@ -5,9 +5,9 @@ Config = {
 
 Client.OnStart = function()
 
-	movegizmo = require("movegizmo")
-	movegizmo:setLayer(4)
-	movegizmo:setScale(0.3)
+	gizmo = require("gizmo")
+	gizmo:setLayer(4)
+	gizmo:setScale(0.3)
 
 	controls = require("controls")
 
@@ -17,29 +17,35 @@ Client.OnStart = function()
 
 	max_total_nb_shapes = 32
 
-	colliderMinGizmo = movegizmo:create({ orientation = movegizmo.Orientation.World, snap = 0.5 })
-	colliderMinGizmo.onDrag = function()
-		local axis = { "X", "Y", "Z" }
-		for _,a in ipairs(axis) do
-			if colliderMinObject.Position[a] >= colliderMaxObject.Position[a] then
-				colliderMinObject.Position[a] = colliderMaxObject.Position[a] - 0.5
-			end
-		end
-		colliderMinGizmo:setObject(colliderMinObject)
-		updateCollider()
-	end
+	colliderMinGizmo = gizmo:create({ 
+			orientation = gizmo.Orientation.World,
+			moveSnap = 0.5,
+			onMove = function()
+				local axis = { "X", "Y", "Z" }
+				for _,a in ipairs(axis) do
+					if colliderMinObject.Position[a] >= colliderMaxObject.Position[a] then
+						colliderMinObject.Position[a] = colliderMaxObject.Position[a] - 0.5
+					end
+				end
+				colliderMinGizmo:setObject(colliderMinObject)
+				updateCollider()
+			end,
+	})
 
-	colliderMaxGizmo = movegizmo:create({ orientation = movegizmo.Orientation.World, snap = 0.5 })
-	colliderMaxGizmo.onDrag = function()
-		local axis = { "X", "Y", "Z" }
-		for _,a in ipairs(axis) do
-			if colliderMaxObject.Position[a] <= colliderMinObject.Position[a] then
-				colliderMaxObject.Position[a] = colliderMinObject.Position[a] + 0.5
-			end
-		end
-		colliderMaxGizmo:setObject(colliderMaxObject)
-		updateCollider()
-	end
+	colliderMaxGizmo = gizmo:create({ 
+			orientation = gizmo.Orientation.World,
+			moveSnap = 0.5,
+			onMove = function()
+				local axis = { "X", "Y", "Z" }
+				for _,a in ipairs(axis) do
+					if colliderMaxObject.Position[a] <= colliderMinObject.Position[a] then
+						colliderMaxObject.Position[a] = colliderMinObject.Position[a] + 0.5
+					end
+				end
+				colliderMaxGizmo:setObject(colliderMaxObject)
+				updateCollider()
+			end,
+	})
 
 	colorPickerModule = require("colorpicker")
 
@@ -111,8 +117,8 @@ Client.OnStart = function()
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
 				s.IsHiddenSelf = false
 			end)
-			gizmo.activeGizmo.onDrag = nil
-			gizmo:setObject(nil)
+			
+			selectGizmo:setObject(nil)
 			changePivotBtn.Text = "Change Pivot"
 			isModeChangePivot = false
 		end
@@ -1309,12 +1315,10 @@ initClientFunctions = function()
 
 		-- Do not show gizmo if root item or if shape is nil (unselect)
 		local gizmoShape = (shape ~= nil and shape ~= item) and shape or nil
-		-- gizmo:setObject(gizmoShape)
+		selectGizmo:setObject(gizmoShape)
 
 		if focusShape then
 			local maxLength = math.max(focusShape.Width, math.max(focusShape.Height, focusShape.Depth))
-			print("TODO: set gizmo scale")
-			-- gizmo:setGizmoScale(1 - (1 / maxLength) - 0.3)
 		end
 		refreshDrawMode()
 
@@ -1662,7 +1666,7 @@ function ui_init()
 			mirrorControls:hide()
 			selectControls:hide()
 			mirrorGizmo:setObject(nil)
-			gizmo:setObject(nil)
+			selectGizmo:setObject(nil)
 
 			placeGizmo:setObject(item)
 		end
@@ -2158,12 +2162,15 @@ function ui_init()
 	mirrorControls = ui:createFrame(ui_config.groupBackgroundColor)
 	mirrorControls:hide()
 
-	mirrorGizmo = movegizmo:create({ orientation = movegizmo.Orientation.World, snap = 0.5 })
-	mirrorGizmo.onDrag = function()
-		local shape = mirrorAnchor.selectedShape
-		if not shape then return end
-		mirrorAnchor.coords = shape:WorldToBlock(mirrorAnchor.Position) - {0.5, 0.5, 0.5}
-	end
+	mirrorGizmo = gizmo:create({ 
+								orientation = gizmo.Orientation.World, 
+								moveSnap = 0.5,
+								onMove = function()
+									local shape = mirrorAnchor.selectedShape
+									if not shape then return end
+									mirrorAnchor.coords = shape:WorldToBlock(mirrorAnchor.Position) - {0.5, 0.5, 0.5}
+								end,
+							})
 
 	rotateMirrorBtn = createButton("↻", ui_config.btnColor, ui_config.btnColorSelected)
 	rotateMirrorBtn:setParent(mirrorControls)
@@ -2219,8 +2226,7 @@ function ui_init()
 		end
 	end
 
-	-- TODO: rename selectGizmo and handle 3 gizmos in array for input
-	gizmo = movegizmo:create({ orientation = movegizmo.Orientation.Local, snap = 0.5 })
+	selectGizmo = gizmo:create({ orientation = gizmo.Orientation.Local, moveSnap = 0.5 })
 
 	addChild = ui:createText("Add shape", Color.White)
 	addChild:setParent(selectControls)
@@ -2302,7 +2308,7 @@ function ui_init()
 	changePivotBtn = createButton("Change Pivot", ui_config.btnColor, ui_config.btnColorSelected)
 	changePivotBtn:setParent(selectControls)
 	local pivotObject = Object()
-	local prevGizmoMode
+
 	changePivotBtn.onRelease = function()
 		if not isModeChangePivot then
 			pivotObject:SetParent(focusShape)
@@ -2310,20 +2316,20 @@ function ui_init()
 				s.IsHiddenSelf = s ~= focusShape -- hide all except focus shape
 			end)
 
-			prevGizmoMode = gizmo.mode
-			gizmo:setMode(gizmo.Mode.Move)
-
-			gizmo:setOrientation(colliderMinGizmo.Orientation.Local)
+			selectGizmo:setMode(gizmo.Mode.Move)
+			selectGizmo:setOrientation(gizmo.Orientation.Local)
 
 			local pivot = focusShape.Pivot
 			changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", pivot.X, pivot.Y, pivot.Z)
-			gizmo.activeGizmo.onDrag = function(pos)
+
+			selectGizmo:setOnMove(function(pos)
 				local diffPos = pivotObject.Position - focusShape.Position
 				local newPivot = focusShape.Pivot + diffPos
 				changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", newPivot.X, newPivot.Y, newPivot.Z)
-			end
+			end)
+
 			pivotObject.Position = focusShape.Position
-			gizmo:setObject(pivotObject)
+			selectGizmo:setObject(pivotObject)
 		else
 			local diffPos = pivotObject.Position - focusShape.Position
 			local newPivot = focusShape.Pivot + diffPos
@@ -2333,10 +2339,12 @@ function ui_init()
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
 				s.IsHiddenSelf = false
 			end)
-			gizmo.activeGizmo.onDrag = nil
-			gizmo:setObject(focusShape)
-			gizmo:setMode(prevGizmoMode)
-			gizmo:setOrientation(colliderMinGizmo.Orientation.World)
+			
+			selectGizmo:setOnMove(nil)
+			selectGizmo:setObject(focusShape)
+			-- selectGizmo:setMode(prevGizmoMode) -- TODO: what should we do?
+			selectGizmo:setOrientation(gizmo.Orientation.World)
+
 			changePivotBtn.Text = "Change Pivot"
 		end
 		isModeChangePivot = not isModeChangePivot
@@ -2346,13 +2354,13 @@ function ui_init()
 	moveShapeBtn:setParent(selectControls)
 	table.insert(selectToggleBtns, moveShapeBtn)
 	moveShapeBtn.onRelease = function()
-		if gizmo.object and gizmo.mode == gizmo.Mode.Move then
+		if selectGizmo.object and selectGizmo.mode == gizmo.Mode.Move then
 			selectToggleBtnsSelect(nil)
-			gizmo:setObject(nil)
+			selectGizmo:setObject(nil)
 		else
 			selectToggleBtnsSelect(moveShapeBtn)
-			gizmo:setObject(focusShape)
-			gizmo:setMode(gizmo.Mode.Move)
+			selectGizmo:setObject(focusShape)
+			selectGizmo:setMode(gizmo.Mode.Move)
 		end
 	end
 
@@ -2360,13 +2368,13 @@ function ui_init()
 	rotateShapeBtn:setParent(selectControls)
 	table.insert(selectToggleBtns, rotateShapeBtn)
 	rotateShapeBtn.onRelease = function()
-		if gizmo.object and gizmo.mode == gizmo.Mode.Rotate then
+		if selectGizmo.object and selectGizmo.mode == gizmo.Mode.Rotate then
 			selectToggleBtnsSelect(nil)
-			gizmo:setObject(nil)
+			selectGizmo:setObject(nil)
 		else
 			selectToggleBtnsSelect(rotateShapeBtn)
-			gizmo:setObject(focusShape)
-			gizmo:setMode(gizmo.Mode.Rotate)
+			selectGizmo:setObject(focusShape)
+			selectGizmo:setMode(gizmo.Mode.Rotate)
 		end
 	end
 
@@ -2468,8 +2476,8 @@ function ui_init()
 		local funcSubShapesControls = focusShape == item and "hide" or "show"
 		if funcSubShapesControls == "show" then
 			nameInput.Text = focusShape.Name or ""
-			-- gizmo:setObject(focusShape)
-			if gizmo.mode == gizmo.Mode.Move then
+			selectGizmo:setObject(focusShape)
+			if selectGizmo.mode == gizmo.Mode.Move then
 				selectToggleBtnsSelect(moveShapeBtn)
 			else
 				selectToggleBtnsSelect(rotateShapeBtn)
@@ -2532,45 +2540,48 @@ function ui_init()
 		end
 	end
 
-	placeGizmo = movegizmo:create({ orientation = movegizmo.Orientation.Local, snap = 0.5 })
-	placeGizmo.onDrag = function()
-		savePOI()
-	end
-	-- placeGizmo._gizmos[placeGizmo.Mode.Rotate].onDrag = function()
-	-- 	savePOI()
-	-- end
+	placeGizmo = gizmo:create({ 
+								orientation = gizmo.Orientation.Local, 
+								moveSnap = 0.5,
+								onMove = function()
+									savePOI()
+								end,
+								onRotate = function()
+									savePOI()
+								end,
+							})
 
 	moveBtn = createButton("⇢", btnColor, btnColorSelected)
 	table.insert(placeSubMenuToggleBtns, moveBtn)
 	moveBtn:setParent(placeSubMenu)
 	moveBtn.onRelease = function()
 		setMode(nil, pointsSubmode.move)
-		if placeGizmo.object and placeGizmo.mode == placeGizmo.Mode.Move then
+		if placeGizmo.object and placeGizmo.mode == gizmo.Mode.Move then
 			placeSubMenuToggleSelect(nil)
 			placeGizmo:setObject(nil)
 		else
 			placeSubMenuToggleSelect(moveBtn)
 			placeGizmo:setObject(item)
-			placeGizmo:setMode(placeGizmo.Mode.Move)
-			placeGizmo:setSnap(placeGizmo.Mode.Move, 0.5)
+			placeGizmo:setMode(gizmo.Mode.Move)
+			placeGizmo:setMoveSnap(0.5)
 		end
 	end
 	moveBtn:select()
-	-- placeGizmo:setMode(placeGizmo.Mode.Move)
+	placeGizmo:setMode(gizmo.Mode.Move)
 
 	rotateBtn = createButton("↻", btnColor, btnColorSelected)
 	table.insert(placeSubMenuToggleBtns, rotateBtn)
 	rotateBtn:setParent(placeSubMenu)
 	rotateBtn.onRelease = function()
 		setMode(nil, pointsSubmode.rotate)
-		if placeGizmo.object and placeGizmo.mode == placeGizmo.Mode.Rotate then
+		if placeGizmo.object and placeGizmo.mode == gizmo.Mode.Rotate then
 			placeSubMenuToggleSelect(nil)
 			placeGizmo:setObject(nil)
 		else
 			placeSubMenuToggleSelect(rotateBtn)
 			placeGizmo:setObject(item)
-			placeGizmo:setMode(placeGizmo.Mode.Rotate)
-			placeGizmo:setSnap(placeGizmo.Mode.Rotate, math.pi / 16)
+			placeGizmo:setMode(gizmo.Mode.Rotate)
+			placeGizmo:setRotateSnap(math.pi / 16)
 		end
 	end
 
