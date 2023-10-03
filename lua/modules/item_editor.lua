@@ -4,7 +4,11 @@ Config = {
 }
 
 Client.OnStart = function()
-	
+
+	movegizmo = require("movegizmo")
+	movegizmo:setLayer(4)
+	movegizmo:setScale(0.3)
+
 	controls = require("controls")
 
 	box_outline = require("box_outline")
@@ -13,13 +17,8 @@ Client.OnStart = function()
 
 	max_total_nb_shapes = 32
 
-	colliderMinGizmo = require("gizmo"):create()
-	colliderMinGizmo:setLayer(4)
-	colliderMinGizmo:setGizmoScale(0.3)
-	colliderMinGizmo:setOrientation(colliderMinGizmo.Orientation.World)
-	colliderMinGizmo:setMode(colliderMinGizmo.Mode.Move)
-	colliderMinGizmo:setSnap(colliderMinGizmo.Mode.Move, 0.5)
-	colliderMinGizmo._gizmos[colliderMinGizmo.Mode.Move].onDrag = function()
+	colliderMinGizmo = movegizmo:create({ orientation = movegizmo.Orientation.World, snap = 0.5 })
+	colliderMinGizmo.onDrag = function()
 		local axis = { "X", "Y", "Z" }
 		for _,a in ipairs(axis) do
 			if colliderMinObject.Position[a] >= colliderMaxObject.Position[a] then
@@ -30,13 +29,8 @@ Client.OnStart = function()
 		updateCollider()
 	end
 
-	colliderMaxGizmo = require("gizmo"):create()
-	colliderMaxGizmo:setLayer(4)
-	colliderMaxGizmo:setGizmoScale(0.3)
-	colliderMaxGizmo:setOrientation(colliderMaxGizmo.Orientation.World)
-	colliderMaxGizmo:setMode(colliderMaxGizmo.Mode.Move)
-	colliderMaxGizmo:setSnap(colliderMaxGizmo.Mode.Move, 0.5)
-	colliderMaxGizmo._gizmos[colliderMaxGizmo.Mode.Move].onDrag = function()
+	colliderMaxGizmo = movegizmo:create({ orientation = movegizmo.Orientation.World, snap = 0.5 })
+	colliderMaxGizmo.onDrag = function()
 		local axis = { "X", "Y", "Z" }
 		for _,a in ipairs(axis) do
 			if colliderMaxObject.Position[a] <= colliderMinObject.Position[a] then
@@ -294,7 +288,7 @@ Client.OnStart = function()
 
 	cameraRefresh = function(r)
 		-- clamp rotation between 90° and -90° on X
-		cameraCurrentState.cameraRotation.X = clamp(cameraCurrentState.cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
+		cameraCurrentState.cameraRotation.X = math.clamp(cameraCurrentState.cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
 
 		Camera.Rotation = cameraCurrentState.cameraRotation
 
@@ -536,13 +530,6 @@ end
 
 Pointer.Click = function() end
 click = function(e)
-	if gizmoCapturedPointer 
-		or mirrorGizmoCapturedPointer
-		or placeGizmoCapturedPointer
-		or colliderMinGizmoCapturedPointer
-		or colliderMaxGizmoCapturedPointer then
-		return
-	end
 
 	if currentMode == mode.edit then
 		local impact
@@ -640,57 +627,8 @@ click = function(e)
 
 end
 
-Pointer.Down = function() end
-down = function(e)
-	if gizmo:down(e) then
-		gizmoCapturedPointer = true
-		return
-	end
-	if mirrorGizmo:down(e) then
-		mirrorGizmoCapturedPointer = true
-		return
-	end
-	if placeGizmo:down(e) then
-		placeGizmoCapturedPointer = true
-		return
-	end
-	if colliderMinGizmo:down(e) then
-		colliderMinGizmoCapturedPointer = true
-		return
-	end
-	if colliderMaxGizmo:down(e) then
-		colliderMaxGizmoCapturedPointer = true
-		return
-	end
-end
-
 Pointer.Up = function() end
 up = function(e)
-	if gizmoCapturedPointer then
-		gizmoCapturedPointer = false
-		gizmo:up(e)
-	end
-	if mirrorGizmoCapturedPointer then
-		mirrorGizmoCapturedPointer = false
-		mirrorGizmo:up(e)
-		return
-	end
-	if placeGizmoCapturedPointer then
-		placeGizmoCapturedPointer = false
-		placeGizmo:up(e)
-		return
-	end
-	if colliderMinGizmoCapturedPointer then
-		colliderMinGizmoCapturedPointer = false
-		colliderMinGizmo:up(e)
-		return
-	end
-	if colliderMaxGizmoCapturedPointer then
-		colliderMaxGizmoCapturedPointer = false
-		colliderMaxGizmo:up(e)
-		return
-	end
-
 	if blockerShape ~= nil then
 		blockerShape:RemoveFromParent()
 		blockerShape = nil
@@ -710,7 +648,6 @@ end
 
 Pointer.LongPress = function() end
 longPress = function(e)
-	if gizmoCapturedPointer then return end
 
 	if currentMode == mode.edit then
 
@@ -768,27 +705,6 @@ end
 
 Pointer.Drag = function() end
 drag = function(e)
-
-	if gizmoCapturedPointer then
-		gizmo:drag(e)
-		return
-	end
-	if mirrorGizmoCapturedPointer then
-		mirrorGizmo:drag(e)
-		return
-	end
-	if placeGizmoCapturedPointer then
-		placeGizmo:drag(e)
-		return
-	end
-	if colliderMinGizmoCapturedPointer then
-		colliderMinGizmo:drag(e)
-		return
-	end
-	if colliderMaxGizmoCapturedPointer then
-		colliderMaxGizmo:drag(e)
-		return
-	end
 
 	if not continuousEdition then
 		local angularSpeed = 0.01
@@ -1393,11 +1309,12 @@ initClientFunctions = function()
 
 		-- Do not show gizmo if root item or if shape is nil (unselect)
 		local gizmoShape = (shape ~= nil and shape ~= item) and shape or nil
-		gizmo:setObject(gizmoShape)
+		-- gizmo:setObject(gizmoShape)
 
 		if focusShape then
 			local maxLength = math.max(focusShape.Width, math.max(focusShape.Height, focusShape.Depth))
-			gizmo:setGizmoScale(1 - (1 / maxLength) - 0.3)
+			print("TODO: set gizmo scale")
+			-- gizmo:setGizmoScale(1 - (1 / maxLength) - 0.3)
 		end
 		refreshDrawMode()
 
@@ -1470,8 +1387,6 @@ initClientFunctions = function()
 
 			mirrorAnchor.selectedShape = shape
 
-			mirrorGizmo:setObject(mirrorAnchor)
-
 			mirrorControls:show()
 
 			placeMirrorText:hide()
@@ -1527,16 +1442,8 @@ initClientFunctions = function()
 				mirrorGizmo:setAxisVisibility(false, false, true)
 			end
 
-			mirrorGizmo:setObject(mirrorShape)
+			mirrorGizmo:setObject(mirrorAnchor)
 		end
-	end
-
-	getAlignment = function(normal)
-		return math.abs(normal:Dot(Camera.Forward))
-	end
-
-	sqr_len = function(dx, dy)
-		return dx * dx + dy * dy
 	end
 
 	setFreeCamera = function()
@@ -1574,14 +1481,6 @@ initClientFunctions = function()
 
 	getCameraDistanceFactor = function()
 	    return 1 + math.max(0, cameraDistFactor * (cameraCurrentState.cameraDistance - cameraDistThreshold))
-	end
-
-	applyDrag = function(velocity, drag, isZero)
-	    if isZero then
-	        velocity = Number3(0, 0, 0)
-        else
-            velocity = velocity * drag
-        end
 	end
 
 	refreshBlockHighlight = function()
@@ -1695,32 +1594,6 @@ function savePOI()
 	changesSinceLastSave = false
 	checkAutoSave()
 end
-
-clamp = function(v, min, max)
-    if v < min then
-        return min
-    elseif v > max then
-        return max
-    else
-        return v
-    end
-end
-
-n3Equals = function(v1, v2, epsilon)
-    return (v2 - v1).Length < epsilon
-end
-
-lerp = function(from, to, v)
-    return from + (to - from) * clamp(v, 0.0, 1.0)
-end
-
-easingQuadOut = function(v)
-    return 1.0 - (1.0 - v) * (1.0 - v);
-end
-
-------------
--- UI
-------------
 
 ui_config = {
 	groupBackgroundColor = Color(0,0,0,150),
@@ -2285,11 +2158,13 @@ function ui_init()
 	mirrorControls = ui:createFrame(ui_config.groupBackgroundColor)
 	mirrorControls:hide()
 
-	mirrorGizmo = require("gizmo"):create()
-	mirrorGizmo:setLayer(4)
-	mirrorGizmo:setGizmoScale(0.2)
-	mirrorGizmo:setMode(mirrorGizmo.Mode.Move)
-	mirrorGizmo:setSnap(mirrorGizmo.Mode.Move, 0.5)
+	mirrorGizmo = movegizmo:create()
+	mirrorGizmo.debug = true
+	-- mirrorGizmo:setGizmoScale(0.2)
+	mirrorGizmo.gizmoObject.Scale = 0.2
+	--mirrorGizmo:setMode(mirrorGizmo.Mode.Move)
+	-- mirrorGizmo:setSnap(mirrorGizmo.Mode.Move, 0.5)
+	mirrorGizmo.snap = 0.5
 
 	rotateMirrorBtn = createButton("↻", ui_config.btnColor, ui_config.btnColorSelected)
 	rotateMirrorBtn:setParent(mirrorControls)
@@ -2346,14 +2221,7 @@ function ui_init()
 	end
 
 	-- TODO: rename selectGizmo and handle 3 gizmos in array for input
-	gizmo = require("gizmo"):create()
-	gizmo.snap = 0
-	gizmo:setGizmoScale(0.2)
-	gizmo:setLayer(4)
-	gizmo:setOrientation(gizmo.Orientation.Local)
-
-	-- Snap to grid 0.5 for movement
-	gizmo:setSnap(gizmo.Mode.Move, 0.5)
+	gizmo = movegizmo:create({ orientation = movegizmo.Orientation.Local, snap = 0.5, scale = 0.2 })
 
 	addChild = ui:createText("Add shape", Color.White)
 	addChild:setParent(selectControls)
@@ -2665,16 +2533,13 @@ function ui_init()
 		end
 	end
 
-	placeGizmo = require("gizmo"):create()
-	placeGizmo:setLayer(4)
-	placeGizmo:setGizmoScale(0.3)
-	placeGizmo:setOrientation(placeGizmo.Orientation.Local)
-	placeGizmo._gizmos[placeGizmo.Mode.Move].onDrag = function()
+	placeGizmo = movegizmo:create({ orientation = movegizmo.Orientation.Local, snap = 0.5 })
+	placeGizmo.onDrag = function()
 		savePOI()
 	end
-	placeGizmo._gizmos[placeGizmo.Mode.Rotate].onDrag = function()
-		savePOI()
-	end
+	-- placeGizmo._gizmos[placeGizmo.Mode.Rotate].onDrag = function()
+	-- 	savePOI()
+	-- end
 
 	moveBtn = createButton("⇢", btnColor, btnColorSelected)
 	table.insert(placeSubMenuToggleBtns, moveBtn)
@@ -2692,8 +2557,7 @@ function ui_init()
 		end
 	end
 	moveBtn:select()
-	placeGizmo:setMode(placeGizmo.Mode.Move)
-	placeGizmo:setSnap(placeGizmo.Mode.Move, 0.5)
+	-- placeGizmo:setMode(placeGizmo.Mode.Move)
 
 	rotateBtn = createButton("↻", btnColor, btnColorSelected)
 	table.insert(placeSubMenuToggleBtns, rotateBtn)
