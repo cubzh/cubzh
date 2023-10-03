@@ -160,6 +160,10 @@ functions.setAxisVisibility = function(self, x, y, z)
 	self.handles[moveGizmo.Axis.Z]:setVisible(z == true)
 end
 
+functions.setScale = function(self, scale)
+	self.gizmoObject.Scale = scale
+end
+
 mt = {
 	__gc = function(t)
 		for _, l in ipairs(t.listeners) do
@@ -172,6 +176,7 @@ mt = {
 		setOrientation = functions.setOrientation,
 		updateHandles = functions.updateHandles,
 		setAxisVisibility = functions.setAxisVisibility,
+		setScale = functions.setScale,
 	},
 	__metatable = false,
 }
@@ -194,15 +199,34 @@ moveGizmo.setScale = function(self, s)
 	scale = s
 end
 
-moveGizmo.create = function()
+moveGizmo.create = function(self, config)
+
+	local _config = { -- default config
+		orientation = movegizmo.Orientation.World,
+		snap = 0.0,
+		scale = scale,
+	}
+
+	local function sameType(a, b)
+		if type(a) == type(b) then return true end
+		if type(a) == "number" and type(b) == "integer" then return true end
+		if type(a) == "integer" and type(b) == "number" then return true end
+		return false
+	end
+
+	if config ~= nil then
+		for k, v in pairs(_config) do
+			if sameType(v, config[k]) then _config[k] = config[k] end
+		end
+	end
 
 	local moveGizmo = {
 		selectedHandle = nil,
 		gizmoObject = nil,
 		object = nil,
-		orientation = moveGizmo.Orientation.World,
+		orientation = _config.orientation,
 		handles = {},
-		snap = 0.0,
+		snap = _config.snap,
 		remove = functions.remove,
 		listeners = {},
 		onDrag = nil,
@@ -210,7 +234,7 @@ moveGizmo.create = function()
 	setmetatable(moveGizmo, mt)
 
 	moveGizmo.gizmoObject = Object()
-	moveGizmo.gizmoObject.Scale = scale
+	moveGizmo.gizmoObject.Scale = _config.scale
 
 	local axisColors = { Color.Red, Color.Blue, Color.Green }
 

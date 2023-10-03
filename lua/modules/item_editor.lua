@@ -2158,13 +2158,12 @@ function ui_init()
 	mirrorControls = ui:createFrame(ui_config.groupBackgroundColor)
 	mirrorControls:hide()
 
-	mirrorGizmo = movegizmo:create()
-	mirrorGizmo.debug = true
-	-- mirrorGizmo:setGizmoScale(0.2)
-	mirrorGizmo.gizmoObject.Scale = 0.2
-	--mirrorGizmo:setMode(mirrorGizmo.Mode.Move)
-	-- mirrorGizmo:setSnap(mirrorGizmo.Mode.Move, 0.5)
-	mirrorGizmo.snap = 0.5
+	mirrorGizmo = movegizmo:create({ orientation = movegizmo.Orientation.World, snap = 0.5 })
+	mirrorGizmo.onDrag = function()
+		local shape = mirrorAnchor.selectedShape
+		if not shape then return end
+		mirrorAnchor.coords = shape:WorldToBlock(mirrorAnchor.Position) - {0.5, 0.5, 0.5}
+	end
 
 	rotateMirrorBtn = createButton("↻", ui_config.btnColor, ui_config.btnColorSelected)
 	rotateMirrorBtn:setParent(mirrorControls)
@@ -2221,7 +2220,7 @@ function ui_init()
 	end
 
 	-- TODO: rename selectGizmo and handle 3 gizmos in array for input
-	gizmo = movegizmo:create({ orientation = movegizmo.Orientation.Local, snap = 0.5, scale = 0.2 })
+	gizmo = movegizmo:create({ orientation = movegizmo.Orientation.Local, snap = 0.5 })
 
 	addChild = ui:createText("Add shape", Color.White)
 	addChild:setParent(selectControls)
