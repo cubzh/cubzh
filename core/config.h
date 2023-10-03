@@ -208,6 +208,8 @@ typedef struct {
     SHAPE_COORDS_INT_T x, y, z;
 } SHAPE_COORDS_INT3_T;
 static SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
+static SHAPE_COORDS_INT3_T coords3_max = {INT16_MAX, INT16_MAX, INT16_MAX};
+static SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
 typedef uint16_t SHAPE_SIZE_INT_T;
 // coords of block within chunk
 typedef int8_t CHUNK_COORDS_INT_T;

@@ -397,15 +397,15 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     if (box_collide(&modelBroadphase, collider)) {
                         // shapes may enable per-block collisions
                         if (shape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
-                            swept = shape_box_swept(shape,
-                                                    &modelBox,
-                                                    &modelDv,
-                                                    &modelEpsilon,
-                                                    true,
-                                                    &normal,
-                                                    &extraReplacement3,
-                                                    NULL,
-                                                    NULL);
+                            swept = shape_box_cast(shape,
+                                                   &modelBox,
+                                                   &modelDv,
+                                                   &modelEpsilon,
+                                                   true,
+                                                   &normal,
+                                                   &extraReplacement3,
+                                                   NULL,
+                                                   NULL);
                         } else {
                             swept = box_swept(&modelBox,
                                               &modelDv,

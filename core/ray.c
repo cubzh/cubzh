@@ -8,26 +8,10 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "transform.h"
 #include "utils.h"
-
-enum DrivingAxis {
-    XDrivingAxis = 0,
-    YDrivingAxis = 1,
-    ZDrivingAxis = 2
-};
-
-struct _BresenhamIterator {
-    int3 start;
-    int3 end;
-    int3 last;
-    int3 d;
-    int3 s;
-    int p1;
-    int p2;
-    enum DrivingAxis drivingAxis;
-};
 
 Ray *ray_new(const float3 *origin, const float3 *dir) {
     Ray *ray = (Ray *)malloc(sizeof(Ray));
@@ -41,6 +25,29 @@ Ray *ray_new(const float3 *origin, const float3 *dir) {
     ray->invdir = float3_new(1.0f / ray->dir->x, 1.0f / ray->dir->y, 1.0f / ray->dir->z);
 
     return ray;
+}
+
+Ray *ray_new_copy(const Ray *src) {
+    Ray *ray = (Ray *)malloc(sizeof(Ray));
+    ray->origin = float3_new_copy(src->origin);
+    ray->dir = float3_new_copy(src->dir);
+    ray->invdir = float3_new_copy(src->invdir);
+    return ray;
+}
+
+void ray_free(Ray *ray) {
+    if (ray != NULL) {
+        free(ray->origin);
+        free(ray->dir);
+        free(ray->invdir);
+    }
+    free(ray);
+}
+
+void ray_copy(Ray *dst, const Ray *src) {
+    *dst->origin = *src->origin;
+    *dst->dir = *src->dir;
+    *dst->invdir = *src->invdir;
 }
 
 // frd 200218
@@ -446,13 +453,4 @@ Ray *ray_world_to_local(const Ray *ray, Transform *t) {
     transform_utils_vector_wtl(t, ray->dir, &dir);
     float3_normalize(&dir);
     return ray_new(&origin, &dir);
-}
-
-void ray_free(Ray *ray) {
-    if (ray != NULL) {
-        free(ray->origin);
-        free(ray->dir);
-        free(ray->invdir);
-    }
-    free(ray);
 }

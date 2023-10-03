@@ -22,17 +22,17 @@
 // Create a chunk and check if the default values are the one used
 // Also check all of these function :
 // --- chunk_new()
-// --- chunk_get_pos()
+// --- chunk_get_origin()
 // --- chunk_get_nb_blocks()
 //////
 void test_chunk_new(void) {
     Chunk *chunk = chunk_new(0, 10, -10);
-    const int3 *GetPos = chunk_get_pos(chunk);
+    SHAPE_COORDS_INT3_T origin = chunk_get_origin(chunk);
     int NBBlocks = chunk_get_nb_blocks(chunk);
 
-    TEST_CHECK(GetPos->x == 0);
-    TEST_CHECK(GetPos->y == 10);
-    TEST_CHECK(GetPos->z == -10);
+    TEST_CHECK(origin.x == 0);
+    TEST_CHECK(origin.y == 10);
+    TEST_CHECK(origin.z == -10);
     TEST_CHECK(NBBlocks == 0);
 
     chunk_free(chunk, false);
@@ -111,14 +111,9 @@ void test_chunk_Block(void) {
     TEST_CHECK(coords.z == 11);
 
     // chunk_get_bounding_box()
-    CHUNK_COORDS_INT_T minX = 0;
-    CHUNK_COORDS_INT_T minY = 0;
-    CHUNK_COORDS_INT_T minZ = 0;
-    CHUNK_COORDS_INT_T maxX = 0;
-    CHUNK_COORDS_INT_T maxY = 0;
-    CHUNK_COORDS_INT_T maxZ = 0;
-    chunk_get_bounding_box(chunk, &minX, &maxX, &minY, &maxY, &minZ, &maxZ);
-    TEST_CHECK(minX == 4 && minY == 4 && minZ == 4 && maxX == 7 && maxY == 7 && maxZ == 7);
+    float3 min, max;
+    chunk_get_bounding_box(chunk, &min, &max);
+    TEST_CHECK(min.x == 4 && min.y == 4 && min.z == 4 && max.x == 7 && max.y == 7 && max.z == 7);
 
     // chunk_remove_block()
     TEST_CHECK(chunk_remove_block(chunk, 4, 4, 4) == true);

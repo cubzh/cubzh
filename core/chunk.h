@@ -19,7 +19,6 @@ extern "C" {
 #include "config.h"
 #include "function_pointers.h"
 #include "index3d.h"
-#include "int3.h"
 #include "octree.h"
 #include "shape.h"
 
@@ -66,8 +65,11 @@ void chunk_free(Chunk *chunk, bool updateNeighbors);
 void chunk_free_func(void *c);
 void chunk_set_dirty(Chunk *chunk, bool b);
 bool chunk_is_dirty(const Chunk *chunk);
-const int3 *chunk_get_pos(const Chunk *chunk);
+SHAPE_COORDS_INT3_T chunk_get_origin(const Chunk *chunk);
 int chunk_get_nb_blocks(const Chunk *chunk);
+Octree *chunk_get_octree(const Chunk *c);
+void chunk_set_rtree_leaf(Chunk *c, void *ptr);
+void *chunk_get_rtree_leaf(const Chunk *c);
 
 bool chunk_add_block(Chunk *chunk,
                      const Block block,
@@ -99,18 +101,12 @@ void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T z,
                          SHAPE_COORDS_INT3_T *pos);
 
-void chunk_get_bounding_box(const Chunk *chunk,
-                            CHUNK_COORDS_INT_T *min_x,
-                            CHUNK_COORDS_INT_T *max_x,
-                            CHUNK_COORDS_INT_T *min_y,
-                            CHUNK_COORDS_INT_T *max_y,
-                            CHUNK_COORDS_INT_T *min_z,
-                            CHUNK_COORDS_INT_T *max_z);
+void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max);
 
 // MARK: - Neighbors -
 
 Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location);
-void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk);
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, const int3 *chunk_coords);
 void chunk_leave_neighborhood(Chunk *chunk);
 
 // MARK: - Buffers -

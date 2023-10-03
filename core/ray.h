@@ -24,11 +24,12 @@ typedef struct Ray {
     float3 *invdir;
 } Ray;
 
-typedef struct _BresenhamIterator BresenhamIterator;
 typedef struct _Transform Transform;
 
 Ray *ray_new(const float3 *origin, const float3 *dir);
+Ray *ray_new_copy(const Ray *src);
 void ray_free(Ray *ray);
+void ray_copy(Ray *dst, const Ray *src);
 
 // ray_intersect_with_box returns if given ray intersects with box
 // identified by ldf and rtb corners.

@@ -192,11 +192,6 @@ bool _scene_standalone_refresh_func(Transform *t, void *ptr) {
     return false;
 }
 
-bool _scene_cast_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2) {
-    return ((RtreeCastResult *)doubly_linked_list_node_pointer(n1))->distance >
-           ((RtreeCastResult *)doubly_linked_list_node_pointer(n2))->distance;
-}
-
 // MARK: -
 
 Scene *scene_new(void) {
@@ -619,7 +614,7 @@ CastHitType scene_cast_ray(Scene *sc,
                                  sceneQuery) > 0) {
 
         // sort query results by distance
-        doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
+        doubly_linked_list_sort_ascending(sceneQuery, rtree_utils_result_sort_func);
 
         // process query results in order, to return first hit block or collision box
         DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
@@ -756,7 +751,7 @@ CastHitType scene_cast_box(Scene *sc,
                                  sceneQuery)) {
 
         // sort query results by distance
-        doubly_linked_list_sort_ascending(sceneQuery, _scene_cast_result_sort_func);
+        doubly_linked_list_sort_ascending(sceneQuery, rtree_utils_result_sort_func);
 
         // process query results in order, to return first hit block or collision box
         DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
@@ -805,15 +800,15 @@ CastHitType scene_cast_box(Scene *sc,
                         Block *block = NULL;
                         SHAPE_COORDS_INT3_T blockCoords;
                         float3 normal;
-                        const float swept = shape_box_swept(hitShape,
-                                                            &modelBox,
-                                                            &modelVector,
-                                                            &modelEpsilon,
-                                                            false,
-                                                            &normal,
-                                                            NULL,
-                                                            &block,
-                                                            &blockCoords);
+                        const float swept = shape_box_cast(hitShape,
+                                                           &modelBox,
+                                                           &modelVector,
+                                                           &modelEpsilon,
+                                                           false,
+                                                           &normal,
+                                                           NULL,
+                                                           &block,
+                                                           &blockCoords);
                         if (swept < 1.0f) {
                             float3_op_scale(&modelVector, swept);
 

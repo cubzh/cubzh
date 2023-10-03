@@ -20,20 +20,22 @@ struct _Chunk {
     // 26 possible chunk neighbors used for fast access
     // when updating chunk data/vertices
     Chunk *neighbors[CHUNK_NEIGHBORS_COUNT]; /* 8 bytes */
-    // position of chunk in world's grid
-    int3 *pos; /* 8 bytes */
     // octree partitioning this chunk's blocks
     Octree *octree; /* 8 bytes */
+    // reference to shape chunks rtree leaf node, used for removal
+    void *rtreeLeaf; /* 8 bytes */
     // first opaque/transparent vbma reserved for that chunk, this can be chained across several vb
     VertexBufferMemArea *vbma_opaque;      /* 8 bytes */
     VertexBufferMemArea *vbma_transparent; /* 8 bytes */
     // number of blocks in that chunk
     int nbBlocks; /* 4 bytes */
+    // position of chunk in shape's model
+    SHAPE_COORDS_INT3_T origin; /* 3 * 2 bytes */
     // wether vertices need to be refreshed
     bool dirty; /* 1 byte */
 
     // padding
-    char pad[3];
+    char pad[5];
 };
 
 // MARK: private functions prototypes
@@ -80,8 +82,9 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
         return NULL;
     }
     chunk->octree = _chunk_new_octree();
-    chunk->pos = int3_new(x, y, z);
+    chunk->rtreeLeaf = NULL;
     chunk->dirty = false;
+    chunk->origin = (SHAPE_COORDS_INT3_T){x, y, z};
     chunk->nbBlocks = 0;
 
     for (int i = 0; i < CHUNK_NEIGHBORS_COUNT; i++) {
@@ -111,8 +114,6 @@ void chunk_free(Chunk *chunk, bool updateNeighbors) {
     }
     chunk->vbma_transparent = NULL;
 
-    int3_free(chunk->pos);
-
     free(chunk);
 }
 
@@ -128,12 +129,24 @@ bool chunk_is_dirty(const Chunk *chunk) {
     return chunk->dirty;
 }
 
-const int3 *chunk_get_pos(const Chunk *chunk) {
-    return chunk->pos;
+SHAPE_COORDS_INT3_T chunk_get_origin(const Chunk *chunk) {
+    return chunk->origin;
 }
 
 int chunk_get_nb_blocks(const Chunk *chunk) {
     return chunk->nbBlocks;
+}
+
+Octree *chunk_get_octree(const Chunk *c) {
+    return c->octree;
+}
+
+void chunk_set_rtree_leaf(Chunk *c, void *ptr) {
+    c->rtreeLeaf = ptr;
+}
+
+void *chunk_get_rtree_leaf(const Chunk *c) {
+    return c->rtreeLeaf;
 }
 
 bool chunk_add_block(Chunk *chunk,
@@ -221,42 +234,35 @@ void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T y,
                          const CHUNK_COORDS_INT_T z,
                          SHAPE_COORDS_INT3_T *pos) {
-    pos->x = x + (SHAPE_COORDS_INT_T)chunk->pos->x;
-    pos->y = y + (SHAPE_COORDS_INT_T)chunk->pos->y;
-    pos->z = z + (SHAPE_COORDS_INT_T)chunk->pos->z;
+    pos->x = x + chunk->origin.x;
+    pos->y = y + chunk->origin.y;
+    pos->z = z + chunk->origin.z;
 }
 
-// TODO: should be cached & maintained, will be used for physics queries
-void chunk_get_bounding_box(const Chunk *chunk,
-                            CHUNK_COORDS_INT_T *min_x,
-                            CHUNK_COORDS_INT_T *max_x,
-                            CHUNK_COORDS_INT_T *min_y,
-                            CHUNK_COORDS_INT_T *max_y,
-                            CHUNK_COORDS_INT_T *min_z,
-                            CHUNK_COORDS_INT_T *max_z) {
-
-    *min_x = CHUNK_SIZE_MINUS_ONE;
-    *min_y = CHUNK_SIZE_MINUS_ONE;
-    *min_z = CHUNK_SIZE_MINUS_ONE;
-    *max_x = 0;
-    *max_y = 0;
-    *max_z = 0;
+void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max) {
+    SHAPE_COORDS_INT3_T min_coords = {CHUNK_SIZE_MINUS_ONE,
+                                      CHUNK_SIZE_MINUS_ONE,
+                                      CHUNK_SIZE_MINUS_ONE};
+    SHAPE_COORDS_INT3_T max_coords = {0, 0, 0};
 
     Block *b;
     bool at_least_one_block = false;
 
-    for (CHUNK_COORDS_INT_T x = 0; x < CHUNK_SIZE; x++) {
-        for (CHUNK_COORDS_INT_T z = 0; z < CHUNK_SIZE; z++) {
-            for (CHUNK_COORDS_INT_T y = 0; y < CHUNK_SIZE; y++) {
-                b = chunk_get_block(chunk, x, y, z);
-                if (b != NULL) {
+    for (uint8_t x = 0; x < CHUNK_SIZE; ++x) {
+        for (uint8_t z = 0; z < CHUNK_SIZE; ++z) {
+            for (uint8_t y = 0; y < CHUNK_SIZE; ++y) {
+                b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                 (size_t)x,
+                                                                 (size_t)y,
+                                                                 (size_t)z);
+                if (block_is_solid(b)) {
                     at_least_one_block = true;
-                    *min_x = x < *min_x ? x : *min_x;
-                    *min_y = y < *min_y ? y : *min_y;
-                    *min_z = z < *min_z ? z : *min_z;
-                    *max_x = x > *max_x ? x : *max_x;
-                    *max_y = y > *max_y ? y : *max_y;
-                    *max_z = z > *max_z ? z : *max_z;
+                    min_coords.x = minimum(min_coords.x, x);
+                    min_coords.y = minimum(min_coords.y, y);
+                    min_coords.z = minimum(min_coords.z, z);
+                    max_coords.x = maximum(max_coords.x, x);
+                    max_coords.y = maximum(max_coords.y, y);
+                    max_coords.z = maximum(max_coords.z, z);
                 }
             }
         }
@@ -265,15 +271,22 @@ void chunk_get_bounding_box(const Chunk *chunk,
     // no block: all values should be set to 0
     if (at_least_one_block == false) {
         cclog_warning("chunk_get_bounding_box called on empty chunk");
-        *min_x = 0;
-        *min_y = 0;
-        *min_z = 0;
+        min_coords.x = 0;
+        min_coords.y = 0;
+        min_coords.z = 0;
     } else {
         // otherwise, max values should be incremented
-        *max_x += 1;
-        *max_y += 1;
-        *max_z += 1;
+        max_coords.x += 1;
+        max_coords.y += 1;
+        max_coords.z += 1;
     }
+
+    min->x = (float)min_coords.x;
+    min->y = (float)min_coords.y;
+    min->z = (float)min_coords.z;
+    max->x = (float)max_coords.x;
+    max->y = (float)max_coords.y;
+    max->z = (float)max_coords.z;
 }
 
 // MARK: - Neighbors -
@@ -282,7 +295,7 @@ Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location) {
     return chunk->neighbors[location];
 }
 
-void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk) {
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, const int3 *chunk_coords) {
     void **batchedNode_X = NULL, **batchedNode_Y = NULL;
 
     // Batch Index3D search for all neighbors on the right (x+1)
@@ -290,29 +303,29 @@ void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk) {
           *x_ny_nz = NULL, *x_z = NULL, *x_nz = NULL;
 
     index3d_batch_get_reset(chunks, &batchedNode_X);
-    if (index3d_batch_get_advance(chunk->pos->x + 1, &batchedNode_X)) {
+    if (index3d_batch_get_advance(chunk_coords->x + 1, &batchedNode_X)) {
         // y batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y, &batchedNode_Y)) {
-            x = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            x_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            x_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y, &batchedNode_Y)) {
+            x = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            x_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            x_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
 
         // y+1 batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y + 1, &batchedNode_Y)) {
-            x_y = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            x_y_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            x_y_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y + 1, &batchedNode_Y)) {
+            x_y = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            x_y_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            x_y_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
 
         // y-1 batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y - 1, &batchedNode_Y)) {
-            x_ny = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            x_ny_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            x_ny_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y - 1, &batchedNode_Y)) {
+            x_ny = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            x_ny_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            x_ny_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
     }
 
@@ -333,29 +346,29 @@ void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk) {
           *nx_ny_nz = NULL, *nx_z = NULL, *nx_nz = NULL;
 
     index3d_batch_get_reset(chunks, &batchedNode_X);
-    if (index3d_batch_get_advance(chunk->pos->x - 1, &batchedNode_X)) {
+    if (index3d_batch_get_advance(chunk_coords->x - 1, &batchedNode_X)) {
         // y batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y, &batchedNode_Y)) {
-            nx = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            nx_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            nx_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y, &batchedNode_Y)) {
+            nx = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            nx_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            nx_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
 
         // y+1 batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y + 1, &batchedNode_Y)) {
-            nx_y = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            nx_y_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            nx_y_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y + 1, &batchedNode_Y)) {
+            nx_y = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            nx_y_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            nx_y_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
 
         // y-1 batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y - 1, &batchedNode_Y)) {
-            nx_ny = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            nx_ny_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            nx_ny_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y - 1, &batchedNode_Y)) {
+            nx_ny = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            nx_ny_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            nx_ny_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
     }
 
@@ -376,28 +389,28 @@ void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk) {
           *nz = NULL;
 
     index3d_batch_get_reset(chunks, &batchedNode_X);
-    if (index3d_batch_get_advance(chunk->pos->x, &batchedNode_X)) {
+    if (index3d_batch_get_advance(chunk_coords->x, &batchedNode_X)) {
         // y batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y, &batchedNode_Y)) {
-            z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y, &batchedNode_Y)) {
+            z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
 
         // y+1 batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y + 1, &batchedNode_Y)) {
-            y = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            y_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            y_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y + 1, &batchedNode_Y)) {
+            y = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            y_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            y_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
 
         // y-1 batch
         batchedNode_Y = batchedNode_X;
-        if (index3d_batch_get_advance(chunk->pos->y - 1, &batchedNode_Y)) {
-            ny = index3d_batch_get(chunk->pos->z, batchedNode_Y);
-            ny_z = index3d_batch_get(chunk->pos->z + 1, batchedNode_Y);
-            ny_nz = index3d_batch_get(chunk->pos->z - 1, batchedNode_Y);
+        if (index3d_batch_get_advance(chunk_coords->y - 1, &batchedNode_Y)) {
+            ny = index3d_batch_get(chunk_coords->z, batchedNode_Y);
+            ny_z = index3d_batch_get(chunk_coords->z + 1, batchedNode_Y);
+            ny_nz = index3d_batch_get(chunk_coords->z - 1, batchedNode_Y);
         }
     }
 

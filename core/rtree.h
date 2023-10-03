@@ -37,7 +37,6 @@ extern "C" {
 
 typedef struct _Rtree Rtree;
 typedef struct _RtreeNode RtreeNode;
-typedef struct RtreeCastResult RtreeCastResult;
 typedef void (*pointer_rtree_recurse_func)(RtreeNode *rn);
 typedef bool (*pointer_rtree_query_overlap_func)(RtreeNode *rn, void *ptr, float epsilon);
 typedef bool (*pointer_rtree_query_cast_all_func)(RtreeNode *rn, void *ptr, float *distance);
@@ -52,12 +51,12 @@ typedef size_t (*pointer_rtree_broadphase_step_func)(Rtree *r,
                                                      const DoublyLinkedList *excludeLeafPtrs,
                                                      DoublyLinkedList *results);
 
-struct RtreeCastResult {
+typedef struct RtreeCastResult {
     RtreeNode *rtreeLeaf;
     float distance;
 
     char pad[4];
-};
+} RtreeCastResult;
 
 Rtree *rtree_new(uint8_t m, uint8_t M);
 void rtree_free(Rtree *r);
@@ -161,6 +160,7 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
                                     void *optionalPtr,
                                     const DoublyLinkedList *excludeLeafPtrs,
                                     DoublyLinkedList *results);
+bool rtree_utils_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2);
 
 /// MARK: - Debug -
 #if DEBUG_RTREE

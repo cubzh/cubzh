@@ -27,31 +27,6 @@
 // takes the 4 low bits of a and casts into uint8_t
 #define TO_UINT4(a) (uint8_t)((a)&0x0F)
 
-// --------------------------------------------------
-//
-// MARK: - Types -
-//
-// --------------------------------------------------
-
-typedef struct _ChunkList ChunkList;
-
-struct _ChunkList {
-    Chunk *chunk;
-    ChunkList *next;
-};
-
-ChunkList *chunk_list_push_new_element(Chunk *c, ChunkList *next) {
-    ChunkList *cl = (ChunkList *)malloc(sizeof(ChunkList));
-    cl->next = next;
-    cl->chunk = c;
-    return cl;
-}
-
-void chunk_list_free(ChunkList *cl) {
-    // no need to free chunks as they have to be referenced elsewhere
-    free(cl);
-}
-
 struct _Shape {
     Weakptr *wptr;
 
@@ -70,8 +45,7 @@ struct _Shape {
     // cached world axis-aligned bounding box, may be NULL if no cache
     Box *worldAABB;
 
-    // Octree is NULL by default, unless the shape is initialized with
-    // shape_make_with_octree.
+    // TODO: remove
     Octree *octree; // 8 bytes
 
     // NULL if shape does not use lighting
@@ -80,10 +54,11 @@ struct _Shape {
     // buffers storing faces data used for rendering
     VertexBuffer *firstVB_opaque, *firstVB_transparent;
     VertexBuffer *lastVB_opaque, *lastVB_transparent;
-    // 3D indexed chunks
+
+    // Chunks are indexed by coordinates, and partitioned in a r-tree for physics queries
     Index3D *chunks;
-    // List of chunks in need for display update
-    ChunkList *needsDisplay;
+    FifoList *dirtyChunks;
+    Rtree *rtree;
 
     // fragmented vertex buffers
     DoublyLinkedList *fragmentedVBs;
@@ -145,15 +120,15 @@ static bool _shape_add_block(Shape *shape,
                              SHAPE_COORDS_INT_T x,
                              SHAPE_COORDS_INT_T y,
                              SHAPE_COORDS_INT_T z);
-static bool _add_block_in_chunks(Index3D *chunks,
-                                 const Block block,
-                                 const SHAPE_COORDS_INT_T x,
-                                 const SHAPE_COORDS_INT_T y,
-                                 const SHAPE_COORDS_INT_T z,
-                                 int3 *block_coords_out,
-                                 bool *chunkAdded,
-                                 Chunk **added_or_existing_chunk,
-                                 Block **added_or_existing_block);
+static bool _shape_add_block_in_chunks(Shape *shape,
+                                       const Block block,
+                                       const SHAPE_COORDS_INT_T x,
+                                       const SHAPE_COORDS_INT_T y,
+                                       const SHAPE_COORDS_INT_T z,
+                                       int3 *block_coords_out,
+                                       bool *chunkAdded,
+                                       Chunk **added_or_existing_chunk,
+                                       Block **added_or_existing_block);
 
 bool _has_allocated_size(const Shape *s);
 bool _is_out_of_allocated_size(const Shape *s,
@@ -274,6 +249,8 @@ Shape *shape_make(void) {
     s->lightingData = NULL;
 
     s->chunks = index3d_new();
+    s->dirtyChunks = NULL;
+    s->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
 
     // vertex buffers will be created on demand during refresh
     s->firstVB_opaque = NULL;
@@ -283,7 +260,6 @@ Shape *shape_make(void) {
     s->vbAllocationFlag_opaque = 0;
     s->vbAllocationFlag_transparent = 0;
 
-    s->needsDisplay = NULL;
     s->history = NULL;
     s->fullname = NULL;
     s->pendingTransaction = NULL;
@@ -470,15 +446,15 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
     switch (*flag) {
         // uninitialized or last buffer capacity was capped (1a)
         case 0: {
-            int3 *size = int3_pool_pop();
-            shape_get_bounding_box_size(shape, size);
+            int3 size;
+            shape_get_bounding_box_size(shape, &size);
 
             // estimation based on maximum of shape shell vs. shape volume block-occupancy
-            size_t shell = (size_t)(minimum(size->z, 2) * size->x * size->y +
-                                    minimum(size->y, 2) * size->x * maximum(size->z - 2, 0) +
-                                    minimum(size->x, 2) * maximum(size->z - 2, 0) *
-                                        maximum(size->y - 2, 0));
-            float volume = (float)(size->x * size->y * size->z) * VERTEX_BUFFER_VOLUME_OCCUPANCY;
+            size_t shell = (size_t)(minimum(size.z, 2) * size.x * size.y +
+                                    minimum(size.y, 2) * size.x * maximum(size.z - 2, 0) +
+                                    minimum(size.x, 2) * maximum(size.z - 2, 0) *
+                                        maximum(size.y - 2, 0));
+            float volume = (float)(size.x * size.y * size.z) * VERTEX_BUFFER_VOLUME_OCCUPANCY;
             if (shell >= (size_t)volume) {
                 capacity = (size_t)(ceilf(
                     (float)shell * VERTEX_BUFFER_SHELL_FACTOR *
@@ -495,8 +471,6 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
                 *flag = 1;
             }
             capacity = CLAMP(capacity, VERTEX_BUFFER_MIN_COUNT, VERTEX_BUFFER_MAX_COUNT);
-
-            int3_pool_recycle(size);
             break;
         }
         // initialized within this frame and last buffer capacity was uncapped (1b)
@@ -609,12 +583,9 @@ void shape_flush(Shape *shape) {
         shape->vbAllocationFlag_opaque = 0;
         shape->vbAllocationFlag_transparent = 0;
 
-        // flush dirty list
-        ChunkList *cl;
-        while (shape->needsDisplay != NULL) {
-            cl = shape->needsDisplay;
-            shape->needsDisplay = cl->next;
-            chunk_list_free(cl);
+        if (shape->dirtyChunks != NULL) {
+            fifo_list_free(shape->dirtyChunks, NULL);
+            shape->dirtyChunks = NULL;
         }
 
         // no need to flush fragmentedVBs,
@@ -689,6 +660,12 @@ void shape_free(Shape *const shape) {
     index3d_flush(shape->chunks, chunk_free_func);
     index3d_free(shape->chunks);
 
+    if (shape->dirtyChunks != NULL) {
+        fifo_list_free(shape->dirtyChunks, NULL);
+    }
+
+    rtree_free(shape->rtree);
+
     // free all vertex buffers
     vertex_buffer_free_all(shape->firstVB_opaque);
     vertex_buffer_free_all(shape->firstVB_transparent);
@@ -697,14 +674,6 @@ void shape_free(Shape *const shape) {
     // vertex_buffer_free_all has been called previously
     doubly_linked_list_free(shape->fragmentedVBs);
     shape->fragmentedVBs = NULL;
-
-    // free dirty list
-    ChunkList *cl = NULL;
-    while (shape->needsDisplay != NULL) {
-        cl = shape->needsDisplay;
-        shape->needsDisplay = cl->next;
-        chunk_list_free(cl);
-    }
 
     // free history
     history_free(shape->history);
@@ -1145,26 +1114,21 @@ Block *shape_get_block_immediate(const Shape *const shape,
 
     Block *b = NULL;
     if (shape_is_within_allocated_bounds(shape, x, y, z)) {
-        if (shape->octree != NULL) {
-            b = (Block *)
-                octree_get_element_without_checking(shape->octree, (size_t)x, (size_t)y, (size_t)z);
-        } else {
-            static int3 globalPos;
-            static int3 posInChunk;
+        static int3 globalPos;
+        static int3 posInChunk;
 
-            int3_set(&globalPos, x, y, z);
+        int3_set(&globalPos, x, y, z);
 
-            static Chunk *chunk;
+        static Chunk *chunk;
 
-            shape_get_chunk_and_position_within(shape, &globalPos, &chunk, NULL, &posInChunk);
+        shape_get_chunk_and_position_within(shape, &globalPos, &chunk, NULL, &posInChunk);
 
-            // found chunk?
-            if (chunk != NULL) {
-                b = chunk_get_block(chunk,
-                                    (CHUNK_COORDS_INT_T)posInChunk.x,
-                                    (CHUNK_COORDS_INT_T)posInChunk.y,
-                                    (CHUNK_COORDS_INT_T)posInChunk.z);
-            }
+        // found chunk?
+        if (chunk != NULL) {
+            b = chunk_get_block(chunk,
+                                (CHUNK_COORDS_INT_T)posInChunk.x,
+                                (CHUNK_COORDS_INT_T)posInChunk.y,
+                                (CHUNK_COORDS_INT_T)posInChunk.z);
         }
     }
     return b;
@@ -1254,20 +1218,8 @@ bool shape_compute_size_and_origin(const Shape *shape,
                                    SHAPE_COORDS_INT_T *origin_y,
                                    SHAPE_COORDS_INT_T *origin_z) {
 
-    // shape boundaries
-    // the min can be > 0 and max can be < 0 so we can set these values now.
-    // we take the ones from first chunk.
-    int32_t min_x = 0;
-    int32_t min_y = 0;
-    int32_t min_z = 0;
-    int32_t max_x = 0;
-    int32_t max_y = 0;
-    int32_t max_z = 0;
-
     Index3DIterator *it = index3d_iterator_new(shape->chunks);
-
     if (index3d_iterator_pointer(it) == NULL) {
-        // no chunk
         *size_x = 0;
         *size_y = 0;
         *size_z = 0;
@@ -1277,68 +1229,49 @@ bool shape_compute_size_and_origin(const Shape *shape,
         return false; // empty shape
     }
 
+    SHAPE_COORDS_INT3_T s_min = coords3_zero, s_max = coords3_zero;
+    float3 c_min, c_max;
+    Chunk *c;
     bool firstChunk = true;
+    while (index3d_iterator_pointer(it) != NULL) {
+        c = (Chunk *)index3d_iterator_pointer(it);
 
-    CHUNK_COORDS_INT_T c_min_x = 0;
-    CHUNK_COORDS_INT_T c_max_x = 0;
-    CHUNK_COORDS_INT_T c_min_y = 0;
-    CHUNK_COORDS_INT_T c_max_y = 0;
-    CHUNK_COORDS_INT_T c_min_z = 0;
-    CHUNK_COORDS_INT_T c_max_z = 0;
-
-    // loop on all the chunks
-    while (true) {
-        // process current chunk
-        Chunk *c = (Chunk *)index3d_iterator_pointer(it);
-
-        // Compute inner bounds only if chunk is NOT empty.
-        // Empty chunks end up being removed but they could
-        // still be present here.
         if (chunk_get_nb_blocks(c) > 0) {
+            chunk_get_bounding_box(c, &c_min, &c_max);
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
 
-            // get chunk's inner bounds to refine limits
-            chunk_get_bounding_box(c, &c_min_x, &c_max_x, &c_min_y, &c_max_y, &c_min_z, &c_max_z);
-
-            // Note: chunk should never be NULL
-
-            // get its position
-            const int3 *p = chunk_get_pos(c);
+            const SHAPE_COORDS_INT3_T c_s_min = {chunkOrigin.x + (SHAPE_COORDS_INT_T)c_min.x,
+                                                 chunkOrigin.y + (SHAPE_COORDS_INT_T)c_min.y,
+                                                 chunkOrigin.z + (SHAPE_COORDS_INT_T)c_min.z};
+            const SHAPE_COORDS_INT3_T c_s_max = {chunkOrigin.x + (SHAPE_COORDS_INT_T)c_max.x,
+                                                 chunkOrigin.y + (SHAPE_COORDS_INT_T)c_max.y,
+                                                 chunkOrigin.z + (SHAPE_COORDS_INT_T)c_max.z};
 
             if (firstChunk) {
-                min_x = p->x + c_min_x;
-                min_y = p->y + c_min_y;
-                min_z = p->z + c_min_z;
-                max_x = p->x + c_max_x;
-                max_y = p->y + c_max_y;
-                max_z = p->z + c_max_z;
+                s_min = c_s_min;
+                s_max = c_s_max;
                 firstChunk = false;
             } else {
-                // update min/max on all 3 axis
-                min_x = (p->x + c_min_x < min_x) ? (p->x + c_min_x) : (min_x);
-                max_x = (p->x + c_max_x > max_x) ? (p->x + c_max_x) : (max_x);
-                min_y = (p->y + c_min_y < min_y) ? (p->y + c_min_y) : (min_y);
-                max_y = (p->y + c_max_y > max_y) ? (p->y + c_max_y) : (max_y);
-                min_z = (p->z + c_min_z < min_z) ? (p->z + c_min_z) : (min_z);
-                max_z = (p->z + c_max_z > max_z) ? (p->z + c_max_z) : (max_z);
+                s_min.x = minimum(s_min.x, c_s_min.x);
+                s_min.y = minimum(s_min.y, c_s_min.x);
+                s_min.z = minimum(s_min.z, c_s_min.x);
+                s_max.x = maximum(s_max.x, c_s_max.x);
+                s_max.y = maximum(s_max.y, c_s_max.y);
+                s_max.z = maximum(s_max.z, c_s_max.z);
             }
         }
 
-        // select next chunk and exit the loop if there is no next chunk
-        if (index3d_iterator_is_at_end(it)) {
-            break;
-        }
         index3d_iterator_next(it);
     }
-
     index3d_iterator_free(it);
 
-    *size_x = (SHAPE_SIZE_INT_T)(max_x - min_x);
-    *size_y = (SHAPE_SIZE_INT_T)(max_y - min_y);
-    *size_z = (SHAPE_SIZE_INT_T)(max_z - min_z);
+    *size_x = (SHAPE_SIZE_INT_T)(s_max.x - s_min.x);
+    *size_y = (SHAPE_SIZE_INT_T)(s_max.y - s_min.y);
+    *size_z = (SHAPE_SIZE_INT_T)(s_max.z - s_min.z);
 
-    *origin_x = (SHAPE_COORDS_INT_T)min_x;
-    *origin_y = (SHAPE_COORDS_INT_T)min_y;
-    *origin_z = (SHAPE_COORDS_INT_T)min_z;
+    *origin_x = s_min.x;
+    *origin_y = s_min.y;
+    *origin_z = s_min.z;
 
     return true; // non-empty shape
 }
@@ -1667,13 +1600,10 @@ void shape_make_space(Shape *const shape,
         shape->maxDepth += az;
 
     // empty current dirty chunks list, if any
-    ChunkList *cl = NULL;
-    while (shape->needsDisplay != NULL) {
-        cl = shape->needsDisplay;
-        shape->needsDisplay = cl->next;
-        chunk_list_free(cl);
+    if (shape->dirtyChunks != NULL) {
+        fifo_list_free(shape->dirtyChunks, NULL);
+        shape->dirtyChunks = NULL;
     }
-    // shape->dirty is now NULL
 
     if (chunks != NULL) {
         // copy with offsets to blocks position
@@ -1709,15 +1639,15 @@ void shape_make_space(Shape *const shape,
                                            (size_t)ox,
                                            (size_t)oy,
                                            (size_t)oz);
-                        _add_block_in_chunks(chunks,
-                                             *block,
-                                             ox,
-                                             oy,
-                                             oz,
-                                             NULL,
-                                             &chunkAdded,
-                                             &chunk,
-                                             NULL);
+                        _shape_add_block_in_chunks(shape,
+                                                   *block,
+                                                   ox,
+                                                   oy,
+                                                   oz,
+                                                   NULL,
+                                                   &chunkAdded,
+                                                   &chunk,
+                                                   NULL);
 
                         // flag this chunk as dirty (needs display)
                         if (chunkAdded) {
@@ -2245,43 +2175,35 @@ void shape_refresh_vertices(Shape *shape) {
         return;
     }
 
-    ChunkList *tmp;
-
-    while (shape->needsDisplay != NULL) {
-        Chunk *c = shape->needsDisplay->chunk;
+    Chunk *c = shape->dirtyChunks != NULL ? fifo_list_pop(shape->dirtyChunks) : NULL;
+    while (c != NULL) {
         // Note: chunk should never be NULL
         // Note: no need to check chunk_is_dirty, it has to be true
 
         // if the chunk has been emptied, we can remove it from shape index and destroy it
         // Note: this will create gaps in all the vb used for this chunk ie. make them fragmented
         if (chunk_get_nb_blocks(c) == 0) {
-            const int3 *pos = chunk_get_pos(c);
-            int3 *ldfPos = int3_pool_pop();
-            int3_set(ldfPos,
-                     pos->x >> CHUNK_SIZE_SQRT,
-                     pos->y >> CHUNK_SIZE_SQRT,
-                     pos->z >> CHUNK_SIZE_SQRT);
-            index3d_remove(shape->chunks, ldfPos->x, ldfPos->y, ldfPos->z, NULL);
-            int3_pool_recycle(ldfPos);
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            int3 chunk_coords = {chunkOrigin.x >> CHUNK_SIZE_SQRT,
+                                 chunkOrigin.y >> CHUNK_SIZE_SQRT,
+                                 chunkOrigin.z >> CHUNK_SIZE_SQRT};
+            index3d_remove(shape->chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z, NULL);
+            rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), false);
+            chunk_free(c, true);
+            c = NULL;
 
             shape->nbChunks--;
-
-            chunk_free(c, true);
-
-            c = NULL;
         }
         // else chunk has data that needs updating
         else {
             chunk_write_vertices(shape, c);
         }
 
-        tmp = shape->needsDisplay;
-        shape->needsDisplay = shape->needsDisplay->next;
-        chunk_list_free(tmp);
-
         if (c != NULL) {
             chunk_set_dirty(c, false);
         }
+
+        c = fifo_list_pop(shape->dirtyChunks);
     }
 
     // check all vertex buffers used by this shape, to see if they have to be defragmented
@@ -2335,11 +2257,9 @@ void shape_refresh_all_vertices(Shape *s) {
     _shape_fill_draw_slices(s->firstVB_transparent);
 
     // flush dirty list
-    ChunkList *cl;
-    while (s->needsDisplay != NULL) {
-        cl = s->needsDisplay;
-        s->needsDisplay = cl->next;
-        chunk_list_free(cl);
+    if (s->dirtyChunks != NULL) {
+        fifo_list_free(s->dirtyChunks, NULL);
+        s->dirtyChunks = NULL;
     }
 }
 
@@ -2393,32 +2313,60 @@ void shape_compute_world_collider(const Shape *s, Box *box) {
     shape_box_to_aabox(s, rigidbody_get_collider(rb), box, true);
 }
 
-float shape_box_swept(const Shape *s,
-                      const Box *modelBox,
-                      const float3 *modelVector,
-                      const float3 *epsilon,
-                      const bool withReplacement,
-                      float3 *normal,
-                      float3 *extraReplacement,
-                      Block **block,
-                      SHAPE_COORDS_INT3_T *blockCoords) {
+typedef struct {
+    Chunk *chunk;
+    void *castData;
+    float distance;
+} _ChunkEntry;
 
-    if (s->octree == NULL) {
-        cclog_error("shape_box_swept can't be used if octree is NULL.");
-        return 1.0f;
+void _chunk_entry_free_ray_func(void *ptr) {
+    _ChunkEntry *ce = (_ChunkEntry *)ptr;
+    ray_free((Ray *)ce->castData);
+    free(ce);
+}
+
+void _chunk_entry_free_box_func(void *ptr) {
+    _ChunkEntry *ce = (_ChunkEntry *)ptr;
+    box_free((Box *)ce->castData);
+    free(ce);
+}
+
+void _chunk_entry_insert(DoublyLinkedList *chunks, Chunk *c, void *castData, float d) {
+    _ChunkEntry *newCe = (_ChunkEntry *)malloc(sizeof(_ChunkEntry));
+    newCe->chunk = c;
+    newCe->castData = castData;
+    newCe->distance = d;
+
+    // insert by order of increasing distance
+    if (doubly_linked_list_first(chunks) == NULL) {
+        doubly_linked_list_push_last(chunks, newCe);
+    } else {
+        bool inserted = false;
+        DoublyLinkedListNode *n = doubly_linked_list_first(chunks);
+        _ChunkEntry *ce;
+        while (n != NULL && inserted == false) {
+            ce = (_ChunkEntry *)doubly_linked_list_node_pointer(n);
+            if (ce->distance > newCe->distance) {
+                doubly_linked_list_insert_node_previous(chunks, n, newCe);
+                inserted = true;
+            }
+            n = doubly_linked_list_node_next(n);
+        }
+        if (inserted == false) {
+            doubly_linked_list_push_last(chunks, newCe);
+        }
     }
+}
 
-    OctreeIterator *oi = octree_iterator_new(s->octree);
-
-    Box broadPhaseBox, tmpBox;
-    box_set_broadphase_box(modelBox, modelVector, &broadPhaseBox);
-
-    bool leaf = false;
-    bool collides;
-    // size_t nbcubes = 0;
-    float3 tmpNormal, tmpReplacement;
-    float minSwept = 1.0f;
-    float swept = 1.0f;
+float shape_box_cast(const Shape *s,
+                     const Box *modelBox,
+                     const float3 *modelVector,
+                     const float3 *epsilon,
+                     const bool withReplacement,
+                     float3 *normal,
+                     float3 *extraReplacement,
+                     Block **block,
+                     SHAPE_COORDS_INT3_T *blockCoords) {
 
     if (normal != NULL) {
         float3_set_one(normal);
@@ -2427,236 +2375,333 @@ float shape_box_swept(const Shape *s,
     if (extraReplacement != NULL) {
         float3_set_zero(extraReplacement);
     }
+
+    float minSwept = 1.0f;
+    const float maxDist = float3_length(modelVector);
+    const float3 unit = {modelVector->x / maxDist,
+                         modelVector->y / maxDist,
+                         modelVector->z / maxDist};
+
+    // select overlapped chunks
+    DoublyLinkedList *chunksQuery = doubly_linked_list_new();
+    if (rtree_query_cast_all_box(s->rtree, modelBox, &unit, maxDist, 0, 1, NULL, chunksQuery) > 0) {
+        // sort query results by distance
+        doubly_linked_list_sort_ascending(chunksQuery, rtree_utils_result_sort_func);
+
+        Box broadPhaseBox, tmpBox;
+        box_set_broadphase_box(modelBox, modelVector, &broadPhaseBox);
+
+        // examine query results in order, return first hit block
+        DoublyLinkedListNode *n = doubly_linked_list_first(chunksQuery);
+        RtreeCastResult *rtreeHit;
+        OctreeIterator *oi;
+        Chunk *c;
+        bool collides = false, leaf;
+        float3 tmpNormal, tmpReplacement;
+        float swept = 1.0f;
+        while (n != NULL && collides == false) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            leaf = false;
 #if PHYSICS_EXTRA_REPLACEMENTS
-    float blockedX = false, blockedY = false, blockedZ = false;
+            float blockedX = false, blockedY = false, blockedZ = false;
 #endif
 
-    while (octree_iterator_is_done(oi) == false) {
+            oi = octree_iterator_new(chunk_get_octree(c));
+            while (octree_iterator_is_done(oi) == false) {
+                octree_iterator_get_node_box(oi, &tmpBox);
 
-        octree_iterator_get_node_box(oi, &tmpBox);
+                // chunk octree box in model space
+                tmpBox.min.x += chunkOrigin.x;
+                tmpBox.min.y += chunkOrigin.y;
+                tmpBox.min.z += chunkOrigin.z;
+                tmpBox.max.x += chunkOrigin.x;
+                tmpBox.max.y += chunkOrigin.y;
+                tmpBox.max.z += chunkOrigin.z;
 
-        collides = box_collide(&tmpBox, &broadPhaseBox);
-
-        if (leaf) {
-            if (collides) {
-                // nbcubes++;
-                swept = box_swept(modelBox,
-                                  modelVector,
-                                  &tmpBox,
-                                  epsilon,
-                                  withReplacement,
-                                  &tmpNormal,
-                                  &tmpReplacement);
-                if (swept < minSwept) {
-                    minSwept = swept;
-                    if (normal != NULL) {
-                        *normal = tmpNormal;
+                collides = box_collide(&tmpBox, &broadPhaseBox);
+                if (leaf && collides) {
+                    swept = box_swept(modelBox,
+                                      modelVector,
+                                      &tmpBox,
+                                      epsilon,
+                                      withReplacement,
+                                      &tmpNormal,
+                                      &tmpReplacement);
+                    if (swept < minSwept) {
+                        minSwept = swept;
+                        if (normal != NULL) {
+                            *normal = tmpNormal;
+                        }
+                        if (block != NULL) {
+                            *block = (Block *)octree_iterator_get_element(oi);
+                        }
+                        if (blockCoords != NULL) {
+                            uint16_t x, y, z;
+                            octree_iterator_get_current_position(oi, &x, &y, &z);
+                            blockCoords->x = (SHAPE_COORDS_INT_T)x;
+                            blockCoords->y = (SHAPE_COORDS_INT_T)y;
+                            blockCoords->z = (SHAPE_COORDS_INT_T)z;
+                        }
                     }
-                    if (block != NULL) {
-                        *block = (Block *)octree_iterator_get_element(oi);
-                    }
-                    if (blockCoords != NULL) {
-                        uint16_t x, y, z;
-                        octree_iterator_get_current_position(oi, &x, &y, &z);
-                        blockCoords->x = (SHAPE_COORDS_INT_T)x;
-                        blockCoords->y = (SHAPE_COORDS_INT_T)y;
-                        blockCoords->z = (SHAPE_COORDS_INT_T)z;
-                    }
-                }
 #if PHYSICS_EXTRA_REPLACEMENTS
-                if (extraReplacement != NULL) {
-                    if (tmpReplacement.x != 0.0f && blockedX == false) {
-                        // previous replacement is positive and new replacement is positive & bigger
-                        if (extraReplacement->x >= 0.0f && tmpReplacement.x > extraReplacement->x) {
-                            extraReplacement->x = tmpReplacement.x;
+                    if (extraReplacement != NULL) {
+                        if (tmpReplacement.x != 0.0f && blockedX == false) {
+                            // previous replacement is positive and new replacement is positive &
+                            // bigger
+                            if (extraReplacement->x >= 0.0f &&
+                                tmpReplacement.x > extraReplacement->x) {
+                                extraReplacement->x = tmpReplacement.x;
+                            }
+                            // previous replacement is negative and new replacement is negative &
+                            // bigger
+                            else if (extraReplacement->x <= 0.0f &&
+                                     tmpReplacement.x < extraReplacement->x) {
+                                extraReplacement->x = tmpReplacement.x;
+                            }
+                            // previous & new replacements are opposite... this axis is blocked,
+                            // set to 0 to avoid stuttering and wait for another axis to replace
+                            else if (extraReplacement->x * tmpReplacement.x < 0.0f) {
+                                extraReplacement->x = 0.0f;
+                                blockedX = true;
+                            }
                         }
-                        // previous replacement is negative and new replacement is negative & bigger
-                        else if (extraReplacement->x <= 0.0f &&
-                                 tmpReplacement.x < extraReplacement->x) {
-                            extraReplacement->x = tmpReplacement.x;
+                        if (tmpReplacement.y != 0.0f && blockedY == false) {
+                            if (extraReplacement->y >= 0.0f &&
+                                tmpReplacement.y > extraReplacement->y) {
+                                extraReplacement->y = tmpReplacement.y;
+                            } else if (extraReplacement->y <= 0.0f &&
+                                       tmpReplacement.y < extraReplacement->y) {
+                                extraReplacement->y = tmpReplacement.y;
+                            } else if (extraReplacement->y * tmpReplacement.y < 0.0f) {
+                                extraReplacement->y = 0.0f;
+                                blockedX = true;
+                            }
                         }
-                        // previous & new replacements are opposite... this axis is blocked,
-                        // set to 0 to avoid stuttering and wait for another axis to replace
-                        else if (extraReplacement->x * tmpReplacement.x < 0.0f) {
-                            extraReplacement->x = 0.0f;
-                            blockedX = true;
+                        if (tmpReplacement.z != 0.0f && blockedZ == false) {
+                            if (extraReplacement->z >= 0.0f &&
+                                tmpReplacement.z > extraReplacement->z) {
+                                extraReplacement->z = tmpReplacement.z;
+                            } else if (extraReplacement->z <= 0.0f &&
+                                       tmpReplacement.z < extraReplacement->z) {
+                                extraReplacement->z = tmpReplacement.z;
+                            } else if (extraReplacement->z * tmpReplacement.z < 0.0f) {
+                                extraReplacement->z = 0.0f;
+                                blockedX = true;
+                            }
                         }
                     }
-                    if (tmpReplacement.y != 0.0f && blockedY == false) {
-                        if (extraReplacement->y >= 0.0f && tmpReplacement.y > extraReplacement->y) {
-                            extraReplacement->y = tmpReplacement.y;
-                        } else if (extraReplacement->y <= 0.0f &&
-                                   tmpReplacement.y < extraReplacement->y) {
-                            extraReplacement->y = tmpReplacement.y;
-                        } else if (extraReplacement->y * tmpReplacement.y < 0.0f) {
-                            extraReplacement->y = 0.0f;
-                            blockedX = true;
-                        }
-                    }
-                    if (tmpReplacement.z != 0.0f && blockedZ == false) {
-                        if (extraReplacement->z >= 0.0f && tmpReplacement.z > extraReplacement->z) {
-                            extraReplacement->z = tmpReplacement.z;
-                        } else if (extraReplacement->z <= 0.0f &&
-                                   tmpReplacement.z < extraReplacement->z) {
-                            extraReplacement->z = tmpReplacement.z;
-                        } else if (extraReplacement->z * tmpReplacement.z < 0.0f) {
-                            extraReplacement->z = 0.0f;
-                            blockedX = true;
-                        }
-                    }
-                }
 #endif
+                }
+
+                octree_iterator_next(oi, collides == false && leaf == false, &leaf);
             }
+            octree_iterator_free(oi);
+
+            if (collides && blockCoords != NULL) {
+                // chunk block coordinates in model space
+                blockCoords->x += chunkOrigin.x;
+                blockCoords->y += chunkOrigin.y;
+                blockCoords->z += chunkOrigin.z;
+            }
+
+            n = doubly_linked_list_node_next(n);
         }
-
-        octree_iterator_next(oi, collides == false && leaf == false, &leaf);
     }
-
-    // printf("found %zu cubes\n", nbcubes);
-
-    octree_iterator_free(oi);
+    doubly_linked_list_flush(chunksQuery, free);
+    doubly_linked_list_free(chunksQuery);
 
     return minSwept;
 }
 
-bool shape_ray_cast(const Shape *sh,
+bool shape_ray_cast(const Shape *s,
                     const Ray *worldRay,
                     float *worldDistance,
                     float3 *localImpact,
                     Block **block,
                     SHAPE_COORDS_INT3_T *coords) {
 
-    if (sh == NULL) {
-        return false;
-    }
-    if (worldRay == NULL) {
+    if (s == NULL || worldRay == NULL) {
         return false;
     }
 
-    if (sh->octree == NULL) {
-        cclog_error("shape_ray_cast can't be used if octree is NULL");
-        return false;
-    }
-
-    OctreeIterator *oi = octree_iterator_new(sh->octree);
-
-    Box tmpBox;
-    bool leaf = false;
-    bool collides = false;
-    Block *b = NULL;
-    // uint16_t nodeSize = 0;
-    float d = 0;
-    float minDistance = FLT_MAX;
-    uint16_t _x = 0;
-    uint16_t _y = 0;
-    uint16_t _z = 0;
-
-    // we want a ray in model space to intersect with octree coordinates
-    Transform *t = shape_get_pivot_transform(sh);
+    // we want a ray in model space to intersect with block coordinates
+    Transform *t = shape_get_pivot_transform(s);
     Ray *modelRay = ray_world_to_local(worldRay, t);
 
-    while (octree_iterator_is_done(oi) == false) {
-        octree_iterator_get_node_box(oi, &tmpBox);
+    // select traversed chunks
+    DoublyLinkedList *chunksQuery = doubly_linked_list_new();
+    if (rtree_query_cast_all_ray(s->rtree, modelRay, 0, 1, NULL, chunksQuery) > 0) {
+        // sort query results by distance
+        doubly_linked_list_sort_ascending(chunksQuery, rtree_utils_result_sort_func);
 
-        collides = ray_intersect_with_box(modelRay, &tmpBox.min, &tmpBox.max, &d);
-        if (d > minDistance) {
-            collides = false; // skip, collision already found closer
-        }
-        if (collides == true) {
-            if (leaf == true) {
-                if (d < minDistance) {
+        // examine query results in order, return first hit block
+        DoublyLinkedListNode *n = doubly_linked_list_first(chunksQuery);
+        RtreeCastResult *rtreeHit;
+        OctreeIterator *oi;
+        Chunk *c;
+        bool collides = false, leaf;
+        Block *hitBlock = NULL;
+        float minDistance = FLT_MAX;
+        uint16_t x, y, z;
+        Box tmpBox;
+        float d;
+        while (n != NULL && collides == false) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            leaf = false;
+
+            oi = octree_iterator_new(chunk_get_octree(c));
+            while (octree_iterator_is_done(oi) == false) {
+                octree_iterator_get_node_box(oi, &tmpBox);
+
+                // chunk octree box in model space
+                tmpBox.min.x += chunkOrigin.x;
+                tmpBox.min.y += chunkOrigin.y;
+                tmpBox.min.z += chunkOrigin.z;
+                tmpBox.max.x += chunkOrigin.x;
+                tmpBox.max.y += chunkOrigin.y;
+                tmpBox.max.z += chunkOrigin.z;
+
+                collides = ray_intersect_with_box(modelRay, &tmpBox.min, &tmpBox.max, &d) &&
+                           d < minDistance;
+                if (leaf && collides) {
                     minDistance = d;
-                    b = (Block *)octree_iterator_get_element(oi);
-                    // nodeSize = octree_iterator_get_current_node_size(oi);
-                    octree_iterator_get_current_position(oi, &_x, &_y, &_z);
+                    hitBlock = (Block *)octree_iterator_get_element(oi);
+                    octree_iterator_get_current_position(oi, &x, &y, &z);
                 }
+
+                octree_iterator_next(oi, collides == false && leaf == false, &leaf);
+            }
+            octree_iterator_free(oi);
+
+            if (collides) {
+                // chunk block coordinates in model space
+                x += chunkOrigin.x;
+                y += chunkOrigin.y;
+                z += chunkOrigin.z;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+
+        if (hitBlock == NULL) {
+            ray_free(modelRay);
+            return false;
+        }
+
+        if (worldDistance != NULL || localImpact != NULL) {
+            float3 _localImpact;
+            ray_impact_point(modelRay, minDistance, &_localImpact);
+            if (localImpact != NULL) {
+                *localImpact = _localImpact;
+            }
+
+            if (worldDistance != NULL) {
+                float3 worldImpact;
+                transform_utils_position_ltw(t, &_localImpact, &worldImpact);
+                float3_op_substract(&worldImpact, worldRay->origin);
+                *worldDistance = float3_length(&worldImpact);
             }
         }
 
-        octree_iterator_next(oi, collides == false && leaf == false, &leaf);
-    }
+        if (block != NULL) {
+            *block = hitBlock;
+        }
 
-    octree_iterator_free(oi);
-    oi = NULL;
+        if (coords != NULL) {
+            coords->x = (SHAPE_COORDS_INT_T)x;
+            coords->y = (SHAPE_COORDS_INT_T)y;
+            coords->z = (SHAPE_COORDS_INT_T)z;
+        }
 
-    if (b == NULL) {
         ray_free(modelRay);
-
-        return false;
+        return true;
     }
+    doubly_linked_list_flush(chunksQuery, free);
+    doubly_linked_list_free(chunksQuery);
 
-    if (worldDistance != NULL || localImpact != NULL) {
-        float3 _localImpact;
-        ray_impact_point(modelRay, minDistance, &_localImpact);
-        if (localImpact != NULL) {
-            *localImpact = _localImpact;
-        }
-
-        if (worldDistance != NULL) {
-            float3 worldImpact;
-            transform_utils_position_ltw(t, &_localImpact, &worldImpact);
-            float3_op_substract(&worldImpact, worldRay->origin);
-            *worldDistance = float3_length(&worldImpact);
-        }
-    }
-
-    if (block != NULL) {
-        *block = b;
-    }
-
-    if (coords != NULL) {
-        coords->x = (SHAPE_COORDS_INT_T)_x;
-        coords->y = (SHAPE_COORDS_INT_T)_y;
-        coords->z = (SHAPE_COORDS_INT_T)_z;
-    }
-
-    ray_free(modelRay);
-
-    return true;
+    return false;
 }
 
 bool shape_point_overlap(const Shape *s, const float3 *world) {
-    if (s->octree == NULL) {
-        cclog_error("shape_point_overlap can't be used if octree is NULL.");
-        return false;
-    }
-
     Transform *t = shape_get_pivot_transform(s); // octree coordinates use model origin
     float3 model;
     transform_utils_position_wtl(t, world, &model);
 
-    Block *b = (Block *)octree_get_element_without_checking(s->octree,
-                                                            (size_t)model.x,
-                                                            (size_t)model.y,
-                                                            (size_t)model.z);
+    int3 chunk_coords = {
+        (int)model.x / CHUNK_SIZE,
+        (int)model.y / CHUNK_SIZE,
+        (int)model.z / CHUNK_SIZE,
+    };
 
-    return block_is_solid(b);
+    Chunk *c = index3d_get(s->chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z);
+    if (c != NULL) {
+        Block *b = (Block *)octree_get_element_without_checking(chunk_get_octree(c),
+                                                                (size_t)model.x,
+                                                                (size_t)model.y,
+                                                                (size_t)model.z);
+
+        return block_is_solid(b);
+    }
+
+    return false;
 }
 
 bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
-    if (s->octree == NULL) {
-        cclog_error("shape_box_overlap can't be used if octree is NULL.");
+    if (s == NULL || modelBox == NULL) {
         return false;
     }
 
-    Box tmpBox;
-    bool leaf = false, collides;
-    OctreeIterator *oi = octree_iterator_new(s->octree);
-    while (octree_iterator_is_done(oi) == false) {
-        octree_iterator_get_node_box(oi, &tmpBox);
+    // select overlapped chunks
+    FifoList *chunksQuery = fifo_list_new();
+    if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, chunksQuery, EPSILON_COLLISION) > 0) {
 
-        collides = box_collide(&tmpBox, modelBox);
-        if (leaf && collides) {
-            if (out != NULL) {
-                *out = tmpBox;
+        // examine query results, stop at first overlap
+        RtreeNode *hit = fifo_list_pop(chunksQuery);
+        OctreeIterator *oi;
+        bool collides = false;
+        bool leaf;
+        Chunk *c;
+        Box tmpBox;
+        while (hit != NULL && collides == false) {
+            c = (Chunk *)rtree_node_get_leaf_ptr(hit);
+
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            leaf = false;
+
+            oi = octree_iterator_new(chunk_get_octree(c));
+            while (octree_iterator_is_done(oi) == false) {
+                octree_iterator_get_node_box(oi, &tmpBox);
+
+                // chunk octree box in model space
+                tmpBox.min.x += chunkOrigin.x;
+                tmpBox.min.y += chunkOrigin.y;
+                tmpBox.min.z += chunkOrigin.z;
+                tmpBox.max.x += chunkOrigin.x;
+                tmpBox.max.y += chunkOrigin.y;
+                tmpBox.max.z += chunkOrigin.z;
+
+                collides = box_collide(modelBox, &tmpBox);
+                if (leaf && collides) {
+                    if (out != NULL) {
+                        *out = tmpBox;
+                    }
+                    break;
+                }
+
+                octree_iterator_next(oi, collides == false && leaf == false, &leaf);
             }
             octree_iterator_free(oi);
-            return true;
-        }
 
-        octree_iterator_next(oi, collides == false && leaf == false, &leaf);
+            hit = fifo_list_pop(chunksQuery);
+        }
     }
-    octree_iterator_free(oi);
+    fifo_list_free(chunksQuery, free);
 
     return false;
 }
@@ -3282,18 +3327,10 @@ void _shape_chunk_enqueue_refresh(Shape *shape, Chunk *c) {
     if (c == NULL)
         return;
     if (chunk_is_dirty(c) == false) {
-        ChunkList *cl;
-        if (shape->needsDisplay == NULL) {
-            cl = (ChunkList *)malloc(sizeof(ChunkList));
-            if (cl == NULL) {
-                return;
-            }
-            cl->chunk = c;
-            cl->next = NULL;
-        } else {
-            cl = chunk_list_push_new_element(c, shape->needsDisplay);
+        if (shape->dirtyChunks == NULL) {
+            shape->dirtyChunks = fifo_list_new();
         }
-        shape->needsDisplay = cl;
+        fifo_list_push(shape->dirtyChunks, c);
         chunk_set_dirty(c, true);
     }
 }
@@ -3350,15 +3387,15 @@ static bool _shape_add_block(Shape *shape,
     int3 block_coords;
     Chunk *chunk = NULL;
     bool chunkAdded = false;
-    bool blockAdded = _add_block_in_chunks(shape->chunks,
-                                           block,
-                                           x,
-                                           y,
-                                           z,
-                                           &block_coords,
-                                           &chunkAdded,
-                                           &chunk,
-                                           NULL);
+    bool blockAdded = _shape_add_block_in_chunks(shape,
+                                                 block,
+                                                 x,
+                                                 y,
+                                                 z,
+                                                 &block_coords,
+                                                 &chunkAdded,
+                                                 &chunk,
+                                                 NULL);
 
     if (chunkAdded) {
         shape->nbChunks++;
@@ -3375,33 +3412,39 @@ static bool _shape_add_block(Shape *shape,
     return blockAdded;
 }
 
-bool _add_block_in_chunks(Index3D *chunks,
-                          const Block block,
-                          const SHAPE_COORDS_INT_T x,
-                          const SHAPE_COORDS_INT_T y,
-                          const SHAPE_COORDS_INT_T z,
-                          int3 *block_coords_out,
-                          bool *chunkAdded,
-                          Chunk **added_or_existing_chunk,
-                          Block **added_or_existing_block) {
+bool _shape_add_block_in_chunks(Shape *shape,
+                                const Block block,
+                                const SHAPE_COORDS_INT_T x,
+                                const SHAPE_COORDS_INT_T y,
+                                const SHAPE_COORDS_INT_T z,
+                                int3 *block_coords_out,
+                                bool *chunkAdded,
+                                Chunk **added_or_existing_chunk,
+                                Block **added_or_existing_block) {
 
     int3 chunk_coords;
     int3 block_coords;
 
     // see if there's a chunk ready for that block
     int3_set(&chunk_coords, x >> CHUNK_SIZE_SQRT, y >> CHUNK_SIZE_SQRT, z >> CHUNK_SIZE_SQRT);
-    Chunk *chunk = (Chunk *)index3d_get(chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z);
+    Chunk *chunk = (Chunk *)
+        index3d_get(shape->chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z);
 
     // insert new chunk if needed
     if (chunk == NULL) {
-        chunk = chunk_new((SHAPE_COORDS_INT_T)chunk_coords.x * CHUNK_SIZE,
-                          (SHAPE_COORDS_INT_T)chunk_coords.y * CHUNK_SIZE,
-                          (SHAPE_COORDS_INT_T)chunk_coords.z * CHUNK_SIZE);
-        index3d_insert(chunks, chunk, chunk_coords.x, chunk_coords.y, chunk_coords.z, NULL);
-        chunk_move_in_neighborhood(chunks, chunk);
+        SHAPE_COORDS_INT3_T chunkOrigin = {(SHAPE_COORDS_INT_T)chunk_coords.x * CHUNK_SIZE,
+                                           (SHAPE_COORDS_INT_T)chunk_coords.y * CHUNK_SIZE,
+                                           (SHAPE_COORDS_INT_T)chunk_coords.z * CHUNK_SIZE};
+        chunk = chunk_new(chunkOrigin.x, chunkOrigin.y, chunkOrigin.z);
 
-        // printf("insert chunk at: %d, %d, %d\n", chunk_coords->x, chunk_coords->y,
-        // chunk_coords->z);
+        index3d_insert(shape->chunks, chunk, chunk_coords.x, chunk_coords.y, chunk_coords.z, NULL);
+        chunk_move_in_neighborhood(shape->chunks, chunk, &chunk_coords);
+
+        Box chunkBox = {{(float)chunkOrigin.x, (float)chunkOrigin.y, (float)chunkOrigin.z},
+                        {(float)(chunkOrigin.x + CHUNK_SIZE),
+                         (float)(chunkOrigin.y + CHUNK_SIZE),
+                         (float)(chunkOrigin.z + CHUNK_SIZE)}};
+        chunk_set_rtree_leaf(chunk, rtree_create_and_insert(shape->rtree, &chunkBox, 1, 1, chunk));
 
         *chunkAdded = true;
     } else {

@@ -93,7 +93,7 @@
 // shape_compute_world_collider
 // shape_set_physics_simulation_mode
 // shape_set_physics_properties
-// shape_box_swept
+// shape_box_cast
 // shape_ray_cast
 // shape_point_overlap
 // shape_box_overlap
@@ -410,8 +410,7 @@ void test_shape_addblock_1(void) {
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2, true);
-    TEST_ASSERT(b != NULL);
-    TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
+    TEST_ASSERT(b == NULL);
 
     // add block 3
     ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);

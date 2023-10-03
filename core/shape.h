@@ -342,15 +342,15 @@ void shape_compute_world_collider(const Shape *s, Box *box);
 /// @param extraReplacement filled only if PHYSICS_EXTRA_REPLACEMENTS is enabled
 /// @param block ptr to first hit block, convenient to grab here
 /// @param blockCoords coordinates of block param
-float shape_box_swept(const Shape *s,
-                      const Box *modelBox,
-                      const float3 *modelVector,
-                      const float3 *epsilon,
-                      const bool withReplacement,
-                      float3 *normal,
-                      float3 *extraReplacement,
-                      Block **block,
-                      SHAPE_COORDS_INT3_T *blockCoords);
+float shape_box_cast(const Shape *s,
+                     const Box *modelBox,
+                     const float3 *modelVector,
+                     const float3 *epsilon,
+                     const bool withReplacement,
+                     float3 *normal,
+                     float3 *extraReplacement,
+                     Block **block,
+                     SHAPE_COORDS_INT3_T *blockCoords);
 
 /// Casts a world ray against given shape. World distance, local impact, block & block octree
 /// coordinates can be returned through pointer parameters

@@ -1445,12 +1445,12 @@ void vertex_buffer_log_mem_areas(const VertexBuffer *vb) {
                        check,
                        dirty);
         } else {
-            const int3 *p = chunk_get_pos(vbma->chunk);
+            const SHAPE_COORDS_INT3_T o = chunk_get_origin(vbma->chunk);
             cclog_info("-- [%04u] - chunk(%d, %d, %d) - (start: %p %p) %s%s",
                        vbma->nbVertices,
-                       p->x,
-                       p->y,
-                       p->z,
+                       o.x,
+                       o.y,
+                       o.z,
                        (void *)vbma->start.faces,
                        (void *)vbma->start.metadata,
                        check,
