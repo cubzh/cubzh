@@ -47,7 +47,7 @@ typedef struct _RigidBody RigidBody;
 #define TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE 1
 
 #if DEBUG
-#define DEBUG_TRANSFORM true
+#define DEBUG_TRANSFORM false
 #else
 #define DEBUG_TRANSFORM false
 #endif
