@@ -432,7 +432,7 @@ Client.OnStart = function()
 
     	post_item_load()
 
-    	Client.WillOpenGameMenu = willOpenGameMenu
+    	Menu:AddDidBecomeActiveCallback(menuDidBecomeActive)
     	Client.Tick = tick
     	Pointer.Zoom = zoom
     	Pointer.Down = down
@@ -501,8 +501,7 @@ Client.Action1Release = nil
 Client.Action2Release = nil
 Client.Action3Release = nil
 
-Client.WillOpenGameMenu = function() end
-willOpenGameMenu = function()
+menuDidBecomeActive = function()
 	if changesSinceLastSave then
 		save()
 	end
@@ -1864,9 +1863,8 @@ function ui_init()
 
 	saveBtn = createButton("💾", btnColor, btnColorSelected)
 	saveBtn:setParent(modeMenu)
-	saveBtn.label = ui:createText("✅", Color.Black, {fontSize="small"})
+	saveBtn.label = ui:createText("✅", Color.Black, "small")
 	saveBtn.label:setParent(saveBtn)
-	-- saveBtn.label.object.BackgroundColor = Color(0,0,0,200)
 
 	saveBtn.onRelease = function()
 		save()
