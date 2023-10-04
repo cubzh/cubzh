@@ -59,7 +59,7 @@ ai._chatSay = function(self, prompt, callback)
     if not prompt or #prompt <= 0 then
         return callback("Error: prompt is not valid")
     end
-    prompt = string.gsub(prompt, '"', '\\"') -- avoid issue with JSON
+    prompt = string.gsub(prompt, '"', '\"') -- avoid issue with JSON
 
     table.insert(self.messages, {
         role = "user",
@@ -69,7 +69,7 @@ ai._chatSay = function(self, prompt, callback)
     require("api").aiChatCompletions(self.messages, function(err, message)
         if err then return callback(err) end
         callback(nil, message.content)
-        message.content = string.gsub(message.content, '"', '\\"') -- avoid issue with JSON
+        message.content = string.gsub(message.content, '"', '\"') -- avoid issue with JSON
         table.insert(self.messages, message)
     end)
 end
@@ -81,6 +81,8 @@ ai.CreateChat = function(self, context)
     local aiChat = {}
     aiChat.messages = {}
     if context then
+    	context = string.gsub(context, '"', '\"')
+    	
         table.insert(aiChat.messages, {
             role = "system",
             content = context
