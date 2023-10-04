@@ -121,6 +121,13 @@ Client.OnStart = function()
 			selectGizmo:setObject(nil)
 			changePivotBtn.Text = "Change Pivot"
 			isModeChangePivot = false
+
+			moveShapeBtn:enable()
+			rotateShapeBtn:enable()
+			removeShapeBtn:enable()
+			addBlockChildBtn:enable()
+			importChildBtn:enable()
+			selectGizmo:setOnMove(nil)
 		end
 	end
 
@@ -2354,6 +2361,8 @@ function ui_init()
 			removeShapeBtn:enable()
 			addBlockChildBtn:enable()
 			importChildBtn:enable()
+
+			selectGizmo:setOnMove(nil)
 
 			local newPivot = focusShape.Pivot + pivotObject.LocalPosition
 			local snap = 0.5
