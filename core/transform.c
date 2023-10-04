@@ -105,7 +105,7 @@ struct _Transform {
     uint8_t ptrType;
 
     bool animationsEnabled;
-    
+
     bool debug; // false by default, just a helper to debug specific transform for now
     // char pad[1];
 };
@@ -1196,7 +1196,7 @@ static void _transform_refresh_position(Transform *t) {
         } else {
             float3_copy(&t->position, &t->localPosition);
         }
-        
+
         _transform_reset_dirty(t, TRANSFORM_POS);
     }
 }
