@@ -1,7 +1,7 @@
 -- Combines all 3 types of gizmos (move, rotate, scale)
 
 gizmo = {
-	Modes = { Move=1, Rotate=2, Scale=3 },
+	Mode = { Move=1, Rotate=2, Scale=3 },
 	Axis = { X=1, Y=2, Z=3 },
 	AxisName = { "X", "Y", "Z" },
 	Orientation = { Local=1, World=2 }
@@ -29,7 +29,7 @@ local functions = {}
 
 functions.setObject = function(self, object)
 	self.object = object
-	for _, m in pairs(gizmo.Modes) do
+	for _, m in pairs(gizmo.Mode) do
 		local g = self.gizmos[m]
 		if g then
 			if g.setObject then g:setObject(object) end
@@ -42,7 +42,8 @@ functions.getObject = function(self, object)
 end
 
 functions.setOrientation = function(self, orientation)
-	for _, m in pairs(gizmo.Modes) do
+	self.orientation = orientation
+	for _, m in pairs(gizmo.Mode) do
 		local g = self.gizmos[m]
 		if g then
 			if g.setOrientation then g:setOrientation(orientation) end
@@ -51,7 +52,7 @@ functions.setOrientation = function(self, orientation)
 end
 
 functions.setAxisVisibility = function(self, x, y, z)
-	for _, m in pairs(gizmo.Modes) do
+	for _, m in pairs(gizmo.Mode) do
 		local g = self.gizmos[m]
 		if g then
 			if g.setAxisVisibility then g:setAxisVisibility(x, y, z) end
@@ -60,7 +61,7 @@ functions.setAxisVisibility = function(self, x, y, z)
 end
 
 functions.setScale = function(self, scale)
-	for _, m in pairs(gizmo.Modes) do
+	for _, m in pairs(gizmo.Mode) do
 		local g = self.gizmos[m]
 		if g then
 			if g.setScale then g:setScale(scale) end
@@ -69,41 +70,45 @@ functions.setScale = function(self, scale)
 end
 
 functions.setOnMove = function(self, fn)
-	local g = self.gizmos[gizmo.Modes.Move]
+	local g = self.gizmos[gizmo.Mode.Move]
 	if g then g.onDrag = fn end
 end
 
 functions.setOnRotate = function(self, fn)
-	local g = self.gizmos[gizmo.Modes.Rotate]
+	local g = self.gizmos[gizmo.Mode.Rotate]
 	if g then g.onDrag = fn end
 end
 
 functions.setOnScale = function(self, fn)
-	local g = self.gizmos[gizmo.Modes.Scale]
+	local g = self.gizmos[gizmo.Mode.Scale]
 	if g then g.onDrag = fn end
 end
 
 functions.setMoveSnap = function(self, v)
 	self.moveSnap = v
-	local g = self.gizmos[gizmo.Modes.Move]
+	local g = self.gizmos[gizmo.Mode.Move]
 	if g then g.snap = v end
 end
 
 functions.setRotateSnap = function(self, v)
 	self.rotateSnap = v
-	local g = self.gizmos[gizmo.Modes.Rotate]
+	local g = self.gizmos[gizmo.Mode.Rotate]
 	if g then g.snap = v end
 end
 
 functions.setScaleSnap = function(self, v)
 	self.scaleSnap = v
-	local g = self.gizmos[gizmo.Modes.Scale]
+	local g = self.gizmos[gizmo.Mode.Scale]
 	if g then g.snap = v end
 end
 
 functions.setMode = function(self, mode)
+	if mode ~= gizmo.Mode.Move and mode ~= gizmo.Mode.Rotate and mode ~= gizmo.Mode.Scale then
+		return
+	end
+	self.mode = mode
 	if self.gizmos[mode] == nil then
-		if mode == gizmo.Modes.Move then
+		if mode == gizmo.Mode.Move then
 			local g = require("movegizmo"):create({ orientation = self.orientation,
 													snap = self.moveSnap,
 													scale = self.scale,
@@ -113,24 +118,29 @@ functions.setMode = function(self, mode)
 			g.onDrag = self.onMove
 			self.gizmos[mode] = g
 			
-		elseif mode == gizmo.Modes.Rotate then
-			-- self.gizmos[mode] = require("rotategizmo"):create({ orientation = self.orientation, snap = self.rotateSnap, scale = self.scale })
-			print("TODO rotate gizmo")
+		elseif mode == gizmo.Mode.Rotate then
+			local g = require("rotategizmo"):create({ orientation = self.orientation,
+													snap = self.rotateSnap,
+													scale = self.scale,
+													camera = camera })
+			g:setObject(self.object)
+			g:setLayer(self.layer)
+			g.onDrag = self.onMove
+			self.gizmos[mode] = g
 
-		elseif mode == gizmo.Modes.Scale then
+		elseif mode == gizmo.Mode.Scale then
 			-- self.gizmos[mode] = require("scalegizmo"):create({ orientation = self.orientation, snap = self.scaleSnap, scale = self.scale })
-			print("TODO scale gizmo")
-
+			error("❌ scale gizmo not supported yet")
 		end
 	end
 
-	for _, m in pairs(gizmo.Modes) do
+	for _, m in pairs(gizmo.Mode) do
 		local g = self.gizmos[m]
 		if g then
 			if m == mode then
-				if g.hide then g:show() end
+				if g.show then g:show() end
 			else
-				if g.show then g:hide() end
+				if g.hide then g:hide() end
 			end
 		end
 	end
@@ -158,7 +168,7 @@ gizmo.create = function(self, config)
 
 	local _config = { -- default config
 		orientation = gizmo.Orientation.World,
-		mode = gizmo.Modes.Move,
+		mode = gizmo.Mode.Move,
 		moveSnap = 0.0,
 		rotateSnap = 0.0,
 		scaleSnap = 0.0,

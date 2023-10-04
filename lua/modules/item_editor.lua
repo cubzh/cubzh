@@ -2307,11 +2307,15 @@ function ui_init()
 
 	changePivotBtn = createButton("Change Pivot", ui_config.btnColor, ui_config.btnColorSelected)
 	changePivotBtn:setParent(selectControls)
+
+	local transformModeBeforePivot = nil
 	local pivotObject = Object()
 
 	changePivotBtn.onRelease = function()
 		if not isModeChangePivot then
+
 			pivotObject:SetParent(focusShape)
+
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
 				s.IsHiddenSelf = s ~= focusShape -- hide all except focus shape
 			end)
@@ -2323,27 +2327,49 @@ function ui_init()
 			changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", pivot.X, pivot.Y, pivot.Z)
 
 			selectGizmo:setOnMove(function(pos)
-				local diffPos = pivotObject.Position - focusShape.Position
-				local newPivot = focusShape.Pivot + diffPos
+				local newPivot = focusShape.Pivot + pivotObject.LocalPosition
+				local snap = 0.5
+				newPivot.X = math.floor(newPivot.X / snap) * snap
+				newPivot.Y = math.floor(newPivot.Y / snap) * snap
+				newPivot.Z = math.floor(newPivot.Z / snap) * snap
+				
+
 				changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", newPivot.X, newPivot.Y, newPivot.Z)
 			end)
 
-			pivotObject.Position = focusShape.Position
+			pivotObject.LocalPosition = Number3.Zero
+			pivotObject.LocalRotation = Number3.Zero
+
 			selectGizmo:setObject(pivotObject)
 		else
-			local diffPos = pivotObject.Position - focusShape.Position
-			local newPivot = focusShape.Pivot + diffPos
-			focusShape.Position = pivotObject.Position
-			focusShape.Pivot = newPivot
+			local newPivot = focusShape.Pivot + pivotObject.LocalPosition
+			local snap = 0.5
+			newPivot.X = math.floor(newPivot.X / snap) * snap
+			newPivot.Y = math.floor(newPivot.Y / snap) * snap
+			newPivot.Z = math.floor(newPivot.Z / snap) * snap
 
+			if newPivot ~= focusShape.Pivot then
+				focusShape.Pivot = newPivot
+				focusShape.Position = pivotObject.Position
+			end
+			
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
 				s.IsHiddenSelf = false
 			end)
-			
-			selectGizmo:setOnMove(nil)
-			selectGizmo:setObject(focusShape)
-			-- selectGizmo:setMode(prevGizmoMode) -- TODO: what should we do?
-			selectGizmo:setOrientation(gizmo.Orientation.World)
+
+			if moveShapeBtn.selected then
+				selectGizmo:setObject(focusShape)
+				selectGizmo:setMode(gizmo.Mode.Move)
+				selectGizmo:setOrientation(gizmo.Orientation.Local)
+
+			elseif rotateShapeBtn.selected then
+				selectGizmo:setObject(focusShape)
+				selectGizmo:setMode(gizmo.Mode.Rotate)
+				selectGizmo:setOrientation(gizmo.Orientation.Local)
+
+			else
+				selectGizmo:setObject(nil)
+			end
 
 			changePivotBtn.Text = "Change Pivot"
 		end

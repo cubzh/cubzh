@@ -9,6 +9,22 @@ plane = require("plane")
 
 local functions = {}
 
+functions.show = function(self)
+	self.hidden = false
+	if self.object ~= nil then
+		self.gizmoObject:SetParent(World)
+	end
+end
+
+functions.hide = function(self)
+	self.hidden = true
+	self.gizmoObject:SetParent(nil)
+end
+
+functions.isShown = function(self)
+	return self.gizmoObject.Parent ~= nil
+end
+
 functions.setLayer = function(self, layer)
 	self.camera.Layers = layer
 	self.handles[moveGizmo.Axis.X].Layers = layer
@@ -69,6 +85,8 @@ end
 
 functions.down = function(self, pe)
 	if not self.object then return false end
+	if self:isShown() == false then return end
+
 	local ray = Ray(pe.Position, pe.Direction)
 	for axis = moveGizmo.Axis.X, moveGizmo.Axis.Z do
 
@@ -105,12 +123,13 @@ functions.setObject = function(self, object)
 		self.gizmoObject:RemoveFromParent()
 		return
 	end
-	self.gizmoObject:SetParent(World)
+	
+	if not self.hidden then self.gizmoObject:SetParent(World) end
 	self:updateHandles()
 end
 
-functions.setOrientation = function(self, mode)
-	self.orientation = mode
+functions.setOrientation = function(self, v)
+	self.orientation = v
 	self:updateHandles()
 end
 
@@ -125,14 +144,10 @@ functions.updateHandles = function(self)
 
 	local checktype = type(self.object)
 
-	if checktype == "Object" or checktype == "Player" then
-		self.gizmoObject.Position = self.object.Position
+	if self.orientation == moveGizmo.Orientation.World and self.object.Center ~= nil then
+		self.gizmoObject.Position = self.object:BlockToWorld(self.object.Center)
 	else
-		-- center gizmo if shape
-		local localPos = Number3(self.object.Width * 0.5 - self.object.Pivot.X,
-								self.object.Height * 0.5 - self.object.Pivot.Y,
-								self.object.Depth * 0.5 - self.object.Pivot.Z)
-		self.gizmoObject.Position = self.object:PositionLocalToWorld(localPos)
+		self.gizmoObject.Position = self.object.Position
 	end
 
 	-- Does not hide or rotate handles if moving gizmo
@@ -172,6 +187,9 @@ mt = {
 		t.listeners = nil
 	end,
 	__index = {
+		show = functions.show,
+		hide = functions.hide,
+		isShown = functions.isShown,
 		setObject = functions.setObject,
 		setOrientation = functions.setOrientation,
 		updateHandles = functions.updateHandles,
@@ -203,7 +221,7 @@ end
 moveGizmo.create = function(self, config)
 
 	local _config = { -- default config
-		orientation = movegizmo.Orientation.World,
+		orientation = moveGizmo.Orientation.World,
 		snap = 0.0,
 		scale = scale,
 		camera = camera,
