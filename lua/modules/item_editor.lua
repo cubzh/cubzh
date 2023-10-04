@@ -2314,6 +2314,12 @@ function ui_init()
 	changePivotBtn.onRelease = function()
 		if not isModeChangePivot then
 
+			moveShapeBtn:disable()
+			rotateShapeBtn:disable()
+			removeShapeBtn:disable()
+			addBlockChildBtn:disable()
+			importChildBtn:disable()
+
 			pivotObject:SetParent(focusShape)
 
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
@@ -2342,6 +2348,13 @@ function ui_init()
 
 			selectGizmo:setObject(pivotObject)
 		else
+
+			moveShapeBtn:enable()
+			rotateShapeBtn:enable()
+			removeShapeBtn:enable()
+			addBlockChildBtn:enable()
+			importChildBtn:enable()
+
 			local newPivot = focusShape.Pivot + pivotObject.LocalPosition
 			local snap = 0.5
 			newPivot.X = math.floor(newPivot.X / snap) * snap
