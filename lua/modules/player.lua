@@ -375,7 +375,8 @@ local playerCall = function(self, playerID, username, userID, isLocal)
 
 		if k == "ID" or k == "Avatar" or k == "Username" or k == "UserID" or k == "IsLocal"
 			or k == "BoundingBox" or k == "Shadow" or k == "Layers" or k == "EquipBackpack" or k == "EquipHat"
-			or k == "EquipLeftHand" or k == "EquipRightHand" or k == "SwapHands" or k == "SwingLeft" or k == "SwingRight" then
+			or k == "EquipLeftHand" or k == "EquipRightHand" or k == "SwapHands" or k == "SwingLeft" or k == "SwingRight" or
+			k == "CastRay" then
 			return mt[k]
 		end
 
