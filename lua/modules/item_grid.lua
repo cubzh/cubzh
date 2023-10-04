@@ -254,13 +254,16 @@ itemGrid.create = function(self, config)
         	if n > 0 then
 				nbLikes.Text = "❤️ " .. math.floor(n)
 				nbLikes:show()
+				likesAndViewsFrame:show()
 				self:layoutLikes()
 			else
 				nbLikes:hide()
+				likesAndViewsFrame:hide()
 			end
        	end
 
        	cell.hideLikes = function(self)
+       		likesAndViewsFrame:hide()
        		nbLikes:hide()
        	end
 
