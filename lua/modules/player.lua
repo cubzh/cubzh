@@ -13,10 +13,13 @@ local OBJECT_DEFAULT_COLLISION_GROUP = 3
 
 local hierarchyactions = require("hierarchyactions")
 
+-- Returns Block Player is standing on
 local blockUnderneath = function(player)
     local ray = Ray(player.Position + Number3(0,0,0), Number3.Down)
     local impact = ray:Cast(nil, Player)
-    return impact and impact.Distance <= 0.5 and impact.Block
+    if impact and impact.Distance <= 0.5 and impact.Block then
+    	return impact.Block
+    end
 end
 
 local CastRay =  function(player, filterIn)
