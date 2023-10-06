@@ -162,10 +162,30 @@ local EquipHat = function(player, shape)
     shape.LocalPosition = poiPos + headPoint
 end
 
-local EquipLeftHand = function(player, shape)
-    if player == nil or type(player) ~= "Player" then
+local EquipLeftHand = function(player, shapeOrItem)
+    if type(player) ~= "Player" then
         error("Player:EquipLeftHand should be called with `:`", 2)
     end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipLeftHand(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipLeftHand(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__leftHandItem == shape then 
+    	-- equipment already installed
+    	return 
+    end
+
     -- always unequip the item currently equipped
     if player.__leftHandItem ~= nil and player.__leftHandItem:GetParent() == player.LeftHand then
         player.__leftHandItem:RemoveFromParent()
@@ -238,10 +258,30 @@ local EquipLeftHand = function(player, shape)
     end
 end
 
-local EquipRightHand = function(player, shape)
-    if player == nil or type(player) ~= "Player" then
+local EquipRightHand = function(player, shapeOrItem)
+    if type(player) ~= "Player" then
         error("Player:EquipRightHand should be called with `:`", 2)
     end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipRightHand(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipRightHand(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__rightHandItem == shape then 
+    	-- equipment already installed
+    	return 
+    end
+
     if player.__rightHandItem ~= nil and player.__rightHandItem:GetParent() == player.RightHand then
         player.__rightHandItem:RemoveFromParent()
         -- restore its physics attributes
