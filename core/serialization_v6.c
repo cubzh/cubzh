@@ -979,11 +979,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
 
                 // size is known, now is a good time to create the shape
-                if (shapeSettings->octree) {
-                    *shape = shape_make_with_octree(width, height, depth, shapeSettings->isMutable);
-                } else {
-                    *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
-                }
+                *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_BLOCKS: {

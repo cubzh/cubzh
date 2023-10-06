@@ -149,11 +149,16 @@ void *chunk_get_rtree_leaf(const Chunk *c) {
     return c->rtreeLeaf;
 }
 
+uint64_t chunk_get_hash(const Chunk *c, uint64_t crc) {
+    return octree_get_hash(c->octree, crc);
+}
+
 bool chunk_add_block(Chunk *chunk,
                      const Block block,
                      const CHUNK_COORDS_INT_T x,
                      const CHUNK_COORDS_INT_T y,
                      const CHUNK_COORDS_INT_T z) {
+
     if (block_is_solid(&block) == false) {
         return false;
     }
@@ -172,11 +177,15 @@ bool chunk_add_block(Chunk *chunk,
 bool chunk_remove_block(Chunk *chunk,
                         const CHUNK_COORDS_INT_T x,
                         const CHUNK_COORDS_INT_T y,
-                        const CHUNK_COORDS_INT_T z) {
+                        const CHUNK_COORDS_INT_T z,
+                        SHAPE_COLOR_INDEX_INT_T *prevColorIndex) {
 
     Block *b = (Block *)
         octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
     if (block_is_solid(b)) {
+        if (prevColorIndex != NULL) {
+            *prevColorIndex = block_get_color_index(b);
+        }
         block_set_color_index(b, SHAPE_COLOR_INDEX_AIR_BLOCK);
         octree_remove_element(chunk->octree, (size_t)x, (size_t)y, (size_t)z, NULL);
         chunk->nbBlocks--;
@@ -190,11 +199,15 @@ bool chunk_paint_block(Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,
                        const CHUNK_COORDS_INT_T y,
                        const CHUNK_COORDS_INT_T z,
-                       const SHAPE_COLOR_INDEX_INT_T colorIndex) {
+                       const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                       SHAPE_COLOR_INDEX_INT_T *prevColorIndex) {
 
     Block *b = (Block *)
         octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
     if (block_is_solid(b)) {
+        if (prevColorIndex != NULL) {
+            *prevColorIndex = block_get_color_index(b);
+        }
         block_set_color_index(b, colorIndex);
         return true;
     } else {
@@ -222,11 +235,8 @@ Block *chunk_get_block(const Chunk *chunk,
     return block_is_solid(b) ? b : NULL;
 }
 
-Block *chunk_get_block_2(const Chunk *chunk, const int3 *pos) {
-    return chunk_get_block(chunk,
-                           (CHUNK_COORDS_INT_T)pos->x,
-                           (CHUNK_COORDS_INT_T)pos->y,
-                           (CHUNK_COORDS_INT_T)pos->z);
+Block *chunk_get_block_2(const Chunk *chunk, CHUNK_COORDS_INT3_T coords) {
+    return chunk_get_block(chunk, coords.x, coords.y, coords.z);
 }
 
 void chunk_get_block_pos(const Chunk *chunk,
@@ -481,7 +491,6 @@ void chunk_set_vbma(Chunk *chunk, void *vbma, bool transparent) {
 }
 
 void chunk_write_vertices(Shape *shape, Chunk *chunk) {
-    const Octree *octree = shape_get_octree(shape);
     ColorPalette *palette = shape_get_palette(shape);
 
     VertexBufferMemAreaWriter *opaqueWriter = vertex_buffer_mem_area_writer_new(shape,
@@ -563,27 +572,12 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                     posZ = (size_t)pos.z;
 
                     // get axis-aligned neighbouring blocks
-                    if (octree != NULL) {
-                        left = (Block *)
-                            octree_get_element_without_checking(octree, posX - 1, posY, posZ);
-                        right = (Block *)
-                            octree_get_element_without_checking(octree, posX + 1, posY, posZ);
-                        front = (Block *)
-                            octree_get_element_without_checking(octree, posX, posY, posZ - 1);
-                        back = (Block *)
-                            octree_get_element_without_checking(octree, posX, posY, posZ + 1);
-                        top = (Block *)
-                            octree_get_element_without_checking(octree, posX, posY + 1, posZ);
-                        bottom = (Block *)
-                            octree_get_element_without_checking(octree, posX, posY - 1, posZ);
-                    } else {
-                        left = _chunk_get_block_including_neighbors(chunk, x - 1, y, z);
-                        right = _chunk_get_block_including_neighbors(chunk, x + 1, y, z);
-                        front = _chunk_get_block_including_neighbors(chunk, x, y, z - 1);
-                        back = _chunk_get_block_including_neighbors(chunk, x, y, z + 1);
-                        top = _chunk_get_block_including_neighbors(chunk, x, y + 1, z);
-                        bottom = _chunk_get_block_including_neighbors(chunk, x, y - 1, z);
-                    }
+                    left = _chunk_get_block_including_neighbors(chunk, x - 1, y, z);
+                    right = _chunk_get_block_including_neighbors(chunk, x + 1, y, z);
+                    front = _chunk_get_block_including_neighbors(chunk, x, y, z - 1);
+                    back = _chunk_get_block_including_neighbors(chunk, x, y, z + 1);
+                    top = _chunk_get_block_including_neighbors(chunk, x, y + 1, z);
+                    bottom = _chunk_get_block_including_neighbors(chunk, x, y - 1, z);
 
                     // get their opacity properties
                     bool solid_left, opaque_left, transparent_left, solid_right, opaque_right,
@@ -710,72 +704,28 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         ao.ao4 = 0;
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
-                        if (octree != NULL) { // use octree to check neighbors if possible
-                            topLeftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                       posX - 1,
-                                                                                       posY + 1,
-                                                                                       posZ + 1);
-                            topLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                   posX - 1,
-                                                                                   posY + 1,
-                                                                                   posZ);
-                            topLeftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                        posX - 1,
-                                                                                        posY + 1,
-                                                                                        posZ - 1);
+                        topLeftBack = _chunk_get_block_including_neighbors(chunk,
+                                                                           x - 1,
+                                                                           y + 1,
+                                                                           z + 1);
+                        topLeft = _chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
+                        topLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                            x - 1,
+                                                                            y + 1,
+                                                                            z - 1);
 
-                            leftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                    posX - 1,
-                                                                                    posY,
-                                                                                    posZ + 1);
-                            leftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                     posX - 1,
-                                                                                     posY,
-                                                                                     posZ - 1);
+                        leftBack = _chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
+                        leftFront = _chunk_get_block_including_neighbors(chunk, x - 1, y, z - 1);
 
-                            bottomLeftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                          posX - 1,
-                                                                                          posY - 1,
-                                                                                          posZ + 1);
-                            bottomLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                      posX - 1,
-                                                                                      posY - 1,
-                                                                                      posZ);
-                            bottomLeftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                           posX - 1,
-                                                                                           posY - 1,
-                                                                                           posZ -
-                                                                                               1);
-                        } else {
-                            topLeftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                               x - 1,
-                                                                               y + 1,
-                                                                               z + 1);
-                            topLeft = _chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
-                            topLeftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                x - 1,
-                                                                                y + 1,
-                                                                                z - 1);
-
-                            leftBack = _chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
-                            leftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                             x - 1,
-                                                                             y,
-                                                                             z - 1);
-
-                            bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                  x - 1,
-                                                                                  y - 1,
-                                                                                  z + 1);
-                            bottomLeft = _chunk_get_block_including_neighbors(chunk,
+                        bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                               x - 1,
                                                                               y - 1,
-                                                                              z);
-                            bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                   x - 1,
-                                                                                   y - 1,
-                                                                                   z - 1);
-                        }
+                                                                              z + 1);
+                        bottomLeft = _chunk_get_block_including_neighbors(chunk, x - 1, y - 1, z);
+                        bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                               x - 1,
+                                                                               y - 1,
+                                                                               z - 1);
 
                         // get their light values & properties
                         _vertex_light_get(shape,
@@ -950,76 +900,28 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         ao.ao4 = 0;
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
-                        if (octree != NULL) { // use octree to check neighbors if possible
-                            topRightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                        posX + 1,
-                                                                                        posY + 1,
-                                                                                        posZ + 1);
-                            topRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                    posX + 1,
-                                                                                    posY + 1,
-                                                                                    posZ);
-                            topRightFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                         posX + 1,
-                                                                                         posY + 1,
-                                                                                         posZ - 1);
-
-                            rightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                     posX + 1,
-                                                                                     posY,
-                                                                                     posZ + 1);
-                            rightFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                      posX + 1,
-                                                                                      posY,
-                                                                                      posZ - 1);
-
-                            bottomRightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                           posX + 1,
-                                                                                           posY - 1,
-                                                                                           posZ +
-                                                                                               1);
-                            bottomRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                       posX + 1,
-                                                                                       posY - 1,
-                                                                                       posZ);
-                            bottomRightFront = (Block *)octree_get_element_without_checking(
-                                octree,
-                                posX + 1,
-                                posY - 1,
-                                posZ - 1);
-                        } else {
-                            topRightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                x + 1,
-                                                                                y + 1,
-                                                                                z + 1);
-                            topRight = _chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
-                            topRightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                 x + 1,
-                                                                                 y + 1,
-                                                                                 z - 1);
-
-                            rightBack = _chunk_get_block_including_neighbors(chunk,
+                        topRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                            x + 1,
+                                                                            y + 1,
+                                                                            z + 1);
+                        topRight = _chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
+                        topRightFront = _chunk_get_block_including_neighbors(chunk,
                                                                              x + 1,
-                                                                             y,
-                                                                             z + 1);
-                            rightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                              x + 1,
-                                                                              y,
-                                                                              z - 1);
+                                                                             y + 1,
+                                                                             z - 1);
 
-                            bottomRightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                   x + 1,
-                                                                                   y - 1,
-                                                                                   z + 1);
-                            bottomRight = _chunk_get_block_including_neighbors(chunk,
+                        rightBack = _chunk_get_block_including_neighbors(chunk, x + 1, y, z + 1);
+                        rightFront = _chunk_get_block_including_neighbors(chunk, x + 1, y, z - 1);
+
+                        bottomRightBack = _chunk_get_block_including_neighbors(chunk,
                                                                                x + 1,
                                                                                y - 1,
-                                                                               z);
-                            bottomRightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                    x + 1,
-                                                                                    y - 1,
-                                                                                    z - 1);
-                        }
+                                                                               z + 1);
+                        bottomRight = _chunk_get_block_including_neighbors(chunk, x + 1, y - 1, z);
+                        bottomRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                x + 1,
+                                                                                y - 1,
+                                                                                z - 1);
 
                         // get their light values & properties
                         _vertex_light_get(shape,
@@ -1195,86 +1097,38 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
                         // left/right blocks may have been retrieved already
-                        if (octree != NULL) { // use octree to check neighbors if possible
-                            if (renderRight == false) {
-                                topRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY + 1,
-                                    posZ - 1);
-                                rightFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                          posX + 1,
-                                                                                          posY,
-                                                                                          posZ - 1);
-                                bottomRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY - 1,
-                                    posZ - 1);
-                            }
-
-                            if (renderLeft == false) {
-                                topLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX - 1,
-                                    posY + 1,
-                                    posZ - 1);
-                                leftFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                         posX - 1,
-                                                                                         posY,
-                                                                                         posZ - 1);
-                                bottomLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX - 1,
-                                    posY - 1,
-                                    posZ - 1);
-                            }
-
-                            topFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                    posX,
-                                                                                    posY + 1,
-                                                                                    posZ - 1);
-                            bottomFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                       posX,
-                                                                                       posY - 1,
-                                                                                       posZ - 1);
-                        } else {
-                            if (renderRight == false) {
-                                topRightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                     x + 1,
-                                                                                     y + 1,
-                                                                                     z - 1);
-                                rightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                  x + 1,
-                                                                                  y,
-                                                                                  z - 1);
-                                bottomRightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                        x + 1,
-                                                                                        y - 1,
-                                                                                        z - 1);
-                            }
-
-                            if (renderLeft == false) {
-                                topLeftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                    x - 1,
-                                                                                    y + 1,
-                                                                                    z - 1);
-                                leftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                 x - 1,
-                                                                                 y,
+                        if (renderRight == false) {
+                            topRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                 x + 1,
+                                                                                 y + 1,
                                                                                  z - 1);
-                                bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                       x - 1,
-                                                                                       y - 1,
-                                                                                       z - 1);
-                            }
-
-                            topFront = _chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
-                            bottomFront = _chunk_get_block_including_neighbors(chunk,
-                                                                               x,
-                                                                               y - 1,
-                                                                               z - 1);
+                            rightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                              x + 1,
+                                                                              y,
+                                                                              z - 1);
+                            bottomRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x + 1,
+                                                                                    y - 1,
+                                                                                    z - 1);
                         }
+
+                        if (renderLeft == false) {
+                            topLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                x - 1,
+                                                                                y + 1,
+                                                                                z - 1);
+                            leftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                             x - 1,
+                                                                             y,
+                                                                             z - 1);
+                            bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x - 1,
+                                                                                   y - 1,
+                                                                                   z - 1);
+                        }
+
+                        topFront = _chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
+                        bottomFront = _chunk_get_block_including_neighbors(chunk, x, y - 1, z - 1);
 
                         // get their light values & properties
                         if (renderRight == false) {
@@ -1452,86 +1306,35 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
                         // left/right blocks may have been retrieved already
-                        if (octree != NULL) { // use octree to check neighbors if possible
-                            if (renderRight == false) {
-                                topRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY + 1,
-                                    posZ + 1);
-                                rightBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                         posX + 1,
-                                                                                         posY,
-                                                                                         posZ + 1);
-                                bottomRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY - 1,
-                                    posZ + 1);
-                            }
-
-                            if (renderLeft == false) {
-                                topLeftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                           posX - 1,
-                                                                                           posY + 1,
-                                                                                           posZ +
-                                                                                               1);
-                                leftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                        posX - 1,
-                                                                                        posY,
-                                                                                        posZ + 1);
-                                bottomLeftBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX - 1,
-                                    posY - 1,
-                                    posZ + 1);
-                            }
-
-                            topBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                   posX,
-                                                                                   posY + 1,
-                                                                                   posZ + 1);
-                            bottomBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                      posX,
-                                                                                      posY - 1,
-                                                                                      posZ + 1);
-                        } else {
-                            if (renderRight == false) {
-                                topRightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                    x + 1,
-                                                                                    y + 1,
-                                                                                    z + 1);
-                                rightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                 x + 1,
-                                                                                 y,
-                                                                                 z + 1);
-                                bottomRightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                       x + 1,
-                                                                                       y - 1,
-                                                                                       z + 1);
-                            }
-
-                            if (renderLeft == false) {
-                                topLeftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                   x - 1,
-                                                                                   y + 1,
-                                                                                   z + 1);
-                                leftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                x - 1,
-                                                                                y,
+                        if (renderRight == false) {
+                            topRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                x + 1,
+                                                                                y + 1,
                                                                                 z + 1);
-                                bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                      x - 1,
-                                                                                      y - 1,
-                                                                                      z + 1);
-                            }
-
-                            topBack = _chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
-                            bottomBack = _chunk_get_block_including_neighbors(chunk,
-                                                                              x,
-                                                                              y - 1,
-                                                                              z + 1);
+                            rightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                             x + 1,
+                                                                             y,
+                                                                             z + 1);
+                            bottomRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x + 1,
+                                                                                   y - 1,
+                                                                                   z + 1);
                         }
+
+                        if (renderLeft == false) {
+                            topLeftBack = _chunk_get_block_including_neighbors(chunk,
+                                                                               x - 1,
+                                                                               y + 1,
+                                                                               z + 1);
+                            leftBack = _chunk_get_block_including_neighbors(chunk, x - 1, y, z + 1);
+                            bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                  x - 1,
+                                                                                  y - 1,
+                                                                                  z + 1);
+                        }
+
+                        topBack = _chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
+                        bottomBack = _chunk_get_block_including_neighbors(chunk, x, y - 1, z + 1);
 
                         // get their light values & properties
                         if (renderRight == false) {
@@ -1709,98 +1512,36 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
                         // left/right/back/front blocks may have been retrieved already
-                        if (octree != NULL) { // use octree to check neighbors if possible
-                            if (renderLeft == false) {
-                                topLeftBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                           posX - 1,
-                                                                                           posY + 1,
-                                                                                           posZ +
-                                                                                               1);
-                                topLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                       posX - 1,
-                                                                                       posY + 1,
-                                                                                       posZ);
-                                topLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX - 1,
-                                    posY + 1,
-                                    posZ - 1);
-                            }
-
-                            if (renderRight == false) {
-                                topRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY + 1,
-                                    posZ + 1);
-                                topRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                        posX + 1,
-                                                                                        posY + 1,
-                                                                                        posZ);
-                                topRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY + 1,
-                                    posZ - 1);
-                            }
-
-                            if (renderBack == false) {
-                                topBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                       posX,
-                                                                                       posY + 1,
-                                                                                       posZ + 1);
-                            }
-
-                            if (renderFront == false) {
-                                topFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                        posX,
-                                                                                        posY + 1,
-                                                                                        posZ - 1);
-                            }
-                        } else {
-                            if (renderLeft == false) {
-                                topLeftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                   x - 1,
-                                                                                   y + 1,
-                                                                                   z + 1);
-                                topLeft = _chunk_get_block_including_neighbors(chunk,
+                        if (renderLeft == false) {
+                            topLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                                x - 1,
                                                                                y + 1,
-                                                                               z);
-                                topLeftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                    x - 1,
-                                                                                    y + 1,
-                                                                                    z - 1);
-                            }
-
-                            if (renderRight == false) {
-                                topRightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                    x + 1,
-                                                                                    y + 1,
-                                                                                    z + 1);
-                                topRight = _chunk_get_block_including_neighbors(chunk,
-                                                                                x + 1,
-                                                                                y + 1,
-                                                                                z);
-                                topRightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                     x + 1,
-                                                                                     y + 1,
-                                                                                     z - 1);
-                            }
-
-                            if (renderBack == false) {
-                                topBack = _chunk_get_block_including_neighbors(chunk,
-                                                                               x,
-                                                                               y + 1,
                                                                                z + 1);
-                            }
-
-                            if (renderFront == false) {
-                                topFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                x,
+                            topLeft = _chunk_get_block_including_neighbors(chunk, x - 1, y + 1, z);
+                            topLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                x - 1,
                                                                                 y + 1,
                                                                                 z - 1);
-                            }
+                        }
+
+                        if (renderRight == false) {
+                            topRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                x + 1,
+                                                                                y + 1,
+                                                                                z + 1);
+                            topRight = _chunk_get_block_including_neighbors(chunk, x + 1, y + 1, z);
+                            topRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                 x + 1,
+                                                                                 y + 1,
+                                                                                 z - 1);
+                        }
+
+                        if (renderBack == false) {
+                            topBack = _chunk_get_block_including_neighbors(chunk, x, y + 1, z + 1);
+                        }
+
+                        if (renderFront == false) {
+                            topFront = _chunk_get_block_including_neighbors(chunk, x, y + 1, z - 1);
                         }
 
                         // get their light values & properties
@@ -1983,99 +1724,48 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         // get 8 neighbors that can impact ambient occlusion and vertex lighting
                         // left/right/back/front blocks may have been retrieved already
-                        if (octree != NULL) { // use octree to check neighbors if possible
-                            if (renderLeft == false) {
-                                bottomLeftBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX - 1,
-                                    posY - 1,
-                                    posZ + 1);
-                                bottomLeft = (Block *)octree_get_element_without_checking(octree,
-                                                                                          posX - 1,
-                                                                                          posY - 1,
-                                                                                          posZ);
-                                bottomLeftFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX - 1,
-                                    posY - 1,
-                                    posZ - 1);
-                            }
-
-                            if (renderRight == false) {
-                                bottomRightBack = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY - 1,
-                                    posZ + 1);
-                                bottomRight = (Block *)octree_get_element_without_checking(octree,
-                                                                                           posX + 1,
-                                                                                           posY - 1,
-                                                                                           posZ);
-                                bottomRightFront = (Block *)octree_get_element_without_checking(
-                                    octree,
-                                    posX + 1,
-                                    posY - 1,
-                                    posZ - 1);
-                            }
-
-                            if (renderBack == false) {
-                                bottomBack = (Block *)octree_get_element_without_checking(octree,
-                                                                                          posX,
-                                                                                          posY - 1,
-                                                                                          posZ + 1);
-                            }
-
-                            if (renderFront == false) {
-                                bottomFront = (Block *)octree_get_element_without_checking(octree,
-                                                                                           posX,
-                                                                                           posY - 1,
-                                                                                           posZ -
-                                                                                               1);
-                            }
-                        } else {
-                            if (renderLeft == false) {
-                                bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                      x - 1,
-                                                                                      y - 1,
-                                                                                      z + 1);
-                                bottomLeft = _chunk_get_block_including_neighbors(chunk,
+                        if (renderLeft == false) {
+                            bottomLeftBack = _chunk_get_block_including_neighbors(chunk,
                                                                                   x - 1,
                                                                                   y - 1,
-                                                                                  z);
-                                bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                       x - 1,
-                                                                                       y - 1,
-                                                                                       z - 1);
-                            }
-
-                            if (renderRight == false) {
-                                bottomRightBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                       x + 1,
-                                                                                       y - 1,
-                                                                                       z + 1);
-                                bottomRight = _chunk_get_block_including_neighbors(chunk,
-                                                                                   x + 1,
-                                                                                   y - 1,
-                                                                                   z);
-                                bottomRightFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                        x + 1,
-                                                                                        y - 1,
-                                                                                        z - 1);
-                            }
-
-                            if (renderBack == false) {
-                                bottomBack = _chunk_get_block_including_neighbors(chunk,
-                                                                                  x,
-                                                                                  y - 1,
                                                                                   z + 1);
-                            }
-
-                            if (renderFront == false) {
-                                bottomFront = _chunk_get_block_including_neighbors(chunk,
-                                                                                   x,
+                            bottomLeft = _chunk_get_block_including_neighbors(chunk,
+                                                                              x - 1,
+                                                                              y - 1,
+                                                                              z);
+                            bottomLeftFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x - 1,
                                                                                    y - 1,
                                                                                    z - 1);
-                            }
+                        }
+
+                        if (renderRight == false) {
+                            bottomRightBack = _chunk_get_block_including_neighbors(chunk,
+                                                                                   x + 1,
+                                                                                   y - 1,
+                                                                                   z + 1);
+                            bottomRight = _chunk_get_block_including_neighbors(chunk,
+                                                                               x + 1,
+                                                                               y - 1,
+                                                                               z);
+                            bottomRightFront = _chunk_get_block_including_neighbors(chunk,
+                                                                                    x + 1,
+                                                                                    y - 1,
+                                                                                    z - 1);
+                        }
+
+                        if (renderBack == false) {
+                            bottomBack = _chunk_get_block_including_neighbors(chunk,
+                                                                              x,
+                                                                              y - 1,
+                                                                              z + 1);
+                        }
+
+                        if (renderFront == false) {
+                            bottomFront = _chunk_get_block_including_neighbors(chunk,
+                                                                               x,
+                                                                               y - 1,
+                                                                               z - 1);
                         }
 
                         // get their light values & properties

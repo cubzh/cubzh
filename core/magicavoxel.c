@@ -278,8 +278,8 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         // loop over blocks
 
         Chunk *chunk = NULL;
-        int3 *shapePos = int3_new(0, 0, 0);
-        int3 *posInChunk = int3_new(0, 0, 0);
+        SHAPE_COORDS_INT3_T coords_in_shape;
+        CHUNK_COORDS_INT3_T coords_in_chunk;
         Block *b = NULL;
         int colorIndexInCombinedPalette;
         RGBAColor *color;
@@ -289,11 +289,16 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                 for (int i = 0; i < shape_size.x; i++) {
                     b = NULL;
 
-                    int3_set(shapePos, (i), (j), (k));
-
-                    shape_get_chunk_and_position_within(src, shapePos, &chunk, NULL, posInChunk);
+                    coords_in_shape = (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)i,
+                                                            (SHAPE_COORDS_INT_T)j,
+                                                            (SHAPE_COORDS_INT_T)k};
+                    shape_get_chunk_and_coordinates(src,
+                                                    coords_in_shape,
+                                                    &chunk,
+                                                    NULL,
+                                                    &coords_in_chunk);
                     if (chunk != NULL) {
-                        b = chunk_get_block_2(chunk, posInChunk);
+                        b = chunk_get_block_2(chunk, coords_in_chunk);
                     }
 
                     if (b == NULL) {
@@ -308,9 +313,9 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                         }
 
                         // ⚠️ y -> z, z -> y
-                        uint8_t x = (uint8_t)shapePos->x;
-                        uint8_t y = (uint8_t)shapePos->z;
-                        uint8_t z = (uint8_t)shapePos->y;
+                        uint8_t x = (uint8_t)coords_in_shape.x;
+                        uint8_t y = (uint8_t)coords_in_shape.z;
+                        uint8_t z = (uint8_t)coords_in_shape.y;
                         uint8_t c = (uint8_t)colorIndexInCombinedPalette + 1;
 
                         // printf("block : %d, %d, %d - color: %d\n", x, y, z, c);
@@ -811,10 +816,10 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_octree((SHAPE_SIZE_INT_T)sizeX,
-                                  (SHAPE_SIZE_INT_T)sizeY,
-                                  (SHAPE_SIZE_INT_T)sizeZ,
-                                  isMutable);
+    *out = shape_make_with_size((SHAPE_SIZE_INT_T)sizeX,
+                                (SHAPE_SIZE_INT_T)sizeY,
+                                (SHAPE_SIZE_INT_T)sizeZ,
+                                isMutable);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);

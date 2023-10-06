@@ -498,11 +498,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 shapeSizeRead = true;
 
                 // size is known, now is a good time to create the shape
-                if (shapeSettings->octree) {
-                    *shape = shape_make_with_octree(width, height, depth, shapeSettings->isMutable);
-                } else {
-                    *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
-                }
+                *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
                 if (serializedPalette != NULL) {
                     shape_set_palette(*shape, serializedPalette);
                 } else {

@@ -67,9 +67,9 @@ void test_chunk_Block(void) {
 
     // chunk_paint_block()
     // Paint the blocks with differents colors
-    TEST_CHECK(chunk_paint_block(chunk, 4, 4, 4, 1) == true);
-    TEST_CHECK(chunk_paint_block(chunk, 6, 6, 6, 3) == true);
-    TEST_CHECK(chunk_paint_block(chunk, 0, 0, 0, 0) == false);
+    TEST_CHECK(chunk_paint_block(chunk, 4, 4, 4, 1, NULL) == true);
+    TEST_CHECK(chunk_paint_block(chunk, 6, 6, 6, 3, NULL) == true);
+    TEST_CHECK(chunk_paint_block(chunk, 0, 0, 0, 0, NULL) == false);
 
     // chunk_get_block()
     // Check if the block is placed at the right spot in the chunk
@@ -82,14 +82,14 @@ void test_chunk_Block(void) {
     TEST_CHECK(check == NULL);
 
     // chunk_get_block_2()
-    int3 pos = {4, 4, 4};
-    check = chunk_get_block_2(chunk, &pos);
+    CHUNK_COORDS_INT3_T pos = {4, 4, 4};
+    check = chunk_get_block_2(chunk, pos);
     TEST_CHECK(check->colorIndex == 1);
-    int3_set(&pos, 6, 6, 6);
-    check = chunk_get_block_2(chunk, &pos);
+    pos = (CHUNK_COORDS_INT3_T){6, 6, 6};
+    check = chunk_get_block_2(chunk, pos);
     TEST_CHECK(check->colorIndex == 3);
-    int3_set(&pos, 11, 9, 6);
-    check = chunk_get_block_2(chunk, &pos);
+    pos = (CHUNK_COORDS_INT3_T){11, 9, 6};
+    check = chunk_get_block_2(chunk, pos);
     TEST_CHECK(check == NULL);
 
     int NBBlocks = chunk_get_nb_blocks(chunk);
@@ -116,17 +116,17 @@ void test_chunk_Block(void) {
     TEST_CHECK(min.x == 4 && min.y == 4 && min.z == 4 && max.x == 7 && max.y == 7 && max.z == 7);
 
     // chunk_remove_block()
-    TEST_CHECK(chunk_remove_block(chunk, 4, 4, 4) == true);
+    TEST_CHECK(chunk_remove_block(chunk, 4, 4, 4, NULL) == true);
     check = chunk_get_block(chunk, 4, 4, 4);
     TEST_CHECK(check == NULL);
     NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 1);
-    TEST_CHECK(chunk_remove_block(chunk, 6, 6, 6) == true);
+    TEST_CHECK(chunk_remove_block(chunk, 6, 6, 6, NULL) == true);
     check = chunk_get_block(chunk, 6, 6, 6);
     TEST_CHECK(check == NULL);
     NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 0);
-    TEST_CHECK(chunk_remove_block(chunk, 0, 0, 0) == false);
+    TEST_CHECK(chunk_remove_block(chunk, 0, 0, 0, NULL) == false);
 
     chunk_free(chunk, false);
 }

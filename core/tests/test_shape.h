@@ -177,16 +177,6 @@ void test_shape_make_copy(void) {
     shape_free((Shape *const)copy);
 }
 
-// octree must have the correct dimension
-void test_shape_make_with_octree(void) {
-    Shape *s = shape_make_with_octree(10, 20, 30, false);
-    const Octree *o = shape_get_octree((const Shape *)s);
-
-    TEST_CHECK(octree_get_dimension(o) == 32);
-
-    shape_free((Shape *const)s);
-}
-
 // check that we can retain a shape
 void test_shape_retain(void) {
     Shape *s = shape_make();
@@ -249,7 +239,7 @@ void test_shape_remove_block(void) {
         shape_set_palette(s, color_palette_new(atlas));
     }
     shape_add_block_with_color(s, idx, x, y, z, true, false, true);
-    const bool ok = shape_remove_block(s, x, y, z, NULL, false, true);
+    const bool ok = shape_remove_block(s, x, y, z, false, true);
 
     TEST_CHECK(ok);
 
@@ -340,8 +330,7 @@ void test_shape_addblock_1(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1, 1, 1,
-                                       true); // isMutable
+    Shape *sh = shape_make_with_size(1, 1, 1, true); // isMutable
     TEST_ASSERT(sh != NULL);
 
     {
@@ -438,8 +427,7 @@ void test_shape_addblock_2(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1, 1, 1,
-                                       true); // isMutable
+    Shape *sh = shape_make_with_size(1, 1, 1, true); // isMutable
     TEST_ASSERT(sh != NULL);
 
     {

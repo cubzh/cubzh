@@ -70,6 +70,7 @@ int chunk_get_nb_blocks(const Chunk *chunk);
 Octree *chunk_get_octree(const Chunk *c);
 void chunk_set_rtree_leaf(Chunk *c, void *ptr);
 void *chunk_get_rtree_leaf(const Chunk *c);
+uint64_t chunk_get_hash(const Chunk *c, uint64_t crc);
 
 bool chunk_add_block(Chunk *chunk,
                      const Block block,
@@ -80,20 +81,22 @@ bool chunk_add_block(Chunk *chunk,
 bool chunk_remove_block(Chunk *chunk,
                         const CHUNK_COORDS_INT_T x,
                         const CHUNK_COORDS_INT_T y,
-                        const CHUNK_COORDS_INT_T z);
+                        const CHUNK_COORDS_INT_T z,
+                        SHAPE_COLOR_INDEX_INT_T *prevColorIndex);
 
 bool chunk_paint_block(Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,
                        const CHUNK_COORDS_INT_T y,
                        const CHUNK_COORDS_INT_T z,
-                       const SHAPE_COLOR_INDEX_INT_T colorIndex);
+                       const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                       SHAPE_COLOR_INDEX_INT_T *prevColorIndex);
 
 Block *chunk_get_block(const Chunk *chunk,
                        const CHUNK_COORDS_INT_T x,
                        const CHUNK_COORDS_INT_T y,
                        const CHUNK_COORDS_INT_T z);
 
-Block *chunk_get_block_2(const Chunk *chunk, const int3 *pos);
+Block *chunk_get_block_2(const Chunk *chunk, CHUNK_COORDS_INT3_T coords);
 
 void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T x,

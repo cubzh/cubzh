@@ -37,7 +37,6 @@ typedef struct _VertexBuffer VertexBuffer;
 typedef struct _Chunk Chunk;
 
 typedef struct _LoadShapeSettings {
-    bool octree;
     bool lighting;
     bool isMutable;
 } LoadShapeSettings;
@@ -69,16 +68,11 @@ typedef uint8_t ShapeDrawMode;
 Shape *shape_make(void);
 // Creates a copy of the given shape
 Shape *shape_make_copy(Shape *origin);
-// Creates a shape without octree, with a known size
+// Creates a shape with a known allocated size (necessary for lighting)
 Shape *shape_make_with_size(const SHAPE_SIZE_INT_T width,
                             const SHAPE_SIZE_INT_T height,
                             const SHAPE_SIZE_INT_T depth,
                             const bool isMutable);
-// Creates a shape with octree i.e. allowing per-block physics
-Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
-                              const SHAPE_SIZE_INT_T height,
-                              const SHAPE_SIZE_INT_T depth,
-                              const bool isMutable);
 
 VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency);
 
@@ -162,7 +156,6 @@ bool shape_remove_block(Shape *shape,
                         SHAPE_COORDS_INT_T x,
                         SHAPE_COORDS_INT_T y,
                         SHAPE_COORDS_INT_T z,
-                        Block **blockBefore, // this is never used
                         const bool applyOffset,
                         const bool shrinkBox);
 
@@ -172,8 +165,6 @@ bool shape_paint_block(Shape *shape,
                        SHAPE_COORDS_INT_T x,
                        SHAPE_COORDS_INT_T y,
                        SHAPE_COORDS_INT_T z,
-                       Block **blockBefore,
-                       Block **blockAfter,
                        const bool applyOffset);
 
 void shape_get_bounding_box_size(const Shape *shape, int3 *size);
@@ -229,8 +220,6 @@ void shape_make_space(Shape *const shape,
                       const bool applyOffset);
 
 size_t shape_get_nb_blocks(const Shape *shape);
-
-const Octree *shape_get_octree(const Shape *shape);
 
 void shape_set_model_locked(Shape *s, bool toggle);
 bool shape_is_model_locked(Shape *s);
@@ -312,11 +301,11 @@ DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
 Index3D *shape_get_chunks(const Shape *shape);
 size_t shape_get_nb_chunks(const Shape *shape);
-void shape_get_chunk_and_position_within(const Shape *shape,
-                                         const int3 *pos,
-                                         Chunk **chunk,
-                                         int3 *chunk_pos,
-                                         int3 *pos_in_chunk);
+void shape_get_chunk_and_coordinates(const Shape *shape,
+                                     const SHAPE_COORDS_INT3_T coords_in_shape,
+                                     Chunk **chunk,
+                                     CHUNK_COORDS_INT3_T *chunk_coords,
+                                     CHUNK_COORDS_INT3_T *coords_in_chunk);
 void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent);
 void shape_refresh_vertices(Shape *shape);
 void shape_refresh_all_vertices(Shape *s);

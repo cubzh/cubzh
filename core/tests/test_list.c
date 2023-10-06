@@ -300,7 +300,6 @@ TEST_LIST = {
     // shape
     {"shape_make", test_shape_make},
     {"shape_make_copy", test_shape_make_copy},
-    {"shape_make_with_octree", test_shape_make_with_octree},
     {"shape_retain", test_shape_retain},
     {"shape_release", test_shape_release},
     {"shape_get_id", test_shape_get_id},

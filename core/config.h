@@ -213,6 +213,9 @@ static SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
 typedef uint16_t SHAPE_SIZE_INT_T;
 // coords of block within chunk
 typedef int8_t CHUNK_COORDS_INT_T;
+typedef struct {
+    CHUNK_COORDS_INT_T x, y, z;
+} CHUNK_COORDS_INT3_T;
 
 typedef uint8_t SHAPE_COLOR_INDEX_INT_T;
 typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
