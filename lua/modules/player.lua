@@ -43,7 +43,30 @@ local CastRay =  function(player, filterIn)
     return impact
 end
 
-local EquipBackpack = function(player, shape)
+local EquipBackpack = function(player, shapeOrItem)
+	if type(player) ~= "Player" then
+        error("Player:EquipBackpack should be called with `:`", 2)
+    end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipBackpack(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipBackpack(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__backpackItem == shape then 
+    	-- equipment already installed
+    	return
+    end
+
     -- always unequip the item currently equipped
     if player.__backpackItem ~= nil and player.__backpackItem:GetParent() == player.Body then
         player.__backpackItem:RemoveFromParent()
@@ -101,10 +124,30 @@ local EquipBackpack = function(player, shape)
     shape.LocalPosition = poiPos + bodyPoint
 end
 
-local EquipHat = function(player, shape)
-    if player == nil or type(player) ~= "Player" then
+local EquipHat = function(player, shapeOrItem)
+    if type(player) ~= "Player" then
         error("Player:EquipHat should be called with `:`", 2)
     end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipHat(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipHat(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__hatItem == shape then 
+    	-- equipment already installed
+    	return 
+    end
+
     -- always unequip the item currently equipped
     if player.__hatItem ~= nil and player.__hatItem:GetParent() == player.Head then
         player.__hatItem:RemoveFromParent()
