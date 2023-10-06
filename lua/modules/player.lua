@@ -409,21 +409,11 @@ end
 
 local SwingRight = function(player)
     if not player.Animations.SwingRight then return end
-    player.Animations.Walk:Toggle("RightHand", false)
-    player.Animations.Walk:Toggle("RightArm", false)
-    player.Animations.Idle:Toggle("RightHand", false)
-    player.Animations.Idle:Toggle("RightArm", false)
-    player.Animations.stanceDirty = true
     player.Animations.SwingRight:Play()
 end
 
 local SwingLeft = function(player)
     if not player.Animations.SwingLeft then return end
-    player.Animations.Walk:Toggle("LeftHand", false)
-    player.Animations.Walk:Toggle("LeftArm", false)
-    player.Animations.Idle:Toggle("LeftHand", false)
-    player.Animations.Idle:Toggle("LeftArm", false)
-    player.Animations.stanceDirty = true
     player.Animations.SwingLeft:Play()
 end
 
