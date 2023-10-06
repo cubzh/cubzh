@@ -44,14 +44,24 @@ local create = function(_)
     end
 
     local animationsNewIndex = function(t, k, v)
-        if attributes[k] then
+        if attributes[k] ~= nil then
+        	local expectedType = type(attributes[k])
+        	if type(v) ~= expectedType then
+	    		error("Animations." .. k .. " should be of type " .. expectedType, 2)
+	    	end
+
             if k == "stanceDirty" then
                 attributes[k] = v
             else
-                error("Animations."..k.." is read-only")
+                error("Animations." .. k .. " is read-only")
             end
             return
         end
+
+        if type(v) ~= "Animation" then
+        	error("Animations." .. k .. " should be of type Animation", 2)
+        end
+
         animationsTable[k] = v
         if v == nil then return end
         v:AddOnPlayCallback(function()
