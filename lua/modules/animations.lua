@@ -77,6 +77,126 @@ animationsMT.__index = function(t, k)
 	return privateFields[t].anims[k]	
 end
 
+local toggleGroups = function(animations)
+	
+	local anims = privateFields[animations].anims
+
+	local playingInLoop = privateFields[animations].playingInLoop
+	local playingOnce = privateFields[animations].playingOnce
+
+	local groupsPlaying = {}
+
+	local anim
+	local groups
+	
+	-- activate all groups
+
+	for _, name in ipairs(playingOnce) do
+		anim = anims[name]
+		if anim then
+			groups = anim.Groups
+			for _, groupName in ipairs(groups) do
+				anim:Toggle(groupName, true)
+			end
+		end
+	end
+
+	for _, name in ipairs(playingInLoop) do
+		anim = anims[name]
+		if anim then
+			groups = anim.Groups
+			for _, groupName in ipairs(groups) do
+				anim:Toggle(groupName, true)
+			end
+		end
+	end
+
+	local groupsPlaying = {}
+
+	for _, name in ipairs(playingOnce) do
+		anim = anims[name]
+		if anim then
+			groups = anim.Groups
+			for _, groupName in ipairs(groups) do
+				if groupsPlaying[groupName] == true then
+					anim:Toggle(groupName, false)
+				else
+					groupsPlaying[groupName] = true
+				end
+			end
+		end
+	end
+
+	for _, name in ipairs(playingInLoop) do
+		anim = anims[name]
+		if anim then
+			groups = anim.Groups
+			for _, groupName in ipairs(groups) do
+				if groupsPlaying[groupName] == true then
+					anim:Toggle(groupName, false)
+				else
+					groupsPlaying[groupName] = true
+				end
+			end
+		end
+	end
+end
+
+local startPlaying = function(animations, animName, anim)
+
+	privateFields[animations].playing[animName] = true
+
+	local playingInLoop = privateFields[animations].playingInLoop
+	local playingOnce = privateFields[animations].playingOnce
+
+	for i, name in ipairs(playingInLoop) do
+		if name == animName then
+			table.remove(playingInLoop, i)
+			break
+		end
+	end
+
+	for i, name in ipairs(playingOnce) do
+		if name == animName then
+			table.remove(playingOnce, i)
+			break
+		end
+	end
+
+	if anim.Mode == AnimationMode.Loop then
+		table.insert(playingInLoop, 1, animName)
+	else
+		table.insert(playingOnce, 1, animName)
+	end
+
+	toggleGroups(animations)
+end
+
+local stopPlaying = function(animations, animName)
+
+	if privateFields[animations].playing[animName] ~= true then return end
+	privateFields[animations].playing[animName] = false
+
+	local playingInLoop = privateFields[animations].playingInLoop
+	local playingOnce = privateFields[animations].playingOnce
+
+	for i, name in ipairs(playingInLoop) do
+		if name == animName then
+			table.remove(playingInLoop, i)
+			break
+		end
+	end
+
+	for i, name in ipairs(playingOnce) do
+		if name == animName then
+			table.remove(playingOnce, i)
+			break
+		end
+	end
+	
+	toggleGroups(animations)
+end
+
 animationsMT.__newindex = function(t, k, v)
 	if indexFunctions[k] ~= nil then
 		error("Animations." .. k .. " is read-only")
@@ -86,21 +206,23 @@ animationsMT.__newindex = function(t, k, v)
 		error("Animations." .. k .. " should be of type Animation", 2)
 	end
 
-	if privateFields[t].anims == nil then privateFields[t].anims = {} end
-
 	-- TODO: REMOVE CALLBACKS
 
 	privateFields[t].anims[k] = v
 
 	if v == nil then return end
 
+	local animations = t
+	local animName = k
+
+	-- NOTE: could use same callback function for all
+	-- animations, indexing animations on anim pointers
 	v:AddOnPlayCallback(function(anim)
-		print("PLAY ANIM:", anim)
-		local g = anim.Groups
+		startPlaying(animations, animName, anim)
 	end)
 
 	v:AddOnStopCallback(function(anim)
-		print("STOP ANIM:", anim)
+		stopPlaying(animations, animName)
 	end)
 end
 
@@ -108,6 +230,23 @@ local create = function(self)
 
 	local animations = {}
 	privateFields[animations] = {}
+
+	if privateFields[animations].anims == nil then 
+		privateFields[animations].anims = {} 
+	end
+
+	-- all playing animations, { animName = true }
+	if privateFields[animations].playing == nil then 
+		privateFields[animations].playing = {}
+	end
+
+	if privateFields[animations].playingInLoop == nil then 
+		privateFields[animations].playingInLoop = {}
+	end
+
+	if privateFields[animations].playingOnce == nil then 
+		privateFields[animations].playingOnce = {}
+	end
 
 	setmetatable(animations, animationsMT)
 
@@ -123,11 +262,18 @@ setmetatable(animationsModule, mt)
 -- tick for all Animations
 local anims
 LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-	for _, animations in pairs(privateFields) do
-		anims = animations.anims
+
+	for animations, animationsPrivateFields in pairs(privateFields) do
+		anims = animationsPrivateFields.anims
 		if anims ~= nil then
-			for _, anim in pairs(anims) do
-				anim:Tick(dt)
+			for name, anim in pairs(anims) do
+				if anim.IsPlaying == false then
+					if animationsPrivateFields.playing[name] == true then
+						stopPlaying(animations, name)
+					end
+				else
+					anim:Tick(dt)
+				end
 			end
 		end
 	end
