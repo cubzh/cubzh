@@ -138,10 +138,16 @@ local _initAnimations = function(avatar)
         -- Head = walk_headK,
         Body = walk_bodyK
     }
+
+    local owner
     for name,v in pairs(walkConfig) do
         for _,frame in ipairs(v) do
-            animWalk:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
-            animWalk:Bind(name, (name == "Body" and not avatar[name]) and avatar or avatar[name])
+        	owner = name == "Body" and avatar or avatar[name]
+        	-- owner = (name == "Body" and not avatar[name]) and avatar or avatar[name]
+        	if owner ~= nil then
+	            animWalk:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
+	            animWalk:Bind(name, owner)
+        	end
         end
     end
 
@@ -213,7 +219,7 @@ local _initAnimations = function(avatar)
         end
     end
 
-    local anims = require("animations"):create()
+    local anims = require("animations")()
     anims.Walk = animWalk
     anims.Idle = animIdle
     anims.SwingRight = animSwingRight
@@ -221,19 +227,6 @@ local _initAnimations = function(avatar)
 
     avatar.Animations = anims
 
-    LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-        if anims.stanceDirty and not anims.SwingRight.IsPlaying and not anims.SwingLeft.IsPlaying then
-            anims.Walk:Toggle("RightHand", true)
-            anims.Walk:Toggle("RightArm", true)
-            anims.Walk:Toggle("LeftHand", true)
-            anims.Walk:Toggle("LeftArm", true)
-            anims.Idle:Toggle("RightHand", true)
-            anims.Idle:Toggle("RightArm", true)
-            anims.Idle:Toggle("LeftHand", true)
-            anims.Idle:Toggle("LeftArm", true)
-            anims.stanceDirty = false
-        end
-    end)
     anims.Idle:Play()
 end
 
