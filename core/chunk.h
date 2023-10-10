@@ -14,10 +14,7 @@ extern "C" {
 #include <stdio.h>
 
 #include "block.h"
-#include "color_palette.h"
-#include "colors.h"
 #include "config.h"
-#include "function_pointers.h"
 #include "index3d.h"
 #include "octree.h"
 #include "shape.h"
@@ -61,6 +58,7 @@ typedef enum {
 Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
                  const SHAPE_COORDS_INT_T y,
                  const SHAPE_COORDS_INT_T z);
+Chunk *chunk_new_copy(const Chunk *c);
 void chunk_free(Chunk *chunk, bool updateNeighbors);
 void chunk_free_func(void *c);
 void chunk_set_dirty(Chunk *chunk, bool b);
@@ -71,6 +69,13 @@ Octree *chunk_get_octree(const Chunk *c);
 void chunk_set_rtree_leaf(Chunk *c, void *ptr);
 void *chunk_get_rtree_leaf(const Chunk *c);
 uint64_t chunk_get_hash(const Chunk *c, uint64_t crc);
+
+void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T light);
+VERTEX_LIGHT_STRUCT_T chunk_get_light_without_checking(const Chunk *c, CHUNK_COORDS_INT3_T coords);
+VERTEX_LIGHT_STRUCT_T chunk_get_light_or_default(Chunk *c,
+                                                 CHUNK_COORDS_INT3_T coords,
+                                                 bool isDefault);
+void chunk_clear_lighting_data(Chunk *c);
 
 bool chunk_add_block(Chunk *chunk,
                      const Block block,
@@ -98,6 +103,13 @@ Block *chunk_get_block(const Chunk *chunk,
 
 Block *chunk_get_block_2(const Chunk *chunk, CHUNK_COORDS_INT3_T coords);
 
+Block *chunk_get_block_including_neighbors(Chunk *chunk,
+                                           const CHUNK_COORDS_INT_T x,
+                                           const CHUNK_COORDS_INT_T y,
+                                           const CHUNK_COORDS_INT_T z,
+                                           Chunk **out_chunk,
+                                           CHUNK_COORDS_INT3_T *out_coords);
+
 void chunk_get_block_pos(const Chunk *chunk,
                          const CHUNK_COORDS_INT_T x,
                          const CHUNK_COORDS_INT_T y,
@@ -109,7 +121,7 @@ void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max);
 // MARK: - Neighbors -
 
 Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location);
-void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, const int3 *chunk_coords);
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, CHUNK_COORDS_INT3_T coords);
 void chunk_leave_neighborhood(Chunk *chunk);
 
 // MARK: - Buffers -

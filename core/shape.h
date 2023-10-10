@@ -151,15 +151,12 @@ bool shape_add_block_with_color(Shape *shape,
                                 const bool applyOffset,
                                 bool useDefaultColor);
 
-// removes block, returns true if the block has been removed, false otherwise
 bool shape_remove_block(Shape *shape,
                         SHAPE_COORDS_INT_T x,
                         SHAPE_COORDS_INT_T y,
                         SHAPE_COORDS_INT_T z,
-                        const bool applyOffset,
-                        const bool shrinkBox);
+                        const bool applyOffset);
 
-// paints block, returns 1 if the block has been painted, 0 otherwise
 bool shape_paint_block(Shape *shape,
                        const SHAPE_COLOR_INDEX_INT_T colorIndex,
                        SHAPE_COORDS_INT_T x,
@@ -168,7 +165,7 @@ bool shape_paint_block(Shape *shape,
                        const bool applyOffset);
 
 void shape_get_bounding_box_size(const Shape *shape, int3 *size);
-void shape_get_allocated_size(const Shape *shape, int3 *size);
+SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape);
 bool shape_is_within_allocated_bounds(const Shape *shape,
                                       const SHAPE_COORDS_INT_T x,
                                       const SHAPE_COORDS_INT_T y,
@@ -398,45 +395,39 @@ void shape_remove_point(Shape *s, const char *key);
 void shape_compute_baked_lighting(Shape *s, bool overwrite);
 
 bool shape_has_baked_lighting_data(const Shape *s);
-const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s);
-void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d);
-VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s,
-                                                       SHAPE_COORDS_INT_T x,
-                                                       SHAPE_COORDS_INT_T y,
-                                                       SHAPE_COORDS_INT_T z);
-void shape_set_light(Shape *s,
-                     SHAPE_COORDS_INT_T x,
-                     SHAPE_COORDS_INT_T y,
-                     SHAPE_COORDS_INT_T z,
-                     VERTEX_LIGHT_STRUCT_T light);
-// helper function that returns light or default light if pos out of bounds or if isDefault
-VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s,
+VERTEX_LIGHT_STRUCT_T *shape_create_lighting_data_blob(const Shape *s);
+void shape_set_lighting_data_from_blob(Shape *s,
+                                       VERTEX_LIGHT_STRUCT_T *blob,
+                                       SHAPE_COORDS_INT3_T min,
+                                       SHAPE_COORDS_INT3_T max);
+void shape_clear_baked_lighing(Shape *s);
+
+/// Helper function that returns light or default light if pos out of bounds
+VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(const Shape *s,
                                                  SHAPE_COORDS_INT_T x,
                                                  SHAPE_COORDS_INT_T y,
-                                                 SHAPE_COORDS_INT_T z,
-                                                 bool isDefault);
+                                                 SHAPE_COORDS_INT_T z);
 
 /// Block removal may open up sunlight or emission propagation, and/or remove emission sources
 void shape_compute_baked_lighting_removed_block(Shape *s,
-                                                SHAPE_COORDS_INT_T x,
-                                                SHAPE_COORDS_INT_T y,
-                                                SHAPE_COORDS_INT_T z,
+                                                Chunk *c,
+                                                SHAPE_COORDS_INT3_T coords_in_shape,
+                                                CHUNK_COORDS_INT3_T coords_in_chunk,
                                                 SHAPE_COLOR_INDEX_INT_T blockID);
 
 /// Block addition may shut sunlight or emission propagation, and/or add emission sources
 void shape_compute_baked_lighting_added_block(Shape *s,
-                                              SHAPE_COORDS_INT_T x,
-                                              SHAPE_COORDS_INT_T y,
-                                              SHAPE_COORDS_INT_T z,
+                                              Chunk *c,
+                                              SHAPE_COORDS_INT3_T coords_in_shape,
+                                              CHUNK_COORDS_INT3_T coords_in_chunk,
                                               SHAPE_COLOR_INDEX_INT_T blockID);
 
 /// Block replacement may remove or replace emission sources
 void shape_compute_baked_lighting_replaced_block(Shape *s,
-                                                 SHAPE_COORDS_INT_T x,
-                                                 SHAPE_COORDS_INT_T y,
-                                                 SHAPE_COORDS_INT_T z,
-                                                 SHAPE_COLOR_INDEX_INT_T blockID,
-                                                 bool applyOffset);
+                                                 Chunk *c,
+                                                 SHAPE_COORDS_INT3_T coords_in_shape,
+                                                 CHUNK_COORDS_INT3_T coords_in_chunk,
+                                                 SHAPE_COLOR_INDEX_INT_T blockID);
 
 uint64_t shape_get_baked_lighting_hash(const Shape *s);
 

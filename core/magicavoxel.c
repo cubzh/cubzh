@@ -10,6 +10,7 @@
 
 #include "cclog.h"
 #include "colors.h"
+#include "config.h"
 #include "hash_uint32_int.h"
 #include "serialization.h"
 #include "shape.h"
@@ -112,7 +113,7 @@ bool serialization_save_vox(Shape *src, FILE *const out) {
 }
 
 bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *const out) {
-    int3 shape_size;
+    SHAPE_SIZE_INT3_T shape_size;
 
     if (out == NULL) {
         cclog_error("file pointer is NULL");
@@ -135,7 +136,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             cclog_error("at least of the given shapes is NULL");
             return false;
         }
-        shape_get_allocated_size(shapes[i], &shape_size);
+        shape_size = shape_get_allocated_size(shapes[i]);
         if (shape_size.x > 256 || shape_size.y > 256 || shape_size.z > 256) {
             cclog_error("shape is too big, can't export for magicavoxel");
             return false;
@@ -242,7 +243,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         palette = shape_get_palette(src);
         paletteConversionMap = paletteConversionMaps[i];
 
-        shape_get_allocated_size(src, &shape_size);
+        shape_size = shape_get_allocated_size(src);
 
         _writeVoxChunkHeader("SIZE", size_bytes, 0, out);
 

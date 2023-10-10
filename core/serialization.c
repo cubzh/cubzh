@@ -334,8 +334,7 @@ bool serialization_save_baked_file(const Shape *s, uint64_t hash, FILE *fd) {
     }
 
     // write lighting data uncompressed size
-    int3 shape_size;
-    shape_get_allocated_size(s, &shape_size);
+    SHAPE_SIZE_INT3_T shape_size = shape_get_allocated_size(s);
     uint32_t size = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
                     sizeof(VERTEX_LIGHT_STRUCT_T);
     if (fwrite(&size, sizeof(uint32_t), 1, fd) != 1) {
@@ -345,7 +344,7 @@ bool serialization_save_baked_file(const Shape *s, uint64_t hash, FILE *fd) {
 
     // compress lighting data
     uLong compressedSize = compressBound(size);
-    const void *uncompressedData = shape_get_lighting_data(s);
+    const void *uncompressedData = shape_create_lighting_data_blob(s);
     void *compressedData = malloc(compressedSize);
     if (compress(compressedData, &compressedSize, uncompressedData, size) != Z_OK) {
         cclog_error("baked file: failed to compress lighting data");
@@ -402,8 +401,7 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
             }
 
             // sanity check
-            int3 shape_size;
-            shape_get_allocated_size(s, &shape_size);
+            SHAPE_SIZE_INT3_T shape_size = shape_get_allocated_size(s);
             uint32_t expectedSize = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
                                     sizeof(VERTEX_LIGHT_STRUCT_T);
             if (size != expectedSize) {
@@ -453,7 +451,13 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
                 return false;
             }
 
-            shape_set_lighting_data(s, uncompressedData);
+            shape_set_lighting_data_from_blob(
+                s,
+                uncompressedData,
+                coords3_zero,
+                (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)shape_size.x,
+                                      (SHAPE_COORDS_INT_T)shape_size.y,
+                                      (SHAPE_COORDS_INT_T)shape_size.z});
 
             return true;
         }

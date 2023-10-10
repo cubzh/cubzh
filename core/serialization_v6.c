@@ -1092,10 +1092,10 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
                     uint8_t v1, v2;
                     for (int i = 0; i < (int)dataCount; i++) {
-                        memcpy(&v1, cursor, sizeof(uint8_t)); // shape baked lighting v1
+                        memcpy(&v1, cursor, sizeof(uint8_t));
                         cursor = (void *)((uint8_t *)cursor + 1);
 
-                        memcpy(&v2, cursor, sizeof(uint8_t)); // shape baked lighting v2
+                        memcpy(&v2, cursor, sizeof(uint8_t));
                         cursor = (void *)((uint8_t *)cursor + 1);
 
                         lightingData[i].red = TO_UINT4(v1 / 16);
@@ -1211,7 +1211,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
             cclog_warning("shape uses lighting but does not match lighting data size");
             free(lightingData);
         } else {
-            shape_set_lighting_data(*shape, lightingData);
+            shape_set_lighting_data_from_blob(*shape,
+                                              lightingData,
+                                              coords3_zero,
+                                              (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)width,
+                                                                    (SHAPE_COORDS_INT_T)height,
+                                                                    (SHAPE_COORDS_INT_T)depth});
         }
     } else if (lightingData != NULL) {
         cclog_warning("shape baked lighting data discarded");
@@ -1412,13 +1417,12 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     const Box *boundingBox = shape_get_model_aabb(shape);
     box_get_size_int(boundingBox, &shapeSize);
 
-    int3 start; // inclusive
-    int3 end;   // non-inclusive
-    int3_set(&start,
-             (int32_t)(boundingBox->min.x),
-             (int32_t)(boundingBox->min.y),
-             (int32_t)(boundingBox->min.z));
-    int3_set(&end, start.x + shapeSize.x, start.y + shapeSize.y, start.z + shapeSize.z);
+    SHAPE_COORDS_INT3_T start = {(SHAPE_COORDS_INT_T)boundingBox->min.x,
+                                 (SHAPE_COORDS_INT_T)boundingBox->min.y,
+                                 (SHAPE_COORDS_INT_T)boundingBox->min.z}; // inclusive
+    SHAPE_COORDS_INT3_T end = {(SHAPE_COORDS_INT_T)boundingBox->max.x,
+                               (SHAPE_COORDS_INT_T)boundingBox->max.y,
+                               (SHAPE_COORDS_INT_T)boundingBox->max.z}; // non-inclusive
 
     uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
@@ -1481,12 +1485,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
             continue;
         }
 
-        // name length w/ 255 chars max, name is truncated if longer than this
-        uint32_t nameLen = (uint32_t)strlen(key);
-        nameLen = nameLen > 255 ? 255 : (uint8_t)nameLen;
+        // name length w/ 255 chars max
+        const uint32_t keyLen = CLAMP((uint32_t)strlen(key), 0, 255);
 
-        shapePointPositionsSize += (uint32_t)sizeof(uint8_t) + nameLen +
-                                   3 * (uint32_t)sizeof(float);
+        shapePointPositionsSize += (uint32_t)sizeof(uint8_t) + keyLen + 3 * (uint32_t)sizeof(float);
         shapePointPositionsCount++;
 
         map_string_float3_iterator_next(it);
@@ -1505,12 +1507,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
             continue;
         }
 
-        // name length w/ 255 chars max, name is truncated if longer than this
-        uint32_t nameLen = (uint32_t)strlen(key);
-        nameLen = nameLen > 255 ? 255 : (uint8_t)nameLen;
+        // name length w/ 255 chars max
+        const uint32_t keyLen = CLAMP((uint32_t)strlen(key), 0, 255);
 
-        shapePointRotationsSize += (uint32_t)sizeof(uint8_t) + nameLen +
-                                   3 * (uint32_t)sizeof(float);
+        shapePointRotationsSize += (uint32_t)sizeof(uint8_t) + keyLen + 3 * (uint32_t)sizeof(float);
         shapePointRotationsCount++;
 
         map_string_float3_iterator_next(it);
@@ -1659,9 +1659,9 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     cursor = (void *)((uint8_t *)cursor + 1);
     *((uint32_t *)cursor) = shapeBlocksSize; // shape blocks chunk size
     cursor = (void *)((uint32_t *)cursor + 1);
-    for (int32_t x = start.x; x < end.x; x++) { // shape blocks
-        for (int32_t y = start.y; y < end.y; y++) {
-            for (int32_t z = start.z; z < end.z; z++) {
+    for (int x = start.x; x < end.x; ++x) { // shape blocks
+        for (int y = start.y; y < end.y; ++y) {
+            for (int z = start.z; z < end.z; ++z) {
                 block = shape_get_block(shape,
                                         (SHAPE_COORDS_INT_T)x,
                                         (SHAPE_COORDS_INT_T)y,
@@ -1692,20 +1692,20 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                 continue;
             }
 
-            // name length w/ 255 chars max, name is truncated if longer than this
-            uint32_t nameLen = (uint32_t)strlen(key);
-            nameLen = nameLen > 255 ? 255 : (uint8_t)nameLen;
-            const uint32_t chunkSize = sizeof(uint8_t) + nameLen + 3 * sizeof(float);
+            // name length w/ 255 chars max
+            const uint32_t keyLen = CLAMP((uint32_t)strlen(key), 0, 255);
+
+            const uint32_t chunkSize = sizeof(uint8_t) + keyLen + 3 * sizeof(float);
 
             // shape POI sub-chunk
             *((uint8_t *)cursor) = P3S_CHUNK_ID_SHAPE_POINT; // shape POI chunk ID
             cursor = (void *)((uint8_t *)cursor + 1);
             *((uint32_t *)cursor) = chunkSize; // shape POI chunk size
             cursor = (void *)((uint32_t *)cursor + 1);
-            *((uint8_t *)cursor) = (uint8_t)nameLen; // shape POI name length
+            *((uint8_t *)cursor) = (uint8_t)keyLen; // shape POI name length
             cursor = (void *)((uint8_t *)cursor + 1);
-            memcpy(cursor, key, nameLen); // shape POI name
-            cursor = (void *)((char *)cursor + nameLen);
+            memcpy(cursor, key, keyLen); // shape POI name
+            cursor = (void *)((char *)cursor + keyLen);
             *((float *)cursor) = f3->x - (float)(start.x); // shape POI X (empty space removed)
             cursor = (void *)((float *)cursor + 1);
             *((float *)cursor) = f3->y - (float)(start.y); // shape POI Y (empty space removed)
@@ -1731,20 +1731,20 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                 continue;
             }
 
-            // name length w/ 255 chars max, name is truncated if longer than this
-            uint32_t nameLen = (uint32_t)strlen(key);
-            nameLen = nameLen > 255 ? 255 : (uint8_t)nameLen;
-            const uint32_t chunkSize = sizeof(uint8_t) + nameLen + 3 * sizeof(float);
+            // name length w/ 255 chars max
+            const uint32_t keyLen = CLAMP((uint32_t)strlen(key), 0, 255);
+
+            const uint32_t chunkSize = sizeof(uint8_t) + keyLen + 3 * sizeof(float);
 
             // shape POI sub-chunk
             *((uint8_t *)cursor) = P3S_CHUNK_ID_SHAPE_POINT_ROTATION; // shape POI chunk ID
             cursor = (void *)((uint8_t *)cursor + 1);
             *((uint32_t *)cursor) = chunkSize; // shape POI chunk size
             cursor = (void *)((uint32_t *)cursor + 1);
-            *((uint8_t *)cursor) = (uint8_t)nameLen; // shape POI name length
+            *((uint8_t *)cursor) = (uint8_t)keyLen; // shape POI name length
             cursor = (void *)((uint8_t *)cursor + 1);
-            memcpy(cursor, key, nameLen); // shape POI name
-            cursor = (void *)((char *)cursor + nameLen);
+            memcpy(cursor, key, keyLen); // shape POI name
+            cursor = (void *)((char *)cursor + keyLen);
             *((float *)cursor) = (float)(f3->x); // shape POI X
             cursor = (void *)((float *)cursor + 1);
             *((float *)cursor) = (float)(f3->y); // shape POI Y
@@ -1769,15 +1769,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         cursor = (void *)((uint32_t *)cursor + 1);
 
         // write offsetted backed lighting
-        // ! \\ light is stored in a flat array, loop nesting is important
-        for (int32_t x = start.x; x < end.x; x++) { // shape blocks
-            for (int32_t y = start.y; y < end.y; y++) {
-                for (int32_t z = start.z; z < end.z; z++) {
-                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_without_checking(
-                        shape,
-                        (SHAPE_COORDS_INT_T)x,
-                        (SHAPE_COORDS_INT_T)y,
-                        (SHAPE_COORDS_INT_T)z);
+        for (SHAPE_COORDS_INT_T x = start.x; x < end.x; x++) { // shape blocks
+            for (SHAPE_COORDS_INT_T y = start.y; y < end.y; y++) {
+                for (SHAPE_COORDS_INT_T z = start.z; z < end.z; z++) {
+                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_or_default(shape, x, y, z);
                     cursor = (void *)((VERTEX_LIGHT_STRUCT_T *)cursor + 1);
                 }
             }

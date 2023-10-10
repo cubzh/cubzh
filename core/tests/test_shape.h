@@ -118,8 +118,8 @@
 // shape_compute_baked_lighting
 // shape_uses_baked_lighting
 // shape_has_baked_lighting_data
-// shape_get_lighting_data
-// shape_set_lighting_data
+// shape_create_lighting_data_blob
+// shape_set_lighting_data_from_blob
 // shape_get_light_without_checking
 // shape_set_light
 // shape_get_light_or_default
@@ -239,7 +239,7 @@ void test_shape_remove_block(void) {
         shape_set_palette(s, color_palette_new(atlas));
     }
     shape_add_block_with_color(s, idx, x, y, z, true, false, true);
-    const bool ok = shape_remove_block(s, x, y, z, false, true);
+    const bool ok = shape_remove_block(s, x, y, z, true);
 
     TEST_CHECK(ok);
 

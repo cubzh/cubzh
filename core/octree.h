@@ -37,6 +37,7 @@ typedef struct _OctreeNodeValue OctreeNodeValue;
 Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
                                         const void *element,
                                         const size_t elementSize);
+Octree *octree_new_copy(const Octree *octree);
 void octree_free(Octree *const tree);
 void octree_flush(Octree *tree);
 

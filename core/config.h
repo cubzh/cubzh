@@ -211,6 +211,9 @@ static SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
 static SHAPE_COORDS_INT3_T coords3_max = {INT16_MAX, INT16_MAX, INT16_MAX};
 static SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
 typedef uint16_t SHAPE_SIZE_INT_T;
+typedef struct {
+    SHAPE_SIZE_INT_T x, y, z;
+} SHAPE_SIZE_INT3_T;
 // coords of block within chunk
 typedef int8_t CHUNK_COORDS_INT_T;
 typedef struct {
@@ -278,6 +281,7 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 
 // SHAPE CHUNKS
 #define CHUNK_SIZE 16
+#define CHUNK_SIZE_SQR 256
 #define CHUNK_SIZE_SQRT 4
 #define CHUNK_SIZE_MINUS_ONE 15
 

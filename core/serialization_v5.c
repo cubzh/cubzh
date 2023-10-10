@@ -628,7 +628,12 @@ uint32_t chunk_v5_read_shape(Stream *s,
             cclog_warning("shape uses lighting but does not match lighting data size");
             free(lightingData);
         } else {
-            shape_set_lighting_data(*shape, lightingData);
+            shape_set_lighting_data_from_blob(*shape,
+                                              lightingData,
+                                              coords3_zero,
+                                              (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)width,
+                                                                    (SHAPE_COORDS_INT_T)height,
+                                                                    (SHAPE_COORDS_INT_T)depth});
         }
     } else if (lightingData != NULL) {
         cclog_warning("shape baked lighting data discarded");
