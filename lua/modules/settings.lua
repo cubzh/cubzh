@@ -14,6 +14,9 @@ settings.createModalContent = function(self, config)
 	local SENSITIVITY_STEP = 0.1
 	local MIN_SENSITIVITY = 0.1
 	local MAX_SENSITIVITY = 3.0
+	local VOLUME_STEP = 0.05
+	local MIN_VOLUME = 0.0
+	local MAX_VOLUME = 1.0
 
 	if config ~= nil and type(config) ~= "table" then
 		error("setting:create(<config>): config should be a table", 2)
@@ -45,6 +48,30 @@ settings.createModalContent = function(self, config)
 
 	local rows = {}
 	
+	-- VOLUME
+
+	local volumeLabel = ui:createText("", Color.White)
+	local function refreshVolumeLabel()
+		volumeLabel.Text = string.format("Volume: %.2f ", System.MasterVolume)
+	end
+	refreshVolumeLabel()
+
+	local volumeMinus = ui:createButton("➖")
+	volumeMinus.label = volumeLabel
+	volumeMinus.onRelease = function(self)
+		System.MasterVolume = math.max(System.MasterVolume - VOLUME_STEP, MIN_VOLUME)
+		refreshVolumeLabel()
+	end
+
+	local volumePlus = ui:createButton("➕")
+	volumePlus.label = volumeLabel
+	volumePlus.onRelease = function(self)
+		System.MasterVolume = math.min(System.MasterVolume + VOLUME_STEP, MAX_VOLUME)
+		refreshVolumeLabel()
+	end
+
+	table.insert(rows, {volumeLabel, volumeMinus, volumePlus})
+	
 	-- SENSITIVITY
 
 	local sensitivityLabel = ui:createText("", Color.White)
@@ -63,7 +90,7 @@ settings.createModalContent = function(self, config)
 	local sensitivityPlus = ui:createButton("➕")
 	sensitivityPlus.label = sensitivityLabel
 	sensitivityPlus.onRelease = function(self)
-        System.Sensitivity = math.min(System.Sensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
+		System.Sensitivity = math.min(System.Sensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
 		refreshSensitivityLabel()
 	end
 
@@ -87,7 +114,7 @@ settings.createModalContent = function(self, config)
 	local zoomSensitivityPlus = ui:createButton("➕")
 	zoomSensitivityPlus.label = zoomSensitivityLabel
 	zoomSensitivityPlus.onRelease = function(self)
-        System.ZoomSensitivity = math.min(System.ZoomSensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
+		System.ZoomSensitivity = math.min(System.ZoomSensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
 		refreshZoomSensitivityLabel()
 	end
 
@@ -116,7 +143,7 @@ settings.createModalContent = function(self, config)
 	local rqPlus = ui:createButton("➕")
 	rqPlus.label = sensitivityLabel
 	rqPlus.onRelease = function(self)
-        System.RenderQualityTier = math.min(System.RenderQualityTier + 1, System.MaxRenderQualityTier)
+		System.RenderQualityTier = math.min(System.RenderQualityTier + 1, System.MaxRenderQualityTier)
 		refreshRenderQualityLabel()
 	end
 
@@ -187,8 +214,10 @@ settings.createModalContent = function(self, config)
 
 	-- CACHE
 
+	cacheAndLogoutRow = {}
+
 	if _config.clearCache == true then
-		local cacheButton = ui:createButton("Clear cache")
+		local cacheButton = ui:createButton("Clear cache", {textSize = "small"})
 		cacheButton.onRelease = function(self)
 			local clearCacheContent = modal:createContent()
 			clearCacheContent.title = "Settings"
@@ -219,13 +248,13 @@ settings.createModalContent = function(self, config)
 
 			content:push(clearCacheContent)
 		end
-	    table.insert(rows, {cacheButton})
+		table.insert(cacheAndLogoutRow, cacheButton)
 	end
 
 	-- LOGOUT
 
 	if _config.logout == true then
-		local logoutButton = ui:createButton("Logout")
+		local logoutButton = ui:createButton("Logout", {textSize = "small"})
 		logoutButton:setColor(theme.colorNegative)
 
 		logoutButton.onRelease = function(self)
@@ -258,7 +287,11 @@ settings.createModalContent = function(self, config)
 
 			content:push(logoutContent)
 		end
-	    table.insert(rows, {logoutButton})
+		table.insert(cacheAndLogoutRow, logoutButton)
+	end
+
+	if #cacheAndLogoutRow > 0 then
+		table.insert(rows, cacheAndLogoutRow)
 	end
 
 	-- UI setup
