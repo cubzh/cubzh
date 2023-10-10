@@ -34,44 +34,89 @@ time.iso8601_to_os_time = function(iso8601)
 end
 
 -- returns number and unit type ("seconds", "minutes", "hours", "days", "months", "years") (string)
-time.ago = function(t)
-	if t == nil then error("time.ago - time parameter can't be nil", 2) end
+time.ago = function(t, config)
+	if t == nil then error("time.ago(t, config) - time parameter can't be nil", 2) end
+	if config == nil then config = {} end
+	if type(config) ~= "table" then error("time.ago(t, config) - config should be an table", 2) end
+
+	local _config = {
+		lang = "en" --variants: en, ru, ua
+	}	
+
+	for key, value in pairs(_config) do
+		if config[key] == nil then
+			config[key] = value
+		end
+	end
+
+	if config.lang ~= "en" and config.lang ~= "ru" and config.lang ~= "ua" then
+		error("time.ago(t, config) - key \"lang\" in config have invalid value \""..config.lang.."\"")
+	end
+
+	local names = {
+		en = {seconds = "seconds", minutes = "minutes", hours = "hours", days = "days", months = "months", years = "years"},
+		ru = {seconds = "секунд", minutes = "минут", hours = "часов", days = "дней", months = "месяцев", years = "лет"},
+		ua = {seconds = "секунд", minutes = "хвилин", hours = "годин", days = "днів", months = "місяців", years = "років"}
+	}
 
 	local now = os.time(os.date("!*t")) -- GMT
 	local seconds = now - t
 	local r
 
 	if seconds < 0 then
-		return 0, "seconds"
+		return 0, names[config.lang][seconds]
 	elseif seconds > 31536000 then -- years
 		r = math.floor((seconds / 31536000) * 10) / 10
-		return r, "years"
+		return r, names[config.lang][years]
 	elseif seconds > 2628288 then -- months
 		r = math.floor(seconds / 2628288)
-		return r, "months"
+		return r, names[config.lang][months]
 	elseif seconds > 86400 then -- days
 		r = math.floor(seconds / 86400)
-		return r, "days"
+		return r, names[config.lang][days]
 	elseif seconds > 3600 then -- hours
 		r = math.floor(seconds / 3600)
-		return r, "hours"
+		return r, names[config.lang][hours]
 	elseif seconds > 60 then -- minutes
 		r = math.floor(seconds / 60)
-		return r, "minutes"
+		return r, names[config.lang][minutes]
 	else
-		return seconds, "seconds"
+		return seconds, names[config.lang][seconds]
 	end
 end
 
 ---@function monthToString Converts an integer into its string representation
 ---@param self time
 ---@param month integer
+---@param config table
 ---@return string
-time.monthToString = function(self, month)
-	if self ~= time then error("time:monthToString(month): use `:`", 2) end
-	if type(month) ~= Type.integer then error("time:monthToString(month): month should be an integer", 2) end
+time.monthToString = function(self, month, config)
+	if config == nil then config = {} end
 
-	local months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	if self ~= time then error("time:monthToString(month, config): use `:`", 2) end
+	if type(month) ~= Type.integer then error("time:monthToString(month, config): month should be an integer", 2) end
+	if type(config) ~= "table" then error("time:monthTostring(month, config): config should be an table", 2) end
+
+	local _config = {
+		lang = "en" --variants: en, ru, ua
+	}	
+
+	for key, value in pairs(_config) do
+		if config[key] == nil then
+			config[key] = value
+		end
+	end
+
+	if config.lang == "en" then
+		local months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	elseif config.lang == "ru"
+		local months = {"Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"}
+	elseif config.lang == "ua"
+		local months = {"Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"}
+	else
+		error("time:monthToString(month, config): key \"lang\" in config have invalid value \""..config.lang.."\"", 2)
+	end
+	
 	return months[month]
 end
 
