@@ -1,0 +1,17 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "AI"
+extends: ""
+description: |
+    AI is a shortcut to require("ai"). See [ai module](/modules/ai).
+
+blocks:
+  - text: |
+      `AI` is a shortcut to `require("ai")`. See [ai module](/modules/ai).
+
+  - code: |
+      -- example, using AI:CreateChat instead of require("ai"):CreateChat
+      local chat = AI:CreateChat("You are a geography expert that answers with answers of 20 words maximum.")
+      chat:Say("Give me 5 random european countries.", function(err, message)
+        if err then print(err) return end
+        print("AI says: " .. message)
+      end)

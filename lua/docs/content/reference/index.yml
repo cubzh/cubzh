@@ -4,6 +4,7 @@ description: "This page documents all objects, functions and properties availabl
 blocks:
     - text: "Here's a list of all top level objects in Cubzh scripting environment:"
     - list:
+        - "<a href=\"/reference/ai\">AI</a>"
         - "<a href=\"/reference/ambient\">Ambient</a>"
         - "<a href=\"/reference/animation\">Animation</a>"
         - "<a href=\"/reference/audiolistener\">AudioListener</a>"
