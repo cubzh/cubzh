@@ -109,9 +109,9 @@ time.monthToString = function(self, month, config)
 
 	if config.lang == "en" then
 		local months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
-	elseif config.lang == "ru"
+	elseif config.lang == "ru" then
 		local months = {"Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"}
-	elseif config.lang == "ua"
+	elseif config.lang == "ua" then
 		local months = {"Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"}
 	else
 		error("time:monthToString(month, config): key \"lang\" in config have invalid value \""..config.lang.."\"", 2)
