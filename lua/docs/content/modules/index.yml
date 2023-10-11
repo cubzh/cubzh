@@ -9,15 +9,16 @@ blocks:
         uikit = require("uikit")
         local btn = uikit:createButton("this is a button")
         btn.onRelease = function() print("clicked") end
-    - text: "All modules follow these simple rules:"
+    - text: "Modules follow these simple rules:"
     - list:
-        - When required, a module returns a single table
-        - Global variables can't be defined within modules (only local ones)
+        - When required, a module always returns a single table
+        - Each module uses its own sandboxed environment, meaning it can't access variables defined in the main script or other modules, even globals.
         - When a module is required several times, the returned table is always the exact same reference
     - text: |
         Currently, only modules packaged with the application can be used, they're all [open-source](https://github.com/cubzh/cubzh/tree/main/lua/modules) and documented on this page.
     - subtitle: "Featured modules:"
     - list:
+        - "<a href=\"/modules/ai\">ai</a>"
         - "<a href=\"/modules/ease\">ease</a>"
         - "<a href=\"/modules/explode\">explode</a>"
         - "<a href=\"/modules/localevent\">localevent</a>"
