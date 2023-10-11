@@ -1,6 +1,6 @@
 worldDetailsMod = {}
 
-worldDetailsMod.create = function(self, config)
+worldDetailsMod.create = function(_, config)
 
 	local _config = {
 		title = "",
@@ -14,7 +14,7 @@ worldDetailsMod.create = function(self, config)
 		end
 	end
 
-	local config = _config
+	config = _config
 
 	local time = require("time")
 	local theme = require("uitheme").current
@@ -27,11 +27,11 @@ worldDetailsMod.create = function(self, config)
 
 	-- becomes true when itemDetails is removed
 	-- callbacks may capture this as upvalue to early return.
-	local removed = false 
+	local removed = false
 	local requests = {}
 	local listeners = {}
 
-	worldDetails.onRemove = function(self)
+	worldDetails.onRemove = function(_)
 		removed = true
 
 		for _, req in ipairs(requests) do
@@ -104,13 +104,13 @@ worldDetailsMod.create = function(self, config)
 
 		editNameBtn.onRelease = focus
 
-		name.onFocus = function(self)
+		name.onFocus = function(_)
 			editNameBtn.Text = "✅"
 			editNameBtn.onRelease = submit
 		end
 
 		name.onTextChange = function(self)
-			local sanitized, err = api.checkWorldName(self.Text)
+			local _, err = api.checkWorldName(self.Text)
 			if err ~= nil then
 				editNameBtn:disable()
 			else
@@ -196,12 +196,12 @@ worldDetailsMod.create = function(self, config)
 					function(text) -- done
 						ui:turnOn()
 						local description = worldDetails.description
-						if text == "" then 
+						if text == "" then
 							description.empty = true
 							description.Text = "Worlds are easier to find with a description!"
 							description.Color = theme.textColorSecondary
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchWorld(worldDetails.id, {description = ""}, function(err, world)
+							local req = api:patchWorld(worldDetails.id, {description = ""}, function(_,_)
 								if removed then return end
 								-- not handling response yet
 							end)
@@ -211,7 +211,7 @@ worldDetailsMod.create = function(self, config)
 							description.Text = text
 							description.Color = theme.textColor
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchWorld(worldDetails.id, {description = text}, function(err, world)
+							local req = api:patchWorld(worldDetails.id, {description = text}, function(_,_)
 								if removed then return end
 								-- not handling response yet
 							end)
@@ -229,7 +229,7 @@ worldDetailsMod.create = function(self, config)
 
 	worldDetails.shape = nil
 
-	content.loadCell = function(self, cell)
+	content.loadCell = function(_, cell)
 		worldDetails:loadCell(cell)
 	end
 
@@ -258,7 +258,7 @@ worldDetailsMod.create = function(self, config)
 		elseif cell.item.shape ~= nil then
 			local shape = Shape(cell.item.shape, {includeChildren = true})
 			self.shape = ui:createShape(shape, {spherized = true})
-	
+
 			self.shape.Width = 350
 			self.shape.Height = 350
 		end
@@ -274,7 +274,7 @@ worldDetailsMod.create = function(self, config)
 					self.author.Text = " @" .. (authorName or "…")
 				elseif byBtn and authorName then
 					byBtn.Text = "by @" .. authorName
-					byBtn.onRelease = function(btn)
+					byBtn.onRelease = function(_)
 						local profileConfig = {isLocal = false, username = authorName, userID = authorID, uikit = ui}
 						local profileContent = require("profile"):create(profileConfig)
 						content:push(profileContent)
@@ -309,15 +309,15 @@ worldDetailsMod.create = function(self, config)
 			self.description.Color = theme.textColor
 		end
 
-		if likes then 
+		if likes then
 			likes.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or 0)
 		elseif likeBtn then
 			likeBtn.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or 0)
-			
+
 			likeBtn.onRelease = function()
 				self.liked = not self.liked
-				local req = api:likeWorld(cell.id, self.liked, function(err) 
-					if removed then return end 
+				local req = api:likeWorld(cell.id, self.liked, function(_)
+					if removed then return end
 				end)
 				table.insert(requests, req)
 
@@ -390,11 +390,11 @@ worldDetailsMod.create = function(self, config)
 		end)
 	end
 
-	worldDetails._width = function(self)
+	worldDetails._width = function(_)
 		return worldDetails._w
 	end
 
-	worldDetails._height = function(self)
+	worldDetails._height = function(_)
 		return worldDetails._h
 	end
 
@@ -486,7 +486,7 @@ worldDetailsMod.create = function(self, config)
 
 				self.name.Width = self.nameArea.Width - self.editNameBtn.Width
 				self.editNameBtn.pos.X = self.nameArea.Width - self.editNameBtn.Width
-			
+
 				if signalBtn then
 					self.nameArea.pos = {0, signalBtn.LocalPosition.Y - self.nameArea.Height - theme.padding, 0}
 				elseif likes then
@@ -495,7 +495,7 @@ worldDetailsMod.create = function(self, config)
 
 				self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
 				self.infoArea.Width = self.Width
-				
+
 				self.infoArea.pos = self.nameArea.pos - {0, self.infoArea.Height + theme.padding, 0}
 				self.descriptionArea.Height = detailsHeight - self.nameArea.Height - self.infoArea.Height - theme.padding * 2
 			else
@@ -509,7 +509,7 @@ worldDetailsMod.create = function(self, config)
 			self.descriptionArea.Width = self.Width
 			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
 
-			if editDescriptionBtn ~= nil then 
+			if editDescriptionBtn ~= nil then
 				editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
 										self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,0}
 
@@ -538,7 +538,7 @@ worldDetailsMod.create = function(self, config)
 
 			local detailsWidth = (self.Width - theme.padding) * detailsWidthRatio
 
-			if detailsWidth < detailsMinWidth then 
+			if detailsWidth < detailsMinWidth then
 				detailsWidth = detailsMinWidth
 			end
 
@@ -561,7 +561,7 @@ worldDetailsMod.create = function(self, config)
 
 			self.shapeArea.Width = previewSize
 			self.shapeArea.Height = previewSize
-			
+
 			self.shapeArea.LocalPosition.X = self.Width - self.shapeArea.Width
 			self.shapeArea.LocalPosition.Y = self.Height - self.shapeArea.Height
 
@@ -601,7 +601,7 @@ worldDetailsMod.create = function(self, config)
 				self.editNameBtn.pos.X = self.nameArea.Width - self.editNameBtn.Width
 
 				self.nameArea.LocalPosition = {0, self.Height - self.nameArea.Height, 0}
-				
+
 				self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
 			else
 				self.infoArea.Height = byBtn.Height + self.publishDate.Height + theme.padding * 3
@@ -619,7 +619,7 @@ worldDetailsMod.create = function(self, config)
 			self.descriptionArea.Width = detailsWidth
 			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
 
-			if editDescriptionBtn ~= nil then 
+			if editDescriptionBtn ~= nil then
 				editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
 										self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,0}
 

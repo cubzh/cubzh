@@ -37,7 +37,7 @@ local orientationCubeMetatable = {
 		setRotation = function(self, cameraRotation)
 			local camera = self.camera
 			if not camera then self:init() end
-			
+
 			self.camera.Rotation:Set(cameraRotation)
 
 			for _,t in ipairs(self.texts) do
@@ -70,9 +70,9 @@ local orientationCubeMetatable = {
             self.layer = layer
 			camera.Layers = layer
             if self.cube then
-    			self.cube.Layers = layer
-	    		for _,t in ipairs(self.texts) do
-		    		t.Layers = layer
+				self.cube.Layers = layer
+				for _,t in ipairs(self.texts) do
+					t.Layers = layer
 			    end
             end
 		end,
@@ -94,7 +94,7 @@ local orientationCubeMetatable = {
 				cube.Pivot = { cube.Width * 0.5, cube.Height * 0.5, cube.Depth * 0.5 }
 
 				camera:SetModeSatellite(cube,17)
-				
+
 				local textsInfo = {
 					{
 						text = "Front",
@@ -148,7 +148,7 @@ local orientationCubeMetatable = {
 				end
 				self:setLayer(self.layer)
 			end)
-	
+
 			self:setScreenPosition(x or Screen.Width - 105, y or Screen.Height - 105)
 			self:setSize(size or 100)
             self:setLayer(self.layer)

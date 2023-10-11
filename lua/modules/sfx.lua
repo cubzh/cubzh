@@ -10,7 +10,7 @@ local sfx = {
 }
 
 local mt = {
-	__call = function(self, name, config) 
+	__call = function(self, name, config)
 		local sfxPool = self.pool
 
 	    local recycled
@@ -19,10 +19,10 @@ local mt = {
 	        sfxPool[name] = {}
 	    else
 	        recycled = table.remove(pool)
-	    end 
+	    end
 
 	    if recycled ~= nil then
-	    	recycled.Position = config.Position or self.defaultConfig.Position
+			recycled.Position = config.Position or self.defaultConfig.Position
 	        recycled.Volume = config.Volume or self.defaultConfig.Volume
 		    recycled.Radius = config.Radius or self.defaultConfig.Radius
 			if config.Spatialized ~= nil then
@@ -65,4 +65,3 @@ if AudioListener.GetParent ~= nil and AudioListener:GetParent() == nil then
 end
 
 return sfx
-    

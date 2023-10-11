@@ -73,7 +73,6 @@ local ACTION = {
 -- VARIABLES --
 ---------------
 
-local syncDT = 0
 local actionCallbacks = {}
 local teleportTriggerDistance = 0
 local sqrTeleportTriggerDistance = teleportTriggerDistance * teleportTriggerDistance
@@ -95,7 +94,7 @@ local _syncObject = function(syncedObj, t, forced)
 
 		if triggerDt <= SYNC_DELAY_TRIGGER then return end
 
-		if syncedObj.onSetTriggered then 
+		if syncedObj.onSetTriggered then
 			syncedObj.onSetTriggered = false
 			syncedObj.triggeredAt = t
 			triggered = true
@@ -140,12 +139,12 @@ local _syncObject = function(syncedObj, t, forced)
 end
 
 -- calback receives sender + metadata (optional)
-multi.onAction = function(self, name, callback)
+multi.onAction = function(_, name, callback)
 	actionCallbacks[name] = callback
 end
 multi.registerPlayerAction = multi.onAction
 
-multi.action = function(self, name, data)
+multi.action = function(_, name, data)
 	local e = Event()
 	e[KEY_MULTI] = true
 	e[KEY_ACTION] = ACTION.PLAYER_ACTION
@@ -181,7 +180,7 @@ local receive = function(e)
 		local name = e[KEY_OBJ_NAME]
 
 		local obj = linkedObjects[name]
-		if not obj then 
+		if not obj then
 			-- TODO: call multi.linkRequest callback if set
 			print(name, "NOT FOUND")
 			return
@@ -213,7 +212,7 @@ local receive = function(e)
 			if e[KEY_ROTATION_Y] then newRot.Y = e[KEY_ROTATION_Y] end
 			if e[KEY_ROTATION_Z] then newRot.Z = e[KEY_ROTATION_Z] end
 
-			obj.parentBox.Rotation = newRot -- set parentBox's rotation right away			
+			obj.parentBox.Rotation = newRot -- set parentBox's rotation right away
 			obj.Rotation = rotStart
 
 			-- smoothing will bring LocalRotation to Number3.Zero
@@ -252,7 +251,7 @@ end
 -- This means that Rotation, Motion, Position & Velocity are synced whenever Motion or Rotation is modified,
 -- or after forced delay otherwise.
 -- On other actors (Clients + Server), multi.linkRequest(name) callback will be triggered for Objects that aren't yet associated.
-multi.sync = function(self, object, name, config) 
+multi.sync = function(_, object, name, config)
 	config = config or {}
 	config.keys = config.keys or { "Rotation", "Motion", "Position", "Velocity" }
 
@@ -288,7 +287,7 @@ multi.sync = function(self, object, name, config)
 						onSetTriggered = false, -- becomes true when triggered with field through OnSet callback
 					}
 
-	syncedObj.onSetTriggerCallback = function(self) 
+	syncedObj.onSetTriggerCallback = function(_)
 		syncedObj.onSetTriggered = true
 	end
 
@@ -306,7 +305,7 @@ multi.sync = function(self, object, name, config)
 	synced[name] = syncedObj
 end
 
-multi.link = function(self, object, name)
+multi.link = function(_, object, name)
 
 	linkedObjects[name] = object
 	local parentBox = Object()
@@ -314,7 +313,7 @@ multi.link = function(self, object, name)
 
 	parentBox.Physics = object.Physics
 
-	if object.Physics == PhysicsMode.Disabled then 
+	if object.Physics == PhysicsMode.Disabled then
 
 		parentBox.CollisionGroups = {}
 		parentBox.CollidesWithGroups = {}
@@ -348,7 +347,7 @@ multi.link = function(self, object, name)
 	object.LocalRotation = ROT_ZERO
 end
 
-multi.unlink = function(self, name)
+multi.unlink = function(_, name)
 	linkedObjects[name] = nil
 	if synced[name] ~= nil then
 		local object = synced[name]
@@ -362,7 +361,7 @@ multi.unlink = function(self, name)
 		end
 		synced[name] = nil
 	end
-	
+
 end
 
 -- Can be called to force sync an Object
@@ -371,7 +370,7 @@ end
 -- NOTE: what if Object owner leaves the game? (soccer game case)
 -- Maybe server should just be owner in that case and allow syncs from non-actors?
 -- On server side: multi:sync(Object(), "ball", { keys = { "Rotation", "Motion", "Position", "Velocity" }, triggers = {} })
-multi.forceSync = function(self, name)
+multi.forceSync = function(_, name)
 	local localObject = synced[name]
 	if localObject then
 		_syncObject(localObject, Time.UnixMilli(), true)
@@ -419,9 +418,9 @@ local tick = function(dt)
 				-- o.LocalRotation:Lerp(o.multi.localRotStart, ROT_ZERO, p)
 			end
 
-			if p == 1 then 
+			if p == 1 then
 				o.multi.dt = nil
-				o.multi.delta = nil 
+				o.multi.delta = nil
 				o.multi.localRotStart = nil
 			end
 		end

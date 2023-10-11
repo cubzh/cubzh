@@ -9,7 +9,7 @@
 local polygonBuilder = {}
 local polygonBuilderMetatable = {
 	__index = {
-		create = function(self,options)
+		create = function(_,options)
 			local nbSides = options.nbSides or 4
 			if nbSides < 3 then
 				print("Error: can't create a polygon with less than 3 sides.")
@@ -40,7 +40,7 @@ local polygonBuilderMetatable = {
 				if i == #vertices then break end
 				local next = vertices[i + 1]
 
-				if distance == nil then 
+				if distance == nil then
 					distance = (next.pos - vertice.pos).Length
 				end
 

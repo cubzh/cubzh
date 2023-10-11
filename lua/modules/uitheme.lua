@@ -77,7 +77,7 @@ local meta = {
 	__index = function(t,k)
 		return t.current[k]
 	end,
-	__newindex = function(t,kv)
+	__newindex = function(_,_)
 		error("can't set new keys in uitheme")
 	end
 }

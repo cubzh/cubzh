@@ -54,7 +54,7 @@ local scaleGizmoFactoryMetatable = {
 
 							handle.axis = axis
 
-							handle.setVisible = function(self, visible)
+							handle.setVisible = function(_, visible)
 								if visible then
 									handle:SetParent(gizmoObject)
 								else
@@ -89,7 +89,7 @@ local scaleGizmoFactoryMetatable = {
 						-- Does not hide or rotate handles if moving gizmo
 						if self.selectedHandle then return end
 
-						for axis, handle in ipairs(self.handles) do
+						for _, handle in ipairs(self.handles) do
 							local v = self.gizmoObject.Position - Camera.Position
 							v:Normalize()
 							local crossProduct = handle.Forward:Dot(v) - 0.001 -- Avoid glitch when attaching object to Camera
@@ -189,9 +189,9 @@ local scaleGizmoFactoryMetatable = {
 						if self.onDrag then
 							self.onDrag(self.object.Position)
 						end
-						return true	
+						return true
 					end,
-					up = function(self, pe)
+					up = function(self, _)
 						if self.selectedHandle then
 							self.selectedHandle = nil
 							return true

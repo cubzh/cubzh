@@ -8,7 +8,7 @@
 
 local pages = {}
 
-pages.create = function(self, uikit) 
+pages.create = function(_, uikit)
 
 	local theme = require("uitheme").current
 	local ui = uikit or require("uikit")
@@ -20,7 +20,7 @@ pages.create = function(self, uikit)
 
 	local nextBtn = ui:createButton("➡️")
 	nextBtn:setParent(node)
-	
+
 	local prevBtn = ui:createButton("⬅️")
 	prevBtn:setParent(node)
 
@@ -98,12 +98,12 @@ pages.create = function(self, uikit)
 	end
 
 	node._triggerPageDidChangeCallback = function(self)
-		if self.pageDidChange then 
+		if self.pageDidChange then
 			self.pageDidChange(self.page)
 		end
 	end
 
-	nextBtn.onRelease = function(self)
+	nextBtn.onRelease = function(_)
 		node.page = node.page + 1
 		if node.page > node.nbPages then
 			node.page = node.nbPages
@@ -113,7 +113,7 @@ pages.create = function(self, uikit)
 		node:_refresh()
 	end
 
-	prevBtn.onRelease = function(self)
+	prevBtn.onRelease = function(_)
 		node.page = node.page - 1
 		if node.page < 1 then
 			node.page = 1

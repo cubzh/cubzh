@@ -48,7 +48,7 @@ functions.setLayer = function(self, layer)
 	end
 end
 
-functions.up = function(self, pe)
+functions.up = function(self, _)
 	if self.selectedHandle then
 		self.selectedHandle = nil
 		return true
@@ -105,11 +105,11 @@ functions.drag = function(self, pe)
 	o:RotateWorld(axis, angle)
 
 	self.object.Rotation = o.Rotation
-	
+
 	if self.onDrag then
 		self.onDrag(self.object.Rotation)
 	end
-	return true	
+	return true
 end
 
 functions.down = function(self, pe)
@@ -167,7 +167,7 @@ functions.down = function(self, pe)
 		self.p = plane:New(self.impactPosition, v1, v2)
 
 		return true
-	end	
+	end
 
 	self.selectedHandle = nil
 	return false
@@ -203,14 +203,12 @@ functions.updateHandles = function(self)
 		self.gizmoObject.Rotation = {0,0,0}
 	end
 
-	local checktype = type(self.object)
-
 	self.gizmoObject.Position = self.object.Position
 
 	-- Does not hide or rotate handles if moving gizmo
 	if self.selectedHandle then return end
 
-	for axis, handle in ipairs(self.handles) do
+	for _, handle in ipairs(self.handles) do
 		local v = self.gizmoObject.Position - self.camera.Position
 		v:Normalize()
 		local crossProduct = handle.Forward:Dot(v) - 0.001 -- Avoid glitch when attaching object to Camera
@@ -257,17 +255,17 @@ local camera = Camera()
 camera:SetParent(Camera)
 camera.On = true
 
-rotateGizmo.setLayer = function(self, l)
+rotateGizmo.setLayer = function(_, l)
 	layer = l
 	camera.Layers = l
 end
 rotateGizmo.setLayer(2) -- TODO: we need a way to ask for unused layer
 
-rotateGizmo.setScale = function(self, s)
+rotateGizmo.setScale = function(_, s)
 	scale = s
 end
 
-rotateGizmo.create = function(self, config)
+rotateGizmo.create = function(_, config)
 
 	local _config = { -- default config
 		orientation = rotateGizmo.Orientation.World,
@@ -327,17 +325,17 @@ rotateGizmo.create = function(self, config)
 			end)
 			obj.axis = axis
 		end)
-		
+
 		handle:SetParent(g.gizmoObject)
 		handle.axis = axis
-		
+
 		if axis == rotateGizmo.Axis.X then
 			handle.LocalRotation = {0, math.pi * 0.5, 0}
 		elseif axis == rotateGizmo.Axis.Y then
 			handle.LocalRotation = {math.pi * 0.5, 0, 0}
 		end
-		
-		handle.setVisible = function(self, visible)
+
+		handle.setVisible = function(_, visible)
 			if visible then
 				handle:SetParent(g.gizmoObject)
 			else
@@ -363,7 +361,7 @@ rotateGizmo.create = function(self, config)
 	end, { topPriority = true })
 	table.insert(g.listeners, l)
 
-	l = LocalEvent:Listen(LocalEvent.Name.Tick, function(pe)
+	l = LocalEvent:Listen(LocalEvent.Name.Tick, function(_)
 		g:updateHandles()
 	end)
 	table.insert(g.listeners, l)

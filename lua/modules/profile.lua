@@ -11,7 +11,6 @@ avatarPortraitTop = true
 -- MODULES
 api = require("system_api", System)
 avatar = require("avatar")
-coins = require("coins")
 equipments = require("equipments")
 itemgrid = require("item_grid")
 modal = require("modal")
@@ -33,11 +32,6 @@ local AVATAR_MAX_SIZE = 300
 local AVATAR_MIN_SIZE = 150
 
 local CONTENT_MAX_WIDTH = 400
-local CONTENT_LANDSCAPE_WIDTH_RATIO_MAX = 0.7
-
-local LANDSCAPE_AVATAR_AREA_HEIGHT_MAX = 400
-local LANDSCAPE_AVATAR_AREA_WIDTH_RATIO_MAX = 0.4
-local PORTRAIT_AVATAR_AREA_HEIGHT_RATIO_MAX = 0.4
 
 local DEBUG = false
 local DEBUG_FRAME_COLOR = Color(255, 255, 0, 200)
@@ -48,7 +42,7 @@ local ACTIVE_NODE_MARGIN = theme.paddingBig
 --- positionCallback(function): position of the popup
 --- config(table): isLocal, id, username
 --- returns: modal content
-profile.create = function(self, config)
+profile.create = function(_, config)
 
 	if config ~= nil and type(config) ~= Type.table then
 		error("profile:create(config): config should be a table", 2)
@@ -78,7 +72,7 @@ profile.create = function(self, config)
 
 	-- nodes beside avatar
 	local activeNode = nil
-	local infoNode = nil
+	local infoNode
 
 	local preferredLayout = "landscape"
 
@@ -150,7 +144,7 @@ profile.create = function(self, config)
 			if config.onDone then config.onDone(self:getColor()) end
 		end
 
-		picker.didPickColor = function(self, color)
+		picker.didPickColor = function(_, color)
 			if config.onPick then config.onPick(color) end
 		end
 
@@ -240,7 +234,7 @@ profile.create = function(self, config)
 
 		node.refresh = function(self)
 			local padding = theme.padding
-			local totalHeight = 0
+			local totalHeight
 			local totalWidth = math.min(CONTENT_MAX_WIDTH, self.Width)
 
 			self.Width = math.min(CONTENT_MAX_WIDTH, self.Width)
@@ -311,7 +305,7 @@ profile.create = function(self, config)
 			self.Width = totalWidth
 		end
 
-		node.setUserInfo = function(self)
+		node.setUserInfo = function(_)
 			if friends.Text == nil then return end
 
 			friends.Text = "🙂 " .. tostring(userInfo.nbFriends)
@@ -372,7 +366,7 @@ profile.create = function(self, config)
 					userInfo.bio = text
 					local data = {bio = userInfo.bio}
 					-- TODO: we could use `api` instead of `require("system_api", System)`
-					local req = require("system_api", System):patchUserInfo(data, function(err)
+					require("system_api", System):patchUserInfo(data, function(err)
 						if err then print("❌", err) end
 					end)
 					ui:turnOn()
@@ -398,7 +392,7 @@ profile.create = function(self, config)
 			userInfo.discord = self.text
 			-- send API request to update user info
 			local data = {discord = self.text}
-			local req = api:patchUserInfo(data, function(err)
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.discord = previous
@@ -419,7 +413,7 @@ profile.create = function(self, config)
 			userInfo.tiktok = self.text
 			-- send API request to update user info
 			local data = {tiktok = self.text}
-			local req = api:patchUserInfo(data, function(err)
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.tiktok = previous
@@ -455,7 +449,7 @@ profile.create = function(self, config)
 			userInfo.x = value
 			-- send API request to update user info
 			local data = {x = value}
-			local req = api:patchUserInfo(data, function(err)
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.x = previous
@@ -476,7 +470,7 @@ profile.create = function(self, config)
 			userInfo.github = self.text
 			-- send API request to update user info
 			local data = {github = self.text}
-			local req = api:patchUserInfo(data, function(err)
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.github = previous
@@ -577,7 +571,7 @@ profile.create = function(self, config)
 				data.skinColor2 = { r=colors.skin2.R, g=colors.skin2.G, b=colors.skin2.B }
 				data.noseColor = { r=colors.nose.R, g=colors.nose.G, b=colors.nose.B }
 				data.mouthColor = { r=colors.mouth.R, g=colors.mouth.G, b=colors.mouth.B }
-				local req = api:updateAvatar(data, function(err, success)
+				api:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
 					end
@@ -608,7 +602,7 @@ profile.create = function(self, config)
 		local _saveEyesColor = function(color)
 			local data = {}
 			data.eyesColor = { r=color.R, g=color.G, b=color.B }
-			local req = api:updateAvatar(data, function(err, success)
+			api:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -640,7 +634,7 @@ profile.create = function(self, config)
 				uiAvatar:setEyesColor(avatarNode, color)
 				avatar:setEyesColor(Player, color)
 				saveEyesColor(color)
-				
+
 				-- TODO: apply colors to small head icon (screen top left corner)
 
 				-- update buttons' color
@@ -651,7 +645,7 @@ profile.create = function(self, config)
 
 		eyesPickerButton:setParent(node)
 		eyesPickerButton:setColor(avatar:getEyesColor(Player))
-		eyesPickerButton.onRelease = function(self)
+		eyesPickerButton.onRelease = function(_)
 			functions.setActiveNode(createColorpickerNode({
 				color = avatar:getEyesColor(Player),
 				title = "👁️ Eyes",
@@ -678,7 +672,7 @@ profile.create = function(self, config)
 		local _saveNoseColor = function(color)
 			local data = {}
 			data.noseColor = { r=color.R, g=color.G, b=color.B }
-			local req = api:updateAvatar(data, function(err, success)
+			api:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -703,7 +697,7 @@ profile.create = function(self, config)
 
 		nosePickerButton:setParent(node)
 		nosePickerButton:setColor(avatar:getNoseColor(Player))
-		nosePickerButton.onRelease = function(self)
+		nosePickerButton.onRelease = function(_)
 			functions.setActiveNode(createColorpickerNode({
 				color = avatar:getNoseColor(Player),
 				title = "👃 Nose",
@@ -729,7 +723,7 @@ profile.create = function(self, config)
 		local _saveMouthColor = function(color)
 			local data = {}
 			data.mouthColor = { r=color.R, g=color.G, b=color.B }
-			local req = api:updateAvatar(data, function(err, success)
+			api:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -754,7 +748,7 @@ profile.create = function(self, config)
 
 		mouthPickerButton:setParent(node)
 		mouthPickerButton:setColor(avatar:getMouthColor(Player))
-		mouthPickerButton.onRelease = function(self)
+		mouthPickerButton.onRelease = function(_)
 			functions.setActiveNode(createColorpickerNode({
 				color = avatar:getMouthColor(Player),
 				title = "👄 Mouth",
@@ -897,7 +891,7 @@ profile.create = function(self, config)
 				end
 				local data = {}
 				data[category] = fullname
-				local req = api:updateAvatar(data, function(err, success)
+				api:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
 					else
@@ -911,7 +905,7 @@ profile.create = function(self, config)
 
 				-- update avatar preview
 				if avatarNode.refresh then
-					avatarNode:refresh() 
+					avatarNode:refresh()
 				end
 			end)
 			if wearableRequest ~= nil then table.insert(requests, wearableRequest) end
@@ -946,13 +940,13 @@ profile.create = function(self, config)
 			grid.pos.X = 0
 
 			pages.pos.Y = 0
-			pages.pos.X =  self.Width * 0.5 - pages.Width * 0.5	
+			pages.pos.X =  self.Width * 0.5 - pages.Width * 0.5
 		end
 
 		return node
 	end
 
-	-- 2 areas within node, one to display the avatar and the other for the rest 
+	-- 2 areas within node, one to display the avatar and the other for the rest
 	-- (text info, wearable gallery in editor mode, etc.)
 
 	infoNode = createInfoNode()
@@ -965,7 +959,7 @@ profile.create = function(self, config)
 	local editOutfitBtn = nil
 
 	local toggleEditOptions = function(btn)
-		if btn.Text == nil or 
+		if btn.Text == nil or
 			editInfoBtn.show == nil or
 			editFaceBtn.show == nil or
 			editOutfitBtn.show == nil then return end
@@ -1007,7 +1001,7 @@ profile.create = function(self, config)
 		end
 	end
 
-	editInfoBtnOnReleaseCallback = function(btn)
+	editInfoBtnOnReleaseCallback = function(_)
 		content.tabs = nil
 		functions.setActiveNode(createEditInfoNode())
 		editInfoBtn:select()
@@ -1015,7 +1009,7 @@ profile.create = function(self, config)
 		editOutfitBtn:unselect()
 	end
 
-	editFaceBtnOnReleaseCallback = function(btn)
+	editFaceBtnOnReleaseCallback = function(_)
 		content.tabs = nil
 		functions.setActiveNode(createEditFaceNode())
 		editInfoBtn:unselect()
@@ -1023,7 +1017,7 @@ profile.create = function(self, config)
 		editOutfitBtn:unselect()
 	end
 
-	editOutfitBtnOnReleaseCallback = function(btn)
+	editOutfitBtnOnReleaseCallback = function(_)
 		functions.setActiveNode(createEditOutfitNode())
 		editInfoBtn:unselect()
 		editFaceBtn:unselect()
@@ -1046,7 +1040,7 @@ profile.create = function(self, config)
 	-- 	as.Spatialized = false
 	-- 	as:Play()
 
-	-- 	Timer(1, function() 
+	-- 	Timer(1, function()
 	-- 		as:RemoveFromParent() as=nil
 	-- 	end)
 
@@ -1089,7 +1083,7 @@ profile.create = function(self, config)
 		editOutfitBtn.onRelease = editOutfitBtnOnReleaseCallback
 
 		local coinsBtn = ui:createButton("💰 …", {sound = "coin_1"})
-		coinsBtn.onRelease = function(btn)
+		coinsBtn.onRelease = function(_)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({uikit = ui}))
 		end
 
@@ -1151,7 +1145,7 @@ profile.create = function(self, config)
 			end
 
 			-- check if the User is already a friend
-			local req = api:getFriends(function(ok, friends, err)
+			local req = api:getFriends(function(ok, friends, _)
 				if not ok then return end
 
 				alreadyFriends = false
@@ -1166,7 +1160,7 @@ profile.create = function(self, config)
 			table.insert(requests, req)
 
 			-- check if a request was already sent
-			local req = api:getSentFriendRequests(function(ok, requests, err)
+			req = api:getSentFriendRequests(function(ok, requests, _)
 				if not ok then return end
 
 				requestSent = false
@@ -1231,7 +1225,7 @@ profile.create = function(self, config)
 			preferredLayout = "portrait"
 		end
 
-		-- pictureBtn is in the bottom-right corner of avatar preview 
+		-- pictureBtn is in the bottom-right corner of avatar preview
 		-- pictureBtn.pos = { avatarNode.pos.X + avatarNode.Width - pictureBtn.Width, 0 }
 
 		return totalWidth, totalHeight
@@ -1245,8 +1239,8 @@ profile.create = function(self, config)
 				activeNode.pos = { ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
 				avatarNode.pos = { self.Width - avatarNode.Width, self.Height * 0.5 - avatarNode.Height * 0.5 }
 			else
-				activeNode.pos = { self.Width - activeNode.Width - ACTIVE_NODE_MARGIN, totalHeight * 0.5 - activeNode.Height * 0.5 }
-				avatarNode.pos = { 0, totalHeight * 0.5 - activeNode.Height * 0.5 }
+				activeNode.pos = { self.Width - activeNode.Width - ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
+				avatarNode.pos = { 0, self.Height * 0.5 - activeNode.Height * 0.5 }
 			end
 		else
 			if avatarPortraitTop then
@@ -1302,7 +1296,7 @@ profile.create = function(self, config)
 			end
 		end)
 
-		local fillUserInfo = function(ok, usr, err)
+		local fillUserInfo = function(ok, usr, _)
 			if not ok then return end
 
 			-- store user info

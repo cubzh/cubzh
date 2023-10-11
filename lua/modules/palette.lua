@@ -41,10 +41,9 @@ p:addColor(Color(255,0,0))
 
 local palette = {}
 
-uikit = require("uikit")
 theme = require("uitheme").current
 
-palette.create = function(self, uikit, btnColor) 
+palette.create = function(_, uikit, btnColor)
 
 	local node = uikit:createNode()
 
@@ -154,7 +153,7 @@ palette.create = function(self, uikit, btnColor)
 
 	node._resetColorsShape = function(self)
 		if self.colors ~= nil then self.colors:remove() end
-			
+
 		local colorsShape = MutableShape()
 		colorsShape.CollisionGroups = {}
 		local colors = uikit:createShape(colorsShape, {doNotFlip = true})
@@ -163,7 +162,7 @@ palette.create = function(self, uikit, btnColor)
 		self.colors = colors
 		self.colorsShape = colorsShape
 
-		colors.onPress = function(self, shape, block)
+		colors.onPress = function(self, _, block)
 			local index = self.parent:_indexFromBlock(block)
 			self.parent:_selectIndex(index)
 		end
@@ -205,17 +204,12 @@ palette.create = function(self, uikit, btnColor)
 		local b = self:_blockFromIndex(index)
 		if b == nil then return end
 
-		local x = b.Coords.X
-		local y = b.Coords.Y
 		local count = self.colorsShape.BlocksCount
 		if count == 1 then return end -- do not remove last color
 
 		local paletteIndexToRemove = b.PaletteIndex
 
-		local w = self.colorsShape.Width
-
 		local b2
-		local startIndex = index + 1
 		for i = index,count do
 			b2 = self:_blockFromIndex(i)
 			b:Replace(b2)
@@ -223,8 +217,7 @@ palette.create = function(self, uikit, btnColor)
 		end
 
 		b:Remove()
-		-- remove this next line when transactions are applied in RemoveColor
-		if self.colorsShape.Width == 0 then end
+
 		self.colorsShape.Palette:RemoveColor(paletteIndexToRemove)
 
 		if index > count - 1 then
@@ -241,7 +234,7 @@ palette.create = function(self, uikit, btnColor)
 	node._refreshSelectionFrame = function(self)
 		if self._selectedIndex == 0 then
 			self.selectionFrame:hide()
-			return	
+			return
 		else
 			self.selectionFrame:show()
 		end
@@ -249,7 +242,7 @@ palette.create = function(self, uikit, btnColor)
 		local b = self:_blockFromIndex(self._selectedIndex)
 		if b == nil then
 			self.selectionFrame:hide()
-			return	
+			return
 		end
 
 		self.selectionFrame.Width = self._squareSize
@@ -328,7 +321,7 @@ palette.create = function(self, uikit, btnColor)
 		if self.didRefresh ~= nil then
 			self:didRefresh()
 		end
-	end	
+	end
 
 	node.parentDidResize = function(self)
 		self:_refresh()
@@ -384,7 +377,7 @@ palette.create = function(self, uikit, btnColor)
 		self.colorsShape:AddBlock(color,x,y,0)
 		nBlocks = nBlocks + 1
 
-		if not skipRefreshAndSelect == true then
+		if skipRefreshAndSelect ~= true then
 			node:_refresh()
 			node:_selectIndex(nBlocks)
 		end

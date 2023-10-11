@@ -2,8 +2,8 @@
 
 serverList = {}
 
-serverList.create = function(self, config)
-	
+serverList.create = function(_, config)
+
 	if config ~= nil and type(config) ~= Type.table then
 		error("server_list:create(config): config should be a table", 2)
 	end
@@ -24,7 +24,7 @@ serverList.create = function(self, config)
 		end
 	end
 
-	local config = _config
+	config = _config
 
 	local ui = config.uikit
 
@@ -59,13 +59,13 @@ serverList.create = function(self, config)
 	loadingCube.Width = 10
 	loadingCube.Height = 10
 	loadingCube:hide()
-	
-	noServerBtn.onRelease = function(btn)
+
+	noServerBtn.onRelease = function(_)
 		joinAndHideUI(config.worldID)
 	end
 
 	local pages = require("pages"):create()
-	pages:setPageDidChange(function(page) 
+	pages:setPageDidChange(function(page)
 		node:refreshList((page - 1) * node.displayedCells + 1)
 	end)
 
@@ -81,7 +81,7 @@ serverList.create = function(self, config)
 	data.worldID = config.worldID
 	data.servers = {} -- servers collection
 	data.request = nil
-	
+
 	data.updateServers = function(self)
 		if data.request ~= nil then data.request:Cancel() data.request = nil end
 
@@ -120,8 +120,8 @@ serverList.create = function(self, config)
 
 	-- Lines
 	node.lines = {}
-	node.flushLines = function(self)
-		for i, v in ipairs(node.lines) do
+	node.flushLines = function(_)
+		for _, v in ipairs(node.lines) do
 			v:remove()
 		end
 		node.lines = {}
@@ -211,7 +211,7 @@ serverList.create = function(self, config)
 		self.displayedCells = maxLines -- update number of displayed cells
 
 		local total = #list
-		local from = from or 1
+		from = from or 1
 
 		if maxLines > 1 and (from % maxLines ~= 1 or from > total) then
 			-- go back to first page
@@ -232,7 +232,7 @@ serverList.create = function(self, config)
 			server = list[i]
 
 			cell = self:createCell(cellHeight, server)
-		
+
 			if cell ~= nil and cell.Height ~= nil then
 				cell.pos.Y = top - (p + 1) * cell.Height - p * theme.padding
 			end
@@ -254,10 +254,10 @@ serverList.create = function(self, config)
 	local titleText = ui:createText(titleStr, Color.White)
 
 	local refreshBtn = ui:createButton("🔁 Refresh")
-	refreshBtn.onRelease = function(b)
+	refreshBtn.onRelease = function(_)
 		data:updateServers()
 	end
-	
+
 	content.topCenter = { titleText }
 	content.bottomRight = { refreshBtn }
 

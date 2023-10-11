@@ -7,7 +7,8 @@ time.iso8601_to_os_time = function(iso8601)
 	-- print("iso8601>>", iso8601) -- 2023-01-31T13:03:01.681Z
 
 	-- Parse time which is in string format
-	local year, month, day, hour, minute, seconds, offsetsign, offsethour, offsetmin = iso8601:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
+	local year, month, day, hour, minute, seconds, offsetsign, offsethour, offsetmin =
+	iso8601:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
 
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
 	local epochShifted = os.time{year=1970, month=1, day=2, hour=0}
@@ -15,7 +16,7 @@ time.iso8601_to_os_time = function(iso8601)
 	local shift = 24 * 3600 -- # seconds in 24 hours
 
 	local timeParsed = os.time{year = year, month = month, day = day, hour = hour, min = minute, sec = math.floor(seconds)}
-	
+
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
 	local timeShifted = timeParsed + shift
 
@@ -25,7 +26,7 @@ time.iso8601_to_os_time = function(iso8601)
 	local offsetMinutes = 0
 	if offsetsign ~= 'Z' then
 		offsetMinutes = tonumber(offsethour) * 60 + tonumber(offsetmin)
-		if offsetsign == "-" then 
+		if offsetsign == "-" then
 			offsetMinutes = -offsetMinutes
 		end
 	end

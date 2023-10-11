@@ -1,10 +1,10 @@
--- 
+--
 -- system_notifications module
--- 
+--
 
 notifications = {}
 
-notifications.available = function(self)
+notifications.available = function(_)
 	return System.RemoteNotifAvailable
 end
 
@@ -19,11 +19,11 @@ notifications.request = function(self, showInformationPopupFunc)
 		return -- do nothing
 	end
 
-	local infoPopupYes = function(self)
+	local infoPopupYes = function(_)
 		System:RemoteNotifRequestAccess()
 	end
 
-	local infoPopupLater = function(self)
+	local infoPopupLater = function(_)
 		System:RemoteNotifInfoPopupLater()
 	end
 

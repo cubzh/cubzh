@@ -19,9 +19,9 @@ skills.addStepClimbing = function(object, config)
 		return
 	end
 
-	local config = config or {}
-	
-	for name, value in pairs(STEP_CLIMBING_DEFAULT_CONFIG) do
+	config = config or {}
+
+	for name, _ in pairs(STEP_CLIMBING_DEFAULT_CONFIG) do
 		if config[name] == nil then config[name] = STEP_CLIMBING_DEFAULT_CONFIG[name] end
 	end
 
@@ -43,7 +43,7 @@ skills.removeStepClimbing = function(object)
 	stepClimbers[object] = nil
 end
 
-LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+LocalEvent:Listen(LocalEvent.Name.Tick, function()
 
 	-- STEP CLIMBERS
 

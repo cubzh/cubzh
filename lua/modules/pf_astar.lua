@@ -13,7 +13,7 @@ local pf_astar = {
 --- PUBLIC FUNCTIONS ---
 ------------------------
 
---[[ 
+--[[
 -- Creates a pathfinder object with specific global search instructions
 -- @param {int} [step = 1] - The value of each movement for this pathfinder
 -- @param {bool} [useDiagonals = false] - Can the pathfinder use NE, SE, SW, NW ? Can be overriden in find
@@ -22,9 +22,9 @@ local pf_astar = {
 pf_astar.newPathfinder = function(self, step, useDiagonals, useCache)
 
   local pathfinder = {}
-  if step ~= nil then pathfinder.step = step else pathfinder.step = kStep end
+  if step ~= nil then pathfinder.step = step else pathfinder.step = pf_astar.kStep end
   if useDiagonals ~= nil then pathfinder.useDiagonals = useDiagonals else pathfinder.useDiagonals = false end
-  if useCache ~= nil then 
+  if useCache ~= nil then
     pathfinder.useCache = useCache
     pathfinder.cached = {}
   else pathfinder.useCache = false end
@@ -37,14 +37,14 @@ pf_astar.newPathfinder = function(self, step, useDiagonals, useCache)
   --- PUBLIC FUNCTIONS ---
   ------------------------
 
-  --[[ 
+  --[[
   -- Clear cached paths
   ]]
   pathfinder.clearCache = function(self)
     if self.cached ~= nil then self.cached = {} end
   end
 
-  --[[ 
+  --[[
   -- Find the path based on positions and a test function (for available coords)
   -- @param {int} startX - starting X position
   -- @param {int} startZ - starting Z position
@@ -95,7 +95,7 @@ pf_astar.newPathfinder = function(self, step, useDiagonals, useCache)
         end
         -- Generate children based on map and test function
         local children = internal.getChildren(currentNode, testFunction, useDiagonals, map)
-        for k, child in ipairs(children) do
+        for _, child in ipairs(children) do
           -- Create child node
           local childNode = internal.createNode(child.x, child.z, currentNode)
           -- Check if it's already been examined
@@ -114,7 +114,7 @@ pf_astar.newPathfinder = function(self, step, useDiagonals, useCache)
   ----------------
   --- INTERNAL ---
   ----------------
-  
+
   --[[ Returns a cache index for given coordinates ]]
   internal.getCacheIndex = function(startX, startZ, endX, endZ)
     return string.format("%d,%d-%d,%d", startX, startZ, endX, endZ)
@@ -177,29 +177,29 @@ pf_astar.newPathfinder = function(self, step, useDiagonals, useCache)
   --[[ Get all childrens based on the value to test and adjacency settings ]]
   internal.getChildren = function(node, testFunction, diagonalsAllowed, map)
       local children = {}
-      local neighbors = {}
+      local neighbors
 
       neighbors = {
-            { x = -1, z = 0 },  
-            { x = 0, z = 1 },  
-            { x = 1, z = 0 }, 
+            { x = -1, z = 0 },
+            { x = 0, z = 1 },
+            { x = 1, z = 0 },
             { x = 0, z = -1 }
     }
     if diagonalsAllowed == true then
       neighbors = {
-              { x = -1, z = 0 },  
-              { x = 0, z = 1 },  
-              { x = 1, z = 0 }, 
+              { x = -1, z = 0 },
+              { x = 0, z = 1 },
+              { x = 1, z = 0 },
               { x = 0, z = -1 },
-              { x = -1, z = -1 },   
-                { x = 1, z = -1 },   
-                { x = 1, z = 1 }, 
-                { x = -1, z = 1 } 
+              { x = -1, z = -1 },
+                { x = 1, z = -1 },
+                { x = 1, z = 1 },
+                { x = -1, z = 1 }
       }
     end
 
       -- Create all neighbors
-      for k, neighbor in ipairs(neighbors) do
+      for _, neighbor in ipairs(neighbors) do
           local x = node.x + neighbor.x
           local z = node.z + neighbor.z
           if testFunction(map[x][z]) then

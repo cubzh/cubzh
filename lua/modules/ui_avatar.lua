@@ -1,10 +1,10 @@
 --- This module allows you to create UI element from player avatars
 ---@code -- A few examples:
----  
+---
 --- -- Place the head of "playerUsername" randomly on the screen with a size of 100
 --- local uiavatar = require("ui_avatar")
 --- local uiHead = uiavatar:getHead("playerUsername" or Player.UserID, 100) -- 100 is the sized
---- uiHead.pos = { 100 + math.random() * (Screen.Width - 400), 100 + math.random() * (Screen.Height - 400), 0 } -- place the head randomly on the screen
+--- uiHead.pos = { 100 + math.random() * (Screen.Width - 400), 100 + math.random() * (Screen.Height - 400), 0 } -- place the head randomly
 --- uiHead.Width = math.random(100,200) -- to set a random size to the head. Height and Width are the same here because the head is spherized
 --- -- Place a body in the UI
 --- local uiBody = require("ui_avatar"):get("caillef")
@@ -15,8 +15,8 @@ local uiavatar = {}
 
 local DEFAULT_SIZE = 30
 
-local SKIN_1_PALETTE_INDEX = 1
-local SKIN_2_PALETTE_INDEX = 2
+-- local SKIN_1_PALETTE_INDEX = 1
+-- local SKIN_2_PALETTE_INDEX = 2
 local EYES_PALETTE_INDEX = 6
 local EYES_DARK_PALETTE_INDEX = 8
 local NOSE_PALETTE_INDEX = 7
@@ -29,7 +29,7 @@ local headCache = {}
 
 local uiavatarMetatable = {
 	__index = {
-		clearCache = function(self)
+		clearCache = function(_)
 			headCache = {}
 		end,
 
@@ -54,13 +54,13 @@ local uiavatarMetatable = {
 		-- /!\ return table of requests does not contain all requests right away
 		-- reference should be kept, not copying entries right after function call.
 		-- uikit: optional, allows to provide specific instance of uikit
-		getHead = function(self, usernameOrId, size, uikit, config)
+		getHead = function(_, usernameOrId, size, uikit, config)
 			local requests
 
 			local ui = uikit or ui
-			
+
 			local defaultSize = size or DEFAULT_SIZE
-			
+
 			local cachedHead = headCache[usernameOrId]
 
 			if config.ignoreCache == true then
@@ -133,7 +133,7 @@ local uiavatarMetatable = {
 			avatar:setSkinColor(Player, color1, color2, nose, mouth)
 		end,
 
-		setEyesColor = function(self, node, color)
+		setEyesColor = function(_, node, color)
 			local palette = node.Head.Palette
 			palette[EYES_PALETTE_INDEX].Color = color
 			palette[EYES_DARK_PALETTE_INDEX].Color = color
@@ -142,7 +142,7 @@ local uiavatarMetatable = {
 			avatar:setEyesColor(node, color)
 		end,
 
-		setNoseColor = function(self, node, color, ignorePlayer)
+		setNoseColor = function(_, node, color, ignorePlayer)
 			local palette = node.Head.Palette
 			palette[NOSE_PALETTE_INDEX].Color = color
 
@@ -151,7 +151,7 @@ local uiavatarMetatable = {
 			end
 		end,
 
-		setMouthColor = function(self, node, color)
+		setMouthColor = function(_, node, color, ignorePlayer)
 			local palette = node.Head.Palette
 			palette[MOUTH_PALETTE_INDEX].Color = color
 
@@ -164,7 +164,7 @@ local uiavatarMetatable = {
 		-- /!\ return table of requests does not contain all requests right away
 		-- reference should be kept, not copying entries right after function call.
 		-- uikit: optional, allows to provide specific instance of uikit
-		get = function(self, usernameOrId, size, config, uikit)
+		get = function(_, usernameOrId, size, config, uikit)
 			local body
 			local requests
 
@@ -229,10 +229,10 @@ local uiavatarMetatable = {
 			node._h = defaultSize
 			node._width = function(self) return self._w end
 			node._height = function(self) return self._h end
-			
+
 			local setWidth = node._setWidth
 			local setHeight = node._setHeight
-			
+
 			node._setWidth = function(self, v)
 				self._w = v self._h = v -- spherized
 				if self.body then self.body.Width = v end

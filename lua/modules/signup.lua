@@ -1,7 +1,7 @@
 local signup = {}
 
-signup.createModal = function(self)
-		
+signup.createModal = function(_)
+
 	local ui = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
@@ -41,7 +41,7 @@ signup.createModal = function(self)
 		end
 	end
 
-	local function idealReducedContentSize(content, width, height)
+	local function idealReducedContentSize(content, _, _)
 		if content.refresh then content:refresh() end
 		-- print("-- 1 -", content.Width,content.Height)
 		-- Timer(1.0, function() content:refresh() print("-- 2 -", content.Width,content.Height) end)
@@ -89,22 +89,22 @@ signup.createModal = function(self)
 		local r = true
 		local daysInMonth = nbDays(_month)
 
-		if _year == nil or _month == nil or _day == nil then 
+		if _year == nil or _month == nil or _day == nil then
 			if config and config.errorIfIncomplete == true then
 				birthdayInfo.Text = "❌ required"
 				birthdayInfo.Color = theme.errorTextColor
-				r = false 
+				r = false
 			else
 				birthdayInfo.Text = ""
 			end
 		elseif _day < 0 or _day > daysInMonth then
 			birthdayInfo.Text = "❌ invalid date"
 			birthdayInfo.Color = theme.errorTextColor
-			r = false 
+			r = false
 		elseif _year > currentYear or (_year == currentYear and _month > currentMonth) or (_year == currentYear and _month == currentMonth and _day > currentDay) then
 			birthdayInfo.Text = "❌ users from the future not allowed"
 			birthdayInfo.Color = theme.errorTextColor
-			r = false 
+			r = false
 		else
 			birthdayInfo.Text = ""
 		end
@@ -139,12 +139,12 @@ signup.createModal = function(self)
 	-- callback(ok, key)
 	local checkUsername = function(callback, config)
 
-		if checkUsernameError ~= nil then 
+		if checkUsernameError ~= nil then
 			if callback then callback(false, nil) end
 			return
 		end
 
-		if checkUsernameKey ~= nil then 
+		if checkUsernameKey ~= nil then
 			if callback then callback(true, checkUsernameKey) end
 			return
 		end
@@ -223,7 +223,7 @@ signup.createModal = function(self)
 						end
 
 						if checkUsernameKey ~= nil then
-							if callback ~= nil then callback(true, usernameKey) end
+							if callback ~= nil then callback(true, checkUsernameKey) end
 						end
 
 						usernameInfo.pos.X = node.Width - usernameInfo.Width
@@ -243,7 +243,7 @@ signup.createModal = function(self)
 		end
 	end
 
-	usernameInput.onTextChange = function(self)
+	usernameInput.onTextChange = function(_)
 		checkUsernameKey = nil
 		checkUsernameError = nil
 		checkUsername()
@@ -292,7 +292,7 @@ signup.createModal = function(self)
 		return r
 	end
 
-	passwordInput.onTextChange = function(self)
+	passwordInput.onTextChange = function(_)
 		checkPassword()
 	end
 
@@ -304,7 +304,7 @@ signup.createModal = function(self)
 		local dobOK = checkDOB({errorIfIncomplete = true})
 		local passwordOK = checkPassword({errorIfEmpty = true, errorIfTooShort = true})
 
-		if dobOK ~= true or passwordOK ~= true then return end		
+		if dobOK ~= true or passwordOK ~= true then return end
 
 		local usernameCallback = function(ok, key)
 			if ok == true and type(key) == "string" then
@@ -336,7 +336,7 @@ signup.createModal = function(self)
 			if usernameInfoDT then
 				usernameInfoDT = usernameInfoDT + dt
 				usernameInfoDT = usernameInfoDT % 0.4
-				
+
 				local currentFrame = math.floor(usernameInfoDT / 0.1)
 
 				if currentFrame ~= usernameInfoFrame then
@@ -421,7 +421,7 @@ signup.createModal = function(self)
 
 		termsBtn.pos.Y = theme.paddingTiny
 		termsBtn.pos.X = terms.Width * 0.5 - w * 0.5
-		
+
 		separator.pos.Y = theme.paddingTiny
 		separator.pos.X = termsBtn.pos.X + termsBtn.Width + theme.padding
 
@@ -434,7 +434,7 @@ signup.createModal = function(self)
 
 	popup.onSuccess = function() end
 
-	popup.bounce = function(self)
+	popup.bounce = function(_)
 		position(popup, true)
 	end
 

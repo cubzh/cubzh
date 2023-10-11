@@ -1,7 +1,7 @@
 
 worlds = {}
 
-worlds.createModalContent = function(self, config)
+worlds.createModalContent = function(_, config)
 
 	local itemGrid = require("item_grid")
 	local worldDetails = require("world_details")
@@ -34,7 +34,7 @@ worlds.createModalContent = function(self, config)
 									uikit = ui,
 								})
 
-	local pages = pages:create(ui)
+	pages = pages:create(ui)
 	exploreContent.bottomCenter = {pages}
 
 	exploreContent.tabs = {
@@ -68,20 +68,20 @@ worlds.createModalContent = function(self, config)
 	exploreContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
 		grid.Width = width
-		grid.Height = height 
+		grid.Height = height
 		if grid.refresh then grid:refresh() end
 		return Number2(grid.Width, grid.Height)
 	end
 
-	exploreContent.willResignActive = function(self)
+	exploreContent.willResignActive = function(_)
 		grid:cancelRequestsAndTimers()
 	end
 
-	exploreContent.didBecomeActive = function(self)
+	exploreContent.didBecomeActive = function(_)
 		if grid.refresh then grid:refresh() end
 	end
 
-	grid.onOpen = function(self, cell)
+	grid.onOpen = function(_, cell)
 		if cell.type ~= "world" then return end
 
 		local worldDetailsContent = worldDetails:create({mode = "explore", title = cell.title, uikit = ui})
@@ -95,7 +95,7 @@ worlds.createModalContent = function(self, config)
 
 		local btnServers = ui:createButton("Servers", {textSize = "big"})
 		btnServers:setColor(theme.colorNeutral)
-		btnServers.onRelease = function(b)
+		btnServers.onRelease = function()
 			local config = { worldID = cell.id, title = cell.title, uikit = ui }
 			local list = require("server_list"):create(config)
 			worldDetailsContent:push(list)
