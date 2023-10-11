@@ -1,5 +1,5 @@
 --[[
-	known categories: "null", hair","jacket", "pants", "boots"
+	known categories: "null", "hair", "jacket", "pants", "boots"
 ]]--
 
 local itemGrid = {}
@@ -24,7 +24,7 @@ itemGrid.create = function(self, config)
 		-- shows advanced filters button when true
 		advancedFilters = false,
 		-- used to filter categories when not nil
-		categories = nil, -- {"null", hair","jacket", "pants", "boots"},
+		categories = nil, -- {"null", "hair" ,"jacket", "pants", "boots"},
 		-- grid gets items by default, unless this is set to "worlds"
 		type = "items", 
 		-- filter on particular repo
