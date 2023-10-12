@@ -46,6 +46,23 @@ func redirectTLS(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	nbArgs := len(os.Args)
+
+	if nbArgs > 1 {
+		command := os.Args[1]
+		if command == "test" {
+
+			err := parseContent()
+			if err != nil {
+				fmt.Println("ERR:", err.Error())
+				os.Exit(1)
+			}
+
+			fmt.Println("OK")
+			return
+		}
+	}
+
 	// --------------------------------------------------
 	// retrieve environment variables' values
 	// --------------------------------------------------
@@ -56,7 +73,10 @@ func main() {
 	var envSecureTransport bool = os.Getenv("PCUBES_SECURE_TRANSPORT") == "1"
 	fmt.Println("[env] secure transport:", envSecureTransport)
 
-	parseContent()
+	err := parseContent()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	for _, staticDir := range staticFileDirectories {
 		http.Handle("/"+staticDir+"/", http.StripPrefix("/"+staticDir+"/", http.FileServer(http.Dir(filepath.Join(contentDirectory, staticDir)))))
@@ -261,10 +281,7 @@ func parseContent() error {
 				err = yaml.NewDecoder(file).Decode(&page)
 
 				if err != nil {
-
-					page.Title = "Error"
-					page.Description = err.Error()
-
+					return fmt.Errorf("%s %v", trimmedPath, err)
 				}
 
 				pages[cleanPath] = &page
@@ -293,17 +310,12 @@ func parseContent() error {
 				err = json.NewDecoder(file).Decode(&module)
 
 				if err != nil {
-					module.Name = "Error"
-					module.Description = []*ContentBlock{
-						&ContentBlock{
-							Text: err.Error(),
-						},
-					}
-				} else {
-					module.Name = path.Base(cleanPath)
+					return fmt.Errorf("%s %v", trimmedPath, err)
 				}
 
-				fmt.Println("cleanPath:", cleanPath)
+				module.Name = path.Base(cleanPath)
+
+				// fmt.Println("from json:", cleanPath)
 				pagesV2[cleanPath] = &module
 			}
 		}
