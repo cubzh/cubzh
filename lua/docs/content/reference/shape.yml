@@ -275,7 +275,9 @@ functions:
           Optional parameters:
           - `screenRatio` indicates the percentage of the screen that should be covered by the target.
           - `spherize` switches between box fit (false) and sphere fit (true), spherize can be useful if the function is used every frame on a moving object, for smoother motion, but the fit will be wider.
-      argument-sets:
+      arguments:
+        - name: "camera"
+          type: "Camera"
         - name: "screenRatio"
           type: "number"
           optional: true
