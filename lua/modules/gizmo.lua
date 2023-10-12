@@ -15,13 +15,13 @@ local camera = Camera()
 camera:SetParent(Camera)
 camera.On = true
 
-gizmo.setLayer = function(self, l)
+gizmo.setLayer = function(_, l)
 	layer = l
 	camera.Layers = l
 end
 gizmo.setLayer(2) -- TODO: we need a way to ask for unused layer
 
-gizmo.setScale = function(self, s)
+gizmo.setScale = function(_, s)
 	scale = s
 end
 
@@ -37,7 +37,7 @@ functions.setObject = function(self, object)
 	end
 end
 
-functions.getObject = function(self, object)
+functions.getObject = function(self)
 	return self.object
 end
 
@@ -117,7 +117,7 @@ functions.setMode = function(self, mode)
 			g:setLayer(self.layer)
 			g.onDrag = self.onMove
 			self.gizmos[mode] = g
-			
+
 		elseif mode == gizmo.Mode.Rotate then
 			local g = require("rotategizmo"):create({ orientation = self.orientation,
 													snap = self.rotateSnap,
@@ -164,7 +164,7 @@ mt = {
 	__metatable = false,
 }
 
-gizmo.create = function(self, config)
+gizmo.create = function(_, config)
 
 	local _config = { -- default config
 		orientation = gizmo.Orientation.World,

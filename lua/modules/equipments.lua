@@ -4,9 +4,8 @@ local equipments = {
                         "jacket",
                         "pants",
                         "boots"},
-                        
-    equipmentParent = function(player, partName)
-    	if partName == "hair" then
+	    equipmentParent = function(player, partName)
+		if partName == "hair" then
             return player.Head
         elseif partName == "jacket" then
             return { player.Body or player, player.RightArm, player.LeftArm }
@@ -14,12 +13,12 @@ local equipments = {
             return { player.RightLeg, player.LeftLeg }
         elseif partName == "boots" then
             return { player.RightFoot, player.LeftFoot }
-    	end
+		end
     end
 }
 
 equipments.partExists = function(name)
-    for index, value in ipairs(equipments.equipmentNames) do
+    for _, value in ipairs(equipments.equipmentNames) do
         if value == name then
             return true
         end
@@ -28,8 +27,7 @@ equipments.partExists = function(name)
 end
 
 equipments.unloadAll = function(player)
-    if player == nil then player = Player end 
-
+    if player == nil then player = Player end
     if player.equipments == nil then return end
 
     for name, shape in pairs(player.equipments) do
@@ -56,8 +54,7 @@ equipments.load = function(equipmentName, itemRepoName, player, mutable, abortIf
         return equipments.load(equipmentName, "official." .. equipmentName, player, mutable, abortIfSet, callback)
 	end
 
-    if player == nil then player = Player end 
-
+    if player == nil then player = Player end
     if player.equipments == nil then
         player.equipments = {}
     end
@@ -111,7 +108,7 @@ equipments.load = function(equipmentName, itemRepoName, player, mutable, abortIf
     return req
 end
 
-equipments.attachEquipmentToBodyPart = function(self, equipment, bodyPart, options)
+equipments.attachEquipmentToBodyPart = function(_, equipment, bodyPart, options)
     local layer = options.layer or 1
     local isPant = options.isPant or false
 
@@ -152,8 +149,7 @@ equipments.place = function(self, player, shape)
 
     local options = {
         layer = player.Layers,
-        isPant = shape.equipmentName == "pants" or shape.equipmentName == "lpant" or shape.equipmentName == "rpant" 
-    }
+        isPant = shape.equipmentName == "pants" or shape.equipmentName == "lpant" or shape.equipmentName == "rpant"	    }
     if type(parent) == "table" then -- multiple shape equipment
         self:attachEquipmentToBodyPart(shape, parent[1], options)
 

@@ -12,10 +12,10 @@ local avatarMetatable = {
 
 local SKIN_1_PALETTE_INDEX = 1
 local SKIN_2_PALETTE_INDEX = 2
-local EYES_PALETTE_INDEX = 6
-local EYES_DARK_PALETTE_INDEX = 8
-local NOSE_PALETTE_INDEX = 7
-local MOUTH_PALETTE_INDEX = 4
+-- local EYES_PALETTE_INDEX = 6
+-- local EYES_DARK_PALETTE_INDEX = 8
+-- local NOSE_PALETTE_INDEX = 7
+-- local MOUTH_PALETTE_INDEX = 4
 
 local bodyPartsNames = { "Head", "Body", "RightArm", "RightHand", "LeftArm", "LeftHand", "RightLeg", "LeftLeg", "RightFoot", "LeftFoot" }
 
@@ -107,15 +107,6 @@ local _initAnimations = function(avatar)
         { time = 5/6, rotation = { 0, -1.1781, 0} },
         { time = 1.0, rotation = { 0, -0.19635, 0} },
     }
-    local walk_headK = {
-        { time = 0.0, rotation = { 0.0490874, -0.0490874, 0 } },
-        { time = 1/6, rotation = { 0.0490874, -0.0490874, 0 } },
-        { time = 1/3, rotation = { 0, -0.0490874, 0 } },
-        { time = 1/2, rotation = { 0.0490874, -0.0490874, 0 } },
-        { time = 2/3, rotation = { 0.0490874, -0.0490874, 0 } },
-        { time = 5/6, rotation = { 0, -0.0490874, 0 } },
-        { time = 1.0, rotation = { 0.0490874, -0.0490874, 0 } },
-    }
     local walk_bodyK = {
         { time = 0.0, position = { 0.0, 15.0, 0.0 }, rotation = { 0, 0, 0 } },
         { time = 1/6, position = { 0.0, 12.0, 0.0 }, rotation = { 0, 0, 0 } },
@@ -134,20 +125,18 @@ local _initAnimations = function(avatar)
         RightFoot = walk_rfootK,
         LeftLeg = walk_llegK,
         LeftFoot = walk_lfootK,
-        -- can't move head first person if head is set in animations
-        -- Head = walk_headK,
         Body = walk_bodyK
     }
 
     local owner
     for name,v in pairs(walkConfig) do
         for _,frame in ipairs(v) do
-        	owner = name == "Body" and avatar or avatar[name]
-        	-- owner = (name == "Body" and not avatar[name]) and avatar or avatar[name]
-        	if owner ~= nil then
+			owner = name == "Body" and avatar or avatar[name]
+			-- owner = (name == "Body" and not avatar[name]) and avatar or avatar[name]
+			if owner ~= nil then
 	            animWalk:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
 	            animWalk:Bind(name, owner)
-        	end
+			end
         end
     end
 
@@ -230,7 +219,7 @@ local _initAnimations = function(avatar)
     anims.Idle:Play()
 end
 
-index.setEyesColor = function(self, playerOrHead, c)
+index.setEyesColor = function(_, playerOrHead, c)
     local head = playerOrHead
     if playerOrHead.Head then
         head = playerOrHead.Head
@@ -240,7 +229,7 @@ index.setEyesColor = function(self, playerOrHead, c)
     head.Palette[8].Color:ApplyBrightnessDiff(-0.15)
 end
 
-index.getEyesColor = function(self, playerOrHead)
+index.getEyesColor = function(_, playerOrHead)
     local head = playerOrHead
     if playerOrHead.Head then
         head = playerOrHead.Head
@@ -248,23 +237,23 @@ index.getEyesColor = function(self, playerOrHead)
     return head.Palette[6].Color
 end
 
-index.setBodyPartColor = function(self, name, shape, skin1, skin2)
+index.setBodyPartColor = function(_, name, shape, skin1, skin2)
     local skin1key = SKIN_1_PALETTE_INDEX
     if name == "LeftHand" or name == "Body" or name == "RightArm" then skin1key = SKIN_2_PALETTE_INDEX end
 
     if shape.Palette[skin1key] then
-    	if skin1 ~= nil then
-        	shape.Palette[skin1key].Color = skin1
-    	end
+		if skin1 ~= nil then
+			shape.Palette[skin1key].Color = skin1
+		end
     end
 
     if name ~= "Body" then
         local skin2key = SKIN_2_PALETTE_INDEX
         if name == "LeftHand" or name == "RightArm" then skin2key = SKIN_1_PALETTE_INDEX end
         if shape.Palette[skin2key] then
-        	if skin2 ~= nil then
-            	shape.Palette[skin2key].Color = skin2
-        	end
+			if skin2 ~= nil then
+				shape.Palette[skin2key].Color = skin2
+			end
         end
     end
 end
@@ -282,12 +271,6 @@ index.setSkinColor = function(self, player, skin1, skin2, nose, mouth)
         for _,name in ipairs(bodyPartsNames) do
             self:setBodyPartColor(name, player[name], skin1, skin2)
         end
-        if player.Name == "Body" then
-            -- player is a Body shape
-            -- first color is shirt color
-            -- second color is neck skin color
-            self:setBodyPartColor(name, player, nil, skin1)
-        end
     end
 
     if nose then
@@ -299,7 +282,7 @@ index.setSkinColor = function(self, player, skin1, skin2, nose, mouth)
     end
 end
 
-index.getNoseColor = function(self, playerOrHead)
+index.getNoseColor = function(_, playerOrHead)
     local head = playerOrHead
     if playerOrHead.Head then
         head = playerOrHead.Head
@@ -307,7 +290,7 @@ index.getNoseColor = function(self, playerOrHead)
     return head.Palette[7].Color
 end
 
-index.setNoseColor = function(self, playerOrHead, color)
+index.setNoseColor = function(_, playerOrHead, color)
     if not color or type(color) ~= "Color" then
         print("Error: setNoseColor second argument must be of type Color.")
         return
@@ -317,11 +300,10 @@ index.setNoseColor = function(self, playerOrHead, color)
     if playerOrHead.Head then
         head = playerOrHead.Head
     end
-    
     head.Palette[7].Color = color
 end
 
-index.getMouthColor = function(self, playerOrHead)
+index.getMouthColor = function(_, playerOrHead)
     local head = playerOrHead
     if playerOrHead.Head then
         head = playerOrHead.Head
@@ -329,7 +311,7 @@ index.getMouthColor = function(self, playerOrHead)
     return head.Palette[4].Color
 end
 
-index.setMouthColor = function(self, playerOrHead, color)
+index.setMouthColor = function(_, playerOrHead, color)
     if not color or type(color) ~= "Color" then
         print("Error: setMouthColor second argument must be of type Color.")
         return
@@ -391,7 +373,7 @@ end
 -- returns MutaleShape + sent requests (table)
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
-index.get = function(self, usernameOrId)
+index.get = function(_, usernameOrId)
 	local requests = {}
     local root = System.MutableShapeFromBundle("caillef.multiavatar")
     root._Head = root.Head -- retain Head shape
@@ -403,7 +385,7 @@ index.get = function(self, usernameOrId)
     _initAnimations(root)
 
     local equipments = require("equipments")
-    local loadEquipments = function(avatar, data)
+    local loadEquipments = function(_, data)
         local equipmentsList = { "hair", "jacket", "pants", "boots" }
         local nbEquipments = #equipmentsList
         local nbEquipmentsLoaded = 0
@@ -414,7 +396,7 @@ index.get = function(self, usernameOrId)
             end
         end
         for _,v in ipairs(equipmentsList) do
-        	-- equipments.load creates the `root.equipments` field
+			-- equipments.load creates the `root.equipments` field
             local req = equipments.load(v, data[v], root, false, false, function(obj)
                 if not obj then
                     print("Error: can't equip default wearables")

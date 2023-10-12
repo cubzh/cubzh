@@ -4,9 +4,9 @@ cleanup = {}
 local ERROR_ON_ACCESS_AFTER_CLEANUP = false
 
 errorOnAccessMetatable = {}
-errorOnAccessMetatable.__call = function(t) error("cleaned up table call", 2) end
-errorOnAccessMetatable.__index = function(t,k)  error("cleaned up table, can't get key: " .. k, 2) end
-errorOnAccessMetatable.__newindex = function(t,k,v) error("cleaned up table, can't set key: " .. k, 2) end
+errorOnAccessMetatable.__call = function() error("cleaned up table call", 2) end
+errorOnAccessMetatable.__index = function(_,k)  error("cleaned up table, can't get key: " .. k, 2) end
+errorOnAccessMetatable.__newindex = function(_,k) error("cleaned up table, can't set key: " .. k, 2) end
 errorOnAccessMetatable.__metatable = false
 
 local metatable = {
@@ -15,7 +15,6 @@ local metatable = {
 		if self == nil or t == nil then return end
 
 		local next = next
-		
 		-- 0: not processed
 		-- 1: cleaning metatable
 		-- 2: cleaning table
@@ -26,16 +25,13 @@ local metatable = {
 		local meta
 		local k
 		local m
-		local t
 
 		while current ~= nil do
-			
 			if current.step == 0 then
 				-- clean metatable
 				meta = getmetatable(current.t)
 
-				if meta ~= nil and type(meta) == "table" then 
-					current.m = meta
+				if meta ~= nil and type(meta) == "table" then					current.m = meta
 					current.step = 1
 					-- goto continue
 				else
@@ -43,16 +39,14 @@ local metatable = {
 					-- goto continue
 				end
 
-			elseif current.step == 1 then 
-				-- cleaning metatable
+			elseif current.step == 1 then				-- cleaning metatable
 				m = current.m
 
 				if current.k == nil then
 					k = next(m)
 				else
 					-- continue after dealing with children
-					k = current.k 
-				end
+					k = current.k				end
 
 				while k ~= nil do
 					if type(m[k]) == "table" then
@@ -65,7 +59,7 @@ local metatable = {
 								if entry.t == m[k] or entry.m == m[k] then
 									-- print("found cycle ref (1)")
 									m[k] = nil
-									k = next(m, k)
+									-- k = next(m, k) -- k unused after set
 									goto continue
 								end
 							end
@@ -83,10 +77,8 @@ local metatable = {
 				end
 
 				current.k = nil
-				current.step = 2			
-
-			elseif current.step == 2 then 
-				-- cleaning table
+				current.step = 2
+			elseif current.step == 2 then				-- cleaning table
 				t = current.t
 
 				if current.k == nil then
@@ -107,7 +99,7 @@ local metatable = {
 								if entry.t == t[k] or entry.m == t[k] then
 									-- print("found cycle ref (2)")
 									t[k] = nil
-									k = next(t, k)
+									-- k = next(t, k) -- k unused after set
 									goto continue
 								end
 							end

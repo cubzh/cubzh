@@ -14,7 +14,7 @@ local errorMT = {
 	__tostring = function(t) return t.message or "" end
 }
 
-mod.error = function(self, statusCode, message)
+mod.error = function(_, statusCode, message)
 	local err = {statusCode = statusCode, message = message}
 	setmetatable(err, errorMT)
 	return err
@@ -25,7 +25,7 @@ end
 -- ok: boolean
 -- users: []User
 -- errMsg: string
-mod.searchUser = function(self, searchText, callback)
+mod.searchUser = function(_, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
 		error("api:getFriends(searchText, callback) - searchText must be a string", 2)
@@ -52,7 +52,7 @@ end
 
 -- getFriends ...
 -- callback(ok, friends, errMsg)
-mod.getFriends = function(self, callback)
+mod.getFriends = function(_, callback)
 	if type(callback) ~= "function" then
 		error("api:getFriends(callback) - callback must be a function", 2)
 		return
@@ -91,7 +91,7 @@ end
 
 -- getSentFriendRequests ...
 -- callback(ok, reqs, errMsg)
-mod.getSentFriendRequests = function(self, callback)
+mod.getSentFriendRequests = function(_, callback)
 	if type(callback) ~= "function" then
 		callback(false, nil, "1st arg must be a function")
 		return
@@ -115,7 +115,7 @@ end
 
 -- getReceivedFriendRequests ...
 -- callback(ok, reqs, errMsg)
-mod.getReceivedFriendRequests = function(self, callback)
+mod.getReceivedFriendRequests = function(_, callback)
 	if type(callback) ~= "function" then
 		callback(false, nil, "1st arg must be a function")
 		return
@@ -138,10 +138,9 @@ end
 
 -- getUserInfo gets a user by its ID
 -- callback(ok, user, errMsg)
--- fields parameter is optional, it can be a table 
--- containing extra expected user fields:
+-- fields parameter is optional, it can be a table-- containing extra expected user fields:
 -- {"created", "nbFriends"}
-mod.getUserInfo = function(self, id, callback, fields)
+mod.getUserInfo = function(_, id, callback, fields)
 	-- validate arguments
 	if type(id) ~= "string" then
 		callback(false, nil, "1st arg must be a string")
@@ -181,7 +180,7 @@ end
 
 -- getMinAppVersion gets minimum app version
 -- callback(error string or nil, minVersion string)
-mod.getMinAppVersion = function(self, callback)
+mod.getMinAppVersion = function(_, callback)
 	if type(callback) ~= "function" then
 		callback("1st arg must be a function", nil)
 		return
@@ -219,7 +218,7 @@ end
 --
 -- callback(error string or nil, items []Item or nil)
 --
-mod.getItems = function(self, filter, callback)
+mod.getItems = function(_, filter, callback)
 	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
 
 	-- validate arguments
@@ -262,7 +261,7 @@ mod.getItems = function(self, filter, callback)
 		if filterIsValid(k, v) then
 			if type(v) == "table" then
 				for _, entry in ipairs(v) do
-					table.insert(queryParams, {key = k, value = tostring(entry)})	
+					table.insert(queryParams, {key = k, value = tostring(entry)})
 				end
 			else
 				table.insert(queryParams, {key = k, value = tostring(v)})
@@ -294,7 +293,7 @@ mod.getItems = function(self, filter, callback)
 		-- decode body
 		local items, err = JSON:Decode(resp.Body)
 
-		for k, v in ipairs(items.results) do
+		for _, v in ipairs(items.results) do
 			v.created = time.iso8601_to_os_time(v.created)
 			v.updated = time.iso8601_to_os_time(v.updated)
 			if v.likes == nil then
@@ -320,7 +319,7 @@ end
 -- NOTE: categories are not in place yet, but they would be useful,
 -- keeping filter in place client side, waiting for backend to support it.
 -- callback(error string or nil, items []World or nil)
-mod.getWorlds = function(self, filter, callback)
+mod.getWorlds = function(_, filter, callback)
 	-- GET /worlddrafts?search=banana,gdevillele&page=1&perPage=100
 
 	-- validate arguments
@@ -360,7 +359,7 @@ mod.getWorlds = function(self, filter, callback)
 		if filterIsValid(k, v) then
 			if type(v) == "table" then
 				for _, entry in ipairs(v) do
-					table.insert(queryParams, {key = k, value = tostring(entry)})	
+					table.insert(queryParams, {key = k, value = tostring(entry)})
 				end
 			else
 				table.insert(queryParams, {key = k, value = tostring(v)})
@@ -396,7 +395,7 @@ mod.getWorlds = function(self, filter, callback)
 			return
 		end
 
-		for k, v in ipairs(data.worlds) do
+		for _, v in ipairs(data.worlds) do
 			if v.created then v.created = time.iso8601_to_os_time(v.created) end
 			if v.updated then v.updated = time.iso8601_to_os_time(v.updated) end
 			if v.likes ~= nil then v.likes = math.floor(v.likes) else v.likes = 0 end
@@ -450,7 +449,6 @@ mod.getPublishedWorlds = function(self, config, callback)
 			callback("http status not 200", nil)
 			return
 		end
-		
 		-- decode body
 		local data, err = JSON:Decode(res.Body)
 		if err ~= nil then
@@ -458,20 +456,19 @@ mod.getPublishedWorlds = function(self, config, callback)
 			return
 		end
 
-		for k, v in ipairs(data.worlds) do
+		for _, v in ipairs(data.worlds) do
 			if v.created then v.created = time.iso8601_to_os_time(v.created) end
 			if v.updated then v.updated = time.iso8601_to_os_time(v.updated) end
 			if v.likes ~= nil then v.likes = math.floor(v.likes) else v.likes = 0 end
 			if v.views ~= nil then v.views = math.floor(v.views) else v.views = 0 end
 		end
-	
 		callback(nil, data.worlds)
 	end)
 	return req
 end
 
 -- callback(error string or nil, World or nil)
-mod.getWorld = function(self, worldID, callback)
+mod.getWorld = function(_, worldID, callback)
 	if type(callback) ~= "function" then
 		callback("2nd arg must be a function", nil)
 		return
@@ -549,9 +546,9 @@ mod.getServers = function(self, worldID, callback)
 		local hasDevMode
 		for _, s in pairs(t.servers) do
 			hasPlayers = false
- 			hasMaxPlayers = false
- 			hasDevMode = false
-			for k, v in pairs(s) do
+			hasMaxPlayers = false
+			hasDevMode = false
+			for k, _ in pairs(s) do
 				if k == "players" then
 					hasPlayers = true
 				end
@@ -644,8 +641,7 @@ mod.getItem = function(self, itemId, cb)
 			cb("json decode failed", nil)
 			return
 		end
-		-- 
-		if itmResp.item.likes == nil then itmResp.item.likes = 0 end
+		--		if itmResp.item.likes == nil then itmResp.item.likes = 0 end
 		if itmResp.item.liked == nil then itmResp.item.liked = false end
 		cb(nil, itmResp.item)
 	end)
@@ -718,7 +714,7 @@ mod.aiChatCompletions = function(messages, temperatureOrCb, cb)
         end
         local body = JSON:Decode(res.Body:ToString())
         if body.error.type then
-        	return cb("Error (" .. body.error.type .. ")")
+			return cb("Error (" .. body.error.type .. ")")
         end
         local message = body.choices[1].message
         cb(nil, message)

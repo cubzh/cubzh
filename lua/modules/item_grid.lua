@@ -15,7 +15,7 @@ local MIN_ROWS = 2
 local MIN_COLUMNS = 2
 local MIN_GRID_SIZE = 50
 
-itemGrid.create = function(self, config)
+itemGrid.create = function(_, config)
 
 	-- load config (overriding defaults)
 	local _config = {
@@ -26,7 +26,7 @@ itemGrid.create = function(self, config)
 		-- used to filter categories when not nil
 		categories = nil, -- {"null", "hair" ,"jacket", "pants", "boots"},
 		-- grid gets items by default, unless this is set to "worlds"
-		type = "items", 
+		type = "items",
 		-- filter on particular repo
 		repo = nil,
 		-- mode
@@ -130,7 +130,7 @@ itemGrid.create = function(self, config)
 		grid.searchBar = ui:createTextInput("", "search")
 		grid.searchBar:setParent(grid)
 
-		grid.searchBar.onTextChange = function(self)
+		grid.searchBar.onTextChange = function(_)
 			if grid.searchTimer ~= nil then
 				grid.searchTimer:Cancel()
 			end
@@ -171,7 +171,7 @@ itemGrid.create = function(self, config)
 
 	-- first page cell when page is set
 	-- using as reference cell to define new page number
-	-- when grid resizes. 
+	-- when grid resizes.
 	-- (doesn't mean cell remains at first position, put somewhere on page)
 	grid.firstPageCell = 1
 
@@ -182,9 +182,9 @@ itemGrid.create = function(self, config)
     grid.entries = {}
 
     grid._paginationDidChange = function(self)
-    	if self.onPaginationChange ~= nil then
-    		self.onPaginationChange(self.page, self.nbPages)
-    	end
+		if self.onPaginationChange ~= nil then
+		self.onPaginationChange(self.page, self.nbPages)
+		end
 	end
 
 	grid.setPage = function(self, page)
@@ -203,7 +203,7 @@ itemGrid.create = function(self, config)
 		self:refresh()
 	end
 
-	grid.onRemove = function(self)
+	grid.onRemove = function(_)
 		cancelRequestsAndTimers()
 		grid.tickListener:Remove()
 		grid.tickListener = nil
@@ -244,14 +244,14 @@ itemGrid.create = function(self, config)
         nbLikes.pos = {theme.padding, theme.padding}
 
         cell.layoutLikes = function(self)
-        	if nbLikes:isVisible() == false then return end
-        	likesAndViewsFrame.Width = nbLikes.Width + theme.padding * 2
-        	likesAndViewsFrame.Height = nbLikes.Height + theme.padding * 2
-        	likesAndViewsFrame.pos.Y = self.Height - likesAndViewsFrame.Height
+			if nbLikes:isVisible() == false then return end
+			likesAndViewsFrame.Width = nbLikes.Width + theme.padding * 2
+			likesAndViewsFrame.Height = nbLikes.Height + theme.padding * 2
+likesAndViewsFrame.pos.Y = self.Height - likesAndViewsFrame.Height
         end
 
         cell.setNbLikes = function(self, n)
-        	if n > 0 then
+			if n > 0 then
 				nbLikes.Text = "❤️ " .. math.floor(n)
 				nbLikes:show()
 				likesAndViewsFrame:show()
@@ -260,12 +260,12 @@ itemGrid.create = function(self, config)
 				nbLikes:hide()
 				likesAndViewsFrame:hide()
 			end
-       	end
+		end
 
-       	cell.hideLikes = function(self)
-       		likesAndViewsFrame:hide()
-       		nbLikes:hide()
-       	end
+		cell.hideLikes = function(_)
+			likesAndViewsFrame:hide()
+			nbLikes:hide()
+		end
 
 		local textFrame = ui:createFrame(theme.gridCellFrameColor)
 		textFrame:setParent(cell)
@@ -280,7 +280,7 @@ itemGrid.create = function(self, config)
 
 		local loadingCube -- = ui:createFrame(Color.White)
 
-		cell.getOrCreateLoadingCube = function(self)
+		cell.getOrCreateLoadingCube = function(_)
 			if loadingCube == nil then
 				loadingCube = ui:createFrame(Color.White)
 				loadingCube:setParent(cell)
@@ -291,7 +291,7 @@ itemGrid.create = function(self, config)
 			return loadingCube
 		end
 
-		cell.getLoadingCube = function(self)
+		cell.getLoadingCube = function(_)
 			return loadingCube
 		end
 
@@ -302,12 +302,12 @@ itemGrid.create = function(self, config)
 		end
 
 		cell.setSize = function(self, size)
-       		self.Width = size
+			self.Width = size
 			self.Height = size
 			self:layoutContent()
-       	end
+		end
 
-       	cell:setSize(size)
+		cell:setSize(size)
 
 		return cell
 	end
@@ -323,18 +323,18 @@ itemGrid.create = function(self, config)
 		for i=1,self.nbCells do
 			 cell = cells[i]
 			 if cell == nil then
-			 	cell = self:_createCell(self.cellSize)
-			 	table.insert(cells, cell)
+				cell = self:_createCell(self.cellSize)
+				table.insert(cells, cell)
 			 end
 			 cell:show()
 
 			local row = 1 + math.floor((i-1) / self.columns)
 			if row > self.rows then break end
 			local column = (i-1) % self.columns
+
 			local x = column * sizeWithPadding
-			local y = self.Height - row * self.cellSize - padding * (row - 1)
-			
 			local y = (self.rows - row) * (self.cellSize + padding)
+
 			cell.LocalPosition = Number3(x,y,0)
 		end
 
@@ -388,7 +388,7 @@ itemGrid.create = function(self, config)
 
 				local loadingCube = cell:getLoadingCube()
 				if loadingCube then loadingCube:hide() end
-				
+
 
 				local item = ui:createShape(obj, {spherized = true})
 				cell.item = item
@@ -569,7 +569,7 @@ itemGrid.create = function(self, config)
 
 			self.nbCells = self.rows * self.columns
 
-			-- reduce size 
+			-- reduce size
 			self.Width = self.columns * (self.cellSize + padding) - padding
 
 			local totalHeight = self.rows * (self.cellSize + padding) - padding
@@ -683,7 +683,7 @@ itemGrid.create = function(self, config)
 
 	grid.dt = 0.0
 	grid.dt4 = 0.0
-	grid.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt) 
+	grid.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		if grid.dt == nil then return end
 		grid.dt = grid.dt + dt
 		grid.dt4 = grid.dt4 + dt * 4

@@ -24,9 +24,7 @@ local function getLastXElements(array, x) local result, length = {}, #array for 
 
 Timer(10, true, function()
 	if #messages < 60 then return end
-	local before = #messages
 	messages = getLastXElements(messages,40)
-	local after = #messages
 end)
 
 local channels = {
@@ -60,7 +58,7 @@ local pushFormattedMessage = function(msgInfo)
 	LocalEvent:Send("did_receive_chat_message", msgInfo)
 end
 
-local createModalContent = function(self, config)
+local createModalContent = function(_, config)
 
 	-- default config
 	local _config = {
@@ -81,7 +79,7 @@ local createModalContent = function(self, config)
 	content.messages = {}
 	content.closeButton = true
 
-	content.idealReducedContentSize = function(content, width, height)
+	content.idealReducedContentSize = function(_, width, height)
 		return Number2(width, height)
 	end
 
@@ -114,7 +112,6 @@ local createModalContent = function(self, config)
 		-- Firstline: message, if too wide, cut the end
 		local uiTextTime = ui:createText("[00:00]", color)
 		local uiTextPrefix
-		local uiHead
 		local uiTextMessageFirstLine = ui:createText("", color)
 
 		uiTextTime.Text = "[" .. string.sub(data.date, 12, 16) .. "]" -- get HH:MM
@@ -256,7 +253,7 @@ local createModalContent = function(self, config)
 			message = message
 		}
 		metatablePayload.__metatable = false
-		metatablePayload.__newindex = function(t,k,v)
+		metatablePayload.__newindex = function(_,k,v)
 			if k ~= "message" then error("payload."..k.." can't be set.", 2) return end
 			if type(v) ~= Type.string then error("payload.message can only be a string") return end
 			metatablePayload.__index.message = v
@@ -277,11 +274,9 @@ local createModalContent = function(self, config)
 	end
 
 	local funcSendMessage = function()
-		if #inputNode.Text < 1 then 
-			local modal = content:getModalIfContentIsActive()
+		if #inputNode.Text < 1 then			local modal = content:getModalIfContentIsActive()
 			if modal then modal:close() end
-			return 
-		end
+			return		end
 		local text = inputNode.Text
 		inputNode.Text = ""
 		playerSendMessage(text)
@@ -322,8 +317,7 @@ local createModalContent = function(self, config)
 
 		messagesNode.Width = node.Width
 		messagesNode.Height = node.Height - inputNode.Height - theme.padding * 2
-		messagesNode.pos = { 0, inputNode.Height + theme.padding * 2 , 0 }	
-
+		messagesNode.pos = { 0, inputNode.Height + theme.padding * 2 , 0 }
 		local shift = 0
 		for i=#content.messages,1,-1 do
 			local msg = content.messages[i]
@@ -352,13 +346,13 @@ local createModalContent = function(self, config)
 
 	local listener
 
-	content.didBecomeActive = function(self)
+	content.didBecomeActive = function(_)
 		listener = LocalEvent:Listen("did_receive_chat_message", function(msgInfo)
 			pushMessage(msgInfo)
 		end)
 	end
 
-	content.willResignActive = function(self)
+	content.willResignActive = function(_)
 		if listener then listener:Remove() end
 	end
 

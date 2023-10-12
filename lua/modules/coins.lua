@@ -3,12 +3,11 @@ coins = {}
 
 -- Creates modal content to present user coins.
 -- (should be used to create or pushed within modal)
-coins.createModalContent = function(self, config)
+coins.createModalContent = function(_, config)
 
 	local theme = require("uitheme").current
 	local modal = require("modal")
 	local api = require("api")
-	local time = require("time")
 
 	-- default config
 	local _config = {
@@ -22,8 +21,6 @@ coins.createModalContent = function(self, config)
 	end
 
 	local ui = _config.uikit
-
-	local maxEntries = 5
 
 	local content = modal:createContent()
 	content.closeButton = true
@@ -60,8 +57,8 @@ coins.createModalContent = function(self, config)
 	historyShowMoreBtn:setParent(historyFrame)
 	historyShowMoreBtn:disable()
 
-	content.idealReducedContentSize = function(content, width, height)
-		local width = math.min(width, 500)
+	content.idealReducedContentSize = function(_, width, _)
+		width = math.min(width, 500)
 
 		local balanceFrameHeight = balanceText.Height * 5
 		balanceFrame.Width = width
@@ -84,7 +81,7 @@ coins.createModalContent = function(self, config)
 
 		for k,entry in ipairs(entries) do
 			entry.pos = Number3(theme.padding, historyText.pos.Y - historyText.Height - theme.padding - (k-1) * entry.Height, 0)
-		end	
+		end
 		historyShowMoreBtn.pos.X = width - historyShowMoreBtn.Width
 
 		historyFrame.pos = { 0, theme.padding, 0 }

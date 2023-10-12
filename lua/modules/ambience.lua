@@ -28,26 +28,26 @@ local default = {
 }
 
 local configMT = {
-	__newindex = function(t, k, v) 
+	__newindex = function(_, k)
 		error("key not supported in ambience config: " .. k, 2)
 	end,
-	__index = function(t, k) return nil end,
+	__index = function() return nil end,
 }
 
 local skyMT = {
-	__index = function(t, k) return default.sky[k] end,
+	__index = function(_, k) return default.sky[k] end,
 }
 
 local fogMT = {
-	__index = function(t, k) return default.fog[k] end,
+	__index = function(_, k) return default.fog[k] end,
 }
 
 local sunMT = {
-	__index = function(t, k) return default.sun[k] end,
+	__index = function(_, k) return default.sun[k] end,
 }
 
 local ambientMT = {
-	__index = function(t, k) return default.ambient[k] end,
+	__index = function(_, k) return default.ambient[k] end,
 }
 
 local function _checkAndInstallMetatables(config)
@@ -58,7 +58,7 @@ local function _checkAndInstallMetatables(config)
 	setmetatable(config.ambient, ambientMT)
 end
 
-configMT.__index = function(t, k) 
+configMT.__index = function(_, k)
 	if k == "copy" then
 		return function(self)
 			local c = {
@@ -203,13 +203,13 @@ sun.Type = LightType.Directional
 World:AddChild(sun)
 ambience.sun = sun
 
-ambience.set = function(self, config)
+ambience.set = function(_, config)
 	-- SKY
 	Sky.LightColor = config.sky.lightColor or default.sky.lightColor
 	Sky.SkyColor = config.sky.skyColor or default.sky.skyColor
 	Sky.HorizonColor = config.sky.horizonColor or default.sky.horizonColor
 	Sky.AbyssColor = config.sky.abyssColor or default.sky.abyssColor
-	
+
 	-- FOG
 	Fog.Color = config.fog.color or default.fog.color
 	Fog.Near = config.fog.near or default.fog.near

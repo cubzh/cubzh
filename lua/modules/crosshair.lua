@@ -21,7 +21,7 @@ default = [["
     2222
 "]]
 
-crosshair.show = function(self, shape)
+crosshair.show = function(_, shape)
 	if shape == nil then shape = default end
 
 	if _crosshair == nil then
@@ -42,7 +42,7 @@ crosshair.show = function(self, shape)
 				y = y - 1
 				x = 0
 				goto continue
-			end	
+			end
 			x = x + 1
 			::continue::
 		end
@@ -57,7 +57,7 @@ crosshair.show = function(self, shape)
 			_crosshair.pos = {Screen.Width * 0.5 - _crosshair.Width * 0.5, Screen.Height * 0.5 - _crosshair.Height * 0.5, 0}
 		end
 		_crosshair:parentDidResize()
-	end	
+	end
 
 	_crosshair:show()
 end

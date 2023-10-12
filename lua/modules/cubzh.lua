@@ -8,8 +8,7 @@ Go to https://docs.cu.bzh/
 ]]--
 
 Config = {
-	Items = { 
-		"hub_collosseum_chunk",
+	Items = {			"hub_collosseum_chunk",
 		"hub_scifi_chunk",
 		"hub_medieval_chunk",
 		"hub_floating_islands_chunk",
@@ -19,7 +18,7 @@ Config = {
 
 -- CONSTANTS
 
-local WATER_ALPHA = 220
+-- local WATER_ALPHA = 220
 local MAP_SCALE = 5.5
 
 directionalPad = Client.DirectionalPad
@@ -36,14 +35,14 @@ Client.Action2 = function() end
 
 Client.OnStart = function()
 
-	-- Dev.DisplayColliders = true 
+	-- Dev.DisplayColliders = true
 
 	-- MODULE TESTS
 	-- require("envtest")
 
 	-- System:DebugEvent("APP_LAUNCH")
 
-	local ambience = require("ambience") 
+	local ambience = require("ambience")
 	ambience:set(ambience.noon)
 
 	controls = require("controls")
@@ -54,11 +53,8 @@ Client.OnStart = function()
 	camera2 = Camera()
 	camera2.Layers = {5}
 	camera2:SetParent(World)
-	camera2.On = true	
-	camera2.TargetY = Screen.Height
-	
-	-- IMPORT MODULES
-	
+	camera2.On = true		camera2.TargetY = Screen.Height
+		-- IMPORT MODULES
 	ui = require("uikit")
 	ease = require("ease")
 	api = require("api")
@@ -71,7 +67,7 @@ Client.OnStart = function()
 
 	function setChunkPos(chunk, x,y,z) chunk.Position = Number3(x,y,z) * MAP_SCALE end
 
-	function setWaterTransparency(chunk)
+	function setWaterTransparency(_) -- chunk
 		-- local i = chunk.Palette:GetIndex(Color(48, 192, 204, 255))
 		-- if i ~= nil then
 		-- 	chunk.Palette[i].Color.A = WATER_ALPHA
@@ -82,7 +78,7 @@ Client.OnStart = function()
 		-- end
 	end
 
-	function setLights(chunk)
+	function setLights(_) -- chunk
 		-- local i = chunk.Palette:GetIndex(Color(252, 240, 176, 255))
 		-- if i ~= nil then
 		-- 	chunk.Palette[i].Color.A = 230
@@ -163,19 +159,6 @@ Client.OnStart = function()
 		p.Physics = true
 	end
 
-	closeModals = function()
-		if loadingModal ~= nil then
-			loadingModal:close()
-			loadingModal = nil
-		end
-
-		secretCount = nil
-	end
-
-	-- for all animations, goes back to main menu 
-	-- after this amount of time:
-	kPostTriggerTime = 1.75
-
 	pi2 = math.pi * 2
 	moveDT = 0.0
 	kCameraPositionY = 90
@@ -196,8 +179,7 @@ Client.OnStart = function()
 		account:showAvatar()
 
 		-- TODO: test DIRECT LINKS
-		-- should be handled by menu		
-		-- if hasEnvironmentToLaunch() then
+		-- should be handled by menu			-- if hasEnvironmentToLaunch() then
 		-- 	launchEnvironment()
 		-- end
 
@@ -239,8 +221,7 @@ Client.Tick = function(dt)
 end
 
 Pointer.Click = function()
-	
-	Player:SwingRight()
+		Player:SwingRight()
 end
 
 -- //////////////////////////////////////////////////
@@ -265,8 +246,7 @@ account = {
 	hideAvatar = function(self)
 		if not self.shown then return end
 		self.shown = false
-		
-		Camera:SetModeFree()
+			Camera:SetModeFree()
 		Player:RemoveFromParent()
 	end,
 }

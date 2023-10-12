@@ -1,7 +1,7 @@
 local horizontalListModule = {}
 local horizontalListModuleMetatable = {
 	__index = {
-		create = function(self, data, config)
+		create = function(_, data, config)
             config = config or {}
 			local ui = require("uikit")
             local theme = require("uitheme").current
@@ -10,7 +10,7 @@ local horizontalListModuleMetatable = {
 			bgNode:setParent(nil)
 
 			local list = {}
-			for k,v in ipairs(data) do
+			for _,v in ipairs(data) do
                 local onRelease = v.onRelease or config.onRelease
 				if onRelease then
                     local text = (v.text or config.text) or ""
@@ -33,7 +33,7 @@ local horizontalListModuleMetatable = {
 
 			bgNode._width = function()
 				local width = 0
-				for k,v in ipairs(list) do
+				for _,v in ipairs(list) do
 					width = width + v.Width + (width > 0 and padding or 0)
 				end
 				return width
@@ -41,7 +41,7 @@ local horizontalListModuleMetatable = {
 
 			bgNode._height = function()
 				local height = 0
-				for k,v in ipairs(list) do
+				for _,v in ipairs(list) do
 					if v.Height > height then height = v.Height end
 				end
 				return height
@@ -50,7 +50,7 @@ local horizontalListModuleMetatable = {
 			bgNode.parentDidResize = function()
                 local nextPos = Number3(0,0,0)
 
-                for k,v in ipairs(list) do
+                for _,v in ipairs(list) do
                     if v.content and v.content.text == "" then -- if not text, square button
                         v.Width = v.Height
                     end

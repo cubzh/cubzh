@@ -38,7 +38,6 @@ local removeOnPlayCallback = function(self, callback)
 	end
 
 	local onPlayCallbacks = privateFields[self].onPlayCallbacks
-	
 	-- onPlayCallbacks does not exist for those Animations, return
 	if onPlayCallbacks == nil then return end
 
@@ -51,7 +50,6 @@ local removeOnStopCallback = function(self, callback)
 	end
 
 	local onStopCallbacks = privateFields[self].onStopCallbacks
-	
 	-- onStopCallbacks does not exist for those Animations, return
 	if onStopCallbacks == nil then return end
 
@@ -74,21 +72,16 @@ local indexFunctions = {
 
 animationsMT.__index = function(t, k)
 	if indexFunctions[k] then return indexFunctions[k] end
-	return privateFields[t].anims[k]	
-end
+	return privateFields[t].anims[k]end
 
 local toggleGroups = function(animations)
-	
 	local anims = privateFields[animations].anims
 
 	local playingInLoop = privateFields[animations].playingInLoop
 	local playingOnce = privateFields[animations].playingOnce
 
-	local groupsPlaying = {}
-
 	local anim
 	local groups
-	
 	-- activate all groups
 
 	for _, name in ipairs(playingOnce) do
@@ -193,7 +186,6 @@ local stopPlaying = function(animations, animName)
 			break
 		end
 	end
-	
 	toggleGroups(animations)
 end
 
@@ -221,31 +213,26 @@ animationsMT.__newindex = function(t, k, v)
 		startPlaying(animations, animName, anim)
 	end)
 
-	v:AddOnStopCallback(function(anim)
+	v:AddOnStopCallback(function(_)
 		stopPlaying(animations, animName)
 	end)
 end
 
-local create = function(self)
+local create = function(_)
 
 	local animations = {}
 	privateFields[animations] = {}
 
-	if privateFields[animations].anims == nil then 
-		privateFields[animations].anims = {} 
-	end
+	if privateFields[animations].anims == nil then		privateFields[animations].anims = {}	end
 
 	-- all playing animations, { animName = true }
-	if privateFields[animations].playing == nil then 
-		privateFields[animations].playing = {}
+	if privateFields[animations].playing == nil then		privateFields[animations].playing = {}
 	end
 
-	if privateFields[animations].playingInLoop == nil then 
-		privateFields[animations].playingInLoop = {}
+	if privateFields[animations].playingInLoop == nil then		privateFields[animations].playingInLoop = {}
 	end
 
-	if privateFields[animations].playingOnce == nil then 
-		privateFields[animations].playingOnce = {}
+	if privateFields[animations].playingOnce == nil then		privateFields[animations].playingOnce = {}
 	end
 
 	setmetatable(animations, animationsMT)

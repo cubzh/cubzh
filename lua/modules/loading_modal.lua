@@ -1,7 +1,7 @@
 loading = {}
 
-loading.create = function(self, text, config)
-		
+loading.create = function(_, text, config)
+
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
@@ -26,7 +26,7 @@ loading.create = function(self, text, config)
 	local content = modal:createContent()
 	content.closeButton = false
 
-	content.idealReducedContentSize = function(content, width, height)
+	content.idealReducedContentSize = function(content, _, _)
 		content:refresh()
 		return Number2(content.Width,content.Height)
 	end
@@ -67,7 +67,7 @@ loading.create = function(self, text, config)
 
 	local c1 = ui:createShape(Shape(cube))
 	c1:setParent(node)
-	
+
 	local c2 = ui:createShape(Shape(cube))
 	c2:setParent(node)
 
@@ -80,22 +80,22 @@ loading.create = function(self, text, config)
 
 	local speed = 6
 	local tDiff = 0.5
-	local t = 1.5
+	local tc1 = 1.5
 	c1.shape.Tick = function(o, dt)
-		t = t + dt * speed
-		o.Scale = 1.0 + math.sin(t) * 0.5
+		tc1 = tc1 + dt * speed
+		o.Scale = 1.0 + math.sin(tc1) * 0.5
 	end
 
-	local t = t - tDiff
+	local tc2 = tc1 - tDiff
 	c2.shape.Tick = function(o, dt)
-		t = t + dt * speed
-		o.Scale = 1.0 + math.sin(t) * 0.5
+		tc2 = tc2 + dt * speed
+		o.Scale = 1.0 + math.sin(tc2) * 0.5
 	end
 
-	local t = t - tDiff
+	local tc3 = tc2 - tDiff
 	c3.shape.Tick = function(o, dt)
-		t = t + dt * speed
-		o.Scale = 1.0 + math.sin(t) * 0.5
+		tc3 = tc3 + dt * speed
+		o.Scale = 1.0 + math.sin(tc3) * 0.5
 	end
 
 
@@ -123,7 +123,7 @@ loading.create = function(self, text, config)
 		c3.object.Position.Z = 20
 	end
 
-	popup.bounce = function(self)
+	popup.bounce = function(_)
 		position(popup, true)
 	end
 

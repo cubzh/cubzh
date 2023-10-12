@@ -1,6 +1,6 @@
 itemDetails = {}
 
-itemDetails.createModalContent = function(self, config)
+itemDetails.createModalContent = function(_, config)
 
 	local _config = {
 		title = "Item",
@@ -14,7 +14,7 @@ itemDetails.createModalContent = function(self, config)
 		end
 	end
 
-	local config = _config
+	config = _config
 
 	local ui = config.uikit
 
@@ -29,14 +29,12 @@ itemDetails.createModalContent = function(self, config)
 
 	-- becomes true when itemDetails is removed
 	-- callbacks may capture this as upvalue to early return.
-	local removed = false 
-	local requests = {}
+	local removed = false		local requests = {}
 	local listeners = {}
 
-	itemDetails.onRemove = function(self)
+	itemDetails.onRemove = function(_)
 		removed = true
-		
-		for _, req in ipairs(requests) do
+			for _, req in ipairs(requests) do
 			req:Cancel()
 		end
 		requests = {}
@@ -159,12 +157,11 @@ itemDetails.createModalContent = function(self, config)
 					function(text) -- done
 						ui:turnOn()
 						local description = itemDetails.description
-						if text == "" then 
-							description.empty = true
+						if text == "" then								description.empty = true
 							description.Text = "Items are easier to find with a description!"
 							description.Color = theme.textColorSecondary
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, {description = ""}, function(err, item)
+							local req = api:patchItem(itemDetails.id, {description = ""}, function(_, _)
 								if removed then return end
 								-- not handling response yet
 							end)
@@ -174,7 +171,7 @@ itemDetails.createModalContent = function(self, config)
 							description.Text = text
 							description.Color = theme.textColor
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, {description = text}, function(err, item)
+							local req = api:patchItem(itemDetails.id, {description = text}, function(_, _)
 								if removed then return end
 								-- not handling response yet
 							end)
@@ -226,7 +223,7 @@ itemDetails.createModalContent = function(self, config)
 		table.insert(requests, req)
 	end
 
-	content.loadCell = function(self, cell)
+	content.loadCell = function(cell)
 		if removed then return end
 		local self = itemDetails
 
@@ -236,10 +233,9 @@ itemDetails.createModalContent = function(self, config)
 		self.id = cell.id
 		if createMode then
 			self.author.Text = " @" .. cell.repo
-			
-		else
+			else
 			-- Retrieve user data. We need their UserID.
-			local req = api:searchUser(cell.repo, function(success, users)
+			local req = api:searchUser(cell.repo, function(_, users)
 				if removed then return end
 
 				by.Text = "by @" .. cell.repo
@@ -251,7 +247,7 @@ itemDetails.createModalContent = function(self, config)
 					end
 				end
 
-				by.onRelease = function(btn)
+				by.onRelease = function(_)
 					local profileConfig = {isLocal = false, username = cell.repo, userID = authorID, uikit = ui}
 					local profileContent = require("profile"):create(profileConfig)
 					content:push(profileContent)
@@ -259,10 +255,9 @@ itemDetails.createModalContent = function(self, config)
 			end)
 			table.insert(requests, req)
 		end
-		
-		-- Retrieve item info. We need its number of likes.
+			-- Retrieve item info. We need its number of likes.
 		-- (cell.id is Item UUID)
-		local req = api:getItem(cell.id, function (err, item)
+		local req = api:getItem(cell.id, function (_, item)
 			if removed then return end
 
 			if self.likes then
@@ -280,8 +275,7 @@ itemDetails.createModalContent = function(self, config)
 			self:refresh() -- refresh layout
 		end)
 		table.insert(requests, req)
-		
-		self.name.Text = cell.name
+			self.name.Text = cell.name
 
 		if config.mode == "create" then
 			if cell.description == nil or cell.description == "" then
@@ -297,15 +291,13 @@ itemDetails.createModalContent = function(self, config)
 			self.description.Color = theme.textColor
 		end
 
-		if self.likes then 
-			self.likes.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
+		if self.likes then				self.likes.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
 
 		elseif self.likeBtn then
 			self.likeBtn.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
 			self.likeBtn.onRelease = function()
 				self.liked = not self.liked
-				local req = api:likeItem(cell.id, self.liked, function(err) 
-					if removed then return end
+				local req = api:likeItem(cell.id, self.liked, function(_)						if removed then return end
 				end)
 				table.insert(requests, req)
 
@@ -389,11 +381,11 @@ itemDetails.createModalContent = function(self, config)
 		end)
 	end
 
-	itemDetails._width = function(self)
+	itemDetails._width = function(_)
 		return itemDetails._w
 	end
 
-	itemDetails._height = function(self)
+	itemDetails._height = function(_)
 		return itemDetails._h
 	end
 
@@ -441,8 +433,7 @@ itemDetails.createModalContent = function(self, config)
 			self.shapeArea.Height = self.shape.Height
 			self.shapeArea.LocalPosition = self.shape.LocalPosition
 
-			local w = (likes and likes.Width + theme.padding or 0) 
-					+ (likeBtn and likeBtn.Width + theme.padding or 0)
+			local w = (likes and likes.Width + theme.padding or 0)						+ (likeBtn and likeBtn.Width + theme.padding or 0)
 					+ (signalBtn and signalBtn.Width + theme.padding or 0)
 					+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
 					- theme.padding
@@ -469,7 +460,7 @@ itemDetails.createModalContent = function(self, config)
 
 			if likeBtn then
 				likeBtn.pos.X = startX
-				startX = startX + likeBtn.Width + theme.padding
+				-- startX = startX + likeBtn.Width + theme.padding
 				likeBtn.pos.Y = self.shape.pos.Y - h + (h - likeBtn.Height) * 0.5 - theme.padding
 			end
 
@@ -486,8 +477,7 @@ itemDetails.createModalContent = function(self, config)
 			self.descriptionArea.Width = self.nameArea.Width
 			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
 
-			if editDescriptionBtn ~= nil then 
-				editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
+			if editDescriptionBtn ~= nil then					editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
 										self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,0}
 
 				self.description.object.MaxWidth = self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding * 3
@@ -504,13 +494,11 @@ itemDetails.createModalContent = function(self, config)
 			-- min width to display details, buttons, etc.
 			-- remaining width can be used for the preview
 
-			local w = (likes and likes.Width + theme.padding or 0) 
-					+ (likeBtn and likeBtn.Width + theme.padding or 0)
+			local w = (likes and likes.Width + theme.padding or 0)						+ (likeBtn and likeBtn.Width + theme.padding or 0)
 					+ (signalBtn and signalBtn.Width + theme.padding or 0)
 					+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
 					- theme.padding
 
-			local detailsMinWidth = 200
 			local detailsWidthRatio = 0.66
 
 			local availableHeight = self.Height
@@ -523,12 +511,8 @@ itemDetails.createModalContent = function(self, config)
 
 			local detailsWidth = (self.Width - theme.padding) * detailsWidthRatio
 
-			if detailsWidth < detailsMinWidth then 
-				detailsMinWidth = detailsMinWidth
-			end
-
 			local previewSize = self.Width - theme.padding - detailsWidth
-			local previewHeight = previewWidth
+
 			if previewSize > availableHeightForPreview then
 				previewSize = availableHeightForPreview
 				detailsWidth = self.Width - theme.padding - previewSize
@@ -597,11 +581,9 @@ itemDetails.createModalContent = function(self, config)
 
 			self.descriptionArea.Height = availableHeight - self.nameArea.Height - self.infoArea.Height - theme.padding * 2
 			self.descriptionArea.Width = detailsWidth
-			
-			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
+				self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
 
-			if editDescriptionBtn ~= nil then 
-				editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
+			if editDescriptionBtn ~= nil then					editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
 										self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,0}
 
 				self.description.object.MaxWidth = self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding * 3

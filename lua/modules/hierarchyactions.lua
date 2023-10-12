@@ -26,7 +26,7 @@ end
 local hierarchyActions = {}
 local hierarchyActionsMetatable = {
     __index = {
-    	_maxDepth = -1,
+		_maxDepth = -1,
         applyToDescendants = function(self, shape, options, callback)
             if callback == nil then
                 callback = options
@@ -54,7 +54,7 @@ local hierarchyActionsMetatable = {
                 self:applyToDescendants(child, newOptions, callback)
             end
         end
-    } 
+    }
 }
 setmetatable(hierarchyActions, hierarchyActionsMetatable)
 

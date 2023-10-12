@@ -16,7 +16,7 @@ explode.shapes = function(self, object)
 			s.Scale = o.LossyScale
 			s.Position = o.Position
 			s.Rotation = o.Rotation
-			
+
 			s.Physics = true
 			s.CollisionGroups = nil
 			s.CollidesWithGroups = Map.CollisionGroups

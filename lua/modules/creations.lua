@@ -1,7 +1,7 @@
 
 creations = {}
 
-creations.createModalContent = function(self, config)
+creations.createModalContent = function(_, config)
 
 	local itemGrid = require("item_grid")
 	local itemDetails = require("item_details")
@@ -25,10 +25,12 @@ creations.createModalContent = function(self, config)
 
 	local ui = _config.uikit
 
+	local functions = {}
+
 	-- if original isn't nil, it means we're duplicating an entity
 	-- original: name of copied entity
 	-- grid parameter is used to force content reload after item creation
-	local createNewContent = function(what, original, grid)
+	functions.createNewContent = function(what, original, grid)
 		local newContent = modal:createContent()
 
 		if what == "item" or what == "wearable" then
@@ -45,7 +47,7 @@ creations.createModalContent = function(self, config)
 
 		local node = ui:createNode()
 
-		local categories = {"null"} 
+		local categories = {"null"}
 		local categoryShapes = {"official.one_cube_template"}
 		local buttonLabels = {"✨ Create Item ⚔️"}
 		local inputLabel = "Item Name?"
@@ -62,14 +64,11 @@ creations.createModalContent = function(self, config)
 							"✨ Create Shoes 👞"
 							}
 		elseif what == "world" then
-			categories = {"null"} 
-			categoryShapes = {"official.world_icon"}
+			categories = {"null"}				categoryShapes = {"official.world_icon"}
 			buttonLabels = {"✨ Create World 🌎"}
 			inputLabel = "World Name?"
 			textWithEmptyInput = "A World needs a name! No pressure, this can be changed later on."
 		end
-
-		local btnLabelDuplicate = ""
 
 		local currentCategory = 1
 
@@ -118,7 +117,6 @@ creations.createModalContent = function(self, config)
 			nextTemplateBtn.onRelease = function()
 				currentCategory = currentCategory + 1
 				if currentCategory > #categories then currentCategory = 1 end
-				local category = categories[currentCategory]
 				local label = buttonLabels[currentCategory]
 				btnCreate.Text = label
 
@@ -135,7 +133,6 @@ creations.createModalContent = function(self, config)
 			previousTemplateBtn.onRelease = function()
 				currentCategory = currentCategory -1
 				if currentCategory < 1 then currentCategory = #categories end
-				local category = categories[currentCategory]
 				local label = buttonLabels[currentCategory]
 				btnCreate.Text = label
 
@@ -149,8 +146,8 @@ creations.createModalContent = function(self, config)
 
 		btnCreate.onRelease = function()
 
-			local sanitized = ""
-			local err = nil
+			local sanitized
+			local err
 
 			if what == "world" then
 				sanitized, err = api.checkWorldName(input.Text)
@@ -279,7 +276,7 @@ creations.createModalContent = function(self, config)
 							-- for refresh at this point
 							local m = itemDetailsContent:getModalIfContentIsActive()
 							if m ~= nil then
-								m:push(createNewContent("item", itemFullName))
+								m:push(functions.createNewContent("item", itemFullName))
 							end
 						end
 
@@ -356,8 +353,7 @@ creations.createModalContent = function(self, config)
 			self.Height = availableSizeForPreview + input.Height + text.Height + theme.padding * 2 + extraBottomPadding
 
 			templatePreview.Height = availableSizeForPreview
-			templatePreview.pos = {self.Width * 0.5 - templatePreview.Width * 0.5, self.Height - templatePreview.Height, 0}			
-
+			templatePreview.pos = {self.Width * 0.5 - templatePreview.Width * 0.5, self.Height - templatePreview.Height, 0}
 			if #categories > 1 then
 				previousTemplateBtn.Height = templatePreview.Height
 				nextTemplateBtn.Height = templatePreview.Height
@@ -387,19 +383,19 @@ creations.createModalContent = function(self, config)
 		creationsContent.title = "Creations"
 		creationsContent.icon = "🏗️"
 
-		local grid = itemGrid:create({	minBlocks = 1, 
-										repo = Player.Username, 
+		local grid = itemGrid:create({	minBlocks = 1,
+										repo = Player.Username,
 										categories = {"null"},
 										uikit = ui,
 									})
 
 		creationsContent.node = grid
 
-		creationsContent.willResignActive = function(self)
+		creationsContent.willResignActive = function(_)
 			grid:cancelRequestsAndTimers()
 		end
 
-		creationsContent.didBecomeActive = function(self)
+		creationsContent.didBecomeActive = function(_)
 			if gridNeedRefresh then
 				-- re-download grid content
 				if grid.getItems then grid:getItems() end
@@ -420,21 +416,21 @@ creations.createModalContent = function(self, config)
 		local newItem = function()
 			local m = creationsContent:getModalIfContentIsActive()
 			if m ~= nil then
-				m:push(createNewContent("item", nil, grid))
+				m:push(functions.createNewContent("item", nil, grid))
 			end
 		end
 
 		local newWearable = function()
 			local m = creationsContent:getModalIfContentIsActive()
 			if m ~= nil then
-				m:push(createNewContent("wearable", nil, grid))
+				m:push(functions.createNewContent("wearable", nil, grid))
 			end
 		end
 
 		local newWorld = function()
 			local m = creationsContent:getModalIfContentIsActive()
 			if m ~= nil then
-				m:push(createNewContent("world", nil, grid))
+				m:push(functions.createNewContent("world", nil, grid))
 			end
 		end
 
@@ -484,12 +480,11 @@ creations.createModalContent = function(self, config)
 		creationsContent.idealReducedContentSize = function(content, width, height)
 			local grid = content
 			grid.Width = width
-			grid.Height = height 
-			grid:refresh()
+			grid.Height = height				grid:refresh()
 			return Number2(grid.Width, grid.Height)
 		end
 
-		grid.onOpen = function(self, cell)
+		grid.onOpen = function(_, cell)
 
 			if cell.type == "item" then
 
@@ -509,7 +504,7 @@ creations.createModalContent = function(self, config)
 				btnDuplicate.onRelease = function()
 					local m = itemDetailsContent:getModalIfContentIsActive()
 					if m ~= nil then
-						m:push(createNewContent("item", itemFullName, grid))
+						m:push(functions.createNewContent("item", itemFullName, grid))
 					end
 				end
 
@@ -576,133 +571,6 @@ creations.createModalContent = function(self, config)
 		end
 
 		return creationsContent
-	end
-
-	local createPickCategoryContent = function()
-		local pickCategoryContent = modal:createContent()
-		pickCategoryContent.title = "Create"
-		pickCategoryContent.icon = "🏗️"
-
-		local node = ui:createNode()
-
-		local label = ui:createText("What do you want to create?", theme.textColor)
-		label:setParent(node)
-
-		local itemButton = ui:createButton("⚔️ Item", {textSize="big"})
-		itemButton:setParent(node)
-		local wearableButton = ui:createButton("👕 Wearable", {textSize="big"})
-		wearableButton:setParent(node)
-		local worldButton = ui:createButton("🌎 World", {textSize="big"})
-		worldButton:setParent(node)
-
-		local itemShape = ui:createShape(System.ShapeFromBundle("official.one_cube_template"), {spherized = true})
-		itemShape:setParent(node)
-
-		local wearableShape = ui:createShape(System.ShapeFromBundle("official.jacket_template"), {spherized = true})
-		wearableShape:setParent(node)
-
-		local worldShape = ui:createShape(System.ShapeFromBundle("official.world_icon"), {spherized = true})
-		worldShape:setParent(node)
-
-		itemShape.pivot.Rotation = Number3(-0.1,-math.pi * 0.2,-0.2)
-		wearableShape.pivot.Rotation = Number3(-0.1,-math.pi * 0.2,-0.2)
-		worldShape.pivot.Rotation = Number3(-0.1,-math.pi * 0.2,-0.2)
-
-		itemShape.object.dt = 0
-		itemShape.object.Tick = function(o, dt)
-			o.dt = o.dt + dt
-			if itemShape.pivot ~= nil then
-				itemShape.pivot.LocalRotation.Y = o.dt
-			end
-			if wearableShape.pivot ~= nil then
-				wearableShape.pivot.LocalRotation.Y = o.dt
-			end
-			if worldShape.pivot ~= nil then
-				worldShape.pivot.LocalRotation.Y = o.dt
-			end
-		end
-
-		node._w = 300
-		node._h = 300
-		node._width = function(self) return self._w end
-		node._height = function(self) return self._h end
-
-		node._setWidth = function(self, v) self._w = v end
-		node._setHeight = function(self, v) self._h = v end
-
-		pickCategoryContent.node = node
-
-		node.refresh = function(self)
-			if self.Width < self.Height then -- portrait
-				local btnWidth = self.Width
-
-				local remainingHeightForShapes = self.Height - itemButton.Height * 3 - label.Height - theme.padding * 6
-				local shapeHeight = math.min(remainingHeightForShapes / 3, btnWidth)
-
-				self.Height = itemButton.Height * 3 + shapeHeight * 3 + label.Height + theme.padding * 6
-
-				label.pos = {self.Width * 0.5 - label.Width * 0.5, self.Height - label.Height, 0}
-
-				itemButton.Width = btnWidth
-				wearableButton.Width = btnWidth
-				worldButton.Width = btnWidth
-
-				itemShape.Height = shapeHeight
-				itemShape.pos = {0, label.pos.Y - itemShape.Height - theme.padding, 0}
-
-				itemButton.pos = itemShape.pos - {0, itemButton.Height + theme.padding, 0}
-
-				wearableShape.Height = shapeHeight
-				wearableShape.pos = itemButton.pos - {0, wearableShape.Height + theme.padding, 0}
-
-				wearableButton.pos = wearableShape.pos - {0, wearableButton.Height + theme.padding, 0}
-
-				worldShape.Height = shapeHeight
-				worldShape.pos = wearableButton.pos - {0, worldShape.Height + theme.padding, 0}
-
-				worldButton.pos = worldShape.pos - {0, worldButton.Height + theme.padding, 0}
-
-				itemShape.pos.X = self.Width * 0.5 - itemShape.Width * 0.5
-				wearableShape.pos.X = self.Width * 0.5 - wearableShape.Width * 0.5
-				worldShape.pos.X = self.Width * 0.5 - worldShape.Width * 0.5
-
-			else -- landscape
-				local btnWidth = (self.Width - theme.padding * 2) / 3
-
-				self.Height = itemButton.Height + theme.padding + btnWidth + theme.padding + label.Height
-
-				label.pos = {self.Width * 0.5 - label.Width * 0.5, self.Height - label.Height, 0}
-
-				itemButton.Width = btnWidth
-				wearableButton.Width = btnWidth
-				worldButton.Width = btnWidth
-
-				itemButton.pos = {0,0,0}
-				wearableButton.pos = {self.Width * 0.5 - wearableButton.Width * 0.5,0,0}
-				worldButton.pos = {self.Width - worldButton.Width,0,0}
-
-				itemShape.Width = btnWidth
-				-- itemShape.Height = btnWidth
-				itemShape.pos = itemButton.pos + {0, itemButton.Height + theme.padding, 0}
-
-				wearableShape.Width = btnWidth
-				-- wearableShape.Height = btnWidth
-				wearableShape.pos = wearableButton.pos + {0, wearableButton.Height + theme.padding, 0}
-
-				worldShape.Width = btnWidth
-				-- worldShape.Height = btnWidth
-				worldShape.pos = worldButton.pos + {0, worldButton.Height + theme.padding, 0}
-			end
-		end
-
-		pickCategoryContent.idealReducedContentSize = function(content, width, height)
-			content.Width = width
-			content.Height = height
-			content:refresh()
-			return Number2(content.Width, content.Height)
-		end
-
-		return pickCategoryContent
 	end
 
 	return createCreationsContent()

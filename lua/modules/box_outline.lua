@@ -15,7 +15,7 @@ c.LocalPosition = -Player.Head.Pivot - Number3(0.5,0.5,0.5)
 local boxOutlineModule = {}
 local boxOutlineModuleMetatable = {
 	__index = {
-		create = function(self, size, thickness, color)
+		create = function(_, size, thickness, color)
 			local o = Object()
 
 			o.resize = function(o, size, thickness, color)
@@ -50,7 +50,7 @@ local boxOutlineModuleMetatable = {
 						l.Scale[segment.scaleField] = size[segment.scaleField] + thickness
 					end
 				end
-			end			
+			end
 
 			local line = MutableShape()
 			line:AddBlock(color or Color.White,0,0,0)

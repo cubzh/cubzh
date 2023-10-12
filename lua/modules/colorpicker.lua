@@ -1,7 +1,7 @@
 
 local colorPicker = {}
 
-colorPicker.create = function(self, config)
+colorPicker.create = function(_, config)
 
 	local theme = require("uitheme").current
 
@@ -55,8 +55,7 @@ colorPicker.create = function(self, config)
 	cursorModel:AddBlock(Color.Black,2,0,0)
 	cursorModel:AddBlock(Color.Black,2,2,0)
 	local _hsvCursor = Shape(cursorModel)
-	_hsvCursor.CollisionGroups = {}	
-
+	_hsvCursor.CollisionGroups = {}
 	local hueSliderCursor = uikit:createShape(_hueSliderCursor, true)
 	hueSliderCursor:setParent(node)
 	hueSliderCursor.LocalPosition.Z = -550 -- remove this once uikit better manages layers
@@ -101,12 +100,11 @@ colorPicker.create = function(self, config)
 	local bg = uikit:createFrame(Color(50,50,50,200))
 	bg:setParent(node)
 	node.background = bg
-	
 	local closeBtn = uikit:createButton(config.closeBtnIcon)
 	if config.closeBtnColor then closeBtn:setColor(config.closeBtnColor, Color.White) end
 	closeBtn:setParent(node)
 	node.closeBtn = closeBtn
-	closeBtn.onRelease = function(self)
+	closeBtn.onRelease = function(_)
 		if node.onClose ~= nil then
 			node.onClose()
 		else
@@ -118,7 +116,7 @@ colorPicker.create = function(self, config)
 	if config.closeBtnColor then hexCodeBtn:setColor(config.closeBtnColor, Color.White) end
 	-- hexCodeBtn:setParent(node) -- TODO: turn this back on / implement feature
 	hexCodeBtn:hide()
-	hexCodeBtn.onRelease = function(self)
+	hexCodeBtn.onRelease = function(_)
 		-- node:close()
 	end
 
@@ -156,16 +154,14 @@ colorPicker.create = function(self, config)
 	local function pickSV(x,y)
 		local currentColor = node.currentColor
 
-		if x < 0 then 
-			currentColor.S = 0
+		if x < 0 then			currentColor.S = 0
 		elseif x > uiPaletteShape.Width then
 			currentColor.S = 1.0
 		else
 			currentColor.S = x / uiPaletteShape.Width
 		end
 
-		if y < 0 then 
-			currentColor.V = 0
+		if y < 0 then			currentColor.V = 0
 		elseif y > uiPaletteShape.Height then
 			currentColor.V = 1.0
 		else
@@ -182,7 +178,7 @@ colorPicker.create = function(self, config)
 	local hueShape = MutableShape()
 	hueShape.CollisionGroups = {}
 
-	local c = Color(0,0,0)
+	c = Color(0,0,0)
 	local nbHueSteps = 64 -- can't be more than 128
 	for h=0,nbHueSteps-1 do
 		c.H = h * (360.0 / (nbHueSteps-1))
@@ -194,13 +190,10 @@ colorPicker.create = function(self, config)
 	local uiHueShape = uikit:createShape(hueShape, true)
 	uiHueShape:setParent(node)
 
-	local function pickH(x,y)
+	local function pickH(_,y)
 
 		local h
-		if y < 0 then 
-			h = 0 
-		elseif y > uiHueShape.Height then 
-			h = 1.0
+		if y < 0 then			h = 0		elseif y > uiHueShape.Height then			h = 1.0
 		else
 			h = y / uiHueShape.Height
 		end
@@ -230,7 +223,6 @@ colorPicker.create = function(self, config)
 
 	local parseHexaColor = function(input)
 		input = input:gsub("[%[%]()#]", "")
-	    
 	    -- Convert hex color components to numbers
 	    local r = tonumber(input:sub(1, 2), 16)
 	    local g = tonumber(input:sub(3, 4), 16)
@@ -247,7 +239,6 @@ colorPicker.create = function(self, config)
 
 	local parseRGBColor = function(input)
 	    input = input:gsub("[%[%]()#]", "")
-	    
 	    local colors = {}
 	    for color in input:gmatch("([^, ]+)") do
 	        table.insert(colors, tonumber(color))
@@ -257,9 +248,9 @@ colorPicker.create = function(self, config)
 	    if #colors ~= 3 then return false end
 
 	    for i, c in ipairs(colors) do
-	    	local n = tonumber(c)
-	    	if n == nil then return false end
-	    	n = math.floor(n)
+			local n = tonumber(c)
+			if n == nil then return false end
+			n = math.floor(n)
 		    if n == nil or n < 0 or n > 255 then return false end
 		    colors[i] = n
 		end
@@ -286,7 +277,7 @@ colorPicker.create = function(self, config)
 				return
 			end
 
-			local ok, r, g, b = parseHexaColor(colorCode.Text)
+			ok, r, g, b = parseHexaColor(colorCode.Text)
 			if ok then
 				node:setColor(Color(r,g,b))
 				return
@@ -302,7 +293,7 @@ colorPicker.create = function(self, config)
 				return
 			end
 
-			local ok, r, g, b = parseHexaColor(colorCode.Text)
+			ok, r, g, b = parseHexaColor(colorCode.Text)
 			if ok then
 				node:setColor(Color(r,g,b))
 				return
@@ -351,8 +342,8 @@ colorPicker.create = function(self, config)
 	end
 
     node._setColor = function(self,color)
-    	if color == nil then return end
-    	local c = Color(color) -- temporary, to access HSV
+		if color == nil then return end
+		local c = Color(color) -- temporary, to access HSV
 
 		if self.currentColor == nil then self.currentColor = Color(255,255,255,255) end
 
@@ -415,8 +406,7 @@ colorPicker.create = function(self, config)
 		end
 
 		-- width too big, compute using that limit
-		if width > maxWidth then 
-			width = maxWidth
+		if width > maxWidth then			width = maxWidth
 			colorAreaSize = width - columnWidth - padding
 			if config.extraPadding then
 				colorAreaSize = colorAreaSize - padding * 2
@@ -491,11 +481,10 @@ colorPicker.create = function(self, config)
 
 		hueSliderCursor.pos = uiHueShape.pos - {0, hueSliderCursor.Height * 0.5 , 0} + {0, uiHueShape.Height * hue / 360.0, 0}
 
-		local hue = 0.0 -- 0 to 360
+		hue = 0.0 -- 0 to 360
 		local saturation = 0.0 -- 0 to 1
 		local value = 0.0 -- 0 to 1
-		if self.currentColor ~= nil then 
-			hue = self.currentColor.Hue
+		if self.currentColor ~= nil then			hue = self.currentColor.Hue
 			saturation = self.currentColor.Saturation
 			value = self.currentColor.Value
 		end
@@ -503,8 +492,7 @@ colorPicker.create = function(self, config)
 		local vStep = math.floor(value * self.paletteShapeSize) if vStep >= self.paletteShapeSize then vStep = self.paletteShapeSize - 1 end
 		local svStepSize = uiPaletteShape.Width / self.paletteShapeSize
 		hueSliderCursor.pos = uiHueShape.pos - {0, hueSliderCursor.Height * 0.5 , 0} + {0, uiHueShape.Height * hue / 360.0, 0}
-		hsvCursor.pos = uiPaletteShape.pos - {hsvCursor.Width * 0.5, hsvCursor.Height * 0.5 , 0} + 
-		{svStepSize * (sStep + 0.5), svStepSize * (vStep + 0.5), 0}
+		hsvCursor.pos = uiPaletteShape.pos - {hsvCursor.Width * 0.5, hsvCursor.Height * 0.5 , 0} +		{svStepSize * (sStep + 0.5), svStepSize * (vStep + 0.5), 0}
 
 		if config.transparency then
 			bgAlpha.Width = columnWidth
@@ -523,16 +511,13 @@ colorPicker.create = function(self, config)
 
 			bgAlphaColor.Width = bgAlpha.Width - 2 * padding
 			bgAlphaColor.Height = bgAlpha.Height - 2 * padding
-			
 			alpha.Width = bgAlphaColor.Width
-			alpha.Height = bgAlphaColor.Height		
-		end
+			alpha.Height = bgAlphaColor.Height		end
 
 		if self.didRefresh ~= nil then
 			self:didRefresh()
 		end
-	end	
-
+	end
 	node._refreshColor = function(self)
 
 		local refreshHue = false
@@ -600,17 +585,12 @@ colorPicker.create = function(self, config)
 		local hue = 0.0 -- 0 to 360
 		local saturation = 0.0 -- 0 to 1
 		local value = 0.0 -- 0 to 1
-		if self.currentColor ~= nil then 
-			hue = self.currentColor.Hue
+		if self.currentColor ~= nil then			hue = self.currentColor.Hue
 			saturation = self.currentColor.Saturation
 			value = self.currentColor.Value
 		end
-		
-		local sStep = saturation * self.paletteShapeSize if sStep >= self.paletteShapeSize then sStep = self.paletteShapeSize - 1 end
-		local vStep = value * self.paletteShapeSize if vStep >= self.paletteShapeSize then vStep = self.paletteShapeSize - 1 end
 
 		hueSliderCursor.pos = uiHueShape.LocalPosition - {0, hueSliderCursor.Height * 0.5 , 0} + {0, uiHueShape.Height * hue / 360.0, 0}
-		
 		hsvCursor.pos.X = uiPaletteShape.pos.X - hsvCursor.Width * 0.5 + saturation * uiPaletteShape.Width
 		hsvCursor.pos.Y = uiPaletteShape.pos.Y - hsvCursor.Height * 0.5 + value * uiPaletteShape.Height
 	end
@@ -626,7 +606,7 @@ colorPicker.create = function(self, config)
 		self:_refreshColor()
 	end
 
-	node.getColor = function(self)
+	node.getColor = function(_)
 		local c = Color(node.currentColor)
 		c.Alpha = node.currentAlpha
 		return c

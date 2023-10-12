@@ -14,11 +14,11 @@ local modalContentMT = {
 				for _, element in ipairs(self.bottomLeft) do if element.remove then element:remove() end end
 				for _, element in ipairs(self.bottomCenter) do if element.remove then element:remove() end end
 				for _, element in ipairs(self.bottomRight) do if element.remove then element:remove() end end
-				if self.node ~= nil and self.node.remove then 
+				if self.node ~= nil and self.node.remove then
 					self.node:remove()
 					self.node = nil
 				end
-				
+
 				-- go through attr not to trigger __newindex
 				local attr = t._attr
 				if attr ~= nil then
@@ -36,7 +36,7 @@ local modalContentMT = {
 			end
 		elseif k == "modal" then
 			error("modalContent.modal is private")
-			return nil -- modal is not exposed			
+			return nil -- modal is not exposed
 		end
 		return t._attr[k]
 	end,
@@ -46,7 +46,7 @@ local modalContentMT = {
 		if 	k == "topLeft" or k == "topCenter" or
 			k == "bottomLeft" or k == "bottomCenter" or k == "bottomRight" then
 			if type(v) ~= "table" then error("modalContent." .. k .. " can only be a table", 2) end
-			
+
 			local elements = attr[k]
 			local ok, err
 			for _, element in ipairs(elements) do
@@ -54,12 +54,12 @@ local modalContentMT = {
 					element:remove()
 				end)
 				if ok == false then
-					print("⚠️ modal: can't remove " .. k .. " element")
+					print("⚠️ modal: can't remove " .. k .. " element", err)
 				end
 			end
 
 			for _, element in ipairs(v) do
-				element.contentDidResize = function(self)
+				element.contentDidResize = function(_)
 					local modal = t:getModalIfContentIsActive()
 					if modal then
 						modal:refreshContent(true) -- schedule
@@ -86,13 +86,13 @@ local modalContentMT = {
 	end,
 }
 
-modal.createContent = function(self)
+modal.createContent = function(_)
 
 	-- modalContent describes content modals can load
 	-- pushing content into a modal automatically manages
 	-- navigation (back buttons)
 	local modalContent = {
-		-- 
+		--
 		isModalContent = true,
 
 		-- icon can be an emoji (string), automatically centered (padding)
@@ -101,7 +101,7 @@ modal.createContent = function(self)
 
 		-- title can be a string, it's automatically centered
 		-- considered as first topCenter element
-		title = nil, 
+		title = nil,
 
 		-- closeButton is displayed by default, set to false to hide it
 		closeButton = true,
@@ -122,7 +122,7 @@ modal.createContent = function(self)
 		-- called right after modal content did become active
 		didBecomeActive = nil, -- function(content)
 
-		-- called right before modal content resigns active 
+		-- called right before modal content resigns active
 		-- (when popped or when content pushed replacing it)
 		willResignActive = nil, -- function(content)
 
@@ -144,7 +144,7 @@ modal.createContent = function(self)
 			end,
 			pushAndRemoveSelf = function(self, content)
 				local modal = self._attr.modal
-				if modal ~= nil then 
+				if modal ~= nil then
 					if modal.contentStack[#modal.contentStack] == self then
 						if self.willResignActive ~= nil then
 							self:willResignActive()
@@ -170,9 +170,9 @@ modal.createContent = function(self)
 					modal:push(content)
 				end
 			end,
-			pop = function(self, content)
+			pop = function(self, _)
 				local modal = self:getModalIfContentIsActive()
-				if modal ~= nil then 
+				if modal ~= nil then
 					modal:pop()
 				end
 			end,
@@ -207,7 +207,7 @@ end
 ]]--
 
 -- uikit: optional, allows to provide specific instance of uikit
-modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
+modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 	local theme = require("uitheme").current
 
@@ -281,7 +281,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 	-- push new content page
 	node.push = function(self, content, skipRefresh)
 		if content == nil then error("can't push nil content", 2) end
-		
+
 		self:_hideAllDisplayedElements()
 		content._attr.modal = self
 
@@ -309,7 +309,6 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 			local content = self.contentStack[n]
 			table.remove(self.contentStack, n)
 			content:cleanup()
-			content = nil
 			collectgarbage("collect")
 			return
 		end
@@ -323,7 +322,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 
 		table.remove(self.contentStack)
 		content:cleanup()
-		content = nil
+
 		self._content = nil
 		self:refreshContent()
 		collectgarbage("collect")
@@ -365,7 +364,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 		position(self)
 	end
 
-	node._hideAllContentElements = function(self, content)
+	node._hideAllContentElements = function(_, content)
 		for _, element in ipairs(content.topLeft) do element:setParent(nil) end
 		for _, element in ipairs(content.topCenter) do element:setParent(nil) end
 		for _, element in ipairs(content.bottomLeft) do element:setParent(nil) end
@@ -391,7 +390,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 			local fitsEqWidth = true
 			local largerTabWidth = 0
 			local w
-			for i, tab in ipairs(self._tabs) do
+			for _, tab in ipairs(self._tabs) do
 				w = tab.text.Width + theme.padding * 2
 				if w > eqWidth then
 					fitsEqWidth = false
@@ -406,7 +405,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 			end
 
 			local previous = nil
-			for i, tab in ipairs(self._tabs) do
+			for _, tab in ipairs(self._tabs) do
 				if tab.selected then
 					tab.Color = theme.modalTabColorSelected
 				else
@@ -463,7 +462,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 			if self._backButton ~= nil then self._backButton:remove() self._backButton = nil end
 
 			self._topLeft = {}
-			self._topCenter = {} 
+			self._topCenter = {}
 
 			-- tabs are generated by modal, remove them
 			for _, element in ipairs(self._tabs) do element:remove() end
@@ -471,7 +470,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 
 			self._bottomLeft = {}
 			self._bottomCenter = {}
-			self._bottomRight = {} 
+			self._bottomRight = {}
 
 			if stackIndex > 1 then
 				local backBtn = ui:createButton("⬅️")
@@ -500,13 +499,13 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 				end
 
 				icon:setParent(self.topBar)
-				table.insert(self._topLeft, icon) 
+				table.insert(self._topLeft, icon)
 				self._icon = icon
 			end
 
 			for _, element in ipairs(modalContent.topLeft) do
 				element:setParent(self.topBar)
-				table.insert(self._topLeft, element) 
+				table.insert(self._topLeft, element)
 			end
 
 			if modalContent.title ~= nil and type(modalContent.title) == "string" then
@@ -522,9 +521,9 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 			end
 
 			local selectedSet = false
-			for i, element in ipairs(modalContent.tabs) do 
+			for _, element in ipairs(modalContent.tabs) do
 				local tab = ui:createFrame(Color(255,0,0))
-				
+
 				if not selectedSet then
 					if element.selected == true then
 						tab.selected = true
@@ -684,13 +683,13 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 		local backgroundSize = borderSize - Number2(theme.modalBorder * 2, theme.modalBorder * 2)
 		local contentSize = backgroundSize - Number2(theme.padding * 2, (theme.padding * 2) + self.topBar.Height + self.bottomBar.Height)
 
-		if modalContent.idealReducedContentSize ~= nil then 
+		if modalContent.idealReducedContentSize ~= nil then
 			local reducedContentSize = modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height)
 			if reducedContentSize ~= nil and reducedContentSize ~= contentSize then
 
 				if reducedContentSize.X < totalTopWidth then reducedContentSize.X = totalTopWidth end
 				if reducedContentSize.X < totalBottomWidth then reducedContentSize.X = totalBottomWidth end
-				
+
 				local diff = reducedContentSize - contentSize
 				borderSize = borderSize + diff
 				backgroundSize = backgroundSize + diff
@@ -745,7 +744,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 			end
 
 			previous = nil
-			for i, element in ipairs(self._bottomRight) do
+			for _, element in ipairs(self._bottomRight) do
 				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5
 				if previous then
 					element.pos.X = previous.pos.X - element.Width - theme.padding
@@ -781,7 +780,7 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 		end
 
 		previous = nil
-		for i, element in ipairs(self._topCenter) do
+		for _, element in ipairs(self._topCenter) do
 			if self.closeBtn:isVisible() and element.Height < self.closeBtn.Height then
 				element.pos.Y = self.closeBtn.pos.Y + self.closeBtn.Height * 0.5 - element.Height * 0.5
 			else
@@ -861,13 +860,13 @@ modal.create = function(self, content, maxWidth, maxHeight, position, uikit)
 	-- close button
 	node.closeBtn = ui:createButton("❌")
 	node.closeBtn:setParent(topBar)
-	node.closeBtn.onRelease = function(self)
+	node.closeBtn.onRelease = function(_)
 		node:close()
 	end
 
 	node:_hideAllContentElements(content)
-	
-	-- do not refresh right away, as users could still be updating 
+
+	-- do not refresh right away, as users could still be updating
 	-- content right after creating the modal.
 	node:_scheduleRefresh()
 

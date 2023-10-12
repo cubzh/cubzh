@@ -1,7 +1,8 @@
 Config = {
-    Items = {"%item_name%", "cube_white", "cube_selector" },
-    ChatAvailable = false,
+	Items = {"%item_name%", "cube_white", "cube_selector" },
+	ChatAvailable = false,
 }
+if Config.ChatAvailable then return end -- tmp: to silent "unused global variable Config" luacheck warning
 
 Client.OnStart = function()
 
@@ -9,15 +10,13 @@ Client.OnStart = function()
 	gizmo:setLayer(4)
 	gizmo:setScale(0.3)
 
-	controls = require("controls")
-
 	box_outline = require("box_outline")
 	ui = require("uikit")
 	theme = require("uitheme").current
 
 	max_total_nb_shapes = 32
 
-	colliderMinGizmo = gizmo:create({ 
+	colliderMinGizmo = gizmo:create({
 			orientation = gizmo.Orientation.World,
 			moveSnap = 0.5,
 			onMove = function()
@@ -32,7 +31,7 @@ Client.OnStart = function()
 			end,
 	})
 
-	colliderMaxGizmo = gizmo:create({ 
+	colliderMaxGizmo = gizmo:create({
 			orientation = gizmo.Orientation.World,
 			moveSnap = 0.5,
 			onMove = function()
@@ -51,20 +50,6 @@ Client.OnStart = function()
 
 	-- Descendants
 	hierarchyActions = require("hierarchyactions")
-	getSelfAndDescendantsBlocksCount = function(shape)
-		local count = 0
-		hierarchyActions:applyToDescendants(shape, { includeRoot = true }, function(s)
-			count = count + s.BlocksCount
-		end)
-		return count
-	end
-
-	hideAllTools = function()
-		palette:hide()
-		colorPicker:hide()
-		selectControls:hide()
-		mirrorControls:hide()
-	end
 
 	-- Displays the right tools based on state
 	refreshToolsDisplay = function()
@@ -76,7 +61,7 @@ Client.OnStart = function()
 			)
 
 		local showPalette = currentMode == mode.edit and paletteDisplayed and (
-								currentEditSubmode == editSubmode.add 
+								currentEditSubmode == editSubmode.add
 								or currentEditSubmode == editSubmode.remove
 								or currentEditSubmode == editSubmode.paint
 							)
@@ -117,7 +102,7 @@ Client.OnStart = function()
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
 				s.IsHiddenSelf = false
 			end)
-			
+
 			selectGizmo:setObject(nil)
 			changePivotBtn.Text = "Change Pivot"
 			isModeChangePivot = false
@@ -151,10 +136,10 @@ Client.OnStart = function()
 			s.IsHiddenSelf = isHiddenSelf
 		end)
 	end
-	
+
 	undoShapesStack = {}
 	redoShapesStack = {}
-	
+
 	----------------------------
 	-- SETTINGS
 	----------------------------
@@ -170,7 +155,7 @@ Client.OnStart = function()
 		zoomMin = 5, -- unit, minimum zoom distance allowed
 	}
 	settingsMT = {
-		__index = function(t, k)
+		__index = function(_, k)
 			local v = _settings[k]
 			if v == nil then return nil end
 			local ret
@@ -187,54 +172,36 @@ Client.OnStart = function()
 	setmetatable(settings, settingsMT)
 
 	Dev.DisplayBoxes = false
-
-	cameraVelocityDrag = 0.6 -- ratio of carry-over camera velocity per frame
-	cameraDPadSpeed = 6 -- unit/sec
 	cameraDistFactor = 0.05 -- additive factor per distance unit above threshold
 	cameraDistThreshold = 15 -- distance under which scaling is 1
-	zoomSpeed = 7 -- unit/sec
-	zoomSpeedMax = 200
-	dPadMoveSpeed = 5.0 -- unit/sec
-	zoomVelocityDrag = 0.92 -- ratio of carry-over zoom velocity per frame
-	angularSpeed = 0.4 -- rad/sec per screen point
-	angularVelocityDrag = 0.91 -- ratio of carry-over angular velocity per frame
-	dPadAngularFactor = 0.7 -- in free mode (triggered after using dPad), this multiplies angular velocity
-	autosnapDuration = 0.3 -- seconds
 
 	saveTrigger = 60 -- seconds
 
-    mirrorMargin = 1.0 -- the mirror is x block larger than the item
-    mirrorThickness = 1.0/4.0
+	mirrorMargin = 1.0 -- the mirror is x block larger than the item
+	mirrorThickness = 1.0/4.0
 
-    darkTextColor = Color(100, 100, 100)
-    darkTextColorDisabled = Color(100, 100, 100, 20)
-    lightTextColor = Color(255, 255, 255)
-    selectedButtonColor = Color(100, 100, 100)
-    modeButtonColor = Color(50, 149, 201)
-    modeButtonColorSelected = Color(94, 192, 242)
+	----------------------------
+	-- AMBIANCE
+	----------------------------
 
-    ----------------------------
-    -- AMBIANCE
-    ----------------------------
+	local gradientStart = 120
+	local gradientStep = 40
 
-    local gradientStart = 120
-    local gradientStep = 40
-
-    Sky.AbyssColor = Color(gradientStart, gradientStart, gradientStart)
-    Sky.HorizonColor = Color(gradientStart + gradientStep,
-    						gradientStart + gradientStep,
-    						gradientStart + gradientStep)
-    Sky.SkyColor = Color(gradientStart + gradientStep * 2,
-    						gradientStart + gradientStep * 2,
-    						gradientStart + gradientStep * 2)
-    Clouds.On = false
-    Fog.On = false
+	Sky.AbyssColor = Color(gradientStart, gradientStart, gradientStart)
+	Sky.HorizonColor = Color(gradientStart + gradientStep,
+							gradientStart + gradientStep,
+							gradientStart + gradientStep)
+	Sky.SkyColor = Color(gradientStart + gradientStep * 2,
+						gradientStart + gradientStep * 2,
+						gradientStart + gradientStep * 2)
+	Clouds.On = false
+	Fog.On = false
 
 	----------------------------
 	-- CURSOR / CROSSHAIR
 	----------------------------
 
-    Pointer:Show()
+	Pointer:Show()
 	require("crosshair"):hide()
 
 	----------------------------
@@ -245,13 +212,10 @@ Client.OnStart = function()
 
 	cameraModes = { FREE = 1, SATELLITE = 2 }
 	mode = { edit = 1, points = 2, max = 2 }
-	modeName = { "EDIT", "POINTS" }
 
 	editSubmode = { add = 1, remove = 2, paint = 3, pick = 4, mirror = 5, select = 6, max = 6}
-	editSubmodeName = { "add", "remove", "paint", "pick", "mirror", "import", "select" }
 
 	pointsSubmode = { move = 1, rotate = 2, max = 2}
-	pointsSubmodeName = { "Move", "Rotate"}
 
 	focusMode = { othersVisible = 1, othersTransparent = 2, othersHidden = 3, max = 3 }
 	focusModeName = { "Others Visible", "Others Transparent", "Others Hidden" }
@@ -259,28 +223,20 @@ Client.OnStart = function()
 	wearablePreviewMode = { hide = 1, bodyPart = 2, fullBody = 3 }
 	currentWearablePreviewMode = wearablePreviewMode.hide
 
-    currentMode = nil
-    currentEditSubmode = nil
-    currentPointsSubmode = pointsSubmode.move -- points sub mode
-    
-    -- used to go back to previous submode and btn after pick
-    prePickEditSubmode = nil
-    prePickSelectedBtn = nil
+	currentMode = nil
+	currentEditSubmode = nil
+	currentPointsSubmode = pointsSubmode.move -- points sub mode
 
-    paletteDisplayed = true
-    colorPickerDisplayed = false
+	-- used to go back to previous submode and btn after pick
+	prePickEditSubmode = nil
+	prePickSelectedBtn = nil
 
-    -- camera
+	paletteDisplayed = true
+	colorPickerDisplayed = false
 
-	zoomVelocity = 0.0
-	angularVelocity = Number3(0, 0, 0)
-	cameraVelocity = Number3(0, 0, 0)
+	-- camera
+
 	blockHighlightDirty = false
-	autosnapFromTarget = Number3(0, 0, 0)
-	autosnapFromDistance = 0
-	autosnapToTarget = Number3(0, 0, 0)
-	autosnapToDistance = 0
-	autosnapTimer = -1.0
 
 	cameraStates = {
 		item = {
@@ -299,7 +255,7 @@ Client.OnStart = function()
 		}
 	}
 
-	cameraRefresh = function(r)
+	cameraRefresh = function()
 		-- clamp rotation between 90° and -90° on X
 		cameraCurrentState.cameraRotation.X = math.clamp(cameraCurrentState.cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
 
@@ -321,39 +277,35 @@ Client.OnStart = function()
 		cameraCurrentState.cameraRotation = cameraCurrentState.cameraRotation + r
 		cameraRefresh()
 	end
-	
+
 	-- input
 
-	dragging = false -- drag motion active
-    dragging2 = false -- drag2 motion active
-    editBlockedUntilUp = false
+	dragging2 = false -- drag2 motion active
 
-    -- mirror mode
+	-- mirror mode
 
-    mirrorShape = nil
-    mirrorAnchor = nil
-    mirrorAxes = { x = 1, y = 2, z = 3}
-    currentMirrorAxis = nil
+	mirrorShape = nil
+	mirrorAnchor = nil
+	mirrorAxes = { x = 1, y = 2, z = 3}
+	currentMirrorAxis = nil
 
-    -- other variables
+	-- other variables
 
-    item = nil
-    itemPalette = nil -- set if a palette is found when loading assets
-	
+	item = nil
+	itemPalette = nil -- set if a palette is found when loading assets
+
 	gridEnabled = false
-	displayedModeUIElements = {} -- displayed UI elements specific to current mode
 	currentFacemode = false
 	changesSinceLastSave = false
 	autoSaveDT = 0.0
 	halfVoxel = Number3(0.5, 0.5, 0.5)
-	picker = nil
-    poiNameHand = "ModelPoint_Hand_v2"
-    poiNameHat = "ModelPoint_Hat"
-    poiNameBackpack = "ModelPoint_Backpack"
-	
+	poiNameHand = "ModelPoint_Hand_v2"
+	poiNameHat = "ModelPoint_Hat"
+	poiNameBackpack = "ModelPoint_Backpack"
+
 	poiAvatarRightHandPalmDefaultValue = Number3(3.5, 1.5, 2.5)
-	
-    poiActiveName = poiNameHand
+
+	poiActiveName = poiNameHand
 
 	itemCategory = Environment.itemCategory
 	if itemCategory == "" then itemCategory = "generic" end
@@ -364,38 +316,36 @@ Client.OnStart = function()
 	-- OBJECTS & UI ELEMENTS
 	----------------------------
 
-	itemLoaded = false
-
 	local loadConfig = { useLocal = true, mutable = true}
 	Assets:Load(Environment.itemFullname, AssetType.Any, function(assets)
 
 		local shapesNotParented = {}
 
-        for _,v in ipairs(assets) do
-        	if type(v) == "Palette" then
-        		itemPalette = v
-        	else
-        		if v:GetParent() == nil then
-                	table.insert(shapesNotParented, v)
-            	end
-        	end
-        end
-        
-        local finalObject
-        if #shapesNotParented == 1 then
-            finalObject = shapesNotParented[1]
-        elseif #shapesNotParented > 1 then
-            local root = Object()
-            for _,v in ipairs(shapesNotParented) do
-                root:AddChild(v)
-            end
-            finalObject = root
-        end
-        
-        item = finalObject
-        
-        item:SetParent(World)
-        item.History = true -- enable history for the edited item
+		for _,v in ipairs(assets) do
+			if type(v) == "Palette" then
+				itemPalette = v
+			else
+				if v:GetParent() == nil then
+					table.insert(shapesNotParented, v)
+				end
+			end
+		end
+
+		local finalObject
+		if #shapesNotParented == 1 then
+			finalObject = shapesNotParented[1]
+		elseif #shapesNotParented > 1 then
+			local root = Object()
+			for _,v in ipairs(shapesNotParented) do
+				root:AddChild(v)
+			end
+			finalObject = root
+		end
+
+		item = finalObject
+
+		item:SetParent(World)
+		item.History = true -- enable history for the edited item
 		item.Physics = PhysicsMode.Trigger
 
 		if isWearable then
@@ -405,7 +355,7 @@ Client.OnStart = function()
 			if itemCategory == "pants" then
 				item.Scale = 1.05
 			end
-		
+
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
 				s.Physics = PhysicsMode.Trigger
 				s.Pivot = s:GetPoint("origin").Coords
@@ -428,25 +378,24 @@ Client.OnStart = function()
 		end
 
 		-- INIT UI
-    	ui_init()
+		ui_init()
 
-    	post_item_load()
+		post_item_load()
 
-    	Menu:AddDidBecomeActiveCallback(menuDidBecomeActive)
-    	Client.Tick = tick
-    	Pointer.Zoom = zoom
-    	Pointer.Down = down
-    	Pointer.Up = up
-    	Pointer.Click = click
-    	Pointer.LongPress = longPress
-    	Pointer.DragBegin = dragBegin
-    	Pointer.Drag = drag
-    	Pointer.DragEnd = dragEnd
-    	Pointer.Drag2Begin = drag2Begin
-    	Pointer.Drag2 = drag2
-    	Pointer.Drag2End = drag2End
-    	Screen.DidResize = didResize
-    	Screen.DidResize(Screen.Width, Screen.Height)
+		Menu:AddDidBecomeActiveCallback(menuDidBecomeActive)
+		Client.Tick = tick
+		Pointer.Zoom = zoom
+		Pointer.Up = up
+		Pointer.Click = click
+		Pointer.LongPress = longPress
+		Pointer.DragBegin = dragBegin
+		Pointer.Drag = drag
+		Pointer.DragEnd = dragEnd
+		Pointer.Drag2Begin = drag2Begin
+		Pointer.Drag2 = drag2
+		Pointer.Drag2End = drag2End
+		Screen.DidResize = didResize
+		Screen.DidResize(Screen.Width, Screen.Height)
 
 	end, loadConfig)
 
@@ -467,14 +416,14 @@ Client.OnStart = function()
 		child.Position = pos + shift
 		child.Rotation = parents[2].Rotation
 		if not parents[3] then return end
-		local child = child:GetChild(1)
-		local coords = parents[3]:GetPoint("origin").Coords
+		child = child:GetChild(1)
+		coords = parents[3]:GetPoint("origin").Coords
 		if coords == nil then
 			print("can't get parent coords for equipment")
 			return
 		end
-		local pos = parents[3]:BlockToWorld(coords)
-		local shift = Number3(0,0,0)
+		pos = parents[3]:BlockToWorld(coords)
+		shift = Number3(0,0,0)
 		if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
 			shift = Number3(-5,0,0)
 		end
@@ -521,8 +470,8 @@ tick = function(dt)
 	end
 
 	if blockHighlightDirty then
-        refreshBlockHighlight()
-    end
+		refreshBlockHighlight()
+	end
 end
 
 Pointer.Zoom = function() end
@@ -547,7 +496,7 @@ click = function(e)
 		local impact
 		local shape
 		local impactDistance = 1000000000
-		for k,subShape in ipairs(shapes) do
+		for _,subShape in ipairs(shapes) do
 			if subShape.IsHidden == false then
 				local tmpImpact = e:CastRay(subShape)
 				-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
@@ -588,7 +537,7 @@ click = function(e)
 									if tmpImpact and tmpImpact.Distance < impactDistance then
 										impactDistance = tmpImpact.Distance
 										impact = tmpImpact
-									end	
+									end
 								end
 							end
 						end
@@ -634,13 +583,13 @@ click = function(e)
 		if impact ~= nil then
 			checkAutoSave()
 			refreshUndoRedoButtons()
-		end		
+		end
 	end
 
 end
 
 Pointer.Up = function() end
-up = function(e)
+up = function(_)
 	if blockerShape ~= nil then
 		blockerShape:RemoveFromParent()
 		blockerShape = nil
@@ -651,10 +600,9 @@ up = function(e)
 		shape.KeepHistoryTransactionPending = false
 	end
 	continuousEdition = false
-	editBlockedUntilUp = false
 end
 
-Client.OnPlayerJoin = function(p)
+Client.OnPlayerJoin = function(_)
 	Player.Physics = false
 end
 
@@ -685,7 +633,7 @@ longPress = function(e)
 				local addedBlock = addBlockWithImpact(impact, currentFacemode, selectedShape)
 				table.insert(blocksAddedWithDrag, addedBlock)
 				table.insert(undoShapesStack, selectedShape)
-	
+
 			elseif currentEditSubmode == editSubmode.remove then
 
 				blockerShape = MutableShape()
@@ -700,7 +648,7 @@ longPress = function(e)
 
 				removeBlockWithImpact(impact, currentFacemode, selectedShape)
 				table.insert(undoShapesStack, selectedShape)
-	
+
 			elseif currentEditSubmode == editSubmode.paint then
 				replaceBlockWithImpact(impact, currentFacemode, selectedShape)
 				table.insert(undoShapesStack, selectedShape)
@@ -710,10 +658,7 @@ longPress = function(e)
 end
 
 Pointer.DragBegin = function() end
-dragBegin = function()
-	dragging = true
-	editBlockedUntilUp = not continuousEdition
-end
+dragBegin = function() end
 
 Pointer.Drag = function() end
 drag = function(e)
@@ -732,7 +677,7 @@ drag = function(e)
 
 		if currentEditSubmode == editSubmode.add then
 			local canBeAdded = true
-			for k, b in pairs(blocksAddedWithDrag) do
+			for _, b in pairs(blocksAddedWithDrag) do
 				if impact.Block.Coords == b.Coords then
 					-- do not add on top of added blocks
 					canBeAdded = false
@@ -747,7 +692,7 @@ drag = function(e)
 		elseif currentEditSubmode == editSubmode.remove then
 
 			local impactOnBlocker = e:CastRay(blockerShape, mirrorShape)
-				
+
 			if impactOnBlocker.Block ~= nil and impact.Distance > impactOnBlocker.Distance then
 				return
 			end
@@ -764,19 +709,17 @@ end
 
 Pointer.DragEnd = nil
 dragEnd = function()
-	dragging = false
 	blocksAddedWithDrag = {}
 end
 
 Pointer.Drag2Begin = function() end
 drag2Begin = function()
-    if currentMode == mode.edit then
-        dragging2 = true
-		editBlockedUntilUp = true
+	if currentMode == mode.edit then
+		dragging2 = true
 		setFreeCamera()
-        require("crosshair"):show()
+		require("crosshair"):show()
 		refreshDrawMode()
-    end
+	end
 end
 
 Pointer.Drag2 = function() end
@@ -802,7 +745,7 @@ drag2End = function()
 		local impact
 		local shape
 		local impactDistance = 1000000000
-		for k,subShape in ipairs(shapes) do
+		for _,subShape in ipairs(shapes) do
 			local tmpImpact = Camera:CastRay(subShape)
 			if tmpImpact and tmpImpact.Distance < impactDistance then
 				shape = subShape
@@ -811,30 +754,30 @@ drag2End = function()
 			end
 		end
 
-	    if shape ~= nil then impact = Camera:CastRay(shape) end
+		if shape ~= nil then impact = Camera:CastRay(shape) end
 
-        if impact.Block ~= nil then
-        	local target = impact.Block.Position + halfVoxel
-        	cameraCurrentState.cameraMode = cameraModes.SATELLITE
-        	cameraCurrentState.target = target
-        	cameraCurrentState.cameraDistance = (target - Camera.Position).Length
-        	cameraRefresh()
-        else 
-        	cameraCurrentState.cameraMode = cameraModes.FREE
-        	cameraCurrentState.cameraPosition = Camera.Position
-        	-- cameraCurrentState.cameraRotation = Camera.Rotation
-        	cameraRefresh()
-        end
+		if impact.Block ~= nil then
+			local target = impact.Block.Position + halfVoxel
+			cameraCurrentState.cameraMode = cameraModes.SATELLITE
+			cameraCurrentState.target = target
+			cameraCurrentState.cameraDistance = (target - Camera.Position).Length
+			cameraRefresh()
+		else
+			cameraCurrentState.cameraMode = cameraModes.FREE
+			cameraCurrentState.cameraPosition = Camera.Position
+			-- cameraCurrentState.cameraRotation = Camera.Rotation
+			cameraRefresh()
+		end
 
-        dragging2 = false
-        require("crosshair"):hide()
+		dragging2 = false
+		require("crosshair"):hide()
 		refreshDrawMode()
-    end
+	end
 end
 
 Screen.DidResize = function() end
-didResize = function(width, height)
-	-- 
+didResize = function(_, _)
+	--
 	-- Camera.FOV = (width / height) * 60.0
 	if orientationCube ~= nil then
 		local size = paletteBtn.Width * 2 + ui_config.padding
@@ -890,10 +833,10 @@ initClientFunctions = function()
 				Player:RemoveFromParent()
 
 				item:SetParent(World)
-                item.LocalPosition = { 0, 0, 0 }
-                item.LocalRotation = { 0, 0, 0 }
+				item.LocalPosition = { 0, 0, 0 }
+				item.LocalRotation = { 0, 0, 0 }
 
-                Client.DirectionalPad = nil
+				Client.DirectionalPad = nil
 
 			else -- place item points / preview
 				cameraCurrentState = cameraStates.preview
@@ -909,10 +852,10 @@ initClientFunctions = function()
 				Player.LeftFoot.IgnoreAnimations = true
 				Player.RightLeg.IgnoreAnimations = true
 				Player.RightFoot.IgnoreAnimations = true
-				
+
 				Player:SetParent(World)
 				Player.Physics = false
-				
+
 				if poiActiveName == poiNameHand then
 					Player:EquipRightHand(item)
 					cameraCurrentState.target = getEquipmentAttachPointWorldPosition("handheld")
@@ -1039,12 +982,12 @@ initClientFunctions = function()
 			while true do
 				local b = table.remove(queue)
 				if b == nil then break end
-				for i, f in ipairs(neighborFinder) do
+				for _, f in ipairs(neighborFinder) do
 					local neighborCoords = b.Coords + f
 					-- check there is a block
 					local neighborBlock = shape:GetBlock(neighborCoords)
 					-- check it is the same color
-					if neighborBlock ~= nil and shape.Palette[neighborBlock.PaletteIndex].Color == impactBlockColor then 
+					if neighborBlock ~= nil and shape.Palette[neighborBlock.PaletteIndex].Color == impactBlockColor then
 						-- try to add new block on top of neighbor
 						addedBlock = addSingleBlock(neighborBlock, faceTouched, shape)
 						if addedBlock ~= nil then
@@ -1113,7 +1056,6 @@ initClientFunctions = function()
 		-- add a block to the other side of the mirror
 		if addedBlock ~= nil and shape == mirrorAnchor.selectedShape then
 			local mirrorBlockCoords = mirrorAnchor.coords
-			local mirrorBlock = nil
 
 			local posX = currentMirrorAxis == mirrorAxes.x and (mirrorBlockCoords.X - (addedBlock.Coordinates.X - mirrorBlockCoords.X)) or addedBlock.Coordinates.X
 			local posY = currentMirrorAxis == mirrorAxes.y and (mirrorBlockCoords.Y - (addedBlock.Coordinates.Y - mirrorBlockCoords.Y)) or addedBlock.Coordinates.Y
@@ -1137,7 +1079,7 @@ initClientFunctions = function()
 
 		-- always remove the first block
 		local removed = removeSingleBlock(impact.Block, shape)
-		
+
 		-- if facemode is enable, test the neighbor blocks of impact.Block
 		if removed and facemode == true then
 
@@ -1162,7 +1104,7 @@ initClientFunctions = function()
 			while true do
 				local b = table.remove(queue)
 				if b == nil then break end
-				for i, f in ipairs(neighborFinder) do
+				for _, f in ipairs(neighborFinder) do
 					local neighborCoords = b.Coords + f
 					-- check there is a block
 					local neighborBlock = shape:GetBlock(neighborCoords)
@@ -1217,10 +1159,10 @@ initClientFunctions = function()
 		end
 		block:Remove()
 
-        -- last block can't be removed via mirror mode
+		-- last block can't be removed via mirror mode
 		if shape.BlocksCount > 2 and shape == mirrorAnchor.selectedShape then
 			local mirrorBlockCoords = mirrorAnchor.coords
-			local mirrorBlock = nil
+			local mirrorBlock
 
 			local posX = currentMirrorAxis == mirrorAxes.x and (mirrorBlockCoords.X - (block.Coordinates.X - mirrorBlockCoords.X)) or block.Coordinates.X
 			local posY = currentMirrorAxis == mirrorAxes.y and (mirrorBlockCoords.Y - (block.Coordinates.Y - mirrorBlockCoords.Y)) or block.Coordinates.Y
@@ -1269,7 +1211,7 @@ initClientFunctions = function()
 			while true do
 				local b = table.remove(queue)
 				if b == nil then break end
-				for i, f in ipairs(neighborFinder) do
+				for _, f in ipairs(neighborFinder) do
 					local neighborCoords = b.Coords + f
 					-- check there is a block
 					local neighborBlock = shape:GetBlock(neighborCoords)
@@ -1291,7 +1233,7 @@ initClientFunctions = function()
 
 		if shape == mirrorAnchor.selectedShape then
 			local mirrorBlockCoords = mirrorAnchor.coords
-			local mirrorBlock = nil
+			local mirrorBlock
 
 			local posX = currentMirrorAxis == mirrorAxes.x and (mirrorBlockCoords.X - (block.Coordinates.X - mirrorBlockCoords.X)) or block.Coordinates.X
 			local posY = currentMirrorAxis == mirrorAxes.y and (mirrorBlockCoords.Y - (block.Coordinates.Y - mirrorBlockCoords.Y)) or block.Coordinates.Y
@@ -1310,8 +1252,8 @@ initClientFunctions = function()
 			palette:selectOrAddColorIfMissing(color)
 		end
 
-    	if prePickEditSubmode then setMode(nil, prePickEditSubmode) end
-    	if prePickSelectedBtn then editMenuToggleSelect(prePickSelectedBtn) end
+		if prePickEditSubmode then setMode(nil, prePickEditSubmode) end
+		if prePickSelectedBtn then editMenuToggleSelect(prePickSelectedBtn) end
 
 		LocalEvent:Send("selectedColorDidChange")
 	end
@@ -1323,9 +1265,6 @@ initClientFunctions = function()
 		local gizmoShape = (shape ~= nil and shape ~= item) and shape or nil
 		selectGizmo:setObject(gizmoShape)
 
-		if focusShape then
-			local maxLength = math.max(focusShape.Width, math.max(focusShape.Height, focusShape.Depth))
-		end
 		refreshDrawMode()
 
 		selectControlsRefresh()
@@ -1347,7 +1286,7 @@ initClientFunctions = function()
 		local lastRedoableShape = redoShapesStack[#redoShapesStack]
 		if lastRedoableShape.CanRedo then
 			redoBtn:enable()
-		else 
+		else
 			redoBtn:disable()
 		end
 	end
@@ -1403,7 +1342,7 @@ initClientFunctions = function()
 			rotateMirrorBtn:show()
 			removeMirrorBtn:show()
 			mirrorControls.Width = ui_config.padding + (rotateMirrorBtn.Width + ui_config.padding) * 2
-			mirrorControls.LocalPosition = {Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0}	
+			mirrorControls.LocalPosition = {Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0}
 		end
 
 		updateMirror()
@@ -1457,73 +1396,72 @@ initClientFunctions = function()
 	end
 
 	setFreeCamera = function()
-        blockHighlight.IsHidden = true
-        cameraCurrentState.cameraMode = cameraModes.FREE
-        cameraCurrentState.cameraPosition = Camera.Position
-        Camera:SetModeFree()
-        cameraRefresh()
-    end
+		blockHighlight.IsHidden = true
+		cameraCurrentState.cameraMode = cameraModes.FREE
+		cameraCurrentState.cameraPosition = Camera.Position
+		Camera:SetModeFree()
+		cameraRefresh()
+	end
 
 	fitObjectToScreen = function(object, rotation)
-	    -- set camera positioning using FitToScreen
-        local targetPoint = object:BlockToWorld(object.Center)
-        Camera.Position = targetPoint
-        
-        if rotation ~= nil then
-            Camera.Rotation = rotation
-        end
+		-- set camera positioning using FitToScreen
+		local targetPoint = object:BlockToWorld(object.Center)
+		Camera.Position = targetPoint
+
+		if rotation ~= nil then
+			Camera.Rotation = rotation
+		end
 
 		local box = Box()
 		box:Fit(object, true)
-        Camera:FitToScreen(box, 0.8, true) -- sets camera back
+		Camera:FitToScreen(box, 0.8, true) -- sets camera back
 
-        -- maintain camera satellite mode
-        local distance = (Camera.Position - targetPoint).Length
+		-- maintain camera satellite mode
+		local distance = (Camera.Position - targetPoint).Length
 
-        cameraCurrentState.cameraMode = cameraModes.SATELLITE
-        cameraCurrentState.target = targetPoint
-        cameraCurrentState.cameraDistance = distance
-        if rotation ~= nil then
-        	cameraCurrentState.rotation = rotation
-    	end
-        cameraRefresh()
+		cameraCurrentState.cameraMode = cameraModes.SATELLITE
+		cameraCurrentState.target = targetPoint
+		cameraCurrentState.cameraDistance = distance
+		if rotation ~= nil then
+			cameraCurrentState.rotation = rotation
+		end
+		cameraRefresh()
 	end
 
 	getCameraDistanceFactor = function()
-	    return 1 + math.max(0, cameraDistFactor * (cameraCurrentState.cameraDistance - cameraDistThreshold))
+		return 1 + math.max(0, cameraDistFactor * (cameraCurrentState.cameraDistance - cameraDistThreshold))
 	end
 
 	refreshBlockHighlight = function()
 		local shape
 		local impactDistance = 1000000000
-		for k,subShape in ipairs(shapes) do
+		for _,subShape in ipairs(shapes) do
 			local tmpImpact = Camera:CastRay(subShape)
 			if tmpImpact and tmpImpact.Distance < impactDistance then
 				shape = subShape
 				impactDistance = tmpImpact.Distance
-				impact = tmpImpact
 			end
 		end
 
-	    local impact
-	    if shape ~= nil then impact = Camera:CastRay(shape) end
+		local impact
+		if shape ~= nil then impact = Camera:CastRay(shape) end
 
-        if impact.Block ~= nil then
+		if impact.Block ~= nil then
 			local halfVoxelVec = Number3(0.5,0.5,0.5)
 			halfVoxelVec:Rotate(shape.Rotation)
-            blockHighlight.Position = impact.Block.Position + halfVoxelVec
-            blockHighlight.IsHidden = false
+			blockHighlight.Position = impact.Block.Position + halfVoxelVec
+			blockHighlight.IsHidden = false
 			blockHighlight.Rotation = shape.Rotation
-        else
-            blockHighlight.IsHidden = true
-        end
-        blockHighlightDirty = false
+		else
+			blockHighlight.IsHidden = true
+		end
+		blockHighlightDirty = false
 	end
 end
 
 setFacemode = function(newFacemode)
 	if newFacemode ~= currentFacemode then
-		currentFacemode = newFacemode	
+		currentFacemode = newFacemode
 	end
 end
 
@@ -1550,15 +1488,11 @@ end
 function getEquipmentAttachPointWorldPosition(equipmentType)
 
 	-- body parts have a point stored in model space (block coordinates), where item must be attached
-    -- we can use it to find the corresponding item block
+	-- we can use it to find the corresponding item block
 	local worldBodyPoint = Number3(0, 0, 0)
 
 	if equipmentType == "handheld" then
-		worldBodyPoint = Player.RightHand:GetPoint(poiAvatarRightHandPalm).Position
-		if worldBodyPoint == nil then
-			-- default value
-			worldBodyPoint = Player.RightHand:BlockToWorld(poiAvatarRightHandPalmDefaultValue)
-		end
+		worldBodyPoint = Player.RightHand:BlockToWorld(poiAvatarRightHandPalmDefaultValue)
 	elseif equipmentType == "hat" then
 		-- TODO: review this
 		worldBodyPoint = Player.Head:GetPoint(poiNameHat).Position
@@ -1579,12 +1513,12 @@ function getEquipmentAttachPointWorldPosition(equipmentType)
 end
 
 function savePOI()
-    if poiActiveName == nil or poiActiveName == "" then
-        return
-    end
+	if poiActiveName == nil or poiActiveName == "" then
+		return
+	end
 
-    -- body parts have a point stored in model space (block coordinates), where item must be attached
-    -- we can use it to find the corresponding item block
+	-- body parts have a point stored in model space (block coordinates), where item must be attached
+	-- we can use it to find the corresponding item block
 	local worldBodyPoint = Number3(0, 0, 0)
 
 	if poiActiveName == poiNameHand then
@@ -1595,7 +1529,7 @@ function savePOI()
 		worldBodyPoint = getEquipmentAttachPointWorldPosition("backpack")
 	end
 
-    -- item POI is stored in model space (block coordinates)
+	-- item POI is stored in model space (block coordinates)
 	local modelPoint = item:WorldToBlock(worldBodyPoint)
 
 	-- Save new point coords/rotation
@@ -1740,7 +1674,7 @@ function ui_init()
 
 		File:OpenAndReadAll(function(success, fileData)
 			importBlocker = false
-			
+
 			if not success or fileData == nil then return end
 
 			if item ~= nil and item.Parent ~= nil then
@@ -1756,7 +1690,7 @@ function ui_init()
 			if item.BoundingBox.Min ~= item.CollisionBox.Min and item.BoundingBox.Max ~= item.CollisionBox.Max then
 				customCollisionBox = Box(item.CollisionBox.Min, item.CollisionBox.Max)
 			end
-		
+
 			if currentEditSubmode == editSubmode.select then
 				selectFocusShape(item)
 			end
@@ -1782,9 +1716,9 @@ function ui_init()
 		as.Sound = "gun_reload_1"
 		as:SetParent(World)
 		as.Volume = 0.5
-	    as.Pitch = 1
-	    as.Spatialized = false
-	    as:Play()
+		as.Pitch = 1
+		as.Spatialized = false
+		as:Play()
 		Timer(1, function() as:RemoveFromParent() as=nil end)
 
 		local whiteBg = ui:createFrame(Color.White)
@@ -1806,7 +1740,7 @@ function ui_init()
 				placeGizmo:setObject(nil)
 			end
 
-	        local highlightHidden = blockHighlight.IsHidden
+			local highlightHidden = blockHighlight.IsHidden
 			blockHighlight.IsHidden = true
 
 			local paletteIsVisible = palette:isVisible()
@@ -1817,7 +1751,7 @@ function ui_init()
 				Player.IsHidden = true
 				for _,v in ipairs(copies) do
 					v.IsHidden = true
-				end	
+				end
 			end
 
 			local orientationCubeDisplayed = orientationCube and orientationCube:isVisible()
@@ -1832,13 +1766,13 @@ function ui_init()
 				-- restore UI elements after screenshot
 
 				if mirrorDisplayed then mirrorAnchor.IsHidden = false end
-				
+
 				if placeGizmo then placeGizmo:setObject(placeGizmoObject) end
 
 				if paletteIsVisible then
 					palette:show()
 				end
-				
+
 				ui:show()
 
 				if orientationCubeDisplayed then orientationCube:show() end
@@ -1850,7 +1784,7 @@ function ui_init()
 						Player.IsHidden = true
 						for _,v in ipairs(copies) do
 							v.IsHidden = currentWearablePreviewMode == wearablePreviewMode.hide
-						end	
+						end
 					end
 				end
 
@@ -1876,7 +1810,7 @@ function ui_init()
 	end
 
 	modeMenu.parentDidResize = function(self)
-		
+
 		saveBtn.LocalPosition = {padding, padding, 0}
 		saveBtn.label.pos = {saveBtn.Width - saveBtn.label.Width - 1, 1, 0}
 
@@ -1885,13 +1819,13 @@ function ui_init()
 		importBtn.LocalPosition = {padding, screenshotBtn.LocalPosition.Y + screenshotBtn.Height + padding, 0}
 		placeModeBtn.LocalPosition = {padding, importBtn.LocalPosition.Y + importBtn.Height + padding, 0}
 		editModeBtn.LocalPosition = {padding, placeModeBtn.LocalPosition.Y + placeModeBtn.Height, 0}
-		
+
 		w, h = computeContentSize(self)
 		self.Width = w + padding * 2
 		self.Height = h + padding * 2
 		self.LocalPosition = {padding + Screen.SafeArea.Left, Screen.Height - self.Height - padding - Screen.SafeArea.Top, 0}
 
-		if visibilityMenu ~= nil then 
+		if visibilityMenu ~= nil then
 			visibilityMenu:refresh()
 		end
 	end
@@ -1903,13 +1837,13 @@ function ui_init()
 	recenterBtn = createButton("🎯", btnColor, btnColorSelected)
 	recenterBtn.onRelease = function()
 		if currentMode == mode.edit then
-            fitObjectToScreen(item, nil)
-            -- if cameraFree == false then
-                blockHighlightDirty = true
-            -- end
-        else
-            -- setSatelliteCamera(settings.cameraStartPreviewRotation, nil, settings.cameraStartPreviewDistance, false)
-        end
+			fitObjectToScreen(item, nil)
+			-- if cameraFree == false then
+				blockHighlightDirty = true
+			-- end
+		-- else
+			-- setSatelliteCamera(settings.cameraStartPreviewRotation, nil, settings.cameraStartPreviewDistance, false)
+		end
 	end
 
 	recenterBtn.place = function(self)
@@ -1919,14 +1853,14 @@ function ui_init()
 
 	-- EDIT MENU
 
-    editMenu = ui:createFrame(ui_config.groupBackgroundColor)
-    editMenuToggleBtns = {}
-    editMenuToggleSelected = nil
-    function editMenuToggleSelect(target)
-    	for _,btn in ipairs(editMenuToggleBtns) do btn:unselect() end
+	editMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	editMenuToggleBtns = {}
+	editMenuToggleSelected = nil
+	function editMenuToggleSelect(target)
+		for _,btn in ipairs(editMenuToggleBtns) do btn:unselect() end
 		target:select()
 		editMenuToggleSelected = target
-    end
+	end
 
 	addBlockBtn = createButton("➕", btnColor, btnColorSelected)
 	table.insert(editMenuToggleBtns, addBlockBtn)
@@ -2001,7 +1935,7 @@ function ui_init()
 		replaceBlockBtn.LocalPosition = {removeBlockBtn.LocalPosition.X + removeBlockBtn.Width, padding, 0}
 		selectShapeBtn.LocalPosition = {replaceBlockBtn.LocalPosition.X + replaceBlockBtn.Width, padding, 0}
 		mirrorBtn.LocalPosition = {selectShapeBtn.LocalPosition.X + selectShapeBtn.Width + padding, padding, 0}
-		
+
 		pickColorBtn.LocalPosition = {mirrorBtn.LocalPosition.X + mirrorBtn.Width + padding, padding, 0}
 		paletteBtn.LocalPosition = {pickColorBtn.LocalPosition.X + pickColorBtn.Width + padding, padding, 0}
 
@@ -2167,8 +2101,8 @@ function ui_init()
 	mirrorControls = ui:createFrame(ui_config.groupBackgroundColor)
 	mirrorControls:hide()
 
-	mirrorGizmo = gizmo:create({ 
-								orientation = gizmo.Orientation.World, 
+	mirrorGizmo = gizmo:create({
+								orientation = gizmo.Orientation.World,
 								moveSnap = 0.5,
 								onMove = function()
 									local shape = mirrorAnchor.selectedShape
@@ -2208,14 +2142,14 @@ function ui_init()
 		placeMirrorText.LocalPosition = Number3(ui_config.padding, editMenu.Height / 2 - placeMirrorText.Height / 2, 0)
 		rotateMirrorBtn.LocalPosition = Number3(ui_config.padding, ui_config.padding, 0)
 		removeMirrorBtn.LocalPosition = rotateMirrorBtn.LocalPosition + Number3(rotateMirrorBtn.Width + ui_config.padding, 0, 0)
-	
+
 		if placeMirrorText:isVisible() then
 			mirrorControls.Width = placeMirrorText.Width + ui_config.padding * 2
 		else
 			mirrorControls.Width = ui_config.padding + (rotateMirrorBtn.Width + ui_config.padding) * 2
 		end
 		mirrorControls.Height = ui_config.padding * 2 + rotateMirrorBtn.Height
-		mirrorControls.LocalPosition = {Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0}	
+		mirrorControls.LocalPosition = {Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0}
 	end
 	mirrorControls:parentDidResize()
 
@@ -2313,7 +2247,6 @@ function ui_init()
 	changePivotBtn = createButton("Change Pivot", ui_config.btnColor, ui_config.btnColorSelected)
 	changePivotBtn:setParent(selectControls)
 
-	local transformModeBeforePivot = nil
 	local pivotObject = Object()
 
 	changePivotBtn.onRelease = function()
@@ -2337,13 +2270,13 @@ function ui_init()
 			local pivot = focusShape.Pivot
 			changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", pivot.X, pivot.Y, pivot.Z)
 
-			selectGizmo:setOnMove(function(pos)
+			selectGizmo:setOnMove(function(_)
 				local newPivot = focusShape.Pivot + pivotObject.LocalPosition
 				local snap = 0.5
 				newPivot.X = math.floor(newPivot.X / snap) * snap
 				newPivot.Y = math.floor(newPivot.Y / snap) * snap
 				newPivot.Z = math.floor(newPivot.Z / snap) * snap
-				
+
 
 				changePivotBtn.Text = string.format("(%.1f, %.1f, %.1f) ✅", newPivot.X, newPivot.Y, newPivot.Z)
 			end)
@@ -2372,7 +2305,7 @@ function ui_init()
 				focusShape.Pivot = newPivot
 				focusShape.Position = pivotObject.Position
 			end
-			
+
 			hierarchyActions:applyToDescendants(item,  { includeRoot = true }, function(s)
 				s.IsHiddenSelf = false
 			end)
@@ -2586,8 +2519,8 @@ function ui_init()
 		end
 	end
 
-	placeGizmo = gizmo:create({ 
-								orientation = gizmo.Orientation.Local, 
+	placeGizmo = gizmo:create({
+								orientation = gizmo.Orientation.Local,
 								moveSnap = 0.5,
 								onMove = function()
 									savePOI()
@@ -2635,7 +2568,7 @@ function ui_init()
 	resetBtn:setParent(placeSubMenu)
 	resetBtn.onRelease = function()
 		item:AddPoint(poiActiveName)
-		
+
 		if poiActiveName == poiNameHand then
 			Player:EquipRightHand(item)
 		elseif poiActiveName == poiNameHat then
@@ -2739,7 +2672,7 @@ function post_item_load()
 			end
 			table.insert(toggleFocusBtns, btn)
 		end
-		local toggleFocusMode = ui:createToggle(toggleFocusBtns)
+		-- local toggleFocusMode = ui:createToggle(toggleFocusBtns)
 		selectFocusShape(item)
 	end
 
@@ -2753,13 +2686,13 @@ function post_item_load()
 	palette = require("palette"):create(ui, ui_config.btnColor)
 
 	prevColor = nil
-	colorPicker.didPickColor = function(self, color)
+	colorPicker.didPickColor = function(_, color)
 		if prevColor then
 			if prevColor == color then
 				-- selecting same color, nothing to do
 				return
 			end
-			
+
 			-- check if new color is not already use in shape
 			local colorAlreadyUsed = false
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
@@ -2772,7 +2705,7 @@ function post_item_load()
 			end)
 			if colorAlreadyUsed then
 				colorPicker:setColor(prevColor)
-				print("⚠️ You can't replace a color with a color already in the shape.")	
+				print("⚠️ You can't replace a color with a color already in the shape.")
 				return
 			end
 
@@ -2796,7 +2729,7 @@ function post_item_load()
 		colorPickerDisplayed = false
 	end
 
-	palette.didAdd = function(self, color)
+	palette.didAdd = function(_, color)
 		colorPicker:setColor(color)
 		if not colorPickerDisplayed then
 			colorPickerDisplayed = true
@@ -2807,16 +2740,16 @@ function post_item_load()
 		updatePalettePosition()
 	end
 
-	palette.didRefresh = function(self)
+	palette.didRefresh = function(_)
 		updatePalettePosition()
 	end
 
-	palette.didChangeSelection = function(self, color)
+	palette.didChangeSelection = function(_, color)
 		LocalEvent:Send("selectedColorDidChange")
 		colorPicker:setColor(color)
 		prevColor = color
 	end
-	palette.requiresEdit = function(self, _, color)
+	palette.requiresEdit = function(_, _, color)
 		colorPickerDisplayed = not colorPickerDisplayed
 		if colorPickerDisplayed then
 			colorPicker:setColor(color)
@@ -2826,7 +2759,7 @@ function post_item_load()
 	end
 
 	updatePalettePosition = function()
-		palette.LocalPosition = {Screen.Width - palette.Width - ui_config.padding - Screen.SafeArea.Left, editMenu.LocalPosition.Y + editSubMenu.Height + ui_config.padding, 0}	
+		palette.LocalPosition = {Screen.Width - palette.Width - ui_config.padding - Screen.SafeArea.Left, editMenu.LocalPosition.Y + editSubMenu.Height + ui_config.padding, 0}
 		colorPicker.LocalPosition = Number3(palette.LocalPosition.X - colorPicker.Width - ui_config.padding, palette.LocalPosition.Y, 0)
 	end
 
@@ -2842,7 +2775,7 @@ function post_item_load()
 
 	countTotalNbShapes = function()
 		local nbShapes = 0
-		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(_)
 			nbShapes = nbShapes + 1
 		end)
 		return nbShapes
@@ -2859,7 +2792,7 @@ function post_item_load()
 			Player[p].IgnoreAnimations = true
 			Player[p].Physics = PhysicsMode.Trigger
 		end
-		for key,shape in pairs(Player.equipments) do
+		for _,shape in pairs(Player.equipments) do
 			shape.Physics = PhysicsMode.Trigger
 			for _,s in ipairs(shape.attachedParts or {}) do
 				s.Physics = PhysicsMode.Trigger
@@ -2885,7 +2818,7 @@ function post_item_load()
 		local itemPlusAvatarBtn = ui:createButton("👤")
 
 		onlyItemBtn:setParent(visibilityMenu)
-		onlyItemBtn.onRelease = function(btn)
+		onlyItemBtn.onRelease = function(_)
 
 			onlyItemBtn:select()
 			itemPlusBodyPartBtn:unselect()
@@ -2900,7 +2833,7 @@ function post_item_load()
 		end
 
 		itemPlusBodyPartBtn:setParent(visibilityMenu)
-		itemPlusBodyPartBtn.onRelease = function(btn)
+		itemPlusBodyPartBtn.onRelease = function(_)
 
 			onlyItemBtn:unselect()
 			itemPlusBodyPartBtn:select()
@@ -2912,7 +2845,7 @@ function post_item_load()
 			if #copies > 0 then
 				for _,v in ipairs(copies) do
 					v.IsHidden = false
-				end	
+				end
 				return
 			end
 			local parent = __equipments.equipmentParent(Player, itemCategory)
@@ -2936,8 +2869,8 @@ function post_item_load()
 		end
 
 		itemPlusAvatarBtn:setParent(visibilityMenu)
-		itemPlusAvatarBtn.onRelease = function(btn)
-			
+		itemPlusAvatarBtn.onRelease = function(_)
+
 			onlyItemBtn:unselect()
 			itemPlusBodyPartBtn:unselect()
 			itemPlusAvatarBtn:select()
@@ -2958,7 +2891,7 @@ function post_item_load()
 			onlyItemBtn.pos = {padding, padding, 0}
 			itemPlusBodyPartBtn.pos = onlyItemBtn.pos + {0, onlyItemBtn.Height + padding, 0}
 			itemPlusAvatarBtn.pos = itemPlusBodyPartBtn.pos + {0, itemPlusBodyPartBtn.Height + padding, 0}
-			
+
 			w, h = computeContentSize(self)
 			self.Width = w + padding * 2
 			self.Height = h + padding * 2
@@ -2975,7 +2908,7 @@ function post_item_load()
 			parent = parents[1]
 		end
 		Player.Position = -parent:GetPoint("origin").Position
-		
+
 		itemPlusAvatarBtn:onRelease()
 		Timer(0.1, updateWearableSubShapesPosition)
 	end)

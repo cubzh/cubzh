@@ -18,7 +18,7 @@ alert.create = function(self, text, config)
 	if type(text) ~= Type.string then
 		error("alert:create(text): text should be a string", 2)
 	end
-		
+
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
@@ -41,7 +41,7 @@ alert.create = function(self, text, config)
 	local content = modal:createContent()
 	content.closeButton = false
 
-	content.idealReducedContentSize = function(content, width, height)
+	content.idealReducedContentSize = function(content, _, _)
 		content:refresh()
 		return Number2(content.Width,content.Height)
 	end
@@ -75,7 +75,7 @@ alert.create = function(self, text, config)
 	local label = ui:createText(text, Color.White)
 	label:setParent(node)
 
-	-- buttons are displayed in that order: 
+	-- buttons are displayed in that order:
 	-- NEUTRAL, NEGATIVE, POSITIVE
 	-- POSITIVE one is displayed by default but can be hidden setting callback to nil
 
@@ -87,14 +87,14 @@ alert.create = function(self, text, config)
 	local negativeButton = nil
 	local neutralButton = nil
 
-	local computeWidth = function(self)
+	local computeWidth = function(_)
 		local buttonsWidth = 0
 		if okButton then buttonsWidth = okButton.Width end
-		if negativeButton then 
+		if negativeButton then
 			if buttonsWidth > 0 then buttonsWidth = buttonsWidth + theme.padding end
 			buttonsWidth = buttonsWidth + negativeButton.Width
 		end
-		if neutralButton then 
+		if neutralButton then
 			if buttonsWidth > 0 then buttonsWidth = buttonsWidth + theme.padding end
 			buttonsWidth = buttonsWidth + neutralButton.Width
 		end
@@ -110,7 +110,7 @@ alert.create = function(self, text, config)
 		return width
 	end
 
-	local computeHeight = function(self)
+	local computeHeight = function(_)
 		if okButton ~= nil then
 			return label.Height + theme.padding * 2 + okButton.Height + theme.paddingBig
 		elseif negativeButton then
@@ -142,7 +142,7 @@ alert.create = function(self, text, config)
 		end
 
 		local previous
-		for i, button in ipairs(buttons) do
+		for _, button in ipairs(buttons) do
 			if previous then
 				button.LocalPosition.X = previous.LocalPosition.X + previous.Width + theme.padding
 			else
@@ -182,13 +182,13 @@ alert.create = function(self, text, config)
 				okButton = nil
 			end
 		else
-			if okButton then 
+			if okButton then
 				okButton.Text = text
 			else
 				okButton = ui:createButton(text)
 				okButton:setColor(Color(161,217,0), Color(45,57,17), false)
 				okButton:setParent(node)
-				okButton.onRelease = function(self)
+				okButton.onRelease = function(_)
 					positiveCallback()
 					if popup.close then popup:close() end
 				end
@@ -232,13 +232,13 @@ alert.create = function(self, text, config)
 				negativeButton = nil
 			end
 		else
-			if negativeButton then 
+			if negativeButton then
 				negativeButton.Text = text
 			else
 				negativeButton = ui:createButton(text)
 				negativeButton:setColor(Color(227,52,55), Color.White, false)
 				negativeButton:setParent(node)
-				negativeButton.onRelease = function(self)
+				negativeButton.onRelease = function(_)
 					negativeCallback()
 					if popup.close then popup:close() end
 				end
@@ -272,7 +272,7 @@ alert.create = function(self, text, config)
 		if callback ~= nil and type(callback) ~= Type["function"] then
 			error("alert:setNeutralCallback(text, callback): callback should be a function or nil", 2)
 		end
-		
+
 		neutralCallback = callback
 
 		if callback == nil then
@@ -281,12 +281,12 @@ alert.create = function(self, text, config)
 				neutralButton = nil
 			end
 		else
-			if neutralButton then 
+			if neutralButton then
 				neutralButton.Text = text
 			else
 				neutralButton = ui:createButton(text)
 				neutralButton:setParent(node)
-				neutralButton.onRelease = function(self)
+				neutralButton.onRelease = function(_)
 					neutralCallback()
 					if popup.close then popup:close() end
 				end
@@ -303,7 +303,7 @@ alert.create = function(self, text, config)
 
 	popup:setPositiveCallback("OK", function() end)
 
-	popup.bounce = function(self)
+	popup.bounce = function(_)
 		position(popup, true)
 	end
 

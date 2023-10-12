@@ -5,8 +5,7 @@
 --- - An analog pad that's in fact invisible, listening to Pointer.Drag events
 --- Game can also request custom pads and layouts. (like left right directions distributed on 2 buttons on each side of the screen, or a centered directional pad)
 
--- NOTES ON PLACEMENT AND SIZE CONSTRAINTS: 
-
+-- NOTES ON PLACEMENT AND SIZE CONSTRAINTS:
 -- If X position is positive, button's left border placed from left side of the screen.
 -- If X position is negative, button's right border placed from right side of the screen.
 -- If Y position is positive, button's bottom border placed from bottom side of the screen.
@@ -18,8 +17,7 @@
 
 -- NOTES ON POINTER VISIBILITY
 
--- Available functions when Pointer.IsHidden: 
--- 	- Client.DirectionalPad
+-- Available functions when Pointer.IsHidden:-- 	- Client.DirectionalPad
 --	- Client.AnalogPad
 -- 	- Client.Action1 & Action1Release
 -- 	- Client.Action2 & Action2Release
@@ -54,7 +52,7 @@ local POINTER_INDEX_TOUCH_2 = 2
 local POINTER_INDEX_TOUCH_3 = 3
 local POINTER_INDEX_MOUSE_LEFT = 4
 local POINTER_INDEX_MOUSE_RIGHT = 5
-local POINTER_INDEX_MOUSE_WHEEL = 6
+-- local POINTER_INDEX_MOUSE_WHEEL = 6
 local POINTER_INDEX_MOUSE = 7 -- mouse with no specific button
 local POINTER_INDEX_TOUCH = 8 -- any touch
 
@@ -81,11 +79,9 @@ local CLICK_MOVE_SQR_EPSILON = 4
 -- moving more than that distance diffuses long press timer
 local LONG_PRESS_MOVE_SQR_EPSILON = 4
 -- long press visual effect start after LONG_PRESS_DELAY_1 (in seconds)
-local LONG_PRESS_DELAY_1 = 0.2 
--- long press visual effect lasts LONG_PRESS_DELAY_2 (in seconds)
+local LONG_PRESS_DELAY_1 = 0.2-- long press visual effect lasts LONG_PRESS_DELAY_2 (in seconds)
 -- before Pointer.LongPress is actually triggered
-local LONG_PRESS_DELAY_2 = 0.2 
-
+local LONG_PRESS_DELAY_2 = 0.2
 local controls = {}
 local index = {}
 
@@ -130,7 +126,6 @@ local config = {
 local ui = require("uikit")
 local codes = require("inputcodes")
 local ease = require("ease")
-local theme = require("uitheme")
 local menu = require("menu")
 require("chat")
 
@@ -173,8 +168,7 @@ local _state = {
 	previousDistanceBetweenTouches = nil,
 
 	-- shapes nil by default, created on demand
-	dirpad = nil, 
-	action1 = nil,
+	dirpad = nil,	action1 = nil,
 	action2 = nil,
 	action3 = nil,
 
@@ -192,8 +186,7 @@ local _state = {
 	indicators = {}, -- indexed by pointer indexes
 	pcLongPressIndicator = nil,
 	anim = {
-		dirPadRot = Number3(0,0,0),	
-	},
+		dirPadRot = Number3(0,0,0),	},
 
 	longPressTimer = nil,
 	longPressStartPosition = nil,
@@ -323,7 +316,6 @@ local _getOrCreateIndicator = function(index)
 	indicatorShape:GetBlock(1,sizeMinusOne-1,0):Replace(framePaletteIndex)
 	indicatorShape:GetBlock(sizeMinusOne-1,1,0):Replace(framePaletteIndex)
 	indicatorShape:GetBlock(sizeMinusOne-1,sizeMinusOne-1,0):Replace(framePaletteIndex)
-	
 	indicator = ui:createShape(indicatorShape, {doNotFlip = true})
 
 	indicatorShape.Physics = PhysicsMode.Disabled
@@ -338,10 +330,9 @@ local _getOrCreateIndicator = function(index)
 	return indicator
 end
 
-local _getPCLongPressIndicator = function(createIfNeeded)
+local _getPCLongPressIndicator = function(_)
 	local indicator = _state.pcLongPressIndicator
-	if indicator ~= nil then 
-		indicator:show()
+	if indicator ~= nil then		indicator:show()
 		return indicator
 	end
 
@@ -373,7 +364,6 @@ local _getPCLongPressIndicator = function(createIfNeeded)
 	indicatorShape:AddBlock(framePaletteIndex,1,sizeMinusOne-1,0)
 	indicatorShape:AddBlock(framePaletteIndex,sizeMinusOne-1,1,0)
 	indicatorShape:AddBlock(framePaletteIndex,sizeMinusOne-1,sizeMinusOne-1,0)
-	
 	indicator = ui:createShape(indicatorShape, {doNotFlip = true})
 
 	indicatorShape.Physics = PhysicsMode.Disabled
@@ -422,7 +412,7 @@ local _createActionBtn = function(number)
 	local icon = MutableShape()
 	local colorIndex = icon.Palette:AddColor(config.iconOffColor)
 	local offset = 0
-	for i = 1,n do
+	for _ = 1,n do
 		for y = 0, 3 do
 			icon:AddBlock(colorIndex, offset, y, 0)
 		end
@@ -432,11 +422,9 @@ local _createActionBtn = function(number)
 	icon.Pivot = {icon.Width * 0.5, icon.Height * 0.5, icon.Depth * 0.5}
 	btnShape:AddChild(icon)
 	icon.LocalPosition = {btnShape.Width * 0.5, btnShape.Height * 0.5, 0}
-	
 	local btn = ui:createShape(btnShape, {doNotFlip = true})
 
 	btn.icon = icon
-	
 	_state["action" .. n] = btn
 end
 
@@ -514,8 +502,7 @@ local _setTouchDragPointer = function(pointerEvent)
 	local pointerIndex = pointerEvent.Index
 	if _state.touchDragPointer ~= nil then return false end -- there can be only one touchDragPointer
 	if _state.touchZoomAndDrag2Pointers ~= nil then return false end -- no drag pointer if zoomAndDrag2 pointer is set
-	if _pointerIndexWithin(pointerIndex, POINTER_INDEX_TOUCH_1, POINTER_INDEX_TOUCH_2, POINTER_INDEX_TOUCH_3) == false then 
-		return false -- index not valid
+	if _pointerIndexWithin(pointerIndex, POINTER_INDEX_TOUCH_1, POINTER_INDEX_TOUCH_2, POINTER_INDEX_TOUCH_3) == false then		return false -- index not valid
 	end
 	_state.touchDragPointer = {index = pointerIndex, pos = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)}
 	_state.dragStarted = false
@@ -526,8 +513,7 @@ local _setTouchZoomAndDrag2Pointer = function(pointerEvent)
 	local pointerIndex = pointerEvent.Index
 	if _state.touchDragPointer == nil then return end -- touchDragPointer needs to be set
 	if pointerIndex == _state.touchDragPointer.index then return end
-	if _pointerIndexWithin(pointerIndex, POINTER_INDEX_TOUCH_1, POINTER_INDEX_TOUCH_2, POINTER_INDEX_TOUCH_3) == false then 
-		return false -- index not valid
+	if _pointerIndexWithin(pointerIndex, POINTER_INDEX_TOUCH_1, POINTER_INDEX_TOUCH_2, POINTER_INDEX_TOUCH_3) == false then		return false -- index not valid
 	end
 	-- touchDragPointer becomes nil at this point, no need to check anything else.
 	-- touchDragPointer is going to be redefined when releasing one touch.
@@ -538,8 +524,7 @@ local _setTouchZoomAndDrag2Pointer = function(pointerEvent)
 	}
 
 	local dx = _state.touchZoomAndDrag2Pointers[1].pos.X - _state.touchZoomAndDrag2Pointers[2].pos.X
-	local dy = _state.touchZoomAndDrag2Pointers[1].pos.Y - _state.touchZoomAndDrag2Pointers[2].pos.Y 
-
+	local dy = _state.touchZoomAndDrag2Pointers[1].pos.Y - _state.touchZoomAndDrag2Pointers[2].pos.Y
 	_state.previousDistanceBetweenTouches = math.sqrt(dx * dx + dy * dy)
 
 	_state.touchDragPointer = nil
@@ -591,7 +576,6 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 	local minSqrRadius = r ^ 2 + r ^ 2
 
 	if not checkIfWithinRadius or sqrPointerDistance < sqrRadius then
-		local radius = math.sqrt(sqrRadius)
 
 		local dirpadInput = _state.dirpadInput
 		local rot = Number3(0,0,0)
@@ -607,29 +591,21 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 		else
 
 			local a = math.atan(y - center.Y, x - center.X) + math.pi
-			if a <= DIR_PAD_STEP_1 then 
-				dirpadInput.X = -1.0
+			if a <= DIR_PAD_STEP_1 then				dirpadInput.X = -1.0
 				dirpadInput.Y = 0
-			elseif a <= DIR_PAD_STEP_2 then 
-				dirpadInput.X = -1.0
+			elseif a <= DIR_PAD_STEP_2 then				dirpadInput.X = -1.0
 				dirpadInput.Y = -1.0
-			elseif a <= DIR_PAD_STEP_3 then 
-				dirpadInput.X = 0
+			elseif a <= DIR_PAD_STEP_3 then				dirpadInput.X = 0
 				dirpadInput.Y = -1.0
-			elseif a <= DIR_PAD_STEP_4 then 
-				dirpadInput.X = 1.0
+			elseif a <= DIR_PAD_STEP_4 then				dirpadInput.X = 1.0
 				dirpadInput.Y = -1.0
-			elseif a <= DIR_PAD_STEP_5 then 
-				dirpadInput.X = 1.0
+			elseif a <= DIR_PAD_STEP_5 then				dirpadInput.X = 1.0
 				dirpadInput.Y = 0
-			elseif a <= DIR_PAD_STEP_6 then 
-				dirpadInput.X = 1.0
+			elseif a <= DIR_PAD_STEP_6 then				dirpadInput.X = 1.0
 				dirpadInput.Y = 1.0
-			elseif a <= DIR_PAD_STEP_7 then 
-				dirpadInput.X = 0
+			elseif a <= DIR_PAD_STEP_7 then				dirpadInput.X = 0
 				dirpadInput.Y = 1.0
-			elseif a <= DIR_PAD_STEP_8 then 
-				dirpadInput.X = -1.0
+			elseif a <= DIR_PAD_STEP_8 then				dirpadInput.X = -1.0
 				dirpadInput.Y = 1.0
 			else
 				dirpadInput.X = -1.0
@@ -644,7 +620,6 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 		rot:Normalize()
 
 		Client.DirectionalPad(dirpadInput.X, dirpadInput.Y)
-		
 		ease:cancel(_state.anim)
 		ease:outBack(_state.anim, 0.22, {
 			onUpdate = function(o)
@@ -703,8 +678,7 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 	if btn:isVisible() == false then return end
 
 	if eventType == "down" then
-		if _state.inputPointers["action" .. n] ~= nil then 
-			return false -- button already pressed
+		if _state.inputPointers["action" .. n] ~= nil then			return false -- button already pressed
 		end
 
 		if x >= btn.pos.X and x <= btn.pos.X + btn.Width
@@ -732,12 +706,9 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 		end
 
 	elseif eventType == "up" then
-		if _state.inputPointers["action" .. n] ~= pointerEventIndex then 
-			return false
+		if _state.inputPointers["action" .. n] ~= pointerEventIndex then			return false
 		end
-		
 		_state.inputPointers["action" .. n] = nil
-		
 		btn.pivot.Scale = 1.0
 
 		if btn.icon ~= nil then
@@ -774,8 +745,7 @@ function(pointerEvent)
 		if _isPC then
 			if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT then
 				if Pointer.Down ~= nil then Pointer.Down(pointerEvent) end
-				if Pointer.Click ~= nil then 
-					local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
+				if Pointer.Click ~= nil then					local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
 					_state.clickPointerIndex = pointerEvent.Index
 					_state.clickPointerStartPosition = Number2(x,y)
 				end
@@ -805,19 +775,16 @@ function(pointerEvent)
 			end
 		elseif _isMobile then
 			local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
-			
 			local indicator = _getOrCreateIndicator(pointerEvent.Index)
 			indicator.pos = {x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0}
 
 			-- only Action1 is supposed to be displayed when Pointer is shown
 			if _activate(x, y, pointerEvent.Index, "down") == true then
 				return true -- capture event
-			else			
-				if _setTouchDragPointer(pointerEvent) == true then
+			else				if _setTouchDragPointer(pointerEvent) == true then
 					if Pointer.Down ~= nil then Pointer.Down(pointerEvent) end
 
-					if Pointer.Click ~= nil then 
-						_state.clickPointerIndex = pointerEvent.Index
+					if Pointer.Click ~= nil then						_state.clickPointerIndex = pointerEvent.Index
 						_state.clickPointerStartPosition = Number2(x,y)
 					end
 
@@ -845,7 +812,9 @@ function(pointerEvent)
 						end)
 					end
 
-				elseif _setTouchZoomAndDrag2Pointer(pointerEvent) == true then
+				else
+					_setTouchZoomAndDrag2Pointer(pointerEvent)
+				-- elseif _setTouchZoomAndDrag2Pointer(pointerEvent) == true then
 					-- drag2 and/or zoom about to start, but nothing to do here
 				end
 			end
@@ -878,7 +847,6 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag,
 function(pointerEvent)
 	if not _isActive() then return end
 	if not _pointerIsDown(pointerEvent.Index) then return end
-	
 	local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
 
 	if Pointer.IsHidden == false then -- Pointer shown
@@ -909,11 +877,11 @@ function(pointerEvent)
 						_state.dragStarted = true
 						if Pointer.DragBegin ~= nil then
 							Pointer.DragBegin(PointerEvent( x / Screen.Width,
-							 								y / Screen.Height,
-							 								x - pointerEvent.DX, 
-							 								y - pointerEvent.DY,
-							 								true,
-							 								pointerEvent.Index )) 
+															y / Screen.Height,
+															x - pointerEvent.DX,
+															y - pointerEvent.DY,
+															true,
+															pointerEvent.Index ))
 						end
 					end
 
@@ -925,11 +893,11 @@ function(pointerEvent)
 						_state.drag2Started = true
 						if Pointer.Drag2Begin ~= nil then
 							Pointer.Drag2Begin(PointerEvent( x / Screen.Width,
-							 								y / Screen.Height,
-							 								x - pointerEvent.DX, 
-							 								y - pointerEvent.DY,
-							 								true,
-							 								pointerEvent.Index )) 
+															y / Screen.Height,
+															x - pointerEvent.DX,
+															y - pointerEvent.DY,
+															true,
+															pointerEvent.Index ))
 						end
 					end
 					if Pointer.Drag2 ~= nil then Pointer.Drag2(pointerEvent) end
@@ -944,17 +912,16 @@ function(pointerEvent)
 
 			if _activateDirPad(x, y, pointerEvent.Index, "drag") == true then
 				return true
-			elseif _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerEvent.Index then 
-
+			elseif _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerEvent.Index then
 				if _state.dragStarted == false then
 					_state.dragStarted = true
 					if Pointer.DragBegin ~= nil then
 						Pointer.DragBegin(PointerEvent( _state.touchDragPointer.pos.X,
-						 								_state.touchDragPointer.pos.Y,
-						 								x - _state.touchDragPointer.pos.X, 
-						 								y - _state.touchDragPointer.pos.Y,
-						 								true,
-						 								pointerEvent.Index )) 
+														_state.touchDragPointer.pos.Y,
+														x - _state.touchDragPointer.pos.X,
+														y - _state.touchDragPointer.pos.Y,
+														true,
+														pointerEvent.Index ))
 					end
 				end
 
@@ -1015,12 +982,12 @@ function(pointerEvent)
 							local dy = midYAfter - midYBefore
 
 							Pointer.Drag2Begin(PointerEvent( midXAfter / Screen.Width,
-							 								 midYAfter / Screen.Width,
-							 								 dx, 
-							 								 dy,
-							 								 true,
-							 								 POINTER_INDEX_TOUCH )) 
-						end
+															midYAfter / Screen.Width,
+															dx,
+															dy,
+															true,
+															POINTER_INDEX_TOUCH ))
+							end
 					end
 
 					if Pointer.Drag2 ~= nil then
@@ -1087,9 +1054,7 @@ end, { system = System })
 _state.moveListener = LocalEvent:Listen(LocalEvent.Name.PointerMove,
 function(pointerEvent)
 	if not _isActive() then return end
-	if Pointer.IsHidden == false then -- Pointer shown
-
-	else
+	if Pointer.IsHidden then -- Pointer shown
 		local dx = pointerEvent.DX * _state.sensitivity
 		local dy = pointerEvent.DY * _state.sensitivity
 		if Client.AnalogPad ~= nil then
@@ -1136,7 +1101,6 @@ function(pointerEvent)
 					if Pointer.Click ~= nil then Pointer.Click(pointerEvent) end
 					_state.clickPointerIndex = nil
 				end
-				
 				if Pointer.Up ~= nil then
 					Pointer.Up(pointerEvent)
 				end
@@ -1144,8 +1108,7 @@ function(pointerEvent)
 			elseif _activate(x, y, pointerEvent.Index, "up") == true then
 				return true
 			end
-		end 
-
+		end
 	else -- Pointer hidden
 
 		if _isPC then
@@ -1166,20 +1129,19 @@ function(pointerEvent)
 			if _activate(x, y, pointerEvent.Index, "up") == true then
 				return true
 			end
-		end 
-	end
+		end	end
 end, { system = System })
 
 _state.cancelListener = LocalEvent:Listen(LocalEvent.Name.PointerCancel,
 function(pointerIndex)
 	if not _isActive() then return end
-	if not _pointerIsDown(pointerEvent.Index) then return end
+	if not _pointerIsDown(pointerIndex) then return end
+
 	_setPointerUp(pointerIndex, nil) -- Cancel doesn't communicate a pointer event, only a pointer index
 
 	if _isMobile then
 		local indicator = _getOrCreateIndicator(pointerIndex)
 		indicator:_hide()
-	
 		if _activateDirPad(x, y, pointerIndex, "up") == true then
 			return true
 		end
@@ -1211,26 +1173,22 @@ function applyKey(keyCode, down)
 	elseif keyCode == codes.KEY_W or keyCode == codes.UP then
 		if down then
 			if dirpadInput.Y <= 0 then dirpadInput.Y = 1.0 updateDirPad = true end
-		else 
-			if dirpadInput.Y > 0 then dirpadInput.Y = 0 updateDirPad = true end
+		else			if dirpadInput.Y > 0 then dirpadInput.Y = 0 updateDirPad = true end
 		end
 	elseif keyCode == codes.KEY_S or keyCode == codes.DOWN then
 		if down then
 			if dirpadInput.Y >= 0 then dirpadInput.Y = -1.0 updateDirPad = true end
-		else 
-			if dirpadInput.Y < 0 then dirpadInput.Y = 0 updateDirPad = true end
+		else			if dirpadInput.Y < 0 then dirpadInput.Y = 0 updateDirPad = true end
 		end
 	elseif keyCode == codes.KEY_D or keyCode == codes.RIGHT then
 		if down then
 			if dirpadInput.X <= 0 then dirpadInput.X = 1.0 updateDirPad = true end
-		else 
-			if dirpadInput.X > 0 then dirpadInput.X = 0 updateDirPad = true end
+		else			if dirpadInput.X > 0 then dirpadInput.X = 0 updateDirPad = true end
 		end
 	elseif keyCode == codes.KEY_A or keyCode == codes.LEFT then
 		if down then
 			if dirpadInput.X >= 0 then dirpadInput.X = -1.0 updateDirPad = true end
-		else 
-			if dirpadInput.X < 0 then dirpadInput.X = 0 updateDirPad = true end
+		else			if dirpadInput.X < 0 then dirpadInput.X = 0 updateDirPad = true end
 		end
 	end
 
@@ -1241,7 +1199,7 @@ function applyKey(keyCode, down)
 end
 
 _state.keyboardShownListener = LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown,
-function(keyboardHeight)
+function(_)
 	_state.virtualKeyboardShown = true
 	controls:refresh()
 end, { system = System })
@@ -1255,11 +1213,10 @@ end, { system = System })
 
 
 _state.keyboardListener = LocalEvent:Listen(LocalEvent.Name.KeyboardInput,
-function(char, keyCode, modifiers, down)
+function(_, keyCode, _, down)
 	if not _isActive() then return end
 	if down then
-		if _state.keysDown[keyCode] then 
-			return
+		if _state.keysDown[keyCode] then			return
 		else
 			_state.keysDown[keyCode] = true
 		end
@@ -1301,7 +1258,6 @@ index.refresh = function()
 	_state.action1:hide()
 	_state.action2:hide()
 	_state.action3:hide()
-	
 	if _state.on and _state.virtualKeyboardShown == false then
 		if _isMobile and _state.chatInput == nil then
 			if Client.DirectionalPad ~= nil then _state.dirpad:show() end
@@ -1324,8 +1280,7 @@ index.refresh = function()
 		local layout = config.layout[elementName]
 		if layout == nil then goto continue end
 
-		if layout.pos[1] < 0 then 
-			table.insert(right, {element = btn, layout = layout})
+		if layout.pos[1] < 0 then			table.insert(right, {element = btn, layout = layout})
 		else
 			table.insert(left, {element = btn, layout = layout})
 		end
@@ -1346,7 +1301,6 @@ index.refresh = function()
 		entry.element.object.Scale = scale * ui.kShapeScale
 		entry.element.pos.X = Screen.SafeArea.Left + entry.layout.pos[1] * ui.kShapeScale * scale
 		entry.element.pos.Y = Screen.SafeArea.Bottom + entry.layout.pos[2] * ui.kShapeScale * scale
-		
 		if scale == 1.0 then
 			if bottom == nil or bottom > entry.element.pos.Y then bottom = entry.element.pos.Y end
 			if top == nil or top < entry.element.pos.Y + entry.element.Height then top = entry.element.pos.Y + entry.element.Height end
@@ -1431,8 +1385,7 @@ index.setButtonIcon = function(self, buttonName, shapeOrString)
 		icon = Text()
 		icon.Text = shapeOrString
 		icon.Color = self.config.iconOffColor
-		icon.BackgroundColor = Color(0,0,0,0) 
-		icon.IsUnlit = true
+		icon.BackgroundColor = Color(0,0,0,0)		icon.IsUnlit = true
 		icon.Layers = btn.shape.Layers
 		icon.Scale = 5
 		btn.shape:AddChild(icon)
@@ -1443,7 +1396,7 @@ index.setButtonIcon = function(self, buttonName, shapeOrString)
 end
 
 local metatable = {
-	__index = function(t, k)
+	__index = function(_, k)
 		if k == "DirectionalPadValues" then
 			return _state.dirpadInput
 		elseif k == "config" then

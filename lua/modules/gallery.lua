@@ -7,14 +7,12 @@ Generic gallery serving multiple purposes:
 
 local gallery = {}
 
-gallery.createModalContent = function(self, config)
-	
+gallery.createModalContent = function(_, config)
 	local modal = require("modal")
 	local itemGrid = require("item_grid")
 	local itemDetails = require("item_details")
 	local pagesModule = require("pages")
-	
-	-- load config (overriding defaults)
+		-- load config (overriding defaults)
 	local _config = {
 		-- function triggered when opening cell
 		onOpen = nil,
@@ -77,8 +75,7 @@ gallery.createModalContent = function(self, config)
 			content.Height = height
 			return Number2(content.Width, content.Height)
 		end
-		
-		modalObj:push(itemDetailsContent)
+			modalObj:push(itemDetailsContent)
 	end
 
 	return gridContent

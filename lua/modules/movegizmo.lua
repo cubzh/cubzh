@@ -32,7 +32,7 @@ functions.setLayer = function(self, layer)
 	self.handles[moveGizmo.Axis.Z].Layers = layer
 end
 
-functions.up = function(self, pe)
+functions.up = function(self, _)
 	if self.selectedHandle then
 		self.selectedHandle = nil
 		return true
@@ -80,7 +80,7 @@ functions.drag = function(self, pe)
 
 	functions.updateHandles(self)
 
-	return true	
+	return true
 end
 
 functions.down = function(self, pe)
@@ -123,7 +123,7 @@ functions.setObject = function(self, object)
 		self.gizmoObject:RemoveFromParent()
 		return
 	end
-	
+
 	if not self.hidden then self.gizmoObject:SetParent(World) end
 	self:updateHandles()
 end
@@ -142,8 +142,6 @@ functions.updateHandles = function(self)
 		self.gizmoObject.Rotation = {0,0,0}
 	end
 
-	local checktype = type(self.object)
-
 	if self.orientation == moveGizmo.Orientation.World and self.object.Center ~= nil then
 		self.gizmoObject.Position = self.object:BlockToWorld(self.object.Center)
 	else
@@ -157,7 +155,7 @@ functions.updateHandles = function(self)
 	self.handles[moveGizmo.Axis.Y].Forward = self.gizmoObject.Up
 	self.handles[moveGizmo.Axis.Z].Forward = self.gizmoObject.Forward
 
-	for axis, handle in ipairs(self.handles) do
+	for _, handle in ipairs(self.handles) do
 		local v = self.gizmoObject.Position - Camera.Position
 		v:Normalize()
 		local crossProduct = handle.Forward:Dot(v) - 0.001 -- Avoid glitch when attaching object to Camera
@@ -208,17 +206,17 @@ local camera = Camera()
 camera:SetParent(Camera)
 camera.On = true
 
-moveGizmo.setLayer = function(self, l)
+moveGizmo.setLayer = function(_, l)
 	layer = l
 	camera.Layers = l
 end
 moveGizmo.setLayer(2) -- TODO: we need a way to ask for unused layer
 
-moveGizmo.setScale = function(self, s)
+moveGizmo.setScale = function(_, s)
 	scale = s
 end
 
-moveGizmo.create = function(self, config)
+moveGizmo.create = function(_, config)
 
 	local _config = { -- default config
 		orientation = moveGizmo.Orientation.World,
@@ -267,10 +265,10 @@ moveGizmo.create = function(self, config)
 
 		handle.Layers = layer
 		handle:SetParent(moveGizmo.gizmoObject)
-		
+
 		handle.axis = axis
 
-		handle.setVisible = function(self, visible)
+		handle.setVisible = function(_, visible)
 			if visible then
 				handle:SetParent(moveGizmo.gizmoObject)
 			else
@@ -295,7 +293,7 @@ moveGizmo.create = function(self, config)
 	end, { topPriority = true })
 	table.insert(moveGizmo.listeners, l)
 
-	l = LocalEvent:Listen(LocalEvent.Name.Tick, function(pe)
+	l = LocalEvent:Listen(LocalEvent.Name.Tick, function(_)
 		moveGizmo:updateHandles()
 	end)
 	table.insert(moveGizmo.listeners, l)
