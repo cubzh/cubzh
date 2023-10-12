@@ -13,10 +13,13 @@ local OBJECT_DEFAULT_COLLISION_GROUP = 3
 
 local hierarchyactions = require("hierarchyactions")
 
+-- Returns Block Player is standing on
 local blockUnderneath = function(player)
     local ray = Ray(player.Position + Number3(0,0,0), Number3.Down)
     local impact = ray:Cast(nil, Player)
-    return impact and impact.Distance <= 0.5 and impact.Block
+    if impact and impact.Distance <= 0.5 and impact.Block then
+    	return impact.Block
+    end
 end
 
 local CastRay =  function(player, filterIn)
@@ -40,7 +43,30 @@ local CastRay =  function(player, filterIn)
     return impact
 end
 
-local EquipBackpack = function(player, shape)
+local EquipBackpack = function(player, shapeOrItem)
+	if type(player) ~= "Player" then
+        error("Player:EquipBackpack should be called with `:`", 2)
+    end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipBackpack(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipBackpack(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__backpackItem == shape then 
+    	-- equipment already installed
+    	return
+    end
+
     -- always unequip the item currently equipped
     if player.__backpackItem ~= nil and player.__backpackItem:GetParent() == player.Body then
         player.__backpackItem:RemoveFromParent()
@@ -98,10 +124,30 @@ local EquipBackpack = function(player, shape)
     shape.LocalPosition = poiPos + bodyPoint
 end
 
-local EquipHat = function(player, shape)
-    if player == nil or type(player) ~= "Player" then
+local EquipHat = function(player, shapeOrItem)
+    if type(player) ~= "Player" then
         error("Player:EquipHat should be called with `:`", 2)
     end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipHat(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipHat(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__hatItem == shape then 
+    	-- equipment already installed
+    	return 
+    end
+
     -- always unequip the item currently equipped
     if player.__hatItem ~= nil and player.__hatItem:GetParent() == player.Head then
         player.__hatItem:RemoveFromParent()
@@ -159,10 +205,30 @@ local EquipHat = function(player, shape)
     shape.LocalPosition = poiPos + headPoint
 end
 
-local EquipLeftHand = function(player, shape)
-    if player == nil or type(player) ~= "Player" then
+local EquipLeftHand = function(player, shapeOrItem)
+    if type(player) ~= "Player" then
         error("Player:EquipLeftHand should be called with `:`", 2)
     end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipLeftHand(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipLeftHand(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__leftHandItem == shape then 
+    	-- equipment already installed
+    	return 
+    end
+
     -- always unequip the item currently equipped
     if player.__leftHandItem ~= nil and player.__leftHandItem:GetParent() == player.LeftHand then
         player.__leftHandItem:RemoveFromParent()
@@ -235,10 +301,30 @@ local EquipLeftHand = function(player, shape)
     end
 end
 
-local EquipRightHand = function(player, shape)
-    if player == nil or type(player) ~= "Player" then
+local EquipRightHand = function(player, shapeOrItem)
+    if type(player) ~= "Player" then
         error("Player:EquipRightHand should be called with `:`", 2)
     end
+
+    local shape = nil
+    if shapeOrItem ~= nil then
+	    if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+	    	shape = shapeOrItem
+	    elseif type(shapeOrItem) == "Item" then
+	    	shape = Shape(shapeOrItem)
+	    	if not shape then
+	    		error("Player:EquipRightHand(equipment) - equipment can't be loaded", 2)
+	    	end
+	    else
+	    	error("Player:EquipRightHand(equipment) - equipment parameter should be a Shape or Item", 2)
+	    end
+	end
+
+    if player.__rightHandItem == shape then 
+    	-- equipment already installed
+    	return 
+    end
+
     if player.__rightHandItem ~= nil and player.__rightHandItem:GetParent() == player.RightHand then
         player.__rightHandItem:RemoveFromParent()
         -- restore its physics attributes
@@ -323,21 +409,11 @@ end
 
 local SwingRight = function(player)
     if not player.Animations.SwingRight then return end
-    player.Animations.Walk:Toggle("RightHand", false)
-    player.Animations.Walk:Toggle("RightArm", false)
-    player.Animations.Idle:Toggle("RightHand", false)
-    player.Animations.Idle:Toggle("RightArm", false)
-    player.Animations.stanceDirty = true
     player.Animations.SwingRight:Play()
 end
 
 local SwingLeft = function(player)
     if not player.Animations.SwingLeft then return end
-    player.Animations.Walk:Toggle("LeftHand", false)
-    player.Animations.Walk:Toggle("LeftArm", false)
-    player.Animations.Idle:Toggle("LeftHand", false)
-    player.Animations.Idle:Toggle("LeftArm", false)
-    player.Animations.stanceDirty = true
     player.Animations.SwingLeft:Play()
 end
 
@@ -375,7 +451,8 @@ local playerCall = function(self, playerID, username, userID, isLocal)
 
 		if k == "ID" or k == "Avatar" or k == "Username" or k == "UserID" or k == "IsLocal"
 			or k == "BoundingBox" or k == "Shadow" or k == "Layers" or k == "EquipBackpack" or k == "EquipHat"
-			or k == "EquipLeftHand" or k == "EquipRightHand" or k == "SwapHands" or k == "SwingLeft" or k == "SwingRight" then
+			or k == "EquipLeftHand" or k == "EquipRightHand" or k == "SwapHands" or k == "SwingLeft" or k == "SwingRight" or
+			k == "CastRay" then
 			return mt[k]
 		end
 

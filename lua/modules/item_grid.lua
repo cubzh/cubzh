@@ -1,5 +1,5 @@
 --[[
-	known categories: "null", hair","jacket", "pants", "boots"
+	known categories: "null", "hair", "jacket", "pants", "boots"
 ]]--
 
 local itemGrid = {}
@@ -24,7 +24,7 @@ itemGrid.create = function(self, config)
 		-- shows advanced filters button when true
 		advancedFilters = false,
 		-- used to filter categories when not nil
-		categories = nil, -- {"null", hair","jacket", "pants", "boots"},
+		categories = nil, -- {"null", "hair" ,"jacket", "pants", "boots"},
 		-- grid gets items by default, unless this is set to "worlds"
 		type = "items", 
 		-- filter on particular repo
@@ -214,8 +214,6 @@ itemGrid.create = function(self, config)
 		local idleColor = theme.gridCellColor
 		local cell = ui:createFrame(idleColor)
 		cell:setParent(grid)
-		cell.Width = size
-		cell.Height = size
 
 		cell.onPress = function()
 			-- don't update the color if there's a thumbnail
@@ -256,13 +254,16 @@ itemGrid.create = function(self, config)
         	if n > 0 then
 				nbLikes.Text = "❤️ " .. math.floor(n)
 				nbLikes:show()
+				likesAndViewsFrame:show()
 				self:layoutLikes()
 			else
 				nbLikes:hide()
+				likesAndViewsFrame:hide()
 			end
        	end
 
        	cell.hideLikes = function(self)
+       		likesAndViewsFrame:hide()
        		nbLikes:hide()
        	end
 
@@ -272,15 +273,9 @@ itemGrid.create = function(self, config)
 
 		local tName = ui:createText("", Color.White, "small")
 		tName:setParent(textFrame)
-		tName.updateParentHeight = function(self)
-			self.parent.Height = self.Height + theme.padding * 2
-		end
 
-		tName.LocalPosition = Number3(theme.padding, theme.padding, 0)
-		textFrame.Width = cell.Width
-		tName:updateParentHeight()
+		tName.pos = {theme.padding, theme.padding}
 
-		tName.LocalPosition = Number3(theme.padding, theme.padding, 0)
 		cell.tName = tName
 
 		local loadingCube -- = ui:createFrame(Color.White)
@@ -299,6 +294,20 @@ itemGrid.create = function(self, config)
 		cell.getLoadingCube = function(self)
 			return loadingCube
 		end
+
+		cell.layoutContent = function(self)
+			textFrame.Width = cell.Width
+			textFrame.Height = tName.Height + theme.padding * 2
+			self:layoutLikes()
+		end
+
+		cell.setSize = function(self, size)
+       		self.Width = size
+			self.Height = size
+			self:layoutContent()
+       	end
+
+       	cell:setSize(size)
 
 		return cell
 	end
@@ -358,6 +367,7 @@ itemGrid.create = function(self, config)
 			cell:getOrCreateLoadingCube():show()
 
 			cell:setNbLikes(cell.likes)
+			cell:setSize(grid.cellSize)
 
 			local req = Object:Load(itemName, function(obj)
 				if removed then return end
@@ -397,7 +407,7 @@ itemGrid.create = function(self, config)
 					cell.tName.object.MaxWidth = (grid.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
 					local betterName = transform_string(cell.name)
 					cell.tName.Text = betterName
-					cell.tName:updateParentHeight()
+					cell:layoutContent()
 				end
 
 				-- setting Width sets Height & Depth as well when spherized
@@ -439,10 +449,11 @@ itemGrid.create = function(self, config)
 			if cell.tName then
 				cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
 				cell.tName.Text = cell.title
-				cell.tName:updateParentHeight()
 			end
 
 			cell:setNbLikes(cell.likes)
+			cell:layoutContent()
+
 			cell.loaded = true
 		end
 	end

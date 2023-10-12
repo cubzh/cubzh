@@ -47,7 +47,7 @@ typedef struct _RigidBody RigidBody;
 #define TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE 1
 
 #if DEBUG
-#define DEBUG_TRANSFORM true
+#define DEBUG_TRANSFORM false
 #else
 #define DEBUG_TRANSFORM false
 #endif
@@ -243,6 +243,7 @@ void transform_assign_get_or_compute_world_collider_function(
 int debug_transform_get_refresh_calls(void);
 void debug_transform_reset_refresh_calls(void);
 #endif
+void transform_setDebugEnabled(Transform *const t, const bool enabled);
 
 #ifdef __cplusplus
 } // extern "C"

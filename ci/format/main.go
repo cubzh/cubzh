@@ -72,14 +72,16 @@ func checkFormat(doFormat bool) error {
 	// run the clang command on every file
 	ciContainer = ciContainer.WithExec([]string{"ash", "-c", command})
 
-	// get the exit code
-	code, err := ciContainer.ExitCode(ctx)
+	// To know wether the execution succeeded, we need to force the evaluation
+	// of the pipeline after an using Sync, and then
+	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {
-		fmt.Println("error getting the exitcode")
+		var e *dagger.ExecError
+		if errors.As(err, &e) {
+			return errors.New("incorrect format")
+		}
+		fmt.Println("error syncing the pipeline after exec")
 		return err
-	}
-	if code != 0 && !doFormat {
-		return errors.New("incorrect format")
 	}
 
 	if doFormat {

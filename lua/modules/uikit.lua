@@ -1623,7 +1623,10 @@ function createUI(system)
 			self.keyboardListener = LocalEvent:Listen(
 													LocalEvent.Name.KeyboardInput,
 													function(char, keycode, modifiers, down)
-														if down == false then return end
+														if down == false then 
+															return true -- catch the event
+														end 
+
 														-- print("char:", char, "key:", keycode, "mod:", modifiers)
 														-- we need an enum for key codes (value could change)
 

@@ -11,7 +11,7 @@ listeners = {}
 
 -- indexed by event name,
 -- each entry contains listeners in insertion order
-systemListeners = {}
+topPrioritySystemListeners = {}
 
 localevent = {}
 
@@ -173,12 +173,13 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 					end)
 
 					if err then
-						-- remove listener + display error
-						if listenersArray ~= systemListeners then
+						if listener.system == true then
+							-- only display error if system listener, do not remove
+							print("❌", err)
+						else
+							-- remove listener + display error
 							table.insert(listenersToRemove, listener)
 							print("❌", err, "(function disabled)")
-						else
-							print("❌", err)
 						end
 						goto continue -- continue for loop
 					end
@@ -212,7 +213,7 @@ localevent.Send = function(self, name, ...)
 	local captured = false
 
 	-- dispatch event to SYSTEM listeners
-	captured = sendEventToListeners(self, systemListeners, name, table.unpack(args))
+	captured = sendEventToListeners(self, topPrioritySystemListeners, name, table.unpack(args))
 	if captured == true then
 		return captured
 	end
@@ -255,13 +256,13 @@ listenerMT.__index.remove = listenerMT.__index.Remove
 listenerMT.__index.pause = listenerMT.__index.Pause
 listenerMT.__index.resume = listenerMT.__index.Resume
 
--- metatable for System listeners
-local systemListenerMT = {
+-- metatable for top priority System listeners
+local topPrioritySystemListenerMT = {
 	__tostring = function(t) return "[LocalEventSystemListener]" end,
 	__type = "LocalEventSystemListener",
 	__index = {
 		Remove = function(self)
-			local matchingListeners = systemListeners[self.name]
+			local matchingListeners = topPrioritySystemListeners[self.name]
 			if matchingListeners ~= nil then
 				for i, listener in ipairs(matchingListeners) do 
 					if listener == self then	
@@ -279,9 +280,9 @@ local systemListenerMT = {
 		end,
 	},
 }
-systemListenerMT.__index.remove = systemListenerMT.__index.Remove
-systemListenerMT.__index.pause = systemListenerMT.__index.Pause
-systemListenerMT.__index.resume = systemListenerMT.__index.Resume
+topPrioritySystemListenerMT.__index.remove = topPrioritySystemListenerMT.__index.Remove
+topPrioritySystemListenerMT.__index.pause = topPrioritySystemListenerMT.__index.Pause
+topPrioritySystemListenerMT.__index.resume = topPrioritySystemListenerMT.__index.Resume
 
 -- config is optional
 -- config.topPriority can be used to insert listener in front of others
@@ -292,20 +293,18 @@ localevent.Listen = function(self, name, callback, config)
 	if self ~= localevent then error("LocalEvent:Listen should be called with `:`", 2) end
 	if type(callback) ~= "function" then error("LocalEvent:Listen - callback should be a function", 2) end
 
-	local listener = {name = name, callback = callback}
+	local listener = {name = name, callback = callback, system = config.system == System }
 
-	if config.system == System then
-		setmetatable(listener, systemListenerMT)
+	-- top priority System listeners
+	if listener.system == true and config.topPriority == true then
+		setmetatable(listener, topPrioritySystemListenerMT)
 
-		if systemListeners[name] == nil then
-			systemListeners[name] = {}
+		if topPrioritySystemListeners[name] == nil then
+			topPrioritySystemListeners[name] = {}
 		end
 
-		if config.topPriority == true then
-			table.insert(systemListeners[name], 1, listener)
-		else
-			table.insert(systemListeners[name], listener)
-		end
+		-- always insert top priority system listeners in front
+		table.insert(topPrioritySystemListeners[name], 1, listener)
 	else	
 		setmetatable(listener, listenerMT)
 

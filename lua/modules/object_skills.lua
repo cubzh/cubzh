@@ -10,6 +10,7 @@ STEP_CLIMBING_DEFAULT_CONFIG = {
 }
 
 STEP_CLIMBING_BASE_OFFSET = Number3(0,0.1,0)
+STEP_CLIMBING_BOX_HALF_BASE = Number3(0.5, 0, 0.5)
 
 skills.addStepClimbing = function(object, config)
 
@@ -32,6 +33,7 @@ skills.addStepClimbing = function(object, config)
 
 	config.radius = (max - min).Length * 0.5
 	config.stepDistance = config.radius + config.mapScale * 0.5 -- object collider radius + half map block
+	config.maxDistance = config.stepDistance * 3 -- for ray cast
 	config.stepAndAHalf = Number3(0,config.mapScale * 1.5,0)
 
 	stepClimbers[object] = config or STEP_CLIMBING_DEFAULT_CONFIG
@@ -48,10 +50,17 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 	local d
 	local impact
 	local dist
+	local box = Box({0,0,0}, {1,1,1})
+
 	for stepClimber, config in pairs(stepClimbers) do
-		d = stepClimber.Motion:Copy()
+		d = stepClimber.Motion + stepClimber.Velocity
 		d.Y = 0
-		impact = Ray(stepClimber.Position + STEP_CLIMBING_BASE_OFFSET, d):Cast(config.collisionGroups)
+
+		box.Min = stepClimber.Position - STEP_CLIMBING_BOX_HALF_BASE + STEP_CLIMBING_BASE_OFFSET
+		box.Max = stepClimber.Position + STEP_CLIMBING_BOX_HALF_BASE - STEP_CLIMBING_BASE_OFFSET + config.stepAndAHalf
+
+		impact = box:Cast(d, config.maxDistance, config.collisionGroups)
+
 		dist = config.stepDistance
 		if impact and impact.Distance < dist then
 			impact = Ray(stepClimber.Position + config.stepAndAHalf, d):Cast(config.collisionGroups)

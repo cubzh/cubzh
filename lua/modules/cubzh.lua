@@ -238,6 +238,11 @@ Client.Tick = function(dt)
 	end
 end
 
+Pointer.Click = function()
+	
+	Player:SwingRight()
+end
+
 -- //////////////////////////////////////////////////
 -- ///
 -- /// ACCOUNT MENU
