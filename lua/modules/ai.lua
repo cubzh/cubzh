@@ -20,7 +20,9 @@ ai.CreateChat = function(_, context)
     local aiChat = {}
     aiChat.messages = {}
     if context then
+		-- stylua: ignore start
 		context = string.gsub(context, '"', '\"')
+		-- stylua: ignore end
         table.insert(aiChat.messages, {
             role = "system",
             content = context
@@ -98,7 +100,9 @@ functions.chatSay = function(self, prompt, callback)
     if not prompt or #prompt <= 0 then
         return callback("Error: prompt is not valid")
     end
-    prompt = string.gsub(prompt, '"', '\"') -- avoid issue with JSON
+	-- stylua: ignore start
+	prompt = string.gsub(prompt, '"', '\"') -- avoid issue with JSON
+	-- stylua: ignore end
 
     table.insert(self.messages, {
         role = "user",
