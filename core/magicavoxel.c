@@ -817,10 +817,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_size((SHAPE_SIZE_INT_T)sizeX,
-                                (SHAPE_SIZE_INT_T)sizeY,
-                                (SHAPE_SIZE_INT_T)sizeZ,
-                                isMutable);
+    *out = shape_make_2(isMutable);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);
@@ -875,14 +872,12 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
             colorIdx = 0;
         }
 
-        shape_add_block_with_color(*out,
-                                   colorIdx,
-                                   (SHAPE_COORDS_INT_T)x,
-                                   (SHAPE_COORDS_INT_T)y,
-                                   (SHAPE_COORDS_INT_T)z,
-                                   false,
-                                   false,
-                                   false);
+        shape_add_block(*out,
+                        colorIdx,
+                        (SHAPE_COORDS_INT_T)x,
+                        (SHAPE_COORDS_INT_T)y,
+                        (SHAPE_COORDS_INT_T)z,
+                        false);
     }
     color_palette_clear_lighting_dirty(palette);
 

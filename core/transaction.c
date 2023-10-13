@@ -23,16 +23,7 @@ struct _Transaction {
     // transactions are voluntarily kept pending
     Index3DIterator *iterator;
 
-    // new shape bounds
-    SHAPE_COORDS_INT_T newMinX; // 2 bytes
-    SHAPE_COORDS_INT_T newMaxX; // 2 bytes
-    SHAPE_COORDS_INT_T newMinY; // 2 bytes
-    SHAPE_COORDS_INT_T newMaxY; // 2 bytes
-    SHAPE_COORDS_INT_T newMinZ; // 2 bytes
-    SHAPE_COORDS_INT_T newMaxZ; // 2 bytes
-    bool mustConsiderNewBounds; // 1 byte
-
-    char pad[3];
+    // no padding
 };
 
 ///
@@ -50,17 +41,6 @@ Transaction *transaction_new(void) {
 
     tr->index3D = index3D;
     tr->iterator = NULL;
-
-    tr->newMinX = 0;
-    tr->newMaxX = 0;
-
-    tr->newMinY = 0;
-    tr->newMaxY = 0;
-
-    tr->newMinZ = 0;
-    tr->newMaxZ = 0;
-
-    tr->mustConsiderNewBounds = false;
 
     return tr;
 }
@@ -125,36 +105,6 @@ bool transaction_addBlock(Transaction *const tr,
     }
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 
-    // update transaction bounds
-    if (tr->mustConsiderNewBounds == false) {
-        tr->newMinX = x;
-        tr->newMinY = y;
-        tr->newMinZ = z;
-        tr->newMaxX = x;
-        tr->newMaxY = y;
-        tr->newMaxZ = z;
-        tr->mustConsiderNewBounds = true;
-    } else {
-        if (x < tr->newMinX) {
-            tr->newMinX = x;
-        }
-        if (y < tr->newMinY) {
-            tr->newMinY = y;
-        }
-        if (z < tr->newMinZ) {
-            tr->newMinZ = z;
-        }
-        if (x > tr->newMaxX) {
-            tr->newMaxX = x;
-        }
-        if (y > tr->newMaxY) {
-            tr->newMaxY = y;
-        }
-        if (z > tr->newMaxZ) {
-            tr->newMaxZ = z;
-        }
-    }
-
     return true; // block is considered added
 }
 
@@ -188,7 +138,6 @@ void transaction_removeBlock(const Transaction *const tr,
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 }
 
-// x, y, z are Lua coords
 void transaction_replaceBlock(const Transaction *const tr,
                               const SHAPE_COORDS_INT_T x,
                               const SHAPE_COORDS_INT_T y,
@@ -218,38 +167,6 @@ void transaction_replaceBlock(const Transaction *const tr,
 #endif
     }
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
-}
-
-bool transaction_getMustConsiderNewBounds(const Transaction *const tr) {
-    return tr != NULL && tr->mustConsiderNewBounds;
-}
-
-void transaction_getNewBounds(const Transaction *const tr,
-                              SHAPE_COORDS_INT_T *const minX,
-                              SHAPE_COORDS_INT_T *const minY,
-                              SHAPE_COORDS_INT_T *const minZ,
-                              SHAPE_COORDS_INT_T *const maxX,
-                              SHAPE_COORDS_INT_T *const maxY,
-                              SHAPE_COORDS_INT_T *const maxZ) {
-    vx_assert(tr != NULL);
-    if (minX != NULL) {
-        *minX = tr->newMinX;
-    }
-    if (minY != NULL) {
-        *minY = tr->newMinY;
-    }
-    if (minZ != NULL) {
-        *minZ = tr->newMinZ;
-    }
-    if (maxX != NULL) {
-        *maxX = tr->newMaxX;
-    }
-    if (maxY != NULL) {
-        *maxY = tr->newMaxY;
-    }
-    if (maxZ != NULL) {
-        *maxZ = tr->newMaxZ;
-    }
 }
 
 Index3DIterator *transaction_getIndex3DIterator(Transaction *tr) {

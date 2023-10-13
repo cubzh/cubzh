@@ -805,7 +805,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
                     colorIndex = 0;
                 }
 
-                shape_add_block_with_color(shape, colorIndex, x, y, z, false, false, false);
+                shape_add_block(shape, colorIndex, x, y, z, false);
             }
         }
     }
@@ -979,7 +979,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
 
                 // size is known, now is a good time to create the shape
-                *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
+                *shape = shape_make_2(shapeSettings->isMutable);
                 break;
             }
             case P3S_CHUNK_ID_SHAPE_BLOCKS: {
@@ -1246,7 +1246,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (hasPivot) {
-        shape_set_pivot(*shape, pivot.x, pivot.y, pivot.z, false);
+        shape_set_pivot(*shape, pivot.x, pivot.y, pivot.z);
     } else {
         shape_reset_pivot_to_center(*shape);
     }
@@ -1610,7 +1610,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     memcpy(cursor, &shapePivotSize, sizeof(uint32_t)); // size chunk pivot
     cursor = (void *)((uint32_t *)cursor + 1);
 
-    float3 pivot = shape_get_pivot(shape, false);
+    float3 pivot = shape_get_pivot(shape);
     memcpy(cursor, &pivot, sizeof(float3));
     cursor = (void *)((float3 *)cursor + 1);
 
@@ -1665,8 +1665,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                 block = shape_get_block(shape,
                                         (SHAPE_COORDS_INT_T)x,
                                         (SHAPE_COORDS_INT_T)y,
-                                        (SHAPE_COORDS_INT_T)z,
-                                        false);
+                                        (SHAPE_COORDS_INT_T)z);
                 if (block_is_solid(block)) {
                     *((uint8_t *)cursor) = paletteMapping != NULL
                                                ? paletteMapping[block_get_color_index(block)]

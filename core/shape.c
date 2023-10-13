@@ -84,15 +84,6 @@ struct _Shape {
     size_t nbChunks;
     size_t nbBlocks;
 
-    // octree resize offset, default zero until a resize occurs, is used to convert internal to Lua
-    // coords in order to maintain consistent coordinates in a play session
-    // /!\ nowhere in Cubzh Core should this be used, it should be used when
-    // input/outputting values to Lua
-    int3 offset; // 3 * 4 bytes
-
-    // shape allocated size, going below 0 or past this limit requires a shape resize
-    SHAPE_SIZE_INT_T maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
-
     uint16_t layers; // 2 bytes
 
     // internal flag used for variable-size VB allocation, see shape_add_vertex_buffer
@@ -104,7 +95,7 @@ struct _Shape {
     uint8_t renderingFlags; // 1 byte
     uint8_t luaFlags;       // 1 byte
 
-    char pad[7];
+    char pad[1];
 };
 
 // MARK: - private functions prototypes -
@@ -128,14 +119,6 @@ static bool _shape_add_block_in_chunks(Shape *shape,
                                        Chunk **added_or_existing_chunk,
                                        Block **added_or_existing_block);
 
-bool _has_allocated_size(const Shape *s);
-bool _is_out_of_allocated_size(const Shape *s,
-                               const SHAPE_COORDS_INT_T x,
-                               const SHAPE_COORDS_INT_T y,
-                               const SHAPE_COORDS_INT_T z);
-Octree *_new_octree(const SHAPE_COORDS_INT_T w,
-                    const SHAPE_COORDS_INT_T h,
-                    const SHAPE_COORDS_INT_T d);
 void _set_vb_allocation_flag_one_frame(Shape *s);
 
 /// internal functions used to flag the relevant data when lighting has changed
@@ -221,8 +204,6 @@ void _shape_clear_cached_world_aabb(Shape *s);
 Shape *shape_make(void) {
     Shape *s = (Shape *)malloc(sizeof(Shape));
 
-    int3_set(&s->offset, 0, 0, 0);
-
     s->wptr = NULL;
     s->palette = NULL;
 
@@ -254,10 +235,6 @@ Shape *shape_make(void) {
     s->nbBlocks = 0;
     s->fragmentedVBs = doubly_linked_list_new();
 
-    s->maxWidth = 0;
-    s->maxHeight = 0;
-    s->maxDepth = 0;
-
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES | SHAPE_RENDERING_FLAG_SHADOW;
     s->layers = 1; // CAMERA_LAYERS_DEFAULT
@@ -267,14 +244,18 @@ Shape *shape_make(void) {
     return s;
 }
 
+Shape *shape_make_2(const bool isMutable) {
+    Shape *s = shape_make();
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, true);
+    return s;
+}
+
 Shape *shape_make_copy(Shape *origin) {
     // apply transactions of the origin if needed
     shape_apply_current_transaction(origin, true);
 
     Shape *s = shape_make();
     s->palette = color_palette_new_copy(origin->palette);
-
-    int3_set(&s->offset, origin->offset.x, origin->offset.y, origin->offset.z);
 
     // copy each point of interest
     MapStringFloat3Iterator *it = map_string_float3_iterator_new(origin->POIs);
@@ -313,10 +294,6 @@ Shape *shape_make_copy(Shape *origin) {
     s->layers = origin->layers;
 
     s->luaFlags = origin->luaFlags;
-
-    s->maxWidth = origin->maxWidth;
-    s->maxHeight = origin->maxHeight;
-    s->maxDepth = origin->maxDepth;
 
     // copy chunks data
     Index3DIterator *chunks_it = index3d_iterator_new(origin->chunks);
@@ -357,22 +334,6 @@ Shape *shape_make_copy(Shape *origin) {
     if (name != NULL) {
         transform_set_name(shape_get_root_transform(s), name);
     }
-
-    return s;
-}
-
-Shape *shape_make_with_size(const uint16_t width,
-                            const uint16_t height,
-                            const uint16_t depth,
-                            const bool isMutable) {
-
-    Shape *s = shape_make();
-
-    s->maxWidth = width;
-    s->maxHeight = height;
-    s->maxDepth = depth;
-
-    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, true);
 
     return s;
 }
@@ -650,16 +611,16 @@ uint16_t shape_get_id(const Shape *shape) {
 }
 
 // offset is always applied in this function
-bool shape_add_block_from_lua(Shape *const shape,
-                              Scene *scene,
-                              const SHAPE_COLOR_INDEX_INT_T colorIndex,
-                              const SHAPE_COORDS_INT_T luaX,
-                              const SHAPE_COORDS_INT_T luaY,
-                              const SHAPE_COORDS_INT_T luaZ) {
+bool shape_add_block_as_transaction(Shape *const shape,
+                                    Scene *scene,
+                                    const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                                    const SHAPE_COORDS_INT_T x,
+                                    const SHAPE_COORDS_INT_T y,
+                                    const SHAPE_COORDS_INT_T z) {
     vx_assert(shape != NULL);
 
-    // a new block cannot be added if their is an existing block at those coords
-    const Block *existingBlock = shape_get_block(shape, luaX, luaY, luaZ, true);
+    // a new block cannot be added if there is an existing block at those coords
+    const Block *existingBlock = shape_get_block(shape, x, y, z);
 
     if (block_is_solid(existingBlock) == true) {
         // There is already a solid block at the given coordinates, we cannot
@@ -674,11 +635,9 @@ bool shape_add_block_from_lua(Shape *const shape,
         }
     }
 
-    if (transaction_addBlock(shape->pendingTransaction, luaX, luaY, luaZ, colorIndex)) {
+    if (transaction_addBlock(shape->pendingTransaction, x, y, z, colorIndex)) {
         // register awake box if using per-block collisions
         if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
-            SHAPE_COORDS_INT_T x = luaX, y = luaY, z = luaZ;
-            shape_block_lua_to_internal(shape, &x, &y, &z);
             scene_register_awake_block_box(scene, shape, x, y, z);
         }
         return true;
@@ -687,19 +646,15 @@ bool shape_add_block_from_lua(Shape *const shape,
     }
 }
 
-bool shape_remove_block_from_lua(Shape *const shape,
-                                 Scene *scene,
-                                 const SHAPE_COORDS_INT_T luaX,
-                                 const SHAPE_COORDS_INT_T luaY,
-                                 const SHAPE_COORDS_INT_T luaZ) {
+bool shape_remove_block_as_transaction(Shape *const shape,
+                                       Scene *scene,
+                                       const SHAPE_COORDS_INT_T x,
+                                       const SHAPE_COORDS_INT_T y,
+                                       const SHAPE_COORDS_INT_T z) {
     vx_assert(shape != NULL);
 
     // check whether a block already exists at the given coordinates
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
-                                                 true); // xyz are lua coords
+    const Block *existingBlock = shape_get_block(shape, x, y, z);
 
     if (block_is_solid(existingBlock) == false) {
         return false; // no block here
@@ -712,31 +667,25 @@ bool shape_remove_block_from_lua(Shape *const shape,
         }
     }
 
-    transaction_removeBlock(shape->pendingTransaction, luaX, luaY, luaZ);
+    transaction_removeBlock(shape->pendingTransaction, x, y, z);
 
     // register awake box is using per-block collisions
     if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
-        SHAPE_COORDS_INT_T x = luaX, y = luaY, z = luaZ;
-        shape_block_lua_to_internal(shape, &x, &y, &z);
         scene_register_awake_block_box(scene, shape, x, y, z);
     }
 
     return true; // block is considered removed
 }
 
-bool shape_replace_block_from_lua(Shape *const shape,
-                                  const SHAPE_COLOR_INDEX_INT_T newColorIndex,
-                                  const SHAPE_COORDS_INT_T luaX,
-                                  const SHAPE_COORDS_INT_T luaY,
-                                  const SHAPE_COORDS_INT_T luaZ) {
+bool shape_paint_block_as_transaction(Shape *const shape,
+                                      const SHAPE_COLOR_INDEX_INT_T newColorIndex,
+                                      const SHAPE_COORDS_INT_T x,
+                                      const SHAPE_COORDS_INT_T y,
+                                      const SHAPE_COORDS_INT_T z) {
     vx_assert(shape != NULL);
 
     // check whether a block already exists at the given coordinates
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
-                                                 true); // xyz are lua coords
+    const Block *existingBlock = shape_get_block(shape, x, y, z);
 
     if (block_is_solid(existingBlock) == false) {
         // There is no solid block at those coordinates.
@@ -755,7 +704,7 @@ bool shape_replace_block_from_lua(Shape *const shape,
         }
     }
 
-    transaction_replaceBlock(shape->pendingTransaction, luaX, luaY, luaZ, newColorIndex);
+    transaction_replaceBlock(shape->pendingTransaction, x, y, z, newColorIndex);
 
     return true; // block is considered replaced
 }
@@ -790,26 +739,15 @@ void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
     }
 }
 
-bool shape_add_block_with_color(Shape *shape,
-                                SHAPE_COLOR_INDEX_INT_T colorIndex,
-                                SHAPE_COORDS_INT_T x,
-                                SHAPE_COORDS_INT_T y,
-                                SHAPE_COORDS_INT_T z,
-                                const bool resizeIfNeeded,
-                                const bool applyOffset,
-                                bool useDefaultColor) {
+bool shape_add_block(Shape *shape,
+                     SHAPE_COLOR_INDEX_INT_T colorIndex,
+                     const SHAPE_COORDS_INT_T x,
+                     const SHAPE_COORDS_INT_T y,
+                     const SHAPE_COORDS_INT_T z,
+                     bool useDefaultColor) {
 
     if (shape == NULL) {
         return false;
-    }
-
-    if (resizeIfNeeded) {
-        shape_make_space_for_block(shape, x, y, z, applyOffset);
-    }
-
-    // whether caller expressed x/y/z in Lua coordinates or not
-    if (applyOffset) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
     }
 
     // if caller wants to express colorIndex as a default color, we translate it here
@@ -857,17 +795,12 @@ bool shape_add_block_with_color(Shape *shape,
 }
 
 bool shape_remove_block(Shape *shape,
-                        SHAPE_COORDS_INT_T x,
-                        SHAPE_COORDS_INT_T y,
-                        SHAPE_COORDS_INT_T z,
-                        const bool applyOffset) {
+                        const SHAPE_COORDS_INT_T x,
+                        const SHAPE_COORDS_INT_T y,
+                        const SHAPE_COORDS_INT_T z) {
 
     if (shape == NULL) {
         return false;
-    }
-
-    if (applyOffset) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
     }
 
     bool removed = false;
@@ -910,18 +843,13 @@ bool shape_remove_block(Shape *shape,
 }
 
 bool shape_paint_block(Shape *shape,
-                       SHAPE_COLOR_INDEX_INT_T colorIndex,
-                       SHAPE_COORDS_INT_T x,
-                       SHAPE_COORDS_INT_T y,
-                       SHAPE_COORDS_INT_T z,
-                       const bool applyOffset) {
+                       const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                       const SHAPE_COORDS_INT_T x,
+                       const SHAPE_COORDS_INT_T y,
+                       const SHAPE_COORDS_INT_T z) {
 
     if (shape == NULL) {
         return false;
-    }
-
-    if (applyOffset) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
     }
 
     bool painted = false;
@@ -970,40 +898,29 @@ void shape_set_palette(Shape *shape, ColorPalette *palette) {
 }
 
 const Block *shape_get_block(const Shape *const shape,
-                             SHAPE_COORDS_INT_T x,
-                             SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             const bool luaCoords) {
+                             const SHAPE_COORDS_INT_T x,
+                             const SHAPE_COORDS_INT_T y,
+                             const SHAPE_COORDS_INT_T z) {
     const Block *b = NULL;
 
     // look for the block in the current transaction
     if (shape->pendingTransaction != NULL) {
-        SHAPE_COORDS_INT_T luaX = x;
-        SHAPE_COORDS_INT_T luaY = y;
-        SHAPE_COORDS_INT_T luaZ = z;
-        if (luaCoords == false) {
-            shape_block_internal_to_lua(shape, &luaX, &luaY, &luaZ);
-        }
-        b = transaction_getCurrentBlockAt(shape->pendingTransaction, luaX, luaY, luaZ);
+        b = transaction_getCurrentBlockAt(shape->pendingTransaction, x, y, z);
     }
 
     // transaction doesn't contain a block state for those coords,
     // let's check in the shape blocks
     if (b == NULL) {
-        b = shape_get_block_immediate(shape, x, y, z, luaCoords);
+        b = shape_get_block_immediate(shape, x, y, z);
     }
 
     return b;
 }
 
 Block *shape_get_block_immediate(const Shape *const shape,
-                                 SHAPE_COORDS_INT_T x,
-                                 SHAPE_COORDS_INT_T y,
-                                 SHAPE_COORDS_INT_T z,
-                                 const bool luaCoords) {
-    if (luaCoords) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
-    }
+                                 const SHAPE_COORDS_INT_T x,
+                                 const SHAPE_COORDS_INT_T y,
+                                 const SHAPE_COORDS_INT_T z) {
 
     Chunk *chunk;
     CHUNK_COORDS_INT3_T coords_in_chunk;
@@ -1032,12 +949,13 @@ SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape) {
                                (SHAPE_SIZE_INT_T)shape->box->max.z};
 }
 
-bool shape_is_within_allocated_bounds(const Shape *shape,
-                                      const SHAPE_COORDS_INT_T x,
-                                      const SHAPE_COORDS_INT_T y,
-                                      const SHAPE_COORDS_INT_T z) {
-    return x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 &&
-           z < shape->maxDepth;
+bool shape_is_within_bounding_box(const Shape *shape,
+                                  const SHAPE_COORDS_INT_T x,
+                                  const SHAPE_COORDS_INT_T y,
+                                  const SHAPE_COORDS_INT_T z) {
+
+    return x >= shape->box->min.x && x < shape->box->max.x && y >= shape->box->min.y &&
+           y < shape->box->max.y && z >= shape->box->min.z && z < shape->box->max.z;
 }
 
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider) {
@@ -1229,305 +1147,6 @@ void shape_expand_box(Shape *shape,
     _shape_clear_cached_world_aabb(shape);
 }
 
-void shape_make_space_for_block(Shape *shape,
-                                SHAPE_COORDS_INT_T x,
-                                SHAPE_COORDS_INT_T y,
-                                SHAPE_COORDS_INT_T z,
-                                const bool applyOffset) {
-    shape_make_space(shape, x, y, z, x, y, z, applyOffset);
-}
-
-// required min & max are block coordinates (min is inclusive, max is non inclusive)
-void shape_make_space(Shape *const shape,
-                      SHAPE_COORDS_INT_T requiredMinX,
-                      SHAPE_COORDS_INT_T requiredMinY,
-                      SHAPE_COORDS_INT_T requiredMinZ,
-                      SHAPE_COORDS_INT_T requiredMaxX,
-                      SHAPE_COORDS_INT_T requiredMaxY,
-                      SHAPE_COORDS_INT_T requiredMaxZ,
-                      const bool applyOffset) {
-
-    // no need to make space if there is no fixed/allocated size (no lighting)
-    if (_has_allocated_size(shape) == false) {
-        cclog_warning(
-            "⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor "
-            "lighting)");
-        return;
-    }
-
-    // Convert provided coordinates from Lua coords into "core" coords if needed.
-    if (applyOffset == true) {
-        shape_block_lua_to_internal(shape,
-                                    &requiredMinX,
-                                    &requiredMinY,
-                                    &requiredMinZ); // value += offset
-        shape_block_lua_to_internal(shape,
-                                    &requiredMaxX,
-                                    &requiredMaxY,
-                                    &requiredMaxZ); // value += offset
-    }
-
-    // If required min/max are within allocated bounds, then extra space is not needed.
-    if (shape_is_within_allocated_bounds(shape, requiredMinX, requiredMinY, requiredMinZ) &&
-        shape_is_within_allocated_bounds(shape, requiredMaxX, requiredMaxY, requiredMaxZ)) {
-        return;
-    }
-
-    // cclog_info("📏 RESIZE IS NEEDED");
-
-    // current shape's bounding box limits
-
-    // NOTE: the bounding box origin can't be below {0,0,0}
-    // But shape->offset can be used to represent blocks with negative coordinates
-    int3 min, max;
-    int3_set(&min,
-             (int32_t)shape->box->min.x,
-             (int32_t)shape->box->min.y,
-             (int32_t)shape->box->min.z);
-    int3_set(&max,
-             (int32_t)shape->box->max.x,
-             (int32_t)shape->box->max.y,
-             (int32_t)shape->box->max.z);
-
-    // cclog_trace("📏 CURRENT BOUNDING BOX: (%d,%d,%d) -> (%d,%d,%d)",
-    //       min.x, min.y, min.z, max.x, max.y, max.z);
-
-    // additional space required
-    int3 spaceRequiredMin = int3_zero;
-    int3 spaceRequiredMax = int3_zero;
-
-    const bool isEmpty = shape->nbBlocks == 0;
-    if (isEmpty) {
-        // /!\ special case on an empty shape,
-        // we will set its origin to newly added blocks, to avoid allocating huge
-        // octrees when setting first block at arbitrary coordinates
-
-        // let's have the initial model start at requested min
-        spaceRequiredMin.x = 0;
-        spaceRequiredMin.y = 0;
-        spaceRequiredMin.z = 0;
-
-        // and expand on the positive side
-        spaceRequiredMax.x = requiredMaxX + 1 - requiredMinX;
-        spaceRequiredMax.y = requiredMaxY + 1 - requiredMinY;
-        spaceRequiredMax.z = requiredMaxZ + 1 - requiredMinZ;
-    } else {
-        if (requiredMinX < min.x) {
-            spaceRequiredMin.x = requiredMinX - min.x; // negative, space on the left required
-        }
-
-        if (requiredMaxX + 1 > max.x) {
-            spaceRequiredMax.x = requiredMaxX + 1 - max.x;
-        }
-
-        if (requiredMinY < min.y) {
-            spaceRequiredMin.y = requiredMinY - min.y;
-        }
-
-        if (requiredMaxY + 1 > max.y) {
-            spaceRequiredMax.y = requiredMaxY + 1 - max.y;
-        }
-
-        if (requiredMinZ < min.z) {
-            spaceRequiredMin.z = requiredMinZ - min.z;
-        }
-
-        if (requiredMaxZ + 1 > max.z) {
-            spaceRequiredMax.z = requiredMaxZ + 1 - max.z;
-        }
-    }
-
-    int3 boundingBoxSize;
-    shape_get_bounding_box_size(shape, &boundingBoxSize);
-
-    vx_assert(spaceRequiredMax.x >= 0);
-    vx_assert(spaceRequiredMax.y >= 0);
-    vx_assert(spaceRequiredMax.z >= 0);
-
-    SHAPE_COORDS_INT3_T requiredSize = {
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z)};
-
-    // cclog_info("📏 REQUIRED SIZE: (%d,%d,%d)",
-    //       requiredSize.x, requiredSize.y, requiredSize.z);
-    // cclog_info("📏 SPACE REQUIRED: min(%d, %d, %d) max(%d, %d, %d)",
-    //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
-    //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
-
-    Index3D *chunks = NULL;
-
-    int3 delta = int3_zero;
-    if (_is_out_of_allocated_size(shape, requiredSize.x, requiredSize.y, requiredSize.z)) {
-        // cclog_info("📏 ALLOCATED SIZE NOT BIG ENOUGH");
-        chunks = index3d_new();
-    } else {
-        // allocated size is enough, let's see if there's enough room around the
-        // bounding box, if not we'll need to offset model
-
-        if (spaceRequiredMin.x < 0 && min.x + spaceRequiredMin.x < 0) {
-            delta.x = -(min.x + spaceRequiredMin.x);
-        } else if (spaceRequiredMax.x > 0 && max.x + spaceRequiredMax.x > shape->maxWidth) {
-            delta.x = shape->maxWidth - (max.x + spaceRequiredMax.x);
-        }
-
-        if (spaceRequiredMin.y < 0 && min.y + spaceRequiredMin.y < 0) {
-            delta.y = -(min.y + spaceRequiredMin.y);
-        } else if (spaceRequiredMax.y > 0 && max.y + spaceRequiredMax.y > shape->maxHeight) {
-            delta.y = shape->maxHeight - (max.y + spaceRequiredMax.y);
-        }
-
-        if (spaceRequiredMin.z < 0 && min.z + spaceRequiredMin.z < 0) {
-            delta.z = -(min.z + spaceRequiredMin.z);
-        } else if (spaceRequiredMax.z > 0 && max.z + spaceRequiredMax.z > shape->maxDepth) {
-            delta.z = shape->maxDepth - (max.z + spaceRequiredMax.z);
-        }
-
-        if (delta.x != 0 || delta.y != 0 || delta.z != 0) {
-            // allocated size is big enough, but there's no room around the bounding box:
-            // model needs to be moved to make space for new blocks
-
-            // cclog_info("📏 NO ROOM AROUND BOUNDING BOX");
-            // cclog_info("📏 DELTA: (%d, %d, %d)", delta.x, delta.y, delta.z);
-
-            chunks = index3d_new();
-        } else {
-            // allocated size is big enough AND there's enough room around the bounding box:
-            // nothing to do other than updating shape size & offset
-
-            // cclog_info("📏 THERE'S ROOM AROUND THE BOUNDING BOX");
-            // cclog_info("📏 SPACE REQUIRED: (%d, %d, %d) / (%d, %d, %d)",
-            //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
-            //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
-        }
-    }
-
-    // from here, there may or may not be newly allocated chunks to fill,
-    // but we'll always apply offset to pivot, BB, etc.
-
-    // /!\ special case: empty shape arbitrary model origin (see comment at the start of function)
-    if (isEmpty) {
-        delta.x -= requiredMinX;
-        delta.y -= requiredMinY;
-        delta.z -= requiredMinZ;
-    }
-
-    // added space
-    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
-    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
-    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
-
-    // update allocated size, adding blocks < 0 or > this size will require another resize
-    if (ax > 0)
-        shape->maxWidth += ax;
-    if (ay > 0)
-        shape->maxHeight += ay;
-    if (az > 0)
-        shape->maxDepth += az;
-
-    // empty current dirty chunks list, if any
-    if (shape->dirtyChunks != NULL) {
-        fifo_list_free(shape->dirtyChunks, NULL);
-        shape->dirtyChunks = NULL;
-    }
-
-    if (chunks != NULL) {
-        // copy with offsets to blocks position
-        const Block *block = NULL;
-        SHAPE_COORDS_INT_T ox, oy, oz;
-        Chunk *chunk = NULL;
-        bool chunkAdded = false;
-
-        for (SHAPE_SIZE_INT_T xx = (SHAPE_SIZE_INT_T)min.x; xx < max.x; ++xx) {
-            for (SHAPE_SIZE_INT_T yy = (SHAPE_SIZE_INT_T)min.y; yy < max.y; ++yy) {
-                for (SHAPE_SIZE_INT_T zz = (SHAPE_SIZE_INT_T)min.z; zz < max.z; ++zz) {
-
-                    block = shape_get_block(shape,
-                                            (SHAPE_COORDS_INT_T)xx,
-                                            (SHAPE_COORDS_INT_T)yy,
-                                            (SHAPE_COORDS_INT_T)zz,
-                                            false);
-
-                    if (block_is_solid(block)) {
-                        // get offseted position
-                        ox = (SHAPE_COORDS_INT_T)(xx + delta.x);
-                        oy = (SHAPE_COORDS_INT_T)(yy + delta.y);
-                        oz = (SHAPE_COORDS_INT_T)(zz + delta.z);
-
-                        // check if it is within new bounds
-                        vx_assert(ox >= 0 && oy >= 0 && oz >= 0 && ox < shape->maxWidth &&
-                                  oy < shape->maxHeight && oz < shape->maxDepth);
-
-                        _shape_add_block_in_chunks(shape,
-                                                   *block,
-                                                   ox,
-                                                   oy,
-                                                   oz,
-                                                   NULL,
-                                                   &chunkAdded,
-                                                   &chunk,
-                                                   NULL);
-
-                        // flag this chunk as dirty (needs display)
-                        if (chunkAdded) {
-                            _shape_chunk_enqueue_refresh(shape, chunk);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // offset POIS
-    {
-        MapStringFloat3Iterator *it = shape_get_poi_iterator(shape);
-
-        float3 *poiPosition = NULL;
-
-        while (map_string_float3_iterator_is_done(it) == false) {
-            poiPosition = map_string_float3_iterator_current_value(it);
-            if (poiPosition == NULL) {
-                continue;
-            }
-
-            poiPosition->x += (float)(delta.x);
-            poiPosition->y += (float)(delta.y);
-            poiPosition->z += (float)(delta.z);
-
-            map_string_float3_iterator_next(it);
-        }
-        map_string_float3_iterator_free(it);
-    }
-
-    // offset bounding box
-    float3 fDelta;
-    float3_set(&fDelta, (float)(delta.x), (float)(delta.y), (float)(delta.z));
-    float3_op_add(&shape->box->min, &fDelta);
-    float3_op_add(&shape->box->max, &fDelta);
-    _shape_clear_cached_world_aabb(shape);
-
-    // fit collider to bounding box
-    shape_fit_collider_to_bounding_box(shape);
-
-    // offset pivot
-    float3 pivot = shape_get_pivot(shape, false);
-    shape_set_pivot(shape,
-                    pivot.x + fDelta.x,
-                    pivot.y + fDelta.y,
-                    pivot.z + fDelta.z,
-                    false); // remove offset
-
-    if (chunks != NULL) {
-        index3d_flush(shape->chunks, chunk_free_func);
-        index3d_free(shape->chunks);
-
-        shape->chunks = chunks;
-    }
-
-    // update offset
-    int3_op_add(&shape->offset, &delta);
-}
-
 size_t shape_get_nb_blocks(const Shape *shape) {
     return shape->nbBlocks;
 }
@@ -1560,7 +1179,7 @@ void shape_set_color_palette_atlas(Shape *s, ColorAtlas *ca) {
 
 // MARK: - Transform -
 
-void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool removeOffset) {
+void shape_set_pivot(Shape *s, const float x, const float y, const float z) {
     if (s == NULL) {
         return;
     }
@@ -1584,27 +1203,15 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool
         return;
     }
 
-    if (removeOffset) {
-        transform_set_local_position(s->pivot,
-                                     -x + (float)(s->offset.x),
-                                     -y + (float)(s->offset.y),
-                                     -z + (float)(s->offset.z));
-    } else {
-        transform_set_local_position(s->pivot, -x, -y, -z);
-    }
+    transform_set_local_position(s->pivot, -x, -y, -z);
 }
 
-float3 shape_get_pivot(const Shape *s, bool applyOffset) {
+float3 shape_get_pivot(const Shape *s) {
     if (s == NULL || s->pivot == NULL)
         return float3_zero;
 
     const float3 *p = transform_get_local_position(s->pivot);
     float3 np = {-p->x, -p->y, -p->z};
-    if (applyOffset) {
-        np.x -= (float)(s->offset.x);
-        np.y -= (float)(s->offset.y);
-        np.z -= (float)(s->offset.z);
-    }
     return np;
 }
 
@@ -1617,16 +1224,15 @@ void shape_reset_pivot_to_center(Shape *s) {
     shape_set_pivot(s,
                     s->box->min.x + (float)size.x * 0.5f,
                     s->box->min.y + (float)size.y * 0.5f,
-                    s->box->min.z + (float)size.z * 0.5f,
-                    false);
+                    s->box->min.z + (float)size.z * 0.5f);
 }
 
 float3 shape_block_to_local(const Shape *s, const float x, const float y, const float z) {
     if (s == NULL)
         return float3_zero;
 
-    const float3 offsetedPivot = shape_get_pivot(s, true);
-    float3 local = {x - offsetedPivot.x, y - offsetedPivot.y, z - offsetedPivot.z};
+    const float3 pivot = shape_get_pivot(s);
+    float3 local = {x - pivot.x, y - pivot.y, z - pivot.z};
     return local;
 }
 
@@ -1646,8 +1252,8 @@ float3 shape_local_to_block(const Shape *s, const float x, const float y, const 
     if (s == NULL)
         return float3_zero;
 
-    float3 offsetedPivot = shape_get_pivot(s, true);
-    float3 block = {x + offsetedPivot.x, y + offsetedPivot.y, z + offsetedPivot.z};
+    float3 pivot = shape_get_pivot(s);
+    float3 block = {x + pivot.x, y + pivot.y, z + pivot.z};
     return block;
 }
 
@@ -1661,49 +1267,6 @@ float3 shape_world_to_block(const Shape *s, const float x, const float y, const 
     transform_refresh(t, false, true); // refresh wtl for intra-frame calculations
     transform_utils_position_wtl(t, &world, &local);
     return shape_local_to_block(s, local.x, local.y, local.z);
-}
-
-void shape_block_lua_to_internal(const Shape *s,
-                                 SHAPE_COORDS_INT_T *x,
-                                 SHAPE_COORDS_INT_T *y,
-                                 SHAPE_COORDS_INT_T *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL) {
-        return;
-    }
-
-    *x += (SHAPE_COORDS_INT_T)s->offset.x;
-    *y += (SHAPE_COORDS_INT_T)s->offset.y;
-    *z += (SHAPE_COORDS_INT_T)s->offset.z;
-}
-
-void shape_block_internal_to_lua(const Shape *s,
-                                 SHAPE_COORDS_INT_T *x,
-                                 SHAPE_COORDS_INT_T *y,
-                                 SHAPE_COORDS_INT_T *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL)
-        return;
-
-    *x -= (SHAPE_COORDS_INT_T)s->offset.x;
-    *y -= (SHAPE_COORDS_INT_T)s->offset.y;
-    *z -= (SHAPE_COORDS_INT_T)s->offset.z;
-}
-
-void shape_block_lua_to_internal_float(const Shape *s, float *x, float *y, float *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL)
-        return;
-
-    *x += (float)s->offset.x;
-    *y += (float)s->offset.y;
-    *z += (float)s->offset.z;
-}
-
-void shape_block_internal_to_lua_float(const Shape *s, float *x, float *y, float *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL)
-        return;
-
-    *x -= (float)s->offset.x;
-    *y -= (float)s->offset.y;
-    *z -= (float)s->offset.z;
 }
 
 void shape_set_position(Shape *s, const float x, const float y, const float z) {
@@ -2611,13 +2174,6 @@ void shape_remove_point(Shape *s, const char *key) {
 // MARK: - Baked lighting -
 
 void shape_compute_baked_lighting(Shape *s, bool overwrite) {
-    if (_has_allocated_size(s) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_compute_baked_lighting: no allocated size");
-#endif
-        return;
-    }
-
     if (shape_has_baked_lighting_data(s)) {
         if (overwrite == false) {
 #if SHAPE_LIGHTING_DEBUG
@@ -2629,12 +2185,12 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
 
     LightNodeQueue *q = light_node_queue_new();
 
-    const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
-                                    (SHAPE_COORDS_INT_T)s->maxHeight,
-                                    (SHAPE_COORDS_INT_T)s->maxDepth};
+    const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->box->max.x,
+                                    (SHAPE_COORDS_INT_T)s->box->max.y,
+                                    (SHAPE_COORDS_INT_T)s->box->max.z};
     _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, false);
 
-    _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->maxHeight, -1);
+    _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->box->max.y, -1);
 
     light_node_queue_free(q);
 
@@ -3352,72 +2908,6 @@ bool _shape_add_block_in_chunks(Shape *shape,
     return added;
 }
 
-bool _has_allocated_size(const Shape *s) {
-    return s->maxWidth > 0;
-}
-
-bool _is_out_of_allocated_size(const Shape *s,
-                               const SHAPE_COORDS_INT_T x,
-                               const SHAPE_COORDS_INT_T y,
-                               const SHAPE_COORDS_INT_T z) {
-    return x < 0 || y < 0 || z < 0 || x >= s->maxWidth || y >= s->maxHeight || z >= s->maxDepth;
-}
-
-Octree *_new_octree(const SHAPE_COORDS_INT_T w,
-                    const SHAPE_COORDS_INT_T h,
-                    const SHAPE_COORDS_INT_T d) {
-    // enforcing power of 2 for the octree
-    uint16_t size = (uint16_t)(maximum(maximum(w, h), d));
-    unsigned long upPow2Size = upper_power_of_two(size);
-
-    Block *air = block_new_air();
-
-    // octree stores block color indices
-    Octree *o = NULL;
-    switch (upPow2Size) {
-        case 1:
-            o = octree_new_with_default_element(octree_1x1x1, air, sizeof(Block));
-            break;
-        case 2:
-            o = octree_new_with_default_element(octree_2x2x2, air, sizeof(Block));
-            break;
-        case 4:
-            o = octree_new_with_default_element(octree_4x4x4, air, sizeof(Block));
-            break;
-        case 8:
-            o = octree_new_with_default_element(octree_8x8x8, air, sizeof(Block));
-            break;
-        case 16:
-            o = octree_new_with_default_element(octree_16x16x16, air, sizeof(Block));
-            break;
-        case 32:
-            o = octree_new_with_default_element(octree_32x32x32, air, sizeof(Block));
-            break;
-        case 64:
-            o = octree_new_with_default_element(octree_64x64x64, air, sizeof(Block));
-            break;
-        case 128:
-            o = octree_new_with_default_element(octree_128x128x128, air, sizeof(Block));
-            break;
-        case 256:
-            o = octree_new_with_default_element(octree_256x256x256, air, sizeof(Block));
-            break;
-        case 512:
-            o = octree_new_with_default_element(octree_512x512x512, air, sizeof(Block));
-            break;
-        case 1024:
-            o = octree_new_with_default_element(octree_1024x1024x1024, air, sizeof(Block));
-            break;
-        default:
-            cclog_error("🔥 shape is too big to use an octree.");
-            break;
-    }
-
-    block_free(air);
-
-    return o;
-}
-
 // flag used in shape_add_vertex_buffer
 void _set_vb_allocation_flag_one_frame(Shape *s) {
     // shape VB chain was just initialized this frame, and will now be 1+ frame old
@@ -3628,7 +3118,7 @@ void _light_enqueue_ambient_and_block_sources(Shape *s,
                                               SHAPE_COORDS_INT3_T to,
                                               bool enqueueAir) {
     // Ambient sources: blocks along plane (x,z) from top of the map
-    SHAPE_COORDS_INT3_T coords_in_shape = {0, (SHAPE_COORDS_INT_T)s->maxHeight, 0};
+    SHAPE_COORDS_INT3_T coords_in_shape = {0, (SHAPE_COORDS_INT_T)s->box->max.y, 0};
     for (SHAPE_COORDS_INT_T x = from.x - 1; x <= to.x; ++x) {
         for (SHAPE_COORDS_INT_T z = from.z - 1; z <= to.z; ++z) {
             coords_in_shape.x = x;
@@ -3827,9 +3317,9 @@ void _light_propagate(Shape *s,
         isCurrentOpen = false; // is current node open ie. at least one neighbor is non-opaque
 
         // propagate sunlight top-down from above the map and on the sides
-        if (coords_in_shape.y > 0 && coords_in_shape.y <= s->maxHeight &&
+        if (coords_in_shape.y > 0 && coords_in_shape.y <= s->box->max.y &&
             (coords_in_shape.x == -1 || coords_in_shape.z == -1 ||
-             coords_in_shape.x == s->maxWidth || coords_in_shape.z == s->maxDepth)) {
+             coords_in_shape.x == s->box->max.x || coords_in_shape.z == s->box->max.z)) {
             light_node_queue_push(
                 lightQueue,
                 NULL,
@@ -4103,10 +3593,10 @@ void _light_removal(Shape *s,
         chunk = light_removal_node_get_chunk(rn);
 
         // check that the current block is inside the shape bounds
-        if (shape_is_within_allocated_bounds(s,
-                                             coords_in_shape.x,
-                                             coords_in_shape.y,
-                                             coords_in_shape.z)) {
+        if (shape_is_within_bounding_box(s,
+                                         coords_in_shape.x,
+                                         coords_in_shape.y,
+                                         coords_in_shape.z)) {
 
             coords_in_chunk.x = (CHUNK_COORDS_INT_T)(coords_in_shape.x & CHUNK_SIZE_MINUS_ONE);
             coords_in_chunk.y = (CHUNK_COORDS_INT_T)(coords_in_shape.y & CHUNK_SIZE_MINUS_ONE);
@@ -4381,13 +3871,6 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
         return false;
     }
 
-    // resize shape before applying transaction changes
-    if (transaction_getMustConsiderNewBounds(tr)) {
-        SHAPE_COORDS_INT_T minX, minY, minZ, maxX, maxY, maxZ;
-        transaction_getNewBounds(tr, &minX, &minY, &minZ, &maxX, &maxY, &maxZ);
-        shape_make_space(sh, minX, minY, minZ, maxX, maxY, maxZ, true /*apply offset*/);
-    }
-
     // Returned iterator remains under transaction responsability
     // Do not free it!
     Index3DIterator *it = transaction_getIndex3DIterator(tr);
@@ -4412,7 +3895,7 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
         // an issue since transactions can be applied from a line-by-line refresh in Lua
         // (eg. shape.Width), meaning part of an amended transaction could've been applied
         // already. As a result, we'll always use the CURRENT block
-        b = shape_get_block_immediate(sh, x, y, z, true);
+        b = shape_get_block_immediate(sh, x, y, z);
         before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
         blockChange_set_previous_color(bc, before);
 
@@ -4420,17 +3903,17 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
 
         // [air>block] = add block
         if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_add_block_with_color(sh, after, x, y, z, false, true, false);
+            shape_add_block(sh, after, x, y, z, false);
         }
         // [block>air] = remove block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_remove_block(sh, x, y, z, true);
+            shape_remove_block(sh, x, y, z);
             shapeShrinkNeeded = true;
         }
         // [block>block] = paint block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK &&
                  before != after) {
-            shape_paint_block(sh, after, x, y, z, true);
+            shape_paint_block(sh, after, x, y, z);
         }
 
         index3d_iterator_next(it);
@@ -4474,23 +3957,23 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
-        b = shape_get_block_immediate(sh, x, y, z, true);
+        b = shape_get_block_immediate(sh, x, y, z);
         before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
 
         after = blockChange_get_previous_color(bc);
 
         // [air>block] = add block
         if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_add_block_with_color(sh, after, x, y, z, false, true, false);
+            shape_add_block(sh, after, x, y, z, false);
         }
         // [block>air] = remove block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_remove_block(sh, x, y, z, true);
+            shape_remove_block(sh, x, y, z);
             shapeShrinkNeeded = true;
         }
         // [block>block] = paint block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_paint_block(sh, after, x, y, z, true);
+            shape_paint_block(sh, after, x, y, z);
         }
 
         index3d_iterator_next(it);

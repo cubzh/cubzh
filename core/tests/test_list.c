@@ -333,8 +333,6 @@ TEST_LIST = {
     {"transaction_addBlock", test_transaction_addBlock},
     {"transaction_removeBlock", test_transaction_removeBlock},
     {"transaction_replaceBlock", test_transaction_replaceBlock},
-    {"transaction_getMustConsiderNewBounds", test_transaction_getMustConsiderNewBounds},
-    {"transaction_getNewBounds", test_transaction_getNewBounds},
     {"transaction_getIndex3DIterator", test_transaction_getIndex3DIterator},
 
     // transform

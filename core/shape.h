@@ -64,15 +64,9 @@ typedef uint8_t ShapeDrawMode;
 #define SHAPE_DRAWMODE_GREY 4
 #define SHAPE_DRAWMODE_GRID 8
 
-// Creates an empty Shape
 Shape *shape_make(void);
-// Creates a copy of the given shape
+Shape *shape_make_2(const bool isMutable);
 Shape *shape_make_copy(Shape *origin);
-// Creates a shape with a known allocated size (necessary for lighting)
-Shape *shape_make_with_size(const SHAPE_SIZE_INT_T width,
-                            const SHAPE_SIZE_INT_T height,
-                            const SHAPE_SIZE_INT_T depth,
-                            const bool isMutable);
 
 VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency);
 
@@ -99,77 +93,73 @@ void shape_set_palette(Shape *shape, ColorPalette *palette);
 
 /// Gets the block in model OR transactions
 const Block *shape_get_block(const Shape *const shape,
-                             SHAPE_COORDS_INT_T x,
-                             SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             const bool luaCoords);
+                             const SHAPE_COORDS_INT_T x,
+                             const SHAPE_COORDS_INT_T y,
+                             const SHAPE_COORDS_INT_T z);
 /// Gets the block in model at the time of calling
 Block *shape_get_block_immediate(const Shape *const shape,
-                                 SHAPE_COORDS_INT_T x,
-                                 SHAPE_COORDS_INT_T y,
-                                 SHAPE_COORDS_INT_T z,
-                                 const bool luaCoords);
+                                 const SHAPE_COORDS_INT_T x,
+                                 const SHAPE_COORDS_INT_T y,
+                                 const SHAPE_COORDS_INT_T z);
 
 /// Returns whether the block is considered added.
 /// (a block is not added if it is out of bounds of a fixed size shape, or if
 /// the shape already has a block at the given coordinates)
 ///
 /// This function resizes the shape if needed.
-bool shape_add_block_from_lua(Shape *const shape,
-                              Scene *scene,
-                              const SHAPE_COLOR_INDEX_INT_T colorIndex,
-                              const SHAPE_COORDS_INT_T luaX,
-                              const SHAPE_COORDS_INT_T luaY,
-                              const SHAPE_COORDS_INT_T luaZ);
+bool shape_add_block_as_transaction(Shape *const shape,
+                                    Scene *scene,
+                                    const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                                    const SHAPE_COORDS_INT_T x,
+                                    const SHAPE_COORDS_INT_T y,
+                                    const SHAPE_COORDS_INT_T z);
 
 /// Removes block from Shape, using the automatic transaction system.
 /// Returns whether the block has been removed.
-bool shape_remove_block_from_lua(Shape *const shape,
-                                 Scene *scene,
-                                 const SHAPE_COORDS_INT_T luaX,
-                                 const SHAPE_COORDS_INT_T luaY,
-                                 const SHAPE_COORDS_INT_T luaZ);
+bool shape_remove_block_as_transaction(Shape *const shape,
+                                       Scene *scene,
+                                       const SHAPE_COORDS_INT_T x,
+                                       const SHAPE_COORDS_INT_T y,
+                                       const SHAPE_COORDS_INT_T z);
 
 /// Replaces block from Shape, using the automatic transaction system.
 /// Returns whether the block has been replaced.
-bool shape_replace_block_from_lua(Shape *const shape,
-                                  const SHAPE_COLOR_INDEX_INT_T newColorIndex,
-                                  const SHAPE_COORDS_INT_T luaX,
-                                  const SHAPE_COORDS_INT_T luaY,
-                                  const SHAPE_COORDS_INT_T luaZ);
+bool shape_paint_block_as_transaction(Shape *const shape,
+                                      const SHAPE_COLOR_INDEX_INT_T newColorIndex,
+                                      const SHAPE_COORDS_INT_T x,
+                                      const SHAPE_COORDS_INT_T y,
+                                      const SHAPE_COORDS_INT_T z);
 
 ///
 void shape_apply_current_transaction(Shape *const shape, bool keepPending);
 
 /// @param useDefaultColor will translate a default color into shape palette
-bool shape_add_block_with_color(Shape *shape,
-                                const SHAPE_COLOR_INDEX_INT_T colorIndex,
-                                SHAPE_COORDS_INT_T x,
-                                SHAPE_COORDS_INT_T y,
-                                SHAPE_COORDS_INT_T z,
-                                const bool resizeIfNeeded,
-                                const bool applyOffset,
-                                bool useDefaultColor);
+bool shape_add_block(Shape *shape,
+                     SHAPE_COLOR_INDEX_INT_T colorIndex,
+                     const SHAPE_COORDS_INT_T x,
+                     const SHAPE_COORDS_INT_T y,
+                     const SHAPE_COORDS_INT_T z,
+                     bool useDefaultColor);
 
 bool shape_remove_block(Shape *shape,
-                        SHAPE_COORDS_INT_T x,
-                        SHAPE_COORDS_INT_T y,
-                        SHAPE_COORDS_INT_T z,
-                        const bool applyOffset);
+                        const SHAPE_COORDS_INT_T x,
+                        const SHAPE_COORDS_INT_T y,
+                        const SHAPE_COORDS_INT_T z);
 
 bool shape_paint_block(Shape *shape,
                        const SHAPE_COLOR_INDEX_INT_T colorIndex,
-                       SHAPE_COORDS_INT_T x,
-                       SHAPE_COORDS_INT_T y,
-                       SHAPE_COORDS_INT_T z,
-                       const bool applyOffset);
+                       const SHAPE_COORDS_INT_T x,
+                       const SHAPE_COORDS_INT_T y,
+                       const SHAPE_COORDS_INT_T z);
 
 void shape_get_bounding_box_size(const Shape *shape, int3 *size);
+// TODO: users of this function should probably use bounding box size and discard empty space at
+// origin
 SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape);
-bool shape_is_within_allocated_bounds(const Shape *shape,
-                                      const SHAPE_COORDS_INT_T x,
-                                      const SHAPE_COORDS_INT_T y,
-                                      const SHAPE_COORDS_INT_T z);
+bool shape_is_within_bounding_box(const Shape *shape,
+                                  const SHAPE_COORDS_INT_T x,
+                                  const SHAPE_COORDS_INT_T y,
+                                  const SHAPE_COORDS_INT_T z);
 
 // converts given box to a world axis-aligned box relative to shape
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider);
@@ -199,23 +189,6 @@ void shape_expand_box(Shape *s,
                       const SHAPE_COORDS_INT_T y,
                       const SHAPE_COORDS_INT_T z);
 
-/// Increases allocated size and offsets all shape data (blocks, POIs, pivot, baked lighting)
-/// to make space around existing blocks, if needed. A shape w/o allocated size do not need this,
-/// i.e. a shape with no lighting, no octree, only blocks in chunks
-void shape_make_space_for_block(Shape *shape,
-                                SHAPE_COORDS_INT_T x,
-                                SHAPE_COORDS_INT_T y,
-                                SHAPE_COORDS_INT_T z,
-                                const bool applyOffset);
-void shape_make_space(Shape *const shape,
-                      SHAPE_COORDS_INT_T minX,
-                      SHAPE_COORDS_INT_T minY,
-                      SHAPE_COORDS_INT_T minZ,
-                      SHAPE_COORDS_INT_T maxX,
-                      SHAPE_COORDS_INT_T maxY,
-                      SHAPE_COORDS_INT_T maxZ,
-                      const bool applyOffset);
-
 size_t shape_get_nb_blocks(const Shape *shape);
 
 void shape_set_model_locked(Shape *s, bool toggle);
@@ -239,24 +212,14 @@ void shape_set_color_palette_atlas(Shape *s, ColorAtlas *ca);
 /// expect
 /// - the effect of internal pivot can entirely be reproduced by using a separate Transform or
 /// Object in lua w/ a local position
-void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool removeOffset);
-float3 shape_get_pivot(const Shape *s, bool applyOffset);
+void shape_set_pivot(Shape *s, const float x, const float y, const float z);
+float3 shape_get_pivot(const Shape *s);
 void shape_reset_pivot_to_center(Shape *s);
 
 float3 shape_block_to_local(const Shape *s, const float x, const float y, const float z);
 float3 shape_block_to_world(const Shape *s, const float x, const float y, const float z);
 float3 shape_local_to_block(const Shape *s, const float x, const float y, const float z);
 float3 shape_world_to_block(const Shape *s, const float x, const float y, const float z);
-void shape_block_lua_to_internal(const Shape *s,
-                                 SHAPE_COORDS_INT_T *x,
-                                 SHAPE_COORDS_INT_T *y,
-                                 SHAPE_COORDS_INT_T *z);
-void shape_block_internal_to_lua(const Shape *s,
-                                 SHAPE_COORDS_INT_T *x,
-                                 SHAPE_COORDS_INT_T *y,
-                                 SHAPE_COORDS_INT_T *z);
-void shape_block_lua_to_internal_float(const Shape *s, float *x, float *y, float *z);
-void shape_block_internal_to_lua_float(const Shape *s, float *x, float *y, float *z);
 
 /// translation
 void shape_set_position(Shape *s, const float x, const float y, const float z);

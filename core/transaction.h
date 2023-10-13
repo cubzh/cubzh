@@ -47,18 +47,6 @@ void transaction_replaceBlock(const Transaction *const tr,
                               const SHAPE_COORDS_INT_T z,
                               const SHAPE_COLOR_INDEX_INT_T colorIndex);
 
-///
-bool transaction_getMustConsiderNewBounds(const Transaction *const tr);
-
-///
-void transaction_getNewBounds(const Transaction *const tr,
-                              SHAPE_COORDS_INT_T *const minX,
-                              SHAPE_COORDS_INT_T *const minY,
-                              SHAPE_COORDS_INT_T *const minZ,
-                              SHAPE_COORDS_INT_T *const maxX,
-                              SHAPE_COORDS_INT_T *const maxY,
-                              SHAPE_COORDS_INT_T *const maxZ);
-
 /// Returns iterator at current position
 /// Creating a new one if needed, starting at first operation.
 /// The iterator is freed with its transaction.
