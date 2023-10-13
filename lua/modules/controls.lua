@@ -1069,11 +1069,12 @@ function(pointerEvent)
 			end
 		end
 
+		local dx = pointerEvent.DX * _state.sensitivity
+		local dy = pointerEvent.DY * _state.sensitivity
 		if Client.AnalogPad ~= nil then
-			local dx = pointerEvent.DX * _state.sensitivity
-			local dy = pointerEvent.DY * _state.sensitivity
 			Client.AnalogPad(dx, dy)
 		end
+		LocalEvent:Send(LocalEvent.Name.AnalogPad, dx, dy)
 	end
 end, { system = System })
 
@@ -1089,11 +1090,12 @@ function(pointerEvent)
 	if Pointer.IsHidden == false then -- Pointer shown
 
 	else
+		local dx = pointerEvent.DX * _state.sensitivity
+		local dy = pointerEvent.DY * _state.sensitivity
 		if Client.AnalogPad ~= nil then
-			local dx = pointerEvent.DX * _state.sensitivity
-			local dy = pointerEvent.DY * _state.sensitivity
 			Client.AnalogPad(dx, dy)
 		end
+		LocalEvent:Send(LocalEvent.Name.AnalogPad, dx, dy)
 	end
 end, { system = System })
 
