@@ -1,11 +1,9 @@
-
 settings = {}
 
 --- Creates modal content for app settings
 --- config(table): contents "cache" and "logout" keys, set either of these to true to display associated buttons
 --- returns: modal
 settings.createModalContent = function(_, config)
-
 	-- MODULES
 	local modal = require("modal")
 	local theme = require("uitheme")
@@ -26,12 +24,14 @@ settings.createModalContent = function(_, config)
 	local _config = {
 		clearCache = false,
 		logout = false,
-		uikit = require("uikit")
+		uikit = require("uikit"),
 	}
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -70,7 +70,7 @@ settings.createModalContent = function(_, config)
 		refreshVolumeLabel()
 	end
 
-	table.insert(rows, {volumeLabel, volumeMinus, volumePlus})
+	table.insert(rows, { volumeLabel, volumeMinus, volumePlus })
 
 	-- SENSITIVITY
 
@@ -94,7 +94,7 @@ settings.createModalContent = function(_, config)
 		refreshSensitivityLabel()
 	end
 
-	table.insert(rows, {sensitivityLabel, sensitivityMinus, sensitivityPlus})
+	table.insert(rows, { sensitivityLabel, sensitivityMinus, sensitivityPlus })
 
 	-- ZOOM SENSITIVITY
 
@@ -118,13 +118,14 @@ settings.createModalContent = function(_, config)
 		refreshZoomSensitivityLabel()
 	end
 
-	table.insert(rows, {zoomSensitivityLabel, zoomSensitivityMinus, zoomSensitivityPlus})
+	table.insert(rows, { zoomSensitivityLabel, zoomSensitivityMinus, zoomSensitivityPlus })
 
 	-- RENDER QUALITY
 
 	local renderQualityLabel = ui:createText("", Color.White)
 	local function refreshRenderQualityLabel()
-		renderQualityLabel.Text = string.format("Render Quality: %d/%d ", System.RenderQualityTier, System.MaxRenderQualityTier)
+		renderQualityLabel.Text =
+			string.format("Render Quality: %d/%d ", System.RenderQualityTier, System.MaxRenderQualityTier)
 
 		local modal = content:getModalIfContentIsActive()
 		if modal then
@@ -152,7 +153,7 @@ settings.createModalContent = function(_, config)
 		rqPlus:disable()
 	end
 
-	table.insert(rows, {renderQualityLabel, rqMinus, rqPlus})
+	table.insert(rows, { renderQualityLabel, rqMinus, rqPlus })
 
 	-- HAPTIC FEEDBACK
 	local hapticFeedbackToggle
@@ -180,7 +181,7 @@ settings.createModalContent = function(_, config)
 			end
 		end
 
-		table.insert(rows, {hapticFeedbackLabel, hapticFeedbackToggle})
+		table.insert(rows, { hapticFeedbackLabel, hapticFeedbackToggle })
 	end
 
 	-- FULLSCREEN
@@ -209,7 +210,7 @@ settings.createModalContent = function(_, config)
 			end
 		end
 
-		table.insert(rows, {fullscreenLabel, fullscreenToggle})
+		table.insert(rows, { fullscreenLabel, fullscreenToggle })
 	end
 
 	-- CACHE
@@ -217,7 +218,7 @@ settings.createModalContent = function(_, config)
 	cacheAndLogoutRow = {}
 
 	if _config.clearCache == true then
-		local cacheButton = ui:createButton("Clear cache", {textSize = "small"})
+		local cacheButton = ui:createButton("Clear cache", { textSize = "small" })
 		cacheButton.onRelease = function(_)
 			local clearCacheContent = modal:createContent()
 			clearCacheContent.title = "Settings"
@@ -226,14 +227,17 @@ settings.createModalContent = function(_, config)
 			local node = ui:createFrame()
 			clearCacheContent.node = node
 
-			local text = ui:createText("⚠️ Clearing all cached data from visited experiences, are you sure about this?", Color.White)
+			local text = ui:createText(
+				"⚠️ Clearing all cached data from visited experiences, are you sure about this?",
+				Color.White
+			)
 			text.pos.X = theme.padding
 			text.pos.Y = theme.padding
 			text:setParent(node)
 
 			text.object.MaxWidth = 300
 
-			clearCacheContent.idealReducedContentSize  = function(_, _, _)
+			clearCacheContent.idealReducedContentSize = function(_, _, _)
 				local w, h = text.Width + theme.padding * 2, text.Height + theme.padding * 2
 				return Number2(w, h)
 			end
@@ -242,9 +246,9 @@ settings.createModalContent = function(_, config)
 			yes.onRelease = function()
 				System.ClearCache()
 				local done = ui:createText("✅ Done!", Color.White)
-				clearCacheContent.bottomCenter = {done}
+				clearCacheContent.bottomCenter = { done }
 			end
-			clearCacheContent.bottomCenter = {yes}
+			clearCacheContent.bottomCenter = { yes }
 
 			content:push(clearCacheContent)
 		end
@@ -254,7 +258,7 @@ settings.createModalContent = function(_, config)
 	-- LOGOUT
 
 	if _config.logout == true then
-		local logoutButton = ui:createButton("Logout", {textSize = "small"})
+		local logoutButton = ui:createButton("Logout", { textSize = "small" })
 		logoutButton:setColor(theme.colorNegative)
 
 		logoutButton.onRelease = function(_)
@@ -272,7 +276,7 @@ settings.createModalContent = function(_, config)
 
 			text.object.MaxWidth = 300
 
-			logoutContent.idealReducedContentSize  = function(_, _, _)
+			logoutContent.idealReducedContentSize = function(_, _, _)
 				local w, h = text.Width + theme.padding * 2, text.Height + theme.padding * 2
 				return Number2(w, h)
 			end
@@ -280,10 +284,12 @@ settings.createModalContent = function(_, config)
 			local yes = ui:createButton("Yes! 🙂")
 			yes.onRelease = function()
 				local modal = logoutContent:getModalIfContentIsActive()
-				if modal then modal:close() end
+				if modal then
+					modal:close()
+				end
 				System:LogoutAndExit()
 			end
-			logoutContent.bottomCenter = {yes}
+			logoutContent.bottomCenter = { yes }
 
 			content:push(logoutContent)
 		end
@@ -303,7 +309,6 @@ settings.createModalContent = function(_, config)
 	end
 
 	local refresh = function()
-
 		-- button only used as a min width reference for some buttons
 		local btn = ui:createButton("OFF")
 		local toggleWidth = btn.Width + theme.padding * 2
@@ -311,8 +316,12 @@ settings.createModalContent = function(_, config)
 		local oneEmojiWidth = btn.Width + theme.padding
 		btn:remove()
 
-		if hapticFeedbackToggle ~= nil then hapticFeedbackToggle.Width = toggleWidth end
-		if fullscreenToggle ~= nil then fullscreenToggle.Width = toggleWidth end
+		if hapticFeedbackToggle ~= nil then
+			hapticFeedbackToggle.Width = toggleWidth
+		end
+		if fullscreenToggle ~= nil then
+			fullscreenToggle.Width = toggleWidth
+		end
 		sensitivityMinus.Width = oneEmojiWidth
 		sensitivityPlus.Width = oneEmojiWidth
 		zoomSensitivityMinus.Width = oneEmojiWidth
@@ -369,7 +378,7 @@ settings.createModalContent = function(_, config)
 		return totalWidth, totalHeight
 	end
 
-	content.idealReducedContentSize  = function(_, _, _)
+	content.idealReducedContentSize = function(_, _, _)
 		local w, h = refresh()
 		return Number2(w, h)
 	end

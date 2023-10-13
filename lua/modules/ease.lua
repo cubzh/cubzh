@@ -15,7 +15,6 @@
 --- -- triggers `callback` when done (after 1 second)
 --- ease:inSine(t, 1.0, config)
 
-
 ---@type ease
 
 local ease = {
@@ -25,7 +24,9 @@ local ease = {
 	c1 = 1.70158,
 	c3 = 1.70158 + 1.0,
 	c4 = (2 * math.pi) / 3,
-	isNumber = function(n) return n ~= nil and (type(n) == "number" or type(n) == "integer") end
+	isNumber = function(n)
+		return n ~= nil and (type(n) == "number" or type(n) == "integer")
+	end,
 }
 
 ease._startIfNeeded = function(self)
@@ -45,7 +46,7 @@ ease._startIfNeeded = function(self)
 				end
 				percent = instance:fn(percent)
 
-				for k,from in pairs(instance.from) do
+				for k, from in pairs(instance.from) do
 					to = instance.to[k]
 					local p = from
 					if type(p) == "Rotation" then
@@ -58,10 +59,14 @@ ease._startIfNeeded = function(self)
 					instance.object[k] = p
 				end
 
-				if instance.onUpdate then instance.onUpdate(instance.object) end
+				if instance.onUpdate then
+					instance.onUpdate(instance.object)
+				end
 
 				if done then
-					if instance.onDone then instance.onDone(instance.object) end
+					if instance.onDone then
+						instance.onDone(instance.object)
+					end
 					self.instances[instance.id] = nil
 				end
 			end
@@ -69,7 +74,7 @@ ease._startIfNeeded = function(self)
 	end
 end
 
-ease._common = function(self,object,duration, config)
+ease._common = function(self, object, duration, config)
 	local instance = {}
 	instance.id = self.nextID
 	self.nextID = self.nextID + 1
@@ -78,7 +83,9 @@ ease._common = function(self,object,duration, config)
 	instance.duration = duration
 	instance.to = {}
 	instance.from = {}
-	instance.fn = function(_, v) return v end
+	instance.fn = function(_, v)
+		return v
+	end
 	instance.speed = 0.0
 	instance.amp = 0.0
 
@@ -95,7 +102,6 @@ ease._common = function(self,object,duration, config)
 
 	local m = {}
 	m.__newindex = function(t, k, v)
-
 		if t.object[k] == nil then
 			error("ease: can't ease from nil field")
 		end
@@ -104,17 +110,29 @@ ease._common = function(self,object,duration, config)
 		end
 
 		local fieldType = type(t.object[k])
-		if fieldType ~= type(v) and not (
-			(fieldType == "number" and type(v) == "integer") or
-			(fieldType == "integer" and type(v) == "number")
-		) then
-			if fieldType == "Number3" and -- see if value can be turned into Number3
-				type(v) == "table" and #v == 3 and
-				ease.isNumber(v[1]) and ease.isNumber(v[2]) and ease.isNumber(v[3]) then
+		if
+			fieldType ~= type(v)
+			and not (
+				(fieldType == "number" and type(v) == "integer") or (fieldType == "integer" and type(v) == "number")
+			)
+		then
+			if
+				fieldType == "Number3" -- see if value can be turned into Number3
+				and type(v) == "table"
+				and #v == 3
+				and ease.isNumber(v[1])
+				and ease.isNumber(v[2])
+				and ease.isNumber(v[3])
+			then
 				v = Number3(v[1], v[2], v[3])
-			elseif fieldType == "Rotation" and -- see if value can be turned into Rotation
-				type(v) == "table" and #v == 3 and
-				ease.isNumber(v[1]) and ease.isNumber(v[2]) and ease.isNumber(v[3]) then
+			elseif
+				fieldType == "Rotation" -- see if value can be turned into Rotation
+				and type(v) == "table"
+				and #v == 3
+				and ease.isNumber(v[1])
+				and ease.isNumber(v[2])
+				and ease.isNumber(v[3])
+			then
 				v = Rotation(v[1], v[2], v[3])
 			else
 				error("ease: can't ease from " .. fieldType .. " to " .. type(v))
@@ -147,7 +165,9 @@ end
 ---@code ease:linear(someObject, 1.0).Position = {10, 10, 10}
 ease.linear = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return v end
+	instance.fn = function(_, v)
+		return v
+	end
 	return instance
 end
 
@@ -164,7 +184,9 @@ end
 --- ease:inSine(someObject, 1.0).Position = {10, 10, 10}
 ease.inSine = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return 1.0 - math.cos((v * math.pi) * 0.5) end
+	instance.fn = function(_, v)
+		return 1.0 - math.cos((v * math.pi) * 0.5)
+	end
 	return instance
 end
 
@@ -172,7 +194,9 @@ end
 ---@code ease:outSine(someObject, 1.0).Position = {10, 10, 10}
 ease.outSine = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return math.sin((v * math.pi) * 0.5) end
+	instance.fn = function(_, v)
+		return math.sin((v * math.pi) * 0.5)
+	end
 	return instance
 end
 
@@ -180,7 +204,9 @@ end
 ---@code ease:inOutSine(someObject, 1.0).Position = {10, 10, 10}
 ease.inOutSine = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return  -(math.cos(math.pi * v) - 1.0) * 0.5 end
+	instance.fn = function(_, v)
+		return -(math.cos(math.pi * v) - 1.0) * 0.5
+	end
 	return instance
 end
 
@@ -188,7 +214,9 @@ end
 ---@code ease:inBack(someObject, 1.0).Position = {10, 10, 10}
 ease.inBack = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return ease.c3 * v ^ 3 - ease.c1 * v ^ 2 end
+	instance.fn = function(_, v)
+		return ease.c3 * v ^ 3 - ease.c1 * v ^ 2
+	end
 	return instance
 end
 
@@ -196,7 +224,9 @@ end
 ---@code ease:outBack(someObject, 1.0).Position = {10, 10, 10}
 ease.outBack = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return 1.0 + ease.c3 * (v - 1.0) ^ 3 + ease.c1 * (v - 1.0) ^ 2 end
+	instance.fn = function(_, v)
+		return 1.0 + ease.c3 * (v - 1.0) ^ 3 + ease.c1 * (v - 1.0) ^ 2
+	end
 	return instance
 end
 
@@ -204,7 +234,9 @@ end
 ---@code ease:inQuad(someObject, 1.0).Position = {10, 10, 10}
 ease.inQuad = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return v * v end
+	instance.fn = function(_, v)
+		return v * v
+	end
 	return instance
 end
 
@@ -212,7 +244,9 @@ end
 ---@code ease:outQuad(someObject, 1.0).Position = {10, 10, 10}
 ease.outQuad = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v) return 1.0 - (1.0 - v) * (1.0 - v) end
+	instance.fn = function(_, v)
+		return 1.0 - (1.0 - v) * (1.0 - v)
+	end
 	return instance
 end
 
@@ -220,7 +254,8 @@ end
 ---@code ease:inOutQuad(someObject, 1.0).Position = {10, 10, 10}
 ease.inOutQuad = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v)			if v < 0.5 then
+	instance.fn = function(_, v)
+		if v < 0.5 then
 			return 2 * v * v
 		else
 			local a = -2 * v + 2
@@ -234,7 +269,8 @@ end
 ---@code ease:outElastic(someObject, 1.0).Position = {10, 10, 10}
 ease.outElastic = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v)			if v == 0 then
+	instance.fn = function(_, v)
+		if v == 0 then
 			return 0
 		elseif v == 1 then
 			return 1
@@ -249,7 +285,8 @@ end
 ---@code ease:inElastic(someObject, 1.0).Position = {10, 10, 10}
 ease.inElastic = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
-	instance.fn = function(_, v)			if v == 0 then
+	instance.fn = function(_, v)
+		if v == 0 then
 			return 0
 		elseif v == 1 then
 			return 1
@@ -266,7 +303,8 @@ end
 ---@function cancel Cancels easing when called.
 ---@code local instance = ease:outBack(someObject, 1.0).Position = {10, 10, 10}
 --- instance:cancel()
-ease.cancel = function(self,object)		local toRemove = {}
+ease.cancel = function(self, object)
+	local toRemove = {}
 	for k, instance in pairs(self.instances) do
 		if instance.object == object then
 			table.insert(toRemove, k)

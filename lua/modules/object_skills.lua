@@ -1,4 +1,3 @@
-
 skills = {}
 
 stepClimbers = {} -- all objects with step climbing ability
@@ -9,11 +8,10 @@ STEP_CLIMBING_DEFAULT_CONFIG = {
 	velocityImpulse = 30,
 }
 
-STEP_CLIMBING_BASE_OFFSET = Number3(0,0.1,0)
+STEP_CLIMBING_BASE_OFFSET = Number3(0, 0.1, 0)
 STEP_CLIMBING_BOX_HALF_BASE = Number3(0.5, 0, 0.5)
 
 skills.addStepClimbing = function(object, config)
-
 	if object.CollisionBox == nil then
 		print("⚠️ can't add step climbing skill if object has no CollisionBox")
 		return
@@ -22,7 +20,9 @@ skills.addStepClimbing = function(object, config)
 	config = config or {}
 
 	for name, _ in pairs(STEP_CLIMBING_DEFAULT_CONFIG) do
-		if config[name] == nil then config[name] = STEP_CLIMBING_DEFAULT_CONFIG[name] end
+		if config[name] == nil then
+			config[name] = STEP_CLIMBING_DEFAULT_CONFIG[name]
+		end
 	end
 
 	local box = object.CollisionBox
@@ -34,7 +34,7 @@ skills.addStepClimbing = function(object, config)
 	config.radius = (max - min).Length * 0.5
 	config.stepDistance = config.radius + config.mapScale * 0.5 -- object collider radius + half map block
 	config.maxDistance = config.stepDistance * 3 -- for ray cast
-	config.stepAndAHalf = Number3(0,config.mapScale * 1.5,0)
+	config.stepAndAHalf = Number3(0, config.mapScale * 1.5, 0)
 
 	stepClimbers[object] = config or STEP_CLIMBING_DEFAULT_CONFIG
 end
@@ -44,13 +44,12 @@ skills.removeStepClimbing = function(object)
 end
 
 LocalEvent:Listen(LocalEvent.Name.Tick, function()
-
 	-- STEP CLIMBERS
 
 	local d
 	local impact
 	local dist
-	local box = Box({0,0,0}, {1,1,1})
+	local box = Box({ 0, 0, 0 }, { 1, 1, 1 })
 
 	for stepClimber, config in pairs(stepClimbers) do
 		d = stepClimber.Motion + stepClimber.Velocity
@@ -69,8 +68,6 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function()
 			end
 		end
 	end
-
 end)
 
 return skills
-

@@ -19,16 +19,20 @@ local orientationCube = {}
 local orientationCubeMetatable = {
 	__index = {
 		_defaultLayer = 5,
-        layer = nil,
+		layer = nil,
 		setScreenPosition = function(self, x, y)
 			local camera = self.camera
-			if not camera then self:init() end
+			if not camera then
+				self:init()
+			end
 			camera.TargetX = x
 			camera.TargetY = y
 		end,
 		setSize = function(self, size)
 			local camera = self.camera
-			if not camera then self:init() end
+			if not camera then
+				self:init()
+			end
 			camera.TargetWidth = size
 			camera.TargetHeight = size
 			camera.Width = size
@@ -36,11 +40,13 @@ local orientationCubeMetatable = {
 		end,
 		setRotation = function(self, cameraRotation)
 			local camera = self.camera
-			if not camera then self:init() end
+			if not camera then
+				self:init()
+			end
 
 			self.camera.Rotation:Set(cameraRotation)
 
-			for _,t in ipairs(self.texts) do
+			for _, t in ipairs(self.texts) do
 				local visible = t.Forward:Dot(self.camera.Forward) > -0.3
 				if visible then
 					t:SetParent(self.cube)
@@ -59,28 +65,37 @@ local orientationCubeMetatable = {
 			return self.camera.On
 		end,
 		toggle = function(self, show)
-			if show == nil then show = self:isVisible() == false end
-			if show then self:show()
-			else self:hide() end
+			if show == nil then
+				show = self:isVisible() == false
+			end
+			if show then
+				self:show()
+			else
+				self:hide()
+			end
 		end,
 		setLayer = function(self, layer)
-            local camera = self.camera
-			if not camera then self:init() end
-            if self.layer == layer then return end
-            self.layer = layer
+			local camera = self.camera
+			if not camera then
+				self:init()
+			end
+			if self.layer == layer then
+				return
+			end
+			self.layer = layer
 			camera.Layers = layer
-            if self.cube then
+			if self.cube then
 				self.cube.Layers = layer
-				for _,t in ipairs(self.texts) do
+				for _, t in ipairs(self.texts) do
 					t.Layers = layer
-			    end
-            end
+				end
+			end
 		end,
-		init = function(self,x,y,size)
-            self.layer = self._defaultLayer
+		init = function(self, x, y, size)
+			self.layer = self._defaultLayer
 			local camera = Camera()
 			self.camera = camera
-            camera.Layers = self.layer
+			camera.Layers = self.layer
 			camera:SetParent(World)
 			camera.On = true
 			camera.Rotation = Camera.Rotation
@@ -89,49 +104,49 @@ local orientationCubeMetatable = {
 				self.cube = cube
 				cube.Physics = PhysicsMode.Disabled
 				cube:SetParent(World)
-                cube.Layers = self.layer
+				cube.Layers = self.layer
 				cube.CollisionGroups = 3
 				cube.Pivot = { cube.Width * 0.5, cube.Height * 0.5, cube.Depth * 0.5 }
 
-				camera:SetModeSatellite(cube,17)
+				camera:SetModeSatellite(cube, 17)
 
 				local textsInfo = {
 					{
 						text = "Front",
 						p = { 0, 0, cube.Depth * 0.51 },
-						r = { 0, math.pi, 0 }
+						r = { 0, math.pi, 0 },
 					},
 					{
 						text = "Back",
 						p = { 0, 0, -cube.Depth * 0.51 },
-						r = { 0, 0, 0 }
+						r = { 0, 0, 0 },
 					},
 					{
 						text = "Top",
 						p = { 0, cube.Height * 0.51, 0 },
-						r = { math.pi / 2, 0, 0 }
+						r = { math.pi / 2, 0, 0 },
 					},
 					{
 						text = "Bottom",
 						p = { 0, -cube.Height * 0.51, 0 },
-						r = { -math.pi / 2, 0, 0 }
+						r = { -math.pi / 2, 0, 0 },
 					},
 					{
 						text = "Right",
 						p = { cube.Width * 0.51, 0, 0 },
-						r = { 0, -math.pi / 2, 0 }
+						r = { 0, -math.pi / 2, 0 },
 					},
 					{
 						text = "Left",
 						p = { -cube.Width * 0.51, 0, 0 },
-						r = { 0, math.pi / 2, 0 }
-					}
+						r = { 0, math.pi / 2, 0 },
+					},
 				}
 
 				local texts = {}
 				self.texts = texts
 
-				for _,data in ipairs(textsInfo) do
+				for _, data in ipairs(textsInfo) do
 					local t = Text()
 					t:SetParent(cube)
 					t.Anchor = { 0.5, 0.5 }
@@ -139,8 +154,8 @@ local orientationCubeMetatable = {
 					t.Text = data.text
 					t.Padding = 0
 					t.Color = Color.White
-					t.BackgroundColor = Color(0,0,0,0)
-                    t.Layers = self.layer
+					t.BackgroundColor = Color(0, 0, 0, 0)
+					t.Layers = self.layer
 
 					t.LocalPosition = data.p
 					t.LocalRotation = data.r
@@ -151,9 +166,9 @@ local orientationCubeMetatable = {
 
 			self:setScreenPosition(x or Screen.Width - 105, y or Screen.Height - 105)
 			self:setSize(size or 100)
-            self:setLayer(self.layer)
-		end
-	}
+			self:setLayer(self.layer)
+		end,
+	},
 }
 setmetatable(orientationCube, orientationCubeMetatable)
 

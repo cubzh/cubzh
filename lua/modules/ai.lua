@@ -17,19 +17,19 @@ local functions = {}
 ---     print("ai says: " .. message)
 --- end)
 ai.CreateChat = function(_, context)
-    local aiChat = {}
-    aiChat.messages = {}
-    if context then
+	local aiChat = {}
+	aiChat.messages = {}
+	if context then
 		-- stylua: ignore start
 		context = string.gsub(context, '"', '\"')
 		-- stylua: ignore end
-        table.insert(aiChat.messages, {
-            role = "system",
-            content = context
-        })
-    end
-    aiChat.Say = functions.chatSay
-    return aiChat
+		table.insert(aiChat.messages, {
+			role = "system",
+			content = context,
+		})
+	end
+	aiChat.Say = functions.chatSay
+	return aiChat
 end
 
 ---@function CreateImage Generates image considering prompt and options. Returns a Quad or Shape depending on options.
@@ -80,7 +80,7 @@ end
 ---     Dev:CopyToClipboard(url) -- copy URL to clipboard
 --- end)
 ai.CreateImage = function(_, prompt, optionsOrCallback, callback)
-    require("api").aiImageGenerations(prompt, optionsOrCallback, callback)
+	require("api").aiImageGenerations(prompt, optionsOrCallback, callback)
 end
 
 ---@type aiChat
@@ -97,24 +97,26 @@ end
 ---     print("ai says: " .. message)
 --- end)
 functions.chatSay = function(self, prompt, callback)
-    if not prompt or #prompt <= 0 then
-        return callback("Error: prompt is not valid")
-    end
+	if not prompt or #prompt <= 0 then
+		return callback("Error: prompt is not valid")
+	end
 	-- stylua: ignore start
 	prompt = string.gsub(prompt, '"', '\"') -- avoid issue with JSON
 	-- stylua: ignore end
 
-    table.insert(self.messages, {
-        role = "user",
-        content = prompt
-    })
+	table.insert(self.messages, {
+		role = "user",
+		content = prompt,
+	})
 
-    require("api").aiChatCompletions(self.messages, function(err, message)
-        if err then return callback(err) end
-        callback(nil, message.content)
-        message.content = string.gsub(message.content, '"', '\"') -- avoid issue with JSON
-        table.insert(self.messages, message)
-    end)
+	require("api").aiChatCompletions(self.messages, function(err, message)
+		if err then
+			return callback(err)
+		end
+		callback(nil, message.content)
+		message.content = string.gsub(message.content, '"', '"') -- avoid issue with JSON
+		table.insert(self.messages, message)
+	end)
 end
 
 return ai

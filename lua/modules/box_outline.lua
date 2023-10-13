@@ -10,7 +10,8 @@ local c = boxOutline:create(size,thickness,Color.Red)
 c:SetParent(Player.Head)
 c.LocalPosition = -Player.Head.Pivot - Number3(0.5,0.5,0.5)
 
-]]--
+]]
+--
 
 local boxOutlineModule = {}
 local boxOutlineModuleMetatable = {
@@ -28,20 +29,20 @@ local boxOutlineModuleMetatable = {
 				o.color = color
 
 				local segments = {
-					{ scaleField="X", pos={0,0,0} }, 			-- bottom front
-					{ scaleField="X", pos={0,0,size.Z} },  	  -- bottom back
-					{ scaleField="Z", pos={0,0,0} }, 			-- bottom left
-					{ scaleField="Z", pos={size.X,0,0} },  	  -- bottom right
-					{ scaleField="X", pos={0,size.Y,0} }, 	   -- top front
-					{ scaleField="X", pos={0,size.Y,size.Z} },   -- top back
-					{ scaleField="Z", pos={0,size.Y,0} },    	-- top left
-					{ scaleField="Z", pos={size.X,size.Y,0} },   -- top right
-					{ scaleField="Y", pos={0,0,0} }, 	  	  -- v left front
-					{ scaleField="Y", pos={0,0,size.Z} },   	 -- v left back
-					{ scaleField="Y", pos={size.X,0,0} },    	-- v right front
-					{ scaleField="Y", pos={size.X,0,size.Z} },   -- v right back
+					{ scaleField = "X", pos = { 0, 0, 0 } }, -- bottom front
+					{ scaleField = "X", pos = { 0, 0, size.Z } }, -- bottom back
+					{ scaleField = "Z", pos = { 0, 0, 0 } }, -- bottom left
+					{ scaleField = "Z", pos = { size.X, 0, 0 } }, -- bottom right
+					{ scaleField = "X", pos = { 0, size.Y, 0 } }, -- top front
+					{ scaleField = "X", pos = { 0, size.Y, size.Z } }, -- top back
+					{ scaleField = "Z", pos = { 0, size.Y, 0 } }, -- top left
+					{ scaleField = "Z", pos = { size.X, size.Y, 0 } }, -- top right
+					{ scaleField = "Y", pos = { 0, 0, 0 } }, -- v left front
+					{ scaleField = "Y", pos = { 0, 0, size.Z } }, -- v left back
+					{ scaleField = "Y", pos = { size.X, 0, 0 } }, -- v right front
+					{ scaleField = "Y", pos = { size.X, 0, size.Z } }, -- v right back
 				}
-				for k,segment in ipairs(segments) do
+				for k, segment in ipairs(segments) do
 					local l = o:GetChild(k)
 					l.Scale = thickness
 					l.Scale[segment.scaleField] = size[segment.scaleField]
@@ -53,10 +54,10 @@ local boxOutlineModuleMetatable = {
 			end
 
 			local line = MutableShape()
-			line:AddBlock(color or Color.White,0,0,0)
+			line:AddBlock(color or Color.White, 0, 0, 0)
 
 			-- build 12 segments
-			for i=1,12 do
+			for i = 1, 12 do
 				local l = Shape(line)
 				l:SetParent(o)
 				o[i] = l
@@ -64,8 +65,8 @@ local boxOutlineModuleMetatable = {
 
 			o:resize(size, thickness, color)
 			return o
-		end
-	}
+		end,
+	},
 }
 setmetatable(boxOutlineModule, boxOutlineModuleMetatable)
 

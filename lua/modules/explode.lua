@@ -7,9 +7,8 @@ local explode = {
 -- explodes all shapes in object
 -- (including object itself if it's a shape)
 explode.shapes = function(self, object)
-	self.hierarchyActions:applyToDescendants(object,  { includeRoot = true }, function(o)
+	self.hierarchyActions:applyToDescendants(object, { includeRoot = true }, function(o)
 		if type(o) == "Shape" or type(o) == "MutableShape" then
-
 			local s = Shape(o)
 			World:AddChild(s)
 
@@ -22,7 +21,7 @@ explode.shapes = function(self, object)
 			s.CollidesWithGroups = Map.CollisionGroups
 			s.Bounciness = 0.1
 
-			local v = Number3(0,0,1) * (50 + math.random() * 100)
+			local v = Number3(0, 0, 1) * (50 + math.random() * 100)
 			v:Rotate(Number3(math.random() * -math.pi, math.random() * math.pi * 2, 0))
 			s.Velocity = v
 
@@ -41,6 +40,5 @@ explode.shapes = function(self, object)
 		end
 	end)
 end
-
 
 return explode

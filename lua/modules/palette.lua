@@ -38,13 +38,11 @@ p:mergeColors(s.Palette)
 p:addColor(Color(255,0,0))
 --]]
 
-
 local palette = {}
 
 theme = require("uitheme").current
 
 palette.create = function(_, uikit, btnColor)
-
 	local node = uikit:createNode()
 
 	-- config
@@ -62,7 +60,7 @@ palette.create = function(_, uikit, btnColor)
 	node.didChangeSelection = nil -- function(self, color)
 	node.requiresEdit = nil -- function(self, index, color)
 
-	local bg = uikit:createFrame(Color(50,50,50,200))
+	local bg = uikit:createFrame(Color(50, 50, 50, 200))
 	bg.Width = 200
 	bg.Height = 200
 	bg:setParent(node)
@@ -95,10 +93,10 @@ palette.create = function(_, uikit, btnColor)
 	addBtn:setParent(node)
 	node.addBtn = addBtn
 	addBtn.onRelease = function()
-		local c = Color(255,255,255,255)
+		local c = Color(255, 255, 255, 255)
 		local step = 1
 		-- Avoid adding white if white is already in shape
-		while (node:_paletteHasColor(c)) do
+		while node:_paletteHasColor(c) do
 			c = Color(255 - step, 255 - step, 255 - step, 255)
 			step = step + 1
 		end
@@ -124,8 +122,8 @@ palette.create = function(_, uikit, btnColor)
 	local selectionFrameShape = MutableShape(false)
 	selectionFrameShape.CollisionGroups = {}
 	local size = 10
-	for y=0,size - 1 do
-		for x=0,size - 1 do
+	for y = 0, size - 1 do
+		for x = 0, size - 1 do
 			if y == 0 or x == 0 or y == size - 1 or x == size - 1 then
 				selectionFrameShape:AddBlock(Color.White, x, y, 0)
 			end
@@ -135,7 +133,7 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	local selectionFrame = uikit:createShape(selectionFrameShape, {doNotFlip = true})
+	local selectionFrame = uikit:createShape(selectionFrameShape, { doNotFlip = true })
 	selectionFrame:setParent(node)
 	selectionFrame.Width = 40
 	selectionFrame.Height = 40
@@ -145,18 +143,22 @@ palette.create = function(_, uikit, btnColor)
 
 	node._paletteHasColor = function(self, color)
 		local palette = self.colorsShape.Palette
-		for i=1,#palette do
-			if palette[i].Color == color then return true end
+		for i = 1, #palette do
+			if palette[i].Color == color then
+				return true
+			end
 		end
 		return false
 	end
 
 	node._resetColorsShape = function(self)
-		if self.colors ~= nil then self.colors:remove() end
+		if self.colors ~= nil then
+			self.colors:remove()
+		end
 
 		local colorsShape = MutableShape()
 		colorsShape.CollisionGroups = {}
-		local colors = uikit:createShape(colorsShape, {doNotFlip = true})
+		local colors = uikit:createShape(colorsShape, { doNotFlip = true })
 		colors:setParent(self)
 
 		self.colors = colors
@@ -180,7 +182,7 @@ palette.create = function(_, uikit, btnColor)
 	node._blockFromIndex = function(self, index)
 		local x = (index - 1) % self.nbColumns
 		local y = -1 - math.floor((index - 1) / self.nbColumns)
-		return self.colorsShape:GetBlock(x,y,0)
+		return self.colorsShape:GetBlock(x, y, 0)
 	end
 
 	node._colorFromIndex = function(self, index)
@@ -193,24 +195,30 @@ palette.create = function(_, uikit, btnColor)
 	node._selectIndex = function(self, index)
 		self._selectedIndex = index
 		self:_refreshSelectionFrame()
-		if self.didChangeSelection ~= nil then  -- function(self, color)
+		if self.didChangeSelection ~= nil then -- function(self, color)
 			self:didChangeSelection(self:getCurrentColor())
 		end
 	end
 
 	node._removeIndex = function(self, index)
 		local color = self:_colorFromIndex(index)
-		if color == nil then return end
+		if color == nil then
+			return
+		end
 		local b = self:_blockFromIndex(index)
-		if b == nil then return end
+		if b == nil then
+			return
+		end
 
 		local count = self.colorsShape.BlocksCount
-		if count == 1 then return end -- do not remove last color
+		if count == 1 then
+			return
+		end -- do not remove last color
 
 		local paletteIndexToRemove = b.PaletteIndex
 
 		local b2
-		for i = index,count do
+		for i = index, count do
 			b2 = self:_blockFromIndex(i)
 			b:Replace(b2)
 			b = b2
@@ -253,8 +261,7 @@ palette.create = function(_, uikit, btnColor)
 	end
 
 	node._refresh = function(self)
-
-		local controls = {self.deleteBtn, self.editBtn, self.addBtn}
+		local controls = { self.deleteBtn, self.editBtn, self.addBtn }
 
 		local controlsWidth = self.padding
 		for _, element in ipairs(controls) do
@@ -304,7 +311,7 @@ palette.create = function(_, uikit, btnColor)
 		self.colors.Width = colorsWidth
 		self.colors.Height = colorsHeight
 
-		self.colors.pos = {self.padding, self.deleteBtn.LocalPosition.Y + self.deleteBtn.Height + self.padding, 0}
+		self.colors.pos = { self.padding, self.deleteBtn.LocalPosition.Y + self.deleteBtn.Height + self.padding, 0 }
 
 		colorsWidth = colorsWidth + self.padding * 2
 		local width = controlsWidth > colorsWidth and controlsWidth or colorsWidth
@@ -312,9 +319,11 @@ palette.create = function(_, uikit, btnColor)
 		self.background.Height = heightWithoutColors + self.colors.Height
 		self.background.Width = width
 
-		self.addBtn.LocalPosition = {width - self.padding - self.addBtn.Width, self.padding, 0}
-		self.editBtn.LocalPosition = {self.addBtn.LocalPosition.X - self.editBtn.Width - self.padding, self.padding, 0}
-		self.deleteBtn.LocalPosition = {self.editBtn.LocalPosition.X - self.deleteBtn.Width - self.padding, self.padding, 0}
+		self.addBtn.LocalPosition = { width - self.padding - self.addBtn.Width, self.padding, 0 }
+		self.editBtn.LocalPosition =
+			{ self.addBtn.LocalPosition.X - self.editBtn.Width - self.padding, self.padding, 0 }
+		self.deleteBtn.LocalPosition =
+			{ self.editBtn.LocalPosition.X - self.deleteBtn.Width - self.padding, self.padding, 0 }
 
 		self:_refreshSelectionFrame()
 
@@ -353,16 +362,30 @@ palette.create = function(_, uikit, btnColor)
 
 		while self.colorsShape.Palette:GetIndex(color) ~= nil do
 			if direction < 0 then
-				if color.R > 0 then color.R = color.R + direction end
-				if color.G > 0 then color.G = color.G + direction end
-				if color.B > 0 then color.B = color.B + direction end
+				if color.R > 0 then
+					color.R = color.R + direction
+				end
+				if color.G > 0 then
+					color.G = color.G + direction
+				end
+				if color.B > 0 then
+					color.B = color.B + direction
+				end
 			else
-				if color.R < 255 then color.R = color.R + direction end
-				if color.G < 255 then color.G = color.G + direction end
-				if color.B < 255 then color.B = color.B + direction end
+				if color.R < 255 then
+					color.R = color.R + direction
+				end
+				if color.G < 255 then
+					color.G = color.G + direction
+				end
+				if color.B < 255 then
+					color.B = color.B + direction
+				end
 			end
 			tries = tries + 1
-			if tries == maxTries then return false end
+			if tries == maxTries then
+				return false
+			end
 		end
 
 		self:addColor(color)
@@ -374,7 +397,7 @@ palette.create = function(_, uikit, btnColor)
 
 		local x = nBlocks % self.nbColumns
 		local y = -(math.floor(nBlocks / self.nbColumns)) - 1
-		self.colorsShape:AddBlock(color,x,y,0)
+		self.colorsShape:AddBlock(color, x, y, 0)
 		nBlocks = nBlocks + 1
 
 		if skipRefreshAndSelect ~= true then
@@ -396,14 +419,17 @@ palette.create = function(_, uikit, btnColor)
 
 		node:_resetColorsShape()
 
-		for i = 1,#palette do
+		for i = 1, #palette do
 			self:addColor(palette[i].Color, true)
 		end
 
 		self.colorsShape:RefreshModel()
 
-		if #palette == 0 then self:_selectIndex(0)
-		else self:_selectIndex(1) end
+		if #palette == 0 then
+			self:_selectIndex(0)
+		else
+			self:_selectIndex(1)
+		end
 
 		node:_refresh()
 	end
@@ -423,60 +449,62 @@ palette.create = function(_, uikit, btnColor)
 			error("palette can only get colors from a Palette or a Shape")
 		end
 
-		for i = 1,#palette do
+		for i = 1, #palette do
 			self:selectOrAddColorIfMissing(palette[i].Color)
 		end
 
-		if #palette == 0 then self:_selectIndex(0)
-		else self:_selectIndex(1) end
+		if #palette == 0 then
+			self:_selectIndex(0)
+		else
+			self:_selectIndex(1)
+		end
 
 		node:_refresh()
 	end
 
 	-- DEFAULT COLORS
-	node:addColor(Color(86,51,23))
-	node:addColor(Color(129,88,54))
-	node:addColor(Color(234,159,98))
-	node:addColor(Color(255,220,191))
-	node:addColor(Color(0,0,0))
-	node:addColor(Color(84,84,84))
-	node:addColor(Color(168,168,168))
-	node:addColor(Color(255,255,255))
-	node:addColor(Color(0,47,142))
-	node:addColor(Color(0,81,173))
-	node:addColor(Color(0,120,255))
-	node:addColor(Color(158,189,255))
-	node:addColor(Color(0,81,123))
-	node:addColor(Color(17,139,174))
-	node:addColor(Color(76,215,255))
-	node:addColor(Color(164,250,255))
-	node:addColor(Color(2,83,0))
-	node:addColor(Color(20,160,17))
-	node:addColor(Color(6,238,0))
-	node:addColor(Color(132,255,32))
-	node:addColor(Color(255,191,0))
-	node:addColor(Color(255,224,58))
-	node:addColor(Color(255,221,120))
-	node:addColor(Color(255,253,211))
-	node:addColor(Color(127,65,50))
-	node:addColor(Color(188,75,0))
-	node:addColor(Color(253,110,14))
-	node:addColor(Color(253,174,78))
-	node:addColor(Color(184,13,0))
-	node:addColor(Color(255,18,0))
-	node:addColor(Color(255,117,156))
-	node:addColor(Color(255,175,198))
-	node:addColor(Color(178,0,113))
-	node:addColor(Color(255,0,120))
-	node:addColor(Color(255,157,219))
-	node:addColor(Color(248,203,231))
-	node:addColor(Color(61,0,85))
-	node:addColor(Color(136,0,252))
-	node:addColor(Color(182,122,233))
-	node:addColor(Color(237,215,255))
+	node:addColor(Color(86, 51, 23))
+	node:addColor(Color(129, 88, 54))
+	node:addColor(Color(234, 159, 98))
+	node:addColor(Color(255, 220, 191))
+	node:addColor(Color(0, 0, 0))
+	node:addColor(Color(84, 84, 84))
+	node:addColor(Color(168, 168, 168))
+	node:addColor(Color(255, 255, 255))
+	node:addColor(Color(0, 47, 142))
+	node:addColor(Color(0, 81, 173))
+	node:addColor(Color(0, 120, 255))
+	node:addColor(Color(158, 189, 255))
+	node:addColor(Color(0, 81, 123))
+	node:addColor(Color(17, 139, 174))
+	node:addColor(Color(76, 215, 255))
+	node:addColor(Color(164, 250, 255))
+	node:addColor(Color(2, 83, 0))
+	node:addColor(Color(20, 160, 17))
+	node:addColor(Color(6, 238, 0))
+	node:addColor(Color(132, 255, 32))
+	node:addColor(Color(255, 191, 0))
+	node:addColor(Color(255, 224, 58))
+	node:addColor(Color(255, 221, 120))
+	node:addColor(Color(255, 253, 211))
+	node:addColor(Color(127, 65, 50))
+	node:addColor(Color(188, 75, 0))
+	node:addColor(Color(253, 110, 14))
+	node:addColor(Color(253, 174, 78))
+	node:addColor(Color(184, 13, 0))
+	node:addColor(Color(255, 18, 0))
+	node:addColor(Color(255, 117, 156))
+	node:addColor(Color(255, 175, 198))
+	node:addColor(Color(178, 0, 113))
+	node:addColor(Color(255, 0, 120))
+	node:addColor(Color(255, 157, 219))
+	node:addColor(Color(248, 203, 231))
+	node:addColor(Color(61, 0, 85))
+	node:addColor(Color(136, 0, 252))
+	node:addColor(Color(182, 122, 233))
+	node:addColor(Color(237, 215, 255))
 
 	return node
-
 end
 
 return palette

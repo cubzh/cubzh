@@ -1,17 +1,19 @@
 local plane = {}
 
 local hit = function(self, ray)
-    if type(ray) ~= "Ray" then error("plane:hit(ray) - ray parameter should be a Ray") end
+	if type(ray) ~= "Ray" then
+		error("plane:hit(ray) - ray parameter should be a Ray")
+	end
 
 	-- if origin on plane, return origin
-    if (self.origin - ray.Origin):Dot(self.normal) == 0 then
-        return ray.Origin
-    end
+	if (self.origin - ray.Origin):Dot(self.normal) == 0 then
+		return ray.Origin
+	end
 
-    -- if ray parallel to plane, return nil
-    if math.abs(ray.Direction:Dot(self.normal)) == 0 then
-        return nil
-    end
+	-- if ray parallel to plane, return nil
+	if math.abs(ray.Direction:Dot(self.normal)) == 0 then
+		return nil
+	end
 
 	return ray.Origin + ray.Direction * ((self.origin - ray.Origin):Dot(self.normal) / ray.Direction:Dot(self.normal))
 end
@@ -24,17 +26,17 @@ local planeMetatable = {
 			normal:Normalize()
 			local planeInstanceMetatable = {
 				__index = {
-					origin=origin:Copy(),
-					v1=v1:Copy(),
-					v2=v2:Copy(),
-					normal=normal,
-					hit=hit
-				}
+					origin = origin:Copy(),
+					v1 = v1:Copy(),
+					v2 = v2:Copy(),
+					normal = normal,
+					hit = hit,
+				},
 			}
 			setmetatable(planeInstance, planeInstanceMetatable)
 			return planeInstance
-		end
-	}
+		end,
+	},
 }
 setmetatable(plane, planeMetatable)
 

@@ -1,7 +1,6 @@
 itemDetails = {}
 
 itemDetails.createModalContent = function(_, config)
-
 	local _config = {
 		title = "Item",
 		mode = "explore", -- "explore" / "create"
@@ -10,7 +9,9 @@ itemDetails.createModalContent = function(_, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -29,12 +30,13 @@ itemDetails.createModalContent = function(_, config)
 
 	-- becomes true when itemDetails is removed
 	-- callbacks may capture this as upvalue to early return.
-	local removed = false		local requests = {}
+	local removed = false
+	local requests = {}
 	local listeners = {}
 
 	itemDetails.onRemove = function(_)
 		removed = true
-			for _, req in ipairs(requests) do
+		for _, req in ipairs(requests) do
 			req:Cancel()
 		end
 		requests = {}
@@ -50,43 +52,43 @@ itemDetails.createModalContent = function(_, config)
 	content.icon = "⚔️"
 	content.node = itemDetails
 
-	local nameArea = ui:createFrame(Color(0,0,0))
+	local nameArea = ui:createFrame(Color(0, 0, 0))
 	nameArea:setParent(itemDetails)
 	itemDetails.nameArea = nameArea
 
 	local name = ui:createText("name", Color.White)
 	name:setParent(nameArea)
 	itemDetails.name = name
-	name.LocalPosition = {theme.padding, theme.padding, 0}
+	name.LocalPosition = { theme.padding, theme.padding, 0 }
 
-	local infoArea = ui:createFrame(Color(0,0,0))
+	local infoArea = ui:createFrame(Color(0, 0, 0))
 	infoArea:setParent(itemDetails)
 	itemDetails.infoArea = infoArea
 
 	local publishDate = ui:createText("🌎 2 days ago (v1)", Color.White, "small")
 	publishDate:setParent(infoArea)
 	itemDetails.publishDate = publishDate
-	publishDate.LocalPosition = {theme.padding, theme.padding, 0}
+	publishDate.LocalPosition = { theme.padding, theme.padding, 0 }
 
 	local by
 	if createMode then
 		by = ui:createText("by", Color.White, "small")
 	else
-		by = ui:createButton("by...", {textSize = "small"})
+		by = ui:createButton("by...", { textSize = "small" })
 	end
 	by:setParent(infoArea)
 	itemDetails.by = by
-	by.LocalPosition = publishDate.LocalPosition + {0, publishDate.Height + theme.padding, 0}
+	by.LocalPosition = publishDate.LocalPosition + { 0, publishDate.Height + theme.padding, 0 }
 
 	local author
 	if createMode then
 		author = ui:createText(" @repo", Color.Green)
 		author:setParent(infoArea)
 		itemDetails.author = author
-		author.LocalPosition = by.LocalPosition + {by.Width, 0, 0}
+		author.LocalPosition = by.LocalPosition + { by.Width, 0, 0 }
 	end
 
-	local descriptionArea = ui:createFrame(Color(0,0,0))
+	local descriptionArea = ui:createFrame(Color(0, 0, 0))
 	descriptionArea.IsMask = true
 	descriptionArea:setParent(itemDetails)
 	itemDetails.descriptionArea = descriptionArea
@@ -96,7 +98,7 @@ itemDetails.createModalContent = function(_, config)
 	itemDetails.description = description
 	description.LocalPosition.X = theme.padding
 
-	local shapeArea = ui:createFrame(Color(0,0,0))
+	local shapeArea = ui:createFrame(Color(0, 0, 0))
 	shapeArea:setParent(itemDetails)
 	itemDetails.shapeArea = shapeArea
 
@@ -105,7 +107,7 @@ itemDetails.createModalContent = function(_, config)
 	commentsBtn:setParent(itemDetails)
 	commentsBtn.onRelease = function() end
 
-	local copyNameBtn = ui:createButton("📑 Copy Name", {textSize = "small"})
+	local copyNameBtn = ui:createButton("📑 Copy Name", { textSize = "small" })
 	copyNameBtn:setParent(itemDetails)
 	copyNameBtn.onRelease = function()
 		Dev:CopyToClipboard(copyNameBtn.itemFullName or "")
@@ -136,7 +138,6 @@ itemDetails.createModalContent = function(_, config)
 
 		itemDetails.liked = false
 		itemDetails.originalLiked = false
-
 	elseif config.mode == "create" then
 		likes = ui:createText("❤️ …", theme.textColor)
 		likes:setParent(itemDetails)
@@ -147,7 +148,9 @@ itemDetails.createModalContent = function(_, config)
 		editDescriptionBtn.onRelease = function()
 			if System.MultilineInput ~= nil and itemDetails.description then
 				local description = itemDetails.description
-				if description.empty == true then description = "" end
+				if description.empty == true then
+					description = ""
+				end
 				System.MultilineInput(
 					description.Text,
 					"Description",
@@ -157,12 +160,15 @@ itemDetails.createModalContent = function(_, config)
 					function(text) -- done
 						ui:turnOn()
 						local description = itemDetails.description
-						if text == "" then								description.empty = true
+						if text == "" then
+							description.empty = true
 							description.Text = "Items are easier to find with a description!"
 							description.Color = theme.textColorSecondary
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, {description = ""}, function(_, _)
-								if removed then return end
+							local req = api:patchItem(itemDetails.id, { description = "" }, function(_, _)
+								if removed then
+									return
+								end
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -171,8 +177,10 @@ itemDetails.createModalContent = function(_, config)
 							description.Text = text
 							description.Color = theme.textColor
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, {description = text}, function(_, _)
-								if removed then return end
+							local req = api:patchItem(itemDetails.id, { description = text }, function(_, _)
+								if removed then
+									return
+								end
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -190,12 +198,20 @@ itemDetails.createModalContent = function(_, config)
 	itemDetails.shape = nil
 
 	itemDetails.reloadShape = function(self)
-		if self.cell.itemFullName == nil then return end
+		if self.cell.itemFullName == nil then
+			return
+		end
 		local req = Object:Load(self.cell.itemFullName, function(obj)
-			if removed then return end
+			if removed then
+				return
+			end
 
-			if obj == nil then return end
-			if self.cell == nil then return end
+			if obj == nil then
+				return
+			end
+			if self.cell == nil then
+				return
+			end
 
 			local w = 350
 			local h = 350
@@ -212,31 +228,38 @@ itemDetails.createModalContent = function(_, config)
 				self.shape = nil
 			end
 
-			self.shape = ui:createShape(obj, {spherized = true})
+			self.shape = ui:createShape(obj, { spherized = true })
 			self.shape.Width = w
 			self.shape.Height = h
-			self.shape.pivot.LocalRotation = {-0.1,0,-0.2}
+			self.shape.pivot.LocalRotation = { -0.1, 0, -0.2 }
 
 			self.shape:setParent(self)
-			self.shape.pos = {x, y, 0}
+			self.shape.pos = { x, y, 0 }
 		end)
 		table.insert(requests, req)
 	end
 
 	content.loadCell = function(cell)
-		if removed then return end
+		if removed then
+			return
+		end
 		local self = itemDetails
 
-		if self.shape then self.shape:remove() self.shape = nil end
+		if self.shape then
+			self.shape:remove()
+			self.shape = nil
+		end
 		self.cell = cell
 
 		self.id = cell.id
 		if createMode then
 			self.author.Text = " @" .. cell.repo
-			else
+		else
 			-- Retrieve user data. We need their UserID.
 			local req = api:searchUser(cell.repo, function(_, users)
-				if removed then return end
+				if removed then
+					return
+				end
 
 				by.Text = "by @" .. cell.repo
 
@@ -248,17 +271,19 @@ itemDetails.createModalContent = function(_, config)
 				end
 
 				by.onRelease = function(_)
-					local profileConfig = {isLocal = false, username = cell.repo, userID = authorID, uikit = ui}
+					local profileConfig = { isLocal = false, username = cell.repo, userID = authorID, uikit = ui }
 					local profileContent = require("profile"):create(profileConfig)
 					content:push(profileContent)
 				end
 			end)
 			table.insert(requests, req)
 		end
-			-- Retrieve item info. We need its number of likes.
+		-- Retrieve item info. We need its number of likes.
 		-- (cell.id is Item UUID)
-		local req = api:getItem(cell.id, function (_, item)
-			if removed then return end
+		local req = api:getItem(cell.id, function(_, item)
+			if removed then
+				return
+			end
 
 			if self.likes then
 				self.likes.Text = "❤️ " .. math.floor(item.likes) -- force integer format
@@ -275,7 +300,7 @@ itemDetails.createModalContent = function(_, config)
 			self:refresh() -- refresh layout
 		end)
 		table.insert(requests, req)
-			self.name.Text = cell.name
+		self.name.Text = cell.name
 
 		if config.mode == "create" then
 			if cell.description == nil or cell.description == "" then
@@ -291,13 +316,16 @@ itemDetails.createModalContent = function(_, config)
 			self.description.Color = theme.textColor
 		end
 
-		if self.likes then				self.likes.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
-
+		if self.likes then
+			self.likes.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
 		elseif self.likeBtn then
 			self.likeBtn.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
 			self.likeBtn.onRelease = function()
 				self.liked = not self.liked
-				local req = api:likeItem(cell.id, self.liked, function(_)						if removed then return end
+				local req = api:likeItem(cell.id, self.liked, function(_)
+					if removed then
+						return
+					end
 				end)
 				table.insert(requests, req)
 
@@ -328,7 +356,7 @@ itemDetails.createModalContent = function(_, config)
 		if self.created then
 			local n, unitType = time.ago(self.created)
 			if n == 1 then
-				unitType = unitType:sub(1,#unitType - 1)
+				unitType = unitType:sub(1, #unitType - 1)
 			end
 			self.publishDate.Text = "🌎 " .. n .. " " .. unitType .. " ago"
 		end
@@ -338,18 +366,18 @@ itemDetails.createModalContent = function(_, config)
 		local shapeAsyncLoad = false
 		local shape
 		if cell.item.shape then
-			shape = Shape(cell.item.shape, {includeChildren = true})
+			shape = Shape(cell.item.shape, { includeChildren = true })
 		else
 			shapeAsyncLoad = true
 			shape = MutableShape()
-			shape:AddBlock(Color(255,255,255,50),0,0,0)
+			shape:AddBlock(Color(255, 255, 255, 50), 0, 0, 0)
 		end
 
-		self.shape = ui:createShape(shape, {spherized = true})
+		self.shape = ui:createShape(shape, { spherized = true })
 		self.shape.Width = 350
 		self.shape.Height = 350
 
-		self.shape.pivot.LocalRotation = {-0.1,0,-0.2}
+		self.shape.pivot.LocalRotation = { -0.1, 0, -0.2 }
 
 		local t = 0
 		local listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
@@ -374,7 +402,9 @@ itemDetails.createModalContent = function(_, config)
 
 	itemDetails._refreshTimer = nil
 	itemDetails._scheduleRefresh = function(self)
-		if self._refreshTimer ~= nil then return end
+		if self._refreshTimer ~= nil then
+			return
+		end
 		self._refreshTimer = Timer(0.01, function()
 			self._refreshTimer = nil
 			self:refresh()
@@ -400,8 +430,9 @@ itemDetails.createModalContent = function(_, config)
 	end
 
 	itemDetails.refresh = function(self)
-
-		if self.shape == nil then return end
+		if self.shape == nil then
+			return
+		end
 
 		local portraitMode = self.Width < self.Height
 
@@ -433,10 +464,11 @@ itemDetails.createModalContent = function(_, config)
 			self.shapeArea.Height = self.shape.Height
 			self.shapeArea.LocalPosition = self.shape.LocalPosition
 
-			local w = (likes and likes.Width + theme.padding or 0)						+ (likeBtn and likeBtn.Width + theme.padding or 0)
-					+ (signalBtn and signalBtn.Width + theme.padding or 0)
-					+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
-					- theme.padding
+			local w = (likes and likes.Width + theme.padding or 0)
+				+ (likeBtn and likeBtn.Width + theme.padding or 0)
+				+ (signalBtn and signalBtn.Width + theme.padding or 0)
+				+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
+				- theme.padding
 
 			local startX = availableWidth * 0.5 - w * 0.5
 
@@ -467,21 +499,30 @@ itemDetails.createModalContent = function(_, config)
 			self.nameArea.Height = self.name.Height + theme.padding * 2
 			self.nameArea.Width = self.Width
 
-			self.nameArea.pos = {0, self.shape.pos.Y - h - self.nameArea.Height - theme.padding * 2}
+			self.nameArea.pos = { 0, self.shape.pos.Y - h - self.nameArea.Height - theme.padding * 2 }
 
 			self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
 			self.infoArea.Width = self.nameArea.Width
-			self.infoArea.LocalPosition = self.nameArea.LocalPosition - {0, self.infoArea.Height + theme.padding, 0}
+			self.infoArea.LocalPosition = self.nameArea.LocalPosition - { 0, self.infoArea.Height + theme.padding, 0 }
 
-			self.descriptionArea.Height = detailsHeight - self.nameArea.Height - self.infoArea.Height - theme.padding * 2
+			self.descriptionArea.Height = detailsHeight
+				- self.nameArea.Height
+				- self.infoArea.Height
+				- theme.padding * 2
 			self.descriptionArea.Width = self.nameArea.Width
-			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
+			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition
+				- { 0, self.descriptionArea.Height + theme.padding, 0 }
 
-			if editDescriptionBtn ~= nil then					editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
-										self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,0}
+			if editDescriptionBtn ~= nil then
+				editDescriptionBtn.pos = {
+					self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
+					self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,
+					0,
+				}
 
-				self.description.object.MaxWidth = self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding * 3
-
+				self.description.object.MaxWidth = self.descriptionArea.Width
+					- editDescriptionBtn.Width
+					- theme.padding * 3
 			else
 				self.description.object.MaxWidth = self.descriptionArea.Width - theme.padding * 2
 			end
@@ -489,15 +530,15 @@ itemDetails.createModalContent = function(_, config)
 			self.description.LocalPosition.Y = self.descriptionArea.Height - self.description.Height - theme.padding
 
 			copyNameBtn.pos.Y = self.descriptionArea.pos.Y - copyNameBtn.Height - theme.padding
-
 		else
 			-- min width to display details, buttons, etc.
 			-- remaining width can be used for the preview
 
-			local w = (likes and likes.Width + theme.padding or 0)						+ (likeBtn and likeBtn.Width + theme.padding or 0)
-					+ (signalBtn and signalBtn.Width + theme.padding or 0)
-					+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
-					- theme.padding
+			local w = (likes and likes.Width + theme.padding or 0)
+				+ (likeBtn and likeBtn.Width + theme.padding or 0)
+				+ (signalBtn and signalBtn.Width + theme.padding or 0)
+				+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
+				- theme.padding
 
 			local detailsWidthRatio = 0.66
 
@@ -573,21 +614,30 @@ itemDetails.createModalContent = function(_, config)
 
 			self.nameArea.Height = self.name.Height + theme.padding * 2
 			self.nameArea.Width = detailsWidth
-			self.nameArea.LocalPosition = {0, self.Height - self.nameArea.Height, 0}
+			self.nameArea.LocalPosition = { 0, self.Height - self.nameArea.Height, 0 }
 
 			self.infoArea.Height = self.by.Height + self.publishDate.Height + theme.padding * 3
 			self.infoArea.Width = detailsWidth
-			self.infoArea.LocalPosition = self.nameArea.LocalPosition - {0, self.infoArea.Height + theme.padding, 0}
+			self.infoArea.LocalPosition = self.nameArea.LocalPosition - { 0, self.infoArea.Height + theme.padding, 0 }
 
-			self.descriptionArea.Height = availableHeight - self.nameArea.Height - self.infoArea.Height - theme.padding * 2
+			self.descriptionArea.Height = availableHeight
+				- self.nameArea.Height
+				- self.infoArea.Height
+				- theme.padding * 2
 			self.descriptionArea.Width = detailsWidth
-				self.descriptionArea.LocalPosition = self.infoArea.LocalPosition - {0, self.descriptionArea.Height + theme.padding, 0}
+			self.descriptionArea.LocalPosition = self.infoArea.LocalPosition
+				- { 0, self.descriptionArea.Height + theme.padding, 0 }
 
-			if editDescriptionBtn ~= nil then					editDescriptionBtn.pos = {self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
-										self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,0}
+			if editDescriptionBtn ~= nil then
+				editDescriptionBtn.pos = {
+					self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
+					self.descriptionArea.Height - editDescriptionBtn.Height - theme.padding,
+					0,
+				}
 
-				self.description.object.MaxWidth = self.descriptionArea.Width - editDescriptionBtn.Width - theme.padding * 3
-
+				self.description.object.MaxWidth = self.descriptionArea.Width
+					- editDescriptionBtn.Width
+					- theme.padding * 3
 			else
 				self.description.object.MaxWidth = self.descriptionArea.Width - theme.padding * 2
 			end

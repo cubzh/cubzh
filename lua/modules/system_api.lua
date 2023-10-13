@@ -2,7 +2,8 @@
 
 [System] API module
 
-]]--
+]]
+--
 
 local time = require("time")
 local api = require("api")
@@ -25,7 +26,7 @@ moduleMT.__index = function(_, key)
 end
 
 -- send a poke to a user
-moduleMT.pokeUser = function (mod, username, cb)
+moduleMT.pokeUser = function(mod, username, cb)
 	if type(username) ~= "string" then
 		return
 	end
@@ -77,11 +78,26 @@ end
 
 -- callback(err, credentials)
 mod.signUp = function(_, username, key, dob, password, callback)
-	if type(username) ~= "string" then callback("1st arg must be a string") return end
-	if type(key) ~= "string" then callback("2nd arg must be a string") return end
-	if type(dob) ~= "string" then callback("3rd arg must be a string") return end
-	if type(password) ~= "string" then callback("4th arg must be a string") return end
-	if type(callback) ~= "function" then callback("5th arg must be a function") return end
+	if type(username) ~= "string" then
+		callback("1st arg must be a string")
+		return
+	end
+	if type(key) ~= "string" then
+		callback("2nd arg must be a string")
+		return
+	end
+	if type(dob) ~= "string" then
+		callback("3rd arg must be a string")
+		return
+	end
+	if type(password) ~= "string" then
+		callback("4th arg must be a string")
+		return
+	end
+	if type(callback) ~= "function" then
+		callback("5th arg must be a function")
+		return
+	end
 
 	local url = mod.kApiAddr .. "/users"
 	local body = {
@@ -302,10 +318,22 @@ moduleMT.createWorld = function(self, data, callback)
 			return
 		end
 
-		if world.created then world.created = time.iso8601_to_os_time(world.created) end
-		if world.updated then world.updated = time.iso8601_to_os_time(world.updated) end
-		if world.likes ~= nil then world.likes = math.floor(world.likes) else world.likes = 0 end
-		if world.views ~= nil then world.views = math.floor(world.views) else world.views = 0 end
+		if world.created then
+			world.created = time.iso8601_to_os_time(world.created)
+		end
+		if world.updated then
+			world.updated = time.iso8601_to_os_time(world.updated)
+		end
+		if world.likes ~= nil then
+			world.likes = math.floor(world.likes)
+		else
+			world.likes = 0
+		end
+		if world.views ~= nil then
+			world.views = math.floor(world.views)
+		else
+			world.views = 0
+		end
 
 		callback(nil, world)
 	end)
@@ -327,10 +355,22 @@ moduleMT.patchWorld = function(self, worldID, data, callback)
 			return
 		end
 
-		if world.created then world.created = time.iso8601_to_os_time(world.created) end
-		if world.updated then world.updated = time.iso8601_to_os_time(world.updated) end
-		if world.likes ~= nil then world.likes = math.floor(world.likes) else world.likes = 0 end
-		if world.views ~= nil then world.views = math.floor(world.views) else world.views = 0 end
+		if world.created then
+			world.created = time.iso8601_to_os_time(world.created)
+		end
+		if world.updated then
+			world.updated = time.iso8601_to_os_time(world.updated)
+		end
+		if world.likes ~= nil then
+			world.likes = math.floor(world.likes)
+		else
+			world.likes = 0
+		end
+		if world.views ~= nil then
+			world.views = math.floor(world.views)
+		else
+			world.views = 0
+		end
 
 		callback(nil, world)
 	end)
@@ -339,7 +379,7 @@ end
 
 moduleMT.likeWorld = function(self, worldID, addLike, callback)
 	local url = self.kApiAddr .. "/worlds/" .. worldID .. "/likes"
-	local t = {value = addLike}
+	local t = { value = addLike }
 	local body = JSON:Encode(t)
 	local req = System:HttpPatch(url, body, function(res)
 		if res.StatusCode ~= 200 then
@@ -353,7 +393,7 @@ end
 
 moduleMT.likeItem = function(self, itemID, addLike, callback)
 	local url = self.kApiAddr .. "/items/" .. itemID .. "/likes"
-	local t = {value = addLike}
+	local t = { value = addLike }
 	local body = JSON:Encode(t)
 	local req = System:HttpPatch(url, body, function(res)
 		if res.StatusCode ~= 200 then
@@ -380,10 +420,22 @@ moduleMT.createItem = function(self, data, callback)
 			return
 		end
 
-		if item.created then item.created = time.iso8601_to_os_time(item.created) end
-		if item.updated then item.updated = time.iso8601_to_os_time(item.updated) end
-		if item.likes ~= nil then item.likes = math.floor(item.likes) else item.likes = 0 end
-		if item.views ~= nil then item.views = math.floor(item.views) else item.views = 0 end
+		if item.created then
+			item.created = time.iso8601_to_os_time(item.created)
+		end
+		if item.updated then
+			item.updated = time.iso8601_to_os_time(item.updated)
+		end
+		if item.likes ~= nil then
+			item.likes = math.floor(item.likes)
+		else
+			item.likes = 0
+		end
+		if item.views ~= nil then
+			item.views = math.floor(item.views)
+		else
+			item.views = 0
+		end
 
 		callback(nil, item)
 	end)
@@ -405,10 +457,22 @@ moduleMT.patchItem = function(self, itemID, data, callback)
 			return
 		end
 
-		if item.created then item.created = time.iso8601_to_os_time(item.created) end
-		if item.updated then item.updated = time.iso8601_to_os_time(item.updated) end
-		if item.likes ~= nil then item.likes = math.floor(item.likes) else item.likes = 0 end
-		if item.views ~= nil then item.views = math.floor(item.views) else item.views = 0 end
+		if item.created then
+			item.created = time.iso8601_to_os_time(item.created)
+		end
+		if item.updated then
+			item.updated = time.iso8601_to_os_time(item.updated)
+		end
+		if item.likes ~= nil then
+			item.likes = math.floor(item.likes)
+		else
+			item.likes = 0
+		end
+		if item.views ~= nil then
+			item.views = math.floor(item.views)
+		else
+			item.views = 0
+		end
 
 		callback(nil, item)
 	end)
@@ -448,7 +512,7 @@ moduleMT.patchUserInfo = function(_, info, callback)
 
 	for k, v in pairs(info) do
 		if not filterIsValid(k, v) then
-			api:error("system_api:patchUserInfo(info, callback): key or value is not valid: " .. k.. " " .. v, 2)
+			api:error("system_api:patchUserInfo(info, callback): key or value is not valid: " .. k .. " " .. v, 2)
 		end
 	end
 
@@ -463,39 +527,39 @@ moduleMT.patchUserInfo = function(_, info, callback)
 end
 
 -- moduleMT.getTransactions = function(usernameOrCb, cb) -- or self if nil
-	-- usernameOrCb(nil, {
-		-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e3", from={id="209809842",name="caillef"}, to={id="20980242",name="gdevillele"}, amount=283, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=123, date="2023-03-20T17:01:14.625402882Z" },
-		-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095f3", from={id="20980242",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=200, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=123, date="2023-02-01T15:00:14.625402882Z" },
-		-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=120, date="2022-08-10T16:00:14.625402882Z" },
-		-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e3", from={id="209809842",name="caillef"}, to={id="20980242",name="gdevillele"}, amount=283, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=123, date="2020-07-12T17:01:14.625402882Z" },
-		-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095f3", from={id="20980242",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=200, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=123, date="2020-07-10T15:00:14.625402882Z" },
-		-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=120, date="2020-06-10T16:00:14.625402882Z" }
-	-- })
+-- usernameOrCb(nil, {
+-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e3", from={id="209809842",name="caillef"}, to={id="20980242",name="gdevillele"}, amount=283, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=123, date="2023-03-20T17:01:14.625402882Z" },
+-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095f3", from={id="20980242",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=200, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=123, date="2023-02-01T15:00:14.625402882Z" },
+-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=120, date="2022-08-10T16:00:14.625402882Z" },
+-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e3", from={id="209809842",name="caillef"}, to={id="20980242",name="gdevillele"}, amount=283, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=123, date="2020-07-12T17:01:14.625402882Z" },
+-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095f3", from={id="20980242",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=200, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=123, date="2020-07-10T15:00:14.625402882Z" },
+-- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=120, date="2020-06-10T16:00:14.625402882Z" }
+-- })
 -- end
 
 -- moduleMT.listItem = function(price, maxSupply, cb)
-	-- local body = { price=price, maxSupply=maxSupply }
-	-- cb(nil, { result={
-	-- 	id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
-	-- 	itemId="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5",
-	-- 	itemSlug="caillef.shop",
-	-- 	owner={ id="209809842", name="caillef" },
-	-- 	latestTransactions = { -- 5 latest transactions
-	-- 		{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109500", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item="caillef.shop", copy=68, date="2020-07-10 20:00:00.000" }
-	-- 	},
-	-- 	copyId=68,
-	-- 	createdAt="2020-06-10 15:00:00.000"
-	-- }})
+-- local body = { price=price, maxSupply=maxSupply }
+-- cb(nil, { result={
+-- 	id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
+-- 	itemId="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5",
+-- 	itemSlug="caillef.shop",
+-- 	owner={ id="209809842", name="caillef" },
+-- 	latestTransactions = { -- 5 latest transactions
+-- 		{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109500", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item="caillef.shop", copy=68, date="2020-07-10 20:00:00.000" }
+-- 	},
+-- 	copyId=68,
+-- 	createdAt="2020-06-10 15:00:00.000"
+-- }})
 -- end
 
 -- moduleMT.mintCopy = function(itemId)
-	-- cb(nil, {
-	-- 	id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
-	-- 	item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
-	-- 	copyId=68,
-	-- 	owner={id="209809842", name="caillef"},
-	-- 	createdAt="2020-06-10 15:00:00.000"
-	-- })
+-- cb(nil, {
+-- 	id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
+-- 	item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
+-- 	copyId=68,
+-- 	owner={id="209809842", name="caillef"},
+-- 	createdAt="2020-06-10 15:00:00.000"
+-- })
 -- end
 
 -- moduleMT.getCopies = function(itemId, filtersOrCb, cb)

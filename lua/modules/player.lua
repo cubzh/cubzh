@@ -15,14 +15,14 @@ local hierarchyactions = require("hierarchyactions")
 
 -- Returns Block Player is standing on
 local blockUnderneath = function(player)
-	local ray = Ray(player.Position + Number3(0,0,0), Number3.Down)
+	local ray = Ray(player.Position + Number3(0, 0, 0), Number3.Down)
 	local impact = ray:Cast(nil, Player)
 	if impact and impact.Distance <= 0.5 and impact.Block then
 		return impact.Block
 	end
 end
 
-local CastRay =  function(player, filterIn)
+local CastRay = function(player, filterIn)
 	if player == nil or type(player) ~= "Player" then
 		error("Player:CastRay should be called with `:`", 2)
 	end
@@ -34,7 +34,8 @@ local CastRay =  function(player, filterIn)
 	-- These 2 lines are used to obtain this point:
 	-- (using a vector-plane intersection formula)
 	local normal = Player.Up:Cross(Camera.Right)
-	local origin = Camera.Position + Camera.Forward * ((Player.Position - Camera.Position):Dot(normal) / Camera.Forward:Dot(normal))
+	local origin = Camera.Position
+		+ Camera.Forward * ((Player.Position - Camera.Position):Dot(normal) / Camera.Forward:Dot(normal))
 
 	local ray = Ray(origin, Camera.Forward)
 
@@ -77,7 +78,9 @@ local EquipBackpack = function(player, shapeOrItem)
 		-- lose reference on it
 		player.__backpackItem = nil
 	end
-	if shape == nil then return end
+	if shape == nil then
+		return
+	end
 	-- reset shape Pivot to center
 	shape.Pivot = Number3(shape.Width * 0.5, shape.Height * 0.5, shape.Depth * 0.5)
 	-- disable Physics
@@ -111,8 +114,12 @@ local EquipBackpack = function(player, shapeOrItem)
 		-- Note: engine cannot update POI in local space when the item is resized
 		poiPos = poi.Coords -- get stored value as is
 	end
-	if poiPos == nil then poiPos = Number3(0, 0, 0) end
-	if poiRot == nil then poiRot = Number3(0, 0, 0) end
+	if poiPos == nil then
+		poiPos = Number3(0, 0, 0)
+	end
+	if poiRot == nil then
+		poiRot = Number3(0, 0, 0)
+	end
 	-- body local point
 	local bodyPoint = player.Body:GetPoint("ModelPoint_Backpack").LocalPosition
 	if bodyPoint == nil then
@@ -158,7 +165,9 @@ local EquipHat = function(player, shapeOrItem)
 		-- lose reference on it
 		player.__hatItem = nil
 	end
-	if shape == nil then return end
+	if shape == nil then
+		return
+	end
 	-- reset shape Pivot to center
 	shape.Pivot = Number3(shape.Width * 0.5, shape.Height * 0.5, shape.Depth * 0.5)
 	-- disable Physics
@@ -192,8 +201,12 @@ local EquipHat = function(player, shapeOrItem)
 		-- Note: engine cannot update POI in local space when the item is resized
 		poiPos = poi.Coords -- get stored value as is
 	end
-	if poiPos == nil then poiPos = Number3(0, 0, 0) end
-	if poiRot == nil then poiRot = Number3(0, 0, 0) end
+	if poiPos == nil then
+		poiPos = Number3(0, 0, 0)
+	end
+	if poiRot == nil then
+		poiRot = Number3(0, 0, 0)
+	end
 	-- head local point
 	local headPoint = player.Head:GetPoint("ModelPoint_Hat").LocalPosition
 	if headPoint == nil then
@@ -239,7 +252,9 @@ local EquipLeftHand = function(player, shapeOrItem)
 		-- lose reference on it
 		player.__leftHandItem = nil
 	end
-	if shape == nil then return end
+	if shape == nil then
+		return
+	end
 	-- reset shape Pivot to center
 	shape.Pivot = Number3(shape.Width * 0.5, shape.Height * 0.5, shape.Depth * 0.5)
 	-- disable Physics
@@ -265,7 +280,7 @@ local EquipLeftHand = function(player, shapeOrItem)
 			compatRotation = true
 		else
 			-- default value
-			poiRot = Number3(0,0,0)
+			poiRot = Number3(0, 0, 0)
 		end
 	end
 	-- get POI position
@@ -279,7 +294,7 @@ local EquipLeftHand = function(player, shapeOrItem)
 			if poiPos ~= nil then
 				poiPos = -1.0 * poiPos
 			else
-				poiPos = Number3(0,0,0)
+				poiPos = Number3(0, 0, 0)
 			end
 		end
 	end
@@ -334,7 +349,9 @@ local EquipRightHand = function(player, shapeOrItem)
 		-- lose reference on it
 		player.__rightHandItem = nil
 	end
-	if shape == nil then return end
+	if shape == nil then
+		return
+	end
 	-- reset shape Pivot to center
 	shape.Pivot = Number3(shape.Width * 0.5, shape.Height * 0.5, shape.Depth * 0.5)
 	-- disable Physics
@@ -360,7 +377,7 @@ local EquipRightHand = function(player, shapeOrItem)
 			compatRotation = true
 		else
 			-- default value
-			poiRot = Number3(0,0,0)
+			poiRot = Number3(0, 0, 0)
 		end
 	end
 	-- get POI position
@@ -374,7 +391,7 @@ local EquipRightHand = function(player, shapeOrItem)
 			if poiPos ~= nil then
 				poiPos = -1.0 * poiPos
 			else
-				poiPos = Number3(0,0,0)
+				poiPos = Number3(0, 0, 0)
 			end
 		end
 	end
@@ -408,21 +425,24 @@ local SwapHands = function(player)
 end
 
 local SwingRight = function(player)
-	if not player.Animations.SwingRight then return end
+	if not player.Animations.SwingRight then
+		return
+	end
 	player.Animations.SwingRight:Play()
 end
 
 local SwingLeft = function(player)
-	if not player.Animations.SwingLeft then return end
+	if not player.Animations.SwingLeft then
+		return
+	end
 	player.Animations.SwingLeft:Play()
 end
 
 local playerCall = function(_, playerID, username, userID, isLocal)
-
 	local player = Object()
 
-	player.CollisionGroups = {2}
-	player.CollidesWithGroups = {1,3}
+	player.CollisionGroups = { 2 }
+	player.CollidesWithGroups = { 1, 3 }
 
 	local mt = System.GetMetatable(player)
 
@@ -448,19 +468,42 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 	local objectIndex = mt.__index
 	mt.__index = function(t, k)
-
-		if k == "ID" or k == "Avatar" or k == "Username" or k == "UserID" or k == "IsLocal"
-			or k == "BoundingBox" or k == "Shadow" or k == "Layers" or k == "EquipBackpack" or k == "EquipHat"
-			or k == "EquipLeftHand" or k == "EquipRightHand" or k == "SwapHands" or k == "SwingLeft" or k == "SwingRight" or
-			k == "CastRay" then
+		if
+			k == "ID"
+			or k == "Avatar"
+			or k == "Username"
+			or k == "UserID"
+			or k == "IsLocal"
+			or k == "BoundingBox"
+			or k == "Shadow"
+			or k == "Layers"
+			or k == "EquipBackpack"
+			or k == "EquipHat"
+			or k == "EquipLeftHand"
+			or k == "EquipRightHand"
+			or k == "SwapHands"
+			or k == "SwingLeft"
+			or k == "SwingRight"
+			or k == "CastRay"
+		then
 			return mt[k]
 		end
 
-		if k == "BlockUnderneath" then return blockUnderneath(t) end
-		if k == "Equipments" then return t.Avatar.equipments end
-		if k == "equipments" then return t.Avatar.equipments end
-		if k == "Animations" then return t.Avatar.Animations end
-		if k == "Head" then return t.Avatar.Head end
+		if k == "BlockUnderneath" then
+			return blockUnderneath(t)
+		end
+		if k == "Equipments" then
+			return t.Avatar.equipments
+		end
+		if k == "equipments" then
+			return t.Avatar.equipments
+		end
+		if k == "Animations" then
+			return t.Avatar.Animations
+		end
+		if k == "Head" then
+			return t.Avatar.Head
+		end
 
 		return objectIndex(t, k)
 	end
@@ -472,7 +515,9 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			return
 		end
 		if k == "Avatar" then
-			if v == nil then return end -- can't set nil avatar
+			if v == nil then
+				return
+			end -- can't set nil avatar
 			local previousHead = player.Head
 			mt[k] = v
 			local newHead = player.Head
@@ -480,11 +525,9 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			local angleBefore = player.Head.Forward:Angle(player.Down)
 
 			if previousHead == nil then
-
 				local bypassHeadLocalRotationCallback = false
 				local capHeadRotation = function(_)
 					if bypassHeadLocalRotationCallback == false then
-
 						local angleAfter = player.Head.Forward:Angle(player.Down)
 
 						local dot = player.Head.Forward:Dot(player.Forward)
@@ -515,22 +558,20 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 				player.Head.LocalRotation:AddOnSetCallback(capHeadRotation)
 				player.Head.Rotation:AddOnSetCallback(capHeadRotation)
-
 			elseif newHead ~= previousHead then
-
 				local headRotationOnSetCallBacks = previousHead.Rotation.OnSetCallbacks
 				local headLocalRotationOnSetCallBacks = previousHead.LocalRotation.OnSetCallbacks
 
 				if headRotationOnSetCallBacks ~= nil then
-				   for _, callback in ipairs(headRotationOnSetCallBacks) do
-					   newHead.Rotation:AddOnSetCallback(callback)
-				   end
+					for _, callback in ipairs(headRotationOnSetCallBacks) do
+						newHead.Rotation:AddOnSetCallback(callback)
+					end
 				end
 
 				if headLocalRotationOnSetCallBacks ~= nil then
-				   for _, callback in ipairs(headLocalRotationOnSetCallBacks) do
-					   newHead.LocalRotation:AddOnSetCallback(callback)
-				   end
+					for _, callback in ipairs(headLocalRotationOnSetCallBacks) do
+						newHead.LocalRotation:AddOnSetCallback(callback)
+					end
 				end
 			end
 
@@ -539,7 +580,9 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 		if k == "Shadow" then
 			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
-				if o.Shadow == nil then return end
+				if o.Shadow == nil then
+					return
+				end
 				o.Shadow = v
 			end)
 			mt.Shadow = v
@@ -547,14 +590,18 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 		end
 		if k == "Layers" then
 			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
-				if o.Layers == nil then return end
+				if o.Layers == nil then
+					return
+				end
 				o.Layers = v
 			end)
 			mt.Layers = v
 			return
 		end
 		if k == "Rotation" then
-			if v == nil then return end
+			if v == nil then
+				return
+			end
 			-- Y field works for both Number3 and Rotation
 			if type(v.Y) == "number" then
 				t.Rotation:Set(0, v.Y, 0)
@@ -566,7 +613,9 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			return
 		end
 		if k == "LocalRotation" then
-			if v == nil then return end
+			if v == nil then
+				return
+			end
 			-- Y field works for both Number3 and Rotation
 			if type(v.Y) == "number" then
 				t.Rotation:Set(0, v.Y, 0)
@@ -616,24 +665,30 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	player.Physics = PhysicsMode.Dynamic
 	player.CollidesWithGroups = { MAP_DEFAULT_COLLISION_GROUP, OBJECT_DEFAULT_COLLISION_GROUP }
 	player.CollisionGroups = { PLAYER_DEFAULT_COLLISION_GROUP }
-	player.CollisionBox = Box(Number3(-4.5,0,-4.5), Number3(4.5,29,4.5))
+	player.CollisionBox = Box(Number3(-4.5, 0, -4.5), Number3(4.5, 29, 4.5))
 	player.BoundingBox = player.CollisionBox
 	player.Shadow = true
 	player.ShadowCookie = 4
 	player.Layers = 1 -- Camera Layers 0
 
 	player.Motion:AddOnSetCallback(function()
-		if not player.Avatar then return end -- Avatar not loaded yet
+		if not player.Avatar then
+			return
+		end -- Avatar not loaded yet
 		local anims = player.Animations
 
-		if player.Motion == Number3(0,0,0) then
+		if player.Motion == Number3(0, 0, 0) then
 			if anims.Idle.IsPlaying == false then
-				if anims.Walk.IsPlaying then anims.Walk:Stop() end
+				if anims.Walk.IsPlaying then
+					anims.Walk:Stop()
+				end
 				anims.Idle:Play()
 			end
 		else
 			if anims.Walk.IsPlaying == false then
-				if anims.Idle.IsPlaying then anims.Idle:Stop() end
+				if anims.Idle.IsPlaying then
+					anims.Idle:Stop()
+				end
 				anims.Walk:Play()
 			end
 		end
@@ -648,9 +703,11 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 end
 
 local playerMetatable = {
-	__newindex = function() error("Player is read-only.", 2) end,
+	__newindex = function()
+		error("Player is read-only.", 2)
+	end,
 	__metatable = false,
-	__call = playerCall
+	__call = playerCall,
 }
 setmetatable(playerModule, playerMetatable)
 

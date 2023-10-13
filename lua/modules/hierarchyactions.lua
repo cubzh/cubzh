@@ -25,36 +25,36 @@ end
 
 local hierarchyActions = {}
 local hierarchyActionsMetatable = {
-    __index = {
+	__index = {
 		_maxDepth = -1,
-        applyToDescendants = function(self, shape, options, callback)
-            if callback == nil then
-                callback = options
-                options = {}
-            end
-            if options.depth == nil then
-                options.depth = self._maxDepth
-            end
-            if options.includeRoot then
-                callback(shape)
-            end
-            if options.depth == 0 then
-                return
-            end
-            local newDepth = options.depth
-            if newDepth ~= self._maxDepth then
-                newDepth = newDepth - 1
-            end
-            local newOptions = {
-                depth = newDepth,
-                includeRoot = true -- always include root for descendants
-            }
-            for i=1,shape.ChildrenCount do
-                local child = shape:GetChild(i)
-                self:applyToDescendants(child, newOptions, callback)
-            end
-        end
-    }
+		applyToDescendants = function(self, shape, options, callback)
+			if callback == nil then
+				callback = options
+				options = {}
+			end
+			if options.depth == nil then
+				options.depth = self._maxDepth
+			end
+			if options.includeRoot then
+				callback(shape)
+			end
+			if options.depth == 0 then
+				return
+			end
+			local newDepth = options.depth
+			if newDepth ~= self._maxDepth then
+				newDepth = newDepth - 1
+			end
+			local newOptions = {
+				depth = newDepth,
+				includeRoot = true, -- always include root for descendants
+			}
+			for i = 1, shape.ChildrenCount do
+				local child = shape:GetChild(i)
+				self:applyToDescendants(child, newOptions, callback)
+			end
+		end,
+	},
 }
 setmetatable(hierarchyActions, hierarchyActionsMetatable)
 

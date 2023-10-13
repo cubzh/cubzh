@@ -1,4 +1,3 @@
-
 animationsModule = {}
 
 local privateFields = {}
@@ -39,7 +38,9 @@ local removeOnPlayCallback = function(self, callback)
 
 	local onPlayCallbacks = privateFields[self].onPlayCallbacks
 	-- onPlayCallbacks does not exist for those Animations, return
-	if onPlayCallbacks == nil then return end
+	if onPlayCallbacks == nil then
+		return
+	end
 
 	onPlayCallbacks[callback] = nil
 end
@@ -51,7 +52,9 @@ local removeOnStopCallback = function(self, callback)
 
 	local onStopCallbacks = privateFields[self].onStopCallbacks
 	-- onStopCallbacks does not exist for those Animations, return
-	if onStopCallbacks == nil then return end
+	if onStopCallbacks == nil then
+		return
+	end
 
 	onStopCallbacks[callback] = nil
 end
@@ -71,8 +74,11 @@ local indexFunctions = {
 }
 
 animationsMT.__index = function(t, k)
-	if indexFunctions[k] then return indexFunctions[k] end
-	return privateFields[t].anims[k]end
+	if indexFunctions[k] then
+		return indexFunctions[k]
+	end
+	return privateFields[t].anims[k]
+end
 
 local toggleGroups = function(animations)
 	local anims = privateFields[animations].anims
@@ -136,7 +142,6 @@ local toggleGroups = function(animations)
 end
 
 local startPlaying = function(animations, animName, anim)
-
 	privateFields[animations].playing[animName] = true
 
 	local playingInLoop = privateFields[animations].playingInLoop
@@ -166,8 +171,9 @@ local startPlaying = function(animations, animName, anim)
 end
 
 local stopPlaying = function(animations, animName)
-
-	if privateFields[animations].playing[animName] ~= true then return end
+	if privateFields[animations].playing[animName] ~= true then
+		return
+	end
 	privateFields[animations].playing[animName] = false
 
 	local playingInLoop = privateFields[animations].playingInLoop
@@ -202,7 +208,9 @@ animationsMT.__newindex = function(t, k, v)
 
 	privateFields[t].anims[k] = v
 
-	if v == nil then return end
+	if v == nil then
+		return
+	end
 
 	local animations = t
 	local animName = k
@@ -219,20 +227,24 @@ animationsMT.__newindex = function(t, k, v)
 end
 
 local create = function(_)
-
 	local animations = {}
 	privateFields[animations] = {}
 
-	if privateFields[animations].anims == nil then		privateFields[animations].anims = {}	end
+	if privateFields[animations].anims == nil then
+		privateFields[animations].anims = {}
+	end
 
 	-- all playing animations, { animName = true }
-	if privateFields[animations].playing == nil then		privateFields[animations].playing = {}
+	if privateFields[animations].playing == nil then
+		privateFields[animations].playing = {}
 	end
 
-	if privateFields[animations].playingInLoop == nil then		privateFields[animations].playingInLoop = {}
+	if privateFields[animations].playingInLoop == nil then
+		privateFields[animations].playingInLoop = {}
 	end
 
-	if privateFields[animations].playingOnce == nil then		privateFields[animations].playingOnce = {}
+	if privateFields[animations].playingOnce == nil then
+		privateFields[animations].playingOnce = {}
 	end
 
 	setmetatable(animations, animationsMT)
@@ -249,7 +261,6 @@ setmetatable(animationsModule, mt)
 -- tick for all Animations
 local anims
 LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-
 	for animations, animationsPrivateFields in pairs(privateFields) do
 		anims = animationsPrivateFields.anims
 		if anims ~= nil then

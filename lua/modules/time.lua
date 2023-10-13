@@ -8,14 +8,15 @@ time.iso8601_to_os_time = function(iso8601)
 
 	-- Parse time which is in string format
 	local year, month, day, hour, minute, seconds, offsetsign, offsethour, offsetmin =
-	iso8601:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
+		iso8601:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
 
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
-	local epochShifted = os.time{year=1970, month=1, day=2, hour=0}
+	local epochShifted = os.time({ year = 1970, month = 1, day = 2, hour = 0 })
 
 	local shift = 24 * 3600 -- # seconds in 24 hours
 
-	local timeParsed = os.time{year = year, month = month, day = day, hour = hour, min = minute, sec = math.floor(seconds)}
+	local timeParsed =
+		os.time({ year = year, month = month, day = day, hour = hour, min = minute, sec = math.floor(seconds) })
 
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
 	local timeShifted = timeParsed + shift
@@ -24,7 +25,7 @@ time.iso8601_to_os_time = function(iso8601)
 
 	-- apply timezone offset if there is any
 	local offsetMinutes = 0
-	if offsetsign ~= 'Z' then
+	if offsetsign ~= "Z" then
 		offsetMinutes = tonumber(offsethour) * 60 + tonumber(offsetmin)
 		if offsetsign == "-" then
 			offsetMinutes = -offsetMinutes
@@ -36,7 +37,9 @@ end
 
 -- returns number and unit type ("seconds", "minutes", "hours", "days", "months", "years") (string)
 time.ago = function(t)
-	if t == nil then error("time.ago - time parameter can't be nil", 2) end
+	if t == nil then
+		error("time.ago - time parameter can't be nil", 2)
+	end
 
 	local now = os.time(os.date("!*t")) -- GMT
 	local seconds = now - t
@@ -69,26 +72,47 @@ end
 ---@param month integer
 ---@return string
 time.monthToString = function(self, month)
-	if self ~= time then error("time:monthToString(month): use `:`", 2) end
-	if type(month) ~= Type.integer then error("time:monthToString(month): month should be an integer", 2) end
+	if self ~= time then
+		error("time:monthToString(month): use `:`", 2)
+	end
+	if type(month) ~= Type.integer then
+		error("time:monthToString(month): month should be an integer", 2)
+	end
 
-	local months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	local months = {
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	}
 	return months[month]
 end
-
 
 ---@function iso8601ToTable Converts iso8601 time into a table with year, month and other fields
 ---@param self time
 ---@param isoTime string
 ---@return table
 time.iso8601ToTable = function(self, isoTime)
-	if self ~= time then error("time:iso8601ToTable(isoTime): use `:`", 2) end
-	if type(isoTime) ~= Type.string then error("time:iso8601ToTable(isoTime): isoTime should be an string", 2) end
+	if self ~= time then
+		error("time:iso8601ToTable(isoTime): use `:`", 2)
+	end
+	if type(isoTime) ~= Type.string then
+		error("time:iso8601ToTable(isoTime): isoTime should be an string", 2)
+	end
 
 	-- Parse time which is in string format
-	local year, month, day, hour, minute, seconds = isoTime:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
+	local year, month, day, hour, minute, seconds =
+		isoTime:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
 
-	local table = {year = year, month = month, day = day, hour = hour, minute = minute, second = math.floor(seconds)}
+	local table = { year = year, month = month, day = day, hour = hour, minute = minute, second = math.floor(seconds) }
 	return table
 end
 

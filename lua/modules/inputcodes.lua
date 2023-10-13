@@ -1,4 +1,3 @@
-
 local inputCodes = {
 	NONE = 0,
 	ESCAPE = 1,
@@ -123,7 +122,7 @@ local inputCodes = {
 		Alt = 1, --Same as options, for windows coders
 		Ctrl = 2,
 		Shift = 4,
-		Cmd = 8
+		Cmd = 8,
 	},
 }
 

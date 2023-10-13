@@ -1,8 +1,6 @@
-
 creations = {}
 
 creations.createModalContent = function(_, config)
-
 	local itemGrid = require("item_grid")
 	local itemDetails = require("item_details")
 	local worldDetails = require("world_details")
@@ -19,7 +17,9 @@ creations.createModalContent = function(_, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -47,25 +47,32 @@ creations.createModalContent = function(_, config)
 
 		local node = ui:createNode()
 
-		local categories = {"null"}
-		local categoryShapes = {"official.one_cube_template"}
-		local buttonLabels = {"✨ Create Item ⚔️"}
+		local categories = { "null" }
+		local categoryShapes = { "official.one_cube_template" }
+		local buttonLabels = { "✨ Create Item ⚔️" }
 		local inputLabel = "Item Name?"
 
-		local textWithEmptyInput = "An Item needs a name, coders will use it as a reference within world scripts. Choose wisely, it cannot be changed!"
+		local textWithEmptyInput =
+			"An Item needs a name, coders will use it as a reference within world scripts. Choose wisely, it cannot be changed!"
 
 		if what == "wearable" and original == nil then
-			categories = {"hair", "jacket", "pants", "boots"}
-			categoryShapes = {"official.hair_template", "official.jacket_template", "official.pants_template", "official.shoes_template"}
+			categories = { "hair", "jacket", "pants", "boots" }
+			categoryShapes = {
+				"official.hair_template",
+				"official.jacket_template",
+				"official.pants_template",
+				"official.shoes_template",
+			}
 			buttonLabels = {
-							"✨ Create Hair 🙂",
-							"✨ Create Jacket 👕",
-							"✨ Create Pants 👖",
-							"✨ Create Shoes 👞"
-							}
+				"✨ Create Hair 🙂",
+				"✨ Create Jacket 👕",
+				"✨ Create Pants 👖",
+				"✨ Create Shoes 👞",
+			}
 		elseif what == "world" then
-			categories = {"null"}				categoryShapes = {"official.world_icon"}
-			buttonLabels = {"✨ Create World 🌎"}
+			categories = { "null" }
+			categoryShapes = { "official.world_icon" }
+			buttonLabels = { "✨ Create World 🌎" }
 			inputLabel = "World Name?"
 			textWithEmptyInput = "A World needs a name! No pressure, this can be changed later on."
 		end
@@ -79,17 +86,18 @@ creations.createModalContent = function(_, config)
 			btnCreate = ui:createButton("✨ Duplicate 📑")
 		end
 		btnCreate:setColor(theme.colorPositive)
-		newContent.bottomCenter = {btnCreate}
+		newContent.bottomCenter = { btnCreate }
 
-		local templatePreview = ui:createShape(System.ShapeFromBundle(categoryShapes[currentCategory]), {spherized = true})
+		local templatePreview =
+			ui:createShape(System.ShapeFromBundle(categoryShapes[currentCategory]), { spherized = true })
 		templatePreview:setParent(node)
 
-		templatePreview.pivot.LocalRotation = {-0.1,0,-0.2}
+		templatePreview.pivot.LocalRotation = { -0.1, 0, -0.2 }
 		templatePreview.object.dt = 0
 		templatePreview.object.Tick = function(o, dt)
 			o.dt = o.dt + dt
 			if templatePreview.pivot ~= nil then
-				templatePreview.pivot.LocalRotation = {-0.1,o.dt,-0.2}
+				templatePreview.pivot.LocalRotation = { -0.1, o.dt, -0.2 }
 			end
 		end
 
@@ -116,13 +124,15 @@ creations.createModalContent = function(_, config)
 			nextTemplateBtn:setColor(theme.buttonColorSecondary)
 			nextTemplateBtn.onRelease = function()
 				currentCategory = currentCategory + 1
-				if currentCategory > #categories then currentCategory = 1 end
+				if currentCategory > #categories then
+					currentCategory = 1
+				end
 				local label = buttonLabels[currentCategory]
 				btnCreate.Text = label
 
 				text.Text = textWithEmptyInput
 				text.Color = theme.textColor
-				text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+				text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
 				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
 			end
@@ -131,21 +141,22 @@ creations.createModalContent = function(_, config)
 			previousTemplateBtn:setParent(node)
 			previousTemplateBtn:setColor(theme.buttonColorSecondary)
 			previousTemplateBtn.onRelease = function()
-				currentCategory = currentCategory -1
-				if currentCategory < 1 then currentCategory = #categories end
+				currentCategory = currentCategory - 1
+				if currentCategory < 1 then
+					currentCategory = #categories
+				end
 				local label = buttonLabels[currentCategory]
 				btnCreate.Text = label
 
 				text.Text = textWithEmptyInput
 				text.Color = theme.textColor
-				text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+				text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
 				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
 			end
 		end
 
 		btnCreate.onRelease = function()
-
 			local sanitized
 			local err
 
@@ -154,7 +165,7 @@ creations.createModalContent = function(_, config)
 				if err ~= nil then
 					text.Text = "❌ " .. err
 					text.Color = theme.colorNegative
-					text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+					text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 					return
 				end
 			else
@@ -162,7 +173,7 @@ creations.createModalContent = function(_, config)
 				if err ~= nil then
 					text.Text = "❌ " .. err
 					text.Color = theme.colorNegative
-					text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+					text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 					return
 				end
 			end
@@ -172,29 +183,36 @@ creations.createModalContent = function(_, config)
 
 			text.Text = "Creating..."
 			text.Color = theme.textColor
-			text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+			text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
 			local category = categories[currentCategory]
-			if category == "null" then category = nil end
+			if category == "null" then
+				category = nil
+			end
 
 			local _category = category
-			if original ~= nil then _category = nil end
+			if original ~= nil then
+				_category = nil
+			end
 
 			if what == "world" then
-
-				api:createWorld({title = sanitized, category = _category, original = original}, function(err, world)
+				api:createWorld({ title = sanitized, category = _category, original = original }, function(err, world)
 					if err ~= nil then
 						text.Text = "❌ Sorry, there's been an error."
 						text.Color = theme.colorNegative
-						text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+						text.pos =
+							{ node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
 						btnCreate:enable()
 						input:enable()
 					else
 						-- forces grid to refresh when coming back
-						if grid ~= nil then grid.needsToRefreshEntries = true end
+						if grid ~= nil then
+							grid.needsToRefreshEntries = true
+						end
 
-						local worldDetailsContent = worldDetails:create({mode = "create", title = world.title, uikit = ui })
+						local worldDetailsContent =
+							worldDetails:create({ mode = "create", title = world.title, uikit = ui })
 
 						local cell = {}
 
@@ -202,22 +220,22 @@ creations.createModalContent = function(_, config)
 						cell.title = world.title
 						cell.description = ""
 						cell.created = world.created
-						cell.item = {shape = System.ShapeFromBundle("official.world_icon")}
+						cell.item = { shape = System.ShapeFromBundle("official.world_icon") }
 
 						worldDetailsContent:loadCell(cell)
 
-						local btnEditCode = ui:createButton("🤓 Code", {textSize="default"})
+						local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
 						btnEditCode.onRelease = function()
 							System.EditWorldCode(cell.id)
 						end
 
-						local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
+						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
 							System.EditWorld(cell.id)
 						end
 
-						worldDetailsContent.bottomRight = {btnEdit, btnEditCode}
+						worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
 
 						worldDetailsContent.idealReducedContentSize = function(content, width, height)
 							content.Width = width
@@ -227,11 +245,9 @@ creations.createModalContent = function(_, config)
 
 						newContent:pushAndRemoveSelf(worldDetailsContent)
 					end
-
 				end)
-
 			else
-				api:createItem({name = sanitized, category = _category, original = original}, function(err, item)
+				api:createItem({ name = sanitized, category = _category, original = original }, function(err, item)
 					if err ~= nil then
 						if err.statusCode == 409 then
 							text.Text = "❌ You already have an item with that name!"
@@ -240,18 +256,21 @@ creations.createModalContent = function(_, config)
 							text.Text = "❌ Sorry, there's been an error."
 						end
 						text.Color = theme.colorNegative
-						text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+						text.pos =
+							{ node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
 						btnCreate:enable()
 						input:enable()
 					else
 						-- forces grid to refresh when coming back
-						if grid ~= nil then grid.needsToRefreshEntries = true end
+						if grid ~= nil then
+							grid.needsToRefreshEntries = true
+						end
 
 						local itemFullName = item.repo .. "." .. item.name
 						-- local category = cell.category
 
-						local itemDetailsContent = itemDetails:createModalContent({mode = "create", uikit = ui})
+						local itemDetailsContent = itemDetails:createModalContent({ mode = "create", uikit = ui })
 
 						local cell = {}
 
@@ -262,15 +281,15 @@ creations.createModalContent = function(_, config)
 						cell.itemFullName = itemFullName
 						cell.created = item.created
 
-                        itemDetailsContent:loadCell(cell)
+						itemDetailsContent:loadCell(cell)
 
-						local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
+						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
 							System.LaunchItemEditor(itemFullName, category)
 						end
 
-						local btnDuplicate = ui:createButton("📑 Duplicate", {textSize="default"})
+						local btnDuplicate = ui:createButton("📑 Duplicate", { textSize = "default" })
 						btnDuplicate.onRelease = function()
 							-- no need to pass grid, it's already marked
 							-- for refresh at this point
@@ -281,8 +300,8 @@ creations.createModalContent = function(_, config)
 						end
 
 						-- itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit}
-						itemDetailsContent.bottomRight = {btnEdit}
-						itemDetailsContent.bottomLeft = {btnDuplicate}
+						itemDetailsContent.bottomRight = { btnEdit }
+						itemDetailsContent.bottomLeft = { btnDuplicate }
 
 						itemDetailsContent.idealReducedContentSize = function(content, width, height)
 							content.Width = width
@@ -297,7 +316,6 @@ creations.createModalContent = function(_, config)
 		end
 
 		input.onTextChange = function(self)
-
 			local name = self.Text
 
 			if name == "" then
@@ -324,16 +342,24 @@ creations.createModalContent = function(_, config)
 					end
 				end
 			end
-			text.pos = {node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+			text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 		end
 
 		node._w = 300
 		node._h = 300
-		node._width = function(self) return self._w end
-		node._height = function(self) return self._h end
+		node._width = function(self)
+			return self._w
+		end
+		node._height = function(self)
+			return self._h
+		end
 
-		node._setWidth = function(self, v) self._w = v end
-		node._setHeight = function(self, v) self._h = v end
+		node._setWidth = function(self, v)
+			self._w = v
+		end
+		node._setHeight = function(self, v)
+			self._h = v
+		end
 
 		newContent.node = node
 
@@ -342,10 +368,17 @@ creations.createModalContent = function(_, config)
 			text.object.MaxWidth = (self.Width - theme.padding * 2)
 			input.Width = self.Width
 
-			local availableHeightForPreview = self.Height - text.Height - input.Height - theme.padding * 2 - extraBottomPadding
+			local availableHeightForPreview = self.Height
+				- text.Height
+				- input.Height
+				- theme.padding * 2
+				- extraBottomPadding
 			local availableWidthForPreview = self.Width
 			if #categories > 1 then
-				availableWidthForPreview = availableWidthForPreview - previousTemplateBtn.Width - nextTemplateBtn.Width - theme.padding * 2
+				availableWidthForPreview = availableWidthForPreview
+					- previousTemplateBtn.Width
+					- nextTemplateBtn.Width
+					- theme.padding * 2
 			end
 
 			local availableSizeForPreview = math.min(200, availableHeightForPreview, availableWidthForPreview)
@@ -353,17 +386,20 @@ creations.createModalContent = function(_, config)
 			self.Height = availableSizeForPreview + input.Height + text.Height + theme.padding * 2 + extraBottomPadding
 
 			templatePreview.Height = availableSizeForPreview
-			templatePreview.pos = {self.Width * 0.5 - templatePreview.Width * 0.5, self.Height - templatePreview.Height, 0}
+			templatePreview.pos =
+				{ self.Width * 0.5 - templatePreview.Width * 0.5, self.Height - templatePreview.Height, 0 }
 			if #categories > 1 then
 				previousTemplateBtn.Height = templatePreview.Height
 				nextTemplateBtn.Height = templatePreview.Height
 
-				previousTemplateBtn.pos = {0, self.Height - templatePreview.Height, 0}
-				nextTemplateBtn.pos = {self.Width - previousTemplateBtn.Width, self.Height - templatePreview.Height, 0}
+				previousTemplateBtn.pos = { 0, self.Height - templatePreview.Height, 0 }
+				nextTemplateBtn.pos =
+					{ self.Width - previousTemplateBtn.Width, self.Height - templatePreview.Height, 0 }
 			end
 
-			input.pos = {self.Width * 0.5 - input.Width * 0.5, templatePreview.pos.Y - input.Height - theme.padding, 0}
-			text.pos = {self.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0}
+			input.pos =
+				{ self.Width * 0.5 - input.Width * 0.5, templatePreview.pos.Y - input.Height - theme.padding, 0 }
+			text.pos = { self.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 		end
 
 		newContent.idealReducedContentSize = function(content, width, height)
@@ -383,11 +419,7 @@ creations.createModalContent = function(_, config)
 		creationsContent.title = "Creations"
 		creationsContent.icon = "🏗️"
 
-		local grid = itemGrid:create({	minBlocks = 1,
-										repo = Player.Username,
-										categories = {"null"},
-										uikit = ui,
-									})
+		local grid = itemGrid:create({ minBlocks = 1, repo = Player.Username, categories = { "null" }, uikit = ui })
 
 		creationsContent.node = grid
 
@@ -398,20 +430,24 @@ creations.createModalContent = function(_, config)
 		creationsContent.didBecomeActive = function(_)
 			if gridNeedRefresh then
 				-- re-download grid content
-				if grid.getItems then grid:getItems() end
+				if grid.getItems then
+					grid:getItems()
+				end
 				gridNeedRefresh = false
 			else
 				-- simply display the grid (same content)
-				if grid.refresh then grid:refresh() end
+				if grid.refresh then
+					grid:refresh()
+				end
 			end
 		end
 
 		local pages = pages:create(ui)
-		creationsContent.bottomCenter = {pages}
+		creationsContent.bottomCenter = { pages }
 
 		local btnNew = ui:createButton("✨ New ⚔️")
 		btnNew:setColor(theme.colorPositive)
-		creationsContent.bottomRight = {btnNew}
+		creationsContent.bottomRight = { btnNew }
 
 		local newItem = function()
 			local m = creationsContent:getModalIfContentIsActive()
@@ -441,7 +477,7 @@ creations.createModalContent = function(_, config)
 				label = "⚔️ Items",
 				short = "⚔️",
 				action = function()
-					grid:setCategories({"null"}, "items")
+					grid:setCategories({ "null" }, "items")
 					btnNew.Text = "✨ New ⚔️"
 					btnNew.onRelease = newItem
 				end,
@@ -450,7 +486,7 @@ creations.createModalContent = function(_, config)
 				label = "👕 Wearables",
 				short = "👕",
 				action = function()
-					grid:setCategories({"hair", "jacket", "pants", "boots"}, "items")
+					grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
 					btnNew.Text = "✨ New 👕"
 					btnNew.onRelease = newWearable
 				end,
@@ -459,11 +495,11 @@ creations.createModalContent = function(_, config)
 				label = "🌎 Worlds",
 				short = "🌎",
 				action = function()
-					grid:setCategories({"null"}, "worlds")
+					grid:setCategories({ "null" }, "worlds")
 					btnNew.Text = "✨ New 🌎"
 					btnNew.onRelease = newWorld
 				end,
-			}
+			},
 		}
 
 		grid.onPaginationChange = function(page, nbPages)
@@ -480,27 +516,26 @@ creations.createModalContent = function(_, config)
 		creationsContent.idealReducedContentSize = function(content, width, height)
 			local grid = content
 			grid.Width = width
-			grid.Height = height				grid:refresh()
+			grid.Height = height
+			grid:refresh()
 			return Number2(grid.Width, grid.Height)
 		end
 
 		grid.onOpen = function(_, cell)
-
 			if cell.type == "item" then
-
 				local itemFullName = cell.itemFullName
 				local category = cell.category
 
-				local itemDetailsContent = itemDetails:createModalContent({mode = "create", uikit = ui})
-                itemDetailsContent:loadCell(cell)
+				local itemDetailsContent = itemDetails:createModalContent({ mode = "create", uikit = ui })
+				itemDetailsContent:loadCell(cell)
 
-				local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
+				local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					System.LaunchItemEditor(itemFullName, category)
 				end
 
-				local btnDuplicate = ui:createButton("📑 Duplicate", {textSize="default"})
+				local btnDuplicate = ui:createButton("📑 Duplicate", { textSize = "default" })
 				btnDuplicate.onRelease = function()
 					local m = itemDetailsContent:getModalIfContentIsActive()
 					if m ~= nil then
@@ -508,7 +543,7 @@ creations.createModalContent = function(_, config)
 					end
 				end
 
-				local btnExport = ui:createButton("📤", {textSize="default"})
+				local btnExport = ui:createButton("📤", { textSize = "default" })
 				btnExport.onRelease = function()
 					File:ExportItem(cell.repo, cell.name, "vox", function(err, message)
 						if err then
@@ -519,8 +554,8 @@ creations.createModalContent = function(_, config)
 				end
 
 				--itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit, btnExport}
-				itemDetailsContent.bottomLeft = {btnDuplicate, btnExport}
-				itemDetailsContent.bottomRight = {btnEdit}
+				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport }
+				itemDetailsContent.bottomRight = { btnEdit }
 
 				itemDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width
@@ -532,30 +567,30 @@ creations.createModalContent = function(_, config)
 				if m ~= nil then
 					m:push(itemDetailsContent)
 				end
-
 			elseif cell.type == "world" then
-
-				local worldDetailsContent = worldDetails:create({mode = "create", title = cell.title, uikit = ui})
+				local worldDetailsContent = worldDetails:create({ mode = "create", title = cell.title, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
 					worldDetailsContent.title = updatedWorld.title
-					if worldDetailsContent.refreshModal then worldDetailsContent:refreshModal() end
+					if worldDetailsContent.refreshModal then
+						worldDetailsContent:refreshModal()
+					end
 				end
 
 				worldDetailsContent:loadCell(cell)
 
-				local btnEditCode = ui:createButton("🤓 Code", {textSize="default"})
+				local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
 				btnEditCode.onRelease = function()
 					System.EditWorldCode(cell.id)
 				end
 
-				local btnEdit = ui:createButton("✏️ Edit", {textSize="big"})
+				local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					System.EditWorld(cell.id)
 				end
 
-				worldDetailsContent.bottomRight = {btnEdit, btnEditCode}
+				worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
 
 				worldDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width

@@ -1,8 +1,7 @@
-
 rotateGizmo = {
-	Axis = { X=1, Y=2, Z=3 },
+	Axis = { X = 1, Y = 2, Z = 3 },
 	AxisName = { "X", "Y", "Z" },
-	Orientation = { Local=1, World=2 }
+	Orientation = { Local = 1, World = 2 },
 }
 
 plane = require("plane")
@@ -39,7 +38,7 @@ end
 
 functions.setLayer = function(self, layer)
 	self.camera.Layers = layer
-	for _,a in ipairs(self.handles) do
+	for _, a in ipairs(self.handles) do
 		hierarchyActions:applyToDescendants(a, { includeRoot = true }, function(obj)
 			pcall(function()
 				obj.Layers = layer
@@ -57,12 +56,16 @@ functions.up = function(self, _)
 end
 
 functions.drag = function(self, pe)
-	if not self.object or not self.selectedHandle then return false end
+	if not self.object or not self.selectedHandle then
+		return false
+	end
 
 	local ray = Ray(pe.Position, pe.Direction)
 	local pos = self.p:hit(ray)
 
-	if pos == nil then return false end
+	if pos == nil then
+		return false
+	end
 
 	local p2 = self.gizmoObject:PositionWorldToLocal(pos)
 
@@ -113,21 +116,25 @@ functions.drag = function(self, pe)
 end
 
 functions.down = function(self, pe)
-	if not self.object then return false end
+	if not self.object then
+		return false
+	end
 
 	local ray = Ray(pe.Position, pe.Direction)
 
 	local target
 	local handle
 
-	for axis = rotateGizmo.Axis.X,rotateGizmo.Axis.Z do
+	for axis = rotateGizmo.Axis.X, rotateGizmo.Axis.Z do
 		handle = self.handles[axis]
-		for i= 1,handle.ChildrenCount do
+		for i = 1, handle.ChildrenCount do
 			local part = handle:GetChild(i)
 			local impact = ray:Cast(part)
 			if impact then
 				if target == nil or target.impact.Distance > impact.Distance then
-					if target == nil then target = {} end
+					if target == nil then
+						target = {}
+					end
 					target.handle = handle
 					target.ray = ray
 					target.impact = impact
@@ -137,7 +144,6 @@ functions.down = function(self, pe)
 	end
 
 	if target ~= nil then
-
 		self.selectedHandle = target.handle
 
 		self.impactPosition = target.ray.Origin + target.ray.Direction * target.impact.Distance
@@ -174,7 +180,9 @@ functions.down = function(self, pe)
 end
 
 functions.setObject = function(self, object)
-	if self.object == object then return end
+	if self.object == object then
+		return
+	end
 
 	self.object = object
 	if object == nil then
@@ -185,7 +193,9 @@ functions.setObject = function(self, object)
 	self._objectCopy.Position = object.Position
 	self._objectCopy.Rotation = object.Rotation
 
-	if not self.hidden then self.gizmoObject:SetParent(World) end
+	if not self.hidden then
+		self.gizmoObject:SetParent(World)
+	end
 	self:updateHandles()
 end
 
@@ -195,18 +205,22 @@ functions.setOrientation = function(self, v)
 end
 
 functions.updateHandles = function(self)
-	if not self.object then return end
+	if not self.object then
+		return
+	end
 
 	if self.orientation == rotateGizmo.Orientation.Local then
 		self.gizmoObject.Rotation = self._objectCopy.Rotation
 	else
-		self.gizmoObject.Rotation = {0,0,0}
+		self.gizmoObject.Rotation = { 0, 0, 0 }
 	end
 
 	self.gizmoObject.Position = self.object.Position
 
 	-- Does not hide or rotate handles if moving gizmo
-	if self.selectedHandle then return end
+	if self.selectedHandle then
+		return
+	end
 
 	for _, handle in ipairs(self.handles) do
 		local v = self.gizmoObject.Position - self.camera.Position
@@ -266,7 +280,6 @@ rotateGizmo.setScale = function(_, s)
 end
 
 rotateGizmo.create = function(_, config)
-
 	local _config = { -- default config
 		orientation = rotateGizmo.Orientation.World,
 		snap = 0.0,
@@ -275,15 +288,23 @@ rotateGizmo.create = function(_, config)
 	}
 
 	local function sameType(a, b)
-		if type(a) == type(b) then return true end
-		if type(a) == "number" and type(b) == "integer" then return true end
-		if type(a) == "integer" and type(b) == "number" then return true end
+		if type(a) == type(b) then
+			return true
+		end
+		if type(a) == "number" and type(b) == "integer" then
+			return true
+		end
+		if type(a) == "integer" and type(b) == "number" then
+			return true
+		end
 		return false
 	end
 
 	if config ~= nil then
 		for k, v in pairs(_config) do
-			if sameType(v, config[k]) then _config[k] = config[k] end
+			if sameType(v, config[k]) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -309,13 +330,12 @@ rotateGizmo.create = function(_, config)
 
 	local axisColors = { Color.Red, Color.Green, Color.Blue }
 
-	for axis,color in ipairs(axisColors) do
-
+	for axis, color in ipairs(axisColors) do
 		local handle = polygonBuilder:create({
 			nbSides = 16,
 			color = color,
 			thickness = 1,
-			size = axis == rotateGizmo.Axis.X and 7 or axis == rotateGizmo.Axis.Y and 6.9 or 6.8
+			size = axis == rotateGizmo.Axis.X and 7 or axis == rotateGizmo.Axis.Y and 6.9 or 6.8,
 		})
 
 		-- Apply options to each part of the circle
@@ -330,9 +350,9 @@ rotateGizmo.create = function(_, config)
 		handle.axis = axis
 
 		if axis == rotateGizmo.Axis.X then
-			handle.LocalRotation = {0, math.pi * 0.5, 0}
+			handle.LocalRotation = { 0, math.pi * 0.5, 0 }
 		elseif axis == rotateGizmo.Axis.Y then
-			handle.LocalRotation = {math.pi * 0.5, 0, 0}
+			handle.LocalRotation = { math.pi * 0.5, 0, 0 }
 		end
 
 		handle.setVisible = function(_, visible)

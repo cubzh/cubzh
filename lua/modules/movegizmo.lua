@@ -1,8 +1,7 @@
-
 moveGizmo = {
-	Axis = { X=1, Y=2, Z=3 },
+	Axis = { X = 1, Y = 2, Z = 3 },
 	AxisName = { "X", "Y", "Z" },
-	Orientation = { Local=1, World=2 }
+	Orientation = { Local = 1, World = 2 },
 }
 
 plane = require("plane")
@@ -41,16 +40,24 @@ functions.up = function(self, _)
 end
 
 functions.drag = function(self, pe)
-	if not self.object or not self.selectedHandle then return false end
-	if not self.p then return end
+	if not self.object or not self.selectedHandle then
+		return false
+	end
+	if not self.p then
+		return
+	end
 
 	local ray = Ray(pe.Position, pe.Direction)
 	local pos = self.p:hit(ray)
-	if pos == nil then return false end
+	if pos == nil then
+		return false
+	end
 
 	-- project pos on move axis
 	pos = self.p2:hit(Ray(pos, self.p2.normal))
-	if pos == nil then return false end
+	if pos == nil then
+		return false
+	end
 
 	-- get final pos
 	pos = self.originalPosition + pos - self.impactPosition
@@ -84,12 +91,15 @@ functions.drag = function(self, pe)
 end
 
 functions.down = function(self, pe)
-	if not self.object then return false end
-	if self:isShown() == false then return end
+	if not self.object then
+		return false
+	end
+	if self:isShown() == false then
+		return
+	end
 
 	local ray = Ray(pe.Position, pe.Direction)
 	for axis = moveGizmo.Axis.X, moveGizmo.Axis.Z do
-
 		local handle = self.handles[axis]
 		local impact = ray:Cast(handle)
 		if impact then
@@ -103,7 +113,7 @@ functions.down = function(self, pe)
 				self.p2 = plane:New(self.impactPosition, handle.Forward, self.handles[moveGizmo.Axis.Z].Forward)
 			elseif handle.axis == moveGizmo.Axis.Y then
 				self.p = plane:New(self.impactPosition, handle.Forward, self.handles[moveGizmo.Axis.X].Forward)
-				self.p2 = plane:New(self.impactPosition, handle.Forward,self.handles[moveGizmo.Axis.Z].Forward)
+				self.p2 = plane:New(self.impactPosition, handle.Forward, self.handles[moveGizmo.Axis.Z].Forward)
 			elseif handle.axis == moveGizmo.Axis.Z then
 				self.p = plane:New(self.impactPosition, handle.Forward, self.handles[moveGizmo.Axis.Y].Forward)
 				self.p2 = plane:New(self.impactPosition, handle.Forward, self.handles[moveGizmo.Axis.X].Forward)
@@ -117,14 +127,18 @@ functions.down = function(self, pe)
 end
 
 functions.setObject = function(self, object)
-	if self.object == object then return end
+	if self.object == object then
+		return
+	end
 	self.object = object
 	if object == nil then
 		self.gizmoObject:RemoveFromParent()
 		return
 	end
 
-	if not self.hidden then self.gizmoObject:SetParent(World) end
+	if not self.hidden then
+		self.gizmoObject:SetParent(World)
+	end
 	self:updateHandles()
 end
 
@@ -134,12 +148,14 @@ functions.setOrientation = function(self, v)
 end
 
 functions.updateHandles = function(self)
-	if not self.object then return end
+	if not self.object then
+		return
+	end
 
 	if self.orientation == moveGizmo.Orientation.Local then
 		self.gizmoObject.Rotation = self.object.Rotation
 	else
-		self.gizmoObject.Rotation = {0,0,0}
+		self.gizmoObject.Rotation = { 0, 0, 0 }
 	end
 
 	if self.orientation == moveGizmo.Orientation.World and self.object.Center ~= nil then
@@ -149,7 +165,9 @@ functions.updateHandles = function(self)
 	end
 
 	-- Does not hide or rotate handles if moving gizmo
-	if self.selectedHandle then return end
+	if self.selectedHandle then
+		return
+	end
 
 	self.handles[moveGizmo.Axis.X].Forward = self.gizmoObject.Right
 	self.handles[moveGizmo.Axis.Y].Forward = self.gizmoObject.Up
@@ -217,7 +235,6 @@ moveGizmo.setScale = function(_, s)
 end
 
 moveGizmo.create = function(_, config)
-
 	local _config = { -- default config
 		orientation = moveGizmo.Orientation.World,
 		snap = 0.0,
@@ -226,15 +243,23 @@ moveGizmo.create = function(_, config)
 	}
 
 	local function sameType(a, b)
-		if type(a) == type(b) then return true end
-		if type(a) == "number" and type(b) == "integer" then return true end
-		if type(a) == "integer" and type(b) == "number" then return true end
+		if type(a) == type(b) then
+			return true
+		end
+		if type(a) == "number" and type(b) == "integer" then
+			return true
+		end
+		if type(a) == "integer" and type(b) == "number" then
+			return true
+		end
 		return false
 	end
 
 	if config ~= nil then
 		for k, v in pairs(_config) do
-			if sameType(v, config[k]) then _config[k] = config[k] end
+			if sameType(v, config[k]) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -256,12 +281,12 @@ moveGizmo.create = function(_, config)
 
 	local axisColors = { Color.Red, Color.Green, Color.Blue }
 
-	for axis,color in ipairs(axisColors) do
+	for axis, color in ipairs(axisColors) do
 		local handle = MutableShape()
 
-		handle:AddBlock(color,0,0,0)
-		handle.Pivot = Number3(0.5,0.5,0)
-		handle.Scale = Number3(1,1,10)
+		handle:AddBlock(color, 0, 0, 0)
+		handle.Pivot = Number3(0.5, 0.5, 0)
+		handle.Scale = Number3(1, 1, 10)
 
 		handle.Layers = layer
 		handle:SetParent(moveGizmo.gizmoObject)

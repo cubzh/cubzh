@@ -3,7 +3,8 @@ LocalEvent code. (https://docs.cu.bzh/reference/localevent)
 
 A listener callback can return true to capture an event,
 and avoid triggering following ones on the same even name.
-]]--
+]]
+--
 
 -- indexed by event name,
 -- each entry contains listeners in insertion order
@@ -16,7 +17,9 @@ topPrioritySystemListeners = {}
 localevent = {}
 
 mt = {
-	__tostring = function() return "[LocalEvent]" end,
+	__tostring = function()
+		return "[LocalEvent]"
+	end,
 	__type = "LocalEvent",
 }
 setmetatable(localevent, mt)
@@ -120,14 +123,18 @@ reservedToSystem[localevent.name.KeyboardInput] = true
 reservedToSystem[localevent.name.LocalAvatarUpdate] = true
 
 mt = {
-	__tostring = function() return "[LocalEventName]" end,
+	__tostring = function()
+		return "[LocalEventName]"
+	end,
 	__type = "LocalEventName",
 }
 setmetatable(localevent.name, mt)
 
 -- returns true if event has been consumed, false otherwise
 local sendEventToListeners = function(self, listenersArray, name, ...)
-	if self ~= localevent then error("LocalEvent.sendEventToListeners must receive module as 1st argument") end
+	if self ~= localevent then
+		error("LocalEvent.sendEventToListeners must receive module as 1st argument")
+	end
 
 	local listeners = listenersArray[name]
 	if listeners == nil then
@@ -136,7 +143,7 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 		return false
 	end
 
-	local args = {...}
+	local args = { ... }
 	local captured = false
 	local listener
 	local err
@@ -164,9 +171,7 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 		listener = listeners[i]
 		if not listener.paused then
 			if listener.callback ~= nil then
-
 				if limited[name] then
-
 					err, captured = Dev:ExecutionLimiter(function()
 						-- return 1,2,3 -- limiterStart returns nil, 1, 2, 3
 						return listener.callback(table.unpack(args))
@@ -183,16 +188,17 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 						end
 						goto continue -- continue for loop
 					end
-
 				else
 					captured = listener.callback(table.unpack(args))
 				end
 
-				if captured == true then break end -- event captured, exit!
+				if captured == true then
+					break
+				end -- event captured, exit!
 
 				::continue::
 
-			-- else
+				-- else
 				-- TODO: remove listeners with nil callbacks
 			end
 		end
@@ -208,9 +214,11 @@ end
 
 --
 localevent.Send = function(self, name, ...)
-	if self ~= localevent then error("LocalEvent:Send should be called with `:`", 2) end
+	if self ~= localevent then
+		error("LocalEvent:Send should be called with `:`", 2)
+	end
 
-	local args = {...}
+	local args = { ... }
 
 	-- dispatch event to SYSTEM listeners
 	local captured = sendEventToListeners(self, topPrioritySystemListeners, name, table.unpack(args))
@@ -230,7 +238,9 @@ localevent.send = localevent.Send
 -- ------------------------------
 
 local listenerMT = {
-	__tostring = function() return "[LocalEventListener]" end,
+	__tostring = function()
+		return "[LocalEventListener]"
+	end,
 	__type = "LocalEventListener",
 	__index = {
 		Remove = function(self)
@@ -258,7 +268,9 @@ listenerMT.__index.resume = listenerMT.__index.Resume
 
 -- metatable for top priority System listeners
 local topPrioritySystemListenerMT = {
-	__tostring = function() return "[LocalEventSystemListener]" end,
+	__tostring = function()
+		return "[LocalEventSystemListener]"
+	end,
 	__type = "LocalEventSystemListener",
 	__index = {
 		Remove = function(self)
@@ -290,10 +302,14 @@ topPrioritySystemListenerMT.__index.resume = topPrioritySystemListenerMT.__index
 -- LocalEvent:Listen("eventName", callback, { topPriority = true })
 -- config.system can be set to System table to register listener as "system listener".
 localevent.Listen = function(self, name, callback, config)
-	if self ~= localevent then error("LocalEvent:Listen should be called with `:`", 2) end
-	if type(callback) ~= "function" then error("LocalEvent:Listen - callback should be a function", 2) end
+	if self ~= localevent then
+		error("LocalEvent:Listen should be called with `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		error("LocalEvent:Listen - callback should be a function", 2)
+	end
 
-	local listener = {name = name, callback = callback, system = config.system == System }
+	local listener = { name = name, callback = callback, system = config.system == System }
 
 	-- top priority System listeners
 	if listener.system == true and config.topPriority == true then

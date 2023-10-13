@@ -11,7 +11,7 @@
 local SYNC_DELAY_TRIGGER = 66 -- sync every 100ms
 local SYNC_DELAY_FORCED = 5000 -- force sync even if nothing moved
 local SMOOTH_TIME = 80
-local ROT_ZERO = Rotation(0,0,0)
+local ROT_ZERO = Rotation(0, 0, 0)
 
 -- event keys
 local KEY_MULTI = "mt" -- key to identify events from this module
@@ -42,7 +42,7 @@ local OBJECT_FIELD_TO_EVENT_KEY = {
 	["LocalRotation.Y"] = KEY_LOCALROTATION_Y,
 	["LocalRotation.Z"] = KEY_LOCALROTATION_Z,
 	["Motion"] = KEY_MOTION,
-	["Velocity"] = KEY_VELOCITY
+	["Velocity"] = KEY_VELOCITY,
 }
 
 local function split(str, separator)
@@ -55,13 +55,13 @@ local function split(str, separator)
 end
 
 local EVENT_KEYS = {}
-for _,v in pairs(OBJECT_FIELD_TO_EVENT_KEY) do
+for _, v in pairs(OBJECT_FIELD_TO_EVENT_KEY) do
 	table.insert(EVENT_KEYS, v)
 end
 
 local EVENT_KEY_TO_OBJECT_FIELDS = {} -- [ "rx" = {"Rotation", "X"} ]
-for k,v in pairs(OBJECT_FIELD_TO_EVENT_KEY) do
-	EVENT_KEY_TO_OBJECT_FIELDS[v] = split(k,".")
+for k, v in pairs(OBJECT_FIELD_TO_EVENT_KEY) do
+	EVENT_KEY_TO_OBJECT_FIELDS[v] = split(k, ".")
 end
 
 local ACTION = {
@@ -92,7 +92,9 @@ local _syncObject = function(syncedObj, t, forced)
 		local dt = t - syncedObj.sentAt
 		local triggerDt = t - syncedObj.triggeredAt
 
-		if triggerDt <= SYNC_DELAY_TRIGGER then return end
+		if triggerDt <= SYNC_DELAY_TRIGGER then
+			return
+		end
 
 		if syncedObj.onSetTriggered then
 			syncedObj.onSetTriggered = false
@@ -111,7 +113,9 @@ local _syncObject = function(syncedObj, t, forced)
 			end
 		end
 
-		if triggered == false and dt <= SYNC_DELAY_FORCED then return end
+		if triggered == false and dt <= SYNC_DELAY_FORCED then
+			return
+		end
 	end
 
 	syncedObj.sentAt = t
@@ -125,7 +129,11 @@ local _syncObject = function(syncedObj, t, forced)
 		local objectFields = EVENT_KEY_TO_OBJECT_FIELDS[eventKey]
 		local v
 		for _, field in ipairs(objectFields) do
-			if v == nil then v = obj[field] else v = v[field] end
+			if v == nil then
+				v = obj[field]
+			else
+				v = v[field]
+			end
 		end
 		e[eventKey] = v
 	end
@@ -157,8 +165,15 @@ multi.playerAction = multi.action -- legacy name
 local initPlayer = function(player)
 	player:SetParent(World)
 	if player == Player then
-		multi:sync(player, "p_" .. player.ID, {keys = {"Motion", "Velocity", "Position", "Rotation.Y" }, triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" }})
-		multi:sync(player.Head, "ph_" .. player.ID, {keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" }})
+		multi:sync(player, "p_" .. player.ID, {
+			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
+			triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
+		})
+		multi:sync(
+			player.Head,
+			"ph_" .. player.ID,
+			{ keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } }
+		)
 	else
 		multi:link(player, "p_" .. player.ID)
 		multi:link(player.Head, "ph_" .. player.ID)
@@ -172,11 +187,11 @@ local removePlayer = function(player)
 end
 
 local receive = function(e)
-
-	if e[KEY_MULTI] ~= true then return end -- event not handled by module
+	if e[KEY_MULTI] ~= true then
+		return
+	end -- event not handled by module
 
 	if e[KEY_ACTION] == ACTION.SYNC then
-
 		local name = e[KEY_OBJ_NAME]
 
 		local obj = linkedObjects[name]
@@ -186,7 +201,9 @@ local receive = function(e)
 			return
 		end
 
-		if obj.multi == nil then obj.multi = {} end
+		if obj.multi == nil then
+			obj.multi = {}
+		end
 		obj.multi.dt = 0
 
 		if e[KEY_POSITION] then
@@ -208,24 +225,34 @@ local receive = function(e)
 			local rotStart = obj.Rotation:Copy()
 
 			local newRot = e[KEY_ROTATION] or obj.parentBox.Rotation:Copy()
-			if e[KEY_ROTATION_X] then newRot.X = e[KEY_ROTATION_X] end
-			if e[KEY_ROTATION_Y] then newRot.Y = e[KEY_ROTATION_Y] end
-			if e[KEY_ROTATION_Z] then newRot.Z = e[KEY_ROTATION_Z] end
+			if e[KEY_ROTATION_X] then
+				newRot.X = e[KEY_ROTATION_X]
+			end
+			if e[KEY_ROTATION_Y] then
+				newRot.Y = e[KEY_ROTATION_Y]
+			end
+			if e[KEY_ROTATION_Z] then
+				newRot.Z = e[KEY_ROTATION_Z]
+			end
 
 			obj.parentBox.Rotation = newRot -- set parentBox's rotation right away
 			obj.Rotation = rotStart
 
 			-- smoothing will bring LocalRotation to Number3.Zero
 			obj.multi.localRotStart = obj.LocalRotation:Copy()
-
 		elseif e[KEY_LOCALROTATION] or e[KEY_LOCALROTATION_X] or e[KEY_LOCALROTATION_Y] or e[KEY_LOCALROTATION_Z] then
-
 			local rotStart = obj.Rotation:Copy()
 
 			local newLocalRot = e[KEY_LOCALROTATION] or obj.parentBox.LocalRotation:Copy()
-			if e[KEY_LOCALROTATION_X] then newLocalRot.X = e[KEY_LOCALROTATION_X] end
-			if e[KEY_LOCALROTATION_Y] then newLocalRot.Y = e[KEY_LOCALROTATION_Y] end
-			if e[KEY_LOCALROTATION_Z] then newLocalRot.Z = e[KEY_LOCALROTATION_Z] end
+			if e[KEY_LOCALROTATION_X] then
+				newLocalRot.X = e[KEY_LOCALROTATION_X]
+			end
+			if e[KEY_LOCALROTATION_Y] then
+				newLocalRot.Y = e[KEY_LOCALROTATION_Y]
+			end
+			if e[KEY_LOCALROTATION_Z] then
+				newLocalRot.Z = e[KEY_LOCALROTATION_Z]
+			end
 
 			obj.parentBox.LocalRotation = newLocalRot -- set parentBox's local rotation right away
 			obj.Rotation = rotStart
@@ -236,7 +263,6 @@ local receive = function(e)
 
 		-- TEMPORARY, needed to trigger animations:
 		obj.Motion = e[KEY_MOTION] or Number3.Zero
-
 	elseif e[KEY_ACTION] == ACTION.PLAYER_ACTION then
 		local callback = actionCallbacks[e[KEY_PLAYER_ACTION]]
 		if callback ~= nil then
@@ -268,24 +294,33 @@ multi.sync = function(_, object, name, config)
 	if config.triggers == nil then
 		-- default triggers
 		config.triggers = {}
-		if type(object.Motion) == "Number3" then table.insert(config.triggers, "Motion") end
-		if type(object.Rotation) == "Rotation" then table.insert(config.triggers, "Rotation") end
-		if type(object.Velocity) == "Number3" then table.insert(config.triggers, "Velocity") end
-		if type(object.Position) == "Number3" then table.insert(config.triggers, "Position") end
+		if type(object.Motion) == "Number3" then
+			table.insert(config.triggers, "Motion")
+		end
+		if type(object.Rotation) == "Rotation" then
+			table.insert(config.triggers, "Rotation")
+		end
+		if type(object.Velocity) == "Number3" then
+			table.insert(config.triggers, "Velocity")
+		end
+		if type(object.Position) == "Number3" then
+			table.insert(config.triggers, "Position")
+		end
 	end
 
 	config.onSetTriggers = {}
 
 	config.targets = config.targets or OtherPlayers
 
-	local syncedObj = { name = name, -- name arbitrary given to synced Object
-						prev = {}, -- previous state (used for triggers)
-						object = object, -- Object reference
-						config = config, -- sync config
-						sentAt = 0, -- unix timestamp, when info was last sent
-						triggeredAt = 0, -- using separate timestamp for triggers, to avoid waiting after a force sync
-						onSetTriggered = false, -- becomes true when triggered with field through OnSet callback
-					}
+	local syncedObj = {
+		name = name, -- name arbitrary given to synced Object
+		prev = {}, -- previous state (used for triggers)
+		object = object, -- Object reference
+		config = config, -- sync config
+		sentAt = 0, -- unix timestamp, when info was last sent
+		triggeredAt = 0, -- using separate timestamp for triggers, to avoid waiting after a force sync
+		onSetTriggered = false, -- becomes true when triggered with field through OnSet callback
+	}
 
 	syncedObj.onSetTriggerCallback = function(_)
 		syncedObj.onSetTriggered = true
@@ -306,7 +341,6 @@ multi.sync = function(_, object, name, config)
 end
 
 multi.link = function(_, object, name)
-
 	linkedObjects[name] = object
 	local parentBox = Object()
 	object.parentBox = parentBox
@@ -314,11 +348,9 @@ multi.link = function(_, object, name)
 	parentBox.Physics = object.Physics
 
 	if object.Physics == PhysicsMode.Disabled then
-
 		parentBox.CollisionGroups = {}
 		parentBox.CollidesWithGroups = {}
 	else
-
 		local box = object.CollisionBox:Copy()
 		box.Max = box.Max * object.Scale.X
 		box.Min = box.Min * object.Scale.X
@@ -361,7 +393,6 @@ multi.unlink = function(_, name)
 		end
 		synced[name] = nil
 	end
-
 end
 
 -- Can be called to force sync an Object
@@ -405,7 +436,9 @@ local tick = function(dt)
 	for _, o in pairs(linkedObjects) do
 		if o.multi.dt ~= nil and o.multi.dt < SMOOTH_TIME then
 			o.multi.dt = o.multi.dt + msDT
-			if o.multi.dt > SMOOTH_TIME then o.multi.dt = SMOOTH_TIME end
+			if o.multi.dt > SMOOTH_TIME then
+				o.multi.dt = SMOOTH_TIME
+			end
 			p = o.multi.dt / SMOOTH_TIME
 
 			if o.multi.delta then
@@ -427,10 +460,18 @@ local tick = function(dt)
 	end
 end
 
-LocalEvent:Listen(LocalEvent.Name.Tick, function(dt) tick(dt) end)
-LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p) initPlayer(p) end)
-LocalEvent:Listen(LocalEvent.Name.OnPlayerLeave, function(p) removePlayer(p) end)
-LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e) receive(e) end)
+LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+	tick(dt)
+end)
+LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
+	initPlayer(p)
+end)
+LocalEvent:Listen(LocalEvent.Name.OnPlayerLeave, function(p)
+	removePlayer(p)
+end)
+LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
+	receive(e)
+end)
 
 ----------------
 -- DEPRECATED --

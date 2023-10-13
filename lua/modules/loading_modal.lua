@@ -1,7 +1,6 @@
 loading = {}
 
 loading.create = function(_, text, config)
-
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
@@ -13,7 +12,9 @@ loading.create = function(_, text, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -28,7 +29,7 @@ loading.create = function(_, text, config)
 
 	content.idealReducedContentSize = function(content, _, _)
 		content:refresh()
-		return Number2(content.Width,content.Height)
+		return Number2(content.Width, content.Height)
 	end
 
 	local maxWidth = function()
@@ -43,7 +44,7 @@ loading.create = function(_, text, config)
 		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5, 0)
 
 		if not modal.updatedPosition or forceBounce then
-			modal.LocalPosition = p - {0,100,0}
+			modal.LocalPosition = p - { 0, 100, 0 }
 			modal.updatedPosition = true
 			ease:outElastic(modal, 0.3).LocalPosition = p
 		else
@@ -52,7 +53,7 @@ loading.create = function(_, text, config)
 		end
 	end
 
-	local node = ui:createFrame(Color(0,0,0,0))
+	local node = ui:createFrame(Color(0, 0, 0, 0))
 	content.node = node
 
 	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
@@ -62,8 +63,8 @@ loading.create = function(_, text, config)
 	node.label = label
 
 	local cube = MutableShape()
-	cube:AddBlock(Color.White,0,0,0)
-	cube.Pivot = {0.5, 0.5, 0.5}
+	cube:AddBlock(Color.White, 0, 0, 0)
+	cube.Pivot = { 0.5, 0.5, 0.5 }
 
 	local c1 = ui:createShape(Shape(cube))
 	c1:setParent(node)
@@ -98,10 +99,11 @@ loading.create = function(_, text, config)
 		o.Scale = 1.0 + math.sin(tc3) * 0.5
 	end
 
-
 	node._width = function(self)
 		local w = self.label.Width + theme.padding * 2
-		if w < minWidth then w = minWidth end
+		if w < minWidth then
+			w = minWidth
+		end
 
 		return w
 	end
@@ -112,11 +114,20 @@ loading.create = function(_, text, config)
 
 	node.refresh = function(self)
 		self.label.object.MaxWidth = Screen.Width * 0.7
-		self.label.pos = { self.Width * 0.5 - self.label.Width * 0.5, self.Height - self.label.Height - theme.padding, 0 }
+		self.label.pos =
+			{ self.Width * 0.5 - self.label.Width * 0.5, self.Height - self.label.Height - theme.padding, 0 }
 
-		c1.pos = { self.Width * 0.5 - c1.Width * 0.5 - animationCubeOffset, theme.padding + animationHeight * 0.5 - c1.Height * 0.5, 0 }
+		c1.pos = {
+			self.Width * 0.5 - c1.Width * 0.5 - animationCubeOffset,
+			theme.padding + animationHeight * 0.5 - c1.Height * 0.5,
+			0,
+		}
 		c2.pos = { self.Width * 0.5 - c1.Width * 0.5, theme.padding + animationHeight * 0.5 - c1.Height * 0.5, 0 }
-		c3.pos = { self.Width * 0.5 - c1.Width * 0.5 + animationCubeOffset, theme.padding + animationHeight * 0.5 - c1.Height * 0.5, 0 }
+		c3.pos = {
+			self.Width * 0.5 - c1.Width * 0.5 + animationCubeOffset,
+			theme.padding + animationHeight * 0.5 - c1.Height * 0.5,
+			0,
+		}
 
 		c1.object.Position.Z = 20
 		c2.object.Position.Z = 20

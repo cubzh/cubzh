@@ -2,7 +2,8 @@
 
 API module
 
-]]--
+]]
+--
 
 local time = require("time")
 
@@ -11,11 +12,13 @@ local mod = {
 }
 
 local errorMT = {
-	__tostring = function(t) return t.message or "" end
+	__tostring = function(t)
+		return t.message or ""
+	end,
 }
 
 mod.error = function(_, statusCode, message)
-	local err = {statusCode = statusCode, message = message}
+	local err = { statusCode = statusCode, message = message }
 	setmetatable(err, errorMT)
 	return err
 end
@@ -172,7 +175,9 @@ mod.getUserInfo = function(_, id, callback, fields)
 			callback(false, nil, "json decode error:" .. err)
 			return
 		end
-		if usr.nbFriends ~= nil then usr.nbFriends = math.floor(usr.nbFriends) end
+		if usr.nbFriends ~= nil then
+			usr.nbFriends = math.floor(usr.nbFriends)
+		end
 		callback(true, usr, nil) -- success
 	end)
 	return req
@@ -231,7 +236,7 @@ mod.getItems = function(_, filter, callback)
 		return nil
 	end
 
-	local filterIsValid = function (k, v)
+	local filterIsValid = function(k, v)
 		if type(k) == "string" then
 			if k == "search" and type(v) == "string" and v ~= "" then
 				return true
@@ -261,10 +266,10 @@ mod.getItems = function(_, filter, callback)
 		if filterIsValid(k, v) then
 			if type(v) == "table" then
 				for _, entry in ipairs(v) do
-					table.insert(queryParams, {key = k, value = tostring(entry)})
+					table.insert(queryParams, { key = k, value = tostring(entry) })
 				end
 			else
-				table.insert(queryParams, {key = k, value = tostring(v)})
+				table.insert(queryParams, { key = k, value = tostring(v) })
 			end
 		end
 	end
@@ -332,7 +337,7 @@ mod.getWorlds = function(_, filter, callback)
 		return
 	end
 
-	local filterIsValid = function (k, v)
+	local filterIsValid = function(k, v)
 		if type(k) == "string" then
 			if k == "search" and type(v) == "string" and v ~= "" then
 				return true
@@ -359,10 +364,10 @@ mod.getWorlds = function(_, filter, callback)
 		if filterIsValid(k, v) then
 			if type(v) == "table" then
 				for _, entry in ipairs(v) do
-					table.insert(queryParams, {key = k, value = tostring(entry)})
+					table.insert(queryParams, { key = k, value = tostring(entry) })
 				end
 			else
-				table.insert(queryParams, {key = k, value = tostring(v)})
+				table.insert(queryParams, { key = k, value = tostring(v) })
 			end
 		end
 	end
@@ -396,10 +401,22 @@ mod.getWorlds = function(_, filter, callback)
 		end
 
 		for _, v in ipairs(data.worlds) do
-			if v.created then v.created = time.iso8601_to_os_time(v.created) end
-			if v.updated then v.updated = time.iso8601_to_os_time(v.updated) end
-			if v.likes ~= nil then v.likes = math.floor(v.likes) else v.likes = 0 end
-			if v.views ~= nil then v.views = math.floor(v.views) else v.views = 0 end
+			if v.created then
+				v.created = time.iso8601_to_os_time(v.created)
+			end
+			if v.updated then
+				v.updated = time.iso8601_to_os_time(v.updated)
+			end
+			if v.likes ~= nil then
+				v.likes = math.floor(v.likes)
+			else
+				v.likes = 0
+			end
+			if v.views ~= nil then
+				v.views = math.floor(v.views)
+			else
+				v.views = 0
+			end
 		end
 
 		callback(nil, data.worlds) -- success
@@ -415,34 +432,45 @@ end
 ---		err: string
 ---		worlds: []worlds
 mod.getPublishedWorlds = function(self, config, callback)
-	if self ~= mod then error("api:getPublishedWorlds(config, callback): use `:`", 2) end
-	if type(config) ~= Type.table then error("api:getPublishedWorlds(config, callback): config should be a table", 2) end
-	if type(callback) ~= "function" then error("api:getPublishedWorlds(config, callback): callback should be a function", 2) end
-	if config.list ~= nil and type(config.list) == Type.string and config.list ~= "featured" and config.list ~= "recent" then
-		error("api:getPublishedWorlds(config, callback): config.list should be \"featured\" or \"recent\"", 2)
+	if self ~= mod then
+		error("api:getPublishedWorlds(config, callback): use `:`", 2)
+	end
+	if type(config) ~= Type.table then
+		error("api:getPublishedWorlds(config, callback): config should be a table", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:getPublishedWorlds(config, callback): callback should be a function", 2)
+	end
+	if
+		config.list ~= nil
+		and type(config.list) == Type.string
+		and config.list ~= "featured"
+		and config.list ~= "recent"
+	then
+		error('api:getPublishedWorlds(config, callback): config.list should be "featured" or "recent"', 2)
 	end
 	if config.search ~= nil and type(config.search) ~= Type.string then
 		error("api:getPublishedWorlds(config, callback): config.search should be a string", 2)
 	end
 
-    -- construct query params string
-    local queryParams = ""
+	-- construct query params string
+	local queryParams = ""
 
 	local category = "recent"
 	if config.list ~= nil and type(config.list) == Type.string then
 		category = config.list
 	end
-    queryParams = queryParams .. "category=" .. category
+	queryParams = queryParams .. "category=" .. category
 
 	if config.search ~= nil and type(config.search) == Type.string and #config.search > 0 then
-        -- if this isn't the 1st query param, we need to use a '&' separator
-        if #queryParams > 0 then
-            queryParams = queryParams .. "&"
-        end
-        queryParams = queryParams .. "search=" .. config.search
+		-- if this isn't the 1st query param, we need to use a '&' separator
+		if #queryParams > 0 then
+			queryParams = queryParams .. "&"
+		end
+		queryParams = queryParams .. "search=" .. config.search
 	end
 
-    -- url example : https://api.cu.bzh/worlds?category=featured&search=monster
+	-- url example : https://api.cu.bzh/worlds?category=featured&search=monster
 	local url = mod.kApiAddr .. "/worlds?" .. queryParams
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
@@ -457,10 +485,22 @@ mod.getPublishedWorlds = function(self, config, callback)
 		end
 
 		for _, v in ipairs(data.worlds) do
-			if v.created then v.created = time.iso8601_to_os_time(v.created) end
-			if v.updated then v.updated = time.iso8601_to_os_time(v.updated) end
-			if v.likes ~= nil then v.likes = math.floor(v.likes) else v.likes = 0 end
-			if v.views ~= nil then v.views = math.floor(v.views) else v.views = 0 end
+			if v.created then
+				v.created = time.iso8601_to_os_time(v.created)
+			end
+			if v.updated then
+				v.updated = time.iso8601_to_os_time(v.updated)
+			end
+			if v.likes ~= nil then
+				v.likes = math.floor(v.likes)
+			else
+				v.likes = 0
+			end
+			if v.views ~= nil then
+				v.views = math.floor(v.views)
+			else
+				v.views = 0
+			end
 		end
 		callback(nil, data.worlds)
 	end)
@@ -493,12 +533,26 @@ mod.getWorld = function(_, worldID, callback)
 
 		local world = data.world
 
-		if world.created then world.created = time.iso8601_to_os_time(world.created) end
-		if world.updated then world.updated = time.iso8601_to_os_time(world.updated) end
-		if world.likes ~= nil then world.likes = math.floor(world.likes) else world.likes = 0 end
-		if world.views ~= nil then world.views = math.floor(world.views) else world.views = 0 end
+		if world.created then
+			world.created = time.iso8601_to_os_time(world.created)
+		end
+		if world.updated then
+			world.updated = time.iso8601_to_os_time(world.updated)
+		end
+		if world.likes ~= nil then
+			world.likes = math.floor(world.likes)
+		else
+			world.likes = 0
+		end
+		if world.views ~= nil then
+			world.views = math.floor(world.views)
+		else
+			world.views = 0
+		end
 		-- `liked` field is omitted if value is false
-		if world.liked == nil then world.liked = false end
+		if world.liked == nil then
+			world.liked = false
+		end
 
 		callback(nil, world) -- success
 	end)
@@ -506,9 +560,15 @@ mod.getWorld = function(_, worldID, callback)
 end
 
 mod.getWorldThumbnail = function(self, worldID, callback)
-	if self ~= mod then error("api:getWorldThumbnail(worldID, callback): use `:`", 2) end
-	if type(worldID) ~= Type.string then error("api:getWorldThumbnail(worldID, callback): worldID should be a string", 2) end
-	if type(callback) ~= "function" then error("api:getWorldThumbnail(worldID, callback): callback should be a function", 2) end
+	if self ~= mod then
+		error("api:getWorldThumbnail(worldID, callback): use `:`", 2)
+	end
+	if type(worldID) ~= Type.string then
+		error("api:getWorldThumbnail(worldID, callback): worldID should be a string", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:getWorldThumbnail(worldID, callback): callback should be a function", 2)
+	end
 
 	local url = mod.kApiAddr .. "/world-thumbnail/" .. worldID
 
@@ -559,9 +619,15 @@ mod.getServers = function(self, worldID, callback)
 					hasDevMode = true
 				end
 			end
-			if not hasPlayers then s.players = 0 end
-			if not hasMaxPlayers then s["max-players"] = 0 end
-			if not hasDevMode then s["dev-mode"] = 0 end
+			if not hasPlayers then
+				s.players = 0
+			end
+			if not hasMaxPlayers then
+				s["max-players"] = 0
+			end
+			if not hasDevMode then
+				s["dev-mode"] = 0
+			end
 		end
 		callback(nil, t.servers)
 	end)
@@ -572,10 +638,10 @@ mod.getUserId = function(username, cb)
 	if not username then
 		return cb("Error: first parameter of getUserId must be a username.")
 	end
-	local url = mod.kApiAddr.."/users?username="..username
+	local url = mod.kApiAddr .. "/users?username=" .. username
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
-			return cb("Error (" .. res.StatusCode .. "): can't find user "..username..".")
+			return cb("Error (" .. res.StatusCode .. "): can't find user " .. username .. ".")
 		end
 		cb(nil, JSON:Decode(res.Body).id)
 	end)
@@ -617,7 +683,7 @@ mod.getBalance = function(usernameOrCb, cb)
 		if err then
 			return cb(err)
 		end
-		local url = mod.kApiAddr .. "/users/"..id.."/balance"
+		local url = mod.kApiAddr .. "/users/" .. id .. "/balance"
 		HTTP:Get(url, function(res)
 			if res.StatusCode ~= 200 then
 				cb("Error (" .. res.StatusCode .. "): can't get balance.")
@@ -642,7 +708,9 @@ mod.getItem = function(self, itemId, cb)
 			return
 		end
 		--		if itmResp.item.likes == nil then itmResp.item.likes = 0 end
-		if itmResp.item.liked == nil then itmResp.item.liked = false end
+		if itmResp.item.liked == nil then
+			itmResp.item.liked = false
+		end
 		cb(nil, itmResp.item)
 	end)
 	return req
@@ -655,14 +723,13 @@ end
 -- Receives "natural" name, returns slug and string error (nil if there's none)
 -- No request is sent, this is local validation.
 mod.checkItemName = function(itemName, username)
-
 	if type(itemName) ~= "string" then
 		return nil, "Item name must be a string."
 	elseif itemName == "" then
 		return nil, "Item name can't be empty."
-	elseif itemName:match('^[a-zA-Z].*$') == nil then
+	elseif itemName:match("^[a-zA-Z].*$") == nil then
 		return nil, "Item must start with a letter (A-Z)."
-	elseif itemName:match('^[a-zA-Z][a-zA-Z0-9_ ]*$') == nil then
+	elseif itemName:match("^[a-zA-Z][a-zA-Z0-9_ ]*$") == nil then
 		return nil, "Item name must contain only letters (A-Z), numbers, spaces and underscores."
 	elseif #itemName > 20 then
 		return nil, "Item name must be 20 characters or shorter."
@@ -679,7 +746,6 @@ mod.checkItemName = function(itemName, username)
 end
 
 mod.checkWorldName = function(worldName)
-
 	if type(worldName) ~= "string" then
 		return nil, "World name must be a string."
 	elseif worldName == "" then
@@ -694,55 +760,58 @@ mod.checkWorldName = function(worldName)
 end
 
 mod.aiChatCompletions = function(messages, temperatureOrCb, cb)
-	if not messages then cb("Error: api.aiChatCompletions takes messages as a first parameter.") return end
+	if not messages then
+		cb("Error: api.aiChatCompletions takes messages as a first parameter.")
+		return
+	end
 	if type(temperatureOrCb) == "function" then
 		cb = temperatureOrCb
 	end
 	local temperature = type(temperatureOrCb) == "number" and temperatureOrCb or 0.7
 
 	local url = mod.kApiAddr .. "/ai/chatcompletions"
-    local headers = {}
-    headers["Content-Type"] = "application/json"
+	local headers = {}
+	headers["Content-Type"] = "application/json"
 
-    local body = {}
-    body.model = "gpt-3.5-turbo-0613"
-    body.messages = messages
-    body.temperature = temperature
-    HTTP:Post(url, headers, body, function(res)
-        if res.StatusCode ~= 200 then
-            return cb("Error (" .. tostring(res.StatusCode) .. "): " .. res.Body:ToString())
-        end
-        local body = JSON:Decode(res.Body:ToString())
-        if body.error.type then
+	local body = {}
+	body.model = "gpt-3.5-turbo-0613"
+	body.messages = messages
+	body.temperature = temperature
+	HTTP:Post(url, headers, body, function(res)
+		if res.StatusCode ~= 200 then
+			return cb("Error (" .. tostring(res.StatusCode) .. "): " .. res.Body:ToString())
+		end
+		local body = JSON:Decode(res.Body:ToString())
+		if body.error.type then
 			return cb("Error (" .. body.error.type .. ")")
-        end
-        local message = body.choices[1].message
-        cb(nil, message)
-    end)
+		end
+		local message = body.choices[1].message
+		cb(nil, message)
+	end)
 end
 
 mod.aiImageGenerations = function(prompt, optionsOrCallback, callback)
-    local options = type(optionsOrCallback) == "table" and optionsOrCallback or {}
-    local cb = type(optionsOrCallback) == "function" and optionsOrCallback or callback
+	local options = type(optionsOrCallback) == "table" and optionsOrCallback or {}
+	local cb = type(optionsOrCallback) == "function" and optionsOrCallback or callback
 
 	local url = mod.kApiAddr .. "/ai/imagegenerations"
-    local headers = {}
-    headers["Content-Type"] = "application/json"
+	local headers = {}
+	headers["Content-Type"] = "application/json"
 
-    local body = {
+	local body = {
 		prompt = prompt,
 		size = options.size or 256,
 		output = options.output or "Quad",
 		pixelart = options.pixelart or false,
-		asURL = options.asURL or false
+		asURL = options.asURL or false,
 	}
 	if body.output ~= "Shape" and body.output ~= "Quad" then
-		return cb("Error: output can only be \"Shape\" or \"Quad\".")
+		return cb('Error: output can only be "Shape" or "Quad".')
 	end
 	local req = HTTP:Post(url, headers, body, function(res)
-        if res.StatusCode ~= 200 then
-            return cb("Error (" .. tostring(res.StatusCode) .. "): " .. res.Body:ToString())
-        end
+		if res.StatusCode ~= 200 then
+			return cb("Error (" .. tostring(res.StatusCode) .. "): " .. res.Body:ToString())
+		end
 		local outputObj
 		if body.output == "Quad" and not body.asURL then
 			outputObj = Quad()
@@ -754,16 +823,14 @@ mod.aiImageGenerations = function(prompt, optionsOrCallback, callback)
 			local collisionBoxMin = outputObj.CollisionBox.Min
 			local center = outputObj.CollisionBox.Center:Copy()
 			center.Y = outputObj.CollisionBox.Min.Y
-			outputObj.Pivot = { outputObj.Width * 0.5,
-								collisionBoxMin.Y,
-								outputObj.Depth * 0.5}
-			outputObj.CollisionBox = Box(center - {0.5, 0, 0.5}, center + {0.5, 1, 0.5})
+			outputObj.Pivot = { outputObj.Width * 0.5, collisionBoxMin.Y, outputObj.Depth * 0.5 }
+			outputObj.CollisionBox = Box(center - { 0.5, 0, 0.5 }, center + { 0.5, 1, 0.5 })
 		elseif body.asURL then
 			outputObj = JSON:Decode(res.Body).url
 		end
-        cb(nil, outputObj)
-    end)
-    return req
+		cb(nil, outputObj)
+	end)
+	return req
 end
 
 return mod

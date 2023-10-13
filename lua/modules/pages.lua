@@ -9,7 +9,6 @@
 local pages = {}
 
 pages.create = function(_, uikit)
-
 	local theme = require("uitheme").current
 	local ui = uikit or require("uikit")
 
@@ -68,9 +67,9 @@ pages.create = function(_, uikit)
 		self.contentDidResize = backup
 
 		local h = self.Height
-		prevBtn.pos = {0, h * 0.5 - prevBtn.Height * 0.5, 0}
-		label.pos = {prevBtn.pos.X + prevBtn.Width + theme.padding, h * 0.5 - label.Height * 0.5, 0}
-		nextBtn.pos = {label.pos.X + label.Width + theme.padding, h * 0.5 - nextBtn.Height * 0.5, 0}
+		prevBtn.pos = { 0, h * 0.5 - prevBtn.Height * 0.5, 0 }
+		label.pos = { prevBtn.pos.X + prevBtn.Width + theme.padding, h * 0.5 - label.Height * 0.5, 0 }
+		nextBtn.pos = { label.pos.X + label.Width + theme.padding, h * 0.5 - nextBtn.Height * 0.5, 0 }
 	end
 
 	node.contentDidResize = function(self)
@@ -125,7 +124,6 @@ pages.create = function(_, uikit)
 
 	node:_refresh()
 	return node
-
 end
 
 return pages
