@@ -239,7 +239,7 @@ itemDetails.createModalContent = function(_, config)
 		table.insert(requests, req)
 	end
 
-	content.loadCell = function(cell)
+	content.loadCell = function(_, cell)
 		if removed then
 			return
 		end
@@ -285,11 +285,13 @@ itemDetails.createModalContent = function(_, config)
 				return
 			end
 
+			local likes = item.likes or 0
+
 			if self.likes then
-				self.likes.Text = "❤️ " .. math.floor(item.likes) -- force integer format
+				self.likes.Text = "❤️ " .. math.floor(likes) -- force integer format
 			elseif self.likeBtn then
 				local likeBtn = self.likeBtn
-				likeBtn.Text = "❤️ " .. math.floor(item.likes) -- force integer format
+				likeBtn.Text = "❤️ " .. math.floor(likes) -- force integer format
 				self.liked = item.liked
 				self.originalLiked = item.liked
 				self.originalLikes = item.likes
