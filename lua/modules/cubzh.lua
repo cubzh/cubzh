@@ -5,21 +5,22 @@ Welcome to the cubzh hub script!
 Want to create something like this?
 Go to https://docs.cu.bzh/
 
-]]--
+]]
+--
 
 Config = {
-	Items = { 
+	Items = {
 		"hub_collosseum_chunk",
 		"hub_scifi_chunk",
 		"hub_medieval_chunk",
 		"hub_floating_islands_chunk",
-		"hub_volcano_chunk"
-	}
+		"hub_volcano_chunk",
+	},
 }
 
 -- CONSTANTS
 
-local WATER_ALPHA = 220
+-- local WATER_ALPHA = 220
 local MAP_SCALE = 5.5
 
 directionalPad = Client.DirectionalPad
@@ -35,15 +36,14 @@ Client.Action1 = nil
 Client.Action2 = function() end
 
 Client.OnStart = function()
-
-	-- Dev.DisplayColliders = true 
+	-- Dev.DisplayColliders = true
 
 	-- MODULE TESTS
 	-- require("envtest")
 
 	-- System:DebugEvent("APP_LAUNCH")
 
-	local ambience = require("ambience") 
+	local ambience = require("ambience")
 	ambience:set(ambience.noon)
 
 	controls = require("controls")
@@ -52,13 +52,11 @@ Client.OnStart = function()
 	-- AMBIENCE --
 
 	camera2 = Camera()
-	camera2.Layers = {5}
+	camera2.Layers = { 5 }
 	camera2:SetParent(World)
-	camera2.On = true	
+	camera2.On = true
 	camera2.TargetY = Screen.Height
-	
 	-- IMPORT MODULES
-	
 	ui = require("uikit")
 	ease = require("ease")
 	api = require("api")
@@ -69,9 +67,11 @@ Client.OnStart = function()
 
 	-- MAP
 
-	function setChunkPos(chunk, x,y,z) chunk.Position = Number3(x,y,z) * MAP_SCALE end
+	function setChunkPos(chunk, x, y, z)
+		chunk.Position = Number3(x, y, z) * MAP_SCALE
+	end
 
-	function setWaterTransparency(chunk)
+	function setWaterTransparency(_) -- chunk
 		-- local i = chunk.Palette:GetIndex(Color(48, 192, 204, 255))
 		-- if i ~= nil then
 		-- 	chunk.Palette[i].Color.A = WATER_ALPHA
@@ -82,7 +82,7 @@ Client.OnStart = function()
 		-- end
 	end
 
-	function setLights(chunk)
+	function setLights(_) -- chunk
 		-- local i = chunk.Palette:GetIndex(Color(252, 240, 176, 255))
 		-- if i ~= nil then
 		-- 	chunk.Palette[i].Color.A = 230
@@ -91,15 +91,15 @@ Client.OnStart = function()
 	end
 
 	collosseumChunk = Shape(Items.hub_collosseum_chunk)
-    collosseumChunk.InnerTransparentFaces = false
+	collosseumChunk.InnerTransparentFaces = false
 	collosseumChunk.Physics = PhysicsMode.StaticPerBlock
 	collosseumChunk.CollisionGroups = Map.CollisionGroups
 	collosseumChunk.Scale = MAP_SCALE
-	collosseumChunk.Pivot = {0,0,0}
+	collosseumChunk.Pivot = { 0, 0, 0 }
 	collosseumChunk.Friction = Map.Friction
 	collosseumChunk.Bounciness = Map.Bounciness
 	World:AddChild(collosseumChunk)
-	collosseumChunk.Position = {0,0,0}
+	collosseumChunk.Position = { 0, 0, 0 }
 	setWaterTransparency(collosseumChunk)
 	setLights(collosseumChunk)
 
@@ -108,7 +108,7 @@ Client.OnStart = function()
 	scifiChunk.Physics = PhysicsMode.StaticPerBlock
 	scifiChunk.CollisionGroups = Map.CollisionGroups
 	scifiChunk.Scale = MAP_SCALE
-	scifiChunk.Pivot = {0,0,0}
+	scifiChunk.Pivot = { 0, 0, 0 }
 	scifiChunk.Friction = Map.Friction
 	scifiChunk.Bounciness = Map.Bounciness
 	World:AddChild(scifiChunk)
@@ -121,7 +121,7 @@ Client.OnStart = function()
 	medievalChunk.Physics = PhysicsMode.StaticPerBlock
 	medievalChunk.CollisionGroups = Map.CollisionGroups
 	medievalChunk.Scale = MAP_SCALE
-	medievalChunk.Pivot = {0,0,0}
+	medievalChunk.Pivot = { 0, 0, 0 }
 	medievalChunk.Friction = Map.Friction
 	medievalChunk.Bounciness = Map.Bounciness
 	World:AddChild(medievalChunk)
@@ -134,7 +134,7 @@ Client.OnStart = function()
 	floatingIslandsChunks.Physics = PhysicsMode.StaticPerBlock
 	floatingIslandsChunks.CollisionGroups = Map.CollisionGroups
 	floatingIslandsChunks.Scale = MAP_SCALE
-	floatingIslandsChunks.Pivot = {0,0,0}
+	floatingIslandsChunks.Pivot = { 0, 0, 0 }
 	floatingIslandsChunks.Friction = Map.Friction
 	floatingIslandsChunks.Bounciness = Map.Bounciness
 	World:AddChild(floatingIslandsChunks)
@@ -146,11 +146,11 @@ Client.OnStart = function()
 	volcanoChunk.Physics = PhysicsMode.StaticPerBlock
 	volcanoChunk.CollisionGroups = Map.CollisionGroups
 	volcanoChunk.Scale = MAP_SCALE
-	volcanoChunk.Pivot = {0,0,0}
+	volcanoChunk.Pivot = { 0, 0, 0 }
 	volcanoChunk.Friction = Map.Friction
 	volcanoChunk.Bounciness = Map.Bounciness
 	World:AddChild(volcanoChunk)
-	volcanoChunk.Position = {800,18,-500}
+	volcanoChunk.Position = { 800, 18, -500 }
 	setChunkPos(volcanoChunk, 116, 13, -76)
 	setWaterTransparency(volcanoChunk)
 	setLights(volcanoChunk)
@@ -158,23 +158,10 @@ Client.OnStart = function()
 	function dropPlayer(p)
 		World:AddChild(p)
 		p.Position = Number3(139, 75, 68) * MAP_SCALE
-		p.Rotation = {0.06, math.pi * -0.75, 0}
-		p.Velocity = {0,0,0}
+		p.Rotation = { 0.06, math.pi * -0.75, 0 }
+		p.Velocity = { 0, 0, 0 }
 		p.Physics = true
 	end
-
-	closeModals = function()
-		if loadingModal ~= nil then
-			loadingModal:close()
-			loadingModal = nil
-		end
-
-		secretCount = nil
-	end
-
-	-- for all animations, goes back to main menu 
-	-- after this amount of time:
-	kPostTriggerTime = 1.75
 
 	pi2 = math.pi * 2
 	moveDT = 0.0
@@ -189,18 +176,15 @@ Client.OnStart = function()
 	Pointer:Show()
 
 	require("menu"):OnAuthComplete(function()
-
 		Client.DirectionalPad = directionalPad
 		Client.Action1 = action1
 
 		account:showAvatar()
 
 		-- TODO: test DIRECT LINKS
-		-- should be handled by menu		
-		-- if hasEnvironmentToLaunch() then
+		-- should be handled by menu			-- if hasEnvironmentToLaunch() then
 		-- 	launchEnvironment()
 		-- end
-
 	end)
 
 	-- TODO: test DIRECT LINKS
@@ -210,7 +194,9 @@ Client.OnStart = function()
 end
 
 Client.OnPlayerJoin = function(p)
-	if p ~= Player then return end
+	if p ~= Player then
+		return
+	end
 	objectSkills.addStepClimbing(p)
 	dropPlayer(p)
 end
@@ -220,7 +206,6 @@ Client.OnPlayerLeave = function(p)
 end
 
 Client.Tick = function(dt)
-
 	if account.shown then
 		if Player.Position.Y < -500 then
 			dropPlayer(Player)
@@ -234,12 +219,11 @@ Client.Tick = function(dt)
 		end
 		Camera.Position.Y = (kCameraPositionY + math.sin(moveDT) * 5.0) * MAP_SCALE
 
-		Camera:RotateWorld({0, 0.1 * dt, 0})
+		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
 	end
 end
 
 Pointer.Click = function()
-	
 	Player:SwingRight()
 end
 
@@ -252,7 +236,9 @@ end
 account = {
 	shown = false, -- indicates whether the account menu is shown to the user
 	showAvatar = function(self)
-		if self.shown then return end
+		if self.shown then
+			return
+		end
 		self.shown = true
 
 		-- reload avatar
@@ -263,9 +249,10 @@ account = {
 		dropPlayer(Player)
 	end,
 	hideAvatar = function(self)
-		if not self.shown then return end
+		if not self.shown then
+			return
+		end
 		self.shown = false
-		
 		Camera:SetModeFree()
 		Player:RemoveFromParent()
 	end,

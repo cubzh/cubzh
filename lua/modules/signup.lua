@@ -1,7 +1,6 @@
 local signup = {}
 
-signup.createModal = function(self)
-		
+signup.createModal = function(_)
 	local ui = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
@@ -12,9 +11,24 @@ signup.createModal = function(self)
 	local _month
 	local _day
 
-	local monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	local monthNames = {
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	}
 	local dayNumbers = {}
-	for i = 1,31 do table.insert(dayNumbers, "" .. i) end
+	for i = 1, 31 do
+		table.insert(dayNumbers, "" .. i)
+	end
 
 	local years = {}
 	local yearStrings = {}
@@ -22,46 +36,55 @@ signup.createModal = function(self)
 	local currentMonth = math.floor(tonumber(os.date("%m")))
 	local currentDay = math.floor(tonumber(os.date("%d")))
 
-	for i = currentYear,currentYear-100,-1 do table.insert(years, i) table.insert(yearStrings, "" .. i) end
+	for i = currentYear, currentYear - 100, -1 do
+		table.insert(years, i)
+		table.insert(yearStrings, "" .. i)
+	end
 
 	local function isLeapYear(year)
-	    if year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0) then
-	        return true
-	    else
-	        return false
-	    end
+		if year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0) then
+			return true
+		else
+			return false
+		end
 	end
 
 	local function nbDays(m)
 		if m == 2 then
-			if isLeapYear(m) then return 29 else return 28 end
+			if isLeapYear(m) then
+				return 29
+			else
+				return 28
+			end
 		else
-			local days = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+			local days = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 			return days[m]
 		end
 	end
 
-	local function idealReducedContentSize(content, width, height)
-		if content.refresh then content:refresh() end
+	local function idealReducedContentSize(content, _, _)
+		if content.refresh then
+			content:refresh()
+		end
 		-- print("-- 1 -", content.Width,content.Height)
 		-- Timer(1.0, function() content:refresh() print("-- 2 -", content.Width,content.Height) end)
-		return Number2(content.Width,content.Height)
+		return Number2(content.Width, content.Height)
 	end
 
 	-- initial content, asking for year of birth
 	local content = modal:createContent()
 	content.idealReducedContentSize = idealReducedContentSize
 
-	local node = ui:createFrame(Color(0,0,0,0))
+	local node = ui:createFrame(Color(0, 0, 0, 0))
 	content.node = node
 
 	content.title = "Who are you?"
 	content.icon = "🙂"
 
-	local birthdayLabel = ui:createText("Birthday", Color(200,200,200,255), "small")
+	local birthdayLabel = ui:createText("Birthday", Color(200, 200, 200, 255), "small")
 	birthdayLabel:setParent(node)
 
-	local birthdayInfo = ui:createText("", Color(251,206,0,255), "small")
+	local birthdayInfo = ui:createText("", Color(251, 206, 0, 255), "small")
 	birthdayInfo:setParent(node)
 
 	local monthInput = ui:createComboBox("Month", monthNames)
@@ -73,10 +96,10 @@ signup.createModal = function(self)
 	local yearInput = ui:createComboBox("Year", years)
 	yearInput:setParent(node)
 
-	local usernameLabel = ui:createText("Username", Color(200,200,200,255), "small")
+	local usernameLabel = ui:createText("Username", Color(200, 200, 200, 255), "small")
 	usernameLabel:setParent(node)
 
-	local usernameInfo = ui:createText("⚠️ can't be changed!", Color(251,206,0,255), "small")
+	local usernameInfo = ui:createText("⚠️ can't be changed!", Color(251, 206, 0, 255), "small")
 	usernameInfo:setParent(node)
 
 	local usernameInput = ui:createTextInput("", "Don't use your real name")
@@ -89,22 +112,26 @@ signup.createModal = function(self)
 		local r = true
 		local daysInMonth = nbDays(_month)
 
-		if _year == nil or _month == nil or _day == nil then 
+		if _year == nil or _month == nil or _day == nil then
 			if config and config.errorIfIncomplete == true then
 				birthdayInfo.Text = "❌ required"
 				birthdayInfo.Color = theme.errorTextColor
-				r = false 
+				r = false
 			else
 				birthdayInfo.Text = ""
 			end
 		elseif _day < 0 or _day > daysInMonth then
 			birthdayInfo.Text = "❌ invalid date"
 			birthdayInfo.Color = theme.errorTextColor
-			r = false 
-		elseif _year > currentYear or (_year == currentYear and _month > currentMonth) or (_year == currentYear and _month == currentMonth and _day > currentDay) then
+			r = false
+		elseif
+			_year > currentYear
+			or (_year == currentYear and _month > currentMonth)
+			or (_year == currentYear and _month == currentMonth and _day > currentDay)
+		then
 			birthdayInfo.Text = "❌ users from the future not allowed"
 			birthdayInfo.Color = theme.errorTextColor
-			r = false 
+			r = false
 		else
 			birthdayInfo.Text = ""
 		end
@@ -138,22 +165,31 @@ signup.createModal = function(self)
 
 	-- callback(ok, key)
 	local checkUsername = function(callback, config)
-
-		if checkUsernameError ~= nil then 
-			if callback then callback(false, nil) end
+		if checkUsernameError ~= nil then
+			if callback then
+				callback(false, nil)
+			end
 			return
 		end
 
-		if checkUsernameKey ~= nil then 
-			if callback then callback(true, checkUsernameKey) end
+		if checkUsernameKey ~= nil then
+			if callback then
+				callback(true, checkUsernameKey)
+			end
 			return
 		end
 
 		local r = true
 		local s = usernameInput.Text
 
-		if checkUsernameTimer ~= nil then checkUsernameTimer:Cancel() checkUsernameTimer = nil end
-		if checkUsernameRequest ~= nil then checkUsernameRequest:Cancel() checkUsernameRequest = nil end
+		if checkUsernameTimer ~= nil then
+			checkUsernameTimer:Cancel()
+			checkUsernameTimer = nil
+		end
+		if checkUsernameRequest ~= nil then
+			checkUsernameRequest:Cancel()
+			checkUsernameRequest = nil
+		end
 
 		local usernameInfoDTBackup = usernameInfoDT
 		usernameInfoDT = nil
@@ -184,16 +220,15 @@ signup.createModal = function(self)
 				usernameInfoFrame = 0
 				usernameInfoDT = usernameInfoDTBackup or 0
 				usernameInfo.Text = "checking   "
-				usernameInfo.Color = Color(200,200,200,255)
+				usernameInfo.Color = Color(200, 200, 200, 255)
 				usernameInfo.pos.X = node.Width - usernameInfo.Width
 
 				-- additional delay for api request
 				checkUsernameTimer = Timer(0.8, function()
-					usernameInfo.Color = Color(200,200,200,255)
+					usernameInfo.Color = Color(200, 200, 200, 255)
 					checkUsernameTimer = nil
 
 					checkUsernameRequest = api:checkUsername(s, function(success, res)
-
 						usernameInfoDT = nil
 						checkUsernameRequest = nil
 
@@ -217,13 +252,15 @@ signup.createModal = function(self)
 							usernameInfo.Color = theme.errorTextColor
 						else
 							usernameInfo.Text = "✅"
-							usernameInfo.Color = Color(200,200,200,255)
+							usernameInfo.Color = Color(200, 200, 200, 255)
 							checkUsernameKey = res.key
 							checkUsernameError = nil
 						end
 
 						if checkUsernameKey ~= nil then
-							if callback ~= nil then callback(true, usernameKey) end
+							if callback ~= nil then
+								callback(true, checkUsernameKey)
+							end
 						end
 
 						usernameInfo.pos.X = node.Width - usernameInfo.Width
@@ -239,23 +276,25 @@ signup.createModal = function(self)
 		-- if r == true, it means request for server side checks has been scheduled
 		if r == false then
 			checkUsernameError = true
-			if callback ~= nil then callback(false, nil) end
+			if callback ~= nil then
+				callback(false, nil)
+			end
 		end
 	end
 
-	usernameInput.onTextChange = function(self)
+	usernameInput.onTextChange = function(_)
 		checkUsernameKey = nil
 		checkUsernameError = nil
 		checkUsername()
 	end
 
-	local passwordLabel = ui:createText("Password", Color(200,200,200,255), "small")
+	local passwordLabel = ui:createText("Password", Color(200, 200, 200, 255), "small")
 	passwordLabel:setParent(node)
 
-	local passwordInfo = ui:createText("", Color(251,206,0,255), "small")
+	local passwordInfo = ui:createText("", Color(251, 206, 0, 255), "small")
 	passwordInfo:setParent(node)
 
-	local passwordInput = ui:createTextInput("", "At least 8 characters", {password = true})
+	local passwordInput = ui:createTextInput("", "At least 8 characters", { password = true })
 	passwordInput:setParent(node)
 
 	local btnPasswordToggle = ui:createButton("👁️")
@@ -292,7 +331,7 @@ signup.createModal = function(self)
 		return r
 	end
 
-	passwordInput.onTextChange = function(self)
+	passwordInput.onTextChange = function(_)
 		checkPassword()
 	end
 
@@ -301,10 +340,12 @@ signup.createModal = function(self)
 	signUpButton:setColor(theme.colorPositive)
 
 	signUpButton.onRelease = function()
-		local dobOK = checkDOB({errorIfIncomplete = true})
-		local passwordOK = checkPassword({errorIfEmpty = true, errorIfTooShort = true})
+		local dobOK = checkDOB({ errorIfIncomplete = true })
+		local passwordOK = checkPassword({ errorIfEmpty = true, errorIfTooShort = true })
 
-		if dobOK ~= true or passwordOK ~= true then return end		
+		if dobOK ~= true or passwordOK ~= true then
+			return
+		end
 
 		local usernameCallback = function(ok, key)
 			if ok == true and type(key) == "string" then
@@ -313,11 +354,13 @@ signup.createModal = function(self)
 				local password = passwordInput.Text
 
 				local modal = content:getModalIfContentIsActive()
-				if modal and modal.onSubmit then modal.onSubmit(username, key, dob, password) end
+				if modal and modal.onSubmit then
+					modal.onSubmit(username, key, dob, password)
+				end
 			end
 		end
 
-		checkUsername(usernameCallback, {errorIfEmpty = true})
+		checkUsername(usernameCallback, { errorIfEmpty = true })
 	end
 
 	signUpButton.contentDidResize = function()
@@ -327,7 +370,7 @@ signup.createModal = function(self)
 	end
 	signUpButton:contentDidResize()
 
-	content.bottomCenter = {signUpButton}
+	content.bottomCenter = { signUpButton }
 
 	local tickListener
 
@@ -336,15 +379,19 @@ signup.createModal = function(self)
 			if usernameInfoDT then
 				usernameInfoDT = usernameInfoDT + dt
 				usernameInfoDT = usernameInfoDT % 0.4
-				
+
 				local currentFrame = math.floor(usernameInfoDT / 0.1)
 
 				if currentFrame ~= usernameInfoFrame then
 					usernameInfoFrame = currentFrame
-					if usernameInfoFrame == 0 then usernameInfo.Text = "checking   "
-					elseif usernameInfoFrame == 1 then usernameInfo.Text = "checking.  "
-					elseif usernameInfoFrame == 2 then usernameInfo.Text = "checking.. "
-					else usernameInfo.Text = "checking..."
+					if usernameInfoFrame == 0 then
+						usernameInfo.Text = "checking   "
+					elseif usernameInfoFrame == 1 then
+						usernameInfo.Text = "checking.  "
+					elseif usernameInfoFrame == 2 then
+						usernameInfo.Text = "checking.. "
+					else
+						usernameInfo.Text = "checking..."
 					end
 				end
 			end
@@ -359,23 +406,33 @@ signup.createModal = function(self)
 		return Screen.Height - 100
 	end
 
-	local terms = ui:createFrame(Color(255,255,255,200))
+	local terms = ui:createFrame(Color(255, 255, 255, 200))
 
 	content.willResignActive = function()
-		if tickListener then tickListener:Remove() tickListener = nil end
+		if tickListener then
+			tickListener:Remove()
+			tickListener = nil
+		end
 		terms:remove()
 	end
 
-	local textColor = Color(100,100,100)
-	local linkColor = Color(4,161,255)
-	local linkPressedColor = Color(233,89,249)
+	local textColor = Color(100, 100, 100)
+	local linkColor = Color(4, 161, 255)
+	local linkPressedColor = Color(233, 89, 249)
 
-	local termsText = ui:createText("By clicking Sign Up, you are agreeing to the Terms of Use including arbitration clause and you are aknowledging the Privacy Policy.", textColor, "small")
+	local termsText = ui:createText(
+		"By clicking Sign Up, you are agreeing to the Terms of Use including arbitration clause and you are aknowledging the Privacy Policy.",
+		textColor,
+		"small"
+	)
 	termsText:setParent(terms)
 
-	local termsBtn = ui:createButton("Terms", { textSize = "small", borders = false, shadow = false, underline = true, padding = false })
-	termsBtn:setColor(Color(0,0,0,0), linkColor)
-	termsBtn:setColorPressed(Color(0,0,0,0), linkPressedColor)
+	local termsBtn = ui:createButton(
+		"Terms",
+		{ textSize = "small", borders = false, shadow = false, underline = true, padding = false }
+	)
+	termsBtn:setColor(Color(0, 0, 0, 0), linkColor)
+	termsBtn:setColorPressed(Color(0, 0, 0, 0), linkPressedColor)
 	termsBtn:setParent(terms)
 	termsBtn.onRelease = function()
 		System:OpenWebModal("https://cu.bzh/terms-of-use")
@@ -384,24 +441,30 @@ signup.createModal = function(self)
 	local separator = ui:createText("-", textColor, "small")
 	separator:setParent(terms)
 
-	local privacyBtn = ui:createButton("Privacy", { textSize = "small", borders = false, shadow = false, underline = true, padding = false })
-	privacyBtn:setColor(Color(0,0,0,0), linkColor)
-	privacyBtn:setColorPressed(Color(0,0,0,0), linkPressedColor)
+	local privacyBtn = ui:createButton(
+		"Privacy",
+		{ textSize = "small", borders = false, shadow = false, underline = true, padding = false }
+	)
+	privacyBtn:setColor(Color(0, 0, 0, 0), linkColor)
+	privacyBtn:setColorPressed(Color(0, 0, 0, 0), linkPressedColor)
 	privacyBtn:setParent(terms)
 	privacyBtn.onRelease = function()
 		System:OpenWebModal("https://cu.bzh/privacy-policy")
 	end
 
 	local position = function(modal, forceBounce)
-
 		termsText.object.MaxWidth = modal.Width - theme.paddingTiny * 2
 
 		local termsHeight = termsText.Height + termsBtn.Height + theme.paddingTiny * 3
 
-		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5 + (termsHeight + theme.padding) * 0.5, 0)
+		local p = Number3(
+			Screen.Width * 0.5 - modal.Width * 0.5,
+			Screen.Height * 0.5 - modal.Height * 0.5 + (termsHeight + theme.padding) * 0.5,
+			0
+		)
 
 		if not modal.updatedPosition or forceBounce then
-			modal.LocalPosition = p - {0,100,0}
+			modal.LocalPosition = p - { 0, 100, 0 }
 			modal.updatedPosition = true
 			ease:outElastic(modal, 0.3).LocalPosition = p
 		else
@@ -412,7 +475,7 @@ signup.createModal = function(self)
 		terms.Height = termsHeight
 
 		terms.pos.X = p.X + modal.Width * 0.5 - terms.Width * 0.5
-		terms.pos.Y = p.Y + - terms.Height - theme.padding
+		terms.pos.Y = p.Y + -terms.Height - theme.padding
 
 		termsText.pos.X = terms.Width * 0.5 - termsText.Width * 0.5
 		termsText.pos.Y = terms.Height - termsText.Height - theme.paddingTiny
@@ -421,7 +484,7 @@ signup.createModal = function(self)
 
 		termsBtn.pos.Y = theme.paddingTiny
 		termsBtn.pos.X = terms.Width * 0.5 - w * 0.5
-		
+
 		separator.pos.Y = theme.paddingTiny
 		separator.pos.X = termsBtn.pos.X + termsBtn.Width + theme.padding
 
@@ -434,20 +497,23 @@ signup.createModal = function(self)
 
 	popup.onSuccess = function() end
 
-	popup.bounce = function(self)
+	popup.bounce = function(_)
 		position(popup, true)
 	end
 
 	node.refresh = function(self)
-
 		self.Width = math.min(400, Screen.Width - Screen.SafeArea.Right - Screen.SafeArea.Left - theme.paddingBig * 2)
-		self.Height = birthdayLabel.Height + theme.paddingTiny
-					+ monthInput.Height + theme.padding
-					+ usernameLabel.Height + theme.paddingTiny
-					+ usernameInput.Height + theme.padding
-					+ passwordLabel.Height + theme.paddingTiny
-					+ passwordInput.Height
-
+		self.Height = birthdayLabel.Height
+			+ theme.paddingTiny
+			+ monthInput.Height
+			+ theme.padding
+			+ usernameLabel.Height
+			+ theme.paddingTiny
+			+ usernameInput.Height
+			+ theme.padding
+			+ passwordLabel.Height
+			+ theme.paddingTiny
+			+ passwordInput.Height
 
 		birthdayLabel.pos.Y = self.Height - birthdayLabel.Height
 

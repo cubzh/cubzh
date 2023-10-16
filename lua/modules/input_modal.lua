@@ -1,7 +1,6 @@
 local inputModal = {}
 
-inputModal.create = function(self, prompt)
-		
+inputModal.create = function(_, prompt)
 	local uikit = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
@@ -12,9 +11,9 @@ inputModal.create = function(self, prompt)
 	local content = modal:createContent()
 	content.closeButton = false
 
-	content.idealReducedContentSize = function(content, width, height)
+	content.idealReducedContentSize = function(content, _, _)
 		content:refresh()
-		return Number2(content.Width,content.Height)
+		return Number2(content.Width, content.Height)
 	end
 
 	local maxWidth = function()
@@ -29,7 +28,7 @@ inputModal.create = function(self, prompt)
 		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5, 0)
 
 		if not modal.updatedPosition or forceBounce then
-			modal.LocalPosition = p - {0,100,0}
+			modal.LocalPosition = p - { 0, 100, 0 }
 			modal.updatedPosition = true
 			ease:outElastic(modal, 0.3).LocalPosition = p
 		else
@@ -37,7 +36,7 @@ inputModal.create = function(self, prompt)
 		end
 	end
 
-	local node = uikit:createFrame(Color(0,0,0,0))
+	local node = uikit:createFrame(Color(0, 0, 0, 0))
 	content.node = node
 
 	local popup = modal:create(content, maxWidth, maxHeight, position)
@@ -50,8 +49,7 @@ inputModal.create = function(self, prompt)
 	input:setParent(node)
 	node.input = input
 
-	-- buttons are displayed in that order: 
-	-- NEUTRAL, NEGATIVE, POSITIVE
+	-- buttons are displayed in that order:		-- NEUTRAL, NEGATIVE, POSITIVE
 	-- POSITIVE one is displayed by default but can be hidden setting callback to nil
 
 	node.positiveCallback = nil
@@ -64,13 +62,19 @@ inputModal.create = function(self, prompt)
 
 	node._width = function(self)
 		local buttonsWidth = 0
-		if self.okButton then buttonsWidth = self.okButton.Width end
-		if self.negativeButton then 
-			if buttonsWidth > 0 then buttonsWidth = buttonsWidth + theme.padding end
+		if self.okButton then
+			buttonsWidth = self.okButton.Width
+		end
+		if self.negativeButton then
+			if buttonsWidth > 0 then
+				buttonsWidth = buttonsWidth + theme.padding
+			end
 			buttonsWidth = buttonsWidth + self.negativeButton.Width
 		end
-		if self.neutralButton then 
-			if buttonsWidth > 0 then buttonsWidth = buttonsWidth + theme.padding end
+		if self.neutralButton then
+			if buttonsWidth > 0 then
+				buttonsWidth = buttonsWidth + theme.padding
+			end
 			buttonsWidth = buttonsWidth + self.neutralButton.Width
 		end
 
@@ -89,9 +93,17 @@ inputModal.create = function(self, prompt)
 		if self.okButton ~= nil then
 			return self.label.Height + self.input.Height + theme.padding * 3 + self.okButton.Height + theme.paddingBig
 		elseif self.negativeButton then
-			return self.label.Height + self.input.Height + theme.padding * 3 + self.negativeButton.Height + theme.paddingBig
+			return self.label.Height
+				+ self.input.Height
+				+ theme.padding * 3
+				+ self.negativeButton.Height
+				+ theme.paddingBig
 		elseif self.neutralButton then
-			return self.label.Height + self.input.Height + theme.padding * 3 + self.neutralButton.Height + theme.paddingBig
+			return self.label.Height
+				+ self.input.Height
+				+ theme.padding * 3
+				+ self.neutralButton.Height
+				+ theme.paddingBig
 		else
 			return self.label.Height + self.input.Height + theme.padding * 3
 		end
@@ -101,22 +113,31 @@ inputModal.create = function(self, prompt)
 		self.label.object.MaxWidth = math.min(300, Screen.Width * 0.8)
 		self.input.Width = self.Width
 
-		self.label.pos = { self.Width * 0.5 - self.label.Width * 0.5, self.Height - self.label.Height - theme.padding, 0 }
+		self.label.pos =
+			{ self.Width * 0.5 - self.label.Width * 0.5, self.Height - self.label.Height - theme.padding, 0 }
 		self.input.pos = { 0, self.label.pos.Y - theme.padding - self.input.Height, 0 }
 
 		local buttons = {}
-		if self.neutralButton then table.insert(buttons, self.neutralButton) end
-		if self.negativeButton then table.insert(buttons, self.negativeButton) end
-		if self.okButton then table.insert(buttons, self.okButton) end
+		if self.neutralButton then
+			table.insert(buttons, self.neutralButton)
+		end
+		if self.negativeButton then
+			table.insert(buttons, self.negativeButton)
+		end
+		if self.okButton then
+			table.insert(buttons, self.okButton)
+		end
 
 		local buttonsWidth = 0
 		for i, button in ipairs(buttons) do
-			if i > 1 then buttonsWidth = buttonsWidth + theme.padding end
+			if i > 1 then
+				buttonsWidth = buttonsWidth + theme.padding
+			end
 			buttonsWidth = buttonsWidth + button.Width
 		end
 
 		local previous
-		for i, button in ipairs(buttons) do
+		for _, button in ipairs(buttons) do
 			if previous then
 				button.LocalPosition.X = previous.LocalPosition.X + previous.Width + theme.padding
 			else
@@ -138,13 +159,13 @@ inputModal.create = function(self, prompt)
 				node.okButton = nil
 			end
 		else
-			if node.okButton then 
+			if node.okButton then
 				node.okButton.Text = text
 			else
 				local okButton = uikit:createButton(text)
-				okButton:setColor(Color(161,217,0), Color(45,57,17), false)
+				okButton:setColor(Color(161, 217, 0), Color(45, 57, 17), false)
 				okButton:setParent(node)
-				okButton.onRelease = function(self)
+				okButton.onRelease = function(_)
 					node.positiveCallback(node.input.Text)
 					popup:close()
 				end
@@ -156,7 +177,6 @@ inputModal.create = function(self, prompt)
 				node.okButton.Width = minButtonWidth
 			end
 		end
-		
 		self:refresh()
 	end
 
@@ -171,13 +191,13 @@ inputModal.create = function(self, prompt)
 				node.negativeButton = nil
 			end
 		else
-			if node.negativeButton then 
+			if node.negativeButton then
 				node.negativeButton.Text = text
 			else
 				local negativeButton = uikit:createButton(text)
-				negativeButton:setColor(Color(227,52,55), Color.White, false)
+				negativeButton:setColor(Color(227, 52, 55), Color.White, false)
 				negativeButton:setParent(node)
-				negativeButton.onRelease = function(self)
+				negativeButton.onRelease = function(_)
 					node.negativeCallback()
 					popup:close()
 				end
@@ -204,12 +224,12 @@ inputModal.create = function(self, prompt)
 				node.neutralButton = nil
 			end
 		else
-			if node.neutralButton then 
+			if node.neutralButton then
 				node.neutralButton.Text = text
 			else
 				local neutralButton = uikit:createButton(text)
 				neutralButton:setParent(node)
-				neutralButton.onRelease = function(self)
+				neutralButton.onRelease = function(_)
 					node.neutralCallback()
 					popup:close()
 				end
@@ -227,7 +247,7 @@ inputModal.create = function(self, prompt)
 
 	popup:setPositiveCallback("OK", function() end)
 
-	popup.bounce = function(self)
+	popup.bounce = function(_)
 		position(popup, true)
 	end
 

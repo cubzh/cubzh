@@ -1,4 +1,3 @@
-
 local menu = {}
 
 ui = require("uikit").systemUI(System)
@@ -20,10 +19,10 @@ sys_notifications = require("system_notifications", System)
 ---------------------------
 
 MODAL_MARGIN = theme.paddingBig -- space around modals
-BACKGROUND_COLOR_ON = Color(0,0,0,200)
-BACKGROUND_COLOR_OFF = Color(0,0,0,0)
-ALERT_BACKGROUND_COLOR_ON = Color(0,0,0,200)
-ALERT_BACKGROUND_COLOR_OFF = Color(0,0,0,0)
+BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
+BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
+ALERT_BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
+ALERT_BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
 
 ---------------------------
 -- VARS
@@ -78,7 +77,7 @@ function updateModalPosition(modal, forceBounce)
 	local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5, 0)
 
 	if not modal.updatedPosition or forceBounce then
-		modal.LocalPosition = p - {0,100,0}
+		modal.LocalPosition = p - { 0, 100, 0 }
 		modal.updatedPosition = true
 		ease:cancel(modal) -- cancel modal ease animations if any
 		ease:outBack(modal, 0.22).LocalPosition = p
@@ -95,7 +94,9 @@ function closeModal()
 end
 
 function showModal(key)
-	if not key then return end
+	if not key then
+		return
+	end
 
 	if key == activeModalKey then
 		updateModalPosition(activeModal, true) -- make it bounce
@@ -109,15 +110,15 @@ function showModal(key)
 	end
 
 	if key == MODAL_KEYS.PROFILE then
-		local content = require("profile"):create({uikit = ui})
+		local content = require("profile"):create({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CHAT then
-		local content = require("chat"):createModalContent({uikit = ui})
+		local content = require("chat"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
 		activeModal = friends:create(maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.MARKETPLACE then
-		local content = require("gallery"):createModalContent({uikit = ui})
+		local content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CUBZH_MENU then
 		local content = getCubzhMenuModalContent()
@@ -147,7 +148,7 @@ function showAlert(config)
 		return
 	end
 
-	alertModal = alert:create(config.message or "",  {uikit = ui})
+	alertModal = alert:create(config.message or "", { uikit = ui })
 	alertModal:setParent(alertBackground)
 
 	if config.positiveCallback then
@@ -174,7 +175,7 @@ function showLoading(text)
 		return
 	end
 
-	loadingModal = require("loading_modal"):create(text, {uikit = ui})
+	loadingModal = require("loading_modal"):create(text, { uikit = ui })
 	loadingModal:setParent(alertBackground)
 
 	loadingModal.didClose = function()
@@ -186,7 +187,9 @@ function showLoading(text)
 end
 
 function hideLoading()
-	if loadingModal == nil then return end
+	if loadingModal == nil then
+		return
+	end
 	loadingModal:close()
 	loadingModal = nil
 	triggerCallbacks()
@@ -203,7 +206,9 @@ end
 blockedEvents = {}
 
 function blockEvent(name)
-	local listener = LocalEvent:Listen(name, function() return true end, { topPriority = true, system = System })
+	local listener = LocalEvent:Listen(name, function()
+		return true
+	end, { topPriority = true, system = System })
 	table.insert(blockedEvents, listener)
 end
 
@@ -220,7 +225,6 @@ function unblockEvents()
 end
 
 function triggerCallbacks()
-
 	local isActive = menu:IsActive()
 
 	if isActive ~= wasActive then
@@ -277,35 +281,50 @@ end
 
 function refreshDisplay()
 	if cppMenuIsActive then
-		if activeModal then activeModal:hide() end
-		if loadingModal then loadingModal:hide() end
-		if alertModal then alertModal:hide() end
+		if activeModal then
+			activeModal:hide()
+		end
+		if loadingModal then
+			loadingModal:hide()
+		end
+		if alertModal then
+			alertModal:hide()
+		end
 		cubzhBtn:disable()
 		chatBtn:disable()
 		friendsBtn:disable()
 		profileFrame:hide()
-		chatMessage[1].Color = Color(255,255,255,50)
-		chatMessage[2].Color = Color(255,255,255,50)
-		chatMessage[3].Color = Color(255,255,255,50)
-		chatMessage[4].Color = Color(255,255,255,50)
+		chatMessage[1].Color = Color(255, 255, 255, 50)
+		chatMessage[2].Color = Color(255, 255, 255, 50)
+		chatMessage[3].Color = Color(255, 255, 255, 50)
+		chatMessage[4].Color = Color(255, 255, 255, 50)
 		if signupElements ~= nil then
-			for _, e in ipairs(signupElements) do e:hide() end
+			for _, e in ipairs(signupElements) do
+				e:hide()
+			end
 		end
-
 	else
-		if activeModal then activeModal:show() end
-		if loadingModal then loadingModal:show() end
-		if alertModal then alertModal:show() end
+		if activeModal then
+			activeModal:show()
+		end
+		if loadingModal then
+			loadingModal:show()
+		end
+		if alertModal then
+			alertModal:show()
+		end
 		cubzhBtn:enable()
 		chatBtn:enable()
 		friendsBtn:enable()
 		profileFrame:show()
-		chatMessage[1].Color = Color(200,200,200)
-		chatMessage[2].Color = Color(200,200,200)
-		chatMessage[3].Color = Color(200,200,200)
-		chatMessage[4].Color = Color(200,200,200)
+		chatMessage[1].Color = Color(200, 200, 200)
+		chatMessage[2].Color = Color(200, 200, 200)
+		chatMessage[3].Color = Color(200, 200, 200)
+		chatMessage[4].Color = Color(200, 200, 200)
 		if signupElements ~= nil then
-			for _, e in ipairs(signupElements) do e:show() end
+			for _, e in ipairs(signupElements) do
+				e:show()
+			end
 		end
 	end
 end
@@ -316,7 +335,7 @@ end
 
 background = ui:createFrame(BACKGROUND_COLOR_OFF)
 
-background.parentDidResize = function(self)
+background.parentDidResize = function(_)
 	background.Width = Screen.Width
 	background.Height = Screen.Height
 end
@@ -325,7 +344,7 @@ background:parentDidResize()
 alertBackground = ui:createFrame(ALERT_BACKGROUND_COLOR_OFF)
 alertBackground.pos.Z = -950
 
-alertBackground.parentDidResize = function(self)
+alertBackground.parentDidResize = function(_)
 	alertBackground.Width = Screen.Width
 	alertBackground.Height = Screen.Height
 end
@@ -335,27 +354,27 @@ alertBackground:parentDidResize()
 -- TOP BAR
 ---------------------------
 
-topBar = ui:createFrame(Color(0,0,0,0.7))
+topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
 
 cubzhBtn = ui:createButton("⎔")
-cubzhBtn:setColor(nil, Color(255,255,255,254))
-cubzhBtn:setColorPressed(nil, Color(255,255,255,254))
+cubzhBtn:setColor(nil, Color(255, 255, 255, 254))
+cubzhBtn:setColorPressed(nil, Color(255, 255, 255, 254))
 cubzhBtn:setParent(topBar)
 cubzhBtn.pos.Y = theme.paddingTiny
 
-chatBtn = ui:createButton("💬", {shadow = false, borders = false})
+chatBtn = ui:createButton("💬", { shadow = false, borders = false })
 -- chatBtn = ui:createButton("💬", {shadow = false})
 -- chatBtn = ui:createButton("💬")
-chatBtn:setColor(Color(0,0,0,0))
-chatBtn:setColorPressed(Color(0,0,0,0))
-chatBtn:setColorSelected(Color(0,0,0,0))
+chatBtn:setColor(Color(0, 0, 0, 0))
+chatBtn:setColorPressed(Color(0, 0, 0, 0))
+chatBtn:setColorSelected(Color(0, 0, 0, 0))
 chatBtn:setParent(topBar)
 
-friendsBtn = ui:createButton("💛", {shadow = false, borders = false})
-friendsBtn:setColor(Color(0,0,0,0))
-friendsBtn:setColorPressed(Color(0,0,0,0))
-friendsBtn:setColorSelected(Color(0,0,0,0))
+friendsBtn = ui:createButton("💛", { shadow = false, borders = false })
+friendsBtn:setColor(Color(0, 0, 0, 0))
+friendsBtn:setColorPressed(Color(0, 0, 0, 0))
+friendsBtn:setColorSelected(Color(0, 0, 0, 0))
 friendsBtn:setParent(topBar)
 
 cubzhBtn.onRelease = function()
@@ -373,7 +392,7 @@ end
 profileFrame = ui:createFrame(Color.transparent)
 profileFrame:setParent(topBar)
 
-profileFrame.onRelease = function(self)
+profileFrame.onRelease = function(_)
 	showModal(MODAL_KEYS.PROFILE)
 end
 
@@ -387,7 +406,11 @@ username:setParent(profileFrame)
 xp = nil
 coins = nil
 
-info = ui:createText(string.format("🏆 %s 💰 %s", xp and "" .. xp or "…", coins and "" .. coins or "…"), Color.White, "small")
+info = ui:createText(
+	string.format("🏆 %s 💰 %s", xp and "" .. xp or "…", coins and "" .. coins or "…"),
+	Color.White,
+	"small"
+)
 info:setParent(profileFrame)
 
 chatMessages = ui:createFrame(Color.transparent)
@@ -395,11 +418,10 @@ chatMessages.IsMask = true
 chatMessages:setParent(topBar)
 chatMessage = {}
 
-
-chatMessage[1] = ui:createText("", Color(200,200,200), "small")
-chatMessage[2] = ui:createText("", Color(200,200,200), "small")
-chatMessage[3] = ui:createText("", Color(200,200,200), "small")
-chatMessage[4] = ui:createText("", Color(200,200,200), "small")
+chatMessage[1] = ui:createText("", Color(200, 200, 200), "small")
+chatMessage[2] = ui:createText("", Color(200, 200, 200), "small")
+chatMessage[3] = ui:createText("", Color(200, 200, 200), "small")
+chatMessage[4] = ui:createText("", Color(200, 200, 200), "small")
 
 chatMessage[1]:setParent(chatMessages)
 chatMessage[2]:setParent(chatMessages)
@@ -408,20 +430,19 @@ chatMessage[4]:setParent(chatMessages)
 
 -----
 
-messagesListener = LocalEvent:Listen("did_receive_chat_message", function(msgInfo)
+LocalEvent:Listen("did_receive_chat_message", function(msgInfo)
 	-- /!\ do not print -> stack overflow
 	-- print("XXX", msgInfo.message)
 
 	for i = #chatMessage, 2, -1 do
-		chatMessage[i].Text = chatMessage[i-1].Text
+		chatMessage[i].Text = chatMessage[i - 1].Text
 	end
 
 	if msgInfo.sender.username then
-		chatMessage[1].Text = msgInfo.sender.username .. ": " .. msgInfo.message		
+		chatMessage[1].Text = msgInfo.sender.username .. ": " .. msgInfo.message
 	else
-		chatMessage[1].Text = msgInfo.message		
+		chatMessage[1].Text = msgInfo.message
 	end
-
 end)
 
 ----------------------
@@ -429,7 +450,6 @@ end)
 ----------------------
 
 function getCubzhMenuModalContent()
-
 	local content = modal:createContent()
 	content.closeButton = true
 	content.title = "Cubzh"
@@ -451,64 +471,68 @@ function getCubzhMenuModalContent()
 	local btnLinkTimer
 
 	btnLink.onRelease = function()
-		if btnLinkTimer then btnLinkTimer:Cancel() end
+		if btnLinkTimer then
+			btnLinkTimer:Cancel()
+		end
 		Dev:CopyToClipboard(Dev.ServerURL)
 		btnLink.Text = "📋 Copied!"
 		btnLinkTimer = Timer(1.5, function()
-			if btnLink.Text then btnLink.Text = "📋 Server Link" end
+			if btnLink.Text then
+				btnLink.Text = "📋 Server Link"
+			end
 			btnLinkTimer = nil
 		end)
 	end
 
-	local btnWorlds = ui:createButton("🌎 Worlds", {textSize = "big"})
+	local btnWorlds = ui:createButton("🌎 Worlds", { textSize = "big" })
 	btnWorlds:setColor(theme.colorExplore)
 	btnWorlds:setParent(node)
 
 	btnWorlds.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
-			modal:push(worlds:createModalContent({uikit = ui}))
+			modal:push(worlds:createModalContent({ uikit = ui }))
 		end
 	end
 
-	local btnGallery = ui:createButton("🏗️ Gallery", {textSize = "default"})
+	local btnGallery = ui:createButton("🏗️ Gallery", { textSize = "default" })
 	btnGallery:setParent(node)
 
 	btnGallery.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
-			modal:push(require("gallery"):createModalContent({uikit = ui}))
+			modal:push(require("gallery"):createModalContent({ uikit = ui }))
 		end
 	end
 
-	local btnInventory = ui:createButton("🎒 Inventory", {textSize = "default"})
+	local btnInventory = ui:createButton("🎒 Inventory", { textSize = "default" })
 	btnInventory:setParent(node)
 
 	btnInventory.onRelease = function()
-		showAlert({message = "Coming soon!"})
+		showAlert({ message = "Coming soon!" })
 	end
 
-	local btnMyItems = ui:createButton("⚔️ My Items", {textSize = "default"})
+	local btnMyItems = ui:createButton("⚔️ My Items", { textSize = "default" })
 	btnMyItems:setParent(node)
 
 	btnMyItems.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
-			local content = creations:createModalContent({uikit = ui})
+			local content = creations:createModalContent({ uikit = ui })
 			content.tabs[1].selected = true
 			content.tabs[1].action()
 			modal:push(content)
 		end
 	end
 
-	local btnMyWorlds = ui:createButton("🌎 My Worlds", {textSize = "default"})
+	local btnMyWorlds = ui:createButton("🌎 My Worlds", { textSize = "default" })
 	-- btnMyWorlds:setColor(theme.colorCreate)
 	btnMyWorlds:setParent(node)
 
 	btnMyWorlds.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
-			local content = creations:createModalContent({uikit = ui})
+			local content = creations:createModalContent({ uikit = ui })
 			content.tabs[3].selected = true
 			content.tabs[3].action()
 			modal:push(content)
@@ -527,26 +551,40 @@ function getCubzhMenuModalContent()
 	btnCode:setParent(node)
 
 	btnCode.onRelease = function()
-		if dev then System.EditCode() else System.ReadCode() end
+		if dev then
+			System.EditCode()
+		else
+			System.ReadCode()
+		end
 		closeModal()
 	end
 
 	local btnSettings = ui:createButton("⚙️ Settings")
-	content.bottomRight = {btnSettings}
-
+	content.bottomRight = { btnSettings }
 
 	btnSettings.onRelease = function()
-		content:getModalIfContentIsActive():push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
+		content
+			:getModalIfContentIsActive()
+			:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
 	end
 
-	local btnHelp = ui:createButton("👾 Help!", {textSize = "small"})
+	local btnHelp = ui:createButton("👾 Help!", { textSize = "small" })
 	btnHelp:setParent(node)
 
 	btnHelp.onRelease = function()
 		URL:Open("https://cu.bzh/discord")
 	end
 
-	local buttons = {{btnHome, btnFriends}, {btnWorlds}, {btnGallery, btnInventory}, {btnMyItems, btnMyWorlds}, {btnCode, btnLink}}
+	local buttons = {
+		{ btnHome, btnFriends },
+		{ btnWorlds },
+		{ btnGallery, btnInventory },
+		{ btnMyItems, btnMyWorlds },
+		{
+			btnCode,
+			btnLink,
+		},
+	}
 
 	-- tmp hack: no link for this URL
 	if Dev.ServerURL == "https://app.cu.bzh/?worldID=cubzh" then
@@ -555,20 +593,19 @@ function getCubzhMenuModalContent()
 
 	local osName = Client.OSName
 	if osName == "Windows" or osName == "macOS" then
-		local btnTerminate = ui:createButton("Exit Cubzh", {textSize = "small"})
+		local btnTerminate = ui:createButton("Exit Cubzh", { textSize = "small" })
 		btnTerminate:setColor(theme.colorNegative)
 		-- btnTerminate:setParent(node)
 		btnTerminate.onRelease = function()
 			System:Terminate()
 		end
 		-- table.insert(buttons, btnTerminate)
-		content.bottomLeft = {btnTerminate, btnHelp}
+		content.bottomLeft = { btnTerminate, btnHelp }
 	else
-		content.bottomLeft = {btnHelp}
+		content.bottomLeft = { btnHelp }
 	end
 
-	content.idealReducedContentSize = function(content, width, height)
-
+	content.idealReducedContentSize = function(_, width, _)
 		local height = 0
 
 		for i, row in ipairs(buttons) do
@@ -590,7 +627,7 @@ function getCubzhMenuModalContent()
 			maxRowWidth = math.max(maxRowWidth, w)
 		end
 
-		local width = math.min(width, maxRowWidth)
+		width = math.min(width, maxRowWidth)
 
 		for _, row in ipairs(buttons) do
 			local w = (width - theme.padding * (#row - 1)) / #row
@@ -602,11 +639,11 @@ function getCubzhMenuModalContent()
 		local row
 		local cursorY = 0
 		local cursorX = 0
-		for i = #buttons, 1, -1  do
+		for i = #buttons, 1, -1 do
 			row = buttons[i]
 
 			for _, btn in ipairs(row) do
-				btn.pos = {cursorX, cursorY, 0}
+				btn.pos = { cursorX, cursorY, 0 }
 				cursorX = cursorX + btn.Width + theme.padding
 			end
 
@@ -617,12 +654,10 @@ function getCubzhMenuModalContent()
 		return Number2(width, height)
 	end
 
-	btnMyWorlds.parentDidResize = function(self)
-
-		local height = node.Height
+	btnMyWorlds.parentDidResize = function(_)
 		local width = node.Width
 
-		for i, row in ipairs(buttons) do
+		for _, row in ipairs(buttons) do
 			local h = 0
 			for _, btn in ipairs(row) do
 				h = math.max(h, btn.Height)
@@ -640,7 +675,7 @@ function getCubzhMenuModalContent()
 			maxRowWidth = math.max(maxRowWidth, w)
 		end
 
-		local width = math.max(width, maxRowWidth)
+		width = math.max(width, maxRowWidth)
 
 		for _, row in ipairs(buttons) do
 			local w = (width - theme.padding * (#row - 1)) / #row
@@ -652,11 +687,11 @@ function getCubzhMenuModalContent()
 		local row
 		local cursorY = 0
 		local cursorX = 0
-		for i = #buttons, 1, -1  do
+		for i = #buttons, 1, -1 do
 			row = buttons[i]
 
 			for _, btn in ipairs(row) do
-				btn.pos = {cursorX, cursorY, 0}
+				btn.pos = { cursorX, cursorY, 0 }
 				cursorX = cursorX + btn.Width + theme.padding
 			end
 
@@ -685,12 +720,11 @@ topBar.parentDidResize = function(self)
 
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width - padding
 
-	-- PROFILE BUTTON 
+	-- PROFILE BUTTON
 
 	avatar.Height = height
 
-	profileFrame.Width = math.max(avatar.Width + padding + username.Width,
-									avatar.Width + padding + info.Width)
+	profileFrame.Width = math.max(avatar.Width + padding + username.Width, avatar.Width + padding + info.Width)
 	profileFrame.Height = height
 
 	profileFrame.pos.X = Screen.SafeArea.Left + padding
@@ -725,7 +759,6 @@ topBar.parentDidResize = function(self)
 	chatMessage[2].pos.Y = chatMessage[1].pos.Y + chatMessage[1].Height + padding * 0.5
 	chatMessage[3].pos.Y = chatMessage[2].pos.Y + chatMessage[2].Height + padding * 0.5
 	chatMessage[4].pos.Y = chatMessage[3].pos.Y + chatMessage[3].Height + padding * 0.5
-
 end
 topBar:parentDidResize()
 
@@ -733,7 +766,7 @@ topBar:parentDidResize()
 -- BOTTOM BAR
 ---------------------------
 
-bottomBar = ui:createFrame(Color(255,255,255,0.4))
+bottomBar = ui:createFrame(Color(255, 255, 255, 0.4))
 bottomBar:setParent(background)
 
 appVersion = ui:createText("CUBZH - " .. Client.AppVersion .. " (alpha) #" .. Client.BuildNumber, Color.Black, "small")
@@ -748,45 +781,64 @@ bottomBar.parentDidResize = function(self)
 	self.Width = Screen.Width
 	self.Height = Screen.SafeArea.Bottom + appVersion.Height + padding * 2
 
-	appVersion.pos = {Screen.SafeArea.Left + padding, Screen.SafeArea.Bottom + padding, 0}
-	copyright.pos = {Screen.Width - Screen.SafeArea.Right - copyright.Width - padding, Screen.SafeArea.Bottom + padding, 0}
+	appVersion.pos = { Screen.SafeArea.Left + padding, Screen.SafeArea.Bottom + padding, 0 }
+	copyright.pos =
+		{ Screen.Width - Screen.SafeArea.Right - copyright.Width - padding, Screen.SafeArea.Bottom + padding, 0 }
 end
 bottomBar:parentDidResize()
 
 menu.AddDidBecomeActiveCallback = function(self, callback)
-	if self ~= menu then error("Menu:AddDidBecomeActiveCallback should be called with `:`", 2) end
-	if type(callback) ~= "function" then return end
-	didBecomeActiveCallbacks[callback] = callback 
+	if self ~= menu then
+		error("Menu:AddDidBecomeActiveCallback should be called with `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		return
+	end
+	didBecomeActiveCallbacks[callback] = callback
 end
 
 menu.RemoveDidBecomeActiveCallback = function(self, callback)
-	if self ~= menu then error("Menu:RemoveDidBecomeActiveCallback should be called with `:`", 2) end
-	if type(callback) ~= "function" then return end
-	didBecomeActiveCallbacks[callback] = nil 
+	if self ~= menu then
+		error("Menu:RemoveDidBecomeActiveCallback should be called with `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		return
+	end
+	didBecomeActiveCallbacks[callback] = nil
 end
 
 menu.AddDidResignActiveCallback = function(self, callback)
-	if self ~= menu then error("Menu:AddWillResignActiveCallback should be called with `:`", 2) end
-	if type(callback) ~= "function" then return end
-	didResignActiveCallbacks[callback] = callback 
+	if self ~= menu then
+		error("Menu:AddWillResignActiveCallback should be called with `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		return
+	end
+	didResignActiveCallbacks[callback] = callback
 end
 
 menu.RemoveDidResignActiveCallback = function(self, callback)
-	if self ~= menu then error("Menu:RemoveWillResignActiveCallback should be called with `:`", 2) end
-	if type(callback) ~= "function" then return end
-	didResignActiveCallbacks[callback] = nil 
+	if self ~= menu then
+		error("Menu:RemoveWillResignActiveCallback should be called with `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		return
+	end
+	didResignActiveCallbacks[callback] = nil
 end
 
-menu.IsActive = function(self)
+menu.IsActive = function(_)
 	return activeModal ~= nil or alertModal ~= nil or loadingModal ~= nil or cppMenuIsActive
 end
 
-menu.Show = function(self)
+menu.Show = function(_)
 	-- TODO: review condition
 	-- it should allow to show menu when hidden
-	if System.Authenticated == false then return end
+	if System.Authenticated == false then
+		return
+	end
 
-	if topBar:isVisible() == false then 
+	if topBar:isVisible() == false then
 		showTopBar()
 	end
 
@@ -796,8 +848,12 @@ end
 authCompleteCallbacks = {}
 
 menu.OnAuthComplete = function(self, callback)
-	if self ~= menu then return end
-	if type(callback) ~= "function" then return end
+	if self ~= menu then
+		return
+	end
+	if type(callback) ~= "function" then
+		return
+	end
 	if System.Authenticated then
 		-- already authenticated, trigger callback now!
 		callback()
@@ -808,52 +864,64 @@ end
 
 -- system reserved exposed functions
 
-menu.openURLWarning = function(self, url, system)
-	if system ~= System then error("menu.openURLWarning requires System privileges") end
+menu.openURLWarning = function(_, url, system)
+	if system ~= System then
+		error("menu.openURLWarning requires System privileges")
+	end
 	local config = {
 		message = "Taking you to " .. url .. ". Are you sure you want to go there?",
 		positiveCallback = function()
 			system:OpenURL(url)
 		end,
-		negativeCallback = function() end
+		negativeCallback = function() end,
 	}
 	showAlert(config)
 end
 
-menu.loading = function(self, message, system)
-	if system ~= System then error("menu:loading requires System privileges") end
-	if type(message) ~= "string" then error("menu:loading(message, system) expects message to be a string") end
+menu.loading = function(_, message, system)
+	if system ~= System then
+		error("menu:loading requires System privileges")
+	end
+	if type(message) ~= "string" then
+		error("menu:loading(message, system) expects message to be a string")
+	end
 	showLoading(message)
 end
 
-menu.ShowAlert = function(self, config, system)
-	if system ~= System then error("menu:ShowAlert requires System privileges") end
+menu.ShowAlert = function(_, config, system)
+	if system ~= System then
+		error("menu:ShowAlert requires System privileges")
+	end
 	showAlert(config)
 end
 
 local mt = {
-	__index = function(t, k)
+	__index = function(_, k)
 		if k == "Height" then
 			return topBar.Height
 		end
 	end,
-	__newindex = function(t, k, v)
+	__newindex = function()
 		error("Menu is read-only", 2)
 	end,
 	__metatable = false,
-	__tostring = function() return "[Menu]" end,
+	__tostring = function()
+		return "[Menu]"
+	end,
 	__type = "Menu",
 }
 
 setmetatable(menu, mt)
 
 LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
-	if System.Authenticated == false then return end
+	if System.Authenticated == false then
+		return
+	end
 	chatBtn:onRelease()
 	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, text or "")
 end)
 
-LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(text)
+LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive
 
 	refreshDisplay()
@@ -861,16 +929,15 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(text)
 end)
 
 LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
-
-
 	if updates.skinColors then
-
 		if avatar.head.shape then
-			avatarModule:setHeadColors(avatar.head.shape,
-										updates.skinColors.skin1,
-										updates.skinColors.skin2,
-										updates.skinColors.nose,
-										updates.skinColors.mouth)
+			avatarModule:setHeadColors(
+				avatar.head.shape,
+				updates.skinColors.skin1,
+				updates.skinColors.skin2,
+				updates.skinColors.nose,
+				updates.skinColors.mouth
+			)
 		end
 	end
 
@@ -894,15 +961,16 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 
 	if updates.outfit == true then
 		avatar:remove()
-		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui, {ignoreCache = true})
+		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui, { ignoreCache = true })
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
 	end
-
 end)
 
 function hideTitleScreen()
-	if titleScreen == nil then return end
+	if titleScreen == nil then
+		return
+	end
 
 	titleScreenTickListener:Remove()
 	titleScreen:remove()
@@ -912,7 +980,9 @@ end
 function versionCheck(callbacks)
 	api:getMinAppVersion(function(error, minVersion)
 		if error ~= nil then
-			if callbacks.networkError then callbacks.networkError() end
+			if callbacks.networkError then
+				callbacks.networkError()
+			end
 			return
 		end
 
@@ -920,17 +990,16 @@ function versionCheck(callbacks)
 		local minMajor, minMinor, minPatch = parseVersion(minVersion)
 
 		-- minPatch = 51 -- force trigger, for tests
-		if major < minMajor or
-			(major == minMajor and minor < minMinor) or 
-			(minor == minMinor and patch < minPatch) then
-
-			if callbacks.updateRequired then 
+		if major < minMajor or (major == minMajor and minor < minMinor) or (minor == minMinor and patch < minPatch) then
+			if callbacks.updateRequired then
 				local minVersion = string.format("%d.%d.%d", minMajor, minMinor, minPatch)
 				local currentVersion = string.format("%d.%d.%d", major, minor, patch)
 				callbacks.updateRequired(minVersion, currentVersion)
 			end
-		else 
-			if callbacks.success then callbacks.success() end
+		else
+			if callbacks.success then
+				callbacks.success()
+			end
 		end
 	end)
 end
@@ -956,9 +1025,13 @@ function magicKeyCheck(success, err)
 		-- 	end
 		-- )
 		print("MAGIC KEY CHECK NOT IMPLEMENTED")
-		if err ~= nil then err() end
+		if err ~= nil then
+			err()
+		end
 	else
-		if success ~= nil then success() end
+		if success ~= nil then
+			success()
+		end
 	end
 end
 
@@ -967,7 +1040,9 @@ function accountCheck(callbacks)
 	showLoading("Checking user info")
 
 	if System.HasCredentials == false then
-		if callbacks.loggedOut then callbacks.loggedOut() end
+		if callbacks.loggedOut then
+			callbacks.loggedOut()
+		end
 		return
 	end
 
@@ -976,14 +1051,18 @@ function accountCheck(callbacks)
 	-- (info updated at the engine level)
 	System.GetAccountInfo(function(err, res)
 		if err ~= nil then
-			if callbacks.error then callbacks.error() end
+			if callbacks.error then
+				callbacks.error()
+			end
 			return
 		end
 
 		accountInfo = res
-		
+
 		if accountInfo.hasDOB == false or accountInfo.hasUsername == false then
-			if callbacks.accountIncomplete then callbacks.accountIncomplete() end
+			if callbacks.accountIncomplete then
+				callbacks.accountIncomplete()
+			end
 			return
 		end
 
@@ -991,34 +1070,42 @@ function accountCheck(callbacks)
 		-- for some accounts created pre-0.0.52.
 		-- (mandatory after that)
 
-		if callbacks.success then callbacks.success() end
+		if callbacks.success then
+			callbacks.success()
+		end
 	end)
-
 end
 
 signupElements = nil
 
 -- callbacks: success, cancel, error
 function showSignUp(callbacks)
-
-	local helpBtn = ui:createButton("👾 Need help?", {textSize = "small"})
+	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small" })
 	helpBtn:setColor(theme.colorDiscord, Color.White)
 	helpBtn.onRelease = function()
 		URL:Open("https://cu.bzh/discord")
 	end
 	helpBtn.parentDidResize = function(self)
-		self.pos = {Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right, Screen.Height - self.Height - theme.padding - System.SafeAreaTop, 0}
+		self.pos = {
+			Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
+			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+			0,
+		}
 	end
 	helpBtn:parentDidResize()
 
-	local loginBtn = ui:createButton("🙂 Login", {textSize = "small"})
+	local loginBtn = ui:createButton("🙂 Login", { textSize = "small" })
 	loginBtn.parentDidResize = function(self)
-		self.pos = {Screen.SafeArea.Left + theme.padding, Screen.Height - self.Height - theme.padding - System.SafeAreaTop, 0}
+		self.pos = {
+			Screen.SafeArea.Left + theme.padding,
+			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+			0,
+		}
 	end
 
 	local signupModal = require("signup"):createModal()
 
-	signupElements = {signupModal, helpBtn, loginBtn, signupModal.terms}
+	signupElements = { signupModal, helpBtn, loginBtn, signupModal.terms }
 
 	loginBtn.onRelease = function()
 		ui:turnOff()
@@ -1034,12 +1121,14 @@ function showSignUp(callbacks)
 				signupModal:close()
 				signupModal = nil
 
-				if callbacks.success ~= nil then callbacks.success() end
+				if callbacks.success ~= nil then
+					callbacks.success()
+				end
 			end
 		end)
 	end
 	loginBtn:parentDidResize()
-	
+
 	signupModal.onSubmit = function(username, key, dob, password)
 		System:DebugEvent("SIGNUP_SUBMIT")
 
@@ -1056,12 +1145,16 @@ function showSignUp(callbacks)
 
 			api:signUp(username, key, dob, password, function(err, credentials)
 				if err ~= nil then
-					if onError ~= nil then onError(onError) end
+					if onError ~= nil then
+						onError(onError)
+					end
 					return
 				else
 					System:StoreCredentials(credentials["user-id"], credentials.token)
 					System:DebugEvent("ACCOUNT_CREATED")
-					if callbacks.success ~= nil then callbacks.success() end
+					if callbacks.success ~= nil then
+						callbacks.success()
+					end
 				end
 			end)
 		end
@@ -1069,10 +1162,14 @@ function showSignUp(callbacks)
 		local function onError(onError)
 			showAlert({
 				message = "❌ Sorry, something went wrong.",
-				positiveCallback = function() _createAccount(onError) end,
+				positiveCallback = function()
+					_createAccount(onError)
+				end,
 				positiveLabel = "Retry",
-				neutralCallback = function() 
-					if callbacks.error ~= nil then callbacks.error() end
+				neutralCallback = function()
+					if callbacks.error ~= nil then
+						callbacks.error()
+					end
 				end,
 				neutralLabel = "Cancel",
 			})
@@ -1086,37 +1183,58 @@ function showSignUp(callbacks)
 		helpBtn:remove()
 		signupElements = nil
 		signupModal = nil
-		if callbacks.cancel ~= nil then callbacks.cancel() end
+		if callbacks.cancel ~= nil then
+			callbacks.cancel()
+		end
 	end
 end
 
 function skipTitleScreen()
-	if titleScreen == nil then return end
+	if titleScreen == nil then
+		return
+	end
 
 	hideTitleScreen()
 	hideBottomBar()
 
 	showLoading("Checking app version")
 
-	versionCheck({
-		success = function()
-			magicKeyCheck(
-				function() accountCheck({
-					success = function()
-						hideLoading()
-						showTopBar()
-						hideBottomBar()
-						for _, callback in ipairs(authCompleteCallbacks) do
-							callback()
-						end
-					end, 
-					loggedOut = function()
-						System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
-						hideLoading()
-						showSignUp({
+	versionCheck(
+		{
+			success = function()
+				magicKeyCheck(
+					function()
+						accountCheck({
 							success = function()
-								accountCheck({
+								hideLoading()
+								showTopBar()
+								hideBottomBar()
+								for _, callback in ipairs(authCompleteCallbacks) do
+									callback()
+								end
+							end,
+							loggedOut = function()
+								System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
+								hideLoading()
+								showSignUp({
 									success = function()
+										accountCheck({
+											success = function()
+												hideLoading()
+												showTopBar()
+												hideBottomBar()
+												for _, callback in ipairs(authCompleteCallbacks) do
+													callback()
+												end
+											end,
+											-- not supposed to happen after successful signup
+											loggedOut = function()
+												showTitleScreen()
+											end,
+											error = function()
+												showTitleScreen()
+											end,
+										})
 										hideLoading()
 										showTopBar()
 										hideBottomBar()
@@ -1124,80 +1242,73 @@ function skipTitleScreen()
 											callback()
 										end
 									end,
-									-- not supposed to happen after successful signup
-									loggedOut = function() showTitleScreen() end,
-									error = function() showTitleScreen() end,
-								})
-								hideLoading()
-								showTopBar()
-								hideBottomBar()
-								for _, callback in ipairs(authCompleteCallbacks) do
-									callback()
-								end
-
+									error = function()
+										showTitleScreen()
+									end,
+									cancel = function()
+										showTitleScreen()
+									end,
+								}) -- signup
 							end,
 							error = function()
-								showTitleScreen()
+								hideLoading()
+								showAlert({
+									message = "❌ Sorry, something went wrong.",
+									positiveCallback = function()
+										showTitleScreen()
+									end,
+									positiveLabel = "OK",
+								})
 							end,
-							cancel = function()
-								showTitleScreen()
+							accountIncomplete = function()
+								hideLoading()
+								showAlert({
+									message = "⚠️ Anonymous account detected ⚠️\nAnonymous accounts aren't allowed anymore on Cubzh.",
+									positiveCallback = function()
+										System:Logout()
+										showTitleScreen()
+										skipTitleScreen()
+									end,
+									positiveLabel = "Create a new account",
+								})
 							end,
-						}) -- signup
-					end,
-					error = function()
-						hideLoading()
-						showAlert({
-							message = "❌ Sorry, something went wrong.",
-							positiveCallback = function() 
-								showTitleScreen()
-							end,
-							positiveLabel = "OK",
 						})
+					end, -- magicKeyCheck success (magic key verified or no magic key to verify)
+					function() end -- magicKeyCheck err
+				)
+			end,
+			networkError = function()
+				hideLoading()
+				showAlert({
+					message = "❌ Network error ❌",
+					positiveCallback = function()
+						showTitleScreen()
 					end,
-					accountIncomplete = function()
-						hideLoading()
-						showAlert({
-							message = "⚠️ Anonymous account detected ⚠️\nAnonymous accounts aren't allowed anymore on Cubzh.",
-							positiveCallback = function() 
-								System:Logout()
-								showTitleScreen()
-								skipTitleScreen()
-							end,
-							positiveLabel = "Create a new account",
-						})
+					positiveLabel = "OK",
+				})
+			end,
+			updateRequired = function(minVersion, currentVersion)
+				hideLoading()
+				showAlert({
+					message = "Cubzh needs to be updated!\nMinimum version: "
+						.. minVersion
+						.. "\nCurrent version: "
+						.. currentVersion,
+					positiveCallback = function()
+						showTitleScreen()
 					end,
-				}) end, -- magicKeyCheck success (magic key verified or no magic key to verify)
-				function() end -- magicKeyCheck err
-			)
-		end,
-		networkError = function()
-			hideLoading()
-			showAlert({
-				message = "❌ Network error ❌",
-				positiveCallback = function() 
-					showTitleScreen()
-				end,
-				positiveLabel = "OK",
-			})
-		end,
-		updateRequired = function(minVersion, currentVersion)
-			hideLoading()
-			showAlert({
-				message = "Cubzh needs to be updated!\nMinimum version: " .. minVersion .. "\nCurrent version: " .. currentVersion,
-				positiveCallback = function() 
-					showTitleScreen()
-				end,
-				positiveLabel = "OK",
-			})
-		end,
-
+					positiveLabel = "OK",
+				})
+			end,
 		}, -- versionCheck success
 		function() end -- versionCheck err
 	)
 end
 
 function showTitleScreen()
-	if titleScreen ~= nil then return end
+	if titleScreen ~= nil then
+		return
+	end
 
 	showBottomBar()
 	hideTopBar()
@@ -1230,28 +1341,31 @@ function showTitleScreen()
 		local ratio = math.min(maxWidth / logoNativeWidth, maxHeight / logoNativeHeight)
 
 		logo.Width = logoNativeWidth * ratio
-		logo.Height = logoNativeHeight * ratio	
-		logo.pos = { Screen.Width * 0.5 - logo.Width * 0.5,
-					Screen.Height * 0.5 - logo.Height * 0.5 + (pressAnywhere.Height + theme.padding) * 0.5, 0 }
+		logo.Height = logoNativeHeight * ratio
+		logo.pos = {
+			Screen.Width * 0.5 - logo.Width * 0.5,
+			Screen.Height * 0.5 - logo.Height * 0.5 + (pressAnywhere.Height + theme.padding) * 0.5,
+			0,
+		}
 
 		alpha.Height = logo.Height * 3 / 9
 		alpha.Width = alpha.Height * 33 / 12
-		
-		alpha.pos = logo.pos + { logo.Width * 24.5 / 25 - alpha.Width, 
-								logo.Height * 3.5 / 9 - alpha.Height, 
-								0}
 
-		pressAnywhere.pos = { Screen.Width * 0.5 - pressAnywhere.Width * 0.5,
-							logo.pos.Y - pressAnywhere.Height - theme.padding, 0 }
+		alpha.pos = logo.pos + { logo.Width * 24.5 / 25 - alpha.Width, logo.Height * 3.5 / 9 - alpha.Height, 0 }
 
+		pressAnywhere.pos = {
+			Screen.Width * 0.5 - pressAnywhere.Width * 0.5,
+			logo.pos.Y - pressAnywhere.Height - theme.padding,
+			0,
+		}
 	end
 	titleScreen:parentDidResize()
 
 	local t = 0
 	titleScreenTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		t = t + dt * 4.0
-		pressAnywhere.Color = Color(255,255,255, (math.sin(t) + 1.0) * 0.5)
-		alpha.shape:RotateWorld({0, dt, 0})
+		pressAnywhere.Color = Color(255, 255, 255, (math.sin(t) + 1.0) * 0.5)
+		alpha.shape:RotateWorld({ 0, dt, 0 })
 	end)
 
 	titleScreen.onRelease = function()
@@ -1261,7 +1375,7 @@ function showTitleScreen()
 	if System.HasEnvironmentToLaunch then
 		skipTitleScreen()
 	end
-	
+
 	-- controls:turnOn()
 	-- ui:turnOn()
 end
@@ -1299,14 +1413,24 @@ Timer(0.1, function()
 		username.Text = Player.Username
 
 		api.getBalance(function(err, balance)
-			if err then return end
+			if err then
+				return
+			end
 			coins = balance.total
-			info.Text = string.format("🏆 %s 💰 %s", xp and "" .. math.floor(xp) or "…", coins and "" .. math.floor(coins) or "…")
+			info.Text = string.format(
+				"🏆 %s 💰 %s",
+				xp and "" .. math.floor(xp) or "…",
+				coins and "" .. math.floor(coins) or "…"
+			)
 			topBar:parentDidResize()
 		end)
 
 		xp = 0
-		info.Text = string.format("🏆 %s 💰 %s", xp and "" .. math.floor(xp) or "…", coins and "" .. math.floor(coins) or "…")
+		info.Text = string.format(
+			"🏆 %s 💰 %s",
+			xp and "" .. math.floor(xp) or "…",
+			coins and "" .. math.floor(coins) or "…"
+		)
 		topBar:parentDidResize()
 
 		avatar:remove()
@@ -1321,12 +1445,12 @@ Timer(0.1, function()
 					message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
 					positiveLabel = "Yes",
 					neutralLabel = "Later",
-					positiveCallback = function ()
+					positiveCallback = function()
 						yesCallback()
 					end,
-					neutralCallback = function ()
+					neutralCallback = function()
 						laterCallback()
-					end
+					end,
 				})
 			end
 			sys_notifications:request(showInfoPopupFunc)
@@ -1336,7 +1460,7 @@ Timer(0.1, function()
 		if System.HasEnvironmentToLaunch then
 			System:LaunchEnvironment()
 		else
-			environmentToLaunchListener = LocalEvent:Listen(LocalEvent.Name.ReceivedEnvironmentToLaunch, function()
+			LocalEvent:Listen(LocalEvent.Name.ReceivedEnvironmentToLaunch, function()
 				if System.HasEnvironmentToLaunch then
 					System:LaunchEnvironment()
 				end
@@ -1354,10 +1478,9 @@ end)
 
 return menu
 
-
 -- CODE PREVIOUSLY USED TO EASTER EGG PROMPT:
--- if secretCount == nil then 
--- 	secretCount = 1 
+-- if secretCount == nil then
+-- 	secretCount = 1
 -- else
 -- 	secretCount = secretCount + 1
 -- 	if secretCount == 9 then
@@ -1365,7 +1488,7 @@ return menu
 -- 		secretModal = require("input_modal"):create("Oh, it seems like you have something to say? 🤨")
 -- 		secretModal:setPositiveCallback("Oh yeah!", function(text)
 -- 			if text ~= "" then
--- 				api:postSecret(text, function(success, message) 
+-- 				api:postSecret(text, function(success, message)
 -- 					if success then
 -- 						if message ~= nil and message ~= "" then
 -- 							self:showAlert({message = message})

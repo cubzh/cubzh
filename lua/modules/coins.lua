@@ -1,14 +1,11 @@
-
 coins = {}
 
 -- Creates modal content to present user coins.
 -- (should be used to create or pushed within modal)
-coins.createModalContent = function(self, config)
-
+coins.createModalContent = function(_, config)
 	local theme = require("uitheme").current
 	local modal = require("modal")
 	local api = require("api")
-	local time = require("time")
 
 	-- default config
 	local _config = {
@@ -17,13 +14,13 @@ coins.createModalContent = function(self, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
 	local ui = _config.uikit
-
-	local maxEntries = 5
 
 	local content = modal:createContent()
 	content.closeButton = true
@@ -60,8 +57,8 @@ coins.createModalContent = function(self, config)
 	historyShowMoreBtn:setParent(historyFrame)
 	historyShowMoreBtn:disable()
 
-	content.idealReducedContentSize = function(content, width, height)
-		local width = math.min(width, 500)
+	content.idealReducedContentSize = function(_, width, _)
+		width = math.min(width, 500)
 
 		local balanceFrameHeight = balanceText.Height * 5
 		balanceFrame.Width = width
@@ -70,21 +67,29 @@ coins.createModalContent = function(self, config)
 		coinShape.Width = balanceFrameHeight * 0.7
 		coinShape.Height = balanceFrameHeight * 0.7
 		coinShape.pos = { balanceFrame.Width / 2 - coinShape.Width, balanceFrame.Height / 2 - coinShape.Height / 2, 0 }
-		amountText.pos = coinShape.pos + { coinShape.Width + theme.padding * 2, coinShape.Height / 2 - amountText.Height / 2, 0 }
+		amountText.pos = coinShape.pos
+			+ { coinShape.Width + theme.padding * 2, coinShape.Height / 2 - amountText.Height / 2, 0 }
 
 		balanceText.pos = { theme.padding, balanceFrameHeight - theme.padding - balanceText.Height, 0 }
 
 		historyFrame.Width = width
 		local historyFrameHeight = 100
 		if entries[1] then
-			historyFrameHeight = historyText.Height + entries[1].Height * 5 + historyShowMoreBtn.Height + theme.padding * 3
+			historyFrameHeight = historyText.Height
+				+ entries[1].Height * 5
+				+ historyShowMoreBtn.Height
+				+ theme.padding * 3
 		end
 		historyFrame.Height = historyFrameHeight
 		historyText.pos = { theme.padding, historyFrameHeight - theme.padding - historyText.Height, 0 }
 
-		for k,entry in ipairs(entries) do
-			entry.pos = Number3(theme.padding, historyText.pos.Y - historyText.Height - theme.padding - (k-1) * entry.Height, 0)
-		end	
+		for k, entry in ipairs(entries) do
+			entry.pos = Number3(
+				theme.padding,
+				historyText.pos.Y - historyText.Height - theme.padding - (k - 1) * entry.Height,
+				0
+			)
+		end
 		historyShowMoreBtn.pos.X = width - historyShowMoreBtn.Width
 
 		historyFrame.pos = { 0, theme.padding, 0 }
@@ -94,7 +99,9 @@ coins.createModalContent = function(self, config)
 	end
 
 	api.getBalance(function(err, balance)
-		if not amountText.Text then return end
+		if not amountText.Text then
+			return
+		end
 		if err then
 			amountText.Text = "0"
 			return

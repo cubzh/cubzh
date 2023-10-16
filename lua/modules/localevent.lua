@@ -1,9 +1,10 @@
 --[[
 LocalEvent code. (https://docs.cu.bzh/reference/localevent)
 
-A listener callback can return true to capture an event, 
+A listener callback can return true to capture an event,
 and avoid triggering following ones on the same even name.
-]]--
+]]
+--
 
 -- indexed by event name,
 -- each entry contains listeners in insertion order
@@ -16,7 +17,9 @@ topPrioritySystemListeners = {}
 localevent = {}
 
 mt = {
-	__tostring = function() return "[LocalEvent]" end,
+	__tostring = function()
+		return "[LocalEvent]"
+	end,
 	__type = "LocalEvent",
 }
 setmetatable(localevent, mt)
@@ -43,7 +46,7 @@ localevent.name = {
 	OpenChat = 17, -- sent when user requires chat input to be opened
 	PointerWheel = 18, -- callback function: function(delta)
 	PointerCancel = 19, -- happens when pointer leaves the screen without proper release event
-	PointerLongPress = 20, 
+	PointerLongPress = 20,
 	PointerMove = 21, -- happens only with a mouse
 	Action1Set = 22, -- called when Client.Action1 is set, callback: function(fn) (fn can be nil)
 	Action2Set = 23, -- called when Client.Action2 is set, callback: function(fn) (fn can be nil)
@@ -120,14 +123,18 @@ reservedToSystem[localevent.name.KeyboardInput] = true
 reservedToSystem[localevent.name.LocalAvatarUpdate] = true
 
 mt = {
-	__tostring = function() return "[LocalEventName]" end,
+	__tostring = function()
+		return "[LocalEventName]"
+	end,
 	__type = "LocalEventName",
 }
 setmetatable(localevent.name, mt)
 
 -- returns true if event has been consumed, false otherwise
 local sendEventToListeners = function(self, listenersArray, name, ...)
-	if self ~= localevent then error("LocalEvent.sendEventToListeners must receive module as 1st argument") end
+	if self ~= localevent then
+		error("LocalEvent.sendEventToListeners must receive module as 1st argument")
+	end
 
 	local listeners = listenersArray[name]
 	if listeners == nil then
@@ -136,10 +143,10 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 		return false
 	end
 
-	local args = {...}
+	local args = { ... }
 	local captured = false
 	local listener
-	local err = nil
+	local err
 	local listenersToRemove = {}
 	local isSystemProvided = false
 
@@ -164,9 +171,7 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 		listener = listeners[i]
 		if not listener.paused then
 			if listener.callback ~= nil then
-
 				if limited[name] then
-
 					err, captured = Dev:ExecutionLimiter(function()
 						-- return 1,2,3 -- limiterStart returns nil, 1, 2, 3
 						return listener.callback(table.unpack(args))
@@ -183,15 +188,17 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 						end
 						goto continue -- continue for loop
 					end
-
 				else
 					captured = listener.callback(table.unpack(args))
 				end
 
-				if captured == true then break end -- event captured, exit!
+				if captured == true then
+					break
+				end -- event captured, exit!
 
 				::continue::
-			else
+
+				-- else
 				-- TODO: remove listeners with nil callbacks
 			end
 		end
@@ -205,15 +212,16 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 	return captured
 end
 
--- 
+--
 localevent.Send = function(self, name, ...)
-	if self ~= localevent then error("LocalEvent:Send should be called with `:`", 2) end
+	if self ~= localevent then
+		error("LocalEvent:Send should be called with `:`", 2)
+	end
 
-	local args = {...}
-	local captured = false
+	local args = { ... }
 
 	-- dispatch event to SYSTEM listeners
-	captured = sendEventToListeners(self, topPrioritySystemListeners, name, table.unpack(args))
+	local captured = sendEventToListeners(self, topPrioritySystemListeners, name, table.unpack(args))
 	if captured == true then
 		return captured
 	end
@@ -230,13 +238,15 @@ localevent.send = localevent.Send
 -- ------------------------------
 
 local listenerMT = {
-	__tostring = function(t) return "[LocalEventListener]" end,
+	__tostring = function()
+		return "[LocalEventListener]"
+	end,
 	__type = "LocalEventListener",
 	__index = {
 		Remove = function(self)
 			local matchingListeners = listeners[self.name]
 			if matchingListeners ~= nil then
-				for i, listener in ipairs(matchingListeners) do 
+				for i, listener in ipairs(matchingListeners) do
 					if listener == self then
 						table.remove(matchingListeners, i)
 						break
@@ -258,14 +268,16 @@ listenerMT.__index.resume = listenerMT.__index.Resume
 
 -- metatable for top priority System listeners
 local topPrioritySystemListenerMT = {
-	__tostring = function(t) return "[LocalEventSystemListener]" end,
+	__tostring = function()
+		return "[LocalEventSystemListener]"
+	end,
 	__type = "LocalEventSystemListener",
 	__index = {
 		Remove = function(self)
 			local matchingListeners = topPrioritySystemListeners[self.name]
 			if matchingListeners ~= nil then
-				for i, listener in ipairs(matchingListeners) do 
-					if listener == self then	
+				for i, listener in ipairs(matchingListeners) do
+					if listener == self then
 						table.remove(matchingListeners, i)
 						break
 					end
@@ -290,10 +302,14 @@ topPrioritySystemListenerMT.__index.resume = topPrioritySystemListenerMT.__index
 -- LocalEvent:Listen("eventName", callback, { topPriority = true })
 -- config.system can be set to System table to register listener as "system listener".
 localevent.Listen = function(self, name, callback, config)
-	if self ~= localevent then error("LocalEvent:Listen should be called with `:`", 2) end
-	if type(callback) ~= "function" then error("LocalEvent:Listen - callback should be a function", 2) end
+	if self ~= localevent then
+		error("LocalEvent:Listen should be called with `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		error("LocalEvent:Listen - callback should be a function", 2)
+	end
 
-	local listener = {name = name, callback = callback, system = config.system == System }
+	local listener = { name = name, callback = callback, system = config.system == System }
 
 	-- top priority System listeners
 	if listener.system == true and config.topPriority == true then
@@ -305,7 +321,7 @@ localevent.Listen = function(self, name, callback, config)
 
 		-- always insert top priority system listeners in front
 		table.insert(topPrioritySystemListeners[name], 1, listener)
-	else	
+	else
 		setmetatable(listener, listenerMT)
 
 		if listeners[name] == nil then

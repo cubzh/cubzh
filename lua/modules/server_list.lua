@@ -2,15 +2,14 @@
 
 serverList = {}
 
-serverList.create = function(self, config)
-	
+serverList.create = function(_, config)
 	if config ~= nil and type(config) ~= Type.table then
 		error("server_list:create(config): config should be a table", 2)
 	end
 
 	local theme = require("uitheme").current
 	local modal = require("modal")
-	local api = require ("api")
+	local api = require("api")
 
 	local _config = {
 		title = "",
@@ -20,11 +19,13 @@ serverList.create = function(self, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
-	local config = _config
+	config = _config
 
 	local ui = config.uikit
 
@@ -43,7 +44,7 @@ serverList.create = function(self, config)
 
 	local content = modal:createContent()
 
-	local node = ui:createFrame(Color(0,0,0,0))
+	local node = ui:createFrame(Color(0, 0, 0, 0))
 
 	local noServerText = ui:createText("No server", Color.White)
 	noServerText:setParent(node)
@@ -59,17 +60,17 @@ serverList.create = function(self, config)
 	loadingCube.Width = 10
 	loadingCube.Height = 10
 	loadingCube:hide()
-	
-	noServerBtn.onRelease = function(btn)
+
+	noServerBtn.onRelease = function(_)
 		joinAndHideUI(config.worldID)
 	end
 
 	local pages = require("pages"):create()
-	pages:setPageDidChange(function(page) 
+	pages:setPageDidChange(function(page)
 		node:refreshList((page - 1) * node.displayedCells + 1)
 	end)
 
-	content.bottomLeft = {pages}
+	content.bottomLeft = { pages }
 
 	content.node = node
 	content.idealReducedContentSize = idealReducedContentSize
@@ -81,9 +82,12 @@ serverList.create = function(self, config)
 	data.worldID = config.worldID
 	data.servers = {} -- servers collection
 	data.request = nil
-	
+
 	data.updateServers = function(self)
-		if data.request ~= nil then data.request:Cancel() data.request = nil end
+		if data.request ~= nil then
+			data.request:Cancel()
+			data.request = nil
+		end
 
 		node:flushLines()
 		data.servers = {}
@@ -94,13 +98,16 @@ serverList.create = function(self, config)
 		loadingCube:show()
 		loadingCube.t = 0
 		loadingCube.object.Tick = function(o, dt)
-			if not loadingCube.pos then o.Tick = nil return end
+			if not loadingCube.pos then
+				o.Tick = nil
+				return
+			end
 			loadingCube.t = loadingCube.t + dt * 4
-			loadingCube.pos = {node.Width * 0.5 + math.cos(loadingCube.t) * 20, node.Height * 0.5 - math.sin(loadingCube.t) * 20, 0}
+			loadingCube.pos =
+				{ node.Width * 0.5 + math.cos(loadingCube.t) * 20, node.Height * 0.5 - math.sin(loadingCube.t) * 20, 0 }
 		end
 
 		data.request = api:getServers(self.worldID, function(err, servers)
-
 			loadingCube:hide()
 			loadingCube.object.Tick = nil
 
@@ -120,8 +127,8 @@ serverList.create = function(self, config)
 
 	-- Lines
 	node.lines = {}
-	node.flushLines = function(self)
-		for i, v in ipairs(node.lines) do
+	node.flushLines = function(_)
+		for _, v in ipairs(node.lines) do
 			v:remove()
 		end
 		node.lines = {}
@@ -154,9 +161,11 @@ serverList.create = function(self, config)
 
 	-- returns cell
 	node.createCell = function(self, cellHeight, server)
-		if server.players == nil or server["max-players"] == nil or server["dev-mode"] == nil then return end
+		if server.players == nil or server["max-players"] == nil or server["dev-mode"] == nil then
+			return
+		end
 
-		local cell = ui:createFrame(Color(255,255,255,200))
+		local cell = ui:createFrame(Color(255, 255, 255, 200))
 		cell.Height = cellHeight
 		cell:setParent(self)
 		table.insert(self.lines, cell)
@@ -164,7 +173,10 @@ serverList.create = function(self, config)
 
 		local vPos = cell.Height * 0.5
 
-		local str = math.tointeger(math.floor(server.players)) .. "/" .. math.tointeger(math.floor(server["max-players"])) .. " "
+		local str = math.tointeger(math.floor(server.players))
+			.. "/"
+			.. math.tointeger(math.floor(server["max-players"]))
+			.. " "
 		if type(server.address) == Type.string then
 			if string.find(server.address, "us") ~= nil then
 				str = str .. "🇺" -- USA
@@ -179,7 +191,7 @@ serverList.create = function(self, config)
 			str = str .. " - DEV 🏗"
 		end
 
-		local cellText = ui:createText(str, Color(20,20,20))
+		local cellText = ui:createText(str, Color(20, 20, 20))
 		cellText:setParent(cell)
 		cellText.pos.X = theme.padding * 2
 		cellText.pos.Y = vPos - cellText.Height * 0.5
@@ -201,17 +213,21 @@ serverList.create = function(self, config)
 
 	node.refreshList = function(self, from)
 		local list = data.servers
-		if list == nil then return end
+		if list == nil then
+			return
+		end
 
 		local top = self.Height
 
 		local cellHeight, maxLines = self:flushContentGetCellHeightAndMaxLines()
-		if maxLines <= 0 then return end
+		if maxLines <= 0 then
+			return
+		end
 
 		self.displayedCells = maxLines -- update number of displayed cells
 
 		local total = #list
-		local from = from or 1
+		from = from or 1
 
 		if maxLines > 1 and (from % maxLines ~= 1 or from > total) then
 			-- go back to first page
@@ -227,12 +243,14 @@ serverList.create = function(self, config)
 		local line = 0
 		for i = from, total do
 			line = line + 1
-			if line > maxLines then break end
+			if line > maxLines then
+				break
+			end
 			local p = i - from
 			server = list[i]
 
 			cell = self:createCell(cellHeight, server)
-		
+
 			if cell ~= nil and cell.Height ~= nil then
 				cell.pos.Y = top - (p + 1) * cell.Height - p * theme.padding
 			end
@@ -247,17 +265,17 @@ serverList.create = function(self, config)
 		noServerBtn.pos.X = (self.Width - noServerBtn.Width) * 0.5
 		noServerBtn.pos.Y = self.Height * 0.5 - noServerBtn.Height - theme.padding * 0.5
 
-		loadingCube.pos = {self.Width * 0.5, self.Height * 0.5, 0}
+		loadingCube.pos = { self.Width * 0.5, self.Height * 0.5, 0 }
 	end
 
 	local titleStr = config.title .. "'s servers"
 	local titleText = ui:createText(titleStr, Color.White)
 
 	local refreshBtn = ui:createButton("🔁 Refresh")
-	refreshBtn.onRelease = function(b)
+	refreshBtn.onRelease = function(_)
 		data:updateServers()
 	end
-	
+
 	content.topCenter = { titleText }
 	content.bottomRight = { refreshBtn }
 

@@ -5,13 +5,17 @@ local particles = {
 	model = MutableShape(),
 	initialized = false,
 	n = 0,
-	fromConfigOrDefault = function(f,default)
+	fromConfigOrDefault = function(f, default)
 		if f then
-			if type(f) == "function" then return f() else return f end
+			if type(f) == "function" then
+				return f()
+			else
+				return f
+			end
 		else
 			return default
 		end
-	end
+	end,
 }
 
 --[[
@@ -34,20 +38,19 @@ config = {
 
 --]]
 
-particles.newEmitter = function(self, config)
-
+particles.newEmitter = function(_, config)
 	local emitter = Object()
 	emitter.config = config or {}
 
 	if not particles.initialized then
-		particles.model:AddBlock(Color.White,0,0,0)
+		particles.model:AddBlock(Color.White, 0, 0, 0)
 		particles.initialized = true
 	end
-	
+
 	emitter.spawn = function(self, n)
-		local n = n or 1
+		n = n or 1
 		local conf = self.config
-		for i=1,n do
+		for _ = 1, n do
 			local p = table.remove(particles.pool)
 			if p == nil then
 				p = Shape(particles.model)
@@ -55,9 +58,9 @@ particles.newEmitter = function(self, config)
 			end
 
 			p.Physics = particles.fromConfigOrDefault(conf.physics, true)
-			p.Velocity = particles.fromConfigOrDefault(conf.velocity, Number3(0,0,0))
-			p.Position = self.Position + particles.fromConfigOrDefault(conf.position, Number3(0,0,0))
-			p.Acceleration = particles.fromConfigOrDefault(conf.acceleration, Number3(0,0,0))
+			p.Velocity = particles.fromConfigOrDefault(conf.velocity, Number3(0, 0, 0))
+			p.Position = self.Position + particles.fromConfigOrDefault(conf.position, Number3(0, 0, 0))
+			p.Acceleration = particles.fromConfigOrDefault(conf.acceleration, Number3(0, 0, 0))
 			p.Scale = particles.fromConfigOrDefault(conf.scale, 1.0)
 			p.Mass = particles.fromConfigOrDefault(conf.mass, 1.0)
 			p.Palette[1].Color = particles.fromConfigOrDefault(conf.color, Color.White)
@@ -72,7 +75,6 @@ particles.newEmitter = function(self, config)
 				table.insert(particles.pool, p)
 			end)
 		end
-
 	end
 
 	return emitter

@@ -1,8 +1,6 @@
-
 worlds = {}
 
-worlds.createModalContent = function(self, config)
-
+worlds.createModalContent = function(_, config)
 	local itemGrid = require("item_grid")
 	local worldDetails = require("world_details")
 	local pages = require("pages")
@@ -16,7 +14,9 @@ worlds.createModalContent = function(self, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 	end
 
@@ -27,15 +27,15 @@ worlds.createModalContent = function(self, config)
 	exploreContent.icon = "🗺"
 
 	local grid = itemGrid:create({
-									repo = nil,
-									type = "worlds",
-									worldsFilter = "featured",
-									ignoreCategoryOnSearch = true,
-									uikit = ui,
-								})
+		repo = nil,
+		type = "worlds",
+		worldsFilter = "featured",
+		ignoreCategoryOnSearch = true,
+		uikit = ui,
+	})
 
-	local pages = pages:create(ui)
-	exploreContent.bottomCenter = {pages}
+	pages = pages:create(ui)
+	exploreContent.bottomCenter = { pages }
 
 	exploreContent.tabs = {
 		{
@@ -51,7 +51,7 @@ worlds.createModalContent = function(self, config)
 			action = function()
 				grid:setWorldsFilter("recent")
 			end,
-		}
+		},
 	}
 
 	grid.onPaginationChange = function(page, nbPages)
@@ -68,40 +68,46 @@ worlds.createModalContent = function(self, config)
 	exploreContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
 		grid.Width = width
-		grid.Height = height 
-		if grid.refresh then grid:refresh() end
+		grid.Height = height
+		if grid.refresh then
+			grid:refresh()
+		end
 		return Number2(grid.Width, grid.Height)
 	end
 
-	exploreContent.willResignActive = function(self)
+	exploreContent.willResignActive = function(_)
 		grid:cancelRequestsAndTimers()
 	end
 
-	exploreContent.didBecomeActive = function(self)
-		if grid.refresh then grid:refresh() end
+	exploreContent.didBecomeActive = function(_)
+		if grid.refresh then
+			grid:refresh()
+		end
 	end
 
-	grid.onOpen = function(self, cell)
-		if cell.type ~= "world" then return end
+	grid.onOpen = function(_, cell)
+		if cell.type ~= "world" then
+			return
+		end
 
-		local worldDetailsContent = worldDetails:create({mode = "explore", title = cell.title, uikit = ui})
+		local worldDetailsContent = worldDetails:create({ mode = "explore", title = cell.title, uikit = ui })
 		worldDetailsContent:loadCell(cell)
 
-		local btnLaunch = ui:createButton("Launch", {textSize = "big"})
+		local btnLaunch = ui:createButton("Launch", { textSize = "big" })
 		btnLaunch:setColor(theme.colorPositive)
 		btnLaunch.onRelease = function()
 			URL:Open("https://app.cu.bzh?worldID=" .. cell.id)
 		end
 
-		local btnServers = ui:createButton("Servers", {textSize = "big"})
+		local btnServers = ui:createButton("Servers", { textSize = "big" })
 		btnServers:setColor(theme.colorNeutral)
-		btnServers.onRelease = function(b)
+		btnServers.onRelease = function()
 			local config = { worldID = cell.id, title = cell.title, uikit = ui }
 			local list = require("server_list"):create(config)
 			worldDetailsContent:push(list)
 		end
 
-		worldDetailsContent.bottomCenter = {btnServers, btnLaunch}
+		worldDetailsContent.bottomCenter = { btnServers, btnLaunch }
 
 		worldDetailsContent.idealReducedContentSize = function(content, width, height)
 			content.Width = width

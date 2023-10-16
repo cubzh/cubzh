@@ -11,7 +11,6 @@ avatarPortraitTop = true
 -- MODULES
 api = require("system_api", System)
 avatar = require("avatar")
-coins = require("coins")
 equipments = require("equipments")
 itemgrid = require("item_grid")
 modal = require("modal")
@@ -33,11 +32,6 @@ local AVATAR_MAX_SIZE = 300
 local AVATAR_MIN_SIZE = 150
 
 local CONTENT_MAX_WIDTH = 400
-local CONTENT_LANDSCAPE_WIDTH_RATIO_MAX = 0.7
-
-local LANDSCAPE_AVATAR_AREA_HEIGHT_MAX = 400
-local LANDSCAPE_AVATAR_AREA_WIDTH_RATIO_MAX = 0.4
-local PORTRAIT_AVATAR_AREA_HEIGHT_RATIO_MAX = 0.4
 
 local DEBUG = false
 local DEBUG_FRAME_COLOR = Color(255, 255, 0, 200)
@@ -48,8 +42,7 @@ local ACTIVE_NODE_MARGIN = theme.paddingBig
 --- positionCallback(function): position of the popup
 --- config(table): isLocal, id, username
 --- returns: modal content
-profile.create = function(self, config)
-
+profile.create = function(_, config)
 	if config ~= nil and type(config) ~= Type.table then
 		error("profile:create(config): config should be a table", 2)
 	end
@@ -78,7 +71,7 @@ profile.create = function(self, config)
 
 	-- nodes beside avatar
 	local activeNode = nil
-	local infoNode = nil
+	local infoNode
 
 	local preferredLayout = "landscape"
 
@@ -118,8 +111,10 @@ profile.create = function(self, config)
 	end
 
 	-- avatarNode
-	local avatarNode = require("ui_avatar"):get(username, nil, {localPlayer = isLocal}, ui)
-	if DEBUG then avatarNode.color = DEBUG_FRAME_COLOR end
+	local avatarNode = require("ui_avatar"):get(username, nil, { localPlayer = isLocal }, ui)
+	if DEBUG then
+		avatarNode.color = DEBUG_FRAME_COLOR
+	end
 	avatarNode:setParent(profileNode)
 
 	local userInfo = {
@@ -135,23 +130,29 @@ profile.create = function(self, config)
 	-- functions to create each node
 
 	local createColorpickerNode = function(config)
-
-		local node = ui:createFrame(Color(0,0,0,0))
-		if DEBUG then node.Color = DEBUG_FRAME_COLOR end
+		local node = ui:createFrame(Color(0, 0, 0, 0))
+		if DEBUG then
+			node.Color = DEBUG_FRAME_COLOR
+		end
 
 		local targetLabel = ui:createText(config.title, theme.textColor)
 		targetLabel:setParent(node)
 
-		local picker = colorpicker:create({ closeBtnIcon = "✅",  uikit = ui, transparency = false, colorPreview = false })
-		picker:setColor(config.color or Color(255,0,0))
+		local picker =
+			colorpicker:create({ closeBtnIcon = "✅", uikit = ui, transparency = false, colorPreview = false })
+		picker:setColor(config.color or Color(255, 0, 0))
 		picker:setParent(node)
 
 		picker.didClose = function(self)
-			if config.onDone then config.onDone(self:getColor()) end
+			if config.onDone then
+				config.onDone(self:getColor())
+			end
 		end
 
-		picker.didPickColor = function(self, color)
-			if config.onPick then config.onPick(color) end
+		picker.didPickColor = function(_, color)
+			if config.onPick then
+				config.onPick(color)
+			end
 		end
 
 		node.refresh = function(self)
@@ -180,36 +181,45 @@ profile.create = function(self, config)
 	end
 
 	local createInfoNode = function()
-
 		local socialBtnsConfig = {
 			{
 				key = "discord",
 				icon = "👾",
-				action = function(str) Dev:CopyToClipboard(str) end,
+				action = function(str)
+					Dev:CopyToClipboard(str)
+				end,
 				prefix = "@",
 			},
 			{
 				key = "tiktok",
 				icon = "🇹",
-				action = function(str) URL:Open("https://www.tiktok.com/@" .. str) end,
+				action = function(str)
+					URL:Open("https://www.tiktok.com/@" .. str)
+				end,
 				prefix = "@",
 			},
 			{
 				key = "x",
 				icon = "🇽",
-				action = function(str) URL:Open("https://x.com/" .. str) end,
+				action = function(str)
+					URL:Open("https://x.com/" .. str)
+				end,
 				prefix = "@",
 			},
 			{
 				key = "github",
 				icon = "🇬",
-				action = function(str) URL:Open("https://github.com/" .. str) end,
+				action = function(str)
+					URL:Open("https://github.com/" .. str)
+				end,
 				prefix = "",
-			}
+			},
 		}
 
-		local node = ui:createFrame(Color(0,0,0,0))
-		if DEBUG then node.Color = DEBUG_FRAME_COLOR end
+		local node = ui:createFrame(Color(0, 0, 0, 0))
+		if DEBUG then
+			node.Color = DEBUG_FRAME_COLOR
+		end
 
 		local usernameText = ui:createText(username, Color.White, "big")
 		usernameText:setParent(node)
@@ -218,8 +228,8 @@ profile.create = function(self, config)
 		bioText:setParent(node)
 
 		local socialBtns = {}
-		for _,config in ipairs(socialBtnsConfig) do
-			local btn = ui:createButton("", {textSize = "small"})
+		for _, config in ipairs(socialBtnsConfig) do
+			local btn = ui:createButton("", { textSize = "small" })
 			btn:setParent(node)
 			btn:hide()
 			socialBtns[config.key] = btn
@@ -240,7 +250,7 @@ profile.create = function(self, config)
 
 		node.refresh = function(self)
 			local padding = theme.padding
-			local totalHeight = 0
+			local totalHeight
 			local totalWidth = math.min(CONTENT_MAX_WIDTH, self.Width)
 
 			self.Width = math.min(CONTENT_MAX_WIDTH, self.Width)
@@ -281,7 +291,7 @@ profile.create = function(self, config)
 
 			-- Place middle block (socials)
 			if #listVisibleSocialButtons > 0 then
-				for i=1, #listVisibleSocialButtons, 2 do -- iterate 2 by 2 to place 2 buttons on the same line
+				for i = 1, #listVisibleSocialButtons, 2 do -- iterate 2 by 2 to place 2 buttons on the same line
 					local btn1 = listVisibleSocialButtons[i]
 					local btn2 = listVisibleSocialButtons[i + 1]
 
@@ -311,8 +321,10 @@ profile.create = function(self, config)
 			self.Width = totalWidth
 		end
 
-		node.setUserInfo = function(self)
-			if friends.Text == nil then return end
+		node.setUserInfo = function(_)
+			if friends.Text == nil then
+				return
+			end
 
 			friends.Text = "🙂 " .. tostring(userInfo.nbFriends)
 
@@ -338,7 +350,9 @@ profile.create = function(self, config)
 					local displayStr = config.icon .. " " .. config.prefix .. value
 					btn.Text = displayStr
 					btn:show()
-					btn.onRelease = function() config.action(value) end
+					btn.onRelease = function()
+						config.action(value)
+					end
 				else
 					btn.Text = config.icon
 					btn:hide()
@@ -350,10 +364,11 @@ profile.create = function(self, config)
 	end
 
 	local createEditInfoNode = function()
-
-		local node = ui:createFrame(Color(0,0,0,0))
+		local node = ui:createFrame(Color(0, 0, 0, 0))
 		node.type = "EditInfoNode"
-		if DEBUG then node.Color = DEBUG_FRAME_COLOR end
+		if DEBUG then
+			node.Color = DEBUG_FRAME_COLOR
+		end
 
 		local bioTitle = ui:createText("✏️ Bio", theme.textColor)
 		bioTitle:setParent(node)
@@ -370,10 +385,12 @@ profile.create = function(self, config)
 				140,
 				function(text) -- done
 					userInfo.bio = text
-					local data = {bio = userInfo.bio}
+					local data = { bio = userInfo.bio }
 					-- TODO: we could use `api` instead of `require("system_api", System)`
-					local req = require("system_api", System):patchUserInfo(data, function(err)
-						if err then print("❌", err) end
+					require("system_api", System):patchUserInfo(data, function(err)
+						if err then
+							print("❌", err)
+						end
 					end)
 					ui:turnOn()
 				end,
@@ -397,8 +414,8 @@ profile.create = function(self, config)
 			local previous = userInfo.discord
 			userInfo.discord = self.text
 			-- send API request to update user info
-			local data = {discord = self.text}
-			local req = api:patchUserInfo(data, function(err)
+			local data = { discord = self.text }
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.discord = previous
@@ -418,8 +435,8 @@ profile.create = function(self, config)
 			local previous = userInfo.tiktok
 			userInfo.tiktok = self.text
 			-- send API request to update user info
-			local data = {tiktok = self.text}
-			local req = api:patchUserInfo(data, function(err)
+			local data = { tiktok = self.text }
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.tiktok = previous
@@ -454,8 +471,8 @@ profile.create = function(self, config)
 			local previous = userInfo.x
 			userInfo.x = value
 			-- send API request to update user info
-			local data = {x = value}
-			local req = api:patchUserInfo(data, function(err)
+			local data = { x = value }
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.x = previous
@@ -475,8 +492,8 @@ profile.create = function(self, config)
 			local previous = userInfo.github
 			userInfo.github = self.text
 			-- send API request to update user info
-			local data = {github = self.text}
-			local req = api:patchUserInfo(data, function(err)
+			local data = { github = self.text }
+			api:patchUserInfo(data, function(err)
 				if err then
 					print("❌", err)
 					userInfo.github = previous
@@ -492,13 +509,19 @@ profile.create = function(self, config)
 
 			self.Width = math.min(EDIT_INFO_CONTENT_MAX_WIDTH, self.Width)
 
-			self.Height = bioTitle.Height + padding +
-						bioBtn.Height + padding +
-						socialLinksTitle.Height + padding +
-						textInputHeight + padding + -- discord
-						textInputHeight + padding + -- tiktok
-						textInputHeight + padding + -- X
-						textInputHeight -- Github
+			self.Height = bioTitle.Height
+				+ padding
+				+ bioBtn.Height
+				+ padding
+				+ socialLinksTitle.Height
+				+ padding
+				+ textInputHeight
+				+ padding -- discord
+				+ textInputHeight
+				+ padding -- tiktok
+				+ textInputHeight
+				+ padding -- X
+				+ textInputHeight -- Github
 
 			bioTitle.pos.X = 0
 			bioTitle.pos.Y = self.Height - bioTitle.Height
@@ -517,7 +540,7 @@ profile.create = function(self, config)
 			discordLink.pos.X = discordLogo.Width + padding
 			discordLink.pos.Y = discordLogo.pos.Y
 			discordLink.Width = self.Width - discordLogo.Width - padding
-			discordEmoji.pos = {0, (discordLogo.Height - discordEmoji.Height) * 0.5}
+			discordEmoji.pos = { 0, (discordLogo.Height - discordEmoji.Height) * 0.5 }
 
 			tiktokLogo.pos.X = 0
 			tiktokLogo.pos.Y = discordLogo.pos.Y - textInputHeight - padding
@@ -526,7 +549,7 @@ profile.create = function(self, config)
 			tiktokLink.pos.X = tiktokLogo.Width + padding
 			tiktokLink.pos.Y = tiktokLogo.pos.Y
 			tiktokLink.Width = self.Width - tiktokLogo.Width - padding
-			tiktokEmoji.pos = {0, (tiktokLogo.Height - tiktokEmoji.Height) * 0.5}
+			tiktokEmoji.pos = { 0, (tiktokLogo.Height - tiktokEmoji.Height) * 0.5 }
 
 			xLogo.pos.X = 0
 			xLogo.pos.Y = tiktokLogo.pos.Y - textInputHeight - padding
@@ -535,7 +558,7 @@ profile.create = function(self, config)
 			xLink.pos.X = xLogo.Width + padding
 			xLink.pos.Y = xLogo.pos.Y
 			xLink.Width = self.Width - xLogo.Width - padding
-			xEmoji.pos = {0, (xLogo.Height - xEmoji.Height) * 0.5}
+			xEmoji.pos = { 0, (xLogo.Height - xEmoji.Height) * 0.5 }
 
 			githubLogo.pos.X = 0
 			githubLogo.pos.Y = xLogo.pos.Y - textInputHeight - theme.padding
@@ -544,16 +567,17 @@ profile.create = function(self, config)
 			githubUsername.pos.X = githubLogo.Width + padding
 			githubUsername.pos.Y = githubLogo.pos.Y
 			githubUsername.Width = self.Width - githubLogo.Width - padding
-			githubEmoji.pos = {0, (githubLogo.Height - githubEmoji.Height) * 0.5}
+			githubEmoji.pos = { 0, (githubLogo.Height - githubEmoji.Height) * 0.5 }
 		end
 
 		return node
 	end
 
 	local createEditFaceNode = function()
-
-		local node = ui:createFrame(Color(0,0,0,0))
-		if DEBUG then node.Color = DEBUG_FRAME_COLOR end
+		local node = ui:createFrame(Color(0, 0, 0, 0))
+		if DEBUG then
+			node.Color = DEBUG_FRAME_COLOR
+		end
 
 		local noseShapeButton = ui:createButton("shape")
 		local nosePickerButton = ui:createButton("🎨")
@@ -573,11 +597,11 @@ profile.create = function(self, config)
 			btn:setColor(colors.skin1)
 			btn.onRelease = function()
 				local data = {}
-				data.skinColor = { r=colors.skin1.R, g=colors.skin1.G, b=colors.skin1.B }
-				data.skinColor2 = { r=colors.skin2.R, g=colors.skin2.G, b=colors.skin2.B }
-				data.noseColor = { r=colors.nose.R, g=colors.nose.G, b=colors.nose.B }
-				data.mouthColor = { r=colors.mouth.R, g=colors.mouth.G, b=colors.mouth.B }
-				local req = api:updateAvatar(data, function(err, success)
+				data.skinColor = { r = colors.skin1.R, g = colors.skin1.G, b = colors.skin1.B }
+				data.skinColor2 = { r = colors.skin2.R, g = colors.skin2.G, b = colors.skin2.B }
+				data.noseColor = { r = colors.nose.R, g = colors.nose.G, b = colors.nose.B }
+				data.mouthColor = { r = colors.mouth.R, g = colors.mouth.G, b = colors.mouth.B }
+				api:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
 					end
@@ -607,8 +631,8 @@ profile.create = function(self, config)
 		local saveEyesColorTimer
 		local _saveEyesColor = function(color)
 			local data = {}
-			data.eyesColor = { r=color.R, g=color.G, b=color.B }
-			local req = api:updateAvatar(data, function(err, success)
+			data.eyesColor = { r = color.R, g = color.G, b = color.B }
+			api:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -618,10 +642,12 @@ profile.create = function(self, config)
 		end
 
 		local saveEyesColor = function(color, config)
-
 			LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { eyesColor = color })
 
-			if saveEyesColorTimer ~= nil then saveEyesColorTimer:Cancel() saveEyesColorTimer = nil end
+			if saveEyesColorTimer ~= nil then
+				saveEyesColorTimer:Cancel()
+				saveEyesColorTimer = nil
+			end
 			if config.delay ~= nil then
 				saveEyesColorTimer = Timer(1.0, function()
 					_saveEyesColor(color)
@@ -640,7 +666,7 @@ profile.create = function(self, config)
 				uiAvatar:setEyesColor(avatarNode, color)
 				avatar:setEyesColor(Player, color)
 				saveEyesColor(color)
-				
+
 				-- TODO: apply colors to small head icon (screen top left corner)
 
 				-- update buttons' color
@@ -651,20 +677,19 @@ profile.create = function(self, config)
 
 		eyesPickerButton:setParent(node)
 		eyesPickerButton:setColor(avatar:getEyesColor(Player))
-		eyesPickerButton.onRelease = function(self)
+		eyesPickerButton.onRelease = function(_)
 			functions.setActiveNode(createColorpickerNode({
 				color = avatar:getEyesColor(Player),
 				title = "👁️ Eyes",
 				onDone = function(color)
 					saveEyesColor(color)
 					functions.setActiveNode(functions.createEditFaceNode())
-
 				end,
 				onPick = function(color)
 					uiAvatar:setEyesColor(avatarNode, color)
 					avatar:setEyesColor(Player, color)
 					saveEyesColor(color, { delay = 1.0 })
-				end
+				end,
 			}))
 		end
 
@@ -677,8 +702,8 @@ profile.create = function(self, config)
 		local saveNoseColorTimer
 		local _saveNoseColor = function(color)
 			local data = {}
-			data.noseColor = { r=color.R, g=color.G, b=color.B }
-			local req = api:updateAvatar(data, function(err, success)
+			data.noseColor = { r = color.R, g = color.G, b = color.B }
+			api:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -688,10 +713,12 @@ profile.create = function(self, config)
 		end
 
 		local saveNoseColor = function(color, config)
-
 			LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { noseColor = color })
 
-			if saveNoseColorTimer ~= nil then saveNoseColorTimer:Cancel() saveNoseColorTimer = nil end
+			if saveNoseColorTimer ~= nil then
+				saveNoseColorTimer:Cancel()
+				saveNoseColorTimer = nil
+			end
 			if config.delay ~= nil then
 				saveNoseColorTimer = Timer(1.0, function()
 					_saveNoseColor(color)
@@ -703,7 +730,7 @@ profile.create = function(self, config)
 
 		nosePickerButton:setParent(node)
 		nosePickerButton:setColor(avatar:getNoseColor(Player))
-		nosePickerButton.onRelease = function(self)
+		nosePickerButton.onRelease = function(_)
 			functions.setActiveNode(createColorpickerNode({
 				color = avatar:getNoseColor(Player),
 				title = "👃 Nose",
@@ -715,7 +742,7 @@ profile.create = function(self, config)
 					uiAvatar:setNoseColor(avatarNode, color)
 					avatar:setNoseColor(Player, color)
 					saveNoseColor(color, { delay = 1.0 })
-				end
+				end,
 			}))
 		end
 
@@ -728,8 +755,8 @@ profile.create = function(self, config)
 		local saveMouthColorTimer
 		local _saveMouthColor = function(color)
 			local data = {}
-			data.mouthColor = { r=color.R, g=color.G, b=color.B }
-			local req = api:updateAvatar(data, function(err, success)
+			data.mouthColor = { r = color.R, g = color.G, b = color.B }
+			api:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -739,10 +766,12 @@ profile.create = function(self, config)
 		end
 
 		local saveMouthColor = function(color, config)
-
 			LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { mouthColor = color })
 
-			if saveMouthColorTimer ~= nil then saveMouthColorTimer:Cancel() saveMouthColorTimer = nil end
+			if saveMouthColorTimer ~= nil then
+				saveMouthColorTimer:Cancel()
+				saveMouthColorTimer = nil
+			end
 			if config.delay ~= nil then
 				saveMouthColorTimer = Timer(1.0, function()
 					_saveMouthColor(color)
@@ -754,7 +783,7 @@ profile.create = function(self, config)
 
 		mouthPickerButton:setParent(node)
 		mouthPickerButton:setColor(avatar:getMouthColor(Player))
-		mouthPickerButton.onRelease = function(self)
+		mouthPickerButton.onRelease = function(_)
 			functions.setActiveNode(createColorpickerNode({
 				color = avatar:getMouthColor(Player),
 				title = "👄 Mouth",
@@ -778,10 +807,10 @@ profile.create = function(self, config)
 			local lineHeight = skinButtons[1].Height
 			self.Height = (lineHeight + padding) * 4 - padding
 
-			mouthLabel.pos = {0, lineHeight * 0.5 - mouthLabel.Height * 0.5}
-			noseLabel.pos = {0, (lineHeight + padding) * 1 + lineHeight * 0.5 - noseLabel.Height * 0.5}
-			eyesLabel.pos = {0, (lineHeight + padding) * 2 + lineHeight * 0.5 - noseLabel.Height * 0.5}
-			skinLabel.pos = {0, (lineHeight + padding) * 3 + lineHeight * 0.5 - noseLabel.Height * 0.5}
+			mouthLabel.pos = { 0, lineHeight * 0.5 - mouthLabel.Height * 0.5 }
+			noseLabel.pos = { 0, (lineHeight + padding) * 1 + lineHeight * 0.5 - noseLabel.Height * 0.5 }
+			eyesLabel.pos = { 0, (lineHeight + padding) * 2 + lineHeight * 0.5 - noseLabel.Height * 0.5 }
+			skinLabel.pos = { 0, (lineHeight + padding) * 3 + lineHeight * 0.5 - noseLabel.Height * 0.5 }
 
 			-- Skin
 
@@ -794,7 +823,7 @@ profile.create = function(self, config)
 				btn.Width = skinBtnWidth
 				btn.pos = {
 					largestLabelWidth + padding + (skinBtnWidth + padding) * (i - 1),
-					(lineHeight + padding) * 3
+					(lineHeight + padding) * 3,
 				}
 			end
 
@@ -806,29 +835,29 @@ profile.create = function(self, config)
 			for i, btn in ipairs(eyesButtons) do
 				btn.Width = eyeBtnWidth
 				btn.pos = {
-					largestLabelWidth + padding + (eyeBtnWidth + padding) * (i-1),
-					(lineHeight + padding) * 2
+					largestLabelWidth + padding + (eyeBtnWidth + padding) * (i - 1),
+					(lineHeight + padding) * 2,
 				}
 			end
 
 			eyesPickerButton.pos = {
 				largestLabelWidth + padding + (eyeBtnWidth + padding) * #eyesButtons,
-				(lineHeight + padding) * 2
+				(lineHeight + padding) * 2,
 			}
 
 			-- Nose
 
 			noseShapeButton.Width = widthWithoutLabels - theme.padding * 2 - nosePickerButton.Width
-			noseShapeButton.pos = {largestLabelWidth + theme.padding, (lineHeight + theme.padding) * 1, 0}
+			noseShapeButton.pos = { largestLabelWidth + theme.padding, (lineHeight + theme.padding) * 1, 0 }
 
-			nosePickerButton.pos = noseShapeButton.pos + {noseShapeButton.Width + theme.padding, 0, 0}
+			nosePickerButton.pos = noseShapeButton.pos + { noseShapeButton.Width + theme.padding, 0, 0 }
 
 			-- Mouth
 
 			mouthShapeButton.Width = widthWithoutLabels - theme.padding * 2 - mouthPickerButton.Width
-			mouthShapeButton.pos = {largestLabelWidth + theme.padding, 0, 0}
+			mouthShapeButton.pos = { largestLabelWidth + theme.padding, 0, 0 }
 
-			mouthPickerButton.pos = mouthShapeButton.pos + {mouthShapeButton.Width + theme.padding, 0, 0}
+			mouthPickerButton.pos = mouthShapeButton.pos + { mouthShapeButton.Width + theme.padding, 0, 0 }
 		end
 
 		return node
@@ -836,13 +865,14 @@ profile.create = function(self, config)
 	functions.createEditFaceNode = createEditFaceNode
 
 	local createEditOutfitNode = function()
-
-		local node = ui:createFrame(Color(0,0,0,0))
-		if DEBUG then node.Color = DEBUG_FRAME_COLOR end
+		local node = ui:createFrame(Color(0, 0, 0, 0))
+		if DEBUG then
+			node.Color = DEBUG_FRAME_COLOR
+		end
 
 		local selectedCategory = "hair"
 
-		local grid = itemgrid:create({uikit = ui, searchbar = true, categories = {selectedCategory}})
+		local grid = itemgrid:create({ uikit = ui, searchbar = true, categories = { selectedCategory } })
 		grid:setParent(node)
 
 		local tabs = {
@@ -851,7 +881,7 @@ profile.create = function(self, config)
 				short = "🙂",
 				action = function()
 					selectedCategory = "hair"
-					grid:setCategories({selectedCategory})
+					grid:setCategories({ selectedCategory })
 				end,
 			},
 			{
@@ -859,7 +889,7 @@ profile.create = function(self, config)
 				short = "👕",
 				action = function()
 					selectedCategory = "jacket"
-					grid:setCategories({selectedCategory})
+					grid:setCategories({ selectedCategory })
 				end,
 			},
 			{
@@ -867,7 +897,7 @@ profile.create = function(self, config)
 				short = "👖",
 				action = function()
 					selectedCategory = "pants"
-					grid:setCategories({selectedCategory})
+					grid:setCategories({ selectedCategory })
 				end,
 			},
 			{
@@ -875,20 +905,25 @@ profile.create = function(self, config)
 				short = "👞",
 				action = function()
 					selectedCategory = "boots"
-					grid:setCategories({selectedCategory})
+					grid:setCategories({ selectedCategory })
 				end,
-			}
+			},
 		}
 
 		content.tabs = tabs
 
 		local wearableRequest
 		grid.onOpen = function(_, cell)
-			if not cell.repo or not cell.name then return end
+			if not cell.repo or not cell.name then
+				return
+			end
 			local category = selectedCategory
 			local fullname = cell.repo .. "." .. cell.name
 
-			if wearableRequest ~= nil then wearableRequest:Cancel() wearableRequest = nil end
+			if wearableRequest ~= nil then
+				wearableRequest:Cancel()
+				wearableRequest = nil
+			end
 			wearableRequest = equipments.load(category, fullname, Player, false, false, function(eq)
 				wearableRequest = nil
 				if eq == nil then
@@ -897,7 +932,7 @@ profile.create = function(self, config)
 				end
 				local data = {}
 				data[category] = fullname
-				local req = api:updateAvatar(data, function(err, success)
+				api:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
 					else
@@ -911,10 +946,12 @@ profile.create = function(self, config)
 
 				-- update avatar preview
 				if avatarNode.refresh then
-					avatarNode:refresh() 
+					avatarNode:refresh()
 				end
 			end)
-			if wearableRequest ~= nil then table.insert(requests, wearableRequest) end
+			if wearableRequest ~= nil then
+				table.insert(requests, wearableRequest)
+			end
 		end
 
 		local pages = pages:create(ui)
@@ -946,13 +983,13 @@ profile.create = function(self, config)
 			grid.pos.X = 0
 
 			pages.pos.Y = 0
-			pages.pos.X =  self.Width * 0.5 - pages.Width * 0.5	
+			pages.pos.X = self.Width * 0.5 - pages.Width * 0.5
 		end
 
 		return node
 	end
 
-	-- 2 areas within node, one to display the avatar and the other for the rest 
+	-- 2 areas within node, one to display the avatar and the other for the rest
 	-- (text info, wearable gallery in editor mode, etc.)
 
 	infoNode = createInfoNode()
@@ -965,10 +1002,9 @@ profile.create = function(self, config)
 	local editOutfitBtn = nil
 
 	local toggleEditOptions = function(btn)
-		if btn.Text == nil or 
-			editInfoBtn.show == nil or
-			editFaceBtn.show == nil or
-			editOutfitBtn.show == nil then return end
+		if btn.Text == nil or editInfoBtn.show == nil or editFaceBtn.show == nil or editOutfitBtn.show == nil then
+			return
+		end
 
 		if btn.Text == "✅ Done" then
 			btn.Text = "✏️ Edit"
@@ -989,7 +1025,6 @@ profile.create = function(self, config)
 
 			content.tabs = nil
 			functions.setActiveNode(infoNode)
-
 		else
 			btn.Text = "✅ Done"
 
@@ -1007,7 +1042,7 @@ profile.create = function(self, config)
 		end
 	end
 
-	editInfoBtnOnReleaseCallback = function(btn)
+	editInfoBtnOnReleaseCallback = function(_)
 		content.tabs = nil
 		functions.setActiveNode(createEditInfoNode())
 		editInfoBtn:select()
@@ -1015,7 +1050,7 @@ profile.create = function(self, config)
 		editOutfitBtn:unselect()
 	end
 
-	editFaceBtnOnReleaseCallback = function(btn)
+	editFaceBtnOnReleaseCallback = function(_)
 		content.tabs = nil
 		functions.setActiveNode(createEditFaceNode())
 		editInfoBtn:unselect()
@@ -1023,7 +1058,7 @@ profile.create = function(self, config)
 		editOutfitBtn:unselect()
 	end
 
-	editOutfitBtnOnReleaseCallback = function(btn)
+	editOutfitBtnOnReleaseCallback = function(_)
 		functions.setActiveNode(createEditOutfitNode())
 		editInfoBtn:unselect()
 		editFaceBtn:unselect()
@@ -1046,7 +1081,7 @@ profile.create = function(self, config)
 	-- 	as.Spatialized = false
 	-- 	as:Play()
 
-	-- 	Timer(1, function() 
+	-- 	Timer(1, function()
 	-- 		as:RemoveFromParent() as=nil
 	-- 	end)
 
@@ -1065,7 +1100,7 @@ profile.create = function(self, config)
 	-- 	end)
 	-- end
 
-	local avatarRot = Number3(0,math.pi,0)
+	local avatarRot = Number3(0, math.pi, 0)
 	local dragListener = nil
 	local avatarListener = nil
 
@@ -1088,13 +1123,15 @@ profile.create = function(self, config)
 		editOutfitBtn:hide()
 		editOutfitBtn.onRelease = editOutfitBtnOnReleaseCallback
 
-		local coinsBtn = ui:createButton("💰 …", {sound = "coin_1"})
-		coinsBtn.onRelease = function(btn)
-			content:getModalIfContentIsActive():push(require("coins"):createModalContent({uikit = ui}))
+		local coinsBtn = ui:createButton("💰 …", { sound = "coin_1" })
+		coinsBtn.onRelease = function(_)
+			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
 		end
 
 		api.getBalance(function(err, balance)
-			if not coinsBtn.Text then return end
+			if not coinsBtn.Text then
+				return
+			end
 			if err then
 				coinsBtn.Text = "💰 0"
 				return
@@ -1107,7 +1144,7 @@ profile.create = function(self, config)
 	else
 		local showCreationsBtn = ui:createButton("✨ Show Creations")
 		showCreationsBtn.onRelease = function()
-			require("menu"):ShowAlert({message = "Coming soon!"}, System)
+			require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 		end
 
 		if Player.Username == "guest" then
@@ -1121,10 +1158,14 @@ profile.create = function(self, config)
 			local requestSent = nil
 
 			local updateFriendButton = function()
-				if addFriendBtn.Text == nil then return end
+				if addFriendBtn.Text == nil then
+					return
+				end
 
 				-- wait for both responses
-				if alreadyFriends == nil or requestSent == nil then return end
+				if alreadyFriends == nil or requestSent == nil then
+					return
+				end
 
 				if alreadyFriends then
 					addFriendBtn.Text = "Friends ❤️"
@@ -1151,8 +1192,10 @@ profile.create = function(self, config)
 			end
 
 			-- check if the User is already a friend
-			local req = api:getFriends(function(ok, friends, err)
-				if not ok then return end
+			local req = api:getFriends(function(ok, friends, _)
+				if not ok then
+					return
+				end
 
 				alreadyFriends = false
 				for _, friendID in pairs(friends) do
@@ -1166,8 +1209,10 @@ profile.create = function(self, config)
 			table.insert(requests, req)
 
 			-- check if a request was already sent
-			local req = api:getSentFriendRequests(function(ok, requests, err)
-				if not ok then return end
+			req = api:getSentFriendRequests(function(ok, requests, _)
+				if not ok then
+					return
+				end
 
 				requestSent = false
 				for _, uID in pairs(requests) do
@@ -1183,7 +1228,9 @@ profile.create = function(self, config)
 	end
 
 	functions.refresh = function()
-		if activeNode == nil then return end
+		if activeNode == nil then
+			return
+		end
 
 		local landscape = Screen.Width > Screen.Height
 
@@ -1199,31 +1246,33 @@ profile.create = function(self, config)
 			activeNode.Width = totalWidth - roomForAvatar - ACTIVE_NODE_MARGIN * 2
 			activeNode.Height = totalHeight - ACTIVE_NODE_MARGIN * 2
 		else
-			roomForAvatar= math.min(AVATAR_MAX_SIZE, totalHeight * 0.25)
+			roomForAvatar = math.min(AVATAR_MAX_SIZE, totalHeight * 0.25)
 			roomForAvatar = math.max(roomForAvatar, AVATAR_MIN_SIZE)
 			activeNode.Width = totalWidth - ACTIVE_NODE_MARGIN * 2
 			activeNode.Height = totalHeight - roomForAvatar - ACTIVE_NODE_MARGIN * 2
 		end
 
-		if activeNode.refresh then activeNode:refresh() end -- refresh may shrink content
+		if activeNode.refresh then
+			activeNode:refresh()
+		end -- refresh may shrink content
 
 		local activeNodeWidthWithMargin = activeNode.Width + ACTIVE_NODE_MARGIN * 2
 		local activeNodeHeightWithMargin = activeNode.Height + ACTIVE_NODE_MARGIN * 2
 
-		local avatarSizeInLandscape = math.min(profileNode.Width - activeNodeWidthWithMargin, profileNode.Height, AVATAR_MAX_SIZE)
-		local avatarSizeInPortrait = math.min(profileNode.Height - activeNodeHeightWithMargin, profileNode.Width, AVATAR_MAX_SIZE)
+		local avatarSizeInLandscape =
+			math.min(profileNode.Width - activeNodeWidthWithMargin, profileNode.Height, AVATAR_MAX_SIZE)
+		local avatarSizeInPortrait =
+			math.min(profileNode.Height - activeNodeHeightWithMargin, profileNode.Width, AVATAR_MAX_SIZE)
 
 		-- no matter what real orientation is, pick the layout giving
 		-- that's allowing more space for the avatar.
 		if avatarSizeInLandscape >= avatarSizeInPortrait then -- go landscape
-
 			avatarNode.Width = avatarSizeInLandscape
 			totalHeight = math.max(activeNodeHeightWithMargin, avatarNode.Height)
 			totalWidth = activeNodeWidthWithMargin + avatarNode.Width
 
 			preferredLayout = "landscape"
 		else
-
 			avatarNode.Width = avatarSizeInPortrait
 			totalHeight = activeNodeHeightWithMargin + avatarNode.Height
 			totalWidth = math.max(activeNodeWidthWithMargin, avatarNode.Width)
@@ -1231,22 +1280,25 @@ profile.create = function(self, config)
 			preferredLayout = "portrait"
 		end
 
-		-- pictureBtn is in the bottom-right corner of avatar preview 
+		-- pictureBtn is in the bottom-right corner of avatar preview
 		-- pictureBtn.pos = { avatarNode.pos.X + avatarNode.Width - pictureBtn.Width, 0 }
 
 		return totalWidth, totalHeight
 	end
 
 	profileNode.parentDidResize = function(self)
-		if activeNode == nil or avatarNode == nil then return end
+		if activeNode == nil or avatarNode == nil then
+			return
+		end
 
 		if preferredLayout == "landscape" then
 			if avatarLandscapeRight then
 				activeNode.pos = { ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
 				avatarNode.pos = { self.Width - avatarNode.Width, self.Height * 0.5 - avatarNode.Height * 0.5 }
 			else
-				activeNode.pos = { self.Width - activeNode.Width - ACTIVE_NODE_MARGIN, totalHeight * 0.5 - activeNode.Height * 0.5 }
-				avatarNode.pos = { 0, totalHeight * 0.5 - activeNode.Height * 0.5 }
+				activeNode.pos =
+					{ self.Width - activeNode.Width - ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
+				avatarNode.pos = { 0, self.Height * 0.5 - activeNode.Height * 0.5 }
 			end
 		else
 			if avatarPortraitTop then
@@ -1254,13 +1306,17 @@ profile.create = function(self, config)
 				activeNode.pos = { self.Width * 0.5 - activeNode.Width * 0.5, ACTIVE_NODE_MARGIN }
 			else
 				avatarNode.pos = { self.Width * 0.5 - avatarNode.Width * 0.5, 0 }
-				activeNode.pos = { self.Width * 0.5 - activeNode.Width * 0.5, self.Height - activeNode.Height - ACTIVE_NODE_MARGIN }
+				activeNode.pos =
+					{ self.Width * 0.5 - activeNode.Width * 0.5, self.Height - activeNode.Height - ACTIVE_NODE_MARGIN }
 			end
 		end
 	end
 
 	functions.setActiveNode = function(newNode)
-		if newNode == nil then print("active mode can't be nil") return end
+		if newNode == nil then
+			print("active mode can't be nil")
+			return
+		end
 
 		-- remove previous node if any
 		if activeNode ~= nil then
@@ -1295,15 +1351,21 @@ profile.create = function(self, config)
 				avatarRot.Y = avatarRot.Y - pointerEvent.DX * 0.02
 				avatarRot.X = avatarRot.X + pointerEvent.DY * 0.02
 
-				if avatarRot.X > math.pi * 0.4 then avatarRot.X = math.pi * 0.4 end
-				if avatarRot.X < -math.pi * 0.4 then avatarRot.X = -math.pi * 0.4 end
+				if avatarRot.X > math.pi * 0.4 then
+					avatarRot.X = math.pi * 0.4
+				end
+				if avatarRot.X < -math.pi * 0.4 then
+					avatarRot.X = -math.pi * 0.4
+				end
 
 				avatarNode.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
 			end
 		end)
 
-		local fillUserInfo = function(ok, usr, err)
-			if not ok then return end
+		local fillUserInfo = function(ok, usr, _)
+			if not ok then
+				return
+			end
 
 			-- store user info
 			userInfo.bio = usr.bio or ""
@@ -1315,7 +1377,9 @@ profile.create = function(self, config)
 			userInfo.created = usr.created
 
 			-- update info node with user info we just received
-			if infoNode.setUserInfo ~= nil then infoNode:setUserInfo() end
+			if infoNode.setUserInfo ~= nil then
+				infoNode:setUserInfo()
+			end
 
 			if editBtn ~= nil and editBtn.enable ~= nil then
 				editBtn:enable()
@@ -1327,14 +1391,17 @@ profile.create = function(self, config)
 			content:refreshModal()
 		end
 
-		local req = api:getUserInfo(userID, fillUserInfo, {"created", "nbFriends", "bio", "discord", "x", "tiktok", "github"})
+		local req =
+			api:getUserInfo(userID, fillUserInfo, { "created", "nbFriends", "bio", "discord", "x", "tiktok", "github" })
 		table.insert(requests, req)
 
 		-- listen for avatar load
 		avatarListener = LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function(player)
 			-- avatar of local player is loaded, let's refresh the avatarNode
 			if player == Player then
-				if avatarNode.refresh then avatarNode:refresh() end
+				if avatarNode.refresh then
+					avatarNode:refresh()
+				end
 			end
 		end)
 	end

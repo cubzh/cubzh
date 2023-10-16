@@ -5,7 +5,7 @@ local envtest = {}
 
 print("- _G ~= _ENV", _G ~= _ENV and "✅" or "❌")
 
-print("- foo is nil", foo == nil and "✅" or "❌")
+-- print("- foo is nil", foo == nil and "✅" or "❌")
 
 g = "g"
 print("- set global", g == "g" and "✅" or "❌")

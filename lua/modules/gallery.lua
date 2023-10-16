@@ -3,17 +3,16 @@ Generic gallery serving multiple purposes:
 - explore games
 - explore items
 - explore user creations (by category)
-]]--
+]]
+--
 
 local gallery = {}
 
-gallery.createModalContent = function(self, config)
-	
+gallery.createModalContent = function(_, config)
 	local modal = require("modal")
 	local itemGrid = require("item_grid")
 	local itemDetails = require("item_details")
 	local pagesModule = require("pages")
-	
 	-- load config (overriding defaults)
 	local _config = {
 		-- function triggered when opening cell
@@ -24,7 +23,9 @@ gallery.createModalContent = function(self, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then _config[k] = config[k] end
+			if type(config[k]) == type(v) then
+				_config[k] = config[k]
+			end
 		end
 		_config.onOpen = config.onOpen
 	end
@@ -37,11 +38,11 @@ gallery.createModalContent = function(self, config)
 	gridContent.title = "Gallery"
 	gridContent.icon = "🗺️"
 
-	local grid = itemGrid:create({categories = {"null"}, uikit = ui})
+	local grid = itemGrid:create({ categories = { "null" }, uikit = ui })
 	gridContent.node = grid
 
 	local pages = pagesModule:create(ui)
-	gridContent.bottomCenter = {pages}
+	gridContent.bottomCenter = { pages }
 
 	gridContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
@@ -62,14 +63,16 @@ gallery.createModalContent = function(self, config)
 
 	-- called when a grid cell has been clicked
 	grid.onOpen = function(self, cell)
-		if config.onOpen then return _config.onOpen(self, cell) end
+		if config.onOpen then
+			return _config.onOpen(self, cell)
+		end
 
 		local modalObj = gridContent:getModalIfContentIsActive()
 		if modalObj == nil then
 			return
 		end
 
-		local itemDetailsContent = itemDetails:createModalContent({uikit = ui})
+		local itemDetailsContent = itemDetails:createModalContent({ uikit = ui })
 		itemDetailsContent:loadCell(cell)
 
 		itemDetailsContent.idealReducedContentSize = function(content, width, height)
@@ -77,7 +80,6 @@ gallery.createModalContent = function(self, config)
 			content.Height = height
 			return Number2(content.Width, content.Height)
 		end
-		
 		modalObj:push(itemDetailsContent)
 	end
 
@@ -85,7 +87,6 @@ gallery.createModalContent = function(self, config)
 end
 
 gallery.create = function(self, maxWidth, maxHeight, position, config)
-
 	local content = self:createModalContent(config)
 
 	local modal = require("modal")

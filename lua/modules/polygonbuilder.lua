@@ -9,7 +9,7 @@
 local polygonBuilder = {}
 local polygonBuilderMetatable = {
 	__index = {
-		create = function(self,options)
+		create = function(_, options)
 			local nbSides = options.nbSides or 4
 			if nbSides < 3 then
 				print("Error: can't create a polygon with less than 3 sides.")
@@ -20,15 +20,15 @@ local polygonBuilderMetatable = {
 			local thickness = options.thickness or 0.3
 
 			local sideT = MutableShape(false)
-			sideT:AddBlock(color,0,0,0)
+			sideT:AddBlock(color, 0, 0, 0)
 
 			local polygon = Object()
 			local vertices = {}
 
-			for i=0,nbSides do
+			for i = 0, nbSides do
 				local angle = (i / nbSides) * 2 * math.pi - math.pi / 2
 				local vertice = {
-					pos = Number3(math.cos(angle),math.sin(angle),0) * size,
+					pos = Number3(math.cos(angle), math.sin(angle), 0) * size,
 					angle = angle,
 				}
 				table.insert(vertices, vertice)
@@ -37,10 +37,12 @@ local polygonBuilderMetatable = {
 			local distance -- distance between vertices
 
 			for i, vertice in ipairs(vertices) do
-				if i == #vertices then break end
+				if i == #vertices then
+					break
+				end
 				local next = vertices[i + 1]
 
-				if distance == nil then 
+				if distance == nil then
 					distance = (next.pos - vertice.pos).Length
 				end
 
@@ -53,16 +55,15 @@ local polygonBuilderMetatable = {
 				s.LocalPosition = pos
 
 				s.LocalRotation.Z = angle + math.pi * -0.5
-				s.Pivot = Number3(0.5,1,0.5)
+				s.Pivot = Number3(0.5, 1, 0.5)
 
-				s.Scale = {distance, thickness, thickness}
+				s.Scale = { distance, thickness, thickness }
 			end
 
-
 			return polygon
-		end
-	}
+		end,
+	},
 }
-setmetatable(polygonBuilder,polygonBuilderMetatable)
+setmetatable(polygonBuilder, polygonBuilderMetatable)
 
 return polygonBuilder
