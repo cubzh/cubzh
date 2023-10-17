@@ -44,7 +44,7 @@ void test_chunk_new(void) {
 // --- chunk_paint_block()
 // --- chunk_get_block()
 // --- chunk_get_block_2()
-// --- chunk_get_block_pos()
+// --- chunk_get_block_coords_in_shape()
 // --- chunk_get_bounding_box()
 // --- chunk_remove_block()
 /////
@@ -79,7 +79,7 @@ void test_chunk_Block(void) {
     check = chunk_get_block(chunk, 6, 6, 6);
     TEST_CHECK(check->colorIndex == 3);
     check = chunk_get_block(chunk, 11, 9, 6);
-    TEST_CHECK(check == NULL);
+    TEST_CHECK(check->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
 
     // chunk_get_block_2()
     CHUNK_COORDS_INT3_T pos = {4, 4, 4};
@@ -90,22 +90,22 @@ void test_chunk_Block(void) {
     TEST_CHECK(check->colorIndex == 3);
     pos = (CHUNK_COORDS_INT3_T){11, 9, 6};
     check = chunk_get_block_2(chunk, pos);
-    TEST_CHECK(check == NULL);
+    TEST_CHECK(check->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
 
     int NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 2);
 
-    // chunk_get_block_pos()
+    // chunk_get_block_coords_in_shape()
     SHAPE_COORDS_INT3_T coords = {11, 9, 6};
-    chunk_get_block_pos(chunk, 4, 4, 4, &coords);
+    coords = chunk_get_block_coords_in_shape(chunk, 4, 4, 4);
     TEST_CHECK(coords.x == 14);
     TEST_CHECK(coords.y == 12);
     TEST_CHECK(coords.z == 9);
-    chunk_get_block_pos(chunk, 5, 5, 5, &coords);
+    coords = chunk_get_block_coords_in_shape(chunk, 5, 5, 5);
     TEST_CHECK(coords.x == 15);
     TEST_CHECK(coords.y == 13);
     TEST_CHECK(coords.z == 10);
-    chunk_get_block_pos(chunk, 6, 6, 6, &coords);
+    coords = chunk_get_block_coords_in_shape(chunk, 6, 6, 6);
     TEST_CHECK(coords.x == 16);
     TEST_CHECK(coords.y == 14);
     TEST_CHECK(coords.z == 11);
@@ -118,12 +118,12 @@ void test_chunk_Block(void) {
     // chunk_remove_block()
     TEST_CHECK(chunk_remove_block(chunk, 4, 4, 4, NULL) == true);
     check = chunk_get_block(chunk, 4, 4, 4);
-    TEST_CHECK(check == NULL);
+    TEST_CHECK(check->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
     NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 1);
     TEST_CHECK(chunk_remove_block(chunk, 6, 6, 6, NULL) == true);
     check = chunk_get_block(chunk, 6, 6, 6);
-    TEST_CHECK(check == NULL);
+    TEST_CHECK(check->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
     NBBlocks = chunk_get_nb_blocks(chunk);
     TEST_CHECK(NBBlocks == 0);
     TEST_CHECK(chunk_remove_block(chunk, 0, 0, 0, NULL) == false);

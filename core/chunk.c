@@ -31,12 +31,13 @@ struct _Chunk {
     // number of blocks in that chunk
     int nbBlocks; /* 4 bytes */
     // position of chunk in shape's model
-    SHAPE_COORDS_INT3_T origin; /* 3 * 2 bytes */
+    SHAPE_COORDS_INT3_T origin; /* 3 x 2 bytes */
+    // model axis-aligned bounding box (bbMax - 1 is the max block)
+    CHUNK_COORDS_INT3_T bbMin, bbMax; /* 6 x 1 byte */
     // wether vertices need to be refreshed
     bool dirty; /* 1 byte */
 
-    // padding
-    char pad[5];
+    char pad[7];
 };
 
 // MARK: private functions prototypes
@@ -66,6 +67,11 @@ void _vertex_light_smoothing(VERTEX_LIGHT_STRUCT_T *base,
                              VERTEX_LIGHT_STRUCT_T vlight2,
                              VERTEX_LIGHT_STRUCT_T vlight3);
 
+bool _chunk_is_bounding_box_empty(const Chunk *chunk);
+void _chunk_update_bounding_box(Chunk *chunk,
+                                const CHUNK_COORDS_INT3_T coords,
+                                const bool addOrRemove);
+
 // MARK: public functions
 
 Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
@@ -81,6 +87,8 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
     chunk->rtreeLeaf = NULL;
     chunk->dirty = false;
     chunk->origin = (SHAPE_COORDS_INT3_T){x, y, z};
+    chunk->bbMin = (CHUNK_COORDS_INT3_T){0, 0, 0};
+    chunk->bbMax = (CHUNK_COORDS_INT3_T){0, 0, 0};
     chunk->nbBlocks = 0;
 
     for (int i = 0; i < CHUNK_NEIGHBORS_COUNT; i++) {
@@ -110,6 +118,8 @@ Chunk *chunk_new_copy(const Chunk *c) {
     copy->rtreeLeaf = NULL;
     copy->dirty = false;
     copy->origin = c->origin;
+    copy->bbMin = c->bbMin;
+    copy->bbMax = c->bbMax;
     copy->nbBlocks = c->nbBlocks;
 
     for (int i = 0; i < CHUNK_NEIGHBORS_COUNT; i++) {
@@ -183,8 +193,8 @@ uint64_t chunk_get_hash(const Chunk *c, uint64_t crc) {
 
 void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T light) {
 
-    if (coords.x < 0 || coords.x >= CHUNK_SIZE || coords.y < 0 || coords.y >= CHUNK_SIZE ||
-        coords.z < 0 || coords.z >= CHUNK_SIZE) {
+    if (c == NULL || coords.x < 0 || coords.x >= CHUNK_SIZE || coords.y < 0 ||
+        coords.y >= CHUNK_SIZE || coords.z < 0 || coords.z >= CHUNK_SIZE) {
         return;
     }
 
@@ -199,14 +209,18 @@ void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T
 }
 
 VERTEX_LIGHT_STRUCT_T chunk_get_light_without_checking(const Chunk *c, CHUNK_COORDS_INT3_T coords) {
-    return c->lightingData[coords.x * CHUNK_SIZE_SQR + coords.y * CHUNK_SIZE + coords.z];
+    if (c == NULL || c->lightingData == NULL) {
+        return vertex_light_zero;
+    } else {
+        return c->lightingData[coords.x * CHUNK_SIZE_SQR + coords.y * CHUNK_SIZE + coords.z];
+    }
 }
 
 VERTEX_LIGHT_STRUCT_T chunk_get_light_or_default(Chunk *c,
                                                  CHUNK_COORDS_INT3_T coords,
                                                  bool isDefault) {
-    if (isDefault || c->lightingData == NULL || coords.x < 0 || coords.x >= CHUNK_SIZE ||
-        coords.y < 0 || coords.y >= CHUNK_SIZE || coords.z < 0 || coords.z >= CHUNK_SIZE) {
+    if (isDefault || coords.x < 0 || coords.x >= CHUNK_SIZE || coords.y < 0 ||
+        coords.y >= CHUNK_SIZE || coords.z < 0 || coords.z >= CHUNK_SIZE) {
         VERTEX_LIGHT_STRUCT_T light;
         DEFAULT_LIGHT(light)
         return light;
@@ -239,6 +253,7 @@ bool chunk_add_block(Chunk *chunk,
     } else {
         octree_set_element(chunk->octree, &block, (size_t)x, (size_t)y, (size_t)z);
         chunk->nbBlocks++;
+        _chunk_update_bounding_box(chunk, (CHUNK_COORDS_INT3_T){x, y, z}, true);
         return true;
     }
 }
@@ -258,6 +273,7 @@ bool chunk_remove_block(Chunk *chunk,
         block_set_color_index(b, SHAPE_COLOR_INDEX_AIR_BLOCK);
         octree_remove_element(chunk->octree, (size_t)x, (size_t)y, (size_t)z, NULL);
         chunk->nbBlocks--;
+        _chunk_update_bounding_box(chunk, (CHUNK_COORDS_INT3_T){x, y, z}, false);
         return true;
     } else {
         return false;
@@ -299,9 +315,8 @@ Block *chunk_get_block(const Chunk *chunk,
     if (z < 0 || z > CHUNK_SIZE_MINUS_ONE)
         return NULL;
 
-    Block *b = (Block *)
-        octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
-    return block_is_solid(b) ? b : NULL;
+    return (
+        Block *)octree_get_element_without_checking(chunk->octree, (size_t)x, (size_t)y, (size_t)z);
 }
 
 Block *chunk_get_block_2(const Chunk *chunk, CHUNK_COORDS_INT3_T coords) {
@@ -315,6 +330,8 @@ Block *chunk_get_block_including_neighbors(Chunk *chunk,
                                            Chunk **out_chunk,
                                            CHUNK_COORDS_INT3_T *out_coords) {
     if (chunk == NULL) {
+        *out_chunk = NULL;
+        *out_coords = (CHUNK_COORDS_INT3_T){x, y, z};
         return NULL;
     }
 
@@ -443,64 +460,49 @@ Block *chunk_get_block_including_neighbors(Chunk *chunk,
     }
 }
 
-void chunk_get_block_pos(const Chunk *chunk,
-                         const CHUNK_COORDS_INT_T x,
-                         const CHUNK_COORDS_INT_T y,
-                         const CHUNK_COORDS_INT_T z,
-                         SHAPE_COORDS_INT3_T *pos) {
-    pos->x = x + chunk->origin.x;
-    pos->y = y + chunk->origin.y;
-    pos->z = z + chunk->origin.z;
+SHAPE_COORDS_INT3_T chunk_get_block_coords_in_shape(const Chunk *chunk,
+                                                    const CHUNK_COORDS_INT_T x,
+                                                    const CHUNK_COORDS_INT_T y,
+                                                    const CHUNK_COORDS_INT_T z) {
+    return (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)x + chunk->origin.x,
+                                 (SHAPE_COORDS_INT_T)y + chunk->origin.y,
+                                 (SHAPE_COORDS_INT_T)z + chunk->origin.z};
+}
+
+CHUNK_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape,
+                                           CHUNK_COORDS_INT3_T *coords_in_chunk) {
+    if (coords_in_chunk != NULL) {
+        coords_in_chunk->x = (CHUNK_COORDS_INT_T)(coords_in_shape.x & CHUNK_SIZE_MINUS_ONE);
+        coords_in_chunk->y = (CHUNK_COORDS_INT_T)(coords_in_shape.y & CHUNK_SIZE_MINUS_ONE);
+        coords_in_chunk->z = (CHUNK_COORDS_INT_T)(coords_in_shape.z & CHUNK_SIZE_MINUS_ONE);
+    }
+    return (CHUNK_COORDS_INT3_T){(CHUNK_COORDS_INT_T)(coords_in_shape.x >> CHUNK_SIZE_SQRT),
+                                 (CHUNK_COORDS_INT_T)(coords_in_shape.y >> CHUNK_SIZE_SQRT),
+                                 (CHUNK_COORDS_INT_T)(coords_in_shape.z >> CHUNK_SIZE_SQRT)};
 }
 
 void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max) {
-    SHAPE_COORDS_INT3_T min_coords = {CHUNK_SIZE_MINUS_ONE,
-                                      CHUNK_SIZE_MINUS_ONE,
-                                      CHUNK_SIZE_MINUS_ONE};
-    SHAPE_COORDS_INT3_T max_coords = {0, 0, 0};
-
-    Block *b;
-    bool at_least_one_block = false;
-
-    for (uint8_t x = 0; x < CHUNK_SIZE; ++x) {
-        for (uint8_t z = 0; z < CHUNK_SIZE; ++z) {
-            for (uint8_t y = 0; y < CHUNK_SIZE; ++y) {
-                b = (Block *)octree_get_element_without_checking(chunk->octree,
-                                                                 (size_t)x,
-                                                                 (size_t)y,
-                                                                 (size_t)z);
-                if (block_is_solid(b)) {
-                    at_least_one_block = true;
-                    min_coords.x = minimum(min_coords.x, x);
-                    min_coords.y = minimum(min_coords.y, y);
-                    min_coords.z = minimum(min_coords.z, z);
-                    max_coords.x = maximum(max_coords.x, x);
-                    max_coords.y = maximum(max_coords.y, y);
-                    max_coords.z = maximum(max_coords.z, z);
-                }
-            }
-        }
+    if (min != NULL) {
+        min->x = (float)chunk->bbMin.x;
+        min->y = (float)chunk->bbMin.y;
+        min->z = (float)chunk->bbMin.z;
     }
-
-    // no block: all values should be set to 0
-    if (at_least_one_block == false) {
-        cclog_warning("chunk_get_bounding_box called on empty chunk");
-        min_coords.x = 0;
-        min_coords.y = 0;
-        min_coords.z = 0;
-    } else {
-        // otherwise, max values should be incremented
-        max_coords.x += 1;
-        max_coords.y += 1;
-        max_coords.z += 1;
+    if (max != NULL) {
+        max->x = (float)chunk->bbMax.x;
+        max->y = (float)chunk->bbMax.y;
+        max->z = (float)chunk->bbMax.z;
     }
+}
 
-    min->x = (float)min_coords.x;
-    min->y = (float)min_coords.y;
-    min->z = (float)min_coords.z;
-    max->x = (float)max_coords.x;
-    max->y = (float)max_coords.y;
-    max->z = (float)max_coords.z;
+void chunk_get_bounding_box_2(const Chunk *chunk,
+                              CHUNK_COORDS_INT3_T *min,
+                              CHUNK_COORDS_INT3_T *max) {
+    if (min != NULL) {
+        *min = chunk->bbMin;
+    }
+    if (max != NULL) {
+        *max = chunk->bbMax;
+    }
 }
 
 // MARK: - Neighbors -
@@ -762,7 +764,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                     atlasColorIdx = color_palette_get_atlas_index(palette, shapeColorIdx);
                     selfTransparent = color_palette_is_transparent(palette, shapeColorIdx);
 
-                    chunk_get_block_pos(chunk, x, y, z, &coords_in_shape);
+                    coords_in_shape = chunk_get_block_coords_in_shape(chunk, x, y, z);
 
                     // get axis-aligned neighbouring blocks
                     neighbors[NX].block = chunk_get_block_including_neighbors(
@@ -2429,4 +2431,170 @@ void _vertex_light_smoothing(VERTEX_LIGHT_STRUCT_T *base,
     base->blue = (uint8_t)((blue / count) & 0x0F);
 
 #endif /* GLOBAL_LIGHTING_SMOOTHING_ENABLED */
+}
+
+bool _chunk_is_bounding_box_empty(const Chunk *chunk) {
+    return chunk->bbMin.x == chunk->bbMax.x || chunk->bbMin.y == chunk->bbMax.y ||
+           chunk->bbMin.z == chunk->bbMax.z;
+}
+
+void _chunk_update_bounding_box(Chunk *chunk,
+                                const CHUNK_COORDS_INT3_T coords,
+                                const bool addOrRemove) {
+    if (addOrRemove) {
+        if (_chunk_is_bounding_box_empty(chunk)) {
+            chunk->bbMin = coords;
+            chunk->bbMax = (CHUNK_COORDS_INT3_T){coords.x + 1, coords.y + 1, coords.z + 1};
+        } else {
+            chunk->bbMin.x = minimum(chunk->bbMin.x, coords.x);
+            chunk->bbMin.y = minimum(chunk->bbMin.y, coords.y);
+            chunk->bbMin.z = minimum(chunk->bbMin.z, coords.z);
+            chunk->bbMax.x = maximum(chunk->bbMax.x, coords.x + 1);
+            chunk->bbMax.y = maximum(chunk->bbMax.y, coords.y + 1);
+            chunk->bbMax.z = maximum(chunk->bbMax.z, coords.z + 1);
+        }
+    } else if (_chunk_is_bounding_box_empty(chunk) == false) {
+        // for each BB side the removed block was in, check if that side can be moved in
+        if (coords.x == chunk->bbMax.x - 1) {
+            Block *b;
+            bool isEmpty = true;
+            for (CHUNK_COORDS_INT_T x = chunk->bbMax.x - 1; isEmpty && x >= chunk->bbMin.x; --x) {
+                for (CHUNK_COORDS_INT_T z = chunk->bbMin.z; z < chunk->bbMax.z; ++z) {
+                    for (CHUNK_COORDS_INT_T y = chunk->bbMin.y; y < chunk->bbMax.y; ++y) {
+                        b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                         (size_t)x,
+                                                                         (size_t)y,
+                                                                         (size_t)z);
+                        if (block_is_solid(b)) {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    if (isEmpty == false) {
+                        break;
+                    }
+                }
+                if (isEmpty) {
+                    chunk->bbMax.x--;
+                }
+            }
+        } else if (coords.x == chunk->bbMin.x) {
+            Block *b;
+            bool isEmpty = true;
+            for (CHUNK_COORDS_INT_T x = chunk->bbMin.x; isEmpty && x < chunk->bbMax.x; ++x) {
+                for (CHUNK_COORDS_INT_T z = chunk->bbMin.z; z < chunk->bbMax.z; ++z) {
+                    for (CHUNK_COORDS_INT_T y = chunk->bbMin.y; y < chunk->bbMax.y; ++y) {
+                        b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                         (size_t)x,
+                                                                         (size_t)y,
+                                                                         (size_t)z);
+                        if (block_is_solid(b)) {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    if (isEmpty == false) {
+                        break;
+                    }
+                }
+                if (isEmpty) {
+                    chunk->bbMin.x++;
+                }
+            }
+        }
+        if (coords.y == chunk->bbMax.y - 1) {
+            Block *b;
+            bool isEmpty = true;
+            for (CHUNK_COORDS_INT_T y = chunk->bbMax.y - 1; isEmpty && y >= chunk->bbMin.y; --y) {
+                for (CHUNK_COORDS_INT_T z = chunk->bbMin.z; z < chunk->bbMax.z; ++z) {
+                    for (CHUNK_COORDS_INT_T x = chunk->bbMin.x; x < chunk->bbMax.x; ++x) {
+                        b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                         (size_t)x,
+                                                                         (size_t)y,
+                                                                         (size_t)z);
+                        if (block_is_solid(b)) {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    if (isEmpty == false) {
+                        break;
+                    }
+                }
+                if (isEmpty) {
+                    chunk->bbMax.y--;
+                }
+            }
+        } else if (coords.y == chunk->bbMin.y) {
+            Block *b;
+            bool isEmpty = true;
+            for (CHUNK_COORDS_INT_T y = chunk->bbMin.y; isEmpty && y < chunk->bbMax.y; ++y) {
+                for (CHUNK_COORDS_INT_T z = chunk->bbMin.z; z < chunk->bbMax.z; ++z) {
+                    for (CHUNK_COORDS_INT_T x = chunk->bbMin.x; x < chunk->bbMax.x; ++x) {
+                        b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                         (size_t)x,
+                                                                         (size_t)y,
+                                                                         (size_t)z);
+                        if (block_is_solid(b)) {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    if (isEmpty == false) {
+                        break;
+                    }
+                }
+                if (isEmpty) {
+                    chunk->bbMin.y++;
+                }
+            }
+        }
+        if (coords.z == chunk->bbMax.z - 1) {
+            Block *b;
+            bool isEmpty = true;
+            for (CHUNK_COORDS_INT_T z = chunk->bbMax.z - 1; isEmpty && z >= chunk->bbMin.z; --z) {
+                for (CHUNK_COORDS_INT_T x = chunk->bbMin.x; x < chunk->bbMax.x; ++x) {
+                    for (CHUNK_COORDS_INT_T y = chunk->bbMin.y; y < chunk->bbMax.y; ++y) {
+                        b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                         (size_t)x,
+                                                                         (size_t)y,
+                                                                         (size_t)z);
+                        if (block_is_solid(b)) {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    if (isEmpty == false) {
+                        break;
+                    }
+                }
+                if (isEmpty) {
+                    chunk->bbMax.z--;
+                }
+            }
+        } else if (coords.z == chunk->bbMin.z) {
+            Block *b;
+            bool isEmpty = true;
+            for (CHUNK_COORDS_INT_T z = chunk->bbMin.z; isEmpty && z < chunk->bbMax.z; ++z) {
+                for (CHUNK_COORDS_INT_T x = chunk->bbMin.x; x < chunk->bbMax.x; ++x) {
+                    for (CHUNK_COORDS_INT_T y = chunk->bbMin.y; y < chunk->bbMax.y; ++y) {
+                        b = (Block *)octree_get_element_without_checking(chunk->octree,
+                                                                         (size_t)x,
+                                                                         (size_t)y,
+                                                                         (size_t)z);
+                        if (block_is_solid(b)) {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    if (isEmpty == false) {
+                        break;
+                    }
+                }
+                if (isEmpty) {
+                    chunk->bbMin.z++;
+                }
+            }
+        }
+    }
 }

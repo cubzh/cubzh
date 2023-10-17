@@ -1270,7 +1270,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
         newCollider.max = collisionBoxMax;
 
         // set the new box using
-        rigidbody_set_collider(rb, &newCollider);
+        rigidbody_set_collider(rb, &newCollider, true);
     }
 
     Transform *root = shape_get_root_transform(*shape);
@@ -1409,20 +1409,15 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
 
     const Block *block = NULL;
     MapStringFloat3Iterator *it = NULL;
-    int3 shapeSize;
 
     // we only have to write blocks that are in the bounding box
     // using boundingBox->min to offset blocks at 0,0,0 when writing
     // blocks, POIs, and lightingData
-    const Box *boundingBox = shape_get_model_aabb(shape);
-    box_get_size_int(boundingBox, &shapeSize);
+    SHAPE_COORDS_INT3_T start, end; // 'end' (bbMax) is non-inclusive
+    shape_get_model_aabb_2(shape, &start, &end);
 
-    SHAPE_COORDS_INT3_T start = {(SHAPE_COORDS_INT_T)boundingBox->min.x,
-                                 (SHAPE_COORDS_INT_T)boundingBox->min.y,
-                                 (SHAPE_COORDS_INT_T)boundingBox->min.z}; // inclusive
-    SHAPE_COORDS_INT3_T end = {(SHAPE_COORDS_INT_T)boundingBox->max.x,
-                               (SHAPE_COORDS_INT_T)boundingBox->max.y,
-                               (SHAPE_COORDS_INT_T)boundingBox->max.z}; // non-inclusive
+    int3 shapeSize;
+    shape_get_bounding_box_size(shape, &shapeSize);
 
     uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
@@ -1435,8 +1430,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     // hasCustomCollisionBox
     RigidBody *rb = shape_get_rigidbody(shape);
     const Box *collider = rb != NULL ? rigidbody_get_collider(rb) : NULL;
-    bool hasCustomCollisionBox = collider != NULL &&
-                                 !box_equals(collider, boundingBox, EPSILON_ZERO);
+    bool hasCustomCollisionBox = collider != NULL && rigidbody_is_collider_custom_set(rb);
 
     // is hidden
     Transform *t = shape_get_root_transform(shape);
@@ -2141,7 +2135,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                 }
 
                 // shrink box once all blocks were added to update box origin
-                shape_shrink_box(shape, false);
+                shape_reset_box(shape);
 
                 if (filterMask == AssetType_Any ||
                     (filterMask & (AssetType_Shape + AssetType_Object)) > 0) {

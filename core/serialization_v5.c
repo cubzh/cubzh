@@ -245,7 +245,7 @@ Shape *serialization_v5_load_shape(Stream *s,
                     break;
                 }
                 // shrink box once all blocks were added to update box origin
-                shape_shrink_box(shape, false);
+                shape_reset_box(shape);
 
                 totalSizeRead += sizeRead;
 

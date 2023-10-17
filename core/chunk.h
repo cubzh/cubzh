@@ -110,13 +110,17 @@ Block *chunk_get_block_including_neighbors(Chunk *chunk,
                                            Chunk **out_chunk,
                                            CHUNK_COORDS_INT3_T *out_coords);
 
-void chunk_get_block_pos(const Chunk *chunk,
-                         const CHUNK_COORDS_INT_T x,
-                         const CHUNK_COORDS_INT_T y,
-                         const CHUNK_COORDS_INT_T z,
-                         SHAPE_COORDS_INT3_T *pos);
+SHAPE_COORDS_INT3_T chunk_get_block_coords_in_shape(const Chunk *chunk,
+                                                    const CHUNK_COORDS_INT_T x,
+                                                    const CHUNK_COORDS_INT_T y,
+                                                    const CHUNK_COORDS_INT_T z);
+CHUNK_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape,
+                                           CHUNK_COORDS_INT3_T *coords_in_chunk);
 
 void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max);
+void chunk_get_bounding_box_2(const Chunk *chunk,
+                              CHUNK_COORDS_INT3_T *min,
+                              CHUNK_COORDS_INT3_T *max);
 
 // MARK: - Neighbors -
 

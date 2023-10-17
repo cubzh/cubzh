@@ -18,6 +18,7 @@
 #define SIMULATIONFLAG_BEGIN_CALLBACK_ENABLED 16
 #define SIMULATIONFLAG_CALLBACK_ENABLED 32
 #define SIMULATIONFLAG_END_CALLBACK_ENABLED 64
+#define SIMULATIONFLAG_COLLIDER_CUSTOM_SET 128
 
 #if DEBUG_RIGIDBODY
 static int debug_rigidbody_solver_iterations = 0;
@@ -945,10 +946,13 @@ const Box *rigidbody_get_collider(const RigidBody *rb) {
     return rb->collider;
 }
 
-void rigidbody_set_collider(RigidBody *rb, const Box *value) {
+void rigidbody_set_collider(RigidBody *rb, const Box *value, const bool custom) {
     box_copy(rb->collider, value);
     if (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) != RigidbodyMode_Disabled) {
         _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_DIRTY);
+    }
+    if (custom) {
+        _rigidbody_set_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_CUSTOM_SET);
     }
 }
 
@@ -1133,6 +1137,10 @@ bool rigidbody_uses_per_block_collisions(const RigidBody *rb) {
                               RigidbodyMode_TriggerPerBlock ||
                           _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) ==
                               RigidbodyMode_StaticPerBlock);
+}
+
+bool rigidbody_is_collider_custom_set(const RigidBody *rb) {
+    return rb != NULL && _rigidbody_get_simulation_flag(rb, SIMULATIONFLAG_COLLIDER_CUSTOM_SET);
 }
 
 // MARK: - Utils -

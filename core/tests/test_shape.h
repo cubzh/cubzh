@@ -34,7 +34,7 @@
 // shape_get_local_aabb
 // shape_get_world_aabb
 // shape_compute_size_and_origin
-// shape_shrink_box
+// shape_reset_box
 // shape_expand_box
 // shape_make_space_for_block
 // shape_make_space
@@ -278,8 +278,8 @@ void test_shape_get_model_aabb(void) {
     }
     shape_add_block(s, 1, 1, 2, 3, true);
     int3 result = {0, 0, 0};
-    const Box *aabb = shape_get_model_aabb(s);
-    box_get_size_int(aabb, &result);
+    const Box aabb = shape_get_model_aabb(s);
+    box_get_size_int(&aabb, &result);
 
     TEST_CHECK(result.x == 1);
     TEST_CHECK(result.y == 1);
@@ -399,7 +399,7 @@ void test_shape_addblock_1(void) {
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
     b = shape_get_block(sh, 0, 0, -2);
-    TEST_ASSERT(b == NULL);
+    TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
 
     // add block 3
     ok = shape_add_block_as_transaction(sh, sc, COLOR3, 0, 0, 1);

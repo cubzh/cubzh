@@ -156,10 +156,7 @@ void shape_get_bounding_box_size(const Shape *shape, int3 *size);
 // TODO: users of this function should probably use bounding box size and discard empty space at
 // origin
 SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape);
-bool shape_is_within_bounding_box(const Shape *shape,
-                                  const SHAPE_COORDS_INT_T x,
-                                  const SHAPE_COORDS_INT_T y,
-                                  const SHAPE_COORDS_INT_T z);
+bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T coords);
 
 // converts given box to a world axis-aligned box relative to shape
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider);
@@ -167,27 +164,19 @@ void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isColli
 // a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
 // therefore is dependant on which space we express it in,
 // (1) in model space, ie. "block coordinates", the AABB itself w/o transformation
-const Box *shape_get_model_aabb(const Shape *s);
+Box shape_get_model_aabb(const Shape *s);
+void shape_get_model_aabb_2(const Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax);
 // (2) in local space, ie. the model AABB w/ local transformations applied (on-demand)
 void shape_get_local_aabb(const Shape *s, Box *box);
 // (3) in world space, ie. the model AABB w/ world transformations applied (cached)
 void shape_get_world_aabb(Shape *s, Box *box);
 
-// iterates over chunks and blocks to obtain size and origin
-bool shape_compute_size_and_origin(const Shape *shape,
-                                   SHAPE_SIZE_INT_T *size_x,
-                                   SHAPE_SIZE_INT_T *size_y,
-                                   SHAPE_SIZE_INT_T *size_z,
-                                   SHAPE_COORDS_INT_T *origin_x,
-                                   SHAPE_COORDS_INT_T *origin_y,
-                                   SHAPE_COORDS_INT_T *origin_z);
-// recomputes box from scratch, necessary after block removal
-void shape_shrink_box(Shape *shape, bool forceColliderResize);
-// expand box to include given coordinates
-void shape_expand_box(Shape *s,
-                      const SHAPE_COORDS_INT_T x,
-                      const SHAPE_COORDS_INT_T y,
-                      const SHAPE_COORDS_INT_T z);
+// recomputes box from scratch
+void shape_reset_box(Shape *shape);
+// checks if box can be shrunk depending on the given removed block coordinates
+void shape_shrink_box(Shape *shape, const SHAPE_COORDS_INT3_T coords);
+// expands box to include given coordinates
+void shape_expand_box(Shape *s, const SHAPE_COORDS_INT3_T coords);
 
 size_t shape_get_nb_blocks(const Shape *shape);
 
@@ -261,6 +250,8 @@ DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
 Index3D *shape_get_chunks(const Shape *shape);
 size_t shape_get_nb_chunks(const Shape *shape);
+CHUNK_COORDS_INT3_T shape_get_chunk_coordinates(const SHAPE_COORDS_INT3_T coords_in_shape,
+                                                CHUNK_COORDS_INT3_T *coords_in_chunk);
 void shape_get_chunk_and_coordinates(const Shape *shape,
                                      const SHAPE_COORDS_INT3_T coords_in_shape,
                                      Chunk **chunk,
@@ -351,11 +342,10 @@ void shape_remove_point(Shape *s, const char *key);
 // MARK: - Baked lighting -
 
 /// Shape lighting may be initialized from baked lighting, or by calling this function directly.
-/// If lighting was already computed from either way, this function will not overwrite unless
-/// overwrite=true.
 /// Calling this function will enable the use of baked lighting for the shape i.e. adding or
-/// removing blocks will now update baked lighting
-void shape_compute_baked_lighting(Shape *s, bool overwrite);
+/// removing blocks will now update baked lighting. If already enabled, it overwrites existing
+/// baked lighting
+void shape_compute_baked_lighting(Shape *s);
 
 bool shape_has_baked_lighting_data(const Shape *s);
 VERTEX_LIGHT_STRUCT_T *shape_create_lighting_data_blob(const Shape *s);

@@ -302,9 +302,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                         b = chunk_get_block_2(chunk, coords_in_chunk);
                     }
 
-                    if (b == NULL) {
-                        // no block, don't do anything
-                    } else {
+                    if (block_is_solid(b)) {
                         SHAPE_COLOR_INDEX_INT_T bci = block_get_color_index(b);
                         color = color_palette_get_color(palette, bci);
                         if (hash_uint32_int_get(paletteConversionMap,

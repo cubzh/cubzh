@@ -207,9 +207,9 @@ typedef int16_t SHAPE_COORDS_INT_T;
 typedef struct {
     SHAPE_COORDS_INT_T x, y, z;
 } SHAPE_COORDS_INT3_T;
-static SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
-static SHAPE_COORDS_INT3_T coords3_max = {INT16_MAX, INT16_MAX, INT16_MAX};
-static SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
+static const SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
+static const SHAPE_COORDS_INT3_T coords3_max = {INT16_MAX, INT16_MAX, INT16_MAX};
+static const SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
 typedef uint16_t SHAPE_SIZE_INT_T;
 typedef struct {
     SHAPE_SIZE_INT_T x, y, z;
@@ -247,6 +247,8 @@ typedef struct {
     l.ambient = 15;                                                                                \
     l.red = l.green = l.blue = 0;
 #define ZERO_LIGHT(l) l.ambient = l.red = l.green = l.blue = 0;
+static VERTEX_LIGHT_STRUCT_T vertex_light_default = {15, 0, 0, 0};
+static VERTEX_LIGHT_STRUCT_T vertex_light_zero = {0, 0, 0, 0};
 
 // one uint8_t is enough to store ambient occlusion value for each one
 // of the 4 corners. (4 possible values for each)

@@ -93,7 +93,7 @@ bool rigidbody_tick(Scene *scene,
 
 /// MARK: - Accessors -
 const Box *rigidbody_get_collider(const RigidBody *rb);
-void rigidbody_set_collider(RigidBody *rb, const Box *value);
+void rigidbody_set_collider(RigidBody *rb, const Box *value, const bool custom);
 RtreeNode *rigidbody_get_rtree_leaf(const RigidBody *rb);
 void rigidbody_set_rtree_leaf(RigidBody *rb, RtreeNode *leaf);
 const float3 *rigidbody_get_motion(const RigidBody *rb);
@@ -132,6 +132,7 @@ bool rigidbody_is_active_trigger(const RigidBody *rb);
 bool rigidbody_is_rotation_dependent(const RigidBody *rb);
 bool rigidbody_is_dynamic(const RigidBody *rb);
 bool rigidbody_uses_per_block_collisions(const RigidBody *rb);
+bool rigidbody_is_collider_custom_set(const RigidBody *rb);
 
 /// MARK: - Utils -
 bool rigidbody_check_velocity_contact(const RigidBody *rb, const float3 *velocity);
