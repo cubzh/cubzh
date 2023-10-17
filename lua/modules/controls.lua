@@ -725,6 +725,7 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 
 			local callback = Client["Action" .. n]
 			if callback then callback() end
+			LocalEvent:Send(LocalEvent.Name["Action" .. n])
 
 			return true -- capture
 		else
@@ -735,9 +736,9 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 		if _state.inputPointers["action" .. n] ~= pointerEventIndex then 
 			return false
 		end
-		
+
 		_state.inputPointers["action" .. n] = nil
-		
+
 		btn.pivot.Scale = 1.0
 
 		if btn.icon ~= nil then
@@ -750,6 +751,7 @@ local _activateActionBtn = function(number, x, y, pointerEventIndex, eventType)
 
 		local callback = Client["Action" .. n .. "Release"]
 		if callback then callback() end
+		LocalEvent:Send(LocalEvent.Name["Action" .. n .. "Release"])
 
 		return true -- capture
 	end
