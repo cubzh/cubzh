@@ -854,11 +854,17 @@ function(pointerEvent)
 	else -- Pointer hidden
 
 		if _isPC then
-			if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT and Client.Action2 ~= nil then
-				Client.Action2()
+			if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT then
+				if Client.Action2 ~= nil then
+					Client.Action2()
+				end
+				LocalEvent:Send(LocalEvent.Name.Action2)
 				return true -- capture event
-			elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT and Client.Action3 ~= nil then
-				Client.Action3()
+			elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT then
+				if Client.Action3 ~= nil then
+					Client.Action3()
+				end
+				LocalEvent:Send(LocalEvent.Name.Action3)
 				return true -- capture event
 			end
 		elseif _isMobile then
@@ -1147,12 +1153,17 @@ function(pointerEvent)
 	else -- Pointer hidden
 
 		if _isPC then
-
-			if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT and Client.Action2Release ~= nil then
-				Client.Action2Release()
+			if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT then
+				if Client.Action2Release ~= nil then
+					Client.Action2Release()
+				end
+				LocalEvent:Send(LocalEvent.Name.Action2Release)
 				return true
-			elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT and Client.Action3Release ~= nil then
-				Client.Action3Release()
+			elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT then
+				if Client.Action3Release ~= nil then
+					Client.Action3Release()
+				end
+				LocalEvent:Send(LocalEvent.Name.Action3Release)
 				return true
 			end
 
@@ -1192,8 +1203,10 @@ function applyKey(keyCode, down)
 	if keyCode == codes.SPACE then
 		if down then
 			if Client.Action1 ~= nil then Client.Action1() end
+			LocalEvent:Send(LocalEvent.Name.Action1)
 		else
 			if Client.Action1Release ~= nil then Client.Action1Release() end
+			LocalEvent:Send(LocalEvent.Name.Action1Release)
 		end
 
 	elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
@@ -1302,10 +1315,24 @@ index.refresh = function()
 	
 	if _state.on and _state.virtualKeyboardShown == false then
 		if _isMobile and _state.chatInput == nil then
-			if Client.DirectionalPad ~= nil then _state.dirpad:show() end
-			if Client.Action1 ~= nil or Client.Action1Release ~= nil then _state.action1:show() end
-			if Pointer.IsHidden and (Client.Action2 ~= nil or Client.Action2Release_ ~= nil) then _state.action2:show() end
-			if Pointer.IsHidden and (Client.Action3 ~= nil or Client.Action3Release ~= nil) then _state.action3:show() end
+			if Client.DirectionalPad ~= nil then
+				_state.dirpad:show()
+			end
+			if Client.Action1 ~= nil or Client.Action1Release ~= nil or
+				LocalEvent:HasListeners(LocalEvent.Name.Action1) or
+				LocalEvent:HasListeners(LocalEvent.Name.Action1Release) then
+				_state.action1:show()
+			end
+			if Pointer.IsHidden and (Client.Action2 ~= nil or Client.Action2Release ~= nil or
+				LocalEvent:HasListeners(LocalEvent.Name.Action2) or
+				LocalEvent:HasListeners(LocalEvent.Name.Action2Release)) then
+				_state.action2:show()
+			end
+			if Pointer.IsHidden and (Client.Action3 ~= nil or Client.Action3Release ~= nil or
+				LocalEvent:HasListeners(LocalEvent.Name.Action3) or
+				LocalEvent:HasListeners(LocalEvent.Name.Action3Release)) then
+				_state.action3:show()
+			end
 		end
 	end
 

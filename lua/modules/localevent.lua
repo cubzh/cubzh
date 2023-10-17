@@ -68,6 +68,12 @@ localevent.name = {
 	CppMenuStateChanged = 42, -- needed while Cubzh still uses a few C++ menus (code editor & multiline inputs)
 	LocalAvatarUpdate = 43,
 	ReceivedEnvironmentToLaunch = 44,
+	Action1 = 45,
+	Action1Release = 46,
+	Action2 = 47,
+	Action2Release = 48,
+	Action3 = 49,
+	Action3Release = 50,
 }
 localevent.Name = localevent.name
 
@@ -322,5 +328,16 @@ localevent.Listen = function(self, name, callback, config)
 	return listener
 end
 localevent.listen = localevent.Listen
+
+-- returns true if event is listened at least once
+localevent.HasListeners = function(_, name)
+	for _,listener in ipairs(listeners[name]) do
+		if not listener.paused then return true end
+	end
+	for _,listener in ipairs(topPrioritySystemListeners[name]) do
+		if not listener.paused then return true end
+	end
+	return false
+end
 
 return localevent
