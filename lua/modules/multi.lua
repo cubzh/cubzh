@@ -197,7 +197,6 @@ local receive = function(e)
 		local obj = linkedObjects[name]
 		if not obj then
 			-- TODO: call multi.linkRequest callback if set
-			print(name, "NOT FOUND")
 			return
 		end
 
