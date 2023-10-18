@@ -36,12 +36,7 @@ Client.Action1 = nil
 Client.Action2 = function() end
 
 Client.OnStart = function()
-	-- Dev.DisplayColliders = true
-
-	-- MODULE TESTS
-	-- require("envtest")
-
-	-- System:DebugEvent("APP_LAUNCH")
+	multi = require("multi")
 
 	local ambience = require("ambience")
 	ambience:set(ambience.noon)
@@ -49,20 +44,8 @@ Client.OnStart = function()
 	controls = require("controls")
 	controls:setButtonIcon("action1", "⬆️")
 
-	-- AMBIENCE --
-
-	camera2 = Camera()
-	camera2.Layers = { 5 }
-	camera2:SetParent(World)
-	camera2.On = true
-	camera2.TargetY = Screen.Height
 	-- IMPORT MODULES
 	ui = require("uikit")
-	ease = require("ease")
-	api = require("api")
-	palette = require("palette")
-	modal = require("modal")
-	theme = require("uitheme").current
 	objectSkills = require("object_skills")
 
 	-- MAP
@@ -169,36 +152,22 @@ Client.OnStart = function()
 
 	kCameraPositionRotating = Number3(139, kCameraPositionY, 68) * MAP_SCALE
 
-	require("crosshair"):hide()
-
 	Camera:SetModeFree()
 	Camera.Position = kCameraPositionRotating
 	Pointer:Show()
 
-	require("menu"):OnAuthComplete(function()
+	Menu:OnAuthComplete(function()
 		Client.DirectionalPad = directionalPad
 		Client.Action1 = action1
 
 		account:showAvatar()
-
-		-- TODO: test DIRECT LINKS
-		-- should be handled by menu			-- if hasEnvironmentToLaunch() then
-		-- 	launchEnvironment()
-		-- end
 	end)
-
-	-- TODO: test DIRECT LINKS
-	-- if hasEnvironmentToLaunch() then
-	-- 	skipTitleScreen()
-	-- end
 end
 
 Client.OnPlayerJoin = function(p)
-	if p ~= Player then
-		return
-	end
 	objectSkills.addStepClimbing(p)
 	dropPlayer(p)
+	print(p.Username .. " joined!")
 end
 
 Client.OnPlayerLeave = function(p)
@@ -226,12 +195,6 @@ end
 Pointer.Click = function()
 	Player:SwingRight()
 end
-
--- //////////////////////////////////////////////////
--- ///
--- /// ACCOUNT MENU
--- ///
--- //////////////////////////////////////////////////
 
 account = {
 	shown = false, -- indicates whether the account menu is shown to the user
