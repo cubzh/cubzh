@@ -40,26 +40,35 @@ local tryPickObject = function(pe)
 	while obj and not obj.isEditable do
 		obj = obj:GetParent()
 	end
-	if not obj then return end
+	if not obj then setState(states.DEFAULT) return end
 	setState(states.UPDATING_OBJECT, obj)
 end
 
 local subStatesSettingsUpdatingObject = {
 	-- DEFAULT
-	{},
+	{
+		pointerUp = function(pe)
+			if worldEditor.dragging then return end
+			tryPickObject(pe)
+		end
+	},
 	-- GIZMO_MOVE
 	{
-		onStateChange = function()
+		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
 		end,
 		onStateEnd = function()
 			worldEditor.gizmo:setObject(nil)
 		end,
+		pointerUp = function(pe)
+			if worldEditor.dragging then return end
+			tryPickObject(pe)
+		end
 	},
 	-- GIZMO_ROTATE
 	{
-		onStateChange = function()
+		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Rotate)
 		end,
@@ -73,9 +82,9 @@ local subStatesSettingsUpdatingObject = {
 	},
 	-- GIZMO_SCALE
 	{
-		onStateChange = function()
-			print("scale not available yet")
-			return
+		onStateBegin = function()
+			worldEditor.gizmo:setObject(worldEditor.object)
+			worldEditor.gizmo:setMode(require("gizmo").Mode.Scale)
 		end,
 		onStateEnd = function()
 			worldEditor.gizmo:setObject(nil)
@@ -92,7 +101,7 @@ local subStatesSettingsUpdatingObject = {
 local statesSettings = {
 	-- DEFAULT
 	{
-		onStateChange = function()
+		onStateBegin = function()
 			worldEditor.addBtn:show()
 		end,
 		onStateEnd = function()
@@ -105,7 +114,7 @@ local statesSettings = {
 	},
 	-- GALLERY
 	{
-		onStateChange = function()
+		onStateBegin = function()
 			worldEditor.gallery:show()
 		end,
 		onStateEnd = function()
@@ -114,7 +123,7 @@ local statesSettings = {
 	},
 	-- SPAWNING_OBJECT
 	{
-		onStateChange = function(fullname)
+		onStateBegin = function(fullname)
 			Object:Load(fullname, function(obj)
 				obj:SetParent(World)
 				obj.isEditable = true
@@ -129,7 +138,7 @@ local statesSettings = {
 	},
 	-- PLACING_OBJECT
 	{
-		onStateChange = function(obj)
+		onStateBegin = function(obj)
 			worldEditor.rotationShift = 0
 			worldEditor.placingObj = obj
 		end,
@@ -176,7 +185,7 @@ local statesSettings = {
 				setState(states.SPAWNING_OBJECT, placingObj.fullname)
 			end
 		end,
-		pointerWheel = function(delta)
+		pointerWheelPriority = function(delta)
 			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
 			worldEditor.placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 			return true
@@ -184,7 +193,7 @@ local statesSettings = {
 	},
 	-- UPDATING_OBJECT
 	{
-		onStateChange = function(obj)
+		onStateBegin = function(obj)
 			worldEditor.object = obj
 			worldEditor.updateObjectUI:show()
 
@@ -203,18 +212,14 @@ local statesSettings = {
 			worldEditor.object = nil
 		end,
 		subStatesSettings = subStatesSettingsUpdatingObject,
-		pointerUp = function(pe)
-			if worldEditor.dragging then return end
-			tryPickObject(pe)
-		end,
-		pointerWheel = function(delta)
+		pointerWheelPriority = function(delta)
 			worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
 			return true
 		end
 	},
 	-- DUPLICATE_OBJECT
 	{
-		onStateChange = function()
+		onStateBegin = function()
 			setState(states.SPAWNING_OBJECT, worldEditor.object.fullname)
 		end,
 		onStateEnd = function()
@@ -224,7 +229,7 @@ local statesSettings = {
 	},
 	-- DESTROY_OBJECT
 	{
-		onStateChange = function()
+		onStateBegin = function()
 			worldEditor.object:RemoveFromParent()
 			worldEditor.object = nil
 			worldEditor.updateObjectUI:hide()
@@ -246,8 +251,8 @@ setState = function(newState, data)
 	local oldState = state
 	state = newState
 
-	local onStateChange = statesSettings[state].onStateChange
-	if onStateChange then onStateChange(data) end
+	local onStateBegin = statesSettings[state].onStateBegin
+	if onStateBegin then onStateBegin(data) end
 
 	if statesSettings[state].subStatesSettings then
 		-- if changing state, then going back to default
@@ -261,18 +266,26 @@ setState = function(newState, data)
 end
 
 setSubState = function(newSubState, data)
-	local subStatesSettings = statesSettings[state].subStatesSettings
+	local subStatesSettings
+	local subStateSetting
+
+	-- handle onStateEnd for subState
+	subStatesSettings = statesSettings[state].subStatesSettings
+	if subStatesSettings then
+		subStateSetting = subStatesSettings[activeSubState[state]]
+		if subStateSetting then
+			local onSubStateEnd = subStateSetting.onStateEnd
+			if onSubStateEnd then
+				onSubStateEnd(newSubState, data)
+			end
+		end
+	end
+
+	-- handle onStateBegin for subState
+	subStatesSettings = statesSettings[state].subStatesSettings
 	if not subStatesSettings then
 		error("Current state has no subStates.", 2)
 		return
-	end
-
-	local subStateSetting = subStatesSettings[activeSubState[state]]
-	if subStateSetting then
-		local onSubStateEnd = subStateSetting.onStateEnd
-		if onSubStateEnd then
-			onSubStateEnd(newSubState, data)
-		end
 	end
 
 	subStateSetting = subStatesSettings[newSubState]
@@ -283,8 +296,8 @@ setSubState = function(newSubState, data)
 
 	activeSubState[state] = newSubState
 
-	local onSubStateChange = subStateSetting.onStateChange
-	if onSubStateChange then onSubStateChange(data) end
+	local onSubStateBegin = subStateSetting.onStateBegin
+	if onSubStateBegin then onSubStateBegin(data) end
 end
 
 -- Listeners
@@ -298,32 +311,41 @@ local listeners = {
 	PointerWheel = "pointerWheel",
 }
 
-for localEventName,listenerName in pairs(listeners) do
-	LocalEvent:Listen(LocalEvent.Name[localEventName], function(pe)
-		local stateSettings = statesSettings[state]
-		local callback
+local function handleLocalEventListener(listenerName, pe)
+	local stateSettings = statesSettings[state]
+	local callback
 
-        callback = stateSettings[listenerName]
+	if stateSettings.subStatesSettings then
+		local subState = activeSubState[state]
+		callback = stateSettings.subStatesSettings[subState][listenerName]
 		if callback then
 			if callback(pe) then return true end
 		end
+	end
 
-		if stateSettings.subStatesSettings then
-			local subState = activeSubState[state]
-			callback = stateSettings.subStatesSettings[subState][listenerName]
-			if callback then
-				if callback(pe) then return true end
-			end
-		end
+	callback = stateSettings[listenerName]
+	if callback then
+		if callback(pe) then return true end
+	end
+end
+
+for localEventName,listenerName in pairs(listeners) do
+	LocalEvent:Listen(LocalEvent.Name[localEventName], function(pe)
+		return handleLocalEventListener(listenerName .. "Priority", pe)
 	end, { topPriority = true })
+	LocalEvent:Listen(LocalEvent.Name[localEventName], function(pe)
+		return handleLocalEventListener(listenerName, pe)
+	end, { topPriority = false })
 end
 
 LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
 	if pe.Index ~= 4 then return end -- if not left click, return
-	worldEditor.dragging = true
+	worldEditor.draggingCount = (worldEditor.draggingCount or 0) + 1
+	if worldEditor.draggingCount > 4 then worldEditor.dragging = true end
 end)
 LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
 	if pe.Index ~= 4 then return end -- if not left click, return
+	worldEditor.draggingCount = 0
 	worldEditor.dragging = false
 end)
 
