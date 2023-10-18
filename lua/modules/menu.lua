@@ -847,6 +847,12 @@ end
 
 authCompleteCallbacks = {}
 
+function authCompleted()
+	for _, callback in ipairs(authCompleteCallbacks) do
+		callback()
+	end
+end
+
 menu.OnAuthComplete = function(self, callback)
 	if self ~= menu then
 		return
@@ -1209,9 +1215,7 @@ function skipTitleScreen()
 								hideLoading()
 								showTopBar()
 								hideBottomBar()
-								for _, callback in ipairs(authCompleteCallbacks) do
-									callback()
-								end
+								authCompleted()
 							end,
 							loggedOut = function()
 								System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
@@ -1223,9 +1227,7 @@ function skipTitleScreen()
 												hideLoading()
 												showTopBar()
 												hideBottomBar()
-												for _, callback in ipairs(authCompleteCallbacks) do
-													callback()
-												end
+												authCompleted()
 											end,
 											-- not supposed to happen after successful signup
 											loggedOut = function()
@@ -1238,9 +1240,7 @@ function skipTitleScreen()
 										hideLoading()
 										showTopBar()
 										hideBottomBar()
-										for _, callback in ipairs(authCompleteCallbacks) do
-											callback()
-										end
+										authCompleted()
 									end,
 									error = function()
 										showTitleScreen()
@@ -1410,6 +1410,8 @@ end
 
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
+		System:UpdateAuthStatus()
+
 		username.Text = Player.Username
 
 		api.getBalance(function(err, balance)
