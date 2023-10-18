@@ -123,13 +123,15 @@ local statesSettings = {
 	},
 	-- SPAWNING_OBJECT
 	{
-		onStateBegin = function(fullname)
+		onStateBegin = function(data)
+			local fullname = data.fullname
+			local scale = data.scale
 			Object:Load(fullname, function(obj)
 				obj:SetParent(World)
 				obj.isEditable = true
 				obj.root = true
 				obj.fullname = fullname
-				obj.Scale = 0.5
+				obj.Scale = scale ~= nil and scale or 0.5
 				obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
 				obj.CollisionGroups = 7
 				setState(states.PLACING_OBJECT, obj)
@@ -182,7 +184,7 @@ local statesSettings = {
 				setState(states.UPDATING_OBJECT, placingObj)
 			-- right click, place another one
 			elseif pe.Index == 5 then
-				setState(states.SPAWNING_OBJECT, placingObj.fullname)
+				setState(states.SPAWNING_OBJECT, { fullname = placingObj.fullname })
 			end
 		end,
 		pointerWheelPriority = function(delta)
@@ -220,7 +222,7 @@ local statesSettings = {
 	-- DUPLICATE_OBJECT
 	{
 		onStateBegin = function()
-			setState(states.SPAWNING_OBJECT, worldEditor.object.fullname)
+			setState(states.SPAWNING_OBJECT, { fullname = worldEditor.object.fullname, scale = worldEditor.object.Scale })
 		end,
 		onStateEnd = function()
 			worldEditor.object = nil
@@ -353,6 +355,7 @@ end)
 
 local init = function()
     local ui = require("uikit")
+	local padding = require("uitheme").current.padding
 
 	-- Gizmo
 	Camera.Layers = { 1, 4 }
@@ -375,7 +378,7 @@ local init = function()
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
 		local fullname = cell.repo.."."..cell.name
-		setState(states.SPAWNING_OBJECT, fullname)
+		setState(states.SPAWNING_OBJECT, { fullname = fullname })
 	end
 	worldEditor.gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.4 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, 0 } end, { onOpen = galleryOnOpen })
 	worldEditor.gallery:hide()
@@ -429,7 +432,6 @@ local init = function()
 	end
 
 	updateObjectUI.parentDidResize = function()
-		local padding = require("uitheme").current.padding
 		local bg = updateObjectUI
 		bg.Width = bar.Width + padding * 2
 		bg.Height = (bar.Height + padding) * 2
@@ -446,6 +448,10 @@ local init = function()
 	end
 	updateObjectUI:parentDidResize()
 	worldEditor.updateObjectUI = updateObjectUI
+
+	-- Ambience editor
+	local aiAmbienceButton = require("ui_ai_ambience")
+	aiAmbienceButton.pos = { padding, Screen.Height - 100 }
 end
 
 init()

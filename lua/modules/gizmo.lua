@@ -151,8 +151,16 @@ functions.setMode = function(self, mode)
 			g.onDrag = self.onMove
 			self.gizmos[mode] = g
 		elseif mode == gizmo.Mode.Scale then
-			-- self.gizmos[mode] = require("scalegizmo"):create({ orientation = self.orientation, snap = self.scaleSnap, scale = self.scale })
-			error("❌ scale gizmo not supported yet")
+			local g = require("scalegizmo"):create({
+				orientation = self.orientation,
+				snap = self.rotateSnap,
+				scale = self.scale,
+				camera = camera,
+			})
+			g:setObject(self.object)
+			g:setLayer(self.layer)
+			g.onDrag = self.onMove
+			self.gizmos[mode] = g
 		end
 	end
 
