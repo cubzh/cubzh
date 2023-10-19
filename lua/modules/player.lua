@@ -44,6 +44,40 @@ local CastRay = function(player, filterIn)
 	return impact
 end
 
+local ShowHandle = function(player)
+	if type(player) ~= "Player" then
+		error("Player:ShowHandle should be called with `:`", 2)
+	end
+
+	if player.__handle == nil then
+		local t = Text()
+		t.Text = player.Username
+
+		-- t.Type = TextType.Screen
+		-- t.FontSize = 40
+
+		t.Type = TextType.World
+		t.Color = Color.White
+		t.BackgroundColor = Color(0, 0, 0, 0)
+		t.IsUnlit = true
+		t.Physics = PhysicsMode.Disabled
+		t.CollisionGroups = {}
+		t.CollidesWithGroups = {}
+		t.MaxDistance = Camera.Far + 100
+
+		t.Anchor = { 0.5, 0.5 }
+		-- t.Type = TextType.Screen
+		player:AddChild(t)
+		player.__handle = t
+
+		t.LocalPosition = { 0, playerHeight(player) + 4, 0 }
+	end
+end
+
+playerHeight = function(player)
+	return (player.BoundingBox.Max.Y - player.BoundingBox.Min.Y) -- * player.Scale.Y
+end
+
 local EquipBackpack = function(player, shapeOrItem)
 	if type(player) ~= "Player" then
 		error("Player:EquipBackpack should be called with `:`", 2)
@@ -463,6 +497,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	mt.SwapHands = SwapHands
 	mt.SwingLeft = SwingLeft
 	mt.SwingRight = SwingRight
+	mt.ShowHandle = ShowHandle
 
 	mt.__type = 2 -- ITEM_TYPE_PLAYER in engine
 
@@ -485,6 +520,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			or k == "SwingLeft"
 			or k == "SwingRight"
 			or k == "CastRay"
+			or k == "ShowHandle"
 		then
 			return mt[k]
 		end
@@ -510,8 +546,15 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 	local objectNewIndex = mt.__newindex
 	mt.__newindex = function(t, k, v)
-		if k == "ID" or k == "Username" or k == "UserID" or k == "BoundingBox" then
+		if k == "ID" or k == "UserID" or k == "BoundingBox" then
 			mt[k] = v
+			return
+		end
+		if k == "Username" then
+			mt[k] = v
+			if t.__handle ~= nil then
+				t.__handle.Text = v
+			end
 			return
 		end
 		if k == "Avatar" then
@@ -697,6 +740,9 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	Client.__loadAvatar(player)
 	if isLocal == true then
 		require("camera_modes"):setThirdPerson({ camera = Camera, target = player })
+		player:ShowHandle()
+	else
+		player:ShowHandle()
 	end
 
 	return player
