@@ -9,16 +9,8 @@ Go to https://docs.cu.bzh/
 --
 
 Config = {
-	Items = {
-		"hub_collosseum_chunk",
-		"hub_scifi_chunk",
-		"hub_medieval_chunk",
-		"hub_floating_islands_chunk",
-		"hub_volcano_chunk",
-	},
+	Items = {},
 }
-
--- CONSTANTS
 
 -- local WATER_ALPHA = 220
 local MAP_SCALE = 5.5
@@ -45,6 +37,7 @@ Client.OnStart = function()
 	controls:setButtonIcon("action1", "⬆️")
 
 	-- IMPORT MODULES
+	bundle = require("bundle")
 	ui = require("uikit")
 	objectSkills = require("object_skills")
 
@@ -73,7 +66,7 @@ Client.OnStart = function()
 		-- end
 	end
 
-	collosseumChunk = Shape(Items.hub_collosseum_chunk)
+	collosseumChunk = bundle.Shape("hub_collosseum_chunk")
 	collosseumChunk.InnerTransparentFaces = false
 	collosseumChunk.Physics = PhysicsMode.StaticPerBlock
 	collosseumChunk.CollisionGroups = Map.CollisionGroups
@@ -86,7 +79,7 @@ Client.OnStart = function()
 	setWaterTransparency(collosseumChunk)
 	setLights(collosseumChunk)
 
-	scifiChunk = MutableShape(Items.hub_scifi_chunk)
+	scifiChunk = bundle.Shape("hub_scifi_chunk")
 	scifiChunk.InnerTransparentFaces = false
 	scifiChunk.Physics = PhysicsMode.StaticPerBlock
 	scifiChunk.CollisionGroups = Map.CollisionGroups
@@ -99,7 +92,7 @@ Client.OnStart = function()
 	setWaterTransparency(scifiChunk)
 	setLights(scifiChunk)
 
-	medievalChunk = Shape(Items.hub_medieval_chunk)
+	medievalChunk = bundle.Shape("hub_medieval_chunk")
 	medievalChunk.InnerTransparentFaces = false
 	medievalChunk.Physics = PhysicsMode.StaticPerBlock
 	medievalChunk.CollisionGroups = Map.CollisionGroups
@@ -112,7 +105,7 @@ Client.OnStart = function()
 	setWaterTransparency(medievalChunk)
 	setLights(medievalChunk)
 
-	floatingIslandsChunks = Shape(Items.hub_floating_islands_chunk)
+	floatingIslandsChunks = bundle.Shape("hub_floating_islands_chunk")
 	floatingIslandsChunks.InnerTransparentFaces = false
 	floatingIslandsChunks.Physics = PhysicsMode.StaticPerBlock
 	floatingIslandsChunks.CollisionGroups = Map.CollisionGroups
@@ -125,7 +118,7 @@ Client.OnStart = function()
 	setWaterTransparency(floatingIslandsChunks)
 	setLights(floatingIslandsChunks)
 
-	volcanoChunk = Shape(Items.hub_volcano_chunk)
+	volcanoChunk = bundle.Shape("hub_volcano_chunk")
 	volcanoChunk.Physics = PhysicsMode.StaticPerBlock
 	volcanoChunk.CollisionGroups = Map.CollisionGroups
 	volcanoChunk.Scale = MAP_SCALE
@@ -197,18 +190,13 @@ Pointer.Click = function()
 end
 
 account = {
-	shown = false, -- indicates whether the account menu is shown to the user
+	shown = false,
 	showAvatar = function(self)
 		if self.shown then
 			return
 		end
 		self.shown = true
-
-		-- reload avatar
-		Client.__loadAvatar(Player)
-
 		Camera:SetModeThirdPerson()
-
 		dropPlayer(Player)
 	end,
 	hideAvatar = function(self)
