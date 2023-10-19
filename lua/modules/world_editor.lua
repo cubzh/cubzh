@@ -383,6 +383,7 @@ local maps = {
 	"boumety.building_challenge",
 	"claire.museum",
 	"claire.summer_beach",
+	"claire.voxowl_hq"
 }
 
 init = function()
