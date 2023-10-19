@@ -4,15 +4,17 @@ local index = {}
 local metatable = { __index = index, __metatable = false }
 setmetatable(worldEditor, metatable)
 
+local initDefaultMode
+
 local states = {
-	DEFAULT = 1,
-	GALLERY = 2,
-	SPAWNING_OBJECT = 3,
-	PLACING_OBJECT = 4,
-	UPDATING_OBJECT = 5,
-	DUPLICATE_OBJECT = 6,
-	DESTROY_OBJECT = 7,
-	AMBIENCE_EDITOR = 8,
+	PREPARING = 1,
+	DEFAULT = 2,
+	GALLERY = 3,
+	SPAWNING_OBJECT = 4,
+	PLACING_OBJECT = 5,
+	UPDATING_OBJECT = 6,
+	DUPLICATE_OBJECT = 7,
+	DESTROY_OBJECT = 8,
 }
 
 -- Substates
@@ -29,7 +31,7 @@ local subStates = {
 local setState
 local setSubState
 
-local state = states.DEFAULT
+local state = states.PREPARING
 local activeSubState = {}
 
 local tryPickObject = function(pe)
@@ -99,6 +101,14 @@ local subStatesSettingsUpdatingObject = {
 -- States
 
 local statesSettings = {
+	-- PREPARING
+	{
+		onStateEnd = function()
+			worldEditor.uiPrepareState:remove()
+			worldEditor.uiPrepareState = nil
+			initDefaultMode()
+		end
+	},
 	-- DEFAULT
 	{
 		onStateBegin = function()
@@ -125,15 +135,20 @@ local statesSettings = {
 	{
 		onStateBegin = function(data)
 			local fullname = data.fullname
+			local name = data.name
 			local scale = data.scale
 			Object:Load(fullname, function(obj)
 				obj:SetParent(World)
+				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+					o.Physics = PhysicsMode.StaticPerBlock
+				end)
 				obj.isEditable = true
 				obj.root = true
 				obj.fullname = fullname
 				obj.Scale = scale ~= nil and scale or 0.5
 				obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
 				obj.CollisionGroups = 7
+				obj.Name = name or fullname
 				setState(states.PLACING_OBJECT, obj)
 			end)
 		end
@@ -197,6 +212,10 @@ local statesSettings = {
 	{
 		onStateBegin = function(obj)
 			worldEditor.object = obj
+			worldEditor.nameInput.Text = obj.Name
+			worldEditor.nameInput.onTextChange = function(o)
+				worldEditor.object.Name = o.Text
+			end
 			worldEditor.updateObjectUI:show()
 
 			local currentScale = obj.Scale:Copy()
@@ -222,7 +241,7 @@ local statesSettings = {
 	-- DUPLICATE_OBJECT
 	{
 		onStateBegin = function()
-			setState(states.SPAWNING_OBJECT, { fullname = worldEditor.object.fullname, scale = worldEditor.object.Scale })
+			setState(states.SPAWNING_OBJECT, { fullname = worldEditor.object.fullname, scale = worldEditor.object.Scale, name = worldEditor.object.Name })
 		end,
 		onStateEnd = function()
 			worldEditor.object = nil
@@ -353,7 +372,106 @@ end)
 
 -- init
 
-local init = function()
+local map
+local maps = {
+	"aduermael.hills",
+	"aduermael.base_250x40x250",
+	"claire.harbour",
+	"buche.chess_board",
+	"claire.apocalyptic_city",
+	"aduermael.unicorn_land",
+	"boumety.building_challenge",
+	"claire.museum",
+	"claire.summer_beach",
+}
+
+init = function()
+	Camera:SetModeFree()
+	local pivot = Object()
+	pivot.Tick = function(pvt, dt)
+		pvt.Rotation.Y = pvt.Rotation.Y + dt * 0.06
+	end
+	pivot:SetParent(World)
+	Camera:SetParent(pivot)
+	Camera.Far = 10000
+
+	local mapIndex = 1
+
+	local loadMap
+
+	local ui = require("uikit")
+
+	uiPrepareState = ui:createFrame()
+
+	previousBtn = ui:createButton("<")
+	previousBtn:setParent(uiPrepareState)
+	previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
+	previousBtn.onRelease = function()
+		mapIndex = mapIndex - 1
+		if mapIndex <= 0 then mapIndex = #maps end
+		loadMap(maps[mapIndex])
+	end
+	nextBtn = ui:createButton(">")
+	nextBtn:setParent(uiPrepareState)
+	nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
+	nextBtn.onRelease = function()
+		mapIndex = mapIndex + 1
+		if mapIndex > #maps then mapIndex = 1 end
+		loadMap(maps[mapIndex])
+	end
+	validateBtn = ui:createButton("Start editing this map")
+	validateBtn:setParent(uiPrepareState)
+	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, 50 }
+	validateBtn.onRelease = function()
+		setState(states.DEFAULT)
+	end
+
+	worldEditor.uiPrepareState = uiPrepareState
+
+	loadMap = function(fullname)
+		Object:Load(fullname, function(obj)
+			if map then map:RemoveFromParent() end
+			map = MutableShape(obj)
+			map.Scale = 5
+			map.CollisionGroups = Map.CollisionGroups
+			map.CollidesWithGroups = Map.CollidesWithGroups
+			map.Physics = PhysicsMode.StaticPerBlock
+			map:SetParent(World)
+			map.Position = { 0, 0, 0 }
+			map.Pivot = { 0, 0, 0 }
+
+			Fog.On = false
+			Camera.Rotation.Y = math.pi / 2
+			Camera.Rotation.X = math.pi / 4
+
+			local longestValue =  math.max(map.Width, math.max(map.Height,map.Depth))
+			pivot.Position = Number3(map.Width * 0.5, longestValue, map.Depth * 0.5) * map.Scale
+			Camera.Position = pivot.Position + { -longestValue * 4, 0, 0 }
+		end)
+	end
+
+	loadMap(maps[1])
+end
+
+initDefaultMode = function()
+    dropPlayer = function()
+        Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
+        Player.Rotation = { 0, 0, 0 }
+        Player.Velocity = { 0, 0, 0 }
+    end
+    Player:SetParent(World)
+	Camera:SetModeThirdPerson()
+    dropPlayer()
+
+	require("jumpfly")
+
+	Client.Tick = function()
+		if Player.Position.Y < -500 then
+			dropPlayer()
+			Player:TextBubble("💀 Oops!", true)
+		end
+	end
+
     local ui = require("uikit")
 	local padding = require("uitheme").current.padding
 
@@ -386,12 +504,9 @@ local init = function()
 	-- Update object UI
 	local updateObjectUI = ui:createFrame(Color(78, 78, 78))
 
-	local nameTextBg = ui:createFrame(Color.Black)
-	nameTextBg:setParent(updateObjectUI)
-	local nameText = ui:createText("Item Name", Color.Grey, "small")
-	nameText:setParent(updateObjectUI)
-	local nameEditBtn = ui:createButton("✏️")
-	nameEditBtn:setParent(updateObjectUI)
+	local nameInput = ui:createTextInput("", "Item Name")
+	nameInput:setParent(updateObjectUI)
+	worldEditor.nameInput = nameInput
 
 	local bar = require("ui_container").horizontalContainerNew()
 	bar:setParent(updateObjectUI)
@@ -435,13 +550,9 @@ local init = function()
 		local bg = updateObjectUI
 		bg.Width = bar.Width + padding * 2
 		bg.Height = (bar.Height + padding) * 2
-		nameTextBg.Width = bg.Width
-		nameTextBg.Height = bar.Height
-		nameTextBg.pos = { 0, bg.Height - nameTextBg.Height }
-		nameText.pos = { bg.Width * 0.5 - nameText.Width * 0.5, bar.Height + padding * 2 + bar.Height * 0.5 - nameText.Height * 0.5 }
-		nameEditBtn.Width = bar.Height
-		nameEditBtn.Height = bar.Height
-		nameEditBtn.pos = { bg.Width - nameEditBtn.Width, bg.Height - nameEditBtn.Height }
+		nameInput.Width = bg.Width
+		nameInput.Height = bar.Height
+		nameInput.pos = { 0, bg.Height - nameInput.Height }
 		bar.pos = { padding, padding }
 		bg.pos = { Screen.Width * 0.5 - bg.Width * 0.5, 100 }
 		bg:hide()
