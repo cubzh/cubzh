@@ -39,9 +39,8 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keycode, _, down)
 			if latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
                 -- deactivate
                 flying = false
-			else
-                latestJump = Time.UnixMilli()
 			end
+            latestJump = Time.UnixMilli()
 		end
 	end
 end)
