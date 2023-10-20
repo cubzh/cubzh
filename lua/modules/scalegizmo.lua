@@ -293,6 +293,7 @@ scaleGizmo.create = function(_, config)
 		handle:AddBlock(color, 0, 0, 0)
 		handle.Pivot = Number3(0.5, 0.5, 0)
 		handle.Scale = Number3(1, 1, 10)
+		handle.Physics = PhysicsMode.Trigger
 
 		handle.Layers = layer
 		handle:SetParent(scaleGizmo.gizmoObject)

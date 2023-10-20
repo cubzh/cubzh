@@ -344,6 +344,7 @@ rotateGizmo.create = function(_, config)
 				obj.Layers = layer
 			end)
 			obj.axis = axis
+			obj.Physics = PhysicsMode.Trigger
 		end)
 
 		handle:SetParent(g.gizmoObject)

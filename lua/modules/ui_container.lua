@@ -46,7 +46,7 @@ uiHorizontalIndex.refresh = function(self)
 	self.Height = height
 end
 
-local uiHorizontalCreate = function()
+local createUiHorizontal = function()
 	local elem = {}
 	elem.bg = require("uikit"):createFrame()
 	local list = {}
@@ -70,5 +70,5 @@ local uiHorizontalCreate = function()
 end
 
 return {
-	horizontalContainerNew = uiHorizontalCreate
+	createHorizontalContainer = createUiHorizontal
 }

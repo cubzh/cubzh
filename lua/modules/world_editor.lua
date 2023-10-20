@@ -4,7 +4,10 @@ local index = {}
 local metatable = { __index = index, __metatable = false }
 setmetatable(worldEditor, metatable)
 
+local colorsList = { Color(0,0,0), Color(29,43,83), Color(126,37,83), Color(0,135,81), Color(171,82,54), Color(95,87,79), Color(194,195,199), Color(255,241,232), Color(255,0,77), Color(255,163,0), Color(255,236,39), Color(0,228,54), Color(41,173,255), Color(131,118,156), Color(255,119,168), Color(255,204,170) }
+
 local initDefaultMode
+local initEditMapUI
 
 local states = {
 	PREPARING = 1,
@@ -15,6 +18,7 @@ local states = {
 	UPDATING_OBJECT = 6,
 	DUPLICATE_OBJECT = 7,
 	DESTROY_OBJECT = 8,
+	EDIT_MAP = 9,
 }
 
 -- Substates
@@ -113,9 +117,11 @@ local statesSettings = {
 	{
 		onStateBegin = function()
 			worldEditor.addBtn:show()
+			worldEditor.editMapBtn:show()
 		end,
 		onStateEnd = function()
 			worldEditor.addBtn:hide()
+			worldEditor.editMapBtn:hide()
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -214,6 +220,7 @@ local statesSettings = {
 	{
 		onStateBegin = function(obj)
 			worldEditor.object = obj
+			worldEditor.physicsBtn.Text = "Dynamic"
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
@@ -269,6 +276,33 @@ local statesSettings = {
 			setState(states.DEFAULT)
 		end
 	},
+	-- EDIT_MAP
+	{
+		onStateBegin = function()
+			worldEditor.selectedColor = Color.Grey
+			local block = MutableShape()
+			block:AddBlock(worldEditor.selectedColor, 0, 0, 0)
+			Player:EquipRightHand(block)
+			block.Scale = 5
+			block.LocalPosition = { 1.5,1.5,1.5 }
+			worldEditor.editMapBar:show()
+			initEditMapUI()
+		end,
+		onStateEnd = function()
+			Player:EquipRightHand(nil)
+			worldEditor.editMapBar:hide()
+		end,
+		pointerUp = function(pe)
+			if worldEditor.dragging then return end
+			local impact = pe:CastRay(nil, Player)
+			if not impact or not impact.Object == Map then return end
+			if pe.Index == 4 then
+				impact.Block:Remove()
+			elseif pe.Index == 5 then
+				impact.Block:AddNeighbor(worldEditor.selectedColor, impact.FaceTouched)
+			end
+		end,
+	}
 }
 
 setState = function(newState, data)
@@ -399,6 +433,7 @@ local maps = {
 }
 
 init = function()
+	require("object_skills").addStepClimbing(Player)
 	Camera:SetModeFree()
 	local pivot = Object()
 	pivot.Tick = function(pvt, dt)
@@ -413,6 +448,7 @@ init = function()
 	local loadMap
 
 	local ui = require("uikit")
+	local padding = require("uitheme").current.padding
 
 	uiPrepareState = ui:createFrame()
 
@@ -434,7 +470,7 @@ init = function()
 	end
 	validateBtn = ui:createButton("Start editing this map")
 	validateBtn:setParent(uiPrepareState)
-	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, 50 }
+	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, padding }
 	validateBtn.onRelease = function()
 		setState(states.DEFAULT)
 	end
@@ -494,10 +530,9 @@ initDefaultMode = function()
 	worldEditor.gizmo = require("gizmo"):create({ orientationMode =  require("gizmo").Mode.Local, moveSnap = 0.5 })
 
 	-- Default ui, add btn
-	local addBtn = ui:createButton("➕")
+	local addBtn = ui:createButton("➕ Object")
 	addBtn.parentDidResize = function()
-		addBtn.Width = addBtn.Height
-		addBtn.pos = { Screen.Width * 0.5 - addBtn.Width * 0.5, addBtn.Height * 2 }
+		addBtn.pos = { Screen.Width * 0.5 - addBtn.Width - padding * 0.5, padding }
 	end
 	addBtn.Height = addBtn.Height * 1.5
 	addBtn:parentDidResize()
@@ -505,6 +540,18 @@ initDefaultMode = function()
 		setState(states.GALLERY)
 	end
 	index.addBtn = addBtn
+
+	-- editMap btn
+	local editMapBtn = ui:createButton("🖌 Map")
+	editMapBtn.parentDidResize = function()
+		editMapBtn.pos = { Screen.Width * 0.5 + padding * 0.5, padding }
+	end
+	editMapBtn.Height = editMapBtn.Height * 1.5
+	editMapBtn:parentDidResize()
+	editMapBtn.onRelease = function()
+		setState(states.EDIT_MAP)
+	end
+	index.editMapBtn = editMapBtn
 
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
@@ -533,7 +580,7 @@ initDefaultMode = function()
 	infoBtn:setParent(updateObjectUI)
 	worldEditor.infoBtn = infoBtn
 
-	local bar = require("ui_container").horizontalContainerNew()
+	local bar = require("ui_container").createHorizontalContainer()
 	bar:setParent(updateObjectUI)
 
 	local barInfo = {
@@ -544,15 +591,13 @@ initDefaultMode = function()
 		{ type="button", text="Static ", callback=function(btn)
 			setSubState(subStates[states.UPDATING_OBJECT].DEFAULT)
 			-- Small delay to avoid hitting gizmos
-			Timer(0.05, function()
-				if btn.Text == "Static " then
-					btn.Text = "Dynamic"
-					worldEditor.object.Physics = PhysicsMode.Dynamic
-				else
-					btn.Text = "Static "
-					worldEditor.object.Physics = PhysicsMode.StaticPerBlock
-				end
-			end)
+			if btn.Text == "Static " then
+				btn.Text = "Dynamic"
+				worldEditor.object.Physics = PhysicsMode.Dynamic
+			else
+				btn.Text = "Static "
+				worldEditor.object.Physics = PhysicsMode.StaticPerBlock
+			end
 		end },
 		{ type="separator" },
 		{ type="button", text="📑", state=states.DUPLICATE_OBJECT },
@@ -565,6 +610,9 @@ initDefaultMode = function()
 	for _,elem in ipairs(barInfo) do
 		if elem.type == "button" then
 			local btn = ui:createButton(elem.text)
+			if worldEditor.physicsBtn == nil and elem.text == "Static " then
+				worldEditor.physicsBtn = btn
+			end
 			btn.onRelease = function()
 				if elem.callback then
 					elem.callback(btn)
@@ -600,9 +648,10 @@ initDefaultMode = function()
 		nameInput.pos = { 0, bg.Height - nameInput.Height }
 		infoBtn.pos = { nameInput.Width, bg.Height - nameInput.Height }
 		bar.pos = { padding, padding }
-		bg.pos = { Screen.Width * 0.5 - bg.Width * 0.5, 100 }
+		bg.pos = { Screen.Width * 0.5 - bg.Width * 0.5, padding }
 		bg:hide()
 	end
+	updateObjectUI:hide()
 	updateObjectUI:parentDidResize()
 	worldEditor.updateObjectUI = updateObjectUI
 
@@ -612,6 +661,101 @@ initDefaultMode = function()
 		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
 	end
 	aiAmbienceButton:parentDidResize()
+
+	-- Edit Map
+	local editMapBar = require("ui_container").createHorizontalContainer()
+
+	local editMapBarInfo = {
+		{ type="button", text="✅", state=states.DEFAULT },
+	}
+
+	for _,elem in ipairs(editMapBarInfo) do
+		if elem.type == "button" then
+			local btn = ui:createButton(elem.text)
+			btn.onRelease = function()
+				if elem.callback then
+					elem.callback(btn)
+					return
+				end
+				if elem.state then
+					setState(elem.state)
+				end
+				if elem.subState then
+					if activeSubState[state] == elem.subState then
+						setSubState(subStates[state].DEFAULT)
+					else
+						setSubState(elem.subState)
+					end
+				end
+			end
+			editMapBar:pushElement(btn)
+		elseif elem.type == "separator" then
+			editMapBar:pushSeparator()
+		elseif elem.type == "gap" then
+			editMapBar:pushGap()
+		end
+	end
+
+	editMapBar.parentDidResize = function()
+		editMapBar.pos = { Screen.Width * 0.5 - editMapBar.Width * 0.5, padding }
+	end
+	editMapBar:parentDidResize()
+	editMapBar:hide()
+	worldEditor.editMapBar = editMapBar
+end
+
+initEditMapUI = function()
+	local ui = require("uikit")
+
+	local x = Screen.Width - 300
+	local bWidth
+	for k,v in ipairs(colorsList) do
+		local b = ui:createButton("   ")
+		if bWidth == nil then
+			bWidth = b.Width
+		end
+		b:setParent(ui.rootFrame)
+		b:setColor(v, Color.White)
+		local darkColor = Color(v.R, v.G, v.B)
+		darkColor:ApplyBrightnessDiff(-0.5)
+		b:setColorSelected(darkColor, Color.White, true)
+		b.LocalPosition = Number3(x + ((k-1) % 4) * b.Width, 100 + math.floor((k-1) / 4) * b.Height, 0)
+		b.onRelease = function()
+			if prevB then
+				prevB:unselect()
+			end
+			b:select()
+			prevB = b
+
+			blockColor = v
+
+			worldEditor.selectedColor = blockColor
+		end
+	end
+
+
+	local b = ui:createButton(" 🧪 ")
+	b:setParent(ui.rootFrame)
+	local v = Color.White
+	b:setColor(v, Color.White)
+	local darkColor = Color(v.R, v.G, v.B)
+	darkColor:ApplyBrightnessDiff(-0.5)
+	b:setColorSelected(darkColor, Color.White, true)
+	b.LocalPosition = Number3(x + 4 * bWidth, 100 + b.Height, 0)
+	b.onRelease = function()
+		if prevB then
+			prevB:unselect()
+		end
+		if pick then
+			pick = false
+			return
+		end
+		b:select()
+		prevB = b
+
+		pick = true
+		print("Click on a block to pick color")
+	end
 end
 
 init()
