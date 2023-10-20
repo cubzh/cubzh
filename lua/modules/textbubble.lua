@@ -6,7 +6,17 @@
 --
 -- Here is an example of how to re-enact the legacy use of text bubbles with the new Text objects.
 
-local textbubble = {}
+textbubble = {}
+
+-- keeping weak references on all creates bubbles
+-- to adapt font size when screen size changes
+-- each entry contains bubble config, indexed by bubble table ref
+bubbles = {}
+bubblesMT = {
+	__mode = "k", -- weak keys
+	__metatable = false,
+}
+setmetatable(bubbles, bubblesMT)
 
 textbubble.set = function(object, text, duration, offset, color, backgroundColor, tail)
 	if object == nil then
@@ -46,5 +56,79 @@ textbubble.clear = function(object)
 		object.__text = nil
 	end
 end
+
+defaultFontSize = function()
+	return Text.FontSizeSmall
+end
+
+emptyFunction = function() end
+
+textbubble.create = function(self, config)
+	if self ~= textbubble then
+		error("textbubble:create should be called with `:`", 2)
+	end
+
+	local defaultConfig = {
+		text = "...",
+		maxWidth = 400,
+		padding = 5,
+		tail = true,
+		textColor = Color.Black,
+		backgroundColor = Color.White,
+		-- fontSize has to be a function, it is called
+		-- when the screen size or resolution changes
+		fontSize = defaultFontSize,
+		onExpire = emptyFunction, -- called when bubble is removed by timer
+		expiresIn = 0, -- time in seconds, 0 -> remains displayed forever
+	}
+
+	config = require("config"):merge(defaultConfig, config)
+
+	local t = Text()
+	t.Type = TextType.Screen
+	t.MaxWidth = config.maxWidth
+	t.Padding = config.padding
+	t.IsUnlit = true
+	t.FontSize = config.fontSize()
+	t.Color = config.textColor
+	t.BackgroundColor = config.backgroundColor
+	t.Tail = config.tail
+	t.Text = config.text
+
+	if config.expiresIn > 0 and tickListener == nil then
+		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			local removeTickListener = true
+			for bubble, config in pairs(bubbles) do
+				if bubble.Parent ~= nil then
+					if config.expiresIn ~= 0 then
+						removeTickListener = false
+						config.expiresIn = config.expiresIn - dt
+						if config.expiresIn <= 0 then
+							config.expiresIn = 0
+							config.onExpire(bubble)
+							if bubble.Parent ~= nil then
+								bubble:RemoveFromParent()
+							end
+						end
+					end
+				end
+			end
+			if removeTickListener then
+				tickListener:Remove()
+				tickListener = nil
+			end
+		end)
+	end
+
+	bubbles[t] = config
+
+	return t
+end
+
+LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+	for bubble, config in pairs(bubbles) do
+		bubble.FontSize = config.fontSize()
+	end
+end)
 
 return textbubble

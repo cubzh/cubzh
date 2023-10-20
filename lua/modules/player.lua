@@ -1,5 +1,14 @@
 local playerModule = {}
 
+-- table indexed by player table references
+-- to store private fields
+privateFields = {}
+privateFieldsMT = {
+	__mode = "k", -- weak keys
+	__metatable = false,
+}
+setmetatable(privateFields, privateFieldsMT)
+
 -- CONSTANTS
 
 local PLAYER_BOUNCINESS = 0
@@ -12,6 +21,7 @@ local OBJECT_DEFAULT_COLLISION_GROUP = 3
 -- MODULES
 
 local hierarchyactions = require("hierarchyactions")
+local ease = require("ease")
 
 -- Returns Block Player is standing on
 local blockUnderneath = function(player)
@@ -49,14 +59,20 @@ local ShowHandle = function(player)
 		error("Player:ShowHandle should be called with `:`", 2)
 	end
 
-	if player.__handle == nil then
+	local privateFields = privateFields[player]
+	if privateFields == nil then
+		-- privateFields not supposed to be nil here
+		error("Player - internal error")
+		return
+	end
+
+	if privateFields.handle == nil then
 		local t = Text()
 		t.Text = player.Username
 
-		-- t.Type = TextType.Screen
-		-- t.FontSize = 40
+		t.Type = TextType.Screen
+		t.FontSize = Text.FontSizeSmall
 
-		t.Type = TextType.World
 		t.Color = Color.White
 		t.BackgroundColor = Color(0, 0, 0, 0)
 		t.IsUnlit = true
@@ -68,10 +84,52 @@ local ShowHandle = function(player)
 		t.Anchor = { 0.5, 0.5 }
 		-- t.Type = TextType.Screen
 		player:AddChild(t)
-		player.__handle = t
+		privateFields.handle = t
 
 		t.LocalPosition = { 0, playerHeight(player) + 4, 0 }
 	end
+end
+
+local TextBubble = function(player, text)
+	if type(player) ~= "Player" then
+		error("Player:TextBubble should be called with `:`", 2)
+	end
+
+	local privateFields = privateFields[player]
+	if privateFields == nil then
+		-- privateFields not supposed to be nil here
+		error("Player - internal error")
+		return
+	end
+
+	if privateFields.textBubble ~= nil then
+		privateFields.textBubble:RemoveFromParent()
+	end
+
+	local t = require("textbubble"):create({
+		text = text,
+		expiresIn = 5,
+		onExpire = function(bubble)
+			if privateFields.textBubble == bubble then
+				privateFields.textBubble = nil
+			end
+			if privateFields.handle then
+				privateFields.handle.IsHidden = false
+			end
+		end,
+	})
+
+	player:AddChild(t)
+	privateFields.textBubble = t
+
+	if privateFields.handle ~= nil then
+		privateFields.handle.IsHidden = true
+	end
+
+	local p = Number3(0, playerHeight(player) + 4, 0)
+	t.LocalPosition = p - { 0, 6, 0 }
+
+	ease:outBack(t, 0.14).LocalPosition = p
 end
 
 playerHeight = function(player)
@@ -475,6 +533,8 @@ end
 local playerCall = function(_, playerID, username, userID, isLocal)
 	local player = Object()
 
+	privateFields[player] = {} -- create private fields table
+
 	player.CollisionGroups = { 2 }
 	player.CollidesWithGroups = { 1, 3 }
 
@@ -498,6 +558,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	mt.SwingLeft = SwingLeft
 	mt.SwingRight = SwingRight
 	mt.ShowHandle = ShowHandle
+	mt.TextBubble = TextBubble
 
 	mt.__type = 2 -- ITEM_TYPE_PLAYER in engine
 
@@ -521,6 +582,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			or k == "SwingRight"
 			or k == "CastRay"
 			or k == "ShowHandle"
+			or k == "TextBubble"
 		then
 			return mt[k]
 		end
@@ -552,8 +614,16 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 		end
 		if k == "Username" then
 			mt[k] = v
-			if t.__handle ~= nil then
-				t.__handle.Text = v
+
+			local privateFields = privateFields[t]
+			if privateFields == nil then
+				-- privateFields not supposed to be nil here
+				error("Player - internal error")
+				return
+			end
+
+			if privateFields.handle ~= nil then
+				privateFields.handle.Text = v
 			end
 			return
 		end
@@ -740,7 +810,6 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	Client.__loadAvatar(player)
 	if isLocal == true then
 		require("camera_modes"):setThirdPerson({ camera = Camera, target = player })
-		player:ShowHandle()
 	else
 		player:ShowHandle()
 	end
@@ -756,5 +825,13 @@ local playerMetatable = {
 	__call = playerCall,
 }
 setmetatable(playerModule, playerMetatable)
+
+LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+	for _, playerPrivateFields in pairs(privateFields) do
+		if playerPrivateFields.handle ~= nil then
+			playerPrivateFields.handle.FontSize = Text.FontSizeSmall
+		end
+	end
+end)
 
 return playerModule
