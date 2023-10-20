@@ -541,6 +541,20 @@ initDefaultMode = function()
 		{ type="button", text="↻", subState=subStates[states.UPDATING_OBJECT].GIZMO_ROTATE },
 		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
 		{ type="separator" },
+		{ type="button", text="Static ", callback=function(btn)
+			setSubState(subStates[states.UPDATING_OBJECT].DEFAULT)
+			-- Small delay to avoid hitting gizmos
+			Timer(0.05, function()
+				if btn.Text == "Static " then
+					btn.Text = "Dynamic"
+					worldEditor.object.Physics = PhysicsMode.Dynamic
+				else
+					btn.Text = "Static "
+					worldEditor.object.Physics = PhysicsMode.StaticPerBlock
+				end
+			end)
+		end },
+		{ type="separator" },
 		{ type="button", text="📑", state=states.DUPLICATE_OBJECT },
 		{ type="gap" },
 		{ type="button", text="💀", state=states.DESTROY_OBJECT },
@@ -552,6 +566,10 @@ initDefaultMode = function()
 		if elem.type == "button" then
 			local btn = ui:createButton(elem.text)
 			btn.onRelease = function()
+				if elem.callback then
+					elem.callback(btn)
+					return
+				end
 				if elem.state then
 					setState(elem.state)
 				end
