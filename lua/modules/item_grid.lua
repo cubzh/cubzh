@@ -12,7 +12,7 @@ local theme = require("uitheme").current
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
 local MAX_COLUMNS = 7
-local MIN_ROWS = 2
+local MIN_ROWS = 1
 local MIN_COLUMNS = 2
 local MIN_GRID_SIZE = 50
 

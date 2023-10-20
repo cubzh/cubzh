@@ -137,18 +137,20 @@ local statesSettings = {
 			local fullname = data.fullname
 			local name = data.name
 			local scale = data.scale
+			local itemDetailsCell = data.itemDetailsCell
 			Object:Load(fullname, function(obj)
 				obj:SetParent(World)
 				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 					o.Physics = PhysicsMode.StaticPerBlock
 				end)
-				obj.isEditable = true
-				obj.root = true
-				obj.fullname = fullname
 				obj.Scale = scale ~= nil and scale or 0.5
 				obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
-				obj.CollisionGroups = 7
+				obj.CollisionGroups = { 3, 7 }
+
+				obj.isEditable = true
+				obj.fullname = fullname
 				obj.Name = name or fullname
+				obj.itemDetailsCell = itemDetailsCell
 				setState(states.PLACING_OBJECT, obj)
 			end)
 		end
@@ -199,7 +201,7 @@ local statesSettings = {
 				setState(states.UPDATING_OBJECT, placingObj)
 			-- right click, place another one
 			elseif pe.Index == 5 then
-				setState(states.SPAWNING_OBJECT, { fullname = placingObj.fullname })
+				setState(states.SPAWNING_OBJECT, { fullname = placingObj.fullname, itemDetailsCell = placingObj.itemDetailsCell })
 			end
 		end,
 		pointerWheelPriority = function(delta)
@@ -215,6 +217,10 @@ local statesSettings = {
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
+			end
+			worldEditor.infoBtn.onRelease = function()
+				local cell = worldEditor.object.itemDetailsCell
+				require("item_details"):createModal({ cell=cell })
 			end
 			worldEditor.updateObjectUI:show()
 
@@ -241,7 +247,13 @@ local statesSettings = {
 	-- DUPLICATE_OBJECT
 	{
 		onStateBegin = function()
-			setState(states.SPAWNING_OBJECT, { fullname = worldEditor.object.fullname, scale = worldEditor.object.Scale, name = worldEditor.object.Name })
+			local obj = worldEditor.object
+			setState(states.SPAWNING_OBJECT, {
+				fullname = obj.fullname,
+				scale = obj.Scale,
+				name = obj.Name,
+				itemDetailsCell = obj.itemDetailsCell
+			})
 		end,
 		onStateEnd = function()
 			worldEditor.object = nil
@@ -484,10 +496,10 @@ initDefaultMode = function()
 	-- Default ui, add btn
 	local addBtn = ui:createButton("➕")
 	addBtn.parentDidResize = function()
+		addBtn.Width = addBtn.Height
 		addBtn.pos = { Screen.Width * 0.5 - addBtn.Width * 0.5, addBtn.Height * 2 }
 	end
 	addBtn.Height = addBtn.Height * 1.5
-	addBtn.Width = addBtn.Height
 	addBtn:parentDidResize()
 	addBtn.onRelease = function()
 		setState(states.GALLERY)
@@ -497,10 +509,18 @@ initDefaultMode = function()
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
 		local fullname = cell.repo.."."..cell.name
-		setState(states.SPAWNING_OBJECT, { fullname = fullname })
+		setState(states.SPAWNING_OBJECT, { fullname = fullname, itemDetailsCell = cell })
 	end
-	worldEditor.gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.4 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, 0 } end, { onOpen = galleryOnOpen })
-	worldEditor.gallery:hide()
+	local initGallery
+	initGallery = function()
+		worldEditor.gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.4 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, 0 } end, { onOpen = galleryOnOpen })
+		worldEditor.gallery.didClose = function()
+			setState(states.DEFAULT)
+			initGallery()
+		end
+		worldEditor.gallery:hide()
+	end
+	initGallery()
 
 	-- Update object UI
 	local updateObjectUI = ui:createFrame(Color(78, 78, 78))
@@ -508,6 +528,10 @@ initDefaultMode = function()
 	local nameInput = ui:createTextInput("", "Item Name")
 	nameInput:setParent(updateObjectUI)
 	worldEditor.nameInput = nameInput
+
+	local infoBtn = ui:createButton("👁")
+	infoBtn:setParent(updateObjectUI)
+	worldEditor.infoBtn = infoBtn
 
 	local bar = require("ui_container").horizontalContainerNew()
 	bar:setParent(updateObjectUI)
@@ -551,9 +575,12 @@ initDefaultMode = function()
 		local bg = updateObjectUI
 		bg.Width = bar.Width + padding * 2
 		bg.Height = (bar.Height + padding) * 2
-		nameInput.Width = bg.Width
+		infoBtn.Height = bar.Height
+		infoBtn.Width = bar.Height
+		nameInput.Width = bg.Width - infoBtn.Width
 		nameInput.Height = bar.Height
 		nameInput.pos = { 0, bg.Height - nameInput.Height }
+		infoBtn.pos = { nameInput.Width, bg.Height - nameInput.Height }
 		bar.pos = { padding, padding }
 		bg.pos = { Screen.Width * 0.5 - bg.Width * 0.5, 100 }
 		bg:hide()
