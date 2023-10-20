@@ -71,6 +71,7 @@ localevent.name = {
 	CppMenuStateChanged = 42, -- needed while Cubzh still uses a few C++ menus (code editor & multiline inputs)
 	LocalAvatarUpdate = 43,
 	ReceivedEnvironmentToLaunch = 44,
+	ChatMessage = 45, -- callback: function(msgInfo)
 }
 localevent.Name = localevent.name
 

@@ -6,7 +6,7 @@
 --
 -- Here is an example of how to re-enact the legacy use of text bubbles with the new Text objects.
 
-textbubble = {}
+textbubbles = {}
 
 -- keeping weak references on all creates bubbles
 -- to adapt font size when screen size changes
@@ -18,7 +18,7 @@ bubblesMT = {
 }
 setmetatable(bubbles, bubblesMT)
 
-textbubble.set = function(object, text, duration, offset, color, backgroundColor, tail)
+textbubbles.set = function(object, text, duration, offset, color, backgroundColor, tail)
 	if object == nil then
 		return
 	end
@@ -50,7 +50,7 @@ textbubble.set = function(object, text, duration, offset, color, backgroundColor
 	end
 end
 
-textbubble.clear = function(object)
+textbubbles.clear = function(object)
 	if object ~= nil and object.__text ~= nil then
 		object.__text:RemoveFromParent()
 		object.__text = nil
@@ -63,9 +63,9 @@ end
 
 emptyFunction = function() end
 
-textbubble.create = function(self, config)
-	if self ~= textbubble then
-		error("textbubble:create should be called with `:`", 2)
+textbubbles.create = function(self, config)
+	if self ~= textbubbles then
+		error("textbubbles:create should be called with `:`", 2)
 	end
 
 	local defaultConfig = {
@@ -131,4 +131,36 @@ LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
 	end
 end)
 
-return textbubble
+displayPlayerChatBubbles = false
+
+mt = {
+	__index = {},
+	__newindex = function(t, k, v)
+		if k == "displayPlayerChatBubbles" then
+			if type(v) == "boolean" then
+				if v ~= displayPlayerChatBubbles then
+					displayPlayerChatBubbles = v
+					if displayPlayerChatBubbles then
+						chatListener = LocalEvent:Listen(LocalEvent.Name.ChatMessage, function(msgInfo)
+							if msgInfo.sender.id ~= nil and msgInfo.message ~= nil then
+								local sender = Players[msgInfo.sender.id]
+								if sender ~= nil then
+									sender:TextBubble(msgInfo.message)
+								end
+							end
+						end)
+					else
+						if chatListener then
+							chatListener:Remove()
+						end
+					end
+				end
+			end
+		else
+			error("textbubbles." .. k .. " can't be set", 2)
+		end
+	end,
+}
+setmetatable(textbubbles, mt)
+
+return textbubbles

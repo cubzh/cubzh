@@ -29,6 +29,7 @@ Client.Action2 = function() end
 
 Client.OnStart = function()
 	multi = require("multi")
+	require("textbubbles").displayPlayerChatBubbles = true
 
 	local ambience = require("ambience")
 	ambience:set(ambience.noon)
@@ -187,6 +188,7 @@ end
 
 Pointer.Click = function()
 	Player:SwingRight()
+	Player:TextBubble("This is a test!")
 end
 
 account = {

@@ -106,7 +106,7 @@ local TextBubble = function(player, text)
 		privateFields.textBubble:RemoveFromParent()
 	end
 
-	local t = require("textbubble"):create({
+	local t = require("textbubbles"):create({
 		text = text,
 		expiresIn = 5,
 		onExpire = function(bubble)

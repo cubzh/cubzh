@@ -1,3 +1,6 @@
+local MAX_MESSAGES = 50
+local MAX_MESSAGES_IN_CONSOLE = 50
+
 ui = require("uikit")
 theme = require("uitheme").current
 modal = require("modal")
@@ -18,6 +21,10 @@ setmetatable(chat, chatMetatable)
 
 local messages = {}
 local lastCommandIndex = nil
+
+local defaultConfig = {
+	uikit = ui, -- allows to provide specific instance of uikit
+}
 
 local function getLastXElements(array, x)
 	local result, length = {}, #array
@@ -62,49 +69,168 @@ local channelsColors = { -- same order as channels to be able to do channelsColo
 
 local pushFormattedMessage = function(msgInfo)
 	table.insert(messages, msgInfo)
-	LocalEvent:Send("did_receive_chat_message", msgInfo)
+	while #messages > MAX_MESSAGES do
+		table.remove(messages, 1) -- pop front
+	end
+	LocalEvent:Send(LocalEvent.Name.ChatMessage, msgInfo)
 end
 
-local createModalContent = function(_, config)
-	-- default config
-	local _config = {
-		uikit = ui, -- allows to provide specific instance of uikit
+local playerSendMessage = function(message)
+	local channelType = channels.Local
+	local recipients = OtherPlayers
+	local msgInfo = {
+		sender = { userID = Player.UserID, id = Player.ID, username = Player.Username },
+		date = getCurrentDate(),
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
+	-- set to nil to reset commands history index
+	lastCommandIndex = nil
+
+	-- check if command
+	local channelCommand = string.sub(message, 1, 3)
+	if channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w " then
+		local channel = string.sub(message, 2, 2)
+		channelType = commandsToChannel[channel]
+		message = string.sub(message, 4, #message)
+
+		if channelType == channels.Private then
+			msgInfo.receiver = { username = string.gmatch(message, "%S+")() }
+			-- find player to send message only to this client
+			recipients = {}
+			for _, p in pairs(Players) do
+				if p.Username == msgInfo.receiver.username then
+					if p == Player then
+						LocalEvent:Send(LocalEvent.Name.WarningMessage, "You are trying to send a message to yourself.")
+						return
+					end
+					table.insert(recipients, p)
+					msgInfo.receiver.id = p.ID
+					msgInfo.receiver.userID = p.UserID
+				end
 			end
+			if #recipients == 0 then
+				LocalEvent:Send(
+					LocalEvent.Name.InfoMessage,
+					msgInfo.receiver.username .. " is not currently in your game."
+				)
+				return
+			end
+			message = string.sub(message, 2 + #msgInfo.receiver.username, #message)
 		end
+	elseif string.sub(message, 1, 1) == "/" then
+		local str = string.sub(message, 2, #message)
+		System:AddCommandInHistory(message)
+		if Dev.CanRunCommands then
+			System:ExecCommand(str)
+		else
+			print("⚠️ not authorized to run commands")
+		end
+		return
 	end
 
-	local ui = _config.uikit
+	msgInfo.type = channelType
+	msgInfo.message = message
+
+	local payload = {}
+	local metatablePayload = {}
+	metatablePayload.__index = {
+		message = message,
+	}
+	metatablePayload.__metatable = false
+	metatablePayload.__newindex = function(_, k, v)
+		if k ~= "message" then
+			error("payload." .. k .. " can't be set.", 2)
+			return
+		end
+		if type(v) ~= Type.string then
+			error("payload.message can only be a string")
+			return
+		end
+		metatablePayload.__index.message = v
+	end
+	setmetatable(payload, metatablePayload)
+
+	local catched = LocalEvent:Send(LocalEvent.name.OnChat, payload)
+	if catched then
+		return
+	end
+
+	msgInfo.message = payload.message
+	if msgInfo.message == nil then
+		return
+	end
+
+	local e = Event()
+	e.action = "chatMsg"
+	e.content = JSON:Encode(msgInfo)
+	e:SendTo(recipients)
+	pushFormattedMessage(msgInfo)
+end
+
+-- creates uikit node containing chat console and input
+local createChat = function(_, config)
+	config = require("config"):merge(defaultConfig, config)
+
+	local ui = config.uikit
+
+	local nodeMessages = {}
 
 	local node = ui:createFrame(Color(0.0, 0.0, 0.0, 0.0))
-
-	local content = modal:createContent()
-	content.messages = {}
-	content.closeButton = true
-
-	content.idealReducedContentSize = function(_, width, height)
-		return Number2(width, height)
-	end
-
-	content.node = node
-	content.title = "Chat"
-	content.icon = "💬"
 
 	local messagesNode = ui:createFrame(Color(0, 0, 0, 0))
 	messagesNode:setParent(node)
 
-	local inputNode = ui:createTextInput("", "type message")
+	local inputNode = ui:createTextInput("", "say something!", { textSize = "small" })
 	inputNode:setParent(node)
 	inputNode:focus()
 
-	local sendButton = ui:createButton("💬")
+	local sendButton = ui:createButton("💬", { textSize = "small" })
 	sendButton:setParent(node)
 	sendButton:setColor(Color.Blue)
+
+	inputNode.onSubmit = function()
+		if inputNode.Text == "" then
+			return
+		end
+		local text = inputNode.Text
+		inputNode.Text = ""
+		playerSendMessage(text)
+	end
+
+	node.focus = function()
+		inputNode:focus()
+	end
+
+	inputNode.onTextChange = function()
+		if lastCommandIndex ~= nil then
+			if inputNode.Text ~= System:GetCommandFromHistory(lastCommandIndex) then
+				lastCommandIndex = nil
+			end
+		end
+	end
+
+	inputNode.onUp = function(self)
+		if System.NbCommandsInHistory == 0 then
+			return
+		end
+		lastCommandIndex = lastCommandIndex == nil and 1 or math.min(System.NbCommandsInHistory, lastCommandIndex + 1)
+		if lastCommandIndex > 0 then
+			self.Text = System:GetCommandFromHistory(lastCommandIndex)
+		end
+	end
+
+	inputNode.onDown = function(self)
+		if lastCommandIndex == nil then
+			return
+		end
+		lastCommandIndex = lastCommandIndex - 1
+		if lastCommandIndex < 1 then
+			lastCommandIndex = nil
+			self.Text = ""
+			return
+		end
+		self.Text = System:GetCommandFromHistory(lastCommandIndex)
+	end
 
 	local createUIChatMessage = function(data, ui)
 		local node = ui:createFrame(Color(0, 0, 0, 0))
@@ -117,19 +243,19 @@ local createModalContent = function(_, config)
 		-- Prefix: empty by default, can be "to"/"from"
 		-- Head: empty by default, shape of the head of the player
 		-- Firstline: message, if too wide, cut the end
-		local uiTextTime = ui:createText("[00:00]", color)
+		local uiTextTime = ui:createText("[00:00]", color, "small")
 		local uiTextPrefix
-		local uiTextMessageFirstLine = ui:createText("", color)
+		local uiTextMessageFirstLine = ui:createText("", color, "small")
 
 		uiTextTime.Text = "[" .. string.sub(data.date, 12, 16) .. "]" -- get HH:MM
 
 		-- format msg and add prefix if needed
 		if data.receiver then
-			if data.sender.id == Player.UserID then
-				uiTextPrefix = ui:createText("to", color)
+			if data.sender.id == Player.ID then
+				uiTextPrefix = ui:createText("to", color, "small")
 				message = data.receiver.username .. ": " .. message
-			elseif data.receiver.id == Player.UserID then
-				uiTextPrefix = ui:createText("from", color)
+			elseif data.receiver.id == Player.ID then
+				uiTextPrefix = ui:createText("from", color, "small")
 				message = data.sender.username .. ": " .. message
 			end
 		elseif data.sender then
@@ -139,10 +265,10 @@ local createModalContent = function(_, config)
 		local uiHead
 		local playerInfo = data.receiver or data.sender
 		if playerInfo then
-			if data.receiver.id == Player.UserID then
+			if data.receiver.id == Player.ID then
 				playerInfo = data.sender
 			end
-			uiHead = require("ui_avatar"):getHead(playerInfo.id or playerInfo.username, nil, ui)
+			uiHead = require("ui_avatar"):getHead(playerInfo.userID or playerInfo.username, nil, ui)
 		end
 
 		uiTextMessageFirstLine.Text = message
@@ -206,146 +332,10 @@ local createModalContent = function(_, config)
 		return node
 	end
 
-	local playerSendMessage = function(message)
-		local channelType = channels.Local
-		local recipients = OtherPlayers
-		local msgInfo = {
-			sender = { id = Player.UserID, username = Player.Username },
-			date = getCurrentDate(),
-		}
-
-		-- set to nil to reset commands history index
-		lastCommandIndex = nil
-
-		-- check if command
-		local channelCommand = string.sub(message, 1, 3)
-		if channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w " then
-			local channel = string.sub(message, 2, 2)
-			channelType = commandsToChannel[channel]
-			message = string.sub(message, 4, #message)
-
-			if channelType == channels.Private then
-				msgInfo.receiver = { username = string.gmatch(message, "%S+")() }
-				-- find player to send message only to this client
-				recipients = {}
-				for _, p in pairs(Players) do
-					if p.Username == msgInfo.receiver.username then
-						if p == Player then
-							LocalEvent:Send(
-								LocalEvent.Name.WarningMessage,
-								"You are trying to send a message to yourself."
-							)
-							return
-						end
-						table.insert(recipients, p)
-						msgInfo.receiver.id = p.UserID
-					end
-				end
-				if #recipients == 0 then
-					LocalEvent:Send(
-						LocalEvent.Name.InfoMessage,
-						msgInfo.receiver.username .. " is not currently in your game."
-					)
-					return
-				end
-				message = string.sub(message, 2 + #msgInfo.receiver.username, #message)
-			end
-		elseif string.sub(message, 1, 1) == "/" then
-			local str = string.sub(message, 2, #message)
-			System:AddCommandInHistory(message)
-			if Dev.CanRunCommands then
-				System:ExecCommand(str)
-			else
-				print("⚠️ not authorized to run commands")
-			end
-			return
-		end
-
-		msgInfo.type = channelType
-		msgInfo.message = message
-
-		local payload = {}
-		local metatablePayload = {}
-		metatablePayload.__index = {
-			message = message,
-		}
-		metatablePayload.__metatable = false
-		metatablePayload.__newindex = function(_, k, v)
-			if k ~= "message" then
-				error("payload." .. k .. " can't be set.", 2)
-				return
-			end
-			if type(v) ~= Type.string then
-				error("payload.message can only be a string")
-				return
-			end
-			metatablePayload.__index.message = v
-		end
-		setmetatable(payload, metatablePayload)
-
-		local catched = LocalEvent:Send(LocalEvent.name.OnChat, payload)
-		if catched then
-			return
-		end
-
-		msgInfo.message = payload.message
-		if msgInfo.message == nil then
-			return
-		end
-
-		local e = Event()
-		e.action = "chatMsg"
-		e.content = JSON:Encode(msgInfo)
-		e:SendTo(recipients)
-		pushFormattedMessage(msgInfo)
-	end
-
-	local funcSendMessage = function()
-		if #inputNode.Text < 1 then
-			local modal = content:getModalIfContentIsActive()
-			if modal then
-				modal:close()
-			end
-			return
-		end
-		local text = inputNode.Text
-		inputNode.Text = ""
-		playerSendMessage(text)
-		node:parentDidResize()
-	end
-	inputNode.onSubmit = funcSendMessage
-	inputNode.onTextChange = function()
-		if lastCommandIndex ~= nil then
-			if inputNode.Text ~= System:GetCommandFromHistory(lastCommandIndex) then
-				lastCommandIndex = nil
-			end
-		end
-	end
-	inputNode.onUp = function(self)
-		if System.NbCommandsInHistory == 0 then
-			return
-		end
-		lastCommandIndex = lastCommandIndex == nil and 1 or math.min(System.NbCommandsInHistory, lastCommandIndex + 1)
-		if lastCommandIndex > 0 then
-			self.Text = System:GetCommandFromHistory(lastCommandIndex)
-		end
-	end
-	inputNode.onDown = function(self)
-		if lastCommandIndex == nil then
-			return
-		end
-		lastCommandIndex = lastCommandIndex - 1
-		if lastCommandIndex < 1 then
-			lastCommandIndex = nil
-			self.Text = ""
-			return
-		end
-		self.Text = System:GetCommandFromHistory(lastCommandIndex)
-	end
-
 	sendButton.onRelease = funcSendMessage
 
-	node.parentDidResize = function(node)
+	messagesNode.parentDidResize = function()
+		sendButton.Height = inputNode.Height
 		sendButton.pos = { node.Width - sendButton.Width - theme.padding, theme.padding, 0 }
 		inputNode.Width = node.Width - sendButton.Width - theme.padding * 3
 		inputNode.pos = { theme.padding, theme.padding, 0 }
@@ -354,8 +344,8 @@ local createModalContent = function(_, config)
 		messagesNode.Height = node.Height - inputNode.Height - theme.padding * 2
 		messagesNode.pos = { 0, inputNode.Height + theme.padding * 2, 0 }
 		local shift = 0
-		for i = #content.messages, 1, -1 do
-			local msg = content.messages[i]
+		for i = #nodeMessages, 1, -1 do
+			local msg = nodeMessages[i]
 			msg.pos.Y = shift
 			if shift + msg.Height > messagesNode.Height then
 				msg:hide()
@@ -371,7 +361,7 @@ local createModalContent = function(_, config)
 		local message = createUIChatMessage(messageInfo, ui)
 		message:setParent(messagesNode)
 		local height = message.Height
-		for _, m in ipairs(content.messages) do
+		for _, m in ipairs(nodeMessages) do
 			m.LocalPosition.Y = m.LocalPosition.Y + height
 			if m.LocalPosition.Y + m.Height > messagesNode.Height then
 				m:hide()
@@ -379,7 +369,13 @@ local createModalContent = function(_, config)
 				m:show()
 			end
 		end
-		table.insert(content.messages, message)
+		table.insert(nodeMessages, message)
+		while #nodeMessages > MAX_MESSAGES_IN_CONSOLE do
+			local m = table.remove(nodeMessages, 1) -- pop front
+			if m ~= nil then
+				m:remove()
+			end
+		end
 	end
 
 	-- Push latest messages
@@ -387,23 +383,38 @@ local createModalContent = function(_, config)
 		pushMessage(msgInfo)
 	end
 
-	local listener
+	local messageListener = LocalEvent:Listen(LocalEvent.Name.ChatMessage, function(msgInfo)
+		pushMessage(msgInfo)
+	end)
 
-	content.didBecomeActive = function(_)
-		listener = LocalEvent:Listen("did_receive_chat_message", function(msgInfo)
-			pushMessage(msgInfo)
-		end)
-	end
-
-	content.willResignActive = function(_)
-		if listener then
-			listener:Remove()
-		end
-	end
-
-	LocalEvent:Listen(LocalEvent.Name.SetChatTextInput, function(text)
+	local setChatInputListener = LocalEvent:Listen(LocalEvent.Name.SetChatTextInput, function(text)
 		inputNode.Text = text
 	end)
+
+	node.onRemove = function(_)
+		messageListener:Remove()
+		setChatInputListener:Remove()
+	end
+
+	return node
+end
+
+local createModalContent = function(_, config)
+	config = require("config"):merge(defaultConfig, config)
+
+	local ui = config.uikit
+
+	local content = modal:createContent()
+	content.messages = {}
+	content.closeButton = true
+
+	content.idealReducedContentSize = function(_, width, height)
+		return Number2(width, height)
+	end
+
+	content.node = createChat(nil, config)
+	content.title = "Chat"
+	content.icon = "💬"
 
 	return content
 end
@@ -442,6 +453,8 @@ LocalEvent:Listen(LocalEvent.Name.ErrorMessage, function(msg)
 	pushFormattedMessage({ type = channels.Error, message = "❌ " .. msg, date = getCurrentDate() })
 end)
 
+-- expose functions
 chat.createModalContent = createModalContent
+chat.create = createChat
 
 return chat
