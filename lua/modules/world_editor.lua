@@ -518,7 +518,6 @@ initDefaultMode = function()
         Player.Velocity = { 0, 0, 0 }
     end
     Player:SetParent(World)
-	Player.ShadowCookie = 0
 	Camera:SetModeThirdPerson()
     dropPlayer()
 
