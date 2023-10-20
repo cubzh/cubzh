@@ -13,9 +13,6 @@ promptInput = ui:createTextInput("", "Describe an ambience")
 promptInput:setParent(promptContainer)
 promptInput:hide()
 
-promptContainer.Width = promptInput.Width
-promptContainer.Height = promptInput.Height
-
 promptBtn = ui:createButton("💬 ✨", {textSize = "big"})
 promptBtn:setParent(promptContainer)
 

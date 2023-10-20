@@ -608,7 +608,10 @@ initDefaultMode = function()
 
 	-- Ambience editor
 	local aiAmbienceButton = require("ui_ai_ambience")
-	aiAmbienceButton.pos = { padding, Screen.Height - 100 }
+	aiAmbienceButton.parentDidResize = function()
+		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
+	end
+	aiAmbienceButton:parentDidResize()
 end
 
 init()
