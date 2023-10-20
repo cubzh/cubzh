@@ -4,10 +4,7 @@ local index = {}
 local metatable = { __index = index, __metatable = false }
 setmetatable(worldEditor, metatable)
 
-local colorsList = { Color(0,0,0), Color(29,43,83), Color(126,37,83), Color(0,135,81), Color(171,82,54), Color(95,87,79), Color(194,195,199), Color(255,241,232), Color(255,0,77), Color(255,163,0), Color(255,236,39), Color(0,228,54), Color(41,173,255), Color(131,118,156), Color(255,119,168), Color(255,204,170) }
-
 local initDefaultMode
-local initEditMapUI
 
 local states = {
 	PREPARING = 1,
@@ -142,14 +139,22 @@ local statesSettings = {
 		onStateBegin = function(data)
 			local fullname = data.fullname
 			local name = data.name
-			local scale = data.scale
+			local scale = data.scale or 0.5
 			local itemDetailsCell = data.itemDetailsCell
+			local physics = data.physics or PhysicsMode.StaticPerBlock
 			Object:Load(fullname, function(obj)
 				obj:SetParent(World)
-				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-					o.Physics = PhysicsMode.StaticPerBlock
-				end)
-				obj.Scale = scale ~= nil and scale or 0.5
+				if physics == PhysicsMode.StaticPerBlock then
+					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+						o.Physics = PhysicsMode.StaticPerBlock
+					end)
+				else
+					obj.Physics = PhysicsMode.Dynamic
+					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+						o.Physics = PhysicsMode.Disabled
+					end)
+				end
+				obj.Scale = scale
 				obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
 				obj.CollisionGroups = { 3, 7 }
 
@@ -205,9 +210,6 @@ local statesSettings = {
 			-- left click, back to default
 			if pe.Index == 4 then
 				setState(states.UPDATING_OBJECT, placingObj)
-			-- right click, place another one
-			elseif pe.Index == 5 then
-				setState(states.SPAWNING_OBJECT, { fullname = placingObj.fullname, itemDetailsCell = placingObj.itemDetailsCell })
 			end
 		end,
 		pointerWheelPriority = function(delta)
@@ -220,7 +222,7 @@ local statesSettings = {
 	{
 		onStateBegin = function(obj)
 			worldEditor.object = obj
-			worldEditor.physicsBtn.Text = "Dynamic"
+			worldEditor.physicsBtn.Text = worldEditor.object.Physics == PhysicsMode.DynamicPerBlock and "Dyanmic" or "Static "
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
@@ -259,7 +261,8 @@ local statesSettings = {
 				fullname = obj.fullname,
 				scale = obj.Scale,
 				name = obj.Name,
-				itemDetailsCell = obj.itemDetailsCell
+				itemDetailsCell = obj.itemDetailsCell,
+				physics = obj.Physics
 			})
 		end,
 		onStateEnd = function()
@@ -281,16 +284,22 @@ local statesSettings = {
 		onStateBegin = function()
 			worldEditor.selectedColor = Color.Grey
 			local block = MutableShape()
+			worldEditor.handBlock = block
 			block:AddBlock(worldEditor.selectedColor, 0, 0, 0)
 			Player:EquipRightHand(block)
 			block.Scale = 5
 			block.LocalPosition = { 1.5,1.5,1.5 }
 			worldEditor.editMapBar:show()
-			initEditMapUI()
+			worldEditor.colorPicker:show()
+			worldEditor.colorPicker.parentDidResize = function()
+				worldEditor.colorPicker.pos = { Screen.Width - worldEditor.colorPicker.Width, -20 }
+			end
+			worldEditor.colorPicker:parentDidResize()
 		end,
 		onStateEnd = function()
 			Player:EquipRightHand(nil)
 			worldEditor.editMapBar:hide()
+			worldEditor.colorPicker:hide()
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -509,6 +518,7 @@ initDefaultMode = function()
         Player.Velocity = { 0, 0, 0 }
     end
     Player:SetParent(World)
+	Player.ShadowCookie = 0
 	Camera:SetModeThirdPerson()
     dropPlayer()
 
@@ -589,14 +599,17 @@ initDefaultMode = function()
 		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
 		{ type="separator" },
 		{ type="button", text="Static ", callback=function(btn)
-			setSubState(subStates[states.UPDATING_OBJECT].DEFAULT)
-			-- Small delay to avoid hitting gizmos
 			if btn.Text == "Static " then
 				btn.Text = "Dynamic"
 				worldEditor.object.Physics = PhysicsMode.Dynamic
+				require("hierarchyactions"):applyToDescendants(worldEditor.object, { includeRoot = false }, function(o)
+					o.Physics = PhysicsMode.Disabled
+				end)
 			else
 				btn.Text = "Static "
-				worldEditor.object.Physics = PhysicsMode.StaticPerBlock
+				require("hierarchyactions"):applyToDescendants(worldEditor.object, { includeRoot = true }, function(o)
+					o.Physics = PhysicsMode.StaticPerBlock
+				end)
 			end
 		end },
 		{ type="separator" },
@@ -702,59 +715,17 @@ initDefaultMode = function()
 	editMapBar:parentDidResize()
 	editMapBar:hide()
 	worldEditor.editMapBar = editMapBar
-end
 
-initEditMapUI = function()
-	local ui = require("uikit")
+	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false })
+	picker.closeBtn:remove()
+	picker.closeBtn = nil
+	picker:setColor(Color.Grey)
+	picker:hide()
+	worldEditor.colorPicker = picker
 
-	local x = Screen.Width - 300
-	local bWidth
-	for k,v in ipairs(colorsList) do
-		local b = ui:createButton("   ")
-		if bWidth == nil then
-			bWidth = b.Width
-		end
-		b:setParent(ui.rootFrame)
-		b:setColor(v, Color.White)
-		local darkColor = Color(v.R, v.G, v.B)
-		darkColor:ApplyBrightnessDiff(-0.5)
-		b:setColorSelected(darkColor, Color.White, true)
-		b.LocalPosition = Number3(x + ((k-1) % 4) * b.Width, 100 + math.floor((k-1) / 4) * b.Height, 0)
-		b.onRelease = function()
-			if prevB then
-				prevB:unselect()
-			end
-			b:select()
-			prevB = b
-
-			blockColor = v
-
-			worldEditor.selectedColor = blockColor
-		end
-	end
-
-
-	local b = ui:createButton(" 🧪 ")
-	b:setParent(ui.rootFrame)
-	local v = Color.White
-	b:setColor(v, Color.White)
-	local darkColor = Color(v.R, v.G, v.B)
-	darkColor:ApplyBrightnessDiff(-0.5)
-	b:setColorSelected(darkColor, Color.White, true)
-	b.LocalPosition = Number3(x + 4 * bWidth, 100 + b.Height, 0)
-	b.onRelease = function()
-		if prevB then
-			prevB:unselect()
-		end
-		if pick then
-			pick = false
-			return
-		end
-		b:select()
-		prevB = b
-
-		pick = true
-		print("Click on a block to pick color")
+	picker.didPickColor = function(_, color)
+		worldEditor.selectedColor = color
+		worldEditor.handBlock.Palette[1].Color = color
 	end
 end
 
