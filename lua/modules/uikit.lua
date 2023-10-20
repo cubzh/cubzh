@@ -1499,7 +1499,7 @@ function createUI(system)
 			end
 		end
 
-		local size = config.size
+		local size = config.textSize
 
 		local theme = require("uitheme").current
 
