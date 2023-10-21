@@ -47,6 +47,28 @@ local tryPickObject = function(pe)
 	setState(states.UPDATING_OBJECT, obj)
 end
 
+local freezeObject = function(obj)
+	obj.savedPhysicsState = obj.Physics
+	if obj.Physics == PhysicsMode.StaticPerBlock then return end
+	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		o.Physics = PhysicsMode.StaticPerBlock
+	end)
+end
+
+local unfreezeObject = function(obj)
+	local physics = obj.savedPhysicsState
+	if physics == PhysicsMode.StaticPerBlock then
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Physics = PhysicsMode.StaticPerBlock
+		end)
+	else
+		obj.Physics = PhysicsMode.Dynamic
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+	end
+end
+
 local subStatesSettingsUpdatingObject = {
 	-- DEFAULT
 	{
@@ -60,9 +82,11 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
+			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
 			worldEditor.gizmo:setObject(nil)
+			unfreezeObject(worldEditor.object)
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -74,9 +98,11 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Rotate)
+			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
 			worldEditor.gizmo:setObject(nil)
+			unfreezeObject(worldEditor.object)
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -88,9 +114,11 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Scale)
+			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
 			worldEditor.gizmo:setObject(nil)
+			unfreezeObject(worldEditor.object)
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -222,7 +250,7 @@ local statesSettings = {
 	{
 		onStateBegin = function(obj)
 			worldEditor.object = obj
-			worldEditor.physicsBtn.Text = worldEditor.object.Physics == PhysicsMode.DynamicPerBlock and "Dyanmic" or "Static "
+			worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.Dynamic and "Dynamic" or "Static "
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
@@ -315,14 +343,14 @@ local statesSettings = {
 }
 
 setState = function(newState, data)
-	local onStateEnd = statesSettings[state].onStateEnd
-	if onStateEnd then onStateEnd(newState, data) end
-
 	local subState = activeSubState[state]
 	if subState then
 		onStateEnd = statesSettings[state].subStatesSettings[subState].onStateEnd
 		if onStateEnd then onStateEnd(newState, data) end
 	end
+
+	local onStateEnd = statesSettings[state].onStateEnd
+	if onStateEnd then onStateEnd(newState, data) end
 
 	local oldState = state
 	state = newState
@@ -383,6 +411,8 @@ local listeners = {
 	PointerDown = "pointerDown",
 	PointerMove = "pointerMove",
 	PointerDrag = "pointerDrag",
+	PointerDragBegin = "pointerDragBegin",
+	PointerDragEnd = "pointerDragEnd",
 	PointerUp = "pointerUp",
 	PointerWheel = "pointerWheel",
 }
@@ -598,17 +628,29 @@ initDefaultMode = function()
 		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
 		{ type="separator" },
 		{ type="button", text="Static ", callback=function(btn)
+			local obj = worldEditor.object
+
 			if btn.Text == "Static " then
 				btn.Text = "Dynamic"
-				worldEditor.object.Physics = PhysicsMode.Dynamic
-				require("hierarchyactions"):applyToDescendants(worldEditor.object, { includeRoot = false }, function(o)
-					o.Physics = PhysicsMode.Disabled
-				end)
+				if activeSubState[state] == subStates[state].DEFAULT then
+					obj.Physics = PhysicsMode.Dynamic
+					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+						o.Physics = PhysicsMode.Disabled
+					end)
+				else
+					-- if using gizmo, do not apply physics yet
+					obj.savedPhysicsState = PhysicsMode.Dynamic
+				end
 			else
 				btn.Text = "Static "
-				require("hierarchyactions"):applyToDescendants(worldEditor.object, { includeRoot = true }, function(o)
-					o.Physics = PhysicsMode.StaticPerBlock
-				end)
+				if activeSubState[state] == subStates[state].DEFAULT then
+					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+						o.Physics = PhysicsMode.StaticPerBlock
+					end)
+				else
+					-- if using gizmo, do not apply physics yet
+					obj.savedPhysicsState = PhysicsMode.StaticPerBlock
+				end
 			end
 		end },
 		{ type="separator" },
