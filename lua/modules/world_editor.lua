@@ -542,6 +542,7 @@ init = function()
 end
 
 initDefaultMode = function()
+	Fog.On = true
     dropPlayer = function()
         Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
         Player.Rotation = { 0, 0, 0 }
