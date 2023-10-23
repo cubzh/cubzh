@@ -26,12 +26,22 @@ local getObjectInfoTable = function(obj)
 	if obj.Physics == PhysicsMode.StaticPerBlock then physics = "SPB" end
 	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
 
+	local rotation = obj.Rotation
+	if not rotation then
+		rotation = { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z }
+	end
+
+	local scale = obj.Scale
+	if not scale then
+		scale = { obj.Scale.X, obj.Scale.Y, obj.Scale.Z }
+	end
+
 	return {
 		uuid = obj.uuid,
 		fullname = obj.fullname,
 		Position = { obj.Position.X, obj.Position.Y, obj.Position.Z },
-		Rotation = { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z },
-		Scale = { obj.Scale.X, obj.Scale.Y, obj.Scale.Z },
+		Rotation = rotation,
+		Scale = scale,
 		Name = obj.Name,
 		itemDetailsCell = obj.itemDetailsCell,
 		Physics = physics
@@ -512,7 +522,7 @@ local statesSettings = {
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
 			local impact = pe:CastRay(nil, Player)
-			if not impact or not impact.Object == Map then return end
+			if not impact or not impact.Block or not impact.Object == Map then return end
 			if pe.Index == 4 then
 				local pos = impact.Block.Coords
 				sendToServer(events.P_REMOVE_BLOCK, { pos = { pos.X, pos.Y, pos.Z } })
@@ -1035,9 +1045,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		end)
 	elseif e.a == events.END_EDIT_OBJECT then
 		local obj = objects[data.uuid]
-		obj.trail:remove()
+		if not obj then return end
+		if obj.trail then
+			obj.trail:remove()
+			obj.trail = nil
+		end
 		obj.currentlyEditedBy = nil
-		obj.trail = nil
 	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
 		local color = Color(math.floor(data.color[1]),math.floor(data.color[2]),math.floor(data.color[3]))
 		map:AddBlock(color, data.pos[1], data.pos[2], data.pos[3])
