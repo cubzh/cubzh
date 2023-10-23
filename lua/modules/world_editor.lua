@@ -514,11 +514,24 @@ local statesSettings = {
 			local impact = pe:CastRay(nil, Player)
 			if not impact or not impact.Object == Map then return end
 			if pe.Index == 4 then
+				local pos = impact.Block.Coords
+				sendToServer(events.P_REMOVE_BLOCK, { pos = { pos.X, pos.Y, pos.Z } })
 				impact.Block:Remove()
 			elseif pe.Index == 5 then
 				impact.Block:AddNeighbor(worldEditor.selectedColor, impact.FaceTouched)
+				local pos = impact.Block.Coords:Copy()
+				if impact.FaceTouched == Face.Front then pos.Z = pos.Z + 1
+				elseif impact.FaceTouched == Face.Back then pos.Z = pos.Z - 1
+				elseif impact.FaceTouched == Face.Top then pos.Y = pos.Y + 1
+				elseif impact.FaceTouched == Face.Bottom then pos.Y = pos.Y - 1
+				elseif impact.FaceTouched == Face.Right then pos.X = pos.X + 1
+				elseif impact.FaceTouched == Face.Left then pos.X = pos.X - 1 end
+				sendToServer(events.P_PLACE_BLOCK, {
+					pos = { pos.X, pos.Y, pos.Z },
+					color = { worldEditor.selectedColor.R, worldEditor.selectedColor.G, worldEditor.selectedColor.B }
+				})
 			end
-		end,
+		end
 	}
 }
 
@@ -999,6 +1012,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		obj.trail:remove()
 		obj.currentlyEditedBy = nil
 		obj.trail = nil
+	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
+		local color = Color(math.floor(data.color[1]),math.floor(data.color[2]),math.floor(data.color[3]))
+		map:AddBlock(color, data.pos[1], data.pos[2], data.pos[3])
+	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
+		local b = map:GetBlock(data.pos[1], data.pos[2], data.pos[3])
+		if b then b:Remove() end
 	end
 end)
 
