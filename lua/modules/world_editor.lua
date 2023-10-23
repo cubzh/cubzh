@@ -667,8 +667,7 @@ local maps = {
 local loadMap
 
 init = function()
-	print(Player.ID + Time.UnixMilli())
-	math.randomseed(Player.ID + Time.UnixMilli())
+	math.randomseed(Player.ID + Time.UnixMilli() % 10000)
 
 	require("object_skills").addStepClimbing(Player)
 	Camera:SetModeFree()
