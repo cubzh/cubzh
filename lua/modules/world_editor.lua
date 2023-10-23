@@ -988,10 +988,34 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			setState(states.DEFAULT)
 		end)
 	elseif e.a == events.SYNC then
-		if state == states.PREPARING then
+		if state == states.PREPARING then -- joining
 			local mapIndex = data.mapIndex
 			loadMap(maps[mapIndex], function()
 				setState(states.DEFAULT)
+				if data.blocks then
+					local blocks = data.blocks
+					for _,d in ipairs(blocks) do
+						local k = d[1]
+						local v = d[2]
+						local x = math.floor(k % 1000)
+						local y = math.floor((k / 1000) % 1000)
+						local z = math.floor(k / 1000000)
+						if v == -1 then
+							local b = map:GetBlock(x,y,z)
+							if b then b:Remove() end
+						else
+							local c = Color(math.floor(v[1]),math.floor(v[2]),math.floor(v[3]))
+							local b = map:GetBlock(x,y,z)
+							if b then b:Remove() end
+							map:AddBlock(c, x, y, z)
+						end
+					end
+				end
+				if data.objects then
+					for _,objInfo in ipairs(data.objects) do
+						spawnObject(objInfo)
+					end
+				end
 			end)
 		end
 	elseif e.a == events.PLACE_OBJECT and not isLocalPlayer then

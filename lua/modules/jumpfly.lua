@@ -20,7 +20,7 @@ end)
 
 local codes = require("inputcodes")
 LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keycode, _, down)
-    if not down and keycode == codes.SPACE then
+	if not down and keycode == codes.SPACE then
 		holdingSpace = false
         return
 	end
@@ -33,7 +33,8 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keycode, _, down)
 				Player.Velocity.Y = 100
 			elseif latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
 				-- activate
-                flying = true
+				--TODO: handle multiplayer
+                -- flying = true
 			end
 		else
 			if latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
