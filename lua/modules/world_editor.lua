@@ -458,7 +458,10 @@ local statesSettings = {
 		onStateEnd = function(nextState)
 			worldEditor.updateObjectUI:hide()
 			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
-			worldEditor.object.trail:remove()
+			if worldEditor.object.trail then
+				worldEditor.object.trail:remove()
+				worldEditor.object.trail = nil
+			end
 			if nextState == states.DUPLICATE_OBJECT or nextState == states.DESTROY_OBJECT then
 				return
 			end
