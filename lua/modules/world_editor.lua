@@ -667,6 +667,8 @@ local maps = {
 local loadMap
 
 init = function()
+	math.randomseed(Player.ID + Time.UnixMilli())
+
 	require("object_skills").addStepClimbing(Player)
 	Camera:SetModeFree()
 	local pivot = Object()

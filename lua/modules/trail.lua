@@ -42,6 +42,7 @@ local create = function(_, source, target, color, thickness, segmentLength)
                 if segmentIndex >= MAX_TRAIL_SEGMENTS then return end
                 addSegment(segments, color, thickness, segmentLength)
             end
+            if not segment then return end
             segment.IsHidden = false
             segment.Position = sourcePos + vector * (segmentIndex - 1) * spaceBetweenTwoSegmentOrigins
             segment.Forward = vector
