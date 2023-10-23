@@ -26,20 +26,14 @@ local getObjectInfoTable = function(obj)
 	if obj.Physics == PhysicsMode.StaticPerBlock then physics = "SPB" end
 	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
 
-	local rotation = obj.Rotation
-	if not rotation then
-		rotation = { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z }
-	end
-
-	local scale = obj.Scale
-	if not scale then
-		scale = { obj.Scale.X, obj.Scale.Y, obj.Scale.Z }
-	end
+	local position = obj.Position or Number3(0,0,0)
+	local rotation = obj.Rotation or Rotation(0,0,0)
+	local scale = obj.Scale or Number3(1,1,1)
 
 	return {
 		uuid = obj.uuid,
 		fullname = obj.fullname,
-		Position = { obj.Position.X, obj.Position.Y, obj.Position.Z },
+		Position = position,
 		Rotation = rotation,
 		Scale = scale,
 		Name = obj.Name,
@@ -74,7 +68,7 @@ local events = {
 local sendToServer = function(event, data)
 	local e = Event()
 	e.a = event
-	e.data = JSON:Encode(data)
+	e.data = data
 	e:SendTo(Server)
 end
 
@@ -117,6 +111,7 @@ local tryPickObject = function(pe)
 	end
 	if not obj then setState(states.DEFAULT) return end
 
+	if obj.currentlyEditedBy == Player then return end
 	if obj.currentlyEditedBy then
 		print("Someone else is editing this object, please wait")
 		return
@@ -259,7 +254,7 @@ local subStatesSettingsUpdatingObject = {
 			worldEditor.gizmo:setOnMove(function()
 				sendToServer(events.P_EDIT_OBJECT, {
 					uuid = worldEditor.object.uuid,
-					Position = { worldEditor.object.Position.X, worldEditor.object.Position.Y, worldEditor.object.Position.Z }
+					Position = worldEditor.object.Position
 				})
 			end)
 			freezeObject(worldEditor.object)
@@ -289,7 +284,7 @@ local subStatesSettingsUpdatingObject = {
 			worldEditor.gizmo:setOnRotate(function()
 				sendToServer(events.P_EDIT_OBJECT, {
 					uuid = worldEditor.object.uuid,
-					Rotation = { worldEditor.object.Rotation.X, worldEditor.object.Rotation.Y, worldEditor.object.Rotation.Z }
+					Rotation = worldEditor.object.Rotation
 				})
 			end)
 			freezeObject(worldEditor.object)
@@ -319,7 +314,7 @@ local subStatesSettingsUpdatingObject = {
 			worldEditor.gizmo:setOnScale(function()
 				sendToServer(events.P_EDIT_OBJECT, {
 					uuid = worldEditor.object.uuid,
-					Scale = { worldEditor.object.Scale.X, worldEditor.object.Scale.Y, worldEditor.object.Scale.Z }
+					Scale = worldEditor.object.Scale
 				})
 			end)
 			freezeObject(worldEditor.object)
@@ -446,7 +441,7 @@ local statesSettings = {
 			end
 			worldEditor.infoBtn.onRelease = function()
 				local cell = worldEditor.object.itemDetailsCell
-				require("item_details"):createModal({ cell=cell })
+				require("item_details"):createModal({ cell = cell })
 			end
 			worldEditor.updateObjectUI:show()
 
@@ -525,7 +520,7 @@ local statesSettings = {
 			if not impact or not impact.Block or not impact.Object == Map then return end
 			if pe.Index == 4 then
 				local pos = impact.Block.Coords
-				sendToServer(events.P_REMOVE_BLOCK, { pos = { pos.X, pos.Y, pos.Z } })
+				sendToServer(events.P_REMOVE_BLOCK, { pos = pos })
 				impact.Block:Remove()
 			elseif pe.Index == 5 then
 				impact.Block:AddNeighbor(worldEditor.selectedColor, impact.FaceTouched)
@@ -537,7 +532,7 @@ local statesSettings = {
 				elseif impact.FaceTouched == Face.Right then pos.X = pos.X + 1
 				elseif impact.FaceTouched == Face.Left then pos.X = pos.X - 1 end
 				sendToServer(events.P_PLACE_BLOCK, {
-					pos = { pos.X, pos.Y, pos.Z },
+					pos = pos,
 					color = { worldEditor.selectedColor.R, worldEditor.selectedColor.G, worldEditor.selectedColor.B }
 				})
 			end
@@ -990,7 +985,7 @@ end
 init()
 
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
-	local data = e.data and JSON:Decode(e.data) or nil
+	local data = e.data
 	local sender = Players[e.pID]
 	local isLocalPlayer = e.pID == Player.ID
 
@@ -1053,9 +1048,9 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		obj.currentlyEditedBy = nil
 	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
 		local color = Color(math.floor(data.color[1]),math.floor(data.color[2]),math.floor(data.color[3]))
-		map:AddBlock(color, data.pos[1], data.pos[2], data.pos[3])
+		map:AddBlock(color, data.pos.X, data.pos.Y, data.pos.Z)
 	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
-		local b = map:GetBlock(data.pos[1], data.pos[2], data.pos[3])
+		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
 		if b then b:Remove() end
 	end
 end)
