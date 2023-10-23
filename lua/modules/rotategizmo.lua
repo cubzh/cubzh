@@ -49,6 +49,9 @@ end
 
 functions.up = function(self, _)
 	if self.selectedHandle then
+		if self.onDragEnd then
+			self.onDragEnd(self.object.Position)
+		end
 		self.selectedHandle = nil
 		return true
 	end
@@ -171,6 +174,10 @@ functions.down = function(self, pe)
 		end
 
 		self.p = plane:New(self.impactPosition, v1, v2)
+
+		if self.onDragBegin then
+			self.onDragBegin(self.object.Rotation)
+		end
 
 		return true
 	end
@@ -316,7 +323,9 @@ rotateGizmo.create = function(_, config)
 		handles = {},
 		snap = _config.snap,
 		listeners = {},
+		onDragBegin = nil,
 		onDrag = nil,
+		onDragEnd = nil,
 		camera = _config.camera,
 	}
 	setmetatable(g, mt)

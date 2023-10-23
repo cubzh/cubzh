@@ -6,6 +6,62 @@ setmetatable(worldEditor, metatable)
 
 local initDefaultMode
 
+local objects = {}
+
+local OBJECTS_COLLISION_GROUP = 7
+local ALPHA_ON_DRAG = 0.6
+
+local random = math.random
+local function uuidv4()
+    local template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+    return string.gsub(template, '[xy]', function (c)
+        local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
+        return string.format('%x', v)
+    end)
+end
+
+local getObjectInfoTable = function(obj)
+	local physics = "SPB"
+	if obj.Physics == PhysicsMode.StaticPerBlock then physics = "SPB" end
+	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
+
+	return {
+		uuid = obj.uuid,
+		fullname = obj.fullname,
+		Position = { obj.Position.X, obj.Position.Y, obj.Position.Z },
+		Rotation = { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z },
+		Scale = { obj.Scale.X, obj.Scale.Y, obj.Scale.Z },
+		Name = obj.Name,
+		itemDetailsCell = obj.itemDetailsCell,
+		Physics = physics
+	}
+end
+
+-- multiplayer
+
+local events = {
+	P_END_PREPARING = "pep",
+	END_PREPARING = "ep",
+	P_PLACE_OBJECT = "ppo",
+	PLACE_OBJECT = "po",
+	P_EDIT_OBJECT = "peo",
+	EDIT_OBJECT = "eo",
+	P_REMOVE_OBJECT = "pro",
+	REMOVE_OBJECT = "ro",
+	P_PLACE_BLOCK = "ppb",
+	PLACE_BLOCK = "pb",
+	P_REMOVE_BLOCK = "prb",
+	REMOVE_BLOCK = "rb",
+	SYNC = "s"
+}
+
+local sendToServer = function(event, data)
+	local e = Event()
+	e.a = event
+	e.data = JSON:Encode(data)
+	e:SendTo(Server)
+end
+
 local states = {
 	PREPARING = 1,
 	DEFAULT = 2,
@@ -47,6 +103,23 @@ local tryPickObject = function(pe)
 	setState(states.UPDATING_OBJECT, obj)
 end
 
+local setObjectAlpha = function(obj, alpha)
+	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		if not o.savedAlpha then
+			o.savedAlpha = {}
+			for k=1,#o.Palette do
+				local c = o.Palette[k]
+				o.savedAlpha[k] = c.Color.Alpha / 255
+			end
+		end
+		for k=1,#o.Palette do
+			local c = o.Palette[k]
+			c.Color.Alpha = o.savedAlpha[k] * alpha
+		end
+		o:RefreshModel()
+	end)
+end
+
 local freezeObject = function(obj)
 	obj.savedPhysicsState = obj.Physics
 	if obj.Physics == PhysicsMode.StaticPerBlock then return end
@@ -61,12 +134,84 @@ local unfreezeObject = function(obj)
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 			o.Physics = PhysicsMode.StaticPerBlock
 		end)
+		sendToServer(events.P_EDIT_OBJECT, {
+			uuid = obj.uuid,
+			Physics = "SPB"
+		})
 	else
 		obj.Physics = PhysicsMode.Dynamic
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
 			o.Physics = PhysicsMode.Disabled
 		end)
+		sendToServer(events.P_EDIT_OBJECT, {
+			uuid = obj.uuid,
+			Physics = "D"
+		})
 	end
+end
+
+local spawnObject = function(data, onDone)
+	local uuid = data.uuid
+	local fullname = data.fullname
+	local name = data.Name
+	local position = data.Position or Number3(0,0,0)
+	local rotation = data.Rotation or Rotation(0,0,0)
+	local scale = data.Scale or 0.5
+	local itemDetailsCell = data.itemDetailsCell
+	if data.Physics == "SPB" then data.Physics = PhysicsMode.StaticPerBlock end
+	if data.Physics == "D" then data.Physics = PhysicsMode.Dynamic end
+	local physics = data.Physics or PhysicsMode.StaticPerBlock
+
+	Object:Load(fullname, function(obj)
+		obj:SetParent(World)
+		if physics == PhysicsMode.StaticPerBlock then
+			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.StaticPerBlock
+			end)
+		else
+			obj.Physics = PhysicsMode.Dynamic
+			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+		end
+		obj.uuid = uuid
+		obj.Position = position
+		obj.Rotation = rotation
+		obj.Scale = scale
+		obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
+		obj.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+
+		obj.isEditable = true
+		obj.fullname = fullname
+		obj.Name = name or fullname
+		obj.itemDetailsCell = itemDetailsCell
+
+		objects[obj.uuid] = obj
+		if onDone then onDone(obj) end
+	end)
+end
+
+local editObject = function(objInfo)
+	local obj = objects[objInfo.uuid]
+	if not obj then print("Missing an object") return end
+	for field,value in pairs(objInfo) do
+		if field == "Physics" then
+			if value == "D" then obj.Physics = PhysicsMode.Dynamic end
+			if value == "SPB" then obj.Physics = PhysicsMode.StaticPerBlock end
+		else
+			obj[field] = value
+		end
+	end
+
+	local alpha = objInfo.alpha
+	if alpha ~= nil then
+		setObjectAlpha(obj, alpha)
+	end
+end
+
+local removeObject = function(objInfo)
+	objects[objInfo.uuid]:RemoveFromParent()
+	objects[objInfo.uuid] = nil
 end
 
 local subStatesSettingsUpdatingObject = {
@@ -82,6 +227,20 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
+			worldEditor.gizmo:setOnMoveBegin(function()
+				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
+			end)
+			worldEditor.gizmo:setOnMoveEnd(function()
+				setObjectAlpha(worldEditor.object, 1)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
+			end)
+			worldEditor.gizmo:setOnMove(function()
+				sendToServer(events.P_EDIT_OBJECT, {
+					uuid = worldEditor.object.uuid,
+					Position = { worldEditor.object.Position.X, worldEditor.object.Position.Y, worldEditor.object.Position.Z }
+				})
+			end)
 			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
@@ -98,6 +257,20 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Rotate)
+			worldEditor.gizmo:setOnRotateBegin(function()
+				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
+			end)
+			worldEditor.gizmo:setOnRotateEnd(function()
+				setObjectAlpha(worldEditor.object, 1)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
+			end)
+			worldEditor.gizmo:setOnRotate(function()
+				sendToServer(events.P_EDIT_OBJECT, {
+					uuid = worldEditor.object.uuid,
+					Rotation = { worldEditor.object.Rotation.X, worldEditor.object.Rotation.Y, worldEditor.object.Rotation.Z }
+				})
+			end)
 			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
@@ -114,6 +287,20 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Scale)
+			worldEditor.gizmo:setOnScaleBegin(function()
+				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
+			end)
+			worldEditor.gizmo:setOnScaleEnd(function()
+				setObjectAlpha(worldEditor.object, 1)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
+			end)
+			worldEditor.gizmo:setOnScale(function()
+				sendToServer(events.P_EDIT_OBJECT, {
+					uuid = worldEditor.object.uuid,
+					Scale = { worldEditor.object.Scale.X, worldEditor.object.Scale.Y, worldEditor.object.Scale.Z }
+				})
+			end)
 			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
@@ -165,31 +352,8 @@ local statesSettings = {
 	-- SPAWNING_OBJECT
 	{
 		onStateBegin = function(data)
-			local fullname = data.fullname
-			local name = data.name
-			local scale = data.scale or 0.5
-			local itemDetailsCell = data.itemDetailsCell
-			local physics = data.physics or PhysicsMode.StaticPerBlock
-			Object:Load(fullname, function(obj)
-				obj:SetParent(World)
-				if physics == PhysicsMode.StaticPerBlock then
-					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-						o.Physics = PhysicsMode.StaticPerBlock
-					end)
-				else
-					obj.Physics = PhysicsMode.Dynamic
-					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
-						o.Physics = PhysicsMode.Disabled
-					end)
-				end
-				obj.Scale = scale
-				obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
-				obj.CollisionGroups = { 3, 7 }
-
-				obj.isEditable = true
-				obj.fullname = fullname
-				obj.Name = name or fullname
-				obj.itemDetailsCell = itemDetailsCell
+			data.uuid = uuidv4()
+			spawnObject(data, function(obj)
 				setState(states.PLACING_OBJECT, obj)
 			end)
 		end
@@ -204,7 +368,7 @@ local statesSettings = {
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
-			local impact = pe:CastRay(Map.CollisionGroups + { 7 }, placingObj)
+			local impact = pe:CastRay(Map.CollisionGroups + { OBJECTS_COLLISION_GROUP }, placingObj)
 			if not impact then return end
 			local pos = pe.Position + pe.Direction * impact.Distance
 			placingObj.Position = pos
@@ -214,7 +378,7 @@ local statesSettings = {
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
-			local impact = pe:CastRay(Map.CollisionGroups + { 7 }, placingObj)
+			local impact = pe:CastRay(Map.CollisionGroups + { OBJECTS_COLLISION_GROUP }, placingObj)
 			if not impact then return end
 			local pos = pe.Position + pe.Direction * impact.Distance
 			placingObj.Position = pos
@@ -237,7 +401,9 @@ local statesSettings = {
 
 			-- left click, back to default
 			if pe.Index == 4 then
+				objects[placingObj.uuid] = placingObj
 				setState(states.UPDATING_OBJECT, placingObj)
+				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
 			end
 		end,
 		pointerWheelPriority = function(delta)
@@ -285,13 +451,9 @@ local statesSettings = {
 	{
 		onStateBegin = function()
 			local obj = worldEditor.object
-			setState(states.SPAWNING_OBJECT, {
-				fullname = obj.fullname,
-				scale = obj.Scale,
-				name = obj.Name,
-				itemDetailsCell = obj.itemDetailsCell,
-				physics = obj.Physics
-			})
+			local data = getObjectInfoTable(obj)
+			data.uuid = nil
+			setState(states.SPAWNING_OBJECT, data)
 		end,
 		onStateEnd = function()
 			worldEditor.object = nil
@@ -301,7 +463,7 @@ local statesSettings = {
 	-- DESTROY_OBJECT
 	{
 		onStateBegin = function()
-			worldEditor.object:RemoveFromParent()
+			sendToServer(events.P_REMOVE_OBJECT, { uuid = worldEditor.object.uuid })
 			worldEditor.object = nil
 			worldEditor.updateObjectUI:hide()
 			setState(states.DEFAULT)
@@ -471,6 +633,8 @@ local maps = {
 	"claire.voxowl_hq"
 }
 
+local loadMap
+
 init = function()
 	require("object_skills").addStepClimbing(Player)
 	Camera:SetModeFree()
@@ -483,8 +647,6 @@ init = function()
 	Camera.Far = 10000
 
 	local mapIndex = 1
-
-	local loadMap
 
 	local ui = require("uikit")
 	local padding = require("uitheme").current.padding
@@ -511,12 +673,12 @@ init = function()
 	validateBtn:setParent(uiPrepareState)
 	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, padding }
 	validateBtn.onRelease = function()
-		setState(states.DEFAULT)
+		sendToServer(events.P_END_PREPARING, { mapIndex = mapIndex })
 	end
 
 	worldEditor.uiPrepareState = uiPrepareState
 
-	loadMap = function(fullname)
+	loadMap = function(fullname, onDone)
 		Object:Load(fullname, function(obj)
 			if map then map:RemoveFromParent() end
 			map = MutableShape(obj)
@@ -535,6 +697,7 @@ init = function()
 			local longestValue =  math.max(map.Width, math.max(map.Height,map.Depth))
 			pivot.Position = Number3(map.Width * 0.5, longestValue, map.Depth * 0.5) * map.Scale
 			Camera.Position = pivot.Position + { -longestValue * 4, 0, 0 }
+			if onDone then onDone() end
 		end)
 	end
 
@@ -638,6 +801,11 @@ initDefaultMode = function()
 					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
 						o.Physics = PhysicsMode.Disabled
 					end)
+
+					sendToServer(events.P_EDIT_OBJECT, {
+						uuid = obj.uuid,
+						Physics = "D"
+					})
 				else
 					-- if using gizmo, do not apply physics yet
 					obj.savedPhysicsState = PhysicsMode.Dynamic
@@ -648,6 +816,11 @@ initDefaultMode = function()
 					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 						o.Physics = PhysicsMode.StaticPerBlock
 					end)
+
+					sendToServer(events.P_EDIT_OBJECT, {
+						uuid = obj.uuid,
+						Physics = "SPB"
+					})
 				else
 					-- if using gizmo, do not apply physics yet
 					obj.savedPhysicsState = PhysicsMode.StaticPerBlock
@@ -772,5 +945,29 @@ initDefaultMode = function()
 end
 
 init()
+
+LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
+	local data = e.data and JSON:Decode(e.data) or nil
+	local isLocalPlayer = e.pID == Player.ID
+	if e.a == events.END_PREPARING then
+		local mapIndex = data.mapIndex
+		loadMap(maps[mapIndex], function()
+			setState(states.DEFAULT)
+		end)
+	elseif e.a == events.SYNC then
+		if state == states.PREPARING then
+			local mapIndex = data.mapIndex
+			loadMap(maps[mapIndex], function()
+				setState(states.DEFAULT)
+			end)
+		end
+	elseif e.a == events.PLACE_OBJECT and not isLocalPlayer then
+		spawnObject(data)
+	elseif e.a == events.EDIT_OBJECT and not isLocalPlayer then
+		editObject(data)
+	elseif e.a == events.REMOVE_OBJECT then
+		removeObject(data)
+	end
+end)
 
 return worldEditor

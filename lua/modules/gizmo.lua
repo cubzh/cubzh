@@ -84,6 +84,20 @@ functions.setOnMove = function(self, fn)
 	end
 end
 
+functions.setOnMoveBegin = function(self, fn)
+	local g = self.gizmos[gizmo.Mode.Move]
+	if g then
+		g.onDragBegin = fn
+	end
+end
+
+functions.setOnMoveEnd = function(self, fn)
+	local g = self.gizmos[gizmo.Mode.Move]
+	if g then
+		g.onDragEnd = fn
+	end
+end
+
 functions.setOnRotate = function(self, fn)
 	local g = self.gizmos[gizmo.Mode.Rotate]
 	if g then
@@ -91,10 +105,38 @@ functions.setOnRotate = function(self, fn)
 	end
 end
 
+functions.setOnRotateBegin = function(self, fn)
+	local g = self.gizmos[gizmo.Mode.Rotate]
+	if g then
+		g.onDragBegin = fn
+	end
+end
+
+functions.setOnRotateEnd = function(self, fn)
+	local g = self.gizmos[gizmo.Mode.Rotate]
+	if g then
+		g.onDragEnd = fn
+	end
+end
+
 functions.setOnScale = function(self, fn)
 	local g = self.gizmos[gizmo.Mode.Scale]
 	if g then
 		g.onDrag = fn
+	end
+end
+
+functions.setOnScaleBegin = function(self, fn)
+	local g = self.gizmos[gizmo.Mode.Scale]
+	if g then
+		g.onDragBegin = fn
+	end
+end
+
+functions.setOnScaleEnd = function(self, fn)
+	local g = self.gizmos[gizmo.Mode.Scale]
+	if g then
+		g.onDragEnd = fn
 	end
 end
 
@@ -188,9 +230,15 @@ mt = {
 		setAxisVisibility = functions.setAxisVisibility,
 		setScale = functions.setScale,
 		setMode = functions.setMode,
+		setOnMoveBegin = functions.setOnMoveBegin,
 		setOnMove = functions.setOnMove,
+		setOnMoveEnd = functions.setOnMoveEnd,
+		setOnRotateBegin = functions.setOnRotateBegin,
 		setOnRotate = functions.setOnRotate,
+		setOnRotateEnd = functions.setOnRotateEnd,
+		setOnScaleBegin = functions.setOnScaleBegin,
 		setOnScale = functions.setOnScale,
+		setOnScaleEnd = functions.setOnScaleEnd,
 		setMoveSnap = functions.setMoveSnap,
 		setRotateSnap = functions.setRotateSnap,
 		setScaleSnap = functions.setScaleSnap,
@@ -239,9 +287,15 @@ gizmo.create = function(_, config)
 		moveSnap = _config.moveSnap,
 		rotateSnap = _config.rotateSnap,
 		scaleSnap = _config.scaleSnap,
+		onMoveBegin = _config.onMoveBegin,
 		onMove = _config.onMove,
+		onMoveEnd = _config.onMoveEnd,
+		onRotateBegin = _config.onRotateBegin,
 		onRotate = _config.onRotate,
+		onRotateEnd = _config.onRotateEnd,
+		onScaleBegin = _config.onScaleBegin,
 		onScale = _config.onScale,
+		onScaleEnd = _config.onScaleEnd,
 		gizmos = {}, -- create them on demand
 		scale = scale,
 		layer = layer,

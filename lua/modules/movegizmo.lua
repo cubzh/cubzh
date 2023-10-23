@@ -33,6 +33,9 @@ end
 
 functions.up = function(self, _)
 	if self.selectedHandle then
+		if self.onDragEnd then
+			self.onDragEnd(self.object.Position)
+		end
 		self.selectedHandle = nil
 		return true
 	end
@@ -119,6 +122,9 @@ functions.down = function(self, pe)
 				self.p2 = plane:New(self.impactPosition, handle.Forward, self.handles[moveGizmo.Axis.X].Forward)
 			end
 
+			if self.onDragBegin then
+				self.onDragBegin(self.object.Position)
+			end
 			return true
 		end
 	end
@@ -271,7 +277,9 @@ moveGizmo.create = function(_, config)
 		handles = {},
 		snap = _config.snap,
 		listeners = {},
+		onDragBegin = nil,
 		onDrag = nil,
+		onDragEnd = nil,
 		camera = _config.camera,
 	}
 	setmetatable(moveGizmo, mt)

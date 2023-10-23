@@ -33,6 +33,9 @@ end
 
 functions.up = function(self, _)
 	if self.selectedHandle then
+		if self.onDragEnd then
+			self.onDragEnd(self.object.Scale)
+		end
 		self.selectedHandle = nil
 		return true
 	end
@@ -123,6 +126,10 @@ functions.down = function(self, pe)
 			elseif handle.axis == scaleGizmo.Axis.Z then
 				self.p = plane:New(self.impactPosition, handle.Forward, self.handles[scaleGizmo.Axis.Y].Forward)
 				self.p2 = plane:New(self.impactPosition, handle.Forward, self.handles[scaleGizmo.Axis.X].Forward)
+			end
+
+			if self.onDragBegin then
+				self:onDragBegin(self.object.Scale)
 			end
 
 			return true
@@ -277,7 +284,9 @@ scaleGizmo.create = function(_, config)
 		handles = {},
 		snap = _config.snap,
 		listeners = {},
+		onDragBegin = nil,
 		onDrag = nil,
+		onDragEnd = nil,
 		camera = _config.camera,
 	}
 	setmetatable(scaleGizmo, mt)
