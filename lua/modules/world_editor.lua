@@ -8,6 +8,7 @@ local initDefaultMode
 
 local objects = {}
 
+local TRAILS_COLORS = { Color.Blue, Color.Red, Color.Green, Color.Yellow, Color.Grey, Color.Purple, Color.Beige, Color.Yellow, Color.Brown, Color.Pink }
 local OBJECTS_COLLISION_GROUP = 7
 local ALPHA_ON_DRAG = 0.6
 
@@ -52,7 +53,12 @@ local events = {
 	PLACE_BLOCK = "pb",
 	P_REMOVE_BLOCK = "prb",
 	REMOVE_BLOCK = "rb",
-	SYNC = "s"
+	P_START_EDIT_OBJECT = "pseo",
+	START_EDIT_OBJECT = "seo",
+	P_END_EDIT_OBJECT = "peeo",
+	END_EDIT_OBJECT = "eeo",
+	SYNC = "s",
+	MASTER = "m"
 }
 
 local sendToServer = function(event, data)
@@ -100,6 +106,11 @@ local tryPickObject = function(pe)
 		obj = obj:GetParent()
 	end
 	if not obj then setState(states.DEFAULT) return end
+
+	if obj.currentlyEditedBy then
+		print("Someone else is editing this object, please wait")
+		return
+	end
 	setState(states.UPDATING_OBJECT, obj)
 end
 
@@ -416,10 +427,12 @@ local statesSettings = {
 	{
 		onStateBegin = function(obj)
 			worldEditor.object = obj
+			obj.currentlyEditedBy = Player
 			worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.Dynamic and "Dynamic" or "Static "
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
 			end
 			worldEditor.infoBtn.onRelease = function()
 				local cell = worldEditor.object.itemDetailsCell
@@ -433,9 +446,14 @@ local statesSettings = {
 				require("ease"):inOutQuad(obj, 0.15).Scale = currentScale
 			end)
 			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
+
+			sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
+			worldEditor.object.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 		end,
 		onStateEnd = function(nextState)
 			worldEditor.updateObjectUI:hide()
+			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
+			worldEditor.object.trail:remove()
 			if nextState == states.DUPLICATE_OBJECT or nextState == states.DESTROY_OBJECT then
 				return
 			end
@@ -948,7 +966,9 @@ init()
 
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	local data = e.data and JSON:Decode(e.data) or nil
+	local sender = Players[e.pID]
 	local isLocalPlayer = e.pID == Player.ID
+
 	if e.a == events.END_PREPARING then
 		local mapIndex = data.mapIndex
 		loadMap(maps[mapIndex], function()
@@ -967,6 +987,18 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		editObject(data)
 	elseif e.a == events.REMOVE_OBJECT then
 		removeObject(data)
+	elseif e.a == events.START_EDIT_OBJECT and not isLocalPlayer then
+		Timer(0.5, function()
+			local obj = objects[data.uuid]
+			if not obj then return end
+			obj.currentlyEditedBy = sender
+			obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
+		end)
+	elseif e.a == events.END_EDIT_OBJECT then
+		local obj = objects[data.uuid]
+		obj.trail:remove()
+		obj.currentlyEditedBy = nil
+		obj.trail = nil
 	end
 end)
 
