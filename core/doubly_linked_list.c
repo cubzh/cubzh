@@ -6,7 +6,11 @@
 
 #include "doubly_linked_list.h"
 
+// C
+#include <assert.h>
 #include <stdlib.h>
+
+#include "cclog.h"
 
 struct _DoublyLinkedListNode {
     DoublyLinkedListNode *previous; // toward first
@@ -23,6 +27,31 @@ DoublyLinkedList *doubly_linked_list_new(void) {
     list->first = NULL;
     list->last = NULL;
     return list;
+}
+
+bool doubly_linked_list_copy(DoublyLinkedList *const dst, DoublyLinkedList *const src) {
+    // source and destination lists pointers cannot be NULL
+    if (dst == NULL || src == NULL) {
+        return false;
+    }
+
+    // destination list must be empty
+    if (doubly_linked_list_is_empty(dst) == false) {
+        return false;
+    }
+
+    // copy content
+    DoublyLinkedListNode *node = doubly_linked_list_first(src);
+    while (node != NULL) {
+        // get value of stored pointer
+        void *ptr = doubly_linked_list_node_pointer(node);
+        // insert this pointer value into the `dst` list
+        doubly_linked_list_push_last(dst, ptr);
+        // move to next node
+        node = doubly_linked_list_node_next(node);
+    }
+
+    return true;
 }
 
 void doubly_linked_list_flush(DoublyLinkedList *list, pointer_free_function ptr) {
@@ -42,10 +71,14 @@ void doubly_linked_list_free(DoublyLinkedList *list) {
     free(list);
 }
 
-DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *list, void *ptr) {
+DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *const list, void *const ptr) {
     DoublyLinkedListNode *newNode = doubly_linked_list_node_new(ptr);
+    if (newNode == NULL) {
+        return NULL;
+    }
 
     if (list->last == NULL) {
+        assert(list->first == NULL);
         list->last = newNode;
         list->first = newNode; // list->first has to be NULL if list->last is
         return newNode;
@@ -58,10 +91,14 @@ DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *list, void 
     return newNode;
 }
 
-DoublyLinkedListNode *doubly_linked_list_push_first(DoublyLinkedList *list, void *ptr) {
+DoublyLinkedListNode *doubly_linked_list_push_first(DoublyLinkedList *const list, void *const ptr) {
     DoublyLinkedListNode *newNode = doubly_linked_list_node_new(ptr);
+    if (newNode == NULL) {
+        return NULL;
+    }
 
     if (list->first == NULL) {
+        assert(list->last == NULL);
         list->first = newNode;
         list->last = newNode; // list->last has to be NULL if list->first is
         return newNode;
@@ -130,12 +167,21 @@ DoublyLinkedListNode *doubly_linked_list_first(const DoublyLinkedList *list) {
     return list->first;
 }
 
-DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *list,
-                                                     DoublyLinkedListNode *node) {
-    DoublyLinkedListNode *next = NULL;
+DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *const list,
+                                                     DoublyLinkedListNode *const node) {
+    if (list == NULL || node == NULL) {
+        return NULL;
+    }
+
+    // make sure node is part of the list
+    if (doubly_linked_list_contains_node(list, node) == false) {
+        return NULL;
+    }
+
+    DoublyLinkedListNode *result = NULL;
     if (node->next != NULL) {
         node->next->previous = node->previous;
-        next = node->next;
+        result = node->next;
     }
 
     if (node->previous != NULL) {
@@ -158,7 +204,7 @@ DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *list,
 
     doubly_linked_list_node_free(node);
 
-    return next;
+    return result;
 }
 
 DoublyLinkedListNode *doubly_linked_list_insert_node_previous(DoublyLinkedList *list,
@@ -257,6 +303,18 @@ DoublyLinkedListNode *doubly_linked_list_find(const DoublyLinkedList *list, void
     return NULL;
 }
 
+bool doubly_linked_list_contains_node(const DoublyLinkedList *const list,
+                                      const DoublyLinkedListNode *const node) {
+    DoublyLinkedListNode *n = list->first;
+    while (n != NULL) {
+        if (n == node) {
+            return true;
+        }
+        n = n->next;
+    }
+    return false;
+}
+
 bool doubly_linked_list_contains(const DoublyLinkedList *list, void *ptr) {
     DoublyLinkedListNode *n = list->first;
     while (n != NULL) {
@@ -265,7 +323,6 @@ bool doubly_linked_list_contains(const DoublyLinkedList *list, void *ptr) {
         }
         n = n->next;
     }
-
     return false;
 }
 
@@ -287,8 +344,23 @@ bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
     return false;
 }
 
-bool doubly_linked_list_is_empty(const DoublyLinkedList *list) {
+bool doubly_linked_list_is_empty(const DoublyLinkedList *const list) {
     return list->first == NULL && list->last == NULL;
+}
+
+void doubly_linked_list_print(const DoublyLinkedList *const list) {
+    cclog_debug("--- list --- %p", list);
+    // copy content
+    DoublyLinkedListNode *node = doubly_linked_list_first(list);
+    while (node != NULL) {
+        // get value of stored pointer
+        void *ptr = doubly_linked_list_node_pointer(node);
+        // print pointer
+        cclog_debug("%p", ptr);
+        // move to next node
+        node = doubly_linked_list_node_next(node);
+    }
+    cclog_debug("------------");
 }
 
 //---------------------
