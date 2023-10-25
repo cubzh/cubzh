@@ -32,7 +32,7 @@
 // end-of-frame
 #define TRANSFORM_PHYSICS 64
 // any transformation has been dirty since last end-of-frame, can be used internally by higher types
-#define TRANSFORM_ANY 128
+#define TRANSFORM_CACHE 128
 
 #if DEBUG_TRANSFORM
 static int debug_transform_refresh_calls = 0;
@@ -120,7 +120,7 @@ static pointer_transform_destroyed_func transform_destroyed_callback = NULL;
 
 static uint16_t _transform_get_valid_id(void);
 static void _transform_recycle_id(const uint16_t id);
-static void _transform_set_dirty(Transform *const t, const uint8_t flag);
+static void _transform_set_dirty(Transform *const t, const uint8_t flag, bool keepCache);
 static void _transform_reset_dirty(Transform *const t, const uint8_t flag);
 static bool _transform_get_dirty(Transform *const t, const uint8_t flag);
 static bool _transform_check_and_refresh_parents(Transform *const t);
@@ -321,11 +321,11 @@ void transform_refresh_children_done(Transform *t) {
 }
 
 void transform_reset_any_dirty(Transform *t) {
-    _transform_reset_dirty(t, TRANSFORM_ANY);
+    _transform_reset_dirty(t, TRANSFORM_CACHE);
 }
 
 bool transform_is_any_dirty(Transform *t) {
-    return _transform_get_dirty(t, TRANSFORM_ANY);
+    return _transform_get_dirty(t, TRANSFORM_CACHE);
 }
 
 void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
@@ -607,7 +607,7 @@ void transform_set_local_scale(Transform *t, const float x, const float y, const
         return;
     }
     float3_set(&t->localScale, x, y, z);
-    _transform_set_dirty(t, TRANSFORM_MTX | TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_MTX | TRANSFORM_PHYSICS, false);
 }
 
 void transform_set_local_scale_vec(Transform *t, const float3 *scale) {
@@ -626,15 +626,15 @@ void transform_get_lossy_scale(Transform *t, float3 *scale) {
 // MARK: - Position -
 
 void transform_set_local_position(Transform *t, const float x, const float y, const float z) {
-    _transform_reset_dirty(t, TRANSFORM_LOCAL_POS);
-    _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_MTX);
-
     if (_transform_get_dirty(t, TRANSFORM_LOCAL_POS) ||
         _transform_vec_equals(&t->localPosition, x, y, z, EPSILON_ZERO) == false) {
 
         float3_set(&t->localPosition, x, y, z);
-        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+        _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_MTX | TRANSFORM_PHYSICS, false);
+    } else {
+        _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_MTX, true);
     }
+    _transform_reset_dirty(t, TRANSFORM_LOCAL_POS);
 }
 
 void transform_set_local_position_vec(Transform *t, const float3 *pos) {
@@ -642,15 +642,15 @@ void transform_set_local_position_vec(Transform *t, const float3 *pos) {
 }
 
 void transform_set_position(Transform *t, const float x, const float y, const float z) {
-    _transform_reset_dirty(t, TRANSFORM_POS);
-    _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX);
-
     if (_transform_get_dirty(t, TRANSFORM_POS) ||
         _transform_vec_equals(&t->position, x, y, z, EPSILON_ZERO) == false) {
 
         float3_set(&t->position, x, y, z);
-        _transform_set_dirty(t, TRANSFORM_PHYSICS);
+        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX | TRANSFORM_PHYSICS, false);
+    } else {
+        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_MTX, true);
     }
+    _transform_reset_dirty(t, TRANSFORM_POS);
 }
 
 void transform_set_position_vec(Transform *t, const float3 *pos) {
@@ -672,17 +672,18 @@ const float3 *transform_get_position(Transform *t) {
 // MARK: - Rotation -
 
 void transform_set_local_rotation(Transform *t, Quaternion *q) {
-    _transform_reset_dirty(t, TRANSFORM_LOCAL_ROT);
-    _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX);
-
     if (_transform_get_dirty(t, TRANSFORM_LOCAL_ROT) ||
         quaternion_is_equal(t->localRotation, q, EPSILON_ZERO_TRANSFORM_RAD) == false) {
 
         quaternion_set(t->localRotation, q);
+        _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX, false);
         if (rigidbody_is_rotation_dependent(t->rigidBody)) {
-            _transform_set_dirty(t, TRANSFORM_PHYSICS);
+            _transform_set_dirty(t, TRANSFORM_PHYSICS, false);
         }
+    } else {
+        _transform_set_dirty(t, TRANSFORM_ROT | TRANSFORM_MTX, true);
     }
+    _transform_reset_dirty(t, TRANSFORM_LOCAL_ROT);
 }
 
 void transform_set_local_rotation_vec(Transform *t, const float4 *v) {
@@ -701,17 +702,18 @@ void transform_set_local_rotation_euler_vec(Transform *t, const float3 *euler) {
 }
 
 void transform_set_rotation(Transform *t, Quaternion *q) {
-    _transform_reset_dirty(t, TRANSFORM_ROT);
-    _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX);
-
     if (_transform_get_dirty(t, TRANSFORM_ROT) ||
         quaternion_is_equal(t->rotation, q, EPSILON_ZERO_TRANSFORM_RAD) == false) {
 
         quaternion_set(t->rotation, q);
+        _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX, false);
         if (rigidbody_is_rotation_dependent(t->rigidBody)) {
-            _transform_set_dirty(t, TRANSFORM_PHYSICS);
+            _transform_set_dirty(t, TRANSFORM_PHYSICS, false);
         }
+    } else {
+        _transform_set_dirty(t, TRANSFORM_LOCAL_ROT | TRANSFORM_MTX, true);
     }
+    _transform_reset_dirty(t, TRANSFORM_ROT);
 }
 
 void transform_set_rotation_vec(Transform *t, const float4 *v) {
@@ -1113,7 +1115,7 @@ static void _transform_recycle_id(const uint16_t id) {
     mutex_unlock(_IDMutex);
 }
 
-static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
+static void _transform_set_dirty(Transform *const t, const uint8_t flag, bool keepCache) {
 #if DEBUG_TRANSFORM
     if (t->debug) {
         printf("---- BEGIN transform dirty flags\n");
@@ -1135,7 +1137,11 @@ static void _transform_set_dirty(Transform *const t, const uint8_t flag) {
         printf("---- END transform dirty flags\n");
     }
 #endif
-    t->dirty |= (flag | TRANSFORM_ANY);
+    if (keepCache) {
+        t->dirty |= flag;
+    } else {
+        t->dirty |= (flag | TRANSFORM_CACHE);
+    }
 }
 
 static void _transform_reset_dirty(Transform *const t, const uint8_t flag) {
@@ -1265,7 +1271,7 @@ static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
 
         // transform's mtx was refreshed, therefore other children down the hierarchy
         // may be refreshed on intra-frame demand, or automatically at next end-of-frame
-        _transform_set_dirty(t, TRANSFORM_CHILDREN);
+        _transform_set_dirty(t, TRANSFORM_CHILDREN, true);
     }
 
     if (dirty || hierarchyDirty) {
@@ -1279,7 +1285,7 @@ static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
 
         if (hierarchyDirty) {
             // parent ltw changed, any world transformations may have changed from the ancestors
-            _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT | TRANSFORM_PHYSICS);
+            _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT | TRANSFORM_PHYSICS, false);
         }
 
 #if DEBUG_TRANSFORM_REFRESH_CALLS
@@ -1303,13 +1309,13 @@ static void _transform_set_all_dirty(Transform *t, bool keepWorld) {
     if (keepWorld) {
         _transform_refresh_position(t);
         _transform_refresh_rotation(t);
-        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_LOCAL_ROT);
+        _transform_set_dirty(t, TRANSFORM_LOCAL_POS | TRANSFORM_LOCAL_ROT, true);
     } else {
         _transform_refresh_local_position(t);
         _transform_refresh_local_rotation(t);
-        _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT);
+        _transform_set_dirty(t, TRANSFORM_POS | TRANSFORM_ROT, true);
     }
-    _transform_set_dirty(t, TRANSFORM_MTX | TRANSFORM_PHYSICS);
+    _transform_set_dirty(t, TRANSFORM_MTX | TRANSFORM_PHYSICS, false);
 }
 
 static void _transform_unit_to_rotation(const float3 *right,

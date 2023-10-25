@@ -99,6 +99,7 @@ bool vertex_buffer_has_room_for_new_chunk(const VertexBuffer *vb);
 void vertex_buffer_insert_after(VertexBuffer *vb1, VertexBuffer *vb2);
 
 VertexBuffer *vertex_buffer_get_next(const VertexBuffer *vb);
+VertexBufferMemArea *vertex_buffer_get_first_mem_area(const VertexBuffer *vb);
 
 uint32_t vertex_buffer_get_id(const VertexBuffer *vb);
 
@@ -112,7 +113,7 @@ void vertex_buffer_fill_draw_slices(VertexBuffer *vb);
 void vertex_buffer_flush_draw_slices(VertexBuffer *vb);
 size_t vertex_buffer_get_nb_draw_slices(const VertexBuffer *vb);
 
-size_t vertex_buffer_get_nb_vertices(const VertexBuffer *vb);
+size_t vertex_buffer_get_nb_faces(const VertexBuffer *vb);
 size_t vertex_buffer_get_max_length(const VertexBuffer *vb);
 
 bool vertex_buffer_is_fragmented(const VertexBuffer *vb);
@@ -125,7 +126,11 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb);
 void vertex_buffer_mem_area_make_gap(VertexBufferMemArea *vbma, bool transparent);
 void vertex_buffer_mem_area_flush(VertexBufferMemArea *vbma);
 
-VertexBuffer *vertex_buffer_mem_area_get_vb(VertexBufferMemArea *vbma);
+Chunk *vertex_buffer_mem_area_get_chunk(const VertexBufferMemArea *vbma);
+VertexBuffer *vertex_buffer_mem_area_get_vb(const VertexBufferMemArea *vbma);
+uint32_t vertex_buffer_mem_area_get_start_idx(const VertexBufferMemArea *vbma);
+uint32_t vertex_buffer_mem_area_get_count(const VertexBufferMemArea *vbma);
+VertexBufferMemArea *vertex_buffer_mem_area_get_global_next(VertexBufferMemArea *vbma);
 VertexBufferMemArea *vertex_buffer_mem_area_get_group_next(VertexBufferMemArea *vbma);
 
 bool vertex_buffer_has_dirty_mem_areas(const VertexBuffer *vb);

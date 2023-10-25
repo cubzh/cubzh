@@ -87,7 +87,7 @@ struct _Shape {
 
     uint16_t layers; // 2 bytes
 
-    // internal flag used for variable-size VB allocation, see shape_add_vertex_buffer
+    // internal flag used for variable-size VB allocation, see shape_add_buffer
     uint8_t vbAllocationFlag_opaque;      // 1 byte
     uint8_t vbAllocationFlag_transparent; // 1 byte
 
@@ -354,17 +354,17 @@ Shape *shape_make_copy(Shape *origin) {
 // The buffer capacity is an estimation that should on average reduce occupancy waste,
 // 1) for a shape that was never drawn:
 // - a) if it's the first buffer, it should ideally fit the entire shape at once (estimation)
-// - b) if more space is required, subsequent buffers are scaled using VERTEX_BUFFER_INIT_SCALE_RATE
+// - b) if more space is required, subsequent buffers are scaled using SHAPE_BUFFER_INIT_SCALE_RATE
 // this makes it possible to fit a worst-case scenario "cheese" map even if we know it practically
 // won't happen
 // 2) for a shape that has been drawn before:
 // - a) first buffer should be of a minimal size to fit a few runtime structural changes
 // (estimation)
-// - b) subsequent buffers are scaled using VERTEX_BUFFER_RUNTIME_SCALE_RATE
+// - b) subsequent buffers are scaled using SHAPE_BUFFER_RUNTIME_SCALE_RATE
 // this approach should fit a game that by design do not result in a lot of structural changes,
 // in just one buffer ; and should accommodate a game which by design requires a lot of structural
 // changes, in just a handful of buffers down the chain
-VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
+VertexBuffer *shape_add_buffer(Shape *shape, bool transparency) {
     // estimate new VB capacity
     size_t capacity;
     uint8_t *flag = transparency ? &shape->vbAllocationFlag_transparent
@@ -375,28 +375,17 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
             int3 size;
             shape_get_bounding_box_size(shape, &size);
 
-            // estimation based on maximum of shape shell vs. shape volume block-occupancy
-            size_t shell = (size_t)(minimum(size.z, 2) * size.x * size.y +
-                                    minimum(size.y, 2) * size.x * maximum(size.z - 2, 0) +
-                                    minimum(size.x, 2) * maximum(size.z - 2, 0) *
-                                        maximum(size.y - 2, 0));
-            float volume = (float)(size.x * size.y * size.z) * VERTEX_BUFFER_VOLUME_OCCUPANCY;
-            if (shell >= (size_t)volume) {
-                capacity = (size_t)(ceilf(
-                    (float)shell * VERTEX_BUFFER_SHELL_FACTOR *
-                    (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
-            } else {
-                capacity = (size_t)(ceilf(
-                    volume * VERTEX_BUFFER_VOLUME_FACTOR *
-                    (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
-            }
+            // estimation based on number of faces of each chunks' cube surface area
+            size_t shell = 6 * CHUNK_SIZE_SQR * 2 * shape->nbChunks;
+            capacity = (size_t)(ceilf((float)shell * SHAPE_BUFFER_INITIAL_FACTOR *
+                                      (transparency ? SHAPE_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
 
             // if this shape is exceptionally big and caps max VB count, next VB should be created
             // at full capacity as well
-            if (capacity < VERTEX_BUFFER_MAX_COUNT) {
+            if (capacity < SHAPE_BUFFER_MAX_COUNT) {
                 *flag = 1;
             }
-            capacity = CLAMP(capacity, VERTEX_BUFFER_MIN_COUNT, VERTEX_BUFFER_MAX_COUNT);
+            capacity = CLAMP(capacity, SHAPE_BUFFER_MIN_COUNT, SHAPE_BUFFER_MAX_COUNT);
             break;
         }
         // initialized within this frame and last buffer capacity was uncapped (1b)
@@ -406,19 +395,19 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
 
             // restart buffer series when minimum capacity has been reached already (if downscaling
             // buffers)
-            if (prev == VERTEX_BUFFER_MIN_COUNT) {
+            if (prev == SHAPE_BUFFER_MIN_COUNT) {
                 *flag = 0;
-                return shape_add_vertex_buffer(shape, transparency);
+                return shape_add_buffer(shape, transparency);
             }
 
-            capacity = CLAMP((size_t)(ceilf((float)prev * VERTEX_BUFFER_INIT_SCALE_RATE)),
-                             VERTEX_BUFFER_MIN_COUNT,
-                             VERTEX_BUFFER_MAX_COUNT);
+            capacity = CLAMP((size_t)(ceilf((float)prev * SHAPE_BUFFER_INIT_SCALE_RATE)),
+                             SHAPE_BUFFER_MIN_COUNT,
+                             SHAPE_BUFFER_MAX_COUNT);
             break;
         }
         // initialized for more than a frame, first structural change (2a)
         case 2: {
-            capacity = VERTEX_BUFFER_RUNTIME_COUNT;
+            capacity = SHAPE_BUFFER_RUNTIME_COUNT;
             *flag = 3;
             break;
         }
@@ -426,20 +415,20 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
         case 3: {
             size_t prev = vertex_buffer_get_max_length(transparency ? shape->lastVB_transparent
                                                                     : shape->lastVB_opaque);
-            capacity = CLAMP((size_t)(ceilf((float)prev * VERTEX_BUFFER_RUNTIME_SCALE_RATE)),
-                             VERTEX_BUFFER_MIN_COUNT,
-                             VERTEX_BUFFER_MAX_COUNT);
+            capacity = CLAMP((size_t)(ceilf((float)prev * SHAPE_BUFFER_RUNTIME_SCALE_RATE)),
+                             SHAPE_BUFFER_MIN_COUNT,
+                             SHAPE_BUFFER_MAX_COUNT);
             break;
         }
         default: {
-            capacity = VERTEX_BUFFER_MAX_COUNT;
+            capacity = SHAPE_BUFFER_MAX_COUNT;
             break;
         }
     }
 
     // ensure VB capacity is a multiple of 2 for texture size
     size_t texSize = (size_t)(ceilf(sqrtf((float)capacity)));
-#if VERTEX_BUFFER_TEX_UPPER_POT
+#if SHAPE_BUFFER_TEX_UPPER_POT
     texSize = upper_power_of_two(texSize);
 #endif
     capacity = texSize * texSize;
@@ -842,7 +831,7 @@ bool shape_remove_block(Shape *shape,
 
         // if chunk is now empty, do not destroy it right now and wait until shape_refresh_vertices:
         // 1) in case we reuse this chunk in the meantime
-        // 2) to make sure vb nbVertices is always in sync with its data
+        // 2) to make sure vb count is always in sync with its data
     }
 
     return removed;
@@ -1015,7 +1004,7 @@ void shape_get_local_aabb(const Shape *s, Box *box) {
     box_to_aabox2(&model, box, transform_get_mtx(s->transform), offset, false);
 }
 
-void shape_get_world_aabb(Shape *s, Box *box) {
+bool shape_get_world_aabb(Shape *s, Box *box) {
     if (s->worldAABB == NULL || transform_is_any_dirty(s->transform)) {
         const Box model = shape_get_model_aabb(s);
         shape_box_to_aabox(s, &model, box, false);
@@ -1025,8 +1014,10 @@ void shape_get_world_aabb(Shape *s, Box *box) {
             box_copy(s->worldAABB, box);
         }
         transform_reset_any_dirty(s->transform);
+        return true;
     } else {
         box_copy(box, s->worldAABB);
+        return false;
     }
 }
 
@@ -1657,10 +1648,12 @@ void shape_refresh_vertices(Shape *shape) {
         // Note: this will create gaps in all the vb used for this chunk ie. make them fragmented
         if (chunk_get_nb_blocks(c) == 0) {
             const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
-            int3 chunk_coords = {chunkOrigin.x >> CHUNK_SIZE_SQRT,
-                                 chunkOrigin.y >> CHUNK_SIZE_SQRT,
-                                 chunkOrigin.z >> CHUNK_SIZE_SQRT};
-            index3d_remove(shape->chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z, NULL);
+            CHUNK_COORDS_INT3_T chunk_coords = chunk_utils_get_coords(chunkOrigin, NULL);
+            index3d_remove(shape->chunks,
+                           (int)chunk_coords.x,
+                           (int)chunk_coords.y,
+                           (int)chunk_coords.z,
+                           NULL);
             rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), false);
             chunk_free(c, true);
             c = NULL;
@@ -2970,9 +2963,8 @@ bool _shape_add_block_in_chunks(Shape *shape,
                                 Block **added_or_existing_block) {
 
     // see if there's a chunk ready for that block
-    const CHUNK_COORDS_INT3_T chunk_coords = {(CHUNK_COORDS_INT_T)(x >> CHUNK_SIZE_SQRT),
-                                              (CHUNK_COORDS_INT_T)(y >> CHUNK_SIZE_SQRT),
-                                              (CHUNK_COORDS_INT_T)(z >> CHUNK_SIZE_SQRT)};
+    const CHUNK_COORDS_INT3_T chunk_coords = chunk_utils_get_coords((SHAPE_COORDS_INT3_T){x, y, z},
+                                                                    NULL);
     Chunk *chunk = (Chunk *)
         index3d_get(shape->chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z);
 
@@ -3001,9 +2993,9 @@ bool _shape_add_block_in_chunks(Shape *shape,
         *added_or_existing_chunk = chunk;
     }
 
-    CHUNK_COORDS_INT3_T _block_coords = {(CHUNK_COORDS_INT_T)(x & CHUNK_SIZE_MINUS_ONE),
-                                         (CHUNK_COORDS_INT_T)(y & CHUNK_SIZE_MINUS_ONE),
-                                         (CHUNK_COORDS_INT_T)(z & CHUNK_SIZE_MINUS_ONE)};
+    CHUNK_COORDS_INT3_T _block_coords = {(CHUNK_COORDS_INT_T)(x % CHUNK_SIZE),
+                                         (CHUNK_COORDS_INT_T)(y % CHUNK_SIZE),
+                                         (CHUNK_COORDS_INT_T)(z % CHUNK_SIZE)};
 
     if (block_coords != NULL) {
         *block_coords = _block_coords;
@@ -3018,7 +3010,7 @@ bool _shape_add_block_in_chunks(Shape *shape,
     return added;
 }
 
-// flag used in shape_add_vertex_buffer
+// flag used in shape_add_buffer
 void _set_vb_allocation_flag_one_frame(Shape *s) {
     // shape VB chain was just initialized this frame, and will now be 1+ frame old
     // opaque VB chain
@@ -3391,9 +3383,9 @@ void _light_propagate(Shape *s,
         coords_in_shape = light_node_get_coords(n);
         chunk = light_node_get_chunk(n);
 
-        coords_in_chunk.x = (CHUNK_COORDS_INT_T)(coords_in_shape.x & CHUNK_SIZE_MINUS_ONE);
-        coords_in_chunk.y = (CHUNK_COORDS_INT_T)(coords_in_shape.y & CHUNK_SIZE_MINUS_ONE);
-        coords_in_chunk.z = (CHUNK_COORDS_INT_T)(coords_in_shape.z & CHUNK_SIZE_MINUS_ONE);
+        coords_in_chunk.x = (CHUNK_COORDS_INT_T)(coords_in_shape.x % CHUNK_SIZE);
+        coords_in_chunk.y = (CHUNK_COORDS_INT_T)(coords_in_shape.y % CHUNK_SIZE);
+        coords_in_chunk.z = (CHUNK_COORDS_INT_T)(coords_in_shape.z % CHUNK_SIZE);
 
         current = chunk_get_block(chunk, coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z);
 
@@ -3761,9 +3753,9 @@ void _light_removal(Shape *s,
 
         // check that the current block is inside the shape bounds
         if (shape_is_within_bounding_box(s, coords_in_shape)) {
-            coords_in_chunk.x = (CHUNK_COORDS_INT_T)(coords_in_shape.x & CHUNK_SIZE_MINUS_ONE);
-            coords_in_chunk.y = (CHUNK_COORDS_INT_T)(coords_in_shape.y & CHUNK_SIZE_MINUS_ONE);
-            coords_in_chunk.z = (CHUNK_COORDS_INT_T)(coords_in_shape.z & CHUNK_SIZE_MINUS_ONE);
+            coords_in_chunk.x = (CHUNK_COORDS_INT_T)(coords_in_shape.x % CHUNK_SIZE);
+            coords_in_chunk.y = (CHUNK_COORDS_INT_T)(coords_in_shape.y % CHUNK_SIZE);
+            coords_in_chunk.z = (CHUNK_COORDS_INT_T)(coords_in_shape.z % CHUNK_SIZE);
 
             // if air or transparent block, proceed with light removal
             if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK ||

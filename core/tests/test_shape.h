@@ -14,7 +14,7 @@
 #include "transform.h"
 
 // functions that are NOT tested:
-// shape_add_vertex_buffer
+// shape_add_buffer
 // shape_retain_count
 // shape_free
 // shape_is_resizable

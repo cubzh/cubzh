@@ -282,36 +282,27 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 #define FACE_NONE_CTC 7
 
 // SHAPE CHUNKS
-#define CHUNK_SIZE 16
-#define CHUNK_SIZE_SQR 256
-#define CHUNK_SIZE_SQRT 4
-#define CHUNK_SIZE_MINUS_ONE 15
+#define CHUNK_SIZE 16           // 32//64
+#define CHUNK_SIZE_SQR 256      // 1024//4096
+#define CHUNK_SIZE_MINUS_ONE 15 // 31//63
 
-// VERTEX BUFFERS
-// Note (disambiguation): Cubzh Core's "VB" hold face data and is NOT equivalent to the "VB" that
-// drives drawcalls
-// Maximum allowed capacity for a single vertex buffer, this should be matched by
+// SHAPE BUFFERS
+// Maximum allowed capacity for a single shape buffer, this should be matched by
 // renderer max texture size
-#define VERTEX_BUFFER_MAX_COUNT 1048576
-#define VERTEX_BUFFER_MIN_COUNT 4096
-// Minimal size for the first VB at runtime, see shape_add_vertex_buffer
-#define VERTEX_BUFFER_RUNTIME_COUNT 4096
-// Estimated shape volume block-occupancy
-#define VERTEX_BUFFER_VOLUME_OCCUPANCY 0.08f
-// Final VB capacity multiplier if shape volume was predominant, can be thought of as block-to-faces
-// factor for shape volume
-#define VERTEX_BUFFER_VOLUME_FACTOR 3
-// Final VB capacity multiplier if shape shell was predominant, can be thought of as block-to-faces
-// factor for shape shell
-#define VERTEX_BUFFER_SHELL_FACTOR 2.0f
-// Additional factor for transparent VB capacity
-#define VERTEX_BUFFER_TRANSPARENT_FACTOR 0.25f
-// Subsequent VBs on init/runtime can be downscaled or upscaled, see shape_add_vertex_buffer
-#define VERTEX_BUFFER_INIT_SCALE_RATE .75f
-#define VERTEX_BUFFER_RUNTIME_SCALE_RATE 4.0f
-// Ensure VB size will result in POT texture size (required for compressed texture formats)
+#define SHAPE_BUFFER_MAX_COUNT 1048576
+#define SHAPE_BUFFER_MIN_COUNT 4096
+// Minimal size for the first buffer at runtime, see shape_add_buffer
+#define SHAPE_BUFFER_RUNTIME_COUNT 4096
+// Shape buffers initial capacity multiplier
+#define SHAPE_BUFFER_INITIAL_FACTOR .25f
+// Capacity multiplier for transparent buffer
+#define SHAPE_BUFFER_TRANSPARENT_FACTOR .25f
+// Subsequent buffers on init/runtime can be downscaled or upscaled, see shape_add_buffer
+#define SHAPE_BUFFER_INIT_SCALE_RATE .75f
+#define SHAPE_BUFFER_RUNTIME_SCALE_RATE 4.0f
+// Ensure buffer size will result in POT texture size (required for compressed texture formats)
 // Note: if POT expected, downscale should be 0.25f and upscale 4.0f or upper POT is used
-#define VERTEX_BUFFER_TEX_UPPER_POT false
+#define SHAPE_BUFFER_TEX_UPPER_POT false
 
 //// Disabling global lighting will use neutral value (15, 0, 0, 0) everywhere
 #define GLOBAL_LIGHTING_ENABLED true

@@ -50,7 +50,7 @@ bool vertex_buffer_pop_destroyed_id(uint32_t *id) {
 
 struct _VertexBufferMemArea {
     // where to start writing bytes (pointers for each draw buffer)
-    DrawBufferPtrs start; /* 2 pointers struct = 8 bytes padding */
+    DrawBufferPtrs start; /* struct of pointers = 8 bytes padding */
 
     // vertex buffer that owns the mem area
     VertexBuffer *vb; /* 8 bytes */
@@ -69,14 +69,15 @@ struct _VertexBufferMemArea {
     // (same chunk or gaps)
     VertexBufferMemArea *_groupListPrevious; /* 8 bytes */
 
-    // number of vertices
-    uint32_t nbVertices; /* 4 bytes */
+    // indexing within owner buffer
+    uint32_t startIdx; /* 4 bytes */
+    uint32_t count;    /* 4 bytes */
 
     // Dirty vbma will be re-uploaded next render
     bool dirty; /* 1 byte */
 
     // padding
-    char pad[3];
+    char pad[7];
 };
 
 // private prototypes
@@ -87,7 +88,10 @@ void draw_buffers_memcpy(DrawBufferPtrs dst, DrawBufferPtrs src, size_t count, s
 bool draw_buffers_equal_ptrs(DrawBufferPtrs ptrs1, DrawBufferPtrs ptrs2);
 DrawBufferPtrs draw_buffers_add_ptrs(DrawBufferPtrs ptrs, size_t count);
 
-VertexBufferMemArea *vertex_buffer_mem_area_new(VertexBuffer *vb, DrawBufferPtrs start);
+VertexBufferMemArea *vertex_buffer_mem_area_new(VertexBuffer *vb,
+                                                DrawBufferPtrs start,
+                                                uint32_t startIdx,
+                                                uint32_t count);
 void vertex_buffer_mem_area_free_all(VertexBufferMemArea *front);
 bool vertex_buffer_mem_area_assign_to_chunk(VertexBufferMemArea *vbma,
                                             Chunk *chunk,
@@ -203,7 +207,7 @@ VbSnapshot *vertex_buffer_snapshot(const VertexBuffer *vb) {
     vbma = vb->firstMemArea;
     int i = 0;
     while (vbma != NULL) {
-        vbs->vbmas[i].nbVertices = vbma->nbVertices;
+        vbs->vbmas[i].nbVertices = vbma->count;
         vbs->vbmas[i].isGap = vbma->chunk == NULL;
         if (vbma->chunk != NULL) {
             sprintf(vbs->vbmas[i].chunkID, "%p", (void *)vbma->chunk);
@@ -255,7 +259,7 @@ void vertex_buffer_log_diff(VbSnapshot *snap1, VbSnapshot *snap2) {
 #endif
 
 VertexBuffer *vertex_buffer_new(bool lighting, bool transparent) {
-    return vertex_buffer_new_with_max_count(VERTEX_BUFFER_MAX_COUNT, lighting, transparent);
+    return vertex_buffer_new_with_max_count(SHAPE_BUFFER_MAX_COUNT, lighting, transparent);
 }
 
 VertexBuffer *vertex_buffer_new_with_max_count(size_t n, bool lighting, bool transparent) {
@@ -277,7 +281,7 @@ VertexBuffer *vertex_buffer_new_with_max_count(size_t n, bool lighting, bool tra
     vb->lastMemAreaGap = NULL;
 
     vb->nbVertices = 0;
-    // nothing to initialize, the vertices won't be used if nbVertices == 0
+    // nothing to initialize, the vertices won't be used if count == 0
 
     vb->next = NULL;
     vb->previous = NULL;
@@ -361,6 +365,10 @@ VertexBuffer *vertex_buffer_get_next(const VertexBuffer *vb) {
     return vb->next;
 }
 
+VertexBufferMemArea *vertex_buffer_get_first_mem_area(const VertexBuffer *vb) {
+    return vb->firstMemArea;
+}
+
 uint32_t vertex_buffer_get_id(const VertexBuffer *vb) {
     return vb->id;
 }
@@ -433,11 +441,11 @@ void vertex_buffer_fill_draw_slices(VertexBuffer *vb) {
     while (vbma != NULL) {
         if (vbma->dirty) {
             if (vertex_buffer_mem_area_is_gap(vbma) == false) {
-                vertex_buffer_add_draw_slice(vb, idx, vbma->nbVertices);
+                vertex_buffer_add_draw_slice(vb, idx, vbma->count);
             }
             vbma->dirty = false;
         }
-        idx += vbma->nbVertices;
+        idx += vbma->count;
         vbma = vbma->_globalListNext;
     }
 }
@@ -452,7 +460,7 @@ size_t vertex_buffer_get_nb_draw_slices(const VertexBuffer *vb) {
     return vb->nbDrawSlices;
 }
 
-size_t vertex_buffer_get_nb_vertices(const VertexBuffer *vb) {
+size_t vertex_buffer_get_nb_faces(const VertexBuffer *vb) {
     return vb->nbVertices;
 }
 
@@ -477,7 +485,7 @@ void vertex_buffer_mem_area_remove(VertexBufferMemArea *vbma, bool transparent) 
 }
 
 void vertex_buffer_remove_last_mem_area(VertexBuffer *vb) {
-    vertex_buffer_nb_vertices_decr(vb, vb->lastMemArea->nbVertices);
+    vertex_buffer_nb_vertices_decr(vb, vb->lastMemArea->count);
     vertex_buffer_mem_area_remove(vb->lastMemArea, vb->isTransparent);
 }
 
@@ -509,13 +517,13 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
             // also destroy mem areas with 0 vertices
             while (cursor->_globalListNext != NULL &&
                    (cursor->_globalListNext->chunk == cursor->chunk ||
-                    cursor->_globalListNext->nbVertices == 0)) {
+                    cursor->_globalListNext->count == 0)) {
 
                 // vbma that will be destroyed
                 vbma = cursor->_globalListNext;
-                cursor->nbVertices += vbma->nbVertices; // can be 0
+                cursor->count += vbma->count; // can be 0
                 // maintain dirty flag
-                if (vbma->nbVertices > 0 && vbma->dirty) {
+                if (vbma->count > 0 && vbma->dirty) {
                     cursor->dirty = true;
                 }
 
@@ -550,7 +558,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
         // also destroy mem areas with 0 vertices
         while (cursor->_globalListNext != NULL &&
                (vertex_buffer_mem_area_is_gap(cursor->_globalListNext) == true ||
-                cursor->_globalListNext->nbVertices == 0)) {
+                cursor->_globalListNext->count == 0)) {
 
 #if VERTEX_BUFFER_DEBUG == 1
             if (cursor->chunk != NULL) {
@@ -559,7 +567,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
 #endif
             // vbma that will be destroyed
             vbma = cursor->_globalListNext;
-            cursor->nbVertices += vbma->nbVertices; // can be 0
+            cursor->count += vbma->count; // can be 0
 
 #if VERTEX_BUFFER_DEBUG == 1
             if (cursor->_globalListNext->_globalListPrevious != cursor) {
@@ -592,7 +600,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
 #if VERTEX_BUFFER_DEBUG == 1
         if (cursor->_globalListNext != NULL) {
             if (vertex_buffer_mem_area_is_gap(cursor->_globalListNext) == true ||
-                cursor->_globalListNext->nbVertices == 0) {
+                cursor->_globalListNext->count == 0) {
                 cclog_debug("⚠️⚠️⚠️ error when merging gaps");
             }
         }
@@ -619,7 +627,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
 
         // loop until gap is filled with vertices
         // taking them from non gap mem areas at the end of the list
-        while (written < cursor->nbVertices) {
+        while (written < cursor->count) {
             // options
             // 1) cursor == vb->lastMemArea
             // -> split and remove last part, or remove whole gap if written==0
@@ -642,7 +650,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
             }
             // 3) vb->lastMemArea is not a gap but has no vertices
             // -> remove it and continue
-            else if (vb->lastMemArea->nbVertices == 0) {
+            else if (vb->lastMemArea->count == 0) {
                 vertex_buffer_remove_last_mem_area(vb);
                 continue;
             }
@@ -672,14 +680,14 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
             // 2) rightVbma has exact amount of vertices:
             // -> memcpy all, remove last vbma
             // -> LOOP WILL EXIT
-            else if (cursor->nbVertices == vb->lastMemArea->nbVertices) {
+            else if (cursor->count == vb->lastMemArea->count) {
                 draw_buffers_memcpy(cursor->start,
                                     vb->lastMemArea->start,
-                                    vb->lastMemArea->nbVertices,
+                                    vb->lastMemArea->count,
                                     0);
                 cursor->dirty = true;
 
-                written += vb->lastMemArea->nbVertices;
+                written += vb->lastMemArea->count;
 
                 vertex_buffer_remove_last_mem_area(vb);
                 continue;
@@ -687,16 +695,13 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
             // 3) last vbma has enough vertices:
             // -> memcpy end of rightVbma, split, remove last part
             // -> LOOP WILL EXIT
-            else if (cursor->nbVertices < vb->lastMemArea->nbVertices) {
-                uint32_t diff = vb->lastMemArea->nbVertices - cursor->nbVertices;
+            else if (cursor->count < vb->lastMemArea->count) {
+                uint32_t diff = vb->lastMemArea->count - cursor->count;
 
-                draw_buffers_memcpy(cursor->start,
-                                    vb->lastMemArea->start,
-                                    cursor->nbVertices,
-                                    diff);
+                draw_buffers_memcpy(cursor->start, vb->lastMemArea->start, cursor->count, diff);
                 cursor->dirty = true;
 
-                written += cursor->nbVertices;
+                written += cursor->count;
 
                 vertex_buffer_mem_area_split_and_make_gap(vb->lastMemArea, diff);
 
@@ -707,11 +712,11 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb) {
             else {
                 draw_buffers_memcpy(cursor->start,
                                     vb->lastMemArea->start,
-                                    vb->lastMemArea->nbVertices,
+                                    vb->lastMemArea->count,
                                     0);
                 cursor->dirty = true;
 
-                written += vb->lastMemArea->nbVertices;
+                written += vb->lastMemArea->count;
 
                 vertex_buffer_mem_area_split_and_make_gap(cursor, written);
 
@@ -802,11 +807,14 @@ bool vertex_buffer_mem_area_is_gap(const VertexBufferMemArea *vbma) {
 }
 
 bool vertex_buffer_mem_area_is_null_or_empty(const VertexBufferMemArea *vbma) {
-    return vbma == NULL || vbma->nbVertices == 0;
+    return vbma == NULL || vbma->count == 0;
 }
 
 // creates new VertexBufferMemArea
-VertexBufferMemArea *vertex_buffer_mem_area_new(VertexBuffer *vb, DrawBufferPtrs start) {
+VertexBufferMemArea *vertex_buffer_mem_area_new(VertexBuffer *vb,
+                                                DrawBufferPtrs start,
+                                                uint32_t startIdx,
+                                                uint32_t count) {
     VertexBufferMemArea *vbma = (VertexBufferMemArea *)malloc(sizeof(VertexBufferMemArea));
     if (vbma == NULL) {
         return NULL;
@@ -817,7 +825,8 @@ VertexBufferMemArea *vertex_buffer_mem_area_new(VertexBuffer *vb, DrawBufferPtrs
     vbma->_groupListNext = NULL;
     vbma->_groupListPrevious = NULL;
     vbma->chunk = NULL;
-    vbma->nbVertices = 0;
+    vbma->startIdx = startIdx;
+    vbma->count = count;
     vbma->start = start;
     vbma->dirty = false;
     return vbma;
@@ -895,17 +904,19 @@ void vertex_buffer_mem_area_leave_global_list(VertexBufferMemArea *vbma) {
 // finally/eventually gets merged with another gap.
 void vertex_buffer_new_empty_gap_at_end(VertexBuffer *vb) {
     DrawBufferPtrs start;
+    uint32_t startdIdx;
 
     if (vb->lastMemArea != NULL) {
-        start = draw_buffers_add_ptrs(vb->lastMemArea->start, vb->lastMemArea->nbVertices);
+        start = draw_buffers_add_ptrs(vb->lastMemArea->start, vb->lastMemArea->count);
+        startdIdx = vb->lastMemArea->startIdx + vb->lastMemArea->count;
     } else {
         // no lastMemArea means no mem area at all
         // so we should start at beginning of the buffers in vb->drawBuffers
         start = vb->drawBuffers;
+        startdIdx = 0;
     }
 
-    VertexBufferMemArea *memArea = vertex_buffer_mem_area_new(vb, start);
-    memArea->chunk = NULL;
+    VertexBufferMemArea *memArea = vertex_buffer_mem_area_new(vb, start, startdIdx, 0);
 
     // if firstMemArea == NULL, lastMemArea has to be NULL
     // it simply means the vertex buffer has no mem area yet
@@ -1031,7 +1042,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                          VERTEX_LIGHT_STRUCT_T vlight4) {
 
     // check if no vbma assigned or the end of the memory area has been reached
-    if (vbmaw->vbma == NULL || vbmaw->writtenVertices == vbmaw->vbma->nbVertices) {
+    if (vbmaw->vbma == NULL || vbmaw->writtenVertices == vbmaw->vbma->count) {
         while (true) {
             if (vbmaw->vbma != NULL) {
                 // 1) see if there's already a next area for same chunk we can use
@@ -1043,7 +1054,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                 // 2) if current vb is not full and vbma is the last area, extend it
                 if (vertex_buffer_is_not_full(vbmaw->vbma->vb) &&
                     vbmaw->vbma == vbmaw->vbma->vb->lastMemArea) {
-                    vbmaw->vbma->nbVertices++;
+                    vbmaw->vbma->count++;
                     vertex_buffer_nb_vertices_incr(vbmaw->vbma->vb, 1);
                     break;
                 }
@@ -1082,7 +1093,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                                                vbmaw->isTransparent);
                     }
 
-                    vbmaw->vbma->nbVertices++;
+                    vbmaw->vbma->count++;
                     vertex_buffer_nb_vertices_incr(vb, 1);
                     break;
                 }
@@ -1090,13 +1101,13 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                 vb = vertex_buffer_get_next(vb);
             }
             // if available memory found, exit now
-            if (vbmaw->vbma != NULL && vbmaw->writtenVertices < vbmaw->vbma->nbVertices) {
+            if (vbmaw->vbma != NULL && vbmaw->writtenVertices < vbmaw->vbma->count) {
                 break;
             }
 
             // 4) all the available vb are at capacity and we need a new one
             else {
-                VertexBuffer *newVb = shape_add_vertex_buffer(vbmaw->s, vbmaw->isTransparent);
+                VertexBuffer *newVb = shape_add_buffer(vbmaw->s, vbmaw->isTransparent);
 
                 // immediately create a new vbma for this vb
                 vertex_buffer_new_empty_gap_at_end(newVb);
@@ -1111,7 +1122,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                                            vbmaw->isTransparent);
                 }
 
-                vbmaw->vbma->nbVertices++;
+                vbmaw->vbma->count++;
                 vertex_buffer_nb_vertices_incr(vbmaw->vbma->vb, 1);
                 break;
             }
@@ -1244,7 +1255,7 @@ void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw) {
 
     // 1) remaining areas (unused) should become gaps
     // Note: do NOT decrement vb vertices because a gap still represents a space in memory that
-    // needs to be filled, otherwise vb will consider that there is available space (nbVertices <
+    // needs to be filled, otherwise vb will consider that there is available space (count <
     // maxCount) for new vbma to be created at the end
     while (vbmaw->vbma->_groupListNext != NULL) {
         vertex_buffer_mem_area_make_gap(vbmaw->vbma->_groupListNext, vbmaw->isTransparent);
@@ -1262,14 +1273,14 @@ void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw) {
         vertex_buffer_mem_area_make_gap(vbmaw->vbma, vbmaw->isTransparent);
     }
     // check if in the middle of an area
-    else if (vbmaw->writtenVertices < vbmaw->vbma->nbVertices) {
+    else if (vbmaw->writtenVertices < vbmaw->vbma->count) {
 
-        uint32_t diff = vbmaw->vbma->nbVertices - vbmaw->writtenVertices;
+        uint32_t diff = vbmaw->vbma->count - vbmaw->writtenVertices;
 
         // 3) if vbma is the last area of its vb, just reduce it
         // reducing vertex buffer's nb vertices as well
         if (vbmaw->vbma == vbmaw->vbma->vb->lastMemArea) {
-            vbmaw->vbma->nbVertices = vbmaw->writtenVertices;
+            vbmaw->vbma->count = vbmaw->writtenVertices;
             vertex_buffer_nb_vertices_decr(vbmaw->vbma->vb, diff);
         }
         // 4) split and create a gap
@@ -1333,8 +1344,24 @@ void vertex_buffer_mem_area_make_gap(VertexBufferMemArea *vbma, bool transparent
     }
 }
 
-VertexBuffer *vertex_buffer_mem_area_get_vb(VertexBufferMemArea *vbma) {
+Chunk *vertex_buffer_mem_area_get_chunk(const VertexBufferMemArea *vbma) {
+    return vbma->chunk;
+}
+
+VertexBuffer *vertex_buffer_mem_area_get_vb(const VertexBufferMemArea *vbma) {
     return vbma->vb;
+}
+
+uint32_t vertex_buffer_mem_area_get_start_idx(const VertexBufferMemArea *vbma) {
+    return vbma->startIdx;
+}
+
+uint32_t vertex_buffer_mem_area_get_count(const VertexBufferMemArea *vbma) {
+    return vbma->count;
+}
+
+VertexBufferMemArea *vertex_buffer_mem_area_get_global_next(VertexBufferMemArea *vbma) {
+    return vbma->_globalListNext;
 }
 
 VertexBufferMemArea *vertex_buffer_mem_area_get_group_next(VertexBufferMemArea *vbma) {
@@ -1350,20 +1377,21 @@ VertexBufferMemArea *vertex_buffer_mem_area_split_and_make_gap(VertexBufferMemAr
 
 #if VERTEX_BUFFER_DEBUG == 1
     vertex_buffer_check_mem_area_chain(vbma->vb);
-    if (vbma_size > vbma->nbVertices) {
+    if (vbma_size > vbma->count) {
         cclog_error("⚠️⚠️⚠️ vertex_buffer_mem_area_split_and_make_gap: can't split");
         return NULL;
     }
 #endif
 
-    uint32_t diff = vbma->nbVertices - vbma_size;
+    uint32_t diff = vbma->count - vbma_size;
 
-    vbma->nbVertices = vbma_size;
+    vbma->count = vbma_size;
 
     DrawBufferPtrs start = draw_buffers_add_ptrs(vbma->start, vbma_size);
-    VertexBufferMemArea *gap = vertex_buffer_mem_area_new(vbma->vb, start);
-    gap->chunk = NULL;
-    gap->nbVertices = diff;
+    VertexBufferMemArea *gap = vertex_buffer_mem_area_new(vbma->vb,
+                                                          start,
+                                                          vbma->startIdx + vbma_size,
+                                                          diff);
 
     // insert in global list
     if (vbma->_globalListNext != NULL) {
@@ -1430,7 +1458,7 @@ void vertex_buffer_log_mem_areas(const VertexBuffer *vb) {
         if (previousVbma != NULL) {
             if (draw_buffers_equal_ptrs(
                     vbma->start,
-                    draw_buffers_add_ptrs(previousVbma->start, previousVbma->nbVertices))) {
+                    draw_buffers_add_ptrs(previousVbma->start, previousVbma->count))) {
                 check = "✅";
             } else {
                 check = "❌";
@@ -1439,7 +1467,7 @@ void vertex_buffer_log_mem_areas(const VertexBuffer *vb) {
 
         if (vbma->chunk == NULL) {
             cclog_info("-- [%04u] - GAP - (start: %p %p) %s%s",
-                       vbma->nbVertices,
+                       vbma->count,
                        (void *)vbma->start.faces,
                        (void *)vbma->start.metadata,
                        check,
@@ -1447,7 +1475,7 @@ void vertex_buffer_log_mem_areas(const VertexBuffer *vb) {
         } else {
             const SHAPE_COORDS_INT3_T o = chunk_get_origin(vbma->chunk);
             cclog_info("-- [%04u] - chunk(%d, %d, %d) - (start: %p %p) %s%s",
-                       vbma->nbVertices,
+                       vbma->count,
                        o.x,
                        o.y,
                        o.z,
@@ -1473,14 +1501,14 @@ void vertex_buffer_check_mem_area_chain(VertexBuffer *vb) {
         //        if (vertex_buffer_mem_area_is_gap(vbma)) {
         //            printf("|G");
         //        } else {
-        //            printf("|%d", vbma->nbVertices);
+        //            printf("|%d", vbma->count);
         //        }
 
         if (previousVbma != NULL) {
 
-            if (draw_buffers_equal_ptrs(vbma->start,
-                                        draw_buffers_add_ptrs(previousVbma->start,
-                                                              previousVbma->nbVertices)) == false) {
+            if (draw_buffers_equal_ptrs(
+                    vbma->start,
+                    draw_buffers_add_ptrs(previousVbma->start, previousVbma->count)) == false) {
                 cclog_warning(
                     "⚠️⚠️⚠️ mem area chain broken: start != previous->start + size");
             }

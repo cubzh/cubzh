@@ -68,7 +68,7 @@ Shape *shape_make(void);
 Shape *shape_make_2(const bool isMutable);
 Shape *shape_make_copy(Shape *origin);
 
-VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency);
+VertexBuffer *shape_add_buffer(Shape *shape, bool transparency);
 
 /// Returns false if retain fails
 bool shape_retain(Shape *const shape);
@@ -161,15 +161,16 @@ bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T 
 // converts given box to a world axis-aligned box relative to shape
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider);
 
-// a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
-// therefore is dependant on which space we express it in,
-// (1) in model space, ie. "block coordinates", the AABB itself w/o transformation
+/// a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
+/// therefore is dependant on which space we express it in,
+/// (1) in model space, ie. "block coordinates", the AABB itself w/o transformation
 Box shape_get_model_aabb(const Shape *s);
 void shape_get_model_aabb_2(const Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax);
-// (2) in local space, ie. the model AABB w/ local transformations applied (on-demand)
+/// (2) in local space, ie. the model AABB w/ local transformations applied (on-demand)
 void shape_get_local_aabb(const Shape *s, Box *box);
-// (3) in world space, ie. the model AABB w/ world transformations applied (cached)
-void shape_get_world_aabb(Shape *s, Box *box);
+/// (3) in world space, ie. the model AABB w/ world transformations applied (cached)
+/// @returns true if cache was invalid & world AABB recomputed
+bool shape_get_world_aabb(Shape *s, Box *box);
 
 // recomputes box from scratch
 void shape_reset_box(Shape *shape);

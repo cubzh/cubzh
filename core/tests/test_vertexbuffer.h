@@ -21,7 +21,7 @@
 // vertex_buffer_fill_draw_slices
 // vertex_buffer_flush_draw_slices
 // vertex_buffer_get_nb_draw_slices
-// vertex_buffer_get_nb_vertices
+// vertex_buffer_get_nb_faces
 // vertex_buffer_has_room_for_new_chunk
 // vertex_buffer_log_draw_slices
 // vertex_buffer_is_fragmented
@@ -48,7 +48,7 @@ void test_vertex_buffer_new_with_max_count(void) {
 
     TEST_CHECK(vertex_buffer_is_enlisted(vb) == false);
     TEST_CHECK(vertex_buffer_get_max_length(vb) == 3);
-    TEST_CHECK(vertex_buffer_get_nb_vertices(vb) == 0);
+    TEST_CHECK(vertex_buffer_get_nb_faces(vb) == 0);
     TEST_CHECK(vertex_buffer_get_next(vb) == NULL);
     TEST_CHECK(vertex_buffer_get_draw_slices(vb) != NULL);
     TEST_CHECK(vertex_buffer_get_nb_draw_slices(vb) == 0);

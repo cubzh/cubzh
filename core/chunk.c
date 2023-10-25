@@ -472,13 +472,14 @@ SHAPE_COORDS_INT3_T chunk_get_block_coords_in_shape(const Chunk *chunk,
 CHUNK_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape,
                                            CHUNK_COORDS_INT3_T *coords_in_chunk) {
     if (coords_in_chunk != NULL) {
-        coords_in_chunk->x = (CHUNK_COORDS_INT_T)(coords_in_shape.x & CHUNK_SIZE_MINUS_ONE);
-        coords_in_chunk->y = (CHUNK_COORDS_INT_T)(coords_in_shape.y & CHUNK_SIZE_MINUS_ONE);
-        coords_in_chunk->z = (CHUNK_COORDS_INT_T)(coords_in_shape.z & CHUNK_SIZE_MINUS_ONE);
+        coords_in_chunk->x = (CHUNK_COORDS_INT_T)(coords_in_shape.x % CHUNK_SIZE);
+        coords_in_chunk->y = (CHUNK_COORDS_INT_T)(coords_in_shape.y % CHUNK_SIZE);
+        coords_in_chunk->z = (CHUNK_COORDS_INT_T)(coords_in_shape.z % CHUNK_SIZE);
     }
-    return (CHUNK_COORDS_INT3_T){(CHUNK_COORDS_INT_T)(coords_in_shape.x >> CHUNK_SIZE_SQRT),
-                                 (CHUNK_COORDS_INT_T)(coords_in_shape.y >> CHUNK_SIZE_SQRT),
-                                 (CHUNK_COORDS_INT_T)(coords_in_shape.z >> CHUNK_SIZE_SQRT)};
+    return (CHUNK_COORDS_INT3_T){
+        (CHUNK_COORDS_INT_T)(coords_in_shape.x / CHUNK_SIZE - (coords_in_shape.x < 0 ? 1 : 0)),
+        (CHUNK_COORDS_INT_T)(coords_in_shape.y / CHUNK_SIZE - (coords_in_shape.y < 0 ? 1 : 0)),
+        (CHUNK_COORDS_INT_T)(coords_in_shape.z / CHUNK_SIZE - (coords_in_shape.z < 0 ? 1 : 0))};
 }
 
 void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max) {
