@@ -217,12 +217,17 @@ local spawnObject = function(data, onDone)
 
 	Object:Load(fullname, function(obj)
 		obj:SetParent(World)
+
+		local box = Box()
+		box:Fit(obj, true)
+		obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+
 		setObjectPhysicsMode(obj, physicsMode)
 		obj.uuid = uuid
 		obj.Position = position
 		obj.Rotation = rotation
 		obj.Scale = scale
-		obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
+
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
 		end)
@@ -410,6 +415,7 @@ local statesSettings = {
 	-- SPAWNING_OBJECT
 	{
 		onStateBegin = function(data)
+			worldEditor.rotationShift = data.rotationShift or 0
 			data.uuid = -1
 			spawnObject(data, function(obj)
 				waitingForUUIDObj = obj
@@ -420,7 +426,6 @@ local statesSettings = {
 	-- PLACING_OBJECT
 	{
 		onStateBegin = function(obj)
-			worldEditor.rotationShift = 0
 			worldEditor.placingObj = obj
 			freezeObject(obj)
 		end,
@@ -494,6 +499,7 @@ local statesSettings = {
 			end
 			local data = getObjectInfoTable(obj)
 			data.uuid = nil
+			data.rotationShift = worldEditor.rotationShift
 			setState(states.SPAWNING_OBJECT, data)
 		end,
 		onStateEnd = function()
