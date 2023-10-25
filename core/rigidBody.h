@@ -52,15 +52,17 @@ static const float3 float3_epsilon_collision = {EPSILON_COLLISION,
 /// - other objects are RigidbodyMode_Disabled
 typedef enum {
     // completely excluded from physics
-    RigidbodyMode_Disabled,
+    RigidbodyMode_Disabled = 0,
     // casts receiver, collision callbacks
-    RigidbodyMode_Trigger,
-    RigidbodyMode_TriggerPerBlock,
+    RigidbodyMode_Trigger = 1,
+    RigidbodyMode_TriggerPerBlock = 2,
     // obstacle, casts receiver, collision callbacks
-    RigidbodyMode_Static,
-    RigidbodyMode_StaticPerBlock,
+    RigidbodyMode_Static = 3,
+    RigidbodyMode_StaticPerBlock = 4,
     // simulated, obstacle, casts receiver, collision callbacks
-    RigidbodyMode_Dynamic
+    RigidbodyMode_Dynamic = 5,
+    // used for validation:
+    RigidbodyMode_Max = 5
 } RigidbodyMode;
 
 typedef enum CollisionCallbackType {
