@@ -8,6 +8,9 @@ local initDefaultMode
 
 local objects = {}
 local map
+local mapIndex = 1
+local mapName
+local ambience
 
 local waitingForUUIDObj
 
@@ -21,9 +24,9 @@ local getObjectInfoTable = function(obj)
 	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
 	if obj.Physics == PhysicsMode.Disabled then physics = "DIS" end
 
-	local position = obj.Position or Number3(0,0,0)
-	local rotation = obj.Rotation or Rotation(0,0,0)
-	local scale = obj.Scale or Number3(1,1,1)
+	local position = obj.Position and { obj.Position.X, obj.Position.Y, obj.Position.Z } or { 0,0,0 }
+	local rotation = obj.Rotation and { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z } or { 0, 0, 0 }
+	local scale = obj.Scale and { obj.Scale.X, obj.Scale.Y, obj.Scale.Z } or { 1, 1, 1 }
 
 	return {
 		uuid = obj.uuid,
@@ -35,6 +38,16 @@ local getObjectInfoTable = function(obj)
 		itemDetailsCell = obj.itemDetailsCell,
 		Physics = physics
 	}
+end
+
+function escapeJson(jsonStr)
+	local escapedJsonStr = jsonStr:gsub('"', '\\"')
+	return escapedJsonStr
+end
+
+function unescapeJson(jsonStr)
+	local unescapedJsonStr = jsonStr:gsub('\\"', '"')
+	return unescapedJsonStr
 end
 
 -- multiplayer
@@ -61,6 +74,8 @@ local events = {
 	PLAYER_ACTIVITY = "pa",
 	P_SET_AMBIENCE = "psa",
 	SET_AMBIENCE = "sa",
+	P_LOAD_WORLD = "plw",
+	LOAD_WORLD = "lw"
 }
 
 local sendToServer = function(event, data)
@@ -393,10 +408,12 @@ local statesSettings = {
 		onStateBegin = function()
 			worldEditor.addBtn:show()
 			worldEditor.editMapBtn:show()
+			worldEditor.exportBtn:show()
 		end,
 		onStateEnd = function()
 			worldEditor.addBtn:hide()
 			worldEditor.editMapBtn:hide()
+			worldEditor.exportBtn:hide()
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -712,8 +729,6 @@ init = function()
 	Camera:SetParent(pivot)
 	Camera.Far = 10000
 
-	local mapIndex = 1
-
 	local ui = require("uikit")
 	local padding = require("uitheme").current.padding
 
@@ -739,12 +754,26 @@ init = function()
 	validateBtn:setParent(uiPrepareState)
 	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, padding }
 	validateBtn.onRelease = function()
-		sendToServer(events.P_END_PREPARING, { mapIndex = mapIndex })
+		sendToServer(events.P_END_PREPARING, { mapName = mapName })
+	end
+
+	local loadInput = ui:createTextInput("", "Paste JSON here")
+	loadInput:setParent(uiPrepareState)
+
+	loadBtn = ui:createButton("Load")
+	loadBtn:setParent(uiPrepareState)
+	loadBtn.pos = { Screen.Width - loadBtn.Width - padding, padding }
+	loadInput.pos = loadBtn.pos - { loadInput.Width + padding, 0, 0 }
+	loadBtn.Height = loadInput.Height
+	loadBtn.onRelease = function()
+		local json = JSON:Decode(unescapeJson(loadInput.Text))
+		sendToServer(events.P_LOAD_WORLD, json)
 	end
 
 	worldEditor.uiPrepareState = uiPrepareState
 
 	loadMap = function(fullname, onDone)
+		mapName = fullname
 		Object:Load(fullname, function(obj)
 			if map then map:RemoveFromParent() end
 			map = MutableShape(obj)
@@ -821,6 +850,36 @@ initDefaultMode = function()
 		setState(states.EDIT_MAP)
 	end
 	index.editMapBtn = editMapBtn
+
+	-- export btn
+	local exportBtn = ui:createButton("📑 Export")
+	exportBtn.parentDidResize = function()
+		exportBtn.pos = { Screen.Width - padding - exportBtn.Width, padding }
+	end
+	exportBtn.Height = exportBtn.Height * 1.5
+	exportBtn:parentDidResize()
+	exportBtn.onRelease = function()
+		local objectsList = {}
+		for uuid,_ in pairs(objects) do
+			if uuid ~= -1 then
+				local obj = objects[uuid]
+				table.insert(objectsList, getObjectInfoTable(obj))
+			end
+		end
+		local serializedWorld = JSON:Encode({
+			mapName = mapName,
+			ambience = ambience,
+			objectsList = objectsList
+		})
+		Dev:CopyToClipboard(escapeJson(serializedWorld))
+		exportBtn.Text = "Copied!"
+		exportBtn.pos = { Screen.Width - padding - exportBtn.Width, padding }
+		Timer(1, function()
+			exportBtn.Text = "📑 Export"
+			exportBtn.pos = { Screen.Width - padding - exportBtn.Width, padding }
+		end)
+	end
+	index.exportBtn = exportBtn
 
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
@@ -937,6 +996,7 @@ initDefaultMode = function()
 		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
 	end
 	aiAmbienceButton.onNewAmbience = function(data)
+		ambience = data
 		sendToServer(events.P_SET_AMBIENCE, data)
 	end
 	aiAmbienceButton:parentDidResize()
@@ -1001,14 +1061,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	local isLocalPlayer = e.pID == Player.ID
 
 	if e.a == events.END_PREPARING then
-		local mapIndex = data.mapIndex
-		loadMap(maps[mapIndex], function()
+		loadMap(data.mapName, function()
 			setState(states.DEFAULT)
 		end)
 	elseif e.a == events.SYNC then
 		if state == states.PREPARING then -- joining
-			local mapIndex = data.mapIndex
-			loadMap(maps[mapIndex], function()
+			loadMap(data.mapName, function()
 				setState(states.DEFAULT)
 				if data.blocks then
 					local blocks = data.blocks
@@ -1037,6 +1095,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 				end
 				if data.ambience then
 					require("ui_ai_ambience"):setFromAIConfig(data.ambience)
+					ambience = data.ambience
 				end
 			end)
 		end
@@ -1122,6 +1181,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
 		require("ui_ai_ambience"):setFromAIConfig(data)
+		ambience = data
 	end
 end)
 

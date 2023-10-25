@@ -9,10 +9,16 @@ function refreshAmbiance()
     ambience:set(current)
 end
 
-setFromAIConfig = function(_, config)
-    sfx("metal_clanging_2", {Spatialized = false, Volume = 0.6})
-    if config.text then
-        print("New ambience: "..config.text.."! ✨")
+setFromAIConfig = function(_, config, _quiet)
+    quiet = false
+    if _quiet == true then
+        quiet = true
+    end
+    if not quiet then
+        if config.text then
+            print("New ambience: "..config.text.."! ✨")
+        end
+        sfx("metal_clanging_2", {Spatialized = false, Volume = 0.6})
     end
 
     local c = Color(math.floor(config.sky.skyColor[1] or config.sky.skyColor.X),
