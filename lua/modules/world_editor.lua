@@ -24,7 +24,7 @@ local getObjectInfoTable = function(obj)
 	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
 	if obj.Physics == PhysicsMode.Disabled then physics = "DIS" end
 
-	local position = obj.Position and { obj.Position.X, obj.Position.Y, obj.Position.Z } or { 0,0,0 }
+	local position = obj.Position and { obj.Position.X, obj.Position.Y, obj.Position.Z } or { 0, 0, 0 }
 	local rotation = obj.Rotation and { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z } or { 0, 0, 0 }
 	local scale = obj.Scale and { obj.Scale.X, obj.Scale.Y, obj.Scale.Z } or { 1, 1, 1 }
 
@@ -583,7 +583,7 @@ local statesSettings = {
 				local color = worldEditor.selectedColor
 				sendToServer(events.P_PLACE_BLOCK, {
 					pos = pos,
-					color = { color.R, color.G, color.B }
+					color = color
 				})
 			end
 		end
@@ -1114,7 +1114,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 							local b = map:GetBlock(x,y,z)
 							if b then b:Remove() end
 						else
-							local c = Color(math.floor(v.X),math.floor(v.Y),math.floor(v.Z))
+							local c = v
 							local b = map:GetBlock(x,y,z)
 							if b then b:Remove() end
 							map:AddBlock(c, x, y, z)
@@ -1194,7 +1194,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		end
 		obj.currentlyEditedBy = nil
 	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
-		local color = Color(math.floor(data.color.X),math.floor(data.color.Y),math.floor(data.color.Z))
+		local color = data.color
 		map:AddBlock(color, data.pos.X, data.pos.Y, data.pos.Z)
 	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
 		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)

@@ -21,37 +21,37 @@ setFromAIConfig = function(_, config, _quiet)
         sfx("metal_clanging_2", {Spatialized = false, Volume = 0.6})
     end
 
-    local c = Color(math.floor(config.sky.skyColor[1] or config.sky.skyColor.X),
-        math.floor(config.sky.skyColor[2] or config.sky.skyColor.Y),
-        math.floor(config.sky.skyColor[3] or config.sky.skyColor.Z))
+    local c = Color(math.floor(config.sky.skyColor[1]),
+        math.floor(config.sky.skyColor[2]),
+        math.floor(config.sky.skyColor[3]))
     current.sky.skyColor = c
-    c = Color(math.floor(config.sky.horizonColor[1] or config.sky.horizonColor.X),
-        math.floor(config.sky.horizonColor[2] or config.sky.horizonColor.Y),
-        math.floor(config.sky.horizonColor[3] or config.sky.horizonColor.Z))
+    c = Color(math.floor(config.sky.horizonColor[1]),
+        math.floor(config.sky.horizonColor[2]),
+        math.floor(config.sky.horizonColor[3]))
     current.sky.horizonColor = c
-    c = Color(math.floor(config.sky.abyssColor[1] or config.sky.abyssColor.X),
-        math.floor(config.sky.abyssColor[2] or config.sky.abyssColor.Y),
-        math.floor(config.sky.abyssColor[3] or config.sky.abyssColor.Z))
+    c = Color(math.floor(config.sky.abyssColor[1]),
+        math.floor(config.sky.abyssColor[2]),
+        math.floor(config.sky.abyssColor[3]))
     current.sky.abyssColor = c
-    c = Color(math.floor(config.sky.lightColor[1] or config.sky.lightColor.X),
-        math.floor(config.sky.lightColor[2] or config.sky.lightColor.Y),
-        math.floor(config.sky.lightColor[3] or config.sky.lightColor.Z))
+    c = Color(math.floor(config.sky.lightColor[1]),
+        math.floor(config.sky.lightColor[2]),
+        math.floor(config.sky.lightColor[3]))
     current.sky.lightColor = c
     current.sky.lightIntensity = config.sky.lightIntensity
-    c = Color(math.floor(config.fog.color[1] or config.fog.color.X),
-        math.floor(config.fog.color[2] or config.fog.color.Y),
-        math.floor(config.fog.color[3] or config.fog.color.Z))
+    c = Color(math.floor(config.fog.color[1]),
+        math.floor(config.fog.color[2]),
+        math.floor(config.fog.color[3]))
     current.fog.color = c
     current.fog.near = math.floor(config.fog.near)
     current.fog.far = math.floor(config.fog.far)
     current.fog.lightAbsorbtion = math.clamp(config.fog.lightAbsorbtion, 0, 1)
-    c = Color(math.floor(config.sun.color[1] or config.sun.color.X),
-        math.floor(config.sun.color[2] or config.sun.color.Y),
-        math.floor(config.sun.color[3] or config.sun.color.Z))
+    c = Color(math.floor(config.sun.color[1]),
+        math.floor(config.sun.color[2]),
+        math.floor(config.sun.color[3]))
     current.sun.color = c
     current.sun.intensity = config.sun.intensity
-    current.sun.rotation.X = config.sun.rotation[1] or config.sun.rotation.X
-    current.sun.rotation.Y = config.sun.rotation[2] or config.sun.rotation.Y
+    current.sun.rotation.X = config.sun.rotation[1]
+    current.sun.rotation.Y = config.sun.rotation[2]
 
     refreshAmbiance()
 end
