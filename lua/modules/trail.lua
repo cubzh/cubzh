@@ -5,7 +5,6 @@ local addSegment = function(segments, color, thickness, segmentLength)
     segment:AddBlock(color, 0, 0, 0)
     segment:SetParent(World)
     segment.IsUnlit = true
-    segment.CastShadows = false
     segment.Physics = PhysicsMode.Disabled
     segment.Pivot = { 0.5, 0.5, 0 }
     segment.Scale = { thickness, thickness, segmentLength }

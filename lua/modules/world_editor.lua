@@ -8,23 +8,17 @@ local initDefaultMode
 
 local objects = {}
 
+local waitingForUUIDObj
+
 local TRAILS_COLORS = { Color.Blue, Color.Red, Color.Green, Color.Yellow, Color.Grey, Color.Purple, Color.Beige, Color.Yellow, Color.Brown, Color.Pink }
 local OBJECTS_COLLISION_GROUP = 7
 local ALPHA_ON_DRAG = 0.6
-
-local random = math.random
-local function uuidv4()
-    local template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
-    return string.gsub(template, '[xy]', function (c)
-        local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
-        return string.format('%x', v)
-    end)
-end
 
 local getObjectInfoTable = function(obj)
 	local physics = "SPB"
 	if obj.Physics == PhysicsMode.StaticPerBlock then physics = "SPB" end
 	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
+	if obj.Physics == PhysicsMode.Disabled then physics = "DIS" end
 
 	local position = obj.Position or Number3(0,0,0)
 	local rotation = obj.Rotation or Rotation(0,0,0)
@@ -62,7 +56,10 @@ local events = {
 	P_END_EDIT_OBJECT = "peeo",
 	END_EDIT_OBJECT = "eeo",
 	SYNC = "s",
-	MASTER = "m"
+	MASTER = "m",
+	PLAYER_ACTIVITY = "pa",
+	P_SET_AMBIENCE = "psa",
+	SET_AMBIENCE = "sa",
 }
 
 local sendToServer = function(event, data)
@@ -109,11 +106,11 @@ local tryPickObject = function(pe)
 	while obj and not obj.isEditable do
 		obj = obj:GetParent()
 	end
-	if not obj then setState(states.DEFAULT) return end
+	if not obj then return end-- setState(states.DEFAULT) return end
 
 	if obj.currentlyEditedBy == Player then return end
 	if obj.currentlyEditedBy then
-		print("Someone else is editing this object, please wait")
+		obj:TextBubble("Someone else is editing this object.")
 		return
 	end
 	setState(states.UPDATING_OBJECT, obj)
@@ -121,6 +118,7 @@ end
 
 local setObjectAlpha = function(obj, alpha)
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		if not o.Palette then return end
 		if not o.savedAlpha then
 			o.savedAlpha = {}
 			for k=1,#o.Palette do
@@ -137,14 +135,25 @@ local setObjectAlpha = function(obj, alpha)
 end
 
 local freezeObject = function(obj)
+	if not obj then
+		print("obj does not exist")
+		return
+	end
 	obj.savedPhysicsState = obj.Physics
-	if obj.Physics == PhysicsMode.StaticPerBlock then return end
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		o.Physics = PhysicsMode.StaticPerBlock
+		o.Physics = PhysicsMode.Disabled
 	end)
+	sendToServer(events.P_EDIT_OBJECT, {
+		uuid = obj.uuid,
+		Physics = "DIS"
+	})
 end
 
 local unfreezeObject = function(obj)
+	if not obj then
+		print("obj does not exist")
+		return
+	end
 	local physics = obj.savedPhysicsState
 	if physics == PhysicsMode.StaticPerBlock then
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
@@ -164,6 +173,7 @@ local unfreezeObject = function(obj)
 			Physics = "D"
 		})
 	end
+	obj.savedPhysicsState = nil
 end
 
 local spawnObject = function(data, onDone)
@@ -176,18 +186,19 @@ local spawnObject = function(data, onDone)
 	local itemDetailsCell = data.itemDetailsCell
 	if data.Physics == "SPB" then data.Physics = PhysicsMode.StaticPerBlock end
 	if data.Physics == "D" then data.Physics = PhysicsMode.Dynamic end
+	if data.Physics == "DIS" then data.Physics = PhysicsMode.Disabled end
 	local physics = data.Physics or PhysicsMode.StaticPerBlock
 
 	Object:Load(fullname, function(obj)
 		obj:SetParent(World)
-		if physics == PhysicsMode.StaticPerBlock then
-			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-				o.Physics = PhysicsMode.StaticPerBlock
-			end)
-		else
+		if physics == PhysicsMode.Dynamic then
 			obj.Physics = PhysicsMode.Dynamic
 			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
 				o.Physics = PhysicsMode.Disabled
+			end)
+		else
+			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = physics
 			end)
 		end
 		obj.uuid = uuid
@@ -196,24 +207,39 @@ local spawnObject = function(data, onDone)
 		obj.Scale = scale
 		obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
 		obj.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+		obj.CollisionBox = obj:ComputeLocalBoundingBox()
 
 		obj.isEditable = true
 		obj.fullname = fullname
 		obj.Name = name or fullname
 		obj.itemDetailsCell = itemDetailsCell
 
-		objects[obj.uuid] = obj
+		if obj.uuid ~= -1 then
+			objects[obj.uuid] = obj
+		end
 		if onDone then onDone(obj) end
 	end)
 end
 
 local editObject = function(objInfo)
 	local obj = objects[objInfo.uuid]
-	if not obj then print("Missing an object") return end
+	if not obj then
+		print("Error: can't edit object")
+		return
+	end
+
 	for field,value in pairs(objInfo) do
 		if field == "Physics" then
-			if value == "D" then obj.Physics = PhysicsMode.Dynamic end
-			if value == "SPB" then obj.Physics = PhysicsMode.StaticPerBlock end
+			if value == "D" then
+				obj.Physics = PhysicsMode.Dynamic
+				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+					o.Physics = PhysicsMode.Disabled
+				end)
+			else
+				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+					o.Physics = value == "DIS" and PhysicsMode.Disabled or PhysicsMode.StaticPerBlock
+				end)
+			end
 		else
 			obj[field] = value
 		end
@@ -260,8 +286,10 @@ local subStatesSettingsUpdatingObject = {
 			freezeObject(worldEditor.object)
 		end,
 		onStateEnd = function()
+			if worldEditor.object then
+				unfreezeObject(worldEditor.object)
+			end
 			worldEditor.gizmo:setObject(nil)
-			unfreezeObject(worldEditor.object)
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -368,8 +396,9 @@ local statesSettings = {
 	-- SPAWNING_OBJECT
 	{
 		onStateBegin = function(data)
-			data.uuid = uuidv4()
+			data.uuid = -1
 			spawnObject(data, function(obj)
+				waitingForUUIDObj = obj
 				setState(states.PLACING_OBJECT, obj)
 			end)
 		end
@@ -379,6 +408,7 @@ local statesSettings = {
 		onStateBegin = function(obj)
 			worldEditor.rotationShift = 0
 			worldEditor.placingObj = obj
+			freezeObject(obj)
 		end,
 		pointerMove = function(pe)
 			local placingObj = worldEditor.placingObj
@@ -401,26 +431,20 @@ local statesSettings = {
 			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 		end,
 		pointerUp = function(pe)
+			if pe.Index ~= 4 then return end
+
 			if worldEditor.dragging then return end
 			local placingObj = worldEditor.placingObj
 
 			-- drop object
 			worldEditor.placingObj = nil
 
-			-- smooth bump
-			local currentScale = placingObj.Scale:Copy()
-			require("ease"):inOutQuad(placingObj, 0.15).Scale = currentScale * 1.1
-			Timer(0.15, function()
-				require("ease"):inOutQuad(placingObj, 0.15).Scale = currentScale
-			end)
-			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
+			unfreezeObject(placingObj)
 
-			-- left click, back to default
-			if pe.Index == 4 then
-				objects[placingObj.uuid] = placingObj
-				setState(states.UPDATING_OBJECT, placingObj)
-				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
-			end
+			objects[placingObj.uuid] = placingObj
+			sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
+			placingObj.currentlyEditedBy = Player
+			setState(states.UPDATING_OBJECT, placingObj)
 		end,
 		pointerWheelPriority = function(delta)
 			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
@@ -431,40 +455,12 @@ local statesSettings = {
 	-- UPDATING_OBJECT
 	{
 		onStateBegin = function(obj)
-			worldEditor.object = obj
-			obj.currentlyEditedBy = Player
-			worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.Dynamic and "Dynamic" or "Static "
-			worldEditor.nameInput.Text = obj.Name
-			worldEditor.nameInput.onTextChange = function(o)
-				worldEditor.object.Name = o.Text
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
-			end
-			worldEditor.infoBtn.onRelease = function()
-				local cell = worldEditor.object.itemDetailsCell
-				require("item_details"):createModal({ cell = cell })
-			end
-			worldEditor.updateObjectUI:show()
-
-			local currentScale = obj.Scale:Copy()
-			require("ease"):inOutQuad(obj, 0.15).Scale = currentScale * 1.1
-			Timer(0.15, function()
-				require("ease"):inOutQuad(obj, 0.15).Scale = currentScale
-			end)
-			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
-
+			if obj.uuid == -1 then return end
 			sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
-			worldEditor.object.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 		end,
-		onStateEnd = function(nextState)
+		onStateEnd = function()
 			worldEditor.updateObjectUI:hide()
 			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
-			if worldEditor.object.trail then
-				worldEditor.object.trail:remove()
-				worldEditor.object.trail = nil
-			end
-			if nextState == states.DUPLICATE_OBJECT or nextState == states.DESTROY_OBJECT then
-				return
-			end
 			worldEditor.object = nil
 		end,
 		subStatesSettings = subStatesSettingsUpdatingObject,
@@ -475,24 +471,35 @@ local statesSettings = {
 	},
 	-- DUPLICATE_OBJECT
 	{
-		onStateBegin = function()
-			local obj = worldEditor.object
+		onStateBegin = function(uuid)
+			local obj = objects[uuid]
+			if not obj then
+				print("Error: can't duplicate this object")
+				setState(states.DEFAULT)
+				return
+			end
 			local data = getObjectInfoTable(obj)
 			data.uuid = nil
 			setState(states.SPAWNING_OBJECT, data)
 		end,
 		onStateEnd = function()
-			worldEditor.object = nil
 			worldEditor.updateObjectUI:hide()
 		end
 	},
 	-- DESTROY_OBJECT
 	{
-		onStateBegin = function()
-			sendToServer(events.P_REMOVE_OBJECT, { uuid = worldEditor.object.uuid })
-			worldEditor.object = nil
-			worldEditor.updateObjectUI:hide()
+		onStateBegin = function(uuid)
+			local obj = objects[uuid]
+			if not obj then
+				print("Error: can't remove this object")
+				setState(states.DEFAULT)
+				return
+			end
+			sendToServer(events.P_REMOVE_OBJECT, { uuid = uuid })
 			setState(states.DEFAULT)
+		end,
+		onStateEnd = function()
+			worldEditor.updateObjectUI:hide()
 		end
 	},
 	-- EDIT_MAP
@@ -534,9 +541,10 @@ local statesSettings = {
 				elseif impact.FaceTouched == Face.Bottom then pos.Y = pos.Y - 1
 				elseif impact.FaceTouched == Face.Right then pos.X = pos.X + 1
 				elseif impact.FaceTouched == Face.Left then pos.X = pos.X - 1 end
+				local color = worldEditor.selectedColor
 				sendToServer(events.P_PLACE_BLOCK, {
 					pos = pos,
-					color = { worldEditor.selectedColor.R, worldEditor.selectedColor.G, worldEditor.selectedColor.B }
+					color = { color.R, color.G, color.B }
 				})
 			end
 		end
@@ -675,8 +683,6 @@ local maps = {
 local loadMap
 
 init = function()
-	math.randomseed(Player.ID + Time.UnixMilli() % 10000)
-
 	require("object_skills").addStepClimbing(Player)
 	Camera:SetModeFree()
 	local pivot = Object()
@@ -869,11 +875,11 @@ initDefaultMode = function()
 			end
 		end },
 		{ type="separator" },
-		{ type="button", text="📑", state=states.DUPLICATE_OBJECT },
+		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
-		{ type="button", text="💀", state=states.DESTROY_OBJECT },
+		{ type="button", text="💀", callback=function() setState(states.DESTROY_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
-		{ type="button", text="✅", state=states.DEFAULT },
+		{ type="button", text="✅", callback=function() setState(states.DEFAULT,worldEditor.object.uuid) end  },
 	}
 
 	for _,elem in ipairs(barInfo) do
@@ -886,9 +892,6 @@ initDefaultMode = function()
 				if elem.callback then
 					elem.callback(btn)
 					return
-				end
-				if elem.state then
-					setState(elem.state)
 				end
 				if elem.subState then
 					if activeSubState[state] == elem.subState then
@@ -925,9 +928,12 @@ initDefaultMode = function()
 	worldEditor.updateObjectUI = updateObjectUI
 
 	-- Ambience editor
-	local aiAmbienceButton = require("ui_ai_ambience")
+	local aiAmbienceButton = require("ui_ai_ambience"):createButton()
 	aiAmbienceButton.parentDidResize = function()
 		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
+	end
+	aiAmbienceButton.onNewAmbience = function(data)
+		sendToServer(events.P_SET_AMBIENCE, data)
 	end
 	aiAmbienceButton:parentDidResize()
 
@@ -985,8 +991,6 @@ initDefaultMode = function()
 	end
 end
 
-init()
-
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	local data = e.data
 	local sender = Players[e.pID]
@@ -1014,7 +1018,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 							local b = map:GetBlock(x,y,z)
 							if b then b:Remove() end
 						else
-							local c = Color(math.floor(v[1]),math.floor(v[2]),math.floor(v[3]))
+							local c = Color(math.floor(v.X),math.floor(v.Y),math.floor(v.Z))
 							local b = map:GetBlock(x,y,z)
 							if b then b:Remove() end
 							map:AddBlock(c, x, y, z)
@@ -1023,39 +1027,98 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 				end
 				if data.objects then
 					for _,objInfo in ipairs(data.objects) do
+						objInfo.currentlyEditedBy = nil
 						spawnObject(objInfo)
 					end
 				end
+				if data.ambience then
+					require("ui_ai_ambience"):setFromAIConfig(data.ambience)
+				end
 			end)
 		end
-	elseif e.a == events.PLACE_OBJECT and not isLocalPlayer then
-		spawnObject(data)
+	elseif e.a == events.PLACE_OBJECT then
+		if isLocalPlayer then
+			waitingForUUIDObj.uuid = e.data.uuid
+			objects[waitingForUUIDObj.uuid] = waitingForUUIDObj
+			sendToServer(events.P_START_EDIT_OBJECT, { uuid = e.data.uuid })
+			waitingForUUIDObj = nil
+		else
+			spawnObject(data, function()
+				local obj = objects[data.uuid]
+				obj.currentlyEditedBy = sender
+				if obj.trail then
+					obj.trail:remove()
+				end
+				obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
+			end)
+		end
 	elseif e.a == events.EDIT_OBJECT and not isLocalPlayer then
 		editObject(data)
 	elseif e.a == events.REMOVE_OBJECT then
 		removeObject(data)
-	elseif e.a == events.START_EDIT_OBJECT and not isLocalPlayer then
-		Timer(0.5, function()
-			local obj = objects[data.uuid]
-			if not obj then return end
-			obj.currentlyEditedBy = sender
-			obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
-		end)
-	elseif e.a == events.END_EDIT_OBJECT then
+	elseif e.a == events.START_EDIT_OBJECT then
 		local obj = objects[data.uuid]
 		if not obj then return end
+		obj.currentlyEditedBy = sender
+		if obj.trail then
+			obj.trail:remove()
+		end
+		obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
+		if isLocalPlayer then
+			worldEditor.object = obj
+			worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.Dynamic and "Dynamic" or "Static "
+			worldEditor.nameInput.Text = obj.Name
+			worldEditor.nameInput.onTextChange = function(o)
+				worldEditor.object.Name = o.Text
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
+			end
+			worldEditor.infoBtn.onRelease = function()
+				local cell = worldEditor.object.itemDetailsCell
+				require("item_details"):createModal({ cell = cell })
+			end
+			worldEditor.updateObjectUI:show()
+
+			local currentScale = obj.Scale:Copy()
+			require("ease"):inOutQuad(obj, 0.15).Scale = currentScale * 1.1
+			Timer(0.15, function()
+				require("ease"):inOutQuad(obj, 0.15).Scale = currentScale
+			end)
+			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
+		end
+	elseif e.a == events.END_EDIT_OBJECT then
+		local obj = objects[data.uuid]
+		if not obj then
+			print("can't end edit object")
+			return
+		end
 		if obj.trail then
 			obj.trail:remove()
 			obj.trail = nil
 		end
 		obj.currentlyEditedBy = nil
 	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
-		local color = Color(math.floor(data.color[1]),math.floor(data.color[2]),math.floor(data.color[3]))
+		local color = Color(math.floor(data.color.X),math.floor(data.color.Y),math.floor(data.color.Z))
 		map:AddBlock(color, data.pos.X, data.pos.Y, data.pos.Z)
 	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
 		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
 		if b then b:Remove() end
+	elseif e.a == events.PLAYER_ACTIVITY then
+		for pID,t in pairs(data.activity) do
+			if t and t.editing then
+				local obj = objects[t.editing]
+				if not obj or obj.currentlyEditedBy == Players[pID] then return end
+				obj.currentlyEditedBy = Players[pID]
+				if obj.trail then
+					obj.trail:remove()
+				end
+				obj.trail = require("trail"):create(Players[pID], obj, TRAILS_COLORS[pID], 0.5)
+			end
+		end
+	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
+		require("ui_ai_ambience"):setFromAIConfig(data)
 	end
 end)
+
+init()
 
 return worldEditor
