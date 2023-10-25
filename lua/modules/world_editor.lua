@@ -409,11 +409,13 @@ local statesSettings = {
 			worldEditor.addBtn:show()
 			worldEditor.editMapBtn:show()
 			worldEditor.exportBtn:show()
+			worldEditor.exportGameBtn:show()
 		end,
 		onStateEnd = function()
 			worldEditor.addBtn:hide()
 			worldEditor.editMapBtn:hide()
 			worldEditor.exportBtn:hide()
+			worldEditor.exportGameBtn:hide()
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -851,10 +853,42 @@ initDefaultMode = function()
 	end
 	index.editMapBtn = editMapBtn
 
+	-- exportGame btn
+	local exportGameBtn = ui:createButton("🎮 Export Game")
+	exportGameBtn.parentDidResize = function()
+		exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+	end
+	exportGameBtn.Height = exportGameBtn.Height * 1.5
+	exportGameBtn:parentDidResize()
+	exportGameBtn.onRelease = function()
+		local objectsList = {}
+		for uuid,_ in pairs(objects) do
+			if uuid ~= -1 then
+				local obj = objects[uuid]
+				table.insert(objectsList, getObjectInfoTable(obj))
+			end
+		end
+		local serializedWorld = JSON:Encode({
+			mapName = mapName,
+			ambience = ambience,
+			objectsList = objectsList
+		})
+
+		local game = worldEditorTemplateWorld:gsub("JSON_TO_REPLACE", escapeJson(serializedWorld))
+		Dev:CopyToClipboard(game)
+		exportGameBtn.Text = "Copied game!"
+		exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+		Timer(1, function()
+			exportGameBtn.Text = "🎮 Export Game"
+			exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+		end)
+	end
+	index.exportGameBtn = exportGameBtn
+
 	-- export btn
 	local exportBtn = ui:createButton("📑 Export")
 	exportBtn.parentDidResize = function()
-		exportBtn.pos = { Screen.Width - padding - exportBtn.Width, padding }
+		exportBtn.pos = exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
 	end
 	exportBtn.Height = exportBtn.Height * 1.5
 	exportBtn:parentDidResize()
@@ -873,10 +907,10 @@ initDefaultMode = function()
 		})
 		Dev:CopyToClipboard(escapeJson(serializedWorld))
 		exportBtn.Text = "Copied!"
-		exportBtn.pos = { Screen.Width - padding - exportBtn.Width, padding }
+		exportBtn.pos = exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
 		Timer(1, function()
 			exportBtn.Text = "📑 Export"
-			exportBtn.pos = { Screen.Width - padding - exportBtn.Width, padding }
+			exportBtn.pos = exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
 		end)
 	end
 	index.exportBtn = exportBtn
@@ -1186,5 +1220,49 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 end)
 
 init()
+
+worldEditorTemplateWorld = [[
+	Config = {}
+
+	-- /!\ use map instead of Map
+	local initGame = function()
+		require("multi")
+		sfx = require("sfx")
+
+		dropPlayer = function()
+			Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
+			Player.Rotation = { 0, 0, 0 }
+			Player.Velocity = { 0, 0, 0 }
+		end
+
+		World:AddChild(Player)
+		dropPlayer()
+	end
+
+	Client.OnStart = function()
+		worldEditorMapLoader(initGame)
+		-- Do nothing here, everything in initGame
+	end
+
+	Client.Action1 = function()
+		if Player.IsOnGround then
+			Player.Velocity.Y = 100
+			sfx("hurtscream_1", {Position = Player.Position, Volume = 0.4})
+		end
+	end
+
+	Client.Tick = function(dt)
+		if Player.Position.Y < -500 then
+			dropPlayer()
+			Player:TextBubble("💀 Oops!", true)
+		end
+	end
+
+	-- World Editor Map Loader
+
+	local a=function(b,c)local d=b.fullname;local e=b.Name;local f=b.Position or Number3(0,0,0)local g=b.Rotation or Rotation(0,0,0)local h=b.Scale or 0.5;if b.Physics=="SPB"then b.Physics=PhysicsMode.StaticPerBlock end;if b.Physics=="D"then b.Physics=PhysicsMode.Dynamic end;if b.Physics=="DIS"then b.Physics=PhysicsMode.Disabled end;local i=b.Physics or PhysicsMode.StaticPerBlock;Object:Load(d,function(j)j:SetParent(World)local k=Box()k:Fit(j,true)j.Pivot=Number3(j.Width/2,k.Min.Y+j.Pivot.Y,j.Depth/2)if i==PhysicsMode.Dynamic then j.Physics=PhysicsMode.Dynamic;require("hierarchyactions"):applyToDescendants(j,{includeRoot=false},function(l)l.Physics=PhysicsMode.Disabled end)j.OnCollisionBegin=function(l,m)if m==Player then require("multi"):forceSync(l.uuid)end end;j.OnCollisionEnd=function(l,m)if m==Player then require("multi"):forceSync(l.uuid)end end else require("hierarchyactions"):applyToDescendants(j,{includeRoot=true},function(l)l.Physics=i end)end;j.uuid=uuid;j.Position=f;j.Rotation=g;j.Scale=h;require("hierarchyactions"):applyToDescendants(j,{includeRoot=true},function(l)l.CollisionGroups={3,OBJECTS_COLLISION_GROUP}end)j.CollidesWithGroups=Map.CollisionGroups+Player.CollisionGroups+{OBJECTS_COLLISION_GROUP}j.Name=e or d end)end;local n=function(d,c)Object:Load(d,function(j)map=MutableShape(j)map.Scale=5;map.CollisionGroups=Map.CollisionGroups;map.CollidesWithGroups=Map.CollidesWithGroups;map.Physics=PhysicsMode.StaticPerBlock;map:SetParent(World)map.Position={0,0,0}map.Pivot={0,0,0}if c then c()end end)end;worldEditorMapLoader=function(o)if #worldJson==0 then error("Paste JSON at the bottom of the script") return end local b=JSON:Decode(worldJson)n(b.mapName,function()if b.blocks then local p=b.blocks;for q,r in ipairs(p)do local s=r[1]local t=r[2]local u=math.floor(s%1000)local v=math.floor(s/1000%1000)local w=math.floor(s/1000000)if t==-1 then local x=map:GetBlock(u,v,w)if x then x:Remove()end else local y=Color(math.floor(t.X),math.floor(t.Y),math.floor(t.Z))local x=map:GetBlock(u,v,w)if x then x:Remove()end;map:AddBlock(y,u,v,w)end end end;if b.objectsList then for q,z in ipairs(b.objectsList)do z.currentlyEditedBy=nil;a(z)end end;if b.ambience then require("ui_ai_ambience"):setFromAIConfig(b.ambience,true)end;o()end)end
+
+	worldJson = "JSON_TO_REPLACE" -- paste the JSON between the quotes "{...}"
+]]
 
 return worldEditor
