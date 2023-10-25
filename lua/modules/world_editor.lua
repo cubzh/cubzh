@@ -7,6 +7,7 @@ setmetatable(worldEditor, metatable)
 local initDefaultMode
 
 local objects = {}
+local map
 
 local waitingForUUIDObj
 
@@ -98,6 +99,51 @@ local setSubState
 local state = states.PREPARING
 local activeSubState = {}
 
+local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
+	syncMulti = syncMulti == nil and true or syncMulti
+	if not obj then
+		print("Error: tried to set physics mode on nil object")
+		return
+	end
+	if obj.Physics == physicsMode then return end
+	if physicsMode == PhysicsMode.Dynamic then
+		obj.Physics = PhysicsMode.Dynamic
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+		if syncMulti then
+			sendToServer(events.P_EDIT_OBJECT, {
+				uuid = obj.uuid,
+				Physics = "D"
+			})
+		end
+		obj.OnCollisionBegin = function(o,p)
+			if p == Player then
+				require("multi"):forceSync(o.uuid)
+			end
+		end
+		obj.OnCollisionEnd = function(o,p)
+			if p == Player then
+				require("multi"):forceSync(o.uuid)
+			end
+		end
+	else
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Physics = physicsMode
+		end)
+		if syncMulti then
+			sendToServer(events.P_EDIT_OBJECT, {
+				uuid = obj.uuid,
+				Physics = physicsMode == PhysicsMode.Disabled and "DIS" or "S"
+			})
+		end
+	end
+
+	if obj.uuid ~= nil and obj.uuid ~= -1 then
+		require("multi"):link(obj, obj.uuid)
+	end
+end
+
 local tryPickObject = function(pe)
 	local impact = pe:CastRay()
 	if not impact then return end
@@ -106,11 +152,11 @@ local tryPickObject = function(pe)
 	while obj and not obj.isEditable do
 		obj = obj:GetParent()
 	end
-	if not obj then return end-- setState(states.DEFAULT) return end
+	if not obj then setState(states.DEFAULT) return end
 
 	if obj.currentlyEditedBy == Player then return end
 	if obj.currentlyEditedBy then
-		obj:TextBubble("Someone else is editing this object.")
+		obj:TextBubble("Someone is editing...")
 		return
 	end
 	setState(states.UPDATING_OBJECT, obj)
@@ -140,9 +186,7 @@ local freezeObject = function(obj)
 		return
 	end
 	obj.savedPhysicsState = obj.Physics
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		o.Physics = PhysicsMode.Disabled
-	end)
+	setObjectPhysicsMode(obj, PhysicsMode.Disabled)
 	sendToServer(events.P_EDIT_OBJECT, {
 		uuid = obj.uuid,
 		Physics = "DIS"
@@ -154,25 +198,7 @@ local unfreezeObject = function(obj)
 		print("obj does not exist")
 		return
 	end
-	local physics = obj.savedPhysicsState
-	if physics == PhysicsMode.StaticPerBlock then
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-			o.Physics = PhysicsMode.StaticPerBlock
-		end)
-		sendToServer(events.P_EDIT_OBJECT, {
-			uuid = obj.uuid,
-			Physics = "SPB"
-		})
-	else
-		obj.Physics = PhysicsMode.Dynamic
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
-			o.Physics = PhysicsMode.Disabled
-		end)
-		sendToServer(events.P_EDIT_OBJECT, {
-			uuid = obj.uuid,
-			Physics = "D"
-		})
-	end
+	setObjectPhysicsMode(obj, obj.savedPhysicsState)
 	obj.savedPhysicsState = nil
 end
 
@@ -187,27 +213,20 @@ local spawnObject = function(data, onDone)
 	if data.Physics == "SPB" then data.Physics = PhysicsMode.StaticPerBlock end
 	if data.Physics == "D" then data.Physics = PhysicsMode.Dynamic end
 	if data.Physics == "DIS" then data.Physics = PhysicsMode.Disabled end
-	local physics = data.Physics or PhysicsMode.StaticPerBlock
+	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
 	Object:Load(fullname, function(obj)
 		obj:SetParent(World)
-		if physics == PhysicsMode.Dynamic then
-			obj.Physics = PhysicsMode.Dynamic
-			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
-				o.Physics = PhysicsMode.Disabled
-			end)
-		else
-			require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-				o.Physics = physics
-			end)
-		end
+		setObjectPhysicsMode(obj, physicsMode)
 		obj.uuid = uuid
 		obj.Position = position
 		obj.Rotation = rotation
 		obj.Scale = scale
 		obj.Pivot = Number3(obj.Width / 2, 0, obj.Depth / 2)
-		obj.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
-		obj.CollisionBox = obj:ComputeLocalBoundingBox()
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+		end)
+		obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 
 		obj.isEditable = true
 		obj.fullname = fullname
@@ -231,14 +250,9 @@ local editObject = function(objInfo)
 	for field,value in pairs(objInfo) do
 		if field == "Physics" then
 			if value == "D" then
-				obj.Physics = PhysicsMode.Dynamic
-				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
-					o.Physics = PhysicsMode.Disabled
-				end)
+				setObjectPhysicsMode(obj, PhysicsMode.Dynamic, false)
 			else
-				require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-					o.Physics = value == "DIS" and PhysicsMode.Disabled or PhysicsMode.StaticPerBlock
-				end)
+				setObjectPhysicsMode(obj, "DIS" and PhysicsMode.Disabled or PhysicsMode.StaticPerBlock, false)
 			end
 		else
 			obj[field] = value
@@ -527,7 +541,7 @@ local statesSettings = {
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
 			local impact = pe:CastRay(nil, Player)
-			if not impact or not impact.Block or not impact.Object == Map then return end
+			if not impact or not impact.Block or impact.Object ~= map then return end
 			if pe.Index == 4 then
 				local pos = impact.Block.Coords
 				sendToServer(events.P_REMOVE_BLOCK, { pos = pos })
@@ -666,7 +680,6 @@ end)
 
 -- init
 
-local map
 local maps = {
 	"aduermael.hills",
 	"aduermael.base_250x40x250",
@@ -844,15 +857,7 @@ initDefaultMode = function()
 			if btn.Text == "Static " then
 				btn.Text = "Dynamic"
 				if activeSubState[state] == subStates[state].DEFAULT then
-					obj.Physics = PhysicsMode.Dynamic
-					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
-						o.Physics = PhysicsMode.Disabled
-					end)
-
-					sendToServer(events.P_EDIT_OBJECT, {
-						uuid = obj.uuid,
-						Physics = "D"
-					})
+					setObjectPhysicsMode(obj, PhysicsMode.Dynamic)
 				else
 					-- if using gizmo, do not apply physics yet
 					obj.savedPhysicsState = PhysicsMode.Dynamic
@@ -860,14 +865,7 @@ initDefaultMode = function()
 			else
 				btn.Text = "Static "
 				if activeSubState[state] == subStates[state].DEFAULT then
-					require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-						o.Physics = PhysicsMode.StaticPerBlock
-					end)
-
-					sendToServer(events.P_EDIT_OBJECT, {
-						uuid = obj.uuid,
-						Physics = "SPB"
-					})
+					setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock)
 				else
 					-- if using gizmo, do not apply physics yet
 					obj.savedPhysicsState = PhysicsMode.StaticPerBlock
@@ -1103,15 +1101,17 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
 		if b then b:Remove() end
 	elseif e.a == events.PLAYER_ACTIVITY then
-		for pID,t in pairs(data.activity) do
+		for pIDUserID,t in pairs(data.activity) do
 			if t and t.editing then
+				local pID = tonumber(string.sub(pIDUserID, 1, 1))
 				local obj = objects[t.editing]
-				if not obj or obj.currentlyEditedBy == Players[pID] then return end
-				obj.currentlyEditedBy = Players[pID]
+				local player = Players[pID]
+				if not obj or obj.currentlyEditedBy == player then return end
+				obj.currentlyEditedBy = player
 				if obj.trail then
 					obj.trail:remove()
 				end
-				obj.trail = require("trail"):create(Players[pID], obj, TRAILS_COLORS[pID], 0.5)
+				obj.trail = require("trail"):create(player, obj, TRAILS_COLORS[pID], 0.5)
 			end
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then

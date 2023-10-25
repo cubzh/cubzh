@@ -368,8 +368,7 @@ multi.link = function(_, object, name)
 	parentBox.LocalPosition = object.LocalPosition
 	parentBox.LocalRotation = object.LocalRotation
 
-	object.Physics = PhysicsMode.Disabled
-	object.CollisionGroups = {}
+	object.Physics = PhysicsMode.Trigger
 	object.CollidesWithGroups = {}
 
 	parentBox:AddChild(object)
