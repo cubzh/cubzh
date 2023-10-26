@@ -6,11 +6,12 @@ setmetatable(worldEditor, metatable)
 
 local initDefaultMode
 
+local padding = require("uitheme").current.padding
+
 local objects = {}
 local map
 local mapIndex = 1
 local mapName
-local ambience
 
 local waitingForUUIDObj
 
@@ -75,7 +76,11 @@ local events = {
 	P_SET_AMBIENCE = "psa",
 	SET_AMBIENCE = "sa",
 	P_LOAD_WORLD = "plw",
-	LOAD_WORLD = "lw"
+	LOAD_WORLD = "lw",
+	P_EXPORT_WORLD = "pew",
+	EXPORT_WORLD = "ew",
+	P_EXPORT_GAME = "peg",
+	EXPORT_GAME = "eg",
 }
 
 local sendToServer = function(event, data)
@@ -732,7 +737,6 @@ init = function()
 	Camera.Far = 10000
 
 	local ui = require("uikit")
-	local padding = require("uitheme").current.padding
 
 	uiPrepareState = ui:createFrame()
 
@@ -752,9 +756,25 @@ init = function()
 		if mapIndex > #maps then mapIndex = 1 end
 		loadMap(maps[mapIndex])
 	end
+
+	galleryMapBtn = ui:createButton("or Pick an item as Map")
+	galleryMapBtn:setParent(uiPrepareState)
+	galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
+	galleryMapBtn.onRelease = function()
+		-- Gallery to pick a map
+		local gallery
+		gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.5 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 } end, {
+			onOpen = function(_, cell)
+				local fullname = cell.repo.."."..cell.name
+				sendToServer(events.P_END_PREPARING, { mapName = fullname })
+				gallery:remove()
+			end
+		})
+	end
+
 	validateBtn = ui:createButton("Start editing this map")
 	validateBtn:setParent(uiPrepareState)
-	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, padding }
+	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
 	validateBtn.onRelease = function()
 		sendToServer(events.P_END_PREPARING, { mapName = mapName })
 	end
@@ -822,7 +842,6 @@ initDefaultMode = function()
 	end
 
     local ui = require("uikit")
-	local padding = require("uitheme").current.padding
 
 	-- Gizmo
 	Camera.Layers = { 1, 4 }
@@ -861,27 +880,7 @@ initDefaultMode = function()
 	exportGameBtn.Height = exportGameBtn.Height * 1.5
 	exportGameBtn:parentDidResize()
 	exportGameBtn.onRelease = function()
-		local objectsList = {}
-		for uuid,_ in pairs(objects) do
-			if uuid ~= -1 then
-				local obj = objects[uuid]
-				table.insert(objectsList, getObjectInfoTable(obj))
-			end
-		end
-		local serializedWorld = JSON:Encode({
-			mapName = mapName,
-			ambience = ambience,
-			objectsList = objectsList
-		})
-
-		local game = worldEditorTemplateWorld:gsub("JSON_TO_REPLACE", escapeJson(serializedWorld))
-		Dev:CopyToClipboard(game)
-		exportGameBtn.Text = "Copied game!"
-		exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
-		Timer(1, function()
-			exportGameBtn.Text = "🎮 Export Game"
-			exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
-		end)
+		sendToServer(events.P_EXPORT_GAME)
 	end
 	index.exportGameBtn = exportGameBtn
 
@@ -893,25 +892,7 @@ initDefaultMode = function()
 	exportBtn.Height = exportBtn.Height * 1.5
 	exportBtn:parentDidResize()
 	exportBtn.onRelease = function()
-		local objectsList = {}
-		for uuid,_ in pairs(objects) do
-			if uuid ~= -1 then
-				local obj = objects[uuid]
-				table.insert(objectsList, getObjectInfoTable(obj))
-			end
-		end
-		local serializedWorld = JSON:Encode({
-			mapName = mapName,
-			ambience = ambience,
-			objectsList = objectsList
-		})
-		Dev:CopyToClipboard(escapeJson(serializedWorld))
-		exportBtn.Text = "Copied!"
-		exportBtn.pos = exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
-		Timer(1, function()
-			exportBtn.Text = "📑 Export"
-			exportBtn.pos = exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
-		end)
+		sendToServer(events.P_EXPORT_WORLD)
 	end
 	index.exportBtn = exportBtn
 
@@ -1030,7 +1011,6 @@ initDefaultMode = function()
 		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
 	end
 	aiAmbienceButton.onNewAmbience = function(data)
-		ambience = data
 		sendToServer(events.P_SET_AMBIENCE, data)
 	end
 	aiAmbienceButton:parentDidResize()
@@ -1106,18 +1086,15 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 					local blocks = data.blocks
 					for _,d in ipairs(blocks) do
 						local k = d[1]
-						local v = d[2]
+						local color = d[2]
+						-- get pos
 						local x = math.floor(k % 1000)
 						local y = math.floor((k / 1000) % 1000)
 						local z = math.floor(k / 1000000)
-						if v == -1 then
-							local b = map:GetBlock(x,y,z)
-							if b then b:Remove() end
-						else
-							local c = v
-							local b = map:GetBlock(x,y,z)
-							if b then b:Remove() end
-							map:AddBlock(c, x, y, z)
+						local b = map:GetBlock(x,y,z)
+						if b then b:Remove() end
+						if color ~= nil and color ~= -1 then
+							map:AddBlock(Color(math.floor(color[1]), math.floor(color[2]), math.floor(color[3])), x, y, z)
 						end
 					end
 				end
@@ -1129,7 +1106,6 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 				end
 				if data.ambience then
 					require("ui_ai_ambience"):setFromAIConfig(data.ambience)
-					ambience = data.ambience
 				end
 			end)
 		end
@@ -1215,54 +1191,30 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
 		require("ui_ai_ambience"):setFromAIConfig(data)
-		ambience = data
+	elseif e.a == events.EXPORT_WORLD then
+		local serializedWorld = escapeJson(JSON:Encode(data.world))
+		Dev:CopyToClipboard(serializedWorld)
+
+		local exportBtn = worldEditor.exportBtn
+		exportBtn.Text = "Copied!"
+		exportBtn.pos = worldEditor.exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
+		Timer(1, function()
+			exportBtn.Text = "📑 Export"
+			exportBtn.pos = worldEditor.exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
+		end)
+	elseif e.a == events.EXPORT_GAME then
+		Dev:CopyToClipboard(data.game)
+
+		local exportGameBtn = worldEditor.exportGameBtn
+		exportGameBtn.Text = "Copied game!"
+		exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+		Timer(1, function()
+			exportGameBtn.Text = "🎮 Export Game"
+			exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+		end)
 	end
 end)
 
 init()
-
-worldEditorTemplateWorld = [[
-	Config = {}
-
-	-- /!\ use map instead of Map
-	local initGame = function()
-		require("multi")
-		sfx = require("sfx")
-
-		dropPlayer = function()
-			Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
-			Player.Rotation = { 0, 0, 0 }
-			Player.Velocity = { 0, 0, 0 }
-		end
-
-		World:AddChild(Player)
-		dropPlayer()
-	end
-
-	Client.OnStart = function()
-		worldEditorMapLoader(initGame)
-		-- Do nothing here, everything in initGame
-	end
-
-	Client.Action1 = function()
-		if Player.IsOnGround then
-			Player.Velocity.Y = 100
-			sfx("hurtscream_1", {Position = Player.Position, Volume = 0.4})
-		end
-	end
-
-	Client.Tick = function(dt)
-		if Player.Position.Y < -500 then
-			dropPlayer()
-			Player:TextBubble("💀 Oops!", true)
-		end
-	end
-
-	-- World Editor Map Loader
-
-	local a=function(b,c)local d=b.fullname;local e=b.Name;local f=b.Position or Number3(0,0,0)local g=b.Rotation or Rotation(0,0,0)local h=b.Scale or 0.5;if b.Physics=="SPB"then b.Physics=PhysicsMode.StaticPerBlock end;if b.Physics=="D"then b.Physics=PhysicsMode.Dynamic end;if b.Physics=="DIS"then b.Physics=PhysicsMode.Disabled end;local i=b.Physics or PhysicsMode.StaticPerBlock;Object:Load(d,function(j)j:SetParent(World)local k=Box()k:Fit(j,true)j.Pivot=Number3(j.Width/2,k.Min.Y+j.Pivot.Y,j.Depth/2)if i==PhysicsMode.Dynamic then j.Physics=PhysicsMode.Dynamic;require("hierarchyactions"):applyToDescendants(j,{includeRoot=false},function(l)l.Physics=PhysicsMode.Disabled end)j.OnCollisionBegin=function(l,m)if m==Player then require("multi"):forceSync(l.uuid)end end;j.OnCollisionEnd=function(l,m)if m==Player then require("multi"):forceSync(l.uuid)end end else require("hierarchyactions"):applyToDescendants(j,{includeRoot=true},function(l)l.Physics=i end)end;j.uuid=uuid;j.Position=f;j.Rotation=g;j.Scale=h;require("hierarchyactions"):applyToDescendants(j,{includeRoot=true},function(l)l.CollisionGroups={3,OBJECTS_COLLISION_GROUP}end)j.CollidesWithGroups=Map.CollisionGroups+Player.CollisionGroups+{OBJECTS_COLLISION_GROUP}j.Name=e or d end)end;local n=function(d,c)Object:Load(d,function(j)map=MutableShape(j)map.Scale=5;map.CollisionGroups=Map.CollisionGroups;map.CollidesWithGroups=Map.CollidesWithGroups;map.Physics=PhysicsMode.StaticPerBlock;map:SetParent(World)map.Position={0,0,0}map.Pivot={0,0,0}if c then c()end end)end;worldEditorMapLoader=function(o)if #worldJson==0 then error("Paste JSON at the bottom of the script") return end local b=JSON:Decode(worldJson)n(b.mapName,function()if b.blocks then local p=b.blocks;for q,r in ipairs(p)do local s=r[1]local t=r[2]local u=math.floor(s%1000)local v=math.floor(s/1000%1000)local w=math.floor(s/1000000)if t==-1 then local x=map:GetBlock(u,v,w)if x then x:Remove()end else local y=Color(math.floor(t.X),math.floor(t.Y),math.floor(t.Z))local x=map:GetBlock(u,v,w)if x then x:Remove()end;map:AddBlock(y,u,v,w)end end end;if b.objectsList then for q,z in ipairs(b.objectsList)do z.currentlyEditedBy=nil;a(z)end end;if b.ambience then require("ui_ai_ambience"):setFromAIConfig(b.ambience,true)end;o()end)end
-
-	worldJson = "JSON_TO_REPLACE" -- paste the JSON between the quotes "{...}"
-]]
 
 return worldEditor
