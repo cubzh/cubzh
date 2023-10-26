@@ -137,15 +137,14 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 				Physics = "D"
 			})
 		end
-		obj.OnCollisionBegin = function(o,p)
+		obj.OnCollision = function(o,p)
 			if p == Player then
+				print("now force sync")
 				require("multi"):forceSync(o.uuid)
 			end
 		end
-		obj.OnCollisionEnd = function(o,p)
-			if p == Player then
-				require("multi"):forceSync(o.uuid)
-			end
+		if obj.uuid ~= nil and obj.uuid ~= -1 then
+			require("multi"):link(obj, obj.uuid)
 		end
 	else
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
@@ -157,10 +156,9 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 				Physics = physicsMode == PhysicsMode.Disabled and "DIS" or "S"
 			})
 		end
-	end
-
-	if obj.uuid ~= nil and obj.uuid ~= -1 then
-		require("multi"):link(obj, obj.uuid)
+		if obj.uuid ~= nil and obj.uuid ~= -1 then
+			require("multi"):unlink(obj.uuid)
+		end
 	end
 end
 
@@ -201,10 +199,7 @@ local setObjectAlpha = function(obj, alpha)
 end
 
 local freezeObject = function(obj)
-	if not obj then
-		print("obj does not exist")
-		return
-	end
+	if not obj then	return end
 	obj.savedPhysicsState = obj.Physics
 	setObjectPhysicsMode(obj, PhysicsMode.Disabled)
 	sendToServer(events.P_EDIT_OBJECT, {
@@ -214,10 +209,7 @@ local freezeObject = function(obj)
 end
 
 local unfreezeObject = function(obj)
-	if not obj then
-		print("obj does not exist")
-		return
-	end
+	if not obj then return end
 	setObjectPhysicsMode(obj, obj.savedPhysicsState)
 	obj.savedPhysicsState = nil
 end
@@ -308,6 +300,7 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
+			worldEditor.gizmo:setAxisVisibility(true, true, true)
 			worldEditor.gizmo:setOnMoveBegin(function()
 				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
 				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
@@ -340,6 +333,7 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Rotate)
+			worldEditor.gizmo:setAxisVisibility(true, true, true)
 			worldEditor.gizmo:setOnRotateBegin(function()
 				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
 				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
@@ -370,6 +364,7 @@ local subStatesSettingsUpdatingObject = {
 		onStateBegin = function()
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Scale)
+			worldEditor.gizmo:setAxisVisibility(true, false, false)
 			worldEditor.gizmo:setOnScaleBegin(function()
 				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
 				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
@@ -411,16 +406,10 @@ local statesSettings = {
 	-- DEFAULT
 	{
 		onStateBegin = function()
-			worldEditor.addBtn:show()
-			worldEditor.editMapBtn:show()
-			worldEditor.exportBtn:show()
-			worldEditor.exportGameBtn:show()
+			worldEditor.defaultStateUI:show()
 		end,
 		onStateEnd = function()
-			worldEditor.addBtn:hide()
-			worldEditor.editMapBtn:hide()
-			worldEditor.exportBtn:hide()
-			worldEditor.exportGameBtn:hide()
+			worldEditor.defaultStateUI:hide()
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
@@ -450,8 +439,12 @@ local statesSettings = {
 	-- PLACING_OBJECT
 	{
 		onStateBegin = function(obj)
+			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
 			freezeObject(obj)
+		end,
+		onStateEnd = function()
+			worldEditor.placingCancelBtn:hide()
 		end,
 		pointerMove = function(pe)
 			local placingObj = worldEditor.placingObj
@@ -556,7 +549,7 @@ local statesSettings = {
 			Player:EquipRightHand(block)
 			block.Scale = 5
 			block.LocalPosition = { 1.5,1.5,1.5 }
-			worldEditor.editMapBar:show()
+			worldEditor.editMapValidateBtn:show()
 			worldEditor.colorPicker:show()
 			worldEditor.colorPicker.parentDidResize = function()
 				worldEditor.colorPicker.pos = { Screen.Width - worldEditor.colorPicker.Width, -20 }
@@ -565,7 +558,7 @@ local statesSettings = {
 		end,
 		onStateEnd = function()
 			Player:EquipRightHand(nil)
-			worldEditor.editMapBar:hide()
+			worldEditor.editMapValidateBtn:hide()
 			worldEditor.colorPicker:hide()
 		end,
 		pointerUp = function(pe)
@@ -849,52 +842,53 @@ initDefaultMode = function()
 	worldEditor.gizmo = require("gizmo"):create({ orientationMode =  require("gizmo").Mode.Local, moveSnap = 0.5 })
 
 	-- Default ui, add btn
-	local addBtn = ui:createButton("➕ Object")
-	addBtn.parentDidResize = function()
-		addBtn.pos = { Screen.Width * 0.5 - addBtn.Width - padding * 0.5, padding }
-	end
-	addBtn.Height = addBtn.Height * 1.5
-	addBtn:parentDidResize()
-	addBtn.onRelease = function()
-		setState(states.GALLERY)
-	end
-	index.addBtn = addBtn
+	local defaultStateUI = ui:createFrame()
+	index.defaultStateUI = defaultStateUI
 
-	-- editMap btn
-	local editMapBtn = ui:createButton("🖌 Map")
-	editMapBtn.parentDidResize = function()
-		editMapBtn.pos = { Screen.Width * 0.5 + padding * 0.5, padding }
-	end
-	editMapBtn.Height = editMapBtn.Height * 1.5
-	editMapBtn:parentDidResize()
-	editMapBtn.onRelease = function()
-		setState(states.EDIT_MAP)
-	end
-	index.editMapBtn = editMapBtn
+	local defaultStateUIConfig = {
+		{
+			text = "➕ Object",
+			pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding } end,
+			state = states.GALLERY,
+			name = "addBtn"
+		},
+		{
+			text = "🖌 Map",
+			pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding } end,
+			state = states.EDIT_MAP,
+			name = "editMapBtn"
+		},
+		{
+			text = "🎮 Export Game",
+			pos = function(btn) return { Screen.Width - padding - btn.Width, padding } end,
+			serverEvent = events.P_EXPORT_GAME,
+			name = "exportGameBtn"
+		},
+		{
+			text = "📑 Export",
+			pos = function(btn) return worldEditor.exportGameBtn.pos - { padding + btn.Width, 0, 0 } end,
+			serverEvent = events.P_EXPORT_WORLD,
+			name = "exportBtn"
+		},
+	}
 
-	-- exportGame btn
-	local exportGameBtn = ui:createButton("🎮 Export Game")
-	exportGameBtn.parentDidResize = function()
-		exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+	for _,config in ipairs(defaultStateUIConfig) do
+		local btn = ui:createButton(config.text)
+		btn:setParent(worldEditor.defaultStateUI)
+		btn.parentDidResize = function(b)
+			b.pos = config.pos(b)
+		end
+		btn.Height = btn.Height * 1.5
+		btn:parentDidResize()
+		btn.onRelease = function()
+			if config.state then
+				setState(config.state)
+			elseif config.serverEvent then
+				sendToServer(config.serverEvent)
+			end
+		end
+		index[config.name] = btn
 	end
-	exportGameBtn.Height = exportGameBtn.Height * 1.5
-	exportGameBtn:parentDidResize()
-	exportGameBtn.onRelease = function()
-		sendToServer(events.P_EXPORT_GAME)
-	end
-	index.exportGameBtn = exportGameBtn
-
-	-- export btn
-	local exportBtn = ui:createButton("📑 Export")
-	exportBtn.parentDidResize = function()
-		exportBtn.pos = exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
-	end
-	exportBtn.Height = exportBtn.Height * 1.5
-	exportBtn:parentDidResize()
-	exportBtn.onRelease = function()
-		sendToServer(events.P_EXPORT_WORLD)
-	end
-	index.exportBtn = exportBtn
 
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
@@ -912,6 +906,20 @@ initDefaultMode = function()
 	end
 	initGallery()
 
+	-- Placing
+	local placingCancelBtn = ui:createButton("❌")
+	placingCancelBtn.onRelease = function()
+		setState(states.DEFAULT)
+		worldEditor.placingObj:RemoveFromParent()
+		worldEditor.placingObj = nil
+	end
+	placingCancelBtn.parentDidResize = function()
+		placingCancelBtn.pos = { Screen.Width * 0.5 - placingCancelBtn.Width * 0.5, placingCancelBtn.Height * 2 }
+	end
+	placingCancelBtn:parentDidResize()
+	placingCancelBtn:hide()
+	worldEditor.placingCancelBtn = placingCancelBtn
+
 	-- Update object UI
 	local updateObjectUI = ui:createFrame(Color(78, 78, 78))
 
@@ -928,30 +936,33 @@ initDefaultMode = function()
 
 	local barInfo = {
 		{ type="button", text="⇢", subState=subStates[states.UPDATING_OBJECT].GIZMO_MOVE },
-		{ type="button", text="↻", subState=subStates[states.UPDATING_OBJECT].GIZMO_ROTATE },
-		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
-		{ type="separator" },
-		{ type="button", text="Static ", callback=function(btn)
-			local obj = worldEditor.object
-
-			if btn.Text == "Static " then
-				btn.Text = "Dynamic"
-				if activeSubState[state] == subStates[state].DEFAULT then
-					setObjectPhysicsMode(obj, PhysicsMode.Dynamic)
-				else
-					-- if using gizmo, do not apply physics yet
-					obj.savedPhysicsState = PhysicsMode.Dynamic
-				end
-			else
-				btn.Text = "Static "
-				if activeSubState[state] == subStates[state].DEFAULT then
-					setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock)
-				else
-					-- if using gizmo, do not apply physics yet
-					obj.savedPhysicsState = PhysicsMode.StaticPerBlock
-				end
-			end
+		-- { type="button", text="↻", subState=subStates[states.UPDATING_OBJECT].GIZMO_ROTATE },
+		{ type="button", text="↻", callback = function()
+			worldEditor.object:TextBubble("Mouse wheel: rotate object on Y axis.")
 		end },
+		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
+		-- { type="separator" },
+		-- { type="button", text="Static ", callback=function(btn)
+		-- 	local obj = worldEditor.object
+
+		-- 	if btn.Text == "Static " then
+		-- 		btn.Text = "Dynamic"
+		-- 		if activeSubState[state] == subStates[state].DEFAULT then
+		-- 			setObjectPhysicsMode(obj, PhysicsMode.Dynamic)
+		-- 		else
+		-- 			-- if using gizmo, do not apply physics yet
+		-- 			obj.savedPhysicsState = PhysicsMode.Dynamic
+		-- 		end
+		-- 	else
+		-- 		btn.Text = "Static "
+		-- 		if activeSubState[state] == subStates[state].DEFAULT then
+		-- 			setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock)
+		-- 		else
+		-- 			-- if using gizmo, do not apply physics yet
+		-- 			obj.savedPhysicsState = PhysicsMode.StaticPerBlock
+		-- 		end
+		-- 	end
+		-- end },
 		{ type="separator" },
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
@@ -1016,45 +1027,16 @@ initDefaultMode = function()
 	aiAmbienceButton:parentDidResize()
 
 	-- Edit Map
-	local editMapBar = require("ui_container").createHorizontalContainer()
-
-	local editMapBarInfo = {
-		{ type="button", text="✅", state=states.DEFAULT },
-	}
-
-	for _,elem in ipairs(editMapBarInfo) do
-		if elem.type == "button" then
-			local btn = ui:createButton(elem.text)
-			btn.onRelease = function()
-				if elem.callback then
-					elem.callback(btn)
-					return
-				end
-				if elem.state then
-					setState(elem.state)
-				end
-				if elem.subState then
-					if activeSubState[state] == elem.subState then
-						setSubState(subStates[state].DEFAULT)
-					else
-						setSubState(elem.subState)
-					end
-				end
-			end
-			editMapBar:pushElement(btn)
-		elseif elem.type == "separator" then
-			editMapBar:pushSeparator()
-		elseif elem.type == "gap" then
-			editMapBar:pushGap()
-		end
+	local editMapValidateBtn = ui:createButton("✅")
+	editMapValidateBtn.onRelease = function()
+		setState(states.DEFAULT)
 	end
-
-	editMapBar.parentDidResize = function()
-		editMapBar.pos = { Screen.Width * 0.5 - editMapBar.Width * 0.5, padding }
+	editMapValidateBtn.parentDidResize = function()
+		editMapValidateBtn.pos = { Screen.Width * 0.5 - editMapValidateBtn.Width * 0.5, placingCancelBtn.Height * 2 }
 	end
-	editMapBar:parentDidResize()
-	editMapBar:hide()
-	worldEditor.editMapBar = editMapBar
+	editMapValidateBtn:parentDidResize()
+	editMapValidateBtn:hide()
+	worldEditor.editMapValidateBtn = editMapValidateBtn
 
 	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false })
 	picker.closeBtn:remove()
@@ -1139,7 +1121,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
 		if isLocalPlayer then
 			worldEditor.object = obj
-			worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.Dynamic and "Dynamic" or "Static "
+			-- worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.StaticPerBlock and "Static " or "Dynamic"
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
