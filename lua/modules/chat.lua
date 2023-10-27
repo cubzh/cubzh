@@ -100,10 +100,13 @@ local playerSendMessage = function(message)
 
 	-- check if command
 	local channelCommand = string.sub(message, 1, 3)
-	if channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w " then
-		local channel = string.sub(message, 2, 2)
+	local channelCommandDev = string.sub(message, 1, 4)
+	if not Dev.CanRunCommands and (channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w ")
+		or Dev.CanRunCommands and (channelCommandDev == "//a " or channelCommandDev == "//l " or channelCommandDev == "//w ") then
+
+		local channel = Dev.CanRunCommands and string.sub(message, 3, 3) or string.sub(message, 2, 2)
 		channelType = commandsToChannel[channel]
-		message = string.sub(message, 4, #message)
+		message = Dev.CanRunCommands and string.sub(message, 5, #message) or string.sub(message, 4, #message)
 
 		if channelType == channels.Private then
 			msgInfo.receiver = { username = string.gmatch(message, "%S+")() }
@@ -130,13 +133,13 @@ local playerSendMessage = function(message)
 			message = string.sub(message, 2 + #msgInfo.receiver.username, #message)
 		end
 	elseif string.sub(message, 1, 1) == "/" then
-		local str = string.sub(message, 2, #message)
 		System:AddCommandInHistory(message)
-		if Dev.CanRunCommands then
-			System:ExecCommand(str)
-		else
+		if not Dev.CanRunCommands then
 			print("⚠️ not authorized to run commands")
+			return
 		end
+		local command = string.sub(message, 2, #message)
+		System:ExecCommand(command)
 		return
 	end
 
