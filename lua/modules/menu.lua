@@ -430,7 +430,7 @@ chatMessage[4]:setParent(chatMessages)
 
 -----
 
-LocalEvent:Listen("did_receive_chat_message", function(msgInfo)
+LocalEvent:Listen(LocalEvent.Name.ChatMessage, function(msgInfo)
 	-- /!\ do not print -> stack overflow
 	-- print("XXX", msgInfo.message)
 
@@ -444,6 +444,30 @@ LocalEvent:Listen("did_receive_chat_message", function(msgInfo)
 		chatMessage[1].Text = msgInfo.message
 	end
 end)
+
+---------------------------
+-- CHAT CONSOLE
+---------------------------
+
+-- chat = ui:createFrame(Color(0, 0, 0, 0.7))
+-- chat:setParent(background)
+
+-- console = require("chat"):create({ uikit = ui })
+-- console.Width = 200
+-- console.Height = 500
+-- console:setParent(chat)
+
+-- chat.parentDidResize = function()
+-- 	chat.Width = 300
+-- 	chat.Height = 200
+
+-- 	console.Width = chat.Width - theme.paddingTiny * 2
+-- 	console.Height = chat.Height - theme.paddingTiny * 2
+
+-- 	console.pos = { theme.paddingTiny, theme.paddingTiny }
+-- 	chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
+-- end
+-- chat:parentDidResize()
 
 ----------------------
 -- CUBZH MENU CONTENT
@@ -847,6 +871,12 @@ end
 
 authCompleteCallbacks = {}
 
+function authCompleted()
+	for _, callback in ipairs(authCompleteCallbacks) do
+		callback()
+	end
+end
+
 menu.OnAuthComplete = function(self, callback)
 	if self ~= menu then
 		return
@@ -913,13 +943,13 @@ local mt = {
 
 setmetatable(menu, mt)
 
-LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
-	if System.Authenticated == false then
-		return
-	end
-	chatBtn:onRelease()
-	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, text or "")
-end)
+-- LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
+-- 	if System.Authenticated == false then
+-- 		return
+-- 	end
+-- 	console:focus()
+-- 	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, text or "")
+-- end)
 
 LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive
@@ -1209,9 +1239,7 @@ function skipTitleScreen()
 								hideLoading()
 								showTopBar()
 								hideBottomBar()
-								for _, callback in ipairs(authCompleteCallbacks) do
-									callback()
-								end
+								authCompleted()
 							end,
 							loggedOut = function()
 								System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
@@ -1223,9 +1251,7 @@ function skipTitleScreen()
 												hideLoading()
 												showTopBar()
 												hideBottomBar()
-												for _, callback in ipairs(authCompleteCallbacks) do
-													callback()
-												end
+												authCompleted()
 											end,
 											-- not supposed to happen after successful signup
 											loggedOut = function()
@@ -1238,9 +1264,7 @@ function skipTitleScreen()
 										hideLoading()
 										showTopBar()
 										hideBottomBar()
-										for _, callback in ipairs(authCompleteCallbacks) do
-											callback()
-										end
+										authCompleted()
 									end,
 									error = function()
 										showTitleScreen()
@@ -1410,6 +1434,8 @@ end
 
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
+		System:UpdateAuthStatus()
+
 		username.Text = Player.Username
 
 		api.getBalance(function(err, balance)
@@ -1437,6 +1463,7 @@ Timer(0.1, function()
 		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui)
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
+		-- chat:parentDidResize()
 
 		Timer(10.0, function()
 			-- request permission for remote notifications

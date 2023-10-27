@@ -9,16 +9,8 @@ Go to https://docs.cu.bzh/
 --
 
 Config = {
-	Items = {
-		"hub_collosseum_chunk",
-		"hub_scifi_chunk",
-		"hub_medieval_chunk",
-		"hub_floating_islands_chunk",
-		"hub_volcano_chunk",
-	},
+	Items = {},
 }
-
--- CONSTANTS
 
 -- local WATER_ALPHA = 220
 local MAP_SCALE = 5.5
@@ -36,12 +28,8 @@ Client.Action1 = nil
 Client.Action2 = function() end
 
 Client.OnStart = function()
-	-- Dev.DisplayColliders = true
-
-	-- MODULE TESTS
-	-- require("envtest")
-
-	-- System:DebugEvent("APP_LAUNCH")
+	multi = require("multi")
+	require("textbubbles").displayPlayerChatBubbles = true
 
 	local ambience = require("ambience")
 	ambience:set(ambience.noon)
@@ -49,20 +37,9 @@ Client.OnStart = function()
 	controls = require("controls")
 	controls:setButtonIcon("action1", "⬆️")
 
-	-- AMBIENCE --
-
-	camera2 = Camera()
-	camera2.Layers = { 5 }
-	camera2:SetParent(World)
-	camera2.On = true
-	camera2.TargetY = Screen.Height
 	-- IMPORT MODULES
+	bundle = require("bundle")
 	ui = require("uikit")
-	ease = require("ease")
-	api = require("api")
-	palette = require("palette")
-	modal = require("modal")
-	theme = require("uitheme").current
 	objectSkills = require("object_skills")
 
 	-- MAP
@@ -90,7 +67,7 @@ Client.OnStart = function()
 		-- end
 	end
 
-	collosseumChunk = Shape(Items.hub_collosseum_chunk)
+	collosseumChunk = bundle.Shape("hub_collosseum_chunk")
 	collosseumChunk.InnerTransparentFaces = false
 	collosseumChunk.Physics = PhysicsMode.StaticPerBlock
 	collosseumChunk.CollisionGroups = Map.CollisionGroups
@@ -103,7 +80,7 @@ Client.OnStart = function()
 	setWaterTransparency(collosseumChunk)
 	setLights(collosseumChunk)
 
-	scifiChunk = MutableShape(Items.hub_scifi_chunk)
+	scifiChunk = bundle.Shape("hub_scifi_chunk")
 	scifiChunk.InnerTransparentFaces = false
 	scifiChunk.Physics = PhysicsMode.StaticPerBlock
 	scifiChunk.CollisionGroups = Map.CollisionGroups
@@ -116,7 +93,7 @@ Client.OnStart = function()
 	setWaterTransparency(scifiChunk)
 	setLights(scifiChunk)
 
-	medievalChunk = Shape(Items.hub_medieval_chunk)
+	medievalChunk = bundle.Shape("hub_medieval_chunk")
 	medievalChunk.InnerTransparentFaces = false
 	medievalChunk.Physics = PhysicsMode.StaticPerBlock
 	medievalChunk.CollisionGroups = Map.CollisionGroups
@@ -129,7 +106,7 @@ Client.OnStart = function()
 	setWaterTransparency(medievalChunk)
 	setLights(medievalChunk)
 
-	floatingIslandsChunks = Shape(Items.hub_floating_islands_chunk)
+	floatingIslandsChunks = bundle.Shape("hub_floating_islands_chunk")
 	floatingIslandsChunks.InnerTransparentFaces = false
 	floatingIslandsChunks.Physics = PhysicsMode.StaticPerBlock
 	floatingIslandsChunks.CollisionGroups = Map.CollisionGroups
@@ -142,7 +119,7 @@ Client.OnStart = function()
 	setWaterTransparency(floatingIslandsChunks)
 	setLights(floatingIslandsChunks)
 
-	volcanoChunk = Shape(Items.hub_volcano_chunk)
+	volcanoChunk = bundle.Shape("hub_volcano_chunk")
 	volcanoChunk.Physics = PhysicsMode.StaticPerBlock
 	volcanoChunk.CollisionGroups = Map.CollisionGroups
 	volcanoChunk.Scale = MAP_SCALE
@@ -169,36 +146,22 @@ Client.OnStart = function()
 
 	kCameraPositionRotating = Number3(139, kCameraPositionY, 68) * MAP_SCALE
 
-	require("crosshair"):hide()
-
 	Camera:SetModeFree()
 	Camera.Position = kCameraPositionRotating
 	Pointer:Show()
 
-	require("menu"):OnAuthComplete(function()
+	Menu:OnAuthComplete(function()
 		Client.DirectionalPad = directionalPad
 		Client.Action1 = action1
 
 		account:showAvatar()
-
-		-- TODO: test DIRECT LINKS
-		-- should be handled by menu			-- if hasEnvironmentToLaunch() then
-		-- 	launchEnvironment()
-		-- end
 	end)
-
-	-- TODO: test DIRECT LINKS
-	-- if hasEnvironmentToLaunch() then
-	-- 	skipTitleScreen()
-	-- end
 end
 
 Client.OnPlayerJoin = function(p)
-	if p ~= Player then
-		return
-	end
 	objectSkills.addStepClimbing(p)
 	dropPlayer(p)
+	print(p.Username .. " joined!")
 end
 
 Client.OnPlayerLeave = function(p)
@@ -225,27 +188,17 @@ end
 
 Pointer.Click = function()
 	Player:SwingRight()
+	Player:TextBubble("This is a test!")
 end
 
--- //////////////////////////////////////////////////
--- ///
--- /// ACCOUNT MENU
--- ///
--- //////////////////////////////////////////////////
-
 account = {
-	shown = false, -- indicates whether the account menu is shown to the user
+	shown = false,
 	showAvatar = function(self)
 		if self.shown then
 			return
 		end
 		self.shown = true
-
-		-- reload avatar
-		Client.__loadAvatar(Player)
-
 		Camera:SetModeThirdPerson()
-
 		dropPlayer(Player)
 	end,
 	hideAvatar = function(self)
