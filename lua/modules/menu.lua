@@ -449,25 +449,25 @@ end)
 -- CHAT CONSOLE
 ---------------------------
 
-chat = ui:createFrame(Color(0, 0, 0, 0.7))
-chat:setParent(background)
+-- chat = ui:createFrame(Color(0, 0, 0, 0.7))
+-- chat:setParent(background)
 
-console = require("chat"):create({ uikit = ui })
-console.Width = 200
-console.Height = 500
-console:setParent(chat)
+-- console = require("chat"):create({ uikit = ui })
+-- console.Width = 200
+-- console.Height = 500
+-- console:setParent(chat)
 
-chat.parentDidResize = function()
-	chat.Width = 300
-	chat.Height = 200
+-- chat.parentDidResize = function()
+-- 	chat.Width = 300
+-- 	chat.Height = 200
 
-	console.Width = chat.Width - theme.paddingTiny * 2
-	console.Height = chat.Height - theme.paddingTiny * 2
+-- 	console.Width = chat.Width - theme.paddingTiny * 2
+-- 	console.Height = chat.Height - theme.paddingTiny * 2
 
-	console.pos = { theme.paddingTiny, theme.paddingTiny }
-	chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
-end
-chat:parentDidResize()
+-- 	console.pos = { theme.paddingTiny, theme.paddingTiny }
+-- 	chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
+-- end
+-- chat:parentDidResize()
 
 ----------------------
 -- CUBZH MENU CONTENT
@@ -943,13 +943,13 @@ local mt = {
 
 setmetatable(menu, mt)
 
-LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
-	if System.Authenticated == false then
-		return
-	end
-	console:focus()
-	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, text or "")
-end)
+-- LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
+-- 	if System.Authenticated == false then
+-- 		return
+-- 	end
+-- 	console:focus()
+-- 	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, text or "")
+-- end)
 
 LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive
@@ -1463,7 +1463,7 @@ Timer(0.1, function()
 		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui)
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
-		chat:parentDidResize()
+		-- chat:parentDidResize()
 
 		Timer(10.0, function()
 			-- request permission for remote notifications
