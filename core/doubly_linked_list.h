@@ -30,6 +30,9 @@ typedef struct {
 // constructor
 DoublyLinkedList *doubly_linked_list_new(void);
 
+// copy
+bool doubly_linked_list_copy(DoublyLinkedList *const dst, DoublyLinkedList *const src);
+
 // pop and free all nodes, the list itself is not freed
 void doubly_linked_list_flush(DoublyLinkedList *list, pointer_free_function ptr);
 // destructor
@@ -37,8 +40,8 @@ void doubly_linked_list_flush(DoublyLinkedList *list, pointer_free_function ptr)
 void doubly_linked_list_free(DoublyLinkedList *list);
 
 // push to last/first and return pointer to created node
-DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *list, void *ptr);
-DoublyLinkedListNode *doubly_linked_list_push_first(DoublyLinkedList *list, void *ptr);
+DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *const list, void *const ptr);
+DoublyLinkedListNode *doubly_linked_list_push_first(DoublyLinkedList *const list, void *const ptr);
 
 void *doubly_linked_list_pop_last(DoublyLinkedList *list);
 void *doubly_linked_list_pop_first(DoublyLinkedList *list);
@@ -47,9 +50,9 @@ DoublyLinkedListNode *doubly_linked_list_last(const DoublyLinkedList *list);
 DoublyLinkedListNode *doubly_linked_list_first(const DoublyLinkedList *list);
 
 // removes node from list
-//!\\ stored pointer won't be released
-DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *list,
-                                                     DoublyLinkedListNode *node);
+// /!\ stored pointer won't be released
+DoublyLinkedListNode *doubly_linked_list_delete_node(DoublyLinkedList *const list,
+                                                     DoublyLinkedListNode *const node);
 DoublyLinkedListNode *doubly_linked_list_insert_node_next(DoublyLinkedList *list,
                                                           DoublyLinkedListNode *node,
                                                           void *ptr);
@@ -69,6 +72,8 @@ size_t doubly_linked_list_node_count(const DoublyLinkedList *list);
 DoublyLinkedListNode *doubly_linked_list_node_at_index(const DoublyLinkedList *list, size_t i);
 
 DoublyLinkedListNode *doubly_linked_list_find(const DoublyLinkedList *list, void *ptr);
+bool doubly_linked_list_contains_node(const DoublyLinkedList *const list,
+                                      const DoublyLinkedListNode *const node);
 bool doubly_linked_list_contains(const DoublyLinkedList *list, void *ptr);
 typedef bool (*pointer_doubly_linked_list_contains_func)(void *nodePtr, void *data);
 bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
@@ -76,7 +81,8 @@ bool doubly_linked_list_contains_func(const DoublyLinkedList *list,
                                       void *ptr,
                                       void **out);
 
-bool doubly_linked_list_is_empty(const DoublyLinkedList *list);
+bool doubly_linked_list_is_empty(const DoublyLinkedList *const list);
+void doubly_linked_list_print(const DoublyLinkedList *const list);
 
 //--------------------
 // MARK: - DoublyLinkedListNode -
