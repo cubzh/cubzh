@@ -23,6 +23,12 @@ BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
 BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
 ALERT_BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
 ALERT_BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
+CHAT_SCREEN_WIDTH_RATIO = 0.3
+CHAT_MAX_WIDTH = 600
+CHAT_MIN_WIDTH = 250
+CHAT_SCREEN_HEIGHT_RATIO = 0.25
+CHAT_MIN_HEIGHT = 160
+CHAT_MAX_HEIGHT = 400
 
 ---------------------------
 -- VARS
@@ -34,6 +40,7 @@ wasActive = false
 modalWasShown = false
 alertWasShown = false
 cppMenuIsActive = false
+chatDisplayed = false -- when false, only a mini chat console is displayed in the top bar
 
 ---------------------------
 -- MODALS
@@ -135,10 +142,12 @@ function showModal(key)
 			activeModal = nil
 			activeModalKey = nil
 			System.PointerForceShown = false
+			refreshChat()
 			triggerCallbacks()
 		end
 	end
 
+	refreshChat()
 	triggerCallbacks()
 end
 
@@ -294,10 +303,6 @@ function refreshDisplay()
 		chatBtn:disable()
 		friendsBtn:disable()
 		profileFrame:hide()
-		chatMessage[1].Color = Color(255, 255, 255, 50)
-		chatMessage[2].Color = Color(255, 255, 255, 50)
-		chatMessage[3].Color = Color(255, 255, 255, 50)
-		chatMessage[4].Color = Color(255, 255, 255, 50)
 		if signupElements ~= nil then
 			for _, e in ipairs(signupElements) do
 				e:hide()
@@ -317,10 +322,6 @@ function refreshDisplay()
 		chatBtn:enable()
 		friendsBtn:enable()
 		profileFrame:show()
-		chatMessage[1].Color = Color(200, 200, 200)
-		chatMessage[2].Color = Color(200, 200, 200)
-		chatMessage[3].Color = Color(200, 200, 200)
-		chatMessage[4].Color = Color(200, 200, 200)
 		if signupElements ~= nil then
 			for _, e in ipairs(signupElements) do
 				e:show()
@@ -382,7 +383,15 @@ cubzhBtn.onRelease = function()
 end
 
 chatBtn.onRelease = function()
-	showModal(MODAL_KEYS.CHAT)
+	if activeModal then
+		showModal(MODAL_KEYS.CHAT)
+	else
+		chatDisplayed = not chatDisplayed
+		refreshChat()
+		if console then
+			console:focus()
+		end
+	end
 end
 
 friendsBtn.onRelease = function()
@@ -413,61 +422,119 @@ info = ui:createText(
 )
 info:setParent(profileFrame)
 
-chatMessages = ui:createFrame(Color.transparent)
-chatMessages.IsMask = true
-chatMessages:setParent(topBar)
-chatMessage = {}
+---------
+-- CHAT
+---------
 
-chatMessage[1] = ui:createText("", Color(200, 200, 200), "small")
-chatMessage[2] = ui:createText("", Color(200, 200, 200), "small")
-chatMessage[3] = ui:createText("", Color(200, 200, 200), "small")
-chatMessage[4] = ui:createText("", Color(200, 200, 200), "small")
-
-chatMessage[1]:setParent(chatMessages)
-chatMessage[2]:setParent(chatMessages)
-chatMessage[3]:setParent(chatMessages)
-chatMessage[4]:setParent(chatMessages)
-
------
-
-LocalEvent:Listen(LocalEvent.Name.ChatMessage, function(msgInfo)
-	-- /!\ do not print -> stack overflow
-	-- print("XXX", msgInfo.message)
-
-	for i = #chatMessage, 2, -1 do
-		chatMessage[i].Text = chatMessage[i - 1].Text
+function createTopBarChat()
+	if topBarChat ~= nil then
+		return -- already created
 	end
+	topBarChat = require("chat"):create({ uikit = ui, input = false, time = false, heads = false, maxMessages = 4 })
+	topBarChat:setParent(topBar)
+	if topBar.parentDidResize then
+		topBar:parentDidResize()
+	end
+end
 
-	if msgInfo.sender.username then
-		chatMessage[1].Text = msgInfo.sender.username .. ": " .. msgInfo.message
+function removeTopBarChat()
+	if topBarChat == nil then
+		return -- nothing to remove
+	end
+	topBarChat:remove()
+	topBarChat = nil
+end
+
+function createChat()
+	if chat ~= nil then
+		return -- chat already created
+	end
+	chat = ui:createFrame(Color(0, 0, 0, 0.3))
+	chat:setParent(background)
+
+	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small" })
+	btnChatFullscreen.onRelease = function()
+		showModal(MODAL_KEYS.CHAT)
+	end
+	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
+
+	console = require("chat"):create({
+		uikit = ui,
+		onSubmitEmpty = function()
+			hideChat()
+		end,
+		onFocus = function()
+			chat.Color = Color(0, 0, 0, 0.5)
+		end,
+		onFocusLost = function()
+			chat.Color = Color(0, 0, 0, 0.3)
+		end,
+	})
+	console.Width = 200
+	console.Height = 500
+	console:setParent(chat)
+	btnChatFullscreen:setParent(chat)
+	btnChatFullscreen.pos.Z = -200 -- make sure it's rendered in front of messages
+
+	chat.parentDidResize = function()
+		local w = Screen.Width * CHAT_SCREEN_WIDTH_RATIO
+		w = math.min(w, CHAT_MAX_WIDTH)
+		w = math.max(w, CHAT_MIN_WIDTH)
+		chat.Width = w
+
+		local h = Screen.Height * CHAT_SCREEN_HEIGHT_RATIO
+		h = math.min(h, CHAT_MAX_HEIGHT)
+		h = math.max(h, CHAT_MIN_HEIGHT)
+		chat.Height = h
+
+		console.Width = chat.Width - theme.paddingTiny * 2
+		console.Height = chat.Height - theme.paddingTiny * 2
+
+		console.pos = { theme.paddingTiny, theme.paddingTiny }
+		chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
+
+		btnChatFullscreen.pos = { theme.paddingTiny, chat.Height - btnChatFullscreen.Height - theme.paddingTiny }
+	end
+	chat:parentDidResize()
+end
+
+function removeChat()
+	if chat == nil then
+		return -- nothing to remove
+	end
+	chat:remove()
+	chat = nil
+	console = nil
+end
+
+-- displayes chat as expected based on state
+function refreshChat()
+	if chatDisplayed then
+		if activeModal then
+			removeChat()
+		else
+			createChat()
+		end
+		removeTopBarChat()
 	else
-		chatMessage[1].Text = msgInfo.message
+		removeChat()
+		createTopBarChat()
 	end
-end)
+end
 
----------------------------
--- CHAT CONSOLE
----------------------------
+function showChat(input)
+	chatDisplayed = true
+	refreshChat()
+	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, input or "")
+	console:focus()
+end
 
--- chat = ui:createFrame(Color(0, 0, 0, 0.7))
--- chat:setParent(background)
+function hideChat()
+	chatDisplayed = false
+	refreshChat()
+end
 
--- console = require("chat"):create({ uikit = ui })
--- console.Width = 200
--- console.Height = 500
--- console:setParent(chat)
-
--- chat.parentDidResize = function()
--- 	chat.Width = 300
--- 	chat.Height = 200
-
--- 	console.Width = chat.Width - theme.paddingTiny * 2
--- 	console.Height = chat.Height - theme.paddingTiny * 2
-
--- 	console.pos = { theme.paddingTiny, theme.paddingTiny }
--- 	chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
--- end
--- chat:parentDidResize()
+refreshChat()
 
 ----------------------
 -- CUBZH MENU CONTENT
@@ -775,14 +842,12 @@ topBar.parentDidResize = function(self)
 
 	-- CHAT MESSAGES
 
-	chatMessages.Height = topBarHeight - padding * 2
-	chatMessages.pos.X = chatBtn.pos.X + chatBtn.Width + padding
-	chatMessages.Width = (cubzhBtn.pos.X - chatMessages.pos.X) - padding * 2
-	chatMessages.pos.Y = topBarHeight * 0.5 - chatMessages.Height * 0.5
-
-	chatMessage[2].pos.Y = chatMessage[1].pos.Y + chatMessage[1].Height + padding * 0.5
-	chatMessage[3].pos.Y = chatMessage[2].pos.Y + chatMessage[2].Height + padding * 0.5
-	chatMessage[4].pos.Y = chatMessage[3].pos.Y + chatMessage[3].Height + padding * 0.5
+	if topBarChat then
+		topBarChat.Height = topBarHeight - padding * 2
+		topBarChat.pos.X = chatBtn.pos.X + chatBtn.Width + padding
+		topBarChat.Width = (cubzhBtn.pos.X - topBarChat.pos.X) - padding * 2
+		topBarChat.pos.Y = topBarHeight * 0.5 - topBarChat.Height * 0.5
+	end
 end
 topBar:parentDidResize()
 
@@ -943,13 +1008,12 @@ local mt = {
 
 setmetatable(menu, mt)
 
--- LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
--- 	if System.Authenticated == false then
--- 		return
--- 	end
--- 	console:focus()
--- 	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, text or "")
--- end)
+LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
+	if System.Authenticated == false then
+		return
+	end
+	showChat(text)
+end)
 
 LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive
@@ -1463,7 +1527,9 @@ Timer(0.1, function()
 		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui)
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
-		-- chat:parentDidResize()
+		if chat then
+			chat:parentDidResize()
+		end
 
 		Timer(10.0, function()
 			-- request permission for remote notifications

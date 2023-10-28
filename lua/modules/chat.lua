@@ -8,6 +8,11 @@ modal = require("modal")
 -- Preload heads of current players
 require("ui_avatar"):preloadHeads(Players)
 
+-- used to get the size of a space character
+-- when assembling chat message components
+space = ui:createText(" ", Color.White, "small")
+space:setParent(nil)
+
 local getCurrentDate = function()
 	return os.date("%m-%d-%YT%H:%M:%SZ", os.time())
 end
@@ -24,6 +29,13 @@ local lastCommandIndex = nil
 
 local defaultConfig = {
 	uikit = ui, -- allows to provide specific instance of uikit
+	input = true,
+	maxMessages = MAX_MESSAGES_IN_CONSOLE,
+	time = true,
+	heads = true,
+	onSubmitEmpty = function() end,
+	onFocus = function() end,
+	onFocusLost = function() end,
 }
 
 local function getLastXElements(array, x)
@@ -180,56 +192,69 @@ local createChat = function(_, config)
 	local messagesNode = ui:createFrame(Color(0, 0, 0, 0))
 	messagesNode:setParent(node)
 
-	local inputNode = ui:createTextInput("", "say something!", { textSize = "small" })
-	inputNode:setParent(node)
-	inputNode:focus()
+	local hasInput = config.input
+	local inputNode
 
-	local sendButton = ui:createButton("💬", { textSize = "small" })
-	sendButton:setParent(node)
-	sendButton:setColor(Color.Blue)
+	if hasInput then
+		inputNode = ui:createTextInput("", "say something…", { textSize = "small" })
+		inputNode:setParent(node)
+		inputNode:setColor(Color(0, 0, 0, 0.1), Color.White, Color(255, 255, 255, 0.7))
+		inputNode:setColorPressed(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
+		inputNode:setColorFocused(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
 
-	inputNode.onSubmit = function()
-		if inputNode.Text == "" then
-			return
+		inputNode.onSubmit = function()
+			if inputNode.Text == "" then
+				config.onSubmitEmpty()
+				return
+			end
+			local text = inputNode.Text
+			inputNode.Text = ""
+			playerSendMessage(text)
 		end
-		local text = inputNode.Text
-		inputNode.Text = ""
-		playerSendMessage(text)
-	end
 
-	node.focus = function()
-		inputNode:focus()
-	end
+		node.focus = function()
+			inputNode:focus()
+		end
 
-	inputNode.onTextChange = function()
-		if lastCommandIndex ~= nil then
-			if inputNode.Text ~= System:GetCommandFromHistory(lastCommandIndex) then
-				lastCommandIndex = nil
+		inputNode.onTextChange = function()
+			if lastCommandIndex ~= nil then
+				if inputNode.Text ~= System:GetCommandFromHistory(lastCommandIndex) then
+					lastCommandIndex = nil
+				end
 			end
 		end
-	end
 
-	inputNode.onUp = function(self)
-		if System.NbCommandsInHistory == 0 then
-			return
+		inputNode.onUp = function(self)
+			if System.NbCommandsInHistory == 0 then
+				return
+			end
+			lastCommandIndex = lastCommandIndex == nil and 1
+				or math.min(System.NbCommandsInHistory, lastCommandIndex + 1)
+			if lastCommandIndex > 0 then
+				self.Text = System:GetCommandFromHistory(lastCommandIndex)
+			end
 		end
-		lastCommandIndex = lastCommandIndex == nil and 1 or math.min(System.NbCommandsInHistory, lastCommandIndex + 1)
-		if lastCommandIndex > 0 then
+
+		inputNode.onDown = function(self)
+			if lastCommandIndex == nil then
+				return
+			end
+			lastCommandIndex = lastCommandIndex - 1
+			if lastCommandIndex < 1 then
+				lastCommandIndex = nil
+				self.Text = ""
+				return
+			end
 			self.Text = System:GetCommandFromHistory(lastCommandIndex)
 		end
-	end
 
-	inputNode.onDown = function(self)
-		if lastCommandIndex == nil then
-			return
+		inputNode.onFocus = function()
+			config.onFocus()
 		end
-		lastCommandIndex = lastCommandIndex - 1
-		if lastCommandIndex < 1 then
-			lastCommandIndex = nil
-			self.Text = ""
-			return
+
+		inputNode.onFocusLost = function()
+			config.onFocusLost()
 		end
-		self.Text = System:GetCommandFromHistory(lastCommandIndex)
 	end
 
 	local createUIChatMessage = function(data, ui)
@@ -243,11 +268,14 @@ local createChat = function(_, config)
 		-- Prefix: empty by default, can be "to"/"from"
 		-- Head: empty by default, shape of the head of the player
 		-- Firstline: message, if too wide, cut the end
-		local uiTextTime = ui:createText("[00:00]", color, "small")
+		local uiTextTime = ui:createText("", color, "small")
+
+		if config.time then
+			uiTextTime.Text = "[" .. string.sub(data.date, 12, 16) .. "] " -- get HH:MM
+		end
+
 		local uiTextPrefix
 		local uiTextMessageFirstLine = ui:createText("", color, "small")
-
-		uiTextTime.Text = "[" .. string.sub(data.date, 12, 16) .. "]" -- get HH:MM
 
 		-- format msg and add prefix if needed
 		if data.receiver then
@@ -263,12 +291,19 @@ local createChat = function(_, config)
 		end
 
 		local uiHead
-		local playerInfo = data.receiver or data.sender
-		if playerInfo then
-			if data.receiver.id == Player.ID then
-				playerInfo = data.sender
+		if config.heads then
+			local playerInfo = data.receiver or data.sender
+			if playerInfo then
+				if data.receiver.id == Player.ID then
+					playerInfo = data.sender
+				end
+				uiHead = require("ui_avatar"):getHead(
+					playerInfo.userID or playerInfo.username,
+					nil,
+					ui,
+					{ spherized = true } -- TODO: use false, but ui_avatar needs to be fixed
+				)
 			end
-			uiHead = require("ui_avatar"):getHead(playerInfo.userID or playerInfo.username, nil, ui)
 		end
 
 		uiTextMessageFirstLine.Text = message
@@ -287,62 +322,71 @@ local createChat = function(_, config)
 			if not node.parent then
 				return
 			end
+
 			node.Width = node.parent.Width
 
-			local x = theme.padding -- shift X
+			local x = 0
 
-			uiTextTime.LocalPosition.X = x
-			x = x + uiTextTime.Width + theme.padding
+			uiTextTime.pos.X = x
+			x = x + uiTextTime.Width
 
 			if uiTextPrefix then
-				uiTextPrefix.LocalPosition.X = x
-				x = x + uiTextPrefix.Width + theme.padding
+				uiTextPrefix.pos.X = x
+				x = x + uiTextPrefix.Width
 			end
 			if uiHead then
-				uiHead.Width = uiTextTime.Height * 1.7
-				uiHead.LocalPosition.X = x
-				uiHead.LocalPosition.Z = -20 -- fix layering
-				x = x + uiHead.Width + theme.padding
+				uiHead.Width = space.Width * 2 -- size of an emoji
+				uiHead.pos.X = x
+				x = x + uiHead.Width + space.Width
 			end
-			uiTextMessageFirstLine.LocalPosition.X = x
+			uiTextMessageFirstLine.pos.X = x
 
 			uiTextMessageFirstLine.Width = node.Width - x
 			uiTextMessageFirstLine.object.MaxWidth = node.Width - x
 
 			node.Height = uiTextMessageFirstLine.Height
 
-			uiTextTime.LocalPosition.Y = node.Height - uiTextTime.Height
-			if uiHead then
-				uiHead.LocalPosition.Y = uiTextTime.LocalPosition.Y - 5 - (uiTextTime.Height - 8) / 8
+			uiTextTime.pos.Y = node.Height - uiTextTime.Height
+			if uiTextPrefix then
+				uiTextPrefix.pos.Y = node.Height - uiTextPrefix.Height
 			end
+			if uiHead then
+				uiHead.pos.Y = uiTextTime.pos.Y + uiTextTime.Height * 0.5 - uiHead.Height * 0.5
+			end
+			uiTextMessageFirstLine.pos.Y = node.Height - uiTextMessageFirstLine.Height
 		end
 		node:parentDidResize()
 
-		node.onRelease = function()
-			local username = (data.receiver and data.receiver.username or data.sender.username)
-			if not username then
-				return
-			end
-			if inputNode.Text then
-				inputNode.Text = "/w " .. username .. " "
-				inputNode:focus()
+		if hasInput then
+			node.onRelease = function()
+				local username = (data.receiver and data.receiver.username or data.sender.username)
+				if not username then
+					return
+				end
+				if inputNode.Text then
+					inputNode.Text = "/w " .. username .. " "
+					-- inputNode:focus()
+				end
 			end
 		end
 
 		return node
 	end
 
-	sendButton.onRelease = funcSendMessage
-
 	messagesNode.parentDidResize = function()
-		sendButton.Height = inputNode.Height
-		sendButton.pos = { node.Width - sendButton.Width - theme.padding, theme.padding, 0 }
-		inputNode.Width = node.Width - sendButton.Width - theme.padding * 3
-		inputNode.pos = { theme.padding, theme.padding, 0 }
+		if hasInput then
+			inputNode.Width = node.Width
+			inputNode.pos = { 0, 0 }
 
-		messagesNode.Width = node.Width
-		messagesNode.Height = node.Height - inputNode.Height - theme.padding * 2
-		messagesNode.pos = { 0, inputNode.Height + theme.padding * 2, 0 }
+			messagesNode.Width = node.Width
+			messagesNode.Height = node.Height - inputNode.Height - theme.padding
+			messagesNode.pos = { 0, inputNode.Height + theme.padding }
+		else
+			messagesNode.Width = node.Width
+			messagesNode.Height = node.Height
+			messagesNode.pos = { 0, 0 }
+		end
+
 		local shift = 0
 		for i = #nodeMessages, 1, -1 do
 			local msg = nodeMessages[i]
@@ -362,15 +406,15 @@ local createChat = function(_, config)
 		message:setParent(messagesNode)
 		local height = message.Height
 		for _, m in ipairs(nodeMessages) do
-			m.LocalPosition.Y = m.LocalPosition.Y + height
-			if m.LocalPosition.Y + m.Height > messagesNode.Height then
+			m.pos.Y = m.pos.Y + height
+			if m.pos.Y + m.Height > messagesNode.Height then
 				m:hide()
 			else
 				m:show()
 			end
 		end
 		table.insert(nodeMessages, message)
-		while #nodeMessages > MAX_MESSAGES_IN_CONSOLE do
+		while #nodeMessages > config.maxMessages do
 			local m = table.remove(nodeMessages, 1) -- pop front
 			if m ~= nil then
 				m:remove()
@@ -387,13 +431,21 @@ local createChat = function(_, config)
 		pushMessage(msgInfo)
 	end)
 
-	local setChatInputListener = LocalEvent:Listen(LocalEvent.Name.SetChatTextInput, function(text)
-		inputNode.Text = text
-	end)
+	local setChatInputListener
+
+	if hasInput then
+		setChatInputListener = LocalEvent:Listen(LocalEvent.Name.SetChatTextInput, function(text)
+			if text ~= "" and string.sub(inputNode.Text, 1, #text) ~= text then
+				inputNode.Text = text
+			end
+		end)
+	end
 
 	node.onRemove = function(_)
 		messageListener:Remove()
-		setChatInputListener:Remove()
+		if setChatInputListener then
+			setChatInputListener:Remove()
+		end
 	end
 
 	return node
@@ -415,6 +467,7 @@ local createModalContent = function(_, config)
 	content.node = createChat(nil, config)
 	content.title = "Chat"
 	content.icon = "💬"
+	content.node:focus()
 
 	return content
 end

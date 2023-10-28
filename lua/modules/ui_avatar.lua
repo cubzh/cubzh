@@ -67,6 +67,13 @@ local uiavatarMetatable = {
 
 			local defaultSize = size or DEFAULT_SIZE
 
+			local defaultConfig = {
+				ignoreCache = false,
+				spherized = true,
+			}
+
+			config = require("config"):merge(defaultConfig, config)
+
 			local cachedHead = headCache[usernameOrId]
 
 			if config.ignoreCache == true then

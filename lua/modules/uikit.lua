@@ -891,6 +891,9 @@ function createUI(system)
 				isVisible = function(self)
 					return self.object.IsHidden == false
 				end,
+				hasFocus = function(self)
+					return focused == self
+				end,
 				-- returned when requesting Width if defined
 				-- can be a number or function(self) that returns a number
 				_width = nil,
