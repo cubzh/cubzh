@@ -221,7 +221,7 @@ void transform_assign_get_or_compute_world_collider_function(
     t->ptr_get_or_compute_world_aligned_collider = f;
 }
 
-Transform *transform_make_default() {
+Transform *transform_make_default(void) {
     return transform_make(HierarchyTransform);
 }
 
