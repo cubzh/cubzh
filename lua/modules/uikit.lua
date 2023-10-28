@@ -1760,11 +1760,27 @@ function createUI(system)
 			self:_refresh()
 
 			Client:ShowVirtualKeyboard()
+
+			local keysDown = {}
+
 			self.keyboardListener = LocalEvent:Listen(
 				LocalEvent.Name.KeyboardInput,
 				function(char, keycode, modifiers, down)
-					if down == false then
-						return true -- catch the event
+					if self.string == nil then
+						return
+					end
+
+					if down then
+						if not keysDown[keycode] then
+							keysDown[keycode] = true
+						end
+					else
+						if keysDown[keycode] then
+							keysDown[keycode] = nil
+							return true -- catch
+						else
+							return -- return without catching
+						end
 					end
 
 					-- print("char:", char, "key:", keycode, "mod:", modifiers)
@@ -1819,7 +1835,6 @@ function createUI(system)
 							end
 						elseif char ~= "" then
 							self.string.Text = self.string.Text .. char
-							-- sfx("keydown_" .. math.random(1,4), {Spatialized = false})
 							textDidChange = true
 						end
 					end
