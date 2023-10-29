@@ -1,4 +1,3 @@
-//go:generate client-gen -o api.gen.go --package dagger --lang go
 package dagger
 
 import (
@@ -11,7 +10,7 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"dagger.io/dagger/internal/engineconn"
-	"dagger.io/dagger/internal/querybuilder"
+	"dagger.io/dagger/querybuilder"
 )
 
 // Client is the Dagger Engine Client
@@ -54,14 +53,15 @@ func WithConn(conn engineconn.EngineConn) ClientOpt {
 	})
 }
 
-// Connect to a Dagger Engine
-func Connect(ctx context.Context, opts ...ClientOpt) (_ *Client, rerr error) {
-	defer func() {
-		if rerr != nil {
-			rerr = withErrorHelp(rerr)
-		}
-	}()
+// WithSkipCompatibilityCheck disables the version compatibility check
+func WithSkipCompatibilityCheck() ClientOpt {
+	return clientOptFunc(func(cfg *engineconn.Config) {
+		cfg.SkipCompatibilityCheck = true
+	})
+}
 
+// Connect to a Dagger Engine
+func Connect(ctx context.Context, opts ...ClientOpt) (*Client, error) {
 	cfg := &engineconn.Config{}
 
 	for _, o := range opts {
@@ -80,13 +80,20 @@ func Connect(ctx context.Context, opts ...ClientOpt) (_ *Client, rerr error) {
 		q:    querybuilder.Query(),
 	}
 
-	// Call version compatibility.
-	// If versions are not compatible, a warning will be displayed.
-	if _, err = c.CheckVersionCompatibility(ctx, engineconn.CLIVersion); err != nil {
-		fmt.Fprintln(os.Stderr, "failed to check version compatibility:", err)
+	if !cfg.SkipCompatibilityCheck {
+		// Call version compatibility.
+		// If versions are not compatible, a warning will be displayed.
+		if _, err = c.CheckVersionCompatibility(ctx, engineconn.CLIVersion); err != nil {
+			fmt.Fprintln(os.Stderr, "failed to check version compatibility:", err)
+		}
 	}
 
 	return c, nil
+}
+
+// GraphQLClient returns the underlying graphql.Client
+func (c *Client) GraphQLClient() graphql.Client {
+	return c.c
 }
 
 // Close the engine connection
@@ -156,11 +163,10 @@ type errorWrappedClient struct {
 func (c errorWrappedClient) MakeRequest(ctx context.Context, req *graphql.Request, resp *graphql.Response) error {
 	err := c.Client.MakeRequest(ctx, req, resp)
 	if err != nil {
-		// return custom error without wrapping to enable casting
 		if e := getCustomError(err); e != nil {
 			return e
 		}
-		return withErrorHelp(err)
+		return err
 	}
 	return nil
 }
