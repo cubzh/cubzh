@@ -137,15 +137,6 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 				Physics = "D"
 			})
 		end
-		obj.OnCollision = function(o,p)
-			if p == Player then
-				print("now force sync")
-				require("multi"):forceSync(o.uuid)
-			end
-		end
-		if obj.uuid ~= nil and obj.uuid ~= -1 then
-			require("multi"):link(obj, obj.uuid)
-		end
 	else
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 			o.Physics = physicsMode
@@ -155,9 +146,6 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 				uuid = obj.uuid,
 				Physics = physicsMode == PhysicsMode.Disabled and "DIS" or "S"
 			})
-		end
-		if obj.uuid ~= nil and obj.uuid ~= -1 then
-			require("multi"):unlink(obj.uuid)
 		end
 	end
 end
@@ -201,16 +189,12 @@ end
 local freezeObject = function(obj)
 	if not obj then	return end
 	obj.savedPhysicsState = obj.Physics
-	setObjectPhysicsMode(obj, PhysicsMode.Disabled)
-	sendToServer(events.P_EDIT_OBJECT, {
-		uuid = obj.uuid,
-		Physics = "DIS"
-	})
+	setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
 end
 
 local unfreezeObject = function(obj)
 	if not obj then return end
-	setObjectPhysicsMode(obj, obj.savedPhysicsState)
+	setObjectPhysicsMode(obj, obj.savedPhysicsState, true)
 	obj.savedPhysicsState = nil
 end
 
@@ -233,6 +217,9 @@ local spawnObject = function(data, onDone)
 		local box = Box()
 		box:Fit(obj, true)
 		obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+		box.Min = box.Min + obj.Pivot + Number3(0, box.Max.Y, 0)
+		box.Max = box.Max + obj.Pivot + Number3(0, box.Max.Y, 0)
+		obj.CollisionBox = box
 
 		setObjectPhysicsMode(obj, physicsMode)
 		obj.uuid = uuid
@@ -269,7 +256,7 @@ local editObject = function(objInfo)
 			if value == "D" then
 				setObjectPhysicsMode(obj, PhysicsMode.Dynamic, false)
 			else
-				setObjectPhysicsMode(obj, "DIS" and PhysicsMode.Disabled or PhysicsMode.StaticPerBlock, false)
+				setObjectPhysicsMode(obj, value == "DIS" and PhysicsMode.Disabled or PhysicsMode.StaticPerBlock, false)
 			end
 		else
 			obj[field] = value
@@ -502,6 +489,7 @@ local statesSettings = {
 		subStatesSettings = subStatesSettingsUpdatingObject,
 		pointerWheelPriority = function(delta)
 			worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
+			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
 			return true
 		end
 	},
@@ -975,28 +963,6 @@ initDefaultMode = function()
 			worldEditor.object:TextBubble("Mouse wheel: rotate object on Y axis.")
 		end },
 		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
-		-- { type="separator" },
-		-- { type="button", text="Static ", callback=function(btn)
-		-- 	local obj = worldEditor.object
-
-		-- 	if btn.Text == "Static " then
-		-- 		btn.Text = "Dynamic"
-		-- 		if activeSubState[state] == subStates[state].DEFAULT then
-		-- 			setObjectPhysicsMode(obj, PhysicsMode.Dynamic)
-		-- 		else
-		-- 			-- if using gizmo, do not apply physics yet
-		-- 			obj.savedPhysicsState = PhysicsMode.Dynamic
-		-- 		end
-		-- 	else
-		-- 		btn.Text = "Static "
-		-- 		if activeSubState[state] == subStates[state].DEFAULT then
-		-- 			setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock)
-		-- 		else
-		-- 			-- if using gizmo, do not apply physics yet
-		-- 			obj.savedPhysicsState = PhysicsMode.StaticPerBlock
-		-- 		end
-		-- 	end
-		-- end },
 		{ type="separator" },
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
@@ -1008,9 +974,6 @@ initDefaultMode = function()
 	for _,elem in ipairs(barInfo) do
 		if elem.type == "button" then
 			local btn = ui:createButton(elem.text)
-			if worldEditor.physicsBtn == nil and elem.text == "Static " then
-				worldEditor.physicsBtn = btn
-			end
 			btn.onRelease = function()
 				if elem.callback then
 					elem.callback(btn)
@@ -1154,7 +1117,6 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
 		if isLocalPlayer then
 			worldEditor.object = obj
-			-- worldEditor.physicsBtn.Text = obj.Physics == PhysicsMode.StaticPerBlock and "Static " or "Dynamic"
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
