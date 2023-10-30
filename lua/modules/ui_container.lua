@@ -51,11 +51,11 @@ local createUiHorizontal = function()
 	elem.bg = require("uikit"):createFrame()
 	local list = {}
 
-	local index = function(t,k)
+	local index = function(_,k)
 		if k == "list" then return list end
 		return uiHorizontalIndex[k] or elem.bg[k]
 	end
-	local newindex = function(t,k,v)
+	local newindex = function(_,k,v)
 		if k == "list" then
 			list = v
 			return

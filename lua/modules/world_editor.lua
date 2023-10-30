@@ -1,5 +1,7 @@
 local worldEditor = {}
 
+local LIMITED_VERSION = true
+
 local index = {}
 local metatable = { __index = index, __metatable = false }
 setmetatable(worldEditor, metatable)
@@ -735,7 +737,6 @@ init = function()
 
 	previousBtn = ui:createButton("<")
 	previousBtn:setParent(uiPrepareState)
-	previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
 	previousBtn.onRelease = function()
 		mapIndex = mapIndex - 1
 		if mapIndex <= 0 then mapIndex = #maps end
@@ -743,7 +744,6 @@ init = function()
 	end
 	nextBtn = ui:createButton(">")
 	nextBtn:setParent(uiPrepareState)
-	nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
 	nextBtn.onRelease = function()
 		mapIndex = mapIndex + 1
 		if mapIndex > #maps then mapIndex = 1 end
@@ -752,8 +752,9 @@ init = function()
 
 	galleryMapBtn = ui:createButton("or Pick an item as Map")
 	galleryMapBtn:setParent(uiPrepareState)
-	galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
 	galleryMapBtn.onRelease = function()
+		previousBtn:hide()
+		nextBtn:hide()
 		-- Gallery to pick a map
 		local gallery
 		gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.5 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 } end, {
@@ -763,26 +764,42 @@ init = function()
 				gallery:remove()
 			end
 		})
+		gallery.didClose = function()
+			previousBtn:show()
+			nextBtn:show()
+		end
 	end
 
 	validateBtn = ui:createButton("Start editing this map")
 	validateBtn:setParent(uiPrepareState)
-	validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
 	validateBtn.onRelease = function()
 		sendToServer(events.P_END_PREPARING, { mapName = mapName })
 	end
 
-	local loadInput = ui:createTextInput("", "Paste JSON here")
-	loadInput:setParent(uiPrepareState)
+	uiPrepareState.parentDidResize = function()
+		previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
+		nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
+		galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
+		validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
+	end
+	uiPrepareState:parentDidResize()
 
-	loadBtn = ui:createButton("Load")
-	loadBtn:setParent(uiPrepareState)
-	loadBtn.pos = { Screen.Width - loadBtn.Width - padding, padding }
-	loadInput.pos = loadBtn.pos - { loadInput.Width + padding, 0, 0 }
-	loadBtn.Height = loadInput.Height
-	loadBtn.onRelease = function()
-		local json = JSON:Decode(unescapeJson(loadInput.Text))
-		sendToServer(events.P_LOAD_WORLD, json)
+	if not LIMITED_VERSION then
+		local loadInput = ui:createTextInput("", "Paste JSON here")
+		loadInput:setParent(uiPrepareState)
+
+		loadBtn = ui:createButton("Load")
+		loadBtn:setParent(uiPrepareState)
+		loadBtn.parentDidResize = function()
+			loadBtn.pos = { Screen.Width - loadBtn.Width - padding, padding }
+			loadInput.pos = loadBtn.pos - { loadInput.Width + padding, 0, 0 }
+			loadBtn.Height = loadInput.Height
+		end
+		loadBtn:parentDidResize()
+		loadBtn.onRelease = function()
+			local json = JSON:Decode(unescapeJson(loadInput.Text))
+			sendToServer(events.P_LOAD_WORLD, json)
+		end
 	end
 
 	worldEditor.uiPrepareState = uiPrepareState
@@ -844,11 +861,17 @@ initDefaultMode = function()
 	-- Default ui, add btn
 	local defaultStateUI = ui:createFrame()
 	index.defaultStateUI = defaultStateUI
+	defaultStateUI.parentDidResize = function()
+		defaultStateUI.Width = Screen.Width
+		defaultStateUI.Height = Screen.Height
+	end
+	defaultStateUI:parentDidResize()
 
 	local defaultStateUIConfig = {
 		{
 			text = "➕ Object",
 			pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding } end,
+			mobilePos = function(btn) return { Screen.Width * 0.5 - btn.Width * 0.5, padding } end,
 			state = states.GALLERY,
 			name = "addBtn"
 		},
@@ -856,19 +879,22 @@ initDefaultMode = function()
 			text = "🖌 Map",
 			pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding } end,
 			state = states.EDIT_MAP,
-			name = "editMapBtn"
+			name = "editMapBtn",
+			visibleOnMobile = false
 		},
 		{
 			text = "🎮 Export Game",
 			pos = function(btn) return { Screen.Width - padding - btn.Width, padding } end,
 			serverEvent = events.P_EXPORT_GAME,
-			name = "exportGameBtn"
+			name = "exportGameBtn",
+			visibleOnMobile = false
 		},
 		{
 			text = "📑 Export",
 			pos = function(btn) return worldEditor.exportGameBtn.pos - { padding + btn.Width, 0, 0 } end,
 			serverEvent = events.P_EXPORT_WORLD,
-			name = "exportBtn"
+			name = "exportBtn",
+			visibleOnMobile = false
 		},
 	}
 
@@ -876,7 +902,16 @@ initDefaultMode = function()
 		local btn = ui:createButton(config.text)
 		btn:setParent(worldEditor.defaultStateUI)
 		btn.parentDidResize = function(b)
-			b.pos = config.pos(b)
+			if Screen.Width < Screen.Height and config.visibleOnMobile == false then
+				b:hide()
+			else
+				if Screen.Width < Screen.Height and config.mobilePos then
+					b.pos = config.mobilePos(b)
+				else
+					b.pos = config.pos(b)
+				end
+				b:show()
+			end
 		end
 		btn.Height = btn.Height * 1.5
 		btn:parentDidResize()
@@ -999,18 +1034,17 @@ initDefaultMode = function()
 	end
 
 	updateObjectUI.parentDidResize = function()
-		local bg = updateObjectUI
-		bg.Width = bar.Width + padding * 2
-		bg.Height = (bar.Height + padding) * 2
+		bar:refresh()
+		updateObjectUI.Width = bar.Width + padding * 2
+		updateObjectUI.Height = (bar.Height + padding) * 2
 		infoBtn.Height = bar.Height
 		infoBtn.Width = bar.Height
-		nameInput.Width = bg.Width - infoBtn.Width
-		nameInput.Height = bar.Height
-		nameInput.pos = { 0, bg.Height - nameInput.Height }
-		infoBtn.pos = { nameInput.Width, bg.Height - nameInput.Height }
+		nameInput.Width = updateObjectUI.Width - infoBtn.Width
+		nameInput.Height = infoBtn.Height
+		nameInput.pos = { 0, updateObjectUI.Height - nameInput.Height }
+		infoBtn.pos = { nameInput.Width, updateObjectUI.Height - nameInput.Height }
 		bar.pos = { padding, padding }
-		bg.pos = { Screen.Width * 0.5 - bg.Width * 0.5, padding }
-		bg:hide()
+		updateObjectUI.pos = { Screen.Width * 0.5 - updateObjectUI.Width * 0.5, padding }
 	end
 	updateObjectUI:hide()
 	updateObjectUI:parentDidResize()
@@ -1038,7 +1072,7 @@ initDefaultMode = function()
 	editMapValidateBtn:hide()
 	worldEditor.editMapValidateBtn = editMapValidateBtn
 
-	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false })
+	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false, maxWidth = function() return Screen.Width * 0.5 end })
 	picker.closeBtn:remove()
 	picker.closeBtn = nil
 	picker:setColor(Color.Grey)
