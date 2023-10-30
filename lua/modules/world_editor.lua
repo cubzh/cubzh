@@ -1,7 +1,5 @@
 local worldEditor = {}
 
-local LIMITED_VERSION = true
-
 local index = {}
 local metatable = { __index = index, __metatable = false }
 setmetatable(worldEditor, metatable)
@@ -777,6 +775,7 @@ init = function()
 	end
 
 	uiPrepareState.parentDidResize = function()
+		uiPrepareState.Width = Screen.Width
 		previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
 		nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
 		galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
@@ -784,7 +783,7 @@ init = function()
 	end
 	uiPrepareState:parentDidResize()
 
-	if not LIMITED_VERSION then
+	if Screen.Width > Screen.Height then
 		local loadInput = ui:createTextInput("", "Paste JSON here")
 		loadInput:setParent(uiPrepareState)
 
