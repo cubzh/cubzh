@@ -1008,6 +1008,11 @@ local mt = {
 
 setmetatable(menu, mt)
 
+LocalEvent:Listen(LocalEvent.Name.FailedToLoadWorld, function()
+	hideLoading()
+	-- TODO: display alert, could receive world info to retry
+end)
+
 LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
 	if System.Authenticated == false then
 		return

@@ -72,6 +72,7 @@ localevent.name = {
 	LocalAvatarUpdate = 43,
 	ReceivedEnvironmentToLaunch = 44,
 	ChatMessage = 45, -- callback: function(msgInfo)
+	FailedToLoadWorld = 46, -- callback: function(msgInfo)
 }
 localevent.Name = localevent.name
 
