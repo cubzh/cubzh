@@ -221,7 +221,13 @@ local uiavatarMetatable = {
 				node.refresh = function(self)
 					local previousParent = self.body.parent
 					local previousPosition = self.body.pos
+					-- local previousRotation = self.body.shape.LocalRotation:Copy()
 					local previousRotation = self.body.shape.LocalRotation:Copy()
+					print("previousRotation:", previousRotation)
+					print("-:", self.body.LocalRotation)
+					print("-:", self.body.Rotation)
+					print("-:", self.body.shape.LocalRotation)
+					print("-:", self.body.shape.Rotation)
 					local previousWidth = self.body.Width
 					self.body:setParent(nil)
 
@@ -230,6 +236,7 @@ local uiavatarMetatable = {
 					self.body:setParent(previousParent)
 					self.body.Head.LocalRotation = { 0, 0, 0 }
 					self.body.pos = previousPosition
+					-- self.body.shape.LocalRotation = previousRotation
 					self.body.shape.LocalRotation = previousRotation
 					self.body.Width = previousWidth
 

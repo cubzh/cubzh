@@ -914,6 +914,7 @@ profile.create = function(_, config)
 
 		local wearableRequest
 		grid.onOpen = function(_, cell)
+			print("onOpen !")
 			if not cell.repo or not cell.name then
 				return
 			end
