@@ -1,4 +1,13 @@
-local avatar = {}
+--[[
+	NOTES:
+	- When replacing an avatar, we should replace Shape models,
+	not Shapes themselves as we might lose properties or parented objects.
+	We need a shape:ReplaceModel API for that.
+	- Considering a `didLoad` field might be set on returned avatar is not ideal.
+	`didLoad` could be provided within config table.
+]]
+
+avatar = {}
 
 -- MODULES
 api = require("api")
@@ -16,10 +25,10 @@ local SKIN_2_PALETTE_INDEX = 2
 -- local NOSE_PALETTE_INDEX = 7
 -- local MOUTH_PALETTE_INDEX = 4
 
-local bodyPartsNames =
+bodyPartsNames =
 	{ "Head", "Body", "RightArm", "RightHand", "LeftArm", "LeftHand", "RightLeg", "LeftLeg", "RightFoot", "LeftFoot" }
 
-local cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
+cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
 
 index.eyesColors = {
 	Color(166, 142, 163),
@@ -60,7 +69,7 @@ index.skinColors = {
 	{ skin1 = Color(59, 46, 37), skin2 = Color(53, 41, 33), nose = Color(47, 33, 25), mouth = Color(47, 36, 29) },
 }
 
-local _initAnimations = function(avatar)
+function initAnimations(avatar)
 	local animWalk = Animation("Walk", { speed = 1.8, mode = AnimationMode.Loop })
 	local walk_llegK = {
 		{ time = 0.0, rotation = { -1.1781, 0, 0 } },
@@ -266,6 +275,10 @@ local _initAnimations = function(avatar)
 	anims.Idle:Play()
 end
 
+function tableToColor(t)
+	return Color(math.floor(t.r), math.floor(t.g), math.floor(t.b))
+end
+
 index.setEyesColor = function(_, playerOrHead, c)
 	local head = playerOrHead
 	if playerOrHead.Head then
@@ -375,10 +388,6 @@ index.setMouthColor = function(_, playerOrHead, color)
 	head.Palette[4].Color = color
 end
 
-local function tableToColor(t)
-	return Color(math.floor(t.r), math.floor(t.g), math.floor(t.b))
-end
-
 -- Returns sent requests
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
@@ -429,16 +438,33 @@ end
 -- returns MutaleShape + sent requests (table)
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
-index.get = function(_, usernameOrId)
-	local requests = {}
-	local root = System.MutableShapeFromBundle("caillef.multiavatar")
-	root._Head = root.Head -- retain Head shape
+-- replaced is optional, but can be provided to replace an existing avatar instead of creating a new one.
+index.get = function(_, usernameOrId, replaced)
+	if type(usernameOrId) ~= "string" then
+		error("avatar:get(usernameOrId) - usernameOrId is supposed to be a string", 2)
+	end
 
-	root.Name = "Body"
-	hierarchyactions:applyToDescendants(root, { includeRoot = true }, function(o)
-		o.Physics = PhysicsMode.Disabled
-	end)
-	_initAnimations(root)
+	if replaced ~= nil then
+		if type(replaced) ~= "MutableShape" then
+			error("avatar:get(usernameOrId, avatar) - avatar is supposed to be a MutableShape", 2)
+		end
+		if replaced.Name ~= "Body" then
+			error('avatar:get(usernameOrId, avatar) - avatar.name should be "Body"', 2)
+		end
+	end
+
+	local requests = {}
+
+	local root = replaced
+
+	if root == nil then
+		root = System.MutableShapeFromBundle("caillef.multiavatar")
+		root.Name = "Body"
+		hierarchyactions:applyToDescendants(root, { includeRoot = true }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+		initAnimations(root)
+	end
 
 	local equipments = require("equipments")
 	local loadEquipments = function(_, data)
