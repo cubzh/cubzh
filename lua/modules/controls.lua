@@ -213,11 +213,6 @@ local _diffuseLongPressTimer = function()
 	end
 end
 
-local _toggleChatModal = function(prefix)
-	LocalEvent:Send(LocalEvent.Name.OpenChat, prefix)
-	index.refresh()
-end
-
 local _createDirpad = function()
 	local dirpadShape = MutableShape()
 	dirpadShape.InnerTransparentFaces = false
@@ -1282,11 +1277,11 @@ function applyKey(keyCode, down)
 		end
 	elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
 		if down then
-			_toggleChatModal()
+			LocalEvent:Send(LocalEvent.Name.OpenChat)
 		end
 	elseif keyCode == codes.SLASH then
 		if down then
-			_toggleChatModal("/")
+			LocalEvent:Send(LocalEvent.Name.OpenChat, "/")
 		end
 	elseif keyCode == codes.KEY_W or keyCode == codes.UP then
 		if down then

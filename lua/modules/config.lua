@@ -34,27 +34,29 @@ config.merge = function(self, defaults, overrides, options)
 	end
 
 	local overriden
-	for k, v in pairs(overrides) do
-		overriden = false
-		if conf[k] ~= nil then
-			if type(v) == type(conf[k]) then
-				conf[k] = v
-				overriden = true
-			else
-				if
-					(opts.acceptIntegersAndNumbersDefault or opts.acceptIntegersAndNumbers[k] == true)
-					and (type(conf[k]) == "number" or type(conf[k]) == "integer")
-					and (type(v) == "number" or type(v) == "integer")
-				then
+	if overrides then
+		for k, v in pairs(overrides) do
+			overriden = false
+			if conf[k] ~= nil then
+				if type(v) == type(conf[k]) then
 					conf[k] = v
 					overriden = true
-				elseif v == nil and opts.acceptNil[k] == true then
-					conf[k] = v
-					overriden = true
+				else
+					if
+						(opts.acceptIntegersAndNumbersDefault or opts.acceptIntegersAndNumbers[k] == true)
+						and (type(conf[k]) == "number" or type(conf[k]) == "integer")
+						and (type(v) == "number" or type(v) == "integer")
+					then
+						conf[k] = v
+						overriden = true
+					elseif v == nil and opts.acceptNil[k] == true then
+						conf[k] = v
+						overriden = true
+					end
 				end
-			end
-			if overriden == false then
-				print("⚠️ config:merge - overrides key ignored: " .. k)
+				if overriden == false then
+					print("⚠️ config:merge - overrides key ignored: " .. k)
+				end
 			end
 		end
 	end
