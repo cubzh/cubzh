@@ -193,7 +193,7 @@ local freezeObject = function(obj)
 end
 
 local unfreezeObject = function(obj)
-	if not obj then return end
+	if not obj or not obj.savedPhysicsState then return end
 	setObjectPhysicsMode(obj, obj.savedPhysicsState, true)
 	obj.savedPhysicsState = nil
 end
