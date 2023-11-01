@@ -25,28 +25,6 @@ moduleMT.__index = function(_, key)
 	return api[key] or moduleMT[key]
 end
 
--- send a poke to a user
-moduleMT.pokeUser = function(mod, username, cb)
-	if type(username) ~= "string" then
-		return
-	end
-
-	local url = mod.kApiAddr .. "/dev/poke/" .. username
-	local headers = {}
-	local body = {}
-	System:HttpPost(url, headers, body, function(res)
-		if res.StatusCode ~= 200 then
-			if cb then
-				cb("Error (" .. res.StatusCode .. "): can't send poke.")
-			end
-			return
-		end
-		if cb then
-			cb(nil, JSON:Decode(res.Body))
-		end
-	end)
-end
-
 mod.checkUsername = function(_, username, callback)
 	if type(username) ~= "string" then
 		callback(false, "1st arg must be a string")
