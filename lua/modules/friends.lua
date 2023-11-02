@@ -411,8 +411,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				-- chatBtn:disable()
 				chatBtn.onRelease = function(_)
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
-					-- print("sending poke...")
-					-- api:pokeUser(cellUsername)
 				end
 			elseif displayedList == lists.sent then
 				local removeBtn
