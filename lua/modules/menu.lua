@@ -617,7 +617,6 @@ function getCubzhMenuModalContent()
 	end
 
 	local btnMyWorlds = ui:createButton("🌎 My Worlds", { textSize = "default" })
-	-- btnMyWorlds:setColor(theme.colorCreate)
 	btnMyWorlds:setParent(node)
 
 	btnMyWorlds.onRelease = function()
@@ -709,38 +708,19 @@ function getCubzhMenuModalContent()
 		end
 
 		local maxRowWidth = 0
+		local widthBackup
 		for i, row in ipairs(buttons) do
 			local w = 0
 			for _, btn in ipairs(row) do
+				widthBackup = btn.Width
 				btn.Width = nil
 				w = w + btn.Width + (i > 1 and theme.padding or 0)
+				btn.Width = widthBackup
 			end
 			maxRowWidth = math.max(maxRowWidth, w)
 		end
 
 		width = math.min(width, maxRowWidth)
-
-		for _, row in ipairs(buttons) do
-			local w = (width - theme.padding * (#row - 1)) / #row
-			for _, btn in ipairs(row) do
-				btn.Width = w
-			end
-		end
-
-		local row
-		local cursorY = 0
-		local cursorX = 0
-		for i = #buttons, 1, -1 do
-			row = buttons[i]
-
-			for _, btn in ipairs(row) do
-				btn.pos = { cursorX, cursorY, 0 }
-				cursorX = cursorX + btn.Width + theme.padding
-			end
-
-			cursorY = cursorY + row.height + theme.padding
-			cursorX = 0
-		end
 
 		return Number2(width, height)
 	end
@@ -755,18 +735,6 @@ function getCubzhMenuModalContent()
 			end
 			row.height = h
 		end
-
-		local maxRowWidth = 0
-		for i, row in ipairs(buttons) do
-			local w = 0
-			for _, btn in ipairs(row) do
-				btn.Width = nil
-				w = w + btn.Width + (i > 1 and theme.padding or 0)
-			end
-			maxRowWidth = math.max(maxRowWidth, w)
-		end
-
-		width = math.max(width, maxRowWidth)
 
 		for _, row in ipairs(buttons) do
 			local w = (width - theme.padding * (#row - 1)) / #row
