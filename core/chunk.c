@@ -11,8 +11,11 @@
 
 #include "cclog.h"
 #include "vertextbuffer.h"
+#include "zlib.h"
 
 #define CHUNK_NEIGHBORS_COUNT 26
+
+static VERTEX_LIGHT_STRUCT_T *defaultLight = NULL;
 
 // chunk structure definition
 struct _Chunk {
@@ -74,10 +77,7 @@ void _chunk_update_bounding_box(Chunk *chunk,
 
 // MARK: public functions
 
-Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
-                 const SHAPE_COORDS_INT_T y,
-                 const SHAPE_COORDS_INT_T z) {
-
+Chunk *chunk_new(const SHAPE_COORDS_INT3_T origin) {
     Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
     if (chunk == NULL) {
         return NULL;
@@ -86,7 +86,7 @@ Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
     chunk->lightingData = NULL;
     chunk->rtreeLeaf = NULL;
     chunk->dirty = false;
-    chunk->origin = (SHAPE_COORDS_INT3_T){x, y, z};
+    chunk->origin = origin;
     chunk->bbMin = (CHUNK_COORDS_INT3_T){0, 0, 0};
     chunk->bbMax = (CHUNK_COORDS_INT3_T){0, 0, 0};
     chunk->nbBlocks = 0;
@@ -188,10 +188,16 @@ void *chunk_get_rtree_leaf(const Chunk *c) {
 }
 
 uint64_t chunk_get_hash(const Chunk *c, uint64_t crc) {
-    return octree_get_hash(c->octree, crc);
+    const uint64_t originHash = crc32((uLong)crc,
+                                      (const Bytef *)&c->origin,
+                                      (uInt)sizeof(SHAPE_COORDS_INT3_T));
+    return octree_get_hash(c->octree, originHash);
 }
 
-void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T light) {
+void chunk_set_light(Chunk *c,
+                     const CHUNK_COORDS_INT3_T coords,
+                     const VERTEX_LIGHT_STRUCT_T light,
+                     const bool initEmpty) {
 
     if (c == NULL || coords.x < 0 || coords.x >= CHUNK_SIZE || coords.y < 0 ||
         coords.y >= CHUNK_SIZE || coords.z < 0 || coords.z >= CHUNK_SIZE) {
@@ -199,10 +205,7 @@ void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T
     }
 
     if (c->lightingData == NULL) {
-        const size_t lightingSize = (size_t)CHUNK_SIZE_SQR * (size_t)CHUNK_SIZE *
-                                    (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
-        c->lightingData = malloc(lightingSize);
-        memset(c->lightingData, 0, lightingSize);
+        chunk_reset_lighting_data(c, initEmpty);
     }
 
     c->lightingData[coords.x * CHUNK_SIZE_SQR + coords.y * CHUNK_SIZE + coords.z] = light;
@@ -210,7 +213,9 @@ void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T
 
 VERTEX_LIGHT_STRUCT_T chunk_get_light_without_checking(const Chunk *c, CHUNK_COORDS_INT3_T coords) {
     if (c == NULL || c->lightingData == NULL) {
-        return vertex_light_zero;
+        VERTEX_LIGHT_STRUCT_T light;
+        DEFAULT_LIGHT(light)
+        return light;
     } else {
         return c->lightingData[coords.x * CHUNK_SIZE_SQR + coords.y * CHUNK_SIZE + coords.z];
     }
@@ -234,6 +239,35 @@ void chunk_clear_lighting_data(Chunk *c) {
         free(c->lightingData);
         c->lightingData = NULL;
     }
+}
+
+void chunk_reset_lighting_data(Chunk *c, const bool emptyOrDefault) {
+    const size_t lightingSize = (size_t)CHUNK_SIZE_CUBE * (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
+    if (c->lightingData == NULL) {
+        c->lightingData = malloc(lightingSize);
+    }
+    if (emptyOrDefault) {
+        memset(c->lightingData, 0, lightingSize);
+    } else {
+        if (defaultLight == NULL) {
+            defaultLight = malloc(lightingSize);
+            for (size_t i = 0; i < CHUNK_SIZE_CUBE; ++i) {
+                DEFAULT_LIGHT(defaultLight[i])
+            }
+        }
+        memcpy(c->lightingData, defaultLight, lightingSize);
+    }
+}
+
+void chunk_set_lighting_data(Chunk *c, VERTEX_LIGHT_STRUCT_T *data) {
+    if (c->lightingData != NULL) {
+        free(c->lightingData);
+    }
+    c->lightingData = data;
+}
+
+VERTEX_LIGHT_STRUCT_T *chunk_get_lighting_data(Chunk *c) {
+    return c->lightingData;
 }
 
 bool chunk_add_block(Chunk *chunk,
@@ -469,17 +503,32 @@ SHAPE_COORDS_INT3_T chunk_get_block_coords_in_shape(const Chunk *chunk,
                                  (SHAPE_COORDS_INT_T)z + chunk->origin.z};
 }
 
-CHUNK_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape,
-                                           CHUNK_COORDS_INT3_T *coords_in_chunk) {
-    if (coords_in_chunk != NULL) {
-        coords_in_chunk->x = (CHUNK_COORDS_INT_T)(coords_in_shape.x % CHUNK_SIZE);
-        coords_in_chunk->y = (CHUNK_COORDS_INT_T)(coords_in_shape.y % CHUNK_SIZE);
-        coords_in_chunk->z = (CHUNK_COORDS_INT_T)(coords_in_shape.z % CHUNK_SIZE);
-    }
-    return (CHUNK_COORDS_INT3_T){
-        (CHUNK_COORDS_INT_T)(coords_in_shape.x / CHUNK_SIZE - (coords_in_shape.x < 0 ? 1 : 0)),
-        (CHUNK_COORDS_INT_T)(coords_in_shape.y / CHUNK_SIZE - (coords_in_shape.y < 0 ? 1 : 0)),
-        (CHUNK_COORDS_INT_T)(coords_in_shape.z / CHUNK_SIZE - (coords_in_shape.z < 0 ? 1 : 0))};
+SHAPE_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape) {
+#if CHUNK_SIZE_IS_PERFECT_SQRT
+    return (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)(coords_in_shape.x >> CHUNK_SIZE_SQRT),
+                                 (SHAPE_COORDS_INT_T)(coords_in_shape.y >> CHUNK_SIZE_SQRT),
+                                 (SHAPE_COORDS_INT_T)(coords_in_shape.z >> CHUNK_SIZE_SQRT)};
+#else
+    return (SHAPE_COORDS_INT3_T){
+        (SHAPE_COORDS_INT_T)(coords_in_shape.x / CHUNK_SIZE - (coords_in_shape.x < 0 ? 1 : 0)),
+        (SHAPE_COORDS_INT_T)(coords_in_shape.y / CHUNK_SIZE - (coords_in_shape.y < 0 ? 1 : 0)),
+        (SHAPE_COORDS_INT_T)(coords_in_shape.z / CHUNK_SIZE - (coords_in_shape.z < 0 ? 1 : 0))};
+#endif
+}
+
+CHUNK_COORDS_INT3_T chunk_utils_get_coords_in_chunk(const SHAPE_COORDS_INT3_T coords_in_shape) {
+#if CHUNK_SIZE_IS_PERFECT_SQRT
+    return (CHUNK_COORDS_INT3_T){(CHUNK_COORDS_INT_T)(coords_in_shape.x & CHUNK_SIZE_MINUS_ONE),
+                                 (CHUNK_COORDS_INT_T)(coords_in_shape.y & CHUNK_SIZE_MINUS_ONE),
+                                 (CHUNK_COORDS_INT_T)(coords_in_shape.z & CHUNK_SIZE_MINUS_ONE)};
+#else
+    return (CHUNK_COORDS_INT3_T){(CHUNK_COORDS_INT_T)(coords_in_shape.x % CHUNK_SIZE +
+                                                      (coords_in_shape.x < 0 ? CHUNK_SIZE : 0)),
+                                 (CHUNK_COORDS_INT_T)(coords_in_shape.y % CHUNK_SIZE +
+                                                      (coords_in_shape.y < 0 ? CHUNK_SIZE : 0)),
+                                 (CHUNK_COORDS_INT_T)(coords_in_shape.z % CHUNK_SIZE +
+                                                      (coords_in_shape.z < 0 ? CHUNK_SIZE : 0))};
+#endif
 }
 
 void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max) {
@@ -512,7 +561,7 @@ Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location) {
     return chunk->neighbors[location];
 }
 
-void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, CHUNK_COORDS_INT3_T coords) {
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, SHAPE_COORDS_INT3_T coords) {
     void **batchedNode_X = NULL, **batchedNode_Y = NULL;
 
     // Batch Index3D search for all neighbors on the right (x+1)
@@ -719,7 +768,8 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
     static SHAPE_COLOR_INDEX_INT_T shapeColorIdx;
     static ATLAS_COLOR_INDEX_INT_T atlasColorIdx;
 
-    // vertex lighting ie. smooth lighting
+    // vertex lighting (baked)
+    const bool vLighting = shape_uses_baked_lighting(shape);
     VERTEX_LIGHT_STRUCT_T vlight1, vlight2, vlight3, vlight4;
 
     static FACE_AMBIENT_OCCLUSION_STRUCT_T ao;
@@ -858,30 +908,32 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                  NULL);
 
                     // get their vertex light values
-                    neighbors[NX].vlight = chunk_get_light_or_default(neighbors[NX].chunk,
-                                                                      neighbors[NX].coords,
-                                                                      neighbors[NX].block == NULL ||
-                                                                          opaque_left);
-                    neighbors[X].vlight = chunk_get_light_or_default(neighbors[X].chunk,
-                                                                     neighbors[X].coords,
-                                                                     neighbors[X].block == NULL ||
-                                                                         opaque_right);
-                    neighbors[NZ].vlight = chunk_get_light_or_default(neighbors[NZ].chunk,
-                                                                      neighbors[NZ].coords,
-                                                                      neighbors[NZ].block == NULL ||
-                                                                          opaque_front);
-                    neighbors[Z].vlight = chunk_get_light_or_default(neighbors[Z].chunk,
-                                                                     neighbors[Z].coords,
-                                                                     neighbors[Z].block == NULL ||
-                                                                         opaque_back);
-                    neighbors[Y].vlight = chunk_get_light_or_default(neighbors[Y].chunk,
-                                                                     neighbors[Y].coords,
-                                                                     neighbors[Y].block == NULL ||
-                                                                         opaque_top);
-                    neighbors[NY].vlight = chunk_get_light_or_default(neighbors[NY].chunk,
-                                                                      neighbors[NY].coords,
-                                                                      neighbors[NY].block == NULL ||
-                                                                          opaque_bottom);
+                    if (vLighting) {
+                        neighbors[NX].vlight = chunk_get_light_or_default(
+                            neighbors[NX].chunk,
+                            neighbors[NX].coords,
+                            neighbors[NX].block == NULL || opaque_left);
+                        neighbors[X].vlight = chunk_get_light_or_default(
+                            neighbors[X].chunk,
+                            neighbors[X].coords,
+                            neighbors[X].block == NULL || opaque_right);
+                        neighbors[NZ].vlight = chunk_get_light_or_default(
+                            neighbors[NZ].chunk,
+                            neighbors[NZ].coords,
+                            neighbors[NZ].block == NULL || opaque_front);
+                        neighbors[Z].vlight = chunk_get_light_or_default(
+                            neighbors[Z].chunk,
+                            neighbors[Z].coords,
+                            neighbors[Z].block == NULL || opaque_back);
+                        neighbors[Y].vlight = chunk_get_light_or_default(
+                            neighbors[Y].chunk,
+                            neighbors[Y].coords,
+                            neighbors[Y].block == NULL || opaque_top);
+                        neighbors[NY].vlight = chunk_get_light_or_default(
+                            neighbors[NY].chunk,
+                            neighbors[NY].coords,
+                            neighbors[NY].block == NULL || opaque_bottom);
+                    }
 
                     // check which faces should be rendered
                     // transparent: if neighbor is non-solid or, if enabled, transparent with a
@@ -1060,7 +1112,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao1 = 1;
                         }
                         vlight1 = neighbors[NX].vlight;
-                        if (light_bottomLeft || light_leftFront) {
+                        if (vLighting && (light_bottomLeft || light_leftFront)) {
                             _vertex_light_smoothing(&vlight1,
                                                     light_bottomLeftFront,
                                                     light_bottomLeft,
@@ -1079,7 +1131,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao2 = 1;
                         }
                         vlight2 = neighbors[NX].vlight;
-                        if (light_leftFront || light_topLeft) {
+                        if (vLighting && (light_leftFront || light_topLeft)) {
                             _vertex_light_smoothing(&vlight2,
                                                     light_topLeftFront,
                                                     light_leftFront,
@@ -1098,7 +1150,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao3 = 1;
                         }
                         vlight3 = neighbors[NX].vlight;
-                        if (light_topLeft || light_leftBack) {
+                        if (vLighting && (light_topLeft || light_leftBack)) {
                             _vertex_light_smoothing(&vlight3,
                                                     light_topLeftBack,
                                                     light_topLeft,
@@ -1117,7 +1169,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao4 = 1;
                         }
                         vlight4 = neighbors[NX].vlight;
-                        if (light_leftBack || light_bottomLeft) {
+                        if (vLighting && (light_leftBack || light_bottomLeft)) {
                             _vertex_light_smoothing(&vlight4,
                                                     light_bottomLeftBack,
                                                     light_leftBack,
@@ -1130,11 +1182,12 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
                                                                             : opaqueWriter,
                                                             (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y + 0.5f,
-                                                            (float)coords_in_shape.z + 0.5f,
+                                                            (float)coords_in_shape.y,
+                                                            (float)coords_in_shape.z,
                                                             atlasColorIdx,
                                                             FACE_LEFT,
                                                             ao,
+                                                            vLighting,
                                                             vlight1,
                                                             vlight2,
                                                             vlight3,
@@ -1276,7 +1329,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao1 = 1;
                         }
                         vlight1 = neighbors[X].vlight;
-                        if (light_topRight || light_rightFront) {
+                        if (vLighting && (light_topRight || light_rightFront)) {
                             _vertex_light_smoothing(&vlight1,
                                                     light_topRightFront,
                                                     light_topRight,
@@ -1295,7 +1348,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao2 = 1;
                         }
                         vlight2 = neighbors[X].vlight;
-                        if (light_bottomRight || light_rightFront) {
+                        if (vLighting && (light_bottomRight || light_rightFront)) {
                             _vertex_light_smoothing(&vlight2,
                                                     light_bottomRightFront,
                                                     light_bottomRight,
@@ -1314,7 +1367,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao3 = 1;
                         }
                         vlight3 = neighbors[X].vlight;
-                        if (light_bottomRight || light_rightBack) {
+                        if (vLighting && (light_bottomRight || light_rightBack)) {
                             _vertex_light_smoothing(&vlight3,
                                                     light_bottomRightBack,
                                                     light_bottomRight,
@@ -1333,7 +1386,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao4 = 1;
                         }
                         vlight4 = neighbors[X].vlight;
-                        if (light_topRight || light_rightBack) {
+                        if (vLighting && (light_topRight || light_rightBack)) {
                             _vertex_light_smoothing(&vlight4,
                                                     light_topRightBack,
                                                     light_topRight,
@@ -1345,12 +1398,13 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
                                                                             : opaqueWriter,
-                                                            (float)coords_in_shape.x + 1.0f,
-                                                            (float)coords_in_shape.y + 0.5f,
-                                                            (float)coords_in_shape.z + 0.5f,
+                                                            (float)coords_in_shape.x,
+                                                            (float)coords_in_shape.y,
+                                                            (float)coords_in_shape.z,
                                                             atlasColorIdx,
                                                             FACE_RIGHT,
                                                             ao,
+                                                            vLighting,
                                                             vlight1,
                                                             vlight2,
                                                             vlight3,
@@ -1499,7 +1553,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao1 = 1;
                         }
                         vlight1 = neighbors[NZ].vlight;
-                        if (light_topFront || light_leftFront) {
+                        if (vLighting && (light_topFront || light_leftFront)) {
                             _vertex_light_smoothing(&vlight1,
                                                     light_topLeftFront,
                                                     light_topFront,
@@ -1518,7 +1572,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao2 = 1;
                         }
                         vlight2 = neighbors[NZ].vlight;
-                        if (light_bottomFront || light_leftFront) {
+                        if (vLighting && (light_bottomFront || light_leftFront)) {
                             _vertex_light_smoothing(&vlight2,
                                                     light_bottomLeftFront,
                                                     light_bottomFront,
@@ -1537,7 +1591,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao3 = 1;
                         }
                         vlight3 = neighbors[NZ].vlight;
-                        if (light_bottomFront || light_rightFront) {
+                        if (vLighting && (light_bottomFront || light_rightFront)) {
                             _vertex_light_smoothing(&vlight3,
                                                     light_bottomRightFront,
                                                     light_bottomFront,
@@ -1556,7 +1610,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao4 = 1;
                         }
                         vlight4 = neighbors[NZ].vlight;
-                        if (light_topFront || light_rightFront) {
+                        if (vLighting && (light_topFront || light_rightFront)) {
                             _vertex_light_smoothing(&vlight4,
                                                     light_topRightFront,
                                                     light_topFront,
@@ -1568,12 +1622,13 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
                                                                             : opaqueWriter,
-                                                            (float)coords_in_shape.x + 0.5f,
-                                                            (float)coords_in_shape.y + 0.5f,
+                                                            (float)coords_in_shape.x,
+                                                            (float)coords_in_shape.y,
                                                             (float)coords_in_shape.z,
                                                             atlasColorIdx,
                                                             FACE_BACK,
                                                             ao,
+                                                            vLighting,
                                                             vlight1,
                                                             vlight2,
                                                             vlight3,
@@ -1722,7 +1777,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao1 = 1;
                         }
                         vlight1 = neighbors[Z].vlight;
-                        if (light_bottomBack || light_leftBack) {
+                        if (vLighting && (light_bottomBack || light_leftBack)) {
                             _vertex_light_smoothing(&vlight1,
                                                     light_bottomLeftBack,
                                                     light_bottomBack,
@@ -1741,7 +1796,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao2 = 1;
                         }
                         vlight2 = neighbors[Z].vlight;
-                        if (light_topBack || light_leftBack) {
+                        if (vLighting && (light_topBack || light_leftBack)) {
                             _vertex_light_smoothing(&vlight2,
                                                     light_topLeftBack,
                                                     light_topBack,
@@ -1760,7 +1815,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao3 = 1;
                         }
                         vlight3 = neighbors[Z].vlight;
-                        if (light_topBack || light_rightBack) {
+                        if (vLighting && (light_topBack || light_rightBack)) {
                             _vertex_light_smoothing(&vlight3,
                                                     light_topRightBack,
                                                     light_topBack,
@@ -1779,7 +1834,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao4 = 1;
                         }
                         vlight4 = neighbors[Z].vlight;
-                        if (light_bottomBack || light_rightBack) {
+                        if (vLighting && (light_bottomBack || light_rightBack)) {
                             _vertex_light_smoothing(&vlight4,
                                                     light_bottomRightBack,
                                                     light_bottomBack,
@@ -1791,12 +1846,13 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
                                                                             : opaqueWriter,
-                                                            (float)coords_in_shape.x + 0.5f,
-                                                            (float)coords_in_shape.y + 0.5f,
-                                                            (float)coords_in_shape.z + 1.0f,
+                                                            (float)coords_in_shape.x,
+                                                            (float)coords_in_shape.y,
+                                                            (float)coords_in_shape.z,
                                                             atlasColorIdx,
                                                             FACE_FRONT,
                                                             ao,
+                                                            vLighting,
                                                             vlight1,
                                                             vlight2,
                                                             vlight3,
@@ -1954,7 +2010,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao1 = 1;
                         }
                         vlight1 = neighbors[Y].vlight;
-                        if (light_topRight || light_topFront) {
+                        if (vLighting && (light_topRight || light_topFront)) {
                             _vertex_light_smoothing(&vlight1,
                                                     light_topRightFront,
                                                     light_topRight,
@@ -1973,7 +2029,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao2 = 1;
                         }
                         vlight2 = neighbors[Y].vlight;
-                        if (light_topRight || light_topBack) {
+                        if (vLighting && (light_topRight || light_topBack)) {
                             _vertex_light_smoothing(&vlight2,
                                                     light_topRightBack,
                                                     light_topRight,
@@ -1992,7 +2048,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao3 = 1;
                         }
                         vlight3 = neighbors[Y].vlight;
-                        if (light_topLeft || light_topBack) {
+                        if (vLighting && (light_topLeft || light_topBack)) {
                             _vertex_light_smoothing(&vlight3,
                                                     light_topLeftBack,
                                                     light_topLeft,
@@ -2011,7 +2067,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao4 = 1;
                         }
                         vlight4 = neighbors[Y].vlight;
-                        if (light_topLeft || light_topFront) {
+                        if (vLighting && (light_topLeft || light_topFront)) {
                             _vertex_light_smoothing(&vlight4,
                                                     light_topLeftFront,
                                                     light_topLeft,
@@ -2023,12 +2079,13 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
                                                                             : opaqueWriter,
-                                                            (float)coords_in_shape.x + 0.5f,
-                                                            (float)coords_in_shape.y + 1.0f,
-                                                            (float)coords_in_shape.z + 0.5f,
+                                                            (float)coords_in_shape.x,
+                                                            (float)coords_in_shape.y,
+                                                            (float)coords_in_shape.z,
                                                             atlasColorIdx,
                                                             FACE_TOP,
                                                             ao,
+                                                            vLighting,
                                                             vlight1,
                                                             vlight2,
                                                             vlight3,
@@ -2186,7 +2243,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao1 = 1;
                         }
                         vlight1 = neighbors[NY].vlight;
-                        if (light_bottomLeft || light_bottomFront) {
+                        if (vLighting && (light_bottomLeft || light_bottomFront)) {
                             _vertex_light_smoothing(&vlight1,
                                                     light_bottomLeftFront,
                                                     light_bottomLeft,
@@ -2205,7 +2262,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao2 = 1;
                         }
                         vlight2 = neighbors[NY].vlight;
-                        if (light_bottomLeft || light_bottomBack) {
+                        if (vLighting && (light_bottomLeft || light_bottomBack)) {
                             _vertex_light_smoothing(&vlight2,
                                                     light_bottomLeftBack,
                                                     light_bottomLeft,
@@ -2224,7 +2281,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao3 = 1;
                         }
                         vlight3 = neighbors[NY].vlight;
-                        if (light_bottomRight || light_bottomBack) {
+                        if (vLighting && (light_bottomRight || light_bottomBack)) {
                             _vertex_light_smoothing(&vlight3,
                                                     light_bottomRightBack,
                                                     light_bottomRight,
@@ -2243,7 +2300,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                             ao.ao4 = 1;
                         }
                         vlight4 = neighbors[NY].vlight;
-                        if (light_bottomRight || light_bottomFront) {
+                        if (vLighting && (light_bottomRight || light_bottomFront)) {
                             _vertex_light_smoothing(&vlight4,
                                                     light_bottomRightFront,
                                                     light_bottomRight,
@@ -2255,12 +2312,13 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 
                         vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
                                                                             : opaqueWriter,
-                                                            (float)coords_in_shape.x + 0.5f,
+                                                            (float)coords_in_shape.x,
                                                             (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z + 0.5f,
+                                                            (float)coords_in_shape.z,
                                                             atlasColorIdx,
                                                             FACE_DOWN,
                                                             ao,
+                                                            vLighting,
                                                             vlight1,
                                                             vlight2,
                                                             vlight3,

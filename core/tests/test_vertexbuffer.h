@@ -119,18 +119,6 @@ void test_vertex_buffer_get_next(void) {
     vertex_buffer_pop_destroyed_id(&id);
 }
 
-// check that we have a coherent DrawBufferPtrs (with no lighting)
-void test_vertex_buffer_get_draw_buffers(void) {
-    VertexBuffer *vb = vertex_buffer_new(false, false);
-    DrawBufferPtrs db = vertex_buffer_get_draw_buffers(vb);
-
-    TEST_CHECK(db.lighting == 0); // NULL
-
-    vertex_buffer_free(vb);
-    uint32_t id;
-    vertex_buffer_pop_destroyed_id(&id);
-}
-
 // check that we get the correct max length
 void test_vertex_buffer_get_max_length(void) {
     const size_t len = 500;

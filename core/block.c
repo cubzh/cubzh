@@ -298,7 +298,7 @@ bool block_equal(const Block *b1, const Block *b2) {
     return b1->colorIndex == b2->colorIndex;
 }
 
-void block_getNeighbourBlockCoordinates(const SHAPE_COORDS_INT_T x,
+bool block_getNeighbourBlockCoordinates(const SHAPE_COORDS_INT_T x,
                                         const SHAPE_COORDS_INT_T y,
                                         const SHAPE_COORDS_INT_T z,
                                         const int face,
@@ -315,25 +315,49 @@ void block_getNeighbourBlockCoordinates(const SHAPE_COORDS_INT_T x,
 
     switch (face) {
         case FACE_LEFT_CTC:
-            resultX -= 1;
+            if (x == SHAPE_COORDS_MIN) {
+                return false;
+            } else {
+                resultX -= 1;
+            }
             break;
         case FACE_RIGHT_CTC:
-            resultX += 1;
+            if (x == SHAPE_COORDS_MAX) {
+                return false;
+            } else {
+                resultX += 1;
+            }
             break;
         case FACE_TOP_CTC:
-            resultY += 1;
+            if (y == SHAPE_COORDS_MAX) {
+                return false;
+            } else {
+                resultY += 1;
+            }
             break;
         case FACE_DOWN_CTC:
-            resultY -= 1;
+            if (y == SHAPE_COORDS_MIN) {
+                return false;
+            } else {
+                resultY -= 1;
+            }
             break;
         case FACE_BACK_CTC:
-            resultZ -= 1;
+            if (z == SHAPE_COORDS_MIN) {
+                return false;
+            } else {
+                resultZ -= 1;
+            }
             break;
         case FACE_FRONT_CTC:
-            resultZ += 1;
+            if (z == SHAPE_COORDS_MAX) {
+                return false;
+            } else {
+                resultZ += 1;
+            }
             break;
         default:
-            return;
+            return false;
     }
 
     if (newX != NULL)
@@ -342,4 +366,6 @@ void block_getNeighbourBlockCoordinates(const SHAPE_COORDS_INT_T x,
         *newY = resultY;
     if (newZ != NULL)
         *newZ = resultZ;
+
+    return true;
 }

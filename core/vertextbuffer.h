@@ -24,34 +24,20 @@ typedef struct _Chunk Chunk;
 // MARK: Draw buffers size per face
 //---------------------
 
-// 'faces' buffer contains face center position as RGBA32F [X:Y:Z:color]
-#define DRAWBUFFER_FACES 4
-// face 'metadata' buffer as RG8 [ao:face+aoShift]
-#define DRAWBUFFER_METADATA 2
-// vertex 'lighting' buffer as RG8 [sun+r:g+b]
-#define DRAWBUFFER_LIGHTING 2
-#define DRAWBUFFER_LIGHTING_PER_FACE DRAWBUFFER_LIGHTING * 4
-#define DRAWBUFFER_FACES_BYTES DRAWBUFFER_FACES * sizeof(float)
-#define DRAWBUFFER_METADATA_BYTES DRAWBUFFER_METADATA * sizeof(uint8_t)
-#define DRAWBUFFER_LIGHTING_BYTES DRAWBUFFER_LIGHTING * sizeof(uint8_t)
-#define DRAWBUFFER_LIGHTING_PER_FACE_BYTES DRAWBUFFER_LIGHTING_BYTES * 4
+struct {
+    float x, y, z, color;
+    float metadata;
+} typedef VertexAttributes;
+
+#define DRAWBUFFER_VERTICES_BYTES sizeof(VertexAttributes)
+#define DRAWBUFFER_VERTICES_PER_FACE 4
+#define DRAWBUFFER_VERTICES_PER_FACE_BYTES DRAWBUFFER_VERTICES_BYTES * 4
 
 extern bool vertex_buffer_pop_destroyed_id(uint32_t *id);
-
-// one draw per vertex buffer
-// vertex buffers can be listed, for example when a shape requires more than one
 
 struct {
     uint32_t from, to;
 } typedef DrawBufferWriteSlice;
-
-// Buffers maintained by VertexBuffer used by renderer for each draw call
-// To be used as value-type simply to keep the buffer pointers together
-struct {
-    float *faces;      // RGBA32F  [X:Y:Z:color]
-    uint8_t *metadata; // RG8      [ao:face+aoShift]
-    uint8_t *lighting; // RG8      [sun+r:g+b]
-} typedef DrawBufferPtrs;
 
 // A ChunkVertexMemory is an area in vertex buffer's memory that contains
 // vertices.
@@ -78,6 +64,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                          ATLAS_COLOR_INDEX_INT_T color,
                                          FACE_INDEX_INT_T index,
                                          FACE_AMBIENT_OCCLUSION_STRUCT_T ao,
+                                         bool vLighting,
                                          VERTEX_LIGHT_STRUCT_T vlight1,
                                          VERTEX_LIGHT_STRUCT_T vlight2,
                                          VERTEX_LIGHT_STRUCT_T vlight3,
@@ -103,7 +90,7 @@ VertexBufferMemArea *vertex_buffer_get_first_mem_area(const VertexBuffer *vb);
 
 uint32_t vertex_buffer_get_id(const VertexBuffer *vb);
 
-DrawBufferPtrs vertex_buffer_get_draw_buffers(const VertexBuffer *vb);
+VertexAttributes *vertex_buffer_get_draw_buffer(const VertexBuffer *vb);
 DoublyLinkedList *vertex_buffer_get_draw_slices(const VertexBuffer *vb);
 
 void vertex_buffer_log_draw_slices(const VertexBuffer *vb);

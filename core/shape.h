@@ -256,7 +256,7 @@ CHUNK_COORDS_INT3_T shape_get_chunk_coordinates(const SHAPE_COORDS_INT3_T coords
 void shape_get_chunk_and_coordinates(const Shape *shape,
                                      const SHAPE_COORDS_INT3_T coords_in_shape,
                                      Chunk **chunk,
-                                     CHUNK_COORDS_INT3_T *chunk_coords,
+                                     SHAPE_COORDS_INT3_T *chunk_coords,
                                      CHUNK_COORDS_INT3_T *coords_in_chunk);
 void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent);
 void shape_refresh_vertices(Shape *shape);
@@ -348,8 +348,9 @@ void shape_remove_point(Shape *s, const char *key);
 /// baked lighting
 void shape_compute_baked_lighting(Shape *s);
 
-bool shape_has_baked_lighting_data(const Shape *s);
-VERTEX_LIGHT_STRUCT_T *shape_create_lighting_data_blob(const Shape *s);
+void shape_toggle_baked_lighting(Shape *s, const bool toggle);
+bool shape_uses_baked_lighting(const Shape *s);
+VERTEX_LIGHT_STRUCT_T *shape_create_lighting_data_blob(const Shape *s, void **inout);
 void shape_set_lighting_data_from_blob(Shape *s,
                                        VERTEX_LIGHT_STRUCT_T *blob,
                                        SHAPE_COORDS_INT3_T min,
@@ -399,7 +400,7 @@ void shape_history_redo(Shape *const s);
 // MARK: - Lua flags -
 // These flags are only used to check from VX whether or not some Lua features should be enabled
 
-bool shape_is_lua_mutable(Shape *s);
+bool shape_is_lua_mutable(const Shape *s);
 void shape_set_lua_mutable(Shape *s, const bool value);
 void shape_enableAnimations(Shape *const s);
 void shape_disableAnimations(Shape *const s);

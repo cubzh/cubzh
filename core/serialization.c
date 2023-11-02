@@ -316,57 +316,75 @@ void serialization_utils_writeUint32(void *dest, const uint32_t src, uint32_t *c
 // MARK: - Baked files -
 
 bool serialization_save_baked_file(const Shape *s, uint64_t hash, FILE *fd) {
-    if (shape_has_baked_lighting_data(s) == false) {
+    if (shape_uses_baked_lighting(s) == false) {
         return false;
     }
 
     // write baked file version
-    uint32_t version = 1;
+    uint32_t version = 2;
     if (fwrite(&version, sizeof(uint32_t), 1, fd) != 1) {
         cclog_error("baked file: failed to write version");
         return false;
     }
 
-    // write palette hash
+    // write shape hash
     if (fwrite(&hash, sizeof(uint64_t), 1, fd) != 1) {
         cclog_error("baked file: failed to write palette hash");
         return false;
     }
 
-    // write lighting data uncompressed size
-    SHAPE_SIZE_INT3_T shape_size = shape_get_allocated_size(s);
-    uint32_t size = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
-                    sizeof(VERTEX_LIGHT_STRUCT_T);
-    if (fwrite(&size, sizeof(uint32_t), 1, fd) != 1) {
-        cclog_error("baked file: failed to write lighting data uncompressed size");
+    // write number of chunks
+    const uint32_t nbChunks = (uint32_t)shape_get_nb_chunks(s);
+    if (fwrite(&nbChunks, sizeof(uint32_t), 1, fd) != 1) {
+        cclog_error("baked file: failed to write number of chunks");
         return false;
     }
 
-    // compress lighting data
-    uLong compressedSize = compressBound(size);
-    const void *uncompressedData = shape_create_lighting_data_blob(s);
-    void *compressedData = malloc(compressedSize);
-    if (compress(compressedData, &compressedSize, uncompressedData, size) != Z_OK) {
-        cclog_error("baked file: failed to compress lighting data");
+    // write chunks
+    Chunk *chunk;
+    Index3DIterator *it = index3d_iterator_new(shape_get_chunks(s));
+    while (index3d_iterator_pointer(it) != NULL) {
+        chunk = index3d_iterator_pointer(it);
+
+        // write chunk coordinates
+        const SHAPE_COORDS_INT3_T origin = chunk_get_origin(chunk);
+        const SHAPE_COORDS_INT3_T coords = chunk_utils_get_coords(origin);
+        if (fwrite(&coords, sizeof(SHAPE_COORDS_INT3_T), 1, fd) != 1) {
+            cclog_error("baked file: failed to write chunk coordinates");
+            return false;
+        }
+
+        // compress lighting data
+        const size_t size = (size_t)CHUNK_SIZE_CUBE * (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
+        uLong compressedSize = compressBound(size);
+        const void *uncompressedData = chunk_get_lighting_data(chunk);
+        void *compressedData = malloc(compressedSize);
+        if (compress(compressedData, &compressedSize, uncompressedData, size) != Z_OK) {
+            cclog_error("baked file: failed to compress lighting data");
+            free(compressedData);
+            return false;
+        }
+
+        // write lighting data compressed size
+        if (fwrite(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
+            cclog_error("baked file: failed to write lighting data compressed size");
+            free(compressedData);
+            return false;
+        }
+
+        // write compressed lighting data
+        if (fwrite(compressedData, compressedSize, 1, fd) != 1) {
+            cclog_error("baked file: failed to write compressed lighting data");
+            free(compressedData);
+            return false;
+        }
+
         free(compressedData);
-        return false;
-    }
 
-    // write lighting data compressed size
-    if (fwrite(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
-        cclog_error("baked file: failed to write lighting data compressed size");
-        free(compressedData);
-        return false;
+        index3d_iterator_next(it);
     }
+    index3d_iterator_free(it);
 
-    // write compressed lighting data
-    if (fwrite(compressedData, compressedSize, 1, fd) != 1) {
-        cclog_error("baked file: failed to write compressed lighting data");
-        free(compressedData);
-        return false;
-    }
-
-    free(compressedData);
     return true;
 }
 
@@ -380,84 +398,96 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
 
     switch (version) {
         case 1: {
-            // read palette hash
+            return false; // remove old files
+        }
+        case 2: {
+            // read shape hash
             uint64_t hash;
             if (fread(&hash, sizeof(uint64_t), 1, fd) != 1) {
-                cclog_error("baked file: failed to read palette hash");
+                cclog_error("baked file (v2): failed to read palette hash");
                 return false;
             }
 
-            // match with shape's current palette hash
+            // match with shape's current hash
             if (hash != expectedHash) {
-                cclog_info("baked file: mismatched palette hash, skip");
+                cclog_info("baked file (v2): mismatched palette hash, skip");
                 return false;
             }
 
-            // read lighting data uncompressed size
-            uint32_t size;
-            if (fread(&size, sizeof(uint32_t), 1, fd) != 1) {
-                cclog_error("baked file: failed to read lighting data uncompressed size");
+            // read number of chunks
+            uint32_t nbChunks;
+            if (fread(&nbChunks, sizeof(uint32_t), 1, fd) != 1) {
+                cclog_error("baked file (v2): failed to read number of chunks");
                 return false;
             }
 
-            // sanity check
-            SHAPE_SIZE_INT3_T shape_size = shape_get_allocated_size(s);
-            uint32_t expectedSize = (uint32_t)(shape_size.x * shape_size.y * shape_size.z) *
-                                    sizeof(VERTEX_LIGHT_STRUCT_T);
-            if (size != expectedSize) {
-                cclog_info("baked file: mismatched lighting data size, skip");
+            // match with shape's current chunks
+            if (nbChunks != shape_get_nb_chunks(s)) {
+                cclog_info("baked file (v2): mismatched number of chunks, skip");
                 return false;
             }
 
-            // read lighting data compressed size
-            uint32_t compressedSize;
-            if (fread(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
-                cclog_error("baked file: failed to read lighting data compressed size");
-                return false;
-            }
+            // read chunks
+            Chunk *chunk;
+            Index3D *chunks = shape_get_chunks(s);
+            const size_t size = (size_t)CHUNK_SIZE_CUBE * (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
+            for (uint32_t i = 0; i < nbChunks; ++i) {
+                // read chunk coordinates
+                SHAPE_COORDS_INT3_T coords;
+                if (fread(&coords, sizeof(SHAPE_COORDS_INT3_T), 1, fd) != 1) {
+                    cclog_error("baked file (v2): failed to read chunk coordinates");
+                    return false;
+                }
 
-            // read compressed lighting data
-            void *compressedData = malloc(compressedSize);
-            if (fread(compressedData, compressedSize, 1, fd) != 1) {
-                cclog_error("baked file: failed to read compressed lighting data");
+                chunk = (Chunk *)index3d_get(chunks, coords.x, coords.y, coords.z);
+                if (chunk == NULL) {
+                    continue;
+                }
+
+                // read lighting data compressed size
+                uint32_t compressedSize;
+                if (fread(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
+                    cclog_error("baked file (v2): failed to read lighting data compressed size");
+                    return false;
+                }
+
+                // read compressed lighting data
+                void *compressedData = malloc(compressedSize);
+                if (fread(compressedData, compressedSize, 1, fd) != 1) {
+                    cclog_error("baked file (v2): failed to read compressed lighting data");
+                    free(compressedData);
+                    return false;
+                }
+
+                // uncompress lighting data
+                uLong resultSize = size;
+                void *uncompressedData = malloc(size);
+                if (uncompressedData == NULL) {
+                    cclog_error(
+                        "baked file (v2): failed to uncompress lighting data (memory alloc)");
+                    free(compressedData);
+                    return false;
+                }
+
+                if (uncompress(uncompressedData, &resultSize, compressedData, compressedSize) !=
+                    Z_OK) {
+                    cclog_error("baked file (v2): failed to uncompress lighting data");
+                    free(uncompressedData);
+                    free(compressedData);
+                    return false;
+                }
                 free(compressedData);
-                return false;
+                compressedData = NULL;
+
+                // sanity check
+                if (resultSize != size) {
+                    cclog_info("baked file (v2): mismatched lighting data uncompressed size, skip");
+                    free(uncompressedData);
+                    return false;
+                }
+
+                chunk_set_lighting_data(chunk, (VERTEX_LIGHT_STRUCT_T *)uncompressedData);
             }
-
-            // uncompress lighting data
-            uLong resultSize = size;
-            void *uncompressedData = malloc(size);
-
-            if (uncompressedData == NULL) {
-                // memory allocation failed
-                cclog_error("baked file: failed to uncompress lighting data (memory alloc)");
-                free(compressedData);
-                return false;
-            }
-
-            if (uncompress(uncompressedData, &resultSize, compressedData, compressedSize) != Z_OK) {
-                cclog_error("baked file: failed to uncompress lighting data");
-                free(uncompressedData);
-                free(compressedData);
-                return false;
-            }
-            free(compressedData);
-            compressedData = NULL;
-
-            // sanity check
-            if (resultSize != size) {
-                cclog_info("baked file: mismatched lighting data uncompressed size, skip");
-                free(uncompressedData);
-                return false;
-            }
-
-            shape_set_lighting_data_from_blob(
-                s,
-                uncompressedData,
-                coords3_zero,
-                (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)shape_size.x,
-                                      (SHAPE_COORDS_INT_T)shape_size.y,
-                                      (SHAPE_COORDS_INT_T)shape_size.z});
 
             return true;
         }

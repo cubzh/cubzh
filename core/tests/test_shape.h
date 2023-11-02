@@ -117,7 +117,7 @@
 // shape_clear_baked_lighting
 // shape_compute_baked_lighting
 // shape_uses_baked_lighting
-// shape_has_baked_lighting_data
+// shape_uses_baked_lighting
 // shape_create_lighting_data_blob
 // shape_set_lighting_data_from_blob
 // shape_get_light_without_checking

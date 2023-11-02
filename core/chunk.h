@@ -55,9 +55,7 @@ typedef enum {
     NZ = 25
 } Neighbor;
 
-Chunk *chunk_new(const SHAPE_COORDS_INT_T x,
-                 const SHAPE_COORDS_INT_T y,
-                 const SHAPE_COORDS_INT_T z);
+Chunk *chunk_new(const SHAPE_COORDS_INT3_T origin);
 Chunk *chunk_new_copy(const Chunk *c);
 void chunk_free(Chunk *chunk, bool updateNeighbors);
 void chunk_free_func(void *c);
@@ -70,12 +68,18 @@ void chunk_set_rtree_leaf(Chunk *c, void *ptr);
 void *chunk_get_rtree_leaf(const Chunk *c);
 uint64_t chunk_get_hash(const Chunk *c, uint64_t crc);
 
-void chunk_set_light(Chunk *c, CHUNK_COORDS_INT3_T coords, VERTEX_LIGHT_STRUCT_T light);
+void chunk_set_light(Chunk *c,
+                     const CHUNK_COORDS_INT3_T coords,
+                     const VERTEX_LIGHT_STRUCT_T light,
+                     const bool initEmpty);
 VERTEX_LIGHT_STRUCT_T chunk_get_light_without_checking(const Chunk *c, CHUNK_COORDS_INT3_T coords);
 VERTEX_LIGHT_STRUCT_T chunk_get_light_or_default(Chunk *c,
                                                  CHUNK_COORDS_INT3_T coords,
                                                  bool isDefault);
 void chunk_clear_lighting_data(Chunk *c);
+void chunk_reset_lighting_data(Chunk *c, const bool emptyOrDefault);
+void chunk_set_lighting_data(Chunk *c, VERTEX_LIGHT_STRUCT_T *data);
+VERTEX_LIGHT_STRUCT_T *chunk_get_lighting_data(Chunk *c);
 
 bool chunk_add_block(Chunk *chunk,
                      const Block block,
@@ -114,8 +118,8 @@ SHAPE_COORDS_INT3_T chunk_get_block_coords_in_shape(const Chunk *chunk,
                                                     const CHUNK_COORDS_INT_T x,
                                                     const CHUNK_COORDS_INT_T y,
                                                     const CHUNK_COORDS_INT_T z);
-CHUNK_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape,
-                                           CHUNK_COORDS_INT3_T *coords_in_chunk);
+SHAPE_COORDS_INT3_T chunk_utils_get_coords(const SHAPE_COORDS_INT3_T coords_in_shape);
+CHUNK_COORDS_INT3_T chunk_utils_get_coords_in_chunk(const SHAPE_COORDS_INT3_T coords_in_shape);
 
 void chunk_get_bounding_box(const Chunk *chunk, float3 *min, float3 *max);
 void chunk_get_bounding_box_2(const Chunk *chunk,
@@ -125,7 +129,7 @@ void chunk_get_bounding_box_2(const Chunk *chunk,
 // MARK: - Neighbors -
 
 Chunk *chunk_get_neighbor(const Chunk *chunk, Neighbor location);
-void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, CHUNK_COORDS_INT3_T coords);
+void chunk_move_in_neighborhood(Index3D *chunks, Chunk *chunk, SHAPE_COORDS_INT3_T coords);
 void chunk_leave_neighborhood(Chunk *chunk);
 
 // MARK: - Buffers -

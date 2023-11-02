@@ -207,6 +207,8 @@ typedef int16_t SHAPE_COORDS_INT_T;
 typedef struct {
     SHAPE_COORDS_INT_T x, y, z;
 } SHAPE_COORDS_INT3_T;
+#define SHAPE_COORDS_MAX INT16_MAX
+#define SHAPE_COORDS_MIN INT16_MIN
 static const SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
 static const SHAPE_COORDS_INT3_T coords3_max = {INT16_MAX, INT16_MAX, INT16_MAX};
 static const SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
@@ -284,11 +286,13 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 // SHAPE CHUNKS
 #define CHUNK_SIZE 16           // 32//64
 #define CHUNK_SIZE_SQR 256      // 1024//4096
+#define CHUNK_SIZE_CUBE 4096    // 32768//262144
 #define CHUNK_SIZE_MINUS_ONE 15 // 31//63
+#define CHUNK_SIZE_IS_PERFECT_SQRT true
+#define CHUNK_SIZE_SQRT 4
 
 // SHAPE BUFFERS
-// Maximum allowed capacity for a single shape buffer, this should be matched by
-// renderer max texture size
+// Maximum allowed capacity for a single shape buffer
 #define SHAPE_BUFFER_MAX_COUNT 1048576
 #define SHAPE_BUFFER_MIN_COUNT 4096
 // Minimal size for the first buffer at runtime, see shape_add_buffer
@@ -309,10 +313,10 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 #define GLOBAL_LIGHTING_SMOOTHING_ENABLED true
 #define GLOBAL_LIGHTING_BAKE_READ_ENABLED true
 #define GLOBAL_LIGHTING_BAKE_WRITE_ENABLED true
-/// Save file in cache if baked lighting wasn't present for a game map,
+/// Save file in cache if baked lighting wasn't present for a shape,
 /// new file path prefixed with "baked_" and suffixed with game ID
 #define GLOBAL_LIGHTING_BAKE_SAVE_ENABLED true
-/// Checks if a "baked_" file exists first when loading a game map
+/// Checks if a "baked_" file exists first when loading a shape
 #define GLOBAL_LIGHTING_BAKE_LOAD_ENABLED true
 
 //// Function used for vertex light smoothing

@@ -101,8 +101,8 @@ void aware_block_free_2(void *aBlockVoided);
 
 bool block_equal(const Block *b1, const Block *b2);
 
-///
-void block_getNeighbourBlockCoordinates(const SHAPE_COORDS_INT_T x,
+/// @returns false if coordinates is already maximum/minimum
+bool block_getNeighbourBlockCoordinates(const SHAPE_COORDS_INT_T x,
                                         const SHAPE_COORDS_INT_T y,
                                         const SHAPE_COORDS_INT_T z,
                                         const int face,

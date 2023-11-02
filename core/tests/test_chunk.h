@@ -26,7 +26,7 @@
 // --- chunk_get_nb_blocks()
 //////
 void test_chunk_new(void) {
-    Chunk *chunk = chunk_new(0, 10, -10);
+    Chunk *chunk = chunk_new((SHAPE_COORDS_INT3_T){0, 10, -10});
     SHAPE_COORDS_INT3_T origin = chunk_get_origin(chunk);
     int NBBlocks = chunk_get_nb_blocks(chunk);
 
@@ -49,7 +49,7 @@ void test_chunk_new(void) {
 // --- chunk_remove_block()
 /////
 void test_chunk_Block(void) {
-    Chunk *chunk = chunk_new(10, 8, 5);
+    Chunk *chunk = chunk_new((SHAPE_COORDS_INT3_T){10, 8, 5});
     Block *ABlock = block_new();
     Block *BBlock = block_new_air();
     Block *CBlock = block_new_with_color(155);
@@ -134,7 +134,7 @@ void test_chunk_Block(void) {
 // Create a chunk and set differents values on the "display bool" of this chunk.
 // Then check if the bool is set with the good values
 void test_chunk_needs_display(void) {
-    Chunk *chunk = chunk_new(10, 10, 10);
+    Chunk *chunk = chunk_new((SHAPE_COORDS_INT3_T){10, 10, 10});
 
     TEST_CHECK(chunk_is_dirty(chunk) == false);
     chunk_set_dirty(chunk, true);

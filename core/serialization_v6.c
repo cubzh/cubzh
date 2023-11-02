@@ -1076,36 +1076,17 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 memcpy(&lightingDataSizeRead, cursor, sizeof(uint32_t));
                 cursor = (void *)((uint32_t *)cursor + 1);
 
+                totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
+
                 if (shapeSettings->lighting) {
-                    uint32_t dataCount = lightingDataSizeRead / sizeof(VERTEX_LIGHT_STRUCT_T);
-                    if (dataCount == 0) {
-                        cclog_error("baked light data count cannot be 0, skipping");
-                        totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
+                    lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingDataSizeRead);
+                    if (lightingData == NULL) {
                         break;
                     }
 
-                    lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingDataSizeRead);
-                    if (lightingData == NULL) {
-                        totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
-                        continue;
-                    }
-
-                    uint8_t v1, v2;
-                    for (int i = 0; i < (int)dataCount; i++) {
-                        memcpy(&v1, cursor, sizeof(uint8_t));
-                        cursor = (void *)((uint8_t *)cursor + 1);
-
-                        memcpy(&v2, cursor, sizeof(uint8_t));
-                        cursor = (void *)((uint8_t *)cursor + 1);
-
-                        lightingData[i].red = TO_UINT4(v1 / 16);
-                        lightingData[i].ambient = TO_UINT4(v1 - lightingData[i].red * 16);
-                        lightingData[i].blue = TO_UINT4(v2 / 16);
-                        lightingData[i].green = TO_UINT4(v2 - lightingData[i].blue * 16);
-                    }
+                    memcpy(lightingData, cursor, lightingDataSizeRead);
+                    cursor = (void *)((char *)cursor + lightingDataSizeRead);
                 }
-
-                totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
             }
 #endif
             default: // shape sub chunks we don't need to read
@@ -1422,7 +1403,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
 #if GLOBAL_LIGHTING_BAKE_WRITE_ENABLED
-    bool hasLighting = shape_has_baked_lighting_data(shape);
+    bool hasLighting = shape_uses_baked_lighting(shape);
 #else
     bool hasLighting = false;
 #endif
@@ -1761,15 +1742,7 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
         memcpy(cursor, &shapeLightingSize, sizeof(uint32_t));
         cursor = (void *)((uint32_t *)cursor + 1);
 
-        // write offsetted backed lighting
-        for (SHAPE_COORDS_INT_T x = start.x; x < end.x; x++) { // shape blocks
-            for (SHAPE_COORDS_INT_T y = start.y; y < end.y; y++) {
-                for (SHAPE_COORDS_INT_T z = start.z; z < end.z; z++) {
-                    *((VERTEX_LIGHT_STRUCT_T *)cursor) = shape_get_light_or_default(shape, x, y, z);
-                    cursor = (void *)((VERTEX_LIGHT_STRUCT_T *)cursor + 1);
-                }
-            }
-        }
+        shape_create_lighting_data_blob(shape, &cursor);
     }
 
     if (nameLen > 0) {
