@@ -1330,10 +1330,6 @@ function skipTitleScreen()
 												showTitleScreen()
 											end,
 										})
-										hideLoading()
-										showTopBar()
-										hideBottomBar()
-										authCompleted()
 									end,
 									error = function()
 										showTitleScreen()
