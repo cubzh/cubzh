@@ -111,7 +111,7 @@ N        | uint8      | emissive flag
 -------------------------------------------------------------------------------
 
 
-8. SubChunk id 'OBJECT_ID' (17) : only for serialization in parent id
+8. SubChunk id 'OBJECT_ID' (18) : only for serialization in parent id
 -------------------------------------------------------------------------------
 # Bytes  | Type       | Value
 -------------------------------------------------------------------------------
