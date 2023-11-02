@@ -46,6 +46,13 @@ local function getLastXElements(array, x)
 	return result
 end
 
+function trim(s)
+	if type(s) ~= "string" then
+		return ""
+	end
+	return s:gsub("^%s*(.-)%s*$", "%1")
+end
+
 Timer(10, true, function()
 	if #messages < 60 then
 		return
@@ -206,11 +213,11 @@ local createChat = function(_, config)
 		inputNode:setColorFocused(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
 
 		inputNode.onSubmit = function()
-			if inputNode.Text == "" then
+			local text = trim(inputNode.Text)
+			if text == "" then
 				config.onSubmitEmpty()
 				return
 			end
-			local text = inputNode.Text
 			inputNode.Text = ""
 			playerSendMessage(text)
 		end
