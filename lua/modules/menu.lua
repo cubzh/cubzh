@@ -769,7 +769,13 @@ end
 topBar.parentDidResize = function(self)
 	local padding = theme.paddingTiny
 
+	-- Compute height of top bar
 	local height = math.max(cubzhBtn.Height, username.Height + padding + info.Height)
+
+	-- Adjust Cubzh button's height if the top bar height is larger
+	cubzhBtn.Height = math.max(cubzhBtn.Height, height)
+	-- Cubzh button must remain square
+	cubzhBtn.Width = math.max(cubzhBtn.Height, cubzhBtn.Width)
 
 	self.Width = Screen.Width
 	self.Height = System.SafeAreaTop + padding * 2 + height
