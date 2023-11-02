@@ -93,7 +93,7 @@ signup.createModal = function(_)
 	local dayInput = ui:createComboBox("Day", dayNumbers)
 	dayInput:setParent(node)
 
-	local yearInput = ui:createComboBox("Year", years)
+	local yearInput = ui:createComboBox("Year", yearStrings)
 	yearInput:setParent(node)
 
 	local usernameLabel = ui:createText("Username", Color(200, 200, 200, 255), "small")
