@@ -509,7 +509,7 @@ end
 
 -- displayes chat as expected based on state
 function refreshChat()
-	if chatDisplayed then
+	if chatDisplayed and cppMenuIsActive == false then
 		if activeModal then
 			removeChat()
 		else
@@ -993,6 +993,7 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 
 	refreshDisplay()
 	triggerCallbacks()
+	refreshChat()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
