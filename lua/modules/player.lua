@@ -79,7 +79,7 @@ local ShowHandle = function(player)
 		t.Physics = PhysicsMode.Disabled
 		t.CollisionGroups = {}
 		t.CollidesWithGroups = {}
-		t.MaxDistance = Camera.Far + 100
+		t.MaxDistance = Camera.Far * 0.2
 
 		t.Anchor = { 0.5, 0.5 }
 		-- t.Type = TextType.Screen
@@ -87,6 +87,24 @@ local ShowHandle = function(player)
 		privateFields.handle = t
 
 		t.LocalPosition = { 0, playerHeight(player) + 4, 0 }
+	end
+end
+
+local HideHandle = function(player)
+	if type(player) ~= "Player" then
+		error("Player:HideHandle should be called with `:`", 2)
+	end
+
+	local privateFields = privateFields[player]
+	if privateFields == nil then
+		-- privateFields not supposed to be nil here
+		error("Player - internal error")
+		return
+	end
+
+	if privateFields.handle ~= nil then
+		privateFields.handle:RemoveFromParent()
+		privateFields.handle = nil
 	end
 end
 
@@ -558,6 +576,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	mt.SwingLeft = SwingLeft
 	mt.SwingRight = SwingRight
 	mt.ShowHandle = ShowHandle
+	mt.HideHandle = HideHandle
 	mt.TextBubble = TextBubble
 
 	mt.__type = 2 -- ITEM_TYPE_PLAYER in engine
@@ -582,6 +601,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			or k == "SwingRight"
 			or k == "CastRay"
 			or k == "ShowHandle"
+			or k == "HideHandle"
 			or k == "TextBubble"
 		then
 			return mt[k]
