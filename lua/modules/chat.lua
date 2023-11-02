@@ -108,9 +108,11 @@ local playerSendMessage = function(message)
 	-- check if command
 	local channelCommand = string.sub(message, 1, 3)
 	local channelCommandDev = string.sub(message, 1, 4)
-	if not Dev.CanRunCommands and (channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w ")
-		or Dev.CanRunCommands and (channelCommandDev == "//a " or channelCommandDev == "//l " or channelCommandDev == "//w ") then
-
+	if
+		not Dev.CanRunCommands and (channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w ")
+		or Dev.CanRunCommands
+			and (channelCommandDev == "//a " or channelCommandDev == "//l " or channelCommandDev == "//w ")
+	then
 		local channel = Dev.CanRunCommands and string.sub(message, 3, 3) or string.sub(message, 2, 2)
 		channelType = commandsToChannel[channel]
 		message = Dev.CanRunCommands and string.sub(message, 5, #message) or string.sub(message, 4, #message)
