@@ -15,9 +15,6 @@ local particles = {
 		else
 			return default
 		end
-	end,
-	lerp = function(a, b, w)
-		return a + (b-a)*w
 	end
 }
 
@@ -85,7 +82,7 @@ particles.newEmitter = function(_, config)
 			World:AddChild(p)
 
 			p.Tick = function(s, dt)
-				s.Scale = particles.lerp(s.startScale, s.endScale, 1-(s.life/s.startLife))
+				s.Scale:Lerp(s.startScale, s.endScale, 1-(s.life/s.startLife))
 				
 				s.life = s.life - dt
 				if s.life <= 0 then
