@@ -20,35 +20,16 @@ local OBJECTS_COLLISION_GROUP = 7
 local ALPHA_ON_DRAG = 0.6
 
 local getObjectInfoTable = function(obj)
-	local physics = "SPB"
-	if obj.Physics == PhysicsMode.StaticPerBlock then physics = "SPB" end
-	if obj.Physics == PhysicsMode.Dynamic then physics = "D" end
-	if obj.Physics == PhysicsMode.Disabled then physics = "DIS" end
-
-	local position = obj.Position and { obj.Position.X, obj.Position.Y, obj.Position.Z } or { 0, 0, 0 }
-	local rotation = obj.Rotation and { obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z } or { 0, 0, 0 }
-	local scale = obj.Scale and { obj.Scale.X, obj.Scale.Y, obj.Scale.Z } or { 1, 1, 1 }
-
 	return {
 		uuid = obj.uuid,
 		fullname = obj.fullname,
-		Position = position,
-		Rotation = rotation,
-		Scale = scale,
+		Position = obj.Position or Number3(0, 0, 0),
+		Rotation = obj.Rotation or Number3(0, 0, 0),
+		Scale = obj.Scale or Number3(1, 1, 1),
 		Name = obj.Name,
 		itemDetailsCell = obj.itemDetailsCell,
-		Physics = physics
+		Physics = obj.Physics or PhysicsMode.StaticPerBlock
 	}
-end
-
-function escapeJson(jsonStr)
-	local escapedJsonStr = jsonStr:gsub('"', '\\"')
-	return escapedJsonStr
-end
-
-function unescapeJson(jsonStr)
-	local unescapedJsonStr = jsonStr:gsub('\\"', '"')
-	return unescapedJsonStr
 end
 
 -- multiplayer
@@ -131,22 +112,16 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
 			o.Physics = PhysicsMode.Disabled
 		end)
-		if syncMulti then
-			sendToServer(events.P_EDIT_OBJECT, {
-				uuid = obj.uuid,
-				Physics = "D"
-			})
-		end
 	else
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 			o.Physics = physicsMode
 		end)
-		if syncMulti then
-			sendToServer(events.P_EDIT_OBJECT, {
-				uuid = obj.uuid,
-				Physics = physicsMode == PhysicsMode.Disabled and "DIS" or "S"
-			})
-		end
+	end
+	if syncMulti then
+		sendToServer(events.P_EDIT_OBJECT, {
+			uuid = obj.uuid,
+			Physics = physicsMode
+		})
 	end
 end
 
@@ -206,9 +181,6 @@ local spawnObject = function(data, onDone)
 	local rotation = data.Rotation or Rotation(0,0,0)
 	local scale = data.Scale or 0.5
 	local itemDetailsCell = data.itemDetailsCell
-	if data.Physics == "SPB" then data.Physics = PhysicsMode.StaticPerBlock end
-	if data.Physics == "D" then data.Physics = PhysicsMode.Dynamic end
-	if data.Physics == "DIS" then data.Physics = PhysicsMode.Disabled end
 	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
 	Object:Load(fullname, function(obj)
@@ -252,15 +224,7 @@ local editObject = function(objInfo)
 	end
 
 	for field,value in pairs(objInfo) do
-		if field == "Physics" then
-			if value == "D" then
-				setObjectPhysicsMode(obj, PhysicsMode.Dynamic, false)
-			else
-				setObjectPhysicsMode(obj, value == "DIS" and PhysicsMode.Disabled or PhysicsMode.StaticPerBlock, false)
-			end
-		else
-			obj[field] = value
-		end
+		obj[field] = value
 	end
 
 	local alpha = objInfo.alpha
@@ -478,8 +442,34 @@ local statesSettings = {
 	-- UPDATING_OBJECT
 	{
 		onStateBegin = function(obj)
-			if obj.uuid == -1 then return end
-			sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
+			if obj.uuid ~= -1 then
+				sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
+			end
+			obj.currentlyEditedBy = Player
+			worldEditor.object = obj
+			-- require("box_gizmo").onScaleChange = function(_, newScale)
+			-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Scale = newScale })
+			-- end
+			-- require("box_gizmo"):setGizmoMode("scale")
+			-- require("box_gizmo"):toggle(obj, Color.White)
+			worldEditor.nameInput.Text = obj.Name
+			worldEditor.nameInput.onTextChange = function(o)
+				worldEditor.object.Name = o.Text
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
+			end
+			worldEditor.infoBtn.onRelease = function()
+				local cell = worldEditor.object.itemDetailsCell
+				require("item_details"):createModal({ cell = cell })
+			end
+			worldEditor.updateObjectUI:show()
+
+			local currentScale = obj.Scale:Copy()
+			require("ease"):inOutQuad(obj, 0.15).Scale = currentScale * 1.1
+			Timer(0.15, function()
+				require("ease"):inOutQuad(obj, 0.15).Scale = currentScale
+			end)
+			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
+			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 		end,
 		onStateEnd = function()
 			worldEditor.updateObjectUI:hide()
@@ -784,8 +774,7 @@ init = function()
 		end
 		loadBtn:parentDidResize()
 		loadBtn.onRelease = function()
-			local json = JSON:Decode(unescapeJson(loadInput.Text))
-			sendToServer(events.P_LOAD_WORLD, json)
+			sendToServer(events.P_LOAD_WORLD, { base64world = loadInput.Text })
 		end
 	end
 
@@ -962,7 +951,6 @@ initDefaultMode = function()
 		{ type="button", text="↻", callback = function()
 			worldEditor.object:TextBubble("Mouse wheel: rotate object on Y axis.")
 		end },
-		{ type="button", text="⇱", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
 		{ type="separator" },
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
@@ -1058,10 +1046,11 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		end)
 	elseif e.a == events.SYNC then
 		if state == states.PREPARING then -- joining
-			loadMap(data.mapName, function()
+			local t = Data(data, { format = "base64" }):ToTable()
+			loadMap(t.mapName, function()
 				setState(states.DEFAULT)
-				if data.blocks then
-					local blocks = data.blocks
+				local blocks = t.blocks
+				if blocks then
 					for _,d in ipairs(blocks) do
 						local k = d[1]
 						local color = d[2]
@@ -1076,14 +1065,14 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 						end
 					end
 				end
-				if data.objects then
-					for _,objInfo in ipairs(data.objects) do
+				if t.objects then
+					for _,objInfo in ipairs(t.objects) do
 						objInfo.currentlyEditedBy = nil
 						spawnObject(objInfo)
 					end
 				end
-				if data.ambience then
-					require("ui_ai_ambience"):setFromAIConfig(data.ambience)
+				if t.ambience then
+					require("ui_ai_ambience"):setFromAIConfig(t.ambience)
 				end
 			end)
 		end
@@ -1109,32 +1098,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		removeObject(data)
 	elseif e.a == events.START_EDIT_OBJECT then
 		local obj = objects[data.uuid]
-		if not obj then return end
+		if not obj or isLocalPlayer then return end
 		obj.currentlyEditedBy = sender
 		if obj.trail then
 			obj.trail:remove()
 		end
 		obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
-		if isLocalPlayer then
-			worldEditor.object = obj
-			worldEditor.nameInput.Text = obj.Name
-			worldEditor.nameInput.onTextChange = function(o)
-				worldEditor.object.Name = o.Text
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
-			end
-			worldEditor.infoBtn.onRelease = function()
-				local cell = worldEditor.object.itemDetailsCell
-				require("item_details"):createModal({ cell = cell })
-			end
-			worldEditor.updateObjectUI:show()
-
-			local currentScale = obj.Scale:Copy()
-			require("ease"):inOutQuad(obj, 0.15).Scale = currentScale * 1.1
-			Timer(0.15, function()
-				require("ease"):inOutQuad(obj, 0.15).Scale = currentScale
-			end)
-			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
-		end
 	elseif e.a == events.END_EDIT_OBJECT then
 		local obj = objects[data.uuid]
 		if not obj then
@@ -1169,8 +1138,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
 		require("ui_ai_ambience"):setFromAIConfig(data)
 	elseif e.a == events.EXPORT_WORLD then
-		local serializedWorld = escapeJson(JSON:Encode(data.world))
-		Dev:CopyToClipboard(serializedWorld)
+		Dev:CopyToClipboard(data.base64world)
 
 		local exportBtn = worldEditor.exportBtn
 		exportBtn.Text = "Copied!"
