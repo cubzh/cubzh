@@ -11,9 +11,10 @@ UI module used to implement default user interfaces in Cubzh.
 ----------------------
 
 UI_FAR = 1000
-UI_LAYER = 2
-UI_LAYER_SYSTEM = 13
-UI_COLLISION_GROUP = 7
+UI_LAYER = 13
+UI_LAYER_SYSTEM = 14
+UI_COLLISION_GROUP = 13
+UI_COLLISION_GROUP_SYSTEM = 14
 UI_SHAPE_SCALE = 5
 LAYER_STEP = -0.1 -- children offset
 BUTTON_PADDING = 4
@@ -105,8 +106,28 @@ function createUI(system)
 		if system == true then
 			System:SetLayersElevated(object, UI_LAYER_SYSTEM)
 		else
-			object.Layers = UI_LAYER
+			System:SetLayersElevated(object, UI_LAYER)
 		end
+	end
+
+	local function _setCollisionGroups(object)
+		if system == true then
+			System:SetCollisionGroupsElevated(object, UI_COLLISION_GROUP_SYSTEM)
+		else
+			System:SetCollisionGroupsElevated(object, UI_COLLISION_GROUP)
+		end
+	end
+
+	local _groups
+	local function _getCollisionGroups()
+		if _groups == nil then
+			if system == true then
+				_groups = System:GetGroupsElevated({ UI_COLLISION_GROUP_SYSTEM })
+			else
+				_groups = System:GetGroupsElevated({ UI_COLLISION_GROUP })
+			end
+		end
+		return _groups
 	end
 
 	----------------------
@@ -149,7 +170,7 @@ function createUI(system)
 
 		if collides and object.Width ~= nil and object.Height ~= nil then
 			object.Physics = PhysicsMode.Trigger
-			object.CollisionGroups = { UI_COLLISION_GROUP }
+			_setCollisionGroups(object)
 			object.CollisionBox = Box({ 0, 0, 0 }, { object.Width, object.Height, 0.1 })
 		end
 	end
@@ -544,7 +565,7 @@ function createUI(system)
 					end
 				elseif v ~= nil then
 					background.Physics = PhysicsMode.Trigger
-					background.CollisionGroups = { UI_COLLISION_GROUP }
+					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 					t._onPress = function()
 						if v ~= nil then
@@ -577,7 +598,7 @@ function createUI(system)
 					end
 				elseif v ~= nil then
 					background.Physics = PhysicsMode.Trigger
-					background.CollisionGroups = { UI_COLLISION_GROUP }
+					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 					t._onRelease = function()
 						if v ~= nil then
@@ -1323,7 +1344,7 @@ function createUI(system)
 			end
 			if b then
 				self.shape.Physics = PhysicsMode.TriggerPerBlock
-				self.shape.CollisionGroups = { UI_COLLISION_GROUP }
+				_setCollisionGroups(self.shape)
 			else
 				self.shape.Physics = PhysicsMode.Disabled
 				self.shape.CollisionGroups = {}
@@ -2445,7 +2466,7 @@ function createUI(system)
 			focused = nil
 		end
 
-		local impact = Ray(origin, direction):Cast({ UI_COLLISION_GROUP })
+		local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 		local hitObject = impact.Shape or impact.Object
 		if hitObject._node._onPress or hitObject._node._onRelease then
 			pressed = hitObject._node
@@ -2485,7 +2506,7 @@ function createUI(system)
 			local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 			local direction = { 0, 0, 1 }
 
-			local impact = Ray(origin, direction):Cast({ UI_COLLISION_GROUP })
+			local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 			local hitObject = impact.Shape or impact.Object
 			if hitObject._node == pressed and hitObject._node._onRelease then
 				pressed:_onRelease(hitObject, impact.Block)
