@@ -2427,7 +2427,7 @@ function createUI(system)
 				child:parentDidResize()
 			end
 		end
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	pointerDownListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pointerEvent)
 		if pointerIndex ~= nil then
@@ -2473,7 +2473,7 @@ function createUI(system)
 			pointerIndex = pointerEvent.Index
 			return true -- capture event, other listeners won't get it
 		end
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	pointerUpListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointerEvent)
 		if pointerIndex == nil or pointerIndex ~= pointerEvent.Index then
@@ -2500,7 +2500,7 @@ function createUI(system)
 			return true
 		end
 		pressed = nil
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pointerEvent)
 		if pointerIndex == nil or pointerIndex ~= pointerEvent.Index then
@@ -2527,7 +2527,7 @@ function createUI(system)
 				return true -- capture only if onDrag is set on the node
 			end
 		end
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	-- TODO: PointerCancel
 	-- TODO: PointerMove
