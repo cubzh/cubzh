@@ -388,9 +388,6 @@ chatBtn.onRelease = function()
 	else
 		chatDisplayed = not chatDisplayed
 		refreshChat()
-		if console then
-			console:focus()
-		end
 	end
 end
 

@@ -479,7 +479,6 @@ local createModalContent = function(_, config)
 	content.node = createChat(nil, config)
 	content.title = "Chat"
 	content.icon = "💬"
-	content.node:focus()
 
 	return content
 end
