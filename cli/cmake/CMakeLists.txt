@@ -28,9 +28,11 @@ message("CZH_ARCH: " ${CZH_ARCH})
 # --------------------------------------------------
 
 # CZH_ROOT_DIR: Git repo root directory
-# file(REAL_PATH "../.." CZH_ROOT_DIR) # relative to ${CMAKE_CURRENT_SOURCE_DIR}
 # message("CZH_ROOT_DIR: " ${CZH_ROOT_DIR})
 set(CZH_ROOT_DIR "/cubzh")
+if (NOT EXISTS ${CZH_ROOT_DIR})
+    file(REAL_PATH "../.." CZH_ROOT_DIR) # relative to ${CMAKE_CURRENT_SOURCE_DIR}
+endif()
 
 # CZH_CORE_DIR: core directory
 # file(REAL_PATH "./core" CZH_CORE_DIR BASE_DIRECTORY ${CZH_ROOT_DIR})
