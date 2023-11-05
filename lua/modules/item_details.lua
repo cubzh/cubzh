@@ -293,8 +293,8 @@ itemDetails.createModalContent = function(_, config)
 				local likeBtn = self.likeBtn
 				likeBtn.Text = "❤️ " .. math.floor(likes) -- force integer format
 				self.liked = item.liked
-				self.originalLiked = item.liked
-				self.originalLikes = item.likes
+				self.originalLiked = item.liked or false
+				self.originalLikes = item.likes or 0
 				if item.liked == true and likeBtn.setColor then
 					likeBtn:setColor(theme.colorPositive)
 				end
@@ -532,7 +532,6 @@ itemDetails.createModalContent = function(_, config)
 			self.description.LocalPosition.Y = self.descriptionArea.Height - self.description.Height - theme.padding
 
 			copyNameBtn.pos.Y = self.descriptionArea.pos.Y - copyNameBtn.Height - theme.padding
-
 		else -- landscape
 			-- min width to display details, buttons, etc.
 			-- remaining width can be used for the preview
