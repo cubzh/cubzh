@@ -227,7 +227,9 @@ function createUI(system)
 
 			-- displaying shapes at mid camera far distance
 			-- to decrease chances of clipping. This is not ideal...
-			attr.object.LocalPosition.Z = -UI_FAR * 0.5
+			-- 0.45 instead of 0.5 to let room for alerts in front
+			-- (quick fix for shapes clipping with alert background)
+			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
 		if self.parentDidResize then
