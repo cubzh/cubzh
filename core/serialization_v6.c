@@ -954,15 +954,15 @@ uint32_t chunk_v6_read_shape(Stream *s,
             case P3S_CHUNK_ID_SHAPE_NAME: {
                 uint8_t nameLen;
                 memcpy(&nameLen, cursor, sizeof(uint8_t));
+                cursor = (void *)((uint8_t *)cursor + 1);
                 name = malloc(nameLen + 1);
                 if (name == NULL) {
                     cclog_error("malloc failed");
-                    // TODO: handle error
-                    // (if `nameStr` is NULL, we cannot let the function continue)
+                } else {
+                    memcpy(name, cursor, sizeof(char) * nameLen);
+                    name[nameLen] = 0;
                 }
-                cursor = (void *)((uint8_t *)cursor + 1);
-                memcpy(name, cursor, sizeof(char) * nameLen);
-                name[nameLen] = 0;
+                cursor = (void *)((uint8_t *)cursor + nameLen);
                 totalSizeRead += (uint32_t)(sizeof(uint8_t) + sizeof(char) * nameLen);
                 break;
             }
@@ -1014,11 +1014,10 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 nameStr = (char *)malloc(nameLen + 1); // +1 for null terminator
                 if (nameStr == NULL) {
                     cclog_error("malloc failed");
-                    // TODO: handle error
-                    // (if `nameStr` is NULL, we cannot let the function continue)
+                } else {
+                    memcpy(nameStr, cursor, nameLen); // shape POI name
+                    nameStr[nameLen] = 0;             // add null terminator
                 }
-                memcpy(nameStr, cursor, nameLen); // shape POI name
-                nameStr[nameLen] = 0;             // add null terminator
                 cursor = (void *)((char *)cursor + nameLen);
 
                 memcpy(&(poi->x), cursor, sizeof(float)); // shape POI X
@@ -1030,8 +1029,10 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 memcpy(&(poi->z), cursor, sizeof(float)); // shape POI Z
                 cursor = (void *)((float *)cursor + 1);
 
-                map_string_float3_set_key_value(pois, nameStr, poi);
-                free(nameStr);
+                if (nameStr != NULL) {
+                    map_string_float3_set_key_value(pois, nameStr, poi);
+                    free(nameStr);
+                }
 
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
@@ -1049,11 +1050,11 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
                 nameStr = (char *)malloc(nameLen + 1); // +1 for null terminator
                 if (nameStr == NULL) {
-                    totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
-                    continue;
+                    cclog_error("malloc failed");
+                } else {
+                    memcpy(nameStr, cursor, nameLen); // shape POI name
+                    nameStr[nameLen] = 0;             // add null terminator
                 }
-                memcpy(nameStr, cursor, nameLen); // shape POI name
-                nameStr[nameLen] = 0;             // add null terminator
                 cursor = (void *)((char *)cursor + nameLen);
 
                 memcpy(&(poi->x), cursor, sizeof(float)); // shape POI X
@@ -1065,8 +1066,10 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 memcpy(&(poi->z), cursor, sizeof(float)); // shape POI Z
                 cursor = (void *)((float *)cursor + 1);
 
-                map_string_float3_set_key_value(pois_rotation, nameStr, poi);
-                free(nameStr);
+                if (nameStr != NULL) {
+                    map_string_float3_set_key_value(pois_rotation, nameStr, poi);
+                    free(nameStr);
+                }
 
                 totalSizeRead += sizeRead + (uint32_t)sizeof(uint32_t);
                 break;
@@ -1243,6 +1246,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
 
     if (name != NULL) {
         transform_set_name(shape_get_root_transform(*shape), name);
+        free(name);
     }
 
     if (hasCustomCollisionBox) {
