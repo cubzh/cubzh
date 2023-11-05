@@ -1766,7 +1766,9 @@ function createUI(system)
 
 		node.onFocus = nil
 		node.onFocusLost = nil
-		node.onSubmit = nil
+		node.onSubmit = function()
+			node:_unfocus() -- onfocus by default on submit
+		end
 		node.onUp = nil
 		node.onDown = nil
 
