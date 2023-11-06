@@ -1174,7 +1174,7 @@ function showSignUp(callbacks)
 		}
 	end
 
-	local signupModal = require("signup"):createModal()
+	local signupModal = require("signup"):createModal({ uikit = ui })
 
 	signupElements = { signupModal, helpBtn, loginBtn, signupModal.terms }
 
