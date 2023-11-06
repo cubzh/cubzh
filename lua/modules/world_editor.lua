@@ -784,7 +784,7 @@ init = function()
 		mapName = fullname
 		Object:Load(fullname, function(obj)
 			if map then map:RemoveFromParent() end
-			map = MutableShape(obj)
+			map = MutableShape(obj, { includeChildren = true })
 			map.Scale = 5
 			map.CollisionGroups = Map.CollisionGroups
 			map.CollidesWithGroups = Map.CollidesWithGroups
@@ -951,6 +951,7 @@ initDefaultMode = function()
 		{ type="button", text="↻", callback = function()
 			worldEditor.object:TextBubble("Mouse wheel: rotate object on Y axis.")
 		end },
+		-- { type="button", text="⇢", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
 		{ type="separator" },
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
