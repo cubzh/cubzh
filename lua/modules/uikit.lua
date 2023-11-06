@@ -11,9 +11,10 @@ UI module used to implement default user interfaces in Cubzh.
 ----------------------
 
 UI_FAR = 1000
-UI_LAYER = 2
+UI_LAYER = 12
 UI_LAYER_SYSTEM = 13
-UI_COLLISION_GROUP = 7
+UI_COLLISION_GROUP = 12
+UI_COLLISION_GROUP_SYSTEM = 13
 UI_SHAPE_SCALE = 5
 LAYER_STEP = -0.1 -- children offset
 BUTTON_PADDING = 4
@@ -50,10 +51,43 @@ sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
 
+sharedUI = nil
+sharedUIRootFrame = nil
+
+systemUI = nil
+systemUIRootFrame = nil
+
+keyboardToolbar = nil
+
 -- Using global to keep reference on focused node because
 -- local within createUI conflicts between both uikit instances.
 -- We could not find a better solution yet.
 focused = nil
+
+-- focused combo box
+comboBoxSelector = nil
+
+function focus(node)
+	if focused ~= nil then
+		if focused == node then
+			return
+		end
+		if focused._unfocus ~= nil then
+			focused:_unfocus()
+		end
+		focused = nil
+	end
+	focused = node
+
+	if comboBoxSelector ~= nil then
+		if comboBoxSelector.close ~= nil then
+			comboBoxSelector:close()
+			comboBoxSelector = nil
+		end
+	end
+
+	applyVirtualKeyboardOffset()
+end
 
 -- by default, require("uikit") returns one ui instance,
 -- calling this function.
@@ -72,10 +106,6 @@ function createUI(system)
 	----------------------
 
 	local rootChildren = {}
-
-	-- Node with focus (not all nodes are focusable)
-	--local focused = nil
-	local comboBoxSelector = nil
 
 	-- The pointer index that's currently being used to interract with the UI.
 	-- UI won't accept other pointer down events while this is not nil.
@@ -105,8 +135,28 @@ function createUI(system)
 		if system == true then
 			System:SetLayersElevated(object, UI_LAYER_SYSTEM)
 		else
-			object.Layers = UI_LAYER
+			System:SetLayersElevated(object, UI_LAYER)
 		end
+	end
+
+	local function _setCollisionGroups(object)
+		if system == true then
+			System:SetCollisionGroupsElevated(object, UI_COLLISION_GROUP_SYSTEM)
+		else
+			System:SetCollisionGroupsElevated(object, UI_COLLISION_GROUP)
+		end
+	end
+
+	local _groups
+	local function _getCollisionGroups()
+		if _groups == nil then
+			if system == true then
+				_groups = System:GetGroupsElevated({ UI_COLLISION_GROUP_SYSTEM })
+			else
+				_groups = System:GetGroupsElevated({ UI_COLLISION_GROUP })
+			end
+		end
+		return _groups
 	end
 
 	----------------------
@@ -127,6 +177,12 @@ function createUI(system)
 
 	-- Top level object, containing all UI nodes
 	local rootFrame = Object()
+	if system == true then
+		systemUIRootFrame = rootFrame
+	else
+		sharedUIRootFrame = rootFrame
+	end
+
 	rootFrame:SetParent(World)
 	rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR }
 
@@ -149,7 +205,7 @@ function createUI(system)
 
 		if collides and object.Width ~= nil and object.Height ~= nil then
 			object.Physics = PhysicsMode.Trigger
-			object.CollisionGroups = { UI_COLLISION_GROUP }
+			_setCollisionGroups(object)
 			object.CollisionBox = Box({ 0, 0, 0 }, { object.Width, object.Height, 0.1 })
 		end
 	end
@@ -206,7 +262,9 @@ function createUI(system)
 
 			-- displaying shapes at mid camera far distance
 			-- to decrease chances of clipping. This is not ideal...
-			attr.object.LocalPosition.Z = -UI_FAR * 0.5
+			-- 0.45 instead of 0.5 to let room for alerts in front
+			-- (quick fix for shapes clipping with alert background)
+			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
 		if self.parentDidResize then
@@ -246,10 +304,7 @@ function createUI(system)
 		end
 
 		if focused == t then
-			if focused._unfocus ~= nil then
-				focused:_unfocus()
-			end
-			focused = nil
+			focus(nil)
 		end
 
 		if t.object then
@@ -544,7 +599,7 @@ function createUI(system)
 					end
 				elseif v ~= nil then
 					background.Physics = PhysicsMode.Trigger
-					background.CollisionGroups = { UI_COLLISION_GROUP }
+					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 					t._onPress = function()
 						if v ~= nil then
@@ -577,7 +632,7 @@ function createUI(system)
 					end
 				elseif v ~= nil then
 					background.Physics = PhysicsMode.Trigger
-					background.CollisionGroups = { UI_COLLISION_GROUP }
+					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 					t._onRelease = function()
 						if v ~= nil then
@@ -1148,18 +1203,30 @@ function createUI(system)
 			error("ui:createFrame(color, config): config should be a table", 2)
 		end
 
+		local _config = {
+			unfocuses = false, -- unfocused focused node when true
+			image = nil,
+		}
+
 		local image
 		if config ~= nil and config.image ~= nil then
 			if type(config.image) ~= Type.Data then
 				error("ui:createFrame(color, config): config.image should be a Data instance", 2)
 			end
 			print("image taken into account")
+			_config.image = config.image
 			image = config.image
+		end
+
+		if type(config.unfocuses) == "boolean" then
+			_config.unfocuses = config.unfocuses
 		end
 
 		color = color or Color(0, 0, 0, 0) -- default transparent frame
 		local node = _nodeCreate()
 		node.type = NodeType.Frame
+
+		node.config = _config
 
 		local background = Quad()
 		if image == nil then
@@ -1323,7 +1390,7 @@ function createUI(system)
 			end
 			if b then
 				self.shape.Physics = PhysicsMode.TriggerPerBlock
-				self.shape.CollisionGroups = { UI_COLLISION_GROUP }
+				_setCollisionGroups(self.shape)
 			else
 				self.shape.Physics = PhysicsMode.Disabled
 				self.shape.CollisionGroups = {}
@@ -1481,6 +1548,17 @@ function createUI(system)
 		return node
 	end
 
+	function _textInputTextDidChange(textInput)
+		if textInput.hiddenString then
+			textInput.hiddenString.Text = string.rep("*", #textInput.Text)
+		end
+
+		if textInput.onTextChange then
+			textInput:onTextChange()
+		end
+		textInput:_refresh()
+	end
+
 	-- ui:createTextInput(<string>, <placeholder>, <size>)
 	ui.createTextInput = function(self, str, placeholder, configOrSize) -- "default" (default), "small", "big"
 		local _config = {
@@ -1592,15 +1670,7 @@ function createUI(system)
 
 		node._setText = function(self, str)
 			self.string.Text = str
-
-			if self.hiddenString then
-				self.hiddenString.Text = string.rep("*", #str)
-			end
-
-			if self.onTextChange then
-				self:onTextChange()
-			end
-			self:_refresh()
+			_textInputTextDidChange(self)
 		end
 
 		node._color = function(self)
@@ -1743,7 +1813,9 @@ function createUI(system)
 
 		node.onFocus = nil
 		node.onFocusLost = nil
-		node.onSubmit = nil
+		node.onSubmit = function()
+			node:_unfocus() -- onfocus by default on submit
+		end
 		node.onUp = nil
 		node.onDown = nil
 
@@ -1757,7 +1829,8 @@ function createUI(system)
 				return
 			end
 			self.state = State.Focused
-			focused = self
+
+			focus(self)
 
 			_textInputRefreshColor(self)
 			self:_refresh()
@@ -1843,15 +1916,7 @@ function createUI(system)
 					end
 
 					if textDidChange then
-						if self.hiddenString then
-							self.hiddenString.Text = string.rep("*", #self.string.Text)
-						end
-
-						self:_refresh()
-
-						if self.onTextChange then
-							self:onTextChange()
-						end
+						_textInputTextDidChange(self)
 					end
 
 					return true -- capture event
@@ -1864,18 +1929,20 @@ function createUI(system)
 
 			self.dt = 0
 			self.cursor.shown = true
-			self.object.Tick = function(_, dt)
-				if not self.dt then
-					return
-				end
-				self.dt = self.dt + dt
-				if self.dt >= theme.textInputCursorBlinkTime then
-					self.dt = self.dt % 0.3
-					self.cursor.shown = not self.cursor.shown
-					local backup = self.contentDidResizeSystem
-					self.contentDidResizeSystem = nil
-					self.cursor.Width = self.cursor.shown and theme.textInputCursorWidth or 0
-					self.contentDidResizeSystem = backup
+			if self.object.Tick == nil then
+				self.object.Tick = function(_, dt)
+					if not self.dt then
+						return
+					end
+					self.dt = self.dt + dt
+					if self.dt >= theme.textInputCursorBlinkTime then
+						self.dt = self.dt % 0.3
+						self.cursor.shown = not self.cursor.shown
+						local backup = self.contentDidResizeSystem
+						self.contentDidResizeSystem = nil
+						self.cursor.Width = self.cursor.shown and theme.textInputCursorWidth or 0
+						self.contentDidResizeSystem = backup
+					end
 				end
 			end
 
@@ -1918,6 +1985,7 @@ function createUI(system)
 			shadow = true,
 			textSize = "default",
 			sound = "button_1",
+			unfocuses = true, -- unfocused focused node when true
 		}
 
 		if config then
@@ -2181,11 +2249,7 @@ function createUI(system)
 			local selector = ui:createFrame(Color(0, 0, 0, 100))
 			selector:setParent(btn.Parent)
 
-			if comboBoxSelector ~= nil then
-				if comboBoxSelector.close ~= nil then
-					comboBoxSelector:close()
-				end
-			end
+			focus(nil)
 			comboBoxSelector = selector
 
 			local frame = ui:createFrame(Color(255, 255, 255))
@@ -2203,7 +2267,7 @@ function createUI(system)
 			local showAbove = false
 
 			for i, choice in ipairs(choices) do
-				local c = ui:createButton(choice, { borders = false, shadow = false })
+				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
 				c:setParent(container)
 
 				local index = i
@@ -2220,14 +2284,14 @@ function createUI(system)
 				table.insert(choiceButtons, c)
 			end
 
-			local down = ui:createButton("⬇️", { borders = true, shadow = false })
+			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
 			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
 			down:setParent(frame)
 			down.pos.Z = -10
 			down:hide()
 			down:disable()
 
-			local up = ui:createButton("⬆️", { borders = true, shadow = false })
+			local up = ui:createButton("⬆️", { borders = true, shadow = false, unfocuses = false })
 			up:setParent(frame)
 			up.pos.Z = -10
 			up:hide()
@@ -2353,43 +2417,6 @@ function createUI(system)
 	-- LISTENERS
 	----------------------
 
-	-- install listeners to adapt ui considering
-	-- virtual keyboard presence.
-	LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown, function(keyboardHeight)
-		if focused ~= nil then
-			local rootPos = focused.pos
-			local parent = focused.parent
-			while parent ~= nil do
-				rootPos = rootPos + parent.pos
-				parent = parent.parent
-			end
-			if rootPos.Y - theme.paddingBig < keyboardHeight then
-				local diff = keyboardHeight - (rootPos.Y - theme.paddingBig)
-				ease:cancel(rootFrame)
-				ease:inOutSine(rootFrame, 0.2).LocalPosition = {
-					-Screen.Width * 0.5,
-					diff - Screen.Height * 0.5,
-					UI_FAR,
-				}
-			end
-		end
-	end, { system = system == true and System or nil })
-
-	LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden, function()
-		if focused ~= nil then
-			if focused._unfocus ~= nil then
-				focused:_unfocus()
-			end
-			focused = nil
-		end
-		ease:cancel(rootFrame)
-		ease:inOutSine(rootFrame, 0.2).LocalPosition = {
-			-Screen.Width * 0.5,
-			-Screen.Height * 0.5,
-			UI_FAR,
-		}
-	end, { system = system == true and System or nil })
-
 	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function(_, _)
 		camera.Width = Screen.Width
 		camera.Height = Screen.Height
@@ -2427,7 +2454,7 @@ function createUI(system)
 				child:parentDidResize()
 			end
 		end
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	pointerDownListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pointerEvent)
 		if pointerIndex ~= nil then
@@ -2438,17 +2465,16 @@ function createUI(system)
 		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 		local direction = { 0, 0, 1 }
 
-		if focused ~= nil then
-			if focused._unfocus ~= nil then
-				focused:_unfocus()
-			end
-			focused = nil
-		end
-
-		local impact = Ray(origin, direction):Cast({ UI_COLLISION_GROUP })
+		local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 		local hitObject = impact.Shape or impact.Object
 		if hitObject._node._onPress or hitObject._node._onRelease then
 			pressed = hitObject._node
+
+			-- unfocus focused node, unless hit node.config.unfocused == false
+			if pressed.config.unfocuses ~= false then
+				focus(nil)
+			end
+
 			if hitObject._node._onPress then
 				local pressed = pressed
 				local pressedX = pressed.pos.X
@@ -2473,7 +2499,7 @@ function createUI(system)
 			pointerIndex = pointerEvent.Index
 			return true -- capture event, other listeners won't get it
 		end
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	pointerUpListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointerEvent)
 		if pointerIndex == nil or pointerIndex ~= pointerEvent.Index then
@@ -2485,7 +2511,7 @@ function createUI(system)
 			local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 			local direction = { 0, 0, 1 }
 
-			local impact = Ray(origin, direction):Cast({ UI_COLLISION_GROUP })
+			local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 			local hitObject = impact.Shape or impact.Object
 			if hitObject._node == pressed and hitObject._node._onRelease then
 				pressed:_onRelease(hitObject, impact.Block)
@@ -2500,7 +2526,7 @@ function createUI(system)
 			return true
 		end
 		pressed = nil
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pointerEvent)
 		if pointerIndex == nil or pointerIndex ~= pointerEvent.Index then
@@ -2527,7 +2553,7 @@ function createUI(system)
 				return true -- capture only if onDrag is set on the node
 			end
 		end
-	end, { system = system == true and System or nil })
+	end, { system = system == true and System or nil, topPriority = true })
 
 	-- TODO: PointerCancel
 	-- TODO: PointerMove
@@ -2562,6 +2588,180 @@ function createUI(system)
 
 	return ui
 end
+
+-- SHARED LISTENERS (for both shared an system UIs)
+
+currentKeyboardHeight = nil
+
+function applyVirtualKeyboardOffset()
+	if currentKeyboardHeight == nil then
+		return
+	end
+	if focused ~= nil then
+		local ui = sharedUI.systemUI(System)
+
+		-- rootPos: absolute position of focused component
+		local rootPos = focused.pos
+		local parent = focused.parent
+
+		while parent ~= nil do
+			rootPos = rootPos + parent.pos
+			parent = parent.parent
+		end
+
+		local toolbarHeight
+
+		if keyboardToolbar == nil then
+			keyboardToolbar = ui:createFrame(theme.modalTopBarColor)
+			keyboardToolbar.onPress = function() end -- blocker
+
+			local cutBtn = ui:createButton("✂️", { unfocuses = false })
+			cutBtn:setParent(keyboardToolbar)
+			cutBtn.onRelease = function()
+				if focused.Text ~= nil then
+					Dev:CopyToClipboard(focused.Text)
+					focused.Text = ""
+				end
+			end
+
+			local copyBtn = ui:createButton("📑", { unfocuses = false })
+			copyBtn:setParent(keyboardToolbar)
+			copyBtn.onRelease = function()
+				if focused.Text ~= nil then
+					Dev:CopyToClipboard(focused.Text)
+				end
+			end
+
+			local pasteBtn = ui:createButton("📋", { unfocuses = false })
+			pasteBtn:setParent(keyboardToolbar)
+			pasteBtn.onRelease = function()
+				local s = System:GetFromClipboard()
+				if s ~= "" and focused.Text ~= nil then
+					focused.Text = focused.Text .. s
+				end
+			end
+
+			-- local undoBtn = ui:createButton("↪️", { unfocuses = false })
+			-- undoBtn:setParent(keyboardToolbar)
+
+			-- local redoBtn = ui:createButton("↩️", { unfocuses = false })
+			-- redoBtn:setParent(keyboardToolbar)
+
+			local closeBtn = ui:createButton("⬇️", { unfocuses = false })
+			closeBtn:setParent(keyboardToolbar)
+			closeBtn.onRelease = function()
+				focus(nil)
+			end
+
+			keyboardToolbar.cutBtn = cutBtn
+			keyboardToolbar.copyBtn = copyBtn
+			keyboardToolbar.pasteBtn = pasteBtn
+			-- keyboardToolbar.undoBtn = undoBtn
+			-- keyboardToolbar.redoBtn = redoBtn
+			keyboardToolbar.closeBtn = closeBtn
+		end
+
+		keyboardToolbar.Width = Screen.Width
+		keyboardToolbar.Height = keyboardToolbar.cutBtn.Height + theme.paddingTiny * 2
+		toolbarHeight = keyboardToolbar.Height
+
+		local diff = 0
+
+		local bottomLine = currentKeyboardHeight + toolbarHeight + theme.paddingBig
+
+		if rootPos.Y < bottomLine then
+			diff = bottomLine - rootPos.Y
+
+			if systemUIRootFrame then
+				ease:cancel(systemUIRootFrame)
+				ease:inOutSine(systemUIRootFrame, 0.2).LocalPosition = {
+					-Screen.Width * 0.5,
+					-Screen.Height * 0.5 + diff,
+					UI_FAR,
+				}
+			end
+
+			if sharedUIRootFrame then
+				ease:cancel(sharedUIRootFrame)
+				ease:inOutSine(sharedUIRootFrame, 0.2).LocalPosition = {
+					-Screen.Width * 0.5,
+					-Screen.Height * 0.5 + diff,
+					UI_FAR,
+				}
+			end
+		end
+
+		if keyboardToolbar ~= nil then
+			keyboardToolbar.cutBtn.pos.X = Screen.SafeArea.Left + theme.padding
+			keyboardToolbar.cutBtn.pos.Y = theme.paddingTiny
+
+			keyboardToolbar.copyBtn.pos.X = keyboardToolbar.cutBtn.pos.X
+				+ keyboardToolbar.cutBtn.Width
+				+ theme.paddingTiny
+			keyboardToolbar.copyBtn.pos.Y = theme.paddingTiny
+
+			keyboardToolbar.pasteBtn.pos.X = keyboardToolbar.copyBtn.pos.X
+				+ keyboardToolbar.copyBtn.Width
+				+ theme.paddingTiny
+			keyboardToolbar.pasteBtn.pos.Y = theme.paddingTiny
+
+			-- keyboardToolbar.undoBtn.pos.X = keyboardToolbar.pasteBtn.pos.X
+			-- 	+ keyboardToolbar.pasteBtn.Width
+			-- 	+ theme.padding
+			-- keyboardToolbar.undoBtn.pos.Y = theme.paddingTiny
+
+			-- keyboardToolbar.redoBtn.pos.X = keyboardToolbar.undoBtn.pos.X
+			-- 	+ keyboardToolbar.undoBtn.Width
+			-- 	+ theme.paddingTiny
+			-- keyboardToolbar.redoBtn.pos.Y = theme.paddingTiny
+
+			keyboardToolbar.closeBtn.pos.X = Screen.Width
+				- Screen.SafeArea.Right
+				- keyboardToolbar.closeBtn.Width
+				- theme.padding
+			keyboardToolbar.closeBtn.pos.Y = theme.paddingTiny
+
+			keyboardToolbar.pos.Z = -UI_FAR + 2
+			keyboardToolbar.pos.Y = currentKeyboardHeight - diff
+		end
+	end
+end
+
+-- listeners to adapt ui considering virtual keyboard presence.
+LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardShown, function(keyboardHeight)
+	currentKeyboardHeight = keyboardHeight
+	applyVirtualKeyboardOffset()
+end, { system = System })
+
+LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden, function()
+	focus(nil)
+	currentKeyboardHeight = nil
+
+	if systemUIRootFrame then
+		ease:cancel(systemUIRootFrame)
+		ease:inOutSine(systemUIRootFrame, 0.2).LocalPosition = {
+			-Screen.Width * 0.5,
+			-Screen.Height * 0.5,
+			UI_FAR,
+		}
+	end
+
+	if sharedUIRootFrame then
+		ease:cancel(sharedUIRootFrame)
+		ease:inOutSine(sharedUIRootFrame, 0.2).LocalPosition = {
+			-Screen.Width * 0.5,
+			-Screen.Height * 0.5,
+			UI_FAR,
+		}
+	end
+
+	if keyboardToolbar ~= nil then
+		keyboardToolbar:remove()
+		keyboardToolbar = nil
+	end
+end, { system = System })
+
+-- INIT
 
 sharedUI = createUI()
 

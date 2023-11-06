@@ -293,8 +293,8 @@ itemDetails.createModalContent = function(_, config)
 				local likeBtn = self.likeBtn
 				likeBtn.Text = "❤️ " .. math.floor(likes) -- force integer format
 				self.liked = item.liked
-				self.originalLiked = item.liked
-				self.originalLikes = item.likes
+				self.originalLiked = item.liked or false
+				self.originalLikes = item.likes or 0
 				if item.liked == true and likeBtn.setColor then
 					likeBtn:setColor(theme.colorPositive)
 				end
@@ -337,7 +337,7 @@ itemDetails.createModalContent = function(_, config)
 					likeBtn:setColor(theme.buttonColor)
 				end
 
-				local nbLikes = self.originalLikes
+				local nbLikes = self.originalLikes or 0
 				if self.liked ~= self.originalLiked then
 					if self.liked then
 						nbLikes = nbLikes + 1
@@ -532,36 +532,41 @@ itemDetails.createModalContent = function(_, config)
 			self.description.LocalPosition.Y = self.descriptionArea.Height - self.description.Height - theme.padding
 
 			copyNameBtn.pos.Y = self.descriptionArea.pos.Y - copyNameBtn.Height - theme.padding
-		else
+		else -- landscape
 			-- min width to display details, buttons, etc.
 			-- remaining width can be used for the preview
 
+			local detailsWidthRatio = 0.66
+			local detailsWidth = (self.Width - theme.padding) * detailsWidthRatio
+			local previewWidth = self.Width - theme.padding - detailsWidth
+
+			-- total width needed for 1st line of buttons under the preview
 			local w = (likes and likes.Width + theme.padding or 0)
 				+ (likeBtn and likeBtn.Width + theme.padding or 0)
 				+ (signalBtn and signalBtn.Width + theme.padding or 0)
 				+ (commentsBtn and commentsBtn.Width + theme.padding or 0)
 				- theme.padding
 
-			local detailsWidthRatio = 0.66
+			-- height of the 1st line of buttons under the preview
+			local h = math.max(likeBtn and likeBtn.Height or 0, likes and likes.Height or 0, commentsBtn.Height)
+
+			-- Decide whether the comments button will be on its own line.
+			local commentsBtnOnSeparateLine = w > previewWidth
 
 			local availableHeight = self.Height
-			local availableHeightForPreview = availableHeight - copyNameBtn.Height - theme.padding * 2
-			if likeBtn then
-				availableHeightForPreview = availableHeightForPreview - likeBtn.Height
-			elseif likes then
-				availableHeightForPreview = availableHeightForPreview - likes.Height
+			local availableHeightForPreview = availableHeight - copyNameBtn.Height - theme.padding
+			availableHeightForPreview = availableHeightForPreview - h - theme.padding
+
+			if commentsBtn ~= nil and commentsBtnOnSeparateLine == true then
+				availableHeightForPreview = availableHeightForPreview - commentsBtn.Height - theme.padding
 			end
 
-			local detailsWidth = (self.Width - theme.padding) * detailsWidthRatio
-
-			local previewSize = self.Width - theme.padding - detailsWidth
-
-			if previewSize > availableHeightForPreview then
-				previewSize = availableHeightForPreview
-				detailsWidth = self.Width - theme.padding - previewSize
+			if previewWidth > availableHeightForPreview then
+				previewWidth = availableHeightForPreview
+				detailsWidth = self.Width - theme.padding - previewWidth
 			end
 
-			self.shape.Width = previewSize
+			self.shape.Width = previewWidth
 
 			self.shape.LocalPosition.X = self.Width - self.shape.Width
 			self.shape.LocalPosition.Y = self.Height - self.shape.Height
@@ -569,8 +574,6 @@ itemDetails.createModalContent = function(_, config)
 			self.shapeArea.Width = self.shape.Width
 			self.shapeArea.Height = self.shape.Height
 			self.shapeArea.LocalPosition = self.shape.LocalPosition
-
-			local h = math.max(likeBtn and likeBtn.Height or 0, likes and likes.Height or 0, commentsBtn.Height)
 
 			if likeBtn then
 				likeBtn.pos.X = self.shape.pos.X + self.shape.Width - likeBtn.Width

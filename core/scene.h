@@ -125,7 +125,7 @@ CastResult scene_cast_result_default(void);
 
 CastHitType scene_cast_ray(Scene *sc,
                            const Ray *worldRay,
-                           uint8_t groups,
+                           uint16_t groups,
                            const DoublyLinkedList *filterOutTransforms,
                            CastResult *result);
 Block *scene_cast_ray_shape_only(Scene *sc,
@@ -136,7 +136,7 @@ CastHitType scene_cast_box(Scene *sc,
                            const Box *aabb,
                            const float3 *unit,
                            float maxDist,
-                           uint8_t groups,
+                           uint16_t groups,
                            const DoublyLinkedList *filterOutTransforms,
                            CastResult *result);
 

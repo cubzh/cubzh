@@ -1,11 +1,20 @@
 local signup = {}
 
-signup.createModal = function(_)
+signup.createModal = function(_, config)
 	local ui = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
 	local api = require("system_api", System)
+	local conf = require("config")
+
+	local defaultConfig = {
+		uikit = ui,
+	}
+
+	config = conf:merge(defaultConfig, config)
+
+	ui = config.uikit
 
 	local _year
 	local _month
@@ -72,7 +81,7 @@ signup.createModal = function(_)
 	end
 
 	-- initial content, asking for year of birth
-	local content = modal:createContent()
+	local content = modal:createContent({ uikit = ui })
 	content.idealReducedContentSize = idealReducedContentSize
 
 	local node = ui:createFrame(Color(0, 0, 0, 0))
@@ -297,7 +306,7 @@ signup.createModal = function(_)
 	local passwordInput = ui:createTextInput("", "At least 8 characters", { password = true })
 	passwordInput:setParent(node)
 
-	local btnPasswordToggle = ui:createButton("👁️")
+	local btnPasswordToggle = ui:createButton("👁️", { unfocuses = false })
 	btnPasswordToggle:setParent(node)
 	btnPasswordToggle.onRelease = function()
 		if passwordInput:isTextHidden() then
@@ -435,7 +444,7 @@ signup.createModal = function(_)
 	termsBtn:setColorPressed(Color(0, 0, 0, 0), linkPressedColor)
 	termsBtn:setParent(terms)
 	termsBtn.onRelease = function()
-		System:OpenWebModal("https://cu.bzh/terms-of-use")
+		System:OpenWebModal("https://cu.bzh/terms")
 	end
 
 	local separator = ui:createText("-", textColor, "small")
@@ -449,7 +458,7 @@ signup.createModal = function(_)
 	privacyBtn:setColorPressed(Color(0, 0, 0, 0), linkPressedColor)
 	privacyBtn:setParent(terms)
 	privacyBtn.onRelease = function()
-		System:OpenWebModal("https://cu.bzh/privacy-policy")
+		System:OpenWebModal("https://cu.bzh/privacy")
 	end
 
 	local position = function(modal, forceBounce)
@@ -492,7 +501,7 @@ signup.createModal = function(_)
 		privacyBtn.pos.X = separator.pos.X + separator.Width + theme.padding
 	end
 
-	local popup = modal:create(content, maxWidth, maxHeight, position)
+	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
 	popup.terms = terms
 
 	popup.onSuccess = function() end

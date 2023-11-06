@@ -46,6 +46,13 @@ local function getLastXElements(array, x)
 	return result
 end
 
+function trim(s)
+	if type(s) ~= "string" then
+		return ""
+	end
+	return s:gsub("^%s*(.-)%s*$", "%1")
+end
+
 Timer(10, true, function()
 	if #messages < 60 then
 		return
@@ -101,9 +108,11 @@ local playerSendMessage = function(message)
 	-- check if command
 	local channelCommand = string.sub(message, 1, 3)
 	local channelCommandDev = string.sub(message, 1, 4)
-	if not Dev.CanRunCommands and (channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w ")
-		or Dev.CanRunCommands and (channelCommandDev == "//a " or channelCommandDev == "//l " or channelCommandDev == "//w ") then
-
+	if
+		not Dev.CanRunCommands and (channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w ")
+		or Dev.CanRunCommands
+			and (channelCommandDev == "//a " or channelCommandDev == "//l " or channelCommandDev == "//w ")
+	then
 		local channel = Dev.CanRunCommands and string.sub(message, 3, 3) or string.sub(message, 2, 2)
 		channelType = commandsToChannel[channel]
 		message = Dev.CanRunCommands and string.sub(message, 5, #message) or string.sub(message, 4, #message)
@@ -206,11 +215,11 @@ local createChat = function(_, config)
 		inputNode:setColorFocused(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
 
 		inputNode.onSubmit = function()
-			if inputNode.Text == "" then
+			local text = trim(inputNode.Text)
+			if text == "" then
 				config.onSubmitEmpty()
 				return
 			end
-			local text = inputNode.Text
 			inputNode.Text = ""
 			playerSendMessage(text)
 		end
@@ -470,7 +479,6 @@ local createModalContent = function(_, config)
 	content.node = createChat(nil, config)
 	content.title = "Chat"
 	content.icon = "💬"
-	content.node:focus()
 
 	return content
 end
