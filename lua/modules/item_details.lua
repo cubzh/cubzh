@@ -337,7 +337,7 @@ itemDetails.createModalContent = function(_, config)
 					likeBtn:setColor(theme.buttonColor)
 				end
 
-				local nbLikes = self.originalLikes
+				local nbLikes = self.originalLikes or 0
 				if self.liked ~= self.originalLiked then
 					if self.liked then
 						nbLikes = nbLikes + 1
