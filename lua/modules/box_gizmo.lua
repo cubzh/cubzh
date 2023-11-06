@@ -17,7 +17,6 @@ boxGizmoMetatable = {
 				edge:AddBlock(Color.White,0,0,0)
 				edge:SetParent(self._rootEdges)
 				edge.CollisionGroups = nil
-				edge.Scale = 0.05
 				table.insert(self._edges,edge)
 			end
 
@@ -50,14 +49,13 @@ boxGizmoMetatable = {
             shape.Rotation = Number3(0,0,0)
             Timer(0.001, function()
                 box:Fit(shape, true)
-                print(box.Max - box.Min)
 				shape.Rotation = savedRotation
 				shape:Refresh()
 				local isNotShape = type(object) ~= "Shape" and type(object) ~= "MutableShape"
 				local w = isNotShape and 5 or (box.Max.X - box.Min.X)
 				local h = isNotShape and 5 or (box.Max.Y - box.Min.Y)
 				local d = isNotShape and 5 or (box.Max.Z - box.Min.Z)
-				local pivot = isNotShape and Number3(2.5,2.5,2.5) or (shape.Position - box.Min + Number3(1,1,1))
+				local pivot = isNotShape and Number3(2.5,2.5,2.5) or (shape.Position - box.Min)
 				local size = Number3(w,h,d)
 				local edgeSetups = {
 					{ pos=-pivot,px=0,sx=w }, { pos=-pivot,py=0,sy=h }, { pos=-pivot,pz=0,sz=d },
@@ -67,22 +65,23 @@ boxGizmoMetatable = {
 					{ pos=-pivot+Number3(0,0,d),px=0,sx=w }, { pos=-pivot+Number3(0,0,d),py=0,sy=h }
 				}
 
-				self._rootEdges:SetParent(World)
-				self._rootEdges.Position = object.Position
-				self._rootEdges.Rotation = object.Rotation
-				self._rootEdges.Scale = { 1, 1, 1 }
+				self._rootEdges:SetParent(object)
+				self._rootEdges.LocalPosition = Number3(0,0,0)
+				self._rootEdges.LocalRotation = Number3(0,0,0)
+				self._rootEdges.LocalScale = 1 / object.Scale.X
 				for key,setup in ipairs(edgeSetups) do
 					local b = self._edges[key]
 					b.LocalPosition = setup.pos
 					b.LocalRotation = { 0, 0, 0 }
 					b.Pivot = { setup.px or 0.5, setup.py or 0.5, setup.pz or 0.5 }
-					b.Scale = { setup.sx or 1, setup.sy or 1, setup.sz or 1 }
+					b.Scale = { setup.sx or 0.1, setup.sy or 0.1, setup.sz or 0.1 }
 				end
 
-				self._scaleGizmo:SetParent(object)
-				self._scaleGizmo.IsHidden = false
-				self._scaleGizmo.CollisionGroups = { 6 }
-				self._scaleGizmo.LocalPosition = -pivot + Number3(w,h,0)
+				-- self._scaleGizmo:SetParent(object)
+				-- self._scaleGizmo.IsHidden = false
+				-- self._scaleGizmo.CollisionGroups = { 6 }
+				-- self._scaleGizmo.Position = box.Max
+				-- self._scaleGizmo.Scale = 2
 			end)
 		end,
 		pointerDown = function(self, pointerEvent)
@@ -91,7 +90,9 @@ boxGizmoMetatable = {
 			if impact and impact.Object and impact.Object == self._scaleGizmo then
 				self.dragGizmo = true
                 Camera:SetModeFree()
+				return true
 			end
+			return false
 		end,
 		pointerUp = function(self)
 			self.dragGizmo = false
@@ -99,8 +100,9 @@ boxGizmoMetatable = {
 		end,
 		pointerDrag = function(self, pe)
 			if not self.object or not self.dragGizmo then return end
-			self.object.Scale = self.object.Scale + Number3(1,1,1) * (pe.DX / 60)
+			self.object.Scale = self.object.Scale + Number3(1,1,1) * (pe.DX / 500)
             if self.onScaleChange then self:onScaleChange(self.object.Scale) end
+			return true
 		end
 	},
 	__newIndex = function() print("Error: boxGizmo is read-only") end
@@ -108,13 +110,13 @@ boxGizmoMetatable = {
 setmetatable(boxGizmo, boxGizmoMetatable)
 
 LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
-	boxGizmo:pointerDown(pe)
+	return boxGizmo:pointerDown(pe)
 end)
 LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-	boxGizmo:pointerDrag(pe)
+	return boxGizmo:pointerDrag(pe)
 end)
 LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
-	boxGizmo:pointerUp(pe)
+	return boxGizmo:pointerUp(pe)
 end)
 
 return boxGizmo

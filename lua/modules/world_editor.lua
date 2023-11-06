@@ -451,7 +451,7 @@ local statesSettings = {
 			-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Scale = newScale })
 			-- end
 			-- require("box_gizmo"):setGizmoMode("scale")
-			-- require("box_gizmo"):toggle(obj, Color.White)
+			require("box_gizmo"):toggle(obj, Color.White)
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
@@ -472,6 +472,7 @@ local statesSettings = {
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 		end,
 		onStateEnd = function()
+			require("box_gizmo"):toggle(nil)
 			worldEditor.updateObjectUI:hide()
 			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
 			worldEditor.object = nil
@@ -951,7 +952,7 @@ initDefaultMode = function()
 		{ type="button", text="↻", callback = function()
 			worldEditor.object:TextBubble("Mouse wheel: rotate object on Y axis.")
 		end },
-		-- { type="button", text="⇢", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
+		{ type="button", text="⇢", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
 		{ type="separator" },
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
