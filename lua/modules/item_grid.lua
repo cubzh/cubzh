@@ -505,6 +505,8 @@ itemGrid.create = function(_, config)
 			end
 
 			cell:setNbLikes(cell.likes)
+			cell:setSize(grid.cellSize)
+
 			cell:layoutContent()
 
 			cell.loaded = true
