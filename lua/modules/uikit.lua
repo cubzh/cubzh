@@ -11,10 +11,10 @@ UI module used to implement default user interfaces in Cubzh.
 ----------------------
 
 UI_FAR = 1000
-UI_LAYER = 13
-UI_LAYER_SYSTEM = 14
-UI_COLLISION_GROUP = 13
-UI_COLLISION_GROUP_SYSTEM = 14
+UI_LAYER = 12
+UI_LAYER_SYSTEM = 13
+UI_COLLISION_GROUP = 12
+UI_COLLISION_GROUP_SYSTEM = 13
 UI_SHAPE_SCALE = 5
 LAYER_STEP = -0.1 -- children offset
 BUTTON_PADDING = 4
