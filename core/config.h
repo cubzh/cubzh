@@ -33,11 +33,11 @@ extern "C" {
 
 // PLAYER
 
-#define PLAYER_ID_SERVER 255       // ID to represent the server
-#define PLAYER_ID_ALL 254          // ID to represent all players
-#define PLAYER_ID_ALL_BUT_SELF 253 // ID to represent all players except the local one
+#define PLAYER_ID_SERVER 255         // ID to represent the server
+#define PLAYER_ID_ALL 254            // ID to represent all players
+#define PLAYER_ID_ALL_BUT_SELF 253   // ID to represent all players except the local one
 #define PLAYER_ID_NOT_ATTRIBUTED 252 // value before ID is attributed
-#define PLAYER_ID_NONE 251 // ID to represent no one
+#define PLAYER_ID_NONE 251           // ID to represent no one
 
 #define PLAYER_SCALE 0.5f
 #define PLAYER_AVATAR_BB_SIZE_Y 29.0f // expressed in local space from player root,
