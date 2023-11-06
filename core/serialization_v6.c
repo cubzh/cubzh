@@ -1135,6 +1135,12 @@ uint32_t chunk_v6_read_shape(Stream *s,
         }
     }
 
+    if (*shape == NULL) {
+        free(chunkData);
+        cclog_error("failed to read shape - no size chunk found");
+        return 0;
+    }
+
     // Compatibility modes (see comment in serialization_load_assets_v6):
     // [MULTI] Sub-chunk palette exists, use it as shape palette, ignore file palette
     // [SINGLE] If file palette exists, use it as shape palette (optionally shrinked)
