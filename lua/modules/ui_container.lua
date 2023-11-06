@@ -1,3 +1,4 @@
+local padding = require("uitheme").current.padding
 
 local uiHorizontalIndex = {}
 
@@ -32,9 +33,10 @@ uiHorizontalIndex.setParent = function(self, node)
 end
 
 uiHorizontalIndex.refresh = function(self)
-	local width, height = 0, 0
+	local width, height = padding, padding
 	for _,elem in ipairs(self.list) do
 		elem.pos.X = width
+		elem.pos.Y = padding
 		width = width + elem.Width
 		if height < elem.Height then height = elem.Height end
 	end
@@ -42,13 +44,13 @@ uiHorizontalIndex.refresh = function(self)
 	for _,elem in ipairs(self.list) do
 		elem.Height = height
 	end
-	self.Width = width
-	self.Height = height
+	self.Width = width + 2 * padding
+	self.Height = height + 2 * padding
 end
 
-local createUiHorizontal = function()
+local createUiHorizontal = function(_, color)
 	local elem = {}
-	elem.bg = require("uikit"):createFrame()
+	elem.bg = require("uikit"):createFrame(color)
 	local list = {}
 
 	local index = function(_,k)
@@ -63,6 +65,91 @@ local createUiHorizontal = function()
 		elem.bg[k] = v
 	end
 
+	elem.bg.parentDidResize = function()
+		elem:refresh()
+	end
+
+	local metatable = { __metatable = false, __index = index, __newindex = newindex }
+	setmetatable(elem, metatable)
+
+	return elem
+end
+
+local uiVerticalIndex = {}
+
+uiVerticalIndex.pushElement = function(self, node)
+	node:setParent(self.bg)
+	table.insert(self.list, node)
+	self:refresh()
+end
+
+uiVerticalIndex.pushSeparator = function(self)
+	self:pushGap()
+	local separator = require("uikit"):createFrame(Color.Grey)
+	separator.Width = self.Width
+	separator.Height = 1
+	separator:setParent(self.bg)
+	table.insert(self.list, separator)
+	self:pushGap()
+	self:refresh()
+end
+
+uiVerticalIndex.pushGap = function(self)
+	local gap = require("uikit"):createFrame()
+	gap.Width = self.Width
+	gap.Height = require("uitheme").current.padding
+	gap:setParent(self.bg)
+	table.insert(self.list, gap)
+	self:refresh()
+end
+
+uiVerticalIndex.setParent = function(self, node)
+	self.bg:setParent(node)
+end
+
+uiVerticalIndex.refresh = function(self)
+	local width, height = 0, 0
+
+	for _,elem in ipairs(self.list) do
+		height = height + elem.Height
+	end
+	self.Height = height + 2 * padding
+
+	height = self.Height - padding
+	for _,elem in ipairs(self.list) do
+		elem.pos.X = padding
+		elem.pos.Y = height - elem.Height
+		height = height - elem.Height
+		if width < elem.Width then width = elem.Width end
+	end
+
+	for _,elem in ipairs(self.list) do
+		elem.Width = width
+	end
+	self.Width = width + 2 * padding
+end
+
+local createUiVertical = function(_, color)
+	local elem = {}
+	elem.bg = require("uikit"):createFrame(color)
+	local list = {}
+
+	local index = function(_,k)
+		if k == "list" then return list end
+		return uiVerticalIndex[k] or elem.bg[k]
+	end
+	local newindex = function(_,k,v)
+		if k == "list" then
+			list = v
+			return
+		end
+		elem.bg[k] = v
+	end
+
+	elem.bg.parentDidResize = function()
+		elem:refresh()
+	end
+
 	local metatable = { __metatable = false, __index = index, __newindex = newindex }
 	setmetatable(elem, metatable)
 
@@ -70,5 +157,6 @@ local createUiHorizontal = function()
 end
 
 return {
-	createHorizontalContainer = createUiHorizontal
+	createHorizontalContainer = createUiHorizontal,
+	createVerticalContainer = createUiVertical
 }

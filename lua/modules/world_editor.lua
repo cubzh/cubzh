@@ -8,6 +8,8 @@ local initDefaultMode
 
 local padding = require("uitheme").current.padding
 
+local defaultModeUiInitialized = false
+local worldModified = false -- to avoid changing map scale if modified
 local objects = {}
 local map
 local mapIndex = 1
@@ -62,6 +64,10 @@ local events = {
 	EXPORT_WORLD = "ew",
 	P_EXPORT_GAME = "peg",
 	EXPORT_GAME = "eg",
+	P_SET_MAP_SCALE = "psms",
+	SET_MAP_SCALE = "sms",
+	P_RESET_ALL = "pra",
+	RESET_ALL = "ra",
 }
 
 local sendToServer = function(event, data)
@@ -211,6 +217,7 @@ local spawnObject = function(data, onDone)
 
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
+			worldModified = true
 		end
 		if onDone then onDone(obj) end
 	end)
@@ -349,8 +356,7 @@ local statesSettings = {
 	-- PREPARING
 	{
 		onStateEnd = function()
-			worldEditor.uiPrepareState:remove()
-			worldEditor.uiPrepareState = nil
+			worldEditor.uiPrepareState:hide()
 			initDefaultMode()
 		end
 	},
@@ -698,6 +704,9 @@ local maps = {
 local loadMap
 
 init = function()
+	require("ambience"):set(require("ambience").noon)
+
+	state = states.PREPARING
 	require("object_skills").addStepClimbing(Player)
 	Camera:SetModeFree()
 	local pivot = Object()
@@ -710,61 +719,63 @@ init = function()
 
 	local ui = require("uikit")
 
-	uiPrepareState = ui:createFrame()
-
-	previousBtn = ui:createButton("<")
-	previousBtn:setParent(uiPrepareState)
-	previousBtn.onRelease = function()
-		mapIndex = mapIndex - 1
-		if mapIndex <= 0 then mapIndex = #maps end
-		loadMap(maps[mapIndex])
-	end
-	nextBtn = ui:createButton(">")
-	nextBtn:setParent(uiPrepareState)
-	nextBtn.onRelease = function()
-		mapIndex = mapIndex + 1
-		if mapIndex > #maps then mapIndex = 1 end
-		loadMap(maps[mapIndex])
-	end
-
-	galleryMapBtn = ui:createButton("or Pick an item as Map")
-	galleryMapBtn:setParent(uiPrepareState)
-	galleryMapBtn.onRelease = function()
-		previousBtn:hide()
-		nextBtn:hide()
-		-- Gallery to pick a map
-		local gallery
-		gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.5 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 } end, {
-			onOpen = function(_, cell)
-				local fullname = cell.repo.."."..cell.name
-				sendToServer(events.P_END_PREPARING, { mapName = fullname })
-				gallery:remove()
-			end
-		})
-		gallery.didClose = function()
-			previousBtn:show()
-			nextBtn:show()
+	if worldEditor.uiPrepareState then
+		worldEditor.uiPrepareState:show()
+	else
+		local uiPrepareState = ui:createFrame()
+		local previousBtn = ui:createButton("<")
+		previousBtn:setParent(uiPrepareState)
+		previousBtn.onRelease = function()
+			mapIndex = mapIndex - 1
+			if mapIndex <= 0 then mapIndex = #maps end
+			loadMap(maps[mapIndex])
 		end
-	end
+		local nextBtn = ui:createButton(">")
+		nextBtn:setParent(uiPrepareState)
+		nextBtn.onRelease = function()
+			mapIndex = mapIndex + 1
+			if mapIndex > #maps then mapIndex = 1 end
+			loadMap(maps[mapIndex])
+		end
 
-	validateBtn = ui:createButton("Start editing this map")
-	validateBtn:setParent(uiPrepareState)
-	validateBtn.onRelease = function()
-		sendToServer(events.P_END_PREPARING, { mapName = mapName })
-	end
+		local galleryMapBtn = ui:createButton("or Pick an item as Map")
+		galleryMapBtn:setParent(uiPrepareState)
+		galleryMapBtn.onRelease = function()
+			previousBtn:hide()
+			nextBtn:hide()
+			-- Gallery to pick a map
+			local gallery
+			gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.5 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 } end, {
+				onOpen = function(_, cell)
+					local fullname = cell.repo.."."..cell.name
+					sendToServer(events.P_END_PREPARING, { mapName = fullname })
+					gallery:remove()
+				end
+			})
+			gallery.didClose = function()
+				previousBtn:show()
+				nextBtn:show()
+			end
+		end
 
-	uiPrepareState.parentDidResize = function()
-		uiPrepareState.Width = Screen.Width
-		previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
-		nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
-		galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
-		validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
-	end
-	uiPrepareState:parentDidResize()
+		local validateBtn = ui:createButton("Start editing this map")
+		validateBtn:setParent(uiPrepareState)
+		validateBtn.onRelease = function()
+			sendToServer(events.P_END_PREPARING, { mapName = mapName })
+		end
 
-	if Screen.Width > Screen.Height then
-		local loadInput = ui:createTextInput("", "Paste JSON here")
+		uiPrepareState.parentDidResize = function()
+			uiPrepareState.Width = Screen.Width
+			previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
+			nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
+			galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
+			validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
+		end
+		uiPrepareState:parentDidResize()
+
+		local loadInput = ui:createTextInput("", "Paste base64")
 		loadInput:setParent(uiPrepareState)
+		uiPrepareState.loadInput = loadInput
 
 		loadBtn = ui:createButton("Load")
 		loadBtn:setParent(uiPrepareState)
@@ -777,19 +788,32 @@ init = function()
 		loadBtn.onRelease = function()
 			sendToServer(events.P_LOAD_WORLD, { base64world = loadInput.Text })
 		end
+		uiPrepareState.loadBtn = loadBtn
+
+		worldEditor.uiPrepareState = uiPrepareState
 	end
 
-	worldEditor.uiPrepareState = uiPrepareState
+	local uiPrepareState = worldEditor.uiPrepareState
+	local isMobile = Screen.Width < Screen.Height
+	if isMobile then
+		uiPrepareState.loadBtn:hide()
+		uiPrepareState.loadInput:hide()
+	else
+		uiPrepareState.loadBtn:show()
+		uiPrepareState.loadInput:show()
+	end
 
-	loadMap = function(fullname, onDone)
+	loadMap = function(fullname, scale, onDone)
 		mapName = fullname
 		Object:Load(fullname, function(obj)
 			if map then map:RemoveFromParent() end
 			map = MutableShape(obj, { includeChildren = true })
-			map.Scale = 5
-			map.CollisionGroups = Map.CollisionGroups
-			map.CollidesWithGroups = Map.CollidesWithGroups
-			map.Physics = PhysicsMode.StaticPerBlock
+			map.Scale = scale or 5
+			require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
+				o.CollisionGroups = Map.CollisionGroups
+				o.CollidesWithGroups = Map.CollidesWithGroups
+				o.Physics = PhysicsMode.StaticPerBlock
+			end)
 			map:SetParent(World)
 			map.Position = { 0, 0, 0 }
 			map.Pivot = { 0, 0, 0 }
@@ -830,6 +854,11 @@ initDefaultMode = function()
 
     local ui = require("uikit")
 
+	if defaultModeUiInitialized then
+		worldEditor.defaultStateUI:show()
+		return
+	end
+
 	-- Gizmo
 	Camera.Layers = { 1, 4 }
 	require("gizmo"):setLayer(4)
@@ -858,21 +887,7 @@ initDefaultMode = function()
 			state = states.EDIT_MAP,
 			name = "editMapBtn",
 			visibleOnMobile = false
-		},
-		{
-			text = "🎮 Export Game",
-			pos = function(btn) return { Screen.Width - padding - btn.Width, padding } end,
-			serverEvent = events.P_EXPORT_GAME,
-			name = "exportGameBtn",
-			visibleOnMobile = false
-		},
-		{
-			text = "📑 Export",
-			pos = function(btn) return worldEditor.exportGameBtn.pos - { padding + btn.Width, 0, 0 } end,
-			serverEvent = events.P_EXPORT_WORLD,
-			name = "exportBtn",
-			visibleOnMobile = false
-		},
+		}
 	}
 
 	for _,config in ipairs(defaultStateUIConfig) do
@@ -901,6 +916,135 @@ initDefaultMode = function()
 		end
 		index[config.name] = btn
 	end
+
+	-- Settings menu
+	local menuBar = require("ui_container"):createVerticalContainer(Color.DarkGrey)
+	worldEditor.menuBar = menuBar
+
+	local showSettingsBtn = ui:createButton("⚙️ Settings")
+	showSettingsBtn:setParent(worldEditor.defaultStateUI)
+	showSettingsBtn.onRelease = function()
+		showSettingsBtn:hide()
+		menuBar:show()
+	end
+	showSettingsBtn.parentDidResize = function()
+		showSettingsBtn.pos = { Screen.Width - padding - showSettingsBtn.Width, Screen.Height - showSettingsBtn.Height - 50 }
+	end
+	showSettingsBtn:parentDidResize()
+
+	local menuSettingsConfig = {
+		{
+			type = "button",
+			text = "❌ Close",
+			callback = function()
+				showSettingsBtn:show()
+				menuBar:hide()
+			end
+		},
+		{ type="gap" },
+		{
+			type = "button",
+			text = "📑 Export",
+			serverEvent = events.P_EXPORT_WORLD,
+			name = "exportBtn",
+		},
+		{
+			type = "button",
+			text = "🎮 Export Game",
+			serverEvent = events.P_EXPORT_GAME,
+			name = "exportGameBtn",
+		},
+		{ type = "gap" },
+		{
+			type = "node",
+			create = function()
+				local frame = ui:createFrame()
+				local text = ui:createText("Map Scale", Color.White)
+				text:setParent(frame)
+				local scale = map.Scale.X
+				if math.floor(scale) == scale then
+					scale = math.floor(scale)
+				end
+				local input = ui:createTextInput(scale)
+				input.onSubmit = function()
+					if worldModified then
+						print("Error: You can't change the scale of a world that has been edited.")
+						return
+					end
+					local value = tonumber(input.Text)
+					if value <= 0 then
+						print("Error: Map scale must be positive")
+						return
+					end
+					sendToServer(events.P_SET_MAP_SCALE, { mapScale = value })
+				end
+				input:setParent(frame)
+				frame.parentDidResize = function()
+					text.pos.Y = input.Height * 0.5 - text.Height * 0.5
+					input.Width = frame.Width - text.Width - padding
+					input.pos.X = text.pos.X + text.Width + padding
+				end
+				worldEditor.mapScaleInput = input
+				frame.Height = input.Height
+				frame:parentDidResize()
+				return frame
+			end
+		},
+		{ type = "gap" },
+		{
+			type = "button",
+			text = "Reset all",
+			callback = function()
+				alertModal = require("alert"):create("Confirm that you want to remove all modifications and start from scratch.", { uikit = require("uikit") })
+				alertModal:setPositiveCallback("Reset and pick a new map", function()
+					menuBar:hide()
+					showSettingsBtn:show()
+					sendToServer(events.P_RESET_ALL)
+				end)
+				alertModal:setNegativeCallback("Cancel, I want to continue", function()
+					alertModal:close()
+				end)
+				alertModal.didClose = function()
+					alertModal = nil
+				end
+			end,
+			color = require("uitheme").current.colorNegative,
+			name = "resetBtn",
+		}
+	}
+	for _,info in ipairs(menuSettingsConfig) do
+		if info.type == "separator" then
+			menuBar:pushSeparator()
+		elseif info.type == "gap" then
+			menuBar:pushGap()
+		elseif info.type == "node" then
+			local node = info.create()
+			menuBar:pushElement(node)
+		elseif info.type == "button" then
+			local btn = ui:createButton(info.text)
+			if info.color then btn:setColor(info.color) end
+			btn.onRelease = function()
+				if info.serverEvent then
+					sendToServer(info.serverEvent)
+					return
+				end
+				if info.callback then
+					info.callback()
+				end
+			end
+			if info.name then
+				index[info.name] = btn
+			end
+			menuBar:pushElement(btn)
+		end
+	end
+
+	menuBar:hide()
+	menuBar.parentDidResize = function()
+		menuBar:refresh()
+		menuBar.pos = { Screen.Width - padding - menuBar.Width, Screen.Height - menuBar.Height - 50 }
+	end
+	menuBar:parentDidResize()
 
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
@@ -1035,6 +1179,8 @@ initDefaultMode = function()
 		worldEditor.selectedColor = color
 		worldEditor.handBlock.Palette[1].Color = color
 	end
+
+	defaultModeUiInitialized = true
 end
 
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
@@ -1043,13 +1189,13 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	local isLocalPlayer = e.pID == Player.ID
 
 	if e.a == events.END_PREPARING then
-		loadMap(data.mapName, function()
+		loadMap(data.mapName, data.mapScale or 5, function()
 			setState(states.DEFAULT)
 		end)
 	elseif e.a == events.SYNC then
 		if state == states.PREPARING then -- joining
 			local t = Data(data, { format = "base64" }):ToTable()
-			loadMap(t.mapName, function()
+			loadMap(t.mapName, t.mapScale or 5, function()
 				setState(states.DEFAULT)
 				local blocks = t.blocks
 				if blocks then
@@ -1082,6 +1228,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		if isLocalPlayer then
 			waitingForUUIDObj.uuid = e.data.uuid
 			objects[waitingForUUIDObj.uuid] = waitingForUUIDObj
+			worldModified = true
 			sendToServer(events.P_START_EDIT_OBJECT, { uuid = e.data.uuid })
 			waitingForUUIDObj = nil
 		else
@@ -1144,21 +1291,37 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 
 		local exportBtn = worldEditor.exportBtn
 		exportBtn.Text = "Copied!"
-		exportBtn.pos = worldEditor.exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
+		worldEditor.menuBar:refresh()
 		Timer(1, function()
 			exportBtn.Text = "📑 Export"
-			exportBtn.pos = worldEditor.exportGameBtn.pos - { padding + exportBtn.Width, 0, 0 }
+			worldEditor.menuBar:refresh()
 		end)
 	elseif e.a == events.EXPORT_GAME then
 		Dev:CopyToClipboard(data.game)
 
 		local exportGameBtn = worldEditor.exportGameBtn
 		exportGameBtn.Text = "Copied game!"
-		exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+		worldEditor.menuBar:refresh()
 		Timer(1, function()
 			exportGameBtn.Text = "🎮 Export Game"
-			exportGameBtn.pos = { Screen.Width - padding - exportGameBtn.Width, padding }
+			worldEditor.menuBar:refresh()
 		end)
+	elseif e.a == events.SET_MAP_SCALE then
+		map.Scale = data.mapScale
+		dropPlayer()
+	elseif e.a == events.RESET_ALL then
+		setState(states.DEFAULT)
+		worldEditor.defaultStateUI:hide()
+		Player:RemoveFromParent()
+		map:RemoveFromParent()
+		map = nil
+		for _,o in pairs(objects) do
+			o:RemoveFromParent()
+		end
+		objects = {}
+		mapName = nil
+		require("ambience"):set(require("ambience").noon)
+		init()
 	end
 end)
 
