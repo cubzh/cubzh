@@ -306,7 +306,7 @@ signup.createModal = function(_, config)
 	local passwordInput = ui:createTextInput("", "At least 8 characters", { password = true })
 	passwordInput:setParent(node)
 
-	local btnPasswordToggle = ui:createButton("👁️")
+	local btnPasswordToggle = ui:createButton("👁️", { unfocuses = false })
 	btnPasswordToggle:setParent(node)
 	btnPasswordToggle.onRelease = function()
 		if passwordInput:isTextHidden() then
@@ -444,7 +444,7 @@ signup.createModal = function(_, config)
 	termsBtn:setColorPressed(Color(0, 0, 0, 0), linkPressedColor)
 	termsBtn:setParent(terms)
 	termsBtn.onRelease = function()
-		System:OpenWebModal("https://cu.bzh/terms-of-use")
+		System:OpenWebModal("https://cu.bzh/terms")
 	end
 
 	local separator = ui:createText("-", textColor, "small")
@@ -458,7 +458,7 @@ signup.createModal = function(_, config)
 	privacyBtn:setColorPressed(Color(0, 0, 0, 0), linkPressedColor)
 	privacyBtn:setParent(terms)
 	privacyBtn.onRelease = function()
-		System:OpenWebModal("https://cu.bzh/privacy-policy")
+		System:OpenWebModal("https://cu.bzh/privacy")
 	end
 
 	local position = function(modal, forceBounce)
