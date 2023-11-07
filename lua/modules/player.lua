@@ -660,6 +660,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			if previousHead == nil then
 				local bypassHeadLocalRotationCallback = false
 				local capHeadRotation = function(_)
+					if player ~= Player then return end
 					if bypassHeadLocalRotationCallback == false then
 						local angleAfter = player.Head.Forward:Angle(player.Down)
 
