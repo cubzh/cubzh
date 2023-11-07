@@ -666,26 +666,23 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 						local dot = player.Head.Forward:Dot(player.Forward)
 
-						local upLimit = 5
-						local downLimit = 5
+						local limitOffset = 5
+						local upLimit = 85
+						local downLimit = -85
 
 						bypassHeadLocalRotationCallback = true
 						if dot < 0 then
 							if angleBefore < math.rad(90) then
-								player.Head.LocalRotation:Set(math.rad(85), 0, 0)
+								player.Head.LocalRotation:Set(math.rad(upLimit), 0, 0)
 							else
-								player.Head.LocalRotation:Set(math.rad(-85), 0, 0)
+								player.Head.LocalRotation:Set(math.rad(downLimit), 0, 0)
 							end
-							angleBefore = player.Head.Forward:Angle(player.Down)
-						elseif angleAfter < math.rad(downLimit) + 0.001 then
-							player.Head.LocalRotation:Set(math.rad(90 - downLimit), 0, 0)
-							angleBefore = player.Head.Forward:Angle(player.Down)
-						elseif angleAfter > math.rad(180 - upLimit) then
-							player.Head.LocalRotation:Set(math.rad(-90 + upLimit), 0, 0)
-							angleBefore = player.Head.Forward:Angle(player.Down)
-						else
-							angleBefore = angleAfter
+						elseif angleAfter < math.rad(limitOffset) + 0.001 then
+							player.Head.LocalRotation:Set(math.rad(upLimit), 0, 0)
+						elseif angleAfter > math.rad(180 - limitOffset) then
+							player.Head.LocalRotation:Set(math.rad(downLimit), 0, 0)
 						end
+						angleBefore = player.Head.Forward:Angle(player.Down)
 						bypassHeadLocalRotationCallback = false
 					end
 				end
