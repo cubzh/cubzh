@@ -659,7 +659,7 @@ function getCubzhMenuModalContent()
 	btnHelp:setParent(node)
 
 	btnHelp.onRelease = function()
-		URL:Open("https://cu.bzh/discord")
+		URL:Open("https://link.cu.bzh/cubzhdiscord")
 	end
 
 	local buttons = {
