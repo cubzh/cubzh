@@ -8,6 +8,9 @@ local initDefaultMode
 
 local padding = require("uitheme").current.padding
 
+local worldTitle
+local worldID
+
 local defaultModeUiInitialized = false
 local worldModified = false -- to avoid changing map scale if modified
 local objects = {}
@@ -68,6 +71,8 @@ local events = {
 	SET_MAP_SCALE = "sms",
 	P_RESET_ALL = "pra",
 	RESET_ALL = "ra",
+	P_SAVE_WORLD = "psw",
+	SAVE_WORLD = "sw"
 }
 
 local sendToServer = function(event, data)
@@ -722,6 +727,30 @@ init = function()
 	if worldEditor.uiPrepareState then
 		worldEditor.uiPrepareState:show()
 	else
+		local modal
+		local content
+		modal, content = require("creations"):createModal({ uikit = ui,
+			onOpen = function(_, cell)
+				worldTitle = cell.title
+				worldID = cell.id
+				require("system_api", System):getWorld(worldID, function(a, b)
+					if not b then
+						print(a)
+						return
+					end
+					local mapBase64 = b.mapBase64
+					if not mapBase64 or #mapBase64 == 0 then
+						print("Can't retrieve map")
+						return
+					end
+					sendToServer(events.P_LOAD_WORLD, { mapBase64 = mapBase64 })
+					modal:close()
+				end)
+			end
+		})
+		content.tabs[3].selected = true
+		content.tabs[3].action()
+
 		local uiPrepareState = ui:createFrame()
 		local previousBtn = ui:createButton("<")
 		previousBtn:setParent(uiPrepareState)
@@ -944,6 +973,12 @@ initDefaultMode = function()
 		{ type="gap" },
 		{
 			type = "button",
+			text = "📑 Save World",
+			serverEvent = events.P_SAVE_WORLD,
+			name = "saveWorldBtn",
+		},
+		{
+			type = "button",
 			text = "📑 Export",
 			serverEvent = events.P_EXPORT_WORLD,
 			name = "exportBtn",
@@ -1131,8 +1166,8 @@ initDefaultMode = function()
 
 	updateObjectUI.parentDidResize = function()
 		bar:refresh()
-		updateObjectUI.Width = bar.Width + padding * 2
-		updateObjectUI.Height = (bar.Height + padding) * 2
+		updateObjectUI.Width = bar.Width
+		updateObjectUI.Height = bar.Height * 2
 		infoBtn.Height = bar.Height
 		infoBtn.Width = bar.Height
 		nameInput.Width = updateObjectUI.Width - infoBtn.Width
@@ -1322,6 +1357,20 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		mapName = nil
 		require("ambience"):set(require("ambience").noon)
 		init()
+	elseif e.a == events.SAVE_WORLD then
+		local mapBase64 = data.mapBase64
+		if mapBase64 == nil then print("Received nil from server") return end
+		require("system_api", System):patchWorld(worldID, { mapBase64 = mapBase64 }, function(err, world)
+			if world and world.mapBase64 == mapBase64 then
+				print("World '" .. worldTitle .. "' saved")
+			else
+				if err then
+					print("Error while saving world: ", JSON:Encode(err))
+				else
+					print("Error while saving world")
+				end
+			end
+		end)
 	end
 end)
 

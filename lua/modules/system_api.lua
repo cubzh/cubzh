@@ -320,7 +320,7 @@ end
 
 -- api:patchWorld("world-id", {title = "something", description = "banana"}, function(err, world))
 moduleMT.patchWorld = function(self, worldID, data, callback)
-	local url = self.kApiAddr .. "/worlddrafts/" .. worldID
+	local url = self.kApiAddr .. "/worlds/" .. worldID
 	local req = System:HttpPatch(url, data, function(res)
 		if res.StatusCode ~= 200 then
 			callback(api:error(res.StatusCode, "could not modify world"), nil)
