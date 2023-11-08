@@ -661,30 +661,30 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 				local bypassHeadLocalRotationCallback = false
 				local capHeadRotation = function(_)
 					if player ~= Player then return end
-					if bypassHeadLocalRotationCallback == false then
-						local angleAfter = player.Head.Forward:Angle(player.Down)
+					if bypassHeadLocalRotationCallback then return end
 
-						local dot = player.Head.Forward:Dot(player.Forward)
+					local angleAfter = player.Head.Forward:Angle(player.Down)
 
-						local limitOffset = 5
-						local upLimit = 85
-						local downLimit = -85
+					local dot = player.Head.Forward:Dot(player.Forward)
 
-						bypassHeadLocalRotationCallback = true
-						if dot < 0 then
-							if angleBefore < math.rad(90) then
-								player.Head.LocalRotation:Set(math.rad(upLimit), 0, 0)
-							else
-								player.Head.LocalRotation:Set(math.rad(downLimit), 0, 0)
-							end
-						elseif angleAfter < math.rad(limitOffset) + 0.001 then
+					local limitOffset = 5
+					local upLimit = 85
+					local downLimit = -85
+
+					bypassHeadLocalRotationCallback = true
+					if dot < 0 then
+						if angleBefore < math.rad(90) then
 							player.Head.LocalRotation:Set(math.rad(upLimit), 0, 0)
-						elseif angleAfter > math.rad(180 - limitOffset) then
+						else
 							player.Head.LocalRotation:Set(math.rad(downLimit), 0, 0)
 						end
-						angleBefore = player.Head.Forward:Angle(player.Down)
-						bypassHeadLocalRotationCallback = false
+					elseif angleAfter < math.rad(limitOffset) + 0.001 then
+						player.Head.LocalRotation:Set(math.rad(upLimit), 0, 0)
+					elseif angleAfter > math.rad(180 - limitOffset) then
+						player.Head.LocalRotation:Set(math.rad(downLimit), 0, 0)
 					end
+					angleBefore = player.Head.Forward:Angle(player.Down)
+					bypassHeadLocalRotationCallback = false
 				end
 
 				player.Head.LocalRotation:AddOnSetCallback(capHeadRotation)
