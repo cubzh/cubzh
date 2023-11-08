@@ -29,13 +29,13 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keycode, _, down)
 		holdingSpace = true
 		if not flying then
             latestJump = Time.UnixMilli()
-			if Player.IsOnGround then
+			-- if Player.IsOnGround then
 				Player.Velocity.Y = 100
-			elseif latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
+			-- elseif latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
 				-- activate
 				--TODO: handle multiplayer
                 -- flying = true
-			end
+			-- end
 		else
 			if latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
                 -- deactivate

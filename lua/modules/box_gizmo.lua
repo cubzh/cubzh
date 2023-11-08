@@ -95,8 +95,10 @@ boxGizmoMetatable = {
 			return false
 		end,
 		pointerUp = function(self)
-			self.dragGizmo = false
-            Camera:SetModeThirdPerson()
+			if self.dragGizmo then
+				self.dragGizmo = false
+				Camera:SetModeThirdPerson()
+			end
 		end,
 		pointerDrag = function(self, pe)
 			if not self.object or not self.dragGizmo then return end

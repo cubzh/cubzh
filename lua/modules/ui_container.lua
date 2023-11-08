@@ -4,6 +4,7 @@ local uiHorizontalIndex = {}
 
 uiHorizontalIndex.pushElement = function(self, node)
 	node:setParent(self.bg)
+	node.elementType = "node"
 	table.insert(self.list, node)
 	self:refresh()
 end
@@ -11,6 +12,7 @@ end
 uiHorizontalIndex.pushSeparator = function(self)
 	self:pushGap()
 	local separator = require("uikit"):createFrame(Color.Grey)
+	separator.elementType = "separator"
 	separator.Width = 1
 	separator.Height = self.Height
 	separator:setParent(self.bg)
@@ -21,6 +23,7 @@ end
 
 uiHorizontalIndex.pushGap = function(self)
 	local gap = require("uikit"):createFrame()
+	gap.elementType = "gap"
 	gap.Width = require("uitheme").current.padding
 	gap.Height = self.Height
 	gap:setParent(self.bg)
@@ -33,22 +36,23 @@ uiHorizontalIndex.setParent = function(self, node)
 end
 
 uiHorizontalIndex.refresh = function(self)
-	local width, height = padding, padding
+	local width, height = padding, 0
 	for _,elem in ipairs(self.list) do
 		elem.pos.X = width
 		elem.pos.Y = padding
 		width = width + elem.Width
-		if height < elem.Height then height = elem.Height end
+		if elem.elementType == "node" and height < elem.Height then height = elem.Height end
 	end
 
 	for _,elem in ipairs(self.list) do
 		elem.Height = height
 	end
-	self.Width = width + 2 * padding
-	self.Height = height + 2 * padding
+	width, height = width + padding, height + padding * 2
+	self.Width = width
+	self.Height = height
 end
 
-local createUiHorizontal = function(_, color)
+local createHorizontalContainer = function(_, color)
 	local elem = {}
 	elem.bg = require("uikit"):createFrame(color)
 	local list = {}
@@ -79,6 +83,7 @@ local uiVerticalIndex = {}
 
 uiVerticalIndex.pushElement = function(self, node)
 	node:setParent(self.bg)
+	node.elementType = "node"
 	table.insert(self.list, node)
 	self:refresh()
 end
@@ -86,6 +91,7 @@ end
 uiVerticalIndex.pushSeparator = function(self)
 	self:pushGap()
 	local separator = require("uikit"):createFrame(Color.Grey)
+	separator.elementType = "separator"
 	separator.Width = self.Width
 	separator.Height = 1
 	separator:setParent(self.bg)
@@ -96,6 +102,7 @@ end
 
 uiVerticalIndex.pushGap = function(self)
 	local gap = require("uikit"):createFrame()
+	gap.elementType = "gap"
 	gap.Width = self.Width
 	gap.Height = require("uitheme").current.padding
 	gap:setParent(self.bg)
@@ -129,7 +136,7 @@ uiVerticalIndex.refresh = function(self)
 	self.Width = width + 2 * padding
 end
 
-local createUiVertical = function(_, color)
+local createVerticalContainer = function(_, color)
 	local elem = {}
 	elem.bg = require("uikit"):createFrame(color)
 	local list = {}
@@ -157,6 +164,6 @@ local createUiVertical = function(_, color)
 end
 
 return {
-	createHorizontalContainer = createUiHorizontal,
-	createVerticalContainer = createUiVertical
+	createHorizontalContainer = createHorizontalContainer,
+	createVerticalContainer = createVerticalContainer
 }

@@ -31,11 +31,11 @@ end
 mod.searchUser = function(_, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
-		error("api:getFriends(searchText, callback) - searchText must be a string", 2)
+		error("api:searchUser(searchText, callback) - searchText must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		error("api:getFriends(searchText, callback) - callback must be a function", 2)
+		error("api:searchUser(searchText, callback) - callback must be a function", 2)
 		return
 	end
 	local req = HTTP:Get(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
