@@ -449,29 +449,32 @@ function createChat()
 	chat = ui:createFrame(Color(0, 0, 0, 0.3))
 	chat:setParent(background)
 
-	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small" })
+	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
 	btnChatFullscreen.onRelease = function()
 		showModal(MODAL_KEYS.CHAT)
 	end
 	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
+	btnChatFullscreen:hide()
 
 	console = require("chat"):create({
 		uikit = ui,
+		time = false,
 		onSubmitEmpty = function()
 			hideChat()
 		end,
 		onFocus = function()
 			chat.Color = Color(0, 0, 0, 0.5)
+			btnChatFullscreen:show()
 		end,
 		onFocusLost = function()
 			chat.Color = Color(0, 0, 0, 0.3)
+			btnChatFullscreen:hide()
 		end,
 	})
 	console.Width = 200
 	console.Height = 500
 	console:setParent(chat)
 	btnChatFullscreen:setParent(chat)
-	btnChatFullscreen.pos.Z = -200 -- make sure it's rendered in front of messages
 
 	chat.parentDidResize = function()
 		local w = Screen.Width * CHAT_SCREEN_WIDTH_RATIO
@@ -490,7 +493,7 @@ function createChat()
 		console.pos = { theme.paddingTiny, theme.paddingTiny }
 		chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
 
-		btnChatFullscreen.pos = { theme.paddingTiny, chat.Height - btnChatFullscreen.Height - theme.paddingTiny }
+		btnChatFullscreen.pos = { chat.Width + theme.paddingTiny, chat.Height - btnChatFullscreen.Height }
 	end
 	chat:parentDidResize()
 end

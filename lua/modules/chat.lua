@@ -390,9 +390,9 @@ local createChat = function(_, config)
 			inputNode.Width = node.Width
 			inputNode.pos = { 0, 0 }
 
-			messagesNode.Width = node.Width
+			messagesNode.Width = node.Width - theme.paddingTiny * 2
 			messagesNode.Height = node.Height - inputNode.Height - theme.padding
-			messagesNode.pos = { 0, inputNode.Height + theme.padding }
+			messagesNode.pos = { theme.paddingTiny, inputNode.Height + theme.padding }
 		else
 			messagesNode.Width = node.Width
 			messagesNode.Height = node.Height
