@@ -1275,14 +1275,6 @@ function applyKey(keyCode, down)
 				Client.Action1Release()
 			end
 		end
-	elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
-		if down then
-			LocalEvent:Send(LocalEvent.Name.OpenChat)
-		end
-	elseif keyCode == codes.SLASH then
-		if down then
-			LocalEvent:Send(LocalEvent.Name.OpenChat, "/")
-		end
 	elseif keyCode == codes.KEY_W or keyCode == codes.UP then
 		if down then
 			if dirpadInput.Y <= 0 then

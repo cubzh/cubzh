@@ -6,16 +6,6 @@ description: |
     Client is nil in the [Server] execution context.
 
 functions:
-    - name: "OpenChatInput"
-      description: |
-        Opens the chat input.
-
-    - name: "OpenGameMenu"
-      description: |
-        Shows the game menu.
-
-        From there, players can exit or resume the game.
-
 
 properties:
 

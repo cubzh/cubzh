@@ -1004,7 +1004,12 @@ end)
 local keysDown = {} -- captured keys
 
 LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
-	if keyCode ~= codes.ESCAPE and keyCode ~= codes.RETURN and keyCode ~= codes.NUMPAD_RETURN then
+	if
+		keyCode ~= codes.ESCAPE
+		and keyCode ~= codes.RETURN
+		and keyCode ~= codes.NUMPAD_RETURN
+		and keyCode ~= codes.SLASH
+	then
 		-- key not handled by menu
 		return
 	end
@@ -1018,7 +1023,7 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
 	else
 		if keysDown[keyCode] then
 			keysDown[keyCode] = nil
-			return true -- catch
+			return true -- capture
 		else
 			return -- return without catching
 		end
@@ -1031,16 +1036,15 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
 			else
 				menu:Show()
 			end
+		elseif keyCode == codes.RETURN or keyCode ~= codes.NUMPAD_RETURN then
+			showChat("")
+		elseif keyCode == codes.SLASH then
+			showChat("/")
 		end
 	end
-end, { topPriority = true, system = System })
 
-LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
-	if System.Authenticated == false then
-		return
-	end
-	showChat(text)
-end)
+	return true -- capture
+end, { topPriority = true, system = System })
 
 LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive
