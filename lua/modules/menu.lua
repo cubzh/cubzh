@@ -13,6 +13,7 @@ creations = require("creations")
 api = require("system_api", System)
 alert = require("alert")
 sys_notifications = require("system_notifications", System)
+codes = require("inputcodes")
 
 ---------------------------
 -- CONSTANTS
@@ -97,6 +98,19 @@ function closeModal()
 	if activeModal ~= nil then
 		activeModal:close()
 		activeModal = nil
+	end
+end
+
+-- pops active modal content
+-- closing modal when reaching root content
+function popModal()
+	if activeModal == nil then
+		return
+	end
+	if #activeModal.contentStack > 1 then
+		activeModal:pop()
+	else
+		closeModal()
 	end
 end
 
@@ -986,6 +1000,40 @@ LocalEvent:Listen(LocalEvent.Name.FailedToLoadWorld, function()
 	hideLoading()
 	-- TODO: display alert, could receive world info to retry
 end)
+
+local keysDown = {} -- captured keys
+
+LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
+	if keyCode ~= codes.ESCAPE and keyCode ~= codes.RETURN and keyCode ~= codes.NUMPAD_RETURN then
+		-- key not handled by menu
+		return
+	end
+
+	if down then
+		if not keysDown[keyCode] then
+			keysDown[keyCode] = true
+		else
+			return -- key already down, not considering repeated inputs
+		end
+	else
+		if keysDown[keyCode] then
+			keysDown[keyCode] = nil
+			return true -- catch
+		else
+			return -- return without catching
+		end
+	end
+
+	if down then
+		if keyCode == codes.ESCAPE then
+			if activeModal ~= nil then
+				popModal()
+			else
+				menu:Show()
+			end
+		end
+	end
+end, { topPriority = true, system = System })
 
 LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
 	if System.Authenticated == false then
