@@ -537,10 +537,15 @@ function refreshChat()
 end
 
 function showChat(input)
+	if System.Authenticated == false then
+		return
+	end
 	chatDisplayed = true
 	refreshChat()
 	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, input or "")
-	console:focus()
+	if console then
+		console:focus()
+	end
 end
 
 function hideChat()
@@ -909,8 +914,6 @@ menu.IsActive = function(_)
 end
 
 menu.Show = function(_)
-	-- TODO: review condition
-	-- it should allow to show menu when hidden
 	if System.Authenticated == false then
 		return
 	end
@@ -1004,6 +1007,23 @@ end)
 local keysDown = {} -- captured keys
 
 LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
+	if titleScreen ~= nil and down then
+		skipTitleScreen()
+		keysDown[keyCode] = true
+		return true
+	end
+
+	if not down then
+		if keysDown[keyCode] then
+			keysDown[keyCode] = nil
+			return true -- capture
+		else
+			return -- return without catching
+		end
+	end
+
+	-- key is down from here
+
 	if
 		keyCode ~= codes.ESCAPE
 		and keyCode ~= codes.RETURN
@@ -1014,25 +1034,18 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
 		return
 	end
 
-	if down then
-		if not keysDown[keyCode] then
-			keysDown[keyCode] = true
-		else
-			return -- key already down, not considering repeated inputs
-		end
+	if not keysDown[keyCode] then
+		keysDown[keyCode] = true
 	else
-		if keysDown[keyCode] then
-			keysDown[keyCode] = nil
-			return true -- capture
-		else
-			return -- return without catching
-		end
+		return -- key already down, not considering repeated inputs
 	end
 
 	if down then
 		if keyCode == codes.ESCAPE then
 			if activeModal ~= nil then
 				popModal()
+			elseif console ~= nil and console:hasFocus() == true then
+				console:unfocus()
 			else
 				menu:Show()
 			end

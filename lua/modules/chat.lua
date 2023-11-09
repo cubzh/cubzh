@@ -228,6 +228,14 @@ local createChat = function(_, config)
 			inputNode:focus()
 		end
 
+		node.unfocus = function()
+			inputNode:unfocus()
+		end
+
+		node.hasFocus = function()
+			return inputNode:hasFocus()
+		end
+
 		inputNode.onTextChange = function()
 			if lastCommandIndex ~= nil then
 				if inputNode.Text ~= System:GetCommandFromHistory(lastCommandIndex) then
