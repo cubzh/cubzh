@@ -1847,6 +1847,10 @@ function createUI(system)
 				self.keyboardListener = LocalEvent:Listen(
 					LocalEvent.Name.KeyboardInput,
 					function(char, keycode, modifiers, down)
+						if keycode == codes.ESCAPE then
+							-- do not consider / capture ESC key inputs
+							return
+						end
 						if self.string == nil then
 							return
 						end
@@ -1975,6 +1979,12 @@ function createUI(system)
 
 			if self.onFocusLost ~= nil then
 				self:onFocusLost()
+			end
+		end
+
+		node.unfocus = function(self)
+			if self:hasFocus() then
+				focus(nil)
 			end
 		end
 
