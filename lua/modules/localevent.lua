@@ -67,7 +67,7 @@ localevent.name = {
 	ErrorMessage = 38,
 	SensitivityUpdated = 39,
 	OnChat = 40,
-	SetChatTextInput = 41,
+	-- SetChatTextInput = 41, -- REMOVED AFTER 0.0.53
 	CppMenuStateChanged = 42, -- needed while Cubzh still uses a few C++ menus (code editor & multiline inputs)
 	LocalAvatarUpdate = 43,
 	ReceivedEnvironmentToLaunch = 44,
@@ -114,7 +114,6 @@ limited[localevent.name.InfoMessage] = true
 limited[localevent.name.WarningMessage] = true
 limited[localevent.name.ErrorMessage] = true
 limited[localevent.name.OnChat] = true
-limited[localevent.name.SetChatTextInput] = true
 limited[localevent.name.CppMenuStateChanged] = true
 limited[localevent.name.LocalAvatarUpdate] = true
 

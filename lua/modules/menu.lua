@@ -134,7 +134,12 @@ function showModal(key)
 		local content = require("profile"):create({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CHAT then
-		local content = require("chat"):createModalContent({ uikit = ui })
+		local inputText = ""
+		if console then
+			inputText = console:getText()
+		end
+
+		local content = require("chat"):createModalContent({ uikit = ui, inputText = inputText })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
 		activeModal = friends:create(maxModalWidth, maxModalHeight, updateModalPosition, ui)
@@ -542,9 +547,11 @@ function showChat(input)
 	end
 	chatDisplayed = true
 	refreshChat()
-	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, input or "")
 	if console then
 		console:focus()
+		if input ~= nil then
+			console:setText(input)
+		end
 	end
 end
 
@@ -1049,7 +1056,7 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
 			else
 				menu:Show()
 			end
-		elseif keyCode == codes.RETURN or keyCode ~= codes.NUMPAD_RETURN then
+		elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
 			showChat("")
 		elseif keyCode == codes.SLASH then
 			showChat("/")
