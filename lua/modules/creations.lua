@@ -628,7 +628,7 @@ creations.createModal = function(_, config)
 
 	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen })
 
-	creationsContent.idealReducedContentSize = function(content, width, height)
+	creationsContent.idealReducedContentSize = function(_, width, height)
 		return Number2(width, height)
 	end
 
@@ -640,7 +640,7 @@ creations.createModal = function(_, config)
 	end
 
 	function maxModalHeight()
-		return (Screen.Height - Screen.SafeArea.Bottom - topBarHeight - MODAL_MARGIN * 2) * 0.7
+		return (Screen.Height - Screen.SafeArea.Bottom - topBarHeight - MODAL_MARGIN * 2) * 0.95
 	end
 
 	function updateModalPosition(modal, forceBounce)

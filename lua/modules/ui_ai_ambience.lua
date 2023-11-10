@@ -21,37 +21,40 @@ setFromAIConfig = function(_, config, _quiet)
         sfx("metal_clanging_2", {Spatialized = false, Volume = 0.6})
     end
 
-    local c = Color(math.floor(config.sky.skyColor[1]),
+    if not config.sky.skyColor then return end
+
+    local colorType = type(Color.Red)
+    local c = type(config.sky.skyColor) == colorType and config.sky.skyColor or Color(math.floor(config.sky.skyColor[1]),
         math.floor(config.sky.skyColor[2]),
         math.floor(config.sky.skyColor[3]))
     current.sky.skyColor = c
-    c = Color(math.floor(config.sky.horizonColor[1]),
+    c = type(config.sky.horizonColor) == colorType and config.sky.horizonColor or Color(math.floor(config.sky.horizonColor[1]),
         math.floor(config.sky.horizonColor[2]),
         math.floor(config.sky.horizonColor[3]))
     current.sky.horizonColor = c
-    c = Color(math.floor(config.sky.abyssColor[1]),
+    c = type(config.sky.abyssColor) == colorType and config.sky.abyssColor or Color(math.floor(config.sky.abyssColor[1]),
         math.floor(config.sky.abyssColor[2]),
         math.floor(config.sky.abyssColor[3]))
     current.sky.abyssColor = c
-    c = Color(math.floor(config.sky.lightColor[1]),
+    c = type(config.sky.lightColor) == colorType and config.sky.lightColor or Color(math.floor(config.sky.lightColor[1]),
         math.floor(config.sky.lightColor[2]),
         math.floor(config.sky.lightColor[3]))
     current.sky.lightColor = c
     current.sky.lightIntensity = config.sky.lightIntensity
-    c = Color(math.floor(config.fog.color[1]),
+    c = type(config.fog.color) == colorType and config.fog.color or Color(math.floor(config.fog.color[1]),
         math.floor(config.fog.color[2]),
         math.floor(config.fog.color[3]))
     current.fog.color = c
     current.fog.near = math.floor(config.fog.near)
     current.fog.far = math.floor(config.fog.far)
     current.fog.lightAbsorbtion = math.clamp(config.fog.lightAbsorbtion, 0, 1)
-    c = Color(math.floor(config.sun.color[1]),
+    c = type(config.sun.color) == colorType and config.sun.color or Color(math.floor(config.sun.color[1]),
         math.floor(config.sun.color[2]),
         math.floor(config.sun.color[3]))
     current.sun.color = c
     current.sun.intensity = config.sun.intensity
-    current.sun.rotation.X = config.sun.rotation[1]
-    current.sun.rotation.Y = config.sun.rotation[2]
+    current.sun.rotation.X = type(config.sun.rotation) == type(Number3.Zero) and config.sun.rotation.X or config.sun.rotation[1]
+    current.sun.rotation.Y = type(config.sun.rotation) == type(Number3.Zero) and config.sun.rotation.Y or config.sun.rotation[2]
 
     refreshAmbiance()
 end

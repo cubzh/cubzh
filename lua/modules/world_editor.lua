@@ -1,13 +1,19 @@
 local worldEditor = {}
 
-local index = {}
-local metatable = { __index = index, __metatable = false }
-setmetatable(worldEditor, metatable)
+local sendToServer = require("world_editor_server").sendToServer
+local worldEditorCommon = require("world_editor_common")
+local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
 
-local initDefaultMode
+local deserializeWorld = worldEditorCommon.deserializeWorld
+local maps = worldEditorCommon.maps
+local events = worldEditorCommon.events
 
 local padding = require("uitheme").current.padding
 local ambience = require("ambience")
+
+local index = {}
+local metatable = { __index = index, __metatable = false }
+setmetatable(worldEditor, metatable)
 
 local worldTitle
 local worldID
@@ -19,21 +25,6 @@ local mapIndex = 1
 local mapName
 
 local waitingForUUIDObj
-
-local maps = {
-	"aduermael.hills",
-	"aduermael.base_250x40x250",
-	"claire.harbour",
-	"buche.chess_board",
-	"claire.apocalyptic_city",
-	"aduermael.unicorn_land",
-	"boumety.building_challenge",
-	"claire.museum",
-	"claire.summer_beach",
-	"claire.voxowl_hq"
-}
-
-local loadMap
 
 local TRAILS_COLORS = { Color.Blue, Color.Red, Color.Green, Color.Yellow, Color.Grey, Color.Purple, Color.Beige, Color.Yellow, Color.Brown, Color.Pink }
 local OBJECTS_COLLISION_GROUP = 7
@@ -50,47 +41,6 @@ local getObjectInfoTable = function(obj)
 		itemDetailsCell = obj.itemDetailsCell,
 		Physics = obj.Physics or PhysicsMode.StaticPerBlock
 	}
-end
-
--- multiplayer
-
-local events = {
-	P_END_PREPARING = "pep",
-	END_PREPARING = "ep",
-	P_PLACE_OBJECT = "ppo",
-	PLACE_OBJECT = "po",
-	P_EDIT_OBJECT = "peo",
-	EDIT_OBJECT = "eo",
-	P_REMOVE_OBJECT = "pro",
-	REMOVE_OBJECT = "ro",
-	P_PLACE_BLOCK = "ppb",
-	PLACE_BLOCK = "pb",
-	P_REMOVE_BLOCK = "prb",
-	REMOVE_BLOCK = "rb",
-	P_START_EDIT_OBJECT = "pseo",
-	START_EDIT_OBJECT = "seo",
-	P_END_EDIT_OBJECT = "peeo",
-	END_EDIT_OBJECT = "eeo",
-	SYNC = "s",
-	MASTER = "m",
-	PLAYER_ACTIVITY = "pa",
-	P_SET_AMBIENCE = "psa",
-	SET_AMBIENCE = "sa",
-	P_LOAD_WORLD = "plw",
-	LOAD_WORLD = "lw",
-	P_SET_MAP_SCALE = "psms",
-	SET_MAP_SCALE = "sms",
-	P_RESET_ALL = "pra",
-	RESET_ALL = "ra",
-	P_SAVE_WORLD = "psw",
-	SAVE_WORLD = "sw"
-}
-
-local sendToServer = function(event, data)
-	local e = Event()
-	e.a = event
-	e.data = data
-	e:SendTo(Server)
 end
 
 local states = {
@@ -205,6 +155,7 @@ local spawnObject = function(data, onDone)
 	local rotation = data.Rotation or Rotation(0,0,0)
 	local scale = data.Scale or 0.5
 	local itemDetailsCell = data.itemDetailsCell
+	local itemDetailsCellItem = data.itemDetailsCellItem
 	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
 	Object:Load(fullname, function(obj)
@@ -230,6 +181,7 @@ local spawnObject = function(data, onDone)
 		obj.fullname = fullname
 		obj.Name = name or fullname
 		obj.itemDetailsCell = itemDetailsCell
+		obj.itemDetailsCellItem = itemDetailsCellItem
 
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
@@ -411,12 +363,12 @@ local statesSettings = {
 		end,
 		onStateEnd = function()
 			worldEditor.uiPickMap:hide()
+			startDefaultMode()
 		end
 	},
 	-- DEFAULT
 	{
 		onStateBegin = function()
-			startDefaultMode()
 			worldEditor.defaultStateUI:show()
 		end,
 		onStateEnd = function()
@@ -507,10 +459,6 @@ local statesSettings = {
 			end
 			obj.currentlyEditedBy = Player
 			worldEditor.object = obj
-			-- require("box_gizmo").onScaleChange = function(_, newScale)
-			-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Scale = newScale })
-			-- end
-			-- require("box_gizmo"):setGizmoMode("scale")
 			require("box_gizmo"):toggle(obj, Color.White)
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
@@ -519,6 +467,7 @@ local statesSettings = {
 			end
 			worldEditor.infoBtn.onRelease = function()
 				local cell = worldEditor.object.itemDetailsCell
+				cell.item = worldEditor.object.itemDetailsCellItem
 				require("item_details"):createModal({ cell = cell })
 			end
 			worldEditor.updateObjectUI:show()
@@ -764,15 +713,14 @@ initPickWorld = function()
 		onOpen = function(_, cell)
 			worldTitle = cell.title
 			worldID = cell.id
-			require("system_api", System):getWorld(worldID, function(a, b)
-				if not b then
-					print(a)
+			require("system_api", System):getWorld(worldID, function(err, data)
+				if err then
+					print(err)
 					return
 				end
-				local mapBase64 = b.mapBase64
+				local mapBase64 = data.mapBase64
 				if not mapBase64 or #mapBase64 == 0 then
 					setState(states.PICK_MAP)
-					print("Can't retrieve map")
 					return
 				end
 				sendToServer(events.P_LOAD_WORLD, { mapBase64 = mapBase64 })
@@ -840,65 +788,37 @@ initPickMap = function()
 	end
 	uiPickMap:parentDidResize()
 
-	local loadInput = ui:createTextInput("", "Paste base64")
-	loadInput:setParent(uiPickMap)
-	uiPickMap.loadInput = loadInput
-
-	loadBtn = ui:createButton("Load")
-	loadBtn:setParent(uiPickMap)
-	loadBtn.parentDidResize = function()
-		loadBtn.pos = { Screen.Width - loadBtn.Width - padding, padding }
-		loadInput.pos = loadBtn.pos - { loadInput.Width + padding, 0, 0 }
-		loadBtn.Height = loadInput.Height
-	end
-	loadBtn:parentDidResize()
-	loadBtn.onRelease = function()
-		sendToServer(events.P_LOAD_WORLD, { base64world = loadInput.Text })
-	end
-	uiPickMap.loadBtn = loadBtn
-
 	worldEditor.uiPickMap = uiPickMap
 
-	uiPickMap.parentDidResize = function()
-		local isMobile = Screen.Width < Screen.Height
-		if isMobile then
-			uiPickMap.loadBtn:hide()
-			uiPickMap.loadInput:hide()
-		else
-			uiPickMap.loadBtn:show()
-			uiPickMap.loadInput:show()
-		end
-	end
 	uiPickMap:parentDidResize()
+end
 
-	loadMap = function(fullname, scale, onDone)
-		mapName = fullname
-		Object:Load(fullname, function(obj)
-			if map then map:RemoveFromParent() end
-			map = MutableShape(obj, { includeChildren = true })
-			map.Scale = scale or 5
-			require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
-				o.CollisionGroups = Map.CollisionGroups
-				o.CollidesWithGroups = Map.CollidesWithGroups
-				o.Physics = PhysicsMode.StaticPerBlock
-			end)
-			map:SetParent(World)
-			map.Position = { 0, 0, 0 }
-			map.Pivot = { 0, 0, 0 }
-
-			if state == states.PICK_MAP then
-				Fog.On = false
-				Camera.Rotation.Y = math.pi / 2
-				Camera.Rotation.X = math.pi / 4
-
-				local longestValue =  math.max(map.Width, math.max(map.Height,map.Depth))
-				print(worldEditor.mapPivot)
-				worldEditor.mapPivot.Position = Number3(map.Width * 0.5, longestValue, map.Depth * 0.5) * map.Scale
-				Camera.Position = worldEditor.mapPivot.Position + { -longestValue * 4, 0, 0 }
-			end
-			if onDone then onDone() end
+loadMap = function(fullname, scale, onDone)
+	mapName = fullname
+	Object:Load(fullname, function(obj)
+		if map then map:RemoveFromParent() end
+		map = MutableShape(obj, { includeChildren = true })
+		map.Scale = scale or 5
+		require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
+			o.CollisionGroups = Map.CollisionGroups
+			o.CollidesWithGroups = Map.CollidesWithGroups
+			o.Physics = PhysicsMode.StaticPerBlock
 		end)
-	end
+		map:SetParent(World)
+		map.Position = { 0, 0, 0 }
+		map.Pivot = { 0, 0, 0 }
+
+		if state == states.PICK_MAP then
+			Fog.On = false
+			Camera.Rotation.Y = math.pi / 2
+			Camera.Rotation.X = math.pi / 4
+
+			local longestValue =  math.max(map.Width, math.max(map.Height,map.Depth))
+			worldEditor.mapPivot.Position = Number3(map.Width * 0.5, longestValue, map.Depth * 0.5) * map.Scale
+			Camera.Position = worldEditor.mapPivot.Position + { -longestValue * 4, 0, 0 }
+		end
+		if onDone then onDone() end
+	end)
 end
 
 startDefaultMode = function()
@@ -1022,7 +942,7 @@ initDefaultMode = function()
 				local frame = ui:createFrame()
 				local text = ui:createText("Map Scale", Color.White)
 				text:setParent(frame)
-				local scale = map.Scale.X or 5
+				local scale = map.Scale.X or MAP_SCALE_DEFAULT
 				if math.floor(scale) == scale then
 					scale = math.floor(scale)
 				end
@@ -1110,7 +1030,7 @@ initDefaultMode = function()
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
 		local fullname = cell.repo.."."..cell.name
-		setState(states.SPAWNING_OBJECT, { fullname = fullname, itemDetailsCell = { itemFullName = cell.itemFullName, repo = cell.repo, name = cell.name, id = cell.id, item = cell.item } })
+		setState(states.SPAWNING_OBJECT, { fullname = fullname, itemDetailsCell = { itemFullName = cell.itemFullName, repo = cell.repo, name = cell.name, id = cell.id }, itemDetailsCellItem = cell.item })
 	end
 	local initGallery
 	initGallery = function()
@@ -1208,6 +1128,7 @@ initDefaultMode = function()
 
 	-- Ambience editor
 	local aiAmbienceButton = require("ui_ai_ambience"):createButton()
+	aiAmbienceButton:setParent(defaultStateUI)
 	aiAmbienceButton.parentDidResize = function()
 		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
 	end
@@ -1247,14 +1168,15 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	local isLocalPlayer = e.pID == Player.ID
 
 	if e.a == events.END_PREPARING then
-		loadMap(data.mapName, data.mapScale or 5, function()
+		loadMap(data.mapName, data.mapScale or MAP_SCALE_DEFAULT, function()
 			setState(states.DEFAULT)
 		end)
 	elseif e.a == events.SYNC then
 		if state == states.PICK_WORLD then -- joining
-			local t = Data(data, { format = "base64" }):ToTable()
-			loadMap(t.mapName, t.mapScale or 5, function()
+			local t = deserializeWorld(data.mapBase64)
+			loadMap(t.mapName, t.mapScale or MAP_SCALE_DEFAULT, function()
 				setState(states.DEFAULT)
+				startDefaultMode()
 				local blocks = t.blocks
 				if blocks then
 					for _,d in ipairs(blocks) do
@@ -1267,9 +1189,10 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 						local b = map:GetBlock(x,y,z)
 						if b then b:Remove() end
 						if color ~= nil and color ~= -1 then
-							map:AddBlock(Color(math.floor(color[1]), math.floor(color[2]), math.floor(color[3])), x, y, z)
+							map:AddBlock(color, x, y, z)
 						end
 					end
+					map:RefreshModel()
 				end
 				if t.objects then
 					for _,objInfo in ipairs(t.objects) do
@@ -1278,7 +1201,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 					end
 				end
 				if t.ambience then
-					require("ui_ai_ambience"):setFromAIConfig(t.ambience)
+					require("ui_ai_ambience"):setFromAIConfig(t.ambience, true)
 				end
 			end)
 		end
@@ -1325,6 +1248,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
 		local color = data.color
 		map:AddBlock(color, data.pos.X, data.pos.Y, data.pos.Z)
+		map:RefreshModel()
 	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
 		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
 		if b then b:Remove() end
@@ -1343,7 +1267,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			end
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
-		require("ui_ai_ambience"):setFromAIConfig(data)
+		require("ui_ai_ambience"):setFromAIConfig(data, true)
 	elseif e.a == events.SET_MAP_SCALE then
 		map.Scale = data.mapScale
 		dropPlayer()
@@ -1365,6 +1289,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			end
 		end)
 	end
+end)
+
+Timer(20, true, function()
+	if state < states.DEFAULT then return end
+	print("Autosaving...")
+	sendToServer(events.P_SAVE_WORLD)
 end)
 
 setState(states.LOADING)
