@@ -152,6 +152,8 @@ function showModal(key)
 	end
 
 	if activeModal ~= nil then
+		ui.unfocus() -- unfocuses node currently focused
+
 		activeModal:setParent(background)
 
 		System.PointerForceShown = true

@@ -656,4 +656,64 @@ itemDetails.createModalContent = function(_, config)
 	return content
 end
 
+itemDetails.createModal = function(_, config)
+	local cell = config.cell
+	if not cell then error("Can't make item details modal without cell in config") return end
+
+	local modal = require("modal")
+	local ui = config.ui or require("uikit")
+	local ease = require("ease")
+	local theme = require("uitheme").current
+	local MODAL_MARGIN = theme.paddingBig -- space around modals
+
+	-- TODO: handle this correctly
+	local topBarHeight = 50
+
+	local content = modal:createContent()
+
+	local itemDetailsContent = itemDetails:createModalContent({ uikit = ui })
+	itemDetailsContent:loadCell(cell)
+
+	itemDetailsContent.idealReducedContentSize = function(content, width, height)
+		content.Width = width * 0.8
+		content.Height = height * 0.8
+		return Number2(content.Width, content.Height)
+	end
+
+	function maxModalWidth()
+		local computed = Screen.Width - Screen.SafeArea.Left - Screen.SafeArea.Right - MODAL_MARGIN * 2
+		local max = 1400
+		local w = math.min(max, computed)
+		return w
+	end
+
+	function maxModalHeight()
+		return Screen.Height - Screen.SafeArea.Bottom - topBarHeight - MODAL_MARGIN * 2
+	end
+
+	function updateModalPosition(modal, forceBounce)
+		local vMin = Screen.SafeArea.Bottom + MODAL_MARGIN
+		local vMax = Screen.Height - topBarHeight - MODAL_MARGIN
+
+		local vCenter = vMin + (vMax - vMin) * 0.5
+
+		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5, 0)
+
+		if not modal.updatedPosition or forceBounce then
+			modal.LocalPosition = p - { 0, 100, 0 }
+			modal.updatedPosition = true
+			ease:cancel(modal) -- cancel modal ease animations if any
+			ease:outBack(modal, 0.22).LocalPosition = p
+		else
+			modal.LocalPosition = p
+		end
+	end
+
+	local currentModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+
+	content:pushAndRemoveSelf(itemDetailsContent)
+
+	return currentModal
+end
+
 return itemDetails

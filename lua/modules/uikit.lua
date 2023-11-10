@@ -90,6 +90,10 @@ function focus(node)
 	return true
 end
 
+function unfocus()
+	focus(nil)
+end
+
 -- by default, require("uikit") returns one ui instance,
 -- calling this function.
 -- but it's also possible for System modules to request
@@ -1932,7 +1936,7 @@ function createUI(system)
 					end,
 					{
 						topPriority = true,
-						system = system == true and System or nil,
+						system = System,
 					}
 				)
 			end
@@ -2791,6 +2795,7 @@ sharedUI.systemUI = function(system)
 
 	if systemUI == nil then
 		systemUI = createUI(true)
+		systemUI.unfocus = unfocus
 	end
 
 	return systemUI
