@@ -223,54 +223,50 @@ end
 --
 -- callback(error string or nil, items []Item or nil)
 --
-mod.getItems = function(_, filter, callback)
+mod.getItems = function(_, config, callback)
 	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
 
+	local defaultConfig = {
+		minBlock = 0,
+		repo = "",
+		category = nil,
+		page = 1,
+		perpage = 250,
+		search = "",
+		useCache = true,
+	}
+
+	config = require("config"):merge(defaultConfig, config, {acceptNil = {category = true}})
+
 	-- validate arguments
-	if type(filter) ~= "table" then
+	if type(config) ~= "table" then
 		callback("1st arg must be a table", nil)
 		return nil
 	end
+
 	if type(callback) ~= "function" then
 		callback("2nd arg must be a function", nil)
 		return nil
 	end
 
-	local filterIsValid = function(k, v)
-		if type(k) == "string" then
-			if k == "search" and type(v) == "string" and v ~= "" then
-				return true
-			end
-			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
-				return true
-			end
-			if k == "page" or k == "perpage" then
-				return true
-			end
-			if k == "category" then
-				return true
-			end
-			if k == "repo" then
-				return true
-			end
-			if k == "minBlock" then
-				return true
-			end
-		end
-		return false
+	-- build request headers
+	local headers = {}
+	if config.useCache == false then
+		headers["Cache-Control"] = "no-cache"
+	end
+	if config.useCache ~= nil then
+		config.useCache = nil
 	end
 
 	-- parse filters
 	local queryParams = {}
-	for k, v in pairs(filter) do
-		if filterIsValid(k, v) then
-			if type(v) == "table" then
-				for _, entry in ipairs(v) do
-					table.insert(queryParams, { key = k, value = tostring(entry) })
-				end
-			else
-				table.insert(queryParams, { key = k, value = tostring(v) })
+	for k, v in pairs(config) do
+		if type(v) == "table" then
+			for _, entry in ipairs(v) do
+				table.insert(queryParams, { key = k, value = tostring(entry) })
 			end
+		else
+			table.insert(queryParams, { key = k, value = tostring(v) })
 		end
 	end
 
@@ -287,11 +283,12 @@ mod.getItems = function(_, filter, callback)
 		end
 	end
 
+
 	-- send request
-	local req = HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, headers, function(resp)
 		-- check status code
 		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+			callback("http status not 200: " .. resp.StatusCode .. " " .. resp.Body:ToString(), nil)
 			return
 		end
 
@@ -324,51 +321,49 @@ end
 -- NOTE: categories are not in place yet, but they would be useful,
 -- keeping filter in place client side, waiting for backend to support it.
 -- callback(error string or nil, items []World or nil)
-mod.getWorlds = function(_, filter, callback)
+mod.getWorlds = function(_, config, callback)
 	-- GET /worlddrafts?search=banana,gdevillele&page=1&perPage=100
 
+	local defaultConfig = {
+		repo = "",
+		category = {},
+		page = 1,
+		perpage = 250,
+		search = "",
+		useCache = true,
+	}
+
+	config = require("config"):merge(defaultConfig, config, {acceptNil = {category = true}})
+
 	-- validate arguments
-	if type(filter) ~= "table" then
+	if type(config) ~= "table" then
 		callback("1st arg must be a table", nil)
 		return
 	end
+
 	if type(callback) ~= "function" then
 		callback("2nd arg must be a function", nil)
 		return
 	end
 
-	local filterIsValid = function(k, v)
-		if type(k) == "string" then
-			if k == "search" and type(v) == "string" and v ~= "" then
-				return true
-			end
-			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
-				return true
-			end
-			if k == "page" or k == "perpage" then
-				return true
-			end
-			if k == "category" then
-				return true
-			end
-			if k == "repo" then
-				return true
-			end
-		end
-		return false
+	-- build request headers
+	local headers = {}
+	if config.useCache == false then
+		headers["Cache-Control"] = "no-cache"
+	end
+	if config.useCache ~= nil then
+		config.useCache = nil
 	end
 
 	-- parse filters
 	local queryParams = {}
-	for k, v in pairs(filter) do
-		if filterIsValid(k, v) then
-			if type(v) == "table" then
-				for _, entry in ipairs(v) do
-					table.insert(queryParams, { key = k, value = tostring(entry) })
-				end
-			else
-				table.insert(queryParams, { key = k, value = tostring(v) })
+	for k, v in pairs(config) do
+		if type(v) == "table" then
+			for _, entry in ipairs(v) do
+				table.insert(queryParams, { key = k, value = tostring(entry) })
 			end
+		else
+			table.insert(queryParams, { key = k, value = tostring(v) })
 		end
 	end
 
@@ -385,11 +380,12 @@ mod.getWorlds = function(_, filter, callback)
 		end
 	end
 
+
 	-- send request
-	local req = HTTP:Get(url, function(resp)
+	local req = HTTP:Get(url, headers, function(resp)
 		-- check status code
 		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+			callback("http status not 200: " .. resp.StatusCode .. " " .. resp.Body:ToString(), nil)
 			return
 		end
 
@@ -421,6 +417,7 @@ mod.getWorlds = function(_, filter, callback)
 
 		callback(nil, data.worlds) -- success
 	end)
+
 	return req
 end
 

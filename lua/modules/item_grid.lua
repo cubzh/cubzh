@@ -35,6 +35,8 @@ itemGrid.create = function(_, config)
 		worldsFilter = nil,
 		--
 		ignoreCategoryOnSearch = false,
+		-- whether HTTP cache is used (true by default)
+		useCache = true,
 		--
 		uikit = require("uikit"),
 	}
@@ -70,6 +72,9 @@ itemGrid.create = function(_, config)
 		end
 		if config.ignoreCategoryOnSearch ~= nil then
 			_config.ignoreCategoryOnSearch = config.ignoreCategoryOnSearch
+		end
+		if config.useCache ~= nil then
+			_config.useCache = config.useCache
 		end
 		if type(config.uikit) == type(_config.uikit) then
 			_config.uikit = config.uikit
@@ -677,16 +682,17 @@ itemGrid.create = function(_, config)
 		if self.setGridEntries ~= nil then
 			self:setGridEntries({})
 		end
-
 		if config.type == "items" then
-			local req = api:getItems({
+			local reqConfig = {
 				minBlock = config.minBlocks,
 				repo = config.repo,
 				category = config.categories,
 				page = 1,
 				perpage = 250,
 				search = search,
-			}, function(err, items)
+				useCache = config.useCache,
+			}
+			local req = api:getItems(reqConfig, function(err, items)
 				if err then
 					print("Error: " .. err)
 					return
@@ -723,10 +729,16 @@ itemGrid.create = function(_, config)
 			if repoFilter ~= nil then
 				local categories = config.categories
 				if ignoreCategoryOnSearch == true and search ~= nil and #search > 0 then
-					categories = ""
+					categories = nil
 				end
-				local reqConfig =
-					{ repo = config.repo, category = categories, page = 1, perpage = 250, search = search }
+				local reqConfig = {
+					repo = repoFilter,
+					category = categories,
+					page = 1,
+					perpage = 250,
+					search = search,
+					useCache = config.useCache,
+				}
 				local req = api:getWorlds(reqConfig, apiCallback)
 				addSentRequest(req)
 			else -- published worlds
