@@ -36,6 +36,7 @@ local defaultConfig = {
 	onSubmitEmpty = function() end,
 	onFocus = function() end,
 	onFocusLost = function() end,
+	inputText = "",
 }
 
 local function getLastXElements(array, x)
@@ -214,6 +215,8 @@ local createChat = function(_, config)
 		inputNode:setColorPressed(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
 		inputNode:setColorFocused(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
 
+		inputNode.Text = config.inputText
+
 		inputNode.onSubmit = function()
 			local text = trim(inputNode.Text)
 			if text == "" then
@@ -226,6 +229,24 @@ local createChat = function(_, config)
 
 		node.focus = function()
 			inputNode:focus()
+		end
+
+		node.unfocus = function()
+			inputNode:unfocus()
+		end
+
+		node.setText = function(_, text)
+			if type(text) == "string" then
+				inputNode.Text = text
+			end
+		end
+
+		node.getText = function(_)
+			return inputNode.Text or ""
+		end
+
+		node.hasFocus = function()
+			return inputNode:hasFocus()
 		end
 
 		inputNode.onTextChange = function()
@@ -390,9 +411,9 @@ local createChat = function(_, config)
 			inputNode.Width = node.Width
 			inputNode.pos = { 0, 0 }
 
-			messagesNode.Width = node.Width
+			messagesNode.Width = node.Width - theme.paddingTiny * 2
 			messagesNode.Height = node.Height - inputNode.Height - theme.padding
-			messagesNode.pos = { 0, inputNode.Height + theme.padding }
+			messagesNode.pos = { theme.paddingTiny, inputNode.Height + theme.padding }
 		else
 			messagesNode.Width = node.Width
 			messagesNode.Height = node.Height
@@ -443,21 +464,8 @@ local createChat = function(_, config)
 		pushMessage(msgInfo)
 	end)
 
-	local setChatInputListener
-
-	if hasInput then
-		setChatInputListener = LocalEvent:Listen(LocalEvent.Name.SetChatTextInput, function(text)
-			if text ~= "" and string.sub(inputNode.Text, 1, #text) ~= text then
-				inputNode.Text = text
-			end
-		end)
-	end
-
 	node.onRemove = function(_)
 		messageListener:Remove()
-		if setChatInputListener then
-			setChatInputListener:Remove()
-		end
 	end
 
 	return node

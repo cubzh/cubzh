@@ -13,6 +13,7 @@ creations = require("creations")
 api = require("system_api", System)
 alert = require("alert")
 sys_notifications = require("system_notifications", System)
+codes = require("inputcodes")
 
 ---------------------------
 -- CONSTANTS
@@ -100,6 +101,19 @@ function closeModal()
 	end
 end
 
+-- pops active modal content
+-- closing modal when reaching root content
+function popModal()
+	if activeModal == nil then
+		return
+	end
+	if #activeModal.contentStack > 1 then
+		activeModal:pop()
+	else
+		closeModal()
+	end
+end
+
 function showModal(key)
 	if not key then
 		return
@@ -120,7 +134,12 @@ function showModal(key)
 		local content = require("profile"):create({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CHAT then
-		local content = require("chat"):createModalContent({ uikit = ui })
+		local inputText = ""
+		if console then
+			inputText = console:getText()
+		end
+
+		local content = require("chat"):createModalContent({ uikit = ui, inputText = inputText })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
 		activeModal = friends:create(maxModalWidth, maxModalHeight, updateModalPosition, ui)
@@ -449,29 +468,32 @@ function createChat()
 	chat = ui:createFrame(Color(0, 0, 0, 0.3))
 	chat:setParent(background)
 
-	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small" })
+	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
 	btnChatFullscreen.onRelease = function()
 		showModal(MODAL_KEYS.CHAT)
 	end
 	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
+	btnChatFullscreen:hide()
 
 	console = require("chat"):create({
 		uikit = ui,
+		time = false,
 		onSubmitEmpty = function()
 			hideChat()
 		end,
 		onFocus = function()
 			chat.Color = Color(0, 0, 0, 0.5)
+			btnChatFullscreen:show()
 		end,
 		onFocusLost = function()
 			chat.Color = Color(0, 0, 0, 0.3)
+			btnChatFullscreen:hide()
 		end,
 	})
 	console.Width = 200
 	console.Height = 500
 	console:setParent(chat)
 	btnChatFullscreen:setParent(chat)
-	btnChatFullscreen.pos.Z = -200 -- make sure it's rendered in front of messages
 
 	chat.parentDidResize = function()
 		local w = Screen.Width * CHAT_SCREEN_WIDTH_RATIO
@@ -490,7 +512,7 @@ function createChat()
 		console.pos = { theme.paddingTiny, theme.paddingTiny }
 		chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
 
-		btnChatFullscreen.pos = { theme.paddingTiny, chat.Height - btnChatFullscreen.Height - theme.paddingTiny }
+		btnChatFullscreen.pos = { chat.Width + theme.paddingTiny, chat.Height - btnChatFullscreen.Height }
 	end
 	chat:parentDidResize()
 end
@@ -520,10 +542,17 @@ function refreshChat()
 end
 
 function showChat(input)
+	if System.Authenticated == false then
+		return
+	end
 	chatDisplayed = true
 	refreshChat()
-	LocalEvent:Send(LocalEvent.Name.SetChatTextInput, input or "")
-	console:focus()
+	if console then
+		console:focus()
+		if input ~= nil then
+			console:setText(input)
+		end
+	end
 end
 
 function hideChat()
@@ -892,8 +921,6 @@ menu.IsActive = function(_)
 end
 
 menu.Show = function(_)
-	-- TODO: review condition
-	-- it should allow to show menu when hidden
 	if System.Authenticated == false then
 		return
 	end
@@ -984,12 +1011,60 @@ LocalEvent:Listen(LocalEvent.Name.FailedToLoadWorld, function()
 	-- TODO: display alert, could receive world info to retry
 end)
 
-LocalEvent:Listen(LocalEvent.Name.OpenChat, function(text)
-	if System.Authenticated == false then
+local keysDown = {} -- captured keys
+
+LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
+	if titleScreen ~= nil and down then
+		skipTitleScreen()
+		keysDown[keyCode] = true
+		return true
+	end
+
+	if not down then
+		if keysDown[keyCode] then
+			keysDown[keyCode] = nil
+			return true -- capture
+		else
+			return -- return without catching
+		end
+	end
+
+	-- key is down from here
+
+	if
+		keyCode ~= codes.ESCAPE
+		and keyCode ~= codes.RETURN
+		and keyCode ~= codes.NUMPAD_RETURN
+		and keyCode ~= codes.SLASH
+	then
+		-- key not handled by menu
 		return
 	end
-	showChat(text)
-end)
+
+	if not keysDown[keyCode] then
+		keysDown[keyCode] = true
+	else
+		return -- key already down, not considering repeated inputs
+	end
+
+	if down then
+		if keyCode == codes.ESCAPE then
+			if activeModal ~= nil then
+				popModal()
+			elseif console ~= nil and console:hasFocus() == true then
+				console:unfocus()
+			else
+				menu:Show()
+			end
+		elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
+			showChat("")
+		elseif keyCode == codes.SLASH then
+			showChat("/")
+		end
+	end
+
+	return true -- capture
+end, { topPriority = true, system = System })
 
 LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive

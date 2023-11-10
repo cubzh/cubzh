@@ -70,7 +70,7 @@ comboBoxSelector = nil
 function focus(node)
 	if focused ~= nil then
 		if focused == node then
-			return
+			return false -- already focused
 		end
 		if focused._unfocus ~= nil then
 			focused:_unfocus()
@@ -87,6 +87,7 @@ function focus(node)
 	end
 
 	applyVirtualKeyboardOffset()
+	return true
 end
 
 -- by default, require("uikit") returns one ui instance,
@@ -1830,102 +1831,111 @@ function createUI(system)
 			end
 			self.state = State.Focused
 
-			focus(self)
-
 			_textInputRefreshColor(self)
 			self:_refresh()
+
+			if focus(self) == false then
+				-- can't take focus, maybe it already had it
+				return
+			end
 
 			Client:ShowVirtualKeyboard()
 
 			local keysDown = {}
 
-			self.keyboardListener = LocalEvent:Listen(
-				LocalEvent.Name.KeyboardInput,
-				function(char, keycode, modifiers, down)
-					if self.string == nil then
-						return
-					end
-
-					if down then
-						if not keysDown[keycode] then
-							keysDown[keycode] = true
+			if self.keyboardListener == nil then -- better be safe, do not listen if already listening
+				self.keyboardListener = LocalEvent:Listen(
+					LocalEvent.Name.KeyboardInput,
+					function(char, keycode, modifiers, down)
+						if keycode == codes.ESCAPE then
+							-- do not consider / capture ESC key inputs
+							return
 						end
-					else
-						if keysDown[keycode] then
-							keysDown[keycode] = nil
-							return true -- catch
-						else
-							return -- return without catching
+						if self.string == nil then
+							return
 						end
-					end
 
-					-- print("char:", char, "key:", keycode, "mod:", modifiers)
-					-- we need an enum for key codes (value could change)
-
-					local cmd = (modifiers & codes.modifiers.Cmd) > 0
-					local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
-					local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
-					-- local shift = (modifiers & codes.modifiers.Shift) > 0
-
-					local textDidChange = false
-					if (cmd or ctrl) and not option then
-						if keycode == codes.KEY_C then
-							Dev:CopyToClipboard(self.string.Text)
-						elseif keycode == codes.KEY_V then
-							local s = System:GetFromClipboard()
-							if s ~= "" then
-								self.string.Text = self.string.Text .. s
-								textDidChange = true
+						if down then
+							if not keysDown[keycode] then
+								keysDown[keycode] = true
 							end
+						else
+							if keysDown[keycode] then
+								keysDown[keycode] = nil
+								return true -- catch
+							else
+								return -- return without catching
+							end
+						end
+
+						-- print("char:", char, "key:", keycode, "mod:", modifiers)
+						-- we need an enum for key codes (value could change)
+
+						local cmd = (modifiers & codes.modifiers.Cmd) > 0
+						local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
+						local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
+						-- local shift = (modifiers & codes.modifiers.Shift) > 0
+
+						local textDidChange = false
+						if (cmd or ctrl) and not option then
+							if keycode == codes.KEY_C then
+								Dev:CopyToClipboard(self.string.Text)
+							elseif keycode == codes.KEY_V then
+								local s = System:GetFromClipboard()
+								if s ~= "" then
+									self.string.Text = self.string.Text .. s
+									textDidChange = true
+								end
 
 							-- sfx("keydown_" .. math.random(1,4), {Spatialized = false})
-						elseif keycode == codes.KEY_X then
-							if self.string.Text ~= "" then
-								Dev:CopyToClipboard(self.string.Text)
-								self.string.Text = ""
+							elseif keycode == codes.KEY_X then
+								if self.string.Text ~= "" then
+									Dev:CopyToClipboard(self.string.Text)
+									self.string.Text = ""
+									textDidChange = true
+								end
+							end
+						else
+							if keycode == codes.UP then
+								if self.onUp then
+									self:onUp()
+									return true
+								end
+							elseif keycode == codes.DOWN then
+								if self.onDown then
+									self:onDown()
+									return true
+								end
+							elseif keycode == codes.BACKSPACE then
+								local str = self.string.Text
+								if #str > 0 then
+									str = deleteLastCharacter(str)
+									self.string.Text = str
+									textDidChange = true
+								end
+							elseif keycode == codes.RETURN or keycode == codes.NUMPAD_RETURN then
+								if self.onSubmit then
+									self:onSubmit()
+									return true
+								end
+							elseif char ~= "" then
+								self.string.Text = self.string.Text .. char
 								textDidChange = true
 							end
 						end
-					else
-						if keycode == codes.UP then
-							if self.onUp then
-								self:onUp()
-								return true
-							end
-						elseif keycode == codes.DOWN then
-							if self.onDown then
-								self:onDown()
-								return true
-							end
-						elseif keycode == codes.BACKSPACE then
-							local str = self.string.Text
-							if #str > 0 then
-								str = deleteLastCharacter(str)
-								self.string.Text = str
-								textDidChange = true
-							end
-						elseif keycode == codes.RETURN or keycode == codes.NUMPAD_RETURN then
-							if self.onSubmit then
-								self:onSubmit()
-								return true
-							end
-						elseif char ~= "" then
-							self.string.Text = self.string.Text .. char
-							textDidChange = true
+
+						if textDidChange then
+							_textInputTextDidChange(self)
 						end
-					end
 
-					if textDidChange then
-						_textInputTextDidChange(self)
-					end
-
-					return true -- capture event
-				end,
-				{
-					topPriority = true,
-					system = system == true and System or nil,
-				}
-			)
+						return true -- capture event
+					end,
+					{
+						topPriority = true,
+						system = system == true and System or nil,
+					}
+				)
+			end
 
 			self.dt = 0
 			self.cursor.shown = true
@@ -1969,6 +1979,12 @@ function createUI(system)
 
 			if self.onFocusLost ~= nil then
 				self:onFocusLost()
+			end
+		end
+
+		node.unfocus = function(self)
+			if self:hasFocus() then
+				focus(nil)
 			end
 		end
 
@@ -2471,7 +2487,7 @@ function createUI(system)
 			pressed = hitObject._node
 
 			-- unfocus focused node, unless hit node.config.unfocused == false
-			if pressed.config.unfocuses ~= false then
+			if pressed ~= focused and pressed.config.unfocuses ~= false then
 				focus(nil)
 			end
 
@@ -2498,6 +2514,9 @@ function createUI(system)
 
 			pointerIndex = pointerEvent.Index
 			return true -- capture event, other listeners won't get it
+		else
+			-- did not touch anything, unfocus if focused node
+			focus(nil)
 		end
 	end, { system = system == true and System or nil, topPriority = true })
 
