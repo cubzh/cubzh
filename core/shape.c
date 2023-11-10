@@ -2019,7 +2019,7 @@ bool shape_ray_cast(const Shape *s,
         bool didHit = false, leaf;
         Block *hitBlock = NULL;
         float minDistance = FLT_MAX;
-        uint16_t x, y, z;
+        uint16_t x = 0, y = 0, z = 0;
         Box tmpBox;
         float d;
         while (n != NULL && didHit == false) {
@@ -2069,6 +2069,8 @@ bool shape_ray_cast(const Shape *s,
 
         if (hitBlock == NULL) {
             ray_free(modelRay);
+            doubly_linked_list_flush(chunksQuery, free);
+            doubly_linked_list_free(chunksQuery);
             return false;
         }
 
@@ -2098,8 +2100,12 @@ bool shape_ray_cast(const Shape *s,
         }
 
         ray_free(modelRay);
+        doubly_linked_list_flush(chunksQuery, free);
+        doubly_linked_list_free(chunksQuery);
         return true;
     }
+    
+    ray_free(modelRay);
     doubly_linked_list_flush(chunksQuery, free);
     doubly_linked_list_free(chunksQuery);
 
