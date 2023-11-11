@@ -2104,7 +2104,7 @@ bool shape_ray_cast(const Shape *s,
         doubly_linked_list_free(chunksQuery);
         return true;
     }
-    
+
     ray_free(modelRay);
     doubly_linked_list_flush(chunksQuery, free);
     doubly_linked_list_free(chunksQuery);
@@ -2410,7 +2410,10 @@ VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(const Shape *s,
                                         &chunk,
                                         NULL,
                                         &coords_in_chunk);
-        return chunk_get_light_or_default(chunk, coords_in_chunk, chunk == NULL);
+        const Block *b = chunk_get_block_2(chunk, coords_in_chunk);
+        return chunk_get_light_or_default(chunk,
+                                          coords_in_chunk,
+                                          chunk == NULL || block_is_solid(b));
     } else {
         VERTEX_LIGHT_STRUCT_T light;
         DEFAULT_LIGHT(light)
@@ -3380,24 +3383,12 @@ void _light_propagate(Shape *s,
         }
         isCurrentOpen = false; // is current node open ie. at least one neighbor is non-opaque
 
-        // propagate sunlight top-down from above the volume, through empty chunks, and on the sides
-        if (chunk == NULL) {
-            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y - 1, coords_in_shape.z};
-            if (cs.y >= bbMin->y && cs.y < bbMax->y && cs.x >= bbMin->x - 1 &&
-                cs.z >= bbMin->z - 1 && cs.x <= bbMax->x && cs.z <= bbMax->z) {
-
-                shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
-                chunk_set_light(insertChunk, cc, vertex_light_default, initWithEmptyLight);
-                light_node_queue_push(lightQueue, insertChunk, cs);
-                _lighting_set_dirty(&min, &max, coords_in_shape);
-            }
-        }
-
         // for each non-opaque neighbor: flag current node as open & propagate light if current
         // non-opaque
         // for each emissive neighbor: add to light queue if current non-opaque
         // y - 1
         cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x, coords_in_chunk.y - 1, coords_in_chunk.z};
+        cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y - 1, coords_in_shape.z};
         if (chunk != NULL) {
             neighbor = chunk_get_block_including_neighbors(chunk,
                                                            cc.x,
@@ -3406,7 +3397,6 @@ void _light_propagate(Shape *s,
                                                            &insertChunk,
                                                            &cc);
         } else {
-            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y - 1, coords_in_shape.z};
             shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
             neighbor = chunk_get_block_2(insertChunk, cc);
         }
@@ -3437,6 +3427,14 @@ void _light_propagate(Shape *s,
                                        EMISSION_PROPAGATION_STEP,
                                        initWithEmptyLight);
             }
+        }
+        // propagate sunlight top-down from above the volume, through empty chunks, and on the sides
+        else if (cs.y >= min.y && cs.y < max.y && cs.x >= min.x - 1 && cs.z >= min.z - 1 &&
+                 cs.x <= max.x && cs.z <= max.z) {
+
+            chunk_set_light(insertChunk, cc, currentLight, initWithEmptyLight);
+            light_node_queue_push(lightQueue, insertChunk, cs);
+            _lighting_set_dirty(&min, &max, coords_in_shape);
         }
 
         // y + 1
