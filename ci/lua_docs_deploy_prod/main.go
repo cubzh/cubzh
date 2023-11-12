@@ -193,7 +193,7 @@ func deployLuaDocs() error {
 		// will remove known_hosts file
 		defer os.Remove(KNOWNHOSTS_LOCAL_FILEPATH)
 
-		// execute remote command
+		// execute remote command to update docker service
 		output, err := remoteRun(
 			LUA_DOCS_SRV_SSH_USER,
 			LUA_DOCS_SRV_SSH_HOST,
@@ -209,6 +209,23 @@ func deployLuaDocs() error {
 
 		fmt.Println(output)
 		fmt.Println("✅ docker service update OK")
+
+		// remote SSH command to flush old docker images
+		output, err = remoteRun(
+			LUA_DOCS_SRV_SSH_USER,
+			LUA_DOCS_SRV_SSH_HOST,
+			LUA_DOCS_SRV_SSH_PORT,
+			LUA_DOCS_SRV_SSH_PRIVATEKEY,
+			KNOWNHOSTS_LOCAL_FILEPATH,
+			"docker system prune -af",
+		)
+		if err != nil {
+			fmt.Println("❌ ssh call failed:", err.Error())
+			return err
+		}
+
+		fmt.Println(output)
+		fmt.Println("✅ docker system prune OK")
 	}
 
 	fmt.Println("✅ Lua docs deployment done!")
