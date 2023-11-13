@@ -105,7 +105,7 @@ local serializeWorldBase64 = function(world)
 	d:WriteByte(SERIALIZE_VERSION) -- version
 	writeChunkMap(d, world.mapName, world.mapScale or 5)
 	writeChunkBase64(d, SERIALIZED_CHUNKS_ID.AMBIENCE, world.ambience or require("ambience").noon)
-    writeChunkBase64(d, SERIALIZED_CHUNKS_ID.OBJECTS, world.objects or {})
+	writeChunkBase64(d, SERIALIZED_CHUNKS_ID.OBJECTS, world.objects or {})
 	writeChunkBase64(d, SERIALIZED_CHUNKS_ID.BLOCKS, world.blocks or {})
 	return d:ToString({ format = "base64" })
 end
