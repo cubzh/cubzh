@@ -16,8 +16,6 @@
 void test_transaction_new(void) {
     Transaction *t = transaction_new();
 
-    TEST_CHECK(transaction_getMustConsiderNewBounds(t) == false);
-
     transaction_free(t);
 }
 
@@ -73,37 +71,6 @@ void test_transaction_replaceBlock(void) {
     const Block *block = transaction_getCurrentBlockAt(t, x, y, z);
 
     TEST_CHECK(block->colorIndex == color_index);
-
-    transaction_free(t);
-}
-
-// check that adding a block sets MustConsiderNewBounds to true
-void test_transaction_getMustConsiderNewBounds(void) {
-    Transaction *t = transaction_new();
-    const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
-    const SHAPE_COLOR_INDEX_INT_T color_index = 1;
-    transaction_addBlock(t, x, y, z, color_index);
-
-    TEST_CHECK(transaction_getMustConsiderNewBounds(t));
-
-    transaction_free(t);
-}
-
-// check new min / max values
-void test_transaction_getNewBounds(void) {
-    Transaction *t = transaction_new();
-    const SHAPE_COLOR_INDEX_INT_T color_index = 1;
-    SHAPE_COORDS_INT_T minX, minY, minZ, maxX, maxY, maxZ;
-    transaction_addBlock(t, 1, 2, 3, color_index);
-    transaction_addBlock(t, 5, 6, 1, color_index);
-    transaction_getNewBounds(t, &minX, &minY, &minZ, &maxX, &maxY, &maxZ);
-
-    TEST_CHECK(minX == 1);
-    TEST_CHECK(minY == 2);
-    TEST_CHECK(minZ == 1);
-    TEST_CHECK(maxX == 5);
-    TEST_CHECK(maxY == 6);
-    TEST_CHECK(maxZ == 3);
 
     transaction_free(t);
 }

@@ -300,7 +300,6 @@ TEST_LIST = {
     // shape
     {"shape_make", test_shape_make},
     {"shape_make_copy", test_shape_make_copy},
-    {"shape_make_with_octree", test_shape_make_with_octree},
     {"shape_retain", test_shape_retain},
     {"shape_release", test_shape_release},
     {"shape_get_id", test_shape_get_id},
@@ -334,8 +333,6 @@ TEST_LIST = {
     {"transaction_addBlock", test_transaction_addBlock},
     {"transaction_removeBlock", test_transaction_removeBlock},
     {"transaction_replaceBlock", test_transaction_replaceBlock},
-    {"transaction_getMustConsiderNewBounds", test_transaction_getMustConsiderNewBounds},
-    {"transaction_getNewBounds", test_transaction_getNewBounds},
     {"transaction_getIndex3DIterator", test_transaction_getIndex3DIterator},
 
     // transform
@@ -366,7 +363,6 @@ TEST_LIST = {
     {"vertex_buffer_is_not_full", test_vertex_buffer_is_not_full},
     {"vertex_buffer_insert_after", test_vertex_buffer_insert_after},
     {"vertex_buffer_get_next", test_vertex_buffer_get_next},
-    {"vertex_buffer_get_draw_buffers", test_vertex_buffer_get_draw_buffers},
     {"vertex_buffer_get_max_length", test_vertex_buffer_get_max_length},
     {"vertex_buffer_is_enlisted", test_vertex_buffer_is_enlisted},
     {"vertex_buffer_set_enlisted", test_vertex_buffer_set_enlisted},

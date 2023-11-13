@@ -1029,6 +1029,11 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
     return hits;
 }
 
+bool rtree_utils_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2) {
+    return ((RtreeCastResult *)doubly_linked_list_node_pointer(n1))->distance >
+           ((RtreeCastResult *)doubly_linked_list_node_pointer(n2))->distance;
+}
+
 // MARK: - Debug functions -
 #if DEBUG_RTREE
 

@@ -27,30 +27,20 @@
 // takes the 4 low bits of a and casts into uint8_t
 #define TO_UINT4(a) (uint8_t)((a)&0x0F)
 
-// --------------------------------------------------
-//
-// MARK: - Types -
-//
-// --------------------------------------------------
+#define SHAPE_RENDERING_FLAG_NONE 0
+// whether or not to draw transparent inner faces between 2 blocks of a different color
+#define SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES 1
+#define SHAPE_RENDERING_FLAG_SHADOW 2
+#define SHAPE_RENDERING_FLAG_UNLIT 4
+// whether or not this shape uses baked vertex lighting
+#define SHAPE_RENDERING_FLAG_BAKED_LIGHTING 8
+// no automatic refresh, no model changes until unlocked
+#define SHAPE_RENDERING_FLAG_BAKE_LOCKED 16
 
-typedef struct _ChunkList ChunkList;
-
-struct _ChunkList {
-    Chunk *chunk;
-    ChunkList *next;
-};
-
-ChunkList *chunk_list_push_new_element(Chunk *c, ChunkList *next) {
-    ChunkList *cl = (ChunkList *)malloc(sizeof(ChunkList));
-    cl->next = next;
-    cl->chunk = c;
-    return cl;
-}
-
-void chunk_list_free(ChunkList *cl) {
-    // no need to free chunks as they have to be referenced elsewhere
-    free(cl);
-}
+#define SHAPE_LUA_FLAG_NONE 0
+#define SHAPE_LUA_FLAG_MUTABLE 1
+#define SHAPE_LUA_FLAG_HISTORY 2
+#define SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING 4
 
 struct _Shape {
     Weakptr *wptr;
@@ -65,152 +55,121 @@ struct _Shape {
     Transform *transform;
     Transform *pivot;
 
-    // model axis-aligned bounding box (box->max - 1 is the max block)
-    Box *box;
     // cached world axis-aligned bounding box, may be NULL if no cache
     Box *worldAABB;
-
-    // Octree is NULL by default, unless the shape is initialized with
-    // shape_make_with_octree.
-    Octree *octree; // 8 bytes
-
-    // NULL if shape does not use lighting
-    VERTEX_LIGHT_STRUCT_T *lightingData;
 
     // buffers storing faces data used for rendering
     VertexBuffer *firstVB_opaque, *firstVB_transparent;
     VertexBuffer *lastVB_opaque, *lastVB_transparent;
-    // 3D indexed chunks
+
+    // Chunks are indexed by coordinates, and partitioned in a r-tree for physics queries
     Index3D *chunks;
-    // List of chunks in need for display update
-    ChunkList *needsDisplay;
+    FifoList *dirtyChunks;
+    Rtree *rtree;
 
     // fragmented vertex buffers
     DoublyLinkedList *fragmentedVBs;
 
-    ///
+    // block adds/removes/paints history
     History *history;
 
-    /// Current shape transaction (to be applied at the end of frame)
-    /// uses Lua coords
+    // Current shape transaction, to be applied at end of frame (lua coords)
     Transaction *pendingTransaction;
 
     // name of the original item <username>.<itemname>, used for baked files
     char *fullname;
 
-    // keeping track of total amount of chunks
     size_t nbChunks;
-    // keeping track of total amount of blocks
     size_t nbBlocks;
 
-    // octree resize offset, default zero until a resize occurs, is used to convert internal to Lua
-    // coords in order to maintain consistent coordinates in a play session
-    // /!\ nowhere in Cubzh Core should this be used, it should be used when
-    // input/outputting values to Lua
-    int3 offset; // 3 * 4 bytes
-
-    // shape allocated size, going below 0 or past this limit requires a shape resize
-    SHAPE_SIZE_INT_T maxWidth, maxHeight, maxDepth; // 3 * 2 bytes
+    // model axis-aligned bounding box (bbMax - 1 is the max block)
+    SHAPE_COORDS_INT3_T bbMin, bbMax; /* 6 x 2 bytes */
 
     uint16_t layers; // 2 bytes
 
-    // internal flag used for variable-size VB allocation, see shape_add_vertex_buffer
+    // internal flag used for variable-size VB allocation, see shape_add_buffer
     uint8_t vbAllocationFlag_opaque;      // 1 byte
     uint8_t vbAllocationFlag_transparent; // 1 byte
 
     ShapeDrawMode drawMode; // 1 byte
 
-    // Whether transparent inner faces between 2 blocks of a different color should be drawn
-    bool innerTransparentFaces; // 1 byte
+    uint8_t renderingFlags; // 1 byte
+    uint8_t luaFlags;       // 1 byte
 
-    bool shadow;  // 1 byte
-    bool isUnlit; // 1 byte
-
-    bool isMutable;                        // 1 byte
-    bool historyEnabled;                   // 1 byte
-    bool historyKeepingTransactionPending; // 1 byte
-
-    // no automatic refresh, no model changes until unlocked
-    bool isBakeLocked; // 1 byte
-
-    char pad[2];
+    char pad[1];
 };
 
 // MARK: - private functions prototypes -
 
-// returns true if block was added
-static bool _add_block_in_chunks(Index3D *chunks,
-                                 Block *newBlock,
-                                 const SHAPE_COORDS_INT_T x,
-                                 const SHAPE_COORDS_INT_T y,
-                                 const SHAPE_COORDS_INT_T z,
-                                 int3 *block_ldfPos,
-                                 bool *chunkAdded,
-                                 Chunk **added_or_existing_chunk,
-                                 Block **added_or_existing_block);
+static void _shape_toggle_rendering_flag(Shape *s, const uint8_t flag, const bool toggle);
+static bool _shape_get_rendering_flag(const Shape *s, const uint8_t flag);
+static void _shape_toggle_lua_flag(Shape *s, const uint8_t flag, const bool toggle);
+static bool _shape_get_lua_flag(const Shape *s, const uint8_t flag);
 
-/// add a block at (x, y, z) local to shape
-static bool _shape_add_block(Shape *shape,
-                             SHAPE_COORDS_INT_T x,
-                             SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             Block **added_or_existing_block);
+void _shape_chunk_enqueue_refresh(Shape *shape, Chunk *c);
+void _shape_chunk_check_neighbors_dirty(Shape *shape,
+                                        const Chunk *chunk,
+                                        CHUNK_COORDS_INT3_T block_pos);
+static bool _shape_add_block_in_chunks(Shape *shape,
+                                       const Block block,
+                                       const SHAPE_COORDS_INT_T x,
+                                       const SHAPE_COORDS_INT_T y,
+                                       const SHAPE_COORDS_INT_T z,
+                                       CHUNK_COORDS_INT3_T *block_coords,
+                                       bool *chunkAdded,
+                                       Chunk **added_or_existing_chunk,
+                                       Block **added_or_existing_block);
 
-bool _has_allocated_size(const Shape *s);
-bool _is_out_of_allocated_size(const Shape *s,
-                               const SHAPE_COORDS_INT_T x,
-                               const SHAPE_COORDS_INT_T y,
-                               const SHAPE_COORDS_INT_T z);
-bool _is_out_of_maximum_shape_size(const SHAPE_COORDS_INT_T x,
-                                   const SHAPE_COORDS_INT_T y,
-                                   const SHAPE_COORDS_INT_T z);
-Octree *_new_octree(const SHAPE_COORDS_INT_T w,
-                    const SHAPE_COORDS_INT_T h,
-                    const SHAPE_COORDS_INT_T d);
 void _set_vb_allocation_flag_one_frame(Shape *s);
 
 /// internal functions used to flag the relevant data when lighting has changed
 void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin,
                          SHAPE_COORDS_INT3_T *bbMax,
-                         SHAPE_COORDS_INT_T x,
-                         SHAPE_COORDS_INT_T y,
-                         SHAPE_COORDS_INT_T z);
+                         SHAPE_COORDS_INT3_T coords);
 void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax);
 
 //// internal functions used to compute and update light propagation (sun & emission)
 /// check a neighbor air block for light removal upon adding a block
-void _light_removal_processNeighbor(Shape *s,
-                                    SHAPE_COORDS_INT3_T *bbMin,
-                                    SHAPE_COORDS_INT3_T *bbMax,
-                                    VERTEX_LIGHT_STRUCT_T light,
-                                    uint8_t srgb,
-                                    bool equals,
-                                    SHAPE_COORDS_INT3_T *neighborPos,
-                                    const Block *neighbor,
-                                    LightNodeQueue *lightQueue,
-                                    LightRemovalNodeQueue *lightRemovalQueue);
+void _light_removal_process_neighbor(Shape *s,
+                                     Chunk *c,
+                                     SHAPE_COORDS_INT3_T *bbMin,
+                                     SHAPE_COORDS_INT3_T *bbMax,
+                                     VERTEX_LIGHT_STRUCT_T light,
+                                     uint8_t srgb,
+                                     bool equals,
+                                     CHUNK_COORDS_INT3_T coords_in_chunk,
+                                     SHAPE_COORDS_INT3_T coords_in_shape,
+                                     const Block *neighbor,
+                                     LightNodeQueue *lightQueue,
+                                     LightRemovalNodeQueue *lightRemovalQueue);
 /// insert light values and if necessary (lightQueue != NULL) add it to the light propagation queue
-void _light_set_and_enqueue_source(SHAPE_COORDS_INT3_T *pos,
-                                   Shape *shape,
+void _light_set_and_enqueue_source(Shape *shape,
+                                   Chunk *c,
+                                   CHUNK_COORDS_INT3_T coords_in_chunk,
+                                   SHAPE_COORDS_INT3_T coords_in_shape,
                                    VERTEX_LIGHT_STRUCT_T source,
-                                   LightNodeQueue *lightQueue);
+                                   LightNodeQueue *lightQueue,
+                                   bool initEmpty);
 void _light_enqueue_ambient_and_block_sources(Shape *s,
                                               LightNodeQueue *q,
-                                              SHAPE_COORDS_INT3_T from,
-                                              SHAPE_COORDS_INT3_T to,
+                                              SHAPE_COORDS_INT3_T min,
+                                              SHAPE_COORDS_INT3_T max,
                                               bool enqueueAir);
 /// propagate light values at a given block
 void _light_block_propagate(Shape *s,
+                            Chunk *c,
                             SHAPE_COORDS_INT3_T *bbMin,
                             SHAPE_COORDS_INT3_T *bbMax,
                             VERTEX_LIGHT_STRUCT_T current,
-                            SHAPE_COORDS_INT3_T *neighborPos,
+                            CHUNK_COORDS_INT3_T coords_in_chunk,
+                            SHAPE_COORDS_INT3_T coords_in_shape,
                             const Block *neighbor,
                             bool air,
                             bool transparent,
                             LightNodeQueue *lightQueue,
                             uint8_t stepS,
-                            uint8_t stepRGB);
+                            uint8_t stepRGB,
+                            bool initEmpty);
 /// light propagation algorithm
 void _light_propagate(Shape *s,
                       SHAPE_COORDS_INT3_T *bbMin,
@@ -218,32 +177,33 @@ void _light_propagate(Shape *s,
                       LightNodeQueue *lightQueue,
                       SHAPE_COORDS_INT_T srcX,
                       SHAPE_COORDS_INT_T srcY,
-                      SHAPE_COORDS_INT_T srcZ);
+                      SHAPE_COORDS_INT_T srcZ,
+                      bool initWithEmptyLight);
 /// light removal also enqueues back any light source that needs recomputing
 void _light_removal(Shape *s,
                     SHAPE_COORDS_INT3_T *bbMin,
                     SHAPE_COORDS_INT3_T *bbMax,
                     LightRemovalNodeQueue *lightRemovalQueue,
                     LightNodeQueue *lightQueue);
-/// lighting data realloc used after a shape resize
-void _light_realloc(Shape *s,
-                    const SHAPE_SIZE_INT_T dx,
-                    const SHAPE_SIZE_INT_T dy,
-                    const SHAPE_SIZE_INT_T dz,
-                    const SHAPE_SIZE_INT_T offsetX,
-                    const SHAPE_SIZE_INT_T offsetY,
-                    const SHAPE_SIZE_INT_T offsetZ);
+void _light_removal_all(Shape *s, SHAPE_COORDS_INT3_T *min, SHAPE_COORDS_INT3_T *max);
 void _shape_check_all_vb_fragmented(Shape *s, VertexBuffer *first);
 void _shape_flush_all_vb(Shape *s);
 void _shape_fill_draw_slices(VertexBuffer *vb);
 
-///
 bool _shape_apply_transaction(Shape *const sh, Transaction *tr);
-
-///
 bool _shape_undo_transaction(Shape *const sh, Transaction *tr);
 
 void _shape_clear_cached_world_aabb(Shape *s);
+
+bool _shape_compute_size_and_origin(const Shape *shape,
+                                    SHAPE_SIZE_INT_T *size_x,
+                                    SHAPE_SIZE_INT_T *size_y,
+                                    SHAPE_SIZE_INT_T *size_z,
+                                    SHAPE_COORDS_INT_T *origin_x,
+                                    SHAPE_COORDS_INT_T *origin_y,
+                                    SHAPE_COORDS_INT_T *origin_z);
+
+bool _shape_is_bounding_box_empty(const Shape *shape);
 
 // --------------------------------------------------
 //
@@ -256,25 +216,20 @@ void _shape_clear_cached_world_aabb(Shape *s);
 Shape *shape_make(void) {
     Shape *s = (Shape *)malloc(sizeof(Shape));
 
-    int3_set(&s->offset, 0, 0, 0);
-
     s->wptr = NULL;
     s->palette = NULL;
 
     s->POIs = map_string_float3_new();
     s->pois_rotation = map_string_float3_new();
 
-    s->box = box_new();
     s->worldAABB = NULL;
-
-    s->octree = NULL;
 
     s->transform = transform_make_with_ptr(ShapeTransform, s, 0, NULL);
     s->pivot = NULL;
 
-    s->lightingData = NULL;
-
     s->chunks = index3d_new();
+    s->dirtyChunks = NULL;
+    s->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
 
     // vertex buffers will be created on demand during refresh
     s->firstVB_opaque = NULL;
@@ -284,31 +239,27 @@ Shape *shape_make(void) {
     s->vbAllocationFlag_opaque = 0;
     s->vbAllocationFlag_transparent = 0;
 
-    s->needsDisplay = NULL;
     s->history = NULL;
     s->fullname = NULL;
     s->pendingTransaction = NULL;
     s->nbChunks = 0;
     s->nbBlocks = 0;
+    s->bbMin = coords3_zero;
+    s->bbMax = coords3_zero;
     s->fragmentedVBs = doubly_linked_list_new();
 
-    s->maxWidth = 0;
-    s->maxHeight = 0;
-    s->maxDepth = 0;
-
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
-    s->innerTransparentFaces = true;
-    s->shadow = true;
-    s->isUnlit = false;
+    s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES | SHAPE_RENDERING_FLAG_SHADOW;
     s->layers = 1; // CAMERA_LAYERS_DEFAULT
 
-    s->isMutable = false;
+    s->luaFlags = SHAPE_LUA_FLAG_NONE;
 
-    s->historyEnabled = false;
-    s->historyKeepingTransactionPending = false;
+    return s;
+}
 
-    s->isBakeLocked = false;
-
+Shape *shape_make_2(const bool isMutable) {
+    Shape *s = shape_make();
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, true);
     return s;
 }
 
@@ -318,8 +269,6 @@ Shape *shape_make_copy(Shape *origin) {
 
     Shape *s = shape_make();
     s->palette = color_palette_new_copy(origin->palette);
-
-    int3_set(&s->offset, origin->offset.x, origin->offset.y, origin->offset.z);
 
     // copy each point of interest
     MapStringFloat3Iterator *it = map_string_float3_iterator_new(origin->POIs);
@@ -351,45 +300,42 @@ Shape *shape_make_copy(Shape *origin) {
     }
     map_string_float3_iterator_free(it);
 
-    box_copy(s->box, origin->box);
+    s->bbMin = origin->bbMin;
+    s->bbMax = origin->bbMax;
 
     s->drawMode = origin->drawMode;
-    s->innerTransparentFaces = origin->innerTransparentFaces;
-    s->isUnlit = origin->isUnlit;
+    s->renderingFlags = origin->renderingFlags;
     s->layers = origin->layers;
-    s->isMutable = origin->isMutable;
 
-    if (origin->octree != NULL) {
-        s->octree = _new_octree((SHAPE_COORDS_INT_T)origin->maxWidth,
-                                (SHAPE_COORDS_INT_T)origin->maxHeight,
-                                (SHAPE_COORDS_INT_T)origin->maxDepth);
+    s->luaFlags = origin->luaFlags;
 
-        s->maxWidth = origin->maxWidth;
-        s->maxHeight = origin->maxHeight;
-        s->maxDepth = origin->maxDepth;
+    // copy chunks data
+    Index3DIterator *chunks_it = index3d_iterator_new(origin->chunks);
+    Chunk *chunk, *chunkCopy;
+    while (index3d_iterator_pointer(chunks_it) != NULL) {
+        chunk = index3d_iterator_pointer(chunks_it);
+        chunkCopy = chunk_new_copy(chunk);
+
+        const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(chunk);
+        const SHAPE_COORDS_INT3_T chunkCoords = chunk_utils_get_coords(chunkOrigin);
+
+        // index new chunk & link w/ chunks neighbors
+        index3d_insert(s->chunks, chunkCopy, chunkCoords.x, chunkCoords.y, chunkCoords.z, NULL);
+        chunk_move_in_neighborhood(s->chunks, chunkCopy, chunkCoords);
+
+        // partition new chunk in shape space
+        Box chunkBox = {{(float)chunkOrigin.x, (float)chunkOrigin.y, (float)chunkOrigin.z},
+                        {(float)(chunkOrigin.x + CHUNK_SIZE),
+                         (float)(chunkOrigin.y + CHUNK_SIZE),
+                         (float)(chunkOrigin.z + CHUNK_SIZE)}};
+        chunk_set_rtree_leaf(chunk, rtree_create_and_insert(s->rtree, &chunkBox, 1, 1, chunkCopy));
+
+        // enqueue new shape buffers
+        _shape_chunk_enqueue_refresh(s, chunkCopy);
+
+        index3d_iterator_next(chunks_it);
     }
-
-    const Block *b = NULL;
-    for (SHAPE_COORDS_INT_T x = 0; x <= origin->maxWidth; x += 1) {
-        for (SHAPE_COORDS_INT_T y = 0; y <= origin->maxHeight; y += 1) {
-            for (SHAPE_COORDS_INT_T z = 0; z <= origin->maxDepth; z += 1) {
-                b = shape_get_block(origin, x, y, z, false);
-                if (b != NULL && b->colorIndex != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-                    shape_add_block_with_color(s, b->colorIndex, x, y, z, false, false, false);
-                }
-            }
-        }
-    }
-
-    if (origin->lightingData != NULL) {
-        const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight *
-                                    (size_t)s->maxDepth * (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
-        s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
-        if (s->lightingData == NULL) {
-            return NULL;
-        }
-        memcpy(s->lightingData, origin->lightingData, lightingSize);
-    }
+    index3d_iterator_free(chunks_it);
 
     if (origin->fullname != NULL) {
         s->fullname = string_new_copy(origin->fullname);
@@ -404,47 +350,6 @@ Shape *shape_make_copy(Shape *origin) {
     return s;
 }
 
-Shape *shape_make_with_size(const uint16_t width,
-                            const uint16_t height,
-                            const uint16_t depth,
-                            const bool isMutable) {
-
-    Shape *s = shape_make();
-
-    s->maxWidth = width;
-    s->maxHeight = height;
-    s->maxDepth = depth;
-
-    s->isMutable = isMutable;
-
-    return s;
-}
-
-Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
-                              const SHAPE_SIZE_INT_T height,
-                              const SHAPE_SIZE_INT_T depth,
-                              const bool isMutable) {
-
-    if (_is_out_of_maximum_shape_size((SHAPE_COORDS_INT_T)width,
-                                      (SHAPE_COORDS_INT_T)height,
-                                      (SHAPE_COORDS_INT_T)depth)) {
-        return NULL;
-    }
-
-    Shape *s = shape_make();
-
-    s->octree = _new_octree((SHAPE_COORDS_INT_T)width,
-                            (SHAPE_COORDS_INT_T)height,
-                            (SHAPE_COORDS_INT_T)depth);
-    s->maxWidth = width;
-    s->maxHeight = height;
-    s->maxDepth = depth;
-
-    s->isMutable = isMutable;
-
-    return s;
-}
-
 // Creates a new empty vertex buffer for the shape
 // - enabling lighting buffer if it uses lighting
 // - enabling transparency if requested
@@ -453,17 +358,17 @@ Shape *shape_make_with_octree(const SHAPE_SIZE_INT_T width,
 // The buffer capacity is an estimation that should on average reduce occupancy waste,
 // 1) for a shape that was never drawn:
 // - a) if it's the first buffer, it should ideally fit the entire shape at once (estimation)
-// - b) if more space is required, subsequent buffers are scaled using VERTEX_BUFFER_INIT_SCALE_RATE
+// - b) if more space is required, subsequent buffers are scaled using SHAPE_BUFFER_INIT_SCALE_RATE
 // this makes it possible to fit a worst-case scenario "cheese" map even if we know it practically
 // won't happen
 // 2) for a shape that has been drawn before:
 // - a) first buffer should be of a minimal size to fit a few runtime structural changes
 // (estimation)
-// - b) subsequent buffers are scaled using VERTEX_BUFFER_RUNTIME_SCALE_RATE
+// - b) subsequent buffers are scaled using SHAPE_BUFFER_RUNTIME_SCALE_RATE
 // this approach should fit a game that by design do not result in a lot of structural changes,
 // in just one buffer ; and should accommodate a game which by design requires a lot of structural
 // changes, in just a handful of buffers down the chain
-VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
+VertexBuffer *shape_add_buffer(Shape *shape, bool transparency) {
     // estimate new VB capacity
     size_t capacity;
     uint8_t *flag = transparency ? &shape->vbAllocationFlag_transparent
@@ -471,33 +376,20 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
     switch (*flag) {
         // uninitialized or last buffer capacity was capped (1a)
         case 0: {
-            int3 *size = int3_pool_pop();
-            shape_get_bounding_box_size(shape, size);
+            int3 size;
+            shape_get_bounding_box_size(shape, &size);
 
-            // estimation based on maximum of shape shell vs. shape volume block-occupancy
-            size_t shell = (size_t)(minimum(size->z, 2) * size->x * size->y +
-                                    minimum(size->y, 2) * size->x * maximum(size->z - 2, 0) +
-                                    minimum(size->x, 2) * maximum(size->z - 2, 0) *
-                                        maximum(size->y - 2, 0));
-            float volume = (float)(size->x * size->y * size->z) * VERTEX_BUFFER_VOLUME_OCCUPANCY;
-            if (shell >= (size_t)volume) {
-                capacity = (size_t)(ceilf(
-                    (float)shell * VERTEX_BUFFER_SHELL_FACTOR *
-                    (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
-            } else {
-                capacity = (size_t)(ceilf(
-                    volume * VERTEX_BUFFER_VOLUME_FACTOR *
-                    (transparency ? VERTEX_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
-            }
+            // estimation based on number of faces of each chunks' cube surface area
+            size_t shell = 6 * CHUNK_SIZE_SQR * 2 * shape->nbChunks;
+            capacity = (size_t)(ceilf((float)shell * SHAPE_BUFFER_INITIAL_FACTOR *
+                                      (transparency ? SHAPE_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
 
             // if this shape is exceptionally big and caps max VB count, next VB should be created
             // at full capacity as well
-            if (capacity < VERTEX_BUFFER_MAX_COUNT) {
+            if (capacity < SHAPE_BUFFER_MAX_COUNT) {
                 *flag = 1;
             }
-            capacity = CLAMP(capacity, VERTEX_BUFFER_MIN_COUNT, VERTEX_BUFFER_MAX_COUNT);
-
-            int3_pool_recycle(size);
+            capacity = CLAMP(capacity, SHAPE_BUFFER_MIN_COUNT, SHAPE_BUFFER_MAX_COUNT);
             break;
         }
         // initialized within this frame and last buffer capacity was uncapped (1b)
@@ -507,19 +399,19 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
 
             // restart buffer series when minimum capacity has been reached already (if downscaling
             // buffers)
-            if (prev == VERTEX_BUFFER_MIN_COUNT) {
+            if (prev == SHAPE_BUFFER_MIN_COUNT) {
                 *flag = 0;
-                return shape_add_vertex_buffer(shape, transparency);
+                return shape_add_buffer(shape, transparency);
             }
 
-            capacity = CLAMP((size_t)(ceilf((float)prev * VERTEX_BUFFER_INIT_SCALE_RATE)),
-                             VERTEX_BUFFER_MIN_COUNT,
-                             VERTEX_BUFFER_MAX_COUNT);
+            capacity = CLAMP((size_t)(ceilf((float)prev * SHAPE_BUFFER_INIT_SCALE_RATE)),
+                             SHAPE_BUFFER_MIN_COUNT,
+                             SHAPE_BUFFER_MAX_COUNT);
             break;
         }
         // initialized for more than a frame, first structural change (2a)
         case 2: {
-            capacity = VERTEX_BUFFER_RUNTIME_COUNT;
+            capacity = SHAPE_BUFFER_RUNTIME_COUNT;
             *flag = 3;
             break;
         }
@@ -527,26 +419,27 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
         case 3: {
             size_t prev = vertex_buffer_get_max_length(transparency ? shape->lastVB_transparent
                                                                     : shape->lastVB_opaque);
-            capacity = CLAMP((size_t)(ceilf((float)prev * VERTEX_BUFFER_RUNTIME_SCALE_RATE)),
-                             VERTEX_BUFFER_MIN_COUNT,
-                             VERTEX_BUFFER_MAX_COUNT);
+            capacity = CLAMP((size_t)(ceilf((float)prev * SHAPE_BUFFER_RUNTIME_SCALE_RATE)),
+                             SHAPE_BUFFER_MIN_COUNT,
+                             SHAPE_BUFFER_MAX_COUNT);
             break;
         }
         default: {
-            capacity = VERTEX_BUFFER_MAX_COUNT;
+            capacity = SHAPE_BUFFER_MAX_COUNT;
             break;
         }
     }
 
     // ensure VB capacity is a multiple of 2 for texture size
     size_t texSize = (size_t)(ceilf(sqrtf((float)capacity)));
-#if VERTEX_BUFFER_TEX_UPPER_POT
+#if SHAPE_BUFFER_TEX_UPPER_POT
     texSize = upper_power_of_two(texSize);
 #endif
     capacity = texSize * texSize;
 
     // create and add new VB to the appropriate chain
-    const bool lighting = vertex_buffer_get_lighting_enabled() && shape->lightingData != NULL;
+    const bool lighting = vertex_buffer_get_lighting_enabled() &&
+                          _shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING);
     VertexBuffer *vb = vertex_buffer_new_with_max_count(capacity, lighting, transparency);
     if (transparency) {
         if (shape->lastVB_transparent != NULL) {
@@ -570,73 +463,10 @@ VertexBuffer *shape_add_vertex_buffer(Shape *shape, bool transparency) {
     return vb;
 }
 
-// adds chunk to the list of chunks in need for display (a chunk can only be
-// added once)
-void shape_chunk_needs_display(Shape *shape, Chunk *c) {
-    if (c == NULL)
-        return;
-    if (chunk_needs_display(c) == false) {
-        ChunkList *cl;
-        if (shape->needsDisplay == NULL) {
-            cl = (ChunkList *)malloc(sizeof(ChunkList));
-            if (cl == NULL) {
-                return;
-            }
-            cl->chunk = c;
-            cl->next = NULL;
-        } else {
-            cl = chunk_list_push_new_element(c, shape->needsDisplay);
-        }
-        shape->needsDisplay = cl;
-        chunk_set_needs_display(c, true);
-    }
-}
-
-void shape_chunk_cancel_needs_display(Shape *shape, Chunk *c) {
-    if (c == NULL) {
-        return;
-    }
-    if (shape->needsDisplay == NULL)
-        return;
-
-    if (chunk_needs_display(c)) {
-
-        chunk_set_needs_display(c, false);
-
-        ChunkList *cl = shape->needsDisplay;
-        if (cl->chunk == c) {
-            cl = cl->next;
-            chunk_list_free(shape->needsDisplay);
-            shape->needsDisplay = cl;
-            return;
-        }
-
-        ChunkList *clPrevious = cl;
-        cl = cl->next;
-
-        while (cl != NULL) {
-            if (cl->chunk == c) {
-                clPrevious->next = cl->next;
-                chunk_list_free(cl);
-                return;
-            }
-            clPrevious = cl;
-            cl = cl->next;
-        }
-    }
-}
-
-// wrapper to silent warning
-// TODO: a quicker version of chunk_destroy could be used when we know
-// all mem areas are getting removed anyway
-void shape_chunk_free(void *c) {
-    chunk_destroy((Chunk *)c);
-}
-
 void shape_flush(Shape *shape) {
     if (shape != NULL) {
 
-        index3d_flush(shape->chunks, shape_chunk_free);
+        index3d_flush(shape->chunks, chunk_free_func);
 
         map_string_float3_free(shape->POIs);
         shape->POIs = map_string_float3_new();
@@ -644,19 +474,8 @@ void shape_flush(Shape *shape) {
         map_string_float3_free(shape->pois_rotation);
         shape->pois_rotation = map_string_float3_new();
 
-        if (_has_allocated_size(shape)) {
-            if (shape->octree != NULL) {
-                octree_flush(shape->octree);
-            }
-            if (shape->lightingData != NULL) {
-                const size_t lightingSize = (size_t)shape->maxWidth * (size_t)shape->maxHeight *
-                                            (size_t)shape->maxDepth *
-                                            (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
-                memset(shape->lightingData, 0, lightingSize);
-            }
-        }
-
-        box_copy(shape->box, &box_zero);
+        shape->bbMin = coords3_zero;
+        shape->bbMax = coords3_zero;
 
         RigidBody *rb = shape_get_rigidbody(shape);
         if (rb != NULL) {
@@ -673,12 +492,9 @@ void shape_flush(Shape *shape) {
         shape->vbAllocationFlag_opaque = 0;
         shape->vbAllocationFlag_transparent = 0;
 
-        // flush needsDisplay list
-        ChunkList *cl;
-        while (shape->needsDisplay != NULL) {
-            cl = shape->needsDisplay;
-            shape->needsDisplay = cl->next;
-            chunk_list_free(cl);
+        if (shape->dirtyChunks != NULL) {
+            fifo_list_free(shape->dirtyChunks, NULL);
+            shape->dirtyChunks = NULL;
         }
 
         // no need to flush fragmentedVBs,
@@ -697,10 +513,11 @@ bool shape_retain(Shape *const shape) {
     return transform_retain(shape->transform);
 }
 
-uint16_t shape_retain_count(const Shape *const s) {
-    if (s == NULL)
-        return 0;
-    return transform_retain_count(s->transform);
+void shape_release(Shape *const shape) {
+    if (shape == NULL) {
+        return;
+    }
+    transform_release(shape->transform);
 }
 
 void shape_free(Shape *const shape) {
@@ -725,11 +542,6 @@ void shape_free(Shape *const shape) {
         shape->pois_rotation = NULL;
     }
 
-    if (shape->box != NULL) {
-        box_free(shape->box);
-        shape->box = NULL;
-    }
-
     if (shape->worldAABB != NULL) {
         box_free(shape->worldAABB);
         shape->worldAABB = NULL;
@@ -740,17 +552,14 @@ void shape_free(Shape *const shape) {
         shape->pivot = NULL;
     }
 
-    if (shape->octree != NULL) {
-        octree_free(shape->octree);
-        shape->octree = NULL;
-    }
-    if (shape->lightingData != NULL) {
-        free(shape->lightingData);
-        shape->lightingData = NULL;
+    index3d_flush(shape->chunks, chunk_free_func);
+    index3d_free(shape->chunks);
+
+    if (shape->dirtyChunks != NULL) {
+        fifo_list_free(shape->dirtyChunks, NULL);
     }
 
-    index3d_flush(shape->chunks, shape_chunk_free);
-    index3d_free(shape->chunks);
+    rtree_free(shape->rtree);
 
     // free all vertex buffers
     vertex_buffer_free_all(shape->firstVB_opaque);
@@ -760,14 +569,6 @@ void shape_free(Shape *const shape) {
     // vertex_buffer_free_all has been called previously
     doubly_linked_list_free(shape->fragmentedVBs);
     shape->fragmentedVBs = NULL;
-
-    // free needsDisplay list
-    ChunkList *cl = NULL;
-    while (shape->needsDisplay != NULL) {
-        cl = shape->needsDisplay;
-        shape->needsDisplay = cl->next;
-        chunk_list_free(cl);
-    }
 
     // free history
     history_free(shape->history);
@@ -784,141 +585,39 @@ void shape_free(Shape *const shape) {
     free(shape);
 }
 
-void shape_release(Shape *const shape) {
-    if (shape == NULL) {
-        return;
+Weakptr *shape_get_weakptr(Shape *s) {
+    if (s->wptr == NULL) {
+        s->wptr = weakptr_new(s);
     }
-    transform_release(shape->transform);
+    return s->wptr;
+}
+
+Weakptr *shape_get_and_retain_weakptr(Shape *s) {
+    if (s->wptr == NULL) {
+        s->wptr = weakptr_new(s);
+    }
+    if (weakptr_retain(s->wptr)) {
+        return s->wptr;
+    } else { // this can only happen if weakptr ref count is at max
+        return NULL;
+    }
 }
 
 uint16_t shape_get_id(const Shape *shape) {
     return transform_get_id(shape->transform);
 }
 
-// sets "needs display" to neighbor chunks when updating
-// blocks on the edges.
-void shape_chunk_inform_neighbors_about_change(Shape *shape,
-                                               const Chunk *chunk,
-                                               const int3 *block_pos) {
-
-    if (block_pos->x == 0) { // left side
-        shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Left));
-        if (block_pos->y == 0) {
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Bottom));
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomLeft));
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, LeftFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomLeftFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, LeftBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomLeftBack));
-            }
-        } else if (block_pos->y == CHUNK_HEIGHT_MINUS_ONE) {
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Top));
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopLeft));
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, LeftFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopLeftFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, LeftBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopLeftBack));
-            }
-        } else { // middle
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, LeftFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, LeftBack));
-            }
-        }
-    } else if (block_pos->x == CHUNK_WIDTH_MINUS_ONE) { // right side
-        shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Right));
-        if (block_pos->y == 0) {
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Bottom));
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomRight));
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, RightFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomRightFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, RightBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomRightBack));
-            }
-        } else if (block_pos->y == CHUNK_HEIGHT_MINUS_ONE) {
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Top));
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopRight));
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, RightFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopFront));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopRightFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, RightBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopBack));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopRightBack));
-            }
-        } else { // middle
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, RightFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, RightBack));
-            }
-        }
-    } else { // not on left side, not on right side, all corner cases handled
-        if (block_pos->y == 0) {
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Bottom));
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, BottomBack));
-            }
-        } else if (block_pos->y == CHUNK_HEIGHT_MINUS_ONE) {
-            shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Top));
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopFront));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, TopBack));
-            }
-        } else { // middle
-            if (block_pos->z == 0) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Front));
-            } else if (block_pos->z == CHUNK_DEPTH_MINUS_ONE) {
-                shape_chunk_needs_display(shape, chunk_get_neighbor(chunk, Back));
-            }
-        }
-    }
-}
-
 // offset is always applied in this function
-bool shape_add_block_from_lua(Shape *const shape,
-                              Scene *scene,
-                              const SHAPE_COLOR_INDEX_INT_T colorIndex,
-                              const SHAPE_COORDS_INT_T luaX,
-                              const SHAPE_COORDS_INT_T luaY,
-                              const SHAPE_COORDS_INT_T luaZ) {
+bool shape_add_block_as_transaction(Shape *const shape,
+                                    Scene *scene,
+                                    const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                                    const SHAPE_COORDS_INT_T x,
+                                    const SHAPE_COORDS_INT_T y,
+                                    const SHAPE_COORDS_INT_T z) {
     vx_assert(shape != NULL);
 
-    // a new block cannot be added if their is an existing block at those coords
-    const Block *existingBlock = shape_get_block(shape, luaX, luaY, luaZ, true);
+    // a new block cannot be added if there is an existing block at those coords
+    const Block *existingBlock = shape_get_block(shape, x, y, z);
 
     if (block_is_solid(existingBlock) == true) {
         // There is already a solid block at the given coordinates, we cannot
@@ -933,11 +632,9 @@ bool shape_add_block_from_lua(Shape *const shape,
         }
     }
 
-    if (transaction_addBlock(shape->pendingTransaction, luaX, luaY, luaZ, colorIndex)) {
+    if (transaction_addBlock(shape->pendingTransaction, x, y, z, colorIndex)) {
         // register awake box if using per-block collisions
         if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
-            SHAPE_COORDS_INT_T x = luaX, y = luaY, z = luaZ;
-            shape_block_lua_to_internal(shape, &x, &y, &z);
             scene_register_awake_block_box(scene, shape, x, y, z);
         }
         return true;
@@ -946,19 +643,15 @@ bool shape_add_block_from_lua(Shape *const shape,
     }
 }
 
-bool shape_remove_block_from_lua(Shape *const shape,
-                                 Scene *scene,
-                                 const SHAPE_COORDS_INT_T luaX,
-                                 const SHAPE_COORDS_INT_T luaY,
-                                 const SHAPE_COORDS_INT_T luaZ) {
+bool shape_remove_block_as_transaction(Shape *const shape,
+                                       Scene *scene,
+                                       const SHAPE_COORDS_INT_T x,
+                                       const SHAPE_COORDS_INT_T y,
+                                       const SHAPE_COORDS_INT_T z) {
     vx_assert(shape != NULL);
 
     // check whether a block already exists at the given coordinates
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
-                                                 true); // xyz are lua coords
+    const Block *existingBlock = shape_get_block(shape, x, y, z);
 
     if (block_is_solid(existingBlock) == false) {
         return false; // no block here
@@ -971,31 +664,25 @@ bool shape_remove_block_from_lua(Shape *const shape,
         }
     }
 
-    transaction_removeBlock(shape->pendingTransaction, luaX, luaY, luaZ);
+    transaction_removeBlock(shape->pendingTransaction, x, y, z);
 
     // register awake box is using per-block collisions
     if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
-        SHAPE_COORDS_INT_T x = luaX, y = luaY, z = luaZ;
-        shape_block_lua_to_internal(shape, &x, &y, &z);
         scene_register_awake_block_box(scene, shape, x, y, z);
     }
 
     return true; // block is considered removed
 }
 
-bool shape_replace_block_from_lua(Shape *const shape,
-                                  const SHAPE_COLOR_INDEX_INT_T newColorIndex,
-                                  const SHAPE_COORDS_INT_T luaX,
-                                  const SHAPE_COORDS_INT_T luaY,
-                                  const SHAPE_COORDS_INT_T luaZ) {
+bool shape_paint_block_as_transaction(Shape *const shape,
+                                      const SHAPE_COLOR_INDEX_INT_T newColorIndex,
+                                      const SHAPE_COORDS_INT_T x,
+                                      const SHAPE_COORDS_INT_T y,
+                                      const SHAPE_COORDS_INT_T z) {
     vx_assert(shape != NULL);
 
     // check whether a block already exists at the given coordinates
-    const Block *existingBlock = shape_get_block(shape,
-                                                 luaX,
-                                                 luaY,
-                                                 luaZ,
-                                                 true); // xyz are lua coords
+    const Block *existingBlock = shape_get_block(shape, x, y, z);
 
     if (block_is_solid(existingBlock) == false) {
         // There is no solid block at those coordinates.
@@ -1014,14 +701,15 @@ bool shape_replace_block_from_lua(Shape *const shape,
         }
     }
 
-    transaction_replaceBlock(shape->pendingTransaction, luaX, luaY, luaZ, newColorIndex);
+    transaction_replaceBlock(shape->pendingTransaction, x, y, z, newColorIndex);
 
     return true; // block is considered replaced
 }
 
 void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
     vx_assert(shape != NULL);
-    if (shape->pendingTransaction == NULL || shape->isBakeLocked) {
+    if (shape->pendingTransaction == NULL ||
+        _shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKE_LOCKED)) {
         return; // no transaction to apply
     }
 
@@ -1032,9 +720,11 @@ void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
         return;
     }
 
-    keepPending = keepPending || (shape->historyEnabled && shape->historyKeepingTransactionPending);
+    keepPending = keepPending ||
+                  _shape_get_lua_flag(shape,
+                                      SHAPE_LUA_FLAG_HISTORY | SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING);
     if (keepPending == false) {
-        if (shape->historyEnabled == true && shape->history != NULL) {
+        if (_shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY) && shape->history != NULL) {
             // history is enabled, store the transaction in the history
             transaction_resetIndex3DIterator(shape->pendingTransaction);
             history_pushTransaction(shape->history, shape->pendingTransaction);
@@ -1046,215 +736,148 @@ void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
     }
 }
 
-bool shape_add_block_with_color(Shape *shape,
-                                SHAPE_COLOR_INDEX_INT_T colorIndex,
-                                SHAPE_COORDS_INT_T x,
-                                SHAPE_COORDS_INT_T y,
-                                SHAPE_COORDS_INT_T z,
-                                const bool resizeIfNeeded,
-                                const bool applyOffset,
-                                bool useDefaultColor) {
-    Block *block = NULL;
-
-    if (resizeIfNeeded) {
-        // returns if no need to make space
-        // NOTE: offset not applied on x, y & z here.
-        shape_make_space_for_block(shape, x, y, z, applyOffset);
-    }
-
-    // apply current offset
-    // (could have been updated within shape_make_space_for_block)
-    // that's why we apply it now, not at at the beginning of the function.
-    if (applyOffset) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
-    }
-
-    const bool added = _shape_add_block(shape, x, y, z, &block);
-
-    if (added) {
-        // if caller wants to express colorIndex as a default color, we translate it here
-        if (useDefaultColor) {
-            color_palette_check_and_add_default_color_2021(shape->palette, colorIndex, &colorIndex);
-        } else {
-            color_palette_increment_color(shape->palette, colorIndex);
-        }
-
-        block_set_color_index(block, colorIndex);
-        if (shape->octree != NULL) {
-            octree_set_element(shape->octree, (void *)block, (size_t)x, (size_t)y, (size_t)z);
-        }
-
-        if (shape->lightingData != NULL) {
-            shape_compute_baked_lighting_added_block(shape, x, y, z, colorIndex);
-        }
-    }
-
-    return added;
-}
-
-/// returns whether the block has been removed
-///
-/// /!\ *blockBefore must be freed by the caller.
-bool shape_remove_block(Shape *shape,
-                        SHAPE_COORDS_INT_T x,
-                        SHAPE_COORDS_INT_T y,
-                        SHAPE_COORDS_INT_T z,
-                        Block **blockBefore,
-                        const bool applyOffset,
-                        const bool shrinkBox) {
+bool shape_add_block(Shape *shape,
+                     SHAPE_COLOR_INDEX_INT_T colorIndex,
+                     const SHAPE_COORDS_INT_T x,
+                     const SHAPE_COORDS_INT_T y,
+                     const SHAPE_COORDS_INT_T z,
+                     bool useDefaultColor) {
 
     if (shape == NULL) {
         return false;
     }
 
-    if (applyOffset) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
+    // if caller wants to express colorIndex as a default color, we translate it here
+    if (useDefaultColor) {
+        color_palette_check_and_add_default_color_2021(shape->palette, colorIndex, &colorIndex);
     }
 
-    // make sure block removed is within fixed boundaries
-    if (_has_allocated_size(shape) && _is_out_of_allocated_size(shape, x, y, z)) {
-        cclog_error("⚠️ trying to remove block from outside shape's fixed boundaries");
+    Block block = (Block){colorIndex};
+    CHUNK_COORDS_INT3_T block_coords;
+    Chunk *chunk = NULL;
+    bool chunkAdded = false;
+    bool blockAdded = _shape_add_block_in_chunks(shape,
+                                                 block,
+                                                 x,
+                                                 y,
+                                                 z,
+                                                 &block_coords,
+                                                 &chunkAdded,
+                                                 &chunk,
+                                                 NULL);
+
+    if (chunkAdded) {
+        shape->nbChunks++;
+    }
+
+    if (blockAdded) {
+        shape->nbBlocks++;
+        _shape_chunk_enqueue_refresh(shape, chunk);
+        _shape_chunk_check_neighbors_dirty(shape, chunk, block_coords);
+
+        shape_expand_box(shape, (SHAPE_COORDS_INT3_T){x, y, z});
+
+        color_palette_increment_color(shape->palette, colorIndex);
+
+        if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
+            shape_compute_baked_lighting_added_block(shape,
+                                                     chunk,
+                                                     (SHAPE_COORDS_INT3_T){x, y, z},
+                                                     block_coords,
+                                                     colorIndex);
+        }
+    }
+
+    return blockAdded;
+}
+
+bool shape_remove_block(Shape *shape,
+                        const SHAPE_COORDS_INT_T x,
+                        const SHAPE_COORDS_INT_T y,
+                        const SHAPE_COORDS_INT_T z) {
+
+    if (shape == NULL) {
         return false;
     }
 
     bool removed = false;
 
-    Chunk *chunk = NULL;
+    Chunk *chunk;
+    CHUNK_COORDS_INT3_T coords_in_chunk;
+    SHAPE_COORDS_INT3_T coords_in_shape = (SHAPE_COORDS_INT3_T){x, y, z};
+    shape_get_chunk_and_coordinates(shape, coords_in_shape, &chunk, NULL, &coords_in_chunk);
 
-    int3 globalPos;
-    int3 posInChunk;
-    int3 chunkPos;
-
-    int3_set(&globalPos, x, y, z);
-    int3_set(&posInChunk, 0, 0, 0);
-    int3_set(&chunkPos, 0, 0, 0);
-
-    shape_get_chunk_and_position_within(shape, &globalPos, &chunk, &chunkPos, &posInChunk);
-
-    // found chunk?
     if (chunk != NULL) {
-        Block *block = chunk_get_block(chunk,
-                                       (CHUNK_COORDS_INT_T)posInChunk.x,
-                                       (CHUNK_COORDS_INT_T)posInChunk.y,
-                                       (CHUNK_COORDS_INT_T)posInChunk.z);
-        if (block == NULL) {
-            return false;
-        }
-
-        SHAPE_COLOR_INDEX_INT_T colorIdx = block->colorIndex;
-        if (blockBefore != NULL) {
-            *blockBefore = block_new_copy(block);
-        }
-        removed = chunk_removeBlock(chunk,
-                                    (CHUNK_COORDS_INT_T)posInChunk.x,
-                                    (CHUNK_COORDS_INT_T)posInChunk.y,
-                                    (CHUNK_COORDS_INT_T)posInChunk.z);
+        SHAPE_COLOR_INDEX_INT_T prevColor;
+        removed = chunk_remove_block(chunk,
+                                     coords_in_chunk.x,
+                                     coords_in_chunk.y,
+                                     coords_in_chunk.z,
+                                     &prevColor);
 
         if (removed) {
             shape->nbBlocks--;
-            shape_chunk_inform_neighbors_about_change(shape, chunk, &posInChunk);
-            shape_chunk_needs_display(shape, chunk);
+            _shape_chunk_check_neighbors_dirty(shape, chunk, coords_in_chunk);
+            _shape_chunk_enqueue_refresh(shape, chunk);
 
-            // note: box.min inclusive, box.max exclusive
-            const bool shouldUpdateBB = x <= (SHAPE_COORDS_INT_T)shape->box->min.x ||
-                                        x >= (SHAPE_COORDS_INT_T)shape->box->max.x - 1 ||
-                                        y <= (SHAPE_COORDS_INT_T)shape->box->min.y ||
-                                        y >= (SHAPE_COORDS_INT_T)shape->box->max.y - 1 ||
-                                        z <= (SHAPE_COORDS_INT_T)shape->box->min.z ||
-                                        z >= (SHAPE_COORDS_INT_T)shape->box->max.z - 1;
+            // shape_reset_box(shape, x, y, z);
 
-            if (shouldUpdateBB && shrinkBox) {
-                shape_shrink_box(shape, true);
-            }
-            if (shape->octree != NULL) {
-                Block *air = block_new_air();
-                octree_remove_element(shape->octree, (size_t)x, (size_t)y, (size_t)z, air);
-                block_free(air);
+            if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
+                shape_compute_baked_lighting_removed_block(shape,
+                                                           chunk,
+                                                           coords_in_shape,
+                                                           coords_in_chunk,
+                                                           prevColor);
             }
 
-            if (shape->lightingData != NULL) {
-                shape_compute_baked_lighting_removed_block(shape, x, y, z, colorIdx);
-            }
-
-            color_palette_decrement_color(shape->palette, colorIdx);
+            color_palette_decrement_color(shape->palette, prevColor);
         }
 
         // if chunk is now empty, do not destroy it right now and wait until shape_refresh_vertices:
         // 1) in case we reuse this chunk in the meantime
-        // 2) to make sure vb nbVertices is always in sync with its data
+        // 2) to make sure vb count is always in sync with its data
     }
 
     return removed;
 }
 
-/// /!\ *blockBefore must be freed by the caller.
-/// /!\ *blockAfter must be freed by the caller.
 bool shape_paint_block(Shape *shape,
-                       SHAPE_COLOR_INDEX_INT_T colorIndex,
-                       SHAPE_COORDS_INT_T x,
-                       SHAPE_COORDS_INT_T y,
-                       SHAPE_COORDS_INT_T z,
-                       Block **blockBefore,
-                       Block **blockAfter,
-                       const bool applyOffset) {
+                       const SHAPE_COLOR_INDEX_INT_T colorIndex,
+                       const SHAPE_COORDS_INT_T x,
+                       const SHAPE_COORDS_INT_T y,
+                       const SHAPE_COORDS_INT_T z) {
 
-    if (applyOffset) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
+    if (shape == NULL) {
+        return false;
     }
 
     bool painted = false;
 
-    Chunk *chunk = NULL;
+    Chunk *chunk;
+    CHUNK_COORDS_INT3_T coords_in_chunk;
+    SHAPE_COORDS_INT3_T coords_in_shape = (SHAPE_COORDS_INT3_T){x, y, z};
+    shape_get_chunk_and_coordinates(shape, coords_in_shape, &chunk, NULL, &coords_in_chunk);
 
-    static int3 globalPos;
-    static int3 posInChunk;
-    static int3 chunkPos;
-
-    int3_set(&globalPos, x, y, z);
-
-    shape_get_chunk_and_position_within(shape, &globalPos, &chunk, &chunkPos, &posInChunk);
-
-    // found chunk?
     if (chunk != NULL) {
-        Block *block = chunk_get_block(chunk,
-                                       (CHUNK_COORDS_INT_T)posInChunk.x,
-                                       (CHUNK_COORDS_INT_T)posInChunk.y,
-                                       (CHUNK_COORDS_INT_T)posInChunk.z);
-        if (block == NULL) {
-            return false;
-        }
-
-        const uint8_t prevColor = block->colorIndex;
-        if (blockBefore != NULL) {
-            *blockBefore = block_new_copy(block);
-        }
-
-        color_palette_decrement_color(shape->palette, prevColor);
-
-        color_palette_increment_color(shape->palette, colorIndex);
-
+        SHAPE_COLOR_INDEX_INT_T prevColor;
         painted = chunk_paint_block(chunk,
-                                    (CHUNK_COORDS_INT_T)posInChunk.x,
-                                    (CHUNK_COORDS_INT_T)posInChunk.y,
-                                    (CHUNK_COORDS_INT_T)posInChunk.z,
-                                    colorIndex);
-        if (blockAfter != NULL) {
-            *blockAfter = block_new_copy(block);
-        }
+                                    coords_in_chunk.x,
+                                    coords_in_chunk.y,
+                                    coords_in_chunk.z,
+                                    colorIndex,
+                                    &prevColor);
         if (painted) {
-            shape_chunk_needs_display(shape, chunk);
+            color_palette_decrement_color(shape->palette, prevColor);
+            color_palette_increment_color(shape->palette, colorIndex);
 
-            // Note: block in chunk index and block in octree are 2 different copies
-            if (shape->octree != NULL) {
-                octree_set_element(shape->octree,
-                                   (const void *)(&colorIndex),
-                                   (size_t)x,
-                                   (size_t)y,
-                                   (size_t)z);
-            }
+            _shape_chunk_enqueue_refresh(shape, chunk);
 
-            if (shape->lightingData != NULL) {
-                shape_compute_baked_lighting_replaced_block(shape, x, y, z, colorIndex, false);
+            if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
+                shape_compute_baked_lighting_replaced_block(shape,
+                                                            chunk,
+                                                            coords_in_shape,
+                                                            coords_in_chunk,
+                                                            colorIndex);
             }
         }
     }
@@ -1274,180 +897,62 @@ void shape_set_palette(Shape *shape, ColorPalette *palette) {
 }
 
 const Block *shape_get_block(const Shape *const shape,
-                             SHAPE_COORDS_INT_T x,
-                             SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             const bool luaCoords) {
+                             const SHAPE_COORDS_INT_T x,
+                             const SHAPE_COORDS_INT_T y,
+                             const SHAPE_COORDS_INT_T z) {
     const Block *b = NULL;
 
     // look for the block in the current transaction
     if (shape->pendingTransaction != NULL) {
-        SHAPE_COORDS_INT_T luaX = x;
-        SHAPE_COORDS_INT_T luaY = y;
-        SHAPE_COORDS_INT_T luaZ = z;
-        if (luaCoords == false) {
-            shape_block_internal_to_lua(shape, &luaX, &luaY, &luaZ);
-        }
-        b = transaction_getCurrentBlockAt(shape->pendingTransaction, luaX, luaY, luaZ);
+        b = transaction_getCurrentBlockAt(shape->pendingTransaction, x, y, z);
     }
 
     // transaction doesn't contain a block state for those coords,
     // let's check in the shape blocks
     if (b == NULL) {
-        b = shape_get_block_immediate(shape, x, y, z, luaCoords);
+        b = shape_get_block_immediate(shape, x, y, z);
     }
 
     return b;
 }
 
 Block *shape_get_block_immediate(const Shape *const shape,
-                                 SHAPE_COORDS_INT_T x,
-                                 SHAPE_COORDS_INT_T y,
-                                 SHAPE_COORDS_INT_T z,
-                                 const bool luaCoords) {
-    if (luaCoords) {
-        shape_block_lua_to_internal(shape, &x, &y, &z);
+                                 const SHAPE_COORDS_INT_T x,
+                                 const SHAPE_COORDS_INT_T y,
+                                 const SHAPE_COORDS_INT_T z) {
+
+    Chunk *chunk;
+    CHUNK_COORDS_INT3_T coords_in_chunk;
+    shape_get_chunk_and_coordinates(shape,
+                                    (SHAPE_COORDS_INT3_T){x, y, z},
+                                    &chunk,
+                                    NULL,
+                                    &coords_in_chunk);
+
+    if (chunk != NULL) {
+        return chunk_get_block(chunk, coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z);
     }
 
-    Block *b = NULL;
-    if (shape_is_within_allocated_bounds(shape, x, y, z)) {
-        if (shape->octree != NULL) {
-            b = (Block *)
-                octree_get_element_without_checking(shape->octree, (size_t)x, (size_t)y, (size_t)z);
-        } else {
-            static int3 globalPos;
-            static int3 posInChunk;
-
-            int3_set(&globalPos, x, y, z);
-
-            static Chunk *chunk;
-
-            shape_get_chunk_and_position_within(shape, &globalPos, &chunk, NULL, &posInChunk);
-
-            // found chunk?
-            if (chunk != NULL) {
-                b = chunk_get_block(chunk,
-                                    (CHUNK_COORDS_INT_T)posInChunk.x,
-                                    (CHUNK_COORDS_INT_T)posInChunk.y,
-                                    (CHUNK_COORDS_INT_T)posInChunk.z);
-            }
-        }
-    }
-    return b;
-}
-
-void shape_get_chunk_neighbors(const Shape *shape,
-                               const Chunk *c,
-                               Chunk **left,
-                               Chunk **right,
-                               Chunk **top,
-                               Chunk **bottom,
-                               Chunk **front,
-                               Chunk **back) {
-    static int3 neighbor_ldf_pos;
-
-    const int3 *pos = chunk_get_pos(c);
-
-    // left
-    int3_set(&neighbor_ldf_pos,
-             (pos->x - CHUNK_WIDTH) >> CHUNK_WIDTH_SQRT,
-             pos->y >> CHUNK_HEIGHT_SQRT,
-             pos->z >> CHUNK_DEPTH_SQRT);
-    *left = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
-
-    // right
-    int3_set(&neighbor_ldf_pos,
-             (pos->x + CHUNK_WIDTH) >> CHUNK_WIDTH_SQRT,
-             pos->y >> CHUNK_HEIGHT_SQRT,
-             pos->z >> CHUNK_DEPTH_SQRT);
-    *right = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
-
-    // top
-    int3_set(&neighbor_ldf_pos,
-             pos->x >> CHUNK_WIDTH_SQRT,
-             (pos->y + CHUNK_HEIGHT) >> CHUNK_HEIGHT_SQRT,
-             pos->z >> CHUNK_DEPTH_SQRT);
-    *top = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
-
-    // bottom
-    int3_set(&neighbor_ldf_pos,
-             pos->x >> CHUNK_WIDTH_SQRT,
-             (pos->y - CHUNK_HEIGHT) >> CHUNK_HEIGHT_SQRT,
-             pos->z >> CHUNK_DEPTH_SQRT);
-    *bottom = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
-
-    // front
-    int3_set(&neighbor_ldf_pos,
-             pos->x >> CHUNK_WIDTH_SQRT,
-             pos->y >> CHUNK_HEIGHT_SQRT,
-             (pos->z - CHUNK_DEPTH) >> CHUNK_DEPTH_SQRT);
-    *front = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
-
-    // back
-    int3_set(&neighbor_ldf_pos,
-             pos->x >> CHUNK_WIDTH_SQRT,
-             pos->y >> CHUNK_HEIGHT_SQRT,
-             (pos->z + CHUNK_DEPTH) >> CHUNK_DEPTH_SQRT);
-    *back = (Chunk *)
-        index3d_get(shape->chunks, neighbor_ldf_pos.x, neighbor_ldf_pos.y, neighbor_ldf_pos.z);
-}
-
-void shape_get_chunk_and_position_within(const Shape *shape,
-                                         const int3 *pos,
-                                         Chunk **chunk,
-                                         int3 *chunk_pos,
-                                         int3 *pos_in_chunk) {
-    static int3 chunk_ldfPos;
-
-    int3_set(&chunk_ldfPos,
-             pos->x >> CHUNK_WIDTH_SQRT,
-             pos->y >> CHUNK_HEIGHT_SQRT,
-             pos->z >> CHUNK_DEPTH_SQRT);
-
-    if (chunk_pos != NULL) {
-        chunk_pos->x = chunk_ldfPos.x;
-        chunk_pos->y = chunk_ldfPos.y;
-        chunk_pos->z = chunk_ldfPos.z;
-    }
-
-    if (pos_in_chunk != NULL) {
-        pos_in_chunk->x = pos->x & CHUNK_WIDTH_MINUS_ONE;
-        pos_in_chunk->y = pos->y & CHUNK_HEIGHT_MINUS_ONE;
-        pos_in_chunk->z = pos->z & CHUNK_DEPTH_MINUS_ONE;
-    }
-
-    *chunk = (Chunk *)index3d_get(shape->chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z);
+    return NULL;
 }
 
 void shape_get_bounding_box_size(const Shape *shape, int3 *size) {
     if (size == NULL)
         return;
-    box_get_size_int(shape->box, size);
+    size->x = (int)(shape->bbMax.x - shape->bbMin.x);
+    size->y = (int)(shape->bbMax.y - shape->bbMin.y);
+    size->z = (int)(shape->bbMax.z - shape->bbMin.z);
 }
 
-void shape_get_allocated_size(const Shape *shape, int3 *size) {
-    if (size == NULL)
-        return;
-    if (_has_allocated_size(shape)) {
-        size->x = shape->maxWidth;
-        size->y = shape->maxHeight;
-        size->z = shape->maxDepth;
-    } else {
-        shape_get_bounding_box_size(shape, size);
-    }
+SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape) {
+    return (SHAPE_SIZE_INT3_T){(SHAPE_SIZE_INT_T)shape->bbMax.x,
+                               (SHAPE_SIZE_INT_T)shape->bbMax.y,
+                               (SHAPE_SIZE_INT_T)shape->bbMax.z};
 }
 
-bool shape_is_within_allocated_bounds(const Shape *shape,
-                                      const SHAPE_COORDS_INT_T x,
-                                      const SHAPE_COORDS_INT_T y,
-                                      const SHAPE_COORDS_INT_T z) {
-    return x >= 0 && x < shape->maxWidth && y >= 0 && y < shape->maxHeight && z >= 0 &&
-           z < shape->maxDepth;
+bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T coords) {
+    return coords.x >= shape->bbMin.x && coords.x < shape->bbMax.x && coords.y >= shape->bbMin.y &&
+           coords.y < shape->bbMax.y && coords.z >= shape->bbMin.z && coords.z < shape->bbMax.z;
 }
 
 void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider) {
@@ -1472,753 +977,299 @@ void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isColli
     }
 }
 
-const Box *shape_get_model_aabb(const Shape *shape) {
-    return shape->box;
+Box shape_get_model_aabb(const Shape *shape) {
+    Box box = {(float3){(float)shape->bbMin.x, (float)shape->bbMin.y, (float)shape->bbMin.z},
+               (float3){(float)shape->bbMax.x, (float)shape->bbMax.y, (float)shape->bbMax.z}};
+    return box;
+}
+
+void shape_get_model_aabb_2(const Shape *s,
+                            SHAPE_COORDS_INT3_T *bbMin,
+                            SHAPE_COORDS_INT3_T *bbMax) {
+    if (bbMin != NULL) {
+        bbMin->x = s->bbMin.x;
+        bbMin->y = s->bbMin.y;
+        bbMin->z = s->bbMin.z;
+    }
+    if (bbMax != NULL) {
+        bbMax->x = s->bbMax.x;
+        bbMax->y = s->bbMax.y;
+        bbMax->z = s->bbMax.z;
+    }
 }
 
 void shape_get_local_aabb(const Shape *s, Box *box) {
     if (s == NULL || box == NULL)
         return;
 
+    const Box model = shape_get_model_aabb(s);
     const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
     transform_refresh(s->transform, false, true); // refresh mtx for intra-frame calculations
-    box_to_aabox2(s->box, box, transform_get_mtx(s->transform), offset, false);
+    box_to_aabox2(&model, box, transform_get_mtx(s->transform), offset, false);
 }
 
-void shape_get_world_aabb(Shape *s, Box *box) {
+bool shape_get_world_aabb(Shape *s, Box *box) {
     if (s->worldAABB == NULL || transform_is_any_dirty(s->transform)) {
-        shape_box_to_aabox(s, s->box, box, false);
+        const Box model = shape_get_model_aabb(s);
+        shape_box_to_aabox(s, &model, box, false);
         if (s->worldAABB == NULL) {
             s->worldAABB = box_new_copy(box);
         } else {
             box_copy(s->worldAABB, box);
         }
         transform_reset_any_dirty(s->transform);
+        return true;
     } else {
         box_copy(box, s->worldAABB);
+        return false;
     }
 }
 
-// compute the size of the shape (a cube containing the shape)
-bool shape_compute_size_and_origin(const Shape *shape,
-                                   SHAPE_SIZE_INT_T *size_x,
-                                   SHAPE_SIZE_INT_T *size_y,
-                                   SHAPE_SIZE_INT_T *size_z,
-                                   SHAPE_COORDS_INT_T *origin_x,
-                                   SHAPE_COORDS_INT_T *origin_y,
-                                   SHAPE_COORDS_INT_T *origin_z) {
-
-    // shape boundaries
-    // the min can be > 0 and max can be < 0 so we can set these values now.
-    // we take the ones from first chunk.
-    int32_t min_x = 0;
-    int32_t min_y = 0;
-    int32_t min_z = 0;
-    int32_t max_x = 0;
-    int32_t max_y = 0;
-    int32_t max_z = 0;
-
-    Index3DIterator *it = index3d_iterator_new(shape->chunks);
-
-    if (index3d_iterator_pointer(it) == NULL) {
-        // no chunk
-        *size_x = 0;
-        *size_y = 0;
-        *size_z = 0;
-        *origin_x = 0;
-        *origin_y = 0;
-        *origin_z = 0;
-        return false; // empty shape
-    }
-
-    bool firstChunk = true;
-
-    CHUNK_COORDS_INT_T c_min_x = 0;
-    CHUNK_COORDS_INT_T c_max_x = 0;
-    CHUNK_COORDS_INT_T c_min_y = 0;
-    CHUNK_COORDS_INT_T c_max_y = 0;
-    CHUNK_COORDS_INT_T c_min_z = 0;
-    CHUNK_COORDS_INT_T c_max_z = 0;
-
-    // loop on all the chunks
-    while (true) {
-        // process current chunk
-        Chunk *c = (Chunk *)index3d_iterator_pointer(it);
-
-        // Compute inner bounds only if chunk is NOT empty.
-        // Empty chunks end up being removed but they could
-        // still be present here.
-        if (chunk_get_nb_blocks(c) > 0) {
-
-            // get chunk's inner bounds to refine limits
-            chunk_get_inner_bounds(c, &c_min_x, &c_max_x, &c_min_y, &c_max_y, &c_min_z, &c_max_z);
-
-            // Note: chunk should never be NULL
-
-            // get its position
-            const int3 *p = chunk_get_pos(c);
-
-            if (firstChunk) {
-                min_x = p->x + c_min_x;
-                min_y = p->y + c_min_y;
-                min_z = p->z + c_min_z;
-                max_x = p->x + c_max_x;
-                max_y = p->y + c_max_y;
-                max_z = p->z + c_max_z;
-                firstChunk = false;
-            } else {
-                // update min/max on all 3 axis
-                min_x = (p->x + c_min_x < min_x) ? (p->x + c_min_x) : (min_x);
-                max_x = (p->x + c_max_x > max_x) ? (p->x + c_max_x) : (max_x);
-                min_y = (p->y + c_min_y < min_y) ? (p->y + c_min_y) : (min_y);
-                max_y = (p->y + c_max_y > max_y) ? (p->y + c_max_y) : (max_y);
-                min_z = (p->z + c_min_z < min_z) ? (p->z + c_min_z) : (min_z);
-                max_z = (p->z + c_max_z > max_z) ? (p->z + c_max_z) : (max_z);
-            }
-        }
-
-        // select next chunk and exit the loop if there is no next chunk
-        if (index3d_iterator_is_at_end(it)) {
-            break;
-        }
-        index3d_iterator_next(it);
-    }
-
-    index3d_iterator_free(it);
-
-    *size_x = (SHAPE_SIZE_INT_T)(max_x - min_x);
-    *size_y = (SHAPE_SIZE_INT_T)(max_y - min_y);
-    *size_z = (SHAPE_SIZE_INT_T)(max_z - min_z);
-
-    *origin_x = (SHAPE_COORDS_INT_T)min_x;
-    *origin_y = (SHAPE_COORDS_INT_T)min_y;
-    *origin_z = (SHAPE_COORDS_INT_T)min_z;
-
-    return true; // non-empty shape
-}
-
-void shape_shrink_box(Shape *shape, bool forceColliderResize) {
+void shape_reset_box(Shape *shape) {
     if (shape == NULL) {
-        cclog_error("[shape_shrink_box] shape arg is NULL. Abort.");
+        cclog_error("[shape_reset_box] shape arg is NULL. Abort.");
         return;
     }
     SHAPE_SIZE_INT_T size_x, size_y, size_z;
     SHAPE_COORDS_INT_T origin_x, origin_y, origin_z;
-    shape_compute_size_and_origin(shape,
-                                  &size_x,
-                                  &size_y,
-                                  &size_z,
-                                  &origin_x,
-                                  &origin_y,
-                                  &origin_z);
+    _shape_compute_size_and_origin(shape,
+                                   &size_x,
+                                   &size_y,
+                                   &size_z,
+                                   &origin_x,
+                                   &origin_y,
+                                   &origin_z);
 
-    shape->box->min.x = origin_x;
-    shape->box->min.y = origin_y;
-    shape->box->min.z = origin_z;
-
-    shape->box->max.x = (float)(origin_x + size_x);
-    shape->box->max.y = (float)(origin_y + size_y);
-    shape->box->max.z = (float)(origin_z + size_z);
-
-    _shape_clear_cached_world_aabb(shape);
-
-    // fit collider only if not already set in deserialization
-    const RigidBody *rb = shape_get_rigidbody(shape);
-    if (rb == NULL) {
-        return;
-    }
-    const Box *collider = rigidbody_get_collider(rb);
-    if (forceColliderResize || (float3_isZero(&collider->min, EPSILON_ZERO) &&
-                                float3_isZero(&collider->max, EPSILON_ZERO))) {
-        shape_fit_collider_to_bounding_box(shape);
-    }
-}
-
-void shape_expand_box(Shape *shape,
-                      const SHAPE_COORDS_INT_T x,
-                      const SHAPE_COORDS_INT_T y,
-                      const SHAPE_COORDS_INT_T z) {
-    const float xf = (const float)x;
-    const float yf = (const float)y;
-    const float zf = (const float)z;
-
-    if (box_is_empty(shape->box)) {
-        float3_set(&shape->box->min, xf, yf, zf);
-        float3_set(&shape->box->max, xf + 1.0f, yf + 1.0f, zf + 1.0f);
-    } else {
-        if (xf < shape->box->min.x) {
-            shape->box->min.x = xf;
-        }
-        if (yf < shape->box->min.y) {
-            shape->box->min.y = yf;
-        }
-        if (zf < shape->box->min.z) {
-            shape->box->min.z = zf;
-        }
-        if (xf >= shape->box->max.x) {
-            shape->box->max.x = xf + 1.0f;
-        }
-        if (yf >= shape->box->max.y) {
-            shape->box->max.y = yf + 1.0f;
-        }
-        if (zf >= shape->box->max.z) {
-            shape->box->max.z = zf + 1.0f;
-        }
-    }
+    shape->bbMin = (SHAPE_COORDS_INT3_T){origin_x, origin_y, origin_z};
+    shape->bbMax = (SHAPE_COORDS_INT3_T){origin_x + (SHAPE_COORDS_INT_T)size_x,
+                                         origin_y + (SHAPE_COORDS_INT_T)size_y,
+                                         origin_z + (SHAPE_COORDS_INT_T)size_z};
 
     shape_fit_collider_to_bounding_box(shape);
     _shape_clear_cached_world_aabb(shape);
 }
 
-// NOTE: offset is supposed to already be applied when calling this.
-void shape_make_space_for_block(Shape *shape,
-                                SHAPE_COORDS_INT_T x,
-                                SHAPE_COORDS_INT_T y,
-                                SHAPE_COORDS_INT_T z,
-                                const bool applyOffset) {
-    shape_make_space(shape, x, y, z, x, y, z, applyOffset);
-}
-
-// required min & max are block coordinates (min is inclusive, max is non inclusive)
-void shape_make_space(Shape *const shape,
-                      SHAPE_COORDS_INT_T requiredMinX,
-                      SHAPE_COORDS_INT_T requiredMinY,
-                      SHAPE_COORDS_INT_T requiredMinZ,
-                      SHAPE_COORDS_INT_T requiredMaxX,
-                      SHAPE_COORDS_INT_T requiredMaxY,
-                      SHAPE_COORDS_INT_T requiredMaxZ,
-                      const bool applyOffset) {
-
-    // octree_log(shape->octree);
-    // cclog_info("📏 MAKE SPACE | new bounds needed : (%d, %d, %d) -> (%d, %d, %d)",
-    //      requiredMinX, requiredMinY, requiredMinZ, requiredMaxX, requiredMaxY, requiredMaxZ);
-    // cclog_info("📏 MAKE SPACE | offset : %d %d %d", shape->offset.x, shape->offset.y,
-    // shape->offset.z);
-
-    if (shape->octree == NULL) {
-        cclog_warning("shape_make_space not implemented for shape with no octree yet.");
+void shape_shrink_box(Shape *shape, const SHAPE_COORDS_INT3_T coords) {
+    if (shape->nbBlocks == 0) {
+        shape->bbMin = shape->bbMax = coords3_zero;
         return;
     }
 
-    // no need to make space if there is no fixed/allocated size (no octree nor lighting)
-    if (_has_allocated_size(shape) == false) {
-        cclog_warning(
-            "⚠️ shape_make_space: not needed if shape has no fixed size (no octree nor "
-            "lighting)");
-        return;
-    }
+    const SHAPE_COORDS_INT3_T chunkMin = chunk_utils_get_coords(shape->bbMin);
+    const SHAPE_COORDS_INT3_T chunkMax = chunk_utils_get_coords(shape->bbMax);
 
-    // Convert provided coordinates from Lua coords into "core" coords if needed.
-    if (applyOffset == true) {
-        shape_block_lua_to_internal(shape,
-                                    &requiredMinX,
-                                    &requiredMinY,
-                                    &requiredMinZ); // value += offset
-        shape_block_lua_to_internal(shape,
-                                    &requiredMaxX,
-                                    &requiredMaxY,
-                                    &requiredMaxZ); // value += offset
-    }
+    // for each BB side the removed block was in, gather the new boundary from chunks BB
+    if (coords.x == shape->bbMax.x - 1) {
+        Chunk *c;
+        CHUNK_COORDS_INT3_T bbMax;
+        CHUNK_COORDS_INT_T max;
+        bool isEmpty = true, unchanged = false;
+        for (SHAPE_COORDS_INT_T x = chunkMax.x; isEmpty && x >= chunkMin.x; --x) {
+            max = 0;
+            for (SHAPE_COORDS_INT_T z = chunkMin.z; z <= chunkMax.z; ++z) {
+                for (SHAPE_COORDS_INT_T y = chunkMin.y; y <= chunkMax.y; ++y) {
+                    c = index3d_get(shape->chunks, x, y, z);
+                    if (c != NULL && chunk_get_nb_blocks(c) > 0) {
+                        isEmpty = false;
+                        chunk_get_bounding_box_2(c, NULL, &bbMax);
+                        max = maximum(max, bbMax.x);
 
-    // If required min/max are within allocated bounds, then extra space is not needed.
-    if (shape_is_within_allocated_bounds(shape, requiredMinX, requiredMinY, requiredMinZ) &&
-        shape_is_within_allocated_bounds(shape, requiredMaxX, requiredMaxY, requiredMaxZ)) {
-        return;
-    }
-
-    // cclog_info("📏 RESIZE IS NEEDED");
-
-    // current shape's bounding box limits
-
-    // NOTE: the bounding box origin can't be below {0,0,0}
-    // But shape->offset can be used to represent blocks with negative coordinates
-    int3 min, max;
-    int3_set(&min,
-             (int32_t)shape->box->min.x,
-             (int32_t)shape->box->min.y,
-             (int32_t)shape->box->min.z);
-    int3_set(&max,
-             (int32_t)shape->box->max.x,
-             (int32_t)shape->box->max.y,
-             (int32_t)shape->box->max.z);
-
-    // cclog_trace("📏 CURRENT BOUNDING BOX: (%d,%d,%d) -> (%d,%d,%d)",
-    //       min.x, min.y, min.z, max.x, max.y, max.z);
-
-    // additional space required
-    int3 spaceRequiredMin = int3_zero;
-    int3 spaceRequiredMax = int3_zero;
-
-    const bool isEmpty = shape->nbBlocks == 0;
-    if (isEmpty) {
-        // /!\ special case on an empty shape,
-        // we will set its origin to newly added blocks, to avoid allocating huge
-        // octrees when setting first block at arbitrary coordinates
-
-        // let's have the initial model start at requested min
-        spaceRequiredMin.x = 0;
-        spaceRequiredMin.y = 0;
-        spaceRequiredMin.z = 0;
-
-        // and expand on the positive side
-        spaceRequiredMax.x = requiredMaxX + 1 - requiredMinX;
-        spaceRequiredMax.y = requiredMaxY + 1 - requiredMinY;
-        spaceRequiredMax.z = requiredMaxZ + 1 - requiredMinZ;
-    } else {
-        if (requiredMinX < min.x) {
-            spaceRequiredMin.x = requiredMinX - min.x; // negative, space on the left required
-        }
-
-        if (requiredMaxX + 1 > max.x) {
-            spaceRequiredMax.x = requiredMaxX + 1 - max.x;
-        }
-
-        if (requiredMinY < min.y) {
-            spaceRequiredMin.y = requiredMinY - min.y;
-        }
-
-        if (requiredMaxY + 1 > max.y) {
-            spaceRequiredMax.y = requiredMaxY + 1 - max.y;
-        }
-
-        if (requiredMinZ < min.z) {
-            spaceRequiredMin.z = requiredMinZ - min.z;
-        }
-
-        if (requiredMaxZ + 1 > max.z) {
-            spaceRequiredMax.z = requiredMaxZ + 1 - max.z;
-        }
-    }
-
-    int3 boundingBoxSize;
-    shape_get_bounding_box_size(shape, &boundingBoxSize);
-
-    vx_assert(spaceRequiredMax.x >= 0);
-    vx_assert(spaceRequiredMax.y >= 0);
-    vx_assert(spaceRequiredMax.z >= 0);
-
-    SHAPE_COORDS_INT3_T requiredSize = {
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.x + abs(spaceRequiredMin.x) + spaceRequiredMax.x),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.y + abs(spaceRequiredMin.y) + spaceRequiredMax.y),
-        (SHAPE_COORDS_INT_T)(boundingBoxSize.z + abs(spaceRequiredMin.z) + spaceRequiredMax.z)};
-
-    if (_is_out_of_maximum_shape_size(requiredSize.x, requiredSize.y, requiredSize.z)) {
-        return;
-    }
-
-    // cclog_info("📏 REQUIRED SIZE: (%d,%d,%d)",
-    //       requiredSize.x, requiredSize.y, requiredSize.z);
-    // cclog_info("📏 SPACE REQUIRED: min(%d, %d, %d) max(%d, %d, %d)",
-    //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
-    //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
-
-    Octree *octree = NULL;
-    Index3D *chunks = NULL;
-
-    // largest dimension (among x, y, z)
-    const size_t requiredSizeMax = (size_t)(maximum(maximum(requiredSize.x, requiredSize.y),
-                                                    requiredSize.z));
-    size_t octree_size = octree_get_dimension(shape->octree);
-
-    int3 delta = int3_zero;
-
-    if (requiredSizeMax > octree_size) {
-
-        // cclog_info("📏 OCTREE NOT BIG ENOUGH");
-        octree = _new_octree(requiredSize.x, requiredSize.y, requiredSize.z);
-        vx_assert(octree != NULL); // shouldn't happen, here within octree max
-        chunks = index3d_new();
-
-        // newly allocated octree size
-        octree_size = octree_get_dimension(octree);
-
-        if (spaceRequiredMin.x < 0 && min.x + spaceRequiredMin.x < 0) {
-            delta.x = -(min.x + spaceRequiredMin.x);
-        } else if (spaceRequiredMax.x > 0 && max.x + spaceRequiredMax.x > (int)octree_size) {
-            delta.x = (int)octree_size - (max.x + spaceRequiredMax.x);
-        }
-
-        if (spaceRequiredMin.y < 0 && min.y + spaceRequiredMin.y < 0) {
-            delta.y = -(min.y + spaceRequiredMin.y);
-        } else if (spaceRequiredMax.y > 0 && max.y + spaceRequiredMax.y > (int)octree_size) {
-            delta.y = (int)octree_size - (max.y + spaceRequiredMax.y);
-        }
-
-        if (spaceRequiredMin.z < 0 && min.z + spaceRequiredMin.z < 0) {
-            delta.z = -(min.z + spaceRequiredMin.z);
-        } else if (spaceRequiredMax.z > 0 && max.z + spaceRequiredMax.z > (int)octree_size) {
-            delta.z = (int)octree_size - (max.z + spaceRequiredMax.z);
-        }
-
-    } else {
-
-        // octree is big enough, let's see if there's enough room around the
-        // bounding box, if not we'll need to offset model
-
-        if (spaceRequiredMin.x < 0 && min.x + spaceRequiredMin.x < 0) {
-            delta.x = -(min.x + spaceRequiredMin.x);
-        } else if (spaceRequiredMax.x > 0 && max.x + spaceRequiredMax.x > (int)octree_size) {
-            delta.x = (int)octree_size - (max.x + spaceRequiredMax.x);
-        }
-
-        if (spaceRequiredMin.y < 0 && min.y + spaceRequiredMin.y < 0) {
-            delta.y = -(min.y + spaceRequiredMin.y);
-        } else if (spaceRequiredMax.y > 0 && max.y + spaceRequiredMax.y > (int)octree_size) {
-            delta.y = (int)octree_size - (max.y + spaceRequiredMax.y);
-        }
-
-        if (spaceRequiredMin.z < 0 && min.z + spaceRequiredMin.z < 0) {
-            delta.z = -(min.z + spaceRequiredMin.z);
-        } else if (spaceRequiredMax.z > 0 && max.z + spaceRequiredMax.z > (int)octree_size) {
-            delta.z = (int)octree_size - (max.z + spaceRequiredMax.z);
-        }
-
-        if (delta.x != 0 || delta.y != 0 || delta.z != 0) {
-            // octree is big enough, but there's no room around the bounding box:
-            // model needs to be moved to make space for new blocks
-
-            // cclog_info("📏 NO ROOM AROUND BOUNDING BOX");
-            // cclog_info("📏 DELTA: (%d, %d, %d)", delta.x, delta.y, delta.z);
-
-            // TODO: could it be more optimized to move blocks inside octree?
-            SHAPE_COORDS_INT_T size = (SHAPE_COORDS_INT_T)octree_size;
-            octree = _new_octree(size, size, size);
-            vx_assert(octree != NULL); // shouldn't happen, here within octree max
-            chunks = index3d_new();
-
-        } else {
-            // octree is big enough AND there's enough room around the bounding box:
-            // nothing to do other than updating shape size & offset
-
-            // cclog_info("📏 THERE'S ROOM AROUND THE BOUNDING BOX");
-            // cclog_info("📏 SPACE REQUIRED: (%d, %d, %d) / (%d, %d, %d)",
-            //       spaceRequiredMin.x, spaceRequiredMin.y, spaceRequiredMin.z,
-            //       spaceRequiredMax.x, spaceRequiredMax.y, spaceRequiredMax.z);
-        }
-    }
-
-    // from here, there may or may not be newly allocated octree/chunks to fill,
-    // but we'll always apply offset to pivot, BB, etc.
-
-    // /!\ special case: empty shape arbitrary model origin (see comment at the start of function)
-    if (isEmpty) {
-        delta.x -= requiredMinX;
-        delta.y -= requiredMinY;
-        delta.z -= requiredMinZ;
-    }
-
-    // added space
-    const uint16_t ax = (const uint16_t)(abs(spaceRequiredMin.x) + spaceRequiredMax.x);
-    const uint16_t ay = (const uint16_t)(abs(spaceRequiredMin.y) + spaceRequiredMax.y);
-    const uint16_t az = (const uint16_t)(abs(spaceRequiredMin.z) + spaceRequiredMax.z);
-
-    // update allocated size, adding blocks < 0 or > this size will require another resize
-    if (ax > 0)
-        shape->maxWidth += ax;
-    if (ay > 0)
-        shape->maxHeight += ay;
-    if (az > 0)
-        shape->maxDepth += az;
-
-    // empty current dirty chunks list, if any
-    ChunkList *cl = NULL;
-    while (shape->needsDisplay != NULL) {
-        cl = shape->needsDisplay;
-        shape->needsDisplay = cl->next;
-        chunk_list_free(cl);
-    }
-    // shape->needsDisplay is now NULL
-
-    if (chunks != NULL) {
-        // copy with offsets to blocks position
-        const Block *block = NULL;
-        Block *block_copy = NULL;
-        SHAPE_COORDS_INT_T ox, oy, oz;
-        Chunk *chunk = NULL;
-        bool chunkAdded = false;
-
-        for (SHAPE_SIZE_INT_T xx = (SHAPE_SIZE_INT_T)min.x; xx < max.x; ++xx) {
-            for (SHAPE_SIZE_INT_T yy = (SHAPE_SIZE_INT_T)min.y; yy < max.y; ++yy) {
-                for (SHAPE_SIZE_INT_T zz = (SHAPE_SIZE_INT_T)min.z; zz < max.z; ++zz) {
-
-                    block = shape_get_block(shape,
-                                            (SHAPE_COORDS_INT_T)xx,
-                                            (SHAPE_COORDS_INT_T)yy,
-                                            (SHAPE_COORDS_INT_T)zz,
-                                            false);
-
-                    if (block_is_solid(block)) {
-                        // get offseted position
-                        ox = (SHAPE_COORDS_INT_T)(xx + delta.x);
-                        oy = (SHAPE_COORDS_INT_T)(yy + delta.y);
-                        oz = (SHAPE_COORDS_INT_T)(zz + delta.z);
-
-                        // check if it is within new bounds
-                        vx_assert(ox >= 0 && oy >= 0 && oz >= 0 && ox < shape->maxWidth &&
-                                  oy < shape->maxHeight && oz < shape->maxDepth);
-
-                        vx_assert(octree != NULL);
-
-                        block_copy = block_new_copy(block);
-
-                        // block is again copied within octree_set_element
-                        octree_set_element(octree,
-                                           (const void *)block_copy,
-                                           (size_t)ox,
-                                           (size_t)oy,
-                                           (size_t)oz);
-
-                        // block_copy is stored here, its memory is handled by responsible chunk
-                        _add_block_in_chunks(chunks,
-                                             block_copy,
-                                             ox,
-                                             oy,
-                                             oz,
-                                             NULL,
-                                             &chunkAdded,
-                                             &chunk,
-                                             NULL);
-
-                        // flag this chunk as dirty (needs display)
-                        if (chunkAdded) {
-                            shape_chunk_needs_display(shape, chunk);
+                        if (x == chunkMax.x && x * CHUNK_SIZE + bbMax.x == shape->bbMax.x) {
+                            unchanged = true;
+                            break; // no change, early stop
                         }
                     }
                 }
+                if (unchanged) {
+                    break;
+                }
+            }
+            if (isEmpty == false && unchanged == false) {
+                shape->bbMax.x = x * CHUNK_SIZE + max;
+            }
+        }
+    } else if (coords.x == shape->bbMin.x) {
+        Chunk *c;
+        CHUNK_COORDS_INT3_T bbMin;
+        CHUNK_COORDS_INT_T min;
+        bool isEmpty = true, unchanged = false;
+        for (SHAPE_COORDS_INT_T x = chunkMin.x; isEmpty && x <= chunkMax.x; ++x) {
+            min = CHUNK_SIZE;
+            for (SHAPE_COORDS_INT_T z = chunkMin.z; z <= chunkMax.z; ++z) {
+                for (SHAPE_COORDS_INT_T y = chunkMin.y; y <= chunkMax.y; ++y) {
+                    c = index3d_get(shape->chunks, x, y, z);
+                    if (c != NULL && chunk_get_nb_blocks(c) > 0) {
+                        isEmpty = false;
+                        chunk_get_bounding_box_2(c, &bbMin, NULL);
+                        min = minimum(min, bbMin.x);
+
+                        if (x == chunkMin.x && x * CHUNK_SIZE + bbMin.x == shape->bbMin.x) {
+                            unchanged = true; // no change, early stop
+                            break;
+                        }
+                    }
+                }
+                if (unchanged) {
+                    break;
+                }
+            }
+            if (isEmpty == false && unchanged == false) {
+                shape->bbMin.x = x * CHUNK_SIZE + min;
+            }
+        }
+    }
+    if (coords.y == shape->bbMax.y - 1) {
+        Chunk *c;
+        CHUNK_COORDS_INT3_T bbMax;
+        CHUNK_COORDS_INT_T max;
+        bool isEmpty = true, unchanged = false;
+        for (SHAPE_COORDS_INT_T y = chunkMax.y; isEmpty && y >= chunkMin.y; --y) {
+            max = 0;
+            for (SHAPE_COORDS_INT_T z = chunkMin.z; z <= chunkMax.z; ++z) {
+                for (SHAPE_COORDS_INT_T x = chunkMin.x; x <= chunkMax.x; ++x) {
+                    c = index3d_get(shape->chunks, x, y, z);
+                    if (c != NULL && chunk_get_nb_blocks(c) > 0) {
+                        isEmpty = false;
+                        chunk_get_bounding_box_2(c, NULL, &bbMax);
+                        max = maximum(max, bbMax.y);
+
+                        if (y == chunkMax.y && y * CHUNK_SIZE + bbMax.y == shape->bbMax.y) {
+                            unchanged = true; // no change, early stop
+                            break;
+                        }
+                    }
+                }
+                if (unchanged) {
+                    break;
+                }
+            }
+            if (isEmpty == false && unchanged == false) {
+                shape->bbMax.y = y * CHUNK_SIZE + max;
+            }
+        }
+    } else if (coords.y == shape->bbMin.y) {
+        Chunk *c;
+        CHUNK_COORDS_INT3_T bbMin;
+        CHUNK_COORDS_INT_T min;
+        bool isEmpty = true, unchanged = false;
+        for (SHAPE_COORDS_INT_T y = chunkMin.y; isEmpty && y <= chunkMax.y; ++y) {
+            min = CHUNK_SIZE;
+            for (SHAPE_COORDS_INT_T z = chunkMin.z; z <= chunkMax.z; ++z) {
+                for (SHAPE_COORDS_INT_T x = chunkMin.x; x <= chunkMax.x; ++x) {
+                    c = index3d_get(shape->chunks, x, y, z);
+                    if (c != NULL && chunk_get_nb_blocks(c) > 0) {
+                        isEmpty = false;
+                        chunk_get_bounding_box_2(c, &bbMin, NULL);
+                        isEmpty = false;
+                        min = minimum(min, bbMin.y);
+
+                        if (y == chunkMin.y && y * CHUNK_SIZE + bbMin.y == shape->bbMin.y) {
+                            unchanged = true; // no change, early stop
+                            break;
+                        }
+                    }
+                }
+                if (unchanged) {
+                    break;
+                }
+            }
+            if (isEmpty == false && unchanged == false) {
+                shape->bbMin.y = y * CHUNK_SIZE + min;
+            }
+        }
+    }
+    if (coords.z == shape->bbMax.z - 1) {
+        Chunk *c;
+        CHUNK_COORDS_INT3_T bbMax;
+        CHUNK_COORDS_INT_T max;
+        bool isEmpty = true, unchanged = false;
+        for (SHAPE_COORDS_INT_T z = chunkMax.z; isEmpty && z >= chunkMin.z; --z) {
+            max = 0;
+            for (SHAPE_COORDS_INT_T x = chunkMin.x; x <= chunkMax.x; ++x) {
+                for (SHAPE_COORDS_INT_T y = chunkMin.y; y <= chunkMax.y; ++y) {
+                    c = index3d_get(shape->chunks, x, y, z);
+                    if (c != NULL && chunk_get_nb_blocks(c) > 0) {
+                        isEmpty = false;
+                        chunk_get_bounding_box_2(c, NULL, &bbMax);
+                        isEmpty = false;
+                        max = maximum(max, bbMax.z);
+
+                        if (z == chunkMax.z && z * CHUNK_SIZE + bbMax.z == shape->bbMax.z) {
+                            unchanged = true; // no change, early stop
+                            break;
+                        }
+                    }
+                }
+                if (unchanged) {
+                    break;
+                }
+            }
+            if (isEmpty == false && unchanged == false) {
+                shape->bbMax.z = z * CHUNK_SIZE + max;
+            }
+        }
+    } else if (coords.z == shape->bbMin.z) {
+        Chunk *c;
+        CHUNK_COORDS_INT3_T bbMin;
+        CHUNK_COORDS_INT_T min;
+        bool isEmpty = true, unchanged = false;
+        for (SHAPE_COORDS_INT_T z = chunkMin.z; isEmpty && z <= chunkMax.z; ++z) {
+            min = CHUNK_SIZE;
+            for (SHAPE_COORDS_INT_T x = chunkMin.x; x <= chunkMax.x; ++x) {
+                for (SHAPE_COORDS_INT_T y = chunkMin.y; y <= chunkMax.y; ++y) {
+                    c = index3d_get(shape->chunks, x, y, z);
+                    if (c != NULL && chunk_get_nb_blocks(c) > 0) {
+                        isEmpty = false;
+                        chunk_get_bounding_box_2(c, &bbMin, NULL);
+                        min = minimum(min, bbMin.z);
+
+                        if (z == chunkMin.z && z * CHUNK_SIZE + bbMin.z == shape->bbMin.z) {
+                            unchanged = true; // no change, early stop
+                            break;
+                        }
+                    }
+                }
+                if (unchanged) {
+                    break;
+                }
+            }
+            if (isEmpty == false && unchanged == false) {
+                shape->bbMin.z = z * CHUNK_SIZE + min;
             }
         }
     }
 
-    // offset POIS
-    {
-        MapStringFloat3Iterator *it = shape_get_poi_iterator(shape);
-
-        float3 *poiPosition = NULL;
-
-        while (map_string_float3_iterator_is_done(it) == false) {
-            poiPosition = map_string_float3_iterator_current_value(it);
-            if (poiPosition == NULL) {
-                continue;
-            }
-
-            poiPosition->x += (float)(delta.x);
-            poiPosition->y += (float)(delta.y);
-            poiPosition->z += (float)(delta.z);
-
-            map_string_float3_iterator_next(it);
-        }
-        map_string_float3_iterator_free(it);
-    }
-
-    // offset bounding box
-    float3 fDelta;
-    float3_set(&fDelta, (float)(delta.x), (float)(delta.y), (float)(delta.z));
-    float3_op_add(&shape->box->min, &fDelta);
-    float3_op_add(&shape->box->max, &fDelta);
-    _shape_clear_cached_world_aabb(shape);
-
-    // fit collider to bounding box
     shape_fit_collider_to_bounding_box(shape);
-
-    // offset pivot
-    float3 pivot = shape_get_pivot(shape, false);
-    shape_set_pivot(shape,
-                    pivot.x + fDelta.x,
-                    pivot.y + fDelta.y,
-                    pivot.z + fDelta.z,
-                    false); // remove offset
-
-    if (octree != NULL) {
-        octree_free(shape->octree);
-        shape->octree = octree;
-    }
-    if (chunks != NULL) {
-        index3d_flush(shape->chunks, shape_chunk_free);
-        index3d_free(shape->chunks);
-
-        shape->chunks = chunks;
-    }
-
-    // update offset
-    int3_op_add(&shape->offset, &delta);
-
-    // offset lighting data
-    _light_realloc(shape,
-                   ax,
-                   ay,
-                   az,
-                   (SHAPE_SIZE_INT_T)delta.x,
-                   (SHAPE_SIZE_INT_T)delta.y,
-                   (SHAPE_SIZE_INT_T)delta.z);
+    _shape_clear_cached_world_aabb(shape);
 }
 
-void shape_refresh_vertices(Shape *shape) {
-    if (shape->isBakeLocked) {
-        _shape_fill_draw_slices(shape->firstVB_opaque);
-        _shape_fill_draw_slices(shape->firstVB_transparent);
-        return;
+void shape_expand_box(Shape *shape, const SHAPE_COORDS_INT3_T coords) {
+    if (_shape_is_bounding_box_empty(shape)) {
+        shape->bbMin = coords;
+        shape->bbMax = (SHAPE_COORDS_INT3_T){coords.x + 1, coords.y + 1, coords.z + 1};
+    } else {
+        shape->bbMin.x = minimum(shape->bbMin.x, coords.x);
+        shape->bbMin.y = minimum(shape->bbMin.y, coords.y);
+        shape->bbMin.z = minimum(shape->bbMin.z, coords.z);
+        shape->bbMax.x = maximum(shape->bbMax.x, coords.x + 1);
+        shape->bbMax.y = maximum(shape->bbMax.y, coords.y + 1);
+        shape->bbMax.z = maximum(shape->bbMax.z, coords.z + 1);
     }
 
-    ChunkList *tmp;
-
-    while (shape->needsDisplay != NULL) {
-        Chunk *c = shape->needsDisplay->chunk;
-        // Note: chunk should never be NULL
-        // Note: no need to check chunk_needs_display, it has to be true
-
-        // if the chunk has been emptied, we can remove it from shape index and destroy it
-        // Note: this will create gaps in all the vb used for this chunk ie. make them fragmented
-        if (chunk_get_nb_blocks(c) == 0) {
-            const int3 *pos = chunk_get_pos(c);
-            int3 *ldfPos = int3_pool_pop();
-            int3_set(ldfPos,
-                     pos->x >> CHUNK_WIDTH_SQRT,
-                     pos->y >> CHUNK_HEIGHT_SQRT,
-                     pos->z >> CHUNK_DEPTH_SQRT);
-            index3d_remove(shape->chunks, ldfPos->x, ldfPos->y, ldfPos->z, NULL);
-            int3_pool_recycle(ldfPos);
-
-            shape->nbChunks--;
-
-            chunk_destroy(c);
-
-            c = NULL;
-        }
-        // else chunk has data that needs updating
-        else {
-            chunk_write_vertices(shape, c);
-        }
-
-        tmp = shape->needsDisplay;
-        shape->needsDisplay = shape->needsDisplay->next;
-        chunk_list_free(tmp);
-
-        if (c != NULL) {
-            chunk_set_needs_display(c, false);
-        }
-    }
-
-    // check all vertex buffers used by this shape, to see if they have to be defragmented
-    _shape_check_all_vb_fragmented(shape, shape->firstVB_opaque);
-    _shape_check_all_vb_fragmented(shape, shape->firstVB_transparent);
-
-    // DEFRAGMENTATION
-
-    // fill remaining mem area gaps (for all vertex buffers involved)
-    VertexBuffer *fragmentedVB = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedVBs);
-
-    // bool log = true; // fragmentedVB != NULL;
-
-    //    if (log) {
-    //        shape_log_vertex_buffers(shape, true);
-    //    }
-
-    while (fragmentedVB != NULL) {
-        vertex_buffer_fill_gaps(fragmentedVB);
-        vertex_buffer_set_enlisted(fragmentedVB, false);
-
-        fragmentedVB = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedVBs);
-    }
-
-    //    if (log) {
-    //        shape_log_vertex_buffers(shape, true);
-    //    }
-
-    // fill draw slices after defragmentation
-    _shape_fill_draw_slices(shape->firstVB_opaque);
-    _shape_fill_draw_slices(shape->firstVB_transparent);
-
-    _set_vb_allocation_flag_one_frame(shape);
-}
-
-void shape_refresh_all_vertices(Shape *s) {
-    // refresh all chunks
-    Index3DIterator *it = index3d_iterator_new(s->chunks);
-    Chunk *chunk;
-    while (index3d_iterator_pointer(it) != NULL) {
-        chunk = index3d_iterator_pointer(it);
-
-        chunk_write_vertices(s, chunk);
-        chunk_set_needs_display(chunk, false);
-
-        index3d_iterator_next(it);
-    }
-
-    // refresh draw slices after full refresh
-    _shape_fill_draw_slices(s->firstVB_opaque);
-    _shape_fill_draw_slices(s->firstVB_transparent);
-
-    // flush needsDisplay list
-    ChunkList *cl;
-    while (s->needsDisplay != NULL) {
-        cl = s->needsDisplay;
-        s->needsDisplay = cl->next;
-        chunk_list_free(cl);
-    }
-}
-
-VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent) {
-    return transparent ? shape->firstVB_transparent : shape->firstVB_opaque;
-}
-
-Index3DIterator *shape_new_chunk_iterator(const Shape *shape) {
-    Index3DIterator *it = index3d_iterator_new(shape->chunks);
-    return it;
-}
-
-size_t shape_get_nb_chunks(const Shape *shape) {
-    return shape->nbChunks;
+    shape_fit_collider_to_bounding_box(shape);
+    _shape_clear_cached_world_aabb(shape);
 }
 
 size_t shape_get_nb_blocks(const Shape *shape) {
     return shape->nbBlocks;
 }
 
-const Octree *shape_get_octree(const Shape *shape) {
-    return shape->octree;
-}
-
-void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent) {
-    VertexBuffer *vb = transparent ? shape->firstVB_transparent : shape->firstVB_opaque;
-    int i = 1;
-
-    bool firstDisplay = true;
-
-    while (vb != NULL) {
-
-        if (dirtyOnly) {
-            if (vertex_buffer_has_dirty_mem_areas(vb) == false) {
-                vb = vertex_buffer_get_next(vb);
-                i++;
-                continue;
-            }
-        }
-
-        if (firstDisplay) {
-            cclog_debug("");
-            if (dirtyOnly) {
-                cclog_debug("SHAPE'S (DIRTY) VERTEX BUFFERS:");
-            } else {
-                cclog_debug("SHAPE'S VERTEX BUFFERS:");
-            }
-            cclog_debug("--------------------------");
-            firstDisplay = false;
-        }
-
-        cclog_debug("#%d", i);
-        cclog_debug("--------------------------");
-        vertex_buffer_log_mem_areas(vb);
-        vb = vertex_buffer_get_next(vb);
-        i++;
-    }
-}
-
 void shape_set_model_locked(Shape *s, bool toggle) {
-    s->isBakeLocked = toggle;
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKE_LOCKED, toggle);
 }
 
 bool shape_is_model_locked(Shape *s) {
-    return s->isBakeLocked;
+    return _shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKE_LOCKED);
 }
 
 void shape_set_fullname(Shape *s, const char *fullname) {
@@ -2239,23 +1290,9 @@ void shape_set_color_palette_atlas(Shape *s, ColorAtlas *ca) {
     color_palette_set_atlas(s->palette, ca);
 }
 
-bool shape_is_lua_mutable(Shape *s) {
-    if (s == NULL) {
-        return false;
-    }
-    return s->isMutable;
-}
-
-void shape_set_lua_mutable(Shape *s, const bool value) {
-    if (s == NULL) {
-        return;
-    }
-    s->isMutable = value;
-}
-
 // MARK: - Transform -
 
-void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool removeOffset) {
+void shape_set_pivot(Shape *s, const float x, const float y, const float z) {
     if (s == NULL) {
         return;
     }
@@ -2279,27 +1316,15 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z, bool
         return;
     }
 
-    if (removeOffset) {
-        transform_set_local_position(s->pivot,
-                                     -x + (float)(s->offset.x),
-                                     -y + (float)(s->offset.y),
-                                     -z + (float)(s->offset.z));
-    } else {
-        transform_set_local_position(s->pivot, -x, -y, -z);
-    }
+    transform_set_local_position(s->pivot, -x, -y, -z);
 }
 
-float3 shape_get_pivot(const Shape *s, bool applyOffset) {
+float3 shape_get_pivot(const Shape *s) {
     if (s == NULL || s->pivot == NULL)
         return float3_zero;
 
     const float3 *p = transform_get_local_position(s->pivot);
     float3 np = {-p->x, -p->y, -p->z};
-    if (applyOffset) {
-        np.x -= (float)(s->offset.x);
-        np.y -= (float)(s->offset.y);
-        np.z -= (float)(s->offset.z);
-    }
     return np;
 }
 
@@ -2307,21 +1332,18 @@ void shape_reset_pivot_to_center(Shape *s) {
     if (s == NULL)
         return;
 
-    int3 size;
-    shape_get_bounding_box_size(s, &size);
     shape_set_pivot(s,
-                    s->box->min.x + (float)size.x * 0.5f,
-                    s->box->min.y + (float)size.y * 0.5f,
-                    s->box->min.z + (float)size.z * 0.5f,
-                    false);
+                    (float)s->bbMin.x + (float)(s->bbMax.x - s->bbMin.x) * 0.5f,
+                    (float)s->bbMin.y + (float)(s->bbMax.y - s->bbMin.y) * 0.5f,
+                    (float)s->bbMin.z + (float)(s->bbMax.z - s->bbMin.z) * 0.5f);
 }
 
 float3 shape_block_to_local(const Shape *s, const float x, const float y, const float z) {
     if (s == NULL)
         return float3_zero;
 
-    const float3 offsetedPivot = shape_get_pivot(s, true);
-    float3 local = {x - offsetedPivot.x, y - offsetedPivot.y, z - offsetedPivot.z};
+    const float3 pivot = shape_get_pivot(s);
+    float3 local = {x - pivot.x, y - pivot.y, z - pivot.z};
     return local;
 }
 
@@ -2341,8 +1363,8 @@ float3 shape_local_to_block(const Shape *s, const float x, const float y, const 
     if (s == NULL)
         return float3_zero;
 
-    float3 offsetedPivot = shape_get_pivot(s, true);
-    float3 block = {x + offsetedPivot.x, y + offsetedPivot.y, z + offsetedPivot.z};
+    float3 pivot = shape_get_pivot(s);
+    float3 block = {x + pivot.x, y + pivot.y, z + pivot.z};
     return block;
 }
 
@@ -2356,49 +1378,6 @@ float3 shape_world_to_block(const Shape *s, const float x, const float y, const 
     transform_refresh(t, false, true); // refresh wtl for intra-frame calculations
     transform_utils_position_wtl(t, &world, &local);
     return shape_local_to_block(s, local.x, local.y, local.z);
-}
-
-void shape_block_lua_to_internal(const Shape *s,
-                                 SHAPE_COORDS_INT_T *x,
-                                 SHAPE_COORDS_INT_T *y,
-                                 SHAPE_COORDS_INT_T *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL) {
-        return;
-    }
-
-    *x += (SHAPE_COORDS_INT_T)s->offset.x;
-    *y += (SHAPE_COORDS_INT_T)s->offset.y;
-    *z += (SHAPE_COORDS_INT_T)s->offset.z;
-}
-
-void shape_block_internal_to_lua(const Shape *s,
-                                 SHAPE_COORDS_INT_T *x,
-                                 SHAPE_COORDS_INT_T *y,
-                                 SHAPE_COORDS_INT_T *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL)
-        return;
-
-    *x -= (SHAPE_COORDS_INT_T)s->offset.x;
-    *y -= (SHAPE_COORDS_INT_T)s->offset.y;
-    *z -= (SHAPE_COORDS_INT_T)s->offset.z;
-}
-
-void shape_block_lua_to_internal_float(const Shape *s, float *x, float *y, float *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL)
-        return;
-
-    *x += (float)s->offset.x;
-    *y += (float)s->offset.y;
-    *z += (float)s->offset.z;
-}
-
-void shape_block_internal_to_lua_float(const Shape *s, float *x, float *y, float *z) {
-    if (s == NULL || x == NULL || y == NULL || z == NULL)
-        return;
-
-    *x -= (float)s->offset.x;
-    *y -= (float)s->offset.y;
-    *z -= (float)s->offset.z;
 }
 
 void shape_set_position(Shape *s, const float x, const float y, const float z) {
@@ -2593,6 +1572,173 @@ DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s) {
     return transform_get_children_iterator(shape_get_root_transform((s)));
 }
 
+// MARK: - Chunks & buffers -
+
+Index3D *shape_get_chunks(const Shape *shape) {
+    return shape->chunks;
+}
+
+size_t shape_get_nb_chunks(const Shape *shape) {
+    return shape->nbChunks;
+}
+
+void shape_get_chunk_and_coordinates(const Shape *shape,
+                                     const SHAPE_COORDS_INT3_T coords_in_shape,
+                                     Chunk **chunk,
+                                     SHAPE_COORDS_INT3_T *chunk_coords,
+                                     CHUNK_COORDS_INT3_T *coords_in_chunk) {
+
+    const SHAPE_COORDS_INT3_T _chunk_coords = chunk_utils_get_coords(coords_in_shape);
+
+    if (chunk_coords != NULL) {
+        *chunk_coords = _chunk_coords;
+    }
+    if (coords_in_chunk != NULL) {
+        *coords_in_chunk = chunk_utils_get_coords_in_chunk(coords_in_shape);
+    }
+
+    if (chunk != NULL) {
+        *chunk = (Chunk *)
+            index3d_get(shape->chunks, _chunk_coords.x, _chunk_coords.y, _chunk_coords.z);
+    }
+}
+
+void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent) {
+    VertexBuffer *vb = transparent ? shape->firstVB_transparent : shape->firstVB_opaque;
+    int i = 1;
+
+    bool firstDisplay = true;
+
+    while (vb != NULL) {
+
+        if (dirtyOnly) {
+            if (vertex_buffer_has_dirty_mem_areas(vb) == false) {
+                vb = vertex_buffer_get_next(vb);
+                i++;
+                continue;
+            }
+        }
+
+        if (firstDisplay) {
+            cclog_debug("");
+            if (dirtyOnly) {
+                cclog_debug("SHAPE'S (DIRTY) VERTEX BUFFERS:");
+            } else {
+                cclog_debug("SHAPE'S VERTEX BUFFERS:");
+            }
+            cclog_debug("--------------------------");
+            firstDisplay = false;
+        }
+
+        cclog_debug("#%d", i);
+        cclog_debug("--------------------------");
+        vertex_buffer_log_mem_areas(vb);
+        vb = vertex_buffer_get_next(vb);
+        i++;
+    }
+}
+
+void shape_refresh_vertices(Shape *shape) {
+    if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKE_LOCKED)) {
+        _shape_fill_draw_slices(shape->firstVB_opaque);
+        _shape_fill_draw_slices(shape->firstVB_transparent);
+        return;
+    }
+
+    Chunk *c = shape->dirtyChunks != NULL ? fifo_list_pop(shape->dirtyChunks) : NULL;
+    while (c != NULL) {
+        // Note: chunk should never be NULL
+        // Note: no need to check chunk_is_dirty, it has to be true
+
+        // if the chunk has been emptied, we can remove it from shape index and destroy it
+        // Note: this will create gaps in all the vb used for this chunk ie. make them fragmented
+        if (chunk_get_nb_blocks(c) == 0) {
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            SHAPE_COORDS_INT3_T chunk_coords = chunk_utils_get_coords(chunkOrigin);
+            index3d_remove(shape->chunks,
+                           (int)chunk_coords.x,
+                           (int)chunk_coords.y,
+                           (int)chunk_coords.z,
+                           NULL);
+            rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), false);
+            chunk_free(c, true);
+            c = NULL;
+
+            shape->nbChunks--;
+        }
+        // else chunk has data that needs updating
+        else {
+            chunk_write_vertices(shape, c);
+        }
+
+        if (c != NULL) {
+            chunk_set_dirty(c, false);
+        }
+
+        c = fifo_list_pop(shape->dirtyChunks);
+    }
+
+    // check all vertex buffers used by this shape, to see if they have to be defragmented
+    _shape_check_all_vb_fragmented(shape, shape->firstVB_opaque);
+    _shape_check_all_vb_fragmented(shape, shape->firstVB_transparent);
+
+    // DEFRAGMENTATION
+
+    // fill remaining mem area gaps (for all vertex buffers involved)
+    VertexBuffer *fragmentedVB = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedVBs);
+
+    // bool log = true; // fragmentedVB != NULL;
+
+    //    if (log) {
+    //        shape_log_vertex_buffers(shape, true);
+    //    }
+
+    while (fragmentedVB != NULL) {
+        vertex_buffer_fill_gaps(fragmentedVB);
+        vertex_buffer_set_enlisted(fragmentedVB, false);
+
+        fragmentedVB = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedVBs);
+    }
+
+    //    if (log) {
+    //        shape_log_vertex_buffers(shape, true);
+    //    }
+
+    // fill draw slices after defragmentation
+    _shape_fill_draw_slices(shape->firstVB_opaque);
+    _shape_fill_draw_slices(shape->firstVB_transparent);
+
+    _set_vb_allocation_flag_one_frame(shape);
+}
+
+void shape_refresh_all_vertices(Shape *s) {
+    // refresh all chunks
+    Index3DIterator *it = index3d_iterator_new(s->chunks);
+    Chunk *chunk;
+    while (index3d_iterator_pointer(it) != NULL) {
+        chunk = index3d_iterator_pointer(it);
+
+        chunk_write_vertices(s, chunk);
+        chunk_set_dirty(chunk, false);
+
+        index3d_iterator_next(it);
+    }
+
+    // refresh draw slices after full refresh
+    _shape_fill_draw_slices(s->firstVB_opaque);
+    _shape_fill_draw_slices(s->firstVB_transparent);
+
+    // flush dirty list
+    if (s->dirtyChunks != NULL) {
+        fifo_list_free(s->dirtyChunks, NULL);
+        s->dirtyChunks = NULL;
+    }
+}
+
+VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent) {
+    return transparent ? shape->firstVB_transparent : shape->firstVB_opaque;
+}
+
 // MARK: - Physics -
 
 RigidBody *shape_get_rigidbody(const Shape *s) {
@@ -2618,9 +1764,10 @@ bool shape_ensure_rigidbody(Shape *s, uint16_t groups, uint16_t collidesWith, Ri
 void shape_fit_collider_to_bounding_box(const Shape *s) {
     vx_assert(s != NULL);
     RigidBody *rb = shape_get_rigidbody(s);
-    if (rb == NULL)
+    if (rb == NULL || rigidbody_is_collider_custom_set(rb))
         return;
-    rigidbody_set_collider(rb, s->box);
+    const Box aabb = shape_get_model_aabb(s);
+    rigidbody_set_collider(rb, &aabb, false);
 }
 
 const Box *shape_get_local_collider(const Shape *s) {
@@ -2637,6 +1784,411 @@ void shape_compute_world_collider(const Shape *s, Box *box) {
     if (rb == NULL)
         return;
     shape_box_to_aabox(s, rigidbody_get_collider(rb), box, true);
+}
+
+typedef struct {
+    Chunk *chunk;
+    void *castData;
+    float distance;
+} _ChunkEntry;
+
+void _chunk_entry_free_ray_func(void *ptr) {
+    _ChunkEntry *ce = (_ChunkEntry *)ptr;
+    ray_free((Ray *)ce->castData);
+    free(ce);
+}
+
+void _chunk_entry_free_box_func(void *ptr) {
+    _ChunkEntry *ce = (_ChunkEntry *)ptr;
+    box_free((Box *)ce->castData);
+    free(ce);
+}
+
+void _chunk_entry_insert(DoublyLinkedList *chunks, Chunk *c, void *castData, float d) {
+    _ChunkEntry *newCe = (_ChunkEntry *)malloc(sizeof(_ChunkEntry));
+    newCe->chunk = c;
+    newCe->castData = castData;
+    newCe->distance = d;
+
+    // insert by order of increasing distance
+    if (doubly_linked_list_first(chunks) == NULL) {
+        doubly_linked_list_push_last(chunks, newCe);
+    } else {
+        bool inserted = false;
+        DoublyLinkedListNode *n = doubly_linked_list_first(chunks);
+        _ChunkEntry *ce;
+        while (n != NULL && inserted == false) {
+            ce = (_ChunkEntry *)doubly_linked_list_node_pointer(n);
+            if (ce->distance > newCe->distance) {
+                doubly_linked_list_insert_node_previous(chunks, n, newCe);
+                inserted = true;
+            }
+            n = doubly_linked_list_node_next(n);
+        }
+        if (inserted == false) {
+            doubly_linked_list_push_last(chunks, newCe);
+        }
+    }
+}
+
+float shape_box_cast(const Shape *s,
+                     const Box *modelBox,
+                     const float3 *modelVector,
+                     const float3 *epsilon,
+                     const bool withReplacement,
+                     float3 *normal,
+                     float3 *extraReplacement,
+                     Block **block,
+                     SHAPE_COORDS_INT3_T *blockCoords) {
+
+    if (normal != NULL) {
+        float3_set_one(normal);
+    }
+
+    if (extraReplacement != NULL) {
+        float3_set_zero(extraReplacement);
+    }
+
+    float minSwept = 1.0f;
+    const float maxDist = float3_length(modelVector);
+    const float3 unit = {modelVector->x / maxDist,
+                         modelVector->y / maxDist,
+                         modelVector->z / maxDist};
+
+    // select overlapped chunks
+    DoublyLinkedList *chunksQuery = doubly_linked_list_new();
+    if (rtree_query_cast_all_box(s->rtree, modelBox, &unit, maxDist, 0, 1, NULL, chunksQuery) > 0) {
+        // sort query results by distance
+        doubly_linked_list_sort_ascending(chunksQuery, rtree_utils_result_sort_func);
+
+        Box broadPhaseBox, tmpBox;
+        box_set_broadphase_box(modelBox, modelVector, &broadPhaseBox);
+
+        // examine query results in order, return first hit block
+        DoublyLinkedListNode *n = doubly_linked_list_first(chunksQuery);
+        RtreeCastResult *rtreeHit;
+        OctreeIterator *oi;
+        Chunk *c;
+        bool didHit = false, leaf;
+        float3 tmpNormal, tmpReplacement;
+        float swept = 1.0f;
+        while (n != NULL && didHit == false) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            leaf = false;
+#if PHYSICS_EXTRA_REPLACEMENTS
+            float blockedX = false, blockedY = false, blockedZ = false;
+#endif
+
+            oi = octree_iterator_new(chunk_get_octree(c));
+            while (octree_iterator_is_done(oi) == false) {
+                octree_iterator_get_node_box(oi, &tmpBox);
+
+                // chunk octree box in model space
+                tmpBox.min.x += chunkOrigin.x;
+                tmpBox.min.y += chunkOrigin.y;
+                tmpBox.min.z += chunkOrigin.z;
+                tmpBox.max.x += chunkOrigin.x;
+                tmpBox.max.y += chunkOrigin.y;
+                tmpBox.max.z += chunkOrigin.z;
+
+                const bool collides = box_collide(&tmpBox, &broadPhaseBox);
+                if (leaf && collides) {
+                    swept = box_swept(modelBox,
+                                      modelVector,
+                                      &tmpBox,
+                                      epsilon,
+                                      withReplacement,
+                                      &tmpNormal,
+                                      &tmpReplacement);
+                    if (swept < minSwept) {
+                        minSwept = swept;
+                        didHit = true;
+                        if (normal != NULL) {
+                            *normal = tmpNormal;
+                        }
+                        if (block != NULL) {
+                            *block = (Block *)octree_iterator_get_element(oi);
+                        }
+                        if (blockCoords != NULL) {
+                            uint16_t x, y, z;
+                            octree_iterator_get_current_position(oi, &x, &y, &z);
+                            blockCoords->x = (SHAPE_COORDS_INT_T)x;
+                            blockCoords->y = (SHAPE_COORDS_INT_T)y;
+                            blockCoords->z = (SHAPE_COORDS_INT_T)z;
+                        }
+                    }
+#if PHYSICS_EXTRA_REPLACEMENTS
+                    if (extraReplacement != NULL) {
+                        if (tmpReplacement.x != 0.0f && blockedX == false) {
+                            // previous replacement is positive and new replacement is positive &
+                            // bigger
+                            if (extraReplacement->x >= 0.0f &&
+                                tmpReplacement.x > extraReplacement->x) {
+                                extraReplacement->x = tmpReplacement.x;
+                            }
+                            // previous replacement is negative and new replacement is negative &
+                            // bigger
+                            else if (extraReplacement->x <= 0.0f &&
+                                     tmpReplacement.x < extraReplacement->x) {
+                                extraReplacement->x = tmpReplacement.x;
+                            }
+                            // previous & new replacements are opposite... this axis is blocked,
+                            // set to 0 to avoid stuttering and wait for another axis to replace
+                            else if (extraReplacement->x * tmpReplacement.x < 0.0f) {
+                                extraReplacement->x = 0.0f;
+                                blockedX = true;
+                            }
+                        }
+                        if (tmpReplacement.y != 0.0f && blockedY == false) {
+                            if (extraReplacement->y >= 0.0f &&
+                                tmpReplacement.y > extraReplacement->y) {
+                                extraReplacement->y = tmpReplacement.y;
+                            } else if (extraReplacement->y <= 0.0f &&
+                                       tmpReplacement.y < extraReplacement->y) {
+                                extraReplacement->y = tmpReplacement.y;
+                            } else if (extraReplacement->y * tmpReplacement.y < 0.0f) {
+                                extraReplacement->y = 0.0f;
+                                blockedX = true;
+                            }
+                        }
+                        if (tmpReplacement.z != 0.0f && blockedZ == false) {
+                            if (extraReplacement->z >= 0.0f &&
+                                tmpReplacement.z > extraReplacement->z) {
+                                extraReplacement->z = tmpReplacement.z;
+                            } else if (extraReplacement->z <= 0.0f &&
+                                       tmpReplacement.z < extraReplacement->z) {
+                                extraReplacement->z = tmpReplacement.z;
+                            } else if (extraReplacement->z * tmpReplacement.z < 0.0f) {
+                                extraReplacement->z = 0.0f;
+                                blockedX = true;
+                            }
+                        }
+                    }
+#endif
+                }
+
+                octree_iterator_next(oi, collides == false && leaf == false, &leaf);
+            }
+            octree_iterator_free(oi);
+
+            if (didHit && blockCoords != NULL) {
+                // chunk block coordinates in model space
+                blockCoords->x += chunkOrigin.x;
+                blockCoords->y += chunkOrigin.y;
+                blockCoords->z += chunkOrigin.z;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+    }
+    doubly_linked_list_flush(chunksQuery, free);
+    doubly_linked_list_free(chunksQuery);
+
+    return minSwept;
+}
+
+bool shape_ray_cast(const Shape *s,
+                    const Ray *worldRay,
+                    float *worldDistance,
+                    float3 *localImpact,
+                    Block **block,
+                    SHAPE_COORDS_INT3_T *coords) {
+
+    if (s == NULL || worldRay == NULL) {
+        return false;
+    }
+
+    // we want a ray in model space to intersect with block coordinates
+    Transform *t = shape_get_pivot_transform(s);
+    Ray *modelRay = ray_world_to_local(worldRay, t);
+
+    // select traversed chunks
+    DoublyLinkedList *chunksQuery = doubly_linked_list_new();
+    if (rtree_query_cast_all_ray(s->rtree, modelRay, 0, 1, NULL, chunksQuery) > 0) {
+        // sort query results by distance
+        doubly_linked_list_sort_ascending(chunksQuery, rtree_utils_result_sort_func);
+
+        // examine query results in order, return first hit block
+        DoublyLinkedListNode *n = doubly_linked_list_first(chunksQuery);
+        RtreeCastResult *rtreeHit;
+        OctreeIterator *oi;
+        Chunk *c;
+        bool didHit = false, leaf;
+        Block *hitBlock = NULL;
+        float minDistance = FLT_MAX;
+        uint16_t x = 0, y = 0, z = 0;
+        Box tmpBox;
+        float d;
+        while (n != NULL && didHit == false) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            leaf = false;
+
+            oi = octree_iterator_new(chunk_get_octree(c));
+            while (octree_iterator_is_done(oi) == false) {
+                octree_iterator_get_node_box(oi, &tmpBox);
+
+                // chunk octree box in model space
+                tmpBox.min.x += chunkOrigin.x;
+                tmpBox.min.y += chunkOrigin.y;
+                tmpBox.min.z += chunkOrigin.z;
+                tmpBox.max.x += chunkOrigin.x;
+                tmpBox.max.y += chunkOrigin.y;
+                tmpBox.max.z += chunkOrigin.z;
+
+                const bool collides = ray_intersect_with_box(modelRay,
+                                                             &tmpBox.min,
+                                                             &tmpBox.max,
+                                                             &d) &&
+                                      d < minDistance;
+                if (leaf && collides) {
+                    didHit = true;
+                    minDistance = d;
+                    hitBlock = (Block *)octree_iterator_get_element(oi);
+                    octree_iterator_get_current_position(oi, &x, &y, &z);
+                }
+
+                octree_iterator_next(oi, collides == false && leaf == false, &leaf);
+            }
+            octree_iterator_free(oi);
+
+            if (didHit) {
+                // chunk block coordinates in model space
+                x += chunkOrigin.x;
+                y += chunkOrigin.y;
+                z += chunkOrigin.z;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+
+        if (hitBlock == NULL) {
+            ray_free(modelRay);
+            doubly_linked_list_flush(chunksQuery, free);
+            doubly_linked_list_free(chunksQuery);
+            return false;
+        }
+
+        if (worldDistance != NULL || localImpact != NULL) {
+            float3 _localImpact;
+            ray_impact_point(modelRay, minDistance, &_localImpact);
+            if (localImpact != NULL) {
+                *localImpact = _localImpact;
+            }
+
+            if (worldDistance != NULL) {
+                float3 worldImpact;
+                transform_utils_position_ltw(t, &_localImpact, &worldImpact);
+                float3_op_substract(&worldImpact, worldRay->origin);
+                *worldDistance = float3_length(&worldImpact);
+            }
+        }
+
+        if (block != NULL) {
+            *block = hitBlock;
+        }
+
+        if (coords != NULL) {
+            coords->x = (SHAPE_COORDS_INT_T)x;
+            coords->y = (SHAPE_COORDS_INT_T)y;
+            coords->z = (SHAPE_COORDS_INT_T)z;
+        }
+
+        ray_free(modelRay);
+        doubly_linked_list_flush(chunksQuery, free);
+        doubly_linked_list_free(chunksQuery);
+        return true;
+    }
+
+    ray_free(modelRay);
+    doubly_linked_list_flush(chunksQuery, free);
+    doubly_linked_list_free(chunksQuery);
+
+    return false;
+}
+
+bool shape_point_overlap(const Shape *s, const float3 *world) {
+    Transform *t = shape_get_pivot_transform(s); // octree coordinates use model origin
+    float3 model;
+    transform_utils_position_wtl(t, world, &model);
+
+    Chunk *c;
+    const SHAPE_COORDS_INT3_T coords_in_shape = (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)model.x,
+                                                                      (SHAPE_COORDS_INT_T)model.y,
+                                                                      (SHAPE_COORDS_INT_T)model.z};
+    CHUNK_COORDS_INT3_T coords_in_chunk;
+    shape_get_chunk_and_coordinates(s, coords_in_shape, &c, NULL, &coords_in_chunk);
+
+    if (c != NULL) {
+        Block *b = (Block *)octree_get_element_without_checking(chunk_get_octree(c),
+                                                                (size_t)coords_in_chunk.x,
+                                                                (size_t)coords_in_chunk.y,
+                                                                (size_t)coords_in_chunk.z);
+
+        return block_is_solid(b);
+    }
+
+    return false;
+}
+
+bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
+    if (s == NULL || modelBox == NULL) {
+        return false;
+    }
+
+    // select overlapped chunks
+    FifoList *chunksQuery = fifo_list_new();
+    if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, chunksQuery, EPSILON_COLLISION) > 0) {
+
+        // examine query results, stop at first overlap
+        RtreeNode *hit = fifo_list_pop(chunksQuery);
+        OctreeIterator *oi;
+        bool didHit = false;
+        bool leaf;
+        Chunk *c;
+        Box tmpBox;
+        while (hit != NULL && didHit == false) {
+            c = (Chunk *)rtree_node_get_leaf_ptr(hit);
+
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+            leaf = false;
+
+            oi = octree_iterator_new(chunk_get_octree(c));
+            while (octree_iterator_is_done(oi) == false) {
+                octree_iterator_get_node_box(oi, &tmpBox);
+
+                // chunk octree box in model space
+                tmpBox.min.x += chunkOrigin.x;
+                tmpBox.min.y += chunkOrigin.y;
+                tmpBox.min.z += chunkOrigin.z;
+                tmpBox.max.x += chunkOrigin.x;
+                tmpBox.max.y += chunkOrigin.y;
+                tmpBox.max.z += chunkOrigin.z;
+
+                const bool collides = box_collide(modelBox, &tmpBox);
+                if (leaf && collides) {
+                    didHit = true;
+                    if (out != NULL) {
+                        *out = tmpBox;
+                    }
+                    break;
+                }
+
+                octree_iterator_next(oi, collides == false && leaf == false, &leaf);
+            }
+            octree_iterator_free(oi);
+
+            hit = fifo_list_pop(chunksQuery);
+        }
+    }
+    fifo_list_free(chunksQuery, free);
+
+    return false;
 }
 
 // MARK: - Graphics -
@@ -2666,36 +2218,36 @@ void shape_set_inner_transparent_faces(Shape *s, const bool toggle) {
     if (s == NULL) {
         return;
     }
-    s->innerTransparentFaces = toggle;
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES, toggle);
 }
 
 bool shape_draw_inner_transparent_faces(const Shape *s) {
     if (s == NULL) {
         return false;
     }
-    return s->innerTransparentFaces;
+    return _shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES);
 }
 
 void shape_set_shadow(Shape *s, const bool toggle) {
     if (s == NULL) {
         return;
     }
-    s->shadow = toggle;
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_SHADOW, toggle);
 }
 
 bool shape_has_shadow(const Shape *s) {
     if (s == NULL) {
         return false;
     }
-    return s->shadow;
+    return _shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_SHADOW);
 }
 
 void shape_set_unlit(Shape *s, const bool value) {
-    s->isUnlit = value;
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_UNLIT, value);
 }
 
 bool shape_is_unlit(const Shape *s) {
-    return s->isUnlit;
+    return _shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_UNLIT);
 }
 
 void shape_set_layers(Shape *s, const uint16_t value) {
@@ -2706,283 +2258,7 @@ uint16_t shape_get_layers(const Shape *s) {
     return s->layers;
 }
 
-// MARK: -
-
-float shape_box_swept(const Shape *s,
-                      const Box *modelBox,
-                      const float3 *modelVector,
-                      const float3 *epsilon,
-                      const bool withReplacement,
-                      float3 *normal,
-                      float3 *extraReplacement,
-                      Block **block,
-                      SHAPE_COORDS_INT3_T *blockCoords) {
-
-    if (s->octree == NULL) {
-        cclog_error("shape_box_swept can't be used if octree is NULL.");
-        return 1.0f;
-    }
-
-    OctreeIterator *oi = octree_iterator_new(s->octree);
-
-    Box broadPhaseBox, tmpBox;
-    box_set_broadphase_box(modelBox, modelVector, &broadPhaseBox);
-
-    bool leaf = false;
-    bool collides;
-    // size_t nbcubes = 0;
-    float3 tmpNormal, tmpReplacement;
-    float minSwept = 1.0f;
-    float swept = 1.0f;
-
-    if (normal != NULL) {
-        float3_set_one(normal);
-    }
-
-    if (extraReplacement != NULL) {
-        float3_set_zero(extraReplacement);
-    }
-#if PHYSICS_EXTRA_REPLACEMENTS
-    float blockedX = false, blockedY = false, blockedZ = false;
-#endif
-
-    while (octree_iterator_is_done(oi) == false) {
-
-        octree_iterator_get_node_box(oi, &tmpBox);
-
-        collides = box_collide(&tmpBox, &broadPhaseBox);
-
-        if (leaf) {
-            if (collides) {
-                // nbcubes++;
-                swept = box_swept(modelBox,
-                                  modelVector,
-                                  &tmpBox,
-                                  epsilon,
-                                  withReplacement,
-                                  &tmpNormal,
-                                  &tmpReplacement);
-                if (swept < minSwept) {
-                    minSwept = swept;
-                    if (normal != NULL) {
-                        *normal = tmpNormal;
-                    }
-                    if (block != NULL) {
-                        *block = (Block *)octree_iterator_get_element(oi);
-                    }
-                    if (blockCoords != NULL) {
-                        uint16_t x, y, z;
-                        octree_iterator_get_current_position(oi, &x, &y, &z);
-                        blockCoords->x = (SHAPE_COORDS_INT_T)x;
-                        blockCoords->y = (SHAPE_COORDS_INT_T)y;
-                        blockCoords->z = (SHAPE_COORDS_INT_T)z;
-                    }
-                }
-#if PHYSICS_EXTRA_REPLACEMENTS
-                if (extraReplacement != NULL) {
-                    if (tmpReplacement.x != 0.0f && blockedX == false) {
-                        // previous replacement is positive and new replacement is positive & bigger
-                        if (extraReplacement->x >= 0.0f && tmpReplacement.x > extraReplacement->x) {
-                            extraReplacement->x = tmpReplacement.x;
-                        }
-                        // previous replacement is negative and new replacement is negative & bigger
-                        else if (extraReplacement->x <= 0.0f &&
-                                 tmpReplacement.x < extraReplacement->x) {
-                            extraReplacement->x = tmpReplacement.x;
-                        }
-                        // previous & new replacements are opposite... this axis is blocked,
-                        // set to 0 to avoid stuttering and wait for another axis to replace
-                        else if (extraReplacement->x * tmpReplacement.x < 0.0f) {
-                            extraReplacement->x = 0.0f;
-                            blockedX = true;
-                        }
-                    }
-                    if (tmpReplacement.y != 0.0f && blockedY == false) {
-                        if (extraReplacement->y >= 0.0f && tmpReplacement.y > extraReplacement->y) {
-                            extraReplacement->y = tmpReplacement.y;
-                        } else if (extraReplacement->y <= 0.0f &&
-                                   tmpReplacement.y < extraReplacement->y) {
-                            extraReplacement->y = tmpReplacement.y;
-                        } else if (extraReplacement->y * tmpReplacement.y < 0.0f) {
-                            extraReplacement->y = 0.0f;
-                            blockedX = true;
-                        }
-                    }
-                    if (tmpReplacement.z != 0.0f && blockedZ == false) {
-                        if (extraReplacement->z >= 0.0f && tmpReplacement.z > extraReplacement->z) {
-                            extraReplacement->z = tmpReplacement.z;
-                        } else if (extraReplacement->z <= 0.0f &&
-                                   tmpReplacement.z < extraReplacement->z) {
-                            extraReplacement->z = tmpReplacement.z;
-                        } else if (extraReplacement->z * tmpReplacement.z < 0.0f) {
-                            extraReplacement->z = 0.0f;
-                            blockedX = true;
-                        }
-                    }
-                }
-#endif
-            }
-        }
-
-        octree_iterator_next(oi, collides == false && leaf == false, &leaf);
-    }
-
-    // printf("found %zu cubes\n", nbcubes);
-
-    octree_iterator_free(oi);
-
-    return minSwept;
-}
-
-bool shape_ray_cast(const Shape *sh,
-                    const Ray *worldRay,
-                    float *worldDistance,
-                    float3 *localImpact,
-                    Block **block,
-                    SHAPE_COORDS_INT3_T *coords) {
-
-    if (sh == NULL) {
-        return false;
-    }
-    if (worldRay == NULL) {
-        return false;
-    }
-
-    if (sh->octree == NULL) {
-        cclog_error("shape_ray_cast can't be used if octree is NULL");
-        return false;
-    }
-
-    OctreeIterator *oi = octree_iterator_new(sh->octree);
-
-    Box tmpBox;
-    bool leaf = false;
-    bool collides = false;
-    Block *b = NULL;
-    // uint16_t nodeSize = 0;
-    float d = 0;
-    float minDistance = FLT_MAX;
-    uint16_t _x = 0;
-    uint16_t _y = 0;
-    uint16_t _z = 0;
-
-    // we want a ray in model space to intersect with octree coordinates
-    Transform *t = shape_get_pivot_transform(sh);
-    Ray *modelRay = ray_world_to_local(worldRay, t);
-
-    while (octree_iterator_is_done(oi) == false) {
-        octree_iterator_get_node_box(oi, &tmpBox);
-
-        collides = ray_intersect_with_box(modelRay, &tmpBox.min, &tmpBox.max, &d);
-        if (d > minDistance) {
-            collides = false; // skip, collision already found closer
-        }
-        if (collides == true) {
-            if (leaf == true) {
-                if (d < minDistance) {
-                    minDistance = d;
-                    b = (Block *)octree_iterator_get_element(oi);
-                    // nodeSize = octree_iterator_get_current_node_size(oi);
-                    octree_iterator_get_current_position(oi, &_x, &_y, &_z);
-                }
-            }
-        }
-
-        octree_iterator_next(oi, collides == false && leaf == false, &leaf);
-    }
-
-    octree_iterator_free(oi);
-    oi = NULL;
-
-    if (b == NULL) {
-        ray_free(modelRay);
-
-        return false;
-    }
-
-    if (worldDistance != NULL || localImpact != NULL) {
-        float3 _localImpact;
-        ray_impact_point(modelRay, minDistance, &_localImpact);
-        if (localImpact != NULL) {
-            *localImpact = _localImpact;
-        }
-
-        if (worldDistance != NULL) {
-            float3 worldImpact;
-            transform_utils_position_ltw(t, &_localImpact, &worldImpact);
-            float3_op_substract(&worldImpact, worldRay->origin);
-            *worldDistance = float3_length(&worldImpact);
-        }
-    }
-
-    if (block != NULL) {
-        *block = b;
-    }
-
-    if (coords != NULL) {
-        coords->x = (SHAPE_COORDS_INT_T)_x;
-        coords->y = (SHAPE_COORDS_INT_T)_y;
-        coords->z = (SHAPE_COORDS_INT_T)_z;
-    }
-
-    ray_free(modelRay);
-
-    return true;
-}
-
-bool shape_point_overlap(const Shape *s, const float3 *world) {
-    if (s->octree == NULL) {
-        cclog_error("shape_point_overlap can't be used if octree is NULL.");
-        return false;
-    }
-
-    Transform *t = shape_get_pivot_transform(s); // octree coordinates use model origin
-    float3 model;
-    transform_utils_position_wtl(t, world, &model);
-
-    void *element = NULL;
-
-    octree_get_element_or_empty_value(s->octree,
-                                      (size_t)model.x,
-                                      (size_t)model.y,
-                                      (size_t)model.z,
-                                      &element,
-                                      NULL);
-
-    if (element != NULL) {
-        return true; // collides!
-    }
-
-    return false;
-}
-
-bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
-    if (s->octree == NULL) {
-        cclog_error("shape_box_overlap can't be used if octree is NULL.");
-        return false;
-    }
-
-    Box tmpBox;
-    bool leaf = false, collides;
-    OctreeIterator *oi = octree_iterator_new(s->octree);
-    while (octree_iterator_is_done(oi) == false) {
-        octree_iterator_get_node_box(oi, &tmpBox);
-
-        collides = box_collide(&tmpBox, modelBox);
-        if (leaf && collides) {
-            if (out != NULL) {
-                *out = tmpBox;
-            }
-            octree_iterator_free(oi);
-            return true;
-        }
-
-        octree_iterator_next(oi, collides == false && leaf == false, &leaf);
-    }
-    octree_iterator_free(oi);
-
-    return false;
-}
+// MARK: - POI -
 
 MapStringFloat3Iterator *shape_get_poi_iterator(const Shape *s) {
     return map_string_float3_iterator_new(s->POIs);
@@ -3021,39 +2297,15 @@ void shape_remove_point(Shape *s, const char *key) {
 
 // MARK: - Baked lighting -
 
-void shape_compute_baked_lighting(Shape *s, bool overwrite) {
-    if (_has_allocated_size(s) == false) {
-#if SHAPE_LIGHTING_DEBUG
-        cclog_debug("🔥 shape_compute_baked_lighting: no allocated size");
-#endif
-        return;
-    }
-
-    if (shape_has_baked_lighting_data(s)) {
-        if (overwrite == false) {
-#if SHAPE_LIGHTING_DEBUG
-            cclog_error("shape_compute_baked_lighting: shape lighting already computed");
-#endif
-            return;
-        }
-    }
-
-    const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight * (size_t)s->maxDepth *
-                                (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
-    if (s->lightingData == NULL) {
-        s->lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
-        _shape_flush_all_vb(s); // let VBs be realloc w/ lighting buffers
-    }
-    memset(s->lightingData, 0, lightingSize);
+void shape_compute_baked_lighting(Shape *s) {
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING, true);
 
     LightNodeQueue *q = light_node_queue_new();
+    SHAPE_COORDS_INT3_T min, max;
 
-    const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
-                                    (SHAPE_COORDS_INT_T)s->maxHeight,
-                                    (SHAPE_COORDS_INT_T)s->maxDepth};
-    _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, false);
-
-    _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->maxHeight, -1);
+    _light_removal_all(s, &min, &max);
+    _light_enqueue_ambient_and_block_sources(s, q, min, max, false);
+    _light_propagate(s, &min, &max, q, min.x - 1, max.y, min.z - 1, true);
 
     light_node_queue_free(q);
 
@@ -3062,97 +2314,154 @@ void shape_compute_baked_lighting(Shape *s, bool overwrite) {
 #endif
 }
 
-bool shape_has_baked_lighting_data(const Shape *s) {
-    return s->lightingData != NULL;
+void shape_toggle_baked_lighting(Shape *s, const bool toggle) {
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING, toggle);
 }
 
-const VERTEX_LIGHT_STRUCT_T *shape_get_lighting_data(const Shape *s) {
-    return s->lightingData;
+bool shape_uses_baked_lighting(const Shape *s) {
+    return _shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING);
 }
 
-void shape_set_lighting_data(Shape *s, VERTEX_LIGHT_STRUCT_T *d) {
-    if (s->lightingData != NULL) {
-        free(s->lightingData);
-        if (d == NULL) {
-            _shape_flush_all_vb(s); // let VBs be realloc w/o lighting buffers
+VERTEX_LIGHT_STRUCT_T *shape_create_lighting_data_blob(const Shape *s, void **inout) {
+    VERTEX_LIGHT_STRUCT_T *blob;
+    if (inout == NULL) {
+        const size_t blobSize = (size_t)(s->bbMax.x - s->bbMin.x) *
+                                (size_t)(s->bbMax.y - s->bbMin.y) *
+                                (size_t)(s->bbMax.z - s->bbMin.z) *
+                                (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
+        blob = (VERTEX_LIGHT_STRUCT_T *)malloc(blobSize);
+        if (blob == NULL) {
+            return NULL;
         }
-    } else if (d != NULL) {
-        _shape_flush_all_vb(s); // let VBs be realloc w/ lighting buffers
+    } else {
+        blob = *inout;
     }
-    s->lightingData = d;
-}
 
-VERTEX_LIGHT_STRUCT_T shape_get_light_without_checking(const Shape *s,
-                                                       SHAPE_COORDS_INT_T x,
-                                                       SHAPE_COORDS_INT_T y,
-                                                       SHAPE_COORDS_INT_T z) {
-    return s->lightingData[x * s->maxHeight * s->maxDepth + y * s->maxDepth + z];
-}
-
-void shape_set_light(Shape *s,
-                     SHAPE_COORDS_INT_T x,
-                     SHAPE_COORDS_INT_T y,
-                     SHAPE_COORDS_INT_T z,
-                     VERTEX_LIGHT_STRUCT_T light) {
-    if (x >= 0 && x < s->maxWidth && y >= 0 && y < s->maxHeight && z >= 0 && z < s->maxDepth) {
-        s->lightingData[x * s->maxHeight * s->maxDepth + y * s->maxDepth + z] = light;
+    VERTEX_LIGHT_STRUCT_T *cursor = blob;
+    for (SHAPE_COORDS_INT_T x = s->bbMin.x; x < s->bbMax.x; x++) {
+        for (SHAPE_COORDS_INT_T y = s->bbMin.y; y < s->bbMax.y; y++) {
+            for (SHAPE_COORDS_INT_T z = s->bbMin.z; z < s->bbMax.z; z++) {
+                *cursor = shape_get_light_or_default(s, x, y, z);
+                cursor = cursor + 1;
+            }
+        }
     }
+    if (inout != NULL) {
+        *inout = cursor;
+    }
+
+    return blob;
 }
 
-VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(Shape *s,
+void shape_set_lighting_data_from_blob(Shape *s,
+                                       VERTEX_LIGHT_STRUCT_T *blob,
+                                       SHAPE_COORDS_INT3_T min,
+                                       SHAPE_COORDS_INT3_T max) {
+
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING, true);
+
+    Chunk *chunk;
+    CHUNK_COORDS_INT3_T coords_in_chunk;
+    VERTEX_LIGHT_STRUCT_T *cursor = blob;
+    for (SHAPE_COORDS_INT_T x = s->bbMin.x; x < s->bbMax.x; x++) {
+        for (SHAPE_COORDS_INT_T y = s->bbMin.y; y < s->bbMax.y; y++) {
+            for (SHAPE_COORDS_INT_T z = s->bbMin.z; z < s->bbMax.z; z++) {
+                shape_get_chunk_and_coordinates(s,
+                                                (SHAPE_COORDS_INT3_T){x, y, z},
+                                                &chunk,
+                                                NULL,
+                                                &coords_in_chunk);
+                if (chunk != NULL) {
+                    chunk_set_light(chunk, coords_in_chunk, *cursor, false);
+                }
+                cursor = cursor + 1;
+            }
+        }
+    }
+
+    free(blob);
+}
+
+void shape_clear_baked_lighing(Shape *s) {
+    Index3DIterator *it = index3d_iterator_new(s->chunks);
+    Chunk *c;
+    while (index3d_iterator_pointer(it) != NULL) {
+        c = index3d_iterator_pointer(it);
+
+        chunk_clear_lighting_data(c);
+        _shape_chunk_enqueue_refresh(s, c);
+
+        index3d_iterator_next(it);
+    }
+    index3d_iterator_free(it);
+
+    _shape_toggle_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING, false);
+}
+
+VERTEX_LIGHT_STRUCT_T shape_get_light_or_default(const Shape *s,
                                                  SHAPE_COORDS_INT_T x,
                                                  SHAPE_COORDS_INT_T y,
-                                                 SHAPE_COORDS_INT_T z,
-                                                 bool isDefault) {
-    if (isDefault || s->lightingData == NULL ||
-        shape_is_within_allocated_bounds(s, x, y, z) == false) {
+                                                 SHAPE_COORDS_INT_T z) {
+    if (shape_uses_baked_lighting(s)) {
+        Chunk *chunk;
+        CHUNK_COORDS_INT3_T coords_in_chunk;
+        shape_get_chunk_and_coordinates(s,
+                                        (SHAPE_COORDS_INT3_T){x, y, z},
+                                        &chunk,
+                                        NULL,
+                                        &coords_in_chunk);
+        const Block *b = chunk_get_block_2(chunk, coords_in_chunk);
+        return chunk_get_light_or_default(chunk,
+                                          coords_in_chunk,
+                                          chunk == NULL || block_is_solid(b));
+    } else {
         VERTEX_LIGHT_STRUCT_T light;
         DEFAULT_LIGHT(light)
         return light;
-    } else {
-        return shape_get_light_without_checking(s, x, y, z);
     }
 }
 
 void shape_compute_baked_lighting_removed_block(Shape *s,
-                                                SHAPE_COORDS_INT_T x,
-                                                SHAPE_COORDS_INT_T y,
-                                                SHAPE_COORDS_INT_T z,
+                                                Chunk *c,
+                                                SHAPE_COORDS_INT3_T coords_in_shape,
+                                                CHUNK_COORDS_INT3_T coords_in_chunk,
                                                 SHAPE_COLOR_INDEX_INT_T blockID) {
-    if (s == NULL) {
+    if (s == NULL || c == NULL) {
         return;
     }
 
-    if (s->lightingData == NULL) {
-        cclog_error(
-            "🔥 shape_compute_baked_lighting_removed_block: shape doesn't have lighting data");
+    if (_shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING) == false) {
         return;
     }
 
 #if SHAPE_LIGHTING_DEBUG
-    cclog_debug("☀️☀️☀️ compute light for removed block (%d, %d, %d)", x, y, z);
+    cclog_debug("☀️☀️☀️ compute light for removed block (%d, %d, %d)",
+                coords_in_shape.x,
+                coords_in_shape.y,
+                coords_in_shape.z);
 #endif
 
-    SHAPE_COORDS_INT3_T coords;
     LightNodeQueue *lightQueue = light_node_queue_new();
 
     // changed values bounding box need to include both removed and added lights
     SHAPE_COORDS_INT3_T min, max;
-    min.x = max.x = x;
-    min.y = max.y = y;
-    min.z = max.z = z;
+    min.x = max.x = coords_in_shape.x;
+    min.y = max.y = coords_in_shape.y;
+    min.z = max.z = coords_in_shape.z;
 
     // get existing values
-    VERTEX_LIGHT_STRUCT_T existingLight = shape_get_light_without_checking(s, x, y, z);
+    VERTEX_LIGHT_STRUCT_T existingLight = chunk_get_light_without_checking(c, coords_in_chunk);
 
     // if self is emissive, start light removal
     if (existingLight.red > 0 || existingLight.green > 0 || existingLight.blue > 0) {
         LightRemovalNodeQueue *lightRemovalQueue = light_removal_node_queue_new();
 
-        coords.x = x;
-        coords.y = y;
-        coords.z = z;
-        light_removal_node_queue_push(lightRemovalQueue, &coords, existingLight, 15, blockID);
+        light_removal_node_queue_push(lightRemovalQueue,
+                                      c,
+                                      coords_in_shape,
+                                      existingLight,
+                                      15,
+                                      blockID);
 
         // run light removal
         _light_removal(s, &min, &max, lightRemovalQueue, lightQueue);
@@ -3162,123 +2471,141 @@ void shape_compute_baked_lighting_removed_block(Shape *s,
 
     // add all neighbors to light propagation queue
     {
+        SHAPE_COORDS_INT3_T insertCoords;
+        Chunk *insertChunk;
+
         // x + 1
-        coords.x = x + 1;
-        coords.y = y;
-        coords.z = z;
-        light_node_queue_push(lightQueue, &coords);
+        insertCoords = (SHAPE_COORDS_INT3_T){coords_in_shape.x + 1,
+                                             coords_in_shape.y,
+                                             coords_in_shape.z};
+        shape_get_chunk_and_coordinates(s, insertCoords, &insertChunk, NULL, NULL);
+        light_node_queue_push(lightQueue, insertChunk, insertCoords);
 
         // x - 1
-        coords.x = x - 1;
-        coords.y = y;
-        coords.z = z;
-        light_node_queue_push(lightQueue, &coords);
+        insertCoords = (SHAPE_COORDS_INT3_T){coords_in_shape.x - 1,
+                                             coords_in_shape.y,
+                                             coords_in_shape.z};
+        shape_get_chunk_and_coordinates(s, insertCoords, &insertChunk, NULL, NULL);
+        light_node_queue_push(lightQueue, insertChunk, insertCoords);
 
         // y + 1
-        coords.x = x;
-        coords.y = y + 1;
-        coords.z = z;
-        light_node_queue_push(lightQueue, &coords);
+        insertCoords = (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                             coords_in_shape.y + 1,
+                                             coords_in_shape.z};
+        shape_get_chunk_and_coordinates(s, insertCoords, &insertChunk, NULL, NULL);
+        light_node_queue_push(lightQueue, insertChunk, insertCoords);
 
         // y - 1
-        coords.x = x;
-        coords.y = y - 1;
-        coords.z = z;
-        light_node_queue_push(lightQueue, &coords);
+        insertCoords = (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                             coords_in_shape.y - 1,
+                                             coords_in_shape.z};
+        shape_get_chunk_and_coordinates(s, insertCoords, &insertChunk, NULL, NULL);
+        light_node_queue_push(lightQueue, insertChunk, insertCoords);
 
         // z + 1
-        coords.x = x;
-        coords.y = y;
-        coords.z = z + 1;
-        light_node_queue_push(lightQueue, &coords);
+        insertCoords = (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                             coords_in_shape.y,
+                                             coords_in_shape.z + 1};
+        shape_get_chunk_and_coordinates(s, insertCoords, &insertChunk, NULL, NULL);
+        light_node_queue_push(lightQueue, insertChunk, insertCoords);
 
         // z - 1
-        coords.x = x;
-        coords.y = y;
-        coords.z = z - 1;
-        light_node_queue_push(lightQueue, &coords);
+        insertCoords = (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                             coords_in_shape.y,
+                                             coords_in_shape.z - 1};
+        shape_get_chunk_and_coordinates(s, insertCoords, &insertChunk, NULL, NULL);
+        light_node_queue_push(lightQueue, insertChunk, insertCoords);
     }
 
     // self light values are now 0
     VERTEX_LIGHT_STRUCT_T zero;
     ZERO_LIGHT(zero)
-    shape_set_light(s, x, y, z, zero);
+    chunk_set_light(c, coords_in_chunk, zero, false);
 
     // Then we run the regular light propagation algorithm
-    _light_propagate(s, &min, &max, lightQueue, x, y, z);
+    _light_propagate(s,
+                     &min,
+                     &max,
+                     lightQueue,
+                     coords_in_shape.x,
+                     coords_in_shape.y,
+                     coords_in_shape.z,
+                     false);
 
     light_node_queue_free(lightQueue);
 }
 
 void shape_compute_baked_lighting_added_block(Shape *s,
-                                              SHAPE_COORDS_INT_T x,
-                                              SHAPE_COORDS_INT_T y,
-                                              SHAPE_COORDS_INT_T z,
+                                              Chunk *c,
+                                              SHAPE_COORDS_INT3_T coords_in_shape,
+                                              CHUNK_COORDS_INT3_T coords_in_chunk,
                                               SHAPE_COLOR_INDEX_INT_T blockID) {
 
-    if (s == NULL) {
+    if (s == NULL || c == NULL) {
         return;
     }
 
-    if (s->lightingData == NULL) {
-        cclog_error("🔥 shape_compute_baked_lighting_added_block: shape doesn't have lighting data");
+    if (_shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING) == false) {
         return;
     }
 
 #if SHAPE_LIGHTING_DEBUG
-    cclog_debug("☀️☀️☀️ compute light for added block (%d, %d, %d)", x, y, z);
+    cclog_debug("☀️☀️☀️ compute light for added block (%d, %d, %d)",
+                coords_in_shape.x,
+                coords_in_shape.y,
+                coords_in_shape.z);
 #endif
 
-    SHAPE_COORDS_INT3_T coords;
     LightNodeQueue *lightQueue = light_node_queue_new();
     LightRemovalNodeQueue *lightRemovalQueue = light_removal_node_queue_new();
 
     // changed values bounding box need to include both removed and added lights
     SHAPE_COORDS_INT3_T min, max;
-    min.x = max.x = x;
-    min.y = max.y = y;
-    min.z = max.z = z;
-
-    coords.x = x;
-    coords.y = y;
-    coords.z = z;
+    min.x = max.x = coords_in_shape.x;
+    min.y = max.y = coords_in_shape.y;
+    min.z = max.z = coords_in_shape.z;
 
     // get existing and new light values
-    VERTEX_LIGHT_STRUCT_T existingLight = shape_get_light_without_checking(s, x, y, z);
+    VERTEX_LIGHT_STRUCT_T existingLight = chunk_get_light_without_checking(c, coords_in_chunk);
     VERTEX_LIGHT_STRUCT_T newLight = color_palette_get_emissive_color_as_light(s->palette, blockID);
 
     // if emissive, add it to the light propagation queue & store original emission of the block
     // note: we do this since palette may have been changed when running light removal at a later
     // point
     if (newLight.red > 0 || newLight.green > 0 || newLight.blue > 0) {
-        light_node_queue_push(lightQueue, &coords);
-        shape_set_light(s, x, y, z, newLight);
+        light_node_queue_push(lightQueue, c, coords_in_shape);
+        chunk_set_light(c, coords_in_chunk, newLight, false);
     }
 
     // start light removal from current position as an air block w/ existingLight
-    light_removal_node_queue_push(lightRemovalQueue, &coords, existingLight, 15, 255);
+    light_removal_node_queue_push(lightRemovalQueue, c, coords_in_shape, existingLight, 15, 255);
 
     // check in the vicinity for any emissive block that would be affected by the added block
     const Block *block = NULL;
     VERTEX_LIGHT_STRUCT_T light;
-    for (SHAPE_COORDS_INT_T xo = -1; xo <= 1; xo++) {
-        for (SHAPE_COORDS_INT_T yo = -1; yo <= 1; yo++) {
-            for (SHAPE_COORDS_INT_T zo = -1; zo <= 1; zo++) {
+    Chunk *insertChunk;
+    for (CHUNK_COORDS_INT_T xo = -1; xo <= 1; ++xo) {
+        for (CHUNK_COORDS_INT_T yo = -1; yo <= 1; ++yo) {
+            for (CHUNK_COORDS_INT_T zo = -1; zo <= 1; ++zo) {
                 if (xo == 0 && yo == 0 && zo == 0) {
                     continue;
                 }
 
-                coords.x = x + xo;
-                coords.y = y + yo;
-                coords.z = z + zo;
-
-                block = shape_get_block(s, coords.x, coords.y, coords.z, false);
+                block = chunk_get_block_including_neighbors(c,
+                                                            coords_in_chunk.x + xo,
+                                                            coords_in_chunk.y + yo,
+                                                            coords_in_chunk.z + zo,
+                                                            &insertChunk,
+                                                            NULL);
                 if (block != NULL && color_palette_is_emissive(s->palette, block->colorIndex)) {
                     light = color_palette_get_emissive_color_as_light(s->palette,
                                                                       block->colorIndex);
 
                     light_removal_node_queue_push(lightRemovalQueue,
-                                                  &coords,
+                                                  insertChunk,
+                                                  (SHAPE_COORDS_INT3_T){coords_in_shape.x + xo,
+                                                                        coords_in_shape.y + yo,
+                                                                        coords_in_shape.z + zo},
                                                   light,
                                                   15,
                                                   block->colorIndex);
@@ -3293,37 +2620,40 @@ void shape_compute_baked_lighting_added_block(Shape *s,
     light_removal_node_queue_free(lightRemovalQueue);
 
     // Then we run the regular light propagation algorithm
-    _light_propagate(s, &min, &max, lightQueue, x, y, z);
+    _light_propagate(s,
+                     &min,
+                     &max,
+                     lightQueue,
+                     coords_in_shape.x,
+                     coords_in_shape.y,
+                     coords_in_shape.z,
+                     false);
 
     light_node_queue_free(lightQueue);
 }
 
 void shape_compute_baked_lighting_replaced_block(Shape *s,
-                                                 SHAPE_COORDS_INT_T x,
-                                                 SHAPE_COORDS_INT_T y,
-                                                 SHAPE_COORDS_INT_T z,
-                                                 SHAPE_COLOR_INDEX_INT_T blockID,
-                                                 bool applyOffset) {
-    if (s == NULL) {
+                                                 Chunk *c,
+                                                 SHAPE_COORDS_INT3_T coords_in_shape,
+                                                 CHUNK_COORDS_INT3_T coords_in_chunk,
+                                                 SHAPE_COLOR_INDEX_INT_T blockID) {
+    if (s == NULL || c == NULL) {
         return;
     }
 
-    if (applyOffset) {
-        shape_block_lua_to_internal(s, &x, &y, &z);
-    }
-
-    if (s->lightingData == NULL) {
-        cclog_error(
-            "🔥 shape_compute_baked_lighting_replaced_block: shape doesn't have lighting data");
+    if (_shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING) == false) {
         return;
     }
 
 #if SHAPE_LIGHTING_DEBUG
-    cclog_debug("☀️☀️☀️ compute light for replaced block (%d, %d, %d)", x, y, z);
+    cclog_debug("☀️☀️☀️ compute light for replaced block (%d, %d, %d)",
+                coords_in_shape.x,
+                coords_in_shape.y,
+                coords_in_shape.z);
 #endif
 
     // get existing and new light values
-    VERTEX_LIGHT_STRUCT_T existingLight = shape_get_light_without_checking(s, x, y, z);
+    VERTEX_LIGHT_STRUCT_T existingLight = chunk_get_light_without_checking(c, coords_in_chunk);
     VERTEX_LIGHT_STRUCT_T newLight = color_palette_get_emissive_color_as_light(s->palette, blockID);
 
     // early exit if emission values did not change
@@ -3332,24 +2662,24 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
         return;
     }
 
-    SHAPE_COORDS_INT3_T i3;
     LightNodeQueue *lightQueue = light_node_queue_new();
 
     // changed values bounding box need to include both removed and added lights
     SHAPE_COORDS_INT3_T min, max;
-    min.x = max.x = x;
-    min.y = max.y = y;
-    min.z = max.z = z;
-
-    i3.x = x;
-    i3.y = y;
-    i3.z = z;
+    min.x = max.x = coords_in_shape.x;
+    min.y = max.y = coords_in_shape.y;
+    min.z = max.z = coords_in_shape.z;
 
     // if replaced light was emissive, start light removal
     if (existingLight.red > 0 || existingLight.green > 0 || existingLight.blue > 0) {
         LightRemovalNodeQueue *lightRemovalQueue = light_removal_node_queue_new();
 
-        light_removal_node_queue_push(lightRemovalQueue, &i3, existingLight, 15, blockID);
+        light_removal_node_queue_push(lightRemovalQueue,
+                                      c,
+                                      coords_in_shape,
+                                      existingLight,
+                                      15,
+                                      blockID);
 
         // run light removal
         _light_removal(s, &min, &max, lightRemovalQueue, lightQueue);
@@ -3361,26 +2691,45 @@ void shape_compute_baked_lighting_replaced_block(Shape *s,
     // the block note: we do this since palette may have been changed when running light removal at
     // a later point
     if (newLight.red > 0 || newLight.green > 0 || newLight.blue > 0) {
-        light_node_queue_push(lightQueue, &i3);
-        shape_set_light(s, x, y, z, newLight);
+        light_node_queue_push(lightQueue, c, coords_in_shape);
+        chunk_set_light(c, coords_in_chunk, newLight, false);
     } else {
         // self light values are now 0
         VERTEX_LIGHT_STRUCT_T zero;
         ZERO_LIGHT(zero)
-        shape_set_light(s, x, y, z, zero);
+        chunk_set_light(c, coords_in_chunk, zero, false);
     }
 
     // Then we run the regular light propagation algorithm
-    _light_propagate(s, &min, &max, lightQueue, x, y, z);
+    _light_propagate(s,
+                     &min,
+                     &max,
+                     lightQueue,
+                     coords_in_shape.x,
+                     coords_in_shape.y,
+                     coords_in_shape.z,
+                     false);
 
     light_node_queue_free(lightQueue);
 }
 
 uint64_t shape_get_baked_lighting_hash(const Shape *s) {
-    if (s == NULL || s->octree == NULL || s->palette == NULL) {
+    if (s == NULL || s->palette == NULL) {
         return 0;
     }
-    return octree_get_hash(s->octree, (uint64_t)color_palette_get_lighting_hash(s->palette));
+
+    // combine palette hash with chunks hash
+    uint64_t hash = (uint64_t)color_palette_get_lighting_hash(s->palette);
+    Index3DIterator *it = index3d_iterator_new(s->chunks);
+    Chunk *c;
+    while (index3d_iterator_pointer(it) != NULL) {
+        c = index3d_iterator_pointer(it);
+        hash = chunk_get_hash(c, hash);
+        index3d_iterator_next(it);
+    }
+    index3d_iterator_free(it);
+
+    return hash;
 }
 
 // MARK: - History -
@@ -3389,7 +2738,7 @@ void shape_history_setEnabled(Shape *s, const bool enable) {
     if (s == NULL) {
         return;
     }
-    if (enable == s->historyEnabled) {
+    if (enable == _shape_get_lua_flag(s, SHAPE_LUA_FLAG_HISTORY)) {
         return;
     }
 
@@ -3407,28 +2756,28 @@ void shape_history_setEnabled(Shape *s, const bool enable) {
         history_free(s->history);
         s->history = NULL;
     }
-    s->historyEnabled = enable;
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_HISTORY, enable);
 }
 
 bool shape_history_getEnabled(Shape *s) {
     if (s == NULL) {
         return false;
     }
-    return s->historyEnabled;
+    return _shape_get_lua_flag(s, SHAPE_LUA_FLAG_HISTORY);
 }
 
 void shape_history_setKeepTransactionPending(Shape *s, const bool b) {
     if (s == NULL) {
         return;
     }
-    s->historyKeepingTransactionPending = b;
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING, b);
 }
 
 bool shape_history_getKeepTransactionPending(Shape *s) {
     if (s == NULL) {
         return false;
     }
-    return s->historyKeepingTransactionPending;
+    return _shape_get_lua_flag(s, SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING);
 }
 
 bool shape_history_canUndo(const Shape *const s) {
@@ -3484,7 +2833,21 @@ void shape_history_redo(Shape *const s) {
     }
 }
 
-//
+// MARK: - Lua flags -
+
+bool shape_is_lua_mutable(const Shape *s) {
+    if (s == NULL) {
+        return false;
+    }
+    return _shape_get_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE);
+}
+
+void shape_set_lua_mutable(Shape *s, const bool value) {
+    if (s == NULL) {
+        return;
+    }
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, value);
+}
 
 void shape_enableAnimations(Shape *const s) {
     if (s == NULL) {
@@ -3516,256 +2879,100 @@ bool shape_getIgnoreAnimations(Shape *const s) {
     return transform_getAnimationsEnabled(s->transform) == false;
 }
 
-// MARK: - Weak ptr -
-
-Weakptr *shape_get_weakptr(Shape *s) {
-    if (s->wptr == NULL) {
-        s->wptr = weakptr_new(s);
-    }
-    return s->wptr;
-}
-
-Weakptr *shape_get_and_retain_weakptr(Shape *s) {
-    if (s->wptr == NULL) {
-        s->wptr = weakptr_new(s);
-    }
-    if (weakptr_retain(s->wptr)) {
-        return s->wptr;
-    } else { // this can only happen if weakptr ref count is at max
-        return NULL;
-    }
-}
-
-// --------------------------------------------------
-//
-// MARK: - static functions -
-//
-// --------------------------------------------------
-
-///
-static bool _shape_add_block(Shape *shape,
-                             SHAPE_COORDS_INT_T x,
-                             SHAPE_COORDS_INT_T y,
-                             SHAPE_COORDS_INT_T z,
-                             Block **added_or_existing_block) {
-
-    if (added_or_existing_block != NULL) {
-        *added_or_existing_block = NULL;
-    }
-
-    if (_is_out_of_maximum_shape_size(x, y, z)) {
-        return false;
-    }
-
-    // make sure block is added within fixed boundaries
-    if (_has_allocated_size(shape) && _is_out_of_allocated_size(shape, x, y, z)) {
-        cclog_error("⚠️ trying to add block outside shape's allocated boundaries| %p %d %d %d",
-                    shape,
-                    x,
-                    y,
-                    z);
-        cclog_error("shape allocated size: %d | %d %d %d",
-                    _has_allocated_size(shape),
-                    shape->maxWidth,
-                    shape->maxHeight,
-                    shape->maxDepth);
-        return false;
-    }
-
-    // TODO: chunks should not be required when using an octree
-    //    // If blocks are stored in an octree
-    //    if (shape->octree != NULL) {
-    //        // -------------------------
-    //        // USING OCTREE
-    //        // -------------------------
-    //
-    //        Block *block = (Block*)octree_get_element(shape->octree, x, y, z);
-    //
-    //        // there's already a block, we can't add one
-    //        if (block != NULL) {
-    //            if (added_or_existing_block != NULL) {
-    //                *added_or_existing_block = block;
-    //            }
-    //            return false;
-    //        }
-    //
-    //        block = block_new(); // NOTE: we could always use the same block to avoid allocations,
-    //        or support NULL for octree_set_element shape->nbBlocks++;
-    //        octree_set_element(shape->octree, (void*)block, x, y, z);
-    //
-    //        // octree_set_element makes a copy, it's ok to free this one now.
-    //        block_free(block);
-    //
-    //        printf("shape_add_block not fully implemented for octrees");
-    //        return false;
-    //    }
-
-    // -------------------------
-    // USING CHUNKS
-    // -------------------------
-
-    // declaring variables here instead of using pool because
-    // of multi thread access issues.
-    int3 block_ldfPos;
-    Chunk *chunk = NULL;
-    bool chunkAdded = false;
-    bool blockAdded = _add_block_in_chunks(shape->chunks,
-                                           NULL,
-                                           x,
-                                           y,
-                                           z,
-                                           &block_ldfPos,
-                                           &chunkAdded,
-                                           &chunk,
-                                           added_or_existing_block);
-
-    if (chunkAdded) {
-        shape->nbChunks++;
-    }
-
-    if (blockAdded) {
-        shape->nbBlocks++;
-        shape_chunk_needs_display(shape, chunk);
-        shape_chunk_inform_neighbors_about_change(shape, chunk, &block_ldfPos);
-
-        shape_expand_box(shape, x, y, z);
-    }
-
-    return blockAdded;
-}
-
 // MARK: - private functions -
 
-bool _add_block_in_chunks(Index3D *chunks,
-                          Block *newBlock,
-                          const SHAPE_COORDS_INT_T x,
-                          const SHAPE_COORDS_INT_T y,
-                          const SHAPE_COORDS_INT_T z,
-                          int3 *block_ldfPos_out,
-                          bool *chunkAdded,
-                          Chunk **added_or_existing_chunk,
-                          Block **added_or_existing_block) {
+static void _shape_toggle_rendering_flag(Shape *s, const uint8_t flag, const bool toggle) {
+    if (toggle) {
+        s->renderingFlags |= flag;
+    } else {
+        s->renderingFlags &= ~flag;
+    }
+}
 
-    // declaring variables here instead of using pool because
-    // of multi thread access issues.
-    int3 chunk_ldfPos;
-    // position within chunk
-    int3 block_ldfPos;
+static bool _shape_get_rendering_flag(const Shape *s, const uint8_t flag) {
+    return flag == (s->renderingFlags & flag);
+}
 
-    // see if there's a chunk ready for that block (ldf: left-down-front)
-    int3_set(&chunk_ldfPos, x >> CHUNK_WIDTH_SQRT, y >> CHUNK_HEIGHT_SQRT, z >> CHUNK_DEPTH_SQRT);
+static void _shape_toggle_lua_flag(Shape *s, const uint8_t flag, const bool toggle) {
+    if (toggle) {
+        s->luaFlags |= flag;
+    } else {
+        s->luaFlags &= ~flag;
+    }
+}
 
-    Chunk *chunk = (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z);
+static bool _shape_get_lua_flag(const Shape *s, const uint8_t flag) {
+    return flag == (s->luaFlags & flag);
+}
+
+void _shape_chunk_enqueue_refresh(Shape *shape, Chunk *c) {
+    if (c == NULL)
+        return;
+    if (chunk_is_dirty(c) == false) {
+        if (shape->dirtyChunks == NULL) {
+            shape->dirtyChunks = fifo_list_new();
+        }
+        fifo_list_push(shape->dirtyChunks, c);
+        chunk_set_dirty(c, true);
+    }
+}
+
+void _shape_chunk_check_neighbors_dirty(Shape *shape,
+                                        const Chunk *chunk,
+                                        CHUNK_COORDS_INT3_T block_pos) {
+    // Only neighbors sharing faces need to have their mesh set dirty
+    // Not refreshing diagonal chunks will only affect AO on that corner, not essential
+    // TODO: enable diagonal refresh once chunks slice refresh is implemented
+
+    if (block_pos.x == 0) {
+        _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, NX));
+    } else if (block_pos.x == CHUNK_SIZE_MINUS_ONE) {
+        _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, X));
+    }
+
+    if (block_pos.y == 0) {
+        _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, NY));
+    } else if (block_pos.y == CHUNK_SIZE_MINUS_ONE) {
+        _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, Y));
+    }
+
+    if (block_pos.z == 0) {
+        _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, NZ));
+    } else if (block_pos.z == CHUNK_SIZE_MINUS_ONE) {
+        _shape_chunk_enqueue_refresh(shape, chunk_get_neighbor(chunk, Z));
+    }
+}
+
+bool _shape_add_block_in_chunks(Shape *shape,
+                                const Block block,
+                                const SHAPE_COORDS_INT_T x,
+                                const SHAPE_COORDS_INT_T y,
+                                const SHAPE_COORDS_INT_T z,
+                                CHUNK_COORDS_INT3_T *block_coords,
+                                bool *chunkAdded,
+                                Chunk **added_or_existing_chunk,
+                                Block **added_or_existing_block) {
+
+    // see if there's a chunk ready for that block
+    const SHAPE_COORDS_INT3_T chunk_coords = chunk_utils_get_coords((SHAPE_COORDS_INT3_T){x, y, z});
+    Chunk *chunk = (Chunk *)
+        index3d_get(shape->chunks, chunk_coords.x, chunk_coords.y, chunk_coords.z);
 
     // insert new chunk if needed
     if (chunk == NULL) {
-        // it's necessary to store chunk position, as a chunk should be able
-        // to generate its face vertices without external context
-        chunk = chunk_new((SHAPE_COORDS_INT_T)chunk_ldfPos.x * CHUNK_WIDTH,
-                          (SHAPE_COORDS_INT_T)chunk_ldfPos.y * CHUNK_HEIGHT,
-                          (SHAPE_COORDS_INT_T)chunk_ldfPos.z * CHUNK_DEPTH);
-        index3d_insert(chunks, chunk, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z, NULL);
+        SHAPE_COORDS_INT3_T chunkOrigin = {(SHAPE_COORDS_INT_T)chunk_coords.x * CHUNK_SIZE,
+                                           (SHAPE_COORDS_INT_T)chunk_coords.y * CHUNK_SIZE,
+                                           (SHAPE_COORDS_INT_T)chunk_coords.z * CHUNK_SIZE};
+        chunk = chunk_new(chunkOrigin);
 
-        // printf("insert chunk at: %d, %d, %d\n", chunk_ldfPos->x, chunk_ldfPos->y,
-        // chunk_ldfPos->z);
+        index3d_insert(shape->chunks, chunk, chunk_coords.x, chunk_coords.y, chunk_coords.z, NULL);
+        chunk_move_in_neighborhood(shape->chunks, chunk, chunk_coords);
 
-        // TODO: optimize index search:
-        // - look for equal x positions once -> 9, 8, 9
-        // - look for equal y positions within x nodes -> 3, 3, 3; 3, 2, 3; 3, 3, 3
-        chunk_move_in_neighborhood(
-            chunk,
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z + 1), // topLeftBack
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z + 1), // topBack
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z + 1), // topRightBack
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z), // topLeft
-            (Chunk *)index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y + 1, chunk_ldfPos.z), // top
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z), // topRight
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z - 1), // topLeftFront
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z - 1), // topFront
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y + 1,
-                                 chunk_ldfPos.z - 1), // topRightFront
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z + 1), // bottomLeftBack
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z + 1), // bottomBack
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z + 1), // bottomRightBack
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z), // bottomLeft
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y - 1, chunk_ldfPos.z), // bottom
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z), // bottomRight
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z - 1), // bottomLeftFront
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z - 1), // bottomFront
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y - 1,
-                                 chunk_ldfPos.z - 1), // bottomRightFront
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y,
-                                 chunk_ldfPos.z + 1), // LeftBack
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z + 1), // Back
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y,
-                                 chunk_ldfPos.z + 1), // RightBack
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x - 1, chunk_ldfPos.y, chunk_ldfPos.z), // Left
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x + 1, chunk_ldfPos.y, chunk_ldfPos.z), // Right
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x - 1,
-                                 chunk_ldfPos.y,
-                                 chunk_ldfPos.z - 1), // LeftFront
-            (Chunk *)
-                index3d_get(chunks, chunk_ldfPos.x, chunk_ldfPos.y, chunk_ldfPos.z - 1), // Front
-            (Chunk *)index3d_get(chunks,
-                                 chunk_ldfPos.x + 1,
-                                 chunk_ldfPos.y,
-                                 chunk_ldfPos.z - 1) // RightFront
-        );
+        Box chunkBox = {{(float)chunkOrigin.x, (float)chunkOrigin.y, (float)chunkOrigin.z},
+                        {(float)(chunkOrigin.x + CHUNK_SIZE),
+                         (float)(chunkOrigin.y + CHUNK_SIZE),
+                         (float)(chunkOrigin.z + CHUNK_SIZE)}};
+        chunk_set_rtree_leaf(chunk, rtree_create_and_insert(shape->rtree, &chunkBox, 1, 1, chunk));
 
         *chunkAdded = true;
     } else {
@@ -3776,119 +2983,27 @@ bool _add_block_in_chunks(Index3D *chunks,
         *added_or_existing_chunk = chunk;
     }
 
-    int3_set(&block_ldfPos,
-             x & CHUNK_WIDTH_MINUS_ONE,
-             y & CHUNK_HEIGHT_MINUS_ONE,
-             z & CHUNK_DEPTH_MINUS_ONE);
+    CHUNK_COORDS_INT3_T coords_in_chunk = chunk_utils_get_coords_in_chunk(
+        (SHAPE_COORDS_INT3_T){x, y, z});
 
-    if (block_ldfPos_out != NULL) {
-        int3_set(block_ldfPos_out, block_ldfPos.x, block_ldfPos.y, block_ldfPos.z);
+    if (block_coords != NULL) {
+        *block_coords = coords_in_chunk;
     }
 
-    Block *block = chunk_get_block(chunk,
-                                   (CHUNK_COORDS_INT_T)block_ldfPos.x,
-                                   (CHUNK_COORDS_INT_T)block_ldfPos.y,
-                                   (CHUNK_COORDS_INT_T)block_ldfPos.z);
-
-    // there's already a block, we can't add one
-    if (block != NULL) {
-        if (added_or_existing_block != NULL) {
-            *added_or_existing_block = block;
-        }
-        return false;
-    }
-
-    block = newBlock != NULL ? newBlock : block_new();
-    bool ok = chunk_addBlock(chunk,
-                             block,
-                             (CHUNK_COORDS_INT_T)block_ldfPos.x,
-                             (CHUNK_COORDS_INT_T)block_ldfPos.y,
-                             (CHUNK_COORDS_INT_T)block_ldfPos.z);
-    if (ok == false) {
-        return false;
-    }
+    bool added = chunk_add_block(chunk,
+                                 block,
+                                 coords_in_chunk.x,
+                                 coords_in_chunk.y,
+                                 coords_in_chunk.z);
 
     if (added_or_existing_block != NULL) {
-        *added_or_existing_block = block;
+        *added_or_existing_block = chunk_get_block_2(chunk, coords_in_chunk);
     }
 
-    return true;
+    return added;
 }
 
-bool _has_allocated_size(const Shape *s) {
-    return s->maxWidth > 0;
-}
-
-bool _is_out_of_allocated_size(const Shape *s,
-                               const SHAPE_COORDS_INT_T x,
-                               const SHAPE_COORDS_INT_T y,
-                               const SHAPE_COORDS_INT_T z) {
-    return x < 0 || y < 0 || z < 0 || x >= s->maxWidth || y >= s->maxHeight || z >= s->maxDepth;
-}
-
-bool _is_out_of_maximum_shape_size(const SHAPE_COORDS_INT_T x,
-                                   const SHAPE_COORDS_INT_T y,
-                                   const SHAPE_COORDS_INT_T z) {
-    return x < 0 || y < 0 || z < 0 || x >= SHAPE_OCTREE_MAX || y >= SHAPE_OCTREE_MAX ||
-           z >= SHAPE_OCTREE_MAX;
-}
-
-Octree *_new_octree(const SHAPE_COORDS_INT_T w,
-                    const SHAPE_COORDS_INT_T h,
-                    const SHAPE_COORDS_INT_T d) {
-    // enforcing power of 2 for the octree
-    uint16_t size = (uint16_t)(maximum(maximum(w, h), d));
-    unsigned long upPow2Size = upper_power_of_two(size);
-
-    Block *air = block_new_air();
-
-    // octree stores block color indices
-    Octree *o = NULL;
-    switch (upPow2Size) {
-        case 1:
-            o = octree_new_with_default_element(octree_1x1x1, air, sizeof(Block));
-            break;
-        case 2:
-            o = octree_new_with_default_element(octree_2x2x2, air, sizeof(Block));
-            break;
-        case 4:
-            o = octree_new_with_default_element(octree_4x4x4, air, sizeof(Block));
-            break;
-        case 8:
-            o = octree_new_with_default_element(octree_8x8x8, air, sizeof(Block));
-            break;
-        case 16:
-            o = octree_new_with_default_element(octree_16x16x16, air, sizeof(Block));
-            break;
-        case 32:
-            o = octree_new_with_default_element(octree_32x32x32, air, sizeof(Block));
-            break;
-        case 64:
-            o = octree_new_with_default_element(octree_64x64x64, air, sizeof(Block));
-            break;
-        case 128:
-            o = octree_new_with_default_element(octree_128x128x128, air, sizeof(Block));
-            break;
-        case 256:
-            o = octree_new_with_default_element(octree_256x256x256, air, sizeof(Block));
-            break;
-        case 512:
-            o = octree_new_with_default_element(octree_512x512x512, air, sizeof(Block));
-            break;
-        case 1024:
-            o = octree_new_with_default_element(octree_1024x1024x1024, air, sizeof(Block));
-            break;
-        default:
-            cclog_error("🔥 shape is too big to use an octree.");
-            break;
-    }
-
-    block_free(air);
-
-    return o;
-}
-
-// flag used in shape_add_vertex_buffer
+// flag used in shape_add_buffer
 void _set_vb_allocation_flag_one_frame(Shape *s) {
     // shape VB chain was just initialized this frame, and will now be 1+ frame old
     // opaque VB chain
@@ -3903,46 +3018,32 @@ void _set_vb_allocation_flag_one_frame(Shape *s) {
 
 void _lighting_set_dirty(SHAPE_COORDS_INT3_T *bbMin,
                          SHAPE_COORDS_INT3_T *bbMax,
-                         SHAPE_COORDS_INT_T x,
-                         SHAPE_COORDS_INT_T y,
-                         SHAPE_COORDS_INT_T z) {
+                         SHAPE_COORDS_INT3_T coords) {
     if (vertex_buffer_get_lighting_enabled()) {
-        bbMin->x = minimum(bbMin->x, x);
-        bbMin->y = minimum(bbMin->y, y);
-        bbMin->z = minimum(bbMin->z, z);
-        bbMax->x = maximum(bbMax->x, x);
-        bbMax->y = maximum(bbMax->y, y);
-        bbMax->z = maximum(bbMax->z, z);
+        bbMin->x = minimum(bbMin->x, coords.x);
+        bbMin->y = minimum(bbMin->y, coords.y);
+        bbMin->z = minimum(bbMin->z, coords.z);
+        bbMax->x = maximum(bbMax->x, coords.x);
+        bbMax->y = maximum(bbMax->y, coords.y);
+        bbMax->z = maximum(bbMax->z, coords.z);
     }
 }
 
 void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COORDS_INT3_T *bbMax) {
     if (vertex_buffer_get_lighting_enabled()) {
-        SHAPE_COORDS_INT3_T chunkMin = *bbMin, chunkMax = *bbMax;
-
         // account for vertex lighting smoothing, values need to be updated on adjacent vertices
-        chunkMin.x -= 1;
-        chunkMin.y -= 1;
-        chunkMin.z -= 1;
-        chunkMax.x += 1;
-        chunkMax.y += 1;
-        chunkMax.z += 1;
-
-        // find corresponding chunks and set dirty
-        chunkMin.x /= CHUNK_WIDTH;
-        chunkMax.x /= CHUNK_WIDTH;
-        chunkMin.y /= CHUNK_HEIGHT;
-        chunkMax.y /= CHUNK_HEIGHT;
-        chunkMin.z /= CHUNK_DEPTH;
-        chunkMax.z /= CHUNK_DEPTH;
+        SHAPE_COORDS_INT3_T chunkMin = chunk_utils_get_coords(
+            (SHAPE_COORDS_INT3_T){bbMin->x - 1, bbMin->y - 1, bbMin->z - 1});
+        SHAPE_COORDS_INT3_T chunkMax = chunk_utils_get_coords(
+            (SHAPE_COORDS_INT3_T){bbMax->x + 1, bbMax->y + 1, bbMax->z + 1});
 
         Chunk *chunk;
-        for (int x = chunkMin.x; x <= chunkMax.x; x++) {
-            for (int y = chunkMin.y; y <= chunkMax.y; y++) {
-                for (int z = chunkMin.z; z <= chunkMax.z; z++) {
+        for (SHAPE_COORDS_INT_T x = chunkMin.x; x <= chunkMax.x; ++x) {
+            for (SHAPE_COORDS_INT_T y = chunkMin.y; y <= chunkMax.y; ++y) {
+                for (SHAPE_COORDS_INT_T z = chunkMin.z; z <= chunkMax.z; ++z) {
                     chunk = (Chunk *)index3d_get(s->chunks, x, y, z);
                     if (chunk != NULL) {
-                        shape_chunk_needs_display(s, chunk);
+                        _shape_chunk_enqueue_refresh(s, chunk);
                     }
                 }
             }
@@ -3950,24 +3051,23 @@ void _lighting_postprocess_dirty(Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_COO
     }
 }
 
-void _light_removal_processNeighbor(Shape *s,
-                                    SHAPE_COORDS_INT3_T *bbMin,
-                                    SHAPE_COORDS_INT3_T *bbMax,
-                                    VERTEX_LIGHT_STRUCT_T light,
-                                    uint8_t srgb,
-                                    bool equals,
-                                    SHAPE_COORDS_INT3_T *neighborPos,
-                                    const Block *neighbor,
-                                    LightNodeQueue *lightQueue,
-                                    LightRemovalNodeQueue *lightRemovalQueue) {
+void _light_removal_process_neighbor(Shape *s,
+                                     Chunk *c,
+                                     SHAPE_COORDS_INT3_T *bbMin,
+                                     SHAPE_COORDS_INT3_T *bbMax,
+                                     VERTEX_LIGHT_STRUCT_T light,
+                                     uint8_t srgb,
+                                     bool equals,
+                                     CHUNK_COORDS_INT3_T coords_in_chunk,
+                                     SHAPE_COORDS_INT3_T coords_in_shape,
+                                     const Block *neighbor,
+                                     LightNodeQueue *lightQueue,
+                                     LightRemovalNodeQueue *lightRemovalQueue) {
 
     // air and transparent blocks can be reset & further light removal
     if (neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK ||
         color_palette_is_transparent(s->palette, neighbor->colorIndex)) {
-        VERTEX_LIGHT_STRUCT_T neighborLight = shape_get_light_without_checking(s,
-                                                                               neighborPos->x,
-                                                                               neighborPos->y,
-                                                                               neighborPos->z);
+        VERTEX_LIGHT_STRUCT_T neighborLight = chunk_get_light_without_checking(c, coords_in_chunk);
 
         // 1) any neighbor's individual light channel is selected for reset if:
         // - its value is non-zero and less than the current node
@@ -4015,12 +3115,13 @@ void _light_removal_processNeighbor(Shape *s,
                 neighborLight.blue = 0;
                 insertSRGB |= (uint8_t)1;
             }
-            shape_set_light(s, neighborPos->x, neighborPos->y, neighborPos->z, neighborLight);
-            _lighting_set_dirty(bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
+            chunk_set_light(c, coords_in_chunk, neighborLight, false);
+            _lighting_set_dirty(bbMin, bbMax, coords_in_shape);
 
             // enqueue neighbor for removal
             light_removal_node_queue_push(lightRemovalQueue,
-                                          neighborPos,
+                                          c,
+                                          coords_in_shape,
                                           insertLight,
                                           insertSRGB,
                                           255);
@@ -4046,24 +3147,23 @@ void _light_removal_processNeighbor(Shape *s,
         }
 
         if (propagateS || propagateR || propagateG || propagateB) {
-            light_node_queue_push(lightQueue, neighborPos);
+            light_node_queue_push(lightQueue, c, coords_in_shape);
         }
     }
     // emissive blocks, if in the vicinity of light removal, may be re-enqueued as well
     else if (color_palette_is_emissive(s->palette, neighbor->colorIndex)) {
-        light_node_queue_push(lightQueue, neighborPos);
+        light_node_queue_push(lightQueue, c, coords_in_shape);
     }
 }
 
-void _light_set_and_enqueue_source(SHAPE_COORDS_INT3_T *pos,
-                                   Shape *shape,
+void _light_set_and_enqueue_source(Shape *shape,
+                                   Chunk *c,
+                                   CHUNK_COORDS_INT3_T coords_in_chunk,
+                                   SHAPE_COORDS_INT3_T coords_in_shape,
                                    VERTEX_LIGHT_STRUCT_T source,
-                                   LightNodeQueue *lightQueue) {
-    VERTEX_LIGHT_STRUCT_T current = shape_get_light_or_default(shape,
-                                                               pos->x,
-                                                               pos->y,
-                                                               pos->z,
-                                                               false);
+                                   LightNodeQueue *lightQueue,
+                                   bool initEmpty) {
+    VERTEX_LIGHT_STRUCT_T current = chunk_get_light_without_checking(c, coords_in_chunk);
     const bool s = current.ambient < source.ambient;
     const bool r = current.red < source.red;
     const bool g = current.green < source.green;
@@ -4082,52 +3182,71 @@ void _light_set_and_enqueue_source(SHAPE_COORDS_INT3_T *pos,
         if (b) {
             current.blue = source.blue;
         }
-        shape_set_light(shape, pos->x, pos->y, pos->z, current);
+        chunk_set_light(c, coords_in_chunk, current, initEmpty);
 
         // enqueue as a new light source if any value was higher
         if (lightQueue != NULL) {
-            light_node_queue_push(lightQueue, pos);
+            light_node_queue_push(lightQueue, c, coords_in_shape);
         }
     }
 }
 
 void _light_enqueue_ambient_and_block_sources(Shape *s,
                                               LightNodeQueue *q,
-                                              SHAPE_COORDS_INT3_T from,
-                                              SHAPE_COORDS_INT3_T to,
+                                              SHAPE_COORDS_INT3_T min,
+                                              SHAPE_COORDS_INT3_T max,
                                               bool enqueueAir) {
-    // Ambient sources: blocks along plane (x,z) from top of the map
-    SHAPE_COORDS_INT3_T pos = {0, (SHAPE_COORDS_INT_T)s->maxHeight, 0};
-    for (SHAPE_COORDS_INT_T x = from.x - 1; x <= to.x; ++x) {
-        for (SHAPE_COORDS_INT_T z = from.z - 1; z <= to.z; ++z) {
-            pos.x = x;
-            pos.z = z;
-            light_node_queue_push(q, &pos);
+    // Ambient sources: blocks along plane (x,z) from above the volume
+    SHAPE_COORDS_INT3_T coords_in_shape = {0, max.y, 0};
+    for (SHAPE_COORDS_INT_T x = min.x - 1; x <= max.x; ++x) {
+        for (SHAPE_COORDS_INT_T z = min.z - 1; z <= max.z; ++z) {
+            coords_in_shape.x = x;
+            coords_in_shape.z = z;
+            light_node_queue_push(q, NULL, coords_in_shape);
         }
     }
 
-    // Block sources: enqueue all emissive blocks (and air if requested) around the given area
+    // Block sources: enqueue all emissive blocks in the given area
     const Block *b;
-    for (SHAPE_COORDS_INT_T x = from.x - 1; x <= to.x; ++x) {
-        for (SHAPE_COORDS_INT_T y = from.y - 1; y <= to.y; ++y) {
-            for (SHAPE_COORDS_INT_T z = from.z - 1; z <= to.z; ++z) {
-                b = shape_get_block(s, x, y, z, false);
-                if (b != NULL) {
-                    if (color_palette_is_emissive(s->palette, b->colorIndex)) {
-                        pos.x = x;
-                        pos.y = y;
-                        pos.z = z;
-                        light_node_queue_push(q, &pos);
-                    } else if (block_is_solid(b) == false && enqueueAir) {
-                        const VERTEX_LIGHT_STRUCT_T light = shape_get_light_without_checking(s,
-                                                                                             x,
-                                                                                             y,
-                                                                                             z);
-                        if (light.blue > 0 || light.green > 0 || light.red > 0) {
-                            pos.x = x;
-                            pos.y = y;
-                            pos.z = z;
-                            light_node_queue_push(q, &pos);
+    SHAPE_COORDS_INT3_T chunkFrom = chunk_utils_get_coords(
+        (SHAPE_COORDS_INT3_T){min.x - 1, min.y - 1, min.z - 1});
+    SHAPE_COORDS_INT3_T chunkTo = chunk_utils_get_coords(
+        (SHAPE_COORDS_INT3_T){max.x, max.y, max.z});
+
+    Chunk *chunk;
+    for (SHAPE_COORDS_INT_T x = chunkFrom.x; x <= chunkTo.x; ++x) {
+        for (SHAPE_COORDS_INT_T y = chunkFrom.y; y <= chunkTo.y; ++y) {
+            for (SHAPE_COORDS_INT_T z = chunkFrom.z; z <= chunkTo.z; ++z) {
+                chunk = (Chunk *)index3d_get(s->chunks, x, y, z);
+                if (chunk == NULL) {
+                    continue;
+                }
+
+                // split iteration into two parts to get chunk only once
+                for (CHUNK_COORDS_INT_T cx = 0; cx < CHUNK_SIZE; ++cx) {
+                    for (CHUNK_COORDS_INT_T cy = 0; cy < CHUNK_SIZE; ++cy) {
+                        for (CHUNK_COORDS_INT_T cz = 0; cz < CHUNK_SIZE; ++cz) {
+                            coords_in_shape = (SHAPE_COORDS_INT3_T){x * CHUNK_SIZE + cx,
+                                                                    y * CHUNK_SIZE + cy,
+                                                                    z * CHUNK_SIZE + cz};
+                            if (coords_in_shape.x < min.x || coords_in_shape.x > max.x ||
+                                coords_in_shape.y < min.y || coords_in_shape.y > max.y ||
+                                coords_in_shape.z < min.z || coords_in_shape.z > max.z) {
+                                continue;
+                            }
+
+                            b = chunk_get_block(chunk, cx, cy, cz);
+                            if (b != NULL && color_palette_is_emissive(s->palette, b->colorIndex)) {
+                                light_node_queue_push(q, chunk, coords_in_shape);
+                            } else if (block_is_solid(b) == false && enqueueAir) {
+                                const VERTEX_LIGHT_STRUCT_T
+                                    light = chunk_get_light_without_checking(
+                                        chunk,
+                                        (CHUNK_COORDS_INT3_T){cx, cy, cz});
+                                if (light.blue > 0 || light.green > 0 || light.red > 0) {
+                                    light_node_queue_push(q, chunk, coords_in_shape);
+                                }
+                            }
                         }
                     }
                 }
@@ -4137,16 +3256,19 @@ void _light_enqueue_ambient_and_block_sources(Shape *s,
 }
 
 void _light_block_propagate(Shape *s,
+                            Chunk *c,
                             SHAPE_COORDS_INT3_T *bbMin,
                             SHAPE_COORDS_INT3_T *bbMax,
                             VERTEX_LIGHT_STRUCT_T current,
-                            SHAPE_COORDS_INT3_T *neighborPos,
+                            CHUNK_COORDS_INT3_T coords_in_chunk,
+                            SHAPE_COORDS_INT3_T coords_in_shape,
                             const Block *neighbor,
                             bool air,
                             bool transparent,
                             LightNodeQueue *lightQueue,
                             uint8_t stepS,
-                            uint8_t stepRGB) {
+                            uint8_t stepRGB,
+                            bool initEmpty) {
 
     // if neighbor non-opaque, propagate sunlight and emission values individually & enqueue if
     // needed
@@ -4177,11 +3299,7 @@ void _light_block_propagate(Shape *s,
             current.ambient = TO_UINT4((uint8_t)((float)current.ambient * absorbS));
         }
 
-        VERTEX_LIGHT_STRUCT_T neighborLight = shape_get_light_or_default(s,
-                                                                         neighborPos->x,
-                                                                         neighborPos->y,
-                                                                         neighborPos->z,
-                                                                         false);
+        VERTEX_LIGHT_STRUCT_T neighborLight = chunk_get_light_without_checking(c, coords_in_chunk);
         const bool propagateS = neighborLight.ambient < current.ambient - stepS;
         const bool propagateR = neighborLight.red < current.red - stepRGB;
         const bool propagateG = neighborLight.green < current.green - stepRGB;
@@ -4199,22 +3317,20 @@ void _light_block_propagate(Shape *s,
             if (propagateB) {
                 neighborLight.blue = TO_UINT4(current.blue - stepRGB);
             }
-            shape_set_light(s, neighborPos->x, neighborPos->y, neighborPos->z, neighborLight);
+            chunk_set_light(c, coords_in_chunk, neighborLight, initEmpty);
 
-            light_node_queue_push(lightQueue, neighborPos);
-            _lighting_set_dirty(bbMin, bbMax, neighborPos->x, neighborPos->y, neighborPos->z);
+            light_node_queue_push(lightQueue, c, coords_in_shape);
+            _lighting_set_dirty(bbMin, bbMax, coords_in_shape);
         }
     }
     // if neighbor emissive, enqueue & store original emission of the block (relevant if first
     // propagation)
     else if (color_palette_is_emissive(s->palette, neighbor->colorIndex)) {
-        shape_set_light(
-            s,
-            neighborPos->x,
-            neighborPos->y,
-            neighborPos->z,
-            color_palette_get_emissive_color_as_light(s->palette, neighbor->colorIndex));
-        light_node_queue_push(lightQueue, neighborPos);
+        chunk_set_light(c,
+                        coords_in_chunk,
+                        color_palette_get_emissive_color_as_light(s->palette, neighbor->colorIndex),
+                        initEmpty);
+        light_node_queue_push(lightQueue, c, coords_in_shape);
     }
 }
 
@@ -4224,76 +3340,68 @@ void _light_propagate(Shape *s,
                       LightNodeQueue *lightQueue,
                       SHAPE_COORDS_INT_T srcX,
                       SHAPE_COORDS_INT_T srcY,
-                      SHAPE_COORDS_INT_T srcZ) {
+                      SHAPE_COORDS_INT_T srcZ,
+                      bool initWithEmptyLight) {
 
 #if SHAPE_LIGHTING_DEBUG
     cclog_debug("☀️ light propagation started...");
+    int iCount = 0;
 #endif
 
-    // changed values bounding box initialized at source position or using given bounding box
-    SHAPE_COORDS_INT3_T min, max;
-    if (bbMin == NULL) {
-        min = (SHAPE_COORDS_INT3_T){srcX, srcY, srcZ};
-    } else {
-        min = *bbMin;
-    }
-    if (bbMax == NULL) {
-        max = (SHAPE_COORDS_INT3_T){srcX, srcY, srcZ};
-    } else {
-        max = *bbMax;
-    }
+    // changed values bounding box
+    SHAPE_COORDS_INT3_T min = *bbMin;
+    SHAPE_COORDS_INT3_T max = *bbMax;
 
     // set source block dirty
-    _lighting_set_dirty(&min, &max, srcX, srcY, srcZ);
+    _lighting_set_dirty(&min, &max, (SHAPE_COORDS_INT3_T){srcX, srcY, srcZ});
 
-    SHAPE_COORDS_INT3_T pos, insertPos;
+    Chunk *chunk, *insertChunk;
+    CHUNK_COORDS_INT3_T coords_in_chunk, cc;
+    SHAPE_COORDS_INT3_T coords_in_shape, cs;
     const Block *current = NULL;
     const Block *neighbor = NULL;
     VERTEX_LIGHT_STRUCT_T currentLight;
     bool isCurrentAir, isCurrentOpen, isCurrentTransparent, isNeighborAir, isNeighborTransparent;
     LightNode *n = light_node_queue_pop(lightQueue);
     while (n != NULL) {
-        light_node_get_coords(n, &pos);
+        coords_in_shape = light_node_get_coords(n);
+        chunk = light_node_get_chunk(n);
+
+        coords_in_chunk = chunk_utils_get_coords_in_chunk(coords_in_shape);
+
+        current = chunk_get_block(chunk, coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z);
 
         // get current light
-        if (_is_out_of_allocated_size(s, pos.x, pos.y, pos.z)) {
+        if (current == NULL) {
             DEFAULT_LIGHT(currentLight)
             isCurrentAir = true;
             isCurrentTransparent = false;
         } else {
-            current = shape_get_block(s, pos.x, pos.y, pos.z, false);
-            if (current == NULL) {
-                cclog_error("🔥 no element found at index");
-                light_node_queue_recycle(n);
-                n = light_node_queue_pop(lightQueue);
-                continue;
-            }
-
-            currentLight = shape_get_light_without_checking(s, pos.x, pos.y, pos.z);
+            currentLight = chunk_get_light_without_checking(chunk, coords_in_chunk);
             isCurrentAir = current->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isCurrentTransparent = color_palette_is_transparent(s->palette, current->colorIndex);
         }
         isCurrentOpen = false; // is current node open ie. at least one neighbor is non-opaque
 
-        // propagate sunlight top-down from above the map and on the sides
-        // note: test this first and individually, because the octree has a POT size ie. most likely
-        // higher than fixed width & depth and will return an air block by default to stop
-        // propagation
-        if (pos.y > 0 && pos.y <= s->maxHeight &&
-            (pos.x == -1 || pos.z == -1 || pos.x == s->maxWidth || pos.z == s->maxDepth)) {
-            insertPos.x = pos.x;
-            insertPos.y = pos.y - 1;
-            insertPos.z = pos.z;
-            light_node_queue_push(lightQueue, &insertPos);
-        }
-
         // for each non-opaque neighbor: flag current node as open & propagate light if current
         // non-opaque
         // for each emissive neighbor: add to light queue if current non-opaque
         // y - 1
-        neighbor = shape_get_block(s, pos.x, pos.y - 1, pos.z, false);
+        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x, coords_in_chunk.y - 1, coords_in_chunk.z};
+        cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y - 1, coords_in_shape.z};
+        if (chunk != NULL) {
+            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                           cc.x,
+                                                           cc.y,
+                                                           cc.z,
+                                                           &insertChunk,
+                                                           &cc);
+        } else {
+            shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
+            neighbor = chunk_get_block_2(insertChunk, cc);
+        }
         if (neighbor != NULL) {
-            isNeighborAir = neighbor->colorIndex == 255;
+            isNeighborAir = neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
 
             if (isNeighborAir || isNeighborTransparent) {
@@ -4301,29 +3409,50 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = pos.x;
-                insertPos.y = pos.y - 1;
-                insertPos.z = pos.z;
-
                 // sunlight propagates infinitely vertically (step = 0)
                 _light_block_propagate(s,
+                                       insertChunk,
                                        &min,
                                        &max,
                                        currentLight,
-                                       &insertPos,
+                                       cc,
+                                       (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                             coords_in_shape.y - 1,
+                                                             coords_in_shape.z},
                                        neighbor,
                                        isNeighborAir,
                                        isNeighborTransparent,
                                        lightQueue,
                                        0,
-                                       EMISSION_PROPAGATION_STEP);
+                                       EMISSION_PROPAGATION_STEP,
+                                       initWithEmptyLight);
             }
+        }
+        // propagate sunlight top-down from above the volume, through empty chunks, and on the sides
+        else if (cs.y >= min.y && cs.y < max.y && cs.x >= min.x - 1 && cs.z >= min.z - 1 &&
+                 cs.x <= max.x && cs.z <= max.z) {
+
+            chunk_set_light(insertChunk, cc, currentLight, initWithEmptyLight);
+            light_node_queue_push(lightQueue, insertChunk, cs);
+            _lighting_set_dirty(&min, &max, coords_in_shape);
         }
 
         // y + 1
-        neighbor = shape_get_block(s, pos.x, pos.y + 1, pos.z, false);
+        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z};
+        if (chunk != NULL) {
+            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                           cc.x,
+                                                           cc.y,
+                                                           cc.z,
+                                                           &insertChunk,
+                                                           &cc);
+        } else {
+            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y + 1, coords_in_shape.z};
+            shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
+            neighbor = chunk_get_block_2(insertChunk, cc);
+        }
         if (neighbor != NULL) {
-            isNeighborAir = neighbor->colorIndex == 255;
+            isNeighborAir = neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
 
             if (isNeighborAir || isNeighborTransparent) {
@@ -4331,28 +3460,41 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = pos.x;
-                insertPos.y = pos.y + 1;
-                insertPos.z = pos.z;
-
                 _light_block_propagate(s,
+                                       insertChunk,
                                        &min,
                                        &max,
                                        currentLight,
-                                       &insertPos,
+                                       cc,
+                                       (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                             coords_in_shape.y + 1,
+                                                             coords_in_shape.z},
                                        neighbor,
                                        isNeighborAir,
                                        isNeighborTransparent,
                                        lightQueue,
                                        SUNLIGHT_PROPAGATION_STEP,
-                                       EMISSION_PROPAGATION_STEP);
+                                       EMISSION_PROPAGATION_STEP,
+                                       initWithEmptyLight);
             }
         }
 
         // x + 1
-        neighbor = shape_get_block(s, pos.x + 1, pos.y, pos.z, false);
+        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z};
+        if (chunk != NULL) {
+            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                           cc.x,
+                                                           cc.y,
+                                                           cc.z,
+                                                           &insertChunk,
+                                                           &cc);
+        } else {
+            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x + 1, coords_in_shape.y, coords_in_shape.z};
+            shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
+            neighbor = chunk_get_block_2(insertChunk, cc);
+        }
         if (neighbor != NULL) {
-            isNeighborAir = neighbor->colorIndex == 255;
+            isNeighborAir = neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
 
             if (isNeighborAir || isNeighborTransparent) {
@@ -4360,28 +3502,41 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = pos.x + 1;
-                insertPos.y = pos.y;
-                insertPos.z = pos.z;
-
                 _light_block_propagate(s,
+                                       insertChunk,
                                        &min,
                                        &max,
                                        currentLight,
-                                       &insertPos,
+                                       cc,
+                                       (SHAPE_COORDS_INT3_T){coords_in_shape.x + 1,
+                                                             coords_in_shape.y,
+                                                             coords_in_shape.z},
                                        neighbor,
                                        isNeighborAir,
                                        isNeighborTransparent,
                                        lightQueue,
                                        SUNLIGHT_PROPAGATION_STEP,
-                                       EMISSION_PROPAGATION_STEP);
+                                       EMISSION_PROPAGATION_STEP,
+                                       initWithEmptyLight);
             }
         }
 
         // x - 1
-        neighbor = shape_get_block(s, pos.x - 1, pos.y, pos.z, false);
+        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x - 1, coords_in_chunk.y, coords_in_chunk.z};
+        if (chunk != NULL) {
+            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                           cc.x,
+                                                           cc.y,
+                                                           cc.z,
+                                                           &insertChunk,
+                                                           &cc);
+        } else {
+            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x - 1, coords_in_shape.y, coords_in_shape.z};
+            shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
+            neighbor = chunk_get_block_2(insertChunk, cc);
+        }
         if (neighbor != NULL) {
-            isNeighborAir = neighbor->colorIndex == 255;
+            isNeighborAir = neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
 
             if (isNeighborAir || isNeighborTransparent) {
@@ -4389,28 +3544,41 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = pos.x - 1;
-                insertPos.y = pos.y;
-                insertPos.z = pos.z;
-
                 _light_block_propagate(s,
+                                       insertChunk,
                                        &min,
                                        &max,
                                        currentLight,
-                                       &insertPos,
+                                       cc,
+                                       (SHAPE_COORDS_INT3_T){coords_in_shape.x - 1,
+                                                             coords_in_shape.y,
+                                                             coords_in_shape.z},
                                        neighbor,
                                        isNeighborAir,
                                        isNeighborTransparent,
                                        lightQueue,
                                        SUNLIGHT_PROPAGATION_STEP,
-                                       EMISSION_PROPAGATION_STEP);
+                                       EMISSION_PROPAGATION_STEP,
+                                       initWithEmptyLight);
             }
         }
 
         // z + 1
-        neighbor = shape_get_block(s, pos.x, pos.y, pos.z + 1, false);
+        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z + 1};
+        if (chunk != NULL) {
+            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                           cc.x,
+                                                           cc.y,
+                                                           cc.z,
+                                                           &insertChunk,
+                                                           &cc);
+        } else {
+            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z + 1};
+            shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
+            neighbor = chunk_get_block_2(insertChunk, cc);
+        }
         if (neighbor != NULL) {
-            isNeighborAir = neighbor->colorIndex == 255;
+            isNeighborAir = neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
 
             if (isNeighborAir || isNeighborTransparent) {
@@ -4418,28 +3586,41 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = pos.x;
-                insertPos.y = pos.y;
-                insertPos.z = pos.z + 1;
-
                 _light_block_propagate(s,
+                                       insertChunk,
                                        &min,
                                        &max,
                                        currentLight,
-                                       &insertPos,
+                                       cc,
+                                       (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                             coords_in_shape.y,
+                                                             coords_in_shape.z + 1},
                                        neighbor,
                                        isNeighborAir,
                                        isNeighborTransparent,
                                        lightQueue,
                                        SUNLIGHT_PROPAGATION_STEP,
-                                       EMISSION_PROPAGATION_STEP);
+                                       EMISSION_PROPAGATION_STEP,
+                                       initWithEmptyLight);
             }
         }
 
         // z - 1
-        neighbor = shape_get_block(s, pos.x, pos.y, pos.z - 1, false);
+        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z - 1};
+        if (chunk != NULL) {
+            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                           cc.x,
+                                                           cc.y,
+                                                           cc.z,
+                                                           &insertChunk,
+                                                           &cc);
+        } else {
+            cs = (SHAPE_COORDS_INT3_T){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z - 1};
+            shape_get_chunk_and_coordinates(s, cs, &insertChunk, NULL, &cc);
+            neighbor = chunk_get_block_2(insertChunk, cc);
+        }
         if (neighbor != NULL) {
-            isNeighborAir = neighbor->colorIndex == 255;
+            isNeighborAir = neighbor->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK;
             isNeighborTransparent = color_palette_is_transparent(s->palette, neighbor->colorIndex);
 
             if (isNeighborAir || isNeighborTransparent) {
@@ -4447,21 +3628,22 @@ void _light_propagate(Shape *s,
             }
 
             if (isCurrentAir || isCurrentTransparent) {
-                insertPos.x = pos.x;
-                insertPos.y = pos.y;
-                insertPos.z = pos.z - 1;
-
                 _light_block_propagate(s,
+                                       insertChunk,
                                        &min,
                                        &max,
                                        currentLight,
-                                       &insertPos,
+                                       cc,
+                                       (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                             coords_in_shape.y,
+                                                             coords_in_shape.z - 1},
                                        neighbor,
                                        isNeighborAir,
                                        isNeighborTransparent,
                                        lightQueue,
                                        SUNLIGHT_PROPAGATION_STEP,
-                                       EMISSION_PROPAGATION_STEP);
+                                       EMISSION_PROPAGATION_STEP,
+                                       initWithEmptyLight);
             }
         }
 
@@ -4482,33 +3664,39 @@ void _light_propagate(Shape *s,
             // 3x3x3-1=26) instead of the 6 that would occur on first propagation iteration, for
             // homogeneous self-lighting this is equivalent to simulating the first iteration
             // manually, to alter the way it initially spreads
-            for (SHAPE_COORDS_INT_T xo = -1; xo <= 1; xo++) {
-                for (SHAPE_COORDS_INT_T yo = -1; yo <= 1; yo++) {
-                    for (SHAPE_COORDS_INT_T zo = -1; zo <= 1; zo++) {
-                        insertPos.x = pos.x + xo;
-                        insertPos.y = pos.y + yo;
-                        insertPos.z = pos.z + zo;
+            for (CHUNK_COORDS_INT_T xo = -1; xo <= 1; xo++) {
+                for (CHUNK_COORDS_INT_T yo = -1; yo <= 1; yo++) {
+                    for (CHUNK_COORDS_INT_T zo = -1; zo <= 1; zo++) {
+                        cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x + xo,
+                                                   coords_in_chunk.y + yo,
+                                                   coords_in_chunk.z + zo};
 
-                        if (shape_is_within_allocated_bounds(s,
-                                                             insertPos.x,
-                                                             insertPos.y,
-                                                             insertPos.z)) {
-                            neighbor = shape_get_block(s,
-                                                       insertPos.x,
-                                                       insertPos.y,
-                                                       insertPos.z,
-                                                       false);
-                            if (block_is_opaque(neighbor, s->palette) == false) {
-                                _light_set_and_enqueue_source(&insertPos,
-                                                              s,
-                                                              currentLight,
-                                                              lightQueue);
-                            }
+                        neighbor = chunk_get_block_including_neighbors(chunk,
+                                                                       cc.x,
+                                                                       cc.y,
+                                                                       cc.z,
+                                                                       &insertChunk,
+                                                                       &cc);
+                        if (neighbor != NULL && block_is_opaque(neighbor, s->palette) == false) {
+                            _light_set_and_enqueue_source(
+                                s,
+                                insertChunk,
+                                cc,
+                                (SHAPE_COORDS_INT3_T){coords_in_shape.x + xo,
+                                                      coords_in_shape.y + yo,
+                                                      coords_in_shape.z + zo},
+                                currentLight,
+                                lightQueue,
+                                initWithEmptyLight);
                         }
                     }
                 }
             }
         }
+
+#if SHAPE_LIGHTING_DEBUG
+        iCount++;
+#endif
 
         light_node_queue_recycle(n);
         n = light_node_queue_pop(lightQueue);
@@ -4529,135 +3717,186 @@ void _light_removal(Shape *s,
 
 #if SHAPE_LIGHTING_DEBUG
     cclog_debug("☀️ light removal started...");
+    int iCount = 0;
 #endif
 
     VERTEX_LIGHT_STRUCT_T light;
     uint8_t srgb;
     SHAPE_COLOR_INDEX_INT_T blockID;
     const Block *neighbor = NULL;
-
-    SHAPE_COORDS_INT3_T pos, insertPos;
+    Chunk *chunk, *insertChunk;
+    SHAPE_COORDS_INT3_T coords_in_shape;
+    CHUNK_COORDS_INT3_T coords_in_chunk, cc;
     LightRemovalNode *rn = light_removal_node_queue_pop(lightRemovalQueue);
     while (rn != NULL) {
-        // get coords and light value of the light removal node (rn)
-        light_removal_node_get_coords(rn, &pos);
-        light_removal_node_get_light(rn, &light);
+        coords_in_shape = light_removal_node_get_coords(rn);
+        light = light_removal_node_get_light(rn);
         srgb = light_removal_node_get_srgb(rn);
         blockID = light_removal_node_get_block_id(rn);
+        chunk = light_removal_node_get_chunk(rn);
 
         // check that the current block is inside the shape bounds
-        if (shape_is_within_allocated_bounds(s, pos.x, pos.y, pos.z)) {
+        if (shape_is_within_bounding_box(s, coords_in_shape)) {
+            coords_in_chunk = chunk_utils_get_coords_in_chunk(coords_in_shape);
 
             // if air or transparent block, proceed with light removal
             if (blockID == SHAPE_COLOR_INDEX_AIR_BLOCK ||
                 color_palette_is_transparent(s->palette, blockID)) {
                 // x + 1
-                neighbor = shape_get_block(s, pos.x + 1, pos.y, pos.z, false);
+                cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x + 1,
+                                           coords_in_chunk.y,
+                                           coords_in_chunk.z};
+                neighbor = chunk_get_block_including_neighbors(chunk,
+                                                               cc.x,
+                                                               cc.y,
+                                                               cc.z,
+                                                               &insertChunk,
+                                                               &cc);
                 if (neighbor != NULL) {
-                    insertPos.x = pos.x + 1;
-                    insertPos.y = pos.y;
-                    insertPos.z = pos.z;
-
-                    _light_removal_processNeighbor(s,
-                                                   bbMin,
-                                                   bbMax,
-                                                   light,
-                                                   srgb,
-                                                   false,
-                                                   &insertPos,
-                                                   neighbor,
-                                                   lightQueue,
-                                                   lightRemovalQueue);
+                    _light_removal_process_neighbor(s,
+                                                    insertChunk,
+                                                    bbMin,
+                                                    bbMax,
+                                                    light,
+                                                    srgb,
+                                                    false,
+                                                    cc,
+                                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x + 1,
+                                                                          coords_in_shape.y,
+                                                                          coords_in_shape.z},
+                                                    neighbor,
+                                                    lightQueue,
+                                                    lightRemovalQueue);
                 }
                 // x - 1
-                neighbor = shape_get_block(s, pos.x - 1, pos.y, pos.z, false);
+                cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x - 1,
+                                           coords_in_chunk.y,
+                                           coords_in_chunk.z};
+                neighbor = chunk_get_block_including_neighbors(chunk,
+                                                               cc.x,
+                                                               cc.y,
+                                                               cc.z,
+                                                               &insertChunk,
+                                                               &cc);
                 if (neighbor != NULL) {
-                    insertPos.x = pos.x - 1;
-                    insertPos.y = pos.y;
-                    insertPos.z = pos.z;
-
-                    _light_removal_processNeighbor(s,
-                                                   bbMin,
-                                                   bbMax,
-                                                   light,
-                                                   srgb,
-                                                   false,
-                                                   &insertPos,
-                                                   neighbor,
-                                                   lightQueue,
-                                                   lightRemovalQueue);
+                    _light_removal_process_neighbor(s,
+                                                    insertChunk,
+                                                    bbMin,
+                                                    bbMax,
+                                                    light,
+                                                    srgb,
+                                                    false,
+                                                    cc,
+                                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x - 1,
+                                                                          coords_in_shape.y,
+                                                                          coords_in_shape.z},
+                                                    neighbor,
+                                                    lightQueue,
+                                                    lightRemovalQueue);
                 }
                 // y + 1
-                neighbor = shape_get_block(s, pos.x, pos.y + 1, pos.z, false);
+                cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x,
+                                           coords_in_chunk.y + 1,
+                                           coords_in_chunk.z};
+                neighbor = chunk_get_block_including_neighbors(chunk,
+                                                               cc.x,
+                                                               cc.y,
+                                                               cc.z,
+                                                               &insertChunk,
+                                                               &cc);
                 if (neighbor != NULL) {
-                    insertPos.x = pos.x;
-                    insertPos.y = pos.y + 1;
-                    insertPos.z = pos.z;
-
-                    _light_removal_processNeighbor(s,
-                                                   bbMin,
-                                                   bbMax,
-                                                   light,
-                                                   srgb,
-                                                   false,
-                                                   &insertPos,
-                                                   neighbor,
-                                                   lightQueue,
-                                                   lightRemovalQueue);
+                    _light_removal_process_neighbor(s,
+                                                    insertChunk,
+                                                    bbMin,
+                                                    bbMax,
+                                                    light,
+                                                    srgb,
+                                                    false,
+                                                    cc,
+                                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                                          coords_in_shape.y + 1,
+                                                                          coords_in_shape.z},
+                                                    neighbor,
+                                                    lightQueue,
+                                                    lightRemovalQueue);
                 }
                 // y - 1
-                neighbor = shape_get_block(s, pos.x, pos.y - 1, pos.z, false);
+                cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x,
+                                           coords_in_chunk.y - 1,
+                                           coords_in_chunk.z};
+                neighbor = chunk_get_block_including_neighbors(chunk,
+                                                               cc.x,
+                                                               cc.y,
+                                                               cc.z,
+                                                               &insertChunk,
+                                                               &cc);
                 if (neighbor != NULL) {
-                    insertPos.x = pos.x;
-                    insertPos.y = pos.y - 1;
-                    insertPos.z = pos.z;
-
-                    _light_removal_processNeighbor(s,
-                                                   bbMin,
-                                                   bbMax,
-                                                   light,
-                                                   srgb,
-                                                   false,
-                                                   &insertPos,
-                                                   neighbor,
-                                                   lightQueue,
-                                                   lightRemovalQueue);
+                    _light_removal_process_neighbor(s,
+                                                    insertChunk,
+                                                    bbMin,
+                                                    bbMax,
+                                                    light,
+                                                    srgb,
+                                                    false,
+                                                    cc,
+                                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                                          coords_in_shape.y - 1,
+                                                                          coords_in_shape.z},
+                                                    neighbor,
+                                                    lightQueue,
+                                                    lightRemovalQueue);
                 }
                 // z + 1
-                neighbor = shape_get_block(s, pos.x, pos.y, pos.z + 1, false);
+                cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x,
+                                           coords_in_chunk.y,
+                                           coords_in_chunk.z + 1};
+                neighbor = chunk_get_block_including_neighbors(chunk,
+                                                               cc.x,
+                                                               cc.y,
+                                                               cc.z,
+                                                               &insertChunk,
+                                                               &cc);
                 if (neighbor != NULL) {
-                    insertPos.x = pos.x;
-                    insertPos.y = pos.y;
-                    insertPos.z = pos.z + 1;
-
-                    _light_removal_processNeighbor(s,
-                                                   bbMin,
-                                                   bbMax,
-                                                   light,
-                                                   srgb,
-                                                   false,
-                                                   &insertPos,
-                                                   neighbor,
-                                                   lightQueue,
-                                                   lightRemovalQueue);
+                    _light_removal_process_neighbor(s,
+                                                    insertChunk,
+                                                    bbMin,
+                                                    bbMax,
+                                                    light,
+                                                    srgb,
+                                                    false,
+                                                    cc,
+                                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                                          coords_in_shape.y,
+                                                                          coords_in_shape.z + 1},
+                                                    neighbor,
+                                                    lightQueue,
+                                                    lightRemovalQueue);
                 }
                 // z - 1
-                neighbor = shape_get_block(s, pos.x, pos.y, pos.z - 1, false);
+                cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x,
+                                           coords_in_chunk.y,
+                                           coords_in_chunk.z - 1};
+                neighbor = chunk_get_block_including_neighbors(chunk,
+                                                               cc.x,
+                                                               cc.y,
+                                                               cc.z,
+                                                               &insertChunk,
+                                                               &cc);
                 if (neighbor != NULL) {
-                    insertPos.x = pos.x;
-                    insertPos.y = pos.y;
-                    insertPos.z = pos.z - 1;
-
-                    _light_removal_processNeighbor(s,
-                                                   bbMin,
-                                                   bbMax,
-                                                   light,
-                                                   srgb,
-                                                   false,
-                                                   &insertPos,
-                                                   neighbor,
-                                                   lightQueue,
-                                                   lightRemovalQueue);
+                    _light_removal_process_neighbor(s,
+                                                    insertChunk,
+                                                    bbMin,
+                                                    bbMax,
+                                                    light,
+                                                    srgb,
+                                                    false,
+                                                    cc,
+                                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x,
+                                                                          coords_in_shape.y,
+                                                                          coords_in_shape.z - 1},
+                                                    neighbor,
+                                                    lightQueue,
+                                                    lightRemovalQueue);
                 }
             }
             // if emissive block
@@ -4671,34 +3910,43 @@ void _light_removal(Shape *s,
                                 continue;
                             }
 
-                            insertPos.x = pos.x + xo;
-                            insertPos.y = pos.y + yo;
-                            insertPos.z = pos.z + zo;
-
-                            neighbor = shape_get_block(s,
-                                                       insertPos.x,
-                                                       insertPos.y,
-                                                       insertPos.z,
-                                                       false);
+                            cc = (CHUNK_COORDS_INT3_T){coords_in_chunk.x + (CHUNK_COORDS_INT_T)xo,
+                                                       coords_in_chunk.y + (CHUNK_COORDS_INT_T)yo,
+                                                       coords_in_chunk.z + (CHUNK_COORDS_INT_T)zo};
+                            neighbor = chunk_get_block_including_neighbors(chunk,
+                                                                           cc.x,
+                                                                           cc.y,
+                                                                           cc.z,
+                                                                           &insertChunk,
+                                                                           &cc);
                             if (neighbor != NULL) {
                                 // only first-degree neighbors remove the emissive block's own RGB
                                 // values (passing equals=true)
-                                _light_removal_processNeighbor(s,
-                                                               bbMin,
-                                                               bbMax,
-                                                               light,
-                                                               15,
-                                                               true,
-                                                               &insertPos,
-                                                               neighbor,
-                                                               lightQueue,
-                                                               lightRemovalQueue);
+                                _light_removal_process_neighbor(
+                                    s,
+                                    insertChunk,
+                                    bbMin,
+                                    bbMax,
+                                    light,
+                                    15,
+                                    true,
+                                    cc,
+                                    (SHAPE_COORDS_INT3_T){coords_in_shape.x + xo,
+                                                          coords_in_shape.y + yo,
+                                                          coords_in_shape.z + zo},
+                                    neighbor,
+                                    lightQueue,
+                                    lightRemovalQueue);
                             }
                         }
                     }
                 }
             }
         }
+
+#if SHAPE_LIGHTING_DEBUG
+        iCount++;
+#endif
 
         light_removal_node_queue_recycle(rn);
         rn = light_removal_node_queue_pop(lightRemovalQueue);
@@ -4709,140 +3957,37 @@ void _light_removal(Shape *s,
 #endif
 }
 
-void _light_realloc(Shape *s,
-                    const SHAPE_SIZE_INT_T dx,
-                    const SHAPE_SIZE_INT_T dy,
-                    const SHAPE_SIZE_INT_T dz,
-                    const SHAPE_SIZE_INT_T offsetX,
-                    const SHAPE_SIZE_INT_T offsetY,
-                    const SHAPE_SIZE_INT_T offsetZ) {
+void _light_removal_all(Shape *s, SHAPE_COORDS_INT3_T *min, SHAPE_COORDS_INT3_T *max) {
+    Index3DIterator *it = index3d_iterator_new(s->chunks);
+    Chunk *c;
+    bool init = true;
+    while (index3d_iterator_pointer(it) != NULL) {
+        c = index3d_iterator_pointer(it);
 
-    // skip if this shape cannot use baked light, or if it is not computed yet
-    if (_has_allocated_size(s) == false || s->lightingData == NULL)
-        return;
-
-    // - keep existing data, copy it and apply offset
-    // - set newly allocated lighting data to 0
-    // - propagate from ambient & light blocks sources located on each side where new space was
-    // appended
-
-    const size_t lightingSize = (size_t)s->maxWidth * (size_t)s->maxHeight * (size_t)s->maxDepth *
-                                (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
-    VERTEX_LIGHT_STRUCT_T *lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingSize);
-    if (lightingData == NULL) {
-        return;
-    }
-    const SHAPE_SIZE_INT_T srcWidth = s->maxWidth - dx;
-    const SHAPE_SIZE_INT_T srcHeight = s->maxHeight - dy;
-    const SHAPE_SIZE_INT_T srcDepth = s->maxDepth - dz;
-    const size_t srcSlicePitch = srcHeight * srcDepth;
-    const size_t dstSlicePitch = s->maxHeight * s->maxDepth;
-
-    const size_t offsetZSize = offsetZ * sizeof(VERTEX_LIGHT_STRUCT_T);
-    const size_t srcDepthSize = srcDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
-    const size_t dstDepthSize = s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T);
-    const size_t reminderSize = (dz - offsetZ) * sizeof(VERTEX_LIGHT_STRUCT_T);
-
-    // set to 0 empty slice of data at the beginning (from offsetX)
-    if (offsetX > 0) {
-        memset(lightingData, 0, offsetX * dstSlicePitch * sizeof(VERTEX_LIGHT_STRUCT_T));
-    }
-
-    SHAPE_SIZE_INT_T ox, oy;
-    for (SHAPE_SIZE_INT_T xx = 0; xx < s->maxWidth; ++xx) {
-
-        // set to 0 empty row of data at the beginning (from offsetY)
-        if (offsetY > 0) {
-            memset(lightingData + xx * dstSlicePitch,
-                   0,
-                   offsetY * s->maxDepth * sizeof(VERTEX_LIGHT_STRUCT_T));
+        const SHAPE_COORDS_INT3_T origin = chunk_get_origin(c);
+        if (init) {
+            *min = origin;
+            *max = (SHAPE_COORDS_INT3_T){origin.x + CHUNK_SIZE,
+                                         origin.y + CHUNK_SIZE,
+                                         origin.z + CHUNK_SIZE};
+            init = false;
+        } else {
+            min->x = minimum(min->x, origin.x);
+            min->y = minimum(min->y, origin.y);
+            min->z = minimum(min->z, origin.z);
+            max->x = maximum(max->x, origin.x + CHUNK_SIZE);
+            max->y = maximum(max->y, origin.y + CHUNK_SIZE);
+            max->z = maximum(max->z, origin.z + CHUNK_SIZE);
         }
+        chunk_reset_lighting_data(c, true);
 
-        for (SHAPE_SIZE_INT_T yy = 0; yy < s->maxHeight; ++yy) {
-            ox = xx + offsetX;
-            oy = yy + offsetY;
-
-            if (xx < srcWidth && yy < srcHeight) {
-                // set to 0 empty data at the beginning (from offsetZ)
-                if (offsetZ > 0) {
-                    memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth, 0, offsetZSize);
-                }
-
-                // copy existing row data
-                memcpy(lightingData + ox * dstSlicePitch + oy * s->maxDepth + offsetZ,
-                       s->lightingData + xx * srcSlicePitch + yy * srcDepth,
-                       srcDepthSize);
-
-                // set reminder to 0
-                if (dz > offsetZ) {
-                    memset(lightingData + ox * dstSlicePitch + oy * s->maxDepth + offsetZ +
-                               srcDepth,
-                           0,
-                           reminderSize);
-                }
-            } else {
-                // set new row to 0
-                memset(lightingData + xx * dstSlicePitch + yy * s->maxDepth, 0, dstDepthSize);
-            }
-        }
+        index3d_iterator_next(it);
     }
+    index3d_iterator_free(it);
 
-    free(s->lightingData);
-    s->lightingData = lightingData;
-
-    LightNodeQueue *q = light_node_queue_new();
-
-    // enqueue ambient & light block & air sources within range, on each side w/ newly empty data
-    if (offsetX > 0) {
-        const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)offsetX,
-                                        (SHAPE_COORDS_INT_T)s->maxHeight,
-                                        (SHAPE_COORDS_INT_T)s->maxDepth};
-        _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, true);
+    if (init) {
+        *min = *max = coords3_zero;
     }
-    if (offsetY > 0) {
-        const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
-                                        (SHAPE_COORDS_INT_T)offsetY,
-                                        (SHAPE_COORDS_INT_T)s->maxDepth};
-        _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, true);
-    }
-    if (offsetZ > 0) {
-        const SHAPE_COORDS_INT3_T to = {(SHAPE_COORDS_INT_T)s->maxWidth,
-                                        (SHAPE_COORDS_INT_T)s->maxHeight,
-                                        (SHAPE_COORDS_INT_T)offsetZ};
-        _light_enqueue_ambient_and_block_sources(s, q, coords3_zero, to, true);
-    }
-    const SHAPE_COORDS_INT3_T max = {(SHAPE_COORDS_INT_T)s->maxWidth,
-                                     (SHAPE_COORDS_INT_T)s->maxHeight,
-                                     (SHAPE_COORDS_INT_T)s->maxDepth};
-    // note: dx and not reminder (dx - offsetX), to include empty data previously inside model then
-    // offseted
-    if (dx > 0) {
-        const SHAPE_COORDS_INT3_T from = {(SHAPE_COORDS_INT_T)(s->maxWidth - dx), 0, 0};
-        _light_enqueue_ambient_and_block_sources(s, q, from, max, true);
-    }
-    if (dy > 0) {
-        const SHAPE_COORDS_INT3_T from = {0, (SHAPE_COORDS_INT_T)(s->maxHeight - dy), 0};
-        _light_enqueue_ambient_and_block_sources(s, q, from, max, true);
-    }
-    if (dz > 0) {
-        const SHAPE_COORDS_INT3_T from = {0, 0, (SHAPE_COORDS_INT_T)(s->maxDepth - dz)};
-        _light_enqueue_ambient_and_block_sources(s, q, from, max, true);
-    }
-
-    _light_propagate(s, NULL, NULL, q, -1, (SHAPE_COORDS_INT_T)s->maxHeight, -1);
-
-    light_node_queue_free(q);
-
-#if SHAPE_LIGHTING_DEBUG
-    cclog_debug(
-        "☀️☀️☀️lighting data reallocated w/ delta (%d, %d, %d) offset (%d, %d, %d)",
-        dx,
-        dy,
-        dz,
-        offsetX,
-        offsetY,
-        offsetZ);
-#endif
 }
 
 void _shape_check_all_vb_fragmented(Shape *s, VertexBuffer *first) {
@@ -4865,7 +4010,7 @@ void _shape_flush_all_vb(Shape *s) {
 
         chunk_set_vbma(c, NULL, false);
         chunk_set_vbma(c, NULL, true);
-        shape_chunk_needs_display(s, c);
+        _shape_chunk_enqueue_refresh(s, c);
 
         index3d_iterator_next(it);
     }
@@ -4900,14 +4045,7 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
         return false;
     }
 
-    // resize shape before applying transaction changes
-    if (transaction_getMustConsiderNewBounds(tr)) {
-        SHAPE_COORDS_INT_T minX, minY, minZ, maxX, maxY, maxZ;
-        transaction_getNewBounds(tr, &minX, &minY, &minZ, &maxX, &maxY, &maxZ);
-        shape_make_space(sh, minX, minY, minZ, maxX, maxY, maxZ, true /*apply offset*/);
-    }
-
-    // Returned iterator remains under transaction responsability
+    // Returned iterator remains under transaction responsibility
     // Do not free it!
     Index3DIterator *it = transaction_getIndex3DIterator(tr);
     if (it == NULL) {
@@ -4917,12 +4055,13 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
     // loop on all the BlockChanges
     SHAPE_COLOR_INDEX_INT_T before, after;
     SHAPE_COORDS_INT_T x, y, z;
-    bool shapeShrinkNeeded = false;
+    uint32_t resetBoxNeeded = false;
 
     BlockChange *bc;
     const Block *b;
     while (index3d_iterator_pointer(it) != NULL) {
         bc = (BlockChange *)index3d_iterator_pointer(it);
+        index3d_iterator_next(it);
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
@@ -4931,7 +4070,7 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
         // an issue since transactions can be applied from a line-by-line refresh in Lua
         // (eg. shape.Width), meaning part of an amended transaction could've been applied
         // already. As a result, we'll always use the CURRENT block
-        b = shape_get_block_immediate(sh, x, y, z, true);
+        b = shape_get_block_immediate(sh, x, y, z);
         before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
         blockChange_set_previous_color(bc, before);
 
@@ -4939,24 +4078,27 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
 
         // [air>block] = add block
         if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_add_block_with_color(sh, after, x, y, z, false, true, false);
+            shape_add_block(sh, after, x, y, z, false);
         }
         // [block>air] = remove block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_remove_block(sh, x, y, z, NULL, true, false);
-            shapeShrinkNeeded = true;
+            shape_remove_block(sh, x, y, z);
+            if (index3d_iterator_pointer(it) == NULL) {
+                // if block removal is the only transaction, use cheaper function
+                shape_shrink_box(sh, (SHAPE_COORDS_INT3_T){x, y, z});
+            } else {
+                resetBoxNeeded = true;
+            }
         }
         // [block>block] = paint block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK &&
                  before != after) {
-            shape_paint_block(sh, after, x, y, z, NULL, NULL, true);
+            shape_paint_block(sh, after, x, y, z);
         }
-
-        index3d_iterator_next(it);
     }
 
-    if (shapeShrinkNeeded == true) {
-        shape_shrink_box(sh, true);
+    if (resetBoxNeeded) {
+        shape_reset_box(sh);
     }
 
     return true;
@@ -4974,7 +4116,7 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
 
     // No need to resize the shape down
 
-    // Returned iterator remains under transaction responsability
+    // Returned iterator remains under transaction responsibility
     // Do not free it!
     Index3DIterator *it = transaction_getIndex3DIterator(tr);
     if (it == NULL) {
@@ -4983,40 +4125,46 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
 
     SHAPE_COLOR_INDEX_INT_T before, after;
     SHAPE_COORDS_INT_T x, y, z;
-    bool shapeShrinkNeeded = false;
+    bool resetBoxNeeded = false;
 
     // loop on all the BlockChanges and revert them
     BlockChange *bc;
     const Block *b;
     while (index3d_iterator_pointer(it) != NULL) {
         bc = (BlockChange *)index3d_iterator_pointer(it);
+        index3d_iterator_next(it);
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
-        b = shape_get_block_immediate(sh, x, y, z, true);
+        b = shape_get_block_immediate(sh, x, y, z);
         before = b != NULL ? b->colorIndex : SHAPE_COLOR_INDEX_AIR_BLOCK;
 
         after = blockChange_get_previous_color(bc);
 
         // [air>block] = add block
         if (before == SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_add_block_with_color(sh, after, x, y, z, false, true, false);
+            shape_add_block(sh, after, x, y, z, false);
         }
         // [block>air] = remove block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after == SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_remove_block(sh, x, y, z, NULL, true, false);
-            shapeShrinkNeeded = true;
+            shape_remove_block(sh, x, y, z);
+            if (index3d_iterator_pointer(it) == NULL) {
+                // if block removal is the only transaction, use cheaper function
+                shape_shrink_box(sh, (SHAPE_COORDS_INT3_T){x, y, z});
+            } else {
+                resetBoxNeeded = true;
+            }
         }
         // [block>block] = paint block
         else if (before != SHAPE_COLOR_INDEX_AIR_BLOCK && after != SHAPE_COLOR_INDEX_AIR_BLOCK) {
-            shape_paint_block(sh, after, x, y, z, NULL, NULL, true);
+            shape_paint_block(sh, after, x, y, z);
         }
 
         index3d_iterator_next(it);
     }
 
-    if (shapeShrinkNeeded == true) {
-        shape_shrink_box(sh, true);
+    if (resetBoxNeeded == true) {
+        shape_reset_box(sh);
     }
 
     return true;
@@ -5027,4 +4175,75 @@ void _shape_clear_cached_world_aabb(Shape *s) {
         box_free(s->worldAABB);
         s->worldAABB = NULL;
     }
+}
+
+bool _shape_compute_size_and_origin(const Shape *shape,
+                                    SHAPE_SIZE_INT_T *size_x,
+                                    SHAPE_SIZE_INT_T *size_y,
+                                    SHAPE_SIZE_INT_T *size_z,
+                                    SHAPE_COORDS_INT_T *origin_x,
+                                    SHAPE_COORDS_INT_T *origin_y,
+                                    SHAPE_COORDS_INT_T *origin_z) {
+
+    Index3DIterator *it = index3d_iterator_new(shape->chunks);
+    if (index3d_iterator_pointer(it) == NULL) {
+        *size_x = 0;
+        *size_y = 0;
+        *size_z = 0;
+        *origin_x = 0;
+        *origin_y = 0;
+        *origin_z = 0;
+        return false; // empty shape
+    }
+
+    SHAPE_COORDS_INT3_T s_min = coords3_zero, s_max = coords3_zero;
+    float3 c_min, c_max;
+    Chunk *c;
+    bool firstChunk = true;
+    while (index3d_iterator_pointer(it) != NULL) {
+        c = (Chunk *)index3d_iterator_pointer(it);
+
+        if (chunk_get_nb_blocks(c) > 0) {
+            chunk_get_bounding_box(c, &c_min, &c_max);
+            const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
+
+            const SHAPE_COORDS_INT3_T c_s_min = {chunkOrigin.x + (SHAPE_COORDS_INT_T)c_min.x,
+                                                 chunkOrigin.y + (SHAPE_COORDS_INT_T)c_min.y,
+                                                 chunkOrigin.z + (SHAPE_COORDS_INT_T)c_min.z};
+            const SHAPE_COORDS_INT3_T c_s_max = {chunkOrigin.x + (SHAPE_COORDS_INT_T)c_max.x,
+                                                 chunkOrigin.y + (SHAPE_COORDS_INT_T)c_max.y,
+                                                 chunkOrigin.z + (SHAPE_COORDS_INT_T)c_max.z};
+
+            if (firstChunk) {
+                s_min = c_s_min;
+                s_max = c_s_max;
+                firstChunk = false;
+            } else {
+                s_min.x = minimum(s_min.x, c_s_min.x);
+                s_min.y = minimum(s_min.y, c_s_min.x);
+                s_min.z = minimum(s_min.z, c_s_min.x);
+                s_max.x = maximum(s_max.x, c_s_max.x);
+                s_max.y = maximum(s_max.y, c_s_max.y);
+                s_max.z = maximum(s_max.z, c_s_max.z);
+            }
+        }
+
+        index3d_iterator_next(it);
+    }
+    index3d_iterator_free(it);
+
+    *size_x = (SHAPE_SIZE_INT_T)(s_max.x - s_min.x);
+    *size_y = (SHAPE_SIZE_INT_T)(s_max.y - s_min.y);
+    *size_z = (SHAPE_SIZE_INT_T)(s_max.z - s_min.z);
+
+    *origin_x = s_min.x;
+    *origin_y = s_min.y;
+    *origin_z = s_min.z;
+
+    return true; // non-empty shape
+}
+
+bool _shape_is_bounding_box_empty(const Shape *shape) {
+    return shape->bbMin.x == shape->bbMax.x || shape->bbMin.y == shape->bbMax.y ||
+           shape->bbMin.z == shape->bbMax.z;
 }

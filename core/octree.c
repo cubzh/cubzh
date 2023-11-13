@@ -35,18 +35,16 @@ static const int startIndexForLevel[11] =
 
 ///
 struct _Octree {
-    void *nodes;         // memory area containing all nodes // 4/8 bytes
-    void *elements;      // memory area for all elements (kind of a flat 3d array based on octree
-                         // indexes) // 4/8 bytes
-    size_t element_size; // size of one element, small + power of two is ideal // 4/8 bytes
-    size_t nodes_size_in_memory;    // 4/8 bytes
+    void *nodes;                 // memory area containing all nodes // 4/8 bytes
+    void *elements;              // memory area for all elements (flat 3d array) // 4/8 bytes
+    size_t element_size;         // size of one element, small + power of two is ideal // 4/8 bytes
+    size_t nodes_size_in_memory; // 4/8 bytes
     size_t elements_size_in_memory; // 4/8 bytes
     size_t width_height_depth;      // 4/8 bytes
     uint32_t nb_nodes;              // 4 bytes
     uint32_t nb_elements;           // 4 bytes
     uint8_t levels;                 // 1 byte
-    uint8_t nbDrawSlices;           // 1 byte
-    char pad[6];                    // 6 bytes
+    char pad[7];
 };
 
 ///
@@ -84,14 +82,6 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
     const double cubicRoot = cbrt(tree->nb_elements);
     tree->width_height_depth = (size_t)cubicRoot;
 
-    //    if (tree->width_height_depth == upper_power_of_two(tree->width_height_depth)) {
-    //        cclog_info("👍 octree size is a power of 2");
-    //    } else {
-    //        cclog_info("⚠️ octree size is NOT a power of 2");
-    //    }
-
-    // const int systemPageSize = getpagesize();
-
     tree->element_size = elementSize;
 
     tree->nodes_size_in_memory = tree->nb_nodes * sizeof(OctreeNode);
@@ -119,6 +109,33 @@ Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
     }
 
     return tree;
+}
+
+Octree *octree_new_copy(const Octree *octree) {
+    Octree *copy = _octree_new();
+    copy->levels = octree->levels;
+    copy->nb_nodes = octree->nb_nodes;
+    copy->nb_elements = octree->nb_elements;
+    copy->width_height_depth = octree->width_height_depth;
+    copy->element_size = octree->element_size;
+    copy->nodes_size_in_memory = octree->nodes_size_in_memory;
+    copy->elements_size_in_memory = octree->elements_size_in_memory;
+
+    copy->nodes = malloc(copy->nodes_size_in_memory);
+    if (copy->nodes == NULL) {
+        octree_free(copy);
+        return NULL;
+    }
+    memcpy(copy->nodes, octree->nodes, copy->nodes_size_in_memory);
+
+    copy->elements = malloc(copy->elements_size_in_memory);
+    if (copy->elements == NULL) {
+        octree_free(copy);
+        return NULL;
+    }
+    memcpy(copy->elements, octree->elements, copy->elements_size_in_memory);
+
+    return copy;
 }
 
 void octree_flush(Octree *tree) {
@@ -434,11 +451,10 @@ bool octree_remove_element(const Octree *octree, size_t x, size_t y, size_t z, v
         _octree_set_element(octree, emptyElement, x, y, z);
     }
 
-    // printf("🔥 octree_remove_element not implemented\n");
     return true;
 }
 
-// looks level per level to see if the element and returns it if it does, NULL otherwise.
+// looks level per level to see if the element exists and returns it if it does, NULL otherwise.
 void *octree_get_element(const Octree *octree, const size_t x, const size_t y, const size_t z) {
 
     // check if element exists
@@ -1259,6 +1275,5 @@ static Octree *_octree_new(void) {
     o->nb_nodes = 0;
     o->nb_elements = 0;
     o->levels = 0;
-    o->nbDrawSlices = 0;
     return o;
 }

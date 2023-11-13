@@ -31,30 +31,30 @@ void test_light_node_queue_new(void) {
 void test_light_node_get_coords(void) {
     const SHAPE_COORDS_INT3_T coords1 = {-10, 0, 10};
     const SHAPE_COORDS_INT3_T coords2 = {185, 516, -1684};
-    SHAPE_COORDS_INT3_T int3Check = {0, 0, 0};
+    SHAPE_COORDS_INT3_T coordsCheck = {0, 0, 0};
     LightNode *check = NULL;
 
     LightNodeQueue *const q = light_node_queue_new();
 
-    light_node_queue_push(q, &coords1);
+    light_node_queue_push(q, NULL, coords1);
     check = light_node_queue_pop(q);
-    light_node_get_coords(check, &int3Check);
+    coordsCheck = light_node_get_coords(check);
 
     light_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coords1.x);
-    TEST_CHECK(int3Check.y == coords1.y);
-    TEST_CHECK(int3Check.z == coords1.z);
+    TEST_CHECK(coordsCheck.x == coords1.x);
+    TEST_CHECK(coordsCheck.y == coords1.y);
+    TEST_CHECK(coordsCheck.z == coords1.z);
 
-    light_node_queue_push(q, &coords2);
+    light_node_queue_push(q, NULL, coords2);
     check = light_node_queue_pop(q);
-    light_node_get_coords(check, &int3Check);
+    coordsCheck = light_node_get_coords(check);
 
     light_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coords2.x);
-    TEST_CHECK(int3Check.y == coords2.y);
-    TEST_CHECK(int3Check.z == coords2.z);
+    TEST_CHECK(coordsCheck.x == coords2.x);
+    TEST_CHECK(coordsCheck.y == coords2.y);
+    TEST_CHECK(coordsCheck.z == coords2.z);
 
     light_node_queue_free(q);
 }
@@ -62,19 +62,19 @@ void test_light_node_get_coords(void) {
 // Create a queue and insert in it a node. Pop the node and check if this is the good one.
 void test_light_node_queue_push(void) {
     const SHAPE_COORDS_INT3_T coords = {-10, 0, 10};
-    SHAPE_COORDS_INT3_T int3Check = {0, 0, 0};
+    SHAPE_COORDS_INT3_T coordsCheck = {0, 0, 0};
 
     LightNodeQueue *q = light_node_queue_new();
-    light_node_queue_push(q, &coords);
+    light_node_queue_push(q, NULL, coords);
 
     LightNode *check = light_node_queue_pop(q);
-    light_node_get_coords(check, &int3Check);
+    coordsCheck = light_node_get_coords(check);
 
     light_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coords.x);
-    TEST_CHECK(int3Check.y == coords.y);
-    TEST_CHECK(int3Check.z == coords.z);
+    TEST_CHECK(coordsCheck.x == coords.x);
+    TEST_CHECK(coordsCheck.y == coords.y);
+    TEST_CHECK(coordsCheck.z == coords.z);
 
     light_node_queue_free(q);
 }
@@ -86,40 +86,40 @@ void test_light_node_queue_pop(void) {
     const SHAPE_COORDS_INT3_T coordsA = {-10, 0, 10};
     const SHAPE_COORDS_INT3_T coordsB = {-3565, 17368, 20724};
     const SHAPE_COORDS_INT3_T coordsC = {984, -27863, 1563};
-    SHAPE_COORDS_INT3_T int3Check = {0, 0, 0};
+    SHAPE_COORDS_INT3_T coordsCheck = {0, 0, 0};
     LightNode *check = NULL;
 
     LightNodeQueue *q = light_node_queue_new();
-    light_node_queue_push(q, &coordsA); // [coordsA]
-    light_node_queue_push(q, &coordsB); // [coordsB, coordsA]
-    light_node_queue_push(q, &coordsC); // [coordsC, coordsB, coordsA]
+    light_node_queue_push(q, NULL, coordsA); // [coordsA]
+    light_node_queue_push(q, NULL, coordsB); // [coordsB, coordsA]
+    light_node_queue_push(q, NULL, coordsC); // [coordsC, coordsB, coordsA]
 
     check = light_node_queue_pop(q); // [coordsB, coordsA]
-    light_node_get_coords(check, &int3Check);
+    coordsCheck = light_node_get_coords(check);
 
     light_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coordsC.x);
-    TEST_CHECK(int3Check.y == coordsC.y);
-    TEST_CHECK(int3Check.z == coordsC.z);
+    TEST_CHECK(coordsCheck.x == coordsC.x);
+    TEST_CHECK(coordsCheck.y == coordsC.y);
+    TEST_CHECK(coordsCheck.z == coordsC.z);
 
     check = light_node_queue_pop(q); // [coordsA]
-    light_node_get_coords(check, &int3Check);
+    coordsCheck = light_node_get_coords(check);
 
     light_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coordsB.x);
-    TEST_CHECK(int3Check.y == coordsB.y);
-    TEST_CHECK(int3Check.z == coordsB.z);
+    TEST_CHECK(coordsCheck.x == coordsB.x);
+    TEST_CHECK(coordsCheck.y == coordsB.y);
+    TEST_CHECK(coordsCheck.z == coordsB.z);
 
     check = light_node_queue_pop(q); // []
-    light_node_get_coords(check, &int3Check);
+    coordsCheck = light_node_get_coords(check);
 
     light_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coordsA.x);
-    TEST_CHECK(int3Check.y == coordsA.y);
-    TEST_CHECK(int3Check.z == coordsA.z);
+    TEST_CHECK(coordsCheck.x == coordsA.x);
+    TEST_CHECK(coordsCheck.y == coordsA.y);
+    TEST_CHECK(coordsCheck.z == coordsA.z);
 
     check = light_node_queue_pop(q);
     TEST_CHECK(check == NULL);
@@ -149,7 +149,7 @@ void test_light_removal_node_queue_push(void) {
     DEFAULT_LIGHT(light);
     uint8_t srgb = 15;
     SHAPE_COLOR_INDEX_INT_T blockID = 100;
-    light_removal_node_queue_push(q, &coords, light, srgb, blockID);
+    light_removal_node_queue_push(q, NULL, coords, light, srgb, blockID);
 
     check = light_removal_node_queue_pop(q);
     TEST_CHECK(check != NULL);
@@ -165,24 +165,24 @@ void test_light_removal_node_queue_push(void) {
 void test_light_removal_node_queue_pop(void) {
     const SHAPE_COORDS_INT3_T coords = {-10, 0, 10};
     LightRemovalNode *check = NULL;
-    SHAPE_COORDS_INT3_T int3Check = {0, 0, 0};
+    SHAPE_COORDS_INT3_T coordsCheck = {0, 0, 0};
 
     LightRemovalNodeQueue *q = light_removal_node_queue_new();
     VERTEX_LIGHT_STRUCT_T light;
     DEFAULT_LIGHT(light);
     uint8_t srgb = 15;
     SHAPE_COLOR_INDEX_INT_T blockID = 100;
-    light_removal_node_queue_push(q, &coords, light, srgb, blockID);
+    light_removal_node_queue_push(q, NULL, coords, light, srgb, blockID);
 
     check = light_removal_node_queue_pop(q);
     TEST_CHECK(check != NULL);
-    light_removal_node_get_coords(check, &int3Check);
+    coordsCheck = light_removal_node_get_coords(check);
 
     light_removal_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coords.x);
-    TEST_CHECK(int3Check.y == coords.y);
-    TEST_CHECK(int3Check.z == coords.z);
+    TEST_CHECK(coordsCheck.x == coords.x);
+    TEST_CHECK(coordsCheck.y == coords.y);
+    TEST_CHECK(coordsCheck.z == coords.z);
 
     light_removal_node_queue_free(q);
 }
@@ -193,7 +193,7 @@ void test_light_removal_node_get_coords(void) {
     const SHAPE_COORDS_INT3_T coordsA = {-10, 0, 10};
     const SHAPE_COORDS_INT3_T coordsB = {29684, -45, -14556};
     LightRemovalNode *check = NULL;
-    SHAPE_COORDS_INT3_T int3Check = {0, 0, 0};
+    SHAPE_COORDS_INT3_T coordsCheck = {0, 0, 0};
 
     LightRemovalNodeQueue *q = light_removal_node_queue_new();
 
@@ -202,34 +202,34 @@ void test_light_removal_node_get_coords(void) {
     DEFAULT_LIGHT(lightA);
     uint8_t srgbA = 15;
     SHAPE_COLOR_INDEX_INT_T blockIDA = 100;
-    light_removal_node_queue_push(q, &coordsA, lightA, srgbA, blockIDA);
+    light_removal_node_queue_push(q, NULL, coordsA, lightA, srgbA, blockIDA);
 
     // Node B
     VERTEX_LIGHT_STRUCT_T lightB;
     ZERO_LIGHT(lightB);
     uint8_t srgbB = 30;
     SHAPE_COLOR_INDEX_INT_T blockIDB = 255;
-    light_removal_node_queue_push(q, &coordsB, lightB, srgbB, blockIDB);
+    light_removal_node_queue_push(q, NULL, coordsB, lightB, srgbB, blockIDB);
 
     // Check for Node B
     check = light_removal_node_queue_pop(q);
-    light_removal_node_get_coords(check, &int3Check);
+    coordsCheck = light_removal_node_get_coords(check);
 
     light_removal_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coordsB.x);
-    TEST_CHECK(int3Check.y == coordsB.y);
-    TEST_CHECK(int3Check.z == coordsB.z);
+    TEST_CHECK(coordsCheck.x == coordsB.x);
+    TEST_CHECK(coordsCheck.y == coordsB.y);
+    TEST_CHECK(coordsCheck.z == coordsB.z);
 
     // Check for Node A
     check = light_removal_node_queue_pop(q);
-    light_removal_node_get_coords(check, &int3Check);
+    coordsCheck = light_removal_node_get_coords(check);
 
     light_removal_node_free(check);
     check = NULL;
-    TEST_CHECK(int3Check.x == coordsA.x);
-    TEST_CHECK(int3Check.y == coordsA.y);
-    TEST_CHECK(int3Check.z == coordsA.z);
+    TEST_CHECK(coordsCheck.x == coordsA.x);
+    TEST_CHECK(coordsCheck.y == coordsA.y);
+    TEST_CHECK(coordsCheck.z == coordsA.z);
 
     light_removal_node_queue_free(q);
 }
@@ -249,14 +249,14 @@ void test_light_removal_node_get_srgb(void) {
     DEFAULT_LIGHT(lightA);
     uint8_t srgbA = 15;
     SHAPE_COLOR_INDEX_INT_T blockIDA = 100;
-    light_removal_node_queue_push(q, &coordsA, lightA, srgbA, blockIDA);
+    light_removal_node_queue_push(q, NULL, coordsA, lightA, srgbA, blockIDA);
 
     // Node B
     VERTEX_LIGHT_STRUCT_T lightB;
     ZERO_LIGHT(lightB);
     uint8_t srgbB = 30;
     SHAPE_COLOR_INDEX_INT_T blockIDB = 255;
-    light_removal_node_queue_push(q, &coordsB, lightB, srgbB, blockIDB);
+    light_removal_node_queue_push(q, NULL, coordsB, lightB, srgbB, blockIDB);
 
     // Check for Node B
     check = light_removal_node_queue_pop(q);
@@ -292,14 +292,14 @@ void test_light_removal_node_get_block_id(void) {
     DEFAULT_LIGHT(lightA);
     uint8_t srgbA = 15;
     SHAPE_COLOR_INDEX_INT_T blockIDA = 100;
-    light_removal_node_queue_push(q, &coordsA, lightA, srgbA, blockIDA);
+    light_removal_node_queue_push(q, NULL, coordsA, lightA, srgbA, blockIDA);
 
     // Node B
     VERTEX_LIGHT_STRUCT_T lightB;
     ZERO_LIGHT(lightB);
     uint8_t srgbB = 30;
     SHAPE_COLOR_INDEX_INT_T blockIDB = 255;
-    light_removal_node_queue_push(q, &coordsB, lightB, srgbB, blockIDB);
+    light_removal_node_queue_push(q, NULL, coordsB, lightB, srgbB, blockIDB);
 
     // Check for Node B
     check = light_removal_node_queue_pop(q);

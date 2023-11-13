@@ -9,10 +9,12 @@
 #include <stdlib.h>
 
 #include "cclog.h"
+#include "chunk.h"
 #include "int3.h"
 
 struct _LightNode {
     LightNode *next;
+    Chunk *chunk;
     SHAPE_COORDS_INT3_T coords; /* 6 bytes */
     char pad[2];
 };
@@ -24,6 +26,7 @@ struct _LightNodeQueue {
 LightNode *light_node_new(void) {
     LightNode *ln = (LightNode *)malloc(sizeof(LightNode));
     ln->next = NULL;
+    ln->chunk = NULL;
     ln->coords = (SHAPE_COORDS_INT3_T){0, 0, 0};
     return ln;
 }
@@ -36,8 +39,12 @@ void light_removal_node_free(LightRemovalNode *n) {
     free(n);
 }
 
-void light_node_get_coords(const LightNode *n, SHAPE_COORDS_INT3_T *coords) {
-    *coords = n->coords;
+SHAPE_COORDS_INT3_T light_node_get_coords(const LightNode *n) {
+    return n->coords;
+}
+
+Chunk *light_node_get_chunk(const LightNode *n) {
+    return n->chunk;
 }
 
 LightNodeQueue *light_node_recycle_pool(void) {
@@ -74,7 +81,7 @@ LightNode *light_node_queue_pop(LightNodeQueue *q) {
     return r;
 }
 
-void light_node_queue_push(LightNodeQueue *q, const SHAPE_COORDS_INT3_T *coords) {
+void light_node_queue_push(LightNodeQueue *q, Chunk *chunk, const SHAPE_COORDS_INT3_T coords) {
     // try to get new node from recycle pool first
     LightNode *n = light_node_queue_pop(light_node_recycle_pool());
 
@@ -87,7 +94,8 @@ void light_node_queue_push(LightNodeQueue *q, const SHAPE_COORDS_INT3_T *coords)
         return;
     }
 
-    n->coords = *coords;
+    n->chunk = chunk;
+    n->coords = coords;
     n->next = q->first;
     q->first = n;
 }
@@ -100,6 +108,7 @@ void light_node_queue_recycle(LightNode *n) {
 
 struct _LightRemovalNode {
     LightRemovalNode *next;
+    Chunk *chunk;
     SHAPE_COORDS_INT3_T coords;  /* 6 bytes */
     VERTEX_LIGHT_STRUCT_T light; /* 2 bytes */
     // 4 first bits used to flag in which channel [sunlight:R:G:B] removal should propagate
@@ -116,6 +125,7 @@ struct _LightRemovalNodeQueue {
 LightRemovalNode *light_removal_node_new(void) {
     LightRemovalNode *ln = (LightRemovalNode *)malloc(sizeof(LightRemovalNode));
     ln->next = NULL;
+    ln->chunk = NULL;
     ln->coords = (SHAPE_COORDS_INT3_T){0, 0, 0};
     ln->light.ambient = 0;
     ln->light.red = 0;
@@ -140,15 +150,16 @@ void light_removal_node_queue_free(LightRemovalNodeQueue *q) {
     free(q);
 }
 
-void light_removal_node_get_coords(const LightRemovalNode *n, SHAPE_COORDS_INT3_T *coords) {
-    *coords = n->coords;
+SHAPE_COORDS_INT3_T light_removal_node_get_coords(const LightRemovalNode *n) {
+    return n->coords;
 }
 
-void light_removal_node_get_light(const LightRemovalNode *n, VERTEX_LIGHT_STRUCT_T *light) {
-    light->ambient = n->light.ambient;
-    light->red = n->light.red;
-    light->green = n->light.green;
-    light->blue = n->light.blue;
+Chunk *light_removal_node_get_chunk(const LightRemovalNode *n) {
+    return n->chunk;
+}
+
+VERTEX_LIGHT_STRUCT_T light_removal_node_get_light(const LightRemovalNode *n) {
+    return n->light;
 }
 
 uint8_t light_removal_node_get_srgb(const LightRemovalNode *n) {
@@ -181,7 +192,8 @@ LightRemovalNode *light_removal_node_queue_pop(LightRemovalNodeQueue *q) {
 }
 
 void light_removal_node_queue_push(LightRemovalNodeQueue *q,
-                                   const SHAPE_COORDS_INT3_T *coords,
+                                   Chunk *chunk,
+                                   const SHAPE_COORDS_INT3_T coords,
                                    VERTEX_LIGHT_STRUCT_T light,
                                    uint8_t srgb,
                                    SHAPE_COLOR_INDEX_INT_T blockID) {
@@ -198,7 +210,8 @@ void light_removal_node_queue_push(LightRemovalNodeQueue *q,
         return;
     }
 
-    n->coords = *coords;
+    n->chunk = chunk;
+    n->coords = coords;
     n->light.ambient = light.ambient;
     n->light.red = light.red;
     n->light.green = light.green;

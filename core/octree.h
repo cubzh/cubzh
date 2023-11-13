@@ -37,22 +37,24 @@ typedef struct _OctreeNodeValue OctreeNodeValue;
 Octree *octree_new_with_default_element(const OctreeLevelsForSize levels,
                                         const void *element,
                                         const size_t elementSize);
-
-// destructor
+Octree *octree_new_copy(const Octree *octree);
 void octree_free(Octree *const tree);
-
 void octree_flush(Octree *tree);
 
+/// Checks for the existence of a node first, returns NULL if none.
+/// Note: if octree empty nodes aren't used to store arbitrary data,
+///  octree_get_element_without_checking is always faster
 void *octree_get_element(const Octree *octree, const size_t x, const size_t y, const size_t z);
 
+/// Always return the data at given coordinates (could be default value)
 void *octree_get_element_without_checking(const Octree *octree,
                                           const size_t x,
                                           const size_t y,
                                           const size_t z);
 
-// Useful when storing values in empty nodes.
-// if node is empty, *element will be set to NULL and *empty will point
-// to what's currently stored at (x, y, z).
+/// Useful if using octree to store arbitrary values in empty nodes ;
+/// if node is empty, *element will be set to NULL and *empty will point
+/// to what's currently stored at (x, y, z).
 void octree_get_element_or_empty_value(const Octree *octree,
                                        const size_t x,
                                        const size_t y,
@@ -76,7 +78,7 @@ uint8_t octree_get_levels(const Octree *octree);
 size_t octree_get_dimension(const Octree *octree);
 uint64_t octree_get_hash(const Octree *octree, uint64_t crc);
 
-// MARK: Octree iterator
+// MARK: - Iterator -
 
 typedef struct _OctreeIterator OctreeIterator;
 

@@ -10,6 +10,7 @@
 
 #include "cclog.h"
 #include "colors.h"
+#include "config.h"
 #include "hash_uint32_int.h"
 #include "serialization.h"
 #include "shape.h"
@@ -112,7 +113,7 @@ bool serialization_save_vox(Shape *src, FILE *const out) {
 }
 
 bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *const out) {
-    int3 shape_size;
+    SHAPE_SIZE_INT3_T shape_size;
 
     if (out == NULL) {
         cclog_error("file pointer is NULL");
@@ -135,7 +136,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             cclog_error("at least of the given shapes is NULL");
             return false;
         }
-        shape_get_allocated_size(shapes[i], &shape_size);
+        shape_size = shape_get_allocated_size(shapes[i]);
         if (shape_size.x > 256 || shape_size.y > 256 || shape_size.z > 256) {
             cclog_error("shape is too big, can't export for magicavoxel");
             return false;
@@ -242,7 +243,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         palette = shape_get_palette(src);
         paletteConversionMap = paletteConversionMaps[i];
 
-        shape_get_allocated_size(src, &shape_size);
+        shape_size = shape_get_allocated_size(src);
 
         _writeVoxChunkHeader("SIZE", size_bytes, 0, out);
 
@@ -278,8 +279,8 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         // loop over blocks
 
         Chunk *chunk = NULL;
-        int3 *shapePos = int3_new(0, 0, 0);
-        int3 *posInChunk = int3_new(0, 0, 0);
+        SHAPE_COORDS_INT3_T coords_in_shape;
+        CHUNK_COORDS_INT3_T coords_in_chunk;
         Block *b = NULL;
         int colorIndexInCombinedPalette;
         RGBAColor *color;
@@ -289,16 +290,19 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                 for (int i = 0; i < shape_size.x; i++) {
                     b = NULL;
 
-                    int3_set(shapePos, (i), (j), (k));
-
-                    shape_get_chunk_and_position_within(src, shapePos, &chunk, NULL, posInChunk);
+                    coords_in_shape = (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)i,
+                                                            (SHAPE_COORDS_INT_T)j,
+                                                            (SHAPE_COORDS_INT_T)k};
+                    shape_get_chunk_and_coordinates(src,
+                                                    coords_in_shape,
+                                                    &chunk,
+                                                    NULL,
+                                                    &coords_in_chunk);
                     if (chunk != NULL) {
-                        b = chunk_get_block_2(chunk, posInChunk);
+                        b = chunk_get_block_2(chunk, coords_in_chunk);
                     }
 
-                    if (b == NULL) {
-                        // no block, don't do anything
-                    } else {
+                    if (block_is_solid(b)) {
                         SHAPE_COLOR_INDEX_INT_T bci = block_get_color_index(b);
                         color = color_palette_get_color(palette, bci);
                         if (hash_uint32_int_get(paletteConversionMap,
@@ -308,9 +312,9 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                         }
 
                         // ⚠️ y -> z, z -> y
-                        uint8_t x = (uint8_t)shapePos->x;
-                        uint8_t y = (uint8_t)shapePos->z;
-                        uint8_t z = (uint8_t)shapePos->y;
+                        uint8_t x = (uint8_t)coords_in_shape.x;
+                        uint8_t y = (uint8_t)coords_in_shape.z;
+                        uint8_t z = (uint8_t)coords_in_shape.y;
                         uint8_t c = (uint8_t)colorIndexInCombinedPalette + 1;
 
                         // printf("block : %d, %d, %d - color: %d\n", x, y, z, c);
@@ -811,10 +815,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     }
 
     // create Shape
-    *out = shape_make_with_octree((SHAPE_SIZE_INT_T)sizeX,
-                                  (SHAPE_SIZE_INT_T)sizeY,
-                                  (SHAPE_SIZE_INT_T)sizeZ,
-                                  isMutable);
+    *out = shape_make_2(isMutable);
     shape_set_palette(*out, color_palette_new(colorAtlas));
 
     stream_set_cursor_position(s, blocksPosition);
@@ -869,14 +870,12 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
             colorIdx = 0;
         }
 
-        shape_add_block_with_color(*out,
-                                   colorIdx,
-                                   (SHAPE_COORDS_INT_T)x,
-                                   (SHAPE_COORDS_INT_T)y,
-                                   (SHAPE_COORDS_INT_T)z,
-                                   false,
-                                   false,
-                                   false);
+        shape_add_block(*out,
+                        colorIdx,
+                        (SHAPE_COORDS_INT_T)x,
+                        (SHAPE_COORDS_INT_T)y,
+                        (SHAPE_COORDS_INT_T)z,
+                        false);
     }
     color_palette_clear_lighting_dirty(palette);
 

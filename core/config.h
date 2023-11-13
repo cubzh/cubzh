@@ -39,21 +39,6 @@ extern "C" {
 #define PLAYER_ID_NOT_ATTRIBUTED 252 // value before ID is attributed
 #define PLAYER_ID_NONE 251           // ID to represent no one
 
-#define PLAYER_SCALE 0.5f
-#define PLAYER_AVATAR_BB_SIZE_Y 29.0f // expressed in local space from player root,
-#define PLAYER_AVATAR_BB_SIZE_XZ 9.0f // or in blocks (provided body shapes are scale 1)
-
-// walk animation ramps up from 0 to maximum motion force
-#define PLAYER_WALK_MAX_SPEED 1.8f
-#define PLAYER_WALK_MAX_MOTION_MAG 2500.0f
-#define PLAYER_WAVE_SPEED 4.5f
-#define PLAYER_TALK_SPEED 7.0f
-#define PLAYER_SWING_SPEED 4.0f
-#define PLAYER_IDLE_SPEED 0.5f
-#define PLAYER_ANIM_SPEED_WALK_RIGHT_ITEM 0.5f
-#define PLAYER_ANIM_SPEED_HOLD_DRINK 0.5f
-#define PLAYER_ANIM_SPEED_DRINK 2.0f
-
 // EVENTS
 #define EVENT_TYPE_FROM_SCRIPT 1
 #define EVENT_TYPE_SERVER_LOG_INFO 2
@@ -222,10 +207,20 @@ typedef int16_t SHAPE_COORDS_INT_T;
 typedef struct {
     SHAPE_COORDS_INT_T x, y, z;
 } SHAPE_COORDS_INT3_T;
-static SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
+#define SHAPE_COORDS_MAX INT16_MAX
+#define SHAPE_COORDS_MIN INT16_MIN
+static const SHAPE_COORDS_INT3_T coords3_zero = {0, 0, 0};
+static const SHAPE_COORDS_INT3_T coords3_max = {INT16_MAX, INT16_MAX, INT16_MAX};
+static const SHAPE_COORDS_INT3_T coords3_min = {INT16_MIN, INT16_MIN, INT16_MIN};
 typedef uint16_t SHAPE_SIZE_INT_T;
+typedef struct {
+    SHAPE_SIZE_INT_T x, y, z;
+} SHAPE_SIZE_INT3_T;
 // coords of block within chunk
 typedef int8_t CHUNK_COORDS_INT_T;
+typedef struct {
+    CHUNK_COORDS_INT_T x, y, z;
+} CHUNK_COORDS_INT3_T;
 
 typedef uint8_t SHAPE_COLOR_INDEX_INT_T;
 typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
@@ -254,6 +249,8 @@ typedef struct {
     l.ambient = 15;                                                                                \
     l.red = l.green = l.blue = 0;
 #define ZERO_LIGHT(l) l.ambient = l.red = l.green = l.blue = 0;
+static VERTEX_LIGHT_STRUCT_T vertex_light_default = {15, 0, 0, 0};
+static VERTEX_LIGHT_STRUCT_T vertex_light_zero = {0, 0, 0, 0};
 
 // one uint8_t is enough to store ambient occlusion value for each one
 // of the 4 corners. (4 possible values for each)
@@ -286,58 +283,40 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 #define FACE_SIZE_CTC 6
 #define FACE_NONE_CTC 7
 
-// CHUNKS
-// In Minecraft, a chunk is a column. (i.e. 16x16x128)
-// It may be better to use cubes and don't limit
-// world height depending on chunk height. It should
-// be an othet variable, and we should be able to display
-// fog vertically as well (depending on view distance)
-#define CHUNK_HEIGHT 16
-#define CHUNK_WIDTH 16
-#define CHUNK_DEPTH 16
-// used to divide
-#define CHUNK_HEIGHT_SQRT 4
-#define CHUNK_WIDTH_SQRT 4
-#define CHUNK_DEPTH_SQRT 4
-// used to get modulo
-#define CHUNK_HEIGHT_MINUS_ONE 15
-#define CHUNK_WIDTH_MINUS_ONE 15
-#define CHUNK_DEPTH_MINUS_ONE 15
+// SHAPE CHUNKS
+#define CHUNK_SIZE 16           // 32//64
+#define CHUNK_SIZE_SQR 256      // 1024//4096
+#define CHUNK_SIZE_CUBE 4096    // 32768//262144
+#define CHUNK_SIZE_MINUS_ONE 15 // 31//63
+#define CHUNK_SIZE_IS_PERFECT_SQRT true
+#define CHUNK_SIZE_SQRT 4
 
-// VERTEX BUFFERS
-// Note (disambiguation): Cubzh Core's "VB" hold face data and is NOT equivalent to the "VB" that
-// drives drawcalls Maximum allowed capacity for a single vertex buffer, this should be matched by
-// renderer max texture size
-#define VERTEX_BUFFER_MAX_COUNT 1048576
-#define VERTEX_BUFFER_MIN_COUNT 4096
-// Minimal size for the first VB at runtime, see shape_add_vertex_buffer
-#define VERTEX_BUFFER_RUNTIME_COUNT 4096
-// Estimated shape volume block-occupancy
-#define VERTEX_BUFFER_VOLUME_OCCUPANCY 0.08f
-// Final VB capacity multiplier if shape volume was predominant, can be thought of as block-to-faces
-// factor for shape volume
-#define VERTEX_BUFFER_VOLUME_FACTOR 3
-// Final VB capacity multiplier if shape shell was predominant, can be thought of as block-to-faces
-// factor for shape shell
-#define VERTEX_BUFFER_SHELL_FACTOR 2.0f
-// Additional factor for transparent VB capacity
-#define VERTEX_BUFFER_TRANSPARENT_FACTOR 0.25f
-// Subsequent VBs on init/runtime can be downscaled or upscaled, see shape_add_vertex_buffer
-#define VERTEX_BUFFER_INIT_SCALE_RATE .75f
-#define VERTEX_BUFFER_RUNTIME_SCALE_RATE 4.0f
-// Ensure VB size will result in POT texture size (required for compressed texture formats)
+// SHAPE BUFFERS
+// Maximum allowed capacity for a single shape buffer
+#define SHAPE_BUFFER_MAX_COUNT 1048576
+#define SHAPE_BUFFER_MIN_COUNT 4096
+// Minimal size for the first buffer at runtime, see shape_add_buffer
+#define SHAPE_BUFFER_RUNTIME_COUNT 4096
+// Shape buffers initial capacity multiplier
+#define SHAPE_BUFFER_INITIAL_FACTOR .25f
+// Capacity multiplier for transparent buffer
+#define SHAPE_BUFFER_TRANSPARENT_FACTOR .25f
+// Subsequent buffers on init/runtime can be downscaled or upscaled, see shape_add_buffer
+#define SHAPE_BUFFER_INIT_SCALE_RATE .75f
+#define SHAPE_BUFFER_RUNTIME_SCALE_RATE 4.0f
+// Ensure buffer size will result in POT texture size (required for compressed texture formats)
 // Note: if POT expected, downscale should be 0.25f and upscale 4.0f or upper POT is used
-#define VERTEX_BUFFER_TEX_UPPER_POT false
+#define SHAPE_BUFFER_TEX_UPPER_POT false
 
 //// Disabling global lighting will use neutral value (15, 0, 0, 0) everywhere
 #define GLOBAL_LIGHTING_ENABLED true
 #define GLOBAL_LIGHTING_SMOOTHING_ENABLED true
 #define GLOBAL_LIGHTING_BAKE_READ_ENABLED true
 #define GLOBAL_LIGHTING_BAKE_WRITE_ENABLED true
-/// Save file in cache if baked lighting wasn't present for a game map,
+/// Save file in cache if baked lighting wasn't present for a shape,
 /// new file path prefixed with "baked_" and suffixed with game ID
 #define GLOBAL_LIGHTING_BAKE_SAVE_ENABLED true
-/// Checks if a "baked_" file exists first when loading a game map
+/// Checks if a "baked_" file exists first when loading a shape
 #define GLOBAL_LIGHTING_BAKE_LOAD_ENABLED true
 
 //// Function used for vertex light smoothing

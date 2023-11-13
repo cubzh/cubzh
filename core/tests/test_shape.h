@@ -14,7 +14,7 @@
 #include "transform.h"
 
 // functions that are NOT tested:
-// shape_add_vertex_buffer
+// shape_add_buffer
 // shape_retain_count
 // shape_free
 // shape_is_resizable
@@ -22,11 +22,11 @@
 // shape_set_palette
 // shape_get_block
 // shape_get_block_immediate
-// shape_add_block_from_lua
-// shape_remove_block_from_lua
-// shape_replace_block_from_lua
+// shape_add_block_as_transaction
+// shape_remove_block_as_transaction
+// shape_paint_block_as_transaction
 // shape_apply_current_transaction
-// shape_add_block_with_color
+// shape_add_block
 // shape_paint_block
 // shape_get_chunk_and_position_within
 // shape_get_max_fixed_size
@@ -34,7 +34,7 @@
 // shape_get_local_aabb
 // shape_get_world_aabb
 // shape_compute_size_and_origin
-// shape_shrink_box
+// shape_reset_box
 // shape_expand_box
 // shape_make_space_for_block
 // shape_make_space
@@ -93,7 +93,7 @@
 // shape_compute_world_collider
 // shape_set_physics_simulation_mode
 // shape_set_physics_properties
-// shape_box_swept
+// shape_box_cast
 // shape_ray_cast
 // shape_point_overlap
 // shape_box_overlap
@@ -117,9 +117,9 @@
 // shape_clear_baked_lighting
 // shape_compute_baked_lighting
 // shape_uses_baked_lighting
-// shape_has_baked_lighting_data
-// shape_get_lighting_data
-// shape_set_lighting_data
+// shape_uses_baked_lighting
+// shape_create_lighting_data_blob
+// shape_set_lighting_data_from_blob
 // shape_get_light_without_checking
 // shape_set_light
 // shape_get_light_or_default
@@ -175,16 +175,6 @@ void test_shape_make_copy(void) {
 
     shape_free((Shape *const)src);
     shape_free((Shape *const)copy);
-}
-
-// octree must have the correct dimension
-void test_shape_make_with_octree(void) {
-    Shape *s = shape_make_with_octree(10, 20, 30, false);
-    const Octree *o = shape_get_octree((const Shape *)s);
-
-    TEST_CHECK(octree_get_dimension(o) == 32);
-
-    shape_free((Shape *const)s);
 }
 
 // check that we can retain a shape
@@ -248,13 +238,13 @@ void test_shape_remove_block(void) {
         TEST_ASSERT(atlas != NULL);
         shape_set_palette(s, color_palette_new(atlas));
     }
-    shape_add_block_with_color(s, idx, x, y, z, true, false, true);
-    const bool ok = shape_remove_block(s, x, y, z, NULL, false, true);
+    shape_add_block(s, idx, x, y, z, true);
+    const bool ok = shape_remove_block(s, x, y, z);
 
     TEST_CHECK(ok);
 
     shape_apply_current_transaction(s, false);
-    TEST_CHECK(block_is_solid(shape_get_block(s, x, y, z, false)) == false);
+    TEST_CHECK(block_is_solid(shape_get_block(s, x, y, z)) == false);
 
     shape_free((Shape *const)s);
 }
@@ -267,7 +257,7 @@ void test_shape_get_bounding_box_size(void) {
         TEST_ASSERT(atlas != NULL);
         shape_set_palette(s, color_palette_new(atlas));
     }
-    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, true);
+    shape_add_block(s, 1, 1, 2, 3, true);
     int3 result = {0, 0, 0};
     shape_get_bounding_box_size(s, &result);
 
@@ -286,10 +276,10 @@ void test_shape_get_model_aabb(void) {
         TEST_ASSERT(atlas != NULL);
         shape_set_palette(s, color_palette_new(atlas));
     }
-    shape_add_block_with_color(s, 1, 1, 2, 3, true, false, true);
+    shape_add_block(s, 1, 1, 2, 3, true);
     int3 result = {0, 0, 0};
-    const Box *aabb = shape_get_model_aabb(s);
-    box_get_size_int(aabb, &result);
+    const Box aabb = shape_get_model_aabb(s);
+    box_get_size_int(&aabb, &result);
 
     TEST_CHECK(result.x == 1);
     TEST_CHECK(result.y == 1);
@@ -340,8 +330,7 @@ void test_shape_addblock_1(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1, 1, 1,
-                                       true); // isMutable
+    Shape *sh = shape_make_2(true); // isMutable
     TEST_ASSERT(sh != NULL);
 
     {
@@ -378,47 +367,46 @@ void test_shape_addblock_1(void) {
     }
 
     // add block 0
-    ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, 0);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR1, 0, 0, 0);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, 0, true);
+    b = shape_get_block(sh, 0, 0, 0);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
 
     // add block 1
-    ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR1, 0, 0, -1);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, -1, true);
+    b = shape_get_block(sh, 0, 0, -1);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
 
     // add block 2
-    ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR2, 0, 0, -2);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, -2, true);
+    b = shape_get_block(sh, 0, 0, -2);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR2);
 
     // remove block 2
-    ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
+    ok = shape_remove_block_as_transaction(sh, sc, 0, 0, -2);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, -2, true);
-    TEST_ASSERT(b != NULL);
+    b = shape_get_block(sh, 0, 0, -2);
     TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
 
     // add block 3
-    ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR3, 0, 0, 1);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, 1, true);
+    b = shape_get_block(sh, 0, 0, 1);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR3);
 
@@ -439,8 +427,7 @@ void test_shape_addblock_2(void) {
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
-    Shape *sh = shape_make_with_octree(1, 1, 1,
-                                       true); // isMutable
+    Shape *sh = shape_make_2(true); // isMutable
     TEST_ASSERT(sh != NULL);
 
     {
@@ -477,38 +464,38 @@ void test_shape_addblock_2(void) {
     }
 
     // add block 1
-    ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR1, 0, 0, -1);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, -1, true);
+    b = shape_get_block(sh, 0, 0, -1);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR1);
 
     // add block 2
-    ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR2, 0, 0, -2);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, -2, true);
+    b = shape_get_block(sh, 0, 0, -2);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR2);
 
     // remove block 2
-    ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
+    ok = shape_remove_block_as_transaction(sh, sc, 0, 0, -2);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, -2, true);
+    b = shape_get_block(sh, 0, 0, -2);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
 
     // add block 3
-    ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR3, 0, 0, 1);
     TEST_ASSERT(ok);
     shape_apply_current_transaction(sh,
                                     false /* false means transaction is pushed into the history */);
-    b = shape_get_block(sh, 0, 0, 1, true);
+    b = shape_get_block(sh, 0, 0, 1);
     TEST_ASSERT(b != NULL);
     TEST_ASSERT(b->colorIndex == COLOR3);
 
@@ -533,30 +520,30 @@ void test_shape_addblock_3(void) {
     TEST_CHECK(sh != NULL);
 
     // add block 1
-    ok = shape_add_block_from_lua(sh, sc, COLOR1, 0, 0, -1);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR1, 0, 0, -1);
     TEST_CHECK(ok);
-    b = shape_get_block(sh, 0, 0, -1, true);
+    b = shape_get_block(sh, 0, 0, -1);
     TEST_CHECK(b != NULL);
     TEST_CHECK(b->colorIndex == COLOR1);
 
     // add block 2
-    ok = shape_add_block_from_lua(sh, sc, COLOR2, 0, 0, -2);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR2, 0, 0, -2);
     TEST_CHECK(ok);
-    b = shape_get_block(sh, 0, 0, -2, true);
+    b = shape_get_block(sh, 0, 0, -2);
     TEST_CHECK(b != NULL);
     TEST_CHECK(b->colorIndex == COLOR2);
 
     // remove block 2
-    ok = shape_remove_block_from_lua(sh, sc, 0, 0, -2);
+    ok = shape_remove_block_as_transaction(sh, sc, 0, 0, -2);
     TEST_CHECK(ok);
-    b = shape_get_block(sh, 0, 0, -2, true);
+    b = shape_get_block(sh, 0, 0, -2);
     TEST_CHECK(b != NULL);
     TEST_CHECK(b->colorIndex == SHAPE_COLOR_INDEX_AIR_BLOCK);
 
     // add block 3
-    ok = shape_add_block_from_lua(sh, sc, COLOR3, 0, 0, 1);
+    ok = shape_add_block_as_transaction(sh, sc, COLOR3, 0, 0, 1);
     TEST_CHECK(ok);
-    b = shape_get_block(sh, 0, 0, 1, true);
+    b = shape_get_block(sh, 0, 0, 1);
     TEST_CHECK(b != NULL);
     TEST_CHECK(b->colorIndex == COLOR3);
 

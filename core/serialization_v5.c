@@ -245,7 +245,7 @@ Shape *serialization_v5_load_shape(Stream *s,
                     break;
                 }
                 // shrink box once all blocks were added to update box origin
-                shape_shrink_box(shape, false);
+                shape_reset_box(shape);
 
                 totalSizeRead += sizeRead;
 
@@ -418,14 +418,12 @@ uint32_t chunk_read_shape_process_blocks(Stream *s,
         c -= (uint32_t)(block_y_pos * w);
         block_x_pos = (uint16_t)c;
 
-        shape_add_block_with_color(shape,
-                                   colorIndex,
-                                   (SHAPE_COORDS_INT_T)block_x_pos,
-                                   (SHAPE_COORDS_INT_T)block_y_pos,
-                                   (SHAPE_COORDS_INT_T)block_z_pos,
-                                   false, // resize if needed
-                                   false, // apply offset
-                                   useDefaultPalette);
+        shape_add_block(shape,
+                        colorIndex,
+                        (SHAPE_COORDS_INT_T)block_x_pos,
+                        (SHAPE_COORDS_INT_T)block_y_pos,
+                        (SHAPE_COORDS_INT_T)block_z_pos,
+                        useDefaultPalette);
     }
     color_palette_clear_lighting_dirty(shape_get_palette(shape));
 
@@ -498,11 +496,7 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 shapeSizeRead = true;
 
                 // size is known, now is a good time to create the shape
-                if (shapeSettings->octree) {
-                    *shape = shape_make_with_octree(width, height, depth, shapeSettings->isMutable);
-                } else {
-                    *shape = shape_make_with_size(width, height, depth, shapeSettings->isMutable);
-                }
+                *shape = shape_make_2(shapeSettings->isMutable);
                 if (serializedPalette != NULL) {
                     shape_set_palette(*shape, serializedPalette);
                 } else {
@@ -632,7 +626,12 @@ uint32_t chunk_v5_read_shape(Stream *s,
             cclog_warning("shape uses lighting but does not match lighting data size");
             free(lightingData);
         } else {
-            shape_set_lighting_data(*shape, lightingData);
+            shape_set_lighting_data_from_blob(*shape,
+                                              lightingData,
+                                              coords3_zero,
+                                              (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)width,
+                                                                    (SHAPE_COORDS_INT_T)height,
+                                                                    (SHAPE_COORDS_INT_T)depth});
         }
     } else if (lightingData != NULL) {
         cclog_warning("shape baked lighting data discarded");
