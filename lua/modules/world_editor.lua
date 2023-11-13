@@ -154,7 +154,7 @@ local spawnObject = function(data, onDone)
 	local position = data.Position or Number3(0,0,0)
 	local rotation = data.Rotation or Rotation(0,0,0)
 	local scale = data.Scale or 0.5
-	local itemDetailsCell = data.itemDetailsCell
+	local itemDetailsCell = data.itemDetailsCell and JSON:Decode(JSON:Encode(data.itemDetailsCell))
 	local itemDetailsCellItem = data.itemDetailsCellItem
 	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
@@ -466,7 +466,7 @@ local statesSettings = {
 				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
 			end
 			worldEditor.infoBtn.onRelease = function()
-				local cell = worldEditor.object.itemDetailsCell
+				local cell = JSON:Decode(JSON:Encode(worldEditor.object.itemDetailsCell))
 				cell.item = worldEditor.object.itemDetailsCellItem
 				require("item_details"):createModal({ cell = cell })
 			end
