@@ -531,7 +531,7 @@ mod.getWorld = function(_, worldID, callback)
 			return
 		end
 
-		local world = data.world
+		local world = data
 
 		if world.created then
 			world.created = time.iso8601_to_os_time(world.created)
