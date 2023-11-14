@@ -75,10 +75,6 @@ loading.create = function(_, text, config)
 	local c3 = ui:createShape(Shape(cube))
 	c3:setParent(node)
 
-	c1.object.Position.Z = 20
-	c2.object.Position.Z = 20
-	c3.object.Position.Z = 20
-
 	local speed = 6
 	local tDiff = 0.5
 	local tc1 = 1.5
@@ -140,11 +136,11 @@ loading.create = function(_, text, config)
 
 	popup.setText = function(self, text)
 		label.Text = text
-		-- node:refresh()
-		-- self:refresh()
-		-- position(popup, false)
 		self:refreshContent()
+		node:refresh()
 	end
+
+	node:refresh()
 
 	return popup
 end
