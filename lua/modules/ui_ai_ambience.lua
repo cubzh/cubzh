@@ -53,8 +53,8 @@ setFromAIConfig = function(_, config, _quiet)
         math.floor(config.sun.color[3]))
     current.sun.color = c
     current.sun.intensity = config.sun.intensity
-    current.sun.rotation.X = type(config.sun.rotation) == type(Number3.Zero) and config.sun.rotation.X or config.sun.rotation[1]
-    current.sun.rotation.Y = type(config.sun.rotation) == type(Number3.Zero) and config.sun.rotation.Y or config.sun.rotation[2]
+    current.sun.rotation.X = config.sun.rotation.X ~= nil and config.sun.rotation.X or config.sun.rotation[1]
+    current.sun.rotation.Y = config.sun.rotation.Y ~= nil and config.sun.rotation.Y or config.sun.rotation[2]
 
     refreshAmbiance()
 end
