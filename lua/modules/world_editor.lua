@@ -829,6 +829,7 @@ startDefaultMode = function()
         Player.Rotation = { 0, 0, 0 }
         Player.Velocity = { 0, 0, 0 }
     end
+	-- require("multi")
     Player:SetParent(World)
 	Camera:SetModeThirdPerson()
     dropPlayer()
@@ -1034,7 +1035,40 @@ initDefaultMode = function()
 	end
 	local initGallery
 	initGallery = function()
-		worldEditor.gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.4 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, 0 } end, { onOpen = galleryOnOpen })
+		worldEditor.gallery = require("gallery"):create(function()
+			if not Client.IsMobile then
+				return Screen.Width
+			else
+				if Screen.Height > Screen.Width then -- portrait mode
+					return Screen.Width
+				else -- landscape mode
+					return Screen.Width * 0.5
+				end
+			end
+		end,
+		function()
+			if not Client.IsMobile then
+				return Screen.Height * 0.4
+			else
+				if Screen.Height > Screen.Width then -- portrait mode
+					return Screen.Height * 0.5
+				else -- landscape mode
+					return Screen.Height
+				end
+			end
+		end,
+		function(m)
+			if not Client.IsMobile then
+				m.pos = { Screen.Width * 0.5 - m.Width * 0.5, 0 }
+			else
+				if Screen.Height > Screen.Width then -- portrait mode
+					m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.5 - m.Height * 0.5}
+				else -- landscape mode
+					m.pos = { Screen.Width * 0.5, 0 }
+				end
+			end
+		end,
+		{ onOpen = galleryOnOpen })
 		worldEditor.gallery.didClose = function()
 			setState(states.DEFAULT)
 			initGallery()
