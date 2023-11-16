@@ -46,7 +46,6 @@ bool count_blocks(cxxopts::ParseResult parseResult, std::string& err) {
     Stream * const stream = stream_new_file_read(fd); // Stream is responsible for fclose-ing the file descriptor
 
     const LoadShapeSettings shapeSettings = {
-        .octree = true,
         .lighting = false,
         .isMutable = false
     };
