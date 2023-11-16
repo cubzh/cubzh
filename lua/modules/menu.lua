@@ -1317,7 +1317,7 @@ function magicKeyCheck(success, err)
 		-- 		end
 		-- 	end
 		-- )
-		print("MAGIC KEY CHECK NOT IMPLEMENTED")
+		System:RemoveAskedForMagicKey()
 		if err ~= nil then
 			err()
 		end
@@ -1559,7 +1559,10 @@ function skipTitleScreen()
 							end,
 						})
 					end, -- magicKeyCheck success (magic key verified or no magic key to verify)
-					function() end -- magicKeyCheck err
+					function()
+						showTitleScreen()
+						skipTitleScreen()
+					end -- magicKeyCheck err
 				)
 			end,
 			networkError = function()
