@@ -333,12 +333,14 @@ local statesSettings = {
 			require("object_skills").addStepClimbing(Player)
 
 			setState(states.PICK_WORLD)
+			require("controls"):turnOff()
 		end
 	},
 	-- PICK WORLD
 	{
 		onStateBegin = function()
 			worldEditor.uiPickWorld:show()
+			require("controls"):turnOff()
 		end,
 		onStateEnd = function()
 			if worldEditor.uiPickWorld then
@@ -360,6 +362,7 @@ local statesSettings = {
 			Camera:SetParent(worldEditor.mapPivot)
 			Camera.Far = 10000
 			loadMap(maps[1])
+			require("controls"):turnOff()
 		end,
 		onStateEnd = function()
 			worldEditor.uiPickMap:hide()
@@ -369,6 +372,7 @@ local statesSettings = {
 	-- DEFAULT
 	{
 		onStateBegin = function()
+			require("controls"):turnOn()
 			worldEditor.defaultStateUI:show()
 		end,
 		onStateEnd = function()
@@ -383,9 +387,11 @@ local statesSettings = {
 	{
 		onStateBegin = function()
 			worldEditor.gallery:show()
+			require("controls"):turnOff()
 		end,
 		onStateEnd = function()
 			worldEditor.gallery:hide()
+			require("controls"):turnOn()
 		end
 	},
 	-- SPAWNING_OBJECT
