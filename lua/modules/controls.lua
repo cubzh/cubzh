@@ -1529,6 +1529,14 @@ menu:AddDidResignActiveCallback(function()
 	index.refresh()
 end)
 
+index.getActionButton = function(_, index)
+	return _state["action" .. index]
+end
+
+index.getDirectionalPad = function(_)
+	return _state.dirpad
+end
+
 index.turnOn = function(self)
 	if self ~= controls then
 		error("controls:turnOn should be called with `:`", 2)

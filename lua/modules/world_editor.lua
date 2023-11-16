@@ -318,6 +318,14 @@ local subStatesSettingsUpdatingObject = {
 	},
 }
 
+local mobilePlacingObject = function(obj)
+	local impact = Camera:CastRay(nil, Player)
+	if not impact then return end
+
+	obj.Position = Camera.Position + Camera.Forward * impact.Distance
+	obj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+end
+
 -- States
 
 local statesSettings = {
@@ -411,11 +419,21 @@ local statesSettings = {
 			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
 			freezeObject(obj)
+			if Client.IsMobile then
+				if worldEditor.rotationShift == nil or worldEditor.rotationShift == 0 then worldEditor.rotationShift = math.pi * 0.5 end
+				worldEditor.placingValidateBtn:show()
+				return
+			end
+		end,
+		tick = function()
+			mobilePlacingObject(worldEditor.placingObj)
 		end,
 		onStateEnd = function()
+			worldEditor.placingValidateBtn:hide()
 			worldEditor.placingCancelBtn:hide()
 		end,
 		pointerMove = function(pe)
+			if Client.IsMobile then return end
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
@@ -426,6 +444,7 @@ local statesSettings = {
 			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 		end,
 		pointerDrag = function(pe)
+			if Client.IsMobile then return end
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
@@ -436,6 +455,7 @@ local statesSettings = {
 			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 		end,
 		pointerUp = function(pe)
+			if Client.IsMobile then return end
 			if pe.Index ~= 4 then return end
 
 			if worldEditor.dragging then return end
@@ -545,10 +565,6 @@ local statesSettings = {
 			block.LocalPosition = { 1.5,1.5,1.5 }
 			worldEditor.editMapValidateBtn:show()
 			worldEditor.colorPicker:show()
-			worldEditor.colorPicker.parentDidResize = function()
-				worldEditor.colorPicker.pos = { Screen.Width - worldEditor.colorPicker.Width, -20 }
-			end
-			worldEditor.colorPicker:parentDidResize()
 		end,
 		onStateEnd = function()
 			Player:EquipRightHand(nil)
@@ -686,12 +702,18 @@ for localEventName,listenerName in pairs(listeners) do
 end
 
 LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-	if pe.Index ~= 4 then return end -- if not left click, return
-	worldEditor.draggingCount = (worldEditor.draggingCount or 0) + 1
+	if not Client.IsMobile then
+		if pe.Index ~= 4 then return end -- if not left click, return
+		worldEditor.draggingCount = (worldEditor.draggingCount or 0) + 1
+	else
+		worldEditor.draggingCount = (worldEditor.draggingCount or 0) + 1
+	end
 	if worldEditor.draggingCount > 4 then worldEditor.dragging = true end
 end)
 LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
-	if pe.Index ~= 4 then return end -- if not left click, return
+	if not Client.IsMobile then
+		if pe.Index ~= 4 then return end -- if not left click, return
+	end
 	worldEditor.draggingCount = 0
 	worldEditor.dragging = false
 end)
@@ -870,17 +892,15 @@ initDefaultMode = function()
 	local defaultStateUIConfig = {
 		{
 			text = "➕ Object",
-			pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding } end,
-			mobilePos = function(btn) return { Screen.Width * 0.5 - btn.Width * 0.5, padding } end,
+			pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding * 2 } end,
 			state = states.GALLERY,
 			name = "addBtn"
 		},
 		{
 			text = "🖌 Map",
-			pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding } end,
+			pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding * 2 } end,
 			state = states.EDIT_MAP,
-			name = "editMapBtn",
-			visibleOnMobile = false
+			name = "editMapBtn"
 		}
 	}
 
@@ -888,16 +908,7 @@ initDefaultMode = function()
 		local btn = ui:createButton(config.text)
 		btn:setParent(worldEditor.defaultStateUI)
 		btn.parentDidResize = function(b)
-			if Screen.Width < Screen.Height and config.visibleOnMobile == false then
-				b:hide()
-			else
-				if Screen.Width < Screen.Height and config.mobilePos then
-					b.pos = config.mobilePos(b)
-				else
-					b.pos = config.pos(b)
-				end
-				b:show()
-			end
+			b.pos = config.pos(b)
 		end
 		btn.Height = btn.Height * 1.5
 		btn:parentDidResize()
@@ -1097,6 +1108,27 @@ initDefaultMode = function()
 	placingCancelBtn:hide()
 	worldEditor.placingCancelBtn = placingCancelBtn
 
+	local placingValidateBtn = ui:createButton("✅")
+	placingValidateBtn.onRelease = function()
+		local placingObj = worldEditor.placingObj
+		worldEditor.placingObj = nil
+
+		unfreezeObject(placingObj)
+
+		objects[placingObj.uuid] = placingObj
+		sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
+		placingObj.currentlyEditedBy = Player
+		setState(states.UPDATING_OBJECT, placingObj)
+	end
+	placingValidateBtn.parentDidResize = function()
+		placingValidateBtn.Width = placingCancelBtn.Width * 1.4
+		placingValidateBtn.Height = placingValidateBtn.Width
+		placingValidateBtn.pos = placingCancelBtn.pos + { placingCancelBtn.Width + padding, placingCancelBtn.Height * 0.5 - placingValidateBtn.Height * 0.5, 0 }
+	end
+	placingValidateBtn:parentDidResize()
+	placingValidateBtn:hide()
+	worldEditor.placingValidateBtn = placingValidateBtn
+
 	-- Update object UI
 	local updateObjectUI = ui:createFrame(Color(255,0,0))
 
@@ -1189,7 +1221,24 @@ initDefaultMode = function()
 	editMapValidateBtn:hide()
 	worldEditor.editMapValidateBtn = editMapValidateBtn
 
-	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false, maxWidth = function() return Screen.Width * 0.5 end })
+	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false,
+		maxWidth = function()
+			if Client.IsMobile and Screen.Height > Screen.Width then -- portrait mode
+				return Screen.Width * 0.4
+			end
+			return Screen.Width * 0.5
+		end
+	})
+	picker.parentDidResize = function()
+		if not Client.IsMobile then
+			picker.pos = { Screen.Width - picker.Width, -20 }
+		else
+			local actionButton1 = require("controls"):getActionButton(1)
+			if not actionButton1 then error("Action1 button does not exist", 2) return end
+			picker.pos = { Screen.Width - picker.Width - padding, actionButton1.pos.Y + actionButton1.Height + padding }
+		end
+	end
+	picker:parentDidResize()
 	picker.closeBtn:remove()
 	picker.closeBtn = nil
 	picker:setColor(Color.Grey)
@@ -1317,6 +1366,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	elseif e.a == events.SAVE_WORLD then
 		local mapBase64 = data.mapBase64
 		if mapBase64 == nil then print("Received nil from server") return end
+		-- could be move to world_editor_server, not sure System works on the server (must enable the file in require.cpp)
 		require("system_api", System):patchWorld(worldID, { mapBase64 = mapBase64 }, function(err, world)
 			if world and world.mapBase64 == mapBase64 then
 				print("World '" .. worldTitle .. "' saved")
@@ -1331,9 +1381,9 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	end
 end)
 
-Timer(20, true, function()
+Timer(30, true, function()
 	if state < states.DEFAULT then return end
-	print("Autosaving...")
+	-- ask for auto save every 30 seconds, if no changes since last save, server does not answer
 	sendToServer(events.P_SAVE_WORLD)
 end)
 
