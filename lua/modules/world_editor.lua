@@ -1153,7 +1153,7 @@ initDefaultMode = function()
 		{ type="separator" },
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
-		{ type="button", text="💀", callback=function() setState(states.DESTROY_OBJECT,worldEditor.object.uuid) end },
+		{ type="button", text="🗑️", callback=function() setState(states.DESTROY_OBJECT,worldEditor.object.uuid) end },
 		{ type="gap" },
 		{ type="button", text="✅", callback=function() setState(states.DEFAULT,worldEditor.object.uuid) end  },
 	}
@@ -1249,6 +1249,9 @@ initDefaultMode = function()
 		worldEditor.selectedColor = color
 		worldEditor.handBlock.Palette[1].Color = color
 	end
+
+	-- Edit map mobile (pickaxe and block)
+	
 end
 
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
