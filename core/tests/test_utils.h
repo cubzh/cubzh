@@ -147,17 +147,17 @@ void test_utils_string_new_join(void) {
     char *str = NULL;
     char *verif = NULL;
 
-    str = _string_new_join(1, "Hello");
+    str = string_new_join("Hello", NULL);
     verif = "Hello";
     TEST_CHECK(strcmp(str, verif) == 0);
     free(str);
 
-    str = _string_new_join(1, "123890 _&@/()[]{}");
+    str = string_new_join("123890 _&@/()[]{}", NULL);
     verif = "123890 _&@/()[]{}";
     TEST_CHECK(strcmp(str, verif) == 0);
     free(str);
 
-    str = _string_new_join(5, "Hello", "World", "This", "Is", "Moon");
+    str = string_new_join("Hello", "World", "This", "Is", "Moon", NULL);
     verif = "HelloWorldThisIsMoon";
     TEST_CHECK(strcmp(str, verif) == 0);
     free(str);
