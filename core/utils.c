@@ -179,34 +179,33 @@ AxesMaskValue utils_axis_index_to_mask_value(AxisIndex idx) {
 
 // STRINGS / STRING ARRAYS
 
-char *_string_new_join(int nbArgs, ...) {
+char *string_new_join(const char *elem, ...) {
 
     va_list ap;
     size_t len = 0;
 
-    if (nbArgs < 1)
+    if (elem == NULL) {
         return NULL;
+    }
 
     // First, measure the total length required.
-    va_start(ap, nbArgs);
-    for (int i = 0; i < nbArgs; i++) {
-        const char *s = va_arg(ap, char *);
+    va_start(ap, elem);
+    for (const char *s = elem; s != NULL; s = va_arg(ap, char *)) {
         len += strlen(s);
     }
     va_end(ap);
 
     // Allocate return buffer.
-    char *ret = (char *)malloc(len + 1);
+    char *ret = (char *)malloc(len + 1); // +1 is for NULL terminator
     if (ret == NULL)
         return NULL;
 
     // Concatenate all the strings into the return buffer.
     char *dst = ret;
-    va_start(ap, nbArgs);
-    for (int i = 0; i < nbArgs; i++) {
-        const char *src = va_arg(ap, char *);
-        strcpy(dst, src);
-        dst += strlen(src);
+    va_start(ap, elem);
+    for (const char *s = elem; s != NULL; s = va_arg(ap, char *)) {
+        strcpy(dst, s);
+        dst += strlen(s);
     }
     va_end(ap);
 
@@ -395,13 +394,13 @@ char *utils_get_baked_fullname(const char *id, const char *itemFullname) {
         if (len == 2) { // itemFullname is of the form <username>.<file>
             const char *user = stringArray_get(arr, 0);
             const char *file = stringArray_get(arr, 1);
-            bakedFullname = string_new_join(user, ".baked_", file, "_", id);
+            bakedFullname = string_new_join(user, ".baked_", file, "_", id, NULL);
         } else {
-            bakedFullname = string_new_join("baked_", itemFullname, "_", id);
+            bakedFullname = string_new_join("baked_", itemFullname, "_", id, NULL);
         }
         stringArray_free(arr);
     } else {
-        bakedFullname = string_new_join("baked_", id);
+        bakedFullname = string_new_join("baked_", id, NULL);
     }
 
     return bakedFullname;
