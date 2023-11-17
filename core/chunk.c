@@ -138,7 +138,7 @@ void chunk_free(Chunk *chunk, bool updateNeighbors) {
     }
 
     octree_free(chunk->octree);
-    if (chunk->lightingData == NULL) {
+    if (chunk->lightingData != NULL) {
         free(chunk->lightingData);
     }
 

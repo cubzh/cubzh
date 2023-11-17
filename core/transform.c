@@ -501,14 +501,11 @@ Transform_Array transform_get_children_copy(Transform *t, size_t *count) {
         *count = 0;
         return NULL;
     }
-    // to be safe, we fill the memory buffer with zeros
-    memset((void *)children, 0 /* NULL */, byteCount);
 
-    size_t i = 0;
-    DoublyLinkedListNode *n = transform_get_children_iterator(t);
-    while (n != NULL && i < t->childrenCount) {
+    DoublyLinkedListNode *n = doubly_linked_list_first(t->children);
+    for (size_t i = 0; i < t->childrenCount; ++i) {
+        vx_assert(n != NULL); // cannot happen (for code analyzer)
         children[i] = (Transform *)doubly_linked_list_node_pointer(n);
-        ++i;
         n = doubly_linked_list_node_next(n);
     }
 

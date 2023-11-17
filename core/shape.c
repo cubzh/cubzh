@@ -1160,7 +1160,6 @@ void shape_shrink_box(Shape *shape, const SHAPE_COORDS_INT3_T coords) {
                     if (c != NULL && chunk_get_nb_blocks(c) > 0) {
                         isEmpty = false;
                         chunk_get_bounding_box_2(c, &bbMin, NULL);
-                        isEmpty = false;
                         min = minimum(min, bbMin.y);
 
                         if (y == chunkMin.y && y * CHUNK_SIZE + bbMin.y == shape->bbMin.y) {
@@ -1191,7 +1190,6 @@ void shape_shrink_box(Shape *shape, const SHAPE_COORDS_INT3_T coords) {
                     if (c != NULL && chunk_get_nb_blocks(c) > 0) {
                         isEmpty = false;
                         chunk_get_bounding_box_2(c, NULL, &bbMax);
-                        isEmpty = false;
                         max = maximum(max, bbMax.z);
 
                         if (z == chunkMax.z && z * CHUNK_SIZE + bbMax.z == shape->bbMax.z) {

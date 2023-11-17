@@ -955,6 +955,9 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 uint8_t nameLen;
                 memcpy(&nameLen, cursor, sizeof(uint8_t));
                 cursor = (void *)((uint8_t *)cursor + 1);
+                if (name != NULL) { // shouldn't happen
+                    free(name);
+                }
                 name = malloc(nameLen + 1);
                 if (name == NULL) {
                     cclog_error("malloc failed");
@@ -1079,6 +1082,9 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 totalSizeRead += lightingDataSizeRead + (uint32_t)sizeof(uint32_t);
 
                 if (shapeSettings->lighting) {
+                    if (lightingData != NULL) { // shouldn't happen
+                        free(lightingData);
+                    }
                     lightingData = (VERTEX_LIGHT_STRUCT_T *)malloc(lightingDataSizeRead);
                     if (lightingData == NULL) {
                         break;
@@ -1113,8 +1119,13 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     if (*shape == NULL) {
+        free(lightingData);
+        free(name);
+        free(palette);
+        map_string_float3_free(pois);
+        map_string_float3_free(pois_rotation);
         free(chunkData);
-        cclog_error("failed to read shape - no size chunk found");
+        cclog_error("error while reading shape : no shape were created");
         return 0;
     }
 
@@ -1149,15 +1160,6 @@ uint32_t chunk_v6_read_shape(Stream *s,
     }
 
     free(chunkData);
-
-    if (*shape == NULL) {
-        cclog_error("error while reading shape : no shape were created");
-        if (lightingData != NULL) {
-            free(lightingData);
-        }
-        map_string_float3_free(pois);
-        return 0;
-    }
 
     float3 f3;
 
@@ -2026,7 +2028,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
     //  - palette chunk represents shape palette
     //  - only 1 shape
     //  - palette may contain unused colors & legacy palettes may be shrinked
-    // In this case, shape octree may have been serialized w/ default or shape palette indices,
+    // In this case, shape blocks may have been serialized w/ default or shape palette indices,
     // 2a) if there is a serialized palette, we consider that the octree was serialized w/ shape
     // palette indices, use it and optionally shrink it [SINGLE]
     // 2b) if not, the octree was serialized w/ default palette indices (which legacy palette

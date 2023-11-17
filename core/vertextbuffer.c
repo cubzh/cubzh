@@ -197,6 +197,7 @@ VbSnapshot *vertex_buffer_snapshot(const VertexBuffer *vb) {
 
     vbs->vbmas = (VbmaRepresentation *)malloc(sizeof(VbmaRepresentation) * vbs->n);
     if (vbs->vbmas == NULL) {
+        free(vbs);
         return NULL;
     }
 
@@ -794,11 +795,12 @@ void vertex_buffer_mem_area_free(VertexBufferMemArea *vbma) {
 
 void vertex_buffer_mem_area_leave_group_list(VertexBufferMemArea *vbma, bool transparent) {
     // maybe it is the front mem area of chunk (if not a gap)
-    if (vertex_buffer_mem_area_is_gap(vbma) == false &&
-        chunk_get_vbma(vbma->chunk, transparent) == vbma) {
-        chunk_set_vbma(vbma->chunk, vbma->_groupListNext, transparent);
-    } else {                                     // not the front mem area of a chunk
-        if (vbma == vbma->vb->firstMemAreaGap) { // in case vbma = first gap
+    if (vertex_buffer_mem_area_is_gap(vbma) == false) {
+        if (chunk_get_vbma(vbma->chunk, transparent) == vbma) {
+            chunk_set_vbma(vbma->chunk, vbma->_groupListNext, transparent);
+        }
+    } else { // not the front mem area of a chunk
+        if (vbma == vbma->vb->firstMemAreaGap) {
             vbma->vb->firstMemAreaGap = vbma->_groupListNext;
         }
         if (vbma == vbma->vb->lastMemAreaGap) {

@@ -722,6 +722,7 @@ void rtree_remove(Rtree *r, RtreeNode *leaf, bool freeLeaf) {
 void rtree_find_and_remove(Rtree *r, Box *aabb, void *ptr) {
     RtreeNode *leaf = _rtree_find_leaf(r->root, aabb, ptr, false);
     if (leaf != NULL) {
+        vx_assert(leaf != r->root); // cannot happen (for code analyzer)
         rtree_remove(r, leaf, true);
     }
 #if DEBUG_RTREE_EXTRA_LOGS
