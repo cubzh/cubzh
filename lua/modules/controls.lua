@@ -1520,6 +1520,13 @@ index.action2Listener = LocalEvent:Listen(LocalEvent.Name.Action1Set, index.refr
 index.action3Listener = LocalEvent:Listen(LocalEvent.Name.Action2Set, index.refresh, { system = System })
 index.dirPadListener = LocalEvent:Listen(LocalEvent.Name.Action3Set, index.refresh, { system = System })
 
+LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
+	print("ON PLAYER JOIN:", p)
+	if Client.OnPlayerJoin ~= nil then
+		Client.OnPlayerJoin(p)
+	end
+end, { system = System })
+
 menu:AddDidBecomeActiveCallback(function()
 	releaseAllInputs()
 	index.refresh()
