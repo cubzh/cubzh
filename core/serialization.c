@@ -439,16 +439,17 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
                     return false;
                 }
 
-                chunk = (Chunk *)index3d_get(chunks, coords.x, coords.y, coords.z);
-                if (chunk == NULL) {
-                    continue;
-                }
-
                 // read lighting data compressed size
                 uint32_t compressedSize;
                 if (fread(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
                     cclog_error("baked file (v2): failed to read lighting data compressed size");
                     return false;
+                }
+
+                chunk = (Chunk *)index3d_get(chunks, coords.x, coords.y, coords.z);
+                if (chunk == NULL) {
+                    fseek(fd, compressedSize, SEEK_CUR);
+                    continue;
                 }
 
                 // read compressed lighting data
