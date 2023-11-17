@@ -223,8 +223,8 @@ void scene_free(Scene *sc) {
         t = (Transform *)fifo_list_pop(sc->removed);
     }
 
-    transform_release(sc->root);
     transform_release(sc->system);
+    transform_release(sc->root); // triggers release cascade in the hierarchy
     rtree_free(sc->rtree);
     weakptr_invalidate(sc->wptr);
     fifo_list_free(sc->removed, NULL);

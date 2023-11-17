@@ -67,6 +67,10 @@ Quad *quad_new(void) {
     return q;
 }
 
+void quad_release(Quad *q) {
+    transform_release(q->transform);
+}
+
 void quad_free(Quad *q) {
     if (q->data != NULL) {
         free(q->data);
