@@ -1076,6 +1076,22 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	refreshChat()
 end)
 
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionSuccess, function()
+	print("connection success")
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionFailed, function()
+	print("connection failed")
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionLost, function()
+	print("connection lost")
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
+	print("connecting...")
+end)
+
 LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 	if updates.skinColors then
 		if avatar.head.shape then
@@ -1549,6 +1565,9 @@ end
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
 		System:UpdateAuthStatus()
+
+		-- connects client to server if it makes sense (maxPlayers > 1)
+		System:ConnectToServer()
 
 		username.Text = Player.Username
 

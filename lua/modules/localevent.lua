@@ -76,6 +76,7 @@ localevent.name = {
 	ServerConnectionSuccess = 47,
 	ServerConnectionLost = 48,
 	ServerConnectionFailed = 49,
+	ServerConnectionStart = 50, -- called when starting to establish connection
 }
 localevent.Name = localevent.name
 
@@ -123,6 +124,10 @@ limited[localevent.name.LocalAvatarUpdate] = true
 reservedToSystem = {}
 reservedToSystem[localevent.name.KeyboardInput] = true
 reservedToSystem[localevent.name.LocalAvatarUpdate] = true
+reservedToSystem[localevent.name.ServerConnectionSuccess] = true
+reservedToSystem[localevent.name.ServerConnectionLost] = true
+reservedToSystem[localevent.name.ServerConnectionFailed] = true
+reservedToSystem[localevent.name.ServerConnectionStart] = true
 
 mt = {
 	__tostring = function()
