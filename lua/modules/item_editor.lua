@@ -2967,7 +2967,8 @@ function post_item_load()
 		return nbShapes
 	end
 
-	LocalEvent:listen(LocalEvent.Name.AvatarLoaded, function()
+	local avatarLoadedListener
+	avatarLoadedListener = LocalEvent:listen(LocalEvent.Name.AvatarLoaded, function()
 		-- if equipment, show preview buttons
 		if not isWearable then
 			return
@@ -3096,6 +3097,9 @@ function post_item_load()
 
 		itemPlusAvatarBtn:onRelease()
 		Timer(0.1, updateWearableSubShapesPosition)
+
+		avatarLoadedListener:Remove()
+		avatarLoadedListener = nil
 	end)
 
 	fitObjectToScreen(item, settings.cameraStartRotation) -- sets cameraCurrentState.target
