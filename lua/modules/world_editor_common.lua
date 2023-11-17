@@ -387,7 +387,7 @@ local writeChunkObjects = function(d, objects)
 				d:WriteNumber3(object.Scale)
 				nbFields = nbFields + 1
 			end
-			if object.Name then
+			if object.Name and object.Name ~= object.fullname then
 				d:WriteString("na")
 				d:WriteUInt8(#object.Name)
 				d:WriteString(object.Name)
@@ -400,7 +400,7 @@ local writeChunkObjects = function(d, objects)
 				d:WriteString(base64Field)
 				nbFields = nbFields + 1
 			end
-			if object.Physics then
+			if object.Physics and object.Physics ~= PhysicsMode.StaticPerBlock then
 				d:WriteString("pm")
 				d:WritePhysicsMode(object.Physics)
 				nbFields = nbFields + 1

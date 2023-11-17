@@ -37,7 +37,7 @@ local getObjectInfoTable = function(obj)
 		Position = obj.Position or Number3(0, 0, 0),
 		Rotation = obj.Rotation or Number3(0, 0, 0),
 		Scale = obj.Scale or Number3(1, 1, 1),
-		Name = obj.Name,
+		Name = obj.Name or obj.fullname,
 		itemDetailsCell = obj.itemDetailsCell,
 		Physics = obj.Physics or PhysicsMode.StaticPerBlock
 	}

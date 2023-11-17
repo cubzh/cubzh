@@ -575,7 +575,9 @@ itemGrid.create = function(_, config)
 				c.tName.Text = ""
 				c:setImage(nil)
 				if c.item ~= nil then
-					c.item:remove()
+					if c.item.remove then
+						c.item:remove()
+					end
 					c.item = nil
 				end
 			end
