@@ -73,6 +73,9 @@ localevent.name = {
 	ReceivedEnvironmentToLaunch = 44,
 	ChatMessage = 45, -- callback: function(msgInfo)
 	FailedToLoadWorld = 46, -- callback: function(msgInfo)
+	ServerConnectionSuccess = 47,
+	ServerConnectionLost = 48,
+	ServerConnectionFailed = 49,
 }
 localevent.Name = localevent.name
 
