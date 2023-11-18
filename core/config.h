@@ -39,6 +39,9 @@ extern "C" {
 #define PLAYER_ID_NOT_ATTRIBUTED 252 // value before ID is attributed
 #define PLAYER_ID_NONE 251           // ID to represent no one
 
+#define PLAYER_USERNAME_NOT_ATTRIBUTED "..."
+#define PLAYER_USERID_NOT_ATTRIBUTED "..."
+
 // EVENTS
 #define EVENT_TYPE_FROM_SCRIPT 1
 #define EVENT_TYPE_SERVER_LOG_INFO 2
