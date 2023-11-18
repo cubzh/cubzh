@@ -401,6 +401,29 @@ profile.create = function(_, config)
 			ui:turnOff()
 		end
 
+		local removeURL = function(value)
+			local slashIndex = 0
+			for i = 1, #value do
+				if string.sub(value, i, i) == "/" then
+					slashIndex = i
+				end
+			end
+			if slashIndex ~= 0 then
+				value = string.sub(value, slashIndex + 1, #value)
+			end
+
+			return value
+		end
+
+		local trimPrefix = function(str, prefix)
+			if str:sub(1, #prefix) == prefix then
+				-- Trim the prefix
+				local trimmedStr = str:sub(#prefix + 1)
+				return trimmedStr
+			end
+			return str -- return the string, unchanged
+		end
+
 		local socialLinksTitle = ui:createText("✏️ Social links", theme.textColor)
 		socialLinksTitle:setParent(node)
 
@@ -414,8 +437,7 @@ profile.create = function(_, config)
 			local previous = userInfo.discord
 			userInfo.discord = self.text
 			-- send API request to update user info
-			local data = { discord = self.text }
-			api:patchUserInfo(data, function(err)
+			api:patchUserInfo({ discord = userInfo.discord }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.discord = previous
@@ -434,9 +456,10 @@ profile.create = function(_, config)
 		tiktokLink.onFocusLost = function(self)
 			local previous = userInfo.tiktok
 			userInfo.tiktok = self.text
+			userInfo.tiktok = removeURL(userInfo.tiktok)
+			userInfo.tiktok = trimPrefix(userInfo.tiktok, "@")
 			-- send API request to update user info
-			local data = { tiktok = self.text }
-			api:patchUserInfo(data, function(err)
+			api:patchUserInfo({ tiktok = userInfo.tiktok }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.tiktok = previous
@@ -468,11 +491,11 @@ profile.create = function(_, config)
 			if value:sub(1, 1) == "@" then
 				value = value:sub(2)
 			end
+			value = removeURL(value)
 			local previous = userInfo.x
 			userInfo.x = value
 			-- send API request to update user info
-			local data = { x = value }
-			api:patchUserInfo(data, function(err)
+			api:patchUserInfo({ x = userInfo.x }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.x = previous
@@ -491,9 +514,9 @@ profile.create = function(_, config)
 		githubUsername.onFocusLost = function(self)
 			local previous = userInfo.github
 			userInfo.github = self.text
+			userInfo.github = removeURL(userInfo.github)
 			-- send API request to update user info
-			local data = { github = self.text }
-			api:patchUserInfo(data, function(err)
+			api:patchUserInfo({ github = userInfo.github }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.github = previous
