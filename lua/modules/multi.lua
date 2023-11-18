@@ -163,7 +163,9 @@ end
 multi.playerAction = multi.action -- legacy name
 
 local initPlayer = function(player)
-	player:SetParent(World)
+	if player.Parent == nil then
+		player:SetParent(World)
+	end
 	if player == Player then
 		multi:sync(player, "p_" .. player.ID, {
 			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
@@ -183,7 +185,6 @@ end
 local removePlayer = function(player)
 	multi:unlink("ph_" .. player.ID)
 	multi:unlink("p_" .. player.ID)
-	player:RemoveFromParent()
 end
 
 local receive = function(e)
