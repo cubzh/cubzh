@@ -67,6 +67,9 @@ MODAL_KEYS = {
 }
 
 function connect()
+	if Players.Max <= 1 then
+		return -- no need to connect when max players not > 1
+	end
 	if connectionRetryTimer ~= nil then
 		connectionRetryTimer:Cancel()
 		connectionRetryTimer = nil
