@@ -548,6 +548,23 @@ local SwingLeft = function(player)
 	player.Animations.SwingLeft:Play()
 end
 
+loadAvatar = function(p)
+	if p.Avatar ~= nil then
+		require("avatar"):get(p.Username, p.Avatar)
+		-- didLoad function should already be installed
+	else
+		local avatar = require("avatar"):get(p.Username)
+		avatar.didLoad = function(err, _)
+			if err then
+				return
+			end
+			LocalEvent:send(LocalEvent.name.AvatarLoaded, p)
+		end
+		p.Avatar = avatar
+		avatar:SetParent(p)
+	end
+end
+
 local playerCall = function(_, playerID, username, userID, isLocal)
 	local player = Object()
 
@@ -645,6 +662,10 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			if privateFields.handle ~= nil then
 				privateFields.handle.Text = v
 			end
+
+			-- load avatar
+			loadAvatar(t)
+
 			return
 		end
 		if k == "Avatar" then
@@ -660,8 +681,12 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			if previousHead == nil then
 				local bypassHeadLocalRotationCallback = false
 				local capHeadRotation = function(_)
-					if player ~= Player then return end
-					if bypassHeadLocalRotationCallback then return end
+					if player ~= Player then
+						return
+					end
+					if bypassHeadLocalRotationCallback then
+						return
+					end
 
 					local angleAfter = player.Head.Forward:Angle(player.Down)
 
@@ -825,7 +850,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 		end
 	end)
 
-	Client.__loadAvatar(player)
+	loadAvatar(player)
 	if isLocal == true then
 		require("camera_modes"):setThirdPerson({ camera = Camera, target = player })
 	else
