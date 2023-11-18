@@ -428,6 +428,7 @@ noConnectionIndicator:hide()
 noConnectionIndicator.onRelease = connect
 
 function connectionIndicatorValid()
+	Client:HapticFeedback()
 	connShape.Tick = nil
 	local palette = connShape.Palette
 	palette[1].Color = theme.colorPositive
@@ -1474,6 +1475,8 @@ function skipTitleScreen()
 	if titleScreen == nil then
 		return
 	end
+
+	Client:HapticFeedback()
 
 	hideTitleScreen()
 	hideBottomBar()
