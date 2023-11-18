@@ -903,7 +903,7 @@ topBar.parentDidResize = function(self)
 	cubzhBtn.Width = math.max(cubzhBtn.Height, cubzhBtn.Width)
 
 	connectionIndicator.Height = cubzhBtn.Height * 0.4
-	connectionIndicator.Width = connectionIndicator.Height * 7.0 / 6.0
+	connectionIndicator.Width = connectionIndicator.Height
 
 	noConnectionIndicator.Height = connectionIndicator.Height
 	noConnectionIndicator.Width = connectionIndicator.Width
@@ -954,7 +954,7 @@ topBar.parentDidResize = function(self)
 	if topBarChat then
 		topBarChat.Height = topBarHeight - padding * 2
 		topBarChat.pos.X = chatBtn.pos.X + chatBtn.Width + padding
-		topBarChat.Width = (cubzhBtn.pos.X - topBarChat.pos.X) - padding * 2
+		topBarChat.Width = (connectionIndicator.pos.X - topBarChat.pos.X) - padding * 2
 		topBarChat.pos.Y = topBarHeight * 0.5 - topBarChat.Height * 0.5
 	end
 end
