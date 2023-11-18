@@ -30,6 +30,7 @@ CHAT_MIN_WIDTH = 250
 CHAT_SCREEN_HEIGHT_RATIO = 0.25
 CHAT_MIN_HEIGHT = 160
 CHAT_MAX_HEIGHT = 400
+CONNECTION_RETRY_DELAY = 5.0 -- in seconds
 
 ---------------------------
 -- VARS
@@ -64,6 +65,25 @@ MODAL_KEYS = {
 	MARKETPLACE = 8,
 	CUBZH_MENU = 9,
 }
+
+function connect()
+	if connectionRetryTimer ~= nil then
+		connectionRetryTimer:Cancel()
+		connectionRetryTimer = nil
+	end
+	connectBtn:hide()
+	System:ConnectToServer()
+end
+
+function startConnectTimer()
+	if connectionRetryTimer ~= nil then
+		connectionRetryTimer:Cancel()
+	end
+	connectionRetryTimer = Timer(CONNECTION_RETRY_DELAY, function()
+		connect()
+	end)
+	connectBtn:show()
+end
 
 function maxModalWidth()
 	local computed = Screen.Width - Screen.SafeArea.Left - Screen.SafeArea.Right - MODAL_MARGIN * 2
@@ -384,6 +404,13 @@ cubzhBtn:setColor(nil, Color(255, 255, 255, 254))
 cubzhBtn:setColorPressed(nil, Color(255, 255, 255, 254))
 cubzhBtn:setParent(topBar)
 cubzhBtn.pos.Y = theme.paddingTiny
+
+connectBtn = ui:createButton("🔌")
+connectBtn:setColor(theme.buttonColorSecondary)
+connectBtn:setParent(topBar)
+connectBtn.pos.Y = theme.paddingTiny
+connectBtn:hide()
+connectBtn.onRelease = connect
 
 chatBtn = ui:createButton("💬", { shadow = false, borders = false })
 -- chatBtn = ui:createButton("💬", {shadow = false})
@@ -805,6 +832,9 @@ topBar.parentDidResize = function(self)
 	-- Cubzh button must remain square
 	cubzhBtn.Width = math.max(cubzhBtn.Height, cubzhBtn.Width)
 
+	connectBtn.Height = cubzhBtn.Height
+	connectBtn.Width = connectBtn.Height
+
 	self.Width = Screen.Width
 	self.Height = System.SafeAreaTop + padding * 2 + height
 	self.pos.Y = Screen.Height - self.Height
@@ -812,6 +842,7 @@ topBar.parentDidResize = function(self)
 	local topBarHeight = self.Height - System.SafeAreaTop
 
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width - padding
+	connectBtn.pos.X = cubzhBtn.pos.X - connectBtn.Width - padding
 
 	-- PROFILE BUTTON
 
@@ -1078,18 +1109,32 @@ end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionSuccess, function()
 	print("connection success")
+	if Client.ServerConnectionSuccess then
+		Client.ServerConnectionSuccess()
+	end
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionFailed, function()
 	print("connection failed")
+	if Client.ServerConnectionFailed then
+		Client.ServerConnectionFailed()
+	end
+	startConnectTimer()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionLost, function()
 	print("connection lost")
+	if Client.ServerConnectionLost then
+		Client.ServerConnectionLost()
+	end
+	startConnectTimer()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
 	print("connecting...")
+	if Client.ConnectingToServer then
+		Client.ConnectingToServer()
+	end
 end)
 
 LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
@@ -1567,7 +1612,7 @@ Timer(0.1, function()
 		System:UpdateAuthStatus()
 
 		-- connects client to server if it makes sense (maxPlayers > 1)
-		System:ConnectToServer()
+		connect()
 
 		username.Text = Player.Username
 
