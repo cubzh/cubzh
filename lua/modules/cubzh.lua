@@ -140,7 +140,6 @@ Client.OnStart = function()
 		p.Physics = true
 	end
 
-	pi2 = math.pi * 2
 	moveDT = 0.0
 	kCameraPositionY = 90
 
@@ -154,31 +153,39 @@ Client.OnStart = function()
 		Client.DirectionalPad = directionalPad
 		Client.Action1 = action1
 
-		account:showAvatar()
+		showLocalPlayer()
+		print(Player.Username .. " joined!")
 	end)
+
+	objectSkills.addStepClimbing(Player)
 end
 
 Client.OnPlayerJoin = function(p)
+	if p == Player then
+		return
+	end
 	objectSkills.addStepClimbing(p)
 	dropPlayer(p)
 	print(p.Username .. " joined!")
 end
 
 Client.OnPlayerLeave = function(p)
-	objectSkills.removeStepClimbing(p)
+	if p ~= Player then
+		objectSkills.removeStepClimbing(p)
+	end
 end
 
 Client.Tick = function(dt)
-	if account.shown then
+	if localPlayerShown then
 		if Player.Position.Y < -500 then
 			dropPlayer(Player)
 		end
 	else
-		-- UP/DOWN MOVEMENT
+		-- Camera movement before player is shown
 		moveDT = moveDT + dt * 0.2
 		-- keep moveDT between -pi & pi
 		while moveDT > math.pi do
-			moveDT = moveDT - pi2
+			moveDT = moveDT - math.pi * 2
 		end
 		Camera.Position.Y = (kCameraPositionY + math.sin(moveDT) * 5.0) * MAP_SCALE
 
@@ -188,25 +195,11 @@ end
 
 Pointer.Click = function()
 	Player:SwingRight()
-	Player:TextBubble("This is a test!")
 end
 
-account = {
-	shown = false,
-	showAvatar = function(self)
-		if self.shown then
-			return
-		end
-		self.shown = true
-		Camera:SetModeThirdPerson()
-		dropPlayer(Player)
-	end,
-	hideAvatar = function(self)
-		if not self.shown then
-			return
-		end
-		self.shown = false
-		Camera:SetModeFree()
-		Player:RemoveFromParent()
-	end,
-}
+localPlayerShown = false
+function showLocalPlayer()
+	localPlayerShown = true
+	Camera:SetModeThirdPerson()
+	dropPlayer(Player)
+end
