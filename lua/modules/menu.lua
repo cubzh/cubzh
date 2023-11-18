@@ -71,7 +71,12 @@ function connect()
 		connectionRetryTimer:Cancel()
 		connectionRetryTimer = nil
 	end
-	connectBtn:hide()
+
+	connectionIndicator:show()
+	noConnectionIndicator:hide()
+
+	connectionIndicatorStartAnimation()
+
 	System:ConnectToServer()
 end
 
@@ -82,7 +87,10 @@ function startConnectTimer()
 	connectionRetryTimer = Timer(CONNECTION_RETRY_DELAY, function()
 		connect()
 	end)
-	connectBtn:show()
+
+	connShape.Tick = nil
+	connectionIndicator:hide()
+	noConnectionIndicator:show()
 end
 
 function maxModalWidth()
@@ -405,12 +413,70 @@ cubzhBtn:setColorPressed(nil, Color(255, 255, 255, 254))
 cubzhBtn:setParent(topBar)
 cubzhBtn.pos.Y = theme.paddingTiny
 
-connectBtn = ui:createButton("🔌")
-connectBtn:setColor(theme.buttonColorSecondary)
-connectBtn:setParent(topBar)
-connectBtn.pos.Y = theme.paddingTiny
-connectBtn:hide()
-connectBtn.onRelease = connect
+connShape = System.ShapeFromBundle("aduermael.connection_indicator")
+connectionIndicator = ui:createShape(connShape)
+connectionIndicator:setParent(topBar)
+connectionIndicator:hide()
+
+noConnShape = System.ShapeFromBundle("aduermael.no_conn_indicator")
+noConnectionIndicator = ui:createShape(noConnShape)
+noConnectionIndicator:setParent(topBar)
+noConnectionIndicator:hide()
+noConnectionIndicator.onRelease = connect
+
+function connectionIndicatorValid()
+	connShape.Tick = nil
+	local palette = connShape.Palette
+	palette[1].Color = theme.colorPositive
+	palette[2].Color = theme.colorPositive
+	palette[3].Color = theme.colorPositive
+	palette[4].Color = theme.colorPositive
+end
+
+function connectionIndicatorStartAnimation()
+	local animTime = 0.7
+	local animTimePortion = animTime / 4.0
+	local t = 0.0
+
+	local palette = connShape.Palette
+	palette[1].Color = Color(255, 255, 255, 0)
+	palette[2].Color = Color(255, 255, 255, 0)
+	palette[3].Color = Color(255, 255, 255, 0)
+	palette[4].Color = Color(255, 255, 255, 0)
+
+	connShape.Tick = function(_, dt)
+		t = t + dt
+		local palette = connShape.Palette
+
+		t = math.min(animTime, t)
+
+		if t < animTime * 0.25 then
+			palette[1].Color = Color(255, 255, 255, t / animTimePortion)
+			palette[2].Color = Color(255, 255, 255, 0)
+			palette[3].Color = Color(255, 255, 255, 0)
+			palette[4].Color = Color(255, 255, 255, 0)
+		elseif t < animTime * 0.5 then
+			palette[1].Color = Color(255, 255, 255, 255)
+			palette[2].Color = Color(255, 255, 255, (t - animTimePortion) / animTimePortion)
+			palette[3].Color = Color(255, 255, 255, 0)
+			palette[4].Color = Color(255, 255, 255, 0)
+		elseif t < animTime * 0.75 then
+			palette[1].Color = Color(255, 255, 255, 255)
+			palette[2].Color = Color(255, 255, 255, 255)
+			palette[3].Color = Color(255, 255, 255, (t - animTimePortion * 2) / animTimePortion)
+			palette[4].Color = Color(255, 255, 255, 0)
+		else
+			palette[1].Color = Color(255, 255, 255, 255)
+			palette[2].Color = Color(255, 255, 255, 255)
+			palette[3].Color = Color(255, 255, 255, 255)
+			palette[4].Color = Color(255, 255, 255, (t - animTimePortion * 3) / animTimePortion)
+		end
+
+		if t >= animTime then
+			t = 0.0
+		end
+	end
+end
 
 chatBtn = ui:createButton("💬", { shadow = false, borders = false })
 -- chatBtn = ui:createButton("💬", {shadow = false})
@@ -832,8 +898,11 @@ topBar.parentDidResize = function(self)
 	-- Cubzh button must remain square
 	cubzhBtn.Width = math.max(cubzhBtn.Height, cubzhBtn.Width)
 
-	connectBtn.Height = cubzhBtn.Height
-	connectBtn.Width = connectBtn.Height
+	connectionIndicator.Height = cubzhBtn.Height * 0.4
+	connectionIndicator.Width = connectionIndicator.Height * 7.0 / 6.0
+
+	noConnectionIndicator.Height = connectionIndicator.Height
+	noConnectionIndicator.Width = connectionIndicator.Width
 
 	self.Width = Screen.Width
 	self.Height = System.SafeAreaTop + padding * 2 + height
@@ -842,7 +911,10 @@ topBar.parentDidResize = function(self)
 	local topBarHeight = self.Height - System.SafeAreaTop
 
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width - padding
-	connectBtn.pos.X = cubzhBtn.pos.X - connectBtn.Width - padding
+	connectionIndicator.pos.X = cubzhBtn.pos.X - connectionIndicator.Width - padding * 2
+	connectionIndicator.pos.Y = cubzhBtn.pos.Y + cubzhBtn.Height * 0.5 - connectionIndicator.Height * 0.5
+
+	noConnectionIndicator.pos = connectionIndicator.pos
 
 	-- PROFILE BUTTON
 
@@ -1108,14 +1180,13 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionSuccess, function()
-	print("connection success")
+	connectionIndicatorValid()
 	if Client.ServerConnectionSuccess then
 		Client.ServerConnectionSuccess()
 	end
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionFailed, function()
-	print("connection failed")
 	if Client.ServerConnectionFailed then
 		Client.ServerConnectionFailed()
 	end
@@ -1123,7 +1194,6 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionFailed, function()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionLost, function()
-	print("connection lost")
 	if Client.ServerConnectionLost then
 		Client.ServerConnectionLost()
 	end
@@ -1131,7 +1201,6 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionLost, function()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
-	print("connecting...")
 	if Client.ConnectingToServer then
 		Client.ConnectingToServer()
 	end
