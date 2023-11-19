@@ -185,6 +185,9 @@ end
 local removePlayer = function(player)
 	multi:unlink("ph_" .. player.ID)
 	multi:unlink("p_" .. player.ID)
+	if player ~= Player then
+		player:RemoveFromParent()
+	end
 end
 
 local receive = function(e)
