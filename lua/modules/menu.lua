@@ -14,6 +14,7 @@ api = require("system_api", System)
 alert = require("alert")
 sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
+sfx = require("sfx")
 
 ---------------------------
 -- CONSTANTS
@@ -435,6 +436,7 @@ function connectionIndicatorValid()
 	palette[2].Color = theme.colorPositive
 	palette[3].Color = theme.colorPositive
 	palette[4].Color = theme.colorPositive
+	sfx("metal_clanging_2", { Volume = 0.2, Pitch = 5.0, Spatialized = false })
 end
 
 function connectionIndicatorStartAnimation()
