@@ -508,13 +508,30 @@ mod.getPublishedWorlds = function(self, config, callback)
 end
 
 -- callback(error string or nil, World or nil)
-mod.getWorld = function(_, worldID, callback)
-	if type(callback) ~= "function" then
-		callback("2nd arg must be a function", nil)
+-- field=authorName
+mod.getWorld = function(_, worldID, fields, callback)
+	if type(fields) ~= "table" then
+		error("api:getWorld(worldID, fields, callback) - fields must be a table")
 		return
 	end
 
-	local url = mod.kApiAddr .. "/worlds/" .. worldID
+	if #fields < 1 then
+		error("api:getWorld(worldID, fields, callback) - fields must contain at least one entry")
+	end
+
+	if type(callback) ~= "function" then
+		error("api:getWorld(worldID, fields, callback) - callback must be a function")
+		return
+	end
+
+	local url = mod.kApiAddr .. "/worlds/" .. worldID .. "?"
+
+	for i, field in ipairs(fields) do
+		if i > 1 then
+			url = url .. "&"
+		end
+		url = url .. "field=" .. field
+	end
 
 	-- send request
 	local req = HTTP:Get(url, function(resp)

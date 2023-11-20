@@ -713,7 +713,7 @@ initPickWorld = function()
 		onOpen = function(_, cell)
 			worldTitle = cell.title
 			worldID = cell.id
-			require("system_api", System):getWorld(worldID, function(err, data)
+			require("system_api", System):getWorld(worldID, { "mapBase64" }, function(err, data)
 				if err then
 					print(err)
 					return
