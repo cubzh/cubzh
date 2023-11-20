@@ -443,11 +443,16 @@ function connectionIndicatorStartAnimation()
 	local t = 0.0
 
 	local palette = connShape.Palette
-	palette[1].Color = Color(255, 255, 255, 0)
-	palette[2].Color = Color(255, 255, 255, 0)
-	palette[3].Color = Color(255, 255, 255, 0)
-	palette[4].Color = Color(255, 255, 255, 0)
+	local darkGrayLevel = 100
+	local darkGray = Color(darkGrayLevel, darkGrayLevel, darkGrayLevel)
+	local white = Color.White
 
+	palette[1].Color = darkGray
+	palette[2].Color = darkGray
+	palette[3].Color = darkGray
+	palette[4].Color = darkGray
+
+	local v
 	connShape.Tick = function(_, dt)
 		t = t + dt
 		local palette = connShape.Palette
@@ -455,25 +460,29 @@ function connectionIndicatorStartAnimation()
 		t = math.min(animTime, t)
 
 		if t < animTime * 0.25 then
-			palette[1].Color = Color(255, 255, 255, t / animTimePortion)
-			palette[2].Color = Color(255, 255, 255, 0)
-			palette[3].Color = Color(255, 255, 255, 0)
-			palette[4].Color = Color(255, 255, 255, 0)
+			v = t / animTimePortion
+			palette[1].Color:Lerp(darkGray, white, v)
+			palette[2].Color = darkGray
+			palette[3].Color = darkGray
+			palette[4].Color = darkGray
 		elseif t < animTime * 0.5 then
-			palette[1].Color = Color(255, 255, 255, 255)
-			palette[2].Color = Color(255, 255, 255, (t - animTimePortion) / animTimePortion)
-			palette[3].Color = Color(255, 255, 255, 0)
-			palette[4].Color = Color(255, 255, 255, 0)
+			v = (t - animTimePortion) / animTimePortion
+			palette[1].Color = white
+			palette[2].Color:Lerp(darkGray, white, v)
+			palette[3].Color = darkGray
+			palette[4].Color = darkGray
 		elseif t < animTime * 0.75 then
-			palette[1].Color = Color(255, 255, 255, 255)
-			palette[2].Color = Color(255, 255, 255, 255)
-			palette[3].Color = Color(255, 255, 255, (t - animTimePortion * 2) / animTimePortion)
-			palette[4].Color = Color(255, 255, 255, 0)
+			v = (t - animTimePortion * 2) / animTimePortion
+			palette[1].Color = white
+			palette[2].Color = white
+			palette[3].Color:Lerp(darkGray, white, v)
+			palette[4].Color = darkGray
 		else
-			palette[1].Color = Color(255, 255, 255, 255)
-			palette[2].Color = Color(255, 255, 255, 255)
-			palette[3].Color = Color(255, 255, 255, 255)
-			palette[4].Color = Color(255, 255, 255, (t - animTimePortion * 3) / animTimePortion)
+			v = (t - animTimePortion * 3) / animTimePortion
+			palette[1].Color = white
+			palette[2].Color = white
+			palette[3].Color = white
+			palette[4].Color:Lerp(darkGray, white, v)
 		end
 
 		if t >= animTime then
