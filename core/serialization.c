@@ -171,16 +171,16 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
 }
 
 void serialization_assets_free_func(void *ptr) {
-    Asset *a = (Asset*)ptr;
-    switch(a->type) {
+    Asset *a = (Asset *)ptr;
+    switch (a->type) {
         case AssetType_Shape:
-            shape_release((Shape*)a->ptr);
+            shape_release((Shape *)a->ptr);
             break;
         case AssetType_Object:
-            transform_release((Transform*)a->ptr);
+            transform_release((Transform *)a->ptr);
             break;
         case AssetType_Palette:
-            color_palette_free((ColorPalette*)a->ptr);
+            color_palette_free((ColorPalette *)a->ptr);
             break;
         default:
             break;

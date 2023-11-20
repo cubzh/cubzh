@@ -43,7 +43,7 @@ typedef struct {
 } _CollisionCouple;
 
 void _scene_collision_couple_free_func(void *ptr) {
-    _CollisionCouple *cc = (_CollisionCouple*)ptr;
+    _CollisionCouple *cc = (_CollisionCouple *)ptr;
     weakptr_release(cc->t1);
     weakptr_release(cc->t2);
     free(cc);
