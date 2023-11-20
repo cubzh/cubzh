@@ -91,7 +91,7 @@ Shape *serialization_load_shape(Stream *s,
                                 LoadShapeSettings *shapeSettings,
                                 const bool allowLegacy);
 
-Shape *assets_get_root_shape(DoublyLinkedList *list);
+Shape *assets_get_root_shape(DoublyLinkedList *list, bool remove);
 
 /// Load assets (shapes) from Stream and return it as a list
 /// - Parameters:
@@ -107,6 +107,7 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
                                             ColorAtlas *colorAtlas,
                                             const LoadShapeSettings *const settings,
                                             const bool allowLegacy);
+void serialization_assets_free_func(void *ptr);
 
 /// serialize a shape w/ its palette
 bool serialization_save_shape(Shape *shape,

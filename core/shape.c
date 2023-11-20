@@ -1721,6 +1721,7 @@ void shape_refresh_all_vertices(Shape *s) {
 
         index3d_iterator_next(it);
     }
+    index3d_iterator_free(it);
 
     // refresh draw slices after full refresh
     _shape_fill_draw_slices(s->firstVB_opaque);

@@ -49,24 +49,23 @@ uint8_t readMagicBytesLegacy(Stream *s) {
     return 0; // ok
 }
 
-Shape *assets_get_root_shape(DoublyLinkedList *list) {
-    Shape *shape = NULL;
-    DoublyLinkedListNode *node = doubly_linked_list_first(list);
-    while (node != NULL) {
-        Asset *r = (Asset *)doubly_linked_list_node_pointer(node);
+Shape *assets_get_root_shape(DoublyLinkedList *list, bool remove) {
+    DoublyLinkedListNode *n = doubly_linked_list_first(list);
+    while (n != NULL) {
+        Asset *r = (Asset *)doubly_linked_list_node_pointer(n);
         if (r->type == AssetType_Shape) {
             Shape *s = (Shape *)r->ptr;
             if (transform_get_parent(shape_get_root_transform(s)) == NULL) {
-                shape = s;
-                break;
+                if (remove) {
+                    free(r);
+                    doubly_linked_list_delete_node(list, n);
+                }
+                return s;
             }
         }
-        node = doubly_linked_list_node_next(node);
-        if (node == doubly_linked_list_first(list)) {
-            node = NULL;
-        }
+        n = doubly_linked_list_node_next(n);
     }
-    return shape;
+    return NULL;
 }
 
 /// This does free the Stream
@@ -85,10 +84,12 @@ Shape *serialization_load_shape(Stream *s,
     if (assets == NULL) {
         return NULL;
     }
-    Shape *shape = assets_get_root_shape(assets);
+    Shape *shape = assets_get_root_shape(assets, true);
 
-    doubly_linked_list_flush(assets, free);
+    // do not keep ownership on sub-objects + free unused palette
+    doubly_linked_list_flush(assets, serialization_assets_free_func);
     doubly_linked_list_free(assets);
+
     return shape;
 }
 
@@ -161,12 +162,30 @@ DoublyLinkedList *serialization_load_assets(Stream *s,
     }
 
     // set fullname if containing a root shape
-    Shape *shape = assets_get_root_shape(list);
+    Shape *shape = assets_get_root_shape(list, false);
     if (shape != NULL) {
         shape_set_fullname(shape, fullname);
     }
 
     return list;
+}
+
+void serialization_assets_free_func(void *ptr) {
+    Asset *a = (Asset *)ptr;
+    switch (a->type) {
+        case AssetType_Shape:
+            shape_release((Shape *)a->ptr);
+            break;
+        case AssetType_Object:
+            transform_release((Transform *)a->ptr);
+            break;
+        case AssetType_Palette:
+            color_palette_free((ColorPalette *)a->ptr);
+            break;
+        default:
+            break;
+    }
+    free(a);
 }
 
 bool serialization_save_shape(Shape *shape,
@@ -439,16 +458,17 @@ bool serialization_load_baked_file(Shape *s, uint64_t expectedHash, FILE *fd) {
                     return false;
                 }
 
-                chunk = (Chunk *)index3d_get(chunks, coords.x, coords.y, coords.z);
-                if (chunk == NULL) {
-                    continue;
-                }
-
                 // read lighting data compressed size
                 uint32_t compressedSize;
                 if (fread(&compressedSize, sizeof(uint32_t), 1, fd) != 1) {
                     cclog_error("baked file (v2): failed to read lighting data compressed size");
                     return false;
+                }
+
+                chunk = (Chunk *)index3d_get(chunks, coords.x, coords.y, coords.z);
+                if (chunk == NULL) {
+                    fseek(fd, compressedSize, SEEK_CUR);
+                    continue;
                 }
 
                 // read compressed lighting data
