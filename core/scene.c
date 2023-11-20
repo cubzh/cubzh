@@ -42,6 +42,13 @@ typedef struct {
     bool flag;
 } _CollisionCouple;
 
+void _scene_collision_couple_free_func(void *ptr) {
+    _CollisionCouple *cc = (_CollisionCouple*)ptr;
+    weakptr_release(cc->t1);
+    weakptr_release(cc->t2);
+    free(cc);
+}
+
 void _scene_update_rtree(Scene *sc, RigidBody *rb, Transform *t, Box *collider) {
     // register awake volume here for new and removed colliders, and for transformations change
     if (rigidbody_is_enabled(rb) && rigidbody_is_collider_valid(rb) &&
@@ -228,6 +235,7 @@ void scene_free(Scene *sc) {
     rtree_free(sc->rtree);
     weakptr_invalidate(sc->wptr);
     fifo_list_free(sc->removed, NULL);
+    doubly_linked_list_flush(sc->collisions, _scene_collision_couple_free_func);
     doubly_linked_list_free(sc->collisions);
     doubly_linked_list_flush(sc->awakeBoxes, box_free_std);
     doubly_linked_list_free(sc->awakeBoxes);
@@ -334,9 +342,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 rigidbody_fire_reciprocal_collision_end_callback(t, t2, callbackData);
             }
 
-            weakptr_release(cc->t1);
-            weakptr_release(cc->t2);
-            free(cc);
+            _scene_collision_couple_free_func(cc);
 
             DoublyLinkedListNode *next = doubly_linked_list_node_next(n);
             doubly_linked_list_delete_node(sc->collisions, n);
@@ -489,7 +495,7 @@ CollisionCoupleStatus scene_register_collision_couple(Scene *sc,
                                          _scene_register_collision_couple_func,
                                          newCC,
                                          (void **)&existingCC)) {
-        free(newCC);
+        _scene_collision_couple_free_func(newCC);
         *wNormal = existingCC->wNormal;
         if (existingCC->flag) {
             return CollisionCoupleStatus_Discard;
