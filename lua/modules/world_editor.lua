@@ -57,22 +57,9 @@ local states = {
 	EDIT_MAP = 11,
 }
 
--- Substates
-
-local subStates = {
-	[states.UPDATING_OBJECT] = {
-		DEFAULT = 1,
-		GIZMO_MOVE = 2,
-		GIZMO_ROTATE = 3,
-		GIZMO_SCALE = 4,
-	}
-}
-
 local setState
-local setSubState
 
 local state
-local activeSubState = {}
 
 local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 	syncMulti = syncMulti == nil and true or syncMulti
@@ -213,111 +200,6 @@ local removeObject = function(objInfo)
 	objects[objInfo.uuid] = nil
 end
 
-local subStatesSettingsUpdatingObject = {
-	-- DEFAULT
-	{
-		pointerUp = function(pe)
-			if worldEditor.dragging then return end
-			tryPickObject(pe)
-		end
-	},
-	-- GIZMO_MOVE
-	{
-		onStateBegin = function()
-			worldEditor.gizmo:setObject(worldEditor.object)
-			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
-			worldEditor.gizmo:setAxisVisibility(true, true, true)
-			worldEditor.gizmo:setOnMoveBegin(function()
-				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
-			end)
-			worldEditor.gizmo:setOnMoveEnd(function()
-				setObjectAlpha(worldEditor.object, 1)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
-			end)
-			worldEditor.gizmo:setOnMove(function()
-				sendToServer(events.P_EDIT_OBJECT, {
-					uuid = worldEditor.object.uuid,
-					Position = worldEditor.object.Position
-				})
-			end)
-			freezeObject(worldEditor.object)
-		end,
-		onStateEnd = function()
-			if worldEditor.object then
-				unfreezeObject(worldEditor.object)
-			end
-			worldEditor.gizmo:setObject(nil)
-		end,
-		pointerUp = function(pe)
-			if worldEditor.dragging then return end
-			tryPickObject(pe)
-		end
-	},
-	-- GIZMO_ROTATE
-	{
-		onStateBegin = function()
-			worldEditor.gizmo:setObject(worldEditor.object)
-			worldEditor.gizmo:setMode(require("gizmo").Mode.Rotate)
-			worldEditor.gizmo:setAxisVisibility(true, true, true)
-			worldEditor.gizmo:setOnRotateBegin(function()
-				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
-			end)
-			worldEditor.gizmo:setOnRotateEnd(function()
-				setObjectAlpha(worldEditor.object, 1)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
-			end)
-			worldEditor.gizmo:setOnRotate(function()
-				sendToServer(events.P_EDIT_OBJECT, {
-					uuid = worldEditor.object.uuid,
-					Rotation = worldEditor.object.Rotation
-				})
-			end)
-			freezeObject(worldEditor.object)
-		end,
-		onStateEnd = function()
-			worldEditor.gizmo:setObject(nil)
-			unfreezeObject(worldEditor.object)
-		end,
-		pointerUp = function(pe)
-			if worldEditor.dragging then return end
-			tryPickObject(pe)
-		end
-	},
-	-- GIZMO_SCALE
-	{
-		onStateBegin = function()
-			worldEditor.gizmo:setObject(worldEditor.object)
-			worldEditor.gizmo:setMode(require("gizmo").Mode.Scale)
-			worldEditor.gizmo:setAxisVisibility(true, false, false)
-			worldEditor.gizmo:setOnScaleBegin(function()
-				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
-			end)
-			worldEditor.gizmo:setOnScaleEnd(function()
-				setObjectAlpha(worldEditor.object, 1)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
-			end)
-			worldEditor.gizmo:setOnScale(function()
-				sendToServer(events.P_EDIT_OBJECT, {
-					uuid = worldEditor.object.uuid,
-					Scale = worldEditor.object.Scale
-				})
-			end)
-			freezeObject(worldEditor.object)
-		end,
-		onStateEnd = function()
-			worldEditor.gizmo:setObject(nil)
-			unfreezeObject(worldEditor.object)
-		end,
-		pointerUp = function(pe)
-			if worldEditor.dragging then return end
-			tryPickObject(pe)
-		end
-	},
-}
-
 local mobilePlacingObject = function(obj)
 	local impact = Camera:CastRay(nil, Player)
 	if not impact then return end
@@ -426,7 +308,9 @@ local statesSettings = {
 			end
 		end,
 		tick = function()
-			mobilePlacingObject(worldEditor.placingObj)
+			if Client.IsMobile then
+				mobilePlacingObject(worldEditor.placingObj)
+			end
 		end,
 		onStateEnd = function()
 			worldEditor.placingValidateBtn:hide()
@@ -505,14 +389,41 @@ local statesSettings = {
 			end)
 			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
+
+			-- Active translate gizmo
+			worldEditor.gizmo:setObject(worldEditor.object)
+			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
+			worldEditor.gizmo:setAxisVisibility(true, true, true)
+			worldEditor.gizmo:setOnMoveBegin(function()
+				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
+			end)
+			worldEditor.gizmo:setOnMoveEnd(function()
+				setObjectAlpha(worldEditor.object, 1)
+				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
+			end)
+			worldEditor.gizmo:setOnMove(function()
+				sendToServer(events.P_EDIT_OBJECT, {
+					uuid = worldEditor.object.uuid,
+					Position = worldEditor.object.Position
+				})
+			end)
+			freezeObject(worldEditor.object)
+		end,
+		pointerUp = function(pe)
+			if worldEditor.dragging then return end
+			tryPickObject(pe)
 		end,
 		onStateEnd = function()
+			if worldEditor.object then
+				unfreezeObject(worldEditor.object)
+			end
+			worldEditor.gizmo:setObject(nil)
 			require("box_gizmo"):toggle(nil)
 			worldEditor.updateObjectUI:hide()
 			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
 			worldEditor.object = nil
 		end,
-		subStatesSettings = subStatesSettingsUpdatingObject,
 		pointerWheelPriority = function(delta)
 			worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
 			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
@@ -530,8 +441,17 @@ local statesSettings = {
 			end
 			local data = getObjectInfoTable(obj)
 			data.uuid = nil
-			data.rotationShift = worldEditor.rotationShift
-			setState(states.SPAWNING_OBJECT, data)
+			data.rotationShift = worldEditor.rotationShift or 0
+			data.uuid = -1
+			local previousObj = obj
+			spawnObject(data, function(obj)
+				waitingForUUIDObj = obj
+				obj.Position = previousObj.Position + Number3(5,0,5)
+				obj.Rotation = previousObj.Rotation
+				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(obj))
+				obj.currentlyEditedBy = Player
+				setState(states.UPDATING_OBJECT, obj)
+			end)
 		end,
 		onStateEnd = function()
 			worldEditor.updateObjectUI:hide()
@@ -600,65 +520,14 @@ local statesSettings = {
 
 setState = function(newState, data)
 	if state then
-		local subState = activeSubState[state]
-		if subState then
-			onStateEnd = statesSettings[state].subStatesSettings[subState].onStateEnd
-			if onStateEnd then onStateEnd(newState, data) end
-		end
 		local onStateEnd = statesSettings[state].onStateEnd
 		if onStateEnd then onStateEnd(newState, data) end
 	end
 
-	local oldState = state
 	state = newState
 
 	local onStateBegin = statesSettings[state].onStateBegin
 	if onStateBegin then onStateBegin(data) end
-
-	if statesSettings[state].subStatesSettings then
-		-- if changing state, then going back to default
-		if oldState ~= state then
-			setSubState(subStates[state].DEFAULT)
-		-- else keep the current subState
-		else
-			setSubState(activeSubState[state])
-		end
-	end
-end
-
-setSubState = function(newSubState, data)
-	local subStatesSettings
-	local subStateSetting
-
-	-- handle onStateEnd for subState
-	subStatesSettings = statesSettings[state].subStatesSettings
-	if subStatesSettings then
-		subStateSetting = subStatesSettings[activeSubState[state]]
-		if subStateSetting then
-			local onSubStateEnd = subStateSetting.onStateEnd
-			if onSubStateEnd then
-				onSubStateEnd(newSubState, data)
-			end
-		end
-	end
-
-	-- handle onStateBegin for subState
-	subStatesSettings = statesSettings[state].subStatesSettings
-	if not subStatesSettings then
-		error("Current state has no subStates.", 2)
-		return
-	end
-
-	subStateSetting = subStatesSettings[newSubState]
-	if not subStateSetting then
-		error("Can't currently switch to this subState, change the state before.", 2)
-		return
-	end
-
-	activeSubState[state] = newSubState
-
-	local onSubStateBegin = subStateSetting.onStateBegin
-	if onSubStateBegin then onSubStateBegin(data) end
 end
 
 -- Listeners
@@ -677,14 +546,6 @@ local listeners = {
 local function handleLocalEventListener(listenerName, pe)
 	local stateSettings = statesSettings[state]
 	local callback
-
-	if stateSettings.subStatesSettings then
-		local subState = activeSubState[state]
-		callback = stateSettings.subStatesSettings[subState][listenerName]
-		if callback then
-			if callback(pe) then return true end
-		end
-	end
 
 	callback = stateSettings[listenerName]
 	if callback then
@@ -915,8 +776,6 @@ initDefaultMode = function()
 		btn.onRelease = function()
 			if config.state then
 				setState(config.state)
-			elseif config.serverEvent then
-				sendToServer(config.serverEvent)
 			end
 		end
 		index[config.name] = btn
@@ -933,7 +792,7 @@ initDefaultMode = function()
 		menuBar:show()
 	end
 	showSettingsBtn.parentDidResize = function()
-		showSettingsBtn.pos = { Screen.Width - padding - showSettingsBtn.Width, Screen.Height - showSettingsBtn.Height - 50 }
+		showSettingsBtn.pos = { Screen.Width - padding - showSettingsBtn.Width, Screen.Height - showSettingsBtn.Height - Screen.SafeArea.Top - padding }
 	end
 	showSettingsBtn:parentDidResize()
 
@@ -1041,7 +900,7 @@ initDefaultMode = function()
 	menuBar:hide()
 	menuBar.parentDidResize = function()
 		menuBar:refresh()
-		menuBar.pos = { Screen.Width - padding - menuBar.Width, Screen.Height - menuBar.Height - 50 }
+		menuBar.pos = { Screen.Width - padding - menuBar.Width, Screen.Height - menuBar.Height - Screen.SafeArea.Top - padding }
 	end
 	menuBar:parentDidResize()
 
@@ -1132,48 +991,31 @@ initDefaultMode = function()
 	-- Update object UI
 	local updateObjectUI = ui:createFrame(Color(255,0,0))
 
-	local nameInput = ui:createTextInput("", "Item Name")
-	nameInput:setParent(updateObjectUI)
-	worldEditor.nameInput = nameInput
-
-	local infoBtn = ui:createButton("👁")
-	infoBtn:setParent(updateObjectUI)
-	worldEditor.infoBtn = infoBtn
-
 	local bar = require("ui_container"):createHorizontalContainer(Color(78, 78, 78))
 	bar:setParent(updateObjectUI)
 
+	local nameInput = ui:createTextInput("", "Item Name")
+	worldEditor.nameInput = nameInput
+	bar:pushElement(nameInput)
+
+	local infoBtn = ui:createButton("i")
+	worldEditor.infoBtn = infoBtn
+	bar:pushElement(infoBtn)
+
+	bar:pushSeparator()
+
 	local barInfo = {
-		{ type="button", text="⇢", subState=subStates[states.UPDATING_OBJECT].GIZMO_MOVE },
-		-- { type="button", text="↻", subState=subStates[states.UPDATING_OBJECT].GIZMO_ROTATE },
-		{ type="button", text="↻", callback = function()
-			worldEditor.object:TextBubble("Mouse wheel: rotate object on Y axis.")
-		end },
-		{ type="button", text="⇢", subState=subStates[states.UPDATING_OBJECT].GIZMO_SCALE },
-		{ type="separator" },
-		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT,worldEditor.object.uuid) end },
+		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT, worldEditor.object.uuid) end },
 		{ type="gap" },
-		{ type="button", text="🗑️", callback=function() setState(states.DESTROY_OBJECT,worldEditor.object.uuid) end },
+		{ type="button", text="🗑️", callback=function() setState(states.DESTROY_OBJECT, worldEditor.object.uuid) end },
 		{ type="gap" },
-		{ type="button", text="✅", callback=function() setState(states.DEFAULT,worldEditor.object.uuid) end  },
+		{ type="button", text="✅", callback=function() setState(states.DEFAULT, worldEditor.object.uuid) end  },
 	}
 
 	for _,elem in ipairs(barInfo) do
 		if elem.type == "button" then
 			local btn = ui:createButton(elem.text)
-			btn.onRelease = function()
-				if elem.callback then
-					elem.callback(btn)
-					return
-				end
-				if elem.subState then
-					if activeSubState[state] == elem.subState then
-						setSubState(subStates[state].DEFAULT)
-					else
-						setSubState(elem.subState)
-					end
-				end
-			end
+			btn.onRelease = elem.callback
 			bar:pushElement(btn)
 		elseif elem.type == "separator" then
 			bar:pushSeparator()
@@ -1183,14 +1025,10 @@ initDefaultMode = function()
 	end
 
 	updateObjectUI.parentDidResize = function()
+		nameInput.Width = 150
 		bar:refresh()
 		updateObjectUI.Width = bar.Width
-		infoBtn.Height = nameInput.Height
-		infoBtn.Width = nameInput.Height
-		nameInput.Width = updateObjectUI.Width - infoBtn.Width
-		updateObjectUI.Height = bar.Height + nameInput.Height
-		nameInput.pos = { 0, bar.Height }
-		infoBtn.pos = { nameInput.Width, nameInput.pos.Y }
+		updateObjectUI.Height = bar.Height
 		bar.pos = { 0, 0 }
 		updateObjectUI.pos = { Screen.Width * 0.5 - updateObjectUI.Width * 0.5, padding }
 	end
@@ -1199,15 +1037,15 @@ initDefaultMode = function()
 	worldEditor.updateObjectUI = updateObjectUI
 
 	-- Ambience editor
-	local aiAmbienceButton = require("ui_ai_ambience"):createButton()
-	aiAmbienceButton:setParent(defaultStateUI)
-	aiAmbienceButton.parentDidResize = function()
-		aiAmbienceButton.pos = { padding, Screen.Height - 90 }
+	local aiAmbienceContainer = require("ui_ai_ambience"):createNode()
+	aiAmbienceContainer:setParent(defaultStateUI)
+	aiAmbienceContainer.parentDidResize = function()
+		aiAmbienceContainer.pos = { padding, Screen.Height - aiAmbienceContainer.btn.Height - Screen.SafeArea.Top - padding }
 	end
-	aiAmbienceButton.onNewAmbience = function(data)
+	aiAmbienceContainer:parentDidResize()
+	aiAmbienceContainer.onNewAmbience = function(data)
 		sendToServer(events.P_SET_AMBIENCE, data)
 	end
-	aiAmbienceButton:parentDidResize()
 
 	-- Edit Map
 	local editMapValidateBtn = ui:createButton("✅")
