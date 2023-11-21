@@ -13,7 +13,7 @@ creations.createModalContent = function(_, config)
 	-- default config
 	local _config = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
-		onOpen = nil
+		onOpen = nil,
 	}
 
 	if config then
@@ -524,7 +524,10 @@ creations.createModalContent = function(_, config)
 		end
 
 		grid.onOpen = function(_, cell)
-			if config.onOpen then config.onOpen(creationsContent, cell) return end
+			if config.onOpen then
+				config.onOpen(creationsContent, cell)
+				return
+			end
 			if cell.type == "item" then
 				local itemFullName = cell.itemFullName
 				local category = cell.category
@@ -556,55 +559,32 @@ creations.createModalContent = function(_, config)
 					end)
 				end
 
-				local btnArchive = ui:createButton("🗑️", {textSize="default"})
+				local btnArchive = ui:createButton("🗑️", { textSize = "default" })
 				btnArchive.onRelease = function()
-					local warningPopup = modal:createContent()
-					local node = ui:createNode()
-					warningPopup.node = node
-					warningPopup.title = "Archive Item"
 					local str = "Are you sure you want to archive this item?"
-					local text = ui:createText(str)
-					text:setParent(node)
-					text.color = Color.White
-
-					warningPopup.idealReducedContentSize = function(content, _, _)
-						local w = text.Width + 2 * theme.padding
-						local h = text.Height + 2 * theme.padding
-						content.Width = w
-						content.Height = h
-						text.pos = {-text.Width * 0.5, theme.padding}
-						return Number2(w, h)
-					end
-
-					local btnConfirm = ui:createButton("Yes")
-					btnConfirm:setColor(theme.colorPositive)
-					btnConfirm.onRelease = function()
-						local data = {archived = true}
+					local positive = function()
+						local data = { archived = true }
 						api:patchItem(cell.id, data, function(err, itm)
 							if err or not itm.archived then
-								text.Text = "Could not archive item"
-								warningPopup.bottomRight = {}
-								warningPopup.bottomLeft = {}
+								require("menu"):ShowAlert({ message = "Could not archive item" }, System)
 								return
 							end
-							warningPopup:pop()
-							creationsContent:pop()
 						end)
 					end
-					warningPopup.bottomRight = {btnConfirm}
+					local negative = function() end
+					local alertConfig = {
+						message = str,
+						positiveLabel = "Yes",
+						positiveCallback = positive,
+						negativeLabel = "No",
+						negativeCallback = negative,
+					}
 
-					local btnCancel = ui:createButton("No")
-					btnCancel:setColor(theme.colorNegative)
-					btnCancel.onRelease = function()
-						warningPopup:pop()
-					end
-					warningPopup.bottomLeft = {btnCancel}
-
-					itemDetailsContent:push(warningPopup)
+					require("menu"):ShowAlert(alertConfig, System)
 				end
 
-				itemDetailsContent.bottomLeft = {btnDuplicate, btnExport, btnArchive}
-				itemDetailsContent.bottomRight = {btnEdit}
+				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }
+				itemDetailsContent.bottomRight = { btnEdit }
 
 				itemDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width
