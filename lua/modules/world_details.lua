@@ -275,13 +275,13 @@ worldDetailsMod.create = function(_, config)
 			self.shape.Height = 350
 		end
 
-		local req = api:getWorld(cell.id, function(err, world)
+		local req = api:getWorld(cell.id, { "authorName", "authorID" }, function(err, world)
 			if removed then
 				return
 			end
 
-			local authorName = world["author-name"]
-			local authorID = world["author-id"]
+			local authorName = world.authorName
+			local authorID = world.authorID
 
 			if err == nil and world ~= nil then
 				if self.author ~= nil then

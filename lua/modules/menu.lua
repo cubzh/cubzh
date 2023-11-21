@@ -14,6 +14,7 @@ api = require("system_api", System)
 alert = require("alert")
 sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
+sfx = require("sfx")
 
 ---------------------------
 -- CONSTANTS
@@ -30,6 +31,7 @@ CHAT_MIN_WIDTH = 250
 CHAT_SCREEN_HEIGHT_RATIO = 0.25
 CHAT_MIN_HEIGHT = 160
 CHAT_MAX_HEIGHT = 400
+CONNECTION_RETRY_DELAY = 5.0 -- in seconds
 
 ---------------------------
 -- VARS
@@ -64,6 +66,36 @@ MODAL_KEYS = {
 	MARKETPLACE = 8,
 	CUBZH_MENU = 9,
 }
+
+function connect()
+	if Players.Max <= 1 then
+		return -- no need to connect when max players not > 1
+	end
+	if connectionRetryTimer ~= nil then
+		connectionRetryTimer:Cancel()
+		connectionRetryTimer = nil
+	end
+
+	connectionIndicator:show()
+	noConnectionIndicator:hide()
+
+	connectionIndicatorStartAnimation()
+
+	System:ConnectToServer()
+end
+
+function startConnectTimer()
+	if connectionRetryTimer ~= nil then
+		connectionRetryTimer:Cancel()
+	end
+	connectionRetryTimer = Timer(CONNECTION_RETRY_DELAY, function()
+		connect()
+	end)
+
+	connShape.Tick = nil
+	connectionIndicator:hide()
+	noConnectionIndicator:show()
+end
 
 function maxModalWidth()
 	local computed = Screen.Width - Screen.SafeArea.Left - Screen.SafeArea.Right - MODAL_MARGIN * 2
@@ -384,6 +416,82 @@ cubzhBtn:setColor(nil, Color(255, 255, 255, 254))
 cubzhBtn:setColorPressed(nil, Color(255, 255, 255, 254))
 cubzhBtn:setParent(topBar)
 cubzhBtn.pos.Y = theme.paddingTiny
+
+connShape = System.ShapeFromBundle("aduermael.connection_indicator")
+connectionIndicator = ui:createShape(connShape)
+connectionIndicator:setParent(topBar)
+connectionIndicator:hide()
+
+noConnShape = System.ShapeFromBundle("aduermael.no_conn_indicator")
+noConnectionIndicator = ui:createShape(noConnShape)
+noConnectionIndicator:setParent(topBar)
+noConnectionIndicator:hide()
+noConnectionIndicator.onRelease = connect
+
+function connectionIndicatorValid()
+	Client:HapticFeedback()
+	connShape.Tick = nil
+	local palette = connShape.Palette
+	palette[1].Color = theme.colorPositive
+	palette[2].Color = theme.colorPositive
+	palette[3].Color = theme.colorPositive
+	palette[4].Color = theme.colorPositive
+	sfx("metal_clanging_2", { Volume = 0.2, Pitch = 5.0, Spatialized = false })
+end
+
+function connectionIndicatorStartAnimation()
+	local animTime = 0.7
+	local animTimePortion = animTime / 4.0
+	local t = 0.0
+
+	local palette = connShape.Palette
+	local darkGrayLevel = 100
+	local darkGray = Color(darkGrayLevel, darkGrayLevel, darkGrayLevel)
+	local white = Color.White
+
+	palette[1].Color = darkGray
+	palette[2].Color = darkGray
+	palette[3].Color = darkGray
+	palette[4].Color = darkGray
+
+	local v
+	connShape.Tick = function(_, dt)
+		t = t + dt
+		local palette = connShape.Palette
+
+		t = math.min(animTime, t)
+
+		if t < animTime * 0.25 then
+			v = t / animTimePortion
+			palette[1].Color:Lerp(darkGray, white, v)
+			palette[2].Color = darkGray
+			palette[3].Color = darkGray
+			palette[4].Color = darkGray
+		elseif t < animTime * 0.5 then
+			v = (t - animTimePortion) / animTimePortion
+			palette[1].Color = white
+			palette[2].Color:Lerp(darkGray, white, v)
+			palette[3].Color = darkGray
+			palette[4].Color = darkGray
+		elseif t < animTime * 0.75 then
+			v = (t - animTimePortion * 2) / animTimePortion
+			palette[1].Color = white
+			palette[2].Color = white
+			palette[3].Color:Lerp(darkGray, white, v)
+			palette[4].Color = darkGray
+		else
+			v = (t - animTimePortion * 3) / animTimePortion
+			palette[1].Color = white
+			palette[2].Color = white
+			palette[3].Color = white
+			palette[4].Color:Lerp(darkGray, white, v)
+		end
+
+		if t >= animTime then
+			t = 0.0
+		end
+	end
+end
 
 chatBtn = ui:createButton("💬", { shadow = false, borders = false })
 -- chatBtn = ui:createButton("💬", {shadow = false})
@@ -805,6 +913,12 @@ topBar.parentDidResize = function(self)
 	-- Cubzh button must remain square
 	cubzhBtn.Width = math.max(cubzhBtn.Height, cubzhBtn.Width)
 
+	connectionIndicator.Height = cubzhBtn.Height * 0.4
+	connectionIndicator.Width = connectionIndicator.Height
+
+	noConnectionIndicator.Height = connectionIndicator.Height
+	noConnectionIndicator.Width = connectionIndicator.Width
+
 	self.Width = Screen.Width
 	self.Height = System.SafeAreaTop + padding * 2 + height
 	self.pos.Y = Screen.Height - self.Height
@@ -812,6 +926,10 @@ topBar.parentDidResize = function(self)
 	local topBarHeight = self.Height - System.SafeAreaTop
 
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width - padding
+	connectionIndicator.pos.X = cubzhBtn.pos.X - connectionIndicator.Width - padding * 2
+	connectionIndicator.pos.Y = cubzhBtn.pos.Y + cubzhBtn.Height * 0.5 - connectionIndicator.Height * 0.5
+
+	noConnectionIndicator.pos = connectionIndicator.pos
 
 	-- PROFILE BUTTON
 
@@ -847,7 +965,7 @@ topBar.parentDidResize = function(self)
 	if topBarChat then
 		topBarChat.Height = topBarHeight - padding * 2
 		topBarChat.pos.X = chatBtn.pos.X + chatBtn.Width + padding
-		topBarChat.Width = (cubzhBtn.pos.X - topBarChat.pos.X) - padding * 2
+		topBarChat.Width = (connectionIndicator.pos.X - topBarChat.pos.X) - padding * 2
 		topBarChat.pos.Y = topBarHeight * 0.5 - topBarChat.Height * 0.5
 	end
 end
@@ -1074,6 +1192,33 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	refreshDisplay()
 	triggerCallbacks()
 	refreshChat()
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionSuccess, function()
+	connectionIndicatorValid()
+	if Client.ServerConnectionSuccess then
+		Client.ServerConnectionSuccess()
+	end
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionFailed, function()
+	if Client.ServerConnectionFailed then
+		Client.ServerConnectionFailed()
+	end
+	startConnectTimer()
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionLost, function()
+	if Client.ServerConnectionLost then
+		Client.ServerConnectionLost()
+	end
+	startConnectTimer()
+end)
+
+LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
+	if Client.ConnectingToServer then
+		Client.ConnectingToServer()
+	end
 end)
 
 LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
@@ -1342,6 +1487,8 @@ function skipTitleScreen()
 		return
 	end
 
+	Client:HapticFeedback()
+
 	hideTitleScreen()
 	hideBottomBar()
 
@@ -1549,6 +1696,9 @@ end
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
 		System:UpdateAuthStatus()
+
+		-- connects client to server if it makes sense (maxPlayers > 1)
+		connect()
 
 		username.Text = Player.Username
 

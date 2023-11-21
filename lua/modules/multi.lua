@@ -8,7 +8,7 @@
 -- CONSTANTS --
 ---------------
 
-local SYNC_DELAY_TRIGGER = 66 -- sync every 100ms
+local SYNC_DELAY_TRIGGER = 66 -- sync every 66ms
 local SYNC_DELAY_FORCED = 5000 -- force sync even if nothing moved
 local SMOOTH_TIME = 80
 local ROT_ZERO = Rotation(0, 0, 0)
@@ -102,8 +102,8 @@ local _syncObject = function(syncedObj, t, forced)
 			triggered = true
 		else
 			-- Check if at least one trigger has been modified
-			for _, triggerName in ipairs(syncedObj.config.triggers) do
-				if not syncedObj.config.isOnSetTrigger[triggerName] then
+			for i, triggerName in ipairs(syncedObj.config.triggers) do
+				if not syncedObj.config.isOnSetTrigger[i] then
 					if syncedObj.prev[triggerName] ~= obj[triggerName] then
 						syncedObj.triggeredAt = t
 						triggered = true
@@ -163,7 +163,9 @@ end
 multi.playerAction = multi.action -- legacy name
 
 local initPlayer = function(player)
-	player:SetParent(World)
+	if player.Parent == nil then
+		player:SetParent(World)
+	end
 	if player == Player then
 		multi:sync(player, "p_" .. player.ID, {
 			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
@@ -183,7 +185,9 @@ end
 local removePlayer = function(player)
 	multi:unlink("ph_" .. player.ID)
 	multi:unlink("p_" .. player.ID)
-	player:RemoveFromParent()
+	if player ~= Player then
+		player:RemoveFromParent()
+	end
 end
 
 local receive = function(e)
