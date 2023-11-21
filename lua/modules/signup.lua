@@ -87,7 +87,7 @@ signup.createModal = function(_, config)
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 	content.node = node
 
-	content.title = "Who are you?"
+	content.title = "Sign Up"
 	content.icon = "🙂"
 
 	local birthdayLabel = ui:createText("Birthday", Color(200, 200, 200, 255), "small")
@@ -111,7 +111,7 @@ signup.createModal = function(_, config)
 	local usernameInfo = ui:createText("⚠️ can't be changed!", Color(251, 206, 0, 255), "small")
 	usernameInfo:setParent(node)
 
-	local usernameInput = ui:createTextInput("", "Don't use your real name")
+	local usernameInput = ui:createTextInput("", "Don't use your real name!")
 	usernameInput:setParent(node)
 
 	local usernameInfoFrame = nil
