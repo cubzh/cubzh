@@ -59,7 +59,7 @@ local uitheme = {
 			textInputTextColorFocused = Color.White,
 			textInputTextColorDisabled = Color(255, 255, 255, 0.3),
 
-			textInputPlaceholderColor = Color(0, 0, 0, 0.2),
+			textInputPlaceholderColor = Color(0, 0, 0, 0.4),
 			textInputPlaceholderColorPressed = Color(0, 0, 0, 0.2),
 			textInputPlaceholderColorFocused = Color(0, 0, 0, 0.2),
 			textInputPlaceholderColorDisabled = Color(0, 0, 0, 0.1),
