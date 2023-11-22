@@ -3,10 +3,6 @@ local MAX_MESSAGES_IN_CONSOLE = 50
 
 ui = require("uikit")
 theme = require("uitheme").current
-modal = require("modal")
-
--- Preload heads of current players
-require("ui_avatar"):preloadHeads(Players)
 
 -- used to get the size of a space character
 -- when assembling chat message components
@@ -472,9 +468,9 @@ local createChat = function(_, config)
 end
 
 local createModalContent = function(_, config)
-	config = require("config"):merge(defaultConfig, config)
+	local modal = require("modal")
 
-	local ui = config.uikit
+	config = require("config"):merge(defaultConfig, config)
 
 	local content = modal:createContent()
 	content.messages = {}
