@@ -2498,7 +2498,11 @@ function createUI(system)
 
 		local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 		local hitObject = impact.Shape or impact.Object
-		if hitObject._node._onPress or hitObject._node._onRelease then
+		-- try to find parent ui object (when impact a child of a mutable shape)
+		while hitObject and not hitObject._node do
+			hitObject = hitObject:GetParent()
+		end
+		if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
 			pressed = hitObject._node
 
 			-- unfocus focused node, unless hit node.config.unfocused == false
