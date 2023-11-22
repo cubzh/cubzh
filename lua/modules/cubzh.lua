@@ -47,7 +47,6 @@ Client.OnStart = function()
 
 	world = worldEditorCommon.deserializeWorld(mapdata:ToString())
 
-	print("world.mapScale", world.mapScale)
 	MAP_SCALE = world.mapScale or 5
 
 	map = bundle.Shape(world.mapName)
