@@ -328,7 +328,7 @@ Shape *shape_make_copy(Shape *origin) {
                         {(float)(chunkOrigin.x + CHUNK_SIZE),
                          (float)(chunkOrigin.y + CHUNK_SIZE),
                          (float)(chunkOrigin.z + CHUNK_SIZE)}};
-        chunk_set_rtree_leaf(chunk, rtree_create_and_insert(s->rtree, &chunkBox, 1, 1, chunkCopy));
+        chunk_set_rtree_leaf(chunkCopy, rtree_create_and_insert(s->rtree, &chunkBox, 1, 1, chunkCopy));
 
         // enqueue new shape buffers
         _shape_chunk_enqueue_refresh(s, chunkCopy);
