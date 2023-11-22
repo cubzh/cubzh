@@ -249,7 +249,7 @@ Shape *shape_make(void) {
     s->fragmentedVBs = doubly_linked_list_new();
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
-    s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES | SHAPE_RENDERING_FLAG_SHADOW;
+    s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES;
     s->layers = 1; // CAMERA_LAYERS_DEFAULT
 
     s->luaFlags = SHAPE_LUA_FLAG_NONE;
