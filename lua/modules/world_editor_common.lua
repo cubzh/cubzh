@@ -12,7 +12,7 @@ common.maps = {
 	"boumety.building_challenge",
 	"claire.museum",
 	"claire.summer_beach",
-	"claire.voxowl_hq"
+	"claire.voxowl_hq",
 }
 
 common.events = {
@@ -48,87 +48,171 @@ common.events = {
 }
 
 local SERIALIZED_CHUNKS_ID = {
-    MAP = 0,
-    AMBIENCE = 1,
-    OBJECTS = 2,
-    BLOCKS = 3,
+	MAP = 0,
+	AMBIENCE = 1,
+	OBJECTS = 2,
+	BLOCKS = 3,
 }
 
 local ambienceFields = { -- key, serialize and deserialize functions
 	["sky.skyColor"] = {
 		"ssc",
-		function(d, v) if type(v) == "Color" then d:WriteColor(v) else d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3]))) end end,
-		function(d) return d:ReadColor() end
+		function(d, v)
+			if type(v) == "Color" then
+				d:WriteColor(v)
+			else
+				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
+			end
+		end,
+		function(d)
+			return d:ReadColor()
+		end,
 	},
 	["sky.horizonColor"] = {
 		"shc",
-		function(d, v) if type(v) == "Color" then d:WriteColor(v) else d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3]))) end end,
-		function(d) return d:ReadColor() end
+		function(d, v)
+			if type(v) == "Color" then
+				d:WriteColor(v)
+			else
+				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
+			end
+		end,
+		function(d)
+			return d:ReadColor()
+		end,
 	},
 	["sky.abyssColor"] = {
 		"sac",
-		function(d, v) if type(v) == "Color" then d:WriteColor(v) else d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3]))) end end,
-		function(d) return d:ReadColor() end
+		function(d, v)
+			if type(v) == "Color" then
+				d:WriteColor(v)
+			else
+				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
+			end
+		end,
+		function(d)
+			return d:ReadColor()
+		end,
 	},
 	["sky.lightColor"] = {
 		"slc",
-		function(d, v) if type(v) == "Color" then d:WriteColor(v) else d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3]))) end end,
-		function(d) return d:ReadColor() end
+		function(d, v)
+			if type(v) == "Color" then
+				d:WriteColor(v)
+			else
+				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
+			end
+		end,
+		function(d)
+			return d:ReadColor()
+		end,
 	},
 	["sky.lightIntensity"] = {
 		"sli",
-		function(d, v) d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
 	},
 	["fog.color"] = {
 		"foc",
-		function(d, v) if type(v) == "Color" then d:WriteColor(v) else d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3]))) end end,
-		function(d) return d:ReadColor() end
+		function(d, v)
+			if type(v) == "Color" then
+				d:WriteColor(v)
+			else
+				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
+			end
+		end,
+		function(d)
+			return d:ReadColor()
+		end,
 	},
 	["fog.near"] = {
 		"fon",
-		function(d, v)  d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
 	},
 	["fog.far"] = {
 		"fof",
-		function(d, v)  d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
 	},
 	["fog.lightAbsorbtion"] = {
 		"foa",
-		function(d, v)  d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
 	},
 	["sun.color"] = {
 		"suc",
-		function(d, v) if type(v) == "Color" then d:WriteColor(v) else d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3]))) end end,
-		function(d) return d:ReadColor() end
+		function(d, v)
+			if type(v) == "Color" then
+				d:WriteColor(v)
+			else
+				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
+			end
+		end,
+		function(d)
+			return d:ReadColor()
+		end,
 	},
 	["sun.intensity"] = {
 		"sui",
-		function(d, v) d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
 	},
 	["sun.rotation"] = {
 		"sur",
-		function(d, v) d:WriteFloat(v[1]); d:WriteFloat(v[2]) end,
-		function(d) return Number2(d:ReadFloat(), d:ReadFloat()) end
+		function(d, v)
+			d:WriteFloat(v[1])
+			d:WriteFloat(v[2])
+		end,
+		function(d)
+			return Number2(d:ReadFloat(), d:ReadFloat())
+		end,
 	},
 	["ambient.skyLightFactor"] = {
 		"asl",
-		function(d, v) d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
 	},
 	["ambient.dirLightFactor"] = {
 		"adl",
-		function(d, v) d:WriteFloat(v) end,
-		function(d) return d:ReadFloat() end
-	}
+		function(d, v)
+			d:WriteFloat(v)
+		end,
+		function(d)
+			return d:ReadFloat()
+		end,
+	},
 }
 
 local writeChunkMap = function(d, name, scale)
-	if name == nil or scale == nil then error("can't serialize map", 2) return false end
+	if name == nil or scale == nil then
+		error("can't serialize map", 2)
+		return false
+	end
 	-- Map
 	-- CHUNK_ID 1
 	-- SCALE 8
@@ -149,7 +233,10 @@ local readChunkMap = function(d)
 end
 
 local writeChunkAmbience = function(d, ambience)
-	if ambience == nil then error("can't serialize ambience chunk", 2) return false end
+	if ambience == nil then
+		error("can't serialize ambience chunk", 2)
+		return false
+	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.AMBIENCE)
 	local cursorLength = d.Length
 	d:WriteUInt16(0) -- temporary write size
@@ -163,12 +250,19 @@ local writeChunkAmbience = function(d, ambience)
 
 	local fieldsList = {}
 
-	for k1,v1 in pairs(ambience) do
+	for k1, v1 in pairs(ambience) do
 		if type(v1) == "string" then
-			table.insert(fieldsList, { "txt", v1, function(d, name) d:WriteUInt8(#name) d:WriteString(name) end })
+			table.insert(fieldsList, {
+				"txt",
+				v1,
+				function(d, name)
+					d:WriteUInt8(#name)
+					d:WriteString(name)
+				end,
+			})
 		elseif type(v1) == "table" then
-			for k2,v2 in pairs(v1) do
-				local ambienceField = ambienceFields[k1.."."..k2]
+			for k2, v2 in pairs(v1) do
+				local ambienceField = ambienceFields[k1 .. "." .. k2]
 				local key = ambienceField[1] -- get key
 				local serializeFunction = ambienceField[2]
 				table.insert(fieldsList, { key, v2, serializeFunction })
@@ -177,7 +271,7 @@ local writeChunkAmbience = function(d, ambience)
 	end
 	local nbFields = #fieldsList
 	d:WriteUInt8(nbFields)
-	for _,value in ipairs(fieldsList) do
+	for _, value in ipairs(fieldsList) do
 		d:WriteString(value[1])
 		local serializeFunction = value[3]
 		serializeFunction(d, value[2])
@@ -196,10 +290,10 @@ local readChunkAmbience = function(d)
 	local ambience = {}
 	d:ReadUInt16() -- read size
 	local nbFields = d:ReadUInt8()
-	for _=1,nbFields do
+	for _ = 1, nbFields do
 		local key = d:ReadString(3)
 		local found = false
-		for fullFieldName,v in pairs(ambienceFields) do
+		for fullFieldName, v in pairs(ambienceFields) do
 			if v[1] == key then
 				local value = v[3](d) -- read value
 				local category, name = fullFieldName:gsub("%.(.*)", ""), fullFieldName:match("%.(.*)")
@@ -224,7 +318,7 @@ end
 local groupObjects = function(objects)
 	local t = {}
 	local nbGroups = 0
-	for _,v in ipairs(objects) do
+	for _, v in ipairs(objects) do
 		if not t[v.fullname] then
 			t[v.fullname] = {}
 			nbGroups = nbGroups + 1
@@ -235,7 +329,10 @@ local groupObjects = function(objects)
 end
 
 local writeChunkObjects = function(d, objects)
-	if objects == nil then error("can't serialize objects chunk", 2) return false end
+	if objects == nil then
+		error("can't serialize objects chunk", 2)
+		return false
+	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.OBJECTS)
 	local cursorLength = d.Length
 	d:WriteUInt16(0) -- temporary write size
@@ -255,13 +352,13 @@ local writeChunkObjects = function(d, objects)
 
 	local nbObjects = #objects
 	d:WriteUInt16(nbObjects)
-	for fullname,group in pairs(objectsGrouped) do
+	for fullname, group in pairs(objectsGrouped) do
 		d:WriteUInt16(#fullname)
 		d:WriteString(fullname)
 
 		d:WriteUInt16(#group)
 
-		for _,object in ipairs(group) do
+		for _, object in ipairs(group) do
 			local cursorNbFields = d.Length
 			local nbFields = 0
 			d:WriteUInt8(0) -- temporary nbFields
@@ -272,20 +369,20 @@ local writeChunkObjects = function(d, objects)
 				d:WriteString(object.uuid)
 				nbFields = nbFields + 1
 			end
-			if object.Position and object.Position ~= Number3(0,0,0) then
+			if object.Position and object.Position ~= Number3(0, 0, 0) then
 				d:WriteString("po")
 				d:WriteNumber3(object.Position)
 				nbFields = nbFields + 1
 			end
-			if object.Rotation and object.Rotation ~= Rotation(0,0,0) then
+			if object.Rotation and object.Rotation ~= Rotation(0, 0, 0) then
 				d:WriteString("ro")
 				d:WriteRotation(object.Rotation)
 				nbFields = nbFields + 1
 			end
-			if object.Scale and object.Scale ~= Number3(1,1,1) then
+			if object.Scale and object.Scale ~= Number3(1, 1, 1) then
 				d:WriteString("sc")
 				if type(object.Scale) == "number" then
-					object.Scale = object.Scale * Number3(1,1,1)
+					object.Scale = object.Scale * Number3(1, 1, 1)
 				end
 				d:WriteNumber3(object.Scale)
 				nbFields = nbFields + 1
@@ -335,12 +432,12 @@ local readChunkObjects = function(d)
 		local fullnameSize = d:ReadUInt16()
 		local fullname = d:ReadString(fullnameSize)
 		local nbInstances = d:ReadUInt16()
-		for _=1,nbInstances do
+		for _ = 1, nbInstances do
 			local instance = {
 				fullname = fullname,
 			}
 			local nbFields = d:ReadUInt8()
-			for _=1,nbFields do
+			for _ = 1, nbFields do
 				local key = d:ReadString(2)
 				if key == "po" then
 					instance.Position = d:ReadNumber3()
@@ -372,7 +469,10 @@ local readChunkObjects = function(d)
 end
 
 local writeChunkBlocks = function(d, blocks)
-	if blocks == nil then error("can't serialize blocks chunk", 2) return false end
+	if blocks == nil then
+		error("can't serialize blocks chunk", 2)
+		return false
+	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.BLOCKS)
 	local cursorLength = d.Length
 	d:WriteUInt16(0) -- temporary write size
@@ -382,7 +482,7 @@ local writeChunkBlocks = function(d, blocks)
 	-- NB_BLOCKS UInt16
 	d:WriteUInt16(0) -- temporary write size
 	local nbBlocks = 0
-	for _,v in ipairs(blocks) do
+	for _, v in ipairs(blocks) do
 		local key, color = v[1], v[2]
 		d:WriteUInt16(#key) -- key size
 		d:WriteString(key) -- key
@@ -410,7 +510,7 @@ local readChunkBlocks = function(d)
 	local blocks = {}
 	d:ReadUInt16() -- skip length
 	local nbBlocks = d:ReadUInt16()
-	for _=1,nbBlocks do
+	for _ = 1, nbBlocks do
 		local keyLength = d:ReadUInt16()
 		local key = d:ReadString(keyLength)
 		local blockAction = d:ReadUInt8()
@@ -425,7 +525,10 @@ local readChunkBlocks = function(d)
 end
 
 local writeChunkBase64 = function(d, chunkId, chunkTable)
-	if chunkTable == nil then error("can't serialize chunk "..tostring(chunkId), 2) return false end
+	if chunkTable == nil then
+		error("can't serialize chunk " .. tostring(chunkId), 2)
+		return false
+	end
 	d:WriteByte(chunkId)
 	-- chunk
 	-- CHUNK_ID 1
@@ -453,7 +556,10 @@ end
 local SERIALIZE_VERSION = 2
 
 local serializeWorldBase64 = function(world)
-	if not world.mapName then error("can't serialize without mapName", 2) return end
+	if not world.mapName then
+		error("can't serialize without mapName", 2)
+		return
+	end
 	local d = Data()
 	d:WriteByte(SERIALIZE_VERSION) -- version
 	writeChunkMap(d, world.mapName, world.mapScale or 5)
@@ -507,7 +613,7 @@ common.serializeWorld = function(world)
 end
 
 common.deserializeWorld = function(str)
-    return deserializeWorldBase64(str)
+	return deserializeWorldBase64(str)
 end
 
 common.posToStr = function(pos)
@@ -515,109 +621,103 @@ common.posToStr = function(pos)
 end
 
 common.uuidv4 = function()
-	local template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
-	return string.gsub(template, '[xy]', function (c)
-		local v = (c == 'x') and math.random(0, 0xf) or math.random(8, 0xb)
-		return string.format('%x', v)
+	local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+	return string.gsub(template, "[xy]", function(c)
+		local v = (c == "x") and math.random(0, 0xf) or math.random(8, 0xb)
+		return string.format("%x", v)
 	end)
 end
 
 local loadObject = function(objInfo, didLoad)
-    Object:Load(
-        objInfo.fullname,
-        function(obj)
-            obj:SetParent(World)
-            local k = Box()
-            k:Fit(obj, true)
-            obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-            require("hierarchyactions"):applyToDescendants(
-                obj,
-                {includeRoot = true},
-                function(l)
-                    l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-                end
-            )
-            obj.Position = objInfo.Position or Number3(0, 0, 0)
-            obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-            obj.Scale = objInfo.Scale or 0.5
-            obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
-            obj.Name = objInfo.Name or objInfo.fullname
-            if didLoad then didLoad(obj) end
-        end
-    )
+	Object:Load(objInfo.fullname, function(obj)
+		obj:SetParent(World)
+		local k = Box()
+		k:Fit(obj, true)
+		obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
+			l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
+		end)
+		obj.Position = objInfo.Position or Number3(0, 0, 0)
+		obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
+		obj.Scale = objInfo.Scale or 0.5
+		obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
+		obj.Name = objInfo.Name or objInfo.fullname
+		if didLoad then
+			didLoad(obj)
+		end
+	end)
 end
 
 local loadMap = function(d, n, didLoad)
-    Object:Load(
-        d,
-        function(j)
-            map = MutableShape(j, {includeChildren = true})
-            map.Scale = n or 5
-            require("hierarchyactions"):applyToDescendants(map, { includeRoot = true },
-                function(o)
-                    o.CollisionGroups = Map.CollisionGroups
-                    o.CollidesWithGroups = Map.CollidesWithGroups
-                    o.Physics = PhysicsMode.StaticPerBlock
-                end
-            )
-            map:SetParent(World)
-            map.Position = {0, 0, 0}
-            map.Pivot = {0, 0, 0}
-            if didLoad then
-                didLoad()
-            end
-        end
-    )
+	Object:Load(d, function(j)
+		map = MutableShape(j, { includeChildren = true })
+		map.Scale = n or 5
+		require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
+			o.CollisionGroups = Map.CollisionGroups
+			o.CollidesWithGroups = Map.CollidesWithGroups
+			o.Physics = PhysicsMode.StaticPerBlock
+		end)
+		map:SetParent(World)
+		map.Position = { 0, 0, 0 }
+		map.Pivot = { 0, 0, 0 }
+		if didLoad then
+			didLoad()
+		end
+	end)
 end
 
 common.loadWorld = function(mapBase64, config)
-    if #mapBase64 == 0 then
-        return
-    end
-    local world = common.deserializeWorld(mapBase64)
-    local loadObjectsBlocksAndAmbience = function()
-        if config.skipMap then
-            Map.Scale = world.mapScale or 5
-            map = Map
-        end
-        local blocks = world.blocks
-        local objects = world.objects
-        local ambience = world.ambience
-        if blocks then
-            for _, data in ipairs(blocks) do
-                local pos = data[1]
-                local color = data[2]
-                local x = math.floor(pos % 1000)
-                local y = math.floor(pos / 1000 % 1000)
-                local z = math.floor(pos / 1000000)
-                local w = map:GetBlock(x, y, z)
-                if w then w:Remove() end
-                if color ~= nil and color ~= -1 then
-                    map:AddBlock(color, x, y, z)
-                end
-            end
-            map:RefreshModel()
-        end
-        nbObjectsLoaded = 0
-        function loadedOneMore()
-            nbObjectsLoaded = nbObjectsLoaded + 1
-            if nbObjectsLoaded == #objects and config.didLoad then
-                config.didLoad()
-            end
-        end
-        if objects then
-            for _, objInfo in ipairs(objects) do
-                objInfo.currentlyEditedBy = nil
-                loadObject(objInfo, loadedOneMore)
-            end
-        end
-        if ambience then require("ui_ai_ambience"):setFromAIConfig(ambience, true) end
-    end
-    if not config.skipMap then
-        loadMap(world.mapName, world.mapScale, loadObjectsBlocksAndAmbience)
-    else
-        loadObjectsBlocksAndAmbience()
-    end
+	if #mapBase64 == 0 then
+		return
+	end
+	local world = common.deserializeWorld(mapBase64)
+	local loadObjectsBlocksAndAmbience = function()
+		if config.skipMap then
+			Map.Scale = world.mapScale or 5
+			map = Map
+		end
+		local blocks = world.blocks
+		local objects = world.objects
+		local ambience = world.ambience
+		if blocks then
+			for _, data in ipairs(blocks) do
+				local pos = data[1]
+				local color = data[2]
+				local x = math.floor(pos % 1000)
+				local y = math.floor(pos / 1000 % 1000)
+				local z = math.floor(pos / 1000000)
+				local w = map:GetBlock(x, y, z)
+				if w then
+					w:Remove()
+				end
+				if color ~= nil and color ~= -1 then
+					map:AddBlock(color, x, y, z)
+				end
+			end
+			map:RefreshModel()
+		end
+		nbObjectsLoaded = 0
+		function loadedOneMore()
+			nbObjectsLoaded = nbObjectsLoaded + 1
+			if nbObjectsLoaded == #objects and config.didLoad then
+				config.didLoad()
+			end
+		end
+		if objects then
+			for _, objInfo in ipairs(objects) do
+				objInfo.currentlyEditedBy = nil
+				loadObject(objInfo, loadedOneMore)
+			end
+		end
+		if ambience then
+			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
+		end
+	end
+	if not config.skipMap then
+		loadMap(world.mapName, world.mapScale, loadObjectsBlocksAndAmbience)
+	else
+		loadObjectsBlocksAndAmbience()
+	end
 end
 
 return common
