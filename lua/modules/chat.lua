@@ -1,14 +1,6 @@
 local MAX_MESSAGES = 50
 local MAX_MESSAGES_IN_CONSOLE = 50
 
-ui = require("uikit")
-theme = require("uitheme").current
-
--- used to get the size of a space character
--- when assembling chat message components
-space = ui:createText(" ", Color.White, "small")
-space:setParent(nil)
-
 local getCurrentDate = function()
 	return os.date("%m-%d-%YT%H:%M:%SZ", os.time())
 end
@@ -23,17 +15,24 @@ setmetatable(chat, chatMetatable)
 local messages = {}
 local lastCommandIndex = nil
 
-local defaultConfig = {
-	uikit = ui, -- allows to provide specific instance of uikit
-	input = true,
-	maxMessages = MAX_MESSAGES_IN_CONSOLE,
-	time = true,
-	heads = true,
-	onSubmitEmpty = function() end,
-	onFocus = function() end,
-	onFocusLost = function() end,
-	inputText = "",
-}
+function getDefaultConfig()
+	if defaultConfig then
+		return defaultConfig
+	end
+	defaultConfig = {
+		uikit = require("uikit"), -- allows to provide specific instance of uikit
+		input = true,
+		maxMessages = MAX_MESSAGES_IN_CONSOLE,
+		time = true,
+		heads = true,
+		onSubmitEmpty = function() end,
+		onFocus = function() end,
+		onFocusLost = function() end,
+		inputText = "",
+		theme = require("uitheme").current,
+	}
+	return defaultConfig
+end
 
 local function getLastXElements(array, x)
 	local result, length = {}, #array
@@ -190,9 +189,13 @@ end
 
 -- creates uikit node containing chat console and input
 local createChat = function(_, config)
-	config = require("config"):merge(defaultConfig, config)
+	config = require("config"):merge(getDefaultConfig(), config)
 
 	local ui = config.uikit
+	local theme = config.theme
+
+	local space = ui:createText(" ", Color.White, "small")
+	space:setParent(nil)
 
 	local nodeMessages = {}
 
@@ -470,7 +473,7 @@ end
 local createModalContent = function(_, config)
 	local modal = require("modal")
 
-	config = require("config"):merge(defaultConfig, config)
+	config = require("config"):merge(getDefaultConfig(), config)
 
 	local content = modal:createContent()
 	content.messages = {}
