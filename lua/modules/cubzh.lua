@@ -14,7 +14,11 @@ Config = {
 
 Dev.DisplayFPS = true
 
+local MINIMUM_ITEM_SIZE_FOR_SHADOWS = 40
+local MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR = MINIMUM_ITEM_SIZE_FOR_SHADOWS * MINIMUM_ITEM_SIZE_FOR_SHADOWS
 local MAP_SCALE = 5.5
+
+local SPAWN_IN_BLOCK = Number3(105, 15, 58)
 
 directionalPad = Client.DirectionalPad
 action1 = function()
@@ -40,20 +44,22 @@ Client.OnStart = function()
 
 	-- LOAD MAP
 	local mapdata = bundle.Data("misc/hubmap.b64")
-	print("mapdata:", mapdata)
 
-	print("worldEditorCommon:", worldEditorCommon)
 	world = worldEditorCommon.deserializeWorld(mapdata:ToString())
-	MAP_SCALE = world.mapScale
 
-	print("world.mapName", world.mapName)
+	print("world.mapScale", world.mapScale)
+	MAP_SCALE = world.mapScale or 5
 
 	map = bundle.Shape(world.mapName)
 	map.Scale = MAP_SCALE
-	map.Physics = PhysicsMode.StaticPerBlock
+	hierarchyactions:applyToDescendants(map, { includeRoot = true }, function(o)
+		o.CollisionGroups = Map.CollisionGroups
+		o.CollidesWithGroups = Map.CollidesWithGroups
+		o.Physics = PhysicsMode.StaticPerBlock
+	end)
+	map:SetParent(World)
 	map.Position = { 0, 0, 0 }
 	map.Pivot = { 0, 0, 0 }
-	map:SetParent(World)
 
 	local loadedObjects = {}
 	local o
@@ -74,21 +80,37 @@ Client.OnStart = function()
 	end
 
 	local obj
+	local scale
+	local boxSize
+	local turnOffShadows
+	local k
 	if world.objects then
 		for _, objInfo in ipairs(world.objects) do
 			o = loadedObjects[objInfo.fullname]
 			if o ~= nil and o ~= "ERROR" then
-				obj = Shape(o)
+				obj = Shape(o, { includeChildren = true })
 				obj:SetParent(World)
-				local k = Box()
+				k = Box()
 				k:Fit(obj, true)
+
+				scale = objInfo.Scale or 0.5
+				boxSize = k.Size * scale
+				turnOffShadows = false
+
+				if boxSize.SquaredLength < MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR then
+					turnOffShadows = true
+				end
+
 				obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
 				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(l)
 					l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
+					if turnOffShadows then
+						l.Shadow = false
+					end
 				end)
 				obj.Position = objInfo.Position or Number3(0, 0, 0)
 				obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-				obj.Scale = objInfo.Scale or 0.5
+				obj.Scale = scale
 				obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
 				obj.Name = objInfo.Name or objInfo.fullname
 			end
@@ -103,8 +125,7 @@ Client.OnStart = function()
 
 	function dropPlayer(p)
 		World:AddChild(p)
-		print(map.Position, map.Size)
-		p.Position = Number3(105, 15, 58) * map.Scale
+		p.Position = SPAWN_IN_BLOCK * map.Scale
 		p.Rotation = { 0.06, math.pi * -0.75, 0 }
 		p.Velocity = { 0, 0, 0 }
 		p.Physics = true
