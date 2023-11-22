@@ -1658,7 +1658,7 @@ void shape_refresh_vertices(Shape *shape) {
                            (int)chunk_coords.y,
                            (int)chunk_coords.z,
                            NULL);
-            rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), false);
+            rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), true);
             chunk_free(c, true);
             c = NULL;
 
