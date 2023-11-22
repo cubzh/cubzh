@@ -59,6 +59,7 @@ Client.OnStart = function()
 	map:SetParent(World)
 	map.Position = { 0, 0, 0 }
 	map.Pivot = { 0, 0, 0 }
+	map.Shadow = true
 
 	local loadedObjects = {}
 	local o
@@ -81,7 +82,7 @@ Client.OnStart = function()
 	local obj
 	local scale
 	local boxSize
-	local turnOffShadows
+	local turnOnShadows
 	local k
 	if world.objects then
 		for _, objInfo in ipairs(world.objects) do
@@ -94,17 +95,17 @@ Client.OnStart = function()
 
 				scale = objInfo.Scale or 0.5
 				boxSize = k.Size * scale
-				turnOffShadows = false
+				turnOnShadows = false
 
-				if boxSize.SquaredLength < MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR then
-					turnOffShadows = true
+				if boxSize.SquaredLength >= MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR then
+					turnOnShadows = true
 				end
 
 				obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
 				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(l)
 					l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-					if turnOffShadows then
-						l.Shadow = false
+					if turnOnShadows then
+						l.Shadow = true
 					end
 				end)
 				obj.Position = objInfo.Position or Number3(0, 0, 0)
