@@ -1,5 +1,7 @@
 skills = {}
 
+conf = require("config")
+
 stepClimbers = {} -- all objects with step climbing ability
 
 STEP_CLIMBING_DEFAULT_CONFIG = {
@@ -7,6 +9,8 @@ STEP_CLIMBING_DEFAULT_CONFIG = {
 	mapScale = Map.Scale.Y,
 	velocityImpulse = 30,
 }
+
+EMPTY_CALLBACK = function() end
 
 STEP_CLIMBING_BASE_OFFSET = Number3(0, 0.1, 0)
 STEP_CLIMBING_BOX_HALF_BASE = Number3(0.5, 0, 0.5)
@@ -17,13 +21,7 @@ skills.addStepClimbing = function(object, config)
 		return
 	end
 
-	config = config or {}
-
-	for name, _ in pairs(STEP_CLIMBING_DEFAULT_CONFIG) do
-		if config[name] == nil then
-			config[name] = STEP_CLIMBING_DEFAULT_CONFIG[name]
-		end
-	end
+	config = conf:merge(STEP_CLIMBING_DEFAULT_CONFIG, config)
 
 	local box = object.CollisionBox
 	local min = box.Min
@@ -69,5 +67,59 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function()
 		end
 	end
 end)
+
+-- JUMPS
+
+jumpers = {}
+
+skills.jump = function(object)
+	local config = jumpers[object]
+	if config == nil then
+		print("can't jump, no config")
+		return
+	end
+	if object.Velocity.Y <= 0 and isOnGround(object, config) then
+		config.airJumpsAvailable = config.airJumps
+		object.Velocity.Y = config.jumpVelocity
+		config.onJump(object)
+	else
+		if config.airJumpsAvailable > 0 then
+			config.airJumpsAvailable = config.airJumpsAvailable - 1
+			local v = math.max(0, object.Velocity.Y)
+			v = math.min(config.maxAirJumpVelocity, v + config.jumpVelocity)
+			object.Velocity.Y = v
+			config.onAirJump(object)
+		end
+	end
+end
+
+skills.addJump = function(object, config)
+	local defaultConfig = {
+		airJumps = 0, -- no air jumps by default
+		maxGroundDistance = 1.0,
+		jumpVelocity = 100,
+		maxAirJumpVelocity = 150,
+		onJump = EMPTY_CALLBACK,
+		onAirJump = EMPTY_CALLBACK,
+	}
+	config = conf:merge(defaultConfig, config)
+	config.airJumpsAvailable = config.airJumps
+	jumpers[object] = config
+end
+
+skills.removeJump = function(object)
+	jumpers[object] = nil
+end
+
+function isOnGround(object, config)
+	if object.CollisionBox == nil then
+		return false
+	end
+	local box = object.CollisionBox:Copy()
+	box.Min = object:PositionLocalToWorld(box.Min)
+	box.Max = object:PositionLocalToWorld(box.Max)
+	local impact = box:Cast(Number3.Down, config.maxGroundDistance, object.CollidesWithGroups)
+	return impact ~= nil
+end
 
 return skills
