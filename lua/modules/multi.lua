@@ -390,7 +390,9 @@ multi.unlink = function(_, name)
 		-- remove onset triggers
 		for i, trigger in ipairs(config.triggers) do
 			if config.isOnSetTrigger[i] then
-				object[trigger]:RemoveOnSetCallback(object.onSetTriggerCallback)
+				if object[trigger].RemoveOnSetCallback then
+					object[trigger]:RemoveOnSetCallback(object.onSetTriggerCallback)
+				end
 			end
 		end
 		synced[name] = nil
