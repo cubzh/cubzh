@@ -60,6 +60,10 @@ Client.OnStart = function()
 
 	-- LOCAL PLAYER PROPERTIES
 	objectSkills.addStepClimbing(Player)
+	objectSkills.addJump(
+		Player,
+		{ maxGroundDistance = 1.0, airJumps = 1, jumpVelocity = 100, maxAirJumpVelocity = 150 }
+	)
 end
 
 Client.OnPlayerJoin = function(p)
@@ -67,6 +71,7 @@ Client.OnPlayerJoin = function(p)
 		return
 	end
 	objectSkills.addStepClimbing(p)
+	-- objectSkills.addJump(p, { maxGroundDistance = 1.0, airJumps = 1, jumpVelocity = 100, maxAirJumpVelocity = 150 })
 	dropPlayer(p)
 	print(p.Username .. " joined!")
 end
@@ -74,6 +79,7 @@ end
 Client.OnPlayerLeave = function(p)
 	if p ~= Player then
 		objectSkills.removeStepClimbing(p)
+		objectSkills.removeJump(p)
 	end
 end
 
@@ -111,6 +117,9 @@ end
 function setAmbiance()
 	local ambience = require("ambience")
 	ambience:set(ambience.noon)
+
+	Fog.Near = 300
+	Fog.Far = 1000
 end
 
 function loadMap()
@@ -194,10 +203,7 @@ function loadMap()
 end
 
 function jump()
-	-- if Player.IsOnGround then
-	Player.Velocity.Y = 100
-	-- print(Player.Position / map.Scale)
-	-- end
+	objectSkills.jump(Player)
 end
 
 function dropPlayer(p)
