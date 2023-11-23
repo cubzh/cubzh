@@ -16,4 +16,9 @@ bundle.Shape = System.ShapeFromBundle
 --- local mutableShape = bundle.MutableShape("official.cubzh")
 bundle.MutableShape = System.MutableShapeFromBundle
 
+---@function Data reads a file from the local app bundle.
+---@param filepath string
+---@return Data
+bundle.Data = System.DataFromBundle
+
 return bundle

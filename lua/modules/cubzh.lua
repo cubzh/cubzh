@@ -12,14 +12,20 @@ Config = {
 	Items = {},
 }
 
--- local WATER_ALPHA = 220
+Dev.DisplayFPS = true
+
+local MINIMUM_ITEM_SIZE_FOR_SHADOWS = 40
+local MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR = MINIMUM_ITEM_SIZE_FOR_SHADOWS * MINIMUM_ITEM_SIZE_FOR_SHADOWS
 local MAP_SCALE = 5.5
+
+local SPAWN_IN_BLOCK = Number3(105, 15, 58)
 
 directionalPad = Client.DirectionalPad
 action1 = function()
-	if Player.IsOnGround then
-		Player.Velocity.Y = 100
-	end
+	-- if Player.IsOnGround then
+	Player.Velocity.Y = 100
+	-- print(Player.Position / map.Scale)
+	-- end
 end
 
 Client.DirectionalPad = nil
@@ -28,8 +34,88 @@ Client.Action1 = nil
 Client.Action2 = function() end
 
 Client.OnStart = function()
-	multi = require("multi")
+	require("multi")
 	require("textbubbles").displayPlayerChatBubbles = true
+	hierarchyactions = require("hierarchyactions")
+	bundle = require("bundle")
+	worldEditorCommon = require("world_editor_common")
+
+	objectSkills = require("object_skills")
+
+	-- LOAD MAP
+	local mapdata = bundle.Data("misc/hubmap.b64")
+
+	world = worldEditorCommon.deserializeWorld(mapdata:ToString())
+
+	MAP_SCALE = world.mapScale or 5
+
+	map = bundle.Shape(world.mapName)
+	map.Scale = MAP_SCALE
+	hierarchyactions:applyToDescendants(map, { includeRoot = true }, function(o)
+		o.CollisionGroups = Map.CollisionGroups
+		o.CollidesWithGroups = Map.CollidesWithGroups
+		o.Physics = PhysicsMode.StaticPerBlock
+	end)
+	map:SetParent(World)
+	map.Position = { 0, 0, 0 }
+	map.Pivot = { 0, 0, 0 }
+	map.Shadow = true
+
+	local loadedObjects = {}
+	local o
+	if world.objects then
+		for _, objInfo in ipairs(world.objects) do
+			if loadedObjects[objInfo.fullname] == nil then
+				ok = pcall(function()
+					o = bundle.Shape(objInfo.fullname)
+				end)
+				if ok then
+					loadedObjects[objInfo.fullname] = o
+				else
+					loadedObjects[objInfo.fullname] = "ERROR"
+					print("could not load " .. objInfo.fullname)
+				end
+			end
+		end
+	end
+
+	local obj
+	local scale
+	local boxSize
+	local turnOnShadows
+	local k
+	if world.objects then
+		for _, objInfo in ipairs(world.objects) do
+			o = loadedObjects[objInfo.fullname]
+			if o ~= nil and o ~= "ERROR" then
+				obj = Shape(o, { includeChildren = true })
+				obj:SetParent(World)
+				k = Box()
+				k:Fit(obj, true)
+
+				scale = objInfo.Scale or 0.5
+				boxSize = k.Size * scale
+				turnOnShadows = false
+
+				if boxSize.SquaredLength >= MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR then
+					turnOnShadows = true
+				end
+
+				obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(l)
+					l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
+					if turnOnShadows then
+						l.Shadow = true
+					end
+				end)
+				obj.Position = objInfo.Position or Number3(0, 0, 0)
+				obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
+				obj.Scale = scale
+				obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
+				obj.Name = objInfo.Name or objInfo.fullname
+			end
+		end
+	end
 
 	local ambience = require("ambience")
 	ambience:set(ambience.noon)
@@ -37,113 +123,18 @@ Client.OnStart = function()
 	controls = require("controls")
 	controls:setButtonIcon("action1", "⬆️")
 
-	-- IMPORT MODULES
-	bundle = require("bundle")
-	ui = require("uikit")
-	objectSkills = require("object_skills")
-
-	-- MAP
-
-	function setChunkPos(chunk, x, y, z)
-		chunk.Position = Number3(x, y, z) * MAP_SCALE
-	end
-
-	function setWaterTransparency(_) -- chunk
-		-- local i = chunk.Palette:GetIndex(Color(48, 192, 204, 255))
-		-- if i ~= nil then
-		-- 	chunk.Palette[i].Color.A = WATER_ALPHA
-		-- end
-		-- i = chunk.Palette:GetIndex(Color(252, 252, 252, 255))
-		-- if i ~= nil then
-		-- 	chunk.Palette[i].Color.A = WATER_ALPHA
-		-- end
-	end
-
-	function setLights(_) -- chunk
-		-- local i = chunk.Palette:GetIndex(Color(252, 240, 176, 255))
-		-- if i ~= nil then
-		-- 	chunk.Palette[i].Color.A = 230
-		-- 	chunk.Palette[i].Light = true
-		-- end
-	end
-
-	collosseumChunk = bundle.Shape("hub_collosseum_chunk")
-	collosseumChunk.InnerTransparentFaces = false
-	collosseumChunk.Physics = PhysicsMode.StaticPerBlock
-	collosseumChunk.CollisionGroups = Map.CollisionGroups
-	collosseumChunk.Scale = MAP_SCALE
-	collosseumChunk.Pivot = { 0, 0, 0 }
-	collosseumChunk.Friction = Map.Friction
-	collosseumChunk.Bounciness = Map.Bounciness
-	World:AddChild(collosseumChunk)
-	collosseumChunk.Position = { 0, 0, 0 }
-	setWaterTransparency(collosseumChunk)
-	setLights(collosseumChunk)
-
-	scifiChunk = bundle.Shape("hub_scifi_chunk")
-	scifiChunk.InnerTransparentFaces = false
-	scifiChunk.Physics = PhysicsMode.StaticPerBlock
-	scifiChunk.CollisionGroups = Map.CollisionGroups
-	scifiChunk.Scale = MAP_SCALE
-	scifiChunk.Pivot = { 0, 0, 0 }
-	scifiChunk.Friction = Map.Friction
-	scifiChunk.Bounciness = Map.Bounciness
-	World:AddChild(scifiChunk)
-	setChunkPos(scifiChunk, 8, 20, -100)
-	setWaterTransparency(scifiChunk)
-	setLights(scifiChunk)
-
-	medievalChunk = bundle.Shape("hub_medieval_chunk")
-	medievalChunk.InnerTransparentFaces = false
-	medievalChunk.Physics = PhysicsMode.StaticPerBlock
-	medievalChunk.CollisionGroups = Map.CollisionGroups
-	medievalChunk.Scale = MAP_SCALE
-	medievalChunk.Pivot = { 0, 0, 0 }
-	medievalChunk.Friction = Map.Friction
-	medievalChunk.Bounciness = Map.Bounciness
-	World:AddChild(medievalChunk)
-	setChunkPos(medievalChunk, -10, -6, 92)
-	setWaterTransparency(medievalChunk)
-	setLights(medievalChunk)
-
-	floatingIslandsChunks = bundle.Shape("hub_floating_islands_chunk")
-	floatingIslandsChunks.InnerTransparentFaces = false
-	floatingIslandsChunks.Physics = PhysicsMode.StaticPerBlock
-	floatingIslandsChunks.CollisionGroups = Map.CollisionGroups
-	floatingIslandsChunks.Scale = MAP_SCALE
-	floatingIslandsChunks.Pivot = { 0, 0, 0 }
-	floatingIslandsChunks.Friction = Map.Friction
-	floatingIslandsChunks.Bounciness = Map.Bounciness
-	World:AddChild(floatingIslandsChunks)
-	setChunkPos(floatingIslandsChunks, 141, -4, 0)
-	setWaterTransparency(floatingIslandsChunks)
-	setLights(floatingIslandsChunks)
-
-	volcanoChunk = bundle.Shape("hub_volcano_chunk")
-	volcanoChunk.Physics = PhysicsMode.StaticPerBlock
-	volcanoChunk.CollisionGroups = Map.CollisionGroups
-	volcanoChunk.Scale = MAP_SCALE
-	volcanoChunk.Pivot = { 0, 0, 0 }
-	volcanoChunk.Friction = Map.Friction
-	volcanoChunk.Bounciness = Map.Bounciness
-	World:AddChild(volcanoChunk)
-	volcanoChunk.Position = { 800, 18, -500 }
-	setChunkPos(volcanoChunk, 116, 13, -76)
-	setWaterTransparency(volcanoChunk)
-	setLights(volcanoChunk)
-
 	function dropPlayer(p)
 		World:AddChild(p)
-		p.Position = Number3(139, 75, 68) * MAP_SCALE
+		p.Position = SPAWN_IN_BLOCK * map.Scale
 		p.Rotation = { 0.06, math.pi * -0.75, 0 }
 		p.Velocity = { 0, 0, 0 }
 		p.Physics = true
 	end
 
 	moveDT = 0.0
-	kCameraPositionY = 90
 
-	kCameraPositionRotating = Number3(139, kCameraPositionY, 68) * MAP_SCALE
+	kCameraPositionRotating = Number3(105, 18, 58) * map.Scale
+	kCameraPositionY = kCameraPositionRotating.Y
 
 	Camera:SetModeFree()
 	Camera.Position = kCameraPositionRotating
@@ -187,7 +178,7 @@ Client.Tick = function(dt)
 		while moveDT > math.pi do
 			moveDT = moveDT - math.pi * 2
 		end
-		Camera.Position.Y = (kCameraPositionY + math.sin(moveDT) * 5.0) * MAP_SCALE
+		Camera.Position.Y = kCameraPositionY + (math.sin(moveDT) * 5.0 * MAP_SCALE)
 
 		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
 	end

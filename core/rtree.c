@@ -598,7 +598,6 @@ void rtree_insert(Rtree *r, RtreeNode *leaf) {
     // we should only be inserting a leaf (no parent yet)
     vx_assert(leaf->leaf != NULL && leaf->aabb != NULL);
 
-    rn = r->root;
     selectedNode = r->root;
     level = 1;
 
@@ -610,7 +609,7 @@ void rtree_insert(Rtree *r, RtreeNode *leaf) {
 
         selectedNodeVol = FLT_MAX;
 
-        n = doubly_linked_list_first(rn->children);
+        n = doubly_linked_list_first(selectedNode->children);
         while (n != NULL) {
             rn = (RtreeNode *)doubly_linked_list_node_pointer(n);
 

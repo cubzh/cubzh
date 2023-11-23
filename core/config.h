@@ -169,11 +169,11 @@ extern unsigned long upper_power_of_two(unsigned long v);
 #define PHYSICS_GROUP_MASK_API_BITS 12
 #define PHYSICS_GROUP_MASK_SYSTEM_BITS 4
 #define PHYSICS_GROUP_DEFAULT_MAP 1
-#define PHYSICS_COLLIDESWITH_DEFAULT_MAP PHYSICS_GROUP_NONE
+#define PHYSICS_COLLIDESWITH_DEFAULT_MAP 7
 #define PHYSICS_GROUP_DEFAULT_PLAYER 2
 #define PHYSICS_COLLIDESWITH_DEFAULT_PLAYER 5 // map + object
 #define PHYSICS_GROUP_DEFAULT_OBJECT 4
-#define PHYSICS_COLLIDESWITH_DEFAULT_OBJECT 5 // map + object
+#define PHYSICS_COLLIDESWITH_DEFAULT_OBJECT 7
 
 /// Permanent absorption of any force in given environment, currently we only have air drag
 /// This could become configurable in Lua, and could be a property of pass-through rigidbodies

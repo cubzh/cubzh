@@ -823,7 +823,6 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	player.CollisionGroups = { PLAYER_DEFAULT_COLLISION_GROUP }
 	player.CollisionBox = Box(Number3(-4.5, 0, -4.5), Number3(4.5, 29, 4.5))
 	player.BoundingBox = player.CollisionBox
-	player.Shadow = true
 	player.ShadowCookie = 4
 	player.Layers = 1 -- Camera Layers 0
 
@@ -856,6 +855,9 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	else
 		player:ShowHandle()
 	end
+
+	-- this recurses over children, so need to load avatar first
+	player.Shadow = true
 
 	return player
 end

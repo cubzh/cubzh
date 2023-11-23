@@ -249,7 +249,7 @@ Shape *shape_make(void) {
     s->fragmentedVBs = doubly_linked_list_new();
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
-    s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES | SHAPE_RENDERING_FLAG_SHADOW;
+    s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES;
     s->layers = 1; // CAMERA_LAYERS_DEFAULT
 
     s->luaFlags = SHAPE_LUA_FLAG_NONE;
@@ -328,7 +328,8 @@ Shape *shape_make_copy(Shape *origin) {
                         {(float)(chunkOrigin.x + CHUNK_SIZE),
                          (float)(chunkOrigin.y + CHUNK_SIZE),
                          (float)(chunkOrigin.z + CHUNK_SIZE)}};
-        chunk_set_rtree_leaf(chunk, rtree_create_and_insert(s->rtree, &chunkBox, 1, 1, chunkCopy));
+        chunk_set_rtree_leaf(chunkCopy,
+                             rtree_create_and_insert(s->rtree, &chunkBox, 1, 1, chunkCopy));
 
         // enqueue new shape buffers
         _shape_chunk_enqueue_refresh(s, chunkCopy);
@@ -1658,7 +1659,7 @@ void shape_refresh_vertices(Shape *shape) {
                            (int)chunk_coords.y,
                            (int)chunk_coords.z,
                            NULL);
-            rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), false);
+            rtree_remove(shape->rtree, chunk_get_rtree_leaf(c), true);
             chunk_free(c, true);
             c = NULL;
 
