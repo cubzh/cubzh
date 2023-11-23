@@ -26,6 +26,7 @@ Client.OnStart = function()
 	-- REQUIRE MODULES
 	conf = require("config")
 	particles = require("particles")
+	walkSFX = require("walk_sfx")
 	require("multi")
 	require("textbubbles").displayPlayerChatBubbles = true
 	objectSkills = require("object_skills")
@@ -90,14 +91,16 @@ Client.OnStart = function()
 		onJump = spawnJumpParticles,
 		onAirJump = spawnJumpParticles,
 	})
+	walkSFX:register(Player)
 end
 
 Client.OnPlayerJoin = function(p)
 	if p == Player then
 		return
 	end
+
 	objectSkills.addStepClimbing(p)
-	-- objectSkills.addJump(p, { maxGroundDistance = 1.0, airJumps = 1, jumpVelocity = 100, maxAirJumpVelocity = 150 })
+	walkSFX:register(p)
 	dropPlayer(p)
 	print(p.Username .. " joined!")
 end
@@ -106,6 +109,7 @@ Client.OnPlayerLeave = function(p)
 	if p ~= Player then
 		objectSkills.removeStepClimbing(p)
 		objectSkills.removeJump(p)
+		walkSFX:unregister(p)
 	end
 end
 
