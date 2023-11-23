@@ -114,11 +114,14 @@ local funcs = {
 				blocks[v[1]] = v[2]
 			end
 		end
-		local e = Event()
-		e.a = events.SYNC
-		e.data = { mapBase64 = serializeWorld(getWorldState()) }
-		e:SendTo(Players)
-		return nil, -1
+		if FAKE_SERVER then
+			LocalEvent:Send(LocalEvent.Name.DidReceiveEvent, { a = events.SYNC, data = { mapBase64 = serializeWorld(getWorldState()) }, pID = Player.ID })
+		else
+			local e = Event()
+			e.a = events.SYNC
+			e.data = { mapBase64 = serializeWorld(getWorldState()) }
+			e:SendTo(Players)
+		end
 	end,
 	[events.P_SET_MAP_SCALE] = function(_, data)
 		mapScale = data.mapScale
