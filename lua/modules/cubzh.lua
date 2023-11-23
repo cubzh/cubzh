@@ -16,6 +16,7 @@ local MINIMUM_ITEM_SIZE_FOR_SHADOWS = 40
 local MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR = MINIMUM_ITEM_SIZE_FOR_SHADOWS * MINIMUM_ITEM_SIZE_FOR_SHADOWS
 local SPAWN_IN_BLOCK = Number3(107, 14, 73)
 local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(107, 20, 73)
+local REQUEST_FAIL_RETRY_DELAY = 5.0
 
 -- VARIABLES
 
@@ -27,6 +28,7 @@ Client.OnStart = function()
 	conf = require("config")
 	particles = require("particles")
 	walkSFX = require("walk_sfx")
+	sfx = require("sfx")
 	require("multi")
 	require("textbubbles").displayPlayerChatBubbles = true
 	objectSkills = require("object_skills")
@@ -80,6 +82,7 @@ Client.OnStart = function()
 	local spawnJumpParticles = function(o)
 		jumpParticles.Position = o.Position
 		jumpParticles:spawn(10)
+		sfx("walk_concrete_2", { Position = o.Position, Volume = 0.1 })
 	end
 
 	objectSkills.addStepClimbing(Player)
@@ -171,11 +174,18 @@ function loadMap()
 
 	map = bundle.Shape(world.mapName)
 	map.Scale = MAP_SCALE
-	hierarchyactions:applyToDescendants(map, { includeRoot = true }, function(o)
-		o.CollisionGroups = Map.CollisionGroups
-		o.CollidesWithGroups = Map.CollidesWithGroups
-		o.Physics = PhysicsMode.StaticPerBlock
+
+	map.CollisionGroups = Map.CollisionGroups
+	map.CollidesWithGroups = Map.CollidesWithGroups
+	map.Physics = PhysicsMode.StaticPerBlock
+
+	hierarchyactions:applyToDescendants(map, { includeRoot = false }, function(o)
+		-- apparently, children == water so far in this map
+		o.CollisionGroups = {}
+		o.CollidesWithGroups = {}
+		o.Physics = PhysicsMode.Disabled
 	end)
+
 	map:SetParent(World)
 	map.Position = { 0, 0, 0 }
 	map.Pivot = { 0, 0, 0 }
@@ -251,67 +261,108 @@ function dropPlayer(p)
 	p.Physics = true
 end
 
+function contains(t, v)
+	for _, value in ipairs(t) do
+		if value == v then
+			return true
+		end
+	end
+	return false
+end
+
+-- collected part IDs (arrays)
+collectedGliderParts = {} -- {1, 3, 5}
+collectedJetpackParts = {}
+
 function addCollectibles()
-	-- collected part IDs:
-	-- { 1 = true, 3 = true }
-	-- local collectedJetpackParts = {}
-	local collectedGliderParts = {}
+	local function spawnCollectibles()
+		-- local jetpackPartsPositions = {
+		-- 	Number3(850, 96, 350),
+		-- 	Number3(810, 96, 350),
+		-- 	Number3(770, 96, 350),
+		-- }
 
-	-- local jetpackPartsPositions = {
-	-- 	Number3(850, 96, 350),
-	-- 	Number3(810, 96, 350),
-	-- 	Number3(770, 96, 350),
-	-- }
-
-	local gliderParts = {
-		{ ID = 1, Position = Number3(418, 128, 566) },
-		{ ID = 2, Position = Number3(387, 242, 625) },
-		{ ID = 3, Position = Number3(62, 248, 470) },
-		{ ID = 4, Position = Number3(336, 260, 403) },
-		{ ID = 5, Position = Number3(194, 230, 202) },
-		{ ID = 6, Position = Number3(363, 212, 149) },
-		{ ID = 7, Position = Number3(155, 266, 673) },
-		{ ID = 8, Position = Number3(100, 350, 523) },
-		{ ID = 9, Position = Number3(240, 404, 249) },
-		{ ID = 10, Position = Number3(453, 472, 156) },
-	}
-
-	if #collectedGliderParts >= #gliderParts then
-		-- baseControls.enableGlider(Player, true)
-		print("GLIDER AVAILABLE!")
-	else
-		local gliderPartConfig = {
-			scale = 0.2,
-			rotation = { math.pi / 6, 0, math.pi / 6 },
-			position = Number3.Zero,
-			ID = -1,
-			callback = function(o)
-				collectedGliderParts[o.collectibleID] = true
-
-				-- local data = Data(Player.gliderParts):ToString({ format = "base64" })
-				-- local e = Event()
-				-- e.action = "setGliderStatus"
-				-- e.data = data
-				-- e:SendTo(Server)
-				if DEBUG then
-					print("Glider parts collected: " .. #collectedGliderParts .. "/" .. #gliderParts)
-				end
-				-- if #Player.gliderParts >= #gliderPartsPositions then
-				-- 	baseControls.enableGlider(Player, true)
-				-- 	baseControls.selectBackpack(Player, "glider")
-				-- 	if printDebug then
-				-- 		print("Glider Unlocked!")
-				-- 	end
-				-- end
-			end,
+		local gliderParts = {
+			{ ID = 1, Position = Number3(418, 128, 566) },
+			{ ID = 2, Position = Number3(387, 242, 625) },
+			{ ID = 3, Position = Number3(62, 248, 470) },
+			{ ID = 4, Position = Number3(336, 260, 403) },
+			{ ID = 5, Position = Number3(194, 230, 202) },
+			{ ID = 6, Position = Number3(363, 212, 149) },
+			{ ID = 7, Position = Number3(155, 266, 673) },
+			{ ID = 8, Position = Number3(100, 350, 523) },
+			{ ID = 9, Position = Number3(240, 404, 249) },
+			{ ID = 10, Position = Number3(453, 472, 156) },
 		}
-		for _, v in ipairs(gliderParts) do
-			if not collectedGliderParts[v.ID] then
-				local config = conf:merge(gliderPartConfig, { position = v.Position, ID = v.ID })
-				collectible:create("voxels.hang_glider", config)
+
+		if #collectedGliderParts >= #gliderParts then
+			-- baseControls.enableGlider(Player, true)
+			print("GLIDER AVAILABLE!")
+		else
+			local gliderPartConfig = {
+				scale = 0.2,
+				rotation = { math.pi / 6, 0, math.pi / 6 },
+				position = Number3.Zero,
+				ID = -1,
+				callback = function(o)
+					if contains(collectedGliderParts, o.collectibleID) then
+						return
+					end
+
+					table.insert(collectedGliderParts, o.collectibleID)
+
+					local retry = {}
+					retry.fn = function()
+						local store = KeyValueStore(Player.UserID)
+						store:set("collectedGliderParts", collectedGliderParts, function(ok)
+							if not ok then
+								Timer(REQUEST_FAIL_RETRY_DELAY, retry.fn)
+							end
+						end)
+					end
+					retry.fn()
+
+					if DEBUG then
+						print("Glider parts collected: " .. #collectedGliderParts .. "/" .. #gliderParts)
+					end
+
+					if #collectedGliderParts >= #gliderParts then
+						print("GLIDER AVAILABLE!")
+						-- 	baseControls.enableGlider(Player, true)
+						-- 	baseControls.selectBackpack(Player, "glider")
+						-- 	if printDebug then
+						-- 		print("Glider Unlocked!")
+						-- 	end
+					end
+				end,
+			}
+			for _, v in ipairs(gliderParts) do
+				if not contains(collectedGliderParts, v.ID) then
+					local config = conf:merge(gliderPartConfig, { position = v.Position, ID = v.ID })
+					collectible:create("voxels.hang_glider", config)
+				end
 			end
 		end
 	end
+
+	local t = {}
+	t.get = function()
+		local store = KeyValueStore(Player.UserID)
+		store:get("collectedGliderParts", "collectedJetpackParts", function(ok, results)
+			if ok then
+				if results.collectedGliderParts ~= nil then
+					collectedGliderParts = results.collectedGliderParts
+				end
+				if results.collectedJetpackParts ~= nil then
+					collectedJetpackParts = results.collectedJetpackParts
+				end
+				spawnCollectibles()
+			else
+				Timer(REQUEST_FAIL_RETRY_DELAY, t.get)
+			end
+		end)
+	end
+	t.get()
 end
 
 -- COLLECTIBLES
@@ -371,8 +422,8 @@ collectible.create = function(self, itemName, config)
 
 	hierarchyactions:applyToDescendants(s, { includeRoot = true }, function(o)
 		o.Physics = PhysicsMode.Trigger
-		o.IsUnlit = true
-		-- o.PrivateDrawMode = 2
+		-- o.IsUnlit = true
+		o.PrivateDrawMode = 2
 	end)
 
 	s.collectibleID = config.ID
