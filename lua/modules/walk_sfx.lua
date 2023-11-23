@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
 		grass = Color(64, 155, 69),
 	},
 	stepDelay = 0.3,
-	volume = 0.3,
+	volume = 0.25,
 }
 
 objects = {} -- configs, indexed by object ref
