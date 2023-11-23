@@ -9,6 +9,7 @@ local mod = {}
 
 -- Define a metatable with __call metamethod
 local metatable = {
+    __tostring = function(_) return "[KeyValueStore (class)]" end,
     __type = 60,
     __call = function(self, storeName)
         if type(storeName) ~= "string" then
@@ -69,6 +70,7 @@ local metatable = {
             end,
         }
         setmetatable(newStore, {
+            __tostring = function(self) return "[KeyValueStore " .. self.name .. "]" end,
             __type = 61,
         })
         return newStore
