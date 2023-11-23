@@ -66,6 +66,15 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function()
 			end
 		end
 	end
+
+	-- JUMPERS
+
+	for jumper, config in pairs(jumpers) do
+		if config.airJumped and isOnGround(jumper, config) then
+			config.airJumpsAvailable = config.airJumps
+			config.airJumped = false
+		end
+	end
 end)
 
 -- JUMPS
@@ -89,6 +98,7 @@ skills.jump = function(object)
 			v = math.min(config.maxAirJumpVelocity, v + config.jumpVelocity)
 			object.Velocity.Y = v
 			config.onAirJump(object)
+			config.airJumped = true
 		end
 	end
 end
@@ -102,7 +112,9 @@ skills.addJump = function(object, config)
 		onJump = EMPTY_CALLBACK,
 		onAirJump = EMPTY_CALLBACK,
 	}
+
 	config = conf:merge(defaultConfig, config)
+
 	config.airJumpsAvailable = config.airJumps
 	jumpers[object] = config
 end

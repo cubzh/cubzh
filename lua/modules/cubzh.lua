@@ -14,8 +14,8 @@ Go to https://docs.cu.bzh/
 
 local MINIMUM_ITEM_SIZE_FOR_SHADOWS = 40
 local MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR = MINIMUM_ITEM_SIZE_FOR_SHADOWS * MINIMUM_ITEM_SIZE_FOR_SHADOWS
-local SPAWN_IN_BLOCK = Number3(105, 15, 58)
-local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(105, 18, 58)
+local SPAWN_IN_BLOCK = Number3(107, 14, 73)
+local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(107, 20, 73)
 
 -- VARIABLES
 
@@ -25,6 +25,7 @@ local DEBUG = true
 Client.OnStart = function()
 	-- REQUIRE MODULES
 	conf = require("config")
+	particles = require("particles")
 	require("multi")
 	require("textbubbles").displayPlayerChatBubbles = true
 	objectSkills = require("object_skills")
@@ -45,6 +46,21 @@ Client.OnStart = function()
 	local controls = require("controls")
 	controls:setButtonIcon("action1", "⬆️")
 
+	-- PARTICLES
+	jumpParticles = particles:newEmitter({
+		life = function()
+			return 0.3
+		end,
+		velocity = function()
+			local v = Number3(15 + math.random() * 10, 0, 0)
+			v:Rotate(0, math.random() * math.pi * 2, 0)
+			return v
+		end,
+		acceleration = function()
+			return -Config.ConstantAcceleration
+		end,
+	})
+
 	-- CAMERA
 	-- Set camera for pre-authentication state (rotating while title screen is shown)
 	Camera:SetModeFree()
@@ -59,11 +75,21 @@ Client.OnStart = function()
 	end)
 
 	-- LOCAL PLAYER PROPERTIES
+
+	local spawnJumpParticles = function(o)
+		jumpParticles.Position = o.Position
+		jumpParticles:spawn(10)
+	end
+
 	objectSkills.addStepClimbing(Player)
-	objectSkills.addJump(
-		Player,
-		{ maxGroundDistance = 1.0, airJumps = 1, jumpVelocity = 100, maxAirJumpVelocity = 150 }
-	)
+	objectSkills.addJump(Player, {
+		maxGroundDistance = 1.0,
+		airJumps = 1,
+		jumpVelocity = 100,
+		maxAirJumpVelocity = 150,
+		onJump = spawnJumpParticles,
+		onAirJump = spawnJumpParticles,
+	})
 end
 
 Client.OnPlayerJoin = function(p)
@@ -107,9 +133,15 @@ end
 
 localPlayerShown = false
 function showLocalPlayer()
+	if localPlayerShown then
+		return
+	end
 	localPlayerShown = true
-	Camera:SetModeThirdPerson()
+
 	dropPlayer(Player)
+	Player.Position = Camera.Position
+	Player.Rotation = Camera.Rotation
+	Camera:SetModeThirdPerson()
 end
 
 -- UTILITY FUNCTIONS
@@ -157,7 +189,7 @@ function loadMap()
 					loadedObjects[objInfo.fullname] = o
 				else
 					loadedObjects[objInfo.fullname] = "ERROR"
-					print("could not load " .. objInfo.fullname)
+					-- print("could not load " .. objInfo.fullname)
 				end
 			end
 		end
@@ -192,6 +224,7 @@ function loadMap()
 						l.Shadow = true
 					end
 				end)
+
 				obj.Position = objInfo.Position or Number3(0, 0, 0)
 				obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
 				obj.Scale = scale
@@ -217,14 +250,14 @@ end
 function addCollectibles()
 	-- collected part IDs:
 	-- { 1 = true, 3 = true }
-	local collectedJetpackParts = {}
+	-- local collectedJetpackParts = {}
 	local collectedGliderParts = {}
 
-	local jetpackPartsPositions = {
-		Number3(850, 96, 350),
-		Number3(810, 96, 350),
-		Number3(770, 96, 350),
-	}
+	-- local jetpackPartsPositions = {
+	-- 	Number3(850, 96, 350),
+	-- 	Number3(810, 96, 350),
+	-- 	Number3(770, 96, 350),
+	-- }
 
 	local gliderParts = {
 		{ ID = 1, Position = Number3(418, 128, 566) },
@@ -339,7 +372,9 @@ collectible.create = function(self, itemName, config)
 	end)
 
 	s.collectibleID = config.ID
+
 	s.Pivot = { s.Width * 0.5, 0, s.Depth * 0.5 }
+
 	s.Scale = config.scale
 	s.Position = config.position
 	s.Rotation = config.rotation
