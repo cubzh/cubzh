@@ -42,6 +42,7 @@ return {
 		"HTTP",
 		"Items",
 		"JSON",
+		"KeyValueStore",
 		"LightType",
 		"LocalEvent",
 		"Map",
