@@ -409,12 +409,18 @@ local statesSettings = {
 				})
 			end)
 			freezeObject(worldEditor.object)
+
+			local uiGizmoRotation = require("ui_gizmo_rotation", { shape = worldEditor.object })
+			worldEditor.uiGizmoRotation = uiGizmoRotation
+			uiGizmoRotation.Size = 250
+			uiGizmoRotation.pos = { 0, 0 }--{ Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
 			tryPickObject(pe)
 		end,
 		onStateEnd = function()
+			worldEditor.uiGizmoRotation:remove()
 			if worldEditor.object then
 				unfreezeObject(worldEditor.object)
 			end
