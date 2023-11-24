@@ -18,6 +18,9 @@ local SPAWN_IN_BLOCK = Number3(107, 14, 73)
 local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(107, 20, 73)
 local REQUEST_FAIL_RETRY_DELAY = 5.0
 
+local JUMP_VELOCITY = 82
+local MAX_AIR_JUMP_VELOCITY = 85
+
 -- VARIABLES
 
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
@@ -89,8 +92,8 @@ Client.OnStart = function()
 	objectSkills.addJump(Player, {
 		maxGroundDistance = 1.0,
 		airJumps = 1,
-		jumpVelocity = 100,
-		maxAirJumpVelocity = 150,
+		jumpVelocity = JUMP_VELOCITY,
+		maxAirJumpVelocity = MAX_AIR_JUMP_VELOCITY,
 		onJump = spawnJumpParticles,
 		onAirJump = spawnJumpParticles,
 	})
