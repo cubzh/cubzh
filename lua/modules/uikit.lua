@@ -2551,6 +2551,10 @@ function createUI(system)
 
 			local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 			local hitObject = impact.Shape or impact.Object
+			-- try to find parent ui object (when impact a child of a mutable shape)
+			while hitObject and not hitObject._node do
+				hitObject = hitObject:GetParent()
+			end
 			if hitObject._node == pressed and hitObject._node._onRelease then
 				pressed:_onRelease(hitObject, impact.Block)
 				pressed = nil
