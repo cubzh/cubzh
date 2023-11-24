@@ -99,6 +99,7 @@ void transform_reset_any_dirty(Transform *t);
 /// set, but not reset by transform, can be used internally by higher types as custom flag
 bool transform_is_any_dirty(Transform *t);
 void transform_set_destroy_callback(pointer_transform_destroyed_func f);
+void transform_setRecycleIDs(bool b);
 
 /// MARK: - Physics -
 void transform_reset_physics_dirty(Transform *t);

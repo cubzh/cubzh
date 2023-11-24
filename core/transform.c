@@ -113,6 +113,8 @@ struct _Transform {
 static Mutex *_IDMutex = NULL;
 static uint16_t _nextID = 1;
 static FiloListUInt16 *_availableIDs = NULL;
+static FiloListUInt16 *_delayedAvailableIDs = NULL;
+static bool _recycleIDs = false;
 
 static pointer_transform_destroyed_func transform_destroyed_callback = NULL;
 
@@ -330,6 +332,21 @@ bool transform_is_any_dirty(Transform *t) {
 
 void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
     transform_destroyed_callback = f;
+}
+
+void transform_setRecycleIDs(bool b) {
+    mutex_lock(_IDMutex);
+    _recycleIDs = b;
+    if (_recycleIDs && _delayedAvailableIDs != NULL) {
+        if (_availableIDs == NULL) {
+            _availableIDs = filo_list_uint16_new();
+        }
+        uint16_t id;
+        while (filo_list_uint16_pop(_delayedAvailableIDs, &id)) {
+            filo_list_uint16_push(_availableIDs, id);
+        }
+    }
+    mutex_unlock(_IDMutex);
 }
 
 // MARK: - Physics -
@@ -1105,10 +1122,17 @@ static uint16_t _transform_get_valid_id(void) {
 
 static void _transform_recycle_id(const uint16_t id) {
     mutex_lock(_IDMutex);
-    if (_availableIDs == NULL) {
-        _availableIDs = filo_list_uint16_new();
+    if (_recycleIDs) {
+        if (_availableIDs == NULL) {
+            _availableIDs = filo_list_uint16_new();
+        }
+        filo_list_uint16_push(_availableIDs, id);
+    } else {
+        if (_delayedAvailableIDs == NULL) {
+            _delayedAvailableIDs = filo_list_uint16_new();
+        }
+        filo_list_uint16_push(_delayedAvailableIDs, id);
     }
-    filo_list_uint16_push(_availableIDs, id);
     mutex_unlock(_IDMutex);
 }
 
