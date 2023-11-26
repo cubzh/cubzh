@@ -2312,13 +2312,13 @@ function createUI(system)
 			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
 			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
 			down:setParent(frame)
-			down.pos.Z = -10
+			down.pos.Z = -20
 			down:hide()
 			down:disable()
 
 			local up = ui:createButton("⬆️", { borders = true, shadow = false, unfocuses = false })
 			up:setParent(frame)
-			up.pos.Z = -10
+			up.pos.Z = -20
 			up:hide()
 			up:disable()
 
