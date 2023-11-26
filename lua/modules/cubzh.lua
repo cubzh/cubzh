@@ -88,7 +88,7 @@ Client.OnStart = function()
 		sfx("walk_concrete_2", { Position = o.Position, Volume = 0.1 })
 	end
 
-	objectSkills.addStepClimbing(Player)
+	objectSkills.addStepClimbing(Player, { mapScale = MAP_SCALE })
 	objectSkills.addJump(Player, {
 		maxGroundDistance = 1.0,
 		airJumps = 1,
@@ -105,7 +105,7 @@ Client.OnPlayerJoin = function(p)
 		return
 	end
 
-	objectSkills.addStepClimbing(p)
+	objectSkills.addStepClimbing(p, { mapScale = MAP_SCALE })
 	walkSFX:register(p)
 	dropPlayer(p)
 	print(p.Username .. " joined!")
