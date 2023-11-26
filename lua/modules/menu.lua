@@ -538,6 +538,9 @@ avatar.pos.Y = theme.paddingTiny
 username = ui:createText("", Color.White, "small")
 username:setParent(profileFrame)
 
+userAttribute = ui:createText("", Color(255, 255, 255, 100), "small")
+userAttribute:setParent(profileFrame)
+
 xp = nil
 coins = nil
 
@@ -935,7 +938,10 @@ topBar.parentDidResize = function(self)
 
 	avatar.Height = height
 
-	profileFrame.Width = math.max(avatar.Width + padding + username.Width, avatar.Width + padding + info.Width)
+	profileFrame.Width = math.max(
+		avatar.Width + padding + username.Width + padding + userAttribute.Width,
+		avatar.Width + padding + info.Width
+	)
 	profileFrame.Height = height
 
 	profileFrame.pos.X = Screen.SafeArea.Left + padding
@@ -946,6 +952,9 @@ topBar.parentDidResize = function(self)
 
 	username.pos.X = avatar.pos.X + avatar.Width + padding
 	username.pos.Y = profileFrame.Height * 0.5 + padding * 0.5
+
+	userAttribute.pos.X = username.pos.X + username.Width + padding
+	userAttribute.pos.Y = username.pos.Y
 
 	info.pos.X = avatar.pos.X + avatar.Width + padding
 	info.pos.Y = profileFrame.Height * 0.5 - info.Height - padding * 0.5
@@ -1699,6 +1708,10 @@ end
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
 		System:UpdateAuthStatus()
+
+		if System.IsUserUnder13 then
+			userAttribute.Text = "<13"
+		end
 
 		-- connects client to server if it makes sense (maxPlayers > 1)
 		connect()
