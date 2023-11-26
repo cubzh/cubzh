@@ -1618,6 +1618,18 @@ function createUI(system)
 		textContainer.IsMask = true
 		node.textContainer = textContainer
 
+		textContainer.contentDidResize = function(_)
+			if node._refresh then
+				node:_refresh()
+			end
+		end
+
+		node.contentDidResizeSystem = function(self)
+			if self._refresh then
+				self:_refresh()
+			end
+		end
+
 		node.placeholder = ui:createText(placeholder or "", Color.White, size) -- color replaced later on
 		node.placeholder:setParent(textContainer)
 
@@ -1792,12 +1804,6 @@ function createUI(system)
 
 		node:_refresh()
 		_textInputRefreshColor(node) -- apply initial colors
-
-		node.contentDidResizeSystem = function(self)
-			if self._refresh then
-				self:_refresh()
-			end
-		end
 
 		node.border.onPress = function()
 			if node.disabled == true then
@@ -2083,7 +2089,6 @@ function createUI(system)
 
 		node._setText = function(self, str)
 			self.content.Text = str
-			self:contentDidResizeWrapper()
 		end
 
 		node.setColor = function(self, background, text, doNotrefresh)
