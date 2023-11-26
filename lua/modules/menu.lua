@@ -37,8 +37,6 @@ CONNECTION_RETRY_DELAY = 5.0 -- in seconds
 -- VARS
 ---------------------------
 
--- NOTE: this may not be necessary, as we can access information through System table
-accountInfo = nil -- stores account information
 wasActive = false
 modalWasShown = false
 alertWasShown = false
@@ -1306,7 +1304,7 @@ function versionCheck(callbacks)
 	end)
 end
 
-function magicKeyCheck(success, err)
+function magicKeyCheck(callbacks)
 	if System.HasCredentials == false and System.AskedForMagicKey then
 		-- TODO
 		-- checkMagicKey(
@@ -1327,12 +1325,12 @@ function magicKeyCheck(success, err)
 		-- 	end
 		-- )
 		System:RemoveAskedForMagicKey()
-		if err ~= nil then
-			err()
+		if callbacks.err ~= nil then
+			callbacks.err()
 		end
 	else
-		if success ~= nil then
-			success()
+		if callbacks.success ~= nil then
+			callbacks.success()
 		end
 	end
 end
@@ -1359,13 +1357,20 @@ function accountCheck(callbacks)
 			return
 		end
 
-		accountInfo = res
+		local accountInfo = res
 
 		if accountInfo.hasDOB == false or accountInfo.hasUsername == false then
 			if callbacks.accountIncomplete then
 				callbacks.accountIncomplete()
 			end
 			return
+		end
+
+		if System.Under13DisclaimerNeedsApproval then
+			if callbacks.under13DisclaimerNeedsApproval then
+				callbacks.under13DisclaimerNeedsApproval()
+				return
+			end
 		end
 
 		-- NOTE: accountInfo.hasPassword could be false here
@@ -1414,7 +1419,6 @@ function showSignUp(callbacks)
 		System.Login(function(success, info)
 			ui:turnOn()
 			if success then
-				accountInfo = info
 				helpBtn:remove()
 				loginBtn:remove()
 				signupElements = nil
@@ -1444,7 +1448,6 @@ function showSignUp(callbacks)
 
 		local function _createAccount(onError)
 			showLoading("Creating account")
-
 			api:signUp(username, key, dob, password, function(err, credentials)
 				if err ~= nil then
 					if onError ~= nil then
@@ -1501,79 +1504,24 @@ function skipTitleScreen()
 	hideTitleScreen()
 	hideBottomBar()
 
-	showLoading("Checking app version")
+	local flow = {}
 
-	versionCheck(
-		{
-			success = function()
-				magicKeyCheck(
-					function()
-						accountCheck({
-							success = function()
-								hideLoading()
-								showTopBar()
-								hideBottomBar()
-								authCompleted()
-							end,
-							loggedOut = function()
-								System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
-								hideLoading()
-								showSignUp({
-									success = function()
-										accountCheck({
-											success = function()
-												hideLoading()
-												showTopBar()
-												hideBottomBar()
-												authCompleted()
-											end,
-											-- not supposed to happen after successful signup
-											loggedOut = function()
-												showTitleScreen()
-											end,
-											error = function()
-												showTitleScreen()
-											end,
-										})
-									end,
-									error = function()
-										showTitleScreen()
-									end,
-									cancel = function()
-										showTitleScreen()
-									end,
-								}) -- signup
-							end,
-							error = function()
-								hideLoading()
-								showAlert({
-									message = "❌ Sorry, something went wrong.",
-									positiveCallback = function()
-										showTitleScreen()
-									end,
-									positiveLabel = "OK",
-								})
-							end,
-							accountIncomplete = function()
-								hideLoading()
-								showAlert({
-									message = "⚠️ Anonymous account detected ⚠️\nAnonymous accounts aren't allowed anymore on Cubzh.",
-									positiveCallback = function()
-										System:Logout()
-										showTitleScreen()
-										skipTitleScreen()
-									end,
-									positiveLabel = "Create a new account",
-								})
-							end,
-						})
-					end, -- magicKeyCheck success (magic key verified or no magic key to verify)
-					function()
-						showTitleScreen()
-						skipTitleScreen()
-					end -- magicKeyCheck err
-				)
-			end,
+	flow.restartSignUp = function()
+		showTitleScreen()
+		skipTitleScreen()
+	end
+
+	flow.startPlaying = function()
+		hideLoading()
+		showTopBar()
+		hideBottomBar()
+		authCompleted()
+	end
+
+	flow.versionCheck = function()
+		showLoading("Checking app version")
+		versionCheck({
+			success = flow.magicKeyCheck,
 			networkError = function()
 				hideLoading()
 				showAlert({
@@ -1597,9 +1545,70 @@ function skipTitleScreen()
 					positiveLabel = "OK",
 				})
 			end,
-		}, -- versionCheck success
-		function() end -- versionCheck err
-	)
+		})
+	end
+
+	flow.magicKeyCheck = function()
+		magicKeyCheck({
+			success = flow.accountCheck,
+			err = flow.restartSignUp,
+		})
+	end
+
+	flow.accountCheck = function()
+		accountCheck({
+			success = flow.startPlaying,
+			loggedOut = flow.showSignUp, -- not supposed to happen after successful signup
+			error = function()
+				hideLoading()
+				showAlert({
+					message = "❌ Sorry, something went wrong.",
+					positiveCallback = function()
+						showTitleScreen()
+					end,
+					positiveLabel = "OK",
+				})
+			end,
+			accountIncomplete = function()
+				hideLoading()
+				showAlert({
+					message = "⚠️ Anonymous account detected ⚠️\nAnonymous accounts aren't allowed anymore on Cubzh.",
+					positiveCallback = function()
+						System:Logout()
+						flow.restartSignUp()
+					end,
+					positiveLabel = "Create a new account",
+				})
+			end,
+			under13DisclaimerNeedsApproval = function()
+				hideLoading()
+				showAlert({
+					message = "⚠️ Be safe online! ⚠️\n\nDo NOT share personal details, watch out for phishing, scams and always think about who you're talking to.\n\nIf anything goes wrong, talk to someone you trust. 🙂",
+					positiveLabel = "Yes sure!",
+					positiveCallback = function()
+						System.ApproveUnder13Disclaimer()
+						flow.startPlaying()
+					end,
+					neutralLabel = "I'm not ready.",
+					neutralCallback = function()
+						showTitleScreen()
+					end,
+				})
+			end,
+		})
+	end
+
+	flow.showSignUp = function()
+		System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
+		hideLoading()
+		showSignUp({
+			success = flow.accountCheck,
+			error = showTitleScreen,
+			cancel = showTitleScreen,
+		})
+	end
+
+	flow.versionCheck() -- start with version check
 end
 
 function showTitleScreen()
