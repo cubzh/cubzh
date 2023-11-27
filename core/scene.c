@@ -849,7 +849,7 @@ CastHitType scene_cast_box(Scene *sc,
                             float3_op_scale(&modelVector, swept);
 
                             float3 worldVector;
-                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                            transform_utils_vector_ltw(hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr,
                                                        &modelVector,
                                                        &worldVector);
 
