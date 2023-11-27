@@ -51,7 +51,7 @@ void transaction_replaceBlock(const Transaction *const tr,
 /// Creating a new one if needed, starting at first operation.
 /// The iterator is freed with its transaction.
 /// To start over, transaction_resetIndex3DIterator should be called.
-Index3DIterator *transaction_getIndex3DIterator(Transaction *tr);
+Index3DIterator *transaction_getIndex3DIterator(Transaction *const tr);
 
 /// Resets transaction's Index3DIterator
-void transaction_resetIndex3DIterator(Transaction *tr);
+void transaction_resetIndex3DIterator(Transaction *const tr);

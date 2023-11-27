@@ -724,6 +724,7 @@ void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
     keepPending = keepPending ||
                   _shape_get_lua_flag(shape,
                                       SHAPE_LUA_FLAG_HISTORY | SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING);
+
     if (keepPending == false) {
         if (_shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY) && shape->history != NULL) {
             // history is enabled, store the transaction in the history
@@ -2811,7 +2812,7 @@ void shape_history_undo(Shape *const s) {
         transaction_free(s->pendingTransaction);
         s->pendingTransaction = NULL;
     } else {
-        Transaction *tr = history_getTransactionToUndo(s->history);
+        Transaction *const tr = history_getTransactionToUndo(s->history);
         if (tr != NULL) {
             transaction_resetIndex3DIterator(tr);
             _shape_undo_transaction(s, tr);
@@ -4053,12 +4054,12 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
     }
 
     // loop on all the BlockChanges
+    uint32_t resetBoxNeeded = false;
     SHAPE_COLOR_INDEX_INT_T before, after;
     SHAPE_COORDS_INT_T x, y, z;
-    uint32_t resetBoxNeeded = false;
-
     BlockChange *bc;
     const Block *b;
+
     while (index3d_iterator_pointer(it) != NULL) {
         bc = (BlockChange *)index3d_iterator_pointer(it);
 
@@ -4124,11 +4125,10 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
         return false;
     }
 
+    // loop on all the BlockChanges and revert them
+    bool resetBoxNeeded = false;
     SHAPE_COLOR_INDEX_INT_T before, after;
     SHAPE_COORDS_INT_T x, y, z;
-    bool resetBoxNeeded = false;
-
-    // loop on all the BlockChanges and revert them
     BlockChange *bc;
     const Block *b;
 

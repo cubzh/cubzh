@@ -169,7 +169,7 @@ void transaction_replaceBlock(const Transaction *const tr,
     index3d_insert(tr->index3D, bc, x, y, z, tr->iterator);
 }
 
-Index3DIterator *transaction_getIndex3DIterator(Transaction *tr) {
+Index3DIterator *transaction_getIndex3DIterator(Transaction *const tr) {
     if (tr == NULL || tr->index3D == NULL) {
         return NULL;
     }
@@ -180,7 +180,7 @@ Index3DIterator *transaction_getIndex3DIterator(Transaction *tr) {
     return tr->iterator;
 }
 
-void transaction_resetIndex3DIterator(Transaction *tr) {
+void transaction_resetIndex3DIterator(Transaction *const tr) {
     if (tr != NULL && tr->iterator != NULL) {
         index3d_iterator_free(tr->iterator);
         tr->iterator = NULL;
