@@ -123,15 +123,46 @@ skills.removeJump = function(object)
 	jumpers[object] = nil
 end
 
+COLLISION_BOX_REDUCE_OFFSET = Number3(1, 0, 1)
+
+local isOnGroundBox = Box()
+local pts = {}
+local minN3 = Number3.Zero
+local maxN3 = Number3.Zero
+local bMax
+local bMin
 function isOnGround(object, config)
 	if object.CollisionBox == nil then
 		return false
 	end
-	local box = object.CollisionBox:Copy()
-	box.Min = object:PositionLocalToWorld(box.Min)
-	box.Max = object:PositionLocalToWorld(box.Max)
-	local impact = box:Cast(Number3.Down, config.maxGroundDistance, object.CollidesWithGroups)
-	return impact ~= nil
+
+	bMax = object.CollisionBox.Max
+	bMin = object.CollisionBox.Min
+
+	-- TMP, waiting for object:BoxLocalToWorld
+	pts[1] = object:PositionLocalToWorld(bMin)
+	pts[2] = object:PositionLocalToWorld({ bMax.X, bMin.Y, bMin.Z })
+	pts[3] = object:PositionLocalToWorld({ bMin.X, bMax.Y, bMin.Z })
+	pts[4] = object:PositionLocalToWorld({ bMin.X, bMin.Y, bMax.Z })
+	pts[5] = object:PositionLocalToWorld({ bMax.X, bMax.Y, bMin.Z })
+	pts[6] = object:PositionLocalToWorld({ bMax.X, bMin.Y, bMax.Z })
+	pts[7] = object:PositionLocalToWorld({ bMin.X, bMax.Y, bMax.Z })
+	pts[8] = object:PositionLocalToWorld(bMax)
+
+	minN3:Set(pts[1])
+	minN3.X = math.min(minN3.X, pts[2].X, pts[3].X, pts[4].X, pts[5].X, pts[6].X, pts[7].X, pts[8].X)
+	minN3.Y = math.min(minN3.Y, pts[2].Y, pts[3].Y, pts[4].Y, pts[5].Y, pts[6].Y, pts[7].Y, pts[8].Y)
+	minN3.Z = math.min(minN3.Z, pts[2].Z, pts[3].Z, pts[4].Z, pts[5].Z, pts[6].Z, pts[7].Z, pts[8].Z)
+	maxN3:Set(pts[1])
+	maxN3.X = math.max(maxN3.X, pts[2].X, pts[3].X, pts[4].X, pts[5].X, pts[6].X, pts[7].X, pts[8].X)
+	maxN3.Y = math.max(maxN3.Y, pts[2].Y, pts[3].Y, pts[4].Y, pts[5].Y, pts[6].Y, pts[7].Y, pts[8].Y)
+	maxN3.Z = math.max(maxN3.Z, pts[2].Z, pts[3].Z, pts[4].Z, pts[5].Z, pts[6].Z, pts[7].Z, pts[8].Z)
+
+	isOnGroundBox.Min = minN3 + COLLISION_BOX_REDUCE_OFFSET
+	isOnGroundBox.Max = maxN3 - COLLISION_BOX_REDUCE_OFFSET
+
+	local impact = isOnGroundBox:Cast(Number3.Down, config.maxGroundDistance, object.CollidesWithGroups)
+	return (impact ~= nil and impact.FaceTouched == Face.Top)
 end
 
 return skills
