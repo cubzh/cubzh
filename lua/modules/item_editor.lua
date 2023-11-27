@@ -629,6 +629,8 @@ Client.OnStart = function()
 			item.Position = parents:BlockToWorld(coords)
 			item.Rotation = parents.Rotation
 		end
+
+		fitObjectToScreen(item, nil)
 	end
 
 	-- long press + drag
@@ -3140,8 +3142,10 @@ function post_item_load()
 				Player[p].Rotation = Number3(0, 0, 0)
 			end
 			Player[p].IgnoreAnimations = true
-			Player[p].Physics = PhysicsMode.Trigger
+			Player[p].Physics = PhysicsMode.TriggerPerBlock
 		end
+		Player.Physics = PhysicsMode.Disabled
+
 		for _, shape in pairs(Player.equipments) do
 			shape.Physics = PhysicsMode.Trigger
 			for _, s in ipairs(shape.attachedParts or {}) do
