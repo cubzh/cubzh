@@ -7,7 +7,6 @@ if Config.ChatAvailable then
 	return
 end -- tmp: to silent "unused global variable Config" luacheck warning
 
-
 -- --------------------------------------------------
 -- Utilities for Player avatar
 -- --------------------------------------------------
@@ -130,9 +129,7 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 	end
 end
 
-
 Client.OnStart = function()
-
 	gizmo = require("gizmo")
 	gizmo:setLayer(4)
 	gizmo:setScale(0.3)
@@ -182,17 +179,17 @@ Client.OnStart = function()
 	refreshToolsDisplay = function()
 		local enablePaletteBtn = currentMode == mode.edit
 			and (
-			currentEditSubmode == editSubmode.add
-			or currentEditSubmode == editSubmode.remove
-			or currentEditSubmode == editSubmode.paint
+				currentEditSubmode == editSubmode.add
+				or currentEditSubmode == editSubmode.remove
+				or currentEditSubmode == editSubmode.paint
 			)
 
 		local showPalette = currentMode == mode.edit
 			and paletteDisplayed
 			and (
-			currentEditSubmode == editSubmode.add
-			or currentEditSubmode == editSubmode.remove
-			or currentEditSubmode == editSubmode.paint
+				currentEditSubmode == editSubmode.add
+				or currentEditSubmode == editSubmode.remove
+				or currentEditSubmode == editSubmode.paint
 			)
 
 		local showColorPicker = showPalette and colorPickerDisplayed
@@ -240,7 +237,7 @@ Client.OnStart = function()
 				mirrorControls.Width = ui_config.padding + (rotateMirrorBtn.Width + ui_config.padding) * 2
 			end
 			mirrorControls.LocalPosition =
-			{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
+				{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
 		else
 			mirrorControls:hide()
 		end
@@ -301,7 +298,7 @@ Client.OnStart = function()
 		cameraStartPreviewRotationBackpack = Number3(0, 0, 0),
 		cameraStartPreviewDistance = 15,
 		cameraThumbnailRotation = Number3(0.32, 3.9, 0.0), --- other option for Y: 2.33
-		zoomMin = 5,                                       -- unit, minimum zoom distance allowed
+		zoomMin = 5, -- unit, minimum zoom distance allowed
 	}
 	settingsMT = {
 		__index = function(_, k)
@@ -327,12 +324,12 @@ Client.OnStart = function()
 	setmetatable(settings, settingsMT)
 
 	Dev.DisplayBoxes = false
-	cameraDistFactor = 0.05  -- additive factor per distance unit above threshold
+	cameraDistFactor = 0.05 -- additive factor per distance unit above threshold
 	cameraDistThreshold = 15 -- distance under which scaling is 1
 
-	saveTrigger = 60         -- seconds
+	saveTrigger = 60 -- seconds
 
-	mirrorMargin = 1.0       -- the mirror is x block larger than the item
+	mirrorMargin = 1.0 -- the mirror is x block larger than the item
 	mirrorThickness = 1.0 / 4.0
 
 	----------------------------
@@ -573,7 +570,6 @@ Client.OnStart = function()
 
 		-- parents can be a Lua table (containing Shapes) or a Shape
 		if parentsType == "table" then
-
 			-- item root shape
 			do
 				local s = item
@@ -622,7 +618,6 @@ Client.OnStart = function()
 
 			child.Position = pos + shift
 			child.Rotation = parents[3].Rotation
-
 		elseif parentsType == "MutableShape" then
 			-- `parents` is a MutableShape
 			local coords = parents:GetPoint("origin").Coords
@@ -660,8 +655,7 @@ menuDidBecomeActive = function()
 	end
 end
 
-Client.Tick = function()
-end
+Client.Tick = function() end
 tick = function(dt)
 	if changesSinceLastSave then
 		autoSaveDT = autoSaveDT + dt
@@ -678,8 +672,7 @@ tick = function(dt)
 	end
 end
 
-Pointer.Zoom = function()
-end
+Pointer.Zoom = function() end
 zoom = function(zoomValue)
 	local factor = 0.5
 
@@ -695,8 +688,7 @@ zoom = function(zoomValue)
 	end
 end
 
-Pointer.Click = function()
-end
+Pointer.Click = function() end
 click = function(e)
 	if currentMode == mode.edit then
 		local impact
@@ -751,9 +743,13 @@ click = function(e)
 				end -- end Player.IsHidden == false
 
 				-- if avatar body parts are shown, consider them in RayCast
-				if currentWearablePreviewMode == wearablePreviewMode.bodyPart
-					or currentWearablePreviewMode == wearablePreviewMode.fullBody then
-					local shownBodyParts = utils.findSubshapes(Player, function(s) return s.IsHidden == false end)
+				if
+					currentWearablePreviewMode == wearablePreviewMode.bodyPart
+					or currentWearablePreviewMode == wearablePreviewMode.fullBody
+				then
+					local shownBodyParts = utils.findSubshapes(Player, function(s)
+						return s.IsHidden == false
+					end)
 					for _, bp in ipairs(shownBodyParts) do
 						local tmpImpact = e:CastRay(bp)
 						if tmpImpact and tmpImpact.Distance < impactDistance then
@@ -791,8 +787,7 @@ click = function(e)
 	end
 end
 
-Pointer.Up = function()
-end
+Pointer.Up = function() end
 up = function(_)
 	if blockerShape ~= nil then
 		blockerShape:RemoveFromParent()
@@ -810,8 +805,7 @@ Client.OnPlayerJoin = function(_)
 	Player.Physics = false
 end
 
-Pointer.LongPress = function()
-end
+Pointer.LongPress = function() end
 longPress = function(e)
 	if currentMode == mode.edit then
 		local impact = nil
@@ -857,13 +851,10 @@ longPress = function(e)
 	end
 end
 
-Pointer.DragBegin = function()
-end
-dragBegin = function()
-end
+Pointer.DragBegin = function() end
+dragBegin = function() end
 
-Pointer.Drag = function()
-end
+Pointer.Drag = function() end
 drag = function(e)
 	if not continuousEdition then
 		local angularSpeed = 0.01
@@ -911,8 +902,7 @@ dragEnd = function()
 	blocksAddedWithDrag = {}
 end
 
-Pointer.Drag2Begin = function()
-end
+Pointer.Drag2Begin = function() end
 drag2Begin = function()
 	if currentMode == mode.edit then
 		dragging2 = true
@@ -922,8 +912,7 @@ drag2Begin = function()
 	end
 end
 
-Pointer.Drag2 = function()
-end
+Pointer.Drag2 = function() end
 drag2 = function(e)
 	-- in edit mode, Drag2 performs camera pan
 	if currentMode == mode.edit then
@@ -938,8 +927,7 @@ drag2 = function(e)
 	end
 end
 
-Pointer.Drag2End = function()
-end
+Pointer.Drag2End = function() end
 drag2End = function()
 	-- snaps to nearby block center after drag2 (camera pan)
 	if dragging2 then
@@ -978,8 +966,7 @@ drag2End = function()
 	end
 end
 
-Screen.DidResize = function()
-end
+Screen.DidResize = function() end
 didResize = function(_, _)
 	--
 	-- Camera.FOV = (width / height) * 60.0
@@ -1271,13 +1258,13 @@ initClientFunctions = function()
 			local mirrorBlockCoords = mirrorAnchor.coords
 
 			local posX = currentMirrorAxis == mirrorAxes.x
-				and (mirrorBlockCoords.X - (addedBlock.Coordinates.X - mirrorBlockCoords.X))
+					and (mirrorBlockCoords.X - (addedBlock.Coordinates.X - mirrorBlockCoords.X))
 				or addedBlock.Coordinates.X
 			local posY = currentMirrorAxis == mirrorAxes.y
-				and (mirrorBlockCoords.Y - (addedBlock.Coordinates.Y - mirrorBlockCoords.Y))
+					and (mirrorBlockCoords.Y - (addedBlock.Coordinates.Y - mirrorBlockCoords.Y))
 				or addedBlock.Coordinates.Y
 			local posZ = currentMirrorAxis == mirrorAxes.z
-				and (mirrorBlockCoords.Z - (addedBlock.Coordinates.Z - mirrorBlockCoords.Z))
+					and (mirrorBlockCoords.Z - (addedBlock.Coordinates.Z - mirrorBlockCoords.Z))
 				or addedBlock.Coordinates.Z
 			local added = shape:AddBlock(getCurrentColor(), posX, posY, posZ)
 			if added then
@@ -1397,13 +1384,13 @@ initClientFunctions = function()
 			local mirrorBlock
 
 			local posX = currentMirrorAxis == mirrorAxes.x
-				and (mirrorBlockCoords.X - (block.Coordinates.X - mirrorBlockCoords.X))
+					and (mirrorBlockCoords.X - (block.Coordinates.X - mirrorBlockCoords.X))
 				or block.Coordinates.X
 			local posY = currentMirrorAxis == mirrorAxes.y
-				and (mirrorBlockCoords.Y - (block.Coordinates.Y - mirrorBlockCoords.Y))
+					and (mirrorBlockCoords.Y - (block.Coordinates.Y - mirrorBlockCoords.Y))
 				or block.Coordinates.Y
 			local posZ = currentMirrorAxis == mirrorAxes.z
-				and (mirrorBlockCoords.Z - (block.Coordinates.Z - mirrorBlockCoords.Z))
+					and (mirrorBlockCoords.Z - (block.Coordinates.Z - mirrorBlockCoords.Z))
 				or block.Coordinates.Z
 			mirrorBlock = shape:GetBlock(posX, posY, posZ)
 
@@ -1486,13 +1473,13 @@ initClientFunctions = function()
 			local mirrorBlock
 
 			local posX = currentMirrorAxis == mirrorAxes.x
-				and (mirrorBlockCoords.X - (block.Coordinates.X - mirrorBlockCoords.X))
+					and (mirrorBlockCoords.X - (block.Coordinates.X - mirrorBlockCoords.X))
 				or block.Coordinates.X
 			local posY = currentMirrorAxis == mirrorAxes.y
-				and (mirrorBlockCoords.Y - (block.Coordinates.Y - mirrorBlockCoords.Y))
+					and (mirrorBlockCoords.Y - (block.Coordinates.Y - mirrorBlockCoords.Y))
 				or block.Coordinates.Y
 			local posZ = currentMirrorAxis == mirrorAxes.z
-				and (mirrorBlockCoords.Z - (block.Coordinates.Z - mirrorBlockCoords.Z))
+					and (mirrorBlockCoords.Z - (block.Coordinates.Z - mirrorBlockCoords.Z))
 				or block.Coordinates.Z
 			mirrorBlock = shape:GetBlock(posX, posY, posZ)
 
@@ -1604,7 +1591,7 @@ initClientFunctions = function()
 			removeMirrorBtn:show()
 			mirrorControls.Width = ui_config.padding + (rotateMirrorBtn.Width + ui_config.padding) * 2
 			mirrorControls.LocalPosition =
-			{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
+				{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
 		end
 
 		updateMirror()
@@ -1959,7 +1946,7 @@ function ui_init()
 			item = nil
 
 			item = MutableShape(fileData) -- raises an error on failure / do not share palette colors
-			item.History = true           -- enable history for the edited item
+			item.History = true -- enable history for the edited item
 			item:SetParent(World)
 
 			customCollisionBox = nil
@@ -2034,7 +2021,9 @@ function ui_init()
 			local shownBodyParts = nil
 			if isWearable then
 				-- during the screenshot, hide avatar parts that are currently shown
-				shownBodyParts = utils.findSubshapes(Player, function(s) return s.IsHiddenSelf == false end)
+				shownBodyParts = utils.findSubshapes(Player, function(s)
+					return s.IsHiddenSelf == false
+				end)
 				for _, bp in ipairs(shownBodyParts) do
 					bp.IsHiddenSelf = true
 				end
@@ -2110,7 +2099,7 @@ function ui_init()
 		self.Width = w + padding * 2
 		self.Height = h + padding * 2
 		self.LocalPosition =
-		{ padding + Screen.SafeArea.Left, Screen.Height - self.Height - padding - Screen.SafeArea.Top, 0 }
+			{ padding + Screen.SafeArea.Left, Screen.Height - self.Height - padding - Screen.SafeArea.Top, 0 }
 
 		if visibilityMenu ~= nil then
 			visibilityMenu:refresh()
@@ -2237,7 +2226,7 @@ function ui_init()
 		self.Width = w + padding * 2
 		self.Height = h + padding * 2
 		self.LocalPosition =
-		{ Screen.Width - self.Width - padding - Screen.SafeArea.Right, padding + Screen.SafeArea.Bottom, 0 }
+			{ Screen.Width - self.Width - padding - Screen.SafeArea.Right, padding + Screen.SafeArea.Bottom, 0 }
 	end
 
 	editMenu:parentDidResize()
@@ -2398,7 +2387,7 @@ function ui_init()
 		self.Width = w + padding * 2
 		self.Height = h + padding * 2
 		self.LocalPosition =
-		{ Screen.Width - self.Width - padding - Screen.SafeArea.Right, padding + Screen.SafeArea.Bottom, 0 }
+			{ Screen.Width - self.Width - padding - Screen.SafeArea.Right, padding + Screen.SafeArea.Bottom, 0 }
 
 		if placeSubMenu ~= nil then
 			placeSubMenu:place()
@@ -2442,7 +2431,7 @@ function ui_init()
 		removeMirrorBtn:hide()
 		mirrorControls.Width = placeMirrorText.Width + ui_config.padding * 2
 		mirrorControls.LocalPosition =
-		{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
+			{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
 	end
 
 	placeMirrorText = ui:createText("Click on shape to place mirror.", Color.White)
@@ -2464,7 +2453,7 @@ function ui_init()
 		end
 		mirrorControls.Height = ui_config.padding * 2 + rotateMirrorBtn.Height
 		mirrorControls.LocalPosition =
-		{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
+			{ Screen.Width - mirrorControls.Width - ui_config.padding, editMenu.Height + 2 * ui_config.padding, 0 }
 	end
 	mirrorControls:parentDidResize()
 
@@ -2535,9 +2524,6 @@ function ui_init()
 				s.History = true -- enable history for the edited item
 				table.insert(shapes, s)
 			end)
-
-
-
 
 			selectFocusShape(child)
 
@@ -2839,7 +2825,7 @@ function ui_init()
 		selectControls.Width = width
 		selectControls.Height = height
 		selectControls.LocalPosition =
-		{ Screen.Width - selectControls.Width - padding, editMenu.Height + 2 * padding, 0 }
+			{ Screen.Width - selectControls.Width - padding, editMenu.Height + 2 * padding, 0 }
 	end
 	selectControlsRefresh()
 
