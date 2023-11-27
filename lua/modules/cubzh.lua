@@ -9,6 +9,8 @@ Go to https://docs.cu.bzh/
 --
 
 -- Dev.DisplayFPS = true
+-- Dev.DisplayColliders = true
+-- Dev.DisplayBoxes = true
 
 -- CONSTANTS
 
@@ -65,6 +67,27 @@ Client.OnStart = function()
 		end,
 		acceleration = function()
 			return -Config.ConstantAcceleration
+		end,
+		collidesWithGroups = function()
+			return {}
+		end,
+	})
+
+	collectParticles = particles:newEmitter({
+		life = function()
+			return 1.0
+		end,
+		velocity = function()
+			local v = Number3(20 + math.random() * 10, 0, 0)
+			v:Rotate(0, math.random() * math.pi * 2, 0)
+			v.Y = 30 + math.random() * 20
+			return v
+		end,
+		scale = function()
+			return 0.5
+		end,
+		collidesWithGroups = function()
+			return {}
 		end,
 	})
 
@@ -263,6 +286,7 @@ end
 
 function jump()
 	objectSkills.jump(Player)
+	print(Dev:CopyToClipboard("" .. Player.Position.X .. ", " .. Player.Position.Y .. ", " .. Player.Position.Z))
 end
 
 function dropPlayer(p)
@@ -307,13 +331,29 @@ function addCollectibles()
 			{ ID = 10, Position = Number3(453, 472, 156) },
 		}
 
+		local gliderBackpacks = {
+			{ Position = Number3(451, 102, 510) },
+		}
+
+		local backpackConfig = {
+			scale = 0.75,
+			rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
+			position = Number3.Zero,
+			callback = function(_) end,
+		}
+
+		for _, v in ipairs(gliderBackpacks) do
+			local config = conf:merge(backpackConfig, { position = v.Position })
+			collectible:create("voxels.glider_backpack", config)
+		end
+
 		if #collectedGliderParts >= #gliderParts then
 			-- baseControls.enableGlider(Player, true)
 			print("GLIDER AVAILABLE!")
 		else
 			local gliderPartConfig = {
-				scale = 0.2,
-				rotation = { math.pi / 6, 0, math.pi / 6 },
+				scale = 0.5,
+				rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
 				position = Number3.Zero,
 				ID = -1,
 				callback = function(o)
@@ -351,7 +391,7 @@ function addCollectibles()
 			for _, v in ipairs(gliderParts) do
 				if not contains(collectedGliderParts, v.ID) then
 					local config = conf:merge(gliderPartConfig, { position = v.Position, ID = v.ID })
-					collectible:create("voxels.hang_glider", config)
+					collectible:create("voxels.glider_parts", config)
 				end
 			end
 		end
@@ -363,7 +403,7 @@ function addCollectibles()
 		store:get("collectedGliderParts", "collectedJetpackParts", function(ok, results)
 			if ok then
 				if results.collectedGliderParts ~= nil then
-					collectedGliderParts = results.collectedGliderParts
+					-- collectedGliderParts = results.collectedGliderParts
 				end
 				if results.collectedJetpackParts ~= nil then
 					collectedJetpackParts = results.collectedJetpackParts
@@ -380,14 +420,30 @@ end
 -- COLLECTIBLES
 
 collectible = {
-	pool = {},
+	pool = {}, -- { config = {}, object = {} }
 	tickListener = nil,
 	toggleTick = function(self)
 		if #self.pool > 0 and self.tickListener == nil then
 			local pool = self.pool
+			local t = 0.0
+			local offset
+			-- local squaredDistance
 			self.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+				t = t + dt
+				offset = ((math.sin(t) + 1) / 2) * 2
 				for _, c in ipairs(pool) do
 					c:RotateLocal(0, dt, 0)
+					c.Position.Y = c.lowPosition.Y + offset
+					-- squaredDistance = (c.Position - Camera.Position).SquaredLength
+					-- if squaredDistance > 40000 then
+					-- 	if c.IsUnlit then
+					-- 		c.IsUnlit = false
+					-- 	end
+					-- else
+					-- 	if c.IsUnlit == false then
+					-- 		c.IsUnlit = true
+					-- 	end
+					-- end
 				end
 			end)
 		elseif #self.pool == 0 and self.tickListener ~= nil then
@@ -406,7 +462,11 @@ collectible.onCollision = function(self, other)
 		self:callback()
 	end
 
-	-- self.emitter:spawn(20)
+	collectParticles.Position = self.Position
+	collectParticles:spawn(20)
+	sfx("wood_impact_3", { Position = self.Position, Volume = 0.6, Pitch = 1.3 })
+	Client:HapticFeedback()
+
 	self:RemoveFromParent()
 
 	-- remove from pool
@@ -433,16 +493,19 @@ collectible.create = function(self, itemName, config)
 	s:SetParent(World)
 
 	hierarchyactions:applyToDescendants(s, { includeRoot = true }, function(o)
-		o.Physics = PhysicsMode.Trigger
+		o.Physics = PhysicsMode.Disabled
 		-- o.IsUnlit = true
-		o.PrivateDrawMode = 2
+		-- o.PrivateDrawMode = 2
 	end)
+	s.Physics = PhysicsMode.Trigger
+	s.Shadow = true
 
 	s.collectibleID = config.ID
 
 	s.Pivot = { s.Width * 0.5, 0, s.Depth * 0.5 }
 
 	s.Scale = config.scale
+	s.lowPosition = config.position
 	s.Position = config.position
 	s.Rotation = config.rotation
 	s.callback = config.callback
