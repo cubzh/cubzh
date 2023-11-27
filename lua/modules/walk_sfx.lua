@@ -20,7 +20,7 @@ objects = {} -- configs, indexed by object ref
 
 local motion = Number3.Zero
 local distance
-local cgroup
+local o
 
 LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 	for object, config in pairs(objects) do
@@ -29,20 +29,20 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		if distance.SquaredLength < config.radiusSquared then
 			motion:Set(object.Motion.X, 0, object.Motion.Z)
 
-			if object.Motion.SquaredLength > 0 then -- and object.IsOnGround then
+			-- supporting multi module parentBox system
+			if object.parentBox then
+				o = object.parentBox
+			else
+				o = object
+			end
+
+			if o.Motion.SquaredLength > 0 and o.IsOnGround then
 				config.t = config.t + dt
 
 				if config.t > config.stepDelay then
 					config.t = config.t % config.stepDelay
 
-					-- supporting multi module parentBox system
-					if object.parentBox then
-						cgroup = object.parentBox.CollidesWithGroups
-					else
-						cgroup = object.CollidesWithGroups
-					end
-
-					local impact = Ray(object.Position + { 0, 0.1, 0 }, { 0, -1, 0 }):Cast(cgroup)
+					local impact = Ray(object.Position + { 0, 0.1, 0 }, { 0, -1, 0 }):Cast(o.CollidesWithGroups)
 					local block = impact.Block
 
 					if block == nil then
