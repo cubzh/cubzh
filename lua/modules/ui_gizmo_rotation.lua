@@ -37,7 +37,9 @@ local create = function(_, config)
 			handle.Scale[config.axis] = handleSize
 			if handle.sphereUp then
 				handle.sphereUp.Scale[config.axis] = 1 / handleSize
+                handle.sphereUp.Scale = handle.sphereUp.Scale * (node.Width / 200)
 				handle.sphereDown.Scale[config.axis] = 1 / handleSize
+                handle.sphereDown.Scale = handle.sphereDown.Scale * (node.Width / 200)
 			end
 		end
 		handle.Pivot = { 0.5, 0.5, 0.5 }
@@ -79,6 +81,7 @@ local create = function(_, config)
 			obj.Layers = handle.Layers
 			obj.CollisionGroups = handle.CollisionGroups
 			obj.Physics = PhysicsMode.TriggerPerBlock
+            obj.IsUnlit = true
 			handle.sphereUp = obj
 
 			obj = Shape(obj)
@@ -89,6 +92,7 @@ local create = function(_, config)
 			obj.Layers = handle.Layers
 			obj.CollisionGroups = handle.CollisionGroups
 			obj.Physics = PhysicsMode.TriggerPerBlock
+            obj.IsUnlit = true
 			handle.sphereDown = obj
 
 			uiAxis:parentDidResize()
@@ -105,40 +109,40 @@ local create = function(_, config)
 
 	local rotateUpdateUI
 
-	local xInput = ui:createTextInput(math.deg(shape.Rotation.X), "X")
-	xInput.onSubmit = function()
-		shape.LocalRotation.X = math.rad(math.ceil(tonumber(xInput.Text)))
-		rotateUpdateUI()
-	end
-	local xText = ui:createButton("X")
-	xText.Height = xInput.Height
-	xText.onRelease = function()
-		xInput:focus()
-	end
-	xText:setColor(Color.Red)
-	local yInput = ui:createTextInput(math.deg(shape.Rotation.Y), "Y")
-	yInput.onSubmit = function()
-		shape.LocalRotation.Y = math.rad(math.ceil(tonumber(yInput.Text)))
-		rotateUpdateUI()
-	end
-	local yText = ui:createButton("Y")
-	yText.onRelease = function()
-		yInput:focus()
-	end
-	yText:setColor(Color.Green)
-	local zInput = ui:createTextInput(math.deg(shape.Rotation.Z), "Z")
-	zInput.onSubmit = function()
-		shape.LocalRotation.Z = math.rad(math.ceil(tonumber(zInput.Text)))
-		rotateUpdateUI()
-	end
-	local zText = ui:createButton("Z")
-	zText.onRelease = function()
-		zInput:focus()
-	end
-	zText:setColor(Color.Blue)
+	-- local xInput = ui:createTextInput(math.deg(shape.Rotation.X), "X")
+	-- xInput.onSubmit = function()
+	-- 	shape.LocalRotation.X = math.rad(math.ceil(tonumber(xInput.Text)))
+	-- 	rotateUpdateUI()
+	-- end
+	-- local xText = ui:createButton("X")
+	-- xText.Height = xInput.Height
+	-- xText.onRelease = function()
+	-- 	xInput:focus()
+	-- end
+	-- xText:setColor(Color.Red)
+	-- local yInput = ui:createTextInput(math.deg(shape.Rotation.Y), "Y")
+	-- yInput.onSubmit = function()
+	-- 	shape.LocalRotation.Y = math.rad(math.ceil(tonumber(yInput.Text)))
+	-- 	rotateUpdateUI()
+	-- end
+	-- local yText = ui:createButton("Y")
+	-- yText.onRelease = function()
+	-- 	yInput:focus()
+	-- end
+	-- yText:setColor(Color.Green)
+	-- local zInput = ui:createTextInput(math.deg(shape.Rotation.Z), "Z")
+	-- zInput.onSubmit = function()
+	-- 	shape.LocalRotation.Z = math.rad(math.ceil(tonumber(zInput.Text)))
+	-- 	rotateUpdateUI()
+	-- end
+	-- local zText = ui:createButton("Z")
+	-- zText.onRelease = function()
+	-- 	zInput:focus()
+	-- end
+	-- zText:setColor(Color.Blue)
 
 	rotateUpdateUI = function()
-		if not shape then return end
+		if not shape or not xInput then return end
 		xInput.Text = math.floor(math.deg(math.abs(shape.Rotation.X)))
 		yInput.Text = math.floor(math.deg(math.abs(shape.Rotation.Y)))
 		zInput.Text = math.floor(math.deg(math.abs(shape.Rotation.Z)))
@@ -153,28 +157,36 @@ local create = function(_, config)
 	end
 	node:setShape(shape)
 
-	local container = require("ui_container"):createHorizontalContainer()
-	container:pushElement(xText)
-	container:pushElement(xInput)
-	container:pushElement(yText)
-	container:pushElement(yInput)
-	container:pushElement(zText)
-	container:pushElement(zInput)
+	-- local inputsContainer = require("ui_container"):createHorizontalContainer()
+	-- inputsContainer:pushElement(xText)
+	-- inputsContainer:pushElement(xInput)
+	-- inputsContainer:pushElement(yText)
+	-- inputsContainer:pushElement(yInput)
+	-- inputsContainer:pushElement(zText)
+	-- inputsContainer:pushElement(zInput)
 
-	node.parentDidResize = function()
-		xInput.Width = (node.Width - xText.Width * 3 - padding * 2) / 3
-		yInput.Width = xInput.Width
-		zInput.Width = xInput.Width
+	-- inputsContainer.parentDidResize = function()
+	-- 	xInput.Width = (node.Width - xText.Width * 3 - padding * 2) / 3
+	-- 	yInput.Width = xInput.Width
+	-- 	zInput.Width = xInput.Width
 
-		xText.Height = xInput.Height
-		yText.Height = yInput.Height
-		zText.Height = zInput.Height
+	-- 	xText.Height = xInput.Height
+	-- 	yText.Height = yInput.Height
+	-- 	zText.Height = zInput.Height
+    --     inputsContainer.pos = { 0, -inputsContainer.Height, 0 }
+	-- 	inputsContainer:refresh()
+	-- end
 
-		container:refresh()
-	end
+    -- node.showInputs = function()
+    --     inputsContainer:show()
+    -- end
 
-	container:setParent(node)
-	container.pos = { 0, -container.Height, 0 }
+    -- node.hideInputs = function()
+    --     inputsContainer:hide()
+    -- end
+
+    -- node.inputs = inputsContainer
+	-- inputsContainer:setParent(node)
 
 	return node
 end

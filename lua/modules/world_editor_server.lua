@@ -100,11 +100,15 @@ local funcs = {
 			print("Autosaving...")
 			previousAutoSaveMapBase64 = newMapBase64
 
-			local e = Event()
-			e.a = events.SAVE_WORLD
-			e.data = { mapBase64 = newMapBase64 }
-			e.pID = sender.ID
-			e:SendTo(sender)
+			if FAKE_SERVER then
+				LocalEvent:Send(LocalEvent.Name.DidReceiveEvent, { a = events.SAVE_WORLD, data = { mapBase64 = newMapBase64 }, pID = Player.ID })
+			else
+				local e = Event()
+				e.a = events.SAVE_WORLD
+				e.data = { mapBase64 = newMapBase64 }
+				e.pID = sender.ID
+				e:SendTo(sender)
+			end
 		end
 		return data
 	end,
@@ -151,7 +155,10 @@ local funcs = {
 	end,
 	[events.P_SAVE_WORLD] = function(sender)
 		local newMapBase64 = serializeWorld(getWorldState())
-		if newMapBase64 == previousAutoSaveMapBase64 then return nil, -1 end -- returns nothing
+		if newMapBase64 == previousAutoSaveMapBase64 then
+			print("No changes since last save.")
+			return nil, -1  -- returns nothing
+		end
 		previousAutoSaveMapBase64 = newMapBase64
 		print("Autosaving...")
 		return { mapBase64 = newMapBase64 }, sender

@@ -146,6 +146,7 @@ local spawnObject = function(data, onDone)
 	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
 	Object:Load(fullname, function(obj)
+		if not obj then print("Can't load", fullname) return end
 		obj:SetParent(World)
 
 		local box = Box()
@@ -410,10 +411,25 @@ local statesSettings = {
 			end)
 			freezeObject(worldEditor.object)
 
-			local uiGizmoRotation = require("ui_gizmo_rotation", { shape = worldEditor.object })
+			local uiGizmoRotation = require("ui_gizmo_rotation"):create({ shape = worldEditor.object })
 			worldEditor.uiGizmoRotation = uiGizmoRotation
-			uiGizmoRotation.Size = 250
-			uiGizmoRotation.pos = { 0, 0 }--{ Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
+			uiGizmoRotation.parentDidResize = function()
+				if not Client.IsMobile then
+					uiGizmoRotation.Size = math.min(250, Screen.Height * 0.3)
+					uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
+				else
+					if Screen.Width < Screen.Height then
+						uiGizmoRotation.Size = 130
+						local actionButton1 = require("controls"):getActionButton(1)
+						uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height+ padding * 2 }
+					else
+						uiGizmoRotation.Size = 130
+						local actionButton1 = require("controls"):getActionButton(1)
+						uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height + padding * 2 }
+					end
+				end
+			end
+			uiGizmoRotation:parentDidResize()
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
