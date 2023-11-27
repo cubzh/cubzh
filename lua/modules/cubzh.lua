@@ -86,7 +86,7 @@ Client.OnStart = function()
 	local spawnJumpParticles = function(o)
 		jumpParticles.Position = o.Position
 		jumpParticles:spawn(10)
-		sfx("walk_concrete_2", { Position = o.Position, Volume = 0.1 })
+		sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
 	end
 
 	objectSkills.addStepClimbing(Player, { mapScale = MAP_SCALE })
