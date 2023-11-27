@@ -33,7 +33,7 @@ Client.OnStart = function()
 	particles = require("particles")
 	walkSFX = require("walk_sfx")
 	sfx = require("sfx")
-	require("multi")
+	multi = require("multi")
 	require("textbubbles").displayPlayerChatBubbles = true
 	objectSkills = require("object_skills")
 
@@ -99,6 +99,11 @@ Client.OnStart = function()
 		onAirJump = spawnJumpParticles,
 	})
 	walkSFX:register(Player)
+
+	-- SYNCED ACTIONS
+	multi:onAction("swingRight", function(sender)
+		sender:SwingRight()
+	end)
 end
 
 Client.OnPlayerJoin = function(p)
@@ -142,6 +147,7 @@ end
 
 Pointer.Click = function()
 	Player:SwingRight()
+	multi:action("swingRight")
 end
 
 localPlayerShown = false
