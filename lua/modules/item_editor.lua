@@ -292,7 +292,7 @@ Client.OnStart = function()
 	----------------------------
 
 	local _settings = {
-		cameraStartRotation = Number3(0.32, -0.81, 0.0),
+		cameraStartRotation = Number3(0.32, math.rad(225), 0.0),
 		cameraStartPreviewRotationHand = Number3(0, math.rad(-130), 0),
 		cameraStartPreviewRotationHat = Number3(math.rad(20), math.rad(180), 0),
 		cameraStartPreviewRotationBackpack = Number3(0, 0, 0),
