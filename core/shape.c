@@ -4061,7 +4061,6 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
     const Block *b;
     while (index3d_iterator_pointer(it) != NULL) {
         bc = (BlockChange *)index3d_iterator_pointer(it);
-        index3d_iterator_next(it);
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
@@ -4095,6 +4094,8 @@ bool _shape_apply_transaction(Shape *const sh, Transaction *tr) {
                  before != after) {
             shape_paint_block(sh, after, x, y, z);
         }
+
+        index3d_iterator_next(it);
     }
 
     if (resetBoxNeeded) {
@@ -4130,9 +4131,9 @@ bool _shape_undo_transaction(Shape *const sh, Transaction *tr) {
     // loop on all the BlockChanges and revert them
     BlockChange *bc;
     const Block *b;
+
     while (index3d_iterator_pointer(it) != NULL) {
         bc = (BlockChange *)index3d_iterator_pointer(it);
-        index3d_iterator_next(it);
 
         blockChange_getXYZ(bc, &x, &y, &z);
 
