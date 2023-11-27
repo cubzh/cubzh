@@ -24,6 +24,7 @@ return {
 		"Screen",
 		"Sky",
 		"System",
+		"CollisionGroups",
 	},
 
 	read_globals = {
