@@ -141,6 +141,11 @@ local funcs = {
 		end
 	end,
 	[events.P_SET_MAP_SCALE] = function(_, data)
+		local ratio = data.mapScale / mapScale
+		for _,o in pairs(serverObjects) do
+			o.Scale = o.Scale * ratio
+			o.Position = o.Position * ratio
+		end
 		mapScale = data.mapScale
 		return data
 	end,

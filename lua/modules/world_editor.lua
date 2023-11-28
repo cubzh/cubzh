@@ -850,10 +850,6 @@ initDefaultMode = function()
 				end
 				local input = ui:createTextInput(scale)
 				input.onSubmit = function()
-					if worldModified then
-						print("Error: You can't change the scale of a world that has been edited.")
-						return
-					end
 					local value = tonumber(input.Text)
 					if value <= 0 then
 						print("Error: Map scale must be positive")
@@ -1220,7 +1216,13 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
 		require("ui_ai_ambience"):setFromAIConfig(data, true)
 	elseif e.a == events.SET_MAP_SCALE then
+		local prevScale = map.Scale
+		local ratio = data.mapScale / prevScale
 		map.Scale = data.mapScale
+		for _,o in pairs(objects) do
+			o.Scale = o.Scale * ratio
+			o.Position = o.Position * ratio
+		end
 		dropPlayer()
 	elseif e.a == events.RESET_ALL then
 		setState(states.DEFAULT)
