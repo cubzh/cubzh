@@ -289,7 +289,7 @@ end
 
 function jump()
 	objectSkills.jump(Player)
-	print(Dev:CopyToClipboard("" .. Player.Position.X .. ", " .. Player.Position.Y .. ", " .. Player.Position.Z))
+	-- Dev:CopyToClipboard("" .. Player.Position.X .. ", " .. Player.Position.Y .. ", " .. Player.Position.Z)
 end
 
 function dropPlayer(p)
@@ -343,6 +343,9 @@ function addCollectibles()
 			rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
 			position = Number3.Zero,
 			itemName = "voxels.glider_backpack",
+			onCollisionBegin = function(c)
+				print("NOT AVAILABLE YET")
+			end,
 		}
 
 		for _, v in ipairs(gliderBackpacks) do

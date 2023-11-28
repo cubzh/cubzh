@@ -34,7 +34,7 @@ function toggleTick()
 				object.Position.Y = config.position.Y + offset
 			end
 		end)
-	elseif #pool == 0 and tickListener ~= nil then
+	elseif nbCollectibles == 0 and tickListener ~= nil then
 		tickListener:Remove()
 		tickListener = nil
 	end
@@ -48,10 +48,7 @@ collectibleOnCollisionBegin = function(collectibleObject, other)
 	if config == nil then
 		return -- config not found
 	end
-
 	config:onCollisionBegin()
-
-	collectible:remove(config)
 end
 
 collectibleOnCollisionEnd = function(_, _) end
