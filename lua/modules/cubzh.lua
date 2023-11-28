@@ -31,6 +31,7 @@ local DEBUG = true
 
 Client.OnStart = function()
 	-- REQUIRE MODULES
+	collectible = require("collectible")
 	conf = require("config")
 	particles = require("particles")
 	walkSFX = require("walk_sfx")
@@ -219,6 +220,8 @@ function loadMap()
 		o.CollisionGroups = {}
 		o.CollidesWithGroups = {}
 		o.Physics = PhysicsMode.Disabled
+		o.InnerTransparentFaces = false
+		o:RefreshModel()
 	end)
 
 	map:SetParent(World)
@@ -339,12 +342,12 @@ function addCollectibles()
 			scale = 0.75,
 			rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
 			position = Number3.Zero,
-			callback = function(_) end,
+			itemName = "voxels.glider_backpack",
 		}
 
 		for _, v in ipairs(gliderBackpacks) do
 			local config = conf:merge(backpackConfig, { position = v.Position })
-			collectible:create("voxels.glider_backpack", config)
+			collectible:create(config)
 		end
 
 		if #collectedGliderParts >= #gliderParts then
@@ -355,13 +358,23 @@ function addCollectibles()
 				scale = 0.5,
 				rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
 				position = Number3.Zero,
-				ID = -1,
-				callback = function(o)
-					if contains(collectedGliderParts, o.collectibleID) then
+				itemName = "voxels.glider_parts",
+				userdata = {
+					ID = -1,
+				},
+				onCollisionBegin = function(c)
+					collectParticles.Position = c.object.Position
+					collectParticles:spawn(20)
+					sfx("wood_impact_3", { Position = c.object.Position, Volume = 0.6, Pitch = 1.3 })
+					Client:HapticFeedback()
+
+					collectible:remove(c)
+
+					if contains(collectedGliderParts, c.userdata.ID) then
 						return
 					end
 
-					table.insert(collectedGliderParts, o.collectibleID)
+					table.insert(collectedGliderParts, c.userdata.ID)
 
 					local retry = {}
 					retry.fn = function()
@@ -390,8 +403,8 @@ function addCollectibles()
 			}
 			for _, v in ipairs(gliderParts) do
 				if not contains(collectedGliderParts, v.ID) then
-					local config = conf:merge(gliderPartConfig, { position = v.Position, ID = v.ID })
-					collectible:create("voxels.glider_parts", config)
+					local config = conf:merge(gliderPartConfig, { position = v.Position, userdata = { ID = v.ID } })
+					collectible:create(config)
 				end
 			end
 		end
@@ -415,104 +428,4 @@ function addCollectibles()
 		end)
 	end
 	t.get()
-end
-
--- COLLECTIBLES
-
-collectible = {
-	pool = {}, -- { config = {}, object = {} }
-	tickListener = nil,
-	toggleTick = function(self)
-		if #self.pool > 0 and self.tickListener == nil then
-			local pool = self.pool
-			local t = 0.0
-			local offset
-			-- local squaredDistance
-			self.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-				t = t + dt
-				offset = ((math.sin(t) + 1) / 2) * 2
-				for _, c in ipairs(pool) do
-					c:RotateLocal(0, dt, 0)
-					c.Position.Y = c.lowPosition.Y + offset
-					-- squaredDistance = (c.Position - Camera.Position).SquaredLength
-					-- if squaredDistance > 40000 then
-					-- 	if c.IsUnlit then
-					-- 		c.IsUnlit = false
-					-- 	end
-					-- else
-					-- 	if c.IsUnlit == false then
-					-- 		c.IsUnlit = true
-					-- 	end
-					-- end
-				end
-			end)
-		elseif #self.pool == 0 and self.tickListener ~= nil then
-			self.tickListener:Remove()
-			self.tickListener = nil
-		end
-	end,
-}
-
-collectible.onCollision = function(self, other)
-	if other ~= Player then
-		return
-	end
-
-	if self.callback ~= nil then
-		self:callback()
-	end
-
-	collectParticles.Position = self.Position
-	collectParticles:spawn(20)
-	sfx("wood_impact_3", { Position = self.Position, Volume = 0.6, Pitch = 1.3 })
-	Client:HapticFeedback()
-
-	self:RemoveFromParent()
-
-	-- remove from pool
-	local index = nil
-	for i, v in ipairs(collectible.pool) do
-		if v == self then
-			index = i
-			break
-		end
-	end
-
-	if index ~= nil then
-		table.remove(collectible.pool, index)
-	end
-
-	collectible:toggleTick()
-end
-
-collectible.create = function(self, itemName, config)
-	local bundle = require("bundle")
-	local hierarchyactions = require("hierarchyactions")
-
-	local s = bundle.Shape(itemName)
-	s:SetParent(World)
-
-	hierarchyactions:applyToDescendants(s, { includeRoot = true }, function(o)
-		o.Physics = PhysicsMode.Disabled
-		-- o.IsUnlit = true
-		-- o.PrivateDrawMode = 2
-	end)
-	s.Physics = PhysicsMode.Trigger
-	s.Shadow = true
-
-	s.collectibleID = config.ID
-
-	s.Pivot = { s.Width * 0.5, 0, s.Depth * 0.5 }
-
-	s.Scale = config.scale
-	s.lowPosition = config.position
-	s.Position = config.position
-	s.Rotation = config.rotation
-	s.callback = config.callback
-
-	s.OnCollisionBegin = self.onCollision
-
-	table.insert(self.pool, s)
-	self:toggleTick()
-	return s
 end
