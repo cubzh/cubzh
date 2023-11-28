@@ -1,3 +1,5 @@
+-- TODO: do not only load collectibles from bundle
+
 collectible = {}
 
 defaultCollectibleConfig = {
@@ -96,7 +98,7 @@ collectible.create = function(_, config)
 
 	toggleTick()
 
-	return s
+	return config
 end
 
 collectible.remove = function(_, c)
