@@ -38,6 +38,7 @@ Client.OnStart = function()
 	walkSFX = require("walk_sfx")
 	sfx = require("sfx")
 	multi = require("multi")
+	bundle = require("bundle")
 	require("textbubbles").displayPlayerChatBubbles = true
 	objectSkills = require("object_skills")
 
