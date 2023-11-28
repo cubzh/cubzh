@@ -10,6 +10,7 @@ local create = function(_, config)
 	local node = ui:createFrame(Color(0,0,0,0.2))
 
 	local shape = config.shape
+	local onRotate = config.onRotate
 
 	local shapeWorldAxis = MutableShape()
 	shapeWorldAxis:AddBlock(Color.White,0,0,0)
@@ -65,6 +66,11 @@ local create = function(_, config)
 			shapeWorldAxis.Position = shape.Position
 			shapeWorldAxis.Rotation = shape.Rotation
 			diff = x
+
+			if onRotate then
+				onRotate(shape.Rotation)
+			end
+
 			return true
 		end
 		uiAxis.onRelease = function()

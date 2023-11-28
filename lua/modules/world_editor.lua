@@ -359,11 +359,11 @@ local statesSettings = {
 			placingObj.currentlyEditedBy = Player
 			setState(states.UPDATING_OBJECT, placingObj)
 		end,
-		pointerWheelPriority = function(delta)
-			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
-			worldEditor.placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
-			return true
-		end
+		-- pointerWheelPriority = function(delta)
+		-- 	worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
+		-- 	worldEditor.placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+		-- 	return true
+		-- end
 	},
 	-- UPDATING_OBJECT
 	{
@@ -409,7 +409,12 @@ local statesSettings = {
 			end)
 			freezeObject(worldEditor.object)
 
-			local uiGizmoRotation = require("ui_gizmo_rotation"):create({ shape = worldEditor.object })
+			local uiGizmoRotation = require("ui_gizmo_rotation"):create({
+				shape = worldEditor.object,
+				onRotate = function()
+					sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
+				end
+			})
 			worldEditor.uiGizmoRotation = uiGizmoRotation
 			uiGizmoRotation.parentDidResize = function()
 				if not Client.IsMobile then
@@ -444,11 +449,11 @@ local statesSettings = {
 			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
 			worldEditor.object = nil
 		end,
-		pointerWheelPriority = function(delta)
-			worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
-			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
-			return true
-		end
+		-- pointerWheelPriority = function(delta)
+		-- 	worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
+		-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
+		-- 	return true
+		-- end
 	},
 	-- DUPLICATE_OBJECT
 	{
