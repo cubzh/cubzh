@@ -1556,6 +1556,7 @@ index.turnOff = function(self)
 		return
 	end -- already off
 	_state.on = false
+	_state.dirpadInput = Number2(0, 0)
 	self:refresh()
 end
 

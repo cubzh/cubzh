@@ -38,7 +38,6 @@ local getObjectInfoTable = function(obj)
 		Rotation = obj.Rotation or Number3(0, 0, 0),
 		Scale = obj.Scale or Number3(1, 1, 1),
 		Name = obj.Name or obj.fullname,
-		itemDetailsCell = obj.itemDetailsCell,
 		Physics = obj.Physics or PhysicsMode.StaticPerBlock
 	}
 end
@@ -141,8 +140,6 @@ local spawnObject = function(data, onDone)
 	local position = data.Position or Number3(0,0,0)
 	local rotation = data.Rotation or Rotation(0,0,0)
 	local scale = data.Scale or 0.5
-	local itemDetailsCell = data.itemDetailsCell and JSON:Decode(JSON:Encode(data.itemDetailsCell))
-	local itemDetailsCellItem = data.itemDetailsCellItem
 	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
 	Object:Load(fullname, function(obj)
@@ -168,8 +165,6 @@ local spawnObject = function(data, onDone)
 		obj.isEditable = true
 		obj.fullname = fullname
 		obj.Name = name or fullname
-		obj.itemDetailsCell = itemDetailsCell
-		obj.itemDetailsCellItem = itemDetailsCellItem
 
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
@@ -188,6 +183,10 @@ local editObject = function(objInfo)
 
 	for field,value in pairs(objInfo) do
 		obj[field] = value
+	end
+
+	if objInfo.Physics then
+		setObjectPhysicsMode(obj, objInfo.Physics, true)
 	end
 
 	local alpha = objInfo.alpha
@@ -225,6 +224,7 @@ local statesSettings = {
 
 			setState(states.PICK_WORLD)
 			require("controls"):turnOff()
+			Player.Motion = { 0, 0, 0 }
 		end
 	},
 	-- PICK WORLD
@@ -232,6 +232,7 @@ local statesSettings = {
 		onStateBegin = function()
 			worldEditor.uiPickWorld:show()
 			require("controls"):turnOff()
+			Player.Motion = { 0, 0, 0 }
 		end,
 		onStateEnd = function()
 			if worldEditor.uiPickWorld then
@@ -254,6 +255,7 @@ local statesSettings = {
 			Camera.Far = 10000
 			loadMap(maps[1])
 			require("controls"):turnOff()
+			Player.Motion = { 0, 0, 0 }
 		end,
 		onStateEnd = function()
 			worldEditor.uiPickMap:hide()
@@ -279,6 +281,7 @@ local statesSettings = {
 		onStateBegin = function()
 			worldEditor.gallery:show()
 			require("controls"):turnOff()
+			Player.Motion = { 0, 0, 0 }
 		end,
 		onStateEnd = function()
 			worldEditor.gallery:hide()
@@ -375,11 +378,6 @@ local statesSettings = {
 			worldEditor.nameInput.onTextChange = function(o)
 				worldEditor.object.Name = o.Text
 				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Name = o.Text })
-			end
-			worldEditor.infoBtn.onRelease = function()
-				local cell = JSON:Decode(JSON:Encode(worldEditor.object.itemDetailsCell))
-				cell.item = worldEditor.object.itemDetailsCellItem
-				require("item_details"):createModal({ cell = cell })
 			end
 			worldEditor.updateObjectUI:show()
 
@@ -929,7 +927,7 @@ initDefaultMode = function()
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
 		local fullname = cell.repo.."."..cell.name
-		setState(states.SPAWNING_OBJECT, { fullname = fullname, itemDetailsCell = { itemFullName = cell.itemFullName, repo = cell.repo, name = cell.name, id = cell.id }, itemDetailsCellItem = cell.item })
+		setState(states.SPAWNING_OBJECT, { fullname = fullname })
 	end
 	local initGallery
 	initGallery = function()
@@ -1019,10 +1017,6 @@ initDefaultMode = function()
 	local nameInput = ui:createTextInput("", "Item Name")
 	worldEditor.nameInput = nameInput
 	bar:pushElement(nameInput)
-
-	local infoBtn = ui:createButton("i")
-	worldEditor.infoBtn = infoBtn
-	bar:pushElement(infoBtn)
 
 	bar:pushSeparator()
 

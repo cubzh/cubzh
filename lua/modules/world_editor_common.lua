@@ -335,10 +335,10 @@ local writeChunkObjects = function(d, objects)
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.OBJECTS)
 	local cursorLength = d.Length
-	d:WriteUInt16(0) -- temporary write size
+	d:WriteUInt32(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
-	-- CHUNK_LEN UINT16
+	-- CHUNK_LEN UINT32
 	-- NB_OBJECTS UINT16
 	-- 1 -> NB_OBJECTS
 	--   OBJECT FULLNAME_SIZE UINT16
@@ -393,16 +393,10 @@ local writeChunkObjects = function(d, objects)
 				d:WriteString(object.Name)
 				nbFields = nbFields + 1
 			end
-			if object.itemDetailsCell then
-				d:WriteString("de")
-				local base64Field = Data(object.itemDetailsCell):ToString({ format = "base64" })
-				d:WriteUInt16(#base64Field)
-				d:WriteString(base64Field)
-				nbFields = nbFields + 1
-			end
 			if object.Physics and object.Physics ~= PhysicsMode.StaticPerBlock then
 				d:WriteString("pm")
-				d:WritePhysicsMode(object.Physics)
+				local realPhysicsMode = object.savedPhysicsState or object.Physics -- object might be frozen when manipulating it (disabled)
+				d:WritePhysicsMode(realPhysicsMode)
 				nbFields = nbFields + 1
 			end
 
@@ -417,13 +411,13 @@ local writeChunkObjects = function(d, objects)
 	local finalLength = d.Length
 	local size = d.Length - cursorLength
 	d.Length = cursorLength
-	d:WriteUInt16(size)
+	d:WriteUInt32(size)
 	d.Length = finalLength
 
 	return true
 end
 
-local readChunkObjects = function(d)
+local readChunkObjectsV2 = function(d)
 	local objects = {}
 	d:ReadUInt16() -- read size
 	local nbObjects = d:ReadUInt16()
@@ -454,6 +448,48 @@ local readChunkObjects = function(d)
 				elseif key == "de" then
 					local length = d:ReadUInt16()
 					instance.itemDetailsCell = Data(d:ReadString(length), { format = "base64" }):ToTable()
+				elseif key == "pm" then
+					instance.Physics = d:ReadPhysicsMode()
+				else
+					error("Wrong format while deserializing", 2)
+					return false
+				end
+			end
+			table.insert(objects, instance)
+			fetchedObjects = fetchedObjects + 1
+		end
+	end
+	return objects
+end
+
+local readChunkObjects = function(d)
+	local objects = {}
+	d:ReadUInt32() -- read size
+	local nbObjects = d:ReadUInt16()
+	local fetchedObjects = 0
+	while fetchedObjects < nbObjects do
+		local fullnameSize = d:ReadUInt16()
+		local fullname = d:ReadString(fullnameSize)
+		local nbInstances = d:ReadUInt16()
+		for _ = 1, nbInstances do
+			local instance = {
+				fullname = fullname,
+			}
+			local nbFields = d:ReadUInt8()
+			for _ = 1, nbFields do
+				local key = d:ReadString(2)
+				if key == "po" then
+					instance.Position = d:ReadNumber3()
+				elseif key == "ro" then
+					instance.Rotation = d:ReadRotation()
+				elseif key == "sc" then
+					instance.Scale = d:ReadNumber3()
+				elseif key == "na" then
+					local nameLength = d:ReadUInt8()
+					instance.Name = d:ReadString(nameLength)
+				elseif key == "id" then
+					local idLength = d:ReadUInt8()
+					instance.uuid = d:ReadString(idLength)
 				elseif key == "pm" then
 					instance.Physics = d:ReadPhysicsMode()
 				else
@@ -552,8 +588,9 @@ end
 -- v1: versionId, map chunk that can be read from cpp to load map, then 3 table serialized as base64 chunks
 -- v2: versionId, map chunk that can be read from cpp to load map, ambience fields, objects, blocks
 --     ambience, objects and blocks might not be serialized if the value is nil or length is 0
+-- v3: same as v2 but removed itemDetailsCell and Objects chunk length is now uint32 and not uint16
 
-local SERIALIZE_VERSION = 2
+local SERIALIZE_VERSION = 3
 
 local serializeWorldBase64 = function(world)
 	if not world.mapName then
@@ -588,7 +625,7 @@ local deserializeWorldBase64 = function(str)
 		world.objects = readChunkBase64(d)
 		d:ReadByte() -- skip chunk byte
 		world.blocks = readChunkBase64(d)
-	elseif version == 2 then
+	elseif version == 2 or version == 3 then
 		while d.Cursor < d.Length do
 			local chunk = d:ReadByte()
 			if chunk == SERIALIZED_CHUNKS_ID.MAP then
@@ -596,7 +633,11 @@ local deserializeWorldBase64 = function(str)
 			elseif chunk == SERIALIZED_CHUNKS_ID.AMBIENCE then
 				world.ambience = readChunkAmbience(d)
 			elseif chunk == SERIALIZED_CHUNKS_ID.OBJECTS then
-				world.objects = readChunkObjects(d)
+				if version == 2 then
+					world.objects = readChunkObjectsV2(d)
+				else
+					world.objects = readChunkObjects(d)
+				end
 			elseif chunk == SERIALIZED_CHUNKS_ID.BLOCKS then
 				world.blocks = readChunkBlocks(d)
 			end

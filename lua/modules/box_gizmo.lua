@@ -17,6 +17,7 @@ boxGizmoMetatable = {
 				edge:AddBlock(Color.White,0,0,0)
 				edge:SetParent(self._rootEdges)
 				edge.CollisionGroups = nil
+				edge.CollidesWithGroups = nil
 				table.insert(self._edges,edge)
 			end
 
