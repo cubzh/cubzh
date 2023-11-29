@@ -342,13 +342,17 @@ profile.create = function(_, config)
 
 			bioText.Text = userInfo.bio or ""
 
-			local aChar = ui:createText("a", nil, "small")
-			local charWidth = aChar.Width
-			aChar:remove()
+			local charWidth
+			local emojiWidth
+			do
+				local aChar = ui:createText("a", nil, "small")
+				charWidth = aChar.Width
+				aChar:remove()
 
-			local anEmoji = ui:createText("👾", nil, "small")
-			local emojiWidth = anEmoji.Width
-			anEmoji:remove()
+				local anEmoji = ui:createText("👾", nil, "small")
+				emojiWidth = anEmoji.Width
+				anEmoji:remove()
+			end
 
 			local availableWidth = activeNode.Width / 2
 				- ACTIVE_NODE_MARGIN * 2
