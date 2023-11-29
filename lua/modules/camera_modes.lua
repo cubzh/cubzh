@@ -9,6 +9,11 @@ cameraModes = {}
 --]]
 cameras = {}
 
+conf = require("config")
+
+worldObject = Object() -- object in World used to compute positions
+worldObject:SetParent(World)
+
 function clearListeners(entry)
 	if type(entry.listeners) ~= "table" then
 		error("camera_modes - internal error (1)")
@@ -261,35 +266,39 @@ cameraModes.setFirstPerson = function(self, config)
 	hideAvatar(entry)
 end
 
+-- TODO: setThirdPersonWithDynamicOffset
+
 cameraModes.setThirdPerson = function(self, config)
 	if self ~= cameraModes then
 		error("camera_modes:setThirdPerson(config) should be called with `:`", 2)
 	end
 
-	local _config = { -- default config
+	local defaultConfig = { -- default config
 		showPointer = true,
+		distance = 40,
 		minZoomDistance = 0,
 		maxZoomDistance = 75,
 		camera = Camera, -- main Camera by default
 		target = nil, -- must be set
+		offset = nil, -- offset from target
+		rotationOffset = nil,
+		rigidity = 0.5,
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-		_config.target = config.target
-	end
+	config = conf:merge(defaultConfig, config, {
+		acceptTypes = {
+			target = { "Object", "Shape", "MutableShape", "Number3", "Player" },
+			offset = { "Number3" },
+			rotationOffset = { "Rotation" },
+		},
+	})
 
-	if _config.target == nil then
+	if config.target == nil then
 		error("camera_modes:setThirdPerson(config) - config.target can't be nil", 2)
 	end
 
-	_config.targetIsPlayer = type(_config.target) == "Player"
-
-	config = _config
+	-- NOTE (aduermael): it would be nice to remove this hardcoded system for Players
+	config.targetIsPlayer = type(config.target) == "Player"
 
 	local entry = insert(config)
 
@@ -300,7 +309,10 @@ cameraModes.setThirdPerson = function(self, config)
 	local minZoomDistance = config.minZoomDistance
 	local maxZoomDistance = config.maxZoomDistance
 	local target = config.target
+	local offset = config.offset or Number3.Zero
+	local rotationOffset = config.rotationOffset or Rotation(0, 0, 0)
 	local targetIsPlayer = type(target) == "Player"
+	local targetHasRotation = type(target) == "Object" or type(target) == "Shape" or type(target) == "MutableShape"
 
 	camera:SetParent(World)
 
@@ -310,7 +322,7 @@ cameraModes.setThirdPerson = function(self, config)
 		Pointer:Hide()
 	end
 
-	local camDistance = 40
+	local camDistance = config.distance
 	local listener
 
 	listener = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
@@ -324,32 +336,36 @@ cameraModes.setThirdPerson = function(self, config)
 	end)
 	table.insert(entry.listeners, listener)
 
-	listener = LocalEvent:Listen(LocalEvent.Name.Tick, function()
-		local currentTarget = target
+	local ray
+	local impact
+	local distance
+	local rigidityFactor = config.rigidity * 60.0
+	local lerpFactor
 
-		local startPosition = currentTarget.Position:Copy()
+	listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+		worldObject.Position:Set(target.Position + offset)
 
 		if targetIsPlayer then
-			camera.Rotation = currentTarget.Head.Rotation
+			worldObject.Position.Y = worldObject.Position.Y + target.CollisionBox.Max.Y * target.Scale.Y
+			worldObject.Rotation:Set(target.Head.Rotation * rotationOffset)
+		elseif targetHasRotation then
+			worldObject.Rotation:Set(target.Rotation * rotationOffset)
+		else
+			worldObject.Rotation:Set(rotationOffset)
 		end
 
-		if targetIsPlayer then
-			startPosition.Y = startPosition.Y + currentTarget.CollisionBox.Max.Y * currentTarget.Scale.Y
-		end
+		-- TODO: use box
+		ray = Ray(worldObject.Position, Number3.Up)
+		impact = ray:Cast(Map.CollisionGroups)
 
-		local ray = Ray(startPosition, Number3.Up)
-		local impact = ray:Cast(Map.CollisionGroups)
-
-		local distance = 3
+		distance = 3
 		if impact.Distance and impact.Distance < distance then
 			distance = impact.Distance
 		end
 
-		startPosition = startPosition + Number3.Up * distance
+		worldObject.Position = worldObject.Position + Number3.Up * distance
 
-		camera.Position = startPosition
-
-		ray = Ray(startPosition, camera.Backward)
+		ray = Ray(worldObject.Position, camera.Backward)
 		impact = ray:Cast(Map.CollisionGroups)
 
 		if camDistance < 4 then -- in Head, make it invisible
@@ -373,7 +389,9 @@ cameraModes.setThirdPerson = function(self, config)
 			distance = impact.Distance * 0.95
 		end
 
-		camera.Position = startPosition + camera.Backward * distance
+		lerpFactor = math.min(rigidityFactor * dt, 1.0)
+		camera.Position:Lerp(camera.Position, worldObject.Position + worldObject.Backward * distance, lerpFactor)
+		camera.Rotation:Slerp(camera.Rotation, worldObject.Rotation, lerpFactor)
 	end)
 	table.insert(entry.listeners, listener)
 end
