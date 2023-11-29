@@ -150,7 +150,7 @@ Client.OnStart = function()
 		sender:EquipBackpack(bundle.Shape("voxels.glider_backpack"))
 	end)
 
-	local animLiftRight = Animation("LiftRight", { speed = 5, loops = 1, removeWhenDone = false })
+	local animLiftRight = Animation("LiftRight", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
 	local liftRightArm = {
 		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
 		{ time = 1.0, rotation = { 0, 0, math.rad(30) } },
@@ -174,7 +174,7 @@ Client.OnStart = function()
 	end
 	Player.Animations.LiftRight = animLiftRight
 
-	local animLiftLeft = Animation("LiftLeft", { speed = 5, loops = 1, removeWhenDone = false })
+	local animLiftLeft = Animation("LiftLeft", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
 	local liftLeftArm = {
 		{ time = 0.0, rotation = { 0, 0, 1.0472 } },
 		{ time = 1.0, rotation = { 0, 0, math.rad(-30) } },
@@ -717,7 +717,6 @@ playerControls.glide = function(self, player)
 	local p
 	local leftLift
 	local rightLift
-	local l
 	local down
 	local up
 	local speedOverMax

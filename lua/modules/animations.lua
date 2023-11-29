@@ -81,60 +81,28 @@ animationsMT.__index = function(t, k)
 end
 
 local toggleGroups = function(animations)
-	local anims = privateFields[animations].anims
+	local playing = privateFields[animations].playing
 
-	local playingInLoop = privateFields[animations].playingInLoop
-	local playingOnce = privateFields[animations].playingOnce
+	local groupsPlaying = {} -- { groupName: anim }
+	local otherAnimPlayingGroup
 
-	local anim
-	local groups
-	-- activate all groups
-
-	for _, name in ipairs(playingOnce) do
-		anim = anims[name]
+	for _, anim in pairs(playing) do
 		if anim then
 			groups = anim.Groups
 			for _, groupName in ipairs(groups) do
-				anim:Toggle(groupName, true)
-			end
-		end
-	end
-
-	for _, name in ipairs(playingInLoop) do
-		anim = anims[name]
-		if anim then
-			groups = anim.Groups
-			for _, groupName in ipairs(groups) do
-				anim:Toggle(groupName, true)
-			end
-		end
-	end
-
-	local groupsPlaying = {}
-
-	for _, name in ipairs(playingOnce) do
-		anim = anims[name]
-		if anim then
-			groups = anim.Groups
-			for _, groupName in ipairs(groups) do
-				if groupsPlaying[groupName] == true then
-					anim:Toggle(groupName, false)
+				otherAnimPlayingGroup = groupsPlaying[groupName]
+				if otherAnimPlayingGroup ~= nil then
+					-- print("**", groupName, "other:", otherAnimPlayingGroup.Priority, animName .. ":", anim.Priority)
+					if otherAnimPlayingGroup.Priority < anim.Priority then
+						otherAnimPlayingGroup:Toggle(groupName, false)
+						anim:Toggle(groupName, true)
+						groupsPlaying[groupName] = anim
+					else
+						anim:Toggle(groupName, false)
+					end
 				else
-					groupsPlaying[groupName] = true
-				end
-			end
-		end
-	end
-
-	for _, name in ipairs(playingInLoop) do
-		anim = anims[name]
-		if anim then
-			groups = anim.Groups
-			for _, groupName in ipairs(groups) do
-				if groupsPlaying[groupName] == true then
-					anim:Toggle(groupName, false)
-				else
-					groupsPlaying[groupName] = true
+					anim:Toggle(groupName, true)
+					groupsPlaying[groupName] = anim
 				end
 			end
 		end
@@ -142,56 +110,12 @@ local toggleGroups = function(animations)
 end
 
 local startPlaying = function(animations, animName, anim)
-	privateFields[animations].playing[animName] = true
-
-	local playingInLoop = privateFields[animations].playingInLoop
-	local playingOnce = privateFields[animations].playingOnce
-
-	for i, name in ipairs(playingInLoop) do
-		if name == animName then
-			table.remove(playingInLoop, i)
-			break
-		end
-	end
-
-	for i, name in ipairs(playingOnce) do
-		if name == animName then
-			table.remove(playingOnce, i)
-			break
-		end
-	end
-
-	if anim.Loops == 0 then
-		table.insert(playingInLoop, 1, animName)
-	else
-		table.insert(playingOnce, 1, animName)
-	end
-
+	privateFields[animations].playing[animName] = anim
 	toggleGroups(animations)
 end
 
 local stopPlaying = function(animations, animName)
-	if privateFields[animations].playing[animName] ~= true then
-		return
-	end
-	privateFields[animations].playing[animName] = false
-
-	local playingInLoop = privateFields[animations].playingInLoop
-	local playingOnce = privateFields[animations].playingOnce
-
-	for i, name in ipairs(playingInLoop) do
-		if name == animName then
-			table.remove(playingInLoop, i)
-			break
-		end
-	end
-
-	for i, name in ipairs(playingOnce) do
-		if name == animName then
-			table.remove(playingOnce, i)
-			break
-		end
-	end
+	privateFields[animations].playing[animName] = nil
 	toggleGroups(animations)
 end
 
@@ -236,17 +160,9 @@ local create = function(_)
 		privateFields[animations].anims = {}
 	end
 
-	-- all playing animations, { animName = true }
+	-- all playing animations, { animName = anim }
 	if privateFields[animations].playing == nil then
 		privateFields[animations].playing = {}
-	end
-
-	if privateFields[animations].playingInLoop == nil then
-		privateFields[animations].playingInLoop = {}
-	end
-
-	if privateFields[animations].playingOnce == nil then
-		privateFields[animations].playingOnce = {}
 	end
 
 	setmetatable(animations, animationsMT)
@@ -268,10 +184,8 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		if anims ~= nil then
 			for name, anim in pairs(anims) do
 				if anim.IsPlaying == false then
-					if anims.RemoveWhenDone == true then
-						if animationsPrivateFields.playing[name] == true then
-							stopPlaying(animations, name)
-						end
+					if anim.RemoveWhenDone == true then
+						stopPlaying(animations, name)
 					end
 				else
 					anim:Tick(dt)
