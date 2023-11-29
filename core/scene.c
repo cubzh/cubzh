@@ -22,6 +22,8 @@ struct _Scene {
     Rtree *rtree;
     Weakptr *wptr;
 
+    void *game; // weak ref used to resolve resources associated to transform IDs
+
     // transforms potentially removed from scene since last end-of-frame,
     // relevant for physics & sync, internal transforms do not need to be accounted for here
     FifoList *removed;
@@ -210,7 +212,7 @@ void _scene_register_removed_transform(Scene *sc, Transform *t) {
 
 // MARK: -
 
-Scene *scene_new(void) {
+Scene *scene_new(void *g) {
     Scene *sc = (Scene *)malloc(sizeof(Scene));
     if (sc != NULL) {
         sc->root = transform_make(PointTransform);
@@ -218,6 +220,7 @@ Scene *scene_new(void) {
         sc->map = NULL;
         sc->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
         sc->wptr = NULL;
+        sc->game = g;
         sc->removed = fifo_list_new();
         sc->collisions = doubly_linked_list_new();
         sc->awakeBoxes = doubly_linked_list_new();
@@ -450,6 +453,14 @@ bool scene_remove_transform(Scene *sc, Transform *t, const bool keepWorld) {
         return true;
     }
     return false;
+}
+
+void scene_register_managed_transform(Scene *sc, Transform *t) {
+    if (sc == NULL || t == NULL) {
+        return;
+    }
+
+    transform_set_managed_ptr(t, sc->game);
 }
 
 bool _scene_register_collision_couple_func(void *ptr, void *data) {

@@ -66,6 +66,9 @@ struct _Transform {
     // optionally create a weak ptr for this transform
     Weakptr *wptr;
 
+    // if managed, transform_destroyed_callback is called w/ this ptr as parameter
+    void *managed;
+
     // SET any LOCAL or WORLD transformation will flag as dirty its counterpart & the matrices, and
     // unflag itself
     Quaternion *localRotation;
@@ -109,8 +112,6 @@ struct _Transform {
 static Mutex *_IDMutex = NULL;
 static uint16_t _nextID = 1;
 static FiloListUInt16 *_availableIDs = NULL;
-static FiloListUInt16 *_delayedAvailableIDs = NULL;
-static bool _recycleIDs = false;
 
 static pointer_transform_destroyed_func transform_destroyed_callback = NULL;
 
@@ -187,6 +188,7 @@ Transform *transform_make(TransformType type) {
     t->ptrType = 0;
     t->ptr_free = NULL;
     t->wptr = NULL;
+    t->managed = NULL;
     t->type = type;
     t->isHiddenBranch = false;
     t->isHiddenSelf = false;
@@ -221,21 +223,6 @@ void transform_init_ID_thread_safety(void) {
     if (_IDMutex == NULL) {
         cclog_error("transform: failed to init thread safety");
     }
-}
-
-void transform_toggle_ID_recycling(bool b) {
-    mutex_lock(_IDMutex);
-    _recycleIDs = b;
-    if (_recycleIDs && _delayedAvailableIDs != NULL) {
-        if (_availableIDs == NULL) {
-            _availableIDs = filo_list_uint16_new();
-        }
-        uint16_t id;
-        while (filo_list_uint16_pop(_delayedAvailableIDs, &id)) {
-            filo_list_uint16_push(_availableIDs, id);
-        }
-    }
-    mutex_unlock(_IDMutex);
 }
 
 uint16_t transform_get_id(const Transform *t) {
@@ -332,6 +319,10 @@ bool transform_is_any_dirty(Transform *t) {
 
 void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
     transform_destroyed_callback = f;
+}
+
+void transform_set_managed_ptr(Transform *t, void *ptr) {
+    t->managed = ptr;
 }
 
 // MARK: - Physics -
@@ -1093,7 +1084,7 @@ void transform_set_shadow_decal(Transform *t, float size) {
 static uint16_t _transform_get_valid_id(void) {
     uint16_t resultId = 0;
     mutex_lock(_IDMutex);
-    if (_recycleIDs == false || _availableIDs == NULL || filo_list_uint16_pop(_availableIDs, &resultId) == false) {
+    if (_availableIDs == NULL || filo_list_uint16_pop(_availableIDs, &resultId) == false) {
         resultId = _nextID;
         _nextID += 1;
     }
@@ -1103,17 +1094,10 @@ static uint16_t _transform_get_valid_id(void) {
 
 static void _transform_recycle_id(const uint16_t id) {
     mutex_lock(_IDMutex);
-    if (_recycleIDs) {
-        if (_availableIDs == NULL) {
-            _availableIDs = filo_list_uint16_new();
-        }
-        filo_list_uint16_push(_availableIDs, id);
-    } else {
-        if (_delayedAvailableIDs == NULL) {
-            _delayedAvailableIDs = filo_list_uint16_new();
-        }
-        filo_list_uint16_push(_delayedAvailableIDs, id);
+    if (_availableIDs == NULL) {
+        _availableIDs = filo_list_uint16_new();
     }
+    filo_list_uint16_push(_availableIDs, id);
     mutex_unlock(_IDMutex);
 }
 
@@ -1520,8 +1504,8 @@ static void _transform_free(Transform *const t) {
         return;
     }
 
-    if (transform_destroyed_callback != NULL) {
-        transform_destroyed_callback(t->id);
+    if (t->managed != NULL && transform_destroyed_callback != NULL) {
+        transform_destroyed_callback(t->id, t->managed);
     }
 
     // free pointers for transforms that were created in Lua
