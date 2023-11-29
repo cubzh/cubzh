@@ -1,111 +1,104 @@
 --- This module allows you to create UI toast messages
 
 uikit = require("uikit")
-theme = require("uitheme").current
 ease = require("ease")
 
--- in seconds
-local TOAST_DEFAULT_DURATION = 4.0
-local PADDING = theme.padding
+local PADDING = require("uitheme").current.padding
+
+topRightToast = nil
+centerToast = nil
 
 local mod = {}
 
-mod.Placement = {
-	Center = 0,
-	TopRight = 2,
-	Custom = 3,
-}
+mod.create = function(_, config)
+	local DEFAULT_CONFIG = {
+		message = "hello!",
+		center = false,
+		iconShape = nil,
+		duration = 4.0, -- in seconds
+	}
 
-local modMetatable = {
-	__index = {
-		-- Create a toast message
-		-- @param message (string) The message to display
-		create = function(_, message, placement, iconShape)
-			-- validate params
-			do
-				local typePlacement = type(placement)
-				if typePlacement ~= "nil" and typePlacement ~= "integer" then
-					error("placement must be an integer or nil", 2)
-				end
-				local typeIconShape = type(iconShape)
-				if typeIconShape ~= "nil" and typeIconShape ~= "Shape" and typeIconShape ~= "MutableShape" then
-					error("iconShape must be a Shape, MutableShape or nil", 2)
-				end
-			end
-			-- placement default value
-			placement = placement or mod.Placement.Center
+	config = require("config"):merge(DEFAULT_CONFIG, config, {
+		acceptTypes = {
+			iconShape = { "Shape", "MutableShape" },
+		},
+	})
 
-			-- Create frame
-			local frameConfig = {
-				-- image = Data()
-				unfocuses = false,
-			}
-			local toast = uikit:createFrame(Color.Black, frameConfig)
-			toast.placement = placement
+	local toast = uikit:createFrame(Color.Black)
 
-			-- Create text
-			local text = uikit:createText(message, Color.White)
-			text:setParent(toast)
-			toast.text = text
+	if config.center then
+		if centerToast then
+			centerToast.removeTimer:Cancel()
+			centerToast:remove()
+		end
+		centerToast = toast
+	else
+		if topRightToast then
+			topRightToast.removeTimer:Cancel()
+			topRightToast:remove()
+		end
+		topRightToast = toast
+	end
 
-			-- Create icon (optional)
-			if iconShape then
-				local iconFrame = uikit:createShape(iconShape, { spherized = true })
-				iconFrame:setParent(toast)
-				toast.icon = iconFrame
-			end
+	-- Create text
+	local text = uikit:createText(config.message, Color.White)
+	text:setParent(toast)
 
-			-- Setup toast layout, size, and position
-			toast.parentDidResize = function(_)
-				if toast.icon then
-					-- icon + text
-					local toastHeight = text.Size.Y + (PADDING * 1.5)
-					toast.icon.Size = Number2(toastHeight, toastHeight)
-					toast.Size = Number2(toast.icon.Size.X + toast.text.Size.X + (PADDING * 2), toastHeight)
-					toast.icon.position = Number2(PADDING, 0)
-					toast.text.position.X = toast.icon.position.X + toast.icon.Size.X
-					toast.text.position.Y = toast.Size.Y / 2 - text.Size.Y / 2
-				else
-					-- text only
-					toast.Size = text.Size + Number2(PADDING * 1.5, PADDING * 1.5)
-					text.position = toast.Size / 2 - text.Size / 2
-				end
+	-- Create icon (optional)
+	local iconFrame
+	if config.iconShape then
+		iconFrame = uikit:createShape(config.iconShape, { spherized = true })
+		iconFrame:setParent(toast)
+	end
 
-				local toastPosition = Number2(0, 0)
-				if toast.placement == mod.Placement.Center then
-					toastPosition = Screen.Size / 2 - toast.Size / 2
-				elseif toast.placement == mod.Placement.TopRight then
-					toastPosition = Screen.Size
-						- toast.Size
-						- Number2(0, Screen.SafeArea.Top)
-						- Number2(PADDING, PADDING)
-				end
-				toast.position = toastPosition
-			end
-			toast:parentDidResize()
+	-- Setup toast layout, size, and position
+	toast.parentDidResize = function(_)
+		if iconFrame then
+			-- icon + text
+			local toastHeight = text.Size.Y + (PADDING * 1.5)
+			iconFrame.Size = Number2(toastHeight, toastHeight)
+			toast.Size = Number2(iconFrame.Size.X + text.Size.X + (PADDING * 2), toastHeight)
+			iconFrame.position = Number2(PADDING, 0)
+			text.position.X = iconFrame.position.X + iconFrame.Size.X
+			text.position.Y = toast.Size.Y / 2 - text.Size.Y / 2
+		else
+			-- text only
+			toast.Size = text.Size + Number2(PADDING * 1.5, PADDING * 1.5)
+			text.position = toast.Size / 2 - text.Size / 2
+		end
 
-			-- Animate toast
-			local toastPosition = Number2(0, 0)
-			if toast.placement == mod.Placement.Center then
-				toastPosition = Screen.Size / 2 - toast.Size / 2
-				toast.position = toastPosition - Number2(0, toast.Height)
-			elseif toast.placement == mod.Placement.TopRight then
-				toastPosition = Screen.Size - toast.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
-				toast.position = toastPosition + Number2(toast.Width, 0)
-			end
-			ease:cancel(toast)
-			ease:outBack(toast, 0.75).position = Number3(toastPosition.X, toastPosition.Y, 0)
+		local toastPosition
+		if config.center then
+			toastPosition = Screen.Size / 2 - toast.Size / 2
+		else
+			toastPosition = Screen.Size - toast.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+		end
+		toast.position = toastPosition
+	end
+	toast:parentDidResize()
 
-			-- Remove toast after a while
-			toast.removeTimer = Timer(TOAST_DEFAULT_DURATION, function()
-				toast:setParent(nil)
-				toast.removeTimer = nil
-			end)
+	-- Animate toast
+	local toastPosition
+	if config.center then
+		toastPosition = Screen.Size / 2 - toast.Size / 2
+		toast.position = toastPosition - Number2(0, toast.Height)
+	else
+		toastPosition = Screen.Size - toast.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+		toast.position = toastPosition + Number2(toast.Width, 0)
+	end
+	ease:cancel(toast)
+	ease:outBack(toast, 0.75).position = Number3(toastPosition.X, toastPosition.Y, 0)
 
-			return toast
-		end,
-	},
-}
-setmetatable(mod, modMetatable)
+	-- Remove toast after a while
+	toast.removeTimer = Timer(config.duration, function()
+		if toast == centerToast then
+			centerToast = nil
+		elseif toast == topRightToast then
+			topRightToast = nil
+		end
+		toast.removeTimer = nil
+		toast:remove()
+	end)
+end
 
 return mod
