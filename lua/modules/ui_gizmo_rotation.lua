@@ -12,10 +12,6 @@ local create = function(_, config)
 	local shape = config.shape
 	local onRotate = config.onRotate
 
-	local shapeWorldAxis = MutableShape()
-	shapeWorldAxis:AddBlock(Color.White,0,0,0)
-	shapeWorldAxis.Pivot = { 0.5, 0.5, 0.5 }
-
 	local ratio = 7
 	local axisConfig = {
 		{ color = Color.Red, axis = "X", vector = "Right" },
@@ -47,34 +43,15 @@ local create = function(_, config)
 
 		uiAxis.onPress = function()
 			diff = 0
-			shapeWorldAxis:SetParent(World)
-			shapeWorldAxis.Position = shape.Position
-			shapeWorldAxis.Rotation = shape.Rotation
-			if config.axis == "X" then
-				shapeWorldAxis.Scale = shape.Scale * Number3(shape.Width + 5, 0.1, 0.1)
-			elseif config.axis == "Y" then
-				shapeWorldAxis.Scale = shape.Scale * Number3(0.1, shape.Height + 5, 0.1)
-			elseif config.axis == "Z" then
-				shapeWorldAxis.Scale = shape.Scale * Number3(0.1, 0.1, shape.Depth + 5)
-			end
-            shapeWorldAxis.Palette[1].Color = config.color
 		end
 		uiAxis.onDrag = function(_, x, _)
 			shape:RotateWorld(shape[config.vector], (diff - x) * 0.01)
 			shape.Rotation = shape.Rotation -- trigger onsetcallback
-
-			shapeWorldAxis.Position = shape.Position
-			shapeWorldAxis.Rotation = shape.Rotation
 			diff = x
-
 			if onRotate then
 				onRotate(shape.Rotation)
 			end
-
 			return true
-		end
-		uiAxis.onRelease = function()
-			shapeWorldAxis:RemoveFromParent()
 		end
 		table.insert(axisList, { handle = handle, uiAxis = uiAxis })
 

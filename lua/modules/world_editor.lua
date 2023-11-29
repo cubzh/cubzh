@@ -389,7 +389,9 @@ local statesSettings = {
 			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 
-			-- Active translate gizmo
+			freezeObject(worldEditor.object)
+
+			-- Translation gizmo
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
 			worldEditor.gizmo:setAxisVisibility(true, true, true)
@@ -407,8 +409,8 @@ local statesSettings = {
 					Position = worldEditor.object.Position
 				})
 			end)
-			freezeObject(worldEditor.object)
 
+			-- Rotation
 			local uiGizmoRotation = require("ui_gizmo_rotation"):create({
 				shape = worldEditor.object,
 				onRotate = function()
@@ -433,6 +435,24 @@ local statesSettings = {
 				end
 			end
 			uiGizmoRotation:parentDidResize()
+
+			-- Scale
+			if not worldEditor.scaleButton then
+				-- REPRO HERE
+				worldEditor.scaleButton = require("uikit"):createButton("Scale")
+			end
+		end,
+		tick = function()
+			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0,1,1))
+            local v = worldEditor.object.Position - Camera.Position
+            local isVisible = Camera.Forward:Dot(v) >= 0
+            if p and isVisible then
+				worldEditor.scaleButton:hide()
+				worldEditor.scaleButton.pos = { p.X * Screen.Width, p.Y * Screen.Height }
+				print(worldEditor.scaleButton.pos)
+            else
+				worldEditor.scaleButton:show()
+            end
 		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
