@@ -216,7 +216,7 @@ function initAnimations(avatar)
 		animIdle:Bind(frame.name, (frame.name == "Body" and not avatar[frame.name]) and avatar or avatar[frame.name])
 	end
 
-	local animSwingRight = Animation("SwingRight", { speed = 3 })
+	local animSwingRight = Animation("SwingRight", { speed = 3, priority = 1 })
 	local swingRight_rightArm = {
 		{ time = 0.0, rotation = { -0.0, 0, -1.0472 } },
 		{ time = 1 / 3, rotation = { -0.785398, 0.392699, 0.1309 } },
@@ -240,7 +240,7 @@ function initAnimations(avatar)
 		end
 	end
 
-	local animSwingLeft = Animation("SwingLeft", { speed = 3 })
+	local animSwingLeft = Animation("SwingLeft", { speed = 3, priority = 1 })
 	local swingLeft_leftArm = {
 		{ time = 0.0, rotation = { -0.0, 0, -1.0472 } },
 		{ time = 1 / 3, rotation = { -0.785398, 0.392699, 0.1309 } },
