@@ -2,9 +2,26 @@ wingTrail = {}
 
 pool = {}
 oneCube = nil
-trails = {} -- active trails
+firstSegments = {} -- first segments, indexed by object
 
-wingTrail.create = function(self)
+wingTrail.remove = function(_, o)
+	o:RemoveFromParent()
+	o.Tick = nil
+	local segment = firstSegments[o]
+	while segment ~= nil do
+		segment.cube:RemoveFromParent()
+		table.insert(pool, segment)
+		segment = segment.next
+	end
+end
+
+wingTrail.create = function(_, config)
+	local defaultConfig = {
+		scale = 1.0,
+	}
+
+	config = require("config"):merge(defaultConfig, config)
+
 	local o = Object()
 
 	local nextSegmentDT = 0.0
@@ -13,6 +30,7 @@ wingTrail.create = function(self)
 	local nbSegments = 0
 	local firstSegment
 	local currentSegment
+	local scale = config.scale
 
 	o.setColor = function(_, c)
 		color = c
@@ -52,6 +70,7 @@ wingTrail.create = function(self)
 				t.cube.Physics = PhysicsMode.Disabled
 			end
 
+			t.next = nil
 			t.cube:SetParent(World)
 			t.cube.Palette[1].Color = color
 
@@ -70,6 +89,7 @@ wingTrail.create = function(self)
 
 			if firstSegment == nil then
 				firstSegment = currentSegment
+				firstSegments[o] = firstSegment
 			end
 
 			nbSegments = nbSegments + 1
@@ -78,6 +98,7 @@ wingTrail.create = function(self)
 				firstSegment.cube:RemoveFromParent()
 				table.insert(pool, firstSegment)
 				firstSegment = firstSegment.next
+				firstSegments[o] = firstSegment
 			end
 		end
 
@@ -88,7 +109,7 @@ wingTrail.create = function(self)
 		t.currentPos:Set(o.Position)
 		t.cube.Right = t.originPos - t.currentPos
 
-		t.cube.Scale = { (t.originPos - t.currentPos).Length, 1, 1 }
+		t.cube.Scale = { (t.originPos - t.currentPos).Length, scale, scale }
 	end
 
 	return o
