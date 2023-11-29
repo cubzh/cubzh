@@ -1488,7 +1488,13 @@ function createUI(system)
 
 	ui.createText = function(_, str, color, size) -- "default" (default), "small", "big"
 		if str == nil then
-			error("ui:createText(string, <color>, <align>) expects a non-nil string", 2)
+			error("ui:createText(string, <color>, <size>) str must be a string", 2)
+		end
+		if color and type(color) ~= Type.Color then
+			error("ui:createText(string, <color>, <size>) color must be a Color", 2)
+		end
+		if size and type(size) ~= Type.string then
+			error('ui:createText(string, <color>, <size>) size must be a string ("default", "small" or "big")', 2)
 		end
 
 		local node = _nodeCreate()

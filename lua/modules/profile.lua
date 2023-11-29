@@ -342,12 +342,41 @@ profile.create = function(_, config)
 
 			bioText.Text = userInfo.bio or ""
 
+			local charWidth
+			local emojiWidth
+			do
+				local aChar = ui:createText("a", nil, "small")
+				charWidth = aChar.Width
+				aChar:remove()
+
+				local anEmoji = ui:createText("👾", nil, "small")
+				emojiWidth = anEmoji.Width
+				anEmoji:remove()
+			end
+
+			local availableWidth = activeNode.Width / 2
+				- ACTIVE_NODE_MARGIN * 2
+				- theme.padding * 2
+				- emojiWidth
+				- charWidth * 2
+			local nbMaxChars = availableWidth // charWidth
+
 			-- Loop through the config list and apply the logic
+			local btn
+			local displayStr
 			for _, config in pairs(socialBtnsConfig) do
 				local value = userInfo[config.key]
-				local btn = socialBtns[config.key]
+				btn = socialBtns[config.key]
 				if value ~= nil and value ~= "" then
-					local displayStr = config.icon .. " " .. config.prefix .. value
+					if string.len(value) > nbMaxChars then
+						displayStr = config.icon
+							.. " "
+							.. config.prefix
+							.. string.sub(value, 1, nbMaxChars - 1)
+							.. "…"
+					else
+						displayStr = config.icon .. " " .. config.prefix .. value
+					end
 					btn.Text = displayStr
 					btn:show()
 					btn.onRelease = function()
