@@ -63,10 +63,6 @@ struct _Transform {
     // function pointer, to free ptr when defined
     pointer_free_function ptr_free;
 
-    // TEMPORARY, NULL in most cases.
-    // See comment where transform_get_or_compute_world_collider_function is defined
-    transform_get_or_compute_world_collider_function ptr_get_or_compute_world_aligned_collider;
-
     // optionally create a weak ptr for this transform
     Weakptr *wptr;
 
@@ -190,7 +186,6 @@ Transform *transform_make(TransformType type) {
     t->ptr = NULL;
     t->ptrType = 0;
     t->ptr_free = NULL;
-    t->ptr_get_or_compute_world_aligned_collider = NULL;
     t->wptr = NULL;
     t->type = type;
     t->isHiddenBranch = false;
@@ -217,17 +212,7 @@ Transform *transform_make_with_ptr(TransformType type,
     return t;
 }
 
-void transform_assign_get_or_compute_world_collider_function(
-    Transform *t,
-    transform_get_or_compute_world_collider_function f) {
-    t->ptr_get_or_compute_world_aligned_collider = f;
-}
-
-Transform *transform_make_default() {
-    return transform_make(HierarchyTransform);
-}
-
-void transform_init_thread_safety(void) {
+void transform_init_ID_thread_safety(void) {
     if (_IDMutex != NULL) {
         cclog_error("transform: thread safety initialized more than once");
         return;
@@ -236,6 +221,21 @@ void transform_init_thread_safety(void) {
     if (_IDMutex == NULL) {
         cclog_error("transform: failed to init thread safety");
     }
+}
+
+void transform_toggle_ID_recycling(bool b) {
+    mutex_lock(_IDMutex);
+    _recycleIDs = b;
+    if (_recycleIDs && _delayedAvailableIDs != NULL) {
+        if (_availableIDs == NULL) {
+            _availableIDs = filo_list_uint16_new();
+        }
+        uint16_t id;
+        while (filo_list_uint16_pop(_delayedAvailableIDs, &id)) {
+            filo_list_uint16_push(_availableIDs, id);
+        }
+    }
+    mutex_unlock(_IDMutex);
 }
 
 uint16_t transform_get_id(const Transform *t) {
@@ -334,21 +334,6 @@ void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
     transform_destroyed_callback = f;
 }
 
-void transform_setRecycleIDs(bool b) {
-    mutex_lock(_IDMutex);
-    _recycleIDs = b;
-    if (_recycleIDs && _delayedAvailableIDs != NULL) {
-        if (_availableIDs == NULL) {
-            _availableIDs = filo_list_uint16_new();
-        }
-        uint16_t id;
-        while (filo_list_uint16_pop(_delayedAvailableIDs, &id)) {
-            filo_list_uint16_push(_availableIDs, id);
-        }
-    }
-    mutex_unlock(_IDMutex);
-}
-
 // MARK: - Physics -
 
 void transform_reset_physics_dirty(Transform *t) {
@@ -384,10 +369,6 @@ RigidBody *transform_get_rigidbody(Transform *const t) {
 }
 
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider) {
-    if (t->ptr_get_or_compute_world_aligned_collider != NULL && t->ptr != NULL) {
-        return t->ptr_get_or_compute_world_aligned_collider(t->ptr, collider);
-    }
-
     RigidBody *rb = NULL;
     if (collider != NULL) {
         *collider = box_zero;
@@ -1112,7 +1093,7 @@ void transform_set_shadow_decal(Transform *t, float size) {
 static uint16_t _transform_get_valid_id(void) {
     uint16_t resultId = 0;
     mutex_lock(_IDMutex);
-    if (_availableIDs == NULL || filo_list_uint16_pop(_availableIDs, &resultId) == false) {
+    if (_recycleIDs == false || _availableIDs == NULL || filo_list_uint16_pop(_availableIDs, &resultId) == false) {
         resultId = _nextID;
         _nextID += 1;
     }

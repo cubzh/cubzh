@@ -199,6 +199,15 @@ bool _scene_standalone_refresh_func(Transform *t, void *ptr) {
     return false;
 }
 
+void _scene_register_removed_transform(Scene *sc, Transform *t) {
+    if (sc == NULL || t == NULL) {
+        return;
+    }
+
+    transform_retain(t);
+    fifo_list_push(sc->removed, t);
+}
+
 // MARK: -
 
 Scene *scene_new(void) {
@@ -308,7 +317,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 child = doubly_linked_list_node_pointer(n);
 
                 transform_set_scene_dirty(child, true);
-                scene_register_removed_transform(sc, child);
+                _scene_register_removed_transform(sc, child);
 
                 n = doubly_linked_list_node_next(n);
             }
@@ -420,7 +429,7 @@ void scene_add_map(Scene *sc, Shape *map) {
     transform_set_parent(sc->map, sc->root, true);
 
 #if DEBUG_SCENE_EXTRALOG
-    cclog_debug("🏞 map added to the scene");
+    cclog_debug("🏞 map %p (id: %d) added to scene %p", sc->map, transform_get_id(sc->map), sc);
 #endif
 }
 
@@ -428,39 +437,19 @@ Transform *scene_get_map(Scene *sc) {
     return sc->map;
 }
 
-void scene_remove_map(Scene *sc) {
-    vx_assert(sc != NULL);
-
-    if (sc->map != NULL) {
-        transform_remove_parent(sc->map, true);
-        sc->map = NULL;
-    }
-
-#if DEBUG_SCENE_EXTRALOG
-    cclog_debug("🏞 map removed from the scene");
-#endif
-}
-
-void scene_remove_transform(Scene *sc, Transform *t) {
-    vx_assert(sc != NULL);
-    if (t == NULL)
-        return;
-
-    scene_register_removed_transform(sc, t);
-    transform_remove_parent(t, true);
-
-#if DEBUG_SCENE_EXTRALOG
-    cclog_debug("🏞 transform removed from the scene");
-#endif
-}
-
-void scene_register_removed_transform(Scene *sc, Transform *t) {
+bool scene_remove_transform(Scene *sc, Transform *t, const bool keepWorld) {
     if (sc == NULL || t == NULL) {
-        return;
+        return false;
     }
 
-    transform_retain(t);
-    fifo_list_push(sc->removed, t);
+    if (transform_remove_parent(t, keepWorld)) {
+        _scene_register_removed_transform(sc, t);
+#if DEBUG_SCENE_EXTRALOG
+        cclog_debug("🏞 transform %p (id: %d) removed from scene %p", t, transform_get_id(t), sc);
+#endif
+        return true;
+    }
+    return false;
 }
 
 bool _scene_register_collision_couple_func(void *ptr, void *data) {

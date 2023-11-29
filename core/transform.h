@@ -80,8 +80,8 @@ Transform *transform_make_with_ptr(TransformType type,
                                    void *ptr,
                                    const uint8_t ptrType,
                                    pointer_free_function ptrFreeFn);
-Transform *transform_make_default(void);
-void transform_init_thread_safety(void);
+void transform_init_ID_thread_safety(void);
+void transform_toggle_ID_recycling(bool b);
 uint16_t transform_get_id(const Transform *t);
 /// Increases ref count and returns false if the retain count can't be increased
 bool transform_retain(Transform *const t);
@@ -99,7 +99,6 @@ void transform_reset_any_dirty(Transform *t);
 /// set, but not reset by transform, can be used internally by higher types as custom flag
 bool transform_is_any_dirty(Transform *t);
 void transform_set_destroy_callback(pointer_transform_destroyed_func f);
-void transform_setRecycleIDs(bool b);
 
 /// MARK: - Physics -
 void transform_reset_physics_dirty(Transform *t);
@@ -229,15 +228,6 @@ void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
 bool transform_getAnimationsEnabled(Transform *const t);
 float transform_get_shadow_decal(Transform *t);
 void transform_set_shadow_decal(Transform *t, float size);
-
-// TEMPORARY
-// Needed while `Player` (defined one level above Cubzh Core)
-// needs to maintain a special way to compute its world collider.
-// We'll find a solution to make that go away.
-typedef RigidBody *(*transform_get_or_compute_world_collider_function)(void *ptr, Box *collider);
-void transform_assign_get_or_compute_world_collider_function(
-    Transform *t,
-    transform_get_or_compute_world_collider_function f);
 
 /// MARK: - Debug -
 #if DEBUG_TRANSFORM
