@@ -629,9 +629,7 @@ end
 
 local GLIDER_MIN_SPEED = 40
 local GLIDER_MAX_SPEED = 80
-local GLIDER_WING_LENGTH = 22
-local GLIDER_CAMERA_DISTANCE = 50
-local GLIDER_CAMERA_ANGLE = Rotation(math.rad(30), 0, 0)
+local GLIDER_WING_LENGTH = 24
 
 playerControls.glide = function(self, player)
 	self:exitVehicle(player)
@@ -683,11 +681,7 @@ playerControls.glide = function(self, player)
 		Player.Animations.LiftLeft:Play()
 	end
 
-	Camera:SetModeFree()
-	Camera:SetParent(vehicle)
-	Camera.LocalRotation = GLIDER_CAMERA_ANGLE
-	Camera.Position = vehicle.Position + Camera.Backward * GLIDER_CAMERA_DISTANCE
-	Camera.FOV = cameraDefaultFOV
+	require("camera_modes"):setThirdPerson({ target = vehicle, rotationOffset = Rotation(math.rad(20), 0, 0) })
 
 	vehicle.speed = GLIDER_MIN_SPEED
 	vehicle.targetSpeed = vehicle.speed
