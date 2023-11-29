@@ -36,7 +36,7 @@ extern "C" {
 ///
 typedef struct _Scene Scene;
 
-Scene *scene_new(void);
+Scene *scene_new(void *g);
 void scene_free(Scene *sc);
 Weakptr *scene_get_weakptr(Scene *sc);
 Weakptr *scene_get_and_retain_weakptr(Scene *sc);
@@ -77,6 +77,9 @@ Transform *scene_get_map(Scene *sc);
 /// in all appropriate systems (r-tree, sync, etc). We may register for removal even tentatively,
 /// and if the transform is re-added to the hierarchy in the same frame, removal is cancelled
 bool scene_remove_transform(Scene *sc, Transform *t, const bool keepWorld);
+/// Managed transforms have resources associated to their IDs, which need to be freed when their
+/// transform is freed. Setting a managed ptr will toggle transform's destroy callback
+void scene_register_managed_transform(Scene *sc, Transform *t);
 
 typedef enum CollisionCoupleStatus {
     CollisionCoupleStatus_Begin,
