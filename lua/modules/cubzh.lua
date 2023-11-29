@@ -594,6 +594,13 @@ playerControls.exitVehicle = function(self, player)
 
 	vehicle.Tick = nil
 
+	if vehicle.wingTrails then
+		for _, t in ipairs(vehicle.wingTrails) do
+			wingTrail:remove(t)
+		end
+		vehicle.wingTrails = nil
+	end
+
 	player:SetParent(World, true)
 	player.Rotation = { 0, vehicle.Rotation.Y, 0 }
 	player.Position = vehicle.Position
@@ -627,9 +634,10 @@ playerControls.walk = function(self, player)
 	end
 end
 
-local GLIDER_MIN_SPEED = 40
-local GLIDER_MAX_SPEED = 80
+local GLIDER_MAX_SPEED_FOR_EFFECTS = 80 -- speed can be above that, but used for visual effects
+local GLIDER_MAX_SPEED = 200
 local GLIDER_WING_LENGTH = 24
+local GLIDER_MAX_START_SPEED = 40
 
 playerControls.glide = function(self, player)
 	self:exitVehicle(player)
@@ -663,6 +671,10 @@ playerControls.glide = function(self, player)
 
 	vehicle.Rotation = { 0, player.Rotation.Y, 0 }
 	vehicle.Scale = 0.5
+	vehicle.Velocity = player.Motion + player.Velocity -- initial velocity
+	local l = vehicle.Velocity.Length
+	vehicle.Velocity.Length = math.min(l, GLIDER_MAX_START_SPEED)
+
 	player.Physics = PhysicsMode.Disabled
 	player:SetParent(vehicleRoll, true)
 	player.Scale = 1.0
@@ -683,38 +695,42 @@ playerControls.glide = function(self, player)
 
 	require("camera_modes"):setThirdPerson({ target = vehicle, rotationOffset = Rotation(math.rad(20), 0, 0) })
 
-	vehicle.speed = GLIDER_MIN_SPEED
-	vehicle.targetSpeed = vehicle.speed
-
 	vehicle.Physics = PhysicsMode.Dynamic
 	vehicle.Acceleration = -Config.ConstantAcceleration
 
-	local rightTrail = wingTrail:create()
+	local rightTrail = wingTrail:create({ scale = 0.5 })
 	rightTrail:SetParent(vehicleRoll)
 	rightTrail.LocalPosition = { GLIDER_WING_LENGTH, 8, 0 }
 
-	local leftTrail = wingTrail:create()
+	local leftTrail = wingTrail:create({ scale = 0.5 })
 	leftTrail:SetParent(vehicleRoll)
 	leftTrail.LocalPosition = { -GLIDER_WING_LENGTH, 8, 0 }
 
+	vehicle.wingTrails = {}
+	table.insert(vehicle.wingTrails, rightTrail)
+	table.insert(vehicle.wingTrails, leftTrail)
+
+	local rightWingTip
+	local leftWingTip
+	local diffY
+	local maxDiff
+	local p
+	local leftLift
+	local rightLift
+	local l
+	local down
+	local up
+	local speedOverMax
+	local f
+
 	vehicle.Tick = function(o, dt)
-		local speedOverMax = o.speed / GLIDER_MAX_SPEED
+		rightWingTip = vehicleRoll:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
+		leftWingTip = vehicleRoll:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
 
-		if o.targetSpeed ~= nil then
-			o.speed = o.speed + (o.targetSpeed - o.speed) * dt
-			Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
-		end
+		diffY = leftWingTip.Y - rightWingTip.Y
 
-		local rightWingTip = vehicleRoll:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
-		local leftWingTip = vehicleRoll:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
-
-		local diffY = leftWingTip.Y - rightWingTip.Y
-
-		local maxDiff = GLIDER_WING_LENGTH * 2
-		local p = math.abs(diffY / maxDiff)
-
-		local leftLift
-		local rightLift
+		maxDiff = GLIDER_WING_LENGTH * 2
+		p = math.abs(diffY / maxDiff)
 
 		if diffY < 0 then
 			leftLift = 0.5 + p * 0.5
@@ -724,19 +740,32 @@ playerControls.glide = function(self, player)
 			leftLift = 1.0 - rightLift
 		end
 
-		local f = 0.2 * speedOverMax
+		l = o.Velocity.Length
 
-		rightTrail:setColor(Color(255, 255, 255, rightLift * f))
-		leftTrail:setColor(Color(255, 255, 255, leftLift * f))
-
-		if o.speed >= GLIDER_MIN_SPEED then
-			yawDelta.Y = diffY * dt * 0.001 * 70
-			yaw = yawDelta * yaw
-		end
+		yawDelta.Y = diffY * dt * 0.001 * 70
+		yaw = yawDelta * yaw
 
 		o.Rotation = yaw * tilt
-		o.Motion = o.Forward * o.speed
-		o.Velocity = { 0, -1, 0 }
+
+		down = math.max(0, o.Forward:Dot(Number3.Down)) -- 0 -> 1
+		up = math.max(0, o.Forward:Dot(Number3.Up))
+
+		-- accelerate when facing down / lose more velocity when going up
+		l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
+
+		l = math.max(l, 0) -- speed can't be below 0
+		l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
+
+		o.Velocity = o.Forward * l
+		o.Motion = { 0, -5, 0 } -- constantly going down
+
+		-- EFFECTS
+		speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
+		Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
+
+		f = 0.2 * speedOverMax
+		rightTrail:setColor(Color(255, 255, 255, rightLift * f))
+		leftTrail:setColor(Color(255, 255, 255, leftLift * f))
 	end
 
 	if player == Player then
@@ -751,7 +780,7 @@ playerControls.glide = function(self, player)
 			vehicleRoll.LocalRotation = roll
 		end
 		self.dirPad = function(_, y)
-			vehicle.targetSpeed = math.max(GLIDER_MIN_SPEED, y * GLIDER_MAX_SPEED)
+			-- vehicle.targetSpeed = math.max(GLIDER_MIN_SPEED, y * GLIDER_MAX_SPEED)
 		end
 	end
 end
