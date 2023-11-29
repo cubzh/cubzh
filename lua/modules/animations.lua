@@ -161,7 +161,7 @@ local startPlaying = function(animations, animName, anim)
 		end
 	end
 
-	if anim.Mode == AnimationMode.Loop then
+	if anim.Loops == 0 then
 		table.insert(playingInLoop, 1, animName)
 	else
 		table.insert(playingOnce, 1, animName)
@@ -221,8 +221,10 @@ animationsMT.__newindex = function(t, k, v)
 		startPlaying(animations, animName, anim)
 	end)
 
-	v:AddOnStopCallback(function(_)
-		stopPlaying(animations, animName)
+	v:AddOnStopCallback(function(anim)
+		if anim.RemoveWhenDone == true then
+			stopPlaying(animations, animName)
+		end
 	end)
 end
 
@@ -266,8 +268,10 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		if anims ~= nil then
 			for name, anim in pairs(anims) do
 				if anim.IsPlaying == false then
-					if animationsPrivateFields.playing[name] == true then
-						stopPlaying(animations, name)
+					if anims.RemoveWhenDone == true then
+						if animationsPrivateFields.playing[name] == true then
+							stopPlaying(animations, name)
+						end
 					end
 				else
 					anim:Tick(dt)

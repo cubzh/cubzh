@@ -29,7 +29,6 @@ return {
 
 	read_globals = {
 		"Animation",
-		"AnimationMode",
 		"Assets",
 		"AssetType",
 		"AudioListener",
