@@ -71,16 +71,13 @@ DoublyLinkedList *scene_new_shapes_iterator(Scene *sc);
 /// Parents or unparents a Map transform to the scene root
 void scene_add_map(Scene *sc, Shape *m);
 Transform *scene_get_map(Scene *sc);
-void scene_remove_map(Scene *sc);
 
-/// Removes parent & calls scene_register_removed_transform, check that function for details
-void scene_remove_transform(Scene *sc, Transform *p);
-
+/// Safely removes transform from the scene hierarchy
 /// Transforms removed from hierarchy are kept alive for an additional frame allowing for removal
 /// in all appropriate systems (r-tree, sync, etc). We may register for removal even tentatively,
 /// and if the transform is re-added to the hierarchy in the same frame, removal is cancelled
-/// Note: remember to call this before any operation triggering a possible last transform_release
-void scene_register_removed_transform(Scene *sc, Transform *t);
+bool scene_remove_transform(Scene *sc, Transform *t, const bool keepWorld);
+
 typedef enum CollisionCoupleStatus {
     CollisionCoupleStatus_Begin,
     CollisionCoupleStatus_Tick,
