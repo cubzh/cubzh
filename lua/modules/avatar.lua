@@ -70,7 +70,7 @@ index.skinColors = {
 }
 
 function initAnimations(avatar)
-	local animWalk = Animation("Walk", { speed = 1.8, mode = AnimationMode.Loop })
+	local animWalk = Animation("Walk", { speed = 1.8, loops = 0 })
 	local walk_llegK = {
 		{ time = 0.0, rotation = { -1.1781, 0, 0 } },
 		{ time = 1 / 6, rotation = { -0.785398, 0, 0 } },
@@ -176,7 +176,7 @@ function initAnimations(avatar)
 		end
 	end
 
-	local animIdle = Animation("Idle", { speed = 0.5, mode = AnimationMode.Loop })
+	local animIdle = Animation("Idle", { speed = 0.5, loops = 0 })
 	local idle_keyframes_data = {
 		{ name = "LeftLeg", time = 0.0, rotation = { -0.0, 0, -0.0 } },
 		{ name = "LeftLeg", time = 0.5, rotation = { -0.0, 0, -0.0 } },

@@ -755,64 +755,66 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			return
 		end
 		if k == "Rotation" then
-			if v == nil then
-				return
-			end
-			-- Y field works for both Number3 and Rotation
-			if type(v.Y) == "number" then
-				t.Rotation:Set(0, v.Y, 0)
-			end
-			-- check second number in table: {0, Y, 0}
-			if type(v[2]) == "number" then
-				t.Rotation:Set(0, v[2], 0)
-			end
+			-- if v == nil then
+			-- 	return
+			-- end
+			-- -- Y field works for both Number3 and Rotation
+			-- if type(v.Y) == "number" then
+			-- 	t.Rotation:Set(0, v.Y, 0)
+			-- end
+			-- -- check second number in table: {0, Y, 0}
+			-- if type(v[2]) == "number" then
+			-- 	t.Rotation:Set(0, v[2], 0)
+			-- end
+			t.Rotation:Set(v)
 			return
 		end
 		if k == "LocalRotation" then
-			if v == nil then
-				return
-			end
-			-- Y field works for both Number3 and Rotation
-			if type(v.Y) == "number" then
-				t.Rotation:Set(0, v.Y, 0)
-			end
-			-- check second number in table: {0, Y, 0}
-			if type(v[2]) == "number" then
-				t.Rotation:Set(0, v[2], 0)
-			end
+			-- if v == nil then
+			-- 	return
+			-- end
+			-- -- Y field works for both Number3 and Rotation
+			-- if type(v.Y) == "number" then
+			-- 	t.Rotation:Set(0, v.Y, 0)
+			-- end
+			-- -- check second number in table: {0, Y, 0}
+			-- if type(v[2]) == "number" then
+			-- 	t.Rotation:Set(0, v[2], 0)
+			-- end
+			t.LocalRotation:Set(v)
 			return
 		end
 		objectNewIndex(t, k, v)
 	end
 
-	local byPassRotationCallback = false
+	-- local byPassRotationCallback = false
 
-	player.Rotation:AddOnSetCallback(function(rotation)
-		if byPassRotationCallback then
-			byPassRotationCallback = false
-		else
-			-- enforce X == 0 and Z == 0
-			if rotation.X ~= 0 or rotation.Z ~= 0 then
-				byPassRotationCallback = true
-				-- triggers rotation callback once again, but will be bypassed
-				player.Rotation:Set(0, rotation.Y, 0)
-			end
-		end
-	end)
+	-- player.Rotation:AddOnSetCallback(function(rotation)
+	-- 	if byPassRotationCallback then
+	-- 		byPassRotationCallback = false
+	-- 	else
+	-- 		-- enforce X == 0 and Z == 0
+	-- 		if rotation.X ~= 0 or rotation.Z ~= 0 then
+	-- 			byPassRotationCallback = true
+	-- 			-- triggers rotation callback once again, but will be bypassed
+	-- 			player.Rotation:Set(0, rotation.Y, 0)
+	-- 		end
+	-- 	end
+	-- end)
 
-	local byPassLocalRotationCallback = false
-	player.LocalRotation:AddOnSetCallback(function(rotation)
-		if byPassLocalRotationCallback then
-			byPassLocalRotationCallback = false
-		else
-			-- enforce X == 0 and Z == 0
-			if rotation.X ~= 0 or rotation.Z ~= 0 then
-				byPassLocalRotationCallback = true
-				-- triggers rotation callback once again, but will be bypassed
-				player.LocalRotation:Set(0, rotation.Y, 0)
-			end
-		end
-	end)
+	-- local byPassLocalRotationCallback = false
+	-- player.LocalRotation:AddOnSetCallback(function(rotation)
+	-- 	if byPassLocalRotationCallback then
+	-- 		byPassLocalRotationCallback = false
+	-- 	else
+	-- 		-- enforce X == 0 and Z == 0
+	-- 		if rotation.X ~= 0 or rotation.Z ~= 0 then
+	-- 			byPassLocalRotationCallback = true
+	-- 			-- triggers rotation callback once again, but will be bypassed
+	-- 			player.LocalRotation:Set(0, rotation.Y, 0)
+	-- 		end
+	-- 	end
+	-- end)
 
 	player.Scale = 0.5
 	player.Mass = PLAYER_MASS
