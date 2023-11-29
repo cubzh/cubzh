@@ -372,6 +372,12 @@ holdTimer = nil
 function action1()
 	playerControls:walk(Player)
 
+	require("ui_toast"):create({
+		message = "Glider unlocked!",
+		center = false,
+		iconShape = bundle.Shape("voxels.glider_backpack"),
+	})
+
 	objectSkills.jump(Player)
 	-- Dev:CopyToClipboard("" .. Player.Position.X .. ", " .. Player.Position.Y .. ", " .. Player.Position.Z)
 
