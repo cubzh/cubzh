@@ -1788,6 +1788,16 @@ function createUI(system)
 		_textInputRefreshColor(node) -- apply initial colors
 
 		node.contentDidResizeSystem = function(self)
+			print(
+				self:_text(),
+				math.random(1000),
+				"self._refresh:",
+				self._refresh,
+				"Screen.Width:",
+				Screen.Width,
+				"Screen.Height:",
+				Screen.Height
+			)
 			if self._refresh then
 				self:_refresh()
 			end
