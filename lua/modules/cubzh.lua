@@ -537,6 +537,9 @@ function addCollectibles()
 
 		local gliderBackpackConfigs = {
 			{ position = Number3(451, 102, 510) },
+			{ position = Number3(878, 396, 271) }, -- tower top
+			{ position = Number3(653, 318, 655) }, -- pink tree
+			{ position = Number3(481, 470, 155) }, -- wook plank
 		}
 
 		for _, backpackConfig in ipairs(gliderBackpackConfigs) do
