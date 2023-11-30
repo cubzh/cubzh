@@ -422,6 +422,10 @@ function action1()
 			return
 		end
 		if equipment == "glider" then
+			if gliderUsageToast ~= nil then
+				gliderUsageToast:remove()
+				gliderUsageToast = nil
+			end
 			playerControls:glide(Player)
 		end
 	end)
@@ -464,12 +468,6 @@ function unlockGlider()
 	for _, backpack in ipairs(gliderBackpackCollectibles) do
 		backpack.object.PrivateDrawMode = 0
 	end
-
-	require("ui_toast"):create({
-		message = "Glider unlocked!",
-		center = false,
-		iconShape = bundle.Shape("voxels.glider_backpack"),
-	})
 end
 
 function addCollectibles()
@@ -500,14 +498,6 @@ function addCollectibles()
 			position = Number3.Zero,
 			itemName = "voxels.glider_backpack",
 			onCollisionBegin = function(c)
-				-- globalToast = require("ui_toast"):create({
-				-- 	message = "Maintain jump key to start gliding!",
-				-- 	maxWidth = 200,
-				-- 	center = false,
-				-- 	iconShape = bundle.Shape("voxels.glider"),
-				-- 	duration = -1, -- negative duration means infinite
-				-- })
-
 				if gliderUnlocked then
 					collectParticles.Position = c.object.Position
 					collectParticles:spawn(20)
@@ -520,10 +510,11 @@ function addCollectibles()
 					equipment = "glider"
 					multi:action("equipGlider")
 
-					require("ui_toast"):create({
+					gliderUsageToast = require("ui_toast"):create({
 						message = "Maintain jump key to start gliding!",
 						center = false,
 						iconShape = bundle.Shape("voxels.glider"),
+						duration = -1, -- negative duration means infinite
 					})
 				else
 					require("ui_toast"):create({
@@ -547,6 +538,11 @@ function addCollectibles()
 		end
 
 		if #collectedGliderParts >= #gliderParts then -- or true then
+			require("ui_toast"):create({
+				message = "Glider unlocked!",
+				center = false,
+				iconShape = bundle.Shape("voxels.glider_backpack"),
+			})
 			unlockGlider()
 		else
 			local gliderPartConfig = {
@@ -737,6 +733,7 @@ playerControls.glide = function(self, player)
 	self.vehicles[player.ID] = vehicle
 
 	local glider = self:getShape("voxels.glider")
+	glider.Shadow = true
 	glider.Physics = PhysicsMode.Disabled
 
 	vehicle.Position = player:PositionLocalToWorld({ 0, player.BoundingBox.Max.Y - 2, 0 })

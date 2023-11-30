@@ -13,7 +13,7 @@ local mod = {}
 mod.create = function(_, config)
 	local DEFAULT_CONFIG = {
 		message = "hello!",
-		maxWidth = nil,
+		maxWidth = 250,
 		center = false,
 		iconShape = nil,
 		animationSpeed = 250, -- in points per second
@@ -22,7 +22,6 @@ mod.create = function(_, config)
 
 	config = require("config"):merge(DEFAULT_CONFIG, config, {
 		acceptTypes = {
-			maxWidth = { "number", "integer" },
 			iconShape = { "Shape", "MutableShape" },
 		},
 	})
