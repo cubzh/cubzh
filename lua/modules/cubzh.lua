@@ -39,7 +39,12 @@ Client.OnStart = function()
 	walkSFX = require("walk_sfx")
 	wingTrail = require("wingtrail")
 	sfx = require("sfx")
+
 	multi = require("multi")
+	-- not doing it automatically in that script has we need
+	-- to deal with special situations, like vehicles
+	multi:doNotHandlePlayers()
+
 	bundle = require("bundle")
 	require("textbubbles").displayPlayerChatBubbles = true
 	objectSkills = require("object_skills")
@@ -150,63 +155,85 @@ Client.OnStart = function()
 		sender:EquipBackpack(bundle.Shape("voxels.glider_backpack"))
 	end)
 
-	local animLiftRight = Animation("LiftRight", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
-	local liftRightArm = {
-		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
-		{ time = 1.0, rotation = { 0, 0, math.rad(30) } },
-	}
-	local liftRightHand = {
-		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
-		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(-30) } },
-	}
-	local animLiftRightConfig = {
-		RightArm = liftRightArm,
-		RightHand = liftRightHand,
-	}
-	for name, v in pairs(animLiftRightConfig) do
-		for _, frame in ipairs(v) do
-			animLiftRight:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
-			animLiftRight:Bind(
-				name,
-				(name == "Body" and not Player.Avatar[name]) and Player.Avatar or Player.Avatar[name]
-			)
-		end
-	end
-	Player.Animations.LiftRight = animLiftRight
+	addPlayerAnimations(Player)
 
-	local animLiftLeft = Animation("LiftLeft", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
-	local liftLeftArm = {
-		{ time = 0.0, rotation = { 0, 0, 1.0472 } },
-		{ time = 1.0, rotation = { 0, 0, math.rad(-30) } },
-	}
-	local liftLeftHand = {
-		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
-		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(30) } },
-	}
-	local animLeftRightConfig = {
-		LeftArm = liftLeftArm,
-		LeftHand = liftLeftHand,
-	}
-	for name, v in pairs(animLeftRightConfig) do
-		for _, frame in ipairs(v) do
-			animLiftLeft:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
-			animLiftLeft:Bind(
-				name,
-				(name == "Body" and not Player.Avatar[name]) and Player.Avatar or Player.Avatar[name]
-			)
+	-- called when receiving information for distant object that isn't link
+	multi.linkRequest = function(name)
+		if stringStartsWith(name, "p_") then
+			local playerID = math.floor(tonumber(stringRemovePrefix(name, "p_")))
+			local p = Players[playerID]
+			if p ~= nil then
+				multi:unlink("g_" .. p.ID)
+
+				playerControls:walk(p)
+
+				multi:link(p, "p_" .. p.ID)
+				multi:link(p.Head, "ph_" .. p.ID)
+				if p.Parent == nil then
+					p:SetParent(World)
+				end
+			end
+		elseif stringStartsWith(name, "ph_") then
+			-- local playerID = math.floor(tonumber(stringRemovePrefix(name, "ph_")))
+			-- local p = Players[playerID]
+			-- if p ~= nil then
+			-- 	multi:link(p.Head, "ph_" .. p.ID)
+			-- end
+		elseif stringStartsWith(name, "g_") then -- glider
+			local playerID = math.floor(tonumber(stringRemovePrefix(name, "g_")))
+			local p = Players[playerID]
+			if p ~= nil then
+				multi:unlink("p_" .. p.ID)
+				multi:unlink("ph_" .. p.ID)
+
+				local glider = playerControls:glide(p)
+
+				multi:link(glider, "g_" .. p.ID)
+			end
 		end
 	end
-	Player.Animations.LiftLeft = animLiftLeft
+end
+
+-- update what local player is syncing
+function updateSync()
+	local p = Player
+	local pID = p.ID
+
+	multi:unlink("g_" .. pID)
+	multi:unlink("p_" .. pID)
+	multi:unlink("ph_" .. pID)
+
+	local vehicle = playerControls.vehicles[pID]
+	if vehicle then
+		if vehicle.type == "glider" then
+			-- sync vehicleRoll child object,
+			-- it contains all needed information
+			multi:sync(vehicle.roll, "g_" .. pID, {
+				-- velocity stored under "v"
+				keys = { "Velocity", "Position", "Rotation" },
+				triggers = { "LocalRotation", "Velocity" },
+			})
+		end
+	else
+		multi:sync(p, "p_" .. pID, {
+			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
+			triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
+		})
+		multi:sync(p.Head, "ph_" .. pID, { keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } })
+	end
 end
 
 Client.OnPlayerJoin = function(p)
 	if p == Player then
+		updateSync()
+		-- that's it, other things are already initialized for local player
 		return
 	end
 
 	objectSkills.addStepClimbing(p, { mapScale = MAP_SCALE })
 	walkSFX:register(p)
-	dropPlayer(p)
+	addPlayerAnimations(p)
+
 	print(p.Username .. " joined!")
 
 	-- inform newcomer that glider has been equipped
@@ -218,9 +245,16 @@ end
 
 Client.OnPlayerLeave = function(p)
 	if p ~= Player then
+		playerControls:exitVehicle(p)
+
+		multi:unlink("g_" .. p.ID)
+		multi:unlink("ph_" .. p.ID)
+		multi:unlink("p_" .. p.ID)
+
 		objectSkills.removeStepClimbing(p)
 		objectSkills.removeJump(p)
 		walkSFX:unregister(p)
+		p:RemoveFromParent()
 	end
 end
 
@@ -569,6 +603,7 @@ end
 playerControls = {
 	shapeCache = {},
 	vehicles = {}, -- vehicles, indexed by player ID
+	current = {}, -- control names, indexed by player ID
 	onDrag = nil,
 	dirPad = nil,
 }
@@ -594,6 +629,7 @@ end
 
 playerControls.exitVehicle = function(self, player)
 	local vehicle = self.vehicles[player.ID]
+
 	if vehicle == nil then
 		return
 	end
@@ -616,15 +652,21 @@ playerControls.exitVehicle = function(self, player)
 	player.Scale = 0.5
 	player.Velocity = Number3.Zero
 
-	Camera:SetModeThirdPerson(player)
-
-	Camera.FOV = cameraDefaultFOV
+	if player == Player then
+		Camera:SetModeThirdPerson(player)
+		Camera.FOV = cameraDefaultFOV
+	end
 
 	vehicle:RemoveFromParent()
 	self.vehicles[player.ID] = nil
 end
 
 playerControls.walk = function(self, player)
+	if self.current[player.ID] == "walk" then
+		return -- already walking
+	end
+	self.current[player.ID] = "walk"
+
 	self:exitVehicle(player)
 
 	if player == Player then
@@ -637,79 +679,52 @@ playerControls.walk = function(self, player)
 		self.dirPad = function(x, y)
 			Player.Motion = (Player.Forward * y + Player.Right * x) * 50
 		end
+		updateSync()
 	end
 end
 
 local GLIDER_MAX_SPEED_FOR_EFFECTS = 80 -- speed can be above that, but used for visual effects
 local GLIDER_MAX_SPEED = 200
 local GLIDER_WING_LENGTH = 24
-local GLIDER_MAX_START_SPEED = 40
+local GLIDER_MAX_START_SPEED = 50
+local GLIDER_DRAG_DOWN = Number3(0, -5, 0)
 
 playerControls.glide = function(self, player)
+	if self.current[player.ID] == "glide" then
+		return -- already gliding
+	end
+	self.current[player.ID] = "glide"
+
 	self:exitVehicle(player)
 
-	local yaw = Rotation(0, 0, 0)
-	local yawDelta = Rotation(0, 0, 0)
+	local vehicle = Object()
+	vehicle.Scale = 0.5
+	vehicle:SetParent(World)
+	vehicle.type = "glider"
 
-	local tilt = Rotation(0, 0, 0)
-	local tiltDelta = Rotation(0, 0, 0)
-
-	local roll = Rotation(0, 0, 0)
-	local rollDelta = Rotation(0, 0, 1)
+	self.vehicles[player.ID] = vehicle
 
 	local glider = self:getShape("voxels.glider")
 	glider.Physics = PhysicsMode.Disabled
 
-	local vehicle = Object()
-	local vehicleRoll = Object()
-	vehicleRoll.Physics = PhysicsMode.Disabled
-	vehicleRoll:SetParent(vehicle)
-	glider:SetParent(vehicleRoll)
-	glider.LocalRotation = { 0, math.rad(180), 0 }
-
-	self.vehicles[player.ID] = vehicle
-
-	vehicle:SetParent(World)
-
 	vehicle.Position = player:PositionLocalToWorld({ 0, player.BoundingBox.Max.Y - 2, 0 })
-
-	yaw:Set(0, player.Rotation.Y, 0)
-
-	vehicle.Rotation = { 0, player.Rotation.Y, 0 }
-	vehicle.Scale = 0.5
-	vehicle.Velocity = player.Motion + player.Velocity -- initial velocity
-	local l = vehicle.Velocity.Length
-	vehicle.Velocity.Length = math.min(l, GLIDER_MAX_START_SPEED)
-
-	player.Physics = PhysicsMode.Disabled
-	player:SetParent(vehicleRoll, true)
-	player.Scale = 1.0
-	player.Motion:Set(0, 0, 0)
 
 	glider.Scale = 0
 	ease:cancel(glider)
 	ease:outElastic(glider, 0.3).Scale = Number3(1, 1, 1)
 
-	player.Head.LocalRotation = { 0, 0, 0 }
-
-	if Player.Animations.LiftRight then
-		Player.Animations.LiftRight:Play()
+	if player.Animations.LiftArms then
+		player.Animations.LiftArms:Play()
 	end
-	if Player.Animations.LiftLeft then
-		Player.Animations.LiftLeft:Play()
-	end
-
-	require("camera_modes"):setThirdPerson({ target = vehicle, rotationOffset = Rotation(math.rad(20), 0, 0) })
 
 	vehicle.Physics = PhysicsMode.Dynamic
 	vehicle.Acceleration = -Config.ConstantAcceleration
+	vehicle.Motion:Set(GLIDER_DRAG_DOWN) -- constantly going down
 
 	local rightTrail = wingTrail:create({ scale = 0.5 })
-	rightTrail:SetParent(vehicleRoll)
 	rightTrail.LocalPosition = { GLIDER_WING_LENGTH, 8, 0 }
 
 	local leftTrail = wingTrail:create({ scale = 0.5 })
-	leftTrail:SetParent(vehicleRoll)
 	leftTrail.LocalPosition = { -GLIDER_WING_LENGTH, 8, 0 }
 
 	vehicle.wingTrails = {}
@@ -728,52 +743,95 @@ playerControls.glide = function(self, player)
 	local speedOverMax
 	local f
 
-	vehicle.Tick = function(o, dt)
-		rightWingTip = vehicleRoll:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
-		leftWingTip = vehicleRoll:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
+	vehicle.Rotation:Set(0, player.Rotation.Y, 0)
+	vehicle.Velocity = player.Motion + player.Velocity * 0.1 -- initial velocity
+	local l = vehicle.Velocity.Length
+	vehicle.Velocity.Length = math.min(l, GLIDER_MAX_START_SPEED)
 
-		diffY = leftWingTip.Y - rightWingTip.Y
+	player.Head.LocalRotation = { 0, 0, 0 }
 
-		maxDiff = GLIDER_WING_LENGTH * 2
-		p = math.abs(diffY / maxDiff)
+	player.Motion:Set(0, 0, 0)
+	player.Velocity:Set(0, 0, 0)
+	player.Physics = PhysicsMode.Disabled
+	player.Scale = 1.0
 
-		if diffY < 0 then
-			leftLift = 0.5 + p * 0.5
-			rightLift = 1.0 - leftLift
-		else
-			rightLift = 0.5 + p * 0.5
-			leftLift = 1.0 - rightLift
+	if player == Player then -- local simulation
+		local yaw = Rotation(0, 0, 0)
+		local yawDelta = Rotation(0, 0, 0)
+
+		local tilt = Rotation(0, 0, 0)
+		local tiltDelta = Rotation(0, 0, 0)
+
+		local roll = Rotation(0, 0, 0)
+		local rollDelta = Rotation(0, 0, 1)
+
+		local vehicleRoll = Object()
+		vehicleRoll.Velocity = Number3.Zero
+		vehicleRoll.Physics = PhysicsMode.Disabled
+		vehicleRoll:SetParent(vehicle)
+		glider:SetParent(vehicleRoll)
+		glider.LocalRotation = { 0, math.rad(180), 0 }
+
+		vehicle.roll = vehicleRoll -- used for sync
+
+		yaw:Set(0, player.Rotation.Y, 0)
+
+		player:SetParent(vehicleRoll, true)
+		player.LocalRotation:Set(Number3.Zero)
+		player.LocalPosition:Set(0, -27, 0)
+
+		rightTrail:SetParent(vehicleRoll)
+		leftTrail:SetParent(vehicleRoll)
+
+		vehicleRoll.Velocity:Set(vehicle.Velocity) -- copying for sync (physics disabled on vehicleRoll)
+
+		vehicle.Tick = function(o, dt)
+			rightWingTip = vehicleRoll:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
+			leftWingTip = vehicleRoll:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
+
+			diffY = leftWingTip.Y - rightWingTip.Y
+
+			maxDiff = GLIDER_WING_LENGTH * 2
+			p = math.abs(diffY / maxDiff)
+
+			if diffY < 0 then
+				leftLift = 0.5 + p * 0.5
+				rightLift = 1.0 - leftLift
+			else
+				rightLift = 0.5 + p * 0.5
+				leftLift = 1.0 - rightLift
+			end
+
+			l = o.Velocity.Length
+
+			yawDelta.Y = diffY * dt * 0.001 * 70
+			yaw = yawDelta * yaw
+
+			o.Rotation = yaw * tilt
+
+			down = math.max(0, o.Forward:Dot(Number3.Down)) -- 0 -> 1
+			up = math.max(0, o.Forward:Dot(Number3.Up))
+
+			-- accelerate when facing down / lose more velocity when going up
+			l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
+
+			l = math.max(l, 0) -- speed can't be below 0
+			l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
+
+			o.Velocity:Set(o.Forward * l)
+			vehicleRoll.Velocity:Set(o.Velocity) -- copying for sync (physics disabled on vehicleRoll)
+
+			-- EFFECTS
+			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
+			Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
+
+			f = 0.2 * speedOverMax
+			rightTrail:setColor(Color(255, 255, 255, rightLift * f))
+			leftTrail:setColor(Color(255, 255, 255, leftLift * f))
 		end
 
-		l = o.Velocity.Length
+		require("camera_modes"):setThirdPerson({ target = vehicle, rotationOffset = Rotation(math.rad(20), 0, 0) })
 
-		yawDelta.Y = diffY * dt * 0.001 * 70
-		yaw = yawDelta * yaw
-
-		o.Rotation = yaw * tilt
-
-		down = math.max(0, o.Forward:Dot(Number3.Down)) -- 0 -> 1
-		up = math.max(0, o.Forward:Dot(Number3.Up))
-
-		-- accelerate when facing down / lose more velocity when going up
-		l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
-
-		l = math.max(l, 0) -- speed can't be below 0
-		l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
-
-		o.Velocity = o.Forward * l
-		o.Motion = { 0, -5, 0 } -- constantly going down
-
-		-- EFFECTS
-		speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
-		Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
-
-		f = 0.2 * speedOverMax
-		rightTrail:setColor(Color(255, 255, 255, rightLift * f))
-		leftTrail:setColor(Color(255, 255, 255, leftLift * f))
-	end
-
-	if player == Player then
 		self.onDrag = function(pe)
 			rollDelta.Z = -pe.DX * 0.01
 			tiltDelta.X = -pe.DY * 0.01
@@ -782,12 +840,64 @@ playerControls.glide = function(self, player)
 			tilt = tiltDelta * tilt
 
 			vehicle.Rotation = yaw * tilt
-			vehicleRoll.LocalRotation = roll
+			vehicleRoll.LocalRotation = roll -- triggers sync
 		end
-		self.dirPad = function(_, y)
-			-- vehicle.targetSpeed = math.max(GLIDER_MIN_SPEED, y * GLIDER_MAX_SPEED)
+		self.dirPad = function(_, _)
+			-- nothing to do, just turning off walk controls
+		end
+		updateSync()
+	else -- distant player
+		glider:SetParent(vehicle)
+		glider.LocalRotation = { 0, math.rad(180), 0 }
+
+		player:SetParent(vehicle, true)
+		player.LocalRotation:Set(Number3.Zero)
+		player.LocalPosition:Set(0, -27, 0)
+
+		rightTrail:SetParent(vehicle)
+		leftTrail:SetParent(vehicle)
+
+		vehicle.Tick = function(o, dt)
+			rightWingTip = vehicle:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
+			leftWingTip = vehicle:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
+
+			diffY = leftWingTip.Y - rightWingTip.Y
+
+			maxDiff = GLIDER_WING_LENGTH * 2
+			p = math.abs(diffY / maxDiff)
+
+			if diffY < 0 then
+				leftLift = 0.5 + p * 0.5
+				rightLift = 1.0 - leftLift
+			else
+				rightLift = 0.5 + p * 0.5
+				leftLift = 1.0 - rightLift
+			end
+
+			l = o.Velocity.Length
+
+			down = math.max(0, vehicle.Forward:Dot(Number3.Down)) -- 0 -> 1
+			up = math.max(0, vehicle.Forward:Dot(Number3.Up))
+
+			-- accelerate when facing down / lose more velocity when going up
+			l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
+
+			l = math.max(l, 0) -- speed can't be below 0
+			l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
+
+			vehicle.Velocity:Set(o.Forward * l)
+
+			-- EFFECTS
+			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
+			Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
+
+			f = 0.2 * speedOverMax
+			rightTrail:setColor(Color(255, 255, 255, rightLift * f))
+			leftTrail:setColor(Color(255, 255, 255, leftLift * f))
 		end
 	end
+
+	return vehicle
 end
 
 function createDraft(pos, width, depth, height, strength)
@@ -855,4 +965,54 @@ function createDraft(pos, width, depth, height, strength)
 	-- end
 
 	return o
+end
+
+-- UTILS
+
+function stringStartsWith(str, prefix)
+	return string.sub(str, 1, string.len(prefix)) == prefix
+end
+
+function stringRemovePrefix(str, prefix)
+	if string.sub(str, 1, string.len(prefix)) == prefix then
+		return string.sub(str, string.len(prefix) + 1)
+	else
+		return str
+	end
+end
+
+function addPlayerAnimations(player)
+	local animLiftArms = Animation("LiftArms", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
+	local liftRightArm = {
+		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
+		{ time = 1.0, rotation = { 0, 0, math.rad(30) } },
+	}
+	local liftRightHand = {
+		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
+		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(-30) } },
+	}
+	local liftLeftArm = {
+		{ time = 0.0, rotation = { 0, 0, 1.0472 } },
+		{ time = 1.0, rotation = { 0, 0, math.rad(-30) } },
+	}
+	local liftLeftHand = {
+		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
+		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(30) } },
+	}
+	local animLiftRightConfig = {
+		RightArm = liftRightArm,
+		RightHand = liftRightHand,
+		LeftArm = liftLeftArm,
+		LeftHand = liftLeftHand,
+	}
+	for name, v in pairs(animLiftRightConfig) do
+		for _, frame in ipairs(v) do
+			animLiftArms:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
+			animLiftArms:Bind(
+				name,
+				(name == "Body" and not player.Avatar[name]) and player.Avatar or player.Avatar[name]
+			)
+		end
+	end
+	player.Animations.LiftArms = animLiftArms
 end
