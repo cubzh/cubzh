@@ -492,6 +492,7 @@ function addCollectibles()
 			{ ID = 10, Position = Number3(453, 472, 156) },
 		}
 
+		-- Glider backpack (blue)
 		local defaultBackpackConfig = {
 			scale = 0.75,
 			rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
@@ -585,12 +586,15 @@ function addCollectibles()
 					end
 
 					if #collectedGliderParts >= #gliderParts then
+						-- the last glider part has been collected
 						unlockGlider()
+					else
+						-- a glider part has been collected
+						require("ui_toast"):create({
+							message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
+							iconShape = bundle.Shape("voxels.glider_parts"),
+						})
 					end
-
-					-- if #collectedGliderParts == 1 then
-					-- 	unlockGlider()
-					-- end
 				end,
 			}
 			for _, v in ipairs(gliderParts) do
