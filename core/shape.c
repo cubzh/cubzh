@@ -1742,9 +1742,13 @@ VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent
 
 // MARK: - Physics -
 
+Rtree *shape_get_rtree(const Shape *shape) {
+    vx_assert(shape != NULL);
+    return shape->rtree;
+}
+
 RigidBody *shape_get_rigidbody(const Shape *s) {
     vx_assert(s != NULL);
-    vx_assert(s->transform != NULL);
     return transform_get_rigidbody(s->transform);
 }
 

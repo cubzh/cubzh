@@ -1069,7 +1069,6 @@ bool debug_rtree_integrity_check(Rtree *r) {
     DoublyLinkedList *toExamine = doubly_linked_list_new();
     DoublyLinkedListNode *n;
     RtreeNode *rn, *child, *rbLeaf;
-    uint16_t level = 0;
     Transform *t;
     Shape *s;
     RigidBody *rb;
@@ -1119,6 +1118,12 @@ bool debug_rtree_integrity_check(Rtree *r) {
             }
         }
 
+        const size_t childrenCount = doubly_linked_list_node_count(rn->children);
+        if (rn->count != childrenCount) {
+            cclog_debug("⚠️⚠️⚠️debug_rtree_integrity_check: mismatched children count");
+            success = false;
+        }
+
         n = doubly_linked_list_first(rn->children);
         while (n != NULL) {
             child = (RtreeNode *)doubly_linked_list_node_pointer(n);
@@ -1135,8 +1140,6 @@ bool debug_rtree_integrity_check(Rtree *r) {
 
             n = doubly_linked_list_node_next(n);
         }
-
-        level++;
     }
 
     doubly_linked_list_free(toExamine);

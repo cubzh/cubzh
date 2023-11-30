@@ -35,6 +35,7 @@ typedef struct _Scene Scene;
 typedef struct _Transform Transform;
 typedef struct _VertexBuffer VertexBuffer;
 typedef struct _Chunk Chunk;
+typedef struct _Rtree Rtree;
 
 typedef struct _LoadShapeSettings {
     bool lighting;
@@ -265,6 +266,7 @@ VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent
 
 // MARK: - Physics -
 
+Rtree *shape_get_rtree(const Shape *shape);
 RigidBody *shape_get_rigidbody(const Shape *s);
 bool shape_ensure_rigidbody(Shape *s,
                             const uint16_t groups,
