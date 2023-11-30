@@ -359,11 +359,11 @@ local statesSettings = {
 			placingObj.currentlyEditedBy = Player
 			setState(states.UPDATING_OBJECT, placingObj)
 		end,
-		-- pointerWheelPriority = function(delta)
-		-- 	worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
-		-- 	worldEditor.placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
-		-- 	return true
-		-- end
+		pointerWheelPriority = function(delta)
+			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
+			worldEditor.placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+			return true
+		end
 	},
 	-- UPDATING_OBJECT
 	{
@@ -411,47 +411,58 @@ local statesSettings = {
 			end)
 
 			-- Rotation
-			local uiGizmoRotation = require("ui_gizmo_rotation"):create({
-				shape = worldEditor.object,
-				onRotate = function()
-					sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
-				end
-			})
-			worldEditor.uiGizmoRotation = uiGizmoRotation
-			uiGizmoRotation.parentDidResize = function()
-				if not Client.IsMobile then
-					uiGizmoRotation.Size = math.min(250, Screen.Height * 0.3)
-					uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
-				else
-					if Screen.Width < Screen.Height then
-						uiGizmoRotation.Size = 130
-						local actionButton1 = require("controls"):getActionButton(1)
-						uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height+ padding * 2 }
+			if not worldEditor.uiGizmoRotation then
+				local uiGizmoRotation = require("ui_gizmo_rotation"):create({
+					shape = worldEditor.object,
+					onRotate = function()
+						sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
+					end
+				})
+				worldEditor.uiGizmoRotation = uiGizmoRotation
+				uiGizmoRotation.parentDidResize = function()
+					if not Client.IsMobile then
+						uiGizmoRotation.Size = math.min(250, Screen.Height * 0.3)
+						uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
 					else
-						uiGizmoRotation.Size = 130
-						local actionButton1 = require("controls"):getActionButton(1)
-						uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height + padding * 2 }
+						if Screen.Width < Screen.Height then
+							uiGizmoRotation.Size = 130
+							local actionButton1 = require("controls"):getActionButton(1)
+							uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height+ padding * 2 }
+						else
+							uiGizmoRotation.Size = 130
+							local actionButton1 = require("controls"):getActionButton(1)
+							uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height + padding * 2 }
+						end
 					end
 				end
+				uiGizmoRotation:parentDidResize()
+			else
+				worldEditor.uiGizmoRotation:setShape(worldEditor.object)
+				worldEditor.uiGizmoRotation:show()
 			end
-			uiGizmoRotation:parentDidResize()
 
 			-- Scale
 			if not worldEditor.scaleButton then
-				-- REPRO HERE
-				worldEditor.scaleButton = require("uikit"):createButton("Scale")
+				worldEditor.scaleButton = require("uikit"):createButton("< Scale >")
+				local startX = nil
+				worldEditor.scaleButton.onPress = function(_, _, _, pe)
+					startX = pe.X
+				end
+				worldEditor.scaleButton.onDrag = function(_, pe)
+					worldEditor.object.Scale = worldEditor.object.Scale + (pe.X - startX) * 3
+					startX = pe.X
+				end
 			end
 		end,
 		tick = function()
-			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0,1,1))
+			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0,10,0) + Player.Right * 5)
             local v = worldEditor.object.Position - Camera.Position
             local isVisible = Camera.Forward:Dot(v) >= 0
             if p and isVisible then
-				worldEditor.scaleButton:hide()
-				worldEditor.scaleButton.pos = { p.X * Screen.Width, p.Y * Screen.Height }
-				print(worldEditor.scaleButton.pos)
-            else
 				worldEditor.scaleButton:show()
+				worldEditor.scaleButton.pos = { p.X * Screen.Width, p.Y * Screen.Height }
+            else
+				worldEditor.scaleButton:hide()
             end
 		end,
 		pointerUp = function(pe)
@@ -459,7 +470,8 @@ local statesSettings = {
 			tryPickObject(pe)
 		end,
 		onStateEnd = function()
-			worldEditor.uiGizmoRotation:remove()
+			worldEditor.uiGizmoRotation:hide()
+			worldEditor.scaleButton:hide()
 			if worldEditor.object then
 				unfreezeObject(worldEditor.object)
 			end
@@ -469,11 +481,11 @@ local statesSettings = {
 			sendToServer(events.P_END_EDIT_OBJECT, { uuid = worldEditor.object.uuid })
 			worldEditor.object = nil
 		end,
-		-- pointerWheelPriority = function(delta)
-		-- 	worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
-		-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
-		-- 	return true
-		-- end
+		pointerWheelPriority = function(delta)
+			worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
+			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
+			return true
+		end
 	},
 	-- DUPLICATE_OBJECT
 	{
@@ -798,16 +810,17 @@ initDefaultMode = function()
 	local defaultStateUIConfig = {
 		{
 			text = "➕ Object",
-			pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding * 2 } end,
+			pos = function(btn) return { Screen.Width * 0.5 - btn.Width * 0.5, padding * 2 } end,
+			-- pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding * 2 } end,
 			state = states.GALLERY,
 			name = "addBtn"
 		},
-		{
-			text = "🖌 Map",
-			pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding * 2 } end,
-			state = states.EDIT_MAP,
-			name = "editMapBtn"
-		}
+		-- {
+		-- 	text = "🖌 Map",
+		-- 	pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding * 2 } end,
+		-- 	state = states.EDIT_MAP,
+		-- 	name = "editMapBtn"
+		-- }
 	}
 
 	for _,config in ipairs(defaultStateUIConfig) do

@@ -41,13 +41,13 @@ local create = function(_, config)
 		end
 		handle.Pivot = { 0.5, 0.5, 0.5 }
 
-		uiAxis.onPress = function()
-			diff = 0
+		uiAxis.onPress = function(_, _, _, pe)
+			diff = pe.X
 		end
-		uiAxis.onDrag = function(_, x, _)
-			shape:RotateWorld(shape[config.vector], (diff - x) * 0.01)
+		uiAxis.onDrag = function(_, pe)
+			shape:RotateWorld(shape[config.vector], (diff - pe.X) * 6)
 			shape.Rotation = shape.Rotation -- trigger onsetcallback
-			diff = x
+			diff = pe.X
 			if onRotate then
 				onRotate(shape.Rotation)
 			end
@@ -82,7 +82,6 @@ local create = function(_, config)
 		end)
 	end
 
-    -- TODO: cancel this on remove
 	LocalEvent:Listen(LocalEvent.Name.Tick, function()
 		for _,axis in ipairs(axisList) do
 			local newRotation = -Camera.Rotation * shape.Rotation
@@ -92,37 +91,45 @@ local create = function(_, config)
 
 	local rotateUpdateUI
 
-	-- local xInput = ui:createTextInput(math.deg(shape.Rotation.X), "X")
-	-- xInput.onSubmit = function()
-	-- 	shape.LocalRotation.X = math.rad(math.ceil(tonumber(xInput.Text)))
-	-- 	rotateUpdateUI()
-	-- end
-	-- local xText = ui:createButton("X")
-	-- xText.Height = xInput.Height
-	-- xText.onRelease = function()
-	-- 	xInput:focus()
-	-- end
-	-- xText:setColor(Color.Red)
-	-- local yInput = ui:createTextInput(math.deg(shape.Rotation.Y), "Y")
-	-- yInput.onSubmit = function()
-	-- 	shape.LocalRotation.Y = math.rad(math.ceil(tonumber(yInput.Text)))
-	-- 	rotateUpdateUI()
-	-- end
-	-- local yText = ui:createButton("Y")
-	-- yText.onRelease = function()
-	-- 	yInput:focus()
-	-- end
-	-- yText:setColor(Color.Green)
-	-- local zInput = ui:createTextInput(math.deg(shape.Rotation.Z), "Z")
-	-- zInput.onSubmit = function()
-	-- 	shape.LocalRotation.Z = math.rad(math.ceil(tonumber(zInput.Text)))
-	-- 	rotateUpdateUI()
-	-- end
-	-- local zText = ui:createButton("Z")
-	-- zText.onRelease = function()
-	-- 	zInput:focus()
-	-- end
-	-- zText:setColor(Color.Blue)
+	local xInput
+	local xText
+	local yInput
+	local yText
+	local zInput
+	local zText
+	if not Client.IsMobile then
+		xInput = ui:createTextInput(math.deg(shape.Rotation.X), "X")
+		xInput.onSubmit = function()
+			shape.LocalRotation.X = math.rad(math.ceil(tonumber(xInput.Text)))
+			rotateUpdateUI()
+		end
+		xText = ui:createButton("X")
+		xText.Height = xInput.Height
+		xText.onRelease = function()
+			xInput:focus()
+		end
+		xText:setColor(Color.Red)
+		yInput = ui:createTextInput(math.deg(shape.Rotation.Y), "Y")
+		yInput.onSubmit = function()
+			shape.LocalRotation.Y = math.rad(math.ceil(tonumber(yInput.Text)))
+			rotateUpdateUI()
+		end
+		yText = ui:createButton("Y")
+		yText.onRelease = function()
+			yInput:focus()
+		end
+		yText:setColor(Color.Green)
+		zInput = ui:createTextInput(math.deg(shape.Rotation.Z), "Z")
+		zInput.onSubmit = function()
+			shape.LocalRotation.Z = math.rad(math.ceil(tonumber(zInput.Text)))
+			rotateUpdateUI()
+		end
+		zText = ui:createButton("Z")
+		zText.onRelease = function()
+			zInput:focus()
+		end
+		zText:setColor(Color.Blue)
+	end
 
 	rotateUpdateUI = function()
 		if not shape or not xInput then return end
@@ -130,7 +137,7 @@ local create = function(_, config)
 		yInput.Text = math.floor(math.deg(math.abs(shape.Rotation.Y)))
 		zInput.Text = math.floor(math.deg(math.abs(shape.Rotation.Z)))
 	end
-	node.setShape = function(self, newShape)
+	node.setShape = function(_, newShape)
 		if shape then
 			shape.Rotation:RemoveOnSetCallback(rotateUpdateUI)
 		end
@@ -140,36 +147,38 @@ local create = function(_, config)
 	end
 	node:setShape(shape)
 
-	-- local inputsContainer = require("ui_container"):createHorizontalContainer()
-	-- inputsContainer:pushElement(xText)
-	-- inputsContainer:pushElement(xInput)
-	-- inputsContainer:pushElement(yText)
-	-- inputsContainer:pushElement(yInput)
-	-- inputsContainer:pushElement(zText)
-	-- inputsContainer:pushElement(zInput)
+	if not Client.IsMobile then
+		local inputsContainer = require("ui_container"):createHorizontalContainer()
+		inputsContainer:pushElement(xText)
+		inputsContainer:pushElement(xInput)
+		inputsContainer:pushElement(yText)
+		inputsContainer:pushElement(yInput)
+		inputsContainer:pushElement(zText)
+		inputsContainer:pushElement(zInput)
 
-	-- inputsContainer.parentDidResize = function()
-	-- 	xInput.Width = (node.Width - xText.Width * 3 - padding * 2) / 3
-	-- 	yInput.Width = xInput.Width
-	-- 	zInput.Width = xInput.Width
+		inputsContainer.parentDidResize = function()
+			xInput.Width = (node.Width - xText.Width * 3 - padding * 2) / 3
+			yInput.Width = xInput.Width
+			zInput.Width = xInput.Width
 
-	-- 	xText.Height = xInput.Height
-	-- 	yText.Height = yInput.Height
-	-- 	zText.Height = zInput.Height
-    --     inputsContainer.pos = { 0, -inputsContainer.Height, 0 }
-	-- 	inputsContainer:refresh()
-	-- end
+			xText.Height = xInput.Height
+			yText.Height = yInput.Height
+			zText.Height = zInput.Height
+			inputsContainer.pos = { 0, -inputsContainer.Height, 0 }
+			inputsContainer:refresh()
+		end
 
-    -- node.showInputs = function()
-    --     inputsContainer:show()
-    -- end
+		node.showInputs = function()
+			inputsContainer:show()
+		end
 
-    -- node.hideInputs = function()
-    --     inputsContainer:hide()
-    -- end
+		node.hideInputs = function()
+			inputsContainer:hide()
+		end
 
-    -- node.inputs = inputsContainer
-	-- inputsContainer:setParent(node)
+		node.inputs = inputsContainer
+		inputsContainer:setParent(node)
+	end
 
 	return node
 end
