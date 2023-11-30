@@ -32,13 +32,17 @@ mod.create = function(_, config)
 
 	if config.center then
 		if centerToast then
-			centerToast.removeTimer:Cancel()
+			if centerToast.removeTimer then
+				centerToast.removeTimer:Cancel()
+			end
 			centerToast:remove()
 		end
 		centerToast = toast
 	else
 		if topRightToast then
-			topRightToast.removeTimer:Cancel()
+			if centerToast.removeTimer then
+				topRightToast.removeTimer:Cancel()
+			end
 			topRightToast:remove()
 		end
 		topRightToast = toast

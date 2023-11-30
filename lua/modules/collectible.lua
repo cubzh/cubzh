@@ -53,7 +53,16 @@ collectibleOnCollisionBegin = function(collectibleObject, other)
 	config:onCollisionBegin()
 end
 
-collectibleOnCollisionEnd = function(_, _) end
+collectibleOnCollisionEnd = function(collectibleObject, other)
+	if other ~= Player then
+		return
+	end
+	local config = pool[collectibleObject]
+	if config == nil then
+		return -- config not found
+	end
+	config:onCollisionEnd()
+end
 
 collectible.create = function(_, config)
 	local bundle = require("bundle")
