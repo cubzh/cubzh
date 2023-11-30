@@ -697,7 +697,14 @@ playerControls.exitVehicle = function(self, player)
 		Camera.FOV = cameraDefaultFOV
 	end
 
-	vehicle:RemoveFromParent()
+	vehicle:SetParent(World, true)
+	vehicle.Physics = PhysicsMode.Disabled
+	ease:linear(vehicle, 0.3, {
+		onDone = function(o)
+			o:RemoveFromParent()
+		end,
+	}).Scale = Number3.Zero
+
 	self.vehicles[player.ID] = nil
 end
 
@@ -825,6 +832,14 @@ playerControls.glide = function(self, player)
 		leftTrail:SetParent(vehicleRoll)
 
 		vehicleRoll.Velocity:Set(vehicle.Velocity) -- copying for sync (physics disabled on vehicleRoll)
+
+		vehicle.CollisionBox = Box({ -10, -30, -10 }, { 10, 14, 10 })
+		vehicle.CollidesWithGroups = Map.CollisionGroups + vehicle.CollisionGroups
+		vehicle.CollisionGroups = {}
+
+		vehicle.OnCollisionBegin = function(_, _)
+			playerControls:walk(player)
+		end
 
 		vehicle.Tick = function(o, dt)
 			rightWingTip = vehicleRoll:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
