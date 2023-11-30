@@ -930,7 +930,6 @@ playerControls.glide = function(self, player)
 
 			-- EFFECTS
 			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
-			Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
 
 			f = 0.2 * speedOverMax
 			rightTrail:setColor(Color(255, 255, 255, rightLift * f))
