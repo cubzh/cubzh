@@ -13,19 +13,23 @@ local mod = {}
 mod.create = function(_, config)
 	local DEFAULT_CONFIG = {
 		message = "hello!",
+		maxWidth = nil,
 		center = false,
 		iconShape = nil,
-		duration = 4.0, -- in seconds
 		animationSpeed = 250, -- in points per second
+		duration = 4.0, -- in seconds
 	}
 
 	config = require("config"):merge(DEFAULT_CONFIG, config, {
 		acceptTypes = {
+			maxWidth = { "number", "integer" },
 			iconShape = { "Shape", "MutableShape" },
 		},
 	})
 
-	local toast = uikit:createFrame(Color.Black)
+	local toast = {}
+	local toastFrame = uikit:createFrame(Color.Black)
+	toast.frame = toastFrame
 
 	if config.center then
 		if centerToast then
@@ -43,67 +47,85 @@ mod.create = function(_, config)
 
 	-- Create text
 	local text = uikit:createText(config.message, Color.White)
-	text:setParent(toast)
+	text:setParent(toastFrame)
+	-- apply max width if specified
+	if config.maxWidth then
+		text.object.MaxWidth = config.maxWidth
+	end
 
 	-- Create icon (optional)
 	local iconFrame
 	if config.iconShape then
 		iconFrame = uikit:createShape(config.iconShape, { spherized = true })
-		iconFrame:setParent(toast)
+		iconFrame:setParent(toastFrame)
 	end
 
 	-- Setup toast layout, size, and position
-	toast.parentDidResize = function(_)
+	toastFrame.parentDidResize = function(_)
 		if iconFrame then
 			-- icon + text
 			local toastHeight = text.Size.Y + (PADDING * 1.5)
 			iconFrame.Size = Number2(toastHeight, toastHeight)
-			toast.Size = Number2(iconFrame.Size.X + text.Size.X + (PADDING * 2), toastHeight)
+			toastFrame.Size = Number2(iconFrame.Size.X + text.Size.X + (PADDING * 2), toastHeight)
 			iconFrame.position = Number2(PADDING, 0)
 			text.position.X = iconFrame.position.X + iconFrame.Size.X
-			text.position.Y = toast.Size.Y / 2 - text.Size.Y / 2
+			text.position.Y = toastFrame.Size.Y / 2 - text.Size.Y / 2
 		else
 			-- text only
-			toast.Size = text.Size + Number2(PADDING * 1.5, PADDING * 1.5)
-			text.position = toast.Size / 2 - text.Size / 2
+			toastFrame.Size = text.Size + Number2(PADDING * 1.5, PADDING * 1.5)
+			text.position = toastFrame.Size / 2 - text.Size / 2
 		end
 
 		local toastPosition
 		if config.center then
-			toastPosition = Screen.Size / 2 - toast.Size / 2
+			toastPosition = Screen.Size / 2 - toastFrame.Size / 2
 		else
-			toastPosition = Screen.Size - toast.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+			toastPosition = Screen.Size - toastFrame.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
 		end
-		toast.position = toastPosition
+		toastFrame.position = toastPosition
 	end
-	toast:parentDidResize()
+	toastFrame:parentDidResize()
 
 	-- Animate toast
 	local toastPosition
 	local animationDuration
 	if config.center then
-		local animationDistance = toast.Height * 2
-		toastPosition = Screen.Size / 2 - toast.Size / 2
-		toast.position = toastPosition - Number2(0, animationDistance)
+		local animationDistance = toastFrame.Height * 2
+		toastPosition = Screen.Size / 2 - toastFrame.Size / 2
+		toastFrame.position = toastPosition - Number2(0, animationDistance)
 		animationDuration = animationDistance / config.animationSpeed
 	else
-		toastPosition = Screen.Size - toast.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
-		toast.position = toastPosition + Number2(toast.Width, 0)
-		animationDuration = toast.Width / config.animationSpeed
+		toastPosition = Screen.Size - toastFrame.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+		toastFrame.position = toastPosition + Number2(toastFrame.Width, 0)
+		animationDuration = toastFrame.Width / config.animationSpeed
 	end
-	ease:cancel(toast)
-	ease:outBack(toast, animationDuration).position = Number3(toastPosition.X, toastPosition.Y, 0)
+	ease:cancel(toastFrame)
+	ease:outBack(toastFrame, animationDuration).position = Number3(toastPosition.X, toastPosition.Y, 0)
 
-	-- Remove toast after a while
-	toast.removeTimer = Timer(config.duration, function()
-		if toast == centerToast then
+	-- If a duration has been specified (positive value), remove toast after a while
+	if config.duration ~= nil and config.duration >= 0 then
+		toastFrame.removeTimer = Timer(config.duration, function()
+			if toastFrame == centerToast then
+				centerToast = nil
+			elseif toastFrame == topRightToast then
+				topRightToast = nil
+			end
+			toastFrame.removeTimer = nil
+			toastFrame:remove()
+		end)
+	end
+
+	-- Provide a function to remove the toast
+	toast.remove = function(p_toast)
+		if p_toast == centerToast then
 			centerToast = nil
-		elseif toast == topRightToast then
+		elseif p_toast == topRightToast then
 			topRightToast = nil
 		end
-		toast.removeTimer = nil
-		toast:remove()
-	end)
+		p_toast.frame:remove()
+	end
+
+	return toast
 end
 
 return mod

@@ -30,6 +30,8 @@ local MAX_AIR_JUMP_VELOCITY = 85
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
 local DEBUG = true
 
+local globalToast = nil
+
 Client.OnStart = function()
 	-- REQUIRE MODULES
 	collectible = require("collectible")
@@ -404,13 +406,12 @@ end
 holdTimer = nil
 
 function action1()
-	playerControls:walk(Player)
+	if globalToast then
+		globalToast:remove()
+		globalToast = nil
+	end
 
-	require("ui_toast"):create({
-		message = "Glider unlocked!",
-		center = false,
-		iconShape = bundle.Shape("voxels.glider_backpack"),
-	})
+	playerControls:walk(Player)
 
 	objectSkills.jump(Player)
 	-- Dev:CopyToClipboard("" .. Player.Position.X .. ", " .. Player.Position.Y .. ", " .. Player.Position.Z)
@@ -459,11 +460,16 @@ gliderUnlocked = false
 equipment = nil
 
 function unlockGlider()
-	print("GLIDER AVAILABLE!")
 	gliderUnlocked = true
 	for _, backpack in ipairs(gliderBackpackCollectibles) do
 		backpack.object.PrivateDrawMode = 0
 	end
+
+	require("ui_toast"):create({
+		message = "Glider unlocked!",
+		center = false,
+		iconShape = bundle.Shape("voxels.glider_backpack"),
+	})
 end
 
 function addCollectibles()
@@ -493,6 +499,14 @@ function addCollectibles()
 			position = Number3.Zero,
 			itemName = "voxels.glider_backpack",
 			onCollisionBegin = function(c)
+				-- globalToast = require("ui_toast"):create({
+				-- 	message = "Maintain jump key to start gliding!",
+				-- 	maxWidth = 200,
+				-- 	center = false,
+				-- 	iconShape = bundle.Shape("voxels.glider"),
+				-- 	duration = -1, -- negative duration means infinite
+				-- })
+
 				if gliderUnlocked then
 					collectParticles.Position = c.object.Position
 					collectParticles:spawn(20)
@@ -504,8 +518,18 @@ function addCollectibles()
 
 					equipment = "glider"
 					multi:action("equipGlider")
+
+					require("ui_toast"):create({
+						message = "Maintain jump key to start gliding!",
+						center = false,
+						iconShape = bundle.Shape("voxels.glider"),
+					})
 				else
-					print("NOT AVAILABLE YET")
+					require("ui_toast"):create({
+						message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
+						center = true,
+						iconShape = bundle.Shape("voxels.glider_parts"),
+					})
 				end
 			end,
 		}
