@@ -28,7 +28,7 @@ local MAX_AIR_JUMP_VELOCITY = 85
 -- VARIABLES
 
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
-local DEBUG = true
+local DEBUG = false
 
 local globalToast = nil
 
@@ -114,7 +114,6 @@ Client.OnStart = function()
 	-- Set camera for pre-authentication state (rotating while title screen is shown)
 
 	cameraDefaultFOV = Camera.FOV
-	print(cameraDefaultFOV)
 
 	Camera:SetModeFree()
 	Camera.Position = TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK * MAP_SCALE
