@@ -200,8 +200,15 @@ local receive = function(e)
 
 		local obj = linkedObjects[name]
 		if not obj then
-			-- TODO: call multi.linkRequest callback if set
-			return
+			if multi.linkRequest then
+				multi.linkRequest(name)
+				obj = linkedObjects[name]
+				if not obj then
+					return
+				end
+			else
+				return
+			end
 		end
 
 		if obj.multi == nil then
@@ -344,6 +351,11 @@ multi.sync = function(_, object, name, config)
 end
 
 multi.link = function(_, object, name)
+	if linkedObjects[name] ~= nil then
+		print("multi:", name, "is already linked!")
+		return
+	end
+
 	linkedObjects[name] = object
 	local parentBox = Object()
 	object.parentBox = parentBox
@@ -363,6 +375,7 @@ multi.link = function(_, object, name)
 		parentBox.CollidesWithGroups = object.CollidesWithGroups
 		parentBox.Bounciness = object.Bounciness
 		parentBox.Friction = object.Friction
+		parentBox.Acceleration = object.Acceleration
 	end
 
 	local parent = object.Parent or World
@@ -382,9 +395,33 @@ multi.link = function(_, object, name)
 end
 
 multi.unlink = function(_, name)
-	linkedObjects[name] = nil
-	if synced[name] ~= nil then
-		local object = synced[name]
+	local object = linkedObjects[name]
+
+	if object ~= nil then
+		-- restore object properties
+		local parentBox = object.parentBox
+		if parentBox then
+			object:SetParent(parentBox.Parent)
+			object.LocalPosition = parentBox.LocalPosition
+			object.LocalRotation = parentBox.LocalRotation
+
+			object.Physics = parentBox.Physics
+			object.CollisionGroups = parentBox.CollisionGroups
+			object.CollidesWithGroups = parentBox.CollidesWithGroups
+			object.Bounciness = parentBox.Bounciness
+			object.Friction = parentBox.Friction
+			object.Acceleration = parentBox.Acceleration
+
+			parentBox:SetParent(nil)
+			object.parentBox = nil
+		end
+
+		linkedObjects[name] = nil
+	end
+
+	object = synced[name]
+
+	if object ~= nil then
 		local config = object.config
 
 		-- remove onset triggers
@@ -467,10 +504,10 @@ end
 LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 	tick(dt)
 end)
-LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
+local onPlayerJoinListener = LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
 	initPlayer(p)
 end)
-LocalEvent:Listen(LocalEvent.Name.OnPlayerLeave, function(p)
+local onPlayerLeaveListener = LocalEvent:Listen(LocalEvent.Name.OnPlayerLeave, function(p)
 	removePlayer(p)
 end)
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
@@ -495,5 +532,16 @@ deprecateFunction("initPlayer")
 deprecateFunction("removePlayer")
 deprecateFunction("receive")
 deprecateFunction("tick")
+
+multi.doNotHandlePlayers = function(_)
+	if onPlayerJoinListener ~= nil then
+		onPlayerJoinListener:Remove()
+		onPlayerJoinListener = nil
+	end
+	if onPlayerLeaveListener ~= nil then
+		onPlayerLeaveListener:Remove()
+		onPlayerLeaveListener = nil
+	end
+end
 
 return multi
