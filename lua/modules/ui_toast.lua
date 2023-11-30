@@ -104,13 +104,13 @@ mod.create = function(_, config)
 
 	-- If a duration has been specified (positive value), remove toast after a while
 	if config.duration ~= nil and config.duration >= 0 then
-		toastFrame.removeTimer = Timer(config.duration, function()
+		toast.removeTimer = Timer(config.duration, function()
 			if toastFrame == centerToast then
 				centerToast = nil
 			elseif toastFrame == topRightToast then
 				topRightToast = nil
 			end
-			toastFrame.removeTimer = nil
+			toast.removeTimer = nil
 			toastFrame:remove()
 		end)
 	end
