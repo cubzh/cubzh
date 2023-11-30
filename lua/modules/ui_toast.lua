@@ -16,6 +16,7 @@ mod.create = function(_, config)
 		center = false,
 		iconShape = nil,
 		duration = 4.0, -- in seconds
+		animationSpeed = 250, -- in points per second
 	}
 
 	config = require("config"):merge(DEFAULT_CONFIG, config, {
@@ -79,15 +80,19 @@ mod.create = function(_, config)
 
 	-- Animate toast
 	local toastPosition
+	local animationDuration
 	if config.center then
+		local animationDistance = toast.Height * 2
 		toastPosition = Screen.Size / 2 - toast.Size / 2
-		toast.position = toastPosition - Number2(0, toast.Height)
+		toast.position = toastPosition - Number2(0, animationDistance)
+		animationDuration = animationDistance / config.animationSpeed
 	else
 		toastPosition = Screen.Size - toast.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
 		toast.position = toastPosition + Number2(toast.Width, 0)
+		animationDuration = toast.Width / config.animationSpeed
 	end
 	ease:cancel(toast)
-	ease:outBack(toast, 0.75).position = Number3(toastPosition.X, toastPosition.Y, 0)
+	ease:outBack(toast, animationDuration).position = Number3(toastPosition.X, toastPosition.Y, 0)
 
 	-- Remove toast after a while
 	toast.removeTimer = Timer(config.duration, function()
