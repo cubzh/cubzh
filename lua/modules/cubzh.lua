@@ -634,6 +634,10 @@ playerControls.exitVehicle = function(self, player)
 		return
 	end
 
+	if player.Animations.LiftArms then
+		player.Animations.LiftArms:Stop()
+	end
+
 	vehicle.Tick = nil
 
 	if vehicle.wingTrails then

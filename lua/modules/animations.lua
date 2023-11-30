@@ -184,9 +184,7 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		if anims ~= nil then
 			for name, anim in pairs(anims) do
 				if anim.IsPlaying == false then
-					if anim.RemoveWhenDone == true then
-						stopPlaying(animations, name)
-					end
+					stopPlaying(animations, name)
 				else
 					anim:Tick(dt)
 				end
