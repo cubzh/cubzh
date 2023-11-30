@@ -1087,8 +1087,6 @@ function createUI(system)
 		local backup = node._refresh
 		node._refresh = nil
 
-		local theme = require("uitheme").current
-
 		local padding = theme.padding
 		local border = theme.textInputBorderSize
 
@@ -1098,10 +1096,7 @@ function createUI(system)
 		local placeholder = node.placeholder
 		local str = node.string
 
-		local hiddenStr
-		if node.hiddenString then
-			hiddenStr = node.hiddenString
-		end
+		local hiddenStr = node.hiddenString
 
 		local cursor = node.cursor
 
@@ -1111,8 +1106,7 @@ function createUI(system)
 			placeholder:show()
 		end
 
-		local h
-		h = str.Height + paddingAndBorder * 2
+		local h = str.Height + paddingAndBorder * 2
 		node.border.Height = h
 		node.background.Height = h - theme.textInputBorderSize * 2
 
@@ -1123,29 +1117,31 @@ function createUI(system)
 
 		placeholder.pos = { padding, textContainer.Height * 0.5 - placeholder.Height * 0.5, 0 }
 		str.pos = { padding, textContainer.Height * 0.5 - str.Height * 0.5, 0 }
-		if hiddenStr ~= nil then
+		if hiddenStr then
 			hiddenStr.pos = str.pos
 		end
 
-		if node.state == State.Focused then
-			if str.Width > textContainer.Width - padding * 2 then
-				str.pos.X = padding - str.Width + (textContainer.Width - padding * 2)
-			end
-
-			if hiddenStr ~= nil and hiddenStr.Width > textContainer.Width - padding * 2 then
-				hiddenStr.pos.X = padding - hiddenStr.Width + (textContainer.Width - padding * 2)
-			end
-
-			cursor:show()
-			cursor.Height = str.Height
-
-			if hiddenStr ~= nil and hiddenStr:isVisible() then
-				cursor.pos = hiddenStr.pos + { hiddenStr.Width, 0, 0 }
-			else
-				cursor.pos = str.pos + { str.Width, 0, 0 }
-			end
-		else
+		if node.state ~= State.Focused then
 			cursor:hide()
+			node._refresh = backup
+			return
+		end
+
+		if str.Width > textContainer.Width - padding * 2 then
+			str.pos.X = padding - str.Width + (textContainer.Width - padding * 2)
+		end
+
+		if hiddenStr and hiddenStr.Width > textContainer.Width - padding * 2 then
+			hiddenStr.pos.X = padding - hiddenStr.Width + (textContainer.Width - padding * 2)
+		end
+
+		cursor:show()
+		cursor.Height = str.Height
+
+		if hiddenStr and hiddenStr:isVisible() then
+			cursor.pos = hiddenStr.pos + { hiddenStr.Width, 0, 0 }
+		else
+			cursor.pos = str.pos + { str.Width, 0, 0 }
 		end
 
 		node._refresh = backup
