@@ -55,8 +55,6 @@ Client.OnStart = function()
 	loadMap()
 	setAmbiance()
 
-	addCollectibles()
-
 	-- createDraft((SPAWN_IN_BLOCK + { 0, 2, 0 }) * MAP_SCALE, 50, 50, 200, 600)
 	-- createDraft(Number3(107, 36, 0) * MAP_SCALE, 50, 50, 200, 600)
 
@@ -125,6 +123,9 @@ Client.OnStart = function()
 		Client.Action1Release = action1Release
 
 		showLocalPlayer()
+
+		addCollectibles()
+
 		print(Player.Username .. " joined!")
 	end)
 
