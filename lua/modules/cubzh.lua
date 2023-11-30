@@ -547,11 +547,6 @@ function addCollectibles()
 		end
 
 		if #collectedGliderParts >= #gliderParts then -- or true then
-			require("ui_toast"):create({
-				message = "Glider unlocked!",
-				center = false,
-				iconShape = bundle.Shape("voxels.glider_backpack"),
-			})
 			unlockGlider()
 		else
 			local gliderPartConfig = {
@@ -593,6 +588,11 @@ function addCollectibles()
 
 					if #collectedGliderParts >= #gliderParts then
 						-- the last glider part has been collected
+						require("ui_toast"):create({
+							message = "Glider unlocked!",
+							center = false,
+							iconShape = bundle.Shape("voxels.glider_backpack"),
+						})
 						unlockGlider()
 					else
 						-- a glider part has been collected
