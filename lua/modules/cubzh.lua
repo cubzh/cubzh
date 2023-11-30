@@ -30,7 +30,9 @@ local MAX_AIR_JUMP_VELOCITY = 85
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
 local DEBUG = false
 
+-- Toasts
 local globalToast = nil
+local backpackTransparentToast = nil
 
 Client.OnStart = function()
 	-- REQUIRE MODULES
@@ -517,11 +519,18 @@ function addCollectibles()
 						duration = -1, -- negative duration means infinite
 					})
 				else
-					require("ui_toast"):create({
+					backpackTransparentToast = require("ui_toast"):create({
 						message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
 						center = true,
+						duration = -1, -- negative duration means infinite
 						iconShape = bundle.Shape("voxels.glider_parts"),
 					})
+				end
+			end,
+			onCollisionEnd = function(_)
+				if backpackTransparentToast then
+					backpackTransparentToast:remove()
+					backpackTransparentToast = nil
 				end
 			end,
 		}
