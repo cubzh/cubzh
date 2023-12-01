@@ -367,7 +367,9 @@ function loadMap()
 						or string.find(objInfo.fullname, "rail")
 						or string.find(objInfo.fullname, "lily")
 					then
-						o.Physics = PhysicsMode.Disabled
+						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
+							o.Physics = PhysicsMode.Disabled
+						end)
 					end
 				else
 					loadedObjects[objInfo.fullname] = "ERROR"
@@ -428,7 +430,7 @@ function loadMap()
 			local ray = Ray(o.Position, Number3.Down)
 			local impact = ray:Cast(map.CollisionGroups)
 			if impact ~= nil then
-				o.Position = o.Position + Number3.Down * impact.Distance - 0.25
+				o.Position = o.Position + Number3.Down * impact.Distance
 			end
 		end
 		-- disabling water physics
