@@ -328,19 +328,26 @@ function loadMap()
 	map.CollidesWithGroups = Map.CollidesWithGroups
 	map.Physics = PhysicsMode.StaticPerBlock
 
-	hierarchyactions:applyToDescendants(map, { includeRoot = false }, function(o)
-		-- apparently, children == water so far in this map
-		o.CollisionGroups = {}
-		o.CollidesWithGroups = {}
-		o.Physics = PhysicsMode.Disabled
-		o.InnerTransparentFaces = false
-		o:RefreshModel()
-	end)
-
 	map:SetParent(World)
 	map.Position = { 0, 0, 0 }
 	map.Pivot = { 0, 0, 0 }
 	map.Shadow = true
+
+	waterShapes = {}
+	-- water
+	hierarchyactions:applyToDescendants(map, { includeRoot = false }, function(o)
+		-- apparently, children == water so far in this map
+		-- physics will be disabled later on for water,
+		-- but we need it turned on to place items on it.
+		o.CollisionGroups = Map.CollisionGroups
+		o.CollidesWithGroups = Map.CollidesWithGroups
+		o.Physics = PhysicsMode.StaticPerBlock
+		o.InnerTransparentFaces = false
+		o.LocalPosition.Y = o.LocalPosition.Y + 0.25
+		o.originY = o.LocalPosition.Y
+		table.insert(waterShapes, o)
+		o:RefreshModel()
+	end)
 
 	local loadedObjects = {}
 	local o
@@ -354,7 +361,12 @@ function loadMap()
 					loadedObjects[objInfo.fullname] = o
 					-- print("loaded " .. objInfo.fullname)
 					o.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-					if string.find(objInfo.fullname, "vines") or string.find(objInfo.fullname, "grass") then
+					if
+						string.find(objInfo.fullname, "vines")
+						or string.find(objInfo.fullname, "grass")
+						or string.find(objInfo.fullname, "rail")
+						or string.find(objInfo.fullname, "lily")
+					then
 						o.Physics = PhysicsMode.Disabled
 					end
 				else
@@ -370,6 +382,8 @@ function loadMap()
 	local boxSize
 	local turnOnShadows
 	local k
+
+	local onWater = {}
 	if world.objects then
 		for _, objInfo in ipairs(world.objects) do
 			o = loadedObjects[objInfo.fullname]
@@ -400,9 +414,31 @@ function loadMap()
 				obj.Scale = scale
 				obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
 				obj.Name = objInfo.Name or objInfo.fullname
+
+				if string.find(objInfo.fullname, "lily") or string.find(objInfo.fullname, "ducky") then
+					table.insert(onWater, obj)
+				end
 			end
 		end
 	end
+
+	Timer(0.1, function()
+		for _, o in ipairs(onWater) do
+			o.Pivot.Y = 0
+			local ray = Ray(o.Position, Number3.Down)
+			local impact = ray:Cast(map.CollisionGroups)
+			if impact ~= nil then
+				o.Position = o.Position + Number3.Down * impact.Distance - 0.25
+			end
+		end
+		-- disabling water physics
+		for _, w in ipairs(waterShapes) do
+			w.Physics = PhysicsMode.Disabled
+			o.CollisionGroups = {}
+			o.CollidesWithGroups = {}
+			o.Physics = PhysicsMode.Disabled
+		end
+	end)
 end
 
 holdTimer = nil
