@@ -686,19 +686,19 @@ function createUI(system)
 				end
 			end
 			-- TODO: node could use a separate internal object when it needs a pivot, to be type-agnostic
-		elseif k == "pos" or k == "position" or k == "LocalPosition" then
+		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
 			local obj = t.object
 			local z = obj.LocalPosition.Z
-			if type(v) == "Number2" then
-				v = Number3(v.X, v.Y, 0)
-			end
-			if v[1] ~= nil and v[2] ~= nil and v[3] == nil then
+			if type(v) == Type.Number2 then
+				v = { v.X, v.Y, 0 }
+			elseif type(v) == Type.table and #v == 2 then
 				v = { v[1], v[2], 0 }
 			end
-			if not pcall(function()
+			local setFunc = function()
 				obj.LocalPosition = v
-			end) then
-				error(k .. " can't be set", 2)
+			end
+			if not pcall(setFunc) then
+				error(k .. " must be a Number2", 2)
 			end
 			obj.LocalPosition.Z = z -- restore Z (layer)
 		elseif k == "size" or k == "Size" then
@@ -717,7 +717,7 @@ function createUI(system)
 			end) then
 				error(k .. " can't be set", 2)
 			end
-		elseif k == "rot" or k == "rotation" or k == "LocalRotation" then
+		elseif k == "rot" or k == "rotation" or k == "Rotation" or k == "LocalRotation" then
 			t.object.LocalRotation = v
 		elseif k == "IsHidden" then
 			t.object.IsHidden = v
