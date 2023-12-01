@@ -2191,7 +2191,7 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
             hit = fifo_list_pop(chunksQuery);
         }
     }
-    fifo_list_free(chunksQuery, free);
+    fifo_list_free(chunksQuery, NULL);
 
     return false;
 }
