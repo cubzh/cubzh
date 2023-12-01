@@ -658,7 +658,13 @@ function addCollectibles()
 		local store = KeyValueStore(Player.UserID)
 		-- store:get("collectedGliderParts", "collectedJetpackParts", function(ok, results)
 		store:get("collectedGliderParts", function(ok, results)
-			if ok then
+			if type(ok) ~= "boolean" then
+				error("KeyValueStore:get() unexpected type of 'ok'", 2)
+			end
+			if type(results) ~= "table" and type(results) ~= "nil" then
+				error("KeyValueStore:get() unexpected type of 'results'", 2)
+			end
+			if ok == true then
 				if results.collectedGliderParts ~= nil then
 					collectedGliderParts = results.collectedGliderParts
 				end
