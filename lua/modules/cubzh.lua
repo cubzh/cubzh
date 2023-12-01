@@ -924,7 +924,11 @@ playerControls.glide = function(self, player)
 			leftTrail:setColor(Color(255, 255, 255, leftLift * f))
 		end
 
-		require("camera_modes"):setThirdPerson({ target = vehicle, rotationOffset = Rotation(math.rad(20), 0, 0) })
+		require("camera_modes"):setThirdPerson({
+			rigidity = 0.3,
+			target = vehicle,
+			rotationOffset = Rotation(math.rad(20), 0, 0),
+		})
 
 		self.onDrag = function(pe)
 			rollDelta.Z = -pe.DX * 0.01
