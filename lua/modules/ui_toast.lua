@@ -3,10 +3,10 @@
 uikit = require("uikit")
 ease = require("ease")
 
+-- Global variables
 local PADDING = require("uitheme").current.padding
-
-topRightToast = nil
-centerToast = nil
+local topRightStack = {}
+local centerStack = {}
 
 local mod = {}
 
@@ -26,27 +26,21 @@ mod.create = function(_, config)
 		},
 	})
 
+	-- create toast object
 	local toast = {}
+	toast.config = config
+	toast.remove = remove
+
 	local toastFrame = uikit:createFrame(Color.Black)
 	toast.frame = toastFrame
 
-	if config.center then
-		if centerToast then
-			if centerToast.removeTimer then
-				centerToast.removeTimer:Cancel()
-			end
-			centerToast:remove()
-		end
-		centerToast = toast
-	else
-		if topRightToast then
-			if centerToast.removeTimer then
-				topRightToast.removeTimer:Cancel()
-			end
-			topRightToast:remove()
-		end
-		topRightToast = toast
+	toast.stack = config.center and centerStack or topRightStack
+	-- If there already is a toast on the stack, disable it
+	if #toast.stack > 0 then
+		disable(toast.stack[#toast.stack])
 	end
+	-- Push new toast to stack
+	table.insert(toast.stack, toast)
 
 	-- Create text
 	local text = uikit:createText(config.message, Color.White)
@@ -90,45 +84,78 @@ mod.create = function(_, config)
 	toastFrame:parentDidResize()
 
 	-- Animate toast
-	local toastPosition
-	local animationDuration
-	if config.center then
-		local animationDistance = toastFrame.Height * 2
-		toastPosition = Screen.Size / 2 - toastFrame.Size / 2
-		toastFrame.position = toastPosition - Number2(0, animationDistance)
-		animationDuration = animationDistance / config.animationSpeed
-	else
-		toastPosition = Screen.Size - toastFrame.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
-		toastFrame.position = toastPosition + Number2(toastFrame.Width, 0)
-		animationDuration = toastFrame.Width / config.animationSpeed
-	end
-	ease:cancel(toastFrame)
-	ease:outBack(toastFrame, animationDuration).position = Number3(toastPosition.X, toastPosition.Y, 0)
-
-	-- If a duration has been specified (positive value), remove toast after a while
-	if config.duration ~= nil and config.duration >= 0 then
-		toast.removeTimer = Timer(config.duration, function()
-			if toast == centerToast then
-				centerToast = nil
-			elseif toast == topRightToast then
-				topRightToast = nil
-			end
-			toast.removeTimer = nil
-			toastFrame:remove()
-		end)
-	end
-
-	-- Provide a function to remove the toast
-	toast.remove = function(p_toast)
-		if p_toast == centerToast then
-			centerToast = nil
-		elseif p_toast == topRightToast then
-			topRightToast = nil
-		end
-		p_toast.frame:remove()
-	end
+	enable(toast)
 
 	return toast
+end
+
+-- start toast timer
+constructAndStartTimer = function(p_toast)
+	if p_toast.config.duration ~= nil and p_toast.config.duration >= 0 then
+		if p_toast.removeTimer then
+			p_toast.removeTimer:Cancel()
+			p_toast.removeTimer = nil
+		end
+		p_toast.removeTimer = Timer(p_toast.config.duration, function()
+			p_toast:remove()
+		end)
+	end
+end
+
+-- Provide a function to remove the toast
+remove = function(p_toast)
+	if p_toast.removeTimer then
+		p_toast.removeTimer:Cancel()
+		p_toast.removeTimer = nil
+	end
+
+	-- Remove toast from stack
+	local stack = p_toast.stack
+	for i, toast in ipairs(stack) do
+		if toast == p_toast then
+			if i == #stack and i > 1 then -- toast is on top
+				-- re-enable toast below
+				enable(stack[i - 1])
+			end
+			table.remove(stack, i)
+			break
+		end
+	end
+
+	p_toast.frame:remove()
+end
+
+-- temporary disable toast
+disable = function(p_toast)
+	p_toast.frame:hide()
+	if p_toast.removeTimer then
+		p_toast.removeTimer:Cancel()
+		p_toast.removeTimer = nil
+	end
+end
+
+-- re-enable toast
+enable = function(p_toast)
+	local frame = p_toast.frame
+
+	p_toast.frame:show()
+
+	local toastPosition
+	local animationDuration
+	if p_toast.config.center then
+		local animationDistance = frame.Height * 2
+		toastPosition = Screen.Size / 2 - frame.Size / 2
+		frame.position = toastPosition - Number2(0, animationDistance)
+		animationDuration = animationDistance / p_toast.config.animationSpeed
+	else
+		toastPosition = Screen.Size - frame.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+		frame.position = toastPosition + Number2(frame.Width, 0)
+		animationDuration = frame.Width / p_toast.config.animationSpeed
+	end
+	ease:cancel(frame)
+	ease:outBack(frame, animationDuration).position = Number3(toastPosition.X, toastPosition.Y, 0)
+
+	constructAndStartTimer(p_toast)
 end
 
 return mod
