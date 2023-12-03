@@ -153,6 +153,9 @@ end
 multi.registerPlayerAction = multi.onAction
 
 multi.action = function(_, name, data)
+	if Client.Connected == false then
+		return
+	end
 	local e = Event()
 	e[KEY_MULTI] = true
 	e[KEY_ACTION] = ACTION.PLAYER_ACTION
@@ -463,6 +466,9 @@ multi.forceSync = function(_, name)
 end
 
 local tick = function(dt)
+	if Client.Connected == false then
+		return
+	end
 	local t = Time.UnixMilli()
 
 	for _, syncedObj in pairs(synced) do
