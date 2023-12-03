@@ -1027,11 +1027,11 @@ initClientFunctions = function()
 				end
 
 				-- remove avatar and arrows
-				-- Player:RemoveFromParent()
+				Player:RemoveFromParent()
 
-				-- item:SetParent(World)
-				-- item.LocalPosition = { 0, 0, 0 }
-				-- item.LocalRotation = { 0, 0, 0 }
+				item:SetParent(World)
+				item.LocalPosition = { 0, 0, 0 }
+				item.LocalRotation = { 0, 0, 0 }
 
 				Client.DirectionalPad = nil
 			else -- place item points / preview
