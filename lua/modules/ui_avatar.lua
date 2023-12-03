@@ -15,13 +15,6 @@ local uiavatar = {}
 
 local DEFAULT_SIZE = 30
 
--- local SKIN_1_PALETTE_INDEX = 1
--- local SKIN_2_PALETTE_INDEX = 2
-local EYES_PALETTE_INDEX = 6
-local EYES_DARK_PALETTE_INDEX = 8
-local NOSE_PALETTE_INDEX = 7
-local MOUTH_PALETTE_INDEX = 4
-
 ui = require("uikit")
 avatar = require("avatar")
 
@@ -154,39 +147,29 @@ local uiavatarMetatable = {
 
 		-- changes only local Player
 		setSkinColor = function(self, node, color1, color2, nose, mouth)
-			avatar:setSkinColor(node, color1, color2, nose, mouth)
+			if node.body ~= nil then
+				avatar:setSkinColor(node.body, color1, color2, nose, mouth)
+			end
 
 			self:setNoseColor(node, nose, true)
 			self:setMouthColor(node, mouth, true)
-
-			-- apply colors to in-game avatar
-			avatar:setSkinColor(Player, color1, color2, nose, mouth)
 		end,
 
-		setEyesColor = function(_, node, color)
-			local palette = node.Head.Palette
-			palette[EYES_PALETTE_INDEX].Color = color
-			palette[EYES_DARK_PALETTE_INDEX].Color = color
-			palette[EYES_DARK_PALETTE_INDEX].Color:ApplyBrightnessDiff(-0.15)
-
-			avatar:setEyesColor(node, color)
-		end,
-
-		setNoseColor = function(_, node, color, ignorePlayer)
-			local palette = node.Head.Palette
-			palette[NOSE_PALETTE_INDEX].Color = color
-
-			if not ignorePlayer then
-				avatar:setNoseColor(Player, color)
+		setEyesColor = function(_, avatarNode, color)
+			if avatarNode.body ~= nil then
+				avatar:setEyesColor(avatarNode.body, color)
 			end
 		end,
 
-		setMouthColor = function(_, node, color, ignorePlayer)
-			local palette = node.Head.Palette
-			palette[MOUTH_PALETTE_INDEX].Color = color
+		setNoseColor = function(_, avatarNode, color)
+			if avatarNode.body ~= nil then
+				avatar:setNoseColor(avatarNode.body, color)
+			end
+		end,
 
-			if not ignorePlayer then
-				avatar:setMouthColor(Player, color)
+		setMouthColor = function(_, avatarNode, color)
+			if avatarNode.body ~= nil then
+				avatar:setMouthColor(avatarNode.body, color)
 			end
 		end,
 
@@ -194,7 +177,7 @@ local uiavatarMetatable = {
 		-- /!\ return table of requests does not contain all requests right away
 		-- reference should be kept, not copying entries right after function call.
 		-- uikit: optional, allows to provide specific instance of uikit
-		get = function(_, usernameOrId, size, config, uikit)
+		get = function(_, usernameOrId, size, _, uikit)
 			local body
 			local requests
 
@@ -204,26 +187,43 @@ local uiavatarMetatable = {
 
 			local node = ui:createFrame(Color(0, 0, 0, 0))
 
-			body, requests = avatar:get(usernameOrId)
-			body.didLoad = function(err, avatarBody)
+			local bodyDidLoad = function(err, avatarBody)
 				if err == true then
 					error(err, 2)
 					return
 				end
+
+				local rotation = Rotation(0, math.rad(180), 0)
+
+				if node.body ~= nil then
+					rotation:Set(node.body.pivot.LocalRotation)
+					node.body:remove()
+					node.body = nil
+				end
+
 				local uiBody = ui:createShape(Shape(avatarBody, { includeChildren = true }), { spherized = true })
 				uiBody:setParent(node)
 				uiBody.Head.LocalRotation = { 0, 0, 0 }
 				node.body = uiBody
 				node.body.Width = node._w
+				node.body.pivot.LocalRotation = rotation
 
 				local center = Number3(uiBody.shape.Width, uiBody.shape.Height, uiBody.shape.Depth)
 				uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
 			end
 
+			body, requests = avatar:get(usernameOrId)
+			body.didLoad = bodyDidLoad
+
 			node.onRemove = function()
 				for _, r in ipairs(requests) do
 					r:Cancel()
 				end
+			end
+
+			node.refresh = function(_)
+				body, requests = avatar:get(usernameOrId)
+				body.didLoad = bodyDidLoad
 			end
 
 			node._w = defaultSize

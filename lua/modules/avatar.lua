@@ -20,13 +20,23 @@ local avatarMetatable = {
 
 local SKIN_1_PALETTE_INDEX = 1
 local SKIN_2_PALETTE_INDEX = 2
--- local EYES_PALETTE_INDEX = 6
--- local EYES_DARK_PALETTE_INDEX = 8
--- local NOSE_PALETTE_INDEX = 7
--- local MOUTH_PALETTE_INDEX = 4
+local EYES_PALETTE_INDEX = 6
+local EYES_DARK_PALETTE_INDEX = 8
+local MOUTH_PALETTE_INDEX = 4
+local NOSE_PALETTE_INDEX = 7
 
-bodyPartsNames =
-	{ "Head", "Body", "RightArm", "RightHand", "LeftArm", "LeftHand", "RightLeg", "LeftLeg", "RightFoot", "LeftFoot" }
+bodyPartsNames = {
+	"Head",
+	"Body",
+	"RightArm",
+	"RightHand",
+	"LeftArm",
+	"LeftHand",
+	"RightLeg",
+	"LeftLeg",
+	"RightFoot",
+	"LeftFoot",
+}
 
 cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
 
@@ -279,14 +289,14 @@ function tableToColor(t)
 	return Color(math.floor(t.r), math.floor(t.g), math.floor(t.b))
 end
 
-index.setEyesColor = function(_, playerOrHead, c)
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
+index.setEyesColor = function(_, avatarOrHead, c)
+	local head = avatarOrHead
+	if avatarOrHead.Head then
+		head = avatarOrHead.Head
 	end
-	head.Palette[6].Color = c
-	head.Palette[8].Color = c
-	head.Palette[8].Color:ApplyBrightnessDiff(-0.15)
+	head.Palette[EYES_PALETTE_INDEX].Color = c
+	head.Palette[EYES_DARK_PALETTE_INDEX].Color = c
+	head.Palette[EYES_DARK_PALETTE_INDEX].Color:ApplyBrightnessDiff(-0.15)
 end
 
 index.getEyesColor = function(_, playerOrHead)
@@ -294,7 +304,7 @@ index.getEyesColor = function(_, playerOrHead)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	return head.Palette[6].Color
+	return head.Palette[EYES_PALETTE_INDEX].Color
 end
 
 index.setBodyPartColor = function(_, name, shape, skin1, skin2)
@@ -330,19 +340,19 @@ index.setHeadColors = function(self, head, skin1, skin2, nose, mouth)
 end
 
 -- Warning: `player` argument can be of different forms
-index.setSkinColor = function(self, player, skin1, skin2, nose, mouth)
+index.setSkinColor = function(self, avatar, skin1, skin2, nose, mouth)
 	if skin1 and skin2 then
 		for _, name in ipairs(bodyPartsNames) do
-			self:setBodyPartColor(name, player[name], skin1, skin2)
+			self:setBodyPartColor(name, avatar[name], skin1, skin2)
 		end
 	end
 
 	if nose then
-		self:setNoseColor(player, nose)
+		self:setNoseColor(avatar, nose)
 	end
 
 	if mouth then
-		self:setMouthColor(player, mouth)
+		self:setMouthColor(avatar, mouth)
 	end
 end
 
@@ -351,20 +361,20 @@ index.getNoseColor = function(_, playerOrHead)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	return head.Palette[7].Color
+	return head.Palette[NOSE_PALETTE_INDEX].Color
 end
 
-index.setNoseColor = function(_, playerOrHead, color)
+index.setNoseColor = function(_, avatarOrHead, color)
 	if not color or type(color) ~= "Color" then
 		print("Error: setNoseColor second argument must be of type Color.")
 		return
 	end
 
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
+	local head = avatarOrHead
+	if avatarOrHead.Head then
+		head = avatarOrHead.Head
 	end
-	head.Palette[7].Color = color
+	head.Palette[NOSE_PALETTE_INDEX].Color = color
 end
 
 index.getMouthColor = function(_, playerOrHead)
@@ -372,7 +382,7 @@ index.getMouthColor = function(_, playerOrHead)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	return head.Palette[4].Color
+	return head.Palette[MOUTH_PALETTE_INDEX].Color
 end
 
 index.setMouthColor = function(_, playerOrHead, color)
@@ -385,7 +395,7 @@ index.setMouthColor = function(_, playerOrHead, color)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	head.Palette[4].Color = color
+	head.Palette[MOUTH_PALETTE_INDEX].Color = color
 end
 
 -- Returns sent requests
