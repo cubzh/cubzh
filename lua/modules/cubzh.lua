@@ -250,16 +250,15 @@ end
 Client.OnPlayerLeave = function(p)
 	if p ~= Player then
 		playerControls:exitVehicle(p)
-
-		multi:unlink("g_" .. p.ID)
-		multi:unlink("ph_" .. p.ID)
-		multi:unlink("p_" .. p.ID)
-
 		objectSkills.removeStepClimbing(p)
 		objectSkills.removeJump(p)
 		walkSFX:unregister(p)
 		p:RemoveFromParent()
 	end
+
+	multi:unlink("g_" .. p.ID)
+	multi:unlink("ph_" .. p.ID)
+	multi:unlink("p_" .. p.ID)
 end
 
 local moveDT = 0.0
