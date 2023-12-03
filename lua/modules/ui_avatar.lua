@@ -201,15 +201,16 @@ local uiavatarMetatable = {
 			local ui = uikit or ui
 
 			local defaultSize = size or DEFAULT_SIZE
-			local localPlayer = false
-			if config and config.localPlayer then
-				localPlayer = true
-			end
 
 			local node = ui:createFrame(Color(0, 0, 0, 0))
 
-			if localPlayer then
-				local uiBody = ui:createShape(Shape(Player.Avatar, { includeChildren = true }), { spherized = true })
+			body, requests = avatar:get(usernameOrId)
+			body.didLoad = function(err, avatarBody)
+				if err == true then
+					error(err, 2)
+					return
+				end
+				local uiBody = ui:createShape(Shape(avatarBody, { includeChildren = true }), { spherized = true })
 				uiBody:setParent(node)
 				uiBody.Head.LocalRotation = { 0, 0, 0 }
 				node.body = uiBody
@@ -217,46 +218,11 @@ local uiavatarMetatable = {
 
 				local center = Number3(uiBody.shape.Width, uiBody.shape.Height, uiBody.shape.Depth)
 				uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
+			end
 
-				node.refresh = function(self)
-					local previousParent = self.body.parent
-					local previousPosition = self.body.pos
-					local previousRotation = self.body.shape.LocalRotation:Copy()
-					local previousWidth = self.body.Width
-					self.body:setParent(nil)
-
-					-- [gaetan] maybe we could avoid a full copy all over again here
-					self.body = ui:createShape(Shape(Player.Avatar, { includeChildren = true }), { spherized = true })
-					self.body:setParent(previousParent)
-					self.body.Head.LocalRotation = { 0, 0, 0 }
-					self.body.pos = previousPosition
-					self.body.shape.LocalRotation = previousRotation
-					self.body.Width = previousWidth
-
-					local center = Number3(self.body.shape.Width, self.body.shape.Height, self.body.shape.Depth)
-					self.body.shape.Pivot = self.body.shape:BlockToLocal(center)
-				end
-			else
-				body, requests = avatar:get(usernameOrId)
-				body.didLoad = function(err, avatarBody)
-					if err == true then
-						error(err, 2)
-						return
-					end
-					local uiBody = ui:createShape(Shape(avatarBody, { includeChildren = true }), { spherized = true })
-					uiBody:setParent(node)
-					uiBody.Head.LocalRotation = { 0, 0, 0 }
-					node.body = uiBody
-					node.body.Width = node._w
-
-					local center = Number3(uiBody.shape.Width, uiBody.shape.Height, uiBody.shape.Depth)
-					uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
-				end
-
-				node.onRemove = function()
-					for _, r in ipairs(requests) do
-						r:Cancel()
-					end
+			node.onRemove = function()
+				for _, r in ipairs(requests) do
+					r:Cancel()
 				end
 			end
 

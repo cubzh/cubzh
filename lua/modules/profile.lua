@@ -111,7 +111,7 @@ profile.create = function(_, config)
 	end
 
 	-- avatarNode
-	local avatarNode = require("ui_avatar"):get(username, nil, { localPlayer = isLocal }, ui)
+	local avatarNode = require("ui_avatar"):get(username, nil, {}, ui)
 	if DEBUG then
 		avatarNode.color = DEBUG_FRAME_COLOR
 	end
