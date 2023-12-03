@@ -334,7 +334,9 @@ function loadMap()
 
 	waterShapes = {}
 	-- water
+	local i = 0
 	hierarchyactions:applyToDescendants(map, { includeRoot = false }, function(o)
+		i = i + 1
 		-- apparently, children == water so far in this map
 		-- physics will be disabled later on for water,
 		-- but we need it turned on to place items on it.
@@ -342,7 +344,11 @@ function loadMap()
 		o.CollidesWithGroups = Map.CollidesWithGroups
 		o.Physics = PhysicsMode.StaticPerBlock
 		o.InnerTransparentFaces = false
-		o.LocalPosition.Y = o.LocalPosition.Y + 0.25
+		if i == 1 then
+			o.LocalPosition.Y = o.LocalPosition.Y + 0.25
+		elseif i == 2 then
+			o.LocalPosition.Y = o.LocalPosition.Y - 0.25
+		end
 		o.originY = o.LocalPosition.Y
 		table.insert(waterShapes, o)
 		o:RefreshModel()
@@ -426,10 +432,11 @@ function loadMap()
 	Timer(0.1, function()
 		for _, o in ipairs(onWater) do
 			o.Pivot.Y = 0
-			local ray = Ray(o.Position, Number3.Down)
+			local p = o.Position + Number3.Up * map.Scale
+			local ray = Ray(p, Number3.Down)
 			local impact = ray:Cast(map.CollisionGroups)
 			if impact ~= nil then
-				o.Position = o.Position + Number3.Down * impact.Distance
+				o.Position = p + Number3.Down * impact.Distance
 			end
 		end
 		-- disabling water physics
