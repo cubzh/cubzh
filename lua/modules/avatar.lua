@@ -74,9 +74,24 @@ index.skinColors = {
 		nose = Color(189, 114, 80),
 		mouth = Color(153, 102, 79),
 	},
-	{ skin1 = Color(156, 92, 88), skin2 = Color(136, 76, 76), nose = Color(135, 64, 68), mouth = Color(109, 63, 61) },
-	{ skin1 = Color(140, 96, 64), skin2 = Color(124, 82, 52), nose = Color(119, 76, 45), mouth = Color(104, 68, 43) },
-	{ skin1 = Color(59, 46, 37), skin2 = Color(53, 41, 33), nose = Color(47, 33, 25), mouth = Color(47, 36, 29) },
+	{
+		skin1 = Color(156, 92, 88),
+		skin2 = Color(136, 76, 76),
+		nose = Color(135, 64, 68),
+		mouth = Color(109, 63, 61),
+	},
+	{
+		skin1 = Color(140, 96, 64),
+		skin2 = Color(124, 82, 52),
+		nose = Color(119, 76, 45),
+		mouth = Color(104, 68, 43),
+	},
+	{
+		skin1 = Color(59, 46, 37),
+		skin2 = Color(53, 41, 33),
+		nose = Color(47, 33, 25),
+		mouth = Color(47, 36, 29),
+	},
 }
 
 function initAnimations(avatar)
