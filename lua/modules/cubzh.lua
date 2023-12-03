@@ -478,11 +478,10 @@ function action1Release()
 end
 
 function dropPlayer(p)
-	World:AddChild(p)
+	playerControls:walk(p)
 	p.Position = SPAWN_IN_BLOCK * map.Scale
 	p.Rotation = { 0.06, math.pi * -0.75, 0 }
 	p.Velocity = { 0, 0, 0 }
-	p.Physics = true
 end
 
 function contains(t, v)
@@ -759,6 +758,8 @@ playerControls.walk = function(self, player)
 	self.current[player.ID] = "walk"
 
 	self:exitVehicle(player)
+
+	player:SetParent(World, true)
 
 	if player == Player then
 		self.onDrag = function(pe)
