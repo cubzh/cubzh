@@ -59,7 +59,7 @@ setFromAIConfig = function(_, config, _quiet)
     refreshAmbiance()
 end
 
-createButton = function()
+createNode = function()
     promptContainer = ui:createNode()
 
     promptInput = ui:createTextInput("", "Describe an ambience")
@@ -67,6 +67,8 @@ createButton = function()
     promptInput:hide()
     promptBtn = ui:createButton("💬 ✨", {textSize = "big"})
     promptBtn:setParent(promptContainer)
+    promptContainer.input = promptInput
+    promptContainer.btn = promptBtn
 
     promptBtn.onRelease = function()
         promptInput:show()
@@ -129,6 +131,6 @@ end
 
 
 return {
-    createButton = createButton,
+    createNode = createNode,
     setFromAIConfig = setFromAIConfig
 }

@@ -296,6 +296,7 @@ moveGizmo.create = function(_, config)
 		handle.Pivot = Number3(0.5, 0.5, 0)
 		handle.Scale = Number3(1, 1, 10)
 		handle.Physics = PhysicsMode.Trigger
+		handle.IsUnlit = true
 
 		handle.Layers = layer
 		handle:SetParent(moveGizmo.gizmoObject)

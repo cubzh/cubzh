@@ -628,8 +628,12 @@ creations.createModal = function(_, config)
 
 	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen })
 
-	creationsContent.idealReducedContentSize = function(_, width, height)
-		return Number2(width, height)
+	creationsContent.idealReducedContentSize = function(content, width, height)
+		local grid = content
+		grid.Width = width
+		grid.Height = height -- - content.pages.Height - theme.padding
+		grid:refresh() -- affects width and height (possibly reducing it)
+		return Number2(grid.Width, grid.Height)
 	end
 
 	function maxModalWidth()

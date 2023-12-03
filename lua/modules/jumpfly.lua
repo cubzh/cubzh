@@ -46,4 +46,10 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keycode, _, down)
 	end
 end)
 
+if Client.IsMobile then
+	Client.Action1 = function()
+		Player.Velocity.Y = 100
+	end
+end
+
 return jumpfly
