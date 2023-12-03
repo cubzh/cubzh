@@ -719,6 +719,9 @@ playerControls.exitVehicle = function(self, player)
 
 	vehicle.Tick = nil
 
+	-- NOTE: each vehicle should implement an onExit
+	-- callback instead of harcoding everything here.
+
 	if vehicle.wingTrails then
 		for _, t in ipairs(vehicle.wingTrails) do
 			wingTrail:remove(t)
@@ -728,7 +731,7 @@ playerControls.exitVehicle = function(self, player)
 
 	player:SetParent(World, true)
 	player.Rotation = { 0, vehicle.Rotation.Y, 0 }
-	player.Position = vehicle.Position
+	player.Position = vehicle.Position + { 0, -27, 0 }
 
 	player.Head.LocalRotation = { 0, 0, 0 }
 	player.Physics = PhysicsMode.Dynamic
@@ -740,13 +743,26 @@ playerControls.exitVehicle = function(self, player)
 		Camera.FOV = cameraDefaultFOV
 	end
 
-	vehicle:SetParent(World, true)
 	vehicle.Physics = PhysicsMode.Disabled
-	ease:linear(vehicle, 0.3, {
-		onDone = function(o)
-			o:RemoveFromParent()
-		end,
-	}).Scale = Number3.Zero
+
+	if vehicle.model ~= nil then
+		vehicle.model.Physics = PhysicsMode.Disabled
+		vehicle.model:SetParent(player, true)
+		vehicle:RemoveFromParent()
+		ease:linear(vehicle.model, 0.3, {
+			onDone = function(o)
+				o:RemoveFromParent()
+			end,
+		}).Scale =
+			Number3.Zero
+	else
+		vehicle:SetParent(World, true)
+		ease:linear(vehicle, 0.3, {
+			onDone = function(o)
+				o:RemoveFromParent()
+			end,
+		}).Scale = Number3.Zero
+	end
 
 	self.vehicles[player.ID] = nil
 end
@@ -799,6 +815,7 @@ playerControls.glide = function(self, player)
 	local glider = self:getShape("voxels.glider")
 	glider.Shadow = true
 	glider.Physics = PhysicsMode.Disabled
+	vehicle.model = glider
 
 	vehicle.Position = player:PositionLocalToWorld({ 0, player.BoundingBox.Max.Y - 2, 0 })
 
