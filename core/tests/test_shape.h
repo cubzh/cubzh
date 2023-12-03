@@ -326,7 +326,7 @@ void test_shape_addblock_1(void) {
     bool ok = false;
     const Block *b = NULL;
 
-    Scene *sc = scene_new();
+    Scene *sc = scene_new(NULL);
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
@@ -423,7 +423,7 @@ void test_shape_addblock_2(void) {
     bool ok = false;
     const Block *b = NULL;
 
-    Scene *sc = scene_new();
+    Scene *sc = scene_new(NULL);
     TEST_ASSERT(sc != NULL);
 
     // create a mutable shape having an octree
@@ -513,7 +513,7 @@ void test_shape_addblock_3(void) {
     bool ok = false;
     const Block *b = NULL;
 
-    Scene *sc = scene_new();
+    Scene *sc = scene_new(NULL);
     TEST_CHECK(sc != NULL);
 
     Shape *sh = shape_make();
