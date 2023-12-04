@@ -249,6 +249,7 @@ end
 
 Client.OnPlayerLeave = function(p)
 	if p ~= Player then
+		print(p.Username .. " just left!")
 		playerControls:exitVehicle(p)
 		objectSkills.removeStepClimbing(p)
 		objectSkills.removeJump(p)
