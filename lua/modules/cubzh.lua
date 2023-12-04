@@ -248,6 +248,10 @@ Client.OnPlayerJoin = function(p)
 end
 
 Client.OnPlayerLeave = function(p)
+	multi:unlink("g_" .. p.ID)
+	multi:unlink("ph_" .. p.ID)
+	multi:unlink("p_" .. p.ID)
+
 	if p ~= Player then
 		print(p.Username .. " just left!")
 		playerControls:exitVehicle(p)
@@ -256,10 +260,6 @@ Client.OnPlayerLeave = function(p)
 		walkSFX:unregister(p)
 		p:RemoveFromParent()
 	end
-
-	multi:unlink("g_" .. p.ID)
-	multi:unlink("ph_" .. p.ID)
-	multi:unlink("p_" .. p.ID)
 end
 
 local moveDT = 0.0
