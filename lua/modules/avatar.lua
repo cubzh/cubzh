@@ -20,10 +20,12 @@ local avatarMetatable = {
 
 local SKIN_1_PALETTE_INDEX = 1
 local SKIN_2_PALETTE_INDEX = 2
-local EYES_PALETTE_INDEX = 6
-local EYES_DARK_PALETTE_INDEX = 8
+-- local CLOTH_PALETTE_INDEX = 3
 local MOUTH_PALETTE_INDEX = 4
+-- local EYES_WHITE_PALETTE_INDEX = 5
+local EYES_PALETTE_INDEX = 6
 local NOSE_PALETTE_INDEX = 7
+local EYES_DARK_PALETTE_INDEX = 8
 
 bodyPartsNames = {
 	"Head",
@@ -322,28 +324,12 @@ index.getEyesColor = function(_, playerOrHead)
 	return head.Palette[EYES_PALETTE_INDEX].Color
 end
 
-index.setBodyPartColor = function(_, name, shape, skin1, skin2)
-	local skin1key = SKIN_1_PALETTE_INDEX
-	if name == "LeftHand" or name == "Body" or name == "RightArm" then
-		skin1key = SKIN_2_PALETTE_INDEX
+index.setBodyPartColor = function(_, _, shape, skin1, skin2)
+	if skin1 ~= nil and shape.Palette[SKIN_1_PALETTE_INDEX] then
+		shape.Palette[SKIN_1_PALETTE_INDEX].Color = skin1
 	end
-
-	if shape.Palette[skin1key] then
-		if skin1 ~= nil then
-			shape.Palette[skin1key].Color = skin1
-		end
-	end
-
-	if name ~= "Body" then
-		local skin2key = SKIN_2_PALETTE_INDEX
-		if name == "LeftHand" or name == "RightArm" then
-			skin2key = SKIN_1_PALETTE_INDEX
-		end
-		if shape.Palette[skin2key] then
-			if skin2 ~= nil then
-				shape.Palette[skin2key].Color = skin2
-			end
-		end
+	if skin2 ~= nil and shape.Palette[SKIN_2_PALETTE_INDEX] then
+		shape.Palette[SKIN_2_PALETTE_INDEX].Color = skin2
 	end
 end
 
@@ -438,14 +424,16 @@ index.prepareHead = function(self, head, usernameOrId, callback)
 			self:setMouthColor(head, tableToColor(data.mouthColor))
 		end
 
-		local req = Object:Load(data.hair, function(shape)
-			if shape == nil then
-				return callback("Error: can't find hair '" .. data.hair .. "'.")
-			end
-			require("equipments"):attachEquipmentToBodyPart(shape, head)
-			callback(nil, head)
-		end)
-		table.insert(requests, req)
+		if data.hair ~= nil and data.hair ~= "" then
+			local req = Object:Load(data.hair, function(shape)
+				if shape == nil then
+					return callback("Error: can't find hair '" .. data.hair .. "'.")
+				end
+				require("equipments"):attachEquipmentToBodyPart(shape, head)
+				callback(nil, head)
+			end)
+			table.insert(requests, req)
+		end
 	end)
 	table.insert(requests, req)
 	return requests
@@ -506,14 +494,17 @@ index.get = function(_, usernameOrId, replaced)
 			end
 		end
 		for _, v in ipairs(equipmentsList) do
+			print("equipment:", v, data[v])
 			-- equipments.load creates the `root.equipments` field
-			local req = equipments.load(v, data[v], root, false, false, function(obj)
-				if not obj then
-					print("Error: can't equip default wearables")
-				end
-				nextEquipmentLoaded()
-			end)
-			table.insert(requests, req)
+			if data[v] ~= nil and data[v] ~= "" then
+				local req = equipments.load(v, data[v], root, false, false, function(obj)
+					if not obj then
+						print("Error: can't equip default wearables")
+					end
+					nextEquipmentLoaded()
+				end)
+				table.insert(requests, req)
+			end
 		end
 	end
 

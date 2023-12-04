@@ -673,7 +673,7 @@ mod.getAvatar = function(usernameOrId, cb)
 			return
 		end
 		local data = JSON:Decode(res.Body)
-		data.hair = #data.hair > 0 and data.hair or "official.hair"
+		data.hair = #data.hair > 0 and data.hair or nil
 		data.jacket = #data.jacket > 0 and data.jacket or "official.jacket"
 		data.pants = #data.pants > 0 and data.pants or "official.pants"
 		data.boots = #data.boots > 0 and data.boots or "official.boots"
