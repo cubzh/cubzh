@@ -146,13 +146,13 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
                                             ColorPalette *shrinkPalette);
 
 // chunk_v6_read_shape allocates a new Shape if shape != NULL
-uint32_t chunk_v6_read_shape(Stream *s,
-                             Shape **shape,
-                             DoublyLinkedList *shapes,
-                             const LoadShapeSettings *const shapeSettings,
-                             ColorAtlas *colorAtlas,
-                             ColorPalette *filePalette,
-                             uint8_t paletteID);
+static uint32_t chunk_v6_read_shape(Stream * const s,
+                                    Shape ** const shape,
+                                    DoublyLinkedList * const shapes,
+                                    const LoadShapeSettings *const shapeSettings,
+                                    ColorAtlas * const colorAtlas,
+                                    ColorPalette * const filePalette,
+                                    uint8_t paletteID);
 
 uint32_t chunk_v6_read_preview_image(Stream *s, void **imageData, uint32_t *size);
 
@@ -814,13 +814,13 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
     return size + sizeof(uint32_t);
 }
 
-uint32_t chunk_v6_read_shape(Stream *s,
-                             Shape **shape,
-                             DoublyLinkedList *shapes,
-                             const LoadShapeSettings *const shapeSettings,
-                             ColorAtlas *colorAtlas,
-                             ColorPalette *filePalette,
-                             uint8_t paletteID) {
+static uint32_t chunk_v6_read_shape(Stream * const s,
+                                    Shape ** const shape,
+                                    DoublyLinkedList * const shapes,
+                                    const LoadShapeSettings * const shapeSettings,
+                                    ColorAtlas * const colorAtlas,
+                                    ColorPalette * const filePalette,
+                                    uint8_t paletteID) {
     if (shapeSettings == NULL) {
         cclog_error("tried to load shape without shape settings");
         return 0;
