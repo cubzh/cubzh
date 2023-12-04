@@ -343,8 +343,13 @@ end
 -- Warning: `player` argument can be of different forms
 index.setSkinColor = function(self, avatar, skin1, skin2, nose, mouth)
 	if skin1 and skin2 then
+		local part
 		for _, name in ipairs(bodyPartsNames) do
-			self:setBodyPartColor(name, avatar[name], skin1, skin2)
+			part = avatar[name]
+			if part == nil and name == "Body" then
+				part = avatar
+			end
+			self:setBodyPartColor(name, part, skin1, skin2)
 		end
 	end
 
@@ -494,7 +499,6 @@ index.get = function(_, usernameOrId, replaced)
 			end
 		end
 		for _, v in ipairs(equipmentsList) do
-			print("equipment:", v, data[v])
 			-- equipments.load creates the `root.equipments` field
 			if data[v] ~= nil and data[v] ~= "" then
 				local req = equipments.load(v, data[v], root, false, false, function(obj)
