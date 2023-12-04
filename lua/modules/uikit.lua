@@ -687,6 +687,19 @@ function createUI(system)
 			end
 			-- TODO: node could use a separate internal object when it needs a pivot, to be type-agnostic
 		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
+			if type(v) ~= Type.table and type(v) ~= Type.Number2 and type(v) ~= Type.Number3 then
+				error("uikit: node." .. k .. " must be a Number2", 2)
+			end
+			local isNumber = function(val)
+				return type(val) == Type.number or type(val) == Type.integer
+			end
+			if type(v) == Type.table and #v == 2 and not (isNumber(v[1]) and isNumber(v[2])) then
+				error("uikit: table values of node." .. k .. " must be numbers", 2)
+			end
+			if type(v) == Type.table and #v == 3 and not (isNumber(v[1]) and isNumber(v[2]) and isNumber(v[3])) then
+				error("uikit: table values of node." .. k .. " must be numbers", 2)
+			end
+
 			local obj = t.object
 			local z = obj.LocalPosition.Z
 			if type(v) == Type.Number2 then
@@ -694,12 +707,7 @@ function createUI(system)
 			elseif type(v) == Type.table and #v == 2 then
 				v = { v[1], v[2], 0 }
 			end
-			local setFunc = function()
-				obj.LocalPosition = v
-			end
-			if not pcall(setFunc) then
-				error(k .. " must be a Number2", 2)
-			end
+			obj.LocalPosition = v
 			obj.LocalPosition.Z = z -- restore Z (layer)
 		elseif k == "size" or k == "Size" then
 			if type(v) == "number" or type(v) == "integer" then
