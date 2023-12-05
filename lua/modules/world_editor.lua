@@ -18,7 +18,6 @@ setmetatable(worldEditor, metatable)
 local worldTitle
 local worldID
 
-local worldModified = false -- to avoid changing map scale if modified
 local objects = {}
 local map
 local mapIndex = 1
@@ -168,7 +167,6 @@ local spawnObject = function(data, onDone)
 
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
-			worldModified = true
 		end
 		if onDone then onDone(obj) end
 	end)
@@ -635,20 +633,6 @@ LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
 	worldEditor.draggingCount = 0
 	worldEditor.dragging = false
 end)
-
-clearWorld = function()
-	Player:RemoveFromParent()
-	if map then
-		map:RemoveFromParent()
-		map = nil
-	end
-	for _,o in pairs(objects) do
-		o:RemoveFromParent()
-	end
-	objects = {}
-	mapName = nil
-	ambience:set(ambience.noon)
-end
 
 initPickWorld = function()
 	local ui = require("uikit")
@@ -1137,9 +1121,6 @@ initDefaultMode = function()
 		worldEditor.selectedColor = color
 		worldEditor.handBlock.Palette[1].Color = color
 	end
-
-	-- Edit map mobile (pickaxe and block)
-	
 end
 
 LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
@@ -1189,7 +1170,6 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		if isLocalPlayer then
 			waitingForUUIDObj.uuid = e.data.uuid
 			objects[waitingForUUIDObj.uuid] = waitingForUUIDObj
-			worldModified = true
 			sendToServer(events.P_START_EDIT_OBJECT, { uuid = e.data.uuid })
 			waitingForUUIDObj = nil
 		else
