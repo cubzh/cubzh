@@ -13,7 +13,7 @@
 void test_transform_rotation_position(void) {
     // set rotation
     {
-        Transform *t = transform_make_default();
+        Transform *t = transform_make(HierarchyTransform);
         TEST_ASSERT(t != NULL);
         Quaternion *q = quaternion_new(1.0f, 2.0f, 3.0f, 0.5f, false);
         transform_set_rotation(t, q);
@@ -27,7 +27,7 @@ void test_transform_rotation_position(void) {
 
     // set position
     {
-        Transform *t = transform_make_default();
+        Transform *t = transform_make(HierarchyTransform);
         TEST_ASSERT(t != NULL);
         transform_set_position(t, 1.0f, 2.0f, 3.0f);
         const float3 *pos1 = transform_get_position(t);
@@ -38,7 +38,7 @@ void test_transform_rotation_position(void) {
 
     // set position (with a float3)
     {
-        Transform *t = transform_make_default();
+        Transform *t = transform_make(HierarchyTransform);
         TEST_ASSERT(t != NULL);
 
         const float3 pos = {4.0f, 5.0f, 6.0f};
@@ -53,8 +53,8 @@ void test_transform_rotation_position(void) {
 
     // set child local position
     {
-        Transform *p = transform_make_default();
-        Transform *c = transform_make_default();
+        Transform *p = transform_make(HierarchyTransform);
+        Transform *c = transform_make(HierarchyTransform);
         TEST_ASSERT(p != NULL && c != NULL);
 
         transform_set_parent(c, p, true);
@@ -74,8 +74,8 @@ void test_transform_rotation_position(void) {
 void test_transform_child(void) {
     // check local position / rotation
     {
-        Transform *t = transform_make_default();
-        Transform *child = transform_make_default();
+        Transform *t = transform_make(HierarchyTransform);
+        Transform *child = transform_make(HierarchyTransform);
         TEST_ASSERT(t != NULL && child != NULL);
         transform_set_parent(child, t, true);
         TEST_CHECK(transform_get_parent(child) == t);
@@ -112,8 +112,8 @@ void test_transform_child(void) {
 
     // check child position with keepWorld
     {
-        Transform *t = transform_make_default();
-        Transform *child = transform_make_default();
+        Transform *t = transform_make(HierarchyTransform);
+        Transform *child = transform_make(HierarchyTransform);
         TEST_ASSERT(t != NULL && child != NULL);
         transform_set_position(child, 10.0f, 20.0f, 30.0f);
         transform_set_parent(child, t, true);
@@ -127,9 +127,9 @@ void test_transform_child(void) {
 }
 
 void test_transform_children(void) {
-    Transform *p = transform_make_default();
-    Transform *c1 = transform_make_default();
-    Transform *c2 = transform_make_default();
+    Transform *p = transform_make(HierarchyTransform);
+    Transform *c1 = transform_make(HierarchyTransform);
+    Transform *c2 = transform_make(HierarchyTransform);
     TEST_ASSERT(p != NULL && c1 != NULL && c2 != NULL);
     TEST_CHECK(transform_get_children_count(p) == (size_t)0);
     TEST_CHECK(transform_is_parented(c1) == false);
@@ -178,9 +178,9 @@ void test_transform_children(void) {
 }
 
 void test_transform_retain(void) {
-    Transform *t = transform_make_default();
-    Transform *c = transform_make_default();
-    Transform *p = transform_make_default();
+    Transform *t = transform_make(HierarchyTransform);
+    Transform *c = transform_make(HierarchyTransform);
+    Transform *p = transform_make(HierarchyTransform);
     TEST_ASSERT(t != NULL && c != NULL && p != NULL);
 
     TEST_CHECK(transform_retain_count(t) == (uint16_t)1);
@@ -213,9 +213,9 @@ void test_transform_retain(void) {
 }
 
 void test_transform_flush(void) {
-    Transform *t = transform_make_default();
-    Transform *c = transform_make_default();
-    Transform *p = transform_make_default();
+    Transform *t = transform_make(HierarchyTransform);
+    Transform *c = transform_make(HierarchyTransform);
+    Transform *p = transform_make(HierarchyTransform);
     transform_set_parent(t, p, false);
     transform_set_parent(c, t, false);
     TEST_CHECK(transform_is_parented(t));

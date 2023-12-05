@@ -63,12 +63,11 @@ struct _Transform {
     // function pointer, to free ptr when defined
     pointer_free_function ptr_free;
 
-    // TEMPORARY, NULL in most cases.
-    // See comment where transform_get_or_compute_world_collider_function is defined
-    transform_get_or_compute_world_collider_function ptr_get_or_compute_world_aligned_collider;
-
     // optionally create a weak ptr for this transform
     Weakptr *wptr;
+
+    // if managed, transform_destroyed_callback is called w/ this ptr as parameter
+    void *managed;
 
     // SET any LOCAL or WORLD transformation will flag as dirty its counterpart & the matrices, and
     // unflag itself
@@ -188,8 +187,8 @@ Transform *transform_make(TransformType type) {
     t->ptr = NULL;
     t->ptrType = 0;
     t->ptr_free = NULL;
-    t->ptr_get_or_compute_world_aligned_collider = NULL;
     t->wptr = NULL;
+    t->managed = NULL;
     t->type = type;
     t->isHiddenBranch = false;
     t->isHiddenSelf = false;
@@ -215,17 +214,7 @@ Transform *transform_make_with_ptr(TransformType type,
     return t;
 }
 
-void transform_assign_get_or_compute_world_collider_function(
-    Transform *t,
-    transform_get_or_compute_world_collider_function f) {
-    t->ptr_get_or_compute_world_aligned_collider = f;
-}
-
-Transform *transform_make_default() {
-    return transform_make(HierarchyTransform);
-}
-
-void transform_init_thread_safety(void) {
+void transform_init_ID_thread_safety(void) {
     if (_IDMutex != NULL) {
         cclog_error("transform: thread safety initialized more than once");
         return;
@@ -332,6 +321,10 @@ void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
     transform_destroyed_callback = f;
 }
 
+void transform_set_managed_ptr(Transform *t, void *ptr) {
+    t->managed = ptr;
+}
+
 // MARK: - Physics -
 
 void transform_reset_physics_dirty(Transform *t) {
@@ -367,10 +360,6 @@ RigidBody *transform_get_rigidbody(Transform *const t) {
 }
 
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider) {
-    if (t->ptr_get_or_compute_world_aligned_collider != NULL && t->ptr != NULL) {
-        return t->ptr_get_or_compute_world_aligned_collider(t->ptr, collider);
-    }
-
     RigidBody *rb = NULL;
     if (collider != NULL) {
         *collider = box_zero;
@@ -1515,8 +1504,8 @@ static void _transform_free(Transform *const t) {
         return;
     }
 
-    if (transform_destroyed_callback != NULL) {
-        transform_destroyed_callback(t->id);
+    if (t->managed != NULL && transform_destroyed_callback != NULL) {
+        transform_destroyed_callback(t->id, t->managed);
     }
 
     // free pointers for transforms that were created in Lua

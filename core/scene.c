@@ -22,6 +22,8 @@ struct _Scene {
     Rtree *rtree;
     Weakptr *wptr;
 
+    void *game; // weak ref used to resolve resources associated to transform IDs
+
     // transforms potentially removed from scene since last end-of-frame,
     // relevant for physics & sync, internal transforms do not need to be accounted for here
     FifoList *removed;
@@ -199,9 +201,18 @@ bool _scene_standalone_refresh_func(Transform *t, void *ptr) {
     return false;
 }
 
+void _scene_register_removed_transform(Scene *sc, Transform *t) {
+    if (sc == NULL || t == NULL) {
+        return;
+    }
+
+    transform_retain(t);
+    fifo_list_push(sc->removed, t);
+}
+
 // MARK: -
 
-Scene *scene_new(void) {
+Scene *scene_new(void *g) {
     Scene *sc = (Scene *)malloc(sizeof(Scene));
     if (sc != NULL) {
         sc->root = transform_make(PointTransform);
@@ -209,6 +220,7 @@ Scene *scene_new(void) {
         sc->map = NULL;
         sc->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
         sc->wptr = NULL;
+        sc->game = g;
         sc->removed = fifo_list_new();
         sc->collisions = doubly_linked_list_new();
         sc->awakeBoxes = doubly_linked_list_new();
@@ -308,7 +320,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 child = doubly_linked_list_node_pointer(n);
 
                 transform_set_scene_dirty(child, true);
-                scene_register_removed_transform(sc, child);
+                _scene_register_removed_transform(sc, child);
 
                 n = doubly_linked_list_node_next(n);
             }
@@ -420,7 +432,7 @@ void scene_add_map(Scene *sc, Shape *map) {
     transform_set_parent(sc->map, sc->root, true);
 
 #if DEBUG_SCENE_EXTRALOG
-    cclog_debug("🏞 map added to the scene");
+    cclog_debug("🏞 map %p (id: %d) added to scene %p", sc->map, transform_get_id(sc->map), sc);
 #endif
 }
 
@@ -428,39 +440,27 @@ Transform *scene_get_map(Scene *sc) {
     return sc->map;
 }
 
-void scene_remove_map(Scene *sc) {
-    vx_assert(sc != NULL);
-
-    if (sc->map != NULL) {
-        transform_remove_parent(sc->map, true);
-        sc->map = NULL;
+bool scene_remove_transform(Scene *sc, Transform *t, const bool keepWorld) {
+    if (sc == NULL || t == NULL) {
+        return false;
     }
 
+    if (transform_remove_parent(t, keepWorld)) {
+        _scene_register_removed_transform(sc, t);
 #if DEBUG_SCENE_EXTRALOG
-    cclog_debug("🏞 map removed from the scene");
+        cclog_debug("🏞 transform %p (id: %d) removed from scene %p", t, transform_get_id(t), sc);
 #endif
+        return true;
+    }
+    return false;
 }
 
-void scene_remove_transform(Scene *sc, Transform *t) {
-    vx_assert(sc != NULL);
-    if (t == NULL)
-        return;
-
-    scene_register_removed_transform(sc, t);
-    transform_remove_parent(t, true);
-
-#if DEBUG_SCENE_EXTRALOG
-    cclog_debug("🏞 transform removed from the scene");
-#endif
-}
-
-void scene_register_removed_transform(Scene *sc, Transform *t) {
+void scene_register_managed_transform(Scene *sc, Transform *t) {
     if (sc == NULL || t == NULL) {
         return;
     }
 
-    transform_retain(t);
-    fifo_list_push(sc->removed, t);
+    transform_set_managed_ptr(t, sc->game);
 }
 
 bool _scene_register_collision_couple_func(void *ptr, void *data) {
@@ -849,9 +849,10 @@ CastHitType scene_cast_box(Scene *sc,
                             float3_op_scale(&modelVector, swept);
 
                             float3 worldVector;
-                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
-                                                       &modelVector,
-                                                       &worldVector);
+                            transform_utils_vector_ltw(
+                                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr,
+                                &modelVector,
+                                &worldVector);
 
                             const float distance = float3_length(&worldVector);
 

@@ -574,10 +574,10 @@ itemGrid.create = function(_, config)
 				c:hideLikes()
 				c.tName.Text = ""
 				c:setImage(nil)
-				if c.item ~= nil then
+				if c.item ~= nil and c.item.remove then
 					c.item:remove()
-					c.item = nil
 				end
+				c.item = nil
 			end
 		end
 	end

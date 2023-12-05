@@ -1529,6 +1529,14 @@ menu:AddDidResignActiveCallback(function()
 	index.refresh()
 end)
 
+index.getActionButton = function(_, index)
+	return _state["action" .. index]
+end
+
+index.getDirectionalPad = function(_)
+	return _state.dirpad
+end
+
 index.turnOn = function(self)
 	if self ~= controls then
 		error("controls:turnOn should be called with `:`", 2)
@@ -1548,6 +1556,7 @@ index.turnOff = function(self)
 		return
 	end -- already off
 	_state.on = false
+	_state.dirpadInput = Number2(0, 0)
 	self:refresh()
 end
 

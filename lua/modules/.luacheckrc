@@ -24,11 +24,11 @@ return {
 		"Screen",
 		"Sky",
 		"System",
+		"CollisionGroups",
 	},
 
 	read_globals = {
 		"Animation",
-		"AnimationMode",
 		"Assets",
 		"AssetType",
 		"AudioListener",
@@ -42,6 +42,7 @@ return {
 		"HTTP",
 		"Items",
 		"JSON",
+		"KeyValueStore",
 		"LightType",
 		"LocalEvent",
 		"Map",

@@ -3,7 +3,7 @@ config = {}
 defaultOptions = {
 	acceptIntegersAndNumbersDefault = true,
 	acceptIntegersAndNumbers = {}, -- map field name : boolean
-	acceptNil = {}, -- map field name : boolean
+	acceptTypes = {}, -- { fieldName : { "Number3", "Object" }}
 }
 
 config.merge = function(self, defaults, overrides, options)
@@ -23,7 +23,12 @@ config.merge = function(self, defaults, overrides, options)
 		error("config:merge(defaults, overrides, option) - options should be nil or a table", 2)
 	end
 
-	local opts = type(options) == "table" and options or defaultOptions
+	local opts
+	if options ~= nil then
+		opts = config:merge(defaultOptions, options)
+	else
+		opts = defaultOptions
+	end
 
 	local conf = {}
 	for k, v in pairs(defaults) do
@@ -34,29 +39,36 @@ config.merge = function(self, defaults, overrides, options)
 	end
 
 	local overriden
+	local types
+	local vType
 	if overrides then
 		for k, v in pairs(overrides) do
+			vType = type(v)
 			overriden = false
-			if conf[k] ~= nil then
-				if type(v) == type(conf[k]) then
+			if vType == type(conf[k]) then
+				conf[k] = v
+				overriden = true
+			else
+				if
+					(opts.acceptIntegersAndNumbersDefault or opts.acceptIntegersAndNumbers[k] == true)
+					and (type(conf[k]) == "number" or type(conf[k]) == "integer")
+					and (vType == "number" or vType == "integer")
+				then
 					conf[k] = v
 					overriden = true
-				else
-					if
-						(opts.acceptIntegersAndNumbersDefault or opts.acceptIntegersAndNumbers[k] == true)
-						and (type(conf[k]) == "number" or type(conf[k]) == "integer")
-						and (type(v) == "number" or type(v) == "integer")
-					then
-						conf[k] = v
-						overriden = true
-					elseif v == nil and opts.acceptNil[k] == true then
-						conf[k] = v
-						overriden = true
+				elseif opts.acceptTypes[k] ~= nil then
+					types = opts.acceptTypes[k]
+					for _, t in ipairs(types) do
+						if vType == t then
+							conf[k] = v
+							overriden = true
+							break
+						end
 					end
 				end
-				if overriden == false then
-					print("⚠️ config:merge - overrides key ignored: " .. k)
-				end
+			end
+			if overriden == false then
+				print("⚠️ config:merge - overrides key ignored: " .. k)
 			end
 		end
 	end

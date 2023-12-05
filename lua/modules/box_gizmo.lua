@@ -17,20 +17,9 @@ boxGizmoMetatable = {
 				edge:AddBlock(Color.White,0,0,0)
 				edge:SetParent(self._rootEdges)
 				edge.CollisionGroups = nil
+				edge.CollidesWithGroups = nil
 				table.insert(self._edges,edge)
 			end
-
-			local scaleGizmo = MutableShape()
-			scaleGizmo.IsUnlit = true
-			scaleGizmo.Scale = 2
-			scaleGizmo:AddBlock(Color.Orange,0,0,0)
-			scaleGizmo.Pivot = { 0.5, 0.5, 0.5 }
-			scaleGizmo.CollisionGroups = { 6 }
-			scaleGizmo.onPress = function()
-				self:setGizmoMode("scale")
-			end
-			self._scaleGizmo = scaleGizmo
-
 			self._isInit = true
 		end,
 		toggle = function(self, object)
@@ -38,7 +27,6 @@ boxGizmoMetatable = {
 
 			-- clear current box
 			self._rootEdges:RemoveFromParent()
-			self._scaleGizmo:RemoveFromParent()
 
 			self.object = object
 			if not object then return end
@@ -51,7 +39,7 @@ boxGizmoMetatable = {
                 box:Fit(shape, true)
 				shape.Rotation = savedRotation
 				shape:Refresh()
-				local isNotShape = type(object) ~= "Shape" and type(object) ~= "MutableShape"
+				local isNotShape = type(shape) ~= "Shape" and type(shape) ~= "MutableShape"
 				local w = isNotShape and 5 or (box.Max.X - box.Min.X)
 				local h = isNotShape and 5 or (box.Max.Y - box.Min.Y)
 				local d = isNotShape and 5 or (box.Max.Z - box.Min.Z)
@@ -76,49 +64,11 @@ boxGizmoMetatable = {
 					b.Pivot = { setup.px or 0.5, setup.py or 0.5, setup.pz or 0.5 }
 					b.Scale = { setup.sx or 0.1, setup.sy or 0.1, setup.sz or 0.1 }
 				end
-
-				-- self._scaleGizmo:SetParent(object)
-				-- self._scaleGizmo.IsHidden = false
-				-- self._scaleGizmo.CollisionGroups = { 6 }
-				-- self._scaleGizmo.Position = box.Max
-				-- self._scaleGizmo.Scale = 2
 			end)
 		end,
-		pointerDown = function(self, pointerEvent)
-			if not self.object then return end
-			local impact = pointerEvent:CastRay({ 6 })
-			if impact and impact.Object and impact.Object == self._scaleGizmo then
-				self.dragGizmo = true
-                Camera:SetModeFree()
-				return true
-			end
-			return false
-		end,
-		pointerUp = function(self)
-			if self.dragGizmo then
-				self.dragGizmo = false
-				Camera:SetModeThirdPerson()
-			end
-		end,
-		pointerDrag = function(self, pe)
-			if not self.object or not self.dragGizmo then return end
-			self.object.Scale = self.object.Scale + Number3(1,1,1) * (pe.DX / 500)
-            if self.onScaleChange then self:onScaleChange(self.object.Scale) end
-			return true
-		end
 	},
 	__newIndex = function() print("Error: boxGizmo is read-only") end
 }
 setmetatable(boxGizmo, boxGizmoMetatable)
-
-LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
-	return boxGizmo:pointerDown(pe)
-end)
-LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-	return boxGizmo:pointerDrag(pe)
-end)
-LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
-	return boxGizmo:pointerUp(pe)
-end)
 
 return boxGizmo

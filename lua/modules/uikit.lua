@@ -461,7 +461,7 @@ function createUI(system)
 		end
 	end
 
-	local function _buttonOnPress(self, callback)
+	local function _buttonOnPress(self, callback, obj, block, pe)
 		if self.disabled == true then
 			return
 		end
@@ -469,7 +469,7 @@ function createUI(system)
 		self.state = State.Pressed
 		_buttonRefreshColor(self)
 		if callback ~= nil then
-			callback(self)
+			callback(self, obj, block, pe)
 		end
 
 		Client:HapticFeedback()
@@ -591,8 +591,8 @@ function createUI(system)
 			end
 		elseif k == "onPress" then
 			if t.type == NodeType.Button then
-				t._onPress = function(self)
-					_buttonOnPress(self, v)
+				t._onPress = function(self, object, block, pe)
+					_buttonOnPress(self, v, object, block, pe)
 				end
 			elseif t.type == NodeType.Frame then
 				local background = t.background
@@ -616,9 +616,9 @@ function createUI(system)
 				if t._setCollider then
 					t:_setCollider(v ~= nil)
 				end
-				t._onPress = function(self, object, block, x, y)
+				t._onPress = function(self, object, block, pe)
 					if v ~= nil then
-						v(self, object, block, x, y)
+						v(self, object, block, pe)
 					end
 				end
 			end
@@ -1618,6 +1618,18 @@ function createUI(system)
 		textContainer.IsMask = true
 		node.textContainer = textContainer
 
+		textContainer.contentDidResize = function(_)
+			if node._refresh then
+				node:_refresh()
+			end
+		end
+
+		node.contentDidResizeSystem = function(self)
+			if self._refresh then
+				self:_refresh()
+			end
+		end
+
 		node.placeholder = ui:createText(placeholder or "", Color.White, size) -- color replaced later on
 		node.placeholder:setParent(textContainer)
 
@@ -1792,12 +1804,6 @@ function createUI(system)
 
 		node:_refresh()
 		_textInputRefreshColor(node) -- apply initial colors
-
-		node.contentDidResizeSystem = function(self)
-			if self._refresh then
-				self:_refresh()
-			end
-		end
 
 		node.border.onPress = function()
 			if node.disabled == true then
@@ -2083,7 +2089,6 @@ function createUI(system)
 
 		node._setText = function(self, str)
 			self.content.Text = str
-			self:contentDidResizeWrapper()
 		end
 
 		node.setColor = function(self, background, text, doNotrefresh)
@@ -2313,13 +2318,13 @@ function createUI(system)
 			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
 			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
 			down:setParent(frame)
-			down.pos.Z = -10
+			down.pos.Z = -20
 			down:hide()
 			down:disable()
 
 			local up = ui:createButton("⬆️", { borders = true, shadow = false, unfocuses = false })
 			up:setParent(frame)
-			up.pos.Z = -10
+			up.pos.Z = -20
 			up:hide()
 			up:disable()
 
@@ -2493,7 +2498,11 @@ function createUI(system)
 
 		local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 		local hitObject = impact.Shape or impact.Object
-		if hitObject._node._onPress or hitObject._node._onRelease then
+		-- try to find parent ui object (when impact a child of a mutable shape)
+		while hitObject and not hitObject._node do
+			hitObject = hitObject:GetParent()
+		end
+		if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
 			pressed = hitObject._node
 
 			-- unfocus focused node, unless hit node.config.unfocused == false
@@ -2502,21 +2511,7 @@ function createUI(system)
 			end
 
 			if hitObject._node._onPress then
-				local pressed = pressed
-				local pressedX = pressed.pos.X
-				local pressedY = pressed.pos.Y
-
-				local p = pressed.parent
-				while p ~= nil do
-					pressedX = pressedX + p.pos.X
-					pressedY = pressedY + p.pos.Y
-					p = p.parent
-				end
-
-				local x = pointerEvent.X * Screen.Width
-				local y = pointerEvent.Y * Screen.Height
-
-				hitObject._node:_onPress(hitObject, impact.Block, x - pressedX, y - pressedY)
+				hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
 			end
 			if pressed.config.sound and pressed.config.sound ~= "" then
 				sfx(pressed.config.sound, { Spatialized = false })
@@ -2542,8 +2537,12 @@ function createUI(system)
 
 			local impact = Ray(origin, direction):Cast(_getCollisionGroups())
 			local hitObject = impact.Shape or impact.Object
+			-- try to find parent ui object (when impact a child of a mutable shape)
+			while hitObject and not hitObject._node do
+				hitObject = hitObject:GetParent()
+			end
 			if hitObject._node == pressed and hitObject._node._onRelease then
-				pressed:_onRelease(hitObject, impact.Block)
+				pressed:_onRelease(hitObject, impact.Block, pointerEvent)
 				pressed = nil
 				return true
 			end
@@ -2565,20 +2564,7 @@ function createUI(system)
 		local pressed = pressed
 		if pressed then
 			if pressed._onDrag then
-				local pressedX = pressed.pos.X
-				local pressedY = pressed.pos.Y
-
-				local p = pressed.parent
-				while p ~= nil do
-					pressedX = pressedX + p.pos.X
-					pressedY = pressedY + p.pos.Y
-					p = p.parent
-				end
-
-				local x = pointerEvent.X * Screen.Width
-				local y = pointerEvent.Y * Screen.Height
-
-				pressed:_onDrag(x - pressedX, y - pressedY)
+				pressed:_onDrag(pointerEvent)
 				return true -- capture only if onDrag is set on the node
 			end
 		end

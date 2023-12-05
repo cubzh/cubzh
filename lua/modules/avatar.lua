@@ -20,13 +20,25 @@ local avatarMetatable = {
 
 local SKIN_1_PALETTE_INDEX = 1
 local SKIN_2_PALETTE_INDEX = 2
--- local EYES_PALETTE_INDEX = 6
--- local EYES_DARK_PALETTE_INDEX = 8
--- local NOSE_PALETTE_INDEX = 7
--- local MOUTH_PALETTE_INDEX = 4
+-- local CLOTH_PALETTE_INDEX = 3
+local MOUTH_PALETTE_INDEX = 4
+-- local EYES_WHITE_PALETTE_INDEX = 5
+local EYES_PALETTE_INDEX = 6
+local NOSE_PALETTE_INDEX = 7
+local EYES_DARK_PALETTE_INDEX = 8
 
-bodyPartsNames =
-	{ "Head", "Body", "RightArm", "RightHand", "LeftArm", "LeftHand", "RightLeg", "LeftLeg", "RightFoot", "LeftFoot" }
+bodyPartsNames = {
+	"Head",
+	"Body",
+	"RightArm",
+	"RightHand",
+	"LeftArm",
+	"LeftHand",
+	"RightLeg",
+	"LeftLeg",
+	"RightFoot",
+	"LeftFoot",
+}
 
 cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
 
@@ -64,13 +76,28 @@ index.skinColors = {
 		nose = Color(189, 114, 80),
 		mouth = Color(153, 102, 79),
 	},
-	{ skin1 = Color(156, 92, 88), skin2 = Color(136, 76, 76), nose = Color(135, 64, 68), mouth = Color(109, 63, 61) },
-	{ skin1 = Color(140, 96, 64), skin2 = Color(124, 82, 52), nose = Color(119, 76, 45), mouth = Color(104, 68, 43) },
-	{ skin1 = Color(59, 46, 37), skin2 = Color(53, 41, 33), nose = Color(47, 33, 25), mouth = Color(47, 36, 29) },
+	{
+		skin1 = Color(156, 92, 88),
+		skin2 = Color(136, 76, 76),
+		nose = Color(135, 64, 68),
+		mouth = Color(109, 63, 61),
+	},
+	{
+		skin1 = Color(140, 96, 64),
+		skin2 = Color(124, 82, 52),
+		nose = Color(119, 76, 45),
+		mouth = Color(104, 68, 43),
+	},
+	{
+		skin1 = Color(59, 46, 37),
+		skin2 = Color(53, 41, 33),
+		nose = Color(47, 33, 25),
+		mouth = Color(47, 36, 29),
+	},
 }
 
 function initAnimations(avatar)
-	local animWalk = Animation("Walk", { speed = 1.8, mode = AnimationMode.Loop })
+	local animWalk = Animation("Walk", { speed = 1.8, loops = 0 })
 	local walk_llegK = {
 		{ time = 0.0, rotation = { -1.1781, 0, 0 } },
 		{ time = 1 / 6, rotation = { -0.785398, 0, 0 } },
@@ -176,7 +203,7 @@ function initAnimations(avatar)
 		end
 	end
 
-	local animIdle = Animation("Idle", { speed = 0.5, mode = AnimationMode.Loop })
+	local animIdle = Animation("Idle", { speed = 0.5, loops = 0 })
 	local idle_keyframes_data = {
 		{ name = "LeftLeg", time = 0.0, rotation = { -0.0, 0, -0.0 } },
 		{ name = "LeftLeg", time = 0.5, rotation = { -0.0, 0, -0.0 } },
@@ -216,7 +243,7 @@ function initAnimations(avatar)
 		animIdle:Bind(frame.name, (frame.name == "Body" and not avatar[frame.name]) and avatar or avatar[frame.name])
 	end
 
-	local animSwingRight = Animation("SwingRight", { speed = 3 })
+	local animSwingRight = Animation("SwingRight", { speed = 3, priority = 1 })
 	local swingRight_rightArm = {
 		{ time = 0.0, rotation = { -0.0, 0, -1.0472 } },
 		{ time = 1 / 3, rotation = { -0.785398, 0.392699, 0.1309 } },
@@ -240,7 +267,7 @@ function initAnimations(avatar)
 		end
 	end
 
-	local animSwingLeft = Animation("SwingLeft", { speed = 3 })
+	local animSwingLeft = Animation("SwingLeft", { speed = 3, priority = 1 })
 	local swingLeft_leftArm = {
 		{ time = 0.0, rotation = { -0.0, 0, -1.0472 } },
 		{ time = 1 / 3, rotation = { -0.785398, 0.392699, 0.1309 } },
@@ -279,14 +306,14 @@ function tableToColor(t)
 	return Color(math.floor(t.r), math.floor(t.g), math.floor(t.b))
 end
 
-index.setEyesColor = function(_, playerOrHead, c)
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
+index.setEyesColor = function(_, avatarOrHead, c)
+	local head = avatarOrHead
+	if avatarOrHead.Head then
+		head = avatarOrHead.Head
 	end
-	head.Palette[6].Color = c
-	head.Palette[8].Color = c
-	head.Palette[8].Color:ApplyBrightnessDiff(-0.15)
+	head.Palette[EYES_PALETTE_INDEX].Color = c
+	head.Palette[EYES_DARK_PALETTE_INDEX].Color = c
+	head.Palette[EYES_DARK_PALETTE_INDEX].Color:ApplyBrightnessDiff(-0.15)
 end
 
 index.getEyesColor = function(_, playerOrHead)
@@ -294,31 +321,15 @@ index.getEyesColor = function(_, playerOrHead)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	return head.Palette[6].Color
+	return head.Palette[EYES_PALETTE_INDEX].Color
 end
 
-index.setBodyPartColor = function(_, name, shape, skin1, skin2)
-	local skin1key = SKIN_1_PALETTE_INDEX
-	if name == "LeftHand" or name == "Body" or name == "RightArm" then
-		skin1key = SKIN_2_PALETTE_INDEX
+index.setBodyPartColor = function(_, _, shape, skin1, skin2)
+	if skin1 ~= nil and shape.Palette[SKIN_1_PALETTE_INDEX] then
+		shape.Palette[SKIN_1_PALETTE_INDEX].Color = skin1
 	end
-
-	if shape.Palette[skin1key] then
-		if skin1 ~= nil then
-			shape.Palette[skin1key].Color = skin1
-		end
-	end
-
-	if name ~= "Body" then
-		local skin2key = SKIN_2_PALETTE_INDEX
-		if name == "LeftHand" or name == "RightArm" then
-			skin2key = SKIN_1_PALETTE_INDEX
-		end
-		if shape.Palette[skin2key] then
-			if skin2 ~= nil then
-				shape.Palette[skin2key].Color = skin2
-			end
-		end
+	if skin2 ~= nil and shape.Palette[SKIN_2_PALETTE_INDEX] then
+		shape.Palette[SKIN_2_PALETTE_INDEX].Color = skin2
 	end
 end
 
@@ -330,19 +341,24 @@ index.setHeadColors = function(self, head, skin1, skin2, nose, mouth)
 end
 
 -- Warning: `player` argument can be of different forms
-index.setSkinColor = function(self, player, skin1, skin2, nose, mouth)
+index.setSkinColor = function(self, avatar, skin1, skin2, nose, mouth)
 	if skin1 and skin2 then
+		local part
 		for _, name in ipairs(bodyPartsNames) do
-			self:setBodyPartColor(name, player[name], skin1, skin2)
+			part = avatar[name]
+			if part == nil and name == "Body" then
+				part = avatar
+			end
+			self:setBodyPartColor(name, part, skin1, skin2)
 		end
 	end
 
 	if nose then
-		self:setNoseColor(player, nose)
+		self:setNoseColor(avatar, nose)
 	end
 
 	if mouth then
-		self:setMouthColor(player, mouth)
+		self:setMouthColor(avatar, mouth)
 	end
 end
 
@@ -351,20 +367,20 @@ index.getNoseColor = function(_, playerOrHead)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	return head.Palette[7].Color
+	return head.Palette[NOSE_PALETTE_INDEX].Color
 end
 
-index.setNoseColor = function(_, playerOrHead, color)
+index.setNoseColor = function(_, avatarOrHead, color)
 	if not color or type(color) ~= "Color" then
 		print("Error: setNoseColor second argument must be of type Color.")
 		return
 	end
 
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
+	local head = avatarOrHead
+	if avatarOrHead.Head then
+		head = avatarOrHead.Head
 	end
-	head.Palette[7].Color = color
+	head.Palette[NOSE_PALETTE_INDEX].Color = color
 end
 
 index.getMouthColor = function(_, playerOrHead)
@@ -372,7 +388,7 @@ index.getMouthColor = function(_, playerOrHead)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	return head.Palette[4].Color
+	return head.Palette[MOUTH_PALETTE_INDEX].Color
 end
 
 index.setMouthColor = function(_, playerOrHead, color)
@@ -385,7 +401,7 @@ index.setMouthColor = function(_, playerOrHead, color)
 	if playerOrHead.Head then
 		head = playerOrHead.Head
 	end
-	head.Palette[4].Color = color
+	head.Palette[MOUTH_PALETTE_INDEX].Color = color
 end
 
 -- Returns sent requests
@@ -413,14 +429,16 @@ index.prepareHead = function(self, head, usernameOrId, callback)
 			self:setMouthColor(head, tableToColor(data.mouthColor))
 		end
 
-		local req = Object:Load(data.hair, function(shape)
-			if shape == nil then
-				return callback("Error: can't find hair '" .. data.hair .. "'.")
-			end
-			require("equipments"):attachEquipmentToBodyPart(shape, head)
-			callback(nil, head)
-		end)
-		table.insert(requests, req)
+		if data.hair ~= nil and data.hair ~= "" then
+			local req = Object:Load(data.hair, function(shape)
+				if shape == nil then
+					return callback("Error: can't find hair '" .. data.hair .. "'.")
+				end
+				require("equipments"):attachEquipmentToBodyPart(shape, head)
+				callback(nil, head)
+			end)
+			table.insert(requests, req)
+		end
 	end)
 	table.insert(requests, req)
 	return requests
@@ -482,13 +500,15 @@ index.get = function(_, usernameOrId, replaced)
 		end
 		for _, v in ipairs(equipmentsList) do
 			-- equipments.load creates the `root.equipments` field
-			local req = equipments.load(v, data[v], root, false, false, function(obj)
-				if not obj then
-					print("Error: can't equip default wearables")
-				end
-				nextEquipmentLoaded()
-			end)
-			table.insert(requests, req)
+			if data[v] ~= nil and data[v] ~= "" then
+				local req = equipments.load(v, data[v], root, false, false, function(obj)
+					if not obj then
+						print("Error: can't equip default wearables")
+					end
+					nextEquipmentLoaded()
+				end)
+				table.insert(requests, req)
+			end
 		end
 	end
 

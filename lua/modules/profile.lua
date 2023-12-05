@@ -111,7 +111,7 @@ profile.create = function(_, config)
 	end
 
 	-- avatarNode
-	local avatarNode = require("ui_avatar"):get(username, nil, { localPlayer = isLocal }, ui)
+	local avatarNode = require("ui_avatar"):get(username, nil, {}, ui)
 	if DEBUG then
 		avatarNode.color = DEBUG_FRAME_COLOR
 	end
@@ -661,10 +661,12 @@ profile.create = function(_, config)
 				-- background request, not updating profile UI
 				-- table.insert(requests, req)
 
-				-- apply colors to avatar preview
-				avatar:setSkinColor(avatarNode, colors.skin1, colors.skin2, colors.nose, colors.mouth)
 				-- apply colors to in-game avatar
 				avatar:setSkinColor(Player, colors.skin1, colors.skin2, colors.nose, colors.mouth)
+
+				-- apply colors to avatar preview
+				uiAvatar:setSkinColor(avatarNode, colors.skin1, colors.skin2, colors.nose, colors.mouth)
+
 				-- update buttons' color
 				nosePickerButton:setColor(colors.nose)
 				mouthPickerButton:setColor(colors.mouth)
@@ -982,6 +984,13 @@ profile.create = function(_, config)
 					print("Error: invalid item.")
 					return
 				end
+
+				-- update avatar preview
+				if avatarNode.refresh then
+					avatarNode:refresh()
+				end
+
+				-- send API request to update user avatar
 				local data = {}
 				data[category] = fullname
 				api:updateAvatar(data, function(err, _)
@@ -995,11 +1004,6 @@ profile.create = function(_, config)
 				end)
 				-- background request, not updating profile UI
 				-- table.insert(requests, req)
-
-				-- update avatar preview
-				if avatarNode.refresh then
-					avatarNode:refresh()
-				end
 			end)
 			if wearableRequest ~= nil then
 				table.insert(requests, wearableRequest)
@@ -1154,7 +1158,7 @@ profile.create = function(_, config)
 
 	local avatarRot = Number3(0, math.pi, 0)
 	local dragListener = nil
-	local avatarListener = nil
+	local avatarLoadedListener = nil
 
 	if isLocal then
 		editBtn = ui:createButton("✏️ Edit")
@@ -1443,12 +1447,19 @@ profile.create = function(_, config)
 			content:refreshModal()
 		end
 
-		local req =
-			api:getUserInfo(userID, fillUserInfo, { "created", "nbFriends", "bio", "discord", "x", "tiktok", "github" })
+		local req = api:getUserInfo(userID, fillUserInfo, {
+			"created",
+			"nbFriends",
+			"bio",
+			"discord",
+			"x",
+			"tiktok",
+			"github",
+		})
 		table.insert(requests, req)
 
 		-- listen for avatar load
-		avatarListener = LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function(player)
+		avatarLoadedListener = LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function(player)
 			-- avatar of local player is loaded, let's refresh the avatarNode
 			if player == Player then
 				if avatarNode.refresh then
@@ -1466,9 +1477,9 @@ profile.create = function(_, config)
 		end
 
 		-- stop listening for AvatarLoaded events
-		if avatarListener then
-			avatarListener:Remove()
-			avatarListener = nil
+		if avatarLoadedListener then
+			avatarLoadedListener:Remove()
+			avatarLoadedListener = nil
 		end
 	end
 

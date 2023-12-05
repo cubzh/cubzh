@@ -195,11 +195,28 @@ colorPicker.create = function(_, config)
 		node:_didPickColor()
 	end
 
-	uiPaletteShape.onPress = function(_, _, _, x, y)
-		pickSV(x, y)
+	local pickSVFromPointerEvent = function(pe)
+		local pressed = uiPaletteShape
+		local pressedX = pressed.pos.X
+		local pressedY = pressed.pos.Y
+
+		local p = pressed.parent
+		while p ~= nil do
+			pressedX = pressedX + p.pos.X
+			pressedY = pressedY + p.pos.Y
+			p = p.parent
+		end
+
+		local x = pe.X * Screen.Width
+		local y = pe.Y * Screen.Height
+
+		pickSV(x - pressedX, y - pressedY)
 	end
-	uiPaletteShape.onDrag = function(_, x, y)
-		pickSV(x, y)
+	uiPaletteShape.onPress = function(_, _, _, pe)
+		pickSVFromPointerEvent(pe)
+	end
+	uiPaletteShape.onDrag = function(_, pe)
+		pickSVFromPointerEvent(pe)
 	end
 
 	local hueShape = MutableShape()
@@ -232,11 +249,28 @@ colorPicker.create = function(_, config)
 		node:_didPickColor()
 	end
 
-	uiHueShape.onPress = function(_, _, _, x, y)
-		pickH(x, y)
+	local pickHFromPointerEvent = function(pe)
+		local pressed = uiPaletteShape
+		local pressedX = pressed.pos.X
+		local pressedY = pressed.pos.Y
+
+		local p = pressed.parent
+		while p ~= nil do
+			pressedX = pressedX + p.pos.X
+			pressedY = pressedY + p.pos.Y
+			p = p.parent
+		end
+
+		local x = pe.X * Screen.Width
+		local y = pe.Y * Screen.Height
+
+		pickH(x - pressedX, y - pressedY)
 	end
-	uiHueShape.onDrag = function(_, x, y)
-		pickH(x, y)
+	uiHueShape.onPress = function(_, _, _, pe)
+		pickHFromPointerEvent(pe)
+	end
+	uiHueShape.onDrag = function(_, pe)
+		pickHFromPointerEvent(pe)
 	end
 
 	local uiFinalShape

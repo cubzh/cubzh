@@ -17,6 +17,8 @@ local mapScale = MAP_SCALE_DEFAULT
 
 local master
 
+local previousAutoSaveMapBase64
+
 local getBlocksChanges = function()
 	local t = {}
 	for k,v in pairs(blocks) do
@@ -93,6 +95,21 @@ local funcs = {
 		playerActivity[tostring(sender.ID) .. sender.UserID] = {
 			editing = nil
 		}
+		local newMapBase64 = serializeWorld(getWorldState())
+		if newMapBase64 ~= previousAutoSaveMapBase64 then
+			print("Autosaving...")
+			previousAutoSaveMapBase64 = newMapBase64
+
+			if FAKE_SERVER then
+				LocalEvent:Send(LocalEvent.Name.DidReceiveEvent, { a = events.SAVE_WORLD, data = { mapBase64 = newMapBase64 }, pID = Player.ID })
+			else
+				local e = Event()
+				e.a = events.SAVE_WORLD
+				e.data = { mapBase64 = newMapBase64 }
+				e.pID = sender.ID
+				e:SendTo(sender)
+			end
+		end
 		return data
 	end,
 	[events.P_SET_AMBIENCE] = function(_, data)
@@ -124,6 +141,11 @@ local funcs = {
 		end
 	end,
 	[events.P_SET_MAP_SCALE] = function(_, data)
+		local ratio = data.mapScale / mapScale
+		for _,o in pairs(serverObjects) do
+			o.Scale = o.Scale * ratio
+			o.Position = o.Position * ratio
+		end
 		mapScale = data.mapScale
 		return data
 	end,
@@ -137,7 +159,14 @@ local funcs = {
 		return data
 	end,
 	[events.P_SAVE_WORLD] = function(sender)
-		return { mapBase64 = serializeWorld(getWorldState()) }, sender
+		local newMapBase64 = serializeWorld(getWorldState())
+		if newMapBase64 == previousAutoSaveMapBase64 then
+			print("No changes since last save.")
+			return nil, -1  -- returns nothing
+		end
+		previousAutoSaveMapBase64 = newMapBase64
+		print("Autosaving...")
+		return { mapBase64 = newMapBase64 }, sender
 	end,
 }
 

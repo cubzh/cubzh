@@ -2,9 +2,132 @@ Config = {
 	Items = { "%item_name%", "cube_white", "cube_selector" },
 	ChatAvailable = false,
 }
+
 if Config.ChatAvailable then
 	return
 end -- tmp: to silent "unused global variable Config" luacheck warning
+
+-- --------------------------------------------------
+-- Utilities for Player avatar
+-- --------------------------------------------------
+
+local debug = {}
+debug.logSubshapes = function(_, shape, level)
+	if level == nil then
+		level = 0
+	end
+	local logIndent = ""
+	for i = 1, level do
+		logIndent = logIndent .. " |"
+	end
+
+	if shape == nil then
+		print("[debug.logSubshapes]", "shape is nil")
+		return
+	end
+
+	print("[debug.logSubshapes]", logIndent, shape)
+
+	local count = shape.ChildrenCount
+	for i = 1, count do
+		local subshape = shape:GetChild(i)
+		debug:logSubshapes(subshape, level + 1)
+	end
+end
+
+local utils = {}
+
+-- returns an array of shapes
+-- `testFunc` is a function(shape) -> boolean
+utils.findSubshapes = function(rootShape, testFunc)
+	if type(rootShape) ~= "Shape" and type(rootShape) ~= "MutableShape" and type(testFunc) ~= "function" then
+		error("wrong arguments")
+	end
+
+	local matchingShapes = {}
+	local shapesToProcess = { rootShape }
+
+	while #shapesToProcess > 0 do
+		local s = table.remove(shapesToProcess, #shapesToProcess)
+		-- process shape
+		if testFunc(s) == true then
+			table.insert(matchingShapes, s)
+		end
+
+		-- explore subshapes
+		local count = s.ChildrenCount
+		for i = 1, count do
+			local subshape = s:GetChild(i)
+			table.insert(shapesToProcess, subshape)
+		end
+	end
+
+	return matchingShapes
+end
+
+local hideShapeSubshapes = function(shape, isHidden)
+	local count = shape.ChildrenCount
+	for i = 1, count do
+		local subshape = shape:GetChild(i)
+		subshape.IsHiddenSelf = isHidden
+	end
+end
+
+local playerHideSubshapes = function(isHidden)
+	local bodyParts = {
+		Player.Head,
+		Player.Body,
+		Player.LeftArm,
+		Player.LeftHand,
+		Player.RightArm,
+		Player.RightHand,
+		Player.LeftLeg,
+		Player.LeftFoot,
+		Player.RightLeg,
+		Player.RightFoot,
+	}
+	for _, bodyPart in ipairs(bodyParts) do
+		bodyPart.IsHiddenSelf = isHidden
+		hideShapeSubshapes(bodyPart, isHidden)
+	end
+end
+
+local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
+	if type(p_isWearable) ~= "boolean" or type(p_wearablePreviewMode) ~= "integer" then
+		error("wrong arguments")
+	end
+
+	if p_isWearable then
+		-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
+		if p_wearablePreviewMode == wearablePreviewMode.hide then
+			Player.IsHidden = false -- TODO: remove this line
+			playerHideSubshapes(true)
+		elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
+			Player.IsHidden = false -- TODO: remove this line
+			-- hide all avatar body parts and equipments
+			playerHideSubshapes(true)
+			-- show some of the avatar body parts based on the type of wearable being edited
+			local parents = __equipments.equipmentParent(Player, itemCategory)
+			local parentsType = type(parents)
+			if parentsType == "table" then
+				for _, parent in ipairs(parents) do
+					parent.IsHiddenSelf = false
+				end
+			elseif parentsType == "MutableShape" then
+				parents.IsHiddenSelf = false
+			else
+				error("unexpected 'parents' type:", parentsType)
+			end
+		elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
+			Player.IsHidden = false -- TODO: remove this line
+			playerHideSubshapes(false)
+		end
+	else
+		-- item is not a wearable, so the player avatar should not be visible
+		Player.IsHidden = false -- TODO: remove this line
+		playerHideSubshapes(true)
+	end
+end
 
 Client.OnStart = function()
 	gizmo = require("gizmo")
@@ -169,13 +292,12 @@ Client.OnStart = function()
 	----------------------------
 
 	local _settings = {
-		cameraStartRotation = Number3(0.32, -0.81, 0.0),
+		cameraStartRotation = Number3(0.32, math.rad(225), 0.0),
 		cameraStartPreviewRotationHand = Number3(0, math.rad(-130), 0),
 		cameraStartPreviewRotationHat = Number3(math.rad(20), math.rad(180), 0),
 		cameraStartPreviewRotationBackpack = Number3(0, 0, 0),
 		cameraStartPreviewDistance = 15,
 		cameraThumbnailRotation = Number3(0.32, 3.9, 0.0), --- other option for Y: 2.33
-
 		zoomMin = 5, -- unit, minimum zoom distance allowed
 	}
 	settingsMT = {
@@ -402,6 +524,7 @@ Client.OnStart = function()
 				s.Physics = PhysicsMode.Trigger
 				s.Pivot = s:GetPoint("origin").Coords
 			end)
+
 			if enableWearablePattern then
 				Object:Load("caillef.pattern" .. itemCategory, function(obj)
 					if not obj then
@@ -422,6 +545,7 @@ Client.OnStart = function()
 		-- INIT UI
 		ui_init()
 
+		-- ???
 		post_item_load()
 
 		Menu:AddDidBecomeActiveCallback(menuDidBecomeActive)
@@ -440,40 +564,73 @@ Client.OnStart = function()
 		Screen.DidResize(Screen.Width, Screen.Height)
 	end, loadConfig)
 
-	updateWearableSubShapesPosition = function(forceNoShift)
+	updateWearableShapesPosition = function(forceNoShift)
 		local parents = __equipments.equipmentParent(Player, itemCategory)
-		if type(parents) ~= "table" then
-			return
+		local parentsType = type(parents)
+
+		-- parents can be a Lua table (containing Shapes) or a Shape
+		if parentsType == "table" then
+			-- item root shape
+			do
+				local s = item
+				local parentIndex = 1
+				local coords = parents[parentIndex]:GetPoint("origin").Coords
+				if coords == nil then
+					print("can't get parent coords for equipment")
+					return
+				end
+				s.Position = parents[parentIndex]:BlockToWorld(coords)
+				s.Rotation = parents[parentIndex].Rotation
+			end
+
+			-- 1st subshape of item
+			local child = item:GetChild(1)
+			local coords = parents[2]:GetPoint("origin").Coords
+			if coords == nil then
+				print("can't get parent coords for equipment")
+				return
+			end
+			local pos = parents[2]:BlockToWorld(coords)
+			local shift = Number3(0, 0, 0)
+			if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
+				shift = #parents == 2 and Number3(-5, 0, 0) or Number3(5, 0, 0)
+			end
+
+			child.Position = pos + shift
+			child.Rotation = parents[2].Rotation
+
+			if not parents[3] then
+				return
+			end
+
+			-- 1st subshade of 1st subshape of item
+			child = child:GetChild(1)
+			coords = parents[3]:GetPoint("origin").Coords
+			if coords == nil then
+				print("can't get parent coords for equipment")
+				return
+			end
+			pos = parents[3]:BlockToWorld(coords)
+			shift = Number3(0, 0, 0)
+			if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
+				shift = Number3(-5, 0, 0)
+			end
+
+			child.Position = pos + shift
+			child.Rotation = parents[3].Rotation
+		elseif parentsType == "MutableShape" then
+			-- `parents` is a MutableShape
+			local coords = parents:GetPoint("origin").Coords
+			if coords == nil then
+				print("can't get parent coords for equipment (2)")
+				return
+			end
+
+			item.Position = parents:BlockToWorld(coords)
+			item.Rotation = parents.Rotation
 		end
-		local child = item:GetChild(1)
-		local coords = parents[2]:GetPoint("origin").Coords
-		if coords == nil then
-			print("can't get parent coords for equipment")
-			return
-		end
-		local pos = parents[2]:BlockToWorld(coords)
-		local shift = Number3(0, 0, 0)
-		if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
-			shift = #parents == 2 and Number3(-5, 0, 0) or Number3(5, 0, 0)
-		end
-		child.Position = pos + shift
-		child.Rotation = parents[2].Rotation
-		if not parents[3] then
-			return
-		end
-		child = child:GetChild(1)
-		coords = parents[3]:GetPoint("origin").Coords
-		if coords == nil then
-			print("can't get parent coords for equipment")
-			return
-		end
-		pos = parents[3]:BlockToWorld(coords)
-		shift = Number3(0, 0, 0)
-		if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
-			shift = Number3(-5, 0, 0)
-		end
-		child.Position = pos + shift
-		child.Rotation = parents[3].Rotation
+
+		fitObjectToScreen(item, nil)
 	end
 
 	-- long press + drag
@@ -587,17 +744,19 @@ click = function(e)
 					end
 				end -- end Player.IsHidden == false
 
-				-- copies are body parts copied when editing a wearable
-				-- and hiding other player parts
-				if copies then
-					for _, copy in ipairs(copies) do
-						if copy.IsHidden == false then
-							local tmpImpact = e:CastRay(copy)
-							-- if tmpImpact then print("HIT copy, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
+				-- if avatar body parts are shown, consider them in RayCast
+				if
+					currentWearablePreviewMode == wearablePreviewMode.bodyPart
+					or currentWearablePreviewMode == wearablePreviewMode.fullBody
+				then
+					local shownBodyParts = utils.findSubshapes(Player, function(s)
+						return s.IsHidden == false
+					end)
+					for _, bp in ipairs(shownBodyParts) do
+						local tmpImpact = e:CastRay(bp)
+						if tmpImpact and tmpImpact.Distance < impactDistance then
+							impactDistance = tmpImpact.Distance
+							impact = tmpImpact
 						end
 					end
 				end
@@ -857,6 +1016,7 @@ initClientFunctions = function()
 
 			if currentMode == mode.edit then
 				cameraCurrentState = cameraStates.item
+
 				-- unequip Player
 				if poiActiveName == poiNameHand then
 					Player:EquipRightHand(nil)
@@ -1802,7 +1962,7 @@ function ui_init()
 
 			initShapes()
 
-			fitObjectToScreen(item)
+			fitObjectToScreen(item, nil)
 
 			-- refresh UI
 			gridEnabled = false
@@ -1859,10 +2019,15 @@ function ui_init()
 			palette:hide()
 
 			ui:hide()
+
+			local shownBodyParts = nil
 			if isWearable then
-				Player.IsHidden = true
-				for _, v in ipairs(copies) do
-					v.IsHidden = true
+				-- during the screenshot, hide avatar parts that are currently shown
+				shownBodyParts = utils.findSubshapes(Player, function(s)
+					return s.IsHiddenSelf == false
+				end)
+				for _, bp in ipairs(shownBodyParts) do
+					bp.IsHiddenSelf = true
 				end
 			end
 
@@ -1895,13 +2060,9 @@ function ui_init()
 				end
 
 				if isWearable then
-					if currentWearablePreviewMode == wearablePreviewMode.fullBody then
-						Player.IsHidden = false
-					else -- hide player and toggle copies if not hide mode
-						Player.IsHidden = true
-						for _, v in ipairs(copies) do
-							v.IsHidden = currentWearablePreviewMode == wearablePreviewMode.hide
-						end
+					-- show avatar body parts again
+					for _, bp in ipairs(shownBodyParts) do
+						bp.IsHiddenSelf = false
 					end
 				end
 
@@ -2967,19 +3128,24 @@ function post_item_load()
 		return nbShapes
 	end
 
+	-- local avatarLoadedListener
+	-- avatarLoadedListener =
 	LocalEvent:listen(LocalEvent.Name.AvatarLoaded, function()
 		-- if equipment, show preview buttons
 		if not isWearable then
 			return
 		end
+
 		-- T-pose
 		for _, p in ipairs(bodyParts) do
 			if p == "RightArm" or p == "LeftArm" or p == "RightHand" or p == "LeftHand" then
 				Player[p].Rotation = Number3(0, 0, 0)
 			end
 			Player[p].IgnoreAnimations = true
-			Player[p].Physics = PhysicsMode.Trigger
+			Player[p].Physics = PhysicsMode.TriggerPerBlock
 		end
+		Player.Physics = PhysicsMode.Disabled
+
 		for _, shape in pairs(Player.equipments) do
 			shape.Physics = PhysicsMode.Trigger
 			for _, s in ipairs(shape.attachedParts or {}) do
@@ -2997,77 +3163,59 @@ function post_item_load()
 			shape:RemoveFromParent()
 		end
 
-		copies = {}
-
 		visibilityMenu = ui:createFrame(ui_config.groupBackgroundColor)
 
 		local onlyItemBtn = ui:createButton("⚅")
 		local itemPlusBodyPartBtn = ui:createButton("✋")
 		local itemPlusAvatarBtn = ui:createButton("👤")
 
+		-- Button for item alone
 		onlyItemBtn:setParent(visibilityMenu)
 		onlyItemBtn.onRelease = function(_)
+			-- update state of the 3 preview buttons
 			onlyItemBtn:select()
 			itemPlusBodyPartBtn:unselect()
 			itemPlusAvatarBtn:unselect()
 
+			-- update avatar visibility
 			currentWearablePreviewMode = wearablePreviewMode.hide
-			updateWearableSubShapesPosition()
-			Player.IsHidden = true
-			for _, v in ipairs(copies) do
-				v.IsHidden = true
-			end
-		end
+			playerUpdateVisibility(isWearable, currentWearablePreviewMode)
 
+			-- update wearable item position
+			updateWearableShapesPosition()
+		end
+		onlyItemBtn:onRelease()
+
+		-- Button for item and parent body part
 		itemPlusBodyPartBtn:setParent(visibilityMenu)
 		itemPlusBodyPartBtn.onRelease = function(_)
+			-- update state of the 3 preview buttons
 			onlyItemBtn:unselect()
 			itemPlusBodyPartBtn:select()
 			itemPlusAvatarBtn:unselect()
 
+			-- update avatar visibility
 			currentWearablePreviewMode = wearablePreviewMode.bodyPart
-			updateWearableSubShapesPosition()
-			Player.IsHidden = true
-			if #copies > 0 then
-				for _, v in ipairs(copies) do
-					v.IsHidden = false
-				end
-				return
-			end
-			local parent = __equipments.equipmentParent(Player, itemCategory)
-			if type(parent) == "table" then
-				for _, p in ipairs(parent) do
-					local copy = Shape(p)
-					copy:SetParent(World)
-					copy.Physics = PhysicsMode.Trigger
-					copy.Position = p.Position
-					copy.Rotation = p.Rotation
-					table.insert(copies, copy)
-				end
-			else
-				local copy = Shape(parent)
-				copy:SetParent(World)
-				copy.Physics = PhysicsMode.Trigger
-				copy.Position = parent.Position
-				copy.Rotation = parent.Rotation
-				table.insert(copies, copy)
-			end
+			playerUpdateVisibility(isWearable, currentWearablePreviewMode)
+
+			-- update wearable item position
+			updateWearableShapesPosition()
 		end
 
+		-- Button for item and full avatar
 		itemPlusAvatarBtn:setParent(visibilityMenu)
 		itemPlusAvatarBtn.onRelease = function(_)
+			-- update state of the 3 preview buttons
 			onlyItemBtn:unselect()
 			itemPlusBodyPartBtn:unselect()
 			itemPlusAvatarBtn:select()
 
+			-- update avatar visibility
 			currentWearablePreviewMode = wearablePreviewMode.fullBody
-			updateWearableSubShapesPosition()
+			playerUpdateVisibility(isWearable, currentWearablePreviewMode)
 
-			for _, v in ipairs(copies) do
-				v.IsHidden = true
-			end
-			copies = {}
-			Player.IsHidden = false
+			-- update wearable item position
+			updateWearableShapesPosition()
 		end
 
 		visibilityMenu.refresh = function(self)
@@ -3087,15 +3235,24 @@ function post_item_load()
 
 		Player:SetParent(World)
 		Player.Scale = 1
-		local parents = __equipments.equipmentParent(Player, itemCategory)
-		local parent = parents
-		if type(parents) == "table" then
-			parent = parents[1]
-		end
-		Player.Position = -parent:GetPoint("origin").Position
+		-- local parents = __equipments.equipmentParent(Player, itemCategory)
+		-- local parent = parents
+		-- if type(parents) == "table" then
+		--     parent = parents[1]
+		-- end
+		-- Player.Position = -parent:GetPoint("origin").Position
 
-		itemPlusAvatarBtn:onRelease()
-		Timer(0.1, updateWearableSubShapesPosition)
+		-- itemPlusAvatarBtn:onRelease()
+		-- Timer(0.1, updateWearableSubShapesPosition)
+
+		-- avatarLoadedListener:Remove()
+		-- avatarLoadedListener = nil
+
+		-- print("🐞[AvatarLoaded] itemCategory:", itemCategory)
+
+		-- item.equipmentName = itemCategory
+		-- Player.equipments[itemCategory] = item
+		-- __equipments:place(Player, item)
 	end)
 
 	fitObjectToScreen(item, settings.cameraStartRotation) -- sets cameraCurrentState.target
