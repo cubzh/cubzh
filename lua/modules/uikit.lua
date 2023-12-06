@@ -50,6 +50,7 @@ hierarchyActions = require("hierarchyactions")
 sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
+conf = require("config")
 
 sharedUI = nil
 sharedUIRootFrame = nil
@@ -1013,20 +1014,19 @@ function createUI(system)
 			end
 		else
 			if node.shape:GetParent() == nil then
-				node.pivot:AddChild(node.shape)
-				node.shape.LocalPosition = { 0, 0, 0 }
+				node.shapeContainer:AddChild(node.shape)
+				node.shape.LocalPosition = Number3.Zero
 			end
 		end
 
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
-		node.shape.LocalPosition = { 0, 0, 0 }
-		node.pivot.LocalPosition = { 0, 0, 0 }
+		node.pivot.LocalPosition = Number3.Zero
 
 		if not node._config.doNotFlip then
 			node.pivot.LocalRotation = { 0, math.pi, 0 } -- shape's front facing camera
 		else
-			node.pivot.LocalRotation = { 0, 0, 0 } -- shape's back facing camera
+			node.pivot.LocalRotation = Rotation(0, 0, 0) -- shape's back facing camera
 		end
 
 		-- shape.LocalScale = UI_SHAPE_SCALE
@@ -1050,8 +1050,6 @@ function createUI(system)
 		-- considering Shape's pivot but not modifying it
 		-- It could be important for shape's children placement.
 
-		node.shape.LocalPosition = -node._aabb.Center
-
 		if node._config.spherized then
 			local radius = node.Width * 0.5
 			node.pivot.LocalPosition = { radius, radius, radius }
@@ -1059,6 +1057,7 @@ function createUI(system)
 			node.pivot.LocalPosition = Number3(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
 
+		node.shapeContainer.LocalPosition = -node._aabb.Center + node._config.offset
 		node.object.LocalScale = backupScale
 	end
 
@@ -1345,38 +1344,30 @@ function createUI(system)
 
 		local node = _nodeCreate()
 
-		node._config = {
+		local defaultConfig = {
 			spherized = false,
 			doNotFlip = false,
+			offset = Number3.Zero,
 		}
 
-		if config ~= nil then
-			if type(config) == "boolean" then
-				-- legacy, `config` parameter used to be `doNotFlip`
-				node._config.doNotFlip = config
-			else
-				if config.spherized ~= nil then
-					node._config.spherized = config.spherized
-				end
-				if config.doNotFlip ~= nil then
-					node._config.doNotFlip = config.doNotFlip
-				end
-			end
-		end
+		config = conf:merge(defaultConfig, config)
+		node._config = config
 
 		node.object = Object()
 		node.object.LocalScale = UI_SHAPE_SCALE
 
 		node.pivot = Object()
+		node.shapeContainer = Object()
 
 		node.object:AddChild(node.pivot)
+		node.pivot:AddChild(node.shapeContainer)
 
 		node.refresh = _refreshShapeNode
 
 		-- getters
 
 		node._width = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbWidth * self.object.LocalScale.X
@@ -1384,7 +1375,7 @@ function createUI(system)
 		end
 
 		node._height = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbHeight * self.object.LocalScale.Y
@@ -1392,7 +1383,7 @@ function createUI(system)
 		end
 
 		node._depth = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbDepth * self.object.LocalScale.Z
@@ -1418,7 +1409,7 @@ function createUI(system)
 			if newWidth == nil then
 				return
 			end
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1435,7 +1426,7 @@ function createUI(system)
 			if newHeight == nil then
 				return
 			end
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1449,7 +1440,7 @@ function createUI(system)
 		end
 
 		node._setDepth = function(self, newDepth)
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1474,9 +1465,13 @@ function createUI(system)
 				self.shape = nil
 			end
 
+			shape:RemoveFromParent()
 			_setupUIObject(shape)
 			self.shape = shape
 			shape._node = self
+
+			node.shapeContainer:AddChild(shape)
+			shape.LocalPosition = Number3.Zero
 
 			if doNotRefresh ~= true then
 				self:refresh()
