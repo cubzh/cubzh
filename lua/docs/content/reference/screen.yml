@@ -4,14 +4,15 @@ description: |
     Screen represents the area on which the app is rendered.
 
 properties:
-    - name: "Width"
-      type: "number"
-      description: "Screen's width, in points."
-
     - name: "Height"
       type: "number"
       description: "Screen's height, in points."
-
+    - name: "Size"
+      type: "Number2"
+      description: "Screen's size (width, height), in points."
+    - name: "Width"
+      type: "number"
+      description: "Screen's width, in points."
 
 functions:
     - name: "DidResize"
