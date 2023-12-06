@@ -37,3 +37,16 @@ properties:
 functions:
     - name: "Cancel"
       description: "Cancels the [Timer]."
+  - name: "Pause"
+    description: "Stops the [Timer] until Resume is used."
+  - name: "Reset"
+    description: "Resets the [Timer]."
+  - name: "Resume"
+    description: "Starts the [Timer] after a Pause."
+    samples:
+     - code: |
+        myTimer = Timer(10, function() print("Done") end)
+        myTimer:Pause()
+
+        -- later in the script
+        myTimer:Resume()
