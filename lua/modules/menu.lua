@@ -1261,7 +1261,7 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 
 	if updates.outfit == true then
 		avatar:remove()
-		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui, { ignoreCache = true })
+		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
 	end
@@ -1749,7 +1749,7 @@ Timer(0.1, function()
 		topBar:parentDidResize()
 
 		avatar:remove()
-		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui)
+		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
 		if chat then
