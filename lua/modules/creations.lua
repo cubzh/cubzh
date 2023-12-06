@@ -569,6 +569,8 @@ creations.createModalContent = function(_, config)
 								require("menu"):ShowAlert({ message = "Could not archive item" }, System)
 								return
 							end
+							itemDetailsContent:pop()
+							grid:getItems()
 						end)
 					end
 					local negative = function() end
