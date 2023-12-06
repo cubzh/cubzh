@@ -1022,6 +1022,7 @@ function createUI(system)
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
 		node.pivot.LocalPosition = Number3.Zero
+		node.shapeContainer.LocalPosition = Number3.Zero
 
 		if not node._config.doNotFlip then
 			node.pivot.LocalRotation = { 0, math.pi, 0 } -- shape's front facing camera

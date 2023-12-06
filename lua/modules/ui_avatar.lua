@@ -200,22 +200,24 @@ local uiavatarMetatable = {
 					node.body = nil
 				end
 
-				local uiBody = ui:createShape(Shape(avatarBody, { includeChildren = true }), { spherized = false })
+				-- local shape = Shape(avatarBody, { includeChildren = true })
+				local shape = avatarBody
+				shape.LocalPosition = Number3.Zero
+
+				-- -12 -> centered (body position set in animation cycle)
+				-- -14 -> from below shoulders
+				local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -14, 0) })
 				uiBody:setParent(node)
 				uiBody.Head.LocalRotation = { 0, 0, 0 }
 				node.body = uiBody
 				uiBody.ratio = uiBody.Width / uiBody.Height
 
-				node.body.Width = node._w * 1.1
+				node.body.Width = node._w
 				node.body.Height = node.body.Width / uiBody.ratio
 
 				node.body.pivot.LocalRotation = rotation
 
-				node.body.pos.X = -(node.body.Width - node._w) * 0.5
-				node.body.pos.Y = node.Height - node.body.Height
-
-				local center = Number3(uiBody.shape.Width, uiBody.shape.Height, uiBody.shape.Depth)
-				uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
+				node.body.pos = { 0, 0 }
 			end
 
 			body, requests = avatar:get(usernameOrId)
