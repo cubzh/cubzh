@@ -14,26 +14,39 @@ constructors:
     - name: "callback"
       type: "function"
     samples:
-        - code: |
-            -- prints "2 seconds" each 2 seconds
-            local myTimer = Timer(2.0, true, function()
-              print("2 seconds")
-            end)
+      - code: |
+          -- prints "2 seconds" each 2 seconds
+          local myTimer = Timer(2.0, true, function()
+            print("2 seconds")
+          end)
 
-            local callback = function()
-              Player.Velocity.Y = 50
-            end
-            -- after 5 seconds the Player will jump
-            local myTimer2 = Timer(5.0, callback)
+          local callback = function()
+            Player.Velocity.Y = 50
+          end
+          -- after 5 seconds the Player will jump
+          local myTimer2 = Timer(5.0, callback)
 
 properties:
-    - name: "RemainingTime"
-      type: "number"
-      description: "Time remaining before the function is called."
-    - name: "Time"
-      type: "number"
-      description: "Time since the start of the [Timer]."
+  - name: "RemainingTime"
+    type: "number"
+    description: "Time remaining before the function is called."
+  - name: "Time"
+    type: "number"
+    description: "Time since the start of the [Timer]."
 
 functions:
-    - name: "Cancel"
-      description: "Cancels the [Timer]."
+  - name: "Cancel"
+    description: "Cancels the [Timer]."
+  - name: "Pause"
+    description: "Stops the [Timer] until Resume is used."
+  - name: "Reset"
+    description: "Resets the [Timer]."
+  - name: "Resume"
+    description: "Starts the [Timer] after a Pause."
+    samples:
+     - code: |
+        myTimer = Timer(10, function() print("Done") end)
+        myTimer:Pause()
+
+        -- later in the script
+        myTimer:Resume()
