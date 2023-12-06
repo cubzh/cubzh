@@ -23,11 +23,26 @@ local map
 local mapIndex = 1
 local mapName
 
+local CameraMode = {
+	THIRD_PERSON = 0,
+	FIRST_PERSON = 1,
+}
+local cameraMode = CameraMode.THIRD_PERSON
+
 local waitingForUUIDObj
 
 local TRAILS_COLORS = { Color.Blue, Color.Red, Color.Green, Color.Yellow, Color.Grey, Color.Purple, Color.Beige, Color.Yellow, Color.Brown, Color.Pink }
 local OBJECTS_COLLISION_GROUP = 7
 local ALPHA_ON_DRAG = 0.6
+
+local setCameraMode = function(mode)
+	cameraMode = mode
+	if mode == CameraMode.THIRD_PERSON then
+		Camera:SetModeThirdPerson()
+	else
+		return require("camera_modes"):setFirstPerson({ offset = Number3(0, 3, 0), camera = Camera, target = Player, showPointer = true })
+	end
+end
 
 local getObjectInfoTable = function(obj)
 	return {
@@ -56,8 +71,21 @@ local states = {
 }
 
 local setState
-
 local state
+
+clearWorld = function()
+	Player:RemoveFromParent()
+	if map then
+		map:RemoveFromParent()
+		map = nil
+	end
+	for _,o in pairs(objects) do
+		o:RemoveFromParent()
+	end
+	objects = {}
+	mapName = nil
+	ambience:set(ambience.noon)
+end
 
 local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 	syncMulti = syncMulti == nil and true or syncMulti
@@ -65,14 +93,15 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 		print("Error: tried to set physics mode on nil object")
 		return
 	end
-	if obj.Physics == physicsMode then return end
 	if physicsMode == PhysicsMode.Dynamic then
 		obj.Physics = PhysicsMode.Dynamic
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
+			if type(o) == "Object" then return end
 			o.Physics = PhysicsMode.Disabled
 		end)
 	else
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			if type(o) == "Object" then return end
 			o.Physics = physicsMode
 		end)
 	end
@@ -85,8 +114,11 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 end
 
 local tryPickObject = function(pe)
-	local impact = pe:CastRay()
-	if not impact then return end
+	local impact = pe:CastRay({ OBJECTS_COLLISION_GROUP })
+	if not impact then
+		setState(states.DEFAULT)
+		return
+	end
 
 	local obj = impact.Object
 	while obj and not obj.isEditable do
@@ -122,14 +154,14 @@ end
 
 local freezeObject = function(obj)
 	if not obj then	return end
-	obj.savedPhysicsState = obj.Physics
+	obj.savedPhysicsMode = obj.Physics
 	setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
 end
 
 local unfreezeObject = function(obj)
-	if not obj or not obj.savedPhysicsState then return end
-	setObjectPhysicsMode(obj, obj.savedPhysicsState, true)
-	obj.savedPhysicsState = nil
+	if not obj or not obj.savedPhysicsMode then return end
+	setObjectPhysicsMode(obj, obj.savedPhysicsMode, true)
+	obj.savedPhysicsMode = nil
 end
 
 local spawnObject = function(data, onDone)
@@ -145,19 +177,22 @@ local spawnObject = function(data, onDone)
 		if not obj then print("Can't load", fullname) return end
 		obj:SetParent(World)
 
+		-- Handle multishape (world space, change position after)
 		local box = Box()
 		box:Fit(obj, true)
-		obj.CollisionBox = box
 		obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
 
 		setObjectPhysicsMode(obj, physicsMode)
+
 		obj.uuid = uuid
 		obj.Position = position
 		obj.Rotation = rotation
 		obj.Scale = scale
 
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			if type(o) == "Object" then return end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+			o:ResetCollisionBox()
 		end)
 		obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 
@@ -198,11 +233,18 @@ local removeObject = function(objInfo)
 	objects[objInfo.uuid] = nil
 end
 
-local mobilePlacingObject = function(obj)
+local firstPersonPlacingObject = function(obj)
 	local impact = Camera:CastRay(nil, Player)
-	if not impact then return end
-
-	obj.Position = Camera.Position + Camera.Forward * impact.Distance
+	local maxDistance = Client.IsMobile and 80 or 30
+	if not impact or (not Client.IsMobile and impact.Distance > maxDistance) then
+		local ray = Ray(Camera.Position + Camera.Forward * maxDistance, Number3(0,-1,0))
+		impact = ray:Cast(nil, Player)
+		if impact then
+			obj.Position = Camera.Position + Camera.Forward * maxDistance + Number3(0,-1,0) * impact.Distance
+		end
+	elseif impact then
+		obj.Position = Camera.Position + Camera.Forward * impact.Distance
+	end
 	obj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 end
 
@@ -303,15 +345,15 @@ local statesSettings = {
 			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
 			freezeObject(obj)
-			if Client.IsMobile then
+			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then
 				if worldEditor.rotationShift == nil or worldEditor.rotationShift == 0 then worldEditor.rotationShift = math.pi * 0.5 end
 				worldEditor.placingValidateBtn:show()
 				return
 			end
 		end,
 		tick = function()
-			if Client.IsMobile then
-				mobilePlacingObject(worldEditor.placingObj)
+			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then -- even third person on mobile uses this placing mode
+				firstPersonPlacingObject(worldEditor.placingObj)
 			end
 		end,
 		onStateEnd = function()
@@ -319,7 +361,7 @@ local statesSettings = {
 			worldEditor.placingCancelBtn:hide()
 		end,
 		pointerMove = function(pe)
-			if Client.IsMobile then return end
+			if cameraMode == CameraMode.FIRST_PERSON then return end
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
@@ -330,7 +372,7 @@ local statesSettings = {
 			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 		end,
 		pointerDrag = function(pe)
-			if Client.IsMobile then return end
+			if cameraMode == CameraMode.FIRST_PERSON then return end
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
@@ -341,7 +383,7 @@ local statesSettings = {
 			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
 		end,
 		pointerUp = function(pe)
-			if Client.IsMobile then return end
+			if cameraMode == CameraMode.FIRST_PERSON then return end
 			if pe.Index ~= 4 then return end
 
 			if worldEditor.dragging then return end
@@ -379,6 +421,17 @@ local statesSettings = {
 			end
 			worldEditor.updateObjectUI:show()
 
+			local physicsModeIcon
+			if obj.Physics == PhysicsMode.StaticPerBlock then
+				physicsModeIcon = "⚅"
+			elseif obj.Physics == PhysicsMode.Static then
+				physicsModeIcon = "⚀"
+			elseif obj.Physics == PhysicsMode.Trigger then
+				physicsModeIcon = "►"
+			end
+			worldEditor.physicsBtn.Text = physicsModeIcon
+			freezeObject(worldEditor.object)
+
 			local currentScale = obj.Scale:Copy()
 			require("ease"):inOutQuad(obj, 0.15).Scale = currentScale * 1.1
 			Timer(0.15, function()
@@ -387,7 +440,6 @@ local statesSettings = {
 			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 
-			freezeObject(worldEditor.object)
 
 			-- Translation gizmo
 			worldEditor.gizmo:setObject(worldEditor.object)
@@ -761,7 +813,11 @@ startDefaultMode = function()
     end
 	-- require("multi")
     Player:SetParent(World)
-	Camera:SetModeThirdPerson()
+	if Client.IsMobile then
+		setCameraMode(CameraMode.FIRST_PERSON)
+	else
+		setCameraMode(CameraMode.THIRD_PERSON)
+	end
     dropPlayer()
 
 	require("jumpfly")
@@ -848,6 +904,17 @@ initDefaultMode = function()
 			end
 		},
 		{ type="gap" },
+		{
+			type = "button",
+			text = "Camera Mode",
+			callback = function()
+				if cameraMode == CameraMode.THIRD_PERSON then
+					setCameraMode(CameraMode.FIRST_PERSON)
+				else
+					setCameraMode(CameraMode.THIRD_PERSON)
+				end
+			end,
+		},
 		{
 			type = "button",
 			text = "📑 Save World",
@@ -1040,6 +1107,22 @@ initDefaultMode = function()
 
 	local barInfo = {
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT, worldEditor.object.uuid) end },
+		{ type="button", text="⚅", name="physicsBtn", callback=function(btn)
+			if btn.Text == "⚅" then
+				worldEditor.object:TextBubble("CollisionMode: Static")
+				worldEditor.object.savedPhysicsMode = PhysicsMode.Static
+				btn.Text = "⚀"
+			elseif btn.Text == "⚀" then
+				worldEditor.object:TextBubble("CollisionMode: Trigger")
+				worldEditor.object.savedPhysicsMode = PhysicsMode.Trigger
+				btn.Text = "►"
+			else
+				worldEditor.object:TextBubble("CollisionMode: StaticPerBlock")
+				worldEditor.object.savedPhysicsMode = PhysicsMode.StaticPerBlock
+				btn.Text = "⚅"
+			end
+		end
+		},
 		{ type="gap" },
 		{ type="button", text="🗑️", callback=function() setState(states.DESTROY_OBJECT, worldEditor.object.uuid) end },
 		{ type="gap" },
@@ -1049,6 +1132,9 @@ initDefaultMode = function()
 	for _,elem in ipairs(barInfo) do
 		if elem.type == "button" then
 			local btn = ui:createButton(elem.text)
+			if elem.name then
+				worldEditor[elem.name] = btn
+			end
 			btn.onRelease = elem.callback
 			bar:pushElement(btn)
 		elseif elem.type == "separator" then
@@ -1239,6 +1325,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		dropPlayer()
 	elseif e.a == events.RESET_ALL then
 		setState(states.DEFAULT)
+		clearWorld()
 		setState(states.PICK_MAP)
 	elseif e.a == events.SAVE_WORLD then
 		local mapBase64 = data.mapBase64
