@@ -274,7 +274,6 @@ itemGrid.create = function(_, config)
 
 		local likesAndViewsFrame = ui:createFrame(theme.gridCellFrameColor)
 		likesAndViewsFrame:setParent(cell)
-		likesAndViewsFrame.Position.Z = 5 -- above shape
 		likesAndViewsFrame.pos.X = 0
 
 		local nbLikes = ui:createText("", Color.White, "small")
@@ -309,7 +308,6 @@ itemGrid.create = function(_, config)
 
 		local textFrame = ui:createFrame(theme.gridCellFrameColor)
 		textFrame:setParent(cell)
-		textFrame.Position.Z = 5 -- above shape, TODO: remove once layering is fixed
 
 		local tName = ui:createText("", Color.White, "small")
 		tName:setParent(textFrame)
