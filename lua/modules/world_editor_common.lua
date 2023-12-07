@@ -395,7 +395,8 @@ local writeChunkObjects = function(d, objects)
 			end
 			if object.Physics and object.Physics ~= PhysicsMode.StaticPerBlock then
 				d:WriteString("pm")
-				local realPhysicsMode = object.savedPhysicsMode or object.Physics -- object might be frozen when manipulating it (disabled)
+				-- object might be Trigger but really Disabled in the UI (realPhysicsMode)
+				local realPhysicsMode = object.realPhysicsMode or object.Physics
 				d:WritePhysicsMode(realPhysicsMode)
 				nbFields = nbFields + 1
 			end

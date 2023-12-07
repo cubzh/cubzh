@@ -93,7 +93,14 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 		print("Error: tried to set physics mode on nil object")
 		return
 	end
-	if physicsMode == PhysicsMode.Dynamic then
+	-- If disabled, keep trigger to allow raycast
+	if physicsMode == PhysicsMode.Disabled then
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			if type(o) == "Object" then return end
+			o.Physics = PhysicsMode.Trigger
+			o.realPhysicsMode = PhysicsMode.Disabled
+		end)
+	elseif physicsMode == PhysicsMode.Dynamic then
 		obj.Physics = PhysicsMode.Dynamic
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
 			if type(o) == "Object" then return end
@@ -154,14 +161,13 @@ end
 
 local freezeObject = function(obj)
 	if not obj then	return end
-	obj.savedPhysicsMode = obj.Physics
+	obj.realPhysicsMode = obj.Physics
 	setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
 end
 
 local unfreezeObject = function(obj)
-	if not obj or not obj.savedPhysicsMode then return end
-	setObjectPhysicsMode(obj, obj.savedPhysicsMode, true)
-	obj.savedPhysicsMode = nil
+	if not obj then return end
+	setObjectPhysicsMode(obj, obj.realPhysicsMode, true)
 end
 
 local spawnObject = function(data, onDone)
@@ -422,12 +428,14 @@ local statesSettings = {
 			worldEditor.updateObjectUI:show()
 
 			local physicsModeIcon
-			if obj.Physics == PhysicsMode.StaticPerBlock then
+			if obj.realPhysicsMode == PhysicsMode.StaticPerBlock then
 				physicsModeIcon = "⚅"
-			elseif obj.Physics == PhysicsMode.Static then
+			elseif obj.realPhysicsMode == PhysicsMode.Static then
 				physicsModeIcon = "⚀"
-			elseif obj.Physics == PhysicsMode.Trigger then
+			elseif obj.realPhysicsMode == PhysicsMode.Trigger then
 				physicsModeIcon = "►"
+			elseif obj.realPhysicsMode == PhysicsMode.Disabled then
+				physicsModeIcon = "❌"
 			end
 			worldEditor.physicsBtn.Text = physicsModeIcon
 			freezeObject(worldEditor.object)
@@ -1110,15 +1118,19 @@ initDefaultMode = function()
 		{ type="button", text="⚅", name="physicsBtn", callback=function(btn)
 			if btn.Text == "⚅" then
 				worldEditor.object:TextBubble("CollisionMode: Static")
-				worldEditor.object.savedPhysicsMode = PhysicsMode.Static
+				worldEditor.object.realPhysicsMode = PhysicsMode.Static
 				btn.Text = "⚀"
 			elseif btn.Text == "⚀" then
 				worldEditor.object:TextBubble("CollisionMode: Trigger")
-				worldEditor.object.savedPhysicsMode = PhysicsMode.Trigger
+				worldEditor.object.realPhysicsMode = PhysicsMode.Trigger
 				btn.Text = "►"
+			elseif btn.Text == "►" then
+				worldEditor.object:TextBubble("CollisionMode: Disabled")
+				worldEditor.object.realPhysicsMode = PhysicsMode.Disabled
+				btn.Text = "❌"
 			else
 				worldEditor.object:TextBubble("CollisionMode: StaticPerBlock")
-				worldEditor.object.savedPhysicsMode = PhysicsMode.StaticPerBlock
+				worldEditor.object.realPhysicsMode = PhysicsMode.StaticPerBlock
 				btn.Text = "⚅"
 			end
 		end
