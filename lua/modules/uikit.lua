@@ -532,7 +532,7 @@ function createUI(system)
 			else
 				return 0
 			end
-		elseif k == "pos" or k == "position" or k == "LocalPosition" then
+		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
 			return t.object.LocalPosition
 		elseif k == "size" or k == "Size" then
 			return Number2(t.Width, t.Height)
