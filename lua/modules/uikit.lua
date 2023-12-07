@@ -532,7 +532,7 @@ function createUI(system)
 			else
 				return 0
 			end
-		elseif k == "pos" or k == "position" or k == "LocalPosition" then
+		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
 			return t.object.LocalPosition
 		elseif k == "size" or k == "Size" then
 			return Number2(t.Width, t.Height)
@@ -686,20 +686,32 @@ function createUI(system)
 				end
 			end
 			-- TODO: node could use a separate internal object when it needs a pivot, to be type-agnostic
-		elseif k == "pos" or k == "position" or k == "LocalPosition" then
+		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
+			local isNumber = function(val)
+				return type(val) == "number" or type(val) == "integer"
+			end
+
+			if type(v) ~= "table" and type(v) ~= "Number2" and type(v) ~= "Number3" then
+				error("uikit: node." .. k .. " must be a Number2", 2)
+			end
+			if type(v) == "table" then
+				if #v < 2 then
+					error("uikit: node." .. k .. " must be a Number2", 2)
+				end
+				if isNumber(v[1]) == false or isNumber(v[2]) == false then
+					error("uikit: node." .. k .. " subvalues must be numbers", 2)
+				end
+			end
+
 			local obj = t.object
 			local z = obj.LocalPosition.Z
+			-- convert to Number3
 			if type(v) == "Number2" then
 				v = Number3(v.X, v.Y, 0)
+			elseif type(v) == "table" and #v == 2 then
+				v = Number3(v[1], v[2], 0)
 			end
-			if v[1] ~= nil and v[2] ~= nil and v[3] == nil then
-				v = { v[1], v[2], 0 }
-			end
-			if not pcall(function()
-				obj.LocalPosition = v
-			end) then
-				error(k .. " can't be set", 2)
-			end
+			obj.LocalPosition = v -- v is a Number3
 			obj.LocalPosition.Z = z -- restore Z (layer)
 		elseif k == "size" or k == "Size" then
 			if type(v) == "number" or type(v) == "integer" then
@@ -717,7 +729,7 @@ function createUI(system)
 			end) then
 				error(k .. " can't be set", 2)
 			end
-		elseif k == "rot" or k == "rotation" or k == "LocalRotation" then
+		elseif k == "rot" or k == "rotation" or k == "Rotation" or k == "LocalRotation" then
 			t.object.LocalRotation = v
 		elseif k == "IsHidden" then
 			t.object.IsHidden = v
