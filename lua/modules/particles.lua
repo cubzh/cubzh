@@ -15,7 +15,7 @@ local particles = {
 		else
 			return default
 		end
-	end,
+	end
 }
 
 --[[
@@ -25,7 +25,10 @@ Also fields can be just values
 config = {
 	velocity = function() return Number3(0,0,0) end, -- start velocity
 	position = function() return Number3(0,0,0) end, -- start position
-	scale = function() return Number3(0,0,0) end, -- start scale
+	rotation = function() return Rotation(0, 0, 0) end,
+	start_scale = function() return Number3(1,1,1) end, -- start scale
+	end_scale = function() return Number3(0,0,0) end, -- end scale
+	-- scale = function() return Number3(1, 1, 1) -- start_scale & end_scale will be equal
 	mass = function() return 1 end, -- should be or return a number
 	physics = true, -- should be or return a boolean
 	acceleration = function() return Number3(0,0,0) end, -- should be or return a Number3
@@ -33,7 +36,6 @@ config = {
 	collidesWithGroups = function return nil end -- should be or return collision groups
 	collisionGroups = function return nil end -- should be or return collision groups
 	color = function return Color.White end -- should be or return a Color
-	pps = function return nil end -- should be or return number of spawned particles per second, if nil, all spawned at once
 }
 
 --]]
@@ -60,20 +62,33 @@ particles.newEmitter = function(_, config)
 			p.Physics = particles.fromConfigOrDefault(conf.physics, true)
 			p.Velocity = particles.fromConfigOrDefault(conf.velocity, Number3(0, 0, 0))
 			p.Position = self.Position + particles.fromConfigOrDefault(conf.position, Number3(0, 0, 0))
+			p.Rotation = particles.fromConfigOrDefault(conf.rotation, Rotation(0, 0, 0))
 			p.Acceleration = particles.fromConfigOrDefault(conf.acceleration, Number3(0, 0, 0))
-			p.Scale = particles.fromConfigOrDefault(conf.scale, 1.0)
+			p.startScale = particles.fromConfigOrDefault(conf.start_scale, particles.fromConfigOrDefault(conf.scale, 1.0))
+			p.endScale = particles.fromConfigOrDefault(conf.end_scale, particles.fromConfigOrDefault(conf.start_scale, particles.fromConfigOrDefault(conf.scale, 1.0)))
 			p.Mass = particles.fromConfigOrDefault(conf.mass, 1.0)
 			p.Palette[1].Color = particles.fromConfigOrDefault(conf.color, Color.White)
 			p.CollisionGroups = particles.fromConfigOrDefault(conf.collisionGroups, nil)
 			p.CollidesWithGroups = particles.fromConfigOrDefault(conf.collidesWithGroups, nil)
+			p.startLife = particles.fromConfigOrDefault(conf.life, 10.0)
+			p.life = particles.fromConfigOrDefault(conf.life, 10.0)
+
+			p.remove = function(s)
+				s.Tick = nil
+				s:RemoveFromParent()
+				table.insert(particles.pool, s)
+			end
 
 			World:AddChild(p)
 
-			local life = particles.fromConfigOrDefault(conf.life, 10.0)
-			Timer(life, function()
-				p:RemoveFromParent()
-				table.insert(particles.pool, p)
-			end)
+			p.Tick = function(s, dt)
+				s.Scale:Lerp(s.startScale, s.endScale, 1-(s.life/s.startLife))
+				
+				s.life = s.life - dt
+				if s.life <= 0 then
+					s:remove()
+				end
+			end
 		end
 	end
 
