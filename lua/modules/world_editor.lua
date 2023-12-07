@@ -52,7 +52,7 @@ local getObjectInfoTable = function(obj)
 		Rotation = obj.Rotation or Number3(0, 0, 0),
 		Scale = obj.Scale or Number3(1, 1, 1),
 		Name = obj.Name or obj.fullname,
-		Physics = obj.Physics or PhysicsMode.StaticPerBlock
+		Physics = obj.realPhysicsMode or PhysicsMode.StaticPerBlock
 	}
 end
 
@@ -93,29 +93,20 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 		print("Error: tried to set physics mode on nil object")
 		return
 	end
-	-- If disabled, keep trigger to allow raycast
-	if physicsMode == PhysicsMode.Disabled then
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-			if type(o) == "Object" then return end
+	obj.realPhysicsMode = physicsMode
+	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		if type(o) == "Object" then return end
+		-- If disabled, keep trigger to allow raycast
+		if physicsMode == PhysicsMode.Disabled then
 			o.Physics = PhysicsMode.Trigger
-			o.realPhysicsMode = PhysicsMode.Disabled
-		end)
-	elseif physicsMode == PhysicsMode.Dynamic then
-		obj.Physics = PhysicsMode.Dynamic
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = false }, function(o)
-			if type(o) == "Object" then return end
-			o.Physics = PhysicsMode.Disabled
-		end)
-	else
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-			if type(o) == "Object" then return end
+		else
 			o.Physics = physicsMode
-		end)
-	end
+		end
+	end)
 	if syncMulti then
 		sendToServer(events.P_EDIT_OBJECT, {
 			uuid = obj.uuid,
-			Physics = physicsMode
+			Physics = obj.realPhysicsMode
 		})
 	end
 end
@@ -161,13 +152,12 @@ end
 
 local freezeObject = function(obj)
 	if not obj then	return end
-	obj.realPhysicsMode = obj.Physics
-	setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
+	obj.CollidesWithGroups = {}
 end
 
 local unfreezeObject = function(obj)
 	if not obj then return end
-	setObjectPhysicsMode(obj, obj.realPhysicsMode, true)
+	obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 end
 
 local spawnObject = function(data, onDone)
@@ -436,6 +426,8 @@ local statesSettings = {
 				physicsModeIcon = "►"
 			elseif obj.realPhysicsMode == PhysicsMode.Disabled then
 				physicsModeIcon = "❌"
+			else
+				error("Physics mode not handled")
 			end
 			worldEditor.physicsBtn.Text = physicsModeIcon
 			freezeObject(worldEditor.object)
@@ -1116,21 +1108,22 @@ initDefaultMode = function()
 	local barInfo = {
 		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT, worldEditor.object.uuid) end },
 		{ type="button", text="⚅", name="physicsBtn", callback=function(btn)
+			local obj = worldEditor.object
 			if btn.Text == "⚅" then
-				worldEditor.object:TextBubble("CollisionMode: Static")
-				worldEditor.object.realPhysicsMode = PhysicsMode.Static
+				obj:TextBubble("CollisionMode: Static")
+				setObjectPhysicsMode(obj, PhysicsMode.Static, true)
 				btn.Text = "⚀"
 			elseif btn.Text == "⚀" then
-				worldEditor.object:TextBubble("CollisionMode: Trigger")
-				worldEditor.object.realPhysicsMode = PhysicsMode.Trigger
+				obj:TextBubble("CollisionMode: Trigger")
+				setObjectPhysicsMode(obj, PhysicsMode.Trigger, true)
 				btn.Text = "►"
 			elseif btn.Text == "►" then
-				worldEditor.object:TextBubble("CollisionMode: Disabled")
-				worldEditor.object.realPhysicsMode = PhysicsMode.Disabled
+				obj:TextBubble("CollisionMode: Disabled")
+				setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
 				btn.Text = "❌"
 			else
-				worldEditor.object:TextBubble("CollisionMode: StaticPerBlock")
-				worldEditor.object.realPhysicsMode = PhysicsMode.StaticPerBlock
+				obj:TextBubble("CollisionMode: StaticPerBlock")
+				setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock, true)
 				btn.Text = "⚅"
 			end
 		end
@@ -1287,6 +1280,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	elseif e.a == events.START_EDIT_OBJECT then
 		local obj = objects[data.uuid]
 		if not obj or isLocalPlayer then return end
+		freezeObject(obj)
 		obj.currentlyEditedBy = sender
 		if obj.trail then
 			obj.trail:remove()
@@ -1298,6 +1292,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			print("can't end edit object")
 			return
 		end
+		unfreezeObject(obj)
 		if obj.trail then
 			obj.trail:remove()
 			obj.trail = nil
