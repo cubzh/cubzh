@@ -13,7 +13,7 @@ creations.createModalContent = function(_, config)
 	-- default config
 	local _config = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
-		onOpen = nil
+		onOpen = nil,
 	}
 
 	if config then
@@ -524,7 +524,10 @@ creations.createModalContent = function(_, config)
 		end
 
 		grid.onOpen = function(_, cell)
-			if config.onOpen then config.onOpen(creationsContent, cell) return end
+			if config.onOpen then
+				config.onOpen(creationsContent, cell)
+				return
+			end
 			if cell.type == "item" then
 				local itemFullName = cell.itemFullName
 				local category = cell.category
@@ -556,8 +559,33 @@ creations.createModalContent = function(_, config)
 					end)
 				end
 
-				--itemDetailsContent.bottomCenter = {btnDuplicate, btnEdit, btnExport}
-				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport }
+				local btnArchive = ui:createButton("🗑️", { textSize = "default" })
+				btnArchive.onRelease = function()
+					local str = "Are you sure you want to archive this item?"
+					local positive = function()
+						local data = { archived = true }
+						api:patchItem(cell.id, data, function(err, itm)
+							if err or not itm.archived then
+								require("menu"):ShowAlert({ message = "Could not archive item" }, System)
+								return
+							end
+							itemDetailsContent:pop()
+							grid:getItems()
+						end)
+					end
+					local negative = function() end
+					local alertConfig = {
+						message = str,
+						positiveLabel = "Yes",
+						positiveCallback = positive,
+						negativeLabel = "No",
+						negativeCallback = negative,
+					}
+
+					require("menu"):ShowAlert(alertConfig, System)
+				end
+
+				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }
 				itemDetailsContent.bottomRight = { btnEdit }
 
 				itemDetailsContent.idealReducedContentSize = function(content, width, height)
