@@ -60,30 +60,36 @@ setFromAIConfig = function(_, config, _quiet)
 end
 
 createNode = function()
-    promptContainer = ui:createNode()
+    promptContainer = ui:createFrame()
 
     promptInput = ui:createTextInput("", "Describe an ambience")
     promptInput:setParent(promptContainer)
     promptInput:hide()
-    promptBtn = ui:createButton("💬 ✨", {textSize = "big"})
+    promptBtn = ui:createButton("💬 ✨")
     promptBtn:setParent(promptContainer)
     promptContainer.input = promptInput
     promptContainer.btn = promptBtn
+
+    promptContainer.Width = promptBtn.Width
+    promptContainer.Height = promptBtn.Height
 
     promptBtn.onRelease = function()
         promptInput:show()
         promptInput:focus()
         promptBtn:hide()
+        promptContainer.Width = promptInput.Width
     end
 
     promptInput.onFocusLost = function()
         promptInput:hide()
         promptBtn:show()
+        promptContainer.Width = promptBtn.Width
     end
 
     promptInput.onSubmit = function()
         promptInput:hide()
         promptBtn:show()
+        promptContainer.Width = promptBtn.Width
 
         local text = promptInput.Text
         promptInput.Text = ""
