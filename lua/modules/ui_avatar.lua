@@ -206,13 +206,15 @@ local uiavatarMetatable = {
 
 				-- -12 -> centered (body position set in animation cycle)
 				-- -14 -> from below shoulders
-				local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -14, 0) })
+				local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
 				uiBody:setParent(node)
 				uiBody.Head.LocalRotation = { 0, 0, 0 }
 				node.body = uiBody
 				uiBody.ratio = uiBody.Width / uiBody.Height
 
-				node.body.Width = node._w
+				-- NOTE: this needs to be improved, to programatically crop
+				-- perfectly around the head, considering hair / headsets, etc.
+				node.body.Width = node._w * 1.1
 				node.body.Height = node.body.Width / uiBody.ratio
 
 				node.body.pivot.LocalRotation = rotation

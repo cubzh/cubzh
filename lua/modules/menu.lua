@@ -34,6 +34,7 @@ CHAT_MIN_HEIGHT = 160
 CHAT_MAX_HEIGHT = 400
 CONNECTION_RETRY_DELAY = 5.0 -- in seconds
 PADDING = theme.padding
+PADDING_BIG = 9
 TOP_BAR_HEIGHT = 40
 
 ---------------------------
@@ -424,10 +425,14 @@ topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
 
 btnContentParentDidResize = function(self)
+	local padding = PADDING_BIG
+	if self == cubzhBtnShape or self == avatar then
+		padding = PADDING
+	end
 	local parent = self.parent
 	self.Width = parent.Width - PADDING * 2
-	self.Height = parent.Height - PADDING * 2
-	self.pos = { PADDING, PADDING }
+	self.Height = parent.Height - padding * 2
+	self.pos = { PADDING, padding }
 end
 
 -- MAIN MENU BTN
@@ -559,9 +564,9 @@ textBubbleShape = ui:createShape(System.ShapeFromBundle("aduermael.textbubble"))
 textBubbleShape:setParent(chatBtn)
 textBubbleShape.parentDidResize = function(self)
 	local parent = self.parent
-	self.Height = parent.Height - PADDING * 2
+	self.Height = parent.Height - PADDING_BIG * 2
 	self.Width = self.Height
-	self.pos = { PADDING, PADDING }
+	self.pos = { PADDING, PADDING_BIG }
 end
 
 friendsBtn = ui:createFrame(_DEBUG and Color(0, 255, 255, 255) or Color.transparent)
@@ -979,13 +984,13 @@ topBar.parentDidResize = function(self)
 	-- FRIENDS BUTTON
 
 	friendsBtn.Height = height
-	friendsBtn.Width = friendsBtn.Height
+	friendsBtn.Width = friendsBtn.Height - (PADDING_BIG - PADDING) * 2
 	friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
 
 	-- CHAT BUTTON
 
 	chatBtn.Height = height
-	chatBtn.pos.X = friendsBtn.pos.X + profileFrame.Width
+	chatBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
 	chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
 
 	-- CHAT MESSAGES
