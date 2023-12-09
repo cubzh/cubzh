@@ -271,8 +271,12 @@ itemDetails.createModalContent = function(_, config)
 				end
 
 				by.onRelease = function(_)
-					local profileConfig = { isLocal = false, username = cell.repo, userID = authorID, uikit = ui }
-					local profileContent = require("profile"):create(profileConfig)
+					local profileContent = require("profile"):create({
+						isLocal = false,
+						username = cell.repo,
+						userID = authorID,
+						uikit = ui,
+					})
 					content:push(profileContent)
 				end
 			end)
@@ -658,7 +662,10 @@ end
 
 itemDetails.createModal = function(_, config)
 	local cell = config.cell
-	if not cell then error("Can't make item details modal without cell in config") return end
+	if not cell then
+		error("Can't make item details modal without cell in config")
+		return
+	end
 
 	local modal = require("modal")
 	local ui = config.ui or require("uikit")

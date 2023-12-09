@@ -485,29 +485,39 @@ index.get = function(_, usernameOrId, replaced)
 	end
 
 	local equipments = require("equipments")
+
+	-- loads avatar equipments (hair, jacket, pants, boots)
 	local loadEquipments = function(_, data)
+		-- keys expected in `data` argument
 		local equipmentsList = { "hair", "jacket", "pants", "boots" }
-		local nbEquipments = #equipmentsList
+		local nbEquipmentsTotal = #equipmentsList
 		local nbEquipmentsLoaded = 0
+
 		local nextEquipmentLoaded = function()
 			nbEquipmentsLoaded = nbEquipmentsLoaded + 1
-			if nbEquipmentsLoaded >= nbEquipments then
+			if nbEquipmentsLoaded >= nbEquipmentsTotal then
 				if root.didLoad then
 					root.didLoad(nil, root)
 					return
 				end
 			end
 		end
-		for _, v in ipairs(equipmentsList) do
-			-- equipments.load creates the `root.equipments` field
-			if data[v] ~= nil and data[v] ~= "" then
-				local req = equipments.load(v, data[v], root, false, false, function(obj)
+
+		for _, eqName in ipairs(equipmentsList) do
+			local itemRepoName = data[eqName]
+			if itemRepoName ~= nil and itemRepoName ~= "" then
+				-- equipments.load creates the `root.equipments` field
+				local req = equipments.load(eqName, itemRepoName, root, false, false, function(obj)
 					if not obj then
 						print("Error: can't equip default wearables")
 					end
 					nextEquipmentLoaded()
 				end)
 				table.insert(requests, req)
+			else
+				-- we need to call nextEquipmentLoaded() even if there is no equipment
+				-- to make sure we call root.didLoad() when all equipments are loaded
+				nextEquipmentLoaded()
 			end
 		end
 	end
