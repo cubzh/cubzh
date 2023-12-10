@@ -2277,7 +2277,7 @@ function createUI(system)
 			btn:disable()
 
 			local selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.Parent)
+			selector:setParent(btn.parent)
 
 			focus(nil)
 			comboBoxSelector = selector
@@ -2394,13 +2394,31 @@ function createUI(system)
 				contentHeight = contentHeight + c.Height
 			end
 
-			frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
+			-- frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
+			frame.Height = math.min(
+				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
+				contentHeight
+			)
+
 			frame.pos.Z = -10 -- render on front
 
 			selector.Height = frame.Height + theme.paddingTiny * 2
 			selector.Width = frame.Width + theme.paddingTiny * 2
 
 			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - frame.Height + theme.padding, 0)
+
+			parent = btn.parent
+			absPy = p.Y
+			while parent do
+				absPy = absPy + parent.pos.Y
+				parent = parent.parent
+			end
+
+			local offset = 0
+			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
+				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
+			end
+			p.Y = p.Y + offset
 
 			selector.pos.X = p.X
 			selector.pos.Y = p.Y - 50
