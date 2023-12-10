@@ -2018,7 +2018,7 @@ function createUI(system)
 	end
 
 	ui.createButton = function(_, stringOrShape, config)
-		local _config = {
+		local defaultConfig = {
 			borders = true,
 			underline = false,
 			padding = true,
@@ -2028,16 +2028,7 @@ function createUI(system)
 			unfocuses = true, -- unfocused focused node when true
 		}
 
-		if config then
-			-- replace default values in _config
-			for k, v in pairs(_config) do
-				if type(config[k]) == type(v) then
-					_config[k] = config[k]
-				end
-			end
-		end
-
-		config = _config
+		config = conf:merge(defaultConfig, config)
 
 		local theme = require("uitheme").current
 
