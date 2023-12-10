@@ -151,18 +151,21 @@ signup.createModal = function(_, config)
 	end
 
 	monthInput.onSelect = function(self, index)
+		System:DebugEvent("SIGNUP_PICK_MONTH")
 		_month = index
 		self.Text = monthNames[index]
 		checkDOB()
 	end
 
 	dayInput.onSelect = function(self, index)
+		System:DebugEvent("SIGNUP_PICK_DAY")
 		_day = index
 		self.Text = dayNumbers[index]
 		checkDOB()
 	end
 
 	yearInput.onSelect = function(self, index)
+		System:DebugEvent("SIGNUP_PICK_YEAR")
 		_year = years[index]
 		self.Text = yearStrings[index]
 		checkDOB()
@@ -234,7 +237,7 @@ signup.createModal = function(_, config)
 				usernameInfo.pos.X = node.Width - usernameInfo.Width
 
 				-- additional delay for api request
-				checkUsernameTimer = Timer(0.8, function()
+				checkUsernameTimer = Timer(0.3, function()
 					usernameInfo.Color = Color(200, 200, 200, 255)
 					checkUsernameTimer = nil
 
@@ -261,6 +264,7 @@ signup.createModal = function(_, config)
 							usernameInfo.Text = "❌ server error, sorry"
 							usernameInfo.Color = theme.errorTextColor
 						else
+							System:DebugEvent("SIGNUP_ENTERED_VALID_USERNAME")
 							usernameInfo.Text = "✅"
 							usernameInfo.Color = Color(200, 200, 200, 255)
 							checkUsernameKey = res.key
