@@ -2296,24 +2296,6 @@ function createUI(system)
 			local showBelow = false
 			local showAbove = false
 
-			for i, choice in ipairs(choices) do
-				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
-				c:setParent(container)
-
-				local index = i
-				c.onRelease = function(_)
-					btn.selectedRow = index
-					if btn.onSelect ~= nil then
-						btn:onSelect(index)
-					end
-					if selector.close then
-						selector:close()
-					end
-				end
-
-				table.insert(choiceButtons, c)
-			end
-
 			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
 			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
 			down:setParent(frame)
@@ -2326,6 +2308,89 @@ function createUI(system)
 			up.pos.Z = -20
 			up:hide()
 			up:disable()
+
+			local dragged = false
+			local selectedBtn = nil
+			local totaldragY = 0
+
+			local function onDrag(_, pe)
+				totaldragY = totaldragY + pe.DY
+				if dragged == false and math.abs(totaldragY) > 5 then
+					dragged = true
+				end
+
+				if selectedBtn ~= nil then
+					selectedBtn:unselect()
+					selectedBtn = nil
+				end
+
+				container.pos.Y = container.pos.Y + pe.DY
+				if container.pos.Y >= 0 then
+					container.pos.Y = 0
+					if down:isVisible() then
+						down:hide()
+						down:disable()
+					end
+				end
+
+				if container.pos.Y + container.Height <= frame.Height then
+					container.pos.Y = frame.Height - container.Height
+					if up:isVisible() then
+						up:hide()
+						up:disable()
+					end
+				end
+
+				if down:isVisible() == false and container.pos.Y < 0 then
+					down:show()
+					down:enable()
+				end
+				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
+					up:show()
+					up:enable()
+				end
+			end
+
+			local function onRelease(self)
+				if dragged == false then
+					btn.selectedRow = self._choiceIndex
+					if btn.onSelect ~= nil then
+						btn:onSelect(self._choiceIndex)
+					end
+					if selector.close then
+						selector:close()
+					end
+				end
+				dragged = false
+			end
+
+			local function onPress(self)
+				dragged = false
+				totaldragY = 0
+				if selectedBtn ~= nil then
+					selectedBtn:unselect()
+				end
+				selectedBtn = self
+				self:select()
+			end
+
+			for i, choice in ipairs(choices) do
+				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
+				c:setParent(container)
+
+				c._onDrag = onDrag
+				c._choiceIndex = i
+
+				if selectedBtn == nil and btn.selectedRow ~= nil and i == btn.selectedRow then
+					c:select()
+					selectedBtn = c
+				end
+
+				c.onRelease = onRelease
+				c.onPress = onPress
+
+				table.insert(choiceButtons, c)
+			end
 
 			down.onPress = function()
 				showBelow = true
@@ -2437,7 +2502,24 @@ function createUI(system)
 				cursorY = cursorY - c.Height
 			end
 
-			container.pos.Y = frame.Height - container.Height
+			local selectionVisibilityOffset = 0
+			if selectedBtn ~= nil then
+				local visibleY = container.Height - frame.Height
+				if selectedBtn.pos.Y < visibleY then -- place button at center if not visible by default
+					selectionVisibilityOffset = visibleY
+						- selectedBtn.pos.Y
+						+ frame.Height * 0.5
+						- selectedBtn.Height * 0.5
+				end
+			end
+
+			container.pos.Y = frame.Height - container.Height + selectionVisibilityOffset
+			if container.pos.Y >= 0 then
+				container.pos.Y = 0
+			end
+			if container.pos.Y + container.Height <= frame.Height then
+				container.pos.Y = frame.Height - container.Height
+			end
 
 			up.pos = { 0, frame.Height - up.Height }
 			up.Width = frame.Width
