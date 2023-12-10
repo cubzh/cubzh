@@ -37,6 +37,9 @@ PADDING = theme.padding
 PADDING_BIG = 9
 TOP_BAR_HEIGHT = 40
 
+CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
+CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
+
 ---------------------------
 -- VARS
 ---------------------------
@@ -47,6 +50,13 @@ alertWasShown = false
 cppMenuIsActive = false
 chatDisplayed = false -- when false, only a mini chat console is displayed in the top bar
 _DEBUG = false
+_DebugColor = function()
+	return Color(
+		150 + math.floor(math.random() * 105),
+		150 + math.floor(math.random() * 105),
+		150 + math.floor(math.random() * 105)
+	)
+end
 
 ---------------------------
 -- MODALS
@@ -418,6 +428,267 @@ end
 alertBackground:parentDidResize()
 
 ---------------------------
+-- ACTION COLUMN
+---------------------------
+
+actionColumn = ui:createFrame(Color.transparent)
+actionColumn:setParent(background)
+actionColumn:hide()
+
+-- SETTINGS BTN
+
+settingsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+settingsBtn:setParent(actionColumn)
+
+settingsBtn.onRelease = function()
+	if activeModal ~= nil then
+		activeModal:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
+	end
+end
+
+settingsIcon = ui:createText("⚙️", Color.White, "big")
+settingsIcon:setParent(settingsBtn)
+
+settingsBtn.getMinSize = function(_)
+	return Number2(settingsIcon.Width, settingsIcon.Height)
+end
+
+settingsIcon.parentDidResize = function(_)
+	local parent = settingsIcon.parent
+	settingsIcon.pos =
+		{ parent.Width * 0.5 - settingsIcon.Width * 0.5, parent.Height * 0.5 - settingsIcon.Height * 0.5 }
+end
+
+-- SHARE BTN
+
+shareBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+shareBtn:setParent(actionColumn)
+
+shareBtn.onRelease = function()
+	-- if btnLinkTimer then
+	-- 	btnLinkTimer:Cancel()
+	-- end
+	Dev:CopyToClipboard(Dev.ServerURL)
+
+	if shareBtnConfirmation ~= nil then
+		if shareBtnConfirmationTimer ~= nil then
+			shareBtnConfirmationTimer:Cancel()
+			shareBtnConfirmationTimer = nil
+		end
+		ease:cancel(shareBtnConfirmation.pos)
+		shareBtnConfirmation:remove()
+	end
+
+	shareBtnConfirmation = ui:createText("📋 Link copied!", Color.White, "small")
+	shareBtnConfirmation:setParent(shareBtn)
+
+	shareBtnConfirmation.pos =
+		{ -shareBtnConfirmation.Width - PADDING, shareBtn.Height * 0.5 - shareBtnConfirmation.Height * 0.5 }
+
+	local backup = shareBtnConfirmation.pos.X
+	shareBtnConfirmation.pos.X = backup + 50
+	ease:outBack(shareBtnConfirmation.pos, 0.22 * 1.2).X = backup
+
+	shareBtnConfirmationTimer = Timer(1.5, function()
+		shareBtnConfirmation:remove()
+		shareBtnConfirmation = nil
+		shareBtnConfirmationTimer = nil
+	end)
+end
+
+shareLabel = ui:createText("Share", Color.White, "small")
+shareLabel:setParent(shareBtn)
+
+shareIcon = ui:createText("↗", Color.White, "big")
+shareIcon:setParent(shareBtn)
+
+shareBtn.getMinSize = function(_)
+	return Number2(math.max(shareLabel.Width, shareIcon.Width), shareLabel.Height + shareIcon.Height)
+end
+
+shareLabel.parentDidResize = function(_)
+	local parent = shareLabel.parent
+	local contentHeight = shareLabel.Height + shareIcon.Height
+	shareLabel.pos = { parent.Width * 0.5 - shareLabel.Width * 0.5, parent.Height * 0.5 - contentHeight * 0.5 }
+	shareIcon.pos = {
+		parent.Width * 0.5 - shareIcon.Width * 0.5,
+		parent.Height * 0.5 + contentHeight * 0.5 - shareIcon.Height,
+	}
+end
+
+-- LIKE BTN
+
+nbLikes = nil
+liked = false
+
+likeBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+likeBtn:setParent(actionColumn)
+likeWorldReq = nil
+
+likeBtn.onRelease = function()
+	if Environment.worldId == nil then
+		return
+	end
+	liked = not liked
+
+	if nbLikes == nil then
+		nbLikes = liked and 1 or nil
+	else
+		if liked then
+			nbLikes = nbLikes + 1
+		else
+			nbLikes = nbLikes - 1
+		end
+	end
+
+	actionColumnUpdateContent()
+
+	if likeWorldReq ~= nil then
+		likeWorldReq:Cancel()
+	end
+	if getWorldInfoReq ~= nil then
+		getWorldInfoReq:Cancel()
+		getWorldInfoReq = nil
+	end
+
+	likeWorldReq = api:likeWorld(Environment.worldId, liked, function(_)
+		likeWorldReq = nil
+		getWorldInfo()
+	end)
+end
+
+likeLabel = ui:createText(nbLikes ~= nil and string.format("%d", nbLikes) or "…", Color.White, "small")
+likeLabel:setParent(likeBtn)
+
+likeIcon = ui:createText("🤍", Color.White, "big")
+likeIcon:setParent(likeBtn)
+
+likeBtn.getMinSize = function(_)
+	return Number2(math.max(likeLabel.Width, likeIcon.Width), likeLabel.Height + likeIcon.Height)
+end
+
+likeLabel.parentDidResize = function(_)
+	local parent = likeLabel.parent
+	local contentHeight = likeLabel.Height + likeIcon.Height
+	likeLabel.pos = { parent.Width * 0.5 - likeLabel.Width * 0.5, parent.Height * 0.5 - contentHeight * 0.5 }
+	likeIcon.pos = {
+		parent.Width * 0.5 - likeIcon.Width * 0.5,
+		parent.Height * 0.5 + contentHeight * 0.5 - likeIcon.Height,
+	}
+end
+
+-- COMMENTS BTN
+
+commentsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+commentsBtn:setParent(actionColumn)
+
+commentsBtn.onRelease = function()
+	showAlert({ message = "Coming soon!" })
+end
+
+-- commentsLabel = ui:createText("3", Color.White, "small")
+-- commentsLabel:setParent(commentsBtn)
+
+commentsIcon = ui:createText("💬", Color.White, "big")
+commentsIcon:setParent(commentsBtn)
+
+commentsBtn.getMinSize = function(_)
+	-- return Number2(math.max(commentsLabel.Width, commentsIcon.Width), commentsLabel.Height + commentsIcon.Height)
+	return Number2(commentsIcon.Width, commentsIcon.Height)
+end
+
+commentsIcon.parentDidResize = function(_)
+	local parent = commentsIcon.parent
+	commentsIcon.pos = {
+		parent.Width * 0.5 - commentsIcon.Width * 0.5,
+		parent.Height * 0.5 - commentsIcon.Height * 0.5,
+	}
+end
+
+-- ACTION COLUMN LAYOUT
+
+function actionColumnUpdateContent()
+	likeLabel.Text = nbLikes ~= nil and string.format("%d", nbLikes) or "…"
+	if liked then
+		likeIcon.Text = "❤️"
+	else
+		likeIcon.Text = "🤍"
+	end
+end
+
+function showActionColumn()
+	if actionColumn:isVisible() then
+		return
+	end
+
+	actionColumn:parentDidResize() -- force layout
+
+	local backup = likeBtn.pos.Y
+	likeBtn.pos.Y = likeBtn.pos.Y - 100 * 1.2
+	ease:outBack(likeBtn.pos, 0.22 * 1.2).Y = backup
+
+	backup = commentsBtn.pos.Y
+	commentsBtn.pos.Y = commentsBtn.pos.Y - 100 * 1.1
+	ease:outBack(commentsBtn.pos, 0.22 * 1.1).Y = backup
+
+	backup = shareBtn.pos.Y
+	shareBtn.pos.Y = shareBtn.pos.Y - 100
+	ease:outBack(shareBtn.pos, 0.22).Y = backup
+
+	backup = settingsBtn.pos.Y
+	settingsBtn.pos.Y = settingsBtn.pos.Y + 100
+	ease:outBack(settingsBtn.pos, 0.22).Y = backup
+
+	actionColumn:show()
+end
+
+-- function hideActionColumn() end
+
+actionColumn.parentDidResize = function(_)
+	ease:cancel(settingsBtn.pos)
+	ease:cancel(likeBtn.pos)
+	ease:cancel(commentsBtn.pos)
+	ease:cancel(shareBtn.pos)
+
+	local height = Screen.Height - TOP_BAR_HEIGHT
+
+	local settingsBtnMinSize = settingsBtn:getMinSize()
+	local shareBtnMinSize = shareBtn:getMinSize()
+	local likeBtnMinSize = likeBtn:getMinSize()
+	local commentsBtnMinSize = commentsBtn:getMinSize()
+
+	local contentWidth = math.max(
+		shareBtnMinSize.Width,
+		likeBtnMinSize.Width,
+		commentsBtnMinSize.Width,
+		settingsBtnMinSize.Width
+	) + PADDING * 2
+	local width = contentWidth + Screen.SafeArea.Right
+
+	actionColumn.Height = height
+	actionColumn.Width = width
+
+	actionColumn.pos.X = Screen.Width - actionColumn.Width
+
+	settingsBtn.Width = contentWidth
+	settingsBtn.Height = settingsBtnMinSize.Height + PADDING_BIG * 2
+	settingsBtn.pos = { 0, actionColumn.Height - settingsBtn.Height }
+
+	shareBtn.Width = contentWidth
+	shareBtn.Height = shareBtnMinSize.Height + PADDING_BIG * 2
+	shareBtn.pos = { 0, Screen.SafeArea.Bottom + PADDING }
+
+	commentsBtn.Width = contentWidth
+	commentsBtn.Height = commentsBtnMinSize.Height + PADDING_BIG * 2
+	commentsBtn.pos = { 0, shareBtn.pos.Y + shareBtn.Height }
+
+	likeBtn.Width = contentWidth
+	likeBtn.Height = likeBtnMinSize.Height + PADDING_BIG * 2
+	likeBtn.pos = { 0, commentsBtn.pos.Y + commentsBtn.Height }
+end
+actionColumn:parentDidResize()
+
+---------------------------
 -- TOP BAR
 ---------------------------
 
@@ -437,7 +708,7 @@ end
 
 -- MAIN MENU BTN
 
-cubzhBtn = ui:createFrame(_DEBUG and Color(255, 0, 0, 255) or Color.transparent)
+cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 cubzhBtn:setParent(topBar)
 
 cubzhLogo = logo:createShape()
@@ -465,7 +736,7 @@ cubzhBtnShape:parentDidResize()
 
 -- CONNECTIVITY BTN
 
-connBtn = ui:createFrame(_DEBUG and Color(0, 255, 0, 255) or Color.transparent)
+connBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 connBtn:setParent(topBar)
 connBtn:hide()
 connBtn.onRelease = connect
@@ -557,7 +828,7 @@ function connectionIndicatorStartAnimation()
 	end
 end
 
-chatBtn = ui:createFrame(_DEBUG and Color(255, 255, 0, 255) or Color.transparent)
+chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 chatBtn:setParent(topBar)
 
 textBubbleShape = ui:createShape(System.ShapeFromBundle("aduermael.textbubble"))
@@ -569,7 +840,7 @@ textBubbleShape.parentDidResize = function(self)
 	self.pos = { PADDING, PADDING_BIG }
 end
 
-friendsBtn = ui:createFrame(_DEBUG and Color(0, 255, 255, 255) or Color.transparent)
+friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 friendsBtn:setParent(topBar)
 
 friendsShape = ui:createShape(System.ShapeFromBundle("aduermael.friends_icon"))
@@ -593,7 +864,7 @@ friendsBtn.onRelease = function()
 	showModal(MODAL_KEYS.FRIENDS)
 end
 
-profileFrame = ui:createFrame(_DEBUG and Color(0, 0, 255, 255) or Color.transparent)
+profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 profileFrame:setParent(topBar)
 profileFrame.onRelease = function(_)
 	showModal(MODAL_KEYS.PROFILE)
@@ -602,9 +873,6 @@ end
 avatar = ui:createFrame(Color.transparent)
 avatar:setParent(profileFrame)
 avatar.parentDidResize = btnContentParentDidResize
-
--- userAttribute = ui:createText("", Color(255, 255, 255, 100), "small")
--- userAttribute:setParent(profileFrame)
 
 ---------
 -- CHAT
@@ -750,28 +1018,10 @@ function getCubzhMenuModalContent()
 		System.GoHome()
 	end
 
-	local btnLink = ui:createButton("📑 Server Link")
-	btnLink:setParent(node)
-
-	local btnLinkTimer
-
-	btnLink.onRelease = function()
-		if btnLinkTimer then
-			btnLinkTimer:Cancel()
-		end
-		Dev:CopyToClipboard(Dev.ServerURL)
-		btnLink.Text = "📋 Copied!"
-		btnLinkTimer = Timer(1.5, function()
-			if btnLink.Text then
-				btnLink.Text = "📋 Server Link"
-			end
-			btnLinkTimer = nil
-		end)
-	end
-
 	local btnWorlds = ui:createButton("🌎 Worlds", { textSize = "big" })
 	btnWorlds:setColor(theme.colorExplore)
 	btnWorlds:setParent(node)
+	btnWorlds.Height = CUBZH_MENU_MAIN_BUTTON_HEIGHT
 
 	btnWorlds.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
@@ -780,7 +1030,7 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnGallery = ui:createButton("🏗️ Gallery", { textSize = "default" })
+	local btnGallery = ui:createButton("✨ Items Gallery", { textSize = "default" })
 	btnGallery:setParent(node)
 
 	btnGallery.onRelease = function()
@@ -790,17 +1040,12 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnInventory = ui:createButton("🎒 Inventory", { textSize = "default" })
-	btnInventory:setParent(node)
+	local btnMyCreations = ui:createButton("🏗️ My Creations", { textSize = "default" })
+	btnMyCreations:setColor(theme.colorCreate)
+	btnMyCreations:setParent(node)
+	btnMyCreations.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
 
-	btnInventory.onRelease = function()
-		showAlert({ message = "Coming soon!" })
-	end
-
-	local btnMyItems = ui:createButton("⚔️ My Items", { textSize = "default" })
-	btnMyItems:setParent(node)
-
-	btnMyItems.onRelease = function()
+	btnMyCreations.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
 			local content = creations:createModalContent({ uikit = ui })
@@ -810,28 +1055,11 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnMyWorlds = ui:createButton("🌎 My Worlds", { textSize = "default" })
-	btnMyWorlds:setParent(node)
-
-	btnMyWorlds.onRelease = function()
-		local modal = content:getModalIfContentIsActive()
-		if modal ~= nil then
-			local content = creations:createModalContent({ uikit = ui })
-			content.tabs[3].selected = true
-			content.tabs[3].action()
-			modal:push(content)
-		end
-	end
-
-	local btnFriends = ui:createButton("💛 Friends")
-	btnFriends:setParent(node)
-
-	btnFriends.onRelease = function()
-		showModal(MODAL_KEYS.FRIENDS)
-	end
-
 	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
-	local btnCode = ui:createButton(dev and "🤓 Edit Code" or "🤓 Read Code")
+	local btnCode = ui:createButton(
+		dev and "🤓 Edit Code" or "🤓 Read Code",
+		{ textSize = "small", borders = false, underline = false, padding = true, shadow = false }
+	)
 	btnCode:setParent(node)
 
 	btnCode.onRelease = function()
@@ -843,16 +1071,10 @@ function getCubzhMenuModalContent()
 		closeModal()
 	end
 
-	local btnSettings = ui:createButton("⚙️ Settings")
-	content.bottomRight = { btnSettings }
-
-	btnSettings.onRelease = function()
-		content
-			:getModalIfContentIsActive()
-			:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
-	end
-
-	local btnHelp = ui:createButton("👾 Help!", { textSize = "small" })
+	local btnHelp = ui:createButton(
+		"👾 Help!",
+		{ textSize = "small", borders = false, underline = false, padding = true, shadow = false }
+	)
 	btnHelp:setParent(node)
 
 	btnHelp.onRelease = function()
@@ -860,34 +1082,27 @@ function getCubzhMenuModalContent()
 	end
 
 	local buttons = {
-		{ btnHome, btnFriends },
 		{ btnWorlds },
-		{ btnGallery, btnInventory },
-		{ btnMyItems, btnMyWorlds },
-		{
-			btnCode,
-			btnLink,
-		},
+		{ btnMyCreations },
+		{ btnGallery },
+		{ btnHome },
 	}
 
-	-- tmp hack: no link for this URL
-	if Dev.ServerURL == "https://app.cu.bzh/?worldID=cubzh" then
-		btnLink:disable()
-	end
+	-- local osName = Client.OSName
+	-- if osName == "Windows" or osName == "macOS" then
+	-- 	local btnTerminate = ui:createButton("Exit Cubzh", { textSize = "small" })
+	-- 	btnTerminate:setColor(theme.colorNegative)
+	-- 	-- btnTerminate:setParent(node)
+	-- 	btnTerminate.onRelease = function()
+	-- 		System:Terminate()
+	-- 	end
+	-- 	-- table.insert(buttons, btnTerminate)
+	-- 	content.bottomCenter = { btnTerminate, btnHelp }
+	-- else
+	-- 	content.bottomCenter = { btnHelp }
+	-- end
 
-	local osName = Client.OSName
-	if osName == "Windows" or osName == "macOS" then
-		local btnTerminate = ui:createButton("Exit Cubzh", { textSize = "small" })
-		btnTerminate:setColor(theme.colorNegative)
-		-- btnTerminate:setParent(node)
-		btnTerminate.onRelease = function()
-			System:Terminate()
-		end
-		-- table.insert(buttons, btnTerminate)
-		content.bottomLeft = { btnTerminate, btnHelp }
-	else
-		content.bottomLeft = { btnHelp }
-	end
+	content.bottomCenter = { btnCode, btnHelp }
 
 	content.idealReducedContentSize = function(_, width, _)
 		local height = 0
@@ -919,7 +1134,7 @@ function getCubzhMenuModalContent()
 		return Number2(width, height)
 	end
 
-	btnMyWorlds.parentDidResize = function(_)
+	btnMyCreations.parentDidResize = function(_)
 		local width = node.Width
 
 		for _, row in ipairs(buttons) do
@@ -954,7 +1169,12 @@ function getCubzhMenuModalContent()
 	end
 
 	content.didBecomeActive = function()
-		btnMyWorlds:parentDidResize()
+		btnMyCreations:parentDidResize()
+		showActionColumn()
+	end
+
+	content.willResignActive = function()
+		actionColumn:hide()
 	end
 
 	return content
@@ -1740,6 +1960,24 @@ if System.Authenticated then
 	hideBottomBar()
 else
 	showTitleScreen()
+end
+
+getWorldInfoReq = nil
+function getWorldInfo()
+	if getWorldInfoReq ~= nil then
+		getWorldInfoReq:Cancel()
+		getWorldInfoReq = nil
+	end
+	if Environment.worldId ~= nil then
+		getWorldInfoReq = api:getWorld(Environment.worldId, { "likes", "liked" }, function(err, world)
+			if err ~= nil then
+				return
+			end
+			nbLikes = world.likes
+			liked = world.liked
+			actionColumnUpdateContent()
+		end)
+	end
 end
 
 Timer(0.1, function()
