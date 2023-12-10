@@ -1746,9 +1746,22 @@ Timer(0.1, function()
 	menu:OnAuthComplete(function()
 		System:UpdateAuthStatus()
 
-		-- if System.IsUserUnder13 then
-		-- 	userAttribute.Text = "<13"
-		-- end
+		if System.IsUserUnder13 then
+			local under13BadgeShape = System.ShapeFromBundle("aduermael.under13_badge")
+			under13Badge = ui:createShape(under13BadgeShape)
+			under13Badge:setParent(profileFrame)
+			local ratio = under13Badge.Width / under13Badge.Height
+			under13Badge.Height = 10
+			under13Badge.Width = under13Badge.Height * ratio
+			under13Badge.parentDidResize = function(self)
+				local parent = self.parent
+				self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
+				under13BadgeShape.LocalPosition.Z = 100
+			end
+			under13Badge:parentDidResize()
+		end
+
+		getWorldInfo()
 
 		-- connects client to server if it makes sense (maxPlayers > 1)
 		connect()
