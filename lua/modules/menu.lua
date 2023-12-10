@@ -1635,8 +1635,8 @@ signupElements = nil
 
 -- callbacks: success, cancel, error
 function showSignUp(callbacks)
-	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small" })
-	helpBtn:setColor(theme.colorDiscord, Color.White)
+	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small", borders = false })
+	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
 	helpBtn.onRelease = function()
 		URL:Open("https://cu.bzh/discord")
 	end
@@ -1649,7 +1649,8 @@ function showSignUp(callbacks)
 	end
 	helpBtn:parentDidResize()
 
-	local loginBtn = ui:createButton("🙂 Login", { textSize = "small" })
+	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
+	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
 	loginBtn.parentDidResize = function(self)
 		self.pos = {
 			Screen.SafeArea.Left + theme.padding,
