@@ -54,6 +54,36 @@ mod.checkUsername = function(_, username, callback)
 	return req
 end
 
+mod.checkItemName = function(_, itemRepo, itemName, callback)
+	if type(itemName) ~= "string" then
+		callback(false, "1st arg must be a string")
+		return
+	end
+	if type(callback) ~= "function" then
+		callback(false, "2nd arg must be a function")
+		return
+	end
+	local url = mod.kApiAddr .. "/checks/itemname"
+	local body = {
+		itemRepo = itemRepo,
+		itemName = itemName,
+	}
+	local req = System:HttpPost(url, body, function(resp)
+		if resp.StatusCode ~= 200 then
+			callback(false, "http status not 200")
+			return
+		end
+		local response, err = JSON:Decode(resp.Body)
+		if err ~= nil then
+			callback(false, "json decode error:" .. err)
+			return
+		end
+		-- response: {format = true, appropriate = true, available = true, key = "hash"}
+		callback(true, response) -- success
+	end)
+	return req
+end
+
 -- callback(err, credentials)
 mod.signUp = function(_, username, key, dob, password, callback)
 	if type(username) ~= "string" then
