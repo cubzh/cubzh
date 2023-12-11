@@ -42,6 +42,7 @@ Client.OnStart = function()
 	particles = require("particles")
 	walkSFX = require("walk_sfx")
 	wingTrail = require("wingtrail")
+	avatar = require("avatar")
 	sfx = require("sfx")
 
 	multi = require("multi")
@@ -282,9 +283,17 @@ Client.Tick = function(dt)
 	end
 end
 
-Pointer.Click = function()
+Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
+
+	-- local impact = pe:CastRay()
+	-- if impact ~= nil then
+	-- 	if impact.Object.ItemName ~= nil then
+	-- 		Dev:CopyToClipboard(impact.Object.ItemName)
+	-- 		print(impact.Object.ItemName)
+	-- 	end
+	-- end
 end
 
 localPlayerShown = false
@@ -372,10 +381,102 @@ function loadMap()
 						or string.find(objInfo.fullname, "grass")
 						or string.find(objInfo.fullname, "rail")
 						or string.find(objInfo.fullname, "lily")
+						or string.find(objInfo.fullname, "cubzh_logo")
+						or string.find(objInfo.fullname, "stool")
+						or string.find(objInfo.fullname, "glider")
+						or string.find(objInfo.fullname, "paint")
+						or string.find(objInfo.fullname, "toolbox")
+						or string.find(objInfo.fullname, "cutout_frame")
+						or string.find(objInfo.fullname, "ducky")
+						or string.find(objInfo.fullname, "arrow_up")
+						or string.find(objInfo.fullname, "moss")
+						or string.find(objInfo.fullname, "traffic_barricade")
+						or string.find(objInfo.fullname, "candle")
+						or string.find(objInfo.fullname, "open_letter")
+						or string.find(objInfo.fullname, "firefly")
+						or string.find(objInfo.fullname, "apple")
+						or string.find(objInfo.fullname, "leaf_pile")
+						or string.find(objInfo.fullname, "leaf_blower")
+						or string.find(objInfo.fullname, "stop_sign")
+						or string.find(objInfo.fullname, "wood_steps")
+						or string.find(objInfo.fullname, "cubzh_coin")
+						or string.find(objInfo.fullname, "shelf")
+						or string.find(objInfo.fullname, "backpack")
+						or string.find(objInfo.fullname, "gramophone")
+						or string.find(objInfo.fullname, "green_2")
+						or string.find(objInfo.fullname, "indicator_light")
+						or string.find(objInfo.fullname, "spaceship")
+						or string.find(objInfo.fullname, "jetpack")
+						or string.find(objInfo.fullname, "wall_countdown")
+						or string.find(objInfo.fullname, "bush")
+						or string.find(objInfo.fullname, "cactus")
+						or string.find(objInfo.fullname, "telephone_pole")
+						or string.find(objInfo.fullname, "campfire")
+						or string.find(objInfo.fullname, "tavern_mug")
+						or string.find(objInfo.fullname, "fishing_rod")
+						or string.find(objInfo.fullname, "tumbleweed")
 					then
 						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
 							o.Physics = PhysicsMode.Disabled
 						end)
+					elseif
+						string.find(objInfo.fullname, "stone_pedestal")
+						or string.find(objInfo.fullname, "clothes_rack")
+						or string.find(objInfo.fullname, "globe")
+						or string.find(objInfo.fullname, "drafting_table")
+						or string.find(objInfo.fullname, "easel")
+						or string.find(objInfo.fullname, "blank_canvas")
+						or string.find(objInfo.fullname, "floor_propeller")
+						or string.find(objInfo.fullname, "broken_bridge_side_1")
+						or string.find(objInfo.fullname, "broken_bridge_side_2")
+						or string.find(objInfo.fullname, "bouncing_mushroom_3")
+						or string.find(objInfo.fullname, "fence")
+						or string.find(objInfo.fullname, "signboard")
+						or string.find(objInfo.fullname, "crate")
+						or string.find(objInfo.fullname, "tree_trunk")
+						or string.find(objInfo.fullname, "concrete_barrier")
+						or string.find(objInfo.fullname, "lantern")
+						or string.find(objInfo.fullname, "apple_tree")
+						or string.find(objInfo.fullname, "barrel")
+						or string.find(objInfo.fullname, "lc_pipe_corner")
+						or string.find(objInfo.fullname, "shrine")
+						or string.find(objInfo.fullname, "wood_table")
+						or string.find(objInfo.fullname, "street_barrier")
+						or string.find(objInfo.fullname, "tree_leaves")
+						or string.find(objInfo.fullname, "pink_treetop_1")
+						or string.find(objInfo.fullname, "pink_treetop_2")
+						or string.find(objInfo.fullname, "orange_treetop_2")
+						or string.find(objInfo.fullname, "orange_treetop_1")
+						or string.find(objInfo.fullname, "tree_leaves")
+						or string.find(objInfo.fullname, "log_pile")
+						or string.find(objInfo.fullname, "stone")
+						or string.find(objInfo.fullname, "blackboard")
+						or string.find(objInfo.fullname, "arcade_cabinet")
+						or string.find(objInfo.fullname, "dustzh_arcade")
+						or string.find(objInfo.fullname, "money_bag")
+						or string.find(objInfo.fullname, "vending_machine")
+						or string.find(objInfo.fullname, "capsule_toy_machine")
+						or string.find(objInfo.fullname, "locker")
+						or string.find(objInfo.fullname, "snake_plant")
+						or string.find(objInfo.fullname, "couch")
+						or string.find(objInfo.fullname, "table")
+						or string.find(objInfo.fullname, "interaction_button")
+						or string.find(objInfo.fullname, "carpet")
+						or string.find(objInfo.fullname, "palm_tree")
+						or string.find(objInfo.fullname, "bamboo")
+						or string.find(objInfo.fullname, "rock")
+						or string.find(objInfo.fullname, "chest")
+						or string.find(objInfo.fullname, "shovel")
+						or string.find(objInfo.fullname, "car")
+						or string.find(objInfo.fullname, "dumpster")
+						or string.find(objInfo.fullname, "engine_lift")
+						or string.find(objInfo.fullname, "beach_chair")
+						or string.find(objInfo.fullname, "beach_umbrella")
+					then
+						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
+							o.Physics = PhysicsMode.Disabled
+						end)
+						o.Physics = PhysicsMode.Static
 					end
 				else
 					loadedObjects[objInfo.fullname] = "ERROR"
@@ -425,6 +526,21 @@ function loadMap()
 
 				if string.find(objInfo.fullname, "lily") or string.find(objInfo.fullname, "ducky") then
 					table.insert(onWater, obj)
+				elseif
+					string.find(objInfo.fullname, "scifi_stairs")
+					or string.find(objInfo.fullname, "pipe_tank")
+					or string.find(objInfo.fullname, "world_generator")
+					or string.find(objInfo.fullname, "world_computer")
+					or string.find(objInfo.fullname, "small_water_pipe")
+					or string.find(objInfo.fullname, "laptop")
+					or string.find(objInfo.fullname, "catwalk_stage")
+					or string.find(objInfo.fullname, "change_room")
+					or string.find(objInfo.fullname, "steel_folding_chairtop")
+					or string.find(objInfo.fullname, "steel_folding_chair")
+					or string.find(objInfo.fullname, "smartphone")
+					or string.find(objInfo.fullname, "portal")
+				then
+					obj:RemoveFromParent()
 				end
 			end
 		end
@@ -442,10 +558,72 @@ function loadMap()
 		end
 		-- disabling water physics
 		for _, w in ipairs(waterShapes) do
-			w.Physics = PhysicsMode.Disabled
-			o.CollisionGroups = {}
-			o.CollidesWithGroups = {}
-			o.Physics = PhysicsMode.Disabled
+			pcall(function()
+				w.Physics = PhysicsMode.Disabled
+				o.CollisionGroups = {}
+				o.CollidesWithGroups = {}
+				o.Physics = PhysicsMode.Disabled
+			end)
+		end
+	end)
+
+	local n3_1 = Number3.Zero
+	local n3_2 = Number3.Zero
+	local function lookAtHorizontal(o1, o2)
+		n3_1:Set(o1.Position.X, 0, o1.Position.Z)
+		n3_2:Set(o2.Position.X, 0, o2.Position.Z)
+		o1.Rotation:SetLookRotation(n3_2 - n3_1)
+	end
+
+	Timer(0.1, function()
+		local avatars = World:FindObjectsByName("cta_customavatar")
+		for i, a in ipairs(avatars) do
+			if i == 2 then
+				local o = Object()
+				local o2 = Object()
+				o2:SetParent(o)
+				local _avatar = avatar:get("claire")
+				o.Physics = PhysicsMode.Trigger
+				o.CollisionBox = Box({ -40, 0, -40 }, { 40, 25, 40 })
+				o.CollidesWithGroups = Player.CollisionGroups
+				o.CollisionGroups = {}
+				o2.Scale = Player.Scale
+				_avatar:SetParent(o2)
+				World:AddChild(o)
+				o.Position = a.Position
+				o.OnCollisionBegin = function(o, player)
+					o2:TextBubble("HEY!", 2.0, Number3(0, 40, 0), true)
+					ease:cancel(o2)
+					ease:linear(o2, 0.1, {
+						onDone = function(o2)
+							o2.Scale = player.Scale
+							ease:linear(o2, 0.1, {}).Scale = player.Scale
+						end,
+					}).Scale = player.Scale
+						* 1.1
+
+					o2.Tick = function(o, _)
+						lookAtHorizontal(o, player)
+					end
+				end
+				o.OnCollisionEnd = function(_, _)
+					o2.Tick = nil
+				end
+			end
+			a:RemoveFromParent()
+		end
+
+		avatars = World:FindObjectsByName("cta_addfriends")
+		for _, a in ipairs(avatars) do
+			a:RemoveFromParent()
+		end
+		avatars = World:FindObjectsByName("cta_exploreworlds")
+		for _, a in ipairs(avatars) do
+			a:RemoveFromParent()
+		end
+		avatars = World:FindObjectsByName("cta_createitems")
+		for _, a in ipairs(avatars) do
+			a:RemoveFromParent()
 		end
 	end)
 end
