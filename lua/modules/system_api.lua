@@ -388,7 +388,12 @@ moduleMT.createItem = function(self, data, callback)
 	local url = self.kApiAddr .. "/itemdrafts"
 	local req = System:HttpPost(url, data, function(res)
 		if res.StatusCode ~= 200 then
-			callback(api:error(res.StatusCode, "could not create item"), nil)
+			local parsedRes, err = JSON:Decode(res.Body)
+			if err == nil and type(parsedRes.msg) == "string" and parsedRes.msg ~= "" then
+				callback(api:error(res.StatusCode, parsedRes.msg), nil)
+				return
+			end
+			callback(api:error(res.StatusCode, nil), nil)
 			return
 		end
 
