@@ -51,11 +51,7 @@ cppMenuIsActive = false
 chatDisplayed = false -- when false, only a mini chat console is displayed in the top bar
 _DEBUG = false
 _DebugColor = function()
-	return Color(
-		150 + math.floor(math.random() * 105),
-		150 + math.floor(math.random() * 105),
-		150 + math.floor(math.random() * 105)
-	)
+	return Color(math.random(150, 255), math.random(150, 255), math.random(150, 255))
 end
 
 ---------------------------
