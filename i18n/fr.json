@@ -1,0 +1,18 @@
+{
+    "day": "jour",
+    "days": "jours",
+    "month": "mois",
+    "year": "année",
+    "years": "années",
+    "password": "mot de passe",
+    "login": "login",
+    "need help?": "besoin d'aide?",
+    "username": "username",
+    "don't use your real name!": "n'utilise pas ton vrai nom!",
+    "sign up": {
+        "sign up form button": "s'inscrire",
+        "form title": "inscription"
+    },
+    "at least %d characters": "au moins %d caractères",
+    "can't be changed!": "ne peut pas être changé!"
+}
