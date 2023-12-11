@@ -169,8 +169,8 @@ local freezeObject = function(obj)
 	if not obj then	return end
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 		if type(o) == "Object" then return end
-		obj.CollisionGroups = {}
-		obj.CollidesWithGroups = {}
+		o.CollisionGroups = { 6 }
+		o.CollidesWithGroups = {}
 	end)
 end
 
@@ -178,7 +178,7 @@ local unfreezeObject = function(obj)
 	if not obj then return end
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
 		if type(o) == "Object" then return end
-		o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+		o.CollisionGroups = { OBJECTS_COLLISION_GROUP }
 		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 	end)
 end
@@ -274,7 +274,7 @@ local firstPersonPlacingObject = function(obj)
 	if impact then
 		obj.Position = Camera.Position + Camera.Forward * impact.Distance
 	end
-	obj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+	obj.Rotation.Y = worldEditor.rotationShift
 end
 
 -- States
@@ -376,8 +376,8 @@ local statesSettings = {
 			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
 			freezeObject(obj)
+			if worldEditor.rotationShift == nil then worldEditor.rotationShift = 0 end
 			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then
-				if worldEditor.rotationShift == nil then worldEditor.rotationShift = 0 end
 				worldEditor.placingValidateBtn:show()
 				return
 			end
@@ -400,7 +400,7 @@ local statesSettings = {
 			if not impact then return end
 			local pos = pe.Position + pe.Direction * impact.Distance
 			placingObj.Position = pos
-			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+			placingObj.Rotation.Y = worldEditor.rotationShift
 		end,
 		pointerDrag = function(pe)
 			if cameraMode == CameraMode.FIRST_PERSON then return end
@@ -411,13 +411,12 @@ local statesSettings = {
 			if not impact then return end
 			local pos = pe.Position + pe.Direction * impact.Distance
 			placingObj.Position = pos
-			placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+			placingObj.Rotation.Y = worldEditor.rotationShift
 		end,
 		pointerUp = function(pe)
 			if cameraMode == CameraMode.FIRST_PERSON then return end
 			if pe.Index ~= 4 then return end
 
-			if worldEditor.dragging then return end
 			local placingObj = worldEditor.placingObj
 
 			-- drop object
@@ -425,14 +424,22 @@ local statesSettings = {
 
 			unfreezeObject(placingObj)
 
-			objects[placingObj.uuid] = placingObj
-			sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
+			if not objects[placingObj.uuid] then
+				objects[placingObj.uuid] = placingObj
+				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
+			else
+				sendToServer(events.P_EDIT_OBJECT, {
+					uuid = placingObj.uuid,
+					Position = placingObj.Position,
+					Rotation = placingObj.Rotation
+				})
+			end
 			placingObj.currentlyEditedBy = Player
 			setState(states.UPDATING_OBJECT, placingObj)
 		end,
 		pointerWheelPriority = function(delta)
 			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
-			worldEditor.placingObj.Rotation.Y = Player.Rotation.Y + worldEditor.rotationShift
+			worldEditor.placingObj.Rotation.Y = worldEditor.rotationShift
 			return true
 		end
 	},
@@ -468,7 +475,9 @@ local statesSettings = {
 				error("Physics mode not handled")
 			end
 			worldEditor.physicsBtn.Text = physicsModeIcon
-			freezeObject(worldEditor.object)
+			Timer(0.1, function()
+				freezeObject(worldEditor.object)
+			end)
 
 			local currentScale = obj.Scale:Copy()
 			require("ease"):inOutQuad(obj, 0.15).Scale = currentScale * 1.1
@@ -513,6 +522,22 @@ local statesSettings = {
 				worldEditor.scaleButton:hide()
             end
 		end,
+		pointerDown = function(pe)
+			local impact = pe:CastRay({ 6 })
+			if not impact then
+				return
+			end
+
+			local obj = impact.Object
+			while obj and not obj.isEditable do
+				obj = obj:GetParent()
+			end
+
+			if not obj or obj ~= worldEditor.object then
+				return
+			end
+			setState(states.PLACING_OBJECT, obj)
+		end,
 		pointerUp = function(pe)
 			if worldEditor.dragging then return end
 			tryPickObject(pe)
@@ -530,7 +555,8 @@ local statesSettings = {
 			worldEditor.object = nil
 		end,
 		pointerWheelPriority = function(delta)
-			worldEditor.object.Rotation.Y = worldEditor.object.Rotation.Y + delta * 0.005
+			worldEditor.object:RotateWorld(Number3(0,1,0), delta * 0.005)
+			worldEditor.object.Rotation = worldEditor.object.Rotation -- trigger OnSetCallback
 			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
 			return true
 		end
@@ -646,6 +672,7 @@ local listeners = {
 	PointerDragEnd = "pointerDragEnd",
 	PointerUp = "pointerUp",
 	PointerWheel = "pointerWheel",
+	PointerLongPress = "pointerLongPress",
 }
 
 local function handleLocalEventListener(listenerName, pe)
