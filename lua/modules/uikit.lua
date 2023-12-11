@@ -50,6 +50,7 @@ hierarchyActions = require("hierarchyactions")
 sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
+conf = require("config")
 
 sharedUI = nil
 sharedUIRootFrame = nil
@@ -1013,20 +1014,20 @@ function createUI(system)
 			end
 		else
 			if node.shape:GetParent() == nil then
-				node.pivot:AddChild(node.shape)
-				node.shape.LocalPosition = { 0, 0, 0 }
+				node.shapeContainer:AddChild(node.shape)
+				node.shape.LocalPosition = Number3.Zero
 			end
 		end
 
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
-		node.shape.LocalPosition = { 0, 0, 0 }
-		node.pivot.LocalPosition = { 0, 0, 0 }
+		node.pivot.LocalPosition = Number3.Zero
+		node.shapeContainer.LocalPosition = Number3.Zero
 
 		if not node._config.doNotFlip then
 			node.pivot.LocalRotation = { 0, math.pi, 0 } -- shape's front facing camera
 		else
-			node.pivot.LocalRotation = { 0, 0, 0 } -- shape's back facing camera
+			node.pivot.LocalRotation = Rotation(0, 0, 0) -- shape's back facing camera
 		end
 
 		-- shape.LocalScale = UI_SHAPE_SCALE
@@ -1050,8 +1051,6 @@ function createUI(system)
 		-- considering Shape's pivot but not modifying it
 		-- It could be important for shape's children placement.
 
-		node.shape.LocalPosition = -node._aabb.Center
-
 		if node._config.spherized then
 			local radius = node.Width * 0.5
 			node.pivot.LocalPosition = { radius, radius, radius }
@@ -1059,6 +1058,7 @@ function createUI(system)
 			node.pivot.LocalPosition = Number3(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
 
+		node.shapeContainer.LocalPosition = -node._aabb.Center + node._config.offset
 		node.object.LocalScale = backupScale
 	end
 
@@ -1345,38 +1345,30 @@ function createUI(system)
 
 		local node = _nodeCreate()
 
-		node._config = {
+		local defaultConfig = {
 			spherized = false,
 			doNotFlip = false,
+			offset = Number3.Zero,
 		}
 
-		if config ~= nil then
-			if type(config) == "boolean" then
-				-- legacy, `config` parameter used to be `doNotFlip`
-				node._config.doNotFlip = config
-			else
-				if config.spherized ~= nil then
-					node._config.spherized = config.spherized
-				end
-				if config.doNotFlip ~= nil then
-					node._config.doNotFlip = config.doNotFlip
-				end
-			end
-		end
+		config = conf:merge(defaultConfig, config)
+		node._config = config
 
 		node.object = Object()
 		node.object.LocalScale = UI_SHAPE_SCALE
 
 		node.pivot = Object()
+		node.shapeContainer = Object()
 
 		node.object:AddChild(node.pivot)
+		node.pivot:AddChild(node.shapeContainer)
 
 		node.refresh = _refreshShapeNode
 
 		-- getters
 
 		node._width = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbWidth * self.object.LocalScale.X
@@ -1384,7 +1376,7 @@ function createUI(system)
 		end
 
 		node._height = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbHeight * self.object.LocalScale.Y
@@ -1392,7 +1384,7 @@ function createUI(system)
 		end
 
 		node._depth = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbDepth * self.object.LocalScale.Z
@@ -1418,7 +1410,7 @@ function createUI(system)
 			if newWidth == nil then
 				return
 			end
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1435,7 +1427,7 @@ function createUI(system)
 			if newHeight == nil then
 				return
 			end
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1449,7 +1441,7 @@ function createUI(system)
 		end
 
 		node._setDepth = function(self, newDepth)
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1474,9 +1466,13 @@ function createUI(system)
 				self.shape = nil
 			end
 
+			shape:RemoveFromParent()
 			_setupUIObject(shape)
 			self.shape = shape
 			shape._node = self
+
+			node.shapeContainer:AddChild(shape)
+			shape.LocalPosition = Number3.Zero
 
 			if doNotRefresh ~= true then
 				self:refresh()
@@ -2022,7 +2018,7 @@ function createUI(system)
 	end
 
 	ui.createButton = function(_, stringOrShape, config)
-		local _config = {
+		local defaultConfig = {
 			borders = true,
 			underline = false,
 			padding = true,
@@ -2032,16 +2028,7 @@ function createUI(system)
 			unfocuses = true, -- unfocused focused node when true
 		}
 
-		if config then
-			-- replace default values in _config
-			for k, v in pairs(_config) do
-				if type(config[k]) == type(v) then
-					_config[k] = config[k]
-				end
-			end
-		end
-
-		config = _config
+		config = conf:merge(defaultConfig, config)
 
 		local theme = require("uitheme").current
 
@@ -2290,7 +2277,7 @@ function createUI(system)
 			btn:disable()
 
 			local selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.Parent)
+			selector:setParent(btn.parent)
 
 			focus(nil)
 			comboBoxSelector = selector
@@ -2309,24 +2296,6 @@ function createUI(system)
 			local showBelow = false
 			local showAbove = false
 
-			for i, choice in ipairs(choices) do
-				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
-				c:setParent(container)
-
-				local index = i
-				c.onRelease = function(_)
-					btn.selectedRow = index
-					if btn.onSelect ~= nil then
-						btn:onSelect(index)
-					end
-					if selector.close then
-						selector:close()
-					end
-				end
-
-				table.insert(choiceButtons, c)
-			end
-
 			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
 			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
 			down:setParent(frame)
@@ -2339,6 +2308,89 @@ function createUI(system)
 			up.pos.Z = -20
 			up:hide()
 			up:disable()
+
+			local dragged = false
+			local selectedBtn = nil
+			local totaldragY = 0
+
+			local function onDrag(_, pe)
+				totaldragY = totaldragY + pe.DY
+				if dragged == false and math.abs(totaldragY) > 5 then
+					dragged = true
+				end
+
+				if selectedBtn ~= nil then
+					selectedBtn:unselect()
+					selectedBtn = nil
+				end
+
+				container.pos.Y = container.pos.Y + pe.DY
+				if container.pos.Y >= 0 then
+					container.pos.Y = 0
+					if down:isVisible() then
+						down:hide()
+						down:disable()
+					end
+				end
+
+				if container.pos.Y + container.Height <= frame.Height then
+					container.pos.Y = frame.Height - container.Height
+					if up:isVisible() then
+						up:hide()
+						up:disable()
+					end
+				end
+
+				if down:isVisible() == false and container.pos.Y < 0 then
+					down:show()
+					down:enable()
+				end
+				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
+					up:show()
+					up:enable()
+				end
+			end
+
+			local function onRelease(self)
+				if dragged == false then
+					btn.selectedRow = self._choiceIndex
+					if btn.onSelect ~= nil then
+						btn:onSelect(self._choiceIndex)
+					end
+					if selector.close then
+						selector:close()
+					end
+				end
+				dragged = false
+			end
+
+			local function onPress(self)
+				dragged = false
+				totaldragY = 0
+				if selectedBtn ~= nil then
+					selectedBtn:unselect()
+				end
+				selectedBtn = self
+				self:select()
+			end
+
+			for i, choice in ipairs(choices) do
+				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
+				c:setParent(container)
+
+				c._onDrag = onDrag
+				c._choiceIndex = i
+
+				if selectedBtn == nil and btn.selectedRow ~= nil and i == btn.selectedRow then
+					c:select()
+					selectedBtn = c
+				end
+
+				c.onRelease = onRelease
+				c.onPress = onPress
+
+				table.insert(choiceButtons, c)
+			end
 
 			down.onPress = function()
 				showBelow = true
@@ -2407,13 +2459,31 @@ function createUI(system)
 				contentHeight = contentHeight + c.Height
 			end
 
-			frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
+			-- frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
+			frame.Height = math.min(
+				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
+				contentHeight
+			)
+
 			frame.pos.Z = -10 -- render on front
 
 			selector.Height = frame.Height + theme.paddingTiny * 2
 			selector.Width = frame.Width + theme.paddingTiny * 2
 
 			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - frame.Height + theme.padding, 0)
+
+			parent = btn.parent
+			absPy = p.Y
+			while parent do
+				absPy = absPy + parent.pos.Y
+				parent = parent.parent
+			end
+
+			local offset = 0
+			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
+				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
+			end
+			p.Y = p.Y + offset
 
 			selector.pos.X = p.X
 			selector.pos.Y = p.Y - 50
@@ -2432,7 +2502,24 @@ function createUI(system)
 				cursorY = cursorY - c.Height
 			end
 
-			container.pos.Y = frame.Height - container.Height
+			local selectionVisibilityOffset = 0
+			if selectedBtn ~= nil then
+				local visibleY = container.Height - frame.Height
+				if selectedBtn.pos.Y < visibleY then -- place button at center if not visible by default
+					selectionVisibilityOffset = visibleY
+						- selectedBtn.pos.Y
+						+ frame.Height * 0.5
+						- selectedBtn.Height * 0.5
+				end
+			end
+
+			container.pos.Y = frame.Height - container.Height + selectionVisibilityOffset
+			if container.pos.Y >= 0 then
+				container.pos.Y = 0
+			end
+			if container.pos.Y + container.Height <= frame.Height then
+				container.pos.Y = frame.Height - container.Height
+			end
 
 			up.pos = { 0, frame.Height - up.Height }
 			up.Width = frame.Width

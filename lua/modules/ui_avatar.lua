@@ -177,6 +177,111 @@ local uiavatarMetatable = {
 		-- /!\ return table of requests does not contain all requests right away
 		-- reference should be kept, not copying entries right after function call.
 		-- uikit: optional, allows to provide specific instance of uikit
+		getHeadAndShoulders = function(_, usernameOrId, size, _, uikit)
+			local body
+			local requests
+
+			local ui = uikit or ui
+			local defaultSize = size or DEFAULT_SIZE
+			local node = ui:createFrame(Color(255, 255, 255, 0))
+			node.IsMask = true
+
+			local bodyDidLoad = function(err, avatarBody)
+				if err == true then
+					error(err, 2)
+					return
+				end
+
+				local rotation = Rotation(0, math.rad(180), 0)
+
+				if node.body ~= nil then
+					rotation:Set(node.body.pivot.LocalRotation)
+					node.body:remove()
+					node.body = nil
+				end
+
+				-- local shape = Shape(avatarBody, { includeChildren = true })
+				local shape = avatarBody
+				shape.LocalPosition = Number3.Zero
+
+				-- -12 -> centered (body position set in animation cycle)
+				-- -14 -> from below shoulders
+				local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
+				uiBody:setParent(node)
+				uiBody.Head.LocalRotation = { 0, 0, 0 }
+				node.body = uiBody
+				uiBody.ratio = uiBody.Width / uiBody.Height
+
+				-- NOTE: this needs to be improved, to programatically crop
+				-- perfectly around the head, considering hair / headsets, etc.
+				node.body.Width = node._w * 1.1
+				node.body.Height = node.body.Width / uiBody.ratio
+
+				node.body.pivot.LocalRotation = rotation
+
+				node.body.pos = { 0, 0 }
+			end
+
+			body, requests = avatar:get(usernameOrId)
+			body.didLoad = bodyDidLoad
+
+			node.onRemove = function()
+				for _, r in ipairs(requests) do
+					r:Cancel()
+				end
+			end
+
+			node.refresh = function(_)
+				body, requests = avatar:get(usernameOrId)
+				body.didLoad = bodyDidLoad
+			end
+
+			node._w = 0
+			node._h = 0
+
+			node._width = function(self)
+				return self._w
+			end
+			node._height = function(self)
+				return self._h
+			end
+
+			local setWidth = node._setWidth
+			local setHeight = node._setHeight
+
+			node._setWidth = function(self, v)
+				self._w = v
+				self._h = v -- spherized
+				if self.body then
+					self.body.Width = v * 2
+					self.body.pos.X = -self.body.Width * 0.25
+					self.body.pos.Y = -self.body.Height * 0.5
+				end
+				setWidth(self, v) -- spherized
+				setHeight(self, v) -- spherized
+			end
+
+			node._setHeight = function(self, v)
+				self._w = v
+				self._h = v -- spherized
+				if self.body then
+					self.body.Width = v * 2
+					self.body.pos.X = -self.body.Width * 0.25
+					self.body.pos.Y = -self.body.Height * 0.5
+				end
+				setWidth(self, v) -- spherized
+				setHeight(self, v) -- spherized
+			end
+
+			node.Width = defaultSize
+
+			return node, requests
+		end,
+
+		-- returns uikit node + sent requests (table, can be nil)
+		-- /!\ return table of requests does not contain all requests right away
+		-- reference should be kept, not copying entries right after function call.
+		-- uikit: optional, allows to provide specific instance of uikit
 		get = function(_, usernameOrId, size, _, uikit)
 			local body
 			local requests

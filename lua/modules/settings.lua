@@ -287,7 +287,7 @@ settings.createModalContent = function(_, config)
 				if modal then
 					modal:close()
 				end
-				System:LogoutAndExit()
+				System:Logout()
 			end
 			logoutContent.bottomCenter = { yes }
 

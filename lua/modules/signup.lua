@@ -75,6 +75,7 @@ signup.createModal = function(_, config)
 		if content.refresh then
 			content:refresh()
 		end
+
 		-- print("-- 1 -", content.Width,content.Height)
 		-- Timer(1.0, function() content:refresh() print("-- 2 -", content.Width,content.Height) end)
 		return Number2(content.Width, content.Height)
@@ -90,7 +91,7 @@ signup.createModal = function(_, config)
 	content.title = "Sign Up"
 	content.icon = "🙂"
 
-	local birthdayLabel = ui:createText("Birthday", Color(200, 200, 200, 255), "small")
+	local birthdayLabel = ui:createText("🎂 Birthday", Color(200, 200, 200, 255), "small")
 	birthdayLabel:setParent(node)
 
 	local birthdayInfo = ui:createText("", Color(251, 206, 0, 255), "small")
@@ -105,7 +106,7 @@ signup.createModal = function(_, config)
 	local yearInput = ui:createComboBox("Year", yearStrings)
 	yearInput:setParent(node)
 
-	local usernameLabel = ui:createText("Username", Color(200, 200, 200, 255), "small")
+	local usernameLabel = ui:createText("👤 Username", Color(200, 200, 200, 255), "small")
 	usernameLabel:setParent(node)
 
 	local usernameInfo = ui:createText("⚠️ can't be changed!", Color(251, 206, 0, 255), "small")
@@ -150,18 +151,21 @@ signup.createModal = function(_, config)
 	end
 
 	monthInput.onSelect = function(self, index)
+		System:DebugEvent("SIGNUP_PICK_MONTH")
 		_month = index
 		self.Text = monthNames[index]
 		checkDOB()
 	end
 
 	dayInput.onSelect = function(self, index)
+		System:DebugEvent("SIGNUP_PICK_DAY")
 		_day = index
 		self.Text = dayNumbers[index]
 		checkDOB()
 	end
 
 	yearInput.onSelect = function(self, index)
+		System:DebugEvent("SIGNUP_PICK_YEAR")
 		_year = years[index]
 		self.Text = yearStrings[index]
 		checkDOB()
@@ -233,7 +237,7 @@ signup.createModal = function(_, config)
 				usernameInfo.pos.X = node.Width - usernameInfo.Width
 
 				-- additional delay for api request
-				checkUsernameTimer = Timer(0.8, function()
+				checkUsernameTimer = Timer(0.3, function()
 					usernameInfo.Color = Color(200, 200, 200, 255)
 					checkUsernameTimer = nil
 
@@ -260,6 +264,7 @@ signup.createModal = function(_, config)
 							usernameInfo.Text = "❌ server error, sorry"
 							usernameInfo.Color = theme.errorTextColor
 						else
+							System:DebugEvent("SIGNUP_ENTERED_VALID_USERNAME")
 							usernameInfo.Text = "✅"
 							usernameInfo.Color = Color(200, 200, 200, 255)
 							checkUsernameKey = res.key
@@ -297,7 +302,7 @@ signup.createModal = function(_, config)
 		checkUsername()
 	end
 
-	local passwordLabel = ui:createText("Password", Color(200, 200, 200, 255), "small")
+	local passwordLabel = ui:createText("🔑 Password", Color(200, 200, 200, 255), "small")
 	passwordLabel:setParent(node)
 
 	local passwordInfo = ui:createText("", Color(251, 206, 0, 255), "small")
@@ -344,9 +349,10 @@ signup.createModal = function(_, config)
 		checkPassword()
 	end
 
-	local signUpButton = ui:createButton("Sign Up") -- , { textSize = "big" })
-	signUpButton:setColor(theme.colorPositive)
-	signUpButton:setColor(theme.colorPositive)
+	local signUpButton = ui:createButton("✨ Sign Up ✨") -- , { textSize = "big" })
+	signUpButton:setParent(node)
+	signUpButton:setColor(Color(150, 200, 61), Color(240, 255, 240))
+	-- signUpButton:setColor(theme.colorPositive)
 
 	signUpButton.onRelease = function()
 		local dobOK = checkDOB({ errorIfIncomplete = true })
@@ -371,15 +377,6 @@ signup.createModal = function(_, config)
 
 		checkUsername(usernameCallback, { errorIfEmpty = true })
 	end
-
-	signUpButton.contentDidResize = function()
-		signUpButton.Width = nil
-		signUpButton.Width = signUpButton.Width * 1.5
-		content:refreshModal()
-	end
-	signUpButton:contentDidResize()
-
-	content.bottomCenter = { signUpButton }
 
 	local tickListener
 
@@ -511,6 +508,9 @@ signup.createModal = function(_, config)
 	end
 
 	node.refresh = function(self)
+		signUpButton.Width = nil
+		signUpButton.Width = signUpButton.Width * 1.5
+
 		self.Width = math.min(400, Screen.Width - Screen.SafeArea.Right - Screen.SafeArea.Left - theme.paddingBig * 2)
 		self.Height = birthdayLabel.Height
 			+ theme.paddingTiny
@@ -523,6 +523,8 @@ signup.createModal = function(_, config)
 			+ passwordLabel.Height
 			+ theme.paddingTiny
 			+ passwordInput.Height
+			+ theme.paddingBig
+			+ signUpButton.Height
 
 		birthdayLabel.pos.Y = self.Height - birthdayLabel.Height
 
@@ -561,6 +563,8 @@ signup.createModal = function(_, config)
 
 		passwordInput.Width = self.Width - btnPasswordToggle.Width - theme.padding
 		passwordInput.pos.Y = passwordLabel.pos.Y - theme.paddingTiny - passwordInput.Height
+
+		signUpButton.pos.X = self.Width * 0.5 - signUpButton.Width * 0.5
 	end
 
 	return popup

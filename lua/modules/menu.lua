@@ -15,6 +15,7 @@ alert = require("alert")
 sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
 sfx = require("sfx")
+logo = require("logo")
 
 ---------------------------
 -- CONSTANTS
@@ -32,6 +33,12 @@ CHAT_SCREEN_HEIGHT_RATIO = 0.25
 CHAT_MIN_HEIGHT = 160
 CHAT_MAX_HEIGHT = 400
 CONNECTION_RETRY_DELAY = 5.0 -- in seconds
+PADDING = theme.padding
+PADDING_BIG = 9
+TOP_BAR_HEIGHT = 40
+
+CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
+CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
 ---------------------------
 -- VARS
@@ -42,6 +49,10 @@ modalWasShown = false
 alertWasShown = false
 cppMenuIsActive = false
 chatDisplayed = false -- when false, only a mini chat console is displayed in the top bar
+_DEBUG = false
+_DebugColor = function()
+	return Color(math.random(150, 255), math.random(150, 255), math.random(150, 255))
+end
 
 ---------------------------
 -- MODALS
@@ -69,11 +80,19 @@ function connect()
 	if Players.Max <= 1 then
 		return -- no need to connect when max players not > 1
 	end
+	if Client.Connected then
+		return -- already connected
+	end
+	if connectionIndicator:isVisible() then
+		return -- already trying to connect
+	end
+
 	if connectionRetryTimer ~= nil then
 		connectionRetryTimer:Cancel()
 		connectionRetryTimer = nil
 	end
 
+	connBtn:show()
 	connectionIndicator:show()
 	noConnectionIndicator:hide()
 
@@ -350,9 +369,10 @@ function refreshDisplay()
 		if alertModal then
 			alertModal:hide()
 		end
-		cubzhBtn:disable()
-		chatBtn:disable()
-		friendsBtn:disable()
+
+		chatBtn:hide()
+		friendsBtn:hide()
+
 		profileFrame:hide()
 		if signupElements ~= nil then
 			for _, e in ipairs(signupElements) do
@@ -369,9 +389,10 @@ function refreshDisplay()
 		if alertModal then
 			alertModal:show()
 		end
-		cubzhBtn:enable()
-		chatBtn:enable()
-		friendsBtn:enable()
+
+		chatBtn:show()
+		friendsBtn:show()
+
 		profileFrame:show()
 		if signupElements ~= nil then
 			for _, e in ipairs(signupElements) do
@@ -403,28 +424,340 @@ end
 alertBackground:parentDidResize()
 
 ---------------------------
+-- ACTION COLUMN
+---------------------------
+
+actionColumn = ui:createFrame(Color.transparent)
+actionColumn:setParent(background)
+actionColumn:hide()
+
+-- SETTINGS BTN
+
+settingsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+settingsBtn:setParent(actionColumn)
+
+settingsBtn.onRelease = function()
+	if activeModal ~= nil then
+		activeModal:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
+	end
+end
+
+settingsIcon = ui:createText("⚙️", Color.White, "big")
+settingsIcon:setParent(settingsBtn)
+
+settingsBtn.getMinSize = function(_)
+	return Number2(settingsIcon.Width, settingsIcon.Height)
+end
+
+settingsIcon.parentDidResize = function(_)
+	local parent = settingsIcon.parent
+	settingsIcon.pos =
+		{ parent.Width * 0.5 - settingsIcon.Width * 0.5, parent.Height * 0.5 - settingsIcon.Height * 0.5 }
+end
+
+-- SHARE BTN
+
+shareBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+shareBtn:setParent(actionColumn)
+
+shareBtn.onRelease = function()
+	-- if btnLinkTimer then
+	-- 	btnLinkTimer:Cancel()
+	-- end
+	Dev:CopyToClipboard(Dev.ServerURL)
+
+	if shareBtnConfirmation ~= nil then
+		if shareBtnConfirmationTimer ~= nil then
+			shareBtnConfirmationTimer:Cancel()
+			shareBtnConfirmationTimer = nil
+		end
+		ease:cancel(shareBtnConfirmation.pos)
+		shareBtnConfirmation:remove()
+	end
+
+	shareBtnConfirmation = ui:createText("📋 Link copied!", Color.White, "small")
+	shareBtnConfirmation:setParent(shareBtn)
+
+	shareBtnConfirmation.pos =
+		{ -shareBtnConfirmation.Width - PADDING, shareBtn.Height * 0.5 - shareBtnConfirmation.Height * 0.5 }
+
+	local backup = shareBtnConfirmation.pos.X
+	shareBtnConfirmation.pos.X = backup + 50
+	ease:outBack(shareBtnConfirmation.pos, 0.22 * 1.2).X = backup
+
+	shareBtnConfirmationTimer = Timer(1.5, function()
+		shareBtnConfirmation:remove()
+		shareBtnConfirmation = nil
+		shareBtnConfirmationTimer = nil
+	end)
+end
+
+shareLabel = ui:createText("Share", Color.White, "small")
+shareLabel:setParent(shareBtn)
+
+shareIcon = ui:createText("↗", Color.White, "big")
+shareIcon:setParent(shareBtn)
+
+shareBtn.getMinSize = function(_)
+	return Number2(math.max(shareLabel.Width, shareIcon.Width), shareLabel.Height + shareIcon.Height)
+end
+
+shareLabel.parentDidResize = function(_)
+	local parent = shareLabel.parent
+	local contentHeight = shareLabel.Height + shareIcon.Height
+	shareLabel.pos = { parent.Width * 0.5 - shareLabel.Width * 0.5, parent.Height * 0.5 - contentHeight * 0.5 }
+	shareIcon.pos = {
+		parent.Width * 0.5 - shareIcon.Width * 0.5,
+		parent.Height * 0.5 + contentHeight * 0.5 - shareIcon.Height,
+	}
+end
+
+-- LIKE BTN
+
+nbLikes = nil
+liked = false
+
+likeBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+likeBtn:setParent(actionColumn)
+likeWorldReq = nil
+
+likeBtn.onRelease = function()
+	if Environment.worldId == nil then
+		return
+	end
+	liked = not liked
+
+	if nbLikes == nil then
+		nbLikes = liked and 1 or nil
+	else
+		if liked then
+			nbLikes = nbLikes + 1
+		else
+			nbLikes = nbLikes - 1
+		end
+	end
+
+	actionColumnUpdateContent()
+
+	if likeWorldReq ~= nil then
+		likeWorldReq:Cancel()
+	end
+	if getWorldInfoReq ~= nil then
+		getWorldInfoReq:Cancel()
+		getWorldInfoReq = nil
+	end
+
+	likeWorldReq = api:likeWorld(Environment.worldId, liked, function(_)
+		likeWorldReq = nil
+		getWorldInfo()
+	end)
+end
+
+likeLabel = ui:createText(nbLikes ~= nil and string.format("%d", nbLikes) or "…", Color.White, "small")
+likeLabel:setParent(likeBtn)
+
+likeIcon = ui:createText("🤍", Color.White, "big")
+likeIcon:setParent(likeBtn)
+
+likeBtn.getMinSize = function(_)
+	return Number2(math.max(likeLabel.Width, likeIcon.Width), likeLabel.Height + likeIcon.Height)
+end
+
+likeLabel.parentDidResize = function(_)
+	local parent = likeLabel.parent
+	local contentHeight = likeLabel.Height + likeIcon.Height
+	likeLabel.pos = { parent.Width * 0.5 - likeLabel.Width * 0.5, parent.Height * 0.5 - contentHeight * 0.5 }
+	likeIcon.pos = {
+		parent.Width * 0.5 - likeIcon.Width * 0.5,
+		parent.Height * 0.5 + contentHeight * 0.5 - likeIcon.Height,
+	}
+end
+
+-- COMMENTS BTN
+
+commentsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+commentsBtn:setParent(actionColumn)
+
+commentsBtn.onRelease = function()
+	showAlert({ message = "Coming soon!" })
+end
+
+-- commentsLabel = ui:createText("3", Color.White, "small")
+-- commentsLabel:setParent(commentsBtn)
+
+commentsIcon = ui:createText("💬", Color.White, "big")
+commentsIcon:setParent(commentsBtn)
+
+commentsBtn.getMinSize = function(_)
+	-- return Number2(math.max(commentsLabel.Width, commentsIcon.Width), commentsLabel.Height + commentsIcon.Height)
+	return Number2(commentsIcon.Width, commentsIcon.Height)
+end
+
+commentsIcon.parentDidResize = function(_)
+	local parent = commentsIcon.parent
+	commentsIcon.pos = {
+		parent.Width * 0.5 - commentsIcon.Width * 0.5,
+		parent.Height * 0.5 - commentsIcon.Height * 0.5,
+	}
+end
+
+-- ACTION COLUMN LAYOUT
+
+function actionColumnUpdateContent()
+	likeLabel.Text = nbLikes ~= nil and string.format("%d", nbLikes) or "…"
+	if liked then
+		likeIcon.Text = "❤️"
+	else
+		likeIcon.Text = "🤍"
+	end
+end
+
+function showActionColumn()
+	if actionColumn:isVisible() then
+		return
+	end
+
+	actionColumn:parentDidResize() -- force layout
+
+	local backup = likeBtn.pos.Y
+	likeBtn.pos.Y = likeBtn.pos.Y - 100 * 1.2
+	ease:outBack(likeBtn.pos, 0.22 * 1.2).Y = backup
+
+	backup = commentsBtn.pos.Y
+	commentsBtn.pos.Y = commentsBtn.pos.Y - 100 * 1.1
+	ease:outBack(commentsBtn.pos, 0.22 * 1.1).Y = backup
+
+	backup = shareBtn.pos.Y
+	shareBtn.pos.Y = shareBtn.pos.Y - 100
+	ease:outBack(shareBtn.pos, 0.22).Y = backup
+
+	backup = settingsBtn.pos.Y
+	settingsBtn.pos.Y = settingsBtn.pos.Y + 100
+	ease:outBack(settingsBtn.pos, 0.22).Y = backup
+
+	actionColumn:show()
+end
+
+-- function hideActionColumn() end
+
+actionColumn.parentDidResize = function(_)
+	ease:cancel(settingsBtn.pos)
+	ease:cancel(likeBtn.pos)
+	ease:cancel(commentsBtn.pos)
+	ease:cancel(shareBtn.pos)
+
+	local height = Screen.Height - TOP_BAR_HEIGHT
+
+	local settingsBtnMinSize = settingsBtn:getMinSize()
+	local shareBtnMinSize = shareBtn:getMinSize()
+	local likeBtnMinSize = likeBtn:getMinSize()
+	local commentsBtnMinSize = commentsBtn:getMinSize()
+
+	local contentWidth = math.max(
+		shareBtnMinSize.Width,
+		likeBtnMinSize.Width,
+		commentsBtnMinSize.Width,
+		settingsBtnMinSize.Width
+	) + PADDING * 2
+	local width = contentWidth + Screen.SafeArea.Right
+
+	actionColumn.Height = height
+	actionColumn.Width = width
+
+	actionColumn.pos.X = Screen.Width - actionColumn.Width
+
+	settingsBtn.Width = contentWidth
+	settingsBtn.Height = settingsBtnMinSize.Height + PADDING_BIG * 2
+	settingsBtn.pos = { 0, actionColumn.Height - settingsBtn.Height }
+
+	shareBtn.Width = contentWidth
+	shareBtn.Height = shareBtnMinSize.Height + PADDING_BIG * 2
+	shareBtn.pos = { 0, Screen.SafeArea.Bottom + PADDING }
+
+	commentsBtn.Width = contentWidth
+	commentsBtn.Height = commentsBtnMinSize.Height + PADDING_BIG * 2
+	commentsBtn.pos = { 0, shareBtn.pos.Y + shareBtn.Height }
+
+	likeBtn.Width = contentWidth
+	likeBtn.Height = likeBtnMinSize.Height + PADDING_BIG * 2
+	likeBtn.pos = { 0, commentsBtn.pos.Y + commentsBtn.Height }
+end
+actionColumn:parentDidResize()
+
+---------------------------
 -- TOP BAR
 ---------------------------
 
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
 
-cubzhBtn = ui:createButton("⎔")
-cubzhBtn:setColor(nil, Color(255, 255, 255, 254))
-cubzhBtn:setColorPressed(nil, Color(255, 255, 255, 254))
+btnContentParentDidResize = function(self)
+	local padding = PADDING_BIG
+	if self == cubzhBtnShape or self == avatar then
+		padding = PADDING
+	end
+	local parent = self.parent
+	self.Width = parent.Width - PADDING * 2
+	self.Height = parent.Height - padding * 2
+	self.pos = { PADDING, padding }
+end
+
+-- MAIN MENU BTN
+
+cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 cubzhBtn:setParent(topBar)
-cubzhBtn.pos.Y = theme.paddingTiny
+
+cubzhLogo = logo:createShape()
+cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
+cubzhBtnShape:setParent(cubzhBtn)
+cubzhBtnShape.parentDidResize = btnContentParentDidResize
+cubzhBtnShape:parentDidResize()
+
+-- animation to draw attention:
+-- logoAnim = {}
+-- logoAnim.start = function()
+-- 	ease:inOutSine(cubzhBtnShape.pivot, 0.15, {
+-- 		onDone = function()
+-- 			ease:inOutSine(cubzhBtnShape.pivot, 0.15, {
+-- 				onDone = function()
+-- 					logoAnim.start()
+-- 				end,
+-- 			}).Scale =
+-- 				Number3(1, 1, 1)
+-- 		end,
+-- 	}).Scale =
+-- 		Number3(1.5, 1.5, 1.5)
+-- end
+-- logoAnim.start()
+
+-- CONNECTIVITY BTN
+
+connBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+connBtn:setParent(topBar)
+connBtn:hide()
+connBtn.onRelease = connect
 
 connShape = System.ShapeFromBundle("aduermael.connection_indicator")
-connectionIndicator = ui:createShape(connShape)
-connectionIndicator:setParent(topBar)
+connectionIndicator = ui:createShape(connShape, { doNotFlip = true })
+connectionIndicator:setParent(connBtn)
 connectionIndicator:hide()
+connectionIndicator.parentDidResize = function(self)
+	local parent = self.parent
+	self.Height = parent.Height * 0.4
+	self.Width = self.Height
+	self.pos = { parent.Width - self.Width - PADDING, parent.Height * 0.5 - self.Height * 0.5 }
+end
 
 noConnShape = System.ShapeFromBundle("aduermael.no_conn_indicator")
 noConnectionIndicator = ui:createShape(noConnShape)
-noConnectionIndicator:setParent(topBar)
+noConnectionIndicator:setParent(connBtn)
 noConnectionIndicator:hide()
-noConnectionIndicator.onRelease = connect
+noConnectionIndicator.parentDidResize = function(self)
+	local parent = self.parent
+	self.Height = parent.Height * 0.4
+	self.Width = self.Height
+	self.pos = { parent.Width - self.Width - PADDING, parent.Height * 0.5 - self.Height * 0.5 }
+end
 
 function connectionIndicatorValid()
 	Client:HapticFeedback()
@@ -491,19 +824,24 @@ function connectionIndicatorStartAnimation()
 	end
 end
 
-chatBtn = ui:createButton("💬", { shadow = false, borders = false })
--- chatBtn = ui:createButton("💬", {shadow = false})
--- chatBtn = ui:createButton("💬")
-chatBtn:setColor(Color(0, 0, 0, 0))
-chatBtn:setColorPressed(Color(0, 0, 0, 0))
-chatBtn:setColorSelected(Color(0, 0, 0, 0))
+chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 chatBtn:setParent(topBar)
 
-friendsBtn = ui:createButton("💛", { shadow = false, borders = false })
-friendsBtn:setColor(Color(0, 0, 0, 0))
-friendsBtn:setColorPressed(Color(0, 0, 0, 0))
-friendsBtn:setColorSelected(Color(0, 0, 0, 0))
+textBubbleShape = ui:createShape(System.ShapeFromBundle("aduermael.textbubble"))
+textBubbleShape:setParent(chatBtn)
+textBubbleShape.parentDidResize = function(self)
+	local parent = self.parent
+	self.Height = parent.Height - PADDING_BIG * 2
+	self.Width = self.Height
+	self.pos = { PADDING, PADDING_BIG }
+end
+
+friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 friendsBtn:setParent(topBar)
+
+friendsShape = ui:createShape(System.ShapeFromBundle("aduermael.friends_icon"))
+friendsShape:setParent(friendsBtn)
+friendsShape.parentDidResize = btnContentParentDidResize
 
 cubzhBtn.onRelease = function()
 	showModal(MODAL_KEYS.CUBZH_MENU)
@@ -522,32 +860,15 @@ friendsBtn.onRelease = function()
 	showModal(MODAL_KEYS.FRIENDS)
 end
 
-profileFrame = ui:createFrame(Color.transparent)
+profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 profileFrame:setParent(topBar)
-
 profileFrame.onRelease = function(_)
 	showModal(MODAL_KEYS.PROFILE)
 end
 
 avatar = ui:createFrame(Color.transparent)
 avatar:setParent(profileFrame)
-avatar.pos.Y = theme.paddingTiny
-
-username = ui:createText("", Color.White, "small")
-username:setParent(profileFrame)
-
-userAttribute = ui:createText("", Color(255, 255, 255, 100), "small")
-userAttribute:setParent(profileFrame)
-
-xp = nil
-coins = nil
-
-info = ui:createText(
-	string.format("🏆 %s 💰 %s", xp and "" .. xp or "…", coins and "" .. coins or "…"),
-	Color.White,
-	"small"
-)
-info:setParent(profileFrame)
+avatar.parentDidResize = btnContentParentDidResize
 
 ---------
 -- CHAT
@@ -558,7 +879,7 @@ function createTopBarChat()
 		return -- already created
 	end
 	topBarChat = require("chat"):create({ uikit = ui, input = false, time = false, heads = false, maxMessages = 4 })
-	topBarChat:setParent(topBar)
+	topBarChat:setParent(chatBtn)
 	if topBar.parentDidResize then
 		topBar:parentDidResize()
 	end
@@ -693,28 +1014,10 @@ function getCubzhMenuModalContent()
 		System.GoHome()
 	end
 
-	local btnLink = ui:createButton("📑 Server Link")
-	btnLink:setParent(node)
-
-	local btnLinkTimer
-
-	btnLink.onRelease = function()
-		if btnLinkTimer then
-			btnLinkTimer:Cancel()
-		end
-		Dev:CopyToClipboard(Dev.ServerURL)
-		btnLink.Text = "📋 Copied!"
-		btnLinkTimer = Timer(1.5, function()
-			if btnLink.Text then
-				btnLink.Text = "📋 Server Link"
-			end
-			btnLinkTimer = nil
-		end)
-	end
-
 	local btnWorlds = ui:createButton("🌎 Worlds", { textSize = "big" })
 	btnWorlds:setColor(theme.colorExplore)
 	btnWorlds:setParent(node)
+	btnWorlds.Height = CUBZH_MENU_MAIN_BUTTON_HEIGHT
 
 	btnWorlds.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
@@ -723,7 +1026,7 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnGallery = ui:createButton("🏗️ Gallery", { textSize = "default" })
+	local btnGallery = ui:createButton("✨ Items Gallery", { textSize = "default" })
 	btnGallery:setParent(node)
 
 	btnGallery.onRelease = function()
@@ -733,17 +1036,12 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnInventory = ui:createButton("🎒 Inventory", { textSize = "default" })
-	btnInventory:setParent(node)
+	local btnMyCreations = ui:createButton("🏗️ My Creations", { textSize = "default" })
+	btnMyCreations:setColor(theme.colorCreate)
+	btnMyCreations:setParent(node)
+	btnMyCreations.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
 
-	btnInventory.onRelease = function()
-		showAlert({ message = "Coming soon!" })
-	end
-
-	local btnMyItems = ui:createButton("⚔️ My Items", { textSize = "default" })
-	btnMyItems:setParent(node)
-
-	btnMyItems.onRelease = function()
+	btnMyCreations.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
 			local content = creations:createModalContent({ uikit = ui })
@@ -753,28 +1051,11 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnMyWorlds = ui:createButton("🌎 My Worlds", { textSize = "default" })
-	btnMyWorlds:setParent(node)
-
-	btnMyWorlds.onRelease = function()
-		local modal = content:getModalIfContentIsActive()
-		if modal ~= nil then
-			local content = creations:createModalContent({ uikit = ui })
-			content.tabs[3].selected = true
-			content.tabs[3].action()
-			modal:push(content)
-		end
-	end
-
-	local btnFriends = ui:createButton("💛 Friends")
-	btnFriends:setParent(node)
-
-	btnFriends.onRelease = function()
-		showModal(MODAL_KEYS.FRIENDS)
-	end
-
 	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
-	local btnCode = ui:createButton(dev and "🤓 Edit Code" or "🤓 Read Code")
+	local btnCode = ui:createButton(
+		dev and "🤓 Edit Code" or "🤓 Read Code",
+		{ textSize = "small", borders = false, underline = false, padding = true, shadow = false }
+	)
 	btnCode:setParent(node)
 
 	btnCode.onRelease = function()
@@ -786,16 +1067,10 @@ function getCubzhMenuModalContent()
 		closeModal()
 	end
 
-	local btnSettings = ui:createButton("⚙️ Settings")
-	content.bottomRight = { btnSettings }
-
-	btnSettings.onRelease = function()
-		content
-			:getModalIfContentIsActive()
-			:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
-	end
-
-	local btnHelp = ui:createButton("👾 Help!", { textSize = "small" })
+	local btnHelp = ui:createButton(
+		"👾 Help!",
+		{ textSize = "small", borders = false, underline = false, padding = true, shadow = false }
+	)
 	btnHelp:setParent(node)
 
 	btnHelp.onRelease = function()
@@ -803,34 +1078,27 @@ function getCubzhMenuModalContent()
 	end
 
 	local buttons = {
-		{ btnHome, btnFriends },
 		{ btnWorlds },
-		{ btnGallery, btnInventory },
-		{ btnMyItems, btnMyWorlds },
-		{
-			btnCode,
-			btnLink,
-		},
+		{ btnMyCreations },
+		{ btnGallery },
+		{ btnHome },
 	}
 
-	-- tmp hack: no link for this URL
-	if Dev.ServerURL == "https://app.cu.bzh/?worldID=cubzh" then
-		btnLink:disable()
-	end
+	-- local osName = Client.OSName
+	-- if osName == "Windows" or osName == "macOS" then
+	-- 	local btnTerminate = ui:createButton("Exit Cubzh", { textSize = "small" })
+	-- 	btnTerminate:setColor(theme.colorNegative)
+	-- 	-- btnTerminate:setParent(node)
+	-- 	btnTerminate.onRelease = function()
+	-- 		System:Terminate()
+	-- 	end
+	-- 	-- table.insert(buttons, btnTerminate)
+	-- 	content.bottomCenter = { btnTerminate, btnHelp }
+	-- else
+	-- 	content.bottomCenter = { btnHelp }
+	-- end
 
-	local osName = Client.OSName
-	if osName == "Windows" or osName == "macOS" then
-		local btnTerminate = ui:createButton("Exit Cubzh", { textSize = "small" })
-		btnTerminate:setColor(theme.colorNegative)
-		-- btnTerminate:setParent(node)
-		btnTerminate.onRelease = function()
-			System:Terminate()
-		end
-		-- table.insert(buttons, btnTerminate)
-		content.bottomLeft = { btnTerminate, btnHelp }
-	else
-		content.bottomLeft = { btnHelp }
-	end
+	content.bottomCenter = { btnCode, btnHelp }
 
 	content.idealReducedContentSize = function(_, width, _)
 		local height = 0
@@ -862,7 +1130,7 @@ function getCubzhMenuModalContent()
 		return Number2(width, height)
 	end
 
-	btnMyWorlds.parentDidResize = function(_)
+	btnMyCreations.parentDidResize = function(_)
 		local width = node.Width
 
 		for _, row in ipairs(buttons) do
@@ -897,83 +1165,58 @@ function getCubzhMenuModalContent()
 	end
 
 	content.didBecomeActive = function()
-		btnMyWorlds:parentDidResize()
+		btnMyCreations:parentDidResize()
+		showActionColumn()
+	end
+
+	content.willResignActive = function()
+		actionColumn:hide()
 	end
 
 	return content
 end
 
 topBar.parentDidResize = function(self)
-	local padding = theme.paddingTiny
+	local height = TOP_BAR_HEIGHT
 
-	-- Compute height of top bar
-	local height = math.max(cubzhBtn.Height, username.Height + padding + info.Height)
+	cubzhBtn.Height = height
+	cubzhBtn.Width = cubzhBtn.Height
 
-	-- Adjust Cubzh button's height if the top bar height is larger
-	cubzhBtn.Height = math.max(cubzhBtn.Height, height)
-	-- Cubzh button must remain square
-	cubzhBtn.Width = math.max(cubzhBtn.Height, cubzhBtn.Width)
-
-	connectionIndicator.Height = cubzhBtn.Height * 0.4
-	connectionIndicator.Width = connectionIndicator.Height
-
-	noConnectionIndicator.Height = connectionIndicator.Height
-	noConnectionIndicator.Width = connectionIndicator.Width
+	connBtn.Height = height
+	connBtn.Width = connBtn.Height
 
 	self.Width = Screen.Width
-	self.Height = System.SafeAreaTop + padding * 2 + height
+	self.Height = System.SafeAreaTop + height
 	self.pos.Y = Screen.Height - self.Height
 
-	local topBarHeight = self.Height - System.SafeAreaTop
-
-	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width - padding
-	connectionIndicator.pos.X = cubzhBtn.pos.X - connectionIndicator.Width - padding * 2
-	connectionIndicator.pos.Y = cubzhBtn.pos.Y + cubzhBtn.Height * 0.5 - connectionIndicator.Height * 0.5
-
-	noConnectionIndicator.pos = connectionIndicator.pos
+	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width
+	connBtn.pos.X = cubzhBtn.pos.X - connBtn.Width
 
 	-- PROFILE BUTTON
 
-	avatar.Height = height
-
-	profileFrame.Width = math.max(
-		avatar.Width + padding + username.Width + padding + userAttribute.Width,
-		avatar.Width + padding + info.Width
-	)
 	profileFrame.Height = height
-
-	profileFrame.pos.X = Screen.SafeArea.Left + padding
-	profileFrame.pos.Y = topBarHeight * 0.5 - profileFrame.Height * 0.5
-
-	avatar.pos.X = 0
-	avatar.pos.Y = 0
-
-	username.pos.X = avatar.pos.X + avatar.Width + padding
-	username.pos.Y = profileFrame.Height * 0.5 + padding * 0.5
-
-	userAttribute.pos.X = username.pos.X + username.Width + padding
-	userAttribute.pos.Y = username.pos.Y
-
-	info.pos.X = avatar.pos.X + avatar.Width + padding
-	info.pos.Y = profileFrame.Height * 0.5 - info.Height - padding * 0.5
+	profileFrame.Width = profileFrame.Height
 
 	-- FRIENDS BUTTON
 
-	friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width + padding
-	friendsBtn.pos.Y = topBarHeight * 0.5 - friendsBtn.Height * 0.5
+	friendsBtn.Height = height
+	friendsBtn.Width = friendsBtn.Height - (PADDING_BIG - PADDING) * 2
+	friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
 
 	-- CHAT BUTTON
 
-	chatBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width + padding
-	chatBtn.pos.Y = topBarHeight * 0.5 - chatBtn.Height * 0.5
+	chatBtn.Height = height
+	chatBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
+	chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
 
 	-- CHAT MESSAGES
 
 	if topBarChat then
-		topBarChat.Height = topBarHeight - padding * 2
-		topBarChat.pos.X = chatBtn.pos.X + chatBtn.Width + padding
-		topBarChat.Width = (connectionIndicator.pos.X - topBarChat.pos.X) - padding * 2
-		topBarChat.pos.Y = topBarHeight * 0.5 - topBarChat.Height * 0.5
+		local topBarHeight = self.Height - System.SafeAreaTop
+		topBarChat.Height = topBarHeight - PADDING
+		topBarChat.Width = chatBtn.Width - PADDING * 3 - textBubbleShape.Width
+		topBarChat.pos.X = textBubbleShape.Width + PADDING * 2
+		topBarChat.pos.Y = PADDING
 	end
 end
 topBar:parentDidResize()
@@ -1261,7 +1504,8 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 
 	if updates.outfit == true then
 		avatar:remove()
-		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui, { ignoreCache = true })
+		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
+		avatar.parentDidResize = btnContentParentDidResize
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
 	end
@@ -1387,8 +1631,8 @@ signupElements = nil
 
 -- callbacks: success, cancel, error
 function showSignUp(callbacks)
-	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small" })
-	helpBtn:setColor(theme.colorDiscord, Color.White)
+	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small", borders = false })
+	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
 	helpBtn.onRelease = function()
 		URL:Open("https://cu.bzh/discord")
 	end
@@ -1401,7 +1645,8 @@ function showSignUp(callbacks)
 	end
 	helpBtn:parentDidResize()
 
-	local loginBtn = ui:createButton("🙂 Login", { textSize = "small" })
+	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
+	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
 	loginBtn.parentDidResize = function(self)
 		self.pos = {
 			Screen.SafeArea.Left + theme.padding,
@@ -1714,42 +1959,51 @@ else
 	showTitleScreen()
 end
 
+getWorldInfoReq = nil
+function getWorldInfo()
+	if getWorldInfoReq ~= nil then
+		getWorldInfoReq:Cancel()
+		getWorldInfoReq = nil
+	end
+	if Environment.worldId ~= nil then
+		getWorldInfoReq = api:getWorld(Environment.worldId, { "likes", "liked" }, function(err, world)
+			if err ~= nil then
+				return
+			end
+			nbLikes = world.likes
+			liked = world.liked
+			actionColumnUpdateContent()
+		end)
+	end
+end
+
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
 		System:UpdateAuthStatus()
 
 		if System.IsUserUnder13 then
-			userAttribute.Text = "<13"
+			local under13BadgeShape = System.ShapeFromBundle("aduermael.under13_badge")
+			under13Badge = ui:createShape(under13BadgeShape)
+			under13Badge:setParent(profileFrame)
+			local ratio = under13Badge.Width / under13Badge.Height
+			under13Badge.Height = 10
+			under13Badge.Width = under13Badge.Height * ratio
+			under13Badge.parentDidResize = function(self)
+				local parent = self.parent
+				self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
+				under13BadgeShape.LocalPosition.Z = 100
+			end
+			under13Badge:parentDidResize()
 		end
+
+		getWorldInfo()
 
 		-- connects client to server if it makes sense (maxPlayers > 1)
 		connect()
 
-		username.Text = Player.Username
-
-		api.getBalance(function(err, balance)
-			if err then
-				return
-			end
-			coins = balance.total
-			info.Text = string.format(
-				"🏆 %s 💰 %s",
-				xp and "" .. math.floor(xp) or "…",
-				coins and "" .. math.floor(coins) or "…"
-			)
-			topBar:parentDidResize()
-		end)
-
-		xp = 0
-		info.Text = string.format(
-			"🏆 %s 💰 %s",
-			xp and "" .. math.floor(xp) or "…",
-			coins and "" .. math.floor(coins) or "…"
-		)
-		topBar:parentDidResize()
-
 		avatar:remove()
-		avatar = uiAvatar:getHead(Player.Username, cubzhBtn.Height, ui)
+		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
+		avatar.parentDidResize = btnContentParentDidResize
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
 		if chat then
