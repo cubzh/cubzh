@@ -18,6 +18,7 @@ local objects = {}
 local map
 local mapIndex = 1
 local mapName
+local mapGhost = false
 
 local CameraMode = {
 	THIRD_PERSON = 0,
@@ -249,6 +250,23 @@ end
 local removeObject = function(objInfo)
 	objects[objInfo.uuid]:RemoveFromParent()
 	objects[objInfo.uuid] = nil
+end
+
+toggleMapGhost = function(activate)
+	if mapGhost == activate then return end
+	if activate == nil then
+		mapGhost = not mapGhost
+	else
+		mapGhost = activate
+	end
+
+	if mapGhost then
+		setObjectAlpha(map, 0.4)
+		map.CollisionGroups = {}
+	else
+		setObjectAlpha(map, 1)
+		map.CollisionGroups = Map.CollisionGroups
+	end
 end
 
 local firstPersonPlacingObject = function(obj)
@@ -971,6 +989,12 @@ initDefaultMode = function()
 		{
 			type = "node",
 			node = mapScaleFrame
+		},
+		{ type = "gap" },
+		{
+			type = "button",
+			text = "Map Ghost",
+			callback = toggleMapGhost
 		},
 		{ type = "gap" },
 		{
