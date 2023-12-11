@@ -72,6 +72,9 @@ local createHorizontalContainer = function(_, color)
 	elem.bg.parentDidResize = function()
 		elem:refresh()
 	end
+	elem.bg.contentDidResize = function()
+		elem:refresh()
+	end
 
 	local metatable = { __metatable = false, __index = index, __newindex = newindex }
 	setmetatable(elem, metatable)
@@ -154,6 +157,9 @@ local createVerticalContainer = function(_, color)
 	end
 
 	elem.bg.parentDidResize = function()
+		elem:refresh()
+	end
+	elem.bg.contentDidResize = function()
 		elem:refresh()
 	end
 

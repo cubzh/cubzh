@@ -224,6 +224,7 @@ cameraModes.setFirstPerson = function(self, config)
 		showPointer = false,
 		camera = Camera, -- main Camera by default
 		target = nil, -- must be set
+		offset = Number3(0,0,0)
 	}
 
 	if config then
@@ -254,7 +255,12 @@ cameraModes.setFirstPerson = function(self, config)
 		camera:SetParent(config.target)
 	end
 
-	camera.LocalPosition:Set(0, 0, 0)
+	if config.offset then
+		camera.LocalPosition:Set(config.offset)
+	else
+		camera.LocalPosition:Set(0, 0, 0)
+	end
+
 	camera.LocalRotation:Set(0, 0, 0)
 
 	if config.showPointer then

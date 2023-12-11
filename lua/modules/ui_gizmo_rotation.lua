@@ -4,13 +4,21 @@
 --	node.pos = { 50, 300 }
 --  node:setShape(shape2)
 
+local Orientation = require("gizmo").Orientation
+
 local create = function(_, config)
 	local ui = require("uikit")
 	local padding = require("uitheme").current.padding
 	local node = ui:createFrame(Color(0,0,0,0.2))
 
-	local shape = config.shape
+	local shape = config.shape or Object()
 	local onRotate = config.onRotate
+
+	local orientationMode = Orientation.World
+
+	node.setOrientation = function(_, mode)
+		orientationMode = mode
+	end
 
 	local ratio = 7
 	local axisConfig = {
@@ -45,7 +53,12 @@ local create = function(_, config)
 			diff = pe.X
 		end
 		uiAxis.onDrag = function(_, pe)
-			shape:RotateWorld(shape[config.vector], (diff - pe.X) * 6)
+			if not shape then return end
+			if orientationMode == Orientation.Local then
+				shape:RotateWorld(shape[config.vector], (diff - pe.X) * 6)
+			else
+				shape:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
+			end
 			shape.Rotation = shape.Rotation -- trigger onsetcallback
 			diff = pe.X
 			if onRotate then
@@ -84,7 +97,13 @@ local create = function(_, config)
 
 	LocalEvent:Listen(LocalEvent.Name.Tick, function()
 		for _,axis in ipairs(axisList) do
-			local newRotation = -Camera.Rotation * shape.Rotation
+			local newRotation
+			if orientationMode == Orientation.Local then
+				if not shape then return end
+				newRotation = -Camera.Rotation * shape.Rotation
+			else
+				newRotation = -Camera.Rotation
+			end
 			axis.handle.Rotation = newRotation
 		end
 	end)
@@ -98,7 +117,8 @@ local create = function(_, config)
 	local zInput
 	local zText
 	if not Client.IsMobile then
-		xInput = ui:createTextInput(math.deg(shape.Rotation.X), "X")
+		local currentRotation = shape and shape.Rotation or Rotation(0,0,0)
+		xInput = ui:createTextInput(math.deg(currentRotation.X), "X")
 		xInput.onSubmit = function()
 			shape.LocalRotation.X = math.rad(math.ceil(tonumber(xInput.Text)))
 			rotateUpdateUI()
@@ -109,7 +129,7 @@ local create = function(_, config)
 			xInput:focus()
 		end
 		xText:setColor(Color.Red)
-		yInput = ui:createTextInput(math.deg(shape.Rotation.Y), "Y")
+		yInput = ui:createTextInput(math.deg(currentRotation.Y), "Y")
 		yInput.onSubmit = function()
 			shape.LocalRotation.Y = math.rad(math.ceil(tonumber(yInput.Text)))
 			rotateUpdateUI()
@@ -119,7 +139,7 @@ local create = function(_, config)
 			yInput:focus()
 		end
 		yText:setColor(Color.Green)
-		zInput = ui:createTextInput(math.deg(shape.Rotation.Z), "Z")
+		zInput = ui:createTextInput(math.deg(currentRotation.Z), "Z")
 		zInput.onSubmit = function()
 			shape.LocalRotation.Z = math.rad(math.ceil(tonumber(zInput.Text)))
 			rotateUpdateUI()
@@ -133,9 +153,16 @@ local create = function(_, config)
 
 	rotateUpdateUI = function()
 		if not shape or not xInput then return end
-		xInput.Text = math.floor(math.deg(math.abs(shape.Rotation.X)))
-		yInput.Text = math.floor(math.deg(math.abs(shape.Rotation.Y)))
-		zInput.Text = math.floor(math.deg(math.abs(shape.Rotation.Z)))
+		local value
+		value = math.floor(math.deg(math.abs(shape.Rotation.X)))
+		if value == 360 then value = 0 end
+		xInput.Text = value
+		value = math.floor(math.deg(math.abs(shape.Rotation.Y)))
+		if value == 360 then value = 0 end
+		yInput.Text = value
+		value = math.floor(math.deg(math.abs(shape.Rotation.Z)))
+		if value == 360 then value = 0 end
+		zInput.Text = value
 	end
 	node.setShape = function(_, newShape)
 		if shape then
@@ -145,7 +172,9 @@ local create = function(_, config)
 		shape.Rotation:AddOnSetCallback(rotateUpdateUI)
 		rotateUpdateUI()
 	end
-	node:setShape(shape)
+	if shape then
+		node:setShape(shape)
+	end
 
 	if not Client.IsMobile then
 		local inputsContainer = require("ui_container"):createHorizontalContainer()

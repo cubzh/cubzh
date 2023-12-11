@@ -395,10 +395,7 @@ local writeChunkObjects = function(d, objects)
 			end
 			if object.Physics and object.Physics ~= PhysicsMode.StaticPerBlock then
 				d:WriteString("pm")
-				local realPhysicsMode = object.savedPhysicsState or object.Physics -- object might be frozen when manipulating it (disabled)
-				-- TODO: remove this - Force StaticPerBlock
-				realPhysicsMode = PhysicsMode.StaticPerBlock
-				d:WritePhysicsMode(realPhysicsMode)
+				d:WritePhysicsMode(object.Physics)
 				nbFields = nbFields + 1
 			end
 
@@ -671,6 +668,17 @@ common.uuidv4 = function()
 	end)
 end
 
+-- Module mass loading
+--[[
+local loadingObjects = { tree1_1 }
+local awaitingObjects["tree1"] = { tree1_2 }
+local cachedObjects = {}
+-- when object load finished
+table.insert(cachedObjects, tree1_1)
+for _,objInfo in ipairs(awaitingObjects["tree1"]) do
+	local obj = Shape(tree1_1)
+end
+--]]
 local loadObject = function(objInfo, didLoad)
 	Object:Load(objInfo.fullname, function(obj)
 		obj:SetParent(World)

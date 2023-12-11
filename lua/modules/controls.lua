@@ -826,28 +826,27 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 					_state.clickPointerStartPosition = Number2(x, y)
 				end
 
-				if Pointer.LongPress ~= nil then
-					local px, py = pointerEvent.X, pointerEvent.Y
-					local x, y = px * Screen.Width, py * Screen.Height
-					_state.longPressStartPosition = Number2(x, y)
-					_state.longPressTimer = Timer(LONG_PRESS_DELAY_1, function()
-						local indicator = _getPCLongPressIndicator(true)
-						indicator.pos = { x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0 }
-						indicator.pivot.Scale = TOUCH_INDICATOR_LONG_PRESS_SCALE
-						ease:inBack(indicator.pivot, LONG_PRESS_DELAY_2).Scale = SCALE_ZERO
-						_state.longPressTimer = Timer(LONG_PRESS_DELAY_2, function()
-							_state.longPressTimer = nil
-							_state.longPressStartPosition = nil
-							if Pointer.LongPress ~= nil then
-								_state.clickPointerIndex = nil -- diffuse click
-								Client:HapticFeedback()
-								indicator:_hide()
-								local pe = PointerEvent(px, py, 0.0, 0.0, true, POINTER_INDEX_MOUSE_LEFT)
-								Pointer.LongPress(pe)
-							end
-						end)
+				local px, py = pointerEvent.X, pointerEvent.Y
+				local x, y = px * Screen.Width, py * Screen.Height
+				_state.longPressStartPosition = Number2(x, y)
+				_state.longPressTimer = Timer(LONG_PRESS_DELAY_1, function()
+					local indicator = _getPCLongPressIndicator(true)
+					indicator.pos = { x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0 }
+					indicator.pivot.Scale = TOUCH_INDICATOR_LONG_PRESS_SCALE
+					ease:inBack(indicator.pivot, LONG_PRESS_DELAY_2).Scale = SCALE_ZERO
+					_state.longPressTimer = Timer(LONG_PRESS_DELAY_2, function()
+						_state.longPressTimer = nil
+						_state.longPressStartPosition = nil
+						_state.clickPointerIndex = nil -- diffuse click
+						Client:HapticFeedback()
+						indicator:_hide()
+						local pe = PointerEvent(px, py, 0.0, 0.0, true, POINTER_INDEX_MOUSE_LEFT)
+						if Pointer.LongPress ~= nil then
+							Pointer.LongPress(pe)
+						end
+						LocalEvent:Send(LocalEvent.Name.PointerLongPress, pe)
 					end)
-				end
+				end)
 			end
 		elseif _isMobile then
 			local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
