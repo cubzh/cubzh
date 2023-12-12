@@ -689,7 +689,7 @@ CharEvent *input_event_to_CharEvent(void *e) {
 
 KeyboardInputListener *input_keyboard_listener_new(void *userdata,
                                                    keyboard_input_callback_ptr callback) {
-    KeyboardInputListener *l = (KeyboardInputListener *)malloc(sizeof(KeyboardInputListener));
+    KeyboardInputListener * const l = (KeyboardInputListener *)malloc(sizeof(KeyboardInputListener));
     if (l == NULL) {
         return NULL;
     }
@@ -697,12 +697,17 @@ KeyboardInputListener *input_keyboard_listener_new(void *userdata,
     l->userdata = userdata;
     l->keyboard_input_callback = callback;
 
-    doubly_linked_list_push_first(inputContext()->keyboardInputListeners, (void *)l);
-
+    DoublyLinkedListNode *newNode = doubly_linked_list_push_first(inputContext()->keyboardInputListeners, (void *)l);
+    if (newNode == NULL) {
+        free(l);
+        return NULL;
+    }
+    
     return l;
 }
 
-void input_keyboard_listener_free(KeyboardInputListener *l, pointer_free_function userdata_free) {
+void input_keyboard_listener_free(KeyboardInputListener * const listener,
+                                  const pointer_free_function userdata_free) {
 
     InputContext *c = inputContext();
 
@@ -711,7 +716,7 @@ void input_keyboard_listener_free(KeyboardInputListener *l, pointer_free_functio
     while (node != NULL) {
         void *ptr = doubly_linked_list_node_pointer(node);
 
-        if (l == ptr) {
+        if (listener == ptr) {
             doubly_linked_list_delete_node(listeners, node);
             break;
         }
@@ -719,49 +724,68 @@ void input_keyboard_listener_free(KeyboardInputListener *l, pointer_free_functio
     }
 
     if (userdata_free != NULL) {
-        userdata_free(l->userdata);
+        userdata_free(listener->userdata);
     }
-    free(l); // only weak refs in listener
+    free(listener); // only weak refs in listener
 }
 
 // ----------------------
 // PointerEventListener
 // ----------------------
 
-PointerEventListener *pointer_event_listener_new(void *userdata,
-                                                 pointer_event_callback_ptr callback) {
-    PointerEventListener *l = (PointerEventListener *)malloc(sizeof(PointerEventListener));
-    if (l == NULL) {
+PointerEventListener *pointer_event_listener_new(void * const userdata,
+                                                 const pointer_event_callback_ptr callback) {
+    if (callback == NULL) {
         return NULL;
     }
 
-    l->userdata = userdata;
-    l->pointer_event_callback = callback;
+    // allocate new pointer event listener
+    PointerEventListener * const listener = (PointerEventListener *)malloc(sizeof(PointerEventListener));
+    if (listener == NULL) {
+        return NULL;
+    }
 
-    doubly_linked_list_push_first(inputContext()->pointerEventListeners, (void *)l);
+    listener->userdata = userdata;
+    listener->pointer_event_callback = callback;
 
-    return l;
+    DoublyLinkedListNode *newNode = doubly_linked_list_push_first(inputContext()->pointerEventListeners, (void *)listener);
+    if (newNode == NULL) {
+        free(listener);
+        return NULL;
+    }
+
+    return listener;
 }
 
-void pointer_event_listener_free(PointerEventListener *l, pointer_free_function userdata_free) {
-    InputContext *c = inputContext();
+void pointer_event_listener_free(PointerEventListener * const listener, 
+                                 const pointer_free_function userdata_free) {
+    if (listener == NULL) {
+        return;
+    }
 
-    DoublyLinkedList *listeners = c->pointerEventListeners;
-    DoublyLinkedListNode *node = doubly_linked_list_last(listeners);
-    while (node != NULL) {
-        void *ptr = doubly_linked_list_node_pointer(node);
+    InputContext * const ctx = inputContext();
+    if (ctx == NULL) {
+        return;
+    }
 
-        if (l == ptr) {
-            doubly_linked_list_delete_node(listeners, node);
-            break;
+    DoublyLinkedList * const listeners = ctx->pointerEventListeners;
+    if (listeners == NULL) {
+        DoublyLinkedListNode *node = doubly_linked_list_first(listeners);
+        while (node != NULL) {
+            if (listener == doubly_linked_list_node_pointer(node)) {
+                doubly_linked_list_delete_node(listeners, node);
+                break;
+            }
+            node = doubly_linked_list_node_next(node);
         }
-        node = doubly_linked_list_node_previous(node);
     }
 
-    if (userdata_free != NULL) {
-        userdata_free(l->userdata);
+    if (listener->userdata != NULL && userdata_free != NULL) {
+        userdata_free(listener->userdata);
+        listener->userdata = NULL;
     }
-    free(l); // only weak refs in listener
+    
+    free(listener); // only weak refs in listener
 }
 
 // ----------------------

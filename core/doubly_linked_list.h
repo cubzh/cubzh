@@ -96,16 +96,16 @@ DoublyLinkedListNode *doubly_linked_list_node_new(void *ptr);
 void doubly_linked_list_node_free(DoublyLinkedListNode *node);
 
 // returns next node (can be NULL)
-DoublyLinkedListNode *doubly_linked_list_node_next(const DoublyLinkedListNode *node);
+DoublyLinkedListNode *doubly_linked_list_node_next(const DoublyLinkedListNode * const node);
 
 // returns previous node (can be NULL)
-DoublyLinkedListNode *doubly_linked_list_node_previous(const DoublyLinkedListNode *node);
+DoublyLinkedListNode *doubly_linked_list_node_previous(const DoublyLinkedListNode * const node);
 
 // returns stored pointer
-void *doubly_linked_list_node_pointer(const DoublyLinkedListNode *node);
+void *doubly_linked_list_node_pointer(const DoublyLinkedListNode * const node);
 
 // sets stored pointer
-void doubly_linked_list_node_set_pointer(DoublyLinkedListNode *node, void *ptr);
+void doubly_linked_list_node_set_pointer(DoublyLinkedListNode * const node, void * const ptr);
 
 #ifdef __cplusplus
 } // extern "C"

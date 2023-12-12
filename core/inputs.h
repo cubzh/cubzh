@@ -309,11 +309,10 @@ KeyboardInputListener *input_keyboard_listener_new(void *userdata,
 void input_keyboard_listener_free(KeyboardInputListener *il, pointer_free_function userdata_free);
 
 //
-PointerEventListener *pointer_event_listener_new(void *userdata,
-                                                 pointer_event_callback_ptr callback);
+PointerEventListener *pointer_event_listener_new(void * const userdata, const pointer_event_callback_ptr callback);
 
 //
-void pointer_event_listener_free(PointerEventListener *il, pointer_free_function userdata_free);
+void pointer_event_listener_free(PointerEventListener * const listener, const pointer_free_function userdata_free);
 
 //
 InputListener *input_listener_new(bool mouseEvents,

@@ -385,24 +385,27 @@ void doubly_linked_list_node_free(DoublyLinkedListNode *node) {
     free(node);
 }
 
-DoublyLinkedListNode *doubly_linked_list_node_next(const DoublyLinkedListNode *node) {
-    if (node == NULL)
+DoublyLinkedListNode *doubly_linked_list_node_next(const DoublyLinkedListNode * const node) {
+    if (node == NULL) {
         return NULL;
+    }
     return node->next;
 }
 
-DoublyLinkedListNode *doubly_linked_list_node_previous(const DoublyLinkedListNode *node) {
-    if (node == NULL)
+DoublyLinkedListNode *doubly_linked_list_node_previous(const DoublyLinkedListNode * const node) {
+    if (node == NULL) {
         return NULL;
+    }
     return node->previous;
 }
 
-void *doubly_linked_list_node_pointer(const DoublyLinkedListNode *node) {
-    if (node == NULL)
+void *doubly_linked_list_node_pointer(const DoublyLinkedListNode * const node) {
+    if (node == NULL) {
         return NULL;
+    }
     return node->ptr;
 }
 
-void doubly_linked_list_node_set_pointer(DoublyLinkedListNode *node, void *ptr) {
+void doubly_linked_list_node_set_pointer(DoublyLinkedListNode * const node, void * const ptr) {
     node->ptr = ptr;
 }
