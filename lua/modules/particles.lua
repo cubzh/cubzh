@@ -66,6 +66,7 @@ particles.newEmitter = function(_, config)
 			p.Palette[1].Color = particles.fromConfigOrDefault(conf.color, Color.White)
 			p.CollisionGroups = particles.fromConfigOrDefault(conf.collisionGroups, nil)
 			p.CollidesWithGroups = particles.fromConfigOrDefault(conf.collidesWithGroups, nil)
+			p:RefreshModel() -- TODO: index particles by color to avoid this
 
 			World:AddChild(p)
 
