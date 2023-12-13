@@ -9,7 +9,7 @@ Go to https://docs.cu.bzh/
 --
 
 -- Dev.DisplayFPS = true
--- Dev.DisplayColliders = true
+Dev.DisplayColliders = true
 -- Dev.DisplayBoxes = true
 
 -- CONSTANTS
@@ -24,6 +24,7 @@ local HOLDING_TIME = 0.6 -- time to trigger action when holding button pressed
 
 local JUMP_VELOCITY = 82
 local MAX_AIR_JUMP_VELOCITY = 85
+local DRAFT_COLLISION_GROUPS = { 7 }
 
 -- VARIABLES
 
@@ -33,6 +34,10 @@ local DEBUG = false
 -- Toasts
 local globalToast = nil
 local backpackTransparentToast = nil
+
+propellers = {}
+fireflies = {}
+friendIcons = {}
 
 Client.OnStart = function()
 	-- REQUIRE MODULES
@@ -44,7 +49,6 @@ Client.OnStart = function()
 	wingTrail = require("wingtrail")
 	avatar = require("avatar")
 	sfx = require("sfx")
-
 	multi = require("multi")
 	-- not doing it automatically in that script has we need
 	-- to deal with special situations, like vehicles
@@ -58,8 +62,7 @@ Client.OnStart = function()
 	loadMap()
 	setAmbiance()
 
-	-- createDraft((SPAWN_IN_BLOCK + { 0, 2, 0 }) * MAP_SCALE, 50, 50, 200, 600)
-	-- createDraft(Number3(107, 36, 0) * MAP_SCALE, 50, 50, 200, 600)
+	createDraft({ 674, 57, 846 }, 32, 32, 100, 200)
 
 	-- CONTROLS
 	-- Disabling controls until user is authenticated
@@ -85,6 +88,9 @@ Client.OnStart = function()
 			v:Rotate(0, math.random() * math.pi * 2, 0)
 			return v
 		end,
+		color = function()
+			return Color.White
+		end,
 		acceleration = function()
 			return -Config.ConstantAcceleration
 		end,
@@ -102,6 +108,9 @@ Client.OnStart = function()
 			v:Rotate(0, math.random() * math.pi * 2, 0)
 			v.Y = 30 + math.random() * 20
 			return v
+		end,
+		color = function()
+			return Color.White
 		end,
 		scale = function()
 			return 0.5
@@ -143,7 +152,7 @@ Client.OnStart = function()
 	objectSkills.addStepClimbing(Player, { mapScale = MAP_SCALE })
 	objectSkills.addJump(Player, {
 		maxGroundDistance = 1.0,
-		airJumps = 1,
+		airJumps = 42,
 		jumpVelocity = JUMP_VELOCITY,
 		maxAirJumpVelocity = MAX_AIR_JUMP_VELOCITY,
 		onJump = spawnJumpParticles,
@@ -264,7 +273,11 @@ Client.OnPlayerLeave = function(p)
 end
 
 local moveDT = 0.0
+local tickT = 0.0
+local yPos
 Client.Tick = function(dt)
+	tickT = tickT + dt
+
 	if localPlayerShown then
 		if Player.Position.Y < -500 then
 			dropPlayer(Player)
@@ -281,19 +294,34 @@ Client.Tick = function(dt)
 		) * MAP_SCALE
 		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
 	end
+
+	for _, propeller in ipairs(propellers) do
+		propeller:RotateLocal(0, dt * 5, 0)
+	end
+
+	for _, firefly in ipairs(fireflies) do
+		firefly.timer = firefly.timer + dt * firefly.animation_speed
+		firefly.LocalPosition.Y = firefly.initialPosY + math.sin(firefly.timer) * firefly.range
+	end
+
+	yPos = math.sin(tickT)
+	for _, friendIcon in ipairs(friendIcons) do
+		friendIcon.LocalPosition.Y = yPos + friendIcon.initialY
+		friendIcon:RotateLocal(0, dt, 0)
+	end
 end
 
 Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
 
-	-- local impact = pe:CastRay()
-	-- if impact ~= nil then
-	-- 	if impact.Object.ItemName ~= nil then
-	-- 		Dev:CopyToClipboard(impact.Object.ItemName)
-	-- 		print(impact.Object.ItemName)
-	-- 	end
-	-- end
+	local impact = pe:CastRay()
+	if impact ~= nil then
+		if impact.Object.ItemName ~= nil then
+			Dev:CopyToClipboard(impact.Object.ItemName)
+			print(impact.Object.ItemName)
+		end
+	end
 end
 
 localPlayerShown = false
@@ -343,32 +371,36 @@ function loadMap()
 	map.Shadow = true
 
 	waterShapes = {}
+	table.insert(waterShapes, map:GetChild(1))
+	table.insert(waterShapes, map:GetChild(2))
+
+	map:GetChild(3).LocalPosition = Number3(84.5, 14.25, 51.5)
+	map:GetChild(3).Physics = PhysicsMode.StaticPerBlock
+	map:GetChild(3).CollisionGroups = Map.CollisionGroups
+	map:GetChild(3).Scale = 1.001
+
 	-- water
-	local i = 0
-	hierarchyactions:applyToDescendants(map, { includeRoot = false }, function(o)
+	for i, waterShape in ipairs(waterShapes) do
 		i = i + 1
-		-- apparently, children == water so far in this map
-		-- physics will be disabled later on for water,
-		-- but we need it turned on to place items on it.
-		o.CollisionGroups = Map.CollisionGroups
-		o.CollidesWithGroups = Map.CollidesWithGroups
-		o.Physics = PhysicsMode.StaticPerBlock
-		o.InnerTransparentFaces = false
-		if i == 1 then
-			o.LocalPosition.Y = o.LocalPosition.Y + 0.25
-		elseif i == 2 then
-			o.LocalPosition.Y = o.LocalPosition.Y - 0.25
+		waterShape.CollisionGroups = Map.CollisionGroups
+		waterShape.CollidesWithGroups = Map.CollidesWithGroups
+		waterShape.Physics = PhysicsMode.StaticPerBlock
+		waterShape.InnerTransparentFaces = false
+		if i == 2 then
+			waterShape.LocalPosition.Y = waterShape.LocalPosition.Y + 0.25
+		elseif i == 1 then
+			waterShape.LocalPosition.Y = waterShape.LocalPosition.Y - 0.25
 		end
-		o.originY = o.LocalPosition.Y
-		table.insert(waterShapes, o)
-		o:RefreshModel()
-	end)
+		waterShape.originY = waterShape.LocalPosition.Y
+		waterShape:RefreshModel()
+	end
 
 	local loadedObjects = {}
 	local o
 	if world.objects then
 		for _, objInfo in ipairs(world.objects) do
 			if loadedObjects[objInfo.fullname] == nil then
+				-- print(objInfo.fullname)
 				ok = pcall(function()
 					o = bundle.Shape(objInfo.fullname)
 				end)
@@ -393,8 +425,6 @@ function loadMap()
 						or string.find(objInfo.fullname, "traffic_barricade")
 						or string.find(objInfo.fullname, "candle")
 						or string.find(objInfo.fullname, "open_letter")
-						or string.find(objInfo.fullname, "firefly")
-						or string.find(objInfo.fullname, "apple")
 						or string.find(objInfo.fullname, "leaf_pile")
 						or string.find(objInfo.fullname, "leaf_blower")
 						or string.find(objInfo.fullname, "stop_sign")
@@ -415,6 +445,7 @@ function loadMap()
 						or string.find(objInfo.fullname, "tavern_mug")
 						or string.find(objInfo.fullname, "fishing_rod")
 						or string.find(objInfo.fullname, "tumbleweed")
+						or string.find(objInfo.fullname, "sun_hat")
 					then
 						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
 							o.Physics = PhysicsMode.Disabled
@@ -426,7 +457,7 @@ function loadMap()
 						or string.find(objInfo.fullname, "drafting_table")
 						or string.find(objInfo.fullname, "easel")
 						or string.find(objInfo.fullname, "blank_canvas")
-						or string.find(objInfo.fullname, "floor_propeller")
+						-- or string.find(objInfo.fullname, "floor_propeller")
 						or string.find(objInfo.fullname, "broken_bridge_side_1")
 						or string.find(objInfo.fullname, "broken_bridge_side_2")
 						or string.find(objInfo.fullname, "bouncing_mushroom_3")
@@ -436,7 +467,7 @@ function loadMap()
 						or string.find(objInfo.fullname, "tree_trunk")
 						or string.find(objInfo.fullname, "concrete_barrier")
 						or string.find(objInfo.fullname, "lantern")
-						or string.find(objInfo.fullname, "apple_tree")
+						or string.find(objInfo.fullname, "apple") -- apple and apple_tree
 						or string.find(objInfo.fullname, "barrel")
 						or string.find(objInfo.fullname, "lc_pipe_corner")
 						or string.find(objInfo.fullname, "shrine")
@@ -472,6 +503,12 @@ function loadMap()
 						or string.find(objInfo.fullname, "engine_lift")
 						or string.find(objInfo.fullname, "beach_chair")
 						or string.find(objInfo.fullname, "beach_umbrella")
+						or string.find(objInfo.fullname, "baseball_bat")
+						or string.find(objInfo.fullname, "beach_ball")
+						or string.find(objInfo.fullname, "skateboard")
+						or string.find(objInfo.fullname, "tire_swing")
+						or string.find(objInfo.fullname, "small_rope_bridge")
+						or string.find(objInfo.fullname, "pug")
 					then
 						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
 							o.Physics = PhysicsMode.Disabled
@@ -480,7 +517,7 @@ function loadMap()
 					end
 				else
 					loadedObjects[objInfo.fullname] = "ERROR"
-					-- print("could not load " .. objInfo.fullname)
+					print("could not load " .. objInfo.fullname)
 				end
 			end
 		end
@@ -523,6 +560,7 @@ function loadMap()
 				obj.Scale = scale
 				obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
 				obj.Name = objInfo.Name or objInfo.fullname
+				print("obj.Name:", obj.Name)
 
 				if string.find(objInfo.fullname, "lily") or string.find(objInfo.fullname, "ducky") then
 					table.insert(onWater, obj)
@@ -541,6 +579,39 @@ function loadMap()
 					or string.find(objInfo.fullname, "portal")
 				then
 					obj:RemoveFromParent()
+				elseif string.find(objInfo.fullname, "floor_propeller") then
+					obj.Physics = PhysicsMode.Static
+					hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
+						o.Physics = PhysicsMode.Disabled
+					end)
+					table.insert(propellers, obj:GetChild(1))
+				elseif string.find(objInfo.fullname, "firefly") then
+					obj.IsUnlit = true
+					hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+						o.Physics = PhysicsMode.Disabled
+					end)
+					obj.animation_speed = math.random(1, 2)
+					obj.timer = math.random(1, 5)
+					obj.range = math.random(2, 3) * 0.4
+					obj.initialPosY = obj.LocalPosition.Y + obj.range
+					table.insert(fireflies, obj)
+				elseif string.find(objInfo.fullname, "friend_icon") then
+					local kOFFSET_Y = { 0, 2, 0 }
+
+					obj.Physics = PhysicsMode.Trigger
+					obj.CollidesWithGroups = { 2 }
+					obj.CollisionGroups = nil
+
+					obj.PrivateDrawMode = 1
+					obj.IsUnlit = true
+					obj.LocalPosition = obj.LocalPosition + kOFFSET_Y
+					obj.initialY = obj.LocalPosition.Y
+					obj.timer = math.random(1, 5)
+
+					obj.OnCollisionBegin = friendIconOnCollisionBegin
+					obj.OnCollisionEnd = friendIconOnCollisionEnd
+
+					table.insert(friendIcons, obj)
 				end
 			end
 		end
@@ -1210,7 +1281,10 @@ function createDraft(pos, width, depth, height, strength)
 	local o = Object()
 	o:SetParent(World)
 	o.Physics = PhysicsMode.Trigger
-	o.CollisionGroups = { 4 }
+	o.CollisionGroups = DRAFT_COLLISION_GROUPS
+	o.CollisionBox = Box({ 0, 0, 0 }, { width, height, depth })
+	o.LocalPosition = pos
+	o.strength = strength
 
 	o.emitter = particles:newEmitter({
 		life = function()
@@ -1232,7 +1306,6 @@ function createDraft(pos, width, depth, height, strength)
 			return {}
 		end,
 	})
-
 	o.emitter:SetParent(o)
 
 	o.as = AudioSource("wind_wind_child_1")
@@ -1245,30 +1318,15 @@ function createDraft(pos, width, depth, height, strength)
 		self.emitter:spawn(1)
 	end
 
-	o.LocalPosition = pos
-	o.CollisionBox = Box({ 0, 0, 0 }, { width, height, depth })
-	o.CollidesWithGroups = Player.CollisionGroups
+	o.OnCollisionBegin = function(self, _)
+		self.as:Play()
+	end
 
-	-- o.OnCollisionBegin = function(self, other)
-	-- 	if other == Player and Player.isUsingGlider then
-	-- 		self.as:Play()
-	-- 	end
-	-- end
-
-	-- o.OnCollision = function(self, other)
-	-- 	if other == Player and Player.isUsingGlider then
-	-- 		Player.draftVelocity = strength
-	-- 	end
-	-- end
-
-	-- o.OnCollisionEnd = function(self, other)
-	-- 	if other == Player then
-	-- 		Player.draftVelocity = 0
-	-- 		Timer(1, function()
-	-- 			self.as:Stop()
-	-- 		end)
-	-- 	end
-	-- end
+	o.OnCollisionEnd = function(self, _)
+		Timer(1, function()
+			self.as:Stop()
+		end)
+	end
 
 	return o
 end
@@ -1321,4 +1379,42 @@ function addPlayerAnimations(player)
 		end
 	end
 	player.Animations.LiftArms = animLiftArms
+end
+
+friendIconOnCollisionBegin = function(_, other)
+	-- self.IsHidden = true
+	if other ~= Player then
+		return
+	end
+	other.toastTimer = Timer(1, function()
+		local toastMsg = "You can add friends in the Friends Menu!"
+		print("other.Name", other.Name)
+		if other.Name == "friend_jetpack" then
+			toastMsg = "Find a friend to help you open this door!"
+		elseif other.Name == "friend_nerf" then
+			toastMsg = "Find 3 friends to help you open this secret door!"
+		end
+
+		other.addFriendsToast = require("ui_toast"):create({
+			message = toastMsg,
+			center = true,
+			duration = -1, -- negative duration means infinite
+			iconShape = bundle.Shape("voxels.friend_icon"),
+		})
+	end)
+end
+
+friendIconOnCollisionEnd = function(_, other)
+	-- self.IsHidden = false
+	if other ~= Player then
+		return
+	end
+	if other.toastTimer then
+		other.toastTimer:Cancel()
+		other.toastTimer = nil
+	end
+	if other.addFriendsToast then
+		other.addFriendsToast:remove()
+		other.addFriendsToast = nil
+	end
 end
