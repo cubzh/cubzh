@@ -29,7 +29,6 @@ local DRAFT_COLLISION_GROUPS = { 7 }
 -- VARIABLES
 
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
-local DEBUG = false
 
 -- Toasts
 local globalToast = nil
@@ -149,7 +148,6 @@ Client.OnStart = function()
 		sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
 	end
 
-	print("MAP_SCALE", MAP_SCALE)
 	objectSkills.addStepClimbing(Player, { mapScale = MAP_SCALE, collisionGroups = Map.CollisionGroups })
 	objectSkills.addJump(Player, {
 		maxGroundDistance = 1.0,
@@ -321,7 +319,7 @@ Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
 
-	-- local impact = pe:CastRay()
+	-- local impact = pe:CastRay"()
 	-- if impact ~= nil then
 	-- 	if impact.Object.ItemName ~= nil then
 	-- 		Dev:CopyToClipboard(impact.Object.ItemName)
@@ -666,11 +664,18 @@ function loadMap()
 				o.CollidesWithGroups = Player.CollisionGroups
 				o.CollisionGroups = {}
 				o2.Scale = Player.Scale
+				o2.LocalRotation = Rotation(0, math.rad(-140), 0)
 				_avatar:SetParent(o2)
 				World:AddChild(o)
 				o.Position = a.Position
 				o.OnCollisionBegin = function(o, player)
-					o2:TextBubble("HEY!", 2.0, Number3(0, 40, 0), true)
+					o2:TextBubble(
+						"Hey! You can edit your avatar in the Profile Menu. 👕👖🥾",
+						-1,
+						Number3(0, 40, 0),
+						true
+					)
+					-- Menu:showProfileButton()
 					ease:cancel(o2)
 					ease:linear(o2, 0.1, {
 						onDone = function(o2)
@@ -685,6 +690,7 @@ function loadMap()
 					end
 				end
 				o.OnCollisionEnd = function(_, _)
+					o2:ClearTextBubble()
 					o2.Tick = nil
 				end
 			end
@@ -790,7 +796,7 @@ end
 
 function addCollectibles()
 	local GLIDER_PARTS = 10
-	local JETPACK_PARTS = 0
+	local JETPACK_PARTS = 2
 	local NERF_PARTS = 0
 
 	collectedGliderParts = {}
@@ -893,23 +899,14 @@ function addCollectibles()
 
 		for i = 1, GLIDER_PARTS do
 			table.insert(gliderParts, World:FindObjectByName("voxels.glider_parts_" .. i))
-			if debug and gliderParts[i] ~= nil then
-				print("Glider part", i, "/", GLIDER_PARTS, "found")
-			end
 		end
 
 		for i = 1, JETPACK_PARTS do
 			table.insert(jetpackParts, World:FindObjectByName("voxels.jetpack_scrap_pile_" .. i))
-			if debug and jetpackParts[i] ~= nil then
-				print("Jetpack part", i, "/", JETPACK_PARTS, "found")
-			end
 		end
 
 		for i = 1, NERF_PARTS do
 			table.insert(nerfParts, World:FindObjectByName("nerf_" .. i))
-			if debug and nerfParts[i] ~= nil then
-				print("Nerf part", i, "/", NERF_PARTS, "found")
-			end
 		end
 
 		local gliderPartConfig = {
@@ -942,10 +939,6 @@ function addCollectibles()
 				end
 				retry.fn()
 
-				if debug then
-					print("Glider parts collected: " .. #collectedGliderParts .. "/" .. #gliderParts)
-				end
-
 				if #collectedGliderParts >= #gliderParts then
 					-- the last glider part has been collected
 					require("ui_toast"):create({
@@ -960,6 +953,7 @@ function addCollectibles()
 					require("ui_toast"):create({
 						message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
 						iconShape = bundle.Shape("voxels.glider_parts"),
+						keepInStack = false,
 					})
 				end
 			end,
@@ -967,7 +961,7 @@ function addCollectibles()
 
 		local jetpackPartConfig = {
 			scale = 0.5,
-			itemName = "voxels.glider_parts", -- @aduermael to replace with :: "voxels.jetpack_scrap_pile",
+			itemName = "voxels.jetpack_scrap_pile",
 			position = Number3.Zero,
 			userdata = {
 				ID = -1,
@@ -994,24 +988,21 @@ function addCollectibles()
 				end
 				retry.fn()
 
-				if debug then
-					print("Jetpack parts collected: " .. #collectedJetpackParts .. "/" .. #jetpackParts)
-				end
-
 				if #collectedJetpackParts >= #jetpackParts then
-					-- the last glider part has been collected
+					-- the last jetpack part has been collected
 					require("ui_toast"):create({
 						message = "Jetpack unlocked!",
 						center = false,
-						iconShape = Shape(Items.voxels.jetpack), -- @aduermael to replace with :: bundle.Shape("voxels.jetpack"),
+						iconShape = bundle.Shape("voxels.jetpack"), -- @aduermael to replace with :: bundle.Shape("voxels.jetpack"),
 						duration = 2,
 					})
-					unlockGlider()
+					unlockJetpack()
 				else
-					-- a glider part has been collected
+					-- a jetpack part has been collected
 					require("ui_toast"):create({
 						message = #collectedJetpackParts .. "/" .. #jetpackParts .. " collected",
-						iconShape = Shape(Items.voxels.jetpack_scrap_pile), -- @aduermael to replace with :: bundle.Shape("voxels.glider"),
+						iconShape = bundle.Shape("voxels.jetpack_scrap_pile"),
+						keepInStack = false,
 					})
 				end
 			end,
@@ -1019,7 +1010,7 @@ function addCollectibles()
 
 		local nerfPartConfig = {
 			scale = 0.5,
-			itemName = "voxels.glider_parts", -- @aduermael to replace with :: "voxels.pistol",
+			itemName = "voxels.pistol",
 			position = Number3.Zero,
 			userdata = {
 				ID = -1,
@@ -1046,98 +1037,68 @@ function addCollectibles()
 				end
 				retry.fn()
 
-				if debug then
-					print("Nerf parts collected: " .. #collectedNerfParts .. "/" .. #nerfParts)
-				end
-
 				if #collectedNerfParts >= #nerfParts then
-					-- the last glider part has been collected
+					-- the last foam gun part has been collected
 					require("ui_toast"):create({
 						message = "Nerf unlocked!",
 						center = false,
-						iconShape = Shape(Items.voxels.pistol), -- @aduermael to replace with :: bundle.Shape("voxels.pistol"),
+						iconShape = bundle.Shape("voxels.pistol"),
 						duration = 2,
 					})
-					unlockGlider()
+					unlockNerf()
 				else
-					-- a glider part has been collected
+					-- a foam gun part has been collected
 					require("ui_toast"):create({
 						message = #collectedNerfParts .. "/" .. #nerfParts .. " collected",
-						iconShape = Shape(Items.voxels.pistol), -- @aduermael to replace with :: bundle.Shape("voxels.pistol"),
+						iconShape = bundle.Shape("voxels.pistol"),
+						keepInStack = false,
 					})
 				end
 			end,
 		}
 
-		print("Glider", #collectedGliderParts, #gliderParts)
 		if #collectedGliderParts >= #gliderParts then -- or true then
 			unlockGlider()
 			for _, v in pairs(gliderParts) do
 				v:RemoveFromParent()
 			end -- @Buche :: clear placed collectibles from world editor
-			if debug then
-				print("Glider unlocked -- removing all Glider collectibles")
-			end
 		else
 			for k, v in ipairs(gliderParts) do
-				local msg = "Already Collected"
 				if not contains(collectedGliderParts, k) then
 					local config = conf:merge(gliderPartConfig, { position = v.Position, userdata = { ID = k } })
 					collectible:create(config)
-					msg = "To Collect"
 				end
 				v:RemoveFromParent() -- @Buche :: clear placed collectibles if already collected
-				if debug then
-					print("Glider part", k, msg)
-				end
 			end
 		end
 
-		print("Jetpack", #collectedJetpackParts, #jetpackParts)
 		if #collectedJetpackParts >= #jetpackParts then
 			unlockJetpack()
 			for _, v in pairs(jetpackParts) do
 				v:RemoveFromParent()
 			end
-			if debug then
-				print("Jetpack unlocked -- removing all Jetpack collectibles")
-			end
 		else
 			for k, v in ipairs(jetpackParts) do
-				local msg = "Already Collected"
 				if not contains(collectedJetpackParts, k) then
 					local config = conf:merge(jetpackPartConfig, { position = v.Position, userdata = { ID = k } })
 					collectible:create(config)
-					msg = "To Collect"
 				end
 				v:RemoveFromParent() -- @Buche :: clear placed collectibles if already collected
-				if debug then
-					print("Jetpack part", k, msg)
-				end
 			end
 		end
 
-		print("Nerf", #collectedNerfParts, #nerfParts)
 		if #collectedNerfParts >= #nerfParts then
 			unlockNerf()
 			for _, v in pairs(nerfParts) do
 				v:RemoveFromParent()
 			end
-			if debug then
-				print("Nerf unlocked -- removing all Nerf collectibles")
-			end
 		else
 			for k, v in ipairs(nerfParts) do
-				local msg = "Already Collected"
 				if not contains(collectedJetpackParts, k) then
-					local config = conf:merge(jetpackPartConfig, { position = v.Position, userdata = { ID = k } })
+					local config = conf:merge(nerfPartConfig, { position = v.Position, userdata = { ID = k } })
 					collectible:create(config)
-					msg = "To Collect"
 				end
 				v:RemoveFromParent() -- @Buche :: clear placed collectibles if already collected
-				if debug then
-					print("Nerf part", k, msg)
-				end
 			end
 		end
 	end
@@ -1657,7 +1618,6 @@ end
 -- MODULES
 
 setTriggerPlates = function()
-	local _debug = false
 	local hierarchyactions = require("hierarchyactions")
 	-- MODULE TRIGGERS --
 
@@ -1775,10 +1735,10 @@ setTriggerPlates = function()
 			{ includeRoot = true },
 			function(o) -- also applies to the new object created
 				o.CollisionGroups = Map.CollisionGroups -- make them climbable
-				o.CollidesWithGroups = {} -- Player.CollisionGroups -- make it collide with player only
+				o.CollidesWithGroups = nil
 			end
 		)
-		area.CollisionGroups = {}
+		area.CollisionGroups = nil
 		area.CollidesWithGroups = Player.CollisionGroups
 		return area
 	end
@@ -1978,11 +1938,7 @@ setTriggerPlates = function()
 		targetDelay = 5,
 		forcedMulti = true,
 	}
-	if _debug then
-		jetpackA = newTriggerInstance(configJetpackA)
-	else
-		newTriggerInstance(configJetpackA)
-	end
+	newTriggerInstance(configJetpackA)
 
 	local configJetpackB = {
 		target = doorJetpack,
@@ -1992,11 +1948,7 @@ setTriggerPlates = function()
 		targetCallback = doorCallback,
 		targetDelay = 3,
 	}
-	if _debug then
-		jetpackB = newTriggerInstance(configJetpackB)
-	else
-		newTriggerInstance(configJetpackB)
-	end
+	newTriggerInstance(configJetpackB)
 
 	-- Nerf Door
 	doorNerf = World:FindObjectByName("door_nerf")
@@ -2018,11 +1970,7 @@ setTriggerPlates = function()
 		targetCallback = doorCallback,
 		targetDelay = 60,
 	}
-	if _debug then
-		nerfA = newTriggerInstance(configNerfA)
-	else
-		newTriggerInstance(configNerfA)
-	end
+	newTriggerInstance(configNerfA)
 
 	local configNerfB = {
 		target = doorNerf,
@@ -2032,9 +1980,5 @@ setTriggerPlates = function()
 		targetCallback = doorCallback,
 		targetDelay = 3,
 	}
-	if _debug then
-		nerfB = newTriggerInstance(configNerfB)
-	else
-		newTriggerInstance(configNerfB)
-	end
+	newTriggerInstance(configNerfB)
 end
