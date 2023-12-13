@@ -539,7 +539,11 @@ bool box_is_valid(const Box *b, float epsilon) {
     if (float3_is_valid(&b->min) == false || float3_is_valid(&b->max) == false) {
         return false;
     }
-    const float3 size = {b->max.x - b->min.x, b->max.y - b->min.y, b->max.z - b->min.z};
+    const float3 size = {
+        maximum(b->max.x - b->min.x, 0.0f),
+        maximum(b->max.y - b->min.y, 0.0f),
+        maximum(b->max.z - b->min.z, 0.0f)
+    };
     if (float3_isZero(&size, epsilon) || float3_is_valid(&size) == false) {
         return false;
     }
