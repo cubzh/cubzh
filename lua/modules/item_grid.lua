@@ -308,6 +308,7 @@ itemGrid.create = function(_, config)
 
 		local textFrame = ui:createFrame(theme.gridCellFrameColor)
 		textFrame:setParent(cell)
+		textFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 		local tName = ui:createText("", Color.White, "small")
 		tName:setParent(textFrame)

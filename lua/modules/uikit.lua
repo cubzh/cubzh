@@ -17,6 +17,8 @@ UI_COLLISION_GROUP = 12
 UI_COLLISION_GROUP_SYSTEM = 13
 UI_SHAPE_SCALE = 5
 LAYER_STEP = -0.1 -- children offset
+UI_FOREGROUND_DEPTH = -945
+UI_ALERT_DEPTH = -950
 BUTTON_PADDING = 4
 BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
@@ -106,6 +108,8 @@ function createUI(system)
 	ui.kShapeScale = UI_SHAPE_SCALE
 	ui.kButtonPadding = BUTTON_PADDING
 	ui.kButtonBorder = BUTTON_BORDER
+	ui.kForegroundDepth = UI_FOREGROUND_DEPTH
+	ui.kAlertDepth = UI_ALERT_DEPTH
 
 	----------------------
 	-- VARS

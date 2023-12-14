@@ -415,7 +415,7 @@ end
 background:parentDidResize()
 
 alertBackground = ui:createFrame(ALERT_BACKGROUND_COLOR_OFF)
-alertBackground.pos.Z = -950
+alertBackground.pos.Z = ui.kAlertDepth
 
 alertBackground.parentDidResize = function(_)
 	alertBackground.Width = Screen.Width
