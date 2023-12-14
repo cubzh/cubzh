@@ -646,7 +646,7 @@ actionColumn.parentDidResize = function(_)
 	ease:cancel(commentsBtn.pos)
 	ease:cancel(shareBtn.pos)
 
-	local height = Screen.Height - TOP_BAR_HEIGHT
+	local height = Screen.Height - Screen.SafeArea.Top
 
 	local settingsBtnMinSize = settingsBtn:getMinSize()
 	local shareBtnMinSize = shareBtn:getMinSize()

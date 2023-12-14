@@ -18,6 +18,7 @@ mod.create = function(_, config)
 		iconShape = nil,
 		animationSpeed = 250, -- in points per second
 		duration = 4.0, -- in seconds
+		keepInStack = true, -- when false, the toast is not kept in the stack when a new toast comes in
 	}
 
 	config = require("config"):merge(DEFAULT_CONFIG, config, {
@@ -37,7 +38,12 @@ mod.create = function(_, config)
 	toast.stack = config.center and centerStack or topRightStack
 	-- If there already is a toast on the stack, disable it
 	if #toast.stack > 0 then
-		disable(toast.stack[#toast.stack])
+		local t = toast.stack[#toast.stack]
+		if t.config.keepInStack == false then
+			t:remove()
+		else
+			disable(toast.stack[#toast.stack])
+		end
 	end
 	-- Push new toast to stack
 	table.insert(toast.stack, toast)

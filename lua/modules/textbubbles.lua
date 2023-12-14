@@ -26,12 +26,13 @@ textbubbles.set = function(object, text, duration, offset, color, backgroundColo
 	if object.__text == nil then
 		object.__text = Text()
 		object.__text.Type = TextType.Screen
+		object.__text.Padding = 5
 		object.__text.IsUnlit = true
 		object.__text.FontSize = Text.FontSizeDefault
 		object.__text:SetParent(object)
 	end
 
-	object.__text.MaxWidth = 400
+	object.__text.MaxWidth = 250
 	object.__text.Text = text ~= nil and text or ""
 	object.__text.LocalPosition = offset ~= nil and offset or { 0, 0, 0 }
 	object.__text.Color = color ~= nil and color or Color.Black
@@ -70,7 +71,7 @@ textbubbles.create = function(self, config)
 
 	local defaultConfig = {
 		text = "...",
-		maxWidth = 400,
+		maxWidth = 250,
 		padding = 5,
 		tail = true,
 		textColor = Color.Black,
