@@ -237,27 +237,6 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     float3_op_scale(rb->velocity, drag);
 
     // ------------------------
-    // MOTION CLAMP
-    // ------------------------
-    // Allow Motion to counter velocity if they are opposed, and dampen inertia faster
-
-    if (rb->velocity->x > 0 && rb->motion->x < 0) {
-        rb->velocity->x = maximum(rb->velocity->x + rb->motion->x, 0.0f);
-    } else if (rb->velocity->x < 0 && rb->motion->x > 0) {
-        rb->velocity->x = minimum(rb->velocity->x + rb->motion->x, 0.0f);
-    }
-    if (rb->velocity->y > 0 && rb->motion->y < 0) {
-        rb->velocity->y = maximum(rb->velocity->y + rb->motion->y, 0.0f);
-    } else if (rb->velocity->y < 0 && rb->motion->y > 0) {
-        rb->velocity->y = minimum(rb->velocity->y + rb->motion->y, 0.0f);
-    }
-    if (rb->velocity->z > 0 && rb->motion->z < 0) {
-        rb->velocity->z = maximum(rb->velocity->z + rb->motion->z, 0.0f);
-    } else if (rb->velocity->z < 0 && rb->motion->z > 0) {
-        rb->velocity->z = minimum(rb->velocity->z + rb->motion->z, 0.0f);
-    }
-
-    // ------------------------
     // ADD MOTION
     // ------------------------
     // Motion moves the object w/o drag and w/o affecting velocity directly, although it may
