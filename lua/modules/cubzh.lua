@@ -151,7 +151,7 @@ Client.OnStart = function()
 	objectSkills.addStepClimbing(Player, { mapScale = MAP_SCALE, collisionGroups = Map.CollisionGroups })
 	objectSkills.addJump(Player, {
 		maxGroundDistance = 1.0,
-		airJumps = 42,
+		airJumps = 1,
 		jumpVelocity = JUMP_VELOCITY,
 		maxAirJumpVelocity = MAX_AIR_JUMP_VELOCITY,
 		onJump = spawnJumpParticles,
@@ -169,7 +169,7 @@ Client.OnStart = function()
 	end)
 
 	addPlayerAnimations(Player)
-	setTriggerPlates()
+	-- setTriggerPlates()
 
 	-- called when receiving information for distant object that isn't link
 	multi.linkRequest = function(name)
@@ -315,13 +315,17 @@ Client.Tick = function(dt)
 	end
 end
 
-Pointer.Click = function(pe)
+Pointer.Click = function(_) -- pe
 	Player:SwingRight()
 	multi:action("swingRight")
 
-	-- local impact = pe:CastRay"()
+	-- local impact = pe:CastRay()
 	-- if impact ~= nil then
 	-- 	if impact.Object.ItemName ~= nil then
+	-- 		if string.find(impact.Object.ItemName, "door_scifi") then
+	-- 			doorCallback(doorJetpack, true)
+	-- 			doorCallback(doorNerf, true)
+	-- 		end
 	-- 		Dev:CopyToClipboard(impact.Object.ItemName)
 	-- 		print(impact.Object.ItemName, impact.Object.CollisionGroups)
 	-- 	end
@@ -452,6 +456,8 @@ function loadMap()
 						or string.find(objInfo.fullname, "fishing_rod")
 						or string.find(objInfo.fullname, "tumbleweed")
 						or string.find(objInfo.fullname, "sun_hat")
+						or string.find(objInfo.fullname, "pistol")
+						or string.find(objInfo.fullname, "nerf_ammo")
 					then
 						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
 							o.Physics = PhysicsMode.Disabled
@@ -515,6 +521,8 @@ function loadMap()
 						or string.find(objInfo.fullname, "tire_swing")
 						or string.find(objInfo.fullname, "small_rope_bridge")
 						or string.find(objInfo.fullname, "pug")
+						or string.find(objInfo.fullname, "floor_countdown")
+						-- or string.find(objInfo.fullname, "door_scifi")
 					then
 						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
 							o.Physics = PhysicsMode.Disabled
@@ -582,6 +590,21 @@ function loadMap()
 					or string.find(objInfo.fullname, "steel_folding_chair")
 					or string.find(objInfo.fullname, "smartphone")
 					or string.find(objInfo.fullname, "portal")
+					or string.find(objInfo.fullname, "obstacle_blue")
+					or string.find(objInfo.fullname, "onstacle_red")
+					or string.find(objInfo.fullname, "obstacle_red")
+					or string.find(objInfo.fullname, "reload_station")
+					or string.find(objInfo.fullname, "recharge_station")
+					or string.find(objInfo.fullname, "ladder_metal")
+					or string.find(objInfo.fullname, "metal_panel")
+					or string.find(objInfo.fullname, "solo_computer")
+					or string.find(objInfo.fullname, "orange_pipe")
+					or (objInfo.Name ~= nil and string.find(objInfo.Name, "plate_jetpack"))
+					or (objInfo.Name ~= nil and string.find(objInfo.Name, "exit_jetpack"))
+					or (objInfo.Name ~= nil and string.find(objInfo.Name, "plate_nerf"))
+					or (objInfo.Name ~= nil and string.find(objInfo.Name, "exit_nerf"))
+					or (objInfo.Name ~= nil and string.find(objInfo.Name, "friend_jetpack"))
+					or (objInfo.Name ~= nil and string.find(objInfo.Name, "friend_nerf"))
 				then
 					obj:RemoveFromParent()
 				elseif string.find(objInfo.fullname, "floor_propeller") then
