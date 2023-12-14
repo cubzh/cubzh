@@ -411,6 +411,20 @@ itemGrid.create = function(_, config)
 			cell:setNbLikes(cell.likes)
 			cell:setSize(grid.cellSize)
 
+			local function transform_string(str)
+				local new_str = string.gsub(str, "_%a", string.upper)
+				new_str = string.gsub(new_str, "_", " ")
+				new_str = string.gsub(new_str, "^%l", string.upper)
+				return new_str
+			end
+
+			if cell.tName then
+				cell.tName.object.MaxWidth = (grid.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
+				local betterName = transform_string(cell.name)
+				cell.tName.Text = betterName
+				cell:layoutContent()
+			end
+
 			local req = Object:Load(itemName, function(obj)
 				if removed then
 					return
@@ -446,20 +460,6 @@ itemGrid.create = function(_, config)
 				item:setParent(cell)
 
 				item.pivot.LocalRotation = { -0.1, 0, -0.2 }
-
-				local function transform_string(str)
-					local new_str = string.gsub(str, "_%a", string.upper)
-					new_str = string.gsub(new_str, "_", " ")
-					new_str = string.gsub(new_str, "^%l", string.upper)
-					return new_str
-				end
-
-				if cell.tName then
-					cell.tName.object.MaxWidth = (grid.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
-					local betterName = transform_string(cell.name)
-					cell.tName.Text = betterName
-					cell:layoutContent()
-				end
 
 				-- setting Width sets Height & Depth as well when spherized
 				item.Width = grid.cellSize or MIN_CELL_SIZE
