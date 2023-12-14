@@ -1876,10 +1876,17 @@ float shape_box_cast(const Shape *s,
         Chunk *c;
         bool didHit = false, leaf;
         float3 tmpNormal, tmpReplacement;
-        float swept = 1.0f;
-        while (n != NULL && didHit == false) {
+        float swept = 1.0f, lastRtreeDist = FLT_MAX;
+        while (n != NULL) {
             rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
             c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            // make sure to examine all hits w/ similar distances before stopping
+            if (didHit &&
+                float_isEqual(rtreeHit->distance, lastRtreeDist, EPSILON_COLLISION) == false) {
+                break;
+            }
+            lastRtreeDist = rtreeHit->distance;
 
             const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
             leaf = false;
@@ -2023,13 +2030,20 @@ bool shape_ray_cast(const Shape *s,
         Chunk *c;
         bool didHit = false, leaf;
         Block *hitBlock = NULL;
-        float minDistance = FLT_MAX;
+        float minDistance = FLT_MAX, lastRtreeDist = FLT_MAX;
         uint16_t x = 0, y = 0, z = 0;
         Box tmpBox;
         float d;
-        while (n != NULL && didHit == false) {
+        while (n != NULL) {
             rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
             c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            // make sure to examine all hits w/ similar distances before stopping
+            if (didHit &&
+                float_isEqual(rtreeHit->distance, lastRtreeDist, EPSILON_COLLISION) == false) {
+                break;
+            }
+            lastRtreeDist = rtreeHit->distance;
 
             const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
             leaf = false;
