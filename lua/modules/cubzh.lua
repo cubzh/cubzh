@@ -1372,10 +1372,14 @@ playerControls.glide = function(self, player)
 		vehicleRoll.Velocity:Set(vehicle.Velocity) -- copying for sync (physics disabled on vehicleRoll)
 
 		vehicle.CollisionBox = Box({ -10, -30, -10 }, { 10, 14, 10 })
-		vehicle.CollidesWithGroups = Map.CollisionGroups + vehicle.CollisionGroups
+		vehicle.CollidesWithGroups = Map.CollisionGroups + vehicle.CollisionGroups + DRAFT_COLLISION_GROUPS
 		vehicle.CollisionGroups = {}
 
-		vehicle.OnCollisionBegin = function(_, _)
+		vehicle.OnCollisionBegin = function(_, other)
+			if other.CollisionGroups == DRAFT_COLLISION_GROUPS then
+				return
+			end
+
 			playerControls:walk(player)
 		end
 
@@ -1533,19 +1537,26 @@ function createDraft(pos, width, depth, height, strength)
 	o.as.Volume = 0.8
 	o.as.Pitch = 1.2
 	o.as.Loop = true
+	o.as:Play()
 
 	o.Tick = function(self, _)
 		self.emitter:spawn(1)
 	end
 
-	o.OnCollisionBegin = function(self, _)
-		self.as:Play()
+	o.OnCollisionBegin = function(_, other)
+		if other.draftEase ~= nil then
+			ease:cancel(other.draftEase)
+		end
+		other.draftEase = ease:inOutSine(other, 0.3)
+		other.draftEase.Motion = GLIDER_DRAG_DOWN + { 0, strength, 0 }
 	end
 
-	o.OnCollisionEnd = function(self, _)
-		Timer(1, function()
-			self.as:Stop()
-		end)
+	o.OnCollisionEnd = function(_, other)
+		if other.draftEase ~= nil then
+			ease:cancel(other.draftEase)
+		end
+		other.draftEase = ease:inOutSine(other, 0.3)
+		other.draftEase.Motion = GLIDER_DRAG_DOWN
 	end
 
 	return o
