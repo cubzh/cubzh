@@ -833,6 +833,9 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 					local indicator = _getPCLongPressIndicator(true)
 					indicator.pos = { x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0 }
 					indicator.pivot.Scale = TOUCH_INDICATOR_LONG_PRESS_SCALE
+					if Pointer.LongPress == nil then
+						indicator:_hide()
+					end
 					ease:inBack(indicator.pivot, LONG_PRESS_DELAY_2).Scale = SCALE_ZERO
 					_state.longPressTimer = Timer(LONG_PRESS_DELAY_2, function()
 						_state.longPressTimer = nil
