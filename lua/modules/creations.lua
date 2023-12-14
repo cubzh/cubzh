@@ -253,8 +253,9 @@ creations.createModalContent = function(_, config)
 					if err ~= nil then
 						if err.statusCode == 409 then
 							text.Text = "❌ You already have an item with that name!"
+						elseif err.message ~= nil then
+							text.Text = "❌ " .. err.message
 						else
-							-- print(err.message, err.statusCode)
 							text.Text = "❌ Sorry, there's been an error."
 						end
 						text.Color = theme.colorNegative
