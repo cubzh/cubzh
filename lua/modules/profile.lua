@@ -1065,33 +1065,31 @@ profile.create = function(_, config)
 		if btn.Text == "✅ Done" then
 			btn.Text = "✏️ Edit"
 
-			editInfoBtn:hide()
-			editInfoBtn:disable()
-			editInfoBtn:unselect()
+			local hideBtn = function(b)
+				b:hide()
+				b:disable()
+				b:unselect()
+			end
 
-			editFaceBtn:hide()
-			editFaceBtn:disable()
-			editFaceBtn:unselect()
-
-			editOutfitBtn:hide()
-			editOutfitBtn:disable()
-			editOutfitBtn:unselect()
-
-			infoNode:setUserInfo()
+			hideBtn(editInfoBtn)
+			hideBtn(editFaceBtn)
+			hideBtn(editOutfitBtn)
 
 			content.tabs = nil
 			functions.setActiveNode(infoNode)
+
+			infoNode:setUserInfo()
 		else
 			btn.Text = "✅ Done"
 
-			editInfoBtn:show()
-			editInfoBtn:enable()
+			local showBtn = function(b)
+				b:show()
+				b:enable()
+			end
 
-			editFaceBtn:show()
-			editFaceBtn:enable()
-
-			editOutfitBtn:show()
-			editOutfitBtn:enable()
+			showBtn(editInfoBtn)
+			showBtn(editFaceBtn)
+			showBtn(editOutfitBtn)
 
 			-- trigger press on editInfoBtn
 			editInfoBtnOnReleaseCallback()
