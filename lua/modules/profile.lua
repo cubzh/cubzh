@@ -1077,10 +1077,10 @@ profile.create = function(_, config)
 			editOutfitBtn:disable()
 			editOutfitBtn:unselect()
 
-			infoNode:setUserInfo()
-
 			content.tabs = nil
 			functions.setActiveNode(infoNode)
+
+			infoNode:setUserInfo()
 		else
 			btn.Text = "✅ Done"
 
