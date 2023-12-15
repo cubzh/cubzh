@@ -275,13 +275,13 @@ worldDetailsMod.create = function(_, config)
 			self.shape.Height = 350
 		end
 
-		local req = api:getWorld(cell.id, { "authorName", "authorID" }, function(err, world)
+		local req = api:getWorld(cell.id, { "authorName", "authorId" }, function(err, world)
 			if removed then
 				return
 			end
 
 			local authorName = world.authorName
-			local authorID = world.authorID
+			local authorId = world.authorId
 
 			if err == nil and world ~= nil then
 				if self.author ~= nil then
@@ -289,7 +289,7 @@ worldDetailsMod.create = function(_, config)
 				elseif byBtn and authorName then
 					byBtn.Text = "by @" .. authorName
 					byBtn.onRelease = function(_)
-						local profileConfig = { isLocal = false, username = authorName, userID = authorID, uikit = ui }
+						local profileConfig = { isLocal = false, username = authorName, userID = authorId, uikit = ui }
 						local profileContent = require("profile"):create(profileConfig)
 						content:push(profileContent)
 					end
