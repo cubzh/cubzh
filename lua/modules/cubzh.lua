@@ -1271,7 +1271,7 @@ local GLIDER_MAX_SPEED_FOR_EFFECTS = 80 -- speed can be above that, but used for
 local GLIDER_MAX_SPEED = 200
 local GLIDER_WING_LENGTH = 24
 local GLIDER_MAX_START_SPEED = 50
-local GLIDER_DRAG_DOWN = Number3(0, -5, 0)
+local GLIDER_DRAG_DOWN = -10
 
 playerControls.glide = function(self, player)
 	if self.current[player.ID] == "glide" then
@@ -1304,8 +1304,11 @@ playerControls.glide = function(self, player)
 	end
 
 	vehicle.Physics = PhysicsMode.Dynamic
-	vehicle.Acceleration = -Config.ConstantAcceleration
-	vehicle.Motion:Set(GLIDER_DRAG_DOWN) -- constantly going down
+	-- vehicle.Tick resets velocity every frame, it means we have to emulate each individual part ourself
+	-- instead of letting velocity compound (from forces, other objects, collision responses etc.), it also
+	-- means that vehicle.Acceleration does nothing for us
+	vehicle.gliderSpd = 0
+	vehicle.gliderPull = Number3(0, GLIDER_DRAG_DOWN, 0)
 
 	local rightTrail = wingTrail:create({ scale = 0.5 })
 	rightTrail.LocalPosition = { GLIDER_WING_LENGTH, 8, 0 }
@@ -1330,9 +1333,8 @@ playerControls.glide = function(self, player)
 	local f
 
 	vehicle.Rotation:Set(0, player.Rotation.Y, 0)
-	vehicle.Velocity = player.Motion + player.Velocity * 0.1 -- initial velocity
-	local l = vehicle.Velocity.Length
-	vehicle.Velocity.Length = math.min(l, GLIDER_MAX_START_SPEED)
+	local initSpd = (player.Motion + player.Velocity * 0.1).Length
+	vehicle.gliderSpd = math.min(initSpd, GLIDER_MAX_START_SPEED)
 
 	player.Head.LocalRotation = { 0, 0, 0 }
 
@@ -1400,27 +1402,27 @@ playerControls.glide = function(self, player)
 				leftLift = 1.0 - rightLift
 			end
 
-			l = o.Velocity.Length
-
 			yawDelta.Y = diffY * dt * 0.001 * 70
 			yaw = yawDelta * yaw
 
 			o.Rotation = yaw * tilt
 
-			down = math.max(0, o.Forward:Dot(Number3.Down)) -- 0 -> 1
-			up = math.max(0, o.Forward:Dot(Number3.Up))
+			local dot = o.Forward:Dot(Number3.Down)
+			local down = math.max(0, dot) -- 0 -> 1
+			local up = math.max(0, -dot)
 
 			-- accelerate when facing down / lose more velocity when going up
-			l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
+			o.gliderSpd = o.gliderSpd + down * 80.0 * dt - (8.0 + up * 8.0) * dt
+			o.gliderSpd = math.max(o.gliderSpd, 0)
 
-			l = math.max(l, 0) -- speed can't be below 0
-			l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
+			-- emulate velocity drag over time ourself on the glider pull component, down to default pull
+			o.gliderPull.Y = math.max(o.gliderPull.Y + GLIDER_DRAG_DOWN, GLIDER_DRAG_DOWN)
 
-			o.Velocity:Set(o.Forward * l)
+			o.Velocity:Set(o.Forward * o.gliderSpd + o.gliderPull * dt)
 			vehicleRoll.Velocity:Set(o.Velocity) -- copying for sync (physics disabled on vehicleRoll)
 
 			-- EFFECTS
-			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
+			speedOverMax = math.min(1.0, o.gliderSpd / GLIDER_MAX_SPEED_FOR_EFFECTS)
 			Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
 
 			f = 0.2 * speedOverMax
@@ -1506,6 +1508,7 @@ function createDraft(pos, width, depth, height, strength)
 	o:SetParent(World)
 	o.Physics = PhysicsMode.Trigger
 	o.CollisionGroups = DRAFT_COLLISION_GROUPS
+	o.CollidesWithGroups = 2
 	o.CollisionBox = Box({ 0, 0, 0 }, { width, height, depth })
 	o.LocalPosition = pos
 	o.strength = strength
@@ -1543,20 +1546,10 @@ function createDraft(pos, width, depth, height, strength)
 		self.emitter:spawn(1)
 	end
 
-	o.OnCollisionBegin = function(_, other)
-		if other.draftEase ~= nil then
-			ease:cancel(other.draftEase)
+	o.OnCollision = function(_, other)
+		if other.gliderPull then
+			other.gliderPull = other.gliderPull + {0, strength, 0}
 		end
-		other.draftEase = ease:inOutSine(other, 0.3)
-		other.draftEase.Motion = GLIDER_DRAG_DOWN + { 0, strength, 0 }
-	end
-
-	o.OnCollisionEnd = function(_, other)
-		if other.draftEase ~= nil then
-			ease:cancel(other.draftEase)
-		end
-		other.draftEase = ease:inOutSine(other, 0.3)
-		other.draftEase.Motion = GLIDER_DRAG_DOWN
 	end
 
 	return o
