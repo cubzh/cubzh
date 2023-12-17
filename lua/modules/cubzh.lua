@@ -61,7 +61,7 @@ Client.OnStart = function()
 	loadMap()
 	setAmbiance()
 
-	createDraft({ 674, 57, 846 }, 32, 32, 100, 200)
+	createDraft({ 674, 57, 846 }, 32, 32, 100, 4000)
 
 	-- CONTROLS
 	-- Disabling controls until user is authenticated
@@ -223,7 +223,6 @@ function updateSync()
 			-- sync vehicleRoll child object,
 			-- it contains all needed information
 			multi:sync(vehicle.roll, "g_" .. pID, {
-				-- velocity stored under "v"
 				keys = { "Velocity", "Position", "Rotation" },
 				triggers = { "LocalRotation", "Velocity" },
 			})
@@ -1163,6 +1162,15 @@ playerControls = {
 	dirPad = nil,
 }
 
+playerControls.getPlayerID = function(_, player)
+	if player == Player then
+		-- using "local" because the local player ID may change while still maintaining active controls
+		return "local"
+	else
+		return player.ID
+	end
+end
+
 playerControls.pointerDrag = function(pe)
 	if playerControls.onDrag ~= nil then
 		playerControls.onDrag(pe)
@@ -1183,7 +1191,9 @@ playerControls.getShape = function(self, shapeName)
 end
 
 playerControls.exitVehicle = function(self, player)
-	local vehicle = self.vehicles[player.ID]
+	local pID = self:getPlayerID(player)
+
+	local vehicle = self.vehicles[pID]
 
 	if vehicle == nil then
 		return
@@ -1240,14 +1250,16 @@ playerControls.exitVehicle = function(self, player)
 		}).Scale = Number3.Zero
 	end
 
-	self.vehicles[player.ID] = nil
+	self.vehicles[pID] = nil
 end
 
 playerControls.walk = function(self, player)
-	if self.current[player.ID] == "walk" then
+	local pID = self:getPlayerID(player)
+
+	if self.current[pID] == "walk" then
 		return -- already walking
 	end
-	self.current[player.ID] = "walk"
+	self.current[pID] = "walk"
 
 	self:exitVehicle(player)
 
@@ -1271,13 +1283,15 @@ local GLIDER_MAX_SPEED_FOR_EFFECTS = 80 -- speed can be above that, but used for
 local GLIDER_MAX_SPEED = 200
 local GLIDER_WING_LENGTH = 24
 local GLIDER_MAX_START_SPEED = 50
-local GLIDER_DRAG_DOWN = -10
+local GLIDER_DRAG_DOWN = -400
 
 playerControls.glide = function(self, player)
-	if self.current[player.ID] == "glide" then
+	local pID = self:getPlayerID(player)
+
+	if self.current[pID] == "glide" then
 		return -- already gliding
 	end
-	self.current[player.ID] = "glide"
+	self.current[pID] = "glide"
 
 	self:exitVehicle(player)
 
@@ -1286,7 +1300,7 @@ playerControls.glide = function(self, player)
 	vehicle:SetParent(World)
 	vehicle.type = "glider"
 
-	self.vehicles[player.ID] = vehicle
+	self.vehicles[pID] = vehicle
 
 	local glider = self:getShape("voxels.glider")
 	glider.Shadow = true
@@ -1331,6 +1345,7 @@ playerControls.glide = function(self, player)
 	local up
 	local speedOverMax
 	local f
+	local dot
 
 	vehicle.Rotation:Set(0, player.Rotation.Y, 0)
 	local initSpd = (player.Motion + player.Velocity * 0.1).Length
@@ -1381,7 +1396,6 @@ playerControls.glide = function(self, player)
 			if other.CollisionGroups == DRAFT_COLLISION_GROUPS then
 				return
 			end
-
 			playerControls:walk(player)
 		end
 
@@ -1407,16 +1421,14 @@ playerControls.glide = function(self, player)
 
 			o.Rotation = yaw * tilt
 
-			local dot = o.Forward:Dot(Number3.Down)
-			local down = math.max(0, dot) -- 0 -> 1
-			local up = math.max(0, -dot)
+			dot = o.Forward:Dot(Number3.Down)
+			down = math.max(0, dot) -- 0 -> 1
+			up = math.max(0, -dot)
 
 			-- accelerate when facing down / lose more velocity when going up
-			o.gliderSpd = o.gliderSpd + down * 80.0 * dt - (8.0 + up * 8.0) * dt
+			o.gliderSpd = o.gliderSpd + down * 80.0 * dt - (8.0 + up * 30.0) * dt
 			o.gliderSpd = math.max(o.gliderSpd, 0)
-
-			-- emulate velocity drag over time ourself on the glider pull component, down to default pull
-			o.gliderPull.Y = math.max(o.gliderPull.Y + GLIDER_DRAG_DOWN, GLIDER_DRAG_DOWN)
+			o.gliderSpd = math.min(GLIDER_MAX_SPEED, o.gliderSpd)
 
 			o.Velocity:Set(o.Forward * o.gliderSpd + o.gliderPull * dt)
 			vehicleRoll.Velocity:Set(o.Velocity) -- copying for sync (physics disabled on vehicleRoll)
@@ -1449,6 +1461,7 @@ playerControls.glide = function(self, player)
 		self.dirPad = function(_, _)
 			-- nothing to do, just turning off walk controls
 		end
+
 		updateSync()
 	else -- distant player
 		glider:SetParent(vehicle)
@@ -1461,7 +1474,10 @@ playerControls.glide = function(self, player)
 		rightTrail:SetParent(vehicle)
 		leftTrail:SetParent(vehicle)
 
-		vehicle.Tick = function(o, dt)
+		vehicle.Tick = function(o, _)
+			-- only update wing trail colors
+			-- no local simulation (for now?), looks good enough so far
+
 			rightWingTip = vehicle:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
 			leftWingTip = vehicle:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
 
@@ -1480,16 +1496,13 @@ playerControls.glide = function(self, player)
 
 			l = o.Velocity.Length
 
-			down = math.max(0, vehicle.Forward:Dot(Number3.Down)) -- 0 -> 1
-			up = math.max(0, vehicle.Forward:Dot(Number3.Up))
-
-			-- accelerate when facing down / lose more velocity when going up
-			l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
-
-			l = math.max(l, 0) -- speed can't be below 0
-			l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
-
-			vehicle.Velocity:Set(o.Forward * l)
+			-- down = math.max(0, vehicle.Forward:Dot(Number3.Down)) -- 0 -> 1
+			-- up = math.max(0, vehicle.Forward:Dot(Number3.Up))
+			-- -- accelerate when facing down / lose more velocity when going up
+			-- l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
+			-- l = math.max(l, 0) -- speed can't be below 0
+			-- l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
+			-- vehicle.Velocity:Set(o.Forward * l)
 
 			-- EFFECTS
 			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
@@ -1546,9 +1559,17 @@ function createDraft(pos, width, depth, height, strength)
 		self.emitter:spawn(1)
 	end
 
-	o.OnCollision = function(_, other)
+	o.OnCollisionBegin = function(_, other)
 		if other.gliderPull then
-			other.gliderPull = other.gliderPull + {0, strength, 0}
+			ease:cancel(other.gliderPull)
+			ease:inOutSine(other.gliderPull, 0.3).Y = strength
+		end
+	end
+
+	o.OnCollisionEnd = function(_, other)
+		if other.gliderPull then
+			ease:cancel(other.gliderPull)
+			ease:inOutSine(other.gliderPull, 0.3).Y = GLIDER_DRAG_DOWN
 		end
 	end
 
@@ -1644,368 +1665,368 @@ end
 
 -- MODULES
 
-setTriggerPlates = function()
-	local hierarchyactions = require("hierarchyactions")
-	-- MODULE TRIGGERS --
+-- setTriggerPlates = function()
+-- 	local hierarchyactions = require("hierarchyactions")
+-- 	-- MODULE TRIGGERS --
 
-	newTriggerInstance = function(config)
-		local instance = {}
-		instance.triggers = {}
-		instance.isActive = false
+-- 	newTriggerInstance = function(config)
+-- 		local instance = {}
+-- 		instance.triggers = {}
+-- 		instance.isActive = false
 
-		local _config = {} --TODO:: Config merge
-		_config.triggers = config.triggers
-		_config.triggerCallback = config.triggerCallback or nil
-		_config.triggerDelay = config.triggerDelay or 0.5
-		_config.target = config.target
-		_config.targetCallback = config.targetCallback or nil
-		_config.targetDelay = config.targetDelay or 0.5
-		_config.forcedMulti = config.forcedMulti or false
+-- 		local _config = {} --TODO:: Config merge
+-- 		_config.triggers = config.triggers
+-- 		_config.triggerCallback = config.triggerCallback or nil
+-- 		_config.triggerDelay = config.triggerDelay or 0.5
+-- 		_config.target = config.target
+-- 		_config.targetCallback = config.targetCallback or nil
+-- 		_config.targetDelay = config.targetDelay or 0.5
+-- 		_config.forcedMulti = config.forcedMulti or false
 
-		for k, _ in pairs(_config.triggers) do
-			instance.triggers[k] = addTrigger(instance, k, _config)
-		end
+-- 		for k, _ in pairs(_config.triggers) do
+-- 			instance.triggers[k] = addTrigger(instance, k, _config)
+-- 		end
 
-		return instance
-	end
+-- 		return instance
+-- 	end
 
-	local triggerOnCollisionBegin = function(self, other)
-		if type(other) == Type.Object then
-			return
-		end --multi.lua again
-		local config = self.config
-		if config == nil then
-			return
-		end
-		local instance = self.instance
-		if instance == nil then
-			return
-		end
-		local k = self.k
-		if k == nil then
-			return
-		end
-		if self.currentDelay then
-			self.currentDelay:Cancel()
-		end --cancel ongoing delay if any
-		if config.forcedMulti then
-			freeTriggers(instance, other.ID, config)
-		end -- a player can't be holding several triggers if forcedMulti is set to true
-		if not isTriggerActive(self) then
-			config.triggerCallback(config.triggers[k], true)
-		end -- activate trigger if not already activated
-		activateTrigger(self, other.ID, true) -- player now holds the trigger
-		Timer(0.5, function() -- after the target delay, check to start the target callback
-			if not areAllTriggersActivated(instance) then
-				return
-			end
-			if not isInstanceActive(instance) then
-				config.targetCallback(config.target, true)
-				activateInstance(instance, true)
-			end
-		end)
-	end
+-- 	local triggerOnCollisionBegin = function(self, other)
+-- 		if type(other) == Type.Object then
+-- 			return
+-- 		end --multi.lua again
+-- 		local config = self.config
+-- 		if config == nil then
+-- 			return
+-- 		end
+-- 		local instance = self.instance
+-- 		if instance == nil then
+-- 			return
+-- 		end
+-- 		local k = self.k
+-- 		if k == nil then
+-- 			return
+-- 		end
+-- 		if self.currentDelay then
+-- 			self.currentDelay:Cancel()
+-- 		end --cancel ongoing delay if any
+-- 		if config.forcedMulti then
+-- 			freeTriggers(instance, other.ID, config)
+-- 		end -- a player can't be holding several triggers if forcedMulti is set to true
+-- 		if not isTriggerActive(self) then
+-- 			config.triggerCallback(config.triggers[k], true)
+-- 		end -- activate trigger if not already activated
+-- 		activateTrigger(self, other.ID, true) -- player now holds the trigger
+-- 		Timer(0.5, function() -- after the target delay, check to start the target callback
+-- 			if not areAllTriggersActivated(instance) then
+-- 				return
+-- 			end
+-- 			if not isInstanceActive(instance) then
+-- 				config.targetCallback(config.target, true)
+-- 				activateInstance(instance, true)
+-- 			end
+-- 		end)
+-- 	end
 
-	local triggerOnCollisionEnd = function(self, other)
-		if type(other) == Type.Object then
-			return
-		end --multi.lua again
-		local config = self.config
-		if config == nil then
-			return
-		end
-		local instance = self.instance
-		if instance == nil then
-			return
-		end
-		local k = self.k
-		if k == nil then
-			return
-		end
-		self.currentDelay = Timer(config.triggerDelay, function() -- After the target delay
-			activateTrigger(self, other.ID, false) -- player no longer holds the trigger
-			if not isTriggerActive(self) then
-				config.triggerCallback(config.triggers[k], false)
-			end -- deactivate if no one else holds it
-			if isInstanceActive(instance) then -- deactivate door if not already deactivated
-				Timer(config.targetDelay, function()
-					config.targetCallback(config.target, false)
-					activateInstance(instance, false)
-				end)
-			end
-		end)
-	end
+-- 	local triggerOnCollisionEnd = function(self, other)
+-- 		if type(other) == Type.Object then
+-- 			return
+-- 		end --multi.lua again
+-- 		local config = self.config
+-- 		if config == nil then
+-- 			return
+-- 		end
+-- 		local instance = self.instance
+-- 		if instance == nil then
+-- 			return
+-- 		end
+-- 		local k = self.k
+-- 		if k == nil then
+-- 			return
+-- 		end
+-- 		self.currentDelay = Timer(config.triggerDelay, function() -- After the target delay
+-- 			activateTrigger(self, other.ID, false) -- player no longer holds the trigger
+-- 			if not isTriggerActive(self) then
+-- 				config.triggerCallback(config.triggers[k], false)
+-- 			end -- deactivate if no one else holds it
+-- 			if isInstanceActive(instance) then -- deactivate door if not already deactivated
+-- 				Timer(config.targetDelay, function()
+-- 					config.targetCallback(config.target, false)
+-- 					activateInstance(instance, false)
+-- 				end)
+-- 			end
+-- 		end)
+-- 	end
 
-	addTrigger = function(instance, k, config)
-		-- create a trigger area around the object and ignore collisions
-		local triggerArea = createTriggerArea(config.triggers[k])
-		triggerArea.config = config
-		triggerArea.instance = instance
-		triggerArea.k = k
-		triggerArea.holding = {} -- table to store anyone holding the trigger
-		triggerArea.OnCollisionBegin = triggerOnCollisionBegin
-		triggerArea.OnCollisionEnd = triggerOnCollisionEnd
-		return triggerArea
-	end
+-- 	addTrigger = function(instance, k, config)
+-- 		-- create a trigger area around the object and ignore collisions
+-- 		local triggerArea = createTriggerArea(config.triggers[k])
+-- 		triggerArea.config = config
+-- 		triggerArea.instance = instance
+-- 		triggerArea.k = k
+-- 		triggerArea.holding = {} -- table to store anyone holding the trigger
+-- 		triggerArea.OnCollisionBegin = triggerOnCollisionBegin
+-- 		triggerArea.OnCollisionEnd = triggerOnCollisionEnd
+-- 		return triggerArea
+-- 	end
 
-	createTriggerArea = function(parentObject)
-		local area = Object()
-		area:SetParent(parentObject)
-		area.Physics = PhysicsMode.Trigger
-		area.CollisionBox = Box(
-			{ parentObject.Width * 0.2, 0, parentObject.Depth * 0.2 },
-			{ parentObject.Width * 0.8, parentObject.Height * 8, parentObject.Depth * 0.8 }
-		)
-		area.LocalPosition = -parentObject.Pivot
-		hierarchyactions:applyToDescendants(
-			parentObject,
-			{ includeRoot = true },
-			function(o) -- also applies to the new object created
-				o.CollisionGroups = Map.CollisionGroups -- make them climbable
-				o.CollidesWithGroups = nil
-			end
-		)
-		area.CollisionGroups = nil
-		area.CollidesWithGroups = Player.CollisionGroups
-		return area
-	end
+-- 	createTriggerArea = function(parentObject)
+-- 		local area = Object()
+-- 		area:SetParent(parentObject)
+-- 		area.Physics = PhysicsMode.Trigger
+-- 		area.CollisionBox = Box(
+-- 			{ parentObject.Width * 0.2, 0, parentObject.Depth * 0.2 },
+-- 			{ parentObject.Width * 0.8, parentObject.Height * 8, parentObject.Depth * 0.8 }
+-- 		)
+-- 		area.LocalPosition = -parentObject.Pivot
+-- 		hierarchyactions:applyToDescendants(
+-- 			parentObject,
+-- 			{ includeRoot = true },
+-- 			function(o) -- also applies to the new object created
+-- 				o.CollisionGroups = Map.CollisionGroups -- make them climbable
+-- 				o.CollidesWithGroups = nil
+-- 			end
+-- 		)
+-- 		area.CollisionGroups = nil
+-- 		area.CollidesWithGroups = Player.CollisionGroups
+-- 		return area
+-- 	end
 
-	areAllTriggersActivated = function(instance)
-		for _, v in pairs(instance.triggers) do
-			if not isTriggerActive(v) then
-				return false
-			end
-		end
-		return true
-	end
+-- 	areAllTriggersActivated = function(instance)
+-- 		for _, v in pairs(instance.triggers) do
+-- 			if not isTriggerActive(v) then
+-- 				return false
+-- 			end
+-- 		end
+-- 		return true
+-- 	end
 
-	isInstanceActive = function(instance)
-		return instance.isActive
-	end
+-- 	isInstanceActive = function(instance)
+-- 		return instance.isActive
+-- 	end
 
-	isTriggerActive = function(trigger)
-		for _, v in pairs(trigger.holding) do
-			if v == true then
-				return true
-			end
-		end
-		return false
-	end
+-- 	isTriggerActive = function(trigger)
+-- 		for _, v in pairs(trigger.holding) do
+-- 			if v == true then
+-- 				return true
+-- 			end
+-- 		end
+-- 		return false
+-- 	end
 
-	isHolding = function(trigger, playerId)
-		return trigger.holding[playerId]
-	end
+-- 	isHolding = function(trigger, playerId)
+-- 		return trigger.holding[playerId]
+-- 	end
 
-	activateTrigger = function(trigger, playerId, bool)
-		trigger.holding[playerId] = bool
-	end
+-- 	activateTrigger = function(trigger, playerId, bool)
+-- 		trigger.holding[playerId] = bool
+-- 	end
 
-	activateInstance = function(instance, bool)
-		instance.isActive = bool
-	end
+-- 	activateInstance = function(instance, bool)
+-- 		instance.isActive = bool
+-- 	end
 
-	freeTriggers = function(instance, playerId, config)
-		for k, v in pairs(instance.triggers) do
-			if isHolding(v, playerId) then
-				activateTrigger(v, playerId, false)
-			end
-			if not isTriggerActive(v) then
-				config.triggerCallback(config.triggers[k], false)
-			end
-		end
-	end
-	---------------------
+-- 	freeTriggers = function(instance, playerId, config)
+-- 		for k, v in pairs(instance.triggers) do
+-- 			if isHolding(v, playerId) then
+-- 				activateTrigger(v, playerId, false)
+-- 			end
+-- 			if not isTriggerActive(v) then
+-- 				config.triggerCallback(config.triggers[k], false)
+-- 			end
+-- 		end
+-- 	end
+-- 	---------------------
 
-	-- LOCAL CODE --
-	local DOOR_ANIM = 0.8
-	local DOOR_SCALE = { 1, 1, 1 }
-	local DOOR_SCALEDOWN = { 0.99, 0.99, 0.99 }
+-- 	-- LOCAL CODE --
+-- 	local DOOR_ANIM = 0.8
+-- 	local DOOR_SCALE = { 1, 1, 1 }
+-- 	local DOOR_SCALEDOWN = { 0.99, 0.99, 0.99 }
 
-	local PLATE_ANIM = 0.5
-	local PLATE_PRIMARY = Color(107, 168, 96)
-	local PLATE_SECONDARY = Color(79, 148, 67)
-	local BULB_PRIMARY = Color(107, 168, 96)
-	local BULB_SECONDARY = Color(79, 148, 67)
+-- 	local PLATE_ANIM = 0.5
+-- 	local PLATE_PRIMARY = Color(107, 168, 96)
+-- 	local PLATE_SECONDARY = Color(79, 148, 67)
+-- 	local BULB_PRIMARY = Color(107, 168, 96)
+-- 	local BULB_SECONDARY = Color(79, 148, 67)
 
-	local doorCallback = function(target, bool)
-		-- Expliciting which parts to animate and their initial positions
-		if not target.isInit then
-			hierarchyactions:applyToDescendants(target, { includeRoot = true }, function(o)
-				o.CollidesWithGroups = { 2 }
-				o.CollisionGroups = nil
-			end)
-			target.leftDoor = target:GetChild(1)
-			target.initialLeftPosition = target.leftDoor.LocalPosition.X
-			target.rightDoor = target:GetChild(2)
-			target.initialRightPosition = target.rightDoor.LocalPosition.X
+-- 	local doorCallback = function(target, bool)
+-- 		-- Expliciting which parts to animate and their initial positions
+-- 		if not target.isInit then
+-- 			hierarchyactions:applyToDescendants(target, { includeRoot = true }, function(o)
+-- 				o.CollidesWithGroups = { 2 }
+-- 				o.CollisionGroups = nil
+-- 			end)
+-- 			target.leftDoor = target:GetChild(1)
+-- 			target.initialLeftPosition = target.leftDoor.LocalPosition.X
+-- 			target.rightDoor = target:GetChild(2)
+-- 			target.initialRightPosition = target.rightDoor.LocalPosition.X
 
-			if target.indicator then
-				target.bulb = target.indicator:GetChild(target.indicatorIdx)
-				target.bulb.initialPrimaryColor = Color(
-					target.bulb.Palette[1].Color.R,
-					target.bulb.Palette[1].Color.G,
-					target.bulb.Palette[1].Color.B
-				)
-				target.bulb.initialSecondaryColor = Color(
-					target.bulb.Palette[2].Color.R,
-					target.bulb.Palette[2].Color.G,
-					target.bulb.Palette[2].Color.B
-				)
-			end
+-- 			if target.indicator then
+-- 				target.bulb = target.indicator:GetChild(target.indicatorIdx)
+-- 				target.bulb.initialPrimaryColor = Color(
+-- 					target.bulb.Palette[1].Color.R,
+-- 					target.bulb.Palette[1].Color.G,
+-- 					target.bulb.Palette[1].Color.B
+-- 				)
+-- 				target.bulb.initialSecondaryColor = Color(
+-- 					target.bulb.Palette[2].Color.R,
+-- 					target.bulb.Palette[2].Color.G,
+-- 					target.bulb.Palette[2].Color.B
+-- 				)
+-- 			end
 
-			target.isInit = true
-		end
+-- 			target.isInit = true
+-- 		end
 
-		-- Handling animation
-		if bool then
-			ease:inSine(target.leftDoor, DOOR_ANIM).Scale = DOOR_SCALEDOWN
-			ease:inSine(target.leftDoor.LocalPosition, DOOR_ANIM).X = target.Width * 0.8
-			ease:inSine(target.rightDoor, DOOR_ANIM).Scale = DOOR_SCALEDOWN
-			ease:inSine(target.rightDoor.LocalPosition, DOOR_ANIM).X = -target.Width * 0.8
-			if target.indicator then
-				target.bulb.Palette[1].Color = BULB_PRIMARY
-				target.bulb.Palette[2].Color = BULB_SECONDARY
-				target.bulb.IsUnlit = true
-			end
-		else
-			ease:inSine(target.leftDoor.LocalPosition, DOOR_ANIM).X = target.initialLeftPosition
-			ease:inSine(target.leftDoor, DOOR_ANIM).Scale = DOOR_SCALE
-			ease:inSine(target.rightDoor.LocalPosition, DOOR_ANIM).X = target.initialRightPosition
-			ease:inSine(target.rightDoor, DOOR_ANIM).Scale = DOOR_SCALE
-			if target.indicator then
-				target.bulb.Palette[1].Color = target.bulb.initialPrimaryColor
-				target.bulb.Palette[2].Color = target.bulb.initialSecondaryColor
-				target.bulb.IsUnlit = false
-			end
-		end
-		sfx("automaticdoor_1", { Position = target.Position, Volume = 0.7 })
-	end
+-- 		-- Handling animation
+-- 		if bool then
+-- 			ease:inSine(target.leftDoor, DOOR_ANIM).Scale = DOOR_SCALEDOWN
+-- 			ease:inSine(target.leftDoor.LocalPosition, DOOR_ANIM).X = target.Width * 0.8
+-- 			ease:inSine(target.rightDoor, DOOR_ANIM).Scale = DOOR_SCALEDOWN
+-- 			ease:inSine(target.rightDoor.LocalPosition, DOOR_ANIM).X = -target.Width * 0.8
+-- 			if target.indicator then
+-- 				target.bulb.Palette[1].Color = BULB_PRIMARY
+-- 				target.bulb.Palette[2].Color = BULB_SECONDARY
+-- 				target.bulb.IsUnlit = true
+-- 			end
+-- 		else
+-- 			ease:inSine(target.leftDoor.LocalPosition, DOOR_ANIM).X = target.initialLeftPosition
+-- 			ease:inSine(target.leftDoor, DOOR_ANIM).Scale = DOOR_SCALE
+-- 			ease:inSine(target.rightDoor.LocalPosition, DOOR_ANIM).X = target.initialRightPosition
+-- 			ease:inSine(target.rightDoor, DOOR_ANIM).Scale = DOOR_SCALE
+-- 			if target.indicator then
+-- 				target.bulb.Palette[1].Color = target.bulb.initialPrimaryColor
+-- 				target.bulb.Palette[2].Color = target.bulb.initialSecondaryColor
+-- 				target.bulb.IsUnlit = false
+-- 			end
+-- 		end
+-- 		sfx("automaticdoor_1", { Position = target.Position, Volume = 0.7 })
+-- 	end
 
-	local plateCallback = function(trigger, bool)
-		-- Expliciting which parts to animate and their initial positions
-		if not trigger.isInit then
-			trigger.button = trigger:GetChild(1)
-			trigger.button.initialPrimaryColor = Color(
-				trigger.button.Palette[2].Color.R,
-				trigger.button.Palette[2].Color.G,
-				trigger.button.Palette[2].Color.B
-			)
-			trigger.button.initialSecondaryColor = Color(
-				trigger.button.Palette[3].Color.R,
-				trigger.button.Palette[3].Color.G,
-				trigger.button.Palette[3].Color.B
-			)
+-- 	local plateCallback = function(trigger, bool)
+-- 		-- Expliciting which parts to animate and their initial positions
+-- 		if not trigger.isInit then
+-- 			trigger.button = trigger:GetChild(1)
+-- 			trigger.button.initialPrimaryColor = Color(
+-- 				trigger.button.Palette[2].Color.R,
+-- 				trigger.button.Palette[2].Color.G,
+-- 				trigger.button.Palette[2].Color.B
+-- 			)
+-- 			trigger.button.initialSecondaryColor = Color(
+-- 				trigger.button.Palette[3].Color.R,
+-- 				trigger.button.Palette[3].Color.G,
+-- 				trigger.button.Palette[3].Color.B
+-- 			)
 
-			if trigger.light ~= nil then
-				trigger.bulb = trigger.light:GetChild(trigger.lightIdx)
-				trigger.bulb.initialPrimaryColor = Color(
-					trigger.bulb.Palette[1].Color.R,
-					trigger.bulb.Palette[1].Color.G,
-					trigger.bulb.Palette[1].Color.B
-				)
-				trigger.bulb.initialSecondaryColor = Color(
-					trigger.bulb.Palette[2].Color.R,
-					trigger.bulb.Palette[2].Color.G,
-					trigger.bulb.Palette[2].Color.B
-				)
-			end
+-- 			if trigger.light ~= nil then
+-- 				trigger.bulb = trigger.light:GetChild(trigger.lightIdx)
+-- 				trigger.bulb.initialPrimaryColor = Color(
+-- 					trigger.bulb.Palette[1].Color.R,
+-- 					trigger.bulb.Palette[1].Color.G,
+-- 					trigger.bulb.Palette[1].Color.B
+-- 				)
+-- 				trigger.bulb.initialSecondaryColor = Color(
+-- 					trigger.bulb.Palette[2].Color.R,
+-- 					trigger.bulb.Palette[2].Color.G,
+-- 					trigger.bulb.Palette[2].Color.B
+-- 				)
+-- 			end
 
-			trigger.isInit = true
-		end
+-- 			trigger.isInit = true
+-- 		end
 
-		-- Handling animation
-		if trigger.anim then
-			trigger.anim:Cancel()
-		end -- reset anim if any
-		if bool then
-			ease:inSine(trigger.button.LocalPosition, PLATE_ANIM).Y = -3
-			trigger.anim = Timer(PLATE_ANIM, function()
-				trigger.button.Palette[2].Color = PLATE_PRIMARY
-				trigger.button.Palette[3].Color = PLATE_SECONDARY
-				trigger.button.IsUnlit = true
-				if trigger.light then
-					trigger.bulb.Palette[1].Color = BULB_PRIMARY
-					trigger.bulb.Palette[2].Color = BULB_SECONDARY
-					trigger.bulb.IsUnlit = true
-				end
-				sfx("button_1", { Position = trigger.Position, Volume = 0.7 })
-			end)
-		else
-			ease:inSine(trigger.button.LocalPosition, PLATE_ANIM).Y = 0
-			trigger.button.Palette[2].Color = trigger.button.initialPrimaryColor
-			trigger.button.Palette[3].Color = trigger.button.initialSecondaryColor
-			trigger.button.IsUnlit = false
-			if trigger.light then
-				trigger.bulb.Palette[1].Color = trigger.bulb.initialPrimaryColor
-				trigger.bulb.Palette[2].Color = trigger.bulb.initialSecondaryColor
-				trigger.bulb.IsUnlit = false
-			end
-			trigger.anim = Timer(PLATE_ANIM, function()
-				sfx("button_1", { Position = trigger.Position, Volume = 0.7 })
-			end)
-		end
-	end
+-- 		-- Handling animation
+-- 		if trigger.anim then
+-- 			trigger.anim:Cancel()
+-- 		end -- reset anim if any
+-- 		if bool then
+-- 			ease:inSine(trigger.button.LocalPosition, PLATE_ANIM).Y = -3
+-- 			trigger.anim = Timer(PLATE_ANIM, function()
+-- 				trigger.button.Palette[2].Color = PLATE_PRIMARY
+-- 				trigger.button.Palette[3].Color = PLATE_SECONDARY
+-- 				trigger.button.IsUnlit = true
+-- 				if trigger.light then
+-- 					trigger.bulb.Palette[1].Color = BULB_PRIMARY
+-- 					trigger.bulb.Palette[2].Color = BULB_SECONDARY
+-- 					trigger.bulb.IsUnlit = true
+-- 				end
+-- 				sfx("button_1", { Position = trigger.Position, Volume = 0.7 })
+-- 			end)
+-- 		else
+-- 			ease:inSine(trigger.button.LocalPosition, PLATE_ANIM).Y = 0
+-- 			trigger.button.Palette[2].Color = trigger.button.initialPrimaryColor
+-- 			trigger.button.Palette[3].Color = trigger.button.initialSecondaryColor
+-- 			trigger.button.IsUnlit = false
+-- 			if trigger.light then
+-- 				trigger.bulb.Palette[1].Color = trigger.bulb.initialPrimaryColor
+-- 				trigger.bulb.Palette[2].Color = trigger.bulb.initialSecondaryColor
+-- 				trigger.bulb.IsUnlit = false
+-- 			end
+-- 			trigger.anim = Timer(PLATE_ANIM, function()
+-- 				sfx("button_1", { Position = trigger.Position, Volume = 0.7 })
+-- 			end)
+-- 		end
+-- 	end
 
-	-- Jetpack Door
-	local doorJetpack = World:FindObjectByName("door_jetpack")
-	local platesJetpackA = World:FindObjectsByName("plate_jetpack") -- 2 plates to open
-	local plateJetpackB = World:FindObjectByName("exit_jetpack") -- 1 plate to exit
-	local lightsJetpack = World:FindObjectsByName("light_jetpack") -- 2 lights
-	for k, v in pairs(platesJetpackA) do
-		v.light = lightsJetpack[k]
-		v.lightIdx = 1
-	end
+-- 	-- Jetpack Door
+-- 	local doorJetpack = World:FindObjectByName("door_jetpack")
+-- 	local platesJetpackA = World:FindObjectsByName("plate_jetpack") -- 2 plates to open
+-- 	local plateJetpackB = World:FindObjectByName("exit_jetpack") -- 1 plate to exit
+-- 	local lightsJetpack = World:FindObjectsByName("light_jetpack") -- 2 lights
+-- 	for k, v in pairs(platesJetpackA) do
+-- 		v.light = lightsJetpack[k]
+-- 		v.lightIdx = 1
+-- 	end
 
-	local configJetpackA = {
-		target = doorJetpack,
-		triggers = platesJetpackA,
-		triggerCallback = plateCallback,
-		triggerDelay = 0.5,
-		targetCallback = doorCallback,
-		targetDelay = 5,
-		forcedMulti = true,
-	}
-	newTriggerInstance(configJetpackA)
+-- 	local configJetpackA = {
+-- 		target = doorJetpack,
+-- 		triggers = platesJetpackA,
+-- 		triggerCallback = plateCallback,
+-- 		triggerDelay = 0.5,
+-- 		targetCallback = doorCallback,
+-- 		targetDelay = 5,
+-- 		forcedMulti = true,
+-- 	}
+-- 	newTriggerInstance(configJetpackA)
 
-	local configJetpackB = {
-		target = doorJetpack,
-		triggers = { plateJetpackB },
-		triggerCallback = plateCallback,
-		triggerDelay = 0.5,
-		targetCallback = doorCallback,
-		targetDelay = 3,
-	}
-	newTriggerInstance(configJetpackB)
+-- 	local configJetpackB = {
+-- 		target = doorJetpack,
+-- 		triggers = { plateJetpackB },
+-- 		triggerCallback = plateCallback,
+-- 		triggerDelay = 0.5,
+-- 		targetCallback = doorCallback,
+-- 		targetDelay = 3,
+-- 	}
+-- 	newTriggerInstance(configJetpackB)
 
-	-- Nerf Door
-	doorNerf = World:FindObjectByName("door_nerf")
-	platesNerfA = World:FindObjectsByName("plate_nerf") -- 4 plates to open
-	plateNerfB = World:FindObjectByName("exit_nerf") -- 1 plate to exit
-	lightsNerf = World:FindObjectByName("light_nerf") -- 4 lights + indicator
-	for k, v in pairs(platesNerfA) do
-		v.light = lightsNerf
-		v.lightIdx = k + 1
-	end
-	doorNerf.indicator = lightsNerf
-	doorNerf.indicatorIdx = 6
+-- 	-- Nerf Door
+-- 	doorNerf = World:FindObjectByName("door_nerf")
+-- 	platesNerfA = World:FindObjectsByName("plate_nerf") -- 4 plates to open
+-- 	plateNerfB = World:FindObjectByName("exit_nerf") -- 1 plate to exit
+-- 	lightsNerf = World:FindObjectByName("light_nerf") -- 4 lights + indicator
+-- 	for k, v in pairs(platesNerfA) do
+-- 		v.light = lightsNerf
+-- 		v.lightIdx = k + 1
+-- 	end
+-- 	doorNerf.indicator = lightsNerf
+-- 	doorNerf.indicatorIdx = 6
 
-	local configNerfA = {
-		target = doorNerf,
-		triggers = platesNerfA,
-		triggerCallback = plateCallback,
-		triggerDelay = 0.5,
-		targetCallback = doorCallback,
-		targetDelay = 60,
-	}
-	newTriggerInstance(configNerfA)
+-- 	local configNerfA = {
+-- 		target = doorNerf,
+-- 		triggers = platesNerfA,
+-- 		triggerCallback = plateCallback,
+-- 		triggerDelay = 0.5,
+-- 		targetCallback = doorCallback,
+-- 		targetDelay = 60,
+-- 	}
+-- 	newTriggerInstance(configNerfA)
 
-	local configNerfB = {
-		target = doorNerf,
-		triggers = { plateNerfB },
-		triggerCallback = plateCallback,
-		triggerDelay = 0.5,
-		targetCallback = doorCallback,
-		targetDelay = 3,
-	}
-	newTriggerInstance(configNerfB)
-end
+-- 	local configNerfB = {
+-- 		target = doorNerf,
+-- 		triggers = { plateNerfB },
+-- 		triggerCallback = plateCallback,
+-- 		triggerDelay = 0.5,
+-- 		targetCallback = doorCallback,
+-- 		targetDelay = 3,
+-- 	}
+-- 	newTriggerInstance(configNerfB)
+-- end
