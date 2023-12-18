@@ -987,11 +987,6 @@ profile.create = function(_, config)
 					return
 				end
 
-				-- update avatar preview
-				if avatarNode.refresh then
-					avatarNode:refresh()
-				end
-
 				-- send API request to update user avatar
 				local data = {}
 				data[category] = fullname
@@ -999,6 +994,11 @@ profile.create = function(_, config)
 					if err then
 						print("❌", err)
 						return
+					end
+
+					-- refresh avatar preview in profile window
+					if avatarNode ~= nil and avatarNode.refresh ~= nil then
+						avatarNode:refresh()
 					end
 
 					-- send local event to update avatar preview in top bar
