@@ -224,7 +224,7 @@ cameraModes.setFirstPerson = function(self, config)
 		showPointer = false,
 		camera = Camera, -- main Camera by default
 		target = nil, -- must be set
-		offset = Number3(0,0,0)
+		offset = Number3(0, 0, 0),
 	}
 
 	if config then
@@ -333,16 +333,13 @@ cameraModes.setThirdPerson = function(self, config)
 
 	listener = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
 		camDistance = camDistance + delta * 0.1
-		if camDistance > maxZoomDistance then
-			camDistance = maxZoomDistance
-		end
-		if camDistance <= minZoomDistance then
-			camDistance = minZoomDistance
-		end
+		camDistance = math.min(maxZoomDistance, camDistance)
+		camDistance = math.max(minZoomDistance, camDistance)
 	end)
 	table.insert(entry.listeners, listener)
 
-	local ray
+	local boxHalfSize = Number3(1, 1, 1)
+	local box = Box()
 	local impact
 	local distance
 	local rigidityFactor = config.rigidity * 60.0
@@ -360,19 +357,22 @@ cameraModes.setThirdPerson = function(self, config)
 			worldObject.Rotation:Set(rotationOffset)
 		end
 
-		-- TODO: use box
-		ray = Ray(worldObject.Position, Number3.Up)
-		impact = ray:Cast(Map.CollisionGroups)
+		box.Min = worldObject.Position - boxHalfSize -- box.Min:Set doesn't work
+		box.Max = worldObject.Position + boxHalfSize -- box.Max:Set doesn't work
+
+		impact = box:Cast(Number3.Up, 3, Map.CollisionGroups)
 
 		distance = 3
-		if impact.Distance and impact.Distance < distance then
+		if impact and impact.Distance < distance then
 			distance = impact.Distance
 		end
 
 		worldObject.Position = worldObject.Position + Number3.Up * distance
 
-		ray = Ray(worldObject.Position, camera.Backward)
-		impact = ray:Cast(Map.CollisionGroups)
+		box.Min = worldObject.Position - boxHalfSize -- box.Min:Set doesn't work
+		box.Max = worldObject.Position + boxHalfSize -- box.Max:Set doesn't work
+
+		impact = box:Cast(camera.Backward, camDistance, Map.CollisionGroups)
 
 		if camDistance < 4 then -- in Head, make it invisible
 			if targetIsPlayer then
