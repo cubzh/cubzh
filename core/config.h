@@ -269,7 +269,7 @@ static const FACE_INDEX_INT_T FACE_FRONT = 2;
 static const FACE_INDEX_INT_T FACE_BACK = 3;
 static const FACE_INDEX_INT_T FACE_TOP = 4;
 static const FACE_INDEX_INT_T FACE_DOWN = 5;
-static const FACE_INDEX_INT_T FACE_SIZE = 6;
+static const FACE_INDEX_INT_T FACE_COUNT = 6;
 static const FACE_INDEX_INT_T FACE_NONE = 7;
 
 // switch cases can only use compile time constants.

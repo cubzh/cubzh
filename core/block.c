@@ -132,7 +132,7 @@ struct _AwareBlock {
 
 void aware_block_update_world_target(AwareBlock *aBlock) {
 
-    if (aBlock->touchedFace < FACE_SIZE && aBlock->shapePos != NULL) {
+    if (aBlock->touchedFace < FACE_COUNT && aBlock->shapePos != NULL) {
 
         if (aBlock->shapeTargetPos == NULL) {
             aBlock->shapeTargetPos = int3_new_copy(aBlock->shapePos);

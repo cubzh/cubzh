@@ -104,10 +104,10 @@ const float3 *rigidbody_get_constant_acceleration(const RigidBody *rb);
 void rigidbody_set_constant_acceleration(RigidBody *rb, const float3 *value);
 float rigidbody_get_mass(const RigidBody *rb);
 void rigidbody_set_mass(RigidBody *rb, const float value);
-float rigidbody_get_friction(const RigidBody *rb);
-void rigidbody_set_friction(RigidBody *rb, const float value);
-float rigidbody_get_bounciness(const RigidBody *rb);
-void rigidbody_set_bounciness(RigidBody *rb, const float value);
+float rigidbody_get_friction(const RigidBody *rb, const FACE_INDEX_INT_T face);
+void rigidbody_set_friction(RigidBody *rb, const FACE_INDEX_INT_T face, const float value);
+float rigidbody_get_bounciness(const RigidBody *rb, const FACE_INDEX_INT_T face);
+void rigidbody_set_bounciness(RigidBody *rb, const FACE_INDEX_INT_T face, const float value);
 uint8_t rigidbody_get_contact_mask(const RigidBody *rb);
 uint16_t rigidbody_get_groups(const RigidBody *rb);
 void rigidbody_set_groups(RigidBody *rb, const uint16_t value);
@@ -144,8 +144,14 @@ bool rigidbody_collision_masks_reciprocal_match(const uint16_t groups1,
                                                 const uint16_t collidesWith1,
                                                 const uint16_t groups2,
                                                 const uint16_t collidesWith2);
-float rigidbody_get_combined_friction(const RigidBody *rb1, const RigidBody *rb2);
-float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *rb2);
+float rigidbody_get_combined_friction(const RigidBody *rb1,
+                                      const RigidBody *rb2,
+                                      const FACE_INDEX_INT_T face1,
+                                      const FACE_INDEX_INT_T face2);
+float rigidbody_get_combined_bounciness(const RigidBody *rb1,
+                                        const RigidBody *rb2,
+                                        const FACE_INDEX_INT_T face1,
+                                        const FACE_INDEX_INT_T face2);
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed);
 void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value);
 void rigidbody_apply_push(RigidBody *rb, const float3 *value);

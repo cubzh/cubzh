@@ -78,12 +78,34 @@ bool utils_is_float3_to_coords_inbounds(const float x, const float y, const floa
 FACE_INDEX_INT_T utils_aligned_normal_to_face(const float3 *normal) {
     // note: we use comparison between components instead of checking for 1's, to make sure we
     // always return something even if it's an approximation, never return FACE_NONE
-    if (fabsf(normal->x) >= fabsf(normal->y) && fabsf(normal->x) >= fabsf(normal->z)) {
+    const float ax = fabsf(normal->x);
+    const float ay = fabsf(normal->y);
+    const float az = fabsf(normal->z);
+    if (ax >= ay && ax >= az) {
         return normal->x > 0.0f ? FACE_RIGHT : FACE_LEFT;
-    } else if (fabsf(normal->y) >= fabsf(normal->x) && fabsf(normal->y) >= fabsf(normal->z)) {
+    } else if (ay >= ax && ay >= az) {
         return normal->y > 0.0f ? FACE_TOP : FACE_DOWN;
     } else {
         return normal->z > 0.0f ? FACE_FRONT : FACE_BACK;
+    }
+}
+
+FACE_INDEX_INT_T utils_face_swapped(const FACE_INDEX_INT_T face) {
+    switch (face) {
+        case FACE_RIGHT_CTC:
+            return FACE_LEFT;
+        case FACE_LEFT_CTC:
+            return FACE_RIGHT;
+        case FACE_TOP_CTC:
+            return FACE_DOWN;
+        case FACE_DOWN_CTC:
+            return FACE_TOP;
+        case FACE_FRONT_CTC:
+            return FACE_BACK;
+        case FACE_BACK_CTC:
+            return FACE_FRONT;
+        default:
+            vx_assert(false);
     }
 }
 
