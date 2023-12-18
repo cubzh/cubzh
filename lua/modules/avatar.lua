@@ -457,24 +457,32 @@ end
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
 -- replaced is optional, but can be provided to replace an existing avatar instead of creating a new one.
-index.get = function(_, usernameOrId, replaced)
+index.get = function(_, usernameOrId, replaced, didLoadCallback)
 	if type(usernameOrId) ~= "string" then
-		error("avatar:get(usernameOrId) - usernameOrId is supposed to be a string", 2)
+		error("avatar:get(usernameOrId, avatar, didLoadCallback) - usernameOrId is supposed to be a string", 2)
 	end
 
 	if replaced ~= nil then
 		if type(replaced) ~= "MutableShape" then
-			error("avatar:get(usernameOrId, avatar) - avatar is supposed to be a MutableShape", 2)
+			error("avatar:get(usernameOrId, avatar, didLoadCallback) - avatar is supposed to be a MutableShape", 2)
 		end
 		if replaced.Name ~= "Body" then
-			error('avatar:get(usernameOrId, avatar) - avatar.name should be "Body"', 2)
+			error('avatar:get(usernameOrId, avatar, didLoadCallback) - avatar.name should be "Body"', 2)
+		end
+	end
+
+	if didLoadCallback ~= nil then
+		if type(didLoadCallback) ~= "function" then
+			error("avatar:get(usernameOrId, avatar, didLoadCallback) - didLoadCallback must be a function", 2)
 		end
 	end
 
 	local requests = {}
 
+	-- `replaced` can be nil, if it has not been provided
 	local root = replaced
 
+	-- if root is nil, we create a new avatar
 	if root == nil then
 		root = System.MutableShapeFromBundle("caillef.multiavatar")
 		root.Name = "Body"
@@ -483,6 +491,8 @@ index.get = function(_, usernameOrId, replaced)
 		end)
 		initAnimations(root)
 	end
+
+	root.didLoad = didLoadCallback
 
 	local equipments = require("equipments")
 

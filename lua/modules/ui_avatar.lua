@@ -187,7 +187,7 @@ local uiavatarMetatable = {
 			node.IsMask = true
 
 			local bodyDidLoad = function(err, avatarBody)
-				if err == true then
+				if err ~= nil then
 					error(err, 2)
 					return
 				end
@@ -293,7 +293,7 @@ local uiavatarMetatable = {
 			local node = ui:createFrame(Color(0, 0, 0, 0))
 
 			local bodyDidLoad = function(err, avatarBody)
-				if err == true then
+				if err ~= nil then
 					error(err, 2)
 					return
 				end
