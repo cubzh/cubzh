@@ -462,6 +462,7 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 		error("avatar:get(usernameOrId, avatar, didLoadCallback) - usernameOrId is supposed to be a string", 2)
 	end
 
+	-- validate replaced if provided
 	if replaced ~= nil then
 		if type(replaced) ~= "MutableShape" then
 			error("avatar:get(usernameOrId, avatar, didLoadCallback) - avatar is supposed to be a MutableShape", 2)
@@ -471,10 +472,9 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 		end
 	end
 
-	if didLoadCallback ~= nil then
-		if type(didLoadCallback) ~= "function" then
-			error("avatar:get(usernameOrId, avatar, didLoadCallback) - didLoadCallback must be a function", 2)
-		end
+	-- validate didLoadCallback if provided
+	if didLoadCallback ~= nil and type(didLoadCallback) ~= "function" then
+		error("avatar:get(usernameOrId, avatar, didLoadCallback) - didLoadCallback must be a function", 2)
 	end
 
 	local requests = {}
@@ -492,7 +492,10 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 		initAnimations(root)
 	end
 
-	root.didLoad = didLoadCallback
+	-- if didLoadCallback is provided, we set it on root
+	if didLoadCallback ~= nil then
+		root.didLoad = didLoadCallback
+	end
 
 	local equipments = require("equipments")
 
