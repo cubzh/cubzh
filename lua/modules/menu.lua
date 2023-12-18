@@ -610,6 +610,7 @@ function actionColumnUpdateContent()
 	else
 		likeIcon.Text = "🤍"
 	end
+	likeLabel:parentDidResize()
 end
 
 function showActionColumn()
