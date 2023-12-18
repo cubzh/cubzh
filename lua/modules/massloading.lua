@@ -1,3 +1,35 @@
+--[[
+This module optimizes the loading of hundreds of shapes when loading a world for example.
+
+It reduces the amount of HTTP request and readFile calls.
+
+All the shapes are kept in a cache object.
+
+-- Example
+local list = {
+    { fullname = "caillef.shop", pos = { 10, 24, 0 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop", pos = { 10, 24, 1 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop", pos = { 10, 24, 2 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop", pos = { 10, 24, 3 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop2", pos = { 10, 24, 4 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop2", pos = { 10, 24, 5 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop2", pos = { 10, 24, 6 }, rotation = { 0, math.pi * 0.5, 0 }},
+    { fullname = "caillef.shop", pos = { 10, 24, 7 }, rotation = { 0, math.pi * 0.5, 0 }},
+}
+
+local massLoading = require("massLoading")
+local onLoad = function(obj, data)
+    -- here SetParent/use data to set position/rotation etc.
+    print(obj, data.fullname, data.pos[3])
+end
+local config = {
+    onLoad = onLoad, -- callback called when a shape is loaded, first parameter is the object, second is the element of the list
+    key = "fullname", -- the key representing the fullname of the shape
+    batchSize = 50, -- call to Shape constructor or Object:Load per batch
+    delayBetweenBatch = 0.1 -- seconds
+}
+massLoading:load(list, config)
+--]]
 
 local massLoading = {}
 
@@ -8,11 +40,11 @@ local loadingObjects = {}
 local DEFAULT_BATCH_SIZE = 50
 local DEFAULT_DELAY_BETWEEN_BATCH = 0.1 -- seconds
 massLoading.load = function(_, list, config, index)
-	if not massLoading.onLoad then
-		error("you must define massLoading.onLoad before calling load")
+    config = config or {}
+	if not config.onLoad then
+		error("you must define config.onLoad")
 		return
 	end
-    config = config or {}
 	config.key = config.key or "fullname"
 	config.batchSize = config.batchSize or DEFAULT_BATCH_SIZE
 	config.delayBetweenBatch = config.delayBetweenBatch or DEFAULT_DELAY_BETWEEN_BATCH
@@ -25,7 +57,7 @@ massLoading.load = function(_, list, config, index)
 
 		-- 1) in cache
 		if cachedObjects[fullname] then
-			massLoading.onLoad(Shape(cachedObjects[fullname], { includeChildren = true }), data)
+			config.onLoad(Shape(cachedObjects[fullname], { includeChildren = true }), data)
 
 		-- 2) already loading
 		elseif loadingObjects[fullname] then
@@ -43,19 +75,21 @@ massLoading.load = function(_, list, config, index)
 
 				-- load object
 				loadingObjects[fullname] = false
-				massLoading.onLoad(Shape(obj, { includeChildren = true }), data)
+				config.onLoad(Shape(obj, { includeChildren = true }), data)
 
 				-- load objects awaiting
 				if awaitingObjects[fullname] then
 					for _,awaitingData in ipairs(awaitingObjects[fullname]) do
-						massLoading.onLoad(Shape(obj, { includeChildren = true }), awaitingData)
+						config.onLoad(Shape(obj, { includeChildren = true }), awaitingData)
 					end
 				end
 			end)
 		end
 	end
 
-	if index + config.batchSize > #list then return end
+	if index + config.batchSize > #list then
+        return
+    end
 
 	return Timer(config.delayBetweenBatch, function()
 		massLoading:load(list, config, index + config.batchSize)
