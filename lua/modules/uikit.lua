@@ -1353,6 +1353,7 @@ function createUI(system)
 			spherized = false,
 			doNotFlip = false,
 			offset = Number3.Zero,
+			perBlockCollisions = false,
 		}
 
 		config = conf:merge(defaultConfig, config)
@@ -1402,9 +1403,11 @@ function createUI(system)
 				return
 			end
 			if b then
-				-- used to be TriggerPerBlock, but not sure it's useful to go into that level on details for UI.
-				-- we could make it an option
-				self.shape.Physics = PhysicsMode.Trigger
+				if config.perBlockCollisions then
+					self.shape.Physics = PhysicsMode.TriggerPerBlock
+				else
+					self.shape.Physics = PhysicsMode.Trigger
+				end
 				_setCollisionGroups(self.shape)
 			else
 				self.shape.Physics = PhysicsMode.Disabled

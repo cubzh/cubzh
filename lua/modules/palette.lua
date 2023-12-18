@@ -158,7 +158,7 @@ palette.create = function(_, uikit, btnColor)
 
 		local colorsShape = MutableShape()
 		colorsShape.CollisionGroups = {}
-		local colors = uikit:createShape(colorsShape, { doNotFlip = true })
+		local colors = uikit:createShape(colorsShape, { doNotFlip = true, perBlockCollisions = true })
 		colors:setParent(self)
 
 		self.colors = colors
