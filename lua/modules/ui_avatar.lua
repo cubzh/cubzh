@@ -178,13 +178,15 @@ local uiavatarMetatable = {
 		-- reference should be kept, not copying entries right after function call.
 		-- uikit: optional, allows to provide specific instance of uikit
 		getHeadAndShoulders = function(_, usernameOrId, size, _, uikit)
-			local body
 			local requests
 
 			local ui = uikit or ui
 			local defaultSize = size or DEFAULT_SIZE
+
 			local node = ui:createFrame(Color(255, 255, 255, 0))
 			node.IsMask = true
+			node._w = 0
+			node._h = 0
 
 			local bodyDidLoad = function(err, avatarBody)
 				if err ~= nil then
@@ -214,7 +216,8 @@ local uiavatarMetatable = {
 
 				-- NOTE: this needs to be improved, to programatically crop
 				-- perfectly around the head, considering hair / headsets, etc.
-				node.body.Width = node._w * 1.1
+				-- [gdevillele] _w field can be nil, I don't understand why
+				node.body.Width = (node._w or 0) * 1.1
 				node.body.Height = node.body.Width / uiBody.ratio
 
 				node.body.pivot.LocalRotation = rotation
@@ -222,8 +225,7 @@ local uiavatarMetatable = {
 				node.body.pos = { 0, 0 }
 			end
 
-			body, requests = avatar:get(usernameOrId)
-			body.didLoad = bodyDidLoad
+			_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
 
 			node.onRemove = function()
 				for _, r in ipairs(requests) do
@@ -232,12 +234,8 @@ local uiavatarMetatable = {
 			end
 
 			node.refresh = function(_)
-				body, requests = avatar:get(usernameOrId)
-				body.didLoad = bodyDidLoad
+				_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
 			end
-
-			node._w = 0
-			node._h = 0
 
 			node._width = function(self)
 				return self._w
@@ -283,7 +281,6 @@ local uiavatarMetatable = {
 		-- reference should be kept, not copying entries right after function call.
 		-- uikit: optional, allows to provide specific instance of uikit
 		get = function(_, usernameOrId, size, _, uikit)
-			local body
 			local requests
 
 			local ui = uikit or ui
@@ -317,8 +314,7 @@ local uiavatarMetatable = {
 				uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
 			end
 
-			body, requests = avatar:get(usernameOrId)
-			body.didLoad = bodyDidLoad
+			_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
 
 			node.onRemove = function()
 				for _, r in ipairs(requests) do
@@ -327,8 +323,7 @@ local uiavatarMetatable = {
 			end
 
 			node.refresh = function(_)
-				body, requests = avatar:get(usernameOrId)
-				body.didLoad = bodyDidLoad
+				_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
 			end
 
 			node._w = defaultSize

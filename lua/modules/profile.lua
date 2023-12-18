@@ -967,6 +967,7 @@ profile.create = function(_, config)
 		content.tabs = tabs
 
 		local wearableRequest
+
 		grid.onOpen = function(_, cell)
 			if not cell.repo or not cell.name then
 				return
@@ -978,16 +979,12 @@ profile.create = function(_, config)
 				wearableRequest:Cancel()
 				wearableRequest = nil
 			end
+
 			wearableRequest = equipments.load(category, fullname, Player, false, false, function(eq)
 				wearableRequest = nil
 				if eq == nil then
 					print("Error: invalid item.")
 					return
-				end
-
-				-- update avatar preview
-				if avatarNode.refresh then
-					avatarNode:refresh()
 				end
 
 				-- send API request to update user avatar
@@ -996,15 +993,21 @@ profile.create = function(_, config)
 				api:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
-					else
-						if category == "hair" then
-							LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { outfit = true })
-						end
+						return
+					end
+
+					-- refresh avatar preview in profile window
+					if avatarNode ~= nil and avatarNode.refresh ~= nil then
+						avatarNode:refresh()
+					end
+
+					-- send local event to update avatar preview in top bar
+					if category == "hair" or category == "jacket" then
+						LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { outfit = true })
 					end
 				end)
-				-- background request, not updating profile UI
-				-- table.insert(requests, req)
 			end)
+
 			if wearableRequest ~= nil then
 				table.insert(requests, wearableRequest)
 			end
