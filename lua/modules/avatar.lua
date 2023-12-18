@@ -508,7 +508,6 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 			if nbEquipmentsLoaded >= nbEquipmentsTotal then
 				if root.didLoad then
 					root.didLoad(nil, root)
-					return
 				end
 			end
 		end
