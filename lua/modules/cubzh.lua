@@ -224,22 +224,29 @@ function updateSync()
 	multi:unlink("p_" .. pID)
 	multi:unlink("ph_" .. pID)
 
-	local vehicle = playerControls.vehicles[pID]
-	if vehicle then
-		if vehicle.type == "glider" then
-			-- sync vehicleRoll child object,
-			-- it contains all needed information
-			multi:sync(vehicle.roll, "g_" .. pID, {
-				keys = { "Velocity", "Position", "Rotation" },
-				triggers = { "LocalRotation", "Velocity" },
+	if Client.Connected then
+		local playerControlID = playerControls:getPlayerID(p)
+		local vehicle = playerControls.vehicles[playerControlID]
+		if vehicle then
+			if vehicle.type == "glider" then
+				-- sync vehicleRoll child object,
+				-- it contains all needed information
+				multi:sync(vehicle.roll, "g_" .. pID, {
+					keys = { "Velocity", "Position", "Rotation" },
+					triggers = { "LocalRotation", "Velocity" },
+				})
+			end
+		else
+			multi:sync(p, "p_" .. pID, {
+				keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
+				triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
 			})
+			multi:sync(
+				p.Head,
+				"ph_" .. pID,
+				{ keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } }
+			)
 		end
-	else
-		multi:sync(p, "p_" .. pID, {
-			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
-			triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
-		})
-		multi:sync(p.Head, "ph_" .. pID, { keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } })
 	end
 end
 
