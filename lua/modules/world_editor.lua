@@ -509,6 +509,15 @@ local statesSettings = {
 			-- Rotation
 			worldEditor.uiGizmoRotation:setShape(worldEditor.object)
 			worldEditor.uiGizmoRotation:show()
+
+			if not Client.IsMobile then
+				worldEditor.positionInput:setShape(worldEditor.object)
+				worldEditor.positionInput:show()
+				worldEditor.rotationInput:setShape(worldEditor.object)
+				worldEditor.rotationInput:show()
+				worldEditor.scaleInput:setShape(worldEditor.object)
+				worldEditor.scaleInput:show()
+			end
 		end,
 		tick = function()
 			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0,10,0) + Player.Right * 5)
@@ -544,6 +553,10 @@ local statesSettings = {
 		onStateEnd = function()
 			worldEditor.uiGizmoRotation:hide()
 			worldEditor.scaleButton:hide()
+
+			worldEditor.positionInput:hide()
+			worldEditor.rotationInput:hide()
+			worldEditor.scaleInput:hide()
 			if worldEditor.object then
 				unfreezeObject(worldEditor.object)
 			end
@@ -863,6 +876,22 @@ initDefaultMode = function()
 	require("gizmo"):setLayer(4)
 	worldEditor.gizmo = require("gizmo"):create({ orientationMode =  require("gizmo").Mode.Local, moveSnap = 0.5 })
 
+	-- Translation and scale UI
+	if not Client.IsMobile then
+		worldEditor.positionInput = require("ui_number3input"):create({ field = "Position" })
+		worldEditor.rotationInput = require("ui_number3input"):create({
+			field = "Rotation",
+			textToField = function(text)
+				return math.rad(math.ceil(tonumber(text)))
+			end,
+			fieldToText = function(field)
+				local value = math.floor(math.abs(math.deg(field)))
+				if value == 360 then value = 0 end
+				return tostring(value)
+			end
+		})
+		worldEditor.scaleInput = require("ui_number3input"):create({ field = "Scale" })
+	end
 	-- Rotation Gizmo
 	local uiGizmoRotation = require("ui_gizmo_rotation"):create({
 		onRotate = function()
@@ -874,6 +903,9 @@ initDefaultMode = function()
 		if not Client.IsMobile then
 			uiGizmoRotation.Size = math.min(250, Screen.Height * 0.3)
 			uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
+			worldEditor.positionInput.pos = uiGizmoRotation.pos - { 0, worldEditor.positionInput.Height - padding, 0 }
+			worldEditor.rotationInput.pos = worldEditor.positionInput.pos - { 0, worldEditor.rotationInput.Height - padding, 0 }
+			worldEditor.scaleInput.pos = worldEditor.rotationInput.pos - { 0, worldEditor.scaleInput.Height - padding, 0 }
 		else
 			if Screen.Width < Screen.Height then
 				uiGizmoRotation.Size = 130
@@ -888,6 +920,9 @@ initDefaultMode = function()
 	end
 	uiGizmoRotation:parentDidResize()
 	uiGizmoRotation:hide()
+	worldEditor.positionInput:hide()
+	worldEditor.rotationInput:hide()
+	worldEditor.scaleInput:hide()
 
 	-- Scale gizmo
 	worldEditor.scaleButton = require("uikit"):createButton("< Scale >")
