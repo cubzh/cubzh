@@ -699,6 +699,9 @@ function loadMap()
 				World:AddChild(o)
 				o.Position = a.Position
 				o.OnCollisionBegin = function(_, player)
+					if player ~= Player then
+						return
+					end
 					o2:TextBubble(
 						"Hey! You can edit your avatar in the Profile Menu. 👕👖🥾",
 						-1,
