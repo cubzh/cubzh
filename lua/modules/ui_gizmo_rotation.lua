@@ -4,6 +4,8 @@
 --	node.pos = { 50, 300 }
 --  node:setShape(shape2)
 
+local SNAP = math.pi * 0.0625
+
 local Orientation = require("gizmo").Orientation
 
 local create = function(_, config)
@@ -26,6 +28,7 @@ local create = function(_, config)
 		{ color = Color.Blue, axis = "Z", vector = "Forward" },
 	}
 	local axisList = {}
+	local fakeObject = Object()
 
 	local diff = nil
 	for _,config in ipairs(axisConfig) do
@@ -50,15 +53,20 @@ local create = function(_, config)
 
 		uiAxis.onPress = function(_, _, _, pe)
 			diff = pe.X
+			fakeObject.Rotation = shape.Rotation
 		end
 		uiAxis.onDrag = function(_, pe)
 			if not shape then return end
 			if orientationMode == Orientation.Local then
-				shape:RotateWorld(shape[config.vector], (diff - pe.X) * 6)
+				fakeObject:RotateWorld(fakeObject[config.vector], (diff - pe.X) * 6)
 			else
-				shape:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
+				fakeObject:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
 			end
-			shape.Rotation = shape.Rotation -- trigger onsetcallback
+			shape.Rotation = Rotation(
+				math.floor(fakeObject.Rotation.X / SNAP) * SNAP,
+				math.floor(fakeObject.Rotation.Y / SNAP) * SNAP,
+				math.floor(fakeObject.Rotation.Z / SNAP) * SNAP
+			) -- trigger onsetcallback
 			diff = pe.X
 			if onRotate then
 				onRotate(shape.Rotation)
