@@ -684,6 +684,7 @@ function loadMap()
 		local avatars = World:FindObjectsByName("cta_customavatar")
 		for i, a in ipairs(avatars) do
 			if i == 2 then
+				local defaultScale = Number3(0.5, 0.5, 0.5)
 				local o = Object()
 				local o2 = Object()
 				o2:SetParent(o)
@@ -697,7 +698,7 @@ function loadMap()
 				_avatar:SetParent(o2)
 				World:AddChild(o)
 				o.Position = a.Position
-				o.OnCollisionBegin = function(o, player)
+				o.OnCollisionBegin = function(_, player)
 					o2:TextBubble(
 						"Hey! You can edit your avatar in the Profile Menu. 👕👖🥾",
 						-1,
@@ -705,20 +706,25 @@ function loadMap()
 						true
 					)
 					-- Menu:showProfileButton()
+
 					ease:cancel(o2)
 					ease:linear(o2, 0.1, {
 						onDone = function(o2)
-							o2.Scale = player.Scale
-							ease:linear(o2, 0.1, {}).Scale = player.Scale
+							ease:linear(o2, 0.1, {}).Scale = defaultScale
 						end,
-					}).Scale = player.Scale
-						* 1.1
+					}).Scale = (
+						defaultScale * 1.1
+					)
 
 					o2.Tick = function(o, _)
 						lookAtHorizontal(o, player)
 					end
 				end
 				o.OnCollisionEnd = function(_, _)
+					-- cancel animation and reset NPC scale
+					ease:cancel(o2)
+					o2.Scale = defaultScale
+
 					o2:ClearTextBubble()
 					o2.Tick = nil
 				end
