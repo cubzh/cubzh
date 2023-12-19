@@ -26,6 +26,11 @@ local JUMP_VELOCITY = 82
 local MAX_AIR_JUMP_VELOCITY = 85
 local DRAFT_COLLISION_GROUPS = { 7 }
 
+local GLIDER_BACKPACK = {
+	SCALE = 0.75,
+	ITEM_NAME = "voxels.glider_backpack",
+}
+
 -- VARIABLES
 
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
@@ -165,7 +170,9 @@ Client.OnStart = function()
 		sender:SwingRight()
 	end)
 	multi:onAction("equipGlider", function(sender)
-		sender:EquipBackpack(bundle.Shape("voxels.glider_backpack"))
+		local s = bundle.Shape(GLIDER_BACKPACK.ITEM_NAME)
+		s.Scale = GLIDER_BACKPACK.SCALE
+		sender:EquipBackpack(s)
 	end)
 
 	addPlayerAnimations(Player)
@@ -859,10 +866,10 @@ function addCollectibles()
 	local function spawnBackpacks()
 		-- Glider backpack (blue)
 		local defaultBackpackConfig = {
-			scale = 0.75,
+			scale = GLIDER_BACKPACK.SCALE,
 			rotation = Number3.Zero,
 			position = Number3.Zero,
-			itemName = "voxels.glider_backpack",
+			itemName = GLIDER_BACKPACK.ITEM_NAME,
 			onCollisionBegin = function(c)
 				if gliderUnlocked then
 					collectParticles.Position = c.object.Position
@@ -966,7 +973,7 @@ function addCollectibles()
 					require("ui_toast"):create({
 						message = "Glider unlocked!",
 						center = false,
-						iconShape = bundle.Shape("voxels.glider_backpack"),
+						iconShape = bundle.Shape(GLIDER_BACKPACK.ITEM_NAME),
 						duration = 2,
 					})
 					unlockGlider()
