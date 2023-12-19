@@ -225,7 +225,7 @@ signup.createModal = function(_, config)
 			usernameInfo.Color = theme.errorTextColor
 			r = false
 		elseif not s:match("^[a-z][a-z0-9]*$") then
-			usernameInfo.Text = "❌ only a-z chars and 0-9 digits"
+			usernameInfo.Text = "❌ a-z 0-9 chars only"
 			usernameInfo.Color = theme.errorTextColor
 			r = false
 		else
