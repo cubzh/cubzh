@@ -22,11 +22,13 @@ local onLoad = function(obj, data)
     -- here SetParent/use data to set position/rotation etc.
     print(obj, data.fullname, data.pos[3])
 end
+local onListLoaded = function(list)
+    print(string.format("Successfully loaded %d items", #list))
+end
 local config = {
-    onLoad = onLoad, -- callback called when a shape is loaded, first parameter is the object, second is the element of the list
-    key = "fullname", -- the key representing the fullname of the shape
-    batchSize = 50, -- call to Shape constructor or Object:Load per batch
-    delayBetweenBatch = 0.1 -- seconds
+    onLoad = onLoad, -- called when a shape is loaded, first parameter is the object, second is the element of the list
+    onListLoaded = onListLoaded, -- called when all the items are loaded
+    fullnameItemKey = "fullname", -- the key representing the fullname of the shape
 }
 massLoading:load(list, config)
 --]]
@@ -37,27 +39,45 @@ local cachedObjects = {}
 local awaitingObjects = {}
 local loadingObjects = {}
 
-local DEFAULT_BATCH_SIZE = 50
-local DEFAULT_DELAY_BETWEEN_BATCH = 0.1 -- seconds
-massLoading.load = function(_, list, config, index)
-    config = config or {}
+massLoading.getObject = function(_, name)
+    return cachedObjects[name]
+end
+
+massLoading.load = function(_, list, config)
+    local defaultConfig = {
+		onLoad = nil,
+		onListLoaded = nil,
+		fullnameItemKey = "fullname",
+	}
+    config = require("config"):merge(defaultConfig, config, {
+        acceptTypes = { onLoad = { "function" }, onListLoaded = { "function" } }
+    })
 	if not config.onLoad then
 		error("you must define config.onLoad")
 		return
 	end
-	config.key = config.key or "fullname"
-	config.batchSize = config.batchSize or DEFAULT_BATCH_SIZE
-	config.delayBetweenBatch = config.delayBetweenBatch or DEFAULT_DELAY_BETWEEN_BATCH
 
-	index = index or 1
-    local maxIndex = math.min(#list, index + config.batchSize - 1) -- avoid overflow
-	for i=index, maxIndex do
-		local data = list[i]
-		local fullname = data[config.key]
+    local nbObjectsLoaded = 0
+    local function loadedNextObject()
+        nbObjectsLoaded = nbObjectsLoaded + 1
+        if nbObjectsLoaded >= #list then
+            awaitingObjects = {}
+            loadingObjects = {}
+            config.onListLoaded(list)
+        end
+    end
+
+    local function loadObject(template, data)
+        config.onLoad(Shape(template, { includeChildren = true }), data)
+        loadedNextObject()
+    end
+
+	for _,data in ipairs(list) do
+		local fullname = data[config.fullnameItemKey]
 
 		-- 1) in cache
 		if cachedObjects[fullname] then
-			config.onLoad(Shape(cachedObjects[fullname], { includeChildren = true }), data)
+            loadObject(cachedObjects[fullname], data)
 
 		-- 2) already loading
 		elseif loadingObjects[fullname] then
@@ -75,25 +95,22 @@ massLoading.load = function(_, list, config, index)
 
 				-- load object
 				loadingObjects[fullname] = false
-				config.onLoad(Shape(obj, { includeChildren = true }), data)
+                loadObject(obj, data)
 
 				-- load objects awaiting
 				if awaitingObjects[fullname] then
 					for _,awaitingData in ipairs(awaitingObjects[fullname]) do
-						config.onLoad(Shape(obj, { includeChildren = true }), awaitingData)
+                        loadObject(obj, awaitingData)
 					end
+                    awaitingObjects[fullname] = {}
 				end
 			end)
 		end
 	end
+end
 
-	if index + config.batchSize > #list then
-        return
-    end
-
-	return Timer(config.delayBetweenBatch, function()
-		massLoading:load(list, config, index + config.batchSize)
-	end)
+massLoading.clearCache = function()
+    cachedObjects = {}
 end
 
 return massLoading
