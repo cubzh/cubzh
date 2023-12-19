@@ -487,7 +487,6 @@ local statesSettings = {
 			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 
-
 			-- Translation gizmo
 			worldEditor.gizmo:setObject(worldEditor.object)
 			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
@@ -1386,6 +1385,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		if isLocalPlayer then
 			waitingForUUIDObj.uuid = e.data.uuid
 			objects[waitingForUUIDObj.uuid] = waitingForUUIDObj
+			objects[-1] = nil
 			sendToServer(events.P_START_EDIT_OBJECT, { uuid = e.data.uuid })
 			waitingForUUIDObj = nil
 		else
