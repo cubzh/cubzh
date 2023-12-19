@@ -849,6 +849,9 @@ cubzhBtn.onRelease = function()
 end
 
 chatBtn.onRelease = function()
+	if isChatAvailable() == false then
+		return
+	end
 	if activeModal then
 		showModal(MODAL_KEYS.CHAT)
 	else
@@ -903,7 +906,9 @@ function createChat()
 
 	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
 	btnChatFullscreen.onRelease = function()
-		showModal(MODAL_KEYS.CHAT)
+		if isChatAvailable() then
+			showModal(MODAL_KEYS.CHAT)
+		end
 	end
 	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
 	btnChatFullscreen:hide()
@@ -976,6 +981,9 @@ end
 
 function showChat(input)
 	if System.Authenticated == false then
+		return
+	end
+	if isChatAvailable() == false then
 		return
 	end
 	chatDisplayed = true
@@ -1215,8 +1223,13 @@ topBar.parentDidResize = function(self)
 	if topBarChat then
 		local topBarHeight = self.Height - System.SafeAreaTop
 		topBarChat.Height = topBarHeight - PADDING
-		topBarChat.Width = chatBtn.Width - PADDING * 3 - textBubbleShape.Width
-		topBarChat.pos.X = textBubbleShape.Width + PADDING * 2
+		if textBubbleShape:isVisible() then
+			topBarChat.Width = chatBtn.Width - PADDING * 3 - textBubbleShape.Width
+			topBarChat.pos.X = textBubbleShape.Width + PADDING * 2
+		else
+			topBarChat.Width = chatBtn.Width - PADDING * 2
+			topBarChat.pos.X = PADDING
+		end
 		topBarChat.pos.Y = PADDING
 	end
 end
@@ -1628,6 +1641,14 @@ function accountCheck(callbacks)
 	end)
 end
 
+-- temporary measure, while we implement parental contral
+function isChatAvailable()
+	if System.IsUserUnder13 and Client.IsMobile then
+		return false
+	end
+	return true
+end
+
 signupElements = nil
 
 -- callbacks: success, cancel, error
@@ -1995,6 +2016,10 @@ Timer(0.1, function()
 				under13BadgeShape.LocalPosition.Z = 100
 			end
 			under13Badge:parentDidResize()
+		end
+
+		if isChatAvailable() == false then
+			textBubbleShape:hide()
 		end
 
 		getWorldInfo()
