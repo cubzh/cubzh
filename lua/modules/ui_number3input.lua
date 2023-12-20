@@ -1,8 +1,16 @@
--- Example
---	local node = ui_vector3input:create({ shape = shape })
---	node.Size = 220
---	node.pos = { 50, 300 }
---  node:setShape(shape2)
+
+--[[ Example
+	local node = ui_number3input:create({
+		shape = shape,
+		field = "fullname",
+
+		-- when typing a value, what is the value to apply
+		textToField = function(text) return tonumber(text) end,
+
+		-- when the value changed in the shape, how to display it in the input
+		fieldToText = function(field) return string.format("%.2f", field) end
+	})
+--]]
 
 local defaultConfig = {
 	textToField = function(text)
@@ -31,7 +39,7 @@ local create = function(_, config)
 
 	local shape = config.shape
 	if not config.field then
-		error("Number3Input: missing \"field\" in config")
+		error("missing \"field\" in config", 2)
 	end
 	local textToField = config.textToField
 	local fieldToText = config.fieldToText
