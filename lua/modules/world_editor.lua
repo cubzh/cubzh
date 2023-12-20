@@ -64,9 +64,9 @@ end
 local setSnapGridValue = function(value)
 	worldEditor.gizmo:setMoveSnap(value)
 	if value > 0 then
-		worldEditor.snapGridBtn.Text = string.format("Grid: %d", value)
+		worldEditor.snapGridBtn.Text = string.format("𐄳 %d", value)
 	else
-		worldEditor.snapGridBtn.Text = string.format("Grid: OFF")
+		worldEditor.snapGridBtn.Text = string.format("𐄳 OFF")
 	end
 	snapGrid = value
 end
@@ -1328,7 +1328,7 @@ initDefaultMode = function()
 		{ type="gap" },
 		{
 			type = "button",
-			text = "Grid: 1",
+			text = "𐄳 1",
 			callback = function()
 				if snapGrid == 1 then
 					setSnapGridValue(5)
