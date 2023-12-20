@@ -45,6 +45,8 @@ common.events = {
 	RESET_ALL = "ra",
 	P_SAVE_WORLD = "psw",
 	SAVE_WORLD = "sw",
+	P_SET_MAP_OFFSET = "psmo",
+	SET_MAP_OFFSET = "smo",
 }
 
 local SERIALIZED_CHUNKS_ID = {

@@ -49,6 +49,18 @@ local getWorldState = function()
 	}
 end
 
+local sendSaveWorld = function(sender)
+	if FAKE_SERVER then
+		LocalEvent:Send(LocalEvent.Name.DidReceiveEvent, { a = events.SAVE_WORLD, data = { mapBase64 = serializeWorld(getWorldState()) }, pID = Player.ID })
+	else
+		local e = Event()
+		e.a = events.SAVE_WORLD
+		e.data = { mapBase64 = serializeWorld(getWorldState()) }
+		e.pID = sender.ID
+		e:SendTo(sender)
+	end
+end
+
 local funcs = {
 	[events.P_END_PREPARING] = function(sender, data)
 		if sender ~= master then print("You can't do that") return end
@@ -140,13 +152,23 @@ local funcs = {
 			e:SendTo(Players)
 		end
 	end,
-	[events.P_SET_MAP_SCALE] = function(_, data)
+	[events.P_SET_MAP_SCALE] = function(sender, data)
 		local ratio = data.mapScale / mapScale
 		for _,o in pairs(serverObjects) do
 			o.Scale = o.Scale * ratio
 			o.Position = o.Position * ratio
 		end
 		mapScale = data.mapScale
+		sendSaveWorld(sender)
+		return data
+	end,
+	[events.P_SET_MAP_OFFSET] = function(sender, data)
+		local offset = data.offset
+		-- shift all objects
+		for _,o in pairs(serverObjects) do
+			o.Position = o.Position + offset
+		end
+		sendSaveWorld(sender)
 		return data
 	end,
 	[events.P_RESET_ALL] = function(_, data)

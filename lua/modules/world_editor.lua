@@ -95,6 +95,7 @@ local states = {
 	DUPLICATE_OBJECT = 9,
 	DESTROY_OBJECT = 10,
 	EDIT_MAP = 11,
+	MAP_OFFSET = 12,
 }
 
 local setState
@@ -292,8 +293,7 @@ end
 -- States
 
 local statesSettings = {
-	-- LOADING
-	{
+	[states.LOADING] = {
 		onStateBegin = function()
 			initPickMap()
 			initPickWorld()
@@ -309,8 +309,7 @@ local statesSettings = {
 			Player.Motion = { 0, 0, 0 }
 		end
 	},
-	-- PICK WORLD
-	{
+	[states.PICK_WORLD] = {
 		onStateBegin = function()
 			worldEditor.uiPickWorld:show()
 			require("controls"):turnOff()
@@ -323,8 +322,7 @@ local statesSettings = {
 			end
 		end
 	},
-	-- PICK MAP
-	{
+	[states.PICK_MAP] = {
 		onStateBegin = function()
 			worldEditor.uiPickMap:show()
 			Camera:SetModeFree()
@@ -344,8 +342,7 @@ local statesSettings = {
 			startDefaultMode()
 		end
 	},
-	-- DEFAULT
-	{
+	[states.DEFAULT] = {
 		onStateBegin = function()
 			require("controls"):turnOn()
 			worldEditor.editUI:show()
@@ -359,8 +356,7 @@ local statesSettings = {
 			tryPickObject(pe)
 		end
 	},
-	-- GALLERY
-	{
+	[states.GALLERY] = {
 		onStateBegin = function()
 			worldEditor.gallery:show()
 			require("controls"):turnOff()
@@ -371,8 +367,7 @@ local statesSettings = {
 			require("controls"):turnOn()
 		end
 	},
-	-- SPAWNING_OBJECT
-	{
+	[states.SPAWNING_OBJECT] = {
 		onStateBegin = function(data)
 			worldEditor.rotationShift = data.rotationShift or 0
 			data.uuid = -1
@@ -382,8 +377,7 @@ local statesSettings = {
 			end)
 		end
 	},
-	-- PLACING_OBJECT
-	{
+	[states.PLACING_OBJECT] = {
 		onStateBegin = function(obj)
 			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
@@ -455,8 +449,7 @@ local statesSettings = {
 			return true
 		end
 	},
-	-- UPDATING_OBJECT
-	{
+	[states.UPDATING_OBJECT] = {
 		onStateBegin = function(obj)
 			if obj.uuid ~= -1 then
 				sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
@@ -585,8 +578,7 @@ local statesSettings = {
 			return true
 		end
 	},
-	-- DUPLICATE_OBJECT
-	{
+	[states.DUPLICATE_OBJECT] = {
 		onStateBegin = function(uuid)
 			local obj = objects[uuid]
 			if not obj then
@@ -612,8 +604,7 @@ local statesSettings = {
 			worldEditor.updateObjectUI:hide()
 		end
 	},
-	-- DESTROY_OBJECT
-	{
+	[states.DESTROY_OBJECT] = {
 		onStateBegin = function(uuid)
 			local obj = objects[uuid]
 			if not obj then
@@ -628,8 +619,7 @@ local statesSettings = {
 			worldEditor.updateObjectUI:hide()
 		end
 	},
-	-- EDIT_MAP
-	{
+	[states.EDIT_MAP] = {
 		onStateBegin = function()
 			worldEditor.selectedColor = Color.Grey
 			local block = MutableShape()
@@ -669,6 +659,82 @@ local statesSettings = {
 					color = color
 				})
 			end
+		end
+	},
+	[states.MAP_OFFSET] = {
+		onStateBegin = function()
+			-- close settings menu
+			worldEditor.showSettingsBtn:show()
+			worldEditor.menuBar:hide()
+
+			local mapPosition = map.Position:Copy()
+
+			-- Offset buttons
+			local ui = require("uikit")
+			local mainContainer = require("ui_container"):createVerticalContainer()
+			worldEditor.offsetMainContainer = mainContainer
+
+			local axisList = { "X", "Y", "Z" }
+			for _,axis in ipairs(axisList) do
+				local btnMinus5 = ui:createButton("-5")
+				btnMinus5.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] - 5 * map.Scale[axis]
+					map.Position = value
+				end
+				local btnMinus = ui:createButton("-1")
+				btnMinus.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] - map.Scale[axis]
+					map.Position = value
+				end
+				local mapPositionAxis = ui:createButton(axis..": 0")
+				mapPositionAxis.Width = 100
+				map.Position:AddOnSetCallback(function()
+					mapPositionAxis.Text = string.format("%s: %d", axis, map.Position[axis] / map.Scale[axis])
+				end)
+				local btnPlus = ui:createButton("+1")
+				btnPlus.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] + map.Scale[axis]
+					map.Position = value
+				end
+				local btnPlus5 = ui:createButton("+5")
+				btnPlus5.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] + 5 * map.Scale[axis]
+					map.Position = value
+				end
+				local container = require("ui_container"):createHorizontalContainer()
+				container:pushElement(btnMinus5)
+				container:pushElement(btnMinus)
+				container:pushGap()
+				container:pushElement(mapPositionAxis)
+				container:pushGap()
+				container:pushElement(btnPlus)
+				container:pushElement(btnPlus5)
+				mainContainer:pushElement(container)
+				mainContainer:pushGap()
+			end
+
+			local validateMapOffsetBtn = require("uikit"):createButton("✅")
+			worldEditor.validateMapOffsetBtn = validateMapOffsetBtn
+			validateMapOffsetBtn.pos = { Screen.Width * 0.5 - validateMapOffsetBtn.Width * 0.5, validateMapOffsetBtn.Height }
+			validateMapOffsetBtn.onRelease = function()
+				local offset = mapPosition - map.Position
+				sendToServer(events.P_SET_MAP_OFFSET, { offset = offset })
+				map.Position = mapPosition
+				setState(states.DEFAULT)
+			end
+		end,
+		onStateEnd = function()
+			require("controls"):turnOn()
+			worldEditor.offsetMainContainer:remove()
+			worldEditor.offsetMainContainer = nil
+			setCameraMode(cameraMode)
+			worldEditor.validateMapOffsetBtn:remove()
+			worldEditor.validateMapOffsetBtn = nil
+			worldEditor.gizmo:setObject(nil)
 		end
 	}
 }
@@ -1074,6 +1140,14 @@ initDefaultMode = function()
 		{ type = "gap" },
 		{
 			type = "button",
+			text = "Map Offset",
+			callback = function()
+				setState(states.MAP_OFFSET)
+			end
+		},
+		{ type = "gap" },
+		{
+			type = "button",
 			text = "Reset all",
 			callback = function()
 				alertModal = require("alert"):create("Confirm that you want to remove all modifications and start from scratch.", { uikit = require("uikit") })
@@ -1331,10 +1405,10 @@ initDefaultMode = function()
 			text = "𐄳 1",
 			callback = function()
 				if snapGrid == 1 then
-					setSnapGridValue(5)
-				elseif snapGrid == 5 then
+					setSnapGridValue(map.Scale.X)
+				elseif snapGrid == map.Scale.X then
 					setSnapGridValue(0)
-				elseif snapGrid == 0 then
+				else
 					setSnapGridValue(1)
 				end
 			end,
@@ -1519,6 +1593,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			o.Position = o.Position * ratio
 		end
 		dropPlayer()
+	elseif e.a == events.SET_MAP_OFFSET then
+		local offset = data.offset
+		for _,o in pairs(objects) do
+			o.Position = o.Position + offset
+		end
+		Player.Position = Player.Position + offset
 	elseif e.a == events.RESET_ALL then
 		setState(states.DEFAULT)
 		clearWorld()
