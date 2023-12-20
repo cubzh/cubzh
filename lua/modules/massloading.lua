@@ -40,44 +40,42 @@ local awaitingObjects = {}
 local loadingObjects = {}
 
 massLoading.getObject = function(_, name)
-    return cachedObjects[name]
+	return cachedObjects[name]
 end
 
 massLoading.load = function(_, list, config)
-    local defaultConfig = {
+	local defaultConfig = {
 		onLoad = nil,
 		onListLoaded = nil,
 		fullnameItemKey = "fullname",
 	}
-    config = require("config"):merge(defaultConfig, config, {
-        acceptTypes = { onLoad = { "function" }, onListLoaded = { "function" } }
-    })
+	config = require("config"):merge(defaultConfig, config, {
+		acceptTypes = { onLoad = { "function" }, onListLoaded = { "function" } },
+	})
 	if not config.onLoad then
 		error("you must define config.onLoad")
 		return
 	end
 
-    local nbObjectsLoaded = 0
-    local function loadedNextObject()
-        nbObjectsLoaded = nbObjectsLoaded + 1
-        if nbObjectsLoaded >= #list then
-            awaitingObjects = {}
-            loadingObjects = {}
-            config.onListLoaded(list)
-        end
-    end
+	local nbObjectsLoaded = 0
+	local function loadedNextObject()
+		nbObjectsLoaded = nbObjectsLoaded + 1
+		if nbObjectsLoaded >= #list then
+			config.onListLoaded(list)
+		end
+	end
 
-    local function loadObject(template, data)
-        config.onLoad(Shape(template, { includeChildren = true }), data)
-        loadedNextObject()
-    end
+	local function loadObject(template, data)
+		config.onLoad(Shape(template, { includeChildren = true }), data)
+		loadedNextObject()
+	end
 
-	for _,data in ipairs(list) do
+	for _, data in ipairs(list) do
 		local fullname = data[config.fullnameItemKey]
 
 		-- 1) in cache
 		if cachedObjects[fullname] then
-            loadObject(cachedObjects[fullname], data)
+			loadObject(cachedObjects[fullname], data)
 
 		-- 2) already loading
 		elseif loadingObjects[fullname] then
@@ -95,14 +93,14 @@ massLoading.load = function(_, list, config)
 
 				-- load object
 				loadingObjects[fullname] = false
-                loadObject(obj, data)
+				loadObject(obj, data)
 
 				-- load objects awaiting
 				if awaitingObjects[fullname] then
-					for _,awaitingData in ipairs(awaitingObjects[fullname]) do
-                        loadObject(obj, awaitingData)
+					for _, awaitingData in ipairs(awaitingObjects[fullname]) do
+						loadObject(obj, awaitingData)
 					end
-                    awaitingObjects[fullname] = {}
+					awaitingObjects[fullname] = {}
 				end
 			end)
 		end
@@ -110,7 +108,7 @@ massLoading.load = function(_, list, config)
 end
 
 massLoading.clearCache = function()
-    cachedObjects = {}
+	cachedObjects = {}
 end
 
 return massLoading
