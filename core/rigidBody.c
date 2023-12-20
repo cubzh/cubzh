@@ -44,18 +44,18 @@ struct _RigidBody {
     // world constant acceleration, in world units/sec^2 (ignores mass)
     float3 *constantAcceleration;
 
-    // mass of the object determines how much a given force can move it,
-    // it cannot be zero, a neutral mass is a mass of 1
-    float mass;
-
     // combined friction of 2 surfaces in contact represents how much force is absorbed,
     // it is a rate between 0 (full stop on contact) and 1 (full slide, no friction), or
     // below 0 (inverted movement) and above 1 (amplified movement)
-    float friction;
+    float *friction;
 
     // bounciness represents how much force is produced in response to a collision,
     // it is a rate between 0 (no bounce) and 1 (100% of the force bounced) or above
-    float bounciness;
+    float *bounciness;
+
+    // mass of the object determines how much a given force can move it,
+    // it cannot be zero, a neutral mass is a mass of 1
+    float mass;
 
     // collision masks
     uint16_t groups;
@@ -585,12 +585,19 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                wNormal.z * vIntruding_mag};
 
             // combined friction & bounciness
-            const float friction = contact.rb != NULL
-                                       ? rigidbody_get_combined_friction(rb, contact.rb)
-                                       : rb->friction;
+            const FACE_INDEX_INT_T contactFace = utils_aligned_normal_to_face(&contact.normal);
+            const FACE_INDEX_INT_T face = utils_face_swapped(contactFace);
+            const float friction = contact.rb != NULL ? rigidbody_get_combined_friction(rb,
+                                                                                        contact.rb,
+                                                                                        face,
+                                                                                        contactFace)
+                                                      : rb->friction[face];
             const float bounciness = contact.rb != NULL
-                                         ? rigidbody_get_combined_bounciness(rb, contact.rb)
-                                         : rb->bounciness;
+                                         ? rigidbody_get_combined_bounciness(rb,
+                                                                             contact.rb,
+                                                                             face,
+                                                                             contactFace)
+                                         : rb->bounciness[face];
 
             // (1) apply combined friction on tangential displacement, assign tangential push if
             // displacement originated at least partly from own velocity, not only motion or scene
@@ -878,13 +885,18 @@ RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16
     b->velocity = float3_new_zero();
     b->constantAcceleration = float3_new_zero();
     b->mass = PHYSICS_MASS_DEFAULT;
-    b->friction = PHYSICS_FRICTION_DEFAULT;
-    b->bounciness = PHYSICS_BOUNCINESS_DEFAULT;
     b->contact = AxesMaskNone;
     b->groups = groups;
     b->collidesWith = collidesWith;
     b->simulationFlags = SIMULATIONFLAG_NONE;
     b->awakeFlag = 0;
+
+    b->friction = (float *)malloc(sizeof(float) * FACE_COUNT);
+    b->bounciness = (float *)malloc(sizeof(float) * FACE_COUNT);
+    for (uint8_t i = 0; i < FACE_COUNT; ++i) {
+        b->friction[i] = PHYSICS_FRICTION_DEFAULT;
+        b->bounciness[i] = PHYSICS_BOUNCINESS_DEFAULT;
+    }
 
     _rigidbody_set_simulation_flag_value(b, SIMULATIONFLAG_MODE, mode);
 
@@ -900,6 +912,8 @@ void rigidbody_free(RigidBody *rb) {
     float3_free(rb->motion);
     float3_free(rb->velocity);
     float3_free(rb->constantAcceleration);
+    free(rb->friction);
+    free(rb->bounciness);
 
     free(rb);
 }
@@ -1014,23 +1028,23 @@ float rigidbody_get_mass(const RigidBody *rb) {
 }
 
 void rigidbody_set_mass(RigidBody *rb, const float value) {
-    rb->mass = maximum(value, 1.0f);
+    rb->mass = maximum(value, EPSILON_ZERO);
 }
 
-float rigidbody_get_friction(const RigidBody *rb) {
-    return rb->friction;
+float rigidbody_get_friction(const RigidBody *rb, const FACE_INDEX_INT_T face) {
+    return rb->friction[face < FACE_COUNT ? face : FACE_DOWN];
 }
 
-void rigidbody_set_friction(RigidBody *rb, const float value) {
-    rb->friction = value;
+void rigidbody_set_friction(RigidBody *rb, const FACE_INDEX_INT_T face, const float value) {
+    rb->friction[face < FACE_COUNT ? face : FACE_DOWN] = value;
 }
 
-float rigidbody_get_bounciness(const RigidBody *rb) {
-    return rb->bounciness;
+float rigidbody_get_bounciness(const RigidBody *rb, const FACE_INDEX_INT_T face) {
+    return rb->bounciness[face < FACE_COUNT ? face : FACE_DOWN];
 }
 
-void rigidbody_set_bounciness(RigidBody *rb, const float value) {
-    rb->bounciness = maximum(value, 0.0f);
+void rigidbody_set_bounciness(RigidBody *rb, const FACE_INDEX_INT_T face, const float value) {
+    rb->bounciness[face < FACE_COUNT ? face : FACE_DOWN] = maximum(value, 0.0f);
 }
 
 uint8_t rigidbody_get_contact_mask(const RigidBody *rb) {
@@ -1260,23 +1274,29 @@ bool rigidbody_collision_masks_reciprocal_match(const uint16_t groups1,
            (collidesWith2 & groups1) != PHYSICS_GROUP_NONE;
 }
 
-float rigidbody_get_combined_friction(const RigidBody *rb1, const RigidBody *rb2) {
+float rigidbody_get_combined_friction(const RigidBody *rb1,
+                                      const RigidBody *rb2,
+                                      const FACE_INDEX_INT_T face1,
+                                      const FACE_INDEX_INT_T face2) {
 #if PHYSICS_COMBINE_FRICTION_FUNC == 0
-    return minimum(rb1->friction, rb2->friction);
+    return maximum(minimum(rb1->friction[face1], rb2->friction[face2]), 0.0f);
 #elif PHYSICS_COMBINE_FRICTION_FUNC == 1
-    return maximum(rb1->friction, rb2->friction);
+    return maximum(maximum(rb1->friction[face1], rb2->friction[face2]), 0.0f);
 #elif PHYSICS_COMBINE_FRICTION_FUNC == 2
-    return (rb1->friction + rb2->friction) * .5f;
+    return maximum((rb1->friction[face1] + rb2->friction[face2]) * .5f, 0.0f);
 #endif
 }
 
-float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *rb2) {
+float rigidbody_get_combined_bounciness(const RigidBody *rb1,
+                                        const RigidBody *rb2,
+                                        const FACE_INDEX_INT_T face1,
+                                        const FACE_INDEX_INT_T face2) {
 #if PHYSICS_COMBINE_BOUNCINESS_FUNC == 0
-    return minimum(rb1->bounciness, rb2->bounciness);
+    return minimum(rb1->bounciness[face1], rb2->bounciness[face2]);
 #elif PHYSICS_COMBINE_BOUNCINESS_FUNC == 1
-    return maximum(rb1->bounciness, rb2->bounciness);
+    return maximum(rb1->bounciness[face1], rb2->bounciness[face2]);
 #elif PHYSICS_COMBINE_BOUNCINESS_FUNC == 2
-    return (rb1->bounciness + rb2->bounciness) * .5f;
+    return (rb1->bounciness[face1] + rb2->bounciness[face2]) * .5f;
 #endif
 }
 
