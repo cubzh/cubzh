@@ -355,6 +355,32 @@ bool transform_ensure_rigidbody(Transform *t,
     return isNew;
 }
 
+bool transform_ensure_rigidbody_copy(Transform *t, const Transform *other) {
+    if (other->rigidBody == NULL) {
+        return false;
+    }
+
+    if (t->rigidBody == NULL) {
+        t->rigidBody = rigidbody_new_copy(other->rigidBody);
+    } else {
+        rigidbody_set_collider(t->rigidBody, rigidbody_get_collider(other->rigidBody), false);
+        rigidbody_set_constant_acceleration(t->rigidBody,
+                                            rigidbody_get_constant_acceleration(other->rigidBody));
+        rigidbody_set_mass(t->rigidBody, rigidbody_get_mass(other->rigidBody));
+        rigidbody_set_groups(t->rigidBody, rigidbody_get_groups(other->rigidBody));
+        rigidbody_set_collides_with(t->rigidBody, rigidbody_get_collides_with(other->rigidBody));
+        for (FACE_INDEX_INT_T i = 0; i < FACE_COUNT; ++i) {
+            rigidbody_set_friction(t->rigidBody, i, rigidbody_get_friction(other->rigidBody, i));
+            rigidbody_set_bounciness(t->rigidBody,
+                                     i,
+                                     rigidbody_get_bounciness(other->rigidBody, i));
+        }
+        rigidbody_set_simulation_mode(t->rigidBody,
+                                      rigidbody_get_simulation_mode(other->rigidBody));
+    }
+    return true;
+}
+
 RigidBody *transform_get_rigidbody(Transform *const t) {
     return t->rigidBody;
 }
