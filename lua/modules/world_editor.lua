@@ -450,7 +450,7 @@ local statesSettings = {
 			setState(states.UPDATING_OBJECT, placingObj)
 		end,
 		pointerWheelPriority = function(delta)
-			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
+			worldEditor.rotationShift = worldEditor.rotationShift + math.pi * 0.0625 * (delta > 0 and 1 or -1)
 			worldEditor.placingObj.Rotation.Y = worldEditor.rotationShift
 			return true
 		end
@@ -579,7 +579,7 @@ local statesSettings = {
 			worldEditor.object = nil
 		end,
 		pointerWheelPriority = function(delta)
-			worldEditor.object:RotateWorld(Number3(0,1,0), delta * 0.005)
+			worldEditor.object:RotateWorld(Number3(0,1,0), math.pi * 0.0625 * (delta > 0 and 1 or -1))
 			worldEditor.object.Rotation = worldEditor.object.Rotation -- trigger OnSetCallback
 			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
 			return true

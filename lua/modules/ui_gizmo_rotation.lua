@@ -59,14 +59,19 @@ local create = function(_, config)
 			if not shape then return end
 			if orientationMode == Orientation.Local then
 				fakeObject:RotateWorld(fakeObject[config.vector], (diff - pe.X) * 6)
+				shape.Rotation = Rotation(
+					fakeObject.Rotation.X,
+					fakeObject.Rotation.Y,
+					fakeObject.Rotation.Z
+				) -- trigger onsetcallback
 			else
 				fakeObject:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
+				shape.Rotation = Rotation(
+					math.floor(fakeObject.Rotation.X / SNAP) * SNAP,
+					math.floor(fakeObject.Rotation.Y / SNAP) * SNAP,
+					math.floor(fakeObject.Rotation.Z / SNAP) * SNAP
+				) -- trigger onsetcallback
 			end
-			shape.Rotation = Rotation(
-				math.floor(fakeObject.Rotation.X / SNAP) * SNAP,
-				math.floor(fakeObject.Rotation.Y / SNAP) * SNAP,
-				math.floor(fakeObject.Rotation.Z / SNAP) * SNAP
-			) -- trigger onsetcallback
 			diff = pe.X
 			if onRotate then
 				onRotate(shape.Rotation)
