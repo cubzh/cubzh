@@ -20,6 +20,8 @@ local mapIndex = 1
 local mapName
 local mapGhost = false
 
+local snapGrid = 1
+
 local CameraMode = {
 	THIRD_PERSON = 0,
 	FIRST_PERSON = 1,
@@ -57,6 +59,16 @@ local setOrientationMode = function(mode)
 		if not worldEditor.gizmoOrientationModeBtn then return end
 		worldEditor.gizmoOrientationModeBtn.Text = "🌎 World"
 	end
+end
+
+local setSnapGridValue = function(value)
+	worldEditor.gizmo:setMoveSnap(value)
+	if value > 0 then
+		worldEditor.snapGridBtn.Text = string.format("Grid: %d", value)
+	else
+		worldEditor.snapGridBtn.Text = string.format("Grid: OFF")
+	end
+	snapGrid = value
 end
 
 local getObjectInfoTable = function(obj)
@@ -856,6 +868,7 @@ startDefaultMode = function()
 		setCameraMode(CameraMode.THIRD_PERSON)
 	end
 	setOrientationMode(GizmoOrientation.Local)
+	setSnapGridValue(1)
     dropPlayer()
 
 	require("jumpfly")
@@ -875,6 +888,7 @@ initDefaultMode = function()
 	Camera.Layers = { 1, 4 }
 	require("gizmo"):setLayer(4)
 	worldEditor.gizmo = require("gizmo"):create({ orientationMode =  require("gizmo").Mode.Local, moveSnap = 0.5 })
+	worldEditor.gizmo:setMoveSnap(1)
 
 	-- Translation and scale UI
 	if not Client.IsMobile then
@@ -1310,6 +1324,21 @@ initDefaultMode = function()
 				end
 			end,
 			name = "gizmoOrientationModeBtn"
+		},
+		{ type="gap" },
+		{
+			type = "button",
+			text = "Grid: 1",
+			callback = function()
+				if snapGrid == 1 then
+					setSnapGridValue(5)
+				elseif snapGrid == 5 then
+					setSnapGridValue(0)
+				elseif snapGrid == 0 then
+					setSnapGridValue(1)
+				end
+			end,
+			name = "snapGridBtn"
 		}
 	}
 	for _,info in ipairs(topBarConfig) do
