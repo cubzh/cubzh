@@ -240,7 +240,7 @@ local writeChunkAmbience = function(d, ambience)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.AMBIENCE)
-	local cursorPosition = d.Cursor
+	local cursorLengthField = d.Cursor
 	d:WriteUInt16(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -279,8 +279,8 @@ local writeChunkAmbience = function(d, ambience)
 		serializeFunction(d, value[2])
 	end
 
-	local size = d.Cursor - cursorPosition
-	d.Cursor = cursorPosition
+	local size = d.Cursor - cursorLengthField
+	d.Cursor = cursorLengthField
 	d:WriteUInt16(size)
 	d.Cursor = d.Length
 
@@ -335,7 +335,7 @@ local writeChunkObjects = function(d, objects)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.OBJECTS)
-	local cursorPosition = d.Cursor
+	local cursorLengthField = d.Cursor
 	d:WriteUInt32(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -360,7 +360,7 @@ local writeChunkObjects = function(d, objects)
 		d:WriteUInt16(#group)
 
 		for _, object in ipairs(group) do
-			local cursorNbFields = d.Length
+			local cursorNbFields = d.Cursor
 			local nbFields = 0
 			d:WriteUInt8(0) -- temporary nbFields
 
@@ -401,15 +401,14 @@ local writeChunkObjects = function(d, objects)
 			end
 
 			-- jump back to set nbFields value
-			local endCursor = d.Length
-			d.Length = cursorNbFields
+			d.Cursor = cursorNbFields
 			d:WriteUInt8(nbFields)
-			d.Length = endCursor
+			d.Cursor = d.Length
 		end
 	end
 
-	local size = d.Cursor - cursorPosition
-	d.Cursor = cursorPosition
+	local size = d.Cursor - cursorLengthField
+	d.Cursor = cursorLengthField
 	d:WriteUInt32(size)
 	d.Cursor = d.Length
 
@@ -418,7 +417,7 @@ end
 
 local readChunkObjectsV2 = function(d)
 	local objects = {}
-	d:ReadUInt16() -- read size
+	d:ReadUInt32() -- read size
 	local nbObjects = d:ReadUInt16()
 	local fetchedObjects = 0
 	while fetchedObjects < nbObjects do
@@ -509,7 +508,7 @@ local writeChunkBlocks = function(d, blocks)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.BLOCKS)
-	local cursorPosition = d.Cursor
+	local cursorLengthField = d.Cursor
 	d:WriteUInt16(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -531,8 +530,8 @@ local writeChunkBlocks = function(d, blocks)
 		end
 	end
 
-	local size = d.Cursor - cursorPosition
-	d.Cursor = cursorPosition
+	local size = d.Cursor - cursorLengthField
+	d.Cursor = cursorLengthField
 	d:WriteUInt16(size)
 	d:WriteUInt16(nbBlocks)
 	d.Cursor = d.Length
@@ -558,32 +557,6 @@ local readChunkBlocks = function(d)
 	return blocks
 end
 
-local writeChunkBase64 = function(d, chunkId, chunkTable)
-	if chunkTable == nil then
-		error("can't serialize chunk " .. tostring(chunkId), 2)
-		return false
-	end
-	d:WriteByte(chunkId)
-	-- chunk
-	-- CHUNK_ID 1
-	-- CHUNK_LEN 4 (len)
-	-- BASE64 len
-	local data = Data(chunkTable)
-	local dataBase64 = data:ToString({ format = "base64" })
-	d:WriteUInt32(#dataBase64)
-	d:WriteString(dataBase64)
-	return true
-end
-
-local readChunkBase64 = function(d)
-	local len = d:ReadUInt32()
-	local base64 = d:ReadString(len)
-	local d2 = Data(base64, { format = "base64" })
-	return d2:ToTable()
-end
-
--- v0: lua table serialized
--- v1: versionId, map chunk that can be read from cpp to load map, then 3 table serialized as base64 chunks
 -- v2: versionId, map chunk that can be read from cpp to load map, ambience fields, objects, blocks
 --     ambience, objects and blocks might not be serialized if the value is nil or length is 0
 -- v3: same as v2 but removed itemDetailsCell and Objects chunk length is now uint32 and not uint16
@@ -614,16 +587,7 @@ local deserializeWorldBase64 = function(str)
 	local d = Data(str, { format = "base64" })
 	local version = d:ReadByte()
 	local world = {}
-	if version == 1 then
-		d:ReadByte() -- skip chunk byte
-		world.mapName, world.mapScale = readChunkMap(d)
-		d:ReadByte() -- skip chunk byte
-		world.ambience = readChunkBase64(d)
-		d:ReadByte() -- skip chunk byte
-		world.objects = readChunkBase64(d)
-		d:ReadByte() -- skip chunk byte
-		world.blocks = readChunkBase64(d)
-	elseif version == 2 or version == 3 then
+	if version == 2 or version == 3 then
 		while d.Cursor < d.Length do
 			local chunk = d:ReadByte()
 			if chunk == SERIALIZED_CHUNKS_ID.MAP then
@@ -667,17 +631,6 @@ common.uuidv4 = function()
 	end)
 end
 
--- Module mass loading
---[[
-local loadingObjects = { tree1_1 }
-local awaitingObjects["tree1"] = { tree1_2 }
-local cachedObjects = {}
--- when object load finished
-table.insert(cachedObjects, tree1_1)
-for _,objInfo in ipairs(awaitingObjects["tree1"]) do
-	local obj = Shape(tree1_1)
-end
---]]
 local loadObject = function(objInfo, didLoad)
 	Object:Load(objInfo.fullname, function(obj)
 		obj:SetParent(World)
