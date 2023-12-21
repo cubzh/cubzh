@@ -259,7 +259,7 @@ Shape *shape_make(void) {
 
 Shape *shape_make_2(const bool isMutable) {
     Shape *s = shape_make();
-    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, true);
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, isMutable);
     return s;
 }
 
@@ -342,10 +342,30 @@ Shape *shape_make_copy(Shape *origin) {
         s->fullname = string_new_copy(origin->fullname);
     }
 
-    Transform *t = shape_get_root_transform(origin);
-    const char *name = transform_get_name(t);
-    if (name != NULL) {
-        transform_set_name(shape_get_root_transform(s), name);
+    if (origin->pivot != NULL) {
+        const float3 pivot = shape_get_pivot(origin);
+        shape_set_pivot(s, pivot.x, pivot.y, pivot.z);
+    }
+
+    // copy transform parameters
+    Transform *originTr = shape_get_root_transform(origin);
+    Transform *t = shape_get_root_transform(s);
+    {
+        const char *name = transform_get_name(originTr);
+        if (name != NULL) {
+            transform_set_name(t, name);
+        }
+
+        transform_ensure_rigidbody_copy(t, originTr);
+
+        transform_set_hidden_branch(t, transform_is_hidden_branch(originTr));
+        transform_set_hidden_self(t, transform_is_hidden_self(originTr));
+
+        transform_set_local_scale_vec(t, transform_get_local_scale(originTr));
+        transform_set_position_vec(t, transform_get_position(originTr));
+        transform_set_rotation(t, transform_get_rotation(originTr));
+
+        // Note: do not parent automatically
     }
 
     return s;

@@ -874,33 +874,80 @@ void _rigidbody_trigger_tick(Scene *scene,
 }
 
 RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16_t collidesWith) {
-    RigidBody *b = (RigidBody *)malloc(sizeof(RigidBody));
-    if (b == NULL) {
+    RigidBody *rb = (RigidBody *)malloc(sizeof(RigidBody));
+    if (rb == NULL) {
         return NULL;
     }
 
-    b->collider = box_new_copy(&box_one);
-    b->rtreeLeaf = NULL;
-    b->motion = float3_new_zero();
-    b->velocity = float3_new_zero();
-    b->constantAcceleration = float3_new_zero();
-    b->mass = PHYSICS_MASS_DEFAULT;
-    b->contact = AxesMaskNone;
-    b->groups = groups;
-    b->collidesWith = collidesWith;
-    b->simulationFlags = SIMULATIONFLAG_NONE;
-    b->awakeFlag = 0;
+    rb->collider = box_new_copy(&box_one);
+    rb->rtreeLeaf = NULL;
+    rb->motion = float3_new_zero();
+    rb->velocity = float3_new_zero();
+    rb->constantAcceleration = float3_new_zero();
+    rb->mass = PHYSICS_MASS_DEFAULT;
+    rb->contact = AxesMaskNone;
+    rb->groups = groups;
+    rb->collidesWith = collidesWith;
+    rb->simulationFlags = SIMULATIONFLAG_NONE;
+    rb->awakeFlag = 0;
 
-    b->friction = (float *)malloc(sizeof(float) * FACE_COUNT);
-    b->bounciness = (float *)malloc(sizeof(float) * FACE_COUNT);
+    rb->friction = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->friction == NULL) {
+        return NULL;
+    }
+    rb->bounciness = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->bounciness == NULL) {
+        return NULL;
+    }
     for (uint8_t i = 0; i < FACE_COUNT; ++i) {
-        b->friction[i] = PHYSICS_FRICTION_DEFAULT;
-        b->bounciness[i] = PHYSICS_BOUNCINESS_DEFAULT;
+        rb->friction[i] = PHYSICS_FRICTION_DEFAULT;
+        rb->bounciness[i] = PHYSICS_BOUNCINESS_DEFAULT;
     }
 
-    _rigidbody_set_simulation_flag_value(b, SIMULATIONFLAG_MODE, mode);
+    _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, mode);
 
-    return b;
+    return rb;
+}
+
+RigidBody *rigidbody_new_copy(const RigidBody *other) {
+    if (other == NULL) {
+        return NULL;
+    }
+
+    RigidBody *rb = (RigidBody *)malloc(sizeof(RigidBody));
+    if (rb == NULL) {
+        return NULL;
+    }
+
+    rb->collider = box_new_copy(other->collider);
+    rb->rtreeLeaf = NULL;
+    rb->motion = float3_new_zero();
+    rb->velocity = float3_new_zero();
+    rb->constantAcceleration = float3_new_copy(other->constantAcceleration);
+    rb->mass = other->mass;
+    rb->contact = AxesMaskNone;
+    rb->groups = other->groups;
+    rb->collidesWith = other->collidesWith;
+    rb->simulationFlags = SIMULATIONFLAG_NONE;
+    rb->awakeFlag = 0;
+
+    rb->friction = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->friction == NULL) {
+        return NULL;
+    }
+    rb->bounciness = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->bounciness == NULL) {
+        return NULL;
+    }
+    for (uint8_t i = 0; i < FACE_COUNT; ++i) {
+        rb->friction[i] = other->friction[i];
+        rb->bounciness[i] = other->bounciness[i];
+    }
+
+    const uint8_t otherMode = _rigidbody_get_simulation_flag_value(other, SIMULATIONFLAG_MODE);
+    _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, otherMode);
+
+    return rb;
 }
 
 void rigidbody_free(RigidBody *rb) {

@@ -80,6 +80,7 @@ typedef void (*pointer_rigidbody_collision_func)(CollisionCallbackType type,
 
 /// MARK: - Lifecycle -
 RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16_t collidesWith);
+RigidBody *rigidbody_new_copy(const RigidBody *other);
 void rigidbody_free(RigidBody *rb);
 void rigidbody_reset(RigidBody *rb);
 void rigidbody_non_kinematic_reset(RigidBody *rb);

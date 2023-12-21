@@ -108,6 +108,7 @@ bool transform_ensure_rigidbody(Transform *t,
                                 uint16_t groups,
                                 uint16_t collidesWith,
                                 RigidBody **out);
+bool transform_ensure_rigidbody_copy(Transform *t, const Transform *other);
 RigidBody *transform_get_rigidbody(Transform *const t);
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);
 
