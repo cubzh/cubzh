@@ -842,7 +842,7 @@ CastHitType scene_cast_box(Scene *sc,
                                                       &modelVector,
                                                       rigidbody_get_collider(hitRb),
                                                       &modelEpsilon,
-                                                      true,
+                                                      false,
                                                       NULL,
                                                       NULL);
                         if (swept < 1.0f) {
