@@ -240,7 +240,7 @@ local writeChunkAmbience = function(d, ambience)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.AMBIENCE)
-	local cursorLength = d.Length
+	local cursorPosition = d.Cursor
 	d:WriteUInt16(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -279,11 +279,10 @@ local writeChunkAmbience = function(d, ambience)
 		serializeFunction(d, value[2])
 	end
 
-	local finalLength = d.Length
-	local size = d.Length - cursorLength
-	d.Length = cursorLength
+	local size = d.Cursor - cursorPosition
+	d.Cursor = cursorPosition
 	d:WriteUInt16(size)
-	d.Length = finalLength
+	d.Cursor = d.Length
 
 	return true
 end
@@ -336,7 +335,7 @@ local writeChunkObjects = function(d, objects)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.OBJECTS)
-	local cursorLength = d.Length
+	local cursorPosition = d.Cursor
 	d:WriteUInt32(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -409,11 +408,10 @@ local writeChunkObjects = function(d, objects)
 		end
 	end
 
-	local finalLength = d.Length
-	local size = d.Length - cursorLength
-	d.Length = cursorLength
+	local size = d.Cursor - cursorPosition
+	d.Cursor = cursorPosition
 	d:WriteUInt32(size)
-	d.Length = finalLength
+	d.Cursor = d.Length
 
 	return true
 end
@@ -511,7 +509,7 @@ local writeChunkBlocks = function(d, blocks)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.BLOCKS)
-	local cursorLength = d.Length
+	local cursorPosition = d.Cursor
 	d:WriteUInt16(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -533,12 +531,11 @@ local writeChunkBlocks = function(d, blocks)
 		end
 	end
 
-	local finalLength = d.Length
-	local size = d.Length - cursorLength
-	d.Length = cursorLength
+	local size = d.Cursor - cursorPosition
+	d.Cursor = cursorPosition
 	d:WriteUInt16(size)
 	d:WriteUInt16(nbBlocks)
-	d.Length = finalLength
+	d.Cursor = d.Length
 
 	return true
 end
