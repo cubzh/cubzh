@@ -273,7 +273,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
 
     uint16_t shapeId = 1;
     if (create_shape_buffers(shapesBuffers, shape, &shapeId, 0, &size) == false) {
-        free(shapesBuffers);
+        doubly_linked_list_free(shapesBuffers);
         return false;
     }
 
@@ -298,7 +298,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
     uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t) * size);
     if (buf == NULL) {
         free(paletteCompressedData);
-        free(shapesBuffers);
+        doubly_linked_list_free(shapesBuffers);
         return false;
     }
 
@@ -330,7 +330,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
         ok = write_preview_chunk_in_buffer(buf + cursor, previewData, previewDataSize, &cursor);
         if (ok == false) {
             free(buf);
-            free(shapesBuffers);
+            doubly_linked_list_free(shapesBuffers);
             return false;
         }
     }
@@ -347,7 +347,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
         free(paletteCompressedData);
         if (ok == false) {
             free(buf);
-            free(shapesBuffers);
+            doubly_linked_list_free(shapesBuffers);
             return false;
         }
     }
@@ -366,13 +366,14 @@ bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
                                    &cursor);
         if (ok == false) {
             free(buf);
-            free(shapesBuffers);
+            doubly_linked_list_free(shapesBuffers);
             return false;
         }
 
         free(shapeBuffersCursor);
         n = doubly_linked_list_node_next(n);
     }
+
     doubly_linked_list_free(shapesBuffers);
 
     // update total size
@@ -1256,7 +1257,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
         rigidbody_set_collider(rb, &newCollider, true);
     }
 
-    Transform * const root = shape_get_root_transform(*shape);
+    Transform *const root = shape_get_root_transform(*shape);
     if (root) {
         transform_set_hidden_self(root, isHiddenSelf == 1);
     }
