@@ -296,10 +296,11 @@ Client.Tick = function(dt)
 	yFastRotation:RotateLocal(0, dt * 5, 0)
 
 	if localPlayerShown then
+		-- Detect if player is under the map and respawn it
 		if Player.Position.Y < -500 then
 			dropPlayer(Player)
 		end
-	else
+	else -- local player not shown yet
 		-- Camera movement before player is shown
 		moveDT = moveDT + dt * 0.2
 		-- keep moveDT between -pi & pi
@@ -794,7 +795,8 @@ end
 function dropPlayer(p)
 	playerControls:walk(p)
 	p.Position = SPAWN_IN_BLOCK * map.Scale
-	p.Rotation = { 0.06, math.pi * -0.75, 0 }
+	p.Rotation = { 0, 0.2, 0 } -- to have NPC in field of view
+	p.Head.LocalRotation.X = 0.06
 	p.Velocity = { 0, 0, 0 }
 end
 
