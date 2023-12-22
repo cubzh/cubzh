@@ -33,7 +33,6 @@ extern "C" {
 typedef struct _RigidBody RigidBody;
 typedef struct _Transform Transform;
 typedef struct _Scene Scene;
-typedef struct float3 float3;
 
 static const float3 float3_epsilon_zero = {EPSILON_ZERO, EPSILON_ZERO, EPSILON_ZERO};
 static const float3 float3_epsilon_collision = {EPSILON_COLLISION,

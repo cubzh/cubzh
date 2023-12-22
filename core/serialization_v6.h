@@ -10,9 +10,11 @@
 extern "C" {
 #endif
 
+// C
 #include <stdbool.h>
 #include <stdio.h>
 
+// Cubzh Core
 #include "asset.h"
 #include "colors.h"
 #include "shape.h"
@@ -31,7 +33,7 @@ typedef struct _LocalTransform {
 
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
-                                               AssetType filterMask,
+                                               const AssetType filterMask,
                                                const LoadShapeSettings *const settings);
 
 /// Saves shape in file w/ optional palette
@@ -41,12 +43,12 @@ bool serialization_v6_save_shape(Shape *shape,
                                  FILE *fd);
 
 /// Serialize a shape in a newly created memory buffer
-bool serialization_v6_save_shape_as_buffer(const Shape *shape,
-                                           const ColorPalette *artistPalette,
-                                           const void *previewData,
+bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
+                                           const ColorPalette *const artistPalette,
+                                           const void *const previewData,
                                            const uint32_t previewDataSize,
-                                           void **outBuffer,
-                                           uint32_t *outBufferSize);
+                                           void **const outBuffer,
+                                           uint32_t *const outBufferSize);
 
 /// get preview data from save file path (caller must free *imageData)
 bool serialization_v6_get_preview_data(Stream *s, void **imageData, uint32_t *size);

@@ -10,18 +10,18 @@
 extern "C" {
 #endif
 
+// C
 #include <stdbool.h>
 
 // float3 structure definition
-struct float3 {
+typedef struct _float3 {
     /// value for the X axis
     float x; //  4 bytes
     /// value for the Y axis
     float y; //  4 bytes
     /// value for the Z axis
     float z; //  4 bytes
-};           // 12 bytes
-typedef struct float3 float3;
+} float3;    // 12 bytes
 
 static const float3 float3_zero = {0.0f, 0.0f, 0.0f};
 static const float3 float3_one = {1.0f, 1.0f, 1.0f};
