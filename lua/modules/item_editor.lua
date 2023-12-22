@@ -37,6 +37,21 @@ end
 
 local utils = {}
 
+bodyParts = {
+	"Head",
+	"Body",
+	"RightArm",
+	"LeftArm",
+	"RightHand",
+	"LeftHand",
+	"RightLeg",
+	"LeftLeg",
+	"RightFoot",
+	"LeftFoot",
+}
+
+__equipments = require("equipments.lua")
+
 -- returns an array of shapes
 -- `testFunc` is a function(shape) -> boolean
 utils.findSubshapes = function(rootShape, testFunc)
@@ -474,13 +489,13 @@ Client.OnStart = function()
 	Assets:Load(Environment.itemFullname, AssetType.Any, function(assets)
 		local shapesNotParented = {}
 
-		for _, v in ipairs(assets) do
-			if type(v) == "Palette" then
-				itemPalette = v
-			else
-				if v:GetParent() == nil then
-					table.insert(shapesNotParented, v)
-				end
+		local t
+		for _, asset in ipairs(assets) do
+			t = type(asset)
+			if t == "Palette" then
+				itemPalette = asset
+			elseif (t == "Object" or t == "Shape" or t == "MutableShape") and asset:GetParent() == nil then
+				table.insert(shapesNotParented, asset)
 			end
 		end
 
@@ -502,20 +517,6 @@ Client.OnStart = function()
 		item.Physics = PhysicsMode.Trigger
 
 		if isWearable then
-			bodyParts = {
-				"Head",
-				"Body",
-				"RightArm",
-				"LeftArm",
-				"RightHand",
-				"LeftHand",
-				"RightLeg",
-				"LeftLeg",
-				"RightFoot",
-				"LeftFoot",
-			}
-			__equipments = require("equipments.lua")
-
 			if itemCategory == "pants" then
 				item.Scale = 1.05
 			end

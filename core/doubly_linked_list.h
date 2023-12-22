@@ -37,7 +37,7 @@ bool doubly_linked_list_copy(DoublyLinkedList *const dst, DoublyLinkedList *cons
 void doubly_linked_list_flush(DoublyLinkedList *list, pointer_free_function ptr);
 // destructor
 //!\\ stored pointers won't be released
-void doubly_linked_list_free(DoublyLinkedList *list);
+void doubly_linked_list_free(DoublyLinkedList *const list);
 
 // push to last/first and return pointer to created node
 DoublyLinkedListNode *doubly_linked_list_push_last(DoublyLinkedList *const list, void *const ptr);

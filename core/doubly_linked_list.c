@@ -64,7 +64,7 @@ void doubly_linked_list_flush(DoublyLinkedList *list, pointer_free_function ptr)
     }
 }
 
-void doubly_linked_list_free(DoublyLinkedList *list) {
+void doubly_linked_list_free(DoublyLinkedList *const list) {
     while (list->last != NULL) {
         doubly_linked_list_pop_last(list);
     }

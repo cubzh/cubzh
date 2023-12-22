@@ -10,9 +10,11 @@
 extern "C" {
 #endif
 
+// C
 #include <stdbool.h>
 #include <stdio.h>
 
+// Cubzh Core
 #include "asset.h"
 #include "colors.h"
 #include "shape.h"

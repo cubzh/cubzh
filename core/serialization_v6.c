@@ -239,12 +239,13 @@ bool serialization_v6_save_shape(Shape *shape,
 /// - shape (mandatory)
 /// - palette (optional)
 /// - imageData (optional)
-bool serialization_v6_save_shape_as_buffer(const Shape *shape,
-                                           const ColorPalette *artistPalette,
-                                           const void *previewData,
+bool serialization_v6_save_shape_as_buffer(const Shape *const shape,
+                                           const ColorPalette *const artistPalette,
+                                           const void *const previewData,
                                            const uint32_t previewDataSize,
-                                           void **outBuffer,
-                                           uint32_t *outBufferSize) {
+                                           void **const outBuffer,
+                                           uint32_t *const outBufferSize) {
+
     if (shape == NULL || outBuffer == NULL || outBufferSize == NULL) {
         return false;
     }
@@ -256,10 +257,8 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
     // --------------------------------------------------
 
     // Header
-    uint32_t size = MAGIC_BYTES_SIZE;
-    size += SERIALIZATION_FILE_FORMAT_VERSION_SIZE;
-    size += SERIALIZATION_COMPRESSION_ALGO_SIZE;
-    size += SERIALIZATION_TOTAL_SIZE_SIZE;
+    uint32_t size = (MAGIC_BYTES_SIZE + SERIALIZATION_FILE_FORMAT_VERSION_SIZE +
+                     SERIALIZATION_COMPRESSION_ALGO_SIZE + SERIALIZATION_TOTAL_SIZE_SIZE);
 
     // Preview
     if (hasPreview) {
@@ -267,7 +266,7 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
         size += chunkSize;
     }
 
-    DoublyLinkedList *shapesBuffers = doubly_linked_list_new();
+    DoublyLinkedList *const shapesBuffers = doubly_linked_list_new();
     if (shapesBuffers == NULL) {
         return false;
     }
@@ -353,10 +352,10 @@ bool serialization_v6_save_shape_as_buffer(const Shape *shape,
         }
     }
 
-    // uint32_t i = 0;
     DoublyLinkedListNode *n = doubly_linked_list_first(shapesBuffers);
+    ShapeBuffers *shapeBuffersCursor = NULL;
     while (n != NULL) {
-        ShapeBuffers *shapeBuffersCursor = (ShapeBuffers *)doubly_linked_list_node_pointer(n);
+        shapeBuffersCursor = (ShapeBuffers *)doubly_linked_list_node_pointer(n);
 
         ok = write_chunk_in_buffer(buf + cursor,
                                    P3S_CHUNK_ID_SHAPE,
@@ -1237,6 +1236,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
     if (name != NULL) {
         transform_set_name(shape_get_root_transform(*shape), name);
         free(name);
+        name = NULL;
     }
 
     if (hasCustomCollisionBox) {
@@ -1256,7 +1256,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
         rigidbody_set_collider(rb, &newCollider, true);
     }
 
-    Transform *root = shape_get_root_transform(*shape);
+    Transform * const root = shape_get_root_transform(*shape);
     if (root) {
         transform_set_hidden_self(root, isHiddenSelf == 1);
     }
@@ -1986,7 +1986,7 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
 
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
-                                               AssetType filterMask,
+                                               const AssetType filterMask,
                                                const LoadShapeSettings *const shapeSettings) {
 
     uint8_t i;
@@ -2113,8 +2113,13 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                 shape_reset_box(shape);
 
                 if (filterMask == AssetType_Any ||
-                    (filterMask & (AssetType_Shape + AssetType_Object)) > 0) {
+                    (filterMask & (AssetType_Shape | AssetType_Object)) > 0) {
                     Asset *asset = malloc(sizeof(Asset));
+                    if (asset == NULL) {
+                        cclog_error("error while allocating asset (shape)");
+                        error = true;
+                        break;
+                    }
                     asset->ptr = shape;
                     asset->type = AssetType_Shape;
                     doubly_linked_list_push_last(list, asset);
