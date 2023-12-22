@@ -707,6 +707,16 @@ end
 cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 cubzhBtn:setParent(topBar)
 
+uiBadge = require("ui_badge")
+badge = uiBadge:create({ text = "!", ui = ui })
+badge.internalParentDidResize = badge.parentDidResize
+badge.parentDidResize = function(self)
+	self.pos.X = self.parent.Width * 0.5
+	self.pos.Y = 0
+	self:internalParentDidResize()
+end
+badge:setParent(cubzhBtn)
+
 cubzhLogo = logo:createShape()
 cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
 cubzhBtnShape:setParent(cubzhBtn)
