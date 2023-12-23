@@ -70,7 +70,7 @@ func buildAnRunCurrentDirectory() error {
 	// execute build commands
 	ciContainer = ciContainer.WithExec([]string{"cmake", "-G", "Ninja", "."})
 
-	// To know wether the execution succeeded, we need to force the evaluation
+	// To know whether the execution succeeded, we need to force the evaluation
 	// of the pipeline after an using Sync, and then
 	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {
@@ -90,7 +90,7 @@ func buildAnRunCurrentDirectory() error {
 	// Ninja will stop if this number of errors is reached : NB_MAX_BUILD_ERRORS
 	ciContainer = ciContainer.WithExec([]string{"cmake", "--build", ".", "--clean-first", "--", "-k", NB_MAX_BUILD_ERRORS})
 
-	// To know wether the execution succeeded, we need to force the evaluation
+	// To know whether the execution succeeded, we need to force the evaluation
 	// of the pipeline after an using Sync, and then
 	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {
@@ -115,7 +115,7 @@ func buildAnRunCurrentDirectory() error {
 
 	// time.Sleep(time.Second * 1) // sleep needed when tests fail (race condition?)
 
-	// To know wether the execution succeeded, we need to force the evaluation
+	// To know whether the execution succeeded, we need to force the evaluation
 	// of the pipeline after an using Sync, and then
 	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {

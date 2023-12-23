@@ -37,7 +37,7 @@ struct _Chunk {
     SHAPE_COORDS_INT3_T origin; /* 3 x 2 bytes */
     // model axis-aligned bounding box (bbMax - 1 is the max block)
     CHUNK_COORDS_INT3_T bbMin, bbMax; /* 6 x 1 byte */
-    // wether vertices need to be refreshed
+    // whether vertices need to be refreshed
     bool dirty; /* 1 byte */
 
     char pad[7];
