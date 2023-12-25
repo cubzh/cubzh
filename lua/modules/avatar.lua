@@ -438,6 +438,9 @@ index.prepareHead = function(self, head, usernameOrId, callback)
 				callback(nil, head)
 			end)
 			table.insert(requests, req)
+		else
+			-- avatar doesn't have hair, we can call the callback right away
+			callback(nil, head)
 		end
 	end)
 	table.insert(requests, req)
