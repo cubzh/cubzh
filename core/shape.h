@@ -67,7 +67,7 @@ typedef uint8_t ShapeDrawMode;
 
 Shape *shape_make(void);
 Shape *shape_make_2(const bool isMutable);
-Shape *shape_make_copy(Shape *origin);
+Shape *shape_make_copy(Shape *const origin);
 
 VertexBuffer *shape_add_buffer(Shape *shape, bool transparency);
 
@@ -80,8 +80,8 @@ void shape_release(Shape *const shape);
 /// /!\ Only called by `transform_release` to free shape-specific resources
 void shape_free(Shape *const shape);
 
-Weakptr *shape_get_weakptr(Shape *s);
-Weakptr *shape_get_and_retain_weakptr(Shape *s);
+Weakptr *shape_get_weakptr(Shape *const s);
+Weakptr *shape_get_and_retain_weakptr(Shape *const s);
 
 uint16_t shape_get_id(const Shape *shape);
 

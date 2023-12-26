@@ -263,17 +263,19 @@ Shape *shape_make_2(const bool isMutable) {
     return s;
 }
 
-Shape *shape_make_copy(Shape *origin) {
+Shape *shape_make_copy(Shape *const origin) {
     // apply transactions of the origin if needed
     shape_apply_current_transaction(origin, true);
 
-    Shape *s = shape_make();
+    Shape *const s = shape_make();
     s->palette = color_palette_new_copy(origin->palette);
 
     // copy each point of interest
-    MapStringFloat3Iterator *it = map_string_float3_iterator_new(origin->POIs);
+    MapStringFloat3Iterator *it = NULL;
     float3 *f3 = NULL;
     const char *key = NULL;
+
+    it = map_string_float3_iterator_new(origin->POIs);
     while (map_string_float3_iterator_is_done(it) == false) {
         f3 = map_string_float3_iterator_current_value(it);
         key = map_string_float3_iterator_current_key(it);
@@ -299,6 +301,7 @@ Shape *shape_make_copy(Shape *origin) {
         map_string_float3_iterator_next(it);
     }
     map_string_float3_iterator_free(it);
+    it = NULL;
 
     s->bbMin = origin->bbMin;
     s->bbMax = origin->bbMax;
@@ -348,8 +351,8 @@ Shape *shape_make_copy(Shape *origin) {
     }
 
     // copy transform parameters
-    Transform *originTr = shape_get_root_transform(origin);
-    Transform *t = shape_get_root_transform(s);
+    Transform *const originTr = shape_get_root_transform(origin);
+    Transform *const t = shape_get_root_transform(s);
     {
         const char *name = transform_get_name(originTr);
         if (name != NULL) {
@@ -606,14 +609,14 @@ void shape_free(Shape *const shape) {
     free(shape);
 }
 
-Weakptr *shape_get_weakptr(Shape *s) {
+Weakptr *shape_get_weakptr(Shape *const s) {
     if (s->wptr == NULL) {
         s->wptr = weakptr_new(s);
     }
     return s->wptr;
 }
 
-Weakptr *shape_get_and_retain_weakptr(Shape *s) {
+Weakptr *shape_get_and_retain_weakptr(Shape *const s) {
     if (s->wptr == NULL) {
         s->wptr = weakptr_new(s);
     }
