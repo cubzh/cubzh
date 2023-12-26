@@ -65,15 +65,18 @@ local uiavatarMetatable = {
 				spherized = true,
 			}
 
-			config = require("config"):merge(defaultConfig, config)
+			-- config = require("config"):merge(defaultConfig, config)
 
-			local cachedHead = headCache[usernameOrId]
+			-- local cachedHead = headCache[usernameOrId]
+			-- if config.ignoreCache == true then
+			-- 	cachedHead = nil
+			-- end
 
-			if config.ignoreCache == true then
-				cachedHead = nil
-			end
+			cachedHead = nil
 
 			local node = ui:createFrame(Color(0, 0, 0, 0))
+
+			print("⭐️[getHead]", usernameOrId, cachedHead)
 
 			if cachedHead then
 				local uiHead = ui:createShape(Shape(cachedHead, { includeChildren = true }), { spherized = true })
