@@ -365,8 +365,8 @@ Shape *shape_make_copy(Shape *const origin) {
         transform_set_hidden_self(t, transform_is_hidden_self(originTr));
 
         transform_set_local_scale_vec(t, transform_get_local_scale(originTr));
-        transform_set_position_vec(t, transform_get_position(originTr));
-        transform_set_rotation(t, transform_get_rotation(originTr));
+        transform_set_local_position_vec(t, transform_get_local_position(originTr));
+        transform_set_local_rotation(t, transform_get_local_rotation(originTr));
 
         // Note: do not parent automatically
     }

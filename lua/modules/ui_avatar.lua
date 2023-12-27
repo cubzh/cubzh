@@ -74,12 +74,23 @@ local uiavatarMetatable = {
 			end
 
 			local node = ui:createFrame(Color(0, 0, 0, 0))
+			node._w = defaultSize
+			node._h = defaultSize
+			node._width = function(self)
+				return self._w
+			end
+			node._height = function(self)
+				return self._h
+			end
 
-			if cachedHead then
+			if cachedHead ~= nil then
 				local uiHead = ui:createShape(Shape(cachedHead, { includeChildren = true }), { spherized = true })
 				uiHead:setParent(node)
 				node.head = uiHead
-				node.head.Width = defaultSize
+				node.head.Width = node.Width
+
+				local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
+				node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
 			else
 				requests = avatar:getPlayerHead(usernameOrId, function(err, head)
 					if err then
@@ -109,15 +120,6 @@ local uiavatarMetatable = {
 						r:Cancel()
 					end
 				end
-			end
-
-			node._w = defaultSize
-			node._h = defaultSize
-			node._width = function(self)
-				return self._w
-			end
-			node._height = function(self)
-				return self._h
 			end
 
 			local setWidth = node._setWidth
