@@ -2026,6 +2026,191 @@ function createUI(system)
 		return node
 	end
 
+	ui.createScrollArea = function(_, color, config)
+		local ui = require("uikit")
+		local node = ui:createFrame(color)
+
+		local cellPadding = config.cellPadding or 0
+		local direction = config.direction or "down"
+
+		local isPointerOverFrame = false
+
+		local container = ui:createFrame()
+		container:setParent(node)
+		container.IsMask = true
+		node.container = container
+
+		local cells = {}
+		local cachedCellsHeight = {}
+
+		node.nbCells = 0
+
+		local maxY = 0
+		node.scrollPosition = 0
+
+		local scrollHandle = ui:createFrame(Color.Black)
+		scrollHandle:setParent(node)
+
+		node.refresh = function()
+			local y
+			if direction == "down" then
+				y = container.Height + node.scrollPosition
+			else
+				y = node.scrollPosition
+			end
+			maxY = 0
+			local indexesToUnload = {}
+			local indexesToLoad = {}
+			for k=1,node.nbCells do
+				local v = cells[k]
+				local height = cachedCellsHeight[k]
+
+				-- place cell
+				if direction == "down" then
+					y = y - height
+					if v then
+						v.pos = { 0, y }
+					end
+					y = y - cellPadding
+				else
+					if v then
+						v.pos = { 0, y }
+					end
+					y = y + height
+					y = y + cellPadding
+				end
+
+				-- unload if out of area
+				if v then
+					if y > node.Height * 2 or y < -node.Height * 1.5 then
+						table.insert(indexesToUnload, k)
+					end
+				-- load if back in area
+				elseif y <= node.Height * 2 and y >= -node.Height then
+					indexesToLoad[k] = true
+				end
+
+				-- compute maxY
+				if maxY == 0 then
+					maxY = height
+				elseif k < node.nbCells then
+					maxY = maxY + height + cellPadding
+				end
+			end
+
+			if direction == "up" then
+				maxY = -maxY - cellPadding + node.Height - (cachedCellsHeight[#cachedCellsHeight] or 0)
+			end
+
+			-- load up to one page
+			if direction == "down" then
+				if y >= -node.Height then
+					indexesToLoad[node.nbCells + 1] = true
+				end
+			elseif direction == "up" then
+				if y <= 2 * node.Height then
+					indexesToLoad[node.nbCells + 1] = true
+				end
+			end
+
+			local loadedCells = false
+			for k,_ in pairs(indexesToLoad) do
+				local newCell = config.loadCell(k)
+				if newCell == nil then
+					break
+				end
+				node:pushCell(newCell, k, false) -- no refresh yet
+				loadedCells = true
+			end
+
+			for _,k in ipairs(indexesToUnload) do
+				if cells[k] then
+					-- unload if too far from screen
+					config.unloadCell(cells[k])
+					cells[k] = nil
+				end
+			end
+
+			if loadedCells then
+				node:refresh() -- refresh the whole list with loaded cells
+			end
+
+			-- refresh scrollHandle
+			if (direction == "up" and maxY < 0) or (direction == "down" and maxY >= node.Height) then
+				scrollHandle:show()
+				scrollHandle.Width = 30
+				scrollHandle.Height = math.min(node.Height, math.max(25, 100 / math.abs(maxY) * node.Height))
+				local posY
+				if direction == "down" then
+					posY = node.Height - scrollHandle.Height - node.Height * math.abs(node.scrollPosition / maxY)
+				elseif direction == "up" then
+					posY = (node.Height - scrollHandle.Height) * math.abs(node.scrollPosition / maxY)
+				end
+				scrollHandle.pos = {
+					node.Width - scrollHandle.Width,
+					posY
+				}
+			else
+				scrollHandle:hide()
+			end
+		end
+
+		-- set scroll position
+		node.setScrollPosition = function(_, newPosition)
+			if direction == "down" then
+				node.scrollPosition = math.min(maxY, math.max(0, newPosition))
+			elseif direction == "up" then
+				node.scrollPosition = math.min(0, math.max(maxY, newPosition))
+			end
+			node:refresh()
+		end
+
+		node.pushFront = function(_, cell)
+			for i=node.nbCells+1,2,-1 do
+				cells[i] = cells[i - 1]
+				cachedCellsHeight[i] = cachedCellsHeight[i - 1]
+			end
+			node.nbCells = node.nbCells + 1
+			node:pushCell(cell, 1)
+		end
+
+		-- add cell at index, called automatically after onLoad callback
+		node.pushCell = function(_, cell, index, needRefresh)
+			needRefresh = needRefresh == nil and true or needRefresh
+			if cell == nil then return end
+			if index == nil then index = node.nbCells + 1 end
+			cells[index] = cell
+			cell:setParent(container)
+			cachedCellsHeight[index] = cell.Height
+			if index > node.nbCells then node.nbCells = index end
+			if needRefresh then
+				node:refresh()
+			end
+		end
+
+		container.parentDidResize = function()
+			container.Width = node.Width
+			container.Height = node.Height
+			node:setScrollPosition(0)
+		end
+
+		LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
+			local x = pe.X * Screen.Width
+			local y = pe.Y * Screen.Height
+			isPointerOverFrame = x >= node.pos.X and
+				x <= node.pos.X + node.Width and
+				y >= node.pos.Y and
+				y <= node.pos.Y + node.Height
+		end)
+
+		LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
+			if not isPointerOverFrame then return end
+			node:setScrollPosition(node.scrollPosition + delta)
+		end)
+
+		return node
+	end
+
 	ui.createButton = function(_, stringOrShape, config)
 		local defaultConfig = {
 			borders = true,
