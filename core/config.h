@@ -146,9 +146,6 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Replacement happens backwards along the trajectory of a moving rigidbody (false),
 /// or in any direction solely based on whether or not the boxes are already colliding (true)
 #define PHYSICS_EXTRA_REPLACEMENTS false
-/// Replacement happens for moving object only (false), or prioritizes replacing inferior mass
-/// object (true)
-#define PHYSICS_MASS_REPLACEMENTS false
 /// Box sweep is checked in order of X, Y, Z and stops on first-in-order collision (false),
 /// or checks every axes and ensures to return the minimum collision (true)
 #define PHYSICS_FULL_BOX_SWEPT false
