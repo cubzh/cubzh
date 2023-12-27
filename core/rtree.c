@@ -1096,8 +1096,7 @@ bool debug_rtree_integrity_check(Rtree *r) {
                     if (float3_isEqual(&rn->aabb->min, &rbLeaf->aabb->min, EPSILON_ZERO) == false ||
                         float3_isEqual(&rn->aabb->max, &rbLeaf->aabb->max, EPSILON_ZERO) == false) {
 
-                        cclog_debug(
-                            "⚠️⚠️⚠️debug_rtree_integrity_check: mismatched leaf");
+                        cclog_debug("⚠️⚠️⚠️debug_rtree_integrity_check: mismatched leaf");
                         success = false;
                     }
                 } else {
@@ -1131,9 +1130,8 @@ bool debug_rtree_integrity_check(Rtree *r) {
             if (box_contains_epsilon(rn->aabb, &child->aabb->min, EPSILON_ZERO) == false ||
                 box_contains_epsilon(rn->aabb, &child->aabb->max, EPSILON_ZERO) == false) {
 
-                cclog_debug(
-                    "⚠️⚠️⚠️debug_rtree_integrity_check: parent aabb does not contain "
-                    "child aabb");
+                cclog_debug("⚠️⚠️⚠️debug_rtree_integrity_check: parent aabb does not contain "
+                            "child aabb");
                 success = false;
             }
             doubly_linked_list_push_first(toExamine, child);

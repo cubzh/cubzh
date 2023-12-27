@@ -44,7 +44,7 @@ CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 -- VARS
 ---------------------------
 
-wasActive = false
+wasActive = nil
 modalWasShown = false
 alertWasShown = false
 cppMenuIsActive = false
@@ -205,13 +205,11 @@ function showModal(key)
 
 		activeModal:setParent(background)
 
-		System.PointerForceShown = true
 		activeModalKey = key
 
 		activeModal.didClose = function()
 			activeModal = nil
 			activeModalKey = nil
-			System.PointerForceShown = false
 			refreshChat()
 			triggerCallbacks()
 		end
@@ -320,8 +318,10 @@ function triggerCallbacks()
 
 		if isActive then
 			blockEvents()
+			System.PointerForceShown = true
 		else
 			unblockEvents()
+			System.PointerForceShown = false
 		end
 	end
 
@@ -1301,7 +1301,7 @@ menu.RemoveDidResignActiveCallback = function(self, callback)
 end
 
 menu.IsActive = function(_)
-	return activeModal ~= nil or alertModal ~= nil or loadingModal ~= nil or cppMenuIsActive
+	return titleScreen ~= nil or activeModal ~= nil or alertModal ~= nil or loadingModal ~= nil or cppMenuIsActive
 end
 
 menu.Show = function(_)
@@ -1949,8 +1949,7 @@ function showTitleScreen()
 		skipTitleScreen()
 	end
 
-	-- controls:turnOn()
-	-- ui:turnOn()
+	triggerCallbacks()
 end
 
 ----------------------------
