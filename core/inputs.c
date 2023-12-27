@@ -638,7 +638,7 @@ uint8_t input_char_code_to_string(char *buf, uint32_t c) {
     if (c < 0x10000) {
         buf[0] = (char)(0xe0 + (c >> 12));
         buf[1] = (char)(0x80 + ((c >> 6) & 0x3f));
-        buf[2] = (char)(0x80 + ((c)&0x3f));
+        buf[2] = (char)(0x80 + ((c) & 0x3f));
         buf[3] = '\0';
         return 3;
     }
@@ -646,7 +646,7 @@ uint8_t input_char_code_to_string(char *buf, uint32_t c) {
         buf[0] = (char)(0xf0 + (c >> 18));
         buf[1] = (char)(0x80 + ((c >> 12) & 0x3f));
         buf[2] = (char)(0x80 + ((c >> 6) & 0x3f));
-        buf[3] = (char)(0x80 + ((c)&0x3f));
+        buf[3] = (char)(0x80 + ((c) & 0x3f));
         buf[4] = '\0';
         return 4;
     }

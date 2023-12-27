@@ -31,12 +31,12 @@ typedef enum P3sCompressionMethod {
 #define P3S_CHUNK_ID_SHAPE_POINT 6
 #define P3S_CHUNK_ID_SHAPE_BAKED_LIGHTING 7
 #define P3S_CHUNK_ID_SHAPE_POINT_ROTATION 8
-//#define P3S_CHUNK_ID_SELECTED_COLOR 8
-//#define P3S_CHUNK_ID_SELECTED_BACKGROUND_COLOR 9
-//#define P3S_CHUNK_ID_CAMERA 10
-//#define P3S_CHUNK_ID_DIRECTIONAL_LIGHT 11
-//#define P3S_CHUNK_ID_SOURCE_METADATA 12
-//#define P3S_CHUNK_ID_GENERAL_RENDERING_OPTIONS 14
+// #define P3S_CHUNK_ID_SELECTED_COLOR 8
+// #define P3S_CHUNK_ID_SELECTED_BACKGROUND_COLOR 9
+// #define P3S_CHUNK_ID_CAMERA 10
+// #define P3S_CHUNK_ID_DIRECTIONAL_LIGHT 11
+// #define P3S_CHUNK_ID_SOURCE_METADATA 12
+// #define P3S_CHUNK_ID_GENERAL_RENDERING_OPTIONS 14
 #define P3S_CHUNK_ID_PALETTE_ID 15
 #define P3S_CHUNK_ID_PALETTE 16
 #define P3S_CHUNK_ID_SHAPE_ID 17        // id used to parent objects and will be used for animations
@@ -55,7 +55,7 @@ typedef enum P3sCompressionMethod {
 #define CHUNK_V6_HEADER_NO_ID_SKIP_SIZE (sizeof(uint8_t) + sizeof(uint32_t))
 
 // takes the 4 low bits of a and casts into uint8_t
-#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+#define TO_UINT4(a) (uint8_t)((a) & 0x0F)
 
 // MARK: - Private functions prototypes -
 // MARK: Write as buffer -

@@ -25,7 +25,7 @@
 #endif
 
 // takes the 4 low bits of a and casts into uint8_t
-#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+#define TO_UINT4(a) (uint8_t)((a) & 0x0F)
 
 #define SHAPE_RENDERING_FLAG_NONE 0
 // whether or not to draw transparent inner faces between 2 blocks of a different color
