@@ -145,8 +145,7 @@ void _scene_refresh_recurse(Scene *sc,
 
 void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchyDirty) {
     // Transform ends the frame inside scene hierarchy
-    transform_set_scene_dirty(t, false);
-    transform_set_is_in_scene(t, true);
+    transform_set_removed_from_scene(t, false);
 
     // Refresh transform (top-first) after sandbox changes
     transform_refresh(t, hierarchyDirty, false);
@@ -313,13 +312,13 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
     RigidBody *rb = NULL;
     while (t != NULL) {
         // if still outside of hierarchy at end-of-frame, proceed with removal
-        if (transform_is_scene_dirty(t)) {
+        if (transform_is_removed_from_scene(t)) {
             // enqueue children for r-tree leaf removal
             n = transform_get_children_iterator(t);
             while (n != NULL) {
                 child = doubly_linked_list_node_pointer(n);
 
-                transform_set_scene_dirty(child, true);
+                transform_set_removed_from_scene(child, true);
                 _scene_register_removed_transform(sc, child);
 
                 n = doubly_linked_list_node_next(n);
@@ -332,8 +331,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 rigidbody_set_rtree_leaf(rb, NULL);
             }
 
-            transform_set_scene_dirty(t, false);
-            transform_set_is_in_scene(t, false);
+            transform_set_removed_from_scene(t, false);
         }
         transform_release(t); // from scene_register_removed_transform
 

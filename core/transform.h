@@ -101,6 +101,8 @@ void transform_set_destroy_callback(pointer_transform_destroyed_func f);
 void transform_set_managed_ptr(Transform *t, void *ptr);
 
 /// MARK: - Physics -
+bool transform_is_kinematic(Transform *t);
+void transform_set_kinematic(Transform *t, bool value);
 void transform_reset_physics_dirty(Transform *t);
 bool transform_is_physics_dirty(Transform *t);
 bool transform_ensure_rigidbody(Transform *t,
@@ -130,10 +132,8 @@ void transform_set_hidden_branch(Transform *t, bool value);
 bool transform_is_hidden_self(Transform *t);
 void transform_set_hidden_self(Transform *t, bool value);
 bool transform_is_hidden(Transform *t);
-bool transform_is_scene_dirty(Transform *t);
-void transform_set_scene_dirty(Transform *t, bool value);
-bool transform_is_in_scene(Transform *t);
-void transform_set_is_in_scene(Transform *t, bool value);
+bool transform_is_removed_from_scene(Transform *t);
+void transform_set_removed_from_scene(Transform *t, bool value);
 const char *transform_get_name(const Transform *t);
 void transform_set_name(Transform *t, const char *value);
 
@@ -225,8 +225,8 @@ const float3 *transform_utils_get_motion(Transform *t);
 const float3 *transform_utils_get_acceleration(Transform *t);
 
 // MARK: - Misc. -
-void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
-bool transform_getAnimationsEnabled(Transform *const t);
+void transform_set_animations_flag(Transform *const t, const bool enabled);
+bool transform_get_animations_flag(Transform *const t);
 float transform_get_shadow_decal(Transform *t);
 void transform_set_shadow_decal(Transform *t, float size);
 
@@ -235,7 +235,7 @@ void transform_set_shadow_decal(Transform *t, float size);
 int debug_transform_get_refresh_calls(void);
 void debug_transform_reset_refresh_calls(void);
 #endif
-void transform_setDebugEnabled(Transform *const t, const bool enabled);
+void debug_transform_set_debug(Transform *const t, const bool enabled);
 
 #ifdef __cplusplus
 } // extern "C"

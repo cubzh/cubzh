@@ -2898,7 +2898,7 @@ void shape_enableAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return;
     }
-    transform_setAnimationsEnabled(s->transform, true);
+    transform_set_animations_flag(s->transform, true);
 }
 
 void shape_disableAnimations(Shape *const s) {
@@ -2908,7 +2908,7 @@ void shape_disableAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return;
     }
-    transform_setAnimationsEnabled(s->transform, false);
+    transform_set_animations_flag(s->transform, false);
 }
 
 bool shape_getIgnoreAnimations(Shape *const s) {
@@ -2918,7 +2918,7 @@ bool shape_getIgnoreAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return false;
     }
-    return transform_getAnimationsEnabled(s->transform) == false;
+    return transform_get_animations_flag(s->transform) == false;
 }
 
 // MARK: - private functions -
