@@ -198,7 +198,8 @@ properties:
       samples:
         - code: |
             -- the default implementation does this:
-            Client.OnChat = function(message)
+            Client.OnChat = function(payload)
+                local message = payload.message -- accessing the message value from the payload table param
                 print(Player.Username .. ": " .. message)
                 Player:TextBubble(message, 3, true)
             end
