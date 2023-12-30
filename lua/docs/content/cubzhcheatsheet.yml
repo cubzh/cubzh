@@ -454,10 +454,9 @@ blocks:
     - title: "Chat"
 
     - code: |
-        Client:OpenChatInput()
 
-        Client.OnChat = function(msgTable)
-            local message = msgTable.message -- access the message field from the msgTable
+        Client.OnChat = function(payload)
+            local message = payload.message -- access the message field from the payload param
             print(message) -- shows the message only for this client, not synced, see Events
         end
 
