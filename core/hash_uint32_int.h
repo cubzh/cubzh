@@ -23,13 +23,13 @@ typedef struct _HashUInt32Int HashUInt32Int;
 HashUInt32Int *hash_uint32_int_new(void);
 void hash_uint32_int_free(HashUInt32Int *h);
 
-// inserts or update value
-void hash_uint32_int_set(HashUInt32Int *h, uint32_t key, int value);
+/// inserts or update value
+void hash_uint32_int_set(HashUInt32Int *const h, uint32_t key, const int value);
 
-// returns true if the value is found, setting outValue
+/// returns true if the value is found, setting outValue
 bool hash_uint32_int_get(HashUInt32Int *h, uint32_t key, int *outValue);
 
-// deletes value if found in the hash
+/// deletes value if found in the hash
 void hash_uint32_int_delete(HashUInt32Int *h, uint32_t key);
 
 #ifdef __cplusplus

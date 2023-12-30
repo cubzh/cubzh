@@ -33,7 +33,7 @@ struct _HashUInt32Int {
 // when leaf == true, each branch slot contains a value, not another branch
 HashUInt32IntNode *hash_uint32_node_new(HashUInt32IntNode *parent, uint8_t index, uint8_t level) {
     vx_assert(level <= HASH_TREE_LEVELS);
-    HashUInt32IntNode *n = (HashUInt32IntNode *)malloc(sizeof(HashUInt32IntNode));
+    HashUInt32IntNode *const n = (HashUInt32IntNode *)malloc(sizeof(HashUInt32IntNode));
     void **slots = (void **)malloc(sizeof(void *) * HASH_UINT32_CHILDREN_PER_NODE);
     for (int i = 0; i < HASH_UINT32_CHILDREN_PER_NODE; ++i) {
         slots[i] = NULL;
@@ -100,7 +100,7 @@ void hash_uint32_int_free(HashUInt32Int *h) {
     free(h);
 }
 
-void hash_uint32_int_set(HashUInt32Int *h, uint32_t key, int value) {
+void hash_uint32_int_set(HashUInt32Int *const h, uint32_t key, const int value) {
     uint8_t level = 1;
     HashUInt32IntNode *n = h->rootNode;
     vx_assert(n != NULL);
