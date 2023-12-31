@@ -1,0 +1,57 @@
+keywords: ["cubzh", "publish", "itch"]
+title: "How to publish a world on itch.io"
+blocks:
+    - text: |
+        Here's a step by step guide to publish a Cubzh world on itch.io! 🙂
+
+    - subtitle: "1 - Upload new project"  
+
+    - image: "/images/guides/itch/upload-new-project.png"
+
+    - subtitle: "2 - Select HTML"
+
+    - text: |
+        Make sure to select "HTML" for the kind of project.
+
+    - image: "/images/guides/itch/select-html.png"
+
+    - subtitle: "3 - Upload HTML"
+
+    - text: |
+        You can download the HTML wrapper [here](https://raw.githubusercontent.com/cubzh/cubzh/main/misc/wrapper.html).
+
+    - text: |
+        You only need to change one thing in the HTML file for your world to load instead of the default hub. Include your world ID here: `src="https://app.cu.bzh"` ➡️ `src="https://app.cu.bzh/?worldID=7762fea1-bbfc-4e9b-bf9e-14ea3d902dc0"`
+
+    - text: |
+        To obtain this URL, you can simply launch your world and click on the share button:
+
+    - image: "/images/guides/itch/share.png"
+
+    - text: |
+        Once your HTML has been modified, you can upload it!
+
+    - image: "/images/guides/itch/upload.png"
+
+    - text: |
+        When it's done, check "This file will be played in the browser".
+
+    - image: "/images/guides/itch/check.png"
+
+    - subtitle: "4 - Settings"
+
+    - text: |
+        Then you can use these settings.
+        Viewport dimensions can be whatever you like. (1000 x 600 here)
+        SharedArrayBuffer support is mandatory!
+
+    - subtitle: "5 - Make it public!"
+
+    - text: |
+        All the rest is up to you, but make sure to check "Public" after you've saved. 🙂
+
+    - image: "/images/guides/itch/public.png"
+
+
+
+
