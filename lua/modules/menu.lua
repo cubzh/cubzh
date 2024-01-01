@@ -16,6 +16,7 @@ sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
+uiPointer = require("ui_pointer")
 
 ---------------------------
 -- CONSTANTS
@@ -53,6 +54,7 @@ _DEBUG = false
 _DebugColor = function()
 	return Color(math.random(150, 255), math.random(150, 255), math.random(150, 255))
 end
+pointer = nil
 
 ---------------------------
 -- MODALS
@@ -201,6 +203,8 @@ function showModal(key)
 	end
 
 	if activeModal ~= nil then
+		menu:RemoveHighlight()
+
 		ui.unfocus() -- unfocuses node currently focused
 
 		activeModal:setParent(background)
@@ -1329,6 +1333,30 @@ menu.Show = function(_)
 	return true
 end
 
+---@function Highlight Highlights Cubzh menu button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code menu:Highlight()
+---@return boolean
+menu.Highlight = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = cubzhBtn, from = "below" })
+	return true
+end
+
+---@function RemoveHighlight Stops highlighting elements in the menu.
+---@code menu:RemoveHighlight()
+menu.RemoveHighlight = function(_)
+	if pointer ~= nil then
+		pointer:remove()
+		pointer = nil
+	end
+end
+
 ---@function ShowFriends Shows friends menu if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
 ---@code menu:ShowFriends() -- shows friends menu
@@ -1341,6 +1369,22 @@ menu.ShowFriends = function(_)
 	return true
 end
 
+---@function HighlightFriends Highlights friends button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code menu:HighlightFriends()
+---@return boolean
+menu.HighlightFriends = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = friendsBtn, from = "below" })
+
+	return true
+end
+
 ---@function ShowProfile Shows local user profile menu if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
 ---@code menu:ShowProfile() -- shows local user profile menu
@@ -1350,6 +1394,21 @@ menu.ShowProfile = function(_)
 		return false
 	end
 	profileFrame:onRelease()
+	return true
+end
+
+---@function HighlightProfile Highlights local user profile button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code menu:HighlightProfile()
+---@return boolean
+menu.HighlightProfile = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = profileFrame, from = "below" })
 	return true
 end
 
