@@ -1341,6 +1341,18 @@ menu.ShowFriends = function(_)
 	return true
 end
 
+---@function ShowProfile Shows local user profile menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code menu:ShowProfile() -- shows local user profile menu
+---@return boolean
+menu.ShowProfile = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	profileFrame:onRelease()
+	return true
+end
+
 authCompleteCallbacks = {}
 
 function authCompleted()
