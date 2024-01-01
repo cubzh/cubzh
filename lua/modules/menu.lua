@@ -1304,16 +1304,41 @@ menu.IsActive = function(_)
 	return titleScreen ~= nil or activeModal ~= nil or alertModal ~= nil or loadingModal ~= nil or cppMenuIsActive
 end
 
-menu.Show = function(_)
+function menuSectionCanBeShown()
 	if System.Authenticated == false then
-		return
+		return false
 	end
-
 	if topBar:isVisible() == false then
-		showTopBar()
+		return false
 	end
+	if menu:IsActive() then
+		return false
+	end
+	return true
+end
 
+---@function Show Shows Cubzh menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code menu:Show() -- shows Cubzh menu
+---@return boolean
+menu.Show = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
 	cubzhBtn:onRelease()
+	return true
+end
+
+---@function ShowFriends Shows friends menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code menu:ShowFriends() -- shows friends menu
+---@return boolean
+menu.ShowFriends = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	friendsBtn:onRelease()
+	return true
 end
 
 authCompleteCallbacks = {}
@@ -2063,52 +2088,7 @@ Timer(0.1, function()
 				end
 			end)
 		end
-
-		-- api.getXP(function(err, xp)
-		-- 	if err then return end
-		-- 	xp = xp
-		-- 	info.Text = string.format("🏆 %s 💰 %s", xp and "" .. math.floor(xp) or "…", coins and "" .. math.floor(coins) or "…")
-		-- 	topBar:parentDidResize()
-		-- end)
 	end)
 end)
 
 return menu
-
--- CODE PREVIOUSLY USED TO EASTER EGG PROMPT:
--- if secretCount == nil then
--- 	secretCount = 1
--- else
--- 	secretCount = secretCount + 1
--- 	if secretCount == 9 then
--- 		closeModals()
--- 		secretModal = require("input_modal"):create("Oh, it seems like you have something to say? 🤨")
--- 		secretModal:setPositiveCallback("Oh yeah!", function(text)
--- 			if text ~= "" then
--- 				api:postSecret(text, function(success, message)
--- 					if success then
--- 						if message ~= nil and message ~= "" then
--- 							self:showAlert({message = message})
--- 						else
--- 							self:showAlert({message = "✅"})
--- 						end
--- 						api.getBalance(function(err, balance)
--- 							if err then return end
--- 							menu.coinsBtn.Text = "" .. math.floor(balance.total) .. " 💰"
--- 							menu:refresh()
--- 						end)
--- 					else
--- 						self:showAlert({message = "❌ Error"})
--- 					end
--- 				end)
--- 			end
--- 		end)
--- 		secretModal:setNegativeCallback("Hmm, no.", function() end)
--- 		secretModal.didClose = function()
--- 			secretModal = nil
--- 			refreshMenuDisplayMode()
--- 		end
--- 		refreshMenuDisplayMode()
--- 		return
--- 	end
--- end
