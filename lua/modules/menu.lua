@@ -18,9 +18,7 @@ sfx = require("sfx")
 logo = require("logo")
 uiPointer = require("ui_pointer")
 
----------------------------
 -- CONSTANTS
----------------------------
 
 MODAL_MARGIN = theme.paddingBig -- space around modals
 BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
@@ -41,9 +39,7 @@ TOP_BAR_HEIGHT = 40
 CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
----------------------------
 -- VARS
----------------------------
 
 wasActive = nil
 modalWasShown = false
@@ -56,9 +52,7 @@ _DebugColor = function()
 end
 pointer = nil
 
----------------------------
 -- MODALS
----------------------------
 
 activeModal = nil
 activeModalKey = nil
@@ -73,9 +67,10 @@ MODAL_KEYS = {
 	SETTINGS = 4,
 	COINS = 5,
 	WORLDS = 6,
-	BUILD = 7,
-	MARKETPLACE = 8,
-	CUBZH_MENU = 9,
+	ITEMS = 7,
+	BUILD = 8,
+	MARKETPLACE = 9,
+	CUBZH_MENU = 10,
 }
 
 function connect()
@@ -199,6 +194,12 @@ function showModal(key)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CUBZH_MENU then
 		local content = getCubzhMenuModalContent()
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.WORLDS then
+		local content = worlds:createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.ITEMS then
+		local content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
@@ -406,9 +407,7 @@ function refreshDisplay()
 	end
 end
 
----------------------------
 -- BACKGROUND
----------------------------
 
 background = ui:createFrame(BACKGROUND_COLOR_OFF)
 
@@ -427,9 +426,7 @@ alertBackground.parentDidResize = function(_)
 end
 alertBackground:parentDidResize()
 
----------------------------
 -- ACTION COLUMN
----------------------------
 
 actionColumn = ui:createFrame(Color.transparent)
 actionColumn:setParent(background)
@@ -689,9 +686,7 @@ actionColumn.parentDidResize = function(_)
 end
 actionColumn:parentDidResize()
 
----------------------------
 -- TOP BAR
----------------------------
 
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
@@ -878,9 +873,7 @@ avatar = ui:createFrame(Color.transparent)
 avatar:setParent(profileFrame)
 avatar.parentDidResize = btnContentParentDidResize
 
----------
 -- CHAT
----------
 
 function createTopBarChat()
 	if topBarChat ~= nil then
@@ -1007,9 +1000,7 @@ end
 
 refreshChat()
 
-----------------------
 -- CUBZH MENU CONTENT
-----------------------
 
 function getCubzhMenuModalContent()
 	local content = modal:createContent()
@@ -1239,9 +1230,7 @@ topBar.parentDidResize = function(self)
 end
 topBar:parentDidResize()
 
----------------------------
 -- BOTTOM BAR
----------------------------
 
 bottomBar = ui:createFrame(Color(255, 255, 255, 0.4))
 bottomBar:setParent(background)
@@ -1323,7 +1312,8 @@ end
 
 ---@function Show Shows Cubzh menu if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
----@code menu:Show() -- shows Cubzh menu
+---@code local menu = require("menu")
+--- menu:Show() -- shows Cubzh menu
 ---@return boolean
 menu.Show = function(_)
 	if menuSectionCanBeShown() == false then
@@ -1335,7 +1325,8 @@ end
 
 ---@function Highlight Highlights Cubzh menu button in the top bar if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
----@code menu:Highlight()
+---@code local menu = require("menu")
+--- menu:Highlight()
 ---@return boolean
 menu.Highlight = function(_)
 	if menuSectionCanBeShown() == false then
@@ -1349,7 +1340,8 @@ menu.Highlight = function(_)
 end
 
 ---@function RemoveHighlight Stops highlighting elements in the menu.
----@code menu:RemoveHighlight()
+---@code local menu = require("menu")
+--- menu:RemoveHighlight()
 menu.RemoveHighlight = function(_)
 	if pointer ~= nil then
 		pointer:remove()
@@ -1359,7 +1351,8 @@ end
 
 ---@function ShowFriends Shows friends menu if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
----@code menu:ShowFriends() -- shows friends menu
+---@code local menu = require("menu")
+--- menu:ShowFriends() -- shows friends menu
 ---@return boolean
 menu.ShowFriends = function(_)
 	if menuSectionCanBeShown() == false then
@@ -1371,7 +1364,8 @@ end
 
 ---@function HighlightFriends Highlights friends button in the top bar if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
----@code menu:HighlightFriends()
+---@code local menu = require("menu")
+--- menu:HighlightFriends()
 ---@return boolean
 menu.HighlightFriends = function(_)
 	if menuSectionCanBeShown() == false then
@@ -1387,7 +1381,8 @@ end
 
 ---@function ShowProfile Shows local user profile menu if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
----@code menu:ShowProfile() -- shows local user profile menu
+---@code local menu = require("menu")
+--- menu:ShowProfile() -- shows local user profile menu
 ---@return boolean
 menu.ShowProfile = function(_)
 	if menuSectionCanBeShown() == false then
@@ -1399,7 +1394,8 @@ end
 
 ---@function HighlightProfile Highlights local user profile button in the top bar if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
----@code menu:HighlightProfile()
+---@code local menu = require("menu")
+--- menu:HighlightProfile()
 ---@return boolean
 menu.HighlightProfile = function(_)
 	if menuSectionCanBeShown() == false then
@@ -1409,6 +1405,32 @@ menu.HighlightProfile = function(_)
 		pointer = uiPointer:create({ uikit = ui })
 	end
 	pointer:pointAt({ target = profileFrame, from = "below" })
+	return true
+end
+
+---@function ShowWorlds Shows the world gallery if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowWorlds() -- shows worlds gallery
+---@return boolean
+menu.ShowWorlds = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.WORLDS)
+	return true
+end
+
+---@function ShowItems Shows the item gallery if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowItems() -- shows items gallery
+---@return boolean
+menu.ShowItems = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.ITEMS)
 	return true
 end
 
@@ -2048,10 +2070,7 @@ function showTitleScreen()
 	triggerCallbacks()
 end
 
-----------------------------
 -- sign up / sign in flow
-----------------------------
--- if System.HasCredentials == false then
 
 function hideTopBar()
 	topBar:hide()
