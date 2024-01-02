@@ -127,6 +127,8 @@ local ui = require("uikit")
 local codes = require("inputcodes")
 local ease = require("ease")
 local menu = require("menu")
+-- require early to catch all messages
+-- including script load error ones.
 require("chat")
 
 local _isMobile = Client.IsMobile

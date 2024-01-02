@@ -44,6 +44,9 @@ struct _RigidBody {
     // world constant acceleration, in world units/sec^2 (ignores mass)
     float3 *constantAcceleration;
 
+    // last known valid position
+    float3 *checkpoint;
+
     // combined friction of 2 surfaces in contact represents how much force is absorbed,
     // it is a rate between 0 (full stop on contact) and 1 (full slide, no friction), or
     // below 0 (inverted movement) and above 1 (amplified movement)
@@ -296,7 +299,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     // PREPARE COLLISION TESTING
     // ------------------------
 
-    float3 dv, normal, push3, extraReplacement3, modelDv, modelEpsilon, rtreeNormal;
+    float3 dv, normal, push3, modelDv, modelEpsilon, rtreeNormal;
     float minSwept, swept, rtreeSwept;
     float3 pos = *transform_get_position(t);
     Box broadphase, modelBox, modelBroadphase;
@@ -325,7 +328,6 @@ bool _rigidbody_dynamic_tick(Scene *scene,
            solverCount < PHYSICS_MAX_SOLVER_ITERATIONS) {
 
         minSwept = 1.0f;
-        extraReplacement3 = float3_zero;
         contact.t = NULL;
         contact.rb = NULL;
         contact.model = NULL;
@@ -425,7 +427,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                    &modelEpsilon,
                                                    true,
                                                    &normal,
-                                                   &extraReplacement3,
+                                                   NULL,
                                                    NULL,
                                                    NULL);
                         } else {
@@ -498,30 +500,29 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // ----------------------
         // a replaced component will become "in contact" after replacement (setting swept to 0)
 
-        if (minSwept < 0.0f /*|| float3_isZero(&extraReplacement3, EPSILON_ZERO) == false*/) {
-            f3 = dv; // extraReplacement3;
+        if (minSwept < 0.0f) {
+            f3 = dv;
             float3_op_scale(&f3, minSwept);
             minSwept = 0.0f;
 
-#if PHYSICS_MASS_REPLACEMENTS
-            // prioritize replacing inferior mass rigidbody
-            if (contact.rb != NULL && rigidbody_is_dynamic(contact.rb) &&
-                contact.rb->mass < rb->mass) {
-                float3_op_scale(&f3, -1.0f);
-                float3_op_add(contact.rb->velocity, &f3);
-                rigidbody_non_kinematic_reset(contact.rb);
-            } else {
-                float3_op_add(&pos, &f3);
-                float3_op_add(&worldCollider->min, &f3);
-                float3_op_add(&worldCollider->max, &f3);
-                rigidbody_non_kinematic_reset(rb);
+            // choose smaller replacement between checkpoint and trajectory
+            if (rb->checkpoint != NULL) {
+                const float3 checkpoint = {rb->checkpoint->x - pos.x,
+                                           rb->checkpoint->y - pos.y,
+                                           rb->checkpoint->z - pos.z};
+                const float sqrDist = float3_sqr_length(&checkpoint);
+                if (float_isZero(sqrDist, EPSILON_ZERO)) {
+                    // checkpoint is now obsolete and may cause bad replacements, reset it
+                    float3_free(rb->checkpoint);
+                    rb->checkpoint = NULL;
+                } else if (sqrDist < float3_sqr_length(&f3)) {
+                    f3 = checkpoint;
+                }
             }
-#else
+
             float3_op_add(&pos, &f3);
             float3_op_add(&worldCollider->min, &f3);
             float3_op_add(&worldCollider->max, &f3);
-            rigidbody_non_kinematic_reset(rb);
-#endif
             INC_REPLACEMENTS
 
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
@@ -738,6 +739,12 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // apply final position to transform
         transform_set_position(t, pos.x, pos.y, pos.z);
 
+        if (rb->checkpoint == NULL) {
+            rb->checkpoint = float3_new_copy(&pos);
+        } else {
+            float3_copy(rb->checkpoint, &pos);
+        }
+
         return true;
     } else {
         return false;
@@ -884,6 +891,7 @@ RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16
     rb->motion = float3_new_zero();
     rb->velocity = float3_new_zero();
     rb->constantAcceleration = float3_new_zero();
+    rb->checkpoint = NULL;
     rb->mass = PHYSICS_MASS_DEFAULT;
     rb->contact = AxesMaskNone;
     rb->groups = groups;
@@ -924,6 +932,7 @@ RigidBody *rigidbody_new_copy(const RigidBody *other) {
     rb->motion = float3_new_zero();
     rb->velocity = float3_new_zero();
     rb->constantAcceleration = float3_new_copy(other->constantAcceleration);
+    rb->checkpoint = other->checkpoint != NULL ? float3_new_copy(other->checkpoint) : NULL;
     rb->mass = other->mass;
     rb->contact = AxesMaskNone;
     rb->groups = other->groups;
@@ -959,6 +968,9 @@ void rigidbody_free(RigidBody *rb) {
     float3_free(rb->motion);
     float3_free(rb->velocity);
     float3_free(rb->constantAcceleration);
+    if (rb->checkpoint != NULL) {
+        float3_free(rb->checkpoint);
+    }
     free(rb->friction);
     free(rb->bounciness);
 
@@ -973,6 +985,8 @@ void rigidbody_reset(RigidBody *rb) {
     // note: rigidbody properties are persistent
     float3_set_zero(rb->motion);
     float3_set_zero(rb->velocity);
+    float3_free(rb->checkpoint);
+    rb->checkpoint = NULL;
 
     _rigidbody_reset_state(rb);
 }
@@ -1122,9 +1136,6 @@ uint8_t rigidbody_get_simulation_mode(const RigidBody *rb) {
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value) {
     const uint8_t mode = _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE);
     if (mode != value) {
-        if (mode == RigidbodyMode_Dynamic) {
-            rigidbody_reset(rb); // reset rigidbody when disabling simulation
-        }
         _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, value);
 #if TRANSFORM_AABOX_STATIC_COLLIDER_MODE != TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE
         if (value != RigidbodyMode_Disabled) {

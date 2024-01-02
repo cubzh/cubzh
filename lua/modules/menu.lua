@@ -16,10 +16,9 @@ sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
+uiPointer = require("ui_pointer")
 
----------------------------
 -- CONSTANTS
----------------------------
 
 MODAL_MARGIN = theme.paddingBig -- space around modals
 BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
@@ -40,9 +39,7 @@ TOP_BAR_HEIGHT = 40
 CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
----------------------------
 -- VARS
----------------------------
 
 wasActive = nil
 modalWasShown = false
@@ -53,10 +50,9 @@ _DEBUG = false
 _DebugColor = function()
 	return Color(math.random(150, 255), math.random(150, 255), math.random(150, 255))
 end
+pointer = nil
 
----------------------------
 -- MODALS
----------------------------
 
 activeModal = nil
 activeModalKey = nil
@@ -71,9 +67,10 @@ MODAL_KEYS = {
 	SETTINGS = 4,
 	COINS = 5,
 	WORLDS = 6,
-	BUILD = 7,
-	MARKETPLACE = 8,
-	CUBZH_MENU = 9,
+	ITEMS = 7,
+	BUILD = 8,
+	MARKETPLACE = 9,
+	CUBZH_MENU = 10,
 }
 
 function connect()
@@ -198,9 +195,17 @@ function showModal(key)
 	elseif key == MODAL_KEYS.CUBZH_MENU then
 		local content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.WORLDS then
+		local content = worlds:createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.ITEMS then
+		local content = require("gallery"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
 	if activeModal ~= nil then
+		menu:RemoveHighlight()
+
 		ui.unfocus() -- unfocuses node currently focused
 
 		activeModal:setParent(background)
@@ -402,9 +407,7 @@ function refreshDisplay()
 	end
 end
 
----------------------------
 -- BACKGROUND
----------------------------
 
 background = ui:createFrame(BACKGROUND_COLOR_OFF)
 
@@ -423,9 +426,7 @@ alertBackground.parentDidResize = function(_)
 end
 alertBackground:parentDidResize()
 
----------------------------
 -- ACTION COLUMN
----------------------------
 
 actionColumn = ui:createFrame(Color.transparent)
 actionColumn:setParent(background)
@@ -685,9 +686,7 @@ actionColumn.parentDidResize = function(_)
 end
 actionColumn:parentDidResize()
 
----------------------------
 -- TOP BAR
----------------------------
 
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
@@ -874,9 +873,7 @@ avatar = ui:createFrame(Color.transparent)
 avatar:setParent(profileFrame)
 avatar.parentDidResize = btnContentParentDidResize
 
----------
 -- CHAT
----------
 
 function createTopBarChat()
 	if topBarChat ~= nil then
@@ -1003,9 +1000,7 @@ end
 
 refreshChat()
 
-----------------------
 -- CUBZH MENU CONTENT
-----------------------
 
 function getCubzhMenuModalContent()
 	local content = modal:createContent()
@@ -1235,9 +1230,7 @@ topBar.parentDidResize = function(self)
 end
 topBar:parentDidResize()
 
----------------------------
 -- BOTTOM BAR
----------------------------
 
 bottomBar = ui:createFrame(Color(255, 255, 255, 0.4))
 bottomBar:setParent(background)
@@ -1304,16 +1297,141 @@ menu.IsActive = function(_)
 	return titleScreen ~= nil or activeModal ~= nil or alertModal ~= nil or loadingModal ~= nil or cppMenuIsActive
 end
 
-menu.Show = function(_)
+function menuSectionCanBeShown()
 	if System.Authenticated == false then
-		return
+		return false
 	end
-
 	if topBar:isVisible() == false then
-		showTopBar()
+		return false
 	end
+	if menu:IsActive() then
+		return false
+	end
+	return true
+end
 
+---@function Show Shows Cubzh menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:Show() -- shows Cubzh menu
+---@return boolean
+menu.Show = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
 	cubzhBtn:onRelease()
+	return true
+end
+
+---@function Highlight Highlights Cubzh menu button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:Highlight()
+---@return boolean
+menu.Highlight = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = cubzhBtn, from = "below" })
+	return true
+end
+
+---@function RemoveHighlight Stops highlighting elements in the menu.
+---@code local menu = require("menu")
+--- menu:RemoveHighlight()
+menu.RemoveHighlight = function(_)
+	if pointer ~= nil then
+		pointer:remove()
+		pointer = nil
+	end
+end
+
+---@function ShowFriends Shows friends menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowFriends() -- shows friends menu
+---@return boolean
+menu.ShowFriends = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	friendsBtn:onRelease()
+	return true
+end
+
+---@function HighlightFriends Highlights friends button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:HighlightFriends()
+---@return boolean
+menu.HighlightFriends = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = friendsBtn, from = "below" })
+
+	return true
+end
+
+---@function ShowProfile Shows local user profile menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowProfile() -- shows local user profile menu
+---@return boolean
+menu.ShowProfile = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	profileFrame:onRelease()
+	return true
+end
+
+---@function HighlightProfile Highlights local user profile button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:HighlightProfile()
+---@return boolean
+menu.HighlightProfile = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = profileFrame, from = "below" })
+	return true
+end
+
+---@function ShowWorlds Shows the world gallery if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowWorlds() -- shows worlds gallery
+---@return boolean
+menu.ShowWorlds = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.WORLDS)
+	return true
+end
+
+---@function ShowItems Shows the item gallery if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowItems() -- shows items gallery
+---@return boolean
+menu.ShowItems = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.ITEMS)
+	return true
 end
 
 authCompleteCallbacks = {}
@@ -1952,10 +2070,7 @@ function showTitleScreen()
 	triggerCallbacks()
 end
 
-----------------------------
 -- sign up / sign in flow
-----------------------------
--- if System.HasCredentials == false then
 
 function hideTopBar()
 	topBar:hide()
@@ -2063,52 +2178,7 @@ Timer(0.1, function()
 				end
 			end)
 		end
-
-		-- api.getXP(function(err, xp)
-		-- 	if err then return end
-		-- 	xp = xp
-		-- 	info.Text = string.format("🏆 %s 💰 %s", xp and "" .. math.floor(xp) or "…", coins and "" .. math.floor(coins) or "…")
-		-- 	topBar:parentDidResize()
-		-- end)
 	end)
 end)
 
 return menu
-
--- CODE PREVIOUSLY USED TO EASTER EGG PROMPT:
--- if secretCount == nil then
--- 	secretCount = 1
--- else
--- 	secretCount = secretCount + 1
--- 	if secretCount == 9 then
--- 		closeModals()
--- 		secretModal = require("input_modal"):create("Oh, it seems like you have something to say? 🤨")
--- 		secretModal:setPositiveCallback("Oh yeah!", function(text)
--- 			if text ~= "" then
--- 				api:postSecret(text, function(success, message)
--- 					if success then
--- 						if message ~= nil and message ~= "" then
--- 							self:showAlert({message = message})
--- 						else
--- 							self:showAlert({message = "✅"})
--- 						end
--- 						api.getBalance(function(err, balance)
--- 							if err then return end
--- 							menu.coinsBtn.Text = "" .. math.floor(balance.total) .. " 💰"
--- 							menu:refresh()
--- 						end)
--- 					else
--- 						self:showAlert({message = "❌ Error"})
--- 					end
--- 				end)
--- 			end
--- 		end)
--- 		secretModal:setNegativeCallback("Hmm, no.", function() end)
--- 		secretModal.didClose = function()
--- 			secretModal = nil
--- 			refreshMenuDisplayMode()
--- 		end
--- 		refreshMenuDisplayMode()
--- 		return
--- 	end
--- end
