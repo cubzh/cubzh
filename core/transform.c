@@ -1081,6 +1081,37 @@ const float3 *transform_utils_get_acceleration(Transform *t) {
     }
 }
 
+void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box) {
+    DoublyLinkedListNode *n = transform_get_children_iterator(t);
+    Transform *child = NULL;
+    while (n != NULL) {
+        child = (Transform *)doubly_linked_list_node_pointer(n);
+
+        if (transform_get_type(child) == ShapeTransform) {
+            transform_refresh(child, false, false); // refresh mtx for intra-frame calculations
+
+            Matrix4x4 child_mtx = mtx;
+            matrix4x4_op_multiply(&child_mtx, child->mtx);
+
+            const Shape *s = (Shape *)t->ptr;
+            const Box model = shape_get_model_aabb(s);
+            const float3 offset = shape_get_pivot(s);
+            Box aabb;
+            box_to_aabox2(&model, &aabb, &child_mtx, &offset, NoSquarify);
+
+            if (box_is_empty(inout_box)) {
+                box_copy(inout_box, &aabb);
+            } else {
+                box_op_merge(inout_box, &aabb, inout_box);
+            }
+
+            transform_utils_box_fit_recurse(child, child_mtx, inout_box);
+        }
+
+        n = doubly_linked_list_node_next(n);
+    }
+}
+
 // MARK: - Misc. -
 
 void transform_setAnimationsEnabled(Transform *const t, const bool enabled) {
