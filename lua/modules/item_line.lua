@@ -3,7 +3,7 @@
 ]]
 --
 
-local itemGrid = {}
+local itemLine = {}
 
 -- MODULES
 local api = require("api")
@@ -12,20 +12,19 @@ local theme = require("uitheme").current
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
 local MAX_COLUMNS = 7
-local MIN_ROWS = 2
 local MIN_COLUMNS = 2
 local MIN_GRID_SIZE = 50
 
-itemGrid.create = function(_, config)
+itemLine.create = function(_, config)
 	-- load config (overriding defaults)
 	local _config = {
-		-- shows search bar when true
-		searchBar = true,
+		-- search terms
+		search = "",
 		-- shows advanced filters button when true
 		advancedFilters = false,
 		-- used to filter categories when not nil
 		categories = nil, -- {"null", "hair" ,"jacket", "pants", "boots"},
-		-- grid gets items by default, unless this is set to "worlds"
+		-- line gets items by default, unless this is set to "worlds"
 		type = "items",
 		-- filter on particular repo
 		repo = nil,
@@ -33,10 +32,10 @@ itemGrid.create = function(_, config)
 		minBlocks = 5,
 		-- page
 		page = 1,
+		-- page
+		nbPerPage = 10,
 		-- filters for new or featured
 		worldsFilter = nil,
-		--
-		ignoreCategoryOnSearch = false,
 		--
 		uikit = require("uikit"),
 	}
@@ -44,14 +43,11 @@ itemGrid.create = function(_, config)
 	-- config validation
 	if config.repo ~= nil then
 		if type(config.repo) ~= Type.string or #config.repo == 0 then
-			error("item_grid:create(config): config.repo must be a non-empty string, or nil", 2)
+			error("item_line:create(config): config.repo must be a non-empty string, or nil", 2)
 		end
 	end
 
 	if config ~= nil and type(config) == Type.table then
-		if config.searchBar ~= nil then
-			_config.searchBar = config.searchBar
-		end
 		if config.advancedFilters ~= nil then
 			_config.advancedFilters = config.advancedFilters
 		end
@@ -67,14 +63,14 @@ itemGrid.create = function(_, config)
 		if config.page ~= nil then
 			_config.page = config.page
 		end
+		if config.nbPerPage ~= nil then
+			_config.nbPerPage = config.nbPerPage
+		end
 		if config.minBlocks ~= nil then
 			_config.minBlocks = config.minBlocks
 		end
 		if config.worldsFilter ~= nil and type(config.worldsFilter) == Type.string then
 			_config.worldsFilter = config.worldsFilter
-		end
-		if config.ignoreCategoryOnSearch ~= nil then
-			_config.ignoreCategoryOnSearch = config.ignoreCategoryOnSearch
 		end
 		if type(config.uikit) == type(_config.uikit) then
 			_config.uikit = config.uikit
@@ -86,8 +82,7 @@ itemGrid.create = function(_, config)
 
 	local removed = false
 
-	local grid = ui:createFrame() -- Color(255,0,0)
-	local search = ""
+	local line = ui:createFrame() -- Color(255,0,0)
 
 	local timers = {}
 	local sentRequests = {}
@@ -121,23 +116,20 @@ itemGrid.create = function(_, config)
 			t:Cancel()
 		end
 		timers = {}
-		if grid.searchTimer ~= nil then
-			grid.searchTimer:Cancel()
-		end
 	end
 
 	local function cancelRequestsAndTimers()
-		-- cancelSentRequest()
-		-- cancelTimers()
+		cancelSentRequest()
+		cancelTimers()
 	end
 
 	-- exposed to the outside, can be called as an optimization
-	-- when hiding the grid without removing here for example.
-	grid.cancelRequestsAndTimers = function()
+	-- when hiding the line without removing here for example.
+	line.cancelRequestsAndTimers = function()
 		cancelRequestsAndTimers()
 	end
 
-	grid.setCategories = function(self, categories, type)
+	line.setCategories = function(self, categories, type)
 		if self.getItems == nil then
 			return
 		end
@@ -149,12 +141,12 @@ itemGrid.create = function(_, config)
 		self:getItems()
 	end
 
-	grid.setWorldsFilter = function(self, filter)
+	line.setWorldsFilter = function(self, filter)
 		if self.getItems == nil then
 			return
 		end
 		if filter == nil or type(filter) ~= Type.string then
-			error("item_grid:setWorldsFilter(filter): filter should be a string", 2)
+			error("item_line:setWorldsFilter(filter): filter should be a string", 2)
 		end
 
 		config.worldsFilter = filter
@@ -162,106 +154,34 @@ itemGrid.create = function(_, config)
 		self:getItems()
 	end
 
-	if config.searchBar then
-		grid.searchBar = ui:createTextInput("", "search")
-		grid.searchBar:setParent(grid)
+	line.cellSize = nil
+	line.nbCells = 1 -- cells per page
+	line.entries = {}
 
-		grid.searchBar.onTextChange = function(_)
-			if grid.searchTimer ~= nil then
-				grid.searchTimer:Cancel()
-			end
-
-			grid.searchTimer = Timer(0.3, function()
-				local text = grid.searchBar.Text
-				text = text:gsub(" ", "+")
-
-				search = text
-				grid:getItems()
-			end)
-
-			if grid.searchBar.Text ~= "" then
-				grid.searchButton.Text = "X"
-				grid.searchButton.onRelease = function()
-					grid.searchBar.Text = ""
-				end
-			else
-				grid.searchButton.Text = "🔎"
-				grid.searchButton.onRelease = function()
-					grid.searchBar:focus()
-				end
-			end
-		end
-
-		-- 🔎 button that becomes "X" (to clear search)
-		grid.searchButton = ui:createButton("🔎")
-		grid.searchButton:setParent(grid)
-		grid.searchButton:setColor(grid.searchBar.Color, Color(255, 255, 255, 254))
-		grid.searchButton:setColorPressed(nil, Color(255, 255, 255, 254))
-		grid.searchButton.onRelease = function()
-			grid.searchBar:focus()
-		end
-	end
-
-	grid.onPaginationChange = nil -- function(page, nbPages)
-
-	-- first page cell when page is set
-	-- using as reference cell to define new page number
-	-- when grid resizes.
-	-- (doesn't mean cell remains at first position, put somewhere on page)
-	grid.firstPageCell = 1
-
-	grid.page = config.page
-	grid.nbPages = 1
-	grid.cellSize = nil
-	grid.nbCells = 1 -- cells per page
-	grid.entries = {}
-
-	grid._paginationDidChange = function(self)
-		if self.onPaginationChange ~= nil then
-			self.onPaginationChange(self.page, self.nbPages)
-		end
-	end
-
-	grid.setPage = function(self, page)
-		if self ~= grid then
-			error("item_grid:setPage(page): use `:`", 2)
-		end
-		self.page = page
-		if self.page < 1 then
-			self.page = 1
-		elseif self.page > self.nbPages then
-			self.page = self.nbPages
-		end
-		self.firstPageCell = (self.page - 1) * self.nbCells + 1
-
+	line.onRemove = function(_)
 		cancelRequestsAndTimers()
-		self:refresh()
-	end
-
-	grid.onRemove = function(_)
-		cancelRequestsAndTimers()
-		grid.tickListener:Remove()
-		grid.tickListener = nil
+		line.tickListener:Remove()
+		line.tickListener = nil
 		removed = true
 	end
 
-	grid._createCell = function(grid, size)
-		local idleColor = theme.gridCellColor
+	line._createCell = function(line, size)
+		local idleColor = theme.lineCellColor
 		local cell = ui:createFrame(idleColor)
-		cell:setParent(grid)
+		cell:setParent(line)
 
 		cell.onPress = function()
 			-- don't update the color if there's a thumbnail
 			if cell.thumbnail ~= nil then
 				return
 			end
-			cell.Color = theme.gridCellColorPressed
+			cell.Color = theme.lineCellColorPressed
 		end
 
 		cell.onRelease = function()
 			if cell.loaded then
-				if grid.onOpen then
-					grid:onOpen(cell)
+				if line.onOpen then
+					line:onOpen(cell)
 				end
 			end
 			if cell.thumbnail ~= nil then
@@ -277,7 +197,7 @@ itemGrid.create = function(_, config)
 			cell.Color = idleColor
 		end
 
-		local likesAndViewsFrame = ui:createFrame(theme.gridCellFrameColor)
+		local likesAndViewsFrame = ui:createFrame(theme.lineCellFrameColor)
 		likesAndViewsFrame:setParent(cell)
 		likesAndViewsFrame.pos.X = 0
 
@@ -311,7 +231,7 @@ itemGrid.create = function(_, config)
 			nbLikes:hide()
 		end
 
-		local textFrame = ui:createFrame(theme.gridCellFrameColor)
+		local textFrame = ui:createFrame(theme.lineCellFrameColor)
 		textFrame:setParent(cell)
 		textFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
@@ -356,7 +276,7 @@ itemGrid.create = function(_, config)
 		return cell
 	end
 
-	grid._generateCells = function(self)
+	line._generateCells = function(self)
 		local padding = theme.padding
 		local sizeWithPadding = self.cellSize + padding
 		if self.cells == nil then
@@ -374,16 +294,9 @@ itemGrid.create = function(_, config)
 			end
 			cell:show()
 
-			local row = 1 + math.floor((i - 1) / self.columns)
-			if row > self.rows then
-				break
-			end
 			local column = (i - 1) % self.columns
-
 			local x = column * sizeWithPadding
-			local y = (self.rows - row) * (self.cellSize + padding)
-
-			cell.LocalPosition = Number3(x, y, 0)
+			cell.LocalPosition = Number3(x, 0, 0)
 		end
 
 		for i = self.nbCells + 1, #cells do
@@ -391,7 +304,7 @@ itemGrid.create = function(_, config)
 		end
 	end
 
-	grid._setEntry = function(grid, cell, entry)
+	line._setEntry = function(line, cell, entry)
 		cell.loaded = false
 		cell.type = entry.type
 
@@ -415,7 +328,7 @@ itemGrid.create = function(_, config)
 			cell:getOrCreateLoadingCube():show()
 
 			cell:setNbLikes(cell.likes)
-			cell:setSize(grid.cellSize)
+			cell:setSize(line.cellSize)
 
 			local function transform_string(str)
 				local new_str = string.gsub(str, "_%a", string.upper)
@@ -425,7 +338,7 @@ itemGrid.create = function(_, config)
 			end
 
 			if cell.tName then
-				cell.tName.object.MaxWidth = (grid.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
+				cell.tName.object.MaxWidth = (line.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
 				local betterName = transform_string(cell.name)
 				cell.tName.Text = betterName
 				cell:layoutContent()
@@ -468,7 +381,7 @@ itemGrid.create = function(_, config)
 				item.pivot.LocalRotation = { -0.1, 0, -0.2 }
 
 				-- setting Width sets Height & Depth as well when spherized
-				item.Width = grid.cellSize or MIN_CELL_SIZE
+				item.Width = line.cellSize or MIN_CELL_SIZE
 				cell.loaded = true
 			end)
 
@@ -480,16 +393,16 @@ itemGrid.create = function(_, config)
 				loadingCube:hide()
 			end
 
-			if entry.thumbnail == nil and cell.item == nil then
-				-- no thumbnail, display default world icon
-				local shape = System.ShapeFromBundle("official.world_icon")
-				local item = ui:createShape(shape, { spherized = true })
-				cell.item = item
-				item:setParent(cell)
-				item.pivot.LocalRotation = { -0.1, 0, -0.2 }
-				-- setting Width sets Height & Depth as well when spherized
-				item.Width = grid.cellSize
-			end
+			-- if entry.thumbnail == nil and cell.item == nil then
+			-- 	-- no thumbnail, display default world icon
+			-- 	local shape = System.ShapeFromBundle("official.world_icon")
+			-- 	local item = ui:createShape(shape, { spherized = true })
+			-- 	cell.item = item
+			-- 	item:setParent(cell)
+			-- 	item.pivot.LocalRotation = { -0.1, 0, -0.2 }
+			-- 	-- setting Width sets Height & Depth as well when spherized
+			-- 	item.Width = line.cellSize
+			-- end
 
 			cell.title = entry.title
 			cell.description = entry.description
@@ -504,12 +417,12 @@ itemGrid.create = function(_, config)
 			cell.updated = entry.updated
 
 			if cell.tName then
-				cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
+				cell.tName.object.MaxWidth = line.cellSize - 2 * theme.padding
 				cell.tName.Text = cell.title
 			end
 
 			cell:setNbLikes(cell.likes)
-			cell:setSize(grid.cellSize)
+			cell:setSize(line.cellSize)
 
 			cell:layoutContent()
 
@@ -517,22 +430,20 @@ itemGrid.create = function(_, config)
 		end
 	end
 
-	-- update the content of the cells based on grid.entries
-	grid._updateCells = function(self)
+	-- update the content of the cells based on line.entries
+	line._updateCells = function(self)
 		cancelTimers()
 		cancelCellContentRequest()
 
 		self:_emptyCells()
 		local cells = self.cells
 		local nbCells = self.nbCells
-		local k = (self.page - 1) * nbCells
 		local req
 
 		for i = 1, nbCells do
 			local cell = cells[i]
-			local entry = self.entries[k + i]
+			local entry = self.entries[i]
 			cell.IsHidden = entry == nil
-
 			if entry ~= nil then
 				local timer = Timer((i - 1) * 0.02, function()
 					if self._setEntry then
@@ -571,8 +482,8 @@ itemGrid.create = function(_, config)
 	end
 
 	-- remove items in cells, keep cells
-	grid._emptyCells = function(grid)
-		local cells = grid.cells
+	line._emptyCells = function(line)
+		local cells = line.cells
 		if cells ~= nil then
 			for _, c in ipairs(cells) do
 				c:hideLikes()
@@ -586,14 +497,21 @@ itemGrid.create = function(_, config)
 		end
 	end
 
-	grid.refresh = function(self)
+	line.computeNbCells = function(self)
+		local widthPlusMargin = self.Width + theme.padding * 2
+		local columns = math.floor(widthPlusMargin / MIN_CELL_SIZE)
+		columns = math.max(MIN_COLUMNS, math.min(MAX_COLUMNS, columns))
+		return columns
+	end
+
+	line.refresh = function(self)
 		if removed then
 			return
 		end
 		cancelCellContentRequest()
 
-		if self ~= grid then
-			error("item_grid:refresh(): use `:`", 2)
+		if self ~= line then
+			error("item_line:refresh(): use `:`", 2)
 		end
 
 		if self.Width < MIN_GRID_SIZE or self.Height < MIN_GRID_SIZE then
@@ -606,43 +524,19 @@ itemGrid.create = function(_, config)
 			self.cellSize == nil
 			or (self.savedSize and (self.savedSize.width ~= self.Width or self.savedSize.height ~= self.Height))
 		then
-			local widthPlusMargin = self.Width + padding
-
-			-- height available for cells
-			-- minus filter components depending on config)
-			local heightPlusMargin = self.Height + padding
-			if self.searchBar ~= nil then
-				heightPlusMargin = heightPlusMargin - self.searchBar.Height - padding
-			end
+			local widthPlusMargin = self.Width + padding * 2
 
 			local columns = math.floor(widthPlusMargin / MIN_CELL_SIZE)
-			if columns > MAX_COLUMNS then
-				columns = MAX_COLUMNS
-			end
-			if columns < MIN_COLUMNS then
-				columns = MIN_COLUMNS
-			end
+			columns = math.max(MIN_COLUMNS, math.min(MAX_COLUMNS, columns))
 
 			self.columns = columns
 			self.cellSize = math.floor(widthPlusMargin / columns) - padding
 
-			self.rows = math.floor(heightPlusMargin / (self.cellSize + padding))
-
-			if self.rows < MIN_ROWS then
-				self.rows = MIN_ROWS
-				self.cellSize = math.floor(heightPlusMargin / self.rows) - padding
-				self.columns = math.floor(widthPlusMargin / (self.cellSize + padding))
-			end
-
-			self.nbCells = self.rows * self.columns
-
+			self.nbCells = self.columns
 			-- reduce size
 			self.Width = self.columns * (self.cellSize + padding) - padding
 
-			local totalHeight = self.rows * (self.cellSize + padding) - padding
-			if self.searchBar ~= nil then
-				totalHeight = totalHeight + self.searchBar.Height + padding
-			end
+			local totalHeight = self.cellSize
 
 			self.Height = totalHeight
 
@@ -654,33 +548,16 @@ itemGrid.create = function(_, config)
 
 		if self:isVisible() then
 			self:_generateCells() -- generated missing cells if needed
-
-			if self.entries ~= nil then
-				self.nbPages = math.ceil(#self.entries / self.nbCells)
-				self.page = math.floor((self.firstPageCell - 1) / self.nbCells) + 1
-			end
-
 			self:_updateCells()
-			self:_paginationDidChange()
-
-			local offset = 0
-
-			if self.searchButton ~= nil then
-				self.searchButton.Height = self.searchBar.Height
-				self.searchButton.Width = self.searchButton.Height
-				self.searchBar.Width = self.Width - self.searchButton.Width
-				self.searchBar.pos = { 0, self.Height - self.searchBar.Height - offset, 0 }
-				self.searchButton.pos = self.searchBar.pos + { self.searchBar.Width, 0, 0 }
-			end
 		end
 	end
 
-	grid.getItems = function(self)
+	line.getItems = function(self)
 		cancelRequestsAndTimers()
 
 		-- empty list
-		if self.setGridEntries ~= nil then
-			self:setGridEntries({})
+		if self.setLineEntries ~= nil then
+			self:setLineEntries({})
 		end
 
 		if config.type == "items" then
@@ -689,8 +566,8 @@ itemGrid.create = function(_, config)
 				repo = config.repo,
 				category = config.categories,
 				page = config.page,
-				perpage = 250,
-				search = search,
+				perpage = config.nbPerPage,
+				search = config.search,
 			}, function(err, items)
 				if err then
 					print("Error: " .. err)
@@ -699,8 +576,8 @@ itemGrid.create = function(_, config)
 				for _, itm in ipairs(items) do
 					itm.type = "item"
 				end
-				if self.setGridEntries ~= nil and config.type == "items" then
-					self:setGridEntries(items)
+				if self.setLineEntries ~= nil and config.type == "items" then
+					self:setLineEntries(items)
 				end
 			end)
 			addSentRequest(req)
@@ -713,59 +590,53 @@ itemGrid.create = function(_, config)
 				for _, w in ipairs(worlds) do
 					w.type = "world"
 				end
-				if self.setGridEntries ~= nil and config.type == "worlds" then
-					self:setGridEntries(worlds)
+				if self.setLineEntries ~= nil and config.type == "worlds" then
+					self:setLineEntries(worlds)
 				end
 			end
 
 			-- world filter (nil, featured, recent)
 			local worldsFilter = config.worldsFilter
-			local ignoreCategoryOnSearch = config.ignoreCategoryOnSearch
 			-- used to filter on the author's name, for "my creations"
 			local repoFilter = config.repo
 
 			-- unpublished worlds (world drafts)
 			if repoFilter ~= nil then
 				local categories = config.categories
-				if ignoreCategoryOnSearch == true and search ~= nil and #search > 0 then
-					categories = ""
-				end
-				local reqConfig =
-					{ repo = config.repo, category = categories, page = config.page, perpage = 250, search = search }
+				local reqConfig = {
+					repo = config.repo,
+					category = categories,
+					page = config.page,
+					perpage = config.nbPerPage,
+					search = config.search,
+				}
 				local req = api:getWorlds(reqConfig, apiCallback)
 				addSentRequest(req)
 			else -- published worlds
-				if ignoreCategoryOnSearch == true and search ~= nil and #search > 0 then
-					worldsFilter = nil
-				end
-				local req = api:getPublishedWorlds({ list = worldsFilter, search = search }, apiCallback)
+				local req = api:getPublishedWorlds({ list = worldsFilter }, apiCallback)
 				addSentRequest(req)
 			end
 		end
 	end
 
-	grid.setGridEntries = function(self, entries)
-		if self ~= grid then
-			error("item_grid:setGridEntries(entries): use `:`", 2)
+	line.setLineEntries = function(self, entries)
+		if self ~= line then
+			error("item_line:setLineEntries(entries): use `:`", 2)
 		end
 
-		self.firstPageCell = 1
-		self.page = config.page
 		self.entries = entries or {}
 		self:refresh()
-		self.nbPages = math.ceil(#self.entries / self.nbCells)
-		self:_paginationDidChange()
 	end
 
-	grid.dt = 0.0
-	grid.dt4 = 0.0
-	grid.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		if grid.dt == nil then
+	line.dt = 0.0
+	line.dt4 = 0.0
+	line.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+		if line.dt == nil then
 			return
 		end
-		grid.dt = grid.dt + dt
-		grid.dt4 = grid.dt4 + dt * 4
-		local cells = grid.cells
+		line.dt = line.dt + dt
+		line.dt4 = line.dt4 + dt * 4
+		local cells = line.cells
 		if cells ~= nil then
 			local loadingCube
 			local loadingCubePos
@@ -774,19 +645,19 @@ itemGrid.create = function(_, config)
 				if loadingCube ~= nil and loadingCube:isVisible() then
 					if loadingCubePos == nil then
 						loadingCubePos =
-							{ c.Width * 0.5 + math.cos(grid.dt4) * 20, c.Height * 0.5 - math.sin(grid.dt4) * 20, 0 }
+							{ c.Width * 0.5 + math.cos(line.dt4) * 20, c.Height * 0.5 - math.sin(line.dt4) * 20, 0 }
 					end
 					loadingCube.pos = loadingCubePos
 				end
 				if c.item ~= nil and c.item.pivot ~= nil then
-					c.item.pivot.LocalRotation = { -0.1, grid.dt, -0.2 }
+					c.item.pivot.LocalRotation = { -0.1, line.dt, -0.2 }
 				end
 			end
 		end
 	end)
 
-	grid:getItems()
-	return grid
+	line:getItems()
+	return line
 end
 
-return itemGrid
+return itemLine

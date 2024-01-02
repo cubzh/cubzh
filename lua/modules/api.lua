@@ -385,6 +385,8 @@ mod.getWorlds = function(_, filter, callback)
 		end
 	end
 
+	print(">", url)
+
 	-- send request
 	local req = HTTP:Get(url, function(resp)
 		-- check status code
