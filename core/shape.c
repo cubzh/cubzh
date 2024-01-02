@@ -1027,10 +1027,13 @@ void shape_get_local_aabb(const Shape *s, Box *box) {
     if (s == NULL || box == NULL)
         return;
 
-    const Box model = shape_get_model_aabb(s);
-    const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
-    transform_refresh(s->transform, false, true); // refresh mtx for intra-frame calculations
-    box_to_aabox2(&model, box, transform_get_mtx(s->transform), offset, false);
+    *box = shape_get_model_aabb(s);
+
+    if (s->pivot != NULL) {
+        const float3 *pivot = transform_get_local_position(s->pivot);
+        float3_op_add(&box->min, pivot);
+        float3_op_add(&box->max, pivot);
+    }
 }
 
 bool shape_get_world_aabb(Shape *s, Box *box) {
