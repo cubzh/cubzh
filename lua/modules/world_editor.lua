@@ -20,6 +20,8 @@ local mapIndex = 1
 local mapName
 local mapGhost = false
 
+local snapGrid = 1
+
 local CameraMode = {
 	THIRD_PERSON = 0,
 	FIRST_PERSON = 1,
@@ -59,6 +61,16 @@ local setOrientationMode = function(mode)
 	end
 end
 
+local setSnapGridValue = function(value)
+	worldEditor.gizmo:setMoveSnap(value)
+	if value > 0 then
+		worldEditor.snapGridBtn.Text = string.format("𐄳 %d", value)
+	else
+		worldEditor.snapGridBtn.Text = string.format("𐄳 OFF")
+	end
+	snapGrid = value
+end
+
 local getObjectInfoTable = function(obj)
 	return {
 		uuid = obj.uuid,
@@ -83,6 +95,7 @@ local states = {
 	DUPLICATE_OBJECT = 9,
 	DESTROY_OBJECT = 10,
 	EDIT_MAP = 11,
+	MAP_OFFSET = 12,
 }
 
 local setState
@@ -280,8 +293,7 @@ end
 -- States
 
 local statesSettings = {
-	-- LOADING
-	{
+	[states.LOADING] = {
 		onStateBegin = function()
 			initPickMap()
 			initPickWorld()
@@ -297,8 +309,7 @@ local statesSettings = {
 			Player.Motion = { 0, 0, 0 }
 		end
 	},
-	-- PICK WORLD
-	{
+	[states.PICK_WORLD] = {
 		onStateBegin = function()
 			worldEditor.uiPickWorld:show()
 			require("controls"):turnOff()
@@ -311,8 +322,7 @@ local statesSettings = {
 			end
 		end
 	},
-	-- PICK MAP
-	{
+	[states.PICK_MAP] = {
 		onStateBegin = function()
 			worldEditor.uiPickMap:show()
 			Camera:SetModeFree()
@@ -332,8 +342,7 @@ local statesSettings = {
 			startDefaultMode()
 		end
 	},
-	-- DEFAULT
-	{
+	[states.DEFAULT] = {
 		onStateBegin = function()
 			require("controls"):turnOn()
 			worldEditor.editUI:show()
@@ -347,8 +356,7 @@ local statesSettings = {
 			tryPickObject(pe)
 		end
 	},
-	-- GALLERY
-	{
+	[states.GALLERY] = {
 		onStateBegin = function()
 			worldEditor.gallery:show()
 			require("controls"):turnOff()
@@ -359,8 +367,7 @@ local statesSettings = {
 			require("controls"):turnOn()
 		end
 	},
-	-- SPAWNING_OBJECT
-	{
+	[states.SPAWNING_OBJECT] = {
 		onStateBegin = function(data)
 			worldEditor.rotationShift = data.rotationShift or 0
 			data.uuid = -1
@@ -370,8 +377,7 @@ local statesSettings = {
 			end)
 		end
 	},
-	-- PLACING_OBJECT
-	{
+	[states.PLACING_OBJECT] = {
 		onStateBegin = function(obj)
 			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
@@ -438,13 +444,12 @@ local statesSettings = {
 			setState(states.UPDATING_OBJECT, placingObj)
 		end,
 		pointerWheelPriority = function(delta)
-			worldEditor.rotationShift = worldEditor.rotationShift + delta * 0.005
+			worldEditor.rotationShift = worldEditor.rotationShift + math.pi * 0.0625 * (delta > 0 and 1 or -1)
 			worldEditor.placingObj.Rotation.Y = worldEditor.rotationShift
 			return true
 		end
 	},
-	-- UPDATING_OBJECT
-	{
+	[states.UPDATING_OBJECT] = {
 		onStateBegin = function(obj)
 			if obj.uuid ~= -1 then
 				sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
@@ -509,6 +514,15 @@ local statesSettings = {
 			-- Rotation
 			worldEditor.uiGizmoRotation:setShape(worldEditor.object)
 			worldEditor.uiGizmoRotation:show()
+
+			if not Client.IsMobile then
+				worldEditor.positionInput:setShape(worldEditor.object)
+				worldEditor.positionInput:show()
+				worldEditor.rotationInput:setShape(worldEditor.object)
+				worldEditor.rotationInput:show()
+				worldEditor.scaleInput:setShape(worldEditor.object)
+				worldEditor.scaleInput:show()
+			end
 		end,
 		tick = function()
 			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0,10,0) + Player.Right * 5)
@@ -544,6 +558,10 @@ local statesSettings = {
 		onStateEnd = function()
 			worldEditor.uiGizmoRotation:hide()
 			worldEditor.scaleButton:hide()
+
+			worldEditor.positionInput:hide()
+			worldEditor.rotationInput:hide()
+			worldEditor.scaleInput:hide()
 			if worldEditor.object then
 				unfreezeObject(worldEditor.object)
 			end
@@ -554,14 +572,13 @@ local statesSettings = {
 			worldEditor.object = nil
 		end,
 		pointerWheelPriority = function(delta)
-			worldEditor.object:RotateWorld(Number3(0,1,0), delta * 0.005)
+			worldEditor.object:RotateWorld(Number3(0,1,0), math.pi * 0.0625 * (delta > 0 and 1 or -1))
 			worldEditor.object.Rotation = worldEditor.object.Rotation -- trigger OnSetCallback
 			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
 			return true
 		end
 	},
-	-- DUPLICATE_OBJECT
-	{
+	[states.DUPLICATE_OBJECT] = {
 		onStateBegin = function(uuid)
 			local obj = objects[uuid]
 			if not obj then
@@ -587,8 +604,7 @@ local statesSettings = {
 			worldEditor.updateObjectUI:hide()
 		end
 	},
-	-- DESTROY_OBJECT
-	{
+	[states.DESTROY_OBJECT] = {
 		onStateBegin = function(uuid)
 			local obj = objects[uuid]
 			if not obj then
@@ -603,8 +619,7 @@ local statesSettings = {
 			worldEditor.updateObjectUI:hide()
 		end
 	},
-	-- EDIT_MAP
-	{
+	[states.EDIT_MAP] = {
 		onStateBegin = function()
 			worldEditor.selectedColor = Color.Grey
 			local block = MutableShape()
@@ -644,6 +659,82 @@ local statesSettings = {
 					color = color
 				})
 			end
+		end
+	},
+	[states.MAP_OFFSET] = {
+		onStateBegin = function()
+			-- close settings menu
+			worldEditor.showSettingsBtn:show()
+			worldEditor.menuBar:hide()
+
+			local mapPosition = map.Position:Copy()
+
+			-- Offset buttons
+			local ui = require("uikit")
+			local mainContainer = require("ui_container"):createVerticalContainer()
+			worldEditor.offsetMainContainer = mainContainer
+
+			local axisList = { "X", "Y", "Z" }
+			for _,axis in ipairs(axisList) do
+				local btnMinus5 = ui:createButton("-5")
+				btnMinus5.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] - 5 * map.Scale[axis]
+					map.Position = value
+				end
+				local btnMinus = ui:createButton("-1")
+				btnMinus.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] - map.Scale[axis]
+					map.Position = value
+				end
+				local mapPositionAxis = ui:createButton(axis..": 0")
+				mapPositionAxis.Width = 100
+				map.Position:AddOnSetCallback(function()
+					mapPositionAxis.Text = string.format("%s: %d", axis, map.Position[axis] / map.Scale[axis])
+				end)
+				local btnPlus = ui:createButton("+1")
+				btnPlus.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] + map.Scale[axis]
+					map.Position = value
+				end
+				local btnPlus5 = ui:createButton("+5")
+				btnPlus5.onRelease = function()
+					local value = map.Position:Copy()
+					value[axis] = value[axis] + 5 * map.Scale[axis]
+					map.Position = value
+				end
+				local container = require("ui_container"):createHorizontalContainer()
+				container:pushElement(btnMinus5)
+				container:pushElement(btnMinus)
+				container:pushGap()
+				container:pushElement(mapPositionAxis)
+				container:pushGap()
+				container:pushElement(btnPlus)
+				container:pushElement(btnPlus5)
+				mainContainer:pushElement(container)
+				mainContainer:pushGap()
+			end
+
+			local validateMapOffsetBtn = require("uikit"):createButton("✅")
+			worldEditor.validateMapOffsetBtn = validateMapOffsetBtn
+			validateMapOffsetBtn.pos = { Screen.Width * 0.5 - validateMapOffsetBtn.Width * 0.5, validateMapOffsetBtn.Height }
+			validateMapOffsetBtn.onRelease = function()
+				local offset = mapPosition - map.Position
+				sendToServer(events.P_SET_MAP_OFFSET, { offset = offset })
+				map.Position = mapPosition
+				setState(states.DEFAULT)
+			end
+		end,
+		onStateEnd = function()
+			require("controls"):turnOn()
+			worldEditor.offsetMainContainer:remove()
+			worldEditor.offsetMainContainer = nil
+			setCameraMode(cameraMode)
+			worldEditor.validateMapOffsetBtn:remove()
+			worldEditor.validateMapOffsetBtn = nil
+			worldEditor.gizmo:setObject(nil)
 		end
 	}
 }
@@ -843,6 +934,7 @@ startDefaultMode = function()
 		setCameraMode(CameraMode.THIRD_PERSON)
 	end
 	setOrientationMode(GizmoOrientation.Local)
+	setSnapGridValue(1)
     dropPlayer()
 
 	require("jumpfly")
@@ -862,7 +954,24 @@ initDefaultMode = function()
 	Camera.Layers = { 1, 4 }
 	require("gizmo"):setLayer(4)
 	worldEditor.gizmo = require("gizmo"):create({ orientationMode =  require("gizmo").Mode.Local, moveSnap = 0.5 })
+	worldEditor.gizmo:setMoveSnap(1)
 
+	-- Translation and scale UI
+	if not Client.IsMobile then
+		worldEditor.positionInput = require("ui_number3input"):create({ field = "Position" })
+		worldEditor.rotationInput = require("ui_number3input"):create({
+			field = "Rotation",
+			textToField = function(text)
+				return math.rad(math.ceil(tonumber(text)))
+			end,
+			fieldToText = function(field)
+				local value = math.floor(math.abs(math.deg(field)))
+				if value == 360 then value = 0 end
+				return tostring(value)
+			end
+		})
+		worldEditor.scaleInput = require("ui_number3input"):create({ field = "Scale" })
+	end
 	-- Rotation Gizmo
 	local uiGizmoRotation = require("ui_gizmo_rotation"):create({
 		onRotate = function()
@@ -874,6 +983,9 @@ initDefaultMode = function()
 		if not Client.IsMobile then
 			uiGizmoRotation.Size = math.min(250, Screen.Height * 0.3)
 			uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
+			worldEditor.positionInput.pos = uiGizmoRotation.pos - { 0, worldEditor.positionInput.Height - padding, 0 }
+			worldEditor.rotationInput.pos = worldEditor.positionInput.pos - { 0, worldEditor.rotationInput.Height - padding, 0 }
+			worldEditor.scaleInput.pos = worldEditor.rotationInput.pos - { 0, worldEditor.scaleInput.Height - padding, 0 }
 		else
 			if Screen.Width < Screen.Height then
 				uiGizmoRotation.Size = 130
@@ -888,6 +1000,9 @@ initDefaultMode = function()
 	end
 	uiGizmoRotation:parentDidResize()
 	uiGizmoRotation:hide()
+	worldEditor.positionInput:hide()
+	worldEditor.rotationInput:hide()
+	worldEditor.scaleInput:hide()
 
 	-- Scale gizmo
 	worldEditor.scaleButton = require("uikit"):createButton("< Scale >")
@@ -1021,6 +1136,14 @@ initDefaultMode = function()
 			type = "button",
 			text = "Map Ghost",
 			callback = toggleMapGhost
+		},
+		{ type = "gap" },
+		{
+			type = "button",
+			text = "Map Offset",
+			callback = function()
+				setState(states.MAP_OFFSET)
+			end
 		},
 		{ type = "gap" },
 		{
@@ -1275,6 +1398,21 @@ initDefaultMode = function()
 				end
 			end,
 			name = "gizmoOrientationModeBtn"
+		},
+		{ type="gap" },
+		{
+			type = "button",
+			text = "𐄳 1",
+			callback = function()
+				if snapGrid == 1 then
+					setSnapGridValue(map.Scale.X)
+				elseif snapGrid == map.Scale.X then
+					setSnapGridValue(0)
+				else
+					setSnapGridValue(1)
+				end
+			end,
+			name = "snapGridBtn"
 		}
 	}
 	for _,info in ipairs(topBarConfig) do
@@ -1455,6 +1593,12 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			o.Position = o.Position * ratio
 		end
 		dropPlayer()
+	elseif e.a == events.SET_MAP_OFFSET then
+		local offset = data.offset
+		for _,o in pairs(objects) do
+			o.Position = o.Position + offset
+		end
+		Player.Position = Player.Position + offset
 	elseif e.a == events.RESET_ALL then
 		setState(states.DEFAULT)
 		clearWorld()

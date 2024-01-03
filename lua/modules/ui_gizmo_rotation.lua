@@ -4,11 +4,12 @@
 --	node.pos = { 50, 300 }
 --  node:setShape(shape2)
 
+local SNAP = math.pi * 0.0625
+
 local Orientation = require("gizmo").Orientation
 
 local create = function(_, config)
 	local ui = require("uikit")
-	local padding = require("uitheme").current.padding
 	local node = ui:createFrame(Color(0,0,0,0.2))
 
 	local shape = config.shape or Object()
@@ -27,6 +28,7 @@ local create = function(_, config)
 		{ color = Color.Blue, axis = "Z", vector = "Forward" },
 	}
 	local axisList = {}
+	local fakeObject = Object()
 
 	local diff = nil
 	for _,config in ipairs(axisConfig) do
@@ -51,15 +53,25 @@ local create = function(_, config)
 
 		uiAxis.onPress = function(_, _, _, pe)
 			diff = pe.X
+			fakeObject.Rotation = shape.Rotation
 		end
 		uiAxis.onDrag = function(_, pe)
 			if not shape then return end
 			if orientationMode == Orientation.Local then
-				shape:RotateWorld(shape[config.vector], (diff - pe.X) * 6)
+				fakeObject:RotateWorld(fakeObject[config.vector], (diff - pe.X) * 6)
+				shape.Rotation = Rotation(
+					fakeObject.Rotation.X,
+					fakeObject.Rotation.Y,
+					fakeObject.Rotation.Z
+				) -- trigger onsetcallback
 			else
-				shape:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
+				fakeObject:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
+				shape.Rotation = Rotation(
+					math.floor(fakeObject.Rotation.X / SNAP) * SNAP,
+					math.floor(fakeObject.Rotation.Y / SNAP) * SNAP,
+					math.floor(fakeObject.Rotation.Z / SNAP) * SNAP
+				) -- trigger onsetcallback
 			end
-			shape.Rotation = shape.Rotation -- trigger onsetcallback
 			diff = pe.X
 			if onRotate then
 				onRotate(shape.Rotation)
@@ -108,105 +120,11 @@ local create = function(_, config)
 		end
 	end)
 
-	local rotateUpdateUI
-
-	local xInput
-	local xText
-	local yInput
-	local yText
-	local zInput
-	local zText
-	if not Client.IsMobile then
-		local currentRotation = shape and shape.Rotation or Rotation(0,0,0)
-		xInput = ui:createTextInput(math.deg(currentRotation.X), "X")
-		xInput.onSubmit = function()
-			shape.LocalRotation.X = math.rad(math.ceil(tonumber(xInput.Text)))
-			rotateUpdateUI()
-		end
-		xText = ui:createButton("X")
-		xText.Height = xInput.Height
-		xText.onRelease = function()
-			xInput:focus()
-		end
-		xText:setColor(Color.Red)
-		yInput = ui:createTextInput(math.deg(currentRotation.Y), "Y")
-		yInput.onSubmit = function()
-			shape.LocalRotation.Y = math.rad(math.ceil(tonumber(yInput.Text)))
-			rotateUpdateUI()
-		end
-		yText = ui:createButton("Y")
-		yText.onRelease = function()
-			yInput:focus()
-		end
-		yText:setColor(Color.Green)
-		zInput = ui:createTextInput(math.deg(currentRotation.Z), "Z")
-		zInput.onSubmit = function()
-			shape.LocalRotation.Z = math.rad(math.ceil(tonumber(zInput.Text)))
-			rotateUpdateUI()
-		end
-		zText = ui:createButton("Z")
-		zText.onRelease = function()
-			zInput:focus()
-		end
-		zText:setColor(Color.Blue)
-	end
-
-	rotateUpdateUI = function()
-		if not shape or not xInput then return end
-		local value
-		value = math.floor(math.deg(math.abs(shape.Rotation.X)))
-		if value == 360 then value = 0 end
-		xInput.Text = value
-		value = math.floor(math.deg(math.abs(shape.Rotation.Y)))
-		if value == 360 then value = 0 end
-		yInput.Text = value
-		value = math.floor(math.deg(math.abs(shape.Rotation.Z)))
-		if value == 360 then value = 0 end
-		zInput.Text = value
-	end
 	node.setShape = function(_, newShape)
-		if shape then
-			shape.Rotation:RemoveOnSetCallback(rotateUpdateUI)
-		end
 		shape = newShape
-		shape.Rotation:AddOnSetCallback(rotateUpdateUI)
-		rotateUpdateUI()
 	end
 	if shape then
 		node:setShape(shape)
-	end
-
-	if not Client.IsMobile then
-		local inputsContainer = require("ui_container"):createHorizontalContainer()
-		inputsContainer:pushElement(xText)
-		inputsContainer:pushElement(xInput)
-		inputsContainer:pushElement(yText)
-		inputsContainer:pushElement(yInput)
-		inputsContainer:pushElement(zText)
-		inputsContainer:pushElement(zInput)
-
-		inputsContainer.parentDidResize = function()
-			xInput.Width = (node.Width - xText.Width * 3 - padding * 2) / 3
-			yInput.Width = xInput.Width
-			zInput.Width = xInput.Width
-
-			xText.Height = xInput.Height
-			yText.Height = yInput.Height
-			zText.Height = zInput.Height
-			inputsContainer.pos = { 0, -inputsContainer.Height, 0 }
-			inputsContainer:refresh()
-		end
-
-		node.showInputs = function()
-			inputsContainer:show()
-		end
-
-		node.hideInputs = function()
-			inputsContainer:hide()
-		end
-
-		node.inputs = inputsContainer
-		inputsContainer:setParent(node)
 	end
 
 	return node
