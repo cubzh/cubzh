@@ -631,24 +631,25 @@ common.uuidv4 = function()
 	end)
 end
 
-local loadObject = function(objInfo, didLoad)
-	Object:Load(objInfo.fullname, function(obj)
-		obj:SetParent(World)
-		local k = Box()
-		k:Fit(obj, true)
-		obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
-			l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-		end)
-		obj.Position = objInfo.Position or Number3(0, 0, 0)
-		obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-		obj.Scale = objInfo.Scale or 0.5
-		obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
-		obj.Name = objInfo.Name or objInfo.fullname
-		if didLoad then
-			didLoad(obj)
-		end
+local loadObject = function(obj, objInfo, config)
+	obj:SetParent(World)
+	local k = Box()
+	k:Fit(obj, true)
+	obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+
+	local scale = objInfo.Scale or 0.5
+	local boxSize = k.Size * scale
+	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
+
+	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
+		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
+		l.Shadow = turnOnShadows
 	end)
+	obj.Position = objInfo.Position or Number3(0, 0, 0)
+	obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
+	obj.Scale = scale
+	obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
+	obj.Name = objInfo.Name or objInfo.fullname
 end
 
 local loadMap = function(d, n, didLoad)
@@ -669,10 +670,26 @@ local loadMap = function(d, n, didLoad)
 	end)
 end
 
+local defaultLoadWorldConfig = {
+	skipMap = false,
+	onLoad = nil,
+	onDone = nil,
+	fullnameItemKey = "fullname",
+	fromBundle = false,
+	optimisations = {
+		minimum_item_size_for_shadows = 40,
+	}
+}
+
 common.loadWorld = function(mapBase64, config)
 	if #mapBase64 == 0 then
 		return
 	end
+
+	config = require("config"):merge(defaultLoadWorldConfig, config, {
+		acceptTypes = { onLoad = { "function" }, onDone = { "function" } },
+	})
+
 	local world = common.deserializeWorld(mapBase64)
 	local loadObjectsBlocksAndAmbience = function()
 		if config.skipMap then
@@ -699,18 +716,24 @@ common.loadWorld = function(mapBase64, config)
 			end
 			map:RefreshModel()
 		end
-		nbObjectsLoaded = 0
-		function loadedOneMore()
-			nbObjectsLoaded = nbObjectsLoaded + 1
-			if nbObjectsLoaded == #objects and config.didLoad then
-				config.didLoad()
-			end
-		end
 		if objects then
-			for _, objInfo in ipairs(objects) do
-				objInfo.currentlyEditedBy = nil
-				loadObject(objInfo, loadedOneMore)
+			local minimum_item_size_for_shadows = config.optimisations.minimum_item_size_for_shadows
+			if minimum_item_size_for_shadows ~= nil then
+				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows * minimum_item_size_for_shadows
 			end
+			local massLoading = require("massLoading")
+			local onLoad = function(obj, data)
+				data.currentlyEditedBy = nil
+				loadObject(obj, data, config)
+				config.onLoad(obj)
+			end
+			local massLoadingConfig = {
+				onDone = config.onDone,
+				onLoad = onLoad,
+				fullnameItemKey = "fullname",
+				fromBundle = config.fromBundle
+			}
+			massLoading:load(objects, massLoadingConfig)
 		end
 		if ambience then
 			require("ui_ai_ambience"):setFromAIConfig(ambience, true)

@@ -77,6 +77,7 @@ localevent.name = {
 	ServerConnectionLost = 48,
 	ServerConnectionFailed = 49,
 	ServerConnectionStart = 50, -- called when starting to establish connection
+	OnWorldObjectLoad = 51,
 }
 localevent.Name = localevent.name
 
@@ -120,6 +121,7 @@ limited[localevent.name.ErrorMessage] = true
 limited[localevent.name.OnChat] = true
 limited[localevent.name.CppMenuStateChanged] = true
 limited[localevent.name.LocalAvatarUpdate] = true
+limited[localevent.name.OnWorldObjectLoad] = true
 
 reservedToSystem = {}
 reservedToSystem[localevent.name.KeyboardInput] = true
