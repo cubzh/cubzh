@@ -648,6 +648,7 @@ local loadObject = function(obj, objInfo, config)
 	obj.Position = objInfo.Position or Number3(0, 0, 0)
 	obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
 	obj.Scale = scale
+	obj.uuid = objInfo.uuid
 	obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
 	obj.Name = objInfo.Name or objInfo.fullname
 end
@@ -725,7 +726,7 @@ common.loadWorld = function(mapBase64, config)
 			local onLoad = function(obj, data)
 				data.currentlyEditedBy = nil
 				loadObject(obj, data, config)
-				config.onLoad(obj)
+				config.onLoad(obj, data)
 			end
 			local massLoadingConfig = {
 				onDone = config.onDone,
