@@ -733,7 +733,10 @@ itemGrid.create = function(_, config)
 				if ignoreCategoryOnSearch == true and search ~= nil and #search > 0 then
 					worldsFilter = nil
 				end
-				local req = api:getPublishedWorlds({ list = worldsFilter, search = search }, apiCallback)
+				local req = api:getPublishedWorlds(
+					{ search = search, list = worldsFilter, perPage = 100, page = 1 },
+					apiCallback
+				)
 				addSentRequest(req)
 			end
 		end
