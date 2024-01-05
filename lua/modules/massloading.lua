@@ -89,7 +89,12 @@ massLoading.load = function(_, list, config)
 
 		-- 3) need to load
 		else
-			local obj = config.fromBundle and bundle.Shape(fullname)
+			local obj
+			if config.fromBundle then
+				pcall(function()
+					obj = bundle.Shape(fullname)
+				end)
+			end
 			if obj then
 				cachedObjects[fullname] = obj
 				loadObject(obj, data)
