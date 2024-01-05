@@ -92,6 +92,8 @@ massLoading.load = function(_, list, config)
 			local obj
 			if config.fromBundle then
 				pcall(function()
+					-- bundle.Shape sends an error if the shape is not in the bundle
+					-- using pcall to load the assets with Object:Load if the file is not in the bundle
 					obj = bundle.Shape(fullname)
 				end)
 			end
