@@ -371,27 +371,197 @@ function setAmbiance()
 	Fog.Far = 1000
 end
 
+local hierarchyactions = require("hierarchyactions")
+Client.OnWorldObjectLoad = function(obj)
+	if string.find(obj.fullname, "vines")
+		or string.find(obj.fullname, "grass")
+		or string.find(obj.fullname, "rail")
+		or string.find(obj.fullname, "lily")
+		or string.find(obj.fullname, "cubzh_logo")
+		or string.find(obj.fullname, "stool")
+		or string.find(obj.fullname, "glider")
+		or string.find(obj.fullname, "paint")
+		or string.find(obj.fullname, "toolbox")
+		or string.find(obj.fullname, "cutout_frame")
+		or string.find(obj.fullname, "ducky")
+		or string.find(obj.fullname, "arrow_up")
+		or string.find(obj.fullname, "moss")
+		or string.find(obj.fullname, "traffic_barricade")
+		or string.find(obj.fullname, "candle")
+		or string.find(obj.fullname, "open_letter")
+		or string.find(obj.fullname, "leaf_pile")
+		or string.find(obj.fullname, "leaf_blower")
+		or string.find(obj.fullname, "stop_sign")
+		or string.find(obj.fullname, "wood_steps")
+		or string.find(obj.fullname, "cubzh_coin")
+		or string.find(obj.fullname, "shelf")
+		or string.find(obj.fullname, "backpack")
+		or string.find(obj.fullname, "gramophone")
+		or string.find(obj.fullname, "green_2")
+		or string.find(obj.fullname, "indicator_light")
+		or string.find(obj.fullname, "spaceship")
+		or string.find(obj.fullname, "jetpack")
+		or string.find(obj.fullname, "wall_countdown")
+		or string.find(obj.fullname, "bush")
+		or string.find(obj.fullname, "cactus")
+		or string.find(obj.fullname, "telephone_pole")
+		or string.find(obj.fullname, "campfire")
+		or string.find(obj.fullname, "tavern_mug")
+		or string.find(obj.fullname, "fishing_rod")
+		or string.find(obj.fullname, "tumbleweed")
+		or string.find(obj.fullname, "sun_hat")
+		or string.find(obj.fullname, "pistol")
+		or string.find(obj.fullname, "nerf_ammo")
+	then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+	elseif
+		string.find(obj.fullname, "stone_pedestal")
+		or string.find(obj.fullname, "clothes_rack")
+		or string.find(obj.fullname, "globe")
+		or string.find(obj.fullname, "drafting_table")
+		or string.find(obj.fullname, "easel")
+		or string.find(obj.fullname, "blank_canvas")
+		-- or string.find(obj.fullname, "floor_propeller")
+		or string.find(obj.fullname, "broken_bridge_side_1")
+		or string.find(obj.fullname, "broken_bridge_side_2")
+		or string.find(obj.fullname, "bouncing_mushroom_3")
+		or string.find(obj.fullname, "fence")
+		or string.find(obj.fullname, "signboard")
+		or string.find(obj.fullname, "crate")
+		or string.find(obj.fullname, "tree_trunk")
+		or string.find(obj.fullname, "concrete_barrier")
+		or string.find(obj.fullname, "lantern")
+		or string.find(obj.fullname, "apple") -- apple and apple_tree
+		or string.find(obj.fullname, "barrel")
+		or string.find(obj.fullname, "lc_pipe_corner")
+		or string.find(obj.fullname, "shrine")
+		or string.find(obj.fullname, "wood_table")
+		or string.find(obj.fullname, "street_barrier")
+		or string.find(obj.fullname, "tree_leaves")
+		or string.find(obj.fullname, "pink_treetop_1")
+		or string.find(obj.fullname, "pink_treetop_2")
+		or string.find(obj.fullname, "orange_treetop_2")
+		or string.find(obj.fullname, "orange_treetop_1")
+		or string.find(obj.fullname, "tree_leaves")
+		or string.find(obj.fullname, "log_pile")
+		or string.find(obj.fullname, "stone")
+		or string.find(obj.fullname, "blackboard")
+		or string.find(obj.fullname, "arcade_cabinet")
+		or string.find(obj.fullname, "dustzh_arcade")
+		or string.find(obj.fullname, "money_bag")
+		or string.find(obj.fullname, "vending_machine")
+		or string.find(obj.fullname, "capsule_toy_machine")
+		or string.find(obj.fullname, "locker")
+		or string.find(obj.fullname, "snake_plant")
+		or string.find(obj.fullname, "couch")
+		or string.find(obj.fullname, "table")
+		-- or string.find(obj.fullname, "interaction_button")
+		or string.find(obj.fullname, "carpet")
+		or string.find(obj.fullname, "palm_tree")
+		or string.find(obj.fullname, "bamboo")
+		or string.find(obj.fullname, "rock")
+		or string.find(obj.fullname, "chest")
+		or string.find(obj.fullname, "shovel")
+		or string.find(obj.fullname, "car")
+		or string.find(obj.fullname, "dumpster")
+		or string.find(obj.fullname, "engine_lift")
+		or string.find(obj.fullname, "beach_chair")
+		or string.find(obj.fullname, "beach_umbrella")
+		or string.find(obj.fullname, "baseball_bat")
+		or string.find(obj.fullname, "beach_ball")
+		or string.find(obj.fullname, "skateboard")
+		or string.find(obj.fullname, "tire_swing")
+		or string.find(obj.fullname, "small_rope_bridge")
+		or string.find(obj.fullname, "pug")
+		or string.find(obj.fullname, "floor_countdown")
+		-- or string.find(obj.fullname, "door_scifi")
+	then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+		obj.Physics = PhysicsMode.Static
+	end
+
+	if obj.fullname == "cta_addfriends"
+		or obj.fullname == "cta_exploreworlds"
+		or obj.fullname == "cta_createitems" then
+		obj:RemoveFromParent()
+	end
+
+
+	if string.find(obj.fullname, "lily") or string.find(obj.fullname, "ducky") then
+		-- table.insert(onWater, obj)
+	elseif
+		string.find(obj.fullname, "scifi_stairs")
+		or string.find(obj.fullname, "pipe_tank")
+		or string.find(obj.fullname, "world_generator")
+		or string.find(obj.fullname, "world_computer")
+		or string.find(obj.fullname, "small_water_pipe")
+		or string.find(obj.fullname, "laptop")
+		or string.find(obj.fullname, "catwalk_stage")
+		or string.find(obj.fullname, "change_room")
+		or string.find(obj.fullname, "steel_folding_chairtop")
+		or string.find(obj.fullname, "steel_folding_chair")
+		or string.find(obj.fullname, "smartphone")
+		or string.find(obj.fullname, "portal")
+		or string.find(obj.fullname, "obstacle_blue")
+		or string.find(obj.fullname, "onstacle_red")
+		or string.find(obj.fullname, "obstacle_red")
+		or string.find(obj.fullname, "reload_station")
+		or string.find(obj.fullname, "recharge_station")
+		or string.find(obj.fullname, "ladder_metal")
+		or string.find(obj.fullname, "metal_panel")
+		or string.find(obj.fullname, "solo_computer")
+		or string.find(obj.fullname, "orange_pipe")
+		or (obj.Name ~= nil and string.find(obj.Name, "plate_jetpack"))
+		or (obj.Name ~= nil and string.find(obj.Name, "exit_jetpack"))
+		or (obj.Name ~= nil and string.find(obj.Name, "plate_nerf"))
+		or (obj.Name ~= nil and string.find(obj.Name, "exit_nerf"))
+		or (obj.Name ~= nil and string.find(obj.Name, "friend_jetpack"))
+		or (obj.Name ~= nil and string.find(obj.Name, "friend_nerf"))
+	then
+		obj:RemoveFromParent()
+	elseif string.find(obj.fullname, "floor_propeller") then
+		obj.Physics = PhysicsMode.Static
+		hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+		table.insert(propellers, obj:GetChild(1))
+	elseif string.find(obj.fullname, "firefly") then
+		obj.IsUnlit = true
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Physics = PhysicsMode.Disabled
+		end)
+		obj.animation_speed = math.random(1, 2)
+		obj.timer = math.random(1, 5)
+		obj.range = math.random(2, 3) * 0.4
+		obj.initialPosY = obj.LocalPosition.Y + obj.range
+		table.insert(fireflies, obj)
+	elseif string.find(obj.fullname, "friend_icon") then
+		local kOFFSET_Y = { 0, 2, 0 }
+
+		obj.Physics = PhysicsMode.Trigger
+		obj.CollidesWithGroups = { 2 }
+		obj.CollisionGroups = nil
+
+		obj.PrivateDrawMode = 1
+		obj.IsUnlit = true
+		obj.LocalPosition = obj.LocalPosition + kOFFSET_Y
+		obj.initialY = obj.LocalPosition.Y
+		obj.timer = math.random(1, 5)
+
+		obj.OnCollisionBegin = friendIconOnCollisionBegin
+		obj.OnCollisionEnd = friendIconOnCollisionEnd
+
+		table.insert(friendIcons, obj)
+	end
+end
+
 function loadMap()
-	local hierarchyactions = require("hierarchyactions")
-	local bundle = require("bundle")
-	local worldEditorCommon = require("world_editor_common")
-
-	local mapdata = bundle.Data("misc/hubmap.b64")
-
-	local world = worldEditorCommon.deserializeWorld(mapdata:ToString())
-
-	MAP_SCALE = world.mapScale or 5
-
-	map = bundle.Shape(world.mapName)
-	map.Scale = MAP_SCALE
-
-	map.CollisionGroups = Map.CollisionGroups
-	map.CollidesWithGroups = Map.CollidesWithGroups
-	map.Physics = PhysicsMode.StaticPerBlock
-
-	map:SetParent(World)
-	map.Position = { 0, 0, 0 }
-	map.Pivot = { 0, 0, 0 }
+	map = Map
+	MAP_SCALE = map.Scale
 	map.Shadow = true
 
 	waterShapes = {}
@@ -419,266 +589,26 @@ function loadMap()
 		waterShape:RefreshModel()
 	end
 
-	local loadedObjects = {}
-	local o
-	if world.objects then
-		for _, objInfo in ipairs(world.objects) do
-			if loadedObjects[objInfo.fullname] == nil then
-				-- print(objInfo.fullname)
-				ok = pcall(function()
-					o = bundle.Shape(objInfo.fullname)
-				end)
-				if ok then
-					loadedObjects[objInfo.fullname] = o
-					-- print("loaded " .. objInfo.fullname)
-					o.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-					if
-						string.find(objInfo.fullname, "vines")
-						or string.find(objInfo.fullname, "grass")
-						or string.find(objInfo.fullname, "rail")
-						or string.find(objInfo.fullname, "lily")
-						or string.find(objInfo.fullname, "cubzh_logo")
-						or string.find(objInfo.fullname, "stool")
-						or string.find(objInfo.fullname, "glider")
-						or string.find(objInfo.fullname, "paint")
-						or string.find(objInfo.fullname, "toolbox")
-						or string.find(objInfo.fullname, "cutout_frame")
-						or string.find(objInfo.fullname, "ducky")
-						or string.find(objInfo.fullname, "arrow_up")
-						or string.find(objInfo.fullname, "moss")
-						or string.find(objInfo.fullname, "traffic_barricade")
-						or string.find(objInfo.fullname, "candle")
-						or string.find(objInfo.fullname, "open_letter")
-						or string.find(objInfo.fullname, "leaf_pile")
-						or string.find(objInfo.fullname, "leaf_blower")
-						or string.find(objInfo.fullname, "stop_sign")
-						or string.find(objInfo.fullname, "wood_steps")
-						or string.find(objInfo.fullname, "cubzh_coin")
-						or string.find(objInfo.fullname, "shelf")
-						or string.find(objInfo.fullname, "backpack")
-						or string.find(objInfo.fullname, "gramophone")
-						or string.find(objInfo.fullname, "green_2")
-						or string.find(objInfo.fullname, "indicator_light")
-						or string.find(objInfo.fullname, "spaceship")
-						or string.find(objInfo.fullname, "jetpack")
-						or string.find(objInfo.fullname, "wall_countdown")
-						or string.find(objInfo.fullname, "bush")
-						or string.find(objInfo.fullname, "cactus")
-						or string.find(objInfo.fullname, "telephone_pole")
-						or string.find(objInfo.fullname, "campfire")
-						or string.find(objInfo.fullname, "tavern_mug")
-						or string.find(objInfo.fullname, "fishing_rod")
-						or string.find(objInfo.fullname, "tumbleweed")
-						or string.find(objInfo.fullname, "sun_hat")
-						or string.find(objInfo.fullname, "pistol")
-						or string.find(objInfo.fullname, "nerf_ammo")
-					then
-						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
-							o.Physics = PhysicsMode.Disabled
-						end)
-					elseif
-						string.find(objInfo.fullname, "stone_pedestal")
-						or string.find(objInfo.fullname, "clothes_rack")
-						or string.find(objInfo.fullname, "globe")
-						or string.find(objInfo.fullname, "drafting_table")
-						or string.find(objInfo.fullname, "easel")
-						or string.find(objInfo.fullname, "blank_canvas")
-						-- or string.find(objInfo.fullname, "floor_propeller")
-						or string.find(objInfo.fullname, "broken_bridge_side_1")
-						or string.find(objInfo.fullname, "broken_bridge_side_2")
-						or string.find(objInfo.fullname, "bouncing_mushroom_3")
-						or string.find(objInfo.fullname, "fence")
-						or string.find(objInfo.fullname, "signboard")
-						or string.find(objInfo.fullname, "crate")
-						or string.find(objInfo.fullname, "tree_trunk")
-						or string.find(objInfo.fullname, "concrete_barrier")
-						or string.find(objInfo.fullname, "lantern")
-						or string.find(objInfo.fullname, "apple") -- apple and apple_tree
-						or string.find(objInfo.fullname, "barrel")
-						or string.find(objInfo.fullname, "lc_pipe_corner")
-						or string.find(objInfo.fullname, "shrine")
-						or string.find(objInfo.fullname, "wood_table")
-						or string.find(objInfo.fullname, "street_barrier")
-						or string.find(objInfo.fullname, "tree_leaves")
-						or string.find(objInfo.fullname, "pink_treetop_1")
-						or string.find(objInfo.fullname, "pink_treetop_2")
-						or string.find(objInfo.fullname, "orange_treetop_2")
-						or string.find(objInfo.fullname, "orange_treetop_1")
-						or string.find(objInfo.fullname, "tree_leaves")
-						or string.find(objInfo.fullname, "log_pile")
-						or string.find(objInfo.fullname, "stone")
-						or string.find(objInfo.fullname, "blackboard")
-						or string.find(objInfo.fullname, "arcade_cabinet")
-						or string.find(objInfo.fullname, "dustzh_arcade")
-						or string.find(objInfo.fullname, "money_bag")
-						or string.find(objInfo.fullname, "vending_machine")
-						or string.find(objInfo.fullname, "capsule_toy_machine")
-						or string.find(objInfo.fullname, "locker")
-						or string.find(objInfo.fullname, "snake_plant")
-						or string.find(objInfo.fullname, "couch")
-						or string.find(objInfo.fullname, "table")
-						-- or string.find(objInfo.fullname, "interaction_button")
-						or string.find(objInfo.fullname, "carpet")
-						or string.find(objInfo.fullname, "palm_tree")
-						or string.find(objInfo.fullname, "bamboo")
-						or string.find(objInfo.fullname, "rock")
-						or string.find(objInfo.fullname, "chest")
-						or string.find(objInfo.fullname, "shovel")
-						or string.find(objInfo.fullname, "car")
-						or string.find(objInfo.fullname, "dumpster")
-						or string.find(objInfo.fullname, "engine_lift")
-						or string.find(objInfo.fullname, "beach_chair")
-						or string.find(objInfo.fullname, "beach_umbrella")
-						or string.find(objInfo.fullname, "baseball_bat")
-						or string.find(objInfo.fullname, "beach_ball")
-						or string.find(objInfo.fullname, "skateboard")
-						or string.find(objInfo.fullname, "tire_swing")
-						or string.find(objInfo.fullname, "small_rope_bridge")
-						or string.find(objInfo.fullname, "pug")
-						or string.find(objInfo.fullname, "floor_countdown")
-						-- or string.find(objInfo.fullname, "door_scifi")
-					then
-						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
-							o.Physics = PhysicsMode.Disabled
-						end)
-						o.Physics = PhysicsMode.Static
-					end
-				else
-					loadedObjects[objInfo.fullname] = "ERROR"
-					print("could not load " .. objInfo.fullname)
-				end
-			end
-		end
-	end
-
-	local obj
-	local scale
-	local boxSize
-	local turnOnShadows
-	local k
-
-	local onWater = {}
-	if world.objects then
-		for _, objInfo in ipairs(world.objects) do
-			o = loadedObjects[objInfo.fullname]
-			if o ~= nil and o ~= "ERROR" then
-				obj = Shape(o, { includeChildren = true })
-				obj:SetParent(World)
-				k = Box()
-				k:Fit(obj, true)
-
-				scale = objInfo.Scale or 0.5
-				boxSize = k.Size * scale
-				turnOnShadows = false
-
-				if boxSize.SquaredLength >= MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR then
-					turnOnShadows = true
-				end
-
-				obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(l)
-					l.Physics = o.Physics
-					if turnOnShadows then
-						l.Shadow = true
-					end
-				end)
-
-				obj.Position = objInfo.Position or Number3(0, 0, 0)
-				obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-				obj.Scale = scale
-				obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
-				obj.Name = objInfo.Name or objInfo.fullname
-
-				if string.find(objInfo.fullname, "lily") or string.find(objInfo.fullname, "ducky") then
-					table.insert(onWater, obj)
-				elseif
-					string.find(objInfo.fullname, "scifi_stairs")
-					or string.find(objInfo.fullname, "pipe_tank")
-					or string.find(objInfo.fullname, "world_generator")
-					or string.find(objInfo.fullname, "world_computer")
-					or string.find(objInfo.fullname, "small_water_pipe")
-					or string.find(objInfo.fullname, "laptop")
-					or string.find(objInfo.fullname, "catwalk_stage")
-					or string.find(objInfo.fullname, "change_room")
-					or string.find(objInfo.fullname, "steel_folding_chairtop")
-					or string.find(objInfo.fullname, "steel_folding_chair")
-					or string.find(objInfo.fullname, "smartphone")
-					or string.find(objInfo.fullname, "portal")
-					or string.find(objInfo.fullname, "obstacle_blue")
-					or string.find(objInfo.fullname, "onstacle_red")
-					or string.find(objInfo.fullname, "obstacle_red")
-					or string.find(objInfo.fullname, "reload_station")
-					or string.find(objInfo.fullname, "recharge_station")
-					or string.find(objInfo.fullname, "ladder_metal")
-					or string.find(objInfo.fullname, "metal_panel")
-					or string.find(objInfo.fullname, "solo_computer")
-					or string.find(objInfo.fullname, "orange_pipe")
-					or (objInfo.Name ~= nil and string.find(objInfo.Name, "plate_jetpack"))
-					or (objInfo.Name ~= nil and string.find(objInfo.Name, "exit_jetpack"))
-					or (objInfo.Name ~= nil and string.find(objInfo.Name, "plate_nerf"))
-					or (objInfo.Name ~= nil and string.find(objInfo.Name, "exit_nerf"))
-					or (objInfo.Name ~= nil and string.find(objInfo.Name, "friend_jetpack"))
-					or (objInfo.Name ~= nil and string.find(objInfo.Name, "friend_nerf"))
-				then
-					obj:RemoveFromParent()
-				elseif string.find(objInfo.fullname, "floor_propeller") then
-					obj.Physics = PhysicsMode.Static
-					hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
-						o.Physics = PhysicsMode.Disabled
-					end)
-					table.insert(propellers, obj:GetChild(1))
-				elseif string.find(objInfo.fullname, "firefly") then
-					obj.IsUnlit = true
-					hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
-						o.Physics = PhysicsMode.Disabled
-					end)
-					obj.animation_speed = math.random(1, 2)
-					obj.timer = math.random(1, 5)
-					obj.range = math.random(2, 3) * 0.4
-					obj.initialPosY = obj.LocalPosition.Y + obj.range
-					table.insert(fireflies, obj)
-				elseif string.find(objInfo.fullname, "friend_icon") then
-					local kOFFSET_Y = { 0, 2, 0 }
-
-					obj.Physics = PhysicsMode.Trigger
-					obj.CollidesWithGroups = { 2 }
-					obj.CollisionGroups = nil
-
-					obj.PrivateDrawMode = 1
-					obj.IsUnlit = true
-					obj.LocalPosition = obj.LocalPosition + kOFFSET_Y
-					obj.initialY = obj.LocalPosition.Y
-					obj.timer = math.random(1, 5)
-
-					obj.OnCollisionBegin = friendIconOnCollisionBegin
-					obj.OnCollisionEnd = friendIconOnCollisionEnd
-
-					table.insert(friendIcons, obj)
-				end
-			end
-		end
-	end
-
-	Timer(0.1, function()
-		for _, o in ipairs(onWater) do
-			o.Pivot.Y = 0
-			local p = o.Position + Number3.Up * map.Scale
-			local ray = Ray(p, Number3.Down)
-			local impact = ray:Cast(map.CollisionGroups)
-			if impact ~= nil then
-				o.Position = p + Number3.Down * impact.Distance
-			end
-		end
-		-- disabling water physics
-		for _, w in ipairs(waterShapes) do
-			pcall(function()
-				w.Physics = PhysicsMode.Disabled
-				o.CollisionGroups = {}
-				o.CollidesWithGroups = {}
-				o.Physics = PhysicsMode.Disabled
-			end)
-		end
-	end)
+	-- Timer(0.1, function()
+	-- 	for _, o in ipairs(onWater) do
+	-- 		o.Pivot.Y = 0
+	-- 		local p = o.Position + Number3.Up * map.Scale
+	-- 		local ray = Ray(p, Number3.Down)
+	-- 		local impact = ray:Cast(map.CollisionGroups)
+	-- 		if impact ~= nil then
+	-- 			o.Position = p + Number3.Down * impact.Distance
+	-- 		end
+	-- 	end
+	-- 	-- disabling water physics
+	-- 	for _, w in ipairs(waterShapes) do
+	-- 		pcall(function()
+	-- 			w.Physics = PhysicsMode.Disabled
+	-- 			o.CollisionGroups = {}
+	-- 			o.CollidesWithGroups = {}
+	-- 			o.Physics = PhysicsMode.Disabled
+	-- 		end)
+	-- 	end
+	-- end)
 
 	local n3_1 = Number3.Zero
 	local n3_2 = Number3.Zero
@@ -688,74 +618,60 @@ function loadMap()
 		o1.Rotation:SetLookRotation(n3_2 - n3_1)
 	end
 
-	Timer(0.1, function()
-		local avatars = World:FindObjectsByName("cta_customavatar")
-		for i, a in ipairs(avatars) do
-			if i == 2 then
-				local defaultScale = Number3(0.5, 0.5, 0.5)
-				local o = Object()
-				local o2 = Object()
-				o2:SetParent(o)
-				local _avatar = avatar:get("claire")
-				o.Physics = PhysicsMode.Trigger
-				o.CollisionBox = Box({ -40, 0, -40 }, { 40, 25, 40 })
-				o.CollidesWithGroups = Player.CollisionGroups
-				o.CollisionGroups = {}
-				o2.Scale = Player.Scale
-				o2.LocalRotation = Rotation(0, math.rad(-140), 0)
-				_avatar:SetParent(o2)
-				World:AddChild(o)
-				o.Position = a.Position
-				o.OnCollisionBegin = function(_, player)
-					if player ~= Player then
-						return
-					end
-					o2:TextBubble(
-						"Hey! You can edit your avatar in the Profile Menu. 👕👖🥾",
-						-1,
-						Number3(0, 40, 0),
-						true
-					)
-					-- Menu:showProfileButton()
+	-- Timer(0.1, function()
+	-- 	local avatars = World:FindObjectsByName("cta_customavatar")
+	-- 	for i, a in ipairs(avatars) do
+	-- 		if i == 2 then
+	-- 			local defaultScale = Number3(0.5, 0.5, 0.5)
+	-- 			local o = Object()
+	-- 			local o2 = Object()
+	-- 			o2:SetParent(o)
+	-- 			local _avatar = avatar:get("claire")
+	-- 			o.Physics = PhysicsMode.Trigger
+	-- 			o.CollisionBox = Box({ -40, 0, -40 }, { 40, 25, 40 })
+	-- 			o.CollidesWithGroups = Player.CollisionGroups
+	-- 			o.CollisionGroups = {}
+	-- 			o2.Scale = Player.Scale
+	-- 			o2.LocalRotation = Rotation(0, math.rad(-140), 0)
+	-- 			_avatar:SetParent(o2)
+	-- 			World:AddChild(o)
+	-- 			o.Position = a.Position
+	-- 			o.OnCollisionBegin = function(_, player)
+	-- 				if player ~= Player then
+	-- 					return
+	-- 				end
+	-- 				o2:TextBubble(
+	-- 					"Hey! You can edit your avatar in the Profile Menu. 👕👖🥾",
+	-- 					-1,
+	-- 					Number3(0, 40, 0),
+	-- 					true
+	-- 				)
+	-- 				-- Menu:showProfileButton()
 
-					ease:cancel(o2)
-					ease:linear(o2, 0.1, {
-						onDone = function(o2)
-							ease:linear(o2, 0.1, {}).Scale = defaultScale
-						end,
-					}).Scale = (
-						defaultScale * 1.1
-					)
+	-- 				ease:cancel(o2)
+	-- 				ease:linear(o2, 0.1, {
+	-- 					onDone = function(o2)
+	-- 						ease:linear(o2, 0.1, {}).Scale = defaultScale
+	-- 					end,
+	-- 				}).Scale = (
+	-- 					defaultScale * 1.1
+	-- 				)
 
-					o2.Tick = function(o, _)
-						lookAtHorizontal(o, player)
-					end
-				end
-				o.OnCollisionEnd = function(_, _)
-					-- cancel animation and reset NPC scale
-					ease:cancel(o2)
-					o2.Scale = defaultScale
+	-- 				o2.Tick = function(o, _)
+	-- 					lookAtHorizontal(o, player)
+	-- 				end
+	-- 			end
+	-- 			o.OnCollisionEnd = function(_, _)
+	-- 				-- cancel animation and reset NPC scale
+	-- 				ease:cancel(o2)
+	-- 				o2.Scale = defaultScale
 
-					o2:ClearTextBubble()
-					o2.Tick = nil
-				end
-			end
-			a:RemoveFromParent()
-		end
-
-		avatars = World:FindObjectsByName("cta_addfriends")
-		for _, a in ipairs(avatars) do
-			a:RemoveFromParent()
-		end
-		avatars = World:FindObjectsByName("cta_exploreworlds")
-		for _, a in ipairs(avatars) do
-			a:RemoveFromParent()
-		end
-		avatars = World:FindObjectsByName("cta_createitems")
-		for _, a in ipairs(avatars) do
-			a:RemoveFromParent()
-		end
-	end)
+	-- 				o2:ClearTextBubble()
+	-- 				o2.Tick = nil
+	-- 			end
+	-- 		end
+	-- 		a:RemoveFromParent()
+	-- 	end
 end
 
 holdTimer = nil

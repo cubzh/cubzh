@@ -651,6 +651,7 @@ local loadObject = function(obj, objInfo, config)
 	obj.uuid = objInfo.uuid
 	obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
 	obj.Name = objInfo.Name or objInfo.fullname
+	obj.fullname = objInfo.fullname
 end
 
 local loadMap = function(d, n, didLoad)
@@ -676,7 +677,7 @@ local defaultLoadWorldConfig = {
 	onLoad = nil,
 	onDone = nil,
 	fullnameItemKey = "fullname",
-	fromBundle = false,
+	fromBundle = true,
 	optimisations = {
 		minimum_item_size_for_shadows = 40,
 	}
