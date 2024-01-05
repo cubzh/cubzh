@@ -1589,6 +1589,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     cursor = (void *)((uint32_t *)cursor + 1);
 
     float3 pivot = shape_get_pivot(shape);
+    pivot.x -= start.x;
+    pivot.y -= start.y;
+    pivot.z -= start.z;
+
     memcpy(cursor, &pivot, sizeof(float3));
     cursor = (void *)((float3 *)cursor + 1);
 
