@@ -18,7 +18,7 @@ local MINIMUM_ITEM_SIZE_FOR_SHADOWS = 40
 local MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR = MINIMUM_ITEM_SIZE_FOR_SHADOWS * MINIMUM_ITEM_SIZE_FOR_SHADOWS
 local SPAWN_IN_BLOCK = Number3(107, 14, 73)
 local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(107, 20, 73)
-local ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCk = 2.0
+local ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK = 2.0
 local REQUEST_FAIL_RETRY_DELAY = 5.0
 local HOLDING_TIME = 0.6 -- time to trigger action when holding button pressed
 
@@ -308,8 +308,8 @@ Client.Tick = function(dt)
 			moveDT = moveDT - math.pi * 2
 		end
 		Camera.Position.Y = (
-			TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCk
-		) * MAP_SCALE
+			TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK
+		) * MAP_SCALE.Y
 		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
 	end
 
