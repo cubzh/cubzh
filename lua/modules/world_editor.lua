@@ -5,6 +5,7 @@ local worldEditorCommon = require("world_editor_common")
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
 
 local deserializeWorld = worldEditorCommon.deserializeWorld
+local loadWorld = worldEditorCommon.loadWorld
 local maps = worldEditorCommon.maps
 local events = worldEditorCommon.events
 
@@ -196,7 +197,7 @@ local unfreezeObject = function(obj)
 	end)
 end
 
-local spawnObject = function(data, onDone)
+local _spawnObject = function(obj, onDone, data)
 	local uuid = data.uuid
 	local fullname = data.fullname
 	local name = data.Name
@@ -205,37 +206,46 @@ local spawnObject = function(data, onDone)
 	local scale = data.Scale or 0.5
 	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
+	obj:SetParent(World)
+
+	-- Handle multishape (world space, change position after)
+	local box = Box()
+	box:Fit(obj, true)
+	obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+
+	setObjectPhysicsMode(obj, physicsMode)
+
+	obj.uuid = uuid
+	obj.Position = position
+	obj.Rotation = rotation
+	obj.Scale = scale
+
+	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		if type(o) == "Object" then return end
+		o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
+		o:ResetCollisionBox()
+	end)
+
+	obj.isEditable = true
+	obj.fullname = fullname
+	obj.Name = name or fullname
+
+	if obj.uuid ~= -1 then
+		objects[obj.uuid] = obj
+	end
+	if onDone then onDone(obj) end
+end
+
+local spawnObject = function(data, onDone, spawnedObj)
+	if spawnedObj then
+		_spawnObject(spawnedObj, onDone, data)
+		return
+	end
+	local fullname = data.fullname
 	Object:Load(fullname, function(obj)
 		if not obj then print("Can't load", fullname) return end
-		obj:SetParent(World)
-
-		-- Handle multishape (world space, change position after)
-		local box = Box()
-		box:Fit(obj, true)
-		obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-
-		setObjectPhysicsMode(obj, physicsMode)
-
-		obj.uuid = uuid
-		obj.Position = position
-		obj.Rotation = rotation
-		obj.Scale = scale
-
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-			if type(o) == "Object" then return end
-			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
-			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
-			o:ResetCollisionBox()
-		end)
-
-		obj.isEditable = true
-		obj.fullname = fullname
-		obj.Name = name or fullname
-
-		if obj.uuid ~= -1 then
-			objects[obj.uuid] = obj
-		end
-		if onDone then onDone(obj) end
+		_spawnObject(obj, onDone, data)
 	end)
 end
 
@@ -1487,37 +1497,16 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		end)
 	elseif e.a == events.SYNC then
 		if state == states.PICK_WORLD then -- joining
-			local t = deserializeWorld(data.mapBase64)
-			loadMap(t.mapName, t.mapScale or MAP_SCALE_DEFAULT, function()
-				setState(states.DEFAULT)
-				startDefaultMode()
-				local blocks = t.blocks
-				if blocks then
-					for _,d in ipairs(blocks) do
-						local k = d[1]
-						local color = d[2]
-						-- get pos
-						local x = math.floor(k % 1000)
-						local y = math.floor((k / 1000) % 1000)
-						local z = math.floor(k / 1000000)
-						local b = map:GetBlock(x,y,z)
-						if b then b:Remove() end
-						if color ~= nil and color ~= -1 then
-							map:AddBlock(color, x, y, z)
-						end
-					end
-					map:RefreshModel()
+			loadWorld(data.mapBase64, {
+				onDone = function()
+					setState(states.DEFAULT)
+					startDefaultMode()
+				end,
+				onLoad = function(obj, data)
+					obj.currentlyEditedBy = nil
+					spawnObject(data, nil, obj)
 				end
-				if t.objects then
-					for _,objInfo in ipairs(t.objects) do
-						objInfo.currentlyEditedBy = nil
-						spawnObject(objInfo)
-					end
-				end
-				if t.ambience then
-					require("ui_ai_ambience"):setFromAIConfig(t.ambience, true)
-				end
-			end)
+			})
 		end
 	elseif e.a == events.PLACE_OBJECT then
 		if isLocalPlayer then
