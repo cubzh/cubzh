@@ -1379,7 +1379,6 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
                                                          uint16_t shapeParentId,
                                                          uint32_t *uncompressedSize,
                                                          void **uncompressedData) {
-
     if (uncompressedSize == NULL) {
         return false;
     }
@@ -1403,12 +1402,12 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     int3 shapeSize;
     shape_get_bounding_box_size(shape, &shapeSize);
 
-    uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
+    const uint32_t blockCount = (uint32_t)(shapeSize.x * shapeSize.y * shapeSize.z);
 
 #if GLOBAL_LIGHTING_BAKE_WRITE_ENABLED
-    bool hasLighting = shape_uses_baked_lighting(shape);
+    const bool hasLighting = shape_uses_baked_lighting(shape);
 #else
-    bool hasLighting = false;
+    const bool hasLighting = false;
 #endif
 
     // hasCustomCollisionBox
@@ -1589,6 +1588,10 @@ bool chunk_v6_shape_create_and_write_uncompressed_buffer(const Shape *shape,
     cursor = (void *)((uint32_t *)cursor + 1);
 
     float3 pivot = shape_get_pivot(shape);
+    pivot.x -= start.x;
+    pivot.y -= start.y;
+    pivot.z -= start.z;
+
     memcpy(cursor, &pivot, sizeof(float3));
     cursor = (void *)((float3 *)cursor + 1);
 
