@@ -426,8 +426,10 @@ end
 
 --- returns the published worlds in the specified category
 --- config: table
---- 	list: string? (nil, "recent", "featured")
+--- 	list: string? (nil, "", "featured")
 --- 	search: string?
+---     perPage: integer?
+---     page: integer? (default is 1)
 --- callback: function(err, worlds)
 ---		err: string
 ---		worlds: []worlds
@@ -441,13 +443,8 @@ mod.getPublishedWorlds = function(self, config, callback)
 	if type(callback) ~= "function" then
 		error("api:getPublishedWorlds(config, callback): callback should be a function", 2)
 	end
-	if
-		config.list ~= nil
-		and type(config.list) == Type.string
-		and config.list ~= "featured"
-		and config.list ~= "recent"
-	then
-		error('api:getPublishedWorlds(config, callback): config.list should be "featured" or "recent"', 2)
+	if config.list ~= nil and config.list ~= "featured" and config.list ~= "recent" then
+		error('api:getPublishedWorlds(config, callback): config.list can only be "featured" or "recent"', 2)
 	end
 	if config.search ~= nil and type(config.search) ~= Type.string then
 		error("api:getPublishedWorlds(config, callback): config.search should be a string", 2)
@@ -456,13 +453,11 @@ mod.getPublishedWorlds = function(self, config, callback)
 	-- construct query params string
 	local queryParams = ""
 
-	local category = "recent"
-	if config.list ~= nil and type(config.list) == Type.string then
-		category = config.list
+	if type(config.list) == Type.string and #config.list > 0 then
+		queryParams = queryParams .. "category=" .. config.list
 	end
-	queryParams = queryParams .. "category=" .. category
 
-	if config.search ~= nil and type(config.search) == Type.string and #config.search > 0 then
+	if type(config.search) == Type.string and #config.search > 0 then
 		-- if this isn't the 1st query param, we need to use a '&' separator
 		if #queryParams > 0 then
 			queryParams = queryParams .. "&"
@@ -470,11 +465,35 @@ mod.getPublishedWorlds = function(self, config, callback)
 		queryParams = queryParams .. "search=" .. config.search
 	end
 
-	-- url example : https://api.cu.bzh/worlds?category=featured&search=monster
-	local url = mod.kApiAddr .. "/worlds?" .. queryParams
+	local perPageType = type(config.perPage)
+	if perPageType == Type.integer or perPageType == Type.number then
+		-- force perPage to be an integer
+		local perPageIntValue = math.floor(config.perPage)
+		if perPageIntValue > 0 then
+			if #queryParams > 0 then
+				queryParams = queryParams .. "&"
+			end
+			queryParams = queryParams .. "perPage=" .. perPageIntValue
+		end
+	end
+
+	local pageType = type(config.page)
+	if pageType == Type.integer or pageType == Type.number then
+		-- force page to be an integer
+		local pageIntValue = math.floor(config.page)
+		if pageIntValue > 0 then
+			if #queryParams > 0 then
+				queryParams = queryParams .. "&"
+			end
+			queryParams = queryParams .. "page=" .. pageIntValue
+		end
+	end
+
+	-- url example : https://api.cu.bzh/worlds2?category=featured&search=monster
+	local url = mod.kApiAddr .. "/worlds2?" .. queryParams
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+			callback("http status not 200 (" .. res.StatusCode .. ")", nil)
 			return
 		end
 		-- decode body
@@ -484,7 +503,7 @@ mod.getPublishedWorlds = function(self, config, callback)
 			return
 		end
 
-		for _, v in ipairs(data.worlds) do
+		for _, v in ipairs(data.results) do
 			if v.created then
 				v.created = time.iso8601_to_os_time(v.created)
 			end
@@ -502,7 +521,7 @@ mod.getPublishedWorlds = function(self, config, callback)
 				v.views = 0
 			end
 		end
-		callback(nil, data.worlds)
+		callback(nil, data.results)
 	end)
 	return req
 end
