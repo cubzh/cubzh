@@ -9,6 +9,14 @@
 ![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg?branch=main)
 [![Join the chat at https://cu.bzh/discord](https://img.shields.io/discord/355905150528913409?color=%237289DA&label=cubzh&logo=discord&logoColor=white)](https://cu.bzh/discord)
 
+<iframe 
+            src="https://app.cu.bzh?worldID=7762fea1-bbfc-4e9b-bf9e-14ea3d902dc0" 
+            frameborder="0" 
+            allowfullscreen
+            crossorigin
+            allow="cross-origin-isolated">
+        </iframe>
+
 ## What is Cubzh?
 
 Cubzh is an online platform written in C/C++ and Lua, allowing users to create Items, Environments, and Games using cubes paired with Lua scripts. It is inpired by both Roblox and Minecraft. With an easy-to-use scripting environment and free servers for instant multiplayer action, we're aiming to unleash the kind of creativity you see in Roblox. Enforcing cubes as building blocks for all 3D assets makes modeling and collaboration easier.
