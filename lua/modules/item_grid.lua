@@ -361,9 +361,9 @@ itemGrid.create = function(_, config)
 		-- self.nbCells == number of displayed cells
 		for i = 1, self.nbCells do
 			cell = cells[i]
-			if cell == nil then
+			if cell == nil or cell.show == nil then
 				cell = self:_createCell(self.cellSize)
-				table.insert(cells, cell)
+				cells[i] = cell
 			end
 			cell:show()
 
@@ -771,6 +771,9 @@ itemGrid.create = function(_, config)
 		local center = grid.cellSize * 0.5
 		local loadingCubePos = { center + math.cos(grid.dt4) * 20, center - math.sin(grid.dt4) * 20, 0 }
 		for _, c in ipairs(cells) do
+			if c.getLoadingCube == nil then
+				return
+			end
 			loadingCube = c:getLoadingCube()
 			if loadingCube ~= nil and loadingCube:isVisible() then
 				loadingCube.pos = loadingCubePos
