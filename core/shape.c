@@ -2187,12 +2187,12 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
 
     // select overlapped chunks
     FifoList *chunksQuery = fifo_list_new();
+    bool didHit = false;
     if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, chunksQuery, EPSILON_COLLISION) > 0) {
 
         // examine query results, stop at first overlap
         RtreeNode *hit = fifo_list_pop(chunksQuery);
         OctreeIterator *oi;
-        bool didHit = false;
         bool leaf;
         Chunk *c;
         Box tmpBox;
@@ -2232,7 +2232,7 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
     }
     fifo_list_free(chunksQuery, NULL);
 
-    return false;
+    return didHit;
 }
 
 // MARK: - Graphics -
