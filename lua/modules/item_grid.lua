@@ -367,7 +367,9 @@ itemGrid.create = function(_, config)
 				cell = self:_createCell(self.cellSize)
 				table.insert(cells, cell)
 			end
-			cell:show()
+			if cell.show ~= nil then
+				cell:show()
+			end
 
 			local row = 1 + math.floor((i - 1) / self.columns)
 			if row > self.rows then
