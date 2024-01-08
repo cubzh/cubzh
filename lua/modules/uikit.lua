@@ -2061,7 +2061,7 @@ function createUI(system)
 			maxY = 0
 			local indexesToUnload = {}
 			local indexesToLoad = {}
-			for k=1,node.nbCells do
+			for k = 1, node.nbCells do
 				local v = cells[k]
 				local height = cachedCellsHeight[k]
 
@@ -2114,7 +2114,7 @@ function createUI(system)
 			end
 
 			local loadedCells = false
-			for k,_ in pairs(indexesToLoad) do
+			for k, _ in pairs(indexesToLoad) do
 				local newCell = config.loadCell(k)
 				if newCell == nil then
 					break
@@ -2123,7 +2123,7 @@ function createUI(system)
 				loadedCells = true
 			end
 
-			for _,k in ipairs(indexesToUnload) do
+			for _, k in ipairs(indexesToUnload) do
 				if cells[k] then
 					-- unload if too far from screen
 					config.unloadCell(cells[k])
@@ -2148,7 +2148,7 @@ function createUI(system)
 				end
 				scrollHandle.pos = {
 					node.Width - scrollHandle.Width,
-					posY
+					posY,
 				}
 			else
 				scrollHandle:hide()
@@ -2166,7 +2166,7 @@ function createUI(system)
 		end
 
 		node.pushFront = function(_, cell)
-			for i=node.nbCells+1,2,-1 do
+			for i = node.nbCells + 1, 2, -1 do
 				cells[i] = cells[i - 1]
 				cachedCellsHeight[i] = cachedCellsHeight[i - 1]
 			end
@@ -2177,12 +2177,18 @@ function createUI(system)
 		-- add cell at index, called automatically after onLoad callback
 		node.pushCell = function(_, cell, index, needRefresh)
 			needRefresh = needRefresh == nil and true or needRefresh
-			if cell == nil then return end
-			if index == nil then index = node.nbCells + 1 end
+			if cell == nil then
+				return
+			end
+			if index == nil then
+				index = node.nbCells + 1
+			end
 			cells[index] = cell
 			cell:setParent(container)
 			cachedCellsHeight[index] = cell.Height
-			if index > node.nbCells then node.nbCells = index end
+			if index > node.nbCells then
+				node.nbCells = index
+			end
 			if needRefresh then
 				node:refresh()
 			end
@@ -2197,14 +2203,16 @@ function createUI(system)
 		LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
 			local x = pe.X * Screen.Width
 			local y = pe.Y * Screen.Height
-			isPointerOverFrame = x >= node.pos.X and
-				x <= node.pos.X + node.Width and
-				y >= node.pos.Y and
-				y <= node.pos.Y + node.Height
+			isPointerOverFrame = x >= node.pos.X
+				and x <= node.pos.X + node.Width
+				and y >= node.pos.Y
+				and y <= node.pos.Y + node.Height
 		end)
 
 		LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
-			if not isPointerOverFrame then return end
+			if not isPointerOverFrame then
+				return
+			end
 			node:setScrollPosition(node.scrollPosition + delta)
 		end)
 
