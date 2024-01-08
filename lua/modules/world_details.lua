@@ -158,7 +158,7 @@ worldDetailsMod.create = function(_, config)
 	local description = ui:createText("description", Color.White, "small")
 	description:setParent(descriptionArea)
 	worldDetails.description = description
-	description.LocalPosition.X = theme.padding
+	worldDetails.description.LocalPosition.X = theme.padding
 
 	local shapeArea = ui:createFrame(Color(0, 0, 0))
 	shapeArea:setParent(worldDetails)
@@ -275,7 +275,7 @@ worldDetailsMod.create = function(_, config)
 			self.shape.Height = 350
 		end
 
-		local req = api:getWorld(cell.id, { "authorName", "authorId" }, function(err, world)
+		local req = api:getWorld(cell.id, { "authorName", "authorId", "description" }, function(err, world)
 			if removed then
 				return
 			end
@@ -284,6 +284,7 @@ worldDetailsMod.create = function(_, config)
 			local authorId = world.authorId
 
 			if err == nil and world ~= nil then
+				-- update author text/button
 				if self.author ~= nil then
 					self.author.Text = " @" .. (authorName or "…")
 				elseif byBtn and authorName then
@@ -293,6 +294,12 @@ worldDetailsMod.create = function(_, config)
 						local profileContent = require("profile"):create(profileConfig)
 						content:push(profileContent)
 					end
+				end
+				-- update description text
+				if self.description ~= nil then
+					self.description.Text = world.description or ""
+					-- refresh view
+					self:_scheduleRefresh()
 				end
 			end
 
