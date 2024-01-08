@@ -780,6 +780,7 @@ size_t rtree_query_overlap_func(Rtree *r,
                                 uint16_t collidesWith,
                                 pointer_rtree_query_overlap_func func,
                                 void *ptr,
+                                const DoublyLinkedList *excludeLeafPtrs,
                                 FifoList *results,
                                 float epsilon) {
 
@@ -787,8 +788,6 @@ size_t rtree_query_overlap_func(Rtree *r,
     DoublyLinkedListNode *n;
     RtreeNode *rn, *child;
     size_t hits = 0;
-
-    vx_assert(results != NULL);
 
     rn = r->root;
     while (rn != NULL) {
@@ -804,8 +803,12 @@ size_t rtree_query_overlap_func(Rtree *r,
 
                 if (child->leaf == NULL) {
                     fifo_list_push(toExamine, child);
-                } else {
-                    fifo_list_push(results, child);
+                } else if (excludeLeafPtrs == NULL ||
+                           doubly_linked_list_contains(excludeLeafPtrs, child->leaf) == false) {
+
+                    if (results != NULL) {
+                        fifo_list_push(results, child);
+                    }
                     hits++;
                 }
             }
@@ -828,6 +831,7 @@ size_t rtree_query_overlap_box(Rtree *r,
                                const Box *aabb,
                                uint16_t groups,
                                uint16_t collidesWith,
+                               const DoublyLinkedList *excludeLeafPtrs,
                                FifoList *results,
                                float epsilon) {
 
@@ -836,6 +840,7 @@ size_t rtree_query_overlap_box(Rtree *r,
                                     collidesWith,
                                     _rtree_query_overlap_box_func,
                                     (void *)aabb,
+                                    excludeLeafPtrs,
                                     results,
                                     epsilon);
 }
@@ -930,8 +935,13 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
     RtreeCastResult *result;
     size_t hits = 0;
 
-    if (rtree_query_overlap_box(r, broadPhaseBox, groups, collidesWith, query, -EPSILON_COLLISION) >
-        0) {
+    if (rtree_query_overlap_box(r,
+                                broadPhaseBox,
+                                groups,
+                                collidesWith,
+                                excludeLeafPtrs,
+                                query,
+                                -EPSILON_COLLISION) > 0) {
         hit = fifo_list_pop(query);
         while (hit != NULL) {
             swept = box_swept(stepOriginBox,

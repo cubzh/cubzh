@@ -351,6 +351,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                     &broadphase,
                                     rb->groups,
                                     rb->collidesWith,
+                                    NULL,
                                     sceneQuery,
                                     -EPSILON_COLLISION) > 0) {
             RtreeNode *hit = fifo_list_pop(sceneQuery);
@@ -773,6 +774,7 @@ void _rigidbody_trigger_tick(Scene *scene,
                                 worldCollider,
                                 rb->groups,
                                 rb->collidesWith,
+                                NULL,
                                 sceneQuery,
                                 EPSILON_COLLISION) > 0) {
 

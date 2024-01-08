@@ -105,6 +105,7 @@ extern unsigned long upper_power_of_two(unsigned long v);
 #define EPSILON_ZERO_RAD 1e-3f
 
 #define EPSILON_COLLISION 1e-3f
+#define EPSILON_CONTACT 1e-2f
 
 // MARK: - PHYSICS -
 
