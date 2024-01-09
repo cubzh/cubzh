@@ -8,6 +8,24 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
+local DEBUG_AMBIENCES = false
+
+local TIME_CYCLE_DURATION = 10 -- 1440
+
+local MAP_COLLISION_GROUPS = { 1 }
+local MAP_COLLIDES_WITH_GROUPS = {}
+
+local PLAYER_COLLISION_GROUPS = { 2 }
+local PLAYER_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
+
+local ITEM_COLLISION_GROUPS = { 3 }
+local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
+
+local BUILDING_COLLISION_GROUPS = { 4 }
+local BUILDING_COLLIDES_WITH_GROUPS = {}
+
+local DRAFT_COLLISION_GROUPS = { 5 }
+
 local _animatedElements = {}
 
 Client.OnStart = function()
@@ -28,9 +46,30 @@ Client.OnStart = function()
 	controls:setButtonIcon("action1", "⬆️")
 
 	-- AMBIENCE
-	Clouds.Altitude = 50
-	local ambiences = { dawn, day, dusk, night }
-	ambienceCycle.start(ambiences, 2)
+	Clouds.Altitude = 50 * MAP_SCALE
+
+	if not DEBUG_AMBIENCES then
+		ambienceCycle = ambience:startCycle({
+			{
+				config = dawn,
+				duration = TIME_CYCLE_DURATION * 0.15,
+			},
+			{
+				config = day,
+				duration = TIME_CYCLE_DURATION * 0.4,
+			},
+			{
+				config = dusk,
+				duration = TIME_CYCLE_DURATION * 0.15,
+			},
+			{
+				config = night,
+				duration = TIME_CYCLE_DURATION * 0.3,
+			},
+		}, {
+			internalTick = false,
+		})
+	end
 
 	-- CONTROLS
 	-- Disabling controls until user is authenticated
@@ -109,7 +148,7 @@ Pointer.Click = function(_)
 	multi:action("swingRight")
 
 	if _animatedElements.solo_computer.interactionAvailable then
-		ambienceCycle.forward()
+		-- ambienceCycle:next()
 	elseif _animatedElements.change_room.interactionAvailable then
 		Menu:ShowProfile()
 	elseif _animatedElements.fountain.interactionAvailable then
@@ -124,6 +163,8 @@ local SAVE_AMOUNT = 10
 local savedPositions, savedRotations = {}, {}
 local moveDT = 0
 
+local unixMilli
+local currentTime
 Client.Tick = function(dt)
 	if not localPlayerShown then
 		moveDT = moveDT + dt * 0.2
@@ -140,6 +181,21 @@ Client.Tick = function(dt)
 	if Player.Position.Y < -200 then
 		dropPlayer(Player)
 	end
+
+	unixMilli = Time.UnixMilli() / 1000.0
+	currentTime = unixMilli % TIME_CYCLE_DURATION
+
+	if townhallHourHand ~= nil then
+		townhallHourHand.LocalRotation = Rotation(-math.pi * 4 * currentTime / TIME_CYCLE_DURATION, 0, 0)
+	end
+
+	if townhallMinuteHand ~= nil then
+		townhallMinuteHand.LocalRotation = Rotation(-math.pi * 48 * currentTime / TIME_CYCLE_DURATION, 0, 0)
+	end
+
+	if not DEBUG_AMBIENCES then
+		ambienceCycle:setTime(currentTime)
+	end
 end
 
 Client.OnPlayerJoin = function(p)
@@ -149,7 +205,7 @@ Client.OnPlayerJoin = function(p)
 	end
 	initPlayer(p)
 	dropPlayer(p)
-	print("[" .. p.ID .. "] " .. p.Username .. " joined (" .. p.UserID .. ")")
+	print(p.Username .. " joined!")
 end
 
 Client.OnPlayerLeave = function(p)
@@ -190,36 +246,26 @@ Client.OnWorldObjectLoad = function(obj)
 		obj.source.LocalPosition = { 0, 1, 0 }
 		obj.source.Radius = 150
 		obj.source:SetParent(obj.lh_light)
-		obj.source.Tick = function(self, _)
-			if ambienceCycle.currentCycleTime > ambienceCycle.fullCycleDuration * 0.75 then
-				self.Intensity = 2
-					- (ambienceCycle.fullCycleDuration - ambienceCycle.currentCycleTime)
-						/ ambienceCycle.fullCycleDuration
-						* 4
-			elseif ambienceCycle.currentCycleTime < ambienceCycle.fullCycleDuration * 0.25 then
-				self.Intensity = 2 - ambienceCycle.currentCycleTime / ambienceCycle.fullCycleDuration * 4
-			else
-				self.Intensity = 0
-			end
-		end
+		-- obj.source.Tick = function(self, _)
+		-- if ambienceCycle.currentCycleTime > ambienceCycle.fullCycleDuration * 0.75 then
+		-- 	self.Intensity = 2
+		-- 		- (ambienceCycle.fullCycleDuration - ambienceCycle.currentCycleTime)
+		-- 			/ ambienceCycle.fullCycleDuration
+		-- 			* 4
+		-- elseif ambienceCycle.currentCycleTime < ambienceCycle.fullCycleDuration * 0.25 then
+		-- 	self.Intensity = 2 - ambienceCycle.currentCycleTime / ambienceCycle.fullCycleDuration * 4
+		-- else
+		-- 	self.Intensity = 0
+		-- end
+		-- end
 		_animatedElements.lighthouse = obj
 	elseif obj.Name == "voxels.townhall" then
-		obj.Hour.Pivot = { 0.5, 0.5, 0.5 }
-		obj.Hour.Tick = function(self, _)
-			self.LocalRotation = {
-				2 * -2 * math.pi * ambienceCycle.currentCycleTime / ambienceCycle.fullCycleDuration - math.pi / 2,
-				0,
-				0,
-			}
-		end
-		obj.Minute.Pivot = { 0.5, 0.5, 0.5 }
-		obj.Minute.Tick = function(self, _)
-			self.LocalRotation = {
-				-2 * math.pi * (ambienceCycle.currentCycleTime / ambienceCycle.fullCycleDuration) * 12,
-				0,
-				0,
-			}
-		end
+		townhallHourHand = obj.Hour
+		townhallHourHand.Pivot = { 0.5, 0.5, 0.5 }
+
+		townhallMinuteHand = obj.Minute
+		townhallMinuteHand.Pivot = { 0.5, 0.5, 0.5 }
+
 		_animatedElements.townhall = obj
 	elseif obj.Name == "voxels.house_1" then
 		obj.Shadow = true
@@ -538,13 +584,15 @@ end
 function dropPlayer(p)
 	p.Velocity, p.Motion = { 0, 0, 0 }, { 0, 0, 0 }
 
-	-- cycling through saved positions to find a valid one
-	for k, v in ipairs(savedPositions) do
-		local ray = Ray(v, Number3.Down)
-		if ray:Cast(Map) ~= nil then
-			p.Position = v
-			p.Rotation = savedRotations[k]
-			return
+	if p == Player then
+		-- cycling through saved positions to find a valid one
+		for k, v in ipairs(savedPositions) do
+			local ray = Ray(v, Number3.Down)
+			if ray:Cast(Map) ~= nil then
+				p.Position = v
+				p.Rotation = savedRotations[k]
+				return
+			end
 		end
 	end
 
@@ -571,6 +619,20 @@ function action1()
 			playerControls:glide(Player)
 		end
 	end)
+
+	if DEBUG_AMBIENCES then
+		if ambiences == nil then
+			ambiences = { dawn, day, dusk, night }
+			nextAmbience = 1
+		end
+		local a = ambiences[nextAmbience]
+		ambience:set(a)
+
+		nextAmbience = nextAmbience + 1
+		if nextAmbience > #ambiences then
+			nextAmbience = 1
+		end
+	end
 end
 
 function action1Release()
@@ -768,7 +830,7 @@ dawn = {
 	sun = {
 		color = Color(224, 82, 82),
 		intensity = 0.200000,
-		rotation = Number3(math.pi * 0.2, math.pi * 0.67, 0.000000),
+		rotation = Rotation(math.pi * 0.2, math.pi * 0.67, 0.000000),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -793,7 +855,7 @@ day = {
 	sun = {
 		color = Color(199, 195, 73),
 		intensity = 1.000000,
-		rotation = Number3(math.pi * 0.34, math.pi, 0.000000),
+		rotation = Rotation(math.rad(50), math.rad(-30), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -818,7 +880,7 @@ dusk = {
 	sun = {
 		color = Color(190, 98, 219),
 		intensity = 0.200000,
-		rotation = Number3(math.pi * 0.2, math.pi * 1.34, 0.000000),
+		rotation = Rotation(math.pi * 0.2, math.pi * 1.34, 0.000000),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -843,82 +905,13 @@ night = {
 	sun = {
 		color = Color(36, 44, 195),
 		intensity = 0.000000,
-		rotation = Number3(math.pi * 0.26, math.pi * 1.5, 0.000000),
+		rotation = Rotation(math.pi * 0.26, math.pi * 1.5, 0.000000),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
 		dirLightFactor = 0.000000,
 	},
 }
-
-ambienceCycle = {}
-ambienceCycle.fullCycleDuration = 10 -- 1440
-ambienceCycle.currentCycleTime = ambienceCycle.fullCycleDuration * 0.5
-ambienceCycle.cycleDuration = ambienceCycle.fullCycleDuration * 0.25
-ambienceCycle.forwardStep = 0.1
-ambienceCycle.timeToAdd = 0
-ambienceCycle.start = function(ambiences, startIdx)
-	local function lerp(a, b, t)
-		return a * (1 - t) + b * t
-	end
-
-	ambienceCycle.currentAmbience = ambiences[startIdx]
-	ambience:set(ambienceCycle.currentAmbience)
-
-	local a = {}
-	a.sky, a.fog, a.sun, a.ambient = {}, {}, {}, {}
-	a.sky.skyColor, a.sky.horizonColor, a.sky.abyssColor, a.sky.lightColor, a.sun.color, a.fog.color =
-		Color.White, Color.White, Color.White, Color.White, Color.White, Color.White
-	a.sun.rotation = Number3.Zero
-	a.lightIntensity, a.sun.intensity, a.fog.lightAbsorbtion = 0.6, 1.0, 0.4
-	a.ambient.skyLightFactor, a.ambient.dirLightFactor = 0.10, 0.20
-
-	local idx = startIdx or 1
-
-	LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		from = ambienceCycle.currentAmbience
-		local nextIdx = idx < #ambiences and (idx + 1) or 1
-		to = ambiences[nextIdx]
-
-		local _, ratio = math.modf(ambienceCycle.currentCycleTime / ambienceCycle.cycleDuration)
-
-		a.sky.skyColor:Lerp(from.sky.skyColor, to.sky.skyColor, ratio)
-		a.sky.horizonColor:Lerp(from.sky.horizonColor, to.sky.horizonColor, ratio)
-		a.sky.abyssColor:Lerp(from.sky.abyssColor, to.sky.abyssColor, ratio)
-		a.sky.lightColor:Lerp(from.sky.lightColor, to.sky.lightColor, ratio)
-
-		a.sun.color:Lerp(from.sun.color, to.sun.color, ratio)
-		a.sun.rotation:Lerp(from.sun.rotation, to.sun.rotation, ratio) --custom lerp to "finish circle"
-		a.sun.intensity = lerp(from.sun.intensity, to.sun.intensity, ratio)
-
-		a.fog.color:Lerp(from.fog.color, to.fog.color, ratio)
-		a.fog.lightAbsorbtion = lerp(from.fog.lightAbsorbtion, from.fog.lightAbsorbtion, ratio)
-
-		a.ambient.skyLightFactor = lerp(from.ambient.skyLightFactor, to.ambient.skyLightFactor, ratio)
-		a.ambient.dirLightFactor = lerp(from.ambient.dirLightFactor, to.ambient.dirLightFactor, ratio)
-
-		ambience:set(a)
-
-		local cycle, _ = math.modf(ambienceCycle.currentCycleTime / ambienceCycle.cycleDuration)
-		ambienceCycle.currentCycleTime = ambienceCycle.currentCycleTime + dt
-		if ambienceCycle.timeToAdd ~= 0 then
-			ambienceCycle.currentCycleTime = ambienceCycle.currentCycleTime + ambienceCycle.timeToAdd
-			ambienceCycle.timeToAdd = 0
-		end
-		local newCycle, _ = math.modf(ambienceCycle.currentCycleTime / ambienceCycle.cycleDuration)
-		if newCycle > cycle or math.abs(newCycle - cycle) == 3 then
-			ambienceCycle.currentAmbience = ambiences[nextIdx]
-			idx = nextIdx
-		end
-		if ambienceCycle.currentCycleTime > ambienceCycle.fullCycleDuration then
-			ambienceCycle.currentCycleTime = 0
-		end
-	end)
-end
-
-ambienceCycle.forward = function()
-	ambienceCycle.timeToAdd = ambienceCycle.forwardStep * ambienceCycle.fullCycleDuration
-end
 
 -- MODULE : PLAYER CONTROLS
 
@@ -1122,7 +1115,6 @@ local GLIDER_MAX_SPEED = 200
 local GLIDER_WING_LENGTH = 24
 local GLIDER_MAX_START_SPEED = 50
 local GLIDER_DRAG_DOWN = -400
-local DRAFT_COLLISION_GROUPS = { 7 }
 
 playerControls.glide = function(self, player)
 	local pID = self:getPlayerID(player)
