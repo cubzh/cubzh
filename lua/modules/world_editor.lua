@@ -4,7 +4,6 @@ local sendToServer = require("world_editor_server").sendToServer
 local worldEditorCommon = require("world_editor_common")
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
 
-local deserializeWorld = worldEditorCommon.deserializeWorld
 local loadWorld = worldEditorCommon.loadWorld
 local maps = worldEditorCommon.maps
 local events = worldEditorCommon.events
@@ -197,55 +196,64 @@ local unfreezeObject = function(obj)
 	end)
 end
 
-local _spawnObject = function(obj, onDone, data)
-	local uuid = data.uuid
-	local fullname = data.fullname
-	local name = data.Name
-	local position = data.Position or Number3(0,0,0)
-	local rotation = data.Rotation or Rotation(0,0,0)
-	local scale = data.Scale or 0.5
-	local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
-
-	obj:SetParent(World)
-
-	-- Handle multishape (world space, change position after)
-	local box = Box()
-	box:Fit(obj, true)
-	obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-
-	setObjectPhysicsMode(obj, physicsMode)
-
-	obj.uuid = uuid
-	obj.Position = position
-	obj.Rotation = rotation
-	obj.Scale = scale
-
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		if type(o) == "Object" then return end
-		o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
-		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
-		o:ResetCollisionBox()
-	end)
-
-	obj.isEditable = true
-	obj.fullname = fullname
-	obj.Name = name or fullname
-
-	if obj.uuid ~= -1 then
-		objects[obj.uuid] = obj
-	end
-	if onDone then onDone(obj) end
-end
-
-local spawnObject = function(data, onDone, spawnedObj)
-	if spawnedObj then
-		_spawnObject(spawnedObj, onDone, data)
+local spawnObject = function(data, onDone)
+	if data.obj then -- Loaded with loadWorld, already created, no need to place it
+		local obj = data.obj
+		obj.isEditable = true
+		local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
+		setObjectPhysicsMode(obj, physicsMode)
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			if type(o) == "Object" then return end
+			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
+			o:ResetCollisionBox()
+		end)
+		if obj.uuid ~= -1 then
+			objects[obj.uuid] = obj
+		end
+		if onDone then onDone(obj) end
 		return
 	end
 	local fullname = data.fullname
 	Object:Load(fullname, function(obj)
 		if not obj then print("Can't load", fullname) return end
-		_spawnObject(obj, onDone, data)
+		local uuid = data.uuid
+		local fullname = data.fullname
+		local name = data.Name
+		local position = data.Position or Number3(0,0,0)
+		local rotation = data.Rotation or Rotation(0,0,0)
+		local scale = data.Scale or 0.5
+		local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
+
+		obj:SetParent(World)
+
+		-- Handle multishape (world space, change position after)
+		local box = Box()
+		box:Fit(obj, true)
+		obj.Pivot = Number3(obj.Width / 2, box.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+
+		setObjectPhysicsMode(obj, physicsMode)
+
+		obj.uuid = uuid
+		obj.Position = position
+		obj.Rotation = rotation
+		obj.Scale = scale
+
+		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+			if type(o) == "Object" then return end
+			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
+			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
+			o:ResetCollisionBox()
+		end)
+
+		obj.isEditable = true
+		obj.fullname = fullname
+		obj.Name = name or fullname
+
+		if obj.uuid ~= -1 then
+			objects[obj.uuid] = obj
+		end
+		if onDone then onDone(obj) end
 	end)
 end
 
@@ -1503,8 +1511,14 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 					startDefaultMode()
 				end,
 				onLoad = function(obj, data)
+					if data == "Map" then
+						if map then map:RemoveFromParent() end
+						map = obj
+						return
+					end
 					obj.currentlyEditedBy = nil
-					spawnObject(data, nil, obj)
+					data.obj = obj
+					spawnObject(data)
 				end
 			})
 		end
