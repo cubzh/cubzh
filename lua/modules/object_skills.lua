@@ -70,7 +70,7 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function()
 	-- JUMPERS
 
 	for jumper, config in pairs(jumpers) do
-		if config.airJumped and isOnGround(jumper, config) then
+		if config.airJumped and jumper.IsOnGround then
 			config.airJumpsAvailable = config.airJumps
 			config.airJumped = false
 		end
@@ -88,7 +88,7 @@ skills.jump = function(object)
 		return
 	end
 
-	if object.Velocity.Y <= 0 and isOnGround(object, config) then
+	if object.Velocity.Y <= 0 and object.IsOnGround then
 		config.airJumpsAvailable = config.airJumps
 		object.Velocity.Y = config.jumpVelocity
 		config.onJump(object)
