@@ -254,10 +254,8 @@ itemGrid.create = function(_, config)
 		end
 
 		cell.onRelease = function()
-			if cell.loaded then
-				if grid.onOpen then
-					grid:onOpen(cell)
-				end
+			if cell.loaded and grid.onOpen then
+				grid:onOpen(cell)
 			end
 			if cell.thumbnail ~= nil then
 				return
@@ -317,7 +315,7 @@ itemGrid.create = function(_, config)
 
 		cell.tName = tName
 
-		local loadingCube -- = ui:createFrame(Color.White)
+		local loadingCube
 
 		cell.getOrCreateLoadingCube = function(_)
 			if loadingCube == nil then
@@ -363,9 +361,9 @@ itemGrid.create = function(_, config)
 		-- self.nbCells == number of displayed cells
 		for i = 1, self.nbCells do
 			cell = cells[i]
-			if cell == nil then
+			if cell == nil or cell.show == nil then
 				cell = self:_createCell(self.cellSize)
-				table.insert(cells, cell)
+				cells[i] = cell
 			end
 			cell:show()
 
@@ -534,29 +532,29 @@ itemGrid.create = function(_, config)
 						self:_setEntry(cell, entry)
 					end
 
-					if config.type == "worlds" then
-						if entry.id ~= nil then
-							req = api:getWorldThumbnail(entry.id, function(err, img)
-								if err == nil and cell.setImage ~= nil then
-									entry.thumbnail = img
-
-									if cell.item ~= nil then
-										cell.item:remove()
-										cell.item = nil
-									end
-
-									cell.thumbnail = img
-									cell:setImage(img)
-
-									if type(entry.onThumbnailUpdate) == "function" then
-										entry.onThumbnailUpdate(img)
-									end
-								end
-							end)
-							addSentRequest(req)
-							addCellContentRequest(req)
-						end
+					if config.type ~= "worlds" or entry.id == nil then
+						return -- no need to get the thumbnail
 					end
+					req = api:getWorldThumbnail(entry.id, function(err, img)
+						if err ~= nil or cell.setImage == nil then
+							return
+						end
+						entry.thumbnail = img
+
+						if cell.item ~= nil then
+							cell.item:remove()
+							cell.item = nil
+						end
+
+						cell.thumbnail = img
+						cell:setImage(img)
+
+						if type(entry.onThumbnailUpdate) == "function" then
+							entry.onThumbnailUpdate(img)
+						end
+					end)
+					addSentRequest(req)
+					addCellContentRequest(req)
 				end)
 				addTimer(timer)
 			end
@@ -568,16 +566,17 @@ itemGrid.create = function(_, config)
 	-- remove items in cells, keep cells
 	grid._emptyCells = function(grid)
 		local cells = grid.cells
-		if cells ~= nil then
-			for _, c in ipairs(cells) do
-				c:hideLikes()
-				c.tName.Text = ""
-				c:setImage(nil)
-				if c.item ~= nil and c.item.remove then
-					c.item:remove()
-				end
-				c.item = nil
+		if cells == nil then
+			return
+		end
+		for _, c in ipairs(cells) do
+			c:hideLikes()
+			c.tName.Text = ""
+			c:setImage(nil)
+			if c.item ~= nil and c.item.remove then
+				c.item:remove()
 			end
+			c.item = nil
 		end
 	end
 
@@ -763,22 +762,25 @@ itemGrid.create = function(_, config)
 		end
 		grid.dt = grid.dt + dt
 		grid.dt4 = grid.dt4 + dt * 4
+
 		local cells = grid.cells
-		if cells ~= nil then
-			local loadingCube
-			local loadingCubePos
-			for _, c in ipairs(cells) do
-				loadingCube = c:getLoadingCube()
-				if loadingCube ~= nil and loadingCube:isVisible() then
-					if loadingCubePos == nil then
-						loadingCubePos =
-							{ c.Width * 0.5 + math.cos(grid.dt4) * 20, c.Height * 0.5 - math.sin(grid.dt4) * 20, 0 }
-					end
-					loadingCube.pos = loadingCubePos
-				end
-				if c.item ~= nil and c.item.pivot ~= nil then
-					c.item.pivot.LocalRotation = { -0.1, grid.dt, -0.2 }
-				end
+		if cells == nil then
+			return
+		end
+		local loadingCube
+		local center = grid.cellSize * 0.5
+		local loadingCubePos = { center + math.cos(grid.dt4) * 20, center - math.sin(grid.dt4) * 20, 0 }
+		for _, c in ipairs(cells) do
+			if c.getLoadingCube == nil then
+				return
+			end
+			loadingCube = c:getLoadingCube()
+			if loadingCube ~= nil and loadingCube:isVisible() then
+				loadingCube.pos = loadingCubePos
+			end
+
+			if c.item ~= nil and c.item.pivot ~= nil then
+				c.item.pivot.LocalRotation = { -0.1, grid.dt, -0.2 }
 			end
 		end
 	end)
