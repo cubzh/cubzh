@@ -941,8 +941,11 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(po
 		if _isPC then
 			if _pointerIndexWithin(pointerEvent.Index, POINTER_INDEX_MOUSE_LEFT, POINTER_INDEX_MOUSE_RIGHT) then
 				if _state.longPressTimer ~= nil then
-					local diff = Number2(x, y) - _state.longPressStartPosition
-					if diff.SquaredLength > LONG_PRESS_MOVE_SQR_EPSILON then
+					if
+						_state.longPressStartPosition == nil
+						or (Number2(x, y) - _state.longPressStartPosition).SquaredLength
+							> LONG_PRESS_MOVE_SQR_EPSILON
+					then
 						_diffuseLongPressTimer()
 						local indicator = _getPCLongPressIndicator()
 						if indicator then
