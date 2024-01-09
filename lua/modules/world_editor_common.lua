@@ -697,6 +697,10 @@ common.loadWorld = function(mapBase64, config)
 		if config.skipMap then
 			Map.Scale = world.mapScale or 5
 			map = Map
+		else
+			if config.onLoad then
+				config.onLoad(map, "Map")
+			end
 		end
 		local blocks = world.blocks
 		local objects = world.objects
