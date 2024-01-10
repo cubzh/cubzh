@@ -1001,10 +1001,7 @@ profile.create = function(_, config)
 						avatarNode:refresh()
 					end
 
-					-- send local event to update avatar preview in top bar
-					if category == "hair" or category == "jacket" then
-						LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { outfit = true })
-					end
+					LocalEvent:Send(LocalEvent.Name.LocalAvatarUpdate, System, { outfit = true })
 				end)
 			end)
 
