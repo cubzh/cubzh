@@ -9,20 +9,23 @@ local GLIDER_BACKPACK = {
 }
 
 local DEBUG_AMBIENCES = false
+local DEBUG_ITEMS = false
 
-local TIME_CYCLE_DURATION = 10 -- 1440
+local TIME_CYCLE_DURATION = 480 -- 8 minutes
 
-local MAP_COLLISION_GROUPS = { 1 }
-local MAP_COLLIDES_WITH_GROUPS = {}
+-- local MAP_COLLISION_GROUPS = { 1 }
+-- local MAP_COLLIDES_WITH_GROUPS = {}
 
 local PLAYER_COLLISION_GROUPS = { 2 }
 local PLAYER_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
 
-local ITEM_COLLISION_GROUPS = { 3 }
-local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
+-- local ITEM_COLLISION_GROUPS = { 3 }
+-- local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
 
 local BUILDING_COLLISION_GROUPS = { 4 }
 local BUILDING_COLLIDES_WITH_GROUPS = {}
+
+local CAMERA_COLLIDES_WITH_GROUPS = { 1, 4 } -- map + buildings
 
 local DRAFT_COLLISION_GROUPS = { 5 }
 
@@ -143,7 +146,7 @@ Client.OnStart = function()
 	end
 end
 
-Pointer.Click = function(_)
+Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
 
@@ -155,6 +158,15 @@ Pointer.Click = function(_)
 		Menu:ShowFriends()
 	elseif _animatedElements.portal.interactionAvailable then
 		Menu:ShowWorlds()
+	end
+
+	if DEBUG_ITEMS then
+		local impact = pe:CastRay()
+		if impact ~= nil then
+			if impact.Object.Name then
+				print(impact.Object.Name)
+			end
+		end
 	end
 end
 
@@ -186,11 +198,17 @@ Client.Tick = function(dt)
 	currentTime = unixMilli % TIME_CYCLE_DURATION
 
 	if townhallHourHand ~= nil then
-		townhallHourHand.LocalRotation = Rotation(-math.pi * 4 * currentTime / TIME_CYCLE_DURATION, 0, 0)
+		-- rotation 0 -> 9, -math.pi * 0.5 -> 12
+		-- mid-day -> 35% of TIME_CYCLE_DURATION
+		-- 0% of TIME_CYCLE_DURATION = -70% of 12h
+		-- Rotation(math.pi * (-0.5 + 2 * 0.7 - 2 * 2 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallHourHand.LocalRotation = Rotation(math.pi * (0.9 - 4 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
 	if townhallMinuteHand ~= nil then
-		townhallMinuteHand.LocalRotation = Rotation(-math.pi * 48 * currentTime / TIME_CYCLE_DURATION, 0, 0)
+		-- rotation 0 -> 12
+		-- Rotation(math.pi * (2 * 0.7 - 2 * 2 * 12 currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallMinuteHand.LocalRotation = Rotation(math.pi * (1.4 - 48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
 	if not DEBUG_AMBIENCES then
@@ -219,6 +237,12 @@ Client.OnPlayerLeave = function(p)
 	p:RemoveFromParent()
 end
 
+function setupBuilding(obj)
+	obj.CollisionGroups = BUILDING_COLLISION_GROUPS
+	obj.CollidesWithGroups = BUILDING_COLLIDES_WITH_GROUPS
+	obj.InnerTransparentFaces = false
+end
+
 Client.OnWorldObjectLoad = function(obj)
 	ease = require("ease")
 	hierarchyactions = require("hierarchyactions")
@@ -228,11 +252,19 @@ Client.OnWorldObjectLoad = function(obj)
 	ui = require("uikit")
 
 	if obj.Name == "voxels.windmill" then
+		setupBuilding(obj)
+
 		obj.Wheel.Tick = function(self, dt)
 			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
 		_animatedElements.windmill = obj
+	elseif obj.Name == "voxels.home_1" then
+		setupBuilding(obj)
+	elseif obj.Name == "voxels.city_lamp" then
+		obj.Shadow = true
 	elseif obj.Name == "voxels.simple_lighthouse" then
+		setupBuilding(obj)
+
 		obj.lh_light = obj:GetChild(1)
 		obj.lh_light.IsUnlit = true
 		obj.lh_light.t = 0
@@ -240,26 +272,17 @@ Client.OnWorldObjectLoad = function(obj)
 			self.t = self.t + dt * 2
 			self.Scale = 1 + math.sin(self.t) * 0.05
 		end
-		obj.source = Light()
-		obj.source.Color = Color(199, 195, 73)
-		obj.source.Intensity = 2
-		obj.source.LocalPosition = { 0, 1, 0 }
-		obj.source.Radius = 150
-		obj.source:SetParent(obj.lh_light)
-		-- obj.source.Tick = function(self, _)
-		-- if ambienceCycle.currentCycleTime > ambienceCycle.fullCycleDuration * 0.75 then
-		-- 	self.Intensity = 2
-		-- 		- (ambienceCycle.fullCycleDuration - ambienceCycle.currentCycleTime)
-		-- 			/ ambienceCycle.fullCycleDuration
-		-- 			* 4
-		-- elseif ambienceCycle.currentCycleTime < ambienceCycle.fullCycleDuration * 0.25 then
-		-- 	self.Intensity = 2 - ambienceCycle.currentCycleTime / ambienceCycle.fullCycleDuration * 4
-		-- else
-		-- 	self.Intensity = 0
-		-- end
-		-- end
+		-- obj.source = Light()
+		-- obj.source.Color = Color(199, 195, 73)
+		-- obj.source.Intensity = 2
+		-- obj.source.LocalPosition = { 0, 1, 0 }
+		-- obj.source.Radius = 150
+		-- obj.source:SetParent(obj.lh_light)
+
 		_animatedElements.lighthouse = obj
 	elseif obj.Name == "voxels.townhall" then
+		setupBuilding(obj)
+
 		townhallHourHand = obj.Hour
 		townhallHourHand.Pivot = { 0.5, 0.5, 0.5 }
 
@@ -267,8 +290,6 @@ Client.OnWorldObjectLoad = function(obj)
 		townhallMinuteHand.Pivot = { 0.5, 0.5, 0.5 }
 
 		_animatedElements.townhall = obj
-	elseif obj.Name == "voxels.house_1" then
-		obj.Shadow = true
 	elseif obj.Name == "voxels.water_fountain" then
 		local w = obj:GetChild(1) --water
 		w.Physics = PhysicsMode.Disabled
@@ -336,6 +357,9 @@ Client.OnWorldObjectLoad = function(obj)
 			_helpers.displayBubble(self.avatar, nil)
 		end
 	elseif obj.Name == "friend1" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Shadow = true
+		end)
 		obj = _helpers.replaceWithAvatar(obj, "aduermael")
 		obj.OnCollisionBegin = function(self, other)
 			_helpers.lookAt(self.avatarContainer, other)
@@ -344,6 +368,9 @@ Client.OnWorldObjectLoad = function(obj)
 			_helpers.lookAt(self.avatarContainer, nil)
 		end
 	elseif obj.Name == "friend2" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Shadow = true
+		end)
 		obj = _helpers.replaceWithAvatar(obj, "gdevillele")
 		obj.OnCollisionBegin = function(self, other)
 			_helpers.lookAt(self.avatarContainer, other)
@@ -503,7 +530,12 @@ local JUMP_VELOCITY = 82
 local MAX_AIR_JUMP_VELOCITY = 85
 initPlayer = function(p)
 	if p == Player then -- Player properties for local simulation
-		Camera:SetModeThirdPerson()
+		require("camera_modes"):setThirdPerson({
+			rigidity = 0.4,
+			target = p,
+			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+		})
+
 		jumpParticles = particles:newEmitter({
 			life = function()
 				return 0.3
@@ -575,7 +607,9 @@ initPlayer = function(p)
 
 	World:AddChild(p) -- Adding the player to the world
 	p.Head:AddChild(AudioListener) -- Adding an audio listener to the player
-	p.Physics = true -- Enabling player physics
+	p.Physics = PhysicsMode.Dynamic
+	p.CollisionGroups = PLAYER_COLLISION_GROUPS
+	p.CollidesWithGroups = PLAYER_COLLIDES_WITH_GROUPS
 	addPlayerAnimations(p) -- Adding animations
 	walkSFX:register(p) -- Adding step sounds
 	playerControls:walk(p) -- Setting the default control to walk
@@ -830,7 +864,7 @@ dawn = {
 	sun = {
 		color = Color(224, 82, 82),
 		intensity = 0.200000,
-		rotation = Rotation(math.pi * 0.2, math.pi * 0.67, 0.000000),
+		rotation = Rotation(math.rad(30), math.rad(-60), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -880,7 +914,7 @@ dusk = {
 	sun = {
 		color = Color(190, 98, 219),
 		intensity = 0.200000,
-		rotation = Rotation(math.pi * 0.2, math.pi * 1.34, 0.000000),
+		rotation = Rotation(math.rad(30), math.rad(60), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -905,7 +939,7 @@ night = {
 	sun = {
 		color = Color(36, 44, 195),
 		intensity = 0.000000,
-		rotation = Rotation(math.pi * 0.26, math.pi * 1.5, 0.000000),
+		rotation = Rotation(math.rad(0), math.rad(0), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -1056,7 +1090,11 @@ playerControls.exitVehicle = function(self, player)
 	player.Velocity = Number3.Zero
 
 	if player == Player then
-		Camera:SetModeThirdPerson(player)
+		require("camera_modes"):setThirdPerson({
+			rigidity = 0.4,
+			target = player,
+			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+		})
 		Camera.FOV = cameraDefaultFOV
 	end
 
@@ -1277,6 +1315,7 @@ playerControls.glide = function(self, player)
 			rigidity = 0.3,
 			target = vehicle,
 			rotationOffset = Rotation(math.rad(20), 0, 0),
+			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
 		})
 
 		self.onDrag = function(pe)
