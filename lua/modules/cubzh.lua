@@ -12,7 +12,7 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
-local TIME_CYCLE_DURATION = 30 -- 480 -- 8 minutes
+local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
 local DAY_DURATION = 0.5
 local DUSK_DURATION = 0.05
@@ -39,7 +39,7 @@ local ITEM_AND_BUILDING_COLLISION_GROUPS = { 3, 4 }
 
 local DRAFT_COLLISION_GROUPS = { 5 }
 
-local _animatedElements = {}
+local _interactiveElements = {}
 
 Client.OnStart = function()
 	multi = require("multi")
@@ -156,44 +156,6 @@ Client.OnStart = function()
 	end
 end
 
-Pointer.Click = function(pe)
-	Player:SwingRight()
-	multi:action("swingRight")
-
-	if _animatedElements.solo_computer.interactionAvailable then
-		-- ambienceCycle:next()
-	elseif _animatedElements.change_room.interactionAvailable then
-		Menu:ShowProfile()
-	elseif _animatedElements.fountain.interactionAvailable then
-		Menu:ShowFriends()
-	elseif _animatedElements.portal.interactionAvailable then
-		Menu:ShowWorlds()
-	end
-
-	if DEBUG_ITEMS then
-		local impact = pe:CastRay(ITEM_AND_BUILDING_COLLISION_GROUPS)
-		if impact ~= nil then
-			if impact.Object ~= nil then
-				local o = impact.Object
-
-				while o.Parent ~= World do
-					o = o.Parent
-				end
-
-				if o ~= nil then
-					if o.fullname ~= nil then
-						print(o.fullname, "(copied)")
-						Dev:CopyToClipboard(o.fullname)
-					elseif o.Name ~= nil then
-						print(o.Name, "(copied)")
-						Dev:CopyToClipboard(o.fullname)
-					end
-				end
-			end
-		end
-	end
-end
-
 local SAVE_INTERVAL = 0.1
 local SAVE_AMOUNT = 10
 local savedPositions, savedRotations = {}, {}
@@ -283,29 +245,14 @@ Client.OnWorldObjectLoad = function(obj)
 		obj.Wheel.Tick = function(self, dt)
 			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
-		_animatedElements.windmill = obj
+		_interactiveElements.windmill = obj
 	elseif obj.Name == "voxels.home_1" then
 		setupBuilding(obj)
 	elseif obj.Name == "voxels.city_lamp" then
 		obj.Shadow = true
+		obj:GetChild(1).IsUnlit = true
 	elseif obj.Name == "voxels.simple_lighthouse" then
 		setupBuilding(obj)
-
-		obj.lh_light = obj:GetChild(1)
-		obj.lh_light.IsUnlit = true
-		obj.lh_light.t = 0
-		obj.lh_light.Tick = function(self, dt)
-			self.t = self.t + dt * 2
-			self.Scale = 1 + math.sin(self.t) * 0.05
-		end
-		-- obj.source = Light()
-		-- obj.source.Color = Color(199, 195, 73)
-		-- obj.source.Intensity = 2
-		-- obj.source.LocalPosition = { 0, 1, 0 }
-		-- obj.source.Radius = 150
-		-- obj.source:SetParent(obj.lh_light)
-
-		_animatedElements.lighthouse = obj
 	elseif obj.Name == "voxels.townhall" then
 		setupBuilding(obj)
 
@@ -315,7 +262,7 @@ Client.OnWorldObjectLoad = function(obj)
 		townhallMinuteHand = obj.Minute
 		townhallMinuteHand.Pivot = { 0.5, 0.5, 0.5 }
 
-		_animatedElements.townhall = obj
+		_interactiveElements.townhall = obj
 	elseif obj.Name == "voxels.water_fountain" then
 		local w = obj:GetChild(1) --water
 		w.Physics = PhysicsMode.Disabled
@@ -362,7 +309,7 @@ Client.OnWorldObjectLoad = function(obj)
 			self.toast = nil
 			obj.interactionAvailable = false
 		end
-		_animatedElements.fountain = obj
+		_interactiveElements.fountain = obj
 	elseif obj.Name == "customavatar" then
 		obj = _helpers.replaceWithAvatar(obj, "claire")
 		obj.OnCollisionBegin = function(self, other)
@@ -416,13 +363,7 @@ Client.OnWorldObjectLoad = function(obj)
 			_helpers.displayBubble(self.avatar, nil)
 		end
 	elseif obj.Name == "voxels.change_room" then
-		obj.trigger = Object()
-		obj.trigger:SetParent(obj)
-		obj.trigger.LocalPosition = { -obj.Width * 0.5, 0, -obj.Depth * 0.5 }
-		obj.trigger.Physics = PhysicsMode.Trigger
-		obj.trigger.CollisionBox = obj.BoundingBox
-		obj.trigger.CollidesWithGroups = { 2 }
-		obj.trigger.CollisionGroups = {}
+		obj.trigger = _helpers.addTriggerArea(obj)
 		obj.trigger.OnCollisionBegin = function(self, other)
 			if other ~= Player then
 				return
@@ -443,7 +384,7 @@ Client.OnWorldObjectLoad = function(obj)
 			self.toast = nil
 			obj.interactionAvailable = false
 		end
-		_animatedElements.change_room = obj
+		_interactiveElements.change_room = obj
 	elseif obj.Name == "voxels.portal" then
 		obj.trigger = _helpers.addTriggerArea(obj)
 		obj.trigger.OnCollisionBegin = function(self, other)
@@ -502,7 +443,7 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 		end
 		animatePortal(obj)
-		_animatedElements.portal = obj
+		_interactiveElements.portal = obj
 	elseif obj.Name == "voxels.solo_computer" then
 		obj.trigger = _helpers.addTriggerArea(obj, nil, { -obj.Width * 0.5, 0, -obj.Depth })
 		obj.trigger.OnCollisionBegin = function(self, other)
@@ -525,7 +466,7 @@ Client.OnWorldObjectLoad = function(obj)
 			self.toast = nil
 			obj.interactionAvailable = false
 		end
-		_animatedElements.solo_computer = obj
+		_interactiveElements.solo_computer = obj
 	end
 
 	if obj.fullname ~= nil then
@@ -558,6 +499,64 @@ Client.OnWorldObjectLoad = function(obj)
 			obj.Position.X = math.floor(obj.Position.X * 10) / 10
 			obj.Position.Y = math.floor(obj.Position.Y + 0.5)
 			obj.Position.Z = math.floor(obj.Position.Z * 10) / 10
+		elseif
+			string.find(obj.fullname, "tuft")
+			or string.find(obj.fullname, "grass")
+			or string.find(obj.fullname, "dirt")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+			if string.find(obj.Name, "_n") then
+				return
+			end
+			obj.Position.Y = obj.Position.Y - 0.40 * MAP_SCALE
+		elseif string.find(obj.fullname, "stone") or string.find(obj.fullname, "log") then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Static
+			end)
+			if string.find(obj.Name, "_n") then
+				return
+			end
+			obj.Position.Y = obj.Position.Y - 0.40 * MAP_SCALE
+		end
+	end
+end
+
+Pointer.Click = function(pe)
+	Player:SwingRight()
+	multi:action("swingRight")
+
+	if _interactiveElements.solo_computer.interactionAvailable then
+		nextAmbience()
+	elseif _interactiveElements.change_room.interactionAvailable then
+		Menu:ShowProfile()
+	elseif _interactiveElements.fountain.interactionAvailable then
+		Menu:ShowFriends()
+	elseif _interactiveElements.portal.interactionAvailable then
+		Menu:ShowWorlds()
+	end
+
+	if DEBUG_ITEMS then
+		local impact = pe:CastRay(ITEM_AND_BUILDING_COLLISION_GROUPS)
+		if impact ~= nil then
+			if impact.Object ~= nil then
+				local o = impact.Object
+
+				while o.Parent ~= World do
+					o = o.Parent
+				end
+
+				if o ~= nil then
+					if o.fullname ~= nil then
+						print(o.fullname, "(copied)")
+						Dev:CopyToClipboard(o.fullname)
+					elseif o.Name ~= nil then
+						print(o.Name, "(copied)")
+						Dev:CopyToClipboard(o.fullname)
+					end
+				end
+			end
 		end
 	end
 end
@@ -692,17 +691,7 @@ function action1()
 	end)
 
 	if DEBUG_AMBIENCES then
-		if ambiences == nil then
-			ambiences = { dawn, day, dusk, night }
-			nextAmbience = 1
-		end
-		local a = ambiences[nextAmbience]
-		ambience:set(a)
-
-		nextAmbience = nextAmbience + 1
-		if nextAmbience > #ambiences then
-			nextAmbience = 1
-		end
+		nextAmbience()
 	end
 end
 
@@ -796,6 +785,19 @@ addTimers = function()
 	end)
 end
 
+nextAmbience = function()
+	if ambiences == nil then
+		ambiences = { dawn, day, dusk, night }
+		nextAmbience = 1
+	end
+	local a = ambiences[nextAmbience]
+	ambience:set(a)
+
+	nextAmbience = nextAmbience + 1
+	if nextAmbience > #ambiences then
+		nextAmbience = 1
+	end
+end
 -- HELPERS
 
 _helpers = {}
@@ -1418,14 +1420,12 @@ end
 
 -- MODULE : COLLECTIBLES
 
-collectedGliderParts, collectedJetpackParts = {}, {}
-gliderBackpackCollectibles, jetpackBackpackCollectibles = {}, {}
+collectedGliderParts = {}
+gliderBackpackCollectibles = {}
 gliderUnlocked = false
-jetpackUnlocked = false
 
 local REQUEST_FAIL_RETRY_DELAY = 5.0
 -- local GLIDER_PARTS = 10
--- local JETPACK_PARTS = 2
 
 backEquipment = nil
 
@@ -1448,18 +1448,11 @@ backEquipment = nil
 function addCollectibles()
 	conf = require("config")
 
-	gliderParts, jetpackParts = {}, {}
+	gliderParts = {}
 
 	local function unlockGlider()
 		gliderUnlocked = true
 		for _, backpack in ipairs(gliderBackpackCollectibles) do
-			backpack.object.PrivateDrawMode = 0
-		end
-	end
-
-	local function unlockJetpack()
-		jetpackUnlocked = true
-		for _, backpack in ipairs(jetpackBackpackCollectibles) do
 			backpack.object.PrivateDrawMode = 0
 		end
 	end
@@ -1553,10 +1546,6 @@ function addCollectibles()
 		for i = 1, GLIDER_PARTS do
 			table.insert(gliderParts, World:FindObjectByName("voxels.glider_parts_" .. i))
 		end
-
-		for i = 1, JETPACK_PARTS do
-			table.insert(jetpackParts, World:FindObjectByName("voxels.jetpack_scrap_pile_" .. i))
-		end
         ]]
 
 		local gliderPartConfig = {
@@ -1609,55 +1598,6 @@ function addCollectibles()
 			end,
 		}
 
-		local jetpackPartConfig = {
-			scale = 0.5,
-			itemName = "voxels.jetpack_scrap_pile",
-			position = Number3.Zero,
-			userdata = {
-				ID = -1,
-			},
-			onCollisionBegin = function(c)
-				collectParticles.Position = c.object.Position
-				collectParticles:spawn(20)
-				sfx("wood_impact_3", { Position = c.object.Position, Volume = 0.6, Pitch = 1.3 })
-				Client:HapticFeedback()
-				collectible:remove(c)
-				if _helpers.contains(collectedJetpackParts, c.userdata.ID) then
-					return
-				end
-
-				table.insert(collectedJetpackParts, c.userdata.ID)
-				local retry = {}
-				retry.fn = function()
-					local store = KeyValueStore(Player.UserID)
-					store:set("collectedJetpackParts", collectedJetpackParts, function(ok)
-						if not ok then
-							Timer(REQUEST_FAIL_RETRY_DELAY, retry.fn)
-						end
-					end)
-				end
-				retry.fn()
-
-				if #collectedJetpackParts >= #jetpackParts then
-					-- the last jetpack part has been collected
-					toast:create({
-						message = "Jetpack unlocked!",
-						center = false,
-						iconShape = bundle.Shape("voxels.jetpack"), -- @aduermael to replace with :: bundle.Shape("voxels.jetpack"),
-						duration = 2,
-					})
-					unlockJetpack()
-				else
-					-- a jetpack part has been collected
-					toast:create({
-						message = #collectedJetpackParts .. "/" .. #jetpackParts .. " collected",
-						iconShape = bundle.Shape("voxels.jetpack_scrap_pile"),
-						keepInStack = false,
-					})
-				end
-			end,
-		}
-
 		if #collectedGliderParts >= #gliderParts then
 			unlockGlider()
 			for _, v in pairs(gliderParts) do
@@ -1670,21 +1610,6 @@ function addCollectibles()
 					collectible:create(config)
 				end
 				v:RemoveFromParent()
-			end
-		end
-
-		if #collectedJetpackParts >= #jetpackParts then
-			unlockJetpack()
-			for _, v in pairs(jetpackParts) do
-				v:RemoveFromParent()
-			end
-		else
-			for k, v in ipairs(jetpackParts) do
-				if not _helpers.contains(collectedJetpackParts, k) then
-					local config = conf:merge(jetpackPartConfig, { position = v.Position, userdata = { ID = k } })
-					collectible:create(config)
-				end
-				v:RemoveFromParent() -- @Buche :: clear placed collectibles if already collected
 			end
 		end
 	end
@@ -1702,9 +1627,6 @@ function addCollectibles()
 			if ok == true then
 				if results.collectedGliderParts ~= nil then
 					collectedGliderParts = results.collectedGliderParts
-				end
-				if results.collectedJetpackParts ~= nil then
-					collectedJetpackParts = results.collectedJetpackParts
 				end
 				spawnBackpacks()
 				spawnCollectibles()
