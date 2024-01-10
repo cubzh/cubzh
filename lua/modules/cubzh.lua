@@ -12,7 +12,7 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
-local TIME_CYCLE_DURATION = 480 -- 8 minutes
+local TIME_CYCLE_DURATION = 30 --480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
 local DAY_DURATION = 0.5
 local DUSK_DURATION = 0.05
@@ -888,26 +888,26 @@ end
 
 dawn = {
 	sky = {
-		skyColor = Color(217, 40, 40),
-		horizonColor = Color(219, 166, 99),
-		abyssColor = Color(37, 100, 176),
-		lightColor = Color(137, 95, 45),
-		lightIntensity = 0.600000,
+		skyColor = Color(246, 40, 140),
+		horizonColor = Color(239, 147, 17),
+		abyssColor = Color(0, 77, 172),
+		lightColor = Color(177, 111, 55),
+		lightIntensity = 0.510000,
 	},
 	fog = {
-		color = Color(199, 120, 110),
+		color = Color(74, 15, 6),
 		near = 300,
 		far = 700,
 		lightAbsorbtion = 0.400000,
 	},
 	sun = {
-		color = Color(224, 82, 82),
-		intensity = 0.200000,
+		color = Color(172, 71, 71),
+		intensity = 1.000000,
 		rotation = Rotation(math.rad(30), math.rad(-60), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
-		dirLightFactor = 0.150000,
+		dirLightFactor = 0.200000,
 	},
 }
 
@@ -938,51 +938,51 @@ day = {
 
 dusk = {
 	sky = {
-		skyColor = Color(96, 4, 205),
-		horizonColor = Color(233, 102, 102),
-		abyssColor = Color(242, 156, 56),
-		lightColor = Color(194, 113, 163),
-		lightIntensity = 0.600000,
+		skyColor = Color(0, 9, 192),
+		horizonColor = Color(227, 43, 70),
+		abyssColor = Color(238, 168, 0),
+		lightColor = Color(180, 51, 180),
+		lightIntensity = 0.510000,
 	},
 	fog = {
-		color = Color(20, 159, 204),
+		color = Color(10, 15, 83),
 		near = 300,
 		far = 700,
 		lightAbsorbtion = 0.400000,
 	},
 	sun = {
-		color = Color(190, 98, 219),
-		intensity = 0.200000,
+		color = Color(91, 28, 164),
+		intensity = 1.000000,
 		rotation = Rotation(math.rad(30), math.rad(60), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
-		dirLightFactor = 0.150000,
+		dirLightFactor = 0.210000,
 	},
 }
 
 night = {
 	sky = {
-		skyColor = Color(2, 2, 52),
-		horizonColor = Color(124, 43, 133),
-		abyssColor = Color(32, 29, 97),
-		lightColor = Color(31, 20, 74),
+		skyColor = Color(26, 7, 86),
+		horizonColor = Color(120, 26, 123),
+		abyssColor = Color(28, 23, 153),
+		lightColor = Color(38, 2, 59),
 		lightIntensity = 0.600000,
 	},
 	fog = {
-		color = Color(20, 159, 204),
+		color = Color(14, 3, 75),
 		near = 300,
 		far = 700,
 		lightAbsorbtion = 0.400000,
 	},
 	sun = {
-		color = Color(36, 44, 195),
-		intensity = 0.000000,
+		color = Color(18, 22, 106),
+		intensity = 1.000000,
 		rotation = Rotation(math.rad(0), math.rad(0), 0),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
-		dirLightFactor = 0.000000,
+		dirLightFactor = 0.200000,
 	},
 }
 
