@@ -1,3 +1,7 @@
+Dev.DisplayColliders = false
+local DEBUG_AMBIENCES = false
+local DEBUG_ITEMS = false
+
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
 local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
 local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(40, 20, 30)
@@ -8,10 +12,14 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
-local DEBUG_AMBIENCES = false
-local DEBUG_ITEMS = false
+local TIME_CYCLE_DURATION = 30 -- 480 -- 8 minutes
+local DAWN_DURATION = 0.05 -- percentages
+local DAY_DURATION = 0.5
+local DUSK_DURATION = 0.05
+local NIGHT_DURATION = 0.4
 
-local TIME_CYCLE_DURATION = 480 -- 8 minutes
+local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
+local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
 
 -- local MAP_COLLISION_GROUPS = { 1 }
 -- local MAP_COLLIDES_WITH_GROUPS = {}
@@ -55,19 +63,19 @@ Client.OnStart = function()
 		ambienceCycle = ambience:startCycle({
 			{
 				config = dawn,
-				duration = TIME_CYCLE_DURATION * 0.15,
+				duration = TIME_CYCLE_DURATION * DAWN_DURATION,
 			},
 			{
 				config = day,
-				duration = TIME_CYCLE_DURATION * 0.4,
+				duration = TIME_CYCLE_DURATION * DAY_DURATION,
 			},
 			{
 				config = dusk,
-				duration = TIME_CYCLE_DURATION * 0.15,
+				duration = TIME_CYCLE_DURATION * DUSK_DURATION,
 			},
 			{
 				config = night,
-				duration = TIME_CYCLE_DURATION * 0.3,
+				duration = TIME_CYCLE_DURATION * NIGHT_DURATION,
 			},
 		}, {
 			internalTick = false,
@@ -202,13 +210,14 @@ Client.Tick = function(dt)
 		-- mid-day -> 35% of TIME_CYCLE_DURATION
 		-- 0% of TIME_CYCLE_DURATION = -70% of 12h
 		-- Rotation(math.pi * (-0.5 + 2 * 0.7 - 2 * 2 * currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallHourHand.LocalRotation = Rotation(math.pi * (0.9 - 4 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallHourHand.LocalRotation =
+			Rotation(math.pi * (HOUR_HAND_OFFSET - 4 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
 	if townhallMinuteHand ~= nil then
 		-- rotation 0 -> 12
 		-- Rotation(math.pi * (2 * 0.7 - 2 * 2 * 12 currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallMinuteHand.LocalRotation = Rotation(math.pi * (1.4 - 48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallMinuteHand.LocalRotation = Rotation(math.pi * (-48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
 	if not DEBUG_AMBIENCES then
