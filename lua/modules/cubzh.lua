@@ -1,6 +1,6 @@
-Dev.DisplayColliders = false
+Dev.DisplayColliders = true
 local DEBUG_AMBIENCES = false
-local DEBUG_ITEMS = false
+local DEBUG_ITEMS = true
 
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
 local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
@@ -12,7 +12,7 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
-local TIME_CYCLE_DURATION = 30 --480 -- 8 minutes
+local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
 local DAY_DURATION = 0.5
 local DUSK_DURATION = 0.05
@@ -21,17 +21,20 @@ local NIGHT_DURATION = 0.4
 local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
 local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
 
--- local MAP_COLLISION_GROUPS = { 1 }
--- local MAP_COLLIDES_WITH_GROUPS = {}
+local MAP_COLLISION_GROUPS = { 1 }
+local MAP_COLLIDES_WITH_GROUPS = {}
 
 local PLAYER_COLLISION_GROUPS = { 2 }
-local PLAYER_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
+local PLAYER_COLLIDES_WITH_GROUPS = { 1, 3, 4, 5 } -- map + items + buildings + barriers
 
--- local ITEM_COLLISION_GROUPS = { 3 }
+local ITEM_COLLISION_GROUPS = { 3 }
 -- local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
 
 local BUILDING_COLLISION_GROUPS = { 4 }
 local BUILDING_COLLIDES_WITH_GROUPS = {}
+
+local BARRIER_COLLISION_GROUPS = { 5 }
+local BARRIER_COLLIDES_WITH_GROUPS = {}
 
 local CAMERA_COLLIDES_WITH_GROUPS = { 1, 4 } -- map + buildings
 
@@ -270,29 +273,23 @@ Client.OnWorldObjectLoad = function(obj)
 
 		_interactiveElements.townhall = obj
 	elseif obj.Name == "voxels.water_fountain" then
-		local w = obj:GetChild(1) --water
+		local w = obj:GetChild(1) -- water
 		w.Physics = PhysicsMode.Disabled
 		w.InnerTransparentFaces = false
-		w.t = 0
+		local t1 = 0
 		w.Tick = function(self, dt)
-			self.t = self.t + dt
-			self.Scale.Y = 1 + (math.sin(self.t) * 0.05)
+			t1 = t1 + dt
+			self.Scale.Y = 1 + (math.sin(t1) * 0.05)
 		end
+
 		local c = obj:GetChild(2) --floating cube
-		c.t = 0
-		c.dirX, c.dirY, c.dirZ = 0.1, 0.1, 0.1
-		c.LocalPosition.Y = c.LocalPosition.Y + 5
-		c.LocalRotation = { 0, 0, 0 }
-		c.rot = math.pi / 10
+		c.Physics = PhysicsMode.Disabled
+		local originY = c.LocalPosition.Y + 5
+		local t2 = 0
 		c.Tick = function(self, dt)
-			self.t = self.t + dt
-			self.rot = self.rot + dt * 0.1
-			self.LocalPosition.Y = self.LocalPosition.Y + (math.sin(self.t) * 0.01)
-			self:RotateLocal(0, dt * self.dirY, dt * self.dirZ)
-			if self.rot > math.pi / 4 then
-				self.dirZ = -self.dirZ
-				self.rot = 0
-			end
+			t2 = t2 + dt * 2
+			self.LocalPosition.Y = originY + 1 + math.sin(t2) * 0.5 * 4
+			self:RotateLocal(0, dt * 0.5, 0)
 		end
 		obj.trigger = _helpers.addTriggerArea(obj)
 		obj.trigger.OnCollisionBegin = function(self, other)
@@ -311,8 +308,10 @@ Client.OnWorldObjectLoad = function(obj)
 			if other ~= Player then
 				return
 			end
-			self.toast:remove()
-			self.toast = nil
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
 			obj.interactionAvailable = false
 		end
 		_interactiveElements.fountain = obj
@@ -386,8 +385,10 @@ Client.OnWorldObjectLoad = function(obj)
 			if other ~= Player then
 				return
 			end
-			self.toast:remove()
-			self.toast = nil
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
 			obj.interactionAvailable = false
 		end
 		_interactiveElements.change_room = obj
@@ -409,8 +410,10 @@ Client.OnWorldObjectLoad = function(obj)
 			if other ~= Player then
 				return
 			end
-			self.toast:remove()
-			self.toast = nil
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
 			obj.interactionAvailable = false
 		end
 		local animatePortal = function(portal)
@@ -478,9 +481,6 @@ Client.OnWorldObjectLoad = function(obj)
 	if obj.fullname ~= nil then
 		if
 			string.find(obj.fullname, "hedge")
-			or string.find(obj.fullname, "fence_gate")
-			or string.find(obj.fullname, "white_fence")
-			or string.find(obj.fullname, "rustic_fence")
 			or string.find(obj.fullname, "hay_bail")
 			or string.find(obj.fullname, "palm_tree")
 			or string.find(obj.fullname, "apple_tree")
@@ -492,19 +492,57 @@ Client.OnWorldObjectLoad = function(obj)
 			or string.find(obj.fullname, "clothes_rack")
 			or string.find(obj.fullname, "city_lamp")
 			or string.find(obj.fullname, "solo_computer")
+			or string.find(obj.fullname, "no_fun_sign")
 		then
 			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
 				o.Physics = PhysicsMode.Static
 			end)
+		elseif string.find(obj.fullname, "walking_plank") then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+			obj.Physics = PhysicsMode.Static
+		elseif
+			string.find(obj.fullname, "fence_gate")
+			or string.find(obj.fullname, "white_fence")
+			or string.find(obj.fullname, "rustic_fence")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Static
+				o.CollisionGroups = BARRIER_COLLISION_GROUPS
+				o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
+			end)
 		elseif string.find(obj.fullname, "beach_barrier") then
 			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
 				o.Physics = PhysicsMode.Static
+				o.CollisionGroups = BARRIER_COLLISION_GROUPS
+				o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
 			end)
 			-- fix beach barries alignments (for better collisions)
 			obj.CollisionBox.Max = Number3(obj.CollisionBox.Max.X, 14, obj.CollisionBox.Max.Z)
-			obj.Position.X = math.floor(obj.Position.X * 10) / 10
+			obj.Position.X = math.floor(obj.Position.X + 0.5)
 			obj.Position.Y = math.floor(obj.Position.Y + 0.5)
-			obj.Position.Z = math.floor(obj.Position.Z * 10) / 10
+			obj.Position.Z = math.floor(obj.Position.Z + 0.5)
+		elseif string.find(obj.fullname, "plank_") then -- items that are "part of the map"
+			hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+			obj.Physics = PhysicsMode.Static
+			obj.CollisionGroups = MAP_COLLISION_GROUPS
+			obj.CollidesWithGroups = MAP_COLLIDES_WITH_GROUPS
+		elseif
+			string.find(obj.fullname, "shell_1")
+			or string.find(obj.fullname, "shell_2")
+			or string.find(obj.fullname, "shell_3")
+			or string.find(obj.fullname, "sand_1")
+			or string.find(obj.fullname, "sand_2")
+			or string.find(obj.fullname, "sand_3")
+			or string.find(obj.fullname, "sand_4")
+			or string.find(obj.fullname, "lily_pads")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
 		elseif
 			string.find(obj.fullname, "tuft")
 			or string.find(obj.fullname, "grass")
@@ -621,7 +659,10 @@ initPlayer = function(p)
 			jumpParticles:spawn(10)
 			sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
 		end
-		skills.addStepClimbing(Player, { mapScale = MAP_SCALE, collisionGroups = Map.CollisionGroups })
+		skills.addStepClimbing(
+			Player,
+			{ mapScale = MAP_SCALE, collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS }
+		)
 		skills.addJump(Player, {
 			maxGroundDistance = 1.0,
 			airJumps = 1,
@@ -719,7 +760,7 @@ function mapEffects()
 	end
 
 	local grass = Map:GetChild(2)
-	grass.Physics = PhysicsMode.StaticPerBlock
+	grass.Physics = PhysicsMode.Disabled
 	grass.CollisionGroups = { 1 }
 	grass.Scale = 0.999
 	grass.LocalPosition = { 5, 12.15, 27 }
@@ -1303,7 +1344,11 @@ playerControls.glide = function(self, player)
 		vehicleRoll.Velocity:Set(vehicle.Velocity) -- copying for sync (physics disabled on vehicleRoll)
 
 		vehicle.CollisionBox = Box({ -10, -30, -10 }, { 10, 14, 10 })
-		vehicle.CollidesWithGroups = Map.CollisionGroups + vehicle.CollisionGroups + DRAFT_COLLISION_GROUPS
+		vehicle.CollidesWithGroups = Map.CollisionGroups
+			+ BUILDING_COLLISION_GROUPS
+			+ vehicle.CollisionGroups
+			+ DRAFT_COLLISION_GROUPS
+			+ BARRIER_COLLISION_GROUPS
 		vehicle.CollisionGroups = {}
 
 		vehicle.OnCollisionBegin = function(_, other)
