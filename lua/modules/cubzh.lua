@@ -1,6 +1,6 @@
-Dev.DisplayColliders = true
+Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
-local DEBUG_ITEMS = true
+local DEBUG_ITEMS = false
 
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
 local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
@@ -45,6 +45,8 @@ local DRAFT_COLLISION_GROUPS = { 5 }
 local _interactiveElements = {}
 
 Client.OnStart = function()
+	dialog = require("dialog")
+	dialog:setMaxWidth(400)
 	multi = require("multi")
 	textbubbles = require("textbubbles")
 	skills = require("object_skills")
@@ -291,30 +293,6 @@ Client.OnWorldObjectLoad = function(obj)
 			self.LocalPosition.Y = originY + 1 + math.sin(t2) * 0.5 * 4
 			self:RotateLocal(0, dt * 0.5, 0)
 		end
-		obj.trigger = _helpers.addTriggerArea(obj)
-		obj.trigger.OnCollisionBegin = function(self, other)
-			if other ~= Player then
-				return
-			end
-			self.toast = toast:create({
-				message = "Interact with the fountain to add Friends!",
-				center = false,
-				iconShape = bundle.Shape("voxels.friend_icon"),
-				duration = -1, -- negative duration means infinite
-			})
-			obj.interactionAvailable = true
-		end
-		obj.trigger.OnCollisionEnd = function(self, other)
-			if other ~= Player then
-				return
-			end
-			if self.toast then
-				self.toast:remove()
-				self.toast = nil
-			end
-			obj.interactionAvailable = false
-		end
-		_interactiveElements.fountain = obj
 	elseif obj.Name == "customavatar" then
 		obj = _helpers.replaceWithAvatar(obj, "claire")
 		obj.OnCollisionBegin = function(self, other)
@@ -351,21 +329,19 @@ Client.OnWorldObjectLoad = function(obj)
 		end)
 		obj = _helpers.replaceWithAvatar(obj, "gdevillele")
 		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
 			_helpers.lookAt(self.avatarContainer, other)
-			if other ~= Player then
-				return
-			end
-			_helpers.displayBubble(
-				self.avatar,
-				"Want to be friends? You can connect with us by opening the Friends menu!"
-			)
+			dialog:create("Looking for friends? Add some through the Friends menu!", self.avatar)
+			Menu:HighlightFriends()
 		end
-		obj.OnCollisionEnd = function(self, other)
-			_helpers.lookAt(self.avatarContainer, nil)
+		obj.OnCollisionEnd = function(_, other)
 			if other ~= Player then
 				return
 			end
-			_helpers.displayBubble(self.avatar, nil)
+			dialog:remove()
+			Menu:RemoveHighlight()
 		end
 	elseif obj.Name == "voxels.change_room" then
 		obj.trigger = _helpers.addTriggerArea(obj)
@@ -471,8 +447,10 @@ Client.OnWorldObjectLoad = function(obj)
 			if other ~= Player then
 				return
 			end
-			self.toast:remove()
-			self.toast = nil
+			if self.toast ~= nil then
+				self.toast:remove()
+				self.toast = nil
+			end
 			obj.interactionAvailable = false
 		end
 		_interactiveElements.solo_computer = obj
@@ -571,12 +549,12 @@ Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
 
+	dialog:complete()
+
 	if _interactiveElements.solo_computer.interactionAvailable then
 		nextAmbience()
 	elseif _interactiveElements.change_room.interactionAvailable then
 		Menu:ShowProfile()
-	elseif _interactiveElements.fountain.interactionAvailable then
-		Menu:ShowFriends()
 	elseif _interactiveElements.portal.interactionAvailable then
 		Menu:ShowWorlds()
 	end
