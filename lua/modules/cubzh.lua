@@ -296,21 +296,23 @@ Client.OnWorldObjectLoad = function(obj)
 	elseif obj.Name == "customavatar" then
 		obj = _helpers.replaceWithAvatar(obj, "claire")
 		obj.OnCollisionBegin = function(self, other)
-			_helpers.lookAt(self.avatarContainer, other)
 			if other ~= Player then
 				return
 			end
-			_helpers.displayBubble(
-				self.avatar,
-				"Hey! You can edit your avatar in the Profile Menu. You can also step in the changing room! 👕👖🥾"
+			_helpers.lookAt(self.avatarContainer, other)
+			dialog:create(
+				"Hey! Edit your avatar in the Profile Menu, or use the changing room! 👕👖🥾",
+				self.avatar
 			)
+			Menu:HighlightProfile()
 		end
 		obj.OnCollisionEnd = function(self, other)
-			_helpers.lookAt(self.avatarContainer, nil)
 			if other ~= Player then
 				return
 			end
-			_helpers.displayBubble(self.avatar, nil)
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+			Menu:RemoveHighlight()
 		end
 	elseif obj.Name == "friend1" then
 		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
@@ -728,13 +730,18 @@ end
 
 function mapEffects()
 	local sea = Map:GetChild(1)
-	sea.Physics = PhysicsMode.Disabled -- let the player go through
+	sea.Physics = PhysicsMode.TriggerPerBlock -- let the player go through
+	sea.CollisionGroups = {}
+	sea.CollidesWithGroups = { 2 }
 	sea.InnerTransparentFaces = false -- no inner surfaces for the renderer
 	sea.LocalPosition = { 0, 1, 0 } -- placement
 	local t = 0
 	sea.Tick = function(self, dt)
 		t = t + dt
 		self.Scale.Y = 1 + (math.sin(t) * 0.05)
+	end
+	sea.OnCollisionBegin = function(_, other)
+		sfx("water_impact_" .. math.random(1, 3))
 	end
 
 	local grass = Map:GetChild(2)
@@ -776,37 +783,58 @@ addTimers = function()
 	end
 
 	Timer(timeToAvatarCTA, function()
-		local toast = toast:create({
-			message = "You can change outfits anytime you like! ",
-			center = false,
-			iconShape = bundle.Shape("voxels.change_room"),
-			duration = -1,
-		})
-		local ptr = createToastPointer(toast)
-		local btn = createToastButton(toast)
-		btn.onRelease = function(_)
-			Menu:ShowProfile()
-			ptr.object.Tick = nil
-			toast:remove()
-			toast = nil
-		end
+		require("api").getAvatar(Player.Username, function(err, data)
+			if not err then
+				if
+					data.hair ~= nil
+					or data.jacket ~= "official.jacket"
+					or data.pants ~= "official.pants"
+					or data.boots ~= "official.boots"
+				then
+					return -- If the player has at least one customized equipment, don't send toastMsg
+				else
+					local toast = toast:create({
+						message = "You can change outfits anytime you like! ",
+						center = false,
+						iconShape = bundle.Shape("voxels.change_room"),
+						duration = -1,
+					})
+					local ptr = createToastPointer(toast)
+					local btn = createToastButton(toast)
+					btn.onRelease = function(_)
+						Menu:ShowProfile()
+						ptr.object.Tick = nil
+						toast:remove()
+						toast = nil
+					end
+				end
+			end
+		end)
 	end)
 
 	Timer(timeToFriendsCTA, function()
-		local toast = toast:create({
-			message = "The more the merrier, add friends and play together!",
-			center = false,
-			iconShape = bundle.Shape("voxels.friend_icon"),
-			duration = -1,
-		})
-		local ptr = createToastPointer(toast)
-		local btn = createToastButton(toast)
-		btn.onRelease = function(_)
-			Menu:ShowFriends()
-			ptr.object.Tick = nil
-			toast:remove()
-			toast = nil
-		end
+		require("api"):getFriendCount(function(ok, count)
+			if ok then
+				if count > 0 then
+					return -- If the player already has friends, don't toastMsg
+				else
+					local toast = toast:create({
+						message = "Add friends and play together!",
+						center = false,
+						iconShape = bundle.Shape("voxels.friend_icon"),
+						duration = -1,
+					})
+					local ptr = createToastPointer(toast)
+					local btn = createToastButton(toast)
+					btn.onRelease = function(_)
+						Menu:ShowFriends()
+						ptr.object.Tick = nil
+						toast:remove()
+						toast = nil
+					end
+				end
+			end
+		end)
 	end)
 end
 
@@ -879,14 +907,6 @@ _helpers.lookAtHorizontal = function(o1, o2)
 	n3_1:Set(o1.Position.X, 0, o1.Position.Z)
 	n3_2:Set(o2.Position.X, 0, o2.Position.Z)
 	ease:linear(o1, 0.3).Forward = n3_2 - n3_1
-end
-
-_helpers.displayBubble = function(obj, msg)
-	if not msg then
-		obj:ClearTextBubble()
-		return
-	end
-	obj:TextBubble(msg, -1, Number3(0, 24, 0), true)
 end
 
 _helpers.addTriggerArea = function(obj, size, offset)
