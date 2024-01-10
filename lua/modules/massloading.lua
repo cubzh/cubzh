@@ -17,7 +17,7 @@ local list = {
     { fullname = "caillef.shop", pos = { 10, 24, 7 }, rotation = { 0, math.pi * 0.5, 0 }},
 }
 
-local massLoading = require("massLoading")
+local massLoading = require("massloading")
 local onLoad = function(obj, data)
     -- here SetParent/use data to set position/rotation etc.
     print(obj, data.fullname, data.pos[3])
