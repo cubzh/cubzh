@@ -114,6 +114,12 @@ Client.OnStart = function()
 		s.Scale = GLIDER_BACKPACK.SCALE
 		sender:EquipBackpack(s)
 	end)
+	LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function()
+		multi:action("updateAvatar")
+	end)
+	multi:onAction("updateAvatar", function(sender)
+		avatar:get(sender.Username, sender.Avatar)
+	end)
 
 	-- called when receiving information for distant object that are not linked
 	multi.linkRequest = function(name)

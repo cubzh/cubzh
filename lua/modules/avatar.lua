@@ -511,10 +511,8 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 
 		local nextEquipmentLoaded = function()
 			nbEquipmentsLoaded = nbEquipmentsLoaded + 1
-			if nbEquipmentsLoaded >= nbEquipmentsTotal then
-				if root.didLoad then
-					root.didLoad(nil, root)
-				end
+			if nbEquipmentsLoaded >= nbEquipmentsTotal and root.didLoad then
+				root.didLoad(nil, root)
 			end
 		end
 
@@ -538,10 +536,8 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 	end
 
 	local req = api.getAvatar(usernameOrId, function(err, data)
-		if err then
-			if root.didLoad then
-				root.didLoad(err)
-			end
+		if err and root.didLoad then
+			root.didLoad(err)
 			return
 		end
 
