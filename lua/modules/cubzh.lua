@@ -35,6 +35,8 @@ local BUILDING_COLLIDES_WITH_GROUPS = {}
 
 local CAMERA_COLLIDES_WITH_GROUPS = { 1, 4 } -- map + buildings
 
+local ITEM_AND_BUILDING_COLLISION_GROUPS = { 3, 4 }
+
 local DRAFT_COLLISION_GROUPS = { 5 }
 
 local _animatedElements = {}
@@ -169,10 +171,24 @@ Pointer.Click = function(pe)
 	end
 
 	if DEBUG_ITEMS then
-		local impact = pe:CastRay()
+		local impact = pe:CastRay(ITEM_AND_BUILDING_COLLISION_GROUPS)
 		if impact ~= nil then
-			if impact.Object.Name then
-				print(impact.Object.Name)
+			if impact.Object ~= nil then
+				local o = impact.Object
+
+				while o.Parent ~= World do
+					o = o.Parent
+				end
+
+				if o ~= nil then
+					if o.fullname ~= nil then
+						print(o.fullname, "(copied)")
+						Dev:CopyToClipboard(o.fullname)
+					elseif o.Name ~= nil then
+						print(o.Name, "(copied)")
+						Dev:CopyToClipboard(o.fullname)
+					end
+				end
 			end
 		end
 	end
