@@ -253,7 +253,7 @@ Client.OnWorldObjectLoad = function(obj)
 
 	if obj.Name == "voxels.windmill" then
 		setupBuilding(obj)
-
+		obj.Wheel.Physics = PhysicsMode.Disabled
 		obj.Wheel.Tick = function(self, dt)
 			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
@@ -390,10 +390,6 @@ Client.OnWorldObjectLoad = function(obj)
 			_helpers.displayBubble(self.avatar, nil)
 		end
 	elseif obj.Name == "voxels.change_room" then
-		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
-			o.CollisionGroups = nil
-			o.CollidesWithGroups = { 2 }
-		end)
 		obj.trigger = Object()
 		obj.trigger:SetParent(obj)
 		obj.trigger.LocalPosition = { -obj.Width * 0.5, 0, -obj.Depth * 0.5 }
@@ -423,10 +419,6 @@ Client.OnWorldObjectLoad = function(obj)
 		end
 		_animatedElements.change_room = obj
 	elseif obj.Name == "voxels.portal" then
-		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
-			o.CollisionGroups = nil
-			o.CollidesWithGroups = { 2 }
-		end)
 		obj.trigger = _helpers.addTriggerArea(obj)
 		obj.trigger.OnCollisionBegin = function(self, other)
 			if other ~= Player then
