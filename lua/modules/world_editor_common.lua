@@ -727,7 +727,7 @@ common.loadWorld = function(mapBase64, config)
 			if minimum_item_size_for_shadows ~= nil then
 				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows * minimum_item_size_for_shadows
 			end
-			local massLoading = require("massLoading")
+			local massLoading = require("massloading")
 			local onLoad = function(obj, data)
 				data.currentlyEditedBy = nil
 				loadObject(obj, data, config)
