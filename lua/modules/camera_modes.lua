@@ -289,6 +289,7 @@ cameraModes.setThirdPerson = function(self, config)
 		offset = nil, -- offset from target
 		rotationOffset = nil,
 		rigidity = 0.5,
+		collidesWithGroups = Map.CollisionGroups,
 	}
 
 	config = conf:merge(defaultConfig, config, {
@@ -296,6 +297,7 @@ cameraModes.setThirdPerson = function(self, config)
 			target = { "Object", "Shape", "MutableShape", "Number3", "Player" },
 			offset = { "Number3" },
 			rotationOffset = { "Rotation" },
+			collidesWithGroups = { "CollisionGroups", "table" },
 		},
 	})
 
@@ -315,6 +317,7 @@ cameraModes.setThirdPerson = function(self, config)
 	local minZoomDistance = config.minZoomDistance
 	local maxZoomDistance = config.maxZoomDistance
 	local target = config.target
+	local collidesWithGroups = config.collidesWithGroups
 	local offset = config.offset or Number3.Zero
 	local rotationOffset = config.rotationOffset or Rotation(0, 0, 0)
 	local targetIsPlayer = type(target) == "Player"
@@ -360,7 +363,7 @@ cameraModes.setThirdPerson = function(self, config)
 		box.Min = worldObject.Position - boxHalfSize -- box.Min:Set doesn't work
 		box.Max = worldObject.Position + boxHalfSize -- box.Max:Set doesn't work
 
-		impact = box:Cast(Number3.Up, 3, Map.CollisionGroups)
+		impact = box:Cast(Number3.Up, 3, collidesWithGroups)
 
 		distance = 3
 		if impact and impact.Distance < distance then
@@ -372,7 +375,7 @@ cameraModes.setThirdPerson = function(self, config)
 		box.Min = worldObject.Position - boxHalfSize -- box.Min:Set doesn't work
 		box.Max = worldObject.Position + boxHalfSize -- box.Max:Set doesn't work
 
-		impact = box:Cast(camera.Backward, camDistance, Map.CollisionGroups)
+		impact = box:Cast(camera.Backward, camDistance, collidesWithGroups)
 
 		if camDistance < 4 then -- in Head, make it invisible
 			if targetIsPlayer then
