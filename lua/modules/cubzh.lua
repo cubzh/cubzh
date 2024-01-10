@@ -211,11 +211,10 @@ Client.Tick = function(dt)
 			TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK
 		) * MAP_SCALE
 		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
-		return
-	end
-
-	if Player.Position.Y < -200 then
-		dropPlayer(Player)
+	else
+		if Player.Position.Y < -200 then
+			dropPlayer(Player)
+		end
 	end
 
 	unixMilli = Time.UnixMilli() / 1000.0
