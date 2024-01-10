@@ -531,6 +531,15 @@ Client.OnWorldObjectLoad = function(obj)
 			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
 				o.Physics = PhysicsMode.Static
 			end)
+		elseif string.find(obj.fullname, "beach_barrier") then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Static
+			end)
+			-- fix beach barries alignments (for better collisions)
+			obj.CollisionBox.Max = Number3(obj.CollisionBox.Max.X, 14, obj.CollisionBox.Max.Z)
+			obj.Position.X = math.floor(obj.Position.X * 10) / 10
+			obj.Position.Y = math.floor(obj.Position.Y + 0.5)
+			obj.Position.Z = math.floor(obj.Position.Z * 10) / 10
 		end
 	end
 end
