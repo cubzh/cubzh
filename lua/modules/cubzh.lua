@@ -625,6 +625,7 @@ initPlayer = function(p)
 end
 
 function dropPlayer(p)
+	playerControls:walk(p)
 	p.Velocity, p.Motion = { 0, 0, 0 }, { 0, 0, 0 }
 
 	if p == Player then
