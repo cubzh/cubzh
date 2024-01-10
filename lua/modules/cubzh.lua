@@ -231,10 +231,12 @@ Client.OnPlayerLeave = function(p)
 	multi:unlink("ph_" .. p.ID)
 	multi:unlink("p_" .. p.ID)
 
-	print(p.Username .. " just left!")
-	skills.removeStepClimbing(p)
-	walkSFX:unregister(p)
-	p:RemoveFromParent()
+	if p ~= Player then
+		print(p.Username .. " just left!")
+		skills.removeStepClimbing(p)
+		walkSFX:unregister(p)
+		p:RemoveFromParent()
+	end
 end
 
 function setupBuilding(obj)
