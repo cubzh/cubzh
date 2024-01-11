@@ -5,6 +5,7 @@ ease = require("ease")
 
 -- Global variables
 local PADDING = require("uitheme").current.padding
+local ICON_MIN_SIZE = 80
 local topRightStack = {}
 local centerStack = {}
 
@@ -69,7 +70,7 @@ mod.create = function(_, config)
 
 	local actionBtn
 	if config.action then
-		actionBtn = uikit:createButton(config.actionText)
+		actionBtn = uikit:createButton(config.actionText, { borders = false, shadow = false })
 		actionBtn:setParent(toastFrame)
 		actionBtn.onRelease = function()
 			config.action()
@@ -77,33 +78,50 @@ mod.create = function(_, config)
 	end
 
 	-- Setup toast layout, size, and position
-	toastFrame.parentDidResize = function(_)
+	toastFrame.parentDidResize = function(self)
+		local size = text.Size:Copy() -- start with text size
+		local textAndIconHeight = size.Height
+
 		if iconFrame then
-			-- icon + text
-			local toastHeight = text.Size.Y + (PADDING * 1.5)
-			iconFrame.Size = Number2(toastHeight, toastHeight)
-			toastFrame.Size = Number2(iconFrame.Size.X + text.Size.X + (PADDING * 2), toastHeight)
-			iconFrame.pos = { PADDING, 0 }
-			text.position.X = iconFrame.position.X + iconFrame.Size.X
-			text.position.Y = toastFrame.Size.Y / 2 - text.Size.Y / 2
-		else
-			-- text only
-			toastFrame.Size = text.Size + Number2(PADDING * 1.5, PADDING * 1.5)
-			text.position = toastFrame.Size / 2 - text.Size / 2
+			iconFrame.Width = math.min(ICON_MIN_SIZE, size.Height)
+			iconFrame.Height = math.min(ICON_MIN_SIZE, size.Height)
+
+			size.Width = iconFrame.Width + PADDING + size.Width
+			size.Height = math.max(iconFrame.Height, size.Height)
+
+			textAndIconHeight = size.Height
 		end
 
 		if actionBtn then
-			actionBtn.Width = toastFrame.Width
-			actionBtn.pos = { toastFrame.Width - actionBtn.Width, -actionBtn.Height }
+			size.Height = size.Height + PADDING + actionBtn.Height
+			actionBtn.Width = nil
+			actionBtn.Width = math.max(actionBtn.Width, size.Width)
+			size.Width = math.max(actionBtn.Width, size.Width)
 		end
 
-		local toastPosition
-		if config.center then
-			toastPosition = Screen.Size / 2 - toastFrame.Size / 2
-		else
-			toastPosition = Screen.Size - toastFrame.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+		size.Height = size.Height + PADDING * 2
+		size.Width = size.Width + PADDING * 2
+
+		local x = PADDING
+
+		if iconFrame then
+			iconFrame.pos = { x, size.Height - textAndIconHeight * 0.5 - iconFrame.Height * 0.5 - PADDING }
+			x = x + iconFrame.Width + PADDING
 		end
-		toastFrame.position = toastPosition
+
+		text.pos = { x, size.Height - textAndIconHeight * 0.5 - text.Height * 0.5 - PADDING }
+
+		if actionBtn then
+			actionBtn.pos = { size.Width * 0.5 - actionBtn.Width * 0.5, PADDING }
+		end
+
+		self.Size = size
+
+		if config.center then
+			self.position = Screen.Size * 0.5 - self.Size * 0.5
+		else
+			self.position = Screen.Size - self.Size - Number2(0, Screen.SafeArea.Top) - Number2(PADDING, PADDING)
+		end
 	end
 	toastFrame:parentDidResize()
 
