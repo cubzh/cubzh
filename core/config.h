@@ -393,7 +393,7 @@ static uint8_t AO_GRADIENT[4] = {0,
 #define GAME_LAUNCH_DEV_MODE true
 #define GAME_LAUNCH_NOT_DEV_MODE false
 
-#define WORLD_HUB_ID "958fa098-7482-4a7a-b863-ec9330f0f4a1"
+#define WORLD_HUB_ID "8ee53160-c2b4-4eeb-8663-a20c13af1f20"
 
 // #define LOCAL_SERVER true
 #define GAME_LAUNCH_DISTANT_SERVER false
