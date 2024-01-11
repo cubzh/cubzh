@@ -210,20 +210,20 @@ Client.Tick = function(dt)
 		townhallMinuteHand.LocalRotation = Rotation(math.pi * (-48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
-	if lightRay ~= nil and lightFire ~= nil then
-		if currentTime / TIME_CYCLE_DURATION > TIME_TO_NIGHTFALL then
-			if lightRay.IsHidden then
-				lightRay.IsHidden = false
-			end
-			if lightFire.IsHidden then
-				lightFire.IsHidden = false
-			end
-			lightRay:RotateLocal(0, dt * 0.5, 0)
-		else
-			lightRay.IsHidden = true
-			lightFire.IsHidden = true
-		end
-	end
+	-- if lightRay ~= nil and lightFire ~= nil then
+	-- 	if currentTime / TIME_CYCLE_DURATION > TIME_TO_NIGHTFALL then
+	-- 		if lightRay.IsHidden then
+	-- 			lightRay.IsHidden = false
+	-- 		end
+	-- 		if lightFire.IsHidden then
+	-- 			lightFire.IsHidden = false
+	-- 		end
+	-- 		lightRay:RotateLocal(0, dt * 0.5, 0)
+	-- 	else
+	-- 		lightRay.IsHidden = true
+	-- 		lightFire.IsHidden = true
+	-- 	end
+	-- end
 
 	if not DEBUG_AMBIENCES then
 		ambienceCycle:setTime(currentTime)
@@ -288,10 +288,10 @@ Client.OnWorldObjectLoad = function(obj)
 		lightFire.IsUnlit = true
 		lightFire.IsHidden = true
 		lightRay = obj:GetChild(2)
-		lightRay.Physics = PhysicsMode.Disabled
-		lightRay.Scale.X = 10
-		lightRay.IsUnlit = true
-		lightRay.Palette[1].Color.A = 20
+		-- lightRay.Physics = PhysicsMode.Disabled
+		-- lightRay.Scale.X = 10
+		-- lightRay.IsUnlit = true
+		-- lightRay.Palette[1].Color.A = 20
 		lightRay.IsHidden = true
 	elseif obj.Name == "voxels.townhall" then
 		setupBuilding(obj)
