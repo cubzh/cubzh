@@ -806,9 +806,10 @@ addTimers = function()
 						center = false,
 						iconShape = bundle.Shape("voxels.friend_icon"),
 						duration = -1,
+						closeButton = true,
 						actionText = "Ok!",
 						action = function(self)
-							Menu:ShowProfile()
+							Menu:ShowFriends()
 							self:remove()
 						end,
 					})
