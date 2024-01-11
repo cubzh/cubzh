@@ -18,6 +18,7 @@ local DUSK_DURATION = 0.05
 local NIGHT_DURATION = 0.4
 
 local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
+local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION
 local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
 
 local MAP_COLLISION_GROUPS = { 1 }
@@ -209,6 +210,21 @@ Client.Tick = function(dt)
 		townhallMinuteHand.LocalRotation = Rotation(math.pi * (-48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
+	if lightRay ~= nil and lightFire ~= nil then
+		if currentTime / TIME_CYCLE_DURATION > TIME_TO_NIGHTFALL then
+			if lightRay.IsHidden then
+				lightRay.IsHidden = false
+			end
+			if lightFire.IsHidden then
+				lightFire.IsHidden = false
+			end
+			lightRay:RotateLocal(0, dt * 0.5, 0)
+		else
+			lightRay.IsHidden = true
+			lightFire.IsHidden = true
+		end
+	end
+
 	if not DEBUG_AMBIENCES then
 		ambienceCycle:setTime(currentTime)
 	end
@@ -261,9 +277,22 @@ Client.OnWorldObjectLoad = function(obj)
 		setupBuilding(obj)
 	elseif obj.Name == "voxels.city_lamp" then
 		obj.Shadow = true
-		obj:GetChild(1).IsUnlit = true
+		local light = obj:GetChild(1)
+		light.IsUnlit = true
+		light.Tick = function(self, _)
+			self.IsUnlit = currentTime / TIME_CYCLE_DURATION > TIME_TO_NIGHTFALL
+		end
 	elseif obj.Name == "voxels.simple_lighthouse" then
 		setupBuilding(obj)
+		lightFire = obj:GetChild(1)
+		lightFire.IsUnlit = true
+		lightFire.IsHidden = true
+		lightRay = obj:GetChild(2)
+		lightRay.Physics = PhysicsMode.Disabled
+		lightRay.Scale.X = 10
+		lightRay.IsUnlit = true
+		lightRay.Palette[1].Color.A = 20
+		lightRay.IsHidden = true
 	elseif obj.Name == "voxels.townhall" then
 		setupBuilding(obj)
 
