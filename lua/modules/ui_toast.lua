@@ -19,11 +19,15 @@ mod.create = function(_, config)
 		animationSpeed = 250, -- in points per second
 		duration = 4.0, -- in seconds
 		keepInStack = true, -- when false, the toast is not kept in the stack when a new toast comes in
+		closeButton = false,
+		actionText = "",
+		action = nil,
 	}
 
 	config = require("config"):merge(DEFAULT_CONFIG, config, {
 		acceptTypes = {
 			iconShape = { "Shape", "MutableShape" },
+			action = { "function" },
 		},
 	})
 
@@ -63,6 +67,15 @@ mod.create = function(_, config)
 		iconFrame:setParent(toastFrame)
 	end
 
+	local actionBtn
+	if config.action then
+		actionBtn = uikit:createButton(config.actionText)
+		actionBtn:setParent(toastFrame)
+		actionBtn.onRelease = function()
+			config.action()
+		end
+	end
+
 	-- Setup toast layout, size, and position
 	toastFrame.parentDidResize = function(_)
 		if iconFrame then
@@ -70,13 +83,18 @@ mod.create = function(_, config)
 			local toastHeight = text.Size.Y + (PADDING * 1.5)
 			iconFrame.Size = Number2(toastHeight, toastHeight)
 			toastFrame.Size = Number2(iconFrame.Size.X + text.Size.X + (PADDING * 2), toastHeight)
-			iconFrame.position = Number2(PADDING, 0)
+			iconFrame.pos = { PADDING, 0 }
 			text.position.X = iconFrame.position.X + iconFrame.Size.X
 			text.position.Y = toastFrame.Size.Y / 2 - text.Size.Y / 2
 		else
 			-- text only
 			toastFrame.Size = text.Size + Number2(PADDING * 1.5, PADDING * 1.5)
 			text.position = toastFrame.Size / 2 - text.Size / 2
+		end
+
+		if actionBtn then
+			actionBtn.Width = toastFrame.Width
+			actionBtn.pos = { toastFrame.Width - actionBtn.Width, -actionBtn.Height }
 		end
 
 		local toastPosition
