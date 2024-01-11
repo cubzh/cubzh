@@ -640,10 +640,11 @@ initPlayer = function(p)
 				end
 			end
 		end)
+
+		p.Head:AddChild(AudioListener) -- Adding an audio listener to the player
 	end
 
 	World:AddChild(p) -- Adding the player to the world
-	p.Head:AddChild(AudioListener) -- Adding an audio listener to the player
 	p.Physics = PhysicsMode.Dynamic
 	p.CollisionGroups = PLAYER_COLLISION_GROUPS
 	p.CollidesWithGroups = PLAYER_COLLIDES_WITH_GROUPS
