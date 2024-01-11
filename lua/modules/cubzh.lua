@@ -11,8 +11,8 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
-local TIME_TO_AVATAR_CTA = 10 -- seconds
-local TIME_TO_FRIENDS_CTA = 20 -- seconds
+local TIME_TO_AVATAR_CTA = 60 * 4 -- seconds
+local TIME_TO_FRIENDS_CTA = 60 * 7 -- seconds
 
 local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
