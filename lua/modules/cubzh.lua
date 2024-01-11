@@ -375,10 +375,11 @@ Client.OnWorldObjectLoad = function(obj)
 			dialog:create("Looking for friends? Add some through the Friends menu!", self.avatar)
 			Menu:HighlightFriends()
 		end
-		obj.OnCollisionEnd = function(_, other)
+		obj.OnCollisionEnd = function(self, other)
 			if other ~= Player then
 				return
 			end
+			_helpers.lookAt(self.avatarContainer, nil)
 			dialog:remove()
 			Menu:RemoveHighlight()
 		end
