@@ -717,7 +717,7 @@ function mapEffects()
 		self.Scale.Y = 1 + (math.sin(t) * 0.05)
 	end
 	sea.OnCollisionBegin = function(_, other)
-		sfx("water_impact_" .. math.random(1, 3))
+		sfx("water_impact_" .. math.random(1, 3), { Position = other.Position, Volume = 0.5, Pitch = 1.0 })
 	end
 
 	local grass = Map:GetChild(2)
