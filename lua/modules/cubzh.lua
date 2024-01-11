@@ -363,12 +363,15 @@ Client.OnWorldObjectLoad = function(obj)
 				return
 			end
 			self.toast = toast:create({
-				message = "Interact with the changing room to pick an outfit!",
+				message = "Ready to customize your avatar? 👕",
 				center = false,
 				iconShape = bundle.Shape("voxels.change_room"),
 				duration = -1, -- negative duration means infinite
+				actionText = "Let's do this!",
+				action = function()
+					Menu:ShowProfile()
+				end,
 			})
-			obj.interactionAvailable = true
 		end
 		obj.trigger.OnCollisionEnd = function(self, other)
 			if other ~= Player then
@@ -378,9 +381,7 @@ Client.OnWorldObjectLoad = function(obj)
 				self.toast:remove()
 				self.toast = nil
 			end
-			obj.interactionAvailable = false
 		end
-		_interactiveElements.change_room = obj
 	elseif obj.Name == "voxels.portal" then
 		obj.trigger = _helpers.addTriggerArea(obj)
 		obj.trigger.OnCollisionBegin = function(self, other)
@@ -388,12 +389,15 @@ Client.OnWorldObjectLoad = function(obj)
 				return
 			end
 			self.toast = toast:create({
-				message = "Interact with the portal to explore a myriad of worlds!",
+				message = "Ready to explore other Worlds? 🌎",
 				center = false,
 				iconShape = bundle.Shape("voxels.portal"),
 				duration = -1, -- negative duration means infinite
+				actionText = "Let's go!",
+				action = function()
+					Menu:ShowWorlds()
+				end,
 			})
-			obj.interactionAvailable = true
 		end
 		obj.trigger.OnCollisionEnd = function(self, other)
 			if other ~= Player then
@@ -403,7 +407,6 @@ Client.OnWorldObjectLoad = function(obj)
 				self.toast:remove()
 				self.toast = nil
 			end
-			obj.interactionAvailable = false
 		end
 		local animatePortal = function(portal)
 			local kANIMATION_SPEED = 1
@@ -566,10 +569,6 @@ Pointer.Click = function(pe)
 
 	if _interactiveElements.solo_computer.interactionAvailable then
 		nextAmbience()
-	elseif _interactiveElements.change_room.interactionAvailable then
-		Menu:ShowProfile()
-	elseif _interactiveElements.portal.interactionAvailable then
-		Menu:ShowWorlds()
 	end
 
 	if DEBUG_ITEMS then
