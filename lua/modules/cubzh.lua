@@ -42,8 +42,6 @@ local ITEM_AND_BUILDING_COLLISION_GROUPS = { 3, 4 }
 
 local DRAFT_COLLISION_GROUPS = { 5 }
 
-local _interactiveElements = {}
-
 Client.OnStart = function()
 	dialog = require("dialog")
 	dialog:setMaxWidth(400)
@@ -267,7 +265,6 @@ Client.OnWorldObjectLoad = function(obj)
 		obj.Wheel.Tick = function(self, dt)
 			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
-		_interactiveElements.windmill = obj
 	elseif obj.Name == "voxels.home_1" then
 		setupBuilding(obj)
 	elseif obj.Name == "voxels.city_lamp" then
@@ -283,8 +280,6 @@ Client.OnWorldObjectLoad = function(obj)
 
 		townhallMinuteHand = obj.Minute
 		townhallMinuteHand.Pivot = { 0.5, 0.5, 0.5 }
-
-		_interactiveElements.townhall = obj
 	elseif obj.Name == "voxels.water_fountain" then
 		local w = obj:GetChild(1) -- water
 		w.Physics = PhysicsMode.Disabled
@@ -444,32 +439,6 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 		end
 		animatePortal(obj)
-		_interactiveElements.portal = obj
-	elseif obj.Name == "voxels.solo_computer" then
-		obj.trigger = _helpers.addTriggerArea(obj, nil, { -obj.Width * 0.5, 0, -obj.Depth })
-		obj.trigger.OnCollisionBegin = function(self, other)
-			if other ~= Player then
-				return
-			end
-			self.toast = toast:create({
-				message = "Interact with the computer to change the time",
-				center = false,
-				iconShape = bundle.Shape("voxels.solo_computer"),
-				duration = -1, -- negative duration means infinite
-			})
-			obj.interactionAvailable = true
-		end
-		obj.trigger.OnCollisionEnd = function(self, other)
-			if other ~= Player then
-				return
-			end
-			if self.toast ~= nil then
-				self.toast:remove()
-				self.toast = nil
-			end
-			obj.interactionAvailable = false
-		end
-		_interactiveElements.solo_computer = obj
 	end
 
 	if obj.fullname ~= nil then
@@ -566,10 +535,6 @@ Pointer.Click = function(pe)
 	multi:action("swingRight")
 
 	dialog:complete()
-
-	if _interactiveElements.solo_computer.interactionAvailable then
-		nextAmbience()
-	end
 
 	if DEBUG_ITEMS then
 		local impact = pe:CastRay(ITEM_AND_BUILDING_COLLISION_GROUPS)
@@ -848,17 +813,19 @@ addTimers = function()
 	end)
 end
 
-nextAmbience = function()
-	if ambiences == nil then
-		ambiences = { dawn, day, dusk, night }
-		nextAmbience = 1
+local _ambiences
+local _nextAmbience
+function nextAmbience()
+	if _ambiences == nil then
+		_ambiences = { dawn, day, dusk, night }
+		_nextAmbience = 1
 	end
-	local a = ambiences[nextAmbience]
-	ambience:set(a)
+	local a = _ambiences[_nextAmbience]
+	_ambiences:set(a)
 
-	nextAmbience = nextAmbience + 1
-	if nextAmbience > #ambiences then
-		nextAmbience = 1
+	_nextAmbience = _nextAmbience + 1
+	if _nextAmbience > #_ambiences then
+		_nextAmbience = 1
 	end
 end
 -- HELPERS
