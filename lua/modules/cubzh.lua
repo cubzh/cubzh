@@ -27,7 +27,7 @@ local PLAYER_COLLISION_GROUPS = { 2 }
 local PLAYER_COLLIDES_WITH_GROUPS = { 1, 3, 4, 5 } -- map + items + buildings + barriers
 
 local ITEM_COLLISION_GROUPS = { 3 }
--- local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
+local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
 
 local BUILDING_COLLISION_GROUPS = { 4 }
 local BUILDING_COLLIDES_WITH_GROUPS = {}
@@ -284,6 +284,16 @@ Client.OnWorldObjectLoad = function(obj)
 
 		local c = obj:GetChild(2) --floating cube
 		c.Physics = PhysicsMode.Disabled
+
+		local collider = c:Copy()
+		collider.IsHidden = true
+		collider.CollisionGroups = ITEM_COLLISION_GROUPS
+		collider.CollidesWithGroups = ITEM_COLLIDES_WITH_GROUPS
+		collider.Physics = PhysicsMode.Static
+		collider:SetParent(obj)
+		collider.LocalPosition = c.LocalPosition + { 0, 5, 0 }
+		collider.Rotation = Rotation(0, 0, 0)
+
 		local originY = c.LocalPosition.Y + 5
 		local t2 = 0
 		c.Tick = function(self, dt)
