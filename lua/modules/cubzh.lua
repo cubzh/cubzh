@@ -21,26 +21,26 @@ local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
 local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION
 local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
 
-local MAP_COLLISION_GROUPS = { 1 }
-local MAP_COLLIDES_WITH_GROUPS = {}
+local MAP_COLLISION_GROUPS = CollisionGroups(1)
+local MAP_COLLIDES_WITH_GROUPS = CollisionGroups()
 
-local PLAYER_COLLISION_GROUPS = { 2 }
-local PLAYER_COLLIDES_WITH_GROUPS = { 1, 3, 4, 5 } -- map + items + buildings + barriers
+local PLAYER_COLLISION_GROUPS = CollisionGroups(2)
+local PLAYER_COLLIDES_WITH_GROUPS = CollisionGroups(1, 3, 4, 5) -- map + items + buildings + barriers
 
-local ITEM_COLLISION_GROUPS = { 3 }
-local ITEM_COLLIDES_WITH_GROUPS = { 1, 3, 4 } -- map + items + buildings
+local ITEM_COLLISION_GROUPS = CollisionGroups(3)
+local ITEM_COLLIDES_WITH_GROUPS = CollisionGroups(1, 3, 4) -- map + items + buildings
 
-local BUILDING_COLLISION_GROUPS = { 4 }
-local BUILDING_COLLIDES_WITH_GROUPS = {}
+local BUILDING_COLLISION_GROUPS = CollisionGroups(4)
+local BUILDING_COLLIDES_WITH_GROUPS = CollisionGroups()
 
-local BARRIER_COLLISION_GROUPS = { 5 }
-local BARRIER_COLLIDES_WITH_GROUPS = {}
+local BARRIER_COLLISION_GROUPS = CollisionGroups(5)
+local BARRIER_COLLIDES_WITH_GROUPS = CollisionGroups()
 
-local CAMERA_COLLIDES_WITH_GROUPS = { 1, 4 } -- map + buildings
+local CAMERA_COLLIDES_WITH_GROUPS = CollisionGroups(1, 4) -- map + buildings
 
-local ITEM_AND_BUILDING_COLLISION_GROUPS = { 3, 4 }
+local ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS = CollisionGroups(3, 4, 5)
 
-local DRAFT_COLLISION_GROUPS = { 5 }
+local DRAFT_COLLISION_GROUPS = CollisionGroups(6)
 
 Client.OnStart = function()
 	dialog = require("dialog")
@@ -568,7 +568,7 @@ Pointer.Click = function(pe)
 	dialog:complete()
 
 	if DEBUG_ITEMS then
-		local impact = pe:CastRay(ITEM_AND_BUILDING_COLLISION_GROUPS)
+		local impact = pe:CastRay(ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS)
 		if impact ~= nil then
 			if impact.Object ~= nil then
 				local o = impact.Object
@@ -1351,9 +1351,9 @@ playerControls.glide = function(self, player)
 		vehicleRoll.Velocity:Set(vehicle.Velocity) -- copying for sync (physics disabled on vehicleRoll)
 
 		vehicle.CollisionBox = Box({ -10, -30, -10 }, { 10, 14, 10 })
-		vehicle.CollidesWithGroups = Map.CollisionGroups
+		vehicle.CollidesWithGroups = MAP_COLLISION_GROUPS
 			+ BUILDING_COLLISION_GROUPS
-			+ vehicle.CollisionGroups
+			+ ITEM_COLLISION_GROUPS
 			+ DRAFT_COLLISION_GROUPS
 			+ BARRIER_COLLISION_GROUPS
 		vehicle.CollisionGroups = {}
