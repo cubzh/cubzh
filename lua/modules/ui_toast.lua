@@ -73,7 +73,7 @@ mod.create = function(_, config)
 		actionBtn = uikit:createButton(config.actionText, { borders = false, shadow = false })
 		actionBtn:setParent(toastFrame)
 		actionBtn.onRelease = function()
-			config.action()
+			config.action(toast)
 		end
 	end
 
