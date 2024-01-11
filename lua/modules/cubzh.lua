@@ -11,6 +11,9 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
+local TIME_TO_AVATAR_CTA = 10 -- seconds
+local TIME_TO_FRIENDS_CTA = 20 -- seconds
+
 local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
 local DAY_DURATION = 0.5
@@ -760,37 +763,7 @@ function mapEffects()
 end
 
 addTimers = function()
-	local timeToAvatarCTA = 10
-	local timeToFriendsCTA = 20
-
-	local createToastPointer = function(toast)
-		local tutoPointer = ui:createText("☝️", Color.White, "big")
-		tutoPointer.position.Z = -999
-		tutoPointer.t = 0
-		tutoPointer.basePos = Number3(tutoPointer.Width, -tutoPointer.Height, 0)
-		tutoPointer.object.Tick = function(_, dt)
-			tutoPointer.t = tutoPointer.t + dt * 5
-			tutoPointer.position = tutoPointer.basePos + Number3(0, math.sin(tutoPointer.t) * 10, 0)
-			tutoPointer.color.A = tutoPointer.t * 255
-		end
-		tutoPointer:setParent(toast.frame)
-		return tutoPointer
-	end
-
-	local createToastButton = function(toast)
-		local toastBtn = ui:createButton("")
-		toastBtn:setColor(Color(0, 0, 0, 0))
-		toastBtn:setColorPressed(Color(0, 0, 0, 0))
-		toastBtn:setColorSelected(Color(0, 0, 0, 0))
-
-		toastBtn.Width = toast.frame.Width
-		toastBtn.Height = toast.frame.Height
-		toastBtn:setParent(toast.frame)
-
-		return toastBtn
-	end
-
-	Timer(timeToAvatarCTA, function()
+	Timer(TIME_TO_AVATAR_CTA, function()
 		require("api").getAvatar(Player.Username, function(err, data)
 			if not err then
 				if
@@ -801,45 +774,40 @@ addTimers = function()
 				then
 					return -- If the player has at least one customized equipment, don't send toastMsg
 				else
-					local toast = toast:create({
-						message = "You can change outfits anytime you like! ",
+					toast:create({
+						message = "You can customize your avatar anytime!",
 						center = false,
 						iconShape = bundle.Shape("voxels.change_room"),
 						duration = -1,
+						closeButton = true,
+						actionText = "Ok!",
+						action = function(self)
+							Menu:ShowProfile()
+							self:remove()
+						end,
 					})
-					local ptr = createToastPointer(toast)
-					local btn = createToastButton(toast)
-					btn.onRelease = function(_)
-						Menu:ShowProfile()
-						ptr.object.Tick = nil
-						toast:remove()
-						toast = nil
-					end
 				end
 			end
 		end)
 	end)
 
-	Timer(timeToFriendsCTA, function()
+	Timer(TIME_TO_FRIENDS_CTA, function()
 		require("api"):getFriendCount(function(ok, count)
 			if ok then
 				if count > 0 then
 					return -- If the player already has friends, don't toastMsg
 				else
-					local toast = toast:create({
+					toast:create({
 						message = "Add friends and play together!",
 						center = false,
 						iconShape = bundle.Shape("voxels.friend_icon"),
 						duration = -1,
+						actionText = "Ok!",
+						action = function(self)
+							Menu:ShowProfile()
+							self:remove()
+						end,
 					})
-					local ptr = createToastPointer(toast)
-					local btn = createToastButton(toast)
-					btn.onRelease = function(_)
-						Menu:ShowFriends()
-						ptr.object.Tick = nil
-						toast:remove()
-						toast = nil
-					end
 				end
 			end
 		end)
