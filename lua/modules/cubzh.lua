@@ -170,20 +170,31 @@ end
 local SAVE_INTERVAL = 0.1
 local SAVE_AMOUNT = 10
 local savedPositions, savedRotations = {}, {}
-local moveDT = 0
 
 local unixMilli
 local currentTime
+
+local t = 0
 Client.Tick = function(dt)
 	if not localPlayerShown then
-		moveDT = moveDT + dt * 0.2
-		while moveDT > math.pi do
-			moveDT = moveDT - math.pi * 2
-		end
-		Camera.Position.Y = (
-			TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK
-		) * MAP_SCALE
-		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
+		t = t + dt -- * 0.2
+
+		local p = Number3(393, 36 + 120, 92)
+
+		p.Y = p.Y + (1 + math.sin(t * 0.6)) * 3
+		-- p.X = p.X + (1 + math.sin(t * 1.1)) * 3
+		-- p.Z = p.Z + (1 + math.sin(t * 1.2)) * 3
+
+		local rx = math.sin(t * 0.5) * math.rad(2)
+		local ry = math.rad(-22) + math.sin(t * 0.2) * math.rad(7)
+
+		Camera.Position = p
+		Camera.Rotation = Rotation(rx, ry, 0)
+
+		-- Camera.Position.Y = (
+		-- 	TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK
+		-- ) * MAP_SCALE
+		-- Camera:RotateWorld({ 0, 0.1 * dt, 0 })
 	else
 		if Player.Position.Y < -200 then
 			dropPlayer(Player)
