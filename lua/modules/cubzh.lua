@@ -62,7 +62,7 @@ Client.OnStart = function()
 	controls:setButtonIcon("action1", "⬆️")
 
 	-- AMBIENCE
-	Clouds.Altitude = 50 * MAP_SCALE
+	Clouds.Altitude = 60 * MAP_SCALE
 
 	if not DEBUG_AMBIENCES then
 		ambienceCycle = ambience:startCycle({
