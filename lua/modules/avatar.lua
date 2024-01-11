@@ -349,7 +349,7 @@ index.setSkinColor = function(self, avatar, skin1, skin2, nose, mouth)
 			if part == nil and name == "Body" then
 				part = avatar
 			end
-			self:setBodyPartColor(name, part, skin1, skin2)
+			self:setBodyPartColor(nil, part, skin1, skin2)
 		end
 	end
 
