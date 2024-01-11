@@ -427,7 +427,7 @@ function createUI(system)
 
 		background.LocalPosition = { 0, 0, 0 }
 
-		content.LocalPosition = { paddingAndBorder, paddingAndBorder + underlinePadding, 0 }
+		content.LocalPosition = { totalWidth * 0.5 - content.Width * 0.5, totalHeight * 0.5 - content.Height * 0.5 }
 
 		if #self.borders > 0 then
 			content.LocalPosition = { paddingLeft, paddingBottom, 0 }
