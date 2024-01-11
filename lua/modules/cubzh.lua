@@ -5,7 +5,6 @@ local DEBUG_ITEMS = false
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
 local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
 local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(40, 20, 30)
-local ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK = 2.0
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
 local GLIDER_BACKPACK = {
 	SCALE = 0.75,
@@ -180,19 +179,12 @@ Client.Tick = function(dt)
 		local p = Number3(393, 36 + 120, 92)
 
 		p.Y = p.Y + (1 + math.sin(t * 0.6)) * 3
-		-- p.X = p.X + (1 + math.sin(t * 1.1)) * 3
-		-- p.Z = p.Z + (1 + math.sin(t * 1.2)) * 3
 
 		local rx = math.sin(t * 0.5) * math.rad(2)
 		local ry = math.rad(-22) + math.sin(t * 0.2) * math.rad(7)
 
 		Camera.Position = p
 		Camera.Rotation = Rotation(rx, ry, 0)
-
-		-- Camera.Position.Y = (
-		-- 	TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCK
-		-- ) * MAP_SCALE
-		-- Camera:RotateWorld({ 0, 0.1 * dt, 0 })
 	else
 		if Player.Position.Y < -200 then
 			dropPlayer(Player)
