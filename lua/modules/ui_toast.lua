@@ -77,6 +77,15 @@ mod.create = function(_, config)
 		end
 	end
 
+	local closeBtn
+	if config.closeButton then
+		closeBtn = uikit:createButton("❌", { borders = false, shadow = false })
+		closeBtn:setParent(toastFrame)
+		closeBtn.onRelease = function()
+			toast:remove()
+		end
+	end
+
 	-- Setup toast layout, size, and position
 	toastFrame.parentDidResize = function(self)
 		local size = text.Size:Copy() -- start with text size
@@ -92,11 +101,22 @@ mod.create = function(_, config)
 			textAndIconHeight = size.Height
 		end
 
+		if closeBtn then
+			size.Height = size.Height + PADDING + closeBtn.Height
+		end
+
 		if actionBtn then
-			size.Height = size.Height + PADDING + actionBtn.Height
+			if closeBtn == nil then
+				size.Height = size.Height + PADDING + actionBtn.Height
+			end
 			actionBtn.Width = nil
-			actionBtn.Width = math.max(actionBtn.Width, size.Width)
-			size.Width = math.max(actionBtn.Width, size.Width)
+			if closeBtn then
+				actionBtn.Width = math.max(actionBtn.Width, size.Width - closeBtn.Width - PADDING)
+				size.Width = math.max(actionBtn.Width + PADDING + closeBtn.Width, size.Width)
+			else
+				actionBtn.Width = math.max(actionBtn.Width, size.Width)
+				size.Width = math.max(actionBtn.Width, size.Width)
+			end
 		end
 
 		size.Height = size.Height + PADDING * 2
@@ -111,8 +131,16 @@ mod.create = function(_, config)
 
 		text.pos = { x, size.Height - textAndIconHeight * 0.5 - text.Height * 0.5 - PADDING }
 
+		if closeBtn then
+			closeBtn.pos = { PADDING, PADDING }
+		end
+
 		if actionBtn then
-			actionBtn.pos = { size.Width * 0.5 - actionBtn.Width * 0.5, PADDING }
+			if closeBtn then
+				actionBtn.pos = { closeBtn.pos.X + closeBtn.Width + PADDING, PADDING }
+			else
+				actionBtn.pos = { PADDING, PADDING }
+			end
 		end
 
 		self.Size = size
