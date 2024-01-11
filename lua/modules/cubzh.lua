@@ -76,6 +76,8 @@ Client.OnStart = function()
 			{
 				config = day,
 				duration = TIME_CYCLE_DURATION * DAY_DURATION,
+				fadeIn = TIME_CYCLE_DURATION * DAWN_DURATION * 0.5,
+				fadeOut = TIME_CYCLE_DURATION * DUSK_DURATION * 0.5,
 			},
 			{
 				config = dusk,
@@ -84,6 +86,8 @@ Client.OnStart = function()
 			{
 				config = night,
 				duration = TIME_CYCLE_DURATION * NIGHT_DURATION,
+				fadeIn = TIME_CYCLE_DURATION * DUSK_DURATION * 0.5,
+				fadeOut = TIME_CYCLE_DURATION * DAWN_DURATION * 0.5,
 			},
 		}, {
 			internalTick = false,
