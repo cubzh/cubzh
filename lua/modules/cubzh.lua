@@ -23,6 +23,7 @@ local NIGHT_DURATION = 0.4
 local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
 local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION
 local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
+local MINUTE_HAND_OFFSET = 1
 
 local MAP_COLLISION_GROUPS = CollisionGroups(1)
 local MAP_COLLIDES_WITH_GROUPS = CollisionGroups()
@@ -214,7 +215,8 @@ Client.Tick = function(dt)
 	if townhallMinuteHand ~= nil then
 		-- rotation 0 -> 12
 		-- Rotation(math.pi * (2 * 0.7 - 2 * 2 * 12 currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallMinuteHand.LocalRotation = Rotation(math.pi * (-48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallMinuteHand.LocalRotation =
+			Rotation(math.pi * (MINUTE_HAND_OFFSET - 48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
 	end
 
 	-- if lightRay ~= nil and lightFire ~= nil then
