@@ -1,4 +1,4 @@
-Dev.DisplayColliders = false
+Dev.DisplayColliders = true
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
 
@@ -517,16 +517,47 @@ Client.OnWorldObjectLoad = function(obj)
 				o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
 			end)
 		elseif string.find(obj.fullname, "beach_barrier") then
-			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
-				o.Physics = PhysicsMode.Static
-				o.CollisionGroups = BARRIER_COLLISION_GROUPS
-				o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
-			end)
 			-- fix beach barries alignments (for better collisions)
-			obj.CollisionBox.Max = Number3(obj.CollisionBox.Max.X, 14, obj.CollisionBox.Max.Z)
-			obj.Position.X = math.floor(obj.Position.X + 0.5)
-			obj.Position.Y = math.floor(obj.Position.Y + 0.5)
-			obj.Position.Z = math.floor(obj.Position.Z + 0.5)
+			if obj.fullname == "voxels.beach_barrier_2" then
+				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+					o.Physics = PhysicsMode.StaticPerBlock
+					o.CollisionGroups = BARRIER_COLLISION_GROUPS
+					o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
+				end)
+			else
+				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+					o.Physics = PhysicsMode.Static
+					o.CollisionGroups = BARRIER_COLLISION_GROUPS
+					o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
+				end)
+
+				-- trying to allign collision boxes to smoothly slide
+				-- along tiled barries.
+				-- doesn't work realy well so far
+
+				local p = obj.Position:Copy()
+				p.X = math.floor(p.X + 0.5)
+				p.Y = math.floor(p.Y + 0.5)
+				p.Z = math.floor(p.Z + 0.5)
+				local diff = obj.Position - p
+
+				obj.CollisionBox = Box(
+					Number3(
+						math.floor(obj.CollisionBox.Max.X + diff.X + 0.5),
+						14,
+						math.floor(obj.CollisionBox.Max.Z + diff.Z + 0.5)
+					),
+					Number3(
+						math.floor(obj.CollisionBox.Min.X + diff.X + 0.5),
+						math.floor(obj.CollisionBox.Min.Y + diff.Y + 0.5),
+						math.floor(obj.CollisionBox.Min.Z + diff.Z + 0.5)
+					)
+				)
+			end
+
+			-- obj.Position.X = math.floor(obj.Position.X + 0.5)
+			-- obj.Position.Y = math.floor(obj.Position.Y + 0.5)
+			-- obj.Position.Z = math.floor(obj.Position.Z + 0.5)
 		elseif string.find(obj.fullname, "plank_") then -- items that are "part of the map"
 			hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
 				o.Physics = PhysicsMode.Disabled
