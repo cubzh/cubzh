@@ -1,4 +1,4 @@
-Dev.DisplayColliders = true
+Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
 
