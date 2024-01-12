@@ -29,13 +29,17 @@ local ease = {
 	end,
 }
 
+local rotation = Rotation()
+local color = Color(0, 0, 0)
+local percent
+local done
+local to
+local p
+
 ease._startIfNeeded = function(self)
 	if self.object.Tick == nil then
 		World:AddChild(self.object)
 		self.object.Tick = function(_, dt)
-			local percent
-			local done
-			local to
 			for _, instance in pairs(self.instances) do
 				done = false
 				instance.dt = instance.dt + dt
@@ -48,10 +52,11 @@ ease._startIfNeeded = function(self)
 
 				for k, from in pairs(instance.from) do
 					to = instance.to[k]
-					local p = from
-					if type(p) == "Rotation" then
+					if type(from) == "Rotation" then
+						p = rotation
 						p:Lerp(from, to, percent)
-					elseif type(p) == "Color" then
+					elseif type(from) == "Color" then
+						p = color
 						p:Lerp(from, to, percent)
 					else
 						p = from + (to - from) * percent
