@@ -302,6 +302,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     float3 dv, normal, push3, modelDv, modelEpsilon, rtreeNormal;
     float minSwept, swept, rtreeSwept;
     float3 pos = *transform_get_position(t);
+    const bool selfCallbacks = rigidbody_has_callbacks(rb);
     Box broadphase, modelBox, modelBroadphase;
     Shape *shape;
 
@@ -384,7 +385,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 const bool isTrigger = mode == RigidbodyMode_Trigger ||
                                        mode == RigidbodyMode_TriggerPerBlock;
 
-                if (isTrigger && rigidbody_has_callbacks(hitRb) == false) {
+                if (isTrigger && selfCallbacks == false &&
+                    rigidbody_has_callbacks(hitRb) == false) {
                     hit = fifo_list_pop(sceneQuery);
                     continue;
                 }
@@ -458,7 +460,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 if (swept < minSwept) {
                     if (isTrigger) {
                         // consider triggers here too, in case dynamic rb passes through in one
-                        // frame
+                        // frame, or the callback is defined only on the dynamic rb
                         float3 wNormal;
                         if (model != NULL) {
                             matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
