@@ -60,7 +60,9 @@ worlds.createModalContent = function(_, config)
 	end
 
 	pages:setPageDidChange(function(page)
-		grid:setPage(page)
+		if grid.setPage ~= nil then
+			grid:setPage(page)
+		end
 	end)
 
 	exploreContent.node = grid

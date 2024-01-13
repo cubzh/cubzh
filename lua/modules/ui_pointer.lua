@@ -32,7 +32,7 @@ pointer.create = function(_, config)
 		end
 
 		local ok = pcall(function()
-			local targetPos = config.target.pos
+			local targetPos = config.target.pos:Copy()
 
 			if config.target.Width ~= nil and config.target.Height ~= nil then
 				if config.from == "below" then
@@ -62,7 +62,7 @@ pointer.create = function(_, config)
 
 		if not ok then
 			ok = pcall(function()
-				self.pos = config.target.Position
+				self.pos = config.target.Position:Copy()
 			end)
 		end
 
@@ -73,7 +73,7 @@ pointer.create = function(_, config)
 		end
 
 		if not ok then
-			error("pointAt: couldn't point at " .. config.target, 2)
+			error("pointAt: couldn't point at target", 2)
 		end
 
 		self.LocalPosition.Z = ui.kForegroundDepth
@@ -125,6 +125,7 @@ pointer.create = function(_, config)
 
 	local remove = p.remove
 	p.remove = function(self)
+		self.config = nil -- important, otherwise remove can propage to what's within config
 		ease:cancel(self)
 		remove(self)
 	end
