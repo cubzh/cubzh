@@ -324,9 +324,13 @@ function triggerCallbacks()
 		if isActive then
 			blockEvents()
 			System.PointerForceShown = true
+			removeBadge()
 		else
 			unblockEvents()
 			System.PointerForceShown = false
+			if true then -- System.HasEmail == false
+				showBadge("!")
+			end
 		end
 	end
 
@@ -708,14 +712,27 @@ cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 cubzhBtn:setParent(topBar)
 
 uiBadge = require("ui_badge")
-badge = uiBadge:create({ text = "!", ui = ui })
-badge.internalParentDidResize = badge.parentDidResize
-badge.parentDidResize = function(self)
-	self.pos.X = self.parent.Width * 0.5
-	self.pos.Y = 0
-	self:internalParentDidResize()
+
+cubhBtnBadge = nil
+
+function showBadge(str)
+	removeBadge()
+	cubhBtnBadge = uiBadge:create({ text = str, ui = ui })
+	cubhBtnBadge.internalParentDidResize = cubhBtnBadge.parentDidResize
+	cubhBtnBadge.parentDidResize = function(self)
+		self.pos.X = self.parent.Width * 0.5
+		self.pos.Y = 0
+		self:internalParentDidResize()
+	end
+	cubhBtnBadge:setParent(cubzhBtn)
 end
-badge:setParent(cubzhBtn)
+
+function removeBadge()
+	if cubhBtnBadge ~= nil then
+		cubhBtnBadge:remove()
+		cubhBtnBadge = nil
+	end
+end
 
 cubzhLogo = logo:createShape()
 cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
@@ -2132,6 +2149,10 @@ Timer(0.1, function()
 				under13BadgeShape.LocalPosition.Z = 100
 			end
 			under13Badge:parentDidResize()
+		end
+
+		if true then -- System.HasEmail == false
+			showBadge("!")
 		end
 
 		if isChatAvailable() == false then
