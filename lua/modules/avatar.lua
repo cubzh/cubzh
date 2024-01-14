@@ -333,7 +333,11 @@ index.setBodyPartColor = function(_, _, shape, skin1, skin2)
 	end
 end
 
-index.setHeadColors = function(self, head, skin1, skin2, nose, mouth)
+index.setHeadColors = function(self, avatarOrHead, skin1, skin2, nose, mouth)
+	local head = avatarOrHead
+	if avatarOrHead.Head then
+		head = avatarOrHead.Head
+	end
 	head.Palette[SKIN_1_PALETTE_INDEX].Color = skin1
 	head.Palette[SKIN_2_PALETTE_INDEX].Color = skin2
 	self:setNoseColor(head, nose)

@@ -1604,9 +1604,9 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
-	if updates.skinColors and avatar.body.shape then
-		avatarModule:setSkinColor(
-			avatar.body.shape,
+	if updates.skinColors ~= nil and avatar ~= nil then
+		avatarModule:setHeadColors(
+			avatar,
 			updates.skinColors.skin1,
 			updates.skinColors.skin2,
 			updates.skinColors.nose,
@@ -1614,16 +1614,16 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 		)
 	end
 
-	if updates.eyesColor and avatar.body.shape then
-		avatarModule:setEyesColor(avatar.body.shape, updates.eyesColor)
+	if type(updates.eyesColor) == Type.Color and avatar ~= nil then
+		avatarModule:setEyesColor(avatar, updates.eyesColor)
 	end
 
-	if updates.noseColor and avatar.body.shape then
-		avatarModule:setNoseColor(avatar.body.shape, updates.noseColor)
+	if type(updates.noseColor) == Type.Color and avatar ~= nil then
+		avatarModule:setNoseColor(avatar, updates.noseColor)
 	end
 
-	if updates.mouthColor and avatar.body.shape then
-		avatarModule:setMouthColor(avatar.head.shape.shape, updates.mouthColor)
+	if type(updates.mouthColor) == Type.Color and avatar ~= nil then
+		avatarModule:setMouthColor(avatar, updates.mouthColor)
 	end
 
 	if updates.outfit == true then
