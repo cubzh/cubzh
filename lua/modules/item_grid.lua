@@ -683,7 +683,7 @@ itemGrid.create = function(_, config)
 				repo = config.repo,
 				category = config.categories,
 				page = 1,
-				perpage = 250,
+				perPage = 250,
 				search = search,
 			}, function(err, items)
 				if err then

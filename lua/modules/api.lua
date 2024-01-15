@@ -215,26 +215,31 @@ end
 -- BLUEPRINTS
 -- --------------------------------------------------
 
--- Lists items using filter.
---
--- filter = {
---   category = "hat",
---   repo = "caillef",
--- }
---
--- callback(error string or nil, items []Item or nil)
---
-mod.getItems = function(_, filter, callback)
+--- Lists items using filter.
+---
+--- Config ---
+--- search: string (not empty)
+--- category: string
+--- repo: string
+--- sortBy: string? (nil, "", "updatedAt:desc", "likes:desc", "views:desc", ...)
+---
+--- Callback ---
+---
+--- error: string (can be nil)
+--- items: []Item (can be nil)
+---
+mod.getItems = function(self, config, callback)
 	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
 
 	-- validate arguments
-	if type(filter) ~= "table" then
-		callback("1st arg must be a table", nil)
-		return nil
+	if self ~= mod then
+		error("api:getItems(config, callback): use `:`", 2)
+	end
+	if type(config) ~= "table" then
+		error("api:getItems(config, callback): config should be a table", 2)
 	end
 	if type(callback) ~= "function" then
-		callback("2nd arg must be a function", nil)
-		return nil
+		error("api:getItems(config, callback): callback should be a function", 2)
 	end
 
 	local filterIsValid = function(k, v)
@@ -242,10 +247,16 @@ mod.getItems = function(_, filter, callback)
 			if k == "search" and type(v) == "string" and v ~= "" then
 				return true
 			end
+			if k == "sortBy" and (type(v) == "string" or type(v) == "nil") then
+				return true
+			end
 			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
 				return true
 			end
-			if k == "page" or k == "perpage" then
+			if k == "page" and (type(v) == "number" or type(v) == "integer") then
+				return true
+			end
+			if k == "perPage" and (type(v) == "number" or type(v) == "integer") then
 				return true
 			end
 			if k == "category" then
@@ -254,7 +265,7 @@ mod.getItems = function(_, filter, callback)
 			if k == "repo" then
 				return true
 			end
-			if k == "minBlock" then
+			if k == "minBlock" and (type(v) == "number" or type(v) == "integer") then
 				return true
 			end
 		end
@@ -263,7 +274,7 @@ mod.getItems = function(_, filter, callback)
 
 	-- parse filters
 	local queryParams = {}
-	for k, v in pairs(filter) do
+	for k, v in pairs(config) do
 		if filterIsValid(k, v) then
 			if type(v) == "table" then
 				for _, entry in ipairs(v) do
@@ -431,6 +442,7 @@ end
 --- 	search: string?
 ---     perPage: integer?
 ---     page: integer? (default is 1)
+---     sortBy: string? (nil, "", "updatedAt:desc", "likes:desc", "views:desc", ...)
 --- callback: function(err, worlds)
 ---		err: string
 ---		worlds: []worlds
@@ -450,6 +462,10 @@ mod.getPublishedWorlds = function(self, config, callback)
 	if config.search ~= nil and type(config.search) ~= Type.string then
 		error("api:getPublishedWorlds(config, callback): config.search should be a string", 2)
 	end
+	-- sortBy (optional)
+	if config.sortBy ~= nil and type(config.sortBy) ~= Type.string then
+		error("api:getPublishedWorlds(config, callback): config.sortBy should be a string", 2)
+	end
 
 	-- construct query params string
 	local queryParams = ""
@@ -464,6 +480,13 @@ mod.getPublishedWorlds = function(self, config, callback)
 			queryParams = queryParams .. "&"
 		end
 		queryParams = queryParams .. "search=" .. config.search
+	end
+
+	if type(config.sortBy) == Type.string and #config.sortBy > 0 then
+		if #queryParams > 0 then
+			queryParams = queryParams .. "&"
+		end
+		queryParams = queryParams .. "sortBy=" .. config.sortBy
 	end
 
 	local perPageType = type(config.perPage)
