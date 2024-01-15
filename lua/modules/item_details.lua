@@ -412,6 +412,9 @@ itemDetails.createModalContent = function(_, config)
 			return
 		end
 		self._refreshTimer = Timer(0.01, function()
+			if self == nil or self.refresh == nil then
+				return
+			end
 			self._refreshTimer = nil
 			self:refresh()
 		end)
