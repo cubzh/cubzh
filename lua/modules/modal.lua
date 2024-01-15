@@ -161,6 +161,13 @@ modal.createContent = function(_)
 			bottomCenter = {},
 			bottomRight = {},
 			modal = nil,
+			isActive = function(self)
+				local modal = self._attr.modal
+				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
+					return true
+				end
+				return false
+			end,
 			getModalIfContentIsActive = function(self)
 				local modal = self._attr.modal
 				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then

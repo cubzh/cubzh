@@ -130,10 +130,11 @@ function updateModalPosition(modal, forceBounce)
 
 	local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5, 0)
 
+	ease:cancel(modal) -- cancel modal ease animations if any
+
 	if not modal.updatedPosition or forceBounce then
 		modal.LocalPosition = p - { 0, 100, 0 }
 		modal.updatedPosition = true
-		ease:cancel(modal) -- cancel modal ease animations if any
 		ease:outBack(modal, 0.22).LocalPosition = p
 	else
 		modal.LocalPosition = p
@@ -328,7 +329,7 @@ function triggerCallbacks()
 		else
 			unblockEvents()
 			System.PointerForceShown = false
-			if true then -- System.HasEmail == false
+			if System.HasEmail == false then
 				showBadge("!")
 			end
 		end
@@ -740,23 +741,6 @@ cubzhBtnShape:setParent(cubzhBtn)
 cubzhBtnShape.parentDidResize = btnContentParentDidResize
 cubzhBtnShape:parentDidResize()
 
--- animation to draw attention:
--- logoAnim = {}
--- logoAnim.start = function()
--- 	ease:inOutSine(cubzhBtnShape.pivot, 0.15, {
--- 		onDone = function()
--- 			ease:inOutSine(cubzhBtnShape.pivot, 0.15, {
--- 				onDone = function()
--- 					logoAnim.start()
--- 				end,
--- 			}).Scale =
--- 				Number3(1, 1, 1)
--- 		end,
--- 	}).Scale =
--- 		Number3(1.5, 1.5, 1.5)
--- end
--- logoAnim.start()
-
 -- CONNECTIVITY BTN
 
 connBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
@@ -1038,12 +1022,12 @@ function getCubzhMenuModalContent()
 	local node = ui:createFrame()
 	content.node = node
 
-	local btnHome = ui:createButton("🏠 Home")
-	btnHome:setParent(node)
+	-- local btnHome = ui:createButton("🏠 Home")
+	-- btnHome:setParent(node)
 
-	btnHome.onRelease = function()
-		System.GoHome()
-	end
+	-- btnHome.onRelease = function()
+	-- 	System.GoHome()
+	-- end
 
 	local btnWorlds = ui:createButton("🌎 Worlds", { textSize = "big" })
 	btnWorlds:setColor(theme.colorExplore)
@@ -1057,10 +1041,11 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnGallery = ui:createButton("✨ Items Gallery", { textSize = "default" })
-	btnGallery:setParent(node)
+	local btnItems = ui:createButton("⚔️ Items", { textSize = "default" })
+	btnItems:setParent(node)
+	btnItems.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
 
-	btnGallery.onRelease = function()
+	btnItems.onRelease = function()
 		local modal = content:getModalIfContentIsActive()
 		if modal ~= nil then
 			modal:push(require("gallery"):createModalContent({ uikit = ui }))
@@ -1068,7 +1053,7 @@ function getCubzhMenuModalContent()
 	end
 
 	local btnMyCreations = ui:createButton("🏗️ My Creations", { textSize = "default" })
-	btnMyCreations:setColor(theme.colorCreate)
+	-- btnMyCreations:setColor(theme.colorCreate)
 	btnMyCreations:setParent(node)
 	btnMyCreations.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
 
@@ -1080,6 +1065,305 @@ function getCubzhMenuModalContent()
 			content.tabs[1].action()
 			modal:push(content)
 		end
+	end
+
+	local buttons
+
+	-- Secure account form
+
+	local emailForm
+
+	local function addEmailForm(hasEmail, emailTemporary, refreshModal)
+		if hasEmail then
+			return
+		end
+
+		emailForm = ui:createFrame(Color(95, 93, 201))
+		emailForm.dynamicHeight = true
+		emailForm:setParent(node)
+		emailForm.Width = 100
+		emailForm.Height = 100
+		emailForm.badge = nil
+
+		local msg
+
+		if System.IsUserUnder13 then
+			msg = "✉️ Add Parent's Email to secure your account."
+		else
+			msg = "✉️ Add an Email to secure your account."
+		end
+
+		local secureAccountFormText = ui:createText(msg, Color.White, "small")
+		secureAccountFormText:hide()
+		secureAccountFormText:setParent(emailForm)
+
+		local secureAccountFormInput = ui:createTextInput("", "name@domain.com", {
+			textSize = "small",
+		})
+		secureAccountFormInput:setParent(emailForm)
+
+		local secureAccountFormBtn = ui:createButton("✅", { textSize = "small" })
+		secureAccountFormBtn:setParent(emailForm)
+
+		-- secureAccountFeedback has to be global to cancel animation
+		local secureAccountFeedback = ui:createText("Sending…", Color(255, 255, 255, 254), "small")
+		secureAccountFeedback:setParent(emailForm)
+		secureAccountFeedback:hide()
+
+		local secureAccountFeedbackAnim = {}
+		secureAccountFeedbackAnim.start = function()
+			ease:inOutSine(secureAccountFeedback, 0.3, {
+				onDone = function()
+					ease:inOutSine(secureAccountFeedback, 0.3, {
+						onDone = function()
+							secureAccountFeedbackAnim.start()
+						end,
+					}).Color =
+						Color(255, 255, 255, 0)
+				end,
+			}).Color =
+				Color(255, 255, 255, 254)
+		end
+
+		local secureAccountRefreshBtn = ui:createButton("Refresh", { textSize = "small" })
+		local secureAccountCancelBtn = ui:createButton("❌", { textSize = "small" })
+
+		secureAccountRefreshBtn:setParent(emailForm)
+		secureAccountRefreshBtn:hide()
+
+		secureAccountRefreshBtn.onRelease = function()
+			secureAccountFormInput:hide()
+			secureAccountFormBtn:hide()
+			secureAccountRefreshBtn:hide()
+			secureAccountCancelBtn:hide()
+			secureAccountFeedback:show()
+			secureAccountFeedback.Text = "Refreshing…"
+
+			secureAccountFeedbackAnim.start()
+
+			if activeModal then
+				activeModal:refreshContent()
+			end
+
+			api:getUserInfo(Player.UserID, function(ok, userInfo, _)
+				if not ok then
+					return
+				end
+
+				if userInfo.hasEmail then
+					System.HasEmail = true -- user is supposed to have an email now
+					secureAccountFormInput:hide()
+					secureAccountFormBtn:hide()
+					secureAccountRefreshBtn:hide()
+					secureAccountCancelBtn:hide()
+					secureAccountFeedback:hide()
+					ease:cancel(secureAccountFeedback)
+					if emailForm.badge ~= nil then
+						emailForm.badge:remove()
+						emailForm.badge = nil
+					end
+					if System.IsUserUnder13 then
+						secureAccountFormText.Text = "✅ Parent's Email verified!"
+					else
+						secureAccountFormText.Text = "✅ Email verified!"
+					end
+				else
+					secureAccountFormInput:hide()
+					secureAccountFormBtn:hide()
+					secureAccountRefreshBtn:show()
+					secureAccountCancelBtn:show()
+					secureAccountFeedback:hide()
+					ease:cancel(secureAccountFeedback)
+				end
+
+				if activeModal then
+					activeModal:refreshContent()
+				end
+			end, { "hasEmail", "emailTemporary" })
+		end
+
+		secureAccountCancelBtn:setParent(emailForm)
+		secureAccountCancelBtn:hide()
+
+		secureAccountCancelBtn.onRelease = function()
+			secureAccountFormInput:show()
+			secureAccountFormBtn:show()
+
+			secureAccountRefreshBtn:hide()
+			secureAccountCancelBtn:hide()
+			secureAccountFeedback:hide()
+
+			secureAccountFormText.Text = msg
+			if activeModal then
+				activeModal:refreshContent()
+			end
+		end
+
+		local secureAccountBadgeSetPosition = function()
+			if emailForm.badge ~= nil then
+				emailForm.badge.pos = {
+					-theme.padding * 2,
+					emailForm.Height * 0.5,
+				}
+			end
+		end
+
+		emailForm.didBecomeActive = function(self)
+			if self.badge == nil and System.HasEmail == false then
+				self.badge = uiBadge:create({ text = "!", ui = ui })
+				self.badge:setParent(emailForm)
+				secureAccountBadgeSetPosition()
+			end
+		end
+
+		emailForm.willResignActive = function(self)
+			if self.badge ~= nil then
+				if secureAccountFeedback then
+					ease:cancel(secureAccountFeedback)
+				end
+				self.badge:remove()
+				self.badge = nil
+			end
+		end
+
+		local function displayEmailSent(email)
+			secureAccountFormInput:hide()
+			secureAccountFormBtn:hide()
+
+			secureAccountRefreshBtn:show()
+			secureAccountCancelBtn:show()
+
+			if System.IsUserUnder13 then
+				secureAccountFormText.Text = "✉️ Link sent to " .. email .. ", ask Parent to click on it to verify!"
+			else
+				secureAccountFormText.Text = "✉️ Link sent to " .. email .. ", click on it to verify!"
+			end
+			if activeModal then
+				activeModal:refreshContent()
+			end
+		end
+
+		secureAccountFormBtn.onRelease = function()
+			local email = secureAccountFormInput.Text
+
+			if email == "" then
+				secureAccountFormText.Text = "❌ Email can't be empty!"
+				if activeModal then
+					activeModal:refreshContent()
+				end
+				return
+			end
+
+			if not email:match("^[A-Za-z0-9.!#$%%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+%.[A-Za-z0-9-]*") then
+				secureAccountFormText.Text = "❌ Doesn't look like a valid email!"
+				if activeModal then
+					activeModal:refreshContent()
+				end
+				return
+			end
+
+			secureAccountFormInput:hide()
+			secureAccountFormBtn:hide()
+			secureAccountFeedback:show()
+			secureAccountFeedback.Text = "Sending…"
+			secureAccountFeedbackAnim.start()
+
+			local fields = {}
+			if System.IsUserUnder13 then
+				fields.parentEmail = email
+			else
+				fields.email = email
+			end
+
+			api:patchUserInfo(fields, function(err)
+				secureAccountFeedback:hide()
+
+				if err ~= nil then
+					secureAccountFormBtn:show()
+					secureAccountFormInput:show()
+					secureAccountFormText.Text = "❌ Sorry, something went wrong. Please try again."
+					if activeModal then
+						activeModal:refreshContent()
+					end
+					return
+				end
+
+				displayEmailSent(email)
+			end)
+		end
+
+		emailForm.parentDidResize = function(self)
+			-- show when setting MaxWidth to avoid glitch
+			-- (long single line of text displayed for a frame)
+			secureAccountFormText:show()
+			secureAccountFormText.object.MaxWidth = self.Width - theme.padding * 2
+			secureAccountFormInput.Width = self.Width - secureAccountFormBtn.Width - theme.padding * 3
+			secureAccountFormBtn.Width = secureAccountFormInput.Height
+
+			secureAccountFormBtn.Height = secureAccountFormInput.Height
+			secureAccountRefreshBtn.Height = secureAccountFormInput.Height
+			secureAccountCancelBtn.Height = secureAccountFormInput.Height
+
+			self.Height = secureAccountFormText.Height + theme.padding * 2
+
+			if
+				secureAccountFormInput:isVisible()
+				or secureAccountRefreshBtn:isVisible()
+				or secureAccountFeedback:isVisible()
+			then
+				self.Height = self.Height + secureAccountFormInput.Height + theme.padding
+			end
+
+			secureAccountFormText.pos = { theme.padding, self.Height - theme.padding - secureAccountFormText.Height }
+
+			secureAccountFormInput.pos = { theme.padding, theme.padding }
+
+			secureAccountFormBtn.pos = { self.Width - theme.padding - secureAccountFormBtn.Width, theme.padding }
+
+			local w = secureAccountRefreshBtn.Width + theme.padding + secureAccountCancelBtn.Width
+			local x = self.Width * 0.5 - w * 0.5
+			secureAccountCancelBtn.pos = { x, theme.padding }
+			x = x + secureAccountCancelBtn.Width + theme.padding
+			secureAccountRefreshBtn.pos = { x, theme.padding }
+
+			secureAccountFeedback.pos = {
+				self.Width * 0.5 - secureAccountFeedback.Width * 0.5,
+				secureAccountFormInput.pos.Y + secureAccountFormInput.Height * 0.5 - secureAccountFeedback.Height * 0.5,
+			}
+
+			secureAccountBadgeSetPosition()
+		end
+
+		if emailTemporary ~= "" then
+			displayEmailSent(emailTemporary)
+		end
+
+		table.insert(buttons, { emailForm })
+
+		if refreshModal then
+			if activeModal then
+				activeModal:refreshContent()
+			end
+		end
+
+		if content:isActive() then
+			emailForm.badge = uiBadge:create({ text = "!", ui = ui })
+			emailForm.badge:setParent(emailForm)
+			secureAccountBadgeSetPosition()
+		end
+	end
+
+	if System.HasEmail == false then
+		api:getUserInfo(Player.UserID, function(ok, userInfo, _)
+			if not ok then
+				return
+			end
+			if userInfo.hasEmail == true then -- could have been verified while menu was closed
+				System.HasEmail = true
+				return
+			end
+			addEmailForm(userInfo.hasEmail, userInfo.emailTemporary or userInfo.parentEmailTemporary or "", true)
+		end, { "hasEmail", "emailTemporary", "parentEmailTemporary" })
 	end
 
 	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
@@ -1108,11 +1392,10 @@ function getCubzhMenuModalContent()
 		URL:Open("https://discord.gg/cubzh")
 	end
 
-	local buttons = {
+	buttons = {
 		{ btnWorlds },
+		{ btnItems },
 		{ btnMyCreations },
-		{ btnGallery },
-		{ btnHome },
 	}
 
 	-- local osName = Client.OSName
@@ -1131,32 +1414,45 @@ function getCubzhMenuModalContent()
 
 	content.bottomCenter = { btnCode, btnHelp }
 
-	content.idealReducedContentSize = function(_, width, _)
+	content.idealReducedContentSize = function(_, width, _, minWidth)
 		local height = 0
+		local maxRowWidth = 0
+		local widthBackup
+		local ok
 
 		for i, row in ipairs(buttons) do
-			local h = 0
+			local w = 0
 			for _, btn in ipairs(row) do
+				widthBackup = btn.Width
+				ok = pcall(function()
+					btn.Width = nil
+				end)
+				if ok == false then
+					btn.Width = 100 -- default width
+				end
+				w = w + btn.Width + (i > 1 and theme.padding or 0)
+				if ok then
+					btn.Width = widthBackup
+				end
+			end
+			maxRowWidth = math.max(maxRowWidth, w)
+		end
+
+		width = math.max(math.min(width, maxRowWidth), minWidth)
+
+		local h
+		for i, row in ipairs(buttons) do
+			h = 0
+			for _, btn in ipairs(row) do
+				if btn.dynamicHeight then
+					btn.Width = width
+					btn:parentDidResize()
+				end
 				h = math.max(h, btn.Height)
 			end
 			row.height = h
 			height = height + h + (i > 1 and theme.padding or 0)
 		end
-
-		local maxRowWidth = 0
-		local widthBackup
-		for i, row in ipairs(buttons) do
-			local w = 0
-			for _, btn in ipairs(row) do
-				widthBackup = btn.Width
-				btn.Width = nil
-				w = w + btn.Width + (i > 1 and theme.padding or 0)
-				btn.Width = widthBackup
-			end
-			maxRowWidth = math.max(maxRowWidth, w)
-		end
-
-		width = math.min(width, maxRowWidth)
 
 		return Number2(width, height)
 	end
@@ -1198,10 +1494,16 @@ function getCubzhMenuModalContent()
 	content.didBecomeActive = function()
 		btnMyCreations:parentDidResize()
 		showActionColumn()
+		if emailForm ~= nil then
+			emailForm:didBecomeActive()
+		end
 	end
 
 	content.willResignActive = function()
 		actionColumn:hide()
+		if emailForm ~= nil then
+			emailForm:willResignActive()
+		end
 	end
 
 	return content
@@ -2146,12 +2448,12 @@ Timer(0.1, function()
 			under13Badge.parentDidResize = function(self)
 				local parent = self.parent
 				self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
-				under13BadgeShape.LocalPosition.Z = 100
+				under13BadgeShape.LocalPosition.Z = 50
 			end
 			under13Badge:parentDidResize()
 		end
 
-		if true then -- System.HasEmail == false
+		if System.HasEmail == false then
 			showBadge("!")
 		end
 

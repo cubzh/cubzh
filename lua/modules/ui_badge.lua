@@ -61,7 +61,7 @@ mod.create = function(_, config)
 	if refreshBadge == nil then
 		refreshBadge = function(badge)
 			badge.shape.pos = { -badge.shape.Width * 0.5, -badge.shape.Height * 0.5 }
-			badge.shape.LocalPosition.Z = -500
+			badge.shape.LocalPosition.Z = -450
 			badge.shape.pivot.Scale = 0.5
 		end
 	end
@@ -84,6 +84,12 @@ mod.create = function(_, config)
 			Number3(1.1, 1.1, 1.1)
 	end
 	logoAnim.start()
+
+	local remove = badge.remove
+	badge.remove = function(self)
+		ease:cancel(self.object)
+		remove(self)
+	end
 
 	return badge
 end
