@@ -2101,6 +2101,10 @@ function createUI(system)
 
 			if direction == "up" then
 				maxY = -maxY - cellPadding + node.Height - (cachedCellsHeight[#cachedCellsHeight] or 0)
+			elseif maxY > node.Height then
+				maxY = maxY - node.Height
+			else -- no scroll, content is not high enough
+				maxY = 0
 			end
 
 			-- load up to one page
@@ -2175,6 +2179,17 @@ function createUI(system)
 			node:pushCell(cell, 1)
 		end
 
+		node.flush = function(_)
+			for i=1,node.nbCells do 
+				if cells[i] then
+					config.unloadCell(cells[i])
+				end
+			end
+			node.nbCells = 0
+			cells = {}
+			cachedCellsHeight = {}
+		end
+
 		-- add cell at index, called automatically after onLoad callback
 		node.pushCell = function(_, cell, index, needRefresh)
 			needRefresh = needRefresh == nil and true or needRefresh
@@ -2201,21 +2216,55 @@ function createUI(system)
 			node:setScrollPosition(0)
 		end
 
-		LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
-			local x = pe.X * Screen.Width
-			local y = pe.Y * Screen.Height
-			isPointerOverFrame = x >= node.pos.X
-				and x <= node.pos.X + node.Width
-				and y >= node.pos.Y
-				and y <= node.pos.Y + node.Height
-		end)
+		if Client.IsMobile then
+			local scrollFrame = ui:createFrame()
+			scrollFrame:setParent(node)
+			scrollFrame.parentDidResize = function()
+				scrollFrame.Width = node.Width
+				scrollFrame.Height = node.Height
+			end
+			container.listenerPointerDrag = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+				local x = pe.X * Screen.Width
+				local y = pe.Y * Screen.Height
+				isPointerOverFrame = x >= node.pos.X
+					and x <= node.pos.X + node.Width
+					and y >= node.pos.Y
+					and y <= node.pos.Y + node.Height
+				if isPointerOverFrame then
+					node:setScrollPosition(node.scrollPosition + pe.DY)
+				end
+			end)
+		else
+			container.listenerPointerMove = LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
+				local x = pe.X * Screen.Width
+				local y = pe.Y * Screen.Height
+				--[[
+				-- TODO: Handle several scroll by checking if pointer on frame
+				-- not working here if the scroll is the child of a child because node.pos is not correct
+				isPointerOverFrame = x >= node.pos.X
+					and x <= node.pos.X + node.Width
+					and y >= node.pos.Y
+					and y <= node.pos.Y + node.Height
+				--]]
+				isPointerOverFrame = true
+			end)
 
-		LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
-			if not isPointerOverFrame then
+			container.listenerPointerWheel = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
+				if not isPointerOverFrame then
+					return
+				end
+				node:setScrollPosition(node.scrollPosition + delta)
+			end)
+		end
+
+		container.onRemove = function()
+			if Client.IsMobile then			
+				container.listenerPointerDrag:Remove()
 				return
 			end
-			node:setScrollPosition(node.scrollPosition + delta)
-		end)
+			container.listenerPointerMove:Remove()
+			container.listenerPointerWheel:Remove()
+		end
 
 		return node
 	end

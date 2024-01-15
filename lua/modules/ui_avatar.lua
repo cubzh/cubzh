@@ -311,9 +311,6 @@ local uiavatarMetatable = {
 				node.body = uiBody
 				node.body.Width = node._w
 				node.body.pivot.LocalRotation = rotation
-
-				local center = Number3(uiBody.shape.Width, uiBody.shape.Height, uiBody.shape.Depth)
-				uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
 			end
 
 			_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
