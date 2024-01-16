@@ -42,9 +42,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local idealReducedContentSize = function(content, width, height)
-		width = 500--math.max(width, 500)
-		height = math.max(height - 100, 500)
-
+		if not Client.IsMobile then
+			width = 500
+		end
 		return Number2(width, height)
 	end
 
@@ -154,23 +154,24 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local computeCellSize = function()
 		local btnJoin = ui:createButton("Join 🌎")
-		local btnMessage = ui:createButton("💬 Send")
+		local btnMessage = ui:createButton("💬")
 		local size = btnJoin.Width + btnMessage.Width + padding * 4
 		btnJoin:remove()
 		btnMessage:remove()
-		return size, size -- width, height
+		return math.floor(size), math.floor(size) -- width, height
 	end
 
 	local cellWidth, cellHeight = computeCellSize()
 	node.screenDidResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
 		cellWidth, cellHeight = computeCellSize()
+		node:resetList()
 	end, { topPriority = true } )
 
 	local createFriendCell = function(config)
 		local forceWidth = config.width
 		local forceHeight = config.height
 
-		local cell = ui:createFrame()
+		local cell = ui:createFrame(Color(40,40,40))
 		local textBg = ui:createFrame(Color(0,0,0,0.5))
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White)
@@ -178,16 +179,18 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local textStatus = ui:createText("", Color.White)
 		textStatus:setParent(textBg)
 
-		local btnLeft = ui:createButton("💬 Send")
+		local btnLeft = ui:createButton("💬", {
+			borders = false,
+			shadow = false,
+		})
 		btnLeft:setParent(textBg)
-		btnLeft.onRelease = function(_)
-			require("menu"):ShowAlert({ message = "Coming soon!" }, System)
-		end
-		local btnRight = ui:createButton("Join 🌎")
+		btnLeft:setColor(Color(0,0,0,0))
+		local btnRight = ui:createButton("Join 🌎", {
+			borders = false,
+			shadow = false,
+		})
 		btnRight:setParent(textBg)
-		btnRight.onRelease = function(_)
-			require("menu"):ShowAlert({ message = "Coming soon!" }, System)
-		end
+		btnRight:setColor(Color(0,0,0,0))
 		cell:hide()
 
 		local avatar
@@ -197,8 +200,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			cell.userID = user.id
 			avatar = uiAvatar:get(user.username, cell.Height - textBg.Height, nil, ui)
 			avatar:setParent(cell)
+			avatar.didLoad = function()
+				avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
+			end
 			textName.Text = user.username
-			textStatus.Text = math.random(3) > 1 and "Online" or "Offline"
+			textStatus.Text = ""--math.random(3) > 1 and "Online" or "Offline"
 			cell:parentDidResize()
 			cell:show()
 		end
@@ -209,7 +215,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 			textBg.Width = cell.Width
 			textBg.Height = textName.Height + padding * 2 + btnLeft.Height
-			textBg.pos = { 0, 0 }
 
 			if avatar then
 				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, textBg.Height }
@@ -223,8 +228,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		cell.setType = function(_, cellType)
 			if cellType == "received" then
-				btnLeft.Text = "Accept"
-				btnLeft:setColor(theme.colorPositive)
+				btnLeft.Text = "➕ Accept"
 				btnLeft.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
 						if not ok then
@@ -234,8 +238,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-				btnRight.Text = "Refuse"
-				btnRight:setColor(theme.colorNegative)
+				btnRight.Text = "❌"
 				btnRight.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, false, function(ok, _)
 						if not ok then
@@ -247,10 +250,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end
 			elseif cellType == "sent" then
 				btnLeft.Text = "Sent"
-				btnLeft:setColorDisabled(Color(0,0,0,0), Color.White)
-				btnLeft:disable()
-				btnRight.Text = "Cancel"
-				btnRight:setColor(theme.colorNegative)
+				btnLeft.onRelease = nil
+				btnRight.Text = "❌"
 				btnRight.onRelease = function()
 					local req = api:cancelFriendRequest(cell.userID, function(ok, _)
 						if not ok then
@@ -265,7 +266,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				btnLeft.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
-				btnRight.Text = "💬 Send"
+				btnRight.Text = "💬"
 				btnRight.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
@@ -328,16 +329,38 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local loadLine = function(cellId)
 		local width = node.Width
-		local nbCells = math.floor(width / cellWidth)
+		local nbCells = math.min(2,math.floor(width / cellWidth))
 
-		local firstCellUser = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
+		local firstCellUser, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
 		if not firstCellUser then return end
 
-		local line = require("ui_container"):createHorizontalContainer(Color.Green)
+		local prevFirstCellUserType
+		if cellId > 1 then
+			_, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
+		end
+
+		local verticalContainer
+		local line = require("ui_container"):createHorizontalContainer()
 		line.Width = width
 		line.Height = cellHeight
 
-		local realCellWidth = (width - 2 * padding - (nbCells - 1) * padding) / nbCells
+		-- Need to make a vertical container to add the title
+		if prevFirstCellUserType == nil or firstCellType ~= prevFirstCellUserType then
+			verticalContainer = require("ui_container"):createVerticalContainer()
+			local titleStr = "Friends"
+			if firstCellType == "received" then
+				titleStr = "Incoming requests"
+			end
+			if firstCellType == "sent" then
+				titleStr = "Sent requests"
+			end
+			local title = ui:createText(titleStr, Color.White, "big")
+			verticalContainer:pushElement(title)
+			verticalContainer:pushElement(line)
+		end
+
+
+		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * padding) / nbCells)
 		for i=1,nbCells do
 			local cell = createFriendCell({ width = realCellWidth, height = cellHeight})
 			line:pushElement(cell)
@@ -350,7 +373,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			end
 		end
 
-		return line
+		return verticalContainer or line
 	end
 
 	local unloadLine = function(cell)
@@ -364,7 +387,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		uikit = uikit or require("uikit")
 	}
 
-	scroll = ui:createScrollArea(Color(0,0,0,0), config)
+	scroll = ui:createScrollArea(Color(20,20,20), config)
 	scroll:setParent(node)
 	node.scroll = scroll
 

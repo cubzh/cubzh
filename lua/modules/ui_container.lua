@@ -48,8 +48,8 @@ uiHorizontalIndex.refresh = function(self)
 		elem.Height = height
 	end
 	width, height = width + padding, height + padding * 2
-	self.Width = width
-	self.Height = height
+	self.Width = math.floor(width)
+	self.Height = math.floor(height)
 end
 
 local createHorizontalContainer = function(_, color)
@@ -123,7 +123,7 @@ uiVerticalIndex.refresh = function(self)
 	for _,elem in ipairs(self.list) do
 		height = height + elem.Height
 	end
-	self.Height = height + 2 * padding
+	self.Height =  math.floor(height + 2 * padding)
 
 	height = self.Height - padding
 	for _,elem in ipairs(self.list) do
@@ -136,7 +136,7 @@ uiVerticalIndex.refresh = function(self)
 	for _,elem in ipairs(self.list) do
 		elem.Width = width
 	end
-	self.Width = width + 2 * padding
+	self.Width = math.floor(width + 2 * padding)
 end
 
 local createVerticalContainer = function(_, color)

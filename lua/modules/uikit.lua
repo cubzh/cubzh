@@ -2049,7 +2049,7 @@ function createUI(system)
 		local maxY = 0
 		node.scrollPosition = 0
 
-		local scrollHandle = ui:createFrame(Color.Black)
+		local scrollHandle = ui:createFrame(Color(0,0,0,0)) -- TODO: work on handle
 		scrollHandle:setParent(node)
 
 		node.refresh = function()
