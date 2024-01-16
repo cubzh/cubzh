@@ -56,13 +56,14 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		node.screenDidResizeListener = nil
 	end
 
-	local retrieveFriendsLists = function(searchText)
+	local retrieveFriendsLists = function(searchText, keepScrollPosition)
 		lists = {}
+		keepScrollPosition = keepScrollPosition or false
 
 		local function newListResponse(name, list)
 			lists[name] = list or {}
 			if lists.friends and lists.received and lists.sent and lists.search then
-				node:resetList()
+				node:resetList(keepScrollPosition)
 			end
 		end
 
@@ -132,7 +133,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			node.searchTimer = Timer(0.2, function()
 				cancelRequests()
 				node.searchTimer = nil
-				retrieveFriendsLists(textInput.Text)
+				retrieveFriendsLists(textInput.Text, false)
 			end)
 		end
 		return textInput
@@ -190,11 +191,13 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cell:hide()
 
 		local avatar
-		cell.setUsername = function(_, username)
-			if not username then return end
-			avatar = uiAvatar:get(username, cell.Height - textBg.Height, nil, ui)
+		cell.setUser = function(_, user)
+			if not user or not user.username then return end
+			cell.username = user.username
+			cell.userID = user.id
+			avatar = uiAvatar:get(user.username, cell.Height - textBg.Height, nil, ui)
 			avatar:setParent(cell)
-			textName.Text = username
+			textName.Text = user.username
 			textStatus.Text = math.random(3) > 1 and "Online" or "Offline"
 			cell:parentDidResize()
 			cell:show()
@@ -218,18 +221,54 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			btnRight.pos = { cell.Width - btnRight.Width, 0 }
 		end
 
-		cell.setType = function(_, type)
-			if type == "received" then
+		cell.setType = function(_, cellType)
+			if cellType == "received" then
 				btnLeft.Text = "Accept"
 				btnLeft:setColor(theme.colorPositive)
+				btnLeft.onRelease = function()
+					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(nil, true)
+					end)
+					table.insert(requests, req)
+				end
 				btnRight.Text = "Refuse"
 				btnRight:setColor(theme.colorNegative)
-			elseif type == "sent" then
+				btnRight.onRelease = function()
+					local req = api:replyToFriendRequest(cell.userID, false, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(nil, true)
+					end)
+					table.insert(requests, req)
+				end
+			elseif cellType == "sent" then
 				btnLeft.Text = "Sent"
 				btnLeft:setColorDisabled(Color(0,0,0,0), Color.White)
 				btnLeft:disable()
 				btnRight.Text = "Cancel"
 				btnRight:setColor(theme.colorNegative)
+				btnRight.onRelease = function()
+					local req = api:cancelFriendRequest(cell.userID, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(nil, true)
+					end)
+					table.insert(requests, req)
+				end
+			elseif cellType == "friends" then
+				btnLeft.Text = "Join 🌎"
+				btnLeft.onRelease = function()
+					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+				end
+				btnRight.Text = "💬 Send"
+				btnRight.onRelease = function()
+					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+				end
 			end
 			cell:parentDidResize()
 		end
@@ -304,10 +343,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			line:pushElement(cell)
 			if i < nbCells then line:pushGap() end
 
-			local user, type = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
+			local user, cellType = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
 			if user then
-				cell:setUsername(user.username)
-				cell:setType(type)
+				cell:setUser(user)
+				cell:setType(cellType)
 			end
 		end
 
@@ -329,9 +368,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	scroll:setParent(node)
 	node.scroll = scroll
 
-	node.resetList = function()
+	node.resetList = function(keepScrollPosition)
+		local scrollPosition = keepScrollPosition and scroll.scrollPosition or 0
 		scroll:flush()
-		scroll:setScrollPosition(0)
+		scroll:setScrollPosition(scrollPosition)
 	end
 
 	retrieveFriendsLists()
@@ -340,7 +380,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	content.node = node
 	content.idealReducedContentSize = idealReducedContentSize
 
-	local _modal = require("modal"):create(content, maxWidth, maxHeight, position, require("uikit"))
+	local _modal = require("modal"):create(content, maxWidth, maxHeight, position, ui)
 	return _modal
 end
 
