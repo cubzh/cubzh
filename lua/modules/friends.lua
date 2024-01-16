@@ -42,7 +42,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local idealReducedContentSize = function(content, width, height)
-		width = math.max(width, 500)
+		width = 500--math.max(width, 500)
 		height = math.max(height - 100, 500)
 
 		return Number2(width, height)
@@ -75,7 +75,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					return
 				end
 				local req = api:searchUser(searchText, function(ok, users, _)
-					print(searchText, "res", #users)
 					for _, usr in ipairs(users) do
 						if usr and usr.username ~= "" then
 							table.insert(list, usr)
@@ -87,7 +86,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 							end)
 							newListResponse(listName, list)
 						end
-						table.insert(requests, req2)
 					end
 				end)
 				table.insert(requests, req)
@@ -150,7 +148,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		if node.scroll then
 			node.scroll.Width = node.Width
 			node.scroll.Height = node.Height - searchBar.Height
-			node.scroll.pos = { 0, 0 }
 		end
 	end
 
@@ -158,7 +155,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local btnJoin = ui:createButton("Join 🌎")
 		local btnMessage = ui:createButton("💬 Send")
 		local size = btnJoin.Width + btnMessage.Width + padding * 4
-		return size, size
+		btnJoin:remove()
+		btnMessage:remove()
+		return size, size -- width, height
 	end
 
 	local cellWidth, cellHeight = computeCellSize()
@@ -193,7 +192,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local avatar
 		cell.setUsername = function(_, username)
 			if not username then return end
-			avatar = uiAvatar:get(username, cell.Height - textBg.Height)
+			avatar = uiAvatar:get(username, cell.Height - textBg.Height, nil, ui)
 			avatar:setParent(cell)
 			textName.Text = username
 			textStatus.Text = math.random(3) > 1 and "Online" or "Offline"
@@ -240,7 +239,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return cell
 	end
 
-	local getUsersInLine = function(index, nbCellsPerLine)
+	local getUserAtIndex = function(index, nbCellsPerLine)
 		local list
 
 		if #lists.search == 0 then
@@ -292,10 +291,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local width = node.Width
 		local nbCells = math.floor(width / cellWidth)
 
-		local firstCellUser = getUsersInLine((cellId - 1) * nbCells + 1, nbCells)
+		local firstCellUser = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
 		if not firstCellUser then return end
 
-		local line = require("ui_container"):createHorizontalContainer()
+		local line = require("ui_container"):createHorizontalContainer(Color.Green)
 		line.Width = width
 		line.Height = cellHeight
 
@@ -305,7 +304,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			line:pushElement(cell)
 			if i < nbCells then line:pushGap() end
 
-			local user, type = getUsersInLine((cellId - 1) * nbCells + i, nbCells)
+			local user, type = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
 			if user then
 				cell:setUsername(user.username)
 				cell:setType(type)
@@ -323,9 +322,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cellPadding = 5,
 		loadCell = loadLine,
 		unloadCell = unloadLine,
+		uikit = uikit or require("uikit")
 	}
 
-	scroll = ui:createScrollArea(Color(0,0,0,0.8), config)
+	scroll = ui:createScrollArea(Color(0,0,0,0), config)
 	scroll:setParent(node)
 	node.scroll = scroll
 

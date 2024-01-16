@@ -2028,7 +2028,7 @@ function createUI(system)
 	end
 
 	ui.createScrollArea = function(_, color, config)
-		local ui = require("uikit")
+		local ui = config.uikit or require("uikit")
 		local node = ui:createFrame(color)
 
 		local cellPadding = config.cellPadding or 0
@@ -2251,14 +2251,15 @@ function createUI(system)
 
 			container.listenerPointerWheel = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
 				if not isPointerOverFrame then
-					return
+					return false
 				end
 				node:setScrollPosition(node.scrollPosition + delta)
-			end)
+				return true
+			end, { topPriority = true })
 		end
 
 		container.onRemove = function()
-			if Client.IsMobile then			
+			if Client.IsMobile then
 				container.listenerPointerDrag:Remove()
 				return
 			end
