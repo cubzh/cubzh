@@ -1999,6 +1999,8 @@ function createUI(system)
 				return
 			end
 
+			unfocus()
+
 			self.state = State.Idle
 			self.object.Tick = nil
 
