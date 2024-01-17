@@ -474,12 +474,13 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local nbCells = math.min(Client.IsMobile and 4 or 2,math.floor(width / cellWidth))
 
 		local firstCellUser, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
-		-- if not firstCellUser then return end
 
 		local prevFirstCellUserType
 		if cellId > 1 then
-			_, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
+			prevCelluser, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
 		end
+
+		if not firstCellUser and not prevCelluser and cellId > 6 then return end
 
 		local verticalContainer
 		local line = require("ui_container"):createHorizontalContainer()
@@ -517,7 +518,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			if user then
 				cell:setUser(user)
 				cell:setType(cellType)
-			elseif firstCellUser ~= nil then
+			elseif getUserAtIndex(1, nbCells) ~= nil then
 				cell:hide()
 			end
 		end

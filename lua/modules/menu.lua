@@ -1829,7 +1829,7 @@ menu.openURLWarning = function(_, url, system)
 		error("menu.openURLWarning requires System privileges")
 	end
 	local config = {
-		message = "Taking you to " .. url .. ". Are you sure you want to go there?",
+		message = "Taking you to " .. url .. "\nAre you sure you want to go there?",
 		positiveCallback = function()
 			system:OpenURL(url)
 		end,
