@@ -559,6 +559,8 @@ function createUI(system)
 			else
 				return nil
 			end
+		elseif k == "onClick" then
+			return t._onClick
 		elseif k == "onRelease" then
 			return t._onRelease
 		elseif k == "onPress" then
@@ -655,6 +657,39 @@ function createUI(system)
 					t:_setCollider(v ~= nil)
 				end
 				t._onRelease = function(self, object, block)
+					if v ~= nil then
+						v(self, object, block)
+					end
+				end
+			end
+		elseif k == "onClick" then
+			if t.type == NodeType.Button then
+				t._onClick = function(self)
+					_buttonOnRelease(self, v)
+				end
+			elseif t.type == NodeType.Frame then
+				local background = t.background
+				if v == nil then
+					t._onClick = nil
+					if t._onPress == nil then
+						background.Physics = PhysicsMode.Disabled
+						background.CollisionGroups = {}
+					end
+				elseif v ~= nil then
+					background.Physics = PhysicsMode.Trigger
+					_setCollisionGroups(background)
+					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+					t._onClick = function()
+						if v ~= nil then
+							v()
+						end
+					end
+				end
+			else
+				if t._setCollider then
+					t:_setCollider(v ~= nil)
+				end
+				t._onClick = function(self, object, block)
 					if v ~= nil then
 						v(self, object, block)
 					end
@@ -2854,7 +2889,7 @@ function createUI(system)
 		while hitObject and not hitObject._node do
 			hitObject = hitObject:GetParent()
 		end
-		if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
+		if hitObject and hitObject._node._onPress or hitObject._node._onRelease or hitObject._node._onClick then
 			pressed = hitObject._node
 
 			-- unfocus focused node, unless hit node.config.unfocused == false
@@ -2884,6 +2919,8 @@ function createUI(system)
 		pointerIndex = nil
 
 		if pressed then
+			local isDrag = pressed._dragging
+			pressed._dragging = false
 			local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 			local direction = { 0, 0, 1 }
 
@@ -2895,6 +2932,11 @@ function createUI(system)
 			end
 			if hitObject._node == pressed and hitObject._node._onRelease then
 				pressed:_onRelease(hitObject, impact.Block, pointerEvent)
+				pressed = nil
+				return true
+			end
+			if hitObject._node == pressed and hitObject._node._onClick and not isDrag then
+				pressed:_onClick(hitObject, impact.Block, pointerEvent)
 				pressed = nil
 				return true
 			end
@@ -2914,6 +2956,7 @@ function createUI(system)
 		end
 
 		local pressed = pressed
+		pressed._dragging = true
 		if pressed then
 			if pressed._onDrag then
 				pressed:_onDrag(pointerEvent)

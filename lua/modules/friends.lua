@@ -3,16 +3,6 @@ Friends module handles friend relations.
 //!\\ Still a work in progress. Your scripts may break in the future if you use it now.	]]
 --
 
---TODO
--- [ ] Input bloqué quand je focus
--- [ ] remove sent in list
--- [ ] add numbers of cell next to title
--- [ ] search add Friends - Sent - Received - Search
-
--- [ ] Animations idle
--- [ ] Scroll un peu plus smooth
--- [ ] add platform under player
-
 local friendsWindow = {}
 
 local mt = {
@@ -33,7 +23,10 @@ local api = require("system_api", System)
 -- uikit: optional, allows to provide specific instance of uikit
 mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local ui = uikit or require("uikit")
+	local content = modal:createContent()
+
 	local scroll
+	local searchText
 
 	-- list of friends, requests (sent or received) or search
 	local lists = {
@@ -66,13 +59,34 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		node.screenDidResizeListener = nil
 	end
 
-	local retrieveFriendsLists = function(searchText, keepScrollPosition)
+	local retrieveFriendsLists = function(_searchText, keepScrollPosition)
+		searchText = _searchText
 		lists = {}
 		keepScrollPosition = keepScrollPosition or false
 
 		local function newListResponse(name, list)
 			lists[name] = list or {}
 			if lists.friends and lists.received and lists.sent and lists.search then
+				if searchText then
+					-- filter out search list
+					-- remove this part once backend handles that
+					for k=#lists.search,1,-1 do
+						local user = lists.search[k]
+						local idFound = false
+						for _,v in ipairs(lists.friends) do
+							if v.id == user.id then idFound = true end
+						end
+						for _,v in ipairs(lists.received) do
+							if v.id == user.id then idFound = true end
+						end
+						for _,v in ipairs(lists.sent) do
+							if v.id == user.id then idFound = true end
+						end
+						if idFound then
+							table.remove(lists.search, k)
+						end
+					end
+				end
 				node:resetList(keepScrollPosition)
 			end
 		end
@@ -101,14 +115,17 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end)
 				table.insert(requests, req)
 				return
-			end 
+			end
 
 			-- TODO: backend must handle search field in when retrieving friends, pending and sent
 			local req = api[methodName](api, function(ok, users, _)
 				for _, usrID in ipairs(users) do
 					local req2 = api:getUserInfo(usrID, function(_, usr)
 						if usr.username ~= "" then
-							table.insert(list, usr)
+							-- if search, match the username
+							if not searchText or string.find(usr.username, searchText) then
+								table.insert(list, usr)
+							end
 						end
 						nbIterations = nbIterations + 1
 						if nbIterations == #users then
@@ -182,7 +199,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local forceHeight = config.height
 
 		local cell = ui:createFrame(Color(40,40,40))
-		local textBg = ui:createFrame(Color(0,0,0,0.2))
+		local textBg = ui:createFrame(Color(0,0,0,0.5))
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White)
 		textName:setParent(textBg)
@@ -206,21 +223,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cell:hide()
 
 		local avatar
-		cell.setUser = function(_, user)
-			if not user or not user.username then return end
-			cell.username = user.username
-			cell.userID = user.id
-			avatar = uiAvatar:get(user.username, cell.Height - textBg.Height, nil, ui)
-			avatar:setParent(cell)
-			avatar.didLoad = function()
-				avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
-			end
-			textName.Text = user.username
-			textStatus.Text = ""--math.random(3) > 1 and "Online" or "Offline"
-			cell:parentDidResize()
-			cell:show()
-		end
-
 		cell.parentDidResize = function()
 			cell.Height = math.floor(forceHeight or cellHeight)
 			cell.Width = math.floor(forceWidth or cell.Height)
@@ -229,7 +231,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
 
 			if avatar then
-				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, textBg.Height }
+				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, cell.Height * 0.4 }
+			end
+
+			if avatarLand and avatarLand.Width then
+				avatarLand.pos = { cell.Width * 0.5 - avatarLand.Width * 0.5, cell.Height * 0.5 - avatarLand.Height * 0.5 - 20 }
 			end
 
 			textName.pos = { padding, btnLeft.Height + padding }
@@ -238,9 +244,50 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			btnRight.pos = { cell.Width - btnRight.Width, 0 }
 		end
 
+
+		cell.setUser = function(_, user)
+			if not user or not user.username then return end
+
+			cell.onClick = function()
+				local profileContent = require("profile"):create({
+					isLocal = false,
+					username = user.username,
+					userID = user.id,
+					uikit = ui,
+				})
+				content:push(profileContent)
+			end
+
+			cell.username = user.username
+			cell.userID = user.id
+			textBg.LocalPosition.Z = -600
+			avatar = uiAvatar:get(user.username, cell.Height * 0.6, nil, ui)
+			avatar:setParent(cell)
+			avatar.didLoad = function()
+				avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
+			end
+			Object:Load("buche.lobby_grassland", function(obj)
+				avatarLand = ui:createShape(obj)
+				avatarLand:setParent(cell)
+				obj.Rotation.Y = math.pi / 4
+				obj:RotateWorld(Number3(1,0,0), math.pi / -6)
+				obj.Scale = 3
+				avatarLand.LocalPosition.Z = -50
+				if cell.parentDidResize then
+					cell:parentDidResize()
+				end
+			end)
+			textName.Text = user.username
+			textStatus.Text = ""--math.random(3) > 1 and "Online" or "Offline"
+			if cell.parentDidResize then
+				cell:parentDidResize()
+			end
+			cell:show()
+		end
+
 		cell.setType = function(_, cellType)
 			if cellType == "received" then
-				btnLeft.Text = "➕ Accept"
+				btnLeft.Text = "✅ Accept"
 				btnLeft.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
 						if not ok then
@@ -282,6 +329,19 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				btnRight.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
+			elseif cellType == "search" then
+				btnLeft.Text = "➕ Add friend"
+				btnLeft.onRelease = function()
+					local req = api:sendFriendRequest(cell.userID, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(searchText, true)
+					end)
+					table.insert(requests, req)
+				end
+				btnRight.Text = ""
+				btnRight.onRelease = nil
 			end
 			cell:parentDidResize()
 		end
@@ -306,6 +366,41 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				index = index - totalCells
 			end
 
+			list = lists.friends
+			if list then
+				-- compute nb lines (add empty spaces)
+				local nbLines = math.ceil(#list / nbCellsPerLine)
+				local totalCells = nbLines * nbCellsPerLine
+				if index <= totalCells then
+					return list[index], "friends"
+				end
+			end
+		else
+			-- lists.friends is only friends matching the search
+			list = lists.friends
+			if list then
+				-- compute nb lines (add empty spaces)
+				local nbLines = math.ceil(#list / nbCellsPerLine)
+				local totalCells = nbLines * nbCellsPerLine
+				if index <= totalCells then
+					return list[index], "friends"
+				end
+				index = index - totalCells
+			end
+
+			-- lists.received is only friends requests matching the search
+			list = lists.received
+			if list then
+				-- compute nb lines (add empty spaces)
+				local nbLines = math.ceil(#list / nbCellsPerLine)
+				local totalCells = nbLines * nbCellsPerLine
+				if index <= totalCells then
+					return list[index], "received"
+				end
+				index = index - totalCells
+			end
+
+			-- lists.sent is only friends requests matching the search
 			list = lists.sent
 			if list then
 				-- compute nb lines (add empty spaces)
@@ -317,16 +412,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				index = index - totalCells
 			end
 
-			list = lists.friends
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], "friends"
-				end
-			end
-		else
 			list = lists.search
 			if list then
 				-- compute nb lines (add empty spaces)
@@ -341,7 +426,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local loadLine = function(cellId)
 		local width = node.Width
-		local nbCells = math.min(2,math.floor(width / cellWidth))
+		local nbCells = math.min(Client.IsMobile and 4 or 2,math.floor(width / cellWidth))
 
 		local firstCellUser, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
 		if not firstCellUser then return end
@@ -358,17 +443,21 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		-- Need to make a vertical container to add the title
 		if prevFirstCellUserType == nil or firstCellType ~= prevFirstCellUserType then
-			verticalContainer = require("ui_container"):createVerticalContainer()
-			local titleStr = "Friends"
-			if firstCellType == "received" then
-				titleStr = "Pending requests"
+			local titles = {
+				friends = "Friends (%d)",
+				received = "Pending Requests (%d)",
+				sent = "Sent Requests (%d)",
+				search = "Search (%d)"
+			}
+			local titleStr = titles[firstCellType]
+			if titleStr then
+				verticalContainer = require("ui_container"):createVerticalContainer()
+				local title = ui:createText(string.format(titleStr, #lists[firstCellType]), Color.White, "big")
+				verticalContainer:pushElement(title)
+				verticalContainer:pushElement(line)
+			else
+				line:pushGap()
 			end
-			if firstCellType == "sent" then
-				titleStr = "Sent requests"
-			end
-			local title = ui:createText(titleStr, Color.White, "big")
-			verticalContainer:pushElement(title)
-			verticalContainer:pushElement(line)
 		else
 			line:pushGap()
 		end
@@ -412,7 +501,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	retrieveFriendsLists()
 
-	local content = modal:createContent()
 	content.node = node
 	content.idealReducedContentSize = idealReducedContentSize
 
