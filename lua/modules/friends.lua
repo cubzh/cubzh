@@ -46,7 +46,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		requests = {}
 	end
 
-	local idealReducedContentSize = function(content, width, height)
+	local idealReducedContentSize = function(_, width, height)
 		if not Client.IsMobile then
 			width = 500
 		end
@@ -77,29 +77,28 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local function newListResponse(name, list)
 			lists[name] = list or {}
 			nbListsRetrieved = nbListsRetrieved + 1
-			if nbListsRetrieved >= nbLists then
-				if searchText then
-					-- filter out search list
-					-- remove this part once backend handles that
-					for k=#lists.search,1,-1 do
-						local user = lists.search[k]
-						local idFound = false
-						for _,v in ipairs(lists.friends) do
-							if v.id == user.id then idFound = true end
-						end
-						for _,v in ipairs(lists.received) do
-							if v.id == user.id then idFound = true end
-						end
-						for _,v in ipairs(lists.sent) do
-							if v.id == user.id then idFound = true end
-						end
-						if idFound then
-							table.remove(lists.search, k)
-						end
+			if nbListsRetrieved < nbLists then return end
+			if searchText then
+				-- filter out search list
+				-- remove this part once backend handles that
+				for k=#lists.search,1,-1 do
+					local user = lists.search[k]
+					local idFound = false
+					for _,v in ipairs(lists.friends) do
+						if v.id == user.id then idFound = true end
+					end
+					for _,v in ipairs(lists.received) do
+						if v.id == user.id then idFound = true end
+					end
+					for _,v in ipairs(lists.sent) do
+						if v.id == user.id then idFound = true end
+					end
+					if idFound then
+						table.remove(lists.search, k)
 					end
 				end
-				node:resetList(keepScrollPosition)
 			end
+			node:resetList(keepScrollPosition)
 		end
 
 		local function requestList(methodName, listName, searchText)
@@ -111,6 +110,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					return
 				end
 				local req = api:searchUser(searchText, function(ok, users, _)
+					if not ok then
+						error("Can't find users", 2)
+					end
 					for _, usr in ipairs(users) do
 						if usr and usr.username ~= "" then
 							table.insert(list, usr)
@@ -130,6 +132,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 			-- TODO: backend must handle search field in when retrieving friends, pending and sent
 			local req = api[methodName](api, function(ok, users, _)
+				if not ok then
+					error("Can't find users", 2)
+				end
 				for _, usrID in ipairs(users) do
 					local req2 = api:getUserInfo(usrID, function(_, usr)
 						if usr.username ~= "" then
@@ -243,17 +248,14 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		textStatus:setParent(textBg)
 		textBg:hide()
 
-		local btnLeft = ui:createButton("", {
+		local btnConfig = {
 			borders = false,
 			shadow = false,
 			textSize = "small"
-		})
+		}
+		local btnLeft = ui:createButton("", btnConfig)
 		btnLeft:setParent(textBg)
-		local btnRight = ui:createButton("", {
-			borders = false,
-			shadow = false,
-			textSize = "small"
-		})
+		local btnRight = ui:createButton("", btnConfig)
 		btnRight:setParent(textBg)
 
 		local avatar
@@ -317,7 +319,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end
 			end)
 			textName.Text = user.username
-			textStatus.Text = ""--math.random(3) > 1 and "Online" or "Offline"
+			-- TODO: handle status
+			textStatus.Text = ""
 			if cell.parentDidResize then
 				cell:parentDidResize()
 			end
@@ -397,74 +400,23 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local getUserAtIndex = function(index, nbCellsPerLine)
-		local list
+		-- default list
+		local listOrder = { "received", "friends" }
+		if #lists.search > 0 then
+			-- search list
+			listOrder = { "friends", "received", "sent", "search" }
+		end
 
-		if #lists.search == 0 then
-			list = lists.received
+		for _, name in ipairs(listOrder) do
+			local list = lists[name]
 			if list then
 				-- compute nb lines (add empty spaces)
 				local nbLines = math.ceil(#list / nbCellsPerLine)
 				local totalCells = nbLines * nbCellsPerLine
 				if index <= totalCells then
-					return list[index], "received"
+					return list[index], name
 				end
 				index = index - totalCells
-			end
-
-			list = lists.friends
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], "friends"
-				end
-			end
-		else
-			-- lists.friends is only friends matching the search
-			list = lists.friends
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], "friends"
-				end
-				index = index - totalCells
-			end
-
-			-- lists.received is only friends requests matching the search
-			list = lists.received
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], "received"
-				end
-				index = index - totalCells
-			end
-
-			-- lists.sent is only friends requests matching the search
-			list = lists.sent
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], "sent"
-				end
-				index = index - totalCells
-			end
-
-			list = lists.search
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], "search"
-				end
 			end
 		end
 	end
@@ -480,6 +432,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			prevCelluser, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
 		end
 
+		-- Have at least 6 cells of "loading cells" before flushing everything
 		if not firstCellUser and not prevCelluser and cellId > 6 then return end
 
 		local verticalContainer
@@ -508,6 +461,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			line:pushGap()
 		end
 
+		-- Stretch width to fit the full length
 		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * 3 * padding) / nbCells)
 		for i=1,nbCells do
 			local cell = createFriendCell({ width = realCellWidth, height = cellHeight})
