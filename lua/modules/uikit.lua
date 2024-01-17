@@ -2010,6 +2010,7 @@ function createUI(system)
 			_textInputRefreshColor(self)
 			self:_refresh()
 
+			unfocus()
 			if self.onFocusLost ~= nil then
 				self:onFocusLost()
 			end
