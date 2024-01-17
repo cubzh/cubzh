@@ -1999,8 +1999,6 @@ function createUI(system)
 				return
 			end
 
-			unfocus()
-
 			self.state = State.Idle
 			self.object.Tick = nil
 
@@ -2012,6 +2010,7 @@ function createUI(system)
 			_textInputRefreshColor(self)
 			self:_refresh()
 
+			unfocus()
 			if self.onFocusLost ~= nil then
 				self:onFocusLost()
 			end
