@@ -24,6 +24,8 @@ local api = require("system_api", System)
 mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local ui = uikit or require("uikit")
 	local content = modal:createContent()
+	content.title = "Friends"
+	content.icon = "😛"
 
 	local scroll
 	local searchText
@@ -61,12 +63,21 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local retrieveFriendsLists = function(_searchText, keepScrollPosition)
 		searchText = _searchText
-		lists = {}
+		local nbLists = 4
+		local nbListsRetrieved = 0
+		lists = {
+			received = {},
+			sent = {},
+			friends = {},
+			search = {}
+		}
+		node:resetList()
 		keepScrollPosition = keepScrollPosition or false
 
 		local function newListResponse(name, list)
 			lists[name] = list or {}
-			if lists.friends and lists.received and lists.sent and lists.search then
+			nbListsRetrieved = nbListsRetrieved + 1
+			if nbListsRetrieved >= nbLists then
 				if searchText then
 					-- filter out search list
 					-- remove this part once backend handles that
@@ -198,34 +209,59 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local forceWidth = config.width
 		local forceHeight = config.height
 
-		local cell = ui:createFrame(Color(40,40,40))
+		local cell = ui:createFrame(Color(63, 63, 63))
+
+		local loadingCube
+		cell.getOrCreateLoadingCube = function(_)
+			if loadingCube == nil then
+				loadingCube = ui:createFrame(Color.White)
+				loadingCube:setParent(cell)
+				loadingCube.Width = 10
+				loadingCube.Height = 10
+			end
+			loadingCube.pos = { cell.Width * 0.5, cell.Height * 0.5, 0 }
+			return loadingCube
+		end
+
+		local t = 0
+		cell.loadingCubeTick = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			if not cell.Width then return end
+			t = t + dt * 5
+			local loadingCubePos = { cell.Width * 0.5 + math.cos(t) * 20, cell.Height * 0.5 - math.sin(t) * 20, 0 }
+			local loadingCube = cell:getOrCreateLoadingCube()
+			if loadingCube ~= nil and loadingCube:isVisible() then
+				loadingCube.pos = loadingCubePos
+			end
+		end)
+		cell:getOrCreateLoadingCube():show()
+
 		local textBg = ui:createFrame(Color(0,0,0,0.5))
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White)
 		textName:setParent(textBg)
 		local textStatus = ui:createText("", Color.White)
 		textStatus:setParent(textBg)
+		textBg:hide()
 
-		local btnLeft = ui:createButton("💬", {
+		local btnLeft = ui:createButton("", {
 			borders = false,
 			shadow = false,
 			textSize = "small"
 		})
 		btnLeft:setParent(textBg)
-		btnLeft:setColor(Color(0,0,0,0))
-		local btnRight = ui:createButton("🌎 Join", {
+		local btnRight = ui:createButton("", {
 			borders = false,
 			shadow = false,
 			textSize = "small"
 		})
 		btnRight:setParent(textBg)
-		btnRight:setColor(Color(0,0,0,0))
-		cell:hide()
 
 		local avatar
 		cell.parentDidResize = function()
 			cell.Height = math.floor(forceHeight or cellHeight)
 			cell.Width = math.floor(forceWidth or cell.Height)
+
+			loadingCube.pos = { cell.Width * 0.5, cell.Height * 0.5, 0 }
 
 			textBg.Width = math.floor(cell.Width)
 			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
@@ -244,9 +280,12 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			btnRight.pos = { cell.Width - btnRight.Width, 0 }
 		end
 
-
 		cell.setUser = function(_, user)
-			if not user or not user.username then return end
+			if not user or not user.username then cell:hide() return end
+
+			cell.loadingCubeTick:Remove()
+			textBg:show()
+			cell:getOrCreateLoadingCube():hide()
 
 			cell.onClick = function()
 				local profileContent = require("profile"):create({
@@ -288,6 +327,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cell.setType = function(_, cellType)
 			if cellType == "received" then
 				btnLeft.Text = "✅ Accept"
+				btnLeft:show()
 				btnLeft.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
 						if not ok then
@@ -298,6 +338,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					table.insert(requests, req)
 				end
 				btnRight.Text = "❌"
+				btnRight:show()
 				btnRight.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, false, function(ok, _)
 						if not ok then
@@ -309,8 +350,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end
 			elseif cellType == "sent" then
 				btnLeft.Text = "Sent"
+				btnLeft:show()
 				btnLeft.onRelease = nil
 				btnRight.Text = "❌"
+				btnRight:show()
 				btnRight.onRelease = function()
 					local req = api:cancelFriendRequest(cell.userID, function(ok, _)
 						if not ok then
@@ -322,15 +365,18 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end
 			elseif cellType == "friends" then
 				btnLeft.Text = "🌎 Join"
+				btnLeft:show()
 				btnLeft.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
 				btnRight.Text = "💬"
+				btnRight:show()
 				btnRight.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
 			elseif cellType == "search" then
 				btnLeft.Text = "➕ Add friend"
+				btnLeft:show()
 				btnLeft.onRelease = function()
 					local req = api:sendFriendRequest(cell.userID, function(ok, _)
 						if not ok then
@@ -341,12 +387,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					table.insert(requests, req)
 				end
 				btnRight.Text = ""
+				btnRight:hide()
 				btnRight.onRelease = nil
 			end
 			cell:parentDidResize()
 		end
-
-		cell:setType("friends")
 
 		return cell
 	end
@@ -429,7 +474,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local nbCells = math.min(Client.IsMobile and 4 or 2,math.floor(width / cellWidth))
 
 		local firstCellUser, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
-		if not firstCellUser then return end
+		-- if not firstCellUser then return end
 
 		local prevFirstCellUserType
 		if cellId > 1 then
@@ -462,16 +507,18 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			line:pushGap()
 		end
 
-		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * padding) / nbCells)
+		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * 3 * padding) / nbCells)
 		for i=1,nbCells do
 			local cell = createFriendCell({ width = realCellWidth, height = cellHeight})
 			line:pushElement(cell)
-			if i < nbCells then line:pushGap() end
+			if i < nbCells then line:pushGap() line:pushGap() line:pushGap() end
 
 			local user, cellType = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
 			if user then
 				cell:setUser(user)
 				cell:setType(cellType)
+			elseif firstCellUser ~= nil then
+				cell:hide()
 			end
 		end
 
@@ -499,6 +546,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		scroll:setScrollPosition(scrollPosition)
 	end
 
+	node:resetList()
 	retrieveFriendsLists()
 
 	content.node = node

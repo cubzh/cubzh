@@ -388,6 +388,7 @@ function createUI(system)
 
 		if self.config.borders == false then
 			border = 0
+			padding = 2 * padding
 		end
 
 		if self.config.underline then
