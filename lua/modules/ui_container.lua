@@ -36,7 +36,7 @@ uiHorizontalIndex.setParent = function(self, node)
 end
 
 uiHorizontalIndex.refresh = function(self)
-	local width, height = padding, 0
+	local width, height = 0, 0
 	for _,elem in ipairs(self.list) do
 		elem.pos.X = width
 		elem.pos.Y = padding
@@ -47,7 +47,7 @@ uiHorizontalIndex.refresh = function(self)
 	for _,elem in ipairs(self.list) do
 		elem.Height = height
 	end
-	width, height = width + padding, height + padding * 2
+	width, height = width, height + padding * 2
 	self.Width = math.floor(width)
 	self.Height = math.floor(height)
 end

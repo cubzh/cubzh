@@ -3,6 +3,16 @@ Friends module handles friend relations.
 //!\\ Still a work in progress. Your scripts may break in the future if you use it now.	]]
 --
 
+--TODO
+-- [ ] Input bloqué quand je focus
+-- [ ] remove sent in list
+-- [ ] add numbers of cell next to title
+-- [ ] search add Friends - Sent - Received - Search
+
+-- [ ] Animations idle
+-- [ ] Scroll un peu plus smooth
+-- [ ] add platform under player
+
 local friendsWindow = {}
 
 local mt = {
@@ -153,8 +163,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local computeCellSize = function()
-		local btnJoin = ui:createButton("Join 🌎")
-		local btnMessage = ui:createButton("💬")
+		local btnJoin = ui:createButton("🌎 Join", { textSize = "small" })
+		local btnMessage = ui:createButton("💬", { textSize = "small" })
 		local size = btnJoin.Width + btnMessage.Width + padding * 4
 		btnJoin:remove()
 		btnMessage:remove()
@@ -172,7 +182,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local forceHeight = config.height
 
 		local cell = ui:createFrame(Color(40,40,40))
-		local textBg = ui:createFrame(Color(0,0,0,0.5))
+		local textBg = ui:createFrame(Color(0,0,0,0.2))
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White)
 		textName:setParent(textBg)
@@ -182,12 +192,14 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local btnLeft = ui:createButton("💬", {
 			borders = false,
 			shadow = false,
+			textSize = "small"
 		})
 		btnLeft:setParent(textBg)
 		btnLeft:setColor(Color(0,0,0,0))
-		local btnRight = ui:createButton("Join 🌎", {
+		local btnRight = ui:createButton("🌎 Join", {
 			borders = false,
 			shadow = false,
+			textSize = "small"
 		})
 		btnRight:setParent(textBg)
 		btnRight:setColor(Color(0,0,0,0))
@@ -210,11 +222,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		cell.parentDidResize = function()
-			cell.Height = forceHeight or cellHeight
-			cell.Width = forceWidth or cell.Height
+			cell.Height = math.floor(forceHeight or cellHeight)
+			cell.Width = math.floor(forceWidth or cell.Height)
 
-			textBg.Width = cell.Width
-			textBg.Height = textName.Height + padding * 2 + btnLeft.Height
+			textBg.Width = math.floor(cell.Width)
+			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
 
 			if avatar then
 				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, textBg.Height }
@@ -262,7 +274,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					table.insert(requests, req)
 				end
 			elseif cellType == "friends" then
-				btnLeft.Text = "Join 🌎"
+				btnLeft.Text = "🌎 Join"
 				btnLeft.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
@@ -341,15 +353,15 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		local verticalContainer
 		local line = require("ui_container"):createHorizontalContainer()
-		line.Width = width
-		line.Height = cellHeight
+		line.Width = math.floor(width)
+		line.Height = math.floor(cellHeight)
 
 		-- Need to make a vertical container to add the title
 		if prevFirstCellUserType == nil or firstCellType ~= prevFirstCellUserType then
 			verticalContainer = require("ui_container"):createVerticalContainer()
 			local titleStr = "Friends"
 			if firstCellType == "received" then
-				titleStr = "Incoming requests"
+				titleStr = "Pending requests"
 			end
 			if firstCellType == "sent" then
 				titleStr = "Sent requests"
@@ -357,8 +369,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			local title = ui:createText(titleStr, Color.White, "big")
 			verticalContainer:pushElement(title)
 			verticalContainer:pushElement(line)
+		else
+			line:pushGap()
 		end
-
 
 		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * padding) / nbCells)
 		for i=1,nbCells do
