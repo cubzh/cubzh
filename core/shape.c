@@ -4265,8 +4265,8 @@ bool _shape_compute_size_and_origin(const Shape *shape,
                 firstChunk = false;
             } else {
                 s_min.x = minimum(s_min.x, c_s_min.x);
-                s_min.y = minimum(s_min.y, c_s_min.x);
-                s_min.z = minimum(s_min.z, c_s_min.x);
+                s_min.y = minimum(s_min.y, c_s_min.y);
+                s_min.z = minimum(s_min.z, c_s_min.z);
                 s_max.x = maximum(s_max.x, c_s_max.x);
                 s_max.y = maximum(s_max.y, c_s_max.y);
                 s_max.z = maximum(s_max.z, c_s_max.z);
