@@ -922,7 +922,7 @@ bool scene_overlap_box(Scene *sc,
 
                 if (shape_box_overlap(s, &model, NULL)) {
                     if (results != NULL) {
-                        OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult *));
+                        OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult));
                         result->hitTr = hitLeaf;
                         result->type = Hit_Block;
                         fifo_list_push(results, result);
@@ -933,7 +933,7 @@ bool scene_overlap_box(Scene *sc,
                 }
             } else {
                 if (results != NULL) {
-                    OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult *));
+                    OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult));
                     result->hitTr = hitLeaf;
                     result->type = Hit_CollisionBox;
                     fifo_list_push(results, result);

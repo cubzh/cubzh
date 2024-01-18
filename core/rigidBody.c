@@ -1229,6 +1229,13 @@ bool rigidbody_is_dynamic(const RigidBody *rb) {
            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Dynamic;
 }
 
+bool rigidbody_is_static(const RigidBody *rb) {
+    return rb != NULL &&
+           (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Static ||
+            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) ==
+                RigidbodyMode_StaticPerBlock);
+}
+
 bool rigidbody_uses_per_block_collisions(const RigidBody *rb) {
     return rb != NULL && (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) ==
                               RigidbodyMode_TriggerPerBlock ||
