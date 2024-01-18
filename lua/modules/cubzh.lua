@@ -1,7 +1,7 @@
 Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
-local DEBUG_PET = false
+local DEBUG_PET = true
 
 Config = {
 	Items = {
@@ -2024,7 +2024,7 @@ pet.dialogTree = function(self, target)
 		)
 	end
 end
-pet.dialogTreeTeaser = function(target)
+pet.dialogTreeTeaser = function(_, target)
 	dialog:create(
 		"Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a companion! ✨",
 		target,
