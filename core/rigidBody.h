@@ -131,6 +131,7 @@ bool rigidbody_has_callbacks(const RigidBody *rb);
 bool rigidbody_is_active_trigger(const RigidBody *rb);
 bool rigidbody_is_rotation_dependent(const RigidBody *rb);
 bool rigidbody_is_dynamic(const RigidBody *rb);
+bool rigidbody_is_static(const RigidBody *rb);
 bool rigidbody_uses_per_block_collisions(const RigidBody *rb);
 bool rigidbody_is_collider_custom_set(const RigidBody *rb);
 
