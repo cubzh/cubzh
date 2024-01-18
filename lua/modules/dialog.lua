@@ -73,27 +73,16 @@ mod.create = function(_, text, target, answers, callback)
 				callback(self.index, self.Text)
 			end
 		end
+		btn.disabled = true
+		btn:setParent(dialogFrame)
 		answers[i] = btn
 	end
+	dialog.answers = answers
 
 	dialogFrame.parentDidResize = function(self)
 		self.text.object.MaxWidth = math.min(maxWidth, Screen.Width * 0.75)
 		self.Width = self.text.Width + margin * 2
 		self.Height = self.text.Height + margin * 2
-
-		local answer
-		local previous
-		for i = #answers, 1, -1 do
-			answer = answers[i]
-			ease:cancel(answer.pos)
-			answer.pos.X = Screen.Width - Screen.SafeArea.Right - answer.Width - margin
-			if previous then
-				answer.pos.Y = previous.pos.Y + previous.Height + marginSmall
-			else
-				answer.pos.Y = Screen.SafeArea.Bottom + margin
-			end
-			previous = answer
-		end
 	end
 
 	dialogFrame.updatePosition = function(self)
@@ -112,6 +101,35 @@ mod.create = function(_, text, target, answers, callback)
 		self.pos = { posX, posY }
 	end
 
+	dialogFrame.updateAnswersPosition = function(self)
+		local previous
+		local totalWidth = 0
+		local row = 1
+		for i = 1, #answers do
+			local answer = answers[i]
+			answer:show()
+			ease:cancel(answer.pos)
+			totalWidth = totalWidth + answer.Width
+			answer.pos.X = marginSmall
+			if totalWidth > self.Width - 2 * margin then
+				totalWidth = 0
+				row = row + 1
+			elseif previous then
+				answer.pos.X = previous.pos.X + previous.Width + marginSmall
+			end
+			previous = answer
+
+			answer.pos.Y = -answer.Height * row
+			ease:outBack(answer.pos, 0.3, {
+				onDone = function(_)
+					answer.disabled = false
+				end,
+			}).Y = -answer.Height
+					* row
+				- marginSmall * row
+		end
+	end
+
 	dialog.complete = function(_)
 		if dialogTimer ~= nil then
 			dialogTimer:Cancel()
@@ -120,23 +138,7 @@ mod.create = function(_, text, target, answers, callback)
 			dialogFrame.text.Text = fullText
 			dialogFrame:parentDidResize()
 			dialogFrame:updatePosition()
-
-			local answer
-			local previous
-			for i = #answers, 1, -1 do
-				answer = answers[i]
-				answer:show()
-				ease:cancel(answer.pos)
-				if previous then
-					answer.pos.Y = previous.pos.Y + previous.Height + marginSmall
-				else
-					answer.pos.Y = Screen.SafeArea.Bottom + margin
-				end
-				previous = answer
-
-				answer.pos.X = Screen.Width
-				ease:outBack(answer.pos, 0.3).X = Screen.Width - Screen.SafeArea.Right - answer.Width - margin
-			end
+			dialogFrame:updateAnswersPosition()
 		end
 	end
 
