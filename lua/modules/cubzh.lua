@@ -1860,14 +1860,15 @@ addConditionalAreas = function()
 		if other == Player and avatarCache.jacket == "claire.tuxedo" then
 			self.Physics = PhysicsMode.Trigger
 			dialog:create("Looking smart!", Number3(434.5, 94, 351))
-			tuxedoJacket.IsHidden = true
 			collectParticles.Position = tuxedoJacket.Position
 			collectParticles:spawn(10)
+			tuxedoJacket.IsHidden = true
 			self.IsHidden = true
+			self.OnCollisionBegin = nil
 		else
 			vfx.shake(tuxedoJacket)
 			townhallDoor.PrivateDrawMode = 0
-			dialog:create("Cmon man, dress up.", Number3(434.5, 94, 351))
+			dialog:create("There is a fancy party going on inside, you need to dress up!.", Number3(434.5, 94, 351))
 		end
 	end
 	townhallDoor.OnCollisionEnd = function(_, other)
