@@ -501,7 +501,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		scroll:setScrollPosition(scrollPosition)
 	end
 
-	node:resetList()
 	retrieveFriendsLists()
 
 	content.node = node
