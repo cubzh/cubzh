@@ -1623,7 +1623,12 @@ menu.RemoveDidResignActiveCallback = function(self, callback)
 end
 
 menu.IsActive = function(_)
-	return titleScreen ~= nil or activeModal ~= nil or alertModal ~= nil or loadingModal ~= nil or cppMenuIsActive
+	return titleScreen ~= nil
+		or activeModal ~= nil
+		or alertModal ~= nil
+		or loadingModal ~= nil
+		or cppMenuIsActive
+		or signupElements ~= nil
 end
 
 function menuSectionCanBeShown()
@@ -1900,6 +1905,12 @@ end, { topPriority = true, system = System })
 LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	cppMenuIsActive = System.IsCppMenuActive
 
+	if cppMenuIsActive then
+		ui:turnOff()
+	else
+		ui:turnOn()
+	end
+
 	refreshDisplay()
 	triggerCallbacks()
 	refreshChat()
@@ -2121,9 +2132,7 @@ function showSignUp(callbacks)
 	signupElements = { signupModal, helpBtn, loginBtn, signupModal.terms }
 
 	loginBtn.onRelease = function()
-		ui:turnOff()
 		System.Login(function(success, _)
-			ui:turnOn()
 			if success then
 				helpBtn:remove()
 				loginBtn:remove()
