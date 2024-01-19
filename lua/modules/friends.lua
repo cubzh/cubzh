@@ -99,8 +99,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						table.remove(lists.search, k)
 					end
 				end
+				nbResults = #lists.friends + #lists.received + #lists.sent + #lists.search
+			else
+				nbResults = #lists.friends + #lists.received
 			end
-			nbResults = #lists.friends + #lists.received + #lists.sent + #lists.search
 			node:resetList(keepScrollPosition)
 		end
 
@@ -419,7 +421,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		if nbResults == 0 then
 			if cellId == 1 then
 				local container = ui:createFrame()
-				local text = ui:createText("No result found.", Color.White)
+				local isSearch = searchText and #searchText > 0
+				local str = isSearch and "No result found." or "Invite your friends!"
+				local text = ui:createText(str, Color.White)
 				text:setParent(container)
 				container.Width = node.Width
 				container.Height = math.floor(cellHeight)
