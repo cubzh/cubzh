@@ -411,7 +411,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				text:setParent(container)
 				container.Width = node.Width
 				container.Height = math.floor(cellHeight)
-				print(container.Width, container.Height)
 				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
 				return container
 			end
@@ -424,7 +423,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				text:setParent(container)
 				container.Width = node.Width
 				container.Height = math.floor(cellHeight)
-				print(container.Width, container.Height)
 				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
 				return container
 			end
