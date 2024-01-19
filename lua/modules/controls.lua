@@ -482,7 +482,7 @@ local _setPointerUp = function(pointerIndex, pointerEvent)
 		end
 	end
 
-	if _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerIndex then
+	if _state.touchDragPointer ~= nil then
 		_state.touchDragPointer = nil
 		if _state.dragStarted then
 			if Pointer.IsHidden == false then
