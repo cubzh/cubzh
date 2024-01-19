@@ -29,6 +29,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local scroll
 	local searchText
+	local nbResults = -1 -- -1 loading..., 0 no result
 
 	-- list of friends, requests (sent or received) or search
 	local lists = {
@@ -63,6 +64,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local retrieveFriendsLists = function(_searchText, keepScrollPosition)
 		searchText = _searchText
+		nbResults = -1
 		local nbLists = 4
 		local nbListsRetrieved = 0
 		lists = {
@@ -98,6 +100,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end
 				end
 			end
+			nbResults = #lists.friends + #lists.received + #lists.sent + #lists.search
 			node:resetList(keepScrollPosition)
 		end
 
@@ -106,12 +109,15 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			local nbIterations = 0
 			if listName == "search" then
 				if searchText == nil or searchText == "" then
-					newListResponse("search", list)
+					newListResponse("search", {})
 					return
 				end
 				local req = api:searchUser(searchText, function(ok, users, _)
 					if not ok then
 						error("Can't find users", 2)
+					end
+					if #users == 0 then
+						newListResponse("search", {})
 					end
 					for _, usr in ipairs(users) do
 						if usr and usr.username ~= "" then
@@ -134,6 +140,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			local req = api[methodName](api, function(ok, users, _)
 				if not ok then
 					error("Can't find users", 2)
+				end
+				if #users == 0 then
+					newListResponse(listName, {})
+					return
 				end
 				for _, usrID in ipairs(users) do
 					local req2 = api:getUserInfo(usrID, function(_, usr)
@@ -216,30 +226,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		local cell = ui:createFrame(Color(63, 63, 63))
 
-		local loadingCube
-		cell.getOrCreateLoadingCube = function(_)
-			if loadingCube == nil then
-				loadingCube = ui:createFrame(Color.White)
-				loadingCube:setParent(cell)
-				loadingCube.Width = 10
-				loadingCube.Height = 10
-			end
-			loadingCube.pos = { cell.Width * 0.5, cell.Height * 0.5, 0 }
-			return loadingCube
-		end
-
-		local t = 0
-		cell.loadingCubeTick = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-			if not cell.Width then return end
-			t = t + dt * 5
-			local loadingCubePos = { cell.Width * 0.5 + math.cos(t) * 20, cell.Height * 0.5 - math.sin(t) * 20, 0 }
-			local loadingCube = cell:getOrCreateLoadingCube()
-			if loadingCube ~= nil and loadingCube:isVisible() then
-				loadingCube.pos = loadingCubePos
-			end
-		end)
-		cell:getOrCreateLoadingCube():show()
-
 		local textBg = ui:createFrame(Color(0,0,0,0.5))
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White)
@@ -263,8 +249,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			cell.Height = math.floor(forceHeight or cellHeight)
 			cell.Width = math.floor(forceWidth or cell.Height)
 
-			loadingCube.pos = { cell.Width * 0.5, cell.Height * 0.5, 0 }
-
 			textBg.Width = math.floor(cell.Width)
 			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
 
@@ -285,9 +269,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cell.setUser = function(_, user)
 			if not user or not user.username then cell:hide() return end
 
-			cell.loadingCubeTick:Remove()
 			textBg:show()
-			cell:getOrCreateLoadingCube():hide()
 
 			cell.onClick = function()
 				local profileContent = require("profile"):create({
@@ -422,18 +404,42 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local loadLine = function(cellId)
+		if nbResults == -1 then
+			if cellId == 1 then
+				local container = ui:createFrame()
+				local text = ui:createText("Loading...", Color.White)
+				text:setParent(container)
+				container.Width = node.Width
+				container.Height = math.floor(cellHeight)
+				print(container.Width, container.Height)
+				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
+				return container
+			end
+			return
+		end
+		if nbResults == 0 then
+			if cellId == 1 then
+				local container = ui:createFrame()
+				local text = ui:createText("No result found.", Color.White)
+				text:setParent(container)
+				container.Width = node.Width
+				container.Height = math.floor(cellHeight)
+				print(container.Width, container.Height)
+				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
+				return container
+			end
+			return
+		end
+
 		local width = node.Width
 		local nbCells = math.min(Client.IsMobile and 4 or 2,math.floor(width / cellWidth))
 
-		local firstCellUser, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
+		local _, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
 
 		local prevFirstCellUserType
 		if cellId > 1 then
-			prevCelluser, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
+			_, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
 		end
-
-		-- Have at least 6 cells of "loading cells" before flushing everything
-		if not firstCellUser and not prevCelluser and cellId > 6 then return end
 
 		local verticalContainer
 		local line = require("ui_container"):createHorizontalContainer()
@@ -501,6 +507,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		scroll:setScrollPosition(scrollPosition)
 	end
 
+	node:resetList()
 	retrieveFriendsLists()
 
 	content.node = node
