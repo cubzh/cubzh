@@ -302,53 +302,6 @@ signup.createModal = function(_, config)
 		checkUsername()
 	end
 
-	local passwordLabel = ui:createText("🔑 Password", Color(200, 200, 200, 255), "small")
-	passwordLabel:setParent(node)
-
-	local passwordInfo = ui:createText("", Color(251, 206, 0, 255), "small")
-	passwordInfo:setParent(node)
-
-	local passwordInput = ui:createTextInput("", "At least 8 characters", { password = true })
-	passwordInput:setParent(node)
-
-	local btnPasswordToggle = ui:createButton("👁️", { unfocuses = false })
-	btnPasswordToggle:setParent(node)
-	btnPasswordToggle.onRelease = function()
-		if passwordInput:isTextHidden() then
-			passwordInput:showText()
-			btnPasswordToggle.Text = "**"
-		else
-			passwordInput:hideText()
-			btnPasswordToggle.Text = "👁️"
-		end
-	end
-
-	local checkPassword = function(config)
-		local r = true
-		local s = passwordInput.Text
-
-		if s == "" and config and config.errorIfEmpty == true then
-			if config and config.errorIfEmpty == true then
-				passwordInfo.Text = "❌ required"
-				passwordInfo.Color = theme.errorTextColor
-			end
-			r = false
-		elseif #s < 8 and config and config.errorIfTooShort == true then
-			passwordInfo.Text = "❌ at least 8 characters"
-			passwordInfo.Color = theme.errorTextColor
-			r = false
-		else
-			passwordInfo.Text = ""
-		end
-
-		passwordInfo.pos.X = node.Width - passwordInfo.Width
-		return r
-	end
-
-	passwordInput.onTextChange = function(_)
-		checkPassword()
-	end
-
 	local signUpButton = ui:createButton("✨ Sign Up ✨") -- , { textSize = "big" })
 	signUpButton:setParent(node)
 	signUpButton:setColor(Color(150, 200, 61), Color(240, 255, 240))
@@ -356,9 +309,8 @@ signup.createModal = function(_, config)
 
 	signUpButton.onRelease = function()
 		local dobOK = checkDOB({ errorIfIncomplete = true })
-		local passwordOK = checkPassword({ errorIfEmpty = true, errorIfTooShort = true })
 
-		if dobOK ~= true or passwordOK ~= true then
+		if dobOK ~= true then
 			return
 		end
 
@@ -366,11 +318,10 @@ signup.createModal = function(_, config)
 			if ok == true and type(key) == "string" then
 				local username = usernameInput.Text
 				local dob = string.format("%02d-%02d-%04d", _month, _day, _year)
-				local password = passwordInput.Text
 
 				local modal = content:getModalIfContentIsActive()
 				if modal and modal.onSubmit then
-					modal.onSubmit(username, key, dob, password)
+					modal.onSubmit(username, key, dob)
 				end
 			end
 		end
@@ -519,10 +470,6 @@ signup.createModal = function(_, config)
 			+ usernameLabel.Height
 			+ theme.paddingTiny
 			+ usernameInput.Height
-			+ theme.padding
-			+ passwordLabel.Height
-			+ theme.paddingTiny
-			+ passwordInput.Height
 			+ theme.paddingBig
 			+ signUpButton.Height
 
@@ -551,18 +498,6 @@ signup.createModal = function(_, config)
 
 		usernameInput.Width = self.Width
 		usernameInput.pos.Y = usernameLabel.pos.Y - theme.paddingTiny - usernameInput.Height
-
-		passwordLabel.pos.Y = usernameInput.pos.Y - theme.padding - passwordLabel.Height
-
-		passwordInfo.pos.Y = passwordLabel.pos.Y
-		passwordInfo.pos.X = self.Width - passwordInfo.Width
-
-		btnPasswordToggle.Height = passwordInput.Height
-		btnPasswordToggle.pos.X = self.Width - btnPasswordToggle.Width
-		btnPasswordToggle.pos.Y = passwordLabel.pos.Y - theme.paddingTiny - btnPasswordToggle.Height
-
-		passwordInput.Width = self.Width - btnPasswordToggle.Width - theme.padding
-		passwordInput.pos.Y = passwordLabel.pos.Y - theme.paddingTiny - passwordInput.Height
 
 		signUpButton.pos.X = self.Width * 0.5 - signUpButton.Width * 0.5
 	end

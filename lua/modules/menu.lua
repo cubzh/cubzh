@@ -2122,7 +2122,7 @@ function showSignUp(callbacks)
 
 	loginBtn.onRelease = function()
 		ui:turnOff()
-		System.Login(function(success, info)
+		System.Login(function(success, _)
 			ui:turnOn()
 			if success then
 				helpBtn:remove()
@@ -2141,7 +2141,7 @@ function showSignUp(callbacks)
 	end
 	loginBtn:parentDidResize()
 
-	signupModal.onSubmit = function(username, key, dob, password)
+	signupModal.onSubmit = function(username, key, dob)
 		System:DebugEvent("SIGNUP_SUBMIT")
 
 		loginBtn:remove()
@@ -2154,9 +2154,10 @@ function showSignUp(callbacks)
 
 		local function _createAccount(onError)
 			showLoading("Creating account")
-			api:signUp(username, key, dob, password, function(err, credentials)
+			api:signUp(username, key, dob, function(err, credentials)
 				if err ~= nil then
 					if onError ~= nil then
+						hideLoading()
 						onError(onError)
 					end
 					return

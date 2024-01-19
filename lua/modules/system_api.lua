@@ -55,7 +55,7 @@ mod.checkUsername = function(_, username, callback)
 end
 
 -- callback(err, credentials)
-mod.signUp = function(_, username, key, dob, password, callback)
+mod.signUp = function(_, username, key, dob, callback)
 	if type(username) ~= "string" then
 		callback("1st arg must be a string")
 		return
@@ -68,12 +68,8 @@ mod.signUp = function(_, username, key, dob, password, callback)
 		callback("3rd arg must be a string")
 		return
 	end
-	if type(password) ~= "string" then
-		callback("4th arg must be a string")
-		return
-	end
 	if type(callback) ~= "function" then
-		callback("5th arg must be a function")
+		callback("4th arg must be a function")
 		return
 	end
 
@@ -82,7 +78,6 @@ mod.signUp = function(_, username, key, dob, password, callback)
 		username = username,
 		key = key,
 		dob = dob,
-		password = password,
 	}
 
 	local req = System:HttpPost(url, body, function(resp)
