@@ -143,7 +143,7 @@ modal.createContent = function(_)
 		-- (used to better fit grids for example)
 		-- The callback receives the size that's about to be applied
 		-- and should return the same size or smaller one.
-		idealReducedContentSize = nil, -- function(content, width, height)
+		idealReducedContentSize = nil, -- function(content, width, height, minWidth)
 
 		-- called right after modal content did become active
 		didBecomeActive = nil, -- function(content)
@@ -161,6 +161,13 @@ modal.createContent = function(_)
 			bottomCenter = {},
 			bottomRight = {},
 			modal = nil,
+			isActive = function(self)
+				local modal = self._attr.modal
+				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
+					return true
+				end
+				return false
+			end,
 			getModalIfContentIsActive = function(self)
 				local modal = self._attr.modal
 				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
@@ -802,9 +809,11 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		local contentSize = backgroundSize
 			- Number2(theme.padding * 2, (theme.padding * 2) + self.topBar.Height + self.bottomBar.Height)
 
+		local minWidth = math.max(totalTopWidth, totalBottomWidth)
+
 		if modalContent.idealReducedContentSize ~= nil then
 			local reducedContentSize =
-				modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height)
+				modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height, minWidth)
 			if reducedContentSize ~= nil and reducedContentSize ~= contentSize then
 				if reducedContentSize.X < totalTopWidth then
 					reducedContentSize.X = totalTopWidth
