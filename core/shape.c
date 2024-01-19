@@ -212,7 +212,10 @@ bool _shape_is_bounding_box_empty(const Shape *shape);
 // --------------------------------------------------
 //
 
-// Shape allocator
+void _shape_void_free(void *s) {
+    shape_free((Shape *)s);
+}
+
 Shape *shape_make(void) {
     Shape *s = (Shape *)malloc(sizeof(Shape));
 
@@ -224,7 +227,7 @@ Shape *shape_make(void) {
 
     s->worldAABB = NULL;
 
-    s->transform = transform_make_with_ptr(ShapeTransform, s, 0, NULL);
+    s->transform = transform_make_with_ptr(ShapeTransform, s, _shape_void_free);
     s->pivot = NULL;
 
     s->chunks = index3d_new();
@@ -1331,7 +1334,7 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z) {
             return;
         } else {
             // add a pivot internal transform, managed by shape
-            s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
+            s->pivot = transform_make_with_ptr(HierarchyTransform, s, NULL);
             transform_set_parent(s->pivot, s->transform, false);
         }
     } else if (isZero) {
@@ -2901,7 +2904,7 @@ void shape_enableAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return;
     }
-    transform_setAnimationsEnabled(s->transform, true);
+    transform_set_animations_enabled(s->transform, true);
 }
 
 void shape_disableAnimations(Shape *const s) {
@@ -2911,7 +2914,7 @@ void shape_disableAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return;
     }
-    transform_setAnimationsEnabled(s->transform, false);
+    transform_set_animations_enabled(s->transform, false);
 }
 
 bool shape_getIgnoreAnimations(Shape *const s) {
@@ -2921,7 +2924,7 @@ bool shape_getIgnoreAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return false;
     }
-    return transform_getAnimationsEnabled(s->transform) == false;
+    return transform_is_animations_enabled(s->transform) == false;
 }
 
 // MARK: - private functions -
@@ -2935,7 +2938,7 @@ static void _shape_toggle_rendering_flag(Shape *s, const uint8_t flag, const boo
 }
 
 static bool _shape_get_rendering_flag(const Shape *s, const uint8_t flag) {
-    return flag == (s->renderingFlags & flag);
+    return (s->renderingFlags & flag) != 0;
 }
 
 static void _shape_toggle_lua_flag(Shape *s, const uint8_t flag, const bool toggle) {
@@ -2947,7 +2950,7 @@ static void _shape_toggle_lua_flag(Shape *s, const uint8_t flag, const bool togg
 }
 
 static bool _shape_get_lua_flag(const Shape *s, const uint8_t flag) {
-    return flag == (s->luaFlags & flag);
+    return (s->luaFlags & flag) != 0;
 }
 
 void _shape_chunk_enqueue_refresh(Shape *shape, Chunk *c) {
