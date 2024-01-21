@@ -818,10 +818,10 @@ initPlayer = function(p)
 			jumpParticles:spawn(10)
 			sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
 		end
-		skills.addStepClimbing(
-			Player,
-			{ mapScale = MAP_SCALE, collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS }
-		)
+		skills.addStepClimbing(Player, {
+			mapScale = MAP_SCALE,
+			collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS + BUILDING_COLLISION_GROUPS,
+		})
 		skills.addJump(Player, {
 			maxGroundDistance = 1.0,
 			airJumps = 1,
