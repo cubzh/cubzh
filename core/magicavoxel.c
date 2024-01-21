@@ -23,7 +23,7 @@
 #define CHUNK_HEADER_SIZE 4
 #define CHUNK_HEADER_SIZE_PLUS_ONE 5
 
-#define VOX_NB_COLORS 256 // there are always 256 colors in a .vox
+#define VOX_MAX_NB_COLORS 256 // there are always 256 colors in a .vox
 
 bool _readExpectedBytes(Stream *s, const char *bytes, size_t size) {
     char current = 0;
@@ -679,11 +679,11 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     enum serialization_magicavoxel_error err = no_error;
 
     size_t blocksPosition = 0;
-    RGBAColor *colors = malloc(sizeof(RGBAColor) * VOX_NB_COLORS);
+    RGBAColor *colors = malloc(sizeof(RGBAColor) * VOX_MAX_NB_COLORS);
     if (colors == NULL) {
         return unknown_chunk;
     }
-    for (int i = 0; i < VOX_NB_COLORS; ++i) {
+    for (int i = 0; i < VOX_MAX_NB_COLORS; ++i) {
         colors[i].r = 0;
         colors[i].g = 0;
         colors[i].b = 0;
@@ -766,13 +766,15 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
         // RGBA (palette)
         else if (strcmp(chunkName, "RGBA") == 0) {
 
-            if (current_chunk_content_bytes != 256 * 4) {
+            if (current_chunk_content_bytes > 256 * 4 || current_chunk_content_bytes % 4 != 0) {
                 cclog_error("invalid RGBA chunk format");
                 err = invalid_format;
                 break;
             }
+            
+            int nbColors = minimum(current_chunk_content_bytes / 4, VOX_MAX_NB_COLORS);
 
-            for (int i = 0; i < VOX_NB_COLORS; i++) {
+            for (int i = 0; i < nbColors; i++) {
 
                 if (stream_read_uint8(s, &(colors[i].r)) == false) {
                     cclog_error("could not read r");
