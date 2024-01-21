@@ -1,6 +1,7 @@
 Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
+local DEBUG_PET = false
 
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
 local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
@@ -16,12 +17,13 @@ local TIME_TO_FRIENDS_CTA = 60 * 7 -- seconds
 
 local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
-local DAY_DURATION = 0.5
+local DAY_DURATION = 0.55
 local DUSK_DURATION = 0.05
-local NIGHT_DURATION = 0.4
+local NIGHT_DURATION = 0.35
 
 local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
-local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION
+local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION * 0.1
+local TIME_TO_DAYBREAK = DAWN_DURATION * 0.1
 local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
 local MINUTE_HAND_OFFSET = 1
 
@@ -46,6 +48,11 @@ local ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS = CollisionGroups(3, 4, 5)
 
 local DRAFT_COLLISION_GROUPS = CollisionGroups(6)
 
+local TRIGGER_AREA_SIZE = Number3(60, 30, 60)
+-- local MAX_PLAYER_DISTANCE = 20
+-- local MAX_PLAYER_DISTANCE_SQR = MAX_PLAYER_DISTANCE * MAX_PLAYER_DISTANCE
+-- local TIME_TO_HATCH = 120
+
 Client.OnStart = function()
 	dialog = require("dialog")
 	dialog:setMaxWidth(400)
@@ -64,6 +71,7 @@ Client.OnStart = function()
 	-- HUD
 	textbubbles.displayPlayerChatBubbles = true
 	controls:setButtonIcon("action1", "⬆️")
+	dialog:setMaxWidth(400)
 
 	-- AMBIENCE
 	Clouds.Altitude = 60 * MAP_SCALE
@@ -137,9 +145,18 @@ Client.OnStart = function()
 	end)
 	LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function()
 		multi:action("updateAvatar")
+		require("api").getAvatar(Player.Username, function(_, _)
+			-- TODO: retry on error? maybe it should be done within getAvatar
+		end)
 	end)
 	multi:onAction("updateAvatar", function(sender)
 		avatar:get(sender.Username, sender.Avatar)
+	end)
+
+	LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function()
+		require("api").getAvatar(Player.Username, function(_, _)
+			-- TODO: retry on error? maybe it should be done within getAvatar
+		end)
 	end)
 
 	-- called when receiving information for distant object that are not linked
@@ -180,6 +197,8 @@ local savedPositions, savedRotations = {}, {}
 local unixMilli
 local currentTime
 
+local isNight = false
+local tInCycle
 local t = 0
 Client.Tick = function(dt)
 	if not localPlayerShown then
@@ -203,39 +222,43 @@ Client.Tick = function(dt)
 	unixMilli = Time.UnixMilli() / 1000.0
 	currentTime = unixMilli % TIME_CYCLE_DURATION
 
+	tInCycle = currentTime / TIME_CYCLE_DURATION
+
 	if townhallHourHand ~= nil then
 		-- rotation 0 -> 9, -math.pi * 0.5 -> 12
 		-- mid-day -> 35% of TIME_CYCLE_DURATION
 		-- 0% of TIME_CYCLE_DURATION = -70% of 12h
 		-- Rotation(math.pi * (-0.5 + 2 * 0.7 - 2 * 2 * currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallHourHand.LocalRotation =
-			Rotation(math.pi * (HOUR_HAND_OFFSET - 4 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallHourHand.LocalRotation = Rotation(math.pi * (HOUR_HAND_OFFSET - 4 * tInCycle), 0, 0)
 	end
 
 	if townhallMinuteHand ~= nil then
 		-- rotation 0 -> 12
 		-- Rotation(math.pi * (2 * 0.7 - 2 * 2 * 12 currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallMinuteHand.LocalRotation =
-			Rotation(math.pi * (MINUTE_HAND_OFFSET - 48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallMinuteHand.LocalRotation = Rotation(math.pi * (MINUTE_HAND_OFFSET - 48 * tInCycle), 0, 0)
 	end
 
-	-- if lightRay ~= nil and lightFire ~= nil then
-	-- 	if currentTime / TIME_CYCLE_DURATION > TIME_TO_NIGHTFALL then
-	-- 		if lightRay.IsHidden then
-	-- 			lightRay.IsHidden = false
-	-- 		end
-	-- 		if lightFire.IsHidden then
-	-- 			lightFire.IsHidden = false
-	-- 		end
-	-- 		lightRay:RotateLocal(0, dt * 0.5, 0)
-	-- 	else
-	-- 		lightRay.IsHidden = true
-	-- 		lightFire.IsHidden = true
-	-- 	end
-	-- end
+	if isNight then
+		if tInCycle > TIME_TO_DAYBREAK and tInCycle < TIME_TO_NIGHTFALL then
+			isNight = false
+			LocalEvent:Send("Day")
+		end
+	else
+		if tInCycle > TIME_TO_NIGHTFALL or tInCycle < TIME_TO_DAYBREAK then
+			isNight = true
+			LocalEvent:Send("Night")
+		end
+	end
 
 	if not DEBUG_AMBIENCES then
 		ambienceCycle:setTime(currentTime)
+	end
+
+	if Player.pet ~= nil then
+		pet:followPlayer()
+		if pet.level < 0 and pet.remaining > 0 then
+			pet:updateHatchTimer()
+		end
 	end
 end
 
@@ -274,7 +297,6 @@ Client.OnWorldObjectLoad = function(obj)
 	toast = require("ui_toast")
 	bundle = require("bundle")
 	avatar = require("avatar")
-	ui = require("uikit")
 
 	if obj.Name == "voxels.windmill" then
 		setupBuilding(obj)
@@ -287,21 +309,28 @@ Client.OnWorldObjectLoad = function(obj)
 	elseif obj.Name == "voxels.city_lamp" then
 		obj.Shadow = true
 		local light = obj:GetChild(1)
-		light.IsUnlit = true
-		light.Tick = function(self, _)
-			self.IsUnlit = currentTime / TIME_CYCLE_DURATION > TIME_TO_NIGHTFALL
-		end
+		light.IsUnlit = false
+		LocalEvent:Listen("Night", function(_)
+			light.IsUnlit = true
+		end)
+		LocalEvent:Listen("Day", function(_)
+			light.IsUnlit = false
+		end)
 	elseif obj.Name == "voxels.simple_lighthouse" then
 		setupBuilding(obj)
 		lightFire = obj:GetChild(1)
 		lightFire.IsUnlit = true
 		lightFire.IsHidden = true
 		lightRay = obj:GetChild(2)
-		-- lightRay.Physics = PhysicsMode.Disabled
-		-- lightRay.Scale.X = 10
-		-- lightRay.IsUnlit = true
-		-- lightRay.Palette[1].Color.A = 20
+		lightRay.Physics = PhysicsMode.Disabled
+		lightRay.Scale.X = 10
+		lightRay.IsUnlit = true
+		lightRay.Palette[1].Color.A = 20
 		lightRay.IsHidden = true
+		-- LocalEvent:Listen("Night", function(_)
+		-- 	--lightFire.IsHidden = not data.isNight
+		-- 	--lightRay.IsHidden = not data.isNight
+		-- end)
 	elseif obj.Name == "voxels.townhall" then
 		setupBuilding(obj)
 
@@ -366,9 +395,15 @@ Client.OnWorldObjectLoad = function(obj)
 		end)
 		obj = _helpers.replaceWithAvatar(obj, "aduermael")
 		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
 			_helpers.lookAt(self.avatarContainer, other)
 		end
-		obj.OnCollisionEnd = function(self, _)
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
 			_helpers.lookAt(self.avatarContainer, nil)
 		end
 	elseif obj.Name == "friend2" then
@@ -480,6 +515,50 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 		end
 		animatePortal(obj)
+	elseif obj.Name == "pet_npc" then
+		obj = _helpers.replaceWithAvatar(obj, "voxels")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+			if DEBUG_PET then
+				pet:dialogTree(self.avatar)
+			else
+				pet:dialogTreeTeaser(self.avatar)
+			end
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+		end
+	elseif obj.Name == "pet_bird" or obj.Name == "pet_gator" or obj.Name == "pet_ram" then
+		obj.initialForward = obj.Forward:Copy()
+		obj.Physics = PhysicsMode.Disabled
+		obj.trigger = _helpers.addTriggerArea(obj)
+		obj.trigger.OnCollisionBegin = function(_, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(obj, other)
+			dialog:create("❤️❤️❤️", obj)
+		end
+		obj.trigger.OnCollisionEnd = function(_, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(obj, nil)
+			dialog:remove()
+		end
+	elseif obj.Name == "pet_spawner" then
+		obj.Physics = PhysicsMode.Disabled
+		for i = 1, 4 do -- 1 : player, 2 : gator, 3 : npc, 4 : fence
+			obj:GetChild(i).Physics = PhysicsMode.Disabled
+			obj.Palette[1].Color.A = 20
+		end
 	end
 
 	if obj.fullname ~= nil then
@@ -605,7 +684,6 @@ end
 Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
-
 	dialog:complete()
 
 	if DEBUG_ITEMS then
@@ -686,10 +764,10 @@ initPlayer = function(p)
 			jumpParticles:spawn(10)
 			sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
 		end
-		skills.addStepClimbing(
-			Player,
-			{ mapScale = MAP_SCALE, collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS }
-		)
+		skills.addStepClimbing(Player, {
+			mapScale = MAP_SCALE,
+			collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS + BUILDING_COLLISION_GROUPS,
+		})
 		skills.addJump(Player, {
 			maxGroundDistance = 1.0,
 			airJumps = 1,
@@ -888,13 +966,23 @@ _helpers.replaceWithAvatar = function(obj, name)
 	o.Position = obj.Position
 	o.Scale = obj.Scale
 	o.Physics = PhysicsMode.Trigger
-	o.CollisionBox = Box({ -30, 0, -30 }, { 30, 25, 30 })
+
+	o.CollisionBox = Box({
+		-TRIGGER_AREA_SIZE.Width * 0.5,
+		math.min(-TRIGGER_AREA_SIZE.Height, o.CollisionBox.Min.Y),
+		-TRIGGER_AREA_SIZE.Depth * 0.5,
+	}, {
+		TRIGGER_AREA_SIZE.Width * 0.5,
+		math.max(TRIGGER_AREA_SIZE.Height, o.CollisionBox.Max.Y),
+		TRIGGER_AREA_SIZE.Depth * 0.5,
+	})
 	o.CollidesWithGroups = { 2 }
 	o.CollisionGroups = {}
 
 	local container = Object()
 	container.Rotation = obj.Rotation
 	container.initialRotation = obj.Rotation:Copy()
+	container.initialForward = obj.Forward:Copy()
 	container:SetParent(o)
 	o.avatarContainer = container
 
@@ -906,10 +994,33 @@ _helpers.replaceWithAvatar = function(obj, name)
 	return o
 end
 
+_helpers.addTriggerArea = function(obj, box, offset)
+	local o = Object()
+	o:SetParent(World)
+	o.Scale = obj.Scale
+	o.Physics = PhysicsMode.Trigger
+	o.CollidesWithGroups = { 2 }
+	o.CollisionGroups = {}
+	o.CollisionBox = box ~= nil and box
+		or (
+			Box({
+				-TRIGGER_AREA_SIZE.Width * 0.5,
+				math.min(-TRIGGER_AREA_SIZE.Height, o.CollisionBox.Min.Y),
+				-TRIGGER_AREA_SIZE.Depth * 0.5,
+			}, {
+				TRIGGER_AREA_SIZE.Width * 0.5,
+				math.max(TRIGGER_AREA_SIZE.Height, o.CollisionBox.Max.Y),
+				TRIGGER_AREA_SIZE.Depth * 0.5,
+			})
+		)
+	o.Position = offset ~= nil and (obj.Position + offset) or (obj.Position - obj.Pivot * 0.5)
+	return o
+end
+
 _helpers.lookAt = function(obj, target)
 	if not target then
+		ease:linear(obj, 0.1).Forward = obj.initialForward
 		obj.Tick = nil
-		ease:linear(obj, 0.3).Rotation = obj.initialRotation
 		return
 	end
 	obj.Tick = function(self, _)
@@ -922,18 +1033,7 @@ _helpers.lookAtHorizontal = function(o1, o2)
 	local n3_2 = Number3.Zero
 	n3_1:Set(o1.Position.X, 0, o1.Position.Z)
 	n3_2:Set(o2.Position.X, 0, o2.Position.Z)
-	ease:linear(o1, 0.3).Forward = n3_2 - n3_1
-end
-
-_helpers.addTriggerArea = function(obj, size, offset)
-	local o = Object()
-	o:SetParent(obj)
-	o.Physics = PhysicsMode.Trigger
-	o.CollidesWithGroups = { 2 }
-	o.CollisionGroups = {}
-	o.CollisionBox = size ~= nil and size or obj.BoundingBox
-	o.LocalPosition = offset ~= nil and offset or { -obj.Width * 0.5, 0, -obj.Depth * 0.5 }
-	return o
+	ease:linear(o1, 0.1).Forward = n3_2 - n3_1
 end
 
 _helpers.contains = function(t, v)
@@ -1024,22 +1124,22 @@ dusk = {
 
 night = {
 	sky = {
-		skyColor = Color(26, 7, 86),
-		horizonColor = Color(120, 26, 123),
-		abyssColor = Color(28, 23, 153),
-		lightColor = Color(38, 2, 59),
+		skyColor = Color(1, 3, 50),
+		horizonColor = Color(70, 64, 146),
+		abyssColor = Color(64, 117, 190),
+		lightColor = Color(69, 80, 181),
 		lightIntensity = 0.600000,
 	},
 	fog = {
-		color = Color(14, 3, 75),
-		near = 300,
+		color = Color(89, 28, 112),
+		near = 310,
 		far = 700,
-		lightAbsorbtion = 0.400000,
+		lightAbsorbtion = 0.310000,
 	},
 	sun = {
-		color = Color(18, 22, 106),
+		color = Color(107, 65, 200),
 		intensity = 1.000000,
-		rotation = Rotation(math.rad(0), math.rad(0), 0),
+		rotation = Rotation(1.061161, 3.089219, 0.000000),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -1701,4 +1801,43 @@ function addCollectibles()
 		end)
 	end
 	t.get()
+end
+
+-- CREATURES
+
+pet = {}
+pet.dialogTreeTeaser = function(_, target)
+	dialog:create(
+		"Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a companion! ✨",
+		target,
+		{ "➡️ Yes of course!", "➡️ No thank you" },
+		function(idx)
+			if idx == 1 then
+				dialog:create(
+					"This machine here can spawn a random egg for you, containing a loving companion!",
+					target,
+					{ "➡️ Ok!" },
+					function()
+						dialog:create(
+							"I'm currently fixing it, come back in a few days!",
+							target,
+							{ "➡️ I'll be back!" },
+							function()
+								dialog:remove()
+							end
+						)
+					end
+				)
+			elseif idx == 2 then
+				dialog:create(
+					"Oh, I could swear you would like a small friend around. Come back if you change your mind!",
+					target,
+					{ "➡️ Ok!" },
+					function()
+						dialog:remove()
+					end
+				)
+			end
+		end
+	)
 end
