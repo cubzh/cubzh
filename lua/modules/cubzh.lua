@@ -1,17 +1,7 @@
 Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
-local DEBUG_PET = true
-
-Config = {
-	Items = {
-		"claire.tuxedo",
-		"aduermael.mob_egg",
-		"voxels.reptile_pet",
-		"voxels.ram_pet",
-		"voxels.bird_pet",
-	},
-}
+local DEBUG_PET = false
 
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
 local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
@@ -27,13 +17,13 @@ local TIME_TO_FRIENDS_CTA = 60 * 7 -- seconds
 
 local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
-local DAY_DURATION = 0.5
+local DAY_DURATION = 0.55
 local DUSK_DURATION = 0.05
-local NIGHT_DURATION = 0.4
+local NIGHT_DURATION = 0.35
 
 local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
-local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION
-local TIME_TO_DAYBREAK = NIGHT_DURATION * 0.5 + DAWN_DURATION
+local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION * 0.1
+local TIME_TO_DAYBREAK = DAWN_DURATION * 0.1
 local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
 local MINUTE_HAND_OFFSET = 1
 
@@ -58,14 +48,14 @@ local ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS = CollisionGroups(3, 4, 5)
 
 local DRAFT_COLLISION_GROUPS = CollisionGroups(6)
 
-local MAX_PLAYER_DISTANCE = 20
-local MAX_PLAYER_DISTANCE_SQR = MAX_PLAYER_DISTANCE * MAX_PLAYER_DISTANCE
-local TIME_TO_HATCH = 120
-
-local _interactiveElements = {}
+local TRIGGER_AREA_SIZE = Number3(60, 30, 60)
+-- local MAX_PLAYER_DISTANCE = 20
+-- local MAX_PLAYER_DISTANCE_SQR = MAX_PLAYER_DISTANCE * MAX_PLAYER_DISTANCE
+-- local TIME_TO_HATCH = 120
 
 Client.OnStart = function()
 	dialog = require("dialog")
+	dialog:setMaxWidth(400)
 	multi = require("multi")
 	textbubbles = require("textbubbles")
 	skills = require("object_skills")
@@ -76,9 +66,7 @@ Client.OnStart = function()
 	particles = require("particles")
 	walkSFX = require("walk_sfx")
 	sfx = require("sfx")
-	vfx = require("vfx")
 	wingTrail = require("wingtrail")
-	radialMenu = require("radialmenu")
 
 	-- HUD
 	textbubbles.displayPlayerChatBubbles = true
@@ -86,7 +74,7 @@ Client.OnStart = function()
 	dialog:setMaxWidth(400)
 
 	-- AMBIENCE
-	Clouds.Altitude = 50 * MAP_SCALE
+	Clouds.Altitude = 60 * MAP_SCALE
 
 	if not DEBUG_AMBIENCES then
 		ambienceCycle = ambience:startCycle({
@@ -139,7 +127,6 @@ Client.OnStart = function()
 
 		addCollectibles()
 		addTimers()
-		addConditionalAreas()
 
 		print(Player.Username .. " joined!")
 	end)
@@ -158,10 +145,8 @@ Client.OnStart = function()
 	end)
 	LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function()
 		multi:action("updateAvatar")
-		require("api").getAvatar(Player.Username, function(err, data)
-			if not err then
-				avatarCache = data
-			end
+		require("api").getAvatar(Player.Username, function(_, _)
+			-- TODO: retry on error? maybe it should be done within getAvatar
 		end)
 	end)
 	multi:onAction("updateAvatar", function(sender)
@@ -169,10 +154,8 @@ Client.OnStart = function()
 	end)
 
 	LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function()
-		require("api").getAvatar(Player.Username, function(err, data)
-			if not err then
-				avatarCache = data
-			end
+		require("api").getAvatar(Player.Username, function(_, _)
+			-- TODO: retry on error? maybe it should be done within getAvatar
 		end)
 	end)
 
@@ -214,6 +197,8 @@ local savedPositions, savedRotations = {}, {}
 local unixMilli
 local currentTime
 
+local isNight = false
+local tInCycle
 local t = 0
 Client.Tick = function(dt)
 	if not localPlayerShown then
@@ -237,20 +222,32 @@ Client.Tick = function(dt)
 	unixMilli = Time.UnixMilli() / 1000.0
 	currentTime = unixMilli % TIME_CYCLE_DURATION
 
+	tInCycle = currentTime / TIME_CYCLE_DURATION
+
 	if townhallHourHand ~= nil then
 		-- rotation 0 -> 9, -math.pi * 0.5 -> 12
 		-- mid-day -> 35% of TIME_CYCLE_DURATION
 		-- 0% of TIME_CYCLE_DURATION = -70% of 12h
 		-- Rotation(math.pi * (-0.5 + 2 * 0.7 - 2 * 2 * currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallHourHand.LocalRotation =
-			Rotation(math.pi * (HOUR_HAND_OFFSET - 4 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallHourHand.LocalRotation = Rotation(math.pi * (HOUR_HAND_OFFSET - 4 * tInCycle), 0, 0)
 	end
 
 	if townhallMinuteHand ~= nil then
 		-- rotation 0 -> 12
 		-- Rotation(math.pi * (2 * 0.7 - 2 * 2 * 12 currentTime / TIME_CYCLE_DURATION), 0, 0)
-		townhallMinuteHand.LocalRotation =
-			Rotation(math.pi * (MINUTE_HAND_OFFSET - 48 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallMinuteHand.LocalRotation = Rotation(math.pi * (MINUTE_HAND_OFFSET - 48 * tInCycle), 0, 0)
+	end
+
+	if isNight then
+		if tInCycle > TIME_TO_DAYBREAK and tInCycle < TIME_TO_NIGHTFALL then
+			isNight = false
+			LocalEvent:Send("Day")
+		end
+	else
+		if tInCycle > TIME_TO_NIGHTFALL or tInCycle < TIME_TO_DAYBREAK then
+			isNight = true
+			LocalEvent:Send("Night")
+		end
 	end
 
 	if not DEBUG_AMBIENCES then
@@ -300,9 +297,6 @@ Client.OnWorldObjectLoad = function(obj)
 	toast = require("ui_toast")
 	bundle = require("bundle")
 	avatar = require("avatar")
-	ui = require("uikit")
-
-	local PET_TRIGGER_OFFSET = Number3(3, 0, 3) * MAP_SCALE
 
 	if obj.Name == "voxels.windmill" then
 		setupBuilding(obj)
@@ -310,15 +304,17 @@ Client.OnWorldObjectLoad = function(obj)
 		obj.Wheel.Tick = function(self, dt)
 			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
-		_interactiveElements.windmill = obj
 	elseif obj.Name == "voxels.home_1" then
 		setupBuilding(obj)
 	elseif obj.Name == "voxels.city_lamp" then
 		obj.Shadow = true
 		local light = obj:GetChild(1)
 		light.IsUnlit = false
-		LocalEvent:Listen("Night", function(data)
-			light.IsUnlit = data.isNight
+		LocalEvent:Listen("Night", function(_)
+			light.IsUnlit = true
+		end)
+		LocalEvent:Listen("Day", function(_)
+			light.IsUnlit = false
 		end)
 	elseif obj.Name == "voxels.simple_lighthouse" then
 		setupBuilding(obj)
@@ -331,10 +327,10 @@ Client.OnWorldObjectLoad = function(obj)
 		lightRay.IsUnlit = true
 		lightRay.Palette[1].Color.A = 20
 		lightRay.IsHidden = true
-		LocalEvent:Listen("Night", function(data)
-			--lightFire.IsHidden = not data.isNight
-			--lightRay.IsHidden = not data.isNight
-		end)
+		-- LocalEvent:Listen("Night", function(_)
+		-- 	--lightFire.IsHidden = not data.isNight
+		-- 	--lightRay.IsHidden = not data.isNight
+		-- end)
 	elseif obj.Name == "voxels.townhall" then
 		setupBuilding(obj)
 
@@ -343,8 +339,6 @@ Client.OnWorldObjectLoad = function(obj)
 
 		townhallMinuteHand = obj.Minute
 		townhallMinuteHand.Pivot = { 0.5, 0.5, 0.5 }
-
-		_interactiveElements.townhall = obj
 	elseif obj.Name == "voxels.water_fountain" then
 		local w = obj:GetChild(1) -- water
 		w.Physics = PhysicsMode.Disabled
@@ -521,32 +515,6 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 		end
 		animatePortal(obj)
-		_interactiveElements.portal = obj
-	elseif obj.Name == "voxels.solo_computer" then
-		obj.trigger = _helpers.addTriggerArea(obj)
-		obj.trigger.OnCollisionBegin = function(self, other)
-			if other ~= Player then
-				return
-			end
-			self.toast = toast:create({
-				message = "Interact with the computer to change the time",
-				center = false,
-				iconShape = bundle.Shape("voxels.solo_computer"),
-				duration = -1, -- negative duration means infinite
-			})
-			obj.interactionAvailable = true
-		end
-		obj.trigger.OnCollisionEnd = function(self, other)
-			if other ~= Player then
-				return
-			end
-			if self.toast ~= nil then
-				self.toast:remove()
-				self.toast = nil
-			end
-			obj.interactionAvailable = false
-		end
-		_interactiveElements.solo_computer = obj
 	elseif obj.Name == "pet_npc" then
 		obj = _helpers.replaceWithAvatar(obj, "voxels")
 		obj.OnCollisionBegin = function(self, other)
@@ -570,7 +538,7 @@ Client.OnWorldObjectLoad = function(obj)
 	elseif obj.Name == "pet_bird" or obj.Name == "pet_gator" or obj.Name == "pet_ram" then
 		obj.initialForward = obj.Forward:Copy()
 		obj.Physics = PhysicsMode.Disabled
-		obj.trigger = _helpers.addTriggerArea(obj, Box(obj.Min - PET_TRIGGER_OFFSET, obj.Max + PET_TRIGGER_OFFSET))
+		obj.trigger = _helpers.addTriggerArea(obj)
 		obj.trigger.OnCollisionBegin = function(_, other)
 			if other ~= Player then
 				return
@@ -591,9 +559,6 @@ Client.OnWorldObjectLoad = function(obj)
 			obj:GetChild(i).Physics = PhysicsMode.Disabled
 			obj.Palette[1].Color.A = 20
 		end
-		_interactiveElements.pet_spawner = obj
-	elseif obj.Name == "pet_computer" then
-		_interactiveElements.pet_computer = obj
 	end
 
 	if obj.fullname ~= nil then
@@ -720,25 +685,6 @@ Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
 	dialog:complete()
-
-	if Player.pet ~= nil then
-		local impact = pe:CastRay(pet.model)
-		if impact ~= nil then
-			if pet.level < 0 then
-				if pet.readyToHatch then
-					radial = radialMenu.create(pet.levelUpMenu)
-				else
-					radial = radialMenu.create(pet.timerMenu)
-				end
-			else
-				radial = radialMenu.create(pet.mainMenu)
-			end
-		else
-			if radial ~= nil then
-				radialMenu.remove()
-			end
-		end
-	end
 
 	if DEBUG_ITEMS then
 		local impact = pe:CastRay(ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS)
@@ -1020,7 +966,16 @@ _helpers.replaceWithAvatar = function(obj, name)
 	o.Position = obj.Position
 	o.Scale = obj.Scale
 	o.Physics = PhysicsMode.Trigger
-	o.CollisionBox = Box({ -30, 0, -30 }, { 30, 25, 30 })
+
+	o.CollisionBox = Box({
+		-TRIGGER_AREA_SIZE.Width * 0.5,
+		math.min(-TRIGGER_AREA_SIZE.Height, o.CollisionBox.Min.Y),
+		-TRIGGER_AREA_SIZE.Depth * 0.5,
+	}, {
+		TRIGGER_AREA_SIZE.Width * 0.5,
+		math.max(TRIGGER_AREA_SIZE.Height, o.CollisionBox.Max.Y),
+		TRIGGER_AREA_SIZE.Depth * 0.5,
+	})
 	o.CollidesWithGroups = { 2 }
 	o.CollisionGroups = {}
 
@@ -1046,7 +1001,18 @@ _helpers.addTriggerArea = function(obj, box, offset)
 	o.Physics = PhysicsMode.Trigger
 	o.CollidesWithGroups = { 2 }
 	o.CollisionGroups = {}
-	o.CollisionBox = box ~= nil and box or obj.BoundingBox
+	o.CollisionBox = box ~= nil and box
+		or (
+			Box({
+				-TRIGGER_AREA_SIZE.Width * 0.5,
+				math.min(-TRIGGER_AREA_SIZE.Height, o.CollisionBox.Min.Y),
+				-TRIGGER_AREA_SIZE.Depth * 0.5,
+			}, {
+				TRIGGER_AREA_SIZE.Width * 0.5,
+				math.max(TRIGGER_AREA_SIZE.Height, o.CollisionBox.Max.Y),
+				TRIGGER_AREA_SIZE.Depth * 0.5,
+			})
+		)
 	o.Position = offset ~= nil and (obj.Position + offset) or (obj.Position - obj.Pivot * 0.5)
 	return o
 end
@@ -1158,22 +1124,22 @@ dusk = {
 
 night = {
 	sky = {
-		skyColor = Color(26, 7, 86),
-		horizonColor = Color(120, 26, 123),
-		abyssColor = Color(28, 23, 153),
-		lightColor = Color(38, 2, 59),
+		skyColor = Color(1, 3, 50),
+		horizonColor = Color(70, 64, 146),
+		abyssColor = Color(64, 117, 190),
+		lightColor = Color(69, 80, 181),
 		lightIntensity = 0.600000,
 	},
 	fog = {
-		color = Color(14, 3, 75),
-		near = 300,
+		color = Color(89, 28, 112),
+		near = 310,
 		far = 700,
-		lightAbsorbtion = 0.400000,
+		lightAbsorbtion = 0.310000,
 	},
 	sun = {
-		color = Color(18, 22, 106),
+		color = Color(107, 65, 200),
 		intensity = 1.000000,
-		rotation = Rotation(math.rad(0), math.rad(0), 0),
+		rotation = Rotation(1.061161, 3.089219, 0.000000),
 	},
 	ambient = {
 		skyLightFactor = 0.100000,
@@ -1837,194 +1803,9 @@ function addCollectibles()
 	t.get()
 end
 
--- POC
-addConditionalAreas = function()
-	townhallDoor = MutableShape()
-	townhallDoor:AddBlock(Color(255, 255, 255, 120), 0, 0, 0)
-	townhallDoor.Scale = Number3(4, 6, 0.5) * MAP_SCALE
-	townhallDoor.Pivot = Number3(0.5, 0, 0)
-	townhallDoor.Position = { 434.5, 78, 351 }
-	townhallDoor.Rotation = { 0, math.pi / 2, 0 }
-	townhallDoor:SetParent(World)
-	townhallDoor.PrivateDrawMode = 2
+-- CREATURES
 
-	tuxedoJacket = Shape(Items.claire.tuxedo)
-	tuxedoJacket:SetParent(World)
-	tuxedoJacket.basePos = Number3(434.5, 90, 351)
-	tuxedoJacket.Position = Number3(434.5, 90, 351)
-	tuxedoJacket.Scale = { 0.5, 0.5, 0.5 }
-	tuxedoJacket.Rotation = { 0, -math.pi / 2, 0 }
-	tuxedoJacket.Physics = PhysicsMode.Disabled
-
-	townhallDoor.OnCollisionBegin = function(self, other)
-		if other == Player and avatarCache.jacket == "claire.tuxedo" then
-			self.Physics = PhysicsMode.Trigger
-			dialog:create("Looking smart!", Number3(434.5, 94, 351))
-			collectParticles.Position = tuxedoJacket.Position
-			collectParticles:spawn(10)
-			tuxedoJacket.IsHidden = true
-			self.IsHidden = true
-			self.OnCollisionBegin = nil
-		else
-			vfx.shake(tuxedoJacket)
-			townhallDoor.PrivateDrawMode = 0
-			dialog:create("There is a fancy party going on inside, you need to dress up!.", Number3(434.5, 94, 351))
-		end
-	end
-	townhallDoor.OnCollisionEnd = function(_, other)
-		if other == Player then
-			Timer(1, function()
-				dialog:remove()
-			end)
-			if avatar.jacket ~= "claire.tuxedo" then
-				townhallDoor.PrivateDrawMode = 2
-			end
-		end
-	end
-end
-
-------------------------
---- CREATURES
-------------------------
 pet = {}
-pet.list = {
-	{
-		name = "Ramona",
-		description = "Quite ill tempered but fluffier than your wildest dreams",
-		eggColor = Color(62, 77, 87),
-		modelName = "ram_pet",
-	},
-	{
-		name = "Touclass",
-		description = "Their feathers produce unique colors and flow small amounts of ink from their stem",
-		eggColor = Color(99, 149, 206),
-		modelName = "bird_pet",
-	},
-	{
-		name = "Crocodingo",
-		description = "Always hungry. Strangely enough though they only eat carrots",
-		eggColor = Color(69, 112, 69),
-		modelName = "reptile_pet",
-	},
-}
-
-pet.followPlayer = function(self)
-	local diff = Player.Position - self.model.Position
-	local diffSqr = diff.SquaredLength
-	if diffSqr > MAX_PLAYER_DISTANCE_SQR then
-		if self.model.IsOnGround then
-			self.onGround = true
-		end
-		if self.onGround then
-			sfx("button_1", { Position = self.model.Position, Volume = 0.9, Pitch = 1.8 + math.random() * 0.7 })
-			self.onGround = false
-			diff.Y = 0
-			diff.Length = math.min(30, diff.Length)
-			self.model.Velocity = Number3.Up * 30.0 + diff
-			_helpers.lookAt(self.model, Player)
-		end
-	else
-		if math.random() > 0.999 then
-			local messages = {
-				"❤️❤️❤️",
-				"✨✨✨",
-				"🙂🙂🙂",
-			}
-			dialog:create(messages[math.random(1, #messages)], self.model)
-			Timer(3, function()
-				dialog:remove()
-			end)
-		end
-	end
-end
-pet.pet = function()
-	--Coming soon
-end
-pet.feed = function()
-	--Coming soon
-end
-pet.heal = function()
-	--Coming soon
-end
-pet.levelUp = function(self)
-	self.level = self.level + 1
-
-	if self.level == 0 then
-		self:setModel(Items.voxels[self.type.modelName])
-		self:setPetMenus()
-	end
-
-	if radial ~= nil then
-		radialMenu.create(self.mainMenu)
-	end
-end
-pet.updateHatchTimer = function(self)
-	local hatchT = self.pickedAt + TIME_TO_HATCH
-	self.remaining = hatchT - Time.Unix()
-	if self.remaining <= 0 then
-		self.remaining = 0
-	end
-end
-pet.dialogTree = function(self, target)
-	if Player.egg ~= nil or Player.pet ~= nil then
-		if self.level ~= nil and self.level < 0 then
-			dialog:create("How are things? Have you tried clicking on the egg?", target)
-		else
-			local messages = {
-				"Seems like you got a " .. pet.type.name .. ".\n" .. pet.type.description,
-				"The farm and mill can produce grain and veggies for your companion!",
-				"I'm sure you're going to be a great caregiver!",
-			}
-			dialog:create(messages[math.random(1, #messages)], target)
-		end
-	else
-		dialog:create(
-			"Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a companion! ✨",
-			target,
-			{ "➡️ Yes of course!", "➡️ No thank you" },
-			function(idx)
-				if idx == 1 then
-					dialog:create(
-						"This machine here can spawn a random egg for you, containing a loving companion!",
-						target,
-						{ "➡️ Ok!" },
-						function()
-							dialog:create("Alright, let me calibrate it for you", target, { "➡️ Ok!" }, function()
-								dialog:create(
-									"*mumbles*... carry the 2... moon in ascending position... cosinus... wait no, sinus...",
-									target,
-									{ "➡️ ..." },
-									function()
-										Player.egg = pet:spawnRandomEgg()
-										_helpers.lookAt(target, Player)
-										dialog:create(
-											"Done! Step on the platform to claim your companion!",
-											target,
-											{ "➡️ On my way!" },
-											function()
-												dialog:remove()
-											end
-										)
-									end
-								)
-							end)
-							_helpers.lookAt(target, _interactiveElements.pet_computer)
-						end
-					)
-				elseif idx == 2 then
-					dialog:create(
-						"Oh, I could swear you would like a small friend around. Come back if you change your mind!",
-						target,
-						{ "➡️ Ok!" },
-						function()
-							dialog:remove()
-						end
-					)
-				end
-			end
-		)
-	end
-end
 pet.dialogTreeTeaser = function(_, target)
 	dialog:create(
 		"Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a companion! ✨",
@@ -2060,160 +1841,3 @@ pet.dialogTreeTeaser = function(_, target)
 		end
 	)
 end
-pet.setPetMenus = function(self)
-	self.timerMenu = {
-		target = self.model,
-		offset = { 0, self.model.Height * 0.5, 0 },
-		nodes = {
-			{
-				type = "text",
-				text = "00:00",
-				angle = 90,
-				radius = 80,
-				tick = function(o, _)
-					if self.remaining <= 0 and not self.readyToHatch then
-						LocalEvent:Send("readyToHatch")
-						return
-					end
-					local minutes = math.floor(self.remaining / 60)
-					local seconds = self.remaining % 60
-					o.txt.Text = string.format("%02d:%02d", minutes, seconds)
-					o:contentDidResize()
-				end,
-			},
-			{
-				type = "button",
-				text = "❌",
-				angle = -90,
-				radius = 80,
-				onRelease = radialMenu.remove,
-			},
-		},
-	}
-	self.levelUpMenu = {
-		target = self.model,
-		offset = { 0, self.model.Height * 0.5, 0 },
-		nodes = {
-			{
-				type = "button",
-				text = "⬆️ Up",
-				angle = 90,
-				radius = 80,
-				onRelease = function()
-					self:levelUp()
-				end,
-			},
-			{
-				type = "button",
-				text = "❌",
-				angle = -90,
-				radius = 80,
-				onRelease = radialMenu.remove,
-			},
-		},
-	}
-	self.mainMenu = {
-		target = self.model,
-		offset = { 0, self.model.Height * 0.5, 0 },
-		nodes = {
-			{
-				type = "button",
-				text = "👄",
-				angle = 45,
-				radius = 80,
-				onRelease = self.feed,
-			},
-			{
-				type = "button",
-				text = "❤️",
-				angle = 90,
-				radius = 80,
-				onRelease = self.pet,
-			},
-			{
-				type = "button",
-				text = "🧪",
-				angle = 135,
-				radius = 80,
-				onRelease = self.heal,
-			},
-			{
-				type = "button",
-				text = "❌",
-				angle = -90,
-				radius = 80,
-				onRelease = radialMenu.remove,
-			},
-		},
-	}
-end
-pet.spawnRandomEgg = function(self)
-	self.type = self.list[math.random(1, #pet.list)]
-
-	s = MutableShape(Items.aduermael.mob_egg)
-	s:SetParent(World)
-	s.Physics = PhysicsMode.Static
-	s.Palette[2].Color = self.type.eggColor
-	s.Position = _interactiveElements.pet_spawner.Position + { 0, 2 * MAP_SCALE, 0 }
-	s.basePos = s.Position:Copy()
-	s.CollisionGroups = {}
-	s.CollidesWithGroups = { 2 }
-	s.t = 0
-	s.lstnr = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		s.t = s.t + dt
-		s.Position.Y = s.basePos.Y + math.sin(s.t)
-		s:RotateLocal(0, dt, 0)
-	end)
-	s.Scale = 0
-	ease:outBack(s, 0.3).Scale = Number3(0.5, 0.5, 0.5)
-
-	s.OnCollisionBegin = function(self, other)
-		if other == Player then
-			self.lstnr:Remove()
-			self.OnCollisionBegin = nil
-			pet:setModel(self)
-
-			pet.level = -1
-			pet.pickedAt = Time.Unix()
-			pet.remaining = TIME_TO_HATCH
-			Player.pet = pet
-			pet:setPetMenus()
-		end
-	end
-
-	return true
-end
-pet.setModel = function(self, itemNameOrShape)
-	local s = nil
-	if type(itemNameOrShape) == "MutableShape" or type(itemNameOrShape) == "Shape" then
-		s = itemNameOrShape
-	else
-		s = MutableShape(itemNameOrShape)
-	end
-
-	s:SetParent(World)
-	s.Physics = PhysicsMode.Dynamic
-	s.CollisionGroups = {}
-	s.CollidesWithGroups = { 1, 3 }
-	s.Pivot = (s.BoundingBox.Max - s.BoundingBox.Min) * 0.5
-
-	if self.model ~= nil then --if there's already an egg or previous form
-		s.Position = self.model.Position
-		self.model:RemoveFromParent()
-	else --for the egg
-		s.Position = _interactiveElements.pet_spawner.Position + { 0, 2 * MAP_SCALE, 0 }
-	end
-
-	collectParticles.Position = s.Position
-	collectParticles:spawn(20)
-	s.Scale = 0
-	ease:outBack(s, 0.3).Scale = Number3(0.5, 0.5, 0.5)
-
-	self.model = s
-end
-pet.hatchListener = LocalEvent:Listen("readyToHatch", function()
-	pet.readyToHatch = true
-	if radial ~= nil then
-		radialMenu.create(pet.levelUpMenu)
-	end
-end)
