@@ -1120,11 +1120,26 @@ function createUI(system)
 		end
 
 		local cursor = node.cursor
+		local nbSpaces = 0
+		local spacesWidth = 0
 
 		if #str.Text > 0 then
 			placeholder:hide()
 		else
 			placeholder:show()
+
+			for c = #str.Text, 1, -1 do
+				if c ~= " " then
+					break
+				end
+				nbSpaces = nbSpaces + 1
+			end
+		end
+
+		if nbSpaces >= 1 then
+			local singleChar = ui:createText("a")
+			spacesWidth = singleChar.Width * nbSpaces
+			singleChar:remove()
 		end
 
 		local h
@@ -1158,7 +1173,7 @@ function createUI(system)
 			if hiddenStr ~= nil and hiddenStr:isVisible() then
 				cursor.pos = hiddenStr.pos + { hiddenStr.Width, 0, 0 }
 			else
-				cursor.pos = str.pos + { str.Width, 0, 0 }
+				cursor.pos = str.pos + { str.Width + spacesWidth, 0, 0 }
 			end
 		else
 			cursor:hide()
