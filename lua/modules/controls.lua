@@ -321,6 +321,7 @@ local _getOrCreateIndicator = function(index)
 	indicatorShape:GetBlock(sizeMinusOne - 1, sizeMinusOne - 1, 0):Replace(framePaletteIndex)
 	indicator = ui:createShape(indicatorShape, { doNotFlip = true })
 
+	indicator.pivot.Scale = TOUCH_INDICATOR_SCALE
 	indicatorShape.Physics = PhysicsMode.Disabled
 	_state.indicators[index] = indicator
 
