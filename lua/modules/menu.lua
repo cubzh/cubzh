@@ -1729,30 +1729,30 @@ menu.ShowProfile = function(_)
 	return true
 end
 
----@function ShowFaceEdit Shows local user profile menu to edit face if possible. (if user is authenticated, and menu not already active)
+---@function ShowProfileFace Shows local user profile menu to edit face if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
 ---@code local menu = require("menu")
---- menu:ShowFaceEdit() -- shows local user profile menu, on edit face tab
+--- menu:ShowProfileFace() -- shows local user profile menu, on edit face tab
 ---@return boolean
-menu.ShowFaceEdit = function(_)
+menu.ShowProfileFace = function(_)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	local _,content = showModal(MODAL_KEYS.PROFILE)
+	local _, content = showModal(MODAL_KEYS.PROFILE)
 	content:showFaceEdit()
 	return true
 end
 
----@function ShowWearablesEdit Shows local user profile menu to edit wearables if possible. (if user is authenticated, and menu not already active)
+---@function ShowProfileWearables Shows local user profile menu to edit wearables if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
 ---@code local menu = require("menu")
---- menu:ShowWearablesEdit() -- shows local user profile menu, on edit wearables tab
+--- menu:ShowProfileWearables() -- shows local user profile menu, on edit wearables tab
 ---@return boolean
-menu.ShowWearablesEdit = function(_)
+menu.ShowProfileWearables = function(_)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	local _,content = showModal(MODAL_KEYS.PROFILE)
+	local _, content = showModal(MODAL_KEYS.PROFILE)
 	content:showWearablesEdit()
 	return true
 end
