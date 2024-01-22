@@ -135,6 +135,11 @@ HitType scene_cast_ray(Scene *sc,
                        uint16_t groups,
                        const DoublyLinkedList *filterOutTransforms,
                        CastResult *result);
+size_t scene_cast_all_ray(Scene *sc,
+                          const Ray *worldRay,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results);
 Block *scene_cast_ray_shape_only(Scene *sc,
                                  const Shape *sh,
                                  const Ray *worldRay,

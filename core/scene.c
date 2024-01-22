@@ -694,6 +694,98 @@ HitType scene_cast_ray(Scene *sc,
     return hit.type;
 }
 
+size_t scene_cast_all_ray(Scene *sc,
+                          const Ray *worldRay,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results) {
+
+    if (worldRay == NULL || results == NULL || groups == PHYSICS_GROUP_NONE) {
+        return 0;
+    }
+
+    DoublyLinkedList *sceneQuery = doubly_linked_list_new();
+    size_t count = 0;
+    if (rtree_query_cast_all_ray(sc->rtree,
+                                 worldRay,
+                                 PHYSICS_GROUP_NONE,
+                                 groups,
+                                 filterOutTransforms,
+                                 sceneQuery) > 0) {
+
+        // process query results to confirm intersections w/ per-block and rotated colliders
+        DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
+        RtreeCastResult *rtreeHit;
+        Transform *hitTr;
+        RigidBody *hitRb;
+        CastResult *hit;
+        while (n != NULL) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+            hitRb = transform_get_rigidbody(hitTr);
+            hit = NULL;
+
+            const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+
+            if (mode == RigidbodyMode_Dynamic) {
+                hit = (CastResult *)malloc(sizeof(CastResult));
+                hit->hitTr = hitTr;
+                hit->distance = rtreeHit->distance;
+                hit->type = Hit_CollisionBox;
+            } else if (transform_get_type(hitTr) == ShapeTransform &&
+                       rigidbody_uses_per_block_collisions(transform_get_rigidbody(hitTr))) {
+
+                CastResult blockHit;
+                if (scene_cast_ray_shape_only(sc,
+                                              transform_utils_get_shape(hitTr),
+                                              worldRay,
+                                              &blockHit)) {
+                    hit = (CastResult *)malloc(sizeof(CastResult));
+                    *hit = blockHit;
+                }
+            } else {
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                const Box *collider = rigidbody_get_collider(hitRb);
+                Transform *modelTr = transform_get_type(hitTr) == ShapeTransform
+                                         ? shape_get_pivot_transform(
+                                               transform_utils_get_shape(hitTr))
+                                         : hitTr;
+                Ray *modelRay = ray_world_to_local(worldRay, modelTr);
+
+                float distance;
+                if (ray_intersect_with_box(modelRay, &collider->min, &collider->max, &distance)) {
+                    const float3 modelVector = {modelRay->dir->x * distance,
+                                                modelRay->dir->y * distance,
+                                                modelRay->dir->z * distance};
+                    float3 worldVector;
+                    transform_utils_vector_ltw(modelTr, &modelVector, &worldVector);
+
+                    hit = (CastResult *)malloc(sizeof(CastResult));
+                    hit->hitTr = hitTr;
+                    hit->distance = float3_length(&worldVector);
+                    hit->type = Hit_CollisionBox;
+                }
+
+                ray_free(modelRay);
+            }
+
+            if (hit != NULL) {
+                doubly_linked_list_push_last(results, hit);
+                ++count;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+    }
+    doubly_linked_list_flush(sceneQuery, free);
+    doubly_linked_list_free(sceneQuery);
+
+    // sort query results by distance
+    doubly_linked_list_sort_ascending(results, rtree_utils_result_sort_func);
+
+    return count;
+}
+
 Block *scene_cast_ray_shape_only(Scene *sc,
                                  const Shape *sh,
                                  const Ray *worldRay,
