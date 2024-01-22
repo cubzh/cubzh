@@ -307,7 +307,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 			textBg:show()
 
-			cell.onClick = function()
+			cell.onRelease = function()
 				local profileContent = require("profile"):create({
 					isLocal = false,
 					username = user.username,
