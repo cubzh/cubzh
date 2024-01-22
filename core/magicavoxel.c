@@ -771,7 +771,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
                 err = invalid_format;
                 break;
             }
-            
+
             int nbColors = minimum(current_chunk_content_bytes / 4, VOX_MAX_NB_COLORS);
 
             for (int i = 0; i < nbColors; i++) {
