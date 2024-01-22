@@ -440,7 +440,7 @@ Client.OnWorldObjectLoad = function(obj)
 				duration = -1, -- negative duration means infinite
 				actionText = "Let's do this!",
 				action = function()
-					Menu:ShowProfile()
+					Menu:ShowProfileWearables()
 				end,
 			})
 		end
@@ -897,7 +897,7 @@ addTimers = function()
 						closeButton = true,
 						actionText = "Ok!",
 						action = function(self)
-							Menu:ShowProfile()
+							Menu:ShowProfileWearables()
 							self:remove()
 						end,
 					})

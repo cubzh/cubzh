@@ -1171,11 +1171,13 @@ profile.create = function(_, config)
 		editFaceBtn:disable()
 		editFaceBtn:hide()
 		editFaceBtn.onRelease = editFaceBtnOnReleaseCallback
+		content.showFaceEdit = editFaceBtnOnReleaseCallback
 
 		editOutfitBtn = ui:createButton("👤")
 		editOutfitBtn:disable()
 		editOutfitBtn:hide()
 		editOutfitBtn.onRelease = editOutfitBtnOnReleaseCallback
+		content.showWearablesEdit = editOutfitBtnOnReleaseCallback
 
 		local coinsBtn = ui:createButton("💰 …", { sound = "coin_1" })
 		coinsBtn.onRelease = function(_)
