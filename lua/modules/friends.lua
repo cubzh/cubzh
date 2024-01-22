@@ -36,7 +36,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		received = {},
 		sent = {},
 		friends = {},
-		search = {}
+		search = {},
 	}
 
 	local requests = {}
@@ -60,7 +60,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cancelRequests()
 		node.screenDidResizeListener:Remove()
 		node.screenDidResizeListener = nil
-		if helpPointer then helpPointer:remove() helpPointer = nil end
+		if helpPointer then
+			helpPointer:remove()
+			helpPointer = nil
+		end
 	end
 
 	local retrieveFriendsLists = function(_searchText, keepScrollPosition)
@@ -72,7 +75,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			received = {},
 			sent = {},
 			friends = {},
-			search = {}
+			search = {},
 		}
 		node:resetList()
 		keepScrollPosition = keepScrollPosition or false
@@ -80,21 +83,29 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local function newListResponse(name, list)
 			lists[name] = list or {}
 			nbListsRetrieved = nbListsRetrieved + 1
-			if nbListsRetrieved < nbLists then return end
+			if nbListsRetrieved < nbLists then
+				return
+			end
 			if searchText and #searchText > 0 then
 				-- filter out search list
 				-- remove this part once backend handles that
-				for k=#lists.search,1,-1 do
+				for k = #lists.search, 1, -1 do
 					local user = lists.search[k]
 					local idFound = false
-					for _,v in ipairs(lists.friends) do
-						if v.id == user.id then idFound = true end
+					for _, v in ipairs(lists.friends) do
+						if v.id == user.id then
+							idFound = true
+						end
 					end
-					for _,v in ipairs(lists.received) do
-						if v.id == user.id then idFound = true end
+					for _, v in ipairs(lists.received) do
+						if v.id == user.id then
+							idFound = true
+						end
 					end
-					for _,v in ipairs(lists.sent) do
-						if v.id == user.id then idFound = true end
+					for _, v in ipairs(lists.sent) do
+						if v.id == user.id then
+							idFound = true
+						end
 					end
 					if idFound then
 						table.remove(lists.search, k)
@@ -239,7 +250,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	node.screenDidResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
 		cellWidth, cellHeight = computeCellSize()
 		node:resetList()
-	end, { topPriority = true } )
+	end, { topPriority = true })
 
 	local createFriendCell = function(config)
 		local forceWidth = config.width
@@ -247,7 +258,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		local cell = ui:createFrame(Color(63, 63, 63))
 
-		local textBg = ui:createFrame(Color(0,0,0,0.5))
+		local textBg = ui:createFrame(Color(0, 0, 0, 0.5))
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White)
 		textName:setParent(textBg)
@@ -258,7 +269,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local btnConfig = {
 			borders = false,
 			shadow = false,
-			textSize = "small"
+			textSize = "small",
 		}
 		local btnLeft = ui:createButton("", btnConfig)
 		btnLeft:setParent(textBg)
@@ -278,7 +289,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			end
 
 			if avatarLand and avatarLand.Width then
-				avatarLand.pos = { cell.Width * 0.5 - avatarLand.Width * 0.5, cell.Height * 0.5 - avatarLand.Height * 0.5 - 20 }
+				avatarLand.pos =
+					{ cell.Width * 0.5 - avatarLand.Width * 0.5, cell.Height * 0.5 - avatarLand.Height * 0.5 - 20 }
 			end
 
 			textName.pos = { padding, btnLeft.Height + padding }
@@ -288,7 +300,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		cell.setUser = function(_, user)
-			if not user or not user.username then cell:hide() return end
+			if not user or not user.username then
+				cell:hide()
+				return
+			end
 
 			textBg:show()
 
@@ -314,7 +329,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				avatarLand = ui:createShape(obj)
 				avatarLand:setParent(cell)
 				obj.Rotation.Y = math.pi / 4
-				obj:RotateWorld(Number3(1,0,0), math.pi / -6)
+				obj:RotateWorld(Number3(1, 0, 0), math.pi / -6)
 				obj.Scale = 3
 				avatarLand.LocalPosition.Z = -50
 				if cell.parentDidResize then
@@ -457,10 +472,12 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		local width = node.Width
-		local nbCells = math.min(Client.IsMobile and 4 or 2,math.floor(width / cellWidth))
+		local nbCells = math.min(Client.IsMobile and 4 or 2, math.floor(width / cellWidth))
 
 		local firstUserCell, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
-		if not firstUserCell then return end
+		if not firstUserCell then
+			return
+		end
 
 		local prevFirstCellUserType
 		if cellId > 1 then
@@ -478,7 +495,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				friends = "Friends (%d)",
 				received = "Pending Requests (%d)",
 				sent = "Sent Requests (%d)",
-				search = "Search (%d)"
+				search = "Search (%d)",
 			}
 			local titleStr = titles[firstCellType]
 			if titleStr then
@@ -495,10 +512,14 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		-- Stretch width to fit the full length
 		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * 3 * padding) / nbCells)
-		for i=1,nbCells do
-			local cell = createFriendCell({ width = realCellWidth, height = cellHeight})
+		for i = 1, nbCells do
+			local cell = createFriendCell({ width = realCellWidth, height = cellHeight })
 			line:pushElement(cell)
-			if i < nbCells then line:pushGap() line:pushGap() line:pushGap() end
+			if i < nbCells then
+				line:pushGap()
+				line:pushGap()
+				line:pushGap()
+			end
 
 			local user, cellType = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
 			if user then
@@ -520,17 +541,20 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cellPadding = 5,
 		loadCell = loadLine,
 		unloadCell = unloadLine,
-		uikit = uikit or require("uikit")
+		uikit = uikit or require("uikit"),
 	}
 
-	scroll = ui:createScrollArea(Color(20,20,20), config)
+	scroll = ui:createScrollArea(Color(20, 20, 20), config)
 	scroll:setParent(node)
 	node.scroll = scroll
 
 	node.resetList = function(keepScrollPosition)
 		local scrollPosition = keepScrollPosition and scroll.scrollPosition or 0
 		scroll:flush()
-		if helpPointer then helpPointer:remove() helpPointer = nil end
+		if helpPointer then
+			helpPointer:remove()
+			helpPointer = nil
+		end
 		scroll:setScrollPosition(scrollPosition)
 	end
 
