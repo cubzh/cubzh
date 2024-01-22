@@ -60,6 +60,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cancelRequests()
 		node.screenDidResizeListener:Remove()
 		node.screenDidResizeListener = nil
+		if helpPointer then helpPointer:remove() helpPointer = nil end
 	end
 
 	local retrieveFriendsLists = function(_searchText, keepScrollPosition)
@@ -80,7 +81,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			lists[name] = list or {}
 			nbListsRetrieved = nbListsRetrieved + 1
 			if nbListsRetrieved < nbLists then return end
-			if searchText then
+			if searchText and #searchText > 0 then
 				-- filter out search list
 				-- remove this part once backend handles that
 				for k=#lists.search,1,-1 do
@@ -176,8 +177,26 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local getSearchBar = function()
+		local searchBarContainer = ui:createFrame()
 		local textInput = ui:createTextInput("", "🔎 search...")
-		textInput.Width = 200
+		searchBar = textInput
+		textInput:setParent(searchBarContainer)
+		local cancelSearch = ui:createButton("X")
+		cancelSearch:setParent(searchBarContainer)
+		cancelSearch.onRelease = function()
+			textInput.Text = ""
+			retrieveFriendsLists(textInput.Text, false)
+		end
+
+		searchBarContainer.parentDidResize = function()
+			searchBarContainer.Width = searchBarContainer.parent.Width
+			searchBarContainer.Height = textInput.Height
+			cancelSearch.Height = textInput.Height
+			cancelSearch.Width = cancelSearch.Height
+			cancelSearch.pos = { searchBarContainer.Width - cancelSearch.Width, 0 }
+			textInput.Width = searchBarContainer.Width - cancelSearch.Width
+		end
+
 		node.searchTimer = nil
 
 		textInput.onTextChange = function(_)
@@ -185,13 +204,13 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				node.searchTimer:Cancel()
 			end
 
-			node.searchTimer = Timer(0.2, function()
+			node.searchTimer = Timer(0.3, function()
 				cancelRequests()
 				node.searchTimer = nil
 				retrieveFriendsLists(textInput.Text, false)
 			end)
 		end
-		return textInput
+		return searchBarContainer
 	end
 
 	local searchBar = getSearchBar()
@@ -422,11 +441,15 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			if cellId == 1 then
 				local container = ui:createFrame()
 				local isSearch = searchText and #searchText > 0
+				if not isSearch and searchBar then
+					helpPointer = helpPointer or require("ui_pointer"):create({ uikit = ui })
+					helpPointer:pointAt({ target = searchBar, from = "below" })
+				end
 				local str = isSearch and "No result found." or "Invite your friends!"
 				local text = ui:createText(str, Color.White)
 				text:setParent(container)
 				container.Width = node.Width
-				container.Height = math.floor(cellHeight)
+				container.Height = math.floor(cellHeight * 1.5)
 				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
 				return container
 			end
@@ -436,7 +459,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local width = node.Width
 		local nbCells = math.min(Client.IsMobile and 4 or 2,math.floor(width / cellWidth))
 
-		local _, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
+		local firstUserCell, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
+		if not firstUserCell then return end
 
 		local prevFirstCellUserType
 		if cellId > 1 then
@@ -506,6 +530,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	node.resetList = function(keepScrollPosition)
 		local scrollPosition = keepScrollPosition and scroll.scrollPosition or 0
 		scroll:flush()
+		if helpPointer then helpPointer:remove() helpPointer = nil end
 		scroll:setScrollPosition(scrollPosition)
 	end
 

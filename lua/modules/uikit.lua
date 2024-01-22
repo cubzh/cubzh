@@ -2138,7 +2138,7 @@ function createUI(system)
 			if direction == "up" then
 				maxY = -maxY - cellPadding + node.Height - (cachedCellsHeight[#cachedCellsHeight] or 0)
 			elseif maxY > node.Height then
-				maxY = maxY - node.Height
+				maxY = maxY - node.Height + cachedCellsHeight[node.nbCells] + cellPadding
 			else -- no scroll, content is not high enough
 				maxY = 0
 			end
