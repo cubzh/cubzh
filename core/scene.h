@@ -151,6 +151,13 @@ HitType scene_cast_box(Scene *sc,
                        uint16_t groups,
                        const DoublyLinkedList *filterOutTransforms,
                        CastResult *result);
+size_t scene_cast_all_box(Scene *sc,
+                          const Box *aabb,
+                          const float3 *unit,
+                          float maxDist,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results);
 bool scene_overlap_box(Scene *sc,
                        const Box *aabb,
                        uint16_t groups,

@@ -970,6 +970,145 @@ HitType scene_cast_box(Scene *sc,
     return hit.type;
 }
 
+size_t scene_cast_all_box(Scene *sc,
+                          const Box *aabb,
+                          const float3 *unit,
+                          float maxDist,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results) {
+
+    if (aabb == NULL || unit == NULL || results == NULL || groups == PHYSICS_GROUP_NONE) {
+        return 0;
+    }
+
+    DoublyLinkedList *sceneQuery = doubly_linked_list_new();
+    size_t count = 0;
+    if (rtree_query_cast_all_box(sc->rtree,
+                                 aabb,
+                                 unit,
+                                 maxDist,
+                                 PHYSICS_GROUP_NONE,
+                                 groups,
+                                 filterOutTransforms,
+                                 sceneQuery)) {
+
+        // process query results to confirm intersections w/ per-block and rotated colliders
+        DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
+        RtreeCastResult *rtreeHit;
+        Transform *hitTr;
+        RigidBody *hitRb;
+        CastResult *hit;
+        while (n != NULL) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+            hitRb = transform_get_rigidbody(hitTr);
+            hit = NULL;
+
+            const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+
+            if (mode == RigidbodyMode_Dynamic) {
+                hit = (CastResult *)malloc(sizeof(CastResult));
+                hit->hitTr = hitTr;
+                hit->distance = rtreeHit->distance;
+                hit->type = Hit_CollisionBox;
+            } else {
+                Box modelBox, modelBroadphase;
+                float3 modelVector, modelEpsilon;
+                Shape *hitShape = transform_utils_get_shape(hitTr);
+
+                float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
+
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                const Box *collider = rigidbody_get_collider(hitRb);
+                const Matrix4x4 *invModel = transform_get_wtl(
+                    hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
+                rigidbody_broadphase_world_to_model(invModel,
+                                                    aabb,
+                                                    &modelBox,
+                                                    &vector,
+                                                    &modelVector,
+                                                    EPSILON_COLLISION,
+                                                    &modelEpsilon);
+
+                box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
+                if (box_collide(&modelBroadphase, collider)) {
+                    // shapes may enable per-block collisions
+                    if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                        Block *block = NULL;
+                        SHAPE_COORDS_INT3_T blockCoords;
+                        float3 normal;
+                        const float swept = shape_box_cast(hitShape,
+                                                           &modelBox,
+                                                           &modelVector,
+                                                           &modelEpsilon,
+                                                           false,
+                                                           &normal,
+                                                           NULL,
+                                                           &block,
+                                                           &blockCoords);
+                        if (swept < 1.0f) {
+                            float3_op_scale(&modelVector, swept);
+
+                            float3 worldVector, worldNormal;
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &modelVector,
+                                                       &worldVector);
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &normal,
+                                                       &worldNormal);
+
+                            hit = (CastResult *)malloc(sizeof(CastResult));
+                            hit->hitTr = hitTr;
+                            hit->block = block;
+                            hit->distance = float3_length(&worldVector);
+                            hit->type = Hit_Block;
+                            hit->blockCoords = blockCoords;
+                            hit->faceTouched = utils_aligned_normal_to_face(&worldNormal);
+                        }
+                    } else {
+                        const float swept = box_swept(&modelBox,
+                                                      &modelVector,
+                                                      rigidbody_get_collider(hitRb),
+                                                      &modelEpsilon,
+                                                      false,
+                                                      NULL,
+                                                      NULL);
+                        if (swept < 1.0f) {
+                            float3_op_scale(&modelVector, swept);
+
+                            float3 worldVector;
+                            transform_utils_vector_ltw(
+                                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr,
+                                &modelVector,
+                                &worldVector);
+
+                            hit = (CastResult *)malloc(sizeof(CastResult));
+                            hit->hitTr = hitTr;
+                            hit->distance = float3_length(&worldVector);
+                            hit->type = Hit_CollisionBox;
+                        }
+                    }
+                }
+            }
+
+            if (hit != NULL) {
+                doubly_linked_list_push_last(results, hit);
+                ++count;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+    }
+    doubly_linked_list_flush(sceneQuery, free);
+    doubly_linked_list_free(sceneQuery);
+
+    // sort query results by distance
+    doubly_linked_list_sort_ascending(results, rtree_utils_result_sort_func);
+
+    return count;
+}
+
 bool scene_overlap_box(Scene *sc,
                        const Box *aabb,
                        uint16_t groups,
