@@ -897,7 +897,7 @@ addTimers = function()
 						closeButton = true,
 						actionText = "Ok!",
 						action = function(self)
-							Menu:ShowProfile()
+							Menu:ShowWearablesEdit()
 							self:remove()
 						end,
 					})

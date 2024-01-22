@@ -177,8 +177,9 @@ function showModal(key)
 		activeModalKey = nil
 	end
 
+	local content
 	if key == MODAL_KEYS.PROFILE then
-		local content = require("profile"):create({ uikit = ui })
+		content = require("profile"):create({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CHAT then
 		local inputText = ""
@@ -186,21 +187,21 @@ function showModal(key)
 			inputText = console:getText()
 		end
 
-		local content = require("chat"):createModalContent({ uikit = ui, inputText = inputText })
+		content = require("chat"):createModalContent({ uikit = ui, inputText = inputText })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
 		activeModal = friends:create(maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.MARKETPLACE then
-		local content = require("gallery"):createModalContent({ uikit = ui })
+		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CUBZH_MENU then
-		local content = getCubzhMenuModalContent()
+		content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
-		local content = worlds:createModalContent({ uikit = ui })
+		content = worlds:createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
-		local content = require("gallery"):createModalContent({ uikit = ui })
+		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
@@ -223,6 +224,8 @@ function showModal(key)
 
 	refreshChat()
 	triggerCallbacks()
+
+	return modal, content
 end
 
 function showAlert(config)
@@ -1723,6 +1726,34 @@ menu.ShowProfile = function(_)
 		return false
 	end
 	profileFrame:onRelease()
+	return true
+end
+
+---@function ShowFaceEdit Shows local user profile menu to edit face if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowFaceEdit() -- shows local user profile menu, on edit face tab
+---@return boolean
+menu.ShowFaceEdit = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	local _,content = showModal(MODAL_KEYS.PROFILE)
+	content:showFaceEdit()
+	return true
+end
+
+---@function ShowWearablesEdit Shows local user profile menu to edit wearables if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowWearablesEdit() -- shows local user profile menu, on edit wearables tab
+---@return boolean
+menu.ShowWearablesEdit = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	local _,content = showModal(MODAL_KEYS.PROFILE)
+	content:showWearablesEdit()
 	return true
 end
 
