@@ -388,6 +388,7 @@ function createUI(system)
 
 		if self.config.borders == false then
 			border = 0
+			padding = 2 * padding
 		end
 
 		if self.config.underline then
@@ -2028,13 +2029,19 @@ function createUI(system)
 	end
 
 	ui.createScrollArea = function(_, color, config)
-		local ui = require("uikit")
+		local ui = config.uikit or require("uikit")
 		local node = ui:createFrame(color)
+		node.isScrollArea = true
 
 		local cellPadding = config.cellPadding or 0
 		local direction = config.direction or "down"
 
-		local isPointerOverFrame = false
+		local listeners = {}
+		local l
+		local hovering = false
+		local activated = false
+		local dragging = false
+		local dragPointerIndex = nil -- pointerIndex used to drag
 
 		local container = ui:createFrame()
 		container:setParent(node)
@@ -2049,7 +2056,7 @@ function createUI(system)
 		local maxY = 0
 		node.scrollPosition = 0
 
-		local scrollHandle = ui:createFrame(Color.Black)
+		local scrollHandle = ui:createFrame(Color(0, 0, 0, 0)) -- TODO: work on handle
 		scrollHandle:setParent(node)
 
 		node.refresh = function()
@@ -2101,6 +2108,10 @@ function createUI(system)
 
 			if direction == "up" then
 				maxY = -maxY - cellPadding + node.Height - (cachedCellsHeight[#cachedCellsHeight] or 0)
+			elseif maxY > node.Height then
+				maxY = maxY - node.Height + cachedCellsHeight[node.nbCells] + cellPadding
+			else -- no scroll, content is not high enough
+				maxY = 0
 			end
 
 			-- load up to one page
@@ -2175,6 +2186,17 @@ function createUI(system)
 			node:pushCell(cell, 1)
 		end
 
+		node.flush = function(_)
+			for i = 1, node.nbCells do
+				if cells[i] then
+					config.unloadCell(cells[i])
+				end
+			end
+			node.nbCells = 0
+			cells = {}
+			cachedCellsHeight = {}
+		end
+
 		-- add cell at index, called automatically after onLoad callback
 		node.pushCell = function(_, cell, index, needRefresh)
 			needRefresh = needRefresh == nil and true or needRefresh
@@ -2201,21 +2223,113 @@ function createUI(system)
 			node:setScrollPosition(0)
 		end
 
-		LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
-			local x = pe.X * Screen.Width
-			local y = pe.Y * Screen.Height
-			isPointerOverFrame = x >= node.pos.X
-				and x <= node.pos.X + node.Width
-				and y >= node.pos.Y
-				and y <= node.pos.Y + node.Height
-		end)
+		local scrollFrame = ui:createFrame()
+		scrollFrame:setParent(node)
+		scrollFrame.parentDidResize = function()
+			scrollFrame.Width = node.Width
+			scrollFrame.Height = node.Height
+		end
 
-		LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
-			if not isPointerOverFrame then
+		node.dragging = function()
+			return dragging
+		end
+
+		node.containsPointer = function(self, pe)
+			local x
+			local y
+
+			local ok = pcall(function()
+				x = pe.X * Screen.Width
+				y = pe.Y * Screen.Height
+			end)
+
+			if not ok then
+				return false
+			end
+
+			-- compute absolute screen coordinates
+			local bottomY = self.pos.Y
+			local topY = bottomY + self.Height
+			local leftX = self.pos.X
+			local rightX = leftX + self.Width
+
+			local parent = self.parent
+
+			while parent do
+				bottomY = bottomY + parent.pos.Y
+				topY = topY + parent.pos.Y
+				leftX = leftX + parent.pos.X
+				rightX = rightX + parent.pos.X
+				parent = parent.parent
+			end
+
+			return (x >= leftX and x <= rightX and y >= bottomY and y <= topY)
+		end
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
+			if node:containsPointer(pe) then
+				dragPointerIndex = pe.Index
+				activated = true
+				unfocus()
+			end
+		end, { system = system == true and System or nil, topPriority = true })
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
+			if pe.Index ~= dragPointerIndex then
 				return
 			end
-			node:setScrollPosition(node.scrollPosition + delta)
-		end)
+			dragPointerIndex = nil
+			activated = false
+			dragging = false
+		end, { system = system == true and System or nil, topPriority = false })
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerCancel, function(pe)
+			if pe.Index ~= dragPointerIndex then
+				return
+			end
+			dragPointerIndex = nil
+			activated = false
+			dragging = false
+		end, { system = system == true and System or nil, topPriority = false })
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+			if pe.Index ~= dragPointerIndex then
+				return
+			end
+			if activated and dragging == false then
+				dragging = true
+			end
+			if dragging then
+				node:setScrollPosition(node.scrollPosition + pe.DY)
+			end
+		end, { system = system == true and System or nil, topPriority = true })
+		table.insert(listeners, l)
+
+		if Client.IsMobile == false then
+			l = LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
+				hovering = node:containsPointer(pe)
+			end, { system = system == true and System or nil, topPriority = true })
+			table.insert(listeners, l)
+
+			l = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
+				if not hovering then
+					return false
+				end
+				node:setScrollPosition(node.scrollPosition + delta)
+				return true
+			end, { system = system == true and System or nil, topPriority = true })
+			table.insert(listeners, l)
+		end
+
+		node.onRemove = function()
+			for _, l in ipairs(listeners) do
+				l:Remove()
+			end
+			listeners = {}
+		end
 
 		return node
 	end
@@ -2798,33 +2912,61 @@ function createUI(system)
 		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 		local direction = { 0, 0, 1 }
 
-		local impact = Ray(origin, direction):Cast(_getCollisionGroups())
-		local hitObject = impact.Shape or impact.Object
-		-- try to find parent ui object (when impact a child of a mutable shape)
-		while hitObject and not hitObject._node do
-			hitObject = hitObject:GetParent()
+		local impacts
+		local hitObject
+		local parent
+		local skip
+
+		impacts = Ray(origin, direction):Cast(_getCollisionGroups(), nil, false)
+
+		table.sort(impacts, function(a, b)
+			return a.Distance < b.Distance
+		end)
+
+		for _, impact in ipairs(impacts) do
+			skip = false
+
+			hitObject = impact.Shape or impact.Object
+
+			-- try to find parent ui object (when impact a child of a mutable shape)
+			while hitObject and not hitObject._node do
+				hitObject = hitObject:GetParent()
+			end
+
+			if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
+				-- check if hitObject is within a scroll
+				parent = hitObject._node.parent
+				while parent ~= nil do
+					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
+						skip = true
+						break
+					end
+					parent = parent.parent
+				end
+
+				if skip == false then
+					pressed = hitObject._node
+
+					-- unfocus focused node, unless hit node.config.unfocused == false
+					if pressed ~= focused and pressed.config.unfocuses ~= false then
+						focus(nil)
+					end
+
+					if hitObject._node._onPress then
+						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
+					end
+					if pressed.config.sound and pressed.config.sound ~= "" then
+						sfx(pressed.config.sound, { Spatialized = false })
+					end
+
+					pointerIndex = pointerEvent.Index
+					return true -- capture event, other listeners won't get it
+				end
+			end
 		end
-		if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
-			pressed = hitObject._node
 
-			-- unfocus focused node, unless hit node.config.unfocused == false
-			if pressed ~= focused and pressed.config.unfocuses ~= false then
-				focus(nil)
-			end
-
-			if hitObject._node._onPress then
-				hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
-			end
-			if pressed.config.sound and pressed.config.sound ~= "" then
-				sfx(pressed.config.sound, { Spatialized = false })
-			end
-
-			pointerIndex = pointerEvent.Index
-			return true -- capture event, other listeners won't get it
-		else
-			-- did not touch anything, unfocus if focused node
-			focus(nil)
-		end
+		-- did not touch anything, unfocus if focused node
+		focus(nil)
 	end, { system = system == true and System or nil, topPriority = true })
 
 	pointerUpListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointerEvent)
@@ -2833,28 +2975,56 @@ function createUI(system)
 		end
 		pointerIndex = nil
 
-		if pressed then
+		if pressed ~= nil then
 			local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 			local direction = { 0, 0, 1 }
 
-			local impact = Ray(origin, direction):Cast(_getCollisionGroups())
-			local hitObject = impact.Shape or impact.Object
-			-- try to find parent ui object (when impact a child of a mutable shape)
-			while hitObject and not hitObject._node do
-				hitObject = hitObject:GetParent()
-			end
-			if hitObject._node == pressed and hitObject._node._onRelease then
-				pressed:_onRelease(hitObject, impact.Block, pointerEvent)
-				pressed = nil
-				return true
-			end
+			local impacts = Ray(origin, direction):Cast(_getCollisionGroups(), nil, false)
 
-			if pressed._onCancel then
-				pressed:_onCancel()
+			table.sort(impacts, function(a, b)
+				return a.Distance < b.Distance
+			end)
+
+			local parent
+			local skip
+
+			for _, impact in ipairs(impacts) do
+				skip = false
+
+				local hitObject = impact.Shape or impact.Object
+				-- try to find parent ui object (when impact a child of a mutable shape)
+				while hitObject and not hitObject._node do
+					hitObject = hitObject:GetParent()
+				end
+
+				parent = hitObject._node.parent
+				while parent ~= nil do
+					if
+						parent.isScrollArea == true
+						and (parent:dragging() or parent:containsPointer(pointerEvent) == false)
+					then
+						skip = true
+						break
+					end
+					parent = parent.parent
+				end
+
+				if skip == false and hitObject._node == pressed then
+					if hitObject._node._onRelease then
+						pressed:_onRelease(hitObject, impact.Block, pointerEvent)
+					elseif pressed._onCancel then
+						pressed:_onCancel()
+					end
+					pressed = nil
+					-- pressed element captures event onRelease event
+					-- even if onRelease and onCancel are nil
+					return true
+				end
 			end
-			pressed = nil
-			return true
 		end
+
+		-- no matter what, pressed is now nil
+		-- but not capturing event
 		pressed = nil
 	end, { system = system == true and System or nil, topPriority = true })
 
