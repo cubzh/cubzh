@@ -321,6 +321,7 @@ local _getOrCreateIndicator = function(index)
 	indicatorShape:GetBlock(sizeMinusOne - 1, sizeMinusOne - 1, 0):Replace(framePaletteIndex)
 	indicator = ui:createShape(indicatorShape, { doNotFlip = true })
 
+	indicator.pivot.Scale = TOUCH_INDICATOR_SCALE
 	indicatorShape.Physics = PhysicsMode.Disabled
 	_state.indicators[index] = indicator
 
@@ -478,7 +479,7 @@ local _setPointerUp = function(pointerIndex, pointerEvent)
 		end
 	end
 
-	if _state.touchDragPointer ~= nil then
+	if _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerIndex then
 		_state.touchDragPointer = nil
 		if _state.dragStarted and not Pointer.IsHidden and Pointer.DragEnd ~= nil then
 			Pointer.DragEnd(pointerEvent)
