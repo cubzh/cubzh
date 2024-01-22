@@ -207,7 +207,7 @@ local _isActive = function()
 	return _state.on and menu:IsActive() == false
 end
 
-local _diffuseLongPressTimer = function()
+local _defuseLongPressTimer = function()
 	if _state.longPressTimer ~= nil then
 		_state.longPressTimer:Cancel()
 		_state.longPressTimer = nil
@@ -388,7 +388,7 @@ local _createActionBtn = function(number)
 	local btnShape = MutableShape()
 	local n = math.floor(number)
 	if n < 1 or n > 3 then
-		error("button number should from 1 to 3")
+		error("button number should be from 1 to 3", 2)
 	end
 	local layout = config.layout["action" .. n]
 
@@ -449,19 +449,19 @@ local _setPointerDown = function(pointerIndex)
 	if _pointerIsDown(pointerIndex) then
 		return
 	end
-	_diffuseLongPressTimer()
+	_defuseLongPressTimer()
 	_state.pointersDown[pointerIndex] = true
 	_state.nbPointersDown = _state.nbPointersDown + 1
 	return true
 end
 
 -- Sets pointer as being in "up" state.
--- Returns true when the operation is successful.
+-- Returns true when the operation should be taken into account
 local _setPointerUp = function(pointerIndex, pointerEvent)
 	if _pointerIsUp(pointerIndex) then
 		return
 	end
-	_diffuseLongPressTimer()
+	_defuseLongPressTimer()
 
 	_state.pointersDown[pointerIndex] = false
 
@@ -472,51 +472,36 @@ local _setPointerUp = function(pointerIndex, pointerEvent)
 			_state.touchDragPointer = _state.touchZoomAndDrag2Pointers[1]
 		end
 		_state.touchZoomAndDrag2Pointers = nil
-		if _state.drag2Started then
-			if Pointer.IsHidden == false then
-				if Pointer.Drag2End ~= nil then
-					Pointer.Drag2End(POINTER_INDEX_TOUCH)
-				end
-			end
+		if _state.drag2Started and not Pointer.IsHidden and Pointer.Drag2End ~= nil then
+			Pointer.Drag2End(POINTER_INDEX_TOUCH)
 			_state.drag2Started = false
 		end
 	end
 
-	if _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerIndex then
+	if _state.touchDragPointer ~= nil then
 		_state.touchDragPointer = nil
-		if _state.dragStarted then
-			if Pointer.IsHidden == false then
-				if Pointer.DragEnd ~= nil then
-					Pointer.DragEnd(pointerEvent)
-				end -- pointerEvent can be nil
-			end
+		if _state.dragStarted and not Pointer.IsHidden and Pointer.DragEnd ~= nil then
+			Pointer.DragEnd(pointerEvent)
 			_state.dragStarted = false
 		end
 	end
 
 	if _isPC then
 		if pointerIndex == POINTER_INDEX_MOUSE_LEFT then
-			if _state.dragStarted then
-				if Pointer.IsHidden == false then
-					if Pointer.DragEnd ~= nil then
-						Pointer.DragEnd(pointerEvent)
-					end -- pointerEvent can be nil
-				end
+			if _state.dragStarted and not Pointer.IsHidden and Pointer.DragEnd ~= nil then
+				Pointer.DragEnd(pointerEvent)
 				_state.dragStarted = false
 			end
 		elseif pointerIndex == POINTER_INDEX_MOUSE_RIGHT then
-			if _state.drag2Started then
-				if Pointer.IsHidden == false then
-					if Pointer.Drag2End ~= nil then
-						Pointer.Drag2End(POINTER_INDEX_MOUSE)
-					end
-				end
+			if _state.drag2Started and not Pointer.IsHidden and Pointer.Drag2End ~= nil then
+				Pointer.Drag2End(POINTER_INDEX_MOUSE)
 				_state.drag2Started = false
 			end
 		end
 	end
 
 	_state.nbPointersDown = _state.nbPointersDown - 1
+
 	return true
 end
 
@@ -525,18 +510,20 @@ end
 local _setTouchDragPointer = function(pointerEvent)
 	local pointerIndex = pointerEvent.Index
 	if _state.touchDragPointer ~= nil then
-		return false
-	end -- there can be only one touchDragPointer
+		return false -- there can be only one touchDragPointer
+	end
+
 	if _state.touchZoomAndDrag2Pointers ~= nil then
-		return false
-	end -- no drag pointer if zoomAndDrag2 pointer is set
-	if
-		_pointerIndexWithin(pointerIndex, POINTER_INDEX_TOUCH_1, POINTER_INDEX_TOUCH_2, POINTER_INDEX_TOUCH_3) == false
-	then
+		return false -- no drag pointer if zoomAndDrag2 pointer is set
+	end
+
+	if not _pointerIndexWithin(pointerIndex, POINTER_INDEX_TOUCH_1, POINTER_INDEX_TOUCH_2, POINTER_INDEX_TOUCH_3) then
 		return false -- index not valid
 	end
-	_state.touchDragPointer =
-		{ index = pointerIndex, pos = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height) }
+
+	_state.touchDragPointer = {}
+	_state.touchDragPointer.index = pointerIndex
+	_state.touchDragPointer.pos = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)
 	_state.dragStarted = false
 	return true
 end
@@ -861,49 +848,47 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 			-- only Action1 is supposed to be displayed when Pointer is shown
 			if _activate(x, y, pointerEvent.Index, "down") == true then
 				return true -- capture event
-			else
-				if _setTouchDragPointer(pointerEvent) == true then
-					if Pointer.Down ~= nil then
-						Pointer.Down(pointerEvent)
-					end
-
-					if Pointer.Click ~= nil then
-						_state.clickPointerIndex = pointerEvent.Index
-						_state.clickPointerStartPosition = Number2(x, y)
-					end
-
-					if Pointer.LongPress ~= nil then
-						_state.longPressStartPosition = Number2(x, y)
-						_state.longPressTimer = Timer(LONG_PRESS_DELAY_1, function()
-							local indicator = _getOrCreateIndicator(pointerEvent.Index)
-							indicator.pivot.Scale = TOUCH_INDICATOR_LONG_PRESS_SCALE
-							ease:inBack(indicator.pivot, LONG_PRESS_DELAY_2).Scale = TOUCH_INDICATOR_SCALE
-							_state.longPressTimer = Timer(LONG_PRESS_DELAY_2, function()
-								_state.longPressTimer = nil
-								_state.longPressStartPosition = nil
-								if _state.touchDragPointer ~= nil then
-									if Pointer.LongPress ~= nil then
-										_state.clickPointerIndex = nil -- diffuse click
-										Client:HapticFeedback()
-										local pe = PointerEvent(
-											_state.touchDragPointer.pos.X / Screen.Width,
-											_state.touchDragPointer.pos.Y / Screen.Height,
-											0.0,
-											0.0,
-											true,
-											_state.touchDragPointer.index
-										)
-										Pointer.LongPress(pe)
-									end
-								end
-							end)
-						end)
-					end
-				else
-					_setTouchZoomAndDrag2Pointer(pointerEvent)
-					-- elseif _setTouchZoomAndDrag2Pointer(pointerEvent) == true then
-					-- drag2 and/or zoom about to start, but nothing to do here
+			elseif _setTouchDragPointer(pointerEvent) then
+				if Pointer.Down ~= nil then
+					Pointer.Down(pointerEvent)
 				end
+
+				if Pointer.Click ~= nil then
+					_state.clickPointerIndex = pointerEvent.Index
+					_state.clickPointerStartPosition = Number2(x, y)
+				end
+
+				if Pointer.LongPress ~= nil then
+					_state.longPressStartPosition = Number2(x, y)
+					_state.longPressTimer = Timer(LONG_PRESS_DELAY_1, function()
+						local indicator = _getOrCreateIndicator(pointerEvent.Index)
+						indicator.pivot.Scale = TOUCH_INDICATOR_LONG_PRESS_SCALE
+						ease:inBack(indicator.pivot, LONG_PRESS_DELAY_2).Scale = TOUCH_INDICATOR_SCALE
+						_state.longPressTimer = Timer(LONG_PRESS_DELAY_2, function()
+							_state.longPressTimer = nil
+							_state.longPressStartPosition = nil
+							if _state.touchDragPointer == nil or Pointer.LongPress == nil then
+								return
+							end
+
+							_state.clickPointerIndex = nil -- diffuse click
+							Client:HapticFeedback()
+							local pe = PointerEvent(
+								_state.touchDragPointer.pos.X / Screen.Width,
+								_state.touchDragPointer.pos.Y / Screen.Height,
+								0.0,
+								0.0,
+								true,
+								_state.touchDragPointer.index
+							)
+							Pointer.LongPress(pe)
+						end)
+					end)
+				end
+			else
+				_setTouchZoomAndDrag2Pointer(pointerEvent)
+				-- elseif _setTouchZoomAndDrag2Pointer(pointerEvent) == true then
+				-- drag2 and/or zoom about to start, but nothing to do here
 			end
 		end
 	else -- Pointer hidden
@@ -937,208 +922,7 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(po
 	end
 	local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
 
-	if Pointer.IsHidden == false then -- Pointer shown
-		if _isPC then
-			if _pointerIndexWithin(pointerEvent.Index, POINTER_INDEX_MOUSE_LEFT, POINTER_INDEX_MOUSE_RIGHT) then
-				if _state.longPressTimer ~= nil then
-					if
-						_state.longPressStartPosition == nil
-						or (Number2(x, y) - _state.longPressStartPosition).SquaredLength
-							> LONG_PRESS_MOVE_SQR_EPSILON
-					then
-						_diffuseLongPressTimer()
-						local indicator = _getPCLongPressIndicator()
-						if indicator then
-							indicator:_hide()
-						end
-					end
-				end
-
-				if _state.clickPointerIndex ~= nil then
-					local diff = Number2(x, y) - _state.clickPointerStartPosition
-					if diff.SquaredLength > CLICK_MOVE_SQR_EPSILON then
-						_state.clickPointerIndex = nil
-					end
-				end
-
-				if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT then
-					if _state.dragStarted == false then
-						_state.dragStarted = true
-						if Pointer.DragBegin ~= nil then
-							Pointer.DragBegin(
-								PointerEvent(
-									x / Screen.Width,
-									y / Screen.Height,
-									x - pointerEvent.DX,
-									y - pointerEvent.DY,
-									true,
-									pointerEvent.Index
-								)
-							)
-						end
-					end
-
-					if Pointer.Drag ~= nil then
-						Pointer.Drag(pointerEvent)
-					end
-				elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT then
-					if _state.drag2Started == false then
-						_state.drag2Started = true
-						if Pointer.Drag2Begin ~= nil then
-							Pointer.Drag2Begin(
-								PointerEvent(
-									x / Screen.Width,
-									y / Screen.Height,
-									x - pointerEvent.DX,
-									y - pointerEvent.DY,
-									true,
-									pointerEvent.Index
-								)
-							)
-						end
-					end
-					if Pointer.Drag2 ~= nil then
-						Pointer.Drag2(pointerEvent)
-					end
-				end
-			end
-		elseif _isMobile then
-			local indicator = _getOrCreateIndicator(pointerEvent.Index)
-			indicator.pos = { x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0 }
-
-			if _activateDirPad(x, y, pointerEvent.Index, "drag") == true then
-				return true
-			elseif _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerEvent.Index then
-				if _state.dragStarted == false then
-					_state.dragStarted = true
-					if Pointer.DragBegin ~= nil then
-						Pointer.DragBegin(
-							PointerEvent(
-								_state.touchDragPointer.pos.X,
-								_state.touchDragPointer.pos.Y,
-								x - _state.touchDragPointer.pos.X,
-								y - _state.touchDragPointer.pos.Y,
-								true,
-								pointerEvent.Index
-							)
-						)
-					end
-				end
-
-				if _state.longPressTimer ~= nil then
-					local diff = Number2(x, y) - _state.longPressStartPosition
-					if diff.SquaredLength > LONG_PRESS_MOVE_SQR_EPSILON then
-						_diffuseLongPressTimer()
-						ease:cancel(indicator.pivot)
-						indicator.pivot.Scale = TOUCH_INDICATOR_SCALE
-					end
-				end
-
-				if _state.clickPointerIndex ~= nil then
-					local diff = Number2(x, y) - _state.clickPointerStartPosition
-					if diff.SquaredLength > CLICK_MOVE_SQR_EPSILON then
-						_state.clickPointerIndex = nil
-					end
-				end
-
-				_state.touchDragPointer.pos.X = x
-				_state.touchDragPointer.pos.Y = y
-
-				if Pointer.Drag ~= nil then
-					Pointer.Drag(pointerEvent)
-				end
-			elseif _state.touchZoomAndDrag2Pointers ~= nil then
-				if
-					pointerEvent.Index == _state.touchZoomAndDrag2Pointers[1].index
-					or pointerEvent.Index == _state.touchZoomAndDrag2Pointers[2].index
-				then
-					local prevX
-					local prevY
-					local x2
-					local y2
-
-					if pointerEvent.Index == _state.touchZoomAndDrag2Pointers[1].index then
-						prevX = _state.touchZoomAndDrag2Pointers[1].pos.X
-						prevY = _state.touchZoomAndDrag2Pointers[1].pos.Y
-						x2 = _state.touchZoomAndDrag2Pointers[2].pos.X
-						y2 = _state.touchZoomAndDrag2Pointers[2].pos.Y
-
-						_state.touchZoomAndDrag2Pointers[1].pos.X = x
-						_state.touchZoomAndDrag2Pointers[1].pos.Y = y
-					elseif pointerEvent.Index == _state.touchZoomAndDrag2Pointers[2].index then
-						prevX = _state.touchZoomAndDrag2Pointers[2].pos.X
-						prevY = _state.touchZoomAndDrag2Pointers[2].pos.Y
-						x2 = _state.touchZoomAndDrag2Pointers[1].pos.X
-						y2 = _state.touchZoomAndDrag2Pointers[1].pos.Y
-
-						_state.touchZoomAndDrag2Pointers[2].pos.X = x
-						_state.touchZoomAndDrag2Pointers[2].pos.Y = y
-					end
-
-					if _state.drag2Started == false then
-						_state.drag2Started = true
-						if Pointer.Drag2Begin ~= nil then
-							local midXBefore = (prevX + x2) * 0.5
-							local midYBefore = (prevY + y2) * 0.5
-
-							local midXAfter = (x + x2) * 0.5
-							local midYAfter = (y + y2) * 0.5
-
-							local dx = midXAfter - midXBefore
-							local dy = midYAfter - midYBefore
-
-							Pointer.Drag2Begin(
-								PointerEvent(
-									midXAfter / Screen.Width,
-									midYAfter / Screen.Width,
-									dx,
-									dy,
-									true,
-									POINTER_INDEX_TOUCH
-								)
-							)
-						end
-					end
-
-					if Pointer.Drag2 ~= nil then
-						local midXBefore = (prevX + x2) * 0.5
-						local midYBefore = (prevY + y2) * 0.5
-
-						local midXAfter = (x + x2) * 0.5
-						local midYAfter = (y + y2) * 0.5
-
-						local dx = midXAfter - midXBefore
-						local dy = midYAfter - midYBefore
-
-						Pointer.Drag2(
-							PointerEvent(
-								midXAfter / Screen.Width,
-								midYAfter / Screen.Height,
-								dx,
-								dy,
-								true,
-								POINTER_INDEX_TOUCH
-							)
-						)
-					end
-
-					if Pointer.Zoom ~= nil then
-						local dx = x - x2
-						local dy = y - y2
-
-						local distanceBetweenTouches = math.sqrt(dx * dx + dy * dy)
-
-						local previousDistanceFromApex = (_state.previousDistanceBetweenTouches * 0.5)
-							/ TAN_TOUCH_ZOOM_ANGLE
-						local distanceFromApex = (distanceBetweenTouches * 0.5) / TAN_TOUCH_ZOOM_ANGLE
-						_state.previousDistanceBetweenTouches = distanceBetweenTouches
-
-						Pointer.Zoom((previousDistanceFromApex - distanceFromApex) * _state.zoomSensitivity)
-					end
-				end
-			end
-		end
-	else -- Pointer hidden
+	if Pointer.IsHidden then
 		if _isMobile then
 			local indicator = _getOrCreateIndicator(pointerEvent.Index)
 			indicator.pos = { x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0 }
@@ -1154,6 +938,188 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(po
 			Client.AnalogPad(dx, dy)
 		end
 		LocalEvent:Send(LocalEvent.Name.AnalogPad, dx, dy)
+		return
+	end
+	if _isPC and _pointerIndexWithin(pointerEvent.Index, POINTER_INDEX_MOUSE_LEFT, POINTER_INDEX_MOUSE_RIGHT) then
+		if _state.longPressTimer ~= nil then
+			if
+				_state.longPressStartPosition == nil
+				or (Number2(x, y) - _state.longPressStartPosition).SquaredLength > LONG_PRESS_MOVE_SQR_EPSILON
+			then
+				_defuseLongPressTimer()
+				local indicator = _getPCLongPressIndicator()
+				if indicator then
+					indicator:_hide()
+				end
+			end
+		end
+
+		if _state.clickPointerIndex ~= nil then
+			local diff = Number2(x, y) - _state.clickPointerStartPosition
+			if diff.SquaredLength > CLICK_MOVE_SQR_EPSILON then
+				_state.clickPointerIndex = nil
+			end
+		end
+
+		if pointerEvent.Index == POINTER_INDEX_MOUSE_LEFT then
+			if _state.dragStarted == false and Pointer.DragBegin ~= nil then
+				local pe = PointerEvent(
+					x / Screen.Width,
+					y / Screen.Height,
+					x - pointerEvent.DX,
+					y - pointerEvent.DY,
+					true,
+					pointerEvent.Index
+				)
+				Pointer.DragBegin(pe)
+			end
+			_state.dragStarted = true
+
+			if Pointer.Drag ~= nil then
+				Pointer.Drag(pointerEvent)
+			end
+		elseif pointerEvent.Index == POINTER_INDEX_MOUSE_RIGHT then
+			if _state.drag2Started == false and Pointer.Drag2Begin ~= nil then
+				local pe = PointerEvent(
+					x / Screen.Width,
+					y / Screen.Height,
+					x - pointerEvent.DX,
+					y - pointerEvent.DY,
+					true,
+					pointerEvent.Index
+				)
+				Pointer.Drag2Begin(pe)
+			end
+			_state.drag2Started = true
+
+			if Pointer.Drag2 ~= nil then
+				Pointer.Drag2(pointerEvent)
+			end
+		end
+	elseif _isMobile then
+		local indicator = _getOrCreateIndicator(pointerEvent.Index)
+		indicator.pos = { x - indicator.Width * 0.5, y - indicator.Height * 0.5, 0 }
+
+		if _activateDirPad(x, y, pointerEvent.Index, "drag") == true then
+			return true
+		elseif _state.touchDragPointer ~= nil and _state.touchDragPointer.index == pointerEvent.Index then
+			if _state.dragStarted == false and Pointer.DragBegin ~= nil then
+				local pe = PointerEvent(
+					_state.touchDragPointer.pos.X,
+					_state.touchDragPointer.pos.Y,
+					x - _state.touchDragPointer.pos.X,
+					y - _state.touchDragPointer.pos.Y,
+					true,
+					pointerEvent.Index
+				)
+				Pointer.DragBegin(pe)
+			end
+			_state.dragStarted = true
+
+			if _state.longPressTimer ~= nil then
+				local diff = Number2(x, y) - _state.longPressStartPosition
+				if diff.SquaredLength > LONG_PRESS_MOVE_SQR_EPSILON then
+					_defuseLongPressTimer()
+					ease:cancel(indicator.pivot)
+					indicator.pivot.Scale = TOUCH_INDICATOR_SCALE
+				end
+			end
+
+			if _state.clickPointerIndex ~= nil then
+				local diff = Number2(x, y) - _state.clickPointerStartPosition
+				if diff.SquaredLength > CLICK_MOVE_SQR_EPSILON then
+					_state.clickPointerIndex = nil
+				end
+			end
+
+			_state.touchDragPointer.pos.X = x
+			_state.touchDragPointer.pos.Y = y
+
+			if Pointer.Drag ~= nil then
+				Pointer.Drag(pointerEvent)
+			end
+		elseif _state.touchZoomAndDrag2Pointers ~= nil then
+			if
+				not _pointerIndexWithin(
+					pointerEvent.Index,
+					_state.touchZoomAndDrag2Pointers[1].index,
+					_state.touchZoomAndDrag2Pointers[2].index
+				)
+			then
+				-- the pointer didn't initiate the drag
+				return
+			end
+
+			local prevX
+			local prevY
+			local x2
+			local y2
+
+			if pointerEvent.Index == _state.touchZoomAndDrag2Pointers[1].index then
+				prevX = _state.touchZoomAndDrag2Pointers[1].pos.X
+				prevY = _state.touchZoomAndDrag2Pointers[1].pos.Y
+				x2 = _state.touchZoomAndDrag2Pointers[2].pos.X
+				y2 = _state.touchZoomAndDrag2Pointers[2].pos.Y
+
+				_state.touchZoomAndDrag2Pointers[1].pos.X = x
+				_state.touchZoomAndDrag2Pointers[1].pos.Y = y
+			elseif pointerEvent.Index == _state.touchZoomAndDrag2Pointers[2].index then
+				prevX = _state.touchZoomAndDrag2Pointers[2].pos.X
+				prevY = _state.touchZoomAndDrag2Pointers[2].pos.Y
+				x2 = _state.touchZoomAndDrag2Pointers[1].pos.X
+				y2 = _state.touchZoomAndDrag2Pointers[1].pos.Y
+
+				_state.touchZoomAndDrag2Pointers[2].pos.X = x
+				_state.touchZoomAndDrag2Pointers[2].pos.Y = y
+			end
+
+			if _state.drag2Started == false and Pointer.Drag2Begin ~= nil then
+				local midXBefore = (prevX + x2) * 0.5
+				local midYBefore = (prevY + y2) * 0.5
+
+				local midXAfter = (x + x2) * 0.5
+				local midYAfter = (y + y2) * 0.5
+
+				local dx = midXAfter - midXBefore
+				local dy = midYAfter - midYBefore
+
+				local xPercent = midXAfter / Screen.Width
+				local yPercent = midYAfter / Screen.Height
+
+				local pe = PointerEvent(xPercent, yPercent, dx, dy, true, POINTER_INDEX_TOUCH)
+				Pointer.Drag2Begin(pe)
+			end
+			_state.drag2Started = true
+
+			if Pointer.Drag2 ~= nil then
+				local midXBefore = (prevX + x2) * 0.5
+				local midYBefore = (prevY + y2) * 0.5
+
+				local midXAfter = (x + x2) * 0.5
+				local midYAfter = (y + y2) * 0.5
+
+				local dx = midXAfter - midXBefore
+				local dy = midYAfter - midYBefore
+
+				local xPercent = midXAfter / Screen.Width
+				local yPercent = midYAfter / Screen.Height
+
+				Pointer.Drag2(PointerEvent(xPercent, yPercent, dx, dy, true, POINTER_INDEX_TOUCH))
+			end
+
+			if Pointer.Zoom ~= nil then
+				local dx = x - x2
+				local dy = y - y2
+
+				local distanceBetweenTouches = math.sqrt(dx * dx + dy * dy)
+
+				local previousDistanceFromApex = (_state.previousDistanceBetweenTouches * 0.5) / TAN_TOUCH_ZOOM_ANGLE
+				local distanceFromApex = (distanceBetweenTouches * 0.5) / TAN_TOUCH_ZOOM_ANGLE
+				_state.previousDistanceBetweenTouches = distanceBetweenTouches
+
+				Pointer.Zoom((previousDistanceFromApex - distanceFromApex) * _state.zoomSensitivity)
+			end
+		end
 	end
 end, { system = System })
 
@@ -1176,14 +1142,13 @@ _state.moveListener = LocalEvent:Listen(LocalEvent.Name.PointerMove, function(po
 	end
 end, { system = System })
 
+-- works only if the pointer is shown
 _state.zoomListener = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
 	if not _isActive() then
 		return
 	end
-	if Pointer.IsHidden == false then -- Pointer shown
-		if Pointer.Zoom ~= nil then
-			Pointer.Zoom(delta * _state.zoomSensitivity)
-		end
+	if Pointer.IsHidden == false and Pointer.Zoom ~= nil then
+		Pointer.Zoom(delta * _state.zoomSensitivity)
 	end
 end, { system = System })
 
@@ -1355,9 +1320,8 @@ _state.keyboardListener = LocalEvent:Listen(LocalEvent.Name.KeyboardInput, funct
 	if down then
 		if _state.keysDown[keyCode] then
 			return
-		else
-			_state.keysDown[keyCode] = true
 		end
+		_state.keysDown[keyCode] = true
 	else
 		_state.keysDown[keyCode] = nil
 	end
@@ -1401,20 +1365,18 @@ index.refresh = function()
 	_state.action1:hide()
 	_state.action2:hide()
 	_state.action3:hide()
-	if _state.on and _state.virtualKeyboardShown == false then
-		if _isMobile and _state.chatInput == nil then
-			if Client.DirectionalPad ~= nil then
-				_state.dirpad:show()
-			end
-			if Client.Action1 ~= nil or Client.Action1Release ~= nil then
-				_state.action1:show()
-			end
-			if Pointer.IsHidden and (Client.Action2 ~= nil or Client.Action2Release_ ~= nil) then
-				_state.action2:show()
-			end
-			if Pointer.IsHidden and (Client.Action3 ~= nil or Client.Action3Release ~= nil) then
-				_state.action3:show()
-			end
+	if _state.on and _state.virtualKeyboardShown == false and _isMobile and _state.chatInput == nil then
+		if Client.DirectionalPad ~= nil then
+			_state.dirpad:show()
+		end
+		if Client.Action1 ~= nil or Client.Action1Release ~= nil then
+			_state.action1:show()
+		end
+		if Pointer.IsHidden and (Client.Action2 ~= nil or Client.Action2Release_ ~= nil) then
+			_state.action2:show()
+		end
+		if Pointer.IsHidden and (Client.Action3 ~= nil or Client.Action3Release ~= nil) then
+			_state.action3:show()
 		end
 	end
 
@@ -1510,7 +1472,8 @@ index.refresh = function()
 		end
 
 		if
-			(top ~= nil and top > halfScreenHeight) or (leftEdge ~= nil and leftEdge < Screen.Width - maxWidthOccupancy)
+			(top ~= nil and top > halfScreenHeight)
+			or (leftEdge ~= nil and leftEdge < Screen.Width - maxWidthOccupancy)
 		then
 			local scaleV = (halfScreenHeight - bottom) / (top - bottom)
 			local scaleH = (maxWidthOccupancy - (Screen.Width - rightEdge)) / (rightEdge - leftEdge)
