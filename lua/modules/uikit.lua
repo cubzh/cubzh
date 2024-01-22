@@ -606,7 +606,7 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onPress = nil
-					if t._onRelease == nil then
+					if t._onClick == nil and t._onRelease == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
@@ -639,7 +639,7 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onRelease = nil
-					if t._onPress == nil then
+					if t._onPress == nil and t._onClick == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
@@ -672,7 +672,7 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onClick = nil
-					if t._onPress == nil then
+					if t._onPress == nil and t._onRelease == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
@@ -2957,8 +2957,8 @@ function createUI(system)
 		end
 
 		local pressed = pressed
-		pressed._dragging = true
 		if pressed then
+			pressed._dragging = true
 			if pressed._onDrag then
 				pressed:_onDrag(pointerEvent)
 				return true -- capture only if onDrag is set on the node
