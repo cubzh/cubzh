@@ -95,6 +95,8 @@ profile.create = function(_, config)
 		requests = {}
 	end
 
+	local editBtn = nil
+
 	local username
 	local userID
 	local isLocal = _config.isLocal
@@ -116,6 +118,19 @@ profile.create = function(_, config)
 		avatarNode.color = DEBUG_FRAME_COLOR
 	end
 	avatarNode:setParent(profileNode)
+
+	local editFaceBtn = ui:createButton("🙂 Face")
+	editFaceBtn:setParent(isLocal and profileNode or nil)
+	local editOutfitBtn = ui:createButton("👤 Outfit")
+	editOutfitBtn:setParent(isLocal and profileNode or nil)
+
+	editFaceBtn.onRelease = function()
+		editFaceBtnOnReleaseCallback()
+	end
+
+	editOutfitBtn.onRelease = function()
+		editOutfitBtnOnReleaseCallback()
+	end
 
 	local userInfo = {
 		bio = "",
@@ -935,6 +950,7 @@ profile.create = function(_, config)
 				short = "🙂",
 				action = function()
 					selectedCategory = "hair"
+					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -943,6 +959,7 @@ profile.create = function(_, config)
 				short = "👕",
 				action = function()
 					selectedCategory = "jacket"
+					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -951,6 +968,7 @@ profile.create = function(_, config)
 				short = "👖",
 				action = function()
 					selectedCategory = "pants"
+					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -959,6 +977,7 @@ profile.create = function(_, config)
 				short = "👞",
 				action = function()
 					selectedCategory = "boots"
+					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -1052,72 +1071,51 @@ profile.create = function(_, config)
 	infoNode:setParent(profileNode)
 	infoNode:hide()
 
-	local editBtn = nil
-	local editInfoBtn = nil
-	local editFaceBtn = nil
-	local editOutfitBtn = nil
-
 	local toggleEditOptions = function(btn)
-		if btn.Text == nil or editInfoBtn.show == nil or editFaceBtn.show == nil or editOutfitBtn.show == nil then
+		if btn.Text == nil then
 			return
 		end
 
-		if btn.Text == "✅ Done" then
+		editFaceBtn:unselect()
+		editOutfitBtn:unselect()
+		if btn.Text == "✏️ Edit" then
+			btn.Text = "✅ Done"
+
+			editInfoBtnOnReleaseCallback()
+		else
 			btn.Text = "✏️ Edit"
-
-			local hideBtn = function(b)
-				b:hide()
-				b:disable()
-				b:unselect()
-			end
-
-			hideBtn(editInfoBtn)
-			hideBtn(editFaceBtn)
-			hideBtn(editOutfitBtn)
 
 			content.tabs = nil
 			functions.setActiveNode(infoNode)
 
 			infoNode:setUserInfo()
-		else
-			btn.Text = "✅ Done"
-
-			local showBtn = function(b)
-				b:show()
-				b:enable()
-			end
-
-			showBtn(editInfoBtn)
-			showBtn(editFaceBtn)
-			showBtn(editOutfitBtn)
-
-			-- trigger press on editInfoBtn
-			editInfoBtnOnReleaseCallback()
 		end
 	end
 
 	editInfoBtnOnReleaseCallback = function(_)
 		content.tabs = nil
-		functions.setActiveNode(createEditInfoNode())
-		editInfoBtn:select()
 		editFaceBtn:unselect()
 		editOutfitBtn:unselect()
+		functions.setActiveNode(createEditInfoNode())
 	end
 
 	editFaceBtnOnReleaseCallback = function(_)
 		content.tabs = nil
-		functions.setActiveNode(createEditFaceNode())
-		editInfoBtn:unselect()
+		editBtn.Text = "😛 Show Profile"
 		editFaceBtn:select()
 		editOutfitBtn:unselect()
+		functions.setActiveNode(createEditFaceNode())
 	end
 
 	editOutfitBtnOnReleaseCallback = function(_)
-		functions.setActiveNode(createEditOutfitNode())
-		editInfoBtn:unselect()
 		editFaceBtn:unselect()
 		editOutfitBtn:select()
+		editBtn.Text = "😛 Show Profile"
+		functions.setActiveNode(createEditOutfitNode())
 	end
+
+	content.showFaceEdit = editFaceBtnOnReleaseCallback
+	content.showWearablesEdit = editOutfitBtnOnReleaseCallback
 
 	-- --------------------------------------------------
 	-- pictureBtn
@@ -1162,23 +1160,6 @@ profile.create = function(_, config)
 		editBtn = ui:createButton("✏️ Edit")
 		editBtn:disable()
 
-		editInfoBtn = ui:createButton("✏️")
-		editInfoBtn:disable()
-		editInfoBtn:hide()
-		editInfoBtn.onRelease = editInfoBtnOnReleaseCallback
-
-		editFaceBtn = ui:createButton("🙂")
-		editFaceBtn:disable()
-		editFaceBtn:hide()
-		editFaceBtn.onRelease = editFaceBtnOnReleaseCallback
-		content.showFaceEdit = editFaceBtnOnReleaseCallback
-
-		editOutfitBtn = ui:createButton("👤")
-		editOutfitBtn:disable()
-		editOutfitBtn:hide()
-		editOutfitBtn.onRelease = editOutfitBtnOnReleaseCallback
-		content.showWearablesEdit = editOutfitBtnOnReleaseCallback
-
 		local coinsBtn = ui:createButton("💰 …", { sound = "coin_1" })
 		coinsBtn.onRelease = function(_)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
@@ -1196,7 +1177,7 @@ profile.create = function(_, config)
 		end)
 
 		content.bottomRight = { coinsBtn }
-		content.bottomLeft = { editBtn, editInfoBtn, editFaceBtn, editOutfitBtn }
+		content.bottomLeft = { editBtn }
 	else
 		local showCreationsBtn = ui:createButton("✨ Show Creations")
 		showCreationsBtn.onRelease = function()
@@ -1315,16 +1296,13 @@ profile.create = function(_, config)
 		local activeNodeWidthWithMargin = activeNode.Width + ACTIVE_NODE_MARGIN * 2
 		local activeNodeHeightWithMargin = activeNode.Height + ACTIVE_NODE_MARGIN * 2
 
-		local avatarSizeInLandscape =
-			math.min(profileNode.Width - activeNodeWidthWithMargin, profileNode.Height, AVATAR_MAX_SIZE)
+		local avatarSizeInLandscape = math.min(profileNode.Height - editFaceBtn.Height, AVATAR_MAX_SIZE)
 		local avatarSizeInPortrait =
 			math.min(profileNode.Height - activeNodeHeightWithMargin, profileNode.Width, AVATAR_MAX_SIZE)
 
-		-- no matter what real orientation is, pick the layout giving
-		-- that's allowing more space for the avatar.
-		if avatarSizeInLandscape >= avatarSizeInPortrait then -- go landscape
+		if Screen.Width >= Screen.Height then -- go landscape
 			avatarNode.Width = avatarSizeInLandscape
-			totalHeight = math.max(activeNodeHeightWithMargin, avatarNode.Height)
+			totalHeight = math.max(activeNodeHeightWithMargin, avatarNode.Height + editFaceBtn.Height)
 			totalWidth = activeNodeWidthWithMargin + avatarNode.Width
 
 			preferredLayout = "landscape"
@@ -1347,23 +1325,61 @@ profile.create = function(_, config)
 			return
 		end
 
+		local buttonsWidth = editFaceBtn.Width + theme.padding + editOutfitBtn.Width
 		if preferredLayout == "landscape" then
 			if avatarLandscapeRight then
 				activeNode.pos = { ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
-				avatarNode.pos = { self.Width - avatarNode.Width, self.Height * 0.5 - avatarNode.Height * 0.5 }
+				avatarNode.pos = {
+					self.Width - avatarNode.Width,
+					editFaceBtn.Height + (self.Height - editFaceBtn.Height) * 0.5 - avatarNode.Height * 0.5,
+				}
+				editFaceBtn.pos = { self.Width - avatarNode.Width * 0.5 - buttonsWidth * 0.5, 0 }
+				editOutfitBtn.pos = {
+					editFaceBtn.pos.X + editFaceBtn.Width + theme.padding,
+					editFaceBtn.pos.Y,
+				}
 			else
 				activeNode.pos =
 					{ self.Width - activeNode.Width - ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
-				avatarNode.pos = { 0, self.Height * 0.5 - activeNode.Height * 0.5 }
+				avatarNode.pos = {
+					0,
+					editFaceBtn.Height + (self.Height - editFaceBtn.Height) * 0.5 - activeNode.Height * 0.5,
+				}
+				editFaceBtn.pos = { avatarNode.Width * 0.5 - buttonsWidth * 0.5, 0 }
+				editOutfitBtn.pos = {
+					editFaceBtn.pos.X + editFaceBtn.Width + theme.padding,
+					editFaceBtn.pos.Y,
+				}
 			end
 		else
 			if avatarPortraitTop then
-				avatarNode.pos = { self.Width * 0.5 - avatarNode.Width * 0.5, self.Height - avatarNode.Height }
+				avatarNode.pos = {
+					self.Width * 0.5 - avatarNode.Width * 0.5,
+					self.Height - avatarNode.Height + editFaceBtn.Height * 0.5,
+				}
 				activeNode.pos = { self.Width * 0.5 - activeNode.Width * 0.5, ACTIVE_NODE_MARGIN }
+
+				editFaceBtn.pos = {
+					self.Width * 0.5 - buttonsWidth * 0.5,
+					self.Height - avatarNode.Height,
+				}
+				editOutfitBtn.pos = {
+					editFaceBtn.pos.X + editFaceBtn.Width + theme.padding,
+					editFaceBtn.pos.Y,
+				}
 			else
-				avatarNode.pos = { self.Width * 0.5 - avatarNode.Width * 0.5, 0 }
+				avatarNode.pos = { self.Width * 0.5 - avatarNode.Width * 0.5, editFaceBtn.Height * 0.5 }
 				activeNode.pos =
 					{ self.Width * 0.5 - activeNode.Width * 0.5, self.Height - activeNode.Height - ACTIVE_NODE_MARGIN }
+
+				editFaceBtn.pos = {
+					self.Width * 0.5 - buttonsWidth * 0.5,
+					0,
+				}
+				editOutfitBtn.pos = {
+					editFaceBtn.pos.X + editFaceBtn.Width + theme.padding,
+					editFaceBtn.pos.Y,
+				}
 			end
 		end
 	end
