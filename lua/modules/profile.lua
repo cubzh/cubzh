@@ -950,7 +950,6 @@ profile.create = function(_, config)
 				short = "🙂",
 				action = function()
 					selectedCategory = "hair"
-					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -959,7 +958,6 @@ profile.create = function(_, config)
 				short = "👕",
 				action = function()
 					selectedCategory = "jacket"
-					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -968,7 +966,6 @@ profile.create = function(_, config)
 				short = "👖",
 				action = function()
 					selectedCategory = "pants"
-					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
@@ -977,7 +974,6 @@ profile.create = function(_, config)
 				short = "👞",
 				action = function()
 					selectedCategory = "boots"
-					grid:show()
 					grid:setCategories({ selectedCategory })
 				end,
 			},
