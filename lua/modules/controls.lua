@@ -1089,6 +1089,11 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(po
 
 				local pe = PointerEvent(xPercent, yPercent, dx, dy, true, POINTER_INDEX_TOUCH)
 				Pointer.Drag2Begin(pe)
+
+				-- defuse click when drag2 begins
+				if _state.clickPointerIndex ~= nil then
+					_state.clickPointerIndex = nil
+				end
 			end
 			_state.drag2Started = true
 
