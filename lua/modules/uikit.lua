@@ -2301,6 +2301,15 @@ function createUI(system)
 			end
 			if activated and dragging == false then
 				dragging = true
+				-- TODO: reactivate this once we better handle ui
+				-- layers above scroll areas.
+				-- Currently, when the alert modal is displayed, we can still scroll.
+				-- if pressed ~= nil then
+				-- 	if pressed._onCancel then
+				-- 		pressed:_onCancel()
+				-- 	end
+				-- 	pressed = nil
+				-- end
 			end
 			if dragging then
 				node:setScrollPosition(node.scrollPosition + pe.DY)
@@ -3009,12 +3018,8 @@ function createUI(system)
 					parent = parent.parent
 				end
 
-				if skip == false and hitObject._node == pressed then
-					if hitObject._node._onRelease then
-						pressed:_onRelease(hitObject, impact.Block, pointerEvent)
-					elseif pressed._onCancel then
-						pressed:_onCancel()
-					end
+				if skip == false and hitObject._node == pressed and hitObject._node._onRelease then
+					pressed:_onRelease(hitObject, impact.Block, pointerEvent)
 					pressed = nil
 					-- pressed element captures event onRelease event
 					-- even if onRelease and onCancel are nil
@@ -3025,6 +3030,9 @@ function createUI(system)
 
 		-- no matter what, pressed is now nil
 		-- but not capturing event
+		if pressed._onCancel then
+			pressed:_onCancel()
+		end
 		pressed = nil
 	end, { system = system == true and System or nil, topPriority = true })
 
