@@ -47,10 +47,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		requests = {}
 	end
 
-	local idealReducedContentSize = function(_, width, height)
-		if not Client.IsMobile then
-			width = 500
-		end
+	local idealReducedContentSize = function(_, width, height, minWidth)
+		width = math.min(width, 500)
+		width = math.max(minWidth, width)
 		return Number2(width, height)
 	end
 
