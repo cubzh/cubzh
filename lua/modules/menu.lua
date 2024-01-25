@@ -2202,7 +2202,7 @@ function showSignUp(callbacks)
 					end
 					return
 				else
-					System:StoreCredentials(credentials["user-id"], credentials.token)
+					System:StoreCredentials(credentials["user-id"], credentials.token, credentials.tokenPrivileged)
 					System:DebugEvent("ACCOUNT_CREATED")
 					if callbacks.success ~= nil then
 						callbacks.success()

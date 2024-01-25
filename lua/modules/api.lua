@@ -8,7 +8,8 @@ API module
 local time = require("time")
 
 local mod = {
-	kApiAddr = "https://api.cu.bzh", -- dev server: "http://192.168.1.88:10083"
+	kApiAddr = "https://api.cu.bzh", -- prod server
+	-- kApiAddr = "http://192.168.1.16:10083", -- dev server
 }
 
 local errorMT = {
