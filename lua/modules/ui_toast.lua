@@ -6,6 +6,7 @@ ease = require("ease")
 -- Global variables
 local PADDING = require("uitheme").current.padding
 local ICON_MIN_SIZE = 40
+local ICON_MAX_SIZE = 60
 local topRightStack = {}
 local centerStack = {}
 
@@ -63,8 +64,10 @@ mod.create = function(_, config)
 
 	-- Create icon (optional)
 	local iconFrame
+	local iconRatio
 	if config.iconShape then
 		iconFrame = uikit:createShape(config.iconShape, { spherized = false })
+		iconRatio = iconFrame.Width / iconFrame.Height
 		iconFrame:setParent(toastFrame)
 	end
 
@@ -92,8 +95,15 @@ mod.create = function(_, config)
 		local textAndIconHeight = size.Height
 
 		if iconFrame then
-			iconFrame.Width = math.max(ICON_MIN_SIZE, size.Height)
-			iconFrame.Height = math.max(ICON_MIN_SIZE, size.Height)
+			if iconRatio > 1.0 then -- width > height
+				iconFrame.Width = math.max(ICON_MIN_SIZE, size.Height)
+				iconFrame.Width = math.min(ICON_MAX_SIZE, iconFrame.Width)
+				iconFrame.Height = iconFrame.Width / iconRatio
+			else
+				iconFrame.Height = math.max(ICON_MIN_SIZE, size.Height)
+				iconFrame.Height = math.min(ICON_MAX_SIZE, iconFrame.Height)
+				iconFrame.Width = iconFrame.Height * iconRatio
+			end
 
 			size.Width = iconFrame.Width + PADDING + size.Width
 			size.Height = math.max(iconFrame.Height, size.Height)
