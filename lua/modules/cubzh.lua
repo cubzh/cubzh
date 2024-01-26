@@ -577,7 +577,7 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 			local icon
 			pcall(function()
-				icon = bundle.Shape("voxels.discord_sign")
+				icon = bundle.Shape("aduermael.discord_logo")
 			end)
 			self.toast = toast:create({
 				message = "Might wanna join Cubzh's Discord to meet other players & builders?",
