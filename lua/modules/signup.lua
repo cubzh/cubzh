@@ -178,6 +178,15 @@ signup.createModal = function(_, config)
 
 	-- callback(ok, key)
 	local checkUsername = function(callback, config)
+		if checkUsernameTimer ~= nil then
+			checkUsernameTimer:Cancel()
+			checkUsernameTimer = nil
+		end
+		if checkUsernameRequest ~= nil then
+			checkUsernameRequest:Cancel()
+			checkUsernameRequest = nil
+		end
+
 		if checkUsernameError ~= nil then
 			if callback then
 				callback(false, nil)
@@ -194,15 +203,6 @@ signup.createModal = function(_, config)
 
 		local r = true
 		local s = usernameInput.Text
-
-		if checkUsernameTimer ~= nil then
-			checkUsernameTimer:Cancel()
-			checkUsernameTimer = nil
-		end
-		if checkUsernameRequest ~= nil then
-			checkUsernameRequest:Cancel()
-			checkUsernameRequest = nil
-		end
 
 		local usernameInfoDTBackup = usernameInfoDT
 		usernameInfoDT = nil
@@ -229,60 +229,70 @@ signup.createModal = function(_, config)
 			usernameInfo.Color = theme.errorTextColor
 			r = false
 		else
-			checkUsernameTimer = Timer(0.2, function()
+			local function displayChecking()
 				usernameInfoFrame = 0
 				usernameInfoDT = usernameInfoDTBackup or 0
 				usernameInfo.Text = "checking   "
 				usernameInfo.Color = Color(200, 200, 200, 255)
 				usernameInfo.pos.X = node.Width - usernameInfo.Width
+			end
 
-				-- additional delay for api request
-				checkUsernameTimer = Timer(0.3, function()
-					usernameInfo.Color = Color(200, 200, 200, 255)
-					checkUsernameTimer = nil
+			local function request()
+				checkUsernameRequest = api:checkUsername(s, function(success, res)
+					usernameInfoDT = nil
+					checkUsernameRequest = nil
 
-					checkUsernameRequest = api:checkUsername(s, function(success, res)
-						usernameInfoDT = nil
-						checkUsernameRequest = nil
+					if success == false then
+						usernameInfo.Text = "❌ server error, sorry"
+						usernameInfo.Color = theme.errorTextColor
+					elseif res.format ~= true then
+						usernameInfo.Text = "❌ format error"
+						usernameInfo.Color = theme.errorTextColor
+						checkUsernameError = true
+					elseif res.appropriate ~= true then
+						usernameInfo.Text = "❌ not appropriate"
+						usernameInfo.Color = theme.errorTextColor
+						checkUsernameError = true
+					elseif res.available ~= true then
+						usernameInfo.Text = "❌ already taken, sorry"
+						usernameInfo.Color = theme.errorTextColor
+						checkUsernameError = true
+					elseif type(res.key) ~= "string" then
+						usernameInfo.Text = "❌ server error, sorry"
+						usernameInfo.Color = theme.errorTextColor
+					else
+						System:DebugEvent("SIGNUP_ENTERED_VALID_USERNAME")
+						usernameInfo.Text = "✅"
+						usernameInfo.Color = Color(200, 200, 200, 255)
+						checkUsernameKey = res.key
+						checkUsernameError = nil
+					end
 
-						if success == false then
-							usernameInfo.Text = "❌ server error, sorry"
-							usernameInfo.Color = theme.errorTextColor
-						elseif res.format ~= true then
-							usernameInfo.Text = "❌ format error"
-							usernameInfo.Color = theme.errorTextColor
-							checkUsernameError = true
-						elseif res.appropriate ~= true then
-							usernameInfo.Text = "❌ not appropriate"
-							usernameInfo.Color = theme.errorTextColor
-							checkUsernameError = true
-						elseif res.available ~= true then
-							usernameInfo.Text = "❌ already taken, sorry"
-							usernameInfo.Color = theme.errorTextColor
-							checkUsernameError = true
-						elseif type(res.key) ~= "string" then
-							usernameInfo.Text = "❌ server error, sorry"
-							usernameInfo.Color = theme.errorTextColor
-						else
-							System:DebugEvent("SIGNUP_ENTERED_VALID_USERNAME")
-							usernameInfo.Text = "✅"
-							usernameInfo.Color = Color(200, 200, 200, 255)
-							checkUsernameKey = res.key
-							checkUsernameError = nil
+					usernameInfo.pos.X = node.Width - usernameInfo.Width
+
+					if checkUsernameKey ~= nil then
+						if callback ~= nil then
+							callback(true, checkUsernameKey)
 						end
+					end
+				end)
+			end
 
-						if checkUsernameKey ~= nil then
-							if callback ~= nil then
-								callback(true, checkUsernameKey)
-							end
-						end
-
-						usernameInfo.pos.X = node.Width - usernameInfo.Width
+			if config.noTimer == true then
+				displayChecking()
+				request()
+			else
+				checkUsernameTimer = Timer(0.2, function()
+					displayChecking()
+					-- additional delay for api request
+					checkUsernameTimer = Timer(0.3, function()
+						usernameInfo.Color = Color(200, 200, 200, 255)
+						checkUsernameTimer = nil
+						request()
 					end)
 				end)
-			end)
-
-			usernameInfo.Text = ""
+				usernameInfo.Text = ""
+			end
 		end
 
 		usernameInfo.pos.X = node.Width - usernameInfo.Width
@@ -326,7 +336,7 @@ signup.createModal = function(_, config)
 			end
 		end
 
-		checkUsername(usernameCallback, { errorIfEmpty = true })
+		checkUsername(usernameCallback, { errorIfEmpty = true, noTimer = true })
 	end
 
 	local tickListener
