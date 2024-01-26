@@ -49,6 +49,8 @@ local ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS = CollisionGroups(3, 4, 5)
 local DRAFT_COLLISION_GROUPS = CollisionGroups(6)
 
 local TRIGGER_AREA_SIZE = Number3(60, 30, 60)
+
+local LIGHT_COLOR = Color(244, 210, 87)
 -- local MAX_PLAYER_DISTANCE = 20
 -- local MAX_PLAYER_DISTANCE_SQR = MAX_PLAYER_DISTANCE * MAX_PLAYER_DISTANCE
 -- local TIME_TO_HATCH = 120
@@ -304,17 +306,49 @@ Client.OnWorldObjectLoad = function(obj)
 		obj.Wheel.Tick = function(self, dt)
 			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
+	elseif obj.Name == "voxels.drink_truck" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			setupBuilding(o)
+		end)
+		local lamps = obj:GetChild(8)
+		lamps.IsUnlit = false
+
+		local l = Light()
+		l:SetParent(lamps)
+		l.LocalPosition.X = 10
+		l.LocalPosition.Z = 30
+		l.Color = LIGHT_COLOR
+		l.Hardness = 0.7
+		l.On = false
+
+		LocalEvent:Listen("Night", function(_)
+			lamps.IsUnlit = true
+			l.On = true
+		end)
+		LocalEvent:Listen("Day", function(_)
+			lamps.IsUnlit = false
+			l.On = false
+		end)
 	elseif obj.Name == "voxels.home_1" then
 		setupBuilding(obj)
 	elseif obj.Name == "voxels.city_lamp" then
 		obj.Shadow = true
 		local light = obj:GetChild(1)
 		light.IsUnlit = false
+
+		local l = Light()
+		l:SetParent(light)
+		l.Color = LIGHT_COLOR
+		l.Hardness = 0.7
+		l.On = false
+
 		LocalEvent:Listen("Night", function(_)
 			light.IsUnlit = true
+			l.On = true
 		end)
 		LocalEvent:Listen("Day", function(_)
 			light.IsUnlit = false
+			l.On = false
 		end)
 	elseif obj.Name == "voxels.simple_lighthouse" then
 		setupBuilding(obj)
@@ -534,6 +568,36 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 			_helpers.lookAt(self.avatarContainer, nil)
 			dialog:remove()
+		end
+	elseif string.find(obj.fullname, "discord_sign") then
+		obj.trigger = _helpers.addTriggerArea(obj)
+		obj.trigger.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			local icon
+			pcall(function()
+				icon = bundle.Shape("voxels.discord_sign")
+			end)
+			self.toast = toast:create({
+				message = "Might wanna join Cubzh's Discord to meet other players & builders?",
+				center = false,
+				iconShape = icon,
+				duration = -1, -- negative duration means infinite
+				actionText = "Sure!",
+				action = function()
+					URL:Open("https://discord.gg/cubzh")
+				end,
+			})
+		end
+		obj.trigger.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
 		end
 	elseif obj.Name == "pet_bird" or obj.Name == "pet_gator" or obj.Name == "pet_ram" then
 		obj.initialForward = obj.Forward:Copy()
@@ -874,7 +938,7 @@ function mapEffects()
 	grass.Physics = PhysicsMode.Disabled
 	grass.CollisionGroups = { 1 }
 	grass.Scale = 0.999
-	grass.LocalPosition = { 5, 12.15, 27 }
+	grass.LocalPosition = { 5, 12.1, 27 }
 end
 
 addTimers = function()
