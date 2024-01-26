@@ -462,7 +462,7 @@ Client.OnWorldObjectLoad = function(obj)
 			Menu:RemoveHighlight()
 		end
 	elseif obj.Name == "voxels.change_room" then
-		obj.trigger = _helpers.addTriggerArea(obj)
+		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
 		obj.trigger.OnCollisionBegin = function(self, other)
 			if other ~= Player then
 				return
@@ -488,7 +488,7 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 		end
 	elseif obj.Name == "voxels.portal" then
-		obj.trigger = _helpers.addTriggerArea(obj)
+		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
 		obj.trigger.OnCollisionBegin = function(self, other)
 			if other ~= Player then
 				return
