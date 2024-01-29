@@ -747,9 +747,8 @@ void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
         return;
     }
 
-    keepPending = keepPending ||
-                  _shape_get_lua_flag(shape,
-                                      SHAPE_LUA_FLAG_HISTORY | SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING);
+    keepPending = keepPending || (_shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY) &&
+                                  _shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING));
 
     if (keepPending == false) {
         if (_shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY) && shape->history != NULL) {
