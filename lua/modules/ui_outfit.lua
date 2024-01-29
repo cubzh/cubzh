@@ -171,13 +171,34 @@ uiOutfit.create = function(_, config)
 			},
 		}
 
+		local tmpUiText = ui:createText("")
 		for key, config in pairs(outfitContainersInfo) do
 			local container = containers[key]
 			container.Width = containerWidth
 			container.Height = containerHeight
 			container.pos = config.pos
 
+			-- Cut text
 			container.btn.Width = container.Width
+
+			local name = container.textBtn.textName
+			local repo = "by @" .. container.textBtn.textRepo
+
+			tmpUiText.Text = name
+			local length = tmpUiText.Width
+			if length + 2 * theme.padding >= container.btn.Width then
+				local percentButtonLengthRatio = container.btn.Width / (length + theme.padding * 2)
+				name = string.sub(name, 1, #repo - math.floor(#repo * (1 - percentButtonLengthRatio)) - 2) .. "…"
+			end
+
+			tmpUiText.Text = repo
+			length = tmpUiText.Width
+			if length + 2 * theme.padding >= container.btn.Width then
+				local percentButtonLengthRatio = container.btn.Width / (length + theme.padding * 2)
+				repo = string.sub(repo, 1, #repo - math.floor(#repo * (1 - percentButtonLengthRatio)) - 2) .. "…"
+			end
+			container.textBtn.Text = string.format("%s\n%s", name, repo)
+
 			container.btn.Height = container.textBtn.Height + 2 * theme.padding
 			container.textBtn.pos = { theme.padding * 2, theme.padding }
 
@@ -185,6 +206,7 @@ uiOutfit.create = function(_, config)
 			container.uiShape.pos =
 				{ container.Width * 0.5 - container.uiShape.Width * 0.5, container.Height - container.uiShape.Height }
 		end
+		tmpUiText:remove()
 	end
 
 	require("api").getAvatar(username, function(err, data)
@@ -214,10 +236,8 @@ uiOutfit.create = function(_, config)
 					nextWearableLoaded()
 				end)
 				local repo, name = string.match(data[wearableName], "([^%.]+)%.([^%.]+)")
-				if #name > 14 then
-					name = string.sub(name, 1, 13) .. "…"
-				end
-				textBtn.Text = string.format("%s\nby @%s", name, repo)
+				textBtn.textName = name
+				textBtn.textRepo = repo
 				btn.onRelease = function()
 					local activeModal = content:getModalIfContentIsActive()
 					activeModal:push(uiOutfit:createTryContent({
@@ -232,7 +252,7 @@ uiOutfit.create = function(_, config)
 	content.idealReducedContentSize = function(content)
 		if Screen.Width < Screen.Height then
 			content.Width = math.min(Screen.Width * 0.7, 400)
-			content.Height = Screen.Height * 0.5
+			content.Height = Screen.Height * 0.45
 		else
 			content.Width = math.min(Screen.Width * 0.5, 600)
 			content.Height = math.min(Screen.Height * 0.75, content.Width * 0.4)
