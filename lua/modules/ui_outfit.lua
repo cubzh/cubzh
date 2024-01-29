@@ -58,7 +58,7 @@ uiOutfit.createTryContent = function(_, config)
 	end
 
 	outfitNode.parentDidResize = function()
-		local avatarSize = Screen.Width * 0.5
+		local avatarSize = outfitNode.Width * 0.5
 		currentAvatar.Size = avatarSize
 		avatar.Size = avatarSize
 
@@ -188,14 +188,14 @@ uiOutfit.create = function(_, config)
 			local length = tmpUiText.Width
 			if length + 2 * theme.padding >= container.btn.Width then
 				local percentButtonLengthRatio = container.btn.Width / (length + theme.padding * 2)
-				name = string.sub(name, 1, #repo - math.floor(#repo * (1 - percentButtonLengthRatio)) - 2) .. "…"
+				name = string.sub(name, 1, #repo - math.floor(#repo * (1 - percentButtonLengthRatio)) - 3) .. "…"
 			end
 
 			tmpUiText.Text = repo
 			length = tmpUiText.Width
 			if length + 2 * theme.padding >= container.btn.Width then
 				local percentButtonLengthRatio = container.btn.Width / (length + theme.padding * 2)
-				repo = string.sub(repo, 1, #repo - math.floor(#repo * (1 - percentButtonLengthRatio)) - 2) .. "…"
+				repo = string.sub(repo, 1, #repo - math.floor(#repo * (1 - percentButtonLengthRatio)) - 3) .. "…"
 			end
 			container.textBtn.Text = string.format("%s\n%s", name, repo)
 

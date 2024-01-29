@@ -305,14 +305,23 @@ local uiavatarMetatable = {
 					node.body = nil
 				end
 
-				avatarBody.equipments.hair.Name = "hair"
-				avatarBody.equipments.jacket.Name = "jacket"
-				avatarBody.equipments.jacket.attachedParts[1].Name = "rsleeve"
-				avatarBody.equipments.jacket.attachedParts[2].Name = "lsleeve"
-				avatarBody.equipments.pants.Name = "pants"
-				avatarBody.equipments.pants.attachedParts[1].Name = "lpant"
-				avatarBody.equipments.boots.Name = "boots"
-				avatarBody.equipments.boots.attachedParts[1].Name = "lboot"
+				if avatarBody.equipments.hair then
+					avatarBody.equipments.hair.Name = "hair"
+				end
+				if avatarBody.equipments.jacket then
+					avatarBody.equipments.jacket.Name = "jacket"
+					avatarBody.equipments.jacket.attachedParts[1].Name = "rsleeve"
+					avatarBody.equipments.jacket.attachedParts[2].Name = "lsleeve"
+				end
+				if avatarBody.equipments.pants then
+					avatarBody.equipments.pants.Name = "pants"
+					avatarBody.equipments.pants.attachedParts[1].Name = "lpant"
+				end
+				if avatarBody.equipments.boots then
+					avatarBody.equipments.boots.Name = "boots"
+					avatarBody.equipments.boots.attachedParts[1].Name = "lboot"
+				end
+
 				local avatarCopy = Shape(avatarBody, { includeChildren = true })
 				local jacket = avatarCopy:FindObjectByName("jacket")
 				jacket.attachedParts = {
@@ -333,6 +342,7 @@ local uiavatarMetatable = {
 					pants = pants,
 					boots = boots,
 				}
+
 				local uiBody = ui:createShape(avatarCopy, { spherized = true })
 				uiBody:setParent(node)
 				uiBody.Head.LocalRotation = { 0, 0, 0 }
