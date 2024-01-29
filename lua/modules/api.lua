@@ -490,8 +490,8 @@ mod.getPublishedWorlds = function(self, config, callback)
 		end
 	end
 
-	-- url example : https://api.cu.bzh/worlds2?category=featured&search=monster
-	local url = mod.kApiAddr .. "/worlds2?" .. queryParams
+	-- url example : https://api.cu.bzh/worlds?category=featured&search=monster
+	local url = mod.kApiAddr .. "/worlds?" .. queryParams
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
 			callback("http status not 200 (" .. res.StatusCode .. ")", nil)
