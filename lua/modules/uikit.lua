@@ -260,6 +260,10 @@ function createUI(system)
 			parentObject = parent
 		end
 
+		if type(parentObject.AddChild) ~= "function" then
+			error("uikit:setParent(parent): parent must be a node", 2)
+		end
+
 		attr.object:SetParent(parentObject)
 
 		if self.shape == nil then

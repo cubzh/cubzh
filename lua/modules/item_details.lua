@@ -117,6 +117,9 @@ itemDetails.createModalContent = function(_, config)
 			copyNameBtn.Width = prevWidth
 		end
 		Timer(1, function()
+			if copyNameBtn == nil then
+				return
+			end
 			copyNameBtn.Width = nil
 			copyNameBtn.Text = "📑 Copy Name"
 		end)
