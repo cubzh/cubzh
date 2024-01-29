@@ -408,7 +408,7 @@ profile.create = function(_, config)
 			},
 			{
 				key = "tiktok",
-				icon = "�����",
+				icon = "🇹",
 				action = function(str)
 					URL:Open("https://www.tiktok.com/@" .. str)
 				end,
@@ -1016,7 +1016,7 @@ profile.create = function(_, config)
 			}))
 		end
 
-		local mouthLabel = ui:createText("���� Mouth", theme.textColor)
+		local mouthLabel = ui:createText("👄 Mouth", theme.textColor)
 		mouthLabel:setParent(node)
 
 		mouthShapeButton:setParent(node)
