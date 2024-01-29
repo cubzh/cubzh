@@ -790,7 +790,10 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self.bottomBar.Height = 0
 		end
 
-		local totalTopWidth = topLeftElementsWidth + topCenterElementsWidth + self.closeBtn.Width + theme.padding * 4
+		-- enforcing same left and right width for center elements
+		-- to better better appear at center with correct margins
+		local topLeftRightWidth = math.max(self.closeBtn.Width, topLeftElementsWidth)
+		local totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
 		local totalBottomWidth = bottomRightElementsWidth
 			+ bottomCenterElementsWidth
 			+ bottomLeftElementsWidth

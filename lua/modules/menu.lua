@@ -447,7 +447,7 @@ settingsBtn:setParent(actionColumn)
 
 settingsBtn.onRelease = function()
 	if activeModal ~= nil then
-		activeModal:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
+		activeModal:push(settings:createModalContent({ clearCache = true, account = true, uikit = ui }))
 	end
 end
 
@@ -2202,7 +2202,7 @@ function showSignUp(callbacks)
 					end
 					return
 				else
-					System:StoreCredentials(credentials["user-id"], credentials.token, credentials.tokenPrivileged)
+					System:StoreCredentials(credentials["user-id"], credentials.token)
 					System:DebugEvent("ACCOUNT_CREATED")
 					if callbacks.success ~= nil then
 						callbacks.success()
