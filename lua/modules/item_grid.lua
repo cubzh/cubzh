@@ -385,7 +385,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid._setEntry = function(grid, cell, entry)
-		cell.loaded = false
 		cell.type = entry.type
 
 		if cell.type == "item" then
@@ -525,6 +524,7 @@ itemGrid.create = function(_, config)
 			local cell = cells[i]
 			local entry = self.entries[k + i]
 			cell.IsHidden = entry == nil
+			cell.loaded = false
 
 			if entry ~= nil then
 				local timer = Timer((i - 1) * 0.02, function()
