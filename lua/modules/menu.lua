@@ -447,7 +447,7 @@ settingsBtn:setParent(actionColumn)
 
 settingsBtn.onRelease = function()
 	if activeModal ~= nil then
-		activeModal:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
+		activeModal:push(settings:createModalContent({ clearCache = true, account = true, uikit = ui }))
 	end
 end
 

@@ -8,7 +8,8 @@ API module
 local time = require("time")
 
 local mod = {
-	kApiAddr = "https://api.cu.bzh", -- dev server: "http://192.168.1.88:10083"
+	kApiAddr = "https://api.cu.bzh", -- prod server
+	-- kApiAddr = "http://192.168.1.16:10083", -- dev server
 }
 
 local errorMT = {
@@ -489,8 +490,8 @@ mod.getPublishedWorlds = function(self, config, callback)
 		end
 	end
 
-	-- url example : https://api.cu.bzh/worlds2?category=featured&search=monster
-	local url = mod.kApiAddr .. "/worlds2?" .. queryParams
+	-- url example : https://api.cu.bzh/worlds?category=featured&search=monster
+	local url = mod.kApiAddr .. "/worlds?" .. queryParams
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
 			callback("http status not 200 (" .. res.StatusCode .. ")", nil)

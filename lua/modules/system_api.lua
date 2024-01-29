@@ -25,6 +25,22 @@ moduleMT.__index = function(_, key)
 	return api[key] or moduleMT[key]
 end
 
+mod.deleteUser = function(_, callback)
+	if type(callback) ~= "function" then
+		callback(false, "1st arg must be a function")
+		return
+	end
+	local url = mod.kApiAddr .. "/users/self"
+	local req = System:HttpDelete(url, {}, function(resp)
+		if resp.StatusCode ~= 200 then
+			callback(false, "http status not 200")
+			return
+		end
+		callback(true, nil) -- success
+	end)
+	return req
+end
+
 mod.checkUsername = function(_, username, callback)
 	if type(username) ~= "string" then
 		callback(false, "1st arg must be a string")

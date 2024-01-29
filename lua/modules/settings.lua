@@ -22,8 +22,8 @@ settings.createModalContent = function(_, config)
 
 	-- default config
 	local _config = {
+		account = true,
 		clearCache = false,
-		logout = false,
 		uikit = require("uikit"),
 	}
 
@@ -217,6 +217,164 @@ settings.createModalContent = function(_, config)
 
 	cacheAndLogoutRow = {}
 
+	if _config.account == true then
+		local accountButton = ui:createButton("Account settings", { textSize = "small" })
+		accountButton.onRelease = function(_)
+			local accountContent = modal:createContent()
+			accountContent.title = "Account"
+			accountContent.icon = "⚙️"
+
+			local node = ui:createFrame()
+			accountContent.node = node
+
+			local logoutButton = ui:createButton("Logout", { textSize = "default" })
+			logoutButton:setColor(theme.colorNegative)
+			logoutButton:setParent(node)
+
+			logoutButton.onRelease = function(_)
+				local logoutContent = modal:createContent()
+				logoutContent.title = "Logout"
+				logoutContent.icon = "⚙️"
+
+				local node = ui:createFrame()
+				logoutContent.node = node
+
+				local text = ui:createText("Are you sure you want to logout now?", Color.White)
+				text:setParent(node)
+
+				text.object.MaxWidth = 300
+
+				logoutContent.idealReducedContentSize = function(_, _, _)
+					local w, h = text.Width + theme.padding * 2, text.Height + theme.padding * 2
+					return Number2(w, h)
+				end
+
+				node.parentDidResize = function(self)
+					local w = text.Width
+					text.pos.X = self.Width * 0.5 - w * 0.5
+					text.pos.Y = self.Height - text.Height - theme.padding
+				end
+
+				local yes = ui:createButton("Yes! 🙂")
+				yes.onRelease = function()
+					local modal = logoutContent:getModalIfContentIsActive()
+					if modal then
+						modal:close()
+					end
+					System:Logout()
+				end
+				logoutContent.bottomCenter = { yes }
+
+				accountContent:push(logoutContent)
+			end
+
+			local deleteButton = ui:createButton(
+				"Delete account",
+				{ textSize = "small", underline = true, borders = false, padding = false, shadow = false }
+			)
+			deleteButton:setColor(Color(0, 0, 0, 0), theme.colorNegative)
+			deleteButton:setParent(node)
+
+			deleteButton.onRelease = function(_)
+				local deleteContent = modal:createContent()
+				deleteContent.title = "Account deletion"
+				deleteContent.icon = "⚙️"
+
+				local node = ui:createFrame()
+				deleteContent.node = node
+
+				local text =
+					ui:createText("⚠️ Are you REALLY sure you want to delete your account now?", Color.White)
+				text:setParent(node)
+
+				local text2 = ui:createText("Type your username to confirm:", Color.White)
+				text2:setParent(node)
+
+				text.object.MaxWidth = 300
+				text2.object.MaxWidth = 300
+
+				local input = ui:createTextInput("", "username", { textSize = "default" })
+				input:setParent(node)
+
+				local req
+
+				node.parentDidResize = function(self)
+					local w = math.max(text.Width, text2.Width)
+
+					text.pos.X = self.Width * 0.5 - w * 0.5
+					text.pos.Y = self.Height - text.Height - theme.padding
+
+					text2.pos.X = self.Width * 0.5 - w * 0.5
+					text2.pos.Y = text.pos.Y - text2.Height - theme.padding
+
+					input.Width = w
+					input.pos.X = self.Width * 0.5 - w * 0.5
+					input.pos.Y = text2.pos.Y - input.Height - theme.padding
+				end
+
+				deleteContent.idealReducedContentSize = function(_, _, _, _)
+					local w = math.max(text.Width, text2.Width) + theme.padding * 2
+					local h = text.Height + text2.Height + input.Height + theme.padding * 4
+					return Number2(w, h)
+				end
+
+				local yes = ui:createButton("🗑️ Delete account")
+				yes:disable()
+				yes.onRelease = function()
+					yes:disable()
+					req = require("system_api", System):deleteUser(function(success)
+						req = nil
+						if success == true then
+							local modal = deleteContent:getModalIfContentIsActive()
+							if modal then
+								modal:close()
+							end
+							System:Logout()
+						else
+							if string.lower(input.Text) == string.lower(Player.Username) then
+								yes:enable()
+							end
+						end
+					end)
+				end
+
+				input.onTextChange = function()
+					if req ~= nil then
+						req:Cancel()
+						req = nil
+					end
+					if string.lower(input.Text) == string.lower(Player.Username) then
+						yes:enable()
+					else
+						yes:disable()
+					end
+				end
+
+				deleteContent.bottomCenter = { yes }
+
+				accountContent:push(deleteContent)
+			end
+
+			node.parentDidResize = function(self)
+				logoutButton.pos.X = self.Width * 0.5 - logoutButton.Width * 0.5
+				logoutButton.pos.Y = self.Height - logoutButton.Height - theme.padding
+
+				deleteButton.pos.X = self.Width * 0.5 - deleteButton.Width * 0.5
+				deleteButton.pos.Y = logoutButton.pos.Y - deleteButton.Height - theme.padding
+			end
+
+			accountContent.idealReducedContentSize = function(_, _, _, minWidth)
+				local w = math.max(logoutButton.Width, deleteButton.Width, 250)
+				local h = logoutButton.Height + deleteButton.Height + theme.padding * 3
+				w = math.max(minWidth, w)
+				return Number2(w, h)
+			end
+
+			content:push(accountContent)
+		end
+		table.insert(cacheAndLogoutRow, accountButton)
+	end
+
 	if _config.clearCache == true then
 		local cacheButton = ui:createButton("Clear cache", { textSize = "small" })
 		cacheButton.onRelease = function(_)
@@ -237,8 +395,10 @@ settings.createModalContent = function(_, config)
 
 			text.object.MaxWidth = 300
 
-			clearCacheContent.idealReducedContentSize = function(_, _, _)
-				local w, h = text.Width + theme.padding * 2, text.Height + theme.padding * 2
+			clearCacheContent.idealReducedContentSize = function(_, _, _, minWidth)
+				local w = text.Width + theme.padding * 2
+				local h = text.Height + theme.padding * 2
+				w = math.max(minWidth, w)
 				return Number2(w, h)
 			end
 
@@ -253,47 +413,6 @@ settings.createModalContent = function(_, config)
 			content:push(clearCacheContent)
 		end
 		table.insert(cacheAndLogoutRow, cacheButton)
-	end
-
-	-- LOGOUT
-
-	if _config.logout == true then
-		local logoutButton = ui:createButton("Logout", { textSize = "small" })
-		logoutButton:setColor(theme.colorNegative)
-
-		logoutButton.onRelease = function(_)
-			local logoutContent = modal:createContent()
-			logoutContent.title = "Settings"
-			logoutContent.icon = "⚙️"
-
-			local node = ui:createFrame()
-			logoutContent.node = node
-
-			local text = ui:createText("Are you sure you want to logout now?", Color.White)
-			text.pos.X = theme.padding
-			text.pos.Y = theme.padding
-			text:setParent(node)
-
-			text.object.MaxWidth = 300
-
-			logoutContent.idealReducedContentSize = function(_, _, _)
-				local w, h = text.Width + theme.padding * 2, text.Height + theme.padding * 2
-				return Number2(w, h)
-			end
-
-			local yes = ui:createButton("Yes! 🙂")
-			yes.onRelease = function()
-				local modal = logoutContent:getModalIfContentIsActive()
-				if modal then
-					modal:close()
-				end
-				System:Logout()
-			end
-			logoutContent.bottomCenter = { yes }
-
-			content:push(logoutContent)
-		end
-		table.insert(cacheAndLogoutRow, logoutButton)
 	end
 
 	if #cacheAndLogoutRow > 0 then
