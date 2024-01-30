@@ -81,6 +81,8 @@ itemGrid.create = function(_, config)
 
 	local removed = false
 
+	local sortBy = "likes:desc"
+
 	local grid = ui:createFrame() -- Color(255,0,0)
 	local search = ""
 
@@ -160,6 +162,19 @@ itemGrid.create = function(_, config)
 	if config.searchBar then
 		grid.searchBar = ui:createTextInput("", "search")
 		grid.searchBar:setParent(grid)
+
+		grid.sortButton = ui:createButton("♥️")
+		grid.sortButton:setParent(grid)
+		grid.sortButton.onRelease = function()
+			if sortBy == "likes:desc" then
+				grid.sortButton.Text = "✨"
+				sortBy = "updatedAt:desc"
+			elseif sortBy == "updatedAt:desc" then
+				grid.sortButton.Text = "♥️"
+				sortBy = "likes:desc"
+			end
+			grid:getItems()
+		end
 
 		grid.searchBar.onTextChange = function(_)
 			if grid.searchTimer ~= nil then
@@ -675,9 +690,11 @@ itemGrid.create = function(_, config)
 			if self.searchButton ~= nil then
 				self.searchButton.Height = self.searchBar.Height
 				self.searchButton.Width = self.searchButton.Height
-				self.searchBar.Width = self.Width - self.searchButton.Width
+				self.sortButton.Height = self.searchBar.Height
+				self.searchBar.Width = self.Width - self.searchButton.Width - self.sortButton.Width
 				self.searchBar.pos = { 0, self.Height - self.searchBar.Height - offset, 0 }
 				self.searchButton.pos = self.searchBar.pos + { self.searchBar.Width, 0, 0 }
+				self.sortButton.pos = self.searchButton.pos + { self.searchButton.Width, 0, 0 }
 			end
 		end
 	end
@@ -698,6 +715,7 @@ itemGrid.create = function(_, config)
 				page = 1,
 				perPage = 250,
 				search = search,
+				sortBy = sortBy,
 			}, function(err, items)
 				if err then
 					print("Error: " .. err)
@@ -746,7 +764,7 @@ itemGrid.create = function(_, config)
 					worldsFilter = nil
 				end
 				local req = api:getPublishedWorlds(
-					{ search = search, list = worldsFilter, perPage = 100, page = 1 },
+					{ search = search, list = worldsFilter, perPage = 100, page = 1, sortBy = sortBy },
 					apiCallback
 				)
 				addSentRequest(req)
