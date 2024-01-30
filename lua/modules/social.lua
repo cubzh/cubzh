@@ -1,7 +1,7 @@
 local social = {}
 
 social.enablePlayerClickMenu = function()
-	LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
+	LocalEvent:Listen(LocalEvent.Name.PointerClick, function(pe)
 		local impacts = Ray(pe.Position, pe.Direction):Cast(nil, nil, false)
 		local player
 		for _, impact in ipairs(impacts) do
@@ -10,9 +10,22 @@ social.enablePlayerClickMenu = function()
 				break
 			end
 		end
-		if player and player ~= Player then
+		if player then -- and player ~= Player then
+			local handleWasShown = false
+			if player.IsHandleShown then
+				handleWasShown = true
+				player:HideHandle()
+			end
+
+			local removeMenu = function()
+				if handleWasShown then
+					player:ShowHandle()
+				end
+				require("radialmenu").remove()
+			end
+
 			local radialMenuConfig = {
-				target = player,
+				target = player.Head,
 				offset = { 0, 10, 0 },
 				nodes = {
 					{
@@ -27,7 +40,7 @@ social.enablePlayerClickMenu = function()
 								uikit = require("uikit"),
 								minimizedModal = true,
 							})
-							require("radialmenu").remove()
+							removeMenu()
 						end,
 					},
 					{
@@ -36,12 +49,13 @@ social.enablePlayerClickMenu = function()
 						angle = -90,
 						radius = 30,
 						onRelease = function()
-							require("radialmenu").remove()
+							removeMenu()
 						end,
 					},
 				},
 			}
 			require("radialmenu"):create(radialMenuConfig)
+			return true -- capture click
 		end
 	end)
 end
