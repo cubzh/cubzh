@@ -14,6 +14,8 @@ local mt = {
 }
 setmetatable(friendsWindow, mt)
 
+local cachedAvatars = {}
+
 local uiAvatar = require("ui_avatar")
 local theme = require("uitheme").current
 local padding = theme.padding
@@ -307,6 +309,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				textBg:show()
 
 				cell.onRelease = function()
+					cell:setColor(Color(63, 63, 63))
 					local profileContent = require("profile"):create({
 						isLocal = false,
 						username = user.username,
@@ -315,16 +318,24 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					})
 					content:push(profileContent)
 				end
+				cell.onPress = function()
+					cell:setColor(Color(35, 35, 35))
+				end
+				cell.onCancel = function()
+					cell:setColor(Color(63, 63, 63))
+				end
 
 				cell.IsMask = true
 				cell.username = user.username
 				cell.userID = user.id
 				textBg.LocalPosition.Z = -600
-				avatar = uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
+				avatar = cachedAvatars[user.username] or uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
 				avatar:setParent(cell)
 				avatar.didLoad = function()
 					avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
+					cachedAvatars[user.username] = avatar
 				end
+				cell.avatar = avatar
 				Object:Load("buche.lobby_grassland", function(obj)
 					avatarLand = ui:createShape(obj)
 					avatarLand:setParent(cell)
@@ -511,6 +522,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				local title = ui:createText(string.format(titleStr, #lists[firstCellType]), Color.White)
 				verticalContainer:pushElement(title)
 				verticalContainer:pushElement(line)
+				verticalContainer.line = line
 			else
 				line:pushGap()
 			end
@@ -542,8 +554,19 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return verticalContainer or line
 	end
 
-	local unloadLine = function(line)
-		line:remove()
+	local unloadLine = function(lineOrVerticalContainer)
+		local line = lineOrVerticalContainer
+		if lineOrVerticalContainer.line then
+			line = lineOrVerticalContainer.line
+		end
+		if line.cells then
+			for _, cell in ipairs(line.cells) do
+				if cell.avatar then
+					cell.avatar:setParent(nil)
+				end
+			end
+		end
+		lineOrVerticalContainer:remove()
 	end
 
 	local config = {

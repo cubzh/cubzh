@@ -37,15 +37,17 @@ end
 
 uiHorizontalIndex.refresh = function(self)
 	local width, height = 0, 0
-	for _,elem in ipairs(self.list) do
+	for _, elem in ipairs(self.list) do
 		elem.pos.X = width
 		elem.pos.Y = padding
-		width = width + elem.Width
-		if elem.elementType == "node" and height < elem.Height then height = elem.Height end
+		width = math.floor(width + elem.Width)
+		if elem.elementType == "node" and height < elem.Height then
+			height = elem.Height
+		end
 	end
 
-	for _,elem in ipairs(self.list) do
-		elem.Height = height
+	for _, elem in ipairs(self.list) do
+		elem.Height = math.floor(height)
 	end
 	width, height = width, height + padding * 2
 	self.Width = math.floor(width)
@@ -57,11 +59,13 @@ local createHorizontalContainer = function(_, color)
 	elem.bg = require("uikit"):createFrame(color)
 	local list = {}
 
-	local index = function(_,k)
-		if k == "list" then return list end
+	local index = function(_, k)
+		if k == "list" then
+			return list
+		end
 		return uiHorizontalIndex[k] or elem.bg[k]
 	end
-	local newindex = function(_,k,v)
+	local newindex = function(_, k, v)
 		if k == "list" then
 			list = v
 			return
@@ -120,20 +124,22 @@ end
 uiVerticalIndex.refresh = function(self)
 	local width, height = 0, 0
 
-	for _,elem in ipairs(self.list) do
+	for _, elem in ipairs(self.list) do
 		height = height + elem.Height
 	end
-	self.Height =  math.floor(height + 2 * padding)
+	self.Height = math.floor(height + 2 * padding)
 
 	height = self.Height - padding
-	for _,elem in ipairs(self.list) do
+	for _, elem in ipairs(self.list) do
 		elem.pos.X = padding
 		elem.pos.Y = height - elem.Height
 		height = height - elem.Height
-		if width < elem.Width then width = elem.Width end
+		if width < elem.Width then
+			width = elem.Width
+		end
 	end
 
-	for _,elem in ipairs(self.list) do
+	for _, elem in ipairs(self.list) do
 		elem.Width = width
 	end
 	self.Width = math.floor(width + 2 * padding)
@@ -144,11 +150,13 @@ local createVerticalContainer = function(_, color)
 	elem.bg = require("uikit"):createFrame(color)
 	local list = {}
 
-	local index = function(_,k)
-		if k == "list" then return list end
+	local index = function(_, k)
+		if k == "list" then
+			return list
+		end
 		return uiVerticalIndex[k] or elem.bg[k]
 	end
-	local newindex = function(_,k,v)
+	local newindex = function(_, k, v)
 		if k == "list" then
 			list = v
 			return
@@ -171,5 +179,5 @@ end
 
 return {
 	createHorizontalContainer = createHorizontalContainer,
-	createVerticalContainer = createVerticalContainer
+	createVerticalContainer = createVerticalContainer,
 }
