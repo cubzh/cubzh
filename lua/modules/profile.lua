@@ -113,127 +113,6 @@ function updateFriendBtn(friendBtn, content, userID)
 	end)
 end
 
-local createMinimizedProfile = function(config)
-	if lastMinimizedProfileModal and lastMinimizedProfileModal._content ~= nil then
-		lastMinimizedProfileModal:close()
-	end
-	local ui = config.uikit or require("uikit")
-	local username = config.username
-	local userID = config.userID
-
-	local newModal
-
-	local profileNode = ui:createFrame()
-	profileNode.Width = 200
-	profileNode.Height = 200
-
-	local content = modal:createContent()
-	content.title = username
-	content.icon = "😛"
-	content.node = profileNode
-
-	local profileBtn = ui:createButton("👤 Profile")
-	profileBtn.onRelease = function()
-		local profileContent = require("profile"):create({
-			isLocal = false,
-			username = username,
-			userID = userID,
-			uikit = ui,
-		})
-		newModal:push(profileContent)
-	end
-	profileBtn:setParent(profileNode)
-	local outfitBtn = ui:createButton("🤠 Outfit")
-	outfitBtn.onRelease = function()
-		newModal:push(require("ui_outfit"):create({
-			uikit = ui,
-			username = username,
-		}))
-	end
-	outfitBtn:setParent(profileNode)
-	local friendBtn = ui:createButton("➕ Add Friend")
-	friendBtn:setParent(profileNode)
-	updateFriendBtn(friendBtn, content, userID)
-
-	local padding = theme.current.padding
-
-	local computeButtonsWidth = function()
-		return math.max(profileBtn.Width, outfitBtn.Width, friendBtn.Width)
-	end
-
-	local computeHeight = function()
-		return profileBtn.Height * 3 + padding * 2
-	end
-
-	local avatar = uiAvatar:get(username, computeHeight(), nil, ui)
-	avatar:setParent(profileNode)
-
-	profileNode.parentDidResize = function()
-		local buttonsWidth = computeButtonsWidth()
-		local avatarWidth = computeHeight()
-
-		avatar.Size = avatarWidth
-		avatar.pos = { 0, 0 }
-
-		profileBtn.Width = buttonsWidth
-		outfitBtn.Width = buttonsWidth
-		friendBtn.Width = buttonsWidth
-
-		friendBtn.pos = { computeHeight() + padding, 0 }
-		outfitBtn.pos = { computeHeight() + padding, friendBtn.pos.Y + friendBtn.Height + padding }
-		profileBtn.pos = { computeHeight() + padding, outfitBtn.pos.Y + outfitBtn.Height + padding }
-	end
-
-	require("api"):getFriends(function(ok, list, err)
-		if not ok then
-			error(err, 2)
-			return
-		end
-		for _, p in ipairs(list) do
-			if p.UserID == userID then
-				friendBtn:disable()
-			end
-		end
-	end)
-
-	local maxModalWidth = function()
-		return computeButtonsWidth() + padding + computeHeight()
-	end
-
-	local maxModalHeight = function()
-		return computeHeight()
-	end
-
-	content.idealReducedContentSize = function(content)
-		content.Width = maxModalWidth()
-		content.Height = maxModalHeight()
-		return Number2(content.Width, content.Height)
-	end
-
-	local updateModalPosition = function(modal, forceBounce)
-		local vMin = Screen.SafeArea.Bottom + ACTIVE_NODE_MARGIN
-		local vMax = Screen.Height - 50 - ACTIVE_NODE_MARGIN
-
-		local vCenter = vMin + (vMax - vMin) * 0.5
-
-		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5, 0)
-
-		if not modal.updatedPosition or forceBounce then
-			modal.LocalPosition = p - { 0, 100, 0 }
-			modal.updatedPosition = true
-			ease:cancel(modal) -- cancel modal ease animations if any
-			ease:outBack(modal, 0.22).LocalPosition = p
-		else
-			modal.LocalPosition = p
-		end
-	end
-
-	newModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
-
-	lastMinimizedProfileModal = newModal
-	return newModal
-end
-
 --- Creates a profile modal content
 --- positionCallback(function): position of the popup
 --- config(table): isLocal, id, username
@@ -249,7 +128,6 @@ profile.create = function(_, config)
 		userID = "",
 		username = "",
 		uikit = ui, -- allows to provide specific instance of uikit
-		minimizedModal = false,
 	}
 
 	if config then
@@ -264,10 +142,6 @@ profile.create = function(_, config)
 
 	if not _config.isLocal and (_config.userID == "" or _config.username == "") then
 		error("profile:create(config): config.userID should be a valid userID", 2)
-	end
-
-	if _config.minimizedModal then
-		return createMinimizedProfile(_config)
 	end
 
 	-- nodes beside avatar

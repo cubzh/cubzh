@@ -26,20 +26,25 @@ social.enablePlayerClickMenu = function()
 
 			local radialMenuConfig = {
 				target = player.Head,
-				offset = { 0, 10, 0 },
+				offset = { 0, 5, 0 },
 				nodes = {
 					{
 						type = "button",
-						text = "👤 Profile",
-						angle = 90,
-						radius = 30,
+						text = "🔎",
+						angle = 130,
+						radius = 45,
 						onRelease = function()
-							require("profile"):create({
-								username = player.Username,
-								userID = player.UserID,
-								uikit = require("uikit"),
-								minimizedModal = true,
-							})
+							Menu:ShowProfile(player)
+							removeMenu()
+						end,
+					},
+					{
+						type = "button",
+						text = "👕",
+						angle = 50,
+						radius = 45,
+						onRelease = function()
+							Menu:ShowOutfits(player)
 							removeMenu()
 						end,
 					},

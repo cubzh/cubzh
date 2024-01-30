@@ -149,6 +149,8 @@ function createUI(system)
 		end
 	end
 
+	ui.setLayers = _setLayers
+
 	local function _setCollisionGroups(object)
 		if system == true then
 			System:SetCollisionGroupsElevated(object, UI_COLLISION_GROUP_SYSTEM)

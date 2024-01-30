@@ -54,7 +54,12 @@ uiOutfit.createTryContent = function(_, config)
 	end
 
 	avatar.didLoad = function()
-		require("equipments").load(config.slot, config.itemfullname, avatar.body.shape, false, false, function(obj) end)
+		require("equipments").load(config.slot, config.itemfullname, avatar.body.shape, false, false, function(obj)
+			ui.setLayers(obj)
+			for _, o in ipairs(obj.attachedParts) do
+				ui.setLayers(o)
+			end
+		end)
 	end
 
 	outfitNode.parentDidResize = function()
@@ -100,7 +105,8 @@ uiOutfit.create = function(_, config)
 	outfitNode.Height = 200
 
 	local content = modal:createContent()
-	content.title = config.username .. " Outfit"
+	content.title = config.username .. "'s outfit"
+	content.icon = "👕"
 	content.node = outfitNode
 
 	local avatar = uiAvatar:get(username, 200, nil, ui)
@@ -116,14 +122,14 @@ uiOutfit.create = function(_, config)
 		containers[value] = container
 		local btn = ui:createButton("")
 		btn:setParent(container)
-		local textBtn = ui:createText("", Color.White)
+		local textBtn = ui:createText("", Color.White, "small")
 		textBtn:setParent(btn)
 		btn.pos.Z = -500
 		container.btn = btn
 		container.textBtn = textBtn
 	end
 
-	local infoText = ui:createText("Click to try the outfit", Color.White)
+	local infoText = ui:createText("Click to try the outfit", Color.White, "small")
 	infoText:setParent(outfitNode)
 
 	outfitNode.parentDidResize = function()
@@ -241,6 +247,7 @@ uiOutfit.create = function(_, config)
 				btn.onRelease = function()
 					local activeModal = content:getModalIfContentIsActive()
 					activeModal:push(uiOutfit:createTryContent({
+						uikit = ui,
 						slot = wearableName,
 						itemfullname = data[wearableName],
 					}))
