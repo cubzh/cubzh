@@ -11,6 +11,7 @@ ui = require("uikit")
 uiAvatar = require("ui_avatar")
 pages = require("pages")
 colorpicker = require("colorpicker")
+ease = require("ease")
 
 -- CONSTANTS
 
@@ -29,6 +30,88 @@ local DEBUG = false
 local DEBUG_FRAME_COLOR = Color(255, 255, 0, 200)
 
 local ACTIVE_NODE_MARGIN = theme.paddingBig
+
+local lastMinimizedProfileModal
+
+function updateFriendBtn(friendBtn, content, userID)
+	if Player.UserID == userID then
+		friendBtn.Text = string.format("📘 Friends")
+		friendBtn.onRelease = function()
+			Menu:ShowFriends()
+		end
+	else
+		friendBtn.onRelease = function()
+			api:sendFriendRequest(userID, function(ok, _)
+				if not ok then
+					return
+				end
+				friendBtn.Text = "📩 Invitation sent"
+				content:refreshModal()
+			end)
+		end
+	end
+
+	-- check if the User is already a friend
+	api:getFriends(function(ok, friends, _)
+		if not ok then
+			return
+		end
+		if Player.UserID == userID then
+			friendBtn.Text = string.format("📘 Friends (%d)", #friends)
+			friendBtn.onRelease = function()
+				Menu:ShowFriends()
+			end
+			content:refreshModal()
+			return
+		end
+		for _, friendID in ipairs(friends) do
+			if friendID == userID then
+				friendBtn.Text = "💬 Message"
+				friendBtn.onRelease = function()
+					local alert = require("alert"):create("⚠️ Work in progress...", { uikit = ui })
+					alert.pos.Z = -500
+				end
+				content:refreshModal()
+				break
+			end
+		end
+	end)
+
+	api:getSentFriendRequests(function(ok, users, _)
+		if not ok then
+			return
+		end
+		for _, friendID in ipairs(users) do
+			if friendID == userID then
+				friendBtn.Text = "📩 Invitation sent"
+				friendBtn.onRelease = nil
+				content:refreshModal()
+				break
+			end
+		end
+	end)
+
+	api:getReceivedFriendRequests(function(ok, users, _)
+		if not ok then
+			return
+		end
+		for _, friendID in ipairs(users) do
+			if friendID == userID then
+				friendBtn.Text = "➕ Add Friend"
+				friendBtn.onRelease = function()
+					api:replyToFriendRequest(userID, true, function()
+						friendBtn.Text = "💬 Message"
+						friendBtn.onRelease = function()
+							require("alert"):create("⚠️ Work in progress...", { uikit = ui })
+						end
+						content:refreshModal()
+					end)
+				end
+				break
+			end
+		end
+	end)
+end
 
 --- Creates a profile modal content
 --- positionCallback(function): position of the popup

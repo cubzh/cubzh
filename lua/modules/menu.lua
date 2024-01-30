@@ -71,6 +71,7 @@ MODAL_KEYS = {
 	BUILD = 8,
 	MARKETPLACE = 9,
 	CUBZH_MENU = 10,
+	OUTFITS = 11,
 }
 
 function connect()
@@ -161,7 +162,7 @@ function popModal()
 	end
 end
 
-function showModal(key)
+function showModal(key, config)
 	if not key then
 		return
 	end
@@ -179,7 +180,20 @@ function showModal(key)
 
 	local content
 	if key == MODAL_KEYS.PROFILE then
-		content = require("profile"):create({ uikit = ui })
+		local c = { uikit = ui }
+		if config.player ~= nil and config.player ~= Player then
+			c.isLocal = false
+			c.username = config.player.Username
+			c.userID = config.player.UserID
+		end
+		content = require("profile"):create(c)
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.OUTFITS then
+		local c = { uikit = ui, username = Player.Username }
+		if config.player ~= nil then
+			c.username = config.player.Username
+		end
+		content = require("ui_outfit"):create(c)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CHAT then
 		local inputText = ""
@@ -1721,11 +1735,21 @@ end
 ---@code local menu = require("menu")
 --- menu:ShowProfile() -- shows local user profile menu
 ---@return boolean
-menu.ShowProfile = function(_)
+menu.ShowProfile = function(_, player)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	profileFrame:onRelease()
+	-- player can be nil, displays local player in that case
+	showModal(MODAL_KEYS.PROFILE, { player = player })
+	return true
+end
+
+menu.ShowOutfits = function(_, player)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	-- player can be nil, displays local player in that case
+	showModal(MODAL_KEYS.OUTFITS, { player = player })
 	return true
 end
 
