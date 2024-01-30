@@ -1091,7 +1091,7 @@ function getCubzhMenuModalContent()
 	local emailForm
 
 	local function addEmailForm(hasEmail, emailTemporary, refreshModal)
-		if hasEmail then
+		if hasEmail or node.setParent == nil then
 			return
 		end
 
