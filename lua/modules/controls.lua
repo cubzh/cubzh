@@ -810,14 +810,13 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 				if Pointer.Down ~= nil then
 					Pointer.Down(pointerEvent)
 				end
-				if Pointer.Click ~= nil then
-					local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
-					_state.clickPointerIndex = pointerEvent.Index
-					_state.clickPointerStartPosition = Number2(x, y)
-				end
 
 				local px, py = pointerEvent.X, pointerEvent.Y
 				local x, y = px * Screen.Width, py * Screen.Height
+
+				_state.clickPointerIndex = pointerEvent.Index
+				_state.clickPointerStartPosition = Number2(x, y)
+
 				_state.longPressStartPosition = Number2(x, y)
 				_state.longPressTimer = Timer(LONG_PRESS_DELAY_1, function()
 					local indicator = _getPCLongPressIndicator(true)
@@ -854,10 +853,8 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 					Pointer.Down(pointerEvent)
 				end
 
-				if Pointer.Click ~= nil then
-					_state.clickPointerIndex = pointerEvent.Index
-					_state.clickPointerStartPosition = Number2(x, y)
-				end
+				_state.clickPointerIndex = pointerEvent.Index
+				_state.clickPointerStartPosition = Number2(x, y)
 
 				if Pointer.LongPress ~= nil then
 					_state.longPressStartPosition = Number2(x, y)
@@ -1173,7 +1170,8 @@ _state.upListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointe
 	if Pointer.IsHidden == false then -- Pointer shown
 		if _isPC then
 			if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
-				if Pointer.Click ~= nil then
+				local captured = LocalEvent:Send(LocalEvent.Name.PointerClick, pointerEvent)
+				if not captured and Pointer.Click ~= nil then
 					Pointer.Click(pointerEvent)
 				end
 				_state.clickPointerIndex = nil
@@ -1188,7 +1186,8 @@ _state.upListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointe
 
 			if pointerEvent.Index == touchDragPointer then
 				if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
-					if Pointer.Click ~= nil then
+					local captured = LocalEvent:Send(LocalEvent.Name.PointerClick, pointerEvent)
+					if not captured and Pointer.Click ~= nil then
 						Pointer.Click(pointerEvent)
 					end
 					_state.clickPointerIndex = nil
