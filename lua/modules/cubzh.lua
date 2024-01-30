@@ -70,6 +70,8 @@ Client.OnStart = function()
 	sfx = require("sfx")
 	wingTrail = require("wingtrail")
 
+	require("social"):enablePlayerClickMenu()
+
 	-- HUD
 	textbubbles.displayPlayerChatBubbles = true
 	controls:setButtonIcon("action1", "⬆️")
