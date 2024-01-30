@@ -640,6 +640,12 @@ Client.OnWorldObjectLoad = function(obj)
 			or string.find(obj.fullname, "city_lamp")
 			or string.find(obj.fullname, "solo_computer")
 			or string.find(obj.fullname, "no_fun_sign")
+			or string.find(obj.fullname, "soon")
+			or string.find(obj.fullname, "brick")
+			or string.find(obj.fullname, "small_water_pipe")
+			or string.find(obj.fullname, "pipe_tank")
+			or string.find(obj.fullname, "beach_umbrella")
+			or string.find(obj.fullname, "beach_chair")
 		then
 			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
 				o.Physics = PhysicsMode.Static
@@ -717,6 +723,8 @@ Client.OnWorldObjectLoad = function(obj)
 			or string.find(obj.fullname, "sand_3")
 			or string.find(obj.fullname, "sand_4")
 			or string.find(obj.fullname, "lily_pads")
+			or string.find(obj.fullname, "vines")
+			or string.find(obj.fullname, "moss")
 		then
 			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
 				o.Physics = PhysicsMode.Disabled
