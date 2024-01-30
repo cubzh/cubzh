@@ -273,6 +273,19 @@ itemGrid.create = function(_, config)
 		local likesAndViewsFrame = ui:createFrame(theme.gridCellFrameColor)
 		likesAndViewsFrame:setParent(cell)
 		likesAndViewsFrame.pos.X = 0
+		local addLikeTimer
+		likesAndViewsFrame.onRelease = function()
+			if addLikeTimer then
+				addLikeTimer:Cancel()
+				addLikeTimer = nil
+			end
+			addLikeTimer = Timer(0.3, function()
+				cell.liked = not cell.liked
+				cell.likes = cell.likes + (cell.liked and 1 or -1)
+				cell:setNbLikes(cell.likes)
+				require("system_api", System):likeItem(cell.id, cell.liked, function(_) end)
+			end)
+		end
 
 		local nbLikes = ui:createText("", Color.White, "small")
 		nbLikes:setParent(likesAndViewsFrame)
@@ -290,13 +303,12 @@ itemGrid.create = function(_, config)
 		cell.setNbLikes = function(self, n)
 			if n > 0 then
 				nbLikes.Text = "❤️ " .. math.floor(n)
-				nbLikes:show()
-				likesAndViewsFrame:show()
-				self:layoutLikes()
 			else
-				nbLikes:hide()
-				likesAndViewsFrame:hide()
+				nbLikes.Text = "❤️"
 			end
+			nbLikes:show()
+			likesAndViewsFrame:show()
+			self:layoutLikes()
 		end
 
 		cell.hideLikes = function(_)
@@ -396,6 +408,7 @@ itemGrid.create = function(_, config)
 			cell.created = entry.created
 			cell.updated = entry.updated
 			cell.likes = entry.likes
+			cell.liked = entry.liked
 
 			local itemName = cell.repo .. "." .. cell.name
 			cell.loadedItemName = itemName
