@@ -275,7 +275,7 @@ worldDetailsMod.create = function(_, config)
 			self.shape.Height = 350
 		end
 
-		local req = api:getWorld(cell.id, { "authorName", "authorId", "description" }, function(err, world)
+		local req = api:getWorld(cell.id, { "authorName", "authorId", "description", "liked" }, function(err, world)
 			if removed then
 				return
 			end
