@@ -257,6 +257,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local forceHeight = config.height
 
 		local cell = ui:createFrame(Color(63, 63, 63))
+		cell.requests = {}
 
 		local textBg = ui:createFrame(Color(0, 0, 0, 0.5))
 		textBg:setParent(cell)
@@ -329,14 +330,21 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				cell.username = user.username
 				cell.userID = user.id
 				textBg.LocalPosition.Z = -600
-				avatar = cachedAvatars[user.username] or uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
+				avatar = cachedAvatars[user.username]
+				if avatar == nil then
+					local requests
+					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
+					for _, r in ipairs(requests) do
+						table.insert(cell.requests, r)
+					end
+				end
 				avatar:setParent(cell)
 				avatar.didLoad = function()
 					avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
 					cachedAvatars[user.username] = avatar
 				end
 				cell.avatar = avatar
-				Object:Load("buche.lobby_grassland", function(obj)
+				local r = Object:Load("buche.lobby_grassland", function(obj)
 					avatarLand = ui:createShape(obj)
 					avatarLand:setParent(cell)
 					obj.Rotation.Y = math.pi / 4
@@ -347,6 +355,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						cell:parentDidResize()
 					end
 				end)
+				table.insert(cell.requests, r)
 				textName.Text = user.username
 				-- TODO: handle status
 				textStatus.Text = ""
@@ -503,8 +512,17 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		line.cells = {}
 		line.onRemove = function()
 			for _, cell in ipairs(line.cells) do
+				if cell.avatar then
+					cell.avatar:setParent(nil)
+					cell.avatar = nil
+				end
+				for _, r in ipairs(cell.requests) do
+					r:Cancel()
+				end
+				cell.requests = {}
 				if cell.waitScrollStopTimer then
 					cell.waitScrollStopTimer:Cancel()
+					cell.waitScrollStopTimer = nil
 				end
 			end
 		end
@@ -559,13 +577,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		if lineOrVerticalContainer.line then
 			line = lineOrVerticalContainer.line
 		end
-		if line.cells then
-			for _, cell in ipairs(line.cells) do
-				if cell.avatar then
-					cell.avatar:setParent(nil)
-				end
-			end
+		if line == nil then
+			return
 		end
+
 		lineOrVerticalContainer:remove()
 	end
 
