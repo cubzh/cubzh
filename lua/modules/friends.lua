@@ -41,12 +41,22 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		search = {},
 	}
 
+	local searchTimer
 	local requests = {}
+
 	local cancelRequests = function()
 		for _, r in ipairs(requests) do
 			r:Cancel()
 		end
 		requests = {}
+	end
+
+	local cancelRequestsAndTimers = function()
+		if searchTimer ~= nil then
+			searchTimer:Cancel()
+			searchTimer = nil
+		end
+		cancelRequests()
 	end
 
 	local idealReducedContentSize = function(_, width, height, minWidth)
@@ -58,7 +68,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 
 	node.onRemove = function()
-		cancelRequests()
+		cancelRequestsAndTimers()
+		-- this is necessary for lines to be unloaded
+		--  and cells to cancel their requests
+		scroll:flush()
 		node.screenDidResizeListener:Remove()
 		node.screenDidResizeListener = nil
 		if helpPointer then
@@ -67,8 +80,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 	end
 
-	local retrieveFriendsLists = function(_searchText, keepScrollPosition)
-		searchText = _searchText
+	local retrieveFriendsLists = function(searchStr, keepScrollPosition)
+		cancelRequestsAndTimers()
+
+		searchText = searchStr
 		nbResults = -1
 		local nbLists = 4
 		local nbListsRetrieved = 0
@@ -162,6 +177,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end
 				for _, usrID in ipairs(users) do
 					local req2 = api:getUserInfo(usrID, function(_, usr)
+						-- TODO: handle errors
 						if usr.username ~= "" then
 							-- if search, match the username
 							if not searchText or string.find(usr.username, searchText) then
@@ -208,16 +224,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			textInput.Width = searchBarContainer.Width - cancelSearch.Width
 		end
 
-		node.searchTimer = nil
-
 		textInput.onTextChange = function(_)
-			if node.searchTimer then
-				node.searchTimer:Cancel()
-			end
-
-			node.searchTimer = Timer(0.3, function()
+			cancelRequestsAndTimers()
+			searchTimer = Timer(0.3, function()
 				cancelRequests()
-				node.searchTimer = nil
+				searchTimer = nil
 				retrieveFriendsLists(textInput.Text, false)
 			end)
 		end
@@ -345,6 +356,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				end
 				cell.avatar = avatar
 				local r = Object:Load("buche.lobby_grassland", function(obj)
+					if obj == nil then
+						return
+					end
 					avatarLand = ui:createShape(obj)
 					avatarLand:setParent(cell)
 					obj.Rotation.Y = math.pi / 4
@@ -580,7 +594,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		if line == nil then
 			return
 		end
-
 		lineOrVerticalContainer:remove()
 	end
 
