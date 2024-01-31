@@ -14,6 +14,8 @@ local mt = {
 }
 setmetatable(friendsWindow, mt)
 
+local cachedAvatars = {}
+
 local uiAvatar = require("ui_avatar")
 local theme = require("uitheme").current
 local padding = theme.padding
@@ -189,7 +191,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local getSearchBar = function()
 		local searchBarContainer = ui:createFrame()
 		local textInput = ui:createTextInput("", "🔎 search...")
-		searchBar = textInput
 		textInput:setParent(searchBarContainer)
 		local cancelSearch = ui:createButton("X")
 		cancelSearch:setParent(searchBarContainer)
@@ -256,12 +257,13 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local forceHeight = config.height
 
 		local cell = ui:createFrame(Color(63, 63, 63))
+		cell.requests = {}
 
 		local textBg = ui:createFrame(Color(0, 0, 0, 0.5))
 		textBg:setParent(cell)
-		local textName = ui:createText("", Color.White)
+		local textName = ui:createText("", Color.White, "small")
 		textName:setParent(textBg)
-		local textStatus = ui:createText("", Color.White)
+		local textStatus = ui:createText("", Color.White, "small")
 		textStatus:setParent(textBg)
 		textBg:hide()
 
@@ -284,12 +286,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
 
 			if avatar then
-				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, cell.Height * 0.4 }
+				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, cell.Height - avatar.Height }
 			end
 
 			if avatarLand and avatarLand.Width then
-				avatarLand.pos =
-					{ cell.Width * 0.5 - avatarLand.Width * 0.5, cell.Height * 0.5 - avatarLand.Height * 0.5 - 20 }
+				avatarLand.pos = { cell.Width * 0.5 - avatarLand.Width * 0.5, 10 }
 			end
 
 			textName.pos = { padding, btnLeft.Height + padding }
@@ -304,44 +305,65 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				return
 			end
 
-			textBg:show()
+			cell.waitScrollStopTimer = Timer(0.5, function()
+				cell.waitScrollStopTimer = nil
+				textBg:show()
 
-			cell.onRelease = function()
-				local profileContent = require("profile"):create({
-					isLocal = false,
-					username = user.username,
-					userID = user.id,
-					uikit = ui,
-				})
-				content:push(profileContent)
-			end
+				cell.onRelease = function()
+					cell:setColor(Color(63, 63, 63))
+					local profileContent = require("profile"):create({
+						isLocal = false,
+						username = user.username,
+						userID = user.id,
+						uikit = ui,
+					})
+					content:push(profileContent)
+				end
+				cell.onPress = function()
+					cell:setColor(Color(35, 35, 35))
+				end
+				cell.onCancel = function()
+					cell:setColor(Color(63, 63, 63))
+				end
 
-			cell.username = user.username
-			cell.userID = user.id
-			textBg.LocalPosition.Z = -600
-			avatar = uiAvatar:get(user.username, cell.Height * 0.6, nil, ui)
-			avatar:setParent(cell)
-			avatar.didLoad = function()
-				avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
-			end
-			Object:Load("buche.lobby_grassland", function(obj)
-				avatarLand = ui:createShape(obj)
-				avatarLand:setParent(cell)
-				obj.Rotation.Y = math.pi / 4
-				obj:RotateWorld(Number3(1, 0, 0), math.pi / -6)
-				obj.Scale = 3
-				avatarLand.LocalPosition.Z = -50
+				cell.IsMask = true
+				cell.username = user.username
+				cell.userID = user.id
+				textBg.LocalPosition.Z = -600
+				avatar = cachedAvatars[user.username]
+				if avatar == nil then
+					local requests
+					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
+					for _, r in ipairs(requests) do
+						table.insert(cell.requests, r)
+					end
+				end
+				avatar:setParent(cell)
+				avatar.didLoad = function()
+					avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
+					cachedAvatars[user.username] = avatar
+				end
+				cell.avatar = avatar
+				local r = Object:Load("buche.lobby_grassland", function(obj)
+					avatarLand = ui:createShape(obj)
+					avatarLand:setParent(cell)
+					obj.Rotation.Y = math.pi / 4
+					obj:RotateWorld(Number3(1, 0, 0), math.pi / -6)
+					obj.Scale = 3
+					avatarLand.LocalPosition.Z = -50
+					if cell.parentDidResize then
+						cell:parentDidResize()
+					end
+				end)
+				table.insert(cell.requests, r)
+				textName.Text = user.username
+				-- TODO: handle status
+				textStatus.Text = ""
 				if cell.parentDidResize then
 					cell:parentDidResize()
 				end
+				cell:show()
 			end)
-			textName.Text = user.username
-			-- TODO: handle status
-			textStatus.Text = ""
-			if cell.parentDidResize then
-				cell:parentDidResize()
-			end
-			cell:show()
 		end
 
 		cell.setType = function(_, cellType)
@@ -487,7 +509,23 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		local line = require("ui_container"):createHorizontalContainer()
 		line.Width = math.floor(width)
 		line.Height = math.floor(cellHeight)
-
+		line.cells = {}
+		line.onRemove = function()
+			for _, cell in ipairs(line.cells) do
+				if cell.avatar then
+					cell.avatar:setParent(nil)
+					cell.avatar = nil
+				end
+				for _, r in ipairs(cell.requests) do
+					r:Cancel()
+				end
+				cell.requests = {}
+				if cell.waitScrollStopTimer then
+					cell.waitScrollStopTimer:Cancel()
+					cell.waitScrollStopTimer = nil
+				end
+			end
+		end
 		-- Need to make a vertical container to add the title
 		if prevFirstCellUserType == nil or firstCellType ~= prevFirstCellUserType then
 			local titles = {
@@ -499,9 +537,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			local titleStr = titles[firstCellType]
 			if titleStr then
 				verticalContainer = require("ui_container"):createVerticalContainer()
-				local title = ui:createText(string.format(titleStr, #lists[firstCellType]), Color.White, "big")
+				local title = ui:createText(string.format(titleStr, #lists[firstCellType]), Color.White)
 				verticalContainer:pushElement(title)
 				verticalContainer:pushElement(line)
+				verticalContainer.line = line
 			else
 				line:pushGap()
 			end
@@ -519,6 +558,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				line:pushGap()
 				line:pushGap()
 			end
+			table.insert(line.cells, cell)
 
 			local user, cellType = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
 			if user then
@@ -532,8 +572,16 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return verticalContainer or line
 	end
 
-	local unloadLine = function(cell)
-		cell:remove()
+	local unloadLine = function(lineOrVerticalContainer)
+		local line = lineOrVerticalContainer
+		if lineOrVerticalContainer.line then
+			line = lineOrVerticalContainer.line
+		end
+		if line == nil then
+			return
+		end
+
+		lineOrVerticalContainer:remove()
 	end
 
 	local config = {

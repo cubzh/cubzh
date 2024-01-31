@@ -125,6 +125,9 @@ equipments.load = function(equipmentName, itemRepoName, player, mutable, abortIf
 end
 
 equipments.attachEquipmentToBodyPart = function(_, equipment, bodyPart, options)
+	if equipment == nil or bodyPart == nil then
+		return
+	end
 	local layer = options.layer or 1
 	local isPant = options.isPant or false
 
