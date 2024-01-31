@@ -10,7 +10,7 @@ social.enablePlayerClickMenu = function()
 				break
 			end
 		end
-		if player then -- and player ~= Player then
+		if player and player ~= Player then
 			local handleWasShown = false
 			if player.IsHandleShown then
 				handleWasShown = true
