@@ -285,50 +285,45 @@ itemGrid.create = function(_, config)
 			cell.Color = idleColor
 		end
 
-		local likesAndViewsFrame = ui:createFrame(theme.gridCellFrameColor)
-		likesAndViewsFrame:setParent(cell)
-		likesAndViewsFrame.pos.X = 0
-		local addLikeTimer
-		likesAndViewsFrame.onRelease = function()
-			if addLikeTimer then
-				addLikeTimer:Cancel()
-				addLikeTimer = nil
-			end
-			addLikeTimer = Timer(0.3, function()
-				cell.liked = not cell.liked
-				cell.likes = cell.likes + (cell.liked and 1 or -1)
-				cell:setNbLikes(cell.likes)
-				require("system_api", System):likeItem(cell.id, cell.liked, function(_) end)
+		local likesBtn = ui:createButton("", { shadow = false, textSize = "small", borders = false })
+		likesBtn:setColor(theme.gridCellFrameColor)
+		likesBtn:setParent(cell)
+		likesBtn.pos.X = 0
+
+		local onReleaseBackup
+		likesBtn.onRelease = function(self)
+			onReleaseBackup = self.onRelease
+			self.onRelease = nil
+			cell.liked = not cell.liked
+			cell.likes = cell.likes + (cell.liked and 1 or -1)
+			cell:setNbLikes(cell.likes)
+			local req = require("system_api", System):likeItem(cell.id, cell.liked, function(_)
+				self.onRelease = onReleaseBackup
 			end)
+			addSentRequest(req)
+			addCellContentRequest(req)
 		end
 
-		local nbLikes = ui:createText("", Color.White, "small")
-		nbLikes:setParent(likesAndViewsFrame)
-		nbLikes.pos = { theme.padding, theme.padding }
-
 		cell.layoutLikes = function(self)
-			if nbLikes:isVisible() == false then
+			if likesBtn:isVisible() == false then
 				return
 			end
-			likesAndViewsFrame.Width = nbLikes.Width + theme.padding * 2
-			likesAndViewsFrame.Height = nbLikes.Height + theme.padding * 2
-			likesAndViewsFrame.pos.Y = self.Height - likesAndViewsFrame.Height
+			likesBtn.pos.Y = self.Height - likesBtn.Height
 		end
 
 		cell.setNbLikes = function(self, n)
 			if n > 0 then
-				nbLikes.Text = "❤️ " .. math.floor(n)
+				likesBtn.Text = "❤️ " .. math.floor(n)
 			else
-				nbLikes.Text = "❤️"
+				likesBtn.Text = "❤️"
 			end
-			nbLikes:show()
-			likesAndViewsFrame:show()
+			likesBtn:show()
+			-- likesAndViewsFrame:show()
 			self:layoutLikes()
 		end
 
 		cell.hideLikes = function(_)
-			likesAndViewsFrame:hide()
-			nbLikes:hide()
+			likesBtn:hide()
 		end
 
 		local textFrame = ui:createFrame(theme.gridCellFrameColor)
