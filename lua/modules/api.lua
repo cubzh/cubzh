@@ -357,7 +357,7 @@ mod.getWorlds = function(_, filter, callback)
 			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
 				return true
 			end
-			if k == "page" or k == "perpage" then
+			if k == "page" or k == "perPage" then
 				return true
 			end
 			if k == "category" then

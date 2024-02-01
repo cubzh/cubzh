@@ -751,7 +751,7 @@ itemGrid.create = function(_, config)
 					categories = ""
 				end
 				local reqConfig =
-					{ repo = config.repo, category = categories, page = 1, perpage = 250, search = search }
+					{ repo = config.repo, category = categories, page = 1, perPage = 250, search = search }
 				local req = api:getWorlds(reqConfig, apiCallback)
 				addSentRequest(req)
 			else -- published worlds
