@@ -275,7 +275,8 @@ worldDetailsMod.create = function(_, config)
 			self.shape.Height = 350
 		end
 
-		local req = api:getWorld(cell.id, { "authorName", "authorId", "description", "liked" }, function(err, world)
+		local fieldsWanted = { "authorName", "authorId", "description", "liked", "views" }
+		local req = api:getWorld(cell.id, fieldsWanted, function(err, world)
 			if removed then
 				return
 			end
@@ -301,13 +302,21 @@ worldDetailsMod.create = function(_, config)
 					-- refresh view
 					self:_scheduleRefresh()
 				end
-			end
 
-			local liked = world.liked
-			self.liked = liked
-			self.originalLike = liked
-			if self.liked and likeBtn and likeBtn.setColor then
-				likeBtn:setColor(theme.colorPositive)
+				-- update views label
+				if world.views ~= nil then
+					cell.views = world.views
+					views.Text = "👁 " .. (cell.views and math.floor(cell.views) or 0)
+				end
+
+				-- update like button
+				if world.liked ~= nil then
+					self.liked = world.liked
+					self.originalLike = world.liked
+					if self.liked ~= nil and likeBtn ~= nil and likeBtn.setColor ~= nil then
+						likeBtn:setColor(theme.colorPositive)
+					end
+				end
 			end
 		end)
 		table.insert(requests, req)
