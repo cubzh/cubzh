@@ -246,8 +246,13 @@ itemDetails.createModalContent = function(_, config)
 			self.author.Text = " @" .. cell.repo
 		else
 			-- Retrieve user data. We need their UserID.
-			local req = api:searchUser(cell.repo, function(_, users)
-				-- TODO: handle error
+			local req = api:searchUser(cell.repo, function(success, users)
+				if success == false then
+					-- don't do anything on failure
+					-- api module should implement retry strategy
+					return
+				end
+
 				by.Text = "by @" .. cell.repo
 
 				for _, u in pairs(users) do
@@ -271,8 +276,13 @@ itemDetails.createModalContent = function(_, config)
 		end
 		-- Retrieve item info. We need its number of likes.
 		-- (cell.id is Item UUID)
-		local req = api:getItem(cell.id, function(_, item)
-			-- TODO: handle error
+		local req = api:getItem(cell.id, function(err, item)
+			if err ~= nil then
+				-- don't do anything on failure
+				-- api module should implement retry strategy
+				return
+			end
+
 			local likes = item.likes or 0
 
 			if self.likes then
