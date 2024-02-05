@@ -1,40 +1,28 @@
 worldDetailsMod = {}
 
 worldDetailsMod.create = function(_, config)
-	local _config = {
-		title = "",
-		mode = "explore", -- "explore" / "create"
-		uikit = require("uikit"),
-	}
-
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-	end
-
-	config = _config
-
 	local time = require("time")
 	local theme = require("uitheme").current
 	local ui = config.uikit
 	local api = require("system_api", System)
 
+	local defaultConfig = {
+		title = "",
+		mode = "explore", -- "explore" / "create"
+		uikit = require("uikit"),
+	}
+
+	config = require("config"):merge(defaultConfig, config)
+
 	local createMode = config.mode == "create"
 
 	local worldDetails = ui:createNode()
 
-	-- becomes true when itemDetails is removed
-	-- callbacks may capture this as upvalue to early return.
-	local removed = false
 	local requests = {}
+	local refreshTimer
 	local listeners = {}
 
-	worldDetails.onRemove = function(_)
-		removed = true
-
+	local cancelRequestsTimersAndListeners = function()
 		for _, req in ipairs(requests) do
 			req:Cancel()
 		end
@@ -44,6 +32,15 @@ worldDetailsMod.create = function(_, config)
 			listener:Remove()
 		end
 		listeners = {}
+
+		if refreshTimer ~= nil then
+			refreshTimer:Cancel()
+			refreshTimer = nil
+		end
+	end
+
+	worldDetails.onRemove = function(_)
+		cancelRequestsTimersAndListeners()
 	end
 
 	local content = require("modal"):createContent()
@@ -86,9 +83,6 @@ worldDetailsMod.create = function(_, config)
 			local sanitized, err = api.checkWorldName(name.Text)
 			if err == nil then
 				local req = api:patchWorld(worldDetails.id, { title = sanitized }, function(err, world)
-					if removed then
-						return
-					end
 					-- print("PATCHED", err, world.id, world.title, world.description)
 					if err == nil then
 						-- World update succeeded.
@@ -207,9 +201,6 @@ worldDetailsMod.create = function(_, config)
 							description.Color = theme.textColorSecondary
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
 							local req = api:patchWorld(worldDetails.id, { description = "" }, function(_, _)
-								if removed then
-									return
-								end
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -219,9 +210,6 @@ worldDetailsMod.create = function(_, config)
 							description.Color = theme.textColor
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
 							local req = api:patchWorld(worldDetails.id, { description = text }, function(_, _)
-								if removed then
-									return
-								end
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -277,10 +265,6 @@ worldDetailsMod.create = function(_, config)
 
 		local fieldsWanted = { "authorName", "authorId", "description", "liked", "views" }
 		local req = api:getWorld(cell.id, fieldsWanted, function(err, world)
-			if removed then
-				return
-			end
-
 			local authorName = world.authorName
 			local authorId = world.authorId
 
@@ -346,11 +330,7 @@ worldDetailsMod.create = function(_, config)
 
 			likeBtn.onRelease = function()
 				self.liked = not self.liked
-				local req = api:likeWorld(cell.id, self.liked, function(_)
-					if removed then
-						return
-					end
-				end)
+				local req = api:likeWorld(cell.id, self.liked, function(_) end)
 				table.insert(requests, req)
 
 				if self.liked then
@@ -417,16 +397,12 @@ worldDetailsMod.create = function(_, config)
 	worldDetails._w = 400
 	worldDetails._h = 400
 
-	worldDetails._refreshTimer = nil
 	worldDetails._scheduleRefresh = function(self)
-		if self._refreshTimer ~= nil then
+		if refreshTimer ~= nil then
 			return
 		end
-		self._refreshTimer = Timer(0.01, function()
-			if self == nil or self.refresh == nil then
-				return
-			end
-			self._refreshTimer = nil
+		refreshTimer = Timer(0.01, function()
+			refreshTimer = nil
 			self:refresh()
 		end)
 	end
