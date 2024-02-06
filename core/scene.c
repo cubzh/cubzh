@@ -330,8 +330,6 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb), true);
                 rigidbody_set_rtree_leaf(rb, NULL);
             }
-
-            transform_set_removed_from_scene(t, false);
         }
         transform_release(t); // from scene_register_removed_transform
 
