@@ -22,6 +22,21 @@ local padding = theme.padding
 local modal = require("modal")
 local api = require("system_api", System)
 
+-- list IDs
+local LIST = {
+	RECEIVED = 1,
+	SENT = 2,
+	FRIENDS = 3,
+	SEARCH = 4,
+}
+
+local TITLES = {
+	"Received (%d)",
+	"Sent (%d)",
+	"Friends (%d)",
+	"Search (%d)",
+}
+
 -- uikit: optional, allows to provide specific instance of uikit
 mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local ui = uikit or require("uikit")
@@ -31,7 +46,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local scroll
 	local searchText
-	local nbResults = -1 -- -1 loading..., 0 no result
+	local loading = true
 
 	-- list of friends, requests (sent or received) or search
 	local lists = {
@@ -84,60 +99,73 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cancelRequestsAndTimers()
 
 		searchText = searchStr
-		nbResults = -1
+		loading = true
 		local nbLists = 4
 		local nbListsRetrieved = 0
-		lists = {
-			received = {},
-			sent = {},
-			friends = {},
-			search = {},
-		}
+
+		lists = {}
+		lists[LIST.RECEIVED] = {}
+		lists[LIST.SENT] = {}
+		lists[LIST.FRIENDS] = {}
+		lists[LIST.SEARCH] = {}
+
+		listsN = {}
+		listsN[LIST.RECEIVED] = 0
+		listsN[LIST.SENT] = 0
+		listsN[LIST.FRIENDS] = 0
+		listsN[LIST.SEARCH] = 0
+
 		node:resetList()
 		keepScrollPosition = keepScrollPosition or false
 
-		local function newListResponse(name, list)
-			lists[name] = list or {}
+		local function newListResponse(listID, list)
+			lists[listID] = list or {}
 			nbListsRetrieved = nbListsRetrieved + 1
 			if nbListsRetrieved < nbLists then
 				return
 			end
+
 			if searchText and #searchText > 0 then
 				-- filter out search list
 				-- remove this part once backend handles that
-				for k = #lists.search, 1, -1 do
-					local user = lists.search[k]
+				for k = #lists[LIST.SEARCH], 1, -1 do
+					local user = lists[LIST.SEARCH][k]
 					local idFound = false
-					for _, v in ipairs(lists.friends) do
+					for _, v in ipairs(lists[LIST.FRIENDS]) do
 						if v.id == user.id then
 							idFound = true
 						end
 					end
-					for _, v in ipairs(lists.received) do
+					for _, v in ipairs(lists[LIST.RECEIVED]) do
 						if v.id == user.id then
 							idFound = true
 						end
 					end
-					for _, v in ipairs(lists.sent) do
+					for _, v in ipairs(lists[LIST.SENT]) do
 						if v.id == user.id then
 							idFound = true
 						end
 					end
 					if idFound then
-						table.remove(lists.search, k)
+						table.remove(lists[LIST.SEARCH], k)
 					end
 				end
-				nbResults = #lists.friends + #lists.received + #lists.sent + #lists.search
-			else
-				nbResults = #lists.friends + #lists.received
 			end
+
+			listsN[LIST.RECEIVED] = #lists[LIST.RECEIVED]
+			listsN[LIST.SENT] = #lists[LIST.SENT]
+			listsN[LIST.FRIENDS] = #lists[LIST.FRIENDS]
+			listsN[LIST.SEARCH] = #lists[LIST.SEARCH]
+
+			loading = false
+
 			node:resetList(keepScrollPosition)
 		end
 
-		local function requestList(methodName, listName, searchText)
+		local function requestList(methodName, listID, searchText)
 			local list = {}
 			local nbIterations = 0
-			if listName == "search" then
+			if listID == LIST.SEARCH then
 				if searchText == nil or searchText == "" then
 					newListResponse("search", {})
 					return
@@ -158,7 +186,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 							table.sort(list, function(a, b)
 								return a.username < b.username
 							end)
-							newListResponse(listName, list)
+							newListResponse(listID, list)
 						end
 					end
 				end)
@@ -172,12 +200,16 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					error("Can't find users", 2)
 				end
 				if #users == 0 then
-					newListResponse(listName, {})
+					newListResponse(listID, {})
 					return
 				end
 				for _, usrID in ipairs(users) do
-					local req2 = api:getUserInfo(usrID, function(_, usr)
-						-- TODO: handle errors
+					local req2 = api:getUserInfo(usrID, function(success, usr)
+						if success == false then
+							-- TODO: handle errors
+							-- insert ERROR CELL
+							return
+						end
 						if usr.username ~= "" then
 							-- if search, match the username
 							if not searchText or string.find(usr.username, searchText) then
@@ -186,10 +218,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						end
 						nbIterations = nbIterations + 1
 						if nbIterations == #users then
-							table.sort(list, function(a, b)
-								return a.username < b.username
-							end)
-							newListResponse(listName, list)
+							-- table.sort(list, function(a, b)
+							-- 	return a.username < b.username -- ERROR: compare 2 nil values
+							-- end)
+							newListResponse(listID, list)
 						end
 					end)
 					table.insert(requests, req2)
@@ -198,10 +230,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			table.insert(requests, req)
 		end
 
-		requestList("getFriends", "friends", searchText)
-		requestList("getReceivedFriendRequests", "received", searchText)
-		requestList("getSentFriendRequests", "sent", searchText)
-		requestList("searchUser", "search", searchText)
+		requestList("getFriends", LIST.FRIENDS, searchText)
+		requestList("getReceivedFriendRequests", LIST.RECEIVED, searchText)
+		requestList("getSentFriendRequests", LIST.SENT, searchText)
+		requestList("searchUser", LIST.SEARCH, searchText)
 	end
 
 	local getSearchBar = function()
@@ -381,7 +413,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		cell.setType = function(_, cellType)
-			if cellType == "received" then
+			if cellType == LIST.RECEIVED then
 				btnLeft.Text = "✅ Accept"
 				btnLeft:show()
 				btnLeft.onRelease = function()
@@ -404,7 +436,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-			elseif cellType == "sent" then
+			elseif cellType == LIST.SENT then
 				btnLeft.Text = "Sent"
 				btnLeft:show()
 				btnLeft.onRelease = nil
@@ -419,7 +451,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-			elseif cellType == "friends" then
+			elseif cellType == LIST.FRIENDS then
 				btnLeft.Text = "🌎 Join"
 				btnLeft:show()
 				btnLeft.onRelease = function()
@@ -430,7 +462,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				btnRight.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
-			elseif cellType == "search" then
+			elseif cellType == LIST.SEARCH then
 				btnLeft.Text = "➕ Add friend"
 				btnLeft:show()
 				btnLeft.onRelease = function()
@@ -452,30 +484,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return cell
 	end
 
-	local getUserAtIndex = function(index, nbCellsPerLine)
-		-- default list
-		local listOrder = { "received", "friends" }
-		if #lists.search > 0 then
-			-- search list
-			listOrder = { "friends", "received", "sent", "search" }
-		end
-
-		for _, name in ipairs(listOrder) do
-			local list = lists[name]
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], name
-				end
-				index = index - totalCells
-			end
-		end
-	end
-
 	local loadLine = function(cellId)
-		if nbResults == -1 then
+		if loading == true then
 			if cellId == 1 then
 				local container = ui:createFrame()
 				local text = ui:createText("Loading...", Color.White)
@@ -487,6 +497,12 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			end
 			return
 		end
+
+		local nbResults = 0
+		for _, n in ipairs(listsN) do
+			nbResults = nbResults + n
+		end
+
 		if nbResults == 0 then
 			if cellId == 1 then
 				local container = ui:createFrame()
@@ -507,83 +523,78 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		local width = node.Width
-		local nbCells = math.min(Client.IsMobile and 4 or 2, math.floor(width / cellWidth))
+		-- nb cells per line
+		local nbCellsPerLine = math.floor(width / cellWidth)
 
-		local firstUserCell, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
-		if not firstUserCell then
-			return
-		end
+		local getContentForLine = function(lineNumber, nbCellsPerLine)
+			nbCellsPerLine = math.floor(nbCellsPerLine)
+			local l = 1
+			while l <= #lists do
+				if listsN[l] == 0 then
+					l = l + 1 -- nothing in that list, look in next one
+				elseif lineNumber == 1 then
+					return lists[l], l, true -- first line : title
+				else
+					local nbLinesForList = math.floor(listsN[l] / nbCellsPerLine)
+						+ (listsN[l] % nbCellsPerLine > 0 and 1 or 0)
 
-		local prevFirstCellUserType
-		if cellId > 1 then
-			_, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
-		end
-
-		local verticalContainer
-		local line = require("ui_container"):createHorizontalContainer()
-		line.Width = math.floor(width)
-		line.Height = math.floor(cellHeight)
-		line.cells = {}
-		line.onRemove = function()
-			for _, cell in ipairs(line.cells) do
-				if cell.avatar then
-					cell.avatar:setParent(nil)
-					cell.avatar = nil
-				end
-				for _, r in ipairs(cell.requests) do
-					r:Cancel()
-				end
-				cell.requests = {}
-				if cell.waitScrollStopTimer then
-					cell.waitScrollStopTimer:Cancel()
-					cell.waitScrollStopTimer = nil
+					if lineNumber - 1 <= nbLinesForList then
+						local start = (lineNumber - 2) * nbCellsPerLine + 1
+						local stop = math.min(start + nbCellsPerLine - 1, listsN[l])
+						return lists[l], l, nil, { start, stop }
+					else
+						l = l + 1
+						lineNumber = lineNumber - 1 - nbLinesForList
+					end
 				end
 			end
 		end
-		-- Need to make a vertical container to add the title
-		if prevFirstCellUserType == nil or firstCellType ~= prevFirstCellUserType then
-			local titles = {
-				friends = "Friends (%d)",
-				received = "Pending Requests (%d)",
-				sent = "Sent Requests (%d)",
-				search = "Search (%d)",
-			}
-			local titleStr = titles[firstCellType]
-			if titleStr then
-				verticalContainer = require("ui_container"):createVerticalContainer()
-				local title = ui:createText(string.format(titleStr, #lists[firstCellType]), Color.White)
-				verticalContainer:pushElement(title)
-				verticalContainer:pushElement(line)
-				verticalContainer.line = line
-			else
-				line:pushGap()
-			end
-		else
-			line:pushGap()
+
+		local list, listID, title, range = getContentForLine(cellId, nbCellsPerLine)
+
+		-- print("listID:", listID, "title:", title, "range:", range[1], range[2])
+
+		if title then
+			local titleStr = TITLES[listID]
+			return ui:createText(string.format(titleStr, listsN[listID]), Color.White)
 		end
 
-		-- Stretch width to fit the full length
-		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * 3 * padding) / nbCells)
-		for i = 1, nbCells do
-			local cell = createFriendCell({ width = realCellWidth, height = cellHeight })
-			line:pushElement(cell)
-			if i < nbCells then
-				line:pushGap()
-				line:pushGap()
-				line:pushGap()
+		if list and range then
+			local line = require("ui_container"):createHorizontalContainer()
+			line.cells = {}
+			line.onRemove = function()
+				for _, cell in ipairs(line.cells) do
+					if cell.avatar then
+						cell.avatar:setParent(nil)
+						cell.avatar = nil
+					end
+					for _, r in ipairs(cell.requests) do
+						r:Cancel()
+					end
+					cell.requests = {}
+					if cell.waitScrollStopTimer then
+						cell.waitScrollStopTimer:Cancel()
+						cell.waitScrollStopTimer = nil
+					end
+				end
 			end
-			table.insert(line.cells, cell)
 
-			local user, cellType = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
-			if user then
-				cell:setUser(user)
-				cell:setType(cellType)
-			elseif getUserAtIndex(1, nbCells) ~= nil then
-				cell:hide()
+			local start = range[1]
+			for i = start, range[2] do
+				local cell = createFriendCell({ width = cellWidth, height = cellHeight })
+				if i > start then
+					line:pushGap()
+				end
+				line:pushElement(cell)
+
+				table.insert(line.cells, cell)
+
+				cell:setUser(list[i])
+				cell:setType(listID)
 			end
+
+			return line
 		end
-
-		return verticalContainer or line
 	end
 
 	local unloadLine = function(lineOrVerticalContainer)
