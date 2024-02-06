@@ -283,8 +283,8 @@ function createUI(system)
 			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
-		if self.parentDidResize then
-			self:parentDidResize()
+		if self.parentDidResizeWrapper then
+			self:parentDidResizeWrapper()
 		end
 	end
 
@@ -758,8 +758,8 @@ function createUI(system)
 				t:_setWidth(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResize ~= nil then
-						child:parentDidResize()
+					if child.parentDidResizeWrapper ~= nil then
+						child:parentDidResizeWrapper()
 					end
 				end
 
@@ -776,8 +776,8 @@ function createUI(system)
 				t:_setHeight(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResize ~= nil then
-						child:parentDidResize()
+					if child.parentDidResizeWrapper ~= nil then
+						child:parentDidResizeWrapper()
 					end
 				end
 
@@ -931,6 +931,15 @@ function createUI(system)
 				type = NodeType.None,
 				children = {},
 				parentDidResize = nil,
+				parentDidResizeSystem = nil,
+				parentDidResizeWrapper = function(self)
+					if self.parentDidResizeSystem ~= nil then
+						self:parentDidResizeSystem()
+					end
+					if self.parentDidResize ~= nil then
+						self:parentDidResize()
+					end
+				end,
 				contentDidResize = nil, -- user defined
 				contentDidResizeSystem = nil,
 				contentDidResizeWrapper = function(self)
@@ -2912,8 +2921,8 @@ function createUI(system)
 		end
 
 		for _, child in pairs(rootChildren) do
-			if child.parentDidResize ~= nil then
-				child:parentDidResize()
+			if child.parentDidResizeWrapper ~= nil then
+				child:parentDidResizeWrapper()
 			end
 		end
 	end, { system = system == true and System or nil, topPriority = true })
