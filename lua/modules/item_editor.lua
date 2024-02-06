@@ -2038,7 +2038,7 @@ function ui_init()
 			end
 
 			Timer(0.2, function()
-				item:Capture(Environment.itemFullname)
+				Screen:Capture(Environment.itemFullname, true --[[transparent background--]])
 
 				-- restore UI elements after screenshot
 
