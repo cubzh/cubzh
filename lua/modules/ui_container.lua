@@ -1,180 +1,127 @@
-local padding = require("uitheme").current.padding
+local SEPARATOR_INSET = require("uitheme").current.paddingTiny
+local PADDING = require("uitheme").current.padding
+local uikit = require("uikit")
 
-local uiHorizontalIndex = {}
-
-uiHorizontalIndex.pushElement = function(self, node)
-	node:setParent(self.bg)
+local pushElement = function(self, node)
+	node:setParent(self)
 	node.elementType = "node"
 	table.insert(self.list, node)
 	self:refresh()
 end
 
-uiHorizontalIndex.pushSeparator = function(self)
-	self:pushGap()
+local pushGap = function(self)
+	local gap = {}
+	gap.elementType = "gap"
+	table.insert(self.list, gap)
+	self:refresh()
+end
+
+local pushSeparator = function(self)
 	local separator = require("uikit"):createFrame(Color.Grey)
 	separator.elementType = "separator"
 	separator.Width = 1
-	separator.Height = self.Height
-	separator:setParent(self.bg)
 	table.insert(self.list, separator)
-	self:pushGap()
 	self:refresh()
 end
 
-uiHorizontalIndex.pushGap = function(self)
-	local gap = require("uikit"):createFrame()
-	gap.elementType = "gap"
-	gap.Width = require("uitheme").current.padding
-	gap.Height = self.Height
-	gap:setParent(self.bg)
-	table.insert(self.list, gap)
-	self:refresh()
-end
+local horizontalContainerRefresh = function(self)
+	local width = 0
+	local height = 0
 
-uiHorizontalIndex.setParent = function(self, node)
-	self.bg:setParent(node)
-end
-
-uiHorizontalIndex.refresh = function(self)
-	local width, height = 0, 0
 	for _, elem in ipairs(self.list) do
-		elem.pos.X = width
-		elem.pos.Y = padding
-		width = math.floor(width + elem.Width)
-		if elem.elementType == "node" and height < elem.Height then
-			height = elem.Height
+		if elem.elementType == "node" then
+			height = math.max(elem.Height, height)
 		end
 	end
 
 	for _, elem in ipairs(self.list) do
-		elem.Height = math.floor(height)
+		if elem.elementType == "node" then
+			elem.pos.X = width
+			elem.pos.Y = height * 0.5 - elem.Height * 0.5
+			width = width + elem.Width
+		elseif elem.elementType == "separator" then
+			elem.pos.X = width + PADDING
+			elem.Width = 1
+			elem.Height = height - SEPARATOR_INSET * 2
+			elem.pos.Y = SEPARATOR_INSET
+			width = width + elem.Width + PADDING * 2
+		elseif elem.elementType == "gap" then
+			width = width + PADDING
+		end
 	end
-	width, height = width, height + padding * 2
-	self.Width = math.floor(width)
-	self.Height = math.floor(height)
+
+	self.Width = width
+	self.Height = height
 end
 
 local createHorizontalContainer = function(_, color)
-	local elem = {}
-	elem.bg = require("uikit"):createFrame(color)
-	local list = {}
+	local container = uikit:createFrame(color or Color(0, 0, 0, 0))
+	container.list = {}
 
-	local index = function(_, k)
-		if k == "list" then
-			return list
-		end
-		return uiHorizontalIndex[k] or elem.bg[k]
-	end
-	local newindex = function(_, k, v)
-		if k == "list" then
-			list = v
-			return
-		end
-		elem.bg[k] = v
+	container.pushElement = pushElement
+	container.pushSeparator = pushSeparator
+	container.pushGap = pushGap
+	container.refresh = horizontalContainerRefresh
+
+	container.parentDidResizeSystem = function(self)
+		horizontalContainerRefresh(self)
 	end
 
-	elem.bg.parentDidResize = function()
-		elem:refresh()
-	end
-	elem.bg.contentDidResize = function()
-		elem:refresh()
-	end
-
-	local metatable = { __metatable = false, __index = index, __newindex = newindex }
-	setmetatable(elem, metatable)
-
-	return elem
+	return container
 end
 
-local uiVerticalIndex = {}
-
-uiVerticalIndex.pushElement = function(self, node)
-	node:setParent(self.bg)
-	node.elementType = "node"
-	table.insert(self.list, node)
-	self:refresh()
-end
-
-uiVerticalIndex.pushSeparator = function(self)
-	self:pushGap()
-	local separator = require("uikit"):createFrame(Color.Grey)
-	separator.elementType = "separator"
-	separator.Width = self.Width
-	separator.Height = 1
-	separator:setParent(self.bg)
-	table.insert(self.list, separator)
-	self:pushGap()
-	self:refresh()
-end
-
-uiVerticalIndex.pushGap = function(self)
-	local gap = require("uikit"):createFrame()
-	gap.elementType = "gap"
-	gap.Width = self.Width
-	gap.Height = require("uitheme").current.padding
-	gap:setParent(self.bg)
-	table.insert(self.list, gap)
-	self:refresh()
-end
-
-uiVerticalIndex.setParent = function(self, node)
-	self.bg:setParent(node)
-end
-
-uiVerticalIndex.refresh = function(self)
-	local width, height = 0, 0
+local verticalContainerRefresh = function(self)
+	local width = 0
+	local height = 0
 
 	for _, elem in ipairs(self.list) do
-		height = height + elem.Height
-	end
-	self.Height = math.floor(height + 2 * padding)
-
-	height = self.Height - padding
-	for _, elem in ipairs(self.list) do
-		elem.pos.X = padding
-		elem.pos.Y = height - elem.Height
-		height = height - elem.Height
-		if width < elem.Width then
-			width = elem.Width
+		if elem.elementType == "node" then
+			width = math.max(elem.Width, width)
+			height = height + elem.Height
+		elseif elem.elementType == "separator" then
+			width = height + 1 + PADDING * 2
+		elseif elem.elementType == "gap" then
+			height = height + PADDING
 		end
 	end
 
+	local cursorY = height
+
 	for _, elem in ipairs(self.list) do
-		elem.Width = width
+		if elem.elementType == "node" then
+			cursorY = cursorY - elem.Height
+			elem.pos.X = width * 0.5 - elem.Width * 0.5
+			elem.pos.Y = cursorY
+		elseif elem.elementType == "separator" then
+			cursorY = cursorY - 1 - PADDING
+			elem.pos.Y = cursorY
+			cursorY = cursorY - PADDING
+			elem.pos.X = SEPARATOR_INSET
+			elem.Width = width - SEPARATOR_INSET * 2
+			elem.Height = 1
+		elseif elem.elementType == "gap" then
+			cursorY = cursorY - PADDING
+		end
 	end
-	self.Width = math.floor(width + 2 * padding)
+
+	self.Width = width
+	self.Height = height
 end
 
 local createVerticalContainer = function(_, color)
-	local elem = {}
-	elem.bg = require("uikit"):createFrame(color)
-	local list = {}
+	local container = uikit:createFrame(color or Color(0, 0, 0, 0))
+	container.list = {}
 
-	local index = function(_, k)
-		if k == "list" then
-			return list
-		end
-		return uiVerticalIndex[k] or elem.bg[k]
-	end
-	local newindex = function(_, k, v)
-		if k == "list" then
-			list = v
-			return
-		end
-		elem.bg[k] = v
+	container.pushElement = pushElement
+	container.pushSeparator = pushSeparator
+	container.pushGap = pushGap
+	container.refresh = verticalContainerRefresh
+
+	container.parentDidResizeSystem = function(self)
+		verticalContainerRefresh(self)
 	end
 
-	elem.bg.parentDidResize = function()
-		elem:refresh()
-	end
-	elem.bg.contentDidResize = function()
-		elem:refresh()
-	end
-
-	local metatable = { __metatable = false, __index = index, __newindex = newindex }
-	setmetatable(elem, metatable)
-
-	return elem
+	return container
 end
 
 return {
