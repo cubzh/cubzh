@@ -22,7 +22,7 @@
 #endif
 
 // takes the 4 low bits of a and casts into uint8_t
-#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+#define TO_UINT4(a) (uint8_t)((a) & 0x0F)
 
 // Vertex buffers are used from outside Cubzh Core
 // when implementing renderers (like Swift/Metal renderer)
@@ -823,13 +823,11 @@ void vertex_buffer_mem_area_leave_global_list(VertexBufferMemArea *vbma) {
 
 #if VERTEX_BUFFER_DEBUG == 1
     if (vbma->_globalListNext == NULL && vbma != vbma->vb->lastMemArea) {
-        cclog_debug(
-            "⚠️⚠️⚠️ vbma should be last mem area or have non NULL _globalListNext");
+        cclog_debug("⚠️⚠️⚠️ vbma should be last mem area or have non NULL _globalListNext");
     }
 
     if (vbma->_globalListNext != NULL && vbma == vbma->vb->lastMemArea) {
-        cclog_debug(
-            "⚠️⚠️⚠️ vbma shouldn't be last mem area (non NULL _globalListNext)");
+        cclog_debug("⚠️⚠️⚠️ vbma shouldn't be last mem area (non NULL _globalListNext)");
     }
 #endif
 
@@ -1270,8 +1268,7 @@ void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw) {
 
 #if VERTEX_BUFFER_DEBUG == 1
     if (vbmaw->vbma->_groupListNext != NULL) {
-        cclog_debug(
-            "⚠️⚠️⚠️ vertex_buffer_mem_area_writer_done: _groupListNext should be NULL");
+        cclog_debug("⚠️⚠️⚠️ vertex_buffer_mem_area_writer_done: _groupListNext should be NULL");
     }
 #endif
 
@@ -1512,8 +1509,7 @@ void vertex_buffer_check_mem_area_chain(VertexBuffer *vb) {
 
             if (vbma->start !=
                 _vertex_buffer_data_add_ptr(previousVbma->start, previousVbma->count)) {
-                cclog_warning(
-                    "⚠️⚠️⚠️ mem area chain broken: start != previous->start + size");
+                cclog_warning("⚠️⚠️⚠️ mem area chain broken: start != previous->start + size");
             }
         }
         previousVbma = vbma;
