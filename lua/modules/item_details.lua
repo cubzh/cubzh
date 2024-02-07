@@ -167,21 +167,16 @@ itemDetails.createModalContent = function(_, config)
 							description.empty = true
 							description.Text = "Items are easier to find with a description!"
 							description.Color = theme.textColorSecondary
-							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, { description = "" }, function(_, _)
-								-- not handling response yet
-							end)
-							table.insert(requests, req)
 						else
 							description.empty = false
 							description.Text = text
 							description.Color = theme.textColor
-							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, { description = text }, function(_, _)
-								-- not handling response yet
-							end)
-							table.insert(requests, req)
 						end
+						description.pos.Y = descriptionArea.Height - description.Height - theme.padding
+						local req = api:patchItem(itemDetails.id, { description = text }, function(_, _)
+							-- not handling response yet
+						end)
+						table.insert(requests, req)
 					end,
 					function() -- cancel
 						ui:turnOn()
