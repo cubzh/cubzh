@@ -166,7 +166,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		local function requestList(methodName, listID, searchText)
 			local list = {}
-			local nbIterations = 0
+
 			if listID == LIST.SEARCH then
 				if searchText == nil or searchText == "" then
 					newListResponse("search", {})
@@ -183,20 +183,16 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						if usr and usr.username ~= "" then
 							table.insert(list, usr)
 						end
-						nbIterations = nbIterations + 1
-						if nbIterations == #users then
-							table.sort(list, function(a, b)
-								return a.username < b.username
-							end)
-							newListResponse(listID, list)
-						end
 					end
+					table.sort(list, function(a, b)
+						return a.username < b.username
+					end)
+					newListResponse(listID, list)
 				end)
 				table.insert(requests, req)
 				return
 			end
 
-			-- TODO: backend must handle search field in when retrieving friends, pending and sent
 			local req = api[methodName](api, function(ok, users, _)
 				if not ok then
 					error("Can't find users", 2)
@@ -205,30 +201,19 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					newListResponse(listID, {})
 					return
 				end
-				for _, usrID in ipairs(users) do
-					local req2 = api:getUserInfo(usrID, function(success, usr)
-						if success == false then
-							-- TODO: handle errors
-							-- insert ERROR CELL
-							return
+				for _, usr in ipairs(users) do
+					if usr.username ~= "" then
+						-- if search, match the username
+						if not searchText or string.find(usr.username, searchText) then
+							table.insert(list, usr)
 						end
-						if usr.username ~= "" then
-							-- if search, match the username
-							if not searchText or string.find(usr.username, searchText) then
-								table.insert(list, usr)
-							end
-						end
-						nbIterations = nbIterations + 1
-						if nbIterations == #users then
-							-- table.sort(list, function(a, b)
-							-- 	return a.username < b.username -- ERROR: compare 2 nil values
-							-- end)
-							newListResponse(listID, list)
-						end
-					end)
-					table.insert(requests, req2)
+					end
 				end
-			end)
+				newListResponse(listID, list)
+				table.sort(list, function(a, b)
+					return a.username < b.username
+				end)
+			end, { "username", "id" })
 			table.insert(requests, req)
 		end
 

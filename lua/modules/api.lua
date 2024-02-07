@@ -56,12 +56,31 @@ end
 
 -- getFriends ...
 -- callback(ok, friends, errMsg)
-mod.getFriends = function(_, callback)
+mod.getFriends = function(_, callback, fields, config)
 	if type(callback) ~= "function" then
-		error("api:getFriends(callback) - callback must be a function", 2)
+		error("api:getFriends(callback, fields, config) - callback must be a function", 2)
 		return
 	end
-	local req = HTTP:Get(mod.kApiAddr .. "/friend-relations", function(resp)
+
+	local defaultConfig = {
+		userID = "self",
+	}
+
+	config = require("config"):merge(defaultConfig, config)
+
+	local url = mod.kApiAddr .. "/users/" .. config.userID .. "/friends"
+
+	if type(fields) == "table" then
+		for i, field in ipairs(fields) do
+			if i == 1 then
+				url = url .. "?f=" .. field
+			else
+				url = url .. "&f=" .. field
+			end
+		end
+	end
+
+	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200: " .. resp.StatusCode)
 			return
@@ -78,29 +97,38 @@ end
 
 -- getFriendCount ...
 -- callback(ok, count, errMsg)
-mod.getFriendCount = function(self, callback)
+mod.getFriendCount = function(self, callback, config)
 	if type(callback) ~= "function" then
 		error("api:getFriendCount(callback) - callback must be a function", 2)
 		return
 	end
+
 	local req = self:getFriends(function(ok, friends)
 		local count = 0
 		if friends ~= nil then
 			count = #friends
 		end
 		callback(ok, count, nil)
-	end)
+	end, { "username" }, config)
 	return req
 end
 
 -- getSentFriendRequests ...
 -- callback(ok, reqs, errMsg)
-mod.getSentFriendRequests = function(_, callback)
+mod.getSentFriendRequests = function(_, callback, fields)
 	if type(callback) ~= "function" then
 		callback(false, nil, "1st arg must be a function")
 		return
 	end
-	local url = mod.kApiAddr .. "/friend-requests-sent"
+
+	local url = mod.kApiAddr .. "/users/self/friend-requests?status=sent"
+
+	if type(fields) == "table" then
+		for _, field in ipairs(fields) do
+			url = url .. "&f=" .. field
+		end
+	end
+
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
@@ -119,12 +147,20 @@ end
 
 -- getReceivedFriendRequests ...
 -- callback(ok, reqs, errMsg)
-mod.getReceivedFriendRequests = function(_, callback)
+mod.getReceivedFriendRequests = function(_, callback, fields)
 	if type(callback) ~= "function" then
 		callback(false, nil, "1st arg must be a function")
 		return
 	end
-	local url = mod.kApiAddr .. "/friend-requests-received"
+
+	local url = mod.kApiAddr .. "/users/self/friend-requests?status=received"
+
+	if type(fields) == "table" then
+		for _, field in ipairs(fields) do
+			url = url .. "&f=" .. field
+		end
+	end
+
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, nil, "http status not 200")
