@@ -60,6 +60,11 @@ local horizontalContainerRefresh = function(self)
 end
 
 local createHorizontalContainer = function(_, config)
+	-- legacy
+	if type(config) == "Color" then
+		config = { color = config }
+	end
+
 	config = require("config"):merge(defaultConfig, config)
 
 	local container = uikit:createFrame(config.color)
@@ -117,6 +122,11 @@ local verticalContainerRefresh = function(self)
 end
 
 local createVerticalContainer = function(_, config)
+	-- legacy
+	if type(config) == "Color" then
+		config = { color = config }
+	end
+
 	config = require("config"):merge(defaultConfig, config)
 
 	local container = uikit:createFrame(config.color)
