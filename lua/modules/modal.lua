@@ -243,6 +243,7 @@ end
 -- uikit: optional, allows to provide specific instance of uikit
 modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	local theme = require("uitheme").current
+	local ease = require("ease")
 
 	local ui = uikit or require("uikit")
 
@@ -949,6 +950,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		if active ~= nil and active.willResignActive ~= nil then
 			active:willResignActive()
 		end
+
+		ease:cancel(self) -- cancel eventual easing
 
 		-- if self._content.onClose ~= nil then
 		-- 	self._content:onClose()

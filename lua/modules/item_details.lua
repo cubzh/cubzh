@@ -1,27 +1,19 @@
 itemDetails = {}
 
 itemDetails.createModalContent = function(_, config)
-	local _config = {
+	local api = require("system_api", System)
+	local time = require("time")
+	local theme = require("uitheme").current
+
+	local defaultConfig = {
 		title = "Item",
 		mode = "explore", -- "explore" / "create"
 		uikit = require("uikit"),
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-	end
-
-	config = _config
+	config = require("config"):merge(defaultConfig, config)
 
 	local ui = config.uikit
-
-	local api = require("system_api", System)
-	local time = require("time")
-	local theme = require("uitheme").current
 
 	local itemDetails = ui:createNode()
 
@@ -30,12 +22,11 @@ itemDetails.createModalContent = function(_, config)
 
 	-- becomes true when itemDetails is removed
 	-- callbacks may capture this as upvalue to early return.
-	local removed = false
 	local requests = {}
+	local refreshTimer
 	local listeners = {}
 
-	itemDetails.onRemove = function(_)
-		removed = true
+	local cancelRequestsTimersAndListeners = function()
 		for _, req in ipairs(requests) do
 			req:Cancel()
 		end
@@ -45,6 +36,15 @@ itemDetails.createModalContent = function(_, config)
 			listener:Remove()
 		end
 		listeners = {}
+
+		if refreshTimer ~= nil then
+			refreshTimer:Cancel()
+			refreshTimer = nil
+		end
+	end
+
+	itemDetails.onRemove = function(_)
+		cancelRequestsTimersAndListeners()
 	end
 
 	local content = require("modal"):createContent()
@@ -167,27 +167,16 @@ itemDetails.createModalContent = function(_, config)
 							description.empty = true
 							description.Text = "Items are easier to find with a description!"
 							description.Color = theme.textColorSecondary
-							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, { description = "" }, function(_, _)
-								if removed then
-									return
-								end
-								-- not handling response yet
-							end)
-							table.insert(requests, req)
 						else
 							description.empty = false
 							description.Text = text
 							description.Color = theme.textColor
-							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchItem(itemDetails.id, { description = text }, function(_, _)
-								if removed then
-									return
-								end
-								-- not handling response yet
-							end)
-							table.insert(requests, req)
 						end
+						description.pos.Y = descriptionArea.Height - description.Height - theme.padding
+						local req = api:patchItem(itemDetails.id, { description = text }, function(_, _)
+							-- not handling response yet
+						end)
+						table.insert(requests, req)
 					end,
 					function() -- cancel
 						ui:turnOn()
@@ -205,10 +194,6 @@ itemDetails.createModalContent = function(_, config)
 			return
 		end
 		local req = Object:Load(self.cell.itemFullName, function(obj)
-			if removed then
-				return
-			end
-
 			if obj == nil then
 				return
 			end
@@ -243,9 +228,6 @@ itemDetails.createModalContent = function(_, config)
 	end
 
 	content.loadCell = function(_, cell)
-		if removed then
-			return
-		end
 		local self = itemDetails
 
 		if self.shape then
@@ -259,8 +241,10 @@ itemDetails.createModalContent = function(_, config)
 			self.author.Text = " @" .. cell.repo
 		else
 			-- Retrieve user data. We need their UserID.
-			local req = api:searchUser(cell.repo, function(_, users)
-				if removed then
+			local req = api:searchUser(cell.repo, function(success, users)
+				if success == false then
+					-- don't do anything on failure
+					-- api module should implement retry strategy
 					return
 				end
 
@@ -287,8 +271,10 @@ itemDetails.createModalContent = function(_, config)
 		end
 		-- Retrieve item info. We need its number of likes.
 		-- (cell.id is Item UUID)
-		local req = api:getItem(cell.id, function(_, item)
-			if removed then
+		local req = api:getItem(cell.id, function(err, item)
+			if err ~= nil then
+				-- don't do anything on failure
+				-- api module should implement retry strategy
 				return
 			end
 
@@ -331,11 +317,7 @@ itemDetails.createModalContent = function(_, config)
 			self.likeBtn.Text = "❤️ " .. (cell.likes and math.floor(cell.likes) or "…")
 			self.likeBtn.onRelease = function()
 				self.liked = not self.liked
-				local req = api:likeItem(cell.id, self.liked, function(_)
-					if removed then
-						return
-					end
-				end)
+				local req = api:likeItem(cell.id, self.liked, function(_) end)
 				table.insert(requests, req)
 
 				if self.liked then
@@ -409,16 +391,15 @@ itemDetails.createModalContent = function(_, config)
 	itemDetails._w = 400
 	itemDetails._h = 400
 
-	itemDetails._refreshTimer = nil
 	itemDetails._scheduleRefresh = function(self)
-		if self._refreshTimer ~= nil then
+		if refreshTimer ~= nil then
 			return
 		end
-		self._refreshTimer = Timer(0.01, function()
+		refreshTimer = Timer(0.01, function()
 			if self == nil or self.refresh == nil then
 				return
 			end
-			self._refreshTimer = nil
+			refreshTimer = nil
 			self:refresh()
 		end)
 	end

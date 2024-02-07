@@ -21,6 +21,22 @@ local theme = require("uitheme").current
 local padding = theme.padding
 local modal = require("modal")
 local api = require("system_api", System)
+local CELL_PADDING = padding
+
+-- list IDs
+local LIST = {
+	RECEIVED = 1,
+	SENT = 2,
+	FRIENDS = 3,
+	SEARCH = 4,
+}
+
+local TITLES = {
+	"Received (%d)",
+	"Sent (%d)",
+	"Friends (%d)",
+	"Search (%d)",
+}
 
 -- uikit: optional, allows to provide specific instance of uikit
 mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
@@ -31,7 +47,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 	local scroll
 	local searchText
-	local nbResults = -1 -- -1 loading..., 0 no result
+	local loading = true
+	local showSent = false
 
 	-- list of friends, requests (sent or received) or search
 	local lists = {
@@ -84,60 +101,73 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		cancelRequestsAndTimers()
 
 		searchText = searchStr
-		nbResults = -1
+		loading = true
 		local nbLists = 4
 		local nbListsRetrieved = 0
-		lists = {
-			received = {},
-			sent = {},
-			friends = {},
-			search = {},
-		}
+
+		lists = {}
+		lists[LIST.RECEIVED] = {}
+		lists[LIST.SENT] = {}
+		lists[LIST.FRIENDS] = {}
+		lists[LIST.SEARCH] = {}
+
+		listsN = {}
+		listsN[LIST.RECEIVED] = 0
+		listsN[LIST.SENT] = 0
+		listsN[LIST.FRIENDS] = 0
+		listsN[LIST.SEARCH] = 0
+
 		node:resetList()
 		keepScrollPosition = keepScrollPosition or false
 
-		local function newListResponse(name, list)
-			lists[name] = list or {}
+		local function newListResponse(listID, list)
+			lists[listID] = list or {}
 			nbListsRetrieved = nbListsRetrieved + 1
 			if nbListsRetrieved < nbLists then
 				return
 			end
+
 			if searchText and #searchText > 0 then
 				-- filter out search list
 				-- remove this part once backend handles that
-				for k = #lists.search, 1, -1 do
-					local user = lists.search[k]
+				for k = #lists[LIST.SEARCH], 1, -1 do
+					local user = lists[LIST.SEARCH][k]
 					local idFound = false
-					for _, v in ipairs(lists.friends) do
+					for _, v in ipairs(lists[LIST.FRIENDS]) do
 						if v.id == user.id then
 							idFound = true
 						end
 					end
-					for _, v in ipairs(lists.received) do
+					for _, v in ipairs(lists[LIST.RECEIVED]) do
 						if v.id == user.id then
 							idFound = true
 						end
 					end
-					for _, v in ipairs(lists.sent) do
+					for _, v in ipairs(lists[LIST.SENT]) do
 						if v.id == user.id then
 							idFound = true
 						end
 					end
 					if idFound then
-						table.remove(lists.search, k)
+						table.remove(lists[LIST.SEARCH], k)
 					end
 				end
-				nbResults = #lists.friends + #lists.received + #lists.sent + #lists.search
-			else
-				nbResults = #lists.friends + #lists.received
 			end
+
+			listsN[LIST.RECEIVED] = #lists[LIST.RECEIVED]
+			listsN[LIST.SENT] = #lists[LIST.SENT]
+			listsN[LIST.FRIENDS] = #lists[LIST.FRIENDS]
+			listsN[LIST.SEARCH] = #lists[LIST.SEARCH]
+
+			loading = false
+
 			node:resetList(keepScrollPosition)
 		end
 
-		local function requestList(methodName, listName, searchText)
+		local function requestList(methodName, listID, searchText)
 			local list = {}
-			local nbIterations = 0
-			if listName == "search" then
+
+			if listID == LIST.SEARCH then
 				if searchText == nil or searchText == "" then
 					newListResponse("search", {})
 					return
@@ -153,55 +183,44 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						if usr and usr.username ~= "" then
 							table.insert(list, usr)
 						end
-						nbIterations = nbIterations + 1
-						if nbIterations == #users then
-							table.sort(list, function(a, b)
-								return a.username < b.username
-							end)
-							newListResponse(listName, list)
-						end
 					end
+					table.sort(list, function(a, b)
+						return a.username < b.username
+					end)
+					newListResponse(listID, list)
 				end)
 				table.insert(requests, req)
 				return
 			end
 
-			-- TODO: backend must handle search field in when retrieving friends, pending and sent
 			local req = api[methodName](api, function(ok, users, _)
 				if not ok then
 					error("Can't find users", 2)
 				end
 				if #users == 0 then
-					newListResponse(listName, {})
+					newListResponse(listID, {})
 					return
 				end
-				for _, usrID in ipairs(users) do
-					local req2 = api:getUserInfo(usrID, function(_, usr)
-						-- TODO: handle errors
-						if usr.username ~= "" then
-							-- if search, match the username
-							if not searchText or string.find(usr.username, searchText) then
-								table.insert(list, usr)
-							end
+				for _, usr in ipairs(users) do
+					if usr.username ~= "" then
+						-- if search, match the username
+						if not searchText or string.find(usr.username, searchText) then
+							table.insert(list, usr)
 						end
-						nbIterations = nbIterations + 1
-						if nbIterations == #users then
-							table.sort(list, function(a, b)
-								return a.username < b.username
-							end)
-							newListResponse(listName, list)
-						end
-					end)
-					table.insert(requests, req2)
+					end
 				end
-			end)
+				newListResponse(listID, list)
+				table.sort(list, function(a, b)
+					return a.username < b.username
+				end)
+			end, { "username", "id" })
 			table.insert(requests, req)
 		end
 
-		requestList("getFriends", "friends", searchText)
-		requestList("getReceivedFriendRequests", "received", searchText)
-		requestList("getSentFriendRequests", "sent", searchText)
-		requestList("searchUser", "search", searchText)
+		requestList("getFriends", LIST.FRIENDS, searchText)
+		requestList("getReceivedFriendRequests", LIST.RECEIVED, searchText)
+		requestList("getSentFriendRequests", LIST.SENT, searchText)
+		requestList("searchUser", LIST.SEARCH, searchText)
 	end
 
 	local getSearchBar = function()
@@ -248,13 +267,26 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 	end
 
+	local btnConfig = {
+		borders = false,
+		shadow = false,
+		textSize = "small",
+		color = Color(0, 0, 0, 0.7),
+	}
+
 	local computeCellSize = function()
-		local btnJoin = ui:createButton("🌎 Join", { textSize = "small" })
-		local btnMessage = ui:createButton("💬", { textSize = "small" })
-		local size = btnJoin.Width + btnMessage.Width + padding * 4
-		btnJoin:remove()
-		btnMessage:remove()
-		return math.floor(size), math.floor(size) -- width, height
+		local w = 170
+		local h = 100
+		-- 2 buttons + 1 label stacked vertically
+		local btn = ui:createButton("foo", btnConfig)
+		local label = ui:createText("username1234567", Color.White, "small") -- usernames are 15 chars max
+		-- 3 paddings between buttons & label +  padding around label within frame
+		h = math.max(h, btn.Height * 2 + label.Height + padding * 5)
+		w = math.max(w, label.Width + padding * 2)
+
+		btn:remove()
+		label:remove()
+		return w, h
 	end
 
 	local cellWidth, cellHeight = computeCellSize()
@@ -274,40 +306,38 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White, "small")
 		textName:setParent(textBg)
+		textName.pos = { padding, padding }
 		local textStatus = ui:createText("", Color.White, "small")
 		textStatus:setParent(textBg)
 		textBg:hide()
 
-		local btnConfig = {
-			borders = false,
-			shadow = false,
-			textSize = "small",
-		}
-		local btnLeft = ui:createButton("", btnConfig)
-		btnLeft:setParent(textBg)
-		local btnRight = ui:createButton("", btnConfig)
-		btnRight:setParent(textBg)
+		local btnPrimary = ui:createButton("", btnConfig)
+		btnPrimary:setParent(cell)
+		btnPrimary.pos = { padding, padding }
+		local btnSecondary = ui:createButton("", btnConfig)
+		btnSecondary:setParent(cell)
 
 		local avatar
 		cell.parentDidResize = function()
-			cell.Height = math.floor(forceHeight or cellHeight)
-			cell.Width = math.floor(forceWidth or cell.Height)
+			cell.Height = forceHeight or cellHeight
+			cell.Width = forceWidth or cell.Height
 
-			textBg.Width = math.floor(cell.Width)
-			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
+			textBg.Width = textName.Width + padding * 2
+			textBg.Height = textName.Height + padding * 2
+			textBg.pos.Y = cell.Height - textBg.Height
 
 			if avatar then
-				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, cell.Height - avatar.Height }
+				avatar.Height = cell.Height -- avatars are spherized, so there's enough margin already
+				avatar.pos = { cell.Width * 0.666 - avatar.Width * 0.5, cell.Height * 0.5 - avatar.Height * 0.5 }
 			end
 
-			if avatarLand and avatarLand.Width then
-				avatarLand.pos = { cell.Width * 0.5 - avatarLand.Width * 0.5, 10 }
-			end
+			btnPrimary.pos = { padding, padding }
+			btnSecondary.pos = { btnPrimary.pos.X, btnPrimary.pos.Y + btnPrimary.Height + padding }
 
-			textName.pos = { padding, btnLeft.Height + padding }
-			textStatus.pos = { cell.Width - textStatus.Width - padding, btnLeft.Height + padding }
-
-			btnRight.pos = { cell.Width - btnRight.Width, 0 }
+			-- display in front of shape
+			textBg.LocalPosition.Z = -600
+			btnPrimary.LocalPosition.Z = -600
+			btnSecondary.LocalPosition.Z = -600
 		end
 
 		cell.setUser = function(_, user)
@@ -337,38 +367,23 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					cell:setColor(Color(63, 63, 63))
 				end
 
-				cell.IsMask = true
 				cell.username = user.username
 				cell.userID = user.id
 				textBg.LocalPosition.Z = -600
 				avatar = cachedAvatars[user.username]
 				if avatar == nil then
 					local requests
-					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
+					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.95, nil, ui)
 					for _, r in ipairs(requests) do
 						table.insert(cell.requests, r)
 					end
 				end
 				avatar:setParent(cell)
 				avatar.didLoad = function()
-					avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
+					avatar.body.pivot.LocalRotation = Rotation(math.rad(-22), 0, 0) * Rotation(0, math.rad(145), 0)
 					cachedAvatars[user.username] = avatar
 				end
 				cell.avatar = avatar
-				local r = Object:Load("buche.lobby_grassland", function(obj)
-					if obj == nil then
-						return
-					end
-					avatarLand = ui:createShape(obj)
-					avatarLand:setParent(cell)
-					obj.Rotation.Y = math.pi / 4
-					obj:RotateWorld(Number3(1, 0, 0), math.pi / -6)
-					obj.Scale = 3
-					avatarLand.LocalPosition.Z = -50
-					if cell.parentDidResize then
-						cell:parentDidResize()
-					end
-				end)
 				table.insert(cell.requests, r)
 				textName.Text = user.username
 				-- TODO: handle status
@@ -381,10 +396,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		cell.setType = function(_, cellType)
-			if cellType == "received" then
-				btnLeft.Text = "✅ Accept"
-				btnLeft:show()
-				btnLeft.onRelease = function()
+			if cellType == LIST.RECEIVED then
+				btnPrimary.Text = "✅ Accept"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
 						if not ok then
 							return
@@ -393,9 +408,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-				btnRight.Text = "❌"
-				btnRight:show()
-				btnRight.onRelease = function()
+				btnSecondary.Text = "❌"
+				btnSecondary:show()
+				btnSecondary.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, false, function(ok, _)
 						if not ok then
 							return
@@ -404,13 +419,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-			elseif cellType == "sent" then
-				btnLeft.Text = "Sent"
-				btnLeft:show()
-				btnLeft.onRelease = nil
-				btnRight.Text = "❌"
-				btnRight:show()
-				btnRight.onRelease = function()
+			elseif cellType == LIST.SENT then
+				btnPrimary.Text = "❌ Cancel"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					local req = api:cancelFriendRequest(cell.userID, function(ok, _)
 						if not ok then
 							return
@@ -419,21 +431,24 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-			elseif cellType == "friends" then
-				btnLeft.Text = "🌎 Join"
-				btnLeft:show()
-				btnLeft.onRelease = function()
+				btnSecondary.Text = ""
+				btnSecondary:hide()
+				btnSecondary.onRelease = nil
+			elseif cellType == LIST.FRIENDS then
+				btnPrimary.Text = "🌎 Join"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
-				btnRight.Text = "💬"
-				btnRight:show()
-				btnRight.onRelease = function()
+				btnSecondary.Text = "💬"
+				btnSecondary:show()
+				btnSecondary.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
-			elseif cellType == "search" then
-				btnLeft.Text = "➕ Add friend"
-				btnLeft:show()
-				btnLeft.onRelease = function()
+			elseif cellType == LIST.SEARCH then
+				btnPrimary.Text = "➕ Add friend"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					local req = api:sendFriendRequest(cell.userID, function(ok, _)
 						if not ok then
 							return
@@ -442,9 +457,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-				btnRight.Text = ""
-				btnRight:hide()
-				btnRight.onRelease = nil
+				btnSecondary.Text = ""
+				btnSecondary:hide()
+				btnSecondary.onRelease = nil
 			end
 			cell:parentDidResize()
 		end
@@ -452,30 +467,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return cell
 	end
 
-	local getUserAtIndex = function(index, nbCellsPerLine)
-		-- default list
-		local listOrder = { "received", "friends" }
-		if #lists.search > 0 then
-			-- search list
-			listOrder = { "friends", "received", "sent", "search" }
-		end
-
-		for _, name in ipairs(listOrder) do
-			local list = lists[name]
-			if list then
-				-- compute nb lines (add empty spaces)
-				local nbLines = math.ceil(#list / nbCellsPerLine)
-				local totalCells = nbLines * nbCellsPerLine
-				if index <= totalCells then
-					return list[index], name
-				end
-				index = index - totalCells
-			end
-		end
-	end
-
 	local loadLine = function(cellId)
-		if nbResults == -1 then
+		if loading == true then
 			if cellId == 1 then
 				local container = ui:createFrame()
 				local text = ui:createText("Loading...", Color.White)
@@ -487,6 +480,12 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			end
 			return
 		end
+
+		local nbResults = 0
+		for _, n in ipairs(listsN) do
+			nbResults = nbResults + n
+		end
+
 		if nbResults == 0 then
 			if cellId == 1 then
 				local container = ui:createFrame()
@@ -507,83 +506,110 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 
 		local width = node.Width
-		local nbCells = math.min(Client.IsMobile and 4 or 2, math.floor(width / cellWidth))
+		-- nb cells per line
+		local nbCellsPerLine = math.floor(width / cellWidth)
 
-		local firstUserCell, firstCellType = getUserAtIndex((cellId - 1) * nbCells + 1, nbCells)
-		if not firstUserCell then
-			return
-		end
+		local adaptedCellWidth = (width - (CELL_PADDING * (nbCellsPerLine - 1))) / nbCellsPerLine
 
-		local prevFirstCellUserType
-		if cellId > 1 then
-			_, prevFirstCellUserType = getUserAtIndex((cellId - 2) * nbCells + 1, nbCells)
-		end
+		local getContentForLine = function(lineNumber, nbCellsPerLine)
+			nbCellsPerLine = math.floor(nbCellsPerLine)
+			local l = 1
+			while l <= #lists do
+				if listsN[l] == 0 then
+					l = l + 1 -- nothing in that list, look in next one
+				elseif showSent == false and l == LIST.SENT and lineNumber > 1 then
+					lineNumber = lineNumber - 1
+					l = l + 1
+				elseif lineNumber == 1 then
+					return lists[l], l, true -- first line : title
+				else
+					local nbLinesForList = math.floor(listsN[l] / nbCellsPerLine)
+						+ (listsN[l] % nbCellsPerLine > 0 and 1 or 0)
 
-		local verticalContainer
-		local line = require("ui_container"):createHorizontalContainer()
-		line.Width = math.floor(width)
-		line.Height = math.floor(cellHeight)
-		line.cells = {}
-		line.onRemove = function()
-			for _, cell in ipairs(line.cells) do
-				if cell.avatar then
-					cell.avatar:setParent(nil)
-					cell.avatar = nil
-				end
-				for _, r in ipairs(cell.requests) do
-					r:Cancel()
-				end
-				cell.requests = {}
-				if cell.waitScrollStopTimer then
-					cell.waitScrollStopTimer:Cancel()
-					cell.waitScrollStopTimer = nil
+					if lineNumber - 1 <= nbLinesForList then
+						local start = (lineNumber - 2) * nbCellsPerLine + 1
+						local stop = math.min(start + nbCellsPerLine - 1, listsN[l])
+						return lists[l], l, nil, { start, stop }
+					else
+						l = l + 1
+						lineNumber = lineNumber - 1 - nbLinesForList
+					end
 				end
 			end
 		end
-		-- Need to make a vertical container to add the title
-		if prevFirstCellUserType == nil or firstCellType ~= prevFirstCellUserType then
-			local titles = {
-				friends = "Friends (%d)",
-				received = "Pending Requests (%d)",
-				sent = "Sent Requests (%d)",
-				search = "Search (%d)",
-			}
-			local titleStr = titles[firstCellType]
-			if titleStr then
-				verticalContainer = require("ui_container"):createVerticalContainer()
-				local title = ui:createText(string.format(titleStr, #lists[firstCellType]), Color.White)
-				verticalContainer:pushElement(title)
-				verticalContainer:pushElement(line)
-				verticalContainer.line = line
-			else
-				line:pushGap()
+
+		local list, listID, title, range = getContentForLine(cellId, nbCellsPerLine)
+
+		if title then
+			local titleStr = TITLES[listID]
+			local frame = ui:createFrame(Color(0, 0, 0, 0.5))
+			local text = ui:createText(string.format(titleStr, listsN[listID]), Color.White)
+			text:setParent(frame)
+			text.pos = { padding, padding }
+			frame.Width = width
+			frame.Height = text.Height + padding * 2
+
+			if listID == LIST.SENT then
+				if showSent then
+					local arrow = ui:createText("⬆️", Color.White)
+					arrow:setParent(frame)
+					arrow.pos = { frame.Width - arrow.Width - padding, padding }
+				else
+					local arrow = ui:createText("⬇️", Color.White)
+					arrow:setParent(frame)
+					arrow.pos = { frame.Width - arrow.Width - padding, padding }
+				end
+
+				frame.onPress = function(_)
+					frame.Color = Color(50, 50, 50, 0.5)
+				end
+
+				frame.onRelease = function(_)
+					frame.Color = Color(0, 0, 0, 0.5)
+					showSent = not showSent
+					node:resetList(true)
+				end
 			end
-		else
-			line:pushGap()
+
+			return frame
 		end
 
-		-- Stretch width to fit the full length
-		local realCellWidth = math.floor((width - 2 * padding - (nbCells - 1) * 3 * padding) / nbCells)
-		for i = 1, nbCells do
-			local cell = createFriendCell({ width = realCellWidth, height = cellHeight })
-			line:pushElement(cell)
-			if i < nbCells then
-				line:pushGap()
-				line:pushGap()
-				line:pushGap()
+		if list and range then
+			local line = require("ui_container"):createHorizontalContainer({ gapSize = CELL_PADDING })
+			line.cells = {}
+			line.onRemove = function()
+				for _, cell in ipairs(line.cells) do
+					if cell.avatar then
+						cell.avatar:setParent(nil)
+						cell.avatar = nil
+					end
+					for _, r in ipairs(cell.requests) do
+						r:Cancel()
+					end
+					cell.requests = {}
+					if cell.waitScrollStopTimer then
+						cell.waitScrollStopTimer:Cancel()
+						cell.waitScrollStopTimer = nil
+					end
+				end
 			end
-			table.insert(line.cells, cell)
 
-			local user, cellType = getUserAtIndex((cellId - 1) * nbCells + i, nbCells)
-			if user then
-				cell:setUser(user)
-				cell:setType(cellType)
-			elseif getUserAtIndex(1, nbCells) ~= nil then
-				cell:hide()
+			local start = range[1]
+			for i = start, range[2] do
+				local cell = createFriendCell({ width = adaptedCellWidth, height = cellHeight })
+				if i > start then
+					line:pushGap()
+				end
+				line:pushElement(cell)
+
+				table.insert(line.cells, cell)
+
+				cell:setUser(list[i])
+				cell:setType(listID)
 			end
+
+			return line
 		end
-
-		return verticalContainer or line
 	end
 
 	local unloadLine = function(lineOrVerticalContainer)
@@ -598,7 +624,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local config = {
-		cellPadding = 5,
+		cellPadding = CELL_PADDING,
 		loadCell = loadLine,
 		unloadCell = unloadLine,
 		uikit = uikit or require("uikit"),

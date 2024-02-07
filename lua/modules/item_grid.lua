@@ -79,8 +79,6 @@ itemGrid.create = function(_, config)
 
 	local ui = config.uikit
 
-	local removed = false
-
 	local sortBy = "likes:desc"
 
 	local grid = ui:createFrame() -- Color(255,0,0)
@@ -135,9 +133,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.setCategories = function(self, categories, type)
-		if self.getItems == nil then
-			return
-		end
 		if type ~= nil then
 			config.type = type
 		end
@@ -147,9 +142,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.setWorldsFilter = function(self, filter)
-		if self.getItems == nil then
-			return
-		end
 		if filter == nil or type(filter) ~= Type.string then
 			error("item_grid:setWorldsFilter(filter): filter should be a string", 2)
 		end
@@ -252,7 +244,6 @@ itemGrid.create = function(_, config)
 		cancelRequestsAndTimers()
 		grid.tickListener:Remove()
 		grid.tickListener = nil
-		removed = true
 	end
 
 	grid._createCell = function(grid, size)
@@ -447,10 +438,6 @@ itemGrid.create = function(_, config)
 			end
 
 			local req = Object:Load(itemName, function(obj)
-				if removed then
-					return
-				end
-
 				if not cell.tName then
 					return
 				end
@@ -466,6 +453,7 @@ itemGrid.create = function(_, config)
 					end
 					return
 				end
+
 				if cell.item then
 					cell.item:remove()
 					cell.item = nil
@@ -604,9 +592,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.refresh = function(self)
-		if removed then
-			return
-		end
 		cancelCellContentRequest()
 
 		if self ~= grid then
@@ -780,14 +765,11 @@ itemGrid.create = function(_, config)
 		self:_paginationDidChange()
 	end
 
-	grid.dt = 0.0
-	grid.dt4 = 0.0
+	local dt1 = 0.0
+	local dt4 = 0.0
 	grid.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		if grid.dt == nil then
-			return
-		end
-		grid.dt = grid.dt + dt
-		grid.dt4 = grid.dt4 + dt * 4
+		dt1 = dt1 + dt
+		dt4 = dt4 + dt * 4
 
 		local cells = grid.cells
 		if cells == nil then
@@ -795,7 +777,7 @@ itemGrid.create = function(_, config)
 		end
 		local loadingCube
 		local center = grid.cellSize * 0.5
-		local loadingCubePos = { center + math.cos(grid.dt4) * 20, center - math.sin(grid.dt4) * 20, 0 }
+		local loadingCubePos = { center + math.cos(dt4) * 20, center - math.sin(dt4) * 20, 0 }
 		for _, c in ipairs(cells) do
 			if c.getLoadingCube == nil then
 				return
@@ -806,7 +788,7 @@ itemGrid.create = function(_, config)
 			end
 
 			if c.item ~= nil and c.item.pivot ~= nil then
-				c.item.pivot.LocalRotation = { -0.1, grid.dt, -0.2 }
+				c.item.pivot.LocalRotation = { -0.1, dt1, -0.2 }
 			end
 		end
 	end)
