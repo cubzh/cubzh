@@ -24,6 +24,11 @@ local pushSeparator = function(self)
 	self:refresh()
 end
 
+local defaultConfig = {
+	gapSize = PADDING,
+	color = Color(0, 0, 0, 0), -- background color
+}
+
 local horizontalContainerRefresh = function(self)
 	local width = 0
 	local height = 0
@@ -46,7 +51,7 @@ local horizontalContainerRefresh = function(self)
 			elem.pos.Y = SEPARATOR_INSET
 			width = width + elem.Width + PADDING * 2
 		elseif elem.elementType == "gap" then
-			width = width + PADDING
+			width = width + self.config.gapSize
 		end
 	end
 
@@ -54,9 +59,12 @@ local horizontalContainerRefresh = function(self)
 	self.Height = height
 end
 
-local createHorizontalContainer = function(_, color)
-	local container = uikit:createFrame(color or Color(0, 0, 0, 0))
+local createHorizontalContainer = function(_, config)
+	config = require("config"):merge(defaultConfig, config)
+
+	local container = uikit:createFrame(config.color)
 	container.list = {}
+	container.config = config
 
 	container.pushElement = pushElement
 	container.pushSeparator = pushSeparator
@@ -81,7 +89,7 @@ local verticalContainerRefresh = function(self)
 		elseif elem.elementType == "separator" then
 			width = height + 1 + PADDING * 2
 		elseif elem.elementType == "gap" then
-			height = height + PADDING
+			height = height + self.config.gapSize
 		end
 	end
 
@@ -108,9 +116,12 @@ local verticalContainerRefresh = function(self)
 	self.Height = height
 end
 
-local createVerticalContainer = function(_, color)
-	local container = uikit:createFrame(color or Color(0, 0, 0, 0))
+local createVerticalContainer = function(_, config)
+	config = require("config"):merge(defaultConfig, config)
+
+	local container = uikit:createFrame(config.color)
 	container.list = {}
+	container.config = config
 
 	container.pushElement = pushElement
 	container.pushSeparator = pushSeparator
