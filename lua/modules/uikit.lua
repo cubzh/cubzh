@@ -1245,16 +1245,6 @@ function createUI(system)
 			image = nil,
 		}
 
-		local image
-		if config ~= nil and config.image ~= nil then
-			if type(config.image) ~= Type.Data then
-				error("ui:createFrame(color, config): config.image should be a Data instance", 2)
-			end
-			print("image taken into account")
-			_config.image = config.image
-			image = config.image
-		end
-
 		if type(config.unfocuses) == "boolean" then
 			_config.unfocuses = config.unfocuses
 		end
@@ -1316,8 +1306,8 @@ function createUI(system)
 				self.background.Color = Color.White
 				self.background.IsDoubleSided = true
 			else
-				background.Color = color
-				background.IsDoubleSided = false
+				self.background.Color = color
+				self.background.IsDoubleSided = false
 			end
 		end
 
@@ -1339,6 +1329,13 @@ function createUI(system)
 		node._setHeight = function(self, v)
 			self.background.Height = v
 			self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+		end
+
+		if config ~= nil and config.image ~= nil then
+			if type(config.image) ~= Type.Data then
+				error("ui:createFrame(color, config): config.image should be a Data instance", 2)
+			end
+			node:setImage(config.image)
 		end
 
 		node.object.LocalPosition = { 0, 0, 0 }
