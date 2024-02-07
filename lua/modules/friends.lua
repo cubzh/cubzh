@@ -21,6 +21,7 @@ local theme = require("uitheme").current
 local padding = theme.padding
 local modal = require("modal")
 local api = require("system_api", System)
+local CELL_PADDING = padding
 
 -- list IDs
 local LIST = {
@@ -47,6 +48,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local scroll
 	local searchText
 	local loading = true
+	local showSent = false
 
 	-- list of friends, requests (sent or received) or search
 	local lists = {
@@ -280,13 +282,26 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end
 	end
 
+	local btnConfig = {
+		borders = false,
+		shadow = false,
+		textSize = "small",
+		color = Color(0, 0, 0, 0.7),
+	}
+
 	local computeCellSize = function()
-		local btnJoin = ui:createButton("🌎 Join", { textSize = "small" })
-		local btnMessage = ui:createButton("💬", { textSize = "small" })
-		local size = btnJoin.Width + btnMessage.Width + padding * 4
-		btnJoin:remove()
-		btnMessage:remove()
-		return math.floor(size), math.floor(size) -- width, height
+		local w = 170
+		local h = 100
+		-- 2 buttons + 1 label stacked vertically
+		local btn = ui:createButton("foo", btnConfig)
+		local label = ui:createText("username1234567", Color.White, "small") -- usernames are 15 chars max
+		-- 3 paddings between buttons & label +  padding around label within frame
+		h = math.max(h, btn.Height * 2 + label.Height + padding * 5)
+		w = math.max(w, label.Width + padding * 2)
+
+		btn:remove()
+		label:remove()
+		return w, h
 	end
 
 	local cellWidth, cellHeight = computeCellSize()
@@ -306,40 +321,38 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		textBg:setParent(cell)
 		local textName = ui:createText("", Color.White, "small")
 		textName:setParent(textBg)
+		textName.pos = { padding, padding }
 		local textStatus = ui:createText("", Color.White, "small")
 		textStatus:setParent(textBg)
 		textBg:hide()
 
-		local btnConfig = {
-			borders = false,
-			shadow = false,
-			textSize = "small",
-		}
-		local btnLeft = ui:createButton("", btnConfig)
-		btnLeft:setParent(textBg)
-		local btnRight = ui:createButton("", btnConfig)
-		btnRight:setParent(textBg)
+		local btnPrimary = ui:createButton("", btnConfig)
+		btnPrimary:setParent(cell)
+		btnPrimary.pos = { padding, padding }
+		local btnSecondary = ui:createButton("", btnConfig)
+		btnSecondary:setParent(cell)
 
 		local avatar
 		cell.parentDidResize = function()
-			cell.Height = math.floor(forceHeight or cellHeight)
-			cell.Width = math.floor(forceWidth or cell.Height)
+			cell.Height = forceHeight or cellHeight
+			cell.Width = forceWidth or cell.Height
 
-			textBg.Width = math.floor(cell.Width)
-			textBg.Height = math.floor(textName.Height + padding * 2 + btnLeft.Height)
+			textBg.Width = textName.Width + padding * 2
+			textBg.Height = textName.Height + padding * 2
+			textBg.pos.Y = cell.Height - textBg.Height
 
 			if avatar then
-				avatar.pos = { cell.Width * 0.5 - avatar.Width * 0.5, cell.Height - avatar.Height }
+				avatar.Height = cell.Height -- avatars are spherized, so there's enough margin already
+				avatar.pos = { cell.Width * 0.666 - avatar.Width * 0.5, cell.Height * 0.5 - avatar.Height * 0.5 }
 			end
 
-			if avatarLand and avatarLand.Width then
-				avatarLand.pos = { cell.Width * 0.5 - avatarLand.Width * 0.5, 10 }
-			end
+			btnPrimary.pos = { padding, padding }
+			btnSecondary.pos = { btnPrimary.pos.X, btnPrimary.pos.Y + btnPrimary.Height + padding }
 
-			textName.pos = { padding, btnLeft.Height + padding }
-			textStatus.pos = { cell.Width - textStatus.Width - padding, btnLeft.Height + padding }
-
-			btnRight.pos = { cell.Width - btnRight.Width, 0 }
+			-- display in front of shape
+			textBg.LocalPosition.Z = -600
+			btnPrimary.LocalPosition.Z = -600
+			btnSecondary.LocalPosition.Z = -600
 		end
 
 		cell.setUser = function(_, user)
@@ -369,38 +382,23 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					cell:setColor(Color(63, 63, 63))
 				end
 
-				cell.IsMask = true
 				cell.username = user.username
 				cell.userID = user.id
 				textBg.LocalPosition.Z = -600
 				avatar = cachedAvatars[user.username]
 				if avatar == nil then
 					local requests
-					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.9, nil, ui)
+					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.95, nil, ui)
 					for _, r in ipairs(requests) do
 						table.insert(cell.requests, r)
 					end
 				end
 				avatar:setParent(cell)
 				avatar.didLoad = function()
-					avatar.body.pivot.LocalRotation = Rotation(-math.pi / 8, 0, 0) * Rotation(0, math.rad(145), 0)
+					avatar.body.pivot.LocalRotation = Rotation(math.rad(-22), 0, 0) * Rotation(0, math.rad(145), 0)
 					cachedAvatars[user.username] = avatar
 				end
 				cell.avatar = avatar
-				local r = Object:Load("buche.lobby_grassland", function(obj)
-					if obj == nil then
-						return
-					end
-					avatarLand = ui:createShape(obj)
-					avatarLand:setParent(cell)
-					obj.Rotation.Y = math.pi / 4
-					obj:RotateWorld(Number3(1, 0, 0), math.pi / -6)
-					obj.Scale = 3
-					avatarLand.LocalPosition.Z = -50
-					if cell.parentDidResize then
-						cell:parentDidResize()
-					end
-				end)
 				table.insert(cell.requests, r)
 				textName.Text = user.username
 				-- TODO: handle status
@@ -414,9 +412,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		cell.setType = function(_, cellType)
 			if cellType == LIST.RECEIVED then
-				btnLeft.Text = "✅ Accept"
-				btnLeft:show()
-				btnLeft.onRelease = function()
+				btnPrimary.Text = "✅ Accept"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
 						if not ok then
 							return
@@ -425,9 +423,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-				btnRight.Text = "❌"
-				btnRight:show()
-				btnRight.onRelease = function()
+				btnSecondary.Text = "❌"
+				btnSecondary:show()
+				btnSecondary.onRelease = function()
 					local req = api:replyToFriendRequest(cell.userID, false, function(ok, _)
 						if not ok then
 							return
@@ -437,12 +435,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					table.insert(requests, req)
 				end
 			elseif cellType == LIST.SENT then
-				btnLeft.Text = "Sent"
-				btnLeft:show()
-				btnLeft.onRelease = nil
-				btnRight.Text = "❌"
-				btnRight:show()
-				btnRight.onRelease = function()
+				btnPrimary.Text = "❌ Cancel"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					local req = api:cancelFriendRequest(cell.userID, function(ok, _)
 						if not ok then
 							return
@@ -451,21 +446,24 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
+				btnSecondary.Text = ""
+				btnSecondary:hide()
+				btnSecondary.onRelease = nil
 			elseif cellType == LIST.FRIENDS then
-				btnLeft.Text = "🌎 Join"
-				btnLeft:show()
-				btnLeft.onRelease = function()
+				btnPrimary.Text = "🌎 Join"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
-				btnRight.Text = "💬"
-				btnRight:show()
-				btnRight.onRelease = function()
+				btnSecondary.Text = "💬"
+				btnSecondary:show()
+				btnSecondary.onRelease = function()
 					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 				end
 			elseif cellType == LIST.SEARCH then
-				btnLeft.Text = "➕ Add friend"
-				btnLeft:show()
-				btnLeft.onRelease = function()
+				btnPrimary.Text = "➕ Add friend"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
 					local req = api:sendFriendRequest(cell.userID, function(ok, _)
 						if not ok then
 							return
@@ -474,9 +472,9 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					end)
 					table.insert(requests, req)
 				end
-				btnRight.Text = ""
-				btnRight:hide()
-				btnRight.onRelease = nil
+				btnSecondary.Text = ""
+				btnSecondary:hide()
+				btnSecondary.onRelease = nil
 			end
 			cell:parentDidResize()
 		end
@@ -526,12 +524,17 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		-- nb cells per line
 		local nbCellsPerLine = math.floor(width / cellWidth)
 
+		local adaptedCellWidth = (width - (CELL_PADDING * (nbCellsPerLine - 1))) / nbCellsPerLine
+
 		local getContentForLine = function(lineNumber, nbCellsPerLine)
 			nbCellsPerLine = math.floor(nbCellsPerLine)
 			local l = 1
 			while l <= #lists do
 				if listsN[l] == 0 then
 					l = l + 1 -- nothing in that list, look in next one
+				elseif showSent == false and l == LIST.SENT and lineNumber > 1 then
+					lineNumber = lineNumber - 1
+					l = l + 1
 				elseif lineNumber == 1 then
 					return lists[l], l, true -- first line : title
 				else
@@ -552,15 +555,42 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 		local list, listID, title, range = getContentForLine(cellId, nbCellsPerLine)
 
-		-- print("listID:", listID, "title:", title, "range:", range[1], range[2])
-
 		if title then
 			local titleStr = TITLES[listID]
-			return ui:createText(string.format(titleStr, listsN[listID]), Color.White)
+			local frame = ui:createFrame(Color(0, 0, 0, 0.5))
+			local text = ui:createText(string.format(titleStr, listsN[listID]), Color.White)
+			text:setParent(frame)
+			text.pos = { padding, padding }
+			frame.Width = width
+			frame.Height = text.Height + padding * 2
+
+			if listID == LIST.SENT then
+				if showSent then
+					local arrow = ui:createText("⬆️", Color.White)
+					arrow:setParent(frame)
+					arrow.pos = { frame.Width - arrow.Width - padding, padding }
+				else
+					local arrow = ui:createText("⬇️", Color.White)
+					arrow:setParent(frame)
+					arrow.pos = { frame.Width - arrow.Width - padding, padding }
+				end
+
+				frame.onPress = function(_)
+					frame.Color = Color(50, 50, 50, 0.5)
+				end
+
+				frame.onRelease = function(_)
+					frame.Color = Color(0, 0, 0, 0.5)
+					showSent = not showSent
+					node:resetList(true)
+				end
+			end
+
+			return frame
 		end
 
 		if list and range then
-			local line = require("ui_container"):createHorizontalContainer()
+			local line = require("ui_container"):createHorizontalContainer({ gapSize = CELL_PADDING })
 			line.cells = {}
 			line.onRemove = function()
 				for _, cell in ipairs(line.cells) do
@@ -581,7 +611,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 			local start = range[1]
 			for i = start, range[2] do
-				local cell = createFriendCell({ width = cellWidth, height = cellHeight })
+				local cell = createFriendCell({ width = adaptedCellWidth, height = cellHeight })
 				if i > start then
 					line:pushGap()
 				end
@@ -609,7 +639,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	end
 
 	local config = {
-		cellPadding = 5,
+		cellPadding = CELL_PADDING,
 		loadCell = loadLine,
 		unloadCell = unloadLine,
 		uikit = uikit or require("uikit"),

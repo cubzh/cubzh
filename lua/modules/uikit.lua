@@ -2043,9 +2043,8 @@ function createUI(system)
 		return node
 	end
 
-	ui.createScrollArea = function(_, color, config)
-		local ui = config.uikit or require("uikit")
-		local node = ui:createFrame(color)
+	ui.createScrollArea = function(self, color, config)
+		local node = self:createFrame(color)
 		node.isScrollArea = true
 
 		local cellPadding = config.cellPadding or 0
@@ -2058,7 +2057,7 @@ function createUI(system)
 		local dragging = false
 		local dragPointerIndex = nil -- pointerIndex used to drag
 
-		local container = ui:createFrame()
+		local container = self:createFrame()
 		container:setParent(node)
 		container.IsMask = true
 		node.container = container
@@ -2071,7 +2070,7 @@ function createUI(system)
 		local maxY = 0
 		node.scrollPosition = 0
 
-		local scrollHandle = ui:createFrame(Color(0, 0, 0, 0)) -- TODO: work on handle
+		local scrollHandle = self:createFrame(Color(0, 0, 0, 0)) -- TODO: work on handle
 		scrollHandle:setParent(node)
 
 		node.refresh = function()
@@ -2238,7 +2237,7 @@ function createUI(system)
 			node:setScrollPosition(0)
 		end
 
-		local scrollFrame = ui:createFrame()
+		local scrollFrame = self:createFrame()
 		scrollFrame:setParent(node)
 		scrollFrame.parentDidResize = function()
 			scrollFrame.Width = node.Width
@@ -2367,9 +2366,34 @@ function createUI(system)
 			textSize = "default",
 			sound = "button_1",
 			unfocuses = true, -- unfocused focused node when true
+			color = theme.buttonColor,
+			colorPressed = nil,
+			colorSelected = theme.buttonColorSelected,
+			colorDisabled = theme.buttonColorDisabled,
+			textColor = theme.buttonTextColor,
+			textColorPressed = nil,
+			textColorSelected = theme.buttonTextColorSelected,
+			textColorDisabled = theme.buttonTextColorDisabled,
 		}
 
-		config = conf:merge(defaultConfig, config)
+		local options = {
+			acceptTypes = {
+				colorPressed = { "Color" },
+				textColorPressed = { "Color" },
+			},
+		}
+
+		config = conf:merge(defaultConfig, config, options)
+
+		if config.colorPressed == nil then
+			config.colorPressed = Color(config.color)
+			config.colorPressed:ApplyBrightnessDiff(-0.15)
+		end
+
+		if config.textColorPressed == nil then
+			config.textColorPressed = Color(config.textColor)
+			config.textColorPressed:ApplyBrightnessDiff(-0.15)
+		end
 
 		local theme = require("uitheme").current
 
@@ -2493,10 +2517,10 @@ function createUI(system)
 			end
 		end
 
-		node:setColor(theme.buttonColor, theme.buttonTextColor, true)
-		node:setColorPressed(theme.buttonColorPressed, theme.buttonTextColorPressed, true)
-		node:setColorSelected(theme.buttonColorSelected, theme.buttonTextColorSelected, true)
-		node:setColorDisabled(theme.buttonColorDisabled, theme.buttonTextColorDisabled, true)
+		node:setColor(config.color, config.textColor, true)
+		node:setColorPressed(config.colorPressed, config.textColorPressed, true)
+		node:setColorSelected(config.colorSelected, config.textColorSelected, true)
+		node:setColorDisabled(config.colorDisabled, config.textColorDisabled, true)
 
 		local background = Quad()
 		background.Color = node.colors[1]
