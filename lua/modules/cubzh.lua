@@ -1,6 +1,6 @@
 Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
-local DEBUG_ITEMS = false
+local DEBUG_ITEMS = true
 local DEBUG_PET = false
 
 local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
@@ -489,6 +489,21 @@ Client.OnWorldObjectLoad = function(obj)
 				self.toast = nil
 			end
 		end
+	elseif obj.Name == "voxels.standing_speaker" then
+		local t = 0.0
+		obj:GetChild(1).Tick = function(o, dt)
+			t = t + dt * 20
+			o.Scale = 1 + (1 + math.sin(t)) * 0.5 * 0.05
+		end
+	elseif obj.Name == "voxels.speaker_left" or obj.Name == "voxels.speaker_right" then
+		obj.Tick = function(o, dt)
+			t = t + dt * 10
+			o.Scale = 0.5 + (1 + math.sin(t)) * 0.5 * 0.05 * 0.5
+		end
+
+		-- hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+		-- 	print("o.Name:", o.Name, o.fullname)
+		-- end)
 	elseif obj.Name == "voxels.portal" then
 		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
 		obj.trigger.OnCollisionBegin = function(self, other)

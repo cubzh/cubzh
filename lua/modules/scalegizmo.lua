@@ -68,8 +68,10 @@ functions.drag = function(self, pe)
 
 	local negative = self.screenOriginalPosition.X > pe.X
 
-	local scale = ((pos - self.originalPosition).Length * 0.1 * (negative and -1 or 1)) * Number3(1,1,1) + self.originalScale
-	self.object.Scale = Number3(math.max(MIN_SCALE,scale.X),math.max(MIN_SCALE,scale.Y),math.max(MIN_SCALE,scale.Z))
+	local scale = ((pos - self.originalPosition).Length * 0.1 * (negative and -1 or 1)) * Number3(1, 1, 1)
+		+ self.originalScale
+	self.object.Scale =
+		Number3(math.max(MIN_SCALE, scale.X), math.max(MIN_SCALE, scale.Y), math.max(MIN_SCALE, scale.Z))
 
 	-- align if snap > 0
 	--[[
@@ -90,7 +92,8 @@ functions.drag = function(self, pe)
 		self.object.Position = pos
 		self.gizmoObject.Position = pos
 	end
-	]]--
+	]]
+	--
 
 	if self.onDrag then
 		self.onDrag(self.object.Scale)
@@ -118,7 +121,7 @@ functions.down = function(self, pe)
 
 			self.impactPosition = ray.Origin + ray.Direction * impact.Distance
 			self.originalPosition = self.object.Position:Copy()
-			self.screenOriginalPosition = { X=pe.X, Y=pe.Y }
+			self.screenOriginalPosition = { X = pe.X, Y = pe.Y }
 			self.originalScale = self.object.Scale:Copy()
 
 			if handle.axis == scaleGizmo.Axis.X then

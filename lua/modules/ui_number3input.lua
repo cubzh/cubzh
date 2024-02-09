@@ -1,4 +1,3 @@
-
 --[[ Example
 	local node = ui_number3input:create({
 		shape = shape,
@@ -20,7 +19,7 @@ local defaultConfig = {
 		return string.format("%.1f", field)
 	end,
 	shape = nil,
-	field = nil
+	field = nil,
 }
 
 local create = function(_, config)
@@ -29,8 +28,8 @@ local create = function(_, config)
 			textToField = { "function" },
 			fieldToText = { "function" },
 			shape = { "Shape", "Object", "MutableShape" },
-			field = { "string" }
-		}
+			field = { "string" },
+		},
 	})
 
 	local ui = require("uikit")
@@ -39,7 +38,7 @@ local create = function(_, config)
 
 	local shape = config.shape
 	if not config.field then
-		error("missing \"field\" in config", 2)
+		error('missing "field" in config', 2)
 	end
 	local textToField = config.textToField
 	local fieldToText = config.fieldToText
@@ -52,41 +51,43 @@ local create = function(_, config)
 	local yText
 	local zInput
 	local zText
-    local currentValue = shape and shape[config.field] or Number3(0,0,0)
-    xInput = ui:createTextInput(math.deg(currentValue.X), "X")
-    xInput.onSubmit = function()
-        shape[config.field].X = textToField(xInput.Text)
-        updateUI()
-    end
-    xText = ui:createButton("X")
-    xText.Height = xInput.Height
-    xText.onRelease = function()
-        xInput:focus()
-    end
-    xText:setColor(Color.Red)
-    yInput = ui:createTextInput(math.deg(currentValue.Y), "Y")
-    yInput.onSubmit = function()
-        shape[config.field].Y = textToField(yInput.Text)
-        updateUI()
-    end
-    yText = ui:createButton("Y")
-    yText.onRelease = function()
-        yInput:focus()
-    end
-    yText:setColor(Color.Green)
-    zInput = ui:createTextInput(math.deg(currentValue.Z), "Z")
-    zInput.onSubmit = function()
-        shape[config.field].Z = textToField(zInput.Text)
-        updateUI()
-    end
-    zText = ui:createButton("Z")
-    zText.onRelease = function()
-        zInput:focus()
-    end
-    zText:setColor(Color.Blue)
+	local currentValue = shape and shape[config.field] or Number3(0, 0, 0)
+	xInput = ui:createTextInput(math.deg(currentValue.X), "X")
+	xInput.onSubmit = function()
+		shape[config.field].X = textToField(xInput.Text)
+		updateUI()
+	end
+	xText = ui:createButton("X")
+	xText.Height = xInput.Height
+	xText.onRelease = function()
+		xInput:focus()
+	end
+	xText:setColor(Color.Red)
+	yInput = ui:createTextInput(math.deg(currentValue.Y), "Y")
+	yInput.onSubmit = function()
+		shape[config.field].Y = textToField(yInput.Text)
+		updateUI()
+	end
+	yText = ui:createButton("Y")
+	yText.onRelease = function()
+		yInput:focus()
+	end
+	yText:setColor(Color.Green)
+	zInput = ui:createTextInput(math.deg(currentValue.Z), "Z")
+	zInput.onSubmit = function()
+		shape[config.field].Z = textToField(zInput.Text)
+		updateUI()
+	end
+	zText = ui:createButton("Z")
+	zText.onRelease = function()
+		zInput:focus()
+	end
+	zText:setColor(Color.Blue)
 
 	updateUI = function()
-		if not shape then return end
+		if not shape then
+			return
+		end
 		xInput.Text = fieldToText(shape[config.field].X)
 		yInput.Text = fieldToText(shape[config.field].Y)
 		zInput.Text = fieldToText(shape[config.field].Z)
@@ -127,5 +128,5 @@ local create = function(_, config)
 end
 
 return {
-    create = create
+	create = create,
 }
