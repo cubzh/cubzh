@@ -489,6 +489,19 @@ Client.OnWorldObjectLoad = function(obj)
 				self.toast = nil
 			end
 		end
+	elseif obj.Name == "voxels.dj_table" then
+		local music = bundle.Data("misc/hubmusic.ogg")
+		if music then
+			local as = AudioSource()
+			as.Sound = music
+			as.Loop = true
+			as.Volume = 1.0
+			as.Radius = 100
+			as.Spatialized = true
+			as:SetParent(obj)
+			as.LocalPosition = { 0, 0, 0 }
+			as:Play()
+		end
 	elseif obj.Name == "voxels.standing_speaker" then
 		local t = 0.0
 		obj:GetChild(1).Tick = function(o, dt)
@@ -496,6 +509,7 @@ Client.OnWorldObjectLoad = function(obj)
 			o.Scale = 1 + (1 + math.sin(t)) * 0.5 * 0.05
 		end
 	elseif obj.Name == "voxels.speaker_left" or obj.Name == "voxels.speaker_right" then
+		local t = 0.0
 		obj.Tick = function(o, dt)
 			t = t + dt * 10
 			o.Scale = 0.5 + (1 + math.sin(t)) * 0.5 * 0.05 * 0.5
