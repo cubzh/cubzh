@@ -1236,14 +1236,14 @@ profile.create = function(_, config)
 			end
 
 			requestSent = false
-			for _, uID in pairs(requests) do
-				if uID == userID then
+			for _, req in pairs(requests) do
+				if req.id == userID then
 					requestSent = true
 					break
 				end
 			end
 			updateFriendButton()
-		end)
+		end, { "id" })
 		table.insert(requests, req)
 	end
 
