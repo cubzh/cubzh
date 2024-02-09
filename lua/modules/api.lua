@@ -18,17 +18,16 @@ local errorMT = {
 	end,
 }
 
-local function urlGetFields(url, fields, key)
+local function urlGetFields(url, fields)
 	if fields == nil then
 		return url
 	end
-	key = key or "f"
 	local firstParams = string.find(url, "?") == nil
 	for i, field in ipairs(fields) do
 		if i == 1 and firstParams then
-			url = url .. "?" .. key .. "=" .. field
+			url = url .. "?f=" .. field
 		else
-			url = url .. "&" .. key .. "=" .. field
+			url = url .. "&f=" .. field
 		end
 	end
 	return url
@@ -602,7 +601,7 @@ mod.getWorld = function(_, worldID, fields, callback)
 
 	local url = mod.kApiAddr .. "/worlds/" .. worldID
 
-	url = urlGetFields(url, fields, "field")
+	url = urlGetFields(url, fields)
 
 	-- send request
 	local req = HTTP:Get(url, function(resp)
