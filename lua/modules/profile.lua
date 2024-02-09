@@ -1219,14 +1219,14 @@ profile.create = function(_, config)
 			end
 
 			alreadyFriends = false
-			for _, friendID in pairs(friends) do
-				if friendID == userID then
+			for _, friend in pairs(friends) do
+				if friend.id == userID then
 					alreadyFriends = true
 					break
 				end
 			end
 			updateFriendButton()
-		end)
+		end, { "id" })
 		table.insert(requests, req)
 
 		-- check if a request was already sent
@@ -1236,14 +1236,14 @@ profile.create = function(_, config)
 			end
 
 			requestSent = false
-			for _, uID in pairs(requests) do
-				if uID == userID then
+			for _, req in pairs(requests) do
+				if req.id == userID then
 					requestSent = true
 					break
 				end
 			end
 			updateFriendButton()
-		end)
+		end, { "id" })
 		table.insert(requests, req)
 	end
 

@@ -18,6 +18,21 @@ local errorMT = {
 	end,
 }
 
+local function urlGetFields(url, fields)
+	if fields == nil then
+		return url
+	end
+	local firstParams = string.find(url, "?") == nil
+	for i, field in ipairs(fields) do
+		if i == 1 and firstParams then
+			url = url .. "?f=" .. field
+		else
+			url = url .. "&f=" .. field
+		end
+	end
+	return url
+end
+
 mod.error = function(_, statusCode, message)
 	local err = { statusCode = statusCode, message = message }
 	setmetatable(err, errorMT)
@@ -33,20 +48,19 @@ mod.searchUser = function(_, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
 		error("api:searchUser(searchText, callback) - searchText must be a string", 2)
-		return
 	end
 	if type(callback) ~= "function" then
 		error("api:searchUser(searchText, callback) - callback must be a function", 2)
-		return
 	end
+
 	local req = HTTP:Get(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "http status not 200")
+			callback(false, nil, "could not search users (" .. resp.StatusCode .. ")")
 			return
 		end
 		local users, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "json decode error:" .. err)
+			callback(false, nil, "search users decode error: " .. err)
 			return
 		end
 		callback(true, users, nil) -- success
@@ -58,8 +72,13 @@ end
 -- callback(ok, friends, errMsg)
 mod.getFriends = function(_, callback, fields, config)
 	if type(callback) ~= "function" then
-		error("api:getFriends(callback, fields, config) - callback must be a function", 2)
-		return
+		error("api:getFriends(callback, [fields, config]) - callback must be a function", 2)
+	end
+	if fields ~= nil and type(fields) ~= "table" then
+		error("api:getFriends(callback, [fields, config]) - fields must be a table or nil", 2)
+	end
+	if config ~= nil and type(config) ~= "table" then
+		error("api:getFriends(callback, [fields, config]) - config must be a table or nil", 2)
 	end
 
 	local defaultConfig = {
@@ -70,24 +89,16 @@ mod.getFriends = function(_, callback, fields, config)
 
 	local url = mod.kApiAddr .. "/users/" .. config.userID .. "/friends"
 
-	if type(fields) == "table" then
-		for i, field in ipairs(fields) do
-			if i == 1 then
-				url = url .. "?f=" .. field
-			else
-				url = url .. "&f=" .. field
-			end
-		end
-	end
+	url = urlGetFields(url, fields)
 
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "http status not 200: " .. resp.StatusCode)
+			callback(false, nil, "could not get friends (" .. resp.StatusCode .. ")")
 			return
 		end
 		local friends, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "json decode error:" .. err)
+			callback(false, nil, "get friends decode error: " .. err)
 			return
 		end
 		callback(true, friends, nil) -- success
@@ -100,15 +111,14 @@ end
 mod.getFriendCount = function(self, callback, config)
 	if type(callback) ~= "function" then
 		error("api:getFriendCount(callback) - callback must be a function", 2)
-		return
 	end
 
-	local req = self:getFriends(function(ok, friends)
+	local req = self:getFriends(function(ok, friends, err)
 		local count = 0
 		if friends ~= nil then
 			count = #friends
 		end
-		callback(ok, count, nil)
+		callback(ok, count, err)
 	end, { "username" }, config)
 	return req
 end
@@ -117,26 +127,25 @@ end
 -- callback(ok, reqs, errMsg)
 mod.getSentFriendRequests = function(_, callback, fields)
 	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
+		error("api:getSentFriendRequests(callback, [fields]) - callback must be a function", 2)
 		return
+	end
+	if fields ~= nil and type(fields) ~= "table" then
+		error("api:getSentFriendRequests(callback, [fields]) - fields must be a table or nil", 2)
 	end
 
 	local url = mod.kApiAddr .. "/users/self/friend-requests?status=sent"
 
-	if type(fields) == "table" then
-		for _, field in ipairs(fields) do
-			url = url .. "&f=" .. field
-		end
-	end
+	url = urlGetFields(url, fields)
 
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "http status not 200")
+			callback(false, nil, "could not get sent requests (" .. resp.StatusCode .. ")")
 			return
 		end
 		local requests, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "json decode error:" .. err)
+			callback(false, nil, "get sent requests decode error: " .. err)
 			return
 		end
 		-- success
@@ -149,26 +158,24 @@ end
 -- callback(ok, reqs, errMsg)
 mod.getReceivedFriendRequests = function(_, callback, fields)
 	if type(callback) ~= "function" then
-		callback(false, nil, "1st arg must be a function")
-		return
+		error("api:getReceivedFriendRequests(callback, [fields]) - callback must be a function", 2)
+	end
+	if fields ~= nil and type(fields) ~= "table" then
+		error("api:getReceivedFriendRequests(callback, [fields]) - fields must be a table or nil", 2)
 	end
 
 	local url = mod.kApiAddr .. "/users/self/friend-requests?status=received"
 
-	if type(fields) == "table" then
-		for _, field in ipairs(fields) do
-			url = url .. "&f=" .. field
-		end
-	end
+	url = urlGetFields(url, fields)
 
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "http status not 200")
+			callback(false, nil, "could not get received requests (" .. resp.StatusCode .. ")")
 			return
 		end
 		local requests, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "json decode error:" .. err)
+			callback(false, nil, "get received requests decode error: " .. err)
 			return
 		end
 		callback(true, requests, nil) -- success
@@ -181,35 +188,28 @@ end
 -- fields parameter is optional, it can be a table-- containing extra expected user fields:
 -- {"created", "nbFriends"}
 mod.getUserInfo = function(_, id, callback, fields)
-	-- validate arguments
 	if type(id) ~= "string" then
-		callback(false, nil, "1st arg must be a string")
-		return
+		error("api:getUserInfo(userID, callback, [fields]) - userID must be a string", 2)
 	end
 	if type(callback) ~= "function" then
-		callback(false, nil, "2nd arg must be a function")
-		return
+		error("api:getUserInfo(userID, callback, [fields]) - callback must be a function", 2)
 	end
+	if fields ~= nil and type(fields) ~= "table" then
+		error("api:getUserInfo(callback, [fields]) - fields must be a table or nil", 2)
+	end
+
 	local url = mod.kApiAddr .. "/users/" .. id
 
-	if type(fields) == "table" then
-		for i, field in ipairs(fields) do
-			if i == 1 then
-				url = url .. "?f=" .. field
-			else
-				url = url .. "&f=" .. field
-			end
-		end
-	end
+	url = urlGetFields(url, fields)
 
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "http status not 200")
+			callback(false, nil, "could not get user info (" .. resp.StatusCode .. ")")
 			return
 		end
 		local usr, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "json decode error:" .. err)
+			callback(false, nil, "get user info decode error: " .. err)
 			return
 		end
 		if usr.nbFriends ~= nil then
@@ -224,22 +224,23 @@ end
 -- callback(error string or nil, minVersion string)
 mod.getMinAppVersion = function(_, callback)
 	if type(callback) ~= "function" then
-		callback("1st arg must be a function", nil)
-		return
+		error("api:getMinAppVersion(callback) - callback must be a function", 2)
 	end
+
 	local url = mod.kApiAddr .. "/min-version"
+
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+			callback("could not get min app version (" .. resp.StatusCode .. ")", nil)
 			return
 		end
 		local r, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback("decode error:" .. err, nil)
+			callback("get min app version decode error: " .. err, nil)
 			return
 		end
 		if not r.version or type(r.version) ~= "string" then
-			callback("version field missing", nil)
+			callback("get min app version error: version field missing", nil)
 			return
 		end
 		callback(nil, r.version) -- success
@@ -264,18 +265,18 @@ end
 --- error: string (can be nil)
 --- items: []Item (can be nil)
 ---
+
 mod.getItems = function(self, config, callback)
 	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
 
-	-- validate arguments
 	if self ~= mod then
 		error("api:getItems(config, callback): use `:`", 2)
 	end
 	if type(config) ~= "table" then
-		error("api:getItems(config, callback): config should be a table", 2)
+		error("api:getItems(config, callback): config must be a table", 2)
 	end
 	if type(callback) ~= "function" then
-		error("api:getItems(config, callback): callback should be a function", 2)
+		error("api:getItems(config, callback): callback must be a function", 2)
 	end
 
 	local filterIsValid = function(k, v)
@@ -375,14 +376,11 @@ end
 mod.getWorlds = function(_, filter, callback)
 	-- GET /worlddrafts?search=banana,gdevillele&page=1&perPage=100
 
-	-- validate arguments
 	if type(filter) ~= "table" then
-		callback("1st arg must be a table", nil)
-		return
+		error("api:getWorld(filter, callback) - filter must be a table", 2)
 	end
 	if type(callback) ~= "function" then
-		callback("2nd arg must be a function", nil)
-		return
+		error("api:getWorld(filter, callback) - callback must be a function", 2)
 	end
 
 	local filterIsValid = function(k, v)
@@ -590,27 +588,20 @@ end
 -- field=authorName
 mod.getWorld = function(_, worldID, fields, callback)
 	if type(fields) ~= "table" then
-		error("api:getWorld(worldID, fields, callback) - fields must be a table")
-		return
+		error("api:getWorld(worldID, fields, callback) - fields must be a table", 2)
 	end
 
 	if #fields < 1 then
-		error("api:getWorld(worldID, fields, callback) - fields must contain at least one entry")
+		error("api:getWorld(worldID, fields, callback) - fields must contain at least one entry", 2)
 	end
 
 	if type(callback) ~= "function" then
-		error("api:getWorld(worldID, fields, callback) - callback must be a function")
-		return
+		error("api:getWorld(worldID, fields, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/worlds/" .. worldID .. "?"
+	local url = mod.kApiAddr .. "/worlds/" .. worldID
 
-	for i, field in ipairs(fields) do
-		if i > 1 then
-			url = url .. "&"
-		end
-		url = url .. "field=" .. field
-	end
+	url = urlGetFields(url, fields)
 
 	-- send request
 	local req = HTTP:Get(url, function(resp)

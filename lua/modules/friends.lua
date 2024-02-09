@@ -169,12 +169,13 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 
 			if listID == LIST.SEARCH then
 				if searchText == nil or searchText == "" then
-					newListResponse("search", {})
+					newListResponse(listID, list)
 					return
 				end
-				local req = api:searchUser(searchText, function(ok, users, _)
+				local req = api:searchUser(searchText, function(ok, users, err)
 					if not ok then
-						error("Can't find users", 2)
+						newListResponse(listID, list) -- set empty list
+						error("request failed: " .. err)
 					end
 					if #users == 0 then
 						newListResponse("search", {})
@@ -193,9 +194,10 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				return
 			end
 
-			local req = api[methodName](api, function(ok, users, _)
+			local req = api[methodName](api, function(ok, users, err)
 				if not ok then
-					error("Can't find users", 2)
+					newListResponse(listID, list) -- set empty list
+					error("request failed: " .. err)
 				end
 				if #users == 0 then
 					newListResponse(listID, {})

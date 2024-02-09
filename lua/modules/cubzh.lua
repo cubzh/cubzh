@@ -204,7 +204,11 @@ local currentTime
 local isNight = false
 local tInCycle
 local t = 0
+local t20 = 0
+local n
 Client.Tick = function(dt)
+	t20 = t20 + dt * 20
+
 	if not localPlayerShown then
 		t = t + dt -- * 0.2
 
@@ -264,6 +268,11 @@ Client.Tick = function(dt)
 			pet:updateHatchTimer()
 		end
 	end
+
+	n = (1 + math.sin(t20)) * 0.5 * 0.05
+	for _, speaker in ipairs(speakers) do
+		speaker.Scale = speaker.originalScale + n
+	end
 end
 
 Client.OnPlayerJoin = function(p)
@@ -295,6 +304,7 @@ function setupBuilding(obj)
 	obj.InnerTransparentFaces = false
 end
 
+speakers = {}
 Client.OnWorldObjectLoad = function(obj)
 	ease = require("ease")
 	hierarchyactions = require("hierarchyactions")
@@ -489,6 +499,41 @@ Client.OnWorldObjectLoad = function(obj)
 				self.toast = nil
 			end
 		end
+	elseif obj.Name == "voxels.dj_table" then
+		local music = bundle.Data("misc/hubmusic.ogg")
+		if music then
+			local as = AudioSource()
+			as.Sound = music
+			as.Loop = true
+			as.Volume = 1.0
+			as.Radius = 100
+			as.Spatialized = true
+			as:SetParent(obj)
+			as.LocalPosition = { 0, 0, 0 }
+			as:Play()
+		end
+	elseif obj.Name == "voxels.standing_speaker" then
+		local speaker = obj:GetChild(1)
+		local collider = Object()
+		collider.CollisionBox = speaker.CollisionBox
+		collider.Physics = PhysicsMode.Static
+		collider:SetParent(obj)
+		collider.LocalPosition = speaker.LocalPosition - speaker.Pivot
+		speaker.Physics = PhysicsMode.Disabled
+		speaker.originalScale = speaker.Scale:Copy()
+		table.insert(speakers, obj:GetChild(1))
+	elseif obj.Name == "voxels.speaker_left" or obj.Name == "voxels.speaker_right" then
+		local speaker = obj
+		local collider = Object()
+		collider.CollisionBox = Box(speaker.CollisionBox.Min - speaker.Pivot, speaker.CollisionBox.Max - speaker.Pivot)
+		collider.Physics = PhysicsMode.Static
+		collider:SetParent(World)
+		collider.Scale = speaker.Scale
+		collider.Position = speaker.Position
+		collider.Rotation = speaker.Rotation
+		speaker.Physics = PhysicsMode.Disabled
+		speaker.originalScale = speaker.Scale:Copy()
+		table.insert(speakers, speaker)
 	elseif obj.Name == "voxels.portal" then
 		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
 		obj.trigger.OnCollisionBegin = function(self, other)

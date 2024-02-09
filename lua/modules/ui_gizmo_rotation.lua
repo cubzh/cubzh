@@ -10,7 +10,7 @@ local Orientation = require("gizmo").Orientation
 
 local create = function(_, config)
 	local ui = require("uikit")
-	local node = ui:createFrame(Color(0,0,0,0.2))
+	local node = ui:createFrame(Color(0, 0, 0, 0.2))
 
 	local shape = config.shape or Object()
 	local onRotate = config.onRotate
@@ -31,9 +31,9 @@ local create = function(_, config)
 	local fakeObject = Object()
 
 	local diff = nil
-	for _,config in ipairs(axisConfig) do
+	for _, config in ipairs(axisConfig) do
 		local handle = MutableShape()
-		handle:AddBlock(config.color,0,0,0)
+		handle:AddBlock(config.color, 0, 0, 0)
 
 		local uiAxis = ui:createShape(handle)
 		uiAxis:setParent(node)
@@ -44,9 +44,9 @@ local create = function(_, config)
 			handle.Scale[config.axis] = handleSize
 			if handle.sphereUp then
 				handle.sphereUp.Scale[config.axis] = 1 / handleSize
-                handle.sphereUp.Scale = handle.sphereUp.Scale * (node.Width / 200)
+				handle.sphereUp.Scale = handle.sphereUp.Scale * (node.Width / 200)
 				handle.sphereDown.Scale[config.axis] = 1 / handleSize
-                handle.sphereDown.Scale = handle.sphereDown.Scale * (node.Width / 200)
+				handle.sphereDown.Scale = handle.sphereDown.Scale * (node.Width / 200)
 			end
 		end
 		handle.Pivot = { 0.5, 0.5, 0.5 }
@@ -56,14 +56,12 @@ local create = function(_, config)
 			fakeObject.Rotation = shape.Rotation
 		end
 		uiAxis.onDrag = function(_, pe)
-			if not shape then return end
+			if not shape then
+				return
+			end
 			if orientationMode == Orientation.Local then
 				fakeObject:RotateWorld(fakeObject[config.vector], (diff - pe.X) * 6)
-				shape.Rotation = Rotation(
-					fakeObject.Rotation.X,
-					fakeObject.Rotation.Y,
-					fakeObject.Rotation.Z
-				) -- trigger onsetcallback
+				shape.Rotation = Rotation(fakeObject.Rotation.X, fakeObject.Rotation.Y, fakeObject.Rotation.Z) -- trigger onsetcallback
 			else
 				fakeObject:RotateWorld(Number3[config.vector], (diff - pe.X) * 6)
 				shape.Rotation = Rotation(
@@ -89,7 +87,7 @@ local create = function(_, config)
 			obj.Layers = handle.Layers
 			obj.CollisionGroups = handle.CollisionGroups
 			obj.Physics = PhysicsMode.TriggerPerBlock
-            obj.IsUnlit = true
+			obj.IsUnlit = true
 			handle.sphereUp = obj
 
 			obj = Shape(obj)
@@ -100,7 +98,7 @@ local create = function(_, config)
 			obj.Layers = handle.Layers
 			obj.CollisionGroups = handle.CollisionGroups
 			obj.Physics = PhysicsMode.TriggerPerBlock
-            obj.IsUnlit = true
+			obj.IsUnlit = true
 			handle.sphereDown = obj
 
 			uiAxis:parentDidResize()
@@ -108,10 +106,12 @@ local create = function(_, config)
 	end
 
 	LocalEvent:Listen(LocalEvent.Name.Tick, function()
-		for _,axis in ipairs(axisList) do
+		for _, axis in ipairs(axisList) do
 			local newRotation
 			if orientationMode == Orientation.Local then
-				if not shape then return end
+				if not shape then
+					return
+				end
 				newRotation = -Camera.Rotation * shape.Rotation
 			else
 				newRotation = -Camera.Rotation
@@ -131,5 +131,5 @@ local create = function(_, config)
 end
 
 return {
-    create = create
+	create = create,
 }
