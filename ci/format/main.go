@@ -48,7 +48,7 @@ func checkFormat(doFormat bool) error {
 	src := client.Host().Directory(".", dirOpts)
 
 	// get Docker container from hub
-	ciContainer := client.Container().From("gaetan/clang-tools")
+	ciContainer := client.Container().From("gaetan/clang-tools:latest")
 
 	// mount host directory to container and go into it
 	ciContainer = ciContainer.WithMountedDirectory("/project", src)

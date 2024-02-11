@@ -196,4 +196,5 @@ PenaltyReturnTypeOnItsOwnLine:             99999
 PenaltyBreakAssignment:                    99999
 SortIncludes:                              CaseInsensitive
 Standard:                                  c++11
+LineEnding:                                LF
 ...
