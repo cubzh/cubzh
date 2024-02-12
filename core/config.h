@@ -306,9 +306,6 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 // Subsequent buffers on init/runtime can be downscaled or upscaled, see shape_add_buffer
 #define SHAPE_BUFFER_INIT_SCALE_RATE .75f
 #define SHAPE_BUFFER_RUNTIME_SCALE_RATE 4.0f
-// Ensure buffer size will result in POT texture size (required for compressed texture formats)
-// Note: if POT expected, downscale should be 0.25f and upscale 4.0f or upper POT is used
-#define SHAPE_BUFFER_TEX_UPPER_POT false
 
 //// Disabling global lighting will use neutral value (15, 0, 0, 0) everywhere
 #define GLOBAL_LIGHTING_ENABLED true

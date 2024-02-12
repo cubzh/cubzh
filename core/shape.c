@@ -60,17 +60,15 @@ struct _Shape {
     // cached world axis-aligned bounding box, may be NULL if no cache
     Box *worldAABB;
 
-    // buffers storing faces data used for rendering
-    VertexBuffer *firstVB_opaque, *firstVB_transparent;
-    VertexBuffer *lastVB_opaque, *lastVB_transparent;
+    // buffers storing vertex data used for rendering, latest buffer is inserted after first
+    VertexBuffer *firstVB_opaque, *firstVB_transparent, *firstIB_opaque, *firstIB_transparent;
 
     // Chunks are indexed by coordinates, and partitioned in a r-tree for physics queries
     Index3D *chunks;
     FifoList *dirtyChunks;
     Rtree *rtree;
 
-    // fragmented vertex buffers
-    DoublyLinkedList *fragmentedVBs;
+    DoublyLinkedList *fragmentedBuffers;
 
     // block adds/removes/paints history
     History *history;
@@ -191,6 +189,9 @@ void _light_removal_all(Shape *s, SHAPE_COORDS_INT3_T *min, SHAPE_COORDS_INT3_T 
 void _shape_check_all_vb_fragmented(Shape *s, VertexBuffer *first);
 void _shape_flush_all_vb(Shape *s);
 void _shape_fill_draw_slices(VertexBuffer *vb);
+VertexBuffer *_shape_get_latest_buffer(const Shape *s,
+                                       const bool transparent,
+                                       const bool isVertexAttributes);
 
 bool _shape_apply_transaction(Shape *const sh, Transaction *tr);
 bool _shape_undo_transaction(Shape *const sh, Transaction *tr);
@@ -237,11 +238,11 @@ Shape *shape_make(void) {
     s->dirtyChunks = NULL;
     s->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
 
-    // vertex buffers will be created on demand during refresh
+    // vertex/index buffers will be created on demand during refresh
     s->firstVB_opaque = NULL;
-    s->lastVB_opaque = NULL;
+    s->firstIB_opaque = NULL;
     s->firstVB_transparent = NULL;
-    s->lastVB_transparent = NULL;
+    s->firstIB_transparent = NULL;
     s->vbAllocationFlag_opaque = 0;
     s->vbAllocationFlag_transparent = 0;
 
@@ -252,7 +253,7 @@ Shape *shape_make(void) {
     s->nbBlocks = 0;
     s->bbMin = coords3_zero;
     s->bbMax = coords3_zero;
-    s->fragmentedVBs = doubly_linked_list_new();
+    s->fragmentedBuffers = doubly_linked_list_new();
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES;
@@ -381,119 +382,6 @@ Shape *shape_make_copy(Shape *const origin) {
     return s;
 }
 
-// Creates a new empty vertex buffer for the shape
-// - enabling lighting buffer if it uses lighting
-// - enabling transparency if requested
-// after calling that function shape's lastVB_* will be empty
-//
-// The buffer capacity is an estimation that should on average reduce occupancy waste,
-// 1) for a shape that was never drawn:
-// - a) if it's the first buffer, it should ideally fit the entire shape at once (estimation)
-// - b) if more space is required, subsequent buffers are scaled using SHAPE_BUFFER_INIT_SCALE_RATE
-// this makes it possible to fit a worst-case scenario "cheese" map even if we know it practically
-// won't happen
-// 2) for a shape that has been drawn before:
-// - a) first buffer should be of a minimal size to fit a few runtime structural changes
-// (estimation)
-// - b) subsequent buffers are scaled using SHAPE_BUFFER_RUNTIME_SCALE_RATE
-// this approach should fit a game that by design do not result in a lot of structural changes,
-// in just one buffer ; and should accommodate a game which by design requires a lot of structural
-// changes, in just a handful of buffers down the chain
-VertexBuffer *shape_add_buffer(Shape *shape, bool transparency) {
-    // estimate new VB capacity
-    size_t capacity;
-    uint8_t *flag = transparency ? &shape->vbAllocationFlag_transparent
-                                 : &shape->vbAllocationFlag_opaque;
-    switch (*flag) {
-        // uninitialized or last buffer capacity was capped (1a)
-        case 0: {
-            int3 size;
-            shape_get_bounding_box_size(shape, &size);
-
-            // estimation based on number of faces of each chunks' cube surface area
-            size_t shell = 6 * CHUNK_SIZE_SQR * 2 * shape->nbChunks;
-            capacity = (size_t)(ceilf((float)shell * SHAPE_BUFFER_INITIAL_FACTOR *
-                                      (transparency ? SHAPE_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
-
-            // if this shape is exceptionally big and caps max VB count, next VB should be created
-            // at full capacity as well
-            if (capacity < SHAPE_BUFFER_MAX_COUNT) {
-                *flag = 1;
-            }
-            capacity = CLAMP(capacity, SHAPE_BUFFER_MIN_COUNT, SHAPE_BUFFER_MAX_COUNT);
-            break;
-        }
-        // initialized within this frame and last buffer capacity was uncapped (1b)
-        case 1: {
-            size_t prev = vertex_buffer_get_max_length(transparency ? shape->lastVB_transparent
-                                                                    : shape->lastVB_opaque);
-
-            // restart buffer series when minimum capacity has been reached already (if downscaling
-            // buffers)
-            if (prev == SHAPE_BUFFER_MIN_COUNT) {
-                *flag = 0;
-                return shape_add_buffer(shape, transparency);
-            }
-
-            capacity = CLAMP((size_t)(ceilf((float)prev * SHAPE_BUFFER_INIT_SCALE_RATE)),
-                             SHAPE_BUFFER_MIN_COUNT,
-                             SHAPE_BUFFER_MAX_COUNT);
-            break;
-        }
-        // initialized for more than a frame, first structural change (2a)
-        case 2: {
-            capacity = SHAPE_BUFFER_RUNTIME_COUNT;
-            *flag = 3;
-            break;
-        }
-        // initialized for more than a frame, subsequent structural change (2b)
-        case 3: {
-            size_t prev = vertex_buffer_get_max_length(transparency ? shape->lastVB_transparent
-                                                                    : shape->lastVB_opaque);
-            capacity = CLAMP((size_t)(ceilf((float)prev * SHAPE_BUFFER_RUNTIME_SCALE_RATE)),
-                             SHAPE_BUFFER_MIN_COUNT,
-                             SHAPE_BUFFER_MAX_COUNT);
-            break;
-        }
-        default: {
-            capacity = SHAPE_BUFFER_MAX_COUNT;
-            break;
-        }
-    }
-
-    // ensure VB capacity is a multiple of 2 for texture size
-    size_t texSize = (size_t)(ceilf(sqrtf((float)capacity)));
-#if SHAPE_BUFFER_TEX_UPPER_POT
-    texSize = upper_power_of_two(texSize);
-#endif
-    capacity = texSize * texSize;
-
-    // create and add new VB to the appropriate chain
-    const bool lighting = vertex_buffer_get_lighting_enabled() &&
-                          _shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING);
-    VertexBuffer *vb = vertex_buffer_new_with_max_count(capacity, lighting, transparency);
-    if (transparency) {
-        if (shape->lastVB_transparent != NULL) {
-            vertex_buffer_insert_after(vb, shape->lastVB_transparent);
-            shape->lastVB_transparent = vb;
-        } else {
-            // if lastVB_transparent is NULL, firstVB_transparent has to be NULL
-            shape->firstVB_transparent = vb;
-            shape->lastVB_transparent = shape->firstVB_transparent;
-        }
-    } else {
-        if (shape->lastVB_opaque != NULL) {
-            vertex_buffer_insert_after(vb, shape->lastVB_opaque);
-            shape->lastVB_opaque = vb;
-        } else {
-            // if lastVB_opaque is NULL, firstVB_opaque has to be NULL
-            shape->firstVB_opaque = vb;
-            shape->lastVB_opaque = shape->firstVB_opaque;
-        }
-    }
-    return vb;
-}
-
 void shape_flush(Shape *shape) {
     if (shape != NULL) {
         // remove own blocks count from (potentially shared) palette
@@ -519,13 +407,15 @@ void shape_flush(Shape *shape) {
             rigidbody_reset(rb);
         }
 
-        // free all vertex buffers
+        // free all buffers
         vertex_buffer_free_all(shape->firstVB_opaque);
         shape->firstVB_opaque = NULL;
-        shape->lastVB_opaque = NULL;
+        vertex_buffer_free_all(shape->firstIB_opaque);
+        shape->firstIB_opaque = NULL;
         vertex_buffer_free_all(shape->firstVB_transparent);
         shape->firstVB_transparent = NULL;
-        shape->lastVB_transparent = NULL;
+        vertex_buffer_free_all(shape->firstIB_transparent);
+        shape->firstIB_transparent = NULL;
         shape->vbAllocationFlag_opaque = 0;
         shape->vbAllocationFlag_transparent = 0;
 
@@ -534,13 +424,13 @@ void shape_flush(Shape *shape) {
             shape->dirtyChunks = NULL;
         }
 
-        // no need to flush fragmentedVBs,
+        // no need to flush fragmentedBuffers,
         // vertex_buffer_free_all has been called previously
-        doubly_linked_list_free(shape->fragmentedVBs);
+        doubly_linked_list_free(shape->fragmentedBuffers);
 
         shape->nbChunks = 0;
         shape->nbBlocks = 0;
-        shape->fragmentedVBs = doubly_linked_list_new();
+        shape->fragmentedBuffers = doubly_linked_list_new();
     }
 }
 
@@ -605,14 +495,16 @@ void shape_free(Shape *const shape) {
 
     rtree_free(shape->rtree);
 
-    // free all vertex buffers
+    // free all buffers
     vertex_buffer_free_all(shape->firstVB_opaque);
+    vertex_buffer_free_all(shape->firstIB_opaque);
     vertex_buffer_free_all(shape->firstVB_transparent);
+    vertex_buffer_free_all(shape->firstIB_transparent);
 
-    // no need to flush fragmentedVBs,
+    // no need to flush fragmentedBuffers,
     // vertex_buffer_free_all has been called previously
-    doubly_linked_list_free(shape->fragmentedVBs);
-    shape->fragmentedVBs = NULL;
+    doubly_linked_list_free(shape->fragmentedBuffers);
+    shape->fragmentedBuffers = NULL;
 
     // free history
     history_free(shape->history);
@@ -864,8 +756,6 @@ bool shape_remove_block(Shape *shape,
             shape->nbBlocks--;
             _shape_chunk_check_neighbors_dirty(shape, chunk, coords_in_chunk);
             _shape_chunk_enqueue_refresh(shape, chunk);
-
-            // shape_reset_box(shape, x, y, z);
 
             if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
                 shape_compute_baked_lighting_removed_block(shape,
@@ -1764,14 +1654,147 @@ void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transpare
     }
 }
 
+// Creates a new empty vertex buffer for the shape
+// - enabling lighting buffer if it uses lighting
+// - enabling transparency if requested
+// after calling that function shape's lastVB_* will be empty
+//
+// The buffer capacity is an estimation that should on average reduce occupancy waste,
+// 1) for a shape that was never drawn:
+// - a) if it's the first buffer, it should ideally fit the entire shape at once (estimation)
+// - b) if more space is required, subsequent buffers are scaled using SHAPE_BUFFER_INIT_SCALE_RATE
+// this makes it possible to fit a worst-case scenario "cheese" map even if we know it practically
+// won't happen
+// 2) for a shape that has been drawn before:
+// - a) first buffer should be of a minimal size to fit a few runtime structural changes
+// (estimation)
+// - b) subsequent buffers are scaled using SHAPE_BUFFER_RUNTIME_SCALE_RATE
+// this approach should fit a game that by design do not result in a lot of structural changes,
+// in just one buffer ; and should accommodate a game which by design requires a lot of structural
+// changes, in just a handful of buffers down the chain
+VertexBuffer *shape_add_buffer(Shape *shape, bool transparency, bool isVertexAttributes) {
+    uint32_t capacity;
+
+    if (isVertexAttributes) {
+        // estimate new VB capacity
+        uint8_t *flag = transparency ? &shape->vbAllocationFlag_transparent
+                                     : &shape->vbAllocationFlag_opaque;
+        switch (*flag) {
+            // uninitialized or last buffer capacity was capped (1a)
+            case 0: {
+                int3 size;
+                shape_get_bounding_box_size(shape, &size);
+
+                // estimation based on number of faces of each chunks' cube surface area
+                size_t shell = 6 * CHUNK_SIZE_SQR * 2 * shape->nbChunks;
+                capacity = (uint32_t)(ceilf(
+                    (float)shell * SHAPE_BUFFER_INITIAL_FACTOR *
+                    (transparency ? SHAPE_BUFFER_TRANSPARENT_FACTOR : 1.0f)));
+
+                // if this shape is exceptionally big and caps max VB count, next VB should be
+                // created at full capacity as well
+                if (capacity < SHAPE_BUFFER_MAX_COUNT) {
+                    *flag = 1;
+                }
+                capacity = CLAMP(capacity, SHAPE_BUFFER_MIN_COUNT, SHAPE_BUFFER_MAX_COUNT);
+                break;
+            }
+                // initialized within this frame and last buffer capacity was uncapped (1b)
+            case 1: {
+                size_t prev = vertex_buffer_get_max_count(
+                    _shape_get_latest_buffer(shape, transparency, isVertexAttributes));
+
+                // restart buffer series when minimum capacity has been reached already (if
+                // downscaling buffers)
+                if (prev == SHAPE_BUFFER_MIN_COUNT) {
+                    *flag = 0;
+                    return shape_add_buffer(shape, transparency, isVertexAttributes);
+                }
+
+                capacity = CLAMP((uint32_t)(ceilf((float)prev * SHAPE_BUFFER_INIT_SCALE_RATE)),
+                                 SHAPE_BUFFER_MIN_COUNT,
+                                 SHAPE_BUFFER_MAX_COUNT);
+                break;
+            }
+                // initialized for more than a frame, first structural change (2a)
+            case 2: {
+                capacity = SHAPE_BUFFER_RUNTIME_COUNT;
+                *flag = 3;
+                break;
+            }
+                // initialized for more than a frame, subsequent structural change (2b)
+            case 3: {
+                uint32_t prev = vertex_buffer_get_max_count(
+                    _shape_get_latest_buffer(shape, transparency, isVertexAttributes));
+                capacity = CLAMP((uint32_t)(ceilf((float)prev * SHAPE_BUFFER_RUNTIME_SCALE_RATE)),
+                                 SHAPE_BUFFER_MIN_COUNT,
+                                 SHAPE_BUFFER_MAX_COUNT);
+                break;
+            }
+            default: {
+                capacity = SHAPE_BUFFER_MAX_COUNT;
+                break;
+            }
+        }
+    } else {
+        // IB capacity is based off of last VB capacity
+        vx_assert(transparency && shape->firstVB_transparent != NULL ||
+                  transparency == false && shape->firstVB_opaque != NULL);
+
+        uint32_t prev = vertex_buffer_get_max_count(
+            _shape_get_latest_buffer(shape, transparency, true));
+        capacity = prev / DRAWBUFFER_VERTICES_PER_FACE * DRAWBUFFER_INDICES_PER_FACE;
+    }
+
+    // create and add a new buffer to the appropriate chain
+    // Note: buffer order in chain does not matter, but we keep the same first buffer ptr for
+    // convenience
+    VertexBuffer *vb = vertex_buffer_new_with_max_count(capacity, transparency, isVertexAttributes);
+    if (isVertexAttributes) {
+        if (transparency) {
+            if (shape->firstVB_transparent != NULL) {
+                vertex_buffer_insert_after(vb, shape->firstVB_transparent);
+            } else {
+                shape->firstVB_transparent = vb;
+            }
+        } else {
+            if (shape->firstVB_opaque != NULL) {
+                vertex_buffer_insert_after(vb, shape->firstVB_opaque);
+            } else {
+                shape->firstVB_opaque = vb;
+            }
+        }
+    } else {
+        if (transparency) {
+            if (shape->firstIB_transparent != NULL) {
+                vertex_buffer_insert_after(vb, shape->firstIB_transparent);
+            } else {
+                shape->firstIB_transparent = vb;
+            }
+        } else {
+            if (shape->firstIB_opaque != NULL) {
+                vertex_buffer_insert_after(vb, shape->firstIB_opaque);
+            } else {
+                shape->firstIB_opaque = vb;
+            }
+        }
+    }
+    return vb;
+}
+
 void shape_refresh_vertices(Shape *shape) {
     if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKE_LOCKED)) {
         _shape_fill_draw_slices(shape->firstVB_opaque);
+        _shape_fill_draw_slices(shape->firstIB_opaque);
         _shape_fill_draw_slices(shape->firstVB_transparent);
+        _shape_fill_draw_slices(shape->firstIB_transparent);
         return;
     }
 
     Chunk *c = shape->dirtyChunks != NULL ? fifo_list_pop(shape->dirtyChunks) : NULL;
+    if (c == NULL) {
+        return;
+    }
     while (c != NULL) {
         // Note: chunk should never be NULL
         // Note: no need to check chunk_is_dirty, it has to be true
@@ -1804,35 +1827,36 @@ void shape_refresh_vertices(Shape *shape) {
         c = fifo_list_pop(shape->dirtyChunks);
     }
 
-    // check all vertex buffers used by this shape, to see if they have to be defragmented
+    // DEFRAGMENTATION
+
+    // check all IBs used by this shape, to see if they have to be defragmented
+    _shape_check_all_vb_fragmented(shape, shape->firstIB_opaque);
+    _shape_check_all_vb_fragmented(shape, shape->firstIB_transparent);
+
+    VertexBuffer *fragmented = (VertexBuffer *)doubly_linked_list_pop_first(
+        shape->fragmentedBuffers);
+    while (fragmented != NULL) {
+        vertex_buffer_fill_gaps(fragmented, false);
+
+        fragmented = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedBuffers);
+    }
+
+    // VBs are never defragmented, vertex data can have gaps to be re-used later, just merge gaps
     _shape_check_all_vb_fragmented(shape, shape->firstVB_opaque);
     _shape_check_all_vb_fragmented(shape, shape->firstVB_transparent);
 
-    // DEFRAGMENTATION
+    fragmented = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedBuffers);
+    while (fragmented != NULL) {
+        vertex_buffer_fill_gaps(fragmented, true);
 
-    // fill remaining mem area gaps (for all vertex buffers involved)
-    VertexBuffer *fragmentedVB = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedVBs);
-
-    // bool log = true; // fragmentedVB != NULL;
-
-    //    if (log) {
-    //        shape_log_vertex_buffers(shape, true);
-    //    }
-
-    while (fragmentedVB != NULL) {
-        vertex_buffer_fill_gaps(fragmentedVB);
-        vertex_buffer_set_enlisted(fragmentedVB, false);
-
-        fragmentedVB = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedVBs);
+        fragmented = (VertexBuffer *)doubly_linked_list_pop_first(shape->fragmentedBuffers);
     }
-
-    //    if (log) {
-    //        shape_log_vertex_buffers(shape, true);
-    //    }
 
     // fill draw slices after defragmentation
     _shape_fill_draw_slices(shape->firstVB_opaque);
+    _shape_fill_draw_slices(shape->firstIB_opaque);
     _shape_fill_draw_slices(shape->firstVB_transparent);
+    _shape_fill_draw_slices(shape->firstIB_transparent);
 
     _set_vb_allocation_flag_one_frame(shape);
 }
@@ -1853,7 +1877,9 @@ void shape_refresh_all_vertices(Shape *s) {
 
     // refresh draw slices after full refresh
     _shape_fill_draw_slices(s->firstVB_opaque);
+    _shape_fill_draw_slices(s->firstIB_opaque);
     _shape_fill_draw_slices(s->firstVB_transparent);
+    _shape_fill_draw_slices(s->firstIB_transparent);
 
     // flush dirty list
     if (s->dirtyChunks != NULL) {
@@ -1864,6 +1890,10 @@ void shape_refresh_all_vertices(Shape *s) {
 
 VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent) {
     return transparent ? shape->firstVB_transparent : shape->firstVB_opaque;
+}
+
+VertexBuffer *shape_get_first_index_buffer(const Shape *shape, bool transparent) {
+    return transparent ? shape->firstIB_transparent : shape->firstIB_opaque;
 }
 
 // MARK: - Physics -
@@ -4139,9 +4169,8 @@ void _light_removal_all(Shape *s, SHAPE_COORDS_INT3_T *min, SHAPE_COORDS_INT3_T 
 void _shape_check_all_vb_fragmented(Shape *s, VertexBuffer *first) {
     VertexBuffer *vb = first;
     while (vb != NULL) {
-        if (vertex_buffer_is_fragmented(vb) && !vertex_buffer_is_enlisted(vb)) {
-            doubly_linked_list_push_first(s->fragmentedVBs, vb);
-            vertex_buffer_set_enlisted(vb, true);
+        if (vertex_buffer_is_fragmented(vb)) {
+            doubly_linked_list_push_first(s->fragmentedBuffers, vb);
         }
         vb = vertex_buffer_get_next(vb);
     }
@@ -4155,20 +4184,24 @@ void _shape_flush_all_vb(Shape *s) {
         c = index3d_iterator_pointer(it);
 
         chunk_set_vbma(c, NULL, false);
+        chunk_set_ibma(c, NULL, false);
         chunk_set_vbma(c, NULL, true);
+        chunk_set_ibma(c, NULL, true);
         _shape_chunk_enqueue_refresh(s, c);
 
         index3d_iterator_next(it);
     }
     index3d_iterator_free(it);
 
-    // free all vertex buffers
+    // free all buffers
     vertex_buffer_free_all(s->firstVB_opaque);
     s->firstVB_opaque = NULL;
-    s->lastVB_opaque = NULL;
+    vertex_buffer_free_all(s->firstIB_opaque);
+    s->firstIB_opaque = NULL;
     vertex_buffer_free_all(s->firstVB_transparent);
     s->firstVB_transparent = NULL;
-    s->lastVB_transparent = NULL;
+    vertex_buffer_free_all(s->firstIB_transparent);
+    s->firstIB_transparent = NULL;
     s->vbAllocationFlag_opaque = 0;
     s->vbAllocationFlag_transparent = 0;
 }
@@ -4178,6 +4211,21 @@ void _shape_fill_draw_slices(VertexBuffer *vb) {
         vertex_buffer_fill_draw_slices(vb);
         // vertex_buffer_log_draw_slices(vb);
         vb = vertex_buffer_get_next(vb);
+    }
+}
+
+VertexBuffer *_shape_get_latest_buffer(const Shape *s,
+                                       const bool transparent,
+                                       const bool isVertexAttributes) {
+    VertexBuffer *result = transparent
+                               ? (isVertexAttributes ? s->firstVB_transparent
+                                                     : s->firstIB_transparent)
+                               : (isVertexAttributes ? s->firstVB_opaque : s->firstIB_opaque);
+    if (result != NULL) {
+        // latest added buffer is always inserted after the first buffer ptr
+        return vertex_buffer_get_next(result) != NULL ? vertex_buffer_get_next(result) : result;
+    } else {
+        return result;
     }
 }
 
