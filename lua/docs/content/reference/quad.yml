@@ -33,6 +33,8 @@ properties:
         
           When getting this value, it returns `true` if the quad is currently textured.
 
+          Note: currently, supporting transparency on a texture requires to flag the quad as transparent by giving it an alpha value less than 255, eg. `quad.Color.A = 254`.
+
     - name: "Width"
       type: "number"
       description: |
@@ -74,6 +76,8 @@ properties:
           If `true`, both sides of the quad are rendered, `true` by default.
         
           Setting this to `false` can be done as an optimization when using quads for UI or 2D games.
+
+          Note: currently, quads back faces are not lit.
 
     - name: "Shadow"
       type: boolean
