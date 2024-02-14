@@ -1106,7 +1106,8 @@ uint32_t chunk_v6_read_shape(Stream *s,
                  #define P3S_CHUNK_ID_GENERAL_RENDERING_OPTIONS 14
                  */
                 // sub chunk header size + sub chunk data size
-                if (uncompressedSize >= totalSizeRead && uncompressedSize - totalSizeRead >= sizeof(uint32_t)) {
+                if (uncompressedSize >= totalSizeRead &&
+                    uncompressedSize - totalSizeRead >= sizeof(uint32_t)) {
                     sizeRead = CHUNK_V6_HEADER_NO_ID_SIZE + *((uint32_t *)cursor);
                     // advance cursor
                     cursor = (void *)((char *)cursor + sizeRead);
