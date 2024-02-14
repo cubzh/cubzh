@@ -109,38 +109,39 @@ end
 
 local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 	if type(p_isWearable) ~= "boolean" or type(p_wearablePreviewMode) ~= "integer" then
-		error("wrong arguments")
+		error("playerUpdateVisibility: wrong arguments", 2)
 	end
 
-	if p_isWearable then
-		-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
-		if p_wearablePreviewMode == wearablePreviewMode.hide then
-			Player.IsHidden = false -- TODO: remove this line
-			playerHideSubshapes(true)
-		elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
-			Player.IsHidden = false -- TODO: remove this line
-			-- hide all avatar body parts and equipments
-			playerHideSubshapes(true)
-			-- show some of the avatar body parts based on the type of wearable being edited
-			local parents = __equipments.equipmentParent(Player, itemCategory)
-			local parentsType = type(parents)
-			if parentsType == "table" then
-				for _, parent in ipairs(parents) do
-					parent.IsHiddenSelf = false
-				end
-			elseif parentsType == "MutableShape" then
-				parents.IsHiddenSelf = false
-			else
-				error("unexpected 'parents' type:", parentsType)
-			end
-		elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
-			Player.IsHidden = false -- TODO: remove this line
-			playerHideSubshapes(false)
-		end
-	else
+	if not p_isWearable then
 		-- item is not a wearable, so the player avatar should not be visible
 		Player.IsHidden = false -- TODO: remove this line
 		playerHideSubshapes(true)
+		return
+	end
+
+	-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
+	if p_wearablePreviewMode == wearablePreviewMode.hide then
+		Player.IsHidden = false -- TODO: remove this line
+		playerHideSubshapes(true)
+	elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
+		Player.IsHidden = false -- TODO: remove this line
+		-- hide all avatar body parts and equipments
+		playerHideSubshapes(true)
+		-- show some of the avatar body parts based on the type of wearable being edited
+		local parents = __equipments.equipmentParent(Player, itemCategory)
+		local parentsType = type(parents)
+		if parentsType == "table" then
+			for _, parent in ipairs(parents) do
+				parent.IsHiddenSelf = false
+			end
+		elseif parentsType == "MutableShape" then
+			parents.IsHiddenSelf = false
+		else
+			error("unexpected 'parents' type:" .. parentsType, 2)
+		end
+	elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
+		Player.IsHidden = false -- TODO: remove this line
+		playerHideSubshapes(false)
 	end
 end
 
@@ -693,100 +694,106 @@ end
 
 Pointer.Click = function() end
 click = function(e)
-	if currentMode == mode.edit then
-		local impact
-		local shape
-		local impactDistance = 1000000000
-		for _, subShape in ipairs(shapes) do
-			if subShape.IsHidden == false then
-				local tmpImpact = e:CastRay(subShape)
-				-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
+	if currentMode ~= mode.edit then
+		return
+	end
+	local impact
+	local shape
+	local impactDistance = 1000000000
+	for _, subShape in ipairs(shapes) do
+		if subShape.IsHidden == false then
+			local tmpImpact = e:CastRay(subShape)
+			-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
+			if tmpImpact and tmpImpact.Distance < impactDistance then
+				shape = subShape
+				impactDistance = tmpImpact.Distance
+				impact = tmpImpact
+			end
+		end
+	end
+
+	if continuousEdition then
+		goto end_on_click
+	end
+
+	if currentEditSubmode == editSubmode.pick then
+		if Player.IsHidden == false then
+			for _, bodyPartName in ipairs(bodyParts) do
+				local bodyPart = Player[bodyPartName]
+				if bodyPart.IsHidden == false then
+					local tmpImpact = e:CastRay(bodyPart)
+					-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
+					if tmpImpact and tmpImpact.Distance < impactDistance then
+						impactDistance = tmpImpact.Distance
+						impact = tmpImpact
+					end
+				end
+			end
+			for _, equipment in pairs(Player.equipments) do
+				if equipment.IsHidden == false then
+					local tmpImpact = e:CastRay(equipment)
+					-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
+					if tmpImpact and tmpImpact.Distance < impactDistance then
+						impactDistance = tmpImpact.Distance
+						impact = tmpImpact
+					end
+
+					for _, shape in ipairs(equipment.attachedParts or {}) do
+						if shape.IsHidden == false then
+							local tmpImpact = e:CastRay(shape)
+							-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
+							if tmpImpact and tmpImpact.Distance < impactDistance then
+								impactDistance = tmpImpact.Distance
+								impact = tmpImpact
+							end
+						end
+					end
+				end
+			end
+		end -- end Player.IsHidden == false
+
+		-- if avatar body parts are shown, consider them in RayCast
+		if
+			currentWearablePreviewMode == wearablePreviewMode.bodyPart
+			or currentWearablePreviewMode == wearablePreviewMode.fullBody
+		then
+			local shownBodyParts = utils.findSubshapes(Player, function(s)
+				return s.IsHidden == false
+			end)
+			for _, bp in ipairs(shownBodyParts) do
+				local tmpImpact = e:CastRay(bp)
 				if tmpImpact and tmpImpact.Distance < impactDistance then
-					shape = subShape
 					impactDistance = tmpImpact.Distance
 					impact = tmpImpact
 				end
 			end
 		end
-		if not continuousEdition then
-			if currentEditSubmode == editSubmode.pick then
-				if Player.IsHidden == false then
-					for _, bodyPartName in ipairs(bodyParts) do
-						local bodyPart = Player[bodyPartName]
-						if bodyPart.IsHidden == false then
-							local tmpImpact = e:CastRay(bodyPart)
-							-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
-						end
-					end
-					for _, equipment in pairs(Player.equipments) do
-						if equipment.IsHidden == false then
-							local tmpImpact = e:CastRay(equipment)
-							-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
 
-							for _, shape in ipairs(equipment.attachedParts or {}) do
-								if shape.IsHidden == false then
-									local tmpImpact = e:CastRay(shape)
-									-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
-									if tmpImpact and tmpImpact.Distance < impactDistance then
-										impactDistance = tmpImpact.Distance
-										impact = tmpImpact
-									end
-								end
-							end
-						end
-					end
-				end -- end Player.IsHidden == false
-
-				-- if avatar body parts are shown, consider them in RayCast
-				if
-					currentWearablePreviewMode == wearablePreviewMode.bodyPart
-					or currentWearablePreviewMode == wearablePreviewMode.fullBody
-				then
-					local shownBodyParts = utils.findSubshapes(Player, function(s)
-						return s.IsHidden == false
-					end)
-					for _, bp in ipairs(shownBodyParts) do
-						local tmpImpact = e:CastRay(bp)
-						if tmpImpact and tmpImpact.Distance < impactDistance then
-							impactDistance = tmpImpact.Distance
-							impact = tmpImpact
-						end
-					end
-				end
-
-				if impact then
-					pickCubeColor(impact.Block)
-				end
-			elseif currentEditSubmode == editSubmode.add then
-				addBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
-				removeBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.paint then
-				replaceBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.mirror then
-				placeMirror(impact, shape)
-			elseif currentEditSubmode == editSubmode.select then
-				selectFocusShape(shape)
-			end
+		if impact then
+			pickCubeColor(impact.Block)
 		end
-		if impact ~= nil then
-			checkAutoSave()
-			refreshUndoRedoButtons()
-		end
+	elseif currentEditSubmode == editSubmode.add then
+		addBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
+		removeBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.paint then
+		replaceBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.mirror then
+		placeMirror(impact, shape)
+	elseif currentEditSubmode == editSubmode.select then
+		selectFocusShape(shape)
+	end
+
+	::end_on_click::
+	if impact ~= nil then
+		checkAutoSave()
+		refreshUndoRedoButtons()
 	end
 end
 
