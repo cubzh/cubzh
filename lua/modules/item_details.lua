@@ -234,41 +234,14 @@ itemDetails.createModalContent = function(_, config)
 			self.shape:remove()
 			self.shape = nil
 		end
-		self.cell = cell
 
+		self.cell = cell
 		self.id = cell.id
+
 		if createMode then
 			self.author.Text = " @" .. cell.repo
-		else
-			-- Retrieve user data. We need their UserID.
-			local req = api:searchUser(cell.repo, function(success, users)
-				if success == false then
-					-- don't do anything on failure
-					-- api module should implement retry strategy
-					return
-				end
-
-				by.Text = "by @" .. cell.repo
-
-				for _, u in pairs(users) do
-					if u.username == cell.repo then
-						authorID = u.id
-						break
-					end
-				end
-
-				by.onRelease = function(_)
-					local profileContent = require("profile"):create({
-						isLocal = false,
-						username = cell.repo,
-						userID = authorID,
-						uikit = ui,
-					})
-					content:push(profileContent)
-				end
-			end)
-			table.insert(requests, req)
 		end
+
 		-- Retrieve item info. We need its number of likes.
 		-- (cell.id is Item UUID)
 		local req = api:getItem(cell.id, function(err, item)
@@ -292,9 +265,31 @@ itemDetails.createModalContent = function(_, config)
 					likeBtn:setColor(theme.colorPositive)
 				end
 			end
+
+			if self.description then
+				local description = item.description or ""
+				self.description.Text = description
+			end
+
+			if createMode == false then
+				by.Text = "by @" .. cell.repo
+				authorID = item["author-id"]
+
+				by.onRelease = function(_)
+					local profileContent = require("profile"):create({
+						isLocal = false,
+						username = cell.repo,
+						userID = authorID,
+						uikit = ui,
+					})
+					content:push(profileContent)
+				end
+			end
+
 			self:refresh() -- refresh layout
 		end)
 		table.insert(requests, req)
+
 		self.name.Text = cell.name
 
 		if config.mode == "create" then
@@ -303,11 +298,11 @@ itemDetails.createModalContent = function(_, config)
 				self.description.Text = "Items are easier to find with a description!"
 				self.description.Color = theme.textColorSecondary
 			else
-				self.description.Text = cell.description
+				self.description.Text = ""
 				self.description.Color = theme.textColor
 			end
 		else
-			self.description.Text = cell.description or ""
+			self.description.Text = ""
 			self.description.Color = theme.textColor
 		end
 
