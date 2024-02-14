@@ -298,7 +298,11 @@ worldDetailsMod.create = function(_, config)
 					self.liked = world.liked
 					self.originalLike = world.liked
 					if self.liked ~= nil and likeBtn ~= nil and likeBtn.setColor ~= nil then
-						likeBtn:setColor(theme.colorPositive)
+						if self.liked then
+							likeBtn:setColor(theme.colorPositive)
+						else
+							likeBtn:setColor(theme.buttonColor)
+						end
 					end
 				end
 			end
