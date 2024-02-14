@@ -20,9 +20,43 @@ properties:
 
     - name: "Altitude"
       type: "number"
-      description: "Altitude of the clouds in blocks"
+      description: "Altitude of the clouds in world units. This is equivalent to [Clouds.Min.Y](#property-min)"
 
     - name: "IsUnlit"
       type: "boolean"
       description: |
         Whether or not the [This] should ignore scene lighting, `false` by default.
+    
+    - name: "Min"
+      type: "Number3"
+      description: |
+        Minimum world point of the volume dedicated to clouds generation.
+    
+    - name: "Max"
+      type: "Number3"
+      description: |
+        Maximum world point of the volume dedicated to clouds generation.
+        
+        Note: currently, [Clouds.Max.Y] isn't used.
+    
+    - name: "Size"
+      type: "Number3"
+      description: |
+        Size of the volume dedicated to clouds generation. This will set [Clouds.Max](#property-max) according to given size.
+        
+        Note: currently, vertical size isn't used.
+    
+    - name: "Width"
+      type: "number"
+      description: |
+        Width of the volume dedicated to clouds generation. This is equivalent to [Clouds.Size.X](#property-size).
+    
+    - name: "Height"
+      type: "number"
+      description: |
+        Height of the volume dedicated to clouds generation. This is equivalent to [Clouds.Size.Y](#property-size).
+    
+    - name: "Color"
+      type: "Color"
+      description: |
+        Color of the clouds. If [Clouds.IsUnlit](#property-isunlit) is set to `false`, clouds color will blend with scene lighting.
