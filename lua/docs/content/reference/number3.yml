@@ -143,18 +143,21 @@ functions:
   
   - name: "Angle"
     description: |
-        Returns the angle in radians between this and given `Number3`.
+        Returns the angle in radians between this and given vector.
     argument-sets:
         - 
-          - name: "eulerAnglesXYZ"
+          - name: "vector"
             type: "Number3"
         - 
-          - name: "eulerAngleX"
+          - name: "vectorX"
             type: "number"
-          - name: "eulerAngleY"
+          - name: "vectorY"
             type: "number"
-          - name: "eulerAngleZ"
+          - name: "vectorZ"
             type: "number"
+        - 
+          - name: "vector"
+            type: "table of 3 numbers"
     return: 
         - type: "number" 
   
@@ -185,8 +188,10 @@ functions:
             type: "number"
 
   - name: "Normalize"
+    return: 
+        - type: "Number3"
     description: |
-      Normalizes the `Number3` so that its magnitude(/reference/number3#property-length) becomes `1.0`.
+      Normalizes the `Number3` so that its magnitude(/reference/number3#property-length) becomes `1.0`, and return it.
     samples:
       - code: |
           local someNumber3 = Number3(10,0,0)
