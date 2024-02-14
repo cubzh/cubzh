@@ -36,7 +36,7 @@ extern "C" {
 ///
 typedef struct _Scene Scene;
 
-Scene *scene_new(void *g);
+Scene *scene_new(Weakptr *g);
 void scene_free(Scene *sc);
 Weakptr *scene_get_weakptr(Scene *sc);
 Weakptr *scene_get_and_retain_weakptr(Scene *sc);
