@@ -1,3 +1,11 @@
+Modules = {
+	ui = "uikit",
+	publicModule = "github.com/aduermael/modzh/test",
+	publicModule2 = "github.com/aduermael/modzh/test:63800724",
+}
+
+Modules.foo = "foo"
+
 Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
@@ -56,6 +64,21 @@ local LIGHT_COLOR = Color(244, 210, 87)
 -- local TIME_TO_HATCH = 120
 
 Client.OnStart = function()
+	-- ui:createButton("THIS IS A TEST")
+
+	local mod = require("github.com/aduermael/modzh/test")
+	print("mod:", mod)
+	mod.test()
+	publicModule.test()
+
+	print("MODULES:")
+	print("#Modules = ", #Modules)
+	print("---------")
+	for k, v in pairs(Modules) do
+		print(k, "->", v)
+	end
+	print("---------")
+
 	dialog = require("dialog")
 	dialog:setMaxWidth(400)
 	multi = require("multi")
