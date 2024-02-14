@@ -77,6 +77,16 @@ void _chunk_update_bounding_box(Chunk *chunk,
 
 // MARK: public functions
 
+void chunk_alloc_default_light(void) {
+    if (defaultLight == NULL) {
+        const size_t lightingSize = (size_t)CHUNK_SIZE_CUBE * (size_t)sizeof(VERTEX_LIGHT_STRUCT_T);
+        defaultLight = malloc(lightingSize);
+        for (size_t i = 0; i < CHUNK_SIZE_CUBE; ++i) {
+            DEFAULT_LIGHT(defaultLight[i])
+        }
+    }
+}
+
 Chunk *chunk_new(const SHAPE_COORDS_INT3_T origin) {
     Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
     if (chunk == NULL) {
@@ -249,12 +259,7 @@ void chunk_reset_lighting_data(Chunk *c, const bool emptyOrDefault) {
     if (emptyOrDefault) {
         memset(c->lightingData, 0, lightingSize);
     } else {
-        if (defaultLight == NULL) {
-            defaultLight = malloc(lightingSize);
-            for (size_t i = 0; i < CHUNK_SIZE_CUBE; ++i) {
-                DEFAULT_LIGHT(defaultLight[i])
-            }
-        }
+        vx_assert(defaultLight != NULL);
         memcpy(c->lightingData, defaultLight, lightingSize);
     }
 }
@@ -763,16 +768,16 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
     VertexBufferMemAreaWriter *transparentWriter = opaqueWriter;
 #endif
 
-    static Block *b;
-    static SHAPE_COORDS_INT3_T coords_in_shape;
-    static SHAPE_COLOR_INDEX_INT_T shapeColorIdx;
-    static ATLAS_COLOR_INDEX_INT_T atlasColorIdx;
+    Block *b;
+    SHAPE_COORDS_INT3_T coords_in_shape;
+    SHAPE_COLOR_INDEX_INT_T shapeColorIdx;
+    ATLAS_COLOR_INDEX_INT_T atlasColorIdx;
 
     // vertex lighting (baked)
     const bool vLighting = shape_uses_baked_lighting(shape);
     VERTEX_LIGHT_STRUCT_T vlight1, vlight2, vlight3, vlight4;
 
-    static FACE_AMBIENT_OCCLUSION_STRUCT_T ao;
+    FACE_AMBIENT_OCCLUSION_STRUCT_T ao;
 
     // neighbors block information
     typedef struct {
@@ -781,7 +786,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
         CHUNK_COORDS_INT3_T coords;
         VERTEX_LIGHT_STRUCT_T vlight;
     } NeighborBlock;
-    static NeighborBlock neighbors[26];
+    NeighborBlock neighbors[26];
 
     // faces are only rendered
     // - if self opaque, when neighbor is not opaque
@@ -793,11 +798,11 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
     // - only non-solid blocks (null or air) are light casters
     // this property is what allow us to let light go through & be absorbed by transparent blocks,
     // without dimming the light values sampled for vertices adjacent to the transparent block
-    static bool ao_topLeftBack, ao_topBack, ao_topRightBack, ao_topLeft, ao_topRight,
-        ao_topLeftFront, ao_topFront, ao_topRightFront, ao_leftBack, ao_rightBack, ao_leftFront,
-        ao_rightFront, ao_bottomLeftBack, ao_bottomBack, ao_bottomRightBack, ao_bottomLeft,
-        ao_bottomRight, ao_bottomLeftFront, ao_bottomFront, ao_bottomRightFront;
-    static bool light_topLeftBack, light_topBack, light_topRightBack, light_topLeft, light_topRight,
+    bool ao_topLeftBack, ao_topBack, ao_topRightBack, ao_topLeft, ao_topRight, ao_topLeftFront,
+        ao_topFront, ao_topRightFront, ao_leftBack, ao_rightBack, ao_leftFront, ao_rightFront,
+        ao_bottomLeftBack, ao_bottomBack, ao_bottomRightBack, ao_bottomLeft, ao_bottomRight,
+        ao_bottomLeftFront, ao_bottomFront, ao_bottomRightFront;
+    bool light_topLeftBack, light_topBack, light_topRightBack, light_topLeft, light_topRight,
         light_topLeftFront, light_topFront, light_topRightFront, light_leftBack, light_rightBack,
         light_leftFront, light_rightFront, light_bottomLeftBack, light_bottomBack,
         light_bottomRightBack, light_bottomLeft, light_bottomRight, light_bottomLeftFront,
