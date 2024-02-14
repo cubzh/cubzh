@@ -278,7 +278,7 @@ functions:
     
     - name: "WorldToScreen"
       description: |
-          Converts a world point to a screen point through this camera projection.
+          Converts a world point to an unsigned normalized screen point (between 0.0 and 1.0) through this camera projection.
       arguments: 
         - name: "point"
           type: "Number3"
@@ -287,7 +287,7 @@ functions:
     
     - name: "ScreenToRay"
       description: |
-          Converts a screen point into a world [Ray] through this camera projection.
+          Converts an unsigned normalized screen point (between 0.0 and 1.0) into a world [Ray] through this camera projection.
       arguments: 
         - name: "point"
           type: "Number2"
