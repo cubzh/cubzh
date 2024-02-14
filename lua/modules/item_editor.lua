@@ -17,7 +17,7 @@ debug.logSubshapes = function(_, shape, level)
 		level = 0
 	end
 	local logIndent = ""
-	for i = 1, level do
+	for _ = 1, level do
 		logIndent = logIndent .. " |"
 	end
 
@@ -55,8 +55,8 @@ __equipments = require("equipments.lua")
 -- returns an array of shapes
 -- `testFunc` is a function(shape) -> boolean
 utils.findSubshapes = function(rootShape, testFunc)
-	if type(rootShape) ~= "Shape" and type(rootShape) ~= "MutableShape" and type(testFunc) ~= "function" then
-		error("wrong arguments")
+	if type(rootShape) ~= "Shape" and type(rootShape) ~= "MutableShape" or type(testFunc) ~= "function" then
+		error("utils.findSubshapes: wrong arguments", 2)
 	end
 
 	local matchingShapes = {}
@@ -480,7 +480,6 @@ Client.OnStart = function()
 		itemCategory = "generic"
 	end
 	isWearable = itemCategory ~= "generic"
-	enableWearablePattern = true -- blue/red blocks to guide creation
 
 	----------------------------
 	-- OBJECTS & UI ELEMENTS
@@ -527,16 +526,15 @@ Client.OnStart = function()
 				s.Pivot = s:GetPoint("origin").Coords
 			end)
 
-			if enableWearablePattern then
-				Object:Load("caillef.pattern" .. itemCategory, function(obj)
-					if not obj then
-						print("Error: can't load pattern")
-						enableWearablePattern = false
-					end
-					obj.Physics = PhysicsMode.Disabled
-					pattern = obj
-				end)
-			end
+			local patternName = "caillef.pattern" .. itemCategory
+
+			Object:Load(patternName, function(obj)
+				if not obj then
+					print("Error: can't load pattern")
+				end
+				obj.Physics = PhysicsMode.Disabled
+				pattern = obj
+			end)
 		end
 
 		-- set customCollisionBox if not equals to BoundingBox
@@ -700,6 +698,7 @@ click = function(e)
 	local impact
 	local shape
 	local impactDistance = 1000000000
+	local overrideCoords = nil
 	for _, subShape in ipairs(shapes) do
 		if subShape.IsHidden == false then
 			local tmpImpact = e:CastRay(subShape)
@@ -709,6 +708,14 @@ click = function(e)
 				impactDistance = tmpImpact.Distance
 				impact = tmpImpact
 			end
+		end
+	end
+
+	if isWearable then
+		local playerImpact = e:CastRay(Player)
+		if playerImpact.Block ~= nil and playerImpact.Distance < impact.Distance then
+			local coordsPlayer = impact.Block.Coords
+			overrideCoords = shape:WorldToBlock(Player:BlockToWorld(coordsPlayer))
 		end
 	end
 
@@ -773,7 +780,7 @@ click = function(e)
 			pickCubeColor(impact.Block)
 		end
 	elseif currentEditSubmode == editSubmode.add then
-		addBlockWithImpact(impact, currentFacemode, shape)
+		addBlockWithImpact(impact, currentFacemode, shape, overrideCoords)
 		table.insert(undoShapesStack, shape)
 		redoShapesStack = {}
 	elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
@@ -1160,16 +1167,16 @@ initClientFunctions = function()
 		saveBtn.label.Text = "✅"
 	end
 
-	addBlockWithImpact = function(impact, facemode, shape)
+	addBlockWithImpact = function(impact, facemode, shape, overrideCoords)
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
 			return
 		end
-		if type(facemode) ~= Type.boolean then
+		if type(facemode) ~= "boolean" then
 			return
 		end
 
 		-- always add the first block
-		local addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape)
+		local addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape, overrideCoords)
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
 		if addedBlock ~= nil and facemode == true then
@@ -1213,7 +1220,7 @@ initClientFunctions = function()
 		return addedBlock
 	end
 
-	addSingleBlock = function(block, faceTouched, shape)
+	addSingleBlock = function(block, faceTouched, shape, overrideCoords)
 		local faces = {
 			[Face.Top] = Number3(0, 1, 0),
 			[Face.Bottom] = Number3(0, -1, 0),
@@ -1223,8 +1230,11 @@ initClientFunctions = function()
 			[Face.Front] = Number3(0, 0, 1),
 		}
 		local newBlockCoords = block.Coordinates + faces[faceTouched]
+		if overrideCoords then
+			newBlockCoords = overrideCoords
+		end
 
-		if enableWearablePattern and pattern then
+		if pattern then
 			local targetPattern = pattern
 			if item.ChildrenCount > 0 then
 				local child = item:GetChild(1) -- Is first child (left part or right sleeve)
@@ -1290,6 +1300,7 @@ initClientFunctions = function()
 
 	removeBlockWithImpact = function(impact, facemode, shape)
 		if shape.BlocksCount == 1 then
+			-- TODO: remove sleeves
 			return
 		end
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
@@ -1354,38 +1365,6 @@ initClientFunctions = function()
 	end
 
 	removeSingleBlock = function(block, shape)
-		if enableWearablePattern and pattern then
-			local targetPattern = pattern
-			if item.ChildrenCount > 0 then
-				local child = item:GetChild(1) -- Is first child (left part or right sleeve)
-				if shape == child then
-					targetPattern = pattern:GetChild(1)
-				elseif child.ChildrenCount > 0 then
-					if shape == child:GetChild(1) then -- Is first child of child (left sleeve)
-						targetPattern = pattern:GetChild(1):GetChild(1)
-					end
-				end
-			end
-			local coords = block.Coords
-			local relativeCoords = coords - shape:GetPoint("origin").Coords
-			local pos = relativeCoords + targetPattern:GetPoint("origin").Coords
-			local b = targetPattern:GetBlock(pos)
-			if b and b.Color == Color.Red then
-				pattern:SetParent(World)
-				local nextShape = item
-				hierarchyActions:applyToDescendants(pattern, { includeRoot = true }, function(s)
-					s.PrivateDrawMode = 1
-					s.Scale = 1.001
-					s.Pivot = s:GetPoint("origin").Coords
-					s.Position = nextShape.Position
-					nextShape = nextShape:GetChild(1)
-				end)
-				Timer(0.5, function()
-					pattern:RemoveFromParent()
-				end)
-				return
-			end
-		end
 		block:Remove()
 
 		-- last block can't be removed via mirror mode

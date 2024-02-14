@@ -1,0 +1,11 @@
+{
+    "Lua.diagnostics.disable": [
+        "lowercase-global",
+        "undefined-global",
+        "duplicate-set-field",
+        "undefined-field",
+        "need-check-nil",
+        "inject-field",
+        "param-type-mismatch"
+    ]
+}
