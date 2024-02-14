@@ -24,3 +24,17 @@ functions:
             Screen.DidResize = function(width, height)
               print("SCREEN SIZE:", width, height)
             end
+    
+    - name: "Capture"
+      type: "function"
+      description: |
+          Captures a screenshot, ignoring the app UI. It will open a file picker to select a file location on your device.
+
+          You can optionally provide a default file name, and whether or not the background should be transparent.
+      arguments:
+        - name: "filename"
+          type: "string"
+          optional: true
+        - name: "transparentBackground"
+          type: "string"
+          optional: true
