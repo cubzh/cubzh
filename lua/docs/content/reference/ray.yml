@@ -47,7 +47,7 @@ functions:
       description: |
           Casts a ray and returns an [Impact] that contains information about what's been hit. If nothing was it, returns `nil` instead.
 
-          The ray will intersect with any objects matching the `filterIn` collision groups. If `nil` is provided, the ray collides with all [CollisionGroups] by default.
+          The ray will intersect with any objects matching the `filterIn` collision groups. If `nil` is provided, the ray intersects with all [CollisionGroups] by default.
           Alternatively, the `filterIn` parameter can be a [Shape], in which case the raycast will only be performed against the shape's blocks.
 
           Additionally, an object can be provided as `filterOut` to exclude it as a potential result. However, it is generally a best practice to filter using collision groups.
