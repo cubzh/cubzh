@@ -56,11 +56,15 @@ functions:
     arguments:
       - name: "target"
         type: "Object"
-      - name: "recursive"
-        type: "boolean"
+      - name: "config"
+        type: "table"
         optional: true
     description: |
-        Sets the box to a bounding box fitting the given target's model and all its descendants if the optional parameter `recursive` is `true`.
+        Sets the box to a bounding box fitting the given target's model.
+
+        Config table can contain any of the following: `{ recursive:boolean, local:boolean }`,
+        - `recursive`: if `true, `the box will also fit all of target's descendants models. Default is `false`.
+        - `local`: if `true`, result box will be in target's local space. Default is `false`, returning a box in world space.
 
   - name: "Merge"
     arguments:
@@ -68,3 +72,25 @@ functions:
         type: "Box"
     description: |
         Sets the box to the combination of both boxes.
+  
+  - name: "Cast"
+    arguments:
+      - name: "direction"
+        type: "Number3"
+      - name: "maxDistance"
+        type: "number"
+        optional: true
+      - name: "filterIn"
+        type: "CollisionGroups"
+        optional: true
+      - name: "filterOut"
+        type: "Object"
+        optional: true
+    return:
+        - type: "Impact"
+    description: |
+        Cast the [Box] along the given direction vector until max distance is reached, if provided.
+
+        The box will collide with any objects matching the `filterIn` collision groups. If `nil` is provided, the ray collides with all [CollisionGroups] by default.
+
+        Additionally, an object can be provided as `filterOut` to exclude it as a potential result. However, it is generally a best practice to filter using collision groups.

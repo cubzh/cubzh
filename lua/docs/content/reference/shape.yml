@@ -7,23 +7,18 @@ description: |
   It introduces an additional coordinate system called model space i.e. relative to model origin.
   Any point can be expressed in model space. If the point is expressed with integers, then it may represent a [Block] coordinates.
 
-  Note that under certain conditions, namely if the [This],
-  - is not mutable or is mutable but its model has not been changed,
-  - has a pivot set to zero,
-  then model space and local space become equivalent.
+  Note that if the [Shape.Pivot](#property-pivot) is set to zero, then model space and local space become equivalent.
 
 constructors: 
   - description: |
         Creates a [Shape] which model can be empty, loaded from an imported [Item] (see [Items]), or copied from an existing [Shape] or [MutableShape].
 
-        The optional [table] parameter can be used to override default configuration:
-        `{includeChildren = false, bakedLight = false}`.
-
-        `bakedLight` (false by default) determines whether or not the shape should be loaded with baked lighting.  If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none. Any subsequent changes to the shape's blocks will automatically maintain its baked lighting.
+        The optional [table] parameter can be used to override default configuration: `{includeChildren = false, bakedLight = false}`.
+        - `includeChildren` (false by default) will load all children of the original shape recursively.
+        - `bakedLight` (false by default) determines whether or not the shape should be loaded with baked lighting.  If `true`, it will use the baked lighting information saved with the original item, or compute it from scratch if there was none. Any subsequent changes to the shape's blocks will automatically maintain its baked lighting.
 
         When copying a [Shape], `includeChildren` (false by default) determines if children should be copied as well.
 
-    
     argument-sets:
       -
         - name: "config"
@@ -143,7 +138,7 @@ properties:
     - name: "Shadow"
       type: boolean
       description: |
-          Whether or not the shape should be affected by light shadow casters in matching layers.
+          Whether or not the shape should cast shadows. [Light] objects set as shadow casters will affect all shapes in matching layers.
 
     - name: "Layers"
       type: "table"
@@ -159,6 +154,11 @@ properties:
       type: "boolean"
       description: |
           Whether or not inner faces between blocks of different colors should be drawn for this shape, `true` by default.
+
+    - name: "ItemName"
+      type: "string"
+      description: |
+          Original item name of this shape. If it was created programmatically, item name is `nil`.
 
 functions:
     - name: "GetBlock"
