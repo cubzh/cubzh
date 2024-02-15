@@ -17,7 +17,7 @@ debug.logSubshapes = function(_, shape, level)
 		level = 0
 	end
 	local logIndent = ""
-	for i = 1, level do
+	for _ = 1, level do
 		logIndent = logIndent .. " |"
 	end
 
@@ -55,8 +55,8 @@ __equipments = require("equipments.lua")
 -- returns an array of shapes
 -- `testFunc` is a function(shape) -> boolean
 utils.findSubshapes = function(rootShape, testFunc)
-	if type(rootShape) ~= "Shape" and type(rootShape) ~= "MutableShape" and type(testFunc) ~= "function" then
-		error("wrong arguments")
+	if type(rootShape) ~= "Shape" and type(rootShape) ~= "MutableShape" or type(testFunc) ~= "function" then
+		error("utils.findSubshapes: wrong arguments", 2)
 	end
 
 	local matchingShapes = {}
@@ -109,38 +109,39 @@ end
 
 local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 	if type(p_isWearable) ~= "boolean" or type(p_wearablePreviewMode) ~= "integer" then
-		error("wrong arguments")
+		error("playerUpdateVisibility: wrong arguments", 2)
 	end
 
-	if p_isWearable then
-		-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
-		if p_wearablePreviewMode == wearablePreviewMode.hide then
-			Player.IsHidden = false -- TODO: remove this line
-			playerHideSubshapes(true)
-		elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
-			Player.IsHidden = false -- TODO: remove this line
-			-- hide all avatar body parts and equipments
-			playerHideSubshapes(true)
-			-- show some of the avatar body parts based on the type of wearable being edited
-			local parents = __equipments.equipmentParent(Player, itemCategory)
-			local parentsType = type(parents)
-			if parentsType == "table" then
-				for _, parent in ipairs(parents) do
-					parent.IsHiddenSelf = false
-				end
-			elseif parentsType == "MutableShape" then
-				parents.IsHiddenSelf = false
-			else
-				error("unexpected 'parents' type:", parentsType)
-			end
-		elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
-			Player.IsHidden = false -- TODO: remove this line
-			playerHideSubshapes(false)
-		end
-	else
+	if not p_isWearable then
 		-- item is not a wearable, so the player avatar should not be visible
 		Player.IsHidden = false -- TODO: remove this line
 		playerHideSubshapes(true)
+		return
+	end
+
+	-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
+	if p_wearablePreviewMode == wearablePreviewMode.hide then
+		Player.IsHidden = false -- TODO: remove this line
+		playerHideSubshapes(true)
+	elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
+		Player.IsHidden = false -- TODO: remove this line
+		-- hide all avatar body parts and equipments
+		playerHideSubshapes(true)
+		-- show some of the avatar body parts based on the type of wearable being edited
+		local parents = __equipments.equipmentParent(Player, itemCategory)
+		local parentsType = type(parents)
+		if parentsType == "table" then
+			for _, parent in ipairs(parents) do
+				parent.IsHiddenSelf = false
+			end
+		elseif parentsType == "MutableShape" then
+			parents.IsHiddenSelf = false
+		else
+			error("unexpected 'parents' type:" .. parentsType, 2)
+		end
+	elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
+		Player.IsHidden = false -- TODO: remove this line
+		playerHideSubshapes(false)
 	end
 end
 
@@ -479,7 +480,6 @@ Client.OnStart = function()
 		itemCategory = "generic"
 	end
 	isWearable = itemCategory ~= "generic"
-	enableWearablePattern = true -- blue/red blocks to guide creation
 
 	----------------------------
 	-- OBJECTS & UI ELEMENTS
@@ -526,16 +526,15 @@ Client.OnStart = function()
 				s.Pivot = s:GetPoint("origin").Coords
 			end)
 
-			if enableWearablePattern then
-				Object:Load("caillef.pattern" .. itemCategory, function(obj)
-					if not obj then
-						print("Error: can't load pattern")
-						enableWearablePattern = false
-					end
-					obj.Physics = PhysicsMode.Disabled
-					pattern = obj
-				end)
-			end
+			local patternName = "caillef.pattern" .. itemCategory
+
+			Object:Load(patternName, function(obj)
+				if not obj then
+					print("Error: can't load pattern")
+				end
+				obj.Physics = PhysicsMode.Disabled
+				pattern = obj
+			end)
 		end
 
 		-- set customCollisionBox if not equals to BoundingBox
@@ -693,100 +692,115 @@ end
 
 Pointer.Click = function() end
 click = function(e)
-	if currentMode == mode.edit then
-		local impact
-		local shape
-		local impactDistance = 1000000000
-		for _, subShape in ipairs(shapes) do
-			if subShape.IsHidden == false then
-				local tmpImpact = e:CastRay(subShape)
-				-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
+	if currentMode ~= mode.edit then
+		return
+	end
+	local impact
+	local shape
+	local impactDistance = 1000000000
+	local overrideCoords = nil
+	for _, subShape in ipairs(shapes) do
+		if subShape.IsHidden == false then
+			local tmpImpact = e:CastRay(subShape)
+			-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
+			if tmpImpact and tmpImpact.Distance < impactDistance then
+				shape = subShape
+				impactDistance = tmpImpact.Distance
+				impact = tmpImpact
+			end
+		end
+	end
+
+	if isWearable then
+		local playerImpact = e:CastRay(Player)
+		if playerImpact.Block ~= nil and playerImpact.Distance < impact.Distance then
+			local coordsPlayer = impact.Block.Coords
+			overrideCoords = shape:WorldToBlock(Player:BlockToWorld(coordsPlayer))
+		end
+	end
+
+	if continuousEdition then
+		goto end_on_click
+	end
+
+	if currentEditSubmode == editSubmode.pick then
+		if Player.IsHidden == false then
+			for _, bodyPartName in ipairs(bodyParts) do
+				local bodyPart = Player[bodyPartName]
+				if bodyPart.IsHidden == false then
+					local tmpImpact = e:CastRay(bodyPart)
+					-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
+					if tmpImpact and tmpImpact.Distance < impactDistance then
+						impactDistance = tmpImpact.Distance
+						impact = tmpImpact
+					end
+				end
+			end
+			for _, equipment in pairs(Player.equipments) do
+				if equipment.IsHidden == false then
+					local tmpImpact = e:CastRay(equipment)
+					-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
+					if tmpImpact and tmpImpact.Distance < impactDistance then
+						impactDistance = tmpImpact.Distance
+						impact = tmpImpact
+					end
+
+					for _, shape in ipairs(equipment.attachedParts or {}) do
+						if shape.IsHidden == false then
+							local tmpImpact = e:CastRay(shape)
+							-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
+							if tmpImpact and tmpImpact.Distance < impactDistance then
+								impactDistance = tmpImpact.Distance
+								impact = tmpImpact
+							end
+						end
+					end
+				end
+			end
+		end -- end Player.IsHidden == false
+
+		-- if avatar body parts are shown, consider them in RayCast
+		if
+			currentWearablePreviewMode == wearablePreviewMode.bodyPart
+			or currentWearablePreviewMode == wearablePreviewMode.fullBody
+		then
+			local shownBodyParts = utils.findSubshapes(Player, function(s)
+				return s.IsHidden == false
+			end)
+			for _, bp in ipairs(shownBodyParts) do
+				local tmpImpact = e:CastRay(bp)
 				if tmpImpact and tmpImpact.Distance < impactDistance then
-					shape = subShape
 					impactDistance = tmpImpact.Distance
 					impact = tmpImpact
 				end
 			end
 		end
-		if not continuousEdition then
-			if currentEditSubmode == editSubmode.pick then
-				if Player.IsHidden == false then
-					for _, bodyPartName in ipairs(bodyParts) do
-						local bodyPart = Player[bodyPartName]
-						if bodyPart.IsHidden == false then
-							local tmpImpact = e:CastRay(bodyPart)
-							-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
-						end
-					end
-					for _, equipment in pairs(Player.equipments) do
-						if equipment.IsHidden == false then
-							local tmpImpact = e:CastRay(equipment)
-							-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
 
-							for _, shape in ipairs(equipment.attachedParts or {}) do
-								if shape.IsHidden == false then
-									local tmpImpact = e:CastRay(shape)
-									-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
-									if tmpImpact and tmpImpact.Distance < impactDistance then
-										impactDistance = tmpImpact.Distance
-										impact = tmpImpact
-									end
-								end
-							end
-						end
-					end
-				end -- end Player.IsHidden == false
-
-				-- if avatar body parts are shown, consider them in RayCast
-				if
-					currentWearablePreviewMode == wearablePreviewMode.bodyPart
-					or currentWearablePreviewMode == wearablePreviewMode.fullBody
-				then
-					local shownBodyParts = utils.findSubshapes(Player, function(s)
-						return s.IsHidden == false
-					end)
-					for _, bp in ipairs(shownBodyParts) do
-						local tmpImpact = e:CastRay(bp)
-						if tmpImpact and tmpImpact.Distance < impactDistance then
-							impactDistance = tmpImpact.Distance
-							impact = tmpImpact
-						end
-					end
-				end
-
-				if impact then
-					pickCubeColor(impact.Block)
-				end
-			elseif currentEditSubmode == editSubmode.add then
-				addBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
-				removeBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.paint then
-				replaceBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.mirror then
-				placeMirror(impact, shape)
-			elseif currentEditSubmode == editSubmode.select then
-				selectFocusShape(shape)
-			end
+		if impact then
+			pickCubeColor(impact.Block)
 		end
-		if impact ~= nil then
-			checkAutoSave()
-			refreshUndoRedoButtons()
-		end
+	elseif currentEditSubmode == editSubmode.add then
+		addBlockWithImpact(impact, currentFacemode, shape, overrideCoords)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
+		removeBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.paint then
+		replaceBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.mirror then
+		placeMirror(impact, shape)
+	elseif currentEditSubmode == editSubmode.select then
+		selectFocusShape(shape)
+	end
+
+	::end_on_click::
+	if impact ~= nil then
+		checkAutoSave()
+		refreshUndoRedoButtons()
 	end
 end
 
@@ -1153,16 +1167,16 @@ initClientFunctions = function()
 		saveBtn.label.Text = "✅"
 	end
 
-	addBlockWithImpact = function(impact, facemode, shape)
+	addBlockWithImpact = function(impact, facemode, shape, overrideCoords)
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
 			return
 		end
-		if type(facemode) ~= Type.boolean then
+		if type(facemode) ~= "boolean" then
 			return
 		end
 
 		-- always add the first block
-		local addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape)
+		local addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape, overrideCoords)
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
 		if addedBlock ~= nil and facemode == true then
@@ -1206,7 +1220,7 @@ initClientFunctions = function()
 		return addedBlock
 	end
 
-	addSingleBlock = function(block, faceTouched, shape)
+	addSingleBlock = function(block, faceTouched, shape, overrideCoords)
 		local faces = {
 			[Face.Top] = Number3(0, 1, 0),
 			[Face.Bottom] = Number3(0, -1, 0),
@@ -1216,8 +1230,11 @@ initClientFunctions = function()
 			[Face.Front] = Number3(0, 0, 1),
 		}
 		local newBlockCoords = block.Coordinates + faces[faceTouched]
+		if overrideCoords then
+			newBlockCoords = overrideCoords
+		end
 
-		if enableWearablePattern and pattern then
+		if pattern then
 			local targetPattern = pattern
 			if item.ChildrenCount > 0 then
 				local child = item:GetChild(1) -- Is first child (left part or right sleeve)
@@ -1283,6 +1300,7 @@ initClientFunctions = function()
 
 	removeBlockWithImpact = function(impact, facemode, shape)
 		if shape.BlocksCount == 1 then
+			-- TODO: remove sleeves
 			return
 		end
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
@@ -1347,38 +1365,6 @@ initClientFunctions = function()
 	end
 
 	removeSingleBlock = function(block, shape)
-		if enableWearablePattern and pattern then
-			local targetPattern = pattern
-			if item.ChildrenCount > 0 then
-				local child = item:GetChild(1) -- Is first child (left part or right sleeve)
-				if shape == child then
-					targetPattern = pattern:GetChild(1)
-				elseif child.ChildrenCount > 0 then
-					if shape == child:GetChild(1) then -- Is first child of child (left sleeve)
-						targetPattern = pattern:GetChild(1):GetChild(1)
-					end
-				end
-			end
-			local coords = block.Coords
-			local relativeCoords = coords - shape:GetPoint("origin").Coords
-			local pos = relativeCoords + targetPattern:GetPoint("origin").Coords
-			local b = targetPattern:GetBlock(pos)
-			if b and b.Color == Color.Red then
-				pattern:SetParent(World)
-				local nextShape = item
-				hierarchyActions:applyToDescendants(pattern, { includeRoot = true }, function(s)
-					s.PrivateDrawMode = 1
-					s.Scale = 1.001
-					s.Pivot = s:GetPoint("origin").Coords
-					s.Position = nextShape.Position
-					nextShape = nextShape:GetChild(1)
-				end)
-				Timer(0.5, function()
-					pattern:RemoveFromParent()
-				end)
-				return
-			end
-		end
 		block:Remove()
 
 		-- last block can't be removed via mirror mode
