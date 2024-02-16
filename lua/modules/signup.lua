@@ -306,7 +306,12 @@ signup.createModal = function(_, config)
 		end
 	end
 
-	usernameInput.onTextChange = function(_)
+	usernameInput.onTextChange = function(self)
+		local backup = self.onTextChange
+		self.onTextChange = nil
+		self.Text = string.lower(self.Text)
+		self.onTextChange = backup
+
 		checkUsernameKey = nil
 		checkUsernameError = nil
 		checkUsername()
