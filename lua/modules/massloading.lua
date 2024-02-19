@@ -60,6 +60,11 @@ massLoading.load = function(_, list, config)
 		return
 	end
 
+	if #list == 0 then
+		config.onDone(list)
+		return
+	end
+
 	local nbObjectsLoaded = 0
 	local function loadedNextObject()
 		nbObjectsLoaded = nbObjectsLoaded + 1
