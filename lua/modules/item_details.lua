@@ -82,7 +82,8 @@ itemDetails.createModalContent = function(_, config)
 
 	local author
 	if createMode then
-		author = ui:createText(" @repo", Color.Green)
+		local str = " @" .. Player.Username
+		author = ui:createText(str, Color.Green)
 		author:setParent(infoArea)
 		itemDetails.author = author
 		author.LocalPosition = by.LocalPosition + { by.Width, 0, 0 }

@@ -134,7 +134,8 @@ worldDetailsMod.create = function(_, config)
 		worldDetails.by = by
 		by.LocalPosition = publishDate.LocalPosition + { 0, publishDate.Height + theme.padding, 0 }
 
-		local author = ui:createText(" @repo", Color.Green)
+		local str = " @" .. Player.Username
+		local author = ui:createText(str, Color.Green)
 		author:setParent(infoArea)
 		worldDetails.author = author
 		author.LocalPosition = by.LocalPosition + { by.Width, 0, 0 }
