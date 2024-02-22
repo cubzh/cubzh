@@ -1354,25 +1354,6 @@ initClientFunctions = function()
 					end
 				end
 			end
-			local coords = block.Coords
-			local relativeCoords = coords - shape:GetPoint("origin").Coords
-			local pos = relativeCoords + targetPattern:GetPoint("origin").Coords
-			local b = targetPattern:GetBlock(pos)
-			if b and b.Color == Color.Red then
-				pattern:SetParent(World)
-				local nextShape = item
-				hierarchyActions:applyToDescendants(pattern, { includeRoot = true }, function(s)
-					s.PrivateDrawMode = 1
-					s.Scale = 1.001
-					s.Pivot = s:GetPoint("origin").Coords
-					s.Position = nextShape.Position
-					nextShape = nextShape:GetChild(1)
-				end)
-				Timer(0.5, function()
-					pattern:RemoveFromParent()
-				end)
-				return
-			end
 		end
 		block:Remove()
 
