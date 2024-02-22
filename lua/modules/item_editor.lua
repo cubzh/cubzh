@@ -527,14 +527,9 @@ Client.OnStart = function()
 			end)
 
 			if enableWearablePattern then
-				Object:Load("caillef.pattern" .. itemCategory, function(obj)
-					if not obj then
-						print("Error: can't load pattern")
-						enableWearablePattern = false
-					end
-					obj.Physics = PhysicsMode.Disabled
-					pattern = obj
-				end)
+				local str = "official.pattern" .. itemCategory
+				pattern = require("bundle").Shape(str)
+				pattern.Physics = PhysicsMode.Disabled
 			end
 		end
 
