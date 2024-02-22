@@ -761,7 +761,18 @@ click = function(e)
 					pickCubeColor(impact.Block)
 				end
 			elseif currentEditSubmode == editSubmode.add then
-				addBlockWithImpact(impact, currentFacemode, shape)
+				local impactCoords = nil
+				if isWearable then
+					local impactOnBody = e:CastRay(Player.Body, mirrorShape)
+					if impactOnBody.Distance < impact.Distance then
+						impact = impactOnBody
+						local ray = Ray(Camera.Position, e.Direction)
+						local i = ray:Cast(Player.Body)
+						local impactPosition = ray.Origin + ray.Direction * i.Distance
+						impactCoords = shape:WorldToBlock(impactPosition)
+					end
+				end
+				addBlockWithImpact(impact, currentFacemode, shape, impactCoords)
 				table.insert(undoShapesStack, shape)
 				redoShapesStack = {}
 			elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
@@ -1148,7 +1159,7 @@ initClientFunctions = function()
 		saveBtn.label.Text = "✅"
 	end
 
-	addBlockWithImpact = function(impact, facemode, shape)
+	addBlockWithImpact = function(impact, facemode, shape, overrideCoords)
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
 			return
 		end
@@ -1157,7 +1168,12 @@ initClientFunctions = function()
 		end
 
 		-- always add the first block
-		local addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape)
+		local addedBlock = nil
+		if overrideCoords then
+			addedBlock = shape:AddBlock(getCurrentColor(), overrideCoords)
+		else
+			addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape)
+		end
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
 		if addedBlock ~= nil and facemode == true then
