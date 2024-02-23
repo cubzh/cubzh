@@ -769,12 +769,22 @@ click = function(e)
 	elseif currentEditSubmode == editSubmode.add then
 		local impactCoords = nil
 		if isWearable then
-			local impactOnBody = e:CastRay(Player.Body, mirrorShape)
-			if impactOnBody.Distance < impact.Distance then
-				impact = impactOnBody
-				local ray = Ray(Camera.Position, e.Direction)
-				local i = ray:Cast(Player.Body)
-				local impactPosition = ray.Origin + ray.Direction * i.Distance
+			local impactOnPlayer = nil
+			local hitPlayerFirst = false
+			local playerDistance = impactDistance
+
+			for _, p in pairs(bodyParts) do
+				local i = e:CastRay(Player[p], mirrorShape)
+				if i and i.Distance < playerDistance then
+					hitPlayerFirst = true
+					impactOnPlayer = i
+					playerDistance = i.Distance
+				end
+			end
+
+			if hitPlayerFirst then
+				impact = impactOnPlayer
+				local impactPosition = Camera.Position + e.Direction * impact.Distance
 				impactCoords = shape:WorldToBlock(impactPosition)
 			end
 		end
@@ -1174,7 +1184,8 @@ initClientFunctions = function()
 		-- always add the first block
 		local addedBlock = nil
 		if overrideCoords then
-			addedBlock = shape:AddBlock(getCurrentColor(), overrideCoords)
+			local block = shape:GetBlock(overrideCoords)
+			addedBlock = addSingleBlock(block, nil, shape, overrideCoords)
 		else
 			addedBlock = addSingleBlock(impact.Block, impact.FaceTouched, shape)
 		end
@@ -1221,7 +1232,7 @@ initClientFunctions = function()
 		return addedBlock
 	end
 
-	addSingleBlock = function(block, faceTouched, shape)
+	addSingleBlock = function(block, faceTouched, shape, overrideCoords)
 		local faces = {
 			[Face.Top] = Number3(0, 1, 0),
 			[Face.Bottom] = Number3(0, -1, 0),
@@ -1230,7 +1241,12 @@ initClientFunctions = function()
 			[Face.Back] = Number3(0, 0, -1),
 			[Face.Front] = Number3(0, 0, 1),
 		}
-		local newBlockCoords = block.Coordinates + faces[faceTouched]
+		local newBlockCoords = nil
+		if faceTouched then
+			newBlockCoords = block.Coordinates + faces[faceTouched]
+		else
+			newBlockCoords = overrideCoords
+		end
 
 		if enableWearablePattern and pattern then
 			local targetPattern = pattern
@@ -1248,7 +1264,7 @@ initClientFunctions = function()
 			local relativeCoords = coords - shape:GetPoint("origin").Coords
 			local pos = relativeCoords + targetPattern:GetPoint("origin").Coords
 			local b = targetPattern:GetBlock(pos)
-			if not b or b.Color == Color.Red then
+			if not b then
 				pattern:SetParent(World)
 				local nextShape = item
 				pattern.Scale = item.Scale + Number3(1, 1, 1) * 0.001
