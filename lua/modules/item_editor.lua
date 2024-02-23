@@ -688,111 +688,115 @@ end
 
 Pointer.Click = function() end
 click = function(e)
-	if currentMode == mode.edit then
-		local impact
-		local shape
-		local impactDistance = 1000000000
-		for _, subShape in ipairs(shapes) do
-			if subShape.IsHidden == false then
-				local tmpImpact = e:CastRay(subShape)
-				-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
+	if currentMode ~= mode.edit then
+		return
+	end
+	local impact
+	local shape
+	local impactDistance = 1000000000
+	for _, subShape in ipairs(shapes) do
+		if subShape.IsHidden == false then
+			local tmpImpact = e:CastRay(subShape)
+			-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
+			if tmpImpact and tmpImpact.Distance < impactDistance then
+				shape = subShape
+				impactDistance = tmpImpact.Distance
+				impact = tmpImpact
+			end
+		end
+	end
+
+	if continuousEdition then
+		return
+	end
+
+	if currentEditSubmode == editSubmode.pick then
+		if Player.IsHidden == false then
+			for _, bodyPartName in ipairs(bodyParts) do
+				local bodyPart = Player[bodyPartName]
+				if bodyPart.IsHidden == false then
+					local tmpImpact = e:CastRay(bodyPart)
+					-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
+					if tmpImpact and tmpImpact.Distance < impactDistance then
+						impactDistance = tmpImpact.Distance
+						impact = tmpImpact
+					end
+				end
+			end
+			for _, equipment in pairs(Player.equipments) do
+				if equipment.IsHidden == false then
+					local tmpImpact = e:CastRay(equipment)
+					-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
+					if tmpImpact and tmpImpact.Distance < impactDistance then
+						impactDistance = tmpImpact.Distance
+						impact = tmpImpact
+					end
+
+					for _, shape in ipairs(equipment.attachedParts or {}) do
+						if shape.IsHidden == false then
+							local tmpImpact = e:CastRay(shape)
+							-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
+							if tmpImpact and tmpImpact.Distance < impactDistance then
+								impactDistance = tmpImpact.Distance
+								impact = tmpImpact
+							end
+						end
+					end
+				end
+			end
+		end -- end Player.IsHidden == false
+
+		-- if avatar body parts are shown, consider them in RayCast
+		if
+			currentWearablePreviewMode == wearablePreviewMode.bodyPart
+			or currentWearablePreviewMode == wearablePreviewMode.fullBody
+		then
+			local shownBodyParts = utils.findSubshapes(Player, function(s)
+				return s.IsHidden == false
+			end)
+			for _, bp in ipairs(shownBodyParts) do
+				local tmpImpact = e:CastRay(bp)
 				if tmpImpact and tmpImpact.Distance < impactDistance then
-					shape = subShape
 					impactDistance = tmpImpact.Distance
 					impact = tmpImpact
 				end
 			end
 		end
-		if not continuousEdition then
-			if currentEditSubmode == editSubmode.pick then
-				if Player.IsHidden == false then
-					for _, bodyPartName in ipairs(bodyParts) do
-						local bodyPart = Player[bodyPartName]
-						if bodyPart.IsHidden == false then
-							local tmpImpact = e:CastRay(bodyPart)
-							-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
-						end
-					end
-					for _, equipment in pairs(Player.equipments) do
-						if equipment.IsHidden == false then
-							local tmpImpact = e:CastRay(equipment)
-							-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
 
-							for _, shape in ipairs(equipment.attachedParts or {}) do
-								if shape.IsHidden == false then
-									local tmpImpact = e:CastRay(shape)
-									-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
-									if tmpImpact and tmpImpact.Distance < impactDistance then
-										impactDistance = tmpImpact.Distance
-										impact = tmpImpact
-									end
-								end
-							end
-						end
-					end
-				end -- end Player.IsHidden == false
-
-				-- if avatar body parts are shown, consider them in RayCast
-				if
-					currentWearablePreviewMode == wearablePreviewMode.bodyPart
-					or currentWearablePreviewMode == wearablePreviewMode.fullBody
-				then
-					local shownBodyParts = utils.findSubshapes(Player, function(s)
-						return s.IsHidden == false
-					end)
-					for _, bp in ipairs(shownBodyParts) do
-						local tmpImpact = e:CastRay(bp)
-						if tmpImpact and tmpImpact.Distance < impactDistance then
-							impactDistance = tmpImpact.Distance
-							impact = tmpImpact
-						end
-					end
-				end
-
-				if impact then
-					pickCubeColor(impact.Block)
-				end
-			elseif currentEditSubmode == editSubmode.add then
-				local impactCoords = nil
-				if isWearable then
-					local impactOnBody = e:CastRay(Player.Body, mirrorShape)
-					if impactOnBody.Distance < impact.Distance then
-						impact = impactOnBody
-						local ray = Ray(Camera.Position, e.Direction)
-						local i = ray:Cast(Player.Body)
-						local impactPosition = ray.Origin + ray.Direction * i.Distance
-						impactCoords = shape:WorldToBlock(impactPosition)
-					end
-				end
-				addBlockWithImpact(impact, currentFacemode, shape, impactCoords)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
-				removeBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.paint then
-				replaceBlockWithImpact(impact, currentFacemode, shape)
-				table.insert(undoShapesStack, shape)
-				redoShapesStack = {}
-			elseif currentEditSubmode == editSubmode.mirror then
-				placeMirror(impact, shape)
-			elseif currentEditSubmode == editSubmode.select then
-				selectFocusShape(shape)
+		if impact then
+			pickCubeColor(impact.Block)
+		end
+	elseif currentEditSubmode == editSubmode.add then
+		local impactCoords = nil
+		if isWearable then
+			local impactOnBody = e:CastRay(Player.Body, mirrorShape)
+			if impactOnBody.Distance < impact.Distance then
+				impact = impactOnBody
+				local ray = Ray(Camera.Position, e.Direction)
+				local i = ray:Cast(Player.Body)
+				local impactPosition = ray.Origin + ray.Direction * i.Distance
+				impactCoords = shape:WorldToBlock(impactPosition)
 			end
 		end
-		if impact ~= nil then
-			checkAutoSave()
-			refreshUndoRedoButtons()
-		end
+		addBlockWithImpact(impact, currentFacemode, shape, impactCoords)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.remove and shape ~= nil then
+		removeBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.paint then
+		replaceBlockWithImpact(impact, currentFacemode, shape)
+		table.insert(undoShapesStack, shape)
+		redoShapesStack = {}
+	elseif currentEditSubmode == editSubmode.mirror then
+		placeMirror(impact, shape)
+	elseif currentEditSubmode == editSubmode.select then
+		selectFocusShape(shape)
+	end
+	if impact ~= nil then
+		checkAutoSave()
+		refreshUndoRedoButtons()
 	end
 end
 
