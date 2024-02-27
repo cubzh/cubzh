@@ -50,6 +50,8 @@ bodyParts = {
 	"LeftFoot",
 }
 
+bodyPartToWearablePart = {}
+
 __equipments = require("equipments.lua")
 
 -- returns an array of shapes
@@ -772,19 +774,22 @@ click = function(e)
 			local impactOnPlayer = nil
 			local hitPlayerFirst = false
 			local playerDistance = impactDistance
+			local hitBodyPart
 
-			for _, p in pairs(bodyParts) do
-				local i = e:CastRay(Player[p], mirrorShape)
+			for k, _ in pairs(bodyPartToWearablePart) do
+				local i = e:CastRay(Player[k], mirrorShape)
 				if i and i.Distance < playerDistance then
 					hitPlayerFirst = true
 					impactOnPlayer = i
 					playerDistance = i.Distance
+					hitBodyPart = k
 				end
 			end
 
 			if hitPlayerFirst then
 				impact = impactOnPlayer
 				local impactPosition = Camera.Position + e.Direction * impact.Distance
+				shape = bodyPartToWearablePart[hitBodyPart]
 				impactCoords = shape:WorldToBlock(impactPosition)
 			end
 		end
@@ -1182,7 +1187,7 @@ initClientFunctions = function()
 		end
 
 		-- always add the first block
-		local addedBlock = nil
+		local addedBlock
 		if overrideCoords then
 			local block = shape:GetBlock(overrideCoords)
 			addedBlock = addSingleBlock(block, nil, shape, overrideCoords)
@@ -1241,7 +1246,7 @@ initClientFunctions = function()
 			[Face.Back] = Number3(0, 0, -1),
 			[Face.Front] = Number3(0, 0, 1),
 		}
-		local newBlockCoords = nil
+		local newBlockCoords
 		if faceTouched then
 			newBlockCoords = block.Coordinates + faces[faceTouched]
 		else
@@ -2993,6 +2998,37 @@ function post_item_load()
 		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
 			s.History = true -- enable history for the edited item
 			table.insert(shapes, s)
+
+			if not isWearable then
+				return
+			end
+
+			if itemCategory == "hair" then
+				bodyPartToWearablePart.Head = s
+			elseif itemCategory == "jacket" then
+				if s:GetParent() == World and s.ChildrenCount == 1 then
+					bodyPartToWearablePart.Body = s
+				elseif s:GetParent() ~= World and s.ChildrenCount == 1 then
+					bodyPartToWearablePart.RightArm = s
+				elseif s:GetParent() ~= World and s.ChildrenCount == 0 then
+					bodyPartToWearablePart.LeftArm = s
+				end
+			elseif itemCategory == "pants" then
+				if s.ChildrenCount == 1 then
+					bodyPartToWearablePart.RightLeg = s
+				else
+					bodyPartToWearablePart.LeftLeg = s
+				end
+			elseif itemCategory == "boots" then
+				if s.ChildrenCount == 1 then
+					bodyPartToWearablePart.RightFoot = s
+				else
+					bodyPartToWearablePart.LeftFoot = s
+				end
+			else
+				local str = "Item category is not supported, itemCategory is " .. itemCategory
+				error(str, 2)
+			end
 		end)
 	end
 
