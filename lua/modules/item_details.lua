@@ -340,11 +340,12 @@ itemDetails.createModalContent = function(_, config)
 		end
 
 		self.created = cell.created
+		print("CREATED:", self.created) -- timezone_test1 | created | 1709046283
 		if self.created then
 			local n, unitType = time.ago(self.created)
-			if n == 1 then
-				unitType = unitType:sub(1, #unitType - 1)
-			end
+			-- if n == 1 then
+			-- 	unitType = unitType:sub(1, #unitType - 1)
+			-- end
 			self.publishDate.Text = "🌎 " .. n .. " " .. unitType .. " ago"
 		end
 

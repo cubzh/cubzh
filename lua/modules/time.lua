@@ -4,11 +4,13 @@ local time = {}
 
 -- `iso8601` argument is a string
 time.iso8601_to_os_time = function(iso8601)
-	-- print("iso8601>>", iso8601) -- 2023-01-31T13:03:01.681Z
-
 	-- Parse time which is in string format
 	local year, month, day, hour, minute, seconds, offsetsign, offsethour, offsetmin =
 		iso8601:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
+
+	-- print(">>> offset hour:", offsethour)
+	-- print(">>> offset min:", offsetmin)
+	-- print(">>> offset sign:", offsetsign)
 
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
 	local epochShifted = os.time({ year = 1970, month = 1, day = 2, hour = 0 })
@@ -32,7 +34,14 @@ time.iso8601_to_os_time = function(iso8601)
 		end
 	end
 
-	return timestamp - (offsetMinutes * 60)
+	print(">>> iso8601>>", iso8601) -- 2023-01-31T13:03:01.681Z
+	print(">>> timestampO:", timestamp)
+
+	local r = timestamp - (offsetMinutes * 60)
+
+	print(">>> timestampF:", r)
+
+	return r
 end
 
 -- returns number and unit type ("seconds", "minutes", "hours", "days", "months", "years") (string)
@@ -41,11 +50,18 @@ time.ago = function(t)
 		error("time.ago - time parameter can't be nil", 2)
 	end
 
-	local now = os.time(os.date("!*t")) -- GMT
+	-- local now1 = os.date("!*t")
+	-- local now = os.time(now1) -- GMT
+	local now = os.time() -- GMT
 	local seconds = now - t
 	local r
 
 	if seconds < 0 then
+		print("🔥 WARNING TIME IS IN FUTURE")
+		-- print("  - now:", now1)
+		print("  - now:", now)
+		print("  - now:", os.time())
+		print("  - t  :", t)
 		return 0, "seconds"
 	elseif seconds > 31536000 then -- years
 		r = math.floor((seconds / 31536000) * 10) / 10
