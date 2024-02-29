@@ -746,6 +746,9 @@ common.loadWorld = function(mapBase64, config)
 		if ambience then
 			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
 		end
+		if not objects then
+			config.onDone()
+		end
 	end
 	if not config.skipMap then
 		loadMap(world.mapName, world.mapScale, loadObjectsBlocksAndAmbience)
