@@ -800,6 +800,23 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			+ bottomLeftElementsWidth
 			+ theme.padding * 4
 
+		local availableWidthForTopCenter = Screen.Width
+			- (self.closeBtn.Width + topLeftElementsWidth + theme.padding * 8)
+		if self._title and modalContent.title then
+			self._title.Text = modalContent.title
+		end
+		if self._title and self._title.Width > availableWidthForTopCenter then
+			local aChar = ui:createText("a")
+			local charWidth = aChar.Width
+			local nbMaxChars = (availableWidthForTopCenter // charWidth) - 1
+			aChar:remove()
+			self._title.Text = self._title.Text:sub(1, nbMaxChars - 1)
+			self._title.Text = self._title.Text .. "…"
+			self._title.pos.X = topLeftElementsWidth + theme.padding
+			topCenterElementsWidth = self._title.Width
+			totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
+		end
+
 		-- Start from max size
 		local borderSize = Number2(self:_computeWidth(), self:_computeHeight())
 		if borderSize.Width < totalTopWidth then
