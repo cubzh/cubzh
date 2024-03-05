@@ -90,10 +90,8 @@ bool vertex_buffer_mem_area_assign_to_chunk(VertexBufferMemArea *vbma,
                                             bool transparent);
 void vertex_buffer_new_empty_gap_at_end(VertexBuffer *vb);
 VertexBufferMemArea *vertex_buffer_mem_area_split_and_make_gap(VertexBufferMemArea *vbma,
-                                                               uint32_t vbma_size,
-                                                               const bool maintainGapCount);
+                                                               uint32_t vbma_size);
 bool vertex_buffer_mem_area_is_gap(const VertexBufferMemArea *vbma);
-bool vertex_buffer_mem_area_is_null_or_no_capacity(const VertexBufferMemArea *vbma);
 void vertex_buffer_mem_area_free(VertexBufferMemArea *vbma);
 bool vertex_buffer_mem_area_insert_after(VertexBufferMemArea *vbma1,
                                          VertexBufferMemArea *vbma2,
@@ -473,6 +471,9 @@ void vertex_buffer_mem_area_remove(VertexBufferMemArea *vbma, bool transparent) 
 
 void vertex_buffer_remove_last_mem_area(VertexBuffer *vb) {
     vertex_buffer_count_decr(vb, vb->lastMemArea->count);
+    if (vertex_buffer_mem_area_is_gap(vb->lastMemArea)) {
+        vb->gapCount -= vb->lastMemArea->count;
+    }
     vertex_buffer_mem_area_remove(vb->lastMemArea, vb->isTransparent);
 }
 
@@ -482,10 +483,6 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
 #if VERTEX_BUFFER_DEBUG == 1
     vertex_buffer_check_mem_area_chain(vb);
 #endif
-
-    // no gap remaining at the end of this function
-    vb->firstMemAreaGap = NULL;
-    vb->gapCount = 0;
 
     // here we know there are gaps, and none of them is at the end
     // of global mem area list
@@ -602,7 +599,8 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
         }
 
         if (mergeOnly) {
-            break; // breaks main loop
+            cursor = cursor->_globalListNext;
+            continue;
         }
 
         uint32_t written = 0;
@@ -616,7 +614,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
             // -> BREAK
             if (cursor == vb->lastMemArea) {
                 if (written > 0) {
-                    vertex_buffer_mem_area_split_and_make_gap(cursor, written, false);
+                    vertex_buffer_mem_area_split_and_make_gap(cursor, written);
                 }
                 // remove created gap or mem area if written == 0
                 vertex_buffer_remove_last_mem_area(vb);
@@ -641,6 +639,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
 
             if (vertex_buffer_mem_area_is_gap(cursor)) {
                 // assign to same chunk as last mem area
+                vb->gapCount -= cursor->count;
                 vertex_buffer_mem_area_insert_after(cursor, vb->lastMemArea, vb->isTransparent);
             }
 
@@ -654,7 +653,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
                     cclog_warning("⚠️ vertex_buffer_fill_gaps: gap is skipped");
                     vertex_buffer_mem_area_make_gap(cursor, vb->isTransparent);
                 } else {
-                    vertex_buffer_mem_area_split_and_make_gap(cursor, written, false);
+                    vertex_buffer_mem_area_split_and_make_gap(cursor, written);
                     // gap can't be removed because not at last position
                 }
                 break;
@@ -690,7 +689,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
 
                 written += cursor->count;
 
-                vertex_buffer_mem_area_split_and_make_gap(vb->lastMemArea, diff, false);
+                vertex_buffer_mem_area_split_and_make_gap(vb->lastMemArea, diff);
 
                 vertex_buffer_remove_last_mem_area(vb);
             }
@@ -706,7 +705,7 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
 
                 written += vb->lastMemArea->count;
 
-                vertex_buffer_mem_area_split_and_make_gap(cursor, written, false);
+                vertex_buffer_mem_area_split_and_make_gap(cursor, written);
 
                 vertex_buffer_remove_last_mem_area(vb);
             }
@@ -724,7 +723,12 @@ void vertex_buffer_fill_gaps(VertexBuffer *vb, const bool mergeOnly) {
 #if VERTEX_BUFFER_DEBUG == 1
     vertex_buffer_check_mem_area_chain(vb);
 #endif
-    vx_assert_d(vb->gapCount == 0 && vb->firstMemAreaGap == NULL);
+
+    if (mergeOnly == false) {
+        // no gap remaining at the end of this function
+        vx_assert_d(vb->firstMemAreaGap == NULL);
+        vx_assert_d(vb->gapCount == 0);
+    }
 }
 
 //---------------------
@@ -990,6 +994,10 @@ void vertex_buffer_mem_area_writer_reset(VertexBufferMemAreaWriter *vbmaw,
 /// Assigns the buffer first mem area gap to given writer
 void vertex_buffer_mem_area_writer_link_buffer(VertexBufferMemAreaWriter *bmaw,
                                                VertexBuffer *buffer) {
+    // done writing in current mem area
+    vertex_buffer_mem_area_writer_done(bmaw, true);
+
+    // will now use buffer's first mem area gap to continue writing
     vx_assert_d(buffer->firstMemAreaGap->count <= buffer->gapCount);
     buffer->gapCount -= buffer->firstMemAreaGap->count;
     if (bmaw->vbma != NULL) {
@@ -1023,25 +1031,42 @@ bool _vertex_buffer_has_capacity_with_gaps(const VertexBuffer *vb, const uint32_
     return vb != NULL && vb->count - vb->gapCount + count <= vb->maxCount;
 }
 
-/// Ensures that the mem area writers point to a VB/IB w/ at least the requested number of vertices
-void vertex_buffer_mem_area_writer_ensure_buffers(VertexBufferMemAreaWriter *vbmaw,
+/// Ensures that the mem area writers point to a VB/IB w/ at least the requested number of shared vertices,
+/// if not, a new VB/IB couple will be selected to write the full number of vertices
+bool vertex_buffer_mem_area_writer_ensure_buffers(VertexBufferMemAreaWriter *vbmaw,
                                                   VertexBufferMemAreaWriter *ibmaw,
-                                                  const uint32_t nbVertices) {
-    // no current VB or current VB cannot fit this group of vertices
-    if (vbmaw->vbma == NULL ||
-        (vbmaw->vbma->count - vbmaw->writtenCount < nbVertices &&
-         _vertex_buffer_has_capacity_with_gaps(
-             vbmaw->vbma->vb,
-             nbVertices - (vbmaw->vbma->count - vbmaw->writtenCount)) == false)) {
+                                                  const uint32_t nbVertices,
+                                                  const uint32_t nbIndices,
+                                                  const uint32_t fullVertices) {
 
-        bool needsNewVB = true;
+    if (nbVertices == 0 && nbIndices == 0) {
+        return false;
+    }
+
+    bool vbChanged = false;
+
+    // no current VB/IB (a) or current VB/IB mem area (b) and remainder of capacity (c)
+    // cannot fit this group of vertices
+    if ((vbmaw->vbma == NULL || ibmaw->vbma == NULL) || // (a)
+        (nbVertices > 0 &&
+            (vbmaw->vbma->count - vbmaw->writtenCount < nbVertices && // (b)
+             _vertex_buffer_has_capacity_with_gaps(vbmaw->vbma->vb,
+                 nbVertices - (vbmaw->vbma->count - vbmaw->writtenCount)) == false) || // (c)
+        nbIndices > 0 &&
+           (ibmaw->vbma->count - ibmaw->writtenCount < nbIndices && // (b)
+            _vertex_buffer_has_capacity_with_gaps(ibmaw->vbma->vb,
+                nbIndices - (ibmaw->vbma->count - ibmaw->writtenCount)) == false))) { // (c)
+
+        bool needsNew = true;
 
         // 1) look across all VBs (w/ matching IB) for the current shape & same render...
         VertexBuffer *vb = shape_get_first_vertex_buffer(vbmaw->s, vbmaw->isTransparent);
         VertexBuffer *ib = shape_get_first_index_buffer(vbmaw->s, vbmaw->isTransparent);
         while (vb != NULL) {
-            // ...for a VB that can fit the whole group of vertices
-            if (_vertex_buffer_has_capacity_with_gaps(vb, nbVertices)) {
+            // ...for a VB/IB that can fit the whole group of vertices
+            if (_vertex_buffer_has_capacity_with_gaps(vb, fullVertices) &&
+                _vertex_buffer_has_capacity_with_gaps(ib, nbIndices)) {
+
                 // link VB
                 if (vb->firstMemAreaGap == NULL) {
                     vertex_buffer_new_empty_gap_at_end(vb);
@@ -1054,7 +1079,7 @@ void vertex_buffer_mem_area_writer_ensure_buffers(VertexBufferMemAreaWriter *vbm
                 }
                 vertex_buffer_mem_area_writer_link_buffer(ibmaw, ib);
 
-                needsNewVB = false;
+                needsNew = false;
                 break;
             }
 
@@ -1062,18 +1087,24 @@ void vertex_buffer_mem_area_writer_ensure_buffers(VertexBufferMemAreaWriter *vbm
             ib = vertex_buffer_get_next(ib);
         }
 
-        // 2) all the available VBs are at capacity and we need a new one, a new IB is created
-        // w/ matching maximum capacity
-        if (needsNewVB) {
+        // 2) all the available VB/IBs are at capacity and we need a new couple
+        if (needsNew) {
             vertex_buffer_mem_area_writer_add_buffer(vbmaw, 0, true);
             vertex_buffer_mem_area_writer_add_buffer(ibmaw, 0, false);
         }
+
+        vbChanged = true;
     }
     vx_assert_d(vbmaw->vbma != NULL &&
-                (vbmaw->vbma->count - vbmaw->writtenCount >= nbVertices ||
-                 _vertex_buffer_has_capacity_with_gaps(
-                     vbmaw->vbma->vb,
-                     nbVertices - (vbmaw->vbma->count - vbmaw->writtenCount))));
+                (vbmaw->vbma->count - vbmaw->writtenCount >= (vbChanged ? fullVertices : nbVertices) ||
+                 _vertex_buffer_has_capacity_with_gaps(vbmaw->vbma->vb,
+                    (vbChanged ? fullVertices : nbVertices) - (vbmaw->vbma->count - vbmaw->writtenCount))));
+    vx_assert_d(ibmaw->vbma != NULL &&
+                (ibmaw->vbma->count - ibmaw->writtenCount >= nbIndices ||
+                 _vertex_buffer_has_capacity_with_gaps(ibmaw->vbma->vb,
+                     nbIndices - (ibmaw->vbma->count - ibmaw->writtenCount))));
+
+    return vbChanged;
 }
 
 /// This function assumes current buffer has enough capacity and only looks for available index
@@ -1086,21 +1117,17 @@ uint32_t vertex_buffer_mem_area_writer_get_next_space(VertexBufferMemAreaWriter 
 
     // check if the end of the mem area has been reached
     if (vbmaw->writtenCount + 1 > vbmaw->vbma->count) {
-        // 1) see if there's already a next area for same chunk we can use
-        if (vertex_buffer_mem_area_check_capacity(vbmaw->vbma->_groupListNext, 1)) {
-            vertex_buffer_mem_area_writer_reset(vbmaw, vbmaw->vbma->_groupListNext);
-        }
-        // 2) see if there's another mem gap that can be used
-        else if (vbmaw->vbma->vb->firstMemAreaGap != NULL &&
+        // 1) see if there's another mem gap that can be used
+        if (vbmaw->vbma->vb->firstMemAreaGap != NULL &&
                  vbmaw->vbma->vb->firstMemAreaGap->count >= 1) {
             vertex_buffer_mem_area_writer_link_buffer(vbmaw, vbmaw->vbma->vb);
         }
-        // 3) if mem area is the last area, extend it
+        // 2) if mem area is the last area, extend it
         else if (vbmaw->vbma == vbmaw->vbma->vb->lastMemArea) {
             vbmaw->vbma->count++;
             vertex_buffer_count_incr(vbmaw->vbma->vb, 1);
         }
-        // 4) add a new gap at the end (we know buffer has capacity)
+        // 3) add a new gap at the end (we know buffer has capacity)
         else {
             vertex_buffer_new_empty_gap_at_end(vbmaw->vbma->vb);
             vertex_buffer_mem_area_writer_link_buffer(vbmaw, vbmaw->vbma->vb);
@@ -1114,11 +1141,18 @@ uint32_t vertex_buffer_mem_area_writer_get_next_space(VertexBufferMemAreaWriter 
     return vbmaw->vbma->startIdx + vbmaw->writtenCount;
 }
 
+uint32_t _vertex_attributes_to_uint32(const CHUNK_COORDS_INT3_T c, const SHAPE_COLOR_INDEX_INT_T shapeColorIdx, const uint8_t ao, const uint8_t faceIdx, const uint8_t s) {
+   return (uint32_t)c.x + ((uint32_t)c.y << 5) + ((uint32_t)c.z << 10) +
+          ((uint32_t)shapeColorIdx << 15) + ((uint32_t)ao << 22) + ((uint32_t)faceIdx << 24) +
+          ((uint32_t)s << 27); //+4
+}
+
 void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                          VertexBufferMemAreaWriter *ibmaw,
-                                         float x,
-                                         float y,
-                                         float z,
+                                         HashUInt32 *vertexMap,
+                                         CHUNK_COORDS_INT3_T coords_in_chunk,
+                                         SHAPE_COORDS_INT3_T coords_in_shape,
+                                         SHAPE_COLOR_INDEX_INT_T shapeColorIdx,
                                          ATLAS_COLOR_INDEX_INT_T color,
                                          FACE_INDEX_INT_T faceIndex,
                                          FACE_AMBIENT_OCCLUSION_STRUCT_T ao,
@@ -1222,75 +1256,166 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
     const float v4_metadata = (float)(ao.ao4 + packed_faceIndex + packed_srgb4);
 
     // Vertex attributes
+    CHUNK_COORDS_INT3_T v1_in_chunk, v2_in_chunk, v3_in_chunk, v4_in_chunk;
     VertexAttributes v1, v2, v3, v4;
     switch (faceIndex) {
         case FACE_RIGHT_CTC: {
-            v1 = (VertexAttributes){x + 1.0f, y + 1.0f, z, (float)color, v1_metadata};
-            v2 = (VertexAttributes){x + 1.0f, y, z, (float)color, v2_metadata};
-            v3 = (VertexAttributes){x + 1.0f, y, z + 1.0f, (float)color, v3_metadata};
-            v4 = (VertexAttributes){x + 1.0f, y + 1.0f, z + 1.0f, (float)color, v4_metadata};
+            v1_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y + 1, coords_in_chunk.z };
+            v2_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z };
+            v3_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z + 1 };
+            v4_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y + 1, coords_in_chunk.z + 1 };
+
+            v1 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y + 1.0f, coords_in_shape.z, (float)color, v1_metadata};
+            v2 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y, coords_in_shape.z, (float)color, v2_metadata};
+            v3 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y, coords_in_shape.z + 1.0f, (float)color, v3_metadata};
+            v4 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y + 1.0f, coords_in_shape.z + 1.0f, (float)color, v4_metadata};
             break;
         }
         case FACE_LEFT_CTC: {
-            v1 = (VertexAttributes){x, y, z, (float)color, v1_metadata};
-            v2 = (VertexAttributes){x, y + 1.0f, z, (float)color, v2_metadata};
-            v3 = (VertexAttributes){x, y + 1.0f, z + 1.0f, (float)color, v3_metadata};
-            v4 = (VertexAttributes){x, y, z + 1.0f, (float)color, v4_metadata};
+            v1_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y , coords_in_chunk.z };
+            v2_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z };
+            v3_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z + 1 };
+            v4_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z + 1 };
+
+            v1 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z, (float)color, v1_metadata};
+            v2 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y + 1.0f, coords_in_shape.z, (float)color, v2_metadata};
+            v3 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y + 1.0f, coords_in_shape.z + 1.0f, (float)color, v3_metadata};
+            v4 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z + 1.0f, (float)color, v4_metadata};
             break;
         }
         case FACE_TOP_CTC: {
-            v1 = (VertexAttributes){x + 1.0f, y + 1.0f, z, (float)color, v1_metadata};
-            v2 = (VertexAttributes){x + 1.0f, y + 1.0f, z + 1.0f, (float)color, v2_metadata};
-            v3 = (VertexAttributes){x, y + 1.0f, z + 1.0f, (float)color, v3_metadata};
-            v4 = (VertexAttributes){x, y + 1.0f, z, (float)color, v4_metadata};
+            v1_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y + 1, coords_in_chunk.z };
+            v2_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y + 1, coords_in_chunk.z + 1 };
+            v3_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z + 1 };
+            v4_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z };
+
+            v1 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y + 1.0f, coords_in_shape.z, (float)color, v1_metadata};
+            v2 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y + 1.0f, coords_in_shape.z + 1.0f, (float)color, v2_metadata};
+            v3 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y + 1.0f, coords_in_shape.z + 1.0f, (float)color, v3_metadata};
+            v4 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y + 1.0f, coords_in_shape.z, (float)color, v4_metadata};
             break;
         }
         case FACE_DOWN_CTC: {
-            v1 = (VertexAttributes){x, y, z, (float)color, v1_metadata};
-            v2 = (VertexAttributes){x, y, z + 1.0f, (float)color, v2_metadata};
-            v3 = (VertexAttributes){x + 1.0f, y, z + 1.0f, (float)color, v3_metadata};
-            v4 = (VertexAttributes){x + 1.0f, y, z, (float)color, v4_metadata};
+            v1_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z };
+            v2_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z + 1 };
+            v3_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z + 1 };
+            v4_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z };
+
+            v1 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z, (float)color, v1_metadata};
+            v2 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z + 1.0f, (float)color, v2_metadata};
+            v3 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y, coords_in_shape.z + 1.0f, (float)color, v3_metadata};
+            v4 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y, coords_in_shape.z, (float)color, v4_metadata};
             break;
         }
         case FACE_FRONT_CTC: {
-            v1 = (VertexAttributes){x, y, z + 1.0f, (float)color, v1_metadata};
-            v2 = (VertexAttributes){x, y + 1.0f, z + 1.0f, (float)color, v2_metadata};
-            v3 = (VertexAttributes){x + 1.0f, y + 1.0f, z + 1.0f, (float)color, v3_metadata};
-            v4 = (VertexAttributes){x + 1.0f, y, z + 1.0f, (float)color, v4_metadata};
+            v1_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z + 1 };
+            v2_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z + 1 };
+            v3_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y + 1, coords_in_chunk.z + 1 };
+            v4_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z + 1 };
+
+            v1 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z + 1.0f, (float)color, v1_metadata};
+            v2 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y + 1.0f, coords_in_shape.z + 1.0f, (float)color, v2_metadata};
+            v3 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y + 1.0f, coords_in_shape.z + 1.0f, (float)color, v3_metadata};
+            v4 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y, coords_in_shape.z + 1.0f, (float)color, v4_metadata};
             break;
         }
         case FACE_BACK_CTC: {
-            v1 = (VertexAttributes){x, y + 1.0f, z, (float)color, v1_metadata};
-            v2 = (VertexAttributes){x, y, z, (float)color, v2_metadata};
-            v3 = (VertexAttributes){x + 1.0f, y, z, (float)color, v3_metadata};
-            v4 = (VertexAttributes){x + 1.0f, y + 1.0f, z, (float)color, v4_metadata};
+            v1_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y + 1, coords_in_chunk.z };
+            v2_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x, coords_in_chunk.y, coords_in_chunk.z };
+            v3_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y, coords_in_chunk.z };
+            v4_in_chunk = (CHUNK_COORDS_INT3_T){ coords_in_chunk.x + 1, coords_in_chunk.y + 1, coords_in_chunk.z };
+
+            v1 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y + 1.0f, coords_in_shape.z, (float)color, v1_metadata};
+            v2 = (VertexAttributes){coords_in_shape.x, coords_in_shape.y, coords_in_shape.z, (float)color, v2_metadata};
+            v3 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y, coords_in_shape.z, (float)color, v3_metadata};
+            v4 = (VertexAttributes){coords_in_shape.x + 1.0f, coords_in_shape.y + 1.0f, coords_in_shape.z, (float)color, v4_metadata};
             break;
         }
     }
 
+    const uint32_t key1 = _vertex_attributes_to_uint32(v1_in_chunk, shapeColorIdx, ao.ao1, faceIndex, vlight1.ambient);
+    const uint32_t key2 = _vertex_attributes_to_uint32(v2_in_chunk, shapeColorIdx, ao.ao2, faceIndex, vlight2.ambient);
+    const uint32_t key3 = _vertex_attributes_to_uint32(v3_in_chunk, shapeColorIdx, ao.ao3, faceIndex, vlight3.ambient);
+    const uint32_t key4 = _vertex_attributes_to_uint32(v4_in_chunk, shapeColorIdx, ao.ao4, faceIndex, vlight4.ambient);
+
+    uint8_t writeCount = 0;
+    void *value1 = NULL, *value2 = NULL, *value3 = NULL, *value4 = NULL;
+    if (hash_uint32_get(vertexMap, key1, &value1) == false) {
+        ++writeCount;
+    }
+    if (hash_uint32_get(vertexMap, key2, &value2) == false) {
+        ++writeCount;
+    }
+    if (hash_uint32_get(vertexMap, key3, &value3) == false) {
+        ++writeCount;
+    }
+    if (hash_uint32_get(vertexMap, key4, &value4) == false) {
+        ++writeCount;
+    }
+
     // Ensure we write to a single VB/IB w/ enough capacity for this group of vertices
-    vertex_buffer_mem_area_writer_ensure_buffers(vbmaw, ibmaw, DRAWBUFFER_VERTICES_PER_FACE);
+    if (vertex_buffer_mem_area_writer_ensure_buffers(vbmaw, ibmaw, writeCount, DRAWBUFFER_INDICES_PER_FACE, DRAWBUFFER_VERTICES_PER_FACE)) {
+        // If not enough space, we'll write the full 4 vertices into a different VB/IB
+        hash_uint32_flush(vertexMap);
+        value1 = value2 = value3 = value4 = NULL;
+    }
 
-    // Write vertices
-    const uint32_t idx1 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
-    *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v1;
-    vbmaw->writtenCount++;
-    vbmaw->vbma->dirty = true;
+    // Write new vertices, get their index
+    uint32_t idx1;
+    if (value1 == NULL) {
+        idx1 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
+        *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v1;
+        vbmaw->writtenCount++;
+        vbmaw->vbma->dirty = true;
 
-    const uint32_t idx2 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
-    *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v2;
-    vbmaw->writtenCount++;
-    vbmaw->vbma->dirty = true;
+        value1 = malloc(sizeof(uint32_t));
+        *((uint32_t*)value1) = idx1;
+        hash_uint32_set(vertexMap, key1, value1);
+    } else {
+        idx1 = *((uint32_t*)value1);
+    }
 
-    const uint32_t idx3 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
-    *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v3;
-    vbmaw->writtenCount++;
-    vbmaw->vbma->dirty = true;
+    uint32_t idx2;
+    if (value2 == NULL) {
+        idx2 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
+        *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v2;
+        vbmaw->writtenCount++;
+        vbmaw->vbma->dirty = true;
 
-    const uint32_t idx4 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
-    *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v4;
-    vbmaw->writtenCount++;
-    vbmaw->vbma->dirty = true;
+        value2 = malloc(sizeof(uint32_t));
+        *((uint32_t*)value2) = idx2;
+        hash_uint32_set(vertexMap, key2, value2);
+    } else {
+        idx2 = *((uint32_t*)value2);
+    }
+
+    uint32_t idx3;
+    if (value3 == NULL) {
+        idx3 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
+        *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v3;
+        vbmaw->writtenCount++;
+        vbmaw->vbma->dirty = true;
+
+        value3 = malloc(sizeof(uint32_t));
+        *((uint32_t*)value3) = idx3;
+        hash_uint32_set(vertexMap, key3, value3);
+    } else {
+        idx3 = *((uint32_t*)value3);
+    }
+
+    uint32_t idx4;
+    if (value4 == NULL) {
+        idx4 = vertex_buffer_mem_area_writer_get_next_space(vbmaw);
+        *((VertexAttributes *)(vbmaw->vbma->start) + vbmaw->writtenCount) = v4;
+        vbmaw->writtenCount++;
+        vbmaw->vbma->dirty = true;
+
+        value4 = malloc(sizeof(uint32_t));
+        *((uint32_t*)value4) = idx4;
+        hash_uint32_set(vertexMap, key4, value4);
+    } else {
+        idx4 = *((uint32_t*)value4);
+    }
 
     // Write indices
     vertex_buffer_mem_area_writer_get_next_space(ibmaw);
@@ -1324,24 +1449,22 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
     ibmaw->vbma->dirty = true;
 }
 
-// call this when done writing
-void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw) {
+void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw, const bool current) {
     if (vbmaw->vbma == NULL)
         return;
 
-    // 1) remaining areas (unused) should become gaps
-    // Note: do NOT decrement vb vertices because a gap still represents a space in memory that
-    // needs to be filled, otherwise vb will consider that there is available space (count <
-    // maxCount) for new vbma to be created at the end
-    while (vbmaw->vbma->_groupListNext != NULL) {
-        vertex_buffer_mem_area_make_gap(vbmaw->vbma->_groupListNext, vbmaw->isTransparent);
-    }
+    if (current == false) {
+        // 1) remaining areas (unused) should become gaps
+        while (vbmaw->vbma->_groupListNext != NULL) {
+            vertex_buffer_mem_area_make_gap(vbmaw->vbma->_groupListNext, vbmaw->isTransparent);
+        }
 
 #if VERTEX_BUFFER_DEBUG == 1
-    if (vbmaw->vbma->_groupListNext != NULL) {
-        cclog_debug("⚠️⚠️⚠️ vertex_buffer_mem_area_writer_done: _groupListNext should be NULL");
-    }
+        if (vbmaw->vbma->_groupListNext != NULL) {
+            cclog_debug("⚠️⚠️⚠️ vertex_buffer_mem_area_writer_done: _groupListNext should be NULL");
+        }
 #endif
+    }
 
     // 2) make gap if vbma unused
     if (vbmaw->writtenCount == 0) {
@@ -1349,8 +1472,7 @@ void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw) {
     }
     // check if in the middle of an area
     else if (vbmaw->writtenCount < vbmaw->vbma->count) {
-
-        uint32_t diff = vbmaw->vbma->count - vbmaw->writtenCount;
+        const uint32_t diff = vbmaw->vbma->count - vbmaw->writtenCount;
 
         // 3) if vbma is the last area of its vb, just reduce it
         // reducing vertex buffer's nb vertices as well
@@ -1361,7 +1483,7 @@ void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw) {
         // 4) split and create a gap
         // ⚠️ gaps have to be filled up before next draw
         else {
-            vertex_buffer_mem_area_split_and_make_gap(vbmaw->vbma, vbmaw->writtenCount, true);
+            vertex_buffer_mem_area_split_and_make_gap(vbmaw->vbma, vbmaw->writtenCount);
         }
     }
 }
@@ -1419,6 +1541,8 @@ void vertex_buffer_mem_area_make_gap(VertexBufferMemArea *vbma, bool transparent
     }
     vbma->vb->gapCount += vbma->count;
     vx_assert_d(vbma->vb->gapCount <= vbma->vb->count);
+    // Note: do NOT decrement vb vertices because a gap still represents an allocated
+    // space in memory, to be used or removed later
 }
 
 Chunk *vertex_buffer_mem_area_get_chunk(const VertexBufferMemArea *vbma) {
@@ -1450,8 +1574,7 @@ VertexBufferMemArea *vertex_buffer_mem_area_get_group_next(VertexBufferMemArea *
 // already queued and/or merged with other gaps
 // vbma->_groupListNext & vbma->_groupListPrevious remain intact
 VertexBufferMemArea *vertex_buffer_mem_area_split_and_make_gap(VertexBufferMemArea *vbma,
-                                                               uint32_t vbma_size,
-                                                               const bool maintainGapCount) {
+                                                               uint32_t vbma_size) {
 
 #if VERTEX_BUFFER_DEBUG == 1
     vertex_buffer_check_mem_area_chain(vbma->vb);
@@ -1495,10 +1618,8 @@ VertexBufferMemArea *vertex_buffer_mem_area_split_and_make_gap(VertexBufferMemAr
         vbma->vb->lastMemAreaGap = gap;
     }
 
-    if (maintainGapCount) {
-        vbma->vb->gapCount += diff;
-        vx_assert_d(vbma->vb->gapCount <= vbma->vb->count);
-    }
+    vbma->vb->gapCount += diff;
+    vx_assert_d(vbma->vb->gapCount <= vbma->vb->count);
 
 #if VERTEX_BUFFER_DEBUG == 1
     vertex_buffer_check_mem_area_chain(vbma->vb);
@@ -1510,7 +1631,7 @@ VertexBufferMemArea *vertex_buffer_mem_area_split_and_make_gap(VertexBufferMemAr
 void vertex_buffer_mem_area_flush(VertexBufferMemArea *vbma) {
     // write nothing to let vertex_buffer_mem_area_writer_done recycle all vbma
     VertexBufferMemAreaWriter *writer = vertex_buffer_mem_area_writer_new(NULL, NULL, vbma, false);
-    vertex_buffer_mem_area_writer_done(writer);
+    vertex_buffer_mem_area_writer_done(writer, false);
     vertex_buffer_mem_area_writer_free(writer);
 }
 

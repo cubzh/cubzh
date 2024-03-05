@@ -60,9 +60,10 @@ void vertex_buffer_mem_area_writer_free(VertexBufferMemAreaWriter *vbmaw);
 
 void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                          VertexBufferMemAreaWriter *ibmaw,
-                                         float x,
-                                         float y,
-                                         float z,
+                                         HashUInt32 *vertexMap,
+                                         CHUNK_COORDS_INT3_T coords_in_chunk,
+                                         SHAPE_COORDS_INT3_T coords_in_shape,
+                                         SHAPE_COLOR_INDEX_INT_T shapeColorIdx,
                                          ATLAS_COLOR_INDEX_INT_T color,
                                          FACE_INDEX_INT_T faceIndex,
                                          FACE_AMBIENT_OCCLUSION_STRUCT_T ao,
@@ -72,7 +73,8 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
                                          VERTEX_LIGHT_STRUCT_T vlight3,
                                          VERTEX_LIGHT_STRUCT_T vlight4);
 
-void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw);
+/// @param current is true, bmaw is done writing in current bma only
+void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw, const bool current);
 
 // a vb may optionally write to a lighting buffer ie. if it belongs to the map shape w/ octree
 VertexBuffer *vertex_buffer_new(bool transparent, bool isVertexAttributes);

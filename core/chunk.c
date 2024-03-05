@@ -767,6 +767,8 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
     // recycle buffer mem areas used by this chunk, as gaps
     _chunk_flush_buffers(chunk);
 
+    HashUInt32 *vertexMap = hash_uint32_new(free);
+
     ColorPalette *palette = shape_get_palette(shape);
 
     VertexBufferMemAreaWriter *vbmaw_opaque = vertex_buffer_mem_area_writer_new(shape,
@@ -793,6 +795,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
 #endif
 
     Block *b;
+    CHUNK_COORDS_INT3_T coords_in_chunk;
     SHAPE_COORDS_INT3_T coords_in_shape;
     SHAPE_COLOR_INDEX_INT_T shapeColorIdx;
     ATLAS_COLOR_INDEX_INT_T atlasColorIdx;
@@ -844,6 +847,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                     atlasColorIdx = color_palette_get_atlas_index(palette, shapeColorIdx);
                     selfTransparent = color_palette_is_transparent(palette, shapeColorIdx);
 
+                    coords_in_chunk = (CHUNK_COORDS_INT3_T){ x, y, z };
                     coords_in_shape = chunk_get_block_coords_in_shape(chunk, x, y, z);
 
                     // get axis-aligned neighbouring blocks
@@ -1211,9 +1215,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(
                             selfTransparent ? vbmaw_transparent : vbmaw_opaque,
                             selfTransparent ? ibmaw_transparent : ibmaw_opaque,
-                            (float)coords_in_shape.x,
-                            (float)coords_in_shape.y,
-                            (float)coords_in_shape.z,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
                             atlasColorIdx,
                             FACE_LEFT,
                             ao,
@@ -1429,9 +1434,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(
                             selfTransparent ? vbmaw_transparent : vbmaw_opaque,
                             selfTransparent ? ibmaw_transparent : ibmaw_opaque,
-                            (float)coords_in_shape.x,
-                            (float)coords_in_shape.y,
-                            (float)coords_in_shape.z,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
                             atlasColorIdx,
                             FACE_RIGHT,
                             ao,
@@ -1654,9 +1660,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(
                             selfTransparent ? vbmaw_transparent : vbmaw_opaque,
                             selfTransparent ? ibmaw_transparent : ibmaw_opaque,
-                            (float)coords_in_shape.x,
-                            (float)coords_in_shape.y,
-                            (float)coords_in_shape.z,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
                             atlasColorIdx,
                             FACE_BACK,
                             ao,
@@ -1879,9 +1886,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(
                             selfTransparent ? vbmaw_transparent : vbmaw_opaque,
                             selfTransparent ? ibmaw_transparent : ibmaw_opaque,
-                            (float)coords_in_shape.x,
-                            (float)coords_in_shape.y,
-                            (float)coords_in_shape.z,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
                             atlasColorIdx,
                             FACE_FRONT,
                             ao,
@@ -2113,9 +2121,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(
                             selfTransparent ? vbmaw_transparent : vbmaw_opaque,
                             selfTransparent ? ibmaw_transparent : ibmaw_opaque,
-                            (float)coords_in_shape.x,
-                            (float)coords_in_shape.y,
-                            (float)coords_in_shape.z,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
                             atlasColorIdx,
                             FACE_TOP,
                             ao,
@@ -2347,9 +2356,10 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                         vertex_buffer_mem_area_writer_write(
                             selfTransparent ? vbmaw_transparent : vbmaw_opaque,
                             selfTransparent ? ibmaw_transparent : ibmaw_opaque,
-                            (float)coords_in_shape.x,
-                            (float)coords_in_shape.y,
-                            (float)coords_in_shape.z,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
                             atlasColorIdx,
                             FACE_DOWN,
                             ao,
@@ -2364,14 +2374,16 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
         }
     }
 
-    vertex_buffer_mem_area_writer_done(vbmaw_opaque);
+    hash_uint32_free(vertexMap);
+
+    vertex_buffer_mem_area_writer_done(vbmaw_opaque, false);
     vertex_buffer_mem_area_writer_free(vbmaw_opaque);
-    vertex_buffer_mem_area_writer_done(ibmaw_opaque);
+    vertex_buffer_mem_area_writer_done(ibmaw_opaque, false);
     vertex_buffer_mem_area_writer_free(ibmaw_opaque);
 #if ENABLE_TRANSPARENCY
-    vertex_buffer_mem_area_writer_done(vbmaw_transparent);
+    vertex_buffer_mem_area_writer_done(vbmaw_transparent, false);
     vertex_buffer_mem_area_writer_free(vbmaw_transparent);
-    vertex_buffer_mem_area_writer_done(ibmaw_transparent);
+    vertex_buffer_mem_area_writer_done(ibmaw_transparent, false);
     vertex_buffer_mem_area_writer_free(ibmaw_transparent);
 #endif
 }

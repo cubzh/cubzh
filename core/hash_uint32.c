@@ -4,10 +4,12 @@
 //  Created by Adrien Duermael on August 15, 2022.
 // -------------------------------------------------------------
 
-#include "hash_uint32_int.h"
+#include "hash_uint32.h"
+
+#include <stdio.h>
 
 #include "cclog.h"
-#include <stdio.h>
+#include "config.h"
 
 #define HASH_UINT32_BIT_SHIFT 2
 // 32 / 2 = 16 levels
@@ -17,23 +19,24 @@
 // % 16 (modulo) == & 15 (binary operation)
 #define HASH_UINT32_BIN_MODULO 15 // 1111
 
-typedef struct _HashUInt32IntNode HashUInt32IntNode;
+typedef struct _HashUInt32Node HashUInt32Node;
 
-struct _HashUInt32IntNode {
+struct _HashUInt32Node {
     void **slots;
-    HashUInt32IntNode *parent;
+    HashUInt32Node *parent;
     uint8_t level;
     uint8_t index;
 };
 
-struct _HashUInt32Int {
-    HashUInt32IntNode *rootNode;
+struct _HashUInt32 {
+    HashUInt32Node *rootNode;
+    pointer_free_function freeFunc;
 };
 
 // when leaf == true, each branch slot contains a value, not another branch
-HashUInt32IntNode *hash_uint32_node_new(HashUInt32IntNode *parent, uint8_t index, uint8_t level) {
+HashUInt32Node *_hash_uint32_node_new(HashUInt32Node *parent, uint8_t index, uint8_t level) {
     vx_assert(level <= HASH_TREE_LEVELS);
-    HashUInt32IntNode *const n = (HashUInt32IntNode *)malloc(sizeof(HashUInt32IntNode));
+    HashUInt32Node *const n = (HashUInt32Node *)malloc(sizeof(HashUInt32Node));
     void **slots = (void **)malloc(sizeof(void *) * HASH_UINT32_CHILDREN_PER_NODE);
     for (int i = 0; i < HASH_UINT32_CHILDREN_PER_NODE; ++i) {
         slots[i] = NULL;
@@ -47,11 +50,11 @@ HashUInt32IntNode *hash_uint32_node_new(HashUInt32IntNode *parent, uint8_t index
 
 // frees node and all children
 // + sets parent slot to NULL
-void hash_uint32_node_free(HashUInt32IntNode *n) {
-    HashUInt32IntNode *cursor = n;
-    HashUInt32IntNode *tmp = NULL;
+void _hash_uint32_node_free(HashUInt32Node *n, pointer_free_function freeFunc) {
+    HashUInt32Node *cursor = n;
+    HashUInt32Node *tmp = NULL;
     uint8_t slotCursor = 0;
-    HashUInt32IntNode **slots;
+    HashUInt32Node **slots;
 
     while (cursor != NULL) {
         if (slotCursor == HASH_UINT32_CHILDREN_PER_NODE ||
@@ -61,7 +64,13 @@ void hash_uint32_node_free(HashUInt32IntNode *n) {
             slotCursor = cursor->index + 1;
             for (int i = 0; i < HASH_UINT32_CHILDREN_PER_NODE; ++i) {
                 if (cursor->slots[i] != NULL) {
-                    free(cursor->slots[i]);
+                    if (cursor->level == HASH_TREE_LEVELS_MINUS_ONE) {
+                        if (freeFunc != NULL) {
+                            freeFunc(cursor->slots[i]);
+                        }
+                    } else {
+                        free(cursor->slots[i]);
+                    }
                     cursor->slots[i] = NULL;
                 }
             }
@@ -79,7 +88,7 @@ void hash_uint32_node_free(HashUInt32IntNode *n) {
             continue;
         }
 
-        slots = (HashUInt32IntNode **)(cursor->slots);
+        slots = (HashUInt32Node **)(cursor->slots);
         if (slots[slotCursor] != NULL) {
             cursor = slots[slotCursor];
             slotCursor = 0;
@@ -89,59 +98,53 @@ void hash_uint32_node_free(HashUInt32IntNode *n) {
     }
 }
 
-HashUInt32Int *hash_uint32_int_new(void) {
-    HashUInt32Int *h = (HashUInt32Int *)malloc(sizeof(HashUInt32Int));
-    h->rootNode = hash_uint32_node_new(NULL, 0, 1);
+HashUInt32 *hash_uint32_new(pointer_free_function freeFunc) {
+    HashUInt32 *h = (HashUInt32 *)malloc(sizeof(HashUInt32));
+    h->rootNode = _hash_uint32_node_new(NULL, 0, 1);
+    h->freeFunc = freeFunc;
     return h;
 }
 
-void hash_uint32_int_free(HashUInt32Int *h) {
-    hash_uint32_node_free(h->rootNode);
+void hash_uint32_free(HashUInt32 *h) {
+    _hash_uint32_node_free(h->rootNode, h->freeFunc);
     free(h);
 }
 
-void hash_uint32_int_set(HashUInt32Int *const h, uint32_t key, const int value) {
+void hash_uint32_set(HashUInt32 *const h, uint32_t key, void *value) {
     uint8_t level = 1;
-    HashUInt32IntNode *n = h->rootNode;
+    HashUInt32Node *n = h->rootNode;
     vx_assert(n != NULL);
     uint8_t modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);
-    HashUInt32IntNode **slots;
+    HashUInt32Node **slots;
 
     while (true) {
-        slots = (HashUInt32IntNode **)(n->slots);
+        slots = (HashUInt32Node **)(n->slots);
         // cclog_debug("LEVEL: %d - modulo: %d", level, modulo);
         ++level;
         if (slots[modulo] == NULL) {
-            slots[modulo] = hash_uint32_node_new(n, modulo, level);
+            slots[modulo] = _hash_uint32_node_new(n, modulo, level);
         }
         n = slots[modulo];
         key = key >> HASH_UINT32_BIT_SHIFT;
         modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);
 
         if (level == HASH_TREE_LEVELS_MINUS_ONE) {
-            slots = (HashUInt32IntNode **)(n->slots);
-            int *i = (int *)slots[modulo];
-
-            if (i == NULL) {
-                slots[modulo] = (void *)malloc(sizeof(int *));
-                i = (int *)slots[modulo];
-            }
-
-            *i = value;
+            //vx_assert_d(n->slots[modulo] == NULL);
+            n->slots[modulo] = value;
             return;
         }
     }
 }
 
-bool hash_uint32_int_get(HashUInt32Int *h, uint32_t key, int *outValue) {
+bool hash_uint32_get(HashUInt32 *h, uint32_t key, void **outValue) {
     int level = 1;
-    HashUInt32IntNode *n = h->rootNode;
+    HashUInt32Node *n = h->rootNode;
     vx_assert(n != NULL);
     uint8_t modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);
-    HashUInt32IntNode **slots;
+    HashUInt32Node **slots;
 
     while (true) {
-        slots = (HashUInt32IntNode **)(n->slots);
+        slots = (HashUInt32Node **)(n->slots);
 
         if (slots[modulo] == NULL) {
             return false;
@@ -152,15 +155,12 @@ bool hash_uint32_int_get(HashUInt32Int *h, uint32_t key, int *outValue) {
         modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);
 
         if (level == HASH_TREE_LEVELS_MINUS_ONE) {
-
-            slots = (HashUInt32IntNode **)(n->slots);
-            int *i = (int *)slots[modulo];
-
-            if (i == NULL) {
+            if (n->slots[modulo] == NULL) {
                 return false;
             }
-
-            *outValue = *i;
+            if (outValue != NULL) {
+                *outValue = n->slots[modulo];
+            }
             return true;
         }
     }
@@ -169,16 +169,16 @@ bool hash_uint32_int_get(HashUInt32Int *h, uint32_t key, int *outValue) {
     return false;
 }
 
-void hash_uint32_int_delete(HashUInt32Int *h, uint32_t key) {
+void hash_uint32_delete(HashUInt32 *h, uint32_t key) {
     int level = 1;
-    HashUInt32IntNode *n = h->rootNode;
-    HashUInt32IntNode *tmp = NULL;
+    HashUInt32Node *n = h->rootNode;
+    HashUInt32Node *tmp = NULL;
     vx_assert(n != NULL);
     uint8_t modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);
-    HashUInt32IntNode **slots;
+    HashUInt32Node **slots;
 
     while (true) {
-        slots = (HashUInt32IntNode **)(n->slots);
+        slots = (HashUInt32Node **)(n->slots);
 
         if (slots[modulo] == NULL) {
             // not found, nothing to delete
@@ -190,16 +190,14 @@ void hash_uint32_int_delete(HashUInt32Int *h, uint32_t key) {
         modulo = (uint8_t)(key & HASH_UINT32_BIN_MODULO);
 
         if (level == HASH_TREE_LEVELS_MINUS_ONE) {
-
-            slots = (HashUInt32IntNode **)(n->slots);
-
-            if (slots[modulo] == NULL) {
+            if (n->slots[modulo] == NULL) {
                 // not found, nothing to delete
                 return;
             }
-
-            free(slots[modulo]); // free int* (value)
-            slots[modulo] = NULL;
+            if (h->freeFunc != NULL) {
+                h->freeFunc(n->slots[modulo]);
+            }
+            n->slots[modulo] = NULL;
             break;
         }
     }
@@ -212,7 +210,16 @@ void hash_uint32_int_delete(HashUInt32Int *h, uint32_t key) {
             }
         }
         tmp = n->parent;
-        hash_uint32_node_free(n);
+        _hash_uint32_node_free(n, NULL);
         n = tmp;
+    }
+}
+
+void hash_uint32_flush(HashUInt32 *h) {
+    for (int i = 0; i < HASH_UINT32_CHILDREN_PER_NODE; ++i) {
+        if (h->rootNode->slots[i] != NULL) {
+            _hash_uint32_node_free(h->rootNode->slots[i], h->freeFunc);
+            h->rootNode->slots[i] = NULL;
+        }
     }
 }

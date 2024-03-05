@@ -22,6 +22,10 @@
 
 #ifdef DEBUG
 #define SHAPE_LIGHTING_DEBUG false
+#define SHAPE_REFRESH_ALL_BUFFERS_FREE false
+#else
+#define SHAPE_LIGHTING_DEBUG false
+#define SHAPE_REFRESH_ALL_BUFFERS_FREE false
 #endif
 
 // takes the 4 low bits of a and casts into uint8_t
@@ -1743,7 +1747,7 @@ VertexBuffer *shape_add_buffer(Shape *shape, bool transparency, bool isVertexAtt
 
         uint32_t prev = vertex_buffer_get_max_count(
             _shape_get_latest_buffer(shape, transparency, true));
-        capacity = prev / DRAWBUFFER_VERTICES_PER_FACE * DRAWBUFFER_INDICES_PER_FACE;
+        capacity = prev / DRAWBUFFER_VERTICES_PER_FACE * DRAWBUFFER_INDICES_PER_FACE * 4; // TODO
     }
 
     // create and add a new buffer to the appropriate chain
@@ -1862,11 +1866,32 @@ void shape_refresh_vertices(Shape *shape) {
 }
 
 void shape_refresh_all_vertices(Shape *s) {
+#if SHAPE_REFRESH_ALL_BUFFERS_FREE
+    // free all buffers
+    vertex_buffer_free_all(s->firstVB_opaque);
+    s->firstVB_opaque = NULL;
+    vertex_buffer_free_all(s->firstIB_opaque);
+    s->firstIB_opaque = NULL;
+    vertex_buffer_free_all(s->firstVB_transparent);
+    s->firstVB_transparent = NULL;
+    vertex_buffer_free_all(s->firstIB_transparent);
+    s->firstIB_transparent = NULL;
+    s->vbAllocationFlag_opaque = 0;
+    s->vbAllocationFlag_transparent = 0;
+#endif
+
     // refresh all chunks
     Index3DIterator *it = index3d_iterator_new(s->chunks);
     Chunk *chunk;
     while (index3d_iterator_pointer(it) != NULL) {
         chunk = index3d_iterator_pointer(it);
+
+#if SHAPE_REFRESH_ALL_BUFFERS_FREE
+        chunk_set_vbma(chunk, NULL, false);
+        chunk_set_vbma(chunk, NULL, true);
+        chunk_set_ibma(chunk, NULL, false);
+        chunk_set_ibma(chunk, NULL, true);
+#endif
 
         chunk_write_vertices(s, chunk);
         chunk_set_dirty(chunk, false);

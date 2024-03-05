@@ -16,7 +16,7 @@ extern "C" {
 #include "colors.h"
 #include "fifo_list.h"
 #include "float3.h"
-#include "hash_uint32_int.h"
+#include "hash_uint32.h"
 #include "weakptr.h"
 
 #if DEBUG
