@@ -825,6 +825,9 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		if borderSize.Width < totalBottomWidth then
 			borderSize.Width = totalBottomWidth
 		end
+		if borderSize.Width > Screen.Width then
+			borderSize.Width = Screen.Width
+		end
 
 		local backgroundSize = borderSize - Number2(theme.modalBorder * 2, theme.modalBorder * 2)
 		local contentSize = backgroundSize
