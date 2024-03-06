@@ -508,7 +508,14 @@ itemGrid.create = function(_, config)
 
 			if cell.tName then
 				cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
-				cell.tName.Text = cell.title
+				if cell.title:len() > api.maxWorldTitleLength then
+					local str = cell.title
+					str = str:sub(1, api.maxWorldTitleLength - 1)
+					str = str .. "…"
+					cell.tName.Text = str
+				else
+					cell.tName.Text = cell.title
+				end
 			end
 
 			cell:setNbLikes(cell.likes)
