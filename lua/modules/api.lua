@@ -10,6 +10,7 @@ local time = require("time")
 local mod = {
 	kApiAddr = "https://api.cu.bzh", -- prod server
 	-- kApiAddr = "http://192.168.1.16:10083", -- dev server
+	maxWorldTitleLength = 32,
 }
 
 local errorMT = {
@@ -837,8 +838,9 @@ mod.checkWorldName = function(worldName)
 		return nil, "World name must be a string."
 	elseif worldName == "" then
 		return nil, "World name can't be empty."
-	elseif #worldName > 32 then
-		return nil, "Item name must be 32 characters or shorter."
+	elseif #worldName > mod.maxWorldTitleLength then
+		local str = "Item name must be " .. mod.maxWorldTitleLength .. " characters or shorter."
+		return nil, str
 	end
 
 	local sanitized = worldName
