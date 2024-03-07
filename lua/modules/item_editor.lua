@@ -770,7 +770,7 @@ click = function(e)
 		end
 	elseif currentEditSubmode == editSubmode.add then
 		local impactCoords = nil
-		if isWearable then
+		if isWearable and currentWearablePreviewMode ~= wearablePreviewMode.hide then
 			local impactOnPlayer = nil
 			local hitPlayerFirst = false
 			local playerDistance = impactDistance
