@@ -97,7 +97,7 @@ index.skinColors = {
 }
 
 function initAnimations(avatar)
-	local animWalk = Animation("Walk", { speed = 1.8, loops = 0 })
+	local animWalk = Animation("Walk", { speed = 1.8, loops = 0, priority = 2 })
 	local walk_llegK = {
 		{ time = 0.0, rotation = { -1.1781, 0, 0 } },
 		{ time = 1 / 6, rotation = { -0.785398, 0, 0 } },

@@ -502,15 +502,46 @@ Client.OnWorldObjectLoad = function(obj)
 	elseif obj.Name == "voxels.dj_table" then
 		local music = bundle.Data("misc/hubmusic.ogg")
 		if music then
+			local radius = 100
 			local as = AudioSource()
 			as.Sound = music
 			as.Loop = true
 			as.Volume = 1.0
-			as.Radius = 100
+			as.Radius = radius
 			as.Spatialized = true
 			as:SetParent(obj)
 			as.LocalPosition = { 0, 0, 0 }
 			as:Play()
+			radius = radius * 0.9
+			local trigger = Object()
+			trigger.CollisionBox = Box({ -radius, -radius, -radius }, { radius, radius, radius })
+			trigger:SetParent(obj)
+			trigger.Physics = PhysicsMode.Trigger
+			trigger.CollisionGroups = {}
+			trigger.CollidesWithGroups = PLAYER_COLLISION_GROUPS
+			trigger.OnCollisionBegin = function(_, p)
+				if p == Player then
+					require("camera_modes"):setThirdPerson({
+						rigidity = 0.4,
+						target = p.Body,
+						offset = Number3(15, 5, 0),
+						rotationOffset = Rotation(math.rad(10), math.rad(-40), 0),
+						collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+					})
+				end
+				p.Animations.Dance:Play()
+			end
+			trigger.OnCollisionEnd = function(_, p)
+				p.Animations.Dance:Stop()
+				p.Head.LocalRotation = { 0, 0, 0 }
+				if p == Player then
+					require("camera_modes"):setThirdPerson({
+						rigidity = 0.4,
+						target = p,
+						collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+					})
+				end
+			end
 		end
 	elseif obj.Name == "voxels.standing_speaker" then
 		local speaker = obj:GetChild(1)
@@ -1336,6 +1367,69 @@ function addPlayerAnimations(player)
 		end
 	end
 	player.Animations.LiftArms = animLiftArms
+
+	local leftLegPos = Player.LeftLeg.LocalPosition
+	local rightLegPos = Player.RightLeg.LocalPosition
+
+	local animDance = Animation("Dance", { duration = 0.5, loops = 0, priority = 1 })
+	local rArm = {
+		{ time = 0.0, rotation = { math.rad(10), 0, -math.rad(70) } },
+		{ time = 0.5, rotation = { math.rad(-70), 0, -math.rad(70) } },
+		{ time = 1.0, rotation = { math.rad(10), 0, -math.rad(70) } },
+	}
+	local rHand = {
+		{ time = 0.0, rotation = { 0, math.rad(-70), 0 } },
+		{ time = 0.5, rotation = { 0, math.rad(-10), 0 } },
+		{ time = 1.0, rotation = { 0, math.rad(-70), 0 } },
+	}
+	local lArm = {
+		{ time = 0.0, rotation = { math.rad(-45), 0, math.rad(60) } },
+		{ time = 0.5, rotation = { math.rad(45), 0, math.rad(60) } },
+		{ time = 1.0, rotation = { math.rad(-45), 0, math.rad(60) } },
+	}
+	local lHand = {
+		{ time = 0.0, rotation = { 0, math.rad(10), 0 } },
+		{ time = 0.5, rotation = { 0, math.rad(70), 0 } },
+		{ time = 1.0, rotation = { 0, math.rad(10), 0 } },
+	}
+	local body = {
+		{ time = 0, position = { 0, 12, 0 } },
+		{ time = 1, position = { 0, 11, 0 } },
+		{ time = 2, position = { 0, 12, 0 } },
+	}
+	local lleg = {
+		{ time = 0, rotation = { 0, 0, 0 }, position = leftLegPos },
+		{ time = 1, rotation = { 0, 0, 0 }, position = { leftLegPos.X, leftLegPos.Y + 1, leftLegPos.Z } },
+		{ time = 2, rotation = { 0, 0, 0 }, position = leftLegPos },
+	}
+	local rleg = {
+		{ time = 0, rotation = { 0, 0, 0 }, position = rightLegPos },
+		{ time = 1, rotation = { 0, 0, 0 }, position = { rightLegPos.X, rightLegPos.Y + 1, rightLegPos.Z } },
+		{ time = 2, rotation = { 0, 0, 0 }, position = rightLegPos },
+	}
+	local head = {
+		{ time = 0, rotation = { 0, 0, math.rad(5) } },
+		{ time = 1, rotation = { 0, 0, math.rad(-5) } },
+		{ time = 2, rotation = { 0, 0, math.rad(5) } },
+	}
+
+	local animDanceConfig = {
+		RightArm = rArm,
+		RightHand = rHand,
+		LeftArm = lArm,
+		LeftHand = lHand,
+		Body = body,
+		LeftLeg = lleg,
+		RightLeg = rleg,
+		Head = head,
+	}
+	for name, v in pairs(animDanceConfig) do
+		for _, frame in ipairs(v) do
+			animDance:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
+			animDance:Bind(name, (name == "Body" and not player.Avatar[name]) and player.Avatar or player.Avatar[name])
+		end
+	end
+	player.Animations.Dance = animDance
 end
 
 playerControls = {
