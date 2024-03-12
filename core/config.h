@@ -14,6 +14,11 @@ extern "C" {
 #include <stdint.h>
 
 #define vx_assert(_CONDITION) assert(_CONDITION)
+#if DEBUG
+#define vx_assert_d(_CONDITION) assert(_CONDITION)
+#else
+#define vx_assert_d(_CONDITION)
+#endif
 
 #ifdef __VX_PLATFORM_WINDOWS
 #define vx_deprecated(_MSG)
@@ -226,7 +231,6 @@ typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
 // color index for air block inside shape octree
 #define SHAPE_COLOR_INDEX_AIR_BLOCK 255
 #define SHAPE_COLOR_INDEX_MAX_COUNT 128
-#define SHAPE_OCTREE_MAX 1024
 
 // Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original +
 // complementary colors Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2,
