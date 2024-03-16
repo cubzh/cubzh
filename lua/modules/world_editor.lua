@@ -599,7 +599,7 @@ local statesSettings = {
 			worldEditor.uiGizmoRotation:setShape(worldEditor.object)
 			worldEditor.uiGizmoRotation:show()
 
-			if not Client.IsMobile then
+			if worldEditor.positionInput then
 				worldEditor.positionInput:setShape(worldEditor.object)
 				worldEditor.positionInput:show()
 				worldEditor.rotationInput:setShape(worldEditor.object)
@@ -645,9 +645,12 @@ local statesSettings = {
 			worldEditor.uiGizmoRotation:hide()
 			worldEditor.scaleButton:hide()
 
-			worldEditor.positionInput:hide()
-			worldEditor.rotationInput:hide()
-			worldEditor.scaleInput:hide()
+			if worldEditor.positionInput then
+				worldEditor.positionInput:hide()
+				worldEditor.rotationInput:hide()
+				worldEditor.scaleInput:hide()
+			end
+
 			if worldEditor.object then
 				unfreezeObject(worldEditor.object)
 			end
@@ -1141,9 +1144,11 @@ initDefaultMode = function()
 	end
 	uiGizmoRotation:parentDidResize()
 	uiGizmoRotation:hide()
-	worldEditor.positionInput:hide()
-	worldEditor.rotationInput:hide()
-	worldEditor.scaleInput:hide()
+	if worldEditor.positionInput then
+		worldEditor.positionInput:hide()
+		worldEditor.rotationInput:hide()
+		worldEditor.scaleInput:hide()
+	end
 
 	-- Scale gizmo
 	worldEditor.scaleButton = require("uikit"):createButton("< Scale >")
