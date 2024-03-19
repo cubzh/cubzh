@@ -1030,10 +1030,6 @@ end
 --------------------------------------------------
 
 initClientFunctions = function()
-	function getCurrentColor()
-		return palette:getCurrentColor()
-	end
-
 	function setMode(newMode, newSubmode)
 		local updatingMode = newMode ~= nil and newMode ~= currentMode
 		local updatingSubMode = false
@@ -1171,7 +1167,7 @@ initClientFunctions = function()
 			end)
 		end
 
-		item:Save(Environment.itemFullname, palette.colorsShape.Palette)
+		item:Save(Environment.itemFullname)
 
 		if isModeChangePivot then
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
@@ -1292,7 +1288,7 @@ initClientFunctions = function()
 			end
 		end
 
-		local added = shape:AddBlock(getCurrentColor(), newBlockCoords)
+		local added = shape:AddBlock(palette:getCurrentIndex(), newBlockCoords)
 		if not added then
 			return nil
 		end
@@ -1311,7 +1307,7 @@ initClientFunctions = function()
 			local posZ = currentMirrorAxis == mirrorAxes.z
 					and (mirrorBlockCoords.Z - (addedBlock.Coordinates.Z - mirrorBlockCoords.Z))
 				or addedBlock.Coordinates.Z
-			local added = shape:AddBlock(getCurrentColor(), posX, posY, posZ)
+			local added = shape:AddBlock(palette:getCurrentIndex(), posX, posY, posZ)
 			if added then
 				local mirrorBlock = shape:GetBlock(posX, posY, posZ)
 				if mirrorBlock and continuousEdition then
@@ -1439,7 +1435,7 @@ initClientFunctions = function()
 		local impactBlockColor = shape.Palette[impact.Block.PaletteIndex].Color
 
 		-- return if trying to replace with same color index
-		if impactBlockColor == getCurrentColor() then
+		if impact.Block.PaletteIndex == palette:getCurrentIndex() then
 			return
 		end
 
@@ -1480,7 +1476,7 @@ initClientFunctions = function()
 					-- check it is the same color
 					if
 						neighborBlock ~= nil
-						and shape.Palette[neighborBlock.PaletteIndex].Color == impactBlockColor
+						and neighborBlock.Color == impact.Block.Color
 						and blockOnTop == nil
 					then
 						replaceSingleBlock(neighborBlock, shape)
@@ -1492,7 +1488,7 @@ initClientFunctions = function()
 	end
 
 	replaceSingleBlock = function(block, shape)
-		block:Replace(getCurrentColor())
+		block:Replace(palette:getCurrentIndex())
 
 		if shape == mirrorAnchor.selectedShape then
 			local mirrorBlockCoords = mirrorAnchor.coords
@@ -1510,15 +1506,14 @@ initClientFunctions = function()
 			mirrorBlock = shape:GetBlock(posX, posY, posZ)
 
 			if mirrorBlock ~= nil then
-				mirrorBlock:Replace(getCurrentColor())
+				mirrorBlock:Replace(palette:getCurrentIndex())
 			end
 		end
 	end
 
 	pickCubeColor = function(block)
 		if block ~= nil then
-			local color = block.Color
-			palette:selectOrAddColorIfMissing(color)
+			palette:selectIndexOrAddColorIfMissing(block.PaletteIndex, block.Color)
 		end
 
 		if prePickEditSubmode then
@@ -2511,7 +2506,8 @@ function ui_init()
 		end
 		local s = MutableShape()
 		s.History = true -- enable history for the edited item
-		s:AddBlock(palette:getCurrentColor(), 0, 0, 0)
+		s.Palette = item.Palette -- shared palette with root shape
+		s:AddBlock(palette:getCurrentIndex(), 0, 0, 0)
 		s.Pivot = Number3(0.5, 0.5, 0.5)
 		s:SetParent(focusShape)
 		-- Spawn next to the parent
@@ -3086,45 +3082,27 @@ function post_item_load()
 	colorPicker:hide()
 
 	palette = require("palette"):create(ui, ui_config.btnColor)
+	palette:setColors(item)
 
-	prevColor = nil
 	colorPicker.didPickColor = function(_, color)
-		if prevColor then
-			if prevColor == color then
-				-- selecting same color, nothing to do
-				return
-			end
+		local index = palette:getCurrentIndex()
 
-			-- check if new color is not already use in shape
-			local colorAlreadyUsed = false
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-				local index = s.Palette:GetIndex(color)
-				if index ~= nil then
-					if s.Palette[index].BlocksCount > 0 then
-						colorAlreadyUsed = true
-					end
-				end
-			end)
-			if colorAlreadyUsed then
-				colorPicker:setColor(prevColor)
-				print("⚠️ You can't replace a color with a color already in the shape.")
-				return
-			end
+		-- root shape palette is shared with children shapes & palette widget
+		local prevAlpha = item.Palette[index].Color.A
+		local colorInUse = item.Palette[index].BlocksCount > 0
 
-			local refreshAlpha = color.A ~= prevColor.A
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-				for i = 1, #s.Palette do
-					if s.Palette[i].Color == prevColor then
-						s.Palette[i].Color = color
-					end
-				end
-				if refreshAlpha then
-					s:RefreshModel()
-				end
-			end)
-			checkAutoSave()
-		end
 		palette:setSelectedColor(color)
+
+		-- models need to be refreshed only if going from opaque (alpha 255) to transparent (alpha <255), and vice-versa
+		if colorInUse and color.A ~= prevAlpha and (color.A == 255 or prevAlpha == 255) then
+			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(o)
+				if o.RefreshModel ~= nil then
+					o:RefreshModel()
+				end
+			end)
+		end
+
+		checkAutoSave()
 	end
 
 	colorPicker.didClose = function()
@@ -3137,7 +3115,6 @@ function post_item_load()
 			colorPickerDisplayed = true
 			refreshToolsDisplay()
 		end
-		prevColor = color
 		checkAutoSave()
 		updatePalettePosition()
 	end
@@ -3149,13 +3126,11 @@ function post_item_load()
 	palette.didChangeSelection = function(_, color)
 		LocalEvent:Send("selectedColorDidChange")
 		colorPicker:setColor(color)
-		prevColor = color
 	end
 	palette.requiresEdit = function(_, _, color)
 		colorPickerDisplayed = not colorPickerDisplayed
 		if colorPickerDisplayed then
 			colorPicker:setColor(color)
-			prevColor = color
 		end
 		refreshToolsDisplay()
 	end
@@ -3168,10 +3143,6 @@ function post_item_load()
 		}
 		colorPicker.LocalPosition =
 			Number3(palette.LocalPosition.X - colorPicker.Width - ui_config.padding, palette.LocalPosition.Y, 0)
-	end
-
-	if itemPalette ~= nil then
-		palette:setColors(itemPalette)
 	end
 
 	LocalEvent:Send("selectedColorDidChange")
