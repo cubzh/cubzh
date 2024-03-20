@@ -11,7 +11,7 @@
 #include "cclog.h"
 #include "colors.h"
 #include "config.h"
-#include "hash_uint32_int.h"
+#include "hash_uint32.h"
 #include "serialization.h"
 #include "shape.h"
 #include "stream.h"
@@ -150,15 +150,16 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     ColorAtlas *colorAtlas = color_palette_get_atlas(shape_get_palette(shapes[0]));
     ColorPalette *combinedPalette = color_palette_new(colorAtlas);
 
-    HashUInt32Int **paletteConversionMaps = (HashUInt32Int **)malloc(sizeof(HashUInt32Int *) *
-                                                                     nbShapes);
+    HashUInt32 **paletteConversionMaps = (HashUInt32 **)malloc(sizeof(HashUInt32 *) *
+                                                               nbShapes);
 
     uint32_t colorAsUint32;
+    SHAPE_COLOR_INDEX_INT_T *mapValue;
     ColorPalette *palette;
-    HashUInt32Int *paletteConversionMap;
+    HashUInt32 *paletteConversionMap;
 
     for (unsigned int i = 0; i < nbShapes; ++i) {
-        paletteConversionMaps[i] = hash_uint32_int_new();
+        paletteConversionMaps[i] = hash_uint32_new(free);
         palette = shape_get_palette(shapes[i]);
         uint8_t count = color_palette_get_count(palette);
         for (SHAPE_COLOR_INDEX_INT_T c = 0; c < count; ++c) {
@@ -181,7 +182,9 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             color_palette_check_and_add_color(combinedPalette, *color, &index, false);
 
             colorAsUint32 = color_to_uint32(color);
-            hash_uint32_int_set(paletteConversionMaps[i], colorAsUint32, index);
+            mapValue = (SHAPE_COLOR_INDEX_INT_T*)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
+            *mapValue = index;
+            hash_uint32_set(paletteConversionMaps[i], colorAsUint32, mapValue);
         }
     }
 
@@ -189,7 +192,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     cclog_error(msg);                                                                              \
     color_palette_free(combinedPalette);                                                           \
     for (unsigned int i = 0; i < nbShapes; ++i) {                                                  \
-        hash_uint32_int_free(paletteConversionMaps[i]);                                            \
+        hash_uint32_free(paletteConversionMaps[i]);                                            \
     }                                                                                              \
     free(paletteConversionMaps);                                                                   \
     return false;
@@ -283,6 +286,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         CHUNK_COORDS_INT3_T coords_in_chunk;
         Block *b = NULL;
         int colorIndexInCombinedPalette;
+        void *mapValue;
         RGBAColor *color;
 
         for (int k = 0; k < shape_size.z; k++) {
@@ -305,9 +309,11 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                     if (block_is_solid(b)) {
                         SHAPE_COLOR_INDEX_INT_T bci = block_get_color_index(b);
                         color = color_palette_get_color(palette, bci);
-                        if (hash_uint32_int_get(paletteConversionMap,
-                                                color_to_uint32(color),
-                                                &colorIndexInCombinedPalette) == false) {
+                        if (hash_uint32_get(paletteConversionMap,
+                                            color_to_uint32(color),
+                                            &mapValue)) {
+                            colorIndexInCombinedPalette = *((SHAPE_COLOR_INDEX_INT_T*)mapValue);
+                        } else {
                             colorIndexInCombinedPalette = 0;
                         }
 
@@ -606,7 +612,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
 
     color_palette_free(combinedPalette);
     for (unsigned int i = 0; i < nbShapes; ++i) {
-        hash_uint32_int_free(paletteConversionMaps[i]);
+        hash_uint32_free(paletteConversionMaps[i]);
     }
     free(paletteConversionMaps);
 

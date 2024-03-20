@@ -137,7 +137,9 @@ void chunk_leave_neighborhood(Chunk *chunk);
 // MARK: - Buffers -
 
 void *chunk_get_vbma(const Chunk *chunk, bool transparent);
+void *chunk_get_ibma(const Chunk *chunk, bool transparent);
 void chunk_set_vbma(Chunk *chunk, void *vbma, bool transparent);
+void chunk_set_ibma(Chunk *chunk, void *vbma, bool transparent);
 void chunk_write_vertices(Shape *shape, Chunk *chunk);
 
 #ifdef __cplusplus

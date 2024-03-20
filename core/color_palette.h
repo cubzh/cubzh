@@ -45,7 +45,7 @@ typedef struct ColorPalette {
     FifoList *availableIndices;
 
     // Reverse mapping for quick search
-    HashUInt32Int *colorToIdx;
+    HashUInt32 *colorToIdx;
 
     Weakptr *wptr;
 

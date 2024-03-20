@@ -28,9 +28,12 @@ struct _Chunk {
     VERTEX_LIGHT_STRUCT_T *lightingData; /* 8 bytes */
     // reference to shape chunks rtree leaf node, used for removal
     void *rtreeLeaf; /* 8 bytes */
-    // first opaque/transparent vbma reserved for that chunk, this can be chained across several vb
+    // first opaque/transparent bma reserved for that chunk, this can be chained across several
+    // buffers
     VertexBufferMemArea *vbma_opaque;      /* 8 bytes */
+    VertexBufferMemArea *ibma_opaque;      /* 8 bytes */
     VertexBufferMemArea *vbma_transparent; /* 8 bytes */
+    VertexBufferMemArea *ibma_transparent; /* 8 bytes */
     // number of blocks in that chunk
     int nbBlocks; /* 4 bytes */
     // position of chunk in shape's model
@@ -46,6 +49,7 @@ struct _Chunk {
 // MARK: private functions prototypes
 
 Octree *_chunk_new_octree(void);
+void _chunk_flush_buffers(Chunk *c);
 
 void _chunk_hello_neighbor(Chunk *newcomer,
                            Neighbor newcomerLocation,
@@ -106,7 +110,9 @@ Chunk *chunk_new(const SHAPE_COORDS_INT3_T origin) {
     }
 
     chunk->vbma_opaque = NULL;
+    chunk->ibma_opaque = NULL;
     chunk->vbma_transparent = NULL;
+    chunk->ibma_transparent = NULL;
 
     return chunk;
 }
@@ -137,7 +143,9 @@ Chunk *chunk_new_copy(const Chunk *c) {
     }
 
     copy->vbma_opaque = NULL;
+    copy->ibma_opaque = NULL;
     copy->vbma_transparent = NULL;
+    copy->ibma_transparent = NULL;
 
     return copy;
 }
@@ -152,15 +160,7 @@ void chunk_free(Chunk *chunk, bool updateNeighbors) {
         free(chunk->lightingData);
     }
 
-    if (chunk->vbma_opaque != NULL) {
-        vertex_buffer_mem_area_flush(chunk->vbma_opaque);
-    }
-    chunk->vbma_opaque = NULL;
-
-    if (chunk->vbma_transparent != NULL) {
-        vertex_buffer_mem_area_flush(chunk->vbma_transparent);
-    }
-    chunk->vbma_transparent = NULL;
+    _chunk_flush_buffers(chunk);
 
     free(chunk);
 }
@@ -743,6 +743,10 @@ void *chunk_get_vbma(const Chunk *chunk, bool transparent) {
     return transparent ? chunk->vbma_transparent : chunk->vbma_opaque;
 }
 
+void *chunk_get_ibma(const Chunk *chunk, bool transparent) {
+    return transparent ? chunk->ibma_transparent : chunk->ibma_opaque;
+}
+
 void chunk_set_vbma(Chunk *chunk, void *vbma, bool transparent) {
     if (transparent) {
         chunk->vbma_transparent = (VertexBufferMemArea *)vbma;
@@ -751,24 +755,47 @@ void chunk_set_vbma(Chunk *chunk, void *vbma, bool transparent) {
     }
 }
 
+void chunk_set_ibma(Chunk *chunk, void *ibma, bool transparent) {
+    if (transparent) {
+        chunk->ibma_transparent = (VertexBufferMemArea *)ibma;
+    } else {
+        chunk->ibma_opaque = (VertexBufferMemArea *)ibma;
+    }
+}
+
 void chunk_write_vertices(Shape *shape, Chunk *chunk) {
+    // recycle buffer mem areas used by this chunk, as gaps
+    _chunk_flush_buffers(chunk);
+
+    HashUInt32 *vertexMap = hash_uint32_new(free);
+
     ColorPalette *palette = shape_get_palette(shape);
 
-    VertexBufferMemAreaWriter *opaqueWriter = vertex_buffer_mem_area_writer_new(shape,
+    VertexBufferMemAreaWriter *vbmaw_opaque = vertex_buffer_mem_area_writer_new(shape,
                                                                                 chunk,
                                                                                 chunk->vbma_opaque,
                                                                                 false);
+    VertexBufferMemAreaWriter *ibmaw_opaque = vertex_buffer_mem_area_writer_new(shape,
+                                                                                chunk,
+                                                                                chunk->ibma_opaque,
+                                                                                false);
 #if ENABLE_TRANSPARENCY
-    VertexBufferMemAreaWriter *transparentWriter = vertex_buffer_mem_area_writer_new(
+    VertexBufferMemAreaWriter *vbmaw_transparent = vertex_buffer_mem_area_writer_new(
         shape,
         chunk,
         chunk->vbma_transparent,
         true);
+    VertexBufferMemAreaWriter *ibmaw_transparent = vertex_buffer_mem_area_writer_new(
+        shape,
+        chunk,
+        chunk->ibma_transparent,
+        true);
 #else
-    VertexBufferMemAreaWriter *transparentWriter = opaqueWriter;
+    VertexBufferMemAreaWriter *vbmaw_transparent = vbmaw_opaque;
 #endif
 
     Block *b;
+    CHUNK_COORDS_INT3_T coords_in_chunk;
     SHAPE_COORDS_INT3_T coords_in_shape;
     SHAPE_COLOR_INDEX_INT_T shapeColorIdx;
     ATLAS_COLOR_INDEX_INT_T atlasColorIdx;
@@ -820,6 +847,7 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                     atlasColorIdx = color_palette_get_atlas_index(palette, shapeColorIdx);
                     selfTransparent = color_palette_is_transparent(palette, shapeColorIdx);
 
+                    coords_in_chunk = (CHUNK_COORDS_INT3_T){ x, y, z };
                     coords_in_shape = chunk_get_block_coords_in_shape(chunk, x, y, z);
 
                     // get axis-aligned neighbouring blocks
@@ -1184,19 +1212,21 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                     neighbors[NX_NY].vlight);
                         }
 
-                        vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
-                                                                            : opaqueWriter,
-                                                            (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z,
-                                                            atlasColorIdx,
-                                                            FACE_LEFT,
-                                                            ao,
-                                                            vLighting,
-                                                            vlight1,
-                                                            vlight2,
-                                                            vlight3,
-                                                            vlight4);
+                        vertex_buffer_mem_area_writer_write(
+                            selfTransparent ? vbmaw_transparent : vbmaw_opaque,
+                            selfTransparent ? ibmaw_transparent : ibmaw_opaque,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
+                            atlasColorIdx,
+                            FACE_LEFT,
+                            ao,
+                            vLighting,
+                            vlight1,
+                            vlight2,
+                            vlight3,
+                            vlight4);
                     }
 
                     if (renderRight) {
@@ -1401,19 +1431,21 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                     neighbors[X_Z].vlight);
                         }
 
-                        vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
-                                                                            : opaqueWriter,
-                                                            (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z,
-                                                            atlasColorIdx,
-                                                            FACE_RIGHT,
-                                                            ao,
-                                                            vLighting,
-                                                            vlight1,
-                                                            vlight2,
-                                                            vlight3,
-                                                            vlight4);
+                        vertex_buffer_mem_area_writer_write(
+                            selfTransparent ? vbmaw_transparent : vbmaw_opaque,
+                            selfTransparent ? ibmaw_transparent : ibmaw_opaque,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
+                            atlasColorIdx,
+                            FACE_RIGHT,
+                            ao,
+                            vLighting,
+                            vlight1,
+                            vlight2,
+                            vlight3,
+                            vlight4);
                     }
 
                     if (renderFront) {
@@ -1625,19 +1657,21 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                     neighbors[X_NZ].vlight);
                         }
 
-                        vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
-                                                                            : opaqueWriter,
-                                                            (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z,
-                                                            atlasColorIdx,
-                                                            FACE_BACK,
-                                                            ao,
-                                                            vLighting,
-                                                            vlight1,
-                                                            vlight2,
-                                                            vlight3,
-                                                            vlight4);
+                        vertex_buffer_mem_area_writer_write(
+                            selfTransparent ? vbmaw_transparent : vbmaw_opaque,
+                            selfTransparent ? ibmaw_transparent : ibmaw_opaque,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
+                            atlasColorIdx,
+                            FACE_BACK,
+                            ao,
+                            vLighting,
+                            vlight1,
+                            vlight2,
+                            vlight3,
+                            vlight4);
                     }
 
                     if (renderBack) {
@@ -1849,19 +1883,21 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                     neighbors[X_Z].vlight);
                         }
 
-                        vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
-                                                                            : opaqueWriter,
-                                                            (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z,
-                                                            atlasColorIdx,
-                                                            FACE_FRONT,
-                                                            ao,
-                                                            vLighting,
-                                                            vlight1,
-                                                            vlight2,
-                                                            vlight3,
-                                                            vlight4);
+                        vertex_buffer_mem_area_writer_write(
+                            selfTransparent ? vbmaw_transparent : vbmaw_opaque,
+                            selfTransparent ? ibmaw_transparent : ibmaw_opaque,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
+                            atlasColorIdx,
+                            FACE_FRONT,
+                            ao,
+                            vLighting,
+                            vlight1,
+                            vlight2,
+                            vlight3,
+                            vlight4);
                     }
 
                     if (renderTop) {
@@ -2082,19 +2118,21 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                     neighbors[Y_NZ].vlight);
                         }
 
-                        vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
-                                                                            : opaqueWriter,
-                                                            (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z,
-                                                            atlasColorIdx,
-                                                            FACE_TOP,
-                                                            ao,
-                                                            vLighting,
-                                                            vlight1,
-                                                            vlight2,
-                                                            vlight3,
-                                                            vlight4);
+                        vertex_buffer_mem_area_writer_write(
+                            selfTransparent ? vbmaw_transparent : vbmaw_opaque,
+                            selfTransparent ? ibmaw_transparent : ibmaw_opaque,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
+                            atlasColorIdx,
+                            FACE_TOP,
+                            ao,
+                            vLighting,
+                            vlight1,
+                            vlight2,
+                            vlight3,
+                            vlight4);
                     }
 
                     if (renderBottom) {
@@ -2315,30 +2353,38 @@ void chunk_write_vertices(Shape *shape, Chunk *chunk) {
                                                     neighbors[NY_NZ].vlight);
                         }
 
-                        vertex_buffer_mem_area_writer_write(selfTransparent ? transparentWriter
-                                                                            : opaqueWriter,
-                                                            (float)coords_in_shape.x,
-                                                            (float)coords_in_shape.y,
-                                                            (float)coords_in_shape.z,
-                                                            atlasColorIdx,
-                                                            FACE_DOWN,
-                                                            ao,
-                                                            vLighting,
-                                                            vlight1,
-                                                            vlight2,
-                                                            vlight3,
-                                                            vlight4);
+                        vertex_buffer_mem_area_writer_write(
+                            selfTransparent ? vbmaw_transparent : vbmaw_opaque,
+                            selfTransparent ? ibmaw_transparent : ibmaw_opaque,
+                            vertexMap,
+                            coords_in_chunk,
+                            coords_in_shape,
+                            shapeColorIdx,
+                            atlasColorIdx,
+                            FACE_DOWN,
+                            ao,
+                            vLighting,
+                            vlight1,
+                            vlight2,
+                            vlight3,
+                            vlight4);
                     }
                 }
             }
         }
     }
 
-    vertex_buffer_mem_area_writer_done(opaqueWriter);
-    vertex_buffer_mem_area_writer_free(opaqueWriter);
+    hash_uint32_free(vertexMap);
+
+    vertex_buffer_mem_area_writer_done(vbmaw_opaque, false);
+    vertex_buffer_mem_area_writer_free(vbmaw_opaque);
+    vertex_buffer_mem_area_writer_done(ibmaw_opaque, false);
+    vertex_buffer_mem_area_writer_free(ibmaw_opaque);
 #if ENABLE_TRANSPARENCY
-    vertex_buffer_mem_area_writer_done(transparentWriter);
-    vertex_buffer_mem_area_writer_free(transparentWriter);
+    vertex_buffer_mem_area_writer_done(vbmaw_transparent, false);
+    vertex_buffer_mem_area_writer_free(vbmaw_transparent);
+    vertex_buffer_mem_area_writer_done(ibmaw_transparent, false);
+    vertex_buffer_mem_area_writer_free(ibmaw_transparent);
 #endif
 }
 
@@ -2391,6 +2437,28 @@ Octree *_chunk_new_octree(void) {
     block_free(defaultBlock);
 
     return o;
+}
+
+void _chunk_flush_buffers(Chunk *c) {
+    if (c->vbma_opaque != NULL) {
+        vertex_buffer_mem_area_flush(c->vbma_opaque);
+    }
+    c->vbma_opaque = NULL;
+
+    if (c->ibma_opaque != NULL) {
+        vertex_buffer_mem_area_flush(c->ibma_opaque);
+    }
+    c->ibma_opaque = NULL;
+
+    if (c->vbma_transparent != NULL) {
+        vertex_buffer_mem_area_flush(c->vbma_transparent);
+    }
+    c->vbma_transparent = NULL;
+
+    if (c->ibma_transparent != NULL) {
+        vertex_buffer_mem_area_flush(c->ibma_transparent);
+    }
+    c->ibma_transparent = NULL;
 }
 
 void _chunk_hello_neighbor(Chunk *newcomer,

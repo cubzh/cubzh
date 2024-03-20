@@ -16,21 +16,24 @@ extern "C" {
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "colors.h"
+#include "function_pointers.h"
 
-typedef struct _HashUInt32Int HashUInt32Int;
+typedef struct _HashUInt32 HashUInt32;
 
-HashUInt32Int *hash_uint32_int_new(void);
-void hash_uint32_int_free(HashUInt32Int *h);
+/// @param freeFunc if NULL, hashmap doesn't free values
+HashUInt32 *hash_uint32_new(pointer_free_function freeFunc);
+void hash_uint32_free(HashUInt32 *h);
 
 /// inserts or update value
-void hash_uint32_int_set(HashUInt32Int *const h, uint32_t key, const int value);
+void hash_uint32_set(HashUInt32 *const h, uint32_t key, void *value);
 
 /// returns true if the value is found, setting outValue
-bool hash_uint32_int_get(HashUInt32Int *h, uint32_t key, int *outValue);
+bool hash_uint32_get(HashUInt32 *h, uint32_t key, void **outValue);
 
 /// deletes value if found in the hash
-void hash_uint32_int_delete(HashUInt32Int *h, uint32_t key);
+void hash_uint32_delete(HashUInt32 *h, uint32_t key);
+
+void hash_uint32_flush(HashUInt32 *h);
 
 #ifdef __cplusplus
 } // extern "C"

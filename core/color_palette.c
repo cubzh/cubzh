@@ -15,11 +15,10 @@
 
 void _color_palette_unmap_entry_and_remap_duplicate(ColorPalette *p,
                                                     SHAPE_COLOR_INDEX_INT_T entry) {
-    int idx;
     uint32_t rgba = color_to_uint32(&p->entries[entry].color);
-    if (hash_uint32_int_get(p->colorToIdx, rgba, &idx)) {
+    if (hash_uint32_get(p->colorToIdx, rgba, NULL)) {
         // this entry was the one used for mapping index, unmap it
-        hash_uint32_int_delete(p->colorToIdx, rgba);
+        hash_uint32_delete(p->colorToIdx, rgba);
 
         // remap first duplicate if any
         RGBAColor color;
@@ -27,7 +26,9 @@ void _color_palette_unmap_entry_and_remap_duplicate(ColorPalette *p,
             if (i != entry) {
                 color = p->entries[p->orderedIndices != NULL ? p->orderedIndices[i] : i].color;
                 if (colors_are_equal(&color, &p->entries[entry].color)) {
-                    hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), i);
+                    SHAPE_COLOR_INDEX_INT_T *value = (SHAPE_COLOR_INDEX_INT_T*) malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
+                    *value = i;
+                    hash_uint32_set(p->colorToIdx, color_to_uint32(&color), value);
                     break;
                 }
             }
@@ -46,7 +47,7 @@ ColorPalette *color_palette_new(ColorAtlas *atlas) {
     p->entries = (PaletteEntry *)malloc(sizeof(PaletteEntry) * SHAPE_COLOR_INDEX_MAX_COUNT);
     p->orderedIndices = NULL;
     p->availableIndices = NULL;
-    p->colorToIdx = hash_uint32_int_new();
+    p->colorToIdx = hash_uint32_new(free);
     p->count = 0;
     p->orderedCount = 0;
     p->lighting_dirty = false;
@@ -67,12 +68,13 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
     p->entries = (PaletteEntry *)malloc(sizeof(PaletteEntry) * size);
     p->orderedIndices = NULL;
     p->availableIndices = NULL;
-    p->colorToIdx = hash_uint32_int_new();
+    p->colorToIdx = hash_uint32_new(free);
     p->count = count;
     p->orderedCount = count;
     p->lighting_dirty = false;
     p->wptr = NULL;
 
+    SHAPE_COLOR_INDEX_INT_T *value;
     for (SHAPE_COLOR_INDEX_INT_T i = 0; i < count; ++i) {
         p->entries[i].color = colors[i];
         p->entries[i].blocksCount = 0;
@@ -81,7 +83,9 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
         if (emissive != NULL) {
             p->entries[i].emissive = emissive[i];
         }
-        hash_uint32_int_set(p->colorToIdx, color_to_uint32(&(colors[i])), i);
+        value = (SHAPE_COLOR_INDEX_INT_T*)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
+        *value = i;
+        hash_uint32_set(p->colorToIdx, color_to_uint32(&(colors[i])), value);
     }
     for (SHAPE_COLOR_INDEX_INT_T i = count; i < SHAPE_COLOR_INDEX_MAX_COUNT; ++i) {
         p->entries[i].color = (RGBAColor){0, 0, 0, 0};
@@ -118,7 +122,7 @@ void color_palette_free(ColorPalette *p) {
     if (p->availableIndices != NULL) {
         fifo_list_free(p->availableIndices, free);
     }
-    hash_uint32_int_free(p->colorToIdx);
+    hash_uint32_free(p->colorToIdx);
     weakptr_invalidate(p->wptr);
     free(p);
 }
@@ -150,10 +154,10 @@ ColorAtlas *color_palette_get_atlas(const ColorPalette *p) {
 }
 
 bool color_palette_find(const ColorPalette *p, RGBAColor color, SHAPE_COLOR_INDEX_INT_T *entryOut) {
-    int idx = 0;
-    if (hash_uint32_int_get(p->colorToIdx, color_to_uint32(&color), &idx)) {
+    void *idx;
+    if (hash_uint32_get(p->colorToIdx, color_to_uint32(&color), &idx)) {
         if (entryOut != NULL) {
-            *entryOut = (SHAPE_COLOR_INDEX_INT_T)idx;
+            *entryOut = *((SHAPE_COLOR_INDEX_INT_T*)idx);
         }
         return true;
     } else {
@@ -202,7 +206,9 @@ bool color_palette_check_and_add_color(ColorPalette *p,
     p->entries[idx].emissive = false;
 
     // for duplicates, keep latest color index
-    hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), idx);
+    SHAPE_COLOR_INDEX_INT_T *value = (SHAPE_COLOR_INDEX_INT_T*)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
+    *value = idx;
+    hash_uint32_set(p->colorToIdx, color_to_uint32(&color), value);
 
     if (p->orderedIndices != NULL) {
         p->orderedIndices[p->orderedCount] = idx;
@@ -359,7 +365,9 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
     if (a != NULL && p->entries[entry].atlasIndex != ATLAS_COLOR_INDEX_ERROR) {
         color_atlas_set_color(a, p->entries[entry].atlasIndex, color);
     }
-    hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), entry);
+    SHAPE_COLOR_INDEX_INT_T *value = (SHAPE_COLOR_INDEX_INT_T*)malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
+    *value = entry;
+    hash_uint32_set(p->colorToIdx, color_to_uint32(&color), value);
 }
 
 RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
@@ -443,8 +451,11 @@ void color_palette_copy(ColorPalette *dst, const ColorPalette *src) {
 
     // populate hashmap + increment usage count w/ atlas
     ColorAtlas *a = (ColorAtlas *)weakptr_get(src->refAtlas);
+    SHAPE_COLOR_INDEX_INT_T *value;
     for (int i = 0; i < dst->count; ++i) {
-        hash_uint32_int_set(dst->colorToIdx, color_to_uint32(&(dst->entries[i].color)), i);
+        value = (SHAPE_COLOR_INDEX_INT_T*) malloc(sizeof(SHAPE_COLOR_INDEX_INT_T));
+        *value = i;
+        hash_uint32_set(dst->colorToIdx, color_to_uint32(&(dst->entries[i].color)), value);
         if (dst->entries[i].blocksCount > 0 && a != NULL) {
             dst->entries[i].atlasIndex = color_atlas_check_and_add_color(a, dst->entries[i].color);
         }
