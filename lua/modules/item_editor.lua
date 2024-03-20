@@ -50,8 +50,6 @@ bodyParts = {
 	"LeftFoot",
 }
 
-bodyPartToWearablePart = {}
-
 __equipments = require("equipments.lua")
 
 -- returns an array of shapes
@@ -82,11 +80,17 @@ utils.findSubshapes = function(rootShape, testFunc)
 	return matchingShapes
 end
 
+local disableObject = function(object, v)
+	if object.IsHiddenSelf ~= nil then
+		object.IsHiddenSelf = v
+	end
+	object.Physics = v and PhysicsMode.Disabled or PhysicsMode.TriggerPerBlock
+end
+
 local hideShapeSubshapes = function(shape, isHidden)
 	local count = shape.ChildrenCount
 	for i = 1, count do
-		local subshape = shape:GetChild(i)
-		subshape.IsHiddenSelf = isHidden
+		disableObject(shape:GetChild(i), isHidden)
 	end
 end
 
@@ -104,7 +108,7 @@ local playerHideSubshapes = function(isHidden)
 		Player.RightFoot,
 	}
 	for _, bodyPart in ipairs(bodyParts) do
-		bodyPart.IsHiddenSelf = isHidden
+		disableObject(bodyPart, isHidden)
 		hideShapeSubshapes(bodyPart, isHidden)
 	end
 end
@@ -117,10 +121,8 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 	if p_isWearable then
 		-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
 		if p_wearablePreviewMode == wearablePreviewMode.hide then
-			Player.IsHidden = false -- TODO: remove this line
 			playerHideSubshapes(true)
 		elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
-			Player.IsHidden = false -- TODO: remove this line
 			-- hide all avatar body parts and equipments
 			playerHideSubshapes(true)
 			-- show some of the avatar body parts based on the type of wearable being edited
@@ -128,20 +130,18 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 			local parentsType = type(parents)
 			if parentsType == "table" then
 				for _, parent in ipairs(parents) do
-					parent.IsHiddenSelf = false
+					disableObject(parent, false)
 				end
 			elseif parentsType == "MutableShape" then
-				parents.IsHiddenSelf = false
+				disableObject(parents, false)
 			else
 				error("unexpected 'parents' type:", parentsType)
 			end
 		elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
-			Player.IsHidden = false -- TODO: remove this line
 			playerHideSubshapes(false)
 		end
 	else
 		-- item is not a wearable, so the player avatar should not be visible
-		Player.IsHidden = false -- TODO: remove this line
 		playerHideSubshapes(true)
 	end
 end
@@ -262,7 +262,7 @@ Client.OnStart = function()
 		-- Pivot
 		if isModeChangePivot then
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-				s.IsHiddenSelf = false
+				disableObject(s, false)
 			end)
 
 			selectGizmo:setObject(nil)
@@ -297,7 +297,7 @@ Client.OnStart = function()
 
 	setSelfAndDescendantsHiddenSelf = function(shape, isHiddenSelf)
 		hierarchyActions:applyToDescendants(shape, { includeRoot = true }, function(s)
-			s.IsHiddenSelf = isHiddenSelf
+			disableObject(s, isHiddenSelf)
 		end)
 	end
 
@@ -487,6 +487,8 @@ Client.OnStart = function()
 	-- OBJECTS & UI ELEMENTS
 	----------------------------
 
+	collisionGroup_item = 1
+
 	local loadConfig = { useLocal = true, mutable = true }
 	Assets:Load(Environment.itemFullname, AssetType.Any, function(assets)
 		local shapesNotParented = {}
@@ -513,20 +515,12 @@ Client.OnStart = function()
 		end
 
 		item = finalObject
-
 		item:SetParent(World)
-		item.History = true -- enable history for the edited item
-		item.Physics = PhysicsMode.Trigger
 
 		if isWearable then
 			if itemCategory == "pants" then
 				item.Scale = 1.05
 			end
-
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-				s.Physics = PhysicsMode.Trigger
-				s.Pivot = s:GetPoint("origin").Coords
-			end)
 
 			if enableWearablePattern then
 				local str = "official.pattern" .. itemCategory
@@ -540,10 +534,7 @@ Client.OnStart = function()
 			customCollisionBox = Box(item.CollisionBox.Min, item.CollisionBox.Max)
 		end
 
-		-- INIT UI
 		ui_init()
-
-		-- ???
 		post_item_load()
 
 		Menu:AddDidBecomeActiveCallback(menuDidBecomeActive)
@@ -641,6 +632,7 @@ Client.OnStart = function()
 	blockHighlight.Scale = 1 / (blockHighlight.Width - 1)
 	blockHighlight:SetParent(World)
 	blockHighlight.IsHidden = true
+	blockHighlight.Physics = PhysicsMode.Disabled
 end -- OnStart end
 
 Client.Action1 = nil
@@ -690,109 +682,28 @@ end
 
 Pointer.Click = function() end
 click = function(e)
-	if currentMode ~= mode.edit then
+	if currentMode ~= mode.edit or continuousEdition then
 		return
 	end
-	local impact
-	local shape
-	local impactDistance = 1000000000
-	for _, subShape in ipairs(shapes) do
-		if subShape.IsHidden == false then
-			local tmpImpact = e:CastRay(subShape)
-			-- if tmpImpact then print("HIT subShape, distance =", tmpImpact.Distance) end
-			if tmpImpact and tmpImpact.Distance < impactDistance then
-				shape = subShape
-				impactDistance = tmpImpact.Distance
-				impact = tmpImpact
-			end
-		end
-	end
 
-	if continuousEdition then
+	-- Raycast against all currently physics-enabled objects, we ensured that hidden objects are also physics-disabled
+	-- note: if needed here, we could selectively use groups for item, player, and wearables ; for example if both body parts
+	-- and wearable are shown but we want to raycast only against wearables e:CastRay(collisionGroup_wearable), or only
+	-- against the item shapes e:CastRay(collisionGroup_item)
+	local impact = e:CastRay() 
+	local shape = impact.Shape
+
+	if impact == nil then
 		return
 	end
 
 	if currentEditSubmode == editSubmode.pick then
-		if Player.IsHidden == false then
-			for _, bodyPartName in ipairs(bodyParts) do
-				local bodyPart = Player[bodyPartName]
-				if bodyPart.IsHidden == false then
-					local tmpImpact = e:CastRay(bodyPart)
-					-- if tmpImpact then print("HIT bodyPart, distance =", tmpImpact.Distance) end
-					if tmpImpact and tmpImpact.Distance < impactDistance then
-						impactDistance = tmpImpact.Distance
-						impact = tmpImpact
-					end
-				end
-			end
-			for _, equipment in pairs(Player.equipments) do
-				if equipment.IsHidden == false then
-					local tmpImpact = e:CastRay(equipment)
-					-- if tmpImpact then print("HIT equipment, distance =", tmpImpact.Distance) end
-					if tmpImpact and tmpImpact.Distance < impactDistance then
-						impactDistance = tmpImpact.Distance
-						impact = tmpImpact
-					end
-
-					for _, shape in ipairs(equipment.attachedParts or {}) do
-						if shape.IsHidden == false then
-							local tmpImpact = e:CastRay(shape)
-							-- if tmpImpact then print("HIT attached part, distance =", tmpImpact.Distance) end
-							if tmpImpact and tmpImpact.Distance < impactDistance then
-								impactDistance = tmpImpact.Distance
-								impact = tmpImpact
-							end
-						end
-					end
-				end
-			end
-		end -- end Player.IsHidden == false
-
-		-- if avatar body parts are shown, consider them in RayCast
-		if
-			currentWearablePreviewMode == wearablePreviewMode.bodyPart
-			or currentWearablePreviewMode == wearablePreviewMode.fullBody
-		then
-			local shownBodyParts = utils.findSubshapes(Player, function(s)
-				return s.IsHidden == false
-			end)
-			for _, bp in ipairs(shownBodyParts) do
-				local tmpImpact = e:CastRay(bp)
-				if tmpImpact and tmpImpact.Distance < impactDistance then
-					impactDistance = tmpImpact.Distance
-					impact = tmpImpact
-				end
-			end
-		end
-
 		if impact then
 			pickCubeColor(impact.Block)
 		end
 	elseif currentEditSubmode == editSubmode.add then
-		local impactCoords = nil
-		if isWearable and currentWearablePreviewMode ~= wearablePreviewMode.hide then
-			local impactOnPlayer = nil
-			local hitPlayerFirst = false
-			local playerDistance = impactDistance
-			local hitBodyPart
-
-			for k, _ in pairs(bodyPartToWearablePart) do
-				local i = e:CastRay(Player[k], mirrorShape)
-				if i and i.Distance < playerDistance then
-					hitPlayerFirst = true
-					impactOnPlayer = i
-					playerDistance = i.Distance
-					hitBodyPart = k
-				end
-			end
-
-			if hitPlayerFirst then
-				impact = impactOnPlayer
-				local impactPosition = Camera.Position + e.Direction * impact.Distance
-				shape = bodyPartToWearablePart[hitBodyPart]
-				impactCoords = shape:WorldToBlock(impactPosition)
-			end
-		end
+		local impactPosition = Camera.Position + e.Direction * impact.Distance
+		local impactCoords = shape:WorldToBlock(impactPosition)
 		addBlockWithImpact(impact, currentFacemode, shape, impactCoords)
 		table.insert(undoShapesStack, shape)
 		redoShapesStack = {}
@@ -1571,8 +1482,7 @@ initClientFunctions = function()
 				mirrorShape = Shape(Items.cube_white)
 				mirrorShape.Pivot = { 0.5, 0.5, 0.5 }
 				mirrorShape.PrivateDrawMode = 1
-
-				mirrorShape.Debug = true
+				mirrorShape.Physics = PhysicsMode.Disabled
 
 				-- Anchor at the shape position because the mirror is not attached to the shape
 				mirrorAnchor = Object()
@@ -2507,6 +2417,7 @@ function ui_init()
 		local s = MutableShape()
 		s.History = true -- enable history for the edited item
 		s.Palette = item.Palette -- shared palette with root shape
+		s.CollisionGroups = collisionGroup_item
 		s:AddBlock(palette:getCurrentIndex(), 0, 0, 0)
 		s.Pivot = Number3(0.5, 0.5, 0.5)
 		s:SetParent(focusShape)
@@ -2546,6 +2457,7 @@ function ui_init()
 
 			hierarchyActions:applyToDescendants(child, { includeRoot = true }, function(s)
 				s.History = true -- enable history for the edited item
+				s.CollisionGroups = collisionGroup_item
 				table.insert(shapes, s)
 			end)
 
@@ -2599,7 +2511,7 @@ function ui_init()
 			pivotObject:SetParent(focusShape)
 
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-				s.IsHiddenSelf = s ~= focusShape -- hide all except focus shape
+				disableObject(s, s ~= focusShape) -- hide all except focus shape
 			end)
 
 			selectGizmo:setMode(gizmo.Mode.Move)
@@ -2643,7 +2555,7 @@ function ui_init()
 			end
 
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-				s.IsHiddenSelf = false
+				disableObject(s, false)
 			end)
 
 			if moveShapeBtn.selected then
@@ -3003,39 +2915,19 @@ function post_item_load()
 	initShapes = function()
 		shapes = {}
 		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
-			s.History = true -- enable history for the edited item
-			table.insert(shapes, s)
+			if type(s) == Type.MutableShape then
+				s.Physics = PhysicsMode.TriggerPerBlock
+				s.CollisionGroups = collisionGroup_item
+				s.History = true -- enable history for the edited item
+				s.Palette = item.Palette -- shared palette with root shape
+				table.insert(shapes, s)
+			end
 
 			if not isWearable then
 				return
 			end
 
-			if itemCategory == "hair" then
-				bodyPartToWearablePart.Head = s
-			elseif itemCategory == "jacket" then
-				if s:GetParent() == World and s.ChildrenCount == 1 then
-					bodyPartToWearablePart.Body = s
-				elseif s:GetParent() ~= World and s.ChildrenCount == 1 then
-					bodyPartToWearablePart.RightArm = s
-				elseif s:GetParent() ~= World and s.ChildrenCount == 0 then
-					bodyPartToWearablePart.LeftArm = s
-				end
-			elseif itemCategory == "pants" then
-				if s.ChildrenCount == 1 then
-					bodyPartToWearablePart.RightLeg = s
-				else
-					bodyPartToWearablePart.LeftLeg = s
-				end
-			elseif itemCategory == "boots" then
-				if s.ChildrenCount == 1 then
-					bodyPartToWearablePart.RightFoot = s
-				else
-					bodyPartToWearablePart.LeftFoot = s
-				end
-			else
-				local str = "Item category is not supported, itemCategory is " .. itemCategory
-				error(str, 2)
-			end
+			s.Pivot = s:GetPoint("origin").Coords
 		end)
 	end
 
