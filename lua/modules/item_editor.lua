@@ -461,7 +461,7 @@ Client.OnStart = function()
 	-- other variables
 
 	item = nil
-	itemPalette = nil -- set if a palette is found when loading assets
+	standalonePalette = nil -- used for retro-compat w/ items created prior to 0.0.66
 
 	gridEnabled = false
 	currentFacemode = false
@@ -497,7 +497,7 @@ Client.OnStart = function()
 		for _, asset in ipairs(assets) do
 			t = type(asset)
 			if t == "Palette" then
-				itemPalette = asset
+				standalonePalette = asset
 			elseif (t == "Object" or t == "Shape" or t == "MutableShape") and asset:GetParent() == nil then
 				table.insert(shapesNotParented, asset)
 			end
@@ -2974,6 +2974,10 @@ function post_item_load()
 	colorPicker:hide()
 
 	palette = require("palette"):create(ui, ui_config.btnColor)
+	if standalonePalette ~= nil then
+		-- as of 0.0.66, the standalone palette isn't used anymore, merge it for retro-compat
+		item.Palette:Merge(standalonePalette)
+	end
 	palette:setColors(item)
 
 	colorPicker.didPickColor = function(_, color)
