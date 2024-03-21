@@ -809,7 +809,10 @@ click = function(e)
 	elseif currentEditSubmode == editSubmode.select then
 		selectFocusShape(shape)
 	end
-	if impact ~= nil then
+
+	if impact ~= nil and (currentEditSubmode == editSubmode.add or
+						  currentEditSubmode == editSubmode.remove or
+						  currentEditSubmode == editSubmode.paint) then
 		checkAutoSave()
 		refreshUndoRedoButtons()
 	end
@@ -1177,7 +1180,6 @@ initClientFunctions = function()
 		end
 
 		changesSinceLastSave = false
-		autoSaveDT = 0.0
 
 		saveBtn.label.Text = "✅"
 	end
@@ -1810,7 +1812,6 @@ function savePOI()
 	-- Save new point coords/rotation
 	item:AddPoint(poiActiveName, modelPoint, item.LocalRotation)
 
-	changesSinceLastSave = false
 	checkAutoSave()
 end
 
@@ -1989,7 +1990,8 @@ function ui_init()
 			-- refresh UI
 			gridEnabled = false
 			refreshUndoRedoButtons()
-			changesSinceLastSave = true
+
+			checkAutoSave()
 		end)
 	end
 
@@ -2516,6 +2518,8 @@ function ui_init()
 		s.Position = focusShape.Position - Number3(focusShape.Width / 2 + 2, 0, 0)
 		table.insert(shapes, s)
 		selectFocusShape(s)
+
+		checkAutoSave()
 	end
 
 	importChildBtn = createButton("📥 Import", ui_config.btnColor, ui_config.btnColorSelected)
@@ -2554,7 +2558,8 @@ function ui_init()
 			-- refresh UI
 			gridEnabled = false
 			refreshUndoRedoButtons()
-			changesSinceLastSave = true
+			
+			checkAutoSave()
 		end)
 	end
 
@@ -2572,6 +2577,8 @@ function ui_init()
 		focusShape:RemoveFromParent()
 		selectFocusShape()
 		removeShapeBtn:hide()
+
+		checkAutoSave()
 	end
 
 	local nameInput = ui:createTextInput("", "Object Name")
