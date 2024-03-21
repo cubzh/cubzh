@@ -826,7 +826,11 @@ up = function(_)
 	if shape then
 		shape.KeepHistoryTransactionPending = false
 	end
-	continuousEdition = false
+
+	if continuousEdition then
+		refreshUndoRedoButtons()
+		continuousEdition = false
+	end
 end
 
 Client.OnPlayerJoin = function(_)
