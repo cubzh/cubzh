@@ -13,6 +13,27 @@
 
 // MARK: - Private functions -
 
+void _color_palette_free(ColorPalette *p) {
+    if (p == NULL) {
+        return;
+    }
+    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
+    if (a != NULL) {
+        color_atlas_remove_palette(a, p);
+    }
+    weakptr_release(p->refAtlas);
+    free(p->entries);
+    if (p->orderedIndices != NULL) {
+        free(p->orderedIndices);
+    }
+    if (p->availableIndices != NULL) {
+        fifo_list_free(p->availableIndices, free);
+    }
+    hash_uint32_int_free(p->colorToIdx);
+    weakptr_invalidate(p->wptr);
+    free(p);
+}
+
 void _color_palette_unmap_entry_and_remap_duplicate(ColorPalette *p,
                                                     SHAPE_COLOR_INDEX_INT_T entry) {
     int idx;
@@ -51,6 +72,7 @@ ColorPalette *color_palette_new(ColorAtlas *atlas) {
     p->orderedCount = 0;
     p->lighting_dirty = false;
     p->wptr = NULL;
+    p->refCount = 1;
     return p;
 }
 
@@ -72,6 +94,7 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
     p->orderedCount = count;
     p->lighting_dirty = false;
     p->wptr = NULL;
+    p->refCount = 1;
 
     for (SHAPE_COLOR_INDEX_INT_T i = 0; i < count; ++i) {
         p->entries[i].color = colors[i];
@@ -102,25 +125,21 @@ ColorPalette *color_palette_new_copy(const ColorPalette *src) {
     return dst;
 }
 
-void color_palette_free(ColorPalette *p) {
-    if (p == NULL) {
-        return;
+bool color_palette_retain(ColorPalette *p) {
+    if (p->refCount < UINT16_MAX) {
+        ++(p->refCount);
+        return true;
     }
-    ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
-    if (a != NULL) {
-        color_atlas_remove_palette(a, p);
+    cclog_error("color_palette_retain: maximum refCount reached!");
+    return false;
+}
+
+bool color_palette_release(ColorPalette *p) {
+    if (p != NULL && --(p->refCount) == 0) {
+        _color_palette_free(p);
+        return true;
     }
-    weakptr_release(p->refAtlas);
-    free(p->entries);
-    if (p->orderedIndices != NULL) {
-        free(p->orderedIndices);
-    }
-    if (p->availableIndices != NULL) {
-        fifo_list_free(p->availableIndices, free);
-    }
-    hash_uint32_int_free(p->colorToIdx);
-    weakptr_invalidate(p->wptr);
-    free(p);
+    return false;
 }
 
 uint8_t color_palette_get_count(const ColorPalette *p) {
@@ -215,34 +234,22 @@ bool color_palette_check_and_add_color(ColorPalette *p,
 bool color_palette_check_and_add_default_color_2021(ColorPalette *p,
                                                     SHAPE_COLOR_INDEX_INT_T defaultIdx,
                                                     SHAPE_COLOR_INDEX_INT_T *entryOut) {
-    RGBAColor *color = color_palette_get_color(
+    RGBAColor color = color_palette_get_color(
         color_palette_get_default_2021(weakptr_get(p->refAtlas)),
         defaultIdx);
-    if (color == NULL) {
-        if (entryOut != NULL) {
-            *entryOut = SHAPE_COLOR_INDEX_AIR_BLOCK;
-        }
-        return false; // color not found and should not be used
-    }
-    return color_palette_check_and_add_color(p, *color, entryOut, false);
+    return color_palette_check_and_add_color(p, color, entryOut, false);
 }
 
 bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
                                                       SHAPE_COLOR_INDEX_INT_T defaultIdx,
                                                       SHAPE_COLOR_INDEX_INT_T *entryOut) {
-    RGBAColor *color = color_palette_get_color(
+    RGBAColor color = color_palette_get_color(
         color_palette_get_default_pico8p(weakptr_get(p->refAtlas)),
         defaultIdx);
-    if (color == NULL) {
-        if (entryOut != NULL) {
-            *entryOut = SHAPE_COLOR_INDEX_AIR_BLOCK;
-        }
-        return false; // color not found and should not be used
-    }
-    return color_palette_check_and_add_color(p, *color, entryOut, false);
+    return color_palette_check_and_add_color(p, color, entryOut, false);
 }
 
-void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
+void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, uint32_t count) {
     if (entry >= p->count) {
         return;
     }
@@ -255,16 +262,17 @@ void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entr
                                                                            p->entries[entry].color);
         }
     }
-    p->entries[entry].blocksCount++;
+    p->entries[entry].blocksCount += count;
 }
 
-void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
+void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, uint32_t count) {
     if (entry >= p->count) {
         return;
     }
 
     if (p->entries[entry].blocksCount > 0) {
-        p->entries[entry].blocksCount--;
+        vx_assert_d(p->entries[entry].blocksCount >= count);
+        p->entries[entry].blocksCount -= count;
 
         // color becomes unused
         ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
@@ -362,11 +370,11 @@ void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGB
     hash_uint32_int_set(p->colorToIdx, color_to_uint32(&color), entry);
 }
 
-RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
+RGBAColor color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry) {
     if (entry >= p->count) {
-        return NULL;
+        return RGBAColor_clear;
     }
-    return &p->entries[entry].color;
+    return p->entries[entry].color;
 }
 
 void color_palette_set_emissive(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool toggle) {

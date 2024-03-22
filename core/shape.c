@@ -45,8 +45,10 @@
 struct _Shape {
     Weakptr *wptr;
 
-    // list of colors used by the shape model, mapped onto color atlas indices
+    // list of colors mapped onto color atlas indices, can be shared between shapes
     ColorPalette *palette;
+    // shape's own palette entry usage count
+    uint32_t *blocksCount;
 
     // points of interest
     MapStringFloat3 *POIs;          // 8 bytes
@@ -221,6 +223,7 @@ Shape *shape_make(void) {
 
     s->wptr = NULL;
     s->palette = NULL;
+    s->blocksCount = (uint32_t *)calloc(SHAPE_COLOR_INDEX_MAX_COUNT, sizeof(uint32_t));
 
     s->POIs = map_string_float3_new();
     s->pois_rotation = map_string_float3_new();
@@ -272,6 +275,7 @@ Shape *shape_make_copy(Shape *const origin) {
 
     Shape *const s = shape_make();
     s->palette = color_palette_new_copy(origin->palette);
+    memcpy(s->blocksCount, origin->blocksCount, SHAPE_COLOR_INDEX_MAX_COUNT * sizeof(uint32_t));
 
     // copy each point of interest
     MapStringFloat3Iterator *it = NULL;
@@ -492,6 +496,12 @@ VertexBuffer *shape_add_buffer(Shape *shape, bool transparency) {
 
 void shape_flush(Shape *shape) {
     if (shape != NULL) {
+        // remove own blocks count from (potentially shared) palette
+        const uint8_t count = color_palette_get_count(shape->palette);
+        for (uint8_t i = 0; i < count; ++i) {
+            color_palette_decrement_color(shape->palette, i, shape->blocksCount[i]);
+        }
+        memset(shape->blocksCount, 0, SHAPE_COLOR_INDEX_MAX_COUNT * sizeof(uint32_t));
 
         index3d_flush(shape->chunks, chunk_free_func);
 
@@ -555,9 +565,16 @@ void shape_free(Shape *const shape) {
     weakptr_invalidate(shape->wptr);
 
     if (shape->palette != NULL) {
-        color_palette_free(shape->palette);
+        // remove own blocks count from (potentially shared) palette
+        const uint8_t count = color_palette_get_count(shape->palette);
+        for (uint8_t i = 0; i < count; ++i) {
+            color_palette_decrement_color(shape->palette, i, shape->blocksCount[i]);
+        }
+
+        color_palette_release(shape->palette);
         shape->palette = NULL;
     }
+    free(shape->blocksCount);
 
     if (shape->POIs != NULL) {
         map_string_float3_free(shape->POIs);
@@ -804,7 +821,8 @@ bool shape_add_block(Shape *shape,
 
         shape_expand_box(shape, (SHAPE_COORDS_INT3_T){x, y, z});
 
-        color_palette_increment_color(shape->palette, colorIndex);
+        color_palette_increment_color(shape->palette, colorIndex, 1);
+        ++shape->blocksCount[colorIndex];
 
         if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
             shape_compute_baked_lighting_added_block(shape,
@@ -857,7 +875,8 @@ bool shape_remove_block(Shape *shape,
                                                            prevColor);
             }
 
-            color_palette_decrement_color(shape->palette, prevColor);
+            color_palette_decrement_color(shape->palette, prevColor, 1);
+            --shape->blocksCount[prevColor];
         }
 
         // if chunk is now empty, do not destroy it right now and wait until shape_refresh_vertices:
@@ -894,8 +913,11 @@ bool shape_paint_block(Shape *shape,
                                     colorIndex,
                                     &prevColor);
         if (painted) {
-            color_palette_decrement_color(shape->palette, prevColor);
-            color_palette_increment_color(shape->palette, colorIndex);
+            color_palette_decrement_color(shape->palette, prevColor, 1);
+            color_palette_increment_color(shape->palette, colorIndex, 1);
+
+            --shape->blocksCount[prevColor];
+            ++shape->blocksCount[colorIndex];
 
             _shape_chunk_enqueue_refresh(shape, chunk);
 
@@ -916,11 +938,24 @@ ColorPalette *shape_get_palette(const Shape *shape) {
     return shape->palette;
 }
 
-void shape_set_palette(Shape *shape, ColorPalette *palette) {
+/// @param retain can be set to false if given palette already accounts for shape's ownership
+void shape_set_palette(Shape *shape, ColorPalette *palette, const bool retain) {
     if (shape->palette != NULL) {
-        color_palette_free(shape->palette);
+        // transfer blocks count to new palette
+        const uint8_t count = color_palette_get_count(shape->palette);
+        for (uint8_t i = 0; i < count; ++i) {
+            color_palette_decrement_color(shape->palette, i, shape->blocksCount[i]);
+            color_palette_increment_color(palette, i, shape->blocksCount[i]);
+        }
+
+        color_palette_release(shape->palette);
+    }
+    if (retain) {
+        color_palette_retain(palette);
     }
     shape->palette = palette;
+
+    shape_refresh_all_vertices(shape);
 }
 
 const Block *shape_get_block(const Shape *const shape,
@@ -3322,7 +3357,7 @@ void _light_block_propagate(Shape *s,
     if (air || transparent) {
         // if transparent, first reduce incoming light values
         if (transparent) {
-            float a = (float)color_palette_get_color(s->palette, neighbor->colorIndex)->a / 255.0f;
+            float a = (float)color_palette_get_color(s->palette, neighbor->colorIndex).a / 255.0f;
 #if TRANSPARENCY_ABSORPTION_FUNC == 1
             a = easings_quadratic_in(a);
 #elif TRANSPARENCY_ABSORPTION_FUNC == 2

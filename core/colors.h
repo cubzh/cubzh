@@ -25,6 +25,8 @@ typedef struct RGBAColor {
     uint8_t a;
 } RGBAColor;
 
+static const RGBAColor RGBAColor_clear = {0, 0, 0, 0};
+
 typedef struct {
     double r; // a fraction between 0 and 1
     double g; // a fraction between 0 and 1

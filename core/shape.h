@@ -90,7 +90,7 @@ void shape_flush(Shape *shape);
 
 // access palette reference to get or set the colors
 ColorPalette *shape_get_palette(const Shape *shape);
-void shape_set_palette(Shape *shape, ColorPalette *palette);
+void shape_set_palette(Shape *shape, ColorPalette *palette, const bool retain);
 
 /// Gets the block in model OR transactions
 const Block *shape_get_block(const Shape *const shape,

@@ -180,7 +180,7 @@ void serialization_assets_free_func(void *ptr) {
             transform_release((Transform *)a->ptr);
             break;
         case AssetType_Palette:
-            color_palette_free((ColorPalette *)a->ptr);
+            color_palette_release((ColorPalette *)a->ptr);
             break;
         default:
             break;
