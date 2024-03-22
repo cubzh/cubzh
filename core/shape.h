@@ -273,7 +273,7 @@ bool shape_ensure_rigidbody(Shape *s,
                             const uint16_t collidesWith,
                             RigidBody **out);
 void shape_fit_collider_to_bounding_box(const Shape *s);
-const Box *shape_get_local_collider(const Shape *s);
+Box shape_get_model_collider(const Shape *s);
 void shape_compute_world_collider(const Shape *s, Box *box);
 
 /// @param s shape model used as obstacle against a moving object
