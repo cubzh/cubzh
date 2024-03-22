@@ -1697,7 +1697,7 @@ initClientFunctions = function()
 
 		cameraCurrentState.cameraMode = cameraModes.SATELLITE
 		cameraCurrentState.target = targetPoint
-		cameraCurrentState.cameraDistance = distance
+		cameraCurrentState.cameraDistance = math.max(distance, settings.zoomMin)
 		if rotation ~= nil then
 			cameraCurrentState.rotation = rotation
 		end
