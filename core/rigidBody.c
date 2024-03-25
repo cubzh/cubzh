@@ -407,11 +407,14 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     normal = rtreeNormal;
                 } else {
                     shape = transform_utils_get_shape(hitLeaf);
+                    const bool hitPerBlock = shape != NULL &&
+                                             rigidbody_uses_per_block_collisions(hitRb);
 
                     // solve non-dynamic rigidbodies in their model space (rotated collider)
-                    const Box *collider = rigidbody_get_collider(hitRb);
+                    const Box collider = hitPerBlock ? shape_get_model_aabb(shape)
+                                                     : *rigidbody_get_collider(hitRb);
                     const Matrix4x4 *invModel = transform_get_wtl(
-                        shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
+                        transform_utils_get_model_transform(hitLeaf));
                     rigidbody_broadphase_world_to_model(invModel,
                                                         worldCollider,
                                                         &modelBox,
@@ -421,9 +424,9 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                         &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
-                    if (box_collide(&modelBroadphase, collider)) {
+                    if (box_collide(&modelBroadphase, &collider)) {
                         // shapes may enable per-block collisions
-                        if (shape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                        if (hitPerBlock) {
                             swept = shape_box_cast(shape,
                                                    &modelBox,
                                                    &modelDv,
@@ -449,8 +452,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                             swept = rtreeSwept;
                             normal = rtreeNormal;
                         } else {
-                            model = transform_get_ltw(
-                                shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
+                            model = transform_get_ltw(transform_utils_get_model_transform(hitLeaf));
                         }
                     } else {
                         swept = 1.0f;
@@ -781,8 +783,10 @@ void _rigidbody_trigger_tick(Scene *scene,
                                 EPSILON_COLLISION) > 0) {
 
         const Shape *s = transform_utils_get_shape(t);
+        const bool selfPerBlock = s != NULL && rigidbody_uses_per_block_collisions(rb);
 
-        const Box *selfCollider = rigidbody_get_collider(rb);
+        const Box selfCollider = selfPerBlock ? shape_get_model_aabb(s)
+                                              : *rigidbody_get_collider(rb);
         Transform *selfModelTr = transform_utils_get_model_transform(t);
         const Matrix4x4 *selfModel = transform_get_ltw(selfModelTr);
         const Matrix4x4 *selfInvModel = transform_get_wtl(selfModelTr);
@@ -810,8 +814,10 @@ void _rigidbody_trigger_tick(Scene *scene,
             }
 
             const Shape *hitShape = transform_utils_get_shape(hitLeaf);
+            const bool hitPerBlock = hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb);
 
-            Box hitCollider = *rigidbody_get_collider(hitRb);
+            Box hitCollider = hitPerBlock ? shape_get_model_aabb(hitShape)
+                                          : *rigidbody_get_collider(hitRb);
             Transform *hitModelTr = transform_utils_get_model_transform(hitLeaf);
             const Matrix4x4 *hitModel = transform_get_ltw(hitModelTr);
             const Matrix4x4 *hitInvModel = transform_get_wtl(hitModelTr);
@@ -825,14 +831,14 @@ void _rigidbody_trigger_tick(Scene *scene,
                                        NoSquarify);
 
             bool overlap1;
-            if (s != NULL && rigidbody_uses_per_block_collisions(rb)) {
+            if (selfPerBlock) {
                 overlap1 = shape_box_overlap(s, &box, NULL);
             } else {
-                overlap1 = box_collide_epsilon(&box, selfCollider, EPSILON_COLLISION);
+                overlap1 = box_collide_epsilon(&box, &selfCollider, EPSILON_COLLISION);
             }
 
             // 2) check for overlap in hit model space (ignoring self shape per-block quality)
-            box_model1_to_model2_aabox(selfCollider,
+            box_model1_to_model2_aabox(&selfCollider,
                                        &box,
                                        selfModel,
                                        hitInvModel,
@@ -840,7 +846,7 @@ void _rigidbody_trigger_tick(Scene *scene,
                                        NoSquarify);
 
             bool overlap2;
-            if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+            if (hitPerBlock) {
                 overlap2 = shape_box_overlap(hitShape, &box, &hitCollider); // out: block box
             } else {
                 overlap2 = box_collide_epsilon(&box, &hitCollider, EPSILON_COLLISION);

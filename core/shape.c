@@ -1829,28 +1829,28 @@ bool shape_ensure_rigidbody(Shape *s, uint16_t groups, uint16_t collidesWith, Ri
 }
 
 void shape_fit_collider_to_bounding_box(const Shape *s) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
+    RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL || rigidbody_is_collider_custom_set(rb))
         return;
     const Box aabb = shape_get_model_aabb(s);
     rigidbody_set_collider(rb, &aabb, false);
 }
 
-const Box *shape_get_local_collider(const Shape *s) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
+Box shape_get_model_collider(const Shape *s) {
+    RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL)
-        return NULL;
-    return rigidbody_get_collider(rb);
+        return box_zero;
+    return rigidbody_uses_per_block_collisions(rb) ? shape_get_model_aabb(s)
+                                                   : *rigidbody_get_collider(rb);
 }
 
 void shape_compute_world_collider(const Shape *s, Box *box) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
+    RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL)
         return;
-    shape_box_to_aabox(s, rigidbody_get_collider(rb), box, true);
+    Box collider = rigidbody_uses_per_block_collisions(rb) ? shape_get_model_aabb(s)
+                                                           : *rigidbody_get_collider(rb);
+    shape_box_to_aabox(s, &collider, box, true);
 }
 
 typedef struct {
