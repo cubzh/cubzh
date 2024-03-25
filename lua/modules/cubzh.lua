@@ -883,10 +883,6 @@ initPlayer = function(p)
 			jumpParticles:spawn(10)
 			sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
 		end
-		skills.addStepClimbing(Player, {
-			mapScale = MAP_SCALE,
-			collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS + BUILDING_COLLISION_GROUPS,
-		})
 		skills.addJump(Player, {
 			maxGroundDistance = 1.0,
 			airJumps = 1,
@@ -912,6 +908,11 @@ initPlayer = function(p)
 
 		p.Head:AddChild(AudioListener) -- Adding an audio listener to the player
 	end
+
+	skills.addStepClimbing(p, {
+		mapScale = MAP_SCALE,
+		collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS + BUILDING_COLLISION_GROUPS,
+	})
 
 	World:AddChild(p) -- Adding the player to the world
 	p.Physics = PhysicsMode.Dynamic
