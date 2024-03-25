@@ -196,7 +196,7 @@ function createUI(system)
 	end
 
 	rootFrame:SetParent(World)
-	rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR }
+	rootFrame.LocalPosition = Number3(-Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR)
 
 	-----------------------------
 	-- PRIVATE FUNCTIONS
@@ -218,7 +218,7 @@ function createUI(system)
 		if collides and object.Width ~= nil and object.Height ~= nil then
 			object.Physics = PhysicsMode.Trigger
 			_setCollisionGroups(object)
-			object.CollisionBox = Box({ 0, 0, 0 }, { object.Width, object.Height, 0.1 })
+			object.CollisionBox = Box(Number3.Zero, Number3(object.Width, object.Height, 0.1))
 		end
 	end
 
@@ -432,12 +432,12 @@ function createUI(system)
 		background.Scale.X = totalWidth
 		background.Scale.Y = totalHeight
 
-		background.LocalPosition = { 0, 0, 0 }
+		background.LocalPosition = Number3.Zero
 
 		content.LocalPosition = { totalWidth * 0.5 - content.Width * 0.5, totalHeight * 0.5 - content.Height * 0.5 }
 
 		if #self.borders > 0 then
-			content.LocalPosition = { paddingLeft, paddingBottom, 0 }
+			content.LocalPosition = Number3(paddingLeft, paddingBottom, 0)
 			local top = self.borders[1]
 			local right = self.borders[2]
 			local bottom = self.borders[3]
@@ -445,31 +445,31 @@ function createUI(system)
 
 			top.Scale.X = totalWidth
 			top.Scale.Y = BUTTON_BORDER
-			top.LocalPosition = { 0, totalHeight - BUTTON_BORDER, LAYER_STEP }
+			top.LocalPosition = Number3(0, totalHeight - BUTTON_BORDER, LAYER_STEP)
 
 			right.Scale.X = BUTTON_BORDER
 			right.Scale.Y = totalHeight - BUTTON_BORDER * 2
-			right.LocalPosition = { totalWidth - BUTTON_BORDER, BUTTON_BORDER, LAYER_STEP }
+			right.LocalPosition = Number3(totalWidth - BUTTON_BORDER, BUTTON_BORDER, LAYER_STEP)
 
 			bottom.Scale.X = totalWidth
 			bottom.Scale.Y = BUTTON_BORDER
-			bottom.LocalPosition = { 0, 0, LAYER_STEP }
+			bottom.LocalPosition = Number3(0, 0, LAYER_STEP)
 
 			left.Scale.X = BUTTON_BORDER
 			left.Scale.Y = totalHeight - BUTTON_BORDER * 2
-			left.LocalPosition = { 0, BUTTON_BORDER, LAYER_STEP }
+			left.LocalPosition = Number3(0, BUTTON_BORDER, LAYER_STEP)
 		end
 
 		if self.underline ~= nil then
 			self.underline.Scale.X = totalWidth
 			self.underline.Scale.Y = BUTTON_UNDERLINE
-			self.underline.LocalPosition = { 0, 0, LAYER_STEP }
+			self.underline.LocalPosition = Number3(0, 0, LAYER_STEP)
 		end
 
 		if self.shadow then
 			self.shadow.Scale.X = totalWidth - BUTTON_BORDER * 2
 			self.shadow.Scale.Y = BUTTON_BORDER
-			self.shadow.LocalPosition = { BUTTON_BORDER, -BUTTON_BORDER, 0 }
+			self.shadow.LocalPosition = Number3(BUTTON_BORDER, -BUTTON_BORDER, 0)
 		end
 	end
 
@@ -617,7 +617,7 @@ function createUI(system)
 				elseif v ~= nil then
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
-					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+					background.CollisionBox = Box(Number3.Zero, Number3(background.Width, background.Height, 0.1))
 					t._onPress = function()
 						if v ~= nil then
 							v()
@@ -650,7 +650,7 @@ function createUI(system)
 				elseif v ~= nil then
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
-					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+					background.CollisionBox = Box(Number3.Zero, Number3(background.Width, background.Height, 0.1))
 					t._onRelease = function()
 						if v ~= nil then
 							v()
@@ -890,7 +890,7 @@ function createUI(system)
 			minZ = aabb2.Min.Z
 		end
 
-		return Box({ minX, minY, minZ }, { maxX, maxY, maxZ })
+		return Box(Number3(minX, minY, minZ), Number3(maxX, maxY, maxZ))
 	end
 
 	local function _computeDescendantsBoundingBox(root)
@@ -913,7 +913,7 @@ function createUI(system)
 		end)
 
 		if boundingBox == nil then
-			boundingBox = Box({ 0, 0, 0 }, { 0, 0, 0 })
+			boundingBox = Box(Number3.Zero, Number3.Zero)
 		end
 
 		return boundingBox
@@ -1045,7 +1045,7 @@ function createUI(system)
 		node.shapeContainer.LocalPosition = Number3.Zero
 
 		if not node._config.doNotFlip then
-			node.pivot.LocalRotation = { 0, math.pi, 0 } -- shape's front facing camera
+			node.pivot.LocalRotation = Rotation(0, math.pi, 0) -- shape's front facing camera
 		else
 			node.pivot.LocalRotation = Rotation(0, 0, 0) -- shape's back facing camera
 		end
@@ -1073,7 +1073,7 @@ function createUI(system)
 
 		if node._config.spherized then
 			local radius = node.Width * 0.5
-			node.pivot.LocalPosition = { radius, radius, radius }
+			node.pivot.LocalPosition = Number3(radius, radius, radius)
 		else
 			node.pivot.LocalPosition = Number3(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
@@ -1151,10 +1151,10 @@ function createUI(system)
 		textContainer.Width = node.Width - border * 2
 		textContainer.Height = node.Height - border * 2
 
-		textContainer.pos = { border, border, 0 }
+		textContainer.pos = Number3(border, border, 0)
 
-		placeholder.pos = { padding, textContainer.Height * 0.5 - placeholder.Height * 0.5, 0 }
-		str.pos = { padding, textContainer.Height * 0.5 - str.Height * 0.5, 0 }
+		placeholder.pos = Number3(padding, textContainer.Height * 0.5 - placeholder.Height * 0.5, 0)
+		str.pos = Number3(padding, textContainer.Height * 0.5 - str.Height * 0.5, 0)
 		if hiddenStr ~= nil then
 			hiddenStr.pos = str.pos
 		end
@@ -1172,9 +1172,9 @@ function createUI(system)
 			cursor.Height = str.Height
 
 			if hiddenStr ~= nil and hiddenStr:isVisible() then
-				cursor.pos = hiddenStr.pos + { hiddenStr.Width, 0, 0 }
+				cursor.pos = hiddenStr.pos + Number3(hiddenStr.Width, 0, 0)
 			else
-				cursor.pos = str.pos + { str.Width, 0, 0 }
+				cursor.pos = str.pos + Number3(str.Width, 0, 0)
 			end
 		else
 			cursor:hide()
@@ -1212,7 +1212,7 @@ function createUI(system)
 	ui.createNode = function(_)
 		local node = _nodeCreate()
 		node.object = Object()
-		node.object.LocalPosition = { 0, 0, 0 }
+		node.object.LocalPosition = Number3.Zero
 
 		node:setParent(rootFrame)
 
@@ -1323,12 +1323,12 @@ function createUI(system)
 
 		node._setWidth = function(self, v)
 			self.background.Width = v
-			self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+			self.background.CollisionBox = Box(Number3.Zero, Number3(background.Width, background.Height, 0.1))
 		end
 
 		node._setHeight = function(self, v)
 			self.background.Height = v
-			self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+			self.background.CollisionBox = Box(Number3.Zero, Number3(background.Width, background.Height, 0.1))
 		end
 
 		if config ~= nil and config.image ~= nil then
@@ -1338,7 +1338,7 @@ function createUI(system)
 			node:setImage(config.image)
 		end
 
-		node.object.LocalPosition = { 0, 0, 0 }
+		node.object.LocalPosition = Number3.Zero
 
 		node:setParent(rootFrame)
 
@@ -1559,7 +1559,7 @@ function createUI(system)
 		end
 
 		local t = Text()
-		t.Anchor = { 0, 0 }
+		t.Anchor = Number2(0, 0)
 		t.Type = TextType.World
 		_setLayers(t)
 		t.Text = str
@@ -1580,7 +1580,7 @@ function createUI(system)
 		t.Physics = PhysicsMode.Disabled
 		t.CollisionGroups = {}
 		t.CollidesWithGroups = {}
-		t.LocalPosition = { 0, 0, 0 }
+		t.LocalPosition = Number3.Zero
 
 		node.object = t
 
@@ -1641,7 +1641,7 @@ function createUI(system)
 
 		node.background = self:createFrame()
 		node.background:setParent(node)
-		node.background.pos = { theme.textInputBorderSize, theme.textInputBorderSize, 0 }
+		node.background.pos = Number3(theme.textInputBorderSize, theme.textInputBorderSize, 0)
 
 		local textContainer = ui:createFrame(Color.transparent)
 		textContainer:setParent(node)
@@ -2088,12 +2088,12 @@ function createUI(system)
 				if direction == "down" then
 					y = y - height
 					if v then
-						v.pos = { 0, y }
+						v.pos = Number2(0, y)
 					end
 					y = y - cellPadding
 				else
 					if v then
-						v.pos = { 0, y }
+						v.pos = Number2(0, y)
 					end
 					y = y + height
 					y = y + cellPadding
@@ -2647,7 +2647,7 @@ function createUI(system)
 			local frame = ui:createFrame(Color(255, 255, 255))
 			frame:setParent(selector)
 			frame.IsMask = true
-			frame.pos = { theme.paddingTiny, theme.paddingTiny }
+			frame.pos = Number2(theme.paddingTiny, theme.paddingTiny)
 			frame.Width = btn.Width + theme.padding * 2
 
 			local choiceButtons = {}
@@ -2883,10 +2883,10 @@ function createUI(system)
 				container.pos.Y = frame.Height - container.Height
 			end
 
-			up.pos = { 0, frame.Height - up.Height }
+			up.pos = Number2(0, frame.Height - up.Height)
 			up.Width = frame.Width
 
-			down.pos = { 0, 0 }
+			down.pos = Number2.Zero
 			down.Width = frame.Width
 
 			selector.close = function(_)
@@ -2913,7 +2913,7 @@ function createUI(system)
 		camera.Width = Screen.Width
 		camera.Height = Screen.Height
 
-		rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR }
+		rootFrame.LocalPosition = Number3(-Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR)
 
 		if
 			currentFontSize ~= Text.FontSizeDefault
