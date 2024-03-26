@@ -754,19 +754,11 @@ end
 Pointer.LongPress = function() end
 longPress = function(e)
 	if currentMode == mode.edit then
-		local impact = nil
+		local impact = e:CastRay()
 		selectedShape = nil
-		local impactDistance = 1000000000
-		for _, subShape in ipairs(shapes) do
-			local tmpImpact = e:CastRay(subShape, mirrorShape)
-			if tmpImpact and tmpImpact.Distance < impactDistance then
-				selectedShape = subShape
-				impactDistance = tmpImpact.Distance
-				impact = tmpImpact
-			end
-		end
 
 		if impact.Block ~= nil then
+			selectedShape = impact.Shape
 			selectedShape.KeepHistoryTransactionPending = true
 
 			continuousEdition = true
@@ -877,22 +869,7 @@ Pointer.Drag2End = function() end
 drag2End = function()
 	-- snaps to nearby block center after drag2 (camera pan)
 	if dragging2 then
-		local impact
-		local shape
-		local impactDistance = 1000000000
-		for _, subShape in ipairs(shapes) do
-			local tmpImpact = Camera:CastRay(subShape)
-			if tmpImpact and tmpImpact.Distance < impactDistance then
-				shape = subShape
-				impactDistance = tmpImpact.Distance
-				impact = tmpImpact
-			end
-		end
-
-		if shape ~= nil then
-			impact = Camera:CastRay(shape)
-		end
-
+		local impact = Camera:CastRay()
 		if impact.Block ~= nil then
 			local target = impact.Block.Position + halfVoxel
 			cameraCurrentState.cameraMode = cameraModes.SATELLITE
@@ -974,6 +951,9 @@ initClientFunctions = function()
 				item.LocalRotation = { 0, 0, 0 }
 
 				Client.DirectionalPad = nil
+
+				blockHighlight.IsHidden = false
+				blockHighlightDirty = true
 			else -- place item points / preview
 				cameraCurrentState = cameraStates.preview
 				-- make player appear in front of camera with item in hand
@@ -1010,6 +990,9 @@ initClientFunctions = function()
 				end
 
 				Client.DirectionalPad = nil
+
+				blockHighlight.IsHidden = true
+				blockHighlightDirty = false
 			end
 
 			refreshUndoRedoButtons()
@@ -1614,27 +1597,13 @@ initClientFunctions = function()
 	end
 
 	refreshBlockHighlight = function()
-		local shape
-		local impactDistance = 1000000000
-		for _, subShape in ipairs(shapes) do
-			local tmpImpact = Camera:CastRay(subShape)
-			if tmpImpact and tmpImpact.Distance < impactDistance then
-				shape = subShape
-				impactDistance = tmpImpact.Distance
-			end
-		end
-
-		local impact
-		if shape ~= nil then
-			impact = Camera:CastRay(shape)
-		end
-
+		local impact = Camera:CastRay()
 		if impact.Block ~= nil then
 			local halfVoxelVec = Number3(0.5, 0.5, 0.5)
-			halfVoxelVec:Rotate(shape.Rotation)
+			halfVoxelVec:Rotate(impact.Shape.Rotation)
 			blockHighlight.Position = impact.Block.Position + halfVoxelVec
 			blockHighlight.IsHidden = false
-			blockHighlight.Rotation = shape.Rotation
+			blockHighlight.Rotation = impact.Shape.Rotation
 		else
 			blockHighlight.IsHidden = true
 		end
