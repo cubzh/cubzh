@@ -1124,7 +1124,7 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(po
 			end
 		end
 	end
-end, { system = System })
+end, { system = System }) -- top priority?
 
 _state.sensitivityListener = LocalEvent:Listen(LocalEvent.Name.SensitivityUpdated, function()
 	_state.sensitivity = Pointer.Sensitivity

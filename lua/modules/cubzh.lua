@@ -48,6 +48,8 @@ local ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS = CollisionGroups(3, 4, 5)
 
 local DRAFT_COLLISION_GROUPS = CollisionGroups(6)
 
+local LIQUID_COLLISION_GROUPS = CollisionGroups(7)
+
 local TRIGGER_AREA_SIZE = Number3(60, 30, 60)
 
 local LIGHT_COLOR = Color(244, 210, 87)
@@ -56,6 +58,8 @@ local LIGHT_COLOR = Color(244, 210, 87)
 -- local TIME_TO_HATCH = 120
 
 Client.OnStart = function()
+	-- Camera.Color = Color(200, 0, 0)
+
 	dialog = require("dialog")
 	dialog:setMaxWidth(400)
 	multi = require("multi")
@@ -837,6 +841,7 @@ initPlayer = function(p)
 			rigidity = 0.4,
 			target = p,
 			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			rotatesWithTarget = false,
 		})
 
 		jumpParticles = particles:newEmitter({
@@ -977,7 +982,7 @@ end
 function mapEffects()
 	local sea = Map:GetChild(1)
 	sea.Physics = PhysicsMode.TriggerPerBlock -- let the player go through
-	sea.CollisionGroups = {}
+	sea.CollisionGroups = LIQUID_COLLISION_GROUPS
 	sea.CollidesWithGroups = { 2 }
 	sea.InnerTransparentFaces = false -- no inner surfaces for the renderer
 	sea.LocalPosition = { 0, 1, 0 } -- placement
@@ -1414,6 +1419,7 @@ playerControls.exitVehicle = function(self, player)
 			rigidity = 0.4,
 			target = player,
 			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			rotatesWithTarget = false,
 		})
 		Camera.FOV = cameraDefaultFOV
 	end
@@ -1456,13 +1462,37 @@ playerControls.walk = function(self, player)
 
 	if player == Player then
 		self.onDrag = function(pe)
-			Player.LocalRotation = Rotation(0, pe.DX * 0.01, 0) * Player.LocalRotation
-			Player.Head.LocalRotation = Rotation(-pe.DY * 0.01, 0, 0) * Player.Head.LocalRotation
+			-- Player.LocalRotation = Rotation(0, pe.DX * 0.01, 0) * Player.LocalRotation
+			-- Player.Head.LocalRotation = Rotation(-pe.DY * 0.01, 0, 0) * Player.Head.LocalRotation
 			local dpad = require("controls").DirectionalPadValues
 			Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
+
+			require("camera_modes"):setThirdPerson({
+				rigidity = 0.4,
+				rotation = Rotation(0, pe.DX * 0.01, 0) * Rotation(-pe.DY * 0.01, 0, 0) * Camera.Rotation,
+				target = Player,
+				collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+				rotatesWithTarget = false,
+			})
 		end
 		self.dirPad = function(x, y)
 			Player.Motion = (Player.Forward * y + Player.Right * x) * 50
+
+			-- if Player.Motion.SquaredLength > 0 then
+			-- 	require("camera_modes"):setThirdPerson({
+			-- 		rigidity = 0.4,
+			-- 		target = Player,
+			-- 		collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			-- 		rotatesWithTarget = true,
+			-- 	})
+			-- else
+			-- 	require("camera_modes"):setThirdPerson({
+			-- 		rigidity = 0.4,
+			-- 		target = Player,
+			-- 		collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			-- 		rotatesWithTarget = false,
+			-- 	})
+			-- end
 		end
 		updateSync()
 	end
@@ -1640,6 +1670,7 @@ playerControls.glide = function(self, player)
 			target = vehicle,
 			rotationOffset = Rotation(math.rad(20), 0, 0),
 			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			rotatesWithTarget = true,
 		})
 
 		self.onDrag = function(pe)
