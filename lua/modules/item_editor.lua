@@ -1061,7 +1061,7 @@ initClientFunctions = function()
 			end)
 		end
 
-		item:Save(Environment.itemFullname)
+		item:Save(Environment.itemFullname, nil, itemCategory)
 
 		if isModeChangePivot then
 			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
