@@ -7,6 +7,7 @@ signup.createModal = function(_, config)
 	local ease = require("ease")
 	local api = require("system_api", System)
 	local conf = require("config")
+	local str = require("str")
 
 	local defaultConfig = {
 		uikit = ui,
@@ -175,6 +176,7 @@ signup.createModal = function(_, config)
 	local checkUsernameRequest = nil
 	local checkUsernameKey = nil
 	local checkUsernameError = nil
+	local reportWrongFormatTimer = nil
 
 	-- callback(ok, key)
 	local checkUsername = function(callback, config)
@@ -220,6 +222,12 @@ signup.createModal = function(_, config)
 			usernameInfo.Text = "❌ must start with a-z char"
 			usernameInfo.Color = theme.errorTextColor
 			r = false
+			if reportWrongFormatTimer == nil then
+				System:DebugEvent("SIGNUP_WRONG_FORMAT_USERNAME", { username = s })
+				reportWrongFormatTimer = Timer(30, function() -- do not report again within the next 30 sec
+					reportWrongFormatTimer = nil
+				end)
+			end
 		elseif #s > 15 then
 			usernameInfo.Text = "❌ too long, 15 chars max"
 			usernameInfo.Color = theme.errorTextColor
@@ -228,6 +236,13 @@ signup.createModal = function(_, config)
 			usernameInfo.Text = "❌ a-z 0-9 chars only"
 			usernameInfo.Color = theme.errorTextColor
 			r = false
+			if reportWrongFormatTimer == nil then
+				print("REPORT WRONG FORMAT")
+				System:DebugEvent("SIGNUP_WRONG_FORMAT_USERNAME", { username = s })
+				reportWrongFormatTimer = Timer(30, function() -- do not report again within the next 30 sec
+					reportWrongFormatTimer = nil
+				end)
+			end
 		else
 			local function displayChecking()
 				usernameInfoFrame = 0
@@ -306,11 +321,21 @@ signup.createModal = function(_, config)
 		end
 	end
 
+	local didStartTyping = false
 	usernameInput.onTextChange = function(self)
 		local backup = self.onTextChange
 		self.onTextChange = nil
-		self.Text = string.lower(self.Text)
+
+		local s = str:normalize(self.Text)
+		s = str:toLower(s)
+
+		self.Text = s
 		self.onTextChange = backup
+
+		if didStartTyping == false and self.Text ~= "" then
+			didStartTyping = true
+			System:DebugEvent("SIGNUP_STARTED_TYPING_USERNAME")
+		end
 
 		checkUsernameKey = nil
 		checkUsernameError = nil
