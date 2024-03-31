@@ -34,6 +34,7 @@ function _localize(l, key, context)
 
 	if type(context) == "string" then
 		if type(v) ~= "table" then
+			print("v is not a table")
 			return
 		end
 		v = v[context]
@@ -60,20 +61,21 @@ function _localize(l, key, context)
 end
 
 local mt = {
-	__call = function(_, str)
+	__call = function(_, str, context)
 		if prefLanguages == nil then
-			prefLanguages = { "fr" }
-			-- prefLanguages = Client.PreferredLanguages
+			-- hack to test languages:
+			-- prefLanguages = { "pl" } -- ua
+			prefLanguages = Client.PreferredLanguages
 		end
 
 		local v
 		local l2
 		for _, l in ipairs(prefLanguages) do
-			v = _localize(l, str)
+			v = _localize(l, str, context)
 			if v == nil then
 				l2 = getLanguageWithoutRegion(l)
 				if l2 ~= "" and l2 ~= l then
-					v = _localize(l2, str)
+					v = _localize(l2, str, context)
 				end
 			end
 			if v ~= nil then

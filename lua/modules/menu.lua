@@ -1,5 +1,7 @@
 local menu = {}
 
+loc = require("localize")
+str = require("str")
 ui = require("uikit").systemUI(System)
 uiAvatar = require("ui_avatar")
 avatarModule = require("avatar")
@@ -2158,7 +2160,8 @@ signupElements = nil
 
 -- callbacks: success, cancel, error
 function showSignUp(callbacks)
-	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small", borders = false })
+	local helpBtn =
+		ui:createButton("👾 " .. str:upperFirstChar(loc("need help?")), { textSize = "small", borders = false })
 	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
 	helpBtn.onRelease = function()
 		URL:Open("https://cu.bzh/discord")
@@ -2354,13 +2357,15 @@ function skipTitleScreen()
 			under13DisclaimerNeedsApproval = function()
 				hideLoading()
 				showAlert({
-					message = "⚠️ Be safe online! ⚠️\n\nDo NOT share personal details, watch out for phishing, scams and always think about who you're talking to.\n\nIf anything goes wrong, talk to someone you trust. 🙂",
-					positiveLabel = "Yes sure!",
+					message = loc(
+						"⚠️ Be safe online! ⚠️\n\nDo NOT share personal details, watch out for phishing, scams and always think about who you're talking to.\n\nIf anything goes wrong, talk to someone you trust. 🙂"
+					),
+					positiveLabel = loc("Yes sure!"),
 					positiveCallback = function()
 						System.ApproveUnder13Disclaimer()
 						flow.startPlaying()
 					end,
-					neutralLabel = "I'm not ready.",
+					neutralLabel = loc("I'm not ready."),
 					neutralCallback = function()
 						showTitleScreen()
 					end,
