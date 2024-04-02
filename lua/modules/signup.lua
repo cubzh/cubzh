@@ -1,13 +1,14 @@
 local signup = {}
 
 signup.createModal = function(_, config)
+	local loc = require("localize")
+	local str = require("str")
 	local ui = require("uikit")
 	local modal = require("modal")
 	local theme = require("uitheme").current
 	local ease = require("ease")
 	local api = require("system_api", System)
 	local conf = require("config")
-	local str = require("str")
 
 	local defaultConfig = {
 		uikit = ui,
@@ -22,18 +23,18 @@ signup.createModal = function(_, config)
 	local _day
 
 	local monthNames = {
-		"January",
-		"February",
-		"March",
-		"April",
-		"May",
-		"June",
-		"July",
-		"August",
-		"September",
-		"October",
-		"November",
-		"December",
+		str:upperFirstChar(loc("january")),
+		str:upperFirstChar(loc("february")),
+		str:upperFirstChar(loc("march")),
+		str:upperFirstChar(loc("april")),
+		str:upperFirstChar(loc("may")),
+		str:upperFirstChar(loc("june")),
+		str:upperFirstChar(loc("july")),
+		str:upperFirstChar(loc("august")),
+		str:upperFirstChar(loc("september")),
+		str:upperFirstChar(loc("october")),
+		str:upperFirstChar(loc("november")),
+		str:upperFirstChar(loc("december")),
 	}
 	local dayNumbers = {}
 	for i = 1, 31 do
@@ -89,31 +90,33 @@ signup.createModal = function(_, config)
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 	content.node = node
 
-	content.title = "Sign Up"
+	content.title = str:upperFirstChar(loc("sign up", "form title"))
 	content.icon = "🙂"
 
-	local birthdayLabel = ui:createText("🎂 Birthday", Color(200, 200, 200, 255), "small")
+	local birthdayLabel =
+		ui:createText("🎂 " .. str:upperFirstChar(loc("birthday")), Color(200, 200, 200, 255), "small")
 	birthdayLabel:setParent(node)
 
 	local birthdayInfo = ui:createText("", Color(251, 206, 0, 255), "small")
 	birthdayInfo:setParent(node)
 
-	local monthInput = ui:createComboBox("Month", monthNames)
+	local monthInput = ui:createComboBox(str:upperFirstChar(loc("month")), monthNames)
 	monthInput:setParent(node)
 
-	local dayInput = ui:createComboBox("Day", dayNumbers)
+	local dayInput = ui:createComboBox(str:upperFirstChar(loc("day")), dayNumbers)
 	dayInput:setParent(node)
 
-	local yearInput = ui:createComboBox("Year", yearStrings)
+	local yearInput = ui:createComboBox(str:upperFirstChar(loc("year")), yearStrings)
 	yearInput:setParent(node)
 
-	local usernameLabel = ui:createText("👤 Username", Color(200, 200, 200, 255), "small")
+	local usernameLabel =
+		ui:createText("👤 " .. str:upperFirstChar(loc("username")), Color(200, 200, 200, 255), "small")
 	usernameLabel:setParent(node)
 
-	local usernameInfo = ui:createText("⚠️ can't be changed!", Color(251, 206, 0, 255), "small")
+	local usernameInfo = ui:createText("⚠️ " .. loc("can't be changed"), Color(251, 206, 0, 255), "small")
 	usernameInfo:setParent(node)
 
-	local usernameInput = ui:createTextInput("", "Don't use your real name!")
+	local usernameInput = ui:createTextInput("", str:upperFirstChar(loc("don't use your real name!")))
 	usernameInput:setParent(node)
 
 	local usernameInfoFrame = nil
@@ -125,7 +128,7 @@ signup.createModal = function(_, config)
 
 		if _year == nil or _month == nil or _day == nil then
 			if config and config.errorIfIncomplete == true then
-				birthdayInfo.Text = "❌ required"
+				birthdayInfo.Text = "❌ " .. loc("required")
 				birthdayInfo.Color = theme.errorTextColor
 				r = false
 			else
@@ -211,15 +214,15 @@ signup.createModal = function(_, config)
 
 		if s == "" then
 			if config and config.errorIfEmpty == true then
-				usernameInfo.Text = "❌ required"
+				usernameInfo.Text = "❌ " .. loc("required")
 				usernameInfo.Color = theme.errorTextColor
 			else
-				usernameInfo.Text = "⚠️ can't be changed"
+				usernameInfo.Text = "⚠️ " .. loc("can't be changed")
 				usernameInfo.Color = theme.warningTextColor
 			end
 			r = false
 		elseif not s:match("^[a-z].*$") then
-			usernameInfo.Text = "❌ must start with a-z char"
+			usernameInfo.Text = "❌ " .. loc("must start with a-z")
 			usernameInfo.Color = theme.errorTextColor
 			r = false
 			if reportWrongFormatTimer == nil then
@@ -229,11 +232,11 @@ signup.createModal = function(_, config)
 				end)
 			end
 		elseif #s > 15 then
-			usernameInfo.Text = "❌ too long, 15 chars max"
+			usernameInfo.Text = "❌ " .. loc("too long")
 			usernameInfo.Color = theme.errorTextColor
 			r = false
 		elseif not s:match("^[a-z][a-z0-9]*$") then
-			usernameInfo.Text = "❌ a-z 0-9 chars only"
+			usernameInfo.Text = "❌ " .. loc("a-z 0-9 only")
 			usernameInfo.Color = theme.errorTextColor
 			r = false
 			if reportWrongFormatTimer == nil then
@@ -247,7 +250,7 @@ signup.createModal = function(_, config)
 			local function displayChecking()
 				usernameInfoFrame = 0
 				usernameInfoDT = usernameInfoDTBackup or 0
-				usernameInfo.Text = "checking   "
+				usernameInfo.Text = loc("checking") .. "   "
 				usernameInfo.Color = Color(200, 200, 200, 255)
 				usernameInfo.pos.X = node.Width - usernameInfo.Width
 			end
@@ -258,22 +261,22 @@ signup.createModal = function(_, config)
 					checkUsernameRequest = nil
 
 					if success == false then
-						usernameInfo.Text = "❌ server error, sorry"
+						usernameInfo.Text = "❌ " .. loc("server error, sorry")
 						usernameInfo.Color = theme.errorTextColor
 					elseif res.format ~= true then
 						usernameInfo.Text = "❌ format error"
 						usernameInfo.Color = theme.errorTextColor
 						checkUsernameError = true
 					elseif res.appropriate ~= true then
-						usernameInfo.Text = "❌ not appropriate"
+						usernameInfo.Text = "❌ " .. loc("not appropriate")
 						usernameInfo.Color = theme.errorTextColor
 						checkUsernameError = true
 					elseif res.available ~= true then
-						usernameInfo.Text = "❌ already taken, sorry"
+						usernameInfo.Text = "❌ " .. loc("already taken, sorry")
 						usernameInfo.Color = theme.errorTextColor
 						checkUsernameError = true
 					elseif type(res.key) ~= "string" then
-						usernameInfo.Text = "❌ server error, sorry"
+						usernameInfo.Text = "❌ " .. loc("server error, sorry")
 						usernameInfo.Color = theme.errorTextColor
 					else
 						System:DebugEvent("SIGNUP_ENTERED_VALID_USERNAME")
@@ -327,7 +330,7 @@ signup.createModal = function(_, config)
 		self.onTextChange = nil
 
 		local s = str:normalize(self.Text)
-		s = str:toLower(s)
+		s = str:lower(s)
 
 		self.Text = s
 		self.onTextChange = backup
@@ -342,10 +345,9 @@ signup.createModal = function(_, config)
 		checkUsername()
 	end
 
-	local signUpButton = ui:createButton("✨ Sign Up ✨") -- , { textSize = "big" })
+	local signUpButton = ui:createButton(" ✨ " .. str:upperFirstChar(loc("sign up", "button")) .. " ✨ ") -- , { textSize = "big" })
 	signUpButton:setParent(node)
 	signUpButton:setColor(Color(150, 200, 61), Color(240, 255, 240))
-	-- signUpButton:setColor(theme.colorPositive)
 
 	signUpButton.onRelease = function()
 		local dobOK = checkDOB({ errorIfIncomplete = true })
@@ -382,13 +384,13 @@ signup.createModal = function(_, config)
 				if currentFrame ~= usernameInfoFrame then
 					usernameInfoFrame = currentFrame
 					if usernameInfoFrame == 0 then
-						usernameInfo.Text = "checking   "
+						usernameInfo.Text = loc("checking") .. "   "
 					elseif usernameInfoFrame == 1 then
-						usernameInfo.Text = "checking.  "
+						usernameInfo.Text = loc("checking") .. ".  "
 					elseif usernameInfoFrame == 2 then
-						usernameInfo.Text = "checking.. "
+						usernameInfo.Text = loc("checking") .. ".. "
 					else
-						usernameInfo.Text = "checking..."
+						usernameInfo.Text = loc("checking") .. "..."
 					end
 				end
 			end
@@ -418,7 +420,7 @@ signup.createModal = function(_, config)
 	local linkPressedColor = Color(233, 89, 249)
 
 	local termsText = ui:createText(
-		"By clicking Sign Up, you are agreeing to the Terms of Use including arbitration clause and you are aknowledging the Privacy Policy.",
+		loc("By clicking Sign Up, you are agreeing to the Terms of Use and aknowledging the Privacy Policy."),
 		textColor,
 		"small"
 	)
@@ -499,8 +501,8 @@ signup.createModal = function(_, config)
 	end
 
 	node.refresh = function(self)
-		signUpButton.Width = nil
-		signUpButton.Width = signUpButton.Width * 1.5
+		-- signUpButton.Width = nil
+		-- signUpButton.Width = signUpButton.Width * 1.5
 
 		self.Width = math.min(400, Screen.Width - Screen.SafeArea.Right - Screen.SafeArea.Left - theme.paddingBig * 2)
 		self.Height = birthdayLabel.Height
