@@ -67,9 +67,9 @@ local channels = {
 chat.Channels = channels
 
 local commandsToChannel = {
-	a = 3,
-	l = 2,
-	w = 4,
+	a = 3, -- all
+	l = 2, -- local
+	w = 4, -- private (whisper)
 }
 
 -- TODO: move colors in theme module
@@ -175,16 +175,24 @@ local playerSendMessage = function(message)
 		return
 	end
 
+	if message ~= payload.message then
+		-- message has been modified within OnChat, do not send it on behalf of user
+		return
+	end
+
 	msgInfo.message = payload.message
 	if msgInfo.message == nil then
 		return
 	end
 
-	local e = Event()
-	e.action = "chatMsg"
-	e.content = JSON:Encode(msgInfo)
-	e:SendTo(recipients)
-	pushFormattedMessage(msgInfo)
+	msgInfo.recipients = recipients
+	System:SendChatMessage(msgInfo)
+
+	-- local e = Event()
+	-- e.action = "chatMsg"
+	-- e.content = JSON:Encode(msgInfo)
+	-- e:SendTo(recipients)
+	-- pushFormattedMessage(msgInfo)
 end
 
 -- creates uikit node containing chat console and input
