@@ -142,7 +142,8 @@ mt = {
 				if v ~= displayPlayerChatBubbles then
 					displayPlayerChatBubbles = v
 					if displayPlayerChatBubbles then
-						chatListener = LocalEvent:Listen(LocalEvent.Name.ChatMessage, function(msgInfo)
+                    -- TODO: review this
+						chatListener = LocalEvent:Listen(LocalEvent.Name.Log, function(msgInfo)
 							if msgInfo.sender.id ~= nil and msgInfo.message ~= nil then
 								local sender = Players[msgInfo.sender.id]
 								if sender ~= nil then

@@ -1,6 +1,7 @@
 local MAX_MESSAGES = 50
 local MAX_MESSAGES_IN_CONSOLE = 50
 
+-- NOTE: engine (or server for chat messages) should provide the timestamps
 local getCurrentDate = function()
 	return os.date("%m-%d-%YT%H:%M:%SZ", os.time())
 end
@@ -12,7 +13,7 @@ local chatMetatable = {
 }
 setmetatable(chat, chatMetatable)
 
-local messages = {}
+local logs = {}
 local lastCommandIndex = nil
 
 function getDefaultConfig()
@@ -50,53 +51,40 @@ function trim(s)
 end
 
 Timer(10, true, function()
-	if #messages < 60 then
+	if #logs < 60 then
 		return
 	end
-	messages = getLastXElements(messages, 40)
+	logs = getLastXElements(logs, 40)
 end)
 
-local channels = {
+local logTypes = {
 	Info = 1,
-	Local = 2,
-	Global = 3,
-	Private = 4,
-	Warning = 5,
-	Error = 6,
-}
-chat.Channels = channels
-
-local commandsToChannel = {
-	a = 3, -- all
-	l = 2, -- local
-	w = 4, -- private (whisper)
+	Warning = 2,
+	Error = 3,
+	ChatMessage = 4,
+	PrivateChatMessage = 5, -- whispering something to someone
 }
 
 -- TODO: move colors in theme module
-local channelsColors = { -- same order as channels to be able to do channelsColors[channels.Info]
+-- same order as logLevels to be able to do logLevelColors[logLevels.Info]
+local logTypeColors = {
 	Color(30, 215, 96), -- Info
-	Color.White, -- Local
-	Color.LightGrey, -- Global
-	Color(17, 169, 255), -- Private
 	Color.White, -- Warning
 	Color.White, -- Error
+	Color.White, -- ChatMessage
+	Color(17, 169, 255), -- PrivateChatMessage (whispering)
 }
 
-local pushFormattedMessage = function(msgInfo)
-	table.insert(messages, msgInfo)
-	while #messages > MAX_MESSAGES do
-		table.remove(messages, 1) -- pop front
+local pushFormattedLog = function(msg)
+	table.insert(logs, msg)
+	while #logs > MAX_MESSAGES do
+		table.remove(logs, 1) -- pop front
 	end
-	LocalEvent:Send(LocalEvent.Name.ChatMessage, msgInfo)
+	LocalEvent:Send(LocalEvent.Name.Log, msg)
 end
 
 local playerSendMessage = function(message)
-	local channelType = channels.Local
 	local recipients = OtherPlayers
-	local msgInfo = {
-		sender = { userID = Player.UserID, id = Player.ID, username = Player.Username },
-		date = getCurrentDate(),
-	}
 
 	-- set to nil to reset commands history index
 	lastCommandIndex = nil
@@ -104,38 +92,31 @@ local playerSendMessage = function(message)
 	-- check if command
 	local channelCommand = string.sub(message, 1, 3)
 	local channelCommandDev = string.sub(message, 1, 4)
-	if
-		not Dev.CanRunCommands and (channelCommand == "/a " or channelCommand == "/l " or channelCommand == "/w ")
-		or Dev.CanRunCommands
-			and (channelCommandDev == "//a " or channelCommandDev == "//l " or channelCommandDev == "//w ")
-	then
-		local channel = Dev.CanRunCommands and string.sub(message, 3, 3) or string.sub(message, 2, 2)
-		channelType = commandsToChannel[channel]
+	if not Dev.CanRunCommands and (channelCommand == "/w ") or Dev.CanRunCommands and (channelCommandDev == "//w ") then
+		local mode = Dev.CanRunCommands and string.sub(message, 3, 3) or string.sub(message, 2, 2)
 		message = Dev.CanRunCommands and string.sub(message, 5, #message) or string.sub(message, 4, #message)
 
-		if channelType == channels.Private then
-			msgInfo.receiver = { username = string.gmatch(message, "%S+")() }
+		if mode == "w" then -- whisper
+			local receiver = { username = string.gmatch(message, "%S+")() }
 			-- find player to send message only to this client
 			recipients = {}
 			for _, p in pairs(Players) do
-				if p.Username == msgInfo.receiver.username then
+				if p.Username == receiver.username then
 					if p == Player then
 						LocalEvent:Send(LocalEvent.Name.WarningMessage, "You are trying to send a message to yourself.")
 						return
 					end
 					table.insert(recipients, p)
-					msgInfo.receiver.id = p.ID
-					msgInfo.receiver.userID = p.UserID
+					receiver.id = p.ID
+					receiver.userID = p.UserID
 				end
 			end
 			if #recipients == 0 then
-				LocalEvent:Send(
-					LocalEvent.Name.InfoMessage,
-					msgInfo.receiver.username .. " is not currently in your game."
-				)
+				LocalEvent:Send(LocalEvent.Name.InfoMessage, receiver.username .. " is not connected.")
 				return
 			end
-			message = string.sub(message, 2 + #msgInfo.receiver.username, #message)
+			-- remove receiver's name from message
+			message = string.sub(message, 2 + #receiver.username, #message)
 		end
 	elseif string.sub(message, 1, 1) == "/" then
 		System:AddCommandInHistory(message)
@@ -147,9 +128,6 @@ local playerSendMessage = function(message)
 		System:ExecCommand(command)
 		return
 	end
-
-	msgInfo.type = channelType
-	msgInfo.message = message
 
 	local payload = {}
 	local metatablePayload = {}
@@ -180,18 +158,7 @@ local playerSendMessage = function(message)
 		return
 	end
 
-	msgInfo.message = payload.message
-	if msgInfo.message == nil then
-		return
-	end
-
 	System:SendChatMessage(message, recipients)
-
-	-- local e = Event()
-	-- e.action = "chatMsg"
-	-- e.content = JSON:Encode(msgInfo)
-	-- e:SendTo(recipients)
-	-- pushFormattedMessage(msgInfo)
 end
 
 -- creates uikit node containing chat console and input
@@ -296,10 +263,10 @@ local createChat = function(_, config)
 		end
 	end
 
-	local createUIChatMessage = function(data, ui)
+	local createUIChatMessage = function(log, ui)
 		local node = ui:createFrame(Color(0, 0, 0, 0))
-		local message = data.message
-		local color = channelsColors[data.type]
+		local message = log.message
+		local color = logTypeColors[log.type]
 
 		node.message = message
 
@@ -310,34 +277,20 @@ local createChat = function(_, config)
 		local uiTextTime = ui:createText("", color, "small")
 
 		if config.time then
-			uiTextTime.Text = "[" .. string.sub(data.date, 12, 16) .. "] " -- get HH:MM
+			uiTextTime.Text = "[" .. string.sub(log.date, 12, 16) .. "] " -- get HH:MM
 		end
 
-		local uiTextPrefix
 		local uiTextMessageFirstLine = ui:createText("", color, "small")
 
-		-- format msg and add prefix if needed
-		if data.receiver then
-			if data.sender.id == Player.ID then
-				uiTextPrefix = ui:createText("to", color, "small")
-				message = data.receiver.username .. ": " .. message
-			elseif data.receiver.id == Player.ID then
-				uiTextPrefix = ui:createText("from", color, "small")
-				message = data.sender.username .. ": " .. message
-			end
-		elseif data.sender then
-			message = data.sender.username .. ": " .. message
+		if log.senderUsername then
+			message = log.senderUsername .. ": " .. message
 		end
 
 		local uiHead
 		if config.heads then
-			local playerInfo = data.receiver or data.sender
-			if playerInfo then
-				if data.receiver.id == Player.ID then
-					playerInfo = data.sender
-				end
+			if log.senderUserID or log.senderUsername then
 				uiHead = require("ui_avatar"):getHead(
-					playerInfo.userID or playerInfo.username,
+					log.senderUserID or log.senderUsername,
 					nil,
 					ui,
 					{ spherized = true } -- TODO: use false, but ui_avatar needs to be fixed
@@ -349,7 +302,6 @@ local createChat = function(_, config)
 
 		local uiElements = {
 			uiTextTime = uiTextTime,
-			uiTextPrefix = uiTextPrefix,
 			uiHead = uiHead,
 			uiTextMessageFirstLine = uiTextMessageFirstLine,
 		}
@@ -369,10 +321,6 @@ local createChat = function(_, config)
 			uiTextTime.pos.X = x
 			x = x + uiTextTime.Width
 
-			if uiTextPrefix then
-				uiTextPrefix.pos.X = x
-				x = x + uiTextPrefix.Width
-			end
 			if uiHead then
 				uiHead.Width = space.Width * 2 -- size of an emoji
 				uiHead.pos.X = x
@@ -386,9 +334,7 @@ local createChat = function(_, config)
 			node.Height = uiTextMessageFirstLine.Height
 
 			uiTextTime.pos.Y = node.Height - uiTextTime.Height
-			if uiTextPrefix then
-				uiTextPrefix.pos.Y = node.Height - uiTextPrefix.Height
-			end
+
 			if uiHead then
 				uiHead.pos.Y = uiTextTime.pos.Y + uiTextTime.Height * 0.5 - uiHead.Height * 0.5
 			end
@@ -398,7 +344,7 @@ local createChat = function(_, config)
 
 		if hasInput then
 			node.onRelease = function()
-				local username = (data.receiver and data.receiver.username or data.sender.username)
+				local username = (log.receiver and log.receiver.username or log.sender.username)
 				if not username then
 					return
 				end
@@ -462,11 +408,11 @@ local createChat = function(_, config)
 	end
 
 	-- Push latest messages
-	for _, msgInfo in ipairs(messages) do
+	for _, msgInfo in ipairs(logs) do
 		pushMessage(msgInfo)
 	end
 
-	local messageListener = LocalEvent:Listen(LocalEvent.Name.ChatMessage, function(msgInfo)
+	local messageListener = LocalEvent:Listen(LocalEvent.Name.Log, function(msgInfo)
 		pushMessage(msgInfo)
 	end)
 
@@ -497,38 +443,55 @@ local createModalContent = function(_, config)
 	return content
 end
 
-LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
-	if e.action ~= "chatMsg" then
-		return false
-	end
-	local msgInfo = JSON:Decode(e.content)
-	pushFormattedMessage(msgInfo)
-	return true
-end)
-
 LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
 	require("ui_avatar"):preloadHeads(p)
 end)
+
+LocalEvent:Listen(
+	LocalEvent.Name.ChatMessage,
+	function(msg, senderID, senderUserID, senderUsername, status, uuid, localUUID)
+		if not msg then
+			return
+		end
+		pushFormattedLog({
+			type = logTypes.ChatMessage,
+			message = msg,
+			date = getCurrentDate(),
+			senderID = senderID, -- connection ID, not reliable if player comes and goes
+			senderUserID = senderUserID,
+			senderUsername = senderUsername,
+			status = status,
+			uuid = uuid,
+			localUUID = localUUID,
+		})
+	end
+)
 
 LocalEvent:Listen(LocalEvent.Name.InfoMessage, function(msg)
 	if not msg then
 		return
 	end
-	pushFormattedMessage({ type = channels.Info, message = msg, date = getCurrentDate() })
+	-- System:Log(msg)
+	-- NOTE: engine should provide the timestamp
+	pushFormattedLog({ type = logTypes.Info, message = msg, date = getCurrentDate() })
 end)
 
 LocalEvent:Listen(LocalEvent.Name.WarningMessage, function(msg)
 	if not msg then
 		return
 	end
-	pushFormattedMessage({ type = channels.Warning, message = "⚠️ " .. msg, date = getCurrentDate() })
+	-- System:Log("⚠️ " .. msg)
+	-- NOTE: engine should provide the timestamp
+	pushFormattedLog({ type = logTypes.Warning, message = "⚠️ " .. msg, date = getCurrentDate() })
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ErrorMessage, function(msg)
 	if not msg then
 		return
 	end
-	pushFormattedMessage({ type = channels.Error, message = "❌ " .. msg, date = getCurrentDate() })
+	-- System:Log("❌ " .. msg)
+	-- NOTE: engine should provide the timestamp
+	pushFormattedLog({ type = logTypes.Error, message = "❌ " .. msg, date = getCurrentDate() })
 end)
 
 -- expose functions
