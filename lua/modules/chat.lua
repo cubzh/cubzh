@@ -185,8 +185,7 @@ local playerSendMessage = function(message)
 		return
 	end
 
-	msgInfo.recipients = recipients
-	System:SendChatMessage(msgInfo)
+	System:SendChatMessage(message, recipients)
 
 	-- local e = Event()
 	-- e.action = "chatMsg"
