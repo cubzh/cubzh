@@ -50,6 +50,8 @@ bodyParts = {
 	"LeftFoot",
 }
 
+bodyPartToWearablePart = {}
+
 __equipments = require("equipments.lua")
 
 -- returns an array of shapes
@@ -108,6 +110,7 @@ local playerHideSubshapes = function(isHidden)
 		Player.RightFoot,
 	}
 	for _, bodyPart in ipairs(bodyParts) do
+		bodyPart.PrivateDrawMode = 0
 		disableObject(bodyPart, isHidden)
 		hideShapeSubshapes(bodyPart, isHidden)
 	end
@@ -122,6 +125,19 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 		-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
 		if p_wearablePreviewMode == wearablePreviewMode.hide then
 			playerHideSubshapes(true)
+			local parents = __equipments.equipmentParent(Player, itemCategory)
+			local parentsType = type(parents)
+			if parentsType == "table" then
+				for _, parent in ipairs(parents) do
+					parent.PrivateDrawMode = 1
+					disableObject(parent, false)
+				end
+			elseif parentsType == "MutableShape" then
+				parents.PrivateDrawMode = 1
+				disableObject(parents, false)
+			else
+				error("unexpected 'parents' type:", parentsType)
+			end
 		elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
 			-- hide all avatar body parts and equipments
 			playerHideSubshapes(true)
@@ -574,41 +590,53 @@ Client.OnStart = function()
 
 			-- 1st subshape of item
 			local child = item:GetChild(1)
-			local coords = parents[2]:GetPoint("origin").Coords
-			if coords == nil then
-				print("can't get parent coords for equipment")
+			local avatarCoords = parents[2]:GetPoint("origin").Coords
+			local wearableCoords = child:GetPoint("origin").Coords
+			local patternCoords = pattern:GetChild(1):GetPoint("origin").Coords
+			if avatarCoords == nil or wearableCoords == nil or patternCoords == nil then
+				print("can't get parent coords for equipment (child)")
 				return
 			end
-			local pos = parents[2]:BlockToWorld(coords)
-			local shift = Number3(0, 0, 0)
+			parents[2].Pivot = avatarCoords
+			child.Pivot = wearableCoords
+			pattern:GetChild(1).shift = Number3(0, 0, 0)
 			if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
-				shift = #parents == 2 and Number3(-5, 0, 0) or Number3(5, 0, 0)
+				if #parents == 2 then
+					parents[2].Pivot.X = parents[2].Pivot.X + 5
+					child.Pivot.X = child.Pivot.X + 5
+					pattern:GetChild(1).shift.X = 5
+				else
+					parents[2].Pivot.X = parents[2].Pivot.X - 5
+					child.Pivot.X = child.Pivot.X - 5
+					pattern:GetChild(1).shift.X = -5
+				end
 			end
-
-			child.Position = pos + shift
 			child.Rotation = parents[2].Rotation
 
 			if not parents[3] then
+				fitObjectToScreen(item, nil)
 				return
 			end
 
-			-- 1st subshade of 1st subshape of item
+			-- 1st subshape of 1st subshape of item
 			child = child:GetChild(1)
-			coords = parents[3]:GetPoint("origin").Coords
-			if coords == nil then
-				print("can't get parent coords for equipment")
+			avatarCoords = parents[3]:GetPoint("origin").Coords
+			wearableCoords = child:GetPoint("origin").Coords
+			patternCoords = pattern:GetChild(1):GetPoint("origin").Coords
+			if avatarCoords == nil or wearableCoords == nil or patternCoords == nil then
+				print("can't get parent coords for equipment (grandchild)")
 				return
 			end
-			pos = parents[3]:BlockToWorld(coords)
-			shift = Number3(0, 0, 0)
+			parents[3].Pivot = avatarCoords
+			child.Pivot = wearableCoords
+			pattern:GetChild(1):GetChild(1).shift = Number3(0, 0, 0)
 			if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
-				shift = Number3(-5, 0, 0)
+				parents[3].Pivot.X = parents[3].Pivot.X + 5
+				child.Pivot.X = child.Pivot.X + 10
+				pattern:GetChild(1):GetChild(1).shift.X = 10
 			end
-
-			child.Position = pos + shift
 			child.Rotation = parents[3].Rotation
 		elseif parentsType == "MutableShape" then
-			-- `parents` is a MutableShape
 			local coords = parents:GetPoint("origin").Coords
 			if coords == nil then
 				print("can't get parent coords for equipment (2)")
@@ -690,17 +718,32 @@ click = function(e)
 	-- note: if needed here, we could selectively use groups for item, player, and wearables ; for example if both body parts
 	-- and wearable are shown but we want to raycast only against wearables e:CastRay(collisionGroup_wearable), or only
 	-- against the item shapes e:CastRay(collisionGroup_item)
-	local impact = e:CastRay() 
+	local impact = e:CastRay()
 	local shape = impact.Shape
 
 	if impact == nil then
 		return
 	end
 
-	if currentEditSubmode == editSubmode.pick then
-		if impact then
-			pickCubeColor(impact.Block)
+	if isWearable and not shape.isItem then
+		if currentEditSubmode ~= editSubmode.add then
+			return
 		end
+		local bodyPartName
+		for _, part in pairs(bodyParts) do
+			if Player[part] == shape then
+				bodyPartName = part
+				break
+			end
+		end
+		shape = bodyPartToWearablePart[bodyPartName]
+		if shape == nil then
+			return
+		end
+	end
+
+	if currentEditSubmode == editSubmode.pick then
+		pickCubeColor(impact.Block)
 	elseif currentEditSubmode == editSubmode.add then
 		local impactPosition = Camera.Position + e.Direction * impact.Distance
 		local impactCoords = shape:WorldToBlock(impactPosition)
@@ -721,9 +764,11 @@ click = function(e)
 		selectFocusShape(shape)
 	end
 
-	if impact ~= nil and (currentEditSubmode == editSubmode.add or
-						  currentEditSubmode == editSubmode.remove or
-						  currentEditSubmode == editSubmode.paint) then
+	if
+		currentEditSubmode == editSubmode.add
+		or currentEditSubmode == editSubmode.remove
+		or currentEditSubmode == editSubmode.paint
+	then
 		checkAutoSave()
 		refreshUndoRedoButtons()
 	end
@@ -1162,8 +1207,14 @@ initClientFunctions = function()
 				end
 			end
 			local coords = newBlockCoords
+			if targetPattern.shift then
+				coords = coords + targetPattern.shift
+			end
 			local relativeCoords = coords - shape:GetPoint("origin").Coords
 			local pos = relativeCoords + targetPattern:GetPoint("origin").Coords
+			if targetPattern.shift then
+				pos = pos - targetPattern.shift
+			end
 			local b = targetPattern:GetBlock(pos)
 			if not b then
 				pattern:SetParent(World)
@@ -1171,7 +1222,7 @@ initClientFunctions = function()
 				pattern.Scale = item.Scale + Number3(1, 1, 1) * 0.001
 				hierarchyActions:applyToDescendants(pattern, { includeRoot = true }, function(s)
 					s.PrivateDrawMode = 1
-					s.Pivot = s:GetPoint("origin").Coords
+					s.Pivot = s:GetPoint("origin").Coords + (s.shift ~= nil and s.shift or { 0, 0, 0 })
 					s.Position = nextShape.Position
 					nextShape = nextShape:GetChild(1)
 				end)
@@ -1368,11 +1419,7 @@ initClientFunctions = function()
 					local blockOnTopPosition = neighborCoords + targetNeighbor
 					local blockOnTop = shape:GetBlock(blockOnTopPosition)
 					-- check it is the same color
-					if
-						neighborBlock ~= nil
-						and neighborBlock.Color == impact.Block.Color
-						and blockOnTop == nil
-					then
+					if neighborBlock ~= nil and neighborBlock.Color == impact.Block.Color and blockOnTop == nil then
 						replaceSingleBlock(neighborBlock, shape)
 						table.insert(queue, neighborBlock)
 					end
@@ -2387,6 +2434,7 @@ function ui_init()
 		s.History = true -- enable history for the edited item
 		s.Palette = item.Palette -- shared palette with root shape
 		s.CollisionGroups = collisionGroup_item
+		s.isItem = true
 		s:AddBlock(palette:getCurrentIndex(), 0, 0, 0)
 		s.Pivot = Number3(0.5, 0.5, 0.5)
 		s:SetParent(focusShape)
@@ -2427,6 +2475,7 @@ function ui_init()
 			hierarchyActions:applyToDescendants(child, { includeRoot = true }, function(s)
 				s.History = true -- enable history for the edited item
 				s.CollisionGroups = collisionGroup_item
+				s.isItem = true
 				table.insert(shapes, s)
 			end)
 
@@ -2435,7 +2484,7 @@ function ui_init()
 			-- refresh UI
 			gridEnabled = false
 			refreshUndoRedoButtons()
-			
+
 			checkAutoSave()
 		end)
 	end
@@ -2887,6 +2936,7 @@ function post_item_load()
 			if type(s) == Type.MutableShape then
 				s.Physics = PhysicsMode.TriggerPerBlock
 				s.CollisionGroups = collisionGroup_item
+				s.isItem = true
 				s.History = true -- enable history for the edited item
 				s.Palette = item.Palette -- shared palette with root shape
 				table.insert(shapes, s)
@@ -2897,6 +2947,33 @@ function post_item_load()
 			end
 
 			s.Pivot = s:GetPoint("origin").Coords
+
+			if itemCategory == "hair" then
+				bodyPartToWearablePart.Head = s
+			elseif itemCategory == "jacket" then
+				if s:GetParent() == World and s.ChildrenCount == 1 then
+					bodyPartToWearablePart.Body = s
+				elseif s:GetParent() ~= World and s.ChildrenCount == 1 then
+					bodyPartToWearablePart.RightArm = s
+				elseif s:GetParent() ~= World and s.ChildrenCount == 0 then
+					bodyPartToWearablePart.LeftArm = s
+				end
+			elseif itemCategory == "pants" then
+				if s.ChildrenCount == 1 then
+					bodyPartToWearablePart.RightLeg = s
+				else
+					bodyPartToWearablePart.LeftLeg = s
+				end
+			elseif itemCategory == "boots" then
+				if s.ChildrenCount == 1 then
+					bodyPartToWearablePart.RightFoot = s
+				else
+					bodyPartToWearablePart.LeftFoot = s
+				end
+			else
+				local str = "Item category is not supported, itemCategory is " .. itemCategory
+				error(str, 2)
+			end
 		end)
 	end
 
