@@ -73,7 +73,7 @@ localevent.name = {
 	ReceivedEnvironmentToLaunch = 44,
 	-- ChatMessage can only be sent by system.
 	-- callback: function(message, sender, status, uuid, localUUID) -- status: "pending", "error", "ok", "reported"
-	ChatMessage = 45, -- callback: function(msgInfo)
+	ChatMessage = 45,
 	FailedToLoadWorld = 46, -- callback: function(msgInfo)
 	ServerConnectionSuccess = 47,
 	ServerConnectionLost = 48,
@@ -81,6 +81,7 @@ localevent.name = {
 	ServerConnectionStart = 50, -- called when starting to establish connection
 	OnWorldObjectLoad = 51,
 	Log = 52, -- callback({type = info(1)|warning(2)|error(3), message = "...", date = "%m-%d-%YT%H:%M:%SZ"})
+	ChatMessageACK = 53, -- callback: function(uuid, localUUID, status) -- status: "error", "ok", "reported"
 }
 localevent.Name = localevent.name
 
@@ -135,6 +136,7 @@ reservedToSystem[localevent.name.ServerConnectionLost] = true
 reservedToSystem[localevent.name.ServerConnectionFailed] = true
 reservedToSystem[localevent.name.ServerConnectionStart] = true
 reservedToSystem[localevent.name.ChatMessage] = true
+reservedToSystem[localevent.name.ChatMessageACK] = true
 
 mt = {
 	__tostring = function()

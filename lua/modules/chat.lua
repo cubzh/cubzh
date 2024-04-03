@@ -14,6 +14,8 @@ local chatMetatable = {
 setmetatable(chat, chatMetatable)
 
 local logs = {}
+local logsByLocalUUID = {}
+
 local lastCommandIndex = nil
 
 function getDefaultConfig()
@@ -65,7 +67,6 @@ local logTypes = {
 	PrivateChatMessage = 5, -- whispering something to someone
 }
 
--- TODO: move colors in theme module
 -- same order as logLevels to be able to do logLevelColors[logLevels.Info]
 local logTypeColors = {
 	Color(30, 215, 96), -- Info
@@ -75,12 +76,28 @@ local logTypeColors = {
 	Color(17, 169, 255), -- PrivateChatMessage (whispering)
 }
 
-local pushFormattedLog = function(msg)
-	table.insert(logs, msg)
-	while #logs > MAX_MESSAGES do
-		table.remove(logs, 1) -- pop front
+local chatMessageStatusColors = {
+	ok = Color.White,
+	error = Color.Red,
+	reported = Color.Yellow,
+	pending = Color(255, 255, 255, 0.3),
+}
+
+local pushFormattedLog = function(log)
+	table.insert(logs, log)
+
+	if log.localUUID then
+		logsByLocalUUID[log.localUUID] = log
 	end
-	LocalEvent:Send(LocalEvent.Name.Log, msg)
+
+	local l
+	while #logs > MAX_MESSAGES do
+		l = table.remove(logs, 1) -- pop front
+		if l ~= nil and l.localUUID ~= nil then
+			logsByLocalUUID[l.localUUID] = nil
+		end
+	end
+	LocalEvent:Send(LocalEvent.Name.Log, log)
 end
 
 local playerSendMessage = function(message)
@@ -171,7 +188,8 @@ local createChat = function(_, config)
 	local space = ui:createText(" ", Color.White, "small")
 	space:setParent(nil)
 
-	local nodeMessages = {}
+	local nodeLogs = {}
+	local nodeLogsByLocalUUID = {}
 
 	local node = ui:createFrame(Color(0.0, 0.0, 0.0, 0.0))
 
@@ -265,8 +283,17 @@ local createChat = function(_, config)
 
 	local createUIChatMessage = function(log, ui)
 		local node = ui:createFrame(Color(0, 0, 0, 0))
+		node.localUUID = log.localUUID
+		node.status = log.status
+
 		local message = log.message
-		local color = logTypeColors[log.type]
+
+		local color
+		if log.type == logTypes.ChatMessage then
+			color = chatMessageStatusColors[log.status] or chatMessageStatusColors["error"]
+		else
+			color = logTypeColors[log.type]
+		end
 
 		node.message = message
 
@@ -280,7 +307,7 @@ local createChat = function(_, config)
 			uiTextTime.Text = "[" .. string.sub(log.date, 12, 16) .. "] " -- get HH:MM
 		end
 
-		local uiTextMessageFirstLine = ui:createText("", color, "small")
+		local uiText = ui:createText("", color, "small")
 
 		if log.senderUsername then
 			message = log.senderUsername .. ": " .. message
@@ -298,14 +325,10 @@ local createChat = function(_, config)
 			end
 		end
 
-		uiTextMessageFirstLine.Text = message
+		uiText.Text = message
+		node.text = uiText
 
-		local uiElements = {
-			uiTextTime = uiTextTime,
-			uiHead = uiHead,
-			uiTextMessageFirstLine = uiTextMessageFirstLine,
-		}
-		for _, elem in pairs(uiElements) do
+		for _, elem in pairs({ uiTextTime, uiHead, uiText }) do
 			elem:setParent(node)
 		end
 
@@ -326,19 +349,19 @@ local createChat = function(_, config)
 				uiHead.pos.X = x
 				x = x + uiHead.Width + space.Width
 			end
-			uiTextMessageFirstLine.pos.X = x
+			uiText.pos.X = x
 
-			uiTextMessageFirstLine.Width = node.Width - x
-			uiTextMessageFirstLine.object.MaxWidth = node.Width - x
+			uiText.Width = node.Width - x
+			uiText.object.MaxWidth = node.Width - x
 
-			node.Height = uiTextMessageFirstLine.Height
+			node.Height = uiText.Height
 
 			uiTextTime.pos.Y = node.Height - uiTextTime.Height
 
 			if uiHead then
 				uiHead.pos.Y = uiTextTime.pos.Y + uiTextTime.Height * 0.5 - uiHead.Height * 0.5
 			end
-			uiTextMessageFirstLine.pos.Y = node.Height - uiTextMessageFirstLine.Height
+			uiText.pos.Y = node.Height - uiText.Height
 		end
 		node:parentDidResize()
 
@@ -373,8 +396,8 @@ local createChat = function(_, config)
 		end
 
 		local shift = 0
-		for i = #nodeMessages, 1, -1 do
-			local msg = nodeMessages[i]
+		for i = #nodeLogs, 1, -1 do
+			local msg = nodeLogs[i]
 			msg.pos.Y = shift
 			if shift + msg.Height > messagesNode.Height then
 				msg:hide()
@@ -386,11 +409,11 @@ local createChat = function(_, config)
 	end
 
 	-- Add message in UI
-	local pushMessage = function(messageInfo)
-		local message = createUIChatMessage(messageInfo, ui)
+	local pushMessage = function(log)
+		local message = createUIChatMessage(log, ui)
 		message:setParent(messagesNode)
 		local height = message.Height
-		for _, m in ipairs(nodeMessages) do
+		for _, m in ipairs(nodeLogs) do
 			m.pos.Y = m.pos.Y + height
 			if m.pos.Y + m.Height > messagesNode.Height then
 				m:hide()
@@ -398,26 +421,45 @@ local createChat = function(_, config)
 				m:show()
 			end
 		end
-		table.insert(nodeMessages, message)
-		while #nodeMessages > config.maxMessages do
-			local m = table.remove(nodeMessages, 1) -- pop front
+
+		table.insert(nodeLogs, message)
+		if message.localUUID then
+			nodeLogsByLocalUUID[message.localUUID] = message
+		end
+
+		while #nodeLogs > config.maxMessages do
+			local m = table.remove(nodeLogs, 1) -- pop front
 			if m ~= nil then
+				if m.localUUID ~= nil then
+					nodeLogsByLocalUUID[message.localUUID] = nil
+				end
 				m:remove()
 			end
 		end
 	end
 
 	-- Push latest messages
-	for _, msgInfo in ipairs(logs) do
-		pushMessage(msgInfo)
+	for _, log in ipairs(logs) do
+		pushMessage(log)
 	end
 
-	local messageListener = LocalEvent:Listen(LocalEvent.Name.Log, function(msgInfo)
-		pushMessage(msgInfo)
+	local messageListener = LocalEvent:Listen(LocalEvent.Name.Log, function(log)
+		pushMessage(log)
+	end)
+
+	local ackListener = LocalEvent:Listen(LocalEvent.Name.ChatMessageACK, function(_, localUUID, status)
+		local message = nodeLogsByLocalUUID[localUUID]
+		if message ~= nil then
+			message.status = status
+			if message.text ~= nil then
+				message.text.Color = chatMessageStatusColors[status] or chatMessageStatusColors["error"]
+			end
+		end
 	end)
 
 	node.onRemove = function(_)
 		messageListener:Remove()
+		ackListener:Remove()
 	end
 
 	return node
@@ -453,6 +495,7 @@ LocalEvent:Listen(
 		if not msg then
 			return
 		end
+
 		pushFormattedLog({
 			type = logTypes.ChatMessage,
 			message = msg,
@@ -466,6 +509,14 @@ LocalEvent:Listen(
 		})
 	end
 )
+
+LocalEvent:Listen(LocalEvent.Name.ChatMessageACK, function(uuid, localUUID, status)
+	local l = logsByLocalUUID[localUUID]
+	if l ~= nil then
+		l.uuid = uuid
+		l.status = status
+	end
+end)
 
 LocalEvent:Listen(LocalEvent.Name.InfoMessage, function(msg)
 	if not msg then
