@@ -745,7 +745,7 @@ click = function(e)
 	if currentEditSubmode == editSubmode.pick then
 		pickCubeColor(impact.Block)
 	elseif currentEditSubmode == editSubmode.add then
-		local impactPosition = Camera.Position + e.Direction * impact.Distance
+		local impactPosition = Camera.Position + e.Direction * (impact.Distance - 0.1) -- epsilon to avoid number rounding errors
 		local impactCoords = shape:WorldToBlock(impactPosition)
 		addBlockWithImpact(impact, currentFacemode, shape, impactCoords)
 		table.insert(undoShapesStack, shape)
