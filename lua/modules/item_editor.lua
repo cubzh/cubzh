@@ -782,7 +782,7 @@ up = function(_)
 	end
 
 	local shape = selectedShape or focusShape
-	if shape then
+	if shape and shape.isItem then
 		shape.KeepHistoryTransactionPending = false
 	end
 
@@ -804,6 +804,10 @@ longPress = function(e)
 
 		if impact.Block ~= nil then
 			selectedShape = impact.Shape
+			if not selectedShape.isItem then
+				return
+			end
+
 			selectedShape.KeepHistoryTransactionPending = true
 
 			continuousEdition = true
