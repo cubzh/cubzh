@@ -355,7 +355,7 @@ end
 
 multi.link = function(_, object, name)
 	if linkedObjects[name] ~= nil then
-		print("multi:", name, "is already linked!")
+		error("multi:", name, "is already linked!", 2)
 		return
 	end
 
