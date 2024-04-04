@@ -878,9 +878,6 @@ cubzhBtn.onRelease = function()
 end
 
 chatBtn.onRelease = function()
-	if isChatAvailable() == false then
-		return
-	end
 	if activeModal then
 		showModal(MODAL_KEYS.CHAT)
 	else
@@ -933,9 +930,7 @@ function createChat()
 
 	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
 	btnChatFullscreen.onRelease = function()
-		if isChatAvailable() then
-			showModal(MODAL_KEYS.CHAT)
-		end
+		showModal(MODAL_KEYS.CHAT)
 	end
 	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
 	btnChatFullscreen:hide()
@@ -1008,9 +1003,6 @@ end
 
 function showChat(input)
 	if System.Authenticated == false then
-		return
-	end
-	if isChatAvailable() == false then
 		return
 	end
 	chatDisplayed = true
@@ -2148,14 +2140,6 @@ function accountCheck(callbacks)
 	end)
 end
 
--- temporary measure, while we implement parental contral
-function isChatAvailable()
-	if System.IsUserUnder13 and Client.IsMobile then
-		return false
-	end
-	return true
-end
-
 signupElements = nil
 
 -- callbacks: success, cancel, error
@@ -2525,10 +2509,6 @@ Timer(0.1, function()
 
 		if System.HasEmail == false then
 			showBadge("!")
-		end
-
-		if isChatAvailable() == false then
-			textBubbleShape:hide()
 		end
 
 		getWorldInfo()
