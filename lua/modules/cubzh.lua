@@ -1566,7 +1566,7 @@ playerControls.exitVehicle = function(self, player)
 		require("ccc"):set({
 			target = player,
 			cameraColliders = CAMERA_COLLIDES_WITH_GROUPS,
-			cameraRotation = Camera.Rotation,
+			cameraRotation = Rotation(0, Camera.Rotation.Y, 0),
 		})
 		Camera.FOV = cameraDefaultFOV
 	end
