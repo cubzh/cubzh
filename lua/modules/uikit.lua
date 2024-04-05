@@ -1256,11 +1256,11 @@ function createUI(system)
 		node.config = _config
 
 		local background = Quad()
-		if image == nil then
+		if node.config.image == nil then
 			background.Color = color
 			background.IsDoubleSided = false
 		else
-			background.Image = image
+			background.Image = node.config.image
 			background.IsDoubleSided = true
 		end
 
