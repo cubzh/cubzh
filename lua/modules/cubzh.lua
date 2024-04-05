@@ -582,7 +582,10 @@ Client.OnWorldObjectLoad = function(obj)
 				if p.Animations.Dance ~= nil then
 					p.Animations.Dance:Stop()
 				end
-				p.Head.LocalRotation = { 0, 0, 0 }
+				-- TODO: for some reason, `p` is not always a Player. Need to investigate.
+				if p.Head ~= nil then
+					p.Head.LocalRotation = { 0, 0, 0 }
+				end
 			end
 		end
 	elseif obj.Name == "voxels.standing_speaker" then
