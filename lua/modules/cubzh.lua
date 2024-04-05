@@ -555,12 +555,13 @@ Client.OnWorldObjectLoad = function(obj)
 	elseif obj.Name == "voxels.dj_table" then
 		local music = bundle.Data("misc/hubmusic.ogg")
 		if music then
-			local radius = 100
+			local radius = 80
 			local as = AudioSource()
 			as.Sound = music
 			as.Loop = true
 			as.Volume = 1.0
 			as.Radius = radius
+			as.MinRadius = 20
 			as.Spatialized = true
 			as:SetParent(obj)
 			as.LocalPosition = { 0, 0, 0 }
