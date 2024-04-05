@@ -1537,6 +1537,8 @@ function createUI(system)
 		end
 
 		node._setText = function(self, str)
+			-- print("DEBUG:", type(str))
+            print("DEBUG") -- triggers an infinite loop leading to a crash
 			if self.object then
 				self.object.Text = str
 			end
