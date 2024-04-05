@@ -618,9 +618,9 @@ function createUI(system)
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
-					t._onPress = function()
+					t._onPress = function(self)
 						if v ~= nil then
-							v()
+							v(self)
 						end
 					end
 				end
@@ -651,9 +651,9 @@ function createUI(system)
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
-					t._onRelease = function()
+					t._onRelease = function(self)
 						if v ~= nil then
-							v()
+							v(self)
 						end
 					end
 				end
