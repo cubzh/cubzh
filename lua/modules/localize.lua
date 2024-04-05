@@ -71,9 +71,16 @@ local mt = {
 		local v
 		local l2
 		for _, l in ipairs(prefLanguages) do
+			-- do not translate to english for now, english always considered to be the source
+			if l == "en" then
+				return str
+			end
 			v = _localize(l, str, context)
 			if v == nil then
 				l2 = getLanguageWithoutRegion(l)
+				if l2 == "en" then
+					return str
+				end
 				if l2 ~= "" and l2 ~= l then
 					v = _localize(l2, str, context)
 				end

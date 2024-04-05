@@ -1,3 +1,5 @@
+-- ADD FRIENDS TOAST -> faster
+
 Dev.DisplayColliders = false
 local DEBUG_AMBIENCES = false
 local DEBUG_ITEMS = false
@@ -12,8 +14,8 @@ local GLIDER_BACKPACK = {
 	ITEM_NAME = "voxels.glider_backpack",
 }
 
-local TIME_TO_AVATAR_CTA = 60 * 4 -- seconds
-local TIME_TO_FRIENDS_CTA = 60 * 7 -- seconds
+local TIME_TO_AVATAR_CTA = 60 * 2 -- seconds
+local TIME_TO_FRIENDS_CTA = 60 * 3 -- seconds
 
 local TIME_CYCLE_DURATION = 480 -- 8 minutes
 local DAWN_DURATION = 0.05 -- percentages
@@ -58,6 +60,7 @@ local LIGHT_COLOR = Color(244, 210, 87)
 Client.OnStart = function()
 	dialog = require("dialog")
 	dialog:setMaxWidth(400)
+	loc = require("localize")
 	multi = require("multi")
 	textbubbles = require("textbubbles")
 	skills = require("object_skills")
@@ -132,7 +135,7 @@ Client.OnStart = function()
 		addCollectibles()
 		addTimers()
 
-		print(Player.Username .. " joined!")
+		print(string.format(loc("%s joined!"), Player.Username))
 	end)
 
 	mapEffects()
@@ -282,7 +285,8 @@ Client.OnPlayerJoin = function(p)
 	end
 	initPlayer(p)
 	dropPlayer(p)
-	print(p.Username .. " joined!")
+
+	print(string.format(loc("%s joined!"), Player.Username))
 end
 
 Client.OnPlayerLeave = function(p)
@@ -291,7 +295,7 @@ Client.OnPlayerLeave = function(p)
 	multi:unlink("p_" .. p.ID)
 
 	if p ~= Player then
-		print(p.Username .. " just left!")
+		print(string.format(loc("%s just left!"), Player.Username))
 		skills.removeStepClimbing(p)
 		walkSFX:unregister(p)
 		p:RemoveFromParent()
@@ -341,6 +345,31 @@ Client.OnWorldObjectLoad = function(obj)
 			lamps.IsUnlit = false
 			l.On = false
 		end)
+	elseif obj.Name == "avatars_sign" then
+		obj.Lights_1.IsUnlit = true
+		obj.Lights_2.IsUnlit = true
+	elseif obj.Name == "worlds_sign" then
+		obj.Lights_1.IsUnlit = true
+		obj.Lights_2.IsUnlit = true
+	elseif obj.Name == "ground_wire" then
+		local lights = { obj.Lights_1, obj.Lights_2, obj.Lights_3, obj.Lights_4 }
+		local t = 0.0
+		local animTime = 0.6
+		local step
+		local previousStep
+		obj.Tick = function(o, dt)
+			t = (t + dt) % animTime
+			step = math.floor(t / animTime * 4) + 1
+			if step ~= previousStep then
+				previousStep = step
+				lights[step].IsUnlit = true
+				if step > 1 then
+					lights[step - 1].IsUnlit = false
+				else
+					lights[4].IsUnlit = false
+				end
+			end
+		end
 	elseif obj.Name == "voxels.home_1" then
 		setupBuilding(obj)
 	elseif obj.Name == "voxels.city_lamp" then
@@ -422,7 +451,7 @@ Client.OnWorldObjectLoad = function(obj)
 			end
 			_helpers.lookAt(self.avatarContainer, other)
 			dialog:create(
-				"Hey! Edit your avatar in the Profile Menu, or use the changing room! 👕👖🥾",
+				loc("Hey! Edit your avatar in the Profile Menu, or use the changing room! 👕👖🥾"),
 				self.avatar
 			)
 			Menu:HighlightProfile()
@@ -462,8 +491,32 @@ Client.OnWorldObjectLoad = function(obj)
 				return
 			end
 			_helpers.lookAt(self.avatarContainer, other)
-			dialog:create("Looking for friends? Add some through the Friends menu!", self.avatar)
+			dialog:create(loc("Looking for friends? Add some through the Friends menu!"), self.avatar)
 			Menu:HighlightFriends()
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+			Menu:RemoveHighlight()
+		end
+	elseif obj.Name == "worlds_npc" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Shadow = true
+		end)
+		obj = _helpers.replaceWithAvatar(obj, "minadune")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+			dialog:create(
+				loc("There are many Worlds to explore in Cubzh, step inside and use my teleporter or the Main menu!"),
+				self.avatar
+			)
+			Menu:HighlightCubzhMenu()
 		end
 		obj.OnCollisionEnd = function(self, other)
 			if other ~= Player then
@@ -480,11 +533,11 @@ Client.OnWorldObjectLoad = function(obj)
 				return
 			end
 			self.toast = toast:create({
-				message = "Ready to customize your avatar? 👕",
+				message = loc("Ready to customize your avatar? 👕"),
 				center = false,
 				iconShape = bundle.Shape("voxels.change_room"),
 				duration = -1, -- negative duration means infinite
-				actionText = "Let's do this!",
+				actionText = loc("Let's do this!"),
 				action = function()
 					Menu:ShowProfileWearables()
 				end,
@@ -502,15 +555,31 @@ Client.OnWorldObjectLoad = function(obj)
 	elseif obj.Name == "voxels.dj_table" then
 		local music = bundle.Data("misc/hubmusic.ogg")
 		if music then
+			local radius = 80
 			local as = AudioSource()
 			as.Sound = music
 			as.Loop = true
 			as.Volume = 1.0
-			as.Radius = 100
+			as.Radius = radius
+			as.MinRadius = 20
 			as.Spatialized = true
 			as:SetParent(obj)
 			as.LocalPosition = { 0, 0, 0 }
 			as:Play()
+			radius = radius * 0.9
+			local trigger = Object()
+			trigger.CollisionBox = Box({ -radius, -radius, -radius }, { radius, radius, radius })
+			trigger:SetParent(obj)
+			trigger.Physics = PhysicsMode.Trigger
+			trigger.CollisionGroups = {}
+			trigger.CollidesWithGroups = PLAYER_COLLISION_GROUPS
+			trigger.OnCollisionBegin = function(_, p)
+				p.Animations.Dance:Play()
+			end
+			trigger.OnCollisionEnd = function(_, p)
+				p.Animations.Dance:Stop()
+				p.Head.LocalRotation = { 0, 0, 0 }
+			end
 		end
 	elseif obj.Name == "voxels.standing_speaker" then
 		local speaker = obj:GetChild(1)
@@ -535,17 +604,20 @@ Client.OnWorldObjectLoad = function(obj)
 		speaker.originalScale = speaker.Scale:Copy()
 		table.insert(speakers, speaker)
 	elseif obj.Name == "voxels.portal" then
+		local l = Light()
+		l.Color = Color(255, 139, 185)
+		l:SetParent(obj)
 		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
 		obj.trigger.OnCollisionBegin = function(self, other)
 			if other ~= Player then
 				return
 			end
 			self.toast = toast:create({
-				message = "Ready to explore other Worlds? 🌎",
+				message = loc("Ready to explore other Worlds? 🌎"),
 				center = false,
 				iconShape = bundle.Shape("voxels.portal"),
 				duration = -1, -- negative duration means infinite
-				actionText = "Let's go!",
+				actionText = loc("Let's go!"),
 				action = function()
 					Menu:ShowWorlds()
 				end,
@@ -627,11 +699,11 @@ Client.OnWorldObjectLoad = function(obj)
 				icon = bundle.Shape("aduermael.discord_logo")
 			end)
 			self.toast = toast:create({
-				message = "Might wanna join Cubzh's Discord to meet other players & builders?",
+				message = loc("Might wanna join Cubzh's Discord to meet other players & creators?"),
 				center = false,
 				iconShape = icon,
 				duration = -1, -- negative duration means infinite
-				actionText = "Sure!",
+				actionText = loc("Sure!"),
 				action = function()
 					URL:Open("https://discord.gg/cubzh")
 				end,
@@ -833,10 +905,16 @@ local JUMP_VELOCITY = 82
 local MAX_AIR_JUMP_VELOCITY = 85
 initPlayer = function(p)
 	if p == Player then -- Player properties for local simulation
-		require("camera_modes"):setThirdPerson({
-			rigidity = 0.4,
+		-- require("camera_modes"):setThirdPerson({
+		-- 	rigidity = 0.4,
+		-- 	target = p,
+		-- 	collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+		-- })
+
+		require("camera_modes"):setFree()
+		require("ccc"):set({
 			target = p,
-			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			cameraColliders = CAMERA_COLLIDES_WITH_GROUPS,
 		})
 
 		jumpParticles = particles:newEmitter({
@@ -1009,12 +1087,12 @@ addTimers = function()
 					return -- If the player has at least one customized equipment, don't send toastMsg
 				else
 					toast:create({
-						message = "You can customize your avatar anytime!",
+						message = loc("You can customize your avatar anytime!"),
 						center = false,
 						iconShape = bundle.Shape("voxels.change_room"),
 						duration = -1,
 						closeButton = true,
-						actionText = "Ok!",
+						actionText = loc("Ok!"),
 						action = function(self)
 							Menu:ShowProfileWearables()
 							self:remove()
@@ -1032,12 +1110,12 @@ addTimers = function()
 					return -- If the player already has friends, don't toastMsg
 				else
 					toast:create({
-						message = "Add friends and play together!",
+						message = loc("Add friends and play with them!"),
 						center = false,
 						iconShape = bundle.Shape("voxels.friend_icon"),
 						duration = -1,
 						closeButton = true,
-						actionText = "Ok!",
+						actionText = loc("Ok!"),
 						action = function(self)
 							Menu:ShowFriends()
 							self:remove()
@@ -1336,6 +1414,69 @@ function addPlayerAnimations(player)
 		end
 	end
 	player.Animations.LiftArms = animLiftArms
+
+	local leftLegPos = Player.LeftLeg.LocalPosition
+	local rightLegPos = Player.RightLeg.LocalPosition
+
+	local animDance = Animation("Dance", { duration = 0.5, loops = 0, priority = 1 })
+	local rArm = {
+		{ time = 0.0, rotation = { math.rad(10), 0, -math.rad(70) } },
+		{ time = 0.5, rotation = { math.rad(-70), 0, -math.rad(70) } },
+		{ time = 1.0, rotation = { math.rad(10), 0, -math.rad(70) } },
+	}
+	local rHand = {
+		{ time = 0.0, rotation = { 0, math.rad(-70), 0 } },
+		{ time = 0.5, rotation = { 0, math.rad(-10), 0 } },
+		{ time = 1.0, rotation = { 0, math.rad(-70), 0 } },
+	}
+	local lArm = {
+		{ time = 0.0, rotation = { math.rad(-45), 0, math.rad(60) } },
+		{ time = 0.5, rotation = { math.rad(45), 0, math.rad(60) } },
+		{ time = 1.0, rotation = { math.rad(-45), 0, math.rad(60) } },
+	}
+	local lHand = {
+		{ time = 0.0, rotation = { 0, math.rad(10), 0 } },
+		{ time = 0.5, rotation = { 0, math.rad(70), 0 } },
+		{ time = 1.0, rotation = { 0, math.rad(10), 0 } },
+	}
+	local body = {
+		{ time = 0, position = { 0, 12, 0 } },
+		{ time = 1, position = { 0, 11, 0 } },
+		{ time = 2, position = { 0, 12, 0 } },
+	}
+	local lleg = {
+		{ time = 0, rotation = { 0, 0, 0 }, position = leftLegPos },
+		{ time = 1, rotation = { 0, 0, 0 }, position = { leftLegPos.X, leftLegPos.Y + 1, leftLegPos.Z } },
+		{ time = 2, rotation = { 0, 0, 0 }, position = leftLegPos },
+	}
+	local rleg = {
+		{ time = 0, rotation = { 0, 0, 0 }, position = rightLegPos },
+		{ time = 1, rotation = { 0, 0, 0 }, position = { rightLegPos.X, rightLegPos.Y + 1, rightLegPos.Z } },
+		{ time = 2, rotation = { 0, 0, 0 }, position = rightLegPos },
+	}
+	local head = {
+		{ time = 0, rotation = { 0, 0, math.rad(5) } },
+		{ time = 1, rotation = { 0, 0, math.rad(-5) } },
+		{ time = 2, rotation = { 0, 0, math.rad(5) } },
+	}
+
+	local animDanceConfig = {
+		RightArm = rArm,
+		RightHand = rHand,
+		LeftArm = lArm,
+		LeftHand = lHand,
+		Body = body,
+		LeftLeg = lleg,
+		RightLeg = rleg,
+		Head = head,
+	}
+	for name, v in pairs(animDanceConfig) do
+		for _, frame in ipairs(v) do
+			animDance:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
+			animDance:Bind(name, (name == "Body" and not player.Avatar[name]) and player.Avatar or player.Avatar[name])
+		end
+	end
+	player.Animations.Dance = animDance
 end
 
 playerControls = {
@@ -1409,10 +1550,16 @@ playerControls.exitVehicle = function(self, player)
 	player.Velocity = Number3.Zero
 
 	if player == Player then
-		require("camera_modes"):setThirdPerson({
-			rigidity = 0.4,
+		-- require("camera_modes"):setThirdPerson({
+		-- 	rigidity = 0.4,
+		-- 	target = player,
+		-- 	collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+		-- })
+		require("camera_modes"):setFree()
+		require("ccc"):set({
 			target = player,
-			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+			cameraColliders = CAMERA_COLLIDES_WITH_GROUPS,
+			cameraRotation = Camera.Rotation,
 		})
 		Camera.FOV = cameraDefaultFOV
 	end
@@ -1455,13 +1602,13 @@ playerControls.walk = function(self, player)
 
 	if player == Player then
 		self.onDrag = function(pe)
-			Player.LocalRotation = Rotation(0, pe.DX * 0.01, 0) * Player.LocalRotation
-			Player.Head.LocalRotation = Rotation(-pe.DY * 0.01, 0, 0) * Player.Head.LocalRotation
-			local dpad = require("controls").DirectionalPadValues
-			Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
+			-- Player.LocalRotation = Rotation(0, pe.DX * 0.01, 0) * Player.LocalRotation
+			-- Player.Head.LocalRotation = Rotation(-pe.DY * 0.01, 0, 0) * Player.Head.LocalRotation
+			-- local dpad = require("controls").DirectionalPadValues
+			-- Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
 		end
 		self.dirPad = function(x, y)
-			Player.Motion = (Player.Forward * y + Player.Right * x) * 50
+			-- Player.Motion = (Player.Forward * y + Player.Right * x) * 50
 		end
 		updateSync()
 	end
@@ -1634,6 +1781,7 @@ playerControls.glide = function(self, player)
 			leftTrail:setColor(Color(255, 255, 255, leftLift * f))
 		end
 
+		require("ccc"):unset()
 		require("camera_modes"):setThirdPerson({
 			rigidity = 0.3,
 			target = vehicle,
@@ -1761,14 +1909,15 @@ function addCollectibles()
 					multi:action("equipGlider")
 
 					gliderUsageToast = toast:create({
-						message = "Maintain jump key to start gliding!",
+						message = loc("Maintain jump key to start gliding!"),
 						center = false,
 						iconShape = bundle.Shape("voxels.glider"),
 						duration = -1, -- negative duration means infinite
 					})
 				else
+					local format = loc("%d / %d collected", "number of collected glider parts")
 					backpackTransparentToast = toast:create({
-						message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
+						message = string.format(format, #collectedGliderParts, #gliderParts),
 						center = true,
 						duration = -1, -- negative duration means infinite
 						iconShape = bundle.Shape("voxels.glider_parts"),
@@ -1865,7 +2014,7 @@ function addCollectibles()
 				if #collectedGliderParts >= #gliderParts then
 					-- the last glider part has been collected
 					toast:create({
-						message = "Glider unlocked!",
+						message = loc("Glider unlocked!"),
 						center = false,
 						iconShape = bundle.Shape(GLIDER_BACKPACK.ITEM_NAME),
 						duration = 2,
@@ -1873,8 +2022,9 @@ function addCollectibles()
 					unlockGlider()
 				else
 					-- a glider part has been collected
+					local format = loc("%d / %d collected", "number of collected glider parts")
 					toast:create({
-						message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
+						message = string.format(format, #collectedGliderParts, #gliderParts),
 						iconShape = bundle.Shape("voxels.glider_parts"),
 						keepInStack = false,
 					})
@@ -1927,20 +2077,20 @@ end
 pet = {}
 pet.dialogTreeTeaser = function(_, target)
 	dialog:create(
-		"Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a companion! ✨",
+		loc("Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a pet! ✨"),
 		target,
-		{ "➡️ Yes of course!", "➡️ No thank you" },
+		{ loc("➡️ Yes of course!"), loc("➡️ No thank you") },
 		function(idx)
 			if idx == 1 then
 				dialog:create(
-					"This machine here can spawn a random egg for you, containing a loving companion!",
+					loc("This machine here can spawn a random egg for you!"),
 					target,
-					{ "➡️ Ok!" },
+					{ loc("➡️ Ok!") },
 					function()
 						dialog:create(
-							"I'm currently fixing it, come back in a few days!",
+							loc("I'm currently fixing it, come back in a few days!"),
 							target,
-							{ "➡️ I'll be back!" },
+							{ loc("➡️ I'll be back!") },
 							function()
 								dialog:remove()
 							end
@@ -1949,9 +2099,9 @@ pet.dialogTreeTeaser = function(_, target)
 				)
 			elseif idx == 2 then
 				dialog:create(
-					"Oh, I could swear you would like a small friend around. Come back if you change your mind!",
+					loc("Oh, I could swear you would like to adopt a cute pet. Come back if you change your mind!"),
 					target,
-					{ "➡️ Ok!" },
+					{ loc("➡️ Ok!") },
 					function()
 						dialog:remove()
 					end

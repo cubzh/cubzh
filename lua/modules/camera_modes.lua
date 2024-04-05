@@ -135,7 +135,7 @@ cameraModes.setFree = function(self, config)
 	if self ~= cameraModes then
 		error("camera_modes:setFree(config) should be called with `:`", 2)
 	end
-	if type(config) ~= "table" then
+	if config ~= nil and type(config) ~= "table" then
 		error("camera_modes:setFree(config) - config should be a table", 2)
 	end
 
@@ -288,15 +288,18 @@ cameraModes.setThirdPerson = function(self, config)
 		target = nil, -- must be set
 		offset = nil, -- offset from target
 		rotationOffset = nil,
+		rotation = nil,
 		rigidity = 0.5,
 		collidesWithGroups = Map.CollisionGroups,
+		rotatesWithTarget = true,
 	}
 
 	config = conf:merge(defaultConfig, config, {
 		acceptTypes = {
 			target = { "Object", "Shape", "MutableShape", "Number3", "Player" },
 			offset = { "Number3" },
-			rotationOffset = { "Rotation" },
+			rotationOffset = { "Rotation", "Number3", "table" },
+			rotation = { "Rotation", "Number3", "table" },
 			collidesWithGroups = { "CollisionGroups", "table" },
 		},
 	})
@@ -322,8 +325,16 @@ cameraModes.setThirdPerson = function(self, config)
 	local rotationOffset = config.rotationOffset or Rotation(0, 0, 0)
 	local targetIsPlayer = type(target) == "Player"
 	local targetHasRotation = type(target) == "Object" or type(target) == "Shape" or type(target) == "MutableShape"
+	local rotatesWithTarget = config.rotatesWithTarget
 
 	camera:SetParent(World)
+	if config.rotation then
+		if not pcall(function()
+			worldObject.Rotation:Set(config.rotation)
+		end) then
+			error("can't set camera rotation", 2)
+		end
+	end
 
 	if showPointer then
 		Pointer:Show()
@@ -353,9 +364,15 @@ cameraModes.setThirdPerson = function(self, config)
 
 		if targetIsPlayer then
 			worldObject.Position.Y = worldObject.Position.Y + target.CollisionBox.Max.Y * target.Scale.Y
-			worldObject.Rotation:Set(target.Head.Rotation * rotationOffset)
+			if rotatesWithTarget then
+				worldObject.Rotation:Set(target.Head.Rotation * rotationOffset)
+			end
 		elseif targetHasRotation then
-			worldObject.Rotation:Set(target.Rotation * rotationOffset)
+			if rotatesWithTarget then
+				worldObject.Rotation:Set(target.Rotation * rotationOffset)
+			else
+				worldObject.Rotation:Set(rotationOffset)
+			end
 		else
 			worldObject.Rotation:Set(rotationOffset)
 		end

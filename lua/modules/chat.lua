@@ -70,7 +70,7 @@ local logTypes = {
 -- same order as logLevels to be able to do logLevelColors[logLevels.Info]
 local logTypeColors = {
 	Color(30, 215, 96), -- Info
-	Color.White, -- Warning
+	Color.Yellow, -- Warning
 	Color.White, -- Error
 	Color.White, -- ChatMessage
 	Color(17, 169, 255), -- PrivateChatMessage (whispering)
@@ -453,6 +453,9 @@ local createChat = function(_, config)
 			message.status = status
 			if message.text ~= nil then
 				message.text.Color = chatMessageStatusColors[status] or chatMessageStatusColors["error"]
+				if status == "reported" then
+					LocalEvent:Send(LocalEvent.Name.WarningMessage, "sent message moderated")
+				end
 			end
 		end
 	end)

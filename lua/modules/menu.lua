@@ -207,6 +207,9 @@ function showModal(key, config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
 		activeModal = friends:create(maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.COINS then
+		content = require("coins"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.MARKETPLACE then
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
@@ -401,6 +404,7 @@ function refreshDisplay()
 
 		chatBtn:hide()
 		friendsBtn:hide()
+		pezhBtn:hide()
 
 		profileFrame:hide()
 		if signupElements ~= nil then
@@ -421,6 +425,7 @@ function refreshDisplay()
 
 		chatBtn:show()
 		friendsBtn:show()
+		pezhBtn:show()
 
 		profileFrame:show()
 		if signupElements ~= nil then
@@ -715,20 +720,31 @@ actionColumn:parentDidResize()
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
 
+topBarBtnPress = function(self)
+	self.Color = Color(0, 0, 0, 0.5)
+	Client:HapticFeedback()
+end
+
+topBarBtnRelease = function(self)
+	self.Color = _DEBUG and _DebugColor() or Color(0, 0, 0, 0)
+end
+
 btnContentParentDidResize = function(self)
 	local padding = PADDING_BIG
 	if self == cubzhBtnShape or self == avatar then
 		padding = PADDING
 	end
 	local parent = self.parent
-	self.Width = parent.Width - PADDING * 2
+	local ratio = self.Width / self.Height
 	self.Height = parent.Height - padding * 2
-	self.pos = { PADDING, padding }
+	self.Width = ratio * self.Height
+	self.pos = { self.parent.Width * 0.5 - self.Width * 0.5, self.parent.Height * 0.5 - self.Height * 0.5 }
 end
 
 -- MAIN MENU BTN
 
 cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 cubzhBtn:setParent(topBar)
 
 uiBadge = require("ui_badge")
@@ -763,9 +779,16 @@ cubzhBtnShape:parentDidResize()
 -- CONNECTIVITY BTN
 
 connBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 connBtn:setParent(topBar)
 connBtn:hide()
-connBtn.onRelease = connect
+
+connBtn.onPress = topBarBtnPress
+connBtn.onCancel = topBarBtnRelease
+connBtn.onRelease = function(self)
+	topBarBtnRelease(self)
+	connect()
+end
 
 connShape = System.ShapeFromBundle("aduermael.connection_indicator")
 connectionIndicator = ui:createShape(connShape, { doNotFlip = true })
@@ -775,7 +798,7 @@ connectionIndicator.parentDidResize = function(self)
 	local parent = self.parent
 	self.Height = parent.Height * 0.4
 	self.Width = self.Height
-	self.pos = { parent.Width - self.Width - PADDING, parent.Height * 0.5 - self.Height * 0.5 }
+	self.pos = { parent.Width * 0.5 - self.Width * 0.5, parent.Height * 0.5 - self.Height * 0.5 }
 end
 
 noConnShape = System.ShapeFromBundle("aduermael.no_conn_indicator")
@@ -855,6 +878,7 @@ function connectionIndicatorStartAnimation()
 end
 
 chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 chatBtn:setParent(topBar)
 
 textBubbleShape = ui:createShape(System.ShapeFromBundle("aduermael.textbubble"))
@@ -867,17 +891,24 @@ textBubbleShape.parentDidResize = function(self)
 end
 
 friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 friendsBtn:setParent(topBar)
 
 friendsShape = ui:createShape(System.ShapeFromBundle("aduermael.friends_icon"))
 friendsShape:setParent(friendsBtn)
 friendsShape.parentDidResize = btnContentParentDidResize
 
-cubzhBtn.onRelease = function()
+cubzhBtn.onPress = topBarBtnPress
+cubzhBtn.onCancel = topBarBtnRelease
+cubzhBtn.onRelease = function(self)
+	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.CUBZH_MENU)
 end
 
-chatBtn.onRelease = function()
+chatBtn.onPress = topBarBtnPress
+chatBtn.onCancel = topBarBtnRelease
+chatBtn.onRelease = function(self)
+	topBarBtnRelease(self)
 	if activeModal then
 		showModal(MODAL_KEYS.CHAT)
 	else
@@ -886,19 +917,44 @@ chatBtn.onRelease = function()
 	end
 end
 
-friendsBtn.onRelease = function()
+friendsBtn.onPress = topBarBtnPress
+friendsBtn.onCancel = topBarBtnRelease
+friendsBtn.onRelease = function(self)
+	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.FRIENDS)
 end
 
 profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 profileFrame:setParent(topBar)
-profileFrame.onRelease = function(_)
+
+profileFrame.onPress = topBarBtnPress
+profileFrame.onCancel = topBarBtnRelease
+profileFrame.onRelease = function(self)
+	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.PROFILE)
 end
 
 avatar = ui:createFrame(Color.transparent)
 avatar:setParent(profileFrame)
 avatar.parentDidResize = btnContentParentDidResize
+
+-- PEZH
+
+pezhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
+pezhBtn:setParent(topBar)
+
+pezhShape = ui:createShape(System.ShapeFromBundle("aduermael.pezh_coin"))
+pezhShape:setParent(pezhBtn)
+pezhShape.parentDidResize = btnContentParentDidResize
+
+pezhBtn.onPress = topBarBtnPress
+pezhBtn.onCancel = topBarBtnRelease
+pezhBtn.onRelease = function(self)
+	topBarBtnRelease(self)
+	showModal(MODAL_KEYS.COINS)
+end
 
 -- CHAT
 
@@ -1524,10 +1580,10 @@ topBar.parentDidResize = function(self)
 	local height = TOP_BAR_HEIGHT
 
 	cubzhBtn.Height = height
-	cubzhBtn.Width = cubzhBtn.Height
+	cubzhBtn.Width = height
 
 	connBtn.Height = height
-	connBtn.Width = connBtn.Height
+	connBtn.Width = height
 
 	self.Width = Screen.Width
 	self.Height = System.SafeAreaTop + height
@@ -1539,19 +1595,25 @@ topBar.parentDidResize = function(self)
 	-- PROFILE BUTTON
 
 	profileFrame.Height = height
-	profileFrame.Width = profileFrame.Height
+	profileFrame.Width = height
 
 	-- FRIENDS BUTTON
 
 	friendsBtn.Height = height
-	friendsBtn.Width = friendsBtn.Height - (PADDING_BIG - PADDING) * 2
+	friendsBtn.Width = height
 	friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
+
+	-- PEZH BUTTON
+
+	pezhBtn.Height = height
+	pezhBtn.Width = height
+	pezhBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
 
 	-- CHAT BUTTON
 
 	chatBtn.Height = height
-	chatBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
-	chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
+	chatBtn.pos.X = pezhBtn.pos.X + pezhBtn.Width
+	chatBtn.Width = connBtn:isVisible() and (connBtn.pos.X - chatBtn.pos.X) or (cubzhBtn.pos.X - chatBtn.pos.X)
 
 	-- CHAT MESSAGES
 
@@ -1720,6 +1782,23 @@ menu.HighlightFriends = function(_)
 		pointer = uiPointer:create({ uikit = ui })
 	end
 	pointer:pointAt({ target = friendsBtn, from = "below" })
+
+	return true
+end
+
+---@function HighlightCubzhMenu Highlights Cubzh button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:HighlightCubzhMenu()
+---@return boolean
+menu.HighlightCubzhMenu = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = cubzhBtn, from = "below" })
 
 	return true
 end

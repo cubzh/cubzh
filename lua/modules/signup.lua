@@ -90,11 +90,11 @@ signup.createModal = function(_, config)
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 	content.node = node
 
-	content.title = str:upperFirstChar(loc("sign up", "form title"))
+	content.title = str:upperFirstChar(loc("sign up", "title"))
 	content.icon = "🙂"
 
 	local birthdayLabel =
-		ui:createText("🎂 " .. str:upperFirstChar(loc("birthday")), Color(200, 200, 200, 255), "small")
+		ui:createText("🎂 " .. str:upperFirstChar(loc("date of birth")), Color(200, 200, 200, 255), "small")
 	birthdayLabel:setParent(node)
 
 	local birthdayInfo = ui:createText("", Color(251, 206, 0, 255), "small")
@@ -261,7 +261,7 @@ signup.createModal = function(_, config)
 					checkUsernameRequest = nil
 
 					if success == false then
-						usernameInfo.Text = "❌ " .. loc("server error, sorry")
+						usernameInfo.Text = "❌ " .. loc("server error")
 						usernameInfo.Color = theme.errorTextColor
 					elseif res.format ~= true then
 						usernameInfo.Text = "❌ format error"
@@ -272,11 +272,11 @@ signup.createModal = function(_, config)
 						usernameInfo.Color = theme.errorTextColor
 						checkUsernameError = true
 					elseif res.available ~= true then
-						usernameInfo.Text = "❌ " .. loc("already taken, sorry")
+						usernameInfo.Text = "❌ " .. loc("already taken")
 						usernameInfo.Color = theme.errorTextColor
 						checkUsernameError = true
 					elseif type(res.key) ~= "string" then
-						usernameInfo.Text = "❌ " .. loc("server error, sorry")
+						usernameInfo.Text = "❌ " .. loc("server error")
 						usernameInfo.Color = theme.errorTextColor
 					else
 						System:DebugEvent("SIGNUP_ENTERED_VALID_USERNAME")
