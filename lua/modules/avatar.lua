@@ -38,6 +38,8 @@ bodyPartsNames = {
 	"LeftLeg",
 	"RightFoot",
 	"LeftFoot",
+	"EyeLidRight",
+	"EyeLidLeft",
 }
 
 cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
@@ -97,7 +99,7 @@ index.skinColors = {
 }
 
 function initAnimations(avatar)
-	local animWalk = Animation("Walk", { speed = 1.8, loops = 0 })
+	local animWalk = Animation("Walk", { speed = 1.8, loops = 0, priority = 2 })
 	local walk_llegK = {
 		{ time = 0.0, rotation = { -1.1781, 0, 0 } },
 		{ time = 1 / 6, rotation = { -0.785398, 0, 0 } },
@@ -203,38 +205,41 @@ function initAnimations(avatar)
 		end
 	end
 
+	local yOffset = 0.4
+	local leftLegOrigin = avatar.LeftLeg.LocalPosition:Copy()
+	local rightLegOrigin = avatar.RightLeg.LocalPosition:Copy()
 	local animIdle = Animation("Idle", { speed = 0.5, loops = 0 })
 	local idle_keyframes_data = {
-		{ name = "LeftLeg", time = 0.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "LeftLeg", time = 0.5, rotation = { -0.0, 0, -0.0 } },
-		{ name = "LeftLeg", time = 1.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "LeftFoot", time = 0.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "LeftFoot", time = 0.5, rotation = { -0.0, 0, -0.0 } },
-		{ name = "LeftFoot", time = 1.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "RightLeg", time = 0.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "RightLeg", time = 0.5, rotation = { -0.0, 0, -0.0 } },
-		{ name = "RightLeg", time = 1.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "RightFoot", time = 0.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "RightFoot", time = 0.5, rotation = { -0.0, 0, -0.0 } },
-		{ name = "RightFoot", time = 1.0, rotation = { -0.0, 0, -0.0 } },
-		{ name = "LeftArm", time = 0.0, rotation = { -0.0, 0, 1.14537 } },
-		{ name = "LeftArm", time = 0.5, rotation = { -0.0, 0, 1.14537 } },
-		{ name = "LeftArm", time = 1.0, rotation = { -0.0, 0, 1.14537 } },
-		{ name = "LeftHand", time = 0.0, rotation = { -0.0, 0.294524, -0.0981748 } },
-		{ name = "LeftHand", time = 0.5, rotation = { -0.0, 0.19635, -0.0981748 } },
-		{ name = "LeftHand", time = 1.0, rotation = { -0.0, 0.294524, -0.0981748 } },
-		{ name = "RightArm", time = 0.0, rotation = { -0.0, 0, -1.14537 } },
-		{ name = "RightArm", time = 0.5, rotation = { -0.0, 0, -1.14537 } },
-		{ name = "RightArm", time = 1.0, rotation = { -0.0, 0, -1.14537 } },
-		{ name = "RightHand", time = 0.0, rotation = { -0.0, -0.294524, -0.0 } },
-		{ name = "RightHand", time = 0.5, rotation = { -0.0, -0.19635, -0.0 } },
-		{ name = "RightHand", time = 1.0, rotation = { -0.0, -0.294524, -0.0 } },
+		{ name = "LeftLeg", time = 0.0, position = leftLegOrigin, rotation = { 0, 0, 0 } },
+		{ name = "LeftLeg", time = 0.5, position = leftLegOrigin + { 0.0, yOffset, 0.0 }, rotation = { 0, 0, 0 } },
+		{ name = "LeftLeg", time = 1.0, position = leftLegOrigin, rotation = { 0, 0, 0 } },
+		{ name = "LeftFoot", time = 0.0, rotation = { 0, 0, 0 } },
+		{ name = "LeftFoot", time = 0.5, rotation = { 0, 0, 0 } },
+		{ name = "LeftFoot", time = 1.0, rotation = { 0, 0, 0 } },
+		{ name = "RightLeg", time = 0.0, position = rightLegOrigin, rotation = { 0, 0, 0 } },
+		{ name = "RightLeg", time = 0.5, position = rightLegOrigin + { 0.0, yOffset, 0.0 }, rotation = { 0, 0, 0 } },
+		{ name = "RightLeg", time = 1.0, position = rightLegOrigin, rotation = { 0, 0, 0 } },
+		{ name = "RightFoot", time = 0.0, rotation = { 0, 0, 0 } },
+		{ name = "RightFoot", time = 0.5, rotation = { 0, 0, 0 } },
+		{ name = "RightFoot", time = 1.0, rotation = { 0, 0, 0 } },
+		{ name = "LeftArm", time = 0.0, rotation = { 0, 0, 1.14537 + 0.1 } },
+		{ name = "LeftArm", time = 0.5, rotation = { 0, 0, 1.14537 } },
+		{ name = "LeftArm", time = 1.0, rotation = { 0, 0, 1.14537 + 0.1 } },
+		{ name = "LeftHand", time = 0.0, rotation = { 0, 0.294524, -0.0981748 } },
+		{ name = "LeftHand", time = 0.5, rotation = { 0, 0.19635, -0.0981748 } },
+		{ name = "LeftHand", time = 1.0, rotation = { 0, 0.294524, -0.0981748 } },
+		{ name = "RightArm", time = 0.0, rotation = { 0, 0, -1.14537 - 0.1 } },
+		{ name = "RightArm", time = 0.5, rotation = { 0, 0, -1.14537 } },
+		{ name = "RightArm", time = 1.0, rotation = { 0, 0, -1.14537 - 0.1 } },
+		{ name = "RightHand", time = 0.0, rotation = { 0, -0.294524, 0 } },
+		{ name = "RightHand", time = 0.5, rotation = { 0, -0.19635, 0 } },
+		{ name = "RightHand", time = 1.0, rotation = { 0, -0.294524, 0 } },
 		-- can't move head first person if head is set in animations
 		-- { name = "Head", time = 0.0, rotation = { 0, 0, 0 } },
 		-- { name = "Head", time = 0.5, rotation = { 0, 0, 0 } },
 		-- { name = "Head", time = 1.0, rotation = { 0, 0, 0 } },
 		{ name = "Body", time = 0.0, position = { 0.0, 12.0, 0.0 }, rotation = { 0, 0, 0 } },
-		{ name = "Body", time = 0.5, position = { 0.0, 12.0, 0.0 }, rotation = { 0, 0, 0 } },
+		{ name = "Body", time = 0.5, position = { 0.0, 12.0 - yOffset, 0.0 }, rotation = { 0, 0, 0 } },
 		{ name = "Body", time = 1.0, position = { 0.0, 12.0, 0.0 }, rotation = { 0, 0, 0 } },
 	}
 
@@ -245,16 +250,16 @@ function initAnimations(avatar)
 
 	local animSwingRight = Animation("SwingRight", { speed = 3, priority = 1 })
 	local swingRight_rightArm = {
-		{ time = 0.0, rotation = { -0.0, 0, -1.0472 } },
+		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
 		{ time = 1 / 3, rotation = { -0.785398, 0.392699, 0.1309 } },
 		{ time = 2 / 3, rotation = { 0.392699, -1.9635, -0.261799 } },
-		{ time = 1.0, rotation = { -0.0, 0, -1.0472 } },
+		{ time = 1.0, rotation = { 0, 0, -1.0472 } },
 	}
 	local swingRight_rightHand = {
-		{ time = 0.0, rotation = { -0.0, -0.392699, -0.0 } },
-		{ time = 1 / 3, rotation = { -1.5708, -0.392699, -0.0 } },
-		{ time = 2 / 3, rotation = { -2.74889, -1.5708, -0.0 } },
-		{ time = 1.0, rotation = { -0.0, -0.392699, -0.0 } },
+		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
+		{ time = 1 / 3, rotation = { -1.5708, -0.392699, 0 } },
+		{ time = 2 / 3, rotation = { -2.74889, -1.5708, 0 } },
+		{ time = 1.0, rotation = { 0, -0.392699, 0 } },
 	}
 	local swingRightConfig = {
 		RightArm = swingRight_rightArm,
@@ -269,16 +274,16 @@ function initAnimations(avatar)
 
 	local animSwingLeft = Animation("SwingLeft", { speed = 3, priority = 1 })
 	local swingLeft_leftArm = {
-		{ time = 0.0, rotation = { -0.0, 0, -1.0472 } },
+		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
 		{ time = 1 / 3, rotation = { -0.785398, 0.392699, 0.1309 } },
 		{ time = 2 / 3, rotation = { 0.392699, -1.9635, -0.261799 } },
-		{ time = 1.0, rotation = { -0.0, 0, -1.0472 } },
+		{ time = 1.0, rotation = { 0, 0, -1.0472 } },
 	}
 	local swingLeft_leftHand = {
-		{ time = 0.0, rotation = { -0.0, -0.392699, -0.0 } },
-		{ time = 1 / 3, rotation = { -1.5708, -0.392699, -0.0 } },
-		{ time = 2 / 3, rotation = { -2.74889, -1.5708, -0.0 } },
-		{ time = 1.0, rotation = { -0.0, -0.392699, -0.0 } },
+		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
+		{ time = 1 / 3, rotation = { -1.5708, -0.392699, 0 } },
+		{ time = 2 / 3, rotation = { -2.74889, -1.5708, 0 } },
+		{ time = 1.0, rotation = { 0, -0.392699, 0 } },
 	}
 	local swingLeftConfig = {
 		LeftHand = swingLeft_leftHand,
@@ -497,6 +502,53 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 			o.Physics = PhysicsMode.Disabled
 		end)
 		initAnimations(root)
+
+		local eyeLidRight = MutableShape()
+		eyeLidRight.Physics = PhysicsMode.Disabled
+		eyeLidRight.Palette = root.Head.Palette
+		eyeLidRight:AddBlock(1, 0, 0, 0)
+
+		eyeLidRight = Shape(eyeLidRight)
+		eyeLidRight.Name = "EyeLidRight"
+		eyeLidRight:SetParent(root.Head)
+		eyeLidRight.Pivot = { 0.5, 1, 0.5 }
+		eyeLidRight.Scale.Z = 1
+		eyeLidRight.Scale.X = 3.2
+		eyeLidRight.Scale.Y = 0 -- 4.2
+		eyeLidRight.LocalPosition:Set(4, 5.1, 5.1)
+
+		local eyeLidLeft = Shape(eyeLidRight)
+		eyeLidLeft.Name = "EyeLidLeft"
+		eyeLidLeft:SetParent(root.Head)
+		eyeLidLeft.Pivot = { 0.5, 1, 0.5 }
+		eyeLidLeft.Scale.Z = 1
+		eyeLidLeft.Scale.X = 3.2
+		eyeLidLeft.Scale.Y = 0 -- 4.2
+		eyeLidLeft.LocalPosition:Set(-4, 5.1, 5.1)
+
+		local eyeBlinks = {}
+		eyeBlinks.close = function()
+			-- removing eyelids when head loses its parent
+			-- not ideal, but no easy way currently to detect when the avatar is destroyed
+			if eyeLidRight:GetParent() == nil or eyeLidRight:GetParent():GetParent() == nil then
+				eyeBlinks = nil
+				eyeLidRight:RemoveFromParent()
+				eyeLidLeft:RemoveFromParent()
+				return
+			end
+			eyeLidRight.Scale.Y = 4.2
+			eyeLidLeft.Scale.Y = 4.2
+			Timer(0.1, eyeBlinks.open)
+		end
+		eyeBlinks.open = function()
+			eyeLidRight.Scale.Y = 0
+			eyeLidLeft.Scale.Y = 0
+			eyeBlinks.schedule()
+		end
+		eyeBlinks.schedule = function()
+			Timer(3.0 + math.random() * 1.0, eyeBlinks.close)
+		end
+		eyeBlinks.schedule()
 	end
 
 	-- if didLoadCallback is provided, we set it on root
