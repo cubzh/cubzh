@@ -574,10 +574,14 @@ Client.OnWorldObjectLoad = function(obj)
 			trigger.CollisionGroups = {}
 			trigger.CollidesWithGroups = PLAYER_COLLISION_GROUPS
 			trigger.OnCollisionBegin = function(_, p)
-				p.Animations.Dance:Play()
+				if p.Animations.Dance ~= nil then
+					p.Animations.Dance:Play()
+				end
 			end
 			trigger.OnCollisionEnd = function(_, p)
-				p.Animations.Dance:Stop()
+				if p.Animations.Dance ~= nil then
+					p.Animations.Dance:Stop()
+				end
 				p.Head.LocalRotation = { 0, 0, 0 }
 			end
 		end
