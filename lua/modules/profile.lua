@@ -1391,8 +1391,9 @@ profile.create = function(_, config)
 				end
 
 				avatarNode.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
+				return true
 			end
-		end)
+		end, { topPriority = true })
 
 		local fillUserInfo = function(ok, usr, _)
 			if not ok then
