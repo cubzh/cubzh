@@ -286,7 +286,7 @@ Client.OnPlayerJoin = function(p)
 	initPlayer(p)
 	dropPlayer(p)
 
-	print(string.format(loc("%s joined!"), Player.Username))
+	print(string.format(loc("%s joined!"), p.Username))
 end
 
 Client.OnPlayerLeave = function(p)
@@ -295,7 +295,7 @@ Client.OnPlayerLeave = function(p)
 	multi:unlink("p_" .. p.ID)
 
 	if p ~= Player then
-		print(string.format(loc("%s just left!"), Player.Username))
+		print(string.format(loc("%s just left!"), p.Username))
 		skills.removeStepClimbing(p)
 		walkSFX:unregister(p)
 		p:RemoveFromParent()
