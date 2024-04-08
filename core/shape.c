@@ -993,7 +993,8 @@ void shape_remap_colors(Shape *s, const SHAPE_COLOR_INDEX_INT_T *remap) {
                                 const SHAPE_COLOR_INDEX_INT_T prevColor = b->colorIndex;
                                 const SHAPE_COLOR_INDEX_INT_T newColor = remap[b->colorIndex];
 
-                                if (newColor == SHAPE_COLOR_INDEX_AIR_BLOCK) {
+                                if (newColor == SHAPE_COLOR_INDEX_AIR_BLOCK ||
+                                    newColor == prevColor) {
                                     continue;
                                 }
 
