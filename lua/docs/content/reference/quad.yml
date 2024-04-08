@@ -59,16 +59,16 @@ properties:
     - name: "Tiling"
       type: "Number2"
       description: |
-          Tiling of the texture on this quad. Has no effect if the quad isn't textured.
+          Tiling of the texture on this quad. Only has effect if the quad is textured by setting its [Image](/reference/quad#property-image) property.
           
-          This can be used to repeat a pattern over the quad's surface.
+          This can be used to repeat a pattern over the quad's surface. Especially useful when combined with a seamless image, to create a continuously textured surface.
 
     - name: "Offset"
       type: "Number2"
       description: |
-          Offset of the texture on this quad. Has no effect if the quad isn't textured.
+          Offset of the texture on this quad. Only has effect if the quad is textured by setting its [Image](/reference/quad#property-image) property.
           
-          This can be use to select an area of the texture to display, or to create scrolling effects.
+          This can be used to select an area of the texture to display, or to create scrolling effects.
 
     - name: "IsDoubleSided"
       type: "boolean"
