@@ -515,6 +515,26 @@ Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p) {
     }
 }
 
+void color_palette_merge(ColorPalette *p1,
+                         const ColorPalette *p2,
+                         const bool allowDuplicates,
+                         SHAPE_COLOR_INDEX_INT_T **remapOut) {
+    if (remapOut != NULL) {
+        *remapOut = (SHAPE_COLOR_INDEX_INT_T *)calloc(p2->count, sizeof(SHAPE_COLOR_INDEX_INT_T));
+    }
+    SHAPE_COLOR_INDEX_INT_T mergedIdx;
+    for (uint8_t i = 0; i < p2->orderedCount; ++i) {
+        const SHAPE_COLOR_INDEX_INT_T entryIdx = color_palette_ordered_idx_to_entry_idx(p2, i);
+        color_palette_check_and_add_color(p1,
+                                          color_palette_get_color(p2, entryIdx),
+                                          &mergedIdx,
+                                          allowDuplicates);
+        if (remapOut != NULL && *remapOut != NULL) {
+            (*remapOut)[entryIdx] = mergedIdx;
+        }
+    }
+}
+
 // MARK: - Baked lighting -
 
 bool color_palette_is_lighting_dirty(const ColorPalette *p) {
