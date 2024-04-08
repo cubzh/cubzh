@@ -2437,6 +2437,7 @@ function ui_init()
 		local s = MutableShape()
 		s.History = true -- enable history for the edited item
 		s.Palette = item.Palette -- shared palette with root shape
+		s.Physics = PhysicsMode.TriggerPerBlock
 		s.CollisionGroups = collisionGroup_item
 		s.isItem = true
 		s:AddBlock(palette:getCurrentIndex(), 0, 0, 0)
@@ -2478,6 +2479,7 @@ function ui_init()
 
 			hierarchyActions:applyToDescendants(child, { includeRoot = true }, function(s)
 				s.History = true -- enable history for the edited item
+				s.Physics = PhysicsMode.TriggerPerBlock
 				s.CollisionGroups = collisionGroup_item
 				s.isItem = true
 				table.insert(shapes, s)
