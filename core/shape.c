@@ -958,6 +958,68 @@ void shape_set_palette(Shape *shape, ColorPalette *palette, const bool retain) {
     shape_refresh_all_vertices(shape);
 }
 
+void shape_remap_colors(Shape *s, const SHAPE_COLOR_INDEX_INT_T *remap) {
+    SHAPE_COORDS_INT3_T chunkFrom = chunk_utils_get_coords(
+        (SHAPE_COORDS_INT3_T){s->bbMin.x, s->bbMin.y, s->bbMin.z});
+    SHAPE_COORDS_INT3_T chunkTo = chunk_utils_get_coords(
+        (SHAPE_COORDS_INT3_T){s->bbMax.x - 1, s->bbMax.y - 1, s->bbMax.z - 1});
+
+    Block *b;
+    Chunk *chunk;
+    SHAPE_COORDS_INT3_T coords_in_shape;
+    for (SHAPE_COORDS_INT_T x = chunkFrom.x; x <= chunkTo.x; ++x) {
+        for (SHAPE_COORDS_INT_T y = chunkFrom.y; y <= chunkTo.y; ++y) {
+            for (SHAPE_COORDS_INT_T z = chunkFrom.z; z <= chunkTo.z; ++z) {
+                chunk = (Chunk *)index3d_get(s->chunks, x, y, z);
+                if (chunk == NULL) {
+                    continue;
+                }
+
+                // split iteration into two parts to get chunk only once
+                for (CHUNK_COORDS_INT_T cx = 0; cx < CHUNK_SIZE; ++cx) {
+                    for (CHUNK_COORDS_INT_T cy = 0; cy < CHUNK_SIZE; ++cy) {
+                        for (CHUNK_COORDS_INT_T cz = 0; cz < CHUNK_SIZE; ++cz) {
+                            coords_in_shape = (SHAPE_COORDS_INT3_T){x * CHUNK_SIZE + cx,
+                                                                    y * CHUNK_SIZE + cy,
+                                                                    z * CHUNK_SIZE + cz};
+                            if (coords_in_shape.x < s->bbMin.x || coords_in_shape.x > s->bbMax.x ||
+                                coords_in_shape.y < s->bbMin.y || coords_in_shape.y > s->bbMax.y ||
+                                coords_in_shape.z < s->bbMin.z || coords_in_shape.z > s->bbMax.z) {
+                                continue;
+                            }
+
+                            b = chunk_get_block(chunk, cx, cy, cz);
+                            if (block_is_solid(b)) {
+                                const SHAPE_COLOR_INDEX_INT_T prevColor = b->colorIndex;
+                                const SHAPE_COLOR_INDEX_INT_T newColor = remap[b->colorIndex];
+
+                                if (newColor == SHAPE_COLOR_INDEX_AIR_BLOCK ||
+                                    newColor == prevColor) {
+                                    continue;
+                                }
+
+                                block_set_color_index(b, newColor);
+
+                                color_palette_decrement_color(s->palette, prevColor, 1);
+                                color_palette_increment_color(s->palette, newColor, 1);
+
+                                --s->blocksCount[prevColor];
+                                ++s->blocksCount[newColor];
+
+                                _shape_chunk_enqueue_refresh(s, chunk);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (_shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
+        shape_compute_baked_lighting(s);
+    }
+}
+
 const Block *shape_get_block(const Shape *const shape,
                              const SHAPE_COORDS_INT_T x,
                              const SHAPE_COORDS_INT_T y,

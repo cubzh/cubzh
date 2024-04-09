@@ -116,6 +116,10 @@ RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
                                              SHAPE_COLOR_INDEX_INT_T **outMapping);
 Weakptr *color_palette_get_weakptr(ColorPalette *p);
 Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p);
+void color_palette_merge(ColorPalette *p1,
+                         const ColorPalette *p2,
+                         const bool allowDuplicates,
+                         SHAPE_COLOR_INDEX_INT_T **remapOut);
 
 // MARK: - Baked lighting -
 

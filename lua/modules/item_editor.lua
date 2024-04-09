@@ -2937,6 +2937,13 @@ function post_item_load()
 	cameraCurrentState = cameraStates.item
 
 	initShapes = function()
+		-- as of 0.0.66, the standalone palette inside item's 3zh isn't used anymore
+		if standalonePalette ~= nil then
+			item.Palette:Merge(standalonePalette) -- merge it so that these colors are still displayed in the editor
+			item.Palette:Merge(item, { remap=true, recurse=true }) -- merge & remap each child shape to use item.Palette
+		end
+		
+		-- initialize item and its sub-shapes (physics mode, shared palette, etc.)
 		shapes = {}
 		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
 			if type(s) == Type.MutableShape then
@@ -2983,7 +2990,6 @@ function post_item_load()
 		end)
 	end
 
-	-- Shapes array
 	initShapes()
 
 	local SHOW_FOCUS_MODE_BUTTONS = false
@@ -3026,10 +3032,6 @@ function post_item_load()
 	colorPicker:hide()
 
 	palette = require("palette"):create(ui, ui_config.btnColor)
-	if standalonePalette ~= nil then
-		-- as of 0.0.66, the standalone palette isn't used anymore, merge it for retro-compat
-		item.Palette:Merge(standalonePalette)
-	end
 	palette:setColors(item)
 
 	colorPicker.didPickColor = function(_, color)
