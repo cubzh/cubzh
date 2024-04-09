@@ -8,6 +8,8 @@ description: |
 
     A code example of `Light`'s various fields can be found in the world `Lights Tests`.
 
+    ⚠️ Currently, only directional lights ([Type](/reference/light#property-type)) have shadow-casting capability.
+
 constructors: 
   - description: "Creates a Light with default properties."
     samples:
@@ -80,6 +82,8 @@ properties:
       type: "boolean"
       description: |
           Enables the light source as a shadow caster. Cubzh may limit the number of light shadow casters in a scene based on each player's device.
+
+          ⚠️ Currently, only directional lights ([Type](/reference/light#property-type)) have shadow-casting capability.
 
     - name: "PriorityGroup"
       type: "integer"
