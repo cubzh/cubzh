@@ -1,6 +1,7 @@
 mod = {}
 
 controls = require("controls")
+menu = require("menu")
 
 defaultConfig = {
 	firstPerson = false, -- third person by default
@@ -126,6 +127,10 @@ mod.set = function(self, config)
 	end)
 
 	dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+		if menu:IsActive() then
+			return
+		end
+
 		cameraWorldObject.Rotation.Y = cameraWorldObject.Rotation.Y + pe.DX * 0.01
 		cameraWorldObject.Rotation.X = cameraWorldObject.Rotation.X - pe.DY * 0.01
 

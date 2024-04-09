@@ -431,7 +431,7 @@ local createChat = function(_, config)
 			local m = table.remove(nodeLogs, 1) -- pop front
 			if m ~= nil then
 				if m.localUUID ~= nil then
-					nodeLogsByLocalUUID[message.localUUID] = nil
+					nodeLogsByLocalUUID[m.localUUID] = nil
 				end
 				m:remove()
 			end

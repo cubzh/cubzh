@@ -286,7 +286,7 @@ Client.OnPlayerJoin = function(p)
 	initPlayer(p)
 	dropPlayer(p)
 
-	print(string.format(loc("%s joined!"), Player.Username))
+	print(string.format(loc("%s joined!"), p.Username))
 end
 
 Client.OnPlayerLeave = function(p)
@@ -295,7 +295,7 @@ Client.OnPlayerLeave = function(p)
 	multi:unlink("p_" .. p.ID)
 
 	if p ~= Player then
-		print(string.format(loc("%s just left!"), Player.Username))
+		print(string.format(loc("%s just left!"), p.Username))
 		skills.removeStepClimbing(p)
 		walkSFX:unregister(p)
 		p:RemoveFromParent()
@@ -574,11 +574,18 @@ Client.OnWorldObjectLoad = function(obj)
 			trigger.CollisionGroups = {}
 			trigger.CollidesWithGroups = PLAYER_COLLISION_GROUPS
 			trigger.OnCollisionBegin = function(_, p)
-				p.Animations.Dance:Play()
+				if p.Animations.Dance ~= nil then
+					p.Animations.Dance:Play()
+				end
 			end
 			trigger.OnCollisionEnd = function(_, p)
-				p.Animations.Dance:Stop()
-				p.Head.LocalRotation = { 0, 0, 0 }
+				if p.Animations.Dance ~= nil then
+					p.Animations.Dance:Stop()
+				end
+				-- TODO: for some reason, `p` is not always a Player. Need to investigate.
+				if p.Head ~= nil then
+					p.Head.LocalRotation = { 0, 0, 0 }
+				end
 			end
 		end
 	elseif obj.Name == "voxels.standing_speaker" then
@@ -1559,7 +1566,7 @@ playerControls.exitVehicle = function(self, player)
 		require("ccc"):set({
 			target = player,
 			cameraColliders = CAMERA_COLLIDES_WITH_GROUPS,
-			cameraRotation = Camera.Rotation,
+			cameraRotation = Rotation(0, Camera.Rotation.Y, 0),
 		})
 		Camera.FOV = cameraDefaultFOV
 	end
