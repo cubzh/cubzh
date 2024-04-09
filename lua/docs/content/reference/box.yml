@@ -63,8 +63,8 @@ functions:
         Sets the box to a bounding box fitting the given target's model.
 
         Config table can contain any of the following: `{ recursive=boolean, local=boolean }`,
-        - `recursive`: if `true, `the box will also fit all of target's descendants models. Default is `false`.
-        - `local`: if `true`, result box will be in target's local space. Default is `false`, returning a box in world space.
+        - `recursive`: the box will also fit all of target's descendants models. Default is `false`.
+        - `local`: result box will be in target's local space. Default is `false`, returning a box in world space.
 
   - name: "Merge"
     arguments:
