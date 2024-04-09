@@ -148,10 +148,14 @@ uint8_t color_palette_get_count(const ColorPalette *p) {
 
 void color_palette_set_atlas(ColorPalette *p, ColorAtlas *atlas) {
     if (p->refAtlas != NULL) {
+        ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
+        if (a == atlas) {
+            return;
+        }
+
         cclog_warning(" ️⚠️ color_palette_set_atlas: replacing existing atlas will affect "
                       "loaded shapes");
 
-        ColorAtlas *a = (ColorAtlas *)weakptr_get(p->refAtlas);
         if (a != NULL) {
             color_atlas_remove_palette(a, p);
         }
