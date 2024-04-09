@@ -82,6 +82,7 @@ localevent.name = {
 	OnWorldObjectLoad = 51,
 	Log = 52, -- callback({type = info(1)|warning(2)|error(3), message = "...", date = "%m-%d-%YT%H:%M:%SZ"})
 	ChatMessageACK = 53, -- callback: function(uuid, localUUID, status) -- status: "error", "ok", "reported"
+	ActiveTextInputUpdate = 54, -- callback: function(string, cursorStart, cursorEnd)
 }
 localevent.Name = localevent.name
 
