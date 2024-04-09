@@ -948,6 +948,7 @@ void shape_set_palette(Shape *shape, ColorPalette *palette, const bool retain) {
             color_palette_increment_color(palette, i, shape->blocksCount[i]);
         }
 
+        color_palette_set_atlas(palette, color_palette_get_atlas(shape->palette));
         color_palette_release(shape->palette);
     }
     if (retain) {
