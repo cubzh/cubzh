@@ -1888,97 +1888,97 @@ function createUI(system)
 
 			Client:ShowVirtualKeyboard()
 
-			local keysDown = {}
-
-			if self.keyboardListener == nil then -- better be safe, do not listen if already listening
-				self.keyboardListener = LocalEvent:Listen(
+			if self.textInputUpdateListener == nil then
+				self.textInputUpdateListener = LocalEvent:Listen(
 					LocalEvent.Name.ActiveTextInputUpdate,
 					function(str, cursorStart, cursorEnd)
-						-- if keycode == codes.ESCAPE then
-						-- 	-- do not consider / capture ESC key inputs
-						-- 	return
-						-- end
-						-- if self.string == nil then
-						-- 	return
-						-- end
-
-						-- if down then
-						-- 	if not keysDown[keycode] then
-						-- 		keysDown[keycode] = true
-						-- 	end
-						-- else
-						-- 	if keysDown[keycode] then
-						-- 		keysDown[keycode] = nil
-						-- 		return true -- catch
-						-- 	else
-						-- 		return -- return without catching
-						-- 	end
-						-- end
-
-						-- -- print("char:", char, "key:", keycode, "mod:", modifiers)
-						-- -- we need an enum for key codes (value could change)
-
-						-- local cmd = (modifiers & codes.modifiers.Cmd) > 0
-						-- local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
-						-- local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
-						-- -- local shift = (modifiers & codes.modifiers.Shift) > 0
-
-						-- local textDidChange = false
-						-- if (cmd or ctrl) and not option then
-						-- 	if keycode == codes.KEY_C then
-						-- 		Dev:CopyToClipboard(self.string.Text)
-						-- 	elseif keycode == codes.KEY_V then
-						-- 		local s = System:GetFromClipboard()
-						-- 		if s ~= "" then
-						-- 			self.string.Text = self.string.Text .. s
-						-- 			textDidChange = true
-						-- 		end
-
-						-- 	-- sfx("keydown_" .. math.random(1,4), {Spatialized = false})
-						-- 	elseif keycode == codes.KEY_X then
-						-- 		if self.string.Text ~= "" then
-						-- 			Dev:CopyToClipboard(self.string.Text)
-						-- 			self.string.Text = ""
-						-- 			textDidChange = true
-						-- 		end
-						-- 	end
-						-- else
-						-- 	if keycode == codes.UP then
-						-- 		if self.onUp then
-						-- 			self:onUp()
-						-- 			return true
-						-- 		end
-						-- 	elseif keycode == codes.DOWN then
-						-- 		if self.onDown then
-						-- 			self:onDown()
-						-- 			return true
-						-- 		end
-						-- 	elseif keycode == codes.BACKSPACE then
-						-- 		local str = self.string.Text
-						-- 		if #str > 0 then
-						-- 			str = deleteLastCharacter(str)
-						-- 			self.string.Text = str
-						-- 			textDidChange = true
-						-- 		end
-						-- 	elseif keycode == codes.RETURN or keycode == codes.NUMPAD_RETURN then
-						-- 		if self.onSubmit then
-						-- 			self:onSubmit()
-						-- 			return true
-						-- 		end
-						-- 	elseif char ~= "" then
-						-- 		self.string.Text = self.string.Text .. char
-						-- 		textDidChange = true
-						-- 	end
-						-- end
-
-						local textDidChange = self.string.Text ~= str
-
-						if textDidChange then
+						if self.string.Text ~= str then -- check if text is different
 							self.string.Text = str
 							_textInputTextDidChange(self)
 						end
-
 						return true -- capture event
+					end,
+					{
+						topPriority = true,
+						system = System,
+					}
+				)
+			end
+
+			if self.textInputCloseListener == nil then
+				self.textInputCloseListener = LocalEvent:Listen(LocalEvent.Name.ActiveTextInputClose, function()
+					-- TODO: unfocus
+					return true -- capture event
+				end, {
+					topPriority = true,
+					system = System,
+				})
+			end
+
+			if self.textInputDoneListener == nil then
+				self.textInputDoneListener = LocalEvent:Listen(LocalEvent.Name.ActiveTextInputDone, function()
+					-- TODO: submit?
+					return true -- capture event
+				end, {
+					topPriority = true,
+					system = System,
+				})
+			end
+
+			if self.textInputNextListener == nil then
+				self.textInputNextListener = LocalEvent:Listen(LocalEvent.Name.ActiveTextInputNext, function()
+					-- TODO: move to next field, `onNext`?
+					return true -- capture event
+				end, {
+					topPriority = true,
+					system = System,
+				})
+			end
+
+			local keysDown = {}
+			if self.keyboardListener == nil then -- better be safe, do not listen if already listening
+				self.keyboardListener = LocalEvent:Listen(
+					LocalEvent.Name.KeyboardInput,
+					function(_, keycode, modifiers, down)
+						if keycode ~= codes.UP and keycode ~= codes.DOWN then
+							-- only consider UP and DOWN keycodes
+							return
+						end
+
+						if down then
+							if not keysDown[keycode] then
+								keysDown[keycode] = true
+							end
+						else
+							if keysDown[keycode] then
+								keysDown[keycode] = nil
+								return true -- catch
+							else
+								return -- return without catching
+							end
+						end
+
+						local cmd = (modifiers & codes.modifiers.Cmd) > 0
+						local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
+						local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
+
+						if cmd or ctrl or option then
+							return false
+						end
+
+						if keycode == codes.UP then
+							if self.onUp then
+								self:onUp()
+								return true
+							end
+						elseif keycode == codes.DOWN then
+							if self.onDown then
+								self:onDown()
+								return true
+							end
+						end
+
+						return false
 					end,
 					{
 						topPriority = true,
@@ -2019,11 +2019,32 @@ function createUI(system)
 			self.state = State.Idle
 			self.object.Tick = nil
 
+			if self.textInputUpdateListener ~= nil then
+				Client:HideVirtualKeyboard() -- TODO: stop listening for text input
+				self.textInputUpdateListener:Remove()
+				self.textInputUpdateListener = nil
+			end
+
+			if self.textInputCloseListener ~= nil then
+				self.textInputCloseListener:Remove()
+				self.textInputCloseListener = nil
+			end
+
+			if self.textInputDoneListener ~= nil then
+				self.textInputDoneListener:Remove()
+				self.textInputDoneListener = nil
+			end
+
+			if self.textInputNextListener ~= nil then
+				self.textInputNextListener:Remove()
+				self.textInputNextListener = nil
+			end
+
 			if self.keyboardListener ~= nil then
-				Client:HideVirtualKeyboard()
 				self.keyboardListener:Remove()
 				self.keyboardListener = nil
 			end
+
 			_textInputRefreshColor(self)
 			self:_refresh()
 
