@@ -1603,23 +1603,23 @@ function createUI(system)
 
 	-- ui:createTextInput(<string>, <placeholder>, <size>)
 	ui.createTextInput = function(self, str, placeholder, configOrSize) -- "default" (default), "small", "big"
-		local _config = {
+		local defaultConfig = {
 			password = false,
 			textSize = "default",
+			multiline = false, -- not yet implemented
+			returnKeyType = "done", -- options: "default", "done", "send", "next"
+			keyboardType = "default", -- other options: "email", "phone", "numbers", "url", "ascii"
 		}
 
 		local config = {}
 
 		if type(configOrSize) == "string" then
 			config.textSize = configOrSize
+			config = conf:merge(defaultConfig, config)
 		elseif type(configOrSize) == "table" then
-			for k, _ in pairs(_config) do
-				if configOrSize[k] ~= nil and type(configOrSize[k]) == type(_config[k]) then
-					config[k] = configOrSize[k]
-				else
-					config[k] = _config[k]
-				end
-			end
+			config = conf:merge(defaultConfig, configOrSize)
+		else
+			config = conf:merge(defaultConfig, config)
 		end
 
 		local size = config.textSize
@@ -1725,6 +1725,7 @@ function createUI(system)
 		node._setText = function(self, str)
 			self.string.Text = str
 			_textInputTextDidChange(self)
+			Client.OSTextInput:Update({ content = str, cursorStart = 0, cursorEnd = 0 })
 		end
 
 		node._color = function(self)
@@ -1867,11 +1868,6 @@ function createUI(system)
 		node.onUp = nil
 		node.onDown = nil
 
-		-- function to delete last UTF8 char
-		local deleteLastCharacter = function(str)
-			return (str:gsub("[%z\1-\127\194-\244][\128-\191]*$", ""))
-		end
-
 		node.focus = function(self)
 			if self.state == State.Focused then
 				return
@@ -1886,7 +1882,14 @@ function createUI(system)
 				return
 			end
 
-			Client:ShowVirtualKeyboard()
+			Client.OSTextInput:Request({
+				content = self.string.Text,
+				multiline = config.multiline,
+				returnKeyType = config.returnKeyType,
+				keyboardType = config.keyboardType,
+				cursorStart = 0,
+				cursorEnd = 0,
+			})
 
 			if self.textInputUpdateListener == nil then
 				self.textInputUpdateListener = LocalEvent:Listen(
@@ -1907,7 +1910,7 @@ function createUI(system)
 
 			if self.textInputCloseListener == nil then
 				self.textInputCloseListener = LocalEvent:Listen(LocalEvent.Name.ActiveTextInputClose, function()
-					-- TODO: unfocus
+					self:unfocus()
 					return true -- capture event
 				end, {
 					topPriority = true,
@@ -1917,8 +1920,10 @@ function createUI(system)
 
 			if self.textInputDoneListener == nil then
 				self.textInputDoneListener = LocalEvent:Listen(LocalEvent.Name.ActiveTextInputDone, function()
-					-- TODO: submit?
-					return true -- capture event
+					if self.onSubmit then
+						self:onSubmit()
+						return true
+					end
 				end, {
 					topPriority = true,
 					system = System,
@@ -2020,7 +2025,7 @@ function createUI(system)
 			self.object.Tick = nil
 
 			if self.textInputUpdateListener ~= nil then
-				Client:HideVirtualKeyboard() -- TODO: stop listening for text input
+				Client.OSTextInput:Close()
 				self.textInputUpdateListener:Remove()
 				self.textInputUpdateListener = nil
 			end
