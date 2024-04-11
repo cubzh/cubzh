@@ -919,7 +919,7 @@ function createUI(system)
 		return boundingBox
 	end
 
-	local function _nodeCreate()
+	local function _nodeCreate(isGrid, isCell)
 		local node = {}
 		local m = {
 			attr = {
@@ -1009,6 +1009,16 @@ function createUI(system)
 			__index = _nodeIndex,
 			__newindex = _nodeNewindex,
 		}
+		if isGrid then
+			m.__gc = function(_)
+				print("grid GC")
+			end
+		end
+		-- if isCell then
+		-- 	m.__gc = function(_)
+		-- 		print("grid cell GC")
+		-- 	end
+		-- end
 		setmetatable(node, m)
 
 		node._id = nodeID
@@ -1249,8 +1259,17 @@ function createUI(system)
 			_config.unfocuses = config.unfocuses
 		end
 
+		local isGrid = false
+		local isCell = false
+		if config.isGrid then
+			isGrid = true
+		end
+		if config.isCell then
+			isCell = true
+		end
+
 		color = color or Color(0, 0, 0, 0) -- default transparent frame
-		local node = _nodeCreate()
+		local node = _nodeCreate(isGrid, isCell)
 		node.type = NodeType.Frame
 
 		node.config = _config

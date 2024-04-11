@@ -81,7 +81,19 @@ itemGrid.create = function(_, config)
 
 	local sortBy = "likes:desc"
 
-	local grid = ui:createFrame() -- Color(255,0,0)
+	local grid = ui:createFrame(Color(0, 0, 0, 0), { isGrid = true }) -- Color(255,0,0)
+
+	local frameMT = getmetatable(grid)
+	local frame__gc = frameMT.__gc
+	local grid__gc = function(grid)
+		if frame__gc then
+			frame__gc(grid)
+		end
+		print("grid freed")
+	end
+	frameMT.__gc = grid__gc
+	setmetatable(grid, frameMT)
+
 	local search = ""
 
 	local timers = {}
@@ -248,7 +260,7 @@ itemGrid.create = function(_, config)
 
 	grid._createCell = function(grid, size)
 		local idleColor = theme.gridCellColor
-		local cell = ui:createFrame(idleColor)
+		local cell = ui:createFrame(idleColor, { isCell = true })
 		cell:setParent(grid)
 
 		cell.onPress = function()
@@ -262,6 +274,7 @@ itemGrid.create = function(_, config)
 		cell.onRelease = function()
 			if cell.loaded and grid.onOpen then
 				grid:onOpen(cell)
+				--collectgarbage("collect")
 			end
 			if cell.thumbnail ~= nil then
 				return
@@ -801,6 +814,7 @@ itemGrid.create = function(_, config)
 	end)
 
 	grid:getItems()
+	grid.isGrid = true
 	return grid
 end
 

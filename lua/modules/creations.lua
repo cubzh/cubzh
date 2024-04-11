@@ -430,9 +430,9 @@ creations.createModalContent = function(_, config)
 		creationsContent.node = grid
 
 		creationsContent.willResignActive = function(_)
-			if grid and grid.cancelRequestsAndTimers then
-				grid:cancelRequestsAndTimers()
-			end
+			--if grid and grid.cancelRequestsAndTimers then
+			grid:cancelRequestsAndTimers()
+			--end
 		end
 
 		creationsContent.didBecomeActive = function(_)

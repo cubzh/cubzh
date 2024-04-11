@@ -75,6 +75,13 @@ Client.OnStart = function()
 
 	require("social"):enablePlayerClickMenu()
 
+	LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
+		if down and keyCode == require("inputcodes").KEY_G then
+			collectgarbage("collect")
+			print("collect garbage done")
+		end
+	end, {})
+
 	-- HUD
 	textbubbles.displayPlayerChatBubbles = true
 	controls:setButtonIcon("action1", "⬆️")
