@@ -2,9 +2,9 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
 type: "BlockProperties"
 creatable: true # indicates that instances can be created, even if there's no constructor
 description: |
-    A `BlockProperties` entry describes the visual properties of a [Block]. It is stored in a [Shape]'s [Palette] where it can be referred to by its palette index.
+    A `BlockProperties` entry describes the visual properties of a [Block](/reference/block). It is stored in a [Palette](/reference/palette) where it can be referred to by its palette index.
 
-    A `BlockProperties` entry can only be removed from its palette if it is currently not used by any blocks in its owner shape.
+    A `BlockProperties` entry can only be removed from its palette if it is currently not used by any block in its owner shape(s).
 
 properties:
     - name: "Color"
@@ -17,11 +17,11 @@ properties:
 
     - name: "PaletteIndex"
       type: "number"
-      description: "[This]' index in the [Palette] it belongs to."
+      description: "[This]' index in the [Palette](/reference/palette) it belongs to."
 
     - name: "BlocksCount"
       type: "number"
-      description: "How many blocks are currently using [This]."
+      description: "How many blocks are currently using [This]. If the [Palette](/reference/palette) is shared by multiple shapes, [BlocksCount] is the sum of all blocks using [This] amongst all shapes."
 
 functions:
     - name: "IsUsed"

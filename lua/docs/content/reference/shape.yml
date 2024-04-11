@@ -59,7 +59,10 @@ properties:
     - name: "Palette"
       type: "array"
       description: |
-          Palette is an [array] of [BlockProperties], with each entry corresponding to a style of block used by the [This]'s model.
+          Palette is an [array] of [BlockProperties], with each entry corresponding to a style of block used by the [This]'s model. Each of the [This]'s block use a palette index, indicating which entry to use to draw that block.
+
+          If [This].[Palette] is set, the shape will start using the new palette in place. Each of its block's palette index will then point to the [BlockProperties] of that new palette. This can be used to share a single palette between multiple shapes, for example to create effects by changing color on a whole group of shapes at once.
+          Note that if you would like to keep the original colors of the shape while assigning another palette, you should use the [Palette](/reference/palette).[Merge](/reference/palette#functions-merge) function instead.
 
     - name: "Pivot"
       type: "Number3"
