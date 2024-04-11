@@ -35,6 +35,8 @@ local modalContentMT = {
 						element:remove()
 					end
 				end
+				print("in modal cleanup:self.node, self.node.remove:", self.node, self.node.remove)
+				print("  node was a grid:", self.node.isGrid == true)
 				if self.node ~= nil and self.node.remove then
 					self.node:remove()
 					self.node = nil
@@ -103,6 +105,7 @@ local modalContentMT = {
 		end
 	end,
 	__gc = function(t)
+		print("modal GC")
 		t:cleanup()
 		for k, _ in pairs(t._attr) do
 			t._attr[k] = nil
@@ -180,6 +183,7 @@ modal.createContent = function(_)
 				if modal ~= nil then
 					if modal.contentStack[#modal.contentStack] == self then
 						if self.willResignActive ~= nil then
+							--collectgarbage("collect")
 							self:willResignActive()
 						end
 						local toRemove = #modal.contentStack
