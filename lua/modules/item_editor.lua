@@ -51,6 +51,7 @@ bodyParts = {
 }
 
 bodyPartToWearablePart = {}
+bodyPartsBasePositions = {}
 
 __equipments = require("equipments.lua")
 
@@ -569,7 +570,7 @@ Client.OnStart = function()
 		Screen.DidResize(Screen.Width, Screen.Height)
 	end, loadConfig)
 
-	updateWearableShapesPosition = function(forceNoShift)
+	updateWearableShapesPosition = function()
 		local parents = __equipments.equipmentParent(Player, itemCategory)
 		local parentsType = type(parents)
 
@@ -580,68 +581,47 @@ Client.OnStart = function()
 				local s = item
 				local parentIndex = 1
 				local coords = parents[parentIndex]:GetPoint("origin").Coords
-				if coords == nil then
-					print("can't get parent coords for equipment")
-					return
-				end
 				s.Position = parents[parentIndex]:BlockToWorld(coords)
 				s.Rotation = parents[parentIndex].Rotation
 			end
 
 			-- 1st subshape of item
 			local child = item:GetChild(1)
-			local avatarCoords = parents[2]:GetPoint("origin").Coords
-			local wearableCoords = child:GetPoint("origin").Coords
-			local patternCoords = pattern:GetChild(1):GetPoint("origin").Coords
-			if avatarCoords == nil or wearableCoords == nil or patternCoords == nil then
-				print("can't get parent coords for equipment (child)")
-				return
-			end
-			parents[2].Pivot = avatarCoords
-			child.Pivot = wearableCoords
-			pattern:GetChild(1).shift = Number3(0, 0, 0)
-			if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
-				if #parents == 2 then
-					parents[2].Pivot.X = parents[2].Pivot.X + 5
-					child.Pivot.X = child.Pivot.X + 5
-					pattern:GetChild(1).shift.X = 5
+			local parent = parents[2]
+			parent.LocalPosition = bodyPartsBasePositions[parent]
+			if currentWearablePreviewMode == wearablePreviewMode.hide then
+				if itemCategory == "pants" or itemCategory == "boots" then
+					parent.LocalPosition = parent.LocalPosition + Number3(-5, 0, 0)
+				elseif itemCategory == "jacket" then
+					parent.LocalPosition = parent.LocalPosition + Number3(5, 0, 0)
 				else
-					parents[2].Pivot.X = parents[2].Pivot.X - 5
-					child.Pivot.X = child.Pivot.X - 5
-					pattern:GetChild(1).shift.X = -5
+					local err = "Category not supported, category is" .. itemCategory
+					error(err)
 				end
 			end
-			child.Rotation = parents[2].Rotation
+			local bodyPartCoords = parent:GetPoint("origin").Coords
+			local pos = parent:BlockToWorld(bodyPartCoords)
+			child.Position = pos
+			child.Rotation = parent.Rotation
 
-			if not parents[3] then
+			if itemCategory ~= "jacket" then
 				fitObjectToScreen(item, nil)
 				return
 			end
 
 			-- 1st subshape of 1st subshape of item
 			child = child:GetChild(1)
-			avatarCoords = parents[3]:GetPoint("origin").Coords
-			wearableCoords = child:GetPoint("origin").Coords
-			patternCoords = pattern:GetChild(1):GetPoint("origin").Coords
-			if avatarCoords == nil or wearableCoords == nil or patternCoords == nil then
-				print("can't get parent coords for equipment (grandchild)")
-				return
+			parent = parents[3]
+			parent.LocalPosition = bodyPartsBasePositions[parent]
+			if currentWearablePreviewMode == wearablePreviewMode.hide then
+				parent.LocalPosition = parent.LocalPosition + Number3(-5, 0, 0)
 			end
-			parents[3].Pivot = avatarCoords
-			child.Pivot = wearableCoords
-			pattern:GetChild(1):GetChild(1).shift = Number3(0, 0, 0)
-			if not forceNoShift and currentWearablePreviewMode == wearablePreviewMode.hide then
-				parents[3].Pivot.X = parents[3].Pivot.X + 5
-				child.Pivot.X = child.Pivot.X + 10
-				pattern:GetChild(1):GetChild(1).shift.X = 10
-			end
-			child.Rotation = parents[3].Rotation
+			bodyPartCoords = parent:GetPoint("origin").Coords
+			pos = parent:BlockToWorld(bodyPartCoords)
+			child.Position = pos
+			child.Rotation = parent.Rotation
 		elseif parentsType == "MutableShape" then
 			local coords = parents:GetPoint("origin").Coords
-			if coords == nil then
-				print("can't get parent coords for equipment (2)")
-				return
-			end
 
 			item.Position = parents:BlockToWorld(coords)
 			item.Rotation = parents.Rotation
@@ -649,6 +629,10 @@ Client.OnStart = function()
 
 		fitObjectToScreen(item, nil)
 	end
+
+	hierarchyActions:applyToDescendants(Player.Body, { includeRoot = true }, function(bodyPart)
+		bodyPartsBasePositions[bodyPart] = bodyPart.LocalPosition:Copy()
+	end)
 
 	-- long press + drag
 	continuousEdition = false
@@ -1211,14 +1195,8 @@ initClientFunctions = function()
 				end
 			end
 			local coords = newBlockCoords
-			if targetPattern.shift then
-				coords = coords + targetPattern.shift
-			end
 			local relativeCoords = coords - shape:GetPoint("origin").Coords
 			local pos = relativeCoords + targetPattern:GetPoint("origin").Coords
-			if targetPattern.shift then
-				pos = pos - targetPattern.shift
-			end
 			local b = targetPattern:GetBlock(pos)
 			if not b then
 				pattern:SetParent(World)
@@ -1226,7 +1204,7 @@ initClientFunctions = function()
 				pattern.Scale = item.Scale + Number3(1, 1, 1) * 0.001
 				hierarchyActions:applyToDescendants(pattern, { includeRoot = true }, function(s)
 					s.PrivateDrawMode = 1
-					s.Pivot = s:GetPoint("origin").Coords + (s.shift ~= nil and s.shift or { 0, 0, 0 })
+					s.Pivot = s:GetPoint("origin").Coords
 					s.Position = nextShape.Position
 					nextShape = nextShape:GetChild(1)
 				end)
@@ -1334,19 +1312,6 @@ initClientFunctions = function()
 	end
 
 	removeSingleBlock = function(block, shape)
-		if enableWearablePattern and pattern then
-			local targetPattern = pattern
-			if item.ChildrenCount > 0 then
-				local child = item:GetChild(1) -- Is first child (left part or right sleeve)
-				if shape == child then
-					targetPattern = pattern:GetChild(1)
-				elseif child.ChildrenCount > 0 then
-					if shape == child:GetChild(1) then -- Is first child of child (left sleeve)
-						targetPattern = pattern:GetChild(1):GetChild(1)
-					end
-				end
-			end
-		end
 		block:Remove()
 
 		-- last block can't be removed via mirror mode
