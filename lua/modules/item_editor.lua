@@ -1125,9 +1125,9 @@ initClientFunctions = function()
 		end
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
-		if addedBlock ~= nil and facemode == true then
+		if addedBlock ~= nil and facemode then
 			local faceTouched = impact.FaceTouched
-			local impactBlockColor = shape.Palette[impact.Block.PaletteIndex].Color
+			local oldColorPaletteIndex = impact.Block.PaletteIndex
 			local queue = { impact.Block }
 			-- neighbor finder (depending on the mirror orientation)
 			local neighborFinder = {}
@@ -1150,7 +1150,7 @@ initClientFunctions = function()
 					-- check there is a block
 					local neighborBlock = shape:GetBlock(neighborCoords)
 					-- check it is the same color
-					if neighborBlock ~= nil and shape.Palette[neighborBlock.PaletteIndex].Color == impactBlockColor then
+					if neighborBlock ~= nil and neighborBlock.PaletteIndex == oldColorPaletteIndex then
 						-- try to add new block on top of neighbor
 						addedBlock = addSingleBlock(neighborBlock, faceTouched, shape)
 						if addedBlock ~= nil then
@@ -1261,9 +1261,9 @@ initClientFunctions = function()
 		local removed = removeSingleBlock(impact.Block, shape)
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
-		if removed and facemode == true then
+		if removed and facemode then
 			local faceTouched = impact.FaceTouched
-			local impactBlockColor = shape.Palette[impact.Block.PaletteIndex].Color
+			local oldColorPaletteIndex = impact.Block.PaletteIndex
 			local queue = { impact.Block }
 			-- neighbor finder (depending on the mirror orientation)
 			local neighborFinder = {}
@@ -1295,7 +1295,7 @@ initClientFunctions = function()
 					-- check it is the same color
 					if
 						neighborBlock ~= nil
-						and shape.Palette[neighborBlock.PaletteIndex].Color == impactBlockColor
+						and neighborBlock.PaletteIndex == oldColorPaletteIndex
 						and blockOnTop == nil
 					then
 						removeSingleBlock(neighborBlock, shape)
@@ -1346,18 +1346,17 @@ initClientFunctions = function()
 			return
 		end
 
-		local impactBlockColor = shape.Palette[impact.Block.PaletteIndex].Color
+		local oldColorPaletteIndex = impact.Block.PaletteIndex
 
 		-- return if trying to replace with same color index
-		if impact.Block.PaletteIndex == palette:getCurrentIndex() then
+		if oldColorPaletteIndex == palette:getCurrentIndex() then
 			return
 		end
 
-		-- always remove the first block
-		-- it would be nice to have a return value here
+		-- always paint the first block
 		replaceSingleBlock(impact.Block, shape)
 
-		if facemode == true then
+		if facemode then
 			local faceTouched = impact.FaceTouched
 			local queue = { impact.Block }
 			-- neighbor finder (depending on the mirror orientation)
@@ -1388,7 +1387,11 @@ initClientFunctions = function()
 					local blockOnTopPosition = neighborCoords + targetNeighbor
 					local blockOnTop = shape:GetBlock(blockOnTopPosition)
 					-- check it is the same color
-					if neighborBlock ~= nil and neighborBlock.Color == impact.Block.Color and blockOnTop == nil then
+					if
+						neighborBlock ~= nil
+						and neighborBlock.PaletteIndex == oldColorPaletteIndex
+						and blockOnTop == nil
+					then
 						replaceSingleBlock(neighborBlock, shape)
 						table.insert(queue, neighborBlock)
 					end
@@ -2905,9 +2908,9 @@ function post_item_load()
 		-- as of 0.0.66, the standalone palette inside item's 3zh isn't used anymore
 		if standalonePalette ~= nil then
 			item.Palette:Merge(standalonePalette) -- merge it so that these colors are still displayed in the editor
-			item.Palette:Merge(item, { remap=true, recurse=true }) -- merge & remap each child shape to use item.Palette
+			item.Palette:Merge(item, { remap = true, recurse = true }) -- merge & remap each child shape to use item.Palette
 		end
-		
+
 		-- initialize item and its sub-shapes (physics mode, shared palette, etc.)
 		shapes = {}
 		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
