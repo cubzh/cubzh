@@ -1388,7 +1388,7 @@ initClientFunctions = function()
 					local blockOnTopPosition = neighborCoords + targetNeighbor
 					local blockOnTop = shape:GetBlock(blockOnTopPosition)
 					-- check it is the same color
-					if neighborBlock ~= nil and neighborBlock.Color == impact.Block.Color and blockOnTop == nil then
+					if neighborBlock ~= nil and neighborBlock.Color == impactBlockColor and blockOnTop == nil then
 						replaceSingleBlock(neighborBlock, shape)
 						table.insert(queue, neighborBlock)
 					end
@@ -2905,9 +2905,9 @@ function post_item_load()
 		-- as of 0.0.66, the standalone palette inside item's 3zh isn't used anymore
 		if standalonePalette ~= nil then
 			item.Palette:Merge(standalonePalette) -- merge it so that these colors are still displayed in the editor
-			item.Palette:Merge(item, { remap=true, recurse=true }) -- merge & remap each child shape to use item.Palette
+			item.Palette:Merge(item, { remap = true, recurse = true }) -- merge & remap each child shape to use item.Palette
 		end
-		
+
 		-- initialize item and its sub-shapes (physics mode, shared palette, etc.)
 		shapes = {}
 		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
