@@ -809,7 +809,7 @@ longPress = function(e)
 				blockerShape.Pivot = selectedShape.Pivot
 				blockerShape.Position = selectedShape.Position
 				blockerShape.Rotation = selectedShape.Rotation
-				local coords = blockerShape:WorldToBlock(selectedShape:BlockToWorld(impact.Block))
+				local coords = blockerShape:WorldToBlock(selectedShape:BlockToWorld(impact.Block) + { 0.5, 0.5, 0.5 })
 				blockerShape:AddBlock(1, coords)
 
 				removeBlockWithImpact(impact, currentFacemode, selectedShape)
@@ -859,7 +859,7 @@ drag = function(e)
 				return
 			end
 
-			local coords = blockerShape:WorldToBlock(item:BlockToWorld(impact.Block))
+			local coords = blockerShape:WorldToBlock(item:BlockToWorld(impact.Block) + { 0.5, 0.5, 0.5 })
 			blockerShape:AddBlock(1, coords)
 			removeBlockWithImpact(impact, false, selectedShape)
 		elseif currentEditSubmode == editSubmode.paint then
