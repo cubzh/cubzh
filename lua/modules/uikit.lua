@@ -17,6 +17,8 @@ UI_COLLISION_GROUP = 12
 UI_COLLISION_GROUP_SYSTEM = 13
 UI_SHAPE_SCALE = 5
 LAYER_STEP = -0.1 -- children offset
+UI_FOREGROUND_DEPTH = -945
+UI_ALERT_DEPTH = -950
 BUTTON_PADDING = 4
 BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
@@ -50,6 +52,7 @@ hierarchyActions = require("hierarchyactions")
 sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
+conf = require("config")
 
 sharedUI = nil
 sharedUIRootFrame = nil
@@ -105,6 +108,8 @@ function createUI(system)
 	ui.kShapeScale = UI_SHAPE_SCALE
 	ui.kButtonPadding = BUTTON_PADDING
 	ui.kButtonBorder = BUTTON_BORDER
+	ui.kForegroundDepth = UI_FOREGROUND_DEPTH
+	ui.kAlertDepth = UI_ALERT_DEPTH
 
 	----------------------
 	-- VARS
@@ -143,6 +148,8 @@ function createUI(system)
 			System:SetLayersElevated(object, UI_LAYER)
 		end
 	end
+
+	ui.setLayers = _setLayers
 
 	local function _setCollisionGroups(object)
 		if system == true then
@@ -253,6 +260,10 @@ function createUI(system)
 			parentObject = parent
 		end
 
+		if type(parentObject.AddChild) ~= "function" then
+			error("uikit:setParent(parent): parent must be a node", 2)
+		end
+
 		attr.object:SetParent(parentObject)
 
 		if self.shape == nil then
@@ -272,8 +283,8 @@ function createUI(system)
 			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
-		if self.parentDidResize then
-			self:parentDidResize()
+		if self.parentDidResizeWrapper then
+			self:parentDidResizeWrapper()
 		end
 	end
 
@@ -383,6 +394,7 @@ function createUI(system)
 
 		if self.config.borders == false then
 			border = 0
+			padding = 2 * padding
 		end
 
 		if self.config.underline then
@@ -422,7 +434,7 @@ function createUI(system)
 
 		background.LocalPosition = { 0, 0, 0 }
 
-		content.LocalPosition = { paddingAndBorder, paddingAndBorder + underlinePadding, 0 }
+		content.LocalPosition = { totalWidth * 0.5 - content.Width * 0.5, totalHeight * 0.5 - content.Height * 0.5 }
 
 		if #self.borders > 0 then
 			content.LocalPosition = { paddingLeft, paddingBottom, 0 }
@@ -606,9 +618,9 @@ function createUI(system)
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
-					t._onPress = function()
+					t._onPress = function(self)
 						if v ~= nil then
-							v()
+							v(self)
 						end
 					end
 				end
@@ -639,9 +651,9 @@ function createUI(system)
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
-					t._onRelease = function()
+					t._onRelease = function(self)
 						if v ~= nil then
-							v()
+							v(self)
 						end
 					end
 				end
@@ -746,8 +758,8 @@ function createUI(system)
 				t:_setWidth(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResize ~= nil then
-						child:parentDidResize()
+					if child.parentDidResizeWrapper ~= nil then
+						child:parentDidResizeWrapper()
 					end
 				end
 
@@ -764,8 +776,8 @@ function createUI(system)
 				t:_setHeight(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResize ~= nil then
-						child:parentDidResize()
+					if child.parentDidResizeWrapper ~= nil then
+						child:parentDidResizeWrapper()
 					end
 				end
 
@@ -919,6 +931,15 @@ function createUI(system)
 				type = NodeType.None,
 				children = {},
 				parentDidResize = nil,
+				parentDidResizeSystem = nil,
+				parentDidResizeWrapper = function(self)
+					if self.parentDidResizeSystem ~= nil then
+						self:parentDidResizeSystem()
+					end
+					if self.parentDidResize ~= nil then
+						self:parentDidResize()
+					end
+				end,
 				contentDidResize = nil, -- user defined
 				contentDidResizeSystem = nil,
 				contentDidResizeWrapper = function(self)
@@ -1013,20 +1034,20 @@ function createUI(system)
 			end
 		else
 			if node.shape:GetParent() == nil then
-				node.pivot:AddChild(node.shape)
-				node.shape.LocalPosition = { 0, 0, 0 }
+				node.shapeContainer:AddChild(node.shape)
+				node.shape.LocalPosition = Number3.Zero
 			end
 		end
 
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
-		node.shape.LocalPosition = { 0, 0, 0 }
-		node.pivot.LocalPosition = { 0, 0, 0 }
+		node.pivot.LocalPosition = Number3.Zero
+		node.shapeContainer.LocalPosition = Number3.Zero
 
 		if not node._config.doNotFlip then
 			node.pivot.LocalRotation = { 0, math.pi, 0 } -- shape's front facing camera
 		else
-			node.pivot.LocalRotation = { 0, 0, 0 } -- shape's back facing camera
+			node.pivot.LocalRotation = Rotation(0, 0, 0) -- shape's back facing camera
 		end
 
 		-- shape.LocalScale = UI_SHAPE_SCALE
@@ -1050,8 +1071,6 @@ function createUI(system)
 		-- considering Shape's pivot but not modifying it
 		-- It could be important for shape's children placement.
 
-		node.shape.LocalPosition = -node._aabb.Center
-
 		if node._config.spherized then
 			local radius = node.Width * 0.5
 			node.pivot.LocalPosition = { radius, radius, radius }
@@ -1059,6 +1078,7 @@ function createUI(system)
 			node.pivot.LocalPosition = Number3(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
 
+		node.shapeContainer.LocalPosition = -node._aabb.Center + node._config.offset
 		node.object.LocalScale = backupScale
 	end
 
@@ -1225,16 +1245,6 @@ function createUI(system)
 			image = nil,
 		}
 
-		local image
-		if config ~= nil and config.image ~= nil then
-			if type(config.image) ~= Type.Data then
-				error("ui:createFrame(color, config): config.image should be a Data instance", 2)
-			end
-			print("image taken into account")
-			_config.image = config.image
-			image = config.image
-		end
-
 		if type(config.unfocuses) == "boolean" then
 			_config.unfocuses = config.unfocuses
 		end
@@ -1246,11 +1256,11 @@ function createUI(system)
 		node.config = _config
 
 		local background = Quad()
-		if image == nil then
+		if node.config.image == nil then
 			background.Color = color
 			background.IsDoubleSided = false
 		else
-			background.Image = image
+			background.Image = node.config.image
 			background.IsDoubleSided = true
 		end
 
@@ -1296,8 +1306,8 @@ function createUI(system)
 				self.background.Color = Color.White
 				self.background.IsDoubleSided = true
 			else
-				background.Color = color
-				background.IsDoubleSided = false
+				self.background.Color = color
+				self.background.IsDoubleSided = false
 			end
 		end
 
@@ -1319,6 +1329,13 @@ function createUI(system)
 		node._setHeight = function(self, v)
 			self.background.Height = v
 			self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+		end
+
+		if config ~= nil and config.image ~= nil then
+			if type(config.image) ~= Type.Data then
+				error("ui:createFrame(color, config): config.image should be a Data instance", 2)
+			end
+			node:setImage(config.image)
 		end
 
 		node.object.LocalPosition = { 0, 0, 0 }
@@ -1345,38 +1362,31 @@ function createUI(system)
 
 		local node = _nodeCreate()
 
-		node._config = {
+		local defaultConfig = {
 			spherized = false,
 			doNotFlip = false,
+			offset = Number3.Zero,
+			perBlockCollisions = false,
 		}
 
-		if config ~= nil then
-			if type(config) == "boolean" then
-				-- legacy, `config` parameter used to be `doNotFlip`
-				node._config.doNotFlip = config
-			else
-				if config.spherized ~= nil then
-					node._config.spherized = config.spherized
-				end
-				if config.doNotFlip ~= nil then
-					node._config.doNotFlip = config.doNotFlip
-				end
-			end
-		end
+		config = conf:merge(defaultConfig, config)
+		node._config = config
 
 		node.object = Object()
 		node.object.LocalScale = UI_SHAPE_SCALE
 
 		node.pivot = Object()
+		node.shapeContainer = Object()
 
 		node.object:AddChild(node.pivot)
+		node.pivot:AddChild(node.shapeContainer)
 
 		node.refresh = _refreshShapeNode
 
 		-- getters
 
 		node._width = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbWidth * self.object.LocalScale.X
@@ -1384,7 +1394,7 @@ function createUI(system)
 		end
 
 		node._height = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbHeight * self.object.LocalScale.Y
@@ -1392,7 +1402,7 @@ function createUI(system)
 		end
 
 		node._depth = function(self)
-			if node._config.spherized then
+			if config.spherized then
 				return self._diameter * self.object.LocalScale.X
 			else
 				return self._aabbDepth * self.object.LocalScale.Z
@@ -1406,7 +1416,11 @@ function createUI(system)
 				return
 			end
 			if b then
-				self.shape.Physics = PhysicsMode.TriggerPerBlock
+				if config.perBlockCollisions then
+					self.shape.Physics = PhysicsMode.TriggerPerBlock
+				else
+					self.shape.Physics = PhysicsMode.Trigger
+				end
 				_setCollisionGroups(self.shape)
 			else
 				self.shape.Physics = PhysicsMode.Disabled
@@ -1418,7 +1432,7 @@ function createUI(system)
 			if newWidth == nil then
 				return
 			end
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1435,7 +1449,7 @@ function createUI(system)
 			if newHeight == nil then
 				return
 			end
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1449,7 +1463,7 @@ function createUI(system)
 		end
 
 		node._setDepth = function(self, newDepth)
-			if node._config.spherized then
+			if config.spherized then
 				if self._diameter == 0 then
 					return
 				end
@@ -1474,9 +1488,13 @@ function createUI(system)
 				self.shape = nil
 			end
 
+			shape:RemoveFromParent()
 			_setupUIObject(shape)
 			self.shape = shape
 			shape._node = self
+
+			node.shapeContainer:AddChild(shape)
+			shape.LocalPosition = Number3.Zero
 
 			if doNotRefresh ~= true then
 				self:refresh()
@@ -2005,6 +2023,7 @@ function createUI(system)
 			_textInputRefreshColor(self)
 			self:_refresh()
 
+			unfocus()
 			if self.onFocusLost ~= nil then
 				self:onFocusLost()
 			end
@@ -2021,8 +2040,322 @@ function createUI(system)
 		return node
 	end
 
+	ui.createScrollArea = function(self, color, config)
+		local node = self:createFrame(color)
+		node.isScrollArea = true
+
+		local cellPadding = config.cellPadding or 0
+		local direction = config.direction or "down"
+
+		local listeners = {}
+		local l
+		local hovering = false
+		local activated = false
+		local dragging = false
+		local dragPointerIndex = nil -- pointerIndex used to drag
+
+		local container = self:createFrame()
+		container:setParent(node)
+		container.IsMask = true
+		node.container = container
+
+		local cells = {}
+		local cachedCellsHeight = {}
+
+		node.nbCells = 0
+
+		local maxY = 0
+		node.scrollPosition = 0
+
+		local scrollHandle = self:createFrame(Color(0, 0, 0, 0)) -- TODO: work on handle
+		scrollHandle:setParent(node)
+
+		node.refresh = function()
+			local y
+			if direction == "down" then
+				y = container.Height + node.scrollPosition
+			else
+				y = node.scrollPosition
+			end
+			maxY = 0
+			local indexesToUnload = {}
+			local indexesToLoad = {}
+			for k = 1, node.nbCells do
+				local v = cells[k]
+				local height = cachedCellsHeight[k]
+
+				-- place cell
+				if direction == "down" then
+					y = y - height
+					if v then
+						v.pos = { 0, y }
+					end
+					y = y - cellPadding
+				else
+					if v then
+						v.pos = { 0, y }
+					end
+					y = y + height
+					y = y + cellPadding
+				end
+
+				-- unload if out of area
+				if v then
+					if y > node.Height * 2 or y < -node.Height * 1.5 then
+						table.insert(indexesToUnload, k)
+					end
+				-- load if back in area
+				elseif y <= node.Height * 2 and y >= -node.Height then
+					indexesToLoad[k] = true
+				end
+
+				-- compute maxY
+				if maxY == 0 then
+					maxY = height
+				elseif k < node.nbCells then
+					maxY = maxY + height + cellPadding
+				end
+			end
+
+			if direction == "up" then
+				maxY = -maxY - cellPadding + node.Height - (cachedCellsHeight[#cachedCellsHeight] or 0)
+			elseif maxY > node.Height then
+				maxY = maxY - node.Height + cachedCellsHeight[node.nbCells] + cellPadding
+			else -- no scroll, content is not high enough
+				maxY = 0
+			end
+
+			-- load up to one page
+			if direction == "down" then
+				if y >= -node.Height then
+					indexesToLoad[node.nbCells + 1] = true
+				end
+			elseif direction == "up" then
+				if y <= 2 * node.Height then
+					indexesToLoad[node.nbCells + 1] = true
+				end
+			end
+
+			local loadedCells = false
+			for k, _ in pairs(indexesToLoad) do
+				local newCell = config.loadCell(k)
+				if newCell == nil then
+					break
+				end
+				node:pushCell(newCell, k, false) -- no refresh yet
+				loadedCells = true
+			end
+
+			for _, k in ipairs(indexesToUnload) do
+				if cells[k] then
+					-- unload if too far from screen
+					config.unloadCell(cells[k])
+					cells[k] = nil
+				end
+			end
+
+			if loadedCells then
+				node:refresh() -- refresh the whole list with loaded cells
+			end
+
+			-- refresh scrollHandle
+			if (direction == "up" and maxY < 0) or (direction == "down" and maxY >= node.Height) then
+				scrollHandle:show()
+				scrollHandle.Width = 30
+				scrollHandle.Height = math.min(node.Height, math.max(25, 100 / math.abs(maxY) * node.Height))
+				local posY
+				if direction == "down" then
+					posY = node.Height - scrollHandle.Height - node.Height * math.abs(node.scrollPosition / maxY)
+				elseif direction == "up" then
+					posY = (node.Height - scrollHandle.Height) * math.abs(node.scrollPosition / maxY)
+				end
+				scrollHandle.pos = {
+					node.Width - scrollHandle.Width,
+					posY,
+				}
+			else
+				scrollHandle:hide()
+			end
+		end
+
+		-- set scroll position
+		node.setScrollPosition = function(_, newPosition)
+			if direction == "down" then
+				node.scrollPosition = math.min(maxY, math.max(0, newPosition))
+			elseif direction == "up" then
+				node.scrollPosition = math.min(0, math.max(maxY, newPosition))
+			end
+			node:refresh()
+		end
+
+		node.pushFront = function(_, cell)
+			for i = node.nbCells + 1, 2, -1 do
+				cells[i] = cells[i - 1]
+				cachedCellsHeight[i] = cachedCellsHeight[i - 1]
+			end
+			node.nbCells = node.nbCells + 1
+			node:pushCell(cell, 1)
+		end
+
+		node.flush = function(_)
+			for i = 1, node.nbCells do
+				if cells[i] then
+					config.unloadCell(cells[i])
+				end
+			end
+			node.nbCells = 0
+			cells = {}
+			cachedCellsHeight = {}
+		end
+
+		-- add cell at index, called automatically after onLoad callback
+		node.pushCell = function(_, cell, index, needRefresh)
+			needRefresh = needRefresh == nil and true or needRefresh
+			if cell == nil then
+				return
+			end
+			if index == nil then
+				index = node.nbCells + 1
+			end
+			cells[index] = cell
+			cell:setParent(container)
+			cachedCellsHeight[index] = cell.Height
+			if index > node.nbCells then
+				node.nbCells = index
+			end
+			if needRefresh then
+				node:refresh()
+			end
+		end
+
+		container.parentDidResize = function()
+			container.Width = node.Width
+			container.Height = node.Height
+			node:setScrollPosition(0)
+		end
+
+		local scrollFrame = self:createFrame()
+		scrollFrame:setParent(node)
+		scrollFrame.parentDidResize = function()
+			scrollFrame.Width = node.Width
+			scrollFrame.Height = node.Height
+		end
+
+		node.dragging = function()
+			return dragging
+		end
+
+		node.containsPointer = function(self, pe)
+			local x
+			local y
+
+			local ok = pcall(function()
+				x = pe.X * Screen.Width
+				y = pe.Y * Screen.Height
+			end)
+
+			if not ok then
+				return false
+			end
+
+			-- compute absolute screen coordinates
+			local bottomY = self.pos.Y
+			local topY = bottomY + self.Height
+			local leftX = self.pos.X
+			local rightX = leftX + self.Width
+
+			local parent = self.parent
+
+			while parent do
+				bottomY = bottomY + parent.pos.Y
+				topY = topY + parent.pos.Y
+				leftX = leftX + parent.pos.X
+				rightX = rightX + parent.pos.X
+				parent = parent.parent
+			end
+
+			return (x >= leftX and x <= rightX and y >= bottomY and y <= topY)
+		end
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
+			if node:containsPointer(pe) then
+				dragPointerIndex = pe.Index
+				activated = true
+				unfocus()
+			end
+		end, { system = system == true and System or nil, topPriority = true })
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
+			if pe.Index ~= dragPointerIndex then
+				return
+			end
+			dragPointerIndex = nil
+			activated = false
+			dragging = false
+		end, { system = system == true and System or nil, topPriority = false })
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerCancel, function(pe)
+			if pe.Index ~= dragPointerIndex then
+				return
+			end
+			dragPointerIndex = nil
+			activated = false
+			dragging = false
+		end, { system = system == true and System or nil, topPriority = false })
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+			if pe.Index ~= dragPointerIndex then
+				return
+			end
+			if activated and dragging == false then
+				dragging = true
+				-- TODO: reactivate this once we better handle ui
+				-- layers above scroll areas.
+				-- Currently, when the alert modal is displayed, we can still scroll.
+				-- if pressed ~= nil then
+				-- 	if pressed._onCancel then
+				-- 		pressed:_onCancel()
+				-- 	end
+				-- 	pressed = nil
+				-- end
+			end
+			if dragging then
+				node:setScrollPosition(node.scrollPosition + pe.DY)
+			end
+		end, { system = system == true and System or nil, topPriority = true })
+		table.insert(listeners, l)
+
+		if Client.IsMobile == false then
+			l = LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
+				hovering = node:containsPointer(pe)
+			end, { system = system == true and System or nil, topPriority = true })
+			table.insert(listeners, l)
+
+			l = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
+				if not hovering then
+					return false
+				end
+				node:setScrollPosition(node.scrollPosition + delta)
+				return true
+			end, { system = system == true and System or nil, topPriority = true })
+			table.insert(listeners, l)
+		end
+
+		node.onRemove = function()
+			for _, l in ipairs(listeners) do
+				l:Remove()
+			end
+			listeners = {}
+		end
+
+		return node
+	end
+
 	ui.createButton = function(_, stringOrShape, config)
-		local _config = {
+		local defaultConfig = {
 			borders = true,
 			underline = false,
 			padding = true,
@@ -2030,18 +2363,34 @@ function createUI(system)
 			textSize = "default",
 			sound = "button_1",
 			unfocuses = true, -- unfocused focused node when true
+			color = theme.buttonColor,
+			colorPressed = nil,
+			colorSelected = theme.buttonColorSelected,
+			colorDisabled = theme.buttonColorDisabled,
+			textColor = theme.buttonTextColor,
+			textColorPressed = nil,
+			textColorSelected = theme.buttonTextColorSelected,
+			textColorDisabled = theme.buttonTextColorDisabled,
 		}
 
-		if config then
-			-- replace default values in _config
-			for k, v in pairs(_config) do
-				if type(config[k]) == type(v) then
-					_config[k] = config[k]
-				end
-			end
+		local options = {
+			acceptTypes = {
+				colorPressed = { "Color" },
+				textColorPressed = { "Color" },
+			},
+		}
+
+		config = conf:merge(defaultConfig, config, options)
+
+		if config.colorPressed == nil then
+			config.colorPressed = Color(config.color)
+			config.colorPressed:ApplyBrightnessDiff(-0.15)
 		end
 
-		config = _config
+		if config.textColorPressed == nil then
+			config.textColorPressed = Color(config.textColor)
+			config.textColorPressed:ApplyBrightnessDiff(-0.15)
+		end
 
 		local theme = require("uitheme").current
 
@@ -2165,10 +2514,10 @@ function createUI(system)
 			end
 		end
 
-		node:setColor(theme.buttonColor, theme.buttonTextColor, true)
-		node:setColorPressed(theme.buttonColorPressed, theme.buttonTextColorPressed, true)
-		node:setColorSelected(theme.buttonColorSelected, theme.buttonTextColorSelected, true)
-		node:setColorDisabled(theme.buttonColorDisabled, theme.buttonTextColorDisabled, true)
+		node:setColor(config.color, config.textColor, true)
+		node:setColorPressed(config.colorPressed, config.textColorPressed, true)
+		node:setColorSelected(config.colorSelected, config.textColorSelected, true)
+		node:setColorDisabled(config.colorDisabled, config.textColorDisabled, true)
 
 		local background = Quad()
 		background.Color = node.colors[1]
@@ -2290,7 +2639,7 @@ function createUI(system)
 			btn:disable()
 
 			local selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.Parent)
+			selector:setParent(btn.parent)
 
 			focus(nil)
 			comboBoxSelector = selector
@@ -2309,24 +2658,6 @@ function createUI(system)
 			local showBelow = false
 			local showAbove = false
 
-			for i, choice in ipairs(choices) do
-				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
-				c:setParent(container)
-
-				local index = i
-				c.onRelease = function(_)
-					btn.selectedRow = index
-					if btn.onSelect ~= nil then
-						btn:onSelect(index)
-					end
-					if selector.close then
-						selector:close()
-					end
-				end
-
-				table.insert(choiceButtons, c)
-			end
-
 			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
 			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
 			down:setParent(frame)
@@ -2339,6 +2670,89 @@ function createUI(system)
 			up.pos.Z = -20
 			up:hide()
 			up:disable()
+
+			local dragged = false
+			local selectedBtn = nil
+			local totaldragY = 0
+
+			local function onDrag(_, pe)
+				totaldragY = totaldragY + pe.DY
+				if dragged == false and math.abs(totaldragY) > 5 then
+					dragged = true
+				end
+
+				if selectedBtn ~= nil then
+					selectedBtn:unselect()
+					selectedBtn = nil
+				end
+
+				container.pos.Y = container.pos.Y + pe.DY
+				if container.pos.Y >= 0 then
+					container.pos.Y = 0
+					if down:isVisible() then
+						down:hide()
+						down:disable()
+					end
+				end
+
+				if container.pos.Y + container.Height <= frame.Height then
+					container.pos.Y = frame.Height - container.Height
+					if up:isVisible() then
+						up:hide()
+						up:disable()
+					end
+				end
+
+				if down:isVisible() == false and container.pos.Y < 0 then
+					down:show()
+					down:enable()
+				end
+				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
+					up:show()
+					up:enable()
+				end
+			end
+
+			local function onRelease(self)
+				if dragged == false then
+					btn.selectedRow = self._choiceIndex
+					if btn.onSelect ~= nil then
+						btn:onSelect(self._choiceIndex)
+					end
+					if selector.close then
+						selector:close()
+					end
+				end
+				dragged = false
+			end
+
+			local function onPress(self)
+				dragged = false
+				totaldragY = 0
+				if selectedBtn ~= nil then
+					selectedBtn:unselect()
+				end
+				selectedBtn = self
+				self:select()
+			end
+
+			for i, choice in ipairs(choices) do
+				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
+				c:setParent(container)
+
+				c._onDrag = onDrag
+				c._choiceIndex = i
+
+				if selectedBtn == nil and btn.selectedRow ~= nil and i == btn.selectedRow then
+					c:select()
+					selectedBtn = c
+				end
+
+				c.onRelease = onRelease
+				c.onPress = onPress
+
+				table.insert(choiceButtons, c)
+			end
 
 			down.onPress = function()
 				showBelow = true
@@ -2407,13 +2821,31 @@ function createUI(system)
 				contentHeight = contentHeight + c.Height
 			end
 
-			frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
+			-- frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
+			frame.Height = math.min(
+				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
+				contentHeight
+			)
+
 			frame.pos.Z = -10 -- render on front
 
 			selector.Height = frame.Height + theme.paddingTiny * 2
 			selector.Width = frame.Width + theme.paddingTiny * 2
 
 			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - frame.Height + theme.padding, 0)
+
+			parent = btn.parent
+			absPy = p.Y
+			while parent do
+				absPy = absPy + parent.pos.Y
+				parent = parent.parent
+			end
+
+			local offset = 0
+			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
+				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
+			end
+			p.Y = p.Y + offset
 
 			selector.pos.X = p.X
 			selector.pos.Y = p.Y - 50
@@ -2432,7 +2864,24 @@ function createUI(system)
 				cursorY = cursorY - c.Height
 			end
 
-			container.pos.Y = frame.Height - container.Height
+			local selectionVisibilityOffset = 0
+			if selectedBtn ~= nil then
+				local visibleY = container.Height - frame.Height
+				if selectedBtn.pos.Y < visibleY then -- place button at center if not visible by default
+					selectionVisibilityOffset = visibleY
+						- selectedBtn.pos.Y
+						+ frame.Height * 0.5
+						- selectedBtn.Height * 0.5
+				end
+			end
+
+			container.pos.Y = frame.Height - container.Height + selectionVisibilityOffset
+			if container.pos.Y >= 0 then
+				container.pos.Y = 0
+			end
+			if container.pos.Y + container.Height <= frame.Height then
+				container.pos.Y = frame.Height - container.Height
+			end
 
 			up.pos = { 0, frame.Height - up.Height }
 			up.Width = frame.Width
@@ -2493,8 +2942,8 @@ function createUI(system)
 		end
 
 		for _, child in pairs(rootChildren) do
-			if child.parentDidResize ~= nil then
-				child:parentDidResize()
+			if child.parentDidResizeWrapper ~= nil then
+				child:parentDidResizeWrapper()
 			end
 		end
 	end, { system = system == true and System or nil, topPriority = true })
@@ -2508,33 +2957,61 @@ function createUI(system)
 		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 		local direction = { 0, 0, 1 }
 
-		local impact = Ray(origin, direction):Cast(_getCollisionGroups())
-		local hitObject = impact.Shape or impact.Object
-		-- try to find parent ui object (when impact a child of a mutable shape)
-		while hitObject and not hitObject._node do
-			hitObject = hitObject:GetParent()
+		local impacts
+		local hitObject
+		local parent
+		local skip
+
+		impacts = Ray(origin, direction):Cast(_getCollisionGroups(), nil, false)
+
+		table.sort(impacts, function(a, b)
+			return a.Distance < b.Distance
+		end)
+
+		for _, impact in ipairs(impacts) do
+			skip = false
+
+			hitObject = impact.Shape or impact.Object
+
+			-- try to find parent ui object (when impact a child of a mutable shape)
+			while hitObject and not hitObject._node do
+				hitObject = hitObject:GetParent()
+			end
+
+			if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
+				-- check if hitObject is within a scroll
+				parent = hitObject._node.parent
+				while parent ~= nil do
+					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
+						skip = true
+						break
+					end
+					parent = parent.parent
+				end
+
+				if skip == false then
+					pressed = hitObject._node
+
+					-- unfocus focused node, unless hit node.config.unfocused == false
+					if pressed ~= focused and pressed.config.unfocuses ~= false then
+						focus(nil)
+					end
+
+					if hitObject._node._onPress then
+						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
+					end
+					if pressed.config.sound and pressed.config.sound ~= "" then
+						sfx(pressed.config.sound, { Spatialized = false })
+					end
+
+					pointerIndex = pointerEvent.Index
+					return true -- capture event, other listeners won't get it
+				end
+			end
 		end
-		if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
-			pressed = hitObject._node
 
-			-- unfocus focused node, unless hit node.config.unfocused == false
-			if pressed ~= focused and pressed.config.unfocuses ~= false then
-				focus(nil)
-			end
-
-			if hitObject._node._onPress then
-				hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
-			end
-			if pressed.config.sound and pressed.config.sound ~= "" then
-				sfx(pressed.config.sound, { Spatialized = false })
-			end
-
-			pointerIndex = pointerEvent.Index
-			return true -- capture event, other listeners won't get it
-		else
-			-- did not touch anything, unfocus if focused node
-			focus(nil)
-		end
+		-- did not touch anything, unfocus if focused node
+		focus(nil)
 	end, { system = system == true and System or nil, topPriority = true })
 
 	pointerUpListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointerEvent)
@@ -2543,27 +3020,54 @@ function createUI(system)
 		end
 		pointerIndex = nil
 
-		if pressed then
+		if pressed ~= nil then
 			local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 			local direction = { 0, 0, 1 }
 
-			local impact = Ray(origin, direction):Cast(_getCollisionGroups())
-			local hitObject = impact.Shape or impact.Object
-			-- try to find parent ui object (when impact a child of a mutable shape)
-			while hitObject and not hitObject._node do
-				hitObject = hitObject:GetParent()
-			end
-			if hitObject._node == pressed and hitObject._node._onRelease then
-				pressed:_onRelease(hitObject, impact.Block, pointerEvent)
-				pressed = nil
-				return true
-			end
+			local impacts = Ray(origin, direction):Cast(_getCollisionGroups(), nil, false)
 
-			if pressed._onCancel then
-				pressed:_onCancel()
+			table.sort(impacts, function(a, b)
+				return a.Distance < b.Distance
+			end)
+
+			local parent
+			local skip
+
+			for _, impact in ipairs(impacts) do
+				skip = false
+
+				local hitObject = impact.Shape or impact.Object
+				-- try to find parent ui object (when impact a child of a mutable shape)
+				while hitObject and not hitObject._node do
+					hitObject = hitObject:GetParent()
+				end
+
+				parent = hitObject._node.parent
+				while parent ~= nil do
+					if
+						parent.isScrollArea == true
+						and (parent:dragging() or parent:containsPointer(pointerEvent) == false)
+					then
+						skip = true
+						break
+					end
+					parent = parent.parent
+				end
+
+				if skip == false and hitObject._node == pressed and hitObject._node._onRelease then
+					pressed:_onRelease(hitObject, impact.Block, pointerEvent)
+					pressed = nil
+					-- pressed element captures event onRelease event
+					-- even if onRelease and onCancel are nil
+					return true
+				end
 			end
-			pressed = nil
-			return true
+		end
+
+		-- no matter what, pressed is now nil
+		-- but not capturing event
+		if pressed._onCancel then
+			pressed:_onCancel()
 		end
 		pressed = nil
 	end, { system = system == true and System or nil, topPriority = true })
@@ -2611,6 +3115,63 @@ function createUI(system)
 			print("⚠️ uikit.pointerUp is deprecated, no need to call it anymore!")
 			pointerUpWarningDisplayed = true
 		end
+	end
+
+	---@function shrinkToFit Reduces the number of char of a text so it can fit in maxWidth.
+	---@param self uikit
+	---@param text text
+	---@param maxWidth number
+	---@return nil
+	ui.shrinkToFit = function(self, text, maxWidth)
+		if text.Width <= maxWidth then
+			return
+		end
+		local charWidth
+		local spaceWidth
+		local emojiWidth
+		local emojisPositions = {}
+		local firstEmojiUTF8Code = 0x2000
+
+		local pos = 1
+		for _, code in utf8.codes(text.Text) do
+			if code > firstEmojiUTF8Code then
+				table.insert(emojisPositions, i)
+			end
+			pos = pos + 1
+		end
+
+		do
+			local aChar = self:createText("a")
+			charWidth = aChar.Width
+			aChar:remove()
+			local aStr = self:createText("aa")
+			local strWidth = aStr.Width
+			aStr:remove()
+			spaceWidth = strWidth - 2 * charWidth
+			local anEmoji = self:createText("⬅️")
+			emojiWidth = anEmoji.Width
+			anEmoji:remove()
+		end
+
+		local currentWidth = 0
+		local nbChars = 0
+		local it = 1
+		for i = 1, #text.Text do
+			if i == emojisPositions[it] then
+				currentWidth = currentWidth + emojiWidth
+				it = it + 1
+			else
+				currentWidth = currentWidth + charWidth
+			end
+
+			if currentWidth + charWidth > maxWidth then
+				break
+			end
+			nbChars = nbChars + 1
+			currentWidth = currentWidth + spaceWidth
+		end
+
+		text.Text = text.Text:sub(1, nbChars) .. "…"
 	end
 
 	return ui

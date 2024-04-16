@@ -124,19 +124,15 @@ properties:
             -- (those functions can be redefined)
 
             Client.DirectionalPad = function(x, y)
-                -- storing globals here for AnalogPad
-                -- to update Player.Motion
-                dpadX = x dpadY = y
                 Player.Motion = (Player.Forward * y + Player.Right * x) * 50
             end
-
+            
             Client.AnalogPad = function(dx, dy)
-                Player.LocalRotation.Y = Player.LocalRotation.Y + dx * 0.01
-                Player.LocalRotation.X = Player.LocalRotation.X + -dy * 0.01
+                Player.LocalRotation = Rotation(0, dx * 0.01, 0) * Player.LocalRotation
+                Player.Head.LocalRotation = Rotation(-dy * 0.01, 0, 0) * Player.Head.LocalRotation
 
-                if dpadX ~= nil and dpadY ~= nil then
-                    Player.Motion = (Player.Forward * dpadY + Player.Right * dpadX) * 50
-                end
+                local dpad = require("controls").DirectionalPadValues
+                Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
             end
 
     - name: "DPad"
@@ -163,18 +159,14 @@ properties:
             -- (those functions can be redefined)
 
             Client.AnalogPad = function(dx, dy)
-                Player.LocalRotation.Y = Player.LocalRotation.Y + dx * 0.01
-                Player.LocalRotation.X = Player.LocalRotation.X + -dy * 0.01
+                Player.LocalRotation = Rotation(0, dx * 0.01, 0) * Player.LocalRotation
+                Player.Head.LocalRotation = Rotation(-dy * 0.01, 0, 0) * Player.Head.LocalRotation
 
-                if dpadX ~= nil and dpadY ~= nil then
-                    Player.Motion = (Player.Forward * dpadY + Player.Right * dpadX) * 50
-                end
+                local dpad = require("controls").DirectionalPadValues
+                Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
             end
 
             Client.DirectionalPad = function(x, y)
-                -- storing globals here for AnalogPad
-                -- to update Player.Motion
-                dpadX = x dpadY = y
                 Player.Motion = (Player.Forward * y + Player.Right * x) * 50
             end
 
@@ -198,7 +190,8 @@ properties:
       samples:
         - code: |
             -- the default implementation does this:
-            Client.OnChat = function(message)
+            Client.OnChat = function(payload)
+                local message = payload.message -- accessing the message value from the payload table param
                 print(Player.Username .. ": " .. message)
                 Player:TextBubble(message, 3, true)
             end

@@ -43,7 +43,7 @@ localevent.name = {
 	PointerDragEnd = 14,
 	HomeMenuOpened = 15,
 	HomeMenuClosed = 16,
-	-- OpenChat = 17, -- REMOVED AFTER 0.0.53
+	PointerClick = 17, -- down then up without moving
 	PointerWheel = 18, -- callback function: function(delta)
 	PointerCancel = 19, -- happens when pointer leaves the screen without proper release event
 	PointerLongPress = 20,
@@ -66,17 +66,22 @@ localevent.name = {
 	WarningMessage = 37,
 	ErrorMessage = 38,
 	SensitivityUpdated = 39,
-	OnChat = 40,
+	OnChat = 40, -- triggered when a chat message is submitted by the local user
 	-- SetChatTextInput = 41, -- REMOVED AFTER 0.0.53
 	CppMenuStateChanged = 42, -- needed while Cubzh still uses a few C++ menus (code editor & multiline inputs)
 	LocalAvatarUpdate = 43,
 	ReceivedEnvironmentToLaunch = 44,
-	ChatMessage = 45, -- callback: function(msgInfo)
+	-- ChatMessage can only be sent by system.
+	-- callback: function(message, sender, status, uuid, localUUID) -- status: "pending", "error", "ok", "reported"
+	ChatMessage = 45,
 	FailedToLoadWorld = 46, -- callback: function(msgInfo)
 	ServerConnectionSuccess = 47,
 	ServerConnectionLost = 48,
 	ServerConnectionFailed = 49,
 	ServerConnectionStart = 50, -- called when starting to establish connection
+	OnWorldObjectLoad = 51,
+	Log = 52, -- callback({type = info(1)|warning(2)|error(3), message = "...", date = "%m-%d-%YT%H:%M:%SZ"})
+	ChatMessageACK = 53, -- callback: function(uuid, localUUID, status) -- status: "error", "ok", "reported"
 }
 localevent.Name = localevent.name
 
@@ -92,6 +97,7 @@ limited[localevent.name.PointerShown] = true
 limited[localevent.name.PointerHidden] = true
 limited[localevent.name.PointerDown] = true
 limited[localevent.name.PointerUp] = true
+limited[localevent.name.PointerClick] = true
 limited[localevent.name.PointerDragBegin] = true
 limited[localevent.name.PointerDrag] = true
 limited[localevent.name.PointerDragEnd] = true
@@ -120,6 +126,7 @@ limited[localevent.name.ErrorMessage] = true
 limited[localevent.name.OnChat] = true
 limited[localevent.name.CppMenuStateChanged] = true
 limited[localevent.name.LocalAvatarUpdate] = true
+limited[localevent.name.OnWorldObjectLoad] = true
 
 reservedToSystem = {}
 reservedToSystem[localevent.name.KeyboardInput] = true
@@ -128,6 +135,8 @@ reservedToSystem[localevent.name.ServerConnectionSuccess] = true
 reservedToSystem[localevent.name.ServerConnectionLost] = true
 reservedToSystem[localevent.name.ServerConnectionFailed] = true
 reservedToSystem[localevent.name.ServerConnectionStart] = true
+reservedToSystem[localevent.name.ChatMessage] = true
+reservedToSystem[localevent.name.ChatMessageACK] = true
 
 mt = {
 	__tostring = function()

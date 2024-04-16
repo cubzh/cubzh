@@ -1,64 +1,114 @@
---[[
+-- ADD FRIENDS TOAST -> faster
 
-Welcome to the cubzh hub script!
+Dev.DisplayColliders = false
+local DEBUG_AMBIENCES = false
+local DEBUG_ITEMS = false
+local DEBUG_PET = false
 
-Want to create something like this?
-Go to https://docs.cu.bzh/
-
-]]
---
-
--- Dev.DisplayFPS = true
--- Dev.DisplayColliders = true
--- Dev.DisplayBoxes = true
-
--- CONSTANTS
-
-local MINIMUM_ITEM_SIZE_FOR_SHADOWS = 40
-local MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR = MINIMUM_ITEM_SIZE_FOR_SHADOWS * MINIMUM_ITEM_SIZE_FOR_SHADOWS
-local SPAWN_IN_BLOCK = Number3(107, 14, 73)
-local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(107, 20, 73)
-local ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCk = 2.0
-local REQUEST_FAIL_RETRY_DELAY = 5.0
-local HOLDING_TIME = 0.6 -- time to trigger action when holding button pressed
-
-local JUMP_VELOCITY = 82
-local MAX_AIR_JUMP_VELOCITY = 85
-
--- VARIABLES
-
+local SPAWN_POSITION = Number3(254, 80, 181) --315, 81, 138 --spawn point placed in world editor
+local SPAWN_ROTATION = Number3(0, math.pi * 0.08, 0)
+local TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK = Number3(40, 20, 30)
 local MAP_SCALE = 6.0 -- var because could be overriden when loading map
-local DEBUG = false
+local GLIDER_BACKPACK = {
+	SCALE = 0.75,
+	ITEM_NAME = "voxels.glider_backpack",
+}
 
--- Toasts
-local globalToast = nil
-local backpackTransparentToast = nil
+local TIME_TO_AVATAR_CTA = 60 * 2 -- seconds
+local TIME_TO_FRIENDS_CTA = 60 * 3 -- seconds
+
+local TIME_CYCLE_DURATION = 480 -- 8 minutes
+local DAWN_DURATION = 0.05 -- percentages
+local DAY_DURATION = 0.55
+local DUSK_DURATION = 0.05
+local NIGHT_DURATION = 0.35
+
+local TIME_TO_MID_DAY = DAWN_DURATION + DAY_DURATION * 0.5
+local TIME_TO_NIGHTFALL = DAWN_DURATION + DAY_DURATION + DUSK_DURATION * 0.1
+local TIME_TO_DAYBREAK = DAWN_DURATION * 0.1
+local HOUR_HAND_OFFSET = -0.5 + 2 * TIME_TO_MID_DAY
+local MINUTE_HAND_OFFSET = 1
+
+local MAP_COLLISION_GROUPS = CollisionGroups(1)
+local MAP_COLLIDES_WITH_GROUPS = CollisionGroups()
+
+local PLAYER_COLLISION_GROUPS = CollisionGroups(2)
+local PLAYER_COLLIDES_WITH_GROUPS = CollisionGroups(1, 3, 4, 5) -- map + items + buildings + barriers
+
+local ITEM_COLLISION_GROUPS = CollisionGroups(3)
+local ITEM_COLLIDES_WITH_GROUPS = CollisionGroups(1, 3, 4) -- map + items + buildings
+
+local BUILDING_COLLISION_GROUPS = CollisionGroups(4)
+local BUILDING_COLLIDES_WITH_GROUPS = CollisionGroups()
+
+local BARRIER_COLLISION_GROUPS = CollisionGroups(5)
+local BARRIER_COLLIDES_WITH_GROUPS = CollisionGroups()
+
+local CAMERA_COLLIDES_WITH_GROUPS = CollisionGroups(1, 4) -- map + buildings
+
+local ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS = CollisionGroups(3, 4, 5)
+
+local DRAFT_COLLISION_GROUPS = CollisionGroups(6)
+
+local TRIGGER_AREA_SIZE = Number3(60, 30, 60)
+
+local LIGHT_COLOR = Color(244, 210, 87)
+-- local MAX_PLAYER_DISTANCE = 20
+-- local MAX_PLAYER_DISTANCE_SQR = MAX_PLAYER_DISTANCE * MAX_PLAYER_DISTANCE
+-- local TIME_TO_HATCH = 120
 
 Client.OnStart = function()
-	-- REQUIRE MODULES
+	dialog = require("dialog")
+	dialog:setMaxWidth(400)
+	loc = require("localize")
+	multi = require("multi")
+	textbubbles = require("textbubbles")
+	skills = require("object_skills")
+	controls = require("controls")
+	ambience = require("ambience")
 	collectible = require("collectible")
-	ease = require("ease")
-	conf = require("config")
+	-- SFX & VFX
 	particles = require("particles")
 	walkSFX = require("walk_sfx")
-	wingTrail = require("wingtrail")
 	sfx = require("sfx")
+	wingTrail = require("wingtrail")
 
-	multi = require("multi")
-	-- not doing it automatically in that script has we need
-	-- to deal with special situations, like vehicles
-	multi:doNotHandlePlayers()
+	require("social"):enablePlayerClickMenu()
 
-	bundle = require("bundle")
-	require("textbubbles").displayPlayerChatBubbles = true
-	objectSkills = require("object_skills")
+	-- HUD
+	textbubbles.displayPlayerChatBubbles = true
+	controls:setButtonIcon("action1", "⬆️")
+	dialog:setMaxWidth(400)
 
-	-- SET MAP / AMBIANCE
-	loadMap()
-	setAmbiance()
+	-- AMBIENCE
+	Clouds.Altitude = 60 * MAP_SCALE
 
-	-- createDraft((SPAWN_IN_BLOCK + { 0, 2, 0 }) * MAP_SCALE, 50, 50, 200, 600)
-	-- createDraft(Number3(107, 36, 0) * MAP_SCALE, 50, 50, 200, 600)
+	if not DEBUG_AMBIENCES then
+		ambienceCycle = ambience:startCycle({
+			{
+				config = dawn,
+				duration = TIME_CYCLE_DURATION * DAWN_DURATION,
+			},
+			{
+				config = day,
+				duration = TIME_CYCLE_DURATION * DAY_DURATION,
+				fadeIn = TIME_CYCLE_DURATION * DAWN_DURATION * 0.5,
+				fadeOut = TIME_CYCLE_DURATION * DUSK_DURATION * 0.5,
+			},
+			{
+				config = dusk,
+				duration = TIME_CYCLE_DURATION * DUSK_DURATION,
+			},
+			{
+				config = night,
+				duration = TIME_CYCLE_DURATION * NIGHT_DURATION,
+				fadeIn = TIME_CYCLE_DURATION * DUSK_DURATION * 0.5,
+				fadeOut = TIME_CYCLE_DURATION * DAWN_DURATION * 0.5,
+			},
+		}, {
+			internalTick = false,
+		})
+	end
 
 	-- CONTROLS
 	-- Disabling controls until user is authenticated
@@ -67,54 +117,9 @@ Client.OnStart = function()
 	Client.Action1Release = nil
 	Pointer.Drag = nil
 
-	-- set icon for action1 button (for touch screens)
-	local controls = require("controls")
-	controls:setButtonIcon("action1", "⬆️")
-
-	playerControls:walk(Player)
-
-	-- PARTICLES
-
-	jumpParticles = particles:newEmitter({
-		life = function()
-			return 0.3
-		end,
-		velocity = function()
-			local v = Number3(15 + math.random() * 10, 0, 0)
-			v:Rotate(0, math.random() * math.pi * 2, 0)
-			return v
-		end,
-		acceleration = function()
-			return -Config.ConstantAcceleration
-		end,
-		collidesWithGroups = function()
-			return {}
-		end,
-	})
-
-	collectParticles = particles:newEmitter({
-		life = function()
-			return 1.0
-		end,
-		velocity = function()
-			local v = Number3(20 + math.random() * 10, 0, 0)
-			v:Rotate(0, math.random() * math.pi * 2, 0)
-			v.Y = 30 + math.random() * 20
-			return v
-		end,
-		scale = function()
-			return 0.5
-		end,
-		collidesWithGroups = function()
-			return {}
-		end,
-	})
-
 	-- CAMERA
 	-- Set camera for pre-authentication state (rotating while title screen is shown)
-
 	cameraDefaultFOV = Camera.FOV
-
 	Camera:SetModeFree()
 	Camera.Position = TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK * MAP_SCALE
 
@@ -124,47 +129,47 @@ Client.OnStart = function()
 		Client.Action1 = action1
 		Client.Action1Release = action1Release
 
-		showLocalPlayer()
+		initPlayer(Player)
+		dropPlayer(Player)
 
 		addCollectibles()
+		addTimers()
 
-		print(Player.Username .. " joined!")
+		print(string.format(loc("%s joined!"), Player.Username))
 	end)
 
-	-- LOCAL PLAYER PROPERTIES
-
-	local spawnJumpParticles = function(o)
-		jumpParticles.Position = o.Position
-		jumpParticles:spawn(10)
-		sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
-	end
-
-	objectSkills.addStepClimbing(Player, { mapScale = MAP_SCALE })
-	objectSkills.addJump(Player, {
-		maxGroundDistance = 1.0,
-		airJumps = 1,
-		jumpVelocity = JUMP_VELOCITY,
-		maxAirJumpVelocity = MAX_AIR_JUMP_VELOCITY,
-		onJump = spawnJumpParticles,
-		onAirJump = spawnJumpParticles,
-	})
-	walkSFX:register(Player)
+	mapEffects()
 
 	-- SYNCED ACTIONS
-
 	multi:onAction("swingRight", function(sender)
 		sender:SwingRight()
 	end)
+
 	multi:onAction("equipGlider", function(sender)
-		sender:EquipBackpack(bundle.Shape("voxels.glider_backpack"))
+		local s = bundle.Shape(GLIDER_BACKPACK.ITEM_NAME)
+		s.Scale = GLIDER_BACKPACK.SCALE
+		sender:EquipBackpack(s)
+	end)
+	LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function()
+		multi:action("updateAvatar")
+		require("api").getAvatar(Player.Username, function(_, _)
+			-- TODO: retry on error? maybe it should be done within getAvatar
+		end)
+	end)
+	multi:onAction("updateAvatar", function(sender)
+		avatar:get(sender.Username, sender.Avatar)
 	end)
 
-	addPlayerAnimations(Player)
+	LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function()
+		require("api").getAvatar(Player.Username, function(_, _)
+			-- TODO: retry on error? maybe it should be done within getAvatar
+		end)
+	end)
 
-	-- called when receiving information for distant object that isn't link
+	-- called when receiving information for distant object that are not linked
 	multi.linkRequest = function(name)
-		if stringStartsWith(name, "p_") then
-			local playerID = math.floor(tonumber(stringRemovePrefix(name, "p_")))
+		if _helpers.stringStartsWith(name, "p_") then
+			local playerID = math.floor(tonumber(_helpers.stringRemovePrefix(name, "p_")))
 			local p = Players[playerID]
 			if p ~= nil then
 				multi:unlink("g_" .. p.ID)
@@ -177,14 +182,8 @@ Client.OnStart = function()
 					p:SetParent(World)
 				end
 			end
-		elseif stringStartsWith(name, "ph_") then
-			-- local playerID = math.floor(tonumber(stringRemovePrefix(name, "ph_")))
-			-- local p = Players[playerID]
-			-- if p ~= nil then
-			-- 	multi:link(p.Head, "ph_" .. p.ID)
-			-- end
-		elseif stringStartsWith(name, "g_") then -- glider
-			local playerID = math.floor(tonumber(stringRemovePrefix(name, "g_")))
+		elseif _helpers.stringStartsWith(name, "g_") then -- glider
+			local playerID = math.floor(tonumber(_helpers.stringRemovePrefix(name, "g_")))
 			local p = Players[playerID]
 			if p ~= nil then
 				multi:unlink("p_" .. p.ID)
@@ -198,53 +197,96 @@ Client.OnStart = function()
 	end
 end
 
--- update what local player is syncing
-function updateSync()
-	local p = Player
-	local pID = p.ID
+local SAVE_INTERVAL = 0.1
+local SAVE_AMOUNT = 10
+local savedPositions, savedRotations = {}, {}
 
-	multi:unlink("g_" .. pID)
-	multi:unlink("p_" .. pID)
-	multi:unlink("ph_" .. pID)
+local unixMilli
+local currentTime
 
-	local vehicle = playerControls.vehicles[pID]
-	if vehicle then
-		if vehicle.type == "glider" then
-			-- sync vehicleRoll child object,
-			-- it contains all needed information
-			multi:sync(vehicle.roll, "g_" .. pID, {
-				-- velocity stored under "v"
-				keys = { "Velocity", "Position", "Rotation" },
-				triggers = { "LocalRotation", "Velocity" },
-			})
+local isNight = false
+local tInCycle
+local t = 0
+local t20 = 0
+local n
+Client.Tick = function(dt)
+	t20 = t20 + dt * 20
+
+	if not localPlayerShown then
+		t = t + dt -- * 0.2
+
+		local p = Number3(393, 36 + 120, 92)
+
+		p.Y = p.Y + (1 + math.sin(t * 0.6)) * 3
+
+		local rx = math.sin(t * 0.5) * math.rad(2)
+		local ry = math.rad(-22) + math.sin(t * 0.2) * math.rad(7)
+
+		Camera.Position = p
+		Camera.Rotation = Rotation(rx, ry, 0)
+	else
+		if Player.Position.Y < -200 then
+			dropPlayer(Player)
+		end
+	end
+
+	unixMilli = Time.UnixMilli() / 1000.0
+	currentTime = unixMilli % TIME_CYCLE_DURATION
+
+	tInCycle = currentTime / TIME_CYCLE_DURATION
+
+	if townhallHourHand ~= nil then
+		-- rotation 0 -> 9, -math.pi * 0.5 -> 12
+		-- mid-day -> 35% of TIME_CYCLE_DURATION
+		-- 0% of TIME_CYCLE_DURATION = -70% of 12h
+		-- Rotation(math.pi * (-0.5 + 2 * 0.7 - 2 * 2 * currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallHourHand.LocalRotation = Rotation(math.pi * (HOUR_HAND_OFFSET - 4 * tInCycle), 0, 0)
+	end
+
+	if townhallMinuteHand ~= nil then
+		-- rotation 0 -> 12
+		-- Rotation(math.pi * (2 * 0.7 - 2 * 2 * 12 currentTime / TIME_CYCLE_DURATION), 0, 0)
+		townhallMinuteHand.LocalRotation = Rotation(math.pi * (MINUTE_HAND_OFFSET - 48 * tInCycle), 0, 0)
+	end
+
+	if isNight then
+		if tInCycle > TIME_TO_DAYBREAK and tInCycle < TIME_TO_NIGHTFALL then
+			isNight = false
+			LocalEvent:Send("Day")
 		end
 	else
-		multi:sync(p, "p_" .. pID, {
-			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
-			triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
-		})
-		multi:sync(p.Head, "ph_" .. pID, { keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } })
+		if tInCycle > TIME_TO_NIGHTFALL or tInCycle < TIME_TO_DAYBREAK then
+			isNight = true
+			LocalEvent:Send("Night")
+		end
+	end
+
+	if not DEBUG_AMBIENCES then
+		ambienceCycle:setTime(currentTime)
+	end
+
+	if Player.pet ~= nil then
+		pet:followPlayer()
+		if pet.level < 0 and pet.remaining > 0 then
+			pet:updateHatchTimer()
+		end
+	end
+
+	n = (1 + math.sin(t20)) * 0.5 * 0.05
+	for _, speaker in ipairs(speakers) do
+		speaker.Scale = speaker.originalScale + n
 	end
 end
 
 Client.OnPlayerJoin = function(p)
 	if p == Player then
-		updateSync()
-		-- that's it, other things are already initialized for local player
+		updateSync() -- Syncing for other players
 		return
 	end
+	initPlayer(p)
+	dropPlayer(p)
 
-	objectSkills.addStepClimbing(p, { mapScale = MAP_SCALE })
-	walkSFX:register(p)
-	addPlayerAnimations(p)
-
-	print(p.Username .. " joined!")
-
-	-- inform newcomer that glider has been equipped
-	-- TODO: send event to newcomer only
-	if equipment == "glider" then
-		multi:action("equipGlider")
-	end
+	print(string.format(loc("%s joined!"), p.Username))
 end
 
 Client.OnPlayerLeave = function(p)
@@ -253,222 +295,750 @@ Client.OnPlayerLeave = function(p)
 	multi:unlink("p_" .. p.ID)
 
 	if p ~= Player then
-		print(p.Username .. " just left!")
-		playerControls:exitVehicle(p)
-		objectSkills.removeStepClimbing(p)
-		objectSkills.removeJump(p)
+		print(string.format(loc("%s just left!"), p.Username))
+		skills.removeStepClimbing(p)
 		walkSFX:unregister(p)
 		p:RemoveFromParent()
 	end
 end
 
-local moveDT = 0.0
-Client.Tick = function(dt)
-	if localPlayerShown then
-		if Player.Position.Y < -500 then
-			dropPlayer(Player)
+function setupBuilding(obj)
+	obj.CollisionGroups = BUILDING_COLLISION_GROUPS
+	obj.CollidesWithGroups = BUILDING_COLLIDES_WITH_GROUPS
+	obj.InnerTransparentFaces = false
+end
+
+speakers = {}
+Client.OnWorldObjectLoad = function(obj)
+	ease = require("ease")
+	hierarchyactions = require("hierarchyactions")
+	toast = require("ui_toast")
+	bundle = require("bundle")
+	avatar = require("avatar")
+
+	if obj.Name == "voxels.windmill" then
+		setupBuilding(obj)
+		obj.Wheel.Physics = PhysicsMode.Disabled
+		obj.Wheel.Tick = function(self, dt)
+			self:RotateLocal(-dt * 0.25, 0, 0)
 		end
-	else
-		-- Camera movement before player is shown
-		moveDT = moveDT + dt * 0.2
-		-- keep moveDT between -pi & pi
-		while moveDT > math.pi do
-			moveDT = moveDT - math.pi * 2
+	elseif obj.Name == "voxels.drink_truck" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			setupBuilding(o)
+		end)
+		local lamps = obj:GetChild(8)
+		lamps.IsUnlit = false
+
+		local l = Light()
+		l:SetParent(lamps)
+		l.LocalPosition.X = 10
+		l.LocalPosition.Z = 30
+		l.Color = LIGHT_COLOR
+		l.Hardness = 0.7
+		l.On = false
+
+		LocalEvent:Listen("Night", function(_)
+			lamps.IsUnlit = true
+			l.On = true
+		end)
+		LocalEvent:Listen("Day", function(_)
+			lamps.IsUnlit = false
+			l.On = false
+		end)
+	elseif obj.Name == "avatars_sign" then
+		obj.Lights_1.IsUnlit = true
+		obj.Lights_2.IsUnlit = true
+	elseif obj.Name == "worlds_sign" then
+		obj.Lights_1.IsUnlit = true
+		obj.Lights_2.IsUnlit = true
+	elseif obj.Name == "ground_wire" then
+		local lights = { obj.Lights_1, obj.Lights_2, obj.Lights_3, obj.Lights_4 }
+		local t = 0.0
+		local animTime = 0.6
+		local step
+		local previousStep
+		obj.Tick = function(o, dt)
+			t = (t + dt) % animTime
+			step = math.floor(t / animTime * 4) + 1
+			if step ~= previousStep then
+				previousStep = step
+				lights[step].IsUnlit = true
+				if step > 1 then
+					lights[step - 1].IsUnlit = false
+				else
+					lights[4].IsUnlit = false
+				end
+			end
 		end
-		Camera.Position.Y = (
-			TITLE_SCREEN_CAMERA_POSITION_IN_BLOCK.Y + math.sin(moveDT) * ROTATING_CAMERA_MAX_OFFSET_Y_IN_BLOCk
-		) * MAP_SCALE
-		Camera:RotateWorld({ 0, 0.1 * dt, 0 })
+	elseif obj.Name == "voxels.home_1" then
+		setupBuilding(obj)
+	elseif obj.Name == "voxels.city_lamp" then
+		obj.Shadow = true
+		local light = obj:GetChild(1)
+		light.IsUnlit = false
+
+		local l = Light()
+		l:SetParent(light)
+		l.Color = LIGHT_COLOR
+		l.Hardness = 0.7
+		l.On = false
+
+		LocalEvent:Listen("Night", function(_)
+			light.IsUnlit = true
+			l.On = true
+		end)
+		LocalEvent:Listen("Day", function(_)
+			light.IsUnlit = false
+			l.On = false
+		end)
+	elseif obj.Name == "voxels.simple_lighthouse" then
+		setupBuilding(obj)
+		lightFire = obj:GetChild(1)
+		lightFire.IsUnlit = true
+		lightFire.IsHidden = true
+		lightRay = obj:GetChild(2)
+		lightRay.Physics = PhysicsMode.Disabled
+		lightRay.Scale.X = 10
+		lightRay.IsUnlit = true
+		lightRay.Palette[1].Color.A = 20
+		lightRay.IsHidden = true
+		-- LocalEvent:Listen("Night", function(_)
+		-- 	--lightFire.IsHidden = not data.isNight
+		-- 	--lightRay.IsHidden = not data.isNight
+		-- end)
+	elseif obj.Name == "voxels.townhall" then
+		setupBuilding(obj)
+
+		townhallHourHand = obj.Hour
+		townhallHourHand.Pivot = { 0.5, 0.5, 0.5 }
+
+		townhallMinuteHand = obj.Minute
+		townhallMinuteHand.Pivot = { 0.5, 0.5, 0.5 }
+	elseif obj.Name == "voxels.water_fountain" then
+		local w = obj:GetChild(1) -- water
+		w.Physics = PhysicsMode.Disabled
+		w.InnerTransparentFaces = false
+		local t1 = 0
+		w.Tick = function(self, dt)
+			t1 = t1 + dt
+			self.Scale.Y = 1 + (math.sin(t1) * 0.05)
+		end
+
+		local c = obj:GetChild(2) --floating cube
+		c.Physics = PhysicsMode.Disabled
+
+		local collider = c:Copy()
+		collider.IsHidden = true
+		collider.CollisionGroups = ITEM_COLLISION_GROUPS
+		collider.CollidesWithGroups = ITEM_COLLIDES_WITH_GROUPS
+		collider.Physics = PhysicsMode.Static
+		collider:SetParent(obj)
+		collider.LocalPosition = c.LocalPosition + { 0, 5, 0 }
+		collider.Rotation = Rotation(0, 0, 0)
+
+		local originY = c.LocalPosition.Y + 5
+		local t2 = 0
+		c.Tick = function(self, dt)
+			t2 = t2 + dt * 2
+			self.LocalPosition.Y = originY + 1 + math.sin(t2) * 0.5 * 4
+			self:RotateLocal(0, dt * 0.5, 0)
+		end
+	elseif obj.Name == "customavatar" then
+		obj = _helpers.replaceWithAvatar(obj, "claire")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+			dialog:create(
+				loc("Hey! Edit your avatar in the Profile Menu, or use the changing room! 👕👖🥾"),
+				self.avatar
+			)
+			Menu:HighlightProfile()
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+			Menu:RemoveHighlight()
+		end
+	elseif obj.Name == "friend1" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Shadow = true
+		end)
+		obj = _helpers.replaceWithAvatar(obj, "aduermael")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+		end
+	elseif obj.Name == "friend2" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Shadow = true
+		end)
+		obj = _helpers.replaceWithAvatar(obj, "gdevillele")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+			dialog:create(loc("Looking for friends? Add some through the Friends menu!"), self.avatar)
+			Menu:HighlightFriends()
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+			Menu:RemoveHighlight()
+		end
+	elseif obj.Name == "worlds_npc" then
+		hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+			o.Shadow = true
+		end)
+		obj = _helpers.replaceWithAvatar(obj, "minadune")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+			dialog:create(
+				loc("There are many Worlds to explore in Cubzh, step inside and use my teleporter or the Main menu!"),
+				self.avatar
+			)
+			Menu:HighlightCubzhMenu()
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+			Menu:RemoveHighlight()
+		end
+	elseif obj.Name == "voxels.change_room" then
+		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
+		obj.trigger.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			self.toast = toast:create({
+				message = loc("Ready to customize your avatar? 👕"),
+				center = false,
+				iconShape = bundle.Shape("voxels.change_room"),
+				duration = -1, -- negative duration means infinite
+				actionText = loc("Let's do this!"),
+				action = function()
+					Menu:ShowProfileWearables()
+				end,
+			})
+		end
+		obj.trigger.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
+		end
+	elseif obj.Name == "voxels.dj_table" then
+		local music = bundle.Data("misc/hubmusic.ogg")
+		if music then
+			local radius = 80
+			local as = AudioSource()
+			as.Sound = music
+			as.Loop = true
+			as.Volume = 1.0
+			as.Radius = radius
+			as.MinRadius = 20
+			as.Spatialized = true
+			as:SetParent(obj)
+			as.LocalPosition = { 0, 0, 0 }
+			as:Play()
+			radius = radius * 0.9
+			local trigger = Object()
+			trigger.CollisionBox = Box({ -radius, -radius, -radius }, { radius, radius, radius })
+			trigger:SetParent(obj)
+			trigger.Physics = PhysicsMode.Trigger
+			trigger.CollisionGroups = {}
+			trigger.CollidesWithGroups = PLAYER_COLLISION_GROUPS
+			trigger.OnCollisionBegin = function(_, p)
+				if p.Animations.Dance ~= nil then
+					p.Animations.Dance:Play()
+				end
+			end
+			trigger.OnCollisionEnd = function(_, p)
+				if p.Animations.Dance ~= nil then
+					p.Animations.Dance:Stop()
+				end
+				-- TODO: for some reason, `p` is not always a Player. Need to investigate.
+				if p.Head ~= nil then
+					p.Head.LocalRotation = { 0, 0, 0 }
+				end
+			end
+		end
+	elseif obj.Name == "voxels.standing_speaker" then
+		local speaker = obj:GetChild(1)
+		local collider = Object()
+		collider.CollisionBox = speaker.CollisionBox
+		collider.Physics = PhysicsMode.Static
+		collider:SetParent(obj)
+		collider.LocalPosition = speaker.LocalPosition - speaker.Pivot
+		speaker.Physics = PhysicsMode.Disabled
+		speaker.originalScale = speaker.Scale:Copy()
+		table.insert(speakers, obj:GetChild(1))
+	elseif obj.Name == "voxels.speaker_left" or obj.Name == "voxels.speaker_right" then
+		local speaker = obj
+		local collider = Object()
+		collider.CollisionBox = Box(speaker.CollisionBox.Min - speaker.Pivot, speaker.CollisionBox.Max - speaker.Pivot)
+		collider.Physics = PhysicsMode.Static
+		collider:SetParent(World)
+		collider.Scale = speaker.Scale
+		collider.Position = speaker.Position
+		collider.Rotation = speaker.Rotation
+		speaker.Physics = PhysicsMode.Disabled
+		speaker.originalScale = speaker.Scale:Copy()
+		table.insert(speakers, speaker)
+	elseif obj.Name == "voxels.portal" then
+		local l = Light()
+		l.Color = Color(255, 139, 185)
+		l:SetParent(obj)
+		obj.trigger = _helpers.addTriggerArea(obj, obj.BoundingBox)
+		obj.trigger.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			self.toast = toast:create({
+				message = loc("Ready to explore other Worlds? 🌎"),
+				center = false,
+				iconShape = bundle.Shape("voxels.portal"),
+				duration = -1, -- negative duration means infinite
+				actionText = loc("Let's go!"),
+				action = function()
+					Menu:ShowWorlds()
+				end,
+			})
+		end
+		obj.trigger.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
+		end
+		local animatePortal = function(portal)
+			local kANIMATION_SPEED = 1
+			local kOFFSET_Y = 16
+
+			local ringsParent = portal:GetChild(2)
+			hierarchyactions:applyToDescendants(ringsParent, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Trigger
+				o.IsUnlit = true
+			end)
+
+			ringsParent.OnCollisionBegin = function(_, other)
+				if other.CollisionGroups == Player.CollisionGroups then
+					kANIMATION_SPEED = 5
+				end
+			end
+			ringsParent.OnCollisionEnd = function(_, other)
+				if other.CollisionGroups == Player.CollisionGroups then
+					kANIMATION_SPEED = 1
+				end
+			end
+			local rings, start, range, speed, timer = {}, {}, {}, {}, {}
+
+			for i = 1, ringsParent.ChildrenCount do
+				rings[i] = ringsParent:GetChild(i)
+				rings[i].Scale = rings[i].Scale * (1 - 0.01 * i) --Clipping OTP
+				start[i] = math.random(-4, 4)
+				range[i] = math.random(4, 8)
+				speed[i] = math.random(1, 2) * 0.5
+				timer[i] = math.random(1, 5)
+				rings[i].Tick = function(self, dt)
+					timer[i] = timer[i] + speed[i] * dt * kANIMATION_SPEED
+					self.LocalPosition.Y = kOFFSET_Y + start[i] + math.sin(timer[i]) * range[i]
+				end
+			end
+		end
+		animatePortal(obj)
+	elseif obj.Name == "pet_npc" then
+		obj = _helpers.replaceWithAvatar(obj, "voxels")
+		obj.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, other)
+			if DEBUG_PET then
+				pet:dialogTree(self.avatar)
+			else
+				pet:dialogTreeTeaser(self.avatar)
+			end
+		end
+		obj.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(self.avatarContainer, nil)
+			dialog:remove()
+		end
+	elseif string.find(obj.fullname, "discord_sign") then
+		obj.trigger = _helpers.addTriggerArea(obj)
+		obj.trigger.OnCollisionBegin = function(self, other)
+			if other ~= Player then
+				return
+			end
+			local icon
+			pcall(function()
+				icon = bundle.Shape("aduermael.discord_logo")
+			end)
+			self.toast = toast:create({
+				message = loc("Might wanna join Cubzh's Discord to meet other players & creators?"),
+				center = false,
+				iconShape = icon,
+				duration = -1, -- negative duration means infinite
+				actionText = loc("Sure!"),
+				action = function()
+					URL:Open("https://discord.gg/cubzh")
+				end,
+			})
+		end
+		obj.trigger.OnCollisionEnd = function(self, other)
+			if other ~= Player then
+				return
+			end
+			if self.toast then
+				self.toast:remove()
+				self.toast = nil
+			end
+		end
+	elseif obj.Name == "pet_bird" or obj.Name == "pet_gator" or obj.Name == "pet_ram" then
+		obj.initialForward = obj.Forward:Copy()
+		obj.Physics = PhysicsMode.Disabled
+		obj.trigger = _helpers.addTriggerArea(obj)
+		obj.trigger.OnCollisionBegin = function(_, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(obj, other)
+			dialog:create("❤️❤️❤️", obj)
+		end
+		obj.trigger.OnCollisionEnd = function(_, other)
+			if other ~= Player then
+				return
+			end
+			_helpers.lookAt(obj, nil)
+			dialog:remove()
+		end
+	elseif obj.Name == "pet_spawner" then
+		obj.Physics = PhysicsMode.Disabled
+		for i = 1, 4 do -- 1 : player, 2 : gator, 3 : npc, 4 : fence
+			obj:GetChild(i).Physics = PhysicsMode.Disabled
+			obj.Palette[1].Color.A = 20
+		end
+	end
+
+	if obj.fullname ~= nil then
+		if
+			string.find(obj.fullname, "hedge")
+			or string.find(obj.fullname, "hay_bail")
+			or string.find(obj.fullname, "palm_tree")
+			or string.find(obj.fullname, "apple_tree")
+			or string.find(obj.fullname, "carrot_1")
+			or string.find(obj.fullname, "turnip")
+			or string.find(obj.fullname, "training_dummy")
+			or string.find(obj.fullname, "farmhat")
+			or string.find(obj.fullname, "broken_bridge_side_1")
+			or string.find(obj.fullname, "clothes_rack")
+			or string.find(obj.fullname, "city_lamp")
+			or string.find(obj.fullname, "solo_computer")
+			or string.find(obj.fullname, "no_fun_sign")
+			or string.find(obj.fullname, "soon")
+			or string.find(obj.fullname, "brick")
+			or string.find(obj.fullname, "small_water_pipe")
+			or string.find(obj.fullname, "pipe_tank")
+			or string.find(obj.fullname, "beach_umbrella")
+			or string.find(obj.fullname, "beach_chair")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Static
+			end)
+		elseif string.find(obj.fullname, "walking_plank") then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+			obj.Physics = PhysicsMode.Static
+		elseif
+			string.find(obj.fullname, "fence_gate")
+			or string.find(obj.fullname, "white_fence")
+			or string.find(obj.fullname, "rustic_fence")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Static
+				o.CollisionGroups = BARRIER_COLLISION_GROUPS
+				o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
+			end)
+		elseif string.find(obj.fullname, "beach_barrier") then
+			-- fix beach barries alignments (for better collisions)
+			if obj.fullname == "voxels.beach_barrier_2" then
+				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+					o.Physics = PhysicsMode.StaticPerBlock
+					o.CollisionGroups = BARRIER_COLLISION_GROUPS
+					o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
+				end)
+			else
+				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+					o.Physics = PhysicsMode.Static
+					o.CollisionGroups = BARRIER_COLLISION_GROUPS
+					o.CollidesWithGroups = BARRIER_COLLIDES_WITH_GROUPS
+				end)
+
+				-- trying to allign collision boxes to smoothly slide
+				-- along tiled barries.
+				-- doesn't work realy well so far
+
+				local p = obj.Position:Copy()
+				p.X = math.floor(p.X + 0.5)
+				p.Y = math.floor(p.Y + 0.5)
+				p.Z = math.floor(p.Z + 0.5)
+				local diff = obj.Position - p
+
+				obj.CollisionBox = Box(
+					Number3(
+						math.floor(obj.CollisionBox.Max.X + diff.X + 0.5),
+						14,
+						math.floor(obj.CollisionBox.Max.Z + diff.Z + 0.5)
+					),
+					Number3(
+						math.floor(obj.CollisionBox.Min.X + diff.X + 0.5),
+						math.floor(obj.CollisionBox.Min.Y + diff.Y + 0.5),
+						math.floor(obj.CollisionBox.Min.Z + diff.Z + 0.5)
+					)
+				)
+			end
+
+			-- obj.Position.X = math.floor(obj.Position.X + 0.5)
+			-- obj.Position.Y = math.floor(obj.Position.Y + 0.5)
+			-- obj.Position.Z = math.floor(obj.Position.Z + 0.5)
+		elseif string.find(obj.fullname, "plank_") then -- items that are "part of the map"
+			hierarchyactions:applyToDescendants(obj, { includeRoot = false }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+			obj.Physics = PhysicsMode.Static
+			obj.CollisionGroups = MAP_COLLISION_GROUPS
+			obj.CollidesWithGroups = MAP_COLLIDES_WITH_GROUPS
+		elseif
+			string.find(obj.fullname, "shell_1")
+			or string.find(obj.fullname, "shell_2")
+			or string.find(obj.fullname, "shell_3")
+			or string.find(obj.fullname, "sand_1")
+			or string.find(obj.fullname, "sand_2")
+			or string.find(obj.fullname, "sand_3")
+			or string.find(obj.fullname, "sand_4")
+			or string.find(obj.fullname, "lily_pads")
+			or string.find(obj.fullname, "vines")
+			or string.find(obj.fullname, "moss")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+		elseif
+			string.find(obj.fullname, "tuft")
+			or string.find(obj.fullname, "grass")
+			or string.find(obj.fullname, "dirt")
+		then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Disabled
+			end)
+			if string.find(obj.Name, "_n") then
+				return
+			end
+			obj.Position.Y = obj.Position.Y - 0.40 * MAP_SCALE
+		elseif string.find(obj.fullname, "stone") or string.find(obj.fullname, "log") then
+			hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(o)
+				o.Physics = PhysicsMode.Static
+			end)
+			if string.find(obj.Name, "_n") then
+				return
+			end
+			obj.Position.Y = obj.Position.Y - 0.40 * MAP_SCALE
+		end
 	end
 end
 
-Pointer.Click = function()
+Pointer.Click = function(pe)
 	Player:SwingRight()
 	multi:action("swingRight")
-end
+	dialog:complete()
 
-localPlayerShown = false
-function showLocalPlayer()
-	if localPlayerShown then
-		return
-	end
-	localPlayerShown = true
+	if DEBUG_ITEMS then
+		local impact = pe:CastRay(ITEM_BUILDING_AND_BARRIER_COLLISION_GROUPS)
+		if impact ~= nil then
+			if impact.Object ~= nil then
+				local o = impact.Object
 
-	dropPlayer(Player)
-	Player.Position = Camera.Position
-	Player.Rotation = Camera.Rotation
-	Camera:SetModeThirdPerson()
-end
+				while o.Parent ~= World do
+					o = o.Parent
+				end
 
--- UTILITY FUNCTIONS
-
-function setAmbiance()
-	local ambience = require("ambience")
-	ambience:set(ambience.noon)
-
-	Fog.Near = 300
-	Fog.Far = 1000
-end
-
-function loadMap()
-	local hierarchyactions = require("hierarchyactions")
-	local bundle = require("bundle")
-	local worldEditorCommon = require("world_editor_common")
-
-	local mapdata = bundle.Data("misc/hubmap.b64")
-
-	local world = worldEditorCommon.deserializeWorld(mapdata:ToString())
-
-	MAP_SCALE = world.mapScale or 5
-
-	map = bundle.Shape(world.mapName)
-	map.Scale = MAP_SCALE
-
-	map.CollisionGroups = Map.CollisionGroups
-	map.CollidesWithGroups = Map.CollidesWithGroups
-	map.Physics = PhysicsMode.StaticPerBlock
-
-	map:SetParent(World)
-	map.Position = { 0, 0, 0 }
-	map.Pivot = { 0, 0, 0 }
-	map.Shadow = true
-
-	waterShapes = {}
-	-- water
-	local i = 0
-	hierarchyactions:applyToDescendants(map, { includeRoot = false }, function(o)
-		i = i + 1
-		-- apparently, children == water so far in this map
-		-- physics will be disabled later on for water,
-		-- but we need it turned on to place items on it.
-		o.CollisionGroups = Map.CollisionGroups
-		o.CollidesWithGroups = Map.CollidesWithGroups
-		o.Physics = PhysicsMode.StaticPerBlock
-		o.InnerTransparentFaces = false
-		if i == 1 then
-			o.LocalPosition.Y = o.LocalPosition.Y + 0.25
-		elseif i == 2 then
-			o.LocalPosition.Y = o.LocalPosition.Y - 0.25
-		end
-		o.originY = o.LocalPosition.Y
-		table.insert(waterShapes, o)
-		o:RefreshModel()
-	end)
-
-	local loadedObjects = {}
-	local o
-	if world.objects then
-		for _, objInfo in ipairs(world.objects) do
-			if loadedObjects[objInfo.fullname] == nil then
-				ok = pcall(function()
-					o = bundle.Shape(objInfo.fullname)
-				end)
-				if ok then
-					loadedObjects[objInfo.fullname] = o
-					-- print("loaded " .. objInfo.fullname)
-					o.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-					if
-						string.find(objInfo.fullname, "vines")
-						or string.find(objInfo.fullname, "grass")
-						or string.find(objInfo.fullname, "rail")
-						or string.find(objInfo.fullname, "lily")
-					then
-						hierarchyactions:applyToDescendants(o, { includeRoot = true }, function(o)
-							o.Physics = PhysicsMode.Disabled
-						end)
+				if o ~= nil then
+					if o.fullname ~= nil then
+						print(o.fullname, "(copied)")
+						Dev:CopyToClipboard(o.fullname)
+					elseif o.Name ~= nil then
+						print(o.Name, "(copied)")
+						Dev:CopyToClipboard(o.fullname)
 					end
-				else
-					loadedObjects[objInfo.fullname] = "ERROR"
-					-- print("could not load " .. objInfo.fullname)
 				end
 			end
 		end
 	end
-
-	local obj
-	local scale
-	local boxSize
-	local turnOnShadows
-	local k
-
-	local onWater = {}
-	if world.objects then
-		for _, objInfo in ipairs(world.objects) do
-			o = loadedObjects[objInfo.fullname]
-			if o ~= nil and o ~= "ERROR" then
-				obj = Shape(o, { includeChildren = true })
-				obj:SetParent(World)
-				k = Box()
-				k:Fit(obj, true)
-
-				scale = objInfo.Scale or 0.5
-				boxSize = k.Size * scale
-				turnOnShadows = false
-
-				if boxSize.SquaredLength >= MINIMUM_ITEM_SIZE_FOR_SHADOWS_SQR then
-					turnOnShadows = true
-				end
-
-				obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-				hierarchyactions:applyToDescendants(obj, { includeRoot = true }, function(l)
-					l.Physics = o.Physics
-					if turnOnShadows then
-						l.Shadow = true
-					end
-				end)
-
-				obj.Position = objInfo.Position or Number3(0, 0, 0)
-				obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-				obj.Scale = scale
-				obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
-				obj.Name = objInfo.Name or objInfo.fullname
-
-				if string.find(objInfo.fullname, "lily") or string.find(objInfo.fullname, "ducky") then
-					table.insert(onWater, obj)
-				end
-			end
-		end
-	end
-
-	Timer(0.1, function()
-		for _, o in ipairs(onWater) do
-			o.Pivot.Y = 0
-			local p = o.Position + Number3.Up * map.Scale
-			local ray = Ray(p, Number3.Down)
-			local impact = ray:Cast(map.CollisionGroups)
-			if impact ~= nil then
-				o.Position = p + Number3.Down * impact.Distance
-			end
-		end
-		-- disabling water physics
-		for _, w in ipairs(waterShapes) do
-			w.Physics = PhysicsMode.Disabled
-			o.CollisionGroups = {}
-			o.CollidesWithGroups = {}
-			o.Physics = PhysicsMode.Disabled
-		end
-	end)
 end
 
-holdTimer = nil
+local JUMP_VELOCITY = 82
+local MAX_AIR_JUMP_VELOCITY = 85
+initPlayer = function(p)
+	if p == Player then -- Player properties for local simulation
+		-- require("camera_modes"):setThirdPerson({
+		-- 	rigidity = 0.4,
+		-- 	target = p,
+		-- 	collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+		-- })
 
+		require("camera_modes"):setFree()
+		require("ccc"):set({
+			target = p,
+			cameraColliders = CAMERA_COLLIDES_WITH_GROUPS,
+		})
+
+		jumpParticles = particles:newEmitter({
+			life = function()
+				return 0.3
+			end,
+			velocity = function()
+				local v = Number3(15 + math.random() * 10, 0, 0)
+				v:Rotate(0, math.random() * math.pi * 2, 0)
+				return v
+			end,
+			color = function()
+				return Color.White
+			end,
+			acceleration = function()
+				return -Config.ConstantAcceleration
+			end,
+			collidesWithGroups = function()
+				return {}
+			end,
+		})
+		collectParticles = particles:newEmitter({
+			life = function()
+				return 1.0
+			end,
+			velocity = function()
+				local v = Number3(20 + math.random() * 10, 0, 0)
+				v:Rotate(0, math.random() * math.pi * 2, 0)
+				v.Y = 30 + math.random() * 20
+				return v
+			end,
+			color = function()
+				return Color.White
+			end,
+			scale = function()
+				return 0.5
+			end,
+			collidesWithGroups = function()
+				return {}
+			end,
+		})
+		local spawnJumpParticles = function(o)
+			jumpParticles.Position = o.Position
+			jumpParticles:spawn(10)
+			sfx("walk_concrete_2", { Position = o.Position, Volume = 0.2 })
+		end
+		skills.addStepClimbing(Player, {
+			mapScale = MAP_SCALE,
+			collisionGroups = Map.CollisionGroups + ITEM_COLLISION_GROUPS + BUILDING_COLLISION_GROUPS,
+		})
+		skills.addJump(Player, {
+			maxGroundDistance = 1.0,
+			airJumps = 1,
+			jumpVelocity = JUMP_VELOCITY,
+			maxAirJumpVelocity = MAX_AIR_JUMP_VELOCITY,
+			onJump = spawnJumpParticles,
+			onAirJump = spawnJumpParticles,
+		})
+		localPlayerShown = true
+
+		-- Timer to save recent on ground positions
+		local saveIdx = 1
+		Timer(SAVE_INTERVAL, true, function()
+			if Player.IsOnGround then
+				savedPositions[saveIdx] = Player.Position:Copy() + { 0, MAP_SCALE, 0 } -- adding a one block Y offset on the respawn
+				savedRotations[saveIdx] = Player.Rotation:Copy()
+				saveIdx = saveIdx + 1
+				if saveIdx > SAVE_AMOUNT then
+					saveIdx = 1
+				end
+			end
+		end)
+
+		p.Head:AddChild(AudioListener) -- Adding an audio listener to the player
+	end
+
+	World:AddChild(p) -- Adding the player to the world
+	p.Physics = PhysicsMode.Dynamic
+	p.CollisionGroups = PLAYER_COLLISION_GROUPS
+	p.CollidesWithGroups = PLAYER_COLLIDES_WITH_GROUPS
+	addPlayerAnimations(p) -- Adding animations
+	walkSFX:register(p) -- Adding step sounds
+	playerControls:walk(p) -- Setting the default control to walk
+end
+
+function dropPlayer(p)
+	playerControls:walk(p)
+	p.Velocity, p.Motion = { 0, 0, 0 }, { 0, 0, 0 }
+
+	if p == Player then
+		-- cycling through saved positions to find a valid one
+		for k, v in ipairs(savedPositions) do
+			local ray = Ray(v, Number3.Down)
+			if ray:Cast(Map) ~= nil then
+				p.Position = v
+				p.Rotation = savedRotations[k]
+				return
+			end
+		end
+	end
+
+	p.Position = SPAWN_POSITION + Number3(math.random(-6, 6), 0, math.random(-6, 6))
+	p.Rotation = SPAWN_ROTATION + Number3(0, math.random(-1, 1) * math.pi * 0.08, 0)
+end
+
+local HOLDING_TIME = 0.6 -- time to trigger action when holding button pressed
+local holdTimer = nil
 function action1()
-	if globalToast then
-		globalToast:remove()
-		globalToast = nil
-	end
-
 	playerControls:walk(Player)
-
-	objectSkills.jump(Player)
-	-- Dev:CopyToClipboard("" .. Player.Position.X .. ", " .. Player.Position.Y .. ", " .. Player.Position.Z)
+	skills.jump(Player)
 
 	holdTimer = Timer(HOLDING_TIME, function()
 		holdTimer = nil
-		if equipment == "" then
+		if backEquipment == "" then
 			return
 		end
-		if equipment == "glider" then
+		if backEquipment == "glider" then
 			if gliderUsageToast ~= nil then
 				gliderUsageToast:remove()
 				gliderUsageToast = nil
@@ -476,6 +1046,10 @@ function action1()
 			playerControls:glide(Player)
 		end
 	end)
+
+	if DEBUG_AMBIENCES then
+		nextAmbience()
+	end
 end
 
 function action1Release()
@@ -484,14 +1058,189 @@ function action1Release()
 	end
 end
 
-function dropPlayer(p)
-	playerControls:walk(p)
-	p.Position = SPAWN_IN_BLOCK * map.Scale
-	p.Rotation = { 0.06, math.pi * -0.75, 0 }
-	p.Velocity = { 0, 0, 0 }
+function mapEffects()
+	local sea = Map:GetChild(1)
+	sea.Physics = PhysicsMode.TriggerPerBlock -- let the player go through
+	sea.CollisionGroups = {}
+	sea.CollidesWithGroups = { 2 }
+	sea.InnerTransparentFaces = false -- no inner surfaces for the renderer
+	sea.LocalPosition = { 0, 1, 0 } -- placement
+	local t = 0
+	sea.Tick = function(self, dt)
+		t = t + dt
+		self.Scale.Y = 1 + (math.sin(t) * 0.05)
+	end
+	sea.OnCollisionBegin = function(_, other)
+		sfx("water_impact_" .. math.random(1, 3), { Position = other.Position, Volume = 0.5, Pitch = 1.0 })
+	end
+
+	local grass = Map:GetChild(2)
+	grass.Physics = PhysicsMode.Disabled
+	grass.CollisionGroups = { 1 }
+	grass.Scale = 0.999
+	grass.LocalPosition = { 5, 12.1, 27 }
 end
 
-function contains(t, v)
+addTimers = function()
+	Timer(TIME_TO_AVATAR_CTA, function()
+		require("api").getAvatar(Player.Username, function(err, data)
+			if not err then
+				if
+					data.hair ~= nil
+					or data.jacket ~= "official.jacket"
+					or data.pants ~= "official.pants"
+					or data.boots ~= "official.boots"
+				then
+					return -- If the player has at least one customized equipment, don't send toastMsg
+				else
+					toast:create({
+						message = loc("You can customize your avatar anytime!"),
+						center = false,
+						iconShape = bundle.Shape("voxels.change_room"),
+						duration = -1,
+						closeButton = true,
+						actionText = loc("Ok!"),
+						action = function(self)
+							Menu:ShowProfileWearables()
+							self:remove()
+						end,
+					})
+				end
+			end
+		end)
+	end)
+
+	Timer(TIME_TO_FRIENDS_CTA, function()
+		require("api"):getFriendCount(function(ok, count)
+			if ok then
+				if count > 0 then
+					return -- If the player already has friends, don't toastMsg
+				else
+					toast:create({
+						message = loc("Add friends and play with them!"),
+						center = false,
+						iconShape = bundle.Shape("voxels.friend_icon"),
+						duration = -1,
+						closeButton = true,
+						actionText = loc("Ok!"),
+						action = function(self)
+							Menu:ShowFriends()
+							self:remove()
+						end,
+					})
+				end
+			end
+		end)
+	end)
+end
+
+local _ambiences
+local _nextAmbience
+function nextAmbience()
+	if _ambiences == nil then
+		_ambiences = { dawn, day, dusk, night }
+		_nextAmbience = 1
+	end
+	local a = _ambiences[_nextAmbience]
+	_ambiences:set(a)
+
+	_nextAmbience = _nextAmbience + 1
+	if _nextAmbience > #_ambiences then
+		_nextAmbience = 1
+	end
+end
+-- HELPERS
+
+_helpers = {}
+_helpers.stringStartsWith = function(str, prefix)
+	return string.sub(str, 1, string.len(prefix)) == prefix
+end
+
+_helpers.stringRemovePrefix = function(str, prefix)
+	if string.sub(str, 1, string.len(prefix)) == prefix then
+		return string.sub(str, string.len(prefix) + 1)
+	else
+		return str
+	end
+end
+
+_helpers.replaceWithAvatar = function(obj, name)
+	local o = Object()
+	o:SetParent(World)
+	o.Position = obj.Position
+	o.Scale = obj.Scale
+	o.Physics = PhysicsMode.Trigger
+
+	o.CollisionBox = Box({
+		-TRIGGER_AREA_SIZE.Width * 0.5,
+		math.min(-TRIGGER_AREA_SIZE.Height, o.CollisionBox.Min.Y),
+		-TRIGGER_AREA_SIZE.Depth * 0.5,
+	}, {
+		TRIGGER_AREA_SIZE.Width * 0.5,
+		math.max(TRIGGER_AREA_SIZE.Height, o.CollisionBox.Max.Y),
+		TRIGGER_AREA_SIZE.Depth * 0.5,
+	})
+	o.CollidesWithGroups = { 2 }
+	o.CollisionGroups = {}
+
+	local container = Object()
+	container.Rotation = obj.Rotation
+	container.initialRotation = obj.Rotation:Copy()
+	container.initialForward = obj.Forward:Copy()
+	container:SetParent(o)
+	o.avatarContainer = container
+
+	local newObj = avatar:get(name)
+	o.avatar = newObj
+	newObj:SetParent(o.avatarContainer)
+
+	obj:RemoveFromParent()
+	return o
+end
+
+_helpers.addTriggerArea = function(obj, box, offset)
+	local o = Object()
+	o:SetParent(World)
+	o.Scale = obj.Scale
+	o.Physics = PhysicsMode.Trigger
+	o.CollidesWithGroups = { 2 }
+	o.CollisionGroups = {}
+	o.CollisionBox = box ~= nil and box
+		or (
+			Box({
+				-TRIGGER_AREA_SIZE.Width * 0.5,
+				math.min(-TRIGGER_AREA_SIZE.Height, o.CollisionBox.Min.Y),
+				-TRIGGER_AREA_SIZE.Depth * 0.5,
+			}, {
+				TRIGGER_AREA_SIZE.Width * 0.5,
+				math.max(TRIGGER_AREA_SIZE.Height, o.CollisionBox.Max.Y),
+				TRIGGER_AREA_SIZE.Depth * 0.5,
+			})
+		)
+	o.Position = offset ~= nil and (obj.Position + offset) or (obj.Position - obj.Pivot * 0.5)
+	return o
+end
+
+_helpers.lookAt = function(obj, target)
+	if not target then
+		ease:linear(obj, 0.1).Forward = obj.initialForward
+		obj.Tick = nil
+		return
+	end
+	obj.Tick = function(self, _)
+		_helpers.lookAtHorizontal(self, target)
+	end
+end
+
+_helpers.lookAtHorizontal = function(o1, o2)
+	local n3_1 = Number3.Zero
+	local n3_2 = Number3.Zero
+	n3_1:Set(o1.Position.X, 0, o1.Position.Z)
+	n3_2:Set(o2.Position.X, 0, o2.Position.Z)
+	ease:linear(o1, 0.1).Forward = n3_2 - n3_1
+end
+
+_helpers.contains = function(t, v)
 	for _, value in ipairs(t) do
 		if value == v then
 			return true
@@ -500,190 +1249,241 @@ function contains(t, v)
 	return false
 end
 
--- collected part IDs (arrays)
-collectedGliderParts = {} -- {1, 3, 5}
--- collectedJetpackParts = {}
+-- MODULE : DAY NIGHT CYCLE
 
-gliderBackpackCollectibles = {}
-gliderUnlocked = false
+dawn = {
+	sky = {
+		skyColor = Color(246, 40, 140),
+		horizonColor = Color(239, 147, 17),
+		abyssColor = Color(0, 77, 172),
+		lightColor = Color(177, 111, 55),
+		lightIntensity = 0.510000,
+	},
+	fog = {
+		color = Color(74, 15, 6),
+		near = 300,
+		far = 700,
+		lightAbsorbtion = 0.400000,
+	},
+	sun = {
+		color = Color(172, 71, 71),
+		intensity = 1.000000,
+		rotation = Rotation(math.rad(30), math.rad(-60), 0),
+	},
+	ambient = {
+		skyLightFactor = 0.100000,
+		dirLightFactor = 0.200000,
+	},
+}
 
-equipment = nil
+day = {
+	sky = {
+		skyColor = Color(0, 103, 255),
+		horizonColor = Color(0, 248, 248),
+		abyssColor = Color(202, 255, 245),
+		lightColor = Color(199, 174, 148),
+		lightIntensity = 0.600000,
+	},
+	fog = {
+		color = Color(20, 159, 204),
+		near = 300,
+		far = 700,
+		lightAbsorbtion = 0.400000,
+	},
+	sun = {
+		color = Color(199, 195, 73),
+		intensity = 1.000000,
+		rotation = Rotation(math.rad(50), math.rad(-30), 0),
+	},
+	ambient = {
+		skyLightFactor = 0.100000,
+		dirLightFactor = 0.200000,
+	},
+}
 
-function unlockGlider()
-	gliderUnlocked = true
-	for _, backpack in ipairs(gliderBackpackCollectibles) do
-		backpack.object.PrivateDrawMode = 0
+dusk = {
+	sky = {
+		skyColor = Color(0, 9, 192),
+		horizonColor = Color(227, 43, 70),
+		abyssColor = Color(238, 168, 0),
+		lightColor = Color(180, 51, 180),
+		lightIntensity = 0.510000,
+	},
+	fog = {
+		color = Color(10, 15, 83),
+		near = 300,
+		far = 700,
+		lightAbsorbtion = 0.400000,
+	},
+	sun = {
+		color = Color(91, 28, 164),
+		intensity = 1.000000,
+		rotation = Rotation(math.rad(30), math.rad(60), 0),
+	},
+	ambient = {
+		skyLightFactor = 0.100000,
+		dirLightFactor = 0.210000,
+	},
+}
+
+night = {
+	sky = {
+		skyColor = Color(1, 3, 50),
+		horizonColor = Color(70, 64, 146),
+		abyssColor = Color(64, 117, 190),
+		lightColor = Color(69, 80, 181),
+		lightIntensity = 0.600000,
+	},
+	fog = {
+		color = Color(89, 28, 112),
+		near = 310,
+		far = 700,
+		lightAbsorbtion = 0.310000,
+	},
+	sun = {
+		color = Color(107, 65, 200),
+		intensity = 1.000000,
+		rotation = Rotation(1.061161, 3.089219, 0.000000),
+	},
+	ambient = {
+		skyLightFactor = 0.100000,
+		dirLightFactor = 0.200000,
+	},
+}
+
+-- MODULE : PLAYER CONTROLS
+
+function updateSync()
+	local p = Player
+	local pID = p.ID
+
+	multi:unlink("g_" .. pID)
+	multi:unlink("p_" .. pID)
+	multi:unlink("ph_" .. pID)
+
+	if Client.Connected then
+		local playerControlID = playerControls:getPlayerID(p)
+		local vehicle = playerControls.vehicles[playerControlID]
+		if vehicle then
+			if vehicle.type == "glider" then
+				-- sync vehicleRoll child object,
+				-- it contains all needed information
+				multi:sync(vehicle.roll, "g_" .. pID, {
+					keys = { "Velocity", "Position", "Rotation" },
+					triggers = { "LocalRotation", "Velocity" },
+				})
+			end
+		else
+			multi:sync(p, "p_" .. pID, {
+				keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
+				triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
+			})
+			multi:sync(
+				p.Head,
+				"ph_" .. pID,
+				{ keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } }
+			)
+		end
 	end
 end
 
-function addCollectibles()
-	local function spawnCollectibles()
-		-- local jetpackPartsPositions = {
-		-- 	Number3(850, 96, 350),
-		-- 	Number3(810, 96, 350),
-		-- 	Number3(770, 96, 350),
-		-- }
-
-		local gliderParts = {
-			{ ID = 1, Position = Number3(418, 128, 566) },
-			{ ID = 2, Position = Number3(387, 242, 625) },
-			{ ID = 3, Position = Number3(62, 248, 470) },
-			{ ID = 4, Position = Number3(336, 260, 403) },
-			{ ID = 5, Position = Number3(194, 230, 202) },
-			{ ID = 6, Position = Number3(363, 212, 149) },
-			{ ID = 7, Position = Number3(155, 266, 673) },
-			{ ID = 8, Position = Number3(100, 350, 523) },
-			{ ID = 9, Position = Number3(240, 404, 249) },
-			{ ID = 10, Position = Number3(453, 472, 156) },
-		}
-
-		-- Glider backpack (blue)
-		local defaultBackpackConfig = {
-			scale = 0.75,
-			rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
-			position = Number3.Zero,
-			itemName = "voxels.glider_backpack",
-			onCollisionBegin = function(c)
-				if gliderUnlocked then
-					collectParticles.Position = c.object.Position
-					collectParticles:spawn(20)
-					sfx("wood_impact_3", { Position = c.object.Position, Volume = 0.6, Pitch = 1.3 })
-					Client:HapticFeedback()
-					collectible:remove(c)
-
-					Player:EquipBackpack(c.object)
-
-					equipment = "glider"
-					multi:action("equipGlider")
-
-					gliderUsageToast = require("ui_toast"):create({
-						message = "Maintain jump key to start gliding!",
-						center = false,
-						iconShape = bundle.Shape("voxels.glider"),
-						duration = -1, -- negative duration means infinite
-					})
-				else
-					backpackTransparentToast = require("ui_toast"):create({
-						message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
-						center = true,
-						duration = -1, -- negative duration means infinite
-						iconShape = bundle.Shape("voxels.glider_parts"),
-					})
-				end
-			end,
-			onCollisionEnd = function(_)
-				if backpackTransparentToast then
-					backpackTransparentToast:remove()
-					backpackTransparentToast = nil
-				end
-			end,
-		}
-
-		local gliderBackpackConfigs = {
-			{ position = Number3(451, 102, 510) },
-			{ position = Number3(878, 396, 271) }, -- tower top
-			{ position = Number3(653, 318, 655) }, -- pink tree
-			{ position = Number3(481, 470, 155) }, -- wook plank
-		}
-
-		for _, backpackConfig in ipairs(gliderBackpackConfigs) do
-			local config = conf:merge(defaultBackpackConfig, backpackConfig)
-			local c = collectible:create(config)
-			c.object.PrivateDrawMode = 1
-			table.insert(gliderBackpackCollectibles, c)
-		end
-
-		if #collectedGliderParts >= #gliderParts then -- or true then
-			unlockGlider()
-		else
-			local gliderPartConfig = {
-				scale = 0.5,
-				rotation = Number3.Zero, -- { math.pi / 6, 0, math.pi / 6 },
-				position = Number3.Zero,
-				itemName = "voxels.glider_parts",
-				userdata = {
-					ID = -1,
-				},
-				onCollisionBegin = function(c)
-					collectParticles.Position = c.object.Position
-					collectParticles:spawn(20)
-					sfx("wood_impact_3", { Position = c.object.Position, Volume = 0.6, Pitch = 1.3 })
-					Client:HapticFeedback()
-
-					collectible:remove(c)
-
-					if contains(collectedGliderParts, c.userdata.ID) then
-						return
-					end
-
-					table.insert(collectedGliderParts, c.userdata.ID)
-
-					local retry = {}
-					retry.fn = function()
-						local store = KeyValueStore(Player.UserID)
-						store:set("collectedGliderParts", collectedGliderParts, function(ok)
-							if not ok then
-								Timer(REQUEST_FAIL_RETRY_DELAY, retry.fn)
-							end
-						end)
-					end
-					retry.fn()
-
-					if DEBUG then
-						print("Glider parts collected: " .. #collectedGliderParts .. "/" .. #gliderParts)
-					end
-
-					if #collectedGliderParts >= #gliderParts then
-						-- the last glider part has been collected
-						require("ui_toast"):create({
-							message = "Glider unlocked!",
-							center = false,
-							iconShape = bundle.Shape("voxels.glider_backpack"),
-						})
-						unlockGlider()
-					else
-						-- a glider part has been collected
-						require("ui_toast"):create({
-							message = #collectedGliderParts .. "/" .. #gliderParts .. " collected",
-							iconShape = bundle.Shape("voxels.glider_parts"),
-						})
-					end
-				end,
-			}
-			for _, v in ipairs(gliderParts) do
-				if not contains(collectedGliderParts, v.ID) then
-					local config = conf:merge(gliderPartConfig, { position = v.Position, userdata = { ID = v.ID } })
-					collectible:create(config)
-				end
-			end
+function addPlayerAnimations(player)
+	local animLiftArms = Animation("LiftArms", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
+	local liftRightArm = {
+		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
+		{ time = 1.0, rotation = { 0, 0, math.rad(30) } },
+	}
+	local liftRightHand = {
+		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
+		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(-30) } },
+	}
+	local liftLeftArm = {
+		{ time = 0.0, rotation = { 0, 0, 1.0472 } },
+		{ time = 1.0, rotation = { 0, 0, math.rad(-30) } },
+	}
+	local liftLeftHand = {
+		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
+		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(30) } },
+	}
+	local animLiftRightConfig = {
+		RightArm = liftRightArm,
+		RightHand = liftRightHand,
+		LeftArm = liftLeftArm,
+		LeftHand = liftLeftHand,
+	}
+	for name, v in pairs(animLiftRightConfig) do
+		for _, frame in ipairs(v) do
+			animLiftArms:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
+			animLiftArms:Bind(
+				name,
+				(name == "Body" and not player.Avatar[name]) and player.Avatar or player.Avatar[name]
+			)
 		end
 	end
+	player.Animations.LiftArms = animLiftArms
 
-	local t = {}
-	t.get = function()
-		local store = KeyValueStore(Player.UserID)
-		-- store:get("collectedGliderParts", "collectedJetpackParts", function(ok, results)
-		store:get("collectedGliderParts", function(ok, results)
-			if type(ok) ~= "boolean" then
-				error("KeyValueStore:get() unexpected type of 'ok'", 2)
-			end
-			if type(results) ~= "table" and type(results) ~= "nil" then
-				error("KeyValueStore:get() unexpected type of 'results'", 2)
-			end
-			if ok == true then
-				if results.collectedGliderParts ~= nil then
-					collectedGliderParts = results.collectedGliderParts
-				end
-				-- if results.collectedJetpackParts ~= nil then
-				-- 	collectedJetpackParts = results.collectedJetpackParts
-				-- end
-				spawnCollectibles()
-			else
-				Timer(REQUEST_FAIL_RETRY_DELAY, t.get)
-			end
-		end)
+	local leftLegPos = Player.LeftLeg.LocalPosition
+	local rightLegPos = Player.RightLeg.LocalPosition
+
+	local animDance = Animation("Dance", { duration = 0.5, loops = 0, priority = 1 })
+	local rArm = {
+		{ time = 0.0, rotation = { math.rad(10), 0, -math.rad(70) } },
+		{ time = 0.5, rotation = { math.rad(-70), 0, -math.rad(70) } },
+		{ time = 1.0, rotation = { math.rad(10), 0, -math.rad(70) } },
+	}
+	local rHand = {
+		{ time = 0.0, rotation = { 0, math.rad(-70), 0 } },
+		{ time = 0.5, rotation = { 0, math.rad(-10), 0 } },
+		{ time = 1.0, rotation = { 0, math.rad(-70), 0 } },
+	}
+	local lArm = {
+		{ time = 0.0, rotation = { math.rad(-45), 0, math.rad(60) } },
+		{ time = 0.5, rotation = { math.rad(45), 0, math.rad(60) } },
+		{ time = 1.0, rotation = { math.rad(-45), 0, math.rad(60) } },
+	}
+	local lHand = {
+		{ time = 0.0, rotation = { 0, math.rad(10), 0 } },
+		{ time = 0.5, rotation = { 0, math.rad(70), 0 } },
+		{ time = 1.0, rotation = { 0, math.rad(10), 0 } },
+	}
+	local body = {
+		{ time = 0, position = { 0, 12, 0 } },
+		{ time = 1, position = { 0, 11, 0 } },
+		{ time = 2, position = { 0, 12, 0 } },
+	}
+	local lleg = {
+		{ time = 0, rotation = { 0, 0, 0 }, position = leftLegPos },
+		{ time = 1, rotation = { 0, 0, 0 }, position = { leftLegPos.X, leftLegPos.Y + 1, leftLegPos.Z } },
+		{ time = 2, rotation = { 0, 0, 0 }, position = leftLegPos },
+	}
+	local rleg = {
+		{ time = 0, rotation = { 0, 0, 0 }, position = rightLegPos },
+		{ time = 1, rotation = { 0, 0, 0 }, position = { rightLegPos.X, rightLegPos.Y + 1, rightLegPos.Z } },
+		{ time = 2, rotation = { 0, 0, 0 }, position = rightLegPos },
+	}
+	local head = {
+		{ time = 0, rotation = { 0, 0, math.rad(5) } },
+		{ time = 1, rotation = { 0, 0, math.rad(-5) } },
+		{ time = 2, rotation = { 0, 0, math.rad(5) } },
+	}
+
+	local animDanceConfig = {
+		RightArm = rArm,
+		RightHand = rHand,
+		LeftArm = lArm,
+		LeftHand = lHand,
+		Body = body,
+		LeftLeg = lleg,
+		RightLeg = rleg,
+		Head = head,
+	}
+	for name, v in pairs(animDanceConfig) do
+		for _, frame in ipairs(v) do
+			animDance:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
+			animDance:Bind(name, (name == "Body" and not player.Avatar[name]) and player.Avatar or player.Avatar[name])
+		end
 	end
-	t.get()
+	player.Animations.Dance = animDance
 end
 
 playerControls = {
@@ -693,6 +1493,15 @@ playerControls = {
 	onDrag = nil,
 	dirPad = nil,
 }
+
+playerControls.getPlayerID = function(_, player)
+	if player == Player then
+		-- using "local" because the local player ID may change while still maintaining active controls
+		return "local"
+	else
+		return player.ID
+	end
+end
 
 playerControls.pointerDrag = function(pe)
 	if playerControls.onDrag ~= nil then
@@ -714,7 +1523,9 @@ playerControls.getShape = function(self, shapeName)
 end
 
 playerControls.exitVehicle = function(self, player)
-	local vehicle = self.vehicles[player.ID]
+	local pID = self:getPlayerID(player)
+
+	local vehicle = self.vehicles[pID]
 
 	if vehicle == nil then
 		return
@@ -746,7 +1557,17 @@ playerControls.exitVehicle = function(self, player)
 	player.Velocity = Number3.Zero
 
 	if player == Player then
-		Camera:SetModeThirdPerson(player)
+		-- require("camera_modes"):setThirdPerson({
+		-- 	rigidity = 0.4,
+		-- 	target = player,
+		-- 	collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
+		-- })
+		require("camera_modes"):setFree()
+		require("ccc"):set({
+			target = player,
+			cameraColliders = CAMERA_COLLIDES_WITH_GROUPS,
+			cameraRotation = Rotation(0, Camera.Rotation.Y, 0),
+		})
 		Camera.FOV = cameraDefaultFOV
 	end
 
@@ -771,14 +1592,16 @@ playerControls.exitVehicle = function(self, player)
 		}).Scale = Number3.Zero
 	end
 
-	self.vehicles[player.ID] = nil
+	self.vehicles[pID] = nil
 end
 
 playerControls.walk = function(self, player)
-	if self.current[player.ID] == "walk" then
+	local pID = self:getPlayerID(player)
+
+	if self.current[pID] == "walk" then
 		return -- already walking
 	end
-	self.current[player.ID] = "walk"
+	self.current[pID] = "walk"
 
 	self:exitVehicle(player)
 
@@ -786,13 +1609,13 @@ playerControls.walk = function(self, player)
 
 	if player == Player then
 		self.onDrag = function(pe)
-			Player.LocalRotation = Rotation(0, pe.DX * 0.01, 0) * Player.LocalRotation
-			Player.Head.LocalRotation = Rotation(-pe.DY * 0.01, 0, 0) * Player.Head.LocalRotation
-			local dpad = require("controls").DirectionalPadValues
-			Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
+			-- Player.LocalRotation = Rotation(0, pe.DX * 0.01, 0) * Player.LocalRotation
+			-- Player.Head.LocalRotation = Rotation(-pe.DY * 0.01, 0, 0) * Player.Head.LocalRotation
+			-- local dpad = require("controls").DirectionalPadValues
+			-- Player.Motion = (Player.Forward * dpad.Y + Player.Right * dpad.X) * 50
 		end
 		self.dirPad = function(x, y)
-			Player.Motion = (Player.Forward * y + Player.Right * x) * 50
+			-- Player.Motion = (Player.Forward * y + Player.Right * x) * 50
 		end
 		updateSync()
 	end
@@ -802,13 +1625,15 @@ local GLIDER_MAX_SPEED_FOR_EFFECTS = 80 -- speed can be above that, but used for
 local GLIDER_MAX_SPEED = 200
 local GLIDER_WING_LENGTH = 24
 local GLIDER_MAX_START_SPEED = 50
-local GLIDER_DRAG_DOWN = Number3(0, -5, 0)
+local GLIDER_DRAG_DOWN = -400
 
 playerControls.glide = function(self, player)
-	if self.current[player.ID] == "glide" then
+	local pID = self:getPlayerID(player)
+
+	if self.current[pID] == "glide" then
 		return -- already gliding
 	end
-	self.current[player.ID] = "glide"
+	self.current[pID] = "glide"
 
 	self:exitVehicle(player)
 
@@ -817,7 +1642,7 @@ playerControls.glide = function(self, player)
 	vehicle:SetParent(World)
 	vehicle.type = "glider"
 
-	self.vehicles[player.ID] = vehicle
+	self.vehicles[pID] = vehicle
 
 	local glider = self:getShape("voxels.glider")
 	glider.Shadow = true
@@ -835,8 +1660,11 @@ playerControls.glide = function(self, player)
 	end
 
 	vehicle.Physics = PhysicsMode.Dynamic
-	vehicle.Acceleration = -Config.ConstantAcceleration
-	vehicle.Motion:Set(GLIDER_DRAG_DOWN) -- constantly going down
+	-- vehicle.Tick resets velocity every frame, it means we have to emulate each individual part ourself
+	-- instead of letting velocity compound (from forces, other objects, collision responses etc.), it also
+	-- means that vehicle.Acceleration does nothing for us
+	vehicle.gliderSpd = 0
+	vehicle.gliderPull = Number3(0, GLIDER_DRAG_DOWN, 0)
 
 	local rightTrail = wingTrail:create({ scale = 0.5 })
 	rightTrail.LocalPosition = { GLIDER_WING_LENGTH, 8, 0 }
@@ -859,11 +1687,11 @@ playerControls.glide = function(self, player)
 	local up
 	local speedOverMax
 	local f
+	local dot
 
 	vehicle.Rotation:Set(0, player.Rotation.Y, 0)
-	vehicle.Velocity = player.Motion + player.Velocity * 0.1 -- initial velocity
-	local l = vehicle.Velocity.Length
-	vehicle.Velocity.Length = math.min(l, GLIDER_MAX_START_SPEED)
+	local initSpd = (player.Motion + player.Velocity * 0.1).Length
+	vehicle.gliderSpd = math.min(initSpd, GLIDER_MAX_START_SPEED)
 
 	player.Head.LocalRotation = { 0, 0, 0 }
 
@@ -903,10 +1731,17 @@ playerControls.glide = function(self, player)
 		vehicleRoll.Velocity:Set(vehicle.Velocity) -- copying for sync (physics disabled on vehicleRoll)
 
 		vehicle.CollisionBox = Box({ -10, -30, -10 }, { 10, 14, 10 })
-		vehicle.CollidesWithGroups = Map.CollisionGroups + vehicle.CollisionGroups
+		vehicle.CollidesWithGroups = MAP_COLLISION_GROUPS
+			+ BUILDING_COLLISION_GROUPS
+			+ ITEM_COLLISION_GROUPS
+			+ DRAFT_COLLISION_GROUPS
+			+ BARRIER_COLLISION_GROUPS
 		vehicle.CollisionGroups = {}
 
-		vehicle.OnCollisionBegin = function(_, _)
+		vehicle.OnCollisionBegin = function(_, other)
+			if other.CollisionGroups == DRAFT_COLLISION_GROUPS then
+				return
+			end
 			playerControls:walk(player)
 		end
 
@@ -927,27 +1762,25 @@ playerControls.glide = function(self, player)
 				leftLift = 1.0 - rightLift
 			end
 
-			l = o.Velocity.Length
-
 			yawDelta.Y = diffY * dt * 0.001 * 70
 			yaw = yawDelta * yaw
 
 			o.Rotation = yaw * tilt
 
-			down = math.max(0, o.Forward:Dot(Number3.Down)) -- 0 -> 1
-			up = math.max(0, o.Forward:Dot(Number3.Up))
+			dot = o.Forward:Dot(Number3.Down)
+			down = math.max(0, dot) -- 0 -> 1
+			up = math.max(0, -dot)
 
 			-- accelerate when facing down / lose more velocity when going up
-			l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
+			o.gliderSpd = o.gliderSpd + down * 80.0 * dt - (8.0 + up * 30.0) * dt
+			o.gliderSpd = math.max(o.gliderSpd, 0)
+			o.gliderSpd = math.min(GLIDER_MAX_SPEED, o.gliderSpd)
 
-			l = math.max(l, 0) -- speed can't be below 0
-			l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
-
-			o.Velocity:Set(o.Forward * l)
+			o.Velocity:Set(o.Forward * o.gliderSpd + o.gliderPull * dt)
 			vehicleRoll.Velocity:Set(o.Velocity) -- copying for sync (physics disabled on vehicleRoll)
 
 			-- EFFECTS
-			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
+			speedOverMax = math.min(1.0, o.gliderSpd / GLIDER_MAX_SPEED_FOR_EFFECTS)
 			Camera.FOV = cameraDefaultFOV + 20 * speedOverMax
 
 			f = 0.2 * speedOverMax
@@ -955,10 +1788,12 @@ playerControls.glide = function(self, player)
 			leftTrail:setColor(Color(255, 255, 255, leftLift * f))
 		end
 
+		require("ccc"):unset()
 		require("camera_modes"):setThirdPerson({
 			rigidity = 0.3,
 			target = vehicle,
 			rotationOffset = Rotation(math.rad(20), 0, 0),
+			collidesWithGroups = CAMERA_COLLIDES_WITH_GROUPS,
 		})
 
 		self.onDrag = function(pe)
@@ -971,9 +1806,11 @@ playerControls.glide = function(self, player)
 			vehicle.Rotation = yaw * tilt
 			vehicleRoll.LocalRotation = roll -- triggers sync
 		end
+
 		self.dirPad = function(_, _)
 			-- nothing to do, just turning off walk controls
 		end
+
 		updateSync()
 	else -- distant player
 		glider:SetParent(vehicle)
@@ -986,7 +1823,10 @@ playerControls.glide = function(self, player)
 		rightTrail:SetParent(vehicle)
 		leftTrail:SetParent(vehicle)
 
-		vehicle.Tick = function(o, dt)
+		vehicle.Tick = function(o, _)
+			-- only update wing trail colors
+			-- no local simulation (for now?), looks good enough so far
+
 			rightWingTip = vehicle:PositionLocalToWorld(GLIDER_WING_LENGTH, 0, 0)
 			leftWingTip = vehicle:PositionLocalToWorld(-GLIDER_WING_LENGTH, 0, 0)
 
@@ -1005,17 +1845,6 @@ playerControls.glide = function(self, player)
 
 			l = o.Velocity.Length
 
-			down = math.max(0, vehicle.Forward:Dot(Number3.Down)) -- 0 -> 1
-			up = math.max(0, vehicle.Forward:Dot(Number3.Up))
-
-			-- accelerate when facing down / lose more velocity when going up
-			l = l + down * 50.0 * dt - (8.0 + up * 8.0) * dt
-
-			l = math.max(l, 0) -- speed can't be below 0
-			l = math.min(l, GLIDER_MAX_SPEED) -- can't go faster than GLIDER_MAX_SPEED
-
-			vehicle.Velocity:Set(o.Forward * l)
-
 			-- EFFECTS
 			speedOverMax = math.min(1.0, l / GLIDER_MAX_SPEED_FOR_EFFECTS)
 
@@ -1028,119 +1857,263 @@ playerControls.glide = function(self, player)
 	return vehicle
 end
 
-function createDraft(pos, width, depth, height, strength)
-	local o = Object()
-	o:SetParent(World)
-	o.Physics = PhysicsMode.Trigger
-	o.CollisionGroups = { 4 }
+-- MODULE : COLLECTIBLES
 
-	o.emitter = particles:newEmitter({
-		life = function()
-			return 0.6
-		end,
-		position = function()
-			return Number3(math.random(0, width), 0, math.random(0, depth))
-		end,
-		color = function()
-			return Color(255, 255, 255, 80)
-		end,
-		physics = function()
-			return true
-		end,
-		velocity = function()
-			return Number3(0, math.random(300, 400), 0)
-		end,
-		collidesWithGroups = function()
-			return {}
-		end,
-	})
+collectedGliderParts = {}
+gliderBackpackCollectibles = {}
+gliderUnlocked = false
 
-	o.emitter:SetParent(o)
+local REQUEST_FAIL_RETRY_DELAY = 5.0
+-- local GLIDER_PARTS = 10
 
-	o.as = AudioSource("wind_wind_child_1")
-	o.as:SetParent(o)
-	o.as.Volume = 0.8
-	o.as.Pitch = 1.2
-	o.as.Loop = true
+backEquipment = nil
 
-	o.Tick = function(self, _)
-		self.emitter:spawn(1)
-	end
+-- function resetKVS()
+-- 	-- if debug then
+-- 	local retry = {}
+-- 	retry.fn = function()
+-- 		local store = KeyValueStore(Player.UserID)
+-- 		store:set("collectedGliderParts", {}, "collectedJetpackParts", {}, "CollectedNerfParts", {}, function(ok)
+-- 			if not ok then
+-- 				Timer(REQUEST_FAIL_RETRY_DELAY, retry.fn)
+-- 			end
+-- 		end)
+-- 	end
+-- 	retry.fn()
+-- 	addCollectibles()
+-- 	-- end
+-- end
 
-	o.LocalPosition = pos
-	o.CollisionBox = Box({ 0, 0, 0 }, { width, height, depth })
-	o.CollidesWithGroups = Player.CollisionGroups
+function addCollectibles()
+	conf = require("config")
 
-	-- o.OnCollisionBegin = function(self, other)
-	-- 	if other == Player and Player.isUsingGlider then
-	-- 		self.as:Play()
-	-- 	end
-	-- end
+	gliderParts = {}
 
-	-- o.OnCollision = function(self, other)
-	-- 	if other == Player and Player.isUsingGlider then
-	-- 		Player.draftVelocity = strength
-	-- 	end
-	-- end
-
-	-- o.OnCollisionEnd = function(self, other)
-	-- 	if other == Player then
-	-- 		Player.draftVelocity = 0
-	-- 		Timer(1, function()
-	-- 			self.as:Stop()
-	-- 		end)
-	-- 	end
-	-- end
-
-	return o
-end
-
--- UTILS
-
-function stringStartsWith(str, prefix)
-	return string.sub(str, 1, string.len(prefix)) == prefix
-end
-
-function stringRemovePrefix(str, prefix)
-	if string.sub(str, 1, string.len(prefix)) == prefix then
-		return string.sub(str, string.len(prefix) + 1)
-	else
-		return str
-	end
-end
-
-function addPlayerAnimations(player)
-	local animLiftArms = Animation("LiftArms", { speed = 5, loops = 1, removeWhenDone = false, priority = 255 })
-	local liftRightArm = {
-		{ time = 0.0, rotation = { 0, 0, -1.0472 } },
-		{ time = 1.0, rotation = { 0, 0, math.rad(30) } },
-	}
-	local liftRightHand = {
-		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
-		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(-30) } },
-	}
-	local liftLeftArm = {
-		{ time = 0.0, rotation = { 0, 0, 1.0472 } },
-		{ time = 1.0, rotation = { 0, 0, math.rad(-30) } },
-	}
-	local liftLeftHand = {
-		{ time = 0.0, rotation = { 0, -0.392699, 0 } },
-		{ time = 1.0, rotation = { math.rad(-180), 0, math.rad(30) } },
-	}
-	local animLiftRightConfig = {
-		RightArm = liftRightArm,
-		RightHand = liftRightHand,
-		LeftArm = liftLeftArm,
-		LeftHand = liftLeftHand,
-	}
-	for name, v in pairs(animLiftRightConfig) do
-		for _, frame in ipairs(v) do
-			animLiftArms:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
-			animLiftArms:Bind(
-				name,
-				(name == "Body" and not player.Avatar[name]) and player.Avatar or player.Avatar[name]
-			)
+	local function unlockGlider()
+		gliderUnlocked = true
+		for _, backpack in ipairs(gliderBackpackCollectibles) do
+			backpack.object.PrivateDrawMode = 0
 		end
 	end
-	player.Animations.LiftArms = animLiftArms
+
+	local function spawnBackpacks()
+		local defaultBackpackConfig = {
+			scale = GLIDER_BACKPACK.SCALE,
+			rotation = Number3.Zero,
+			position = Number3.Zero,
+			itemName = GLIDER_BACKPACK.ITEM_NAME,
+			onCollisionBegin = function(c)
+				if gliderUnlocked then
+					collectParticles.Position = c.object.Position
+					collectParticles:spawn(20)
+					sfx("wood_impact_3", { Position = c.object.Position, Volume = 0.6, Pitch = 1.3 })
+					Client:HapticFeedback()
+					collectible:remove(c)
+
+					Player:EquipBackpack(c.object)
+
+					backEquipment = "glider"
+					multi:action("equipGlider")
+
+					gliderUsageToast = toast:create({
+						message = loc("Maintain jump key to start gliding!"),
+						center = false,
+						iconShape = bundle.Shape("voxels.glider"),
+						duration = -1, -- negative duration means infinite
+					})
+				else
+					local format = loc("%d / %d collected", "number of collected glider parts")
+					backpackTransparentToast = toast:create({
+						message = string.format(format, #collectedGliderParts, #gliderParts),
+						center = true,
+						duration = -1, -- negative duration means infinite
+						iconShape = bundle.Shape("voxels.glider_parts"),
+					})
+				end
+			end,
+			onCollisionEnd = function(_)
+				if backpackTransparentToast then
+					backpackTransparentToast:remove()
+					backpackTransparentToast = nil
+				end
+			end,
+		}
+
+		-- To replace by segment below when world editor is fixed
+		local gliderBackpackConfigs = {
+			{ position = Number3(75, 186, 262) },
+			{ position = Number3(330, 80, 160) },
+		}
+
+		for _, bpConfig in pairs(gliderBackpackConfigs) do
+			local config = conf:merge(defaultBackpackConfig, bpConfig)
+			local c = collectible:create(config)
+			c.object.PrivateDrawMode = 1
+			table.insert(gliderBackpackCollectibles, c)
+		end
+
+		-- segment
+		--[[
+        local bp = World:FindObjectsByName("voxels.glider_backpack")
+
+        for _, v in pairs(bp) do
+            local config = {position = v.Position}
+            config = conf:merge(defaultBackpackConfig, config)
+            local c = collectible:create(config)
+			c.object.PrivateDrawMode = 1
+			table.insert(gliderBackpackCollectibles, c)
+        end
+        ]]
+	end
+
+	local function spawnCollectibles()
+		-- To replace with segment below when World Editor is fixed
+		tempPos = {
+			Number3(264, 80, 504),
+			Number3(144, 164, 408),
+			Number3(75, 186, 300),
+		}
+
+		for k, v in ipairs(tempPos) do
+			local s = bundle.Shape("voxels.glider_parts")
+			s.Name = "voxels.glider_parts_" .. k
+			s.Position = v
+			table.insert(gliderParts, s)
+		end
+
+		-- segment
+		--[[
+		for i = 1, GLIDER_PARTS do
+			table.insert(gliderParts, World:FindObjectByName("voxels.glider_parts_" .. i))
+		end
+        ]]
+
+		local gliderPartConfig = {
+			scale = 0.5,
+			itemName = "voxels.glider_parts",
+			position = Number3.Zero,
+			userdata = {
+				ID = -1,
+			},
+			onCollisionBegin = function(c)
+				collectParticles.Position = c.object.Position
+				collectParticles:spawn(20)
+				sfx("wood_impact_3", { Position = c.object.Position, Volume = 0.6, Pitch = 1.3 })
+				Client:HapticFeedback()
+				collectible:remove(c)
+				if _helpers.contains(collectedGliderParts, c.userdata.ID) then
+					return
+				end
+
+				table.insert(collectedGliderParts, c.userdata.ID)
+
+				local retry = {}
+				retry.fn = function()
+					local store = KeyValueStore(Player.UserID)
+					store:set("collectedGliderParts", collectedGliderParts, function(ok)
+						if not ok then
+							Timer(REQUEST_FAIL_RETRY_DELAY, retry.fn)
+						end
+					end)
+				end
+				retry.fn()
+
+				if #collectedGliderParts >= #gliderParts then
+					-- the last glider part has been collected
+					toast:create({
+						message = loc("Glider unlocked!"),
+						center = false,
+						iconShape = bundle.Shape(GLIDER_BACKPACK.ITEM_NAME),
+						duration = 2,
+					})
+					unlockGlider()
+				else
+					-- a glider part has been collected
+					local format = loc("%d / %d collected", "number of collected glider parts")
+					toast:create({
+						message = string.format(format, #collectedGliderParts, #gliderParts),
+						iconShape = bundle.Shape("voxels.glider_parts"),
+						keepInStack = false,
+					})
+				end
+			end,
+		}
+
+		if #collectedGliderParts >= #gliderParts then
+			unlockGlider()
+			for _, v in pairs(gliderParts) do
+				v:RemoveFromParent()
+			end
+		else
+			for k, v in ipairs(gliderParts) do
+				if not _helpers.contains(collectedGliderParts, k) then
+					local config = conf:merge(gliderPartConfig, { position = v.Position, userdata = { ID = k } })
+					collectible:create(config)
+				end
+				v:RemoveFromParent()
+			end
+		end
+	end
+
+	local t = {}
+	t.get = function()
+		local store = KeyValueStore(Player.UserID)
+		store:get("collectedGliderParts", "collectedJetpackParts", function(ok, results)
+			if type(ok) ~= "boolean" then
+				error("KeyValueStore:get() unexpected type of 'ok'", 2)
+			end
+			if type(results) ~= "table" and type(results) ~= "nil" then
+				error("KeyValueStore:get() unexpected type of 'results'", 2)
+			end
+			if ok == true then
+				if results.collectedGliderParts ~= nil then
+					collectedGliderParts = results.collectedGliderParts
+				end
+				spawnBackpacks()
+				spawnCollectibles()
+			else
+				Timer(REQUEST_FAIL_RETRY_DELAY, t.get)
+			end
+		end)
+	end
+	t.get()
+end
+
+-- CREATURES
+
+pet = {}
+pet.dialogTreeTeaser = function(_, target)
+	dialog:create(
+		loc("Hey there! 🙂 You seem like a kind-hearted soul. I'm sure you would take good care of a pet! ✨"),
+		target,
+		{ loc("➡️ Yes of course!"), loc("➡️ No thank you") },
+		function(idx)
+			if idx == 1 then
+				dialog:create(
+					loc("This machine here can spawn a random egg for you!"),
+					target,
+					{ loc("➡️ Ok!") },
+					function()
+						dialog:create(
+							loc("I'm currently fixing it, come back in a few days!"),
+							target,
+							{ loc("➡️ I'll be back!") },
+							function()
+								dialog:remove()
+							end
+						)
+					end
+				)
+			elseif idx == 2 then
+				dialog:create(
+					loc("Oh, I could swear you would like to adopt a cute pet. Come back if you change your mind!"),
+					target,
+					{ loc("➡️ Ok!") },
+					function()
+						dialog:remove()
+					end
+				)
+			end
+		end
+	)
 end

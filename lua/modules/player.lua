@@ -12,7 +12,7 @@ setmetatable(privateFields, privateFieldsMT)
 -- CONSTANTS
 
 local PLAYER_BOUNCINESS = 0
-local PLAYER_FRICTION = 0
+local PLAYER_FRICTION = 0.05
 local PLAYER_MASS = 1.0
 local MAP_DEFAULT_COLLISION_GROUP = 1
 local PLAYER_DEFAULT_COLLISION_GROUP = 2
@@ -639,6 +639,10 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 		if k == "Head" then
 			return t.Avatar.Head
 		end
+		if k == "IsHandleShown" then
+			local privateFields = privateFields[t]
+			return privateFields.handle ~= nil
+		end
 
 		return objectIndex(t, k)
 	end
@@ -818,7 +822,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 	player.Scale = 0.5
 	player.Mass = PLAYER_MASS
-	player.Friction = PLAYER_FRICTION
+	player.Friction = { right = 0.0, left = 0.0, front = 0.0, back = 0.0, top = 0.0, bottom = PLAYER_FRICTION }
 	player.Bounciness = PLAYER_BOUNCINESS
 	player.Physics = PhysicsMode.Dynamic
 	player.CollidesWithGroups = { MAP_DEFAULT_COLLISION_GROUP, OBJECT_DEFAULT_COLLISION_GROUP }

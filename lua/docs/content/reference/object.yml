@@ -337,15 +337,23 @@ properties:
           The mass of the [Object] determines how much a given force can move it and whether or not another object can be pushed by it. It cannot be zero, a neutral mass is a mass of 1.
 
     - name: Friction
-      type: "number"
+      type: "number or table of numbers"
       description: |
-          The combined friction of 2 [Object]s in contact represents how much the moving [Object] will be able to slide along the colliding [Object]. It is a rate between 0 (full slide, no friction) and 1 (full stop on contact), values lower than 0 or higher than 1 are allowed and will create an increasing or inverted momentum, like sliding on ice.
+          The combined friction of 2 [Object]s in contact represents how much the moving [Object] will be able to slide along the colliding [Object].
+          
+          It is a rate between 0 (full slide, no friction) and 1 (maximum friction). Values equal to or lower than 0 will keep or increase momentum, like sliding on ice. Values higher than 1 means a faster stop, up to a value of 2 to ensure a full stop on contact regardless of the colliding [Object]'s own friction.
+
+          [Object.Friction] can be set per-face by providing a table with any combination of the following keys : `right`, `left`, `front`, `back`, `top`, `bottom`, `other`.
+          For example, to set the friction on the bottom face of an object's collider to `0` and `0.2` on every other faces, you could set, `object.Friction = { bottom=0, other=0.2 }`.
 
     - name: Bounciness
       type: "number"
       description: |
-          The combined bounciness of 2 [Object]s in contact represents how much of the moving [Object]'s velocity is produced after being in contact with colliding [Object], it is a rate between 0 (no bounce) and 1 (100% of the velocity bounced). Values higher than 1 are allowed and will create an increasing momentum at each bounce (try at your own risk).
+          The combined bounciness of 2 [Object]s in contact represents how much of the moving [Object]'s velocity is produced after being in contact with the colliding [Object], it is a rate between 0 (no bounce) and 1 (100% of the velocity bounced). Values higher than 1 are allowed and will create an increasing momentum at each bounce (try at your own risk).
 
+          [Object.Bounciness] can be set per-face by providing a table with any combination of the following keys : `right`, `left`, `front`, `back`, `top`, `bottom`, `other`.
+          For example, to set the bounciness on the side faces of an object's collider to `0.2` and `0` on top and bottom faces, you could set, `object.Bounciness = { top=0, bottom=0, other=0.2 }`.
+    
     - name: CollisionBox
       type: "Box"
       description: |

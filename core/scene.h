@@ -36,7 +36,7 @@ extern "C" {
 ///
 typedef struct _Scene Scene;
 
-Scene *scene_new(void *g);
+Scene *scene_new(Weakptr *g);
 void scene_free(Scene *sc);
 Weakptr *scene_get_weakptr(Scene *sc);
 Weakptr *scene_get_and_retain_weakptr(Scene *sc);
@@ -106,16 +106,16 @@ void scene_register_awake_block_box(Scene *sc,
                                     const SHAPE_COORDS_INT_T z);
 
 typedef enum {
-    CastHit_None,
-    CastHit_Block,
-    CastHit_CollisionBox
-} CastHitType;
+    Hit_None,
+    Hit_Block,
+    Hit_CollisionBox
+} HitType;
 
 typedef struct {
     Transform *hitTr;
     Block *block;
     float distance;
-    CastHitType type;
+    HitType type;
     SHAPE_COORDS_INT3_T blockCoords;
     FACE_INDEX_INT_T faceTouched; // of the block if any (model space)
 
@@ -123,22 +123,47 @@ typedef struct {
 } CastResult;
 CastResult scene_cast_result_default(void);
 
-CastHitType scene_cast_ray(Scene *sc,
-                           const Ray *worldRay,
-                           uint16_t groups,
-                           const DoublyLinkedList *filterOutTransforms,
-                           CastResult *result);
+typedef struct {
+    Transform *hitTr;
+    HitType type;
+
+    char pad[4];
+} OverlapResult;
+
+HitType scene_cast_ray(Scene *sc,
+                       const Ray *worldRay,
+                       uint16_t groups,
+                       const DoublyLinkedList *filterOutTransforms,
+                       CastResult *result);
+size_t scene_cast_all_ray(Scene *sc,
+                          const Ray *worldRay,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results);
 Block *scene_cast_ray_shape_only(Scene *sc,
                                  const Shape *sh,
                                  const Ray *worldRay,
                                  CastResult *result);
-CastHitType scene_cast_box(Scene *sc,
-                           const Box *aabb,
-                           const float3 *unit,
-                           float maxDist,
-                           uint16_t groups,
-                           const DoublyLinkedList *filterOutTransforms,
-                           CastResult *result);
+HitType scene_cast_box(Scene *sc,
+                       const Box *aabb,
+                       const float3 *unit,
+                       float maxDist,
+                       uint16_t groups,
+                       const DoublyLinkedList *filterOutTransforms,
+                       CastResult *result);
+size_t scene_cast_all_box(Scene *sc,
+                          const Box *aabb,
+                          const float3 *unit,
+                          float maxDist,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results);
+bool scene_overlap_box(Scene *sc,
+                       const Box *aabb,
+                       uint16_t groups,
+                       uint16_t collidesWith,
+                       const DoublyLinkedList *filterOutTransforms,
+                       FifoList *results);
 
 // MARK: - Debug -
 #if DEBUG_RIGIDBODY

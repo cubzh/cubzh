@@ -40,7 +40,7 @@ void _quad_toggle_flag(Quad *q, uint8_t flag, bool toggle) {
 }
 
 bool _quad_get_flag(const Quad *q, uint8_t flag) {
-    return flag == (q->flags & flag);
+    return (q->flags & flag) != 0;
 }
 
 void _quad_void_free(void *o) {
@@ -50,7 +50,7 @@ void _quad_void_free(void *o) {
 
 Quad *quad_new(void) {
     Quad *q = (Quad *)malloc(sizeof(Quad));
-    q->transform = transform_make_with_ptr(QuadTransform, q, 0, &_quad_void_free);
+    q->transform = transform_make_with_ptr(QuadTransform, q, &_quad_void_free);
     q->data = NULL;
     q->size = 0;
     q->width = 1.0f;

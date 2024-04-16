@@ -33,6 +33,8 @@ properties:
         
           When getting this value, it returns `true` if the quad is currently textured.
 
+          Note: currently, supporting transparency on a texture requires to flag the quad as transparent by giving it an alpha value less than 255, eg. `quad.Color.A = 254`.
+
     - name: "Width"
       type: "number"
       description: |
@@ -57,16 +59,16 @@ properties:
     - name: "Tiling"
       type: "Number2"
       description: |
-          Tiling of the texture on this quad. Has no effect if the quad isn't textured.
+          Tiling of the texture on this quad. Only has effect if the quad is textured by setting its [This].[Image](/reference/quad#property-image) property.
           
-          This can be used to repeat a pattern over the quad's surface.
+          This can be used to repeat a pattern over the quad's surface. Especially useful when combined with a seamless image, to create a continuously textured surface.
 
     - name: "Offset"
       type: "Number2"
       description: |
-          Offset of the texture on this quad. Has no effect if the quad isn't textured.
+          Offset of the texture on this quad. Only has effect if the quad is textured by setting its [This].[Image](/reference/quad#property-image) property.
           
-          This can be use to select an area of the texture to display, or to create scrolling effects.
+          This can be used to select an area of the texture to display, or to create scrolling effects.
 
     - name: "IsDoubleSided"
       type: "boolean"
@@ -74,6 +76,8 @@ properties:
           If `true`, both sides of the quad are rendered, `true` by default.
         
           Setting this to `false` can be done as an optimization when using quads for UI or 2D games.
+
+          Note: currently, quads back faces are not lit.
 
     - name: "Shadow"
       type: boolean

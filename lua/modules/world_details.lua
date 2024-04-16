@@ -1,40 +1,28 @@
 worldDetailsMod = {}
 
 worldDetailsMod.create = function(_, config)
-	local _config = {
-		title = "",
-		mode = "explore", -- "explore" / "create"
-		uikit = require("uikit"),
-	}
-
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-	end
-
-	config = _config
-
 	local time = require("time")
 	local theme = require("uitheme").current
 	local ui = config.uikit
 	local api = require("system_api", System)
 
+	local defaultConfig = {
+		title = "",
+		mode = "explore", -- "explore" / "create"
+		uikit = require("uikit"),
+	}
+
+	config = require("config"):merge(defaultConfig, config)
+
 	local createMode = config.mode == "create"
 
 	local worldDetails = ui:createNode()
 
-	-- becomes true when itemDetails is removed
-	-- callbacks may capture this as upvalue to early return.
-	local removed = false
 	local requests = {}
+	local refreshTimer
 	local listeners = {}
 
-	worldDetails.onRemove = function(_)
-		removed = true
-
+	local cancelRequestsTimersAndListeners = function()
 		for _, req in ipairs(requests) do
 			req:Cancel()
 		end
@@ -44,6 +32,15 @@ worldDetailsMod.create = function(_, config)
 			listener:Remove()
 		end
 		listeners = {}
+
+		if refreshTimer ~= nil then
+			refreshTimer:Cancel()
+			refreshTimer = nil
+		end
+	end
+
+	worldDetails.onRemove = function(_)
+		cancelRequestsTimersAndListeners()
 	end
 
 	local content = require("modal"):createContent()
@@ -86,9 +83,6 @@ worldDetailsMod.create = function(_, config)
 			local sanitized, err = api.checkWorldName(name.Text)
 			if err == nil then
 				local req = api:patchWorld(worldDetails.id, { title = sanitized }, function(err, world)
-					if removed then
-						return
-					end
 					-- print("PATCHED", err, world.id, world.title, world.description)
 					if err == nil then
 						-- World update succeeded.
@@ -140,7 +134,8 @@ worldDetailsMod.create = function(_, config)
 		worldDetails.by = by
 		by.LocalPosition = publishDate.LocalPosition + { 0, publishDate.Height + theme.padding, 0 }
 
-		local author = ui:createText(" @repo", Color.Green)
+		local str = " @" .. Player.Username
+		local author = ui:createText(str, Color.Green)
 		author:setParent(infoArea)
 		worldDetails.author = author
 		author.LocalPosition = by.LocalPosition + { by.Width, 0, 0 }
@@ -158,7 +153,7 @@ worldDetailsMod.create = function(_, config)
 	local description = ui:createText("description", Color.White, "small")
 	description:setParent(descriptionArea)
 	worldDetails.description = description
-	description.LocalPosition.X = theme.padding
+	worldDetails.description.LocalPosition.X = theme.padding
 
 	local shapeArea = ui:createFrame(Color(0, 0, 0))
 	shapeArea:setParent(worldDetails)
@@ -207,9 +202,6 @@ worldDetailsMod.create = function(_, config)
 							description.Color = theme.textColorSecondary
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
 							local req = api:patchWorld(worldDetails.id, { description = "" }, function(_, _)
-								if removed then
-									return
-								end
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -219,9 +211,6 @@ worldDetailsMod.create = function(_, config)
 							description.Color = theme.textColor
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
 							local req = api:patchWorld(worldDetails.id, { description = text }, function(_, _)
-								if removed then
-									return
-								end
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -275,32 +264,48 @@ worldDetailsMod.create = function(_, config)
 			self.shape.Height = 350
 		end
 
-		local req = api:getWorld(cell.id, { "authorName", "authorID" }, function(err, world)
-			if removed then
-				return
-			end
-
+		local fieldsWanted = { "authorName", "authorId", "description", "liked", "views" }
+		local req = api:getWorld(cell.id, fieldsWanted, function(err, world)
 			local authorName = world.authorName
-			local authorID = world.authorID
+			local authorId = world.authorId
 
 			if err == nil and world ~= nil then
+				-- update author text/button
 				if self.author ~= nil then
 					self.author.Text = " @" .. (authorName or "…")
 				elseif byBtn and authorName then
 					byBtn.Text = "by @" .. authorName
 					byBtn.onRelease = function(_)
-						local profileConfig = { isLocal = false, username = authorName, userID = authorID, uikit = ui }
+						local profileConfig = { isLocal = false, username = authorName, userID = authorId, uikit = ui }
 						local profileContent = require("profile"):create(profileConfig)
 						content:push(profileContent)
 					end
 				end
-			end
+				-- update description text
+				if self.description ~= nil then
+					self.description.Text = world.description or ""
+					-- refresh view
+					self:_scheduleRefresh()
+				end
 
-			local liked = world.liked
-			self.liked = liked
-			self.originalLike = liked
-			if self.liked and likeBtn and likeBtn.setColor then
-				likeBtn:setColor(theme.colorPositive)
+				-- update views label
+				if world.views ~= nil then
+					cell.views = world.views
+					views.Text = "👁 " .. (cell.views and math.floor(cell.views) or 0)
+				end
+
+				-- update like button
+				if world.liked ~= nil then
+					self.liked = world.liked
+					self.originalLike = world.liked
+					if self.liked ~= nil and likeBtn ~= nil and likeBtn.setColor ~= nil then
+						if self.liked then
+							likeBtn:setColor(theme.colorPositive)
+						else
+							likeBtn:setColor(theme.buttonColor)
+						end
+					end
+				end
 			end
 		end)
 		table.insert(requests, req)
@@ -330,11 +335,7 @@ worldDetailsMod.create = function(_, config)
 
 			likeBtn.onRelease = function()
 				self.liked = not self.liked
-				local req = api:likeWorld(cell.id, self.liked, function(_)
-					if removed then
-						return
-					end
-				end)
+				local req = api:likeWorld(cell.id, self.liked, function(_) end)
 				table.insert(requests, req)
 
 				if self.liked then
@@ -401,13 +402,12 @@ worldDetailsMod.create = function(_, config)
 	worldDetails._w = 400
 	worldDetails._h = 400
 
-	worldDetails._refreshTimer = nil
 	worldDetails._scheduleRefresh = function(self)
-		if self._refreshTimer ~= nil then
+		if refreshTimer ~= nil then
 			return
 		end
-		self._refreshTimer = Timer(0.01, function()
-			self._refreshTimer = nil
+		refreshTimer = Timer(0.01, function()
+			refreshTimer = nil
 			self:refresh()
 		end)
 	end

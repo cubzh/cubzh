@@ -190,18 +190,21 @@ typedef struct {
     char pad[2];
 } MouseEvent;
 
-void inputs_accept(const bool b);
-
-void inputs_set_nb_pixels_in_one_point(const float f);
-
-void mouse_event_copy(const MouseEvent *src, MouseEvent *dst);
-
 typedef enum {
-    TouchStateNone,
+    TouchStateNone = 0,
     TouchStateDown,
     TouchStateUp,
     TouchStateCanceled
 } TouchState;
+
+typedef struct {
+    float x;
+    float y;
+    TouchState state;
+    bool down;
+    uint8_t skippedMoves;
+    char pad[2];
+} Touch;
 
 typedef enum {
     PointerIDTouch1 = 1,
@@ -219,7 +222,7 @@ typedef enum {
 } PointerID;
 
 typedef enum {
-    PointerEventTypeDown,
+    PointerEventTypeDown = 0,
     PointerEventTypeUp,
     PointerEventTypeMove,
     PointerEventTypeCancel,
@@ -238,6 +241,12 @@ typedef struct {
     bool move;  // if true: (x,y) represents a translation, not a position
     char pad[2];
 } TouchEvent;
+
+void inputs_accept(const bool b);
+
+void inputs_set_nb_pixels_in_one_point(const float f);
+
+void mouse_event_copy(const MouseEvent *src, MouseEvent *dst);
 
 // returns true if the provided ID is an ID of a touch event
 bool isTouchEventID(const uint8_t ID);
@@ -352,6 +361,7 @@ const CharEvent *input_listener_pop_char_event(InputListener *il);
 void postMouseEvent(float x, float y, float dx, float dy, MouseButton button, bool down, bool move);
 
 void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState state, bool move);
+Touch **getDownTouches(int *const arrSize);
 
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state);
 void postCharEvent(unsigned int inputChar);

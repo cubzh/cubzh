@@ -71,6 +71,7 @@ functions.drag = function(self, pe)
 	if snap > 0 then
 		if self.orientation == moveGizmo.Orientation.Local then
 			pos = self.object:PositionWorldToLocal(pos)
+			snap = snap / self.object.Scale[axisName]
 		end
 		pos[axisName] = math.floor(pos[axisName] / snap) * snap
 		if self.orientation == moveGizmo.Orientation.Local then
@@ -78,11 +79,8 @@ functions.drag = function(self, pe)
 		end
 	end
 
-	local currentLocalPos = self.object:PositionWorldToLocal(self.object.Position)
-	if currentLocalPos[axisName] ~= self.object:PositionWorldToLocal(pos)[axisName] then
-		self.object.Position = pos
-		self.gizmoObject.Position = pos
-	end
+	self.object.Position = pos
+	self.gizmoObject.Position = pos
 
 	if self.onDrag then
 		self.onDrag(self.object.Position)

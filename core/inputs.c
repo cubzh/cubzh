@@ -16,6 +16,7 @@
 #include "config.h"
 
 #define MOVE_EVENTS_TO_SKIP 2
+#define NB_TOUCHES 2
 
 typedef struct {
     float x;
@@ -26,19 +27,10 @@ typedef struct {
     char pad;
 } Mouse;
 
-typedef struct {
-    float x;
-    float y;
-    TouchState state;
-    bool down;
-    uint8_t skippedMoves;
-    char pad[2];
-} Touch;
-
 // represents the context of inputs (mouse, touch, & keyboard events)
 struct _InputContext {
     // current situation regarding touches
-    Touch touches[2]; // supporting 2 touches maximum, increase to support more
+    Touch touches[NB_TOUCHES]; // supporting 2 touches maximum, increase to support more
 
     // current situation for the mouse
     Mouse mouse;
@@ -128,17 +120,17 @@ InputContext *inputContext(void) {
         }
         memset(c, 0, sizeof(InputContext)); // fill memory buffer with zeros
 
-        c->touches[0].x = 0.0f;
-        c->touches[0].y = 0.0f;
-        c->touches[0].state = TouchStateNone;
-        c->touches[0].down = false;
-        c->touches[0].skippedMoves = 0;
+        c->touches[TOUCH_EVENT_FINGER_1].x = 0.0f;
+        c->touches[TOUCH_EVENT_FINGER_1].y = 0.0f;
+        c->touches[TOUCH_EVENT_FINGER_1].state = TouchStateNone;
+        c->touches[TOUCH_EVENT_FINGER_1].down = false;
+        c->touches[TOUCH_EVENT_FINGER_1].skippedMoves = 0;
 
-        c->touches[1].x = 0.0f;
-        c->touches[1].y = 0.0f;
-        c->touches[1].state = TouchStateNone;
-        c->touches[1].down = false;
-        c->touches[1].skippedMoves = 0;
+        c->touches[TOUCH_EVENT_FINGER_2].x = 0.0f;
+        c->touches[TOUCH_EVENT_FINGER_2].y = 0.0f;
+        c->touches[TOUCH_EVENT_FINGER_2].state = TouchStateNone;
+        c->touches[TOUCH_EVENT_FINGER_2].down = false;
+        c->touches[TOUCH_EVENT_FINGER_2].skippedMoves = 0;
 
         c->mouse.x = 0.0f;
         c->mouse.y = 0.0f;
@@ -442,6 +434,30 @@ void postTouchEvent(uint8_t ID, float x, float y, float dx, float dy, TouchState
     te = NULL;
 }
 
+Touch **getDownTouches(int *const arrSize) {
+    InputContext *const c = inputContext();
+    Touch *t;
+
+    Touch **const out = (Touch **)malloc(sizeof(Touch *) * NB_TOUCHES);
+    if (out == NULL) {
+        *arrSize = 0;
+        return NULL;
+    }
+
+    *arrSize = NB_TOUCHES;
+
+    for (int id = 0; id < NB_TOUCHES; id += 1) {
+        t = &(c->touches[id]);
+        if (t->down || t->state == TouchStateDown) {
+            out[id] = t;
+        } else {
+            out[id] = NULL;
+        }
+    }
+
+    return out;
+}
+
 void postKeyEvent(Input input, uint8_t modifiers, KeyState state) {
     InputContext *c = inputContext();
 
@@ -622,7 +638,7 @@ uint8_t input_char_code_to_string(char *buf, uint32_t c) {
     if (c < 0x10000) {
         buf[0] = (char)(0xe0 + (c >> 12));
         buf[1] = (char)(0x80 + ((c >> 6) & 0x3f));
-        buf[2] = (char)(0x80 + ((c)&0x3f));
+        buf[2] = (char)(0x80 + ((c) & 0x3f));
         buf[3] = '\0';
         return 3;
     }
@@ -630,7 +646,7 @@ uint8_t input_char_code_to_string(char *buf, uint32_t c) {
         buf[0] = (char)(0xf0 + (c >> 18));
         buf[1] = (char)(0x80 + ((c >> 12) & 0x3f));
         buf[2] = (char)(0x80 + ((c >> 6) & 0x3f));
-        buf[3] = (char)(0x80 + ((c)&0x3f));
+        buf[3] = (char)(0x80 + ((c) & 0x3f));
         buf[4] = '\0';
         return 4;
     }

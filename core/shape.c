@@ -25,7 +25,7 @@
 #endif
 
 // takes the 4 low bits of a and casts into uint8_t
-#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+#define TO_UINT4(a) (uint8_t)((a) & 0x0F)
 
 #define SHAPE_RENDERING_FLAG_NONE 0
 // whether or not to draw transparent inner faces between 2 blocks of a different color
@@ -45,8 +45,10 @@
 struct _Shape {
     Weakptr *wptr;
 
-    // list of colors used by the shape model, mapped onto color atlas indices
+    // list of colors mapped onto color atlas indices, can be shared between shapes
     ColorPalette *palette;
+    // shape's own palette entry usage count
+    uint32_t *blocksCount;
 
     // points of interest
     MapStringFloat3 *POIs;          // 8 bytes
@@ -212,19 +214,23 @@ bool _shape_is_bounding_box_empty(const Shape *shape);
 // --------------------------------------------------
 //
 
-// Shape allocator
+void _shape_void_free(void *s) {
+    shape_free((Shape *)s);
+}
+
 Shape *shape_make(void) {
     Shape *s = (Shape *)malloc(sizeof(Shape));
 
     s->wptr = NULL;
     s->palette = NULL;
+    s->blocksCount = (uint32_t *)calloc(SHAPE_COLOR_INDEX_MAX_COUNT, sizeof(uint32_t));
 
     s->POIs = map_string_float3_new();
     s->pois_rotation = map_string_float3_new();
 
     s->worldAABB = NULL;
 
-    s->transform = transform_make_with_ptr(ShapeTransform, s, 0, NULL);
+    s->transform = transform_make_with_ptr(ShapeTransform, s, _shape_void_free);
     s->pivot = NULL;
 
     s->chunks = index3d_new();
@@ -259,21 +265,24 @@ Shape *shape_make(void) {
 
 Shape *shape_make_2(const bool isMutable) {
     Shape *s = shape_make();
-    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, true);
+    _shape_toggle_lua_flag(s, SHAPE_LUA_FLAG_MUTABLE, isMutable);
     return s;
 }
 
-Shape *shape_make_copy(Shape *origin) {
+Shape *shape_make_copy(Shape *const origin) {
     // apply transactions of the origin if needed
     shape_apply_current_transaction(origin, true);
 
-    Shape *s = shape_make();
+    Shape *const s = shape_make();
     s->palette = color_palette_new_copy(origin->palette);
+    memcpy(s->blocksCount, origin->blocksCount, SHAPE_COLOR_INDEX_MAX_COUNT * sizeof(uint32_t));
 
     // copy each point of interest
-    MapStringFloat3Iterator *it = map_string_float3_iterator_new(origin->POIs);
+    MapStringFloat3Iterator *it = NULL;
     float3 *f3 = NULL;
     const char *key = NULL;
+
+    it = map_string_float3_iterator_new(origin->POIs);
     while (map_string_float3_iterator_is_done(it) == false) {
         f3 = map_string_float3_iterator_current_value(it);
         key = map_string_float3_iterator_current_key(it);
@@ -299,6 +308,7 @@ Shape *shape_make_copy(Shape *origin) {
         map_string_float3_iterator_next(it);
     }
     map_string_float3_iterator_free(it);
+    it = NULL;
 
     s->bbMin = origin->bbMin;
     s->bbMax = origin->bbMax;
@@ -342,10 +352,30 @@ Shape *shape_make_copy(Shape *origin) {
         s->fullname = string_new_copy(origin->fullname);
     }
 
-    Transform *t = shape_get_root_transform(origin);
-    const char *name = transform_get_name(t);
-    if (name != NULL) {
-        transform_set_name(shape_get_root_transform(s), name);
+    if (origin->pivot != NULL) {
+        const float3 pivot = shape_get_pivot(origin);
+        shape_set_pivot(s, pivot.x, pivot.y, pivot.z);
+    }
+
+    // copy transform parameters
+    Transform *const originTr = shape_get_root_transform(origin);
+    Transform *const t = shape_get_root_transform(s);
+    {
+        const char *name = transform_get_name(originTr);
+        if (name != NULL) {
+            transform_set_name(t, name);
+        }
+
+        transform_ensure_rigidbody_copy(t, originTr);
+
+        transform_set_hidden_branch(t, transform_is_hidden_branch(originTr));
+        transform_set_hidden_self(t, transform_is_hidden_self(originTr));
+
+        transform_set_local_scale_vec(t, transform_get_local_scale(originTr));
+        transform_set_local_position_vec(t, transform_get_local_position(originTr));
+        transform_set_local_rotation(t, transform_get_local_rotation(originTr));
+
+        // Note: do not parent automatically
     }
 
     return s;
@@ -466,6 +496,12 @@ VertexBuffer *shape_add_buffer(Shape *shape, bool transparency) {
 
 void shape_flush(Shape *shape) {
     if (shape != NULL) {
+        // remove own blocks count from (potentially shared) palette
+        const uint8_t count = color_palette_get_count(shape->palette);
+        for (uint8_t i = 0; i < count; ++i) {
+            color_palette_decrement_color(shape->palette, i, shape->blocksCount[i]);
+        }
+        memset(shape->blocksCount, 0, SHAPE_COLOR_INDEX_MAX_COUNT * sizeof(uint32_t));
 
         index3d_flush(shape->chunks, chunk_free_func);
 
@@ -529,9 +565,16 @@ void shape_free(Shape *const shape) {
     weakptr_invalidate(shape->wptr);
 
     if (shape->palette != NULL) {
-        color_palette_free(shape->palette);
+        // remove own blocks count from (potentially shared) palette
+        const uint8_t count = color_palette_get_count(shape->palette);
+        for (uint8_t i = 0; i < count; ++i) {
+            color_palette_decrement_color(shape->palette, i, shape->blocksCount[i]);
+        }
+
+        color_palette_release(shape->palette);
         shape->palette = NULL;
     }
+    free(shape->blocksCount);
 
     if (shape->POIs != NULL) {
         map_string_float3_free(shape->POIs);
@@ -586,14 +629,14 @@ void shape_free(Shape *const shape) {
     free(shape);
 }
 
-Weakptr *shape_get_weakptr(Shape *s) {
+Weakptr *shape_get_weakptr(Shape *const s) {
     if (s->wptr == NULL) {
         s->wptr = weakptr_new(s);
     }
     return s->wptr;
 }
 
-Weakptr *shape_get_and_retain_weakptr(Shape *s) {
+Weakptr *shape_get_and_retain_weakptr(Shape *const s) {
     if (s->wptr == NULL) {
         s->wptr = weakptr_new(s);
     }
@@ -721,9 +764,8 @@ void shape_apply_current_transaction(Shape *const shape, bool keepPending) {
         return;
     }
 
-    keepPending = keepPending ||
-                  _shape_get_lua_flag(shape,
-                                      SHAPE_LUA_FLAG_HISTORY | SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING);
+    keepPending = keepPending || (_shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY) &&
+                                  _shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY_KEEP_PENDING));
 
     if (keepPending == false) {
         if (_shape_get_lua_flag(shape, SHAPE_LUA_FLAG_HISTORY) && shape->history != NULL) {
@@ -779,7 +821,8 @@ bool shape_add_block(Shape *shape,
 
         shape_expand_box(shape, (SHAPE_COORDS_INT3_T){x, y, z});
 
-        color_palette_increment_color(shape->palette, colorIndex);
+        color_palette_increment_color(shape->palette, colorIndex, 1);
+        ++shape->blocksCount[colorIndex];
 
         if (_shape_get_rendering_flag(shape, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
             shape_compute_baked_lighting_added_block(shape,
@@ -832,7 +875,8 @@ bool shape_remove_block(Shape *shape,
                                                            prevColor);
             }
 
-            color_palette_decrement_color(shape->palette, prevColor);
+            color_palette_decrement_color(shape->palette, prevColor, 1);
+            --shape->blocksCount[prevColor];
         }
 
         // if chunk is now empty, do not destroy it right now and wait until shape_refresh_vertices:
@@ -869,8 +913,11 @@ bool shape_paint_block(Shape *shape,
                                     colorIndex,
                                     &prevColor);
         if (painted) {
-            color_palette_decrement_color(shape->palette, prevColor);
-            color_palette_increment_color(shape->palette, colorIndex);
+            color_palette_decrement_color(shape->palette, prevColor, 1);
+            color_palette_increment_color(shape->palette, colorIndex, 1);
+
+            --shape->blocksCount[prevColor];
+            ++shape->blocksCount[colorIndex];
 
             _shape_chunk_enqueue_refresh(shape, chunk);
 
@@ -891,11 +938,87 @@ ColorPalette *shape_get_palette(const Shape *shape) {
     return shape->palette;
 }
 
-void shape_set_palette(Shape *shape, ColorPalette *palette) {
+/// @param retain can be set to false if given palette already accounts for shape's ownership
+void shape_set_palette(Shape *shape, ColorPalette *palette, const bool retain) {
     if (shape->palette != NULL) {
-        color_palette_free(shape->palette);
+        // transfer blocks count to new palette
+        const uint8_t count = color_palette_get_count(shape->palette);
+        for (uint8_t i = 0; i < count; ++i) {
+            color_palette_decrement_color(shape->palette, i, shape->blocksCount[i]);
+            color_palette_increment_color(palette, i, shape->blocksCount[i]);
+        }
+
+        color_palette_set_atlas(palette, color_palette_get_atlas(shape->palette));
+        color_palette_release(shape->palette);
+    }
+    if (retain) {
+        color_palette_retain(palette);
     }
     shape->palette = palette;
+
+    shape_refresh_all_vertices(shape);
+}
+
+void shape_remap_colors(Shape *s, const SHAPE_COLOR_INDEX_INT_T *remap) {
+    SHAPE_COORDS_INT3_T chunkFrom = chunk_utils_get_coords(
+        (SHAPE_COORDS_INT3_T){s->bbMin.x, s->bbMin.y, s->bbMin.z});
+    SHAPE_COORDS_INT3_T chunkTo = chunk_utils_get_coords(
+        (SHAPE_COORDS_INT3_T){s->bbMax.x - 1, s->bbMax.y - 1, s->bbMax.z - 1});
+
+    Block *b;
+    Chunk *chunk;
+    SHAPE_COORDS_INT3_T coords_in_shape;
+    for (SHAPE_COORDS_INT_T x = chunkFrom.x; x <= chunkTo.x; ++x) {
+        for (SHAPE_COORDS_INT_T y = chunkFrom.y; y <= chunkTo.y; ++y) {
+            for (SHAPE_COORDS_INT_T z = chunkFrom.z; z <= chunkTo.z; ++z) {
+                chunk = (Chunk *)index3d_get(s->chunks, x, y, z);
+                if (chunk == NULL) {
+                    continue;
+                }
+
+                // split iteration into two parts to get chunk only once
+                for (CHUNK_COORDS_INT_T cx = 0; cx < CHUNK_SIZE; ++cx) {
+                    for (CHUNK_COORDS_INT_T cy = 0; cy < CHUNK_SIZE; ++cy) {
+                        for (CHUNK_COORDS_INT_T cz = 0; cz < CHUNK_SIZE; ++cz) {
+                            coords_in_shape = (SHAPE_COORDS_INT3_T){x * CHUNK_SIZE + cx,
+                                                                    y * CHUNK_SIZE + cy,
+                                                                    z * CHUNK_SIZE + cz};
+                            if (coords_in_shape.x < s->bbMin.x || coords_in_shape.x > s->bbMax.x ||
+                                coords_in_shape.y < s->bbMin.y || coords_in_shape.y > s->bbMax.y ||
+                                coords_in_shape.z < s->bbMin.z || coords_in_shape.z > s->bbMax.z) {
+                                continue;
+                            }
+
+                            b = chunk_get_block(chunk, cx, cy, cz);
+                            if (block_is_solid(b)) {
+                                const SHAPE_COLOR_INDEX_INT_T prevColor = b->colorIndex;
+                                const SHAPE_COLOR_INDEX_INT_T newColor = remap[b->colorIndex];
+
+                                if (newColor == SHAPE_COLOR_INDEX_AIR_BLOCK ||
+                                    newColor == prevColor) {
+                                    continue;
+                                }
+
+                                block_set_color_index(b, newColor);
+
+                                color_palette_decrement_color(s->palette, prevColor, 1);
+                                color_palette_increment_color(s->palette, newColor, 1);
+
+                                --s->blocksCount[prevColor];
+                                ++s->blocksCount[newColor];
+
+                                _shape_chunk_enqueue_refresh(s, chunk);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (_shape_get_rendering_flag(s, SHAPE_RENDERING_FLAG_BAKED_LIGHTING)) {
+        shape_compute_baked_lighting(s);
+    }
 }
 
 const Block *shape_get_block(const Shape *const shape,
@@ -1003,6 +1126,8 @@ void shape_get_model_aabb_2(const Shape *s,
 void shape_get_local_aabb(const Shape *s, Box *box) {
     if (s == NULL || box == NULL)
         return;
+
+    *box = shape_get_model_aabb(s);
 
     const Box model = shape_get_model_aabb(s);
     const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
@@ -1306,7 +1431,7 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z) {
             return;
         } else {
             // add a pivot internal transform, managed by shape
-            s->pivot = transform_make_with_ptr(HierarchyTransform, s, 0, NULL);
+            s->pivot = transform_make_with_ptr(HierarchyTransform, s, NULL);
             transform_set_parent(s->pivot, s->transform, false);
         }
     } else if (isZero) {
@@ -1767,28 +1892,28 @@ bool shape_ensure_rigidbody(Shape *s, uint16_t groups, uint16_t collidesWith, Ri
 }
 
 void shape_fit_collider_to_bounding_box(const Shape *s) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
+    RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL || rigidbody_is_collider_custom_set(rb))
         return;
     const Box aabb = shape_get_model_aabb(s);
     rigidbody_set_collider(rb, &aabb, false);
 }
 
-const Box *shape_get_local_collider(const Shape *s) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
+Box shape_get_model_collider(const Shape *s) {
+    RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL)
-        return NULL;
-    return rigidbody_get_collider(rb);
+        return box_zero;
+    return rigidbody_uses_per_block_collisions(rb) ? shape_get_model_aabb(s)
+                                                   : *rigidbody_get_collider(rb);
 }
 
 void shape_compute_world_collider(const Shape *s, Box *box) {
-    vx_assert(s != NULL);
-    RigidBody *rb = shape_get_rigidbody(s);
+    RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL)
         return;
-    shape_box_to_aabox(s, rigidbody_get_collider(rb), box, true);
+    Box collider = rigidbody_uses_per_block_collisions(rb) ? shape_get_model_aabb(s)
+                                                           : *rigidbody_get_collider(rb);
+    shape_box_to_aabox(s, &collider, box, true);
 }
 
 typedef struct {
@@ -1876,10 +2001,17 @@ float shape_box_cast(const Shape *s,
         Chunk *c;
         bool didHit = false, leaf;
         float3 tmpNormal, tmpReplacement;
-        float swept = 1.0f;
-        while (n != NULL && didHit == false) {
+        float swept = 1.0f, lastRtreeDist = FLT_MAX;
+        while (n != NULL) {
             rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
             c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            // make sure to examine all hits w/ similar distances before stopping
+            if (didHit &&
+                float_isEqual(rtreeHit->distance, lastRtreeDist, EPSILON_COLLISION) == false) {
+                break;
+            }
+            lastRtreeDist = rtreeHit->distance;
 
             const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
             leaf = false;
@@ -2023,13 +2155,20 @@ bool shape_ray_cast(const Shape *s,
         Chunk *c;
         bool didHit = false, leaf;
         Block *hitBlock = NULL;
-        float minDistance = FLT_MAX;
+        float minDistance = FLT_MAX, lastRtreeDist = FLT_MAX;
         uint16_t x = 0, y = 0, z = 0;
         Box tmpBox;
         float d;
-        while (n != NULL && didHit == false) {
+        while (n != NULL) {
             rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
             c = (Chunk *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+
+            // make sure to examine all hits w/ similar distances before stopping
+            if (didHit &&
+                float_isEqual(rtreeHit->distance, lastRtreeDist, EPSILON_COLLISION) == false) {
+                break;
+            }
+            lastRtreeDist = rtreeHit->distance;
 
             const SHAPE_COORDS_INT3_T chunkOrigin = chunk_get_origin(c);
             leaf = false;
@@ -2148,12 +2287,13 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
 
     // select overlapped chunks
     FifoList *chunksQuery = fifo_list_new();
-    if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, chunksQuery, EPSILON_COLLISION) > 0) {
+    bool didHit = false;
+    if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, NULL, chunksQuery, EPSILON_COLLISION) >
+        0) {
 
         // examine query results, stop at first overlap
         RtreeNode *hit = fifo_list_pop(chunksQuery);
         OctreeIterator *oi;
-        bool didHit = false;
         bool leaf;
         Chunk *c;
         Box tmpBox;
@@ -2193,7 +2333,7 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
     }
     fifo_list_free(chunksQuery, NULL);
 
-    return false;
+    return didHit;
 }
 
 // MARK: - Graphics -
@@ -2861,7 +3001,7 @@ void shape_enableAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return;
     }
-    transform_setAnimationsEnabled(s->transform, true);
+    transform_set_animations_enabled(s->transform, true);
 }
 
 void shape_disableAnimations(Shape *const s) {
@@ -2871,7 +3011,7 @@ void shape_disableAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return;
     }
-    transform_setAnimationsEnabled(s->transform, false);
+    transform_set_animations_enabled(s->transform, false);
 }
 
 bool shape_getIgnoreAnimations(Shape *const s) {
@@ -2881,7 +3021,7 @@ bool shape_getIgnoreAnimations(Shape *const s) {
     if (s->transform == NULL) {
         return false;
     }
-    return transform_getAnimationsEnabled(s->transform) == false;
+    return transform_is_animations_enabled(s->transform) == false;
 }
 
 // MARK: - private functions -
@@ -2895,7 +3035,7 @@ static void _shape_toggle_rendering_flag(Shape *s, const uint8_t flag, const boo
 }
 
 static bool _shape_get_rendering_flag(const Shape *s, const uint8_t flag) {
-    return flag == (s->renderingFlags & flag);
+    return (s->renderingFlags & flag) != 0;
 }
 
 static void _shape_toggle_lua_flag(Shape *s, const uint8_t flag, const bool toggle) {
@@ -2907,7 +3047,7 @@ static void _shape_toggle_lua_flag(Shape *s, const uint8_t flag, const bool togg
 }
 
 static bool _shape_get_lua_flag(const Shape *s, const uint8_t flag) {
-    return flag == (s->luaFlags & flag);
+    return (s->luaFlags & flag) != 0;
 }
 
 void _shape_chunk_enqueue_refresh(Shape *shape, Chunk *c) {
@@ -3280,7 +3420,7 @@ void _light_block_propagate(Shape *s,
     if (air || transparent) {
         // if transparent, first reduce incoming light values
         if (transparent) {
-            float a = (float)color_palette_get_color(s->palette, neighbor->colorIndex)->a / 255.0f;
+            float a = (float)color_palette_get_color(s->palette, neighbor->colorIndex).a / 255.0f;
 #if TRANSPARENCY_ABSORPTION_FUNC == 1
             a = easings_quadratic_in(a);
 #elif TRANSPARENCY_ABSORPTION_FUNC == 2
@@ -4225,8 +4365,8 @@ bool _shape_compute_size_and_origin(const Shape *shape,
                 firstChunk = false;
             } else {
                 s_min.x = minimum(s_min.x, c_s_min.x);
-                s_min.y = minimum(s_min.y, c_s_min.x);
-                s_min.z = minimum(s_min.z, c_s_min.x);
+                s_min.y = minimum(s_min.y, c_s_min.y);
+                s_min.z = minimum(s_min.z, c_s_min.z);
                 s_max.x = maximum(s_max.x, c_s_max.x);
                 s_max.y = maximum(s_max.y, c_s_max.y);
                 s_max.z = maximum(s_max.z, c_s_max.z);

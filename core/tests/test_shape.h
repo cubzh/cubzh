@@ -164,7 +164,7 @@ void test_shape_make_copy(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        shape_set_palette(src, color_palette_new(atlas));
+        shape_set_palette(src, color_palette_new(atlas), false);
     }
     Shape *copy = shape_make_copy(src);
 
@@ -220,7 +220,7 @@ void test_shape_get_palette(void) {
     // const SHAPE_COORDS_INT_T x = 1, y = 2, z = 3;
     ColorAtlas *atlas = color_atlas_new();
     TEST_ASSERT(atlas != NULL);
-    shape_set_palette(s, color_palette_new(atlas));
+    shape_set_palette(s, color_palette_new(atlas), false);
     ColorPalette *p = shape_get_palette((const Shape *)s);
 
     TEST_CHECK(color_palette_get_atlas((const ColorPalette *)p) == atlas);
@@ -236,7 +236,7 @@ void test_shape_remove_block(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        shape_set_palette(s, color_palette_new(atlas));
+        shape_set_palette(s, color_palette_new(atlas), false);
     }
     shape_add_block(s, idx, x, y, z, true);
     const bool ok = shape_remove_block(s, x, y, z);
@@ -255,7 +255,7 @@ void test_shape_get_bounding_box_size(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        shape_set_palette(s, color_palette_new(atlas));
+        shape_set_palette(s, color_palette_new(atlas), false);
     }
     shape_add_block(s, 1, 1, 2, 3, true);
     int3 result = {0, 0, 0};
@@ -274,7 +274,7 @@ void test_shape_get_model_aabb(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        shape_set_palette(s, color_palette_new(atlas));
+        shape_set_palette(s, color_palette_new(atlas), false);
     }
     shape_add_block(s, 1, 1, 2, 3, true);
     int3 result = {0, 0, 0};
@@ -336,7 +336,7 @@ void test_shape_addblock_1(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        shape_set_palette(sh, color_palette_new(atlas));
+        shape_set_palette(sh, color_palette_new(atlas), false);
     }
 
     ColorPalette *palette = shape_get_palette(sh);
@@ -433,7 +433,7 @@ void test_shape_addblock_2(void) {
     {
         ColorAtlas *atlas = color_atlas_new();
         TEST_ASSERT(atlas != NULL);
-        shape_set_palette(sh, color_palette_new(atlas));
+        shape_set_palette(sh, color_palette_new(atlas), false);
     }
 
     ColorPalette *palette = shape_get_palette(sh);

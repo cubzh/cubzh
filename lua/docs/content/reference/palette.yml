@@ -2,13 +2,16 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
 type: "Palette"
 creatable: true # indicates that instances can be created, even if there's no constructor
 description: |
-    A `Palette` is an [array] of [BlockProperties] entries describing the visual properties of its owner [Shape]'s blocks.
+    A `Palette` is an [array] of [BlockProperties] entries describing the visual properties of [Shape]s blocks. It can be shared by multiple shapes.
     
     The entries of a palette can be changed at runtime with a few specific caveats:
-    - only colors that are unused by the shape can be removed from its palette,
-    - changing a color from opaque to/from transparent will require a call to `shape:RefreshModel()` to be reflected on the existing shape blocks,
+    - only colors that are unused by the shape(s) can be removed from the palette,
+    - changing a color from opaque to/from transparent will require a call to `shape:RefreshModel()` to be reflected on the existing shapes blocks (not necessary for newly added blocks),
     - changing the [BlockProperties.Light] or [BlockProperties.Color]'s alpha values will only be reflected on the baked lighting after calling `shape:ComputeBakedLight` (as of 0.0.47, only relevant for [Map])
-    
+
+constructors: 
+  - description: "Creates an empty Palette."
+
 properties:
     - name: "MaximumEntries"
       type: "integer"
@@ -50,3 +53,45 @@ functions:
         - code: |
             -- remove red Color from the shape if not used
             local removed = myShape.Palette:RemoveColor(Color(255, 0, 0))
+    
+    - name: "Copy"
+      description: "Performs a copy of the palette and returns it."
+      return:
+        - type: Palette
+
+    - name: "Merge"
+      description: |
+          Combine the colors of the given palette into [This]. If a [Shape](/reference/shape) is passed, it will use its [Shape](/reference/shape).[Palette](/reference/palette) property.
+
+          The config table can contain any of the following properties,
+          - `duplicates`: keep duplicate colors when merging, `false` by default.
+          - `remap`: given shape will now use this palette, and shape's blocks indices are remapped to the new palette so that they keep their colors. Default is `false`. Only works if a [Shape](/reference/shape) is passed as parameter.
+          - `recurse`: merge colors of the shape and all its children shapes, `false` by default. Only works if a [Shape](/reference/shape) is passed as parameter.
+      argument-sets: 
+        -
+          - name: palette
+            type: Palette
+          - name: config
+            type: table
+        -
+          - name: shape
+            type: Shape
+          - name: config
+            type: table
+      samples:
+        - code: |
+            -- merge the colors of palette2 into palette1
+            palette1:Merge(palette2)
+
+            -- merge the colors of palette2 into palette1, keeping duplicates
+            palette1:Merge(palette2, { duplicates=true })
+
+            -- merge into palette3 all the colors found in the shape and all its children
+            palette3:Merge(rootShape, { recurse=true })
+
+            -- merge & assign a shared palette to given shape and all its children
+            palette4:Merge(rootShape, { remap=true, recurse=true })
+            palette4[i].Color = Color.Red -- will affect all blocks using palette index 'i' in all these shapes
+    
+    - name: "Reduce"
+      description: "Removes all unused colors from the palette."

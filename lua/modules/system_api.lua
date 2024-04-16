@@ -25,6 +25,22 @@ moduleMT.__index = function(_, key)
 	return api[key] or moduleMT[key]
 end
 
+mod.deleteUser = function(_, callback)
+	if type(callback) ~= "function" then
+		callback(false, "1st arg must be a function")
+		return
+	end
+	local url = mod.kApiAddr .. "/users/self"
+	local req = System:HttpDelete(url, {}, function(resp)
+		if resp.StatusCode ~= 200 then
+			callback(false, "http status not 200")
+			return
+		end
+		callback(true, nil) -- success
+	end)
+	return req
+end
+
 mod.checkUsername = function(_, username, callback)
 	if type(username) ~= "string" then
 		callback(false, "1st arg must be a string")
@@ -55,7 +71,7 @@ mod.checkUsername = function(_, username, callback)
 end
 
 -- callback(err, credentials)
-mod.signUp = function(_, username, key, dob, password, callback)
+mod.signUp = function(_, username, key, dob, callback)
 	if type(username) ~= "string" then
 		callback("1st arg must be a string")
 		return
@@ -68,12 +84,8 @@ mod.signUp = function(_, username, key, dob, password, callback)
 		callback("3rd arg must be a string")
 		return
 	end
-	if type(password) ~= "string" then
-		callback("4th arg must be a string")
-		return
-	end
 	if type(callback) ~= "function" then
-		callback("5th arg must be a function")
+		callback("4th arg must be a function")
 		return
 	end
 
@@ -82,7 +94,6 @@ mod.signUp = function(_, username, key, dob, password, callback)
 		username = username,
 		key = key,
 		dob = dob,
-		password = password,
 	}
 
 	local req = System:HttpPost(url, body, function(resp)

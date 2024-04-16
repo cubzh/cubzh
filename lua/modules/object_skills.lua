@@ -70,7 +70,7 @@ LocalEvent:Listen(LocalEvent.Name.Tick, function()
 	-- JUMPERS
 
 	for jumper, config in pairs(jumpers) do
-		if config.airJumped and isOnGround(jumper, config) then
+		if config.airJumped and jumper.IsOnGround then
 			config.airJumpsAvailable = config.airJumps
 			config.airJumped = false
 		end
@@ -87,19 +87,18 @@ skills.jump = function(object)
 		print("can't jump, no config")
 		return
 	end
-	if object.Velocity.Y <= 0 and isOnGround(object, config) then
+
+	if object.Velocity.Y <= 0 and object.IsOnGround then
 		config.airJumpsAvailable = config.airJumps
 		object.Velocity.Y = config.jumpVelocity
 		config.onJump(object)
-	else
-		if config.airJumpsAvailable > 0 then
-			config.airJumpsAvailable = config.airJumpsAvailable - 1
-			local v = math.max(0, object.Velocity.Y)
-			v = math.min(config.maxAirJumpVelocity, v + config.jumpVelocity)
-			object.Velocity.Y = v
-			config.onAirJump(object)
-			config.airJumped = true
-		end
+	elseif config.airJumpsAvailable > 0 then
+		config.airJumpsAvailable = config.airJumpsAvailable - 1
+		local v = math.max(0, object.Velocity.Y)
+		v = math.min(config.maxAirJumpVelocity, v + config.jumpVelocity)
+		object.Velocity.Y = v
+		config.onAirJump(object)
+		config.airJumped = true
 	end
 end
 

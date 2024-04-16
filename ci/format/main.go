@@ -72,7 +72,7 @@ func checkFormat(doFormat bool) error {
 	// run the clang command on every file
 	ciContainer = ciContainer.WithExec([]string{"ash", "-c", command})
 
-	// To know wether the execution succeeded, we need to force the evaluation
+	// To know whether the execution succeeded, we need to force the evaluation
 	// of the pipeline after an using Sync, and then
 	ciContainer, err = ciContainer.Sync(ctx)
 	if err != nil {

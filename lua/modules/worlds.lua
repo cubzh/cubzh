@@ -3,24 +3,19 @@ worlds = {}
 worlds.createModalContent = function(_, config)
 	local itemGrid = require("item_grid")
 	local worldDetails = require("world_details")
-	local pages = require("pages")
 	local theme = require("uitheme").current
 	local modal = require("modal")
+	local conf = require("config")
+	local emptyFn = function() end
 
 	-- default config
-	local _config = {
+	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-	end
+	config = conf:merge(defaultConfig, config)
 
-	local ui = _config.uikit
+	local ui = config.uikit
 
 	local exploreContent = modal:createContent()
 	exploreContent.title = "Worlds"
@@ -34,7 +29,7 @@ worlds.createModalContent = function(_, config)
 		uikit = ui,
 	})
 
-	pages = pages:create(ui)
+	local pages = require("pages"):create(ui)
 	exploreContent.bottomCenter = { pages }
 
 	exploreContent.tabs = {
@@ -54,14 +49,16 @@ worlds.createModalContent = function(_, config)
 		},
 	}
 
-	grid.onPaginationChange = function(page, nbPages)
+	local onPaginationChange = function(page, nbPages)
 		pages:setNbPages(nbPages)
 		pages:setPage(page)
 	end
+	grid.onPaginationChange = emptyFn
 
-	pages:setPageDidChange(function(page)
+	local pageDidChange = function(page)
 		grid:setPage(page)
-	end)
+	end
+	pages:setPageDidChange(emptyFn)
 
 	exploreContent.node = grid
 
@@ -69,23 +66,11 @@ worlds.createModalContent = function(_, config)
 		local grid = content
 		grid.Width = width
 		grid.Height = height
-		if grid.refresh then
-			grid:refresh()
-		end
+		grid:refresh()
 		return Number2(grid.Width, grid.Height)
 	end
 
-	exploreContent.willResignActive = function(_)
-		grid:cancelRequestsAndTimers()
-	end
-
-	exploreContent.didBecomeActive = function(_)
-		if grid.refresh then
-			grid:refresh()
-		end
-	end
-
-	grid.onOpen = function(_, cell)
+	local onOpen = function(_, cell)
 		if cell.type ~= "world" then
 			return
 		end
@@ -116,6 +101,21 @@ worlds.createModalContent = function(_, config)
 		end
 
 		exploreContent:push(worldDetailsContent)
+	end
+	grid.onOpen = emptyFn
+
+	exploreContent.willResignActive = function(_)
+		grid:cancelRequestsAndTimers()
+		grid.onPaginationChange = emptyFn
+		grid.onOpen = emptyFn
+		pages:setPageDidChange(emptyFn)
+	end
+
+	exploreContent.didBecomeActive = function(_)
+		grid.onPaginationChange = onPaginationChange
+		pages:setPageDidChange(pageDidChange)
+		grid.onOpen = onOpen
+		grid:refresh()
 	end
 
 	return exploreContent

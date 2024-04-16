@@ -14,575 +14,645 @@ local mt = {
 }
 setmetatable(friendsWindow, mt)
 
+local cachedAvatars = {}
+
 local uiAvatar = require("ui_avatar")
 local theme = require("uitheme").current
+local padding = theme.padding
 local modal = require("modal")
 local api = require("system_api", System)
+local CELL_PADDING = padding
 
-local lists = { friends = 0, sent = 1, received = 2, search = 3 }
+-- list IDs
+local LIST = {
+	RECEIVED = 1,
+	SENT = 2,
+	FRIENDS = 3,
+	SEARCH = 4,
+}
+
+local TITLES = {
+	"Received (%d)",
+	"Sent (%d)",
+	"Friends (%d)",
+	"Search (%d)",
+}
 
 -- uikit: optional, allows to provide specific instance of uikit
 mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	local ui = uikit or require("uikit")
+	local content = modal:createContent()
+	content.title = "Friends"
+	content.icon = "😛"
 
-	local displayedList = lists.friends
-	local responses = {} -- list of friends, requests (sent or received), or search
+	local scroll
+	local searchText
+	local loading = true
+	local showSent = false
+
+	-- list of friends, requests (sent or received) or search
+	local lists = {
+		received = {},
+		sent = {},
+		friends = {},
+		search = {},
+	}
+
+	local searchTimer
 	local requests = {}
-	local countRequests = {}
-	local avatarRequestGroups = {}
-
-	local function cancelAvatarRequests()
-		for _, requestGroup in ipairs(avatarRequestGroups) do
-			for _, r in ipairs(requestGroup) do
-				r:Cancel()
-			end
-		end
-		avatarRequestGroups = {}
-	end
-
-	local function addAvatarRequests(reqs)
-		table.insert(avatarRequestGroups, reqs)
-	end
 
 	local cancelRequests = function()
-		cancelAvatarRequests()
 		for _, r in ipairs(requests) do
 			r:Cancel()
 		end
 		requests = {}
 	end
 
-	local cancelCountRequests = function()
-		for _, r in ipairs(countRequests) do
-			r:Cancel()
+	local cancelRequestsAndTimers = function()
+		if searchTimer ~= nil then
+			searchTimer:Cancel()
+			searchTimer = nil
 		end
-		countRequests = {}
+		cancelRequests()
 	end
 
-	local idealReducedContentSize = function(content, width, height)
+	local idealReducedContentSize = function(_, width, height, minWidth)
 		width = math.min(width, 500)
-		height = math.min(height, 500)
-
-		local cellHeight, maxLines = content.getCellHeightAndMaxLines(height)
-		return Number2(width, (cellHeight + theme.padding) * maxLines - theme.padding)
+		width = math.max(minWidth, width)
+		return Number2(width, height)
 	end
 
-	local content = modal:createContent()
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 
 	node.onRemove = function()
-		cancelCountRequests()
-		cancelRequests()
-	end
-
-	content.willResignActive = function(_)
-		cancelCountRequests()
-		cancelRequests()
-	end
-
-	local pages = require("pages"):create(ui)
-	pages:setPageDidChange(function(page)
-		node:refreshList((page - 1) * node.displayedCells + 1)
-	end)
-
-	node.pages = pages
-	content.bottomLeft = { node.pages }
-
-	content.node = node
-	content.idealReducedContentSize = idealReducedContentSize
-	local updateFriends = function(callback) -- callback(bool success)
-		cancelRequests()
-		responses = {}
-		node:flushLines()
-
-		local req = api:getFriends(function(ok, friends, _)
-			if not ok then
-				if callback ~= nil then
-					callback(false)
-				end
-				return
-			end
-			if #friends == 0 then
-				if callback ~= nil then
-					callback(true)
-				end
-			else
-				for _, usrID in ipairs(friends) do
-					local req = api:getUserInfo(usrID, function(_, usr)
-						table.insert(responses, usr)
-						if #responses == #friends then
-							-- sort responses alphabetically
-							table.sort(responses, function(a, b)
-								return a.username < b.username
-							end)
-							-- call callback
-							if callback ~= nil then
-								callback(true)
-							end
-						end
-					end)
-					table.insert(requests, req)
-				end
-			end
-		end)
-		table.insert(requests, req)
-	end
-
-	local refreshSentFriendRequests = function(callback) -- callback(bool success)
-		cancelRequests()
-		responses = {}
-		node:flushLines()
-
-		local req = api:getSentFriendRequests(function(ok, sentReqs, _)
-			if not ok then
-				if callback ~= nil then
-					callback(false)
-				end
-				return
-			end
-			if #sentReqs == 0 then
-				if callback ~= nil then
-					callback(true)
-				end
-			else
-				for _, usrID in ipairs(sentReqs) do
-					local req = api:getUserInfo(usrID, function(_, usr)
-						table.insert(responses, usr)
-						if #responses == #sentReqs then
-							if callback ~= nil then
-								callback(true)
-							end
-						end
-					end)
-					table.insert(requests, req)
-				end
-			end
-		end)
-		table.insert(requests, req)
-	end
-
-	local refreshReceivedFriendRequests = function(callback) -- callback(bool success)
-		cancelRequests()
-		responses = {}
-		node:flushLines()
-
-		local req = api:getReceivedFriendRequests(function(ok, receivedReqs, _)
-			if not ok then
-				if callback ~= nil then
-					callback(false)
-				end
-				return
-			end
-			if #receivedReqs == 0 then
-				if callback ~= nil then
-					callback(true)
-				end
-			else
-				for _, usrID in ipairs(receivedReqs) do
-					local req = api:getUserInfo(usrID, function(_, usr)
-						table.insert(responses, usr)
-						if #responses == #receivedReqs then
-							if callback ~= nil then
-								callback(true)
-							end
-						end
-					end)
-					table.insert(requests, req)
-				end
-			end
-		end)
-		table.insert(requests, req)
-	end
-
-	local searchFriends = function(searchText, callback)
-		cancelRequests()
-		responses = {}
-		node:flushLines()
-
-		local req = api:searchUser(searchText, function(ok, users, _)
-			if not ok then
-				if callback ~= nil then
-					callback(false)
-				end
-				return
-			end
-			responses = users
-			if callback ~= nil then
-				callback(true)
-			end
-		end)
-		table.insert(requests, req)
-	end
-
-	local refreshSentAndReceivedCounts = function()
-		cancelCountRequests()
-
-		local req = api:getSentFriendRequests(function(ok, sentReqs, _)
-			if not ok then
-				return
-			end
-			local count = #sentReqs
-			node.sentBtn.Text = "Sent" .. (count > 0 and " (" .. count .. ")" or "")
-		end)
-		table.insert(countRequests, req)
-
-		req = api:getReceivedFriendRequests(function(ok, receivedReqs, _)
-			if not ok then
-				return
-			end
-			local count = #receivedReqs
-			node.receivedBtn.Text = "Received" .. (count > 0 and " (" .. count .. ")" or "")
-		end)
-		table.insert(countRequests, req)
-	end
-
-	-- Lines
-	node.lines = {}
-	node.flushLines = function(_)
-		for _, v in ipairs(node.lines) do
-			v:remove()
+		cancelRequestsAndTimers()
+		-- this is necessary for lines to be unloaded
+		--  and cells to cancel their requests
+		scroll:flush()
+		node.screenDidResizeListener:Remove()
+		node.screenDidResizeListener = nil
+		if helpPointer then
+			helpPointer:remove()
+			helpPointer = nil
 		end
-		node.lines = {}
 	end
 
-	node.textInput = ui:createTextInput("", "🔎 search...")
-	node.textInput.Width = 200
-	node.textInput:setParent(node)
-	node.textInput:hide()
-	node.searchTimer = nil
+	local retrieveFriendsLists = function(searchStr, keepScrollPosition)
+		cancelRequestsAndTimers()
 
-	node.textInput.onTextChange = function(_)
-		if node.searchTimer ~= nil then
-			node.searchTimer:Cancel()
-		end
+		searchText = searchStr
+		loading = true
+		local nbLists = 4
+		local nbListsRetrieved = 0
 
-		node.searchTimer = Timer(0.3, function()
-			cancelRequests()
-			responses = {}
-			node:flushLines()
+		lists = {}
+		lists[LIST.RECEIVED] = {}
+		lists[LIST.SENT] = {}
+		lists[LIST.FRIENDS] = {}
+		lists[LIST.SEARCH] = {}
 
-			local text = node.textInput.Text
+		listsN = {}
+		listsN[LIST.RECEIVED] = 0
+		listsN[LIST.SENT] = 0
+		listsN[LIST.FRIENDS] = 0
+		listsN[LIST.SEARCH] = 0
 
-			if text == "" then
-				node:refreshList()
-			else
-				searchFriends(text, function(ok)
-					if not ok then
-						return
+		node:resetList()
+		keepScrollPosition = keepScrollPosition or false
+
+		local function newListResponse(listID, list)
+			lists[listID] = list or {}
+			nbListsRetrieved = nbListsRetrieved + 1
+			if nbListsRetrieved < nbLists then
+				return
+			end
+
+			if searchText and #searchText > 0 then
+				-- filter out search list
+				-- remove this part once backend handles that
+				for k = #lists[LIST.SEARCH], 1, -1 do
+					local user = lists[LIST.SEARCH][k]
+					local idFound = false
+					for _, v in ipairs(lists[LIST.FRIENDS]) do
+						if v.id == user.id then
+							idFound = true
+						end
 					end
-					node:refreshList()
+					for _, v in ipairs(lists[LIST.RECEIVED]) do
+						if v.id == user.id then
+							idFound = true
+						end
+					end
+					for _, v in ipairs(lists[LIST.SENT]) do
+						if v.id == user.id then
+							idFound = true
+						end
+					end
+					if idFound then
+						table.remove(lists[LIST.SEARCH], k)
+					end
+				end
+			end
+
+			listsN[LIST.RECEIVED] = #lists[LIST.RECEIVED]
+			listsN[LIST.SENT] = #lists[LIST.SENT]
+			listsN[LIST.FRIENDS] = #lists[LIST.FRIENDS]
+			listsN[LIST.SEARCH] = #lists[LIST.SEARCH]
+
+			loading = false
+
+			node:resetList(keepScrollPosition)
+		end
+
+		local function requestList(methodName, listID, searchText)
+			local list = {}
+
+			if listID == LIST.SEARCH then
+				if searchText == nil or searchText == "" then
+					newListResponse(listID, list)
+					return
+				end
+				local req = api:searchUser(searchText, function(ok, users, err)
+					if not ok then
+						newListResponse(listID, list) -- set empty list
+						error("request failed: " .. err)
+					end
+					if #users == 0 then
+						newListResponse("search", {})
+					end
+					for _, usr in ipairs(users) do
+						if usr and usr.username ~= "" then
+							table.insert(list, usr)
+						end
+					end
+					table.sort(list, function(a, b)
+						return a.username < b.username
+					end)
+					newListResponse(listID, list)
 				end)
+				table.insert(requests, req)
+				return
 			end
-			node.searchTimer = nil
-		end)
+
+			local req = api[methodName](api, function(ok, users, err)
+				if not ok then
+					newListResponse(listID, list) -- set empty list
+					error("request failed: " .. err)
+				end
+				if #users == 0 then
+					newListResponse(listID, {})
+					return
+				end
+				for _, usr in ipairs(users) do
+					if usr.username ~= "" then
+						-- if search, match the username
+						if not searchText or string.find(usr.username, searchText) then
+							table.insert(list, usr)
+						end
+					end
+				end
+				newListResponse(listID, list)
+				table.sort(list, function(a, b)
+					return a.username < b.username
+				end)
+			end, { "username", "id" })
+			table.insert(requests, req)
+		end
+
+		requestList("getFriends", LIST.FRIENDS, searchText)
+		requestList("getReceivedFriendRequests", LIST.RECEIVED, searchText)
+		requestList("getSentFriendRequests", LIST.SENT, searchText)
+		requestList("searchUser", LIST.SEARCH, searchText)
 	end
 
-	-- Refresh list UI
-
-	node.getCellHeightAndMaxLines = function(height)
-		local t = ui:createText("A")
-		local b = ui:createButton("💬")
-		local cellHeight = math.max(t.Height, b.Height) + theme.padding * 3
-		b:remove()
-		t:remove()
-
-		local h = cellHeight + theme.padding
-		local maxLines = math.floor(height / h)
-
-		if (maxLines + 1) * (cellHeight + theme.padding) - theme.padding <= height then
-			maxLines = maxLines + 1
+	local getSearchBar = function()
+		local searchBarContainer = ui:createFrame()
+		local textInput = ui:createTextInput("", "🔎 search...")
+		textInput:setParent(searchBarContainer)
+		local cancelSearch = ui:createButton("X")
+		cancelSearch:setParent(searchBarContainer)
+		cancelSearch.onRelease = function()
+			textInput.Text = ""
+			retrieveFriendsLists(textInput.Text, false)
 		end
 
-		return cellHeight, maxLines
+		searchBarContainer.parentDidResize = function()
+			searchBarContainer.Width = searchBarContainer.parent.Width
+			searchBarContainer.Height = textInput.Height
+			cancelSearch.Height = textInput.Height
+			cancelSearch.Width = cancelSearch.Height
+			cancelSearch.pos = { searchBarContainer.Width - cancelSearch.Width, 0 }
+			textInput.Width = searchBarContainer.Width - cancelSearch.Width
+		end
+
+		textInput.onTextChange = function(_)
+			cancelRequestsAndTimers()
+			searchTimer = Timer(0.3, function()
+				cancelRequests()
+				searchTimer = nil
+				retrieveFriendsLists(textInput.Text, false)
+			end)
+		end
+		return searchBarContainer
 	end
 
-	node.flushContentGetCellHeightAndMaxLines = function(self)
-		self:flushLines()
-		local top = self.Height
-		if self.textInput:isVisible() then
-			top = self.textInput.pos.Y - theme.padding
+	local searchBar = getSearchBar()
+	searchBar:setParent(node)
+
+	node.parentDidResize = function(_)
+		searchBar.Width = node.Width
+		searchBar.pos = { 0, node.Height - searchBar.Height }
+
+		if node.scroll then
+			node.scroll.Width = node.Width
+			node.scroll.Height = node.Height - searchBar.Height
 		end
-		return self.getCellHeightAndMaxLines(top)
 	end
 
-	-- returns cell + buttons
-	node.createCellWithUsernameAndButtons = function(self, cellHeight, uname, ...)
-		local cell = ui:createFrame(Color(255, 255, 255, 200))
-		cell.Height = cellHeight
-		cell:setParent(self)
-		table.insert(self.lines, cell)
-		cell.Width = self.Width
+	local btnConfig = {
+		borders = false,
+		shadow = false,
+		textSize = "small",
+		color = Color(0, 0, 0, 0.7),
+	}
 
-		local vPos = cell.Height * 0.5
+	local computeCellSize = function()
+		local w = 170
+		local h = 100
+		-- 2 buttons + 1 label stacked vertically
+		local btn = ui:createButton("foo", btnConfig)
+		local label = ui:createText("username1234567", Color.White, "small") -- usernames are 15 chars max
+		-- 3 paddings between buttons & label +  padding around label within frame
+		h = math.max(h, btn.Height * 2 + label.Height + padding * 5)
+		w = math.max(w, label.Width + padding * 2)
 
-		local head = nil
-		local name
-		if uname then
-			name = uname
-			local requests
-			head, requests = uiAvatar:getHead(uname, cellHeight - theme.padding * 2, uikit)
-			addAvatarRequests(requests)
-			head:setParent(cell)
-		else
-			name = "⚠️ <guest>"
-		end
+		btn:remove()
+		label:remove()
+		return w, h
+	end
 
-		local username = ui:createText(name, Color(20, 20, 20))
-		username:setParent(cell)
+	local cellWidth, cellHeight = computeCellSize()
+	node.screenDidResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+		cellWidth, cellHeight = computeCellSize()
+		node:resetList()
+	end, { topPriority = true })
 
-		if head then
-			head.pos.X = theme.padding * 2
-			head.pos.Y = vPos - head.Height * 0.5
-			head.LocalPosition.Z = -20 -- fix layering
+	local createFriendCell = function(config)
+		local forceWidth = config.width
+		local forceHeight = config.height
 
-			username.pos.X = head.pos.X + head.Width + theme.padding * 2
-			username.pos.Y = vPos - username.Height * 0.5
-		else
-			username.pos.X = theme.padding * 2
-			username.pos.Y = vPos - username.Height * 0.5
-		end
+		local cell = ui:createFrame(Color(63, 63, 63))
+		cell.requests = {}
 
-		local ret = { cell }
+		local textBg = ui:createFrame(Color(0, 0, 0, 0.5))
+		textBg:setParent(cell)
+		local textName = ui:createText("", Color.White, "small")
+		textName:setParent(textBg)
+		textName.pos = { padding, padding }
+		local textStatus = ui:createText("", Color.White, "small")
+		textStatus:setParent(textBg)
+		textBg:hide()
 
-		local args = { ... }
+		local btnPrimary = ui:createButton("", btnConfig)
+		btnPrimary:setParent(cell)
+		btnPrimary.pos = { padding, padding }
+		local btnSecondary = ui:createButton("", btnConfig)
+		btnSecondary:setParent(cell)
 
-		local previous
-		for _, btnLabel in ipairs(args) do
-			local btn = ui:createButton(btnLabel)
-			btn:setParent(cell)
-			btn.pos.Y = vPos - btn.Height * 0.5
-			if previous == nil then
-				btn.pos.X = cell.Width - btn.Width - theme.padding * 2
-			else
-				btn.pos.X = previous.pos.X - btn.Width - theme.padding
+		local avatar
+		cell.parentDidResize = function()
+			cell.Height = forceHeight or cellHeight
+			cell.Width = forceWidth or cell.Height
+
+			textBg.Width = textName.Width + padding * 2
+			textBg.Height = textName.Height + padding * 2
+			textBg.pos.Y = cell.Height - textBg.Height
+
+			if avatar then
+				avatar.Height = cell.Height -- avatars are spherized, so there's enough margin already
+				avatar.pos = { cell.Width * 0.666 - avatar.Width * 0.5, cell.Height * 0.5 - avatar.Height * 0.5 }
 			end
-			previous = btn
-			table.insert(ret, btn)
+
+			btnPrimary.pos = { padding, padding }
+			btnSecondary.pos = { btnPrimary.pos.X, btnPrimary.pos.Y + btnPrimary.Height + padding }
+
+			-- display in front of shape
+			textBg.LocalPosition.Z = -600
+			btnPrimary.LocalPosition.Z = -600
+			btnSecondary.LocalPosition.Z = -600
 		end
 
-		return table.unpack(ret)
+		cell.setUser = function(_, user)
+			if not user or not user.username then
+				cell:hide()
+				return
+			end
+
+			cell.waitScrollStopTimer = Timer(0.5, function()
+				cell.waitScrollStopTimer = nil
+				textBg:show()
+
+				cell.onRelease = function()
+					cell:setColor(Color(63, 63, 63))
+					local profileContent = require("profile"):create({
+						isLocal = false,
+						username = user.username,
+						userID = user.id,
+						uikit = ui,
+					})
+					content:push(profileContent)
+				end
+				cell.onPress = function()
+					cell:setColor(Color(35, 35, 35))
+				end
+				cell.onCancel = function()
+					cell:setColor(Color(63, 63, 63))
+				end
+
+				cell.username = user.username
+				cell.userID = user.id
+				textBg.LocalPosition.Z = -600
+				avatar = cachedAvatars[user.username]
+				if avatar == nil then
+					local requests
+					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.95, nil, ui)
+					for _, r in ipairs(requests) do
+						table.insert(cell.requests, r)
+					end
+				end
+				avatar:setParent(cell)
+				avatar.didLoad = function()
+					avatar.body.pivot.LocalRotation = Rotation(math.rad(-22), 0, 0) * Rotation(0, math.rad(145), 0)
+					cachedAvatars[user.username] = avatar
+				end
+				cell.avatar = avatar
+				table.insert(cell.requests, r)
+				textName.Text = user.username
+				-- TODO: handle status
+				textStatus.Text = ""
+				if cell.parentDidResize then
+					cell:parentDidResize()
+				end
+				cell:show()
+			end)
+		end
+
+		cell.setType = function(_, cellType)
+			if cellType == LIST.RECEIVED then
+				btnPrimary.Text = "✅ Accept"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
+					local req = api:replyToFriendRequest(cell.userID, true, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(nil, true)
+					end)
+					table.insert(requests, req)
+				end
+				btnSecondary.Text = "❌"
+				btnSecondary:show()
+				btnSecondary.onRelease = function()
+					local req = api:replyToFriendRequest(cell.userID, false, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(nil, true)
+					end)
+					table.insert(requests, req)
+				end
+			elseif cellType == LIST.SENT then
+				btnPrimary.Text = "❌ Cancel"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
+					local req = api:cancelFriendRequest(cell.userID, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(nil, true)
+					end)
+					table.insert(requests, req)
+				end
+				btnSecondary.Text = ""
+				btnSecondary:hide()
+				btnSecondary.onRelease = nil
+			elseif cellType == LIST.FRIENDS then
+				btnPrimary.Text = "🌎 Join"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
+					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+				end
+				btnSecondary.Text = "💬"
+				btnSecondary:show()
+				btnSecondary.onRelease = function()
+					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+				end
+			elseif cellType == LIST.SEARCH then
+				btnPrimary.Text = "➕ Add friend"
+				btnPrimary:show()
+				btnPrimary.onRelease = function()
+					local req = api:sendFriendRequest(cell.userID, function(ok, _)
+						if not ok then
+							return
+						end
+						retrieveFriendsLists(searchText, true)
+					end)
+					table.insert(requests, req)
+				end
+				btnSecondary.Text = ""
+				btnSecondary:hide()
+				btnSecondary.onRelease = nil
+			end
+			cell:parentDidResize()
+		end
+
+		return cell
 	end
 
-	node.refreshList = function(self, from)
-		local top = self.Height
-		if self.textInput:isVisible() then
-			self.textInput.pos.Y = self.Height - self.textInput.Height
-			self.textInput.Width = self.Width
-			top = self.textInput.pos.Y - theme.padding
-		end
-
-		local cellHeight, maxLines = self:flushContentGetCellHeightAndMaxLines()
-		if maxLines <= 0 then
+	local loadLine = function(cellId)
+		if loading == true then
+			if cellId == 1 then
+				local container = ui:createFrame()
+				local text = ui:createText("Loading...", Color.White)
+				text:setParent(container)
+				container.Width = node.Width
+				container.Height = math.floor(cellHeight)
+				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
+				return container
+			end
 			return
 		end
 
-		self.displayedCells = maxLines -- update number of displayed cells
-
-		local total = #responses
-		from = from or 1
-
-		if maxLines > 1 and (from % maxLines ~= 1 or from > total) then
-			-- go back to first page
-			from = 1
+		local nbResults = 0
+		for _, n in ipairs(listsN) do
+			nbResults = nbResults + n
 		end
 
-		local page = math.floor(from / maxLines) + 1
-		local totalPages = math.floor(total / maxLines) + 1
-		if node.pages ~= nil then
-			node.pages:setNbPages(totalPages)
-			node.pages:setPage(page)
-		end
-
-		local usr, cell
-		local line = 0
-		for i = from, total do
-			line = line + 1
-			if line > maxLines then
-				break
+		if nbResults == 0 then
+			if cellId == 1 then
+				local container = ui:createFrame()
+				local isSearch = searchText and #searchText > 0
+				if not isSearch and searchBar then
+					helpPointer = helpPointer or require("ui_pointer"):create({ uikit = ui })
+					helpPointer:pointAt({ target = searchBar, from = "below" })
+				end
+				local str = isSearch and "No result found." or "Invite your friends!"
+				local text = ui:createText(str, Color.White)
+				text:setParent(container)
+				container.Width = node.Width
+				container.Height = math.floor(cellHeight * 1.5)
+				text.pos = { container.Width * 0.5 - text.Width * 0.5, container.Height * 0.5 - text.Height * 0.5 }
+				return container
 			end
-			local p = i - from
-			usr = responses[i]
+			return
+		end
 
-			if displayedList == lists.friends then
-				local joinBtn, chatBtn
-				local cellUsername = usr.username
-				cell, joinBtn, chatBtn = self:createCellWithUsernameAndButtons(cellHeight, cellUsername, "🌎", "💬")
-				joinBtn:disable()
-				-- chatBtn:disable()
-				chatBtn.onRelease = function(_)
-					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
-				end
-			elseif displayedList == lists.sent then
-				local removeBtn
-				cell, removeBtn = self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌")
-				removeBtn.userID = usr.id
-				removeBtn.onRelease = function(self)
-					local req = api:cancelFriendRequest(self.userID, function(ok, _)
-						if not ok then
-							return
-						end
-						refreshSentAndReceivedCounts()
-						node.sentBtn:onRelease()
-					end)
-					table.insert(requests, req)
-				end
-			elseif displayedList == lists.received then
-				local removeBtn, btnAccept
-				cell, removeBtn, btnAccept =
-					self:createCellWithUsernameAndButtons(cellHeight, usr.username, "❌", "✅")
+		local width = node.Width
+		-- nb cells per line
+		local nbCellsPerLine = math.floor(width / cellWidth)
 
-				removeBtn.userID = usr.id
-				btnAccept.userID = usr.id
+		local adaptedCellWidth = (width - (CELL_PADDING * (nbCellsPerLine - 1))) / nbCellsPerLine
 
-				btnAccept.onRelease = function(self)
-					local req = api:replyToFriendRequest(self.userID, true, function(ok, _)
-						if not ok then
-							return
-						end
-						refreshSentAndReceivedCounts()
-						refreshReceivedFriendRequests(function(ok)
-							if not ok then
-								return
-							end
-							node:refreshList()
-						end)
-					end)
-					table.insert(requests, req)
-				end
+		local getContentForLine = function(lineNumber, nbCellsPerLine)
+			nbCellsPerLine = math.floor(nbCellsPerLine)
+			local l = 1
+			while l <= #lists do
+				if listsN[l] == 0 then
+					l = l + 1 -- nothing in that list, look in next one
+				elseif showSent == false and l == LIST.SENT and lineNumber > 1 then
+					lineNumber = lineNumber - 1
+					l = l + 1
+				elseif lineNumber == 1 then
+					return lists[l], l, true -- first line : title
+				else
+					local nbLinesForList = math.floor(listsN[l] / nbCellsPerLine)
+						+ (listsN[l] % nbCellsPerLine > 0 and 1 or 0)
 
-				removeBtn.onRelease = function(self)
-					local req = api:replyToFriendRequest(self.userID, false, function(ok, _)
-						if not ok then
-							return
-						end
-						refreshSentAndReceivedCounts()
-						refreshReceivedFriendRequests(function(ok)
-							if not ok then
-								return
-							end
-							node:refreshList()
-						end)
-					end)
-					table.insert(requests, req)
-				end
-			elseif displayedList == lists.search then
-				local btnAdd
-				local logo = usr.hasBeenSentARequest and "✅" or "➕"
-				cell, btnAdd = self:createCellWithUsernameAndButtons(cellHeight, usr.username, logo)
-
-				btnAdd.usr = usr
-				btnAdd.userID = usr.id
-				btnAdd.sending = false
-				btnAdd.onRelease = function(btn)
-					if btn.sending then
-						return
+					if lineNumber - 1 <= nbLinesForList then
+						local start = (lineNumber - 2) * nbCellsPerLine + 1
+						local stop = math.min(start + nbCellsPerLine - 1, listsN[l])
+						return lists[l], l, nil, { start, stop }
+					else
+						l = l + 1
+						lineNumber = lineNumber - 1 - nbLinesForList
 					end
-					btn.sending = true
-					local req = api:sendFriendRequest(btn.userID, function(ok)
-						if not ok then
-							btn.sending = false
-							return
-						end
-						refreshSentAndReceivedCounts()
-						btn.Text = "✅"
-					end)
-					table.insert(requests, req)
-					btn.usr.hasBeenSentARequest = true
 				end
-			else
-				break
 			end
-			cell.pos.Y = top - (p + 1) * cell.Height - p * theme.padding
+		end
+
+		local list, listID, title, range = getContentForLine(cellId, nbCellsPerLine)
+
+		if title then
+			local titleStr = TITLES[listID]
+			local frame = ui:createFrame(Color(0, 0, 0, 0.5))
+			local text = ui:createText(string.format(titleStr, listsN[listID]), Color.White)
+			text:setParent(frame)
+			text.pos = { padding, padding }
+			frame.Width = width
+			frame.Height = text.Height + padding * 2
+
+			if listID == LIST.SENT then
+				if showSent then
+					local arrow = ui:createText("⬆️", Color.White)
+					arrow:setParent(frame)
+					arrow.pos = { frame.Width - arrow.Width - padding, padding }
+				else
+					local arrow = ui:createText("⬇️", Color.White)
+					arrow:setParent(frame)
+					arrow.pos = { frame.Width - arrow.Width - padding, padding }
+				end
+
+				frame.onPress = function(_)
+					frame.Color = Color(50, 50, 50, 0.5)
+				end
+
+				frame.onRelease = function(_)
+					frame.Color = Color(0, 0, 0, 0.5)
+					showSent = not showSent
+					node:resetList(true)
+				end
+			end
+
+			return frame
+		end
+
+		if list and range then
+			local line = require("ui_container"):createHorizontalContainer({ gapSize = CELL_PADDING })
+			line.cells = {}
+			line.onRemove = function()
+				for _, cell in ipairs(line.cells) do
+					if cell.avatar then
+						cell.avatar:setParent(nil)
+						cell.avatar = nil
+					end
+					for _, r in ipairs(cell.requests) do
+						r:Cancel()
+					end
+					cell.requests = {}
+					if cell.waitScrollStopTimer then
+						cell.waitScrollStopTimer:Cancel()
+						cell.waitScrollStopTimer = nil
+					end
+				end
+			end
+
+			local start = range[1]
+			for i = start, range[2] do
+				local cell = createFriendCell({ width = adaptedCellWidth, height = cellHeight })
+				if i > start then
+					line:pushGap()
+				end
+				line:pushElement(cell)
+
+				table.insert(line.cells, cell)
+
+				cell:setUser(list[i])
+				cell:setType(listID)
+			end
+
+			return line
 		end
 	end
 
-	node.parentDidResize = function(_)
-		node:refreshList()
-	end
-
-	-- buttons
-	node.friendsBtn = ui:createButton("Friends")
-	node.friendsBtn.onRelease = function(_)
-		node.friendsBtn:select()
-		node.sentBtn:unselect()
-		node.receivedBtn:unselect()
-		node.textInput:hide()
-		-- "add friend" button
-		local addFriendBtn = ui:createButton("🔎 Add friend ")
-		addFriendBtn:setColor(theme.colorPositive, Color(255, 255, 255, 254))
-		addFriendBtn:setColorPressed(nil, Color(255, 255, 255, 254))
-		content.bottomRight = { addFriendBtn }
-		addFriendBtn.onRelease = function(_)
-			node.textInput:show()
-			node.textInput:focus()
-
-			displayedList = lists.search
-			cancelRequests()
-			responses = {}
-			node:flushLines()
-			node:refreshList()
+	local unloadLine = function(lineOrVerticalContainer)
+		local line = lineOrVerticalContainer
+		if lineOrVerticalContainer.line then
+			line = lineOrVerticalContainer.line
 		end
-
-		displayedList = lists.friends
-
-		updateFriends(function(ok)
-			if not ok then
-				return
-			end
-			if displayedList == lists.friends then
-				node:refreshList()
-			end
-		end)
+		if line == nil then
+			return
+		end
+		lineOrVerticalContainer:remove()
 	end
 
-	node.sentBtn = ui:createButton("Sent")
-	node.sentBtn.onRelease = function(_)
-		node.friendsBtn:unselect()
-		node.sentBtn:select()
-		node.receivedBtn:unselect()
-		node.textInput:hide()
+	local config = {
+		cellPadding = CELL_PADDING,
+		loadCell = loadLine,
+		unloadCell = unloadLine,
+		uikit = uikit or require("uikit"),
+	}
 
-		content.bottomRight = {}
+	scroll = ui:createScrollArea(Color(20, 20, 20), config)
+	scroll:setParent(node)
+	node.scroll = scroll
 
-		displayedList = lists.sent
-
-		refreshSentFriendRequests(function(ok)
-			if not ok then
-				return
-			end
-			if displayedList == lists.sent then
-				node:refreshList()
-			end
-		end)
+	node.resetList = function(keepScrollPosition)
+		local scrollPosition = keepScrollPosition and scroll.scrollPosition or 0
+		scroll:flush()
+		if helpPointer then
+			helpPointer:remove()
+			helpPointer = nil
+		end
+		scroll:setScrollPosition(scrollPosition)
 	end
 
-	node.receivedBtn = ui:createButton("Received")
-	node.receivedBtn.onRelease = function(_)
-		node.friendsBtn:unselect()
-		node.sentBtn:unselect()
-		node.receivedBtn:select()
-		node.textInput:hide()
+	node:resetList()
+	retrieveFriendsLists()
 
-		content.bottomRight = {}
+	content.node = node
+	content.idealReducedContentSize = idealReducedContentSize
 
-		displayedList = lists.received
-
-		refreshReceivedFriendRequests(function(ok)
-			if not ok then
-				return
-			end
-			if displayedList == lists.received then
-				node:refreshList()
-			end
-		end)
-	end
-
-	content.topLeft = { node.friendsBtn, node.sentBtn, node.receivedBtn }
-
-	node.friendsBtn:onRelease()
-	refreshSentAndReceivedCounts()
-
-	local _modal = modal:create(content, maxWidth, maxHeight, position, uikit)
+	local _modal = require("modal"):create(content, maxWidth, maxHeight, position, ui)
 	return _modal
 end
 

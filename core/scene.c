@@ -22,7 +22,7 @@ struct _Scene {
     Rtree *rtree;
     Weakptr *wptr;
 
-    void *game; // weak ref used to resolve resources associated to transform IDs
+    Weakptr *game; // weak ref used to resolve resources associated to transform IDs
 
     // transforms potentially removed from scene since last end-of-frame,
     // relevant for physics & sync, internal transforms do not need to be accounted for here
@@ -145,8 +145,7 @@ void _scene_refresh_recurse(Scene *sc,
 
 void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchyDirty) {
     // Transform ends the frame inside scene hierarchy
-    transform_set_scene_dirty(t, false);
-    transform_set_is_in_scene(t, true);
+    transform_set_removed_from_scene(t, false);
 
     // Refresh transform (top-first) after sandbox changes
     transform_refresh(t, hierarchyDirty, false);
@@ -212,7 +211,7 @@ void _scene_register_removed_transform(Scene *sc, Transform *t) {
 
 // MARK: -
 
-Scene *scene_new(void *g) {
+Scene *scene_new(Weakptr *g) {
     Scene *sc = (Scene *)malloc(sizeof(Scene));
     if (sc != NULL) {
         sc->root = transform_make(PointTransform);
@@ -313,13 +312,13 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
     RigidBody *rb = NULL;
     while (t != NULL) {
         // if still outside of hierarchy at end-of-frame, proceed with removal
-        if (transform_is_scene_dirty(t)) {
+        if (transform_is_removed_from_scene(t)) {
             // enqueue children for r-tree leaf removal
             n = transform_get_children_iterator(t);
             while (n != NULL) {
                 child = doubly_linked_list_node_pointer(n);
 
-                transform_set_scene_dirty(child, true);
+                transform_set_removed_from_scene(child, true);
                 _scene_register_removed_transform(sc, child);
 
                 n = doubly_linked_list_node_next(n);
@@ -331,9 +330,6 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb), true);
                 rigidbody_set_rtree_leaf(rb, NULL);
             }
-
-            transform_set_scene_dirty(t, false);
-            transform_set_is_in_scene(t, false);
         }
         transform_release(t); // from scene_register_removed_transform
 
@@ -378,6 +374,7 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                                     awakeBox,
                                     PHYSICS_GROUP_ALL_SYSTEM,
                                     PHYSICS_GROUP_ALL_SYSTEM,
+                                    NULL,
                                     awakeQuery,
                                     EPSILON_COLLISION) > 0) {
             RtreeNode *hit = fifo_list_pop(awakeQuery);
@@ -588,18 +585,18 @@ CastResult scene_cast_result_default(void) {
     CastResult hit;
     hit.hitTr = NULL;
     hit.block = NULL;
-    hit.blockCoords = (SHAPE_COORDS_INT3_T){0, 0, 0};
+    hit.blockCoords = coords3_zero;
     hit.distance = FLT_MAX;
-    hit.type = CastHit_None;
+    hit.type = Hit_None;
     hit.faceTouched = FACE_NONE;
     return hit;
 }
 
-CastHitType scene_cast_ray(Scene *sc,
-                           const Ray *worldRay,
-                           uint16_t groups,
-                           const DoublyLinkedList *filterOutTransforms,
-                           CastResult *result) {
+HitType scene_cast_ray(Scene *sc,
+                       const Ray *worldRay,
+                       uint16_t groups,
+                       const DoublyLinkedList *filterOutTransforms,
+                       CastResult *result) {
 
     CastResult hit = scene_cast_result_default();
 
@@ -608,7 +605,7 @@ CastHitType scene_cast_ray(Scene *sc,
     }
 
     if (worldRay == NULL || groups == PHYSICS_GROUP_NONE) {
-        return CastHit_None;
+        return Hit_None;
     }
 
     DoublyLinkedList *sceneQuery = doubly_linked_list_new();
@@ -642,7 +639,7 @@ CastHitType scene_cast_ray(Scene *sc,
             if (mode == RigidbodyMode_Dynamic) {
                 hit.hitTr = hitTr;
                 hit.distance = rtreeHit->distance;
-                hit.type = CastHit_CollisionBox;
+                hit.type = Hit_CollisionBox;
             } else if (transform_get_type(hitTr) == ShapeTransform &&
                        rigidbody_uses_per_block_collisions(transform_get_rigidbody(hitTr))) {
 
@@ -675,7 +672,7 @@ CastHitType scene_cast_ray(Scene *sc,
                     if (distance < hit.distance) {
                         hit.hitTr = hitTr;
                         hit.distance = distance;
-                        hit.type = CastHit_CollisionBox;
+                        hit.type = Hit_CollisionBox;
                     }
                 }
 
@@ -693,6 +690,98 @@ CastHitType scene_cast_ray(Scene *sc,
     }
 
     return hit.type;
+}
+
+size_t scene_cast_all_ray(Scene *sc,
+                          const Ray *worldRay,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results) {
+
+    if (worldRay == NULL || results == NULL || groups == PHYSICS_GROUP_NONE) {
+        return 0;
+    }
+
+    DoublyLinkedList *sceneQuery = doubly_linked_list_new();
+    size_t count = 0;
+    if (rtree_query_cast_all_ray(sc->rtree,
+                                 worldRay,
+                                 PHYSICS_GROUP_NONE,
+                                 groups,
+                                 filterOutTransforms,
+                                 sceneQuery) > 0) {
+
+        // process query results to confirm intersections w/ per-block and rotated colliders
+        DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
+        RtreeCastResult *rtreeHit;
+        Transform *hitTr;
+        RigidBody *hitRb;
+        CastResult *hit;
+        while (n != NULL) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+            hitRb = transform_get_rigidbody(hitTr);
+            hit = NULL;
+
+            const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+
+            if (mode == RigidbodyMode_Dynamic) {
+                hit = (CastResult *)malloc(sizeof(CastResult));
+                hit->hitTr = hitTr;
+                hit->distance = rtreeHit->distance;
+                hit->type = Hit_CollisionBox;
+            } else if (transform_get_type(hitTr) == ShapeTransform &&
+                       rigidbody_uses_per_block_collisions(transform_get_rigidbody(hitTr))) {
+
+                CastResult blockHit;
+                if (scene_cast_ray_shape_only(sc,
+                                              transform_utils_get_shape(hitTr),
+                                              worldRay,
+                                              &blockHit)) {
+                    hit = (CastResult *)malloc(sizeof(CastResult));
+                    *hit = blockHit;
+                }
+            } else {
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                const Box *collider = rigidbody_get_collider(hitRb);
+                Transform *modelTr = transform_get_type(hitTr) == ShapeTransform
+                                         ? shape_get_pivot_transform(
+                                               transform_utils_get_shape(hitTr))
+                                         : hitTr;
+                Ray *modelRay = ray_world_to_local(worldRay, modelTr);
+
+                float distance;
+                if (ray_intersect_with_box(modelRay, &collider->min, &collider->max, &distance)) {
+                    const float3 modelVector = {modelRay->dir->x * distance,
+                                                modelRay->dir->y * distance,
+                                                modelRay->dir->z * distance};
+                    float3 worldVector;
+                    transform_utils_vector_ltw(modelTr, &modelVector, &worldVector);
+
+                    hit = (CastResult *)malloc(sizeof(CastResult));
+                    hit->hitTr = hitTr;
+                    hit->distance = float3_length(&worldVector);
+                    hit->type = Hit_CollisionBox;
+                }
+
+                ray_free(modelRay);
+            }
+
+            if (hit != NULL) {
+                doubly_linked_list_push_last(results, hit);
+                ++count;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+    }
+    doubly_linked_list_flush(sceneQuery, free);
+    doubly_linked_list_free(sceneQuery);
+
+    // sort query results by distance
+    doubly_linked_list_sort_ascending(results, rtree_utils_result_sort_func);
+
+    return count;
 }
 
 Block *scene_cast_ray_shape_only(Scene *sc,
@@ -717,7 +806,7 @@ Block *scene_cast_ray_shape_only(Scene *sc,
         const FACE_INDEX_INT_T face = ray_impacted_block_face(&localImpact, &ldf);
 
         hit.hitTr = shape_get_root_transform(sh);
-        hit.type = CastHit_Block;
+        hit.type = Hit_Block;
         hit.faceTouched = face;
     }
 
@@ -728,13 +817,13 @@ Block *scene_cast_ray_shape_only(Scene *sc,
     return hit.block;
 }
 
-CastHitType scene_cast_box(Scene *sc,
-                           const Box *aabb,
-                           const float3 *unit,
-                           float maxDist,
-                           uint16_t groups,
-                           const DoublyLinkedList *filterOutTransforms,
-                           CastResult *result) {
+HitType scene_cast_box(Scene *sc,
+                       const Box *aabb,
+                       const float3 *unit,
+                       float maxDist,
+                       uint16_t groups,
+                       const DoublyLinkedList *filterOutTransforms,
+                       CastResult *result) {
 
     CastResult hit = scene_cast_result_default();
 
@@ -743,7 +832,7 @@ CastHitType scene_cast_box(Scene *sc,
     }
 
     if (aabb == NULL || unit == NULL || groups == PHYSICS_GROUP_NONE) {
-        return CastHit_None;
+        return Hit_None;
     }
 
     DoublyLinkedList *sceneQuery = doubly_linked_list_new();
@@ -779,7 +868,7 @@ CastHitType scene_cast_box(Scene *sc,
             if (mode == RigidbodyMode_Dynamic) {
                 hit.hitTr = hitTr;
                 hit.distance = rtreeHit->distance;
-                hit.type = CastHit_CollisionBox;
+                hit.type = Hit_CollisionBox;
             } else {
                 Box modelBox, modelBroadphase;
                 float3 modelVector, modelEpsilon;
@@ -832,7 +921,7 @@ CastHitType scene_cast_box(Scene *sc,
                                 hit.hitTr = hitTr;
                                 hit.block = block;
                                 hit.distance = distance;
-                                hit.type = CastHit_Block;
+                                hit.type = Hit_Block;
                                 hit.blockCoords = blockCoords;
                                 hit.faceTouched = utils_aligned_normal_to_face(&worldNormal);
                             }
@@ -842,7 +931,7 @@ CastHitType scene_cast_box(Scene *sc,
                                                       &modelVector,
                                                       rigidbody_get_collider(hitRb),
                                                       &modelEpsilon,
-                                                      true,
+                                                      false,
                                                       NULL,
                                                       NULL);
                         if (swept < 1.0f) {
@@ -859,7 +948,7 @@ CastHitType scene_cast_box(Scene *sc,
                             if (distance < hit.distance) {
                                 hit.hitTr = hitTr;
                                 hit.distance = distance;
-                                hit.type = CastHit_CollisionBox;
+                                hit.type = Hit_CollisionBox;
                             }
                         }
                     }
@@ -877,6 +966,216 @@ CastHitType scene_cast_box(Scene *sc,
     }
 
     return hit.type;
+}
+
+size_t scene_cast_all_box(Scene *sc,
+                          const Box *aabb,
+                          const float3 *unit,
+                          float maxDist,
+                          uint16_t groups,
+                          const DoublyLinkedList *filterOutTransforms,
+                          DoublyLinkedList *results) {
+
+    if (aabb == NULL || unit == NULL || results == NULL || groups == PHYSICS_GROUP_NONE) {
+        return 0;
+    }
+
+    DoublyLinkedList *sceneQuery = doubly_linked_list_new();
+    size_t count = 0;
+    if (rtree_query_cast_all_box(sc->rtree,
+                                 aabb,
+                                 unit,
+                                 maxDist,
+                                 PHYSICS_GROUP_NONE,
+                                 groups,
+                                 filterOutTransforms,
+                                 sceneQuery)) {
+
+        // process query results to confirm intersections w/ per-block and rotated colliders
+        DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
+        RtreeCastResult *rtreeHit;
+        Transform *hitTr;
+        RigidBody *hitRb;
+        CastResult *hit;
+        while (n != NULL) {
+            rtreeHit = (RtreeCastResult *)doubly_linked_list_node_pointer(n);
+            hitTr = (Transform *)rtree_node_get_leaf_ptr(rtreeHit->rtreeLeaf);
+            hitRb = transform_get_rigidbody(hitTr);
+            hit = NULL;
+
+            const RigidbodyMode mode = rigidbody_get_simulation_mode(hitRb);
+
+            if (mode == RigidbodyMode_Dynamic) {
+                hit = (CastResult *)malloc(sizeof(CastResult));
+                hit->hitTr = hitTr;
+                hit->distance = rtreeHit->distance;
+                hit->type = Hit_CollisionBox;
+            } else {
+                Box modelBox, modelBroadphase;
+                float3 modelVector, modelEpsilon;
+                Shape *hitShape = transform_utils_get_shape(hitTr);
+
+                float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
+
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                const Box *collider = rigidbody_get_collider(hitRb);
+                const Matrix4x4 *invModel = transform_get_wtl(
+                    hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
+                rigidbody_broadphase_world_to_model(invModel,
+                                                    aabb,
+                                                    &modelBox,
+                                                    &vector,
+                                                    &modelVector,
+                                                    EPSILON_COLLISION,
+                                                    &modelEpsilon);
+
+                box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
+                if (box_collide(&modelBroadphase, collider)) {
+                    // shapes may enable per-block collisions
+                    if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                        Block *block = NULL;
+                        SHAPE_COORDS_INT3_T blockCoords;
+                        float3 normal;
+                        const float swept = shape_box_cast(hitShape,
+                                                           &modelBox,
+                                                           &modelVector,
+                                                           &modelEpsilon,
+                                                           false,
+                                                           &normal,
+                                                           NULL,
+                                                           &block,
+                                                           &blockCoords);
+                        if (swept < 1.0f) {
+                            float3_op_scale(&modelVector, swept);
+
+                            float3 worldVector, worldNormal;
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &modelVector,
+                                                       &worldVector);
+                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
+                                                       &normal,
+                                                       &worldNormal);
+
+                            hit = (CastResult *)malloc(sizeof(CastResult));
+                            hit->hitTr = hitTr;
+                            hit->block = block;
+                            hit->distance = float3_length(&worldVector);
+                            hit->type = Hit_Block;
+                            hit->blockCoords = blockCoords;
+                            hit->faceTouched = utils_aligned_normal_to_face(&worldNormal);
+                        }
+                    } else {
+                        const float swept = box_swept(&modelBox,
+                                                      &modelVector,
+                                                      rigidbody_get_collider(hitRb),
+                                                      &modelEpsilon,
+                                                      false,
+                                                      NULL,
+                                                      NULL);
+                        if (swept < 1.0f) {
+                            float3_op_scale(&modelVector, swept);
+
+                            float3 worldVector;
+                            transform_utils_vector_ltw(
+                                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr,
+                                &modelVector,
+                                &worldVector);
+
+                            hit = (CastResult *)malloc(sizeof(CastResult));
+                            hit->hitTr = hitTr;
+                            hit->distance = float3_length(&worldVector);
+                            hit->type = Hit_CollisionBox;
+                        }
+                    }
+                }
+            }
+
+            if (hit != NULL) {
+                doubly_linked_list_push_last(results, hit);
+                ++count;
+            }
+
+            n = doubly_linked_list_node_next(n);
+        }
+    }
+    doubly_linked_list_flush(sceneQuery, free);
+    doubly_linked_list_free(sceneQuery);
+
+    // sort query results by distance
+    doubly_linked_list_sort_ascending(results, rtree_utils_result_sort_func);
+
+    return count;
+}
+
+bool scene_overlap_box(Scene *sc,
+                       const Box *aabb,
+                       uint16_t groups,
+                       uint16_t collidesWith,
+                       const DoublyLinkedList *filterOutTransforms,
+                       FifoList *results) {
+
+    if (aabb == NULL || (groups == PHYSICS_GROUP_NONE && collidesWith == PHYSICS_GROUP_NONE)) {
+        return false;
+    }
+
+    FifoList *sceneQuery = fifo_list_new();
+    size_t hits = 0;
+    if (rtree_query_overlap_box(sc->rtree,
+                                aabb,
+                                groups,
+                                collidesWith,
+                                filterOutTransforms,
+                                sceneQuery,
+                                EPSILON_COLLISION) > 0) {
+        RtreeNode *hit = fifo_list_pop(sceneQuery);
+        Transform *hitLeaf;
+        RigidBody *hitRb;
+        Shape *s;
+        Box model;
+        while (hit != NULL) {
+            hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
+            vx_assert(rtree_node_is_leaf(hit));
+
+            hitRb = transform_get_rigidbody(hitLeaf);
+            vx_assert(hitRb != NULL);
+
+            s = transform_utils_get_shape(hitLeaf);
+            if (s != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                box_to_aabox2(aabb,
+                              &model,
+                              transform_get_wtl(shape_get_pivot_transform(s)),
+                              NULL,
+                              NoSquarify);
+
+                if (shape_box_overlap(s, &model, NULL)) {
+                    if (results != NULL) {
+                        OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult));
+                        result->hitTr = hitLeaf;
+                        result->type = Hit_Block;
+                        fifo_list_push(results, result);
+                        ++hits;
+                    } else {
+                        return true;
+                    }
+                }
+            } else {
+                if (results != NULL) {
+                    OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult));
+                    result->hitTr = hitLeaf;
+                    result->type = Hit_CollisionBox;
+                    fifo_list_push(results, result);
+                    ++hits;
+                } else {
+                    return true;
+                }
+            }
+
+            hit = fifo_list_pop(sceneQuery);
+        }
+    }
+    fifo_list_free(sceneQuery, NULL);
+
+    return hits > 0;
 }
 
 // MARK: - Debug -

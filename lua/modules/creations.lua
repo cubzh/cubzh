@@ -32,7 +32,7 @@ creations.createModalContent = function(_, config)
 	-- if original isn't nil, it means we're duplicating an entity
 	-- original: name of copied entity
 	-- grid parameter is used to force content reload after item creation
-	functions.createNewContent = function(what, original, grid)
+	functions.createNewContent = function(what, original, grid, originalCategory)
 		local newContent = modal:createContent()
 
 		if what == "item" or what == "wearable" then
@@ -187,18 +187,16 @@ creations.createModalContent = function(_, config)
 			text.Color = theme.textColor
 			text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
-			local category = categories[currentCategory]
-			if category == "null" then
-				category = nil
+			local newCategory = categories[currentCategory]
+			if originalCategory then
+				newCategory = originalCategory
 			end
-
-			local _category = category
-			if original ~= nil then
-				_category = nil
+			if newCategory == "null" then
+				newCategory = nil
 			end
 
 			if what == "world" then
-				api:createWorld({ title = sanitized, category = _category, original = original }, function(err, world)
+				api:createWorld({ title = sanitized, category = newCategory, original = original }, function(err, world)
 					if err ~= nil then
 						text.Text = "❌ Sorry, there's been an error."
 						text.Color = theme.colorNegative
@@ -249,7 +247,7 @@ creations.createModalContent = function(_, config)
 					end
 				end)
 			else
-				api:createItem({ name = sanitized, category = _category, original = original }, function(err, item)
+				api:createItem({ name = sanitized, category = newCategory, original = original }, function(err, item)
 					if err ~= nil then
 						if err.statusCode == 409 then
 							text.Text = "❌ You already have an item with that name!"
@@ -288,7 +286,7 @@ creations.createModalContent = function(_, config)
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
-							System.LaunchItemEditor(itemFullName, category)
+							System.LaunchItemEditor(itemFullName, newCategory)
 						end
 
 						local btnDuplicate = ui:createButton("📑 Duplicate", { textSize = "default" })
@@ -297,7 +295,13 @@ creations.createModalContent = function(_, config)
 							-- for refresh at this point
 							local m = itemDetailsContent:getModalIfContentIsActive()
 							if m ~= nil then
-								m:push(functions.createNewContent("item", itemFullName))
+								local what
+								if newCategory == nil then
+									what = "item"
+								else
+									what = "wearable"
+								end
+								m:push(functions.createNewContent(what, itemFullName, nil, newCategory))
 							end
 						end
 
@@ -545,7 +549,13 @@ creations.createModalContent = function(_, config)
 				btnDuplicate.onRelease = function()
 					local m = itemDetailsContent:getModalIfContentIsActive()
 					if m ~= nil then
-						m:push(functions.createNewContent("item", itemFullName, grid))
+						local what
+						if category == nil then
+							what = "item"
+						else
+							what = "wearable"
+						end
+						m:push(functions.createNewContent(what, itemFullName, grid, category))
 					end
 				end
 

@@ -45,6 +45,8 @@ common.events = {
 	RESET_ALL = "ra",
 	P_SAVE_WORLD = "psw",
 	SAVE_WORLD = "sw",
+	P_SET_MAP_OFFSET = "psmo",
+	SET_MAP_OFFSET = "smo",
 }
 
 local SERIALIZED_CHUNKS_ID = {
@@ -238,7 +240,7 @@ local writeChunkAmbience = function(d, ambience)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.AMBIENCE)
-	local cursorLength = d.Length
+	local cursorLengthField = d.Cursor
 	d:WriteUInt16(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -277,11 +279,10 @@ local writeChunkAmbience = function(d, ambience)
 		serializeFunction(d, value[2])
 	end
 
-	local finalLength = d.Length
-	local size = d.Length - cursorLength
-	d.Length = cursorLength
+	local size = d.Cursor - cursorLengthField
+	d.Cursor = cursorLengthField
 	d:WriteUInt16(size)
-	d.Length = finalLength
+	d.Cursor = d.Length
 
 	return true
 end
@@ -334,7 +335,7 @@ local writeChunkObjects = function(d, objects)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.OBJECTS)
-	local cursorLength = d.Length
+	local cursorLengthField = d.Cursor
 	d:WriteUInt32(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -359,7 +360,7 @@ local writeChunkObjects = function(d, objects)
 		d:WriteUInt16(#group)
 
 		for _, object in ipairs(group) do
-			local cursorNbFields = d.Length
+			local cursorNbFields = d.Cursor
 			local nbFields = 0
 			d:WriteUInt8(0) -- temporary nbFields
 
@@ -395,33 +396,28 @@ local writeChunkObjects = function(d, objects)
 			end
 			if object.Physics and object.Physics ~= PhysicsMode.StaticPerBlock then
 				d:WriteString("pm")
-				local realPhysicsMode = object.savedPhysicsState or object.Physics -- object might be frozen when manipulating it (disabled)
-				-- TODO: remove this - Force StaticPerBlock
-				realPhysicsMode = PhysicsMode.StaticPerBlock
-				d:WritePhysicsMode(realPhysicsMode)
+				d:WritePhysicsMode(object.Physics)
 				nbFields = nbFields + 1
 			end
 
 			-- jump back to set nbFields value
-			local endCursor = d.Length
-			d.Length = cursorNbFields
+			d.Cursor = cursorNbFields
 			d:WriteUInt8(nbFields)
-			d.Length = endCursor
+			d.Cursor = d.Length
 		end
 	end
 
-	local finalLength = d.Length
-	local size = d.Length - cursorLength
-	d.Length = cursorLength
+	local size = d.Cursor - cursorLengthField
+	d.Cursor = cursorLengthField
 	d:WriteUInt32(size)
-	d.Length = finalLength
+	d.Cursor = d.Length
 
 	return true
 end
 
 local readChunkObjectsV2 = function(d)
 	local objects = {}
-	d:ReadUInt16() -- read size
+	d:ReadUInt32() -- read size
 	local nbObjects = d:ReadUInt16()
 	local fetchedObjects = 0
 	while fetchedObjects < nbObjects do
@@ -512,7 +508,7 @@ local writeChunkBlocks = function(d, blocks)
 		return false
 	end
 	d:WriteByte(SERIALIZED_CHUNKS_ID.BLOCKS)
-	local cursorLength = d.Length
+	local cursorLengthField = d.Cursor
 	d:WriteUInt16(0) -- temporary write size
 	-- chunk
 	-- CHUNK_ID 1
@@ -534,12 +530,11 @@ local writeChunkBlocks = function(d, blocks)
 		end
 	end
 
-	local finalLength = d.Length
-	local size = d.Length - cursorLength
-	d.Length = cursorLength
+	local size = d.Cursor - cursorLengthField
+	d.Cursor = cursorLengthField
 	d:WriteUInt16(size)
 	d:WriteUInt16(nbBlocks)
-	d.Length = finalLength
+	d.Cursor = d.Length
 
 	return true
 end
@@ -562,32 +557,6 @@ local readChunkBlocks = function(d)
 	return blocks
 end
 
-local writeChunkBase64 = function(d, chunkId, chunkTable)
-	if chunkTable == nil then
-		error("can't serialize chunk " .. tostring(chunkId), 2)
-		return false
-	end
-	d:WriteByte(chunkId)
-	-- chunk
-	-- CHUNK_ID 1
-	-- CHUNK_LEN 4 (len)
-	-- BASE64 len
-	local data = Data(chunkTable)
-	local dataBase64 = data:ToString({ format = "base64" })
-	d:WriteUInt32(#dataBase64)
-	d:WriteString(dataBase64)
-	return true
-end
-
-local readChunkBase64 = function(d)
-	local len = d:ReadUInt32()
-	local base64 = d:ReadString(len)
-	local d2 = Data(base64, { format = "base64" })
-	return d2:ToTable()
-end
-
--- v0: lua table serialized
--- v1: versionId, map chunk that can be read from cpp to load map, then 3 table serialized as base64 chunks
 -- v2: versionId, map chunk that can be read from cpp to load map, ambience fields, objects, blocks
 --     ambience, objects and blocks might not be serialized if the value is nil or length is 0
 -- v3: same as v2 but removed itemDetailsCell and Objects chunk length is now uint32 and not uint16
@@ -618,16 +587,7 @@ local deserializeWorldBase64 = function(str)
 	local d = Data(str, { format = "base64" })
 	local version = d:ReadByte()
 	local world = {}
-	if version == 1 then
-		d:ReadByte() -- skip chunk byte
-		world.mapName, world.mapScale = readChunkMap(d)
-		d:ReadByte() -- skip chunk byte
-		world.ambience = readChunkBase64(d)
-		d:ReadByte() -- skip chunk byte
-		world.objects = readChunkBase64(d)
-		d:ReadByte() -- skip chunk byte
-		world.blocks = readChunkBase64(d)
-	elseif version == 2 or version == 3 then
+	if version == 2 or version == 3 then
 		while d.Cursor < d.Length do
 			local chunk = d:ReadByte()
 			if chunk == SERIALIZED_CHUNKS_ID.MAP then
@@ -671,24 +631,28 @@ common.uuidv4 = function()
 	end)
 end
 
-local loadObject = function(objInfo, didLoad)
-	Object:Load(objInfo.fullname, function(obj)
-		obj:SetParent(World)
-		local k = Box()
-		k:Fit(obj, true)
-		obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
-			l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-		end)
-		obj.Position = objInfo.Position or Number3(0, 0, 0)
-		obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-		obj.Scale = objInfo.Scale or 0.5
-		obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
-		obj.Name = objInfo.Name or objInfo.fullname
-		if didLoad then
-			didLoad(obj)
-		end
+local loadObject = function(obj, objInfo, config)
+	obj:SetParent(World)
+	local k = Box()
+	k:Fit(obj, true)
+	obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
+
+	local scale = objInfo.Scale or 0.5
+	local boxSize = k.Size * scale
+	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr
+		and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
+
+	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
+		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
+		l.Shadow = turnOnShadows
 	end)
+	obj.Position = objInfo.Position or Number3(0, 0, 0)
+	obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
+	obj.Scale = scale
+	obj.uuid = objInfo.uuid
+	obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
+	obj.Name = objInfo.Name or objInfo.fullname
+	obj.fullname = objInfo.fullname
 end
 
 local loadMap = function(d, n, didLoad)
@@ -709,15 +673,35 @@ local loadMap = function(d, n, didLoad)
 	end)
 end
 
+local defaultLoadWorldConfig = {
+	skipMap = false,
+	onLoad = nil,
+	onDone = nil,
+	fullnameItemKey = "fullname",
+	fromBundle = true,
+	optimisations = {
+		minimum_item_size_for_shadows = 40,
+	},
+}
+
 common.loadWorld = function(mapBase64, config)
 	if #mapBase64 == 0 then
 		return
 	end
+
+	config = require("config"):merge(defaultLoadWorldConfig, config, {
+		acceptTypes = { onLoad = { "function" }, onDone = { "function" } },
+	})
+
 	local world = common.deserializeWorld(mapBase64)
 	local loadObjectsBlocksAndAmbience = function()
 		if config.skipMap then
 			Map.Scale = world.mapScale or 5
 			map = Map
+		else
+			if config.onLoad then
+				config.onLoad(map, "Map")
+			end
 		end
 		local blocks = world.blocks
 		local objects = world.objects
@@ -739,21 +723,31 @@ common.loadWorld = function(mapBase64, config)
 			end
 			map:RefreshModel()
 		end
-		nbObjectsLoaded = 0
-		function loadedOneMore()
-			nbObjectsLoaded = nbObjectsLoaded + 1
-			if nbObjectsLoaded == #objects and config.didLoad then
-				config.didLoad()
-			end
-		end
 		if objects then
-			for _, objInfo in ipairs(objects) do
-				objInfo.currentlyEditedBy = nil
-				loadObject(objInfo, loadedOneMore)
+			local minimum_item_size_for_shadows = config.optimisations.minimum_item_size_for_shadows
+			if minimum_item_size_for_shadows ~= nil then
+				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows
+					* minimum_item_size_for_shadows
 			end
+			local massLoading = require("massloading")
+			local onLoad = function(obj, data)
+				data.currentlyEditedBy = nil
+				loadObject(obj, data, config)
+				config.onLoad(obj, data)
+			end
+			local massLoadingConfig = {
+				onDone = config.onDone,
+				onLoad = onLoad,
+				fullnameItemKey = "fullname",
+				fromBundle = config.fromBundle,
+			}
+			massLoading:load(objects, massLoadingConfig)
 		end
 		if ambience then
 			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
+		end
+		if not objects then
+			config.onDone()
 		end
 	end
 	if not config.skipMap then

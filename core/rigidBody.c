@@ -44,18 +44,21 @@ struct _RigidBody {
     // world constant acceleration, in world units/sec^2 (ignores mass)
     float3 *constantAcceleration;
 
-    // mass of the object determines how much a given force can move it,
-    // it cannot be zero, a neutral mass is a mass of 1
-    float mass;
+    // last known valid position
+    float3 *checkpoint;
 
     // combined friction of 2 surfaces in contact represents how much force is absorbed,
     // it is a rate between 0 (full stop on contact) and 1 (full slide, no friction), or
     // below 0 (inverted movement) and above 1 (amplified movement)
-    float friction;
+    float *friction;
 
     // bounciness represents how much force is produced in response to a collision,
     // it is a rate between 0 (no bounce) and 1 (100% of the force bounced) or above
-    float bounciness;
+    float *bounciness;
+
+    // mass of the object determines how much a given force can move it,
+    // it cannot be zero, a neutral mass is a mass of 1
+    float mass;
 
     // collision masks
     uint16_t groups;
@@ -237,6 +240,27 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     float3_op_scale(rb->velocity, drag);
 
     // ------------------------
+    // MOTION CLAMP
+    // ------------------------
+    // Allow Motion to counter velocity if they are opposed, and dampen inertia faster
+
+    if (rb->velocity->x > 0 && rb->motion->x < 0) {
+        rb->velocity->x = maximum(rb->velocity->x + rb->motion->x, 0.0f);
+    } else if (rb->velocity->x < 0 && rb->motion->x > 0) {
+        rb->velocity->x = minimum(rb->velocity->x + rb->motion->x, 0.0f);
+    }
+    if (rb->velocity->y > 0 && rb->motion->y < 0) {
+        rb->velocity->y = maximum(rb->velocity->y + rb->motion->y, 0.0f);
+    } else if (rb->velocity->y < 0 && rb->motion->y > 0) {
+        rb->velocity->y = minimum(rb->velocity->y + rb->motion->y, 0.0f);
+    }
+    if (rb->velocity->z > 0 && rb->motion->z < 0) {
+        rb->velocity->z = maximum(rb->velocity->z + rb->motion->z, 0.0f);
+    } else if (rb->velocity->z < 0 && rb->motion->z > 0) {
+        rb->velocity->z = minimum(rb->velocity->z + rb->motion->z, 0.0f);
+    }
+
+    // ------------------------
     // ADD MOTION
     // ------------------------
     // Motion moves the object w/o drag and w/o affecting velocity directly, although it may
@@ -275,9 +299,10 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     // PREPARE COLLISION TESTING
     // ------------------------
 
-    float3 dv, normal, push3, extraReplacement3, modelDv, modelEpsilon, rtreeNormal;
+    float3 dv, normal, push3, modelDv, modelEpsilon, rtreeNormal;
     float minSwept, swept, rtreeSwept;
     float3 pos = *transform_get_position(t);
+    const bool selfCallbacks = rigidbody_has_callbacks(rb);
     Box broadphase, modelBox, modelBroadphase;
     Shape *shape;
 
@@ -304,7 +329,6 @@ bool _rigidbody_dynamic_tick(Scene *scene,
            solverCount < PHYSICS_MAX_SOLVER_ITERATIONS) {
 
         minSwept = 1.0f;
-        extraReplacement3 = float3_zero;
         contact.t = NULL;
         contact.rb = NULL;
         contact.model = NULL;
@@ -328,6 +352,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                     &broadphase,
                                     rb->groups,
                                     rb->collidesWith,
+                                    NULL,
                                     sceneQuery,
                                     -EPSILON_COLLISION) > 0) {
             RtreeNode *hit = fifo_list_pop(sceneQuery);
@@ -360,7 +385,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 const bool isTrigger = mode == RigidbodyMode_Trigger ||
                                        mode == RigidbodyMode_TriggerPerBlock;
 
-                if (isTrigger && rigidbody_has_callbacks(hitRb) == false) {
+                if (isTrigger && selfCallbacks == false &&
+                    rigidbody_has_callbacks(hitRb) == false) {
                     hit = fifo_list_pop(sceneQuery);
                     continue;
                 }
@@ -381,11 +407,14 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     normal = rtreeNormal;
                 } else {
                     shape = transform_utils_get_shape(hitLeaf);
+                    const bool hitPerBlock = shape != NULL &&
+                                             rigidbody_uses_per_block_collisions(hitRb);
 
                     // solve non-dynamic rigidbodies in their model space (rotated collider)
-                    const Box *collider = rigidbody_get_collider(hitRb);
+                    const Box collider = hitPerBlock ? shape_get_model_aabb(shape)
+                                                     : *rigidbody_get_collider(hitRb);
                     const Matrix4x4 *invModel = transform_get_wtl(
-                        shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
+                        transform_utils_get_model_transform(hitLeaf));
                     rigidbody_broadphase_world_to_model(invModel,
                                                         worldCollider,
                                                         &modelBox,
@@ -395,16 +424,16 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                         &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
-                    if (box_collide(&modelBroadphase, collider)) {
+                    if (box_collide(&modelBroadphase, &collider)) {
                         // shapes may enable per-block collisions
-                        if (shape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+                        if (hitPerBlock) {
                             swept = shape_box_cast(shape,
                                                    &modelBox,
                                                    &modelDv,
                                                    &modelEpsilon,
                                                    true,
                                                    &normal,
-                                                   &extraReplacement3,
+                                                   NULL,
                                                    NULL,
                                                    NULL);
                         } else {
@@ -423,8 +452,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                             swept = rtreeSwept;
                             normal = rtreeNormal;
                         } else {
-                            model = transform_get_ltw(
-                                shape != NULL ? shape_get_pivot_transform(shape) : hitLeaf);
+                            model = transform_get_ltw(transform_utils_get_model_transform(hitLeaf));
                         }
                     } else {
                         swept = 1.0f;
@@ -434,7 +462,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                 if (swept < minSwept) {
                     if (isTrigger) {
                         // consider triggers here too, in case dynamic rb passes through in one
-                        // frame
+                        // frame, or the callback is defined only on the dynamic rb
                         float3 wNormal;
                         if (model != NULL) {
                             matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
@@ -477,30 +505,29 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // ----------------------
         // a replaced component will become "in contact" after replacement (setting swept to 0)
 
-        if (minSwept < 0.0f /*|| float3_isZero(&extraReplacement3, EPSILON_ZERO) == false*/) {
-            f3 = dv; // extraReplacement3;
+        if (minSwept < 0.0f) {
+            f3 = dv;
             float3_op_scale(&f3, minSwept);
             minSwept = 0.0f;
 
-#if PHYSICS_MASS_REPLACEMENTS
-            // prioritize replacing inferior mass rigidbody
-            if (contact.rb != NULL && rigidbody_is_dynamic(contact.rb) &&
-                contact.rb->mass < rb->mass) {
-                float3_op_scale(&f3, -1.0f);
-                float3_op_add(contact.rb->velocity, &f3);
-                rigidbody_non_kinematic_reset(contact.rb);
-            } else {
-                float3_op_add(&pos, &f3);
-                float3_op_add(&worldCollider->min, &f3);
-                float3_op_add(&worldCollider->max, &f3);
-                rigidbody_non_kinematic_reset(rb);
+            // choose smaller replacement between checkpoint and trajectory
+            if (rb->checkpoint != NULL) {
+                const float3 checkpoint = {rb->checkpoint->x - pos.x,
+                                           rb->checkpoint->y - pos.y,
+                                           rb->checkpoint->z - pos.z};
+                const float sqrDist = float3_sqr_length(&checkpoint);
+                if (float_isZero(sqrDist, EPSILON_ZERO)) {
+                    // checkpoint is now obsolete and may cause bad replacements, reset it
+                    float3_free(rb->checkpoint);
+                    rb->checkpoint = NULL;
+                } else if (sqrDist < float3_sqr_length(&f3)) {
+                    f3 = checkpoint;
+                }
             }
-#else
+
             float3_op_add(&pos, &f3);
             float3_op_add(&worldCollider->min, &f3);
             float3_op_add(&worldCollider->max, &f3);
-            rigidbody_non_kinematic_reset(rb);
-#endif
             INC_REPLACEMENTS
 
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
@@ -564,12 +591,19 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                wNormal.z * vIntruding_mag};
 
             // combined friction & bounciness
-            const float friction = contact.rb != NULL
-                                       ? rigidbody_get_combined_friction(rb, contact.rb)
-                                       : rb->friction;
+            const FACE_INDEX_INT_T contactFace = utils_aligned_normal_to_face(&contact.normal);
+            const FACE_INDEX_INT_T face = utils_face_swapped(contactFace);
+            const float friction = contact.rb != NULL ? rigidbody_get_combined_friction(rb,
+                                                                                        contact.rb,
+                                                                                        face,
+                                                                                        contactFace)
+                                                      : rb->friction[face];
             const float bounciness = contact.rb != NULL
-                                         ? rigidbody_get_combined_bounciness(rb, contact.rb)
-                                         : rb->bounciness;
+                                         ? rigidbody_get_combined_bounciness(rb,
+                                                                             contact.rb,
+                                                                             face,
+                                                                             contactFace)
+                                         : rb->bounciness[face];
 
             // (1) apply combined friction on tangential displacement, assign tangential push if
             // displacement originated at least partly from own velocity, not only motion or scene
@@ -710,6 +744,12 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // apply final position to transform
         transform_set_position(t, pos.x, pos.y, pos.z);
 
+        if (rb->checkpoint == NULL) {
+            rb->checkpoint = float3_new_copy(&pos);
+        } else {
+            float3_copy(rb->checkpoint, &pos);
+        }
+
         return true;
     } else {
         return false;
@@ -738,12 +778,15 @@ void _rigidbody_trigger_tick(Scene *scene,
                                 worldCollider,
                                 rb->groups,
                                 rb->collidesWith,
+                                NULL,
                                 sceneQuery,
                                 EPSILON_COLLISION) > 0) {
 
         const Shape *s = transform_utils_get_shape(t);
+        const bool selfPerBlock = s != NULL && rigidbody_uses_per_block_collisions(rb);
 
-        const Box *selfCollider = rigidbody_get_collider(rb);
+        const Box selfCollider = selfPerBlock ? shape_get_model_aabb(s)
+                                              : *rigidbody_get_collider(rb);
         Transform *selfModelTr = transform_utils_get_model_transform(t);
         const Matrix4x4 *selfModel = transform_get_ltw(selfModelTr);
         const Matrix4x4 *selfInvModel = transform_get_wtl(selfModelTr);
@@ -771,8 +814,10 @@ void _rigidbody_trigger_tick(Scene *scene,
             }
 
             const Shape *hitShape = transform_utils_get_shape(hitLeaf);
+            const bool hitPerBlock = hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb);
 
-            Box hitCollider = *rigidbody_get_collider(hitRb);
+            Box hitCollider = hitPerBlock ? shape_get_model_aabb(hitShape)
+                                          : *rigidbody_get_collider(hitRb);
             Transform *hitModelTr = transform_utils_get_model_transform(hitLeaf);
             const Matrix4x4 *hitModel = transform_get_ltw(hitModelTr);
             const Matrix4x4 *hitInvModel = transform_get_wtl(hitModelTr);
@@ -786,14 +831,14 @@ void _rigidbody_trigger_tick(Scene *scene,
                                        NoSquarify);
 
             bool overlap1;
-            if (s != NULL && rigidbody_uses_per_block_collisions(rb)) {
+            if (selfPerBlock) {
                 overlap1 = shape_box_overlap(s, &box, NULL);
             } else {
-                overlap1 = box_collide_epsilon(&box, selfCollider, EPSILON_COLLISION);
+                overlap1 = box_collide_epsilon(&box, &selfCollider, EPSILON_COLLISION);
             }
 
             // 2) check for overlap in hit model space (ignoring self shape per-block quality)
-            box_model1_to_model2_aabox(selfCollider,
+            box_model1_to_model2_aabox(&selfCollider,
                                        &box,
                                        selfModel,
                                        hitInvModel,
@@ -801,7 +846,7 @@ void _rigidbody_trigger_tick(Scene *scene,
                                        NoSquarify);
 
             bool overlap2;
-            if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
+            if (hitPerBlock) {
                 overlap2 = shape_box_overlap(hitShape, &box, &hitCollider); // out: block box
             } else {
                 overlap2 = box_collide_epsilon(&box, &hitCollider, EPSILON_COLLISION);
@@ -846,28 +891,82 @@ void _rigidbody_trigger_tick(Scene *scene,
 }
 
 RigidBody *rigidbody_new(const uint8_t mode, const uint16_t groups, const uint16_t collidesWith) {
-    RigidBody *b = (RigidBody *)malloc(sizeof(RigidBody));
-    if (b == NULL) {
+    RigidBody *rb = (RigidBody *)malloc(sizeof(RigidBody));
+    if (rb == NULL) {
         return NULL;
     }
 
-    b->collider = box_new_copy(&box_one);
-    b->rtreeLeaf = NULL;
-    b->motion = float3_new_zero();
-    b->velocity = float3_new_zero();
-    b->constantAcceleration = float3_new_zero();
-    b->mass = PHYSICS_MASS_DEFAULT;
-    b->friction = PHYSICS_FRICTION_DEFAULT;
-    b->bounciness = PHYSICS_BOUNCINESS_DEFAULT;
-    b->contact = AxesMaskNone;
-    b->groups = groups;
-    b->collidesWith = collidesWith;
-    b->simulationFlags = SIMULATIONFLAG_NONE;
-    b->awakeFlag = 0;
+    rb->collider = box_new_copy(&box_one);
+    rb->rtreeLeaf = NULL;
+    rb->motion = float3_new_zero();
+    rb->velocity = float3_new_zero();
+    rb->constantAcceleration = float3_new_zero();
+    rb->checkpoint = NULL;
+    rb->mass = PHYSICS_MASS_DEFAULT;
+    rb->contact = AxesMaskNone;
+    rb->groups = groups;
+    rb->collidesWith = collidesWith;
+    rb->simulationFlags = SIMULATIONFLAG_NONE;
+    rb->awakeFlag = 0;
 
-    _rigidbody_set_simulation_flag_value(b, SIMULATIONFLAG_MODE, mode);
+    rb->friction = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->friction == NULL) {
+        return NULL;
+    }
+    rb->bounciness = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->bounciness == NULL) {
+        return NULL;
+    }
+    for (uint8_t i = 0; i < FACE_COUNT; ++i) {
+        rb->friction[i] = PHYSICS_FRICTION_DEFAULT;
+        rb->bounciness[i] = PHYSICS_BOUNCINESS_DEFAULT;
+    }
 
-    return b;
+    _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, mode);
+
+    return rb;
+}
+
+RigidBody *rigidbody_new_copy(const RigidBody *other) {
+    if (other == NULL) {
+        return NULL;
+    }
+
+    RigidBody *rb = (RigidBody *)malloc(sizeof(RigidBody));
+    if (rb == NULL) {
+        return NULL;
+    }
+
+    rb->collider = box_new_copy(other->collider);
+    rb->rtreeLeaf = NULL;
+    rb->motion = float3_new_zero();
+    rb->velocity = float3_new_zero();
+    rb->constantAcceleration = float3_new_copy(other->constantAcceleration);
+    rb->checkpoint = other->checkpoint != NULL ? float3_new_copy(other->checkpoint) : NULL;
+    rb->mass = other->mass;
+    rb->contact = AxesMaskNone;
+    rb->groups = other->groups;
+    rb->collidesWith = other->collidesWith;
+    rb->simulationFlags = SIMULATIONFLAG_NONE;
+    rb->awakeFlag = 0;
+
+    rb->friction = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->friction == NULL) {
+        return NULL;
+    }
+    rb->bounciness = (float *)malloc(sizeof(float) * FACE_COUNT);
+    if (rb->bounciness == NULL) {
+        return NULL;
+    }
+    for (uint8_t i = 0; i < FACE_COUNT; ++i) {
+        rb->friction[i] = other->friction[i];
+        rb->bounciness[i] = other->bounciness[i];
+    }
+
+    const uint8_t otherMode = _rigidbody_get_simulation_flag_value(other, SIMULATIONFLAG_MODE);
+    _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, otherMode);
+
+    return rb;
 }
 
 void rigidbody_free(RigidBody *rb) {
@@ -879,6 +978,11 @@ void rigidbody_free(RigidBody *rb) {
     float3_free(rb->motion);
     float3_free(rb->velocity);
     float3_free(rb->constantAcceleration);
+    if (rb->checkpoint != NULL) {
+        float3_free(rb->checkpoint);
+    }
+    free(rb->friction);
+    free(rb->bounciness);
 
     free(rb);
 }
@@ -891,6 +995,8 @@ void rigidbody_reset(RigidBody *rb) {
     // note: rigidbody properties are persistent
     float3_set_zero(rb->motion);
     float3_set_zero(rb->velocity);
+    float3_free(rb->checkpoint);
+    rb->checkpoint = NULL;
 
     _rigidbody_reset_state(rb);
 }
@@ -993,23 +1099,23 @@ float rigidbody_get_mass(const RigidBody *rb) {
 }
 
 void rigidbody_set_mass(RigidBody *rb, const float value) {
-    rb->mass = maximum(value, 1.0f);
+    rb->mass = maximum(value, EPSILON_ZERO);
 }
 
-float rigidbody_get_friction(const RigidBody *rb) {
-    return rb->friction;
+float rigidbody_get_friction(const RigidBody *rb, const FACE_INDEX_INT_T face) {
+    return rb->friction[face < FACE_COUNT ? face : FACE_DOWN];
 }
 
-void rigidbody_set_friction(RigidBody *rb, const float value) {
-    rb->friction = value;
+void rigidbody_set_friction(RigidBody *rb, const FACE_INDEX_INT_T face, const float value) {
+    rb->friction[face < FACE_COUNT ? face : FACE_DOWN] = value;
 }
 
-float rigidbody_get_bounciness(const RigidBody *rb) {
-    return rb->bounciness;
+float rigidbody_get_bounciness(const RigidBody *rb, const FACE_INDEX_INT_T face) {
+    return rb->bounciness[face < FACE_COUNT ? face : FACE_DOWN];
 }
 
-void rigidbody_set_bounciness(RigidBody *rb, const float value) {
-    rb->bounciness = maximum(value, 0.0f);
+void rigidbody_set_bounciness(RigidBody *rb, const FACE_INDEX_INT_T face, const float value) {
+    rb->bounciness[face < FACE_COUNT ? face : FACE_DOWN] = maximum(value, 0.0f);
 }
 
 uint8_t rigidbody_get_contact_mask(const RigidBody *rb) {
@@ -1040,9 +1146,6 @@ uint8_t rigidbody_get_simulation_mode(const RigidBody *rb) {
 void rigidbody_set_simulation_mode(RigidBody *rb, const uint8_t value) {
     const uint8_t mode = _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE);
     if (mode != value) {
-        if (mode == RigidbodyMode_Dynamic) {
-            rigidbody_reset(rb); // reset rigidbody when disabling simulation
-        }
         _rigidbody_set_simulation_flag_value(rb, SIMULATIONFLAG_MODE, value);
 #if TRANSFORM_AABOX_STATIC_COLLIDER_MODE != TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE
         if (value != RigidbodyMode_Disabled) {
@@ -1130,6 +1233,13 @@ bool rigidbody_is_rotation_dependent(const RigidBody *rb) {
 bool rigidbody_is_dynamic(const RigidBody *rb) {
     return rb != NULL &&
            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Dynamic;
+}
+
+bool rigidbody_is_static(const RigidBody *rb) {
+    return rb != NULL &&
+           (_rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) == RigidbodyMode_Static ||
+            _rigidbody_get_simulation_flag_value(rb, SIMULATIONFLAG_MODE) ==
+                RigidbodyMode_StaticPerBlock);
 }
 
 bool rigidbody_uses_per_block_collisions(const RigidBody *rb) {
@@ -1239,23 +1349,29 @@ bool rigidbody_collision_masks_reciprocal_match(const uint16_t groups1,
            (collidesWith2 & groups1) != PHYSICS_GROUP_NONE;
 }
 
-float rigidbody_get_combined_friction(const RigidBody *rb1, const RigidBody *rb2) {
+float rigidbody_get_combined_friction(const RigidBody *rb1,
+                                      const RigidBody *rb2,
+                                      const FACE_INDEX_INT_T face1,
+                                      const FACE_INDEX_INT_T face2) {
 #if PHYSICS_COMBINE_FRICTION_FUNC == 0
-    return minimum(rb1->friction, rb2->friction);
+    return maximum(minimum(rb1->friction[face1], rb2->friction[face2]), 0.0f);
 #elif PHYSICS_COMBINE_FRICTION_FUNC == 1
-    return maximum(rb1->friction, rb2->friction);
+    return maximum(maximum(rb1->friction[face1], rb2->friction[face2]), 0.0f);
 #elif PHYSICS_COMBINE_FRICTION_FUNC == 2
-    return (rb1->friction + rb2->friction) * .5f;
+    return maximum((rb1->friction[face1] + rb2->friction[face2]) * .5f, 0.0f);
 #endif
 }
 
-float rigidbody_get_combined_bounciness(const RigidBody *rb1, const RigidBody *rb2) {
+float rigidbody_get_combined_bounciness(const RigidBody *rb1,
+                                        const RigidBody *rb2,
+                                        const FACE_INDEX_INT_T face1,
+                                        const FACE_INDEX_INT_T face2) {
 #if PHYSICS_COMBINE_BOUNCINESS_FUNC == 0
-    return minimum(rb1->bounciness, rb2->bounciness);
+    return minimum(rb1->bounciness[face1], rb2->bounciness[face2]);
 #elif PHYSICS_COMBINE_BOUNCINESS_FUNC == 1
-    return maximum(rb1->bounciness, rb2->bounciness);
+    return maximum(rb1->bounciness[face1], rb2->bounciness[face2]);
 #elif PHYSICS_COMBINE_BOUNCINESS_FUNC == 2
-    return (rb1->bounciness + rb2->bounciness) * .5f;
+    return (rb1->bounciness[face1] + rb2->bounciness[face2]) * .5f;
 #endif
 }
 

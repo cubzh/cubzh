@@ -5,10 +5,12 @@ description: |
     `Sky` defines properties of the scene global lighting and colouring.
 
 properties:
-    - name: "SkyLightColor"
+    - name: "LightColor"
       type: "Color"
       description: |
           Global scene lighting color, default RGB `(255, 255, 234)`.
+          
+          If using a directional [Light] object in the scene, reducing [Sky.LightColor]'s overall brightness will help creating more contrast from the directional light.
 
     - name: "SkyColor"
       type: "Color"

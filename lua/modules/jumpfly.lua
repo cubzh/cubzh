@@ -3,7 +3,7 @@
 --- TODO: handle mobile Action1
 
 local jumpfly = {
-    TIME_BETWEEN_JUMP = 300
+	TIME_BETWEEN_JUMP = 300,
 }
 
 local latestJump = 0
@@ -12,8 +12,8 @@ local holdingSpace = false
 
 LocalEvent:Listen(LocalEvent.Name.Tick, function()
 	if flying then
-        Player.Animations.Walk:Stop()
-        Player.Animations.Idle:Play()
+		Player.Animations.Walk:Stop()
+		Player.Animations.Idle:Play()
 		Player.Velocity.Y = 3.8 * (holdingSpace and 10 or 1)
 	end
 end)
@@ -22,26 +22,26 @@ local codes = require("inputcodes")
 LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keycode, _, down)
 	if not down and keycode == codes.SPACE then
 		holdingSpace = false
-        return
+		return
 	end
 
 	if down and keycode == codes.SPACE then
 		holdingSpace = true
 		if not flying then
-            latestJump = Time.UnixMilli()
+			latestJump = Time.UnixMilli()
 			-- if Player.IsOnGround then
-				Player.Velocity.Y = 100
+			Player.Velocity.Y = 100
 			-- elseif latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
-				-- activate
-				--TODO: handle multiplayer
-                -- flying = true
+			-- activate
+			--TODO: handle multiplayer
+			-- flying = true
 			-- end
 		else
 			if latestJump > Time.UnixMilli() - jumpfly.TIME_BETWEEN_JUMP then
-                -- deactivate
-                flying = false
+				-- deactivate
+				flying = false
 			end
-            latestJump = Time.UnixMilli()
+			latestJump = Time.UnixMilli()
 		end
 	end
 end)

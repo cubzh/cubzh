@@ -143,7 +143,7 @@ modal.createContent = function(_)
 		-- (used to better fit grids for example)
 		-- The callback receives the size that's about to be applied
 		-- and should return the same size or smaller one.
-		idealReducedContentSize = nil, -- function(content, width, height)
+		idealReducedContentSize = nil, -- function(content, width, height, minWidth)
 
 		-- called right after modal content did become active
 		didBecomeActive = nil, -- function(content)
@@ -161,6 +161,13 @@ modal.createContent = function(_)
 			bottomCenter = {},
 			bottomRight = {},
 			modal = nil,
+			isActive = function(self)
+				local modal = self._attr.modal
+				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
+					return true
+				end
+				return false
+			end,
 			getModalIfContentIsActive = function(self)
 				local modal = self._attr.modal
 				if modal ~= nil and modal.contentStack ~= nil and modal.contentStack[#modal.contentStack] == self then
@@ -236,6 +243,7 @@ end
 -- uikit: optional, allows to provide specific instance of uikit
 modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	local theme = require("uitheme").current
+	local ease = require("ease")
 
 	local ui = uikit or require("uikit")
 
@@ -783,11 +791,26 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self.bottomBar.Height = 0
 		end
 
-		local totalTopWidth = topLeftElementsWidth + topCenterElementsWidth + self.closeBtn.Width + theme.padding * 4
+		-- enforcing same left and right width for center elements
+		-- to better better appear at center with correct margins
+		local topLeftRightWidth = math.max(self.closeBtn.Width, topLeftElementsWidth)
+		local totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
 		local totalBottomWidth = bottomRightElementsWidth
 			+ bottomCenterElementsWidth
 			+ bottomLeftElementsWidth
 			+ theme.padding * 4
+
+		local availableWidthForTopCenter = Screen.Width
+			- (self.closeBtn.Width + topLeftElementsWidth + theme.padding * 8)
+		if self._title and modalContent.title then
+			self._title.Text = modalContent.title
+		end
+		if self._title and self._title.Width > availableWidthForTopCenter then
+			ui:shrinkToFit(self._title, availableWidthForTopCenter)
+			self._title.pos.X = topLeftElementsWidth + theme.padding
+			topCenterElementsWidth = self._title.Width
+			totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
+		end
 
 		-- Start from max size
 		local borderSize = Number2(self:_computeWidth(), self:_computeHeight())
@@ -797,14 +820,19 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		if borderSize.Width < totalBottomWidth then
 			borderSize.Width = totalBottomWidth
 		end
+		if borderSize.Width > Screen.Width then
+			borderSize.Width = Screen.Width
+		end
 
 		local backgroundSize = borderSize - Number2(theme.modalBorder * 2, theme.modalBorder * 2)
 		local contentSize = backgroundSize
 			- Number2(theme.padding * 2, (theme.padding * 2) + self.topBar.Height + self.bottomBar.Height)
 
+		local minWidth = math.max(totalTopWidth, totalBottomWidth)
+
 		if modalContent.idealReducedContentSize ~= nil then
 			local reducedContentSize =
-				modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height)
+				modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height, minWidth)
 			if reducedContentSize ~= nil and reducedContentSize ~= contentSize then
 				if reducedContentSize.X < totalTopWidth then
 					reducedContentSize.X = totalTopWidth
@@ -937,6 +965,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		if active ~= nil and active.willResignActive ~= nil then
 			active:willResignActive()
 		end
+
+		ease:cancel(self) -- cancel eventual easing
 
 		-- if self._content.onClose ~= nil then
 		-- 	self._content:onClose()

@@ -135,7 +135,7 @@ cameraModes.setFree = function(self, config)
 	if self ~= cameraModes then
 		error("camera_modes:setFree(config) should be called with `:`", 2)
 	end
-	if type(config) ~= "table" then
+	if config ~= nil and type(config) ~= "table" then
 		error("camera_modes:setFree(config) - config should be a table", 2)
 	end
 
@@ -224,6 +224,7 @@ cameraModes.setFirstPerson = function(self, config)
 		showPointer = false,
 		camera = Camera, -- main Camera by default
 		target = nil, -- must be set
+		offset = Number3(0, 0, 0),
 	}
 
 	if config then
@@ -254,7 +255,12 @@ cameraModes.setFirstPerson = function(self, config)
 		camera:SetParent(config.target)
 	end
 
-	camera.LocalPosition:Set(0, 0, 0)
+	if config.offset then
+		camera.LocalPosition:Set(config.offset)
+	else
+		camera.LocalPosition:Set(0, 0, 0)
+	end
+
 	camera.LocalRotation:Set(0, 0, 0)
 
 	if config.showPointer then
@@ -282,14 +288,19 @@ cameraModes.setThirdPerson = function(self, config)
 		target = nil, -- must be set
 		offset = nil, -- offset from target
 		rotationOffset = nil,
+		rotation = nil,
 		rigidity = 0.5,
+		collidesWithGroups = Map.CollisionGroups,
+		rotatesWithTarget = true,
 	}
 
 	config = conf:merge(defaultConfig, config, {
 		acceptTypes = {
 			target = { "Object", "Shape", "MutableShape", "Number3", "Player" },
 			offset = { "Number3" },
-			rotationOffset = { "Rotation" },
+			rotationOffset = { "Rotation", "Number3", "table" },
+			rotation = { "Rotation", "Number3", "table" },
+			collidesWithGroups = { "CollisionGroups", "table" },
 		},
 	})
 
@@ -309,12 +320,21 @@ cameraModes.setThirdPerson = function(self, config)
 	local minZoomDistance = config.minZoomDistance
 	local maxZoomDistance = config.maxZoomDistance
 	local target = config.target
+	local collidesWithGroups = config.collidesWithGroups
 	local offset = config.offset or Number3.Zero
 	local rotationOffset = config.rotationOffset or Rotation(0, 0, 0)
 	local targetIsPlayer = type(target) == "Player"
 	local targetHasRotation = type(target) == "Object" or type(target) == "Shape" or type(target) == "MutableShape"
+	local rotatesWithTarget = config.rotatesWithTarget
 
 	camera:SetParent(World)
+	if config.rotation then
+		if not pcall(function()
+			worldObject.Rotation:Set(config.rotation)
+		end) then
+			error("can't set camera rotation", 2)
+		end
+	end
 
 	if showPointer then
 		Pointer:Show()
@@ -327,16 +347,13 @@ cameraModes.setThirdPerson = function(self, config)
 
 	listener = LocalEvent:Listen(LocalEvent.Name.PointerWheel, function(delta)
 		camDistance = camDistance + delta * 0.1
-		if camDistance > maxZoomDistance then
-			camDistance = maxZoomDistance
-		end
-		if camDistance <= minZoomDistance then
-			camDistance = minZoomDistance
-		end
+		camDistance = math.min(maxZoomDistance, camDistance)
+		camDistance = math.max(minZoomDistance, camDistance)
 	end)
 	table.insert(entry.listeners, listener)
 
-	local ray
+	local boxHalfSize = Number3(1, 1, 1)
+	local box = Box()
 	local impact
 	local distance
 	local rigidityFactor = config.rigidity * 60.0
@@ -347,26 +364,35 @@ cameraModes.setThirdPerson = function(self, config)
 
 		if targetIsPlayer then
 			worldObject.Position.Y = worldObject.Position.Y + target.CollisionBox.Max.Y * target.Scale.Y
-			worldObject.Rotation:Set(target.Head.Rotation * rotationOffset)
+			if rotatesWithTarget then
+				worldObject.Rotation:Set(target.Head.Rotation * rotationOffset)
+			end
 		elseif targetHasRotation then
-			worldObject.Rotation:Set(target.Rotation * rotationOffset)
+			if rotatesWithTarget then
+				worldObject.Rotation:Set(target.Rotation * rotationOffset)
+			else
+				worldObject.Rotation:Set(rotationOffset)
+			end
 		else
 			worldObject.Rotation:Set(rotationOffset)
 		end
 
-		-- TODO: use box
-		ray = Ray(worldObject.Position, Number3.Up)
-		impact = ray:Cast(Map.CollisionGroups)
+		box.Min = worldObject.Position - boxHalfSize -- box.Min:Set doesn't work
+		box.Max = worldObject.Position + boxHalfSize -- box.Max:Set doesn't work
+
+		impact = box:Cast(Number3.Up, 3, collidesWithGroups)
 
 		distance = 3
-		if impact.Distance and impact.Distance < distance then
+		if impact and impact.Distance < distance then
 			distance = impact.Distance
 		end
 
 		worldObject.Position = worldObject.Position + Number3.Up * distance
 
-		ray = Ray(worldObject.Position, camera.Backward)
-		impact = ray:Cast(Map.CollisionGroups)
+		box.Min = worldObject.Position - boxHalfSize -- box.Min:Set doesn't work
+		box.Max = worldObject.Position + boxHalfSize -- box.Max:Set doesn't work
+
+		impact = box:Cast(camera.Backward, camDistance, collidesWithGroups)
 
 		if camDistance < 4 then -- in Head, make it invisible
 			if targetIsPlayer then

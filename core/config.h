@@ -14,6 +14,11 @@ extern "C" {
 #include <stdint.h>
 
 #define vx_assert(_CONDITION) assert(_CONDITION)
+#if DEBUG
+#define vx_assert_d(_CONDITION) assert(_CONDITION)
+#else
+#define vx_assert_d(_CONDITION)
+#endif
 
 #ifdef __VX_PLATFORM_WINDOWS
 #define vx_deprecated(_MSG)
@@ -105,6 +110,7 @@ extern unsigned long upper_power_of_two(unsigned long v);
 #define EPSILON_ZERO_RAD 1e-3f
 
 #define EPSILON_COLLISION 1e-3f
+#define EPSILON_CONTACT 1e-2f
 
 // MARK: - PHYSICS -
 
@@ -146,9 +152,6 @@ extern unsigned long upper_power_of_two(unsigned long v);
 /// Replacement happens backwards along the trajectory of a moving rigidbody (false),
 /// or in any direction solely based on whether or not the boxes are already colliding (true)
 #define PHYSICS_EXTRA_REPLACEMENTS false
-/// Replacement happens for moving object only (false), or prioritizes replacing inferior mass
-/// object (true)
-#define PHYSICS_MASS_REPLACEMENTS false
 /// Box sweep is checked in order of X, Y, Z and stops on first-in-order collision (false),
 /// or checks every axes and ensures to return the minimum collision (true)
 #define PHYSICS_FULL_BOX_SWEPT false
@@ -227,8 +230,7 @@ typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
 
 // color index for air block inside shape octree
 #define SHAPE_COLOR_INDEX_AIR_BLOCK 255
-#define SHAPE_COLOR_INDEX_MAX_COUNT 128
-#define SHAPE_OCTREE_MAX 1024
+#define SHAPE_COLOR_INDEX_MAX_COUNT 255
 
 // Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original +
 // complementary colors Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2,
@@ -269,7 +271,7 @@ static const FACE_INDEX_INT_T FACE_FRONT = 2;
 static const FACE_INDEX_INT_T FACE_BACK = 3;
 static const FACE_INDEX_INT_T FACE_TOP = 4;
 static const FACE_INDEX_INT_T FACE_DOWN = 5;
-static const FACE_INDEX_INT_T FACE_SIZE = 6;
+static const FACE_INDEX_INT_T FACE_COUNT = 6;
 static const FACE_INDEX_INT_T FACE_NONE = 7;
 
 // switch cases can only use compile time constants.
@@ -395,7 +397,7 @@ static uint8_t AO_GRADIENT[4] = {0,
 #define GAME_LAUNCH_DEV_MODE true
 #define GAME_LAUNCH_NOT_DEV_MODE false
 
-#define WORLD_HUB_ID "958fa098-7482-4a7a-b863-ec9330f0f4a1"
+#define WORLD_HUB_ID "8ee53160-c2b4-4eeb-8663-a20c13af1f20"
 
 // #define LOCAL_SERVER true
 #define GAME_LAUNCH_DISTANT_SERVER false

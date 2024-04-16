@@ -16,7 +16,7 @@
 #include "transform.h"
 
 #define P3S_COMPRESSION_ALGO_NONE 0
-//#define P3S_COMPRESSION_ALGO_ZIP 1
+// #define P3S_COMPRESSION_ALGO_ZIP 1
 
 #define P3S_CHUNK_ID_NONE 0 // not used as a chunk ID
 #define P3S_CHUNK_ID_PREVIEW 1
@@ -36,7 +36,7 @@
 #define P3S_CHUNK_ID_MAX 15 // not used as a chunk ID, but used to check if chunk ID is known or not
 
 // takes the 4 low bits of a and casts into uint8_t
-#define TO_UINT4(a) (uint8_t)((a)&0x0F)
+#define TO_UINT4(a) (uint8_t)((a) & 0x0F)
 
 // private functions
 // all chunk_v5_read_* functions return number of bytes read.
@@ -498,9 +498,9 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 // size is known, now is a good time to create the shape
                 *shape = shape_make_2(shapeSettings->isMutable);
                 if (serializedPalette != NULL) {
-                    shape_set_palette(*shape, serializedPalette);
+                    shape_set_palette(*shape, serializedPalette, false);
                 } else {
-                    shape_set_palette(*shape, color_palette_new(colorAtlas));
+                    shape_set_palette(*shape, color_palette_new(colorAtlas), false);
                 }
 
                 // this means blocks have been found before the size.

@@ -62,12 +62,16 @@ typedef enum {
     /// default type, only contributes to the transformations down the hierarchy
     /// /!\ only used by internal objects
     HierarchyTransform,
-    /// a point in space, optional ptr RigidBody*, may be considered for physics
+    /// a point in space, optional ptr to rigidbody
     PointTransform,
-    /// rendering primitives, ptr to their respective type, may be considered for rendering &
-    /// physics
+    /// scene primitives, ptr to their respective type
     ShapeTransform,
-    QuadTransform
+    QuadTransform,
+    CameraTransform,
+    LightTransform,
+    WorldTextTransform,
+    AudioSourceTransform,
+    AudioListenerTransform
 } TransformType;
 
 typedef bool (*pointer_transform_recurse_func)(Transform *t, void *ptr);
@@ -76,10 +80,7 @@ typedef Transform **Transform_Array;
 
 /// MARK: - Lifecycle -
 Transform *transform_make(TransformType type);
-Transform *transform_make_with_ptr(TransformType type,
-                                   void *ptr,
-                                   const uint8_t ptrType,
-                                   pointer_free_function ptrFreeFn);
+Transform *transform_make_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn);
 void transform_init_ID_thread_safety(void);
 uint16_t transform_get_id(const Transform *t);
 /// Increases ref count and returns false if the retain count can't be increased
@@ -98,7 +99,7 @@ void transform_reset_any_dirty(Transform *t);
 /// set, but not reset by transform, can be used internally by higher types as custom flag
 bool transform_is_any_dirty(Transform *t);
 void transform_set_destroy_callback(pointer_transform_destroyed_func f);
-void transform_set_managed_ptr(Transform *t, void *ptr);
+void transform_set_managed_ptr(Transform *t, Weakptr *wptr);
 
 /// MARK: - Physics -
 void transform_reset_physics_dirty(Transform *t);
@@ -108,6 +109,7 @@ bool transform_ensure_rigidbody(Transform *t,
                                 uint16_t groups,
                                 uint16_t collidesWith,
                                 RigidBody **out);
+bool transform_ensure_rigidbody_copy(Transform *t, const Transform *other);
 RigidBody *transform_get_rigidbody(Transform *const t);
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);
 
@@ -120,19 +122,15 @@ DoublyLinkedListNode *transform_get_children_iterator(Transform *t);
 Transform_Array transform_get_children_copy(Transform *t, size_t *count);
 size_t transform_get_children_count(Transform *t);
 void *transform_get_ptr(Transform *const t);
-void transform_set_type(Transform *t, TransformType type);
 TransformType transform_get_type(const Transform *t);
-uint8_t transform_get_underlying_ptr_type(const Transform *t);
 bool transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst);
 bool transform_is_hidden_branch(Transform *t);
 void transform_set_hidden_branch(Transform *t, bool value);
 bool transform_is_hidden_self(Transform *t);
 void transform_set_hidden_self(Transform *t, bool value);
 bool transform_is_hidden(Transform *t);
-bool transform_is_scene_dirty(Transform *t);
-void transform_set_scene_dirty(Transform *t, bool value);
-bool transform_is_in_scene(Transform *t);
-void transform_set_is_in_scene(Transform *t, bool value);
+bool transform_is_removed_from_scene(Transform *t);
+void transform_set_removed_from_scene(Transform *t, bool value);
 const char *transform_get_name(const Transform *t);
 void transform_set_name(Transform *t, const char *value);
 
@@ -222,10 +220,11 @@ void transform_utils_get_down(Transform *t, float3 *down);
 const float3 *transform_utils_get_velocity(Transform *t);
 const float3 *transform_utils_get_motion(Transform *t);
 const float3 *transform_utils_get_acceleration(Transform *t);
+void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box);
 
 // MARK: - Misc. -
-void transform_setAnimationsEnabled(Transform *const t, const bool enabled);
-bool transform_getAnimationsEnabled(Transform *const t);
+void transform_set_animations_enabled(Transform *const t, const bool enabled);
+bool transform_is_animations_enabled(Transform *const t);
 float transform_get_shadow_decal(Transform *t);
 void transform_set_shadow_decal(Transform *t, float size);
 
@@ -234,7 +233,7 @@ void transform_set_shadow_decal(Transform *t, float size);
 int debug_transform_get_refresh_calls(void);
 void debug_transform_reset_refresh_calls(void);
 #endif
-void transform_setDebugEnabled(Transform *const t, const bool enabled);
+void debug_transform_set_debug(Transform *const t, const bool enabled);
 
 #ifdef __cplusplus
 } // extern "C"

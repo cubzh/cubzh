@@ -25,13 +25,19 @@ properties:
     
     - name: "Near"
       type: "number"
-      description: "Distance at which Fog starts, in world units"
+      description: |
+          Distance at which Fog starts, in world units. Default value is `200`.
+          
+          Anything closer than `Fog.Near` is not affected by the fog. Anything between `Fog.Near` and `Fog.Far` is progressively colored by fog.
       samples:
         - code: Fog.Near = 50
     
     - name: "Far"
       type: "number"
-      description: "Distance at which Fog ends, in world units."
+      description: |
+          Distance at which Fog ends, in world units. Default value is `400`.
+
+          Anything between `Fog.Near` and `Fog.Far` is progressively colored by fog, up to maximum fog opacity at `Fog.Far` and beyond.
       samples:
         - code: Fog.Far = 100
         - code: |
