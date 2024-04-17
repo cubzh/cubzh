@@ -1258,10 +1258,10 @@ initClientFunctions = function()
 		end
 
 		-- always remove the first block
-		local removed = removeSingleBlock(impact.Block, shape)
+		removeSingleBlock(impact.Block, shape)
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
-		if removed and facemode then
+		if facemode then
 			local faceTouched = impact.FaceTouched
 			local oldColorPaletteIndex = impact.Block.PaletteIndex
 			local queue = { impact.Block }
@@ -1334,8 +1334,6 @@ initClientFunctions = function()
 				mirrorBlock:Remove()
 			end
 		end
-
-		return true
 	end
 
 	replaceBlockWithImpact = function(impact, facemode, shape)
