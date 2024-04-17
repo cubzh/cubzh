@@ -35,6 +35,8 @@ debug.logSubshapes = function(_, shape, level)
 	end
 end
 
+blocksToRemove = {}
+
 local utils = {}
 
 bodyParts = {
@@ -674,6 +676,14 @@ tick = function(dt)
 	if blockHighlightDirty then
 		refreshBlockHighlight()
 	end
+
+	if #blocksToRemove > 0 then
+		for _, t in ipairs(blocksToRemove) do
+			removeSingleBlock(t.block, t.shape)
+		end
+		updateMirror()
+		blocksToRemove = {}
+	end
 end
 
 Pointer.Zoom = function() end
@@ -812,7 +822,8 @@ longPress = function(e)
 				local coords = blockerShape:WorldToBlock(selectedShape:BlockToWorld(impact.Block) + { 0.5, 0.5, 0.5 })
 				blockerShape:AddBlock(1, coords)
 
-				removeBlockWithImpact(impact, currentFacemode, selectedShape)
+				local blockToRemove = { shape = selectedShape, block = impact.Block }
+				table.insert(blocksToRemove, blockToRemove)
 				table.insert(undoShapesStack, selectedShape)
 			elseif currentEditSubmode == editSubmode.paint then
 				replaceBlockWithImpact(impact, currentFacemode, selectedShape)
@@ -861,7 +872,8 @@ drag = function(e)
 
 			local coords = blockerShape:WorldToBlock(item:BlockToWorld(impact.Block) + { 0.5, 0.5, 0.5 })
 			blockerShape:AddBlock(1, coords)
-			removeBlockWithImpact(impact, false, selectedShape)
+			local blockToRemove = { shape = selectedShape, block = impact.Block }
+			table.insert(blocksToRemove, blockToRemove)
 		elseif currentEditSubmode == editSubmode.paint then
 			replaceBlockWithImpact(impact, currentFacemode, selectedShape)
 		end
