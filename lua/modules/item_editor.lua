@@ -35,6 +35,8 @@ debug.logSubshapes = function(_, shape, level)
 	end
 end
 
+blocksToRemove = {}
+
 local utils = {}
 
 bodyParts = {
@@ -674,6 +676,14 @@ tick = function(dt)
 	if blockHighlightDirty then
 		refreshBlockHighlight()
 	end
+
+	if #blocksToRemove > 0 then
+		for _, t in ipairs(blocksToRemove) do
+			removeSingleBlock(t.block, t.shape)
+		end
+		updateMirror()
+		blocksToRemove = {}
+	end
 end
 
 Pointer.Zoom = function() end
@@ -809,10 +819,11 @@ longPress = function(e)
 				blockerShape.Pivot = selectedShape.Pivot
 				blockerShape.Position = selectedShape.Position
 				blockerShape.Rotation = selectedShape.Rotation
-				local coords = blockerShape:WorldToBlock(selectedShape:BlockToWorld(impact.Block))
+				local coords = blockerShape:WorldToBlock(selectedShape:BlockToWorld(impact.Block) + { 0.5, 0.5, 0.5 })
 				blockerShape:AddBlock(1, coords)
 
-				removeBlockWithImpact(impact, currentFacemode, selectedShape)
+				local blockToRemove = { shape = selectedShape, block = impact.Block }
+				table.insert(blocksToRemove, blockToRemove)
 				table.insert(undoShapesStack, selectedShape)
 			elseif currentEditSubmode == editSubmode.paint then
 				replaceBlockWithImpact(impact, currentFacemode, selectedShape)
@@ -859,9 +870,10 @@ drag = function(e)
 				return
 			end
 
-			local coords = blockerShape:WorldToBlock(item:BlockToWorld(impact.Block))
+			local coords = blockerShape:WorldToBlock(item:BlockToWorld(impact.Block) + { 0.5, 0.5, 0.5 })
 			blockerShape:AddBlock(1, coords)
-			removeBlockWithImpact(impact, false, selectedShape)
+			local blockToRemove = { shape = selectedShape, block = impact.Block }
+			table.insert(blocksToRemove, blockToRemove)
 		elseif currentEditSubmode == editSubmode.paint then
 			replaceBlockWithImpact(impact, currentFacemode, selectedShape)
 		end
@@ -1258,10 +1270,10 @@ initClientFunctions = function()
 		end
 
 		-- always remove the first block
-		local removed = removeSingleBlock(impact.Block, shape)
+		removeSingleBlock(impact.Block, shape)
 
 		-- if facemode is enable, test the neighbor blocks of impact.Block
-		if removed and facemode then
+		if facemode then
 			local faceTouched = impact.FaceTouched
 			local oldColorPaletteIndex = impact.Block.PaletteIndex
 			local queue = { impact.Block }
@@ -1334,8 +1346,6 @@ initClientFunctions = function()
 				mirrorBlock:Remove()
 			end
 		end
-
-		return true
 	end
 
 	replaceBlockWithImpact = function(impact, facemode, shape)
