@@ -178,7 +178,7 @@ blocks:
             local impact = ray:Cast()
 
             if impact.Block ~= nil then
-                local position = pointer.Position + pointerEvent.Direction * impact.Distance
+                local position = pointerEvent.Position + pointerEvent.Direction * impact.Distance
                 print("block hit:", impact.Block)
             end
         end
