@@ -1725,7 +1725,7 @@ function createUI(system)
 		node._setText = function(self, str)
 			self.string.Text = str
 			_textInputTextDidChange(self)
-			Client.OSTextInput:Update({ content = str, cursorStart = 0, cursorEnd = 0 })
+			Client.OSTextInput:Update({ content = str, cursorStart = nil, cursorEnd = nil })
 		end
 
 		node._color = function(self)
@@ -1887,8 +1887,8 @@ function createUI(system)
 				multiline = config.multiline,
 				returnKeyType = config.returnKeyType,
 				keyboardType = config.keyboardType,
-				cursorStart = 0,
-				cursorEnd = 0,
+				cursorStart = nil,
+				cursorEnd = nil,
 			})
 
 			if self.textInputUpdateListener == nil then
