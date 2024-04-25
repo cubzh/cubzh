@@ -19,6 +19,7 @@ codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
 uiPointer = require("ui_pointer")
+conf = require("config")
 
 -- CONSTANTS
 
@@ -407,11 +408,6 @@ function refreshDisplay()
 		pezhBtn:hide()
 
 		profileFrame:hide()
-		if signupElements ~= nil then
-			for _, e in ipairs(signupElements) do
-				e:hide()
-			end
-		end
 	else
 		if activeModal then
 			activeModal:show()
@@ -428,11 +424,6 @@ function refreshDisplay()
 		pezhBtn:show()
 
 		profileFrame:show()
-		if signupElements ~= nil then
-			for _, e in ipairs(signupElements) do
-				e:show()
-			end
-		end
 	end
 end
 
@@ -1702,7 +1693,7 @@ menu.IsActive = function(_)
 		or alertModal ~= nil
 		or loadingModal ~= nil
 		or cppMenuIsActive
-		or signupElements ~= nil
+		or authFlow:isActive() == true
 end
 
 function menuSectionCanBeShown()
@@ -2220,68 +2211,160 @@ function accountCheck(callbacks)
 	end)
 end
 
-signupElements = nil
+authFlow = {
+	isActive = function(self)
+		return self.modal ~= nil
+	end,
+	cancel = function(self)
+		if self.callbacks.cancel then
+			self.callbacks.cancel()
+		end
+	end,
+	helpBtn = nil,
+	loginBtn = nil,
+	signUpBtn = nil,
+	modal = nil,
+	callbacks = nil, -- generic callbacks for auth flow (for users going through sign up OR login)
+}
+
+authFlow.clear = function(self, config)
+	local defaultConfig = {
+		callCancel = false,
+		removeHelpBtn = true,
+		closeModal = true,
+	}
+	config = conf:merge(defaultConfig, config)
+
+	if config.removeHelpBtn == true and self.helpBtn ~= nil then
+		self.helpBtn:remove()
+		self.helpBtn = nil
+	end
+	if self.loginBtn ~= nil then
+		self.loginBtn:remove()
+		self.loginBtn = nil
+	end
+	if self.signUpBtn ~= nil then
+		self.signUpBtn:remove()
+		self.signUpBtn = nil
+	end
+	if self.modal ~= nil then
+		self.modal.didClose = nil -- defuse didClose callback
+		if config.callCancel == true then
+			self:cancel()
+		end
+		if config.closeModal == true then
+			self.modal:close()
+		end
+		self.modal = nil
+	end
+end
+
+authFlow.common = function(self)
+	if self.helpBtn == nil then
+		local helpBtn =
+			ui:createButton("👾 " .. str:upperFirstChar(loc("need help?")), { textSize = "small", borders = false })
+		helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+		helpBtn.onRelease = function()
+			URL:Open("https://cu.bzh/discord")
+		end
+		helpBtn.parentDidResize = function(self)
+			self.pos = {
+				Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
+				Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+				0,
+			}
+		end
+		helpBtn:parentDidResize()
+		self.helpBtn = helpBtn
+	end
+end
+
+authFlow.showLogin = function(self)
+	self:clear({ removeHelpBtn = false })
+	self:common()
+
+	if self.signUpBtn == nil then
+		local signUpBtn = ui:createButton("Sign Up", { textSize = "small", borders = false })
+		signUpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+		signUpBtn.parentDidResize = function(self)
+			self.pos = {
+				Screen.SafeArea.Left + theme.padding,
+				Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+				0,
+			}
+		end
+		self.signUpBtn = signUpBtn
+
+		signUpBtn.onRelease = function()
+			authFlow:showSignUp()
+		end
+		signUpBtn:parentDidResize()
+	end
+
+	local loginModal = require("login"):createModal({ uikit = ui })
+	loginModal.onLoginSuccess = function()
+		-- credentials already stored when reaching this point
+		System:DebugEvent("LOGIN_SUCCESS")
+		self:clear()
+		if authFlow.callbacks.success ~= nil then
+			authFlow.callbacks.success()
+		end
+	end
+	self.modal = loginModal
+
+	loginModal.didClose = function()
+		self:clear({ callCancel = true, closeModal = false })
+	end
+end
 
 -- callbacks: success, cancel, error
-function showSignUp(callbacks)
-	local helpBtn =
-		ui:createButton("👾 " .. str:upperFirstChar(loc("need help?")), { textSize = "small", borders = false })
-	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-	helpBtn.onRelease = function()
-		URL:Open("https://cu.bzh/discord")
+authFlow.showSignUp = function(self, callbacks)
+	if callbacks ~= nil then
+		self.callbacks = callbacks
 	end
-	helpBtn.parentDidResize = function(self)
-		self.pos = {
-			Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
-			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-			0,
-		}
-	end
-	helpBtn:parentDidResize()
 
-	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
-	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-	loginBtn.parentDidResize = function(self)
-		self.pos = {
-			Screen.SafeArea.Left + theme.padding,
-			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-			0,
-		}
+	self:clear({ removeHelpBtn = false })
+	self:common()
+
+	if self.loginBtn == nil then
+		local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
+		loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+		loginBtn.parentDidResize = function(self)
+			self.pos = {
+				Screen.SafeArea.Left + theme.padding,
+				Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+				0,
+			}
+		end
+
+		loginBtn.onRelease = function()
+			authFlow:showLogin()
+			-- System.Login(function(success, _)
+			-- 	if success then
+			-- 		helpBtn:remove()
+			-- 		loginBtn:remove()
+
+			-- 		signupModal.didClose = nil
+			-- 		signupModal:close()
+			-- 		signupModal = nil
+
+			-- 		if callbacks.success ~= nil then
+			-- 			callbacks.success()
+			-- 		end
+			-- 	end
+			-- end)
+		end
+		loginBtn:parentDidResize()
+
+		self.loginBtn = loginBtn
 	end
 
 	local signupModal = require("signup"):createModal({ uikit = ui })
-
-	signupElements = { signupModal, helpBtn, loginBtn, signupModal.terms }
-
-	loginBtn.onRelease = function()
-		System.Login(function(success, _)
-			if success then
-				helpBtn:remove()
-				loginBtn:remove()
-				signupElements = nil
-
-				signupModal.didClose = nil
-				signupModal:close()
-				signupModal = nil
-
-				if callbacks.success ~= nil then
-					callbacks.success()
-				end
-			end
-		end)
-	end
-	loginBtn:parentDidResize()
+	self.modal = signupModal
 
 	signupModal.onSubmit = function(username, key, dob)
 		System:DebugEvent("SIGNUP_SUBMIT")
-
-		loginBtn:remove()
-		helpBtn:remove()
-		signupElements = nil
-
-		signupModal.didClose = nil
-		signupModal:close()
-		signupModal = nil
+		self:clear()
 
 		local function _createAccount(onError)
 			showLoading("Creating account")
@@ -2295,8 +2378,8 @@ function showSignUp(callbacks)
 				else
 					System:StoreCredentials(credentials["user-id"], credentials.token)
 					System:DebugEvent("ACCOUNT_CREATED")
-					if callbacks.success ~= nil then
-						callbacks.success()
+					if authFlow.callbacks.success ~= nil then
+						authFlow.callbacks.success()
 					end
 				end
 			end)
@@ -2310,8 +2393,8 @@ function showSignUp(callbacks)
 				end,
 				positiveLabel = "Retry",
 				neutralCallback = function()
-					if callbacks.error ~= nil then
-						callbacks.error()
+					if authFlow.callbacks.error ~= nil then
+						authFlow.callbacks.error()
 					end
 				end,
 				neutralLabel = "Cancel",
@@ -2322,13 +2405,7 @@ function showSignUp(callbacks)
 	end
 
 	signupModal.didClose = function()
-		loginBtn:remove()
-		helpBtn:remove()
-		signupElements = nil
-		signupModal = nil
-		if callbacks.cancel ~= nil then
-			callbacks.cancel()
-		end
+		self:clear({ callCancel = true, closeModal = false })
 	end
 end
 
@@ -2441,7 +2518,7 @@ function skipTitleScreen()
 	flow.showSignUp = function()
 		System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
 		hideLoading()
-		showSignUp({
+		authFlow:showSignUp({
 			success = flow.accountCheck,
 			error = showTitleScreen,
 			cancel = showTitleScreen,
