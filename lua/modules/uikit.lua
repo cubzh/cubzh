@@ -1725,7 +1725,9 @@ function createUI(system)
 		node._setText = function(self, str)
 			self.string.Text = str
 			_textInputTextDidChange(self)
-			Client.OSTextInput:Update({ content = str, cursorStart = nil, cursorEnd = nil })
+			if focused == self then
+				Client.OSTextInput:Update({ content = str, cursorStart = nil, cursorEnd = nil })
+			end
 		end
 
 		node._color = function(self)
