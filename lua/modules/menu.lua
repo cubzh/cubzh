@@ -2134,27 +2134,9 @@ end
 
 function magicKeyCheck(callbacks)
 	if System.HasCredentials == false and System.AskedForMagicKey then
-		-- TODO
-		-- checkMagicKey(
-		-- 	function(error, info)
-		-- 		if error ~= nil then
-		-- 			-- displayTitleScreen()
-		-- 		else
-		-- 			accountInfo = info
-		-- 			done()
-		-- 		end
-		-- 	end,
-		-- 	function(keyIsValid)
-		-- 		if keyIsValid then
-		-- 			closeModals()
-		-- 		else
-		-- 			checkUserInfo()
-		-- 		end
-		-- 	end
-		-- )
-		System:RemoveAskedForMagicKey()
-		if callbacks.err ~= nil then
-			callbacks.err()
+		authFlow:showLogin(callbacks)
+		if callbacks.requestedMagicKey ~= nil then
+			callbacks.requestedMagicKey()
 		end
 	else
 		if callbacks.success ~= nil then
@@ -2279,7 +2261,11 @@ authFlow.common = function(self)
 	end
 end
 
-authFlow.showLogin = function(self)
+authFlow.showLogin = function(self, callbacks, hasMagicKey)
+	if callbacks ~= nil then
+		self.callbacks = callbacks
+	end
+
 	self:clear({ removeHelpBtn = false })
 	self:common()
 
@@ -2301,7 +2287,8 @@ authFlow.showLogin = function(self)
 		signUpBtn:parentDidResize()
 	end
 
-	local loginModal = require("login"):createModal({ uikit = ui })
+	-- if hasMagicKey == true -> jumps to magic key prompt
+	local loginModal = require("login"):createModal({ uikit = ui, hasMagicKey = hasMagicKey })
 	loginModal.onLoginSuccess = function()
 		-- credentials already stored when reaching this point
 		System:DebugEvent("LOGIN_SUCCESS")
@@ -2467,6 +2454,7 @@ function skipTitleScreen()
 		magicKeyCheck({
 			success = flow.accountCheck,
 			err = flow.restartSignUp,
+			requestedMagicKey = flow.showLogin,
 		})
 	end
 
@@ -2522,6 +2510,15 @@ function skipTitleScreen()
 			success = flow.accountCheck,
 			error = showTitleScreen,
 			cancel = showTitleScreen,
+		})
+	end
+
+	flow.showLogin = function()
+		hideLoading()
+		authFlow:showLogin({
+			success = flow.accountCheck,
+			error = showTitleScreen,
+			csancel = showTitleScreen,
 		})
 	end
 

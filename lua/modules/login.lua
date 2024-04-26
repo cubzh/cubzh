@@ -217,7 +217,7 @@ mod.createModal = function(_, config)
 				local req = api:getMagicKey(usernameOrEmail, function(err, res)
 					-- res.username, res.password, res.magickey
 					if err == nil then
-						-- TODO: store that magic key's been sent
+						System:SetAskedForMagicKey()
 						-- opening Cubzh again after this should bring up magic key input directly then
 						local c = getMagicKeyInputContent(usernameOrEmail)
 						content:push(c)
@@ -343,6 +343,12 @@ mod.createModal = function(_, config)
 	end
 
 	loginButton.onRelease = function()
+		-- save in case user comes back with magic key after closing app
+		System:SaveUsernameOrEmail(usernameInput.Text)
+		-- if user asked for magic key in the past, this is the best
+		-- time to forget about it.
+		System:RemoveAskedForMagicKey()
+
 		showLoading()
 		local req = api:getLoginOptions(usernameInput.Text, function(err, res)
 			-- res.username, res.password, res.magickey
@@ -403,6 +409,11 @@ mod.createModal = function(_, config)
 
 		loadingLabel.pos.X = self.Width * 0.5 - loadingLabel.Width * 0.5
 		loadingLabel.pos.Y = self.Height * 0.5 - loadingLabel.Height * 0.5
+	end
+
+	if System.AskedForMagicKey == true then
+		local c = getMagicKeyInputContent(System.SavedUsernameOrEmail)
+		content:push(c)
 	end
 
 	return popup
