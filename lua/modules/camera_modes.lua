@@ -65,6 +65,8 @@ function showAvatar(entry)
 
 	player.Head.IsHidden = false
 	player.Head.IsHiddenSelf = false
+	player.EyeLidRight.IsHidden = false
+	player.EyeLidLeft.IsHidden = false
 	player.Body.IsHiddenSelf = false
 	player.RightArm.IsHidden = false
 	player.LeftArm.IsHidden = false
@@ -91,6 +93,8 @@ function hideAvatar(entry)
 
 	player.Head.IsHidden = false
 	player.Head.IsHiddenSelf = true
+	player.EyeLidRight.IsHidden = true
+	player.EyeLidLeft.IsHidden = true
 	player.Body.IsHiddenSelf = true
 	player.RightArm.IsHidden = true
 	player.LeftArm.IsHidden = true
