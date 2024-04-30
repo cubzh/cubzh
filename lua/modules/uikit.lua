@@ -1561,6 +1561,7 @@ function createUI(system)
 		local t = Text()
 		t.Anchor = { 0, 0 }
 		t.Type = TextType.World
+		t.Font = Font.Noto
 		_setLayers(t)
 		t.Text = str
 		t.Padding = 0

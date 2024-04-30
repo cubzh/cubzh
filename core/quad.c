@@ -27,8 +27,9 @@ struct _Quad {
     uint32_t abgr;          /* 4 bytes */
     uint16_t layers;        /* 2 bytes */
     uint8_t flags;          /* 1 byte */
+    uint8_t sortOrder;      /* 1 byte */
 
-    char pad[1];
+    // no padding
 };
 
 void _quad_toggle_flag(Quad *q, uint8_t flag, bool toggle) {
@@ -64,6 +65,7 @@ Quad *quad_new(void) {
     q->abgr = 0xffffffff;
     q->layers = 1; // CAMERA_LAYERS_DEFAULT
     q->flags = QUAD_FLAG_DOUBLESIDED;
+    q->sortOrder = 0;
     return q;
 }
 
@@ -223,6 +225,14 @@ void quad_set_mask(Quad *q, bool toggle) {
 
 bool quad_is_mask(const Quad *q) {
     return _quad_get_flag(q, QUAD_FLAG_MASK);
+}
+
+void quad_set_sort_order(Quad *q, uint8_t value) {
+    q->sortOrder = value;
+}
+
+uint8_t quad_get_sort_order(const Quad *q) {
+    return q->sortOrder;
 }
 
 // MARK: - Utils -
