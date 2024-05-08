@@ -577,47 +577,50 @@ local statesSettings = {
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 
 			-- Translation gizmo
-			worldEditor.gizmo:setObject(worldEditor.object)
-			worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
-			worldEditor.gizmo:setAxisVisibility(true, true, true)
-			worldEditor.gizmo:setOnMoveBegin(function()
-				setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
-			end)
-			worldEditor.gizmo:setOnMoveEnd(function()
-				setObjectAlpha(worldEditor.object, 1)
-				sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
-			end)
-			worldEditor.gizmo:setOnMove(function()
-				sendToServer(events.P_EDIT_OBJECT, {
-					uuid = worldEditor.object.uuid,
-					Position = worldEditor.object.Position,
-				})
-			end)
+			local g = require("transformgizmo"):create({ target = worldEditor.object })
+			worldEditor.transformGizmo = g
 
-			-- Rotation
-			worldEditor.uiGizmoRotation:setShape(worldEditor.object)
-			worldEditor.uiGizmoRotation:show()
+			-- worldEditor.gizmo:setObject(worldEditor.object)
+			-- worldEditor.gizmo:setMode(require("gizmo").Mode.Move)
+			-- worldEditor.gizmo:setAxisVisibility(true, true, true)
+			-- worldEditor.gizmo:setOnMoveBegin(function()
+			-- 	setObjectAlpha(worldEditor.object, ALPHA_ON_DRAG)
+			-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = ALPHA_ON_DRAG })
+			-- end)
+			-- worldEditor.gizmo:setOnMoveEnd(function()
+			-- 	setObjectAlpha(worldEditor.object, 1)
+			-- 	sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, alpha = 1 })
+			-- end)
+			-- worldEditor.gizmo:setOnMove(function()
+			-- 	sendToServer(events.P_EDIT_OBJECT, {
+			-- 		uuid = worldEditor.object.uuid,
+			-- 		Position = worldEditor.object.Position,
+			-- 	})
+			-- end)
 
-			if worldEditor.positionInput then
-				worldEditor.positionInput:setShape(worldEditor.object)
-				worldEditor.positionInput:show()
-				worldEditor.rotationInput:setShape(worldEditor.object)
-				worldEditor.rotationInput:show()
-				worldEditor.scaleInput:setShape(worldEditor.object)
-				worldEditor.scaleInput:show()
-			end
+			-- -- Rotation
+			-- worldEditor.uiGizmoRotation:setShape(worldEditor.object)
+			-- worldEditor.uiGizmoRotation:show()
+
+			-- if worldEditor.positionInput then
+			-- 	worldEditor.positionInput:setShape(worldEditor.object)
+			-- 	worldEditor.positionInput:show()
+			-- 	worldEditor.rotationInput:setShape(worldEditor.object)
+			-- 	worldEditor.rotationInput:show()
+			-- 	worldEditor.scaleInput:setShape(worldEditor.object)
+			-- 	worldEditor.scaleInput:show()
+			-- end
 		end,
 		tick = function()
-			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0, 10, 0) + Player.Right * 5)
-			local v = worldEditor.object.Position - Camera.Position
-			local isVisible = Camera.Forward:Dot(v) >= 0
-			if p and isVisible then
-				worldEditor.scaleButton:show()
-				worldEditor.scaleButton.pos = { p.X * Screen.Width, p.Y * Screen.Height }
-			else
-				worldEditor.scaleButton:hide()
-			end
+			-- local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0, 10, 0) + Player.Right * 5)
+			-- local v = worldEditor.object.Position - Camera.Position
+			-- local isVisible = Camera.Forward:Dot(v) >= 0
+			-- if p and isVisible then
+			-- 	worldEditor.scaleButton:show()
+			-- 	worldEditor.scaleButton.pos = { p.X * Screen.Width, p.Y * Screen.Height }
+			-- else
+			-- 	worldEditor.scaleButton:hide()
+			-- end
 		end,
 		pointerDown = function(pe)
 			local impact = pe:CastRay({ 6 })
@@ -642,8 +645,17 @@ local statesSettings = {
 			tryPickObject(pe)
 		end,
 		onStateEnd = function()
-			worldEditor.uiGizmoRotation:hide()
-			worldEditor.scaleButton:hide()
+			if worldEditor.transformGizmo then
+				worldEditor.transformGizmo:remove()
+			end
+
+			if worldEditor.uiGizmoRotation then
+				worldEditor.uiGizmoRotation:hide()
+			end
+
+			if worldEditor.scaleButton then
+				worldEditor.scaleButton:hide()
+			end
 
 			if worldEditor.positionInput then
 				worldEditor.positionInput:hide()
