@@ -1251,7 +1251,12 @@ initDefaultMode = function()
 		sendToServer(events.P_SET_MAP_SCALE, { mapScale = value })
 	end
 	input:setParent(frame)
-	frame.parentDidResize = function()
+	frame.parentDidResize = function(self)
+		local parent = self.parent
+		if not parent then
+			return
+		end
+		self.Width = parent.Width
 		text.pos.Y = input.Height * 0.5 - text.Height * 0.5
 		input.Width = frame.Width - text.Width - padding
 		input.pos.X = text.pos.X + text.Width + padding
