@@ -1886,6 +1886,13 @@ function ui_init()
 				selectFocusShape(item)
 			end
 
+			-- dump previous standalone palette
+			-- note: this function probably should have looked for a standalone palette in the imported file ; but now, after .66, it doesn't matter anymore
+			standalonePalette = nil
+
+			-- reset all colors in the palette widget
+			palette:setColors(item)
+
 			initShapes()
 
 			fitObjectToScreen(item, nil)
