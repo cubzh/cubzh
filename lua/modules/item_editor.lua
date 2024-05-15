@@ -1873,7 +1873,7 @@ function ui_init()
 			end
 			item = nil
 
-			item = MutableShape(fileData) -- raises an error on failure / do not share palette colors
+			item = MutableShape(fileData) -- raises an error on failure
 			item.History = true -- enable history for the edited item
 			item:SetParent(World)
 
@@ -2456,8 +2456,10 @@ function ui_init()
 				return
 			end
 
-			child = MutableShape(fileData) -- raises an error on failure / do not share palette colors
+			child = MutableShape(fileData) -- raises an error on failure
 			child:SetParent(focusShape)
+
+			item.Palette:Merge(child, { remap = true, recurse = true }) -- merge & remap each child shape to use item.Palette
 
 			-- Spawn next to the parent
 			child.Position = child.Position - Number3(focusShape.Width / 2 + child.Width * 2, 0, 0)
