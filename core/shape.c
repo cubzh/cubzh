@@ -1442,6 +1442,7 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z) {
     }
 
     transform_set_local_position(s->pivot, -x, -y, -z);
+    transform_set_physics_dirty(s->transform);
 }
 
 float3 shape_get_pivot(const Shape *s) {

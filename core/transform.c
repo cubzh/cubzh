@@ -318,6 +318,10 @@ void transform_set_managed_ptr(Transform *t, Weakptr *wptr) {
 
 // MARK: - Physics -
 
+void transform_set_physics_dirty(Transform *t) {
+    _transform_set_dirty(t, TRANSFORM_DIRTY_PHYSICS, false);
+}
+
 void transform_reset_physics_dirty(Transform *t) {
     _transform_reset_dirty(t, TRANSFORM_DIRTY_PHYSICS);
 }
