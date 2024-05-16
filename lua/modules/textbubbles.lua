@@ -28,6 +28,7 @@ textbubbles.set = function(object, text, duration, offset, color, backgroundColo
 		object.__text.Type = TextType.Screen
 		object.__text.Padding = 5
 		object.__text.IsUnlit = true
+		object.__text.Font = Font.Noto
 		object.__text.FontSize = Text.FontSizeDefault
 		object.__text:SetParent(object)
 	end
@@ -90,6 +91,7 @@ textbubbles.create = function(self, config)
 	t.MaxWidth = config.maxWidth
 	t.Padding = config.padding
 	t.IsUnlit = true
+	t.Font = Font.Noto
 	t.FontSize = config.fontSize()
 	t.Color = config.textColor
 	t.BackgroundColor = config.backgroundColor
