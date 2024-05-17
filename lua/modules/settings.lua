@@ -123,35 +123,38 @@ settings.createModalContent = function(_, config)
 	-- RENDER QUALITY
 
 	local renderQualityLabel = ui:createText("", Color.White)
+	local rqMinus = ui:createButton("➖")
+	local rqPlus = ui:createButton("➕")
+
 	local function refreshRenderQualityLabel()
-		renderQualityLabel.Text =
-			string.format("Render Quality: %d/%d ", System.RenderQualityTier, System.MaxRenderQualityTier)
+		if System.RenderQualityTiersAvailable then
+			renderQualityLabel.Text =
+				string.format("Render Quality: %d/%d ", System.RenderQualityTier, System.MaxRenderQualityTier)
+		else
+			rqMinus:disable()
+			rqPlus:disable()
+			renderQualityLabel.Text = string.format("Render Quality: 1/%d ", System.MaxRenderQualityTier)
+		end
 
 		local modal = content:getModalIfContentIsActive()
 		if modal then
 			modal:refreshContent()
 		end
 	end
-	refreshRenderQualityLabel()
 
-	local rqMinus = ui:createButton("➖")
 	rqMinus.label = sensitivityLabel
 	rqMinus.onRelease = function(_)
 		System.RenderQualityTier = math.max(System.RenderQualityTier - 1, System.MinRenderQualityTier)
 		refreshRenderQualityLabel()
 	end
 
-	local rqPlus = ui:createButton("➕")
 	rqPlus.label = sensitivityLabel
 	rqPlus.onRelease = function(_)
 		System.RenderQualityTier = math.min(System.RenderQualityTier + 1, System.MaxRenderQualityTier)
 		refreshRenderQualityLabel()
 	end
 
-	if System.RenderQualityTiersAvailable == false then
-		rqMinus:disable()
-		rqPlus:disable()
-	end
+	refreshRenderQualityLabel()
 
 	table.insert(rows, { renderQualityLabel, rqMinus, rqPlus })
 
