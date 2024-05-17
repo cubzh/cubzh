@@ -1,14 +1,6 @@
---[[
-UI module used to implement default user interfaces in Cubzh.
+--- This module allows you to create User Interface components (buttons, labels, texts, etc.).
 
-//!\\ Still a work in progress. Your scripts may break in the future if you use it now.
-
-]]
---
-
-----------------------
 -- CONSTANTS
-----------------------
 
 UI_FAR = 1000
 UI_LAYER = 12
@@ -24,9 +16,7 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 COMBO_BOX_SELECTOR_SPEED = 400
 
-----------------------
 -- ENUMS
-----------------------
 
 local State = {
 	Idle = 0,
@@ -42,9 +32,7 @@ local NodeType = {
 	Button = 2,
 }
 
-----------------------
 -- MODULES
-----------------------
 
 codes = require("inputcodes")
 cleanup = require("cleanup")
@@ -53,6 +41,8 @@ sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
 conf = require("config")
+
+-- GLOBALS
 
 sharedUI = nil
 sharedUIRootFrame = nil
@@ -97,10 +87,21 @@ function unfocus()
 	focus(nil)
 end
 
--- by default, require("uikit") returns one ui instance,
--- calling this function.
--- but it's also possible for System modules to request
--- a "System" instance that's always rendered on top of everything.
+function getPointerXYWithinNode(pe, node)
+	local x = pe.X * Screen.Width
+	local y = pe.Y * Screen.Height
+	local n = node
+	while n do
+		x = x - n.pos.X
+		y = y - n.pos.Y
+		n = n.parent
+	end
+	return Number2(x, y)
+end
+
+-- Pne UI instance is automatically created when requiring module.
+-- a second one is also created for system menus.
+-- This function is not exposed, thus no other instances can be created.
 function createUI(system)
 	local ui = {}
 
@@ -171,9 +172,7 @@ function createUI(system)
 		return _groups
 	end
 
-	----------------------
 	-- INIT
-	----------------------
 
 	Pointer:Show()
 
@@ -197,10 +196,6 @@ function createUI(system)
 
 	rootFrame:SetParent(World)
 	rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR }
-
-	-----------------------------
-	-- PRIVATE FUNCTIONS
-	-----------------------------
 
 	local function _setupUIObject(object, collides)
 		hierarchyActions:applyToDescendants(object, { includeRoot = true }, function(o)
@@ -618,9 +613,9 @@ function createUI(system)
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
-					t._onPress = function(self)
+					t._onPress = function(self, object, block, pe)
 						if v ~= nil then
-							v(self)
+							v(self, object, block, pe)
 						end
 					end
 				end
@@ -680,9 +675,9 @@ function createUI(system)
 				end
 			end
 		elseif k == "onDrag" then
-			t._onDrag = function(self, x, y)
+			t._onDrag = function(self, pe)
 				if v ~= nil then
-					v(self, x, y)
+					v(self, pe)
 				end
 			end
 		elseif k == "Pivot" then
@@ -1168,24 +1163,13 @@ function createUI(system)
 				hiddenStr.pos.X = padding - hiddenStr.Width + (textContainer.Width - padding * 2)
 			end
 
-			cursor:show()
 			cursor.Height = str.Height
-
-			if hiddenStr ~= nil and hiddenStr:isVisible() then
-				cursor.pos = hiddenStr.pos + { hiddenStr.Width, 0, 0 }
-			else
-				cursor.pos = str.pos + { str.Width, 0, 0 }
-			end
-		else
-			cursor:hide()
 		end
 
 		node._refresh = backup
 	end
 
-	----------------------
-	-- PUBLIC FUNCTIONS
-	----------------------
+	-- EXPOSED FUNCTIONS
 
 	ui.isShown = function(_)
 		return rootFrame:GetParent() ~= nil
@@ -1219,16 +1203,6 @@ function createUI(system)
 		return node
 	end
 
-	---@function createImage Creates a frame
-	---@param color? color
-	---@param config? uikitNodeConfig
-	---@code -- nodes can have an image if provided image Data (PNG or JPEG)
-	--- local url = "https://cu.bzh/img/pen.png"
-	--- HTTP:Get(url, function(response)
-	---		local f = uikit:createFrame(Color.Black, {image = response.Data})
-	---		f:setParent(uikit.rootFrame)
-	---		f.LocalPosition = {50, 50, 0}
-	--- end)
 	ui.createFrame = function(self, color, config)
 		if self ~= ui then
 			error("ui:createFrame(color, config): use `:`", 2)
@@ -1516,21 +1490,53 @@ function createUI(system)
 		return node
 	end
 
-	ui.createText = function(_, str, color, size) -- "default" (default), "small", "big"
+	---@function createText Creates a text component.
+	---@param string str
+	---@param table? config
+	---@code -- nodes can have an image if provided image Data (PNG or JPEG)
+	--- local url = "https://cu.bzh/img/pen.png"
+	--- HTTP:Get(url, function(response)
+	---		local f = uikit:createFrame(Color.Black, {image = response.Data})
+	---		f:setParent(uikit.rootFrame)
+	---		f.LocalPosition = {50, 50, 0}
+	--- end)
+	-- LEGACY: expecting config table, but it's still ok to provide color and size
+	ui.createText = function(_, str, configOrcolor, size) -- "default" (default), "small", "big"
 		if str == nil then
-			error("ui:createText(string, <color>, <size>) str must be a string", 2)
+			error("ui:createText(str, config) str must be a string", 2)
 		end
-		if color and type(color) ~= Type.Color then
-			error("ui:createText(string, <color>, <size>) color must be a Color", 2)
+
+		local defaultConfig = {
+			color = Color(0, 0, 0),
+			backgroundColor = Color(0, 0, 0, 0),
+			size = "default",
+		}
+
+		local config = nil
+		if configOrcolor ~= nil then
+			if type(configOrcolor) == Type.Color then
+				defaultConfig.color = configOrcolor
+			else
+				config = configOrcolor
+			end
 		end
-		if size and type(size) ~= Type.string then
-			error('ui:createText(string, <color>, <size>) size must be a string ("default", "small" or "big")', 2)
+
+		if size ~= nil then
+			if type(size) ~= "string" or (size ~= "default" and size ~= "small" and size ~= "big") then
+				error('ui:createText(str, color, size) - size must be a string ("default", "small" or "big")', 2)
+			end
+			defaultConfig.size = size
+		end
+
+		local ok, err = pcall(function()
+			config = conf:merge(defaultConfig, config)
+		end)
+		if not ok then
+			error("ui:createText(str, config) - config error: " .. err, 2)
 		end
 
 		local node = _nodeCreate()
 		texts[node._id] = node
-
-		node.fontsize = size
 
 		node._text = function(self)
 			return self.object.Text
@@ -1558,6 +1564,8 @@ function createUI(system)
 			return self.object.Height * self.object.LocalScale.Y
 		end
 
+		-- TODO: max width
+
 		local t = Text()
 		t.Anchor = { 0, 0 }
 		t.Type = TextType.World
@@ -1565,27 +1573,90 @@ function createUI(system)
 		_setLayers(t)
 		t.Text = str
 		t.Padding = 0
-		t.Color = color or Color(0, 0, 0, 255)
-		t.BackgroundColor = Color(0, 0, 0, 0)
+		t.Color = config.color
+		t.BackgroundColor = config.backgroundColor
 		t.MaxDistance = camera.Far + 100
 
-		if node.fontsize == nil or node.fontsize == "default" then
-			t.FontSize = currentFontSize
-		elseif node.fontsize == "big" then
+		if config.size == "big" then
 			t.FontSize = currentFontSizeBig
-		elseif node.fontsize == "small" then
+		elseif config.size == "small" then
 			t.FontSize = currentFontSizeSmall
+		else
+			t.FontSize = currentFontSize
 		end
 
 		t.IsUnlit = true
 		t.Physics = PhysicsMode.Disabled
 		t.CollisionGroups = {}
 		t.CollidesWithGroups = {}
-		t.LocalPosition = { 0, 0, 0 }
+		t.LocalPosition:Set(Number3.Zero)
 
 		node.object = t
 
 		node:setParent(rootFrame)
+
+		node.select = function(self, cursorStart, cursorEnd)
+			if self ~= node then
+				error("text:select(start, end) should be called with `:`", 2)
+			end
+			if type(cursorStart) ~= "integer" then
+				error("text:select(start, end) - start should be an integer", 2)
+			end
+			if cursorEnd == nil then
+				cursorEnd = cursorStart
+			end
+			if type(cursorEnd) ~= "integer" then
+				error("text:select(start, end) - end should be an integer", 2)
+			end
+		end
+
+		-- returns both char index and position cursor's snapped position
+		node.localPositionToCursor = function(self, pos)
+			if self ~= node then
+				error("text:localPositionToCursor(pos) should be called with `:`", 2)
+			end
+			local posType = type(pos)
+			if posType ~= "Number2" and posType ~= "table" then
+				error("text:localPositionToCursor(pos) - pos should be a Number2 or table with 2 numbers", 2)
+			end
+
+			local t = self.object
+			local charIndex = 0
+			local cursorPos = 0
+
+			local ok, err = pcall(function()
+				cursorPos, charIndex = t:LocalToCursor(pos)
+			end)
+
+			if not ok then
+				error("text:localPositionToCursor(pos) " .. err, 2)
+			end
+
+			return charIndex, cursorPos
+		end
+
+		node.charIndexToCursor = function(self, charIndex)
+			if self ~= node then
+				error("text:charIndexToCursor(charIndex) should be called with `:`", 2)
+			end
+			if type(charIndex) ~= "integer" then
+				error("text:charIndexToCursor(charIndex) - charIndex should be an integer", 2)
+			end
+
+			local t = self.object
+			local verifiedCharIndex = 0
+			local cursorPos = 0
+
+			local ok, err = pcall(function()
+				cursorPos, verifiedCharIndex = t:CharIndexToCursor(charIndex)
+			end)
+
+			if not ok then
+				error("text:charIndexToCursor(charIndex) " .. err, 2)
+			end
+
+			return verifiedCharIndex, cursorPos
+		end
 
 		return node
 	end
@@ -1661,10 +1732,10 @@ function createUI(system)
 			end
 		end
 
-		node.placeholder = ui:createText(placeholder or "", Color.White, size) -- color replaced later on
+		node.placeholder = ui:createText(placeholder or "", { color = Color.White, size = size }) -- color replaced later on
 		node.placeholder:setParent(textContainer)
 
-		node.string = ui:createText(str or "", Color.White, size) -- color replaced later on
+		node.string = ui:createText(str or "", { color = Color.White, size = size }) -- color replaced later on
 		node.string:setParent(textContainer)
 
 		if config.password then
@@ -1691,6 +1762,9 @@ function createUI(system)
 				self.hiddenString:show()
 			end
 		end
+
+		node.selection = self:createFrame(Color(255, 255, 255, 0.3))
+		node.selection:setParent(textContainer)
 
 		node.cursor = self:createFrame(Color.White)
 		node.cursor.Width = theme.textInputCursorWidth
@@ -1839,12 +1913,90 @@ function createUI(system)
 		node:_refresh()
 		_textInputRefreshColor(node) -- apply initial colors
 
-		node.border.onPress = function()
+		local cursorT = 0
+		local cursorShown = true
+		local blinkTime = theme.textInputCursorBlinkTime
+
+		local function forceShowCursor()
+			node.cursor:show()
+			cursorT = 0
+			cursorShown = true
+			node.cursor.Width = theme.textInputCursorWidth
+		end
+
+		local startIndex
+		local endIndex
+		local startCursorPos
+
+		node.border.onPress = function(self, _, _, pointerEvent)
 			if node.disabled == true then
 				return
 			end
-			node.state = State.Pressed
-			_textInputRefreshColor(node)
+			if not node.string then
+				return
+			end
+
+			if node.state ~= State.Focused then
+				node.state = State.Pressed
+				_textInputRefreshColor(node)
+			end
+
+			if node.state == State.Focused then
+				-- TODO: use hiddenStr instead here when visible
+				local pos = getPointerXYWithinNode(pointerEvent, node.string)
+				pos.Y = node.string.Height * 0.5 -- enforce event at mid height for single line inputs
+
+				local charIndex, cursorPos = node.string:localPositionToCursor(pos)
+				-- print("charIndex:", charIndex, "X:", cursorPos.X)
+
+				node.cursor.pos = cursorPos
+					+ Number2(node.string.pos.X - theme.textInputCursorWidth * 0.5, node.string.pos.Y)
+				forceShowCursor()
+
+				startCursorPos = node.cursor.pos:Copy()
+				node.selection.Width = 0
+
+				startIndex = charIndex
+				endIndex = startIndex
+
+				Client.OSTextInput:Update({ content = node.string.Text, cursorStart = startIndex, cursorEnd = endIndex })
+			end
+		end
+
+		node.border.onDrag = function(self, pointerEvent)
+			if node.disabled == true then
+				return
+			end
+			if node.state ~= State.Focused then
+				return
+			end
+			if not node.string then
+				return
+			end
+
+			local pos = getPointerXYWithinNode(pointerEvent, node.string)
+			pos.Y = node.string.Height * 0.5 -- enforce event at mid height for single line inputs
+
+			local charIndex, cursorPos = node.string:localPositionToCursor(pos)
+
+			node.cursor.pos = cursorPos
+				+ Number2(node.string.pos.X - theme.textInputCursorWidth * 0.5, node.string.pos.Y)
+
+			endIndex = charIndex
+
+			if startIndex == endIndex then
+				forceShowCursor()
+			else
+				node.cursor:hide()
+				node.selection.pos = node.cursor.pos
+				if startCursorPos.X < node.cursor.pos.X then
+					node.selection.pos.X = startCursorPos.X
+				end
+				node.selection.Height = node.cursor.Height
+				node.selection.Width = math.abs(startCursorPos.X - node.cursor.pos.X)
+			end
+
+			Client.OSTextInput:Update({ content = node.string.Text, cursorStart = startIndex, cursorEnd = endIndex })
 		end
 
 		node.border.onCancel = function()
@@ -1884,6 +2036,22 @@ function createUI(system)
 				return
 			end
 
+			if self.tickListener == nil then
+				self.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+					if self.cursor:isVisible() then
+						cursorT = cursorT + dt
+						if cursorT >= blinkTime then
+							cursorT = cursorT % blinkTime
+							cursorShown = not cursorShown
+							local backup = self.contentDidResizeSystem
+							self.contentDidResizeSystem = nil
+							self.cursor.Width = cursorShown and theme.textInputCursorWidth or 0
+							self.contentDidResizeSystem = backup
+						end
+					end
+				end)
+			end
+
 			Client.OSTextInput:Request({
 				content = self.string.Text,
 				multiline = config.multiline,
@@ -1901,6 +2069,34 @@ function createUI(system)
 							self.string.Text = str
 							_textInputTextDidChange(self)
 						end
+
+						-- print("cursorStart:", cursorStart)
+						local charIndex, cursorPos = self.string:charIndexToCursor(cursorStart)
+						-- print("CURSOR:", cursorPos.X, cursorPos.Y, charIndex)
+						self.cursor.pos = cursorPos
+							+ Number2(self.string.pos.X - theme.textInputCursorWidth * 0.5, self.string.pos.Y)
+
+						startIndex = charIndex
+						startCursorPos = node.cursor.pos:Copy()
+
+						if cursorStart == cursorEnd then
+							forceShowCursor()
+							node.selection.Width = 0
+						else
+							self.cursor:hide()
+							_, cursorPos = self.string:charIndexToCursor(cursorEnd)
+
+							self.cursor.pos = cursorPos
+								+ Number2(self.string.pos.X - theme.textInputCursorWidth * 0.5, self.string.pos.Y)
+
+							node.selection.pos = node.cursor.pos
+							if startCursorPos.X < node.cursor.pos.X then
+								node.selection.pos.X = startCursorPos.X
+							end
+							node.selection.Height = node.cursor.Height
+							node.selection.Width = math.abs(startCursorPos.X - node.cursor.pos.X)
+						end
+
 						return true -- capture event
 					end,
 					{
@@ -1994,25 +2190,6 @@ function createUI(system)
 				)
 			end
 
-			self.dt = 0
-			self.cursor.shown = true
-			if self.object.Tick == nil then
-				self.object.Tick = function(_, dt)
-					if not self.dt then
-						return
-					end
-					self.dt = self.dt + dt
-					if self.dt >= theme.textInputCursorBlinkTime then
-						self.dt = self.dt % 0.3
-						self.cursor.shown = not self.cursor.shown
-						local backup = self.contentDidResizeSystem
-						self.contentDidResizeSystem = nil
-						self.cursor.Width = self.cursor.shown and theme.textInputCursorWidth or 0
-						self.contentDidResizeSystem = backup
-					end
-				end
-			end
-
 			if self.onFocus ~= nil then
 				self:onFocus()
 			end
@@ -2050,6 +2227,11 @@ function createUI(system)
 			if self.keyboardListener ~= nil then
 				self.keyboardListener:Remove()
 				self.keyboardListener = nil
+			end
+
+			if self.tickListener ~= nil then
+				self.tickListener:Remove()
+				self.tickListener = nil
 			end
 
 			_textInputRefreshColor(self)
@@ -2611,7 +2793,7 @@ function createUI(system)
 
 		-- TODO: test stringOrShape type
 
-		local t = ui:createText(stringOrShape, nil, config.textSize) -- color is nil here
+		local t = ui:createText(stringOrShape, { size = config.textSize }) -- color is nil here
 		t:setParent(node)
 		node.content = t
 
@@ -2937,9 +3119,7 @@ function createUI(system)
 		return btn
 	end
 
-	----------------------
 	-- LISTENERS
-	----------------------
 
 	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function(_, _)
 		camera.Width = Screen.Width
@@ -3149,11 +3329,6 @@ function createUI(system)
 		end
 	end
 
-	---@function shrinkToFit Reduces the number of char of a text so it can fit in maxWidth.
-	---@param self uikit
-	---@param text text
-	---@param maxWidth number
-	---@return nil
 	ui.shrinkToFit = function(self, text, maxWidth)
 		if text.Width <= maxWidth then
 			return

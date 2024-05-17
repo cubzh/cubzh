@@ -1,6 +1,6 @@
 --- This module allows you to modify values over a given period of time and following different variation curves.
 ---@code -- A few examples:
----	--- local t = {x = 0.0}
+---	local t = {x = 0.0}
 --- -- All ease functions return an instance controlling how
 --- -- values change over time, and on what duration:
 --- local instance = ease:inSine(t, 1.0)
