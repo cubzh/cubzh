@@ -539,6 +539,7 @@ Client.OnStart = function()
 		if isWearable then
 			if itemCategory == "pants" then
 				item.Scale = 1.05
+				item:GetChild(1).Scale = 1.0501
 			end
 
 			if enableWearablePattern then
@@ -3106,8 +3107,10 @@ function post_item_load()
 
 		-- T-pose
 		for _, p in ipairs(bodyParts) do
-			if p == "RightArm" or p == "LeftArm" or p == "RightHand" or p == "LeftHand" then
-				Player[p].Rotation = Number3(0, 0, 0)
+			if p == "RightArm" or p == "RightHand" then
+				Player[p].Rotation = Number3(0, 0, 0.01)
+			elseif p == "LeftArm" or p == "LeftHand" then
+				Player[p].Rotation = Number3(0, 0, -0.01)
 			end
 			Player[p].IgnoreAnimations = true
 			Player[p].Physics = PhysicsMode.TriggerPerBlock
