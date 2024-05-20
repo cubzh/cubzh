@@ -11,7 +11,7 @@
 // functions that are NOT tested:
 // vertex_buffer_mem_area_writer_new
 // vertex_buffer_mem_area_writer_free
-// vertex_buffer_mem_area_writer_write
+// vertex_buffer_mem_area_writer_write_vertex
 // vertex_buffer_mem_area_writer_done
 // vertex_buffer_new
 // vertex_buffer_get_id
@@ -21,7 +21,7 @@
 // vertex_buffer_fill_draw_slices
 // vertex_buffer_flush_draw_slices
 // vertex_buffer_get_nb_draw_slices
-// vertex_buffer_get_nb_faces
+// vertex_buffer_get_count
 // vertex_buffer_has_room_for_new_chunk
 // vertex_buffer_log_draw_slices
 // vertex_buffer_is_fragmented
@@ -46,9 +46,8 @@ void test_vertex_buffer_pop_destroyed_id(void) {
 void test_vertex_buffer_new_with_max_count(void) {
     VertexBuffer *vb = vertex_buffer_new_with_max_count(3, false, false);
 
-    TEST_CHECK(vertex_buffer_is_enlisted(vb) == false);
-    TEST_CHECK(vertex_buffer_get_max_length(vb) == 3);
-    TEST_CHECK(vertex_buffer_get_nb_faces(vb) == 0);
+    TEST_CHECK(vertex_buffer_get_max_count(vb) == 3);
+    TEST_CHECK(vertex_buffer_get_count(vb) == 0);
     TEST_CHECK(vertex_buffer_get_next(vb) == NULL);
     TEST_CHECK(vertex_buffer_get_draw_slices(vb) != NULL);
     TEST_CHECK(vertex_buffer_get_nb_draw_slices(vb) == 0);
@@ -77,8 +76,8 @@ void test_vertex_buffer_is_not_full(void) {
     VertexBuffer *a = vertex_buffer_new_with_max_count(3, false, false);
     VertexBuffer *b = vertex_buffer_new_with_max_count(0, false, false);
 
-    TEST_CHECK(vertex_buffer_is_not_full(a));
-    TEST_CHECK(vertex_buffer_is_not_full(b) == false);
+    TEST_CHECK(vertex_buffer_has_capacity(a, 1));
+    TEST_CHECK(vertex_buffer_has_capacity(b, 1) == false);
 
     vertex_buffer_free(a);
     vertex_buffer_free(b);
@@ -119,35 +118,12 @@ void test_vertex_buffer_get_next(void) {
     vertex_buffer_pop_destroyed_id(&id);
 }
 
-// check that we get the correct max length
-void test_vertex_buffer_get_max_length(void) {
+// check that we get the correct max count
+void test_vertex_buffer_get_max_count(void) {
     const size_t len = 500;
     VertexBuffer *vb = vertex_buffer_new_with_max_count(500, false, false);
 
-    TEST_CHECK(vertex_buffer_get_max_length(vb) == len);
-
-    vertex_buffer_free(vb);
-    uint32_t id;
-    vertex_buffer_pop_destroyed_id(&id);
-}
-
-// check default value
-void test_vertex_buffer_is_enlisted(void) {
-    VertexBuffer *vb = vertex_buffer_new_with_max_count(4, false, false);
-
-    TEST_CHECK(vertex_buffer_is_enlisted(vb) == false);
-
-    vertex_buffer_free(vb);
-    uint32_t id;
-    vertex_buffer_pop_destroyed_id(&id);
-}
-
-// check that we can change the value
-void test_vertex_buffer_set_enlisted(void) {
-    VertexBuffer *vb = vertex_buffer_new_with_max_count(4, false, false);
-
-    vertex_buffer_set_enlisted(vb, true);
-    TEST_CHECK(vertex_buffer_is_enlisted(vb));
+    TEST_CHECK(vertex_buffer_get_max_count(vb) == len);
 
     vertex_buffer_free(vb);
     uint32_t id;
