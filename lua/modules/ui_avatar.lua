@@ -1,3 +1,5 @@
+-- TODO: use private fields like in `avatar` module for avatar node instance
+
 --- This module allows you to create UI element from player avatars
 ---@code -- A few examples:
 ---
@@ -13,399 +15,339 @@
 
 local uiavatar = {}
 
-local DEFAULT_SIZE = 30
+-- GLOBALS
 
 ui = require("uikit")
 avatar = require("avatar")
 
-local headCache = {}
+defaultSize = 30
 
-local uiavatarMetatable = {
-	__index = {
-		clearCache = function(_)
-			headCache = {}
-		end,
+function emptyFunc() end
 
-		preloadHeads = function(self, playersTable)
-			if type(playersTable) ~= "table" then
-				playersTable = { playersTable }
+function setupNodeAvatar(node, avatar, ui)
+	local rotation = Rotation(0, math.rad(180), 0)
+
+	if node.body ~= nil then
+		rotation:Set(node.body.pivot.LocalRotation)
+		node.body:remove()
+		node.body = nil
+	end
+
+	local uiAvatar = ui:createShape(avatar, { spherized = true })
+
+	uiAvatar:setParent(node)
+	uiAvatar.Head.LocalRotation:Set(Number3.Zero)
+	node.body = uiAvatar
+	node.body.Width = node.Width
+	node.body.pivot.LocalRotation:Set(rotation)
+
+	node.load = function(self, config)
+		avatar:load(config)
+	end
+	node.loadEquipment = function(self, config)
+		avatar:loadEquipment(config)
+	end
+	node.setColors = function(self, config)
+		avatar:setColors(config)
+	end
+	node.setEyes = function(self, config)
+		avatar:setEyes(config)
+	end
+	node.setNose = function(self, config)
+		avatar:setNose(config)
+	end
+end
+
+-- EXPOSED FUNCTIONS
+
+-- returns uikit node + sent requests (table, can be nil)
+-- /!\ return table of requests does not contain all requests right away
+-- reference should be kept, not copying entries right after function call.
+-- uikit: optional, allows to provide specific instance of uikit
+uiavatar.get = function(self, config)
+	if self ~= uiavatar then
+		error("ui_avatar:get(config) should be called with `:`", 2)
+	end
+
+	local defaultConfig = {
+		usernameOrId = "", -- loading "empty" avatar from bundle when empty
+		size = defaultSize,
+		didLoad = emptyFunc, -- can be multiple times when changing body parts
+		ui = ui, -- can only be used by System to override UI instance
+		eyeBlinks = true,
+	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+	if not ok then
+		error("ui_avatar:get(config) - config error: " .. err, 2)
+	end
+
+	local requests
+
+	local ui = config.ui
+	local node = ui:createFrame(Color(0, 0, 0, 0))
+
+	local w = 0
+	local h = 0
+
+	local function didLoad(err)
+		if err ~= nil then
+			error(err, 2)
+		end
+
+		if config.didLoad then
+			config:didLoad()
+		end
+	end
+
+	node.onRemove = function()
+		node:loadEquipment({ type = "jacket", item = "" })
+		node:loadEquipment({ type = "hair", item = "" })
+		node:loadEquipment({ type = "pants", item = "" })
+		node:loadEquipment({ type = "boots", item = "" })
+
+		for _, r in ipairs(requests) do
+			r:Cancel()
+		end
+	end
+
+	node._width = function(self)
+		return w
+	end
+	node._height = function(self)
+		return h
+	end
+
+	local setWidth = node._setWidth
+	local setHeight = node._setHeight
+
+	node._setWidth = function(self, v)
+		w = v
+		h = v -- spherized
+		if self.body then
+			self.body.Width = v
+		end
+		setWidth(self, v) -- spherized
+		setHeight(self, v) -- spherized
+	end
+
+	node._setHeight = function(self, v)
+		w = v
+		h = v -- spherized
+		if self.body then
+			self.body.Height = v
+		end
+		setWidth(self, v) -- spherized
+		setHeight(self, v) -- spherized
+	end
+
+	node.Width = config.size
+
+	local avatarObject
+	avatarObject, requests =
+		avatar:get({ usernameOrId = config.usernameOrId, didLoad = didLoad, eyeBlinks = config.eyeBlinks })
+	setupNodeAvatar(node, avatarObject, config.ui)
+
+	return node, requests
+end
+
+-- returns uikit node + sent requests (table, can be nil)
+-- /!\ return table of requests does not contain all requests right away
+-- reference should be kept, not copying entries right after function call.
+-- uikit: optional, allows to provide specific instance of uikit
+uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
+	local requests
+
+	local ui = uikit or ui
+
+	local defaultSize = size or defaultSize
+
+	local defaultConfig = {
+		ignoreCache = false,
+		spherized = true,
+	}
+
+	config = require("config"):merge(defaultConfig, config)
+
+	local cachedHead = headCache[usernameOrId]
+
+	if config.ignoreCache == true then
+		cachedHead = nil
+	end
+
+	local node = ui:createFrame(Color(0, 0, 0, 0))
+	node._w = defaultSize
+	node._h = defaultSize
+	node._width = function(self)
+		return self._w
+	end
+	node._height = function(self)
+		return self._h
+	end
+
+	if cachedHead ~= nil then
+		local uiHead = ui:createShape(Shape(cachedHead, { includeChildren = true }), { spherized = true })
+		uiHead:setParent(node)
+		node.head = uiHead
+		node.head.Width = node.Width
+
+		local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
+		node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
+	else
+		requests = avatar:getPlayerHead(usernameOrId, function(err, head)
+			if err then
+				print(err)
+				return
 			end
-			for _, p in pairs(playersTable) do
-				local username
-				if type(p) == "string" then
-					username = p
-				elseif type(p) == "Player" then
-					username = p.Username
-				end
-				if self._headCache[username] then
-					return
-				end -- Do not reload the head if already in cache
-				avatar:getPlayerHead(username, function(err, head)
-					if err then
-						return
+			-- Optimized cache: If ID, try to get the username from the Players list. Cache keys can be username or ids
+			if type(usernameOrId) ~= "string" then
+				for _, p in pairs(Players) do
+					if p.UserID == usernameOrId then
+						usernameOrId = p.Username
 					end
-					headCache[username] = head
-				end)
-			end
-		end,
-
-		-- returns uikit node + sent requests (table, can be nil)
-		-- /!\ return table of requests does not contain all requests right away
-		-- reference should be kept, not copying entries right after function call.
-		-- uikit: optional, allows to provide specific instance of uikit
-		getHead = function(_, usernameOrId, size, uikit, config)
-			local requests
-
-			local ui = uikit or ui
-
-			local defaultSize = size or DEFAULT_SIZE
-
-			local defaultConfig = {
-				ignoreCache = false,
-				spherized = true,
-			}
-
-			config = require("config"):merge(defaultConfig, config)
-
-			local cachedHead = headCache[usernameOrId]
-
-			if config.ignoreCache == true then
-				cachedHead = nil
-			end
-
-			local node = ui:createFrame(Color(0, 0, 0, 0))
-			node._w = defaultSize
-			node._h = defaultSize
-			node._width = function(self)
-				return self._w
-			end
-			node._height = function(self)
-				return self._h
-			end
-
-			if cachedHead ~= nil then
-				local uiHead = ui:createShape(Shape(cachedHead, { includeChildren = true }), { spherized = true })
-				uiHead:setParent(node)
-				node.head = uiHead
-				node.head.Width = node.Width
-
-				local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
-				node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
-			else
-				requests = avatar:getPlayerHead(usernameOrId, function(err, head)
-					if err then
-						print(err)
-						return
-					end
-					-- Optimized cache: If ID, try to get the username from the Players list. Cache keys can be username or ids
-					if type(usernameOrId) ~= "string" then
-						for _, p in pairs(Players) do
-							if p.UserID == usernameOrId then
-								usernameOrId = p.Username
-							end
-						end
-					end
-					headCache[usernameOrId] = head
-					local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = true })
-					uiHead:setParent(node)
-					node.head = uiHead
-					node.head.Width = node.Width
-
-					local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
-					node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
-				end)
-
-				node.onRemove = function()
-					for _, r in ipairs(requests) do
-						r:Cancel()
-					end
 				end
 			end
+			headCache[usernameOrId] = head
+			local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = true })
+			uiHead:setParent(node)
+			node.head = uiHead
+			node.head.Width = node.Width
 
-			local setWidth = node._setWidth
-			local setHeight = node._setHeight
+			local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
+			node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
+		end)
 
-			node._setWidth = function(self, v)
-				self._w = v
-				self._h = v -- spherized
-				if self.head then
-					self.head.Width = v
-				end
-				setWidth(self, v) -- spherized
-				setHeight(self, v) -- spherized
+		node.onRemove = function()
+			for _, r in ipairs(requests) do
+				r:Cancel()
 			end
-			node._setHeight = function(self, v)
-				self._w = v
-				self._h = v -- spherized
-				if self.head then
-					self.head.Height = v
-				end
-				setWidth(self, v) -- spherized
-				setHeight(self, v) -- spherized
-			end
+		end
+	end
 
-			return node, requests
-		end,
+	local setWidth = node._setWidth
+	local setHeight = node._setHeight
 
-		-- changes only local Player
-		setSkinColor = function(self, node, color1, color2, nose, mouth)
-			if node.body ~= nil then
-				avatar:setSkinColor(node.body, color1, color2, nose, mouth)
-			end
+	node._setWidth = function(self, v)
+		self._w = v
+		self._h = v -- spherized
+		if self.head then
+			self.head.Width = v
+		end
+		setWidth(self, v) -- spherized
+		setHeight(self, v) -- spherized
+	end
+	node._setHeight = function(self, v)
+		self._w = v
+		self._h = v -- spherized
+		if self.head then
+			self.head.Height = v
+		end
+		setWidth(self, v) -- spherized
+		setHeight(self, v) -- spherized
+	end
 
-			self:setNoseColor(node, nose, true)
-			self:setMouthColor(node, mouth, true)
-		end,
+	return node, requests
+end
 
-		setEyesColor = function(_, avatarNode, color)
-			if avatarNode.body ~= nil then
-				avatar:setEyesColor(avatarNode.body, color)
-			end
-		end,
+-- returns uikit node + sent requests (table, can be nil)
+-- /!\ return table of requests does not contain all requests right away
+-- reference should be kept, not copying entries right after function call.
+-- uikit: optional, allows to provide specific instance of uikit
+uiavatar.getHeadAndShoulders = function(_, usernameOrId, size, _, uikit)
+	local requests
 
-		setNoseColor = function(_, avatarNode, color)
-			if avatarNode.body ~= nil then
-				avatar:setNoseColor(avatarNode.body, color)
-			end
-		end,
+	local ui = uikit or ui
+	local defaultSize = size or defaultSize
 
-		setMouthColor = function(_, avatarNode, color)
-			if avatarNode.body ~= nil then
-				avatar:setMouthColor(avatarNode.body, color)
-			end
-		end,
+	local node = ui:createFrame(Color(255, 255, 255, 0))
+	node.IsMask = true
+	node._w = 0
+	node._h = 0
 
-		-- returns uikit node + sent requests (table, can be nil)
-		-- /!\ return table of requests does not contain all requests right away
-		-- reference should be kept, not copying entries right after function call.
-		-- uikit: optional, allows to provide specific instance of uikit
-		getHeadAndShoulders = function(_, usernameOrId, size, _, uikit)
-			local requests
+	local bodyDidLoad = function(err, avatarBody)
+		if err ~= nil then
+			error(err, 2)
+			return
+		end
 
-			local ui = uikit or ui
-			local defaultSize = size or DEFAULT_SIZE
+		local rotation = Rotation(0, math.rad(180), 0)
 
-			local node = ui:createFrame(Color(255, 255, 255, 0))
-			node.IsMask = true
-			node._w = 0
-			node._h = 0
+		if node.body ~= nil then
+			rotation:Set(node.body.pivot.LocalRotation)
+			node.body:remove()
+			node.body = nil
+		end
 
-			local bodyDidLoad = function(err, avatarBody)
-				if err ~= nil then
-					error(err, 2)
-					return
-				end
+		-- local shape = Shape(avatarBody, { includeChildren = true })
+		local shape = avatarBody
+		shape.LocalPosition = Number3.Zero
 
-				local rotation = Rotation(0, math.rad(180), 0)
+		-- -12 -> centered (body position set in animation cycle)
+		-- -14 -> from below shoulders
+		local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
+		uiBody:setParent(node)
+		uiBody.Head.LocalRotation = { 0, 0, 0 }
+		node.body = uiBody
+		uiBody.ratio = uiBody.Width / uiBody.Height
 
-				if node.body ~= nil then
-					rotation:Set(node.body.pivot.LocalRotation)
-					node.body:remove()
-					node.body = nil
-				end
+		-- NOTE: this needs to be improved, to programatically crop
+		-- perfectly around the head, considering hair / headsets, etc.
+		-- [gdevillele] _w field can be nil, I don't understand why
+		node.body.Width = (node._w or 0) * 1.1
+		node.body.Height = node.body.Width / uiBody.ratio
 
-				-- local shape = Shape(avatarBody, { includeChildren = true })
-				local shape = avatarBody
-				shape.LocalPosition = Number3.Zero
+		node.body.pivot.LocalRotation = rotation
 
-				-- -12 -> centered (body position set in animation cycle)
-				-- -14 -> from below shoulders
-				local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
-				uiBody:setParent(node)
-				uiBody.Head.LocalRotation = { 0, 0, 0 }
-				node.body = uiBody
-				uiBody.ratio = uiBody.Width / uiBody.Height
+		node.body.pos = { 0, 0 }
+	end
 
-				-- NOTE: this needs to be improved, to programatically crop
-				-- perfectly around the head, considering hair / headsets, etc.
-				-- [gdevillele] _w field can be nil, I don't understand why
-				node.body.Width = (node._w or 0) * 1.1
-				node.body.Height = node.body.Width / uiBody.ratio
+	_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
 
-				node.body.pivot.LocalRotation = rotation
+	node.onRemove = function()
+		for _, r in ipairs(requests) do
+			r:Cancel()
+		end
+	end
 
-				node.body.pos = { 0, 0 }
-			end
+	node._width = function(self)
+		return self._w
+	end
+	node._height = function(self)
+		return self._h
+	end
 
-			_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
+	local setWidth = node._setWidth
+	local setHeight = node._setHeight
 
-			node.onRemove = function()
-				for _, r in ipairs(requests) do
-					r:Cancel()
-				end
-			end
+	node._setWidth = function(self, v)
+		self._w = v
+		self._h = v -- spherized
+		if self.body then
+			self.body.Width = v * 2
+			self.body.pos.X = -self.body.Width * 0.25
+			self.body.pos.Y = -self.body.Height * 0.5
+		end
+		setWidth(self, v) -- spherized
+		setHeight(self, v) -- spherized
+	end
 
-			node.refresh = function(_)
-				_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
-			end
+	node._setHeight = function(self, v)
+		self._w = v
+		self._h = v -- spherized
+		if self.body then
+			self.body.Width = v * 2
+			self.body.pos.X = -self.body.Width * 0.25
+			self.body.pos.Y = -self.body.Height * 0.5
+		end
+		setWidth(self, v) -- spherized
+		setHeight(self, v) -- spherized
+	end
 
-			node._width = function(self)
-				return self._w
-			end
-			node._height = function(self)
-				return self._h
-			end
+	node.Width = defaultSize
 
-			local setWidth = node._setWidth
-			local setHeight = node._setHeight
-
-			node._setWidth = function(self, v)
-				self._w = v
-				self._h = v -- spherized
-				if self.body then
-					self.body.Width = v * 2
-					self.body.pos.X = -self.body.Width * 0.25
-					self.body.pos.Y = -self.body.Height * 0.5
-				end
-				setWidth(self, v) -- spherized
-				setHeight(self, v) -- spherized
-			end
-
-			node._setHeight = function(self, v)
-				self._w = v
-				self._h = v -- spherized
-				if self.body then
-					self.body.Width = v * 2
-					self.body.pos.X = -self.body.Width * 0.25
-					self.body.pos.Y = -self.body.Height * 0.5
-				end
-				setWidth(self, v) -- spherized
-				setHeight(self, v) -- spherized
-			end
-
-			node.Width = defaultSize
-
-			return node, requests
-		end,
-
-		-- returns uikit node + sent requests (table, can be nil)
-		-- /!\ return table of requests does not contain all requests right away
-		-- reference should be kept, not copying entries right after function call.
-		-- uikit: optional, allows to provide specific instance of uikit
-		get = function(_, usernameOrId, size, _, uikit)
-			local requests
-
-			local ui = uikit or ui
-
-			local defaultSize = size or DEFAULT_SIZE
-
-			local node = ui:createFrame(Color(0, 0, 0, 0))
-
-			local bodyDidLoad = function(err, avatarBody)
-				if err ~= nil then
-					error(err, 2)
-					return
-				end
-
-				local rotation = Rotation(0, math.rad(180), 0)
-
-				if node.body ~= nil then
-					rotation:Set(node.body.pivot.LocalRotation)
-					node.body:remove()
-					node.body = nil
-				end
-
-				if avatarBody.equipments.hair then
-					avatarBody.equipments.hair.Name = "hair"
-				end
-				if avatarBody.equipments.jacket then
-					avatarBody.equipments.jacket.Name = "jacket"
-					avatarBody.equipments.jacket.attachedParts[1].Name = "rsleeve"
-					avatarBody.equipments.jacket.attachedParts[2].Name = "lsleeve"
-				end
-				if avatarBody.equipments.pants then
-					avatarBody.equipments.pants.Name = "pants"
-					avatarBody.equipments.pants.attachedParts[1].Name = "lpant"
-				end
-				if avatarBody.equipments.boots then
-					avatarBody.equipments.boots.Name = "boots"
-					avatarBody.equipments.boots.attachedParts[1].Name = "lboot"
-				end
-
-				local avatarCopy = Shape(avatarBody, { includeChildren = true })
-				local jacket = avatarCopy:FindObjectByName("jacket")
-				jacket.attachedParts = {
-					avatarCopy:FindObjectByName("rsleeve"),
-					avatarCopy:FindObjectByName("lsleeve"),
-				}
-				local pants = avatarCopy:FindObjectByName("pants")
-				pants.attachedParts = {
-					avatarCopy:FindObjectByName("lpant"),
-				}
-				local boots = avatarCopy:FindObjectByName("boots")
-				boots.attachedParts = {
-					avatarCopy:FindObjectByName("lboot"),
-				}
-				avatarCopy.equipments = {
-					hair = avatarCopy:FindObjectByName("hair"),
-					jacket = jacket,
-					pants = pants,
-					boots = boots,
-				}
-
-				local uiBody = ui:createShape(avatarCopy, { spherized = true })
-				uiBody:setParent(node)
-				uiBody.Head.LocalRotation = { 0, 0, 0 }
-				node.body = uiBody
-				node.body.Width = node._w
-				node.body.pivot.LocalRotation = rotation
-
-				local center = Number3(uiBody.shape.Width, uiBody.shape.Height, uiBody.shape.Depth)
-				uiBody.shape.Pivot = uiBody.shape:BlockToLocal(center)
-
-				if node.didLoad then
-					node:didLoad()
-				end
-			end
-
-			_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
-
-			node.onRemove = function()
-				for _, r in ipairs(requests) do
-					r:Cancel()
-				end
-			end
-
-			node.refresh = function(_)
-				_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
-			end
-
-			node._w = defaultSize
-			node._h = defaultSize
-			node._width = function(self)
-				return self._w
-			end
-			node._height = function(self)
-				return self._h
-			end
-
-			local setWidth = node._setWidth
-			local setHeight = node._setHeight
-
-			node._setWidth = function(self, v)
-				self._w = v
-				self._h = v -- spherized
-				if self.body then
-					self.body.Width = v
-				end
-				setWidth(self, v) -- spherized
-				setHeight(self, v) -- spherized
-			end
-
-			node._setHeight = function(self, v)
-				self._w = v
-				self._h = v -- spherized
-				if self.body then
-					self.body.Height = v
-				end
-				setWidth(self, v) -- spherized
-				setHeight(self, v) -- spherized
-			end
-
-			return node, requests
-		end,
-	},
-}
-setmetatable(uiavatar, uiavatarMetatable)
+	return node, requests
+end
 
 return uiavatar

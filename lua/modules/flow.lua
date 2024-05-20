@@ -34,6 +34,23 @@ flow.create = function(self)
 		step:onEnter()
 	end
 
+	f.pushAndRemove = function(self, step)
+		if self ~= f then
+			error("flow:push(step) should be called with `:`", 2)
+		end
+		if createdSteps[step] ~= true then
+			error("flow:push(step) expects a step created with flow:createStep(config)", 2)
+		end
+
+		if #self.steps > 0 then
+			local currentStep = self.steps[#self.steps]
+			currentStep:onExit()
+		end
+
+		table.insert(self.steps, step)
+		step:onEnter()
+	end
+
 	f.back = function(self)
 		if self ~= f then
 			error("flow:back() should be called with `:`", 2)

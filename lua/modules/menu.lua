@@ -57,6 +57,7 @@ pointer = nil
 
 -- MODALS
 
+activeFlow = nil
 activeModal = nil
 activeModalKey = nil
 
@@ -1970,12 +1971,6 @@ end)
 local keysDown = {} -- captured keys
 
 LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
-	if titleScreen ~= nil and down then
-		skipTitleScreen()
-		keysDown[keyCode] = true
-		return true
-	end
-
 	if not down then
 		if keysDown[keyCode] then
 			keysDown[keyCode] = nil
@@ -2100,7 +2095,6 @@ function hideTitleScreen()
 		return
 	end
 
-	titleScreenTickListener:Remove()
 	titleScreen:remove()
 	titleScreen = nil
 end
@@ -2229,6 +2223,7 @@ authFlow.clear = function(self, config)
 		self.signUpBtn:remove()
 		self.signUpBtn = nil
 	end
+
 	if self.modal ~= nil then
 		self.modal.didClose = nil -- defuse didClose callback
 		if config.callCancel == true then
@@ -2239,26 +2234,33 @@ authFlow.clear = function(self, config)
 		end
 		self.modal = nil
 	end
+
+	if self.activeFlow ~= nil then
+		if config.callCancel == true then
+			self:cancel()
+		end
+		self.activeFlow = nil
+	end
 end
 
 authFlow.common = function(self)
-	if self.helpBtn == nil then
-		local helpBtn =
-			ui:createButton("👾 " .. str:upperFirstChar(loc("need help?")), { textSize = "small", borders = false })
-		helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-		helpBtn.onRelease = function()
-			URL:Open("https://cu.bzh/discord")
-		end
-		helpBtn.parentDidResize = function(self)
-			self.pos = {
-				Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
-				Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-				0,
-			}
-		end
-		helpBtn:parentDidResize()
-		self.helpBtn = helpBtn
-	end
+	-- if self.helpBtn == nil then
+	-- 	local helpBtn =
+	-- 		ui:createButton("👾 " .. str:upperFirstChar(loc("need help?")), { textSize = "small", borders = false })
+	-- 	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+	-- 	helpBtn.onRelease = function()
+	-- 		URL:Open("https://cu.bzh/discord")
+	-- 	end
+	-- 	helpBtn.parentDidResize = function(self)
+	-- 		self.pos = {
+	-- 			Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
+	-- 			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+	-- 			0,
+	-- 		}
+	-- 	end
+	-- 	helpBtn:parentDidResize()
+	-- 	self.helpBtn = helpBtn
+	-- end
 end
 
 authFlow.showLogin = function(self, callbacks, hasMagicKey)
@@ -2313,87 +2315,99 @@ authFlow.showSignUp = function(self, callbacks)
 	self:clear({ removeHelpBtn = false })
 	self:common()
 
-	if self.loginBtn == nil then
-		local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
-		loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-		loginBtn.parentDidResize = function(self)
-			self.pos = {
-				Screen.SafeArea.Left + theme.padding,
-				Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-				0,
-			}
-		end
+	-- if self.loginBtn == nil then
+	-- 	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
+	-- 	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+	-- 	loginBtn.parentDidResize = function(self)
+	-- 		self.pos = {
+	-- 			Screen.SafeArea.Left + theme.padding,
+	-- 			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+	-- 			0,
+	-- 		}
+	-- 	end
 
-		loginBtn.onRelease = function()
-			authFlow:showLogin()
-			-- System.Login(function(success, _)
-			-- 	if success then
-			-- 		helpBtn:remove()
-			-- 		loginBtn:remove()
+	-- 	loginBtn.onRelease = function()
+	-- 		authFlow:showLogin()
+	-- 		-- System.Login(function(success, _)
+	-- 		-- 	if success then
+	-- 		-- 		helpBtn:remove()
+	-- 		-- 		loginBtn:remove()
 
-			-- 		signupModal.didClose = nil
-			-- 		signupModal:close()
-			-- 		signupModal = nil
+	-- 		-- 		signupModal.didClose = nil
+	-- 		-- 		signupModal:close()
+	-- 		-- 		signupModal = nil
 
-			-- 		if callbacks.success ~= nil then
-			-- 			callbacks.success()
-			-- 		end
-			-- 	end
-			-- end)
-		end
-		loginBtn:parentDidResize()
+	-- 		-- 		if callbacks.success ~= nil then
+	-- 		-- 			callbacks.success()
+	-- 		-- 		end
+	-- 		-- 	end
+	-- 		-- end)
+	-- 	end
+	-- 	loginBtn:parentDidResize()
 
-		self.loginBtn = loginBtn
-	end
+	-- 	self.loginBtn = loginBtn
+	-- end
 
-	local signupModal = require("signup"):createModal({ uikit = ui })
-	self.modal = signupModal
+	local signupFlow = require("signup"):startFlow({
+		ui = ui,
+		onCancel = function()
+			self:clear({ callCancel = true, closeModal = false })
+		end,
+		avatarPreviewStep = function()
+			hideTitleScreen()
+			hideBottomBar()
+		end,
+	})
+	self.activeFlow = signupFlow
 
-	signupModal.onSubmit = function(username, key, dob)
-		System:DebugEvent("SIGNUP_SUBMIT")
-		self:clear()
+	-- local signupModal = require("signup"):createModal({ uikit = ui })
+	-- self.modal = signupModal
 
-		local function _createAccount(onError)
-			showLoading("Creating account")
-			api:signUp(username, key, dob, function(err, credentials)
-				if err ~= nil then
-					if onError ~= nil then
-						hideLoading()
-						onError(onError)
-					end
-					return
-				else
-					System:StoreCredentials(credentials["user-id"], credentials.token)
-					System:DebugEvent("ACCOUNT_CREATED")
-					if authFlow.callbacks.success ~= nil then
-						authFlow.callbacks.success()
-					end
-				end
-			end)
-		end
+	-- signupModal.onSubmit = function(username, key, dob)
+	-- 	System:DebugEvent("SIGNUP_SUBMIT")
+	-- 	self:clear()
 
-		local function onError(onError)
-			showAlert({
-				message = "❌ Sorry, something went wrong.",
-				positiveCallback = function()
-					_createAccount(onError)
-				end,
-				positiveLabel = "Retry",
-				neutralCallback = function()
-					if authFlow.callbacks.error ~= nil then
-						authFlow.callbacks.error()
-					end
-				end,
-				neutralLabel = "Cancel",
-			})
-		end
+	-- 	local function _createAccount(onError)
+	-- 		showLoading("Creating account")
+	-- 		api:signUp(username, key, dob, function(err, credentials)
+	-- 			if err ~= nil then
+	-- 				if onError ~= nil then
+	-- 					hideLoading()
+	-- 					onError(onError)
+	-- 				end
+	-- 				return
+	-- 			else
+	-- 				System:StoreCredentials(credentials["user-id"], credentials.token)
+	-- 				System:DebugEvent("ACCOUNT_CREATED")
+	-- 				if authFlow.callbacks.success ~= nil then
+	-- 					authFlow.callbacks.success()
+	-- 				end
+	-- 			end
+	-- 		end)
+	-- 	end
 
-		_createAccount(onError)
-	end
+	-- 	local function onError(onError)
+	-- 		showAlert({
+	-- 			message = "❌ Sorry, something went wrong.",
+	-- 			positiveCallback = function()
+	-- 				_createAccount(onError)
+	-- 			end,
+	-- 			positiveLabel = "Retry",
+	-- 			neutralCallback = function()
+	-- 				if authFlow.callbacks.error ~= nil then
+	-- 					authFlow.callbacks.error()
+	-- 				end
+	-- 			end,
+	-- 			neutralLabel = "Cancel",
+	-- 		})
+	-- 	end
 
-	signupModal.didClose = function()
-		self:clear({ callCancel = true, closeModal = false })
-	end
+	-- 	_createAccount(onError)
+	-- end
+
+	-- signupModal.didClose = function()
+	-- 	self:clear({ callCancel = true, closeModal = false })
+	-- end
 end
 
 function skipTitleScreen()
@@ -2535,66 +2549,36 @@ function showTitleScreen()
 
 	titleScreen = ui:createFrame()
 
-	local logoShape = System.ShapeFromBundle("official.cubzh")
-	local alphaShape = System.ShapeFromBundle("official.alpha")
+	-- local logoShape = System.ShapeFromBundle("official.cubzh")
 
-	logo = ui:createShape(logoShape)
-	logo:setParent(titleScreen)
-	alpha = ui:createShape(alphaShape)
-	alpha:setParent(titleScreen)
+	-- logo = ui:createShape(logoShape)
+	-- logo:setParent(titleScreen)
 
-	alpha.pos.Z = -700
-
-	pressAnywhere = ui:createText("Press Anywhere", Color.White)
-	pressAnywhere:setParent(titleScreen)
-
-	logoNativeWidth = logo.Width
-	logoNativeHeight = logo.Height
+	-- logoNativeWidth = logo.Width
+	-- logoNativeHeight = logo.Height
 
 	titleScreen.parentDidResize = function()
-		titleScreen.Width = Screen.Width
-		titleScreen.Height = Screen.Height
+		-- titleScreen.Width = Screen.Width
+		-- titleScreen.Height = Screen.Height
 
-		local maxWidth = math.min(600, Screen.Width * 0.8)
-		local maxHeight = math.min(216, Screen.Height * 0.3)
+		-- local maxWidth = math.min(600, Screen.Width * 0.8)
+		-- local maxHeight = math.min(216, Screen.Height * 0.3)
 
-		local ratio = math.min(maxWidth / logoNativeWidth, maxHeight / logoNativeHeight)
+		-- local ratio = math.min(maxWidth / logoNativeWidth, maxHeight / logoNativeHeight)
 
-		logo.Width = logoNativeWidth * ratio
-		logo.Height = logoNativeHeight * ratio
-		logo.pos = {
-			Screen.Width * 0.5 - logo.Width * 0.5,
-			Screen.Height * 0.5 - logo.Height * 0.5 + (pressAnywhere.Height + theme.padding) * 0.5,
-			0,
-		}
-
-		alpha.Height = logo.Height * 3 / 9
-		alpha.Width = alpha.Height * 33 / 12
-
-		alpha.pos = logo.pos + { logo.Width * 24.5 / 25 - alpha.Width, logo.Height * 3.5 / 9 - alpha.Height, 0 }
-
-		pressAnywhere.pos = {
-			Screen.Width * 0.5 - pressAnywhere.Width * 0.5,
-			logo.pos.Y - pressAnywhere.Height - theme.padding,
-			0,
-		}
+		-- logo.Width = logoNativeWidth * ratio
+		-- logo.Height = logoNativeHeight * ratio
+		-- logo.pos = {
+		-- 	Screen.Width * 0.5 - logo.Width * 0.5,
+		-- 	Screen.Height * 0.5 - logo.Height * 0.5,
+		-- 	0,
+		-- }
 	end
 	titleScreen:parentDidResize()
 
-	local t = 0
-	titleScreenTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		t = t + dt * 4.0
-		pressAnywhere.Color = Color(255, 255, 255, (math.sin(t) + 1.0) * 0.5)
-		alpha.shape:RotateWorld({ 0, dt, 0 })
-	end)
-
-	titleScreen.onRelease = function()
-		skipTitleScreen()
-	end
-
-	if System.HasEnvironmentToLaunch then
-		skipTitleScreen()
-	end
+	-- if System.HasEnvironmentToLaunch then
+	-- 	skipTitleScreen()
+	-- end
 
 	triggerCallbacks()
 end
@@ -2622,6 +2606,34 @@ if System.Authenticated then
 	hideBottomBar()
 else
 	showTitleScreen()
+	local signupFlow = require("signup"):startFlow({
+		ui = ui,
+		avatarPreviewStep = function()
+			LocalEvent:Send("signup_flow_avatar_preview")
+			hideTitleScreen()
+			hideBottomBar()
+		end,
+		loginStep = function()
+			LocalEvent:Send("signup_flow_login")
+			hideTitleScreen()
+			hideBottomBar()
+		end,
+		signUpOrLoginStep = function()
+			LocalEvent:Send("signup_flow_start_or_login")
+			showTitleScreen()
+			showBottomBar()
+		end,
+		loginSuccess = function()
+			LocalEvent:Send("signup_flow_login_success")
+			hideTitleScreen()
+			showTopBar()
+			hideBottomBar()
+			if activeFlow ~= nil then
+				activeFlow:remove()
+			end
+		end,
+	})
+	activeFlow = signupFlow
 end
 
 getWorldInfoReq = nil

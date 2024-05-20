@@ -1,28 +1,25 @@
---[[
-	NOTES:
-	- When replacing an avatar, we should replace Shape models,
-	not Shapes themselves as we might lose properties or parented objects.
-	We need a shape:ReplaceModel API for that.
-	- Considering a `didLoad` field might be set on returned avatar is not ideal.
-	`didLoad` could be provided within config table.
-]]
+mod = {}
 
-avatar = {}
+-- storage for avatar instances' private fields
+-- (allows to check if a table is in fact an avatar)
+-- { config = {},
+--   equipments = { equipmentType = { request = onGoingRequest, shapes = {} }, ... },
+--   requests = {},
+--   palette = Palette()
+-- }
+avatarPrivateFields = setmetatable({}, { __mode = "k" })
 
 -- MODULES
 api = require("api")
 hierarchyactions = require("hierarchyactions")
 
-local index = {}
-local avatarMetatable = {
-	__index = index,
-}
+function emptyFunc() end
 
 local SKIN_1_PALETTE_INDEX = 1
 local SKIN_2_PALETTE_INDEX = 2
--- local CLOTH_PALETTE_INDEX = 3
+local CLOTH_PALETTE_INDEX = 3
 local MOUTH_PALETTE_INDEX = 4
--- local EYES_WHITE_PALETTE_INDEX = 5
+local EYES_WHITE_PALETTE_INDEX = 5
 local EYES_PALETTE_INDEX = 6
 local NOSE_PALETTE_INDEX = 7
 local EYES_DARK_PALETTE_INDEX = 8
@@ -44,7 +41,7 @@ bodyPartsNames = {
 
 cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
 
-index.eyesColors = {
+mod.eyeColors = {
 	Color(166, 142, 163),
 	Color(68, 172, 229),
 	Color(61, 204, 141),
@@ -53,7 +50,7 @@ index.eyesColors = {
 	Color(229, 114, 189),
 }
 
-index.skinColors = {
+mod.skinColors = {
 	{
 		skin1 = Color(246, 227, 208),
 		skin2 = Color(246, 216, 186),
@@ -96,9 +93,258 @@ index.skinColors = {
 		nose = Color(47, 33, 25),
 		mouth = Color(47, 36, 29),
 	},
+	{ -- 8
+		skin1 = Color(108, 194, 231),
+		skin2 = Color(100, 158, 192),
+		nose = Color(98, 147, 189),
+		mouth = Color(113, 169, 200),
+	},
 }
 
+local DEFAULT_BODY_COLOR = 8
+
+mod.eyes = {
+	{
+		-- right eye
+		{ x = 1, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = EYES_PALETTE_INDEX },
+		{ x = 3, y = 1, c = EYES_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = EYES_PALETTE_INDEX },
+		{ x = 3, y = 2, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = EYES_PALETTE_INDEX },
+		{ x = 3, y = 3, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 1, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 3, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+
+		-- left eye
+		{ x = 9, y = 1, c = EYES_PALETTE_INDEX },
+		{ x = 10, y = 1, c = EYES_PALETTE_INDEX },
+		{ x = 11, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 2, c = EYES_PALETTE_INDEX },
+		{ x = 11, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 3, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 3, c = EYES_PALETTE_INDEX },
+		{ x = 11, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 11, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+	},
+	{
+		-- right eye
+		{ x = 1, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 1, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 3, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+
+		-- left eye
+		{ x = 9, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 11, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 3, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 11, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+	},
+	{
+		-- right eye
+		{ x = 1, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = EYES_PALETTE_INDEX },
+		{ x = 3, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = EYES_PALETTE_INDEX },
+		{ x = 3, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+
+		-- left eye
+		{ x = 9, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 2, c = EYES_PALETTE_INDEX },
+		{ x = 11, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 3, c = EYES_PALETTE_INDEX },
+		{ x = 11, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+	},
+	{
+		-- right eye
+		{ x = 1, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 2, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 3, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 1, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 3, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+
+		-- left eye
+		{ x = 9, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 11, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 3, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 3, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 11, y = 4, c = EYES_WHITE_PALETTE_INDEX },
+	},
+	{
+		-- right eye
+		{ x = 2, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 1, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 2, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 2, c = EYES_DARK_PALETTE_INDEX },
+
+		-- left eye
+		{ x = 9, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 1, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 9, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 2, c = EYES_DARK_PALETTE_INDEX },
+	},
+	{
+		-- right eye
+		{ x = 1, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 1, c = EYES_DARK_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 3, y = 2, c = EYES_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 3, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+
+		-- left eye
+		{ x = 9, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 10, y = 1, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 1, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 2, c = EYES_PALETTE_INDEX },
+		{ x = 10, y = 2, c = EYES_DARK_PALETTE_INDEX },
+		{ x = 11, y = 2, c = EYES_WHITE_PALETTE_INDEX },
+
+		{ x = 9, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 10, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+		{ x = 11, y = 3, c = EYES_WHITE_PALETTE_INDEX },
+	},
+}
+
+mod.noses = {
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+}
+
+local DEFAULT_NOSE_INDEX = 1
+
+avatarPalette = Palette()
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin1) -- skin 1
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin2) -- skin 2
+avatarPalette:AddColor(Color(231, 230, 208)) -- cloth
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].mouth) -- mouth
+avatarPalette:AddColor(Color(255, 255, 255)) -- eyes white
+avatarPalette:AddColor(Color(50, 50, 50)) -- eyes
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].nose) -- nose
+avatarPalette:AddColor(Color(10, 10, 10)) -- eyes dark
+
 function initAnimations(avatar)
+	local leftLegOrigin = avatar.LeftLeg.LocalPosition:Copy()
+	local rightLegOrigin = avatar.RightLeg.LocalPosition:Copy()
+
 	local animWalk = Animation("Walk", { speed = 1.8, loops = 0, priority = 2 })
 	local walk_llegK = {
 		{ time = 0.0, rotation = { -1.1781, 0, 0 } },
@@ -196,8 +442,7 @@ function initAnimations(avatar)
 	local owner
 	for name, v in pairs(walkConfig) do
 		for _, frame in ipairs(v) do
-			owner = name == "Body" and avatar or avatar[name]
-			-- owner = (name == "Body" and not avatar[name]) and avatar or avatar[name]
+			owner = (name == "Body" and not avatar[name]) and avatar or avatar[name]
 			if owner ~= nil then
 				animWalk:AddFrameInGroup(name, frame.time, { position = frame.position, rotation = frame.rotation })
 				animWalk:Bind(name, owner)
@@ -206,8 +451,6 @@ function initAnimations(avatar)
 	end
 
 	local yOffset = 0.4
-	local leftLegOrigin = avatar.LeftLeg.LocalPosition:Copy()
-	local rightLegOrigin = avatar.RightLeg.LocalPosition:Copy()
 	local animIdle = Animation("Idle", { speed = 0.5, loops = 0 })
 	local idle_keyframes_data = {
 		{ name = "LeftLeg", time = 0.0, position = leftLegOrigin, rotation = { 0, 0, 0 } },
@@ -311,221 +554,112 @@ function tableToColor(t)
 	return Color(math.floor(t.r), math.floor(t.g), math.floor(t.b))
 end
 
-index.setEyesColor = function(_, avatarOrHead, c)
-	local head = avatarOrHead
-	if avatarOrHead.Head then
-		head = avatarOrHead.Head
-	end
-	head.Palette[EYES_PALETTE_INDEX].Color = c
-	head.Palette[EYES_DARK_PALETTE_INDEX].Color = c
-	head.Palette[EYES_DARK_PALETTE_INDEX].Color:ApplyBrightnessDiff(-0.15)
-end
-
-index.getEyesColor = function(_, playerOrHead)
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
-	end
-	return head.Palette[EYES_PALETTE_INDEX].Color
-end
-
-index.setBodyPartColor = function(_, _, shape, skin1, skin2)
-	if skin1 ~= nil and shape.Palette[SKIN_1_PALETTE_INDEX] then
-		shape.Palette[SKIN_1_PALETTE_INDEX].Color = skin1
-	end
-	if skin2 ~= nil and shape.Palette[SKIN_2_PALETTE_INDEX] then
-		shape.Palette[SKIN_2_PALETTE_INDEX].Color = skin2
-	end
-end
-
-index.setHeadColors = function(self, avatarOrHead, skin1, skin2, nose, mouth)
-	local head = avatarOrHead
-	if avatarOrHead.Head then
-		head = avatarOrHead.Head
-	end
-	head.Palette[SKIN_1_PALETTE_INDEX].Color = skin1
-	head.Palette[SKIN_2_PALETTE_INDEX].Color = skin2
-	self:setNoseColor(head, nose)
-	self:setMouthColor(head, mouth)
-end
-
--- Warning: `player` argument can be of different forms
-index.setSkinColor = function(self, avatar, skin1, skin2, nose, mouth)
-	if skin1 and skin2 then
-		local part
-		for _, name in ipairs(bodyPartsNames) do
-			part = avatar[name]
-			if part == nil and name == "Body" then
-				part = avatar
-			end
-			self:setBodyPartColor(nil, part, skin1, skin2)
-		end
-	end
-
-	if nose then
-		self:setNoseColor(avatar, nose)
-	end
-
-	if mouth then
-		self:setMouthColor(avatar, mouth)
-	end
-end
-
-index.getNoseColor = function(_, playerOrHead)
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
-	end
-	return head.Palette[NOSE_PALETTE_INDEX].Color
-end
-
-index.setNoseColor = function(_, avatarOrHead, color)
-	if not color or type(color) ~= "Color" then
-		print("Error: setNoseColor second argument must be of type Color.")
-		return
-	end
-
-	local head = avatarOrHead
-	if avatarOrHead.Head then
-		head = avatarOrHead.Head
-	end
-	head.Palette[NOSE_PALETTE_INDEX].Color = color
-end
-
-index.getMouthColor = function(_, playerOrHead)
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
-	end
-	return head.Palette[MOUTH_PALETTE_INDEX].Color
-end
-
-index.setMouthColor = function(_, playerOrHead, color)
-	if not color or type(color) ~= "Color" then
-		print("Error: setMouthColor second argument must be of type Color.")
-		return
-	end
-
-	local head = playerOrHead
-	if playerOrHead.Head then
-		head = playerOrHead.Head
-	end
-	head.Palette[MOUTH_PALETTE_INDEX].Color = color
-end
-
 -- Returns sent requests
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
-index.prepareHead = function(self, head, usernameOrId, callback)
-	local requests = {}
-	local req = api.getAvatar(usernameOrId, function(err, data)
-		if err then
-			callback(err)
-			return
-		end
-		if data.skinColor then
-			local skinColor = tableToColor(data.skinColor)
-			local skinColor2 = tableToColor(data.skinColor2)
-			self:setBodyPartColor("Head", head, skinColor, skinColor2)
-		end
-		if data.eyesColor then
-			self:setEyesColor(head, tableToColor(data.eyesColor))
-		end
-		if data.noseColor then
-			self:setNoseColor(head, tableToColor(data.noseColor))
-		end
-		if data.mouthColor then
-			self:setMouthColor(head, tableToColor(data.mouthColor))
-		end
-
-		if data.hair ~= nil and data.hair ~= "" then
-			local req = Object:Load(data.hair, function(shape)
-				if shape == nil then
-					return callback("Error: can't find hair '" .. data.hair .. "'.")
-				end
-				require("equipments"):attachEquipmentToBodyPart(shape, head)
-				callback(nil, head)
-			end)
-			table.insert(requests, req)
-		else
-			-- avatar doesn't have hair, we can call the callback right away
-			callback(nil, head)
-		end
-	end)
-	table.insert(requests, req)
-	return requests
+mod.getPlayerHead = function(self, usernameOrId, callback)
+	error("REVIEW getPlayerHead")
+	-- local head = Shape(cachedHead)
+	-- local requests = self:prepareHead(head, usernameOrId, callback)
+	-- return requests
 end
 
--- Returns sent requests
--- /!\ return table of requests does not contain all requests right away
--- reference should be kept, not copying entries right after function call.
-index.getPlayerHead = function(self, usernameOrId, callback)
-	local head = Shape(cachedHead)
-	local requests = self:prepareHead(head, usernameOrId, callback)
-	return requests
-end
+avatarDefaultConfig = {
+	usernameOrId = "", -- item repo and name (like "aduermael.hair")
+	didLoad = emptyFunc, -- function(err) end
+	eyeBlinks = true,
+	defaultAnimations = true,
+	loadEquipments = true,
+}
 
 -- returns MutaleShape + sent requests (table)
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
 -- replaced is optional, but can be provided to replace an existing avatar instead of creating a new one.
-index.get = function(_, usernameOrId, replaced, didLoadCallback)
-	if type(usernameOrId) ~= "string" then
-		error("avatar:get(usernameOrId, avatar, didLoadCallback) - usernameOrId is supposed to be a string", 2)
+-- LEGACY: config used to be usernameOrId
+mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated)
+	if self ~= mod then
+		error("avatar:get(config) should be called with `:`", 2)
 	end
 
-	-- validate replaced if provided
-	if replaced ~= nil then
-		if type(replaced) ~= "MutableShape" then
-			error("avatar:get(usernameOrId, avatar, didLoadCallback) - avatar is supposed to be a MutableShape", 2)
+	-- LEGACY
+	if type(config) == "string" then
+		config = {
+			usernameOrId = config, -- parameter used to be usernameOrId
+		}
+	end
+	if type(didLoadCallback_deprecated) == "function" then
+		if config == nil then
+			config = {}
 		end
-		if replaced.Name ~= "Body" then
-			error('avatar:get(usernameOrId, avatar, didLoadCallback) - avatar.name should be "Body"', 2)
-		end
+		config.didLoad = didLoadCallback_deprecated
 	end
 
-	-- validate didLoadCallback if provided
-	if didLoadCallback ~= nil and type(didLoadCallback) ~= "function" then
-		error("avatar:get(usernameOrId, avatar, didLoadCallback) - didLoadCallback must be a function", 2)
+	ok, err = pcall(function()
+		config = require("config"):merge(avatarDefaultConfig, config)
+	end)
+	if not ok then
+		error("avatar:get(config) - config error: " .. err, 2)
 	end
 
 	local requests = {}
 
-	-- `replaced` can be nil, if it has not been provided
-	local root = replaced
+	local avatar = Object()
+	avatar.load = avatar_load
+	avatar.loadEquipment = avatar_loadEquipment
+	avatar.setColors = avatar_setColors
+	avatar.setEyes = avatar_setEyes
+	avatar.setNose = avatar_setNose
 
-	-- if root is nil, we create a new avatar
-	if root == nil then
-		root = System.MutableShapeFromBundle("caillef.multiavatar")
-		root.Name = "Body"
-		hierarchyactions:applyToDescendants(root, { includeRoot = true }, function(o)
-			o.Physics = PhysicsMode.Disabled
-		end)
-		initAnimations(root)
+	local requests = {}
+	local palette = avatarPalette:Copy()
 
-		local eyeLidRight = MutableShape()
-		eyeLidRight.Physics = PhysicsMode.Disabled
-		eyeLidRight.Palette = root.Head.Palette
-		eyeLidRight:AddBlock(1, 0, 0, 0)
+	avatarPrivateFields[avatar] = { config = config, equipments = {}, requests = requests, palette = palette }
 
-		eyeLidRight = Shape(eyeLidRight)
-		eyeLidRight.Name = "EyeLidRight"
-		eyeLidRight:SetParent(root.Head)
-		eyeLidRight.Pivot = { 0.5, 1, 0.5 }
-		eyeLidRight.Scale.Z = 1
-		eyeLidRight.Scale.X = 3.2
-		eyeLidRight.Scale.Y = 0 -- 4.2
-		eyeLidRight.LocalPosition:Set(4, 5.1, 5.1)
+	local body = System.MutableShapeFromBundle("caillef.multiavatar")
+	body.Name = "Body"
+	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
+		o.Physics = PhysicsMode.Disabled
+	end)
 
-		local eyeLidLeft = Shape(eyeLidRight)
-		eyeLidLeft.Name = "EyeLidLeft"
-		eyeLidLeft:SetParent(root.Head)
-		eyeLidLeft.Pivot = { 0.5, 1, 0.5 }
-		eyeLidLeft.Scale.Z = 1
-		eyeLidLeft.Scale.X = 3.2
-		eyeLidLeft.Scale.Y = 0 -- 4.2
-		eyeLidLeft.LocalPosition:Set(-4, 5.1, 5.1)
+	avatar:AddChild(body)
+	body.LocalPosition.Y = 12
 
+	if config.defaultAnimations then
+		initAnimations(avatar)
+	end
+
+	avatar:setEyes({ index = 1 })
+	avatar:setNose({ index = DEFAULT_NOSE_INDEX })
+
+	local eyeLidRight = MutableShape()
+	eyeLidRight.Physics = PhysicsMode.Disabled
+	eyeLidRight.Palette = palette
+	eyeLidRight:AddBlock(1, 0, 0, 0)
+
+	eyeLidRight = Shape(eyeLidRight)
+	eyeLidRight.Name = "EyeLidRight"
+	eyeLidRight:SetParent(avatar.Head)
+	eyeLidRight.Pivot = { 0.5, 1, 0.5 }
+	eyeLidRight.Scale.Z = 1
+	eyeLidRight.Scale.X = 3.2
+	eyeLidRight.Scale.Y = 0 -- 4.2
+	eyeLidRight.LocalPosition:Set(4, 5.1, 5.1)
+
+	local eyeLidLeft = Shape(eyeLidRight)
+	eyeLidLeft.Name = "EyeLidLeft"
+	eyeLidLeft:SetParent(avatar.Head)
+	eyeLidLeft.Pivot = { 0.5, 1, 0.5 }
+	eyeLidLeft.Scale.Z = 1
+	eyeLidLeft.Scale.X = 3.2
+	eyeLidLeft.Scale.Y = 0 -- 4.2
+	eyeLidLeft.LocalPosition:Set(-4, 5.1, 5.1)
+
+	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
+		o.Palette = palette
+	end)
+
+	if config.eyeBlinks then
 		local eyeBlinks = {}
 		eyeBlinks.close = function()
 			-- removing eyelids when head loses its parent
@@ -551,92 +685,370 @@ index.get = function(_, usernameOrId, replaced, didLoadCallback)
 		eyeBlinks.schedule()
 	end
 
-	-- if didLoadCallback is provided, we set it on root
-	if didLoadCallback ~= nil then
-		root.didLoad = didLoadCallback
+	avatar:load()
+
+	return avatar, requests
+end
+
+function avatar_load(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:load(config) should be called with `:`", 2)
 	end
 
-	local equipments = require("equipments")
-
-	-- loads avatar equipments (hair, jacket, pants, boots)
-	local loadEquipments = function(_, data)
-		-- keys expected in `data` argument
-		local equipmentsList = { "hair", "jacket", "pants", "boots" }
-		local nbEquipmentsTotal = #equipmentsList
-		local nbEquipmentsLoaded = 0
-
-		local nextEquipmentLoaded = function()
-			nbEquipmentsLoaded = nbEquipmentsLoaded + 1
-			if nbEquipmentsLoaded >= nbEquipmentsTotal and root.didLoad then
-				root.didLoad(nil, root)
-			end
-		end
-
-		for _, eqName in ipairs(equipmentsList) do
-			local itemRepoName = data[eqName]
-			if itemRepoName ~= nil and itemRepoName ~= "" then
-				-- equipments.load creates the `root.equipments` field
-				local req = equipments.load(eqName, itemRepoName, root, false, false, function(obj)
-					if not obj then
-						print("Error: can't equip default wearables")
-					end
-					nextEquipmentLoaded()
-				end)
-				table.insert(requests, req)
-			else
-				-- we need to call nextEquipmentLoaded() even if there is no equipment
-				-- to make sure we call root.didLoad() when all equipments are loaded
-				nextEquipmentLoaded()
-			end
-		end
+	-- if config parameter isn't nil: load provided field,
+	-- load avatar's config otherwise
+	if config == nil then
+		config = fields.config
 	end
 
-	local req = api.getAvatar(usernameOrId, function(err, data)
-		if err and root.didLoad then
-			root.didLoad(err)
+	if config.usernameOrId ~= "" then
+		local req = api.getAvatar(config.usernameOrId, function(err, data)
+			if err and config.didLoad then
+				config.didLoad(err)
+				return
+			end
+
+			local skinColor = nil
+			local skinColor2 = nil
+			local noseColor = nil
+			local mouthColor = nil
+			local eyesColor = nil
+
+			if data.skinColor then
+				skinColor =
+					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
+			end
+			if data.skinColor2 then
+				skinColor2 =
+					Color(math.floor(data.skinColor2.r), math.floor(data.skinColor2.g), math.floor(data.skinColor2.b))
+			end
+			if data.noseColor then
+				noseColor =
+					Color(math.floor(data.noseColor.r), math.floor(data.noseColor.g), math.floor(data.noseColor.b))
+			end
+			if data.mouthColor then
+				mouthColor =
+					Color(math.floor(data.mouthColor.r), math.floor(data.mouthColor.g), math.floor(data.mouthColor.b))
+			end
+			if data.eyesColor then
+				eyesColor =
+					Color(math.floor(data.eyesColor.r), math.floor(data.eyesColor.g), math.floor(data.eyesColor.b))
+			end
+
+			self:setColors({
+				skin1 = skinColor,
+				skin2 = skinColor2,
+				nose = noseColor,
+				mouth = mouthColor,
+				eyes = eyesColor,
+			})
+
+			-- print("data:", JSON:Encode(data))
+
+			if data.jacket then
+				self:loadEquipment({ type = "jacket", item = data.jacket })
+			end
+			if data.pants then
+				self:loadEquipment({ type = "pants", item = data.pants })
+			end
+			if data.hair then
+				self:loadEquipment({ type = "hair", item = data.hair })
+			end
+			if data.boots then
+				self:loadEquipment({ type = "boots", item = data.boots })
+			end
+		end)
+
+		table.insert(fields.requests, req)
+	end
+end
+
+function _attachEquipmentToBodyPart(bodyPart, equipment, scale)
+	if equipment == nil or bodyPart == nil then
+		return
+	end
+	equipment.Physics = PhysicsMode.Disabled
+	equipment.LocalRotation:Set(0, 0, 0)
+
+	equipment:SetParent(bodyPart)
+	equipment.Shadow = bodyPart.Shadow
+	equipment.IsUnlit = bodyPart.IsUnlit
+	System:SetLayersElevated(equipment, System:GetLayersElevated(bodyPart))
+
+	local coords = bodyPart:GetPoint("origin").Coords
+	if coords == nil then
+		print("can't get parent coords for equipment")
+		return
+	end
+
+	local localPos = bodyPart:BlockToLocal(coords)
+	local origin = Number3(0, 0, 0)
+	local point = equipment:GetPoint("origin")
+	if point ~= nil then
+		origin = point.Coords
+	end
+	equipment.Pivot = origin
+	equipment.LocalPosition = localPos
+
+	equipment.Scale = scale or 1
+end
+
+function avatar_loadEquipment(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:loadEquipment(config) should be called with `:`", 2)
+	end
+
+	local requests = fields.requests
+
+	local defaultConfig = {
+		type = "",
+		item = "", -- item repo and name (like "aduermael.hair")
+		avatar = nil, -- avatar to be equipped (can remain nil)
+		mutable = false, -- equipment shape(s) made mutable when true
+		didLoad = emptyFunc, -- function(shape, equipmentType) end
+		-- allows to provide shape that's already been loaded
+		-- /!\ shape then managed by avatar, provide copy if needed
+		shape = nil,
+	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				shape = { "Shape", "MutableShape" },
+			},
+		})
+	end)
+	if not ok then
+		error("loadEquipment(config) - config error: " .. err, 2)
+	end
+
+	local currentEquipment = fields.equipments[config.type]
+	if currentEquipment == nil then
+		currentEquipment = {}
+		fields.equipments[config.type] = currentEquipment
+	end
+
+	if currentEquipment.request ~= nil then
+		currentEquipment.request:Cancel()
+		currentEquipment.request = nil
+	end
+
+	local attachEquipment = function(equipment)
+		-- remove current equipment
+		if currentEquipment.shapes ~= nil then
+			for i, previousEquipment in ipairs(currentEquipment.shapes) do
+				if i > 1 then
+					previousEquipment:SetParent(currentEquipment.shapes[i - 1])
+				else
+					previousEquipment:RemoveFromParent()
+				end
+			end
+		end
+		if equipment == nil then
+			-- no equipment to attach
 			return
 		end
 
-		local skinColor = nil
-		local skinColor2 = nil
-		local noseColor = nil
-		local mouthColor = nil
-		local eyesColor = nil
+		if config.type == "jacket" then
+			local rightSleeve
+			local leftSleeve
+			rightSleeve = equipment:GetChild(1)
+			if rightSleeve then
+				leftSleeve = rightSleeve:GetChild(1)
+			end
+			currentEquipment.shapes = { equipment, rightSleeve, leftSleeve }
+			_attachEquipmentToBodyPart(self.Body, equipment)
+			if rightSleeve then
+				_attachEquipmentToBodyPart(self.RightArm, rightSleeve)
+			end
+			if leftSleeve then
+				_attachEquipmentToBodyPart(self.LeftArm, leftSleeve)
+			end
+		elseif config.type == "pants" then
+			local leftLeg = equipment:GetChild(1)
+			currentEquipment.shapes = { equipment, leftLeg }
+			_attachEquipmentToBodyPart(self.RightLeg, equipment, 1.05)
+			_attachEquipmentToBodyPart(self.LeftLeg, leftLeg, 1.05)
+		elseif config.type == "boots" then
+			local leftFoot = equipment:GetChild(1)
+			currentEquipment.shapes = { equipment, leftFoot }
+			_attachEquipmentToBodyPart(self.RightFoot, equipment)
+			_attachEquipmentToBodyPart(self.LeftFoot, leftFoot)
+		elseif config.type == "hair" then
+			currentEquipment.shapes = { equipment }
+			_attachEquipmentToBodyPart(self.Head, equipment)
+		end
+	end
 
-		if data.skinColor then
-			skinColor = Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
-		end
-		if data.skinColor2 then
-			skinColor2 =
-				Color(math.floor(data.skinColor2.r), math.floor(data.skinColor2.g), math.floor(data.skinColor2.b))
-		end
-		if data.noseColor then
-			noseColor = Color(math.floor(data.noseColor.r), math.floor(data.noseColor.g), math.floor(data.noseColor.b))
-		end
-		if data.mouthColor then
-			mouthColor =
-				Color(math.floor(data.mouthColor.r), math.floor(data.mouthColor.g), math.floor(data.mouthColor.b))
-		end
-		if data.eyesColor then
-			eyesColor = Color(math.floor(data.eyesColor.r), math.floor(data.eyesColor.g), math.floor(data.eyesColor.b))
-		end
+	if config.shape then
+		attachEquipment(config.shape)
+	elseif config.item == "" then
+		attachEquipment(nil)
+	else
+		local req = Object:Load(config.item, function(equipment)
+			currentEquipment.request = nil
 
-		if skinColor or skinColor2 or noseColor or mouthColor then
-			index:setSkinColor(root, skinColor, skinColor2, noseColor, mouthColor)
-		end
+			if equipment == nil then
+				-- TODO: keep retrying
+				return
+			end
 
-		if eyesColor then
-			index:setEyesColor(root, eyesColor)
-		end
+			attachEquipment(equipment)
+		end)
 
-		loadEquipments(root, data)
-	end)
+		currentEquipment.request = req
 
-	table.insert(requests, req)
-
-	return root, requests
+		table.insert(requests, req)
+	end
 end
 
-setmetatable(avatar, avatarMetatable)
+function avatar_setColors(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:load(config) should be called with `:`", 2)
+	end
 
-return avatar
+	config = require("config"):merge({}, config, {
+		acceptTypes = {
+			skin1 = { "Color" },
+			skin2 = { "Color" },
+			cloth = { "Color" },
+			mouth = { "Color" },
+			eyes = { "Color" },
+			eyesWhite = { "Color" },
+			eyesDark = { "Color" },
+			nose = { "Color" },
+		},
+	})
+
+	local palette = fields.palette
+
+	if config.skin1 then
+		palette[SKIN_1_PALETTE_INDEX].Color = config.skin1
+	end
+	if config.skin2 then
+		palette[SKIN_2_PALETTE_INDEX].Color = config.skin2
+	end
+	if config.cloth then
+		palette[CLOTH_PALETTE_INDEX].Color = config.cloth
+	end
+	if config.mouth then
+		palette[MOUTH_PALETTE_INDEX].Color = config.mouth
+	end
+	if config.eyes then
+		palette[EYES_PALETTE_INDEX].Color = config.eyes
+		if config.eyesDark == nil then
+			config.eyesDark = Color(palette[EYES_PALETTE_INDEX].Color)
+			config.eyesDark:ApplyBrightnessDiff(-0.2)
+		end
+	end
+	if config.eyesWhite then
+		palette[EYES_WHITE_PALETTE_INDEX].Color = config.eyesWhite
+	end
+	if config.eyesDark then
+		palette[EYES_DARK_PALETTE_INDEX].Color = config.eyesDark
+	end
+	if config.nose then
+		palette[NOSE_PALETTE_INDEX].Color = config.nose
+	end
+end
+
+function avatar_setEyes(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:setEyes(config) should be called with `:`", 2)
+	end
+
+	config = require("config"):merge({}, config, {
+		acceptTypes = {
+			index = { "integer" },
+			color = { "Color" },
+		},
+	})
+
+	if config.index ~= nil then
+		-- remove current eyes
+		local head = self.Head
+		local b
+		for x = 4, head.Width - 5 do -- width -> left side when looking at face
+			for y = 3, head.Height - 5 do
+				b = head:GetBlock(x, y, head.Depth - 2)
+				if b then
+					b:Replace(SKIN_1_PALETTE_INDEX)
+				end
+			end
+		end
+
+		local eyes = mod.eyes[config.index]
+		for _, e in ipairs(eyes) do
+			b = head:GetBlock(15 - e.x, e.y + 2, head.Depth - 2)
+			if b then
+				b:Replace(e.c)
+			end
+		end
+	end
+
+	if config.color ~= nil then
+		self:setColors({
+			eyes = config.color,
+		})
+	end
+end
+
+function avatar_setNose(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:setNose(config) should be called with `:`", 2)
+	end
+
+	config = require("config"):merge({}, config, {
+		acceptTypes = {
+			index = { "integer" },
+			color = { "Color" },
+		},
+	})
+
+	if config.index ~= nil then
+		-- remove current nose
+		local head = self.Head
+		local b
+		local depth = 12
+		for x = 8, head.Width - 9 do -- width -> left side when looking at face
+			for y = 3, head.Height - 5 do
+				b = head:GetBlock(x, y, depth)
+				if b ~= nil then
+					b:Remove()
+				end
+			end
+		end
+
+		local nose = mod.noses[config.index]
+		for _, n in ipairs(nose) do
+			head:AddBlock(n.c, 11 - n.x, n.y + 2, depth)
+		end
+	end
+
+	if config.color ~= nil then
+		-- self:setColors({
+		-- 	eyes = config.color,
+		-- })
+	end
+end
+
+-- EQUIPMENTS
+
+equipmentTypes = {
+	"hair",
+	"jacket",
+	"pants",
+	"boots",
+}
+
+equipmentIndex = {}
+for _, e in ipairs(equipmentTypes) do
+	equipmentIndex[e] = true
+end
+
+return mod
