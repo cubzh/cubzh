@@ -69,8 +69,6 @@ Shape *shape_make(void);
 Shape *shape_make_2(const bool isMutable);
 Shape *shape_make_copy(Shape *const origin);
 
-VertexBuffer *shape_add_buffer(Shape *shape, bool transparency);
-
 /// Returns false if retain fails
 bool shape_retain(Shape *const shape);
 
@@ -261,6 +259,7 @@ void shape_get_chunk_and_coordinates(const Shape *shape,
                                      SHAPE_COORDS_INT3_T *chunk_coords,
                                      CHUNK_COORDS_INT3_T *coords_in_chunk);
 void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent);
+VertexBuffer *shape_add_buffer(Shape *shape, bool transparency);
 void shape_refresh_vertices(Shape *shape);
 void shape_refresh_all_vertices(Shape *s);
 VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent);
