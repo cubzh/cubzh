@@ -309,7 +309,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     typedef struct {
         Transform *t;
         RigidBody *rb;
-        const Matrix4x4 *model;
+        Matrix4x4 *model;
         float3 normal;
     } ContactData;
     ContactData contact; // TODO: list of contacts to handle contact ties
@@ -399,7 +399,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                        &rtreeNormal,
                                        NULL);
 
-                const Matrix4x4 *model = NULL;
+                Matrix4x4 *model = NULL;
                 normal = float3_zero;
 
                 if (mode == RigidbodyMode_Dynamic) {
@@ -413,9 +413,9 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                     // solve non-dynamic rigidbodies in their model space (rotated collider)
                     const Box collider = hitPerBlock ? shape_get_model_aabb(shape)
                                                      : *rigidbody_get_collider(hitRb);
-                    const Matrix4x4 *invModel = transform_get_wtl(
-                        transform_utils_get_model_transform(hitLeaf));
-                    rigidbody_broadphase_world_to_model(invModel,
+                    Matrix4x4 invModel;
+                    transform_utils_get_model_wtl(hitLeaf, &invModel);
+                    rigidbody_broadphase_world_to_model(&invModel,
                                                         worldCollider,
                                                         &modelBox,
                                                         &dv,
@@ -452,7 +452,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                             swept = rtreeSwept;
                             normal = rtreeNormal;
                         } else {
-                            model = transform_get_ltw(transform_utils_get_model_transform(hitLeaf));
+                            model = matrix4x4_new_identity();
+                            transform_utils_get_model_ltw(hitLeaf, model);
                         }
                     } else {
                         swept = 1.0f;
@@ -467,6 +468,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                         if (model != NULL) {
                             matrix4x4_op_multiply_vec_vector(&wNormal, &normal, model);
                             float3_normalize(&wNormal);
+                            matrix4x4_free(model);
                         } else {
                             wNormal = normal;
                         }
@@ -485,6 +487,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                         contact.normal = normal;
                         minSwept = swept;
                     }
+                } else if (model != NULL) {
+                    matrix4x4_free(model);
                 }
 
                 hit = fifo_list_pop(sceneQuery);
@@ -734,6 +738,10 @@ bool _rigidbody_dynamic_tick(Scene *scene,
             float3_set_zero(&dv);
         }
 
+        if (contact.model != NULL) {
+            matrix4x4_free(contact.model);
+        }
+
         solverCount++;
     }
 #if DEBUG_RIGIDBODY_CALLS
@@ -787,9 +795,10 @@ void _rigidbody_trigger_tick(Scene *scene,
 
         const Box selfCollider = selfPerBlock ? shape_get_model_aabb(s)
                                               : *rigidbody_get_collider(rb);
-        Transform *selfModelTr = transform_utils_get_model_transform(t);
-        const Matrix4x4 *selfModel = transform_get_ltw(selfModelTr);
-        const Matrix4x4 *selfInvModel = transform_get_wtl(selfModelTr);
+        Matrix4x4 selfModel;
+        transform_utils_get_model_ltw(t, &selfModel);
+        Matrix4x4 selfInvModel;
+        transform_utils_get_model_wtl(t, &selfInvModel);
 
         RtreeNode *hit = fifo_list_pop(sceneQuery);
         Transform *hitLeaf;
@@ -818,15 +827,16 @@ void _rigidbody_trigger_tick(Scene *scene,
 
             Box hitCollider = hitPerBlock ? shape_get_model_aabb(hitShape)
                                           : *rigidbody_get_collider(hitRb);
-            Transform *hitModelTr = transform_utils_get_model_transform(hitLeaf);
-            const Matrix4x4 *hitModel = transform_get_ltw(hitModelTr);
-            const Matrix4x4 *hitInvModel = transform_get_wtl(hitModelTr);
+            Matrix4x4 hitModel;
+            transform_utils_get_model_ltw(hitLeaf, &hitModel);
+            Matrix4x4 hitInvModel;
+            transform_utils_get_model_wtl(hitLeaf, &hitInvModel);
 
             // 1) check for overlap in self model space (ignoring hit shape per-block quality)
             box_model1_to_model2_aabox(&hitCollider,
                                        &box,
-                                       hitModel,
-                                       selfInvModel,
+                                       &hitModel,
+                                       &selfInvModel,
                                        &float3_zero,
                                        NoSquarify);
 
@@ -840,8 +850,8 @@ void _rigidbody_trigger_tick(Scene *scene,
             // 2) check for overlap in hit model space (ignoring self shape per-block quality)
             box_model1_to_model2_aabox(&selfCollider,
                                        &box,
-                                       selfModel,
-                                       hitInvModel,
+                                       &selfModel,
+                                       &hitInvModel,
                                        &float3_zero,
                                        NoSquarify);
 
@@ -874,7 +884,7 @@ void _rigidbody_trigger_tick(Scene *scene,
                     normal.z = box.max.z > hitCollider.min.z ? -1.0f : 1.0f;
                 }
                 float3 wNormal;
-                matrix4x4_op_multiply_vec_vector(&wNormal, &normal, hitModel);
+                matrix4x4_op_multiply_vec_vector(&wNormal, &normal, &hitModel);
 
                 _rigidbody_fire_reciprocal_callbacks(scene,
                                                      rb,

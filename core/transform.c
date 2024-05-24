@@ -16,6 +16,7 @@
 #include "config.h"
 #include "filo_list_uint16.h"
 #include "mutex.h"
+#include "quad.h"
 #include "scene.h"
 #include "utils.h"
 
@@ -1015,8 +1016,38 @@ Shape *transform_utils_get_shape(Transform *t) {
     return (Shape *)t->ptr;
 }
 
-Transform *transform_utils_get_model_transform(Transform *t) {
-    return transform_get_type(t) == ShapeTransform ? shape_get_pivot_transform((Shape *)t->ptr) : t;
+void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
+    if (transform_get_type(t) == ShapeTransform) {
+        const float3 pivot = shape_get_pivot((Shape *)t->ptr);
+        matrix4x4_set_translation(out, -pivot.x, -pivot.y, -pivot.z);
+        matrix4x4_op_multiply_2(t->ltw, out);
+    } else if (transform_get_type(t) == QuadTransform) {
+        const Quad *q = (Quad *)t->ptr;
+        matrix4x4_set_translation(out,
+                                  -quad_get_anchor_x(q) * quad_get_width(q),
+                                  -quad_get_anchor_y(q) * quad_get_height(q),
+                                  0.0f);
+        matrix4x4_op_multiply_2(t->ltw, out);
+    } else {
+        matrix4x4_copy(out, t->ltw);
+    }
+}
+
+void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out) {
+    if (transform_get_type(t) == ShapeTransform) {
+        const float3 pivot = shape_get_pivot((Shape *)t->ptr);
+        matrix4x4_set_translation(out, pivot.x, pivot.y, pivot.z);
+        matrix4x4_op_multiply(out, t->wtl);
+    } else if (transform_get_type(t) == QuadTransform) {
+        const Quad *q = (Quad *)t->ptr;
+        matrix4x4_set_translation(out,
+                                  quad_get_anchor_x(q) * quad_get_width(q),
+                                  quad_get_anchor_y(q) * quad_get_height(q),
+                                  0.0f);
+        matrix4x4_op_multiply(out, t->wtl);
+    } else {
+        matrix4x4_copy(out, t->wtl);
+    }
 }
 
 void transform_utils_get_backward(Transform *t, float3 *backward) {

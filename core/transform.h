@@ -214,7 +214,8 @@ void transform_utils_box_to_dynamic_collider(Transform *t,
                                              const float3 *offset,
                                              SquarifyType squarify);
 Shape *transform_utils_get_shape(Transform *t);
-Transform *transform_utils_get_model_transform(Transform *t);
+void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out);
+void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out);
 void transform_utils_get_backward(Transform *t, float3 *backward);
 void transform_utils_get_left(Transform *t, float3 *left);
 void transform_utils_get_down(Transform *t, float3 *down);

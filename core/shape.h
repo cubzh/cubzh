@@ -216,7 +216,7 @@ void shape_set_position(Shape *s, const float x, const float y, const float z);
 void shape_set_local_position(Shape *s, const float x, const float y, const float z);
 const float3 *shape_get_position(const Shape *s);
 const float3 *shape_get_local_position(const Shape *s);
-const float3 *shape_get_model_origin(const Shape *s);
+float3 shape_get_model_origin(const Shape *s);
 
 /// rotation
 void shape_set_rotation(Shape *s, Quaternion *q);
@@ -233,17 +233,12 @@ void shape_set_local_scale(Shape *s, const float x, const float y, const float z
 const float3 *shape_get_local_scale(const Shape *s);
 void shape_get_lossy_scale(const Shape *s, float3 *scale);
 
-/// matrices
-const Matrix4x4 *shape_get_model_matrix(const Shape *s);
-
 bool shape_set_parent(Shape *s, Transform *parent, const bool keepWorld);
 /// /!\ shape_remove_parent is INTERNAL use only,
 /// for external usage i.e. for shapes that exist as a lua Shape, transform removal needs to be
 /// registered in scene, see lua_object for examples
 bool shape_remove_parent(Shape *s, const bool keepWorld);
 Transform *shape_get_root_transform(const Shape *s);
-Transform *shape_get_pivot_transform(const Shape *s); // corresponds to shape model origin
-void shape_move_children(Shape *from, Shape *to, const bool keepWorld);
 uint32_t shape_count_shape_descendants(const Shape *s);
 DoublyLinkedListNode *shape_get_transform_children_iterator(const Shape *s);
 
@@ -298,7 +293,8 @@ float shape_box_cast(const Shape *s,
 /// Casts a world ray against given shape. World distance, local impact, block & block octree
 /// coordinates can be returned through pointer parameters
 /// @return true if a block is touched
-bool shape_ray_cast(const Shape *s,
+bool shape_ray_cast(const Transform *t,
+                    const Shape *s,
                     const Ray *worldRay,
                     float *worldDistance,
                     float3 *localImpact,
