@@ -1800,12 +1800,10 @@ function createUI(system)
 			self.string.Text = str
 			_textInputTextDidChange(self)
 			if focused == self then
-				-- if new text is empty, reset cursor to start
-				if str == "" then
-					local charIndex, cursorPos = self.string:charIndexToCursor(1)
-					self.cursor.pos = cursorPos
-						+ Number2(self.string.pos.X - theme.textInputCursorWidth * 0.5, self.string.pos.Y)
-				end
+				-- put cursor at the end of string
+				local charIndex, cursorPos = self.string:charIndexToCursor(#str + 1)
+				self.cursor.pos = cursorPos
+					+ Number2(self.string.pos.X - theme.textInputCursorWidth * 0.5, self.string.pos.Y)
 				Client.OSTextInput:Update({ content = str, cursorStart = nil, cursorEnd = nil })
 			end
 		end
