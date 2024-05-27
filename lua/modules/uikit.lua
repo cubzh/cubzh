@@ -802,118 +802,6 @@ function createUI(system)
 		end
 	end
 
-	local function _AABBToOBB(aabb)
-		local obb = {}
-		local min = aabb.Min
-		local max = aabb.Max
-
-		obb[1] = Number3(min.X, min.Y, min.Z)
-		obb[2] = Number3(max.X, min.Y, min.Z)
-		obb[3] = Number3(max.X, min.Y, max.Z)
-		obb[4] = Number3(min.X, min.Y, max.Z)
-		obb[5] = Number3(min.X, max.Y, min.Z)
-		obb[6] = Number3(max.X, max.Y, min.Z)
-		obb[7] = Number3(max.X, max.Y, max.Z)
-		obb[8] = Number3(min.X, max.Y, max.Z)
-
-		return obb
-	end
-
-	local function _OBBToAABB(obb)
-		local point = obb[1]
-		local min = Number3(point.X, point.Y, point.Z)
-		local max = min:Copy()
-
-		for i = 2, 8 do
-			point = obb[i]
-			if point.X < min.X then
-				min.X = point.X
-			end
-			if point.Y < min.Y then
-				min.Y = point.Y
-			end
-			if point.Z < min.Z then
-				min.Z = point.Z
-			end
-			if point.X > max.X then
-				max.X = point.X
-			end
-			if point.Y > max.Y then
-				max.Y = point.Y
-			end
-			if point.Z > max.Z then
-				max.Z = point.Z
-			end
-		end
-
-		return Box(min, max)
-	end
-
-	local function _OBBLocalToLocal(obb, src, dst)
-		local point
-		for i = 1, 8 do
-			point = obb[i]
-			point = src:PositionLocalToWorld(point)
-			obb[i] = dst:PositionWorldToLocal(point)
-		end
-	end
-
-	local function _AABBJoin(aabb1, aabb2)
-		-- using local variables + recreating the box
-		-- as a workaround because box.Max/Min.X/Y/Z
-		-- can't be set directly (needs to be fixed in Cubzh engine)
-		local maxX, maxY, maxZ = aabb1.Max.X, aabb1.Max.Y, aabb1.Max.Z
-		local minX, minY, minZ = aabb1.Min.X, aabb1.Min.Y, aabb1.Min.Z
-
-		if aabb2.Max.X > maxX then
-			maxX = aabb2.Max.X
-		end
-		if aabb2.Max.Y > maxY then
-			maxY = aabb2.Max.Y
-		end
-		if aabb2.Max.Z > maxZ then
-			maxZ = aabb2.Max.Z
-		end
-
-		if aabb2.Min.X < minX then
-			minX = aabb2.Min.X
-		end
-		if aabb2.Min.Y < minY then
-			minY = aabb2.Min.Y
-		end
-		if aabb2.Min.Z < minZ then
-			minZ = aabb2.Min.Z
-		end
-
-		return Box({ minX, minY, minZ }, { maxX, maxY, maxZ })
-	end
-
-	local function _computeDescendantsBoundingBox(root)
-		local boundingBox
-		local aabb
-		local obb
-
-		hierarchyActions:applyToDescendants(root, { includeRoot = false }, function(s)
-			if s.ComputeLocalBoundingBox ~= nil then
-				aabb = s:ComputeLocalBoundingBox()
-				obb = _AABBToOBB(aabb)
-				_OBBLocalToLocal(obb, s:GetParent(), root)
-				aabb = _OBBToAABB(obb)
-				if boundingBox == nil then
-					boundingBox = aabb:Copy()
-				else
-					boundingBox = _AABBJoin(boundingBox, aabb)
-				end
-			end
-		end)
-
-		if boundingBox == nil then
-			boundingBox = Box({ 0, 0, 0 }, { 0, 0, 0 })
-		end
-
-		return boundingBox
-	end
-
 	local function _nodeCreate()
 		local node = {}
 		local m = {
@@ -1017,46 +905,34 @@ function createUI(system)
 			return
 		end
 
-		if node.shape.Width == 0 then
-			if node.shape:GetParent() ~= nil then
-				node._aabb = nil
-				node._aabbWidth = 0
-				node._aabbHeight = 0
-				node._aabbDepth = 0
-				node._diameter = 0
-				node.shape:RemoveFromParent()
-				return
-			end
-		else
-			if node.shape:GetParent() == nil then
-				node.shapeContainer:AddChild(node.shape)
-				node.shape.LocalPosition = Number3.Zero
-			end
+		if node.shape:GetParent() == nil then
+			node.shapeContainer:AddChild(node.shape)
 		end
+		node.shape.LocalPosition:Set(Number3.Zero)
+		node.shape.LocalRotation:Set(Number3.Zero)
 
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
 		node.pivot.LocalPosition = Number3.Zero
 		node.shapeContainer.LocalPosition = Number3.Zero
 
-		if not node._config.doNotFlip then
-			node.pivot.LocalRotation = { 0, math.pi, 0 } -- shape's front facing camera
-		else
-			node.pivot.LocalRotation = Rotation(0, 0, 0) -- shape's back facing camera
-		end
-
-		-- shape.LocalScale = UI_SHAPE_SCALE
 		-- the shape scale is always 1
 		-- in the context of a shape node, we always apply scale to the parent object
 		node.shape.LocalScale = 1
 
-		-- NOTE: Using AABB in pivot space to infer size & placement.
-		-- We may also need AABB in object space in some cases.
-		node._aabb = _computeDescendantsBoundingBox(node.pivot)
+		node.pivot.LocalRotation:Set(0, 0, 0)
 
-		node._aabbWidth = node._aabb.Max.X - node._aabb.Min.X
-		node._aabbHeight = node._aabb.Max.Y - node._aabb.Min.Y
-		node._aabbDepth = node._aabb.Max.Z - node._aabb.Min.Z
+		-- NOTE: Using AABB in pivot space to infer size & placement.
+		local aabb = Box()
+		aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
+
+		if not node._config.doNotFlip then
+			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
+		end
+
+		node._aabbWidth = aabb.Max.X - aabb.Min.X
+		node._aabbHeight = aabb.Max.Y - aabb.Min.Y
+		node._aabbDepth = aabb.Max.Z - aabb.Min.Z
 
 		if node._config.spherized then
 			node._diameter = math.sqrt(node._aabbWidth ^ 2 + node._aabbHeight ^ 2 + node._aabbDepth ^ 2)
@@ -1068,12 +944,12 @@ function createUI(system)
 
 		if node._config.spherized then
 			local radius = node.Width * 0.5
-			node.pivot.LocalPosition = { radius, radius, radius }
+			node.pivot.LocalPosition:Set(radius, radius, radius)
 		else
-			node.pivot.LocalPosition = Number3(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
+			node.pivot.LocalPosition:Set(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
 
-		node.shapeContainer.LocalPosition = -node._aabb.Center + node._config.offset
+		node.shapeContainer.LocalPosition:Set(-aabb.Center + node._config.offset)
 		node.object.LocalScale = backupScale
 	end
 
@@ -1330,7 +1206,7 @@ function createUI(system)
 	-- @param config {table} -
 	]]
 	ui.createShape = function(_, shape, config)
-		if shape == nil or (type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then
+		if shape == nil or (type(shape) ~= "Object" and type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then
 			error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
 		end
 
@@ -1355,6 +1231,7 @@ function createUI(system)
 		node.object:AddChild(node.pivot)
 		node.pivot:AddChild(node.shapeContainer)
 
+		-- _diameter defined within _refreshShapeNode
 		node.refresh = _refreshShapeNode
 
 		-- getters

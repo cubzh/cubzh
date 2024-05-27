@@ -550,10 +550,9 @@ end
 
 loadAvatar = function(p)
 	if p.Avatar ~= nil then
-		require("avatar"):get(p.Username, p.Avatar)
-		-- didLoad function should already be installed
+		p.Avatar:load({ usernameOrId = p.Username })
 	else
-		local avatar = require("avatar"):get(p.Username)
+		local avatar = require("avatar"):get({ usernameOrId = p.Username })
 		avatar.didLoad = function(err, _)
 			if err then
 				return

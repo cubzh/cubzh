@@ -1,5 +1,6 @@
 local mod = {}
 
+-- TODO: remove
 mod.createModal = function(_, config)
 	local loc = require("localize")
 	local str = require("str")
