@@ -972,14 +972,15 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		-- 	self._content:onClose()
 		-- end
 		self:setParent(nil)
-		if self.didClose ~= nil then
-			self:didClose()
-		end
 
 		for _, content in ipairs(self.contentStack) do
 			content:cleanup()
 		end
 		self.contentStack = {}
+
+		if self.didClose ~= nil then
+			self:didClose()
+		end
 
 		if self.remove ~= nil then
 			self:remove() -- does a deep cleanup

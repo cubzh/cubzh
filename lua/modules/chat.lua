@@ -200,7 +200,7 @@ local createChat = function(_, config)
 	local inputNode
 
 	if hasInput then
-		inputNode = ui:createTextInput("", "say something…", { textSize = "small" })
+		inputNode = ui:createTextInput("", "say something…", { textSize = "small", returnKeyType = "send" })
 		inputNode:setParent(node)
 		inputNode:setColor(Color(0, 0, 0, 0.1), Color.White, Color(255, 255, 255, 0.7))
 		inputNode:setColorPressed(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))

@@ -7,6 +7,7 @@
 
 local time = require("time")
 local api = require("api")
+local conf = require("config")
 
 local mod = {
 	kApiAddr = api.kApiAddr,
@@ -70,6 +71,133 @@ mod.checkUsername = function(_, username, callback)
 	return req
 end
 
+-- callback(err, res) err is nil on success
+mod.getLoginOptions = function(_, usernameOrEmail, callback)
+	if type(usernameOrEmail) ~= "string" then
+		callback("1st arg must be a string", nil)
+		return
+	end
+	if type(callback) ~= "function" then
+		callback("2nd arg must be a function", nil)
+		return
+	end
+
+	if usernameOrEmail == "" then
+		callback("username can't be empty", nil)
+		return
+	end
+
+	local url = mod.kApiAddr .. "/get-login-options"
+	local body = {
+		["username-or-email"] = usernameOrEmail,
+	}
+
+	local req = System:HttpPost(url, body, function(resp)
+		if resp.StatusCode ~= 200 then
+			if resp.StatusCode >= 500 then
+				callback("internal server error", nil)
+			elseif resp.StatusCode >= 400 then
+				callback("bad request", nil)
+			else
+				callback("something went wrong", nil)
+			end
+			return
+		end
+
+		local res, err = JSON:Decode(resp.Body)
+		if err ~= nil then
+			callback("something went wrong", nil)
+			return
+		end
+
+		-- print(resp.Body:ToString())
+
+		res.magickey = res["magic-key"]
+
+		if res.password == nil and res.magickey == nil then
+			callback("can't authenticate account", nil)
+			return
+		end
+
+		callback(nil, res) -- success
+	end)
+
+	return req
+end
+
+-- callback(err) err == nil on success
+mod.getMagicKey = function(_, usernameOrEmail, callback)
+	if type(usernameOrEmail) ~= "string" then
+		callback("1st arg must be a string")
+		return
+	end
+	if type(callback) ~= "function" then
+		callback("2nd arg must be a function")
+		return
+	end
+
+	local url = mod.kApiAddr .. "/get-magic-key"
+	local body = {
+		["username-or-email"] = usernameOrEmail,
+	}
+
+	local req = System:HttpPost(url, body, function(resp)
+		if resp.StatusCode ~= 200 then
+			if resp.StatusCode >= 500 then
+				callback("internal server error", nil)
+			elseif resp.StatusCode >= 400 then
+				callback("bad request", nil)
+			else
+				callback("something went wrong", nil)
+			end
+			return
+		end
+
+		callback(nil) -- success
+	end)
+
+	return req
+end
+
+-- callback(err, credentials)
+mod.login = function(_, config, callback)
+	local defaultConfig = {
+		usernameOrEmail = "",
+		magickey = "",
+		password = "",
+	}
+	config = conf:merge(defaultConfig, config)
+
+	local url = mod.kApiAddr .. "/login"
+	local body = {
+		["username-or-email"] = config.usernameOrEmail,
+		["magic-key"] = config.magickey,
+		["password"] = config.password,
+	}
+
+	local req = System:HttpPost(url, body, function(resp)
+		if resp.StatusCode ~= 200 then
+			if resp.StatusCode >= 500 then
+				callback("internal server error", nil)
+			elseif resp.StatusCode >= 400 then
+				callback("bad request", nil)
+			else
+				callback("something went wrong", nil)
+			end
+			return
+		end
+
+		-- print(resp.Body:ToString())
+		local res, err = JSON:Decode(resp.Body)
+		if err ~= nil then
+			callback("json decode error:" .. err, nil)
+			return
+		end
+
+		callback(nil, res.credentials) -- success
+	end)
+end
+
 -- callback(err, credentials)
 mod.signUp = function(_, username, key, dob, callback)
 	if type(username) ~= "string" then
@@ -98,12 +226,12 @@ mod.signUp = function(_, username, key, dob, callback)
 
 	local req = System:HttpPost(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, "http status not 200")
+			callback("http status not 200")
 			return
 		end
 		local res, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, "json decode error:" .. err)
+			callback("json decode error:" .. err)
 			return
 		end
 
@@ -514,104 +642,5 @@ moduleMT.patchUserInfo = function(_, info, callback)
 	end)
 	return req
 end
-
--- moduleMT.getTransactions = function(usernameOrCb, cb) -- or self if nil
--- usernameOrCb(nil, {
--- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e3", from={id="209809842",name="caillef"}, to={id="20980242",name="gdevillele"}, amount=283, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=123, date="2023-03-20T17:01:14.625402882Z" },
--- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095f3", from={id="20980242",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=200, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=123, date="2023-02-01T15:00:14.625402882Z" },
--- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.coffee" }, copyId=120, date="2022-08-10T16:00:14.625402882Z" },
--- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e3", from={id="209809842",name="caillef"}, to={id="20980242",name="gdevillele"}, amount=283, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=123, date="2020-07-12T17:01:14.625402882Z" },
--- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095f3", from={id="20980242",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=200, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=123, date="2020-07-10T15:00:14.625402882Z" },
--- { id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copyId=120, date="2020-06-10T16:00:14.625402882Z" }
--- })
--- end
-
--- moduleMT.listItem = function(price, maxSupply, cb)
--- local body = { price=price, maxSupply=maxSupply }
--- cb(nil, { result={
--- 	id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
--- 	itemId="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5",
--- 	itemSlug="caillef.shop",
--- 	owner={ id="209809842", name="caillef" },
--- 	latestTransactions = { -- 5 latest transactions
--- 		{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109500", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item="caillef.shop", copy=68, date="2020-07-10 20:00:00.000" }
--- 	},
--- 	copyId=68,
--- 	createdAt="2020-06-10 15:00:00.000"
--- }})
--- end
-
--- moduleMT.mintCopy = function(itemId)
--- cb(nil, {
--- 	id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
--- 	item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
--- 	copyId=68,
--- 	owner={id="209809842", name="caillef"},
--- 	createdAt="2020-06-10 15:00:00.000"
--- })
--- end
-
--- moduleMT.getCopies = function(itemId, filtersOrCb, cb)
--- 	cb(nil, {
--- 		{
--- 			id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
--- 			item = { id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
--- 			copyId=68,
--- 			listingPrice=80,
--- 			owner={id="209809848", name="gdevillele"},
--- 			createdAt="2020-06-10 15:00:00.000"
--- 		},
--- 		{
--- 			id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d4",
--- 			item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
--- 			copyId=97,
--- 			listingPrice=81,
--- 			owner={id="20989842", name="aduermael"},
--- 			createdAt="2020-06-10 15:00:00.000"
--- 		},
--- 		{
--- 			id="09c5cd9e-9c3a-4dc5-8083-06b77e1095e6",
--- 			item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
--- 			copyId=120,
--- 			listingPrice=100,
--- 			owner={id="209809842", name="caillef"},
--- 			createdAt="2020-06-10 15:00:00.000"
--- 		}
--- 	})
--- end
-
--- moduleMT.listCopy = function(itemId, price, duration, cb)
--- 	cb(nil, {
--- 		id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
--- 		item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
--- 		copyId=68,
--- 		listingPrice=80,
--- 		endListing="2020-06-10 15:00:00.000",
--- 		owner={ id="209809848", name="gdevillele" },
--- 		createdAt="2020-06-10 15:00:00.000"
--- 	})
--- end
-
--- moduleMT.getCopyTransactions = function(copyId, cb)
--- 	cb(nil, {
--- 		{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109500", from={id="209809843",name="gdevillele"}, to={id="209809842",name="caillef"}, amount=140, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copy=68, date="2020-07-10 22:00:00.000" },
--- 		{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109501", from={id="209809842",name="caillef"}, to={id="209809843",name="gdevillele"}, amount=120, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copy=68, date="2020-07-10 21:00:00.000" },
--- 		{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109502", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copy=68, date="2020-07-10 20:00:00.000" }
--- 	})
--- end
-
--- moduleMT.buyCopy = function(copyId,cb)
--- 	cb(nil, {
--- 		id="09c5cd9e-9c3a-4dc5-8083-06b77e1095d3",
--- 		item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" },
--- 		copyId=68,
--- 		latestTransactions={
--- 			{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109501", from={id="209809842",name="caillef"}, to={id="209809843",name="gdevillele"}, amount=120, action="buy", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copy=68, date="2020-07-10 21:00:00.000" },
--- 			{ id="b9c5cd9e-9c3a-4dc5-8083-06b77e109502", from={id="0",name="treasure"}, to={id="209809842",name="caillef"}, amount=100, action="mint", item={ id="09b5cd9f-9c3a-4dc5-8083-06b77e1099e5", slug="caillef.shop" }, copy=68, date="2020-07-10 20:00:00.000" },
--- 		},
--- 		owner={id="209809848",name="gdevillele"},
--- 		createdAt="2020-06-10 15:00:00.000"
--- 	})
--- end
 
 return mod
