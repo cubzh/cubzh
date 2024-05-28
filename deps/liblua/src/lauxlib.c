@@ -202,12 +202,27 @@ static void tag_error (lua_State *L, int arg, int tag) {
 ** The use of 'lua_pushfstring' ensures this function does not
 ** need reserved stack space when called.
 */
+#define MODULE_IDENTIFIER_LINES 1
+#define MODULE_SCOPE_PREFIX_LINES 0
 LUALIB_API void luaL_where (lua_State *L, int level) {
   lua_Debug ar;
   if (lua_getstack(L, level, &ar)) {  /* check function at level */
     lua_getinfo(L, "Sl", &ar);  /* get info about it */
     if (ar.currentline > 0) {  /* is there info? */
-      lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.currentline);
+        if (strncmp(ar.source, "--__MODULE__", 12) == 0) {
+            char *newlineChar = strchr(ar.source, '\n');
+            if (newlineChar != NULL) {
+                size_t length = newlineChar - (ar.source + 12);
+                char moduleName[255];
+                strncpy(moduleName, &ar.source[12], length);
+                moduleName[length] = '\0';
+                lua_pushfstring(L, "%s:L%d: ", moduleName, ar.currentline - MODULE_IDENTIFIER_LINES - MODULE_SCOPE_PREFIX_LINES);
+            } else {
+                lua_pushfstring(L, "MODULE:L%d: ", ar.currentline - MODULE_IDENTIFIER_LINES - MODULE_SCOPE_PREFIX_LINES);
+            }
+        } else {
+            lua_pushfstring(L, "L%d: ", ar.currentline);
+        }
       return;
     }
   }

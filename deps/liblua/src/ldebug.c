@@ -626,15 +626,37 @@ l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
 
 
 /* add src:line information to 'msg' */
+#define MODULE_IDENTIFIER_LINES 1
+#define MODULE_SCOPE_PREFIX_LINES 0
 const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
-                                        int line) {
-  char buff[LUA_IDSIZE];
-  if (src)
-    luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
-  else {  /* no source available; use "?" instead */
-    buff[0] = '?'; buff[1] = '\0';
-  }
-  return luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
+                          int line) {
+    char buff[LUA_IDSIZE];
+    char moduleName[255];
+    char *source = NULL;
+    
+    if (src) {
+        // luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
+        source = getstr(src);
+        
+        if (strncmp(source, "--__MODULE__", 12) == 0) {
+            char *newlineChar = strchr(source, '\n');
+            if (newlineChar != NULL) {
+                size_t length = newlineChar - (source + 12);
+                strncpy(moduleName, &source[12], length);
+                moduleName[length] = '\0';
+                return luaO_pushfstring(L, "%s:L%d: %s", moduleName, line - MODULE_IDENTIFIER_LINES - MODULE_SCOPE_PREFIX_LINES, msg);
+            } else {
+                return luaO_pushfstring(L, "MODULE:L%d: %s", line - MODULE_IDENTIFIER_LINES - MODULE_SCOPE_PREFIX_LINES, msg);
+            }
+        } else {
+            return luaO_pushfstring(L, "L%d: %s", line, msg);
+            // lua_pushfstring(L, "%s:L%d: ", ar.short_src, ar.currentline);
+        }
+    } else {  /* no source available; use "?" instead */
+        buff[0] = '?'; buff[1] = '\0';
+    }
+    
+    return luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
 }
 
 
