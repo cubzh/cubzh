@@ -22,19 +22,26 @@
 #undef PI
 #define PI	(l_mathop(3.141592653589793238462643383279502884))
 
+// Ensuring same sequence of numbers on all platforms
+#if !defined(l_rand)
+// see https://pubs.opengroup.org/onlinepubs/9699919799/functions/rand.html
+#define L_RANDMAX 32767
+#define L_RANDMAX_PLUS_ONE 32768
+static unsigned long cubzh_rand_next = 1;
 
-#if !defined(l_rand)		/* { */
-#if defined(LUA_USE_POSIX)
-#define l_rand()	random()
-#define l_srand(x)	srandom(x)
-#define L_RANDMAX	2147483647	/* (2^31 - 1), following POSIX */
-#else
-#define l_rand()	rand()
-#define l_srand(x)	srand(x)
-#define L_RANDMAX	RAND_MAX
+int cubzh_rand(void) // assuming L_RANDMAX 32767
+{
+    cubzh_rand_next = cubzh_rand_next * 1103515245 + 12345;
+    return (unsigned int)(cubzh_rand_next/65536) % L_RANDMAX_PLUS_ONE;
+}
+
+void cubzh_srand(unsigned int seed)
+{
+    cubzh_rand_next = seed;
+}
+#define l_rand() cubzh_rand()
+#define l_srand(x) cubzh_srand(x)
 #endif
-#endif				/* } */
-
 
 static int math_abs (lua_State *L) {
   if (lua_isinteger(L, 1)) {
@@ -246,7 +253,8 @@ static int math_max (lua_State *L) {
 */
 static int math_random (lua_State *L) {
   lua_Integer low, up;
-  double r = (double)l_rand() * (1.0 / ((double)L_RANDMAX + 1.0));
+  const int lr = l_rand();
+  double r = (double)lr * (1.0 / ((double)L_RANDMAX + 1.0));
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
       lua_pushnumber(L, (lua_Number)r);  /* Number between 0 and 1 */
@@ -275,7 +283,8 @@ static int math_random (lua_State *L) {
 
 
 static int math_randomseed (lua_State *L) {
-  l_srand((unsigned int)(lua_Integer)luaL_checknumber(L, 1));
+  const lua_Number n = luaL_checknumber(L, 1);
+  l_srand((unsigned int)n);
   (void)l_rand(); /* discard first value to avoid undesirable correlations */
   return 0;
 }
