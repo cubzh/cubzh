@@ -1,10 +1,5 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
-* text=auto
-
-# Source files
-# --------------------
-*.lua text eol=lf
-
+* text=auto eol=lf
 
 # LFS & binary files
 # --------------------
