@@ -1,5 +1,6 @@
 local menu = {}
 
+bundle = require("bundle")
 loc = require("localize")
 str = require("str")
 ui = require("uikit").systemUI(System)
@@ -783,7 +784,7 @@ connBtn.onRelease = function(self)
 	connect()
 end
 
-connShape = System.ShapeFromBundle("aduermael.connection_indicator")
+connShape = bundle:Shape("shapes/connection_indicator")
 connectionIndicator = ui:createShape(connShape, { doNotFlip = true })
 connectionIndicator:setParent(connBtn)
 connectionIndicator:hide()
@@ -794,7 +795,7 @@ connectionIndicator.parentDidResize = function(self)
 	self.pos = { parent.Width * 0.5 - self.Width * 0.5, parent.Height * 0.5 - self.Height * 0.5 }
 end
 
-noConnShape = System.ShapeFromBundle("aduermael.no_conn_indicator")
+noConnShape = bundle:Shape("shapes/no_conn_indicator")
 noConnectionIndicator = ui:createShape(noConnShape)
 noConnectionIndicator:setParent(connBtn)
 noConnectionIndicator:hide()
@@ -874,7 +875,7 @@ chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
 chatBtn:setParent(topBar)
 
-textBubbleShape = ui:createShape(System.ShapeFromBundle("aduermael.textbubble"))
+textBubbleShape = ui:createShape(bundle:Shape("shapes/textbubble"))
 textBubbleShape:setParent(chatBtn)
 textBubbleShape.parentDidResize = function(self)
 	local parent = self.parent
@@ -887,7 +888,7 @@ friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
 friendsBtn:setParent(topBar)
 
-friendsShape = ui:createShape(System.ShapeFromBundle("aduermael.friends_icon"))
+friendsShape = ui:createShape(bundle:Shape("shapes/friends_icon"))
 friendsShape:setParent(friendsBtn)
 friendsShape.parentDidResize = btnContentParentDidResize
 
@@ -938,7 +939,7 @@ pezhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
 pezhBtn:setParent(topBar)
 
-pezhShape = ui:createShape(System.ShapeFromBundle("aduermael.pezh_coin"))
+pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin"))
 pezhShape:setParent(pezhBtn)
 pezhShape.parentDidResize = btnContentParentDidResize
 
@@ -2549,7 +2550,7 @@ function showTitleScreen()
 
 	titleScreen = ui:createFrame()
 
-	-- local logoShape = System.ShapeFromBundle("official.cubzh")
+	-- local logoShape = bundle:Shape("shapes/cubzh")
 
 	-- logo = ui:createShape(logoShape)
 	-- logo:setParent(titleScreen)
@@ -2659,7 +2660,7 @@ Timer(0.1, function()
 		System:UpdateAuthStatus()
 
 		if System.IsUserUnder13 then
-			local under13BadgeShape = System.ShapeFromBundle("aduermael.under13_badge")
+			local under13BadgeShape = bundle:Shape("shapes/under13_badge")
 			under13Badge = ui:createShape(under13BadgeShape)
 			under13Badge:setParent(profileFrame)
 			local ratio = under13Badge.Width / under13Badge.Height

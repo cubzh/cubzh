@@ -32,23 +32,23 @@ end
 
 function placeItems()
 	logo = Object()
-	local c = bundle.Shape("voxels.cubzh_logo_c")
+	local c = bundle:Shape("shapes/cubzh_logo_c")
 	c.Pivot:Set(c.Width * 0.5, c.Height * 0.5, c.Depth * 0.5)
 	c:SetParent(logo)
 
-	local u = bundle.Shape("voxels.cubzh_logo_u")
+	local u = bundle:Shape("shapes/cubzh_logo_u")
 	u.Pivot:Set(u.Width * 0.5, u.Height * 0.5, u.Depth * 0.5)
 	u:SetParent(logo)
 
-	local b = bundle.Shape("voxels.cubzh_logo_b")
+	local b = bundle:Shape("shapes/cubzh_logo_b")
 	b.Pivot:Set(b.Width * 0.5, b.Height * 1.5 / 4.0, b.Depth * 0.5)
 	b:SetParent(logo)
 
-	local z = bundle.Shape("voxels.cubzh_logo_z")
+	local z = bundle:Shape("shapes/cubzh_logo_z")
 	z.Pivot:Set(z.Width * 0.5, z.Height * 0.5, z.Depth * 0.5)
 	z:SetParent(logo)
 
-	local h = bundle.Shape("voxels.cubzh_logo_h")
+	local h = bundle:Shape("shapes/cubzh_logo_h")
 	h.Pivot:Set(h.Width * 0.5, h.Height * 1.5 / 4.0, h.Depth * 0.5)
 	h:SetParent(logo)
 

@@ -7,6 +7,7 @@ creations.createModalContent = function(_, config)
 	local pages = require("pages")
 	local theme = require("uitheme").current
 	local modal = require("modal")
+    local bundle = require("bundle")
 	local api = require("system_api", System)
 	local gridNeedRefresh = false
 
@@ -50,7 +51,7 @@ creations.createModalContent = function(_, config)
 		local node = ui:createNode()
 
 		local categories = { "null" }
-		local categoryShapes = { "official.one_cube_template" }
+		local categoryShapes = { "shapes/one_cube_template" }
 		local buttonLabels = { "✨ Create Item ⚔️" }
 		local inputLabel = "Item Name?"
 
@@ -60,10 +61,10 @@ creations.createModalContent = function(_, config)
 		if what == "wearable" and original == nil then
 			categories = { "hair", "jacket", "pants", "boots" }
 			categoryShapes = {
-				"official.hair_template",
-				"official.jacket_template",
-				"official.pants_template",
-				"official.shoes_template",
+				"shapes/hair_template",
+				"shapes/jacket_template",
+				"shapes/pants_template",
+				"shapes/shoes_template",
 			}
 			buttonLabels = {
 				"✨ Create Hair 🙂",
@@ -73,7 +74,7 @@ creations.createModalContent = function(_, config)
 			}
 		elseif what == "world" then
 			categories = { "null" }
-			categoryShapes = { "official.world_icon" }
+			categoryShapes = { "shapes/world_icon" }
 			buttonLabels = { "✨ Create World 🌎" }
 			inputLabel = "World Name?"
 			textWithEmptyInput = "A World needs a name! No pressure, this can be changed later on."
@@ -91,7 +92,7 @@ creations.createModalContent = function(_, config)
 		newContent.bottomCenter = { btnCreate }
 
 		local templatePreview =
-			ui:createShape(System.ShapeFromBundle(categoryShapes[currentCategory]), { spherized = true })
+			ui:createShape(bundle:Shape(categoryShapes[currentCategory]), { spherized = true })
 		templatePreview:setParent(node)
 
 		templatePreview.pivot.LocalRotation = { -0.1, 0, -0.2 }
@@ -136,7 +137,7 @@ creations.createModalContent = function(_, config)
 				text.Color = theme.textColor
 				text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
-				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
+				templatePreview:setShape(bundle:Shape(categoryShapes[currentCategory]))
 			end
 
 			previousTemplateBtn = ui:createButton("⬅️")
@@ -154,7 +155,7 @@ creations.createModalContent = function(_, config)
 				text.Color = theme.textColor
 				text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
-				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
+				templatePreview:setShape(bundle:Shape(categoryShapes[currentCategory]))
 			end
 		end
 
@@ -220,7 +221,7 @@ creations.createModalContent = function(_, config)
 						cell.title = world.title
 						cell.description = ""
 						cell.created = world.created
-						cell.item = { shape = System.ShapeFromBundle("official.world_icon") }
+						cell.item = { shape = bundle:Shape("shapes/world_icon") }
 
 						worldDetailsContent:loadCell(cell)
 

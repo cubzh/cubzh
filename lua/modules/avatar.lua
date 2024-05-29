@@ -11,6 +11,7 @@ avatarPrivateFields = setmetatable({}, { __mode = "k" })
 
 -- MODULES
 api = require("api")
+bundle = require("bundle")
 hierarchyactions = require("hierarchyactions")
 
 function emptyFunc() end
@@ -39,7 +40,7 @@ bodyPartsNames = {
 	"EyeLidLeft",
 }
 
-cachedHead = System.ShapeFromBundle("aduermael.head_skin2_v2")
+cachedHead = bundle:Shape("shapes/head_skin2_v2.3zh")
 
 mod.eyeColors = {
 	Color(166, 142, 163),
@@ -616,7 +617,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 
 	avatarPrivateFields[avatar] = { config = config, equipments = {}, requests = requests, palette = palette }
 
-	local body = System.MutableShapeFromBundle("caillef.multiavatar")
+	local body = bundle:MutableShape("shapes/avatar.3zh")
 	body.Name = "Body"
 	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
 		o.Physics = PhysicsMode.Disabled
