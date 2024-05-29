@@ -9,7 +9,7 @@ else ifeq ($(CUBZH_TARGETARCH),amd64)
 endif
 echo "PLATFORM/ARCH: "$(PLATFORM_ARCH_CMAKE)
 
-LIBPNG_DIR=../../lpng
+LIBPNG_DIR=../../lpng/src
 LIBWEBSOCKETS_DIR=../../libwebsockets/linux/$(CUBZH_TARGETARCH)/include
 LIBSSL_DIR=../../libssl/linux/$(CUBZH_TARGETARCH)/include
 LIBZ_INCLUDE_DIR=../../libz/$(PLATFORM_ARCH_CMAKE)/include
