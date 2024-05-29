@@ -20,7 +20,7 @@ You can help us including more characters and emojis. There are simple guideline
 - Reuse colors from other emojis as much as possible
 - Use brighter pixels to emphasize top edges, simulating light coming from the top
 - Use darker pixels to emphasize bottom edges
-- Add new character coordinates in `font.txt`
+- Add new character coordinates in `bundle/fonts/pixel.txt`
 
 ## Is it ok to use the font elsewhere?
 
