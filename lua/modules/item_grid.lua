@@ -8,6 +8,7 @@ local itemGrid = {}
 -- MODULES
 local api = require("api")
 local theme = require("uitheme").current
+local bundle = require("bundle")
 
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
@@ -485,7 +486,7 @@ itemGrid.create = function(_, config)
 
 			if entry.thumbnail == nil and cell.item == nil then
 				-- no thumbnail, display default world icon
-				local shape = System.ShapeFromBundle("official.world_icon")
+				local shape = bundle:Shape("shapes/world_icon")
 				local item = ui:createShape(shape, { spherized = true })
 				cell.item = item
 				item:setParent(cell)

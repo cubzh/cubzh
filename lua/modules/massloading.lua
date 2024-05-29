@@ -29,7 +29,6 @@ local config = {
     onLoad = onLoad, -- called when a shape is loaded, first parameter is the object, second is the element of the list
     onDone = onDone, -- called when all the items are loaded
     fullnameItemKey = "fullname", -- the key representing the fullname of the shape
-	fromBundle = false -- default
 }
 massLoading:load(list, config)
 --]]
@@ -45,12 +44,10 @@ massLoading.getObject = function(_, name)
 end
 
 massLoading.load = function(_, list, config)
-	local bundle = require("bundle")
 	local defaultConfig = {
 		onLoad = nil,
 		onDone = nil,
 		fullnameItemKey = "fullname",
-		fromBundle = false,
 	}
 	config = require("config"):merge(defaultConfig, config, {
 		acceptTypes = { onLoad = { "function" }, onDone = { "function" } },
@@ -94,36 +91,23 @@ massLoading.load = function(_, list, config)
 
 		-- 3) need to load
 		else
-			local obj
-			if config.fromBundle then
-				pcall(function()
-					-- bundle.Shape sends an error if the shape is not in the bundle
-					-- using pcall to load the assets with Object:Load if the file is not in the bundle
-					obj = bundle.Shape(fullname)
-				end)
-			end
-			if obj then
+			loadingObjects[fullname] = true
+			Object:Load(fullname, function(obj)
+				-- add object in cache
 				cachedObjects[fullname] = obj
+
+				-- load object
+				loadingObjects[fullname] = false
 				loadObject(obj, data)
-			else
-				loadingObjects[fullname] = true
-				Object:Load(fullname, function(obj)
-					-- add object in cache
-					cachedObjects[fullname] = obj
 
-					-- load object
-					loadingObjects[fullname] = false
-					loadObject(obj, data)
-
-					-- load objects awaiting
-					if awaitingObjects[fullname] then
-						for _, awaitingData in ipairs(awaitingObjects[fullname]) do
-							loadObject(obj, awaitingData)
-						end
-						awaitingObjects[fullname] = {}
+				-- load objects awaiting
+				if awaitingObjects[fullname] then
+					for _, awaitingData in ipairs(awaitingObjects[fullname]) do
+						loadObject(obj, awaitingData)
 					end
-				end)
-			end
+					awaitingObjects[fullname] = {}
+				end
+			end)
 		end
 	end
 end

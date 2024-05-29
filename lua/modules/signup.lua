@@ -51,35 +51,35 @@ signup.startFlow = function(self, config)
 
 	local bundle = require("bundle")
 	local hairs = {
-		bundle.Shape("signup_demo.air_goggles"),
-		bundle.Shape("signup_demo.hair_pink_blue"),
-		bundle.Shape("signup_demo.lofi_girl_head"),
-		bundle.Shape("signup_demo.pink_pop_hair"),
-		bundle.Shape("signup_demo.pirate_captain_hat"),
-		bundle.Shape("signup_demo.santa_hair"),
+		bundle:Shape("shapes/signup_demo/air_goggles"),
+		bundle:Shape("shapes/signup_demo/hair_pink_blue"),
+		bundle:Shape("shapes/signup_demo/lofi_girl_head"),
+		bundle:Shape("shapes/signup_demo/pink_pop_hair"),
+		bundle:Shape("shapes/signup_demo/pirate_captain_hat"),
+		bundle:Shape("shapes/signup_demo/santa_hair"),
 	}
 
 	local jackets = {
-		bundle.Shape("signup_demo.astronaut_top"),
-		bundle.Shape("signup_demo.cute_top"),
-		bundle.Shape("signup_demo.lab_coat"),
-		bundle.Shape("signup_demo.princess_dresstop"),
-		bundle.Shape("signup_demo.red_robot_suit"),
-		bundle.Shape("signup_demo.sweater"),
+		bundle:Shape("shapes/signup_demo/astronaut_top"),
+		bundle:Shape("shapes/signup_demo/cute_top"),
+		bundle:Shape("shapes/signup_demo/lab_coat"),
+		bundle:Shape("shapes/signup_demo/princess_dresstop"),
+		bundle:Shape("shapes/signup_demo/red_robot_suit"),
+		bundle:Shape("shapes/signup_demo/sweater"),
 	}
 
 	local pants = {
-		bundle.Shape("signup_demo.overalls_pants"),
-		bundle.Shape("signup_demo.jorts"),
-		bundle.Shape("signup_demo.red_crewmate_pants"),
-		bundle.Shape("signup_demo.stripe_pants2"),
+		bundle:Shape("shapes/signup_demo/overalls_pants"),
+		bundle:Shape("shapes/signup_demo/jorts"),
+		bundle:Shape("shapes/signup_demo/red_crewmate_pants"),
+		bundle:Shape("shapes/signup_demo/stripe_pants2"),
 	}
 
 	local boots = {
-		bundle.Shape("signup_demo.astronaut_shoes"),
-		bundle.Shape("signup_demo.flaming_boots"),
-		bundle.Shape("signup_demo.kids_shoes"),
-		bundle.Shape("signup_demo.pirate_boots_01"),
+		bundle:Shape("shapes/signup_demo/astronaut_shoes"),
+		bundle:Shape("shapes/signup_demo/flaming_boots"),
+		bundle:Shape("shapes/signup_demo/kids_shoes"),
+		bundle:Shape("shapes/signup_demo/pirate_boots_01"),
 	}
 
 	local yaw = math.rad(-190)
