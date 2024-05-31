@@ -72,3 +72,11 @@ Even though we're officially maintaining native Cubzh clients (iOS, Android, Win
 | Home Editor | 📋| TODO (for users to edit their homes, templated World Editor) |
 
 
+Download Cubzh on: 
+- [Steam](https://store.steampowered.com/app/1386770/Cubzh_Open_Alpha/)
+- [iOS](https://apps.apple.com/th/app/cubzh/id1478257849)
+- [Android](https://play.google.com/store/apps/details?id=com.voxowl.pcubes.android&hl=en&gl=US&pli=1)
+- [Epic Game Store](https://store.epicgames.com/fr/p/cubzh-3cc767)
+- [On Web](https://app.cu.bzh)
+
+
