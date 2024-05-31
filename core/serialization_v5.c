@@ -498,9 +498,9 @@ uint32_t chunk_v5_read_shape(Stream *s,
                 // size is known, now is a good time to create the shape
                 *shape = shape_make_2(shapeSettings->isMutable);
                 if (serializedPalette != NULL) {
-                    shape_set_palette(*shape, serializedPalette);
+                    shape_set_palette(*shape, serializedPalette, false);
                 } else {
-                    shape_set_palette(*shape, color_palette_new(colorAtlas));
+                    shape_set_palette(*shape, color_palette_new(colorAtlas), false);
                 }
 
                 // this means blocks have been found before the size.

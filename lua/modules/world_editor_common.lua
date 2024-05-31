@@ -639,7 +639,8 @@ local loadObject = function(obj, objInfo, config)
 
 	local scale = objInfo.Scale or 0.5
 	local boxSize = k.Size * scale
-	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
+	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr
+		and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
 
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
 		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
@@ -680,7 +681,7 @@ local defaultLoadWorldConfig = {
 	fromBundle = true,
 	optimisations = {
 		minimum_item_size_for_shadows = 40,
-	}
+	},
 }
 
 common.loadWorld = function(mapBase64, config)
@@ -725,7 +726,8 @@ common.loadWorld = function(mapBase64, config)
 		if objects then
 			local minimum_item_size_for_shadows = config.optimisations.minimum_item_size_for_shadows
 			if minimum_item_size_for_shadows ~= nil then
-				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows * minimum_item_size_for_shadows
+				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows
+					* minimum_item_size_for_shadows
 			end
 			local massLoading = require("massloading")
 			local onLoad = function(obj, data)
@@ -737,12 +739,15 @@ common.loadWorld = function(mapBase64, config)
 				onDone = config.onDone,
 				onLoad = onLoad,
 				fullnameItemKey = "fullname",
-				fromBundle = config.fromBundle
+				fromBundle = config.fromBundle,
 			}
 			massLoading:load(objects, massLoadingConfig)
 		end
 		if ambience then
 			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
+		end
+		if not objects then
+			config.onDone()
 		end
 	end
 	if not config.skipMap then

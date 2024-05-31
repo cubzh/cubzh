@@ -144,12 +144,8 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     }
 
     // combine palettes
-    // All Shapes are supposed to share
-    // the same ColorAtlas, getting it from first shape:
 
-    ColorAtlas *colorAtlas = color_palette_get_atlas(shape_get_palette(shapes[0]));
-    ColorPalette *combinedPalette = color_palette_new(colorAtlas);
-
+    ColorPalette *combinedPalette = color_palette_new(NULL);
     HashUInt32Int **paletteConversionMaps = (HashUInt32Int **)malloc(sizeof(HashUInt32Int *) *
                                                                      nbShapes);
 
@@ -165,29 +161,23 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
             if (color_palette_get_color_use_count(palette, c) == 0) {
                 continue; // skip unused colors
             }
-            RGBAColor *color = color_palette_get_color(palette, c);
-            if (color == NULL) {
-                continue; // skip NULL colors
-            }
-            //
+            RGBAColor color = color_palette_get_color(palette, c);
             SHAPE_COLOR_INDEX_INT_T index = 0; // color set at index
 
             // NOTE: Palettes in Cubzh can contain up to 128 colors
             // while .vox palette (shared by all models) contains up to 255 colors
             // Currently, some colors are lost if the total amount of colors in combined shapes is
             // over 128.
-            // TODO: Use 2 palettes to support up to 255 colors? Or a palette with a higher limit.
-            // TODO: Find closest color
-            color_palette_check_and_add_color(combinedPalette, *color, &index, false);
+            color_palette_check_and_add_color(combinedPalette, color, &index, false);
 
-            colorAsUint32 = color_to_uint32(color);
+            colorAsUint32 = color_to_uint32(&color);
             hash_uint32_int_set(paletteConversionMaps[i], colorAsUint32, index);
         }
     }
 
 #define _shapes_to_vox_error(msg)                                                                  \
     cclog_error(msg);                                                                              \
-    color_palette_free(combinedPalette);                                                           \
+    color_palette_release(combinedPalette);                                                        \
     for (unsigned int i = 0; i < nbShapes; ++i) {                                                  \
         hash_uint32_int_free(paletteConversionMaps[i]);                                            \
     }                                                                                              \
@@ -283,7 +273,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         CHUNK_COORDS_INT3_T coords_in_chunk;
         Block *b = NULL;
         int colorIndexInCombinedPalette;
-        RGBAColor *color;
+        RGBAColor color;
 
         for (int k = 0; k < shape_size.z; k++) {
             for (int j = 0; j < shape_size.y; j++) {
@@ -306,7 +296,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
                         SHAPE_COLOR_INDEX_INT_T bci = block_get_color_index(b);
                         color = color_palette_get_color(palette, bci);
                         if (hash_uint32_int_get(paletteConversionMap,
-                                                color_to_uint32(color),
+                                                color_to_uint32(&color),
                                                 &colorIndexInCombinedPalette) == false) {
                             colorIndexInCombinedPalette = 0;
                         }
@@ -561,25 +551,25 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         const ColorPalette *palette = combinedPalette;
         uint16_t nbColors = palette->count;
 
-        RGBAColor *color = NULL;
+        RGBAColor color;
 
         for (int i = 0; i < 256; i++) {
             if (i < nbColors) {
                 color = color_palette_get_color(palette, (SHAPE_COLOR_INDEX_INT_T)i);
                 // r
-                if (fwrite(&color->r, sizeof(uint8_t), 1, out) != 1) {
+                if (fwrite(&color.r, sizeof(uint8_t), 1, out) != 1) {
                     _shapes_to_vox_error("failed to write r")
                 }
                 // g
-                if (fwrite(&color->g, sizeof(uint8_t), 1, out) != 1) {
+                if (fwrite(&color.g, sizeof(uint8_t), 1, out) != 1) {
                     _shapes_to_vox_error("failed to write g")
                 }
                 // b
-                if (fwrite(&color->b, sizeof(uint8_t), 1, out) != 1) {
+                if (fwrite(&color.b, sizeof(uint8_t), 1, out) != 1) {
                     _shapes_to_vox_error("failed to write b")
                 }
                 // a
-                if (fwrite(&color->a, sizeof(uint8_t), 1, out) != 1) {
+                if (fwrite(&color.a, sizeof(uint8_t), 1, out) != 1) {
                     _shapes_to_vox_error("failed to write a")
                 }
             } else {
@@ -604,7 +594,7 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
         fseek(out, currentPosition, SEEK_SET); // back to current position
     }
 
-    color_palette_free(combinedPalette);
+    color_palette_release(combinedPalette);
     for (unsigned int i = 0; i < nbShapes; ++i) {
         hash_uint32_int_free(paletteConversionMaps[i]);
     }
@@ -818,7 +808,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
 
     // create Shape
     *out = shape_make_2(isMutable);
-    shape_set_palette(*out, color_palette_new(colorAtlas));
+    shape_set_palette(*out, color_palette_new(colorAtlas), false);
 
     stream_set_cursor_position(s, blocksPosition);
 

@@ -243,6 +243,7 @@ end
 -- uikit: optional, allows to provide specific instance of uikit
 modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	local theme = require("uitheme").current
+	local ease = require("ease")
 
 	local ui = uikit or require("uikit")
 
@@ -790,11 +791,26 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self.bottomBar.Height = 0
 		end
 
-		local totalTopWidth = topLeftElementsWidth + topCenterElementsWidth + self.closeBtn.Width + theme.padding * 4
+		-- enforcing same left and right width for center elements
+		-- to better better appear at center with correct margins
+		local topLeftRightWidth = math.max(self.closeBtn.Width, topLeftElementsWidth)
+		local totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
 		local totalBottomWidth = bottomRightElementsWidth
 			+ bottomCenterElementsWidth
 			+ bottomLeftElementsWidth
 			+ theme.padding * 4
+
+		local availableWidthForTopCenter = Screen.Width
+			- (self.closeBtn.Width + topLeftElementsWidth + theme.padding * 8)
+		if self._title and modalContent.title then
+			self._title.Text = modalContent.title
+		end
+		if self._title and self._title.Width > availableWidthForTopCenter then
+			ui:shrinkToFit(self._title, availableWidthForTopCenter)
+			self._title.pos.X = topLeftElementsWidth + theme.padding
+			topCenterElementsWidth = self._title.Width
+			totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
+		end
 
 		-- Start from max size
 		local borderSize = Number2(self:_computeWidth(), self:_computeHeight())
@@ -803,6 +819,9 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		end
 		if borderSize.Width < totalBottomWidth then
 			borderSize.Width = totalBottomWidth
+		end
+		if borderSize.Width > Screen.Width then
+			borderSize.Width = Screen.Width
 		end
 
 		local backgroundSize = borderSize - Number2(theme.modalBorder * 2, theme.modalBorder * 2)
@@ -947,18 +966,21 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			active:willResignActive()
 		end
 
+		ease:cancel(self) -- cancel eventual easing
+
 		-- if self._content.onClose ~= nil then
 		-- 	self._content:onClose()
 		-- end
 		self:setParent(nil)
-		if self.didClose ~= nil then
-			self:didClose()
-		end
 
 		for _, content in ipairs(self.contentStack) do
 			content:cleanup()
 		end
 		self.contentStack = {}
+
+		if self.didClose ~= nil then
+			self:didClose()
+		end
 
 		if self.remove ~= nil then
 			self:remove() -- does a deep cleanup

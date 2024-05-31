@@ -5,6 +5,7 @@ coins = {}
 coins.createModalContent = function(_, config)
 	local theme = require("uitheme").current
 	local modal = require("modal")
+    local bundle = require("bundle")
 	local api = require("api")
 
 	-- default config
@@ -24,7 +25,7 @@ coins.createModalContent = function(_, config)
 
 	local content = modal:createContent()
 	content.closeButton = true
-	content.title = "Coinzh"
+	content.title = "Bank Account"
 	content.icon = "💰"
 
 	local node = ui:createFrame()
@@ -35,7 +36,7 @@ coins.createModalContent = function(_, config)
 	local balanceText = ui:createText("Balance", Color.White)
 	balanceText:setParent(balanceFrame)
 
-	local shape = System.ShapeFromBundle("aduermael.coin")
+	local shape = bundle:Shape("shapes/coin")
 	shape.Tick = function(o, dt)
 		o.LocalRotation.Y = o.LocalRotation.Y + dt * 2
 	end

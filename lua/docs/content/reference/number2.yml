@@ -68,8 +68,10 @@ functions:
           print(n1.X) -- n1.X is still 1
   
   - name: "Normalize"
+    return: 
+      - type: "Number2"
     description: |
-      Normalizes the `Number2` so that its magnitude becomes `1.0`.
+      Normalizes the `Number2` so that its magnitude becomes `1.0`, and return it.
   
   - name: "Lerp"
     description: |

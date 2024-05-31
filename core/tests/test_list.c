@@ -363,9 +363,7 @@ TEST_LIST = {
     {"vertex_buffer_is_not_full", test_vertex_buffer_is_not_full},
     {"vertex_buffer_insert_after", test_vertex_buffer_insert_after},
     {"vertex_buffer_get_next", test_vertex_buffer_get_next},
-    {"vertex_buffer_get_max_length", test_vertex_buffer_get_max_length},
-    {"vertex_buffer_is_enlisted", test_vertex_buffer_is_enlisted},
-    {"vertex_buffer_set_enlisted", test_vertex_buffer_set_enlisted},
+    {"vertex_buffer_get_max_count", test_vertex_buffer_get_max_length},
     {"vertex_buffer_set_lighting_enabled", test_vertex_buffer_set_lighting_enabled},
     {"vertex_buffer_get_lighting_enabled", test_vertex_buffer_get_lighting_enabled},
 

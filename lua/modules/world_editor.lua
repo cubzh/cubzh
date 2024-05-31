@@ -33,7 +33,18 @@ local orientationMode = GizmoOrientation.Local
 
 local waitingForUUIDObj
 
-local TRAILS_COLORS = { Color.Blue, Color.Red, Color.Green, Color.Yellow, Color.Grey, Color.Purple, Color.Beige, Color.Yellow, Color.Brown, Color.Pink }
+local TRAILS_COLORS = {
+	Color.Blue,
+	Color.Red,
+	Color.Green,
+	Color.Yellow,
+	Color.Grey,
+	Color.Purple,
+	Color.Beige,
+	Color.Yellow,
+	Color.Brown,
+	Color.Pink,
+}
 local OBJECTS_COLLISION_GROUP = 7
 local ALPHA_ON_DRAG = 0.6
 
@@ -42,7 +53,12 @@ local setCameraMode = function(mode)
 	if mode == CameraMode.THIRD_PERSON then
 		Camera:SetModeThirdPerson()
 	else
-		return require("camera_modes"):setFirstPerson({ offset = Number3(0, 3, 0), camera = Camera, target = Player, showPointer = true })
+		return require("camera_modes"):setFirstPerson({
+			offset = Number3(0, 3, 0),
+			camera = Camera,
+			target = Player,
+			showPointer = true,
+		})
 	end
 end
 
@@ -51,12 +67,16 @@ local setOrientationMode = function(mode)
 	if mode == GizmoOrientation.Local then
 		worldEditor.gizmo:setOrientation(require("gizmo").Orientation.Local)
 		worldEditor.uiGizmoRotation:setOrientation(require("gizmo").Orientation.Local)
-		if not worldEditor.gizmoOrientationModeBtn then return end
+		if not worldEditor.gizmoOrientationModeBtn then
+			return
+		end
 		worldEditor.gizmoOrientationModeBtn.Text = "⇢ Local"
 	else
 		worldEditor.gizmo:setOrientation(require("gizmo").Orientation.World)
 		worldEditor.uiGizmoRotation:setOrientation(require("gizmo").Orientation.World)
-		if not worldEditor.gizmoOrientationModeBtn then return end
+		if not worldEditor.gizmoOrientationModeBtn then
+			return
+		end
 		worldEditor.gizmoOrientationModeBtn.Text = "🌎 World"
 	end
 end
@@ -79,7 +99,7 @@ local getObjectInfoTable = function(obj)
 		Rotation = obj.Rotation or Number3(0, 0, 0),
 		Scale = obj.Scale or Number3(1, 1, 1),
 		Name = obj.Name or obj.fullname,
-		Physics = obj.realPhysicsMode or PhysicsMode.StaticPerBlock
+		Physics = obj.realPhysicsMode or PhysicsMode.StaticPerBlock,
 	}
 end
 
@@ -107,7 +127,7 @@ clearWorld = function()
 		map:RemoveFromParent()
 		map = nil
 	end
-	for _,o in pairs(objects) do
+	for _, o in pairs(objects) do
 		o:RemoveFromParent()
 	end
 	objects = {}
@@ -123,7 +143,9 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 	end
 	obj.realPhysicsMode = physicsMode
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		if type(o) == "Object" then return end
+		if type(o) == "Object" then
+			return
+		end
 		-- If disabled, keep trigger to allow raycast
 		if physicsMode == PhysicsMode.Disabled then
 			o.Physics = PhysicsMode.Trigger
@@ -134,7 +156,7 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 	if syncMulti then
 		sendToServer(events.P_EDIT_OBJECT, {
 			uuid = obj.uuid,
-			Physics = obj.realPhysicsMode
+			Physics = obj.realPhysicsMode,
 		})
 	end
 end
@@ -150,9 +172,14 @@ local tryPickObject = function(pe)
 	while obj and not obj.isEditable do
 		obj = obj:GetParent()
 	end
-	if not obj then setState(states.DEFAULT) return end
+	if not obj then
+		setState(states.DEFAULT)
+		return
+	end
 
-	if obj.currentlyEditedBy == Player then return end
+	if obj.currentlyEditedBy == Player then
+		return
+	end
 	if obj.currentlyEditedBy then
 		obj:TextBubble("Someone is editing...")
 		return
@@ -162,15 +189,17 @@ end
 
 local setObjectAlpha = function(obj, alpha)
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		if not o.Palette then return end
+		if not o.Palette then
+			return
+		end
 		if not o.savedAlpha then
 			o.savedAlpha = {}
-			for k=1,#o.Palette do
+			for k = 1, #o.Palette do
 				local c = o.Palette[k]
 				o.savedAlpha[k] = c.Color.Alpha / 255
 			end
 		end
-		for k=1,#o.Palette do
+		for k = 1, #o.Palette do
 			local c = o.Palette[k]
 			c.Color.Alpha = o.savedAlpha[k] * alpha
 		end
@@ -179,18 +208,26 @@ local setObjectAlpha = function(obj, alpha)
 end
 
 local freezeObject = function(obj)
-	if not obj then	return end
+	if not obj then
+		return
+	end
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		if type(o) == "Object" then return end
+		if type(o) == "Object" then
+			return
+		end
 		o.CollisionGroups = { 6 }
 		o.CollidesWithGroups = {}
 	end)
 end
 
 local unfreezeObject = function(obj)
-	if not obj then return end
+	if not obj then
+		return
+	end
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-		if type(o) == "Object" then return end
+		if type(o) == "Object" then
+			return
+		end
 		o.CollisionGroups = { OBJECTS_COLLISION_GROUP }
 		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 	end)
@@ -203,7 +240,9 @@ local spawnObject = function(data, onDone)
 		local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 		setObjectPhysicsMode(obj, physicsMode)
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-			if type(o) == "Object" then return end
+			if type(o) == "Object" then
+				return
+			end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
 			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 			o:ResetCollisionBox()
@@ -211,17 +250,22 @@ local spawnObject = function(data, onDone)
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
 		end
-		if onDone then onDone(obj) end
+		if onDone then
+			onDone(obj)
+		end
 		return
 	end
 	local fullname = data.fullname
 	Object:Load(fullname, function(obj)
-		if not obj then print("Can't load", fullname) return end
+		if not obj then
+			print("Can't load", fullname)
+			return
+		end
 		local uuid = data.uuid
 		local fullname = data.fullname
 		local name = data.Name
-		local position = data.Position or Number3(0,0,0)
-		local rotation = data.Rotation or Rotation(0,0,0)
+		local position = data.Position or Number3(0, 0, 0)
+		local rotation = data.Rotation or Rotation(0, 0, 0)
 		local scale = data.Scale or 0.5
 		local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 
@@ -240,7 +284,9 @@ local spawnObject = function(data, onDone)
 		obj.Scale = scale
 
 		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
-			if type(o) == "Object" then return end
+			if type(o) == "Object" then
+				return
+			end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
 			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 			o:ResetCollisionBox()
@@ -253,7 +299,9 @@ local spawnObject = function(data, onDone)
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
 		end
-		if onDone then onDone(obj) end
+		if onDone then
+			onDone(obj)
+		end
 	end)
 end
 
@@ -264,7 +312,7 @@ local editObject = function(objInfo)
 		return
 	end
 
-	for field,value in pairs(objInfo) do
+	for field, value in pairs(objInfo) do
 		obj[field] = value
 	end
 
@@ -284,7 +332,9 @@ local removeObject = function(objInfo)
 end
 
 toggleMapGhost = function(activate)
-	if mapGhost == activate then return end
+	if mapGhost == activate then
+		return
+	end
 	if activate == nil then
 		mapGhost = not mapGhost
 	else
@@ -325,7 +375,7 @@ local statesSettings = {
 			setState(states.PICK_WORLD)
 			require("controls"):turnOff()
 			Player.Motion = { 0, 0, 0 }
-		end
+		end,
 	},
 	[states.PICK_WORLD] = {
 		onStateBegin = function()
@@ -338,7 +388,7 @@ local statesSettings = {
 				worldEditor.uiPickWorld:close()
 				worldEditor.uiPickWorld = nil
 			end
-		end
+		end,
 	},
 	[states.PICK_MAP] = {
 		onStateBegin = function()
@@ -358,7 +408,7 @@ local statesSettings = {
 		onStateEnd = function()
 			worldEditor.uiPickMap:hide()
 			startDefaultMode()
-		end
+		end,
 	},
 	[states.DEFAULT] = {
 		onStateBegin = function()
@@ -370,9 +420,11 @@ local statesSettings = {
 			worldEditor.defaultStateUI:hide()
 		end,
 		pointerUp = function(pe)
-			if worldEditor.dragging then return end
+			if worldEditor.dragging then
+				return
+			end
 			tryPickObject(pe)
-		end
+		end,
 	},
 	[states.GALLERY] = {
 		onStateBegin = function()
@@ -383,7 +435,7 @@ local statesSettings = {
 		onStateEnd = function()
 			worldEditor.gallery:hide()
 			require("controls"):turnOn()
-		end
+		end,
 	},
 	[states.SPAWNING_OBJECT] = {
 		onStateBegin = function(data)
@@ -393,14 +445,16 @@ local statesSettings = {
 				waitingForUUIDObj = obj
 				setState(states.PLACING_OBJECT, obj)
 			end)
-		end
+		end,
 	},
 	[states.PLACING_OBJECT] = {
 		onStateBegin = function(obj)
 			worldEditor.placingCancelBtn:show()
 			worldEditor.placingObj = obj
 			freezeObject(obj)
-			if worldEditor.rotationShift == nil then worldEditor.rotationShift = 0 end
+			if worldEditor.rotationShift == nil then
+				worldEditor.rotationShift = 0
+			end
 			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then
 				worldEditor.placingValidateBtn:show()
 				return
@@ -416,30 +470,42 @@ local statesSettings = {
 			worldEditor.placingCancelBtn:hide()
 		end,
 		pointerMove = function(pe)
-			if cameraMode == CameraMode.FIRST_PERSON then return end
+			if cameraMode == CameraMode.FIRST_PERSON then
+				return
+			end
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
 			local impact = pe:CastRay(Map.CollisionGroups + { OBJECTS_COLLISION_GROUP }, placingObj)
-			if not impact then return end
+			if not impact then
+				return
+			end
 			local pos = pe.Position + pe.Direction * impact.Distance
 			placingObj.Position = pos
 			placingObj.Rotation.Y = worldEditor.rotationShift
 		end,
 		pointerDrag = function(pe)
-			if cameraMode == CameraMode.FIRST_PERSON then return end
+			if cameraMode == CameraMode.FIRST_PERSON then
+				return
+			end
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
 			local impact = pe:CastRay(Map.CollisionGroups + { OBJECTS_COLLISION_GROUP }, placingObj)
-			if not impact then return end
+			if not impact then
+				return
+			end
 			local pos = pe.Position + pe.Direction * impact.Distance
 			placingObj.Position = pos
 			placingObj.Rotation.Y = worldEditor.rotationShift
 		end,
 		pointerUp = function(pe)
-			if cameraMode == CameraMode.FIRST_PERSON then return end
-			if pe.Index ~= 4 then return end
+			if cameraMode == CameraMode.FIRST_PERSON then
+				return
+			end
+			if pe.Index ~= 4 then
+				return
+			end
 
 			local placingObj = worldEditor.placingObj
 
@@ -455,7 +521,7 @@ local statesSettings = {
 				sendToServer(events.P_EDIT_OBJECT, {
 					uuid = placingObj.uuid,
 					Position = placingObj.Position,
-					Rotation = placingObj.Rotation
+					Rotation = placingObj.Rotation,
 				})
 			end
 			placingObj.currentlyEditedBy = Player
@@ -465,7 +531,7 @@ local statesSettings = {
 			worldEditor.rotationShift = worldEditor.rotationShift + math.pi * 0.0625 * (delta > 0 and 1 or -1)
 			worldEditor.placingObj.Rotation.Y = worldEditor.rotationShift
 			return true
-		end
+		end,
 	},
 	[states.UPDATING_OBJECT] = {
 		onStateBegin = function(obj)
@@ -525,7 +591,7 @@ local statesSettings = {
 			worldEditor.gizmo:setOnMove(function()
 				sendToServer(events.P_EDIT_OBJECT, {
 					uuid = worldEditor.object.uuid,
-					Position = worldEditor.object.Position
+					Position = worldEditor.object.Position,
 				})
 			end)
 
@@ -533,7 +599,7 @@ local statesSettings = {
 			worldEditor.uiGizmoRotation:setShape(worldEditor.object)
 			worldEditor.uiGizmoRotation:show()
 
-			if not Client.IsMobile then
+			if worldEditor.positionInput then
 				worldEditor.positionInput:setShape(worldEditor.object)
 				worldEditor.positionInput:show()
 				worldEditor.rotationInput:setShape(worldEditor.object)
@@ -543,15 +609,15 @@ local statesSettings = {
 			end
 		end,
 		tick = function()
-			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0,10,0) + Player.Right * 5)
-            local v = worldEditor.object.Position - Camera.Position
-            local isVisible = Camera.Forward:Dot(v) >= 0
-            if p and isVisible then
+			local p = Camera:WorldToScreen(worldEditor.object.Position + Number3(0, 10, 0) + Player.Right * 5)
+			local v = worldEditor.object.Position - Camera.Position
+			local isVisible = Camera.Forward:Dot(v) >= 0
+			if p and isVisible then
 				worldEditor.scaleButton:show()
 				worldEditor.scaleButton.pos = { p.X * Screen.Width, p.Y * Screen.Height }
-            else
+			else
 				worldEditor.scaleButton:hide()
-            end
+			end
 		end,
 		pointerDown = function(pe)
 			local impact = pe:CastRay({ 6 })
@@ -570,16 +636,21 @@ local statesSettings = {
 			setState(states.PLACING_OBJECT, obj)
 		end,
 		pointerUp = function(pe)
-			if worldEditor.dragging then return end
+			if worldEditor.dragging then
+				return
+			end
 			tryPickObject(pe)
 		end,
 		onStateEnd = function()
 			worldEditor.uiGizmoRotation:hide()
 			worldEditor.scaleButton:hide()
 
-			worldEditor.positionInput:hide()
-			worldEditor.rotationInput:hide()
-			worldEditor.scaleInput:hide()
+			if worldEditor.positionInput then
+				worldEditor.positionInput:hide()
+				worldEditor.rotationInput:hide()
+				worldEditor.scaleInput:hide()
+			end
+
 			if worldEditor.object then
 				unfreezeObject(worldEditor.object)
 			end
@@ -590,11 +661,14 @@ local statesSettings = {
 			worldEditor.object = nil
 		end,
 		pointerWheelPriority = function(delta)
-			worldEditor.object:RotateWorld(Number3(0,1,0), math.pi * 0.0625 * (delta > 0 and 1 or -1))
+			worldEditor.object:RotateWorld(Number3(0, 1, 0), math.pi * 0.0625 * (delta > 0 and 1 or -1))
 			worldEditor.object.Rotation = worldEditor.object.Rotation -- trigger OnSetCallback
-			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
+			sendToServer(
+				events.P_EDIT_OBJECT,
+				{ uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation }
+			)
 			return true
-		end
+		end,
 	},
 	[states.DUPLICATE_OBJECT] = {
 		onStateBegin = function(uuid)
@@ -611,7 +685,7 @@ local statesSettings = {
 			local previousObj = obj
 			spawnObject(data, function(obj)
 				waitingForUUIDObj = obj
-				obj.Position = previousObj.Position + Number3(5,0,5)
+				obj.Position = previousObj.Position + Number3(5, 0, 5)
 				obj.Rotation = previousObj.Rotation
 				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(obj))
 				obj.currentlyEditedBy = Player
@@ -620,7 +694,7 @@ local statesSettings = {
 		end,
 		onStateEnd = function()
 			worldEditor.updateObjectUI:hide()
-		end
+		end,
 	},
 	[states.DESTROY_OBJECT] = {
 		onStateBegin = function(uuid)
@@ -635,7 +709,7 @@ local statesSettings = {
 		end,
 		onStateEnd = function()
 			worldEditor.updateObjectUI:hide()
-		end
+		end,
 	},
 	[states.EDIT_MAP] = {
 		onStateBegin = function()
@@ -645,7 +719,7 @@ local statesSettings = {
 			block:AddBlock(worldEditor.selectedColor, 0, 0, 0)
 			Player:EquipRightHand(block)
 			block.Scale = 5
-			block.LocalPosition = { 1.5,1.5,1.5 }
+			block.LocalPosition = { 1.5, 1.5, 1.5 }
 			worldEditor.editMapValidateBtn:show()
 			worldEditor.colorPicker:show()
 		end,
@@ -655,9 +729,13 @@ local statesSettings = {
 			worldEditor.colorPicker:hide()
 		end,
 		pointerUp = function(pe)
-			if worldEditor.dragging then return end
+			if worldEditor.dragging then
+				return
+			end
 			local impact = pe:CastRay(nil, Player)
-			if not impact or not impact.Block or impact.Object ~= map then return end
+			if not impact or not impact.Block or impact.Object ~= map then
+				return
+			end
 			if pe.Index == 4 then
 				local pos = impact.Block.Coords
 				sendToServer(events.P_REMOVE_BLOCK, { pos = pos })
@@ -665,19 +743,26 @@ local statesSettings = {
 			elseif pe.Index == 5 then
 				impact.Block:AddNeighbor(worldEditor.selectedColor, impact.FaceTouched)
 				local pos = impact.Block.Coords:Copy()
-				if impact.FaceTouched == Face.Front then pos.Z = pos.Z + 1
-				elseif impact.FaceTouched == Face.Back then pos.Z = pos.Z - 1
-				elseif impact.FaceTouched == Face.Top then pos.Y = pos.Y + 1
-				elseif impact.FaceTouched == Face.Bottom then pos.Y = pos.Y - 1
-				elseif impact.FaceTouched == Face.Right then pos.X = pos.X + 1
-				elseif impact.FaceTouched == Face.Left then pos.X = pos.X - 1 end
+				if impact.FaceTouched == Face.Front then
+					pos.Z = pos.Z + 1
+				elseif impact.FaceTouched == Face.Back then
+					pos.Z = pos.Z - 1
+				elseif impact.FaceTouched == Face.Top then
+					pos.Y = pos.Y + 1
+				elseif impact.FaceTouched == Face.Bottom then
+					pos.Y = pos.Y - 1
+				elseif impact.FaceTouched == Face.Right then
+					pos.X = pos.X + 1
+				elseif impact.FaceTouched == Face.Left then
+					pos.X = pos.X - 1
+				end
 				local color = worldEditor.selectedColor
 				sendToServer(events.P_PLACE_BLOCK, {
 					pos = pos,
-					color = color
+					color = color,
 				})
 			end
-		end
+		end,
 	},
 	[states.MAP_OFFSET] = {
 		onStateBegin = function()
@@ -693,7 +778,7 @@ local statesSettings = {
 			worldEditor.offsetMainContainer = mainContainer
 
 			local axisList = { "X", "Y", "Z" }
-			for _,axis in ipairs(axisList) do
+			for _, axis in ipairs(axisList) do
 				local btnMinus5 = ui:createButton("-5")
 				btnMinus5.onRelease = function()
 					local value = map.Position:Copy()
@@ -706,7 +791,7 @@ local statesSettings = {
 					value[axis] = value[axis] - map.Scale[axis]
 					map.Position = value
 				end
-				local mapPositionAxis = ui:createButton(axis..": 0")
+				local mapPositionAxis = ui:createButton(axis .. ": 0")
 				mapPositionAxis.Width = 100
 				map.Position:AddOnSetCallback(function()
 					mapPositionAxis.Text = string.format("%s: %d", axis, map.Position[axis] / map.Scale[axis])
@@ -737,7 +822,8 @@ local statesSettings = {
 
 			local validateMapOffsetBtn = require("uikit"):createButton("✅")
 			worldEditor.validateMapOffsetBtn = validateMapOffsetBtn
-			validateMapOffsetBtn.pos = { Screen.Width * 0.5 - validateMapOffsetBtn.Width * 0.5, validateMapOffsetBtn.Height }
+			validateMapOffsetBtn.pos =
+				{ Screen.Width * 0.5 - validateMapOffsetBtn.Width * 0.5, validateMapOffsetBtn.Height }
 			validateMapOffsetBtn.onRelease = function()
 				local offset = mapPosition - map.Position
 				sendToServer(events.P_SET_MAP_OFFSET, { offset = offset })
@@ -753,20 +839,24 @@ local statesSettings = {
 			worldEditor.validateMapOffsetBtn:remove()
 			worldEditor.validateMapOffsetBtn = nil
 			worldEditor.gizmo:setObject(nil)
-		end
-	}
+		end,
+	},
 }
 
 setState = function(newState, data)
 	if state then
 		local onStateEnd = statesSettings[state].onStateEnd
-		if onStateEnd then onStateEnd(newState, data) end
+		if onStateEnd then
+			onStateEnd(newState, data)
+		end
 	end
 
 	state = newState
 
 	local onStateBegin = statesSettings[state].onStateBegin
-	if onStateBegin then onStateBegin(data) end
+	if onStateBegin then
+		onStateBegin(data)
+	end
 end
 
 -- Listeners
@@ -789,11 +879,13 @@ local function handleLocalEventListener(listenerName, pe)
 
 	callback = stateSettings[listenerName]
 	if callback then
-		if callback(pe) then return true end
+		if callback(pe) then
+			return true
+		end
 	end
 end
 
-for localEventName,listenerName in pairs(listeners) do
+for localEventName, listenerName in pairs(listeners) do
 	LocalEvent:Listen(LocalEvent.Name[localEventName], function(pe)
 		return handleLocalEventListener(listenerName .. "Priority", pe)
 	end, { topPriority = true })
@@ -804,16 +896,22 @@ end
 
 LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
 	if not Client.IsMobile then
-		if pe.Index ~= 4 then return end -- if not left click, return
+		if pe.Index ~= 4 then
+			return
+		end -- if not left click, return
 		worldEditor.draggingCount = (worldEditor.draggingCount or 0) + 1
 	else
 		worldEditor.draggingCount = (worldEditor.draggingCount or 0) + 1
 	end
-	if worldEditor.draggingCount > 4 then worldEditor.dragging = true end
+	if worldEditor.draggingCount > 4 then
+		worldEditor.dragging = true
+	end
 end)
 LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
 	if not Client.IsMobile then
-		if pe.Index ~= 4 then return end -- if not left click, return
+		if pe.Index ~= 4 then
+			return
+		end -- if not left click, return
 	end
 	worldEditor.draggingCount = 0
 	worldEditor.dragging = false
@@ -824,7 +922,8 @@ initPickWorld = function()
 
 	local uiPickWorld
 	local content
-	uiPickWorld, content = require("creations"):createModal({ uikit = ui,
+	uiPickWorld, content = require("creations"):createModal({
+		uikit = ui,
 		onOpen = function(_, cell)
 			worldTitle = cell.title
 			worldID = cell.id
@@ -842,7 +941,7 @@ initPickWorld = function()
 				uiPickWorld:close()
 				worldEditor.uiPickWorld = nil
 			end)
-		end
+		end,
 	})
 	content.tabs[3].selected = true
 	content.tabs[3].action()
@@ -857,14 +956,18 @@ initPickMap = function()
 	previousBtn:setParent(uiPickMap)
 	previousBtn.onRelease = function()
 		mapIndex = mapIndex - 1
-		if mapIndex <= 0 then mapIndex = #maps end
+		if mapIndex <= 0 then
+			mapIndex = #maps
+		end
 		loadMap(maps[mapIndex])
 	end
 	local nextBtn = ui:createButton(">")
 	nextBtn:setParent(uiPickMap)
 	nextBtn.onRelease = function()
 		mapIndex = mapIndex + 1
-		if mapIndex > #maps then mapIndex = 1 end
+		if mapIndex > #maps then
+			mapIndex = 1
+		end
 		loadMap(maps[mapIndex])
 	end
 
@@ -875,12 +978,18 @@ initPickMap = function()
 		nextBtn:hide()
 		-- Gallery to pick a map
 		local gallery
-		gallery = require("gallery"):create(function() return Screen.Width end, function() return Screen.Height * 0.5 end, function(m) m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 } end, {
+		gallery = require("gallery"):create(function()
+			return Screen.Width
+		end, function()
+			return Screen.Height * 0.5
+		end, function(m)
+			m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 }
+		end, {
 			onOpen = function(_, cell)
-				local fullname = cell.repo.."."..cell.name
+				local fullname = cell.repo .. "." .. cell.name
 				sendToServer(events.P_END_PREPARING, { mapName = fullname })
 				gallery:remove()
-			end
+			end,
 		})
 		gallery.didClose = function()
 			previousBtn:show()
@@ -896,10 +1005,11 @@ initPickMap = function()
 
 	uiPickMap.parentDidResize = function()
 		uiPickMap.Width = Screen.Width
-		previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5}
-		nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5}
+		previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5 }
+		nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5 }
 		galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
-		validateBtn.pos = { Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
+		validateBtn.pos =
+			{ Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
 	end
 	uiPickMap:parentDidResize()
 
@@ -911,7 +1021,9 @@ end
 loadMap = function(fullname, scale, onDone)
 	mapName = fullname
 	Object:Load(fullname, function(obj)
-		if map then map:RemoveFromParent() end
+		if map then
+			map:RemoveFromParent()
+		end
 		map = MutableShape(obj, { includeChildren = true })
 		map.Scale = scale or 5
 		require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
@@ -928,24 +1040,28 @@ loadMap = function(fullname, scale, onDone)
 			Camera.Rotation.Y = math.pi / 2
 			Camera.Rotation.X = math.pi / 4
 
-			local longestValue =  math.max(map.Width, math.max(map.Height,map.Depth))
+			local longestValue = math.max(map.Width, math.max(map.Height, map.Depth))
 			worldEditor.mapPivot.Position = Number3(map.Width * 0.5, longestValue, map.Depth * 0.5) * map.Scale
 			Camera.Position = worldEditor.mapPivot.Position + { -longestValue * 4, 0, 0 }
 		end
-		if onDone then onDone() end
+		if onDone then
+			onDone()
+		end
 	end)
 end
 
 startDefaultMode = function()
 	Fog.On = true
-    dropPlayer = function()
-		if not map then return end
-        Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
-        Player.Rotation = { 0, 0, 0 }
-        Player.Velocity = { 0, 0, 0 }
-    end
+	dropPlayer = function()
+		if not map then
+			return
+		end
+		Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
+		Player.Rotation = { 0, 0, 0 }
+		Player.Velocity = { 0, 0, 0 }
+	end
 	-- require("multi")
-    Player:SetParent(World)
+	Player:SetParent(World)
 	if Client.IsMobile then
 		setCameraMode(CameraMode.FIRST_PERSON)
 	else
@@ -953,7 +1069,7 @@ startDefaultMode = function()
 	end
 	setOrientationMode(GizmoOrientation.Local)
 	setSnapGridValue(1)
-    dropPlayer()
+	dropPlayer()
 
 	require("jumpfly")
 
@@ -966,12 +1082,12 @@ startDefaultMode = function()
 end
 
 initDefaultMode = function()
-    local ui = require("uikit")
+	local ui = require("uikit")
 
 	-- Gizmo
 	Camera.Layers = { 1, 4 }
 	require("gizmo"):setLayer(4)
-	worldEditor.gizmo = require("gizmo"):create({ orientationMode =  require("gizmo").Mode.Local, moveSnap = 0.5 })
+	worldEditor.gizmo = require("gizmo"):create({ orientationMode = require("gizmo").Mode.Local, moveSnap = 0.5 })
 	worldEditor.gizmo:setMoveSnap(1)
 
 	-- Translation and scale UI
@@ -984,43 +1100,55 @@ initDefaultMode = function()
 			end,
 			fieldToText = function(field)
 				local value = math.floor(math.abs(math.deg(field)))
-				if value == 360 then value = 0 end
+				if value == 360 then
+					value = 0
+				end
 				return tostring(value)
-			end
+			end,
 		})
 		worldEditor.scaleInput = require("ui_number3input"):create({ field = "Scale" })
 	end
 	-- Rotation Gizmo
 	local uiGizmoRotation = require("ui_gizmo_rotation"):create({
 		onRotate = function()
-			sendToServer(events.P_EDIT_OBJECT, { uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation })
-		end
+			sendToServer(
+				events.P_EDIT_OBJECT,
+				{ uuid = worldEditor.object.uuid, Rotation = worldEditor.object.Rotation }
+			)
+		end,
 	})
 	worldEditor.uiGizmoRotation = uiGizmoRotation
 	uiGizmoRotation.parentDidResize = function()
 		if not Client.IsMobile then
 			uiGizmoRotation.Size = math.min(250, Screen.Height * 0.3)
-			uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
+			uiGizmoRotation.pos =
+				{ Screen.Width - uiGizmoRotation.Width, Screen.Height * 0.5 - uiGizmoRotation.Height * 0.5 }
 			worldEditor.positionInput.pos = uiGizmoRotation.pos - { 0, worldEditor.positionInput.Height - padding, 0 }
-			worldEditor.rotationInput.pos = worldEditor.positionInput.pos - { 0, worldEditor.rotationInput.Height - padding, 0 }
-			worldEditor.scaleInput.pos = worldEditor.rotationInput.pos - { 0, worldEditor.scaleInput.Height - padding, 0 }
+			worldEditor.rotationInput.pos = worldEditor.positionInput.pos
+				- { 0, worldEditor.rotationInput.Height - padding, 0 }
+			worldEditor.scaleInput.pos = worldEditor.rotationInput.pos
+				- { 0, worldEditor.scaleInput.Height - padding, 0 }
 		else
 			if Screen.Width < Screen.Height then
 				uiGizmoRotation.Size = 130
 				local actionButton1 = require("controls"):getActionButton(1)
-				uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height+ padding * 2 }
+				uiGizmoRotation.pos =
+					{ Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height + padding * 2 }
 			else
 				uiGizmoRotation.Size = 130
 				local actionButton1 = require("controls"):getActionButton(1)
-				uiGizmoRotation.pos = { Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height + padding * 2 }
+				uiGizmoRotation.pos =
+					{ Screen.Width - uiGizmoRotation.Width, actionButton1.pos.Y + actionButton1.Height + padding * 2 }
 			end
 		end
 	end
 	uiGizmoRotation:parentDidResize()
 	uiGizmoRotation:hide()
-	worldEditor.positionInput:hide()
-	worldEditor.rotationInput:hide()
-	worldEditor.scaleInput:hide()
+	if worldEditor.positionInput then
+		worldEditor.positionInput:hide()
+		worldEditor.rotationInput:hide()
+		worldEditor.scaleInput:hide()
+	end
 
 	-- Scale gizmo
 	worldEditor.scaleButton = require("uikit"):createButton("< Scale >")
@@ -1055,10 +1183,12 @@ initDefaultMode = function()
 	local defaultStateUIConfig = {
 		{
 			text = "➕ Object",
-			pos = function(btn) return { Screen.Width * 0.5 - btn.Width * 0.5, padding * 2 } end,
+			pos = function(btn)
+				return { Screen.Width * 0.5 - btn.Width * 0.5, padding * 2 }
+			end,
 			-- pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding * 2 } end,
 			state = states.GALLERY,
-			name = "addBtn"
+			name = "addBtn",
 		},
 		-- {
 		-- 	text = "🖌 Map",
@@ -1068,7 +1198,7 @@ initDefaultMode = function()
 		-- }
 	}
 
-	for _,info in ipairs(defaultStateUIConfig) do
+	for _, info in ipairs(defaultStateUIConfig) do
 		local btn = ui:createButton(info.text)
 		btn:setParent(worldEditor.defaultStateUI)
 		btn.parentDidResize = function(b)
@@ -1096,7 +1226,10 @@ initDefaultMode = function()
 		menuBar:show()
 	end
 	showSettingsBtn.parentDidResize = function()
-		showSettingsBtn.pos = { Screen.Width - padding - showSettingsBtn.Width, Screen.Height - showSettingsBtn.Height - Screen.SafeArea.Top - padding }
+		showSettingsBtn.pos = {
+			Screen.Width - padding - showSettingsBtn.Width,
+			Screen.Height - showSettingsBtn.Height - Screen.SafeArea.Top - padding,
+		}
 	end
 	showSettingsBtn:parentDidResize()
 
@@ -1118,7 +1251,12 @@ initDefaultMode = function()
 		sendToServer(events.P_SET_MAP_SCALE, { mapScale = value })
 	end
 	input:setParent(frame)
-	frame.parentDidResize = function()
+	frame.parentDidResize = function(self)
+		local parent = self.parent
+		if not parent then
+			return
+		end
+		self.Width = parent.Width
 		text.pos.Y = input.Height * 0.5 - text.Height * 0.5
 		input.Width = frame.Width - text.Width - padding
 		input.pos.X = text.pos.X + text.Width + padding
@@ -1135,9 +1273,9 @@ initDefaultMode = function()
 			callback = function()
 				showSettingsBtn:show()
 				menuBar:hide()
-			end
+			end,
 		},
-		{ type="gap" },
+		{ type = "gap" },
 		{
 			type = "button",
 			text = "📑 Save World",
@@ -1147,13 +1285,13 @@ initDefaultMode = function()
 		{ type = "gap" },
 		{
 			type = "node",
-			node = mapScaleFrame
+			node = mapScaleFrame,
 		},
 		{ type = "gap" },
 		{
 			type = "button",
 			text = "Map Ghost",
-			callback = toggleMapGhost
+			callback = toggleMapGhost,
 		},
 		{ type = "gap" },
 		{
@@ -1161,14 +1299,17 @@ initDefaultMode = function()
 			text = "Map Offset",
 			callback = function()
 				setState(states.MAP_OFFSET)
-			end
+			end,
 		},
 		{ type = "gap" },
 		{
 			type = "button",
 			text = "Reset all",
 			callback = function()
-				alertModal = require("alert"):create("Confirm that you want to remove all modifications and start from scratch.", { uikit = require("uikit") })
+				alertModal = require("alert"):create(
+					"Confirm that you want to remove all modifications and start from scratch.",
+					{ uikit = require("uikit") }
+				)
 				alertModal:setPositiveCallback("Reset and pick a new map", function()
 					menuBar:hide()
 					showSettingsBtn:show()
@@ -1183,9 +1324,9 @@ initDefaultMode = function()
 			end,
 			color = require("uitheme").current.colorNegative,
 			name = "resetBtn",
-		}
+		},
 	}
-	for _,info in ipairs(menuSettingsConfig) do
+	for _, info in ipairs(menuSettingsConfig) do
 		if info.type == "separator" then
 			menuBar:pushSeparator()
 		elseif info.type == "gap" then
@@ -1194,7 +1335,9 @@ initDefaultMode = function()
 			menuBar:pushElement(info.node)
 		elseif info.type == "button" then
 			local btn = ui:createButton(info.text)
-			if info.color then btn:setColor(info.color) end
+			if info.color then
+				btn:setColor(info.color)
+			end
 			btn.onRelease = function()
 				if info.serverEvent then
 					sendToServer(info.serverEvent)
@@ -1214,13 +1357,14 @@ initDefaultMode = function()
 	menuBar:hide()
 	menuBar.parentDidResize = function()
 		menuBar:refresh()
-		menuBar.pos = { Screen.Width - padding - menuBar.Width, Screen.Height - menuBar.Height - Screen.SafeArea.Top - padding }
+		menuBar.pos =
+			{ Screen.Width - padding - menuBar.Width, Screen.Height - menuBar.Height - Screen.SafeArea.Top - padding }
 	end
 	menuBar:parentDidResize()
 
 	-- Gallery
 	local galleryOnOpen = function(_, cell)
-		local fullname = cell.repo.."."..cell.name
+		local fullname = cell.repo .. "." .. cell.name
 		setState(states.SPAWNING_OBJECT, { fullname = fullname })
 	end
 	local initGallery
@@ -1235,8 +1379,7 @@ initDefaultMode = function()
 					return Screen.Width * 0.5
 				end
 			end
-		end,
-		function()
+		end, function()
 			if not Client.IsMobile then
 				return Screen.Height * 0.4
 			else
@@ -1246,19 +1389,17 @@ initDefaultMode = function()
 					return Screen.Height
 				end
 			end
-		end,
-		function(m)
+		end, function(m)
 			if not Client.IsMobile then
 				m.pos = { Screen.Width * 0.5 - m.Width * 0.5, 0 }
 			else
 				if Screen.Height > Screen.Width then -- portrait mode
-					m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.5 - m.Height * 0.5}
+					m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.5 - m.Height * 0.5 }
 				else -- landscape mode
 					m.pos = { Screen.Width * 0.5, 0 }
 				end
 			end
-		end,
-		{ onOpen = galleryOnOpen })
+		end, { onOpen = galleryOnOpen })
 		worldEditor.gallery.didClose = function()
 			setState(states.DEFAULT)
 			initGallery()
@@ -1296,14 +1437,15 @@ initDefaultMode = function()
 	placingValidateBtn.parentDidResize = function()
 		placingValidateBtn.Width = placingCancelBtn.Width * 1.4
 		placingValidateBtn.Height = placingValidateBtn.Width
-		placingValidateBtn.pos = placingCancelBtn.pos + { placingCancelBtn.Width + padding, placingCancelBtn.Height * 0.5 - placingValidateBtn.Height * 0.5, 0 }
+		placingValidateBtn.pos = placingCancelBtn.pos
+			+ { placingCancelBtn.Width + padding, placingCancelBtn.Height * 0.5 - placingValidateBtn.Height * 0.5, 0 }
 	end
 	placingValidateBtn:parentDidResize()
 	placingValidateBtn:hide()
 	worldEditor.placingValidateBtn = placingValidateBtn
 
 	-- Update object UI
-	local updateObjectUI = ui:createFrame(Color(255,0,0))
+	local updateObjectUI = ui:createFrame(Color(255, 0, 0))
 
 	local bar = require("ui_container"):createHorizontalContainer(Color(78, 78, 78))
 	bar:setParent(updateObjectUI)
@@ -1315,36 +1457,58 @@ initDefaultMode = function()
 	bar:pushSeparator()
 
 	local barInfoConfig = {
-		{ type="button", text="⚅", name="physicsBtn", callback=function(btn)
-			local obj = worldEditor.object
-			if btn.Text == "⚅" then
-				obj:TextBubble("CollisionMode: Static")
-				setObjectPhysicsMode(obj, PhysicsMode.Static, true)
-				btn.Text = "⚀"
-			elseif btn.Text == "⚀" then
-				obj:TextBubble("CollisionMode: Trigger")
-				setObjectPhysicsMode(obj, PhysicsMode.Trigger, true)
-				btn.Text = "►"
-			elseif btn.Text == "►" then
-				obj:TextBubble("CollisionMode: Disabled")
-				setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
-				btn.Text = "❌"
-			else
-				obj:TextBubble("CollisionMode: StaticPerBlock")
-				setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock, true)
-				btn.Text = "⚅"
-			end
-		end
+		{
+			type = "button",
+			text = "⚅",
+			name = "physicsBtn",
+			callback = function(btn)
+				local obj = worldEditor.object
+				if btn.Text == "⚅" then
+					obj:TextBubble("CollisionMode: Static")
+					setObjectPhysicsMode(obj, PhysicsMode.Static, true)
+					btn.Text = "⚀"
+				elseif btn.Text == "⚀" then
+					obj:TextBubble("CollisionMode: Trigger")
+					setObjectPhysicsMode(obj, PhysicsMode.Trigger, true)
+					btn.Text = "►"
+				elseif btn.Text == "►" then
+					obj:TextBubble("CollisionMode: Disabled")
+					setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
+					btn.Text = "❌"
+				else
+					obj:TextBubble("CollisionMode: StaticPerBlock")
+					setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock, true)
+					btn.Text = "⚅"
+				end
+			end,
 		},
-		{ type="gap" },
-		{ type="button", text="📑", callback=function() setState(states.DUPLICATE_OBJECT, worldEditor.object.uuid) end },
-		{ type="gap" },
-		{ type="button", text="🗑️", callback=function() setState(states.DESTROY_OBJECT, worldEditor.object.uuid) end },
-		{ type="gap" },
-		{ type="button", text="✅", callback=function() setState(states.DEFAULT, worldEditor.object.uuid) end  },
+		{ type = "gap" },
+		{
+			type = "button",
+			text = "📑",
+			callback = function()
+				setState(states.DUPLICATE_OBJECT, worldEditor.object.uuid)
+			end,
+		},
+		{ type = "gap" },
+		{
+			type = "button",
+			text = "🗑️",
+			callback = function()
+				setState(states.DESTROY_OBJECT, worldEditor.object.uuid)
+			end,
+		},
+		{ type = "gap" },
+		{
+			type = "button",
+			text = "✅",
+			callback = function()
+				setState(states.DEFAULT, worldEditor.object.uuid)
+			end,
+		},
 	}
 
-	for _,info in ipairs(barInfoConfig) do
+	for _, info in ipairs(barInfoConfig) do
 		if info.type == "button" then
 			local btn = ui:createButton(info.text)
 			if info.name then
@@ -1389,9 +1553,9 @@ initDefaultMode = function()
 	local topBarConfig = {
 		{
 			type = "node",
-			node = aiAmbienceContainer
+			node = aiAmbienceContainer,
 		},
-		{ type="gap" },
+		{ type = "gap" },
 		{
 			type = "button",
 			text = "🎥",
@@ -1402,9 +1566,9 @@ initDefaultMode = function()
 					setCameraMode(CameraMode.THIRD_PERSON)
 				end
 			end,
-			name = "cameraModeBtn"
+			name = "cameraModeBtn",
 		},
-		{ type="gap" },
+		{ type = "gap" },
 		{
 			type = "button",
 			text = "🌎 World",
@@ -1415,9 +1579,9 @@ initDefaultMode = function()
 					setOrientationMode(GizmoOrientation.World)
 				end
 			end,
-			name = "gizmoOrientationModeBtn"
+			name = "gizmoOrientationModeBtn",
 		},
-		{ type="gap" },
+		{ type = "gap" },
 		{
 			type = "button",
 			text = "𐄳 1",
@@ -1430,10 +1594,10 @@ initDefaultMode = function()
 					setSnapGridValue(1)
 				end
 			end,
-			name = "snapGridBtn"
-		}
+			name = "snapGridBtn",
+		},
 	}
-	for _,info in ipairs(topBarConfig) do
+	for _, info in ipairs(topBarConfig) do
 		if info.type == "separator" then
 			topBar:pushSeparator()
 		elseif info.type == "gap" then
@@ -1442,7 +1606,9 @@ initDefaultMode = function()
 			topBar:pushElement(info.node)
 		elseif info.type == "button" then
 			local btn = ui:createButton(info.text)
-			if info.color then btn:setColor(info.color) end
+			if info.color then
+				btn:setColor(info.color)
+			end
 			btn.onRelease = info.callback
 			if info.name then
 				worldEditor[info.name] = btn
@@ -1464,20 +1630,27 @@ initDefaultMode = function()
 	editMapValidateBtn:hide()
 	worldEditor.editMapValidateBtn = editMapValidateBtn
 
-	local picker = require("colorpicker"):create({ closeBtnIcon = "", uikit = ui, transparency = false, colorPreview = false,
+	local picker = require("colorpicker"):create({
+		closeBtnIcon = "",
+		uikit = ui,
+		transparency = false,
+		colorPreview = false,
 		maxWidth = function()
 			if Client.IsMobile and Screen.Height > Screen.Width then -- portrait mode
 				return Screen.Width * 0.4
 			end
 			return Screen.Width * 0.5
-		end
+		end,
 	})
 	picker.parentDidResize = function()
 		if not Client.IsMobile then
 			picker.pos = { Screen.Width - picker.Width, -20 }
 		else
 			local actionButton1 = require("controls"):getActionButton(1)
-			if not actionButton1 then error("Action1 button does not exist", 2) return end
+			if not actionButton1 then
+				error("Action1 button does not exist", 2)
+				return
+			end
 			picker.pos = { Screen.Width - picker.Width - padding, actionButton1.pos.Y + actionButton1.Height + padding }
 		end
 	end
@@ -1512,14 +1685,16 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 				end,
 				onLoad = function(obj, data)
 					if data == "Map" then
-						if map then map:RemoveFromParent() end
+						if map then
+							map:RemoveFromParent()
+						end
 						map = obj
 						return
 					end
 					obj.currentlyEditedBy = nil
 					data.obj = obj
 					spawnObject(data)
-				end
+				end,
 			})
 		end
 	elseif e.a == events.PLACE_OBJECT then
@@ -1545,7 +1720,9 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		removeObject(data)
 	elseif e.a == events.START_EDIT_OBJECT then
 		local obj = objects[data.uuid]
-		if not obj or isLocalPlayer then return end
+		if not obj or isLocalPlayer then
+			return
+		end
 		freezeObject(obj)
 		obj.currentlyEditedBy = sender
 		if obj.trail then
@@ -1570,14 +1747,18 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		map:RefreshModel()
 	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
 		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
-		if b then b:Remove() end
+		if b then
+			b:Remove()
+		end
 	elseif e.a == events.PLAYER_ACTIVITY then
-		for pIDUserID,t in pairs(data.activity) do
+		for pIDUserID, t in pairs(data.activity) do
 			if t and t.editing then
 				local pID = tonumber(string.sub(pIDUserID, 1, 1))
 				local obj = objects[t.editing]
 				local player = Players[pID]
-				if not obj or obj.currentlyEditedBy == player then return end
+				if not obj or obj.currentlyEditedBy == player then
+					return
+				end
 				obj.currentlyEditedBy = player
 				if obj.trail then
 					obj.trail:remove()
@@ -1591,14 +1772,14 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		local prevScale = map.Scale
 		local ratio = data.mapScale / prevScale
 		map.Scale = data.mapScale
-		for _,o in pairs(objects) do
+		for _, o in pairs(objects) do
 			o.Scale = o.Scale * ratio
 			o.Position = o.Position * ratio
 		end
 		dropPlayer()
 	elseif e.a == events.SET_MAP_OFFSET then
 		local offset = data.offset
-		for _,o in pairs(objects) do
+		for _, o in pairs(objects) do
 			o.Position = o.Position + offset
 		end
 		Player.Position = Player.Position + offset
@@ -1608,7 +1789,10 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		setState(states.PICK_MAP)
 	elseif e.a == events.SAVE_WORLD then
 		local mapBase64 = data.mapBase64
-		if mapBase64 == nil then print("Received nil from server") return end
+		if mapBase64 == nil then
+			print("Received nil from server")
+			return
+		end
 		-- could be move to world_editor_server, not sure System works on the server (must enable the file in require.cpp)
 		require("system_api", System):patchWorld(worldID, { mapBase64 = mapBase64 }, function(err, world)
 			if world and world.mapBase64 == mapBase64 then
@@ -1625,7 +1809,9 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 end)
 
 Timer(30, true, function()
-	if state < states.DEFAULT then return end
+	if state < states.DEFAULT then
+		return
+	end
 	-- ask for auto save every 30 seconds, if no changes since last save, server does not answer
 	sendToServer(events.P_SAVE_WORLD)
 end)

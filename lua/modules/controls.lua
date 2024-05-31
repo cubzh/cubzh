@@ -580,7 +580,9 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 		end
 		if eventType == "up" then
 			_state.inputPointers.dirpad = nil
-			if Client.DirectionalPad ~= nil then
+
+			local captured = LocalEvent:Send(LocalEvent.Name.DirPad, 0, 0)
+			if not captured and Client.DirectionalPad ~= nil then
 				Client.DirectionalPad(0, 0)
 			end
 
@@ -663,7 +665,11 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 		dirpadInput:Normalize()
 		rot:Normalize()
 
-		Client.DirectionalPad(dirpadInput.X, dirpadInput.Y)
+		local captured = LocalEvent:Send(LocalEvent.Name.DirPad, dirpadInput.X, dirpadInput.Y)
+		if not captured and Client.DirectionalPad ~= nil then
+			Client.DirectionalPad(dirpadInput.X, dirpadInput.Y)
+		end
+
 		ease:cancel(_state.anim)
 		ease:outBack(_state.anim, 0.22, {
 			onUpdate = function(o)
@@ -810,14 +816,13 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 				if Pointer.Down ~= nil then
 					Pointer.Down(pointerEvent)
 				end
-				if Pointer.Click ~= nil then
-					local x, y = pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height
-					_state.clickPointerIndex = pointerEvent.Index
-					_state.clickPointerStartPosition = Number2(x, y)
-				end
 
 				local px, py = pointerEvent.X, pointerEvent.Y
 				local x, y = px * Screen.Width, py * Screen.Height
+
+				_state.clickPointerIndex = pointerEvent.Index
+				_state.clickPointerStartPosition = Number2(x, y)
+
 				_state.longPressStartPosition = Number2(x, y)
 				_state.longPressTimer = Timer(LONG_PRESS_DELAY_1, function()
 					local indicator = _getPCLongPressIndicator(true)
@@ -854,10 +859,8 @@ _state.downListener = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(po
 					Pointer.Down(pointerEvent)
 				end
 
-				if Pointer.Click ~= nil then
-					_state.clickPointerIndex = pointerEvent.Index
-					_state.clickPointerStartPosition = Number2(x, y)
-				end
+				_state.clickPointerIndex = pointerEvent.Index
+				_state.clickPointerStartPosition = Number2(x, y)
 
 				if Pointer.LongPress ~= nil then
 					_state.longPressStartPosition = Number2(x, y)
@@ -1127,7 +1130,7 @@ _state.dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(po
 			end
 		end
 	end
-end, { system = System })
+end, { system = System }) -- top priority?
 
 _state.sensitivityListener = LocalEvent:Listen(LocalEvent.Name.SensitivityUpdated, function()
 	_state.sensitivity = Pointer.Sensitivity
@@ -1173,7 +1176,8 @@ _state.upListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointe
 	if Pointer.IsHidden == false then -- Pointer shown
 		if _isPC then
 			if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
-				if Pointer.Click ~= nil then
+				local captured = LocalEvent:Send(LocalEvent.Name.PointerClick, pointerEvent)
+				if not captured and Pointer.Click ~= nil then
 					Pointer.Click(pointerEvent)
 				end
 				_state.clickPointerIndex = nil
@@ -1188,7 +1192,8 @@ _state.upListener = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pointe
 
 			if pointerEvent.Index == touchDragPointer then
 				if _state.clickPointerIndex ~= nil and pointerEvent.Index == _state.clickPointerIndex then
-					if Pointer.Click ~= nil then
+					local captured = LocalEvent:Send(LocalEvent.Name.PointerClick, pointerEvent)
+					if not captured and Pointer.Click ~= nil then
 						Pointer.Click(pointerEvent)
 					end
 					_state.clickPointerIndex = nil
@@ -1303,9 +1308,13 @@ function applyKey(keyCode, down)
 		end
 	end
 
-	if updateDirPad and Client.DirectionalPad ~= nil then
+	if updateDirPad then
 		dirpadInput:Normalize()
-		Client.DirectionalPad(dirpadInput.X, dirpadInput.Y)
+
+		local captured = LocalEvent:Send(LocalEvent.Name.DirPad, dirpadInput.X, dirpadInput.Y)
+		if not captured and Client.DirectionalPad ~= nil then
+			Client.DirectionalPad(dirpadInput.X, dirpadInput.Y)
+		end
 	end
 end
 
@@ -1372,6 +1381,7 @@ index.refresh = function()
 	_state.action2:hide()
 	_state.action3:hide()
 	if _state.on and _state.virtualKeyboardShown == false and _isMobile and _state.chatInput == nil then
+		-- TODO: condition should be "there's at least one DirPad listener"
 		if Client.DirectionalPad ~= nil then
 			_state.dirpad:show()
 		end

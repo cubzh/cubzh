@@ -21,35 +21,38 @@ functions:
     - name: "Cast"
       argument-sets:
         -
-        -
           - name: "filterIn"
             type: "CollisionGroups"
+            optional: true
+          - name: "filterOut"
+            type: "Object"
+            optional: true
+          - name: "onlyFirstImpact"
+            type: "boolean"
+            optional: true
         -
           - name: "filterIn"
             type: "Shape"
-        -
-          - name: "filterIn"
-            type: "nil"
+            optional: true
           - name: "filterOut"
             type: "Object"
+            optional: true
+          - name: "onlyFirstImpact"
+            type: "boolean"
+            optional: true
         -
-          - name: "filterIn"
-            type: "CollisionGroups"
-          - name: "filterOut"
-            type: "Object"
-        -
-          - name: "filterIn"
-            type: "Shape"
-          - name: "filterOut"
-            type: "Object"
+          
       return: 
         - type: "Impact" 
       description: |
-          Casts a ray and returns an [Impact] (can be [nil]).
+          Casts a ray and returns an [Impact] that contains information about what's been hit. If nothing was it, returns `nil` instead.
 
-          The [Impact] contains information about what's been hit.
+          The ray will intersect with any objects matching the `filterIn` collision groups. If `nil` is provided, the ray intersects with all [CollisionGroups] by default.
+          Alternatively, the `filterIn` parameter can be a [Shape], in which case the raycast will only be performed against the shape's blocks.
 
-          By default, a ray collides with all [CollisionGroups]. But filters can be set, if you want your ray to only collide with the [Map] for example. You can also filter out an [Object] of any kind.
+          Additionally, an object can be provided as `filterOut` to exclude it as a potential result. However, it is generally a best practice to filter using collision groups.
+      
+          The third parameter `onlyFirstImpact` dictates whether or not to receive only the first impacted object, or all of the intersected objects in a table. It is set to `true` by default.
       samples:
         - code: |
             Pointer.Down = function( pointerEvent )

@@ -8,6 +8,7 @@ loading.create = function(_, text, config)
 	-- default config
 	local _config = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
+		sortOrder = 1 -- base sort order for the background frame, +1 for the texts
 	}
 
 	if config then
@@ -54,11 +55,13 @@ loading.create = function(_, text, config)
 	end
 
 	local node = ui:createFrame(Color(0, 0, 0, 0))
+	node.object.SortOrder = _config.sortOrder
 	content.node = node
 
 	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
 
 	local label = ui:createText(text, Color.White)
+	label.object.SortOrder = _config.sortOrder + 1
 	label:setParent(node)
 	node.label = label
 

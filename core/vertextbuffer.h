@@ -31,7 +31,6 @@ struct {
 
 #define DRAWBUFFER_VERTICES_BYTES sizeof(VertexAttributes)
 #define DRAWBUFFER_VERTICES_PER_FACE 4
-#define DRAWBUFFER_VERTICES_PER_FACE_BYTES DRAWBUFFER_VERTICES_BYTES * 4
 
 extern bool vertex_buffer_pop_destroyed_id(uint32_t *id);
 
@@ -73,8 +72,8 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
 void vertex_buffer_mem_area_writer_done(VertexBufferMemAreaWriter *vbmaw);
 
 // a vb may optionally write to a lighting buffer ie. if it belongs to the map shape w/ octree
-VertexBuffer *vertex_buffer_new(bool lighting, bool transparent);
-VertexBuffer *vertex_buffer_new_with_max_count(size_t n, bool lighting, bool transparent);
+VertexBuffer *vertex_buffer_new(bool transparent);
+VertexBuffer *vertex_buffer_new_with_max_count(uint32_t n, bool transparent);
 
 void vertex_buffer_free(VertexBuffer *vb);
 void vertex_buffer_free_all(VertexBuffer *front);
@@ -98,15 +97,12 @@ void vertex_buffer_log_draw_slices(const VertexBuffer *vb);
 void vertex_buffer_add_draw_slice(VertexBuffer *vb, uint32_t start, uint32_t count);
 void vertex_buffer_fill_draw_slices(VertexBuffer *vb);
 void vertex_buffer_flush_draw_slices(VertexBuffer *vb);
-size_t vertex_buffer_get_nb_draw_slices(const VertexBuffer *vb);
+uint16_t vertex_buffer_get_nb_draw_slices(const VertexBuffer *vb);
 
-size_t vertex_buffer_get_nb_faces(const VertexBuffer *vb);
-size_t vertex_buffer_get_max_length(const VertexBuffer *vb);
+uint32_t vertex_buffer_get_count(const VertexBuffer *vb);
+uint32_t vertex_buffer_get_max_count(const VertexBuffer *vb);
 
 bool vertex_buffer_is_fragmented(const VertexBuffer *vb);
-
-bool vertex_buffer_is_enlisted(const VertexBuffer *vb);
-void vertex_buffer_set_enlisted(VertexBuffer *vb, const bool b);
 
 void vertex_buffer_fill_gaps(VertexBuffer *vb);
 

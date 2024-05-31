@@ -14,6 +14,11 @@ extern "C" {
 #include <stdint.h>
 
 #define vx_assert(_CONDITION) assert(_CONDITION)
+#if DEBUG
+#define vx_assert_d(_CONDITION) assert(_CONDITION)
+#else
+#define vx_assert_d(_CONDITION)
+#endif
 
 #ifdef __VX_PLATFORM_WINDOWS
 #define vx_deprecated(_MSG)
@@ -225,8 +230,7 @@ typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
 
 // color index for air block inside shape octree
 #define SHAPE_COLOR_INDEX_AIR_BLOCK 255
-#define SHAPE_COLOR_INDEX_MAX_COUNT 128
-#define SHAPE_OCTREE_MAX 1024
+#define SHAPE_COLOR_INDEX_MAX_COUNT 255
 
 // Dimensions of the atlas renderer-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE, original +
 // complementary colors Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2,
@@ -302,9 +306,6 @@ static const FACE_INDEX_INT_T FACE_NONE = 7;
 // Subsequent buffers on init/runtime can be downscaled or upscaled, see shape_add_buffer
 #define SHAPE_BUFFER_INIT_SCALE_RATE .75f
 #define SHAPE_BUFFER_RUNTIME_SCALE_RATE 4.0f
-// Ensure buffer size will result in POT texture size (required for compressed texture formats)
-// Note: if POT expected, downscale should be 0.25f and upscale 4.0f or upper POT is used
-#define SHAPE_BUFFER_TEX_UPPER_POT false
 
 //// Disabling global lighting will use neutral value (15, 0, 0, 0) everywhere
 #define GLOBAL_LIGHTING_ENABLED true

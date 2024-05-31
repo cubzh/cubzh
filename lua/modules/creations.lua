@@ -7,6 +7,7 @@ creations.createModalContent = function(_, config)
 	local pages = require("pages")
 	local theme = require("uitheme").current
 	local modal = require("modal")
+    local bundle = require("bundle")
 	local api = require("system_api", System)
 	local gridNeedRefresh = false
 
@@ -32,7 +33,7 @@ creations.createModalContent = function(_, config)
 	-- if original isn't nil, it means we're duplicating an entity
 	-- original: name of copied entity
 	-- grid parameter is used to force content reload after item creation
-	functions.createNewContent = function(what, original, grid)
+	functions.createNewContent = function(what, original, grid, originalCategory)
 		local newContent = modal:createContent()
 
 		if what == "item" or what == "wearable" then
@@ -50,7 +51,7 @@ creations.createModalContent = function(_, config)
 		local node = ui:createNode()
 
 		local categories = { "null" }
-		local categoryShapes = { "official.one_cube_template" }
+		local categoryShapes = { "shapes/one_cube_template" }
 		local buttonLabels = { "✨ Create Item ⚔️" }
 		local inputLabel = "Item Name?"
 
@@ -60,10 +61,10 @@ creations.createModalContent = function(_, config)
 		if what == "wearable" and original == nil then
 			categories = { "hair", "jacket", "pants", "boots" }
 			categoryShapes = {
-				"official.hair_template",
-				"official.jacket_template",
-				"official.pants_template",
-				"official.shoes_template",
+				"shapes/hair_template",
+				"shapes/jacket_template",
+				"shapes/pants_template",
+				"shapes/shoes_template",
 			}
 			buttonLabels = {
 				"✨ Create Hair 🙂",
@@ -73,7 +74,7 @@ creations.createModalContent = function(_, config)
 			}
 		elseif what == "world" then
 			categories = { "null" }
-			categoryShapes = { "official.world_icon" }
+			categoryShapes = { "shapes/world_icon" }
 			buttonLabels = { "✨ Create World 🌎" }
 			inputLabel = "World Name?"
 			textWithEmptyInput = "A World needs a name! No pressure, this can be changed later on."
@@ -91,7 +92,7 @@ creations.createModalContent = function(_, config)
 		newContent.bottomCenter = { btnCreate }
 
 		local templatePreview =
-			ui:createShape(System.ShapeFromBundle(categoryShapes[currentCategory]), { spherized = true })
+			ui:createShape(bundle:Shape(categoryShapes[currentCategory]), { spherized = true })
 		templatePreview:setParent(node)
 
 		templatePreview.pivot.LocalRotation = { -0.1, 0, -0.2 }
@@ -136,7 +137,7 @@ creations.createModalContent = function(_, config)
 				text.Color = theme.textColor
 				text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
-				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
+				templatePreview:setShape(bundle:Shape(categoryShapes[currentCategory]))
 			end
 
 			previousTemplateBtn = ui:createButton("⬅️")
@@ -154,7 +155,7 @@ creations.createModalContent = function(_, config)
 				text.Color = theme.textColor
 				text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
-				templatePreview:setShape(System.ShapeFromBundle(categoryShapes[currentCategory]))
+				templatePreview:setShape(bundle:Shape(categoryShapes[currentCategory]))
 			end
 		end
 
@@ -187,18 +188,16 @@ creations.createModalContent = function(_, config)
 			text.Color = theme.textColor
 			text.pos = { node.Width * 0.5 - text.Width * 0.5, input.pos.Y - text.Height - theme.paddingBig, 0 }
 
-			local category = categories[currentCategory]
-			if category == "null" then
-				category = nil
+			local newCategory = categories[currentCategory]
+			if originalCategory then
+				newCategory = originalCategory
 			end
-
-			local _category = category
-			if original ~= nil then
-				_category = nil
+			if newCategory == "null" then
+				newCategory = nil
 			end
 
 			if what == "world" then
-				api:createWorld({ title = sanitized, category = _category, original = original }, function(err, world)
+				api:createWorld({ title = sanitized, category = newCategory, original = original }, function(err, world)
 					if err ~= nil then
 						text.Text = "❌ Sorry, there's been an error."
 						text.Color = theme.colorNegative
@@ -222,7 +221,7 @@ creations.createModalContent = function(_, config)
 						cell.title = world.title
 						cell.description = ""
 						cell.created = world.created
-						cell.item = { shape = System.ShapeFromBundle("official.world_icon") }
+						cell.item = { shape = bundle:Shape("shapes/world_icon") }
 
 						worldDetailsContent:loadCell(cell)
 
@@ -249,7 +248,7 @@ creations.createModalContent = function(_, config)
 					end
 				end)
 			else
-				api:createItem({ name = sanitized, category = _category, original = original }, function(err, item)
+				api:createItem({ name = sanitized, category = newCategory, original = original }, function(err, item)
 					if err ~= nil then
 						if err.statusCode == 409 then
 							text.Text = "❌ You already have an item with that name!"
@@ -288,7 +287,7 @@ creations.createModalContent = function(_, config)
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
-							System.LaunchItemEditor(itemFullName, category)
+							System.LaunchItemEditor(itemFullName, newCategory)
 						end
 
 						local btnDuplicate = ui:createButton("📑 Duplicate", { textSize = "default" })
@@ -297,7 +296,13 @@ creations.createModalContent = function(_, config)
 							-- for refresh at this point
 							local m = itemDetailsContent:getModalIfContentIsActive()
 							if m ~= nil then
-								m:push(functions.createNewContent("item", itemFullName))
+								local what
+								if newCategory == nil then
+									what = "item"
+								else
+									what = "wearable"
+								end
+								m:push(functions.createNewContent(what, itemFullName, nil, newCategory))
 							end
 						end
 
@@ -545,7 +550,13 @@ creations.createModalContent = function(_, config)
 				btnDuplicate.onRelease = function()
 					local m = itemDetailsContent:getModalIfContentIsActive()
 					if m ~= nil then
-						m:push(functions.createNewContent("item", itemFullName, grid))
+						local what
+						if category == nil then
+							what = "item"
+						else
+							what = "wearable"
+						end
+						m:push(functions.createNewContent(what, itemFullName, grid, category))
 					end
 				end
 

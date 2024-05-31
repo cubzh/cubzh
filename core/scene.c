@@ -22,7 +22,7 @@ struct _Scene {
     Rtree *rtree;
     Weakptr *wptr;
 
-    void *game; // weak ref used to resolve resources associated to transform IDs
+    Weakptr *game; // weak ref used to resolve resources associated to transform IDs
 
     // transforms potentially removed from scene since last end-of-frame,
     // relevant for physics & sync, internal transforms do not need to be accounted for here
@@ -211,7 +211,7 @@ void _scene_register_removed_transform(Scene *sc, Transform *t) {
 
 // MARK: -
 
-Scene *scene_new(void *g) {
+Scene *scene_new(Weakptr *g) {
     Scene *sc = (Scene *)malloc(sizeof(Scene));
     if (sc != NULL) {
         sc->root = transform_make(PointTransform);
@@ -330,8 +330,6 @@ void scene_end_of_frame_refresh(Scene *sc, void *callbackData) {
                 rtree_remove(sc->rtree, rigidbody_get_rtree_leaf(rb), true);
                 rigidbody_set_rtree_leaf(rb, NULL);
             }
-
-            transform_set_removed_from_scene(t, false);
         }
         transform_release(t); // from scene_register_removed_transform
 

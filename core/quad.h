@@ -56,6 +56,8 @@ void quad_set_unlit(Quad *q, bool toggle);
 bool quad_is_unlit(const Quad *q);
 void quad_set_mask(Quad *q, bool toggle);
 bool quad_is_mask(const Quad *q);
+void quad_set_sort_order(Quad *q, uint8_t value);
+uint8_t quad_get_sort_order(const Quad *q);
 
 // MARK: - Utils -
 

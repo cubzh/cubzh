@@ -1219,14 +1219,14 @@ profile.create = function(_, config)
 			end
 
 			alreadyFriends = false
-			for _, friendID in pairs(friends) do
-				if friendID == userID then
+			for _, friend in pairs(friends) do
+				if friend.id == userID then
 					alreadyFriends = true
 					break
 				end
 			end
 			updateFriendButton()
-		end)
+		end, { "id" })
 		table.insert(requests, req)
 
 		-- check if a request was already sent
@@ -1236,14 +1236,14 @@ profile.create = function(_, config)
 			end
 
 			requestSent = false
-			for _, uID in pairs(requests) do
-				if uID == userID then
+			for _, req in pairs(requests) do
+				if req.id == userID then
 					requestSent = true
 					break
 				end
 			end
 			updateFriendButton()
-		end)
+		end, { "id" })
 		table.insert(requests, req)
 	end
 
@@ -1391,8 +1391,9 @@ profile.create = function(_, config)
 				end
 
 				avatarNode.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
+				return true
 			end
-		end)
+		end, { topPriority = true })
 
 		local fillUserInfo = function(ok, usr, _)
 			if not ok then

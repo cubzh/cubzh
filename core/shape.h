@@ -69,8 +69,6 @@ Shape *shape_make(void);
 Shape *shape_make_2(const bool isMutable);
 Shape *shape_make_copy(Shape *const origin);
 
-VertexBuffer *shape_add_buffer(Shape *shape, bool transparency);
-
 /// Returns false if retain fails
 bool shape_retain(Shape *const shape);
 
@@ -90,7 +88,8 @@ void shape_flush(Shape *shape);
 
 // access palette reference to get or set the colors
 ColorPalette *shape_get_palette(const Shape *shape);
-void shape_set_palette(Shape *shape, ColorPalette *palette);
+void shape_set_palette(Shape *shape, ColorPalette *palette, const bool retain);
+void shape_remap_colors(Shape *s, const SHAPE_COLOR_INDEX_INT_T *remap);
 
 /// Gets the block in model OR transactions
 const Block *shape_get_block(const Shape *const shape,
@@ -260,6 +259,7 @@ void shape_get_chunk_and_coordinates(const Shape *shape,
                                      SHAPE_COORDS_INT3_T *chunk_coords,
                                      CHUNK_COORDS_INT3_T *coords_in_chunk);
 void shape_log_vertex_buffers(const Shape *shape, bool dirtyOnly, bool transparent);
+VertexBuffer *shape_add_buffer(Shape *shape, bool transparency);
 void shape_refresh_vertices(Shape *shape);
 void shape_refresh_all_vertices(Shape *s);
 VertexBuffer *shape_get_first_vertex_buffer(const Shape *shape, bool transparent);
@@ -273,7 +273,7 @@ bool shape_ensure_rigidbody(Shape *s,
                             const uint16_t collidesWith,
                             RigidBody **out);
 void shape_fit_collider_to_bounding_box(const Shape *s);
-const Box *shape_get_local_collider(const Shape *s);
+Box shape_get_model_collider(const Shape *s);
 void shape_compute_world_collider(const Shape *s, Box *box);
 
 /// @param s shape model used as obstacle against a moving object

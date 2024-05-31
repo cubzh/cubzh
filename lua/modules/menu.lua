@@ -1,5 +1,8 @@
 local menu = {}
 
+bundle = require("bundle")
+loc = require("localize")
+str = require("str")
 ui = require("uikit").systemUI(System)
 uiAvatar = require("ui_avatar")
 avatarModule = require("avatar")
@@ -17,6 +20,7 @@ codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
 uiPointer = require("ui_pointer")
+conf = require("config")
 
 -- CONSTANTS
 
@@ -54,6 +58,7 @@ pointer = nil
 
 -- MODALS
 
+activeFlow = nil
 activeModal = nil
 activeModalKey = nil
 
@@ -71,6 +76,7 @@ MODAL_KEYS = {
 	BUILD = 8,
 	MARKETPLACE = 9,
 	CUBZH_MENU = 10,
+	OUTFITS = 11,
 }
 
 function connect()
@@ -161,7 +167,7 @@ function popModal()
 	end
 end
 
-function showModal(key)
+function showModal(key, config)
 	if not key then
 		return
 	end
@@ -179,7 +185,20 @@ function showModal(key)
 
 	local content
 	if key == MODAL_KEYS.PROFILE then
-		content = require("profile"):create({ uikit = ui })
+		local c = { uikit = ui }
+		if config.player ~= nil and config.player ~= Player then
+			c.isLocal = false
+			c.username = config.player.Username
+			c.userID = config.player.UserID
+		end
+		content = require("profile"):create(c)
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.OUTFITS then
+		local c = { uikit = ui, username = Player.Username }
+		if config.player ~= nil then
+			c.username = config.player.Username
+		end
+		content = require("ui_outfit"):create(c)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CHAT then
 		local inputText = ""
@@ -191,6 +210,9 @@ function showModal(key)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
 		activeModal = friends:create(maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.COINS then
+		content = require("coins"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.MARKETPLACE then
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
@@ -385,13 +407,9 @@ function refreshDisplay()
 
 		chatBtn:hide()
 		friendsBtn:hide()
+		pezhBtn:hide()
 
 		profileFrame:hide()
-		if signupElements ~= nil then
-			for _, e in ipairs(signupElements) do
-				e:hide()
-			end
-		end
 	else
 		if activeModal then
 			activeModal:show()
@@ -405,13 +423,9 @@ function refreshDisplay()
 
 		chatBtn:show()
 		friendsBtn:show()
+		pezhBtn:show()
 
 		profileFrame:show()
-		if signupElements ~= nil then
-			for _, e in ipairs(signupElements) do
-				e:show()
-			end
-		end
 	end
 end
 
@@ -427,6 +441,7 @@ background:parentDidResize()
 
 alertBackground = ui:createFrame(ALERT_BACKGROUND_COLOR_OFF)
 alertBackground.pos.Z = ui.kAlertDepth
+alertBackground.object.SortOrder = 1 -- in front of elements in default sort order (0)
 
 alertBackground.parentDidResize = function(_)
 	alertBackground.Width = Screen.Width
@@ -447,7 +462,7 @@ settingsBtn:setParent(actionColumn)
 
 settingsBtn.onRelease = function()
 	if activeModal ~= nil then
-		activeModal:push(settings:createModalContent({ clearCache = true, logout = true, uikit = ui }))
+		activeModal:push(settings:createModalContent({ clearCache = true, account = true, uikit = ui }))
 	end
 end
 
@@ -699,20 +714,31 @@ actionColumn:parentDidResize()
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
 
+topBarBtnPress = function(self)
+	self.Color = Color(0, 0, 0, 0.5)
+	Client:HapticFeedback()
+end
+
+topBarBtnRelease = function(self)
+	self.Color = _DEBUG and _DebugColor() or Color(0, 0, 0, 0)
+end
+
 btnContentParentDidResize = function(self)
 	local padding = PADDING_BIG
 	if self == cubzhBtnShape or self == avatar then
 		padding = PADDING
 	end
 	local parent = self.parent
-	self.Width = parent.Width - PADDING * 2
+	local ratio = self.Width / self.Height
 	self.Height = parent.Height - padding * 2
-	self.pos = { PADDING, padding }
+	self.Width = ratio * self.Height
+	self.pos = { self.parent.Width * 0.5 - self.Width * 0.5, self.parent.Height * 0.5 - self.Height * 0.5 }
 end
 
 -- MAIN MENU BTN
 
 cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 cubzhBtn:setParent(topBar)
 
 uiBadge = require("ui_badge")
@@ -747,11 +773,18 @@ cubzhBtnShape:parentDidResize()
 -- CONNECTIVITY BTN
 
 connBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 connBtn:setParent(topBar)
 connBtn:hide()
-connBtn.onRelease = connect
 
-connShape = System.ShapeFromBundle("aduermael.connection_indicator")
+connBtn.onPress = topBarBtnPress
+connBtn.onCancel = topBarBtnRelease
+connBtn.onRelease = function(self)
+	topBarBtnRelease(self)
+	connect()
+end
+
+connShape = bundle:Shape("shapes/connection_indicator")
 connectionIndicator = ui:createShape(connShape, { doNotFlip = true })
 connectionIndicator:setParent(connBtn)
 connectionIndicator:hide()
@@ -759,10 +792,10 @@ connectionIndicator.parentDidResize = function(self)
 	local parent = self.parent
 	self.Height = parent.Height * 0.4
 	self.Width = self.Height
-	self.pos = { parent.Width - self.Width - PADDING, parent.Height * 0.5 - self.Height * 0.5 }
+	self.pos = { parent.Width * 0.5 - self.Width * 0.5, parent.Height * 0.5 - self.Height * 0.5 }
 end
 
-noConnShape = System.ShapeFromBundle("aduermael.no_conn_indicator")
+noConnShape = bundle:Shape("shapes/no_conn_indicator")
 noConnectionIndicator = ui:createShape(noConnShape)
 noConnectionIndicator:setParent(connBtn)
 noConnectionIndicator:hide()
@@ -839,9 +872,10 @@ function connectionIndicatorStartAnimation()
 end
 
 chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 chatBtn:setParent(topBar)
 
-textBubbleShape = ui:createShape(System.ShapeFromBundle("aduermael.textbubble"))
+textBubbleShape = ui:createShape(bundle:Shape("shapes/textbubble"))
 textBubbleShape:setParent(chatBtn)
 textBubbleShape.parentDidResize = function(self)
 	local parent = self.parent
@@ -851,20 +885,24 @@ textBubbleShape.parentDidResize = function(self)
 end
 
 friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 friendsBtn:setParent(topBar)
 
-friendsShape = ui:createShape(System.ShapeFromBundle("aduermael.friends_icon"))
+friendsShape = ui:createShape(bundle:Shape("shapes/friends_icon"))
 friendsShape:setParent(friendsBtn)
 friendsShape.parentDidResize = btnContentParentDidResize
 
-cubzhBtn.onRelease = function()
+cubzhBtn.onPress = topBarBtnPress
+cubzhBtn.onCancel = topBarBtnRelease
+cubzhBtn.onRelease = function(self)
+	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.CUBZH_MENU)
 end
 
-chatBtn.onRelease = function()
-	if isChatAvailable() == false then
-		return
-	end
+chatBtn.onPress = topBarBtnPress
+chatBtn.onCancel = topBarBtnRelease
+chatBtn.onRelease = function(self)
+	topBarBtnRelease(self)
 	if activeModal then
 		showModal(MODAL_KEYS.CHAT)
 	else
@@ -873,19 +911,44 @@ chatBtn.onRelease = function()
 	end
 end
 
-friendsBtn.onRelease = function()
+friendsBtn.onPress = topBarBtnPress
+friendsBtn.onCancel = topBarBtnRelease
+friendsBtn.onRelease = function(self)
+	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.FRIENDS)
 end
 
 profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
 profileFrame:setParent(topBar)
-profileFrame.onRelease = function(_)
+
+profileFrame.onPress = topBarBtnPress
+profileFrame.onCancel = topBarBtnRelease
+profileFrame.onRelease = function(self)
+	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.PROFILE)
 end
 
 avatar = ui:createFrame(Color.transparent)
 avatar:setParent(profileFrame)
 avatar.parentDidResize = btnContentParentDidResize
+
+-- PEZH
+
+pezhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+
+pezhBtn:setParent(topBar)
+
+pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin"))
+pezhShape:setParent(pezhBtn)
+pezhShape.parentDidResize = btnContentParentDidResize
+
+pezhBtn.onPress = topBarBtnPress
+pezhBtn.onCancel = topBarBtnRelease
+pezhBtn.onRelease = function(self)
+	topBarBtnRelease(self)
+	showModal(MODAL_KEYS.COINS)
+end
 
 -- CHAT
 
@@ -917,9 +980,7 @@ function createChat()
 
 	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
 	btnChatFullscreen.onRelease = function()
-		if isChatAvailable() then
-			showModal(MODAL_KEYS.CHAT)
-		end
+		showModal(MODAL_KEYS.CHAT)
 	end
 	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
 	btnChatFullscreen:hide()
@@ -992,9 +1053,6 @@ end
 
 function showChat(input)
 	if System.Authenticated == false then
-		return
-	end
-	if isChatAvailable() == false then
 		return
 	end
 	chatDisplayed = true
@@ -1077,7 +1135,7 @@ function getCubzhMenuModalContent()
 	local emailForm
 
 	local function addEmailForm(hasEmail, emailTemporary, refreshModal)
-		if hasEmail then
+		if hasEmail or node.setParent == nil then
 			return
 		end
 
@@ -1516,10 +1574,10 @@ topBar.parentDidResize = function(self)
 	local height = TOP_BAR_HEIGHT
 
 	cubzhBtn.Height = height
-	cubzhBtn.Width = cubzhBtn.Height
+	cubzhBtn.Width = height
 
 	connBtn.Height = height
-	connBtn.Width = connBtn.Height
+	connBtn.Width = height
 
 	self.Width = Screen.Width
 	self.Height = System.SafeAreaTop + height
@@ -1531,19 +1589,25 @@ topBar.parentDidResize = function(self)
 	-- PROFILE BUTTON
 
 	profileFrame.Height = height
-	profileFrame.Width = profileFrame.Height
+	profileFrame.Width = height
 
 	-- FRIENDS BUTTON
 
 	friendsBtn.Height = height
-	friendsBtn.Width = friendsBtn.Height - (PADDING_BIG - PADDING) * 2
+	friendsBtn.Width = height
 	friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
+
+	-- PEZH BUTTON
+
+	pezhBtn.Height = height
+	pezhBtn.Width = height
+	pezhBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
 
 	-- CHAT BUTTON
 
 	chatBtn.Height = height
-	chatBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
-	chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
+	chatBtn.pos.X = pezhBtn.pos.X + pezhBtn.Width
+	chatBtn.Width = connBtn:isVisible() and (connBtn.pos.X - chatBtn.pos.X) or (cubzhBtn.pos.X - chatBtn.pos.X)
 
 	-- CHAT MESSAGES
 
@@ -1631,7 +1695,7 @@ menu.IsActive = function(_)
 		or alertModal ~= nil
 		or loadingModal ~= nil
 		or cppMenuIsActive
-		or signupElements ~= nil
+		or authFlow:isActive() == true
 end
 
 function menuSectionCanBeShown()
@@ -1716,16 +1780,43 @@ menu.HighlightFriends = function(_)
 	return true
 end
 
+---@function HighlightCubzhMenu Highlights Cubzh button in the top bar if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:HighlightCubzhMenu()
+---@return boolean
+menu.HighlightCubzhMenu = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	if pointer == nil then
+		pointer = uiPointer:create({ uikit = ui })
+	end
+	pointer:pointAt({ target = cubzhBtn, from = "below" })
+
+	return true
+end
+
 ---@function ShowProfile Shows local user profile menu if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
 ---@code local menu = require("menu")
 --- menu:ShowProfile() -- shows local user profile menu
 ---@return boolean
-menu.ShowProfile = function(_)
+menu.ShowProfile = function(_, player)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	profileFrame:onRelease()
+	-- player can be nil, displays local player in that case
+	showModal(MODAL_KEYS.PROFILE, { player = player })
+	return true
+end
+
+menu.ShowOutfits = function(_, player)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	-- player can be nil, displays local player in that case
+	showModal(MODAL_KEYS.OUTFITS, { player = player })
 	return true
 end
 
@@ -1881,12 +1972,6 @@ end)
 local keysDown = {} -- captured keys
 
 LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
-	if titleScreen ~= nil and down then
-		skipTitleScreen()
-		keysDown[keyCode] = true
-		return true
-	end
-
 	if not down then
 		if keysDown[keyCode] then
 			keysDown[keyCode] = nil
@@ -2011,7 +2096,6 @@ function hideTitleScreen()
 		return
 	end
 
-	titleScreenTickListener:Remove()
 	titleScreen:remove()
 	titleScreen = nil
 end
@@ -2045,27 +2129,9 @@ end
 
 function magicKeyCheck(callbacks)
 	if System.HasCredentials == false and System.AskedForMagicKey then
-		-- TODO
-		-- checkMagicKey(
-		-- 	function(error, info)
-		-- 		if error ~= nil then
-		-- 			-- displayTitleScreen()
-		-- 		else
-		-- 			accountInfo = info
-		-- 			done()
-		-- 		end
-		-- 	end,
-		-- 	function(keyIsValid)
-		-- 		if keyIsValid then
-		-- 			closeModals()
-		-- 		else
-		-- 			checkUserInfo()
-		-- 		end
-		-- 	end
-		-- )
-		System:RemoveAskedForMagicKey()
-		if callbacks.err ~= nil then
-			callbacks.err()
+		authFlow:showLogin(callbacks)
+		if callbacks.requestedMagicKey ~= nil then
+			callbacks.requestedMagicKey()
 		end
 	else
 		if callbacks.success ~= nil then
@@ -2122,123 +2188,227 @@ function accountCheck(callbacks)
 	end)
 end
 
--- temporary measure, while we implement parental contral
-function isChatAvailable()
-	if System.IsUserUnder13 and Client.IsMobile then
-		return false
+authFlow = {
+	isActive = function(self)
+		return self.modal ~= nil
+	end,
+	cancel = function(self)
+		if self.callbacks.cancel then
+			self.callbacks.cancel()
+		end
+	end,
+	helpBtn = nil,
+	loginBtn = nil,
+	signUpBtn = nil,
+	modal = nil,
+	callbacks = nil, -- generic callbacks for auth flow (for users going through sign up OR login)
+}
+
+authFlow.clear = function(self, config)
+	local defaultConfig = {
+		callCancel = false,
+		removeHelpBtn = true,
+		closeModal = true,
+	}
+	config = conf:merge(defaultConfig, config)
+
+	if config.removeHelpBtn == true and self.helpBtn ~= nil then
+		self.helpBtn:remove()
+		self.helpBtn = nil
 	end
-	return true
+	if self.loginBtn ~= nil then
+		self.loginBtn:remove()
+		self.loginBtn = nil
+	end
+	if self.signUpBtn ~= nil then
+		self.signUpBtn:remove()
+		self.signUpBtn = nil
+	end
+
+	if self.modal ~= nil then
+		self.modal.didClose = nil -- defuse didClose callback
+		if config.callCancel == true then
+			self:cancel()
+		end
+		if config.closeModal == true then
+			self.modal:close()
+		end
+		self.modal = nil
+	end
+
+	if self.activeFlow ~= nil then
+		if config.callCancel == true then
+			self:cancel()
+		end
+		self.activeFlow = nil
+	end
 end
 
-signupElements = nil
+authFlow.common = function(self)
+	-- if self.helpBtn == nil then
+	-- 	local helpBtn =
+	-- 		ui:createButton("👾 " .. str:upperFirstChar(loc("need help?")), { textSize = "small", borders = false })
+	-- 	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+	-- 	helpBtn.onRelease = function()
+	-- 		URL:Open("https://cu.bzh/discord")
+	-- 	end
+	-- 	helpBtn.parentDidResize = function(self)
+	-- 		self.pos = {
+	-- 			Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
+	-- 			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+	-- 			0,
+	-- 		}
+	-- 	end
+	-- 	helpBtn:parentDidResize()
+	-- 	self.helpBtn = helpBtn
+	-- end
+end
+
+authFlow.showLogin = function(self, callbacks, hasMagicKey)
+	if callbacks ~= nil then
+		self.callbacks = callbacks
+	end
+
+	self:clear({ removeHelpBtn = false })
+	self:common()
+
+	if self.signUpBtn == nil then
+		local signUpBtn = ui:createButton("Sign Up", { textSize = "small", borders = false })
+		signUpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+		signUpBtn.parentDidResize = function(self)
+			self.pos = {
+				Screen.SafeArea.Left + theme.padding,
+				Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+				0,
+			}
+		end
+		self.signUpBtn = signUpBtn
+
+		signUpBtn.onRelease = function()
+			authFlow:showSignUp()
+		end
+		signUpBtn:parentDidResize()
+	end
+
+	-- if hasMagicKey == true -> jumps to magic key prompt
+	local loginModal = require("login"):createModal({ uikit = ui, hasMagicKey = hasMagicKey })
+	loginModal.onLoginSuccess = function()
+		-- credentials already stored when reaching this point
+		System:DebugEvent("LOGIN_SUCCESS")
+		self:clear()
+		if authFlow.callbacks.success ~= nil then
+			authFlow.callbacks.success()
+		end
+	end
+	self.modal = loginModal
+
+	loginModal.didClose = function()
+		self:clear({ callCancel = true, closeModal = false })
+	end
+end
 
 -- callbacks: success, cancel, error
-function showSignUp(callbacks)
-	local helpBtn = ui:createButton("👾 Need help?", { textSize = "small", borders = false })
-	helpBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-	helpBtn.onRelease = function()
-		URL:Open("https://cu.bzh/discord")
-	end
-	helpBtn.parentDidResize = function(self)
-		self.pos = {
-			Screen.Width - self.Width - theme.padding - Screen.SafeArea.Right,
-			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-			0,
-		}
-	end
-	helpBtn:parentDidResize()
-
-	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
-	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-	loginBtn.parentDidResize = function(self)
-		self.pos = {
-			Screen.SafeArea.Left + theme.padding,
-			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-			0,
-		}
+authFlow.showSignUp = function(self, callbacks)
+	if callbacks ~= nil then
+		self.callbacks = callbacks
 	end
 
-	local signupModal = require("signup"):createModal({ uikit = ui })
+	self:clear({ removeHelpBtn = false })
+	self:common()
 
-	signupElements = { signupModal, helpBtn, loginBtn, signupModal.terms }
+	-- if self.loginBtn == nil then
+	-- 	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
+	-- 	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+	-- 	loginBtn.parentDidResize = function(self)
+	-- 		self.pos = {
+	-- 			Screen.SafeArea.Left + theme.padding,
+	-- 			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
+	-- 			0,
+	-- 		}
+	-- 	end
 
-	loginBtn.onRelease = function()
-		System.Login(function(success, _)
-			if success then
-				helpBtn:remove()
-				loginBtn:remove()
-				signupElements = nil
+	-- 	loginBtn.onRelease = function()
+	-- 		authFlow:showLogin()
+	-- 		-- System.Login(function(success, _)
+	-- 		-- 	if success then
+	-- 		-- 		helpBtn:remove()
+	-- 		-- 		loginBtn:remove()
 
-				signupModal.didClose = nil
-				signupModal:close()
-				signupModal = nil
+	-- 		-- 		signupModal.didClose = nil
+	-- 		-- 		signupModal:close()
+	-- 		-- 		signupModal = nil
 
-				if callbacks.success ~= nil then
-					callbacks.success()
-				end
-			end
-		end)
-	end
-	loginBtn:parentDidResize()
+	-- 		-- 		if callbacks.success ~= nil then
+	-- 		-- 			callbacks.success()
+	-- 		-- 		end
+	-- 		-- 	end
+	-- 		-- end)
+	-- 	end
+	-- 	loginBtn:parentDidResize()
 
-	signupModal.onSubmit = function(username, key, dob)
-		System:DebugEvent("SIGNUP_SUBMIT")
+	-- 	self.loginBtn = loginBtn
+	-- end
 
-		loginBtn:remove()
-		helpBtn:remove()
-		signupElements = nil
+	local signupFlow = require("signup"):startFlow({
+		ui = ui,
+		onCancel = function()
+			self:clear({ callCancel = true, closeModal = false })
+		end,
+		avatarPreviewStep = function()
+			hideTitleScreen()
+			hideBottomBar()
+		end,
+	})
+	self.activeFlow = signupFlow
 
-		signupModal.didClose = nil
-		signupModal:close()
-		signupModal = nil
+	-- local signupModal = require("signup"):createModal({ uikit = ui })
+	-- self.modal = signupModal
 
-		local function _createAccount(onError)
-			showLoading("Creating account")
-			api:signUp(username, key, dob, function(err, credentials)
-				if err ~= nil then
-					if onError ~= nil then
-						hideLoading()
-						onError(onError)
-					end
-					return
-				else
-					System:StoreCredentials(credentials["user-id"], credentials.token)
-					System:DebugEvent("ACCOUNT_CREATED")
-					if callbacks.success ~= nil then
-						callbacks.success()
-					end
-				end
-			end)
-		end
+	-- signupModal.onSubmit = function(username, key, dob)
+	-- 	System:DebugEvent("SIGNUP_SUBMIT")
+	-- 	self:clear()
 
-		local function onError(onError)
-			showAlert({
-				message = "❌ Sorry, something went wrong.",
-				positiveCallback = function()
-					_createAccount(onError)
-				end,
-				positiveLabel = "Retry",
-				neutralCallback = function()
-					if callbacks.error ~= nil then
-						callbacks.error()
-					end
-				end,
-				neutralLabel = "Cancel",
-			})
-		end
+	-- 	local function _createAccount(onError)
+	-- 		showLoading("Creating account")
+	-- 		api:signUp(username, key, dob, function(err, credentials)
+	-- 			if err ~= nil then
+	-- 				if onError ~= nil then
+	-- 					hideLoading()
+	-- 					onError(onError)
+	-- 				end
+	-- 				return
+	-- 			else
+	-- 				System:StoreCredentials(credentials["user-id"], credentials.token)
+	-- 				System:DebugEvent("ACCOUNT_CREATED")
+	-- 				if authFlow.callbacks.success ~= nil then
+	-- 					authFlow.callbacks.success()
+	-- 				end
+	-- 			end
+	-- 		end)
+	-- 	end
 
-		_createAccount(onError)
-	end
+	-- 	local function onError(onError)
+	-- 		showAlert({
+	-- 			message = "❌ Sorry, something went wrong.",
+	-- 			positiveCallback = function()
+	-- 				_createAccount(onError)
+	-- 			end,
+	-- 			positiveLabel = "Retry",
+	-- 			neutralCallback = function()
+	-- 				if authFlow.callbacks.error ~= nil then
+	-- 					authFlow.callbacks.error()
+	-- 				end
+	-- 			end,
+	-- 			neutralLabel = "Cancel",
+	-- 		})
+	-- 	end
 
-	signupModal.didClose = function()
-		loginBtn:remove()
-		helpBtn:remove()
-		signupElements = nil
-		signupModal = nil
-		if callbacks.cancel ~= nil then
-			callbacks.cancel()
-		end
-	end
+	-- 	_createAccount(onError)
+	-- end
+
+	-- signupModal.didClose = function()
+	-- 	self:clear({ callCancel = true, closeModal = false })
+	-- end
 end
 
 function skipTitleScreen()
@@ -2299,6 +2469,7 @@ function skipTitleScreen()
 		magicKeyCheck({
 			success = flow.accountCheck,
 			err = flow.restartSignUp,
+			requestedMagicKey = flow.showLogin,
 		})
 	end
 
@@ -2330,13 +2501,15 @@ function skipTitleScreen()
 			under13DisclaimerNeedsApproval = function()
 				hideLoading()
 				showAlert({
-					message = "⚠️ Be safe online! ⚠️\n\nDo NOT share personal details, watch out for phishing, scams and always think about who you're talking to.\n\nIf anything goes wrong, talk to someone you trust. 🙂",
-					positiveLabel = "Yes sure!",
+					message = loc(
+						"⚠️ Be safe online! ⚠️\n\nDo NOT share personal details, watch out for phishing, scams and always think about who you're talking to.\n\nIf anything goes wrong, talk to someone you trust. 🙂"
+					),
+					positiveLabel = loc("Yes sure!"),
 					positiveCallback = function()
 						System.ApproveUnder13Disclaimer()
 						flow.startPlaying()
 					end,
-					neutralLabel = "I'm not ready.",
+					neutralLabel = loc("I'm not ready."),
 					neutralCallback = function()
 						showTitleScreen()
 					end,
@@ -2348,10 +2521,19 @@ function skipTitleScreen()
 	flow.showSignUp = function()
 		System:DebugEvent("SKIP_SPLASHSCREEN_WITH_NO_ACCOUNT")
 		hideLoading()
-		showSignUp({
+		authFlow:showSignUp({
 			success = flow.accountCheck,
 			error = showTitleScreen,
 			cancel = showTitleScreen,
+		})
+	end
+
+	flow.showLogin = function()
+		hideLoading()
+		authFlow:showLogin({
+			success = flow.accountCheck,
+			error = showTitleScreen,
+			csancel = showTitleScreen,
 		})
 	end
 
@@ -2368,66 +2550,36 @@ function showTitleScreen()
 
 	titleScreen = ui:createFrame()
 
-	local logoShape = System.ShapeFromBundle("official.cubzh")
-	local alphaShape = System.ShapeFromBundle("official.alpha")
+	-- local logoShape = bundle:Shape("shapes/cubzh")
 
-	logo = ui:createShape(logoShape)
-	logo:setParent(titleScreen)
-	alpha = ui:createShape(alphaShape)
-	alpha:setParent(titleScreen)
+	-- logo = ui:createShape(logoShape)
+	-- logo:setParent(titleScreen)
 
-	alpha.pos.Z = -700
-
-	pressAnywhere = ui:createText("Press Anywhere", Color.White)
-	pressAnywhere:setParent(titleScreen)
-
-	logoNativeWidth = logo.Width
-	logoNativeHeight = logo.Height
+	-- logoNativeWidth = logo.Width
+	-- logoNativeHeight = logo.Height
 
 	titleScreen.parentDidResize = function()
-		titleScreen.Width = Screen.Width
-		titleScreen.Height = Screen.Height
+		-- titleScreen.Width = Screen.Width
+		-- titleScreen.Height = Screen.Height
 
-		local maxWidth = math.min(600, Screen.Width * 0.8)
-		local maxHeight = math.min(216, Screen.Height * 0.3)
+		-- local maxWidth = math.min(600, Screen.Width * 0.8)
+		-- local maxHeight = math.min(216, Screen.Height * 0.3)
 
-		local ratio = math.min(maxWidth / logoNativeWidth, maxHeight / logoNativeHeight)
+		-- local ratio = math.min(maxWidth / logoNativeWidth, maxHeight / logoNativeHeight)
 
-		logo.Width = logoNativeWidth * ratio
-		logo.Height = logoNativeHeight * ratio
-		logo.pos = {
-			Screen.Width * 0.5 - logo.Width * 0.5,
-			Screen.Height * 0.5 - logo.Height * 0.5 + (pressAnywhere.Height + theme.padding) * 0.5,
-			0,
-		}
-
-		alpha.Height = logo.Height * 3 / 9
-		alpha.Width = alpha.Height * 33 / 12
-
-		alpha.pos = logo.pos + { logo.Width * 24.5 / 25 - alpha.Width, logo.Height * 3.5 / 9 - alpha.Height, 0 }
-
-		pressAnywhere.pos = {
-			Screen.Width * 0.5 - pressAnywhere.Width * 0.5,
-			logo.pos.Y - pressAnywhere.Height - theme.padding,
-			0,
-		}
+		-- logo.Width = logoNativeWidth * ratio
+		-- logo.Height = logoNativeHeight * ratio
+		-- logo.pos = {
+		-- 	Screen.Width * 0.5 - logo.Width * 0.5,
+		-- 	Screen.Height * 0.5 - logo.Height * 0.5,
+		-- 	0,
+		-- }
 	end
 	titleScreen:parentDidResize()
 
-	local t = 0
-	titleScreenTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		t = t + dt * 4.0
-		pressAnywhere.Color = Color(255, 255, 255, (math.sin(t) + 1.0) * 0.5)
-		alpha.shape:RotateWorld({ 0, dt, 0 })
-	end)
-
-	titleScreen.onRelease = function()
-		skipTitleScreen()
-	end
-
-	if System.HasEnvironmentToLaunch then
-		skipTitleScreen()
-	end
+	-- if System.HasEnvironmentToLaunch then
+	-- 	skipTitleScreen()
+	-- end
 
 	triggerCallbacks()
 end
@@ -2455,6 +2607,34 @@ if System.Authenticated then
 	hideBottomBar()
 else
 	showTitleScreen()
+	local signupFlow = require("signup"):startFlow({
+		ui = ui,
+		avatarPreviewStep = function()
+			LocalEvent:Send("signup_flow_avatar_preview")
+			hideTitleScreen()
+			hideBottomBar()
+		end,
+		loginStep = function()
+			LocalEvent:Send("signup_flow_login")
+			hideTitleScreen()
+			hideBottomBar()
+		end,
+		signUpOrLoginStep = function()
+			LocalEvent:Send("signup_flow_start_or_login")
+			showTitleScreen()
+			showBottomBar()
+		end,
+		loginSuccess = function()
+			LocalEvent:Send("signup_flow_login_success")
+			hideTitleScreen()
+			showTopBar()
+			hideBottomBar()
+			if activeFlow ~= nil then
+				activeFlow:remove()
+			end
+		end,
+	})
+	activeFlow = signupFlow
 end
 
 getWorldInfoReq = nil
@@ -2480,7 +2660,7 @@ Timer(0.1, function()
 		System:UpdateAuthStatus()
 
 		if System.IsUserUnder13 then
-			local under13BadgeShape = System.ShapeFromBundle("aduermael.under13_badge")
+			local under13BadgeShape = bundle:Shape("shapes/under13_badge")
 			under13Badge = ui:createShape(under13BadgeShape)
 			under13Badge:setParent(profileFrame)
 			local ratio = under13Badge.Width / under13Badge.Height
@@ -2496,10 +2676,6 @@ Timer(0.1, function()
 
 		if System.HasEmail == false then
 			showBadge("!")
-		end
-
-		if isChatAvailable() == false then
-			textBubbleShape:hide()
 		end
 
 		getWorldInfo()

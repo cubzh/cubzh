@@ -8,6 +8,7 @@ local itemGrid = {}
 -- MODULES
 local api = require("api")
 local theme = require("uitheme").current
+local bundle = require("bundle")
 
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
@@ -79,7 +80,7 @@ itemGrid.create = function(_, config)
 
 	local ui = config.uikit
 
-	local removed = false
+	local sortBy = "likes:desc"
 
 	local grid = ui:createFrame() -- Color(255,0,0)
 	local search = ""
@@ -133,9 +134,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.setCategories = function(self, categories, type)
-		if self.getItems == nil then
-			return
-		end
 		if type ~= nil then
 			config.type = type
 		end
@@ -145,9 +143,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.setWorldsFilter = function(self, filter)
-		if self.getItems == nil then
-			return
-		end
 		if filter == nil or type(filter) ~= Type.string then
 			error("item_grid:setWorldsFilter(filter): filter should be a string", 2)
 		end
@@ -160,6 +155,19 @@ itemGrid.create = function(_, config)
 	if config.searchBar then
 		grid.searchBar = ui:createTextInput("", "search")
 		grid.searchBar:setParent(grid)
+
+		grid.sortButton = ui:createButton("♥️")
+		grid.sortButton:setParent(grid)
+		grid.sortButton.onRelease = function()
+			if sortBy == "likes:desc" then
+				grid.sortButton.Text = "✨"
+				sortBy = "updatedAt:desc"
+			elseif sortBy == "updatedAt:desc" then
+				grid.sortButton.Text = "♥️"
+				sortBy = "likes:desc"
+			end
+			grid:getItems()
+		end
 
 		grid.searchBar.onTextChange = function(_)
 			if grid.searchTimer ~= nil then
@@ -237,7 +245,6 @@ itemGrid.create = function(_, config)
 		cancelRequestsAndTimers()
 		grid.tickListener:Remove()
 		grid.tickListener = nil
-		removed = true
 	end
 
 	grid._createCell = function(grid, size)
@@ -270,38 +277,45 @@ itemGrid.create = function(_, config)
 			cell.Color = idleColor
 		end
 
-		local likesAndViewsFrame = ui:createFrame(theme.gridCellFrameColor)
-		likesAndViewsFrame:setParent(cell)
-		likesAndViewsFrame.pos.X = 0
+		local likesBtn = ui:createButton("", { shadow = false, textSize = "small", borders = false })
+		likesBtn:setColor(theme.gridCellFrameColor)
+		likesBtn:setParent(cell)
+		likesBtn.pos.X = 0
 
-		local nbLikes = ui:createText("", Color.White, "small")
-		nbLikes:setParent(likesAndViewsFrame)
-		nbLikes.pos = { theme.padding, theme.padding }
+		local onReleaseBackup
+		likesBtn.onRelease = function(self)
+			onReleaseBackup = self.onRelease
+			self.onRelease = nil
+			cell.liked = not cell.liked
+			cell.likes = cell.likes + (cell.liked and 1 or -1)
+			cell:setNbLikes(cell.likes)
+			local req = require("system_api", System):likeItem(cell.id, cell.liked, function(_)
+				self.onRelease = onReleaseBackup
+			end)
+			addSentRequest(req)
+			addCellContentRequest(req)
+		end
 
 		cell.layoutLikes = function(self)
-			if nbLikes:isVisible() == false then
+			if likesBtn:isVisible() == false then
 				return
 			end
-			likesAndViewsFrame.Width = nbLikes.Width + theme.padding * 2
-			likesAndViewsFrame.Height = nbLikes.Height + theme.padding * 2
-			likesAndViewsFrame.pos.Y = self.Height - likesAndViewsFrame.Height
+			likesBtn.pos.Y = self.Height - likesBtn.Height
 		end
 
 		cell.setNbLikes = function(self, n)
 			if n > 0 then
-				nbLikes.Text = "❤️ " .. math.floor(n)
-				nbLikes:show()
-				likesAndViewsFrame:show()
-				self:layoutLikes()
+				likesBtn.Text = "❤️ " .. math.floor(n)
 			else
-				nbLikes:hide()
-				likesAndViewsFrame:hide()
+				likesBtn.Text = "❤️"
 			end
+			likesBtn:show()
+			-- likesAndViewsFrame:show()
+			self:layoutLikes()
 		end
 
 		cell.hideLikes = function(_)
-			likesAndViewsFrame:hide()
-			nbLikes:hide()
+			likesBtn:hide()
 		end
 
 		local textFrame = ui:createFrame(theme.gridCellFrameColor)
@@ -385,7 +399,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid._setEntry = function(grid, cell, entry)
-		cell.loaded = false
 		cell.type = entry.type
 
 		if cell.type == "item" then
@@ -397,6 +410,7 @@ itemGrid.create = function(_, config)
 			cell.created = entry.created
 			cell.updated = entry.updated
 			cell.likes = entry.likes
+			cell.liked = entry.liked
 
 			local itemName = cell.repo .. "." .. cell.name
 			cell.loadedItemName = itemName
@@ -425,10 +439,6 @@ itemGrid.create = function(_, config)
 			end
 
 			local req = Object:Load(itemName, function(obj)
-				if removed then
-					return
-				end
-
 				if not cell.tName then
 					return
 				end
@@ -444,6 +454,7 @@ itemGrid.create = function(_, config)
 					end
 					return
 				end
+
 				if cell.item then
 					cell.item:remove()
 					cell.item = nil
@@ -475,7 +486,7 @@ itemGrid.create = function(_, config)
 
 			if entry.thumbnail == nil and cell.item == nil then
 				-- no thumbnail, display default world icon
-				local shape = System.ShapeFromBundle("official.world_icon")
+				local shape = bundle:Shape("shapes/world_icon")
 				local item = ui:createShape(shape, { spherized = true })
 				cell.item = item
 				item:setParent(cell)
@@ -498,7 +509,14 @@ itemGrid.create = function(_, config)
 
 			if cell.tName then
 				cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
-				cell.tName.Text = cell.title
+				if cell.title:len() > api.maxWorldTitleLength then
+					local str = cell.title
+					str = str:sub(1, api.maxWorldTitleLength - 1)
+					str = str .. "…"
+					cell.tName.Text = str
+				else
+					cell.tName.Text = cell.title
+				end
 			end
 
 			cell:setNbLikes(cell.likes)
@@ -525,6 +543,7 @@ itemGrid.create = function(_, config)
 			local cell = cells[i]
 			local entry = self.entries[k + i]
 			cell.IsHidden = entry == nil
+			cell.loaded = false
 
 			if entry ~= nil then
 				local timer = Timer((i - 1) * 0.02, function()
@@ -581,9 +600,6 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.refresh = function(self)
-		if removed then
-			return
-		end
 		cancelCellContentRequest()
 
 		if self ~= grid then
@@ -662,9 +678,11 @@ itemGrid.create = function(_, config)
 			if self.searchButton ~= nil then
 				self.searchButton.Height = self.searchBar.Height
 				self.searchButton.Width = self.searchButton.Height
-				self.searchBar.Width = self.Width - self.searchButton.Width
+				self.sortButton.Height = self.searchBar.Height
+				self.searchBar.Width = self.Width - self.searchButton.Width - self.sortButton.Width
 				self.searchBar.pos = { 0, self.Height - self.searchBar.Height - offset, 0 }
 				self.searchButton.pos = self.searchBar.pos + { self.searchBar.Width, 0, 0 }
+				self.sortButton.pos = self.searchButton.pos + { self.searchButton.Width, 0, 0 }
 			end
 		end
 	end
@@ -683,8 +701,9 @@ itemGrid.create = function(_, config)
 				repo = config.repo,
 				category = config.categories,
 				page = 1,
-				perpage = 250,
+				perPage = 250,
 				search = search,
+				sortBy = sortBy,
 			}, function(err, items)
 				if err then
 					print("Error: " .. err)
@@ -725,7 +744,7 @@ itemGrid.create = function(_, config)
 					categories = ""
 				end
 				local reqConfig =
-					{ repo = config.repo, category = categories, page = 1, perpage = 250, search = search }
+					{ repo = config.repo, category = categories, page = 1, perPage = 250, search = search }
 				local req = api:getWorlds(reqConfig, apiCallback)
 				addSentRequest(req)
 			else -- published worlds
@@ -733,7 +752,7 @@ itemGrid.create = function(_, config)
 					worldsFilter = nil
 				end
 				local req = api:getPublishedWorlds(
-					{ search = search, list = worldsFilter, perPage = 100, page = 1 },
+					{ search = search, list = worldsFilter, perPage = 100, page = 1, sortBy = sortBy },
 					apiCallback
 				)
 				addSentRequest(req)
@@ -754,14 +773,11 @@ itemGrid.create = function(_, config)
 		self:_paginationDidChange()
 	end
 
-	grid.dt = 0.0
-	grid.dt4 = 0.0
+	local dt1 = 0.0
+	local dt4 = 0.0
 	grid.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		if grid.dt == nil then
-			return
-		end
-		grid.dt = grid.dt + dt
-		grid.dt4 = grid.dt4 + dt * 4
+		dt1 = dt1 + dt
+		dt4 = dt4 + dt * 4
 
 		local cells = grid.cells
 		if cells == nil then
@@ -769,7 +785,7 @@ itemGrid.create = function(_, config)
 		end
 		local loadingCube
 		local center = grid.cellSize * 0.5
-		local loadingCubePos = { center + math.cos(grid.dt4) * 20, center - math.sin(grid.dt4) * 20, 0 }
+		local loadingCubePos = { center + math.cos(dt4) * 20, center - math.sin(dt4) * 20, 0 }
 		for _, c in ipairs(cells) do
 			if c.getLoadingCube == nil then
 				return
@@ -780,7 +796,7 @@ itemGrid.create = function(_, config)
 			end
 
 			if c.item ~= nil and c.item.pivot ~= nil then
-				c.item.pivot.LocalRotation = { -0.1, grid.dt, -0.2 }
+				c.item.pivot.LocalRotation = { -0.1, dt1, -0.2 }
 			end
 		end
 	end)

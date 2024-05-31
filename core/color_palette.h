@@ -49,6 +49,9 @@ typedef struct ColorPalette {
 
     Weakptr *wptr;
 
+    // Palettes may be shared by several shapes
+    uint16_t refCount;
+
     // Number of colors up to max entry index currently used (possibly includes unused entries)
     uint8_t count;
 
@@ -58,7 +61,7 @@ typedef struct ColorPalette {
     // Is true if any alpha or emission values changed since last clear
     bool lighting_dirty;
 
-    char pad[5];
+    char pad[3];
 
 } ColorPalette;
 
@@ -68,7 +71,8 @@ ColorPalette *color_palette_new_from_data(ColorAtlas *atlas,
                                           const RGBAColor *colors,
                                           const bool *emissive);
 ColorPalette *color_palette_new_copy(const ColorPalette *src);
-void color_palette_free(ColorPalette *p);
+bool color_palette_retain(ColorPalette *p);
+bool color_palette_release(ColorPalette *p);
 
 void color_palette_set_atlas(ColorPalette *p, ColorAtlas *atlas);
 
@@ -89,13 +93,13 @@ bool color_palette_check_and_add_default_color_2021(ColorPalette *p,
 bool color_palette_check_and_add_default_color_pico8p(ColorPalette *p,
                                                       SHAPE_COLOR_INDEX_INT_T defaultIdx,
                                                       SHAPE_COLOR_INDEX_INT_T *entryOut);
-void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
-void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
+void color_palette_increment_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, uint32_t count);
+void color_palette_decrement_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, uint32_t count);
 bool color_palette_remove_unused_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool remap);
 void color_palette_remove_all_unused_colors(ColorPalette *p, bool remap);
 uint32_t color_palette_get_color_use_count(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_set_color(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, RGBAColor color);
-RGBAColor *color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
+RGBAColor color_palette_get_color(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 void color_palette_set_emissive(ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry, bool toggle);
 bool color_palette_is_emissive(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
 bool color_palette_is_transparent(const ColorPalette *p, SHAPE_COLOR_INDEX_INT_T entry);
@@ -112,6 +116,10 @@ RGBAColor *color_palette_get_colors_as_array(const ColorPalette *p,
                                              SHAPE_COLOR_INDEX_INT_T **outMapping);
 Weakptr *color_palette_get_weakptr(ColorPalette *p);
 Weakptr *color_palette_get_and_retain_weakptr(ColorPalette *p);
+void color_palette_merge(ColorPalette *p1,
+                         const ColorPalette *p2,
+                         const bool allowDuplicates,
+                         SHAPE_COLOR_INDEX_INT_T **remapOut);
 
 // MARK: - Baked lighting -
 

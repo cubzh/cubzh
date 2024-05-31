@@ -17,7 +17,7 @@ pointer.create = function(_, config)
 	config = conf:merge(DEFAULT_CONFIG, config)
 	local ui = config.uikit
 
-	local shape = bundle.Shape("aduermael.ui_pointer_arrow")
+	local shape = bundle:Shape("shapes/ui_pointer_arrow")
 	local p = ui:createShape(shape)
 	local ratio = p.Width / p.Height
 	p.Width = 40

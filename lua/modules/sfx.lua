@@ -4,6 +4,7 @@ local sfx = {
 		Position = Number3(0, 0, 0),
 		Volume = 1,
 		Radius = 600,
+		MinRadius = 200,
 		Spatialized = true,
 		Pitch = 1.0,
 	},
@@ -25,6 +26,7 @@ local mt = {
 			recycled.Position = config.Position or self.defaultConfig.Position
 			recycled.Volume = config.Volume or self.defaultConfig.Volume
 			recycled.Radius = config.Radius or self.defaultConfig.Radius
+			recycled.MinRadius = config.MinRadius or self.defaultConfig.MinRadius
 			if config.Spatialized ~= nil then
 				recycled.Spatialized = config.Spatialized
 			else
@@ -43,6 +45,7 @@ local mt = {
 		as.Position = config.Position or self.defaultConfig.Position
 		as.Volume = config.Volume or self.defaultConfig.Volume
 		as.Radius = config.Radius or self.defaultConfig.Radius
+		as.MinRadius = config.MinRadius or self.defaultConfig.MinRadius
 		if config.Spatialized ~= nil then
 			as.Spatialized = config.Spatialized
 		else

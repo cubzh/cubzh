@@ -55,6 +55,8 @@ typedef enum {
     NZ = 25
 } Neighbor;
 
+void chunk_alloc_default_light(void);
+
 Chunk *chunk_new(const SHAPE_COORDS_INT3_T origin);
 Chunk *chunk_new_copy(const Chunk *c);
 void chunk_free(Chunk *chunk, bool updateNeighbors);

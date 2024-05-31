@@ -311,11 +311,16 @@ void transform_set_destroy_callback(pointer_transform_destroyed_func f) {
     transform_destroyed_callback = f;
 }
 
-void transform_set_managed_ptr(Transform *t, void *ptr) {
-    t->managed = ptr;
+void transform_set_managed_ptr(Transform *t, Weakptr *wptr) {
+    weakptr_retain(wptr);
+    t->managed = wptr;
 }
 
 // MARK: - Physics -
+
+void transform_set_physics_dirty(Transform *t) {
+    _transform_set_dirty(t, TRANSFORM_DIRTY_PHYSICS, false);
+}
 
 void transform_reset_physics_dirty(Transform *t) {
     _transform_reset_dirty(t, TRANSFORM_DIRTY_PHYSICS);
@@ -1557,6 +1562,7 @@ static void _transform_free(Transform *const t) {
     if (t->managed != NULL && transform_destroyed_callback != NULL) {
         transform_destroyed_callback(t->id, t->managed);
     }
+    weakptr_release(t->managed);
 
     if (t->ptr != NULL) {
         if (t->ptr_free != NULL) {
