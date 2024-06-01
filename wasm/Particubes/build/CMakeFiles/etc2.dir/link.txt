@@ -1,0 +1,2 @@
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emar qc libetc2.a "CMakeFiles/etc2.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bimg/3rdparty/etc2/ProcessRGB.cpp.o" "CMakeFiles/etc2.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bimg/3rdparty/etc2/Tables.cpp.o"
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emranlib libetc2.a

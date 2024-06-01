@@ -1,0 +1,25 @@
+CMakeFiles/lua.dir/Users/gaetan/projects/voxowl/particubes-private/common/Lua/src/lmathlib.c.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/common/Lua/src/lmathlib.c \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lprefix.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/math.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/math.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lua.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/__stddef_max_align_t.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/luaconf.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lauxlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdio.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/wasi/api.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lualib.h

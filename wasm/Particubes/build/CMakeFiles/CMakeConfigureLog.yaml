@@ -1,0 +1,306 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.0/share/cmake/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: Emscripten - 1 - x86
+      The host system is: Darwin - 23.4.0 - arm64
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.0/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.29.0/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.29.0/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.29.0/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "cmake/bx.cmake:79 (find_package)"
+      - "bgfx.cmake:63 (include)"
+      - "CMakeLists.txt:247 (include)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-BU8vZG"
+      binary: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-BU8vZG"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: " -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                          "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-BU8vZG'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.29.0/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_48a82/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_48a82.dir/build.make CMakeFiles/cmTC_48a82.dir/build
+        Building C object CMakeFiles/cmTC_48a82.dir/src.c.o
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc -DCMAKE_HAVE_LIBC_PTHREAD  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            -MD -MT CMakeFiles/cmTC_48a82.dir/src.c.o -MF CMakeFiles/cmTC_48a82.dir/src.c.o.d -o CMakeFiles/cmTC_48a82.dir/src.c.o -c /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-BU8vZG/src.c
+        shared:INFO: (Emscripten: Running sanity checks)
+        ports:INFO: retrieving port: zlib from https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
+        ports:INFO: unpacking port: zlib
+        cache:INFO: generating port: sysroot/lib/wasm32-emscripten/libz.a... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/lib/wasm32-emscripten/libz.a" for subsequent builds)
+        system_libs:INFO: compiled 15 inputs
+        cache:INFO:  - ok
+        Linking C executable cmTC_48a82.js
+        /opt/homebrew/Cellar/cmake/3.29.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_48a82.dir/link.txt --verbose=1
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            @CMakeFiles/cmTC_48a82.dir/objects1.rsp -o cmTC_48a82.js
+        cache:INFO: generating system asset: symbol_lists/3ad01aec19bd8abb6b129460e58616ba9e211cc8.json... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/symbol_lists/3ad01aec19bd8abb6b129460e58616ba9e211cc8.json" for subsequent builds)
+        cache:INFO:  - ok
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: Emscripten - 1 - x86
+      The host system is: Darwin - 23.4.0 - arm64
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "cmake/bx.cmake:79 (find_package)"
+      - "bgfx.cmake:63 (include)"
+      - "CMakeLists.txt:247 (include)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-vxg5wK"
+      binary: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-vxg5wK"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: " -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                          "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-vxg5wK'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_a4a66/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_a4a66.dir/build.make CMakeFiles/cmTC_a4a66.dir/build
+        Building C object CMakeFiles/cmTC_a4a66.dir/src.c.o
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc -DCMAKE_HAVE_LIBC_PTHREAD  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            -MD -MT CMakeFiles/cmTC_a4a66.dir/src.c.o -MF CMakeFiles/cmTC_a4a66.dir/src.c.o.d -o CMakeFiles/cmTC_a4a66.dir/src.c.o -c /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-vxg5wK/src.c
+        Linking C executable cmTC_a4a66.js
+        /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a4a66.dir/link.txt --verbose=1
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            @CMakeFiles/cmTC_a4a66.dir/objects1.rsp -o cmTC_a4a66.js
+        cache:INFO: generating system asset: symbol_lists/bc00e2b98083976d207bf439085db1bcbd133a11.json... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/symbol_lists/bc00e2b98083976d207bf439085db1bcbd133a11.json" for subsequent builds)
+        cache:INFO:  - ok
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: Emscripten - 1 - x86
+      The host system is: Darwin - 23.4.0 - arm64
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "cmake/bx.cmake:79 (find_package)"
+      - "bgfx.cmake:63 (include)"
+      - "CMakeLists.txt:247 (include)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4n4gme"
+      binary: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4n4gme"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: " -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                          "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4n4gme'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_3aa12/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_3aa12.dir/build.make CMakeFiles/cmTC_3aa12.dir/build
+        Building C object CMakeFiles/cmTC_3aa12.dir/src.c.o
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc -DCMAKE_HAVE_LIBC_PTHREAD  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            -MD -MT CMakeFiles/cmTC_3aa12.dir/src.c.o -MF CMakeFiles/cmTC_3aa12.dir/src.c.o.d -o CMakeFiles/cmTC_3aa12.dir/src.c.o -c /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4n4gme/src.c
+        Linking C executable cmTC_3aa12.js
+        /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3aa12.dir/link.txt --verbose=1
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            @CMakeFiles/cmTC_3aa12.dir/objects1.rsp -o cmTC_3aa12.js
+        cache:INFO: generating system asset: symbol_lists/7884f4b76840021be58d3c9fd5356716b74aa7a7.json... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/symbol_lists/7884f4b76840021be58d3c9fd5356716b74aa7a7.json" for subsequent builds)
+        cache:INFO:  - ok
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: Emscripten - 1 - x86
+      The host system is: Darwin - 23.4.0 - arm64
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "cmake/bx.cmake:79 (find_package)"
+      - "bgfx.cmake:63 (include)"
+      - "CMakeLists.txt:247 (include)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-I6LC7i"
+      binary: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-I6LC7i"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: " -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                          "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-I6LC7i'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_221b9/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_221b9.dir/build.make CMakeFiles/cmTC_221b9.dir/build
+        Building C object CMakeFiles/cmTC_221b9.dir/src.c.o
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc -DCMAKE_HAVE_LIBC_PTHREAD  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            -MD -MT CMakeFiles/cmTC_221b9.dir/src.c.o -MF CMakeFiles/cmTC_221b9.dir/src.c.o.d -o CMakeFiles/cmTC_221b9.dir/src.c.o -c /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-I6LC7i/src.c
+        Linking C executable cmTC_221b9.js
+        /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_221b9.dir/link.txt --verbose=1
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            @CMakeFiles/cmTC_221b9.dir/objects1.rsp -o cmTC_221b9.js
+        cache:INFO: generating system asset: symbol_lists/c4d9205629e9658dabc3808f5f2d509fdd1f8efd.json... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/symbol_lists/c4d9205629e9658dabc3808f5f2d509fdd1f8efd.json" for subsequent builds)
+        cache:INFO:  - ok
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: Emscripten - 1 - x86
+      The host system is: Darwin - 23.4.0 - arm64
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.29.2/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "cmake/bx.cmake:79 (find_package)"
+      - "bgfx.cmake:63 (include)"
+      - "CMakeLists.txt:247 (include)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4CywLO"
+      binary: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4CywLO"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: " -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                          "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4CywLO'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_ecb7b/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_ecb7b.dir/build.make CMakeFiles/cmTC_ecb7b.dir/build
+        Building C object CMakeFiles/cmTC_ecb7b.dir/src.c.o
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc -DCMAKE_HAVE_LIBC_PTHREAD  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            -MD -MT CMakeFiles/cmTC_ecb7b.dir/src.c.o -MF CMakeFiles/cmTC_ecb7b.dir/src.c.o.d -o CMakeFiles/cmTC_ecb7b.dir/src.c.o -c /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-4CywLO/src.c
+        Linking C executable cmTC_ecb7b.js
+        /opt/homebrew/Cellar/cmake/3.29.2/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ecb7b.dir/link.txt --verbose=1
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            @CMakeFiles/cmTC_ecb7b.dir/objects1.rsp -o cmTC_ecb7b.js
+        cache:INFO: generating system asset: symbol_lists/c98b49389eb2bbf07601f65a758da779a6cd24de.json... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/symbol_lists/c98b49389eb2bbf07601f65a758da779a6cd24de.json" for subsequent builds)
+        cache:INFO:  - ok
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.3/share/cmake/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: Emscripten - 1 - x86
+      The host system is: Darwin - 23.5.0 - arm64
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.29.3/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.29.3/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.29.3/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.29.3/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "cmake/bx.cmake:79 (find_package)"
+      - "bgfx.cmake:63 (include)"
+      - "CMakeLists.txt:247 (include)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-G1Khv5"
+      binary: "/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-G1Khv5"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: " -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                          "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules;/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cmake/Modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-G1Khv5'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.29.3/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_6f4d3/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_6f4d3.dir/build.make CMakeFiles/cmTC_6f4d3.dir/build
+        Building C object CMakeFiles/cmTC_6f4d3.dir/src.c.o
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc -DCMAKE_HAVE_LIBC_PTHREAD  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            -MD -MT CMakeFiles/cmTC_6f4d3.dir/src.c.o -MF CMakeFiles/cmTC_6f4d3.dir/src.c.o.d -o CMakeFiles/cmTC_6f4d3.dir/src.c.o -c /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/build/CMakeFiles/CMakeScratch/TryCompile-G1Khv5/src.c
+        Linking C executable cmTC_6f4d3.js
+        /opt/homebrew/Cellar/cmake/3.29.3/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6f4d3.dir/link.txt --verbose=1
+        /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emcc  -s USE_ZLIB=1                          -s USE_PTHREADS=1                          -Wbad-function-cast                          -Wcast-function-type                            @CMakeFiles/cmTC_6f4d3.dir/objects1.rsp -o cmTC_6f4d3.js
+        cache:INFO: generating system asset: symbol_lists/c55e7ea8c712b40d2b2f33d764c8d558dde321e0.json... (this will be cached in "/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/symbol_lists/c55e7ea8c712b40d2b2f33d764c8d558dde321e0.json" for subsequent builds)
+        cache:INFO:  - ok
+        
+      exitCode: 0
+...

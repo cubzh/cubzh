@@ -1,0 +1,2 @@
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emar qc libedtaa3.a "CMakeFiles/edtaa3.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bimg/3rdparty/edtaa3/edtaa3func.cpp.o"
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emranlib libedtaa3.a

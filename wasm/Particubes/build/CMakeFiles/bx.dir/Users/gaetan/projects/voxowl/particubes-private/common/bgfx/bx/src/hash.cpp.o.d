@@ -1,0 +1,36 @@
+CMakeFiles/bx.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bx/src/hash.cpp.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bx/src/hash.cpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/hash.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/allocator.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/bx.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/alloca.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config_site \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/__stddef_max_align_t.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/platform.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/config.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/constants.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/macros.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/debug.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/typetraits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/inline/typetraits.inl \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/inline/bx.inl \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/uint32_t.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/inline/uint32_t.inl \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/inline/allocator.inl \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/string.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/inline/string.inl \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/bgfx/bx/include/bx/inline/hash.inl
