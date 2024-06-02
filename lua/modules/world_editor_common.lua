@@ -678,7 +678,6 @@ local defaultLoadWorldConfig = {
 	onLoad = nil,
 	onDone = nil,
 	fullnameItemKey = "fullname",
-	fromBundle = true,
 	optimisations = {
 		minimum_item_size_for_shadows = 40,
 	},
@@ -739,7 +738,6 @@ common.loadWorld = function(mapBase64, config)
 				onDone = config.onDone,
 				onLoad = onLoad,
 				fullnameItemKey = "fullname",
-				fromBundle = config.fromBundle,
 			}
 			massLoading:load(objects, massLoadingConfig)
 		end

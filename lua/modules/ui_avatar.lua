@@ -113,10 +113,10 @@ uiavatar.get = function(self, config)
 		end
 	end
 
-	node._width = function(self)
+	node._width = function(_)
 		return w
 	end
-	node._height = function(self)
+	node._height = function(_)
 		return h
 	end
 
@@ -255,99 +255,177 @@ end
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
 -- uikit: optional, allows to provide specific instance of uikit
-uiavatar.getHeadAndShoulders = function(_, usernameOrId, size, _, uikit)
-	local requests
-
-	local ui = uikit or ui
-	local defaultSize = size or defaultSize
-
-	local node = ui:createFrame(Color(255, 255, 255, 0))
-	node.IsMask = true
-	node._w = 0
-	node._h = 0
-
-	local bodyDidLoad = function(err, avatarBody)
-		if err ~= nil then
-			error(err, 2)
-			return
-		end
-
-		local rotation = Rotation(0, math.rad(180), 0)
-
-		if node.body ~= nil then
-			rotation:Set(node.body.pivot.LocalRotation)
-			node.body:remove()
-			node.body = nil
-		end
-
-		-- local shape = Shape(avatarBody, { includeChildren = true })
-		local shape = avatarBody
-		shape.LocalPosition = Number3.Zero
-
-		-- -12 -> centered (body position set in animation cycle)
-		-- -14 -> from below shoulders
-		local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
-		uiBody:setParent(node)
-		uiBody.Head.LocalRotation = { 0, 0, 0 }
-		node.body = uiBody
-		uiBody.ratio = uiBody.Width / uiBody.Height
-
-		-- NOTE: this needs to be improved, to programatically crop
-		-- perfectly around the head, considering hair / headsets, etc.
-		-- [gdevillele] _w field can be nil, I don't understand why
-		node.body.Width = (node._w or 0) * 1.1
-		node.body.Height = node.body.Width / uiBody.ratio
-
-		node.body.pivot.LocalRotation = rotation
-
-		node.body.pos = { 0, 0 }
+uiavatar.getHeadAndShoulders = function(self, config)
+	if self ~= uiavatar then
+		error("ui_avatar:getHeadAndShoulders(config) should be called with `:`", 2)
 	end
 
-	_, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
+	local defaultConfig = {
+		usernameOrId = "", -- loading "empty" avatar from bundle when empty
+		size = defaultSize,
+		didLoad = emptyFunc, -- can be multiple times when changing body parts
+		ui = ui, -- can only be used by System to override UI instance
+		eyeBlinks = true,
+	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+	if not ok then
+		error("ui_avatar:getHeadAndShoulders(config) - config error: " .. err, 2)
+	end
+
+	local requests
+
+	local ui = config.ui
+	local node = ui:createFrame(Color(0, 0, 0, 0))
+
+	node.IsMask = true
+	local w = 0
+	local h = 0
+
+	local function didLoad(err)
+		if err ~= nil then
+			error(err, 2)
+		end
+
+		if config.didLoad then
+			config:didLoad()
+		end
+	end
 
 	node.onRemove = function()
+		node:loadEquipment({ type = "jacket", item = "" })
+		node:loadEquipment({ type = "hair", item = "" })
+		node:loadEquipment({ type = "pants", item = "" })
+		node:loadEquipment({ type = "boots", item = "" })
+
 		for _, r in ipairs(requests) do
 			r:Cancel()
 		end
 	end
 
-	node._width = function(self)
-		return self._w
+	node._width = function(_)
+		return w
 	end
-	node._height = function(self)
-		return self._h
+	node._height = function(_)
+		return h
 	end
 
 	local setWidth = node._setWidth
 	local setHeight = node._setHeight
 
 	node._setWidth = function(self, v)
-		self._w = v
-		self._h = v -- spherized
+		w = v
+		h = v -- spherized
 		if self.body then
-			self.body.Width = v * 2
-			self.body.pos.X = -self.body.Width * 0.25
-			self.body.pos.Y = -self.body.Height * 0.5
+			self.body.Width = v
 		end
 		setWidth(self, v) -- spherized
 		setHeight(self, v) -- spherized
 	end
 
 	node._setHeight = function(self, v)
-		self._w = v
-		self._h = v -- spherized
+		w = v
+		h = v -- spherized
 		if self.body then
-			self.body.Width = v * 2
-			self.body.pos.X = -self.body.Width * 0.25
-			self.body.pos.Y = -self.body.Height * 0.5
+			self.body.Height = v
 		end
 		setWidth(self, v) -- spherized
 		setHeight(self, v) -- spherized
 	end
 
-	node.Width = defaultSize
+	node.Width = config.size
+
+	local avatarObject
+	avatarObject, requests =
+		avatar:get({ usernameOrId = config.usernameOrId, didLoad = didLoad, eyeBlinks = config.eyeBlinks })
+	setupNodeAvatar(node, avatarObject, config.ui)
 
 	return node, requests
+
+	-- local bodyDidLoad = function(err, avatarBody)
+	-- 	if err ~= nil then
+	-- 		error(err, 2)
+	-- 		return
+	-- 	end
+
+	-- 	local rotation = Rotation(0, math.rad(180), 0)
+
+	-- 	if node.body ~= nil then
+	-- 		rotation:Set(node.body.pivot.LocalRotation)
+	-- 		node.body:remove()
+	-- 		node.body = nil
+	-- 	end
+
+	-- 	-- local shape = Shape(avatarBody, { includeChildren = true })
+	-- 	local shape = avatarBody
+	-- 	shape.LocalPosition = Number3.Zero
+
+	-- 	-- -12 -> centered (body position set in animation cycle)
+	-- 	-- -14 -> from below shoulders
+	-- 	local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
+	-- 	uiBody:setParent(node)
+	-- 	uiBody.Head.LocalRotation = { 0, 0, 0 }
+	-- 	node.body = uiBody
+	-- 	uiBody.ratio = uiBody.Width / uiBody.Height
+
+	-- 	-- NOTE: this needs to be improved, to programatically crop
+	-- 	-- perfectly around the head, considering hair / headsets, etc.
+	-- 	-- [gdevillele] _w field can be nil, I don't understand why
+	-- 	node.body.Width = (node._w or 0) * 1.1
+	-- 	node.body.Height = node.body.Width / uiBody.ratio
+
+	-- 	node.body.pivot.LocalRotation = rotation
+
+	-- 	node.body.pos = { 0, 0 }
+	-- end
+
+	-- _, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
+
+	-- node.onRemove = function()
+	-- 	for _, r in ipairs(requests) do
+	-- 		r:Cancel()
+	-- 	end
+	-- end
+
+	-- node._width = function(self)
+	-- 	return self._w
+	-- end
+	-- node._height = function(self)
+	-- 	return self._h
+	-- end
+
+	-- local setWidth = node._setWidth
+	-- local setHeight = node._setHeight
+
+	-- node._setWidth = function(self, v)
+	-- 	self._w = v
+	-- 	self._h = v -- spherized
+	-- 	if self.body then
+	-- 		self.body.Width = v * 2
+	-- 		self.body.pos.X = -self.body.Width * 0.25
+	-- 		self.body.pos.Y = -self.body.Height * 0.5
+	-- 	end
+	-- 	setWidth(self, v) -- spherized
+	-- 	setHeight(self, v) -- spherized
+	-- end
+
+	-- node._setHeight = function(self, v)
+	-- 	self._w = v
+	-- 	self._h = v -- spherized
+	-- 	if self.body then
+	-- 		self.body.Width = v * 2
+	-- 		self.body.pos.X = -self.body.Width * 0.25
+	-- 		self.body.pos.Y = -self.body.Height * 0.5
+	-- 	end
+	-- 	setWidth(self, v) -- spherized
+	-- 	setHeight(self, v) -- spherized
+	-- end
+
+	-- node.Width = defaultSize
+
+	-- return node, requests
 end
 
 return uiavatar

@@ -68,7 +68,7 @@ function placeItems()
 	h.Pivot:Set(h.Width * 0.5, h.Height * 1.5 / 4.0, h.Depth * 0.5)
 	h:SetParent(logo)
 
-	local giraffe = bundle.Shape("voxels.giraffe_head.3zh")
+	local giraffe = bundle:Shape("shapes/giraffe_head")
 	giraffe.Pivot:Set(giraffe.Width * 0.5, giraffe.Height * 0.5, giraffe.Depth * 0.5)
 	giraffe:SetParent(titleRoot)
 	giraffe.Scale = 1
@@ -76,7 +76,7 @@ function placeItems()
 	giraffe.rot = Rotation(0, 0, math.rad(20))
 	giraffe.Rotation:Set(giraffe.rot)
 
-	local chest = bundle.Shape("voxels.chest.3zh")
+	local chest = bundle:Shape("shapes/chest")
 	chest.Pivot:Set(chest.Width * 0.5, chest.Height * 0.5, chest.Depth * 0.5)
 	chest:SetParent(titleRoot)
 	chest.Scale = 0.5
@@ -86,7 +86,7 @@ function placeItems()
 	local chestLid = chest.Lid
 	local chestLidRot = chest.Lid.LocalRotation:Copy()
 
-	local pezh = bundle.Shape("voxels.pezh_coin_2.3zh")
+	local pezh = bundle:Shape("shapes/pezh_coin_2")
 	pezh.Pivot:Set(pezh.Size * 0.5)
 	pezh:SetParent(titleRoot)
 	pezh.Scale = 0.5
@@ -94,7 +94,7 @@ function placeItems()
 	pezh.rot = Rotation(0, 0, math.rad(20))
 	pezh.Rotation:Set(pezh.rot)
 
-	local cube = bundle.Shape("voxels.cube.3zh")
+	local cube = bundle:Shape("shapes/cube")
 	cube.Pivot:Set(cube.Size * 0.5)
 	cube:SetParent(titleRoot)
 	cube.Scale = 0.5
@@ -102,7 +102,7 @@ function placeItems()
 	cube.rot = Rotation(0, 0, math.rad(20))
 	cube.Rotation:Set(cube.rot)
 
-	local sword = bundle.Shape("voxels.sword.3zh")
+	local sword = bundle:Shape("shapes/sword")
 	sword.Pivot:Set(sword.Size * 0.5)
 	sword:SetParent(titleRoot)
 	sword.Scale = 0.5
@@ -110,7 +110,7 @@ function placeItems()
 	sword.rot = Rotation(0, 0, math.rad(-45))
 	sword.Rotation:Set(sword.rot)
 
-	local spaceship = bundle.Shape("voxels.spaceship_2.3zh")
+	local spaceship = bundle:Shape("shapes/spaceship_2")
 	spaceship.Pivot:Set(spaceship.Size * 0.5)
 	spaceship.Pivot.Y = spaceship.Pivot.Y + 55
 	spaceship:SetParent(titleRoot)

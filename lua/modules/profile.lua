@@ -3,7 +3,6 @@ profile = {}
 -- MODULES
 api = require("system_api", System)
 avatar = require("avatar")
-equipments = require("equipments")
 itemgrid = require("item_grid")
 modal = require("modal")
 theme = require("uitheme")
@@ -105,7 +104,7 @@ profile.create = function(_, config)
 	end
 
 	-- avatarNode
-	local avatarNode = uiAvatar:get(username, nil, nil, ui)
+	local avatarNode = uiAvatar:get({ usernameOrId = username, ui = ui })
 	if DEBUG then
 		avatarNode.color = DEBUG_FRAME_COLOR
 	end

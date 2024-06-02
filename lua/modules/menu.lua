@@ -2084,7 +2084,7 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 
 	if updates.outfit == true then
 		avatar:remove()
-		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
+		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
 		avatar.parentDidResize = btnContentParentDidResize
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
@@ -2629,6 +2629,7 @@ else
 			hideTitleScreen()
 			showTopBar()
 			hideBottomBar()
+			authCompleted()
 			if activeFlow ~= nil then
 				activeFlow:remove()
 			end
@@ -2684,7 +2685,7 @@ Timer(0.1, function()
 		connect()
 
 		avatar:remove()
-		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
+		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
 		avatar.parentDidResize = btnContentParentDidResize
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()

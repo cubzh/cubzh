@@ -375,7 +375,8 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				avatar = cachedAvatars[user.username]
 				if avatar == nil then
 					local requests
-					avatar, requests = uiAvatar:get(user.username, cell.Height * 0.95, nil, ui)
+					avatar, requests =
+						uiAvatar:get({ usernameOrId = user.username, size = cell.Height * 0.95, ui = ui })
 					for _, r in ipairs(requests) do
 						table.insert(cell.requests, r)
 					end
