@@ -37,7 +37,6 @@ signup.startFlow = function(self, config)
 	local str = require("str")
 
 	local theme = require("uitheme").current
-	local bigPadding = theme.paddingBig
 	local padding = theme.padding
 
 	local signupFlow = flow:create()

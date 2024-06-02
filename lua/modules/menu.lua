@@ -713,6 +713,7 @@ actionColumn:parentDidResize()
 
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
+topBar:hide()
 
 topBarBtnPress = function(self)
 	self.Color = Color(0, 0, 0, 0.5)
@@ -2591,6 +2592,9 @@ function hideTopBar()
 end
 
 function showTopBar()
+	if Environment.CUBZH_MENU == "disabled" then
+		return
+	end
 	topBar:show()
 end
 
@@ -2606,36 +2610,41 @@ if System.Authenticated then
 	showTopBar()
 	hideBottomBar()
 else
-	showTitleScreen()
-	local signupFlow = require("signup"):startFlow({
-		ui = ui,
-		avatarPreviewStep = function()
-			LocalEvent:Send("signup_flow_avatar_preview")
-			hideTitleScreen()
-			hideBottomBar()
-		end,
-		loginStep = function()
-			LocalEvent:Send("signup_flow_login")
-			hideTitleScreen()
-			hideBottomBar()
-		end,
-		signUpOrLoginStep = function()
-			LocalEvent:Send("signup_flow_start_or_login")
-			showTitleScreen()
-			showBottomBar()
-		end,
-		loginSuccess = function()
-			LocalEvent:Send("signup_flow_login_success")
-			hideTitleScreen()
-			showTopBar()
-			hideBottomBar()
-			authCompleted()
-			if activeFlow ~= nil then
-				activeFlow:remove()
-			end
-		end,
-	})
-	activeFlow = signupFlow
+	if Environment.USER_AUTH == "disabled" then
+		hideBottomBar()
+		hideTitleScreen()
+	else
+		showTitleScreen()
+		local signupFlow = require("signup"):startFlow({
+			ui = ui,
+			avatarPreviewStep = function()
+				LocalEvent:Send("signup_flow_avatar_preview")
+				hideTitleScreen()
+				hideBottomBar()
+			end,
+			loginStep = function()
+				LocalEvent:Send("signup_flow_login")
+				hideTitleScreen()
+				hideBottomBar()
+			end,
+			signUpOrLoginStep = function()
+				LocalEvent:Send("signup_flow_start_or_login")
+				showTitleScreen()
+				showBottomBar()
+			end,
+			loginSuccess = function()
+				LocalEvent:Send("signup_flow_login_success")
+				hideTitleScreen()
+				showTopBar()
+				hideBottomBar()
+				authCompleted()
+				if activeFlow ~= nil then
+					activeFlow:remove()
+				end
+			end,
+		})
+		activeFlow = signupFlow
+	end
 end
 
 getWorldInfoReq = nil
