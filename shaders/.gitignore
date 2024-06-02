@@ -1,0 +1,12 @@
+.DS_Store
+.vscode
+*.xcuserdatad
+*.o
+*.obj
+*.lib
+*.tlog
+*.ipch
+*.db
+*.ilk
+
+intermediates/*
