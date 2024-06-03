@@ -196,28 +196,45 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 		local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
 		node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
 	else
-		requests = avatar:getPlayerHead(usernameOrId, function(err, head)
-			if err then
-				print(err)
-				return
-			end
-			-- Optimized cache: If ID, try to get the username from the Players list. Cache keys can be username or ids
-			if type(usernameOrId) ~= "string" then
-				for _, p in pairs(Players) do
-					if p.UserID == usernameOrId then
-						usernameOrId = p.Username
-					end
-				end
-			end
-			headCache[usernameOrId] = head
-			local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = true })
-			uiHead:setParent(node)
-			node.head = uiHead
-			node.head.Width = node.Width
+		local head
+		head, requests = avatar:getPlayerHead({ usernameOrId = usernameOrId })
 
-			local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
-			node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
-		end)
+		local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = false })
+		uiHead:setParent(node)
+		node.head = uiHead
+		local ratio = node.head.Width / node.head.Height
+
+		local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
+		node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
+
+		node.head.parentDidResize = function(self)
+			self.Width = node.Width
+			self.Height = node.head.Width / ratio
+		end
+		node.head:parentDidResize()
+
+		-- , function(err, head)
+		-- 			if err then
+		-- 				print(err)
+		-- 				return
+		-- 			end
+		-- 			-- Optimized cache: If ID, try to get the username from the Players list. Cache keys can be username or ids
+		-- 			if type(usernameOrId) ~= "string" then
+		-- 				for _, p in pairs(Players) do
+		-- 					if p.UserID == usernameOrId then
+		-- 						usernameOrId = p.Username
+		-- 					end
+		-- 				end
+		-- 			end
+		-- 			headCache[usernameOrId] = head
+		-- 			local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = true })
+		-- 			uiHead:setParent(node)
+		-- 			node.head = uiHead
+		-- 			node.head.Width = node.Width
+
+		-- 			local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
+		-- 			node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
+		-- 		end)
 
 		node.onRemove = function()
 			for _, r in ipairs(requests) do

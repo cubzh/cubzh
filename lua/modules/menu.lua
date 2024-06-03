@@ -990,6 +990,9 @@ function createChat()
 		uikit = ui,
 		time = false,
 		onSubmitEmpty = function()
+			if Environment.CHAT_CONSOLE_DISPLAY == "always" then
+				return
+			end
 			hideChat()
 		end,
 		onFocus = function()
@@ -1053,7 +1056,7 @@ function refreshChat()
 end
 
 function showChat(input)
-	if System.Authenticated == false then
+	if System.Authenticated == false and Environment.USER_AUTH ~= "disabled" then
 		return
 	end
 	chatDisplayed = true
@@ -2010,8 +2013,10 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
 				menu:Show()
 			end
 		elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
+			keysDown[keyCode] = false
 			showChat("")
 		elseif keyCode == codes.SLASH then
+			keysDown[keyCode] = false
 			showChat("/")
 		end
 	end
@@ -2604,6 +2609,11 @@ end
 
 function showBottomBar()
 	bottomBar:show()
+end
+
+if Environment.CHAT_CONSOLE_DISPLAY == "always" then
+	chatDisplayed = true
+	refreshChat()
 end
 
 if System.Authenticated then

@@ -737,6 +737,9 @@ mod.getUserId = function(username, cb)
 end
 
 mod.getAvatar = function(usernameOrId, cb)
+	if type(usernameOrId) ~= "string" then
+		error("getAvatar(usernameOrId) - usernameOrId should be a string", 2)
+	end
 	local url = mod.kApiAddr .. "/users/" .. usernameOrId .. "/avatar"
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then

@@ -40,7 +40,7 @@ bodyPartsNames = {
 	"EyeLidLeft",
 }
 
-cachedHead = bundle:Shape("shapes/head_skin2_v2.3zh")
+cachedHead = bundle:Shape("shapes/head_skin2_v2")
 
 mod.eyeColors = {
 	Color(166, 142, 163),
@@ -551,20 +551,6 @@ function initAnimations(avatar)
 	anims.Idle:Play()
 end
 
-function tableToColor(t)
-	return Color(math.floor(t.r), math.floor(t.g), math.floor(t.b))
-end
-
--- Returns sent requests
--- /!\ return table of requests does not contain all requests right away
--- reference should be kept, not copying entries right after function call.
-mod.getPlayerHead = function(self, usernameOrId, callback)
-	error("REVIEW getPlayerHead")
-	-- local head = Shape(cachedHead)
-	-- local requests = self:prepareHead(head, usernameOrId, callback)
-	-- return requests
-end
-
 avatarDefaultConfig = {
 	usernameOrId = "", -- item repo and name (like "aduermael.hair")
 	didLoad = emptyFunc, -- function(err) end
@@ -572,6 +558,55 @@ avatarDefaultConfig = {
 	defaultAnimations = true,
 	loadEquipments = true,
 }
+
+-- Returns sent requests
+-- /!\ return table of requests does not contain all requests right away
+-- reference should be kept, not copying entries right after function call.
+mod.getPlayerHead = function(self, config)
+	if self ~= mod then
+		error("avatar:getPlayerHead(config) should be called with `:`", 2)
+	end
+
+	-- LEGACY
+	if type(config) == "string" then
+		config = {
+			usernameOrId = config, -- parameter used to be usernameOrId
+		}
+	end
+
+	ok, err = pcall(function()
+		config = require("config"):merge(avatarDefaultConfig, config)
+	end)
+	if not ok then
+		error("avatar:getPlayerHead(config) - config error: " .. err, 2)
+	end
+
+	local head = Shape(cachedHead)
+	-- need custom functions for heads
+	-- head.load = avatar_load
+	-- head.loadEquipment = avatar_loadEquipment
+	-- head.setColors = avatar_setColors
+	-- head.setEyes = avatar_setEyes
+	-- head.setNose = avatar_setNose
+
+	local requests = {}
+	local palette = avatarPalette:Copy()
+
+	avatarPrivateFields[head] = { config = config, equipments = {}, requests = requests, palette = palette }
+
+	-- error("REVIEW getPlayerHead")
+	head.Name = "Head"
+	hierarchyactions:applyToDescendants(head, { includeRoot = true }, function(o)
+		o.Physics = PhysicsMode.Disabled
+		o.Palette = palette
+	end)
+
+	-- head:setEyes({ index = 1 })
+	-- head:setNose({ index = DEFAULT_NOSE_INDEX })
+
+	-- local requests = self:prepareHead(head, usernameOrId, callback)
+	return head, requests
+end
 
 -- returns MutaleShape + sent requests (table)
 -- /!\ return table of requests does not contain all requests right away
@@ -602,8 +637,6 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	if not ok then
 		error("avatar:get(config) - config error: " .. err, 2)
 	end
-
-	local requests = {}
 
 	local avatar = Object()
 	avatar.load = avatar_load
@@ -703,7 +736,7 @@ function avatar_load(self, config)
 		config = fields.config
 	end
 
-	if config.usernameOrId ~= "" then
+	if config.usernameOrId ~= nil and config.usernameOrId ~= "" then
 		local req = api.getAvatar(config.usernameOrId, function(err, data)
 			if err and config.didLoad then
 				config.didLoad(err)
