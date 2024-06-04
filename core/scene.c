@@ -557,19 +557,21 @@ void scene_register_awake_rigidbody_contacts(Scene *sc, RigidBody *rb) {
 }
 
 void scene_register_awake_block_box(Scene *sc,
+                                    const Transform *t,
                                     const Shape *shape,
                                     const SHAPE_COORDS_INT_T x,
                                     const SHAPE_COORDS_INT_T y,
                                     const SHAPE_COORDS_INT_T z) {
 
-    Transform *t = shape_get_pivot_transform(shape);
+    Matrix4x4 model;
+    transform_utils_get_model_ltw(t, &model);
 
     const float3 modelPoint = {x + 0.5f, y + 0.5f, z + 0.5f};
     float3 worldPoint;
-    matrix4x4_op_multiply_vec_point(&worldPoint, &modelPoint, transform_get_ltw(t));
+    matrix4x4_op_multiply_vec_point(&worldPoint, &modelPoint, &model);
 
     float3 scale2;
-    transform_get_lossy_scale(t, &scale2);
+    matrix4x4_get_scaleXYZ(&model, &scale2);
     float3_op_scale(&scale2, 0.5f);
     Box *worldBox = box_new_2((float)worldPoint.x - scale2.x - PHYSICS_AWAKE_DISTANCE,
                               (float)worldPoint.y - scale2.y - PHYSICS_AWAKE_DISTANCE,
@@ -645,6 +647,7 @@ HitType scene_cast_ray(Scene *sc,
 
                 CastResult blockHit;
                 Block *b = scene_cast_ray_shape_only(sc,
+                                                     hitTr,
                                                      transform_utils_get_shape(hitTr),
                                                      worldRay,
                                                      &blockHit);
@@ -652,21 +655,24 @@ HitType scene_cast_ray(Scene *sc,
                     hit = blockHit;
                 }
             } else {
+                Matrix4x4 invModel;
+                transform_utils_get_model_wtl(hitTr, &invModel);
+
                 // solve non-dynamic rigidbodies in their model space (rotated collider)
                 const Box *collider = rigidbody_get_collider(hitRb);
-                Transform *modelTr = transform_get_type(hitTr) == ShapeTransform
-                                         ? shape_get_pivot_transform(
-                                               transform_utils_get_shape(hitTr))
-                                         : hitTr;
-                Ray *modelRay = ray_world_to_local(worldRay, modelTr);
+                Ray *modelRay = ray_transform(worldRay, &invModel);
 
                 float distance;
                 if (ray_intersect_with_box(modelRay, &collider->min, &collider->max, &distance)) {
                     const float3 modelVector = {modelRay->dir->x * distance,
                                                 modelRay->dir->y * distance,
                                                 modelRay->dir->z * distance};
+
+                    Matrix4x4 model;
+                    transform_utils_get_model_ltw(hitTr, &model);
+
                     float3 worldVector;
-                    transform_utils_vector_ltw(modelTr, &modelVector, &worldVector);
+                    matrix4x4_op_multiply_vec_vector(&worldVector, &modelVector, &model);
 
                     distance = float3_length(&worldVector);
                     if (distance < hit.distance) {
@@ -735,6 +741,7 @@ size_t scene_cast_all_ray(Scene *sc,
 
                 CastResult blockHit;
                 if (scene_cast_ray_shape_only(sc,
+                                              hitTr,
                                               transform_utils_get_shape(hitTr),
                                               worldRay,
                                               &blockHit)) {
@@ -742,21 +749,24 @@ size_t scene_cast_all_ray(Scene *sc,
                     *hit = blockHit;
                 }
             } else {
-                // solve non-dynamic rigidbodies in their model space (rotated collider)
                 const Box *collider = rigidbody_get_collider(hitRb);
-                Transform *modelTr = transform_get_type(hitTr) == ShapeTransform
-                                         ? shape_get_pivot_transform(
-                                               transform_utils_get_shape(hitTr))
-                                         : hitTr;
-                Ray *modelRay = ray_world_to_local(worldRay, modelTr);
+
+                // solve non-dynamic rigidbodies in their model space (rotated collider)
+                Matrix4x4 invModel;
+                transform_utils_get_model_wtl(hitTr, &invModel);
+                Ray *modelRay = ray_transform(worldRay, &invModel);
 
                 float distance;
                 if (ray_intersect_with_box(modelRay, &collider->min, &collider->max, &distance)) {
                     const float3 modelVector = {modelRay->dir->x * distance,
                                                 modelRay->dir->y * distance,
                                                 modelRay->dir->z * distance};
+
+                    Matrix4x4 model;
+                    transform_utils_get_model_ltw(hitTr, &model);
+
                     float3 worldVector;
-                    transform_utils_vector_ltw(modelTr, &modelVector, &worldVector);
+                    matrix4x4_op_multiply_vec_vector(&worldVector, &modelVector, &model);
 
                     hit = (CastResult *)malloc(sizeof(CastResult));
                     hit->hitTr = hitTr;
@@ -785,6 +795,7 @@ size_t scene_cast_all_ray(Scene *sc,
 }
 
 Block *scene_cast_ray_shape_only(Scene *sc,
+                                 const Transform *t,
                                  const Shape *sh,
                                  const Ray *worldRay,
                                  CastResult *result) {
@@ -798,7 +809,7 @@ Block *scene_cast_ray_shape_only(Scene *sc,
         return NULL;
 
     float3 localImpact;
-    shape_ray_cast(sh, worldRay, &hit.distance, &localImpact, &hit.block, &hit.blockCoords);
+    shape_ray_cast(t, sh, worldRay, &hit.distance, &localImpact, &hit.block, &hit.blockCoords);
 
     if (hit.block != NULL) {
         // find which side local impact is relative to touched block
@@ -873,14 +884,14 @@ HitType scene_cast_box(Scene *sc,
                 Box modelBox, modelBroadphase;
                 float3 modelVector, modelEpsilon;
                 Shape *hitShape = transform_utils_get_shape(hitTr);
+                const Box *collider = rigidbody_get_collider(hitRb);
 
                 float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
 
                 // solve non-dynamic rigidbodies in their model space (rotated collider)
-                const Box *collider = rigidbody_get_collider(hitRb);
-                const Matrix4x4 *invModel = transform_get_wtl(
-                    hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
-                rigidbody_broadphase_world_to_model(invModel,
+                Matrix4x4 invModel;
+                transform_utils_get_model_wtl(hitTr, &invModel);
+                rigidbody_broadphase_world_to_model(&invModel,
                                                     aabb,
                                                     &modelBox,
                                                     &vector,
@@ -907,13 +918,12 @@ HitType scene_cast_box(Scene *sc,
                         if (swept < 1.0f) {
                             float3_op_scale(&modelVector, swept);
 
+                            Matrix4x4 model;
+                            transform_utils_get_model_ltw(hitTr, &model);
+
                             float3 worldVector, worldNormal;
-                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
-                                                       &modelVector,
-                                                       &worldVector);
-                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
-                                                       &normal,
-                                                       &worldNormal);
+                            matrix4x4_op_multiply_vec_vector(&worldVector, &modelVector, &model);
+                            matrix4x4_op_multiply_vec_vector(&worldNormal, &normal, &model);
 
                             const float distance = float3_length(&worldVector);
 
@@ -937,11 +947,11 @@ HitType scene_cast_box(Scene *sc,
                         if (swept < 1.0f) {
                             float3_op_scale(&modelVector, swept);
 
+                            Matrix4x4 model;
+                            transform_utils_get_model_ltw(hitTr, &model);
+
                             float3 worldVector;
-                            transform_utils_vector_ltw(
-                                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr,
-                                &modelVector,
-                                &worldVector);
+                            matrix4x4_op_multiply_vec_vector(&worldVector, &modelVector, &model);
 
                             const float distance = float3_length(&worldVector);
 
@@ -1014,14 +1024,14 @@ size_t scene_cast_all_box(Scene *sc,
                 Box modelBox, modelBroadphase;
                 float3 modelVector, modelEpsilon;
                 Shape *hitShape = transform_utils_get_shape(hitTr);
+                const Box *collider = rigidbody_get_collider(hitRb);
 
                 float3 vector = {unit->x * maxDist, unit->y * maxDist, unit->z * maxDist};
 
                 // solve non-dynamic rigidbodies in their model space (rotated collider)
-                const Box *collider = rigidbody_get_collider(hitRb);
-                const Matrix4x4 *invModel = transform_get_wtl(
-                    hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr);
-                rigidbody_broadphase_world_to_model(invModel,
+                Matrix4x4 invModel;
+                transform_utils_get_model_wtl(hitTr, &invModel);
+                rigidbody_broadphase_world_to_model(&invModel,
                                                     aabb,
                                                     &modelBox,
                                                     &vector,
@@ -1048,13 +1058,12 @@ size_t scene_cast_all_box(Scene *sc,
                         if (swept < 1.0f) {
                             float3_op_scale(&modelVector, swept);
 
+                            Matrix4x4 model;
+                            transform_utils_get_model_ltw(hitTr, &model);
+
                             float3 worldVector, worldNormal;
-                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
-                                                       &modelVector,
-                                                       &worldVector);
-                            transform_utils_vector_ltw(shape_get_pivot_transform(hitShape),
-                                                       &normal,
-                                                       &worldNormal);
+                            matrix4x4_op_multiply_vec_vector(&worldVector, &modelVector, &model);
+                            matrix4x4_op_multiply_vec_vector(&worldNormal, &normal, &model);
 
                             hit = (CastResult *)malloc(sizeof(CastResult));
                             hit->hitTr = hitTr;
@@ -1075,11 +1084,11 @@ size_t scene_cast_all_box(Scene *sc,
                         if (swept < 1.0f) {
                             float3_op_scale(&modelVector, swept);
 
+                            Matrix4x4 model;
+                            transform_utils_get_model_ltw(hitTr, &model);
+
                             float3 worldVector;
-                            transform_utils_vector_ltw(
-                                hitShape != NULL ? shape_get_pivot_transform(hitShape) : hitTr,
-                                &modelVector,
-                                &worldVector);
+                            matrix4x4_op_multiply_vec_vector(&worldVector, &modelVector, &model);
 
                             hit = (CastResult *)malloc(sizeof(CastResult));
                             hit->hitTr = hitTr;
@@ -1131,7 +1140,7 @@ bool scene_overlap_box(Scene *sc,
         Transform *hitLeaf;
         RigidBody *hitRb;
         Shape *s;
-        Box model;
+        Box modelBox;
         while (hit != NULL) {
             hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
             vx_assert(rtree_node_is_leaf(hit));
@@ -1141,13 +1150,12 @@ bool scene_overlap_box(Scene *sc,
 
             s = transform_utils_get_shape(hitLeaf);
             if (s != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
-                box_to_aabox2(aabb,
-                              &model,
-                              transform_get_wtl(shape_get_pivot_transform(s)),
-                              NULL,
-                              NoSquarify);
+                Matrix4x4 invModel;
+                transform_utils_get_model_wtl(hitLeaf, &invModel);
 
-                if (shape_box_overlap(s, &model, NULL)) {
+                box_to_aabox2(aabb, &modelBox, &invModel, NULL, NoSquarify);
+
+                if (shape_box_overlap(s, &modelBox, NULL)) {
                     if (results != NULL) {
                         OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult));
                         result->hitTr = hitLeaf;

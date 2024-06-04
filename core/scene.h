@@ -100,6 +100,7 @@ const float3 *scene_get_constant_acceleration(const Scene *sc);
 void scene_register_awake_box(Scene *sc, Box *b);
 void scene_register_awake_rigidbody_contacts(Scene *sc, RigidBody *rb);
 void scene_register_awake_block_box(Scene *sc,
+                                    const Transform *t,
                                     const Shape *shape,
                                     const SHAPE_COORDS_INT_T x,
                                     const SHAPE_COORDS_INT_T y,
@@ -141,6 +142,7 @@ size_t scene_cast_all_ray(Scene *sc,
                           const DoublyLinkedList *filterOutTransforms,
                           DoublyLinkedList *results);
 Block *scene_cast_ray_shape_only(Scene *sc,
+                                 const Transform *t,
                                  const Shape *sh,
                                  const Ray *worldRay,
                                  CastResult *result);

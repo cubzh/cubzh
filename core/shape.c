@@ -55,7 +55,7 @@ struct _Shape {
     MapStringFloat3 *pois_rotation; // 8 bytes
 
     Transform *transform;
-    Transform *pivot;
+    float3 *pivot;
 
     // cached world axis-aligned bounding box, may be NULL if no cache
     Box *worldAABB;
@@ -231,7 +231,7 @@ Shape *shape_make(void) {
     s->worldAABB = NULL;
 
     s->transform = transform_make_with_ptr(ShapeTransform, s, _shape_void_free);
-    s->pivot = NULL;
+    s->pivot = float3_new_zero();
 
     s->chunks = index3d_new();
     s->dirtyChunks = NULL;
@@ -351,8 +351,7 @@ Shape *shape_make_copy(Shape *const origin) {
     }
 
     if (origin->pivot != NULL) {
-        const float3 pivot = shape_get_pivot(origin);
-        shape_set_pivot(s, pivot.x, pivot.y, pivot.z);
+        *s->pivot = *origin->pivot;
     }
 
     // copy transform parameters
@@ -474,10 +473,8 @@ void shape_free(Shape *const shape) {
         shape->worldAABB = NULL;
     }
 
-    if (shape->pivot != NULL) {
-        transform_release(shape->pivot); // created in shape_set_pivot
-        shape->pivot = NULL;
-    }
+    float3_free(shape->pivot);
+    shape->pivot = NULL;
 
     index3d_flush(shape->chunks, chunk_free_func);
     index3d_free(shape->chunks);
@@ -562,7 +559,7 @@ bool shape_add_block_as_transaction(Shape *const shape,
     if (transaction_addBlock(shape->pendingTransaction, x, y, z, colorIndex)) {
         // register awake box if using per-block collisions
         if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
-            scene_register_awake_block_box(scene, shape, x, y, z);
+            scene_register_awake_block_box(scene, shape->transform, shape, x, y, z);
         }
         return true;
     } else {
@@ -595,7 +592,7 @@ bool shape_remove_block_as_transaction(Shape *const shape,
 
     // register awake box is using per-block collisions
     if (rigidbody_uses_per_block_collisions(transform_get_rigidbody(shape->transform))) {
-        scene_register_awake_block_box(scene, shape, x, y, z);
+        scene_register_awake_block_box(scene, shape->transform, shape, x, y, z);
     }
 
     return true; // block is considered removed
@@ -965,21 +962,19 @@ void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isColli
     if (s == NULL || box == NULL || aabox == NULL)
         return;
 
-    const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
-
     if (isCollider) {
         if (rigidbody_is_dynamic(shape_get_rigidbody(s))) {
             transform_utils_box_to_dynamic_collider(s->transform,
                                                     box,
                                                     aabox,
-                                                    offset,
+                                                    s->pivot,
                                                     PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify
                                                                                       : NoSquarify);
         } else {
-            transform_utils_box_to_static_collider(s->transform, box, aabox, offset, NoSquarify);
+            transform_utils_box_to_static_collider(s->transform, box, aabox, s->pivot, NoSquarify);
         }
     } else {
-        transform_utils_box_to_aabb(s->transform, box, aabox, offset, NoSquarify);
+        transform_utils_box_to_aabb(s->transform, box, aabox, s->pivot, NoSquarify);
     }
 }
 
@@ -1011,9 +1006,8 @@ void shape_get_local_aabb(const Shape *s, Box *box) {
     *box = shape_get_model_aabb(s);
 
     const Box model = shape_get_model_aabb(s);
-    const float3 *offset = s->pivot != NULL ? transform_get_local_position(s->pivot) : &float3_zero;
     transform_refresh(s->transform, false, true); // refresh mtx for intra-frame calculations
-    box_to_aabox2(&model, box, transform_get_mtx(s->transform), offset, false);
+    box_to_aabox2(&model, box, transform_get_mtx(s->transform), s->pivot, false);
 }
 
 bool shape_get_world_aabb(Shape *s, Box *box) {
@@ -1303,36 +1297,15 @@ void shape_set_pivot(Shape *s, const float x, const float y, const float z) {
         return;
     }
 
-    const bool isZero = float_isZero(x, EPSILON_ZERO) && float_isZero(y, EPSILON_ZERO) &&
-                        float_isZero(z, EPSILON_ZERO);
-
-    if (s->pivot == NULL) {
-        // avoid unnecessary pivot
-        if (isZero) {
-            return;
-        } else {
-            // add a pivot internal transform, managed by shape
-            s->pivot = transform_make_with_ptr(HierarchyTransform, s, NULL);
-            transform_set_parent(s->pivot, s->transform, false);
-        }
-    } else if (isZero) {
-        // remove unnecessary pivot
-        transform_release(s->pivot);
-        s->pivot = NULL;
-        return;
-    }
-
-    transform_set_local_position(s->pivot, -x, -y, -z);
+    float3_set(s->pivot, -x, -y, -z);
     transform_set_physics_dirty(s->transform);
 }
 
 float3 shape_get_pivot(const Shape *s) {
-    if (s == NULL || s->pivot == NULL)
+    if (s == NULL)
         return float3_zero;
 
-    const float3 *p = transform_get_local_position(s->pivot);
-    float3 np = {-p->x, -p->y, -p->z};
-    return np;
+    return (float3){-s->pivot->x, -s->pivot->y, -s->pivot->z};
 }
 
 void shape_reset_pivot_to_center(Shape *s) {
@@ -1415,11 +1388,12 @@ const float3 *shape_get_local_position(const Shape *s) {
     return transform_get_local_position(s->transform);
 }
 
-const float3 *shape_get_model_origin(const Shape *s) {
+float3 shape_get_model_origin(const Shape *s) {
     if (s == NULL)
-        return &float3_zero;
+        return float3_zero;
 
-    return transform_get_position(s->pivot != NULL ? s->pivot : s->transform);
+    const float3 *pos = transform_get_position(s->transform);
+    return (float3){pos->x + s->pivot->x, pos->y + s->pivot->y, pos->z + s->pivot->z};
 }
 
 void shape_set_rotation(Shape *s, Quaternion *q) {
@@ -1500,13 +1474,6 @@ void shape_get_lossy_scale(const Shape *s, float3 *scale) {
     transform_get_lossy_scale(s->transform, scale);
 }
 
-const Matrix4x4 *shape_get_model_matrix(const Shape *s) {
-    if (s == NULL) {
-        return NULL;
-    }
-    return transform_get_ltw(shape_get_pivot_transform(s));
-}
-
 bool shape_set_parent(Shape *s, Transform *parent, const bool keepWorld) {
     if (s == NULL) {
         return false;
@@ -1528,28 +1495,6 @@ bool shape_remove_parent(Shape *s, const bool keepWorld) {
 
 Transform *shape_get_root_transform(const Shape *s) {
     return s->transform;
-}
-
-Transform *shape_get_pivot_transform(const Shape *s) {
-    return s->pivot != NULL ? s->pivot : s->transform;
-}
-
-void shape_move_children(Shape *from, Shape *to, const bool keepWorld) {
-    if (from->pivot == NULL) {
-        transform_utils_move_children(from->transform, to->transform, keepWorld);
-    } else {
-        // move children excluding pivot
-        if (transform_get_children_count(from->transform) > 1) {
-            size_t count = 0;
-            Transform_Array children = transform_get_children_copy(from->transform, &count);
-            for (size_t i = 0; i < count; ++i) {
-                if (children[i] != from->pivot) {
-                    transform_set_parent(children[i], to->transform, keepWorld);
-                }
-            }
-            free(children);
-        }
-    }
 }
 
 uint32_t shape_count_shape_descendants(const Shape *s) {
@@ -2113,7 +2058,8 @@ float shape_box_cast(const Shape *s,
     return minSwept;
 }
 
-bool shape_ray_cast(const Shape *s,
+bool shape_ray_cast(const Transform *t,
+                    const Shape *s,
                     const Ray *worldRay,
                     float *worldDistance,
                     float3 *localImpact,
@@ -2125,8 +2071,9 @@ bool shape_ray_cast(const Shape *s,
     }
 
     // we want a ray in model space to intersect with block coordinates
-    Transform *t = shape_get_pivot_transform(s);
-    Ray *modelRay = ray_world_to_local(worldRay, t);
+    Matrix4x4 invModel;
+    transform_utils_get_model_wtl(t, &invModel);
+    Ray *modelRay = ray_transform(worldRay, &invModel);
 
     // select traversed chunks
     DoublyLinkedList *chunksQuery = doubly_linked_list_new();
@@ -2212,8 +2159,11 @@ bool shape_ray_cast(const Shape *s,
             }
 
             if (worldDistance != NULL) {
+                Matrix4x4 model;
+                transform_utils_get_model_ltw(t, &model);
+
                 float3 worldImpact;
-                transform_utils_position_ltw(t, &_localImpact, &worldImpact);
+                matrix4x4_op_multiply_vec_point(&worldImpact, &_localImpact, &model);
                 float3_op_substract(&worldImpact, worldRay->origin);
                 *worldDistance = float3_length(&worldImpact);
             }
@@ -2243,14 +2193,18 @@ bool shape_ray_cast(const Shape *s,
 }
 
 bool shape_point_overlap(const Shape *s, const float3 *world) {
-    Transform *t = shape_get_pivot_transform(s); // octree coordinates use model origin
-    float3 model;
-    transform_utils_position_wtl(t, world, &model);
+    // octree coordinates use model origin
+    Matrix4x4 invModel;
+    transform_utils_get_model_wtl(s->transform, &invModel);
+
+    float3 modelPoint;
+    matrix4x4_op_multiply_vec_point(&modelPoint, world, &invModel);
 
     Chunk *c;
-    const SHAPE_COORDS_INT3_T coords_in_shape = (SHAPE_COORDS_INT3_T){(SHAPE_COORDS_INT_T)model.x,
-                                                                      (SHAPE_COORDS_INT_T)model.y,
-                                                                      (SHAPE_COORDS_INT_T)model.z};
+    const SHAPE_COORDS_INT3_T coords_in_shape = (SHAPE_COORDS_INT3_T){
+        (SHAPE_COORDS_INT_T)modelPoint.x,
+        (SHAPE_COORDS_INT_T)modelPoint.y,
+        (SHAPE_COORDS_INT_T)modelPoint.z};
     CHUNK_COORDS_INT3_T coords_in_chunk;
     shape_get_chunk_and_coordinates(s, coords_in_shape, &c, NULL, &coords_in_chunk);
 
