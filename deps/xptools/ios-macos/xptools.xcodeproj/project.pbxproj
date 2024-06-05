@@ -935,7 +935,7 @@
 					DEBUG_LOCAL_GAME,
 					__VX_USE_LIBWEBSOCKETS,
 					"PROJECT_LUA_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
-					"PROJECT_BUNDLE_PATH=\"\\\"$SRCROOT/../../../../common/assets\\\"\"",
+					"PROJECT_BUNDLE_PATH=\"\\\"$SRCROOT/../../../../cubzh/bundle\\\"\"",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
