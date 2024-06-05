@@ -990,9 +990,6 @@ function createChat()
 		uikit = ui,
 		time = false,
 		onSubmitEmpty = function()
-			if Environment.CHAT_CONSOLE_DISPLAY == "always" then
-				return
-			end
 			hideChat()
 		end,
 		onFocus = function()
@@ -1070,6 +1067,12 @@ function showChat(input)
 end
 
 function hideChat()
+	if Environment.CHAT_CONSOLE_DISPLAY == "always" then
+		if console ~= nil and console:hasFocus() == true then
+			console:unfocus()
+		end
+		return
+	end
 	chatDisplayed = false
 	refreshChat()
 end
