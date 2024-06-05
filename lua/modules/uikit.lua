@@ -1646,6 +1646,7 @@ function createUI(system)
 		node.cursor = self:createFrame(Color.White)
 		node.cursor.Width = theme.textInputCursorWidth
 		node.cursor:setParent(textContainer)
+		node.cursor:hide()
 
 		node._width = function(self)
 			return self.border.Width
@@ -2082,7 +2083,7 @@ function createUI(system)
 			end
 
 			self.state = State.Idle
-			self.object.Tick = nil
+			self.cursor:hide()
 
 			if self.textInputUpdateListener ~= nil then
 				Client.OSTextInput:Close()
