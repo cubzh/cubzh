@@ -1587,7 +1587,11 @@ topBar.parentDidResize = function(self)
 	connBtn.Width = height
 
 	self.Width = Screen.Width
-	self.Height = System.SafeAreaTop + height
+	if self:isVisible() then
+		self.Height = System.SafeAreaTop + height
+	else
+		self.Height = System.SafeAreaTop
+	end
 	self.pos.Y = Screen.Height - self.Height
 
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width
