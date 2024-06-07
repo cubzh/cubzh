@@ -23,3 +23,5 @@
 
 # Xcode
 *.xcuserdatad
+
+deps/xptools/windows/bundle_tar_gz.hpp
