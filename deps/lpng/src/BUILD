@@ -1,3 +1,4 @@
+# deps/lpng/src
 
 cc_library(
     name = "png",
@@ -52,7 +53,7 @@ cc_library(
     includes = ["."],
     linkopts = [
             "-lm",
-            "-lz", # [gaetan] not sure this is needed
+            # "-lz", # [gaetan] not sure this is needed
         ] + select({
         "@platforms//os:android": [],
         "//conditions:default": [],
@@ -60,4 +61,3 @@ cc_library(
     visibility = ["//visibility:public"],
     # deps = ["@zlib//:zlib"],
 )
-
