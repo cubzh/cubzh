@@ -100,6 +100,10 @@ In `common/bgfx/bgfx/3rdparty/dear-imgui/imgui.h` and `common/bgfx/bgfx/3rdparty
 - add these parameters (default 1.0f & false) to AddCustomRectFontGlyph and ImFont.AddGlyph functions
 - apply parameters inside AddGlyph function (scale x0/y0/x1/y1/advance_x)
 
+### MVS compilation fix
+
+Rename the bgfx backend for dear-imgui from `imgui.h/cpp` to `bgfx-imgui.h/cpp` to avoid conflicts when building with MVS with a file of the same name in dear-imgui.
+
 ## Bgfx tools makefile
 
 Current tools makefile logic tries to automatically set the OS variable and it doesn't work correctly. In `bgfx/scripts/tools.mk`, comment out that logic entirely and replace it with:
