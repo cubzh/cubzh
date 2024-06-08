@@ -3,7 +3,7 @@ local mod = {}
 -- no margin when Screen.Width below NO_MARGIN_SCREEN_WIDTH
 local NO_MARGIN_SCREEN_WIDTH = 400
 local MAX_WIDTH = 600
-local ANIMATION_TIME = 0.3
+local ANIMATION_TIME = 0.2
 
 conf = require("config")
 theme = require("uitheme").current
@@ -26,6 +26,7 @@ mod.create = function(self, config)
 
 	local drawer = ui:createFrame(Color.White)
 	drawer.updateConfig = _updateConfig
+	drawer.clear = _clear
 
 	privateFields[drawer] = {
 		display = "default", -- "default", "expanded", "minimized"
@@ -79,9 +80,37 @@ function _updateConfig(self, config)
 		return
 	end
 
+	local needsLayout = false
+	if config.layoutContent ~= nil then
+		needsLayout = true
+	end
+
 	config = conf:merge(fields.config, config)
 
 	fields.config = config
+
+	if needsLayout then
+		self:parentDidResize()
+	end
+end
+
+function _clear(self)
+	local fields = privateFields[self]
+	if fields == nil then
+		error("drawer:clear(config) should be called with `:`, on a drawer instance", 2)
+		return
+	end
+
+	local toRemove = {}
+	for _, child in pairs(self.children) do
+		table.insert(toRemove, child)
+	end
+
+	local child = table.remove(toRemove)
+	while child ~= nil do
+		child:remove()
+		child = table.remove(toRemove)
+	end
 end
 
 return mod

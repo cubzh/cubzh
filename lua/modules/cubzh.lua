@@ -12,7 +12,7 @@ Client.OnStart = function()
 	Sky.AbyssColor = Color(120, 0, 178)
 	Sky.HorizonColor = Color(106, 73, 243)
 	Sky.SkyColor = Color(121, 169, 255)
-	Sky.LightColor = Color(0, 0, 0)
+	Sky.LightColor = Color(100, 100, 100)
 
 	titleScreen():show()
 
@@ -28,15 +28,16 @@ Client.OnStart = function()
 
 	light = Light()
 	light.Color = Color(150, 150, 200)
-	light.Intensity = 0.9
+	-- light.Color = Color(200, 200, 230)
+	light.Intensity = 1.0
 	light.CastsShadows = true
 	light.On = true
 	light.Type = LightType.Directional
 	World:AddChild(light)
 	light.Rotation:Set(math.rad(20), math.rad(20), 0)
 
-	Light.Ambient.SkyLightFactor = 0
-	Light.Ambient.DirectionalLightFactor = 1.0
+	Light.Ambient.SkyLightFactor = 0.2
+	Light.Ambient.DirectionalLightFactor = 0.5
 end
 
 -- Client.OnWorldObjectLoad = function(obj)

@@ -9,6 +9,7 @@ local itemGrid = {}
 local api = require("api")
 local theme = require("uitheme").current
 local bundle = require("bundle")
+local conf = require("config")
 
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
@@ -38,51 +39,28 @@ itemGrid.create = function(_, config)
 		ignoreCategoryOnSearch = false,
 		--
 		uikit = require("uikit"),
+		--
+		backgroundColor = Color(40, 40, 40),
 	}
 
-	-- config validation
-	if config.repo ~= nil then
-		if type(config.repo) ~= Type.string or #config.repo == 0 then
-			error("item_grid:create(config): config.repo must be a non-empty string, or nil", 2)
-		end
+	local ok, err = pcall(function()
+		config = conf:merge(_config, config, {
+			acceptTypes = {
+				repo = { "string" },
+				categories = { "table" },
+				worldsFilter = { "string" },
+			},
+		})
+	end)
+	if not ok then
+		error("item_grid:create(config) - config error: " .. err, 2)
 	end
-
-	if config ~= nil and type(config) == Type.table then
-		if config.searchBar ~= nil then
-			_config.searchBar = config.searchBar
-		end
-		if config.advancedFilters ~= nil then
-			_config.advancedFilters = config.advancedFilters
-		end
-		if config.categories ~= nil then
-			_config.categories = config.categories
-		end
-		if config.type ~= nil then
-			_config.type = config.type
-		end
-		if config.repo ~= nil then
-			_config.repo = config.repo
-		end
-		if config.minBlocks ~= nil then
-			_config.minBlocks = config.minBlocks
-		end
-		if config.worldsFilter ~= nil and type(config.worldsFilter) == Type.string then
-			_config.worldsFilter = config.worldsFilter
-		end
-		if config.ignoreCategoryOnSearch ~= nil then
-			_config.ignoreCategoryOnSearch = config.ignoreCategoryOnSearch
-		end
-		if type(config.uikit) == type(_config.uikit) then
-			_config.uikit = config.uikit
-		end
-	end
-	config = _config
 
 	local ui = config.uikit
 
 	local sortBy = "likes:desc"
 
-	local grid = ui:createFrame() -- Color(255,0,0)
+	local grid = ui:createFrame(Color(40, 40, 40)) -- Color(255,0,0)
 	local search = ""
 
 	local timers = {}
@@ -709,6 +687,7 @@ itemGrid.create = function(_, config)
 					print("Error: " .. err)
 					return
 				end
+				print("GOT ITEMS:", #items)
 				for _, itm in ipairs(items) do
 					itm.type = "item"
 				end
@@ -761,6 +740,7 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.setGridEntries = function(self, entries)
+		print("setGridEntries - nb entries:", #entries)
 		if self ~= grid then
 			error("item_grid:setGridEntries(entries): use `:`", 2)
 		end

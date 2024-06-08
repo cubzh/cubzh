@@ -13,6 +13,7 @@ signup.startFlow = function(self, config)
 		checkAppVersionAndCredentialsStep = function() end,
 		signUpOrLoginStep = function() end,
 		avatarPreviewStep = function() end,
+		avatarEditorStep = function() end,
 		loginStep = function() end,
 		loginSuccess = function() end,
 	}
@@ -31,8 +32,6 @@ signup.startFlow = function(self, config)
 	local flow = require("flow")
 	local drawerModule = require("drawer")
 	local ease = require("ease")
-	local uiAvatar = require("ui_avatar")
-	local avatarModule = require("avatar")
 	local loc = require("localize")
 	local str = require("str")
 
@@ -48,54 +47,6 @@ signup.startFlow = function(self, config)
 	local drawer
 	local loginBtn
 
-	-- local bundle = require("bundle")
-	-- local hairs = {
-	-- 	bundle:Shape("shapes/signup_demo/air_goggles"),
-	-- 	bundle:Shape("shapes/signup_demo/hair_pink_blue"),
-	-- 	bundle:Shape("shapes/signup_demo/lofi_girl_head"),
-	-- 	bundle:Shape("shapes/signup_demo/pink_pop_hair"),
-	-- 	bundle:Shape("shapes/signup_demo/pirate_captain_hat"),
-	-- 	bundle:Shape("shapes/signup_demo/santa_hair"),
-	-- }
-
-	-- local jackets = {
-	-- 	bundle:Shape("shapes/signup_demo/astronaut_top"),
-	-- 	bundle:Shape("shapes/signup_demo/cute_top"),
-	-- 	bundle:Shape("shapes/signup_demo/lab_coat"),
-	-- 	bundle:Shape("shapes/signup_demo/princess_dresstop"),
-	-- 	bundle:Shape("shapes/signup_demo/red_robot_suit"),
-	-- 	bundle:Shape("shapes/signup_demo/sweater"),
-	-- }
-
-	-- local pants = {
-	-- 	bundle:Shape("shapes/signup_demo/overalls_pants"),
-	-- 	bundle:Shape("shapes/signup_demo/jorts"),
-	-- 	bundle:Shape("shapes/signup_demo/red_crewmate_pants"),
-	-- 	bundle:Shape("shapes/signup_demo/stripe_pants2"),
-	-- }
-
-	-- local boots = {
-	-- 	bundle:Shape("shapes/signup_demo/astronaut_shoes"),
-	-- 	bundle:Shape("shapes/signup_demo/flaming_boots"),
-	-- 	bundle:Shape("shapes/signup_demo/kids_shoes"),
-	-- 	bundle:Shape("shapes/signup_demo/pirate_boots_01"),
-	-- }
-
-	-- local yaw = math.rad(-190)
-	-- local pitch = 0
-	-- local function drag(dx, dy)
-	-- 	yaw = yaw - dx * 0.01
-	-- 	pitch = math.min(math.rad(45), math.max(math.rad(-45), pitch + dy * 0.01))
-
-	-- 	-- avatar.body.pivot.LocalRotation = Rotation(pitch, 0, 0) * Rotation(0, yaw, 0)
-	-- 	if avatarContainer then
-	-- 		avatarContainer.LocalRotation = Rotation(pitch, 0, 0) * Rotation(0, yaw, 0)
-	-- 	end
-	-- end
-
-	-- local dragListener
-	-- local changeTimer
-
 	local function showBackButton()
 		if backButton == nil then
 			backButton = ui:createButton("⬅️", { textSize = "default" })
@@ -104,15 +55,15 @@ signup.startFlow = function(self, config)
 				ease:cancel(self)
 				self.pos = {
 					padding,
-					Screen.Height - self.Height - padding,
+					Screen.Height - Screen.SafeArea.Top - self.Height - padding,
 				}
 			end
 			backButton.onRelease = function(self)
 				signupFlow:back()
 			end
-			backButton.pos = { -backButton.Width, Screen.Height - backButton.Height - padding }
+			backButton.pos = { -backButton.Width, Screen.Height - Screen.SafeArea.Top - backButton.Height - padding }
 			ease:outSine(backButton, animationTime).pos =
-				Number3(padding, Screen.Height - backButton.Height - padding, 0)
+				Number3(padding, Screen.Height - Screen.SafeArea.Top - backButton.Height - padding, 0)
 		end
 	end
 
@@ -566,45 +517,95 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
+	local createAvatarEditorStep = function()
+		local avatarEditor
+
+		local step = flow:createStep({
+			onEnter = function()
+				config.avatarEditorStep()
+
+				showBackButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				avatarEditor = require("ui_avatar_editor"):create({ ui = ui })
+
+				avatarEditor:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						-- self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
+						-- self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
+
+						-- theme.paddingBig
+						avatarEditor.Width = self.Width - padding * 2
+						avatarEditor.Height = self.Height - padding * 2 - Screen.SafeArea.Bottom
+
+						avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+					end,
+				})
+
+				drawer:show()
+			end,
+			onExit = function()
+				drawer:hide()
+			end,
+			onRemove = function() end,
+		})
+
+		return step
+	end
+
 	local createAvatarPreviewStep = function()
 		local step = flow:createStep({
 			onEnter = function()
 				config.avatarPreviewStep()
 
-				-- BACK BUTTON
 				showBackButton()
 
 				-- DRAWER
-				if drawer == nil then
+				if drawer ~= nil then
+					drawer:clear()
+				else
 					drawer = drawerModule:create({ ui = ui })
-
-					local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
-					okBtn:setColor(theme.colorPositive)
-					okBtn:setParent(drawer)
-
-					local text =
-						ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
-							color = Color.Black,
-						})
-					text:setParent(drawer)
-
-					drawer:updateConfig({
-						layoutContent = function(self)
-							-- here, self.Height can be reduced, but not increased
-							-- TODO: enforce this within drawer module
-
-							text.object.MaxWidth = math.min(300, self.Width - theme.paddingBig * 2)
-
-							self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
-							self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
-
-							okBtn.pos =
-								{ self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + theme.paddingBig }
-							text.pos =
-								{ self.Width * 0.5 - text.Width * 0.5, okBtn.pos.Y + okBtn.Height + theme.paddingBig }
-						end,
-					})
 				end
+
+				local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
+				okBtn:setColor(theme.colorPositive)
+				okBtn:setParent(drawer)
+				okBtn.onRelease = function()
+					signupFlow:push(createAvatarEditorStep())
+				end
+
+				local text = ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
+					color = Color.Black,
+				})
+				text:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						text.object.MaxWidth = math.min(300, self.Width - theme.paddingBig * 2)
+
+						self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
+						self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
+
+						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + theme.paddingBig }
+						text.pos =
+							{ self.Width * 0.5 - text.Width * 0.5, okBtn.pos.Y + okBtn.Height + theme.paddingBig }
+					end,
+				})
+
 				drawer:show()
 			end,
 			-- exit = function(continue)
