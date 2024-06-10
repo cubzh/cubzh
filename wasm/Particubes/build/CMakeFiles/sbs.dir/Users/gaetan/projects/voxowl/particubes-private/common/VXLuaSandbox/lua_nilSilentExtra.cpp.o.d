@@ -1,0 +1,36 @@
+CMakeFiles/sbs.dir/Users/gaetan/projects/voxowl/particubes-private/common/VXLuaSandbox/lua_nilSilentExtra.cpp.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/common/VXLuaSandbox/lua_nilSilentExtra.cpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/VXLuaSandbox/lua_nilSilentExtra.hpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lua.hpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lua.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config_site \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/__stddef_max_align_t.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/luaconf.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lualib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lauxlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stdio.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdio.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/wasi/api.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/VXLuaSandbox/lua_utils.hpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/cstdint \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__assert \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__verbose_abort \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__availability \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/deps/xptools/include/vxlog.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/config.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/assert.h
