@@ -284,7 +284,12 @@ std::string vx::fs::getBundleFilePath(const std::string& relFilePath) {
 
 FILE *vx::fs::openBundleFile(std::string filename, std::string mode) {
     const std::string absPath = getBundleFilePath(filename);
-    return openFile(absPath, mode);
+    FILE* result = openFile(absPath, mode);
+    if (result == nullptr) {
+        // try within storage (where we put dynamically loaded "bundle" files).
+        result = openStorageFile(std::string("bundle/") + filename, mode);
+    }
+    return result;
 }
 
 FILE *vx::fs::openStorageFile(std::string relFilePath, std::string mode, size_t writeSize) {

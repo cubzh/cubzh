@@ -106,6 +106,7 @@ FACE_INDEX_INT_T utils_face_swapped(const FACE_INDEX_INT_T face) {
             return FACE_FRONT;
         default:
             vx_assert(false);
+            return FACE_NONE;
     }
 }
 

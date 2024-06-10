@@ -16,6 +16,12 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 COMBO_BOX_SELECTOR_SPEED = 400
 
+SCROLL_LOAD_MARGIN = 50
+SCROLL_UNLOAD_MARGIN = 100
+SCROLL_DEFAULT_RIGIDITY = 0.99
+SCROLL_TIME_TO_TARGET = 0.1
+SCROLL_EPSILON = 0.01
+
 -- ENUMS
 
 local State = {
@@ -1646,6 +1652,7 @@ function createUI(system)
 		node.cursor = self:createFrame(Color.White)
 		node.cursor.Width = theme.textInputCursorWidth
 		node.cursor:setParent(textContainer)
+		node.cursor:hide()
 
 		node._width = function(self)
 			return self.border.Width
@@ -2082,7 +2089,7 @@ function createUI(system)
 			end
 
 			self.state = State.Idle
-			self.object.Tick = nil
+			self.cursor:hide()
 
 			if self.textInputUpdateListener ~= nil then
 				Client.OSTextInput:Close()
@@ -2135,12 +2142,32 @@ function createUI(system)
 		return node
 	end
 
-	ui.createScrollArea = function(self, color, config)
-		local node = self:createFrame(color)
-		node.isScrollArea = true
+	ui.createScroll = function(self, config)
+		local defaultConfig = {
+			backgroundColor = Color(0, 0, 0, 0),
+			direction = "down", -- can also be "up", "left", "right"
+			cellPadding = 0,
+			rigidity = SCROLL_DEFAULT_RIGIDITY,
+			loadCell = function(_) -- index
+				return nil
+			end,
+			unloadCell = function(_, _) -- index, cell
+				return nil
+			end,
+		}
 
-		local cellPadding = config.cellPadding or 0
-		local direction = config.direction or "down"
+		config = conf:merge(defaultConfig, config)
+
+		local down = config.direction == "down"
+		local up = config.direction == "up"
+		local right = config.direction == "right"
+		local left = config.direction == "left"
+		local vertical = down or up
+		local horizontal = right or left
+
+		local node = self:createFrame(config.backgroundColor)
+		node.isScrollArea = true
+		node.IsMask = true
 
 		local listeners = {}
 		local l
@@ -2149,191 +2176,304 @@ function createUI(system)
 		local dragging = false
 		local dragPointerIndex = nil -- pointerIndex used to drag
 
-		local container = self:createFrame()
+		local cellPadding = config.cellPadding
+
+		local container = self:createNode()
 		container:setParent(node)
-		container.IsMask = true
 		node.container = container
 
+		-- loaed cells
 		local cells = {}
-		local cachedCellsHeight = {}
 
-		node.nbCells = 0
+		-- cache for start position and size of each cell that's been loaded once
+		local cache = {
+			contentWidth = 0,
+			contentHeight = 0,
+			cellInfo = {}, -- each entry: { top, bottom, left, right, width, height }
+		}
 
-		local maxY = 0
-		node.scrollPosition = 0
+		local scrollPosition = 0
+		local targetScrollPosition = 0
 
-		local scrollHandle = self:createFrame(Color(0, 0, 0, 0)) -- TODO: work on handle
+		local cell
+		local cellInfo
+		local previousCellInfo
+		local cellIndex
+
+		local loadTop
+		local loadBottom
+		local unloadTop
+		local unloadBottom
+
+		local loadRight
+		local loadLeft
+		local unloadRight
+		local unloadLeft
+
+		local scrollHandle = self:createFrame(Color(0, 0, 0, 0.5))
 		scrollHandle:setParent(node)
 
 		node.refresh = function()
-			local y
-			if direction == "down" then
-				y = container.Height + node.scrollPosition
-			else
-				y = node.scrollPosition
+			if not vertical and not horizontal then
+				return
 			end
-			maxY = 0
-			local indexesToUnload = {}
-			local indexesToLoad = {}
-			for k = 1, node.nbCells do
-				local v = cells[k]
-				local height = cachedCellsHeight[k]
 
-				-- place cell
-				if direction == "down" then
-					y = y - height
-					if v then
-						v.pos = { 0, y }
+			if vertical then
+				container.pos.X = 0
+			else -- horizontal
+				container.pos.Y = 0
+			end
+
+			if down then
+				container.pos.Y = node.Height + scrollPosition
+
+				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
+				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
+
+				unloadTop = -scrollPosition + SCROLL_UNLOAD_MARGIN
+				unloadBottom = loadTop - node.Height - SCROLL_UNLOAD_MARGIN * 2
+			elseif up then
+				container.pos.Y = 0 - scrollPosition
+
+				loadBottom = scrollPosition - SCROLL_LOAD_MARGIN
+				loadTop = loadBottom + node.Height + SCROLL_LOAD_MARGIN * 2
+
+				unloadBottom = scrollPosition - SCROLL_UNLOAD_MARGIN
+				unloadTop = loadBottom + node.Height + SCROLL_UNLOAD_MARGIN * 2
+			elseif right then
+				container.pos.X = 0 - scrollPosition
+
+				loadLeft = scrollPosition - SCROLL_LOAD_MARGIN
+				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
+
+				unloadLeft = scrollPosition - SCROLL_UNLOAD_MARGIN
+				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
+			elseif left then
+				container.pos.X = node.Width + scrollPosition
+
+				loadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN
+				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
+
+				unloadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN * 2
+				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
+			end
+
+			cellIndex = 1
+			cellInfo = nil
+			previousCellInfo = nil
+
+			if vertical then
+				while true do
+					cellInfo = cache.cellInfo[cellIndex]
+
+					if cellInfo == nil then
+						cell = config.loadCell(cellIndex)
+						if cell == nil then
+							-- reached the end of cells
+							break
+						end
+						cellInfo = { height = cell.Height }
+						if previousCellInfo ~= nil then
+							if down then
+								cellInfo.top = previousCellInfo.bottom - cellPadding
+							else -- up
+								cellInfo.top = previousCellInfo.top + cellPadding + cellInfo.height
+							end
+						else -- first cell
+							if down then
+								cellInfo.top = 0
+							else -- up
+								cellInfo.top = cellInfo.height
+							end
+						end
+
+						cellInfo.bottom = cellInfo.top - cellInfo.height
+						cache.cellInfo[cellIndex] = cellInfo
+
+						cells[cellIndex] = cell
+						cell:setParent(container)
+						cell.pos.Y = cellInfo.bottom
+						cell.pos.X = 0
 					end
-					y = y - cellPadding
-				else
-					if v then
-						v.pos = { 0, y }
+
+					previousCellInfo = cellInfo
+
+					if
+						(cellInfo.bottom >= loadBottom and cellInfo.bottom <= loadTop)
+						or (cellInfo.top >= loadBottom and cellInfo.top <= loadTop)
+					then
+						cell = cells[cellIndex]
+						if cell == nil then
+							cell = config.loadCell(cellIndex)
+							-- here if cell == nil, it means cell already loaded once now gone
+							-- let's just not display anything in this area.
+							if cell ~= nil then
+								cell:setParent(container)
+								cell.pos.Y = cellInfo.bottom
+								cell.pos.X = 0
+							end
+						end
+					elseif cellInfo.top <= unloadBottom and cellInfo.bottom >= unloadTop then
+						cell = cells[cellIndex]
+						if cell ~= nil then
+							config.unloadCell(cellIndex, cell)
+							cells[cellIndex] = nil
+						end
+
+						if down and cellInfo.top <= unloadBottom then
+							break -- no need to go further
+						elseif up and cellInfo.bottom >= unloadTop then
+							break -- no need to go further
+						end
 					end
-					y = y + height
-					y = y + cellPadding
-				end
 
-				-- unload if out of area
-				if v then
-					if y > node.Height * 2 or y < -node.Height * 1.5 then
-						table.insert(indexesToUnload, k)
+					cellIndex = cellIndex + 1
+				end
+			else -- horizontal
+				while true do
+					cellInfo = cache.cellInfo[cellIndex]
+
+					if cellInfo == nil then
+						cell = config.loadCell(cellIndex)
+						if cell == nil then
+							-- reached the end of cells
+							break
+						end
+						cellInfo = { width = cell.Width }
+						if cache.contentWidth == 0 then
+							cache.contentWidth = cellInfo.width
+						else
+							cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
+						end
+
+						if previousCellInfo ~= nil then
+							if right then
+								cellInfo.left = previousCellInfo.right + cellPadding
+							else -- left
+								cellInfo.left = previousCellInfo.left - cellPadding + cellInfo.width
+							end
+						else -- first cell
+							if right then
+								cellInfo.left = 0
+							else -- left
+								cellInfo.left = -cellInfo.width
+							end
+						end
+
+						cellInfo.right = cellInfo.left + cellInfo.width
+						cache.cellInfo[cellIndex] = cellInfo
+
+						cells[cellIndex] = cell
+						cell:setParent(container)
+						cell.pos.Y = 0
+						cell.pos.X = cellInfo.left
 					end
-				-- load if back in area
-				elseif y <= node.Height * 2 and y >= -node.Height then
-					indexesToLoad[k] = true
-				end
 
-				-- compute maxY
-				if maxY == 0 then
-					maxY = height
-				elseif k < node.nbCells then
-					maxY = maxY + height + cellPadding
-				end
-			end
+					previousCellInfo = cellInfo
 
-			if direction == "up" then
-				maxY = -maxY - cellPadding + node.Height - (cachedCellsHeight[#cachedCellsHeight] or 0)
-			elseif maxY > node.Height then
-				maxY = maxY - node.Height + cachedCellsHeight[node.nbCells] + cellPadding
-			else -- no scroll, content is not high enough
-				maxY = 0
-			end
+					if
+						(cellInfo.left >= loadLeft and cellInfo.left <= loadRight)
+						or (cellInfo.right >= loadLeft and cellInfo.right <= loadRight)
+					then
+						cell = cells[cellIndex]
+						if cell == nil then
+							cell = config.loadCell(cellIndex)
+							-- here if cell == nil, it means cell already loaded once now gone
+							-- let's just not display anything in this area.
+							if cell ~= nil then
+								cell:setParent(container)
+								cell.pos.Y = 0
+								cell.pos.X = cellInfo.left
+							end
+						end
+					elseif cellInfo.right <= unloadLeft and cellInfo.left >= unloadRight then
+						cell = cells[cellIndex]
+						if cell ~= nil then
+							config.unloadCell(cellIndex, cell)
+							cells[cellIndex] = nil
+						end
 
-			-- load up to one page
-			if direction == "down" then
-				if y >= -node.Height then
-					indexesToLoad[node.nbCells + 1] = true
-				end
-			elseif direction == "up" then
-				if y <= 2 * node.Height then
-					indexesToLoad[node.nbCells + 1] = true
-				end
-			end
+						if right and cellInfo.left >= unloadRight then
+							break -- no need to go further
+						elseif left and cellInfo.right <= unloadLeft then
+							break -- no need to go further
+						end
+					end
 
-			local loadedCells = false
-			for k, _ in pairs(indexesToLoad) do
-				local newCell = config.loadCell(k)
-				if newCell == nil then
-					break
-				end
-				node:pushCell(newCell, k, false) -- no refresh yet
-				loadedCells = true
-			end
-
-			for _, k in ipairs(indexesToUnload) do
-				if cells[k] then
-					-- unload if too far from screen
-					config.unloadCell(cells[k])
-					cells[k] = nil
+					cellIndex = cellIndex + 1
 				end
 			end
+		end
 
-			if loadedCells then
-				node:refresh() -- refresh the whole list with loaded cells
-			end
-
-			-- refresh scrollHandle
-			if (direction == "up" and maxY < 0) or (direction == "down" and maxY >= node.Height) then
-				scrollHandle:show()
-				scrollHandle.Width = 30
-				scrollHandle.Height = math.min(node.Height, math.max(25, 100 / math.abs(maxY) * node.Height))
-				local posY
-				if direction == "down" then
-					posY = node.Height - scrollHandle.Height - node.Height * math.abs(node.scrollPosition / maxY)
-				elseif direction == "up" then
-					posY = (node.Height - scrollHandle.Height) * math.abs(node.scrollPosition / maxY)
-				end
-				scrollHandle.pos = {
-					node.Width - scrollHandle.Width,
-					posY,
-				}
-			else
-				scrollHandle:hide()
+		node.applyScrollDelta = function(_, dx, dy)
+			if vertical then
+				node:setScrollPosition(targetScrollPosition + dy)
+			elseif horizontal then
+				node:setScrollPosition(targetScrollPosition - dx)
 			end
 		end
 
 		-- set scroll position
 		node.setScrollPosition = function(_, newPosition)
-			if direction == "down" then
-				node.scrollPosition = math.min(maxY, math.max(0, newPosition))
-			elseif direction == "up" then
-				node.scrollPosition = math.min(0, math.max(maxY, newPosition))
+			if down then
+				newPosition = math.min(-100, math.max(0, newPosition))
+			elseif up then
+				newPosition = math.min(0, math.max(100, newPosition))
+			elseif right then
+				local limit = cache.contentWidth - node.Width
+				if limit < 0 then
+					limit = 0
+				end
+				newPosition = math.max(0, math.min(limit, newPosition)) -- correct
+			elseif left then
+				newPosition = math.min(100, math.max(-100, newPosition))
 			end
-			node:refresh()
+
+			targetScrollPosition = newPosition
 		end
 
 		node.pushFront = function(_, cell)
-			for i = node.nbCells + 1, 2, -1 do
-				cells[i] = cells[i - 1]
-				cachedCellsHeight[i] = cachedCellsHeight[i - 1]
-			end
-			node.nbCells = node.nbCells + 1
-			node:pushCell(cell, 1)
+			-- for i = node.nbCells + 1, 2, -1 do
+			-- 	cells[i] = cells[i - 1]
+			-- 	cachedCellHeights[i] = cachedCellHeights[i - 1]
+			-- end
+			-- node.nbCells = node.nbCells + 1
+			-- node:pushCell(cell, 1)
 		end
 
 		node.flush = function(_)
-			for i = 1, node.nbCells do
-				if cells[i] then
-					config.unloadCell(cells[i])
-				end
-			end
-			node.nbCells = 0
-			cells = {}
-			cachedCellsHeight = {}
+			-- for i = 1, node.nbCells do
+			-- 	if cells[i] then
+			-- 		config.unloadCell(cells[i])
+			-- 	end
+			-- end
+			-- node.nbCells = 0
+			-- cells = {}
+			-- cachedCellHeights = {}
 		end
 
 		-- add cell at index, called automatically after onLoad callback
 		node.pushCell = function(_, cell, index, needRefresh)
-			needRefresh = needRefresh == nil and true or needRefresh
-			if cell == nil then
-				return
-			end
-			if index == nil then
-				index = node.nbCells + 1
-			end
-			cells[index] = cell
-			cell:setParent(container)
-			cachedCellsHeight[index] = cell.Height
-			if index > node.nbCells then
-				node.nbCells = index
-			end
-			if needRefresh then
-				node:refresh()
-			end
+			-- needRefresh = needRefresh == nil and true or needRefresh
+			-- if cell == nil then
+			-- 	return
+			-- end
+			-- if index == nil then
+			-- 	index = node.nbCells + 1
+			-- end
+			-- cells[index] = cell
+			-- cell:setParent(container)
+			-- cachedCellHeights[index] = cell.Height
+			-- if index > node.nbCells then
+			-- 	node.nbCells = index
+			-- end
+			-- if needRefresh then
+			-- 	node:refresh()
+			-- end
 		end
 
-		container.parentDidResize = function()
-			container.Width = node.Width
-			container.Height = node.Height
-			node:setScrollPosition(0)
-		end
-
-		local scrollFrame = self:createFrame()
-		scrollFrame:setParent(node)
-		scrollFrame.parentDidResize = function()
-			scrollFrame.Width = node.Width
-			scrollFrame.Height = node.Height
+		node.parentDidResizeSystem = function(self)
+			self:refresh()
 		end
 
 		node.dragging = function()
@@ -2372,6 +2512,19 @@ function createUI(system)
 			return (x >= leftX and x <= rightX and y >= bottomY and y <= topY)
 		end
 
+		l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			if targetScrollPosition ~= scrollPosition then
+				scrollPosition = scrollPosition
+					+ (targetScrollPosition - scrollPosition) * config.rigidity * dt * 1.0 / SCROLL_TIME_TO_TARGET
+				if math.abs(scrollPosition - targetScrollPosition) < SCROLL_EPSILON then
+					scrollPosition = targetScrollPosition
+				end
+				-- NOTE: possible optimization: refresh content less often, only the position
+				node:refresh()
+			end
+		end, { system = system == true and System or nil, topPriority = true })
+		table.insert(listeners, l)
+
 		l = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
 			if node:containsPointer(pe) then
 				dragPointerIndex = pe.Index
@@ -2401,6 +2554,8 @@ function createUI(system)
 		end, { system = system == true and System or nil, topPriority = false })
 		table.insert(listeners, l)
 
+		-- TODO: scroll should remain under pointer,
+		-- not the case currently as we simply apply delta and cap position
 		l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
 			if pe.Index ~= dragPointerIndex then
 				return
@@ -2418,7 +2573,8 @@ function createUI(system)
 				-- end
 			end
 			if dragging then
-				node:setScrollPosition(node.scrollPosition + pe.DY)
+				node:applyScrollDelta(pe.DX, pe.DY)
+				return true -- catch event
 			end
 		end, { system = system == true and System or nil, topPriority = true })
 		table.insert(listeners, l)
@@ -2433,7 +2589,7 @@ function createUI(system)
 				if not hovering then
 					return false
 				end
-				node:setScrollPosition(node.scrollPosition + delta)
+				node:applyScrollDelta(delta, delta)
 				return true
 			end, { system = system == true and System or nil, topPriority = true })
 			table.insert(listeners, l)
@@ -2446,6 +2602,7 @@ function createUI(system)
 			listeners = {}
 		end
 
+		node:refresh()
 		return node
 	end
 

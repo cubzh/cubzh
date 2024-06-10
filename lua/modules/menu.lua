@@ -713,6 +713,7 @@ actionColumn:parentDidResize()
 
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
 topBar:setParent(background)
+topBar:hide()
 
 topBarBtnPress = function(self)
 	self.Color = Color(0, 0, 0, 0.5)
@@ -1052,7 +1053,7 @@ function refreshChat()
 end
 
 function showChat(input)
-	if System.Authenticated == false then
+	if System.Authenticated == false and Environment.USER_AUTH ~= "disabled" then
 		return
 	end
 	chatDisplayed = true
@@ -1066,6 +1067,12 @@ function showChat(input)
 end
 
 function hideChat()
+	if Environment.CHAT_CONSOLE_DISPLAY == "always" then
+		if console ~= nil and console:hasFocus() == true then
+			console:unfocus()
+		end
+		return
+	end
 	chatDisplayed = false
 	refreshChat()
 end
@@ -1580,7 +1587,11 @@ topBar.parentDidResize = function(self)
 	connBtn.Width = height
 
 	self.Width = Screen.Width
-	self.Height = System.SafeAreaTop + height
+	if self:isVisible() then
+		self.Height = System.SafeAreaTop + height
+	else
+		self.Height = System.SafeAreaTop
+	end
 	self.pos.Y = Screen.Height - self.Height
 
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width
@@ -2009,8 +2020,10 @@ LocalEvent:Listen(LocalEvent.Name.KeyboardInput, function(_, keyCode, _, down)
 				menu:Show()
 			end
 		elseif keyCode == codes.RETURN or keyCode == codes.NUMPAD_RETURN then
+			keysDown[keyCode] = false
 			showChat("")
 		elseif keyCode == codes.SLASH then
+			keysDown[keyCode] = false
 			showChat("/")
 		end
 	end
@@ -2084,7 +2097,7 @@ LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
 
 	if updates.outfit == true then
 		avatar:remove()
-		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
+		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
 		avatar.parentDidResize = btnContentParentDidResize
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()
@@ -2591,6 +2604,9 @@ function hideTopBar()
 end
 
 function showTopBar()
+	if Environment.CUBZH_MENU == "disabled" then
+		return
+	end
 	topBar:show()
 end
 
@@ -2602,39 +2618,50 @@ function showBottomBar()
 	bottomBar:show()
 end
 
+if Environment.CHAT_CONSOLE_DISPLAY == "always" then
+	chatDisplayed = true
+	refreshChat()
+end
+
 if System.Authenticated then
 	showTopBar()
 	hideBottomBar()
 else
-	showTitleScreen()
-	local signupFlow = require("signup"):startFlow({
-		ui = ui,
-		avatarPreviewStep = function()
-			LocalEvent:Send("signup_flow_avatar_preview")
-			hideTitleScreen()
-			hideBottomBar()
-		end,
-		loginStep = function()
-			LocalEvent:Send("signup_flow_login")
-			hideTitleScreen()
-			hideBottomBar()
-		end,
-		signUpOrLoginStep = function()
-			LocalEvent:Send("signup_flow_start_or_login")
-			showTitleScreen()
-			showBottomBar()
-		end,
-		loginSuccess = function()
-			LocalEvent:Send("signup_flow_login_success")
-			hideTitleScreen()
-			showTopBar()
-			hideBottomBar()
-			if activeFlow ~= nil then
-				activeFlow:remove()
-			end
-		end,
-	})
-	activeFlow = signupFlow
+	if Environment.USER_AUTH == "disabled" then
+		hideBottomBar()
+		hideTitleScreen()
+	else
+		showTitleScreen()
+		local signupFlow = require("signup"):startFlow({
+			ui = ui,
+			avatarPreviewStep = function()
+				LocalEvent:Send("signup_flow_avatar_preview")
+				hideTitleScreen()
+				hideBottomBar()
+			end,
+			loginStep = function()
+				LocalEvent:Send("signup_flow_login")
+				hideTitleScreen()
+				hideBottomBar()
+			end,
+			signUpOrLoginStep = function()
+				LocalEvent:Send("signup_flow_start_or_login")
+				showTitleScreen()
+				showBottomBar()
+			end,
+			loginSuccess = function()
+				LocalEvent:Send("signup_flow_login_success")
+				hideTitleScreen()
+				showTopBar()
+				hideBottomBar()
+				authCompleted()
+				if activeFlow ~= nil then
+					activeFlow:remove()
+				end
+			end,
+		})
+		activeFlow = signupFlow
+	end
 end
 
 getWorldInfoReq = nil
@@ -2684,7 +2711,7 @@ Timer(0.1, function()
 		connect()
 
 		avatar:remove()
-		avatar = uiAvatar:getHeadAndShoulders(Player.Username, cubzhBtn.Height, nil, ui)
+		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
 		avatar.parentDidResize = btnContentParentDidResize
 		avatar:setParent(profileFrame)
 		topBar:parentDidResize()

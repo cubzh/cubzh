@@ -213,6 +213,10 @@ FILE *vx::fs::openBundleFile(std::string relFilePath, std::string mode) {
     std::string absPath = _getAbsBundlePath() + "\\" + relFilePath;
     FILE *fd = nullptr;
     errno_t err = fopen_s(&fd, absPath.c_str(), mode.c_str());
+    if (err != 0) {
+        // try within storage (where we put dynamically loaded "bundle" files).
+        return openStorageFile(std::string("bundle/") + relFilePath, mode);
+    }
     return err == 0 ? fd : nullptr;
 }
 

@@ -13,6 +13,7 @@ signup.startFlow = function(self, config)
 		checkAppVersionAndCredentialsStep = function() end,
 		signUpOrLoginStep = function() end,
 		avatarPreviewStep = function() end,
+		avatarEditorStep = function() end,
 		loginStep = function() end,
 		loginSuccess = function() end,
 	}
@@ -31,68 +32,20 @@ signup.startFlow = function(self, config)
 	local flow = require("flow")
 	local drawerModule = require("drawer")
 	local ease = require("ease")
-	local uiAvatar = require("ui_avatar")
-	local avatarModule = require("avatar")
 	local loc = require("localize")
 	local str = require("str")
 
 	local theme = require("uitheme").current
-	local bigPadding = theme.paddingBig
 	local padding = theme.padding
 
 	local signupFlow = flow:create()
 
 	local animationTime = 0.3
 
-	local backFrame
+	-- local backFrame
 	local backButton
 	local drawer
 	local loginBtn
-
-	local bundle = require("bundle")
-	local hairs = {
-		bundle:Shape("shapes/signup_demo/air_goggles"),
-		bundle:Shape("shapes/signup_demo/hair_pink_blue"),
-		bundle:Shape("shapes/signup_demo/lofi_girl_head"),
-		bundle:Shape("shapes/signup_demo/pink_pop_hair"),
-		bundle:Shape("shapes/signup_demo/pirate_captain_hat"),
-		bundle:Shape("shapes/signup_demo/santa_hair"),
-	}
-
-	local jackets = {
-		bundle:Shape("shapes/signup_demo/astronaut_top"),
-		bundle:Shape("shapes/signup_demo/cute_top"),
-		bundle:Shape("shapes/signup_demo/lab_coat"),
-		bundle:Shape("shapes/signup_demo/princess_dresstop"),
-		bundle:Shape("shapes/signup_demo/red_robot_suit"),
-		bundle:Shape("shapes/signup_demo/sweater"),
-	}
-
-	local pants = {
-		bundle:Shape("shapes/signup_demo/overalls_pants"),
-		bundle:Shape("shapes/signup_demo/jorts"),
-		bundle:Shape("shapes/signup_demo/red_crewmate_pants"),
-		bundle:Shape("shapes/signup_demo/stripe_pants2"),
-	}
-
-	local boots = {
-		bundle:Shape("shapes/signup_demo/astronaut_shoes"),
-		bundle:Shape("shapes/signup_demo/flaming_boots"),
-		bundle:Shape("shapes/signup_demo/kids_shoes"),
-		bundle:Shape("shapes/signup_demo/pirate_boots_01"),
-	}
-
-	local yaw = math.rad(-190)
-	local pitch = 0
-	local function drag(dx, dy)
-		yaw = yaw - dx * 0.01
-		pitch = math.min(math.rad(45), math.max(math.rad(-45), pitch + dy * 0.01))
-
-		avatar.body.pivot.LocalRotation = Rotation(pitch, 0, 0) * Rotation(0, yaw, 0)
-	end
-
-	local dragListener
-	local changeTimer
 
 	local function showBackButton()
 		if backButton == nil then
@@ -102,15 +55,15 @@ signup.startFlow = function(self, config)
 				ease:cancel(self)
 				self.pos = {
 					padding,
-					Screen.Height - self.Height - padding,
+					Screen.Height - Screen.SafeArea.Top - self.Height - padding,
 				}
 			end
 			backButton.onRelease = function(self)
 				signupFlow:back()
 			end
-			backButton.pos = { -backButton.Width, Screen.Height - backButton.Height - padding }
+			backButton.pos = { -backButton.Width, Screen.Height - Screen.SafeArea.Top - backButton.Height - padding }
 			ease:outSine(backButton, animationTime).pos =
-				Number3(padding, Screen.Height - backButton.Height - padding, 0)
+				Number3(padding, Screen.Height - Screen.SafeArea.Top - backButton.Height - padding, 0)
 		end
 	end
 
@@ -564,168 +517,106 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
+	local createAvatarEditorStep = function()
+		local avatarEditor
+
+		local step = flow:createStep({
+			onEnter = function()
+				config.avatarEditorStep()
+
+				showBackButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				avatarEditor = require("ui_avatar_editor"):create({ ui = ui })
+
+				avatarEditor:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						-- self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
+						-- self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
+
+						-- theme.paddingBig
+						avatarEditor.Width = self.Width - padding * 2
+						avatarEditor.Height = self.Height - padding * 2 - Screen.SafeArea.Bottom
+
+						avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+					end,
+				})
+
+				drawer:show()
+			end,
+			onExit = function()
+				drawer:hide()
+			end,
+			onRemove = function() end,
+		})
+
+		return step
+	end
+
 	local createAvatarPreviewStep = function()
 		local step = flow:createStep({
 			onEnter = function()
 				config.avatarPreviewStep()
 
-				-- BACK FRAME
-				if backFrame == nil then
-					backFrame = ui:createFrame(Color(0, 0, 0, 0.75))
-					backFrame.parentDidResize = function(self)
-						ease:cancel(self)
-						self.Width = Screen.Width
-						self.Height = Screen.Height
-					end
-				end
-				backFrame:show()
-				backFrame:parentDidResize()
-				-- ease:linear(backFrame, 1.0).Color = Color(255, 0, 0, 0.9)
-
-				-- BACK BUTTON
 				showBackButton()
 
-				-- AVATAR
-				if avatar == nil then
-					avatar = uiAvatar:get({
-						-- usernameOrId = "aduermael",
-						usernameOrId = "",
-						size = math.min(Screen.Height * 0.5, Screen.Width * 0.75),
-						ui = ui,
-						eyeBlinks = false,
-					})
-
-					-- avatar.body.shape.Animations.Idle:Stop()
-					-- avatar.body.shape.Animations.Walk:Play()
-
-					avatar:loadEquipment({ type = "hair", shape = hairs[1] })
-					avatar:loadEquipment({ type = "jacket", shape = jackets[1] })
-					avatar:loadEquipment({ type = "pants", shape = pants[1] })
-					avatar:loadEquipment({ type = "boots", shape = boots[1] })
-
-					drag(0, 0)
-				end
-				avatar:show()
-
 				-- DRAWER
-				if drawer == nil then
+				if drawer ~= nil then
+					drawer:clear()
+				else
 					drawer = drawerModule:create({ ui = ui })
-
-					local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
-					okBtn:setColor(theme.colorPositive)
-					okBtn:setParent(drawer)
-
-					local text =
-						ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
-							color = Color.Black,
-						})
-					text:setParent(drawer)
-
-					drawer:updateConfig({
-						layoutContent = function(self)
-							-- here, self.Height can be reduced, but not increased
-							-- TODO: enforce this within drawer module
-
-							text.object.MaxWidth = math.min(300, self.Width - theme.paddingBig * 2)
-
-							self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
-							self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
-
-							okBtn.pos =
-								{ self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + theme.paddingBig }
-							text.pos =
-								{ self.Width * 0.5 - text.Width * 0.5, okBtn.pos.Y + okBtn.Height + theme.paddingBig }
-
-							-- PLACE AVATAR
-							-- avatar is outside drawer, but depends on it for layout
-							ease:cancel(avatar)
-
-							local verticalSpace = Screen.Height - Screen.SafeArea.Top - self.Height
-							local horizontalSpace = Screen.Width - Screen.SafeArea.Left - Screen.SafeArea.Right
-
-							avatar.Width = math.min(horizontalSpace, verticalSpace)
-
-							avatar.pos = {
-								Screen.Width * 0.5 - avatar.Width * 0.5,
-								self.Height + verticalSpace * 0.5 - avatar.Height * 0.5,
-							}
-						end,
-					})
 				end
+
+				local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
+				okBtn:setColor(theme.colorPositive)
+				okBtn:setParent(drawer)
+				okBtn.onRelease = function()
+					signupFlow:push(createAvatarEditorStep())
+				end
+
+				local text = ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
+					color = Color.Black,
+				})
+				text:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						text.object.MaxWidth = math.min(300, self.Width - theme.paddingBig * 2)
+
+						self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
+						self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
+
+						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + theme.paddingBig }
+						text.pos =
+							{ self.Width * 0.5 - text.Width * 0.5, okBtn.pos.Y + okBtn.Height + theme.paddingBig }
+					end,
+				})
+
 				drawer:show()
-
-				local offset = 100
-				local p = avatar.pos:Copy()
-				avatar.pos.X = avatar.pos.X + offset
-				ease:outBack(avatar, animationTime).pos = p
-
-				dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-					drag(pe.DX, pe.DY)
-				end)
-
-				local i = 8
-				local r
-				local eyesIndex = 1
-				local eyesCounter = 1
-				local eyesTrigger = 3
-				changeTimer = Timer(0.3, true, function()
-					r = math.random(1, #avatarModule.skinColors)
-					if r == i then
-						r = i + 1
-						if r > #avatarModule.skinColors then
-							r = 1
-						end
-					end
-					i = r
-					local colors = avatarModule.skinColors[i]
-					avatar:setColors({
-						skin1 = colors.skin1,
-						skin2 = colors.skin2,
-						nose = colors.nose,
-						mouth = colors.mouth,
-					})
-					eyesCounter = eyesCounter + 1
-					if eyesCounter >= eyesTrigger then
-						eyesCounter = 0
-						eyesIndex = eyesIndex + 1
-						if eyesIndex > #avatarModule.eyes then
-							eyesIndex = 1
-						end
-						avatar:setEyes({
-							index = eyesIndex,
-							color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
-						})
-						avatar:setNose({
-							index = math.random(1, #avatarModule.noses),
-						})
-					end
-
-					avatar:loadEquipment({ type = "hair", shape = hairs[math.random(1, #hairs)] })
-					avatar:loadEquipment({ type = "jacket", shape = jackets[math.random(1, #jackets)] })
-					avatar:loadEquipment({ type = "pants", shape = pants[math.random(1, #pants)] })
-					avatar:loadEquipment({ type = "boots", shape = boots[math.random(1, #boots)] })
-				end)
 			end,
 			-- exit = function(continue)
 			-- 	-- TODO
 			-- 	continue()
 			-- end,
 			onExit = function()
-				backFrame:hide()
-				ease:cancel(text)
-				avatar:hide()
 				drawer:hide()
-				dragListener:Remove()
-				dragListener = nil
-				changeTimer:Cancel()
-				changeTimer = nil
 			end,
 			onRemove = function()
 				removeBackButton()
-				backFrame:remove()
-				backFrame = nil
-				avatar:remove()
-				avatar = nil
 				drawer:remove()
 				drawer = nil
 				config.onCancel() -- TODO: can't stay here (step also removed when completing flow)

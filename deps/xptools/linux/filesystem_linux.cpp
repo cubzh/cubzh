@@ -130,7 +130,8 @@ FILE *vx::fs::openBundleFile(std::string relFilePath, std::string mode) {
     std::string absPath = getBundleFilePath(relFilePath);
     FILE *result = fopen(absPath.c_str(), mode.c_str());
     if (result == nullptr) {
-        printf("CAN'T OPEN BUNDLE FILE: %s\n", absPath.c_str());
+        // try within storage (where we put dynamically loaded "bundle" files).
+        result = openStorageFile(std::string("bundle/") + relFilePath, mode);
     }
     return result;
 }

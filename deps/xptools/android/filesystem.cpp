@@ -98,7 +98,8 @@ FILE *vx::fs::openFile(const std::string& filePath, const std::string& mode) {
 FILE *vx::fs::openBundleFile(std::string filename, std::string mode) {
     AAsset *asset = AAssetManager_open(vx::android::getAndroidAssetManager(), filename.c_str(), 0);
     if (asset == nullptr) {
-        return nullptr;
+        // try within storage (where we put dynamically loaded "bundle" files).
+        return openStorageFile(std::string("bundle/") + filename, mode);
     }
     return funopen(asset, android_read, android_write, android_seek, android_close);
 }

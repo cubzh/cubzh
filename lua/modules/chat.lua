@@ -488,10 +488,6 @@ local createModalContent = function(_, config)
 	return content
 end
 
-LocalEvent:Listen(LocalEvent.Name.OnPlayerJoin, function(p)
-	require("ui_avatar"):preloadHeads(p)
-end)
-
 LocalEvent:Listen(
 	LocalEvent.Name.ChatMessage,
 	function(msg, senderID, senderUserID, senderUsername, status, uuid, localUUID)
