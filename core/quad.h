@@ -46,6 +46,9 @@ void quad_set_offset_v(Quad *q, float value);
 float quad_get_offset_v(const Quad *q);
 void quad_set_color(Quad *q, uint32_t color);
 uint32_t quad_get_color(const Quad *q);
+void quad_set_vertex_color(Quad *q, uint32_t c, uint8_t idx);
+uint32_t quad_get_vertex_color(const Quad *q, uint8_t idx);
+bool quad_uses_vertex_colors(const Quad *q);
 void quad_set_layers(Quad *q, uint16_t value);
 uint16_t quad_get_layers(const Quad *q);
 void quad_set_doublesided(Quad *q, bool toggle);
@@ -62,6 +65,7 @@ uint8_t quad_get_sort_order(const Quad *q);
 // MARK: - Utils -
 
 float quad_utils_get_diagonal(const Quad *q);
+bool quad_utils_get_visibility(const Quad *q, bool *isOpaque);
 
 #ifdef __cplusplus
 } // extern "C"

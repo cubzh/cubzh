@@ -15,21 +15,22 @@
 #define QUAD_FLAG_UNLIT 4
 #define QUAD_FLAG_DATA_DIRTY 8
 #define QUAD_FLAG_MASK 16
+#define QUAD_FLAG_VCOLOR 32
 
 struct _Quad {
     Transform *transform;
+    uint32_t *rgba;
     void *data;
     size_t size;            /* 8 bytes */
     float width, height;    /* 2x4 bytes */
     float anchorX, anchorY; /* 2x4 bytes */
     float tilingU, tilingV; /* 2x4 bytes */
     float offsetU, offsetV; /* 2x4 bytes */
-    uint32_t abgr;          /* 4 bytes */
     uint16_t layers;        /* 2 bytes */
     uint8_t flags;          /* 1 byte */
     uint8_t sortOrder;      /* 1 byte */
 
-    // no padding
+    char pad[4];
 };
 
 void _quad_toggle_flag(Quad *q, uint8_t flag, bool toggle) {
@@ -62,10 +63,13 @@ Quad *quad_new(void) {
     q->tilingV = 1.0f;
     q->offsetU = 0.0f;
     q->offsetV = 0.0f;
-    q->abgr = 0xffffffff;
     q->layers = 1; // CAMERA_LAYERS_DEFAULT
     q->flags = QUAD_FLAG_DOUBLESIDED;
     q->sortOrder = 0;
+
+    q->rgba = (uint32_t*)malloc(sizeof(uint32_t));
+    *q->rgba = 0xffffffff;
+
     return q;
 }
 
@@ -77,6 +81,7 @@ void quad_free(Quad *q) {
     if (q->data != NULL) {
         free(q->data);
     }
+    free(q->rgba);
     free(q);
 }
 
@@ -180,11 +185,39 @@ float quad_get_offset_v(const Quad *q) {
 }
 
 void quad_set_color(Quad *q, uint32_t color) {
-    q->abgr = color;
+    if (_quad_get_flag(q, QUAD_FLAG_VCOLOR)) {
+        q->rgba[0] = q->rgba[1] = q->rgba[2] = q->rgba[3] = color;
+    } else {
+        *q->rgba = color;
+    }
 }
 
 uint32_t quad_get_color(const Quad *q) {
-    return q->abgr;
+    return *q->rgba;
+}
+
+void quad_set_vertex_color(Quad *q, uint32_t c, uint8_t idx) {
+    if (idx > 3) {
+        return;
+    }
+    if (_quad_get_flag(q, QUAD_FLAG_VCOLOR) == false && idx > 0) {
+        free(q->rgba);
+        q->rgba = (uint32_t*)malloc(4 * sizeof(uint32_t));
+        _quad_toggle_flag(q, QUAD_FLAG_VCOLOR, true);
+    }
+    q->rgba[idx] = c;
+}
+
+uint32_t quad_get_vertex_color(const Quad *q, uint8_t idx) {
+    if (_quad_get_flag(q, QUAD_FLAG_VCOLOR) == false) {
+        return q->rgba[0];
+    } else {
+        return idx <= 3 ? q->rgba[idx] : 0x00000000;
+    }
+}
+
+bool quad_uses_vertex_colors(const Quad *q) {
+    return _quad_get_flag(q, QUAD_FLAG_VCOLOR);
 }
 
 void quad_set_layers(Quad *q, uint16_t value) {
@@ -239,4 +272,19 @@ uint8_t quad_get_sort_order(const Quad *q) {
 
 float quad_utils_get_diagonal(const Quad *q) {
     return sqrtf(q->width * q->width + q->height * q->height);
+}
+
+bool quad_utils_get_visibility(const Quad *q, bool *isOpaque) {
+    if (_quad_get_flag(q, QUAD_FLAG_VCOLOR)) {
+        const uint16_t alpha = (uint16_t)(q->rgba[0] >> 24) +
+                               (uint16_t)(q->rgba[1] >> 24) +
+                               (uint16_t)(q->rgba[2] >> 24) +
+                               (uint16_t)(q->rgba[3] >> 24);
+        *isOpaque = alpha == 1020;
+        return alpha > 0;
+    } else {
+        const uint8_t alpha = (uint8_t)(*q->rgba >> 24);
+        *isOpaque = alpha == 255;
+        return alpha > 0;
+    }
 }
