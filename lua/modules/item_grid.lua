@@ -13,16 +13,15 @@ local conf = require("config")
 
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
-local MAX_COLUMNS = 7
-local MIN_ROWS = 1
-local MIN_COLUMNS = 2
-local MIN_GRID_SIZE = 50
+local MAX_CELL_SIZE = 200
 
 itemGrid.create = function(_, config)
 	-- load config (overriding defaults)
 	local _config = {
 		-- shows search bar when true
 		searchBar = true,
+		--
+		search = "",
 		-- shows advanced filters button when true
 		advancedFilters = false,
 		-- used to filter categories when not nil
@@ -41,6 +40,12 @@ itemGrid.create = function(_, config)
 		uikit = require("uikit"),
 		--
 		backgroundColor = Color(40, 40, 40),
+		--
+		sort = "likes:desc",
+		--
+		cellPadding = theme.padding,
+		--
+		onOpen = function(cell) end,
 	}
 
 	local ok, err = pcall(function()
@@ -57,11 +62,10 @@ itemGrid.create = function(_, config)
 	end
 
 	local ui = config.uikit
-
-	local sortBy = "likes:desc"
+	local sortBy = config.sort
 
 	local grid = ui:createFrame(Color(40, 40, 40)) -- Color(255,0,0)
-	local search = ""
+	local search = config.search
 
 	local timers = {}
 	local sentRequests = {}
@@ -106,7 +110,7 @@ itemGrid.create = function(_, config)
 	end
 
 	-- exposed to the outside, can be called as an optimization
-	-- when hiding the grid without removing here for example.
+	-- when hiding the grid without removing it for example.
 	grid.cancelRequestsAndTimers = function()
 		cancelRequestsAndTimers()
 	end
@@ -130,94 +134,265 @@ itemGrid.create = function(_, config)
 		self:getItems()
 	end
 
-	if config.searchBar then
-		grid.searchBar = ui:createTextInput("", "search")
-		grid.searchBar:setParent(grid)
+	local searchBar
+	local searchBtn
+	local sortBtn
+	local scroll
 
-		grid.sortButton = ui:createButton("♥️")
-		grid.sortButton:setParent(grid)
-		grid.sortButton.onRelease = function()
+	if config.searchBar then
+		searchBar = ui:createTextInput(search, "search", { textSize = "small" })
+		searchBar:setParent(grid)
+
+		sortBtn = ui:createButton("♥️ Likes", { textSize = "small" })
+		sortBtn:setParent(grid)
+		sortBtn.onRelease = function()
 			if sortBy == "likes:desc" then
-				grid.sortButton.Text = "✨"
+				grid.sortButton.Text = "✨ Recent"
 				sortBy = "updatedAt:desc"
 			elseif sortBy == "updatedAt:desc" then
-				grid.sortButton.Text = "♥️"
+				grid.sortButton.Text = "♥️ Likes"
 				sortBy = "likes:desc"
 			end
 			grid:getItems()
 		end
 
-		grid.searchBar.onTextChange = function(_)
+		searchBar.onTextChange = function(_)
 			if grid.searchTimer ~= nil then
 				grid.searchTimer:Cancel()
 			end
 
 			grid.searchTimer = Timer(0.3, function()
-				local text = grid.searchBar.Text
+				local text = searchBar.Text
 				text = text:gsub(" ", "+")
 
 				search = text
 				grid:getItems()
 			end)
 
-			if grid.searchBar.Text ~= "" then
-				grid.searchButton.Text = "X"
-				grid.searchButton.onRelease = function()
-					grid.searchBar.Text = ""
+			if searchBar.Text ~= "" then
+				searchBtn.Text = "X"
+				searchBtn.onRelease = function()
+					searchBar.Text = ""
 				end
 			else
-				grid.searchButton.Text = "🔎"
-				grid.searchButton.onRelease = function()
-					grid.searchBar:focus()
+				searchBtn.Text = "🔎"
+				searchBtn.onRelease = function()
+					searchBar:focus()
 				end
 			end
 		end
 
 		-- 🔎 button that becomes "X" (to clear search)
-		grid.searchButton = ui:createButton("🔎")
-		grid.searchButton:setParent(grid)
-		grid.searchButton:setColor(grid.searchBar.Color, Color(255, 255, 255, 254))
-		grid.searchButton:setColorPressed(nil, Color(255, 255, 255, 254))
-		grid.searchButton.onRelease = function()
-			grid.searchBar:focus()
+		searchBtn = ui:createButton("🔎", { textSize = "small" })
+		searchBtn:setParent(grid)
+		searchBtn:setColor(grid.searchBar.Color, Color(255, 255, 255, 254))
+		searchBtn:setColorPressed(nil, Color(255, 255, 255, 254))
+		searchBtn.onRelease = function()
+			searchBar:focus()
 		end
 	end
 
-	grid.onPaginationChange = nil -- function(page, nbPages)
+	local entries = {}
+	local nbEntries = 0
+	local entriesPerRow = 0
+	local rows = 0
+	local cellSize = MIN_CELL_SIZE
 
-	-- first page cell when page is set
-	-- using as reference cell to define new page number
-	-- when grid resizes.
-	-- (doesn't mean cell remains at first position, put somewhere on page)
-	grid.firstPageCell = 1
+	local rowPool = {}
+	local cellPool = {}
+	local activeCells = {}
 
-	grid.page = 1
-	grid.nbPages = 1
-	grid.cellSize = nil
-	grid.nbCells = 1 -- cells per page
-	grid.entries = {}
+	local idleColor = theme.gridCellColor
 
-	grid._paginationDidChange = function(self)
-		if self.onPaginationChange ~= nil then
-			self.onPaginationChange(self.page, self.nbPages)
-		end
+	local function improveNameFormat(str)
+		local s = string.gsub(str, "_%a", string.upper)
+		s = string.gsub(s, "_", " ")
+		s = string.gsub(s, "^%l", string.upper)
+		return s
 	end
 
-	grid.setPage = function(self, page)
-		if self ~= grid then
-			error("item_grid:setPage(page): use `:`", 2)
-		end
-		self.page = page
-		if self.page < 1 then
-			self.page = 1
-		elseif self.page > self.nbPages then
-			self.page = self.nbPages
-		end
-		self.firstPageCell = (self.page - 1) * self.nbCells + 1
+	scroll = ui:createScroll({
+		backgroundColor = Color(0, 0, 0, 0),
+		direction = "down",
+		cellPadding = config.cellPadding,
+		loadCell = function(index)
+			if index <= rows then
+				local row = table.remove(rowPool)
+				if row == nil then
+					row = ui:createFrame(Color(0, 0, 0, 0))
+					row.cells = {}
+				end
+				row.Width = scroll.Width
+				row.Height = cellSize
 
-		cancelRequestsAndTimers()
-		self:refresh()
+				for i = 1, entriesPerRow do
+					local entryIndex = (index - 1) * entriesPerRow + i
+					if entryIndex > nbEntries then
+						break
+					end
+
+					local cell = table.remove(cellPool)
+					if cell == nil then
+						cell = ui:createFrame(idleColor)
+
+						cell.onPress = function()
+							cell.Color = theme.gridCellColorPressed
+						end
+
+						cell.onRelease = function()
+							if config.onOpen then
+								config.onOpen(cell)
+							end
+							cell.Color = idleColor
+						end
+
+						cell.onCancel = function()
+							cell.Color = idleColor
+						end
+
+						local titleFrame = ui:createFrame(theme.gridCellFrameColor)
+						titleFrame:setParent(cell)
+						titleFrame.LocalPosition.Z = config.uikit.kForegroundDepth
+
+						local title = ui:createText("TEST", Color.White, "small")
+						title:setParent(titleFrame)
+
+						title.pos = { theme.padding, theme.padding }
+
+						cell.titleFrame = titleFrame
+						cell.title = title
+
+						cell.requests = {}
+						cell.item = nil
+
+						cell.loadEntry = function(self, entry)
+							self.id = entry.id
+							self.repo = entry.repo
+							self.name = entry.name
+							self.fullName = self.repo .. "." .. self.name
+							self.category = entry.category
+							self.description = entry.description
+							self.created = entry.created
+							self.updated = entry.updated
+							self.likes = entry.likes
+							self.liked = entry.liked
+
+							if self.item then
+								self.item:remove()
+								self.item = nil
+							end
+
+							self.titleFrame.Width = self.Width
+							self.title.object.MaxWidth = cell.titleFrame.Width - theme.padding * 2
+							self.title.Text = improveNameFormat(entry.name)
+							self.titleFrame.Height = self.title.Height + theme.padding * 2
+
+							local req = Object:Load(self.fullName, function(obj)
+								if obj == nil then
+									-- silent error, no print, just removing loading animation
+									-- local loadingCube = cell:getLoadingCube()
+									-- if loadingCube then
+									-- 	loadingCube:hide()
+									-- end
+									return
+								end
+
+								-- local loadingCube = cell:getLoadingCube()
+								-- if loadingCube then
+								-- 	loadingCube:hide()
+								-- end
+
+								local item = ui:createShape(obj, { spherized = true })
+								cell.item = item
+								item:setParent(cell) -- possible error here, cell destroyed?
+
+								item.pivot.LocalRotation = { -0.1, 0, -0.2 }
+
+								-- setting Width sets Height & Depth as well when spherized
+								item.Width = cell.Width
+							end)
+
+							table.insert(self.requests, req)
+						end
+					end
+
+					table.insert(row.cells, cell)
+
+					cell:setParent(row)
+					cell.entryIndex = entryIndex
+					cell.Width = cellSize
+					cell.Height = cellSize
+					cell.pos = { (i - 1) * (cellSize + config.cellPadding), 0 }
+					cell:loadEntry(entries[entryIndex])
+					activeCells[entryIndex] = cell
+				end
+
+				return row
+			end
+			return nil
+		end,
+		unloadCell = function(_, row)
+			for _, cell in ipairs(row.cells) do
+				for _, req in ipairs(cell.requests) do
+					req:Cancel()
+				end
+				if cell.item then
+					cell.item:remove()
+					cell.item = nil
+				end
+				cell:setParent(nil)
+				cell.requests = {}
+				activeCells[cell.entryIndex] = nil
+				table.insert(cellPool, cell)
+			end
+			row.cells = {}
+			row:setParent(nil)
+			table.insert(rowPool, row)
+		end,
+	})
+
+	local function refreshEntries()
+		nbEntries = #entries
+		local w = scroll.Width + config.cellPadding
+		entriesPerRow = math.floor(w / MIN_CELL_SIZE)
+		cellSize = w / entriesPerRow
+		cellSize = math.max(MIN_CELL_SIZE, math.min(MAX_CELL_SIZE, cellSize))
+		cellSize = cellSize - config.cellPadding
+
+		if nbEntries == 0 then
+			rows = 0
+		else
+			rows = math.floor(nbEntries / entriesPerRow)
+			if nbEntries % entriesPerRow ~= 0 then
+				rows = rows + 1
+			end
+		end
+		scroll:flush()
+		scroll:refresh()
 	end
+
+	scroll.parentDidResize = function(self)
+		local parent = self.parent
+		local y = parent.Height
+		if searchBar ~= nil then
+			y = y - searchBar.Height
+			searchBar.Width = parent.Width - searchBtn.Width - sortBtn.Width
+			searchBar.pos = { 0, y }
+
+			searchBtn.Height = searchBar.Height
+			sortBtn.Height = searchBar.Height
+
+			searchBtn.pos = searchBar.pos + { searchBar.Width, 0 }
+			sortBtn.pos = searchBtn.pos + { searchBtn.Width, 0 }
+		end
+
+		scroll.Width = parent.Width
+		scroll.Height = y
+		scroll.pos = { 0, 0 }
+		refreshEntries()
+	end
+
+	scroll:setParent(grid)
 
 	grid.onRemove = function(_)
 		cancelRequestsAndTimers()
@@ -225,446 +400,447 @@ itemGrid.create = function(_, config)
 		grid.tickListener = nil
 	end
 
-	grid._createCell = function(grid, size)
-		local idleColor = theme.gridCellColor
-		local cell = ui:createFrame(idleColor)
-		cell:setParent(grid)
+	-- grid._createCell = function(grid, size)
+	-- 	local idleColor = theme.gridCellColor
+	-- 	local cell = ui:createFrame(idleColor)
+	-- 	cell:setParent(grid)
 
-		cell.onPress = function()
-			-- don't update the color if there's a thumbnail
-			if cell.thumbnail ~= nil then
-				return
-			end
-			cell.Color = theme.gridCellColorPressed
-		end
+	-- 	cell.onPress = function()
+	-- 		-- don't update the color if there's a thumbnail
+	-- 		if cell.thumbnail ~= nil then
+	-- 			return
+	-- 		end
+	-- 		cell.Color = theme.gridCellColorPressed
+	-- 	end
 
-		cell.onRelease = function()
-			if cell.loaded and grid.onOpen then
-				grid:onOpen(cell)
-			end
-			if cell.thumbnail ~= nil then
-				return
-			end
-			cell.Color = idleColor
-		end
+	-- 	cell.onRelease = function()
+	-- 		if cell.loaded and grid.onOpen then
+	-- 			grid:onOpen(cell)
+	-- 		end
+	-- 		if cell.thumbnail ~= nil then
+	-- 			return
+	-- 		end
+	-- 		cell.Color = idleColor
+	-- 	end
 
-		cell.onCancel = function()
-			if cell.thumbnail ~= nil then
-				return
-			end
-			cell.Color = idleColor
-		end
+	-- 	cell.onCancel = function()
+	-- 		if cell.thumbnail ~= nil then
+	-- 			return
+	-- 		end
+	-- 		cell.Color = idleColor
+	-- 	end
 
-		local likesBtn = ui:createButton("", { shadow = false, textSize = "small", borders = false })
-		likesBtn:setColor(theme.gridCellFrameColor)
-		likesBtn:setParent(cell)
-		likesBtn.pos.X = 0
+	-- 	local likesBtn = ui:createButton("", { shadow = false, textSize = "small", borders = false })
+	-- 	likesBtn:setColor(theme.gridCellFrameColor)
+	-- 	likesBtn:setParent(cell)
+	-- 	likesBtn.pos.X = 0
 
-		local onReleaseBackup
-		likesBtn.onRelease = function(self)
-			onReleaseBackup = self.onRelease
-			self.onRelease = nil
-			cell.liked = not cell.liked
-			cell.likes = cell.likes + (cell.liked and 1 or -1)
-			cell:setNbLikes(cell.likes)
-			local req = require("system_api", System):likeItem(cell.id, cell.liked, function(_)
-				self.onRelease = onReleaseBackup
-			end)
-			addSentRequest(req)
-			addCellContentRequest(req)
-		end
+	-- 	local onReleaseBackup
+	-- 	likesBtn.onRelease = function(self)
+	-- 		onReleaseBackup = self.onRelease
+	-- 		self.onRelease = nil
+	-- 		cell.liked = not cell.liked
+	-- 		cell.likes = cell.likes + (cell.liked and 1 or -1)
+	-- 		cell:setNbLikes(cell.likes)
+	-- 		local req = require("system_api", System):likeItem(cell.id, cell.liked, function(_)
+	-- 			self.onRelease = onReleaseBackup
+	-- 		end)
+	-- 		addSentRequest(req)
+	-- 		addCellContentRequest(req)
+	-- 	end
 
-		cell.layoutLikes = function(self)
-			if likesBtn:isVisible() == false then
-				return
-			end
-			likesBtn.pos.Y = self.Height - likesBtn.Height
-		end
+	-- 	cell.layoutLikes = function(self)
+	-- 		if likesBtn:isVisible() == false then
+	-- 			return
+	-- 		end
+	-- 		likesBtn.pos.Y = self.Height - likesBtn.Height
+	-- 	end
 
-		cell.setNbLikes = function(self, n)
-			if n > 0 then
-				likesBtn.Text = "❤️ " .. math.floor(n)
-			else
-				likesBtn.Text = "❤️"
-			end
-			likesBtn:show()
-			-- likesAndViewsFrame:show()
-			self:layoutLikes()
-		end
+	-- 	cell.setNbLikes = function(self, n)
+	-- 		if n > 0 then
+	-- 			likesBtn.Text = "❤️ " .. math.floor(n)
+	-- 		else
+	-- 			likesBtn.Text = "❤️"
+	-- 		end
+	-- 		likesBtn:show()
+	-- 		-- likesAndViewsFrame:show()
+	-- 		self:layoutLikes()
+	-- 	end
 
-		cell.hideLikes = function(_)
-			likesBtn:hide()
-		end
+	-- 	cell.hideLikes = function(_)
+	-- 		likesBtn:hide()
+	-- 	end
 
-		local textFrame = ui:createFrame(theme.gridCellFrameColor)
-		textFrame:setParent(cell)
-		textFrame.LocalPosition.Z = config.uikit.kForegroundDepth
+	-- 	local textFrame = ui:createFrame(theme.gridCellFrameColor)
+	-- 	textFrame:setParent(cell)
+	-- 	textFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
-		local tName = ui:createText("", Color.White, "small")
-		tName:setParent(textFrame)
+	-- 	local tName = ui:createText("", Color.White, "small")
+	-- 	tName:setParent(textFrame)
 
-		tName.pos = { theme.padding, theme.padding }
+	-- 	tName.pos = { theme.padding, theme.padding }
 
-		cell.tName = tName
+	-- 	cell.tName = tName
 
-		local loadingCube
+	-- 	local loadingCube
 
-		cell.getOrCreateLoadingCube = function(_)
-			if loadingCube == nil then
-				loadingCube = ui:createFrame(Color.White)
-				loadingCube:setParent(cell)
-				loadingCube.Width = 10
-				loadingCube.Height = 10
-			end
-			loadingCube.pos = { cell.Width * 0.5, cell.Height * 0.5, 0 }
-			return loadingCube
-		end
+	-- 	cell.getOrCreateLoadingCube = function(_)
+	-- 		if loadingCube == nil then
+	-- 			loadingCube = ui:createFrame(Color.White)
+	-- 			loadingCube:setParent(cell)
+	-- 			loadingCube.Width = 10
+	-- 			loadingCube.Height = 10
+	-- 		end
+	-- 		loadingCube.pos = { cell.Width * 0.5, cell.Height * 0.5, 0 }
+	-- 		return loadingCube
+	-- 	end
 
-		cell.getLoadingCube = function(_)
-			return loadingCube
-		end
+	-- 	cell.getLoadingCube = function(_)
+	-- 		return loadingCube
+	-- 	end
 
-		cell.layoutContent = function(self)
-			textFrame.Width = cell.Width
-			textFrame.Height = tName.Height + theme.padding * 2
-			self:layoutLikes()
-		end
+	-- 	cell.layoutContent = function(self)
+	-- 		textFrame.Width = cell.Width
+	-- 		textFrame.Height = tName.Height + theme.padding * 2
+	-- 		self:layoutLikes()
+	-- 	end
 
-		cell.setSize = function(self, size)
-			self.Width = size
-			self.Height = size
-			self:layoutContent()
-		end
+	-- 	cell.setSize = function(self, size)
+	-- 		self.Width = size
+	-- 		self.Height = size
+	-- 		self:layoutContent()
+	-- 	end
 
-		cell:setSize(size)
+	-- 	cell:setSize(size)
 
-		return cell
-	end
+	-- 	return cell
+	-- end
 
-	grid._generateCells = function(self)
-		local padding = theme.padding
-		local sizeWithPadding = self.cellSize + padding
-		if self.cells == nil then
-			self.cells = {}
-		end
-		local cells = self.cells
-		local cell
+	-- grid._generateCells = function(self)
+	-- 	local padding = theme.padding
+	-- 	local sizeWithPadding = self.cellSize + padding
+	-- 	if self.cells == nil then
+	-- 		self.cells = {}
+	-- 	end
+	-- 	local cells = self.cells
+	-- 	local cell
 
-		-- self.nbCells == number of displayed cells
-		for i = 1, self.nbCells do
-			cell = cells[i]
-			if cell == nil or cell.show == nil then
-				cell = self:_createCell(self.cellSize)
-				cells[i] = cell
-			end
-			cell:show()
+	-- 	-- self.nbCells == number of displayed cells
+	-- 	for i = 1, self.nbCells do
+	-- 		cell = cells[i]
+	-- 		if cell == nil or cell.show == nil then
+	-- 			cell = self:_createCell(self.cellSize)
+	-- 			cells[i] = cell
+	-- 		end
+	-- 		cell:show()
 
-			local row = 1 + math.floor((i - 1) / self.columns)
-			if row > self.rows then
-				break
-			end
-			local column = (i - 1) % self.columns
+	-- 		local row = 1 + math.floor((i - 1) / self.columns)
+	-- 		if row > self.rows then
+	-- 			break
+	-- 		end
+	-- 		local column = (i - 1) % self.columns
 
-			local x = column * sizeWithPadding
-			local y = (self.rows - row) * (self.cellSize + padding)
+	-- 		local x = column * sizeWithPadding
+	-- 		local y = (self.rows - row) * (self.cellSize + padding)
 
-			cell.LocalPosition = Number3(x, y, 0)
-		end
+	-- 		cell.LocalPosition = Number3(x, y, 0)
+	-- 	end
 
-		for i = self.nbCells + 1, #cells do
-			cells[i]:hide()
-		end
-	end
+	-- 	for i = self.nbCells + 1, #cells do
+	-- 		cells[i]:hide()
+	-- 	end
+	-- end
 
-	grid._setEntry = function(grid, cell, entry)
-		cell.type = entry.type
+	-- grid._setEntry = function(grid, cell, entry)
+	-- 	cell.type = entry.type
 
-		if cell.type == "item" then
-			cell.id = entry.id
-			cell.repo = entry.repo
-			cell.name = entry.name
-			cell.category = entry.category
-			cell.description = entry.description
-			cell.created = entry.created
-			cell.updated = entry.updated
-			cell.likes = entry.likes
-			cell.liked = entry.liked
+	-- 	if cell.type == "item" then
+	-- 		cell.id = entry.id
+	-- 		cell.repo = entry.repo
+	-- 		cell.name = entry.name
+	-- 		cell.category = entry.category
+	-- 		cell.description = entry.description
+	-- 		cell.created = entry.created
+	-- 		cell.updated = entry.updated
+	-- 		cell.likes = entry.likes
+	-- 		cell.liked = entry.liked
 
-			local itemName = cell.repo .. "." .. cell.name
-			cell.loadedItemName = itemName
-			cell.itemFullName = itemName
+	-- 		local itemName = cell.repo .. "." .. cell.name
+	-- 		cell.loadedItemName = itemName
+	-- 		cell.itemFullName = itemName
 
-			if not cell.tName then
-				return
-			end
-			cell:getOrCreateLoadingCube():show()
+	-- 		if not cell.tName then
+	-- 			return
+	-- 		end
+	-- 		cell:getOrCreateLoadingCube():show()
 
-			cell:setNbLikes(cell.likes)
-			cell:setSize(grid.cellSize)
+	-- 		cell:setNbLikes(cell.likes)
+	-- 		cell:setSize(grid.cellSize)
 
-			local function transform_string(str)
-				local new_str = string.gsub(str, "_%a", string.upper)
-				new_str = string.gsub(new_str, "_", " ")
-				new_str = string.gsub(new_str, "^%l", string.upper)
-				return new_str
-			end
+	-- 		local function transform_string(str)
+	-- 			local new_str = string.gsub(str, "_%a", string.upper)
+	-- 			new_str = string.gsub(new_str, "_", " ")
+	-- 			new_str = string.gsub(new_str, "^%l", string.upper)
+	-- 			return new_str
+	-- 		end
 
-			if cell.tName then
-				cell.tName.object.MaxWidth = (grid.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
-				local betterName = transform_string(cell.name)
-				cell.tName.Text = betterName
-				cell:layoutContent()
-			end
+	-- 		if cell.tName then
+	-- 			cell.tName.object.MaxWidth = (grid.cellSize or MIN_CELL_SIZE) - 2 * theme.padding
+	-- 			local betterName = transform_string(cell.name)
+	-- 			cell.tName.Text = betterName
+	-- 			cell:layoutContent()
+	-- 		end
 
-			local req = Object:Load(itemName, function(obj)
-				if not cell.tName then
-					return
-				end
-				if cell.loadedItemName == nil or cell.loadedItemName ~= itemName then
-					return
-				end
+	-- 		local req = Object:Load(itemName, function(obj)
+	-- 			if not cell.tName then
+	-- 				return
+	-- 			end
+	-- 			if cell.loadedItemName == nil or cell.loadedItemName ~= itemName then
+	-- 				return
+	-- 			end
 
-				if obj == nil then
-					-- silent error, no print, just removing loading animation
-					local loadingCube = cell:getLoadingCube()
-					if loadingCube then
-						loadingCube:hide()
-					end
-					return
-				end
+	-- 			if obj == nil then
+	-- 				-- silent error, no print, just removing loading animation
+	-- 				local loadingCube = cell:getLoadingCube()
+	-- 				if loadingCube then
+	-- 					loadingCube:hide()
+	-- 				end
+	-- 				return
+	-- 			end
 
-				if cell.item then
-					cell.item:remove()
-					cell.item = nil
-				end
+	-- 			if cell.item then
+	-- 				cell.item:remove()
+	-- 				cell.item = nil
+	-- 			end
 
-				local loadingCube = cell:getLoadingCube()
-				if loadingCube then
-					loadingCube:hide()
-				end
+	-- 			local loadingCube = cell:getLoadingCube()
+	-- 			if loadingCube then
+	-- 				loadingCube:hide()
+	-- 			end
 
-				local item = ui:createShape(obj, { spherized = true })
-				cell.item = item
-				item:setParent(cell)
+	-- 			local item = ui:createShape(obj, { spherized = true })
+	-- 			cell.item = item
+	-- 			item:setParent(cell)
 
-				item.pivot.LocalRotation = { -0.1, 0, -0.2 }
+	-- 			item.pivot.LocalRotation = { -0.1, 0, -0.2 }
 
-				-- setting Width sets Height & Depth as well when spherized
-				item.Width = grid.cellSize or MIN_CELL_SIZE
-				cell.loaded = true
-			end)
+	-- 			-- setting Width sets Height & Depth as well when spherized
+	-- 			item.Width = grid.cellSize or MIN_CELL_SIZE
+	-- 			cell.loaded = true
+	-- 		end)
 
-			addSentRequest(req)
-			addCellContentRequest(req)
-		elseif cell.type == "world" then
-			local loadingCube = cell:getLoadingCube()
-			if loadingCube then
-				loadingCube:hide()
-			end
+	-- 		addSentRequest(req)
+	-- 		addCellContentRequest(req)
+	-- 	elseif cell.type == "world" then
+	-- 		local loadingCube = cell:getLoadingCube()
+	-- 		if loadingCube then
+	-- 			loadingCube:hide()
+	-- 		end
 
-			if entry.thumbnail == nil and cell.item == nil then
-				-- no thumbnail, display default world icon
-				local shape = bundle:Shape("shapes/world_icon")
-				local item = ui:createShape(shape, { spherized = true })
-				cell.item = item
-				item:setParent(cell)
-				item.pivot.LocalRotation = { -0.1, 0, -0.2 }
-				-- setting Width sets Height & Depth as well when spherized
-				item.Width = grid.cellSize
-			end
+	-- 		if entry.thumbnail == nil and cell.item == nil then
+	-- 			-- no thumbnail, display default world icon
+	-- 			local shape = bundle:Shape("shapes/world_icon")
+	-- 			local item = ui:createShape(shape, { spherized = true })
+	-- 			cell.item = item
+	-- 			item:setParent(cell)
+	-- 			item.pivot.LocalRotation = { -0.1, 0, -0.2 }
+	-- 			-- setting Width sets Height & Depth as well when spherized
+	-- 			item.Width = grid.cellSize
+	-- 		end
 
-			cell.title = entry.title
-			cell.description = entry.description
-			cell.thumbnail = entry.thumbnail
+	-- 		cell.title = entry.title
+	-- 		cell.description = entry.description
+	-- 		cell.thumbnail = entry.thumbnail
 
-			cell.likes = entry.likes
-			cell.views = entry.views
+	-- 		cell.likes = entry.likes
+	-- 		cell.views = entry.views
 
-			cell.id = entry.id
+	-- 		cell.id = entry.id
 
-			cell.created = entry.created
-			cell.updated = entry.updated
+	-- 		cell.created = entry.created
+	-- 		cell.updated = entry.updated
 
-			if cell.tName then
-				cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
-				if cell.title:len() > api.maxWorldTitleLength then
-					local str = cell.title
-					str = str:sub(1, api.maxWorldTitleLength - 1)
-					str = str .. "…"
-					cell.tName.Text = str
-				else
-					cell.tName.Text = cell.title
-				end
-			end
+	-- 		if cell.tName then
+	-- 			cell.tName.object.MaxWidth = grid.cellSize - 2 * theme.padding
+	-- 			if cell.title:len() > api.maxWorldTitleLength then
+	-- 				local str = cell.title
+	-- 				str = str:sub(1, api.maxWorldTitleLength - 1)
+	-- 				str = str .. "…"
+	-- 				cell.tName.Text = str
+	-- 			else
+	-- 				cell.tName.Text = cell.title
+	-- 			end
+	-- 		end
 
-			cell:setNbLikes(cell.likes)
-			cell:setSize(grid.cellSize)
+	-- 		cell:setNbLikes(cell.likes)
+	-- 		cell:setSize(grid.cellSize)
 
-			cell:layoutContent()
+	-- 		cell:layoutContent()
 
-			cell.loaded = true
-		end
-	end
+	-- 		cell.loaded = true
+	-- 	end
+	-- end
 
 	-- update the content of the cells based on grid.entries
-	grid._updateCells = function(self)
-		cancelTimers()
-		cancelCellContentRequest()
+	-- grid._updateCells = function(self)
+	-- 	cancelTimers()
+	-- 	cancelCellContentRequest()
 
-		self:_emptyCells()
-		local cells = self.cells
-		local nbCells = self.nbCells
-		local k = (self.page - 1) * nbCells
-		local req
+	-- 	self:_emptyCells()
+	-- 	local cells = self.cells
+	-- 	local nbCells = self.nbCells
+	-- 	local k = (self.page - 1) * nbCells
+	-- 	local req
 
-		for i = 1, nbCells do
-			local cell = cells[i]
-			local entry = self.entries[k + i]
-			cell.IsHidden = entry == nil
-			cell.loaded = false
+	-- 	for i = 1, nbCells do
+	-- 		local cell = cells[i]
+	-- 		local entry = self.entries[k + i]
+	-- 		cell.IsHidden = entry == nil
+	-- 		cell.loaded = false
 
-			if entry ~= nil then
-				local timer = Timer((i - 1) * 0.02, function()
-					if self._setEntry then
-						self:_setEntry(cell, entry)
-					end
+	-- 		if entry ~= nil then
+	-- 			local timer = Timer((i - 1) * 0.02, function()
+	-- 				if self._setEntry then
+	-- 					self:_setEntry(cell, entry)
+	-- 				end
 
-					if config.type ~= "worlds" or entry.id == nil then
-						return -- no need to get the thumbnail
-					end
-					req = api:getWorldThumbnail(entry.id, function(err, img)
-						if err ~= nil or cell.setImage == nil then
-							return
-						end
-						entry.thumbnail = img
+	-- 				if config.type ~= "worlds" or entry.id == nil then
+	-- 					return -- no need to get the thumbnail
+	-- 				end
+	-- 				req = api:getWorldThumbnail(entry.id, function(err, img)
+	-- 					if err ~= nil or cell.setImage == nil then
+	-- 						return
+	-- 					end
+	-- 					entry.thumbnail = img
 
-						if cell.item ~= nil then
-							cell.item:remove()
-							cell.item = nil
-						end
+	-- 					if cell.item ~= nil then
+	-- 						cell.item:remove()
+	-- 						cell.item = nil
+	-- 					end
 
-						cell.thumbnail = img
-						cell:setImage(img)
+	-- 					cell.thumbnail = img
+	-- 					cell:setImage(img)
 
-						if type(entry.onThumbnailUpdate) == "function" then
-							entry.onThumbnailUpdate(img)
-						end
-					end)
-					addSentRequest(req)
-					addCellContentRequest(req)
-				end)
-				addTimer(timer)
-			end
-		end
+	-- 					if type(entry.onThumbnailUpdate) == "function" then
+	-- 						entry.onThumbnailUpdate(img)
+	-- 					end
+	-- 				end)
+	-- 				addSentRequest(req)
+	-- 				addCellContentRequest(req)
+	-- 			end)
+	-- 			addTimer(timer)
+	-- 		end
+	-- 	end
 
-		collectgarbage("collect")
-	end
+	-- 	collectgarbage("collect")
+	-- end
 
 	-- remove items in cells, keep cells
-	grid._emptyCells = function(grid)
-		local cells = grid.cells
-		if cells == nil then
-			return
-		end
-		for _, c in ipairs(cells) do
-			c:hideLikes()
-			c.tName.Text = ""
-			c:setImage(nil)
-			if c.item ~= nil and c.item.remove then
-				c.item:remove()
-			end
-			c.item = nil
-		end
-	end
+	-- grid._emptyCells = function(grid)
+	-- 	local cells = grid.cells
+	-- 	if cells == nil then
+	-- 		return
+	-- 	end
+	-- 	for _, c in ipairs(cells) do
+	-- 		c:hideLikes()
+	-- 		c.tName.Text = ""
+	-- 		c:setImage(nil)
+	-- 		if c.item ~= nil and c.item.remove then
+	-- 			c.item:remove()
+	-- 		end
+	-- 		c.item = nil
+	-- 	end
+	-- end
 
-	grid.refresh = function(self)
-		cancelCellContentRequest()
+	-- grid.refresh = function(self)
+	-- 	cancelCellContentRequest()
 
-		if self ~= grid then
-			error("item_grid:refresh(): use `:`", 2)
-		end
+	-- 	if self ~= grid then
+	-- 		error("item_grid:refresh(): use `:`", 2)
+	-- 	end
 
-		if self.Width < MIN_GRID_SIZE or self.Height < MIN_GRID_SIZE then
-			return
-		end
+	-- 	if self.Width < MIN_GRID_SIZE or self.Height < MIN_GRID_SIZE then
+	-- 		return
+	-- 	end
 
-		local padding = theme.padding
+	-- 	local padding = theme.padding
 
-		if
-			self.cellSize == nil
-			or (self.savedSize and (self.savedSize.width ~= self.Width or self.savedSize.height ~= self.Height))
-		then
-			local widthPlusMargin = self.Width + padding
+	-- 	if
+	-- 		self.cellSize == nil
+	-- 		or (self.savedSize and (self.savedSize.width ~= self.Width or self.savedSize.height ~= self.Height))
+	-- 	then
+	-- 		local widthPlusMargin = self.Width + padding
 
-			-- height available for cells
-			-- minus filter components depending on config)
-			local heightPlusMargin = self.Height + padding
-			if self.searchBar ~= nil then
-				heightPlusMargin = heightPlusMargin - self.searchBar.Height - padding
-			end
+	-- 		-- height available for cells
+	-- 		-- minus filter components depending on config)
+	-- 		local heightPlusMargin = self.Height + padding
+	-- 		if self.searchBar ~= nil then
+	-- 			heightPlusMargin = heightPlusMargin - self.searchBar.Height - padding
+	-- 		end
 
-			local columns = math.floor(widthPlusMargin / MIN_CELL_SIZE)
-			if columns > MAX_COLUMNS then
-				columns = MAX_COLUMNS
-			end
-			if columns < MIN_COLUMNS then
-				columns = MIN_COLUMNS
-			end
+	-- 		local columns = math.floor(widthPlusMargin / MIN_CELL_SIZE)
+	-- 		if columns > MAX_COLUMNS then
+	-- 			columns = MAX_COLUMNS
+	-- 		end
+	-- 		if columns < MIN_COLUMNS then
+	-- 			columns = MIN_COLUMNS
+	-- 		end
 
-			self.columns = columns
-			self.cellSize = math.floor(widthPlusMargin / columns) - padding
+	-- 		self.columns = columns
+	-- 		self.cellSize = math.floor(widthPlusMargin / columns) - padding
 
-			self.rows = math.floor(heightPlusMargin / (self.cellSize + padding))
+	-- 		self.rows = math.floor(heightPlusMargin / (self.cellSize + padding))
 
-			if self.rows < MIN_ROWS then
-				self.rows = MIN_ROWS
-				self.cellSize = math.floor(heightPlusMargin / self.rows) - padding
-				self.columns = math.floor(widthPlusMargin / (self.cellSize + padding))
-			end
+	-- 		if self.rows < MIN_ROWS then
+	-- 			self.rows = MIN_ROWS
+	-- 			self.cellSize = math.floor(heightPlusMargin / self.rows) - padding
+	-- 			self.columns = math.floor(widthPlusMargin / (self.cellSize + padding))
+	-- 		end
 
-			self.nbCells = self.rows * self.columns
+	-- 		self.nbCells = self.rows * self.columns
 
-			-- reduce size
-			self.Width = self.columns * (self.cellSize + padding) - padding
+	-- 		-- reduce size
+	-- 		self.Width = self.columns * (self.cellSize + padding) - padding
 
-			local totalHeight = self.rows * (self.cellSize + padding) - padding
-			if self.searchBar ~= nil then
-				totalHeight = totalHeight + self.searchBar.Height + padding
-			end
+	-- 		local totalHeight = self.rows * (self.cellSize + padding) - padding
+	-- 		if self.searchBar ~= nil then
+	-- 			totalHeight = totalHeight + self.searchBar.Height + padding
+	-- 		end
 
-			self.Height = totalHeight
+	-- 		self.Height = totalHeight
 
-			self.savedSize = {
-				width = self.Width,
-				height = self.Height,
-			}
-		end
+	-- 		self.savedSize = {
+	-- 			width = self.Width,
+	-- 			height = self.Height,
+	-- 		}
+	-- 	end
 
-		if self:isVisible() then
-			self:_generateCells() -- generated missing cells if needed
+	-- 	if self:isVisible() then
+	-- 		self:_generateCells() -- generated missing cells if needed
 
-			if self.entries ~= nil then
-				self.nbPages = math.ceil(#self.entries / self.nbCells)
-				self.page = math.floor((self.firstPageCell - 1) / self.nbCells) + 1
-			end
+	-- 		if self.entries ~= nil then
+	-- 			self.nbPages = math.ceil(#self.entries / self.nbCells)
+	-- 			self.page = math.floor((self.firstPageCell - 1) / self.nbCells) + 1
+	-- 		end
 
-			self:_updateCells()
-			self:_paginationDidChange()
+	-- 		self:_updateCells()
+	-- 		--- self:_paginationDidChange()
 
-			local offset = 0
+	-- 		local offset = 0
 
-			if self.searchButton ~= nil then
-				self.searchButton.Height = self.searchBar.Height
-				self.searchButton.Width = self.searchButton.Height
-				self.sortButton.Height = self.searchBar.Height
-				self.searchBar.Width = self.Width - self.searchButton.Width - self.sortButton.Width
-				self.searchBar.pos = { 0, self.Height - self.searchBar.Height - offset, 0 }
-				self.searchButton.pos = self.searchBar.pos + { self.searchBar.Width, 0, 0 }
-				self.sortButton.pos = self.searchButton.pos + { self.searchButton.Width, 0, 0 }
-			end
-		end
-	end
+	-- 		if self.searchButton ~= nil then
+	-- 			self.searchButton.Height = self.searchBar.Height
+	-- 			self.searchButton.Width = self.searchButton.Height
+	-- 			self.sortButton.Height = self.searchBar.Height
+	-- 			self.searchBar.Width = self.Width - self.searchButton.Width - self.sortButton.Width
+	-- 			self.searchBar.pos = { 0, self.Height - self.searchBar.Height - offset, 0 }
+	-- 			self.searchButton.pos = self.searchBar.pos + { self.searchBar.Width, 0, 0 }
+	-- 			self.sortButton.pos = self.searchButton.pos + { self.searchButton.Width, 0, 0 }
+	-- 		end
+	-- 	end
+	-- end
 
+	-- triggers request to obtain items
 	grid.getItems = function(self)
 		cancelRequestsAndTimers()
 
@@ -679,7 +855,7 @@ itemGrid.create = function(_, config)
 				repo = config.repo,
 				category = config.categories,
 				page = 1,
-				perPage = 250,
+				perPage = 25,
 				search = search,
 				sortBy = sortBy,
 			}, function(err, items)
@@ -687,7 +863,6 @@ itemGrid.create = function(_, config)
 					print("Error: " .. err)
 					return
 				end
-				print("GOT ITEMS:", #items)
 				for _, itm in ipairs(items) do
 					itm.type = "item"
 				end
@@ -739,18 +914,13 @@ itemGrid.create = function(_, config)
 		end
 	end
 
-	grid.setGridEntries = function(self, entries)
-		print("setGridEntries - nb entries:", #entries)
+	grid.setGridEntries = function(self, _entries)
+		print("setGridEntries - nb entries:", #_entries)
 		if self ~= grid then
 			error("item_grid:setGridEntries(entries): use `:`", 2)
 		end
-
-		self.firstPageCell = 1
-		self.page = 1
-		self.entries = entries or {}
-		self:refresh()
-		self.nbPages = math.ceil(#self.entries / self.nbCells)
-		self:_paginationDidChange()
+		entries = _entries or {}
+		refreshEntries()
 	end
 
 	local dt1 = 0.0
@@ -759,26 +929,28 @@ itemGrid.create = function(_, config)
 		dt1 = dt1 + dt
 		dt4 = dt4 + dt * 4
 
-		local cells = grid.cells
-		if cells == nil then
-			return
+		for _, cell in pairs(activeCells) do
+			if cell.item ~= nil and cell.item.pivot ~= nil then
+				cell.item.pivot.LocalRotation:Set(-0.1, dt1, -0.2)
+			end
 		end
-		local loadingCube
-		local center = grid.cellSize * 0.5
-		local loadingCubePos = { center + math.cos(dt4) * 20, center - math.sin(dt4) * 20, 0 }
-		for _, c in ipairs(cells) do
-			if c.getLoadingCube == nil then
-				return
-			end
-			loadingCube = c:getLoadingCube()
-			if loadingCube ~= nil and loadingCube:isVisible() then
-				loadingCube.pos = loadingCubePos
-			end
 
-			if c.item ~= nil and c.item.pivot ~= nil then
-				c.item.pivot.LocalRotation = { -0.1, dt1, -0.2 }
-			end
-		end
+		-- local loadingCube
+		-- local center = grid.cellSize * 0.5
+		-- local loadingCubePos = { center + math.cos(dt4) * 20, center - math.sin(dt4) * 20, 0 }
+		-- for _, c in ipairs(cells) do
+		-- 	if c.getLoadingCube == nil then
+		-- 		return
+		-- 	end
+		-- 	loadingCube = c:getLoadingCube()
+		-- 	if loadingCube ~= nil and loadingCube:isVisible() then
+		-- 		loadingCube.pos = loadingCubePos
+		-- 	end
+
+		-- 	if c.item ~= nil and c.item.pivot ~= nil then
+		-- 		c.item.pivot.LocalRotation = { -0.1, dt1, -0.2 }
+		-- 	end
+		-- end
 	end)
 
 	grid:getItems()

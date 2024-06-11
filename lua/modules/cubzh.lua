@@ -6,6 +6,26 @@ Modules = {
 -- Dev.DisplayBoxes = true
 
 Client.OnStart = function()
+	ease = require("ease")
+
+	drawerHeight = 0
+	avatarLayers = 5
+	avatarCamera = nil
+
+	function layoutAvatarCamera()
+		local h = Screen.Height - drawerHeight
+
+		ease:cancel(avatarCamera)
+
+		local anim = ease:inOutSine(avatarCamera, 0.2)
+		anim.TargetHeight = h
+		anim.TargetWidth = Screen.Width
+		anim.Height = h
+		anim.Width = Screen.Width
+		anim.TargetX = 0
+		anim.TargetY = 0
+	end
+
 	Camera:SetModeFree()
 	Camera:SetParent(World)
 
@@ -18,12 +38,22 @@ Client.OnStart = function()
 
 	LocalEvent:Listen("signup_flow_avatar_preview", function()
 		titleScreen():hide()
-		avatar():show()
+		avatar():show({ mode = "demo" })
+	end)
+
+	LocalEvent:Listen("signup_flow_avatar_editor", function()
+		titleScreen():hide()
+		avatar():show({ mode = "user" })
 	end)
 
 	LocalEvent:Listen("signup_flow_start_or_login", function()
 		titleScreen():show()
 		avatar():hide()
+	end)
+
+	LocalEvent:Listen("signup_drawer_height_update", function(height)
+		drawerHeight = height
+		layoutAvatarCamera()
 	end)
 
 	light = Light()
@@ -33,11 +63,36 @@ Client.OnStart = function()
 	light.CastsShadows = true
 	light.On = true
 	light.Type = LightType.Directional
+	-- light.Layers = Camera.Layers + avatarLayers
+	light.Layers = avatarLayers
+	light.Layers = { 1, avatarLayers } -- Camera.Layers + avatarLayers
 	World:AddChild(light)
 	light.Rotation:Set(math.rad(20), math.rad(20), 0)
 
 	Light.Ambient.SkyLightFactor = 0.2
 	Light.Ambient.DirectionalLightFactor = 0.5
+
+	avatarCamera = Camera()
+	-- avatarCamera.Layers = Camera.Layers
+	avatarCamera.Layers = avatarLayers
+	avatarCamera:SetParent(World)
+	avatarCamera.On = true
+	-- avatarCamera.FOV = Camera.FOV
+
+	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+		layoutAvatarCamera()
+	end)
+
+	local logoTile = bundle:Data("images/logo-tile.png")
+	print("logoTile:", logoTile, logoTile.Length)
+
+	-- backgroundQuad = Quad()
+	-- -- backgroundQuad.Color = Color(255, 0, 0, 0.3)
+	-- backgroundQuad.Image = logoTile
+	-- backgroundQuad.Width = 100
+	-- backgroundQuad.Height = 100
+	-- backgroundQuad.Anchor = { 0.5, 0.5 }
+	-- World:AddChild(backgroundQuad)
 end
 
 -- Client.OnWorldObjectLoad = function(obj)
@@ -210,6 +265,11 @@ function titleScreen()
 			local box = Box()
 			box:Fit(logo, { recursive = true })
 			Camera:FitToScreen(box, 0.8)
+
+			-- if backgroundQuad then
+			-- 	backgroundQuad.Rotation = Camera.Rotation
+			-- 	backgroundQuad.Position = Camera.Position + Camera.Forward * 100
+			-- end
 		end
 
 		didResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, didResizeFunction)
@@ -278,11 +338,11 @@ function avatar()
 	local yaw = math.rad(-190)
 	local pitch = 0
 
+	-- local avatarCamera
 	local root
-	local didResizeFunction
-	local didResizeListener
-	local dragListener
-	local changeTimer
+	local listeners = {}
+	local avatarLayers = 5
+	local focus = "body" -- body / head
 
 	local function drag(dx, dy)
 		yaw = yaw - dx * 0.01
@@ -292,10 +352,21 @@ function avatar()
 		end
 	end
 
-	_avatar.show = function()
+	local mode = "demo" -- demo / user
+
+	_avatar.show = function(self, config)
 		if root ~= nil then
-			return
+			if mode == config.mode then
+				return
+			end
+			self:hide()
 		end
+
+		mode = config.mode
+		print("mode:", mode)
+
+		local hierarchyactions = require("hierarchyactions")
+
 		root = Object()
 		root:SetParent(World)
 
@@ -303,85 +374,153 @@ function avatar()
 			usernameOrId = "",
 			-- size = math.min(Screen.Height * 0.5, Screen.Width * 0.75),
 			-- ui = ui,
-			eyeBlinks = false,
+			eyeBlinks = mode == "demo" and false or true,
 		})
 
 		avatar:SetParent(root)
 		root.avatar = avatar
 
-		avatar.Animations.Idle:Stop()
+		hierarchyactions:applyToDescendants(root, { includeRoot = true }, function(o)
+			pcall(function()
+				o.Layers = avatarLayers
+			end)
+		end)
+
 		avatar.Animations.Walk:Stop()
-		-- avatar.Animations.Walk:Play()
+		avatar.Animations.Idle:Play()
 
 		local b = Box()
 		b:Fit(avatar, { recursive = true, ["local"] = true })
 		avatar.LocalPosition.Y = -b.Size.Y * 0.5
 
-		avatar:loadEquipment({ type = "hair", shape = hairs[1] })
-		avatar:loadEquipment({ type = "jacket", shape = jackets[1] })
-		avatar:loadEquipment({ type = "pants", shape = pants[1] })
-		avatar:loadEquipment({ type = "boots", shape = boots[1] })
-
-		didResizeFunction = function()
-			local box = Box()
-			box:Fit(root, { recursive = true })
-			Camera:FitToScreen(box, 0.5)
+		if mode == "demo" then
+			avatar:loadEquipment({ type = "hair", shape = hairs[1] })
+			avatar:loadEquipment({ type = "jacket", shape = jackets[1] })
+			avatar:loadEquipment({ type = "pants", shape = pants[1] })
+			avatar:loadEquipment({ type = "boots", shape = boots[1] })
 		end
 
-		dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+		local function updateCamera()
+			local box = Box()
+			if focus == "body" then
+				box:Fit(root, { recursive = true })
+				avatarCamera:FitToScreen(box, 0.7)
+			elseif focus == "head" then
+				box:Fit(root.Head, { recursive = true })
+				avatarCamera:FitToScreen(box, 0.7)
+			end
+		end
+
+		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
 			drag(pe.DX, pe.DY)
 		end)
 		drag(0, 0)
+		table.insert(listeners, l)
 
-		didResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, didResizeFunction)
+		l = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, updateCamera)
 		Timer(0.01, function()
-			didResizeFunction()
+			updateCamera()
 		end)
-		-- didResizeFunction()
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_head", function()
+			focus = "head"
+			updateCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_body", function()
+			focus = "body"
+			updateCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("signup_flow_avatar_preview", function()
+			focus = "body"
+			updateCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_update", function(config)
+			if config.skinColorIndex then
+				local colors = avatarModule.skinColors[config.skinColorIndex]
+				local avatar = root.avatar
+				avatar:setColors({
+					skin1 = colors.skin1,
+					skin2 = colors.skin2,
+					nose = colors.nose,
+					mouth = colors.mouth,
+				})
+			end
+			if config.eyesIndex then
+				avatar:setEyes({
+					index = config.eyesIndex,
+					-- color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
+				})
+			end
+			if config.noseIndex then
+				avatar:setNose({ index = config.noseIndex })
+			end
+			if config.jacket then
+				avatar:loadEquipment({ type = "jacket", item = config.jacket })
+			end
+			if config.hair then
+				avatar:loadEquipment({ type = "hair", item = config.hair })
+			end
+			if config.pants then
+				avatar:loadEquipment({ type = "pants", item = config.pants })
+			end
+			if config.boots then
+				avatar:loadEquipment({ type = "boots", item = config.boots })
+			end
+		end)
+		table.insert(listeners, l)
 
 		local i = 8
 		local r
 		local eyesIndex = 1
 		local eyesCounter = 1
 		local eyesTrigger = 3
-		changeTimer = Timer(0.3, true, function()
-			r = math.random(1, #avatarModule.skinColors)
-			if r == i then
-				r = i + 1
-				if r > #avatarModule.skinColors then
-					r = 1
+		if mode == "demo" then
+			changeTimer = Timer(0.3, true, function()
+				r = math.random(1, #avatarModule.skinColors)
+				if r == i then
+					r = i + 1
+					if r > #avatarModule.skinColors then
+						r = 1
+					end
 				end
-			end
-			i = r
-			local colors = avatarModule.skinColors[i]
-			local avatar = root.avatar
-			avatar:setColors({
-				skin1 = colors.skin1,
-				skin2 = colors.skin2,
-				nose = colors.nose,
-				mouth = colors.mouth,
-			})
-			eyesCounter = eyesCounter + 1
-			if eyesCounter >= eyesTrigger then
-				eyesCounter = 0
-				eyesIndex = eyesIndex + 1
-				if eyesIndex > #avatarModule.eyes then
-					eyesIndex = 1
+				i = r
+				local colors = avatarModule.skinColors[i]
+				local avatar = root.avatar
+				avatar:setColors({
+					skin1 = colors.skin1,
+					skin2 = colors.skin2,
+					nose = colors.nose,
+					mouth = colors.mouth,
+				})
+				eyesCounter = eyesCounter + 1
+				if eyesCounter >= eyesTrigger then
+					eyesCounter = 0
+					eyesIndex = eyesIndex + 1
+					if eyesIndex > #avatarModule.eyes then
+						eyesIndex = 1
+					end
+					avatar:setEyes({
+						index = eyesIndex,
+						color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
+					})
+					avatar:setNose({
+						index = math.random(1, #avatarModule.noses),
+					})
 				end
-				avatar:setEyes({
-					index = eyesIndex,
-					color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
-				})
-				avatar:setNose({
-					index = math.random(1, #avatarModule.noses),
-				})
-			end
 
-			avatar:loadEquipment({ type = "hair", shape = hairs[math.random(1, #hairs)] })
-			avatar:loadEquipment({ type = "jacket", shape = jackets[math.random(1, #jackets)] })
-			avatar:loadEquipment({ type = "pants", shape = pants[math.random(1, #pants)] })
-			avatar:loadEquipment({ type = "boots", shape = boots[math.random(1, #boots)] })
-		end)
+				avatar:loadEquipment({ type = "hair", shape = hairs[math.random(1, #hairs)] })
+				avatar:loadEquipment({ type = "jacket", shape = jackets[math.random(1, #jackets)] })
+				avatar:loadEquipment({ type = "pants", shape = pants[math.random(1, #pants)] })
+				avatar:loadEquipment({ type = "boots", shape = boots[math.random(1, #boots)] })
+			end)
+		end
 	end
 
 	_avatar.hide = function()
@@ -395,12 +534,15 @@ function avatar()
 		avatar:loadEquipment({ type = "pants", item = "" })
 		avatar:loadEquipment({ type = "boots", item = "" })
 
-		changeTimer:Cancel()
-		changeTimer = nil
-		dragListener:Remove()
-		dragListener = nil
-		didResizeListener:Remove()
-		didResizeFunction = nil
+		if changeTimer then
+			changeTimer:Cancel()
+			changeTimer = nil
+		end
+
+		for _, l in ipairs(listeners) do
+			l:Remove()
+		end
+		listeners = {}
 		root:RemoveFromParent()
 		root = nil
 	end

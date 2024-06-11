@@ -21,6 +21,8 @@ SCROLL_UNLOAD_MARGIN = 100
 SCROLL_DEFAULT_RIGIDITY = 0.99
 SCROLL_TIME_TO_TARGET = 0.1
 SCROLL_EPSILON = 0.01
+SCROLL_DRAG_EPSILON = 5
+SCROLL_DRAG_EPSILON_SQ = SCROLL_DRAG_EPSILON * SCROLL_DRAG_EPSILON
 
 -- ENUMS
 
@@ -130,6 +132,11 @@ function createUI(system)
 
 	-- Node that's currently being pressed
 	local pressed = nil
+
+	-- Scroll nodes pressed but not yet dragged
+	-- NOTE: nested scrolls only work so far in moving along non-aligned axis (horizontal vs vertical)
+	-- pressed is assigned to scroll node when drag starts (considering epsilon)
+	local pressedScrolls = {}
 
 	-- keeping a reference on all text items,
 	-- to update fontsize when needed
@@ -284,9 +291,7 @@ function createUI(system)
 			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
-		if self.parentDidResizeWrapper then
-			self:parentDidResizeWrapper()
-		end
+		_parentDidResizeWrapper(self)
 	end
 
 	local function _nodeHasParent(self)
@@ -307,9 +312,7 @@ function createUI(system)
 			toClean = {}
 		end
 
-		if type(t.onRemove) == "function" then
-			t:onRemove()
-		end
+		_onRemoveWrapper(t)
 
 		t:setParent(nil)
 
@@ -759,13 +762,11 @@ function createUI(system)
 				t:_setWidth(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResizeWrapper ~= nil then
-						child:parentDidResizeWrapper()
-					end
+					_parentDidResizeWrapper(child)
 				end
 
 				if t.parent ~= nil then
-					t.parent:contentDidResizeWrapper()
+					_contentDidResizeWrapper(t.parent)
 				end
 			end
 		elseif k == "Height" then
@@ -777,20 +778,18 @@ function createUI(system)
 				t:_setHeight(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResizeWrapper ~= nil then
-						child:parentDidResizeWrapper()
-					end
+					_parentDidResizeWrapper(child)
 				end
 
 				if t.parent ~= nil then
-					t.parent:contentDidResizeWrapper()
+					_contentDidResizeWrapper(t.parent)
 				end
 			end
 		elseif k == "text" or k == "Text" then
 			if t._setText ~= nil then
 				if type(t._setText) == "function" then
 					local r = t:_setText(v)
-					t:contentDidResizeWrapper()
+					_contentDidResizeWrapper(t)
 					return r
 				end
 			else
@@ -808,6 +807,45 @@ function createUI(system)
 		end
 	end
 
+	local function _nodeShow(self)
+		if not self.object then
+			return
+		end
+		if self.parent.object then
+			self.object:SetParent(self.parent.object)
+		else
+			self.object:SetParent(rootFrame)
+		end
+		self.object.IsHidden = false
+	end
+
+	function _nodeHide(self)
+		if not self.object then
+			return
+		end
+		self.object:RemoveFromParent()
+		self.object.IsHidden = true
+	end
+
+	function _nodeToggle(self, show)
+		if show == nil then
+			show = self:isVisible() == false
+		end
+		if show then
+			self:show()
+		else
+			self:hide()
+		end
+	end
+
+	function _nodeIsVisible(self)
+		return self.object.IsHidden == false
+	end
+
+	function _nodeHasFocus(self)
+		return focused == self
+	end
+
 	local function _nodeCreate()
 		local node = {}
 		local m = {
@@ -821,61 +859,18 @@ function createUI(system)
 				children = {},
 				parentDidResize = nil,
 				parentDidResizeSystem = nil,
-				parentDidResizeWrapper = function(self)
-					if self.parentDidResizeSystem ~= nil then
-						self:parentDidResizeSystem()
-					end
-					if self.parentDidResize ~= nil then
-						self:parentDidResize()
-					end
-				end,
-				contentDidResize = nil, -- user defined
+				contentDidResize = nil,
 				contentDidResizeSystem = nil,
-				contentDidResizeWrapper = function(self)
-					if self.contentDidResizeSystem ~= nil then
-						self:contentDidResizeSystem()
-					end
-					if self.contentDidResize ~= nil then
-						self:contentDidResize()
-					end
-				end,
+				onRemove = nil,
+				onRemoveSystem = nil,
 				setParent = _nodeSetParent,
 				hasParent = _nodeHasParent,
 				remove = privateFunctions._nodeRemovePublicWrapper,
-				show = function(self)
-					if not self.object then
-						return
-					end
-					if self.parent.object then
-						self.object:SetParent(self.parent.object)
-					else
-						self.object:SetParent(rootFrame)
-					end
-					self.object.IsHidden = false
-				end,
-				hide = function(self)
-					if not self.object then
-						return
-					end
-					self.object:RemoveFromParent()
-					self.object.IsHidden = true
-				end,
-				toggle = function(self, show)
-					if show == nil then
-						show = self:isVisible() == false
-					end
-					if show then
-						self:show()
-					else
-						self:hide()
-					end
-				end,
-				isVisible = function(self)
-					return self.object.IsHidden == false
-				end,
-				hasFocus = function(self)
-					return focused == self
-				end,
+				show = _nodeShow,
+				hide = _nodeHide,
+				toggle = _nodeToggle,
+				isVisible = _nodeIsVisible,
+				hasFocus = _nodeHasFocus,
 				-- returned when requesting Width if defined
 				-- can be a number or function(self) that returns a number
 				_width = nil,
@@ -2194,6 +2189,7 @@ function createUI(system)
 
 		local scrollPosition = 0
 		local targetScrollPosition = 0
+		local dragStartScrollPosition = 0
 
 		local cell
 		local cellInfo
@@ -2225,7 +2221,7 @@ function createUI(system)
 			end
 
 			if down then
-				container.pos.Y = node.Height + scrollPosition
+				container.pos.Y = node.Height - scrollPosition
 
 				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
@@ -2273,6 +2269,12 @@ function createUI(system)
 							break
 						end
 						cellInfo = { height = cell.Height }
+						if cache.contentHeight == 0 then
+							cache.contentHeight = cellInfo.height
+						else
+							cache.contentHeight = cache.contentHeight + cellInfo.height + cellPadding
+						end
+
 						if previousCellInfo ~= nil then
 							if down then
 								cellInfo.top = previousCellInfo.bottom - cellPadding
@@ -2407,7 +2409,7 @@ function createUI(system)
 
 		node.applyScrollDelta = function(_, dx, dy)
 			if vertical then
-				node:setScrollPosition(targetScrollPosition + dy)
+				node:setScrollPosition(targetScrollPosition - dy)
 			elseif horizontal then
 				node:setScrollPosition(targetScrollPosition - dx)
 			end
@@ -2416,8 +2418,13 @@ function createUI(system)
 		-- set scroll position
 		node.setScrollPosition = function(_, newPosition)
 			if down then
-				newPosition = math.min(-100, math.max(0, newPosition))
+				local limit = cache.contentHeight - node.Height
+				if limit < 0 then
+					limit = 0
+				end
+				newPosition = math.max(-limit, math.min(0, newPosition))
 			elseif up then
+				-- TODO: review
 				newPosition = math.min(0, math.max(100, newPosition))
 			elseif right then
 				local limit = cache.contentWidth - node.Width
@@ -2426,54 +2433,42 @@ function createUI(system)
 				end
 				newPosition = math.max(0, math.min(limit, newPosition)) -- correct
 			elseif left then
+				-- TODO: review
 				newPosition = math.min(100, math.max(-100, newPosition))
 			end
 
 			targetScrollPosition = newPosition
 		end
 
-		node.pushFront = function(_, cell)
-			-- for i = node.nbCells + 1, 2, -1 do
-			-- 	cells[i] = cells[i - 1]
-			-- 	cachedCellHeights[i] = cachedCellHeights[i - 1]
-			-- end
-			-- node.nbCells = node.nbCells + 1
-			-- node:pushCell(cell, 1)
-		end
-
 		node.flush = function(_)
-			-- for i = 1, node.nbCells do
-			-- 	if cells[i] then
-			-- 		config.unloadCell(cells[i])
-			-- 	end
-			-- end
-			-- node.nbCells = 0
-			-- cells = {}
-			-- cachedCellHeights = {}
+			local toRemove = {}
+			for index, _ in pairs(cells) do
+				table.insert(toRemove, index)
+			end
+
+			local indexToRemove = table.remove(toRemove)
+
+			while indexToRemove ~= nil do
+				local cell = cells[indexToRemove]
+				if cell ~= nil then
+					config.unloadCell(indexToRemove, cell)
+				end
+
+				indexToRemove = table.remove(toRemove)
+			end
+
+			cells = {}
+			cache = {
+				contentWidth = 0,
+				contentHeight = 0,
+				cellInfo = {},
+			}
+			scrollPosition = 0
+			targetScrollPosition = 0
 		end
 
-		-- add cell at index, called automatically after onLoad callback
-		node.pushCell = function(_, cell, index, needRefresh)
-			-- needRefresh = needRefresh == nil and true or needRefresh
-			-- if cell == nil then
-			-- 	return
-			-- end
-			-- if index == nil then
-			-- 	index = node.nbCells + 1
-			-- end
-			-- cells[index] = cell
-			-- cell:setParent(container)
-			-- cachedCellHeights[index] = cell.Height
-			-- if index > node.nbCells then
-			-- 	node.nbCells = index
-			-- end
-			-- if needRefresh then
-			-- 	node:refresh()
-			-- end
-		end
-
-		node.parentDidResizeSystem = function(self)
-			self:refresh()
+		container.parentDidResizeSystem = function(self)
+			node:refresh()
 		end
 
 		node.dragging = function()
@@ -2525,59 +2520,43 @@ function createUI(system)
 		end, { system = system == true and System or nil, topPriority = true })
 		table.insert(listeners, l)
 
-		l = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
-			if node:containsPointer(pe) then
-				dragPointerIndex = pe.Index
-				activated = true
-				unfocus()
+		local startPosition
+		-- NOTE: We should have an onPressSystem function for this, to let users
+		-- set their own onPress callback if needed, even on scroll nodes.
+		node.onPress = function(_, _, _, pointerEvent)
+			startPosition = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)
+			if vertical then
+				startPosition.X = 0
+			elseif horizontal then
+				startPosition.Y = 0
 			end
-		end, { system = system == true and System or nil, topPriority = true })
-		table.insert(listeners, l)
 
-		l = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
-			if pe.Index ~= dragPointerIndex then
-				return
-			end
-			dragPointerIndex = nil
-			activated = false
-			dragging = false
-		end, { system = system == true and System or nil, topPriority = false })
-		table.insert(listeners, l)
+			targetScrollPosition = scrollPosition
+			dragStartScrollPosition = scrollPosition
 
-		l = LocalEvent:Listen(LocalEvent.Name.PointerCancel, function(pe)
-			if pe.Index ~= dragPointerIndex then
-				return
-			end
-			dragPointerIndex = nil
-			activated = false
-			dragging = false
-		end, { system = system == true and System or nil, topPriority = false })
-		table.insert(listeners, l)
+			print(startPosition)
+		end
 
-		-- TODO: scroll should remain under pointer,
-		-- not the case currently as we simply apply delta and cap position
-		l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-			if pe.Index ~= dragPointerIndex then
-				return
+		node.onDrag = function(self, pointerEvent)
+			local pos = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)
+
+			local diff = 0
+			if vertical then
+				diff = startPosition.Y - pos.Y
+			elseif horizontal then
+				diff = startPosition.X - pos.X
 			end
-			if activated and dragging == false then
-				dragging = true
-				-- TODO: reactivate this once we better handle ui
-				-- layers above scroll areas.
-				-- Currently, when the alert modal is displayed, we can still scroll.
-				-- if pressed ~= nil then
-				-- 	if pressed._onCancel then
-				-- 		pressed:_onCancel()
-				-- 	end
-				-- 	pressed = nil
-				-- end
+
+			self:setScrollPosition(dragStartScrollPosition + diff)
+
+			if pressed ~= self and math.abs(scrollPosition - dragStartScrollPosition) >= SCROLL_DRAG_EPSILON then
+				if pressed._onCancel then
+					pressed:_onCancel()
+				end
+				focus(nil)
+				pressed = self
 			end
-			if dragging then
-				node:applyScrollDelta(pe.DX, pe.DY)
-				return true -- catch event
-			end
-		end, { system = system == true and System or nil, topPriority = true })
-		table.insert(listeners, l)
+		end
 
 		if Client.IsMobile == false then
 			l = LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
@@ -2595,11 +2574,12 @@ function createUI(system)
 			table.insert(listeners, l)
 		end
 
-		node.onRemove = function()
+		node.onRemoveSystem = function(self)
 			for _, l in ipairs(listeners) do
 				l:Remove()
 			end
 			listeners = {}
+			self:flush()
 		end
 
 		node:refresh()
@@ -3185,16 +3165,12 @@ function createUI(system)
 					end
 				end
 
-				if node.parent.contentDidResizeWrapper ~= nil then
-					node.parent:contentDidResizeWrapper()
-				end
+				_contentDidResizeWrapper(node.parent)
 			end
 		end
 
 		for _, child in pairs(rootChildren) do
-			if child.parentDidResizeWrapper ~= nil then
-				child:parentDidResizeWrapper()
-			end
+			_parentDidResizeWrapper(child)
 		end
 	end, { system = system == true and System or nil, topPriority = true })
 
@@ -3203,6 +3179,8 @@ function createUI(system)
 			return
 		end
 		-- TODO: only accept some indexed (no right mouse for example)
+
+		pressedScrolls = {}
 
 		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 		local direction = { 0, 0, 1 }
@@ -3218,20 +3196,27 @@ function createUI(system)
 			return a.Distance < b.Distance
 		end)
 
+		local pressedCandidate = nil
+		local pressedCandidateImpact = nil
+
 		for _, impact in ipairs(impacts) do
 			skip = false
 
 			hitObject = impact.Shape or impact.Object
 
-			-- try to find parent ui object (when impact a child of a mutable shape)
+			-- try to find parent ui object (when impact is a child of a mutable shape)
 			while hitObject and not hitObject._node do
 				hitObject = hitObject:GetParent()
 			end
 
-			if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
+			if
+				hitObject and (hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea)
+			then
 				-- check if hitObject is within a scroll
 				parent = hitObject._node.parent
 				while parent ~= nil do
+					-- skip action if node parented by scroll but not within area
+					-- note: a scroll can itself be within a scroll
 					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
 						skip = true
 						break
@@ -3240,24 +3225,35 @@ function createUI(system)
 				end
 
 				if skip == false then
-					pressed = hitObject._node
-
-					-- unfocus focused node, unless hit node.config.unfocused == false
-					if pressed ~= focused and pressed.config.unfocuses ~= false then
-						focus(nil)
-					end
-
-					if hitObject._node._onPress then
+					if hitObject._node.isScrollArea then
+						table.insert(pressedScrolls, hitObject._node)
 						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
+					elseif pressedCandidate == nil then
+						pressedCandidate = hitObject._node
+						pressedCandidateImpact = impact
 					end
-					if pressed.config.sound and pressed.config.sound ~= "" then
-						sfx(pressed.config.sound, { Spatialized = false })
-					end
-
-					pointerIndex = pointerEvent.Index
-					return true -- capture event, other listeners won't get it
 				end
 			end
+		end
+
+		if pressedCandidate ~= nil then
+			pressed = pressedCandidate
+
+			-- unfocus focused node, unless hit node.config.unfocused == false
+			if pressed ~= focused and pressed.config.unfocuses ~= false then
+				focus(nil)
+			end
+
+			if pressed.config.sound and pressed.config.sound ~= "" then
+				sfx(pressed.config.sound, { Spatialized = false })
+			end
+
+			if pressed._onPress then
+				pressed:_onPress(hitObject, pressedCandidateImpact.Block, pointerEvent)
+			end
+
+			pointerIndex = pointerEvent.Index
+			return true -- capture event, other listeners won't get it
 		end
 
 		-- did not touch anything, unfocus if focused node
@@ -3327,12 +3323,27 @@ function createUI(system)
 			return
 		end
 
+		local capture = false
+
+		for _, scroll in ipairs(pressedScrolls) do
+			capture = true -- at least one scroll capturing drag
+			scroll:_onDrag(pointerEvent)
+			if pressed == scroll then
+				-- scroll took control, early return!
+				return true
+			end
+		end
+
 		local pressed = pressed
 		if pressed then
 			if pressed._onDrag then
 				pressed:_onDrag(pointerEvent)
 				return true -- capture only if onDrag is set on the node
 			end
+		end
+
+		if capture then
+			return true
 		end
 	end, { system = system == true and System or nil, topPriority = true })
 
@@ -3593,6 +3604,44 @@ LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden, function()
 		keyboardToolbar = nil
 	end
 end, { system = System })
+
+-- GLOBAL FUNCTIONS USED BY ALL ENTITIES
+
+function _parentDidResizeWrapper(node)
+	if node == nil then
+		return
+	end
+	if node.parentDidResizeSystem ~= nil then
+		node:parentDidResizeSystem()
+	end
+	if node.parentDidResize ~= nil then
+		node:parentDidResize()
+	end
+end
+
+function _contentDidResizeWrapper(node)
+	if node == nil then
+		return
+	end
+	if node.contentDidResizeSystem ~= nil then
+		node:contentDidResizeSystem()
+	end
+	if node.contentDidResize ~= nil then
+		node:contentDidResize()
+	end
+end
+
+function _onRemoveWrapper(node)
+	if node == nil then
+		return
+	end
+	if node.onRemoveSystem ~= nil then
+		node:onRemoveSystem()
+	end
+	if node.onRemove ~= nil then
+		node:onRemove()
+	end
+end
 
 -- INIT
 

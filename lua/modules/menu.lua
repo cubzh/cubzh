@@ -2659,6 +2659,9 @@ else
 					activeFlow:remove()
 				end
 			end,
+			avatarEditorStep = function()
+				LocalEvent:Send("signup_flow_avatar_editor")
+			end,
 		})
 		activeFlow = signupFlow
 	end
