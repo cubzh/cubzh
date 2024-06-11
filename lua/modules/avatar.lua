@@ -1045,23 +1045,39 @@ function avatar_setNose(self, config)
 	})
 
 	if config.index ~= nil then
+		local nodeBlocks = {}
+
+		local nose = mod.noses[config.index]
+		for _, n in ipairs(nose) do
+			local x = 11 - n.x
+			local y = n.y + 2
+			if nodeBlocks[x] == nil then
+				nodeBlocks[x] = {}
+			end
+			nodeBlocks[x][y] = n.c
+		end
+
 		-- remove current nose
 		local head = self.Head
 		local b
 		local depth = 12
 		for x = 8, head.Width - 9 do -- width -> left side when looking at face
 			for y = 3, head.Height - 5 do
-				b = head:GetBlock(x, y, depth)
-				if b ~= nil then
-					b:Remove()
+				if nodeBlocks[x][y] == nil then
+					b = head:GetBlock(x, y, depth)
+					if b ~= nil then
+						b:Remove()
+					end
+				else
+					b = head:GetBlock(x, y, depth)
+					if b == nil then
+						head:AddBlock(nodeBlocks[x][y], x, y, depth)
+					end
 				end
 			end
 		end
 
-		local nose = mod.noses[config.index]
-		for _, n in ipairs(nose) do
-			head:AddBlock(n.c, 11 - n.x, n.y + 2, depth)
-		end
+		-- NOTE: there seems to be an issue when removing then adding block at same position
 	end
 
 	if config.color ~= nil then

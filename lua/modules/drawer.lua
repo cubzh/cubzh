@@ -5,6 +5,9 @@ local NO_MARGIN_SCREEN_WIDTH = 400
 local MAX_WIDTH = 600
 local ANIMATION_TIME = 0.2
 
+local SHOW_BUMP_HEIGHT = 200
+local BUMP_HEIGHT = 100
+
 conf = require("config")
 theme = require("uitheme").current
 ease = require("ease")
@@ -66,7 +69,17 @@ mod.create = function(self, config)
 		fields.config.layoutContent(self)
 
 		show(self)
-		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, -drawer.Height }
+		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, -SHOW_BUMP_HEIGHT }
+		ease:outBack(self, ANIMATION_TIME).pos = Number3(Screen.Width * 0.5 - self.Width * 0.5, 0, 0)
+	end
+
+	drawer.bump = function(self)
+		local fields = privateFields[self]
+		if fields == nil then
+			return
+		end
+		ease:cancel(self)
+		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, -BUMP_HEIGHT }
 		ease:outBack(self, ANIMATION_TIME).pos = Number3(Screen.Width * 0.5 - self.Width * 0.5, 0, 0)
 	end
 

@@ -5,6 +5,8 @@ theme = require("uitheme").current
 avatar = require("avatar")
 itemGrid = require("item_grid")
 
+local MAX_COLOR_SWATCH_SIZE = 100
+
 privateFields = setmetatable({}, { __mode = "k" })
 
 mod.create = function(self, config)
@@ -15,6 +17,7 @@ mod.create = function(self, config)
 	local defaultConfig = {
 		ui = ui, -- can only be used by System to override UI instance
 		margin = theme.padding,
+		requestHeightCallback = function(_) end, -- height
 	}
 
 	local ok, err = pcall(function()
@@ -25,7 +28,7 @@ mod.create = function(self, config)
 	end
 
 	local ui = config.ui
-	local node = ui:createFrame(Color(255, 0, 0, 0.3))
+	local node = ui:createFrame(Color(0, 0, 0, 0))
 
 	privateFields[node] = {}
 
@@ -36,61 +39,267 @@ mod.create = function(self, config)
 	local refButton = ui:createButton("dummy")
 	refButton:setParent(nil)
 
-	local categories = ui:createScroll({
-		backgroundColor = Color(200, 200, 200),
-		direction = "right",
-		cellPadding = 6.0,
-		loadCell = function(index)
-			-- print("LOAD", index)
-			if index == 1 then
-				return ui:createButton("🙂 Head & Body")
-			elseif index == 2 then
-				return ui:createButton("👕 Clothing")
-			elseif index == 3 then
-				return ui:createButton("👕 Clothing 2")
-			elseif index == 4 then
-				return ui:createButton("👕 Clothing 3")
-			elseif index == 5 then
-				return ui:createButton("👕 Clothing 4")
-			elseif index == 6 then
-				return ui:createButton("👕 Clothing 5")
-			elseif index == 7 then
-				return ui:createButton("👕 Clothing 6")
-			end
-			return nil
-		end,
-		unloadCell = function(index, cell)
-			-- print("UNLOAD", index)
-			cell:remove()
-		end,
-	})
+	local categoryNode
+	local categories
 
-	local subCategories = ui:createScroll({
+	local function setSkin()
+		if categoryNode then
+			categoryNode:remove()
+		end
+		categoryNode = ui:createFrame()
+
+		local btns = {}
+		for skinColorIndex, color in pairs(avatar.skinColors) do
+			local btn = ui:createButton("", {
+				color = color.skin1,
+			})
+			btn.onRelease = function()
+				LocalEvent:Send("avatar_editor_update", { skinColorIndex = skinColorIndex })
+			end
+			btn:setParent(categoryNode)
+			table.insert(btns, btn)
+		end
+
+		btns[1].parentDidResize = function(self)
+			print("btns[1].parentDidResize")
+			local parent = self.parent
+			local half = math.floor(#btns / 2)
+			local size = (parent.Width - theme.padding * (half - 1)) / half
+			size = math.min(MAX_COLOR_SWATCH_SIZE, size)
+			local totalSize = (size + theme.padding) * half - theme.padding
+			local startX = parent.Width * 0.5 - totalSize * 0.5
+			for i = 1, half do
+				btn = btns[i]
+				btn.Width = size
+				btn.Height = size
+				btn.pos = { startX + (i - 1) * (size + theme.padding), btn.Height + theme.padding }
+			end
+			for i = half + 1, #btns do
+				btn = btns[i]
+				btn.Width = size
+				btn.Height = size
+				btn.pos = { startX + (i - half - 1) * (size + theme.padding), 0 }
+			end
+
+			config.requestHeightCallback(size * 2 + theme.padding * 2 + categories.Height)
+		end
+
+		categoryNode:setParent(node)
+		categories:parentDidResize()
+		LocalEvent:Send("avatar_editor_should_focus_on_body")
+	end
+
+	categories = ui:createScroll({
 		backgroundColor = Color(200, 200, 200),
 		direction = "right",
 		cellPadding = 6.0,
 		loadCell = function(index)
 			if index == 1 then
-				return ui:createButton("Skin")
+				local btn = ui:createButton("🙂 Skin")
+				btn.onRelease = function()
+					setSkin()
+				end
+				return btn
 			elseif index == 2 then
-				return ui:createButton("Hair")
+				local btn = ui:createButton("✨ Hair")
+				btn.onRelease = function()
+					if categoryNode then
+						categoryNode:remove()
+					end
+					categoryNode = itemGrid:create({
+						categories = { "hair" },
+						uikit = ui,
+						onOpen = function(cell)
+							LocalEvent:Send("avatar_editor_update", { hair = cell.fullName })
+						end,
+					})
+					categoryNode:setParent(node)
+					categories:parentDidResize()
+
+					config.requestHeightCallback(10000)
+					LocalEvent:Send("avatar_editor_should_focus_on_head")
+				end
+				return btn
 			elseif index == 3 then
-				return ui:createButton("Eyes")
+				local btn = ui:createButton("🙂 Eyes")
+				btn.onRelease = function()
+					if categoryNode then
+						categoryNode:remove()
+					end
+					categoryNode = ui:createFrame()
+
+					local btns = {}
+					for eyesIndex, _ in pairs(avatar.eyes) do
+						local btn = ui:createButton("", {
+							-- color = color.skin1,
+						})
+						btn.onRelease = function()
+							LocalEvent:Send("avatar_editor_update", { eyesIndex = eyesIndex })
+						end
+						btn:setParent(categoryNode)
+						table.insert(btns, btn)
+					end
+
+					btns[1].parentDidResize = function(self)
+						local parent = self.parent
+						local half = math.floor(#btns / 2)
+						local size = (parent.Width - theme.padding * (half - 1)) / half
+						size = math.min(MAX_COLOR_SWATCH_SIZE, size)
+						local totalSize = (size + theme.padding) * half - theme.padding
+						local startX = parent.Width * 0.5 - totalSize * 0.5
+						for i = 1, half do
+							btn = btns[i]
+							btn.Width = size
+							btn.Height = size
+							btn.pos = { startX + (i - 1) * (size + theme.padding), btn.Height + theme.padding }
+						end
+						for i = half + 1, #btns do
+							btn = btns[i]
+							btn.Width = size
+							btn.Height = size
+							btn.pos = { startX + (i - half - 1) * (size + theme.padding), 0 }
+						end
+
+						config.requestHeightCallback(size * 2 + theme.padding * 2 + categories.Height)
+					end
+
+					categoryNode:setParent(node)
+					categories:parentDidResize()
+					LocalEvent:Send("avatar_editor_should_focus_on_head")
+				end
+				return btn
 			elseif index == 4 then
-				return ui:createButton("Ears")
+				local btn = ui:createButton("✨ Ears")
+				btn:disable()
+				return btn
 			elseif index == 5 then
-				return ui:createButton("Nose")
+				local btn = ui:createButton("👃 Nose")
+				btn.onRelease = function()
+					if categoryNode then
+						categoryNode:remove()
+					end
+					categoryNode = ui:createFrame()
+
+					local btns = {}
+					for noseIndex, _ in pairs(avatar.noses) do
+						local btn = ui:createButton("", {
+							-- color = color.skin1,
+						})
+						btn.onRelease = function()
+							LocalEvent:Send("avatar_editor_update", { noseIndex = noseIndex })
+						end
+						btn:setParent(categoryNode)
+						table.insert(btns, btn)
+					end
+
+					btns[1].parentDidResize = function(self)
+						local parent = self.parent
+						local half = math.floor(#btns / 2)
+						local size = (parent.Width - theme.padding * (half - 1)) / half
+						size = math.min(MAX_COLOR_SWATCH_SIZE, size)
+						local totalSize = (size + theme.padding) * half - theme.padding
+						local startX = parent.Width * 0.5 - totalSize * 0.5
+						for i = 1, half do
+							btn = btns[i]
+							btn.Width = size
+							btn.Height = size
+							btn.pos = { startX + (i - 1) * (size + theme.padding), btn.Height + theme.padding }
+						end
+						for i = half + 1, #btns do
+							btn = btns[i]
+							btn.Width = size
+							btn.Height = size
+							btn.pos = { startX + (i - half - 1) * (size + theme.padding), 0 }
+						end
+
+						config.requestHeightCallback(size * 2 + theme.padding * 2 + categories.Height)
+					end
+
+					categoryNode:setParent(node)
+					categories:parentDidResize()
+					LocalEvent:Send("avatar_editor_should_focus_on_head")
+				end
+				return btn
+			elseif index == 6 then
+				local btn = ui:createButton("👕 Shirt")
+				btn:disable()
+				return btn
+			elseif index == 7 then
+				local btn = ui:createButton("👕 Jacket")
+				btn.onRelease = function()
+					if categoryNode then
+						categoryNode:remove()
+					end
+					categoryNode = itemGrid:create({
+						categories = { "jacket" },
+						uikit = ui,
+						onOpen = function(cell)
+							LocalEvent:Send("avatar_editor_update", { jacket = cell.fullName })
+						end,
+					})
+					categoryNode:setParent(node)
+					categories:parentDidResize()
+
+					config.requestHeightCallback(10000)
+					LocalEvent:Send("avatar_editor_should_focus_on_body")
+				end
+				return btn
+			elseif index == 8 then
+				local btn = ui:createButton("👖 Pants")
+				btn.onRelease = function()
+					if categoryNode then
+						categoryNode:remove()
+					end
+					categoryNode = itemGrid:create({
+						categories = { "pants" },
+						uikit = ui,
+						onOpen = function(cell)
+							LocalEvent:Send("avatar_editor_update", { pants = cell.fullName })
+						end,
+					})
+					categoryNode:setParent(node)
+					categories:parentDidResize()
+
+					config.requestHeightCallback(10000)
+					LocalEvent:Send("avatar_editor_should_focus_on_body")
+				end
+				return btn
+			elseif index == 9 then
+				local btn = ui:createButton("👞 Shoes")
+				btn.onRelease = function()
+					if categoryNode then
+						categoryNode:remove()
+					end
+					categoryNode = itemGrid:create({
+						categories = { "boots" },
+						uikit = ui,
+						onOpen = function(cell)
+							LocalEvent:Send("avatar_editor_update", { boots = cell.fullName })
+						end,
+					})
+					categoryNode:setParent(node)
+					categories:parentDidResize()
+
+					config.requestHeightCallback(10000)
+					LocalEvent:Send("avatar_editor_should_focus_on_body")
+				end
+				return btn
+			elseif index == 10 then
+				local btn = ui:createButton("✨ Gloves")
+				btn:disable()
+				return btn
+			elseif index == 11 then
+				local btn = ui:createButton("🎒 Backpack")
+				btn:disable()
+				return btn
 			end
 			return nil
 		end,
 		unloadCell = function(_, cell)
+			-- print("UNLOAD", index)
 			cell:remove()
 		end,
 	})
-	subCategories:setParent(node)
-
-	local grid = itemGrid:create({ categories = { "jacket" }, uikit = ui })
-	grid:setParent(node)
 
 	categories.parentDidResize = function(self)
 		local parent = self.parent
@@ -98,17 +307,20 @@ mod.create = function(self, config)
 		categories.Height = refButton.Height
 		categories.pos.Y = parent.Height - categories.Height
 
-		subCategories.Width = categories.Width
-		subCategories.Height = refButton.Height
-		subCategories.pos = { categories.pos.X, categories.pos.Y - 10 - subCategories.Height }
+		if categoryNode then
+			categoryNode.Width = parent.Width
+			categoryNode.Height = parent.Height - categories.Height - theme.padding
+			categoryNode.pos = { 0, 0 }
 
-		grid.Width = parent.Width
-		grid.Height = parent.Height - categories.Height - subCategories.Height - 10 * 2
-		grid.pos = { 0, 0 }
-		grid:refresh()
-		grid:getItems()
+			if categoryNode.getItems then
+				categoryNode:getItems()
+			end
+		end
 	end
+
 	categories:setParent(node)
+
+	setSkin()
 
 	return node
 end

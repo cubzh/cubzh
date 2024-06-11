@@ -533,23 +533,39 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				avatarEditor = require("ui_avatar_editor"):create({ ui = ui })
+				avatarEditor = require("ui_avatar_editor"):create({
+					ui = ui,
+					requestHeightCallback = function(height)
+						drawer:updateConfig({
+							layoutContent = function(self)
+								local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
+								drawerHeight = math.min(Screen.Height * 0.6, drawerHeight)
+
+								self.Height = drawerHeight
+
+								if avatarEditor then
+									avatarEditor.Width = self.Width - padding * 2
+									avatarEditor.Height = drawerHeight - Screen.SafeArea.Bottom - padding * 2
+									avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+								end
+
+								LocalEvent:Send("signup_drawer_height_update", drawerHeight)
+							end,
+						})
+						drawer:bump()
+					end,
+				})
 
 				avatarEditor:setParent(drawer)
 
 				drawer:updateConfig({
 					layoutContent = function(self)
-						-- here, self.Height can be reduced, but not increased
-						-- TODO: enforce this within drawer module
-
-						-- self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
-						-- self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
-
-						-- theme.paddingBig
 						avatarEditor.Width = self.Width - padding * 2
 						avatarEditor.Height = self.Height - padding * 2 - Screen.SafeArea.Bottom
 
 						avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
 					end,
 				})
 
@@ -603,6 +619,8 @@ signup.startFlow = function(self, config)
 						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + theme.paddingBig }
 						text.pos =
 							{ self.Width * 0.5 - text.Width * 0.5, okBtn.pos.Y + okBtn.Height + theme.paddingBig }
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
 					end,
 				})
 
@@ -664,7 +682,7 @@ signup.startFlow = function(self, config)
 					}
 				end
 				startBtn:parentDidResize()
-				local targetPos = startBtn.pos:Copy()
+				targetPos = startBtn.pos:Copy()
 				startBtn.pos.Y = startBtn.pos.Y - 50
 				ease:outBack(startBtn, animationTime).pos = targetPos
 
