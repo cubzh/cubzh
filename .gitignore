@@ -25,3 +25,5 @@
 *.xcuserdatad
 
 deps/xptools/windows/bundle_tar_gz.hpp
+
+deps/bgfx/bgfx/tools/bin/
