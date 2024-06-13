@@ -86,13 +86,13 @@ Client.OnStart = function()
 	local logoTile = bundle:Data("images/logo-tile.png")
 	print("logoTile:", logoTile, logoTile.Length)
 
-	-- backgroundQuad = Quad()
-	-- -- backgroundQuad.Color = Color(255, 0, 0, 0.3)
-	-- backgroundQuad.Image = logoTile
-	-- backgroundQuad.Width = 100
-	-- backgroundQuad.Height = 100
-	-- backgroundQuad.Anchor = { 0.5, 0.5 }
-	-- World:AddChild(backgroundQuad)
+	backgroundQuad = Quad()
+	backgroundQuad.Color = Color(255, 0, 0, 0.3)
+	backgroundQuad.Image = logoTile
+	backgroundQuad.Width = 100
+	backgroundQuad.Height = 100
+	backgroundQuad.Anchor = { 0.5, 0.5 }
+	World:AddChild(backgroundQuad)
 end
 
 -- Client.OnWorldObjectLoad = function(obj)
