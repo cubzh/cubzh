@@ -9,13 +9,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "zlib.h"
+
 #define QUAD_FLAG_NONE 0
 #define QUAD_FLAG_DOUBLESIDED 1
 #define QUAD_FLAG_SHADOW 2
 #define QUAD_FLAG_UNLIT 4
-#define QUAD_FLAG_DATA_DIRTY 8
-#define QUAD_FLAG_MASK 16
-#define QUAD_FLAG_VCOLOR 32
+#define QUAD_FLAG_MASK 8
+#define QUAD_FLAG_VCOLOR 16
 
 struct _Quad {
     Transform *transform;
@@ -101,7 +102,6 @@ void quad_copy_data(Quad *q, const void *data, size_t size) {
         q->data = NULL;
         q->size = 0;
     }
-    _quad_toggle_flag(q, QUAD_FLAG_DATA_DIRTY, true);
 }
 
 void *quad_get_data(const Quad *q) {
@@ -112,12 +112,8 @@ size_t quad_get_data_size(const Quad *q) {
     return q->size;
 }
 
-void quad_reset_data_dirty(Quad *q) {
-    _quad_toggle_flag(q, QUAD_FLAG_DATA_DIRTY, false);
-}
-
-bool quad_is_data_dirty(const Quad *q) {
-    return _quad_get_flag(q, QUAD_FLAG_DATA_DIRTY);
+uint64_t quad_get_data_hash(const Quad *q) {
+    return crc32(0, q->data, q->size);
 }
 
 void quad_set_width(Quad *q, float value) {
