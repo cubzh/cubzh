@@ -785,6 +785,67 @@ mod.getBalance = function(usernameOrCb, cb)
 	end)
 end
 
+-- Function to get user name from user ID
+-- userNameCallback: function(userName, errMsg)
+mod.getUserName = function(userId, userNameCallback)
+    local userIDPattern = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
+    
+    if userId:match(userIDPattern) then
+        getUserInfo(userId, function(success, user, errMsg)
+            if success then
+                userNameCallback(user.username)
+            else
+                userNameCallback(nil, errMsg)
+            end
+        end)
+    else
+        userNameCallback(nil, "Invalid format for user ID")
+    end
+end
+ 
+ 
+-- Function to get user information by user ID or user name
+-- param: string (either user ID or user name)
+-- infoCallback: function(userInfo, errMsg)
+mod.getUser = function(param, infoCallback)
+    local userIDPattern = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
+    local usernamePattern = "^[a-zA-Z0-9_ ]+$"
+ 
+    if param:match(userIDPattern) then
+        getUserName(param, function(success, username, errMsg)
+            if success then
+                local userInfo = {
+                    userId = param,
+                    username = username,
+                }
+                infoCallback(userInfo)
+            else
+                infoCallback(nil, errMsg)
+            end
+        end)
+    elseif param:match(usernamePattern) then
+        getUserId(param, function(err, userId)
+            if err then
+                infoCallback(nil, "Error getting user ID: " .. err)
+            else
+                getUserInfo(userId, function(success, user, errMsg)
+                    if success then
+                        local userInfo = {
+                            userId = userId,
+                            username = user.username,
+                        }
+                        infoCallback(userInfo)
+                    else
+                        infoCallback(nil, errMsg)
+                    end
+                end)
+            end
+        end)
+    else
+        infoCallback(nil, "Invalid format for parameter")
+    end
+end
+
 mod.getItem = function(self, itemId, cb)
 	local url = self.kApiAddr .. "/items/" .. itemId
 	local req = HTTP:Get(url, function(resp)
