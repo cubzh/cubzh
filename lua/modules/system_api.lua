@@ -643,4 +643,25 @@ moduleMT.patchUserInfo = function(_, info, callback)
 	return req
 end
 
+moduleMT.patchUserPhone = function(_, info, callback)
+	local url = mod.kApiAddr .. "/users/self/phone"
+
+	if type(info) ~= Type.table then
+		api:error("system_api:patchUserPhone(info, callback): info should be a table", 2)
+	end
+	if type(callback) ~= "function" then
+		api:error("system_api:patchUserPhone(info, callback): callback should be a function", 2)
+	end
+
+	local req = System:HttpPatch(url, info, function(res)
+		if res.StatusCode ~= 200 then
+			print("res.BODY:", res.Body:ToString())
+			callback("Error (" .. res.StatusCode .. "): can't update user info")
+			return
+		end
+		callback(nil)
+	end)
+	return req
+end
+
 return mod

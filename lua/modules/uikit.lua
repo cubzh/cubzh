@@ -22,7 +22,8 @@ SCROLL_DEFAULT_RIGIDITY = 0.99
 SCROLL_TIME_TO_TARGET = 0.1
 SCROLL_EPSILON = 0.01
 SCROLL_DRAG_EPSILON = 5
-SCROLL_DRAG_EPSILON_SQ = SCROLL_DRAG_EPSILON * SCROLL_DRAG_EPSILON
+-- SCROLL_NB_TICKS_TO_DEFUSE_SPEED = 4
+SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
 
 -- ENUMS
 
@@ -380,7 +381,9 @@ function createUI(system)
 			node.underline.Color = textColor
 		end
 
-		node.content.Color = textColor -- doesn't seem to be working
+		if node.content.Text then
+			node.content.Color = textColor
+		end
 	end
 
 	local function _buttonRefresh(self)
@@ -848,6 +851,7 @@ function createUI(system)
 
 	local function _nodeCreate()
 		local node = {}
+
 		local m = {
 			attr = {
 				-- can be a Shape, Text, Object...
@@ -2167,9 +2171,6 @@ function createUI(system)
 		local listeners = {}
 		local l
 		local hovering = false
-		local activated = false
-		local dragging = false
-		local dragPointerIndex = nil -- pointerIndex used to drag
 
 		local cellPadding = config.cellPadding
 
@@ -2187,8 +2188,12 @@ function createUI(system)
 			cellInfo = {}, -- each entry: { top, bottom, left, right, width, height }
 		}
 
+		local released = true
 		local scrollPosition = 0
 		local targetScrollPosition = 0
+		local defuseScrollSpeedCount = 0
+		local totalDragSinceLastTick = 0
+		local scrollSpeed = 0
 		local dragStartScrollPosition = 0
 
 		local cell
@@ -2415,29 +2420,32 @@ function createUI(system)
 			end
 		end
 
-		-- set scroll position
-		node.setScrollPosition = function(_, newPosition)
+		node.capPosition = function(_, pos)
 			if down then
 				local limit = cache.contentHeight - node.Height
 				if limit < 0 then
 					limit = 0
 				end
-				newPosition = math.max(-limit, math.min(0, newPosition))
+				pos = math.max(-limit, math.min(0, pos))
 			elseif up then
 				-- TODO: review
-				newPosition = math.min(0, math.max(100, newPosition))
+				pos = math.min(0, math.max(100, pos))
 			elseif right then
 				local limit = cache.contentWidth - node.Width
 				if limit < 0 then
 					limit = 0
 				end
-				newPosition = math.max(0, math.min(limit, newPosition)) -- correct
+				pos = math.max(0, math.min(limit, pos)) -- correct
 			elseif left then
 				-- TODO: review
-				newPosition = math.min(100, math.max(-100, newPosition))
+				pos = math.min(100, math.max(-100, pos))
 			end
 
-			targetScrollPosition = newPosition
+			return pos
+		end
+
+		node.setScrollPosition = function(self, newPosition)
+			targetScrollPosition = self:capPosition(newPosition)
 		end
 
 		node.flush = function(_)
@@ -2469,10 +2477,6 @@ function createUI(system)
 
 		container.parentDidResizeSystem = function(self)
 			node:refresh()
-		end
-
-		node.dragging = function()
-			return dragging
 		end
 
 		node.containsPointer = function(self, pe)
@@ -2508,14 +2512,47 @@ function createUI(system)
 		end
 
 		l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-			if targetScrollPosition ~= scrollPosition then
-				scrollPosition = scrollPosition
-					+ (targetScrollPosition - scrollPosition) * config.rigidity * dt * 1.0 / SCROLL_TIME_TO_TARGET
-				if math.abs(scrollPosition - targetScrollPosition) < SCROLL_EPSILON then
-					scrollPosition = targetScrollPosition
+			if totalDragSinceLastTick ~= 0 then
+				scrollSpeed = totalDragSinceLastTick
+				totalDragSinceLastTick = 0
+			end
+
+			if released == false and defuseScrollSpeedCount > 0 then
+				defuseScrollSpeedCount = defuseScrollSpeedCount - dt
+				if defuseScrollSpeedCount <= 0 then
+					scrollSpeed = 0
+					totalDragSinceLastTick = 0
+					defuseScrollSpeedCount = 0
 				end
-				-- NOTE: possible optimization: refresh content less often, only the position
+			end
+
+			if released == true and scrollSpeed ~= 0 then
+				scrollPosition = node:capPosition(scrollPosition + scrollSpeed * dt)
+				if scrollSpeed > 0 then
+					scrollSpeed = scrollSpeed - math.min(scrollSpeed, 500 * dt)
+				else
+					scrollSpeed = scrollSpeed + math.min(-scrollSpeed, 500 * dt)
+				end
+				targetScrollPosition = scrollPosition
+
+				if math.abs(scrollSpeed) < SCROLL_EPSILON then
+					scrollSpeed = 0
+				end
 				node:refresh()
+			else
+				if targetScrollPosition ~= scrollPosition then
+					scrollPosition = scrollPosition
+						+ (targetScrollPosition - scrollPosition)
+							* config.rigidity
+							* dt
+							* 1.0
+							/ SCROLL_TIME_TO_TARGET
+					if math.abs(scrollPosition - targetScrollPosition) < SCROLL_EPSILON then
+						scrollPosition = targetScrollPosition
+					end
+					-- NOTE: possible optimization: refresh content less often, only the position
+					node:refresh()
+				end
 			end
 		end, { system = system == true and System or nil, topPriority = true })
 		table.insert(listeners, l)
@@ -2524,6 +2561,8 @@ function createUI(system)
 		-- NOTE: We should have an onPressSystem function for this, to let users
 		-- set their own onPress callback if needed, even on scroll nodes.
 		node.onPress = function(_, _, _, pointerEvent)
+			released = false
+
 			startPosition = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)
 			if vertical then
 				startPosition.X = 0
@@ -2533,8 +2572,6 @@ function createUI(system)
 
 			targetScrollPosition = scrollPosition
 			dragStartScrollPosition = scrollPosition
-
-			print(startPosition)
 		end
 
 		node.onDrag = function(self, pointerEvent)
@@ -2547,6 +2584,9 @@ function createUI(system)
 				diff = startPosition.X - pos.X
 			end
 
+			defuseScrollSpeedCount = SCROLL_TIME_TO_DEFUSE_SPEED
+			totalDragSinceLastTick = totalDragSinceLastTick + diff
+
 			self:setScrollPosition(dragStartScrollPosition + diff)
 
 			if pressed ~= self and math.abs(scrollPosition - dragStartScrollPosition) >= SCROLL_DRAG_EPSILON then
@@ -2556,6 +2596,14 @@ function createUI(system)
 				focus(nil)
 				pressed = self
 			end
+		end
+
+		node.onRelease = function(_)
+			released = true
+		end
+
+		node.onCancel = function(_)
+			released = true
 		end
 
 		if Client.IsMobile == false then
@@ -2586,7 +2634,8 @@ function createUI(system)
 		return node
 	end
 
-	ui.createButton = function(_, stringOrShape, config)
+	-- content can be a string, a uikit node, or a Shape
+	ui.createButton = function(_, content, config)
 		local defaultConfig = {
 			borders = true,
 			underline = false,
@@ -2626,16 +2675,11 @@ function createUI(system)
 
 		local theme = require("uitheme").current
 
-		if stringOrShape == nil then
-			error("ui:createButton(stringOrShape, config) expects a non-nil string or Shape", 2)
-		end
-
-		if type(stringOrShape) ~= "string" then
-			error("ui:createButton(stringOrShape, config) - stringOrShape can only be a string for now", 2)
+		if content == nil then
+			error("ui:createButton(content, config) - content should be a non-nil string, Shape or uikit node", 2)
 		end
 
 		local node = _nodeCreate()
-
 		node.config = config
 
 		node.contentDidResizeSystem = function(self)
@@ -2751,6 +2795,24 @@ function createUI(system)
 		node:setColorSelected(config.colorSelected, config.textColorSelected, true)
 		node:setColorDisabled(config.colorDisabled, config.textColorDisabled, true)
 
+		if type(content) == "string" then
+			local n = ui:createText(content, { size = config.textSize })
+			n:setParent(node)
+			node.content = n
+		elseif type(content) == "Shape" or type(content) == "MutableShape" then
+			local n = ui:createShape(content, { spherized = false, doNotFlip = true })
+			n:setParent(node)
+			node.content = n
+		else
+			local ok = pcall(function()
+				content:setParent(node)
+				node.content = content
+			end)
+			if not ok then
+				error("ui:createButton(content, config) - content should be a non-nil string, Shape or uikit node", 2)
+			end
+		end
+
 		local background = Quad()
 		background.Color = node.colors[1]
 		background.IsDoubleSided = false
@@ -2808,12 +2870,6 @@ function createUI(system)
 			node.object:AddChild(shadow)
 			node.shadow = shadow
 		end
-
-		-- TODO: test stringOrShape type
-
-		local t = ui:createText(stringOrShape, { size = config.textSize }) -- color is nil here
-		t:setParent(node)
-		node.content = t
 
 		node:_refresh()
 		_buttonRefreshColor(node) -- apply initial colors
@@ -3228,7 +3284,8 @@ function createUI(system)
 					if hitObject._node.isScrollArea then
 						table.insert(pressedScrolls, hitObject._node)
 						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
-					elseif pressedCandidate == nil then
+					end
+					if pressedCandidate == nil then
 						pressedCandidate = hitObject._node
 						pressedCandidateImpact = impact
 					end
@@ -3290,10 +3347,7 @@ function createUI(system)
 
 				parent = hitObject._node.parent
 				while parent ~= nil do
-					if
-						parent.isScrollArea == true
-						and (parent:dragging() or parent:containsPointer(pointerEvent) == false)
-					then
+					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
 						skip = true
 						break
 					end

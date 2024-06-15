@@ -7,23 +7,112 @@ Modules = {
 
 Client.OnStart = function()
 	ease = require("ease")
+	particles = require("particles")
 
 	drawerHeight = 0
 	avatarLayers = 5
 	avatarCamera = nil
 
-	function layoutAvatarCamera()
+	avatarCameraFocus = "body" -- body / head
+	avatarCameraTarget = nil
+
+	function getAvatarCameraTargetPosition(h, w)
+		if avatarCameraTarget == nil then
+			-- error("avatarCameraTarget should not be nil", 2)
+			return nil
+		end
+
+		local _w = avatarCamera.TargetWidth
+		local _h = avatarCamera.TargetHeight
+
+		avatarCamera.TargetHeight = h
+		avatarCamera.TargetWidth = w
+		avatarCamera.Height = h
+		avatarCamera.Width = w
+		avatarCamera.TargetX = 0
+		avatarCamera.TargetY = 0
+
+		local box = Box()
+		local pos = avatarCamera.Position:Copy()
+		if avatarCameraFocus == "body" then
+			box:Fit(avatarCameraTarget, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.7)
+		elseif avatarCameraFocus == "head" then
+			box:Fit(avatarCameraTarget.Head, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.5)
+		elseif avatarCameraFocus == "eyes" then
+			box:Fit(avatarCameraTarget.Head, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.6)
+		elseif avatarCameraFocus == "nose" then
+			box:Fit(avatarCameraTarget.Head, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.6)
+		end
+
+		local targetPos = avatarCamera.Position:Copy()
+
+		-- restore
+		avatarCamera.TargetHeight = _h
+		avatarCamera.TargetWidth = _w
+		avatarCamera.Height = _h
+		avatarCamera.Width = _w
+		avatarCamera.TargetX = 0
+		avatarCamera.TargetY = 0
+		avatarCamera.Position:Set(pos)
+
+		return targetPos
+	end
+
+	local avatarCameraState = {}
+	function layoutAvatarCamera(config)
+		-- print("layoutAvatarCamera, drawerHeight:", drawerHeight)
 		local h = Screen.Height - drawerHeight
+
+		if
+			avatarCameraState.h == h
+			and avatarCameraState.screenWidth == Screen.Width
+			and avatarCameraState.focus == avatarCameraFocus
+			and avatarCameraState.target == avatarCameraTarget
+		then
+			-- nothing changed, early return
+			return
+		end
+
+		local p = getAvatarCameraTargetPosition(h, Screen.Width)
+		if p == nil then
+			return
+		end
+
+		avatarCameraState.h = h
+		avatarCameraState.screenWidth = Screen.Width
+		avatarCameraState.focus = avatarCameraFocus
+		avatarCameraState.target = avatarCameraTarget
 
 		ease:cancel(avatarCamera)
 
-		local anim = ease:inOutSine(avatarCamera, 0.2)
+		if config.noAnimation then
+			avatarCamera.TargetHeight = h
+			avatarCamera.TargetWidth = Screen.Width
+			avatarCamera.Height = h
+			avatarCamera.Width = Screen.Width
+			avatarCamera.TargetX = 0
+			avatarCamera.TargetY = 0
+			avatarCamera.Position:Set(p)
+			return
+		end
+
+		local anim = ease:inOutSine(avatarCamera, 0.2, {
+			onDone = function()
+				avatarCameraState.animation = nil
+			end,
+		})
+
 		anim.TargetHeight = h
 		anim.TargetWidth = Screen.Width
 		anim.Height = h
 		anim.Width = Screen.Width
 		anim.TargetX = 0
 		anim.TargetY = 0
+		anim.Position = p
 	end
 
 	Camera:SetModeFree()
@@ -44,6 +133,11 @@ Client.OnStart = function()
 	LocalEvent:Listen("signup_flow_avatar_editor", function()
 		titleScreen():hide()
 		avatar():show({ mode = "user" })
+	end)
+
+	LocalEvent:Listen("signup_flow_dob", function()
+		avatarCameraFocus = "body"
+		layoutAvatarCamera()
 	end)
 
 	LocalEvent:Listen("signup_flow_start_or_login", function()
@@ -83,16 +177,23 @@ Client.OnStart = function()
 		layoutAvatarCamera()
 	end)
 
-	local logoTile = bundle:Data("images/logo-tile.png")
-	print("logoTile:", logoTile, logoTile.Length)
+	local logoTile = bundle:Data("images/logo-tile-rotated.png")
 
 	backgroundQuad = Quad()
-	backgroundQuad.Color = Color(255, 0, 0, 0.3)
+	backgroundQuad.IsDoubleSided = false
+	backgroundQuad.Tiling = Number2(30, 30)
+	backgroundQuad.Color = Color(0, 0, 0, 0.2)
 	backgroundQuad.Image = logoTile
-	backgroundQuad.Width = 100
-	backgroundQuad.Height = 100
+	backgroundQuad.Width = 500
+	backgroundQuad.Height = 500
 	backgroundQuad.Anchor = { 0.5, 0.5 }
 	World:AddChild(backgroundQuad)
+
+	local delta = Number2(-1, 1)
+	speed = 0.2
+	LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+		backgroundQuad.Offset = backgroundQuad.Offset + delta * dt * speed
+	end)
 end
 
 -- Client.OnWorldObjectLoad = function(obj)
@@ -266,10 +367,10 @@ function titleScreen()
 			box:Fit(logo, { recursive = true })
 			Camera:FitToScreen(box, 0.8)
 
-			-- if backgroundQuad then
-			-- 	backgroundQuad.Rotation = Camera.Rotation
-			-- 	backgroundQuad.Position = Camera.Position + Camera.Forward * 100
-			-- end
+			if backgroundQuad then
+				backgroundQuad.Rotation = Camera.Rotation
+				backgroundQuad.Position = Camera.Position + Camera.Forward * 150
+			end
 		end
 
 		didResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, didResizeFunction)
@@ -342,7 +443,6 @@ function avatar()
 	local root
 	local listeners = {}
 	local avatarLayers = 5
-	local focus = "body" -- body / head
 
 	local function drag(dx, dy)
 		yaw = yaw - dx * 0.01
@@ -354,6 +454,9 @@ function avatar()
 
 	local mode = "demo" -- demo / user
 
+	local emitter
+	local particlesColor = Color(0, 0, 0)
+
 	_avatar.show = function(self, config)
 		if root ~= nil then
 			if mode == config.mode then
@@ -362,13 +465,31 @@ function avatar()
 			self:hide()
 		end
 
+		if emitter == nil then
+			emitter = particles:newEmitter({
+				acceleration = -Config.ConstantAcceleration,
+				velocity = function()
+					local v = Number3(0, 0, math.random(40, 50))
+					v:Rotate(math.random() * math.pi * 2, math.random() * math.pi * 2, 0)
+					return v
+				end,
+				life = 3.0,
+				scale = function()
+					return 0.7 + math.random() * 1.0
+				end,
+				layers = avatarLayers,
+				color = function()
+					print(particlesColor)
+					return particlesColor
+				end,
+			})
+		end
+
 		mode = config.mode
-		print("mode:", mode)
 
 		local hierarchyactions = require("hierarchyactions")
 
 		root = Object()
-		root:SetParent(World)
 
 		local avatar = avatarModule:get({
 			usernameOrId = "",
@@ -400,46 +521,56 @@ function avatar()
 			avatar:loadEquipment({ type = "boots", shape = boots[1] })
 		end
 
-		local function updateCamera()
-			local box = Box()
-			if focus == "body" then
-				box:Fit(root, { recursive = true })
-				avatarCamera:FitToScreen(box, 0.7)
-			elseif focus == "head" then
-				box:Fit(root.Head, { recursive = true })
-				avatarCamera:FitToScreen(box, 0.7)
-			end
-		end
-
 		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
 			drag(pe.DX, pe.DY)
 		end)
 		drag(0, 0)
 		table.insert(listeners, l)
 
-		l = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, updateCamera)
-		Timer(0.01, function()
-			updateCamera()
+		l = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+			layoutAvatarCamera()
 		end)
+
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_head", function()
-			focus = "head"
-			updateCamera()
+			avatarCameraFocus = "head"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_eyes", function()
+			avatarCameraFocus = "eyes"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_nose", function()
+			avatarCameraFocus = "nose"
+			layoutAvatarCamera()
 		end)
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_body", function()
-			focus = "body"
-			updateCamera()
+			avatarCameraFocus = "body"
+			layoutAvatarCamera()
 		end)
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("signup_flow_avatar_preview", function()
-			focus = "body"
-			updateCamera()
+			avatarCameraFocus = "body"
+			layoutAvatarCamera()
 		end)
 		table.insert(listeners, l)
+
+		local didAttachEquipmentParts = function(equipmentParts)
+			for _, part in ipairs(equipmentParts) do
+				ease:cancel(part)
+				local scale = part.Scale:Copy()
+				part.Scale = part.Scale * 0.8
+				ease:outBack(part, 0.2).Scale = scale
+			end
+		end
 
 		l = LocalEvent:Listen("avatar_editor_update", function(config)
 			if config.skinColorIndex then
@@ -451,6 +582,14 @@ function avatar()
 					nose = colors.nose,
 					mouth = colors.mouth,
 				})
+
+				ease:cancel(root)
+				root.Scale = 0.8
+				ease:outBack(root, 0.2).Scale = Number3(1.0, 1.0, 1.0)
+
+				particlesColor = colors.skin1
+				emitter.Position = root.Position
+				emitter:spawn(10)
 			end
 			if config.eyesIndex then
 				avatar:setEyes({
@@ -462,16 +601,32 @@ function avatar()
 				avatar:setNose({ index = config.noseIndex })
 			end
 			if config.jacket then
-				avatar:loadEquipment({ type = "jacket", item = config.jacket })
+				avatar:loadEquipment({
+					type = "jacket",
+					item = config.jacket,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
 			end
 			if config.hair then
-				avatar:loadEquipment({ type = "hair", item = config.hair })
+				avatar:loadEquipment({
+					type = "hair",
+					item = config.hair,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
 			end
 			if config.pants then
-				avatar:loadEquipment({ type = "pants", item = config.pants })
+				avatar:loadEquipment({
+					type = "pants",
+					item = config.pants,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
 			end
 			if config.boots then
-				avatar:loadEquipment({ type = "boots", item = config.boots })
+				avatar:loadEquipment({
+					type = "boots",
+					item = config.boots,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
 			end
 		end)
 		table.insert(listeners, l)
@@ -521,6 +676,19 @@ function avatar()
 				avatar:loadEquipment({ type = "boots", shape = boots[math.random(1, #boots)] })
 			end)
 		end
+
+		avatarCameraTarget = nil
+
+		root:SetParent(World)
+		root.IsHidden = true
+
+		Timer(0.03, function()
+			root.IsHidden = false
+			avatarCameraTarget = root
+			layoutAvatarCamera({ noAnimation = true })
+		end)
+
+		return root
 	end
 
 	_avatar.hide = function()
@@ -545,6 +713,9 @@ function avatar()
 		listeners = {}
 		root:RemoveFromParent()
 		root = nil
+
+		emitter:RemoveFromParent()
+		emitter = nil
 	end
 
 	return _avatar
