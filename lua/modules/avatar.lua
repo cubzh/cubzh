@@ -845,12 +845,15 @@ function avatar_loadEquipment(self, config)
 		-- allows to provide shape that's already been loaded
 		-- /!\ shape then managed by avatar, provide copy if needed
 		shape = nil,
+		bumpAnimation = false,
+		didAttachEquipmentParts = nil, -- function(equipmentParts)
 	}
 
 	ok, err = pcall(function()
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				shape = { "Shape", "MutableShape" },
+				didAttachEquipmentParts = { "function" },
 			},
 		})
 	end)
@@ -900,19 +903,35 @@ function avatar_loadEquipment(self, config)
 			if leftSleeve then
 				_attachEquipmentToBodyPart(self.LeftArm, leftSleeve)
 			end
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment, rightSleeve, leftSleeve })
+			end
 		elseif config.type == "pants" then
 			local leftLeg = equipment:GetChild(1)
 			currentEquipment.shapes = { equipment, leftLeg }
 			_attachEquipmentToBodyPart(self.RightLeg, equipment, 1.05)
 			_attachEquipmentToBodyPart(self.LeftLeg, leftLeg, 1.05)
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment, leftLeg })
+			end
 		elseif config.type == "boots" then
 			local leftFoot = equipment:GetChild(1)
 			currentEquipment.shapes = { equipment, leftFoot }
 			_attachEquipmentToBodyPart(self.RightFoot, equipment)
 			_attachEquipmentToBodyPart(self.LeftFoot, leftFoot)
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment, leftFoot })
+			end
 		elseif config.type == "hair" then
 			currentEquipment.shapes = { equipment }
 			_attachEquipmentToBodyPart(self.Head, equipment)
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment })
+			end
 		end
 	end
 

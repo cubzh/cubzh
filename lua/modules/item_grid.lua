@@ -14,6 +14,7 @@ local conf = require("config")
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
 local MAX_CELL_SIZE = 200
+local MIN_CELLS_PER_ROW = 2 -- prority over MIN_CELL_SIZE
 
 itemGrid.create = function(_, config)
 	-- load config (overriding defaults)
@@ -254,13 +255,37 @@ itemGrid.create = function(_, config)
 						titleFrame:setParent(cell)
 						titleFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
-						local title = ui:createText("TEST", Color.White, "small")
+						local title = ui:createText("…", Color.White, "small")
 						title:setParent(titleFrame)
 
 						title.pos = { theme.padding, theme.padding }
 
 						cell.titleFrame = titleFrame
 						cell.title = title
+
+						local likesFrame = ui:createFrame(theme.gridCellFrameColor)
+						likesFrame:setParent(cell)
+						likesFrame.LocalPosition.Z = config.uikit.kForegroundDepth
+
+						local likes = ui:createText("❤️ …", Color.White, "small")
+						likes:setParent(likesFrame)
+
+						likes.pos = { theme.padding, theme.padding }
+
+						cell.likesFrame = likesFrame
+						cell.likesLabel = likes
+
+						local priceFrame = ui:createFrame(theme.gridCellFrameColor)
+						priceFrame:setParent(cell)
+						priceFrame.LocalPosition.Z = config.uikit.kForegroundDepth
+
+						local price = ui:createText("❤️ …", Color.White, "small")
+						price:setParent(priceFrame)
+
+						price.pos = { theme.padding, theme.padding }
+
+						cell.priceFrame = priceFrame
+						cell.priceLabel = price
 
 						cell.requests = {}
 						cell.item = nil
@@ -283,9 +308,22 @@ itemGrid.create = function(_, config)
 							end
 
 							self.titleFrame.Width = self.Width
-							self.title.object.MaxWidth = cell.titleFrame.Width - theme.padding * 2
+							self.title.object.MaxWidth = self.titleFrame.Width - theme.padding * 2
 							self.title.Text = improveNameFormat(entry.name)
 							self.titleFrame.Height = self.title.Height + theme.padding * 2
+
+							self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
+							self.likesLabel.Text = "❤️ " .. self.likes
+							self.likesFrame.Height = self.likesLabel.Height + theme.padding * 2
+							self.likesFrame.Width = self.likesLabel.Width + theme.padding * 2
+							self.likesFrame.pos =
+								{ self.Width - self.likesFrame.Width, self.Height - self.likesFrame.Height }
+
+							self.priceLabel.object.MaxWidth = self.Width - theme.padding * 2
+							self.priceLabel.Text = "💰 0" -- 🪙
+							self.priceFrame.Height = self.priceLabel.Height + theme.padding * 2
+							self.priceFrame.Width = self.priceLabel.Width + theme.padding * 2
+							self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }
 
 							local req = Object:Load(self.fullName, function(obj)
 								if obj == nil then
@@ -355,8 +393,9 @@ itemGrid.create = function(_, config)
 		nbEntries = #entries
 		local w = scroll.Width + config.cellPadding
 		entriesPerRow = math.floor(w / MIN_CELL_SIZE)
+		entriesPerRow = math.max(MIN_CELLS_PER_ROW, entriesPerRow)
 		cellSize = w / entriesPerRow
-		cellSize = math.max(MIN_CELL_SIZE, math.min(MAX_CELL_SIZE, cellSize))
+		cellSize = math.min(MAX_CELL_SIZE, cellSize)
 		cellSize = cellSize - config.cellPadding
 
 		if nbEntries == 0 then
@@ -915,7 +954,7 @@ itemGrid.create = function(_, config)
 	end
 
 	grid.setGridEntries = function(self, _entries)
-		print("setGridEntries - nb entries:", #_entries)
+		-- print("setGridEntries - nb entries:", #_entries)
 		if self ~= grid then
 			error("item_grid:setGridEntries(entries): use `:`", 2)
 		end

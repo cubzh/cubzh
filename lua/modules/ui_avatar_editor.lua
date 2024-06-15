@@ -61,7 +61,6 @@ mod.create = function(self, config)
 		end
 
 		btns[1].parentDidResize = function(self)
-			print("btns[1].parentDidResize")
 			local parent = self.parent
 			local half = math.floor(#btns / 2)
 			local size = (parent.Width - theme.padding * (half - 1)) / half
@@ -165,14 +164,14 @@ mod.create = function(self, config)
 
 					categoryNode:setParent(node)
 					categories:parentDidResize()
-					LocalEvent:Send("avatar_editor_should_focus_on_head")
+					LocalEvent:Send("avatar_editor_should_focus_on_eyes")
 				end
 				return btn
+			-- elseif index == 4 then
+			-- 	local btn = ui:createButton("✨ Ears")
+			-- 	btn:disable()
+			-- 	return btn
 			elseif index == 4 then
-				local btn = ui:createButton("✨ Ears")
-				btn:disable()
-				return btn
-			elseif index == 5 then
 				local btn = ui:createButton("👃 Nose")
 				btn.onRelease = function()
 					if categoryNode then
@@ -217,14 +216,14 @@ mod.create = function(self, config)
 
 					categoryNode:setParent(node)
 					categories:parentDidResize()
-					LocalEvent:Send("avatar_editor_should_focus_on_head")
+					LocalEvent:Send("avatar_editor_should_focus_on_nose")
 				end
 				return btn
-			elseif index == 6 then
-				local btn = ui:createButton("👕 Shirt")
-				btn:disable()
-				return btn
-			elseif index == 7 then
+			-- elseif index == 6 then
+			-- 	local btn = ui:createButton("👕 Shirt")
+			-- 	btn:disable()
+			-- 	return btn
+			elseif index == 5 then
 				local btn = ui:createButton("👕 Jacket")
 				btn.onRelease = function()
 					if categoryNode then
@@ -244,7 +243,7 @@ mod.create = function(self, config)
 					LocalEvent:Send("avatar_editor_should_focus_on_body")
 				end
 				return btn
-			elseif index == 8 then
+			elseif index == 6 then
 				local btn = ui:createButton("👖 Pants")
 				btn.onRelease = function()
 					if categoryNode then
@@ -264,7 +263,7 @@ mod.create = function(self, config)
 					LocalEvent:Send("avatar_editor_should_focus_on_body")
 				end
 				return btn
-			elseif index == 9 then
+			elseif index == 7 then
 				local btn = ui:createButton("👞 Shoes")
 				btn.onRelease = function()
 					if categoryNode then
@@ -284,14 +283,14 @@ mod.create = function(self, config)
 					LocalEvent:Send("avatar_editor_should_focus_on_body")
 				end
 				return btn
-			elseif index == 10 then
-				local btn = ui:createButton("✨ Gloves")
-				btn:disable()
-				return btn
-			elseif index == 11 then
-				local btn = ui:createButton("🎒 Backpack")
-				btn:disable()
-				return btn
+				-- elseif index == 10 then
+				-- 	local btn = ui:createButton("✨ Gloves")
+				-- 	btn:disable()
+				-- 	return btn
+				-- elseif index == 11 then
+				-- 	local btn = ui:createButton("🎒 Backpack")
+				-- 	btn:disable()
+				-- 	return btn
 			end
 			return nil
 		end,

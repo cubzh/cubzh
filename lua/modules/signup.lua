@@ -16,6 +16,8 @@ signup.startFlow = function(self, config)
 		avatarEditorStep = function() end,
 		loginStep = function() end,
 		loginSuccess = function() end,
+		dobStep = function() end,
+		phoneNumberStep = function() end,
 	}
 
 	local ok, err = pcall(function()
@@ -34,6 +36,7 @@ signup.startFlow = function(self, config)
 	local ease = require("ease")
 	local loc = require("localize")
 	local str = require("str")
+	local bundle = require("bundle")
 
 	local theme = require("uitheme").current
 	local padding = theme.padding
@@ -44,8 +47,66 @@ signup.startFlow = function(self, config)
 
 	-- local backFrame
 	local backButton
+	local coinsButton
 	local drawer
 	local loginBtn
+
+	local function showCoinsButton()
+		if coinsButton == nil then
+			local balanceContainer = ui:createFrame(Color(0, 0, 0, 0))
+			local coinShape = bundle:Shape("shapes/pezh_coin_2")
+			local coin = ui:createShape(coinShape, { spherized = false, doNotFlip = true })
+			coin:setParent(balanceContainer)
+
+			local l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+				coin.pivot.Rotation = coin.pivot.Rotation * Rotation(0, dt, 0)
+			end)
+			coin.onRemove = function()
+				l:Remove()
+			end
+
+			local balance = ui:createText("100", { color = Color(252, 220, 44), textSize = "default" })
+			balance:setParent(balanceContainer)
+			balanceContainer.parentDidResize = function(self)
+				local ratio = coin.Width / coin.Height
+				coin.Height = balance.Height
+				coin.Width = coin.Height * ratio
+				self.Width = coin.Width + balance.Width + theme.padding
+				self.Height = coin.Height
+
+				coin.pos = { 0, self.Height * 0.5 - coin.Height * 0.5 }
+				balance.pos = { coin.Width + theme.padding, self.Height * 0.5 - balance.Height * 0.5 }
+			end
+			balanceContainer:parentDidResize()
+
+			coinsButton = ui:createButton(balanceContainer, { textSize = "default", borders = false })
+			coinsButton:setColor(Color(0, 0, 0, 0.4))
+
+			coinsButton.parentDidResize = function(self)
+				ease:cancel(self)
+				self.pos = {
+					Screen.Width - Screen.SafeArea.Right - self.Width - padding,
+					Screen.Height - Screen.SafeArea.Top - self.Height - padding,
+				}
+			end
+			coinsButton.onRelease = function(_)
+				-- display info bubble
+			end
+			coinsButton.pos = { Screen.Width, Screen.Height - Screen.SafeArea.Top - coinsButton.Height - padding }
+			ease:outSine(coinsButton, animationTime).pos = Number3(
+				Screen.Width - Screen.SafeArea.Right - coinsButton.Width - padding,
+				Screen.Height - Screen.SafeArea.Top - coinsButton.Height - padding,
+				0
+			)
+		end
+	end
+
+	local function removeCoinsButton()
+		if coinsButton ~= nil then
+			coinsButton:remove()
+			coinsButton = nil
+		end
+	end
 
 	local function showBackButton()
 		if backButton == nil then
@@ -517,14 +578,13 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createAvatarEditorStep = function()
-		local avatarEditor
-
+	local createPhoneNumberStep = function()
 		local step = flow:createStep({
 			onEnter = function()
-				config.avatarEditorStep()
+				config.phoneNumberStep()
 
 				showBackButton()
+				showCoinsButton()
 
 				-- DRAWER
 				if drawer ~= nil then
@@ -532,6 +592,437 @@ signup.startFlow = function(self, config)
 				else
 					drawer = drawerModule:create({ ui = ui })
 				end
+
+				local okBtn = ui:createButton("Confirm", { textSize = "big" })
+				okBtn:setColor(theme.colorPositive)
+				okBtn:setParent(drawer)
+				okBtn.onRelease = function()
+					-- signupFlow:push(createAvatarEditorStep())
+					api:patchUserPhone({ phone = "+33768201427" }, function(err)
+						if err ~= nil then
+							print("ERR:", err)
+						end
+					end)
+				end
+				-- okBtn:disable()
+
+				local text = ui:createText("Final step! What's your phone number?", {
+					color = Color.Black,
+				})
+				text:setParent(drawer)
+
+				local _country = 2
+				local countries = { "FR", "US" }
+				local countryInput = ui:createComboBox("US", countries)
+				countryInput:setParent(drawer)
+
+				countryInput.onSelect = function(self, index)
+					System:DebugEvent("User did pick country for phone number")
+					_country = index
+					self.Text = countries[index]
+				end
+
+				local phoneInput = ui:createTextInput("", str:upperFirstChar(loc("phone number")), { textSize = "big" })
+				phoneInput:setParent(drawer)
+
+				local secondaryText = ui:createText(
+					"Cubzh asks for phone numbers to secure accounts and fight against cheaters. Information kept private. 🔑",
+					{
+						color = Color(100, 100, 100),
+						size = "small",
+					}
+				)
+				secondaryText:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						local padding = theme.paddingBig
+						local smallPadding = theme.padding
+
+						local maxWidth = math.min(300, self.Width - padding * 2)
+						text.object.MaxWidth = maxWidth
+						secondaryText.object.MaxWidth = maxWidth
+
+						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
+
+						local availableWidth = w - padding * 2
+						countryInput.Height = phoneInput.Height
+						phoneInput.Width = availableWidth - countryInput.Width - smallPadding
+
+						self.Width = w
+						self.Height = Screen.SafeArea.Bottom
+							+ okBtn.Height
+							+ text.Height
+							+ secondaryText.Height
+							+ phoneInput.Height
+							+ padding * 5
+
+						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + padding }
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							okBtn.pos.Y + okBtn.Height + padding,
+						}
+						countryInput.pos = {
+							padding,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						phoneInput.pos = {
+							countryInput.pos.X + countryInput.Width + smallPadding,
+							countryInput.pos.Y,
+						}
+						text.pos = {
+							self.Width * 0.5 - text.Width * 0.5,
+							countryInput.pos.Y + countryInput.Height + padding,
+						}
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
+					end,
+				})
+
+				drawer:show()
+			end,
+			onExit = function() end,
+			onRemove = function() end,
+		})
+
+		return step
+	end
+
+	local createDOBStep = function()
+		local step = flow:createStep({
+			onEnter = function()
+				config.dobStep()
+
+				showBackButton()
+				showCoinsButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				local okBtn = ui:createButton("Confirm", { textSize = "big" })
+				okBtn:setColor(theme.colorPositive)
+				okBtn:setParent(drawer)
+				okBtn.onRelease = function()
+					print("createPhoneNumberStep")
+					signupFlow:push(createPhoneNumberStep())
+				end
+				okBtn:disable()
+
+				local text = ui:createText("Looking good! Now, what's your date of birth, in real life? 🎂", {
+					color = Color.Black,
+				})
+				text:setParent(drawer)
+
+				local secondaryText = ui:createText(
+					"Cubzh is an online social universe. We have to ask this to protect the young ones and will keep that information private. 🔑",
+					{
+						color = Color(100, 100, 100),
+						size = "small",
+					}
+				)
+				secondaryText:setParent(drawer)
+
+				local _year
+				local _month
+				local _day
+
+				local monthNames = {
+					str:upperFirstChar(loc("january")),
+					str:upperFirstChar(loc("february")),
+					str:upperFirstChar(loc("march")),
+					str:upperFirstChar(loc("april")),
+					str:upperFirstChar(loc("may")),
+					str:upperFirstChar(loc("june")),
+					str:upperFirstChar(loc("july")),
+					str:upperFirstChar(loc("august")),
+					str:upperFirstChar(loc("september")),
+					str:upperFirstChar(loc("october")),
+					str:upperFirstChar(loc("november")),
+					str:upperFirstChar(loc("december")),
+				}
+				local dayNumbers = {}
+				for i = 1, 31 do
+					table.insert(dayNumbers, "" .. i)
+				end
+
+				local years = {}
+				local yearStrings = {}
+				local currentYear = math.floor(tonumber(os.date("%Y")))
+				local currentMonth = math.floor(tonumber(os.date("%m")))
+				local currentDay = math.floor(tonumber(os.date("%d")))
+
+				for i = currentYear, currentYear - 100, -1 do
+					table.insert(years, i)
+					table.insert(yearStrings, "" .. i)
+				end
+
+				local function isLeapYear(year)
+					if year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0) then
+						return true
+					else
+						return false
+					end
+				end
+
+				local function nbDays(m)
+					if m == 2 then
+						if isLeapYear(m) then
+							return 29
+						else
+							return 28
+						end
+					else
+						local days = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+						return days[m]
+					end
+				end
+
+				local monthInput = ui:createComboBox(str:upperFirstChar(loc("month")), monthNames)
+				monthInput:setParent(drawer)
+
+				local dayInput = ui:createComboBox(str:upperFirstChar(loc("day")), dayNumbers)
+				dayInput:setParent(drawer)
+
+				local yearInput = ui:createComboBox(str:upperFirstChar(loc("year")), yearStrings)
+				yearInput:setParent(drawer)
+
+				local checkDOB = function()
+					local r = true
+					local daysInMonth = nbDays(_month)
+
+					if _year == nil or _month == nil or _day == nil then
+						-- if config and config.errorIfIncomplete == true then
+						-- birthdayInfo.Text = "❌ " .. loc("required")
+						-- birthdayInfo.Color = theme.errorTextColor
+						r = false
+						-- else
+						-- 	birthdayInfo.Text = ""
+						-- end
+					elseif _day < 0 or _day > daysInMonth then
+						-- birthdayInfo.Text = "❌ invalid date"
+						-- birthdayInfo.Color = theme.errorTextColor
+						r = false
+					elseif
+						_year > currentYear
+						or (_year == currentYear and _month > currentMonth)
+						or (_year == currentYear and _month == currentMonth and _day > currentDay)
+					then
+						-- birthdayInfo.Text = "❌ users from the future not allowed"
+						-- birthdayInfo.Color = theme.errorTextColor
+						r = false
+						-- else
+						-- 	birthdayInfo.Text = ""
+					end
+
+					-- birthdayInfo.pos.X = node.Width - birthdayInfo.Width
+					return r
+				end
+
+				monthInput.onSelect = function(self, index)
+					System:DebugEvent("SIGNUP_PICK_MONTH")
+					_month = index
+					self.Text = monthNames[index]
+					if checkDOB() then
+						okBtn:enable()
+					end
+				end
+
+				dayInput.onSelect = function(self, index)
+					System:DebugEvent("SIGNUP_PICK_DAY")
+					_day = index
+					self.Text = dayNumbers[index]
+					if checkDOB() then
+						okBtn:enable()
+					end
+				end
+
+				yearInput.onSelect = function(self, index)
+					System:DebugEvent("SIGNUP_PICK_YEAR")
+					_year = years[index]
+					self.Text = yearStrings[index]
+					if checkDOB() then
+						okBtn:enable()
+					end
+				end
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						local padding = theme.paddingBig
+						local smallPadding = theme.padding
+
+						local maxWidth = math.min(300, self.Width - padding * 2)
+						text.object.MaxWidth = maxWidth
+						secondaryText.object.MaxWidth = maxWidth
+
+						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
+
+						local availableWidthForInputs = w - padding * 2 - smallPadding * 2
+
+						monthInput.Width = availableWidthForInputs * 0.5
+						dayInput.Width = availableWidthForInputs * 0.2
+						yearInput.Width = availableWidthForInputs * 0.3
+
+						self.Width = w
+						self.Height = Screen.SafeArea.Bottom
+							+ okBtn.Height
+							+ monthInput.Height
+							+ text.Height
+							+ secondaryText.Height
+							+ padding * 5
+
+						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + padding }
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							okBtn.pos.Y + okBtn.Height + padding,
+						}
+						monthInput.pos = {
+							padding,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						dayInput.pos = {
+							monthInput.pos.X + monthInput.Width + smallPadding,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						yearInput.pos = {
+							dayInput.pos.X + dayInput.Width + smallPadding,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						text.pos =
+							{ self.Width * 0.5 - text.Width * 0.5, monthInput.pos.Y + monthInput.Height + padding }
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
+					end,
+				})
+
+				drawer:show()
+			end,
+			onExit = function() end,
+			onRemove = function() end,
+		})
+
+		return step
+	end
+
+	local createAvatarEditorStep = function()
+		local avatarEditor
+		local okBtn
+		local infoFrame
+		local info
+		local avatarUpdateListener
+		local nbPartsChanged = 0
+		local nbPartsToChange = 3
+		local partsChanged = {}
+
+		local step = flow:createStep({
+			onEnter = function()
+				config.avatarEditorStep()
+
+				showBackButton()
+				showCoinsButton()
+
+				infoFrame = ui:createFrame(Color(0, 0, 0, 0.3))
+				info = ui:createText(string.format("Change at least %d things to continue!", nbPartsToChange), {
+					color = Color.White,
+				})
+				info:setParent(infoFrame)
+				info.pos = { padding, padding }
+
+				okBtn = ui:createButton(" Done! ", { textSize = "big" })
+				okBtn:setColor(theme.colorPositive)
+				okBtn.onRelease = function(self)
+					-- go to next step
+					signupFlow:push(createDOBStep())
+				end
+				okBtn:disable()
+
+				local function layoutInfoFrame()
+					local parent = infoFrame.parent
+					if not parent then
+						return
+					end
+					info.object.MaxWidth = parent.Width - okBtn.Width - padding * 5
+					infoFrame.Width = info.Width + padding * 2
+					infoFrame.Height = info.Height + padding * 2
+					infoFrame.pos = {
+						okBtn.pos.X - infoFrame.Width - padding,
+						infoFrame.Height > okBtn.Height and okBtn.pos.Y
+							or okBtn.pos.Y + okBtn.Height * 0.5 - infoFrame.Height * 0.5,
+					}
+				end
+
+				avatarUpdateListener = LocalEvent:Listen("avatar_editor_update", function(config)
+					if config.skinColorIndex then
+						if not partsChanged["skin"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["skin"] = true
+						end
+					end
+					if config.eyesIndex then
+						if not partsChanged["eyes"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["eyes"] = true
+						end
+					end
+					if config.noseIndex then
+						if not partsChanged["nose"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["nose"] = true
+						end
+					end
+					if config.jacket then
+						if not partsChanged["jacket"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["jacket"] = true
+						end
+					end
+					if config.hair then
+						if not partsChanged["hair"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["hair"] = true
+						end
+					end
+					if config.pants then
+						if not partsChanged["pants"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["pants"] = true
+						end
+					end
+					if config.boots then
+						if not partsChanged["boots"] then
+							nbPartsChanged = nbPartsChanged + 1
+							partsChanged["boots"] = true
+						end
+					end
+
+					local remaining = math.max(0, nbPartsToChange - nbPartsChanged)
+					if remaining == 0 then
+						info.text = "You're good to go!"
+						okBtn:enable()
+					else
+						info.text = string.format("Change %d more things to continue!", remaining)
+					end
+					layoutInfoFrame()
+				end)
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				okBtn:setParent(drawer)
+				infoFrame:setParent(drawer)
 
 				avatarEditor = require("ui_avatar_editor"):create({
 					ui = ui,
@@ -549,6 +1040,13 @@ signup.startFlow = function(self, config)
 									avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
 								end
 
+								okBtn.pos = {
+									self.Width - okBtn.Width - padding,
+									self.Height + padding,
+								}
+
+								layoutInfoFrame()
+
 								LocalEvent:Send("signup_drawer_height_update", drawerHeight)
 							end,
 						})
@@ -565,6 +1063,11 @@ signup.startFlow = function(self, config)
 
 						avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
 
+						okBtn.pos = {
+							drawer.Width - okBtn.Width - padding,
+							drawer.Height + padding,
+						}
+
 						LocalEvent:Send("signup_drawer_height_update", self.Height)
 					end,
 				})
@@ -573,6 +1076,10 @@ signup.startFlow = function(self, config)
 			end,
 			onExit = function()
 				drawer:hide()
+				okBtn:remove()
+				if avatarUpdateListener then
+					avatarUpdateListener:Remove()
+				end
 			end,
 			onRemove = function() end,
 		})
@@ -586,6 +1093,7 @@ signup.startFlow = function(self, config)
 				config.avatarPreviewStep()
 
 				showBackButton()
+				removeCoinsButton()
 
 				-- DRAWER
 				if drawer ~= nil then

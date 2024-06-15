@@ -2662,6 +2662,9 @@ else
 			avatarEditorStep = function()
 				LocalEvent:Send("signup_flow_avatar_editor")
 			end,
+			dobStep = function()
+				LocalEvent:Send("signup_flow_dob")
+			end,
 		})
 		activeFlow = signupFlow
 	end
