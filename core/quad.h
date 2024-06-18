@@ -23,10 +23,10 @@ void quad_release(Quad *q);
 void quad_free(Quad *q); // called in transform_release, does not free transform
 
 Transform *quad_get_transform(const Quad *q);
-void quad_copy_data(Quad *q, const void *data, size_t size);
+void quad_copy_data(Quad *q, const void *data, uint32_t size);
 void *quad_get_data(const Quad *q);
-size_t quad_get_data_size(const Quad *q);
-uint64_t quad_get_data_hash(const Quad *q);
+uint32_t quad_get_data_size(const Quad *q);
+uint32_t quad_get_data_hash(const Quad *q);
 void quad_set_width(Quad *q, float value);
 float quad_get_width(const Quad *q);
 void quad_set_height(Quad *q, float value);
@@ -58,8 +58,17 @@ void quad_set_unlit(Quad *q, bool toggle);
 bool quad_is_unlit(const Quad *q);
 void quad_set_mask(Quad *q, bool toggle);
 bool quad_is_mask(const Quad *q);
+void quad_set_alpha(Quad *q, bool toggle);
+bool quad_uses_alpha(const Quad *q);
 void quad_set_sort_order(Quad *q, uint8_t value);
 uint8_t quad_get_sort_order(const Quad *q);
+void quad_set_9slice(Quad *q, bool toggle);
+bool quad_uses_9slice(const Quad *q);
+void quad_set_9slice_uv(Quad *q, float u, float v);
+float quad_get_9slice_u(const Quad *q);
+float quad_get_9slice_v(const Quad *q);
+void quad_set_9slice_scale(Quad *q, float value);
+float quad_get_9slice_scale(const Quad *q);
 
 // MARK: - Utils -
 
