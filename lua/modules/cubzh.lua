@@ -479,7 +479,6 @@ function avatar()
 				end,
 				layers = avatarLayers,
 				color = function()
-					print(particlesColor)
 					return particlesColor
 				end,
 			})

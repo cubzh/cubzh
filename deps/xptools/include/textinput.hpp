@@ -50,7 +50,8 @@ void textInputRequest(std::string str, // it's safer to use copies (no const ref
                       size_t cursorEnd,
                       bool multiline,
                       TextInputKeyboardType keyboardType,
-                      TextInputReturnKeyType returnKeyType );
+                      TextInputReturnKeyType returnKeyType,
+                      bool suggestions);
 void textInputUpdate(std::string str, // it's safer to use copies (no const ref)
                      size_t cursorStart,
                      size_t cursorEnd );

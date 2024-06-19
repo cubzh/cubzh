@@ -40,13 +40,14 @@ typedef enum {
 } TextInputAction;
 
 typedef void (*HostPlatormTextInput_RequestCallback)(const char *str,
-                                     size_t strLen,
-                                     bool strDidchange,
-                                     size_t cursorStart,
-                                     size_t cursorEnd,
-                                     bool multiline,
-                                     TextInputKeyboardType keyboardType,
-                                     TextInputReturnKeyType returnKeyType);
+                                                     size_t strLen,
+                                                     bool strDidchange,
+                                                     size_t cursorStart,
+                                                     size_t cursorEnd,
+                                                     bool multiline,
+                                                     TextInputKeyboardType keyboardType,
+                                                     TextInputReturnKeyType returnKeyType,
+                                                     bool suggestions);
 typedef void (*HostPlatormTextInput_UpdateCallback)(const char *str,
                                                     size_t strLen,
                                                     bool strDidchange,
