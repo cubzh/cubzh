@@ -35,6 +35,7 @@ signup.startFlow = function(self, config)
 	local drawerModule = require("drawer")
 	local ease = require("ease")
 	local loc = require("localize")
+	local phonenumbers = require("phonenumbers")
 	local str = require("str")
 	local bundle = require("bundle")
 
@@ -611,19 +612,87 @@ signup.startFlow = function(self, config)
 				})
 				text:setParent(drawer)
 
-				local _country = 2
-				local countries = { "FR", "US" }
-				local countryInput = ui:createComboBox("US", countries)
+				local proposedCountries = {
+					"US",
+					"CA",
+					"GB",
+					"DE",
+					"FR",
+					"IT",
+					"ES",
+					"NL",
+					"RU",
+					"CN",
+					"IN",
+					"JP",
+					"KR",
+					"AU",
+					"BR",
+					"MX",
+					"AR",
+					"ZA",
+					"SA",
+					"TR",
+					"ID",
+					"VN",
+					"TH",
+					"MY",
+					"PH",
+					"SG",
+					"AE",
+					"IL",
+					"UA",
+				}
+				-- local countries = phonenumbers.countries
+				local countryLabels = {}
+				local c
+				for _, countryCode in ipairs(proposedCountries) do
+					c = phonenumbers.countryCodes[countryCode]
+					if c ~= nil then
+						table.insert(countryLabels, c.code .. " +" .. c.prefix)
+					end
+				end
+				-- for _, country in ipairs(countries) do
+				-- 	table.insert(countryLabels, country.code .. " +" .. country.prefix)
+				-- end
+
+				local countryInput = ui:createComboBox("US +1", countryLabels)
 				countryInput:setParent(drawer)
+
+				local phoneInput = ui:createTextInput(
+					"",
+					str:upperFirstChar(loc("phone number")),
+					{ textSize = "big", keyboardType = "phone", suggestions = false }
+				)
+				phoneInput:setParent(drawer)
+
+				local layoutPhoneInput = function()
+					phoneInput.Width = drawer.Width - theme.paddingBig * 2 - countryInput.Width - theme.padding
+					phoneInput.pos = {
+						countryInput.pos.X + countryInput.Width + theme.padding,
+						countryInput.pos.Y,
+					}
+				end
 
 				countryInput.onSelect = function(self, index)
 					System:DebugEvent("User did pick country for phone number")
-					_country = index
-					self.Text = countries[index]
+					self.Text = countryLabels[index]
+					layoutPhoneInput()
 				end
 
-				local phoneInput = ui:createTextInput("", str:upperFirstChar(loc("phone number")), { textSize = "big" })
-				phoneInput:setParent(drawer)
+				phoneInput.onTextChange = function(self)
+					local backup = self.onTextChange
+					self.onTextChange = nil
+
+					local res = phonenumbers:extractCountryCode(self.Text)
+					if res.countryCode ~= nil then
+						self.Text = res.remainingNumber
+						countryInput.Text = res.countryCode .. " +" .. res.countryPrefix
+						layoutPhoneInput()
+					end
+
+					self.onTextChange = backup
+				end
 
 				local secondaryText = ui:createText(
 					"Cubzh asks for phone numbers to secure accounts and fight against cheaters. Information kept private. 🔑",
@@ -710,7 +779,6 @@ signup.startFlow = function(self, config)
 				okBtn:setColor(theme.colorPositive)
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
-					print("createPhoneNumberStep")
 					signupFlow:push(createPhoneNumberStep())
 				end
 				okBtn:disable()

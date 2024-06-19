@@ -1561,7 +1561,8 @@ function createUI(system)
 			textSize = "default",
 			multiline = false, -- not yet implemented
 			returnKeyType = "done", -- options: "default", "done", "send", "next"
-			keyboardType = "default", -- other options: "email", "phone", "numbers", "url", "ascii"
+			keyboardType = "default", -- other options: "email", "phone", "numbers", "url", "ascii", "oneTimeDigicode"
+			suggestions = false,
 		}
 
 		local config = {}
@@ -1944,6 +1945,7 @@ function createUI(system)
 				multiline = config.multiline,
 				returnKeyType = config.returnKeyType,
 				keyboardType = config.keyboardType,
+				suggestions = config.suggestions,
 				cursorStart = nil,
 				cursorEnd = nil,
 			})
@@ -3112,7 +3114,8 @@ function createUI(system)
 			-- frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
 			frame.Height = math.min(
 				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
-				contentHeight
+				contentHeight,
+				400 -- max heigh for all combo boxes
 			)
 
 			frame.pos.Z = -10 -- render on front
