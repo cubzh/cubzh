@@ -5,8 +5,8 @@ $input v_color0, v_color1, v_texcoord0, v_texcoord1
 	#define v_clipZ v_texcoord0.w
 	#define v_model v_texcoord1.xyz
 	#define v_linearDepth v_texcoord1.w
-#elif VOXEL_VARIANT_MRT_TRANSPARENCY || VOXEL_VARIANT_DRAWMODES
-$input v_color0, v_texcoord0
+#elif VOXEL_VARIANT_DRAWMODES
+$input v_color0, v_texcoord0, v_texcoord1
 	#define v_model v_texcoord0.xyz
 	#define v_clipZ v_texcoord0.w
 #else

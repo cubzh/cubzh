@@ -1,8 +1,7 @@
 $input a_position, a_color0, a_texcoord0
 #if FONT_VARIANT_MRT_TRANSPARENCY
 $output v_color0, v_texcoord0, v_texcoord1
-	#define v_model v_texcoord1.xyz
-	#define v_clipZ v_texcoord1.w
+	#define v_clipZ v_texcoord1.x
 #elif FONT_VARIANT_LIGHTING_UNIFORM || FONT_VARIANT_MRT_LINEAR_DEPTH
 $output v_color0, v_texcoord0, v_texcoord1
 	#define v_linearDepth v_texcoord1.x
@@ -25,7 +24,6 @@ void main() {
 	v_texcoord0 = a_texcoord0;
 	v_color0 = a_color0;
 #if FONT_VARIANT_MRT_TRANSPARENCY
-	v_model = model.xyz;
 	v_clipZ = clip.z;
 #else
 #if FONT_VARIANT_MRT_LINEAR_DEPTH

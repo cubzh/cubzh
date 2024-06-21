@@ -1,7 +1,6 @@
 #ifndef __VOXELS_UNIFORM_SH__
 #define __VOXELS_UNIFORM_SH__
 
-uniform vec4 u_params;
 uniform vec4 u_facesOffsets[24];
 #if VOXEL_VARIANT_LIGHTING_UNIFORM
 uniform vec4 u_lighting;
@@ -13,8 +12,6 @@ uniform vec4 u_overrideParams[2];
 #if DEBUG_FACE == 2
 uniform vec4 u_debug_drawSlices[4];
 #endif
-
-#define u_bakedIntensity u_params.x
 
 #if VOXEL_VARIANT_DRAWMODES
 #define u_alphaOverride u_overrideParams[0].x

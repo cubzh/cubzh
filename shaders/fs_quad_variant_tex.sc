@@ -1,9 +1,6 @@
 /*
  * Quad fragment shader variant: textured
  */
- 
-// Lit
-#define QUAD_VARIANT_UNLIT 0
 
 // No multiple render target
 #define QUAD_VARIANT_MRT_LIGHTING 0

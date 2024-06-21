@@ -1,6 +1,8 @@
 #ifndef __UTILS_LIB_SH__
 #define __UTILS_LIB_SH__
 
+#include "./config.sh"
+
 bool fequal(float f1, float f2, float epsilon) {
 	return f2 - epsilon <= f1 && f1 <= f2 + epsilon;
 }
@@ -101,6 +103,14 @@ float rgb2Luma(vec3 rgb) {
 
 float rgb2PerceivedLuma(vec3 rgb) {
 	return dot(vec3(0.299, 0.587, 0.114), rgb);
+}
+
+vec2 unpackNormalized2Floats(float f) {
+	const float shift = 4095.0;
+	float unpack = f;
+	float f2 = floor((unpack + UNPACK_FUDGE) / shift);
+	float f1 = unpack - f2 * shift;
+	return vec2(f1 / shift, f2 / shift);
 }
 
 #endif // __UTILS_LIB_SH__

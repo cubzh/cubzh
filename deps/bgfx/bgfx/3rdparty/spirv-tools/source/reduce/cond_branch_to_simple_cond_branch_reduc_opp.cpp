@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "source/reduce/conditional_branch_to_simple_conditional_branch_reduc_opportunity.h"
+#include "source/reduce/cond_branch_to_simple_cond_branch_reduc_opp.h"
 
 #include "source/reduce/reduction_util.h"
 

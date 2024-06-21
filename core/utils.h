@@ -137,6 +137,7 @@ char *utils_get_baked_fullname(const char *id, const char *itemFullname);
 void utils_rgba_to_uint8(uint32_t rgba, uint8_t *out);
 uint32_t utils_uint8_to_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 void utils_rgba_to_float(uint32_t rgba, float *out);
+uint32_t utils_float_to_rgba(float r, float g, float b, float a);
 
 // random float value between 0.0 and 1.0
 float frand(void);

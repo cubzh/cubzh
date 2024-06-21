@@ -12,6 +12,6 @@ vec4 i_data3     : TEXCOORD4;
 vec4 i_data4     : TEXCOORD3;
 
 vec4 a_position  : POSITION;
+vec3 a_normal    : NORMAL;
 vec4 a_color0    : COLOR0;
-vec4 a_normal    : COLOR1;
 vec4 a_texcoord0 : TEXCOORD0;

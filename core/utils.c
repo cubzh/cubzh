@@ -447,6 +447,11 @@ void utils_rgba_to_float(uint32_t rgba, float *out) {
     *(out + 3) = (float)((rgba >> 24) & 0xff) / 255.0f;
 }
 
+uint32_t utils_float_to_rgba(float r, float g, float b, float a) {
+    return (uint32_t)(r * 255) + ((uint32_t)(g * 255) << 8) + ((uint32_t)(b * 255) << 16) +
+           ((uint32_t)(a * 255) << 24);
+}
+
 float frand(void) {
     const int r = rand();
     return (float)r / (float)RAND_MAX;

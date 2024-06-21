@@ -1,17 +1,13 @@
-#if OIT_VARIANT_FONT
 $input v_color0, v_texcoord0, v_texcoord1
+#if OIT_VARIANT_FONT
 	#define v_uvw v_texcoord0.xyz
 	#define v_coloredGlyph CLAMP01(v_texcoord0.w)
-	#define v_model v_texcoord1.xyz
-	#define v_clipZ v_texcoord1.w
+	#define v_clipZ v_texcoord1.x
 #elif OIT_VARIANT_TEX
-$input v_color0, v_texcoord0, v_texcoord1
 	#define v_uv v_texcoord0.xy
-	#define v_st v_texcoord0.zw
-	#define v_model v_texcoord1.xyz
-	#define v_clipZ v_texcoord1.w
+	#define v_clipZ v_texcoord0.z
+	#define v_9slice v_texcoord1.xyz
 #else
-$input v_color0, v_texcoord0
 	#define v_model v_texcoord0.xyz
 	#define v_clipZ v_texcoord0.w
 #endif
@@ -39,21 +35,19 @@ $input v_color0, v_texcoord0
 
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
+#include "./include/utils_lib.sh"
 #if VOXEL_VARIANT_DRAWMODES
 #include "./include/drawmodes_lib.sh"
 #include "./include/voxels_uniforms_fs.sh"
+#endif
+#if OIT_VARIANT_TEX
+#include "./include/quad_lib.sh"
 #endif
 
 #if OIT_VARIANT_FONT
 SAMPLERCUBE(s_texColor, 0);
 #elif OIT_VARIANT_TEX
 SAMPLER2D(s_fb1, 0);
-
-#if OIT_VARIANT_TEX_UVST == 0
-uniform vec4 u_params;
-	#define u_tiling u_params.xy
-	#define u_offset u_params.zw
-#endif // OIT_VARIANT_TEX_UVST
 #endif // OIT_VARIANT_FONT
 
 float w(float z, vec4 color) {
@@ -76,24 +70,26 @@ float w(float z, vec4 color) {
 }
 
 void main() {
-#if VOXEL_VARIANT_DRAWMODES
-	vec4 color = getGridColor(v_model, v_color0, u_gridRGB, u_gridScaleMag, v_clipZ);
-#else
 	vec4 color = v_color0;
-#endif
+
 #if OIT_VARIANT_FONT
 	vec4 base = textureCube(s_texColor, v_uvw).bgra;
 	base.a = mix(base.a, base.r, v_coloredGlyph);
 
 	color = vec4(mix(base.rgb, color.rgb, v_coloredGlyph), color.a * base.a);
-
 #elif OIT_VARIANT_TEX
-#if OIT_VARIANT_TEX_UVST
-	color *= texture2D(s_fb1, v_texcoord0.z * v_uv + v_st.y);
-#else
-	color *= texture2D(s_fb1, u_tiling * v_uv + u_offset);
-#endif // OIT_VARIANT_TEX_UVST
+	vec2 slice = unpackNormalized2Floats(v_9slice.x);
+	vec2 uBorders = unpackNormalized2Floats(v_9slice.y);
+	vec2 vBorders = unpackNormalized2Floats(v_9slice.z);
+
+	vec2 uv = vec2(sliceUV(v_uv.x, uBorders, slice.x),
+				   sliceUV(v_uv.y, vBorders, slice.y));
+
+	color *= texture2D(s_fb1, uv);
+#elif VOXEL_VARIANT_DRAWMODES
+	color = getGridColor(v_model, color, u_gridRGB, u_gridScaleMag, v_clipZ);
 #endif // OIT_VARIANT_FONT
+
 	float weight = w(v_clipZ, color);
 	
 	gl_FragData[0] = vec4(color.rgb * color.a * weight, color.a);
