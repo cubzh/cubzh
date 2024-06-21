@@ -18,6 +18,7 @@ SAMPLER2D(s_fb4, 3);
 SAMPLER2D(s_fb5, 4);
 SAMPLER2D(s_fb6, 5);
 
+uniform vec4 u_params;
 uniform vec4 u_color1;
 uniform vec4 u_color2;
 

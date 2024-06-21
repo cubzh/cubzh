@@ -1,9 +1,6 @@
 /*
  * Quad fragment shader variant: lighting pass, linear depth, textured
  */
- 
-// Lit
-#define QUAD_VARIANT_UNLIT 0
 
 // Multiple render target lighting and linear depth
 #define QUAD_VARIANT_MRT_LIGHTING 1

@@ -19,17 +19,17 @@
 	return res;
 } */
 
-void unpackFullMetadata(float f, inout float metadata[6]) {
+void unpackFullMetadata(float f, out float metadata[6]) {
 	float unpack = f;
-	float b = floor(unpack / 131072.0);
+	float b = floor((unpack + UNPACK_FUDGE) / 131072.0);
 	unpack -= b * 131072.0;
-	float g = floor(unpack / 8192.0);
+	float g = floor((unpack + UNPACK_FUDGE) / 8192.0);
 	unpack -= g * 8192.0;
-	float r = floor(unpack / 512.0);
+	float r = floor((unpack + UNPACK_FUDGE) / 512.0);
 	unpack -= r * 512.0;
-	float s = floor(unpack / 32.0);
+	float s = floor((unpack + UNPACK_FUDGE) / 32.0);
 	unpack -= s * 32.0;
-	float face = floor(unpack / 4.0);
+	float face = floor((unpack + UNPACK_FUDGE) / 4.0);
 	float aoIdx = unpack - face * 4.0;
 	
 	metadata[0] = aoIdx;
@@ -42,12 +42,38 @@ void unpackFullMetadata(float f, inout float metadata[6]) {
 
 vec3 unpackMetadata(float f) {
 	float unpack = f;
-	float srgb = floor(unpack / 32.0);
+	float srgb = floor((unpack + UNPACK_FUDGE) / 32.0);
 	unpack -= srgb * 32.0;
-	float face = floor(unpack / 4.0);
+	float face = floor((unpack + UNPACK_FUDGE) / 4.0);
 	float aoIdx = unpack - face * 4.0;
 	
 	return vec3(aoIdx, face, srgb);
+}
+
+void unpackQuadFullMetadata(float f, out float metadata[5]) {
+	float unpack = f;
+	float b = floor((unpack + UNPACK_FUDGE) / 8192.0);
+	unpack -= b * 8192.0;
+	float g = floor((unpack + UNPACK_FUDGE) / 512.0);
+	unpack -= g * 512.0;
+	float r = floor((unpack + UNPACK_FUDGE) / 32.0);
+	unpack -= r * 32.0;
+	float s = floor((unpack + UNPACK_FUDGE) / 2.0);
+	float unlit = unpack - s * 2.0;
+
+	metadata[0] = unlit;
+	metadata[1] = s / VOXEL_LIGHT_MAX;
+	metadata[2] = r / VOXEL_LIGHT_MAX;
+	metadata[3] = g / VOXEL_LIGHT_MAX;
+	metadata[4] = b / VOXEL_LIGHT_MAX;
+}
+
+vec2 unpackQuadMetadata(float f) {
+	float unpack = f;
+	float srgb = floor((unpack + UNPACK_FUDGE) / 2.0);
+	float unlit = unpack - srgb * 2.0;
+
+	return vec2(unlit, srgb);
 }
 
 vec4 unpackAO(float f) {
@@ -64,11 +90,11 @@ vec4 unpackVoxelLight(float f) {
 	return f;
 #else
 	float unpack = f;
-	float b = floor(unpack / 4096.0);
+	float b = floor((unpack + UNPACK_FUDGE) / 4096.0);
 	unpack -= b * 4096.0;
-	float g = floor(unpack / 256.0);
+	float g = floor((unpack + UNPACK_FUDGE) / 256.0);
 	unpack -= g * 256.0;
-	float r = floor(unpack / 16.0);
+	float r = floor((unpack + UNPACK_FUDGE) / 16.0);
 	float sun = unpack - r * 16.0;
 	return vec4(sun, r, g, b) / VOXEL_LIGHT_MAX;
 #endif // DEBUG_VERTEX_LIGHTING

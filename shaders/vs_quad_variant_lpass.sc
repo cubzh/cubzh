@@ -2,9 +2,6 @@
  * Quad vertex shader variant: lighting pass
  */
 
-// No lighting
-#define QUAD_VARIANT_LIGHTING_UNIFORM 0
-
 // Multiple render target lighting
 #define QUAD_VARIANT_MRT_LIGHTING 1
 #define QUAD_VARIANT_MRT_LINEAR_DEPTH 0

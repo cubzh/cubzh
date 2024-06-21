@@ -2,9 +2,6 @@
  * Quad vertex shader variant: textured
  */
 
-// No lighting
-#define QUAD_VARIANT_LIGHTING_UNIFORM 0
-
 // No multiple render target
 #define QUAD_VARIANT_MRT_LIGHTING 0
 #define QUAD_VARIANT_MRT_LINEAR_DEPTH 0
