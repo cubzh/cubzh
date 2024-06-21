@@ -161,7 +161,7 @@ Client.OnStart = function()
 	light.Layers = avatarLayers
 	light.Layers = { 1, avatarLayers } -- Camera.Layers + avatarLayers
 	World:AddChild(light)
-	light.Rotation:Set(math.rad(20), math.rad(20), 0)
+	light.Rotation:Set(math.rad(5), math.rad(-20), 0)
 
 	Light.Ambient.SkyLightFactor = 0.2
 	Light.Ambient.DirectionalLightFactor = 0.5
@@ -357,6 +357,10 @@ function titleScreen()
 			chest.Rotation = chest.rot * Rotation(d7, d8, 0)
 			chestLid.LocalRotation = chestLidRot * Rotation(d5, 0, 0)
 
+			pezh.Rotation = pezh.rot * Rotation(d5, d8, 0)
+			sword.Rotation = sword.rot * Rotation(d5, d8, 0)
+			cube.Rotation = cube.rot * Rotation(d5, d8, 0)
+
 			-- spaceship.Rotation = spaceship.Rotation * Rotation(dt * 3, 0, 0)
 		end)
 
@@ -490,11 +494,16 @@ function avatar()
 
 		root = Object()
 
+		local eyeBlinks = true
+		if mode == "demo" then
+			eyeBlinks = false
+		end
+
 		local avatar = avatarModule:get({
 			usernameOrId = "",
 			-- size = math.min(Screen.Height * 0.5, Screen.Width * 0.75),
 			-- ui = ui,
-			eyeBlinks = mode == "demo" and false or true,
+			eyeBlinks = eyeBlinks,
 		})
 
 		avatar:SetParent(root)
@@ -669,10 +678,26 @@ function avatar()
 					})
 				end
 
-				avatar:loadEquipment({ type = "hair", shape = hairs[math.random(1, #hairs)] })
-				avatar:loadEquipment({ type = "jacket", shape = jackets[math.random(1, #jackets)] })
-				avatar:loadEquipment({ type = "pants", shape = pants[math.random(1, #pants)] })
-				avatar:loadEquipment({ type = "boots", shape = boots[math.random(1, #boots)] })
+				avatar:loadEquipment({
+					type = "hair",
+					shape = hairs[math.random(1, #hairs)],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+				avatar:loadEquipment({
+					type = "jacket",
+					shape = jackets[math.random(1, #jackets)],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+				avatar:loadEquipment({
+					type = "pants",
+					shape = pants[math.random(1, #pants)],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+				avatar:loadEquipment({
+					type = "boots",
+					shape = boots[math.random(1, #boots)],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
 			end)
 		end
 

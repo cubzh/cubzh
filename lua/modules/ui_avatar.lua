@@ -157,6 +157,7 @@ end
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
 -- uikit: optional, allows to provide specific instance of uikit
+local headCache = {}
 uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 	local requests
 
@@ -188,7 +189,10 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 	end
 
 	if cachedHead ~= nil then
-		local uiHead = ui:createShape(Shape(cachedHead, { includeChildren = true }), { spherized = true })
+		local headCopy = Shape(cachedHead, { includeChildren = true })
+		headCopy.setEyes = cachedHead.setEyes
+
+		local uiHead = ui:createShape(headCopy, { spherized = true })
 		uiHead:setParent(node)
 		node.head = uiHead
 		node.head.Width = node.Width
@@ -198,8 +202,12 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 	else
 		local head
 		head, requests = avatar:getPlayerHead({ usernameOrId = usernameOrId })
+		-- headCache[usernameOrId] = head
 
-		local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = false })
+		-- local headCopy = Shape(head, { includeChildren = true })
+		-- headCopy.setEyes = head.setEyes
+
+		local uiHead = ui:createShape(head, { spherized = false })
 		uiHead:setParent(node)
 		node.head = uiHead
 		local ratio = node.head.Width / node.head.Height
@@ -263,6 +271,28 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 		end
 		setWidth(self, v) -- spherized
 		setHeight(self, v) -- spherized
+	end
+
+	-- node.load = function(self, config)
+	-- 	avatar:load(config)
+	-- end
+	-- node.loadEquipment = function(self, config)
+	-- 	avatar:loadEquipment(config)
+	-- end
+	node.setColors = function(self, config)
+		if self.head.shape.setColors then
+			self.head.shape:setColors(config)
+		end
+	end
+	node.setEyes = function(self, config)
+		if self.head.shape.setEyes then
+			self.head.shape:setEyes(config)
+		end
+	end
+	node.setNose = function(self, config)
+		if self.head.shape.setNose then
+			self.head.shape:setNose(config)
+		end
 	end
 
 	return node, requests

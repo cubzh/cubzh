@@ -25,20 +25,20 @@ local EYES_PALETTE_INDEX = 6
 local NOSE_PALETTE_INDEX = 7
 local EYES_DARK_PALETTE_INDEX = 8
 
-bodyPartsNames = {
-	"Head",
-	"Body",
-	"RightArm",
-	"RightHand",
-	"LeftArm",
-	"LeftHand",
-	"RightLeg",
-	"LeftLeg",
-	"RightFoot",
-	"LeftFoot",
-	"EyeLidRight",
-	"EyeLidLeft",
-}
+-- bodyPartsNames = {
+-- 	"Head",
+-- 	"Body",
+-- 	"RightArm",
+-- 	"RightHand",
+-- 	"LeftArm",
+-- 	"LeftHand",
+-- 	"RightLeg",
+-- 	"LeftLeg",
+-- 	"RightFoot",
+-- 	"LeftFoot",
+-- 	"EyeLidRight",
+-- 	"EyeLidLeft",
+-- }
 
 cachedHead = bundle:Shape("shapes/head_skin2_v2")
 
@@ -103,6 +103,7 @@ mod.skinColors = {
 }
 
 local DEFAULT_BODY_COLOR = 8
+mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR
 
 mod.eyes = {
 	{
@@ -281,6 +282,9 @@ mod.eyes = {
 	},
 }
 
+local DEFAULT_EYES_INDEX = 1
+mod.defaultEyesIndex = DEFAULT_EYES_INDEX
+
 mod.noses = {
 	{
 		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
@@ -331,6 +335,7 @@ mod.noses = {
 }
 
 local DEFAULT_NOSE_INDEX = 1
+mod.defaultNoseIndex = DEFAULT_NOSE_INDEX
 
 avatarPalette = Palette()
 avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin1) -- skin 1
@@ -581,18 +586,19 @@ mod.getPlayerHead = function(self, config)
 		error("avatar:getPlayerHead(config) - config error: " .. err, 2)
 	end
 
-	local head = Shape(cachedHead)
+	local head = MutableShape(cachedHead)
 	-- need custom functions for heads
 	-- head.load = avatar_load
 	-- head.loadEquipment = avatar_loadEquipment
-	-- head.setColors = avatar_setColors
-	-- head.setEyes = avatar_setEyes
-	-- head.setNose = avatar_setNose
+	head.setColors = avatar_setColors
+	head.setEyes = avatar_setEyes
+	head.setNose = avatar_setNose
 
 	local requests = {}
 	local palette = avatarPalette:Copy()
 
-	avatarPrivateFields[head] = { config = config, equipments = {}, requests = requests, palette = palette }
+	avatarPrivateFields[head] =
+		{ config = config, equipments = {}, requests = requests, palette = palette, isHead = true }
 
 	-- error("REVIEW getPlayerHead")
 	head.Name = "Head"
@@ -678,6 +684,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	eyeLidRight.Scale.Z = 1
 	eyeLidRight.Scale.X = 3.2
 	eyeLidRight.Scale.Y = 0 -- 4.2
+	eyeLidRight.IsHidden = true
 	eyeLidRight.LocalPosition:Set(4, 5.1, 5.1)
 
 	local eyeLidLeft = Shape(eyeLidRight)
@@ -687,6 +694,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	eyeLidLeft.Scale.Z = 1
 	eyeLidLeft.Scale.X = 3.2
 	eyeLidLeft.Scale.Y = 0 -- 4.2
+	eyeLidLeft.IsHidden = true
 	eyeLidLeft.LocalPosition:Set(-4, 5.1, 5.1)
 
 	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
@@ -705,12 +713,16 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 				return
 			end
 			eyeLidRight.Scale.Y = 4.2
+			eyeLidRight.IsHidden = false
 			eyeLidLeft.Scale.Y = 4.2
+			eyeLidLeft.IsHidden = false
 			Timer(0.1, eyeBlinks.open)
 		end
 		eyeBlinks.open = function()
 			eyeLidRight.Scale.Y = 0
+			eyeLidRight.IsHidden = true
 			eyeLidLeft.Scale.Y = 0
+			eyeLidLeft.IsHidden = true
 			eyeBlinks.schedule()
 		end
 		eyeBlinks.schedule = function()
@@ -1023,7 +1035,12 @@ function avatar_setEyes(self, config)
 
 	if config.index ~= nil then
 		-- remove current eyes
-		local head = self.Head
+		local head
+		if fields.isHead == true then
+			head = self
+		else
+			head = self.Head
+		end
 		local b
 		for x = 4, head.Width - 5 do -- width -> left side when looking at face
 			for y = 3, head.Height - 5 do
@@ -1077,7 +1094,12 @@ function avatar_setNose(self, config)
 		end
 
 		-- remove current nose
-		local head = self.Head
+		local head
+		if fields.isHead == true then
+			head = self
+		else
+			head = self.Head
+		end
 		local b
 		local depth = 12
 		for x = 8, head.Width - 9 do -- width -> left side when looking at face
