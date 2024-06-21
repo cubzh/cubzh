@@ -45,6 +45,12 @@ void box_set_bottom_center_position(Box *b, const float3 *position);
 
 void box_get_center(const Box *b, float3 *center);
 
+float box_get_width(const Box *b);
+
+float box_get_height(const Box *b);
+
+float box_get_depth(const Box *b);
+
 float box_get_diagonal(const Box *b);
 
 void box_copy(Box *dest, const Box *src);
