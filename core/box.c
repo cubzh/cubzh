@@ -67,6 +67,18 @@ void box_get_center(const Box *b, float3 *center) {
                b->min.z + (b->max.z - b->min.z) * .5f);
 }
 
+float box_get_width(const Box *b) {
+    return b->max.x - b->min.x;
+}
+
+float box_get_height(const Box *b) {
+    return b->max.y - b->min.y;
+}
+
+float box_get_depth(const Box *b) {
+    return b->max.z - b->min.z;
+}
+
 float box_get_diagonal(const Box *b) {
     const float w = b->max.x - b->min.x;
     const float h = b->max.y - b->min.y;
