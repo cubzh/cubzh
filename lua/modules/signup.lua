@@ -80,9 +80,9 @@ signup.startFlow = function(self, config)
 			end
 			balanceContainer:parentDidResize()
 
-			coinsButton = ui:createButton(balanceContainer, { textSize = "default", borders = false })
-			coinsButton:setColor(Color(0, 0, 0, 0.4))
-
+			coinsButton = ui:buttonMoney({ content = balanceContainer, textSize = "default" })
+			-- coinsButton = ui:createButton(balanceContainer, { textSize = "default", borders = false })
+			-- coinsButton:setColor(Color(0, 0, 0, 0.4))
 			coinsButton.parentDidResize = function(self)
 				ease:cancel(self)
 				self.pos = {
@@ -111,8 +111,9 @@ signup.startFlow = function(self, config)
 
 	local function showBackButton()
 		if backButton == nil then
-			backButton = ui:createButton("⬅️", { textSize = "default" })
-			backButton:setColor(theme.colorNegative)
+			backButton = ui:buttonNegative({ content = "⬅️", textSize = "default" })
+			-- backButton = ui:createButton("⬅️", { textSize = "default" })
+			-- backButton:setColor(theme.colorNegative)
 			backButton.parentDidResize = function(self)
 				ease:cancel(self)
 				self.pos = {
@@ -1005,8 +1006,9 @@ signup.startFlow = function(self, config)
 				info:setParent(infoFrame)
 				info.pos = { padding, padding }
 
-				okBtn = ui:createButton(" Done! ", { textSize = "big" })
-				okBtn:setColor(theme.colorPositive)
+				okBtn = ui:buttonPositive({ content = "Done!", textSize = "big" })
+				-- okBtn = ui:createButton(" Done! ", { textSize = "big" })
+				-- okBtn:setColor(theme.colorPositive)
 				okBtn.onRelease = function(self)
 					-- go to next step
 					signupFlow:push(createDOBStep())
@@ -1170,8 +1172,9 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
-				okBtn:setColor(theme.colorPositive)
+				local okBtn = ui:buttonPositive({ content = "Ok, let's do this!", textSize = "big" })
+				-- local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
+				-- okBtn:setColor(theme.colorPositive)
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
 					signupFlow:push(createAvatarEditorStep())
@@ -1227,8 +1230,9 @@ signup.startFlow = function(self, config)
 				config.signUpOrLoginStep()
 
 				if loginBtn == nil then
-					loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
-					loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
+					loginBtn = ui:buttonSecondary({ content = "Login", textSize = "small" })
+					-- loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
+					-- loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
 					loginBtn.parentDidResize = function(self)
 						ease:cancel(self)
 						self.pos = {
@@ -1246,8 +1250,9 @@ signup.startFlow = function(self, config)
 				loginBtn.pos.X = Screen.Width
 				ease:outSine(loginBtn, animationTime).pos = targetPos
 
-				startBtn = ui:createButton("Start", { textSize = "big" })
-				startBtn:setColor(theme.colorPositive)
+				startBtn = ui:buttonPositive({ content = "Start", textSize = "big" })
+				-- startBtn = ui:createButton("Start", { textSize = "big" })
+				-- startBtn:setColor(theme.colorPositive)
 				startBtn.parentDidResize = function(self)
 					ease:cancel(self)
 					self.Width = 100

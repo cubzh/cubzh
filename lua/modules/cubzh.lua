@@ -16,6 +16,16 @@ Client.OnStart = function()
 	avatarCameraFocus = "body" -- body / head
 	avatarCameraTarget = nil
 
+	backgroundCamera = Camera()
+	backgroundCamera.Projection = ProjectionMode.Orthographic
+	backgroundCamera.On = true
+	backgroundCamera.Layers = { 6 }
+	print("backgroundCamera.ViewOrder:", backgroundCamera.ViewOrder)
+	World:AddChild(backgroundCamera)
+
+	backgroundCamera.ViewOrder = 1
+	Camera.ViewOrder = 2
+
 	function getAvatarCameraTargetPosition(h, w)
 		if avatarCameraTarget == nil then
 			-- error("avatarCameraTarget should not be nil", 2)
@@ -171,6 +181,7 @@ Client.OnStart = function()
 	avatarCamera.Layers = avatarLayers
 	avatarCamera:SetParent(World)
 	avatarCamera.On = true
+	avatarCamera.ViewOrder = 3
 	-- avatarCamera.FOV = Camera.FOV
 
 	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
@@ -180,19 +191,37 @@ Client.OnStart = function()
 	local logoTile = bundle:Data("images/logo-tile-rotated.png")
 
 	backgroundQuad = Quad()
-	backgroundQuad.IsDoubleSided = false
-	backgroundQuad.Tiling = Number2(30, 30)
-	backgroundQuad.Color = Color(0, 0, 0, 0.2)
-	backgroundQuad.Image = logoTile
-	backgroundQuad.Width = 500
-	backgroundQuad.Height = 500
+	backgroundQuad.IsUnlit = true
+	backgroundQuad.IsDoubleSided = true
+	-- backgroundQuad.Tiling = Number2(30, 30)
+	-- backgroundQuad.Color = Color(255, 0, 0)
+	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
+	-- backgroundQuad.Image = logoTile
+	backgroundQuad.Width = Screen.Width
+	backgroundQuad.Height = Screen.Height
 	backgroundQuad.Anchor = { 0.5, 0.5 }
+	backgroundQuad.Layers = { 6 }
 	World:AddChild(backgroundQuad)
+	backgroundQuad.Position.Z = 2
+
+	backgroundLogo = Quad()
+	backgroundLogo.IsUnlit = true
+	backgroundLogo.IsDoubleSided = true
+	backgroundLogo.Tiling = Number2(8, 8)
+	backgroundLogo.Color = Color(0, 0, 0, 0.2)
+	-- backgroundQuad.Color = { gradient = "V", from = Color(0, 0, 0), to = Color(255, 255, 255) }
+	backgroundLogo.Image = logoTile
+	backgroundLogo.Width = math.max(Screen.Width, Screen.Height)
+	backgroundLogo.Height = backgroundLogo.Width
+	backgroundLogo.Anchor = { 0.5, 0.5 }
+	backgroundLogo.Layers = { 6 }
+	World:AddChild(backgroundLogo)
+	backgroundLogo.Position.Z = 1
 
 	local delta = Number2(-1, 1)
 	speed = 0.2
 	LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		backgroundQuad.Offset = backgroundQuad.Offset + delta * dt * speed
+		backgroundLogo.Offset = backgroundLogo.Offset + delta * dt * speed
 	end)
 end
 
@@ -372,8 +401,10 @@ function titleScreen()
 			Camera:FitToScreen(box, 0.8)
 
 			if backgroundQuad then
-				backgroundQuad.Rotation = Camera.Rotation
-				backgroundQuad.Position = Camera.Position + Camera.Forward * 150
+				backgroundQuad.Width = Screen.Width
+				backgroundQuad.Height = Screen.Height
+				backgroundLogo.Width = math.max(Screen.Width, Screen.Height)
+				backgroundLogo.Height = backgroundLogo.Width
 			end
 		end
 
