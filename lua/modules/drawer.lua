@@ -27,7 +27,7 @@ mod.create = function(self, config)
 
 	local ui = config.ui
 
-	local drawer = ui:createFrame(Color.White)
+	local drawer = ui:frameGenericContainer() -- ui:createFrame(Color.White)
 	drawer.updateConfig = _updateConfig
 	drawer.clear = _clear
 

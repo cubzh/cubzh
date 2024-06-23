@@ -16,6 +16,8 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 COMBO_BOX_SELECTOR_SPEED = 400
 
+DEFAULT_SLICE_9_SCALE = 1.5
+
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
 SCROLL_DEFAULT_RIGIDITY = 0.99
@@ -43,6 +45,7 @@ local NodeType = {
 
 -- MODULES
 
+bundle = require("bundle")
 codes = require("inputcodes")
 cleanup = require("cleanup")
 hierarchyActions = require("hierarchyactions")
@@ -369,12 +372,14 @@ function createUI(system)
 			end
 		end
 
-		node.background.Color = colors[1]
-		if #node.borders > 0 then
-			node.borders[1].Color = colors[2]
-			node.borders[2].Color = colors[2]
-			node.borders[3].Color = colors[3]
-			node.borders[4].Color = colors[3]
+		if colors and node.background then
+			node.background.Color = colors[1]
+			if node.borders and #node.borders > 0 then
+				node.borders[1].Color = colors[2]
+				node.borders[2].Color = colors[2]
+				node.borders[3].Color = colors[3]
+				node.borders[4].Color = colors[3]
+			end
 		end
 
 		if node.underline ~= nil then
@@ -436,14 +441,20 @@ function createUI(system)
 			return
 		end
 
-		background.Scale.X = totalWidth
-		background.Scale.Y = totalHeight
+		background.Width = totalWidth
+		background.Height = totalHeight
+		if background.CollisionBox ~= nil then
+			background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+		end
+
+		-- background.Scale.X = totalWidth
+		-- background.Scale.Y = totalHeight
 
 		background.LocalPosition = { 0, 0, 0 }
 
 		content.LocalPosition = { totalWidth * 0.5 - content.Width * 0.5, totalHeight * 0.5 - content.Height * 0.5 }
 
-		if #self.borders > 0 then
+		if self.borders and #self.borders > 0 then
 			content.LocalPosition = { paddingLeft, paddingBottom, 0 }
 			local top = self.borders[1]
 			local right = self.borders[2]
@@ -1084,43 +1095,69 @@ function createUI(system)
 		return node
 	end
 
-	ui.createFrame = function(self, color, config)
+	ui.frameGenericContainer = function(self)
 		if self ~= ui then
-			error("ui:createFrame(color, config): use `:`", 2)
+			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		if color ~= nil and type(color) ~= Type.Color then
-			error("ui:createFrame(color, config): color should be a Color or nil", 2)
-		end
-		if config ~= nil and type(config) ~= Type.table then
-			error("ui:createFrame(color, config): config should be a table", 2)
+		local image = Data:FromBundle("images/frame.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			-- alpha = false,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	ui.frame = function(self, config)
+		if self ~= ui then
+			error("ui:frame(config): use `:`", 2)
 		end
 
-		local _config = {
-			unfocuses = false, -- unfocused focused node when true
+		local defaultConfig = {
+			color = nil, -- can be a Color or Quad gradient table
 			image = nil,
+			quad = nil, -- allows to suply custom quad directly (takes priority over color or image)
+			-- transparent frame is created if color, image and quad are nil
+			unfocuses = false, -- unfocused focused node when true
 		}
 
-		if type(config.unfocuses) == "boolean" then
-			_config.unfocuses = config.unfocuses
-		end
+		local options = {
+			acceptTypes = {
+				color = { "Color", "table" },
+				image = { "Data" },
+				quad = { "Quad" },
+			},
+		}
 
-		color = color or Color(0, 0, 0, 0) -- default transparent frame
+		config = conf:merge(defaultConfig, config, options)
+
 		local node = _nodeCreate()
 		node.type = NodeType.Frame
 
-		node.config = _config
+		node.config = config
 
-		local background = Quad()
-		if node.config.image == nil then
-			background.Color = color
-			background.IsDoubleSided = false
+		local background
+
+		if config.quad ~= nil then
+			background = config.quad
 		else
-			background.Image = node.config.image
-			background.IsDoubleSided = true
+			background = Quad()
+			if config.image ~= nil then
+				background.Image = node.config.image
+				background.IsDoubleSided = true
+			else
+				if config.color == nil then
+					config.color = Color(0, 0, 0, 0) -- transparent
+				end
+				background.Color = config.color
+				background.IsDoubleSided = false
+			end
 		end
 
 		_setupUIObject(background)
-
 		node.object = background
 
 		background._node = node
@@ -1198,6 +1235,19 @@ function createUI(system)
 		node:setParent(rootFrame)
 
 		return node
+	end
+
+	-- legacy
+	ui.createFrame = function(self, color, config)
+		local newConfig = config or {}
+		newConfig.color = color
+		if config.unfocuses ~= nil then
+			newConfig.unfocuses = config.unfocuses
+		end
+		if config.image ~= nil then
+			newConfig.image = config.image
+		end
+		return ui.frame(self, newConfig)
 	end
 
 	-- NOTES (needs proper documentation)
@@ -2634,52 +2684,91 @@ function createUI(system)
 
 		node:refresh()
 		return node
-	end
+	end -- ui:button
 
-	-- content can be a string, a uikit node, or a Shape
-	ui.createButton = function(_, content, config)
+	ui.button = function(self, config)
+		if self ~= ui then
+			error("ui:button(config): use `:`", 2)
+		end
+
 		local defaultConfig = {
-			borders = true,
+			-- CONTENT --
+			content = "BUTTON", -- can be string, Shape or uikit node
+			-- used if contet is a string:
 			underline = false,
-			padding = true,
-			shadow = true,
 			textSize = "default",
-			sound = "button_1",
-			unfocuses = true, -- unfocused focused node when true
-			color = theme.buttonColor,
-			colorPressed = nil,
-			colorSelected = theme.buttonColorSelected,
-			colorDisabled = theme.buttonColorDisabled,
 			textColor = theme.buttonTextColor,
 			textColorPressed = nil,
 			textColorSelected = theme.buttonTextColorSelected,
 			textColorDisabled = theme.buttonTextColorDisabled,
+			padding = true, -- default padding when true, can also be a number
+
+			-- BACKGROUND --
+			-- quad used in priority for background
+			backgroundQuad = nil,
+			backgroundQuadPressed = nil,
+			backgroundQuadSelected = nil,
+			backgroundQuadDisabled = nil,
+			-- used to define background if quads not defined
+			borders = true, -- default borders when true, can also be a number (thickness)
+			shadow = true,
+			color = nil,
+			colorPressed = nil,
+			colorSelected = nil,
+			colorDisabled = nil,
+			-- radius = 5, -- not yet supported
+
+			-- OTHER PROPERTIES --
+			sound = "button_1",
+			unfocuses = true, -- unfocused focused node when true
 		}
 
 		local options = {
 			acceptTypes = {
-				colorPressed = { "Color" },
 				textColorPressed = { "Color" },
+				content = { "string", "Shape", "MutableShape", "table" },
+				backgroundQuad = { "Quad" },
+				backgroundQuadPressed = { "Quad" },
+				backgroundQuadSelected = { "Quad" },
+				backgroundQuadDisabled = { "Quad" },
+				color = { "Color" },
+				colorPressed = { "Color" },
+				colorSelected = { "Color" },
+				colorDisabled = { "Color" },
 			},
 		}
 
 		config = conf:merge(defaultConfig, config, options)
 
-		if config.colorPressed == nil then
-			config.colorPressed = Color(config.color)
-			config.colorPressed:ApplyBrightnessDiff(-0.15)
+		local content = config.content
+
+		if content == nil then
+			error("ui:button(config) - config.content should be a non-nil string, Shape or uikit node", 2)
 		end
 
-		if config.textColorPressed == nil then
-			config.textColorPressed = Color(config.textColor)
-			config.textColorPressed:ApplyBrightnessDiff(-0.15)
+		if config.backgroundQuad == nil and config.color == nil then
+			-- use default quad
+			config.backgroundQuad = Quad()
+			config.backgroundQuad.Color = Color(0, 0, 0)
+		end
+
+		if config.backgroundQuad ~= nil then
+			-- something to do?
+		elseif config.color ~= nil then
+			if config.colorPressed == nil then
+				config.colorPressed = Color(config.color)
+				config.colorPressed:ApplyBrightnessDiff(-0.15)
+			end
+		end
+
+		if type(content) == "string" then
+			if config.textColorPressed == nil then
+				config.textColorPressed = Color(config.textColor)
+				config.textColorPressed:ApplyBrightnessDiff(-0.15)
+			end
 		end
 
 		local theme = require("uitheme").current
-
-		if content == nil then
-			error("ui:createButton(content, config) - content should be a non-nil string, Shape or uikit node", 2)
-		end
 
 		local node = _nodeCreate()
 		node.config = config
@@ -2701,7 +2790,7 @@ function createUI(system)
 		node.fixedHeight = nil
 
 		node._width = function(self)
-			return self.background.LocalScale.X
+			return self.background.Width
 		end
 
 		node._setWidth = function(self, newWidth)
@@ -2710,7 +2799,7 @@ function createUI(system)
 		end
 
 		node._height = function(self)
-			return self.background.LocalScale.Y
+			return self.background.Height
 		end
 
 		node._setHeight = function(self, newHeight)
@@ -2811,48 +2900,66 @@ function createUI(system)
 				node.content = content
 			end)
 			if not ok then
-				error("ui:createButton(content, config) - content should be a non-nil string, Shape or uikit node", 2)
+				error("ui:button(config) - config.content should be a non-nil string, Shape or uikit node", 2)
 			end
 		end
 
-		local background = Quad()
-		background.Color = node.colors[1]
-		background.IsDoubleSided = false
-		_setupUIObject(background, true)
-		node.object:AddChild(background)
-		background._node = node
+		if config.backgroundQuad ~= nil then
+			local background = config.backgroundQuad
+			background.IsDoubleSided = false
+			_setupUIObject(background, true)
+			node.object:AddChild(background)
+			background._node = node
+			node.background = background
+		elseif config.color ~= nil then
+			local background = Quad()
+			background.Color = node.colors[1]
+			background.IsDoubleSided = false
+			_setupUIObject(background, true)
+			node.object:AddChild(background)
+			background._node = node
 
-		node.background = background
-		node.borders = {}
+			node.background = background
+			node.borders = {}
 
-		if config.borders then
-			local borderTop = Quad()
-			borderTop.Color = node.colors[2]
-			borderTop.IsDoubleSided = false
-			_setupUIObject(borderTop)
-			node.object:AddChild(borderTop)
-			table.insert(node.borders, borderTop)
+			if config.borders then
+				local borderTop = Quad()
+				borderTop.Color = node.colors[2]
+				borderTop.IsDoubleSided = false
+				_setupUIObject(borderTop)
+				node.object:AddChild(borderTop)
+				table.insert(node.borders, borderTop)
 
-			local borderRight = Quad()
-			borderRight.Color = node.colors[2]
-			borderRight.IsDoubleSided = false
-			_setupUIObject(borderRight)
-			node.object:AddChild(borderRight)
-			table.insert(node.borders, borderRight)
+				local borderRight = Quad()
+				borderRight.Color = node.colors[2]
+				borderRight.IsDoubleSided = false
+				_setupUIObject(borderRight)
+				node.object:AddChild(borderRight)
+				table.insert(node.borders, borderRight)
 
-			local borderBottom = Quad()
-			borderBottom.Color = node.colors[3]
-			borderBottom.IsDoubleSided = false
-			_setupUIObject(borderBottom)
-			node.object:AddChild(borderBottom)
-			table.insert(node.borders, borderBottom)
+				local borderBottom = Quad()
+				borderBottom.Color = node.colors[3]
+				borderBottom.IsDoubleSided = false
+				_setupUIObject(borderBottom)
+				node.object:AddChild(borderBottom)
+				table.insert(node.borders, borderBottom)
 
-			local borderLeft = Quad()
-			borderLeft.Color = node.colors[3]
-			borderLeft.IsDoubleSided = false
-			_setupUIObject(borderLeft)
-			node.object:AddChild(borderLeft)
-			table.insert(node.borders, borderLeft)
+				local borderLeft = Quad()
+				borderLeft.Color = node.colors[3]
+				borderLeft.IsDoubleSided = false
+				_setupUIObject(borderLeft)
+				node.object:AddChild(borderLeft)
+				table.insert(node.borders, borderLeft)
+			end
+
+			if config.shadow then
+				local shadow = Quad()
+				shadow.Color = Color(0, 0, 0, 20)
+				shadow.IsDoubleSided = false
+				_setupUIObject(shadow)
+				node.object:AddChild(shadow)
+				node.shadow = shadow
+			end
 		end
 
 		if config.underline and not config.borders then
@@ -2862,15 +2969,6 @@ function createUI(system)
 			_setupUIObject(underline)
 			node.object:AddChild(underline)
 			node.underline = underline
-		end
-
-		if config.shadow then
-			local shadow = Quad()
-			shadow.Color = Color(0, 0, 0, 20)
-			shadow.IsDoubleSided = false
-			_setupUIObject(shadow)
-			node.object:AddChild(shadow)
-			node.shadow = shadow
 		end
 
 		node:_refresh()
@@ -2914,7 +3012,66 @@ function createUI(system)
 		node:setParent(rootFrame)
 
 		return node
-	end -- createButton
+	end
+
+	ui.buttonPositive = function(self, config)
+		config = config or {}
+		local image = Data:FromBundle("images/button_positive.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.button(self, config)
+	end
+
+	ui.buttonNegative = function(self, config)
+		config = config or {}
+		local image = Data:FromBundle("images/button_negative.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 } --[[, slice9Scale = 0.1 ]],
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.button(self, config)
+	end
+
+	ui.buttonMoney = function(self, config)
+		config = config or {}
+		local image = Data:FromBundle("images/button_money.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 } --[[, slice9Scale = 0.1 ]],
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.button(self, config)
+	end
+
+	ui.buttonSecondary = function(self, config)
+		config = config or {}
+		local image = Data:FromBundle("images/button_secondary.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 } --[[, slice9Scale = 0.1 ]],
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.button(self, config)
+	end
+
+	-- legacy
+	ui.createButton = function(_, content, config)
+		config = config or {}
+		config.content = content
+		return ui:button(config)
+	end -- createButton (legacy)
 
 	ui.createComboBox = function(self, stringOrShape, choices, config)
 		if choices == nil then
@@ -3705,7 +3862,7 @@ end
 sharedUI = createUI()
 
 sharedUI.systemUI = function(system)
-	if system ~= System then
+	if rawequal(system, System) == false then
 		error("can't access system UI", 2)
 	end
 
