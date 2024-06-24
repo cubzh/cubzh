@@ -19,6 +19,7 @@ $output v_color0
 
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
+#include "./include/quad_lib.sh"
 #include "./include/game_uniforms.sh"
 #include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
@@ -52,20 +53,20 @@ void main() {
 
 	gl_Position = clip;
 	v_color0 = color;
-#if QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_MRT_TRANSPARENCY
 #if QUAD_VARIANT_TEX
 	v_uv = a_texcoord0.xy;
 #endif
-	v_normal = a_normal;
-#endif // QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_MRT_TRANSPARENCY
-#if QUAD_VARIANT_MRT_LIGHTING
+#if QUAD_VARIANT_MRT_TRANSPARENCY
+	v_clipZ = clip.z;
+#elif QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_TEX
 	v_metadata = a_position.w;
 #if QUAD_VARIANT_MRT_LINEAR_DEPTH
 	v_linearDepth = view.z;
 #endif
-#elif QUAD_VARIANT_MRT_TRANSPARENCY
-	v_clipZ = clip.z;
-#endif // QUAD_VARIANT_MRT_LIGHTING
+#endif // QUAD_VARIANT_MRT_TRANSPARENCY
+#if QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_MRT_TRANSPARENCY
+	v_normal = a_normal;
+#endif
 
 #endif // IS_SHADOW_PASS
 }
