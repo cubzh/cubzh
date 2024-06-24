@@ -136,24 +136,41 @@ itemGrid.create = function(_, config)
 	end
 
 	local searchBar
-	local searchBtn
 	local sortBtn
 	local scroll
+
+	local function layoutSearchBar()
+		if searchBar ~= nil then
+			local parent = searchBar.parent
+			if parent == nil then
+				return
+			end
+			searchBar.pos = { 0, parent.Height - searchBar.Height }
+			if sortBtn ~= nil then
+				searchBar.Width = parent.Width - sortBtn.Width - theme.padding
+				sortBtn.Height = searchBar.Height
+				sortBtn.pos = searchBar.pos + { searchBar.Width + theme.padding, 0 }
+			else
+				searchBar.Width = parent.Width
+			end
+		end
+	end
 
 	if config.searchBar then
 		searchBar = ui:createTextInput(search, "search", { textSize = "small" })
 		searchBar:setParent(grid)
 
-		sortBtn = ui:createButton("♥️ Likes", { textSize = "small" })
+		sortBtn = ui:buttonNeutral({ content = "♥️ Likes", textSize = "small", textColor = Color.Black })
 		sortBtn:setParent(grid)
 		sortBtn.onRelease = function()
 			if sortBy == "likes:desc" then
-				grid.sortButton.Text = "✨ Recent"
+				sortBtn.Text = "✨ Recent"
 				sortBy = "updatedAt:desc"
 			elseif sortBy == "updatedAt:desc" then
-				grid.sortButton.Text = "♥️ Likes"
+				sortBtn.Text = "♥️ Likes"
 				sortBy = "likes:desc"
 			end
+			layoutSearchBar()
 			grid:getItems()
 		end
 
@@ -169,27 +186,6 @@ itemGrid.create = function(_, config)
 				search = text
 				grid:getItems()
 			end)
-
-			if searchBar.Text ~= "" then
-				searchBtn.Text = "X"
-				searchBtn.onRelease = function()
-					searchBar.Text = ""
-				end
-			else
-				searchBtn.Text = "🔎"
-				searchBtn.onRelease = function()
-					searchBar:focus()
-				end
-			end
-		end
-
-		-- 🔎 button that becomes "X" (to clear search)
-		searchBtn = ui:createButton("🔎", { textSize = "small" })
-		searchBtn:setParent(grid)
-		searchBtn:setColor(grid.searchBar.Color, Color(255, 255, 255, 254))
-		searchBtn:setColorPressed(nil, Color(255, 255, 255, 254))
-		searchBtn.onRelease = function()
-			searchBar:focus()
 		end
 	end
 
@@ -203,14 +199,15 @@ itemGrid.create = function(_, config)
 	local cellPool = {}
 	local activeCells = {}
 
-	local idleColor = theme.gridCellColor
-
 	local function improveNameFormat(str)
 		local s = string.gsub(str, "_%a", string.upper)
 		s = string.gsub(s, "_", " ")
 		s = string.gsub(s, "^%l", string.upper)
 		return s
 	end
+
+	local cellSelector = ui:frameScrollCellSelector()
+	cellSelector:setParent(nil)
 
 	scroll = ui:createScroll({
 		backgroundColor = Color(0, 0, 0, 0),
@@ -234,21 +231,25 @@ itemGrid.create = function(_, config)
 
 					local cell = table.remove(cellPool)
 					if cell == nil then
-						cell = ui:createFrame(idleColor)
+						cell = ui:frameScrollCell()
 
 						cell.onPress = function()
-							cell.Color = theme.gridCellColorPressed
+							cellSelector:setParent(cell)
+							cellSelector.Width = cell.Width
+							cellSelector.Height = cell.Height
+							-- cell.Color = theme.gridCellColorPressed
 						end
 
 						cell.onRelease = function()
 							if config.onOpen then
 								config.onOpen(cell)
+							else
+								cellSelector:setParent(nil)
 							end
-							cell.Color = idleColor
 						end
 
 						cell.onCancel = function()
-							cell.Color = idleColor
+							cellSelector:setParent(nil)
 						end
 
 						local titleFrame = ui:createFrame(theme.gridCellFrameColor)
@@ -414,17 +415,9 @@ itemGrid.create = function(_, config)
 		local parent = self.parent
 		local y = parent.Height
 		if searchBar ~= nil then
+			layoutSearchBar()
 			y = y - searchBar.Height
-			searchBar.Width = parent.Width - searchBtn.Width - sortBtn.Width
-			searchBar.pos = { 0, y }
-
-			searchBtn.Height = searchBar.Height
-			sortBtn.Height = searchBar.Height
-
-			searchBtn.pos = searchBar.pos + { searchBar.Width, 0 }
-			sortBtn.pos = searchBtn.pos + { searchBtn.Width, 0 }
 		end
-
 		scroll.Width = parent.Width
 		scroll.Height = y
 		scroll.pos = { 0, 0 }

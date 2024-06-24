@@ -16,7 +16,7 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 COMBO_BOX_SELECTOR_SPEED = 400
 
-DEFAULT_SLICE_9_SCALE = 1.5
+DEFAULT_SLICE_9_SCALE = 1 -- 1.5
 
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
@@ -295,8 +295,51 @@ function createUI(system)
 			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
-		_parentDidResizeWrapper(self)
+		if attr.object.SortOrder ~= nil then
+			local sortOrder = 1
+			parent = attr.object:GetParent()
+			while parent ~= nil do
+				if parent.SortOrder ~= nil then
+					if parent.SortOrder >= sortOrder then
+						sortOrder = parent.SortOrder + 1
+					end
+				end
+				parent = parent:GetParent()
+			end
+
+			-- apply view order
+			attr.object.SortOrder = sortOrder
+			-- attr.object.SortOrder = 10
+			if attr.object.debugName ~= nil then
+				System.Log(">> SET SORT ORDER (" .. attr.object.debugName .. ") : " .. attr.object.SortOrder)
+			elseif attr.object.Text then
+				System.Log(">> SET SORT ORDER (label: " .. attr.object.Text .. ") : " .. attr.object.SortOrder)
+			end
+
+			local t = {}
+			t.applySortOrderToChildren = function(n, sortOrder)
+				local children = n.Children
+				for _, child in ipairs(children) do
+					if child.SortOrder ~= nil then
+						child.SortOrder = sortOrder
+						System.Log("child.SortOrder =" .. child.SortOrder)
+						if child.debugName ~= nil then
+							System.Log(">> SET CHILD SORT ORDER (" .. child.debugName .. ") : " .. child.SortOrder)
+						elseif child.Text then
+							System.Log(">> SET CHILD SORT ORDER (label: " .. child.Text .. ") : " .. child.SortOrder)
+						else
+							System.Log(">> SET CHILD SORT ORDER (?) : " .. child.SortOrder)
+						end
+					end
+					t.applySortOrderToChildren(child, sortOrder + 1)
+				end
+			end
+			t.applySortOrderToChildren(attr.object, sortOrder + 1)
+		end
 	end
+
+	_parentDidResizeWrapper(self)
+	-- end
 
 	local function _nodeHasParent(self)
 		return self.object:GetParent() ~= nil
@@ -436,21 +479,17 @@ function createUI(system)
 			totalHeight = content.Height + paddingAndBorder * 2 + underlinePadding
 		end
 
-		local background = self.background
+		local background = self.object
 		if background == nil then
 			return
 		end
 
 		background.Width = totalWidth
 		background.Height = totalHeight
+
 		if background.CollisionBox ~= nil then
 			background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
 		end
-
-		-- background.Scale.X = totalWidth
-		-- background.Scale.Y = totalHeight
-
-		background.LocalPosition = { 0, 0, 0 }
 
 		content.LocalPosition = { totalWidth * 0.5 - content.Width * 0.5, totalHeight * 0.5 - content.Height * 0.5 }
 
@@ -1095,17 +1134,47 @@ function createUI(system)
 		return node
 	end
 
+	ui.frameScrollCell = function(self)
+		if self ~= ui then
+			error("ui:frameScrollCell(): use `:`", 2)
+		end
+		local image = Data:FromBundle("images/cell.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	ui.frameScrollCellSelector = function(self)
+		if self ~= ui then
+			error("ui:frameScrollCellSelector(): use `:`", 2)
+		end
+		local image = Data:FromBundle("images/cell_selector.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
 		local image = Data:FromBundle("images/frame.png")
 		local quad = Quad()
+		quad.debugName = "frameGenericContainer"
 		quad.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			-- alpha = false,
 			alpha = true,
 		}
 		return ui.frame(self, { quad = quad })
@@ -2721,6 +2790,7 @@ function createUI(system)
 			-- OTHER PROPERTIES --
 			sound = "button_1",
 			unfocuses = true, -- unfocused focused node when true
+			debugName = nil,
 		}
 
 		local options = {
@@ -2735,6 +2805,7 @@ function createUI(system)
 				colorPressed = { "Color" },
 				colorSelected = { "Color" },
 				colorDisabled = { "Color" },
+				debugName = { "string" },
 			},
 		}
 
@@ -2784,13 +2855,13 @@ function createUI(system)
 		node._onCancel = _buttonOnCancel
 		node._refresh = _buttonRefresh
 		node.state = State.Idle
-		node.object = Object()
+		-- node.object = Object()
 
 		node.fixedWidth = nil
 		node.fixedHeight = nil
 
 		node._width = function(self)
-			return self.background.Width
+			return self.object.Width
 		end
 
 		node._setWidth = function(self, newWidth)
@@ -2799,7 +2870,7 @@ function createUI(system)
 		end
 
 		node._height = function(self)
-			return self.background.Height
+			return self.object.Height
 		end
 
 		node._setHeight = function(self, newHeight)
@@ -2808,7 +2879,7 @@ function createUI(system)
 		end
 
 		node._depth = function(self)
-			return self.background.LocalScale.Z
+			return self.object.Depth
 		end
 
 		node._text = function(self)
@@ -2816,7 +2887,9 @@ function createUI(system)
 		end
 
 		node._setText = function(self, str)
-			self.content.Text = str
+			if self.content.Text then
+				self.content.Text = str
+			end
 		end
 
 		node.setColor = function(self, background, text, doNotrefresh)
@@ -2886,38 +2959,22 @@ function createUI(system)
 		node:setColorSelected(config.colorSelected, config.textColorSelected, true)
 		node:setColorDisabled(config.colorDisabled, config.textColorDisabled, true)
 
-		if type(content) == "string" then
-			local n = ui:createText(content, { size = config.textSize })
-			n:setParent(node)
-			node.content = n
-		elseif type(content) == "Shape" or type(content) == "MutableShape" then
-			local n = ui:createShape(content, { spherized = false, doNotFlip = true })
-			n:setParent(node)
-			node.content = n
-		else
-			local ok = pcall(function()
-				content:setParent(node)
-				node.content = content
-			end)
-			if not ok then
-				error("ui:button(config) - config.content should be a non-nil string, Shape or uikit node", 2)
-			end
-		end
-
 		if config.backgroundQuad ~= nil then
 			local background = config.backgroundQuad
 			background.IsDoubleSided = false
 			_setupUIObject(background, true)
-			node.object:AddChild(background)
+			-- node.object:AddChild(background)
 			background._node = node
-			node.background = background
+			-- node.background = background
+			node.object = background
 		elseif config.color ~= nil then
 			local background = Quad()
 			background.Color = node.colors[1]
 			background.IsDoubleSided = false
 			_setupUIObject(background, true)
-			node.object:AddChild(background)
+			-- node.object:AddChild(background)
 			background._node = node
+			node.object = background
 
 			node.background = background
 			node.borders = {}
@@ -2971,6 +3028,24 @@ function createUI(system)
 			node.underline = underline
 		end
 
+		if type(content) == "string" then
+			local n = ui:createText(content, { size = config.textSize })
+			n:setParent(node)
+			node.content = n
+		elseif type(content) == "Shape" or type(content) == "MutableShape" then
+			local n = ui:createShape(content, { spherized = false, doNotFlip = true })
+			n:setParent(node)
+			node.content = n
+		else
+			local ok = pcall(function()
+				content:setParent(node)
+				node.content = content
+			end)
+			if not ok then
+				error("ui:button(config) - config.content should be a non-nil string, Shape or uikit node", 2)
+			end
+		end
+
 		node:_refresh()
 		_buttonRefreshColor(node) -- apply initial colors
 
@@ -3010,13 +3085,12 @@ function createUI(system)
 		end
 
 		node:setParent(rootFrame)
-
 		return node
 	end
 
-	ui.buttonPositive = function(self, config)
+	ui.buttonNeutral = function(self, config)
 		config = config or {}
-		local image = Data:FromBundle("images/button_positive.png")
+		local image = Data:FromBundle("images/button_neutral.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
 			data = image,
@@ -3027,13 +3101,30 @@ function createUI(system)
 		return ui.button(self, config)
 	end
 
+	ui.buttonPositive = function(self, config)
+		config = config or {}
+		local image = Data:FromBundle("images/button_positive.png")
+		config.backgroundQuad = Quad()
+		-- config.backgroundQuad.Color = Color(255, 0, 0)
+		config.backgroundQuad.debugName = "positiveButtonQuad"
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		config.debugName = "positiveButtonQuad"
+		return ui.button(self, config)
+	end
+
 	ui.buttonNegative = function(self, config)
 		config = config or {}
 		local image = Data:FromBundle("images/button_negative.png")
 		config.backgroundQuad = Quad()
+		config.backgroundQuad.debugName = "negativeButtonQuad"
 		config.backgroundQuad.Image = {
 			data = image,
-			slice9 = { 0.5, 0.5 } --[[, slice9Scale = 0.1 ]],
+			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
@@ -3046,7 +3137,7 @@ function createUI(system)
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
 			data = image,
-			slice9 = { 0.5, 0.5 } --[[, slice9Scale = 0.1 ]],
+			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
