@@ -1251,7 +1251,6 @@ signup.startFlow = function(self, config)
 				ease:outSine(loginBtn, animationTime).pos = targetPos
 
 				startBtn = ui:buttonPositive({ content = "Start", textSize = "big" })
-				-- startBtn = ui:createButton("Start", { textSize = "big" })
 				-- startBtn:setColor(theme.colorPositive)
 				startBtn.parentDidResize = function(self)
 					ease:cancel(self)

@@ -101,13 +101,13 @@ mod.create = function(self, config)
 		cellPadding = 6.0,
 		loadCell = function(index)
 			if index == 1 then
-				local btn = ui:createButton("🙂 Skin")
+				local btn = ui:buttonNeutral({ content = "🙂 Skin", textColor = Color.Black })
 				btn.onRelease = function()
 					setSkin()
 				end
 				return btn
 			elseif index == 2 then
-				local btn = ui:createButton("✨ Hair")
+				local btn = ui:buttonNeutral({ content = "✨ Hair", textColor = Color.Black })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -127,7 +127,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 3 then
-				local btn = ui:createButton("🙂 Eyes")
+				local btn = ui:buttonNeutral({ content = "🙂 Eyes", textColor = Color.Black })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -228,7 +228,7 @@ mod.create = function(self, config)
 			-- 	btn:disable()
 			-- 	return btn
 			elseif index == 4 then
-				local btn = ui:createButton("👃 Nose")
+				local btn = ui:buttonNeutral({ content = "👃 Nose", textColor = Color.Black })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -326,7 +326,7 @@ mod.create = function(self, config)
 			-- 	btn:disable()
 			-- 	return btn
 			elseif index == 5 then
-				local btn = ui:createButton("👕 Jacket")
+				local btn = ui:buttonNeutral({ content = "👕 Jacket", textColor = Color.Black })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -346,7 +346,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 6 then
-				local btn = ui:createButton("👖 Pants")
+				local btn = ui:buttonNeutral({ content = "👖 Pants", textColor = Color.Black })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -366,7 +366,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 7 then
-				local btn = ui:createButton("👞 Shoes")
+				local btn = ui:buttonNeutral({ content = "👞 Shoes", textColor = Color.Black })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()

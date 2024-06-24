@@ -225,6 +225,15 @@ Client.OnStart = function()
 	end)
 end
 
+Screen.DidResize = function()
+	if backgroundQuad then
+		backgroundQuad.Width = Screen.Width
+		backgroundQuad.Height = Screen.Height
+		backgroundLogo.Width = math.max(Screen.Width, Screen.Height)
+		backgroundLogo.Height = backgroundLogo.Width
+	end
+end
+
 -- Client.OnWorldObjectLoad = function(obj)
 -- 	obj:RemoveFromParent()
 -- end
@@ -399,13 +408,6 @@ function titleScreen()
 			local box = Box()
 			box:Fit(logo, { recursive = true })
 			Camera:FitToScreen(box, 0.8)
-
-			if backgroundQuad then
-				backgroundQuad.Width = Screen.Width
-				backgroundQuad.Height = Screen.Height
-				backgroundLogo.Width = math.max(Screen.Width, Screen.Height)
-				backgroundLogo.Height = backgroundLogo.Width
-			end
 		end
 
 		didResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, didResizeFunction)
