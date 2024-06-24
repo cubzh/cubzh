@@ -11,9 +11,7 @@ $input v_color0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/utils_lib.sh"
-#if QUAD_VARIANT_TEX
 #include "./include/quad_lib.sh"
-#endif
 #if QUAD_VARIANT_MRT_LIGHTING
 #include "./include/game_uniforms.sh"
 #include "./include/voxels_uniforms.sh"
@@ -34,14 +32,12 @@ uniform vec4 u_color1;
 void main() {
 	vec4 color = v_color0;
 
-#if QUAD_VARIANT_MRT_LIGHTING
+#if QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_TEX
 	//vec3 wnormal = normalize(-u_model[0][2].xyz);
 
 	float meta[5]; unpackQuadFullMetadata(v_metadata, meta);
 	float unlit = mix(LIGHTING_LIT_FLAG, LIGHTING_UNLIT_FLAG, meta[0]);
 	vec4 srgb = vec4(meta[1], meta[2], meta[3], meta[4]);
-#else
-	float unlit = 1.0f;
 #endif
 
 #if QUAD_VARIANT_TEX
