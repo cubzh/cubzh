@@ -44,9 +44,9 @@ void main() {
 
 	vec4 color = a_color0;
 #if QUAD_VARIANT_MRT_LIGHTING == 0
-	float meta[5]; unpackQuadFullMetadata(a_position.w, meta);
+	float meta[6]; unpackQuadFullMetadata(a_position.w, meta);
 	float unlit = meta[0];
-	vec4 srgb = vec4(meta[1], meta[2], meta[3], meta[4]);
+	vec4 srgb = vec4(meta[2], meta[3], meta[4], meta[5]);
 
 	color = mix(getNonVolumeVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
 #endif
