@@ -96,18 +96,18 @@ mod.create = function(self, config)
 	end
 
 	categories = ui:createScroll({
-		backgroundColor = Color(200, 200, 200),
+		backgroundColor = Color(30, 31, 34),
 		direction = "right",
 		cellPadding = 6.0,
 		loadCell = function(index)
 			if index == 1 then
-				local btn = ui:buttonNeutral({ content = "🙂 Skin", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "🙂 Skin", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					setSkin()
 				end
 				return btn
 			elseif index == 2 then
-				local btn = ui:buttonNeutral({ content = "✨ Hair", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "✨ Hair", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -127,7 +127,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 3 then
-				local btn = ui:buttonNeutral({ content = "🙂 Eyes", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "🙂 Eyes", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -228,7 +228,7 @@ mod.create = function(self, config)
 			-- 	btn:disable()
 			-- 	return btn
 			elseif index == 4 then
-				local btn = ui:buttonNeutral({ content = "👃 Nose", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "👃 Nose", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -326,7 +326,7 @@ mod.create = function(self, config)
 			-- 	btn:disable()
 			-- 	return btn
 			elseif index == 5 then
-				local btn = ui:buttonNeutral({ content = "👕 Jacket", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "👕 Jacket", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -346,7 +346,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 6 then
-				local btn = ui:buttonNeutral({ content = "👖 Pants", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "👖 Pants", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -366,7 +366,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 7 then
-				local btn = ui:buttonNeutral({ content = "👞 Shoes", textColor = Color.Black })
+				local btn = ui:buttonNeutral({ content = "👞 Shoes", textColor = Color(30, 31, 34) })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()

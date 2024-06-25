@@ -309,12 +309,11 @@ function createUI(system)
 
 			-- apply view order
 			attr.object.SortOrder = sortOrder
-			-- attr.object.SortOrder = 10
-			if attr.object.debugName ~= nil then
-				System.Log(">> SET SORT ORDER (" .. attr.object.debugName .. ") : " .. attr.object.SortOrder)
-			elseif attr.object.Text then
-				System.Log(">> SET SORT ORDER (label: " .. attr.object.Text .. ") : " .. attr.object.SortOrder)
-			end
+			-- if attr.object.debugName ~= nil then
+			-- 	System.Log(">> SET SORT ORDER (" .. attr.object.debugName .. ") : " .. attr.object.SortOrder)
+			-- elseif attr.object.Text then
+			-- 	System.Log(">> SET SORT ORDER (label: " .. attr.object.Text .. ") : " .. attr.object.SortOrder)
+			-- end
 
 			local t = {}
 			t.applySortOrderToChildren = function(n, sortOrder)
@@ -322,14 +321,14 @@ function createUI(system)
 				for _, child in ipairs(children) do
 					if child.SortOrder ~= nil then
 						child.SortOrder = sortOrder
-						System.Log("child.SortOrder =" .. child.SortOrder)
-						if child.debugName ~= nil then
-							System.Log(">> SET CHILD SORT ORDER (" .. child.debugName .. ") : " .. child.SortOrder)
-						elseif child.Text then
-							System.Log(">> SET CHILD SORT ORDER (label: " .. child.Text .. ") : " .. child.SortOrder)
-						else
-							System.Log(">> SET CHILD SORT ORDER (?) : " .. child.SortOrder)
-						end
+						-- System.Log("child.SortOrder =" .. child.SortOrder)
+						-- if child.debugName ~= nil then
+						-- 	System.Log(">> SET CHILD SORT ORDER (" .. child.debugName .. ") : " .. child.SortOrder)
+						-- elseif child.Text then
+						-- 	System.Log(">> SET CHILD SORT ORDER (label: " .. child.Text .. ") : " .. child.SortOrder)
+						-- else
+						-- 	System.Log(">> SET CHILD SORT ORDER (?) : " .. child.SortOrder)
+						-- end
 					end
 					t.applySortOrderToChildren(child, sortOrder + 1)
 				end
@@ -1138,7 +1137,7 @@ function createUI(system)
 		if self ~= ui then
 			error("ui:frameScrollCell(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/cell.png")
+		local image = Data:FromBundle("images/cell_dark.png")
 		local quad = Quad()
 		quad.Image = {
 			data = image,
@@ -1168,9 +1167,8 @@ function createUI(system)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/frame.png")
+		local image = Data:FromBundle("images/frame_dark.png")
 		local quad = Quad()
-		quad.debugName = "frameGenericContainer"
 		quad.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },
@@ -3090,7 +3088,7 @@ function createUI(system)
 
 	ui.buttonNeutral = function(self, config)
 		config = config or {}
-		local image = Data:FromBundle("images/button_neutral.png")
+		local image = Data:FromBundle("images/button_neutral_dark.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
 			data = image,
@@ -3103,25 +3101,22 @@ function createUI(system)
 
 	ui.buttonPositive = function(self, config)
 		config = config or {}
-		local image = Data:FromBundle("images/button_positive.png")
+		local image = Data:FromBundle("images/button_positive_dark.png")
 		config.backgroundQuad = Quad()
 		-- config.backgroundQuad.Color = Color(255, 0, 0)
-		config.backgroundQuad.debugName = "positiveButtonQuad"
 		config.backgroundQuad.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
-		config.debugName = "positiveButtonQuad"
 		return ui.button(self, config)
 	end
 
 	ui.buttonNegative = function(self, config)
 		config = config or {}
-		local image = Data:FromBundle("images/button_negative.png")
+		local image = Data:FromBundle("images/button_negative_dark.png")
 		config.backgroundQuad = Quad()
-		config.backgroundQuad.debugName = "negativeButtonQuad"
 		config.backgroundQuad.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },

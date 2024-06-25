@@ -5,6 +5,8 @@ local NO_MARGIN_SCREEN_WIDTH = 400
 local MAX_WIDTH = 600
 local ANIMATION_TIME = 0.2
 
+local BOTTOM_OFFSET = 20
+
 local SHOW_BUMP_HEIGHT = 200
 local BUMP_HEIGHT = 100
 
@@ -27,7 +29,11 @@ mod.create = function(self, config)
 
 	local ui = config.ui
 
-	local drawer = ui:frameGenericContainer() -- ui:createFrame(Color.White)
+	local container = ui:frameGenericContainer()
+	local drawer = ui:frame()
+	drawer:setParent(container)
+	container.drawer = drawer
+
 	drawer.updateConfig = _updateConfig
 	drawer.clear = _clear
 
@@ -37,40 +43,67 @@ mod.create = function(self, config)
 		maxExpandedVerticalCover = 0.95,
 		maxMinimizedVerticalCover = 0.1,
 		config = config,
+		container = container,
 	}
 
-	drawer.parentDidResize = function(self)
-		local fields = privateFields[self]
+	container.parentDidResize = function(self)
+		local drawer = self.drawer
+		local fields = privateFields[drawer]
 		if fields == nil then
 			return
 		end
 
 		if Screen.Width <= NO_MARGIN_SCREEN_WIDTH then
-			self.Width = Screen.Width
+			drawer.Width = Screen.Width
 		else
-			self.Width = math.min(MAX_WIDTH, Screen.Width - theme.padding * 2)
+			drawer.Width = math.min(MAX_WIDTH, Screen.Width - theme.padding * 2)
 		end
-		self.Height = 300 -- TODO (depends on content)
 
-		fields.config.layoutContent(self)
+		drawer.Height = 100 -- depends on content
 
-		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, 0 }
+		fields.config.layoutContent(drawer)
+
+		self.Width = drawer.Width
+		self.Height = drawer.Height + BOTTOM_OFFSET
+		drawer.pos.Y = BOTTOM_OFFSET
+
+		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, -BOTTOM_OFFSET }
 	end
-	drawer:parentDidResize()
+	container:parentDidResize()
 
-	local show = drawer.show
+	-- local show = drawer.show
 	drawer.show = function(self)
 		local fields = privateFields[self]
 		if fields == nil then
 			return
 		end
 
-		ease:cancel(self)
+		local container = fields.container
+		ease:cancel(container)
+
 		fields.config.layoutContent(self)
 
-		show(self)
-		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, -SHOW_BUMP_HEIGHT }
-		ease:outBack(self, ANIMATION_TIME).pos = Number3(Screen.Width * 0.5 - self.Width * 0.5, 0, 0)
+		container.Width = self.Width
+		container.Height = self.Height + BOTTOM_OFFSET
+		self.pos.Y = BOTTOM_OFFSET
+
+		container:show()
+
+		container.pos = { Screen.Width * 0.5 - container.Width * 0.5, -SHOW_BUMP_HEIGHT }
+		ease:outBack(container, ANIMATION_TIME).pos =
+			Number3(Screen.Width * 0.5 - container.Width * 0.5, -BOTTOM_OFFSET, 0)
+	end
+
+	drawer.hide = function(self)
+		local fields = privateFields[self]
+		if fields == nil then
+			return
+		end
+
+		local container = fields.container
+		ease:cancel(container)
+
+		container:hide()
 	end
 
 	drawer.bump = function(self)
@@ -78,9 +111,13 @@ mod.create = function(self, config)
 		if fields == nil then
 			return
 		end
-		ease:cancel(self)
-		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, -BUMP_HEIGHT }
-		ease:outBack(self, ANIMATION_TIME).pos = Number3(Screen.Width * 0.5 - self.Width * 0.5, 0, 0)
+
+		local container = fields.container
+		ease:cancel(container)
+
+		container.pos = { Screen.Width * 0.5 - container.Width * 0.5, -BUMP_HEIGHT }
+		ease:outBack(container, ANIMATION_TIME).pos =
+			Number3(Screen.Width * 0.5 - container.Width * 0.5, -BOTTOM_OFFSET, 0)
 	end
 
 	return drawer
@@ -103,7 +140,7 @@ function _updateConfig(self, config)
 	fields.config = config
 
 	if needsLayout then
-		self:parentDidResize()
+		fields.container:parentDidResize()
 	end
 end
 

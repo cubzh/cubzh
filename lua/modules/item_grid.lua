@@ -252,7 +252,7 @@ itemGrid.create = function(_, config)
 							cellSelector:setParent(nil)
 						end
 
-						local titleFrame = ui:createFrame(theme.gridCellFrameColor)
+						local titleFrame = ui:frame({ color = Color(0, 0, 0, 0) })
 						titleFrame:setParent(cell)
 						titleFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
@@ -264,7 +264,7 @@ itemGrid.create = function(_, config)
 						cell.titleFrame = titleFrame
 						cell.title = title
 
-						local likesFrame = ui:createFrame(theme.gridCellFrameColor)
+						local likesFrame = ui:frame({ color = Color(0, 0, 0, 0) })
 						likesFrame:setParent(cell)
 						likesFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
@@ -276,7 +276,7 @@ itemGrid.create = function(_, config)
 						cell.likesFrame = likesFrame
 						cell.likesLabel = likes
 
-						local priceFrame = ui:createFrame(theme.gridCellFrameColor)
+						local priceFrame = ui:frame({ color = Color(0, 0, 0, 0) })
 						priceFrame:setParent(cell)
 						priceFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
