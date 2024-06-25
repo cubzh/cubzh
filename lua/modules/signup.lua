@@ -66,7 +66,7 @@ signup.startFlow = function(self, config)
 				l:Remove()
 			end
 
-			local balance = ui:createText("100", { color = Color(252, 220, 44), textSize = "default" })
+			local balance = ui:createText("100", { color = Color(252, 220, 44), size = "default" })
 			balance:setParent(balanceContainer)
 			balanceContainer.parentDidResize = function(self)
 				local ratio = coin.Width / coin.Height
@@ -1181,7 +1181,7 @@ signup.startFlow = function(self, config)
 				end
 
 				local text = ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
-					color = Color.Black,
+					color = Color.White,
 				})
 				text:setParent(drawer)
 
@@ -1190,7 +1190,7 @@ signup.startFlow = function(self, config)
 						-- here, self.Height can be reduced, but not increased
 						-- TODO: enforce this within drawer module
 
-						text.object.MaxWidth = math.min(300, self.Width - theme.paddingBig * 2)
+						text.object.MaxWidth = math.min(350, self.Width - theme.paddingBig * 2)
 
 						self.Width = math.min(self.Width, math.max(text.Width, okBtn.Width) + theme.paddingBig * 2)
 						self.Height = Screen.SafeArea.Bottom + okBtn.Height + text.Height + theme.paddingBig * 3
