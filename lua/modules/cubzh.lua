@@ -197,8 +197,8 @@ Client.OnStart = function()
 	-- backgroundQuad.Color = Color(255, 0, 0)
 	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
 	-- backgroundQuad.Image = logoTile
-	backgroundQuad.Width = Screen.Width
-	backgroundQuad.Height = Screen.Height
+	backgroundQuad.Width = Screen.RenderWidth
+	backgroundQuad.Height = Screen.RenderHeight
 	backgroundQuad.Anchor = { 0.5, 0.5 }
 	backgroundQuad.Layers = { 6 }
 	World:AddChild(backgroundQuad)
@@ -207,12 +207,12 @@ Client.OnStart = function()
 	backgroundLogo = Quad()
 	backgroundLogo.IsUnlit = true
 	backgroundLogo.IsDoubleSided = true
-	backgroundLogo.Tiling = Number2(8, 8)
 	backgroundLogo.Color = Color(0, 0, 0, 0.2)
 	-- backgroundQuad.Color = { gradient = "V", from = Color(0, 0, 0), to = Color(255, 255, 255) }
 	backgroundLogo.Image = logoTile
-	backgroundLogo.Width = math.max(Screen.Width, Screen.Height)
+	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
 	backgroundLogo.Height = backgroundLogo.Width
+	backgroundLogo.Tiling = backgroundLogo.Width / Number2(100, 100)
 	backgroundLogo.Anchor = { 0.5, 0.5 }
 	backgroundLogo.Layers = { 6 }
 	World:AddChild(backgroundLogo)
@@ -227,10 +227,11 @@ end
 
 Screen.DidResize = function()
 	if backgroundQuad then
-		backgroundQuad.Width = Screen.Width
-		backgroundQuad.Height = Screen.Height
-		backgroundLogo.Width = math.max(Screen.Width, Screen.Height)
+		backgroundQuad.Width = Screen.RenderWidth
+		backgroundQuad.Height = Screen.RenderHeight
+		backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
 		backgroundLogo.Height = backgroundLogo.Width
+		backgroundLogo.Tiling = backgroundLogo.Width / Number2(100, 100)
 	end
 end
 
@@ -252,6 +253,7 @@ function titleScreen()
 	local tickListener
 
 	_titleScreen.show = function()
+		Camera.On = true
 		if root ~= nil then
 			return
 		end
@@ -415,6 +417,7 @@ function titleScreen()
 	end
 
 	_titleScreen.hide = function()
+		Camera.On = false
 		if root == nil then
 			return
 		end
