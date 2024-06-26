@@ -635,16 +635,18 @@ struct ResultSubscription client_on_sync_model_update(struct ToriiClient *client
 struct ResultSubscription client_on_entity_state_update(struct ToriiClient *client,
                                                         struct FieldElement *entities,
                                                         uintptr_t entities_len,
+                                                        void *user_data,
                                                         void (*callback)(struct FieldElement,
                                                                          struct CArrayModel,
-                                                                         void*),
-                                                        void *user_data);
+                                                                         void*));
 
 struct ResultSubscription client_on_event_message_update(struct ToriiClient *client,
                                                          struct FieldElement *event_messages,
                                                          uintptr_t event_messages_len,
+                                                         void *user_data,
                                                          void (*callback)(struct FieldElement,
-                                                                          struct CArrayModel));
+                                                                          struct CArrayModel,
+                                                                          void*));
 
 struct Resultbool client_remove_models_to_sync(struct ToriiClient *client,
                                                const struct KeysClause *models,
@@ -697,8 +699,6 @@ struct FieldElement hash_get_contract_address(struct FieldElement class_hash,
                                               const struct FieldElement *constructor_calldata,
                                               uintptr_t constructor_calldata_len,
                                               struct FieldElement deployer_address);
-
-struct ResultFieldElement poseidon_hash(const char *str);
 
 void subscription_cancel(struct Subscription *subscription);
 
