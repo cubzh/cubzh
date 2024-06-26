@@ -2,7 +2,7 @@ local menu = {}
 
 bundle = require("bundle")
 loc = require("localize")
-str = require("str")
+-- str = require("str")
 ui = require("uikit").systemUI(System)
 uiAvatar = require("ui_avatar")
 avatarModule = require("avatar")
