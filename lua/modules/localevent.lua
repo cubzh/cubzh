@@ -86,6 +86,8 @@ localevent.name = {
 	ActiveTextInputClose = 55, -- callback: function()
 	ActiveTextInputDone = 56, -- callback: function()
 	ActiveTextInputNext = 57, -- callback: function()
+	UserAccountInfoRetrieved = 58, -- callback: function()
+	UserAccountUpdated = 59, -- callback: function() -- called when user account is updated (username, email, etc. added)
 }
 localevent.Name = localevent.name
 
