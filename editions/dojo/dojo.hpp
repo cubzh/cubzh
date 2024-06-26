@@ -636,7 +636,9 @@ struct ResultSubscription client_on_entity_state_update(struct ToriiClient *clie
                                                         struct FieldElement *entities,
                                                         uintptr_t entities_len,
                                                         void (*callback)(struct FieldElement,
-                                                                         struct CArrayModel));
+                                                                         struct CArrayModel,
+                                                                         void*),
+                                                        void *user_data);
 
 struct ResultSubscription client_on_event_message_update(struct ToriiClient *client,
                                                          struct FieldElement *event_messages,
@@ -695,6 +697,8 @@ struct FieldElement hash_get_contract_address(struct FieldElement class_hash,
                                               const struct FieldElement *constructor_calldata,
                                               uintptr_t constructor_calldata_len,
                                               struct FieldElement deployer_address);
+
+struct ResultFieldElement poseidon_hash(const char *str);
 
 void subscription_cancel(struct Subscription *subscription);
 
