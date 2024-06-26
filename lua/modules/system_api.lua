@@ -200,6 +200,15 @@ end
 
 -- callback(err, credentials)
 mod.signUp = function(_, username, key, dob, callback)
+	if username == nil then
+		username = ""
+	end
+	if key == nil then
+		key = ""
+	end
+	if dob == nil then
+		dob = ""
+	end
 	if type(username) ~= "string" then
 		callback("1st arg must be a string")
 		return
