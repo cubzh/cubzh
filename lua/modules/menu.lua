@@ -79,6 +79,24 @@ MODAL_KEYS = {
 	OUTFITS = 11,
 }
 
+-- User account management
+
+-- This can be called once the user account data has been retrieved.
+-- (In the event callback of LocalEvent.Name.UserAccountInfoRetrieved for instance)
+function getUserAccountState()
+	local result = {
+		created = System.Authenticated,
+		hasUsername = System.HasUsername,
+		hasEmail = System.HasEmail,
+		hasPassword = System.HasPassword,
+		-- TODO: add phone number
+		hasDOB = System.HasDOB,
+		hasAcceptedTerms = System.HasAcceptedTerms,
+		isUnder13 = System.IsUnder13,
+	}
+	return result
+end
+
 function connect()
 	if Players.Max <= 1 then
 		return -- no need to connect when max players not > 1
@@ -1901,6 +1919,9 @@ menu.ShowItems = function(_)
 	return true
 end
 
+-- "Auth complete" callbacks called when valid credentials are stored on the device and verified.
+-- (on account creation, when user logs in, when app starts and verify credentials are still valid)
+
 authCompleteCallbacks = {}
 
 function authCompleted()
@@ -1909,6 +1930,7 @@ function authCompleted()
 	end
 end
 
+-- Triggered when the user account is created
 menu.OnAuthComplete = function(self, callback)
 	if self ~= menu then
 		return
@@ -2161,6 +2183,7 @@ function accountCheck(callbacks)
 		if callbacks.loggedOut then
 			callbacks.loggedOut()
 		end
+		LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 		return
 	end
 
@@ -2172,6 +2195,7 @@ function accountCheck(callbacks)
 			if callbacks.error then
 				callbacks.error()
 			end
+			LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 			return
 		end
 
@@ -2181,12 +2205,14 @@ function accountCheck(callbacks)
 			if callbacks.accountIncomplete then
 				callbacks.accountIncomplete()
 			end
+			LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 			return
 		end
 
 		if System.Under13DisclaimerNeedsApproval then
 			if callbacks.under13DisclaimerNeedsApproval then
 				callbacks.under13DisclaimerNeedsApproval()
+				LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 				return
 			end
 		end
@@ -2198,6 +2224,8 @@ function accountCheck(callbacks)
 		if callbacks.success then
 			callbacks.success()
 		end
+
+		LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 	end)
 end
 
@@ -2623,54 +2651,82 @@ if Environment.CHAT_CONSOLE_DISPLAY == "always" then
 	refreshChat()
 end
 
-if System.Authenticated then
-	showTopBar()
-	hideBottomBar()
-else
-	if Environment.USER_AUTH == "disabled" then
-		hideBottomBar()
-		hideTitleScreen()
-	else
-		showTitleScreen()
-		local signupFlow = require("signup"):startFlow({
-			ui = ui,
-			avatarPreviewStep = function()
-				LocalEvent:Send("signup_flow_avatar_preview")
-				hideTitleScreen()
-				hideBottomBar()
-			end,
-			loginStep = function()
-				LocalEvent:Send("signup_flow_login")
-				hideTitleScreen()
-				hideBottomBar()
-			end,
-			signUpOrLoginStep = function()
-				LocalEvent:Send("signup_flow_start_or_login")
-				showTitleScreen()
-				showBottomBar()
-			end,
-			loginSuccess = function()
-				LocalEvent:Send("signup_flow_login_success")
-				hideTitleScreen()
-				showTopBar()
-				hideBottomBar()
-				authCompleted()
-				if activeFlow ~= nil then
-					activeFlow:remove()
-				end
-			end,
-			avatarEditorStep = function()
-				LocalEvent:Send("signup_flow_avatar_editor")
-			end,
-			dobStep = function()
-				LocalEvent:Send("signup_flow_dob")
-			end,
-		})
-		activeFlow = signupFlow
-	end
-end
+-- Register local event listener
+LocalEvent:Listen(LocalEvent.Name.UserAccountInfoRetrieved, function()
+	print("[🛎️][UserAccountInfoRetrieved]")
 
-getWorldInfoReq = nil
+	local accountInfo = getUserAccountState()
+
+	-- if no user account is found locally, then create one,
+	-- and redo the accountCheck() process (that will re-trigger with callback function)
+	if accountInfo.created == false then
+		api:signUp(nil, nil, nil, function(err, credentials)
+			if err ~= nil then
+				print("[🙂][❌] user account creation failed:", err)
+				-- TODO: show an error message or something
+				return
+			else
+				print("[🙂] user account created successfully")
+				System:StoreCredentials(credentials["user-id"], credentials.token)
+				System:DebugEvent("ACCOUNT_CREATED")
+				accountCheck({})
+			end
+		end)
+		return
+	end
+
+	-- if account if incomplete, we start the sign up flow
+	-- TODO: make sure the condition is correct here
+	-- hasParentEmail ?
+	-- hasParentPhoneNumber ?
+	if accountInfo.hasUsername or accountInfo.hasEmail or accountInfo.hasPhoneNumber then
+		-- accepted
+		print("[🛎️][UserAccountInfoRetrieved] accepted")
+		-- TODO : show home screen (list of worlds)
+	else
+		-- sign-up flow
+		print("[🛎️][UserAccountInfoRetrieved] start sign up flow")
+		-- showTitleScreen()
+		-- local signupFlow = require("signup"):startFlow({
+		-- 	ui = ui,
+		-- 	avatarPreviewStep = function()
+		-- 		LocalEvent:Send("signup_flow_avatar_preview")
+		-- 		hideTitleScreen()
+		-- 		hideBottomBar()
+		-- 	end,
+		-- 	loginStep = function()
+		-- 		LocalEvent:Send("signup_flow_login")
+		-- 		hideTitleScreen()
+		-- 		hideBottomBar()
+		-- 	end,
+		-- 	signUpOrLoginStep = function()
+		-- 		LocalEvent:Send("signup_flow_start_or_login")
+		-- 		showTitleScreen()
+		-- 		showBottomBar()
+		-- 	end,
+		-- 	loginSuccess = function()
+		-- 		LocalEvent:Send("signup_flow_login_success")
+		-- 		hideTitleScreen()
+		-- 		showTopBar()
+		-- 		hideBottomBar()
+		-- 		authCompleted()
+		-- 		if activeFlow ~= nil then
+		-- 			activeFlow:remove()
+		-- 		end
+		-- 	end,
+		-- 	avatarEditorStep = function()
+		-- 		LocalEvent:Send("signup_flow_avatar_editor")
+		-- 	end,
+		-- 	dobStep = function()
+		-- 		LocalEvent:Send("signup_flow_dob")
+		-- 	end,
+		-- })
+		-- activeFlow = signupFlow
+	end
+end)
+
+accountCheck({})
+
 function getWorldInfo()
 	if getWorldInfoReq ~= nil then
 		getWorldInfoReq:Cancel()
