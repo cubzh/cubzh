@@ -88,6 +88,7 @@ localevent.name = {
 	ActiveTextInputNext = 57, -- callback: function()
 	UserAccountInfoRetrieved = 58, -- callback: function()
 	UserAccountUpdated = 59, -- callback: function() -- called when user account is updated (username, email, etc. added)
+	AppMinVersionChecked = 60, -- callback: function(err: string, ok: boolean)
 }
 localevent.Name = localevent.name
 
