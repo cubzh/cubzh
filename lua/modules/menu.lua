@@ -2177,7 +2177,7 @@ end
 
 -- callbacks: success, loggedOut, error
 function accountCheck(callbacks)
-	showLoading("Checking user info")
+	print("🐞 checking user account...")
 
 	if System.HasCredentials == false then
 		if callbacks.loggedOut then
@@ -2651,7 +2651,29 @@ if Environment.CHAT_CONSOLE_DISPLAY == "always" then
 	refreshChat()
 end
 
--- Register local event listener
+-- Register local event listener for AppMinVersionChecked
+LocalEvent:Listen(LocalEvent.Name.AppMinVersionChecked, function(err, minVersionRespected)
+	print("[🛎️][AppMinVersionChecked][ERR]", err, "[OK]", minVersionRespected)
+	hideLoading() -- "Checking app version"
+	if err ~= nil then
+		-- TODO: show button to retry + error
+		-- if callbacks.networkError then
+		-- 	callbacks.networkError()
+		-- end
+		return
+	end
+
+	if minVersionRespected == false then
+		-- TODO: show message asking for the update of the app
+		return
+	end
+
+	-- App is up to date, let's start the next step: check the user account info
+	showLoading("Checking user info")
+	accountCheck({})
+end)
+
+-- Register local event listener for UserAccountInfoRetrieved
 LocalEvent:Listen(LocalEvent.Name.UserAccountInfoRetrieved, function()
 	print("[🛎️][UserAccountInfoRetrieved]")
 
@@ -2675,6 +2697,8 @@ LocalEvent:Listen(LocalEvent.Name.UserAccountInfoRetrieved, function()
 		return
 	end
 
+	hideLoading() -- "Checking user info"
+
 	-- if account if incomplete, we start the sign up flow
 	-- TODO: make sure the condition is correct here
 	-- hasParentEmail ?
@@ -2686,46 +2710,71 @@ LocalEvent:Listen(LocalEvent.Name.UserAccountInfoRetrieved, function()
 	else
 		-- sign-up flow
 		print("[🛎️][UserAccountInfoRetrieved] start sign up flow")
-		-- showTitleScreen()
-		-- local signupFlow = require("signup"):startFlow({
-		-- 	ui = ui,
-		-- 	avatarPreviewStep = function()
-		-- 		LocalEvent:Send("signup_flow_avatar_preview")
-		-- 		hideTitleScreen()
-		-- 		hideBottomBar()
-		-- 	end,
-		-- 	loginStep = function()
-		-- 		LocalEvent:Send("signup_flow_login")
-		-- 		hideTitleScreen()
-		-- 		hideBottomBar()
-		-- 	end,
-		-- 	signUpOrLoginStep = function()
-		-- 		LocalEvent:Send("signup_flow_start_or_login")
-		-- 		showTitleScreen()
-		-- 		showBottomBar()
-		-- 	end,
-		-- 	loginSuccess = function()
-		-- 		LocalEvent:Send("signup_flow_login_success")
-		-- 		hideTitleScreen()
-		-- 		showTopBar()
-		-- 		hideBottomBar()
-		-- 		authCompleted()
-		-- 		if activeFlow ~= nil then
-		-- 			activeFlow:remove()
-		-- 		end
-		-- 	end,
-		-- 	avatarEditorStep = function()
-		-- 		LocalEvent:Send("signup_flow_avatar_editor")
-		-- 	end,
-		-- 	dobStep = function()
-		-- 		LocalEvent:Send("signup_flow_dob")
-		-- 	end,
-		-- })
-		-- activeFlow = signupFlow
+		showTitleScreen()
+		local signupFlow = require("signup"):startFlow({
+			ui = ui,
+			avatarPreviewStep = function()
+				LocalEvent:Send("signup_flow_avatar_preview")
+				hideTitleScreen()
+				hideBottomBar()
+			end,
+			loginStep = function()
+				LocalEvent:Send("signup_flow_login")
+				hideTitleScreen()
+				hideBottomBar()
+			end,
+			signUpOrLoginStep = function()
+				LocalEvent:Send("signup_flow_start_or_login")
+				showTitleScreen()
+				showBottomBar()
+			end,
+			loginSuccess = function()
+				LocalEvent:Send("signup_flow_login_success")
+				hideTitleScreen()
+				showTopBar()
+				hideBottomBar()
+				authCompleted()
+				if activeFlow ~= nil then
+					activeFlow:remove()
+				end
+			end,
+			avatarEditorStep = function()
+				LocalEvent:Send("signup_flow_avatar_editor")
+			end,
+			dobStep = function()
+				LocalEvent:Send("signup_flow_dob")
+			end,
+		})
+		activeFlow = signupFlow
 	end
 end)
 
-accountCheck({})
+-- Gets the app min-version from the Cubzh API,
+-- compares it to the current app version, and then
+-- sends the LocalEvent.Name.AppMinVersionChecked event.
+function checkAppMinVersion()
+	print("🐞 checking app min version...")
+
+	api:getMinAppVersion(function(error, minVersion)
+		if error ~= nil then
+			LocalEvent:Send(LocalEvent.Name.AppMinVersionChecked, error, false)
+			return
+		end
+
+		-- compare versions
+		local major, minor, patch = parseVersion(Client.AppVersion)
+		local minMajor, minMinor, minPatch = parseVersion(minVersion)
+		local appIsUpToDate = (major > minMajor)
+			or (major == minMajor and minor > minMinor)
+			or (major == minMajor and minor == minMinor and patch >= minPatch)
+
+		-- send local event
+		LocalEvent:Send(LocalEvent.Name.AppMinVersionChecked, nil, appIsUpToDate)
+	end)
+end
+
+showLoading("Checking app version")
+checkAppMinVersion()
 
 function getWorldInfo()
 	if getWorldInfoReq ~= nil then
