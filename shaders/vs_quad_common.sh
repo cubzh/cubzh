@@ -64,7 +64,7 @@ void main() {
 	v_linearDepth = view.z;
 #endif
 #endif // QUAD_VARIANT_MRT_TRANSPARENCY
-#if QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_MRT_TRANSPARENCY
+#if QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_MRT_TRANSPARENCY || QUAD_VARIANT_TEX
 	v_normal = a_normal;
 #endif
 
