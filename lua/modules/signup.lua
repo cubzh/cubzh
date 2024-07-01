@@ -18,6 +18,7 @@ signup.startFlow = function(self, config)
 		loginSuccess = function() end,
 		dobStep = function() end,
 		phoneNumberStep = function() end,
+		verifyPhoneNumberStep = function() end,
 	}
 
 	local ok, err = pcall(function()
@@ -51,6 +52,19 @@ signup.startFlow = function(self, config)
 	local coinsButton
 	local drawer
 	local loginBtn
+
+	local cache = {
+		dob = {
+			month = nil,
+			day = nil,
+			year = nil,
+			monthIndex = nil,
+			dayIndex = nil,
+			yearIndex = nil,
+		},
+		phoneNumber = nil,
+		nbAvatarPartsChanged = 0,
+	}
 
 	local function showCoinsButton()
 		if coinsButton == nil then
@@ -580,6 +594,133 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
+	local createVerifyPhoneNumberStep = function()
+		local step = flow:createStep({
+			onEnter = function()
+				config.verifyPhoneNumberStep()
+
+				showBackButton()
+				showCoinsButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				local okBtn = ui:buttonPositive({
+					content = "Confirm",
+					textSize = "big",
+					unfocuses = false,
+					padding = 10,
+				})
+				okBtn:setParent(drawer)
+				-- okBtn:disable()
+
+				local text = ui:createText("What code did you receive?", {
+					color = Color.White,
+				})
+				text:setParent(drawer)
+
+				local codeInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
+					textSize = "big",
+					keyboardType = "oneTimeDigicode",
+					bottomMargin = okBtn.Height + padding * 2,
+					suggestions = false,
+				})
+				codeInput:setParent(drawer)
+
+				okBtn.onRelease = function()
+					-- okBtn:disable()
+					-- -- signupFlow:push(createAvatarEditorStep())
+
+					-- local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
+					-- print("PHONE NUMBER:", phoneNumber)
+
+					-- api:patchUserPhone({ phone = phoneNumber }, function(err)
+					-- 	if err ~= nil then
+					-- 		print("ERR:", err)
+					-- 		okBtn:enable()
+					-- 		return
+					-- 	end
+					-- end)
+				end
+
+				codeInput.onTextChange = function(self)
+					local backup = self.onTextChange
+					self.onTextChange = nil
+					-- TODO: format?
+					-- TODO: debug event
+					self.onTextChange = backup
+				end
+
+				local secondaryText = ui:createText(
+					"You should receive it shortly! If not, please verify your phone number, or try later.",
+					{
+						color = Color(200, 200, 200),
+						size = "small",
+					}
+				)
+				secondaryText:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						local padding = theme.paddingBig
+
+						local maxWidth = math.min(300, self.Width - padding * 2)
+						text.object.MaxWidth = maxWidth
+						secondaryText.object.MaxWidth = maxWidth
+
+						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
+
+						local availableWidth = w - padding * 2
+						codeInput.Width = availableWidth
+
+						self.Width = w
+						self.Height = Screen.SafeArea.Bottom
+							+ okBtn.Height
+							+ text.Height
+							+ secondaryText.Height
+							+ codeInput.Height
+							+ padding * 5
+
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							Screen.SafeArea.Bottom + padding,
+						}
+						okBtn.pos = {
+							self.Width * 0.5 - okBtn.Width * 0.5,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						codeInput.pos = {
+							self.Width * 0.5 - codeInput.Width * 0.5,
+							okBtn.pos.Y + okBtn.Height + padding,
+						}
+						text.pos = {
+							self.Width * 0.5 - text.Width * 0.5,
+							codeInput.pos.Y + codeInput.Height + padding,
+						}
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
+					end,
+				})
+
+				drawer:show()
+				Timer(0.2, function()
+					codeInput:focus()
+				end)
+			end,
+			onExit = function() end,
+			onRemove = function() end,
+		})
+
+		return step
+	end
+
 	local createPhoneNumberStep = function()
 		local step = flow:createStep({
 			onEnter = function()
@@ -595,7 +736,12 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big" })
+				local okBtn = ui:buttonPositive({
+					content = "Confirm",
+					textSize = "big",
+					unfocuses = false,
+					padding = 10,
+				})
 				okBtn:setParent(drawer)
 				-- okBtn:disable()
 
@@ -650,14 +796,16 @@ signup.startFlow = function(self, config)
 				local countryInput = ui:createComboBox("US +1", countryLabels)
 				countryInput:setParent(drawer)
 
-				local phoneInput = ui:createTextInput(
-					"",
-					str:upperFirstChar(loc("phone number")),
-					{ textSize = "big", keyboardType = "phone", suggestions = false }
-				)
+				local phoneInput = ui:createTextInput("", str:upperFirstChar(loc("phone number")), {
+					textSize = "big",
+					keyboardType = "phone",
+					suggestions = false,
+					bottomMargin = okBtn.Height + padding * 2,
+				})
 				phoneInput:setParent(drawer)
 
 				okBtn.onRelease = function()
+					okBtn:disable()
 					-- signupFlow:push(createAvatarEditorStep())
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
 					print("PHONE NUMBER:", phoneNumber)
@@ -665,8 +813,12 @@ signup.startFlow = function(self, config)
 					api:patchUserPhone({ phone = phoneNumber }, function(err)
 						if err ~= nil then
 							print("ERR:", err)
+							okBtn:enable()
+							return
 						end
 					end)
+
+					signupFlow:push(createVerifyPhoneNumberStep())
 				end
 
 				local layoutPhoneInput = function()
@@ -735,14 +887,17 @@ signup.startFlow = function(self, config)
 							+ phoneInput.Height
 							+ padding * 5
 
-						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + padding }
 						secondaryText.pos = {
 							self.Width * 0.5 - secondaryText.Width * 0.5,
-							okBtn.pos.Y + okBtn.Height + padding,
+							Screen.SafeArea.Bottom + padding,
+						}
+						okBtn.pos = {
+							self.Width * 0.5 - okBtn.Width * 0.5,
+							secondaryText.pos.Y + secondaryText.Height + padding,
 						}
 						countryInput.pos = {
 							padding,
-							secondaryText.pos.Y + secondaryText.Height + padding,
+							okBtn.pos.Y + okBtn.Height + padding,
 						}
 						phoneInput.pos = {
 							countryInput.pos.X + countryInput.Width + smallPadding,
@@ -781,7 +936,7 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big" })
+				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
 					signupFlow:push(createPhoneNumberStep())
@@ -801,10 +956,6 @@ signup.startFlow = function(self, config)
 					}
 				)
 				secondaryText:setParent(drawer)
-
-				local _year
-				local _month
-				local _day
 
 				local monthNames = {
 					str:upperFirstChar(loc("january")),
@@ -868,9 +1019,9 @@ signup.startFlow = function(self, config)
 
 				local checkDOB = function()
 					local r = true
-					local daysInMonth = nbDays(_month)
+					local daysInMonth = nbDays(cache.dob.month)
 
-					if _year == nil or _month == nil or _day == nil then
+					if cache.dob.year == nil or cache.dob.month == nil or cache.dob.day == nil then
 						-- if config and config.errorIfIncomplete == true then
 						-- birthdayInfo.Text = "❌ " .. loc("required")
 						-- birthdayInfo.Color = theme.errorTextColor
@@ -878,14 +1029,18 @@ signup.startFlow = function(self, config)
 						-- else
 						-- 	birthdayInfo.Text = ""
 						-- end
-					elseif _day < 0 or _day > daysInMonth then
+					elseif cache.dob.day < 0 or cache.dob.day > daysInMonth then
 						-- birthdayInfo.Text = "❌ invalid date"
 						-- birthdayInfo.Color = theme.errorTextColor
 						r = false
 					elseif
-						_year > currentYear
-						or (_year == currentYear and _month > currentMonth)
-						or (_year == currentYear and _month == currentMonth and _day > currentDay)
+						cache.dob.year > currentYear
+						or (cache.dob.year == currentYear and cache.dob.month > currentMonth)
+						or (
+							cache.dob.year == currentYear
+							and cache.dob.month == currentMonth
+							and cache.dob.day > currentDay
+						)
 					then
 						-- birthdayInfo.Text = "❌ users from the future not allowed"
 						-- birthdayInfo.Color = theme.errorTextColor
@@ -899,8 +1054,9 @@ signup.startFlow = function(self, config)
 				end
 
 				monthInput.onSelect = function(self, index)
-					System:DebugEvent("SIGNUP_PICK_MONTH")
-					_month = index
+					System:DebugEvent("User did select DOB month")
+					cache.dob.monthIndex = index
+					cache.dob.month = index
 					self.Text = monthNames[index]
 					if checkDOB() then
 						okBtn:enable()
@@ -908,8 +1064,9 @@ signup.startFlow = function(self, config)
 				end
 
 				dayInput.onSelect = function(self, index)
-					System:DebugEvent("SIGNUP_PICK_DAY")
-					_day = index
+					System:DebugEvent("User did select DOB day")
+					cache.dob.dayIndex = index
+					cache.dob.day = index
 					self.Text = dayNumbers[index]
 					if checkDOB() then
 						okBtn:enable()
@@ -917,12 +1074,30 @@ signup.startFlow = function(self, config)
 				end
 
 				yearInput.onSelect = function(self, index)
-					System:DebugEvent("SIGNUP_PICK_YEAR")
-					_year = years[index]
+					System:DebugEvent("User did select DOB year")
+					cache.dob.yearIndex = index
+					cache.dob.year = years[index]
 					self.Text = yearStrings[index]
 					if checkDOB() then
 						okBtn:enable()
 					end
+				end
+
+				if cache.dob.monthIndex ~= nil then
+					monthInput.selectedRow = cache.dob.monthIndex
+					monthInput.Text = monthNames[cache.dob.monthIndex]
+				end
+				if cache.dob.dayIndex ~= nil then
+					dayInput.selectedRow = cache.dob.dayIndex
+					dayInput.Text = dayNumbers[cache.dob.dayIndex]
+				end
+				if cache.dob.yearIndex ~= nil then
+					yearInput.selectedRow = cache.dob.yearIndex
+					yearInput.Text = years[cache.dob.yearIndex]
+				end
+
+				if checkDOB() then
+					okBtn:enable()
 				end
 
 				drawer:updateConfig({
@@ -992,7 +1167,6 @@ signup.startFlow = function(self, config)
 		local infoFrame
 		local info
 		local avatarUpdateListener
-		local nbPartsChanged = 0
 		-- local nbPartsToChange = 3
 		local nbPartsToChange = 1
 		local partsChanged = {}
@@ -1011,9 +1185,7 @@ signup.startFlow = function(self, config)
 				info:setParent(infoFrame)
 				info.pos = { padding, padding }
 
-				okBtn = ui:buttonPositive({ content = "Done!", textSize = "big" })
-				-- okBtn = ui:createButton(" Done! ", { textSize = "big" })
-				-- okBtn:setColor(theme.colorPositive)
+				okBtn = ui:buttonPositive({ content = "Done!", textSize = "big", padding = 10 })
 				okBtn.onRelease = function(self)
 					-- go to next step
 					signupFlow:push(createDOBStep())
@@ -1035,65 +1207,71 @@ signup.startFlow = function(self, config)
 					}
 				end
 
-				avatarUpdateListener = LocalEvent:Listen("avatar_editor_update", function(config)
-					if config.skinColorIndex then
-						if not partsChanged["skin"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["skin"] = true
-						end
-					end
-					if config.eyesIndex then
-						if not partsChanged["eyes"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["eyes"] = true
-						end
-					end
-					if config.eyesColorIndex then
-						if not partsChanged["eyes"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["eyes"] = true
-						end
-					end
-					if config.noseIndex then
-						if not partsChanged["nose"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["nose"] = true
-						end
-					end
-					if config.jacket then
-						if not partsChanged["jacket"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["jacket"] = true
-						end
-					end
-					if config.hair then
-						if not partsChanged["hair"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["hair"] = true
-						end
-					end
-					if config.pants then
-						if not partsChanged["pants"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["pants"] = true
-						end
-					end
-					if config.boots then
-						if not partsChanged["boots"] then
-							nbPartsChanged = nbPartsChanged + 1
-							partsChanged["boots"] = true
-						end
-					end
-
-					local remaining = math.max(0, nbPartsToChange - nbPartsChanged)
+				local function updateProgress()
+					local remaining = math.max(0, nbPartsToChange - cache.nbAvatarPartsChanged)
 					if remaining == 0 then
 						info.text = "You're good to go!"
 						okBtn:enable()
 					else
 						info.text = string.format("Change %d more things to continue!", remaining)
 					end
+				end
+
+				avatarUpdateListener = LocalEvent:Listen("avatar_editor_update", function(config)
+					if config.skinColorIndex then
+						if not partsChanged["skin"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["skin"] = true
+						end
+					end
+					if config.eyesIndex then
+						if not partsChanged["eyes"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["eyes"] = true
+						end
+					end
+					if config.eyesColorIndex then
+						if not partsChanged["eyes"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["eyes"] = true
+						end
+					end
+					if config.noseIndex then
+						if not partsChanged["nose"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["nose"] = true
+						end
+					end
+					if config.jacket then
+						if not partsChanged["jacket"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["jacket"] = true
+						end
+					end
+					if config.hair then
+						if not partsChanged["hair"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["hair"] = true
+						end
+					end
+					if config.pants then
+						if not partsChanged["pants"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["pants"] = true
+						end
+					end
+					if config.boots then
+						if not partsChanged["boots"] then
+							cache.nbAvatarPartsChanged = cache.nbAvatarPartsChanged + 1
+							partsChanged["boots"] = true
+						end
+					end
+
+					updateProgress()
 					layoutInfoFrame()
 				end)
+
+				updateProgress()
 
 				-- DRAWER
 				if drawer ~= nil then
@@ -1184,8 +1362,6 @@ signup.startFlow = function(self, config)
 				end
 
 				local okBtn = ui:buttonPositive({ content = "Ok, let's do this!", textSize = "big", padding = 10 })
-				-- local okBtn = ui:createButton("Ok, let's do this!", { textSize = "big" })
-				-- okBtn:setColor(theme.colorPositive)
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
 					signupFlow:push(createAvatarEditorStep())
@@ -1216,11 +1392,10 @@ signup.startFlow = function(self, config)
 
 				drawer:show()
 			end,
-			-- exit = function(continue)
-			-- 	-- TODO
-			-- 	continue()
-			-- end,
 			onExit = function()
+				drawer:updateConfig({
+					layoutContent = function(_) end,
+				})
 				drawer:hide()
 			end,
 			onRemove = function()
@@ -1261,7 +1436,7 @@ signup.startFlow = function(self, config)
 				loginBtn.pos.X = Screen.Width
 				ease:outSine(loginBtn, animationTime).pos = targetPos
 
-				startBtn = ui:buttonPositive({ content = "Start", textSize = "big" })
+				startBtn = ui:buttonPositive({ content = "Start", textSize = "big", padding = 10 })
 				startBtn.parentDidResize = function(self)
 					ease:cancel(self)
 					self.Width = 120
