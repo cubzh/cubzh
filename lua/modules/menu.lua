@@ -2357,39 +2357,6 @@ authFlow.showSignUp = function(self, callbacks)
 	self:clear({ removeHelpBtn = false })
 	self:common()
 
-	-- if self.loginBtn == nil then
-	-- 	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
-	-- 	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-	-- 	loginBtn.parentDidResize = function(self)
-	-- 		self.pos = {
-	-- 			Screen.SafeArea.Left + theme.padding,
-	-- 			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-	-- 			0,
-	-- 		}
-	-- 	end
-
-	-- 	loginBtn.onRelease = function()
-	-- 		authFlow:showLogin()
-	-- 		-- System.Login(function(success, _)
-	-- 		-- 	if success then
-	-- 		-- 		helpBtn:remove()
-	-- 		-- 		loginBtn:remove()
-
-	-- 		-- 		signupModal.didClose = nil
-	-- 		-- 		signupModal:close()
-	-- 		-- 		signupModal = nil
-
-	-- 		-- 		if callbacks.success ~= nil then
-	-- 		-- 			callbacks.success()
-	-- 		-- 		end
-	-- 		-- 	end
-	-- 		-- end)
-	-- 	end
-	-- 	loginBtn:parentDidResize()
-
-	-- 	self.loginBtn = loginBtn
-	-- end
-
 	local signupFlow = require("signup"):startFlow({
 		ui = ui,
 		onCancel = function()
@@ -2401,55 +2368,6 @@ authFlow.showSignUp = function(self, callbacks)
 		end,
 	})
 	self.activeFlow = signupFlow
-
-	-- local signupModal = require("signup"):createModal({ uikit = ui })
-	-- self.modal = signupModal
-
-	-- signupModal.onSubmit = function(username, key, dob)
-	-- 	System:DebugEvent("SIGNUP_SUBMIT")
-	-- 	self:clear()
-
-	-- 	local function _createAccount(onError)
-	-- 		showLoading("Creating account")
-	-- 		api:signUp(username, key, dob, function(err, credentials)
-	-- 			if err ~= nil then
-	-- 				if onError ~= nil then
-	-- 					hideLoading()
-	-- 					onError(onError)
-	-- 				end
-	-- 				return
-	-- 			else
-	-- 				System:StoreCredentials(credentials["user-id"], credentials.token)
-	-- 				System:DebugEvent("ACCOUNT_CREATED")
-	-- 				if authFlow.callbacks.success ~= nil then
-	-- 					authFlow.callbacks.success()
-	-- 				end
-	-- 			end
-	-- 		end)
-	-- 	end
-
-	-- 	local function onError(onError)
-	-- 		showAlert({
-	-- 			message = "❌ Sorry, something went wrong.",
-	-- 			positiveCallback = function()
-	-- 				_createAccount(onError)
-	-- 			end,
-	-- 			positiveLabel = "Retry",
-	-- 			neutralCallback = function()
-	-- 				if authFlow.callbacks.error ~= nil then
-	-- 					authFlow.callbacks.error()
-	-- 				end
-	-- 			end,
-	-- 			neutralLabel = "Cancel",
-	-- 		})
-	-- 	end
-
-	-- 	_createAccount(onError)
-	-- end
-
-	-- signupModal.didClose = function()
-	-- 	self:clear({ callCancel = true, closeModal = false })
-	-- end
 end
 
 function skipTitleScreen()
