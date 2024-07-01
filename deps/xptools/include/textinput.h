@@ -25,6 +25,7 @@ typedef enum {
     TextInputKeyboardType_Default,
     TextInputKeyboardType_Email,
     TextInputKeyboardType_Phone,
+    TextInputKeyboardType_OneTimeDigicode,
     TextInputKeyboardType_Numbers,
     TextInputKeyboardType_URL,
     TextInputKeyboardType_ASCII,

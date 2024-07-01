@@ -1757,6 +1757,7 @@ function createUI(system)
 			returnKeyType = "done", -- options: "default", "done", "send", "next"
 			keyboardType = "default", -- other options: "email", "phone", "numbers", "url", "ascii", "oneTimeDigicode"
 			suggestions = false,
+			bottomMargin = 0, -- can be used to add extra margin above virtual keyboard
 		}
 
 		local config = {}
@@ -2105,18 +2106,25 @@ function createUI(system)
 		node.onDown = nil
 
 		node.focus = function(self)
+			print("FOCUS 1")
 			if self.state == State.Focused then
 				return
 			end
 			self.state = State.Focused
 
+			print("FOCUS 2")
+
+			currentKeyboardTopMargin = config.bottomMargin
+
 			_textInputRefreshColor(self)
 			self:_refresh()
 
 			if focus(self) == false then
-				-- can't take focus, maybe it already had it
+				-- can't take focus, maybe it already has it
 				return
 			end
+
+			print("FOCUS 3")
 
 			if self.tickListener == nil then
 				self.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
@@ -3834,6 +3842,7 @@ end
 -- SHARED LISTENERS (for both shared an system UIs)
 
 currentKeyboardHeight = nil
+currentKeyboardTopMargin = 0 -- can be used to add extra margin above virtual keyboard
 
 function applyVirtualKeyboardOffset()
 	if currentKeyboardHeight == nil then
@@ -3857,7 +3866,7 @@ function applyVirtualKeyboardOffset()
 			keyboardToolbar = ui:createFrame(theme.modalTopBarColor)
 			keyboardToolbar.onPress = function() end -- blocker
 
-			local cutBtn = ui:createButton("✂️", { unfocuses = false })
+			local cutBtn = ui:buttonSecondary({ content = "✂️", unfocuses = false })
 			cutBtn:setParent(keyboardToolbar)
 			cutBtn.onRelease = function()
 				if focused.Text ~= nil then
@@ -3866,7 +3875,7 @@ function applyVirtualKeyboardOffset()
 				end
 			end
 
-			local copyBtn = ui:createButton("📑", { unfocuses = false })
+			local copyBtn = ui:buttonSecondary({ content = "📑", unfocuses = false })
 			copyBtn:setParent(keyboardToolbar)
 			copyBtn.onRelease = function()
 				if focused.Text ~= nil then
@@ -3874,7 +3883,7 @@ function applyVirtualKeyboardOffset()
 				end
 			end
 
-			local pasteBtn = ui:createButton("📋", { unfocuses = false })
+			local pasteBtn = ui:buttonSecondary({ content = "📋", unfocuses = false })
 			pasteBtn:setParent(keyboardToolbar)
 			pasteBtn.onRelease = function()
 				local s = System:GetFromClipboard()
@@ -3889,7 +3898,7 @@ function applyVirtualKeyboardOffset()
 			-- local redoBtn = ui:createButton("↩️", { unfocuses = false })
 			-- redoBtn:setParent(keyboardToolbar)
 
-			local closeBtn = ui:createButton("⬇️", { unfocuses = false })
+			local closeBtn = ui:buttonSecondary({ content = "⬇️", unfocuses = false })
 			closeBtn:setParent(keyboardToolbar)
 			closeBtn.onRelease = function()
 				focus(nil)
@@ -3909,7 +3918,7 @@ function applyVirtualKeyboardOffset()
 
 		local diff = 0
 
-		local bottomLine = currentKeyboardHeight + toolbarHeight + theme.paddingBig
+		local bottomLine = currentKeyboardHeight + toolbarHeight + currentKeyboardTopMargin + theme.paddingBig
 
 		if rootPos.Y < bottomLine then
 			diff = bottomLine - rootPos.Y
