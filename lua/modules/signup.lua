@@ -659,13 +659,14 @@ signup.startFlow = function(self, config)
 
 				okBtn.onRelease = function()
 					-- signupFlow:push(createAvatarEditorStep())
+					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
+					print("PHONE NUMBER:", phoneNumber)
 
-					print("PHONE NUMBER:", "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text))
-					-- api:patchUserPhone({ phone = "+33768201427" }, function(err)
-					-- 	if err ~= nil then
-					-- 		print("ERR:", err)
-					-- 	end
-					-- end)
+					api:patchUserPhone({ phone = phoneNumber }, function(err)
+						if err ~= nil then
+							print("ERR:", err)
+						end
+					end)
 				end
 
 				local layoutPhoneInput = function()
