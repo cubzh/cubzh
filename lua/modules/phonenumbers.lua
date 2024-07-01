@@ -283,4 +283,8 @@ mod.extractCountryCode = function(self, phoneNumber)
 	return extractCountryCode(phoneNumber)
 end
 
+mod.sanitize = function(_, phoneNumber)
+	return sanitize(phoneNumber)
+end
+
 return mod
