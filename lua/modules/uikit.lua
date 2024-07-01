@@ -85,9 +85,21 @@ function focus(node)
 	focused = node
 
 	if comboBoxSelector ~= nil then
-		if comboBoxSelector.close ~= nil then
-			comboBoxSelector:close()
-			comboBoxSelector = nil
+		local n = node
+		local close = true
+		while n ~= nil do
+			if n == comboBoxSelector then
+				close = false
+				break
+			end
+			n = n.parent
+		end
+
+		if close then
+			if comboBoxSelector.close ~= nil then
+				comboBoxSelector:close()
+				comboBoxSelector = nil
+			end
 		end
 	end
 
@@ -308,7 +320,10 @@ function createUI(system)
 			end
 
 			-- apply view order
-			attr.object.SortOrder = sortOrder
+			-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+			if attr.object.SortOrder < 255 then
+				attr.object.SortOrder = sortOrder
+			end
 			-- if attr.object.debugName ~= nil then
 			-- 	System.Log(">> SET SORT ORDER (" .. attr.object.debugName .. ") : " .. attr.object.SortOrder)
 			-- elseif attr.object.Text then
@@ -320,7 +335,10 @@ function createUI(system)
 				local children = n.Children
 				for _, child in ipairs(children) do
 					if child.SortOrder ~= nil then
-						child.SortOrder = sortOrder
+						-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+						if child.SortOrder < 255 then
+							child.SortOrder = sortOrder
+						end
 						-- System.Log("child.SortOrder =" .. child.SortOrder)
 						-- if child.debugName ~= nil then
 						-- 	System.Log(">> SET CHILD SORT ORDER (" .. child.debugName .. ") : " .. child.SortOrder)
@@ -335,6 +353,8 @@ function createUI(system)
 			end
 			t.applySortOrderToChildren(attr.object, sortOrder + 1)
 		end
+
+		_parentDidResizeWrapper(self)
 	end
 
 	_parentDidResizeWrapper(self)
@@ -433,6 +453,50 @@ function createUI(system)
 		end
 	end
 
+	local function _buttonSetBackgroundQuad(node, quad)
+		if quad == nil then
+			return
+		end
+		if node.object == quad then
+			return
+		end
+		local background = quad
+		background.IsDoubleSided = false
+		_setupUIObject(background, true)
+		background._node = node
+
+		local previousObject = node.object
+		node.object = background
+		if previousObject ~= nil then
+			background.SortOrder = previousObject.SortOrder
+			node.object:SetParent(previousObject.Parent)
+			node.object.LocalPosition:Set(previousObject.LocalPosition)
+			node.object.LocalRotation:Set(previousObject.LocalRotation)
+
+			local toMove = {}
+			for _, child in ipairs(previousObject.Children) do
+				table.insert(toMove, child)
+			end
+			for _, child in ipairs(toMove) do
+				child:SetParent(node.object)
+			end
+			previousObject:RemoveFromParent()
+		end
+		node:_refresh()
+	end
+
+	local function _buttonRefreshBackground(node)
+		if node.state == State.Pressed then
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuadPressed)
+		elseif node.selected then
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuadSelected)
+		elseif node.disabled then
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuadDisabled)
+		else
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuad)
+		end
+	end
+
 	local function _buttonRefresh(self)
 		if self.content == nil then
 			return
@@ -442,8 +506,12 @@ function createUI(system)
 		local border = BUTTON_BORDER
 		local underlinePadding = 0
 
-		if self.config.padding == false then
+		local paddingType = type(self.config.padding)
+
+		if paddingType == "boolean" and self.config.padding == false then
 			padding = 0
+		elseif paddingType == "number" or paddingType == "integer" then
+			padding = self.config.padding
 		end
 
 		if self.config.borders == false then
@@ -535,7 +603,10 @@ function createUI(system)
 		end
 
 		self.state = State.Pressed
+
+		_buttonRefreshBackground(self)
 		_buttonRefreshColor(self)
+
 		if callback ~= nil then
 			callback(self, obj, block, pe)
 		end
@@ -549,7 +620,10 @@ function createUI(system)
 		end
 
 		self.state = State.Idle
+
+		_buttonRefreshBackground(self)
 		_buttonRefreshColor(self)
+
 		if callback ~= nil then
 			callback(self)
 		end
@@ -561,7 +635,10 @@ function createUI(system)
 		end
 
 		self.state = State.Idle
+
+		_buttonRefreshBackground(self)
 		_buttonRefreshColor(self)
+
 		if callback ~= nil then
 			callback(self)
 		end
@@ -2260,11 +2337,13 @@ function createUI(system)
 		return node
 	end
 
+	local SCROLL_ID = 0
 	ui.createScroll = function(self, config)
 		local defaultConfig = {
 			backgroundColor = Color(0, 0, 0, 0),
 			direction = "down", -- can also be "up", "left", "right"
 			cellPadding = 0,
+			padding = 0, -- padding around cells
 			rigidity = SCROLL_DEFAULT_RIGIDITY,
 			loadCell = function(_) -- index
 				return nil
@@ -2287,15 +2366,28 @@ function createUI(system)
 		node.isScrollArea = true
 		node.IsMask = true
 
+		SCROLL_ID = SCROLL_ID + 1
+		node.scrollID = SCROLL_ID
+
 		local listeners = {}
 		local l
 		local hovering = false
 
 		local cellPadding = config.cellPadding
+		local padding = config.padding
 
-		local container = self:createNode()
+		local container = self:frame()
 		container:setParent(node)
 		node.container = container
+
+		container.parentDidResize = function(self)
+			local parent = self.parent
+			if vertical then
+				container.Width = parent.Width - padding * 2
+			else -- horizontal
+				container.Height = parent.Height - padding * 2
+			end
+		end
 
 		-- loaed cells
 		local cells = {}
@@ -2333,19 +2425,58 @@ function createUI(system)
 		local scrollHandle = self:createFrame(Color(0, 0, 0, 0.5))
 		scrollHandle:setParent(node)
 
+		local endScrollIndicator
+		local beginScrollIndicator
+
+		if config.backgroundColor.A == 255 then
+			local quad = Quad()
+			local opaque = Color(config.backgroundColor)
+			local transparent = Color(config.backgroundColor)
+			transparent.A = 0
+			if right then
+				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+			elseif left then
+				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+			elseif down then
+				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+			elseif up then
+				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+			end
+			endScrollIndicator = ui:frame({ quad = quad })
+			endScrollIndicator.object.SortOrder = 255
+			endScrollIndicator:setParent(node)
+
+			quad = Quad()
+			opaque = Color(config.backgroundColor)
+			transparent = Color(config.backgroundColor)
+			transparent.A = 0
+			if right then
+				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+			elseif left then
+				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+			elseif down then
+				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+			elseif up then
+				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+			end
+			beginScrollIndicator = ui:frame({ quad = quad })
+			beginScrollIndicator.object.SortOrder = 255
+			beginScrollIndicator:setParent(node)
+		end
+
 		node.refresh = function()
 			if not vertical and not horizontal then
 				return
 			end
 
 			if vertical then
-				container.pos.X = 0
+				container.pos.X = padding
 			else -- horizontal
-				container.pos.Y = 0
+				container.pos.Y = padding
 			end
 
 			if down then
-				container.pos.Y = node.Height - scrollPosition
+				container.pos.Y = node.Height - padding - scrollPosition
 
 				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
@@ -2353,7 +2484,7 @@ function createUI(system)
 				unloadTop = -scrollPosition + SCROLL_UNLOAD_MARGIN
 				unloadBottom = loadTop - node.Height - SCROLL_UNLOAD_MARGIN * 2
 			elseif up then
-				container.pos.Y = 0 - scrollPosition
+				container.pos.Y = padding - scrollPosition
 
 				loadBottom = scrollPosition - SCROLL_LOAD_MARGIN
 				loadTop = loadBottom + node.Height + SCROLL_LOAD_MARGIN * 2
@@ -2361,7 +2492,7 @@ function createUI(system)
 				unloadBottom = scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadTop = loadBottom + node.Height + SCROLL_UNLOAD_MARGIN * 2
 			elseif right then
-				container.pos.X = 0 - scrollPosition
+				container.pos.X = padding - scrollPosition
 
 				loadLeft = scrollPosition - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
@@ -2369,7 +2500,7 @@ function createUI(system)
 				unloadLeft = scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
 			elseif left then
-				container.pos.X = node.Width + scrollPosition
+				container.pos.X = node.Width - padding + scrollPosition
 
 				loadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
@@ -2383,6 +2514,17 @@ function createUI(system)
 			previousCellInfo = nil
 
 			if vertical then
+				if endScrollIndicator then
+					endScrollIndicator.Height = 10
+					endScrollIndicator.Width = node.Width
+				end
+
+				if beginScrollIndicator then
+					beginScrollIndicator.Height = 10
+					beginScrollIndicator.Width = node.Width
+					beginScrollIndicator.pos.Y = node.Height - beginScrollIndicator.Height
+				end
+
 				while true do
 					cellInfo = cache.cellInfo[cellIndex]
 
@@ -2394,7 +2536,7 @@ function createUI(system)
 						end
 						cellInfo = { height = cell.Height }
 						if cache.contentHeight == 0 then
-							cache.contentHeight = cellInfo.height
+							cache.contentHeight = cellInfo.height + padding * 2
 						else
 							cache.contentHeight = cache.contentHeight + cellInfo.height + cellPadding
 						end
@@ -2456,6 +2598,17 @@ function createUI(system)
 					cellIndex = cellIndex + 1
 				end
 			else -- horizontal
+				if endScrollIndicator then
+					endScrollIndicator.Height = node.Height
+					endScrollIndicator.Width = 10
+					endScrollIndicator.pos.X = node.Width - endScrollIndicator.Width
+				end
+
+				if beginScrollIndicator then
+					beginScrollIndicator.Height = node.Height
+					beginScrollIndicator.Width = 10
+				end
+
 				while true do
 					cellInfo = cache.cellInfo[cellIndex]
 
@@ -2467,7 +2620,7 @@ function createUI(system)
 						end
 						cellInfo = { width = cell.Width }
 						if cache.contentWidth == 0 then
-							cache.contentWidth = cellInfo.width
+							cache.contentWidth = cellInfo.width + padding * 2
 						else
 							cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
 						end
@@ -2712,7 +2865,6 @@ function createUI(system)
 				if pressed._onCancel then
 					pressed:_onCancel()
 				end
-				focus(nil)
 				pressed = self
 			end
 		end
@@ -2804,6 +2956,7 @@ function createUI(system)
 				colorSelected = { "Color" },
 				colorDisabled = { "Color" },
 				debugName = { "string" },
+				padding = { "boolean", "number", "integer" },
 			},
 		}
 
@@ -2818,7 +2971,16 @@ function createUI(system)
 		if config.backgroundQuad == nil and config.color == nil then
 			-- use default quad
 			config.backgroundQuad = Quad()
-			config.backgroundQuad.Color = Color(0, 0, 0)
+			config.backgroundQuad.Color = theme.buttonColor
+
+			config.backgroundQuadPressed = Quad()
+			config.backgroundQuadPressed.Color = theme.buttonColorPressed
+
+			config.backgroundQuadSelected = Quad()
+			config.backgroundQuadSelected.Color = theme.buttonColorSelected
+
+			config.backgroundQuadDisabled = Quad()
+			config.backgroundQuadDisabled.Color = theme.buttonColorDisabled
 		end
 
 		if config.backgroundQuad ~= nil then
@@ -3045,6 +3207,8 @@ function createUI(system)
 		end
 
 		node:_refresh()
+
+		_buttonRefreshBackground()
 		_buttonRefreshColor(node) -- apply initial colors
 
 		node.onPress = function(_) end
@@ -3055,6 +3219,8 @@ function createUI(system)
 				return
 			end
 			self.selected = true
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -3063,6 +3229,8 @@ function createUI(system)
 				return
 			end
 			self.selected = false
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -3071,6 +3239,8 @@ function createUI(system)
 				return
 			end
 			self.disabled = false
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -3079,6 +3249,8 @@ function createUI(system)
 				return
 			end
 			self.disabled = true
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -3101,20 +3273,33 @@ function createUI(system)
 
 	ui.buttonPositive = function(self, config)
 		config = config or {}
+		config.textColor = theme.buttonPositiveTextColor
+
 		local image = Data:FromBundle("images/button_positive_dark.png")
 		config.backgroundQuad = Quad()
-		-- config.backgroundQuad.Color = Color(255, 0, 0)
 		config.backgroundQuad.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
+
+		image = Data:FromBundle("images/button_disabled.png")
+		config.backgroundQuadDisabled = Quad()
+		config.backgroundQuadDisabled.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
 		return ui.button(self, config)
 	end
 
 	ui.buttonNegative = function(self, config)
 		config = config or {}
+		config.textColor = theme.buttonNegativeTextColor
+
 		local image = Data:FromBundle("images/button_negative_dark.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
@@ -3141,6 +3326,8 @@ function createUI(system)
 
 	ui.buttonSecondary = function(self, config)
 		config = config or {}
+		config.textColor = theme.buttonSecondaryTextColor
+
 		local image = Data:FromBundle("images/button_secondary.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
@@ -3164,209 +3351,96 @@ function createUI(system)
 			return
 		end
 
-		local btn = self:createButton(stringOrShape, config)
+		config = config or {}
+		config.content = stringOrShape
+
+		local btn = self:buttonNeutral(config)
 
 		btn.onSelect = function(_, _) end
 
 		btn.onRelease = function(_)
 			btn:disable()
 
-			local selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.parent)
+			local selector
+
+			local choiceOnRelease = function(self)
+				if self._choiceIndex == nil then
+					return
+				end
+				btn.selectedRow = self._choiceIndex
+				if btn.onSelect ~= nil then
+					btn:onSelect(self._choiceIndex)
+				end
+				if selector.close then
+					selector:close()
+				end
+			end
+
+			local choiceParentDidResize = function(self)
+				self.Width = self.parent.Width
+			end
+
+			local cells = {}
+
+			local scroll = ui:createScroll({
+				direction = "down",
+				cellPadding = 0,
+				padding = 0,
+				loadCell = function(index)
+					local choice = choices[index]
+					if choice then
+						local c = table.remove(cells)
+						if c ~= nil then
+							c:setText(choice)
+						else
+							c = ui:button({
+								content = choice,
+								borders = false,
+								shadow = false,
+								unfocuses = false,
+							})
+							c.parentDidResize = choiceParentDidResize
+							c.onRelease = choiceOnRelease
+						end
+						c._choiceIndex = index
+
+						if btn.selectedRow == c._choiceIndex then
+							c:select()
+						end
+
+						return c
+					end
+				end,
+				unloadCell = function(_, cell) -- index, cell
+					cell:setParent(nil)
+					table.insert(cells, cell)
+				end,
+			})
+
+			scroll.Height = 200
+			scroll.Width = 100
 
 			focus(nil)
+
+			selector = ui:createFrame(Color(0, 0, 0, 100))
+			selector:setParent(btn.parent)
+
+			scroll:setParent(selector)
+
 			comboBoxSelector = selector
 
-			local frame = ui:createFrame(Color(255, 255, 255))
-			frame:setParent(selector)
-			frame.IsMask = true
-			frame.pos = { theme.paddingTiny, theme.paddingTiny }
-			frame.Width = btn.Width + theme.padding * 2
-
-			local choiceButtons = {}
-
-			local container = ui:createFrame(Color.transparent)
-			container:setParent(frame)
-
-			local showBelow = false
-			local showAbove = false
-
-			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
-			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
-			down:setParent(frame)
-			down.pos.Z = -20
-			down:hide()
-			down:disable()
-
-			local up = ui:createButton("⬆️", { borders = true, shadow = false, unfocuses = false })
-			up:setParent(frame)
-			up.pos.Z = -20
-			up:hide()
-			up:disable()
-
-			local dragged = false
-			local selectedBtn = nil
-			local totaldragY = 0
-
-			local function onDrag(_, pe)
-				totaldragY = totaldragY + pe.DY
-				if dragged == false and math.abs(totaldragY) > 5 then
-					dragged = true
-				end
-
-				if selectedBtn ~= nil then
-					selectedBtn:unselect()
-					selectedBtn = nil
-				end
-
-				container.pos.Y = container.pos.Y + pe.DY
-				if container.pos.Y >= 0 then
-					container.pos.Y = 0
-					if down:isVisible() then
-						down:hide()
-						down:disable()
-					end
-				end
-
-				if container.pos.Y + container.Height <= frame.Height then
-					container.pos.Y = frame.Height - container.Height
-					if up:isVisible() then
-						up:hide()
-						up:disable()
-					end
-				end
-
-				if down:isVisible() == false and container.pos.Y < 0 then
-					down:show()
-					down:enable()
-				end
-				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
-					up:show()
-					up:enable()
-				end
-			end
-
-			local function onRelease(self)
-				if dragged == false then
-					btn.selectedRow = self._choiceIndex
-					if btn.onSelect ~= nil then
-						btn:onSelect(self._choiceIndex)
-					end
-					if selector.close then
-						selector:close()
-					end
-				end
-				dragged = false
-			end
-
-			local function onPress(self)
-				dragged = false
-				totaldragY = 0
-				if selectedBtn ~= nil then
-					selectedBtn:unselect()
-				end
-				selectedBtn = self
-				self:select()
-			end
-
-			for i, choice in ipairs(choices) do
-				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
-				c:setParent(container)
-
-				c._onDrag = onDrag
-				c._choiceIndex = i
-
-				if selectedBtn == nil and btn.selectedRow ~= nil and i == btn.selectedRow then
-					c:select()
-					selectedBtn = c
-				end
-
-				c.onRelease = onRelease
-				c.onPress = onPress
-
-				table.insert(choiceButtons, c)
-			end
-
-			down.onPress = function()
-				showBelow = true
-			end
-			down.onRelease = function()
-				showBelow = false
-			end
-			down.onCancel = function()
-				showBelow = false
-			end
-
-			up.onPress = function()
-				showAbove = true
-			end
-			up.onRelease = function()
-				showAbove = false
-			end
-			up.onCancel = function()
-				showAbove = false
-			end
-
-			local comboTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-				if down:isVisible() == false and container.pos.Y < 0 then
-					down:show()
-					down:enable()
-				end
-				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
-					up:show()
-					up:enable()
-				end
-
-				if showBelow then
-					container.pos.Y = container.pos.Y + dt * COMBO_BOX_SELECTOR_SPEED
-					if container.pos.Y >= 0 then
-						container.pos.Y = 0
-						down:onRelease()
-						down:hide()
-						down:disable()
-					end
-				end
-
-				if showAbove then
-					container.pos.Y = container.pos.Y - dt * COMBO_BOX_SELECTOR_SPEED
-					if container.pos.Y + container.Height <= frame.Height then
-						container.pos.Y = frame.Height - container.Height
-						up:onRelease()
-						up:hide()
-						up:disable()
-					end
-				end
-			end)
-
-			-- refresh
-
-			local absY = btn.pos.Y + btn.Height
-			local parent = btn.parent
-
-			while parent do
-				absY = absY + parent.pos.Y
-				parent = parent.parent
-			end
-
-			local contentHeight = 0
-
-			for _, c in ipairs(choiceButtons) do
-				contentHeight = contentHeight + c.Height
-			end
-
-			-- frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
-			frame.Height = math.min(
+			scroll.Height = math.min(
 				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
-				contentHeight,
-				400 -- max heigh for all combo boxes
+				-- contentHeight,
+				300 -- max heigh for all combo boxes
 			)
 
-			frame.pos.Z = -10 -- render on front
+			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
 
-			selector.Height = frame.Height + theme.paddingTiny * 2
-			selector.Width = frame.Width + theme.paddingTiny * 2
+			selector.Height = scroll.Height + theme.paddingTiny * 2
+			selector.Width = scroll.Width + theme.paddingTiny * 2
 
-			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - frame.Height + theme.padding, 0)
+			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
 
 			parent = btn.parent
 			absPy = p.Y
@@ -3388,47 +3462,11 @@ function createUI(system)
 
 			selector.pos.Z = -10 -- render on front
 
-			container.Height = contentHeight
-			container.Width = frame.Width
-
-			local cursorY = container.Height
-			for _, c in ipairs(choiceButtons) do
-				c.Width = container.Width
-				c.pos.Y = cursorY - c.Height
-				cursorY = cursorY - c.Height
-			end
-
-			local selectionVisibilityOffset = 0
-			if selectedBtn ~= nil then
-				local visibleY = container.Height - frame.Height
-				if selectedBtn.pos.Y < visibleY then -- place button at center if not visible by default
-					selectionVisibilityOffset = visibleY
-						- selectedBtn.pos.Y
-						+ frame.Height * 0.5
-						- selectedBtn.Height * 0.5
-				end
-			end
-
-			container.pos.Y = frame.Height - container.Height + selectionVisibilityOffset
-			if container.pos.Y >= 0 then
-				container.pos.Y = 0
-			end
-			if container.pos.Y + container.Height <= frame.Height then
-				container.pos.Y = frame.Height - container.Height
-			end
-
-			up.pos = { 0, frame.Height - up.Height }
-			up.Width = frame.Width
-
-			down.pos = { 0, 0 }
-			down.Width = frame.Width
-
 			selector.close = function(_)
 				if comboBoxSelector == selector then
 					comboBoxSelector = nil
 				end
 				ease:cancel(selector)
-				comboTickListener:Remove()
 				selector:remove()
 				if btn.enable then
 					btn:enable()
@@ -3627,7 +3665,9 @@ function createUI(system)
 
 		for _, scroll in ipairs(pressedScrolls) do
 			capture = true -- at least one scroll capturing drag
-			scroll:_onDrag(pointerEvent)
+			if scroll._onDrag ~= nil then
+				scroll:_onDrag(pointerEvent)
+			end
 			if pressed == scroll then
 				-- scroll took control, early return!
 				return true
