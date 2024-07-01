@@ -46,6 +46,8 @@ itemGrid.create = function(_, config)
 		--
 		cellPadding = theme.padding,
 		--
+		padding = 0,
+		--
 		onOpen = function(cell) end,
 	}
 
@@ -210,9 +212,10 @@ itemGrid.create = function(_, config)
 	cellSelector:setParent(nil)
 
 	scroll = ui:createScroll({
-		backgroundColor = Color(0, 0, 0, 0),
 		direction = "down",
+		backgroundColor = config.backgroundColor or Color(0, 0, 0, 0),
 		cellPadding = config.cellPadding,
+		padding = config.padding,
 		loadCell = function(index)
 			if index <= rows then
 				local row = table.remove(rowPool)
@@ -220,7 +223,7 @@ itemGrid.create = function(_, config)
 					row = ui:createFrame(Color(0, 0, 0, 0))
 					row.cells = {}
 				end
-				row.Width = scroll.Width
+				row.Width = scroll.Width - config.padding * 2
 				row.Height = cellSize
 
 				for i = 1, entriesPerRow do
@@ -392,7 +395,7 @@ itemGrid.create = function(_, config)
 
 	local function refreshEntries()
 		nbEntries = #entries
-		local w = scroll.Width + config.cellPadding
+		local w = scroll.Width - config.padding * 2 + config.cellPadding
 		entriesPerRow = math.floor(w / MIN_CELL_SIZE)
 		entriesPerRow = math.max(MIN_CELLS_PER_ROW, entriesPerRow)
 		cellSize = w / entriesPerRow
@@ -416,7 +419,7 @@ itemGrid.create = function(_, config)
 		local y = parent.Height
 		if searchBar ~= nil then
 			layoutSearchBar()
-			y = y - searchBar.Height
+			y = y - searchBar.Height - 4
 		end
 		scroll.Width = parent.Width
 		scroll.Height = y

@@ -43,13 +43,18 @@ local EYES_DARK_PALETTE_INDEX = 8
 cachedHead = bundle:Shape("shapes/head_skin2_v2")
 
 mod.eyeColors = {
+	Color(80, 80, 80),
 	Color(166, 142, 163),
 	Color(68, 172, 229),
 	Color(61, 204, 141),
 	Color(127, 80, 51),
 	Color(51, 38, 29),
 	Color(229, 114, 189),
+	Color(80, 80, 80),
 }
+
+local DEFAULT_EYES_COLOR_INDEX = 1
+mod.defaultEyesColorIndex = DEFAULT_EYES_COLOR_INDEX
 
 mod.skinColors = {
 	{
@@ -669,7 +674,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 		initAnimations(avatar)
 	end
 
-	avatar:setEyes({ index = 1 })
+	avatar:setEyes({ index = DEFAULT_EYES_INDEX, color = mod.eyeColors[DEFAULT_EYES_COLOR_INDEX] })
 	avatar:setNose({ index = DEFAULT_NOSE_INDEX })
 
 	local eyeLidRight = MutableShape()

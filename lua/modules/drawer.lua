@@ -151,6 +151,8 @@ function _clear(self)
 		return
 	end
 
+	fields.config.layoutContent = function(_) end
+
 	local toRemove = {}
 	for _, child in pairs(self.children) do
 		table.insert(toRemove, child)

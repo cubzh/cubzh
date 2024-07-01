@@ -6,6 +6,8 @@ Modules = {
 -- Dev.DisplayBoxes = true
 
 Client.OnStart = function()
+	Clouds.On = false
+
 	ease = require("ease")
 	particles = require("particles")
 
@@ -253,7 +255,7 @@ function titleScreen()
 	local tickListener
 
 	_titleScreen.show = function()
-		Camera.On = true
+		-- Camera.On = true
 		if root ~= nil then
 			return
 		end
@@ -417,7 +419,7 @@ function titleScreen()
 	end
 
 	_titleScreen.hide = function()
-		Camera.On = false
+		-- Camera.On = false
 		if root == nil then
 			return
 		end
@@ -431,6 +433,14 @@ function titleScreen()
 	end
 
 	return _titleScreen
+end
+
+function shuffle(array)
+	local n = #array
+	for i = n, 2, -1 do
+		local j = math.random(i)
+		array[i], array[j] = array[j], array[i]
+	end
 end
 
 local _avatar
@@ -451,7 +461,23 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/pink_pop_hair"),
 		bundle:Shape("shapes/signup_demo/pirate_captain_hat"),
 		bundle:Shape("shapes/signup_demo/santa_hair"),
+		bundle:Shape("shapes/signup_demo/elf_hair"),
+		bundle:Shape("shapes/signup_demo/sennin_head"),
+		bundle:Shape("shapes/signup_demo/geek_long_hair"),
+		bundle:Shape("shapes/signup_demo/elvis"),
+		bundle:Shape("shapes/signup_demo/wolf_cut"),
+		bundle:Shape("shapes/signup_demo/luffy_hair"),
+		bundle:Shape("shapes/signup_demo/crown"),
+		bundle:Shape("shapes/signup_demo/raccoon_head"),
+		bundle:Shape("shapes/signup_demo/just_hair"),
+		bundle:Shape("shapes/signup_demo/grass_cubzh"),
 	}
+	local hairsCurrentIndex = 0
+	local hairsRandomIndexes = {}
+	for i = 1, #hairs do
+		table.insert(hairsRandomIndexes, i)
+	end
+	shuffle(hairsRandomIndexes)
 
 	local jackets = {
 		bundle:Shape("shapes/signup_demo/astronaut_top"),
@@ -460,7 +486,15 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/princess_dresstop"),
 		bundle:Shape("shapes/signup_demo/red_robot_suit"),
 		bundle:Shape("shapes/signup_demo/sweater"),
+		bundle:Shape("shapes/signup_demo/jedi_tunic"),
 	}
+
+	local jacketsCurrentIndex = 0
+	local jacketsRandomIndexes = {}
+	for i = 1, #jackets do
+		table.insert(jacketsRandomIndexes, i)
+	end
+	shuffle(jacketsRandomIndexes)
 
 	local pants = {
 		bundle:Shape("shapes/signup_demo/overalls_pants"),
@@ -469,12 +503,31 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/stripe_pants2"),
 	}
 
+	local pantsCurrentIndex = 0
+	local pantsRandomIndexes = {}
+	for i = 1, #pants do
+		table.insert(pantsRandomIndexes, i)
+	end
+	shuffle(pantsRandomIndexes)
+
 	local boots = {
 		bundle:Shape("shapes/signup_demo/astronaut_shoes"),
 		bundle:Shape("shapes/signup_demo/flaming_boots"),
 		bundle:Shape("shapes/signup_demo/kids_shoes"),
 		bundle:Shape("shapes/signup_demo/pirate_boots_01"),
 	}
+
+	local bootsCurrentIndex = 0
+	local bootsRandomIndexes = {}
+	for i = 1, #boots do
+		table.insert(bootsRandomIndexes, i)
+	end
+	shuffle(bootsRandomIndexes)
+
+	local defaultHair = bundle:Shape("shapes/default_hair")
+	local defaultJacket = bundle:Shape("shapes/default_jacket")
+	local defaultPants = bundle:Shape("shapes/default_pants")
+	local defaultShoes = bundle:Shape("shapes/default_shoes")
 
 	local yaw = math.rad(-190)
 	local pitch = 0
@@ -563,6 +616,11 @@ function avatar()
 			avatar:loadEquipment({ type = "jacket", shape = jackets[1] })
 			avatar:loadEquipment({ type = "pants", shape = pants[1] })
 			avatar:loadEquipment({ type = "boots", shape = boots[1] })
+		else
+			avatar:loadEquipment({ type = "hair", shape = defaultHair })
+			avatar:loadEquipment({ type = "jacket", shape = defaultJacket })
+			avatar:loadEquipment({ type = "pants", shape = defaultPants })
+			avatar:loadEquipment({ type = "boots", shape = defaultShoes })
 		end
 
 		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
@@ -638,7 +696,11 @@ function avatar()
 			if config.eyesIndex then
 				avatar:setEyes({
 					index = config.eyesIndex,
-					-- color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
+				})
+			end
+			if config.eyesColorIndex then
+				avatar:setEyes({
+					color = avatarModule.eyeColors[config.eyesColorIndex],
 				})
 			end
 			if config.noseIndex then
@@ -714,24 +776,51 @@ function avatar()
 					})
 				end
 
+				hairsCurrentIndex = hairsCurrentIndex + 1
+				if hairsCurrentIndex > #hairsRandomIndexes then
+					shuffle(hairsRandomIndexes)
+					hairsCurrentIndex = 1
+				end
+
 				avatar:loadEquipment({
 					type = "hair",
-					shape = hairs[math.random(1, #hairs)],
+					shape = hairs[hairsRandomIndexes[hairsCurrentIndex]],
 					didAttachEquipmentParts = didAttachEquipmentParts,
 				})
+
+				jacketsCurrentIndex = jacketsCurrentIndex + 1
+				if jacketsCurrentIndex > #jacketsRandomIndexes then
+					shuffle(jacketsRandomIndexes)
+					jacketsCurrentIndex = 1
+				end
+
 				avatar:loadEquipment({
 					type = "jacket",
-					shape = jackets[math.random(1, #jackets)],
+					shape = jackets[jacketsRandomIndexes[jacketsCurrentIndex]],
 					didAttachEquipmentParts = didAttachEquipmentParts,
 				})
+
+				pantsCurrentIndex = pantsCurrentIndex + 1
+				if pantsCurrentIndex > #pantsRandomIndexes then
+					shuffle(pantsRandomIndexes)
+					pantsCurrentIndex = 1
+				end
+
 				avatar:loadEquipment({
 					type = "pants",
-					shape = pants[math.random(1, #pants)],
+					shape = pants[pantsRandomIndexes[pantsCurrentIndex]],
 					didAttachEquipmentParts = didAttachEquipmentParts,
 				})
+
+				bootsCurrentIndex = bootsCurrentIndex + 1
+				if bootsCurrentIndex > #bootsRandomIndexes then
+					shuffle(bootsRandomIndexes)
+					bootsCurrentIndex = 1
+				end
+
 				avatar:loadEquipment({
 					type = "boots",
-					shape = boots[math.random(1, #boots)],
+					shape = boots[bootsRandomIndexes[bootsCurrentIndex]],
 					didAttachEquipmentParts = didAttachEquipmentParts,
 				})
 			end)

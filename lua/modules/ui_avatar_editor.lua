@@ -6,6 +6,9 @@ avatar = require("avatar")
 itemGrid = require("item_grid")
 
 local MAX_COLOR_SWATCH_SIZE = 100
+local PADDING = 4.0
+local CELL_PADDING = 4.0
+local SCROLL_PADDING = 4.0
 
 privateFields = setmetatable({}, { __mode = "k" })
 
@@ -13,6 +16,7 @@ local avatarProperties = {
 	skinColorIndex = avatar.defaultSkinColorIndex,
 	noseIndex = avatar.defaultNoseIndex,
 	eyesIndex = avatar.defaultEyesIndex,
+	eyesColorIndex = avatar.defaultEyesColorIndex,
 }
 
 mod.create = function(self, config)
@@ -71,7 +75,7 @@ mod.create = function(self, config)
 			local parent = self.parent
 			local half = math.floor(#btns / 2)
 			local size = (parent.Width - theme.padding * (half - 1)) / half
-			size = math.min(MAX_COLOR_SWATCH_SIZE, size)
+			size = math.min(Screen.Height * 0.15, MAX_COLOR_SWATCH_SIZE, size)
 			local totalSize = (size + theme.padding) * half - theme.padding
 			local startX = parent.Width * 0.5 - totalSize * 0.5
 			for i = 1, half do
@@ -96,18 +100,19 @@ mod.create = function(self, config)
 	end
 
 	categories = ui:createScroll({
-		backgroundColor = Color(30, 31, 34),
+		backgroundColor = theme.buttonTextColor,
 		direction = "right",
-		cellPadding = 6.0,
+		cellPadding = CELL_PADDING,
+		padding = SCROLL_PADDING,
 		loadCell = function(index)
 			if index == 1 then
-				local btn = ui:buttonNeutral({ content = "🙂 Skin", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "🙂 Skin" })
 				btn.onRelease = function()
 					setSkin()
 				end
 				return btn
 			elseif index == 2 then
-				local btn = ui:buttonNeutral({ content = "✨ Hair", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "✨ Hair" })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -115,6 +120,9 @@ mod.create = function(self, config)
 					categoryNode = itemGrid:create({
 						categories = { "hair" },
 						uikit = ui,
+						backgroundColor = theme.buttonTextColor,
+						cellPadding = CELL_PADDING,
+						padding = SCROLL_PADDING,
 						onOpen = function(cell)
 							LocalEvent:Send("avatar_editor_update", { hair = cell.fullName })
 						end,
@@ -127,7 +135,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 3 then
-				local btn = ui:buttonNeutral({ content = "🙂 Eyes", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "🙂 Eyes" })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -170,7 +178,8 @@ mod.create = function(self, config)
 						mask.head = head
 
 						local btn = ui:createButton(mask, {
-							-- color = color.skin1,
+							color = Color(181, 186, 193),
+							padding = false,
 						})
 						btn.onRelease = function()
 							avatarProperties.eyesIndex = eyesIndex
@@ -180,16 +189,41 @@ mod.create = function(self, config)
 						table.insert(btns, btn)
 					end
 
+					local colorBtns = {}
+					for eyesColorIndex, color in pairs(avatar.eyeColors) do
+						local btn = ui:createButton("", {
+							color = color,
+						})
+						btn.onRelease = function()
+							-- head:setColors({
+							-- 	skin1 = colors.skin1,
+							-- 	skin2 = colors.skin2,
+							-- 	nose = colors.nose,
+							-- 	mouth = colors.mouth,
+							-- })
+							avatarProperties.eyesColorIndex = eyesColorIndex
+							LocalEvent:Send("avatar_editor_update", { eyesColorIndex = eyesColorIndex })
+						end
+						btn:setParent(categoryNode)
+						table.insert(colorBtns, btn)
+					end
+
 					btns[1].parentDidResize = function(self)
 						local parent = self.parent
 						local half = math.floor(#btns / 2)
-						local size = (parent.Width - theme.padding * (half - 1)) / half
-						size = math.min(MAX_COLOR_SWATCH_SIZE, size)
 
-						-- removing padding and border
+						local size = (parent.Width - theme.padding * (half - 1)) / half
+						size = math.min(Screen.Height * 0.15, MAX_COLOR_SWATCH_SIZE, size)
+
+						local halfColors = math.floor(#colorBtns / 2)
+						local colorWidth = (parent.Width - theme.padding * (halfColors - 1)) / halfColors
+						local colorHeight = math.min(Screen.Height * 0.15, 50, colorWidth)
+
+						local startYEyeShapes = colorHeight * 2 + theme.padding * 2
+
 						-- TODO: this should be dynamic
-						local maskSize = size - (4 + 3) * 2
-						local btnHeight = maskSize / btnRatio + (4 + 3) * 2
+						local maskSize = size - 3 * 2 -- 3 = border
+						local btnHeight = maskSize / btnRatio + 3 * 2 -- 3 = border
 
 						local totalSize = (size + theme.padding) * half - theme.padding
 						local startX = parent.Width * 0.5 - totalSize * 0.5
@@ -199,10 +233,10 @@ mod.create = function(self, config)
 							btn.content.Height = maskSize / btnRatio
 							btn.content.head.Width = maskSize * headMaskRatio
 							btn.content.head.pos.X = btn.content.Width * 0.5 - btn.content.head.Width * 0.5
-
-							-- btn.Width = size
-							-- btn.Height = size
-							btn.pos = { startX + (i - 1) * (size + theme.padding), btn.Height + theme.padding }
+							btn.pos = {
+								startX + (i - 1) * (size + theme.padding),
+								startYEyeShapes + btn.Height + theme.padding,
+							}
 						end
 						for i = half + 1, #btns do
 							btn = btns[i]
@@ -210,12 +244,30 @@ mod.create = function(self, config)
 							btn.content.Height = maskSize / btnRatio
 							btn.content.head.Width = maskSize * headMaskRatio
 							btn.content.head.pos.X = btn.content.Width * 0.5 - btn.content.head.Width * 0.5
-							-- btn.Width = size
-							-- btn.Height = size
-							btn.pos = { startX + (i - half - 1) * (size + theme.padding), 0 }
+							btn.pos = { startX + (i - half - 1) * (size + theme.padding), startYEyeShapes }
 						end
 
-						config.requestHeightCallback(btnHeight * 2 + theme.padding * 2 + categories.Height)
+						totalSize = (colorWidth + theme.padding) * halfColors - theme.padding
+						startX = parent.Width * 0.5 - totalSize * 0.5
+						for i = 1, halfColors do
+							btn = colorBtns[i]
+							btn.Width = colorWidth
+							btn.Height = colorHeight
+							btn.pos = {
+								startX + (i - 1) * (colorWidth + theme.padding),
+								btn.Height + theme.padding,
+							}
+						end
+						for i = halfColors + 1, #colorBtns do
+							btn = colorBtns[i]
+							btn.Width = colorWidth
+							btn.Height = colorHeight
+							btn.pos = { startX + (i - halfColors - 1) * (colorWidth + theme.padding), 0 }
+						end
+
+						config.requestHeightCallback(
+							colorHeight * 2 + btnHeight * 2 + theme.padding * 4 + categories.Height
+						)
 					end
 
 					categoryNode:setParent(node)
@@ -228,7 +280,7 @@ mod.create = function(self, config)
 			-- 	btn:disable()
 			-- 	return btn
 			elseif index == 4 then
-				local btn = ui:buttonNeutral({ content = "👃 Nose", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "👃 Nose" })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -271,7 +323,8 @@ mod.create = function(self, config)
 						mask.head = head
 
 						local btn = ui:createButton(mask, {
-							-- color = color.skin1,
+							color = Color(181, 186, 193),
+							padding = false,
 						})
 						btn.onRelease = function()
 							avatarProperties.noseIndex = noseIndex
@@ -287,8 +340,8 @@ mod.create = function(self, config)
 						local size = (parent.Width - theme.padding * (half - 1)) / half
 						size = math.min(MAX_COLOR_SWATCH_SIZE, size)
 
-						local maskSize = size - (4 + 3) * 2
-						local btnHeight = maskSize / btnRatio + (4 + 3) * 2
+						local maskSize = size - 3 * 2 -- 3 = border
+						local btnHeight = maskSize / btnRatio + 3 * 2 -- 3 = border
 
 						local totalSize = (size + theme.padding) * half - theme.padding
 						local startX = parent.Width * 0.5 - totalSize * 0.5
@@ -326,7 +379,7 @@ mod.create = function(self, config)
 			-- 	btn:disable()
 			-- 	return btn
 			elseif index == 5 then
-				local btn = ui:buttonNeutral({ content = "👕 Jacket", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "👕 Jacket" })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -346,7 +399,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 6 then
-				local btn = ui:buttonNeutral({ content = "👖 Pants", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "👖 Pants" })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -366,7 +419,7 @@ mod.create = function(self, config)
 				end
 				return btn
 			elseif index == 7 then
-				local btn = ui:buttonNeutral({ content = "👞 Shoes", textColor = Color(30, 31, 34) })
+				local btn = ui:buttonNeutral({ content = "👞 Shoes" })
 				btn.onRelease = function()
 					if categoryNode then
 						categoryNode:remove()
@@ -405,12 +458,12 @@ mod.create = function(self, config)
 	categories.parentDidResize = function(self)
 		local parent = self.parent
 		categories.Width = parent.Width
-		categories.Height = refButton.Height
+		categories.Height = refButton.Height + SCROLL_PADDING * 2
 		categories.pos.Y = parent.Height - categories.Height
 
 		if categoryNode then
 			categoryNode.Width = parent.Width
-			categoryNode.Height = parent.Height - categories.Height - theme.padding
+			categoryNode.Height = parent.Height - categories.Height - PADDING
 			categoryNode.pos = { 0, 0 }
 
 			if categoryNode.getItems then
