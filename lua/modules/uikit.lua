@@ -2764,13 +2764,14 @@ function createUI(system)
 				currentIndex = currentIndex + 1
 			end
 
-			if vertical then
-				pos = pos + self.Height * 0.5
-			else
-				pos = pos + self.Width * 0.5
+			if pos ~= nil then
+				if vertical then
+					pos = pos + self.Height * 0.5
+				else
+					pos = pos + self.Width * 0.5
+				end
+				self:setScrollPosition(pos)
 			end
-
-			self:setScrollPosition(pos)
 		end
 
 		node.flush = function(_)
