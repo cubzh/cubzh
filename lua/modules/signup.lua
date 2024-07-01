@@ -1403,6 +1403,16 @@ signup.startFlow = function(self, config)
 
 							local accountInfo = res
 
+							-- IF SOMETHING'S MISSING: show signup
+							if
+								not accountInfo.hasUsername
+								and not accountInfo.hasEmail
+								and not accountInfo.hasPhoneNumber
+							then
+								signupFlow:push(createSignUpOrLoginStep())
+								return
+							end
+
 							if accountInfo.hasDOB == false or accountInfo.hasUsername == false then
 								-- TODO: show info about anonymous accounts
 								-- if callbacks.accountIncomplete then
