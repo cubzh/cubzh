@@ -2464,6 +2464,73 @@ function createUI(system)
 			beginScrollIndicator:setParent(node)
 		end
 
+		local function loadCellInfo(cellIndex)
+			local cellInfo = cache.cellInfo[cellIndex]
+			local cell
+
+			if cellInfo == nil then
+				cell = config.loadCell(cellIndex)
+				if cell == nil then
+					-- reached the end of cells
+					return nil
+				end
+
+				if vertical then
+					cellInfo = { height = cell.Height }
+
+					if cache.contentHeight == 0 then
+						cache.contentHeight = cellInfo.height + padding * 2
+					else
+						cache.contentHeight = cache.contentHeight + cellInfo.height + cellPadding
+					end
+
+					if previousCellInfo ~= nil then
+						if down then
+							cellInfo.top = previousCellInfo.bottom - cellPadding
+						else -- up
+							cellInfo.top = previousCellInfo.top + cellPadding + cellInfo.height
+						end
+					else -- first cell
+						if down then
+							cellInfo.top = 0
+						else -- up
+							cellInfo.top = cellInfo.height
+						end
+					end
+
+					cellInfo.bottom = cellInfo.top - cellInfo.height
+				elseif horizontal then
+					cellInfo = { width = cell.Width }
+
+					if cache.contentWidth == 0 then
+						cache.contentWidth = cellInfo.width + padding * 2
+					else
+						cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
+					end
+
+					if previousCellInfo ~= nil then
+						if right then
+							cellInfo.left = previousCellInfo.right + cellPadding
+						else -- left
+							cellInfo.left = previousCellInfo.left - cellPadding + cellInfo.width
+						end
+					else -- first cell
+						if right then
+							cellInfo.left = 0
+						else -- left
+							cellInfo.left = -cellInfo.width
+						end
+					end
+
+					cellInfo.right = cellInfo.left + cellInfo.width
+				end
+
+				cache.cellInfo[cellIndex] = cellInfo
+			end
+
+			return cellInfo, cell
+		end
+
 		node.refresh = function()
 			if not vertical and not horizontal then
 				return
@@ -2526,38 +2593,13 @@ function createUI(system)
 				end
 
 				while true do
-					cellInfo = cache.cellInfo[cellIndex]
-
+					cellInfo, cell = loadCellInfo(cellIndex)
 					if cellInfo == nil then
-						cell = config.loadCell(cellIndex)
-						if cell == nil then
-							-- reached the end of cells
-							break
-						end
-						cellInfo = { height = cell.Height }
-						if cache.contentHeight == 0 then
-							cache.contentHeight = cellInfo.height + padding * 2
-						else
-							cache.contentHeight = cache.contentHeight + cellInfo.height + cellPadding
-						end
+						-- reached the end of cells
+						break
+					end
 
-						if previousCellInfo ~= nil then
-							if down then
-								cellInfo.top = previousCellInfo.bottom - cellPadding
-							else -- up
-								cellInfo.top = previousCellInfo.top + cellPadding + cellInfo.height
-							end
-						else -- first cell
-							if down then
-								cellInfo.top = 0
-							else -- up
-								cellInfo.top = cellInfo.height
-							end
-						end
-
-						cellInfo.bottom = cellInfo.top - cellInfo.height
-						cache.cellInfo[cellIndex] = cellInfo
-
+					if cell ~= nil then
 						cells[cellIndex] = cell
 						cell:setParent(container)
 						cell.pos.Y = cellInfo.bottom
@@ -2610,38 +2652,13 @@ function createUI(system)
 				end
 
 				while true do
-					cellInfo = cache.cellInfo[cellIndex]
-
+					cellInfo, cell = loadCellInfo(cellIndex)
 					if cellInfo == nil then
-						cell = config.loadCell(cellIndex)
-						if cell == nil then
-							-- reached the end of cells
-							break
-						end
-						cellInfo = { width = cell.Width }
-						if cache.contentWidth == 0 then
-							cache.contentWidth = cellInfo.width + padding * 2
-						else
-							cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
-						end
+						-- reached the end of cells
+						break
+					end
 
-						if previousCellInfo ~= nil then
-							if right then
-								cellInfo.left = previousCellInfo.right + cellPadding
-							else -- left
-								cellInfo.left = previousCellInfo.left - cellPadding + cellInfo.width
-							end
-						else -- first cell
-							if right then
-								cellInfo.left = 0
-							else -- left
-								cellInfo.left = -cellInfo.width
-							end
-						end
-
-						cellInfo.right = cellInfo.left + cellInfo.width
-						cache.cellInfo[cellIndex] = cellInfo
-
+					if cell ~= nil then
 						cells[cellIndex] = cell
 						cell:setParent(container)
 						cell.pos.Y = 0
@@ -2718,6 +2735,42 @@ function createUI(system)
 
 		node.setScrollPosition = function(self, newPosition)
 			targetScrollPosition = self:capPosition(newPosition)
+		end
+
+		node.setScrollIndexVisible = function(self, index)
+			local currentIndex = 1
+			local pos
+
+			while currentIndex < index do
+				cellInfo, cell = loadCellInfo(currentIndex)
+				if cellInfo == nil then
+					-- reached the end of cells
+					break
+				end
+
+				if vertical then
+					pos = cellInfo.bottom - cellInfo.height * 0.5
+				else
+					pos = cellInfo.left - cellInfo.width * 0.5
+				end
+
+				-- if cell ~= nil, it means it's just been created
+				-- it has to be parented to the container
+				if cell ~= nil then
+					cells[cellIndex] = cell
+					cell:setParent(container)
+				end
+
+				currentIndex = currentIndex + 1
+			end
+
+			if vertical then
+				pos = pos + self.Height * 0.5
+			else
+				pos = pos + self.Width * 0.5
+			end
+
+			self:setScrollPosition(pos)
 		end
 
 		node.flush = function(_)
@@ -3461,6 +3514,10 @@ function createUI(system)
 			ease:outBack(selector, 0.22).pos = p
 
 			selector.pos.Z = -10 -- render on front
+
+			if btn.selectedRow then
+				scroll:setScrollIndexVisible(btn.selectedRow)
+			end
 
 			selector.close = function(_)
 				if comboBoxSelector == selector then

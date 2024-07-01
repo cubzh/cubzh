@@ -597,15 +597,9 @@ signup.startFlow = function(self, config)
 
 				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big" })
 				okBtn:setParent(drawer)
-				okBtn.onRelease = function()
-					-- signupFlow:push(createAvatarEditorStep())
-					api:patchUserPhone({ phone = "+33768201427" }, function(err)
-						if err ~= nil then
-							print("ERR:", err)
-						end
-					end)
-				end
 				-- okBtn:disable()
+
+				local selectedPrefix = "1"
 
 				local text = ui:createText("Final step! What's your phone number?", {
 					color = Color.White,
@@ -643,7 +637,7 @@ signup.startFlow = function(self, config)
 					"IL",
 					"UA",
 				}
-				-- local countries = phonenumbers.countries
+
 				local countryLabels = {}
 				local c
 				for _, countryCode in ipairs(proposedCountries) do
@@ -652,9 +646,6 @@ signup.startFlow = function(self, config)
 						table.insert(countryLabels, c.code .. " +" .. c.prefix)
 					end
 				end
-				-- for _, country in ipairs(countries) do
-				-- 	table.insert(countryLabels, country.code .. " +" .. country.prefix)
-				-- end
 
 				local countryInput = ui:createComboBox("US +1", countryLabels)
 				countryInput:setParent(drawer)
@@ -665,6 +656,17 @@ signup.startFlow = function(self, config)
 					{ textSize = "big", keyboardType = "phone", suggestions = false }
 				)
 				phoneInput:setParent(drawer)
+
+				okBtn.onRelease = function()
+					-- signupFlow:push(createAvatarEditorStep())
+
+					print("PHONE NUMBER:", "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text))
+					-- api:patchUserPhone({ phone = "+33768201427" }, function(err)
+					-- 	if err ~= nil then
+					-- 		print("ERR:", err)
+					-- 	end
+					-- end)
+				end
 
 				local layoutPhoneInput = function()
 					phoneInput.Width = drawer.Width - theme.paddingBig * 2 - countryInput.Width - theme.padding
@@ -677,6 +679,8 @@ signup.startFlow = function(self, config)
 				countryInput.onSelect = function(self, index)
 					System:DebugEvent("User did pick country for phone number")
 					self.Text = countryLabels[index]
+					-- TODO: update selectedPrefix
+					selectedPrefix = "TODO"
 					layoutPhoneInput()
 				end
 
@@ -688,6 +692,7 @@ signup.startFlow = function(self, config)
 					if res.countryCode ~= nil then
 						self.Text = res.remainingNumber
 						countryInput.Text = res.countryCode .. " +" .. res.countryPrefix
+						selectedPrefix = res.countryPrefix
 						layoutPhoneInput()
 					end
 
