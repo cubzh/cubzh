@@ -99,6 +99,20 @@ mod.create = function(self, config)
 		LocalEvent:Send("avatar_editor_should_focus_on_body")
 	end
 
+	local btns = {}
+
+	local displayedCategoryIndex = 1
+
+	local function refreshCategoryButtons()
+		for _, b in pairs(btns) do
+			if b.index == displayedCategoryIndex then
+				b:select()
+			else
+				b:unselect()
+			end
+		end
+	end
+
 	categories = ui:createScroll({
 		backgroundColor = theme.buttonTextColor,
 		direction = "right",
@@ -107,13 +121,29 @@ mod.create = function(self, config)
 		loadCell = function(index)
 			if index == 1 then
 				local btn = ui:buttonNeutral({ content = "🙂 Skin" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					setSkin()
 				end
 				return btn
 			elseif index == 2 then
 				local btn = ui:buttonNeutral({ content = "✨ Hair" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					if categoryNode then
 						categoryNode:remove()
 					end
@@ -136,7 +166,15 @@ mod.create = function(self, config)
 				return btn
 			elseif index == 3 then
 				local btn = ui:buttonNeutral({ content = "🙂 Eyes" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					if categoryNode then
 						categoryNode:remove()
 					end
@@ -190,20 +228,40 @@ mod.create = function(self, config)
 					end
 
 					local colorBtns = {}
-					for eyesColorIndex, color in pairs(avatar.eyeColors) do
-						local btn = ui:createButton("", {
-							color = color,
-						})
-						btn.onRelease = function()
-							-- head:setColors({
-							-- 	skin1 = colors.skin1,
-							-- 	skin2 = colors.skin2,
-							-- 	nose = colors.nose,
-							-- 	mouth = colors.mouth,
-							-- })
-							avatarProperties.eyesColorIndex = eyesColorIndex
-							LocalEvent:Send("avatar_editor_update", { eyesColorIndex = eyesColorIndex })
+					local lastIndex = #avatar.eyeColors
+					for eyesColorIndex, color in ipairs(avatar.eyeColors) do
+						local btn
+						if eyesColorIndex == lastIndex then -- premium feature, not yet implemented
+							btn = ui:button({
+								content = "🎨",
+								color = Color(0, 0, 0, 0.3),
+							})
+							local premiumBadge = ui:createText("👑", { size = "big" })
+							premiumBadge.parentDidResize = function(self)
+								local parent = self.parent
+								self.pos.X = parent.Width - self.Width - 5
+								self.pos.Y = 5
+							end
+							premiumBadge:setParent(btn)
+
+							btn:disable()
+						else
+							btn = ui:button({
+								content = "",
+								color = color,
+							})
+							btn.onRelease = function()
+								-- head:setColors({
+								-- 	skin1 = colors.skin1,
+								-- 	skin2 = colors.skin2,
+								-- 	nose = colors.nose,
+								-- 	mouth = colors.mouth,
+								-- })
+								avatarProperties.eyesColorIndex = eyesColorIndex
+								LocalEvent:Send("avatar_editor_update", { eyesColorIndex = eyesColorIndex })
+							end
 						end
+
 						btn:setParent(categoryNode)
 						table.insert(colorBtns, btn)
 					end
@@ -281,7 +339,15 @@ mod.create = function(self, config)
 			-- 	return btn
 			elseif index == 4 then
 				local btn = ui:buttonNeutral({ content = "👃 Nose" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					if categoryNode then
 						categoryNode:remove()
 					end
@@ -380,7 +446,15 @@ mod.create = function(self, config)
 			-- 	return btn
 			elseif index == 5 then
 				local btn = ui:buttonNeutral({ content = "👕 Jacket" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					if categoryNode then
 						categoryNode:remove()
 					end
@@ -400,7 +474,15 @@ mod.create = function(self, config)
 				return btn
 			elseif index == 6 then
 				local btn = ui:buttonNeutral({ content = "👖 Pants" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					if categoryNode then
 						categoryNode:remove()
 					end
@@ -420,7 +502,15 @@ mod.create = function(self, config)
 				return btn
 			elseif index == 7 then
 				local btn = ui:buttonNeutral({ content = "👞 Shoes" })
+				btn.index = index
+				btns[btn.index] = btn
 				btn.onRelease = function()
+					if displayedCategoryIndex == index then
+						return
+					end
+					displayedCategoryIndex = index
+					refreshCategoryButtons()
+
 					if categoryNode then
 						categoryNode:remove()
 					end
@@ -473,6 +563,7 @@ mod.create = function(self, config)
 	end
 
 	categories:setParent(node)
+	refreshCategoryButtons()
 
 	setSkin()
 

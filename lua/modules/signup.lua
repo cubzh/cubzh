@@ -816,9 +816,8 @@ signup.startFlow = function(self, config)
 							okBtn:enable()
 							return
 						end
+						signupFlow:push(createVerifyPhoneNumberStep())
 					end)
-
-					signupFlow:push(createVerifyPhoneNumberStep())
 				end
 
 				local layoutPhoneInput = function()
