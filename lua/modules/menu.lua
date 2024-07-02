@@ -2,7 +2,7 @@ local menu = {}
 
 bundle = require("bundle")
 loc = require("localize")
-str = require("str")
+-- str = require("str")
 ui = require("uikit").systemUI(System)
 uiAvatar = require("ui_avatar")
 avatarModule = require("avatar")
@@ -78,6 +78,24 @@ MODAL_KEYS = {
 	CUBZH_MENU = 10,
 	OUTFITS = 11,
 }
+
+-- User account management
+
+-- This can be called once the user account data has been retrieved.
+-- (In the event callback of LocalEvent.Name.UserAccountInfoRetrieved for instance)
+function getUserAccountState()
+	local result = {
+		created = System.Authenticated,
+		hasUsername = System.HasUsername,
+		hasEmail = System.HasEmail,
+		hasPassword = System.HasPassword,
+		-- TODO: add phone number
+		hasDOB = System.HasDOB,
+		hasAcceptedTerms = System.HasAcceptedTerms,
+		isUnder13 = System.IsUnder13,
+	}
+	return result
+end
 
 function connect()
 	if Players.Max <= 1 then
@@ -1901,6 +1919,9 @@ menu.ShowItems = function(_)
 	return true
 end
 
+-- "Auth complete" callbacks called when valid credentials are stored on the device and verified.
+-- (on account creation, when user logs in, when app starts and verify credentials are still valid)
+
 authCompleteCallbacks = {}
 
 function authCompleted()
@@ -1909,6 +1930,7 @@ function authCompleted()
 	end
 end
 
+-- Triggered when the user account is created
 menu.OnAuthComplete = function(self, callback)
 	if self ~= menu then
 		return
@@ -2155,12 +2177,13 @@ end
 
 -- callbacks: success, loggedOut, error
 function accountCheck(callbacks)
-	showLoading("Checking user info")
+	print("🐞 checking user account...")
 
 	if System.HasCredentials == false then
 		if callbacks.loggedOut then
 			callbacks.loggedOut()
 		end
+		LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 		return
 	end
 
@@ -2172,6 +2195,7 @@ function accountCheck(callbacks)
 			if callbacks.error then
 				callbacks.error()
 			end
+			LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 			return
 		end
 
@@ -2181,12 +2205,14 @@ function accountCheck(callbacks)
 			if callbacks.accountIncomplete then
 				callbacks.accountIncomplete()
 			end
+			LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 			return
 		end
 
 		if System.Under13DisclaimerNeedsApproval then
 			if callbacks.under13DisclaimerNeedsApproval then
 				callbacks.under13DisclaimerNeedsApproval()
+				LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 				return
 			end
 		end
@@ -2198,6 +2224,8 @@ function accountCheck(callbacks)
 		if callbacks.success then
 			callbacks.success()
 		end
+
+		LocalEvent:Send(LocalEvent.Name.UserAccountInfoRetrieved)
 	end)
 end
 
@@ -2329,39 +2357,6 @@ authFlow.showSignUp = function(self, callbacks)
 	self:clear({ removeHelpBtn = false })
 	self:common()
 
-	-- if self.loginBtn == nil then
-	-- 	local loginBtn = ui:createButton("Login", { textSize = "small", borders = false })
-	-- 	loginBtn:setColor(Color(0, 0, 0, 0.4), Color(255, 255, 255))
-	-- 	loginBtn.parentDidResize = function(self)
-	-- 		self.pos = {
-	-- 			Screen.SafeArea.Left + theme.padding,
-	-- 			Screen.Height - self.Height - theme.padding - System.SafeAreaTop,
-	-- 			0,
-	-- 		}
-	-- 	end
-
-	-- 	loginBtn.onRelease = function()
-	-- 		authFlow:showLogin()
-	-- 		-- System.Login(function(success, _)
-	-- 		-- 	if success then
-	-- 		-- 		helpBtn:remove()
-	-- 		-- 		loginBtn:remove()
-
-	-- 		-- 		signupModal.didClose = nil
-	-- 		-- 		signupModal:close()
-	-- 		-- 		signupModal = nil
-
-	-- 		-- 		if callbacks.success ~= nil then
-	-- 		-- 			callbacks.success()
-	-- 		-- 		end
-	-- 		-- 	end
-	-- 		-- end)
-	-- 	end
-	-- 	loginBtn:parentDidResize()
-
-	-- 	self.loginBtn = loginBtn
-	-- end
-
 	local signupFlow = require("signup"):startFlow({
 		ui = ui,
 		onCancel = function()
@@ -2373,55 +2368,6 @@ authFlow.showSignUp = function(self, callbacks)
 		end,
 	})
 	self.activeFlow = signupFlow
-
-	-- local signupModal = require("signup"):createModal({ uikit = ui })
-	-- self.modal = signupModal
-
-	-- signupModal.onSubmit = function(username, key, dob)
-	-- 	System:DebugEvent("SIGNUP_SUBMIT")
-	-- 	self:clear()
-
-	-- 	local function _createAccount(onError)
-	-- 		showLoading("Creating account")
-	-- 		api:signUp(username, key, dob, function(err, credentials)
-	-- 			if err ~= nil then
-	-- 				if onError ~= nil then
-	-- 					hideLoading()
-	-- 					onError(onError)
-	-- 				end
-	-- 				return
-	-- 			else
-	-- 				System:StoreCredentials(credentials["user-id"], credentials.token)
-	-- 				System:DebugEvent("ACCOUNT_CREATED")
-	-- 				if authFlow.callbacks.success ~= nil then
-	-- 					authFlow.callbacks.success()
-	-- 				end
-	-- 			end
-	-- 		end)
-	-- 	end
-
-	-- 	local function onError(onError)
-	-- 		showAlert({
-	-- 			message = "❌ Sorry, something went wrong.",
-	-- 			positiveCallback = function()
-	-- 				_createAccount(onError)
-	-- 			end,
-	-- 			positiveLabel = "Retry",
-	-- 			neutralCallback = function()
-	-- 				if authFlow.callbacks.error ~= nil then
-	-- 					authFlow.callbacks.error()
-	-- 				end
-	-- 			end,
-	-- 			neutralLabel = "Cancel",
-	-- 		})
-	-- 	end
-
-	-- 	_createAccount(onError)
-	-- end
-
-	-- signupModal.didClose = function()
-	-- 	self:clear({ callCancel = true, closeModal = false })
-	-- end
 end
 
 function skipTitleScreen()
@@ -2623,14 +2569,65 @@ if Environment.CHAT_CONSOLE_DISPLAY == "always" then
 	refreshChat()
 end
 
-if System.Authenticated then
-	showTopBar()
-	hideBottomBar()
-else
-	if Environment.USER_AUTH == "disabled" then
-		hideBottomBar()
-		hideTitleScreen()
+-- Register local event listener for AppMinVersionChecked
+LocalEvent:Listen(LocalEvent.Name.AppMinVersionChecked, function(err, minVersionRespected)
+	print("[🛎️][AppMinVersionChecked][ERR]", err, "[OK]", minVersionRespected)
+	hideLoading() -- "Checking app version"
+	if err ~= nil then
+		-- TODO: show button to retry + error
+		-- if callbacks.networkError then
+		-- 	callbacks.networkError()
+		-- end
+		return
+	end
+
+	if minVersionRespected == false then
+		-- TODO: show message asking for the update of the app
+		return
+	end
+
+	-- App is up to date, let's start the next step: check the user account info
+	showLoading("Checking user info")
+	accountCheck({})
+end)
+
+-- Register local event listener for UserAccountInfoRetrieved
+LocalEvent:Listen(LocalEvent.Name.UserAccountInfoRetrieved, function()
+	print("[🛎️][UserAccountInfoRetrieved]")
+
+	local accountInfo = getUserAccountState()
+
+	-- if no user account is found locally, then create one,
+	-- and redo the accountCheck() process (that will re-trigger with callback function)
+	if accountInfo.created == false then
+		api:signUp(nil, nil, nil, function(err, credentials)
+			if err ~= nil then
+				print("[🙂][❌] user account creation failed:", err)
+				-- TODO: show an error message or something
+				return
+			else
+				print("[🙂] user account created successfully")
+				System:StoreCredentials(credentials["user-id"], credentials.token)
+				System:DebugEvent("ACCOUNT_CREATED")
+				accountCheck({})
+			end
+		end)
+		return
+	end
+
+	hideLoading() -- "Checking user info"
+
+	-- if account if incomplete, we start the sign up flow
+	-- TODO: make sure the condition is correct here
+	-- hasParentEmail ?
+	-- hasParentPhoneNumber ?
+	if accountInfo.hasUsername or accountInfo.hasEmail or accountInfo.hasPhoneNumber then
+		-- accepted
+		print("[🛎️][UserAccountInfoRetrieved] accepted")
+		-- TODO : show home screen (list of worlds)
 	else
+		-- sign-up flow
+		print("[🛎️][UserAccountInfoRetrieved] start sign up flow")
 		showTitleScreen()
 		local signupFlow = require("signup"):startFlow({
 			ui = ui,
@@ -2659,12 +2656,44 @@ else
 					activeFlow:remove()
 				end
 			end,
+			avatarEditorStep = function()
+				LocalEvent:Send("signup_flow_avatar_editor")
+			end,
+			dobStep = function()
+				LocalEvent:Send("signup_flow_dob")
+			end,
 		})
 		activeFlow = signupFlow
 	end
+end)
+
+-- Gets the app min-version from the Cubzh API,
+-- compares it to the current app version, and then
+-- sends the LocalEvent.Name.AppMinVersionChecked event.
+function checkAppMinVersion()
+	print("🐞 checking app min version...")
+
+	api:getMinAppVersion(function(error, minVersion)
+		if error ~= nil then
+			LocalEvent:Send(LocalEvent.Name.AppMinVersionChecked, error, false)
+			return
+		end
+
+		-- compare versions
+		local major, minor, patch = parseVersion(Client.AppVersion)
+		local minMajor, minMinor, minPatch = parseVersion(minVersion)
+		local appIsUpToDate = (major > minMajor)
+			or (major == minMajor and minor > minMinor)
+			or (major == minMajor and minor == minMinor and patch >= minPatch)
+
+		-- send local event
+		LocalEvent:Send(LocalEvent.Name.AppMinVersionChecked, nil, appIsUpToDate)
+	end)
 end
 
-getWorldInfoReq = nil
+showLoading("Checking app version")
+checkAppMinVersion()
+
 function getWorldInfo()
 	if getWorldInfoReq ~= nil then
 		getWorldInfoReq:Cancel()

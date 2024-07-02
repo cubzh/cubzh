@@ -178,7 +178,7 @@ void TrackingClient::_sendKeepAliveEventIfNeeded() {
         if (t - _session_used_at > KEEP_ALIVE_DELAY) {
             _session_used_at = t;
             std::unordered_map<std::string, std::string> properties;
-            _trackEvent("KEEP_ALIVE", properties);
+            _trackEvent("Keep alive", properties);
         }
     }
     _operationQueue->schedule([](){

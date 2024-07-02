@@ -34,6 +34,7 @@ config = {
 	collisionGroups = function return nil end -- should be or return collision groups
 	color = function return Color.White end -- should be or return a Color
 	pps = function return nil end -- should be or return number of spawned particles per second, if nil, all spawned at once
+	layers = function end
 }
 
 --]]
@@ -66,6 +67,9 @@ particles.newEmitter = function(_, config)
 			p.Palette[1].Color = particles.fromConfigOrDefault(conf.color, Color.White)
 			p.CollisionGroups = particles.fromConfigOrDefault(conf.collisionGroups, nil)
 			p.CollidesWithGroups = particles.fromConfigOrDefault(conf.collidesWithGroups, nil)
+			if conf.layers then
+				p.Layers = conf.layers
+			end
 			p:RefreshModel() -- TODO: index particles by color to avoid this
 
 			World:AddChild(p)

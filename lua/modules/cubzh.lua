@@ -6,6 +6,127 @@ Modules = {
 -- Dev.DisplayBoxes = true
 
 Client.OnStart = function()
+	Clouds.On = false
+
+	ease = require("ease")
+	particles = require("particles")
+
+	drawerHeight = 0
+	avatarLayers = 5
+	avatarCamera = nil
+
+	avatarCameraFocus = "body" -- body / head
+	avatarCameraTarget = nil
+
+	backgroundCamera = Camera()
+	backgroundCamera.Projection = ProjectionMode.Orthographic
+	backgroundCamera.On = true
+	backgroundCamera.Layers = { 6 }
+	print("backgroundCamera.ViewOrder:", backgroundCamera.ViewOrder)
+	World:AddChild(backgroundCamera)
+
+	backgroundCamera.ViewOrder = 1
+	Camera.ViewOrder = 2
+
+	function getAvatarCameraTargetPosition(h, w)
+		if avatarCameraTarget == nil then
+			-- error("avatarCameraTarget should not be nil", 2)
+			return nil
+		end
+
+		local _w = avatarCamera.TargetWidth
+		local _h = avatarCamera.TargetHeight
+
+		avatarCamera.TargetHeight = h
+		avatarCamera.TargetWidth = w
+		avatarCamera.Height = h
+		avatarCamera.Width = w
+		avatarCamera.TargetX = 0
+		avatarCamera.TargetY = 0
+
+		local box = Box()
+		local pos = avatarCamera.Position:Copy()
+		if avatarCameraFocus == "body" then
+			box:Fit(avatarCameraTarget, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.7)
+		elseif avatarCameraFocus == "head" then
+			box:Fit(avatarCameraTarget.Head, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.5)
+		elseif avatarCameraFocus == "eyes" then
+			box:Fit(avatarCameraTarget.Head, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.6)
+		elseif avatarCameraFocus == "nose" then
+			box:Fit(avatarCameraTarget.Head, { recursive = true })
+			avatarCamera:FitToScreen(box, 0.6)
+		end
+
+		local targetPos = avatarCamera.Position:Copy()
+
+		-- restore
+		avatarCamera.TargetHeight = _h
+		avatarCamera.TargetWidth = _w
+		avatarCamera.Height = _h
+		avatarCamera.Width = _w
+		avatarCamera.TargetX = 0
+		avatarCamera.TargetY = 0
+		avatarCamera.Position:Set(pos)
+
+		return targetPos
+	end
+
+	local avatarCameraState = {}
+	function layoutAvatarCamera(config)
+		-- print("layoutAvatarCamera, drawerHeight:", drawerHeight)
+		local h = Screen.Height - drawerHeight
+
+		if
+			avatarCameraState.h == h
+			and avatarCameraState.screenWidth == Screen.Width
+			and avatarCameraState.focus == avatarCameraFocus
+			and avatarCameraState.target == avatarCameraTarget
+		then
+			-- nothing changed, early return
+			return
+		end
+
+		local p = getAvatarCameraTargetPosition(h, Screen.Width)
+		if p == nil then
+			return
+		end
+
+		avatarCameraState.h = h
+		avatarCameraState.screenWidth = Screen.Width
+		avatarCameraState.focus = avatarCameraFocus
+		avatarCameraState.target = avatarCameraTarget
+
+		ease:cancel(avatarCamera)
+
+		if config.noAnimation then
+			avatarCamera.TargetHeight = h
+			avatarCamera.TargetWidth = Screen.Width
+			avatarCamera.Height = h
+			avatarCamera.Width = Screen.Width
+			avatarCamera.TargetX = 0
+			avatarCamera.TargetY = 0
+			avatarCamera.Position:Set(p)
+			return
+		end
+
+		local anim = ease:inOutSine(avatarCamera, 0.2, {
+			onDone = function()
+				avatarCameraState.animation = nil
+			end,
+		})
+
+		anim.TargetHeight = h
+		anim.TargetWidth = Screen.Width
+		anim.Height = h
+		anim.Width = Screen.Width
+		anim.TargetX = 0
+		anim.TargetY = 0
+		anim.Position = p
+	end
+
 	Camera:SetModeFree()
 	Camera:SetParent(World)
 
@@ -18,12 +139,27 @@ Client.OnStart = function()
 
 	LocalEvent:Listen("signup_flow_avatar_preview", function()
 		titleScreen():hide()
-		avatar():show()
+		avatar():show({ mode = "demo" })
+	end)
+
+	LocalEvent:Listen("signup_flow_avatar_editor", function()
+		titleScreen():hide()
+		avatar():show({ mode = "user" })
+	end)
+
+	LocalEvent:Listen("signup_flow_dob", function()
+		avatarCameraFocus = "body"
+		layoutAvatarCamera()
 	end)
 
 	LocalEvent:Listen("signup_flow_start_or_login", function()
 		titleScreen():show()
 		avatar():hide()
+	end)
+
+	LocalEvent:Listen("signup_drawer_height_update", function(height)
+		drawerHeight = height
+		layoutAvatarCamera()
 	end)
 
 	light = Light()
@@ -33,11 +169,72 @@ Client.OnStart = function()
 	light.CastsShadows = true
 	light.On = true
 	light.Type = LightType.Directional
+	-- light.Layers = Camera.Layers + avatarLayers
+	light.Layers = avatarLayers
+	light.Layers = { 1, avatarLayers } -- Camera.Layers + avatarLayers
 	World:AddChild(light)
-	light.Rotation:Set(math.rad(20), math.rad(20), 0)
+	light.Rotation:Set(math.rad(5), math.rad(-20), 0)
 
 	Light.Ambient.SkyLightFactor = 0.2
 	Light.Ambient.DirectionalLightFactor = 0.5
+
+	avatarCamera = Camera()
+	-- avatarCamera.Layers = Camera.Layers
+	avatarCamera.Layers = avatarLayers
+	avatarCamera:SetParent(World)
+	avatarCamera.On = true
+	avatarCamera.ViewOrder = 3
+	-- avatarCamera.FOV = Camera.FOV
+
+	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+		layoutAvatarCamera()
+	end)
+
+	local logoTile = bundle:Data("images/logo-tile-rotated.png")
+
+	backgroundQuad = Quad()
+	backgroundQuad.IsUnlit = true
+	backgroundQuad.IsDoubleSided = true
+	-- backgroundQuad.Tiling = Number2(30, 30)
+	-- backgroundQuad.Color = Color(255, 0, 0)
+	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
+	-- backgroundQuad.Image = logoTile
+	backgroundQuad.Width = Screen.RenderWidth
+	backgroundQuad.Height = Screen.RenderHeight
+	backgroundQuad.Anchor = { 0.5, 0.5 }
+	backgroundQuad.Layers = { 6 }
+	World:AddChild(backgroundQuad)
+	backgroundQuad.Position.Z = 2
+
+	backgroundLogo = Quad()
+	backgroundLogo.IsUnlit = true
+	backgroundLogo.IsDoubleSided = true
+	backgroundLogo.Color = Color(0, 0, 0, 0.2)
+	-- backgroundQuad.Color = { gradient = "V", from = Color(0, 0, 0), to = Color(255, 255, 255) }
+	backgroundLogo.Image = logoTile
+	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
+	backgroundLogo.Height = backgroundLogo.Width
+	backgroundLogo.Tiling = backgroundLogo.Width / Number2(100, 100)
+	backgroundLogo.Anchor = { 0.5, 0.5 }
+	backgroundLogo.Layers = { 6 }
+	World:AddChild(backgroundLogo)
+	backgroundLogo.Position.Z = 1
+
+	local delta = Number2(-1, 1)
+	speed = 0.2
+	LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+		backgroundLogo.Offset = backgroundLogo.Offset + delta * dt * speed
+	end)
+end
+
+Screen.DidResize = function()
+	if backgroundQuad then
+		backgroundQuad.Width = Screen.RenderWidth
+		backgroundQuad.Height = Screen.RenderHeight
+		backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
+		backgroundLogo.Height = backgroundLogo.Width
+		backgroundLogo.Tiling = backgroundLogo.Width / Number2(100, 100)
+	end
 end
 
 -- Client.OnWorldObjectLoad = function(obj)
@@ -58,6 +255,7 @@ function titleScreen()
 	local tickListener
 
 	_titleScreen.show = function()
+		-- Camera.On = true
 		if root ~= nil then
 			return
 		end
@@ -201,6 +399,10 @@ function titleScreen()
 			chest.Rotation = chest.rot * Rotation(d7, d8, 0)
 			chestLid.LocalRotation = chestLidRot * Rotation(d5, 0, 0)
 
+			pezh.Rotation = pezh.rot * Rotation(d5, d8, 0)
+			sword.Rotation = sword.rot * Rotation(d5, d8, 0)
+			cube.Rotation = cube.rot * Rotation(d5, d8, 0)
+
 			-- spaceship.Rotation = spaceship.Rotation * Rotation(dt * 3, 0, 0)
 		end)
 
@@ -217,6 +419,7 @@ function titleScreen()
 	end
 
 	_titleScreen.hide = function()
+		-- Camera.On = false
 		if root == nil then
 			return
 		end
@@ -230,6 +433,14 @@ function titleScreen()
 	end
 
 	return _titleScreen
+end
+
+function shuffle(array)
+	local n = #array
+	for i = n, 2, -1 do
+		local j = math.random(i)
+		array[i], array[j] = array[j], array[i]
+	end
 end
 
 local _avatar
@@ -250,7 +461,23 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/pink_pop_hair"),
 		bundle:Shape("shapes/signup_demo/pirate_captain_hat"),
 		bundle:Shape("shapes/signup_demo/santa_hair"),
+		bundle:Shape("shapes/signup_demo/elf_hair"),
+		bundle:Shape("shapes/signup_demo/sennin_head"),
+		bundle:Shape("shapes/signup_demo/geek_long_hair"),
+		bundle:Shape("shapes/signup_demo/elvis"),
+		bundle:Shape("shapes/signup_demo/wolf_cut"),
+		bundle:Shape("shapes/signup_demo/luffy_hair"),
+		bundle:Shape("shapes/signup_demo/crown"),
+		bundle:Shape("shapes/signup_demo/raccoon_head"),
+		bundle:Shape("shapes/signup_demo/just_hair"),
+		bundle:Shape("shapes/signup_demo/grass_cubzh"),
 	}
+	local hairsCurrentIndex = 0
+	local hairsRandomIndexes = {}
+	for i = 1, #hairs do
+		table.insert(hairsRandomIndexes, i)
+	end
+	shuffle(hairsRandomIndexes)
 
 	local jackets = {
 		bundle:Shape("shapes/signup_demo/astronaut_top"),
@@ -259,7 +486,15 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/princess_dresstop"),
 		bundle:Shape("shapes/signup_demo/red_robot_suit"),
 		bundle:Shape("shapes/signup_demo/sweater"),
+		bundle:Shape("shapes/signup_demo/jedi_tunic"),
 	}
+
+	local jacketsCurrentIndex = 0
+	local jacketsRandomIndexes = {}
+	for i = 1, #jackets do
+		table.insert(jacketsRandomIndexes, i)
+	end
+	shuffle(jacketsRandomIndexes)
 
 	local pants = {
 		bundle:Shape("shapes/signup_demo/overalls_pants"),
@@ -268,6 +503,13 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/stripe_pants2"),
 	}
 
+	local pantsCurrentIndex = 0
+	local pantsRandomIndexes = {}
+	for i = 1, #pants do
+		table.insert(pantsRandomIndexes, i)
+	end
+	shuffle(pantsRandomIndexes)
+
 	local boots = {
 		bundle:Shape("shapes/signup_demo/astronaut_shoes"),
 		bundle:Shape("shapes/signup_demo/flaming_boots"),
@@ -275,14 +517,25 @@ function avatar()
 		bundle:Shape("shapes/signup_demo/pirate_boots_01"),
 	}
 
+	local bootsCurrentIndex = 0
+	local bootsRandomIndexes = {}
+	for i = 1, #boots do
+		table.insert(bootsRandomIndexes, i)
+	end
+	shuffle(bootsRandomIndexes)
+
+	local defaultHair = bundle:Shape("shapes/default_hair")
+	local defaultJacket = bundle:Shape("shapes/default_jacket")
+	local defaultPants = bundle:Shape("shapes/default_pants")
+	local defaultShoes = bundle:Shape("shapes/default_shoes")
+
 	local yaw = math.rad(-190)
 	local pitch = 0
 
+	-- local avatarCamera
 	local root
-	local didResizeFunction
-	local didResizeListener
-	local dragListener
-	local changeTimer
+	local listeners = {}
+	local avatarLayers = 5
 
 	local function drag(dx, dy)
 		yaw = yaw - dx * 0.01
@@ -292,96 +545,299 @@ function avatar()
 		end
 	end
 
-	_avatar.show = function()
+	local mode = "demo" -- demo / user
+
+	local emitter
+	local particlesColor = Color(0, 0, 0)
+
+	_avatar.show = function(self, config)
 		if root ~= nil then
-			return
+			if mode == config.mode then
+				return
+			end
+			self:hide()
 		end
+
+		if emitter == nil then
+			emitter = particles:newEmitter({
+				acceleration = -Config.ConstantAcceleration,
+				velocity = function()
+					local v = Number3(0, 0, math.random(40, 50))
+					v:Rotate(math.random() * math.pi * 2, math.random() * math.pi * 2, 0)
+					return v
+				end,
+				life = 3.0,
+				scale = function()
+					return 0.7 + math.random() * 1.0
+				end,
+				layers = avatarLayers,
+				color = function()
+					return particlesColor
+				end,
+			})
+		end
+
+		mode = config.mode
+
+		local hierarchyactions = require("hierarchyactions")
+
 		root = Object()
-		root:SetParent(World)
+
+		local eyeBlinks = true
+		if mode == "demo" then
+			eyeBlinks = false
+		end
 
 		local avatar = avatarModule:get({
 			usernameOrId = "",
 			-- size = math.min(Screen.Height * 0.5, Screen.Width * 0.75),
 			-- ui = ui,
-			eyeBlinks = false,
+			eyeBlinks = eyeBlinks,
 		})
 
 		avatar:SetParent(root)
 		root.avatar = avatar
 
-		avatar.Animations.Idle:Stop()
+		hierarchyactions:applyToDescendants(root, { includeRoot = true }, function(o)
+			pcall(function()
+				o.Layers = avatarLayers
+			end)
+		end)
+
 		avatar.Animations.Walk:Stop()
-		-- avatar.Animations.Walk:Play()
+		avatar.Animations.Idle:Play()
 
 		local b = Box()
 		b:Fit(avatar, { recursive = true, ["local"] = true })
 		avatar.LocalPosition.Y = -b.Size.Y * 0.5
 
-		avatar:loadEquipment({ type = "hair", shape = hairs[1] })
-		avatar:loadEquipment({ type = "jacket", shape = jackets[1] })
-		avatar:loadEquipment({ type = "pants", shape = pants[1] })
-		avatar:loadEquipment({ type = "boots", shape = boots[1] })
-
-		didResizeFunction = function()
-			local box = Box()
-			box:Fit(root, { recursive = true })
-			Camera:FitToScreen(box, 0.5)
+		if mode == "demo" then
+			avatar:loadEquipment({ type = "hair", shape = hairs[1] })
+			avatar:loadEquipment({ type = "jacket", shape = jackets[1] })
+			avatar:loadEquipment({ type = "pants", shape = pants[1] })
+			avatar:loadEquipment({ type = "boots", shape = boots[1] })
+		else
+			avatar:loadEquipment({ type = "hair", shape = defaultHair })
+			avatar:loadEquipment({ type = "jacket", shape = defaultJacket })
+			avatar:loadEquipment({ type = "pants", shape = defaultPants })
+			avatar:loadEquipment({ type = "boots", shape = defaultShoes })
 		end
 
-		dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
 			drag(pe.DX, pe.DY)
 		end)
 		drag(0, 0)
+		table.insert(listeners, l)
 
-		didResizeListener = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, didResizeFunction)
-		Timer(0.01, function()
-			didResizeFunction()
+		l = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
+			layoutAvatarCamera()
 		end)
-		-- didResizeFunction()
+
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_head", function()
+			avatarCameraFocus = "head"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_eyes", function()
+			avatarCameraFocus = "eyes"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_nose", function()
+			avatarCameraFocus = "nose"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_body", function()
+			avatarCameraFocus = "body"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("signup_flow_avatar_preview", function()
+			avatarCameraFocus = "body"
+			layoutAvatarCamera()
+		end)
+		table.insert(listeners, l)
+
+		local didAttachEquipmentParts = function(equipmentParts)
+			for _, part in ipairs(equipmentParts) do
+				ease:cancel(part)
+				local scale = part.Scale:Copy()
+				part.Scale = part.Scale * 0.8
+				ease:outBack(part, 0.2).Scale = scale
+			end
+		end
+
+		l = LocalEvent:Listen("avatar_editor_update", function(config)
+			if config.skinColorIndex then
+				local colors = avatarModule.skinColors[config.skinColorIndex]
+				local avatar = root.avatar
+				avatar:setColors({
+					skin1 = colors.skin1,
+					skin2 = colors.skin2,
+					nose = colors.nose,
+					mouth = colors.mouth,
+				})
+
+				ease:cancel(root)
+				root.Scale = 0.8
+				ease:outBack(root, 0.2).Scale = Number3(1.0, 1.0, 1.0)
+
+				particlesColor = colors.skin1
+				emitter.Position = root.Position
+				emitter:spawn(10)
+			end
+			if config.eyesIndex then
+				avatar:setEyes({
+					index = config.eyesIndex,
+				})
+			end
+			if config.eyesColorIndex then
+				avatar:setEyes({
+					color = avatarModule.eyeColors[config.eyesColorIndex],
+				})
+			end
+			if config.noseIndex then
+				avatar:setNose({ index = config.noseIndex })
+			end
+			if config.jacket then
+				avatar:loadEquipment({
+					type = "jacket",
+					item = config.jacket,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+			end
+			if config.hair then
+				avatar:loadEquipment({
+					type = "hair",
+					item = config.hair,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+			end
+			if config.pants then
+				avatar:loadEquipment({
+					type = "pants",
+					item = config.pants,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+			end
+			if config.boots then
+				avatar:loadEquipment({
+					type = "boots",
+					item = config.boots,
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+			end
+		end)
+		table.insert(listeners, l)
 
 		local i = 8
 		local r
 		local eyesIndex = 1
 		local eyesCounter = 1
 		local eyesTrigger = 3
-		changeTimer = Timer(0.3, true, function()
-			r = math.random(1, #avatarModule.skinColors)
-			if r == i then
-				r = i + 1
-				if r > #avatarModule.skinColors then
-					r = 1
+		if mode == "demo" then
+			changeTimer = Timer(0.3, true, function()
+				r = math.random(1, #avatarModule.skinColors)
+				if r == i then
+					r = i + 1
+					if r > #avatarModule.skinColors then
+						r = 1
+					end
 				end
-			end
-			i = r
-			local colors = avatarModule.skinColors[i]
-			local avatar = root.avatar
-			avatar:setColors({
-				skin1 = colors.skin1,
-				skin2 = colors.skin2,
-				nose = colors.nose,
-				mouth = colors.mouth,
-			})
-			eyesCounter = eyesCounter + 1
-			if eyesCounter >= eyesTrigger then
-				eyesCounter = 0
-				eyesIndex = eyesIndex + 1
-				if eyesIndex > #avatarModule.eyes then
-					eyesIndex = 1
+				i = r
+				local colors = avatarModule.skinColors[i]
+				local avatar = root.avatar
+				avatar:setColors({
+					skin1 = colors.skin1,
+					skin2 = colors.skin2,
+					nose = colors.nose,
+					mouth = colors.mouth,
+				})
+				eyesCounter = eyesCounter + 1
+				if eyesCounter >= eyesTrigger then
+					eyesCounter = 0
+					eyesIndex = eyesIndex + 1
+					if eyesIndex > #avatarModule.eyes then
+						eyesIndex = 1
+					end
+					avatar:setEyes({
+						index = eyesIndex,
+						color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
+					})
+					avatar:setNose({
+						index = math.random(1, #avatarModule.noses),
+					})
 				end
-				avatar:setEyes({
-					index = eyesIndex,
-					color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
-				})
-				avatar:setNose({
-					index = math.random(1, #avatarModule.noses),
-				})
-			end
 
-			avatar:loadEquipment({ type = "hair", shape = hairs[math.random(1, #hairs)] })
-			avatar:loadEquipment({ type = "jacket", shape = jackets[math.random(1, #jackets)] })
-			avatar:loadEquipment({ type = "pants", shape = pants[math.random(1, #pants)] })
-			avatar:loadEquipment({ type = "boots", shape = boots[math.random(1, #boots)] })
+				hairsCurrentIndex = hairsCurrentIndex + 1
+				if hairsCurrentIndex > #hairsRandomIndexes then
+					shuffle(hairsRandomIndexes)
+					hairsCurrentIndex = 1
+				end
+
+				avatar:loadEquipment({
+					type = "hair",
+					shape = hairs[hairsRandomIndexes[hairsCurrentIndex]],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+
+				jacketsCurrentIndex = jacketsCurrentIndex + 1
+				if jacketsCurrentIndex > #jacketsRandomIndexes then
+					shuffle(jacketsRandomIndexes)
+					jacketsCurrentIndex = 1
+				end
+
+				avatar:loadEquipment({
+					type = "jacket",
+					shape = jackets[jacketsRandomIndexes[jacketsCurrentIndex]],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+
+				pantsCurrentIndex = pantsCurrentIndex + 1
+				if pantsCurrentIndex > #pantsRandomIndexes then
+					shuffle(pantsRandomIndexes)
+					pantsCurrentIndex = 1
+				end
+
+				avatar:loadEquipment({
+					type = "pants",
+					shape = pants[pantsRandomIndexes[pantsCurrentIndex]],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+
+				bootsCurrentIndex = bootsCurrentIndex + 1
+				if bootsCurrentIndex > #bootsRandomIndexes then
+					shuffle(bootsRandomIndexes)
+					bootsCurrentIndex = 1
+				end
+
+				avatar:loadEquipment({
+					type = "boots",
+					shape = boots[bootsRandomIndexes[bootsCurrentIndex]],
+					didAttachEquipmentParts = didAttachEquipmentParts,
+				})
+			end)
+		end
+
+		avatarCameraTarget = nil
+
+		root:SetParent(World)
+		root.IsHidden = true
+
+		Timer(0.03, function()
+			root.IsHidden = false
+			avatarCameraTarget = root
+			layoutAvatarCamera({ noAnimation = true })
 		end)
+
+		return root
 	end
 
 	_avatar.hide = function()
@@ -395,14 +851,20 @@ function avatar()
 		avatar:loadEquipment({ type = "pants", item = "" })
 		avatar:loadEquipment({ type = "boots", item = "" })
 
-		changeTimer:Cancel()
-		changeTimer = nil
-		dragListener:Remove()
-		dragListener = nil
-		didResizeListener:Remove()
-		didResizeFunction = nil
+		if changeTimer then
+			changeTimer:Cancel()
+			changeTimer = nil
+		end
+
+		for _, l in ipairs(listeners) do
+			l:Remove()
+		end
+		listeners = {}
 		root:RemoveFromParent()
 		root = nil
+
+		emitter:RemoveFromParent()
+		emitter = nil
 	end
 
 	return _avatar

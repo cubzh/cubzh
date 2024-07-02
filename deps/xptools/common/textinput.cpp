@@ -75,7 +75,7 @@ void vx::textinput::textInputRegisterDelegate(vx::textinput::UpdateCallback upda
     textInputNextCallback = next;
 }
 
-void vx::textinput::textInputRequest(std::string str, size_t cursorStart, size_t cursorEnd, bool multiline , TextInputKeyboardType keyboardType, TextInputReturnKeyType returnKeyType ) {
+void vx::textinput::textInputRequest(std::string str, size_t cursorStart, size_t cursorEnd, bool multiline , TextInputKeyboardType keyboardType, TextInputReturnKeyType returnKeyType, bool suggestions) {
     if (hostPlatformTextInputRequestCallback == nullptr) {
         return;
     }
@@ -85,9 +85,9 @@ void vx::textinput::textInputRequest(std::string str, size_t cursorStart, size_t
     // printf("** textInputRequest - %s\n", c != platformToEngineBufferChecksum ? "STR DID CHANGE" : "STR DID NOT CHANGE");
     if (c != platformToEngineBufferChecksum) {
         platformToEngineBufferChecksum = c;
-        hostPlatformTextInputRequestCallback(str.c_str(), str.size(), true, cursorStart, cursorEnd, multiline, keyboardType, returnKeyType);
+        hostPlatformTextInputRequestCallback(str.c_str(), str.size(), true, cursorStart, cursorEnd, multiline, keyboardType, returnKeyType, suggestions);
     } else {
-        hostPlatformTextInputRequestCallback(str.c_str(), str.size(), false, cursorStart, cursorEnd, multiline, keyboardType, returnKeyType);
+        hostPlatformTextInputRequestCallback(str.c_str(), str.size(), false /* strDidChange */, cursorStart, cursorEnd, multiline, keyboardType, returnKeyType, suggestions);
     }
 }
 
