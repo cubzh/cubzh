@@ -49,6 +49,11 @@ local hierarchyActionsMetatable = {
 				depth = newDepth,
 				includeRoot = true, -- always include root for descendants
 			}
+			if shape.ChildrenCount == nil then
+				error("shape has no childs", 3)
+				
+				return
+			end
 			for i = 1, shape.ChildrenCount do
 				local child = shape:GetChild(i)
 				self:applyToDescendants(child, newOptions, callback)
