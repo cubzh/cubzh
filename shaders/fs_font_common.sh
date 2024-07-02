@@ -5,10 +5,10 @@ $input v_color0, v_texcoord0, v_texcoord1
 #else
 $input v_color0, v_texcoord0
 #endif
-	#define coloredGlyph CLAMP01(v_texcoord0.w)
 
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
+#include "./include/font_lib.sh"
 #if FONT_VARIANT_LIGHTING_UNIFORM
 #include "./include/utils_lib.sh"
 #include "./include/game_uniforms.sh"
@@ -27,17 +27,24 @@ uniform vec4 u_lighting;
 uniform vec4 u_normal;
 #endif
 
-SAMPLERCUBE(s_texColor, 0);
+SAMPLERCUBE(s_atlas, 0);
+SAMPLERCUBE(s_atlasPoint, 1);
 
 void main() {
-	vec4 base = textureCube(s_texColor, v_texcoord0.xyz).bgra;
-	base.a = mix(base.a, base.r, coloredGlyph);
+	vec2 metadata = unpackFontMetadata(v_texcoord0.w);
+	#define colored metadata.x
+	#define filtering metadata.y
+
+	vec4 base = mix(textureCube(s_atlasPoint, v_texcoord0.xyz).bgra,
+					textureCube(s_atlas, v_texcoord0.xyz).bgra,
+					filtering);
+	base.a = mix(base.r, base.a, colored);
 
 #if FONT_VARIANT_CUTOUT
 	if (base.a <= EPSILON) discard;
 #endif
 
-	vec4 color = vec4(mix(base.rgb, v_color0.rgb, coloredGlyph), v_color0.a * base.a);
+	vec4 color = vec4(mix(v_color0.rgb, base.rgb, colored), v_color0.a * base.a);
 
 #if FONT_VARIANT_LIGHTING_UNIFORM && FONT_VARIANT_MRT_LIGHTING == 0 && FONT_VARIANT_UNLIT == 0
 	color = getNonVolumeVertexLitColor(color, lightValue, emissive, ambient, v_clipZ);
