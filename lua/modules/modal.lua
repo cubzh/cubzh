@@ -806,7 +806,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self._title.Text = modalContent.title
 		end
 		if self._title and self._title.Width > availableWidthForTopCenter then
-			ui:shrinkToFit(self._title, availableWidthForTopCenter)
+			-- ui:shrinkToFit(self._title, availableWidthForTopCenter)
 			self._title.pos.X = topLeftElementsWidth + theme.padding
 			topCenterElementsWidth = self._title.Width
 			totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4

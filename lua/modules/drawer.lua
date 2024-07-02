@@ -120,6 +120,12 @@ mod.create = function(self, config)
 			Number3(Screen.Width * 0.5 - container.Width * 0.5, -BOTTOM_OFFSET, 0)
 	end
 
+	drawer.onRemove = function()
+		drawer:setParent(nil)
+		container.drawer = nil
+		container:remove()
+	end
+
 	return drawer
 end
 

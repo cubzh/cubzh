@@ -2106,13 +2106,10 @@ function createUI(system)
 		node.onDown = nil
 
 		node.focus = function(self)
-			print("FOCUS 1")
 			if self.state == State.Focused then
 				return
 			end
 			self.state = State.Focused
-
-			print("FOCUS 2")
 
 			currentKeyboardTopMargin = config.bottomMargin
 
@@ -2123,8 +2120,6 @@ function createUI(system)
 				-- can't take focus, maybe it already has it
 				return
 			end
-
-			print("FOCUS 3")
 
 			if self.tickListener == nil then
 				self.tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
@@ -3330,6 +3325,16 @@ function createUI(system)
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
+
+		image = Data:FromBundle("images/button_selected.png")
+		config.backgroundQuadSelected = Quad()
+		config.backgroundQuadSelected.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
 		return ui.button(self, config)
 	end
 
@@ -3782,58 +3787,6 @@ function createUI(system)
 			print("⚠️ uikit.pointerUp is deprecated, no need to call it anymore!")
 			pointerUpWarningDisplayed = true
 		end
-	end
-
-	ui.shrinkToFit = function(self, text, maxWidth)
-		if text.Width <= maxWidth then
-			return
-		end
-		local charWidth
-		local spaceWidth
-		local emojiWidth
-		local emojisPositions = {}
-		local firstEmojiUTF8Code = 0x2000
-
-		local pos = 1
-		for _, code in utf8.codes(text.Text) do
-			if code > firstEmojiUTF8Code then
-				table.insert(emojisPositions, i)
-			end
-			pos = pos + 1
-		end
-
-		do
-			local aChar = self:createText("a")
-			charWidth = aChar.Width
-			aChar:remove()
-			local aStr = self:createText("aa")
-			local strWidth = aStr.Width
-			aStr:remove()
-			spaceWidth = strWidth - 2 * charWidth
-			local anEmoji = self:createText("⬅️")
-			emojiWidth = anEmoji.Width
-			anEmoji:remove()
-		end
-
-		local currentWidth = 0
-		local nbChars = 0
-		local it = 1
-		for i = 1, #text.Text do
-			if i == emojisPositions[it] then
-				currentWidth = currentWidth + emojiWidth
-				it = it + 1
-			else
-				currentWidth = currentWidth + charWidth
-			end
-
-			if currentWidth + charWidth > maxWidth then
-				break
-			end
-			nbChars = nbChars + 1
-			currentWidth = currentWidth + spaceWidth
-		end
-
-		text.Text = text.Text:sub(1, nbChars) .. "…"
 	end
 
 	return ui
