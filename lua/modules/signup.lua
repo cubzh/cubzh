@@ -1505,118 +1505,184 @@ signup.startFlow = function(self, config)
 
 					local checks = {}
 
+					-- minAppVersion()
+					-- magicKey (check if a magic key has been requested) TODO: test this flow
+					--   IF NO MAGIC KEY : userAccountExists() (check if a user account exists locally)
+					--   IF MAGIC KEY : display magic key prompt (can be cancelled)
+					-- IF NO USER ACCOUNT : createAccount() then checkUserAccount()
+					-- IF USER ACCOUNT : checkUserAccount()
+					-- IF USER ACCOUNT COMPLETE : go to main home screen
+					-- IF USER ACCOUNT INCOMPLETE : push step "SignUpOrLoginStep"
+
+					--                                           minAppVersion()
+					--                                             |        \
+					--                                             |         \
+					-- 		                                       |        error("app needs updating")
+					--                                             |
+					--                                        magicKey()?
+					--                                          /    \
+					--                                   No    /      \   Yes
+					--                                       /          \
+					--                        userAccountExists()?   displayMagicKeyPrompt() (can be cancelled)
+					--                              /     \
+					--                         No  /       \  Yes
+					--                           /         /
+					--                createAccount()     /
+					--                      |            /
+					--                      |			/
+					--                checkUserAccount()
+					--                      |
+					--             userAccountComplete()?
+					--                  /             \
+					--               No/               \ Yes
+					--                /                 \
+					--   pushStep("SignUpOrLoginStep")  goToMainHomeScreen()
+					--
+
+					checks.error = function(optionalErrorMsg)
+						text.Text = ""
+						loadingFrame:hide()
+
+						local msgStr = "Error, something went wrong."
+						if type(optionalErrorMsg) == "string" and optionalErrorMsg ~= "" then
+							msgStr = optionalErrorMsg
+						end
+
+						-- Show error message with retry button
+						-- Click on button should call checks.minAppVersion()
+
+						local errorText = ui:createText(msgStr, { color = Color.White, size = "default" })
+						local retryBtn = ui:buttonNeutral({ content = "Retry", textSize = "big", padding = 10 })
+						local errorBox = ui:createFrame(Color(0, 0, 0, 0.70))
+
+						errorBox.parentDidResize = function(self)
+							ease:cancel(self)
+							self.Width = math.max(errorText.Width, retryBtn.Width) + theme.paddingBig * 2
+							self.Height = errorText.Height + retryBtn.Height + theme.paddingBig * 3
+							self.pos = {
+								Screen.Width * 0.5 - self.Width * 0.5,
+								Screen.Height / 5.0 - self.Height * 0.5,
+							}
+						end
+
+						errorText.parentDidResize = function(self)
+							self.pos = {
+								errorBox.Width * 0.5 - self.Width * 0.5,
+								retryBtn.Height + theme.paddingBig * 2,
+							}
+						end
+
+						retryBtn.parentDidResize = function(self)
+							self.pos = {
+								errorBox.Width * 0.5 - self.Width * 0.5,
+								theme.paddingBig,
+							}
+						end
+
+						errorText:setParent(errorBox)
+						retryBtn:setParent(errorBox)
+
+						errorBox:parentDidResize()
+
+						retryBtn.onRelease = function()
+							-- hide the error box
+							errorBox:remove()
+							-- call the first sub-step again
+							checks.minAppVersion()
+						end
+
+						local targetPos = errorBox.pos:Copy()
+						errorBox.pos.Y = errorBox.pos.Y - 50
+						ease:outBack(errorBox, animationTime).pos = targetPos
+					end
+
 					checks.minAppVersion = function()
+						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
 							if error ~= nil then
-								-- TODO: show button to retry + error
-								-- if callbacks.networkError then
-								-- 	callbacks.networkError()
-								-- end
+								System:DebugEvent("Request to get min app version failed", { error = error })
+								checks.error() -- Show error message with retry button
 								return
 							end
 
 							local major, minor, patch = parseVersion(Client.AppVersion)
 							local minMajor, minMinor, minPatch = parseVersion(minVersion)
+							local appIsUpToDate = (major > minMajor)
+								or (major == minMajor and minor > minMinor)
+								or (major == minMajor and minor == minMinor and patch >= minPatch)
 
-							-- minPatch = 51 -- force trigger, for tests
-							if
-								major < minMajor
-								or (major == minMajor and minor < minMinor)
-								or (minor == minMinor and patch < minPatch)
-							then
-								if callbacks.updateRequired then
-									local minVersion = string.format("%d.%d.%d", minMajor, minMinor, minPatch)
-									local currentVersion = string.format("%d.%d.%d", major, minor, patch)
-									-- callbacks.updateRequired(minVersion, currentVersion)
-								end
-
-								text.Text = "⚠️ App needs to be updated!\nminimum version: "
-									.. string.format("%d.%d.%d", minMajor, minMinor, minPatch)
-									.. "\n"
-									.. "installed: "
-									.. string.format("%d.%d.%d", major, minor, patch)
-								loadingFrame:parentDidResize()
-							else
+							if appIsUpToDate then
+								-- call next sub-step
 								checks.magicKey()
+							else
+								-- App is not up-to-date
+								checks.error("App needs to be updated!")
 							end
 						end)
 					end
 
+					-- Checks whether a magic key has been requested.
 					checks.magicKey = function()
 						text.Text = "Checking magic key..."
 						loadingFrame:parentDidResize()
 
 						if System.HasCredentials == false and System.AskedForMagicKey then
 							System:RemoveAskedForMagicKey()
-
 							-- TODO: show magic key prompt
-
-							-- authFlow:showLogin(callbacks)
-							-- if callbacks.requestedMagicKey ~= nil then
-							-- 	callbacks.requestedMagicKey()
-							-- end
+							checks.error("TODO: magic key prompt")
 						else
-							checks.account()
+							checks.userAccountExists()
 						end
 					end
 
-					checks.account = function()
-						text.Text = "Checking user info..."
+					-- Checks whether a user account exists locally.
+					checks.userAccountExists = function()
+						-- Update loading message
+						text.Text = "Checking user account..."
 						loadingFrame:parentDidResize()
 
 						if System.HasCredentials == false then
-							signupFlow:push(createSignUpOrLoginStep())
-							return
+							-- Not user account is present locally.
+							-- Create new empty account.
+							checks.createAccount()
+						else
+							checks.checkUserAccount()
 						end
+					end
 
-						-- Fetch account info
-						-- it's ok to continue if err == nil
-						-- (info updated at the engine level)
-						System.GetAccountInfo(function(err, res)
+					checks.createAccount = function()
+						-- Update loading message
+						text.Text = "Creating user account..."
+						loadingFrame:parentDidResize()
+
+						api:signUp(nil, nil, nil, function(err, credentials)
 							if err ~= nil then
-								-- TODO: show button to retry + error
-								-- if callbacks.error then
-								-- 	callbacks.error()
-								-- end
-								return
+								checks.error("Account creation failed")
+							else
+								System:StoreCredentials(credentials["user-id"], credentials.token)
+								System:DebugEvent("ACCOUNT_CREATED")
+								checks.checkUserAccount()
 							end
-
-							local accountInfo = res
-
-							-- IF SOMETHING'S MISSING: show signup
-							if
-								not accountInfo.hasUsername
-								and not accountInfo.hasEmail
-								and not accountInfo.hasPhoneNumber
-							then
-								signupFlow:push(createSignUpOrLoginStep())
-								return
-							end
-
-							if accountInfo.hasDOB == false or accountInfo.hasUsername == false then
-								-- TODO: show info about anonymous accounts
-								-- if callbacks.accountIncomplete then
-								-- 	callbacks.accountIncomplete()
-								-- end
-								return
-							end
-
-							if System.Under13DisclaimerNeedsApproval then
-								if callbacks.under13DisclaimerNeedsApproval then
-									-- TODO: push under 13 disclaimer
-									-- callbacks.under13DisclaimerNeedsApproval()
-									return
-								end
-							end
-
-							-- NOTE: accountInfo.hasPassword could be false here
-							-- for some accounts created pre-0.0.52.
-							-- (mandatory after that)
-
-							config.loginSuccess()
 						end)
 					end
 
+					checks.checkUserAccount = function()
+						text.Text = "Checking user info..."
+						loadingFrame:parentDidResize()
+
+						if
+							System.HasCredentials
+							and (System.hasUsername or System.HasEmail or System.hasVerifiedPhoneNumber)
+						then
+							-- User account is considered complete
+							-- config.loginSuccess() -- TODO: go to main home screen
+						else
+							-- show signup
+							signupFlow:push(createSignUpOrLoginStep())
+						end
+					end
+
+					-- Start with the first sub-step
 					checks.minAppVersion()
 				end
 				loadingFrame:parentDidResize()
