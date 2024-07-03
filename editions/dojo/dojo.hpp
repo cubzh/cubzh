@@ -24,6 +24,11 @@ typedef enum LogicalOperator {
   Or,
 } LogicalOperator;
 
+typedef enum PatternMatching {
+  FixedLen = 0,
+  VariableLen = 1,
+} PatternMatching;
+
 typedef struct Account Account;
 
 typedef struct Provider Provider;
@@ -53,15 +58,9 @@ typedef struct ResultToriiClient {
   };
 } ResultToriiClient;
 
-typedef struct CArrayc_char {
-  const char **data;
-  uintptr_t data_len;
-} CArrayc_char;
-
-typedef struct KeysClause {
-  const char *model;
-  struct CArrayc_char keys;
-} KeysClause;
+typedef struct FieldElement {
+  uint8_t data[32];
+} FieldElement;
 
 typedef struct CArrayu8 {
   uint8_t *data;
@@ -84,10 +83,6 @@ typedef struct ResultCArrayu8 {
     };
   };
 } ResultCArrayu8;
-
-typedef struct FieldElement {
-  uint8_t data[32];
-} FieldElement;
 
 typedef struct Signature {
   /**
@@ -266,6 +261,16 @@ typedef struct ResultCOptionTy {
   };
 } ResultCOptionTy;
 
+typedef struct CArrayFieldElement {
+  struct FieldElement *data;
+  uintptr_t data_len;
+} CArrayFieldElement;
+
+typedef struct ModelKeysClause {
+  struct CArrayFieldElement keys;
+  const char *model;
+} ModelKeysClause;
+
 typedef struct Model {
   const char *name;
   struct CArrayMember members;
@@ -302,6 +307,17 @@ typedef struct ResultCArrayEntity {
     };
   };
 } ResultCArrayEntity;
+
+typedef struct CArrayc_char {
+  const char **data;
+  uintptr_t data_len;
+} CArrayc_char;
+
+typedef struct KeysClause {
+  struct CArrayFieldElement keys;
+  enum PatternMatching pattern_matching;
+  struct CArrayc_char models;
+} KeysClause;
 
 typedef enum ValueType_Tag {
   String,
@@ -396,15 +412,10 @@ typedef struct Query {
   struct COptionClause clause;
 } Query;
 
-typedef struct CArrayKeysClause {
-  struct KeysClause *data;
+typedef struct CArrayModelKeysClause {
+  struct ModelKeysClause *data;
   uintptr_t data_len;
-} CArrayKeysClause;
-
-typedef struct CArrayFieldElement {
-  struct FieldElement *data;
-  uintptr_t data_len;
-} CArrayFieldElement;
+} CArrayModelKeysClause;
 
 typedef struct ModelMetadata {
   struct Ty schema;
@@ -465,6 +476,23 @@ typedef struct ResultSubscription {
     };
   };
 } ResultSubscription;
+
+typedef enum EntityKeysClause_Tag {
+  HashedKeys,
+  EntityKeys,
+} EntityKeysClause_Tag;
+
+typedef struct EntityKeysClause {
+  EntityKeysClause_Tag tag;
+  union {
+    struct {
+      struct CArrayFieldElement hashed_keys;
+    };
+    struct {
+      struct KeysClause entity_keys;
+    };
+  };
+} EntityKeysClause;
 
 typedef enum ResultCArrayFieldElement_Tag {
   OkCArrayFieldElement,
@@ -569,7 +597,7 @@ typedef struct ResultAccount {
 } ResultAccount;
 
 typedef struct Call {
-  const char *to;
+  struct FieldElement to;
   const char *selector;
   struct CArrayFieldElement calldata;
 } Call;
@@ -605,56 +633,54 @@ extern "C" {
 struct ResultToriiClient client_new(const char *torii_url,
                                     const char *rpc_url,
                                     const char *libp2p_relay_url,
-                                    const char *world,
-                                    const struct KeysClause *entities,
-                                    uintptr_t entities_len);
+                                    struct FieldElement world);
 
 struct ResultCArrayu8 client_publish_message(struct ToriiClient *client,
                                              const char *message,
                                              struct Signature signature);
 
-struct ResultCOptionTy client_model(struct ToriiClient *client, const struct KeysClause *keys);
+struct ResultCOptionTy client_model(struct ToriiClient *client, const struct ModelKeysClause *keys);
 
 struct ResultCArrayEntity client_entities(struct ToriiClient *client, const struct Query *query);
 
 struct ResultCArrayEntity client_event_messages(struct ToriiClient *client,
                                                 const struct Query *query);
 
-struct CArrayKeysClause client_subscribed_models(struct ToriiClient *client);
+struct CArrayModelKeysClause client_subscribed_models(struct ToriiClient *client);
 
 struct WorldMetadata client_metadata(struct ToriiClient *client);
 
 struct Resultbool client_add_models_to_sync(struct ToriiClient *client,
-                                            const struct KeysClause *models,
+                                            const struct ModelKeysClause *models,
                                             uintptr_t models_len);
 
 struct ResultSubscription client_on_sync_model_update(struct ToriiClient *client,
-                                                      struct KeysClause model,
+                                                      struct ModelKeysClause model,
                                                       void (*callback)(void));
 
 struct ResultSubscription client_on_entity_state_update(struct ToriiClient *client,
-                                                        struct FieldElement *entities,
-                                                        uintptr_t entities_len,
+                                                        const struct EntityKeysClause *clause,
                                                         void *user_data,
                                                         void (*callback)(struct FieldElement,
                                                                          struct CArrayModel,
                                                                          void*));
 
 struct ResultSubscription client_on_event_message_update(struct ToriiClient *client,
-                                                         struct FieldElement *event_messages,
-                                                         uintptr_t event_messages_len,
+                                                         const struct EntityKeysClause *clause,
                                                          void *user_data,
                                                          void (*callback)(struct FieldElement,
                                                                           struct CArrayModel,
                                                                           void*));
 
 struct Resultbool client_remove_models_to_sync(struct ToriiClient *client,
-                                               const struct KeysClause *models,
+                                               const struct ModelKeysClause *models,
                                                uintptr_t models_len);
 
 struct ResultCArrayFieldElement bytearray_serialize(const char *str);
 
 struct Resultc_char bytearray_deserialize(const struct FieldElement *felts, uintptr_t felts_len);
+
+struct FieldElement poseidon_hash(const struct FieldElement *felts, uintptr_t felts_len);
 
 struct ResultFieldElement typed_data_encode(const char *typed_data, struct FieldElement address);
 
