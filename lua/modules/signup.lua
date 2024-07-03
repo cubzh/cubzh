@@ -635,19 +635,24 @@ signup.startFlow = function(self, config)
 				codeInput:setParent(drawer)
 
 				okBtn.onRelease = function()
-					-- okBtn:disable()
-					-- -- signupFlow:push(createAvatarEditorStep())
+					-- TEMPORARY HACK
+					-- config.loginSuccess()
 
-					-- local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
-					-- print("PHONE NUMBER:", phoneNumber)
+					okBtn:disable()
+					-- signupFlow:push(createAvatarEditorStep())
 
-					-- api:patchUserPhone({ phone = phoneNumber }, function(err)
-					-- 	if err ~= nil then
-					-- 		print("ERR:", err)
-					-- 		okBtn:enable()
-					-- 		return
-					-- 	end
-					-- end)
+					local phoneVerifCode = codeInput.Text
+					print("PHONE VERIF CODE:", phoneVerifCode)
+
+					api:patchUserInfo({ phoneVerifCode = phoneVerifCode }, function(err)
+						if err ~= nil then
+							print("ERR:", err)
+							okBtn:enable()
+							return
+						end
+						print("PATCH USER INFO: OK")
+						config.loginSuccess()
+					end)
 				end
 
 				codeInput.onTextChange = function(self)
@@ -808,17 +813,22 @@ signup.startFlow = function(self, config)
 				phoneInput:setParent(drawer)
 
 				okBtn.onRelease = function()
+					-- TEMPORARY HACK
+					-- signupFlow:push(createVerifyPhoneNumberStep())
+					-- return
+
 					okBtn:disable()
 					-- signupFlow:push(createAvatarEditorStep())
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
 					print("PHONE NUMBER:", phoneNumber)
 
-					api:patchUserPhone({ phone = phoneNumber }, function(err)
+					api:patchUserInfo({ phone = phoneNumber }, function(err)
 						if err ~= nil then
 							print("ERR:", err)
 							okBtn:enable()
 							return
 						end
+						print("PATCH USER INFO: OK")
 						signupFlow:push(createVerifyPhoneNumberStep())
 					end)
 				end
@@ -1415,6 +1425,8 @@ signup.startFlow = function(self, config)
 		local startBtn
 		local step = flow:createStep({
 			onEnter = function()
+				System:DebugEvent("App starts signup or login step")
+
 				config.signUpOrLoginStep()
 
 				if loginBtn == nil then
@@ -1508,15 +1520,6 @@ signup.startFlow = function(self, config)
 
 					local checks = {}
 
-					-- minAppVersion()
-					-- magicKey (check if a magic key has been requested) TODO: test this flow
-					--   IF NO MAGIC KEY : userAccountExists() (check if a user account exists locally)
-					--   IF MAGIC KEY : display magic key prompt (can be cancelled)
-					-- IF NO USER ACCOUNT : createAccount() then checkUserAccount()
-					-- IF USER ACCOUNT : checkUserAccount()
-					-- IF USER ACCOUNT COMPLETE : go to main home screen
-					-- IF USER ACCOUNT INCOMPLETE : push step "SignUpOrLoginStep"
-
 					--                                           minAppVersion()
 					--                                             |        \
 					--                                             |         \
@@ -1600,6 +1603,7 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.minAppVersion = function()
+						print("🔥 checks min app version")
 						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
 							if error ~= nil then
@@ -1626,10 +1630,14 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a magic key has been requested.
 					checks.magicKey = function()
+						print("🔥 checks magic key")
+						System:DebugEvent("App checks if magic key has been requested")
+
 						text.Text = "Checking magic key..."
 						loadingFrame:parentDidResize()
 
 						if System.HasCredentials == false and System.AskedForMagicKey then
+							System:DebugEvent("App shows magic key prompt")
 							System:RemoveAskedForMagicKey()
 							-- TODO: show magic key prompt
 							checks.error("TODO: magic key prompt")
@@ -1640,6 +1648,8 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a user account exists locally.
 					checks.userAccountExists = function()
+						print("🔥 checks user account exists")
+
 						-- Update loading message
 						text.Text = "Checking user account..."
 						loadingFrame:parentDidResize()
@@ -1654,6 +1664,9 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.createAccount = function()
+						print("🔥 creates account")
+						System:DebugEvent("App creates new empty user account")
+
 						-- Update loading message
 						text.Text = "Creating user account..."
 						loadingFrame:parentDidResize()
@@ -1670,21 +1683,27 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.checkUserAccount = function()
+						print("🔥 checks account info")
+
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
 
-						print("System:", System)
-						print("hasCredentials:", System.HasCredentials)
-						print("hasUsername:", System.hasUsername)
-						print("hasEmail:", System.HasEmail)
-						print("hasVerifiedPhoneNumber:", System.hasVerifiedPhoneNumber)
+						print("🔥 System.HasCredentials", System.HasCredentials)
+						print("🔥 System.HasEmail", System.HasEmail)
+						print("🔥 System.IsExemptedFromPhoneNumber", System.IsExemptedFromPhoneNumber)
+						-- print("🔥 System.hasUsername", System.hasUsername)
+						-- print("🔥 System.hasVerifiedPhoneNumber", System.hasVerifiedPhoneNumber)
 
 						if
 							System.HasCredentials
-							-- and (System.HasUsername or System.HasEmail or System.HasVerifiedPhoneNumber)
+							and (
+								System.HasEmail
+								or System.IsExemptedFromPhoneNumber -- or System.HasUsername or System.HasVerifiedPhoneNumber
+							)
 						then
+							print("🔥 loginSuccess()")
 							-- User account is considered complete
-							config.loginSuccess() -- TODO: go to main home screen
+							config.loginSuccess()
 						else
 							-- show signup
 							signupFlow:push(createSignUpOrLoginStep())
