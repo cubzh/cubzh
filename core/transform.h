@@ -29,10 +29,6 @@ typedef struct _RigidBody RigidBody;
 /// 1: combine rotation matrices (accurate, no lock)
 /// 2: combine quaternions (safest & most accurate)
 #define TRANSFORM_ROTATION_HELPERS_MODE 2
-/// Select the computing mode for transforms unit vectors getters
-/// 0: rotate w/ matrices (cheaper & accurate)
-/// 1: rotate w/ quaternions (more computation = more error, but useful for testing)
-#define TRANSFORM_UNIT_VECTORS_MODE 0
 /// Select the computing mode for axis-aligned boxes,
 /// 0: use lossy scale & ignore rotation, this is very cheap but causes important issues when
 /// lossy scale is skewed by rotation

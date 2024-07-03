@@ -748,35 +748,20 @@ void transform_get_rotation_euler(Transform *t, float3 *euler) {
 // MARK: - Unit vectors -
 
 void transform_get_forward(Transform *t, float3 *forward) {
-#if TRANSFORM_UNIT_VECTORS_MODE == 0
     transform_refresh(t, false, true); // refresh ltw for intra-frame calculations
-    transform_utils_vector_ltw(t, &float3_forward, forward);
-#elif TRANSFORM_UNIT_VECTORS_MODE == 1
-    *forward = float3_forward;
-    quaternion_rotate_vector(transform_get_rotation(t), forward);
-#endif
+    *forward = (float3){ t->ltw->x3y1, t->ltw->x3y2, t->ltw->x3y3 };
     float3_normalize(forward);
 }
 
 void transform_get_right(Transform *t, float3 *right) {
-#if TRANSFORM_UNIT_VECTORS_MODE == 0
     transform_refresh(t, false, true); // refresh ltw for intra-frame calculations
-    transform_utils_vector_ltw(t, &float3_right, right);
-#elif TRANSFORM_UNIT_VECTORS_MODE == 1
-    *right = float3_right;
-    quaternion_rotate_vector(transform_get_rotation(t), right);
-#endif
+    *right = (float3){ t->ltw->x1y1, t->ltw->x1y2, t->ltw->x1y3 };
     float3_normalize(right);
 }
 
 void transform_get_up(Transform *t, float3 *up) {
-#if TRANSFORM_UNIT_VECTORS_MODE == 0
     transform_refresh(t, false, true); // refresh ltw for intra-frame calculations
-    transform_utils_vector_ltw(t, &float3_up, up);
-#elif TRANSFORM_UNIT_VECTORS_MODE == 1
-    *up = float3_up;
-    quaternion_rotate_vector(transform_get_rotation(t), up);
-#endif
+    *up = (float3){ t->ltw->x2y1, t->ltw->x2y2, t->ltw->x2y3 };
     float3_normalize(up);
 }
 
