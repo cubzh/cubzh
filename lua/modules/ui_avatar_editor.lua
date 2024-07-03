@@ -12,6 +12,10 @@ local SCROLL_PADDING = 4.0
 
 privateFields = setmetatable({}, { __mode = "k" })
 
+function contentMaxHeight()
+	return Screen.Height * 0.5
+end
+
 local avatarProperties = {
 	skinColorIndex = avatar.defaultSkinColorIndex,
 	noseIndex = avatar.defaultNoseIndex,
@@ -199,7 +203,7 @@ mod.create = function(self, config)
 
 						head:setEyes({
 							index = eyesIndex,
-							-- color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
+							color = avatar.eyeColors[avatarProperties.eyesColorIndex],
 						})
 
 						head:setNose({ index = avatarProperties.noseIndex })
@@ -219,6 +223,8 @@ mod.create = function(self, config)
 							color = Color(181, 186, 193),
 							padding = false,
 						})
+						btn.head = head
+
 						btn.onRelease = function()
 							avatarProperties.eyesIndex = eyesIndex
 							LocalEvent:Send("avatar_editor_update", { eyesIndex = eyesIndex })
@@ -259,6 +265,14 @@ mod.create = function(self, config)
 								-- })
 								avatarProperties.eyesColorIndex = eyesColorIndex
 								LocalEvent:Send("avatar_editor_update", { eyesColorIndex = eyesColorIndex })
+
+								for _, b in ipairs(btns) do
+									print("b:", b)
+									print("b.head:", b.head)
+									b.head:setEyes({
+										color = avatar.eyeColors[avatarProperties.eyesColorIndex],
+									})
+								end
 							end
 						end
 
@@ -268,64 +282,72 @@ mod.create = function(self, config)
 
 					btns[1].parentDidResize = function(self)
 						local parent = self.parent
-						local half = math.floor(#btns / 2)
+						local maxHeight = contentMaxHeight()
 
-						local size = (parent.Width - theme.padding * (half - 1)) / half
-						size = math.min(Screen.Height * 0.15, MAX_COLOR_SWATCH_SIZE, size)
+						-- one section for eye shapes, one for colors
+						local maxEyeShapeSectionWidth = (parent.Width - theme.padding) * 0.5
 
-						local halfColors = math.floor(#colorBtns / 2)
-						local colorWidth = (parent.Width - theme.padding * (halfColors - 1)) / halfColors
-						local colorHeight = math.min(Screen.Height * 0.15, 50, colorWidth)
+						-- EYE SHAPES
 
-						local startYEyeShapes = colorHeight * 2 + theme.padding * 2
+						local columns = 2
+						local rows = math.floor(#avatar.eyes / columns)
+						local btnMaxHeight = ((maxHeight + theme.padding) / rows) - theme.padding
 
-						-- TODO: this should be dynamic
-						local maskSize = size - 3 * 2 -- 3 = border
-						local btnHeight = maskSize / btnRatio + 3 * 2 -- 3 = border
+						local btnWidth = (maxEyeShapeSectionWidth - theme.padding * (columns - 1)) / columns
+						local btnHeight = math.min(btnWidth * 1 / btnRatio, btnMaxHeight)
+						btnWidth = btnHeight * btnRatio
 
-						local totalSize = (size + theme.padding) * half - theme.padding
-						local startX = parent.Width * 0.5 - totalSize * 0.5
-						for i = 1, half do
+						local maskWidth = btnWidth - 3 * 2 -- 3 = border
+						local maskHeight = btnHeight - 3 * 2 -- 3 = border
+
+						-- local totalSize = (btnWidth + theme.padding) * columns - theme.padding
+						local startX = 0
+						local startY = (rows - 1) * (btnHeight + theme.padding)
+
+						local row, x
+						for i = 1, #btns do
+							row = math.floor((i - 1) / columns)
+							x = ((i - 1) % columns) + 1
 							btn = btns[i]
-							btn.content.Width = maskSize
-							btn.content.Height = maskSize / btnRatio
-							btn.content.head.Width = maskSize * headMaskRatio
+							btn.content.Width = maskWidth
+							btn.content.Height = maskHeight
+							btn.content.head.Width = maskWidth * headMaskRatio
 							btn.content.head.pos.X = btn.content.Width * 0.5 - btn.content.head.Width * 0.5
 							btn.pos = {
-								startX + (i - 1) * (size + theme.padding),
-								startYEyeShapes + btn.Height + theme.padding,
+								startX + (x - 1) * (btnWidth + theme.padding),
+								startY - (row * (btnHeight + theme.padding)),
 							}
 						end
-						for i = half + 1, #btns do
-							btn = btns[i]
-							btn.content.Width = maskSize
-							btn.content.Height = maskSize / btnRatio
-							btn.content.head.Width = maskSize * headMaskRatio
-							btn.content.head.pos.X = btn.content.Width * 0.5 - btn.content.head.Width * 0.5
-							btn.pos = { startX + (i - half - 1) * (size + theme.padding), startYEyeShapes }
-						end
 
-						totalSize = (colorWidth + theme.padding) * halfColors - theme.padding
-						startX = parent.Width * 0.5 - totalSize * 0.5
-						for i = 1, halfColors do
+						local eyesectionWidth = (btnWidth + theme.padding) * columns
+						local eyesectionHeightPlusOnePadding = (btnHeight + theme.padding) * rows
+						local remainingWidthForColorSection = parent.Width - eyesectionWidth
+
+						-- COLORS
+
+						columns = 2
+						rows = math.floor(#colorBtns / columns)
+						-- btnMaxHeight = ((maxHeight + theme.padding) / rows) - theme.padding
+
+						btnWidth = (remainingWidthForColorSection - theme.padding * (columns - 1)) / columns
+						btnHeight = (eyesectionHeightPlusOnePadding / rows) - theme.padding
+
+						startX = eyesectionWidth
+						startY = (rows - 1) * (btnHeight + theme.padding)
+
+						for i = 1, #colorBtns do
+							row = math.floor((i - 1) / columns)
+							x = ((i - 1) % columns) + 1
 							btn = colorBtns[i]
-							btn.Width = colorWidth
-							btn.Height = colorHeight
+							btn.Width = btnWidth
+							btn.Height = btnHeight
 							btn.pos = {
-								startX + (i - 1) * (colorWidth + theme.padding),
-								btn.Height + theme.padding,
+								startX + (x - 1) * (btnWidth + theme.padding),
+								startY - (row * (btnHeight + theme.padding)),
 							}
 						end
-						for i = halfColors + 1, #colorBtns do
-							btn = colorBtns[i]
-							btn.Width = colorWidth
-							btn.Height = colorHeight
-							btn.pos = { startX + (i - halfColors - 1) * (colorWidth + theme.padding), 0 }
-						end
 
-						config.requestHeightCallback(
-							colorHeight * 2 + btnHeight * 2 + theme.padding * 4 + categories.Height
-						)
+						config.requestHeightCallback(btnHeight * rows + theme.padding * rows + categories.Height)
 					end
 
 					categoryNode:setParent(node)
@@ -358,6 +380,9 @@ mod.create = function(self, config)
 					local headMaskRatio = 190 / 130
 					local size = 130
 
+					local columns = 4
+					local rows = math.floor(#avatar.noses / columns)
+
 					local btns = {}
 					for noseIndex, _ in pairs(avatar.noses) do
 						-- 13 x 9
@@ -372,7 +397,7 @@ mod.create = function(self, config)
 
 						head:setEyes({
 							index = avatarProperties.eyesIndex,
-							-- color = avatarModule.eyeColors[math.random(1, #avatarModule.eyeColors)],
+							color = avatar.eyeColors[avatarProperties.eyesColorIndex],
 						})
 
 						head:setNose({ index = noseIndex })
@@ -401,38 +426,37 @@ mod.create = function(self, config)
 					end
 
 					btns[1].parentDidResize = function(self)
+						local maxHeight = contentMaxHeight()
+						local btnMaxHeight = ((maxHeight + theme.padding) / rows) - theme.padding
 						local parent = self.parent
-						local half = math.floor(#btns / 2)
-						local size = (parent.Width - theme.padding * (half - 1)) / half
-						size = math.min(MAX_COLOR_SWATCH_SIZE, size)
 
-						local maskSize = size - 3 * 2 -- 3 = border
-						local btnHeight = maskSize / btnRatio + 3 * 2 -- 3 = border
+						local btnWidth = (parent.Width - theme.padding * (columns - 1)) / columns
+						local btnHeight = math.min(btnWidth * 1 / btnRatio, btnMaxHeight)
+						btnWidth = btnHeight * btnRatio
 
-						local totalSize = (size + theme.padding) * half - theme.padding
+						local maskWidth = btnWidth - 3 * 2 -- 3 = border
+						local maskHeight = btnHeight - 3 * 2 -- 3 = border
+
+						local totalSize = (btnWidth + theme.padding) * columns - theme.padding
 						local startX = parent.Width * 0.5 - totalSize * 0.5
-						for i = 1, half do
+						local startY = (rows - 1) * (btnHeight + theme.padding)
+
+						local row, x
+						for i = 1, #btns do
+							row = math.floor((i - 1) / columns)
+							x = ((i - 1) % columns) + 1
 							btn = btns[i]
-							btn.content.Width = maskSize
-							btn.content.Height = maskSize / btnRatio
-							btn.content.head.Width = maskSize * headMaskRatio
+							btn.content.Width = maskWidth
+							btn.content.Height = maskHeight
+							btn.content.head.Width = maskWidth * headMaskRatio
 							btn.content.head.pos.X = btn.content.Width * 0.5 - btn.content.head.Width * 0.5
-							-- btn.Width = size
-							-- btn.Height = size
-							btn.pos = { startX + (i - 1) * (size + theme.padding), btn.Height + theme.padding }
-						end
-						for i = half + 1, #btns do
-							btn = btns[i]
-							btn.content.Width = maskSize
-							btn.content.Height = maskSize / btnRatio
-							btn.content.head.Width = maskSize * headMaskRatio
-							btn.content.head.pos.X = btn.content.Width * 0.5 - btn.content.head.Width * 0.5
-							-- btn.Width = size
-							-- btn.Height = size
-							btn.pos = { startX + (i - half - 1) * (size + theme.padding), 0 }
+							btn.pos = {
+								startX + (x - 1) * (btnWidth + theme.padding),
+								startY - (row * (btnHeight + theme.padding)),
+							}
 						end
 
-						config.requestHeightCallback(btnHeight * 2 + theme.padding * 2 + categories.Height)
+						config.requestHeightCallback(btnHeight * rows + theme.padding * rows + categories.Height)
 					end
 
 					categoryNode:setParent(node)

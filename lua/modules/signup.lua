@@ -1288,7 +1288,7 @@ signup.startFlow = function(self, config)
 						drawer:updateConfig({
 							layoutContent = function(self)
 								local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
-								drawerHeight = math.min(Screen.Height * 0.6, drawerHeight)
+								drawerHeight = math.floor(math.min(Screen.Height * 0.6, drawerHeight))
 
 								self.Height = drawerHeight
 

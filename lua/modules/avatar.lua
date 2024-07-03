@@ -298,6 +298,49 @@ mod.noses = {
 	},
 	{
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+	},
+	{},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 3, c = NOSE_PALETTE_INDEX },
 	},
 	{
 		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
@@ -313,9 +356,7 @@ mod.noses = {
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
 		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
 
-		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
 		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
-		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
 	},
 	{
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
@@ -327,15 +368,11 @@ mod.noses = {
 		{ x = 3, y = 3, c = NOSE_PALETTE_INDEX },
 	},
 	{
-		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
-		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
 
 		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
 		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
 		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
-
-		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
 	},
 }
 
