@@ -301,7 +301,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
 
     float3 dv, normal, push3, modelDv, modelEpsilon, rtreeNormal;
     float minSwept, swept, rtreeSwept;
-    float3 pos = *transform_get_position(t);
+    float3 pos = *transform_get_position(t, false);
     const bool selfCallbacks = rigidbody_has_callbacks(rb);
     Box broadphase, modelBox, modelBroadphase;
     Shape *shape;
@@ -748,7 +748,8 @@ bool _rigidbody_dynamic_tick(Scene *scene,
     debug_rigidbody_solver_iterations += (int)solverCount;
 #endif
 
-    if (solverCount > 0 && float3_isEqual(&pos, transform_get_position(t), EPSILON_ZERO) == false) {
+    if (solverCount > 0 &&
+        float3_isEqual(&pos, transform_get_position(t, false), EPSILON_ZERO) == false) {
         // apply final position to transform
         transform_set_position(t, pos.x, pos.y, pos.z);
 

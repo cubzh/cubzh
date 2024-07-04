@@ -110,7 +110,7 @@ void _scene_refresh_recurse(Scene *sc,
 
     // Get rigidbody, compute world collider
     Box collider;
-    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider);
+    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider, false);
 
     // Step physics (top-first), collider is kept up-to-date
     if (rb != NULL) {
@@ -122,7 +122,7 @@ void _scene_refresh_recurse(Scene *sc,
 
     // Update r-tree (top-first) after changes
     if (rb != NULL) {
-        transform_get_or_compute_world_aligned_collider(t, &collider);
+        transform_get_or_compute_world_aligned_collider(t, &collider, false);
         _scene_update_rtree(sc, rb, t, &collider);
     }
 
@@ -157,7 +157,7 @@ void _scene_end_of_frame_refresh_recurse(Scene *sc, Transform *t, bool hierarchy
 
     // Update r-tree (top-first) after sandbox changes
     Box collider;
-    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider);
+    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider, false);
     if (rb != NULL) {
         _scene_update_rtree(sc, rb, t, &collider);
         _scene_refresh_rtree_collision_masks(rb);

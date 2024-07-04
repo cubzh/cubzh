@@ -108,7 +108,9 @@ bool transform_ensure_rigidbody(Transform *t,
                                 RigidBody **out);
 bool transform_ensure_rigidbody_copy(Transform *t, const Transform *other);
 RigidBody *transform_get_rigidbody(Transform *const t);
-RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t, Box *collider);
+RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
+                                                           Box *collider,
+                                                           const bool refreshParents);
 
 /// MARK: - Hierarchy -
 bool transform_set_parent(Transform *const t, Transform *parent, bool keepWorld);
@@ -135,15 +137,15 @@ void transform_set_name(Transform *t, const char *value);
 void transform_set_local_scale(Transform *t, const float x, const float y, const float z);
 void transform_set_local_scale_vec(Transform *t, const float3 *scale);
 const float3 *transform_get_local_scale(Transform *t);
-void transform_get_lossy_scale(Transform *t, float3 *scale);
+void transform_get_lossy_scale(Transform *t, float3 *scale, const bool refreshParents);
 
 /// MARK: - Position -
 void transform_set_local_position(Transform *t, const float x, const float y, const float z);
 void transform_set_local_position_vec(Transform *t, const float3 *pos);
 void transform_set_position(Transform *t, const float x, const float y, const float z);
 void transform_set_position_vec(Transform *t, const float3 *pos);
-const float3 *transform_get_local_position(Transform *t);
-const float3 *transform_get_position(Transform *t);
+const float3 *transform_get_local_position(Transform *t, const bool refreshParents);
+const float3 *transform_get_position(Transform *t, const bool refreshParents);
 
 /// MARK: - Rotation -
 void transform_set_local_rotation(Transform *t, Quaternion *q);
@@ -164,9 +166,9 @@ void transform_get_rotation_euler(Transform *t, float3 *euler);
 /// a hierarchy will never use unit vectors and that it is redundant w/ storing rotation A simple
 /// optimization tip would be to store the return value if a player/another object intends to use it
 /// multiple times in a same frame Unit vector setters internally set rotation
-void transform_get_forward(Transform *t, float3 *forward);
-void transform_get_right(Transform *t, float3 *right);
-void transform_get_up(Transform *t, float3 *up);
+void transform_get_forward(Transform *t, float3 *forward, const bool refreshParents);
+void transform_get_right(Transform *t, float3 *right, const bool refreshParents);
+void transform_get_up(Transform *t, float3 *up, const bool refreshParents);
 void transform_set_forward(Transform *t, const float x, const float y, const float z);
 void transform_set_right(Transform *t, const float x, const float y, const float z);
 void transform_set_up(Transform *const t, const float x, const float y, const float z);
@@ -198,23 +200,26 @@ void transform_utils_box_to_aabb(Transform *t,
                                  const Box *b,
                                  Box *aab,
                                  const float3 *offset,
-                                 SquarifyType squarify);
+                                 SquarifyType squarify,
+                                 const bool refreshParents);
 void transform_utils_box_to_static_collider(Transform *t,
                                             const Box *b,
                                             Box *aab,
                                             const float3 *offset,
-                                            SquarifyType squarify);
+                                            SquarifyType squarify,
+                                            const bool refreshParents);
 void transform_utils_box_to_dynamic_collider(Transform *t,
                                              const Box *b,
                                              Box *aab,
                                              const float3 *offset,
-                                             SquarifyType squarify);
+                                             SquarifyType squarify,
+                                             const bool refreshParents);
 Shape *transform_utils_get_shape(Transform *t);
 void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out);
 void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out);
-void transform_utils_get_backward(Transform *t, float3 *backward);
-void transform_utils_get_left(Transform *t, float3 *left);
-void transform_utils_get_down(Transform *t, float3 *down);
+void transform_utils_get_backward(Transform *t, float3 *backward, const bool refreshParents);
+void transform_utils_get_left(Transform *t, float3 *left, const bool refreshParents);
+void transform_utils_get_down(Transform *t, float3 *down, const bool refreshParents);
 const float3 *transform_utils_get_velocity(Transform *t);
 const float3 *transform_utils_get_motion(Transform *t);
 const float3 *transform_utils_get_acceleration(Transform *t);

@@ -159,7 +159,11 @@ SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape);
 bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T coords);
 
 // converts given box to a world axis-aligned box relative to shape
-void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider);
+void shape_box_to_aabox(const Shape *s,
+                        const Box *box,
+                        Box *aabox,
+                        bool isCollider,
+                        const bool refreshParents);
 
 /// a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
 /// therefore is dependant on which space we express it in,
@@ -169,8 +173,10 @@ void shape_get_model_aabb_2(const Shape *s, SHAPE_COORDS_INT3_T *bbMin, SHAPE_CO
 /// (2) in local space, ie. the model AABB w/ local transformations applied (on-demand)
 void shape_get_local_aabb(const Shape *s, Box *box);
 /// (3) in world space, ie. the model AABB w/ world transformations applied (cached)
+/// @param refreshParents generally left to false outside of line-by-line refreshes for the lua
+/// sandbox
 /// @returns true if cache was invalid & world AABB recomputed
-bool shape_get_world_aabb(Shape *s, Box *box);
+bool shape_get_world_aabb(Shape *s, Box *box, const bool refreshParents);
 
 // recomputes box from scratch
 void shape_reset_box(Shape *shape);
@@ -212,9 +218,7 @@ float3 shape_local_to_block(const Shape *s, const float x, const float y, const 
 float3 shape_world_to_block(const Shape *s, const float x, const float y, const float z);
 
 /// translation
-void shape_set_position(Shape *s, const float x, const float y, const float z);
 void shape_set_local_position(Shape *s, const float x, const float y, const float z);
-const float3 *shape_get_position(const Shape *s);
 const float3 *shape_get_local_position(const Shape *s);
 float3 shape_get_model_origin(const Shape *s);
 
@@ -269,7 +273,7 @@ bool shape_ensure_rigidbody(Shape *s,
                             RigidBody **out);
 void shape_fit_collider_to_bounding_box(const Shape *s);
 Box shape_get_model_collider(const Shape *s);
-void shape_compute_world_collider(const Shape *s, Box *box);
+void shape_compute_world_collider(const Shape *s, Box *box, const bool refreshParents);
 
 /// @param s shape model used as obstacle against a moving object
 /// @param modelBox moving object collider aligned with shape model space

@@ -30,7 +30,7 @@ void test_transform_rotation_position(void) {
         Transform *t = transform_make(HierarchyTransform);
         TEST_ASSERT(t != NULL);
         transform_set_position(t, 1.0f, 2.0f, 3.0f);
-        const float3 *pos1 = transform_get_position(t);
+        const float3 *pos1 = transform_get_position(t, true);
         const float3 expected = {1.0f, 2.0f, 3.0f};
         TEST_CHECK(float3_isEqual(pos1, &expected, EPSILON_ZERO));
         transform_release(t);
@@ -44,7 +44,7 @@ void test_transform_rotation_position(void) {
         const float3 pos = {4.0f, 5.0f, 6.0f};
         transform_set_position_vec(t, &pos);
 
-        const float3 *curPos = transform_get_position(t);
+        const float3 *curPos = transform_get_position(t, true);
         const float3 expected = {4.0f, 5.0f, 6.0f};
         TEST_CHECK(float3_isEqual(curPos, &expected, EPSILON_ZERO));
 
@@ -62,7 +62,7 @@ void test_transform_rotation_position(void) {
         transform_set_position(p, 2.0f, 4.0f, 6.0f);
         transform_set_local_position(c, -1.0f, -2.0f, -3.0f);
 
-        const float3 *result = transform_get_position(c);
+        const float3 *result = transform_get_position(c, true);
         const float3 expected = {1.0f, 2.0f, 3.0f};
         TEST_CHECK(float3_isEqual(result, &expected, EPSILON_ZERO));
 
@@ -82,11 +82,11 @@ void test_transform_child(void) {
 
         transform_set_position(t, 2.0f, 4.0f, 6.0f);
         transform_set_local_position(child, 1.0f, 2.0f, 3.0f);
-        const float3 *pos1 = transform_get_local_position(child);
+        const float3 *pos1 = transform_get_local_position(child, true);
         const float3 expected1 = {1.0f, 2.0f, 3.0f};
         TEST_CHECK(float3_isEqual(pos1, &expected1, EPSILON_ZERO));
 
-        const float3 *pos2 = transform_get_position(child);
+        const float3 *pos2 = transform_get_position(child, true);
         const float3 expected2 = {3.0f, 6.0f, 9.0f};
         TEST_CHECK(float3_isEqual(pos2, &expected2, EPSILON_ZERO));
 
@@ -117,7 +117,7 @@ void test_transform_child(void) {
         TEST_ASSERT(t != NULL && child != NULL);
         transform_set_position(child, 10.0f, 20.0f, 30.0f);
         transform_set_parent(child, t, true);
-        const float3 *pos = transform_get_position(child);
+        const float3 *pos = transform_get_position(child, true);
         const float3 expected = {10.0f, 20.0f, 30.0f};
         TEST_CHECK(float3_isEqual(pos, &expected, EPSILON_ZERO));
 
@@ -241,9 +241,10 @@ void test_transform_flush(void) {
     TEST_CHECK(float3_isEqual(&local_rot, &expected_local_rot, EPSILON_ZERO));
 
     const float3 expected_pos = {0.1f, 0.2f, 0.3f};
-    TEST_CHECK(float3_isEqual(transform_get_position(t), &expected_pos, EPSILON_ZERO));
+    TEST_CHECK(float3_isEqual(transform_get_position(t, true), &expected_pos, EPSILON_ZERO));
     const float3 expected_local_pos = {0.1f, 0.2f, 0.3f};
-    TEST_CHECK(float3_isEqual(transform_get_local_position(t), &expected_local_pos, EPSILON_ZERO));
+    TEST_CHECK(
+        float3_isEqual(transform_get_local_position(t, true), &expected_local_pos, EPSILON_ZERO));
 
     transform_flush(t);
 
@@ -252,8 +253,8 @@ void test_transform_flush(void) {
     TEST_CHECK(quaternion_is_equal(transform_get_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
     TEST_CHECK(
         quaternion_is_equal(transform_get_local_rotation(t), &rot_zero, EPSILON_QUATERNION_ERROR));
-    TEST_CHECK(float3_isZero(transform_get_position(t), EPSILON_ZERO));
-    TEST_CHECK(float3_isZero(transform_get_local_position(t), EPSILON_ZERO));
+    TEST_CHECK(float3_isZero(transform_get_position(t, true), EPSILON_ZERO));
+    TEST_CHECK(float3_isZero(transform_get_local_position(t, true), EPSILON_ZERO));
     TEST_CHECK(transform_is_parented(t) == false);
     TEST_CHECK(transform_get_children_count(t) == (size_t)0);
     TEST_CHECK(transform_is_any_dirty(t) == false);

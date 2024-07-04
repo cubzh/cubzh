@@ -51,6 +51,7 @@
     <ClInclude Include="..\..\matrix4x4.h" />
     <ClInclude Include="..\..\mutex.h" />
     <ClInclude Include="..\..\octree.h" />
+    <ClInclude Include="..\..\quad.h" />
     <ClInclude Include="..\..\quaternion.h" />
     <ClInclude Include="..\..\ray.h" />
     <ClInclude Include="..\..\rigidBody.h" />
@@ -129,6 +130,7 @@
     <ClCompile Include="..\..\matrix4x4.c" />
     <ClCompile Include="..\..\mutex.c" />
     <ClCompile Include="..\..\octree.c" />
+    <ClCompile Include="..\..\quad.c" />
     <ClCompile Include="..\..\quaternion.c" />
     <ClCompile Include="..\..\ray.c" />
     <ClCompile Include="..\..\rigidBody.c" />

@@ -142,6 +142,9 @@
     <ClCompile Include="..\..\mutex.c">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\quad.c">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\acutest.h">
@@ -373,6 +376,9 @@
       <Filter>tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\mutex.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\quad.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

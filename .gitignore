@@ -1,3 +1,5 @@
+*.obj
+
 # macOS
 .DS_Store
 
@@ -20,6 +22,8 @@
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/Browse.VC.opendb
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/FileContentIndex/
 /core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/ipch/AutoPCH/**/*.ipch
+/core/tests/visual_studio/.vs/Cubzh Core Unit Tests/v17/*.json
+*.tlog
 
 # Xcode
 *.xcuserdatad
