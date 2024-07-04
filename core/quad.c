@@ -25,6 +25,7 @@ struct _Quad {
     uint32_t *rgba;
     void *data;
     uint32_t size;          /* 4 bytes */
+    uint32_t hash;          /* 4 bytes */
     float width, height;    /* 2x4 bytes */
     float anchorX, anchorY; /* 2x4 bytes */
     float tilingU, tilingV; /* 2x4 bytes */
@@ -58,6 +59,7 @@ Quad *quad_new(void) {
     q->transform = transform_make_with_ptr(QuadTransform, q, &_quad_void_free);
     q->data = NULL;
     q->size = 0;
+    q->hash = 0;
     q->width = 1.0f;
     q->height = 1.0f;
     q->anchorX = 0.0f;
@@ -100,9 +102,11 @@ void quad_copy_data(Quad *q, const void *data, uint32_t size) {
         q->data = malloc(size);
         memcpy(q->data, data, size);
         q->size = size;
+        q->hash = (uint32_t)crc32(0, q->data, (uInt)q->size);
     } else {
         q->data = NULL;
         q->size = 0;
+        q->hash = 0;
     }
 }
 
@@ -115,7 +119,7 @@ uint32_t quad_get_data_size(const Quad *q) {
 }
 
 uint32_t quad_get_data_hash(const Quad *q) {
-    return (uint32_t)crc32(0, q->data, (uInt)q->size);
+    return q->hash;
 }
 
 void quad_set_width(Quad *q, float value) {
