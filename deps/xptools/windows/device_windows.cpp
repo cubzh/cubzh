@@ -648,3 +648,7 @@ std::vector<std::string> vx::device::preferredLanguages() {
 
     return languages;
 }
+
+void vx::device::refreshScreenOrientation() {
+    // does nothing on windows
+}

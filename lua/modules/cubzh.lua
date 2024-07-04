@@ -5,7 +5,25 @@ Modules = {
 -- Dev.DisplayColliders = true
 -- Dev.DisplayBoxes = true
 
+-- TEST ORIENTATIONS
+-- local orientations = { "portrait", "landscapeRight", "landscapeLeft" }
+-- local currentOrientation = 1
+-- local t = 0
+-- Client.Tick = function(dt)
+-- 	t = t + dt
+-- 	if t > 1.0 then
+-- 		t = t % 1.0
+-- 		currentOrientation = currentOrientation + 1
+-- 		if currentOrientation > #orientations then
+-- 			currentOrientation = 1
+-- 		end
+-- 		Screen.Orientation = orientations[currentOrientation]
+-- 	end
+-- end
+
 Client.OnStart = function()
+	Screen.Orientation = "portrait" -- force portrait
+
 	Clouds.On = false
 
 	ease = require("ease")

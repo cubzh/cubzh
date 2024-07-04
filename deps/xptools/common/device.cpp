@@ -46,3 +46,20 @@ int vx::device::hardwareMemoryGB() {
     const double f = hardwareMemory() / 1073741824.0;
     return static_cast<int>(floor(f + 0.5));
 }
+
+static std::string screenAllowedOrientation = "all";
+
+void vx::device::setScreenAllowedOrientation(const std::string &orientation) {
+    if (orientation == "all"
+        || orientation == "portrait"
+        || orientation == "landscape"
+        || orientation == "landscapeLeft"
+        || orientation == "landscapeRight") {
+        screenAllowedOrientation = orientation;
+        refreshScreenOrientation();
+    }
+}
+
+const std::string& vx::device::getScreenAllowedOrientation() {
+    return screenAllowedOrientation;
+}

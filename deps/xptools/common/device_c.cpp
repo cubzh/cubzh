@@ -27,4 +27,8 @@ int32_t device_timestampApple(void) {
     return vx::device::timestampApple();
 }
 
+const char* device_screen_allowed_orientation(void) {
+    return vx::device::getScreenAllowedOrientation().c_str();
+}
+
 } // extern "C" 
