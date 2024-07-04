@@ -23,6 +23,16 @@ local avatarProperties = {
 	eyesColorIndex = avatar.defaultEyesColorIndex,
 }
 
+local cache = {
+	search = "",
+	sort = "likes:desc",
+}
+
+function filterDidChange(search, sort)
+	cache.search = search
+	cache.sort = sort
+end
+
 mod.create = function(self, config)
 	if self ~= mod then
 		error("ui_avatar_editor:create(config) should be called with `:`", 2)
@@ -157,6 +167,9 @@ mod.create = function(self, config)
 						backgroundColor = theme.buttonTextColor,
 						cellPadding = CELL_PADDING,
 						padding = SCROLL_PADDING,
+						search = cache.search,
+						sort = cache.sort,
+						filterDidChange = filterDidChange,
 						onOpen = function(cell)
 							LocalEvent:Send("avatar_editor_update", { hair = cell.fullName })
 						end,
@@ -485,6 +498,9 @@ mod.create = function(self, config)
 					categoryNode = itemGrid:create({
 						categories = { "jacket" },
 						uikit = ui,
+						search = cache.search,
+						sort = cache.sort,
+						filterDidChange = filterDidChange,
 						onOpen = function(cell)
 							LocalEvent:Send("avatar_editor_update", { jacket = cell.fullName })
 						end,
@@ -513,6 +529,9 @@ mod.create = function(self, config)
 					categoryNode = itemGrid:create({
 						categories = { "pants" },
 						uikit = ui,
+						search = cache.search,
+						sort = cache.sort,
+						filterDidChange = filterDidChange,
 						onOpen = function(cell)
 							LocalEvent:Send("avatar_editor_update", { pants = cell.fullName })
 						end,
@@ -541,6 +560,9 @@ mod.create = function(self, config)
 					categoryNode = itemGrid:create({
 						categories = { "boots" },
 						uikit = ui,
+						search = cache.search,
+						sort = cache.sort,
+						filterDidChange = filterDidChange,
 						onOpen = function(cell)
 							LocalEvent:Send("avatar_editor_update", { boots = cell.fullName })
 						end,

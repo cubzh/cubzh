@@ -49,6 +49,8 @@ itemGrid.create = function(_, config)
 		padding = 0,
 		--
 		onOpen = function(cell) end,
+		--
+		filterDidChange = function(_, _) end, -- (search, sort)
 	}
 
 	local ok, err = pcall(function()
@@ -57,6 +59,7 @@ itemGrid.create = function(_, config)
 				repo = { "string" },
 				categories = { "table" },
 				worldsFilter = { "string" },
+				sort = { "string" },
 			},
 		})
 	end)
@@ -162,7 +165,12 @@ itemGrid.create = function(_, config)
 		searchBar = ui:createTextInput(search, "search", { textSize = "small" })
 		searchBar:setParent(grid)
 
-		sortBtn = ui:buttonNeutral({ content = "♥️ Likes", textSize = "small", textColor = Color.Black })
+		local s = "♥️ Likes"
+		if sortBy == "updatedAt:desc" then
+			s = "✨ Recent"
+		end
+
+		sortBtn = ui:buttonNeutral({ content = s, textSize = "small", textColor = Color.Black })
 		sortBtn:setParent(grid)
 		sortBtn.onRelease = function()
 			if sortBy == "likes:desc" then
@@ -172,6 +180,7 @@ itemGrid.create = function(_, config)
 				sortBtn.Text = "♥️ Likes"
 				sortBy = "likes:desc"
 			end
+			config.filterDidChange(search, sortBy)
 			layoutSearchBar()
 			grid:getItems()
 		end
@@ -186,6 +195,7 @@ itemGrid.create = function(_, config)
 				text = text:gsub(" ", "+")
 
 				search = text
+				config.filterDidChange(search, sortBy)
 				grid:getItems()
 			end)
 		end
