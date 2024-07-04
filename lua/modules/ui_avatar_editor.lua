@@ -13,7 +13,7 @@ local SCROLL_PADDING = 4.0
 privateFields = setmetatable({}, { __mode = "k" })
 
 function contentMaxHeight()
-	return Screen.Height * 0.5
+	return Screen.Height * 0.4
 end
 
 local avatarProperties = {
