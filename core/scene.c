@@ -155,13 +155,6 @@ void _scene_refresh_recurse(Scene *sc,
 
     // Clear intra-frame refresh flags (deep-first)
     transform_refresh_children_done(t);
-
-#ifndef P3S_CLIENT_HEADLESS
-    // Refresh shape buffers (deep-first)
-    if (transform_get_type(t) == ShapeTransform) {
-        shape_refresh_vertices(transform_utils_get_shape(t));
-    }
-#endif
 }
 
 bool _scene_shapes_iterator_func(Transform *t, void *ptr) {

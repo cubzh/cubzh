@@ -46,8 +46,8 @@ Transform *scene_get_root(Scene *sc);
 Transform *scene_get_system_root(Scene *sc);
 Rtree *scene_get_rtree(Scene *sc);
 
-/// Perform transform refreshes, step the physics engine, refresh shape buffers, handle transform
-/// removal and collision callbacks
+/// Perform transform refreshes, update the r-tree, step the physics engine,
+/// handle transform removal and collision callbacks
 void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData);
 
 /// A standalone refresh can be called to solely refresh transforms in special cases where waiting
