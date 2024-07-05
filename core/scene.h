@@ -46,20 +46,10 @@ Transform *scene_get_root(Scene *sc);
 Transform *scene_get_system_root(Scene *sc);
 Rtree *scene_get_rtree(Scene *sc);
 
-/// FRAME REFRESH ORDER:
-/// - physics and core tick+refresh (this function)
-/// - scripting tick
-/// - end-of-frame refresh
+/// Perform transform refreshes, step the physics engine, refresh shape buffers, handle transform
+/// removal and collision callbacks
 void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData);
 
-/// End-of-frame refresh performs a final refresh after sandbox changes, enqueues transform for
-/// sync, and refreshes shape buffers to be ready for rendering
-///
-/// FRAME REFRESH ORDER:
-/// - physics and core tick+refresh
-/// - scripting tick
-/// - end-of-frame refresh (this function)
-void scene_end_of_frame_refresh(Scene *sc, void *callbackData);
 /// A standalone refresh can be called to solely refresh transforms in special cases where waiting
 /// for end-of-frame isn't an option, overall it should be avoided
 void scene_standalone_refresh(Scene *sc);
