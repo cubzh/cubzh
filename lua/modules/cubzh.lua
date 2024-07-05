@@ -2,25 +2,6 @@ Modules = {
 	bundle = "bundle",
 }
 
--- Dev.DisplayColliders = true
--- Dev.DisplayBoxes = true
-
--- TEST ORIENTATIONS
--- local orientations = { "portrait", "landscapeRight", "landscapeLeft" }
--- local currentOrientation = 1
--- local t = 0
--- Client.Tick = function(dt)
--- 	t = t + dt
--- 	if t > 1.0 then
--- 		t = t % 1.0
--- 		currentOrientation = currentOrientation + 1
--- 		if currentOrientation > #orientations then
--- 			currentOrientation = 1
--- 		end
--- 		Screen.Orientation = orientations[currentOrientation]
--- 	end
--- end
-
 Client.OnStart = function()
 	Screen.Orientation = "portrait" -- force portrait
 
@@ -30,8 +11,6 @@ Client.OnStart = function()
 	particles = require("particles")
 
 	drawerHeight = 0
-	avatarLayers = 5
-	avatarCamera = nil
 
 	avatarCameraFocus = "body" -- body / head
 	avatarCameraTarget = nil
@@ -40,7 +19,6 @@ Client.OnStart = function()
 	backgroundCamera.Projection = ProjectionMode.Orthographic
 	backgroundCamera.On = true
 	backgroundCamera.Layers = { 6 }
-	print("backgroundCamera.ViewOrder:", backgroundCamera.ViewOrder)
 	World:AddChild(backgroundCamera)
 
 	backgroundCamera.ViewOrder = 1
@@ -48,53 +26,51 @@ Client.OnStart = function()
 
 	function getAvatarCameraTargetPosition(h, w)
 		if avatarCameraTarget == nil then
-			-- error("avatarCameraTarget should not be nil", 2)
 			return nil
 		end
 
-		local _w = avatarCamera.TargetWidth
-		local _h = avatarCamera.TargetHeight
+		local _w = Camera.TargetWidth
+		local _h = Camera.TargetHeight
 
-		avatarCamera.TargetHeight = h
-		avatarCamera.TargetWidth = w
-		avatarCamera.Height = h
-		avatarCamera.Width = w
-		avatarCamera.TargetX = 0
-		avatarCamera.TargetY = 0
+		Camera.TargetHeight = h
+		Camera.TargetWidth = w
+		Camera.Height = h
+		Camera.Width = w
+		Camera.TargetX = 0
+		Camera.TargetY = 0
 
 		local box = Box()
-		local pos = avatarCamera.Position:Copy()
+		local pos = Camera.Position:Copy()
 		if avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
-			avatarCamera:FitToScreen(box, 0.7)
+			Camera:FitToScreen(box, 0.7)
 		elseif avatarCameraFocus == "head" then
 			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			avatarCamera:FitToScreen(box, 0.5)
+			Camera:FitToScreen(box, 0.5)
 		elseif avatarCameraFocus == "eyes" then
 			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			avatarCamera:FitToScreen(box, 0.6)
+			Camera:FitToScreen(box, 0.6)
 		elseif avatarCameraFocus == "nose" then
 			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			avatarCamera:FitToScreen(box, 0.6)
+			Camera:FitToScreen(box, 0.6)
 		end
 
-		local targetPos = avatarCamera.Position:Copy()
+		local targetPos = Camera.Position:Copy()
 
 		-- restore
-		avatarCamera.TargetHeight = _h
-		avatarCamera.TargetWidth = _w
-		avatarCamera.Height = _h
-		avatarCamera.Width = _w
-		avatarCamera.TargetX = 0
-		avatarCamera.TargetY = 0
-		avatarCamera.Position:Set(pos)
+		Camera.TargetHeight = _h
+		Camera.TargetWidth = _w
+		Camera.Height = _h
+		Camera.Width = _w
+		Camera.TargetX = 0
+		Camera.TargetY = 0
+		Camera.Position:Set(pos)
 
 		return targetPos
 	end
 
 	local avatarCameraState = {}
-	function layoutAvatarCamera(config)
-		-- print("layoutAvatarCamera, drawerHeight:", drawerHeight)
+	function layoutCamera(config)
 		local h = Screen.Height - drawerHeight
 
 		if
@@ -117,20 +93,20 @@ Client.OnStart = function()
 		avatarCameraState.focus = avatarCameraFocus
 		avatarCameraState.target = avatarCameraTarget
 
-		ease:cancel(avatarCamera)
+		ease:cancel(Camera)
 
 		if config.noAnimation then
-			avatarCamera.TargetHeight = h
-			avatarCamera.TargetWidth = Screen.Width
-			avatarCamera.Height = h
-			avatarCamera.Width = Screen.Width
-			avatarCamera.TargetX = 0
-			avatarCamera.TargetY = 0
-			avatarCamera.Position:Set(p)
+			Camera.TargetHeight = h
+			Camera.TargetWidth = Screen.Width
+			Camera.Height = h
+			Camera.Width = Screen.Width
+			Camera.TargetX = 0
+			Camera.TargetY = 0
+			Camera.Position:Set(p)
 			return
 		end
 
-		local anim = ease:inOutSine(avatarCamera, 0.2, {
+		local anim = ease:inOutSine(Camera, 0.2, {
 			onDone = function()
 				avatarCameraState.animation = nil
 			end,
@@ -167,7 +143,7 @@ Client.OnStart = function()
 
 	LocalEvent:Listen("signup_flow_dob", function()
 		avatarCameraFocus = "body"
-		layoutAvatarCamera()
+		layoutCamera()
 	end)
 
 	LocalEvent:Listen("signup_flow_start_or_login", function()
@@ -177,46 +153,27 @@ Client.OnStart = function()
 
 	LocalEvent:Listen("signup_drawer_height_update", function(height)
 		drawerHeight = height
-		layoutAvatarCamera()
+		layoutCamera()
 	end)
 
 	light = Light()
 	light.Color = Color(150, 150, 200)
-	-- light.Color = Color(200, 200, 230)
 	light.Intensity = 1.0
 	light.CastsShadows = true
 	light.On = true
 	light.Type = LightType.Directional
-	-- light.Layers = Camera.Layers + avatarLayers
-	light.Layers = avatarLayers
-	light.Layers = { 1, avatarLayers } -- Camera.Layers + avatarLayers
 	World:AddChild(light)
 	light.Rotation:Set(math.rad(5), math.rad(-20), 0)
 
 	Light.Ambient.SkyLightFactor = 0.2
 	Light.Ambient.DirectionalLightFactor = 0.5
 
-	avatarCamera = Camera()
-	-- avatarCamera.Layers = Camera.Layers
-	avatarCamera.Layers = avatarLayers
-	avatarCamera:SetParent(World)
-	avatarCamera.On = true
-	avatarCamera.ViewOrder = 3
-	-- avatarCamera.FOV = Camera.FOV
-
-	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
-		layoutAvatarCamera()
-	end)
-
 	local logoTile = bundle:Data("images/logo-tile-rotated.png")
 
 	backgroundQuad = Quad()
 	backgroundQuad.IsUnlit = true
 	backgroundQuad.IsDoubleSided = true
-	-- backgroundQuad.Tiling = Number2(30, 30)
-	-- backgroundQuad.Color = Color(255, 0, 0)
 	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
-	-- backgroundQuad.Image = logoTile
 	backgroundQuad.Width = Screen.RenderWidth
 	backgroundQuad.Height = Screen.RenderHeight
 	backgroundQuad.Anchor = { 0.5, 0.5 }
@@ -228,7 +185,6 @@ Client.OnStart = function()
 	backgroundLogo.IsUnlit = true
 	backgroundLogo.IsDoubleSided = true
 	backgroundLogo.Color = Color(0, 0, 0, 0.2)
-	-- backgroundQuad.Color = { gradient = "V", from = Color(0, 0, 0), to = Color(255, 255, 255) }
 	backgroundLogo.Image = logoTile
 	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
 	backgroundLogo.Height = backgroundLogo.Width
@@ -255,10 +211,6 @@ Screen.DidResize = function()
 	end
 end
 
--- Client.OnWorldObjectLoad = function(obj)
--- 	obj:RemoveFromParent()
--- end
-
 local _titleScreen
 function titleScreen()
 	if _titleScreen then
@@ -273,12 +225,14 @@ function titleScreen()
 	local tickListener
 
 	_titleScreen.show = function()
-		-- Camera.On = true
 		if root ~= nil then
 			return
 		end
 		root = Object()
 		root:SetParent(World)
+
+		drawerHeight = 0
+		layoutCamera({ noAnimation = true })
 
 		local logo = Object()
 		local c = bundle:Shape("shapes/cubzh_logo_c")
@@ -427,6 +381,7 @@ function titleScreen()
 		logo:SetParent(root)
 
 		didResizeFunction = function()
+			layoutCamera({ noAnimation = true })
 			local box = Box()
 			box:Fit(logo, { recursive = true })
 			Camera:FitToScreen(box, 0.8)
@@ -550,10 +505,8 @@ function avatar()
 	local yaw = math.rad(-190)
 	local pitch = 0
 
-	-- local avatarCamera
 	local root
 	local listeners = {}
-	local avatarLayers = 5
 
 	local function drag(dx, dy)
 		yaw = yaw - dx * 0.01
@@ -588,7 +541,6 @@ function avatar()
 				scale = function()
 					return 0.7 + math.random() * 1.0
 				end,
-				layers = avatarLayers,
 				color = function()
 					return particlesColor
 				end,
@@ -596,8 +548,6 @@ function avatar()
 		end
 
 		mode = config.mode
-
-		local hierarchyactions = require("hierarchyactions")
 
 		root = Object()
 
@@ -615,12 +565,6 @@ function avatar()
 
 		avatar:SetParent(root)
 		root.avatar = avatar
-
-		hierarchyactions:applyToDescendants(root, { includeRoot = true }, function(o)
-			pcall(function()
-				o.Layers = avatarLayers
-			end)
-		end)
 
 		avatar.Animations.Walk:Stop()
 		avatar.Animations.Idle:Play()
@@ -648,38 +592,38 @@ function avatar()
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
-			layoutAvatarCamera()
+			layoutCamera()
 		end)
 
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_head", function()
 			avatarCameraFocus = "head"
-			layoutAvatarCamera()
+			layoutCamera()
 		end)
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_eyes", function()
 			avatarCameraFocus = "eyes"
-			layoutAvatarCamera()
+			layoutCamera()
 		end)
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_nose", function()
 			avatarCameraFocus = "nose"
-			layoutAvatarCamera()
+			layoutCamera()
 		end)
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_body", function()
 			avatarCameraFocus = "body"
-			layoutAvatarCamera()
+			layoutCamera()
 		end)
 		table.insert(listeners, l)
 
 		l = LocalEvent:Listen("signup_flow_avatar_preview", function()
 			avatarCameraFocus = "body"
-			layoutAvatarCamera()
+			layoutCamera()
 		end)
 		table.insert(listeners, l)
 
@@ -852,7 +796,7 @@ function avatar()
 		Timer(0.03, function()
 			root.IsHidden = false
 			avatarCameraTarget = root
-			layoutAvatarCamera({ noAnimation = true })
+			layoutCamera({ noAnimation = true })
 		end)
 
 		return root
