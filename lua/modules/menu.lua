@@ -305,14 +305,6 @@ function hideLoading()
 	triggerCallbacks()
 end
 
--- function parseVersion(versionStr)
--- 	local maj, min, patch = versionStr:match("(%d+)%.(%d+)%.(%d+)")
--- 	maj = math.floor(tonumber(maj))
--- 	min = math.floor(tonumber(min))
--- 	patch = math.floor(tonumber(patch))
--- 	return maj, min, patch
--- end
-
 blockedEvents = {}
 
 function blockEvent(name)
@@ -2117,6 +2109,10 @@ if Environment.CHAT_CONSOLE_DISPLAY == "always" then
 	refreshChat()
 end
 
+-- print("menu System.Authenticated:", System.Authenticated)
+-- if System.Authenticated then
+-- 	LocalEvent:Send("signup_flow_login_success")
+-- else
 local signupFlow = require("signup"):startFlow({
 	ui = ui,
 	avatarPreviewStep = function()
@@ -2148,6 +2144,7 @@ local signupFlow = require("signup"):startFlow({
 	end,
 })
 activeFlow = signupFlow
+-- end
 
 function getWorldInfo()
 	if getWorldInfoReq ~= nil then
@@ -2193,6 +2190,8 @@ Timer(0.1, function()
 
 		-- connects client to server if it makes sense (maxPlayers > 1)
 		connect()
+
+		print("GET AVATAR FOR USER:", Player.Username)
 
 		avatar:remove()
 		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })

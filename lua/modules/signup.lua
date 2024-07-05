@@ -1673,12 +1673,18 @@ signup.startFlow = function(self, config)
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
 
+						print("System:", System)
+						print("hasCredentials:", System.HasCredentials)
+						print("hasUsername:", System.hasUsername)
+						print("hasEmail:", System.HasEmail)
+						print("hasVerifiedPhoneNumber:", System.hasVerifiedPhoneNumber)
+
 						if
 							System.HasCredentials
-							and (System.hasUsername or System.HasEmail or System.hasVerifiedPhoneNumber)
+							-- and (System.HasUsername or System.HasEmail or System.HasVerifiedPhoneNumber)
 						then
 							-- User account is considered complete
-							-- config.loginSuccess() -- TODO: go to main home screen
+							config.loginSuccess() -- TODO: go to main home screen
 						else
 							-- show signup
 							signupFlow:push(createSignUpOrLoginStep())

@@ -48,7 +48,7 @@ gallery.createModalContent = function(_, config)
 		local grid = content
 		grid.Width = width
 		grid.Height = height -- - content.pages.Height - theme.padding
-		grid:refresh() -- affects width and height (possibly reducing it)
+		-- grid:refresh() -- affects width and height (possibly reducing it)
 		return Number2(grid.Width, grid.Height)
 	end
 

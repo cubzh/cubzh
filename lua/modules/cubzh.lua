@@ -156,6 +156,12 @@ Client.OnStart = function()
 		layoutCamera()
 	end)
 
+	LocalEvent:Listen("signup_flow_login_success", function(height)
+		drawerHeight = 0
+		titleScreen():hide()
+		layoutCamera({ noAnimation = true })
+	end)
+
 	light = Light()
 	light.Color = Color(150, 150, 200)
 	light.Intensity = 1.0
@@ -184,7 +190,8 @@ Client.OnStart = function()
 	backgroundLogo = Quad()
 	backgroundLogo.IsUnlit = true
 	backgroundLogo.IsDoubleSided = true
-	backgroundLogo.Color = Color(0, 0, 0, 0.2)
+	-- backgroundLogo.Color = Color(0, 0, 0, 0.2)
+	backgroundLogo.Color = Color(255, 255, 255, 0.1)
 	backgroundLogo.Image = logoTile
 	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
 	backgroundLogo.Height = backgroundLogo.Width
