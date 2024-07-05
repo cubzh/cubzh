@@ -161,24 +161,24 @@ signup.startFlow = function(self, config)
 		local frame
 		local step = flow:createStep({
 			onEnter = function()
-				frame = ui:createFrame(Color.White)
+				frame = ui:frameGenericContainer()
 
-				local title = ui:createText(str:upperFirstChar(loc("magic key", "title")) .. " 🔑", Color.Black)
+				local title = ui:createText(str:upperFirstChar(loc("magic key", "title")) .. " 🔑", Color.White)
 				title:setParent(frame)
 
-				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.Black)
+				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.White)
 				loadingLabel:setParent(frame)
 				loadingLabel:hide()
 
 				local magicKeyLabelText = "✉️ What code did you get?"
-				local magicKeyLabel = ui:createText(magicKeyLabelText, Color.Black, "default")
+				local magicKeyLabel = ui:createText(magicKeyLabelText, Color.White, "default")
 				magicKeyLabel:setParent(frame)
 
 				local magicKeyInput =
 					ui:createTextInput("", str:upperFirstChar(loc("000000")), { textSize = "default" })
 				magicKeyInput:setParent(frame)
 
-				local magicKeyButton = ui:createButton(" ✅ ")
+				local magicKeyButton = ui:buttonNeutral({ content = "✅" })
 				magicKeyButton:setParent(frame)
 
 				local function showLoading()
@@ -257,6 +257,8 @@ signup.startFlow = function(self, config)
 				for _, req in ipairs(requests) do
 					req:Cancel()
 				end
+				frame:remove()
+				frame = nil
 			end,
 			onRemove = function() end,
 		})
@@ -275,16 +277,16 @@ signup.startFlow = function(self, config)
 		local frame
 		local step = flow:createStep({
 			onEnter = function()
-				frame = ui:createFrame(Color.White)
+				frame = ui:frameGenericContainer()
 
-				local title = ui:createText(str:upperFirstChar(loc("authentication", "title")) .. " 🔑", Color.Black)
+				local title = ui:createText(str:upperFirstChar(loc("authentication", "title")) .. " 🔑", Color.White)
 				title:setParent(frame)
 
-				local errorLabel = ui:createText("", Color.Black)
+				local errorLabel = ui:createText("", Color.White)
 				errorLabel:setParent(frame)
 				errorLabel:hide()
 
-				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.Black)
+				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.White)
 				loadingLabel:setParent(frame)
 				loadingLabel:hide()
 
@@ -321,7 +323,7 @@ signup.startFlow = function(self, config)
 				end
 
 				if config.password then
-					passwordLabel = ui:createText("🔑 " .. str:upperFirstChar(loc("password")), Color.Black, "small")
+					passwordLabel = ui:createText("🔑 " .. str:upperFirstChar(loc("password")), Color.White, "small")
 					passwordLabel:setParent(frame)
 
 					passwordInput = ui:createTextInput(
@@ -331,17 +333,16 @@ signup.startFlow = function(self, config)
 					)
 					passwordInput:setParent(frame)
 
-					passwordButton = ui:createButton(" ✅ ")
+					passwordButton = ui:buttonNeutral({ content = "✅" })
 					passwordButton:setParent(frame)
 				end
 
 				if config.magickey then
 					magicKeyLabel =
-						ui:createText(config.password and "or, send me a:" or "send me a:", Color.Black, "default")
+						ui:createText(config.password and "or, send me a:" or "send me a:", Color.White, "default")
 					magicKeyLabel:setParent(frame)
 
-					magicKeyButton = ui:createButton(str:upperFirstChar(loc("✨ magic key ✨")))
-					magicKeyButton:setColor(Color(0, 161, 169), Color.White)
+					magicKeyButton = ui:buttonPositive({ content = str:upperFirstChar(loc("✨ magic key ✨")) })
 					magicKeyButton:setParent(frame)
 
 					magicKeyButton.onRelease = function()
@@ -449,16 +450,16 @@ signup.startFlow = function(self, config)
 				-- BACK BUTTON
 				showBackButton()
 
-				frame = ui:createFrame(Color.White)
+				frame = ui:frameGenericContainer()
 
-				local title = ui:createText(str:upperFirstChar(loc("who are you?")) .. " 🙂", Color.Black)
+				local title = ui:createText(str:upperFirstChar(loc("who are you?")) .. " 🙂", Color.White)
 				title:setParent(frame)
 
 				local errorLabel = ui:createText("", Color.Black)
 				errorLabel:setParent(frame)
 				errorLabel:hide()
 
-				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.Black)
+				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.White)
 				loadingLabel:setParent(frame)
 				loadingLabel:hide()
 
@@ -482,9 +483,11 @@ signup.startFlow = function(self, config)
 					end
 				end
 
-				local loginButton = ui:createButton(" ✨ " .. str:upperFirstChar(loc("login", "button")) .. " ✨ ") -- , { textSize = "big" })
+				local loginButton = ui:buttonPositive({
+					content = "✨ " .. str:upperFirstChar(loc("login", "button")) .. " ✨",
+					padding = 10,
+				})
 				loginButton:setParent(frame)
-				loginButton:setColor(Color(150, 200, 61), Color(240, 255, 240))
 
 				frame.parentDidResize = function(self)
 					self.Height = title.Height
