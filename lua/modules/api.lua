@@ -185,9 +185,11 @@ mod.getReceivedFriendRequests = function(_, callback, fields)
 end
 
 -- getUserInfo gets a user by its ID
--- callback(ok, user, errMsg)
+-- callback(userInfo, err)
+-- success: err == nil
 -- fields parameter is optional, it can be a table-- containing extra expected user fields:
 -- {"created", "nbFriends"}
+-- TODO: caller should have a way to check error code -> 401 means bad credentials for signup.lua (removing installed credentials)
 mod.getUserInfo = function(_, id, callback, fields)
 	if type(id) ~= "string" then
 		error("api:getUserInfo(userID, callback, [fields]) - userID must be a string", 2)
@@ -205,18 +207,18 @@ mod.getUserInfo = function(_, id, callback, fields)
 
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get user info (" .. resp.StatusCode .. ")")
+			callback(nil, mod:error(resp.StatusCode, "could not get user info (" .. resp.StatusCode .. ")"))
 			return
 		end
 		local usr, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "get user info decode error: " .. err)
+			callback(nil, mod:error(resp.StatusCode, "get user info decode error: " .. err))
 			return
 		end
 		if usr.nbFriends ~= nil then
 			usr.nbFriends = math.floor(usr.nbFriends)
 		end
-		callback(true, usr, nil) -- success
+		callback(usr, nil) -- success
 	end)
 	return req
 end

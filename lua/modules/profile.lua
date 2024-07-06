@@ -1394,8 +1394,8 @@ profile.create = function(_, config)
 			end
 		end, { topPriority = true })
 
-		local fillUserInfo = function(ok, usr, _)
-			if not ok then
+		local fillUserInfo = function(usr, err)
+			if err ~= nil then
 				return
 			end
 

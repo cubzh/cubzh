@@ -1691,10 +1691,21 @@ signup.startFlow = function(self, config)
 						then
 							config.loginSuccess()
 						elseif System.HasCredentials then
-							api:getUserInfo(System.UserID, function(ok, userInfo, _)
-								if not ok then
-									-- TODO: REMOVE CREDENTIALS IF NOT VALID
-									System:DebugEvent("Request to obtain user info with credentials failed")
+							api:getUserInfo(System.UserID, function(userInfo, err)
+								if err ~= nil then
+									System:DebugEvent(
+										"Request to obtain user info with credentials failed",
+										{ statusCode = err.statusCode, error = err.message }
+									)
+
+									-- if unauthorized, it means credentials aren't valid,
+									-- removing them to start fresh with account creation or login
+									if err.statusCode == 401 then
+										System:RemoveCredentials()
+										checks.minAppVersion() -- restart from beginning now without credentials
+										return
+									end
+
 									checks.error() -- Show error message with retry button
 									return
 								end

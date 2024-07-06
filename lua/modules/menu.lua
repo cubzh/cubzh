@@ -1207,8 +1207,8 @@ function getCubzhMenuModalContent()
 				activeModal:refreshContent()
 			end
 
-			api:getUserInfo(Player.UserID, function(ok, userInfo, _)
-				if not ok then
+			api:getUserInfo(Player.UserID, function(userInfo, err)
+				if err ~= nil then
 					return
 				end
 
@@ -1417,7 +1417,7 @@ function getCubzhMenuModalContent()
 
 	if System.HasEmail == false then
 		api:getUserInfo(Player.UserID, function(ok, userInfo, _)
-			if not ok then
+			if err ~= nil then
 				return
 			end
 			if userInfo.hasEmail == true then -- could have been verified while menu was closed
