@@ -1713,7 +1713,12 @@ signup.startFlow = function(self, config)
 								print("\tdidCustomizeAvatar:", userInfo.didCustomizeAvatar)
 								print("\thasPhoneNumber:", userInfo.hasPhoneNumber)
 
-								config.loginSuccess()
+								if System.Username ~= "" or System.HasEmail or System.HasVerifiedPhoneNumber then
+									config.loginSuccess()
+								else
+									-- show signup
+									signupFlow:push(createSignUpOrLoginStep())
+								end
 							end, {
 								"username",
 								"hasEmail",

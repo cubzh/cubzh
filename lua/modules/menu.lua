@@ -2165,8 +2165,6 @@ end
 
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
-		System:UpdateAuthStatus()
-
 		if System.IsUserUnder13 then
 			local under13BadgeShape = bundle:Shape("shapes/under13_badge")
 			under13Badge = ui:createShape(under13BadgeShape)
