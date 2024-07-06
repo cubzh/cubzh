@@ -1696,10 +1696,10 @@ signup.startFlow = function(self, config)
 
 						if
 							System.HasCredentials
-							-- and (
-							-- 	System.HasEmail
-							-- 	or System.IsExemptedFromPhoneNumber -- or System.HasUsername or System.HasVerifiedPhoneNumber
-							-- )
+							and (
+								System.HasEmail
+								or System.IsExemptedFromPhoneNumber -- or System.HasUsername or System.HasVerifiedPhoneNumber
+							)
 						then
 							print("🔥 loginSuccess()")
 							-- User account is considered complete

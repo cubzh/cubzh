@@ -190,7 +190,6 @@ Client.OnStart = function()
 	backgroundLogo = Quad()
 	backgroundLogo.IsUnlit = true
 	backgroundLogo.IsDoubleSided = true
-	-- backgroundLogo.Color = Color(0, 0, 0, 0.2)
 	backgroundLogo.Color = Color(255, 255, 255, 0.1)
 	backgroundLogo.Image = logoTile
 	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
@@ -263,56 +262,70 @@ function titleScreen()
 		h.Pivot:Set(h.Width * 0.5, h.Height * 1.5 / 4.0, h.Depth * 0.5)
 		h:SetParent(logo)
 
-		local giraffe = bundle:Shape("shapes/giraffe_head")
-		giraffe.Pivot:Set(giraffe.Width * 0.5, giraffe.Height * 0.5, giraffe.Depth * 0.5)
-		giraffe:SetParent(root)
-		giraffe.Scale = 1
-		giraffe.LocalPosition:Set(0, 0, 12)
-		giraffe.rot = Rotation(0, 0, math.rad(20))
-		giraffe.Rotation:Set(giraffe.rot)
+		local titleShapes = {}
 
-		local chest = bundle:Shape("shapes/chest")
-		chest.Pivot:Set(chest.Width * 0.5, chest.Height * 0.5, chest.Depth * 0.5)
-		chest:SetParent(root)
-		chest.Scale = 0.5
-		chest.LocalPosition:Set(7, -12, -7)
-		chest.rot = Rotation(0, math.rad(25), math.rad(-5))
-		chest.Rotation:Set(chest.rot)
+		local function addShape(name, config)
+			local s = bundle:Shape(name)
+			s:SetParent(root)
+			s.Pivot:Set(s.Size * 0.5)
+			s.Scale = config.scale or 1
+			s.LocalPosition:Set(config.position or Number3.Zero)
+			s.rot = config.rotation or Rotation(0, 0, 0)
+			s.Rotation:Set(s.rot)
+			table.insert(titleShapes, s)
+			return s
+		end
+
+		addShape(
+			"shapes/giraffe_head",
+			{ scale = 1, position = Number3(0, 0, 12), rotation = Rotation(0, 0, math.rad(20)) }
+		)
+
+		local chest = addShape(
+			"shapes/chest",
+			{ scale = 0.7, position = Number3(7, -18, -7), rotation = Rotation(0, math.rad(25), math.rad(-5)) }
+		)
 		local chestLid = chest.Lid
+		chest.Coins.IsUnlit = true
 		local chestLidRot = chest.Lid.LocalRotation:Copy()
 
-		local pezh = bundle:Shape("shapes/pezh_coin_2")
-		pezh.Pivot:Set(pezh.Size * 0.5)
-		pezh:SetParent(root)
-		pezh.Scale = 0.5
-		pezh.LocalPosition:Set(-5, -12, -7)
-		pezh.rot = Rotation(0, 0, math.rad(20))
-		pezh.Rotation:Set(pezh.rot)
+		addShape(
+			"shapes/pezh_coin_2",
+			{ scale = 0.7, position = Number3(-5, -12, -7), rotation = Rotation(0, 0, math.rad(20)) }
+		)
 
-		local cube = bundle:Shape("shapes/cube")
-		cube.Pivot:Set(cube.Size * 0.5)
-		cube:SetParent(root)
-		cube.Scale = 0.5
-		cube.LocalPosition:Set(17, -8, -12)
-		cube.rot = Rotation(0, 0, math.rad(20))
-		cube.Rotation:Set(cube.rot)
+		addShape(
+			"shapes/cube",
+			{ scale = 0.7, position = Number3(18, -9, -12), rotation = Rotation(0, 0, math.rad(20)) }
+		)
 
-		local sword = bundle:Shape("shapes/sword")
-		sword.Pivot:Set(sword.Size * 0.5)
-		sword:SetParent(root)
-		sword.Scale = 0.5
-		sword.LocalPosition:Set(-10, -10, -12)
-		sword.rot = Rotation(0, 0, math.rad(-45))
-		sword.Rotation:Set(sword.rot)
+		addShape("shapes/paint_set", {
+			scale = 0.7,
+			position = Number3(-22, 12, 6),
+			rotation = Rotation(math.rad(-60), math.rad(20), math.rad(-20)),
+		})
 
-		local spaceship = bundle:Shape("shapes/spaceship_2")
-		spaceship.Pivot:Set(spaceship.Size * 0.5)
-		spaceship.Pivot.Y = spaceship.Pivot.Y + 55
-		spaceship:SetParent(root)
-		spaceship.Scale = 0.5
-		spaceship.LocalPosition:Set(0, 0, 0)
-		spaceship.rot = Rotation(0, math.rad(-30), math.rad(-30))
-		spaceship.Rotation:Set(spaceship.rot)
+		addShape(
+			"shapes/pizza_slice",
+			{ scale = 0.7, position = Number3(12, 8, -5), rotation = Rotation(math.rad(-40), math.rad(-20), 0) }
+		)
+
+		addShape("shapes/smartphone", {
+			scale = 0.7,
+			position = Number3(30, 8, 20),
+			rotation = Rotation(math.rad(10), math.rad(30), math.rad(-20)),
+		})
+
+		addShape(
+			"shapes/sword",
+			{ scale = 0.7, position = Number3(-14, -12, 7), rotation = Rotation(0, 0, math.rad(-45)) }
+		)
+
+		addShape("shapes/spaceship_2", {
+			scale = 0.5,
+			position = Number3(-15, -22, -14),
+			rotation = Rotation(math.rad(-10), math.rad(-30), math.rad(-30)),
+		})
 
 		local space = 2
 		local totalWidth = c.Width + u.Width + b.Width + z.Width + h.Width + space * 4
@@ -353,7 +366,29 @@ function titleScreen()
 
 		local t = 0
 		local t2 = 1
-		local d1, d2, d3, d4, d5, d6, d7, d8
+		local d1, d2, d3, d4, d5
+
+		local modifiers = {}
+		local nbModifiers = 5
+		local modifier
+		local r
+		for i = 1, nbModifiers do
+			r = math.random(1, 2)
+			modifier = {
+				t = 0,
+				dtCoef = 1 + math.random() * 0.10,
+				amplitude = math.rad(math.random(5, 10)),
+			}
+			if r == 1 then
+				modifier.fn1 = math.cos
+				modifier.fn2 = math.sin
+			else
+				modifier.fn1 = math.sin
+				modifier.fn2 = math.cos
+			end
+			modifiers[i] = modifier
+		end
+
 		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 			t = t + dt
 			t2 = t2 + dt * 1.05
@@ -363,9 +398,6 @@ function titleScreen()
 			d4 = math.cos(t) * math.rad(10)
 
 			d5 = math.sin(t) * math.rad(5)
-			d6 = math.cos(t2) * math.rad(5)
-			d7 = math.sin(t2) * math.rad(5)
-			d8 = math.cos(t) * math.rad(5)
 
 			c.Rotation = cRot * Rotation(d1, d2, 0)
 			u.Rotation = uRot * Rotation(d2, d1, 0)
@@ -373,16 +405,21 @@ function titleScreen()
 			z.Rotation = zRot * Rotation(d4, d3, 0)
 			h.Rotation = hRot * Rotation(d1, d3, 0)
 
-			giraffe.Rotation = giraffe.rot * Rotation(d6, d5, 0)
-
-			chest.Rotation = chest.rot * Rotation(d7, d8, 0)
 			chestLid.LocalRotation = chestLidRot * Rotation(d5, 0, 0)
 
-			pezh.Rotation = pezh.rot * Rotation(d5, d8, 0)
-			sword.Rotation = sword.rot * Rotation(d5, d8, 0)
-			cube.Rotation = cube.rot * Rotation(d5, d8, 0)
+			for _, modifier in ipairs(modifiers) do
+				modifier.t = t + dt * modifier.dtCoef
+				modifier.rot = Rotation(
+					modifier.fn1(modifier.t) * modifier.amplitude,
+					modifier.fn2(modifier.t) * modifier.amplitude,
+					0
+				)
+			end
 
-			-- spaceship.Rotation = spaceship.Rotation * Rotation(dt * 3, 0, 0)
+			for i, s in ipairs(titleShapes) do
+				modifier = modifiers[(i % nbModifiers) + 1]
+				s.Rotation = s.rot * modifier.rot
+			end
 		end)
 
 		logo:SetParent(root)
