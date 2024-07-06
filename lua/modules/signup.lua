@@ -1603,7 +1603,6 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.minAppVersion = function()
-						print("🔥 checks min app version")
 						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
 							if error ~= nil then
@@ -1630,7 +1629,6 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a magic key has been requested.
 					checks.magicKey = function()
-						print("🔥 checks magic key")
 						System:DebugEvent("App checks if magic key has been requested")
 
 						text.Text = "Checking magic key..."
@@ -1648,8 +1646,6 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a user account exists locally.
 					checks.userAccountExists = function()
-						print("🔥 checks user account exists")
-
 						-- Update loading message
 						text.Text = "Checking user account..."
 						loadingFrame:parentDidResize()
@@ -1664,7 +1660,6 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.createAccount = function()
-						print("🔥 creates account")
 						System:DebugEvent("App creates new empty user account")
 
 						-- Update loading message
@@ -1683,27 +1678,51 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.checkUserAccount = function()
-						print("🔥 checks account info")
-
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
 
-						print("🔥 System.HasCredentials", System.HasCredentials)
-						print("🔥 System.HasEmail", System.HasEmail)
-						print("🔥 System.IsExemptedFromPhoneNumber", System.IsExemptedFromPhoneNumber)
-						-- print("🔥 System.hasUsername", System.hasUsername)
-						-- print("🔥 System.hasVerifiedPhoneNumber", System.hasVerifiedPhoneNumber)
+						print("🪲 System.HasCredentials", System.HasCredentials)
+						print("🪲 System.Authenticated:", System.Authenticated)
+						print("🪲 System.UserID:", System.UserID)
 
 						if
-							System.HasCredentials
-							and (
-								System.HasEmail
-								or System.IsExemptedFromPhoneNumber -- or System.HasUsername or System.HasVerifiedPhoneNumber
-							)
+							System.Authenticated
+							and (System.Username ~= "" or System.HasEmail or System.HasVerifiedPhoneNumber)
 						then
-							print("🔥 loginSuccess()")
-							-- User account is considered complete
 							config.loginSuccess()
+						elseif System.HasCredentials then
+							api:getUserInfo(System.UserID, function(ok, userInfo, _)
+								if not ok then
+									-- TODO: REMOVE CREDENTIALS IF NOT VALID
+									System:DebugEvent("Request to obtain user info with credentials failed")
+									checks.error() -- Show error message with retry button
+									return
+								end
+
+								-- System.Authenticated == true means credentials are valid
+								System.Authenticated = true
+								System.Username = userInfo.username or ""
+								System.HasEmail = userInfo.hasEmail or false
+								System.HasVerifiedPhoneNumber = userInfo.hasPhoneNumber or false
+
+								print("🪲 userInfo:")
+								print("\tusername:", userInfo.username)
+								print("\thasEmail:", userInfo.hasEmail)
+								print("\thasPassword:", userInfo.hasPassword)
+								print("\tisUnder13:", userInfo.isUnder13)
+								print("\tdidCustomizeAvatar:", userInfo.didCustomizeAvatar)
+								print("\thasPhoneNumber:", userInfo.hasPhoneNumber)
+
+								config.loginSuccess()
+							end, {
+								"username",
+								"hasEmail",
+								"hasPassword",
+								"hasDOB",
+								"isUnder13",
+								"didCustomizeAvatar",
+								"hasPhoneNumber",
+							})
 						else
 							-- show signup
 							signupFlow:push(createSignUpOrLoginStep())
