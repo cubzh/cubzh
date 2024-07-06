@@ -2356,7 +2356,23 @@ function createUI(system)
 			end,
 		}
 
-		config = conf:merge(defaultConfig, config)
+		local options = {
+			acceptTypes = {
+				padding = { "number", "integer", "table" },
+			},
+		}
+
+		config = conf:merge(defaultConfig, config, options)
+
+		if type(config.padding) == "number" or type(config.padding) == "integer" then
+			local padding = config.padding
+			config.padding = {
+				top = padding,
+				bottom = padding,
+				left = padding,
+				right = padding,
+			}
+		end
 
 		local down = config.direction == "down"
 		local up = config.direction == "up"
@@ -2386,9 +2402,9 @@ function createUI(system)
 		container.parentDidResize = function(self)
 			local parent = self.parent
 			if vertical then
-				container.Width = parent.Width - padding * 2
+				container.Width = parent.Width - padding.left - padding.right
 			else -- horizontal
-				container.Height = parent.Height - padding * 2
+				container.Height = parent.Height - padding.top - padding.bottom
 			end
 		end
 
@@ -2482,7 +2498,7 @@ function createUI(system)
 					cellInfo = { height = cell.Height }
 
 					if cache.contentHeight == 0 then
-						cache.contentHeight = cellInfo.height + padding * 2
+						cache.contentHeight = cellInfo.height + padding.top + padding.bottom
 					else
 						cache.contentHeight = cache.contentHeight + cellInfo.height + cellPadding
 					end
@@ -2506,7 +2522,7 @@ function createUI(system)
 					cellInfo = { width = cell.Width }
 
 					if cache.contentWidth == 0 then
-						cache.contentWidth = cellInfo.width + padding * 2
+						cache.contentWidth = cellInfo.width + padding.left + padding.right
 					else
 						cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
 					end
@@ -2540,13 +2556,13 @@ function createUI(system)
 			end
 
 			if vertical then
-				container.pos.X = padding
+				container.pos.X = padding.left
 			else -- horizontal
-				container.pos.Y = padding
+				container.pos.Y = padding.bottom
 			end
 
 			if down then
-				container.pos.Y = node.Height - padding - scrollPosition
+				container.pos.Y = node.Height - padding.top - scrollPosition
 
 				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
@@ -2554,7 +2570,7 @@ function createUI(system)
 				unloadTop = -scrollPosition + SCROLL_UNLOAD_MARGIN
 				unloadBottom = loadTop - node.Height - SCROLL_UNLOAD_MARGIN * 2
 			elseif up then
-				container.pos.Y = padding - scrollPosition
+				container.pos.Y = padding.bottom - scrollPosition
 
 				loadBottom = scrollPosition - SCROLL_LOAD_MARGIN
 				loadTop = loadBottom + node.Height + SCROLL_LOAD_MARGIN * 2
@@ -2562,7 +2578,7 @@ function createUI(system)
 				unloadBottom = scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadTop = loadBottom + node.Height + SCROLL_UNLOAD_MARGIN * 2
 			elseif right then
-				container.pos.X = padding - scrollPosition
+				container.pos.X = padding.left - scrollPosition
 
 				loadLeft = scrollPosition - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
@@ -2570,7 +2586,7 @@ function createUI(system)
 				unloadLeft = scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
 			elseif left then
-				container.pos.X = node.Width - padding + scrollPosition
+				container.pos.X = node.Width - padding.right + scrollPosition
 
 				loadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2

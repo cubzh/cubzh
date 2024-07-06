@@ -400,10 +400,9 @@ function refreshDisplay()
 		end
 
 		chatBtn:hide()
-		friendsBtn:hide()
+		-- friendsBtn:hide()
 		pezhBtn:hide()
-
-		profileFrame:hide()
+		-- profileFrame:hide()
 	else
 		if activeModal then
 			activeModal:show()
@@ -416,10 +415,9 @@ function refreshDisplay()
 		end
 
 		chatBtn:show()
-		friendsBtn:show()
+		-- friendsBtn:show()
 		pezhBtn:show()
-
-		profileFrame:show()
+		-- profileFrame:show()
 	end
 end
 
@@ -879,13 +877,13 @@ textBubbleShape.parentDidResize = function(self)
 	self.pos = { PADDING, PADDING_BIG }
 end
 
-friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+-- friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
-friendsBtn:setParent(topBar)
+-- friendsBtn:setParent(topBar)
 
-friendsShape = ui:createShape(bundle:Shape("shapes/friends_icon"))
-friendsShape:setParent(friendsBtn)
-friendsShape.parentDidResize = btnContentParentDidResize
+-- friendsShape = ui:createShape(bundle:Shape("shapes/friends_icon"))
+-- friendsShape:setParent(friendsBtn)
+-- friendsShape.parentDidResize = btnContentParentDidResize
 
 cubzhBtn.onPress = topBarBtnPress
 cubzhBtn.onCancel = topBarBtnRelease
@@ -906,27 +904,27 @@ chatBtn.onRelease = function(self)
 	end
 end
 
-friendsBtn.onPress = topBarBtnPress
-friendsBtn.onCancel = topBarBtnRelease
-friendsBtn.onRelease = function(self)
-	topBarBtnRelease(self)
-	showModal(MODAL_KEYS.FRIENDS)
-end
+-- friendsBtn.onPress = topBarBtnPress
+-- friendsBtn.onCancel = topBarBtnRelease
+-- friendsBtn.onRelease = function(self)
+-- 	topBarBtnRelease(self)
+-- 	showModal(MODAL_KEYS.FRIENDS)
+-- end
 
-profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+-- profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
-profileFrame:setParent(topBar)
+-- profileFrame:setParent(topBar)
 
-profileFrame.onPress = topBarBtnPress
-profileFrame.onCancel = topBarBtnRelease
-profileFrame.onRelease = function(self)
-	topBarBtnRelease(self)
-	showModal(MODAL_KEYS.PROFILE)
-end
+-- profileFrame.onPress = topBarBtnPress
+-- profileFrame.onCancel = topBarBtnRelease
+-- profileFrame.onRelease = function(self)
+-- 	topBarBtnRelease(self)
+-- 	showModal(MODAL_KEYS.PROFILE)
+-- end
 
-avatar = ui:createFrame(Color.transparent)
-avatar:setParent(profileFrame)
-avatar.parentDidResize = btnContentParentDidResize
+-- avatar = ui:createFrame(Color.transparent)
+-- avatar:setParent(profileFrame)
+-- avatar.parentDidResize = btnContentParentDidResize
 
 -- PEZH
 
@@ -1579,26 +1577,38 @@ topBar.parentDidResize = function(self)
 
 	-- PROFILE BUTTON
 
-	profileFrame.Height = height
-	profileFrame.Width = height
+	-- profileFrame.Height = height
+	-- profileFrame.Width = height
 
 	-- FRIENDS BUTTON
 
-	friendsBtn.Height = height
-	friendsBtn.Width = height
-	friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
+	-- friendsBtn.Height = height
+	-- friendsBtn.Width = height
+	-- friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
 
 	-- PEZH BUTTON
 
 	pezhBtn.Height = height
 	pezhBtn.Width = height
-	pezhBtn.pos.X = friendsBtn.pos.X + friendsBtn.Width
+
+	if connBtn:isVisible() then
+		pezhBtn.pos.X = connBtn.pos.X - pezhBtn.Width
+	else
+		pezhBtn.pos.X = cubzhBtn.pos.X - pezhBtn.Width
+	end
 
 	-- CHAT BUTTON
 
 	chatBtn.Height = height
-	chatBtn.pos.X = pezhBtn.pos.X + pezhBtn.Width
-	chatBtn.Width = connBtn:isVisible() and (connBtn.pos.X - chatBtn.pos.X) or (cubzhBtn.pos.X - chatBtn.pos.X)
+	-- chatBtn.pos.X = pezhBtn.pos.X + pezhBtn.Width
+
+	if pezhBtn:isVisible() then
+		chatBtn.Width = pezhBtn.pos.X - chatBtn.pos.X
+	elseif connBtn:isVisible() then
+		chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
+	else
+		chatBtn.Width = cubzhBtn.pos.X - chatBtn.pos.X
+	end
 
 	-- CHAT MESSAGES
 
@@ -2128,13 +2138,13 @@ local signupFlow = require("signup"):startFlow({
 		showBottomBar()
 	end,
 	loginSuccess = function()
-		LocalEvent:Send("signup_flow_login_success")
 		showTopBar()
 		hideBottomBar()
 		authCompleted()
 		if activeFlow ~= nil then
 			activeFlow:remove()
 		end
+		LocalEvent:Send("signup_flow_login_success")
 	end,
 	avatarEditorStep = function()
 		LocalEvent:Send("signup_flow_avatar_editor")
@@ -2165,20 +2175,20 @@ end
 
 Timer(0.1, function()
 	menu:OnAuthComplete(function()
-		if System.IsUserUnder13 then
-			local under13BadgeShape = bundle:Shape("shapes/under13_badge")
-			under13Badge = ui:createShape(under13BadgeShape)
-			under13Badge:setParent(profileFrame)
-			local ratio = under13Badge.Width / under13Badge.Height
-			under13Badge.Height = 10
-			under13Badge.Width = under13Badge.Height * ratio
-			under13Badge.parentDidResize = function(self)
-				local parent = self.parent
-				self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
-				under13BadgeShape.LocalPosition.Z = 50
-			end
-			under13Badge:parentDidResize()
-		end
+		-- if System.IsUserUnder13 then
+		-- 	local under13BadgeShape = bundle:Shape("shapes/under13_badge")
+		-- 	under13Badge = ui:createShape(under13BadgeShape)
+		-- 	under13Badge:setParent(profileFrame)
+		-- 	local ratio = under13Badge.Width / under13Badge.Height
+		-- 	under13Badge.Height = 10
+		-- 	under13Badge.Width = under13Badge.Height * ratio
+		-- 	under13Badge.parentDidResize = function(self)
+		-- 		local parent = self.parent
+		-- 		self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
+		-- 		under13BadgeShape.LocalPosition.Z = 50
+		-- 	end
+		-- 	under13Badge:parentDidResize()
+		-- end
 
 		if System.HasEmail == false then
 			showBadge("!")
@@ -2189,12 +2199,12 @@ Timer(0.1, function()
 		-- connects client to server if it makes sense (maxPlayers > 1)
 		connect()
 
-		print("GET AVATAR FOR USER:", Player.Username)
+		-- print("GET AVATAR FOR USER:", Player.Username)
 
-		avatar:remove()
-		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
-		avatar.parentDidResize = btnContentParentDidResize
-		avatar:setParent(profileFrame)
+		-- avatar:remove()
+		-- avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
+		-- avatar.parentDidResize = btnContentParentDidResize
+		-- avatar:setParent(profileFrame)
 		topBar:parentDidResize()
 		if chat then
 			chat:parentDidResize()

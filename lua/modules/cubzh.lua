@@ -1,6 +1,8 @@
-Modules = {
-	bundle = "bundle",
-}
+-- Modules = {
+-- 	bundle = "bundle",
+-- }
+
+bundle = require("bundle")
 
 Client.OnStart = function()
 	Screen.Orientation = "portrait" -- force portrait
@@ -159,6 +161,7 @@ Client.OnStart = function()
 	LocalEvent:Listen("signup_flow_login_success", function(height)
 		drawerHeight = 0
 		titleScreen():hide()
+		home():show()
 		layoutCamera({ noAnimation = true })
 	end)
 
@@ -436,7 +439,6 @@ function titleScreen()
 	end
 
 	_titleScreen.hide = function()
-		-- Camera.On = false
 		if root == nil then
 			return
 		end
@@ -874,6 +876,164 @@ function avatar()
 	end
 
 	return _avatar
+end
+
+local _home
+function home()
+	if _home then
+		return _home
+	end
+
+	_home = {}
+
+	local theme = require("uitheme").current
+	local ui = require("uikit")
+	local uiAvatar = require("ui_avatar")
+
+	local root
+	-- local didResizeFunction
+	-- local didResizeListener
+	-- local tickListener
+
+	_home.show = function()
+		if root ~= nil then
+			return
+		end
+
+		-- backgroundCamera.On = false
+
+		root = ui:frame() -- { color = Color(255, 0, 0, 0.3) }
+		root.parentDidResize = function(self)
+			self.Width = Screen.Width
+			self.Height = Screen.Height
+		end
+		root:parentDidResize()
+
+		local profileCell -- cell to showcase avatar
+		local friendsCell
+
+		local categoryUnusedCells = {}
+		local categoryCells = {}
+		local categories = {
+			{ title = "Friends" },
+			{ title = "Featured" },
+			{ title = "Fun with friends" },
+			{ title = "Top Rated" },
+			{ title = "Popular Items" },
+			{ title = "New Items" },
+		}
+		local nbCategories = #categories
+
+		local padding = theme.padding
+
+		local function cellResizeFn(self)
+			self.Width = self.parent.Width
+			self.title.pos = { padding, self.Height - self.title.Height - padding }
+		end
+
+		local function createCategoryCell()
+			cell = ui:frame({ color = Color(0, 0, 0, 0.5) })
+			cell.Height = 150
+			cell.parentDidResize = cellResizeFn
+
+			local title = ui:createText("Title", Color.White)
+			title:setParent(cell)
+
+			cell.title = title
+			return cell
+		end
+
+		local scroll = ui:createScroll({
+			-- backgroundColor = Color(0, 255, 0, 0.3),
+			padding = { top = Screen.SafeArea.Top + 10, bottom = 10, left = 10, right = 10 },
+			cellPadding = 5,
+			loadCell = function(index)
+				if index == 1 then
+					if profileCell == nil then
+						local avatar = uiAvatar:get({ usernameOrId = Player.Username })
+
+						profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						profileCell.Height = 200
+
+						avatar:setParent(profileCell)
+
+						profileCell.parentDidResize = function(self)
+							self.Width = self.parent.Width
+
+							avatar.Height = self.Height
+							avatar.pos = { self.Width * 0.5 - avatar.Width * 0.5, 0 }
+						end
+					end
+					return profileCell
+				elseif index <= nbCategories + 1 then
+					local categoryIndex = index - 1
+					local category = categories[categoryIndex]
+
+					local cell = categoryCells[categoryIndex]
+					if cell == nil then
+						cell = table.remove(categoryUnusedCells)
+						if cell == nil then
+							-- no cell in recycle pool, create it
+							cell = createCategoryCell()
+						end
+						cell.categoryIndex = categoryIndex
+						categoryCells[categoryIndex] = cell
+
+						cell.title.Text = category.title
+					end
+					return cell
+				end
+			end,
+			unloadCell = function(index, cell)
+				-- TODO: recycle
+			end,
+		})
+		scroll:setParent(root)
+
+		local bottomBar = ui:frame({ color = Color(0, 0, 0, 0.7) })
+
+		local btnHome = ui:button({ content = "Home", textSize = "small" })
+		btnHome:setParent(bottomBar)
+		local btnExplore = ui:button({ content = "Explore", textSize = "small" })
+		btnExplore:setParent(bottomBar)
+		local btnProfile = ui:button({ content = "Profile", textSize = "small" })
+		btnProfile:setParent(bottomBar)
+		local btnFriends = ui:button({ content = "Friends", textSize = "small" })
+		btnFriends:setParent(bottomBar)
+		local btnCreate = ui:button({ content = "Create", textSize = "small" })
+		btnCreate:setParent(bottomBar)
+
+		bottomBar.parentDidResize = function(self)
+			self.Width = self.parent.Width
+			self.Height = Screen.SafeArea.Bottom + btnHome.Height
+			local btnWidth = self.Width / 5.0
+
+			btnHome.Width = btnWidth
+			btnExplore.Width = btnWidth
+			btnProfile.Width = btnWidth
+			btnFriends.Width = btnWidth
+			btnCreate.Width = btnWidth
+
+			btnHome.pos = { 0, Screen.SafeArea.Bottom }
+			btnExplore.pos = btnHome.pos + { btnWidth, 0 }
+			btnProfile.pos = btnExplore.pos + { btnWidth, 0 }
+			btnFriends.pos = btnProfile.pos + { btnWidth, 0 }
+			btnCreate.pos = btnFriends.pos + { btnWidth, 0 }
+
+			scroll.pos = { 0, self.Height }
+			scroll.Width = Screen.Width
+			scroll.Height = Screen.Height - self.Height --  - Screen.SafeArea.Top
+		end
+		bottomBar:setParent(root)
+	end
+
+	_home.hide = function()
+		if root == nil then
+			return
+		end
+	end
+
+	return _home
 end
 
 Client.DirectionalPad = nil
