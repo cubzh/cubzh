@@ -207,7 +207,6 @@ function showModal(key, config)
 		if console then
 			inputText = console:getText()
 		end
-
 		content = require("chat"):createModalContent({ uikit = ui, inputText = inputText })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.FRIENDS then
@@ -226,6 +225,9 @@ function showModal(key, config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
 		content = require("gallery"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.SETTINGS then
+		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
@@ -348,9 +350,6 @@ function triggerCallbacks()
 		else
 			unblockEvents()
 			System.PointerForceShown = false
-			if System.HasEmail == false then
-				showBadge("!")
-			end
 		end
 	end
 
@@ -731,7 +730,6 @@ end
 -- MAIN MENU BTN
 
 cubzhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
-
 cubzhBtn:setParent(topBar)
 
 uiBadge = require("ui_badge")
@@ -757,11 +755,19 @@ function removeBadge()
 	end
 end
 
-cubzhLogo = logo:createShape()
-cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
-cubzhBtnShape:setParent(cubzhBtn)
-cubzhBtnShape.parentDidResize = btnContentParentDidResize
-cubzhBtnShape:parentDidResize()
+if System.IsHomeAppRunning then
+	local settingsIcon = ui:frame({ color = Color(255, 0, 0) })
+	settingsIcon.Width = 50
+	settingsIcon.Height = 50
+	settingsIcon:setParent(cubzhBtn)
+	settingsIcon.parentDidResize = btnContentParentDidResize
+else
+	local cubzhLogo = logo:createShape()
+	cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
+	cubzhBtnShape:setParent(cubzhBtn)
+	cubzhBtnShape.parentDidResize = btnContentParentDidResize
+	cubzhBtnShape:parentDidResize()
+end
 
 -- CONNECTIVITY BTN
 
@@ -889,7 +895,11 @@ cubzhBtn.onPress = topBarBtnPress
 cubzhBtn.onCancel = topBarBtnRelease
 cubzhBtn.onRelease = function(self)
 	topBarBtnRelease(self)
-	showModal(MODAL_KEYS.CUBZH_MENU)
+	if System.IsHomeAppRunning then
+		showModal(MODAL_KEYS.SETTINGS)
+	else
+		showModal(MODAL_KEYS.CUBZH_MENU)
+	end
 end
 
 chatBtn.onPress = topBarBtnPress
