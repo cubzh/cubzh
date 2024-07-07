@@ -14,7 +14,7 @@ UI_ALERT_DEPTH = -950
 BUTTON_PADDING = 4
 BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
-COMBO_BOX_SELECTOR_SPEED = 400
+-- COMBO_BOX_SELECTOR_SPEED = 400
 
 DEFAULT_SLICE_9_SCALE = 1 -- 1.5
 
@@ -2046,7 +2046,7 @@ function createUI(system)
 			end
 		end
 
-		node.border.onDrag = function(self, pointerEvent)
+		node.border.onDrag = function(_, pointerEvent)
 			if node.disabled == true then
 				return
 			end
@@ -2351,7 +2351,7 @@ function createUI(system)
 			loadCell = function(_) -- index
 				return nil
 			end,
-			unloadCell = function(_, _) -- index, cell
+			unloadCell = function(index, _) -- index, cell
 				return nil
 			end,
 		}
@@ -2641,10 +2641,12 @@ function createUI(system)
 								cell.pos.Y = cellInfo.bottom
 								cell.pos.X = 0
 							end
+							cells[cellIndex] = cell
 						end
-					elseif cellInfo.top <= unloadBottom and cellInfo.bottom >= unloadTop then
+					elseif cellInfo.top <= unloadBottom or cellInfo.bottom >= unloadTop then
 						cell = cells[cellIndex]
 						if cell ~= nil then
+							-- TODO: FIX UNLOAD CELL, NOT CALLED CURRENTLY!
 							config.unloadCell(cellIndex, cell)
 							cells[cellIndex] = nil
 						end
@@ -2692,6 +2694,12 @@ function createUI(system)
 					then
 						cell = cells[cellIndex]
 						if cell == nil then
+							-- print(
+							-- 	"LOAD",
+							-- 	cellIndex,
+							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
+							-- 	"[" .. loadLeft .. " - " .. loadRight .. "]"
+							-- )
 							cell = config.loadCell(cellIndex)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
@@ -2700,10 +2708,18 @@ function createUI(system)
 								cell.pos.Y = 0
 								cell.pos.X = cellInfo.left
 							end
+							cells[cellIndex] = cell
 						end
-					elseif cellInfo.right <= unloadLeft and cellInfo.left >= unloadRight then
+					elseif cellInfo.right <= unloadLeft or cellInfo.left >= unloadRight then
 						cell = cells[cellIndex]
 						if cell ~= nil then
+							-- print(
+							-- 	"UNLOAD",
+							-- 	cellIndex,
+							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
+							-- 	"[" .. unloadLeft .. " - " .. unloadRight .. "]"
+							-- )
+							-- TODO: FIX LOAD/UNLOAD, sometimes cells are loaded and unloaded during same frame
 							config.unloadCell(cellIndex, cell)
 							cells[cellIndex] = nil
 						end
@@ -2753,7 +2769,11 @@ function createUI(system)
 		end
 
 		node.setScrollPosition = function(self, newPosition)
-			targetScrollPosition = self:capPosition(newPosition)
+			scrollPosition = self:capPosition(newPosition)
+			targetScrollPosition = scrollPosition
+			self:refresh()
+
+			-- targetScrollPosition = self:capPosition(newPosition)
 		end
 
 		node.setScrollIndexVisible = function(self, index)
@@ -2820,7 +2840,7 @@ function createUI(system)
 			targetScrollPosition = 0
 		end
 
-		container.parentDidResizeSystem = function(self)
+		container.parentDidResizeSystem = function(_)
 			node:refresh()
 		end
 
@@ -2858,7 +2878,7 @@ function createUI(system)
 
 		l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 			if totalDragSinceLastTick ~= 0 then
-				scrollSpeed = totalDragSinceLastTick
+				scrollSpeed = totalDragSinceLastTick * (1.0 / dt) * 0.1
 				totalDragSinceLastTick = 0
 			end
 
@@ -2873,11 +2893,13 @@ function createUI(system)
 
 			if released == true and scrollSpeed ~= 0 then
 				scrollPosition = node:capPosition(scrollPosition + scrollSpeed * dt)
+
 				if scrollSpeed > 0 then
-					scrollSpeed = scrollSpeed - math.min(scrollSpeed, 500 * dt)
+					scrollSpeed = scrollSpeed - math.min(scrollSpeed, math.max(0.1, (scrollSpeed * 3) * dt))
 				else
-					scrollSpeed = scrollSpeed + math.min(-scrollSpeed, 500 * dt)
+					scrollSpeed = scrollSpeed + math.min(-scrollSpeed, math.max(0.1, (-scrollSpeed * 3) * dt))
 				end
+
 				targetScrollPosition = scrollPosition
 
 				if math.abs(scrollSpeed) < SCROLL_EPSILON then
@@ -2934,7 +2956,7 @@ function createUI(system)
 
 			self:setScrollPosition(dragStartScrollPosition + diff)
 
-			if pressed ~= self and math.abs(scrollPosition - dragStartScrollPosition) >= SCROLL_DRAG_EPSILON then
+			if pressed ~= self and math.abs(diff) >= SCROLL_DRAG_EPSILON then
 				if pressed._onCancel then
 					pressed:_onCancel()
 				end
@@ -3665,19 +3687,22 @@ function createUI(system)
 		end
 
 		if pressedCandidate ~= nil then
-			pressed = pressedCandidate
+			if not pressedCandidate.isScrollArea then
+				-- waiting for sufficiant drag delta to consider scroll as main pressed component
+				pressed = pressedCandidate
+			end
 
 			-- unfocus focused node, unless hit node.config.unfocused == false
-			if pressed ~= focused and pressed.config.unfocuses ~= false then
+			if pressedCandidate ~= focused and pressedCandidate.config.unfocuses ~= false then
 				focus(nil)
 			end
 
-			if pressed.config.sound and pressed.config.sound ~= "" then
-				sfx(pressed.config.sound, { Spatialized = false })
+			if pressedCandidate.config.sound and pressedCandidate.config.sound ~= "" then
+				sfx(pressedCandidate.config.sound, { Spatialized = false })
 			end
 
-			if pressed._onPress then
-				pressed:_onPress(hitObject, pressedCandidateImpact.Block, pointerEvent)
+			if pressedCandidate._onPress then
+				pressedCandidate:_onPress(hitObject, pressedCandidateImpact.Block, pointerEvent)
 			end
 
 			pointerIndex = pointerEvent.Index
@@ -3749,13 +3774,13 @@ function createUI(system)
 		end
 
 		local capture = false
-
 		for _, scroll in ipairs(pressedScrolls) do
 			capture = true -- at least one scroll capturing drag
 			if scroll._onDrag ~= nil then
 				scroll:_onDrag(pointerEvent)
 			end
 			if pressed == scroll then
+				pressedScrolls = {}
 				-- scroll took control, early return!
 				return true
 			end

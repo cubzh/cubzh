@@ -893,7 +893,7 @@ function home()
 	local root
 	-- local didResizeFunction
 	-- local didResizeListener
-	-- local tickListener
+	local tickListener
 
 	_home.show = function()
 		if root ~= nil then
@@ -913,6 +913,20 @@ function home()
 
 		local padding = theme.padding
 
+		local recycledWorldCells = {}
+		-- local worldCells = {}
+
+		local recycledWorldIcons = {}
+		local worldIcons = {}
+
+		local t = 0.0
+		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			t = t + dt
+			for icon, _ in pairs(worldIcons) do
+				icon.pivot.LocalRotation:Set(-0.1, t, -0.2)
+			end
+		end)
+
 		local function cellResizeFn(self)
 			self.Width = self.parent.Width
 			self.title.pos = { padding, self.Height - self.title.Height - padding }
@@ -926,6 +940,44 @@ function home()
 
 		local function worldCellResizeFn(self)
 			self.Height = self.parent.Height
+
+			if self.shape then
+				self.shape.pos = { 0, 0 }
+				self.shape.Height = self.Height
+				self.shape.Width = self.Width
+				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+		end
+
+		local function getOrCreateWorldCell()
+			local cell = table.remove(recycledWorldCells)
+
+			if cell == nil then
+				cell = ui:frame({ color = Color(0, 0, 0) })
+				cell.Width = 100
+				cell.parentDidResize = worldCellResizeFn
+			end
+
+			local item = table.remove(recycledWorldIcons)
+			if item == nil then
+				local shape = bundle:Shape("shapes/world_icon")
+				item = ui:createShape(shape, { spherized = true })
+			end
+
+			item:setParent(cell)
+			cell.shape = item
+			worldIcons[item] = true
+			return cell
+		end
+
+		local function recycleWorldCell(cell)
+			cell.shape:setParent(nil)
+			table.insert(recycledWorldIcons, cell.shape)
+			worldIcons[cell.shape] = nil
+			cell.shape = nil
+
+			cell:setParent(nil)
+			table.insert(recycledWorldCells, cell)
 		end
 
 		local categoryUnusedCells = {}
@@ -934,86 +986,72 @@ function home()
 			{
 				title = "Friends",
 				loadCell = function(index)
-					if index < 10 then -- TODO: it should stop loading when past loading area
+					if index < 10 then
 						local cell = ui:frame({ color = Color(0, 0, 0) })
 						cell.Width = 100
 						cell.parentDidResize = worldCellResizeFn
 						return cell
 					end
 				end,
-				unloadCell = function()
+				unloadCell = function(index, cell)
 					cell:remove()
 				end,
 			},
 			{
 				title = "Featured",
 				loadCell = function(index)
-					if index < 10 then -- TODO: it should stop loading when past loading area
-						print("LOAD FEATURED CELL")
-						local cell = ui:frame({ color = Color(0, 0, 0) })
-						cell.Width = 100
-						cell.parentDidResize = worldCellResizeFn
-						return cell
+					if index < 20 then
+						-- print("LOAD FEATURED CELL:", index)
+						return getOrCreateWorldCell()
 					end
 				end,
-				unloadCell = function()
-					cell:remove()
+				unloadCell = function(index, cell)
+					-- print("UNLOAD FEATURED CELL:", index)
+					recycleWorldCell(cell)
 				end,
 			},
 			{
 				title = "Fun with friends",
 				loadCell = function(index)
-					if index < 10 then -- TODO: it should stop loading when past loading area
-						local cell = ui:frame({ color = Color(0, 0, 0) })
-						cell.Width = 100
-						cell.parentDidResize = worldCellResizeFn
-						return cell
+					if index < 10 then
+						return getOrCreateWorldCell()
 					end
 				end,
-				unloadCell = function()
-					cell:remove()
+				unloadCell = function(_, cell)
+					recycleWorldCell(cell)
 				end,
 			},
 			{
 				title = "Top Rated",
 				loadCell = function(index)
-					if index < 10 then -- TODO: it should stop loading when past loading area
-						local cell = ui:frame({ color = Color(0, 0, 0) })
-						cell.Width = 100
-						cell.parentDidResize = worldCellResizeFn
-						return cell
+					if index < 10 then
+						return getOrCreateWorldCell()
 					end
 				end,
-				unloadCell = function()
-					cell:remove()
+				unloadCell = function(_, cell)
+					recycleWorldCell(cell)
 				end,
 			},
 			{
 				title = "Popular Items",
 				loadCell = function(index)
-					if index < 10 then -- TODO: it should stop loading when past loading area
-						local cell = ui:frame({ color = Color(0, 0, 0) })
-						cell.Width = 100
-						cell.parentDidResize = worldCellResizeFn
-						return cell
+					if index < 10 then
+						return getOrCreateWorldCell()
 					end
 				end,
-				unloadCell = function()
-					cell:remove()
+				unloadCell = function(_, cell)
+					recycleWorldCell(cell)
 				end,
 			},
 			{
 				title = "New Items",
 				loadCell = function(index)
-					if index < 10 then -- TODO: it should stop loading when past loading area
-						local cell = ui:frame({ color = Color(0, 0, 0) })
-						cell.Width = 100
-						cell.parentDidResize = worldCellResizeFn
-						return cell
+					if index < 10 then
+						return getOrCreateWorldCell()
 					end
 				end,
-				unloadCell = function()
-					cell:remove()
+				unloadCell = function(_, cell)
+					recycleWorldCell(cell)
 				end,
 			},
 		}
@@ -1079,6 +1117,7 @@ function home()
 								cellPadding = 5,
 								direction = "right",
 								loadCell = category.loadCell,
+								unloadCell = category.unloadCell,
 							})
 							scroll:setParent(cell)
 							cell.scroll = scroll
