@@ -910,28 +910,116 @@ function home()
 		root:parentDidResize()
 
 		local profileCell -- cell to showcase avatar
-		local friendsCell
-
-		local categoryUnusedCells = {}
-		local categoryCells = {}
-		local categories = {
-			{ title = "Friends" },
-			{ title = "Featured" },
-			{ title = "Fun with friends" },
-			{ title = "Top Rated" },
-			{ title = "Popular Items" },
-			{ title = "New Items" },
-		}
-		local nbCategories = #categories
 
 		local padding = theme.padding
 
 		local function cellResizeFn(self)
 			self.Width = self.parent.Width
 			self.title.pos = { padding, self.Height - self.title.Height - padding }
+
+			if self.scroll then
+				self.scroll.pos = { padding, padding }
+				self.scroll.Height = self.Height - self.title.Height - padding * 3
+				self.scroll.Width = self.Width - padding * 2
+			end
 		end
 
-		local function createCategoryCell()
+		local function worldCellResizeFn(self)
+			self.Height = self.parent.Height
+		end
+
+		local categoryUnusedCells = {}
+		local categoryCells = {}
+		local categories = {
+			{
+				title = "Friends",
+				loadCell = function(index)
+					if index < 10 then -- TODO: it should stop loading when past loading area
+						local cell = ui:frame({ color = Color(0, 0, 0) })
+						cell.Width = 100
+						cell.parentDidResize = worldCellResizeFn
+						return cell
+					end
+				end,
+				unloadCell = function()
+					cell:remove()
+				end,
+			},
+			{
+				title = "Featured",
+				loadCell = function(index)
+					if index < 10 then -- TODO: it should stop loading when past loading area
+						print("LOAD FEATURED CELL")
+						local cell = ui:frame({ color = Color(0, 0, 0) })
+						cell.Width = 100
+						cell.parentDidResize = worldCellResizeFn
+						return cell
+					end
+				end,
+				unloadCell = function()
+					cell:remove()
+				end,
+			},
+			{
+				title = "Fun with friends",
+				loadCell = function(index)
+					if index < 10 then -- TODO: it should stop loading when past loading area
+						local cell = ui:frame({ color = Color(0, 0, 0) })
+						cell.Width = 100
+						cell.parentDidResize = worldCellResizeFn
+						return cell
+					end
+				end,
+				unloadCell = function()
+					cell:remove()
+				end,
+			},
+			{
+				title = "Top Rated",
+				loadCell = function(index)
+					if index < 10 then -- TODO: it should stop loading when past loading area
+						local cell = ui:frame({ color = Color(0, 0, 0) })
+						cell.Width = 100
+						cell.parentDidResize = worldCellResizeFn
+						return cell
+					end
+				end,
+				unloadCell = function()
+					cell:remove()
+				end,
+			},
+			{
+				title = "Popular Items",
+				loadCell = function(index)
+					if index < 10 then -- TODO: it should stop loading when past loading area
+						local cell = ui:frame({ color = Color(0, 0, 0) })
+						cell.Width = 100
+						cell.parentDidResize = worldCellResizeFn
+						return cell
+					end
+				end,
+				unloadCell = function()
+					cell:remove()
+				end,
+			},
+			{
+				title = "New Items",
+				loadCell = function(index)
+					if index < 10 then -- TODO: it should stop loading when past loading area
+						local cell = ui:frame({ color = Color(0, 0, 0) })
+						cell.Width = 100
+						cell.parentDidResize = worldCellResizeFn
+						return cell
+					end
+				end,
+				unloadCell = function()
+					cell:remove()
+				end,
+			},
+		}
+		local nbCategories = #categories
+
+		local function createCategoryCell(category)
 			cell = ui:frame({ color = Color(0, 0, 0, 0.5) })
 			cell.Height = 150
 			cell.parentDidResize = cellResizeFn
@@ -974,12 +1062,27 @@ function home()
 						cell = table.remove(categoryUnusedCells)
 						if cell == nil then
 							-- no cell in recycle pool, create it
-							cell = createCategoryCell()
+							cell = createCategoryCell(category)
 						end
 						cell.categoryIndex = categoryIndex
 						categoryCells[categoryIndex] = cell
 
 						cell.title.Text = category.title
+
+						if category.loadCell ~= nil then
+							if cell.scroll then
+								cell.scroll:remove()
+							end
+							local scroll = ui:createScroll({
+								backgroundColor = Color(255, 255, 255),
+								padding = 5,
+								cellPadding = 5,
+								direction = "right",
+								loadCell = category.loadCell,
+							})
+							scroll:setParent(cell)
+							cell.scroll = scroll
+						end
 					end
 					return cell
 				end
