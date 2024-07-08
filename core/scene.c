@@ -99,64 +99,6 @@ void _scene_refresh_rtree_collision_masks(RigidBody *rb) {
     }
 }
 
-void _scene_refresh_recurse(Scene *sc,
-                            Transform *t,
-                            bool hierarchyDirty,
-                            const TICK_DELTA_SEC_T dt,
-                            void *callbackData) {
-
-    // Transform still inside scene hierarchy
-    transform_set_removed_from_scene(t, false);
-
-    // Refresh transform (top-first) after sandbox changes
-    transform_refresh(t, hierarchyDirty, false);
-
-    // Apply shape current transaction (top-first), this may change BB & collider
-    if (transform_get_type(t) == ShapeTransform) {
-        shape_apply_current_transaction(transform_utils_get_shape(t), false);
-    }
-
-    // Get rigidbody, compute world collider
-    Box collider;
-    RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider, false);
-
-    if (rb != NULL) {
-        // Update r-tree (top-first) after sandbox changes
-        _scene_update_rtree(sc, rb, t, &collider);
-        _scene_refresh_rtree_collision_masks(rb);
-
-        // Step physics (top-first), collider is kept up-to-date
-        const bool moved = rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, callbackData);
-
-        if (moved) {
-            // Refresh transform (top-first) after physics changes
-            transform_refresh(t, false, false);
-
-            // Update r-tree (top-first) after physics changes
-            if (rb != NULL) {
-                transform_get_or_compute_world_aligned_collider(t, &collider, false);
-                _scene_update_rtree(sc, rb, t, &collider);
-            }
-        }
-    }
-
-    // Recurse down the branch
-    // ⬆ anything above recursion is executed TOP-FIRST
-    DoublyLinkedListNode *n = transform_get_children_iterator(t);
-    while (n != NULL) {
-        _scene_refresh_recurse(sc,
-                               (Transform *)doubly_linked_list_node_pointer(n),
-                               hierarchyDirty || transform_is_hierarchy_dirty(t),
-                               dt,
-                               callbackData);
-        n = doubly_linked_list_node_next(n);
-    }
-    // ⬇ anything after recursion is executed DEEP-FIRST
-
-    // Clear intra-frame refresh flags (deep-first)
-    transform_refresh_children_done(t);
-}
-
 bool _scene_shapes_iterator_func(Transform *t, void *ptr) {
     if (transform_get_type(t) == ShapeTransform) {
         doubly_linked_list_push_last((DoublyLinkedList *)ptr, (Shape *)transform_get_ptr(t));
@@ -263,16 +205,70 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData) {
 #if DEBUG_RIGIDBODY_EXTRA_LOGS
     cclog_debug("🏞 physics step");
 #endif
-    _scene_refresh_recurse(sc, sc->root, transform_is_hierarchy_dirty(sc->root), dt, callbackData);
+
+    FifoList *toExamine = fifo_list_new();
+    Transform *t = sc->root, *child = NULL;
+    DoublyLinkedListNode *n;
+    while (t != NULL) {
+        // Transform still inside scene hierarchy
+        transform_set_removed_from_scene(t, false);
+
+        // Refresh transform (top-first) after sandbox changes
+        transform_refresh(t, transform_is_hierarchy_dirty(t), false);
+
+        // Apply shape current transaction (top-first), this may change BB & collider
+        if (transform_get_type(t) == ShapeTransform) {
+            shape_apply_current_transaction(transform_utils_get_shape(t), false);
+        }
+
+        // Get rigidbody, compute world collider
+        Box collider;
+        RigidBody *rb = transform_get_or_compute_world_aligned_collider(t, &collider, false);
+
+        if (rb != NULL) {
+            // Update r-tree (top-first) after sandbox changes
+            _scene_update_rtree(sc, rb, t, &collider);
+            _scene_refresh_rtree_collision_masks(rb);
+
+            // Step physics (top-first), collider is kept up-to-date
+            const bool moved = rigidbody_tick(sc, rb, t, &collider, sc->rtree, dt, callbackData);
+
+            if (moved) {
+                // Refresh transform (top-first) after physics changes
+                transform_refresh(t, false, false);
+
+                // Update r-tree (top-first) after physics changes
+                if (rb != NULL) {
+                    transform_get_or_compute_world_aligned_collider(t, &collider, false);
+                    _scene_update_rtree(sc, rb, t, &collider);
+                }
+            }
+        }
+
+        // Enqueue children and propagate dirty hierarchy flag
+        n = transform_get_children_iterator(t);
+        while (n != NULL) {
+            child = (Transform *)doubly_linked_list_node_pointer(n);
+
+            if (transform_is_hierarchy_dirty(t)) {
+                transform_set_children_dirty(child);
+            }
+
+            fifo_list_push(toExamine, child);
+            n = doubly_linked_list_node_next(n);
+        }
+        transform_reset_children_dirty(t);
+
+        t = (Transform *)fifo_list_pop(toExamine);
+    }
+    fifo_list_free(toExamine, NULL);
 
 #if DEBUG_RTREE_CHECK
     vx_assert(debug_rtree_integrity_check(sc->rtree));
 #endif
 
     // process transforms removal from hierarchy
-    Transform *t = (Transform *)fifo_list_pop(sc->removed);
-    DoublyLinkedListNode *n = NULL;
-    Transform *child = NULL;
+    t = (Transform *)fifo_list_pop(sc->removed);
     RigidBody *rb = NULL;
     while (t != NULL) {
         // if still outside of hierarchy at end-of-frame, proceed with removal

@@ -296,7 +296,11 @@ void transform_refresh(Transform *t, bool hierarchyDirty, bool refreshParents) {
     _transform_refresh_matrices(t, hierarchyDirty);
 }
 
-void transform_refresh_children_done(Transform *t) {
+void transform_set_children_dirty(Transform *t) {
+    _transform_set_dirty(t, TRANSFORM_DIRTY_CHILDREN, false);
+}
+
+void transform_reset_children_dirty(Transform *t) {
     _transform_reset_dirty(t, TRANSFORM_DIRTY_CHILDREN);
 }
 

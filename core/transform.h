@@ -90,7 +90,8 @@ Weakptr *transform_get_weakptr(Transform *t);
 Weakptr *transform_get_and_retain_weakptr(Transform *t);
 bool transform_is_hierarchy_dirty(Transform *t);
 void transform_refresh(Transform *t, bool hierarchyDirty, bool refreshParents);
-void transform_refresh_children_done(Transform *t);
+void transform_set_children_dirty(Transform *t);
+void transform_reset_children_dirty(Transform *t);
 void transform_reset_any_dirty(Transform *t);
 /// set, but not reset by transform, can be used internally by higher types as custom flag
 bool transform_is_any_dirty(Transform *t);
