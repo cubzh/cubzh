@@ -369,7 +369,7 @@ Shape *shape_make_copy(Shape *const origin) {
         transform_set_hidden_self(t, transform_is_hidden_self(originTr));
 
         transform_set_local_scale_vec(t, transform_get_local_scale(originTr));
-        transform_set_local_position_vec(t, transform_get_local_position(originTr));
+        transform_set_local_position_vec(t, transform_get_local_position(originTr, true));
         transform_set_local_rotation(t, transform_get_local_rotation(originTr));
 
         // Note: do not parent automatically
@@ -958,7 +958,11 @@ bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T 
            coords.y < shape->bbMax.y && coords.z >= shape->bbMin.z && coords.z < shape->bbMax.z;
 }
 
-void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isCollider) {
+void shape_box_to_aabox(const Shape *s,
+                        const Box *box,
+                        Box *aabox,
+                        bool isCollider,
+                        const bool refreshParents) {
     if (s == NULL || box == NULL || aabox == NULL)
         return;
 
@@ -969,12 +973,18 @@ void shape_box_to_aabox(const Shape *s, const Box *box, Box *aabox, bool isColli
                                                     aabox,
                                                     s->pivot,
                                                     PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify
-                                                                                      : NoSquarify);
+                                                                                      : NoSquarify,
+                                                    refreshParents);
         } else {
-            transform_utils_box_to_static_collider(s->transform, box, aabox, s->pivot, NoSquarify);
+            transform_utils_box_to_static_collider(s->transform,
+                                                   box,
+                                                   aabox,
+                                                   s->pivot,
+                                                   NoSquarify,
+                                                   refreshParents);
         }
     } else {
-        transform_utils_box_to_aabb(s->transform, box, aabox, s->pivot, NoSquarify);
+        transform_utils_box_to_aabb(s->transform, box, aabox, s->pivot, NoSquarify, refreshParents);
     }
 }
 
@@ -1010,10 +1020,10 @@ void shape_get_local_aabb(const Shape *s, Box *box) {
     box_to_aabox2(&model, box, transform_get_mtx(s->transform), s->pivot, false);
 }
 
-bool shape_get_world_aabb(Shape *s, Box *box) {
+bool shape_get_world_aabb(Shape *s, Box *box, const bool refreshParents) {
     if (s->worldAABB == NULL || transform_is_any_dirty(s->transform)) {
         const Box model = shape_get_model_aabb(s);
-        shape_box_to_aabox(s, &model, box, false);
+        shape_box_to_aabox(s, &model, box, false, refreshParents);
         if (s->worldAABB == NULL) {
             s->worldAABB = box_new_copy(box);
         } else {
@@ -1360,13 +1370,6 @@ float3 shape_world_to_block(const Shape *s, const float x, const float y, const 
     return shape_local_to_block(s, local.x, local.y, local.z);
 }
 
-void shape_set_position(Shape *s, const float x, const float y, const float z) {
-    if (s == NULL) {
-        return;
-    }
-    transform_set_position(s->transform, x, y, z);
-}
-
 void shape_set_local_position(Shape *s, const float x, const float y, const float z) {
     if (s == NULL) {
         return;
@@ -1374,25 +1377,18 @@ void shape_set_local_position(Shape *s, const float x, const float y, const floa
     transform_set_local_position(s->transform, x, y, z);
 }
 
-const float3 *shape_get_position(const Shape *s) {
-    if (s == NULL) {
-        return NULL;
-    }
-    return transform_get_position(s->transform);
-}
-
 const float3 *shape_get_local_position(const Shape *s) {
     if (s == NULL) {
         return NULL;
     }
-    return transform_get_local_position(s->transform);
+    return transform_get_local_position(s->transform, true);
 }
 
 float3 shape_get_model_origin(const Shape *s) {
     if (s == NULL)
         return float3_zero;
 
-    const float3 *pos = transform_get_position(s->transform);
+    const float3 *pos = transform_get_position(s->transform, true);
     return (float3){pos->x + s->pivot->x, pos->y + s->pivot->y, pos->z + s->pivot->z};
 }
 
@@ -1471,7 +1467,7 @@ void shape_get_lossy_scale(const Shape *s, float3 *scale) {
     if (s == NULL) {
         return;
     }
-    transform_get_lossy_scale(s->transform, scale);
+    transform_get_lossy_scale(s->transform, scale, true);
 }
 
 bool shape_set_parent(Shape *s, Transform *parent, const bool keepWorld) {
@@ -1838,13 +1834,13 @@ Box shape_get_model_collider(const Shape *s) {
                                                    : *rigidbody_get_collider(rb);
 }
 
-void shape_compute_world_collider(const Shape *s, Box *box) {
+void shape_compute_world_collider(const Shape *s, Box *box, const bool refreshParents) {
     RigidBody *rb = transform_get_rigidbody(s->transform);
     if (rb == NULL)
         return;
     Box collider = rigidbody_uses_per_block_collisions(rb) ? shape_get_model_aabb(s)
                                                            : *rigidbody_get_collider(rb);
-    shape_box_to_aabox(s, &collider, box, true);
+    shape_box_to_aabox(s, &collider, box, true, refreshParents);
 }
 
 typedef struct {
