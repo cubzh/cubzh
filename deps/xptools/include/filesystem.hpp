@@ -242,8 +242,11 @@ void removeStorageDirectoryRecurse(std::string dirPath);
 /// Returns true on success, false otherwise.
 bool readFile(const std::string filepath, std::string& dest);
 
-// Returns path without its last element.
+/// Returns path without its last element.
 std::string pathDir(const std::string& path);
+
+/// Normalizes the given path, removing all "." and ".." elements it may contain.
+std::string normalizePath(const std::string &path);
 
 }
 }

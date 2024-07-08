@@ -13,9 +13,12 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include <stack>
+#include <sstream>
 
 // xptools
 #include "vxlog.h"
+#include "strings.hpp"
 
 // windows
 #include <windows.h>
@@ -209,8 +212,19 @@ std::string vx::fs::getBundleFilePath(const std::string& relFilePath) {
 /// Opens a file located in the bundle "assets" directory.
 /// @param relFilePath relative path of a file in the bundle assets. It shouldn't start with a '/'.
 FILE *vx::fs::openBundleFile(std::string relFilePath, std::string mode) {
-    // vxlog(LOG_SEVERITY_TRACE, LOG_COMPONENT, "[FS] open bundle file : %s %s", relFilePath.c_str(), mode.c_str());
-    std::string absPath = _getAbsBundlePath() + "\\" + relFilePath;
+    
+    // construct the absolute path of the file
+    const std::string absPath = vx::fs::getBundleFilePath(relFilePath);
+    
+    // normalize the path, to remove any . or .. element it may contain
+    const std::string absPathNormalized = vx::fs::normalizePath(absPath);
+
+    // make sure the normalized path targets a file *inside* the bundle directory
+    if (vx::str::hasPrefix(absPathNormalized, _getAbsBundlePath()) == false) {
+        // don't open files outside of the bundle directory
+        return nullptr;
+    }
+
     FILE *fd = nullptr;
     errno_t err = fopen_s(&fd, absPath.c_str(), mode.c_str());
     if (err != 0) {
@@ -856,6 +870,59 @@ unsigned char *vx::fs::getIcon32Pixels() {
 /// returns the raw bytes of the 48x48 icon's pixels
 unsigned char *vx::fs::getIcon48Pixels() {
     return (unsigned char *)icon_48;
+}
+
+std::string vx::fs::normalizePath(const std::string &path) {
+    std::stack<std::string> dirStack;
+    std::vector<std::string> parts;
+    std::stringstream ss(path);
+    std::string item;
+    bool isAbsolutePath = false;
+
+    // Determine if the path is absolute
+    if (path.length() > 2 && path[1] == ':' && path[2] == '\\') {
+        isAbsolutePath = true;
+        dirStack.push(path.substr(0, 3)); // Push the drive letter and root
+        ss.seekg(3);                      // Start parsing after the drive letter
+    } else if (path.length() > 0 && path[0] == '\\') {
+        isAbsolutePath = true;
+        dirStack.push("\\");
+        ss.seekg(1); // Start parsing after the leading backslash
+    }
+
+    // Split the path by '\'
+    while (std::getline(ss, item, '\\')) {
+        if (item == "" || item == ".") {
+            // Skip empty and current directory elements
+            continue;
+        }
+        if (item == "..") {
+            if (!dirStack.empty() && dirStack.top() != "\\" &&
+                !(dirStack.size() == 1 && dirStack.top().length() == 3)) {
+                dirStack.pop();
+            }
+        } else {
+            dirStack.push(item);
+        }
+    }
+
+    // Reconstruct the normalized path
+    std::vector<std::string> result;
+    while (!dirStack.empty()) {
+        result.push_back(dirStack.top());
+        dirStack.pop();
+    }
+    std::reverse(result.begin(), result.end());
+
+    std::string normalizedPath;
+    for (const auto &part : result) {
+        normalizedPath += part;
+        if (&part != &result.back() && part != "\\" && !(part.length() == 3 && part[1] == ':')) {
+            normalizedPath += "\\";
+        }
+    }
+
+    return normalizedPath;
 }
 
 // ------------------------------
