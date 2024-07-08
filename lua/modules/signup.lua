@@ -1716,13 +1716,13 @@ signup.startFlow = function(self, config)
 								System.HasEmail = userInfo.hasEmail or false
 								System.HasVerifiedPhoneNumber = userInfo.hasPhoneNumber or false
 
-								print("🪲 userInfo:")
-								print("\tusername:", userInfo.username)
-								print("\thasEmail:", userInfo.hasEmail)
-								print("\thasPassword:", userInfo.hasPassword)
-								print("\tisUnder13:", userInfo.isUnder13)
-								print("\tdidCustomizeAvatar:", userInfo.didCustomizeAvatar)
-								print("\thasPhoneNumber:", userInfo.hasPhoneNumber)
+								-- print("🪲 userInfo:")
+								-- print("\tusername:", userInfo.username)
+								-- print("\thasEmail:", userInfo.hasEmail)
+								-- print("\thasPassword:", userInfo.hasPassword)
+								-- print("\tisUnder13:", userInfo.isUnder13)
+								-- print("\tdidCustomizeAvatar:", userInfo.didCustomizeAvatar)
+								-- print("\thasPhoneNumber:", userInfo.hasPhoneNumber)
 
 								if System.Username ~= "" or System.HasEmail or System.HasVerifiedPhoneNumber then
 									config.loginSuccess()

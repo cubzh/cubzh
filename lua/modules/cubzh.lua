@@ -9,6 +9,7 @@ Client.OnStart = function()
 
 	Clouds.On = false
 
+	api = require("api")
 	ease = require("ease")
 	particles = require("particles")
 
@@ -915,9 +916,11 @@ function home()
 
 		local recycledWorldCells = {}
 		-- local worldCells = {}
-
 		local recycledWorldIcons = {}
 		local worldIcons = {}
+
+		local recycledFriendCells = {}
+		local friendAvatarCache = {}
 
 		local t = 0.0
 		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
@@ -947,13 +950,23 @@ function home()
 				self.shape.Width = self.Width
 				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
 			end
+
+			if self.avatar then
+				self.avatar.pos = { padding, padding }
+				self.avatar.Height = self.Height - padding * 2
+				self.avatar.Width = self.Width - padding * 2
+			end
+
+			-- if self.usernameFrame then
+			-- 	print("usernameFrame.pos.Z", self.usernameFrame.pos.Z)
+			-- end
 		end
 
 		local function getOrCreateWorldCell()
 			local cell = table.remove(recycledWorldCells)
 
 			if cell == nil then
-				cell = ui:frame({ color = Color(0, 0, 0) })
+				cell = ui:frameScrollCell()
 				cell.Width = 100
 				cell.parentDidResize = worldCellResizeFn
 			end
@@ -980,21 +993,104 @@ function home()
 			table.insert(recycledWorldCells, cell)
 		end
 
+		local friendsRow
+		local friendsScroll
+		local req
+		local loadedFriends = {}
+		local nbLoadedFriends = 0
+		local function requestFriends()
+			if req ~= nil then
+				req:Cancel()
+			end
+			req = api:getFriends(function(ok, friends, _)
+				if not ok then
+					return
+				end
+
+				loadedFriends = friends
+				nbLoadedFriends = #loadedFriends
+
+				if friendsScroll ~= nil then
+					friendsScroll:refresh()
+				end
+
+				if friendsRow ~= nil then
+					friendsRow.title.Text = "Friends (" .. #loadedFriends .. ")"
+				end
+			end, { "id", "username" })
+		end
+
+		local function getOrCreateFriendCell()
+			local cell = table.remove(recycledFriendCells)
+
+			if cell == nil then
+				cell = ui:frameScrollCell()
+				cell.Width = 100
+				cell.parentDidResize = worldCellResizeFn
+
+				-- NOTE(aduermael): I have issues displaying it on top of the avatar itself
+
+				-- local usernameFrame = ui:frame({ color = Color(0, 0, 0) })
+				-- usernameFrame.Width = 30
+				-- usernameFrame.Height = 30
+				-- usernameFrame:setParent(cell)
+				-- -- print("ui.kForegroundDepth:", ui.kForegroundDepth)
+				-- usernameFrame.LocalPosition.Z = ui.kForegroundDepth
+
+				-- local username = ui:createText("...", Color.White)
+				-- username:setParent(cell)
+
+				-- cell.username = username
+				-- cell.usernameFrame = usernameFrame
+			end
+
+			-- worldIcons[item] = true
+			return cell
+		end
+
+		local function recycleFriendCell(cell)
+			if cell.avatar then
+				cell.avatar:setParent(nil)
+				cell.avatar = nil
+			end
+			cell:setParent(nil)
+			table.insert(recycledFriendCells, cell)
+		end
+
 		local categoryUnusedCells = {}
 		local categoryCells = {}
 		local categories = {
 			{
 				title = "Friends",
 				loadCell = function(index)
-					if index < 10 then
-						local cell = ui:frame({ color = Color(0, 0, 0) })
-						cell.Width = 100
-						cell.parentDidResize = worldCellResizeFn
-						return cell
+					if index <= nbLoadedFriends then
+						local friendCell = getOrCreateFriendCell()
+
+						local avatar = friendAvatarCache[index]
+						if avatar == nil then
+							avatar = uiAvatar:getHeadAndShoulders({
+								usernameOrId = loadedFriends[index].id,
+								backgroundColor = Color(49, 51, 57),
+							})
+							friendAvatarCache[index] = avatar
+						end
+						avatar:setParent(friendCell)
+						friendCell.avatar = avatar
+
+						return friendCell
 					end
 				end,
-				unloadCell = function(index, cell)
-					cell:remove()
+				unloadCell = function(_, cell)
+					recycleFriendCell(cell)
+				end,
+				extraSetup = function(scroll, row)
+					friendsScroll = scroll
+					friendsRow = row
+					friendsScroll.onRemove = function()
+						friendsScroll = nil
+						friendsRow = nil
+					end
+					requestFriends()
 				end,
 			},
 			{
@@ -1005,7 +1101,7 @@ function home()
 						return getOrCreateWorldCell()
 					end
 				end,
-				unloadCell = function(index, cell)
+				unloadCell = function(_, cell)
 					-- print("UNLOAD FEATURED CELL:", index)
 					recycleWorldCell(cell)
 				end,
@@ -1057,8 +1153,9 @@ function home()
 		}
 		local nbCategories = #categories
 
-		local function createCategoryCell(category)
-			cell = ui:frame({ color = Color(0, 0, 0, 0.5) })
+		local function createCategoryCell(_)
+			cell = ui:frameGenericContainer()
+			-- cell = ui:frame({ color = Color(0, 0, 0, 0.5) })
 			cell.Height = 150
 			cell.parentDidResize = cellResizeFn
 
@@ -1076,18 +1173,41 @@ function home()
 			loadCell = function(index)
 				if index == 1 then
 					if profileCell == nil then
-						local avatar = uiAvatar:get({ usernameOrId = Player.Username })
+						local avatar = uiAvatar:get({ usernameOrId = Player.Username, spherized = false })
 
-						profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
-						profileCell.Height = 200
+						-- profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						profileCell = ui:frame()
+						profileCell.Height = 150
+
+						local username = ui:createText(Player.Username)
+						username:setParent(profileCell)
+
+						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
+						editAvatarBtn:setParent(profileCell)
+
+						local visitHouseBtn = ui:buttonNeutral({ content = "🏠 Visit house" })
+						visitHouseBtn:setParent(profileCell)
 
 						avatar:setParent(profileCell)
 
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
 
+							local infoWidth = math.max(username.Width, editAvatarBtn.Width, visitHouseBtn.Width)
+							local infoHeight =
+								math.max(username.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2)
+							local totalWidth = infoWidth + avatar.Width + padding
+
 							avatar.Height = self.Height
-							avatar.pos = { self.Width * 0.5 - avatar.Width * 0.5, 0 }
+							avatar.pos = { self.Width * 0.5 - totalWidth * 0.5, 0 }
+
+							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
+							local x = avatar.pos.X + avatar.Width + padding
+							username.pos = { x, y }
+							y = y - padding - editAvatarBtn.Height
+							editAvatarBtn.pos = { x, y }
+							y = y - padding - visitHouseBtn.Height
+							visitHouseBtn.pos = { x, y }
 						end
 					end
 					return profileCell
@@ -1112,7 +1232,8 @@ function home()
 								cell.scroll:remove()
 							end
 							local scroll = ui:createScroll({
-								backgroundColor = Color(255, 255, 255),
+								-- backgroundColor = Color(255, 255, 255),
+								backgroundColor = Color(43, 45, 49),
 								padding = 5,
 								cellPadding = 5,
 								direction = "right",
@@ -1121,34 +1242,80 @@ function home()
 							})
 							scroll:setParent(cell)
 							cell.scroll = scroll
+
+							if category.extraSetup then
+								category.extraSetup(scroll, cell)
+							end
 						end
 					end
 					return cell
 				end
 			end,
-			unloadCell = function(index, cell)
+			unloadCell = function(_, _)
 				-- TODO: recycle
 			end,
 		})
 		scroll:setParent(root)
 
-		local bottomBar = ui:frame({ color = Color(0, 0, 0, 0.7) })
+		local bottomBar = ui:frame()
 
-		local btnHome = ui:button({ content = "Home", textSize = "small" })
-		btnHome:setParent(bottomBar)
-		local btnExplore = ui:button({ content = "Explore", textSize = "small" })
-		btnExplore:setParent(bottomBar)
-		local btnProfile = ui:button({ content = "Profile", textSize = "small" })
-		btnProfile:setParent(bottomBar)
-		local btnFriends = ui:button({ content = "Friends", textSize = "small" })
-		btnFriends:setParent(bottomBar)
-		local btnCreate = ui:button({ content = "Create", textSize = "small" })
-		btnCreate:setParent(bottomBar)
+		local function createBottomBarButton(text)
+			local btn = ui:frame({ color = Color(0, 0, 0) })
+
+			local content = ui:frame()
+
+			local data = Data:FromBundle("images/gear-icon.png")
+			local quad = Quad()
+			quad.Image = {
+				data = data,
+				alpha = true,
+			}
+			local icon = ui:frame({ quad = quad })
+			icon.Width = 20
+			icon.Height = 20
+			icon:setParent(content)
+
+			local title = ui:createText(text, { size = "small", color = Color.White })
+			title:setParent(content)
+
+			content.Width = 50
+			content.Height = title.Height + icon.Height + padding * 2.5
+
+			content.parentDidResize = function(self)
+				self.Width = self.parent.Width
+				self.pos = { 0, self.parent.Height - self.Height }
+
+				local y = self.Height - padding - icon.Height
+				icon.pos = { self.Width * 0.5 - icon.Width * 0.5, y }
+				y = y - padding * 0.5 - title.Height
+				title.pos = { self.Width * 0.5 - title.Width * 0.5, y }
+			end
+
+			content:setParent(btn)
+			btn.content = content
+
+			btn:setParent(bottomBar)
+			return btn
+		end
+
+		local btnHome = createBottomBarButton("Home")
+		local btnExplore = createBottomBarButton("Explore")
+		local btnProfile = createBottomBarButton("Profile")
+		local btnFriends = createBottomBarButton("Friends")
+		local btnCreate = createBottomBarButton("Create")
 
 		bottomBar.parentDidResize = function(self)
 			self.Width = self.parent.Width
-			self.Height = Screen.SafeArea.Bottom + btnHome.Height
 			local btnWidth = self.Width / 5.0
+
+			local h = btnHome.content.Height + Screen.SafeArea.Bottom
+
+			self.Height = h
+			btnHome.Height = h
+			btnExplore.Height = h
+			btnProfile.Height = h
+			btnFriends.Height = h
+			btnCreate.Height = h
 
 			btnHome.Width = btnWidth
 			btnExplore.Width = btnWidth
@@ -1156,7 +1323,7 @@ function home()
 			btnFriends.Width = btnWidth
 			btnCreate.Width = btnWidth
 
-			btnHome.pos = { 0, Screen.SafeArea.Bottom }
+			btnHome.pos = { 0, 0 }
 			btnExplore.pos = btnHome.pos + { btnWidth, 0 }
 			btnProfile.pos = btnExplore.pos + { btnWidth, 0 }
 			btnFriends.pos = btnProfile.pos + { btnWidth, 0 }

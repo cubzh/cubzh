@@ -756,7 +756,13 @@ function removeBadge()
 end
 
 if System.IsHomeAppRunning then
-	local settingsIcon = ui:frame({ color = Color(255, 0, 0) })
+	local icon = Data:FromBundle("images/gear-icon.png")
+	local quad = Quad()
+	quad.Image = {
+		data = icon,
+		alpha = true,
+	}
+	local settingsIcon = ui:frame({ quad = quad })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
