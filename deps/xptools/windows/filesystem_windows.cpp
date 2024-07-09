@@ -246,8 +246,20 @@ FILE *vx::fs::openFile(const std::string& filepath, const std::string& mode) {
 
 /// Use binary mode for non text files
 FILE *vx::fs::openStorageFile(std::string relFilePath, std::string mode, size_t writeSize) {
+
+    // construct the absolute path of the file
     const std::string storagePath = _getAbsStoragePath();
-    std::string absPath = storagePath + "\\" + relFilePath;
+    const std::string absPath = storagePath + "\\" + relFilePath;
+
+    // normalize the path, to remove any . or .. element it may contain
+    const std::string absPathNormalized = vx::fs::normalizePath(absPath);
+
+    // make sure the normalized path targets a file *inside* the storage directory
+    if (vx::str::hasPrefix(absPathNormalized, storagePath) == false) {
+        // don't open files outside of the storage directory
+        return nullptr;
+    }
+
     FILE *fd = nullptr;
 
     // create parent directories if missing when opening for writing
