@@ -585,8 +585,11 @@ mod.create = function(self, config)
 			end
 			return nil
 		end,
-		unloadCell = function(_, cell)
-			-- print("UNLOAD", index)
+		unloadCell = function(_, cell) -- index, cell
+			-- 'cell' is a button here
+			-- Remove the button from the collection of buttons
+			btns[cell.index] = nil
+			-- Remove the button from the UI hierarchy
 			cell:remove()
 		end,
 	})
