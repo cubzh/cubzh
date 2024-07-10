@@ -2564,18 +2564,18 @@ function createUI(system)
 			if down then
 				container.pos.Y = node.Height - padding.top - scrollPosition
 
-				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
+				loadTop = scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
 
-				unloadTop = -scrollPosition + SCROLL_UNLOAD_MARGIN
+				unloadTop = scrollPosition + SCROLL_UNLOAD_MARGIN
 				unloadBottom = loadTop - node.Height - SCROLL_UNLOAD_MARGIN * 2
 			elseif up then
 				container.pos.Y = padding.bottom - scrollPosition
 
-				loadBottom = scrollPosition - SCROLL_LOAD_MARGIN
+				loadBottom = -scrollPosition - SCROLL_LOAD_MARGIN
 				loadTop = loadBottom + node.Height + SCROLL_LOAD_MARGIN * 2
 
-				unloadBottom = scrollPosition - SCROLL_UNLOAD_MARGIN
+				unloadBottom = -scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadTop = loadBottom + node.Height + SCROLL_UNLOAD_MARGIN * 2
 			elseif right then
 				container.pos.X = padding.left - scrollPosition
@@ -2646,7 +2646,6 @@ function createUI(system)
 					elseif cellInfo.top <= unloadBottom or cellInfo.bottom >= unloadTop then
 						cell = cells[cellIndex]
 						if cell ~= nil then
-							-- TODO: FIX UNLOAD CELL, NOT CALLED CURRENTLY!
 							config.unloadCell(cellIndex, cell)
 							cells[cellIndex] = nil
 						end
