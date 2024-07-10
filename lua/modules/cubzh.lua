@@ -956,10 +956,6 @@ function home()
 				self.avatar.Height = self.Height - padding * 2
 				self.avatar.Width = self.Width - padding * 2
 			end
-
-			-- if self.usernameFrame then
-			-- 	print("usernameFrame.pos.Z", self.usernameFrame.pos.Z)
-			-- end
 		end
 
 		local function getOrCreateWorldCell()
@@ -1027,21 +1023,6 @@ function home()
 				cell = ui:frameScrollCell()
 				cell.Width = 100
 				cell.parentDidResize = worldCellResizeFn
-
-				-- NOTE(aduermael): I have issues displaying it on top of the avatar itself
-
-				-- local usernameFrame = ui:frame({ color = Color(0, 0, 0) })
-				-- usernameFrame.Width = 30
-				-- usernameFrame.Height = 30
-				-- usernameFrame:setParent(cell)
-				-- -- print("ui.kForegroundDepth:", ui.kForegroundDepth)
-				-- usernameFrame.LocalPosition.Z = ui.kForegroundDepth
-
-				-- local username = ui:createText("...", Color.White)
-				-- username:setParent(cell)
-
-				-- cell.username = username
-				-- cell.usernameFrame = usernameFrame
 			end
 
 			-- worldIcons[item] = true
@@ -1075,6 +1056,21 @@ function home()
 							friendAvatarCache[index] = avatar
 						end
 						avatar:setParent(friendCell)
+
+						local usernameFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						usernameFrame:setParent(avatar)
+						usernameFrame.LocalPosition.Z = ui.kForegroundDepth
+
+						local username = ui:createText(loadedFriends[index].username, Color.White, "small")
+						username:setParent(usernameFrame)
+						username.pos = { 2, 2 }
+
+						usernameFrame.Width = username.Width + 4
+						usernameFrame.Height = username.Height + 4
+
+						avatar.username = username
+						avatar.usernameFrame = usernameFrame
+
 						friendCell.avatar = avatar
 
 						return friendCell
@@ -1168,6 +1164,7 @@ function home()
 
 		local scroll = ui:createScroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
+			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 			padding = { top = Screen.SafeArea.Top + 10, bottom = 10, left = 10, right = 10 },
 			cellPadding = 5,
 			loadCell = function(index)
@@ -1259,12 +1256,12 @@ function home()
 
 		local bottomBar = ui:frame()
 
-		local function createBottomBarButton(text)
+		local function createBottomBarButton(text, icon)
 			local btn = ui:frame({ color = Color(0, 0, 0) })
 
 			local content = ui:frame()
 
-			local data = Data:FromBundle("images/gear-icon.png")
+			local data = Data:FromBundle(icon or "images/logo.png")
 			local quad = Quad()
 			quad.Image = {
 				data = data,
@@ -1279,7 +1276,7 @@ function home()
 			title:setParent(content)
 
 			content.Width = 50
-			content.Height = title.Height + icon.Height + padding * 2.5
+			content.Height = title.Height + icon.Height + padding * 2.2
 
 			content.parentDidResize = function(self)
 				self.Width = self.parent.Width
@@ -1287,7 +1284,7 @@ function home()
 
 				local y = self.Height - padding - icon.Height
 				icon.pos = { self.Width * 0.5 - icon.Width * 0.5, y }
-				y = y - padding * 0.5 - title.Height
+				y = y - padding * 0.2 - title.Height
 				title.pos = { self.Width * 0.5 - title.Width * 0.5, y }
 			end
 
@@ -1298,11 +1295,11 @@ function home()
 			return btn
 		end
 
-		local btnHome = createBottomBarButton("Home")
-		local btnExplore = createBottomBarButton("Explore")
-		local btnProfile = createBottomBarButton("Profile")
-		local btnFriends = createBottomBarButton("Friends")
-		local btnCreate = createBottomBarButton("Create")
+		local btnHome = createBottomBarButton("Home", "images/logo.png")
+		local btnExplore = createBottomBarButton("Explore", "images/icon-explore.png")
+		local btnProfile = createBottomBarButton("Profile", "images/icon-profile.png")
+		local btnFriends = createBottomBarButton("Friends", "images/icon-friends.png")
+		local btnCreate = createBottomBarButton("Create", "images/icon-create.png")
 
 		bottomBar.parentDidResize = function(self)
 			self.Width = self.parent.Width

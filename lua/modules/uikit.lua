@@ -2344,6 +2344,7 @@ function createUI(system)
 	ui.createScroll = function(self, config)
 		local defaultConfig = {
 			backgroundColor = Color(0, 0, 0, 0),
+			gradientColor = nil,
 			direction = "down", -- can also be "up", "left", "right"
 			cellPadding = 0,
 			padding = 0, -- padding around cells
@@ -2359,6 +2360,7 @@ function createUI(system)
 		local options = {
 			acceptTypes = {
 				padding = { "number", "integer", "table" },
+				gradientColor = { "Color" },
 			},
 		}
 
@@ -2447,10 +2449,10 @@ function createUI(system)
 		local endScrollIndicator
 		local beginScrollIndicator
 
-		if config.backgroundColor.A == 255 then
+		if config.backgroundColor.A == 255 or config.gradientColor ~= nil then
 			local quad = Quad()
-			local opaque = Color(config.backgroundColor)
-			local transparent = Color(config.backgroundColor)
+			local opaque = Color(config.gradientColor or config.backgroundColor)
+			local transparent = Color(config.gradientColor or config.backgroundColor)
 			transparent.A = 0
 			if right then
 				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
