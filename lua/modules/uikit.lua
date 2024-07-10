@@ -3496,7 +3496,7 @@ function createUI(system)
 					if choice then
 						local c = table.remove(cells)
 						if c ~= nil then
-							c:setText(choice)
+							c.text = choice
 						else
 							c = ui:button({
 								content = choice,
