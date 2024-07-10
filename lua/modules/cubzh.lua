@@ -4,6 +4,13 @@
 
 bundle = require("bundle")
 
+config = {
+	WORLD_CELL_SIZE = 150,
+	FRIEND_CELL_SIZE = 100,
+	TINY_PADDING = 2,
+	CELL_PADDING = 5,
+}
+
 Client.OnStart = function()
 	Screen.Orientation = "portrait" -- force portrait
 
@@ -894,7 +901,7 @@ function home()
 	local root
 	-- local didResizeFunction
 	-- local didResizeListener
-	local tickListener
+	-- local tickListener
 
 	_home.show = function()
 		if root ~= nil then
@@ -958,14 +965,57 @@ function home()
 			end
 		end
 
+		local function requestWorlds(dataFetcher)
+			if dataFetcher.req then
+				dataFetcher.req:Cancel()
+			end
+
+			dataFetcher.req = api:getWorlds({
+				category = "featured",
+				fields = { "title", "created", "updated", "views", "likes" },
+			}, function(err, worlds)
+				if err ~= nil then
+					return
+				end
+
+				dataFetcher.entities = worlds
+				dataFetcher.nbEntities = #worlds
+
+				if dataFetcher.scroll then
+					dataFetcher.scroll:refresh()
+				end
+
+				if dataFetcher.row and dataFetcher.title then
+					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+				end
+			end)
+		end
+
 		local function getOrCreateWorldCell()
 			local cell = table.remove(recycledWorldCells)
 
 			if cell == nil then
 				cell = ui:frameScrollCell()
-				cell.Width = 100
+				cell.Width = config.WORLD_CELL_SIZE
+
+				local titleFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+				titleFrame:setParent(cell)
+				titleFrame.pos = { padding, padding }
+				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+
+				local title = ui:createText("...", Color.White, "small")
+				title:setParent(titleFrame)
+				title.pos = { 2, 2 }
+
+				cell.titleFrame = titleFrame
+				cell.title = title
+
 				cell.parentDidResize = worldCellResizeFn
 			end
+
+			cell.title.Text = "..."
+			cell.titleFrame.Width = cell.title.Width + 4
+			cell.titleFrame.Height = cell.title.Height + 4
 
 			local item = table.remove(recycledWorldIcons)
 			if item == nil then
@@ -973,7 +1023,9 @@ function home()
 				item = ui:createShape(shape, { spherized = true })
 			end
 
+			-- item:setParent(nil)
 			item:setParent(cell)
+
 			cell.shape = item
 			worldIcons[item] = true
 			return cell
@@ -989,29 +1041,25 @@ function home()
 			table.insert(recycledWorldCells, cell)
 		end
 
-		local friendsRow
-		local friendsScroll
-		local req
-		local loadedFriends = {}
-		local nbLoadedFriends = 0
-		local function requestFriends()
-			if req ~= nil then
-				req:Cancel()
+		local function requestFriends(dataFetcher)
+			if dataFetcher.req then
+				dataFetcher.req:Cancel()
 			end
-			req = api:getFriends(function(ok, friends, _)
+
+			dataFetcher.req = api:getFriends(function(ok, friends, _)
 				if not ok then
 					return
 				end
 
-				loadedFriends = friends
-				nbLoadedFriends = #loadedFriends
+				dataFetcher.entities = friends
+				dataFetcher.nbEntities = #friends
 
-				if friendsScroll ~= nil then
-					friendsScroll:refresh()
+				if dataFetcher.scroll then
+					dataFetcher.scroll:refresh()
 				end
 
-				if friendsRow ~= nil then
-					friendsRow.title.Text = "Friends (" .. #loadedFriends .. ")"
+				if dataFetcher.row and dataFetcher.title then
+					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
 				end
 			end, { "id", "username" })
 		end
@@ -1021,7 +1069,7 @@ function home()
 
 			if cell == nil then
 				cell = ui:frameScrollCell()
-				cell.Width = 100
+				cell.Width = config.FRIEND_CELL_SIZE
 				cell.parentDidResize = worldCellResizeFn
 			end
 
@@ -1043,14 +1091,16 @@ function home()
 		local categories = {
 			{
 				title = "Friends",
-				loadCell = function(index)
-					if index <= nbLoadedFriends then
+				cellSize = config.FRIEND_CELL_SIZE,
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local friend = dataFetcher.entities[index]
 						local friendCell = getOrCreateFriendCell()
 
 						local avatar = friendAvatarCache[index]
 						if avatar == nil then
 							avatar = uiAvatar:getHeadAndShoulders({
-								usernameOrId = loadedFriends[index].id,
+								usernameOrId = friend.id,
 								backgroundColor = Color(49, 51, 57),
 							})
 							friendAvatarCache[index] = avatar
@@ -1061,7 +1111,7 @@ function home()
 						usernameFrame:setParent(avatar)
 						usernameFrame.LocalPosition.Z = ui.kForegroundDepth
 
-						local username = ui:createText(loadedFriends[index].username, Color.White, "small")
+						local username = ui:createText(friend.username, Color.White, "small")
 						username:setParent(usernameFrame)
 						username.pos = { 2, 2 }
 
@@ -1079,31 +1129,57 @@ function home()
 				unloadCell = function(_, cell)
 					recycleFriendCell(cell)
 				end,
-				extraSetup = function(scroll, row)
-					friendsScroll = scroll
-					friendsRow = row
-					friendsScroll.onRemove = function()
-						friendsScroll = nil
-						friendsRow = nil
-					end
-					requestFriends()
+				extraSetup = function(dataFetcher)
+					requestFriends(dataFetcher)
 				end,
 			},
 			{
 				title = "Featured",
-				loadCell = function(index)
-					if index < 20 then
-						-- print("LOAD FEATURED CELL:", index)
-						return getOrCreateWorldCell()
+				cellSize = config.WORLD_CELL_SIZE,
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local cell = getOrCreateWorldCell()
+
+						local world = dataFetcher.entities[index]
+
+						cell.title.Text = world.title
+						cell.title.object.MaxWidth = cell.Width - (padding + 2) * 2
+
+						cell.titleFrame.Width = cell.title.Width + 4
+						cell.titleFrame.Height = cell.title.Height + 4
+
+						-- dataFetcher.req = api:getWorldThumbnail(entry.id, function(err, img)
+						-- 	if err ~= nil or cell.setImage == nil then
+						-- 		return
+						-- 	end
+						-- 	entry.thumbnail = img
+
+						-- 	if cell.item ~= nil then
+						-- 		cell.item:remove()
+						-- 		cell.item = nil
+						-- 	end
+
+						-- 	cell.thumbnail = img
+						-- 	cell:setImage(img)
+
+						-- 	if type(entry.onThumbnailUpdate) == "function" then
+						-- 		entry.onThumbnailUpdate(img)
+						-- 	end
+						-- end)
+
+						return cell
 					end
 				end,
 				unloadCell = function(_, cell)
-					-- print("UNLOAD FEATURED CELL:", index)
 					recycleWorldCell(cell)
+				end,
+				extraSetup = function(dataFetcher)
+					requestWorlds(dataFetcher)
 				end,
 			},
 			{
 				title = "Fun with friends",
+				cellSize = config.WORLD_CELL_SIZE,
 				loadCell = function(index)
 					if index < 10 then
 						return getOrCreateWorldCell()
@@ -1115,6 +1191,7 @@ function home()
 			},
 			{
 				title = "Top Rated",
+				cellSize = config.WORLD_CELL_SIZE,
 				loadCell = function(index)
 					if index < 10 then
 						return getOrCreateWorldCell()
@@ -1126,6 +1203,7 @@ function home()
 			},
 			{
 				title = "Popular Items",
+				cellSize = config.WORLD_CELL_SIZE,
 				loadCell = function(index)
 					if index < 10 then
 						return getOrCreateWorldCell()
@@ -1137,6 +1215,7 @@ function home()
 			},
 			{
 				title = "New Items",
+				cellSize = config.WORLD_CELL_SIZE,
 				loadCell = function(index)
 					if index < 10 then
 						return getOrCreateWorldCell()
@@ -1149,15 +1228,14 @@ function home()
 		}
 		local nbCategories = #categories
 
-		local function createCategoryCell(_)
+		local function createCategoryCell(category)
 			cell = ui:frameGenericContainer()
-			-- cell = ui:frame({ color = Color(0, 0, 0, 0.5) })
-			cell.Height = 150
 			cell.parentDidResize = cellResizeFn
 
 			local title = ui:createText("Title", Color.White)
 			title:setParent(cell)
 
+			cell.Height = title.Height + (category.cellSize or 100) + padding * 3 + config.CELL_PADDING * 2
 			cell.title = title
 			return cell
 		end
@@ -1165,8 +1243,13 @@ function home()
 		local scroll = ui:createScroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
-			padding = { top = Screen.SafeArea.Top + 10, bottom = 10, left = 10, right = 10 },
-			cellPadding = 5,
+			padding = {
+				top = Screen.SafeArea.Top + config.CELL_PADDING,
+				bottom = config.CELL_PADDING,
+				left = config.CELL_PADDING,
+				right = config.CELL_PADDING,
+			},
+			cellPadding = config.CELL_PADDING,
 			loadCell = function(index)
 				if index == 1 then
 					if profileCell == nil then
@@ -1195,7 +1278,7 @@ function home()
 								math.max(username.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2)
 							local totalWidth = infoWidth + avatar.Width + padding
 
-							avatar.Height = self.Height
+							avatar.Height = self.Height * 0.8
 							avatar.pos = { self.Width * 0.5 - totalWidth * 0.5, 0 }
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
@@ -1228,20 +1311,41 @@ function home()
 							if cell.scroll then
 								cell.scroll:remove()
 							end
+
+							local dataFetcher = {
+								entities = {},
+								nbEntities = 0,
+								row = cell,
+								title = category.title,
+							}
+
 							local scroll = ui:createScroll({
 								-- backgroundColor = Color(255, 255, 255),
 								backgroundColor = Color(43, 45, 49),
-								padding = 5,
-								cellPadding = 5,
+								padding = config.CELL_PADDING,
+								cellPadding = config.CELL_PADDING,
 								direction = "right",
 								loadCell = category.loadCell,
 								unloadCell = category.unloadCell,
+								userdata = dataFetcher,
 							})
+
+							dataFetcher.scroll = scroll
+
 							scroll:setParent(cell)
 							cell.scroll = scroll
 
+							scroll.onRemove = function()
+								if dataFetcher.req then
+									dataFetcher.req:Cancel()
+									dataFetcher.req = nil
+								end
+								dataFetcher.row = nil
+								dataFetcher.scroll = nil
+							end
+
 							if category.extraSetup then
-								category.extraSetup(scroll, cell)
+								category.extraSetup(dataFetcher)
 							end
 						end
 					end

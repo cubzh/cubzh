@@ -2349,10 +2349,11 @@ function createUI(system)
 			cellPadding = 0,
 			padding = 0, -- padding around cells
 			rigidity = SCROLL_DEFAULT_RIGIDITY,
-			loadCell = function(_) -- index
+			userdata = nil, -- can be used to provide extra context to loadCell / unloadCell
+			loadCell = function(_, _) -- index, userdata
 				return nil
 			end,
-			unloadCell = function(index, _) -- index, cell
+			unloadCell = function(_, _, _) -- index, cell, userdata
 				return nil
 			end,
 		}
@@ -2361,6 +2362,7 @@ function createUI(system)
 			acceptTypes = {
 				padding = { "number", "integer", "table" },
 				gradientColor = { "Color" },
+				userdata = { "*" },
 			},
 		}
 
@@ -2490,7 +2492,7 @@ function createUI(system)
 			local cell
 
 			if cellInfo == nil then
-				cell = config.loadCell(cellIndex)
+				cell = config.loadCell(cellIndex, config.userdata)
 				if cell == nil then
 					-- reached the end of cells
 					return nil
@@ -2635,7 +2637,7 @@ function createUI(system)
 					then
 						cell = cells[cellIndex]
 						if cell == nil then
-							cell = config.loadCell(cellIndex)
+							cell = config.loadCell(cellIndex, config.userdata)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then
@@ -2648,7 +2650,7 @@ function createUI(system)
 					elseif cellInfo.top <= unloadBottom or cellInfo.bottom >= unloadTop then
 						cell = cells[cellIndex]
 						if cell ~= nil then
-							config.unloadCell(cellIndex, cell)
+							config.unloadCell(cellIndex, cell, config.userdata)
 							cells[cellIndex] = nil
 						end
 
@@ -2701,7 +2703,7 @@ function createUI(system)
 							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
 							-- 	"[" .. loadLeft .. " - " .. loadRight .. "]"
 							-- )
-							cell = config.loadCell(cellIndex)
+							cell = config.loadCell(cellIndex, config.userdata)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then
@@ -2721,7 +2723,7 @@ function createUI(system)
 							-- 	"[" .. unloadLeft .. " - " .. unloadRight .. "]"
 							-- )
 							-- TODO: FIX LOAD/UNLOAD, sometimes cells are loaded and unloaded during same frame
-							config.unloadCell(cellIndex, cell)
+							config.unloadCell(cellIndex, cell, config.userdata)
 							cells[cellIndex] = nil
 						end
 
@@ -2825,7 +2827,7 @@ function createUI(system)
 			while indexToRemove ~= nil do
 				local cell = cells[indexToRemove]
 				if cell ~= nil then
-					config.unloadCell(indexToRemove, cell)
+					config.unloadCell(indexToRemove, cell, config.userdata)
 				end
 
 				indexToRemove = table.remove(toRemove)
