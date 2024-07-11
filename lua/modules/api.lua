@@ -6,6 +6,7 @@ API module
 --
 
 local time = require("time")
+local url = require("url")
 
 -- TODO create url type
 
@@ -412,30 +413,19 @@ mod.getWorlds = function(self, config, callback)
 		error("api:getWorlds(config, callback): config error (" .. err .. ")", 2)
 	end
 
-	local queryParams = {}
+	local u = url:parse(mod.kApiAddr .. "/worlds")
 
-	if config.category ~= "" then
-		table.insert(queryParams, { key = "category", value = config.category })
-	end
-
-	if config.search ~= "" then
-		table.insert(queryParams, { key = "search", value = config.search })
-	end
-
-	if type(config.sortBy) == Type.string and #config.sortBy > 0 then
-		table.insert(queryParams, { key = "sortBy", value = config.sortBy })
-	end
-
-	table.insert(queryParams, { key = "perPage", value = math.floor(config.perPage) })
-	table.insert(queryParams, { key = "page", value = math.floor(config.page) })
+	u:addQueryParameter("category", config.category)
+	u:addQueryParameter("search", config.search)
+	u:addQueryParameter("sortBy", config.sortBy)
+	u:addQueryParameter("perPage", math.floor(config.perPage))
+	u:addQueryParameter("page", math.floor(config.page))
 
 	for _, field in ipairs(config.fields) do
-		table.insert(queryParams, { key = "f", value = field })
+		u:addQueryParameter("f", field)
 	end
 
-	-- url example : https://api.cu.bzh/worlds?category=featured&search=monster
-	local url = mod.kApiAddr .. "/worlds"
-	url = urlAddQueryParams(url, queryParams)
+	local url = u:toString() -- e.g. https://api.cu.bzh/worlds?category=featured&search=monster
 
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
