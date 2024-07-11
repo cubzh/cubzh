@@ -350,7 +350,7 @@ signup.startFlow = function(self, config)
 						local req = api:getMagicKey(config.username, function(err, res)
 							-- res.username, res.password, res.magickey
 							if err == nil then
-								System:SetAskedForMagicKey()
+								System.AskedForMagicKey = true
 								local step = createMagicKeyInputStep({ usernameOrEmail = config.username })
 								signupFlow:push(step)
 							else
@@ -561,7 +561,7 @@ signup.startFlow = function(self, config)
 					System:SaveUsernameOrEmail(usernameInput.Text)
 					-- if user asked for magic key in the past, this is the best
 					-- time to forget about it.
-					System:RemoveAskedForMagicKey()
+					System.AskedForMagicKey = false
 
 					errorLabel.Text = ""
 					showLoading()
@@ -1636,7 +1636,7 @@ signup.startFlow = function(self, config)
 
 						if System.HasCredentials == false and System.AskedForMagicKey then
 							System:DebugEvent("App shows magic key prompt")
-							System:RemoveAskedForMagicKey()
+							System.AskedForMagicKey = false
 							-- TODO: show magic key prompt
 							checks.error("TODO: magic key prompt")
 						else
