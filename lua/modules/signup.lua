@@ -1681,9 +1681,10 @@ signup.startFlow = function(self, config)
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
 
-						print("🪲 System.HasCredentials", System.HasCredentials)
-						print("🪲 System.Authenticated:", System.Authenticated)
-						print("🪲 System.UserID:", System.UserID)
+						-- print("🪲 System.HasCredentials", System.HasCredentials)
+						-- print("🪲 System.Authenticated:", System.Authenticated)
+						-- print("🪲 System.UserID:", System.UserID)
+						-- 🍏
 
 						if
 							System.Authenticated

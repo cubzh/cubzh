@@ -280,9 +280,8 @@ end
 --- items: []Item (can be nil)
 ---
 
+-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
 mod.getItems = function(self, config, callback)
-	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
-
 	if self ~= mod then
 		error("api:getItems(config, callback): use `:`", 2)
 	end
@@ -293,73 +292,58 @@ mod.getItems = function(self, config, callback)
 		error("api:getItems(config, callback): callback must be a function", 2)
 	end
 
-	local filterIsValid = function(k, v)
-		if type(k) == "string" then
-			if k == "search" and type(v) == "string" and v ~= "" then
-				return true
-			end
-			if k == "sortBy" and (type(v) == "string" or type(v) == "nil") then
-				return true
-			end
-			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
-				return true
-			end
-			if k == "page" and (type(v) == "number" or type(v) == "integer") then
-				return true
-			end
-			if k == "perPage" and (type(v) == "number" or type(v) == "integer") then
-				return true
-			end
-			if k == "category" then
-				return true
-			end
-			if k == "repo" then
-				return true
-			end
-			if k == "minBlock" and (type(v) == "number" or type(v) == "integer") then
-				return true
-			end
-		end
-		return false
+	local defaultConfig = {
+		category = "",
+		search = "",
+		sortBy = "updatedAt:desc", -- likes:desc
+		page = 1,
+		perPage = 50,
+		repo = "",
+		minBlock = nil,
+		fields = { "title", "created", "updated", "views", "likes" },
+	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				minBlock = { "integer" },
+			},
+		})
+	end)
+
+	if not ok then
+		error("api:getWorlds(config, callback): config error (" .. err .. ")", 2)
 	end
 
-	-- parse filters
-	local queryParams = {}
-	for k, v in pairs(config) do
-		if filterIsValid(k, v) then
-			if type(v) == "table" then
-				for _, entry in ipairs(v) do
-					table.insert(queryParams, { key = k, value = tostring(entry) })
-				end
-			else
-				table.insert(queryParams, { key = k, value = tostring(v) })
-			end
-		end
+	local u = url:parse(mod.kApiAddr .. "/itemdrafts")
+
+	u:addQueryParameter("category", config.category)
+	u:addQueryParameter("repo", config.repo)
+	u:addQueryParameter("search", config.search)
+	u:addQueryParameter("sortBy", config.sortBy)
+	u:addQueryParameter("perPage", math.floor(config.perPage))
+	u:addQueryParameter("page", math.floor(config.page))
+	if config.minBlock ~= nil then
+		u:addQueryParameter("minBlock", math.floor(config.minBlock))
 	end
 
-	-- build URL
-	local url = mod.kApiAddr .. "/itemdrafts"
-	for i, param in ipairs(queryParams) do
-		if param.value ~= "" then
-			if i == 1 then
-				url = url .. "?"
-			else
-				url = url .. "&"
-			end
-			url = url .. param.key .. "=" .. param.value
-		end
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
 	end
 
-	-- send request
-	local req = HTTP:Get(url, function(resp)
+	local req = HTTP:Get(u:toString(), function(res)
 		-- check status code
-		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
 
 		-- decode body
-		local items, err = JSON:Decode(resp.Body)
+		local items, err = JSON:Decode(res.Body)
+		if err ~= nil then
+			callback(nil, mod:error(res.StatusCode, "getItems JSON decode error: " .. err))
+			return
+		end
 
 		for _, v in ipairs(items.results) do
 			v.created = time.iso8601_to_os_time(v.created)
@@ -369,11 +353,7 @@ mod.getItems = function(self, config, callback)
 			end
 		end
 
-		if err ~= nil then
-			callback("json decode error:" .. err, nil) -- failure
-			return
-		end
-		callback(nil, items.results) -- success
+		callback(items.results) -- success
 	end)
 	return req
 end
@@ -390,9 +370,9 @@ mod.getWorlds = function(self, config, callback)
 	end
 
 	local defaultConfig = {
-		category = "featured",
+		category = "",
 		search = "",
-		sortBy = "updatedAt:desc",
+		sortBy = "updatedAt:desc", -- likes:desc
 		page = 1,
 		perPage = 50,
 		fields = { "title", "created", "updated", "views", "likes" },

@@ -6,6 +6,7 @@ bundle = require("bundle")
 
 config = {
 	WORLD_CELL_SIZE = 150,
+	ITEM_CELL_SIZE = 150,
 	FRIEND_CELL_SIZE = 100,
 	TINY_PADDING = 2,
 	CELL_PADDING = 5,
@@ -922,10 +923,15 @@ function home()
 		local padding = theme.padding
 
 		local recycledWorldCells = {}
-		-- local worldCells = {}
 		local recycledWorldIcons = {}
 		local worldIcons = {}
 		local worldThumbnails = {} -- cache for loaded world thumbnails
+
+		local recycledItemCells = {}
+		local recycledItemLoadingShapes = {}
+		local itemLoadingShapes = {}
+		local itemShapes = {} -- cache for loaded items
+		local activeItemShapes = {}
 
 		local recycledFriendCells = {}
 		local friendAvatarCache = {}
@@ -935,6 +941,14 @@ function home()
 			t = t + dt
 			for icon, _ in pairs(worldIcons) do
 				icon.pivot.LocalRotation:Set(-0.1, t, -0.2)
+			end
+
+			for itemShape, _ in pairs(activeItemShapes) do
+				itemShape.pivot.LocalRotation:Set(-0.1, t, -0.2)
+			end
+
+			for loadingShape, _ in pairs(itemLoadingShapes) do
+				loadingShape.pivot.LocalRotation:Set(-0.1, t, -0.2)
 			end
 		end)
 
@@ -959,6 +973,20 @@ function home()
 				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
 			end
 
+			if self.loadingShape then
+				self.loadingShape.pos = { 0, 0 }
+				self.loadingShape.Height = self.Height
+				self.loadingShape.Width = self.Width
+				self.loadingShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
+			if self.itemShape then
+				self.itemShape.pos = { 0, 0 }
+				self.itemShape.Height = self.Height
+				self.itemShape.Width = self.Width
+				self.itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
 			if self.avatar then
 				self.avatar.pos = { padding, padding }
 				self.avatar.Height = self.Height - padding * 2
@@ -972,13 +1000,14 @@ function home()
 			end
 		end
 
-		local function requestWorlds(dataFetcher)
+		local function requestWorlds(dataFetcher, config)
 			if dataFetcher.req then
 				dataFetcher.req:Cancel()
 			end
 
 			dataFetcher.req = api:getWorlds({
-				category = "featured",
+				category = config.category,
+				sortBy = config.sortBy,
 				fields = { "title", "created", "updated", "views", "likes" },
 			}, function(worlds, err)
 				if err ~= nil then
@@ -992,7 +1021,7 @@ function home()
 					dataFetcher.scroll:refresh()
 				end
 
-				if dataFetcher.row and dataFetcher.title then
+				if dataFetcher.displayNumberOfEntries and dataFetcher.row and dataFetcher.title then
 					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
 				end
 			end)
@@ -1012,6 +1041,10 @@ function home()
 			if cell.thumbnail ~= nil then
 				cell.thumbnail:setParent(nil)
 				cell.thumbnail = nil
+			end
+			if cell.req then
+				cell.req:Cancel()
+				cell.req = nil
 			end
 			cell:setParent(nil)
 			table.insert(recycledWorldCells, cell)
@@ -1047,26 +1080,177 @@ function home()
 					thumbnail:setParent(cell)
 					cell.thumbnail = thumbnail
 					recycleWorldCellShape(cell)
+				else
+					cell.req = api:getWorldThumbnail(world.id, function(img, err)
+						if err ~= nil then
+							return
+						end
+
+						local thumbnail = ui:frame({ image = img })
+						thumbnail:setParent(cell)
+						cell.thumbnail = thumbnail
+						worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
+						recycleWorldCellShape(cell)
+						worldCellResizeFn(cell)
+					end)
+
+					-- placeholder shape, waiting for thumbnail
+					local item = table.remove(recycledWorldIcons)
+					if item == nil then
+						local shape = bundle:Shape("shapes/world_icon")
+						item = ui:createShape(shape, { spherized = true })
+					end
+
+					item:setParent(cell)
+					cell.shape = item
+					worldIcons[item] = true
 				end
 				cell.title.Text = world.title
 			else
 				cell.title.Text = "..."
 			end
 
-			cell.titleFrame.Width = cell.title.Width + 4
-			cell.titleFrame.Height = cell.title.Height + 4
+			cell.title.object.MaxWidth = cell.Width - (padding + config.TINY_PADDING) * 2
+			cell.titleFrame.Width = cell.title.Width + config.TINY_PADDING * 2
+			cell.titleFrame.Height = cell.title.Height + config.TINY_PADDING * 2
 
-			if cell.thumbnail == nil then
-				local item = table.remove(recycledWorldIcons)
-				if item == nil then
-					local shape = bundle:Shape("shapes/world_icon")
-					item = ui:createShape(shape, { spherized = true })
+			return cell
+		end
+
+		-- ITEMS
+
+		local function prettifyItemName(str)
+			local s = string.gsub(str, "_%a", string.upper)
+			s = string.gsub(s, "_", " ")
+			s = string.gsub(s, "^%l", string.upper)
+			return s
+		end
+
+		local function requestItems(dataFetcher, config)
+			if dataFetcher.req then
+				dataFetcher.req:Cancel()
+			end
+
+			dataFetcher.req = api:getItems({
+				category = config.category,
+				sortBy = config.sortBy,
+				fields = { "repo", "name", "created", "updated", "likes" },
+			}, function(items, err)
+				if err ~= nil then
+					return
 				end
 
-				item:setParent(cell)
-				cell.shape = item
-				worldIcons[item] = true
+				dataFetcher.entities = items
+				dataFetcher.nbEntities = #items
+
+				if dataFetcher.scroll then
+					dataFetcher.scroll:refresh()
+				end
+
+				if dataFetcher.displayNumberOfEntries and dataFetcher.row and dataFetcher.title then
+					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+				end
+			end)
+		end
+
+		local function recycleItemCellLoadingShape(cell)
+			local loadingShape = cell.loadingShape
+			if loadingShape ~= nil then
+				loadingShape:setParent(nil)
+				table.insert(recycledItemLoadingShapes, loadingShape)
+				itemLoadingShapes[loadingShape] = nil
+				cell.loadingShape = nil
 			end
+		end
+
+		local function recycleItemCell(cell)
+			recycleItemCellLoadingShape(cell)
+			if cell.req then
+				cell.req:Cancel()
+				cell.req = nil
+			end
+			if cell.itemShape then
+				activeItemShapes[cell.itemShape] = nil
+				cell.itemShape:setParent(nil)
+				cell.itemShape = nil
+			end
+			cell:setParent(nil)
+			table.insert(recycledItemCells, cell)
+		end
+
+		local function getOrCreateItemCell(item, category)
+			local cell = table.remove(recycledItemCells)
+
+			if cell == nil then
+				cell = ui:frameScrollCell()
+				cell.Width = config.ITEM_CELL_SIZE
+
+				local titleFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+				titleFrame:setParent(cell)
+				titleFrame.pos = { padding, padding }
+				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+
+				local title = ui:createText("...", Color.White, "small")
+				title:setParent(titleFrame)
+				title.pos = { 2, 2 }
+
+				cell.titleFrame = titleFrame
+				cell.title = title
+
+				cell.parentDidResize = worldCellResizeFn
+			end
+
+			cell.category = category or ""
+
+			if item then
+				local itemShape = itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name]
+				if itemShape ~= nil then
+					itemShape:setParent(cell)
+					activeItemShapes[itemShape] = true
+					cell.itemShape = itemShape
+					recycleItemCellLoadingShape(cell)
+				else
+					cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
+						if obj == nil then
+							-- silent error, no print, just removing loading animation
+							-- local loadingCube = cell:getLoadingCube()
+							-- if loadingCube then
+							-- 	loadingCube:hide()
+							-- end
+							return
+						end
+
+						local itemShape = ui:createShape(obj, { spherized = true })
+						cell.itemShape = itemShape
+						itemShape:setParent(cell)
+						activeItemShapes[itemShape] = true
+						itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+
+						itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name] = itemShape
+
+						recycleItemCellLoadingShape(cell)
+						worldCellResizeFn(cell)
+					end)
+
+					-- placeholder shape, waiting for thumbnail
+					local loadingShape = table.remove(recycledItemLoadingShapes)
+					if loadingShape == nil then
+						local shape = bundle:Shape("shapes/world_icon")
+						loadingShape = ui:createShape(shape, { spherized = true })
+					end
+
+					loadingShape:setParent(cell)
+					cell.loadingShape = loadingShape
+					itemLoadingShapes[loadingShape] = true
+				end
+				cell.title.Text = prettifyItemName(item.name)
+			else
+				cell.title.Text = "..."
+			end
+
+			cell.title.object.MaxWidth = cell.Width - (padding + config.TINY_PADDING) * 2
+			cell.titleFrame.Width = cell.title.Width + config.TINY_PADDING * 2
+			cell.titleFrame.Height = cell.title.Height + config.TINY_PADDING * 2
 
 			return cell
 		end
@@ -1120,7 +1304,8 @@ function home()
 		local categoryCells = {}
 		local categories = {
 			{
-				title = "Friends",
+				title = "👥 Friends",
+				displayNumberOfEntries = true,
 				cellSize = config.FRIEND_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
@@ -1164,99 +1349,99 @@ function home()
 				end,
 			},
 			{
-				title = "Featured",
+				title = "✨ Featured Worlds",
 				cellSize = config.WORLD_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local world = dataFetcher.entities[index]
-						local cell = getOrCreateWorldCell(world, "featured")
-
-						-- cell.title.Text = world.title
-						cell.title.object.MaxWidth = cell.Width - (padding + 2) * 2
-						cell.titleFrame.Width = cell.title.Width + 4
-						cell.titleFrame.Height = cell.title.Height + 4
-
-						if cell.thumbnail ~= nil then
-							return cell
-						end
-
-						cell.req = api:getWorldThumbnail(world.id, function(img, err)
-							if err ~= nil then
-								return
-							end
-
-							local thumbnail = ui:frame({ image = img })
-							thumbnail:setParent(cell)
-							cell.thumbnail = thumbnail
-							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
-							recycleWorldCellShape(cell)
-							worldCellResizeFn(cell)
-						end)
-
-						return cell
+						return getOrCreateWorldCell(world, "featured")
 					end
 				end,
 				unloadCell = function(_, cell)
-					if cell.req then
-						cell.req:Cancel()
-						cell.req = nil
-					end
-					if cell.item ~= nil then
-						cell.item:remove()
-						cell.item = nil
-					end
 					recycleWorldCell(cell)
 				end,
 				extraSetup = function(dataFetcher)
-					requestWorlds(dataFetcher)
+					requestWorlds(dataFetcher, { category = "featured" })
 				end,
 			},
 			{
-				title = "Fun with friends",
+				title = "😛 Fun with friends",
 				cellSize = config.WORLD_CELL_SIZE,
-				loadCell = function(index)
-					if index < 10 then
-						return getOrCreateWorldCell()
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local world = dataFetcher.entities[index]
+						return getOrCreateWorldCell(world, "fun_with_friends")
 					end
 				end,
 				unloadCell = function(_, cell)
 					recycleWorldCell(cell)
 				end,
+				extraSetup = function(dataFetcher)
+					requestWorlds(dataFetcher, { category = "fun_with_friends" })
+				end,
 			},
 			{
-				title = "Top Rated",
+				title = "🤠 Playing solo",
 				cellSize = config.WORLD_CELL_SIZE,
-				loadCell = function(index)
-					if index < 10 then
-						return getOrCreateWorldCell()
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local world = dataFetcher.entities[index]
+						return getOrCreateWorldCell(world, "solo")
 					end
 				end,
 				unloadCell = function(_, cell)
 					recycleWorldCell(cell)
 				end,
+				extraSetup = function(dataFetcher)
+					requestWorlds(dataFetcher, { category = "solo" })
+				end,
 			},
 			{
-				title = "Popular Items",
+				title = "🍏 New Items",
+				cellSize = config.ITEM_CELL_SIZE,
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local item = dataFetcher.entities[index]
+						return getOrCreateItemCell(item, "popular_items")
+					end
+				end,
+				unloadCell = function(_, cell)
+					recycleItemCell(cell)
+				end,
+				extraSetup = function(dataFetcher)
+					requestItems(dataFetcher, { sortBy = "updatedAt:desc" })
+				end,
+			},
+			{
+				title = "❤️ Top Rated",
 				cellSize = config.WORLD_CELL_SIZE,
-				loadCell = function(index)
-					if index < 10 then
-						return getOrCreateWorldCell()
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local world = dataFetcher.entities[index]
+						return getOrCreateWorldCell(world, "top_rated")
 					end
 				end,
 				unloadCell = function(_, cell)
 					recycleWorldCell(cell)
 				end,
+				extraSetup = function(dataFetcher)
+					requestWorlds(dataFetcher, { sortBy = "likes:desc" })
+				end,
 			},
 			{
-				title = "New Items",
-				cellSize = config.WORLD_CELL_SIZE,
-				loadCell = function(index)
-					if index < 10 then
-						return getOrCreateWorldCell()
+				title = "⚔️ Popular Items",
+				cellSize = config.ITEM_CELL_SIZE,
+				loadCell = function(index, dataFetcher)
+					if index <= dataFetcher.nbEntities then
+						local item = dataFetcher.entities[index]
+						return getOrCreateItemCell(item, "popular_items")
 					end
 				end,
 				unloadCell = function(_, cell)
-					recycleWorldCell(cell)
+					recycleItemCell(cell)
+				end,
+				extraSetup = function(dataFetcher)
+					requestItems(dataFetcher, { sortBy = "likes:desc" })
 				end,
 			},
 		}
@@ -1354,6 +1539,7 @@ function home()
 								nbEntities = 0,
 								row = cell,
 								title = category.title,
+								displayNumberOfEntries = category.displayNumberOfEntries,
 							}
 
 							local scroll = ui:createScroll({

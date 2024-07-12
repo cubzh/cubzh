@@ -756,7 +756,7 @@ function removeBadge()
 end
 
 if System.IsHomeAppRunning then
-	local icon = Data:FromBundle("images/gear-icon.png")
+	local icon = Data:FromBundle("images/icon-settings.png")
 	local quad = Quad()
 	quad.Image = {
 		data = icon,
