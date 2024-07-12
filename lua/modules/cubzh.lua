@@ -925,6 +925,7 @@ function home()
 		-- local worldCells = {}
 		local recycledWorldIcons = {}
 		local worldIcons = {}
+		local worldThumbnails = {} -- cache for loaded world thumbnails
 
 		local recycledFriendCells = {}
 		local friendAvatarCache = {}
@@ -963,6 +964,12 @@ function home()
 				self.avatar.Height = self.Height - padding * 2
 				self.avatar.Width = self.Width - padding * 2
 			end
+
+			if self.thumbnail then
+				self.thumbnail.pos = { padding, padding }
+				self.thumbnail.Width = self.Width - padding * 2
+				self.thumbnail.Height = self.Height - padding * 2
+			end
 		end
 
 		local function requestWorlds(dataFetcher)
@@ -991,7 +998,26 @@ function home()
 			end)
 		end
 
-		local function getOrCreateWorldCell()
+		local function recycleWorldCellShape(cell)
+			if cell.shape ~= nil then
+				cell.shape:setParent(nil)
+				table.insert(recycledWorldIcons, cell.shape)
+				worldIcons[cell.shape] = nil
+				cell.shape = nil
+			end
+		end
+
+		local function recycleWorldCell(cell)
+			recycleWorldCellShape(cell)
+			if cell.thumbnail ~= nil then
+				cell.thumbnail:setParent(nil)
+				cell.thumbnail = nil
+			end
+			cell:setParent(nil)
+			table.insert(recycledWorldCells, cell)
+		end
+
+		local function getOrCreateWorldCell(world, category)
 			local cell = table.remove(recycledWorldCells)
 
 			if cell == nil then
@@ -1013,32 +1039,36 @@ function home()
 				cell.parentDidResize = worldCellResizeFn
 			end
 
-			cell.title.Text = "..."
+			cell.category = category or ""
+
+			if world then
+				local thumbnail = worldThumbnails[cell.category .. "_" .. world.id]
+				if thumbnail ~= nil then
+					thumbnail:setParent(cell)
+					cell.thumbnail = thumbnail
+					recycleWorldCellShape(cell)
+				end
+				cell.title.Text = world.title
+			else
+				cell.title.Text = "..."
+			end
+
 			cell.titleFrame.Width = cell.title.Width + 4
 			cell.titleFrame.Height = cell.title.Height + 4
 
-			local item = table.remove(recycledWorldIcons)
-			if item == nil then
-				local shape = bundle:Shape("shapes/world_icon")
-				item = ui:createShape(shape, { spherized = true })
+			if cell.thumbnail == nil then
+				local item = table.remove(recycledWorldIcons)
+				if item == nil then
+					local shape = bundle:Shape("shapes/world_icon")
+					item = ui:createShape(shape, { spherized = true })
+				end
+
+				item:setParent(cell)
+				cell.shape = item
+				worldIcons[item] = true
 			end
 
-			-- item:setParent(nil)
-			item:setParent(cell)
-
-			cell.shape = item
-			worldIcons[item] = true
 			return cell
-		end
-
-		local function recycleWorldCell(cell)
-			cell.shape:setParent(nil)
-			table.insert(recycledWorldIcons, cell.shape)
-			worldIcons[cell.shape] = nil
-			cell.shape = nil
-
-			cell:setParent(nil)
-			table.insert(recycledWorldCells, cell)
 		end
 
 		local function requestFriends(dataFetcher)
@@ -1138,31 +1168,30 @@ function home()
 				cellSize = config.WORLD_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
-						local cell = getOrCreateWorldCell()
-
 						local world = dataFetcher.entities[index]
+						local cell = getOrCreateWorldCell(world, "featured")
 
-						cell.title.Text = world.title
+						-- cell.title.Text = world.title
 						cell.title.object.MaxWidth = cell.Width - (padding + 2) * 2
-
 						cell.titleFrame.Width = cell.title.Width + 4
 						cell.titleFrame.Height = cell.title.Height + 4
 
-						-- cell.req = api:getWorldThumbnail(world.id, function(img, err)
-						-- 	if err ~= nil then
-						-- 		return
-						-- 	end
+						if cell.thumbnail ~= nil then
+							return cell
+						end
 
-						-- 	print("WORLD THUMB LOADED")
-						-- 	-- entry.thumbnail = img
+						cell.req = api:getWorldThumbnail(world.id, function(img, err)
+							if err ~= nil then
+								return
+							end
 
-						-- 	if cell.setImage then
-						-- 		cell:setImage(img)
-						-- 	end
-
-						-- 	-- cell.thumbnail = img
-						-- 	-- cell:setImage(img)
-						-- end)
+							local thumbnail = ui:frame({ image = img })
+							thumbnail:setParent(cell)
+							cell.thumbnail = thumbnail
+							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
+							recycleWorldCellShape(cell)
+							worldCellResizeFn(cell)
+						end)
 
 						return cell
 					end
