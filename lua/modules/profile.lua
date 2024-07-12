@@ -1212,8 +1212,8 @@ profile.create = function(_, config)
 		end
 
 		-- check if the User is already a friend
-		local req = api:getFriends(function(ok, friends, _)
-			if not ok then
+		local req = api:getFriends({ fields = { "id" } }, function(friends, err)
+			if err ~= nil then
 				return
 			end
 
@@ -1225,7 +1225,7 @@ profile.create = function(_, config)
 				end
 			end
 			updateFriendButton()
-		end, { "id" })
+		end)
 		table.insert(requests, req)
 
 		-- check if a request was already sent

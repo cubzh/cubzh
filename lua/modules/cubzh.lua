@@ -973,7 +973,7 @@ function home()
 			dataFetcher.req = api:getWorlds({
 				category = "featured",
 				fields = { "title", "created", "updated", "views", "likes" },
-			}, function(err, worlds)
+			}, function(worlds, err)
 				if err ~= nil then
 					return
 				end
@@ -1046,8 +1046,8 @@ function home()
 				dataFetcher.req:Cancel()
 			end
 
-			dataFetcher.req = api:getFriends(function(ok, friends, _)
-				if not ok then
+			dataFetcher.req = api:getFriends({ fields = { "id", "username" } }, function(friends, err)
+				if err ~= nil then
 					return
 				end
 
@@ -1061,7 +1061,7 @@ function home()
 				if dataFetcher.row and dataFetcher.title then
 					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
 				end
-			end, { "id", "username" })
+			end)
 		end
 
 		local function getOrCreateFriendCell()
@@ -1148,29 +1148,34 @@ function home()
 						cell.titleFrame.Width = cell.title.Width + 4
 						cell.titleFrame.Height = cell.title.Height + 4
 
-						-- dataFetcher.req = api:getWorldThumbnail(entry.id, function(err, img)
-						-- 	if err ~= nil or cell.setImage == nil then
+						-- cell.req = api:getWorldThumbnail(world.id, function(img, err)
+						-- 	if err ~= nil then
 						-- 		return
 						-- 	end
-						-- 	entry.thumbnail = img
 
-						-- 	if cell.item ~= nil then
-						-- 		cell.item:remove()
-						-- 		cell.item = nil
+						-- 	print("WORLD THUMB LOADED")
+						-- 	-- entry.thumbnail = img
+
+						-- 	if cell.setImage then
+						-- 		cell:setImage(img)
 						-- 	end
 
-						-- 	cell.thumbnail = img
-						-- 	cell:setImage(img)
-
-						-- 	if type(entry.onThumbnailUpdate) == "function" then
-						-- 		entry.onThumbnailUpdate(img)
-						-- 	end
+						-- 	-- cell.thumbnail = img
+						-- 	-- cell:setImage(img)
 						-- end)
 
 						return cell
 					end
 				end,
 				unloadCell = function(_, cell)
+					if cell.req then
+						cell.req:Cancel()
+						cell.req = nil
+					end
+					if cell.item ~= nil then
+						cell.item:remove()
+						cell.item = nil
+					end
 					recycleWorldCell(cell)
 				end,
 				extraSetup = function(dataFetcher)
@@ -1278,8 +1283,11 @@ function home()
 								math.max(username.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2)
 							local totalWidth = infoWidth + avatar.Width + padding
 
-							avatar.Height = self.Height * 0.8
-							avatar.pos = { self.Width * 0.5 - totalWidth * 0.5, 0 }
+							avatar.Height = self.Height * 0.9
+							avatar.pos = {
+								self.Width * 0.5 - totalWidth * 0.5,
+								self.Height * 0.5 - avatar.Height * 0.5,
+							}
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
 							local x = avatar.pos.X + avatar.Width + padding

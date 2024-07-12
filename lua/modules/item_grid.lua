@@ -917,7 +917,7 @@ itemGrid.create = function(_, config)
 			end)
 			addSentRequest(req)
 		elseif config.type == "worlds" then
-			local apiCallback = function(err, worlds)
+			local apiCallback = function(worlds, err)
 				if err then
 					print("Error: " .. err)
 					return

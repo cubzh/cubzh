@@ -43,18 +43,6 @@ local function urlGetFields(url, fields)
 	return url
 end
 
-function urlAddQueryParams(url, params) -- params is an array of {key = "key", value = "value"} entries
-	local s = url .. "?"
-	for i, param in ipairs(params) do
-		if i > 1 then
-			s = s .. "&" .. param.key .. "=" .. param.value
-		else
-			s = s .. param.key .. "=" .. param.value
-		end
-	end
-	return s
-end
-
 -- search Users by username substring
 -- callback(ok, users, errMsg)
 -- ok: boolean
@@ -84,40 +72,48 @@ mod.searchUser = function(_, searchText, callback)
 	return req
 end
 
--- getFriends ...
--- callback(ok, friends, errMsg)
-mod.getFriends = function(_, callback, fields, config)
+-- getFriends
+-- callback(friends, err)
+mod.getFriends = function(self, config, callback)
+	if self ~= mod then
+		error("api:getFriends(config, callback): use `:`", 2)
+	end
 	if type(callback) ~= "function" then
-		error("api:getFriends(callback, [fields, config]) - callback must be a function", 2)
-	end
-	if fields ~= nil and type(fields) ~= "table" then
-		error("api:getFriends(callback, [fields, config]) - fields must be a table or nil", 2)
-	end
-	if config ~= nil and type(config) ~= "table" then
-		error("api:getFriends(callback, [fields, config]) - config must be a table or nil", 2)
+		error("api:getFriends(config, callback) - callback must be a function", 2)
 	end
 
 	local defaultConfig = {
 		userID = "self",
+		fields = { "id" },
 	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+
+	if not ok then
+		error("api:getFriends(config, callback): config error (" .. err .. ")", 2)
+	end
 
 	config = require("config"):merge(defaultConfig, config)
 
-	local url = mod.kApiAddr .. "/users/" .. config.userID .. "/friends"
+	local u = url:parse(mod.kApiAddr .. "/users/" .. config.userID .. "/friends")
 
-	url = urlGetFields(url, fields)
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
 
-	local req = HTTP:Get(url, function(resp)
-		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get friends (" .. resp.StatusCode .. ")")
+	local req = HTTP:Get(u:toString(), function(res)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		local friends, err = JSON:Decode(resp.Body)
+		local friends, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			callback(false, nil, "get friends decode error: " .. err)
+			callback(nil, mod:error(res.StatusCode, "getFriends JSON decode error: " .. err))
 			return
 		end
-		callback(true, friends, nil) -- success
+		callback(friends) -- success
 	end)
 	return req
 end
@@ -384,12 +380,10 @@ end
 
 --- returns worlds considering provided filters
 -- TODO: add filter for user world drafts
+-- callback(worlds, err)
 mod.getWorlds = function(self, config, callback)
 	if self ~= mod then
 		error("api:getWorlds(config, callback): use `:`", 2)
-	end
-	if type(config) ~= Type.table then
-		error("api:getWorlds(config, callback): config should be a table", 2)
 	end
 	if type(callback) ~= "function" then
 		error("api:getWorlds(config, callback): callback should be a function", 2)
@@ -399,7 +393,6 @@ mod.getWorlds = function(self, config, callback)
 		category = "featured",
 		search = "",
 		sortBy = "updatedAt:desc",
-		-- tags = {}, -- not implemented yet
 		page = 1,
 		perPage = 50,
 		fields = { "title", "created", "updated", "views", "likes" },
@@ -425,19 +418,15 @@ mod.getWorlds = function(self, config, callback)
 		u:addQueryParameter("f", field)
 	end
 
-	local url = u:toString() -- e.g. https://api.cu.bzh/worlds?category=featured&search=monster
-
-	local req = HTTP:Get(url, function(res)
+	local req = HTTP:Get(u:toString(), function(res)
 		if res.StatusCode ~= 200 then
-			callback(mod:error(res.StatusCode, "status code:" .. res.StatusCode), nil)
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		-- decode body
+
 		local data, err = JSON:Decode(res.Body)
 		if err ~= nil then
 			callback(nil, mod:error(res.StatusCode, "getWorlds JSON decode error: " .. err))
-
-			callback("json decode error:" .. err, nil) -- failure
 			return
 		end
 
@@ -459,7 +448,7 @@ mod.getWorlds = function(self, config, callback)
 				v.views = 0
 			end
 		end
-		callback(nil, data.results)
+		callback(data.results)
 	end)
 	return req
 end
@@ -541,11 +530,11 @@ mod.getWorldThumbnail = function(self, worldID, callback)
 
 	local req = HTTP:Get(url, function(res)
 		if res.StatusCode == 200 then
-			callback(nil, res.Body)
+			callback(res.Body)
 		elseif res.StatusCode == 400 then
-			callback("This world has no thumnail", nil)
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 		else
-			callback("Error " .. res.StatusCode .. ": " .. res.Body:ToString(), nil)
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 		end
 	end)
 
