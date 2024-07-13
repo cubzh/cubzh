@@ -2424,7 +2424,6 @@ function createUI(system)
 
 		local released = true
 		local scrollPosition = 0
-		local targetScrollPosition = 0
 		local defuseScrollSpeedCount = 0
 		local totalDragSinceLastTick = 0
 		local scrollSpeed = 0
@@ -2741,9 +2740,9 @@ function createUI(system)
 
 		node.applyScrollDelta = function(_, dx, dy)
 			if vertical then
-				node:setScrollPosition(targetScrollPosition - dy)
+				node:setScrollPosition(scrollPosition - dy)
 			elseif horizontal then
-				node:setScrollPosition(targetScrollPosition - dx)
+				node:setScrollPosition(scrollPosition - dx)
 			end
 		end
 
@@ -2773,10 +2772,7 @@ function createUI(system)
 
 		node.setScrollPosition = function(self, newPosition)
 			scrollPosition = self:capPosition(newPosition)
-			targetScrollPosition = scrollPosition
 			self:refresh()
-
-			-- targetScrollPosition = self:capPosition(newPosition)
 		end
 
 		node.setScrollIndexVisible = function(self, index)
@@ -2840,7 +2836,6 @@ function createUI(system)
 				cellInfo = {},
 			}
 			scrollPosition = 0
-			targetScrollPosition = 0
 		end
 
 		container.parentDidResizeSystem = function(_)
@@ -2903,26 +2898,10 @@ function createUI(system)
 					scrollSpeed = scrollSpeed + math.min(-scrollSpeed, math.max(0.1, (-scrollSpeed * 3) * dt))
 				end
 
-				targetScrollPosition = scrollPosition
-
 				if math.abs(scrollSpeed) < SCROLL_EPSILON then
 					scrollSpeed = 0
 				end
 				node:refresh()
-			else
-				if targetScrollPosition ~= scrollPosition then
-					scrollPosition = scrollPosition
-						+ (targetScrollPosition - scrollPosition)
-							* config.rigidity
-							* dt
-							* 1.0
-							/ SCROLL_TIME_TO_TARGET
-					if math.abs(scrollPosition - targetScrollPosition) < SCROLL_EPSILON then
-						scrollPosition = targetScrollPosition
-					end
-					-- NOTE: possible optimization: refresh content less often, only the position
-					node:refresh()
-				end
 			end
 		end, { system = system == true and System or nil, topPriority = true })
 		table.insert(listeners, l)
@@ -2940,7 +2919,9 @@ function createUI(system)
 				startPosition.Y = 0
 			end
 
-			targetScrollPosition = scrollPosition
+			defuseScrollSpeedCount = 0
+			totalDragSinceLastTick = 0
+
 			dragStartScrollPosition = scrollPosition
 		end
 
