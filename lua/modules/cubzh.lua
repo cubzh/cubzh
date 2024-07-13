@@ -1260,10 +1260,19 @@ function home()
 				dataFetcher.req:Cancel()
 			end
 
-			dataFetcher.req = api:getFriends({ fields = { "id", "username" } }, function(friends, err)
+			dataFetcher.req = api:getFriends({ fields = { "id", "username", "updated" } }, function(friends, err)
 				if err ~= nil then
 					return
 				end
+
+				local function sortByUpdated(a, b)
+					if a.updated ~= nil and b.updated ~= nil then
+						return a.updated > b.updated
+					end
+					return a.id > b.id
+				end
+
+				table.sort(friends, sortByUpdated)
 
 				dataFetcher.entities = friends
 				dataFetcher.nbEntities = #friends
@@ -1478,8 +1487,11 @@ function home()
 						profileCell = ui:frame()
 						profileCell.Height = 150
 
-						local username = ui:createText(Player.Username)
-						username:setParent(profileCell)
+						local usernameFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						usernameFrame:setParent(profileCell)
+
+						local username = ui:createText(Player.Username, Color.White)
+						username:setParent(usernameFrame)
 
 						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
 						editAvatarBtn:setParent(profileCell)
@@ -1492,9 +1504,14 @@ function home()
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
 
+							usernameFrame.Width = username.Width + padding * 2
+							usernameFrame.Height = username.Height + config.TINY_PADDING * 2
+
 							local infoWidth = math.max(username.Width, editAvatarBtn.Width, visitHouseBtn.Width)
-							local infoHeight =
-								math.max(username.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2)
+
+							local infoHeight = math.max(
+								usernameFrame.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2
+							)
 							local totalWidth = infoWidth + avatar.Width + padding
 
 							avatar.Height = self.Height * 0.9
@@ -1505,7 +1522,10 @@ function home()
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
 							local x = avatar.pos.X + avatar.Width + padding
-							username.pos = { x, y }
+
+							usernameFrame.pos = { x, y }
+
+							username.pos = { padding, config.TINY_PADDING }
 							y = y - padding - editAvatarBtn.Height
 							editAvatarBtn.pos = { x, y }
 							y = y - padding - visitHouseBtn.Height

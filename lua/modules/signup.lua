@@ -1684,7 +1684,6 @@ signup.startFlow = function(self, config)
 						-- print("🪲 System.HasCredentials", System.HasCredentials)
 						-- print("🪲 System.Authenticated:", System.Authenticated)
 						-- print("🪲 System.UserID:", System.UserID)
-						-- 🍏
 
 						if
 							System.Authenticated

@@ -948,9 +948,13 @@ pezhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
 pezhBtn:setParent(topBar)
 
-pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin"))
+pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin_2", { spherized = false, doNotFlip = true }))
 pezhShape:setParent(pezhBtn)
 pezhShape.parentDidResize = btnContentParentDidResize
+
+-- LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+-- 	pezhShape.pivot.Rotation = pezhShape.pivot.Rotation * Rotation(0, dt, 0)
+-- end)
 
 pezhBtn.onPress = topBarBtnPress
 pezhBtn.onCancel = topBarBtnRelease

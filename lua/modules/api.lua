@@ -108,7 +108,18 @@ mod.getFriends = function(self, config, callback)
 			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
+
 		local friends, err = JSON:Decode(res.Body)
+
+		for _, friend in ipairs(friends) do
+			if friend.created then
+				friend.created = time.iso8601_to_os_time(friend.created)
+			end
+			if friend.updated then
+				friend.updated = time.iso8601_to_os_time(friend.updated)
+			end
+		end
+
 		if err ~= nil then
 			callback(nil, mod:error(res.StatusCode, "getFriends JSON decode error: " .. err))
 			return
