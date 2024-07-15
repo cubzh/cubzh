@@ -1260,19 +1260,19 @@ function home()
 				dataFetcher.req:Cancel()
 			end
 
-			dataFetcher.req = api:getFriends({ fields = { "id", "username", "updated" } }, function(friends, err)
+			dataFetcher.req = api:getFriends({ fields = { "id", "username", "lastSeen" } }, function(friends, err)
 				if err ~= nil then
 					return
 				end
 
-				local function sortByUpdated(a, b)
-					if a.updated ~= nil and b.updated ~= nil then
-						return a.updated > b.updated
+				local function sortByLastSeen(a, b)
+					if a.lastSeen ~= nil and b.lastSeen ~= nil then
+						return a.lastSeen > b.lastSeen
 					end
 					return a.id > b.id
 				end
 
-				table.sort(friends, sortByUpdated)
+				table.sort(friends, sortByLastSeen)
 
 				dataFetcher.entities = friends
 				dataFetcher.nbEntities = #friends
