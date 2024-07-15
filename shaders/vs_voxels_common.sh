@@ -12,6 +12,7 @@ $output v_color0, v_texcoord0, v_texcoord1
 	#define v_clipZ v_texcoord0.w
 #elif VOXEL_VARIANT_MRT_SHADOW_SAMPLE == 0
 $output v_color0
+	#define v_depth v_color0.x
 #endif
 
 #include "./include/bgfx.sh"
@@ -44,7 +45,7 @@ void main() {
 
 	gl_Position = clip;
 #if VOXEL_VARIANT_MRT_SHADOW_PACK
-	v_color0 = clip;
+	v_depth = clip.z / clip.w;
 #endif
 
 #else // IS_SHADOW_PASS

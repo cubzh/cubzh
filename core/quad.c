@@ -16,7 +16,7 @@
 #define QUAD_FLAG_SHADOW 2
 #define QUAD_FLAG_UNLIT 4
 #define QUAD_FLAG_MASK 8
-#define QUAD_FLAG_ALPHA 16
+#define QUAD_FLAG_ALPHABLEND 16
 #define QUAD_FLAG_VCOLOR 32
 #define QUAD_FLAG_9SLICE 64
 
@@ -30,6 +30,7 @@ struct _Quad {
     float anchorX, anchorY; /* 2x4 bytes */
     float tilingU, tilingV; /* 2x4 bytes */
     float offsetU, offsetV; /* 2x4 bytes */
+    float cutout;           /* 4 bytes */
     uint16_t layers;        /* 2 bytes */
     uint8_t flags;          /* 1 byte */
     uint8_t sortOrder;      /* 1 byte */
@@ -68,6 +69,7 @@ Quad *quad_new(void) {
     q->tilingV = 1.0f;
     q->offsetU = 0.0f;
     q->offsetV = 0.0f;
+    q->cutout = -1.0f;
     q->layers = 1; // CAMERA_LAYERS_DEFAULT
     q->flags = QUAD_FLAG_DOUBLESIDED;
     q->sortOrder = 0;
@@ -194,6 +196,14 @@ float quad_get_offset_v(const Quad *q) {
     return q->offsetV;
 }
 
+void quad_set_cutout(Quad *q, float value) {
+    q->cutout = value;
+}
+
+float quad_get_cutout(const Quad *q) {
+    return q->cutout;
+}
+
 void quad_set_color(Quad *q, uint32_t color) {
     if (_quad_get_flag(q, QUAD_FLAG_VCOLOR)) {
         q->rgba[0] = q->rgba[1] = q->rgba[2] = q->rgba[3] = color;
@@ -274,12 +284,12 @@ bool quad_is_mask(const Quad *q) {
     return _quad_get_flag(q, QUAD_FLAG_MASK);
 }
 
-void quad_set_alpha(Quad *q, bool toggle) {
-    _quad_toggle_flag(q, QUAD_FLAG_ALPHA, toggle);
+void quad_set_alpha_blending(Quad *q, bool toggle) {
+    _quad_toggle_flag(q, QUAD_FLAG_ALPHABLEND, toggle);
 }
 
-bool quad_uses_alpha(const Quad *q) {
-    return _quad_get_flag(q, QUAD_FLAG_ALPHA);
+bool quad_uses_alpha_blending(const Quad *q) {
+    return _quad_get_flag(q, QUAD_FLAG_ALPHABLEND);
 }
 
 void quad_set_sort_order(Quad *q, uint8_t value) {
@@ -338,7 +348,7 @@ float quad_utils_get_diagonal(const Quad *q) {
 }
 
 bool quad_utils_get_visibility(const Quad *q, bool *isOpaque) {
-    const bool transparentTex = q->size > 0 && _quad_get_flag(q, QUAD_FLAG_ALPHA);
+    const bool transparentTex = q->size > 0 && _quad_get_flag(q, QUAD_FLAG_ALPHABLEND);
     if (_quad_get_flag(q, QUAD_FLAG_VCOLOR)) {
         const uint16_t alpha = (uint16_t)(q->rgba[0] >> 24) + (uint16_t)(q->rgba[1] >> 24) +
                                (uint16_t)(q->rgba[2] >> 24) + (uint16_t)(q->rgba[3] >> 24);

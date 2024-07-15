@@ -23,10 +23,13 @@ $input v_color0
 SAMPLER2D(s_fb1, 0);
 
 uniform vec4 u_params;
-uniform vec4 u_color1;
 	#define u_slice u_params.xy
 	#define u_uBorders u_params.zw
+#endif
+#if QUAD_VARIANT_TEX || QUAD_VARIANT_CUTOUT
+uniform vec4 u_color1;
 	#define u_vBorders u_color1.xy
+	#define u_cutout u_color1.z
 #endif
 
 void main() {
@@ -50,6 +53,10 @@ void main() {
 				   sliceUV(v_uv.y, vBorders, slice.y));
 	
 	color *= texture2D(s_fb1, uv);
+#endif
+
+#if QUAD_VARIANT_CUTOUT
+	if (color.a <= u_cutout) discard;
 #endif
 
 #if QUAD_VARIANT_MRT_LIGHTING

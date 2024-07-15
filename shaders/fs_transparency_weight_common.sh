@@ -6,6 +6,7 @@ $input v_color0, v_texcoord0, v_texcoord1
 #elif OIT_VARIANT_TEX
 	#define v_uv v_texcoord0.xy
 	#define v_clipZ v_texcoord0.z
+	#define v_cutout v_texcoord0.w
 	#define v_9slice v_texcoord1.xyz
 #else
 	#define v_model v_texcoord0.xyz
@@ -86,6 +87,11 @@ void main() {
 				   sliceUV(v_uv.y, vBorders, slice.y));
 
 	color *= texture2D(s_fb1, uv);
+
+#if OIT_VARIANT_CUTOUT
+	if (color.a <= v_cutout) discard;
+#endif
+
 #elif VOXEL_VARIANT_DRAWMODES
 	color = getGridColor(v_model, color, u_gridRGB, u_gridScaleMag, v_clipZ);
 #endif // OIT_VARIANT_FONT

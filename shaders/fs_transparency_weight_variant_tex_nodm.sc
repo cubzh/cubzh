@@ -8,5 +8,6 @@
 // Textured
 #define OIT_VARIANT_TEX 1
 #define OIT_VARIANT_FONT 0
+#define OIT_VARIANT_CUTOUT 0
 
 #include "./fs_transparency_weight_common.sh"
