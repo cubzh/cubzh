@@ -30,6 +30,11 @@ signup.startFlow = function(self, config)
 
 	local flowConfig = config
 
+	local internalLoginSuccess = function()
+		print("🟢 [internalLoginSuccess] System.AskedForMagicKey:", System.AskedForMagicKey)
+		flowConfig.loginSuccess()
+	end
+
 	local api = require("system_api", System)
 	local ui = config.ui
 	local flow = require("flow")
@@ -203,7 +208,7 @@ signup.startFlow = function(self, config)
 							-- res.username, res.password, res.magickey
 							if err == nil then
 								System:StoreCredentials(credentials["user-id"], credentials.token)
-								flowConfig.loginSuccess()
+								internalLoginSuccess()
 							else
 								magicKeyLabel.Text = "❌ " .. err
 								hideLoading()
@@ -636,7 +641,7 @@ signup.startFlow = function(self, config)
 
 				okBtn.onRelease = function()
 					-- TEMPORARY HACK
-					-- config.loginSuccess()
+					-- internalLoginSuccess()
 
 					okBtn:disable()
 					-- signupFlow:push(createAvatarEditorStep())
@@ -651,7 +656,7 @@ signup.startFlow = function(self, config)
 							return
 						end
 						print("PATCH USER INFO: OK")
-						config.loginSuccess()
+						internalLoginSuccess()
 					end)
 				end
 
@@ -1198,7 +1203,7 @@ signup.startFlow = function(self, config)
 				info.pos = { padding, padding }
 
 				okBtn = ui:buttonPositive({ content = "Done!", textSize = "big", padding = 10 })
-				okBtn.onRelease = function(self)
+				okBtn.onRelease = function(_)
 					-- go to next step
 					signupFlow:push(createDOBStep())
 				end
@@ -1520,32 +1525,34 @@ signup.startFlow = function(self, config)
 
 					local checks = {}
 
-					--                                           minAppVersion()
-					--                                             |        \
-					--                                             |         \
-					-- 		                                       |        error("app needs updating")
-					--                                             |
-					--                                        magicKey()?
-					--                                          /    \
-					--                                   No    /      \   Yes
-					--                                       /          \
-					--                        userAccountExists()?   displayMagicKeyPrompt() (can be cancelled)
-					--                              /     \
-					--                         No  /       \  Yes
-					--                           /         /
-					--                createAccount()     /
-					--                      |            /
-					--                      |			/
-					--                checkUserAccount()
-					--                      |
-					--             userAccountComplete()?
-					--                  /             \
-					--               No/               \ Yes
-					--                /                 \
-					--   pushStep("SignUpOrLoginStep")  goToMainHomeScreen()
+					--
+					--                                    minAppVersion()
+					--                                        |        \
+					--                                     Ok |         \
+					--                                        |        error("app needs updating")
+					--                                        |
+					--                               userAccountExists()?
+					--                                     /      \
+					--                                Yes /        \ No
+					--                                   /          \
+					--                                  /            \
+					--                       askedMagicKey()?      createAccount()
+					--                          /      \               /       \
+					--                     Yes /        \ No          / Ok      \ Error
+					--                        /          \           /           \
+					--                       /            \         /             \
+					--     displayMagicKeyPrompt()  checkUserAccountComplete()   error("account creation failed")
+					--        (can be cancelled)          /        \
+					--         TODO: next step           /          \
+					--                |                 /            \
+					--              ?????           No /              \ Yes
+					--                                /                \
+					--                               /                  \
+					--            pushStep("SignUpOrLoginStep")     goToMainHomeScreen()
 					--
 
 					checks.error = function(optionalErrorMsg)
+						print("🔴 [error] [", optionalErrorMsg, "]")
 						text.Text = ""
 						loadingFrame:hide()
 
@@ -1603,6 +1610,8 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.minAppVersion = function()
+						print("🟢 [minAppVersion]")
+
 						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
 							if error ~= nil then
@@ -1619,47 +1628,39 @@ signup.startFlow = function(self, config)
 
 							if appIsUpToDate then
 								-- call next sub-step
-								checks.magicKey()
+								checks.userAccountExists()
 							else
 								-- App is not up-to-date
-								checks.error("App needs to be updated!")
+								checks.error("Cubzh app needs to be updated!")
 							end
 						end)
 					end
 
-					-- Checks whether a magic key has been requested.
-					checks.magicKey = function()
-						System:DebugEvent("App checks if magic key has been requested")
-
-						text.Text = "Checking magic key..."
-						loadingFrame:parentDidResize()
-
-						if System.HasCredentials == false and System.AskedForMagicKey then
-							System:DebugEvent("App shows magic key prompt")
-							System.AskedForMagicKey = false
-							-- TODO: show magic key prompt
-							checks.error("TODO: magic key prompt")
-						else
-							checks.userAccountExists()
-						end
-					end
-
 					-- Checks whether a user account exists locally.
 					checks.userAccountExists = function()
+						print("🟢 [userAccountExists]")
+						print("⚪️ [userAccountExists] System.HasCredentials", System.HasCredentials)
+
 						-- Update loading message
-						text.Text = "Checking user account..."
+						text.Text = "Looking for user account..."
 						loadingFrame:parentDidResize()
 
 						if System.HasCredentials == false then
-							-- Not user account is present locally.
-							-- Create new empty account.
+							-- Not user account is present locally
+							-- Cleanup, just to be sure
+							System.AskedForMagicKey = false
+							-- Next sub-step: create new empty account
 							checks.createAccount()
 						else
-							checks.checkUserAccount()
+							-- User account is present
+							-- Next sub-step: check if a magic key has been asked
+							checks.askedMagicKey()
 						end
 					end
 
 					checks.createAccount = function()
+						print("🟢 [createAccount]")
+
 						System:DebugEvent("App creates new empty user account")
 
 						-- Update loading message
@@ -1672,77 +1673,118 @@ signup.startFlow = function(self, config)
 							else
 								System:StoreCredentials(credentials["user-id"], credentials.token)
 								System:DebugEvent("ACCOUNT_CREATED")
-								checks.checkUserAccount()
+								-- Next sub-step: check if user account is complete
+								checks.checkUserAccountComplete()
 							end
 						end)
 					end
 
-					checks.checkUserAccount = function()
+					-- Checks whether a magic key has been requested.
+					checks.askedMagicKey = function()
+						print("🟢 [askedMagicKey]")
+						print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
+						print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
+						print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
+
+						System:DebugEvent("App checks if magic key has been requested")
+
+						text.Text = "Checking magic key..."
+						loadingFrame:parentDidResize()
+
+						-- Cleanup: remove `AskedForMagicKey` flag if it's still set while we have valid credentials
+						if System.HasCredentials and System.Authenticated and System.AskedForMagicKey then
+							System.AskedForMagicKey = false
+						end
+
+						if System.AskedForMagicKey then
+							System:DebugEvent("App shows magic key prompt")
+							System.AskedForMagicKey = false
+							-- TODO: show magic key prompt
+							-- TODO: show magic key prompt
+							-- TODO: show magic key prompt
+							checks.error("TODO: magic key prompt")
+						else
+							-- No magic key has been asked
+							-- Next sub-step: check if user account is complete
+							checks.checkUserAccountComplete()
+						end
+					end
+
+					checks.checkUserAccountComplete = function()
+						print("🟢 [checkUserAccountComplete]")
+						print("⚪️ [checkUserAccountComplete] System.HasCredentials", System.HasCredentials)
+						print("⚪️ [checkUserAccountComplete] System.Authenticated:", System.Authenticated)
+						print("⚪️ [checkUserAccountComplete] System.UserID:", System.UserID)
+
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
 
-						-- print("🪲 System.HasCredentials", System.HasCredentials)
-						-- print("🪲 System.Authenticated:", System.Authenticated)
-						-- print("🪲 System.UserID:", System.UserID)
+						-- System.HasCredentials should always be true here because
+						-- an empty user account is automatically created if none is found
+						if System.HasCredentials == false then
+							checks.error("No credentials found, this should not happen.")
+							return
+						end
 
-						if
-							System.Authenticated
-							and (System.Username ~= "" or System.HasEmail or System.HasVerifiedPhoneNumber)
-						then
-							config.loginSuccess()
-						elseif System.HasCredentials then
-							api:getUserInfo(System.UserID, function(userInfo, err)
-								if err ~= nil then
-									System:DebugEvent(
-										"Request to obtain user info with credentials failed",
-										{ statusCode = err.statusCode, error = err.message }
-									)
+						-- Request user account info
+						api:getUserInfo(System.UserID, function(userInfo, err)
+							if err ~= nil then
+								System:DebugEvent(
+									"Request to obtain user info with credentials failed",
+									{ statusCode = err.statusCode, error = err.message }
+								)
 
-									-- if unauthorized, it means credentials aren't valid,
-									-- removing them to start fresh with account creation or login
-									if err.statusCode == 401 then
-										System:RemoveCredentials()
-										checks.minAppVersion() -- restart from beginning now without credentials
-										return
-									end
-
-									checks.error() -- Show error message with retry button
+								-- if unauthorized, it means credentials aren't valid,
+								-- removing them to start fresh with account creation or login
+								if err.statusCode == 401 then
+									System:RemoveCredentials()
+									checks.minAppVersion() -- restart from beginning now without credentials
 									return
 								end
 
-								-- System.Authenticated == true means credentials are valid
-								System.Authenticated = true
-								System.Username = userInfo.username or ""
-								System.HasEmail = userInfo.hasEmail or false
-								System.HasVerifiedPhoneNumber = userInfo.hasPhoneNumber or false
+								checks.error() -- Show error message with retry button
+								return
+							end
 
-								-- print("🪲 userInfo:")
-								-- print("\tusername:", userInfo.username)
-								-- print("\thasEmail:", userInfo.hasEmail)
-								-- print("\thasPassword:", userInfo.hasPassword)
-								-- print("\tisUnder13:", userInfo.isUnder13)
-								-- print("\tdidCustomizeAvatar:", userInfo.didCustomizeAvatar)
-								-- print("\thasPhoneNumber:", userInfo.hasPhoneNumber)
+							-- No error. Meaning credentials are valid.
+							System.Authenticated = true -- [gaetan] not sure this field is useful...
 
-								if System.Username ~= "" or System.HasEmail or System.HasVerifiedPhoneNumber then
-									config.loginSuccess()
-								else
-									-- show signup
-									signupFlow:push(createSignUpOrLoginStep())
-								end
-							end, {
-								"username",
-								"hasEmail",
-								"hasPassword",
-								"hasDOB",
-								"isUnder13",
-								"didCustomizeAvatar",
-								"hasPhoneNumber",
-							})
-						else
-							-- show signup
-							signupFlow:push(createSignUpOrLoginStep())
-						end
+							print("⚪️ [checkUserAccountComplete] API RESPONSE:")
+							for key, value in pairs(userInfo) do
+								print("⚪️ [checkUserAccountComplete] ->", key, value)
+							end
+
+							-- ⚪️ username gaetan
+							-- ⚪️ hasEmail true
+							-- ⚪️ hasPassword false
+							-- ⚪️ hasDOB true
+							-- ⚪️ isUnder13 false
+							-- ⚪️ didCustomizeAvatar true
+							-- ⚪️ hasPhoneNumber false (TODO: server doesn't return this field yet)
+
+							-- Update values in System
+							System.Username = userInfo.username or ""
+							System.HasEmail = userInfo.hasEmail or false
+							-- System.HasPhoneNumber = userInfo.hasPhoneNumber or false
+
+							if System.Username ~= "" or System.HasEmail == true or System.HasPhoneNumber == true then
+								print("🟢 -> login success")
+								internalLoginSuccess()
+							else
+								-- show signup
+								print("🟢 -> createSignUpOrLoginStep")
+								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
+								signupFlow:push(createSignUpOrLoginStep())
+							end
+						end, {
+							"username",
+							"hasEmail",
+							"hasPassword",
+							"hasDOB",
+							"isUnder13",
+							"didCustomizeAvatar",
+							"hasPhoneNumber",
+						})
 					end
 
 					-- Start with the first sub-step
