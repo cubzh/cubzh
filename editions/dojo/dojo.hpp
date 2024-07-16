@@ -230,36 +230,22 @@ typedef struct Ty {
   };
 } Ty;
 
-typedef enum COptionTy_Tag {
-  SomeTy,
-  NoneTy,
-} COptionTy_Tag;
+typedef enum ResultTy_Tag {
+  OkTy,
+  ErrTy,
+} ResultTy_Tag;
 
-typedef struct COptionTy {
-  COptionTy_Tag tag;
+typedef struct ResultTy {
+  ResultTy_Tag tag;
   union {
     struct {
-      struct Ty *some;
-    };
-  };
-} COptionTy;
-
-typedef enum ResultCOptionTy_Tag {
-  OkCOptionTy,
-  ErrCOptionTy,
-} ResultCOptionTy_Tag;
-
-typedef struct ResultCOptionTy {
-  ResultCOptionTy_Tag tag;
-  union {
-    struct {
-      struct COptionTy ok;
+      struct Ty *ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultCOptionTy;
+} ResultTy;
 
 typedef struct CArrayFieldElement {
   struct FieldElement *data;
@@ -271,19 +257,14 @@ typedef struct ModelKeysClause {
   const char *model;
 } ModelKeysClause;
 
-typedef struct Model {
-  const char *name;
-  struct CArrayMember members;
-} Model;
-
-typedef struct CArrayModel {
-  struct Model *data;
+typedef struct CArrayStruct {
+  struct Struct *data;
   uintptr_t data_len;
-} CArrayModel;
+} CArrayStruct;
 
 typedef struct Entity {
   struct FieldElement hashed_keys;
-  struct CArrayModel models;
+  struct CArrayStruct models;
 } Entity;
 
 typedef struct CArrayEntity {
@@ -308,13 +289,32 @@ typedef struct ResultCArrayEntity {
   };
 } ResultCArrayEntity;
 
+typedef enum COptionFieldElement_Tag {
+  SomeFieldElement,
+  NoneFieldElement,
+} COptionFieldElement_Tag;
+
+typedef struct COptionFieldElement {
+  COptionFieldElement_Tag tag;
+  union {
+    struct {
+      struct FieldElement some;
+    };
+  };
+} COptionFieldElement;
+
+typedef struct CArrayCOptionFieldElement {
+  struct COptionFieldElement *data;
+  uintptr_t data_len;
+} CArrayCOptionFieldElement;
+
 typedef struct CArrayc_char {
   const char **data;
   uintptr_t data_len;
 } CArrayc_char;
 
 typedef struct KeysClause {
-  struct CArrayFieldElement keys;
+  struct CArrayCOptionFieldElement keys;
   enum PatternMatching pattern_matching;
   struct CArrayc_char models;
 } KeysClause;
@@ -366,7 +366,6 @@ typedef struct CArrayClause {
 } CArrayClause;
 
 typedef struct CompositeClause {
-  const char *model;
   enum LogicalOperator operator_;
   struct CArrayClause clauses;
 } CompositeClause;
@@ -419,6 +418,7 @@ typedef struct CArrayModelKeysClause {
 
 typedef struct ModelMetadata {
   struct Ty schema;
+  const char *namespace_;
   const char *name;
   uint32_t packed_size;
   uint32_t unpacked_size;
@@ -427,20 +427,20 @@ typedef struct ModelMetadata {
   struct CArrayFieldElement layout;
 } ModelMetadata;
 
-typedef struct CHashItemc_charModelMetadata {
-  const char *key;
+typedef struct CHashItemFieldElementModelMetadata {
+  struct FieldElement key;
   struct ModelMetadata value;
-} CHashItemc_charModelMetadata;
+} CHashItemFieldElementModelMetadata;
 
-typedef struct CArrayCHashItemc_charModelMetadata {
-  struct CHashItemc_charModelMetadata *data;
+typedef struct CArrayCHashItemFieldElementModelMetadata {
+  struct CHashItemFieldElementModelMetadata *data;
   uintptr_t data_len;
-} CArrayCHashItemc_charModelMetadata;
+} CArrayCHashItemFieldElementModelMetadata;
 
 typedef struct WorldMetadata {
   struct FieldElement world_address;
   struct FieldElement world_class_hash;
-  struct CArrayCHashItemc_charModelMetadata models;
+  struct CArrayCHashItemFieldElementModelMetadata models;
 } WorldMetadata;
 
 typedef enum Resultbool_Tag {
@@ -635,11 +635,13 @@ struct ResultToriiClient client_new(const char *torii_url,
                                     const char *libp2p_relay_url,
                                     struct FieldElement world);
 
+void client_set_logger(struct ToriiClient *client, void (*logger)(const char*));
+
 struct ResultCArrayu8 client_publish_message(struct ToriiClient *client,
                                              const char *message,
                                              struct Signature signature);
 
-struct ResultCOptionTy client_model(struct ToriiClient *client, const struct ModelKeysClause *keys);
+struct ResultTy client_model(struct ToriiClient *client, const struct ModelKeysClause *keys);
 
 struct ResultCArrayEntity client_entities(struct ToriiClient *client, const struct Query *query);
 
@@ -662,14 +664,14 @@ struct ResultSubscription client_on_entity_state_update(struct ToriiClient *clie
                                                         const struct EntityKeysClause *clause,
                                                         void *user_data,
                                                         void (*callback)(struct FieldElement,
-                                                                         struct CArrayModel,
+                                                                         struct CArrayStruct,
                                                                          void*));
 
 struct ResultSubscription client_on_event_message_update(struct ToriiClient *client,
                                                          const struct EntityKeysClause *clause,
                                                          void *user_data,
                                                          void (*callback)(struct FieldElement,
-                                                                          struct CArrayModel,
+                                                                          struct CArrayStruct,
                                                                           void*));
 
 struct Resultbool client_remove_models_to_sync(struct ToriiClient *client,
@@ -722,7 +724,7 @@ struct Resultbool wait_for_transaction(struct Provider *rpc, struct FieldElement
 
 struct FieldElement hash_get_contract_address(struct FieldElement class_hash,
                                               struct FieldElement salt,
-                                              const struct FieldElement *constructor_calldata,
+                                              const FieldElement *constructor_calldata,
                                               uintptr_t constructor_calldata_len,
                                               struct FieldElement deployer_address);
 
@@ -732,7 +734,7 @@ void client_free(struct ToriiClient *t);
 
 void provider_free(struct Provider *rpc);
 
-void model_free(struct Model *model);
+void model_free(struct Struct *model);
 
 void account_free(struct Account *account);
 
