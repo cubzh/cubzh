@@ -563,9 +563,12 @@ signup.startFlow = function(self, config)
 
 				loginButton.onRelease = function()
 					-- save in case user comes back with magic key after closing app
-					System:SaveUsernameOrEmail(usernameInput.Text)
-					-- if user asked for magic key in the past, this is the best
-					-- time to forget about it.
+					System.SavedUsernameOrEmail = usernameInput.Text
+
+					-- if user asked for magic key in the past, this is the best time to forget about it.
+					if System.AskedForMagicKey == false then
+						print("[STATEMENT NOT NEEDED] System.AskedForMagicKey = false")
+					end
 					System.AskedForMagicKey = false
 
 					errorLabel.Text = ""
@@ -1685,6 +1688,7 @@ signup.startFlow = function(self, config)
 						print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
 						print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
 						print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
+						print("⚪️ [askedMagicKey] System.Username:", "[" .. System.Username .. "]")
 
 						System:DebugEvent("App checks if magic key has been requested")
 
@@ -1697,12 +1701,18 @@ signup.startFlow = function(self, config)
 						end
 
 						if System.AskedForMagicKey then
+							-- Magic key has been requested by user in a previous session
 							System:DebugEvent("App shows magic key prompt")
-							System.AskedForMagicKey = false
-							-- TODO: show magic key prompt
-							-- TODO: show magic key prompt
-							-- TODO: show magic key prompt
-							checks.error("TODO: magic key prompt")
+
+							-- retrieve username or email that has been stored
+							local usernameOrEmail = System.SavedUsernameOrEmail
+							if type(usernameOrEmail) == "string" and usernameOrEmail ~= "" then
+								-- show magic key prompt
+								local step = createMagicKeyInputStep({ usernameOrEmail = usernameOrEmail })
+								signupFlow:push(step)
+							else
+								checks.error("failed to resume login with magic key")
+							end
 						else
 							-- No magic key has been asked
 							-- Next sub-step: check if user account is complete

@@ -345,7 +345,7 @@ mod.createModal = function(_, config)
 
 	loginButton.onRelease = function()
 		-- save in case user comes back with magic key after closing app
-		System:SaveUsernameOrEmail(usernameInput.Text)
+		System.SavedUsernameOrEmail = usernameInput.Text
 		-- if user asked for magic key in the past, this is the best
 		-- time to forget about it.
 		System.AskedForMagicKey = false
