@@ -202,20 +202,26 @@ signup.startFlow = function(self, config)
 
 				magicKeyButton.onRelease = function()
 					showLoading()
-					local req = api:login(
-						{ usernameOrEmail = config.usernameOrEmail, magickey = magicKeyInput.Text },
-						function(err, credentials)
-							-- res.username, res.password, res.magickey
-							if err == nil then
-								System:StoreCredentials(credentials["user-id"], credentials.token)
-								internalLoginSuccess()
-							else
-								magicKeyLabel.Text = "❌ " .. err
-								hideLoading()
+					if magicKeyInput.Text ~= "" then
+						local req = api:login(
+							{ usernameOrEmail = config.usernameOrEmail, magickey = magicKeyInput.Text },
+							function(err, credentials)
+								-- res.username, res.password, res.magickey
+								if err == nil then
+									System:StoreCredentials(credentials["user-id"], credentials.token)
+									internalLoginSuccess()
+								else
+									magicKeyLabel.Text = "❌ " .. err
+									hideLoading()
+								end
 							end
-						end
-					)
-					table.insert(requests, req)
+						)
+						table.insert(requests, req)
+					else
+						-- text input is empty
+						magicKeyLabel.Text = "❌ Please enter a magic key"
+						hideLoading()
+					end
 				end
 
 				frame.parentDidResize = function(self)
