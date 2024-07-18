@@ -21,10 +21,11 @@ DEFAULT_SLICE_9_SCALE = 1 -- 1.5
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
 SCROLL_DEFAULT_RIGIDITY = 0.99
-SCROLL_TIME_TO_TARGET = 0.1
-SCROLL_EPSILON = 0.01
+SCROLL_DEFAULT_FRICTION = 3
+SCROLL_SPEED_EPSILON = 1
 SCROLL_DRAG_EPSILON = 10
--- SCROLL_NB_TICKS_TO_DEFUSE_SPEED = 4
+SCROLL_DAMPENING_FACTOR = 0.2
+SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED = 20
 SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
 
 -- ENUMS
@@ -2349,6 +2350,7 @@ function createUI(system)
 			cellPadding = 0,
 			padding = 0, -- padding around cells
 			rigidity = SCROLL_DEFAULT_RIGIDITY,
+			friction = SCROLL_DEFAULT_FRICTION,
 			userdata = nil, -- can be used to provide extra context to loadCell / unloadCell
 			loadCell = function(_, _) -- index, userdata
 				return nil
@@ -2399,6 +2401,8 @@ function createUI(system)
 		local cellPadding = config.cellPadding
 		local padding = config.padding
 
+		local friction = config.friction
+
 		local container = self:frame()
 		container:setParent(node)
 		node.container = container
@@ -2424,9 +2428,11 @@ function createUI(system)
 
 		local released = true
 		local scrollPosition = 0
-		local defuseScrollSpeedCount = 0
-		local totalDragSinceLastTick = 0
+		local defuseScrollSpeedTimer = nil
+		local lastTickSavedScrollPosition = nil
+		-- local totalDragSinceLastTick = 0
 		local scrollSpeed = 0
+		local cappedPosition = nil
 		local dragStartScrollPosition = 0
 
 		local cell
@@ -2565,7 +2571,7 @@ function createUI(system)
 			end
 
 			if down then
-				container.pos.Y = node.Height - padding.top - scrollPosition
+				container.pos.Y = node.Height - padding.top + scrollPosition
 
 				loadTop = scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
@@ -2581,20 +2587,20 @@ function createUI(system)
 				unloadBottom = -scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadTop = loadBottom + node.Height + SCROLL_UNLOAD_MARGIN * 2
 			elseif right then
-				container.pos.X = padding.left - scrollPosition
+				container.pos.X = padding.left + scrollPosition
 
-				loadLeft = scrollPosition - SCROLL_LOAD_MARGIN
+				loadLeft = -scrollPosition - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
 
-				unloadLeft = scrollPosition - SCROLL_UNLOAD_MARGIN
+				unloadLeft = -scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
 			elseif left then
-				container.pos.X = node.Width - padding.right + scrollPosition
+				container.pos.X = node.Width - padding.right - scrollPosition
 
-				loadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN
+				loadLeft = scrollPosition - node.Width - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
 
-				unloadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN * 2
+				unloadLeft = scrollPosition - node.Width - SCROLL_LOAD_MARGIN * 2
 				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
 			end
 
@@ -2752,26 +2758,27 @@ function createUI(system)
 				if limit < 0 then
 					limit = 0
 				end
-				pos = math.max(-limit, math.min(0, pos))
+				pos = math.min(limit, math.max(0, pos))
 			elseif up then
 				-- TODO: review
-				pos = math.min(0, math.max(100, pos))
+				error("IMPLEMENT scroll capPosition for up direction")
 			elseif right then
-				local limit = cache.contentWidth - node.Width
-				if limit < 0 then
+				local limit = node.Width - cache.contentWidth
+				if limit > 0 then
 					limit = 0
 				end
-				pos = math.max(0, math.min(limit, pos)) -- correct
+				pos = math.max(limit, math.min(pos, 0))
 			elseif left then
 				-- TODO: review
-				pos = math.min(100, math.max(-100, pos))
+				error("IMPLEMENT scroll capPosition for left direction")
 			end
 
 			return pos
 		end
 
 		node.setScrollPosition = function(self, newPosition)
-			scrollPosition = self:capPosition(newPosition)
+			-- scrollPosition = self:capPosition(newPosition)
+			scrollPosition = newPosition
 			self:refresh()
 		end
 
@@ -2874,34 +2881,61 @@ function createUI(system)
 			return (x >= leftX and x <= rightX and y >= bottomY and y <= topY)
 		end
 
+		local previousSpeed
+		local refresh = false
 		l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-			if totalDragSinceLastTick ~= 0 then
-				scrollSpeed = totalDragSinceLastTick * (1.0 / dt) * 0.1
-				totalDragSinceLastTick = 0
-			end
+			if released == false and defuseScrollSpeedTimer ~= nil then
+				if lastTickSavedScrollPosition ~= nil and lastTickSavedScrollPosition ~= scrollPosition then
+					scrollSpeed = (scrollPosition - lastTickSavedScrollPosition) * (1.0 / dt) -- * 0.1
+					-- print("scrollSpeed:", scrollSpeed, "released:", released and "YES" or "NO")
+				end
 
-			if released == false and defuseScrollSpeedCount > 0 then
-				defuseScrollSpeedCount = defuseScrollSpeedCount - dt
-				if defuseScrollSpeedCount <= 0 then
+				defuseScrollSpeedTimer = defuseScrollSpeedTimer - dt
+				if defuseScrollSpeedTimer <= 0 then
 					scrollSpeed = 0
-					totalDragSinceLastTick = 0
-					defuseScrollSpeedCount = 0
+					defuseScrollSpeedTimer = nil
 				end
 			end
 
-			if released == true and scrollSpeed ~= 0 then
-				scrollPosition = node:capPosition(scrollPosition + scrollSpeed * dt)
+			lastTickSavedScrollPosition = scrollPosition
 
-				if scrollSpeed > 0 then
-					scrollSpeed = scrollSpeed - math.min(scrollSpeed, math.max(0.1, (scrollSpeed * 3) * dt))
+			if released == true then
+				if scrollSpeed ~= 0 then
+					scrollPosition = scrollPosition + scrollSpeed * dt
+
+					previousSpeed = scrollSpeed
+					scrollSpeed = scrollSpeed - (friction * scrollSpeed * dt)
+
+					cappedPosition = node:capPosition(scrollPosition)
+					if cappedPosition ~= scrollPosition then
+						local counterSpeed = (cappedPosition - scrollPosition)
+						if counterSpeed * scrollSpeed < 0 then
+							scrollSpeed = scrollSpeed + counterSpeed
+						else
+							scrollSpeed = 0
+							scrollPosition = scrollPosition + counterSpeed * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED * dt
+						end
+					end
+
+					-- if sign has changed or speed close to 0, set scrollSpeed to 0
+					if previousSpeed * scrollSpeed < 0 or math.abs(scrollSpeed) < SCROLL_SPEED_EPSILON then
+						scrollSpeed = 0
+					end
+
+					refresh = true
 				else
-					scrollSpeed = scrollSpeed + math.min(-scrollSpeed, math.max(0.1, (-scrollSpeed * 3) * dt))
+					cappedPosition = node:capPosition(scrollPosition)
+					if cappedPosition ~= scrollPosition then
+						local speed = (cappedPosition - scrollPosition) * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED
+						scrollPosition = scrollPosition + speed * dt
+						refresh = true
+					end
 				end
 
-				if math.abs(scrollSpeed) < SCROLL_EPSILON then
-					scrollSpeed = 0
+				if refresh then
+					node:refresh()
+					refresh = false
 				end
-				node:refresh()
 			end
 		end, { system = system == true and System or nil, topPriority = true })
 		table.insert(listeners, l)
@@ -2919,9 +2953,8 @@ function createUI(system)
 				startPosition.Y = 0
 			end
 
-			defuseScrollSpeedCount = 0
-			totalDragSinceLastTick = 0
-
+			defuseScrollSpeedTimer = nil
+			lastTickSavedScrollPosition = scrollPosition
 			dragStartScrollPosition = scrollPosition
 		end
 
@@ -2930,15 +2963,21 @@ function createUI(system)
 
 			local diff = 0
 			if vertical then
-				diff = startPosition.Y - pos.Y
+				diff = pos.Y - startPosition.Y
 			elseif horizontal then
-				diff = startPosition.X - pos.X
+				diff = pos.X - startPosition.X
 			end
 
-			defuseScrollSpeedCount = SCROLL_TIME_TO_DEFUSE_SPEED
-			totalDragSinceLastTick = totalDragSinceLastTick + diff
+			defuseScrollSpeedTimer = SCROLL_TIME_TO_DEFUSE_SPEED
 
-			self:setScrollPosition(dragStartScrollPosition + diff)
+			local newPos = dragStartScrollPosition + diff
+			local capped = node:capPosition(newPos)
+			if newPos ~= capped then
+				local delta = newPos - capped
+				newPos = capped + delta * SCROLL_DAMPENING_FACTOR
+			end
+
+			self:setScrollPosition(newPos)
 
 			if pressed ~= self and math.abs(diff) >= SCROLL_DRAG_EPSILON then
 				if pressed._onCancel then
