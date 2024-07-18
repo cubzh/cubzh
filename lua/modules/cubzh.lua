@@ -1080,7 +1080,7 @@ function home()
 					cellSelector.Height = self.Height
 				end
 
-				cell.onCancel = function(self)
+				cell.onCancel = function(_)
 					cellSelector:setParent(nil)
 				end
 			end
@@ -1211,6 +1211,16 @@ function home()
 				cell.title = title
 
 				cell.parentDidResize = worldCellResizeFn
+
+				cell.onPress = function(self)
+					cellSelector:setParent(self)
+					cellSelector.Width = self.Width
+					cellSelector.Height = self.Height
+				end
+
+				cell.onCancel = function(_)
+					cellSelector:setParent(nil)
+				end
 			end
 
 			cell.category = category or ""
@@ -1307,6 +1317,16 @@ function home()
 				cell = ui:frameScrollCell()
 				cell.Width = config.FRIEND_CELL_SIZE
 				cell.parentDidResize = worldCellResizeFn
+
+				cell.onPress = function(self)
+					cellSelector:setParent(self)
+					cellSelector.Width = self.Width
+					cellSelector.Height = self.Height
+				end
+
+				cell.onCancel = function(_)
+					cellSelector:setParent(nil)
+				end
 			end
 
 			-- worldIcons[item] = true
