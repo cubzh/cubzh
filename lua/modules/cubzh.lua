@@ -936,6 +936,9 @@ function home()
 		local recycledFriendCells = {}
 		local friendAvatarCache = {}
 
+		local cellSelector = ui:frameScrollCellSelector()
+		cellSelector:setParent(nil)
+
 		local t = 0.0
 		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 			t = t + dt
@@ -1070,6 +1073,16 @@ function home()
 				cell.title = title
 
 				cell.parentDidResize = worldCellResizeFn
+
+				cell.onPress = function(self)
+					cellSelector:setParent(self)
+					cellSelector.Width = self.Width
+					cellSelector.Height = self.Height
+				end
+
+				cell.onCancel = function(self)
+					cellSelector:setParent(nil)
+				end
 			end
 
 			cell.category = category or ""
@@ -1498,6 +1511,7 @@ function home()
 
 						local visitHouseBtn = ui:buttonNeutral({ content = "🏠 Visit house" })
 						visitHouseBtn:setParent(profileCell)
+						visitHouseBtn:disable()
 
 						avatar:setParent(profileCell)
 
@@ -1614,7 +1628,8 @@ function home()
 				data = data,
 				alpha = true,
 			}
-			local icon = ui:frame({ quad = quad })
+
+			icon = ui:frame({ quad = quad })
 			icon.Width = 20
 			icon.Height = 20
 			icon:setParent(content)

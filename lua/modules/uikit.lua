@@ -2777,7 +2777,6 @@ function createUI(system)
 		end
 
 		node.setScrollPosition = function(self, newPosition)
-			-- scrollPosition = self:capPosition(newPosition)
 			scrollPosition = newPosition
 			self:refresh()
 		end
