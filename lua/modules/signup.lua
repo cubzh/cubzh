@@ -217,6 +217,7 @@ signup.startFlow = function(self, config)
 								-- res.username, res.password, res.magickey
 								if err == nil then
 									System:StoreCredentials(credentials["user-id"], credentials.token)
+									System.AskedForMagicKey = false
 									internalLoginSuccess()
 								else
 									magicKeyLabel.Text = "❌ " .. err
