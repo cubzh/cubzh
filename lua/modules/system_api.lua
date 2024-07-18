@@ -175,7 +175,7 @@ mod.login = function(_, config, callback)
 		["password"] = config.password,
 	}
 
-	local req = System:HttpPost(url, body, function(resp)
+	local _ = System:HttpPost(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
 			if resp.StatusCode >= 500 then
 				callback("internal server error", nil)

@@ -2992,7 +2992,7 @@ function createUI(system)
 		local defaultConfig = {
 			-- CONTENT --
 			content = "BUTTON", -- can be string, Shape or uikit node
-			-- used if contet is a string:
+			-- used if content is a string:
 			underline = false,
 			textSize = "default",
 			textColor = theme.buttonTextColor,

@@ -140,7 +140,7 @@ signup.startFlow = function(self, config)
 					Screen.Height - Screen.SafeArea.Top - self.Height - padding,
 				}
 			end
-			backButton.onRelease = function(self)
+			backButton.onRelease = function(_)
 				signupFlow:back()
 			end
 			backButton.pos = { -backButton.Width, Screen.Height - Screen.SafeArea.Top - backButton.Height - padding }
@@ -186,11 +186,18 @@ signup.startFlow = function(self, config)
 				local magicKeyButton = ui:buttonNeutral({ content = "✅" })
 				magicKeyButton:setParent(frame)
 
+				local resendCodeButton = ui:buttonNeutral({
+					content = "Send me a new code",
+					textSize = "small",
+				})
+				resendCodeButton:setParent(frame)
+
 				local function showLoading()
 					loadingLabel:show()
 					magicKeyLabel:hide()
 					magicKeyInput:hide()
 					magicKeyButton:hide()
+					resendCodeButton:hide()
 				end
 
 				local function hideLoading()
@@ -198,6 +205,7 @@ signup.startFlow = function(self, config)
 					magicKeyLabel:show()
 					magicKeyInput:show()
 					magicKeyButton:show()
+					resendCodeButton:show()
 				end
 
 				magicKeyButton.onRelease = function()
@@ -224,6 +232,18 @@ signup.startFlow = function(self, config)
 					end
 				end
 
+				resendCodeButton.onRelease = function(_)
+					-- ask the API server to send a new magic key to the user (via email or SMS)
+					showLoading()
+					local req = api:getMagicKey(config.usernameOrEmail, function(err, _)
+						hideLoading()
+						if err ~= nil then
+							magicKeyLabel.Text = "❌ Sorry, failed to send magic key"
+						end
+					end)
+					table.insert(requests, req)
+				end
+
 				frame.parentDidResize = function(self)
 					self.Width = math.min(
 						400,
@@ -234,6 +254,8 @@ signup.startFlow = function(self, config)
 						+ magicKeyLabel.Height
 						+ theme.paddingTiny
 						+ magicKeyInput.Height
+						+ theme.padding
+						+ resendCodeButton.Height
 						+ theme.paddingBig * 2
 
 					title.pos = {
@@ -253,12 +275,16 @@ signup.startFlow = function(self, config)
 					magicKeyButton.pos.X = magicKeyInput.pos.X + magicKeyInput.Width + theme.paddingTiny
 					magicKeyButton.pos.Y = magicKeyInput.pos.Y
 
+					resendCodeButton.pos.X = self.Width * 0.5 - resendCodeButton.Width * 0.5
+					resendCodeButton.pos.Y = magicKeyInput.pos.Y - theme.padding - resendCodeButton.Height
+
 					loadingLabel.pos = {
 						self.Width * 0.5 - loadingLabel.Width * 0.5,
 						self.Height * 0.5 - loadingLabel.Height * 0.5,
 					}
 					self.pos = { Screen.Width * 0.5 - self.Width * 0.5, Screen.Height * 0.5 - self.Height * 0.5 }
 				end
+
 				frame:parentDidResize()
 				targetPos = frame.pos:Copy()
 				frame.pos.Y = frame.pos.Y - 50
@@ -358,15 +384,14 @@ signup.startFlow = function(self, config)
 
 					magicKeyButton.onRelease = function()
 						showLoading()
-						local req = api:getMagicKey(config.username, function(err, res)
-							-- res.username, res.password, res.magickey
+						local req = api:getMagicKey(config.username, function(err, _)
+							hideLoading()
 							if err == nil then
 								System.AskedForMagicKey = true
 								local step = createMagicKeyInputStep({ usernameOrEmail = config.username })
 								signupFlow:push(step)
 							else
-								errorLabel.Text = "❌ sorry, magic key failed to be sent"
-								hideLoading()
+								errorLabel.Text = "❌ Sorry, failed to send magic key"
 							end
 						end)
 						table.insert(requests, req)
