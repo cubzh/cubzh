@@ -1,7 +1,5 @@
---[[
-wip_modal module handles the "Work in Progress" modal.
-]]
---
+--- This modal allows to create uikit modals.
+--- Modals are UI elements that appear on top of the main application, blocking user interaction with the main interface.
 
 local modal = {}
 
@@ -391,11 +389,11 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 	-- accessors
 	node._width = function(self)
-		return self.border.Width
+		return self.background.Width
 	end
 
 	node._height = function(self)
-		return self.border.Height
+		return self.background.Height
 	end
 
 	node._computeWidth = function(self)
@@ -567,7 +565,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self._bottomRight = {}
 
 			if stackIndex > 1 then
-				local backBtn = ui:createButton("⬅️")
+				local backBtn = ui:buttonSecondary({ content = "⬅️", textColor = Color.White })
 				backBtn:setColor(theme.colorNegative)
 				backBtn.onRelease = function()
 					self:pop()
@@ -848,14 +846,6 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 		end
 
-		-- border
-		self.border.Width = borderSize.Width
-		self.border.Height = borderSize.Height
-
-		-- shadow
-		self.shadow.Width = self.border.Width - theme.padding * 2
-		self.shadow.Height = theme.padding
-
 		-- background
 		self.background.Width = backgroundSize.Width
 		self.background.Height = backgroundSize.Height
@@ -988,33 +978,24 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		collectgarbage("collect")
 	end
 
-	local border = ui:createFrame(Color(120, 120, 120, 0))
-	border:setParent(node)
-	node.border = border
-
-	local shadow = ui:createFrame(Color(0, 0, 0, 20))
-	shadow:setParent(node)
-	shadow.LocalPosition = { theme.padding, -theme.padding, 0 }
-	node.shadow = shadow
-
 	-- background
-	local background = ui:createFrame(Color(0, 0, 0, 0.8))
+	local background = ui:frameGenericContainer()
 	background:setParent(node)
-	background.LocalPosition = { theme.modalBorder, theme.modalBorder, 0 }
+	background.pos = { 0, 0 }
 	node.background = background
 
 	-- top bar
-	local topBar = ui:createFrame(theme.modalTopBarColor)
+	local topBar = ui:frame()
 	topBar:setParent(background)
 	node.topBar = topBar
 
 	-- bottom bar
-	local bottomBar = ui:createFrame(theme.modalTopBarColor)
+	local bottomBar = ui:frame()
 	bottomBar:setParent(background)
 	node.bottomBar = bottomBar
 
 	-- close button
-	node.closeBtn = ui:createButton("❌")
+	node.closeBtn = ui:buttonSecondary({ content = "❌" })
 	node.closeBtn:setParent(topBar)
 	node.closeBtn.onRelease = function(_)
 		node:close()
