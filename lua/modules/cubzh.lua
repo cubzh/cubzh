@@ -1519,7 +1519,7 @@ function home()
 			loadCell = function(index)
 				if index == 1 then
 					if profileCell == nil then
-						local avatar = uiAvatar:get({ usernameOrId = Player.Username, spherized = false })
+						local avatar = uiAvatar:get({ usernameOrId = Player.UserID, spherized = false })
 
 						-- profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
 						profileCell = ui:frame()
