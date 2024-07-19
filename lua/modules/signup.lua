@@ -216,7 +216,11 @@ signup.startFlow = function(self, config)
 							function(err, accountInfo)
 								if err == nil then
 									local userID = accountInfo.credentials["user-id"]
+									local username = accountInfo.username
 									local token = accountInfo.credentials.token
+
+									Player.UserID = userID
+									Player.Username = username
 									System:StoreCredentials(userID, token)
 
 									System.AskedForMagicKey = false
