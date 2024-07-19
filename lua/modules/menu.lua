@@ -1434,7 +1434,7 @@ function getCubzhMenuModalContent()
 	end
 
 	if System.HasEmail == false then
-		api:getUserInfo(Player.UserID, function(ok, userInfo, _)
+		api:getUserInfo(Player.UserID, function(userInfo, err)
 			if err ~= nil then
 				return
 			end
