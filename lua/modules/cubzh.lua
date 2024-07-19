@@ -1704,9 +1704,9 @@ function home()
 
 			btnHome.pos = { 0, 0 }
 			btnExplore.pos = btnHome.pos + { btnWidth, 0 }
-			btnProfile.pos = btnExplore.pos + { btnWidth, 0 }
+			btnCreate.pos = btnExplore.pos + { btnWidth, 0 }
+			btnProfile.pos = btnCreate.pos + { btnWidth, 0 }
 			btnFriends.pos = btnProfile.pos + { btnWidth, 0 }
-			btnCreate.pos = btnFriends.pos + { btnWidth, 0 }
 
 			scroll.pos = { 0, self.Height }
 			scroll.Width = Screen.Width
