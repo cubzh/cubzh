@@ -77,6 +77,7 @@ MODAL_KEYS = {
 	MARKETPLACE = 9,
 	CUBZH_MENU = 10,
 	OUTFITS = 11,
+	WORLD = 12,
 }
 
 -- User account management
@@ -180,7 +181,12 @@ function showModal(key, config)
 	end
 
 	if activeModal ~= nil then
-		activeModal:close()
+		if activeModal.close ~= nil then
+			activeModal:close()
+		else
+			-- if modal is a drawer
+			activeModal:remove()
+		end
 		activeModal = nil
 		activeModalKey = nil
 	end
@@ -221,7 +227,17 @@ function showModal(key, config)
 		content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
-		content = worlds:createModalContent({ uikit = ui })
+		-- activeModal = require("world_details"):show({ ui = ui })
+
+		-- content = worlds:createModalContent({ uikit = ui })
+		-- activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+
+		-- TODO: Implement world grid
+		-- (DISPLAYING ITEMS INSTEAD CURRENTLY, FOR DEBUG)
+		content = require("gallery"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.WORLD then
+		content = require("world_details"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
 		content = require("gallery"):createModalContent({ uikit = ui })
@@ -236,7 +252,9 @@ function showModal(key, config)
 
 		ui.unfocus() -- unfocuses node currently focused
 
-		activeModal:setParent(background)
+		if key ~= MODAL_KEYS.WORLDS then
+			activeModal:setParent(background)
+		end
 
 		activeModalKey = key
 
@@ -1890,6 +1908,35 @@ menu.ShowWorlds = function(_)
 		return false
 	end
 	showModal(MODAL_KEYS.WORLDS)
+	return true
+end
+
+---@function ShowWorld Shows world identified by id. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowWorld({id = "some-world-id"})
+---@return boolean
+menu.ShowWorld = function(self, config)
+	if self ~= menu then
+		error("Menu:ShowWorld(config): use `:`", 2)
+	end
+
+	local defaultConfig = {
+		id = "",
+	}
+
+	local ok, err = pcall(function()
+		config = conf:merge(defaultConfig, config)
+	end)
+	if not ok then
+		error("Menu:ShowWorld(config) - config error: " .. err, 2)
+	end
+
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+
+	showModal(MODAL_KEYS.WORLD)
 	return true
 end
 

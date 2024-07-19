@@ -1080,6 +1080,11 @@ function home()
 					cellSelector.Height = self.Height
 				end
 
+				cell.onRelease = function(_)
+					-- print("LOAD WORLD")
+					Menu:ShowWorld({ id = "" })
+				end
+
 				cell.onCancel = function(_)
 					cellSelector:setParent(nil)
 				end
