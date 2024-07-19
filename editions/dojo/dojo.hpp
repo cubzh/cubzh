@@ -257,14 +257,19 @@ typedef struct ModelKeysClause {
   const char *model;
 } ModelKeysClause;
 
-typedef struct CArrayStruct {
-  struct Struct *data;
+typedef struct Model {
+  const char *name;
+  struct CArrayMember members;
+} Model;
+
+typedef struct CArrayModel {
+  struct Model *data;
   uintptr_t data_len;
-} CArrayStruct;
+} CArrayModel;
 
 typedef struct Entity {
   struct FieldElement hashed_keys;
-  struct CArrayStruct models;
+  struct CArrayModel models;
 } Entity;
 
 typedef struct CArrayEntity {
@@ -366,6 +371,7 @@ typedef struct CArrayClause {
 } CArrayClause;
 
 typedef struct CompositeClause {
+  const char *model;
   enum LogicalOperator operator_;
   struct CArrayClause clauses;
 } CompositeClause;
@@ -418,7 +424,6 @@ typedef struct CArrayModelKeysClause {
 
 typedef struct ModelMetadata {
   struct Ty schema;
-  const char *namespace_;
   const char *name;
   uint32_t packed_size;
   uint32_t unpacked_size;
@@ -427,20 +432,20 @@ typedef struct ModelMetadata {
   struct CArrayFieldElement layout;
 } ModelMetadata;
 
-typedef struct CHashItemFieldElementModelMetadata {
-  struct FieldElement key;
+typedef struct CHashItemc_charModelMetadata {
+  const char *key;
   struct ModelMetadata value;
-} CHashItemFieldElementModelMetadata;
+} CHashItemc_charModelMetadata;
 
-typedef struct CArrayCHashItemFieldElementModelMetadata {
-  struct CHashItemFieldElementModelMetadata *data;
+typedef struct CArrayCHashItemc_charModelMetadata {
+  struct CHashItemc_charModelMetadata *data;
   uintptr_t data_len;
-} CArrayCHashItemFieldElementModelMetadata;
+} CArrayCHashItemc_charModelMetadata;
 
 typedef struct WorldMetadata {
   struct FieldElement world_address;
   struct FieldElement world_class_hash;
-  struct CArrayCHashItemFieldElementModelMetadata models;
+  struct CArrayCHashItemc_charModelMetadata models;
 } WorldMetadata;
 
 typedef enum Resultbool_Tag {
@@ -664,14 +669,14 @@ struct ResultSubscription client_on_entity_state_update(struct ToriiClient *clie
                                                         const struct EntityKeysClause *clause,
                                                         void *user_data,
                                                         void (*callback)(struct FieldElement,
-                                                                         struct CArrayStruct,
+                                                                         struct CArrayModel,
                                                                          void*));
 
 struct ResultSubscription client_on_event_message_update(struct ToriiClient *client,
                                                          const struct EntityKeysClause *clause,
                                                          void *user_data,
                                                          void (*callback)(struct FieldElement,
-                                                                          struct CArrayStruct,
+                                                                          struct CArrayModel,
                                                                           void*));
 
 struct Resultbool client_remove_models_to_sync(struct ToriiClient *client,
@@ -724,7 +729,7 @@ struct Resultbool wait_for_transaction(struct Provider *rpc, struct FieldElement
 
 struct FieldElement hash_get_contract_address(struct FieldElement class_hash,
                                               struct FieldElement salt,
-                                              const FieldElement *constructor_calldata,
+                                              const struct FieldElement *constructor_calldata,
                                               uintptr_t constructor_calldata_len,
                                               struct FieldElement deployer_address);
 
@@ -734,7 +739,7 @@ void client_free(struct ToriiClient *t);
 
 void provider_free(struct Provider *rpc);
 
-void model_free(struct Struct *model);
+void model_free(struct Model *model);
 
 void account_free(struct Account *account);
 
