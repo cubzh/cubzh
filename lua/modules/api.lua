@@ -318,17 +318,24 @@ mod.getItems = function(self, config, callback)
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				minBlock = { "integer" },
+				category = { "string", "table" },
 			},
 		})
 	end)
 
 	if not ok then
-		error("api:getWorlds(config, callback): config error (" .. err .. ")", 2)
+		error("api:getItems(config, callback): config error (" .. err .. ")", 2)
 	end
 
 	local u = url:parse(mod.kApiAddr .. "/itemdrafts")
 
-	u:addQueryParameter("category", config.category)
+	if type(config.category) == "string" then
+		u:addQueryParameter("category", config.category)
+	elseif type(config.category) == "table" then
+		for _, category in ipairs(config.category) do
+			u:addQueryParameter("category", category)
+		end
+	end
 	u:addQueryParameter("repo", config.repo)
 	u:addQueryParameter("search", config.search)
 	u:addQueryParameter("sortBy", config.sortBy)
