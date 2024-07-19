@@ -213,10 +213,12 @@ signup.startFlow = function(self, config)
 					if magicKeyInput.Text ~= "" then
 						local req = api:login(
 							{ usernameOrEmail = config.usernameOrEmail, magickey = magicKeyInput.Text },
-							function(err, credentials)
-								-- res.username, res.password, res.magickey
+							function(err, accountInfo)
 								if err == nil then
-									System:StoreCredentials(credentials["user-id"], credentials.token)
+									local userID = accountInfo.credentials["user-id"]
+									local token = accountInfo.credentials.token
+									System:StoreCredentials(userID, token)
+
 									System.AskedForMagicKey = false
 									internalLoginSuccess()
 								else

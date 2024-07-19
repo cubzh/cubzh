@@ -159,7 +159,7 @@ mod.getMagicKey = function(_, usernameOrEmail, callback)
 	return req
 end
 
--- callback(err, credentials)
+-- callback(err, accountInfo)
 mod.login = function(_, config, callback)
 	local defaultConfig = {
 		usernameOrEmail = "",
@@ -194,7 +194,7 @@ mod.login = function(_, config, callback)
 			return
 		end
 
-		callback(nil, res.credentials) -- success
+		callback(nil, res) -- success
 	end)
 end
 
