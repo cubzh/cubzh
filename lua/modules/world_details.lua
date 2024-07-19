@@ -4,12 +4,13 @@ worldDetailsMod.createModalContent = function(_, config)
 	local time = require("time")
 	local theme = require("uitheme").current
 	local ui = config.uikit
-	local api = require("system_api", System)
+	local systemApi = require("system_api", System)
+	local api = require("api")
 
 	local defaultConfig = {
 		world = {
-			id = "",
-			title = "WORLD TITLE",
+			id = "13693497-03fd-4492-9b36-9776bb11d958",
+			title = "…",
 			description = "",
 			thumbnail = nil,
 			likes = nil,
@@ -116,7 +117,7 @@ worldDetailsMod.createModalContent = function(_, config)
 		local function submit()
 			local sanitized, err = api.checkWorldName(name.Text)
 			if err == nil then
-				local req = api:patchWorld(worldDetails.id, { title = sanitized }, function(err, world)
+				local req = systemApi:patchWorld(worldDetails.id, { title = sanitized }, function(err, world)
 					-- print("PATCHED", err, world.id, world.title, world.description)
 					if err == nil then
 						-- World update succeeded.
@@ -153,9 +154,13 @@ worldDetailsMod.createModalContent = function(_, config)
 	local infoArea = ui:frame()
 	infoArea:setParent(worldDetails)
 
-	local publishDate = ui:createText("🌎 . ... ago (v1)", Color.White, "small")
+	local updateDate = ui:createText("✨ updated … ago", Color.White, "small")
+	updateDate:setParent(infoArea)
+	updateDate.pos = { theme.padding, theme.padding }
+
+	local publishDate = ui:createText("🌎 created … ago", Color.White, "small")
 	publishDate:setParent(infoArea)
-	publishDate.pos = { theme.padding, theme.padding }
+	publishDate.pos = { theme.padding, updateDate.Height + theme.padding }
 
 	if createMode then
 		by = ui:createText("by", Color.White)
@@ -167,7 +172,7 @@ worldDetailsMod.createModalContent = function(_, config)
 		author:setParent(infoArea)
 		author.pos = by.pos + { by.Width, 0 }
 	else
-		byBtn = ui:buttonNeutral({ content = "by @…" })
+		byBtn = ui:buttonNeutral({ content = "by @…", textSize = "small" })
 		byBtn:setParent(infoArea)
 		byBtn.pos = publishDate.pos + { 0, publishDate.Height + theme.padding }
 	end
@@ -219,7 +224,7 @@ worldDetailsMod.createModalContent = function(_, config)
 							description.Text = "Worlds are easier to find with a description!"
 							description.Color = theme.textColorSecondary
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchWorld(world.id, { description = "" }, function(_, _)
+							local req = systemApi:patchWorld(world.id, { description = "" }, function(_, _)
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -228,7 +233,7 @@ worldDetailsMod.createModalContent = function(_, config)
 							description.Text = text
 							description.Color = theme.textColor
 							description.pos.Y = descriptionArea.Height - description.Height - theme.padding
-							local req = api:patchWorld(world.id, { description = text }, function(_, _)
+							local req = systemApi:patchWorld(world.id, { description = text }, function(_, _)
 								-- not handling response yet
 							end)
 							table.insert(requests, req)
@@ -245,7 +250,8 @@ worldDetailsMod.createModalContent = function(_, config)
 
 	local shape
 
-	privateFields.loadWorld = function()
+	-- refreshes UI with what's in local config.world / world
+	privateFields.refreshWorld = function()
 		if shape then
 			shape:remove()
 			shape = nil
@@ -254,69 +260,6 @@ worldDetailsMod.createModalContent = function(_, config)
 		if world.thumbnail ~= nil then
 			shapeArea:setImage(world.thumbnail)
 		end
-
-		local req = api:getWorld(world.id, {
-			"authorName",
-			"authorId",
-			"description",
-			"liked",
-			"views",
-			"title",
-			"created",
-			"updated",
-		}, function(err, worldInfo)
-			if err ~= nil then
-				-- TODO: handle error (retry button?)
-				return
-			end
-
-			world.authorName = worldInfo.authorName
-			world.authorId = worldInfo.authorId
-			world.description = worldInfo.description
-			world.title = worldInfo.title
-			world.liked = worldInfo.liked
-			world.views = worldInfo.views
-			world.created = worldInfo.created
-			world.updated = worldInfo.updated
-
-			-- update author text/button
-			if author then
-				author.Text = " @" .. (world.authorName or "…")
-			elseif byBtn and world.authorName then
-				byBtn.Text = "by @" .. world.authorName
-				byBtn.onRelease = function(_)
-					local profileConfig = {
-						isLocal = false,
-						username = world.authorName,
-						userID = world.authorId,
-						uikit = ui,
-					}
-					local profileContent = require("profile"):create(profileConfig)
-					content:push(profileContent)
-				end
-			end
-
-			-- update description text
-			if description ~= nil then
-				description.Text = description or ""
-				privateFields:scheduleRefresh()
-			end
-
-			-- update views label
-			views.Text = "👁 " .. (world.views and math.floor(world.views) or 0)
-
-			-- update like button
-			if world.liked ~= nil then
-				if likeBtn ~= nil and likeBtn.setColor ~= nil then
-					if world.liked then
-						likeBtn:setColor(theme.colorPositive)
-					else
-						likeBtn:setColor(theme.buttonColor)
-					end
-				end
-			end
-		end)
-		table.insert(requests, req)
 
 		if name ~= nil then
 			name.Text = world.title or ""
@@ -353,7 +296,7 @@ worldDetailsMod.createModalContent = function(_, config)
 				if likeRequest then
 					likeRequest:Cancel()
 				end
-				likeRequest = api:likeWorld(world.id, world.liked, function(_)
+				likeRequest = systemApi:likeWorld(world.id, world.liked, function(_)
 					-- TODO: this request should return the refreshed number of likes
 				end)
 				table.insert(requests, likeRequest)
@@ -387,7 +330,23 @@ worldDetailsMod.createModalContent = function(_, config)
 			if n == 1 then
 				unitType = unitType:sub(1, #unitType - 1)
 			end
-			publishDate.Text = "🌎 " .. n .. " " .. unitType .. " ago"
+			if math.floor(n) == n then
+				publishDate.Text = string.format("🌎 created %d %s ago", math.floor(n), unitType)
+			else
+				publishDate.Text = string.format("🌎 created %.1f %s ago", n, unitType)
+			end
+		end
+
+		if world.updated then
+			local n, unitType = time.ago(world.updated)
+			if n == 1 then
+				unitType = unitType:sub(1, #unitType - 1)
+			end
+			if math.floor(n) == n then
+				updateDate.Text = string.format("✨ updated %d %s ago", math.floor(n), unitType)
+			else
+				updateDate.Text = string.format("✨ updated %.1f %s ago", n, unitType)
+			end
 		end
 
 		local t = 0
@@ -404,7 +363,97 @@ worldDetailsMod.createModalContent = function(_, config)
 			shape:setParent(worldDetails)
 		end
 
-		worldDetails:refresh()
+		-- update author text/button
+		if author then
+			author.Text = " @" .. (world.authorName or "…")
+		elseif byBtn and world.authorName then
+			byBtn.Text = "by @" .. world.authorName
+			byBtn.onRelease = function(_)
+				local profileConfig = {
+					isLocal = false,
+					username = world.authorName,
+					userID = world.authorId,
+					uikit = ui,
+				}
+				local profileContent = require("profile"):create(profileConfig)
+				content:push(profileContent)
+			end
+		end
+
+		print("WORLD TITLE:", world.title)
+		content.title = world.title or "…"
+
+		-- update description text
+		if description ~= nil then
+			description.Text = world.description or ""
+		end
+
+		-- update views label
+		views.Text = "👁 " .. (world.views and math.floor(world.views) or 0)
+
+		-- update like button
+		if world.liked ~= nil then
+			if likeBtn ~= nil and likeBtn.setColor ~= nil then
+				if world.liked then
+					likeBtn:setColor(theme.colorPositive)
+				else
+					likeBtn:setColor(theme.buttonColor)
+				end
+			end
+		end
+
+		local modal = content:getModalIfContentIsActive()
+		if modal ~= nil then
+			modal:refreshContent()
+		end
+
+		privateFields:scheduleRefresh()
+		-- worldDetails:refresh()
+	end
+
+	-- send request to gather world information
+	privateFields.loadWorld = function()
+		local req = api:getWorld(world.id, {
+			"authorName",
+			"authorId",
+			"description",
+			"liked",
+			"likes",
+			"views",
+			"title",
+			"created",
+			"updated",
+		}, function(worldInfo, err)
+			if err ~= nil then
+				-- TODO: handle error (retry button?)
+				return
+			end
+
+			world.authorName = worldInfo.authorName
+			world.authorId = worldInfo.authorId
+			world.description = worldInfo.description
+			world.title = worldInfo.title
+			world.liked = worldInfo.liked
+			world.likes = worldInfo.likes
+			world.views = worldInfo.views
+			world.created = worldInfo.created
+			world.updated = worldInfo.updated
+
+			privateFields:refreshWorld()
+		end)
+		table.insert(requests, req)
+
+		if world.thumbnail == nil then
+			local req = api:getWorldThumbnail(world.id, function(thumbnail, err)
+				if err ~= nil then
+					return
+				end
+				world.thumbnail = thumbnail
+
+				privateFields:refreshWorld()
+			end)
+			table.insert(requests, req)
+		end
 	end
 
 	local w = 400
@@ -439,19 +488,13 @@ worldDetailsMod.createModalContent = function(_, config)
 	end
 
 	worldDetails.refresh = function(self)
-		-- if shape == nil and world.thumbnail == nil then
-		-- 	print("🪲 worldDetails.refresh: early return")
-		-- 	return
-		-- end
-		print("🪲 worldDetails.refresh: (1)")
-
 		if world.thumbnail ~= nil then
 			if shape ~= nil then
 				shape:remove()
 				shape = nil
 			end
 
-			shapeArea:setImage(self.cell.thumbnail)
+			shapeArea:setImage(world.thumbnail)
 		end
 
 		local portraitMode = self.Width < self.Height
@@ -485,10 +528,10 @@ worldDetailsMod.createModalContent = function(_, config)
 			shapeArea.LocalPosition.X = self.Width * 0.5 - shapeArea.Width * 0.5
 			shapeArea.LocalPosition.Y = self.Height - shapeArea.Height
 
-			if self.shape ~= nil then
-				self.shape.Width = shapeArea.Width
-				self.shape.Height = shapeArea.Height
-				self.shape.pos = shapeArea.pos
+			if shape ~= nil then
+				shape.Width = shapeArea.Width
+				shape.Height = shapeArea.Height
+				shape.pos = shapeArea.pos
 			end
 
 			if likes then
@@ -526,13 +569,13 @@ worldDetailsMod.createModalContent = function(_, config)
 					nameArea.pos = { 0, likes.LocalPosition.Y - nameArea.Height - theme.padding }
 				end
 
-				infoArea.Height = by.Height + publishDate.Height + theme.padding * 3
+				infoArea.Height = by.Height + publishDate.Height + updateDate.Height + theme.padding * 4
 				infoArea.Width = self.Width
 
 				infoArea.pos = nameArea.pos - { 0, infoArea.Height + theme.padding }
 				descriptionArea.Height = detailsHeight - nameArea.Height - infoArea.Height - theme.padding * 2
 			else
-				infoArea.Height = byBtn.Height + publishDate.Height + theme.padding * 3
+				infoArea.Height = byBtn.Height + publishDate.Height + updateDate.Height + theme.padding * 4
 				infoArea.Width = self.Width
 
 				infoArea.pos = { 0, signalBtn.pos.Y - infoArea.Height - theme.padding }
@@ -643,9 +686,9 @@ worldDetailsMod.createModalContent = function(_, config)
 
 				nameArea.LocalPosition = { 0, self.Height - nameArea.Height, 0 }
 
-				infoArea.Height = by.Height + publishDate.Height + theme.padding * 3
+				infoArea.Height = by.Height + publishDate.Height + updateDate.Height + theme.padding * 4
 			else
-				infoArea.Height = byBtn.Height + publishDate.Height + theme.padding * 3
+				infoArea.Height = byBtn.Height + publishDate.Height + updateDate.Height + theme.padding * 4
 			end
 			infoArea.Width = detailsWidth
 
@@ -676,6 +719,7 @@ worldDetailsMod.createModalContent = function(_, config)
 		end
 	end
 
+	privateFields:refreshWorld()
 	privateFields:loadWorld()
 
 	return content

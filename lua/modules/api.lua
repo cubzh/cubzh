@@ -147,7 +147,7 @@ mod.getFriendCount = function(self, callback, config)
 end
 
 -- getSentFriendRequests ...
--- callback(ok, reqs, errMsg)
+-- callback(requests, err)
 mod.getSentFriendRequests = function(_, callback, fields)
 	if type(callback) ~= "function" then
 		error("api:getSentFriendRequests(callback, [fields]) - callback must be a function", 2)
@@ -161,18 +161,18 @@ mod.getSentFriendRequests = function(_, callback, fields)
 
 	url = urlGetFields(url, fields)
 
-	local req = HTTP:Get(url, function(resp)
-		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get sent requests (" .. resp.StatusCode .. ")")
+	local req = HTTP:Get(url, function(res)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		local requests, err = JSON:Decode(resp.Body)
+		local requests, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			callback(false, nil, "get sent requests decode error: " .. err)
+			callback(nil, mod:error(res.StatusCode, "getSentFriendRequests JSON decode error: " .. err))
 			return
 		end
 		-- success
-		callback(true, requests, nil)
+		callback(requests)
 	end)
 	return req
 end
@@ -466,26 +466,28 @@ mod.getWorld = function(_, worldID, fields, callback)
 		error("api:getWorld(worldID, fields, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/worlds/" .. worldID
+	local u = url:parse(mod.kApiAddr .. "/worlds/" .. worldID)
 
-	url = urlGetFields(url, fields)
+	for _, field in ipairs(fields) do
+		u:addQueryParameter("f", field)
+	end
 
 	-- send request
-	local req = HTTP:Get(url, function(resp)
+	local req = HTTP:Get(u:toString(), function(res)
 		-- check status code
-		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
 
 		-- decode body
-		local data, err = JSON:Decode(resp.Body)
+		local world, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			callback("json JSON decode error:" .. err, nil) -- failure
+			callback(nil, mod:error(res.StatusCode, "getWorld JSON decode error: " .. err))
 			return
 		end
 
-		local world = data
+		print(res.Body:ToString())
 
 		if world.created then
 			world.created = time.iso8601_to_os_time(world.created)
@@ -508,7 +510,7 @@ mod.getWorld = function(_, worldID, fields, callback)
 			world.liked = false
 		end
 
-		callback(nil, world) -- success
+		callback(world) -- success
 	end)
 	return req
 end
@@ -524,9 +526,9 @@ mod.getWorldThumbnail = function(self, worldID, callback)
 		error("api:getWorldThumbnail(worldID, callback): callback should be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/world-thumbnail/" .. worldID
+	local u = url:parse(mod.kApiAddr .. "/world-thumbnail/" .. worldID)
 
-	local req = HTTP:Get(url, function(res)
+	local req = HTTP:Get(u:toString(), function(res)
 		if res.StatusCode == 200 then
 			callback(res.Body)
 		elseif res.StatusCode == 400 then
