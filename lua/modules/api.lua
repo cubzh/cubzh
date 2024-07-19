@@ -526,7 +526,7 @@ mod.getWorldThumbnail = function(self, worldID, callback)
 		error("api:getWorldThumbnail(worldID, callback): callback should be a function", 2)
 	end
 
-	local u = url:parse(mod.kApiAddr .. "/world-thumbnail/" .. worldID)
+	local u = url:parse(mod.kApiAddr .. "/worlds/" .. worldID .. "/thumbnail")
 
 	local req = HTTP:Get(u:toString(), function(res)
 		if res.StatusCode == 200 then
