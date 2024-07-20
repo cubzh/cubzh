@@ -5,7 +5,7 @@ coins = {}
 coins.createModalContent = function(_, config)
 	local theme = require("uitheme").current
 	local modal = require("modal")
-    local bundle = require("bundle")
+	local bundle = require("bundle")
 	local api = require("api")
 
 	-- default config
@@ -36,7 +36,8 @@ coins.createModalContent = function(_, config)
 	local balanceText = ui:createText("Balance", Color.White)
 	balanceText:setParent(balanceFrame)
 
-	local shape = bundle:Shape("shapes/coin")
+	local shape = bundle:Shape("shapes/pezh_coin_2")
+	shape.Pivot = shape.Size * 0.5
 	shape.Tick = function(o, dt)
 		o.LocalRotation.Y = o.LocalRotation.Y + dt * 2
 	end
