@@ -50,8 +50,7 @@ serverList.create = function(_, config)
 	noServerText:setParent(node)
 	noServerText:hide()
 
-	local noServerBtn = ui:createButton("Create one")
-	noServerBtn:setColor(theme.colorPositive, Color.White)
+	local noServerBtn = ui:buttonPositive({ content = "Create one" })
 	noServerBtn:setParent(node)
 	noServerBtn:hide()
 
@@ -271,13 +270,13 @@ serverList.create = function(_, config)
 	local titleStr = config.title .. "'s servers"
 	local titleText = ui:createText(titleStr, Color.White)
 
-	local refreshBtn = ui:createButton("🔁 Refresh")
+	local refreshBtn = ui:buttonNeutral({ content = "🔁 Refresh" })
 	refreshBtn.onRelease = function(_)
 		data:updateServers()
 	end
 
 	content.topCenter = { titleText }
-	content.bottomRight = { refreshBtn }
+	content.bottomCenter = { refreshBtn }
 
 	data:updateServers()
 

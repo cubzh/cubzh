@@ -24,6 +24,8 @@ local uitheme = {
 			buttonColorSelected = Color(70, 2013, 178),
 			buttonTextColorSelected = Color.White,
 
+			urlColor = Color(0, 171, 228),
+
 			-- POSITIVE
 			buttonPositiveTextColor = Color(255, 255, 255),
 

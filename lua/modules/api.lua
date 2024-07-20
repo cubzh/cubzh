@@ -487,8 +487,6 @@ mod.getWorld = function(_, worldID, fields, callback)
 			return
 		end
 
-		print(res.Body:ToString())
-
 		if world.created then
 			world.created = time.iso8601_to_os_time(world.created)
 		end

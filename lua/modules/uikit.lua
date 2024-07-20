@@ -3451,6 +3451,18 @@ function createUI(system)
 		return ui.button(self, config)
 	end
 
+	ui.buttonLink = function(self, config)
+		config = config or {}
+		config.borders = false
+		config.padding = false
+		config.underline = true
+		config.shadow = false
+		config.color = Color(0, 0, 0, 0)
+		config.textColor = theme.urlColor
+
+		return ui.button(self, config)
+	end
+
 	ui.buttonSecondary = function(self, config)
 		config = config or {}
 		config.textColor = theme.buttonSecondaryTextColor

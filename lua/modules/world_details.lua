@@ -88,7 +88,22 @@ worldDetailsMod.createModalContent = function(_, config)
 		end
 	end
 
-	local cell = ui:frame({ color = Color(100, 100, 100) })
+	local btnLaunch = ui:buttonPositive({ content = "Start", textSize = "big", padding = 10 })
+	btnLaunch.onRelease = function()
+		URL:Open("https://app.cu.bzh?worldID=" .. world.id)
+	end
+	btnLaunch:setParent(worldDetails)
+
+	-- TODO: only display servers button if multiplayer
+	local btnServers = ui:buttonNeutral({ content = "Servers", textSize = "default" })
+	btnServers.onRelease = function()
+		local config = { worldID = world.id, title = world.title, uikit = ui }
+		local list = require("server_list"):create(config)
+		content:push(list)
+	end
+	btnServers:setParent(worldDetails)
+
+	local cell = ui:frame() -- { color = Color(100, 100, 100) }
 	cell.Height = 100
 	cell:setParent(nil)
 
@@ -97,14 +112,14 @@ worldDetailsMod.createModalContent = function(_, config)
 	local by
 	local authorBtn
 	local author
-	local signalBtn
 	local likeBtn
 	local likes
 	local editDescriptionBtn
 	local nameArea
-	local shape
 
-	local thumbnailArea = ui:frame()
+	local thumbnailRatio = 16 / 9
+
+	local thumbnailArea = ui:frame({ color = Color(20, 20, 22) })
 	thumbnailArea:setParent(cell)
 
 	if createMode then
@@ -126,7 +141,6 @@ worldDetailsMod.createModalContent = function(_, config)
 			local sanitized, err = api.checkWorldName(name.Text)
 			if err == nil then
 				local req = systemApi:patchWorld(worldDetails.id, { title = sanitized }, function(err, world)
-					-- print("PATCHED", err, world.id, world.title, world.description)
 					if err == nil then
 						-- World update succeeded.
 						-- Notify that the content has changed.
@@ -159,13 +173,15 @@ worldDetailsMod.createModalContent = function(_, config)
 		end
 	end
 
-	local creationDate = ui:createText("🌎 published … ago", Color.White, "small")
+	local secondaryTextColor = Color(150, 150, 150)
+
+	local creationDate = ui:createText("🌎 published … ago", secondaryTextColor, "small")
 	creationDate:setParent(cell)
 
-	local updateDate = ui:createText("✨ updated … ago", Color.White, "small")
+	local updateDate = ui:createText("✨ updated … ago", secondaryTextColor, "small")
 	updateDate:setParent(cell)
 
-	by = ui:createText("🛠️ created by", Color.White, "small")
+	by = ui:createText("🛠️ created by", secondaryTextColor, "small")
 	by:setParent(cell)
 
 	if createMode then
@@ -173,21 +189,17 @@ worldDetailsMod.createModalContent = function(_, config)
 		author = ui:createText(str, Color.Green, "small")
 		author:setParent(cell)
 	else
-		authorBtn = ui:buttonNeutral({ content = "@…", textSize = "small" })
+		authorBtn = ui:buttonLink({ content = "@…", textSize = "small" })
 		authorBtn:setParent(cell)
 	end
 
-	local views = ui:createText("👁 …", Color.White, "small")
+	local views = ui:createText("👁 …", secondaryTextColor, "small")
 	views:setParent(cell)
 
 	local description = ui:createText("description", Color.White, "small")
 	description:setParent(cell)
 
 	if config.mode == "explore" then
-		signalBtn = ui:buttonSecondary({ content = "⚠️" })
-		signalBtn:disable()
-		signalBtn:setParent(cell)
-
 		likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
 		likeBtn:setParent(cell)
 	elseif config.mode == "create" then
@@ -238,7 +250,8 @@ worldDetailsMod.createModalContent = function(_, config)
 	end
 
 	local scroll = ui:createScroll({
-		backgroundColor = Color(255, 0, 0),
+		-- backgroundColor = Color(255, 0, 0),
+		backgroundColor = theme.buttonTextColor,
 		-- backgroundColor = Color(0, 255, 0, 0.3),
 		-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 		padding = {
@@ -259,11 +272,6 @@ worldDetailsMod.createModalContent = function(_, config)
 
 	-- refreshes UI with what's in local config.world / world
 	privateFields.refreshWorld = function()
-		if shape then
-			shape:remove()
-			shape = nil
-		end
-
 		if world.thumbnail ~= nil then
 			thumbnailArea:setImage(world.thumbnail)
 		end
@@ -318,9 +326,7 @@ worldDetailsMod.createModalContent = function(_, config)
 
 				likeBtn.Text = "❤️ " .. nbLikes
 
-				likeBtn.pos.X = thumbnailArea.pos.X + thumbnailArea.Width - likeBtn.Width
-				print("SET VIEW POS (4)")
-				-- views.pos.X = thumbnailArea.pos.X + thumbnailArea.Width - likeBtn.Width - views.Width - theme.padding
+				privateFields.alignViewsAndLikes()
 			end
 		end
 
@@ -351,20 +357,6 @@ worldDetailsMod.createModalContent = function(_, config)
 			end
 		end
 
-		local t = 0
-		local listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-			t = t + dt
-			if shape ~= nil then
-				shape.pivot.LocalRotation.Y = t
-			end
-		end)
-		table.insert(listeners, listener)
-
-		if shape ~= nil then
-			shape.pivot.Rotation = Number3(-0.1, -math.pi * 0.2, -0.2)
-			shape:setParent(worldDetails)
-		end
-
 		-- update author text/button
 		if author then
 			author.Text = " @" .. (world.authorName or "…")
@@ -382,7 +374,6 @@ worldDetailsMod.createModalContent = function(_, config)
 			end
 		end
 
-		print("WORLD TITLE:", world.title)
 		content.title = world.title or "…"
 
 		-- update description text
@@ -472,6 +463,17 @@ worldDetailsMod.createModalContent = function(_, config)
 		end)
 	end
 
+	privateFields.alignViewsAndLikes = function()
+		local likes = likes or likeBtn
+		local parent = likes.parent
+		if parent == nil then
+			return
+		end
+		local viewAndLikesWidth = views.Width + theme.padding + likes.Width
+		views.pos.X = parent.Width * 0.5 - viewAndLikesWidth * 0.5
+		likes.pos.X = views.pos.X + views.Width + theme.padding
+	end
+
 	worldDetails._width = function(_)
 		return w
 	end
@@ -492,37 +494,44 @@ worldDetailsMod.createModalContent = function(_, config)
 
 	worldDetails.refresh = function(self)
 		if world.thumbnail ~= nil then
-			if shape ~= nil then
-				shape:remove()
-				shape = nil
-			end
 			thumbnailArea:setImage(world.thumbnail)
 		end
 
-		local createMode = config.mode == "create"
+		-- local createMode = config.mode == "create"
 
 		local padding = theme.padding
 		local width = self.Width - padding * 2
 
-		thumbnailArea.Width = 200
-		thumbnailArea.Height = 200
+		local thumbnailHeight = self.Height * 0.3
+		local thumbnailWidth = thumbnailHeight * thumbnailRatio
+		if thumbnailWidth > width then
+			thumbnailWidth = width
+			thumbnailHeight = thumbnailWidth * 1.0 / thumbnailWidth
+		end
+
+		thumbnailArea.Width = thumbnailWidth
+		thumbnailArea.Height = thumbnailHeight
 
 		description.object.MaxWidth = width
 
 		local likes = likes or likeBtn
-		local viewAndLikesWidth = views.Width + padding + likes.Width
 		local viewAndLikesHeight = math.max(views.Height, likes.Height)
 
 		local author = author or authorBtn
-		local byAuthorHeight = math.max(by.Height, author.Height)
+		local singleLineHeight = math.max(by.Height, author.Height)
 
 		local contentHeight = thumbnailArea.Height
-			+ viewAndLikesHeight
-			+ byAuthorHeight
-			+ creationDate.Height
-			+ updateDate.Height
+			+ padding
+			+ viewAndLikesHeight -- views and likes
+			+ theme.paddingBig
+			+ singleLineHeight -- author
+			+ padding
+			+ singleLineHeight -- publication date
+			+ padding
+			+ singleLineHeight -- update date
+			+ theme.paddingBig
 			+ description.Height
-			+ padding * 5
+
 		cell.Height = contentHeight
 		cell.Width = width
 
@@ -533,146 +542,42 @@ worldDetailsMod.createModalContent = function(_, config)
 
 		-- view and likes
 		y = y - padding - viewAndLikesHeight * 0.5
-		views.pos = { width * 0.5 - viewAndLikesWidth * 0.5, y - views.Height * 0.5 }
-		likes.pos = { views.pos.X + views.Width + padding, y - likes.Height * 0.5 }
+		views.pos.Y = y - views.Height * 0.5
+		likes.pos.Y = y - likes.Height * 0.5
+		privateFields.alignViewsAndLikes()
 		y = y - viewAndLikesHeight * 0.5
 
 		-- author
-		y = y - padding - byAuthorHeight * 0.5
+		y = y - theme.paddingBig - singleLineHeight * 0.5
 		by.pos = { 0, y - by.Height * 0.5 }
 		authorBtn.pos = { by.pos.X + by.Width + padding, y - author.Height * 0.5 }
-		y = y - byAuthorHeight * 0.5
+		y = y - singleLineHeight * 0.5
 
-		y = y - padding - creationDate.Height
-		creationDate.pos = { 0, y }
+		y = y - padding - singleLineHeight * 0.5
+		creationDate.pos = { 0, y - creationDate.Height * 0.5 }
+		y = y - singleLineHeight * 0.5
 
-		y = y - padding - updateDate.Height
-		updateDate.pos = { 0, y }
+		y = y - padding - singleLineHeight * 0.5
+		updateDate.pos = { 0, y - updateDate.Height * 0.5 }
+		y = y - singleLineHeight * 0.5
 
-		y = y - padding - description.Height
+		y = y - theme.paddingBig - description.Height
 		description.pos = { 0, y }
 
 		scroll.Width = self.Width
-		scroll.Height = self.Height
+		scroll.Height = self.Height - btnLaunch.Height - padding * 2
+
+		local bottomButtonsWidth = btnServers.Width + padding + btnLaunch.Width
+
+		btnServers.pos = {
+			width * 0.5 - bottomButtonsWidth * 0.5,
+			padding + btnLaunch.Height * 0.5 - btnServers.Height * 0.5,
+		}
+		btnLaunch.pos = { btnServers.pos.X + btnServers.Width + padding, padding }
+		scroll.pos.Y = btnLaunch.pos.Y + btnLaunch.Height + padding
+
 		scroll:flush()
 		scroll:refresh()
-
-		if true then
-			return
-		end
-
-		-- min width to display details, buttons, etc.
-		-- remaining width can be used for the preview
-		local detailsMinWidth = 200
-		local detailsWidthRatio = 0.66
-
-		local availableHeight = self.Height
-		local availableHeightForPreview = availableHeight - theme.padding
-
-		if likeBtn then
-			availableHeightForPreview = availableHeightForPreview - likeBtn.Height
-		elseif likes then
-			availableHeightForPreview = availableHeightForPreview - likes.Height
-		end
-
-		local detailsWidth = (self.Width - theme.padding) * detailsWidthRatio
-
-		if detailsWidth < detailsMinWidth then
-			detailsWidth = detailsMinWidth
-		end
-
-		local infoWidth = 0.0
-		if likes ~= nil then
-			infoWidth = views.Width + likes.Width + theme.padding * 3.0
-		elseif likeBtn ~= nil then
-			infoWidth = signalBtn.Width + views.Width + likeBtn.Width + theme.padding * 4.0
-		end
-
-		if detailsWidth + theme.padding + infoWidth > self.Width then
-			detailsWidth = self.Width - theme.padding - infoWidth
-		end
-
-		local previewSize = self.Width - theme.padding - detailsWidth
-		if previewSize > availableHeightForPreview then
-			previewSize = availableHeightForPreview
-			detailsWidth = self.Width - theme.padding - previewSize
-		end
-
-		thumbnailArea.Width = previewSize
-		thumbnailArea.Height = previewSize
-
-		thumbnailArea.LocalPosition.X = self.Width - thumbnailArea.Width
-		thumbnailArea.LocalPosition.Y = self.Height - thumbnailArea.Height
-
-		if shape ~= nil then
-			shape.Width = thumbnailArea.Width
-			shape.Height = thumbnailArea.Height
-			shape.LocalPosition = thumbnailArea.LocalPosition
-		end
-
-		if likeBtn then
-			likeBtn.LocalPosition.X = thumbnailArea.LocalPosition.X + thumbnailArea.Width - likeBtn.Width
-			likeBtn.LocalPosition.Y = thumbnailArea.LocalPosition.Y - likeBtn.Height - theme.padding
-			print("SET VIEW POS (1)")
-			-- views.pos.X = thumbnailArea.pos.X + thumbnailArea.Width - likeBtn.Width - views.Width - theme.padding
-			-- views.pos.Y = likeBtn.pos.Y + likeBtn.Height * 0.5 - views.Height * 0.5
-		end
-
-		if likes then
-			likes.pos.X = thumbnailArea.pos.X + thumbnailArea.Width - likes.Width
-			likes.pos.Y = thumbnailArea.pos.Y - likes.Height - theme.padding
-			print("SET VIEW POS (2)")
-			-- views.pos.X = thumbnailArea.pos.X + thumbnailArea.Width - likes.Width - views.Width - theme.padding
-			-- views.pos.Y = likes.pos.Y + likes.Height * 0.5 - views.Height * 0.5
-		end
-
-		if signalBtn then
-			signalBtn.LocalPosition.X = thumbnailArea.LocalPosition.X
-			signalBtn.LocalPosition.Y = thumbnailArea.LocalPosition.Y - signalBtn.Height - theme.padding
-		end
-
-		if createMode then
-			nameArea.Width = detailsWidth
-			nameArea.Height = name.Height
-
-			editNameBtn.Width = name.Height
-			editNameBtn.Height = name.Height
-
-			name.Width = nameArea.Width - editNameBtn.Width
-			editNameBtn.pos.X = nameArea.Width - editNameBtn.Width
-
-			nameArea.LocalPosition = { 0, self.Height - nameArea.Height, 0 }
-
-			infoArea.Height = by.Height + creationDate.Height + updateDate.Height + theme.padding * 4
-		else
-			infoArea.Height = authorBtn.Height + creationDate.Height + updateDate.Height + theme.padding * 4
-		end
-		infoArea.Width = detailsWidth
-
-		if createMode then
-			infoArea.LocalPosition = nameArea.LocalPosition - { 0, infoArea.Height + theme.padding, 0 }
-			descriptionArea.Height = availableHeight - nameArea.Height - infoArea.Height - theme.padding * 2
-		else
-			infoArea.LocalPosition = { 0, self.Height - infoArea.Height, 0 }
-			descriptionArea.Height = availableHeight - infoArea.Height - theme.padding * 2
-		end
-
-		descriptionArea.Width = detailsWidth
-		descriptionArea.LocalPosition = infoArea.LocalPosition - { 0, descriptionArea.Height + theme.padding, 0 }
-
-		if editDescriptionBtn ~= nil then
-			editDescriptionBtn.pos = {
-				descriptionArea.Width - editDescriptionBtn.Width - theme.padding,
-				descriptionArea.Height - editDescriptionBtn.Height - theme.padding,
-				0,
-			}
-
-			description.object.MaxWidth = descriptionArea.Width - editDescriptionBtn.Width - theme.padding * 3
-		else
-			description.object.MaxWidth = descriptionArea.Width - theme.padding * 2
-		end
-
-		description.LocalPosition.Y = descriptionArea.Height - description.Height - theme.padding
 	end
 
 	privateFields:refreshWorld()
