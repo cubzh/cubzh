@@ -330,8 +330,7 @@ worldDetailsMod.createModalContent = function(_, config)
 			end
 		end
 
-		-- views.Text = "👁 " .. (world.views and math.floor(world.views) or 0)
-		-- views.Text = "TEST"
+		views.Text = "👁 " .. (world.views and math.floor(world.views) or 0)
 
 		if world.created then
 			local n, unitType = time.ago(world.created)
@@ -380,10 +379,6 @@ worldDetailsMod.createModalContent = function(_, config)
 		if description ~= nil then
 			description.Text = world.description or ""
 		end
-
-		-- update views label
-		-- views.Text = "👁 " .. (world.views and math.floor(world.views) or 0)
-		-- views.Text = "TEST 2"
 
 		-- update like button
 		if world.liked ~= nil then
