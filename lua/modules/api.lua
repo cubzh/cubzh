@@ -453,15 +453,16 @@ end
 
 -- callback(error string or nil, World or nil)
 -- field=authorName
-mod.getWorld = function(_, worldID, fields, callback)
+mod.getWorld = function(self, worldID, fields, callback)
+	if self ~= mod then
+		error("api:getWorld(config, callback): use `:`", 2)
+	end
 	if type(fields) ~= "table" then
 		error("api:getWorld(worldID, fields, callback) - fields must be a table", 2)
 	end
-
 	if #fields < 1 then
 		error("api:getWorld(worldID, fields, callback) - fields must contain at least one entry", 2)
 	end
-
 	if type(callback) ~= "function" then
 		error("api:getWorld(worldID, fields, callback) - callback must be a function", 2)
 	end
@@ -651,24 +652,60 @@ mod.getBalance = function(usernameOrCb, cb)
 	end)
 end
 
-mod.getItem = function(self, itemId, cb)
-	local url = self.kApiAddr .. "/items/" .. itemId
-	local req = HTTP:Get(url, function(resp)
-		if resp.StatusCode ~= 200 then
-			cb(self.error(resp.StatusCode, "could not get item info"), nil)
+mod.getItem = function(self, itemId, fields, callback)
+	if self ~= mod then
+		error("api:getItem(config, callback): use `:`", 2)
+	end
+	if type(fields) ~= "table" then
+		error("api:getItem(itemId, fields, callback) - fields must be a table", 2)
+	end
+	if #fields < 1 then
+		error("api:getItem(itemId, fields, callback) - fields must contain at least one entry", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:getItem(itemId, fields, callback) - callback must be a function", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/items/" .. itemId)
+
+	for _, field in ipairs(fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(res)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		-- parse response
-		local itmResp, err = JSON:Decode(resp.Body)
+
+		local item, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			cb("json decode failed", nil)
+			callback(nil, mod:error(res.StatusCode, "getItem JSON decode error: " .. err))
 			return
 		end
-		--		if itmResp.item.likes == nil then itmResp.item.likes = 0 end
-		if itmResp.item.liked == nil then
-			itmResp.item.liked = false
+
+		if item.created then
+			item.created = time.iso8601_to_os_time(item.created)
 		end
-		cb(nil, itmResp.item)
+		if item.updated then
+			item.updated = time.iso8601_to_os_time(item.updated)
+		end
+		if item.likes ~= nil then
+			item.likes = math.floor(item.likes)
+		else
+			item.likes = 0
+		end
+		if item.views ~= nil then
+			item.views = math.floor(item.views)
+		else
+			item.views = 0
+		end
+		-- `liked` field is omitted if value is false
+		if item.liked == nil then
+			item.liked = false
+		end
+
+		callback(item) -- success
 	end)
 	return req
 end

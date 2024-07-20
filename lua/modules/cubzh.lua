@@ -1120,9 +1120,10 @@ function home()
 
 					item:setParent(cell)
 					cell.shape = item
-					cell.world = world
 					worldIcons[item] = true
 				end
+
+				cell.world = world
 				cell.title.Text = world.title
 			else
 				cell.title.Text = "..."
@@ -1223,6 +1224,10 @@ function home()
 					cellSelector.Height = self.Height
 				end
 
+				cell.onRelease = function(self)
+					Menu:ShowItem({ item = self.item })
+				end
+
 				cell.onCancel = function(_)
 					cellSelector:setParent(nil)
 				end
@@ -1271,6 +1276,8 @@ function home()
 					cell.loadingShape = loadingShape
 					itemLoadingShapes[loadingShape] = true
 				end
+
+				cell.item = item
 				cell.title.Text = prettifyItemName(item.name)
 			else
 				cell.title.Text = "..."

@@ -13,7 +13,8 @@ friends = require("friends")
 settings = require("settings")
 worlds = require("worlds")
 creations = require("creations")
-api = require("system_api", System)
+api = require("api")
+systemApi = require("system_api", System)
 alert = require("alert")
 sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
@@ -78,6 +79,7 @@ MODAL_KEYS = {
 	CUBZH_MENU = 10,
 	OUTFITS = 11,
 	WORLD = 12,
+	ITEM = 13,
 }
 
 -- User account management
@@ -248,6 +250,11 @@ function showModal(key, config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
 		content = require("gallery"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.ITEM then
+		local config = config or {}
+		config.uikit = ui
+		content = require("item_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then
 		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
@@ -587,7 +594,7 @@ likeBtn.onRelease = function()
 		getWorldInfoReq = nil
 	end
 
-	likeWorldReq = api:likeWorld(Environment.worldId, liked, function(_)
+	likeWorldReq = systemApi:likeWorld(Environment.worldId, liked, function(_)
 		likeWorldReq = nil
 		getWorldInfo()
 	end)
@@ -1380,7 +1387,7 @@ function getCubzhMenuModalContent()
 				fields.email = email
 			end
 
-			api:patchUserInfo(fields, function(err)
+			systemApi:patchUserInfo(fields, function(err)
 				secureAccountFeedback:hide()
 
 				if err ~= nil then
@@ -1949,6 +1956,24 @@ menu.ShowItems = function(_)
 		return false
 	end
 	showModal(MODAL_KEYS.ITEMS)
+	return true
+end
+
+---@function ShowItem Shows item identified by id. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowItem({id = "some-item-id"})
+---@return boolean
+menu.ShowItem = function(self, config)
+	if self ~= menu then
+		error("Menu:ShowItem(config): use `:`", 2)
+	end
+
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+
+	showModal(MODAL_KEYS.ITEM, config)
 	return true
 end
 

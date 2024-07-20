@@ -1,15 +1,14 @@
-worldDetailsMod = {}
+mod = {}
 
-worldDetailsMod.createModalContent = function(_, config)
+mod.createModalContent = function(_, config)
 	local time = require("time")
 	local theme = require("uitheme").current
-	local ui = config.uikit
 	local systemApi = require("system_api", System)
 	local api = require("api")
 
 	local defaultConfig = {
 		world = {
-			id = "13693497-03fd-4492-9b36-9776bb11d958",
+			id = "",
 			title = "…",
 			description = "",
 			thumbnail = nil,
@@ -33,8 +32,10 @@ worldDetailsMod.createModalContent = function(_, config)
 		})
 	end)
 	if not ok then
-		error("worldDetailsMod:createModalContent(config) - config error: " .. err, 2)
+		error("worldDetails:createModalContent(config) - config error: " .. err, 2)
 	end
+
+	local ui = config.uikit
 
 	local world = config.world
 
@@ -116,6 +117,10 @@ worldDetailsMod.createModalContent = function(_, config)
 	local likes
 	local editDescriptionBtn
 	local nameArea
+	local description
+	local views
+	local creationDate
+	local updateDate
 
 	local thumbnailRatio = 16 / 9
 
@@ -175,10 +180,10 @@ worldDetailsMod.createModalContent = function(_, config)
 
 	local secondaryTextColor = Color(150, 150, 150)
 
-	local creationDate = ui:createText("🌎 published … ago", secondaryTextColor, "small")
+	creationDate = ui:createText("🌎 published … ago", secondaryTextColor, "small")
 	creationDate:setParent(cell)
 
-	local updateDate = ui:createText("✨ updated … ago", secondaryTextColor, "small")
+	updateDate = ui:createText("✨ updated … ago", secondaryTextColor, "small")
 	updateDate:setParent(cell)
 
 	by = ui:createText("🛠️ created by", secondaryTextColor, "small")
@@ -193,16 +198,13 @@ worldDetailsMod.createModalContent = function(_, config)
 		authorBtn:setParent(cell)
 	end
 
-	local views = ui:createText("👁 …", secondaryTextColor, "small")
+	views = ui:createText("👁 …", secondaryTextColor, "small")
 	views:setParent(cell)
 
-	local description = ui:createText("description", Color.White, "small")
+	description = ui:createText("description", Color.White, "small")
 	description:setParent(cell)
 
-	if config.mode == "explore" then
-		likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
-		likeBtn:setParent(cell)
-	elseif config.mode == "create" then
+	if createMode then
 		likes = ui:createText("❤️ …", theme.textColor)
 		likes:setParent(cell)
 
@@ -247,6 +249,9 @@ worldDetailsMod.createModalContent = function(_, config)
 				ui:turnOff()
 			end
 		end
+	else -- explore mode
+		likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
+		likeBtn:setParent(cell)
 	end
 
 	local scroll = ui:createScroll({
@@ -396,8 +401,7 @@ worldDetailsMod.createModalContent = function(_, config)
 			modal:refreshContent()
 		end
 
-		privateFields:scheduleRefresh()
-		-- worldDetails:refresh()
+		worldDetails:refresh()
 	end
 
 	-- send request to gather world information
@@ -581,4 +585,4 @@ worldDetailsMod.createModalContent = function(_, config)
 	return content
 end
 
-return worldDetailsMod
+return mod
