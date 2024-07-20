@@ -284,11 +284,11 @@ end
 moduleMT.searchUser = function(_, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
-		api:error("api:getFriends(searchText, callback) - searchText must be a string", 2)
+		api:error("api:searchUser(searchText, callback) - searchText must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		api:error("api:getFriends(searchText, callback) - callback must be a function", 2)
+		api:error("api:searchUser(searchText, callback) - callback must be a function", 2)
 		return
 	end
 	local req = System:HttpGet(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)

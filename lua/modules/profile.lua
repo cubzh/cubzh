@@ -1,11 +1,12 @@
 profile = {}
 
 -- MODULES
-api = require("system_api", System)
+api = require("api", System)
+systemApi = require("system_api", System)
 avatar = require("avatar")
 itemgrid = require("item_grid")
 modal = require("modal")
-theme = require("uitheme")
+theme = require("uitheme").current
 ui = require("uikit")
 uiAvatar = require("ui_avatar")
 pages = require("pages")
@@ -110,9 +111,9 @@ profile.create = function(_, config)
 	end
 	avatarNode:setParent(profileNode)
 
-	local editBodyBtn = ui:createButton("👤")
+	local editBodyBtn = ui:buttonNeutral({ content = "👤" })
 	editBodyBtn:setParent(isLocal and profileNode or nil)
-	local editOutfitBtn = ui:createButton("👕")
+	local editOutfitBtn = ui:buttonNeutral({ content = "👕" })
 	editOutfitBtn:setParent(isLocal and profileNode or nil)
 
 	editBodyBtn.onRelease = function()
@@ -235,7 +236,7 @@ profile.create = function(_, config)
 
 		local socialBtns = {}
 		for _, config in ipairs(socialBtnsConfig) do
-			local btn = ui:createButton("", { textSize = "small" })
+			local btn = ui:buttonSecondary({ content = "", textSize = "small", textColor = theme.urlColor })
 			btn:setParent(node)
 			btn:hide()
 			socialBtns[config.key] = btn
@@ -409,7 +410,7 @@ profile.create = function(_, config)
 		bioTitle:setParent(node)
 
 		-- temporary button
-		local bioBtn = ui:createButton("Edit Bio")
+		local bioBtn = ui:buttonNeutral({ content = "Edit Bio" })
 		bioBtn:setParent(node)
 		bioBtn.onRelease = function()
 			System.MultilineInput(
@@ -472,7 +473,7 @@ profile.create = function(_, config)
 			local previous = userInfo.discord
 			userInfo.discord = self.text
 			-- send API request to update user info
-			api:patchUserInfo({ discord = userInfo.discord }, function(err)
+			systemApi:patchUserInfo({ discord = userInfo.discord }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.discord = previous
@@ -494,7 +495,7 @@ profile.create = function(_, config)
 			userInfo.tiktok = removeURL(userInfo.tiktok)
 			userInfo.tiktok = trimPrefix(userInfo.tiktok, "@")
 			-- send API request to update user info
-			api:patchUserInfo({ tiktok = userInfo.tiktok }, function(err)
+			systemApi:patchUserInfo({ tiktok = userInfo.tiktok }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.tiktok = previous
@@ -530,7 +531,7 @@ profile.create = function(_, config)
 			local previous = userInfo.x
 			userInfo.x = value
 			-- send API request to update user info
-			api:patchUserInfo({ x = userInfo.x }, function(err)
+			systemApi:patchUserInfo({ x = userInfo.x }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.x = previous
@@ -551,7 +552,7 @@ profile.create = function(_, config)
 			userInfo.github = self.text
 			userInfo.github = removeURL(userInfo.github)
 			-- send API request to update user info
-			api:patchUserInfo({ github = userInfo.github }, function(err)
+			systemApi:patchUserInfo({ github = userInfo.github }, function(err)
 				if err then
 					print("❌", err)
 					userInfo.github = previous
@@ -659,7 +660,7 @@ profile.create = function(_, config)
 				data.skinColor2 = { r = colors.skin2.R, g = colors.skin2.G, b = colors.skin2.B }
 				data.noseColor = { r = colors.nose.R, g = colors.nose.G, b = colors.nose.B }
 				data.mouthColor = { r = colors.mouth.R, g = colors.mouth.G, b = colors.mouth.B }
-				api:updateAvatar(data, function(err, _)
+				systemApi:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
 					end
@@ -692,7 +693,7 @@ profile.create = function(_, config)
 		local _saveEyesColor = function(color)
 			local data = {}
 			data.eyesColor = { r = color.R, g = color.G, b = color.B }
-			api:updateAvatar(data, function(err, _)
+			systemApi:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -763,7 +764,7 @@ profile.create = function(_, config)
 		local _saveNoseColor = function(color)
 			local data = {}
 			data.noseColor = { r = color.R, g = color.G, b = color.B }
-			api:updateAvatar(data, function(err, _)
+			systemApi:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -816,7 +817,7 @@ profile.create = function(_, config)
 		local _saveMouthColor = function(color)
 			local data = {}
 			data.mouthColor = { r = color.R, g = color.G, b = color.B }
-			api:updateAvatar(data, function(err, _)
+			systemApi:updateAvatar(data, function(err, _)
 				if err then
 					print("❌", err)
 				end
@@ -996,7 +997,7 @@ profile.create = function(_, config)
 				-- send API request to update user avatar
 				local data = {}
 				data[category] = fullname
-				api:updateAvatar(data, function(err, _)
+				systemApi:updateAvatar(data, function(err, _)
 					if err then
 						print("❌", err)
 						return
@@ -1104,50 +1105,15 @@ profile.create = function(_, config)
 	content.showBodyEdit = editBodyBtnOnReleaseCallback
 	content.showWearablesEdit = editOutfitBtnOnReleaseCallback
 
-	-- --------------------------------------------------
-	-- pictureBtn
-	-- --------------------------------------------------
-
-	-- local pictureBtn = ui:createButton("📸")
-	-- pictureBtn:setParent(profileNode)
-
-	-- pictureBtn.onRelease = function()
-	-- 	local as = AudioSource()
-	-- 	as.Sound = "gun_reload_1"
-	-- 	as:SetParent(World)
-	-- 	as.Volume = 0.5
-	-- 	as.Pitch = 1
-	-- 	as.Spatialized = false
-	-- 	as:Play()
-
-	-- 	Timer(1, function()
-	-- 		as:RemoveFromParent() as=nil
-	-- 	end)
-
-	-- 	local whiteBg = ui:createFrame(Color.White)
-	-- 	whiteBg.Width = Screen.Width
-	-- 	whiteBg.Height = Screen.Height
-
-	-- 	Timer(0.05, function()
-	-- 		whiteBg:remove()
-	-- 		whiteBg = nil
-	-- 		ui:hide()
-	-- 		Timer(0.2, function()
-	-- 			print("avatarNode.body.shape:", avatarNode.body.shape)
-	-- 			ui:show()
-	-- 		end)
-	-- 	end)
-	-- end
-
 	local avatarRot = Number3(0, math.pi, 0)
 	local dragListener = nil
 	local avatarLoadedListener = nil
 
 	if isLocal then
-		editBtn = ui:createButton("✏️ Edit")
+		editBtn = ui:buttonNeutral({ content = "✏️ Edit" })
 		editBtn:disable()
 
-		local coinsBtn = ui:createButton("💰 …", { sound = "coin_1" })
+		local coinsBtn = ui:buttonNeutral({ content = "💰 …", sound = "coin_1" })
 		coinsBtn.onRelease = function(_)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
 		end
@@ -1166,12 +1132,12 @@ profile.create = function(_, config)
 		content.bottomRight = { coinsBtn }
 		content.bottomLeft = { editBtn }
 	else
-		local showCreationsBtn = ui:createButton("✨ Show Creations")
+		local showCreationsBtn = ui:buttonNeutral({ content = "✨ Show Creations", textSize = "small" })
 		showCreationsBtn.onRelease = function()
 			require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 		end
 
-		local addFriendBtn = ui:createButton("...")
+		local addFriendBtn = ui:buttonNeutral({ content = "…", textSize = "small" })
 		content.bottomCenter = { addFriendBtn, showCreationsBtn }
 
 		local alreadyFriends = nil
@@ -1229,8 +1195,8 @@ profile.create = function(_, config)
 		table.insert(requests, req)
 
 		-- check if a request was already sent
-		req = api:getSentFriendRequests(function(ok, requests, _)
-			if not ok then
+		req = api:getSentFriendRequests(function(requests, err)
+			if err ~= nil then
 				return
 			end
 

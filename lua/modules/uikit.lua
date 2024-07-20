@@ -3465,7 +3465,7 @@ function createUI(system)
 
 	ui.buttonSecondary = function(self, config)
 		config = config or {}
-		config.textColor = theme.buttonSecondaryTextColor
+		config.textColor = config.textColor or theme.buttonSecondaryTextColor
 
 		local image = Data:FromBundle("images/button_secondary.png")
 		config.backgroundQuad = Quad()
