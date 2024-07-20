@@ -199,6 +199,11 @@ function showModal(key, config)
 			c.username = config.player.Username
 			c.userID = config.player.UserID
 		end
+		if config.id ~= nil and config.id ~= Player.UserID then
+			c.isLocal = false
+			c.userID = config.id
+			c.username = config.username
+		end
 		content = require("profile"):create(c)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.OUTFITS then
@@ -1837,13 +1842,16 @@ end
 --- Returns true on success, false otherwise.
 ---@code local menu = require("menu")
 --- menu:ShowProfile() -- shows local user profile menu
+--- menu:ShowProfile({ player = somePlayer }) -- shows profile of given Player
+--- menu:ShowProfile({ id = somePlayerID }) -- shows profile of Player with given UserID
 ---@return boolean
-menu.ShowProfile = function(_, player)
+menu.ShowProfile = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
+	config = config or {}
 	-- player can be nil, displays local player in that case
-	showModal(MODAL_KEYS.PROFILE, { player = player })
+	showModal(MODAL_KEYS.PROFILE, config)
 	return true
 end
 

@@ -1081,7 +1081,6 @@ function home()
 				end
 
 				cell.onRelease = function(self)
-					-- print("LOAD WORLD")
 					Menu:ShowWorld({ world = self.world })
 				end
 
@@ -1330,6 +1329,10 @@ function home()
 					cellSelector.Height = self.Height
 				end
 
+				cell.onRelease = function(self)
+					Menu:ShowProfile({ id = self.userID, username = self.username })
+				end
+
 				cell.onCancel = function(_)
 					cellSelector:setParent(nil)
 				end
@@ -1369,6 +1372,9 @@ function home()
 							friendAvatarCache[index] = avatar
 						end
 						avatar:setParent(friendCell)
+
+						friendCell.userID = friend.id
+						friendCell.username = friend.username
 
 						local usernameFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
 						usernameFrame:setParent(avatar)
