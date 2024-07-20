@@ -506,7 +506,7 @@ worldDetailsMod.createModalContent = function(_, config)
 		local thumbnailWidth = thumbnailHeight * thumbnailRatio
 		if thumbnailWidth > width then
 			thumbnailWidth = width
-			thumbnailHeight = thumbnailWidth * 1.0 / thumbnailWidth
+			thumbnailHeight = thumbnailWidth * 1.0 / thumbnailRatio
 		end
 
 		thumbnailArea.Width = thumbnailWidth

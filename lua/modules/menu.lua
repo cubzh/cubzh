@@ -237,7 +237,9 @@ function showModal(key, config)
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLD then
-		content = require("world_details"):createModalContent({ uikit = ui })
+		local config = config or {}
+		config.uikit = ui
+		content = require("world_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
 		content = require("gallery"):createModalContent({ uikit = ui })
@@ -1921,22 +1923,11 @@ menu.ShowWorld = function(self, config)
 		error("Menu:ShowWorld(config): use `:`", 2)
 	end
 
-	local defaultConfig = {
-		id = "",
-	}
-
-	local ok, err = pcall(function()
-		config = conf:merge(defaultConfig, config)
-	end)
-	if not ok then
-		error("Menu:ShowWorld(config) - config error: " .. err, 2)
-	end
-
 	if menuSectionCanBeShown() == false then
 		return false
 	end
 
-	showModal(MODAL_KEYS.WORLD)
+	showModal(MODAL_KEYS.WORLD, config)
 	return true
 end
 

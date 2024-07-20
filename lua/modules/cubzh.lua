@@ -1080,9 +1080,9 @@ function home()
 					cellSelector.Height = self.Height
 				end
 
-				cell.onRelease = function(_)
+				cell.onRelease = function(self)
 					-- print("LOAD WORLD")
-					Menu:ShowWorld({ id = "" })
+					Menu:ShowWorld({ world = self.world })
 				end
 
 				cell.onCancel = function(_)
@@ -1121,6 +1121,7 @@ function home()
 
 					item:setParent(cell)
 					cell.shape = item
+					cell.world = world
 					worldIcons[item] = true
 				end
 				cell.title.Text = world.title
