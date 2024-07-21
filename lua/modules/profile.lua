@@ -60,8 +60,6 @@ profile.create = function(_, config)
 	local activeNode = nil
 	local infoNode
 
-	local preferredLayout = "landscape"
-
 	local functions = {}
 
 	local profileNode = ui:createFrame()
@@ -1212,25 +1210,16 @@ profile.create = function(_, config)
 			return
 		end
 
-		local landscape = Screen.Width > Screen.Height
-
 		local totalWidth = profileNode.Width
 		local totalHeight = profileNode.Height
 
 		-- compute minimum room for
 		local roomForAvatar
 
-		if landscape then
-			roomForAvatar = math.min(AVATAR_MAX_SIZE, totalWidth * 0.25)
-			roomForAvatar = math.max(roomForAvatar, AVATAR_MIN_SIZE)
-			activeNode.Width = totalWidth - roomForAvatar - ACTIVE_NODE_MARGIN * 2
-			activeNode.Height = totalHeight - ACTIVE_NODE_MARGIN * 2
-		else
-			roomForAvatar = math.min(AVATAR_MAX_SIZE, totalHeight * 0.25)
-			roomForAvatar = math.max(roomForAvatar, AVATAR_MIN_SIZE)
-			activeNode.Width = totalWidth - ACTIVE_NODE_MARGIN * 2
-			activeNode.Height = totalHeight - roomForAvatar - ACTIVE_NODE_MARGIN * 2
-		end
+		roomForAvatar = math.min(AVATAR_MAX_SIZE, totalHeight * 0.25)
+		roomForAvatar = math.max(roomForAvatar, AVATAR_MIN_SIZE)
+		activeNode.Width = totalWidth - ACTIVE_NODE_MARGIN * 2
+		activeNode.Height = totalHeight - roomForAvatar - ACTIVE_NODE_MARGIN * 2
 
 		if activeNode.refresh then
 			activeNode:refresh()
@@ -1239,20 +1228,9 @@ profile.create = function(_, config)
 		local activeNodeWidthWithMargin = activeNode.Width + ACTIVE_NODE_MARGIN * 2
 		local activeNodeHeightWithMargin = activeNode.Height + ACTIVE_NODE_MARGIN * 2
 
-		if landscape then
-			avatarNode.Width = roomForAvatar
-			totalHeight =
-				math.max(activeNodeHeightWithMargin, avatarNode.Height + (isLocal and editBodyBtn.Height or 0))
-			totalWidth = activeNodeWidthWithMargin + avatarNode.Width
-
-			preferredLayout = "landscape"
-		else
-			avatarNode.Width = roomForAvatar
-			totalHeight = activeNodeHeightWithMargin + avatarNode.Height + (isLocal and editBodyBtn.Height or 0)
-			totalWidth = math.max(activeNodeWidthWithMargin, avatarNode.Width)
-
-			preferredLayout = "portrait"
-		end
+		avatarNode.Width = roomForAvatar
+		totalHeight = activeNodeHeightWithMargin + avatarNode.Height + (isLocal and editBodyBtn.Height or 0)
+		totalWidth = math.max(activeNodeWidthWithMargin, avatarNode.Width)
 
 		return totalWidth, totalHeight
 	end
@@ -1263,44 +1241,24 @@ profile.create = function(_, config)
 		end
 
 		local buttonsWidth = editBodyBtn.Width + theme.padding + editOutfitBtn.Width
-		if preferredLayout == "landscape" then
-			activeNode.pos = { ACTIVE_NODE_MARGIN, self.Height * 0.5 - activeNode.Height * 0.5 }
-			avatarNode.pos.X = self.Width - avatarNode.Width
 
-			local avatarAndEditButtonsHeight = avatarNode.Height
-			if isLocal then
-				avatarAndEditButtonsHeight = avatarAndEditButtonsHeight + theme.padding + editOutfitBtn.Height
-				editBodyBtn.pos.X = avatarNode.pos.X + avatarNode.Width * 0.5 - buttonsWidth * 0.5
-				editBodyBtn.pos.Y = self.Height * 0.5 - avatarAndEditButtonsHeight * 0.5
-				editOutfitBtn.pos = {
-					editBodyBtn.pos.X + editBodyBtn.Width + theme.padding,
-					editBodyBtn.pos.Y,
-				}
-				avatarNode.pos.Y = editBodyBtn.Height
-					+ (self.Height - editBodyBtn.Height) * 0.5
-					- avatarNode.Height * 0.5
-			else
-				avatarNode.pos.Y = self.Height * 0.5 - avatarAndEditButtonsHeight * 0.5
-			end
-		else
-			avatarNode.pos = {
-				self.Width * 0.5 - avatarNode.Width * 0.5,
-				self.Height - avatarNode.Height,
+		avatarNode.pos = {
+			self.Width * 0.5 - avatarNode.Width * 0.5,
+			self.Height - avatarNode.Height,
+		}
+
+		if isLocal then
+			editBodyBtn.pos = {
+				self.Width * 0.5 - buttonsWidth * 0.5,
+				avatarNode.pos.Y - editBodyBtn.Height,
 			}
-
-			if isLocal then
-				editBodyBtn.pos = {
-					self.Width * 0.5 - buttonsWidth * 0.5,
-					avatarNode.pos.Y - editBodyBtn.Height,
-				}
-				editOutfitBtn.pos = {
-					editBodyBtn.pos.X + editBodyBtn.Width + theme.padding,
-					editBodyBtn.pos.Y,
-				}
-			end
-
-			activeNode.pos = { self.Width * 0.5 - activeNode.Width * 0.5, ACTIVE_NODE_MARGIN }
+			editOutfitBtn.pos = {
+				editBodyBtn.pos.X + editBodyBtn.Width + theme.padding,
+				editBodyBtn.pos.Y,
+			}
 		end
+
+		activeNode.pos = { self.Width * 0.5 - activeNode.Width * 0.5, ACTIVE_NODE_MARGIN }
 	end
 
 	functions.setActiveNode = function(newNode)
@@ -1328,14 +1286,14 @@ profile.create = function(_, config)
 		content:refreshModal()
 	end
 
-	-- width is current modal width, before eventual resize
-	content.idealReducedContentSize = function(content, width, height, minWidth)
-		content.Width = width
-		content.Height = height
-		local w, h = functions.refresh()
-		w = math.max(minWidth, w)
-		return Number2(w, h)
-	end
+	-- -- width is current modal width, before eventual resize
+	-- content.idealReducedContentSize = function(content, width, height, minWidth)
+	-- 	content.Width = width
+	-- 	content.Height = height
+	-- 	local w, h = functions.refresh()
+	-- 	w = math.max(minWidth, w)
+	-- 	return Number2(w, h)
+	-- end
 
 	content.didBecomeActive = function()
 		dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pointerEvent)

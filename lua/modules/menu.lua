@@ -124,13 +124,17 @@ end
 
 function maxModalWidth()
 	local computed = Screen.Width - Screen.SafeArea.Left - Screen.SafeArea.Right - MODAL_MARGIN * 2
-	local max = 1400
+	local max = 400
 	local w = math.min(max, computed)
 	return w
 end
 
 function maxModalHeight()
-	return Screen.Height - Screen.SafeArea.Bottom - topBar.Height - MODAL_MARGIN * 2
+	local availableHeight = Screen.Height - Screen.SafeArea.Bottom - topBar.Height
+	local minusFixedMargin = availableHeight - MODAL_MARGIN * 2
+	local percentage = availableHeight * 0.9
+	local max = 700
+	return math.min(max, percentage, minusFixedMargin)
 end
 
 function updateModalPosition(modal)
