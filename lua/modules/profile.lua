@@ -41,7 +41,6 @@ profile.create = function(_, config)
 
 	-- default config
 	local _config = {
-		isLocal = true,
 		userID = "",
 		username = "",
 		uikit = ui, -- allows to provide specific instance of uikit
@@ -56,10 +55,6 @@ profile.create = function(_, config)
 	end
 
 	local ui = _config.uikit
-
-	if not _config.isLocal and (_config.userID == "" or _config.username == "") then
-		error("profile:create(config): config.userID should be a valid userID", 2)
-	end
 
 	-- nodes beside avatar
 	local activeNode = nil
@@ -91,7 +86,7 @@ profile.create = function(_, config)
 
 	local username
 	local userID
-	local isLocal = _config.isLocal
+	local isLocal = _config.userID == Player.UserID
 	if isLocal then
 		username = Player.Username
 		userID = Player.UserID

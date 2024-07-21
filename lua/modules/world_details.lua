@@ -368,7 +368,6 @@ mod.createModalContent = function(_, config)
 			authorBtn.Text = "@" .. world.authorName
 			authorBtn.onRelease = function(_)
 				local profileConfig = {
-					isLocal = false,
 					username = world.authorName,
 					userID = world.authorId,
 					uikit = ui,

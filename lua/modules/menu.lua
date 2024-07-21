@@ -196,13 +196,11 @@ function showModal(key, config)
 	local content
 	if key == MODAL_KEYS.PROFILE then
 		local c = { uikit = ui }
-		if config.player ~= nil and config.player ~= Player then
-			c.isLocal = false
+		if config.player ~= nil then
 			c.username = config.player.Username
 			c.userID = config.player.UserID
 		end
-		if config.id ~= nil and config.id ~= Player.UserID then
-			c.isLocal = false
+		if config.id ~= nil then
 			c.userID = config.id
 			c.username = config.username
 		end

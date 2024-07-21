@@ -1702,6 +1702,10 @@ function home()
 		local btnFriends = createBottomBarButton("Friends", "images/icon-friends.png")
 		local btnCreate = createBottomBarButton("Create", "images/icon-create.png")
 
+		btnProfile.onRelease = function()
+			Menu:ShowProfile({ player = Player })
+		end
+
 		bottomBar.parentDidResize = function(self)
 			self.Width = self.parent.Width
 			local btnWidth = self.Width / 5.0
