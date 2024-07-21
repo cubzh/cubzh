@@ -2573,7 +2573,7 @@ function createUI(system)
 			if down then
 				container.pos.Y = node.Height - padding.top + scrollPosition
 
-				loadTop = scrollPosition + SCROLL_LOAD_MARGIN
+				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
 
 				unloadTop = scrollPosition + SCROLL_UNLOAD_MARGIN
@@ -2581,7 +2581,7 @@ function createUI(system)
 			elseif up then
 				container.pos.Y = padding.bottom - scrollPosition
 
-				loadBottom = -scrollPosition - SCROLL_LOAD_MARGIN
+				loadBottom = scrollPosition - SCROLL_LOAD_MARGIN
 				loadTop = loadBottom + node.Height + SCROLL_LOAD_MARGIN * 2
 
 				unloadBottom = -scrollPosition - SCROLL_UNLOAD_MARGIN
