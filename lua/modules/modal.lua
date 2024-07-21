@@ -3,6 +3,9 @@
 
 local modal = {}
 
+local ANIMATION_OFFSET = 50
+local ANIMATION_TIME = 0.22
+
 local modalContentMT = {
 	__index = function(t, k)
 		if k == "cleanup" then
@@ -264,9 +267,11 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	-- a modal is always placed at top level when created
 	local node = ui:createNode()
 
+	local _position = Number3.Zero
+
 	content._attr.modal = node
-	node.contentStack = { content }
-	node.shouldRefreshContent = true
+	node.contentStack = {}
+	node.shouldRefreshContent = false
 
 	node.maxWidth = maxWidth
 	node.maxHeight = maxHeight
@@ -326,6 +331,12 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		self:refreshContent()
 	end
 
+	node.bounce = function(self)
+		ease:cancel(modal) -- cancel modal ease animations if any
+		self.LocalPosition = _position - { 0, ANIMATION_OFFSET, 0 }
+		ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
+	end
+
 	-- push new content page
 	node.push = function(self, content, skipRefresh)
 		if content == nil then
@@ -336,7 +347,9 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		content._attr.modal = self
 
 		local active = self.contentStack[#self.contentStack]
+		local firstContent = true
 		if active ~= nil and active.willResignActive ~= nil then
+			firstContent = false
 			active:willResignActive()
 		end
 
@@ -346,6 +359,16 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			if content.didBecomeActive ~= nil then
 				content:didBecomeActive()
 			end
+		end
+
+		if firstContent then
+			ease:cancel(modal) -- cancel modal ease animations if any
+			self.LocalPosition = _position - { 0, ANIMATION_OFFSET, 0 }
+			ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
+		else
+			ease:cancel(modal) -- cancel modal ease animations if any
+			self.LocalPosition = _position + { ANIMATION_OFFSET, 0, 0 }
+			ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
 		end
 	end
 
@@ -382,8 +405,13 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		collectgarbage("collect")
 
 		content = self.contentStack[#self.contentStack]
-		if content ~= nil and content.didBecomeActive ~= nil then
-			content:didBecomeActive()
+		if content ~= nil then
+			if content.didBecomeActive ~= nil then
+				content:didBecomeActive()
+			end
+			ease:cancel(modal) -- cancel modal ease animations if any
+			self.LocalPosition = _position - { ANIMATION_OFFSET, 0, 0 }
+			ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
 		end
 	end
 
@@ -416,6 +444,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 	node._updatePosition = function(self)
 		position(self)
+		_position = self.LocalPosition:Copy()
 	end
 
 	node._hideAllContentElements = function(_, content)
@@ -1001,11 +1030,13 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		node:close()
 	end
 
-	node:_hideAllContentElements(content)
+	-- node:_hideAllContentElements(content)
 
-	-- do not refresh right away, as users could still be updating
-	-- content right after creating the modal.
-	node:_scheduleRefresh()
+	-- -- do not refresh right away, as users could still be updating
+	-- -- content right after creating the modal.
+	-- node:_scheduleRefresh()
+
+	node:push(content)
 
 	if content.didBecomeActive then
 		content:didBecomeActive()

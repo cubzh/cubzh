@@ -133,23 +133,11 @@ function maxModalHeight()
 	return Screen.Height - Screen.SafeArea.Bottom - topBar.Height - MODAL_MARGIN * 2
 end
 
-function updateModalPosition(modal, forceBounce)
+function updateModalPosition(modal)
 	local vMin = Screen.SafeArea.Bottom + MODAL_MARGIN
 	local vMax = Screen.Height - topBar.Height - MODAL_MARGIN
-
 	local vCenter = vMin + (vMax - vMin) * 0.5
-
-	local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5, 0)
-
-	ease:cancel(modal) -- cancel modal ease animations if any
-
-	if not modal.updatedPosition or forceBounce then
-		modal.LocalPosition = p - { 0, 100, 0 }
-		modal.updatedPosition = true
-		ease:outBack(modal, 0.22).LocalPosition = p
-	else
-		modal.LocalPosition = p
-	end
+	modal.pos = { Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5 }
 end
 
 function closeModal()
@@ -178,7 +166,7 @@ function showModal(key, config)
 	end
 
 	if key == activeModalKey then
-		updateModalPosition(activeModal, true) -- make it bounce
+		activeModal:bounce()
 		return
 	end
 
