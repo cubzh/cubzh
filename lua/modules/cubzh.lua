@@ -612,7 +612,7 @@ function avatar()
 		end
 
 		local avatar = avatarModule:get({
-			usernameOrId = "",
+			usernameOrId = Player.UserID,
 			-- size = math.min(Screen.Height * 0.5, Screen.Width * 0.75),
 			-- ui = ui,
 			eyeBlinks = eyeBlinks,
@@ -1520,7 +1520,8 @@ function home()
 			return cell
 		end
 
-		local scroll = ui:createScroll({
+		local scroll
+		scroll = ui:createScroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 			padding = {
@@ -1533,7 +1534,7 @@ function home()
 			loadCell = function(index)
 				if index == 1 then
 					if profileCell == nil then
-						local avatar = uiAvatar:get({ usernameOrId = Player.UserID, spherized = false })
+						local homeAvatar = uiAvatar:get({ usernameOrId = Player.UserID, spherized = false })
 
 						-- profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
 						profileCell = ui:frame()
@@ -1548,11 +1549,72 @@ function home()
 						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
 						editAvatarBtn:setParent(profileCell)
 
+						editAvatarBtn.onRelease = function(_)
+							if bottomBar then
+								bottomBar:hide()
+							end
+							scroll:hide()
+							avatar():show({ mode = "user" })
+
+							drawer = require("drawer"):create({ ui = ui })
+
+							local okBtn = ui:buttonPositive({
+								content = "Done!",
+								textSize = "big",
+								unfocuses = false,
+								padding = 5,
+							})
+							okBtn:setParent(drawer)
+							okBtn.onRelease = function()
+								drawer:remove()
+								if bottomBar then
+									bottomBar:show()
+								end
+								scroll:show()
+								drawer = nil
+								avatar():hide()
+							end
+
+							avatarEditor = require("ui_avatar_editor"):create({
+								ui = ui,
+								requestHeightCallback = function(height)
+									drawer:updateConfig({
+										layoutContent = function(self)
+											local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
+											drawerHeight = math.floor(math.min(Screen.Height * 0.6, drawerHeight))
+
+											self.Height = drawerHeight
+
+											if avatarEditor then
+												avatarEditor.Width = self.Width - padding * 2
+												avatarEditor.Height = drawerHeight
+													- Screen.SafeArea.Bottom
+													- padding * 2
+												avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+											end
+
+											okBtn.pos = {
+												self.Width - okBtn.Width - padding,
+												self.Height + padding,
+											}
+
+											-- layoutInfoFrame()
+											LocalEvent:Send("signup_drawer_height_update", drawerHeight)
+										end,
+									})
+									drawer:bump()
+								end,
+							})
+
+							avatarEditor:setParent(drawer)
+							drawer:show()
+						end
+
 						local visitHouseBtn = ui:buttonNeutral({ content = "🏠 Visit house" })
 						visitHouseBtn:setParent(profileCell)
 						visitHouseBtn:disable()
 
-						avatar:setParent(profileCell)
+						homeAvatar:setParent(profileCell)
 
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
@@ -1565,16 +1627,16 @@ function home()
 							local infoHeight = math.max(
 								usernameFrame.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2
 							)
-							local totalWidth = infoWidth + avatar.Width + padding
+							local totalWidth = infoWidth + homeAvatar.Width + padding
 
-							avatar.Height = self.Height * 0.9
-							avatar.pos = {
+							homeAvatar.Height = self.Height * 0.9
+							homeAvatar.pos = {
 								self.Width * 0.5 - totalWidth * 0.5,
-								self.Height * 0.5 - avatar.Height * 0.5,
+								self.Height * 0.5 - homeAvatar.Height * 0.5,
 							}
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
-							local x = avatar.pos.X + avatar.Width + padding
+							local x = homeAvatar.pos.X + homeAvatar.Width + padding
 
 							usernameFrame.pos = { x, y }
 
@@ -1654,7 +1716,7 @@ function home()
 		})
 		scroll:setParent(root)
 
-		local bottomBar = ui:frame()
+		bottomBar = ui:frame()
 
 		local function createBottomBarButton(text, icon)
 			local btn = ui:frame({ color = Color(0, 0, 0) })
