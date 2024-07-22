@@ -69,11 +69,14 @@ void main() {
 
 	vec4 color = a_color0;
 #if QUAD_VARIANT_MRT_LIGHTING == 0
-	float meta[6]; unpackQuadFullMetadata(a_position.w, meta);
+	float meta[7]; unpackQuadFullMetadata(a_position.w, meta);
 	float unlit = meta[0];
-	vec4 srgb = vec4(meta[2], meta[3], meta[4], meta[5]);
+	float cutout = meta[2];
+	vec4 srgb = vec4(meta[3], meta[4], meta[5], meta[6]);
 
 	color = mix(getNonVolumeVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
+#elif QUAD_VARIANT_MRT_TRANSPARENCY && QUAD_VARIANT_CUTOUT
+	float cutout = unpackQuadMetadata_Cutout(a_position.w);
 #endif
 
 	gl_Position = clip;
@@ -84,7 +87,7 @@ void main() {
 #if QUAD_VARIANT_MRT_TRANSPARENCY
 	v_clipZ = clip.z;
 #if QUAD_VARIANT_CUTOUT
-	v_cutout = u_cutout;
+	v_cutout = mix(-1.0, u_cutout, cutout);
 #endif // QUAD_VARIANT_CUTOUT
 #elif QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_TEX
 	v_metadata = a_position.w;
