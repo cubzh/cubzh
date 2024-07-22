@@ -232,4 +232,14 @@ mod.upperFirstChar = function(self, str)
 	return upperFirstChar .. rest
 end
 
+mod.trimSpaces = function(self, str)
+	if self ~= mod then
+		error("str:trimSpaces(someString) should be called with `:`", 2)
+	end
+	if type(str) ~= "string" then
+		error("str:trimSpaces(someString) - someString should be a string", 2)
+	end
+	return str:gsub("^%s*(.-)%s*$", "%1")
+end
+
 return mod
