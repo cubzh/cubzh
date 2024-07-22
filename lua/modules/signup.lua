@@ -30,11 +30,6 @@ signup.startFlow = function(self, config)
 
 	local flowConfig = config
 
-	local internalLoginSuccess = function()
-		-- print("🟢 [internalLoginSuccess] System.AskedForMagicKey:", System.AskedForMagicKey)
-		flowConfig.loginSuccess()
-	end
-
 	local api = require("system_api", System)
 	local ui = config.ui
 	local flow = require("flow")
@@ -126,6 +121,16 @@ signup.startFlow = function(self, config)
 			coinsButton:remove()
 			coinsButton = nil
 		end
+	end
+
+	local internalLoginSuccess = function()
+		-- Hide the coins balance button (top right corner)
+		-- The button is shown during the signup process,
+		-- but it should be hidden once the user is logged in,
+		-- because the top bar already displays the user's balance.
+		removeCoinsButton()
+
+		flowConfig.loginSuccess()
 	end
 
 	local function showBackButton()
