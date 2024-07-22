@@ -850,6 +850,8 @@ function avatar_load(self, config)
 
 		table.insert(fields.requests, req)
 	end
+
+	return fields.requests
 end
 
 function _attachEquipmentToBodyPart(bodyPart, equipment, scale)

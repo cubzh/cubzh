@@ -46,7 +46,7 @@ function setupNodeAvatar(node, avatar, config)
 	layoutBody(node)
 
 	node.load = function(_, config)
-		avatar:load(config)
+		return avatar:load(config)
 	end
 	node.loadEquipment = function(_, config)
 		avatar:loadEquipment(config)
