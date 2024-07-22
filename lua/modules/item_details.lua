@@ -641,7 +641,6 @@ mod.createModalContent = function(_, config)
 
 	-- 			by.onRelease = function(_)
 	-- 				local profileContent = require("profile"):create({
-	-- 					isLocal = false,
 	-- 					username = cell.repo,
 	-- 					userID = authorID,
 	-- 					uikit = ui,

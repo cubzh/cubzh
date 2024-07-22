@@ -686,7 +686,7 @@ profile.create = function(_, config)
 		table.insert(requests, req)
 
 		-- check if a request was already sent
-		req = api:getSentFriendRequests(function(requests, err)
+		req = api:getSentFriendRequests({ fields = { "id" } }, function(requests, err)
 			if err ~= nil then
 				return
 			end
@@ -699,7 +699,7 @@ profile.create = function(_, config)
 				end
 			end
 			updateFriendInfo()
-		end, { "id" })
+		end)
 		table.insert(requests, req)
 	end
 

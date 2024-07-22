@@ -31,7 +31,7 @@ signup.startFlow = function(self, config)
 	local flowConfig = config
 
 	local internalLoginSuccess = function()
-		print("🟢 [internalLoginSuccess] System.AskedForMagicKey:", System.AskedForMagicKey)
+		-- print("🟢 [internalLoginSuccess] System.AskedForMagicKey:", System.AskedForMagicKey)
 		flowConfig.loginSuccess()
 	end
 
@@ -1654,7 +1654,7 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.minAppVersion = function()
-						print("🟢 [minAppVersion]")
+						-- print("🟢 [minAppVersion]")
 
 						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
@@ -1682,8 +1682,8 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a user account exists locally.
 					checks.userAccountExists = function()
-						print("🟢 [userAccountExists]")
-						print("⚪️ [userAccountExists] System.HasCredentials", System.HasCredentials)
+						-- print("🟢 [userAccountExists]")
+						-- print("⚪️ [userAccountExists] System.HasCredentials", System.HasCredentials)
 
 						-- Update loading message
 						text.Text = "Looking for user account..."
@@ -1703,7 +1703,7 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.createAccount = function()
-						print("🟢 [createAccount]")
+						-- print("🟢 [createAccount]")
 
 						System:DebugEvent("App creates new empty user account")
 
@@ -1725,11 +1725,11 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a magic key has been requested.
 					checks.askedMagicKey = function()
-						print("🟢 [askedMagicKey]")
-						print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
-						print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
-						print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
-						print("⚪️ [askedMagicKey] System.Username:", "[" .. System.Username .. "]")
+						-- print("🟢 [askedMagicKey]")
+                        -- print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
+                        -- print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
+                        -- print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
+                        -- print("⚪️ [askedMagicKey] System.Username:", "[" .. System.Username .. "]")
 
 						System:DebugEvent("App checks if magic key has been requested")
 
@@ -1762,10 +1762,10 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.checkUserAccountComplete = function()
-						print("🟢 [checkUserAccountComplete]")
-						print("⚪️ [checkUserAccountComplete] System.HasCredentials", System.HasCredentials)
-						print("⚪️ [checkUserAccountComplete] System.Authenticated:", System.Authenticated)
-						print("⚪️ [checkUserAccountComplete] System.UserID:", System.UserID)
+						-- print("🟢 [checkUserAccountComplete]")
+						-- print("⚪️ [checkUserAccountComplete] System.HasCredentials", System.HasCredentials)
+						-- print("⚪️ [checkUserAccountComplete] System.Authenticated:", System.Authenticated)
+						-- print("⚪️ [checkUserAccountComplete] System.UserID:", System.UserID)
 
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
@@ -1800,10 +1800,10 @@ signup.startFlow = function(self, config)
 							-- No error. Meaning credentials are valid.
 							System.Authenticated = true -- [gaetan] not sure this field is useful...
 
-							print("⚪️ [checkUserAccountComplete] API RESPONSE:")
-							for key, value in pairs(userInfo) do
-								print("⚪️ [checkUserAccountComplete] ->", key, value)
-							end
+							-- print("⚪️ [checkUserAccountComplete] API RESPONSE:")
+							-- for key, value in pairs(userInfo) do
+								-- print("⚪️ [checkUserAccountComplete] ->", key, value)
+							-- end
 
 							-- ⚪️ username gaetan
 							-- ⚪️ hasEmail true
@@ -1819,11 +1819,11 @@ signup.startFlow = function(self, config)
 							-- System.HasPhoneNumber = userInfo.hasPhoneNumber or false
 
 							if System.Username ~= "" or System.HasEmail == true or System.HasPhoneNumber == true then
-								print("🟢 -> login success")
+                            -- print("🟢 -> login success")
 								internalLoginSuccess()
 							else
 								-- show signup
-								print("🟢 -> createSignUpOrLoginStep")
+                                -- print("🟢 -> createSignUpOrLoginStep")
 								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
 								signupFlow:push(createSignUpOrLoginStep())
 							end

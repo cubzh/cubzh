@@ -359,7 +359,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				cell.onRelease = function()
 					cell:setColor(Color(63, 63, 63))
 					local profileContent = require("profile"):create({
-						isLocal = false,
 						username = user.username,
 						userID = user.id,
 						uikit = ui,
