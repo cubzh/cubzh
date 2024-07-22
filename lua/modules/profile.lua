@@ -117,6 +117,12 @@ profile.create = function(_, config)
 
 	-- functions to create each node
 
+	local coinsBtn
+	local creationsBtn
+	local addFriendBtn
+	local friendText
+	local doneBtn
+
 	local createInfoNode = function()
 		local socialBtnsConfig = {
 			{
@@ -161,14 +167,14 @@ profile.create = function(_, config)
 
 		if isLocal then
 			editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
-			editAvatarBtn:setParent(cell)
+			editAvatarBtn:setParent(node)
 
 			editAvatarBtn.onRelease = function()
 				-- editAvatarBtnOnReleaseCallback()
 			end
 
 			editBioBtn = ui:buttonNeutral({ content = "✏️ Edit bio", textSize = "small" })
-			editBioBtn:setParent(cell)
+			editBioBtn:setParent(node)
 
 			editBioBtn.onRelease = function()
 				System.MultilineInput(
@@ -197,29 +203,41 @@ profile.create = function(_, config)
 			end
 
 			editLinksBtn = ui:buttonNeutral({ content = "✏️ Edit links", textSize = "small" })
-			editLinksBtn:setParent(cell)
+			editLinksBtn:setParent(node)
 
 			editLinksBtn.onRelease = function()
 				functions.setActiveNode(functions.createEditInfoNode())
 			end
+
+			doneBtn = ui:buttonPositive({ content = "Done", textSize = "default" })
+			doneBtn:setParent(nil)
+
+			doneBtn.onRelease = function()
+				functions.setActiveNode(infoNode)
+				infoNode:setUserInfo()
+			end
 		end
 
+		friendText = ui:createText("", { color = Color.White, size = "small" })
+		friendText:setParent(node)
+		friendText:hide()
+
 		local reputation = ui:createText("🏆 0", Color.White)
-		reputation:setParent(cell)
+		reputation:setParent(node)
 
 		local friends = ui:createText("👥 0", Color.White)
-		friends:setParent(cell)
+		friends:setParent(node)
 
 		local created = ui:createText("📰 ", Color.White)
-		created:setParent(cell)
+		created:setParent(node)
 
 		local bioText = ui:createText(userInfo.bio, { color = Color.White, size = "small" })
-		bioText:setParent(cell)
+		bioText:setParent(node)
 
 		local socialBtns = {}
 		for _, config in ipairs(socialBtnsConfig) do
 			local btn = ui:buttonSecondary({ content = "", textSize = "small", textColor = theme.urlColor })
-			btn:setParent(cell)
+			btn:setParent(node)
 			btn:hide()
 			socialBtns[config.key] = btn
 		end
@@ -321,10 +339,6 @@ profile.create = function(_, config)
 		end
 
 		node.setUserInfo = function(_)
-			if friends.Text == nil then
-				return
-			end
-
 			friends.Text = "👥 " .. tostring(userInfo.nbFriends)
 
 			if userInfo.created ~= nil then
@@ -583,38 +597,12 @@ profile.create = function(_, config)
 	infoNode = createInfoNode()
 	infoNode:setParent(nil)
 
-	-- local toggleEditOptions = function(btn)
-	-- 	if btn.Text == nil then
-	-- 		return
-	-- 	end
-
-	-- 	-- editAvatarBtn:unselect()
-	-- 	if btn.Text == "✏️ Edit" then
-	-- 		btn.Text = "✅ Done"
-
-	-- 		editInfoBtnOnReleaseCallback()
-	-- 	else
-	-- 		btn.Text = "✏️ Edit"
-
-	-- 		content.tabs = nil
-	-- 		functions.setActiveNode(infoNode)
-
-	-- 		infoNode:setUserInfo()
-	-- 	end
-	-- end
-
-	-- editInfoBtnOnReleaseCallback = function(_)
-	-- 	content.tabs = nil
-	-- 	-- editAvatarBtn:unselect()
-	-- 	functions.setActiveNode(createEditInfoNode())
-	-- end
-
 	local avatarRot = Number3(0, math.pi, 0)
 	local dragListener = nil
 	local avatarLoadedListener = nil
 
 	if isLocal then
-		local coinsBtn = ui:buttonNeutral({ content = "💰 …", sound = "coin_1" })
+		coinsBtn = ui:buttonNeutral({ content = "💰 …", sound = "coin_1" })
 		coinsBtn.onRelease = function(_)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
 		end
@@ -629,36 +617,37 @@ profile.create = function(_, config)
 			end
 			coinsBtn.Text = "💰 " .. math.floor(balance.total)
 		end)
-
-		content.bottomRight = { coinsBtn }
 	else
-		local showCreationsBtn = ui:buttonNeutral({ content = "✨ Show Creations", textSize = "small" })
-		showCreationsBtn.onRelease = function()
+		creationsBtn = ui:buttonSecondary({ content = "🛠️ Creations", textSize = "small" })
+		creationsBtn.onRelease = function()
 			require("menu"):ShowAlert({ message = "Coming soon!" }, System)
 		end
-
-		local addFriendBtn = ui:buttonNeutral({ content = "…", textSize = "small" })
-		content.bottomCenter = { addFriendBtn, showCreationsBtn }
 
 		local alreadyFriends = nil
 		local requestSent = nil
 
-		local updateFriendButton = function()
-			if addFriendBtn.Text == nil then
-				return
-			end
-
+		local updateFriendInfo = function()
 			-- wait for both responses
 			if alreadyFriends == nil or requestSent == nil then
 				return
 			end
 
+			friendText:hide()
+			if addFriendBtn then
+				addFriendBtn:hide()
+			end
+
 			if alreadyFriends then
-				addFriendBtn.Text = "Friends ❤️"
+				friendText.Text = "Friends ❤️"
+				friendText:show()
 			elseif requestSent then
-				addFriendBtn.Text = "Request sent!"
+				friendText.Text = "Friend request sent! ✉️"
+				friendText:show()
 			else
-				addFriendBtn.Text = "Add as Friend ➕"
+				if not addFriendBtn then
+					addFriendBtn = ui:buttonNeutral({ content = "➕ Friend 👥", textSize = "small" })
+					addFriendBtn:setParent(nil)
+				end
 
 				addFriendBtn.onRelease = function(btn)
 					btn:disable()
@@ -675,6 +664,8 @@ profile.create = function(_, config)
 					end)
 				end
 			end
+
+			functions.refreshBottomButtons()
 		end
 
 		-- check if the User is already a friend
@@ -690,7 +681,7 @@ profile.create = function(_, config)
 					break
 				end
 			end
-			updateFriendButton()
+			updateFriendInfo()
 		end)
 		table.insert(requests, req)
 
@@ -707,7 +698,7 @@ profile.create = function(_, config)
 					break
 				end
 			end
-			updateFriendButton()
+			updateFriendInfo()
 		end, { "id" })
 		table.insert(requests, req)
 	end
@@ -736,30 +727,65 @@ profile.create = function(_, config)
 		return totalWidth, totalHeight
 	end
 
-	-- profileNode.parentDidResize = function(self)
-	-- 	if activeNode == nil or avatarNode == nil then
-	-- 		return
-	-- 	end
+	-- returns height occupied
+	functions.refreshBottomButtons = function()
+		local padding = theme.padding
 
-	-- 	if isLocal then
-	-- 		editAvatarBtn.pos = {
-	-- 			self.Width * 0.5 - editAvatarBtn.Width * 0.5,
-	-- 			avatarNode.pos.Y - editAvatarBtn.Height,
-	-- 		}
-	-- 	end
+		local friend = friendText
+		if addFriendBtn and addFriendBtn:isVisible() then
+			friend = addFriendBtn
+		end
 
-	-- 	activeNode.pos = { self.Width * 0.5 - activeNode.Width * 0.5, ACTIVE_NODE_MARGIN }
-	-- end
+		if creationsBtn then
+			creationsBtn:setParent(nil)
+		end
+		if friend then
+			friend:setParent(nil)
+		end
+		if coinsBtn then
+			coinsBtn:setParent(nil)
+		end
+		if doneBtn then
+			doneBtn:setParent(nil)
+		end
+
+		local h = 0
+
+		if activeNode == infoNode then
+			if isLocal then
+				coinsBtn:setParent(profileNode)
+				h = coinsBtn.Height + padding * 2
+				local w = coinsBtn.Width
+				coinsBtn.pos = { profileNode.Width * 0.5 - w * 0.5, h * 0.5 - coinsBtn.Height * 0.5 }
+			else
+				creationsBtn:setParent(profileNode)
+				friend:setParent(profileNode)
+				h = math.max(friend.Height, creationsBtn.Height) + padding * 2
+				local w = friend.Width + padding + creationsBtn.Width
+				friend.pos = { profileNode.Width * 0.5 - w * 0.5, h * 0.5 - friend.Height * 0.5 }
+				creationsBtn.pos = { friend.pos.X + friend.Width + padding, h * 0.5 - creationsBtn.Height * 0.5 }
+			end
+		else -- edit node
+			if isLocal then
+				doneBtn:setParent(profileNode)
+				h = doneBtn.Height + padding * 2
+				local w = doneBtn.Width
+				doneBtn.pos = { profileNode.Width * 0.5 - w * 0.5, h * 0.5 - doneBtn.Height * 0.5 }
+			end
+		end
+
+		scroll.Height = profileNode.Height - h
+		scroll.pos = { 0, h }
+	end
 
 	scroll.parentDidResize = function(self)
 		local parent = self.parent
 		local padding = theme.padding
 
 		cell.Width = parent.Width - padding * 2
-
-		scroll.Height = parent.Height
 		scroll.Width = parent.Width
-		scroll.pos = { 0, 0 }
+
+		functions.refreshBottomButtons()
 
 		local width = self.Width - padding * 2
 
@@ -775,8 +801,8 @@ profile.create = function(_, config)
 
 		local cellContentHeight = avatarNodeHeight
 
-		if infoNode.parent ~= nil then
-			cellContentHeight = cellContentHeight + infoNode.Height + padding
+		if activeNode.parent ~= nil then
+			cellContentHeight = cellContentHeight + activeNode.Height + padding
 		end
 
 		cell.Height = cellContentHeight
@@ -810,7 +836,7 @@ profile.create = function(_, config)
 		-- remove previous node if any
 		if activeNode ~= nil then
 			if activeNode == infoNode then
-				activeNode:hide()
+				activeNode:setParent(nil)
 			else
 				activeNode:remove()
 			end
@@ -822,6 +848,7 @@ profile.create = function(_, config)
 		-- force layout refresh
 		functions.refresh()
 		content:refreshModal()
+		scroll:parentDidResize()
 	end
 
 	content.didBecomeActive = function()
@@ -856,11 +883,7 @@ profile.create = function(_, config)
 			userInfo.nbFriends = usr.nbFriends or 0
 			userInfo.created = usr.created
 
-			-- update info node with user info we just received
-			if infoNode.setUserInfo ~= nil then
-				infoNode:setUserInfo()
-			end
-
+			infoNode:setUserInfo()
 			content:refreshModal()
 		end
 
