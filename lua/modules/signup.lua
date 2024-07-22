@@ -889,9 +889,12 @@ signup.startFlow = function(self, config)
 
 				countryInput.onSelect = function(self, index)
 					System:DebugEvent("User did pick country for phone number")
-					self.Text = countryLabels[index]
-					-- TODO: update selectedPrefix
-					selectedPrefix = "TODO"
+					self.Text = countryLabels[index] -- "FR +33"
+					-- find the position of the + char
+					local plusPos = string.find(self.Text, "+") -- 4
+					-- get the substring after the + char
+					local prefix = string.sub(self.Text, plusPos + 1) -- "33"
+					selectedPrefix = prefix
 					layoutPhoneInput()
 				end
 
