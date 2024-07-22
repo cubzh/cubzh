@@ -308,58 +308,50 @@ function createUI(system)
 			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
-		if attr.object.SortOrder ~= nil then
-			local sortOrder = 1
-			parent = attr.object:GetParent()
-			while parent ~= nil do
-				if parent.SortOrder ~= nil then
-					if parent.SortOrder >= sortOrder then
-						sortOrder = parent.SortOrder + 1
-					end
-				end
-				parent = parent:GetParent()
-			end
+		-- SORT ORDERS
+		-- TODO: review this, keeping number of different sort orders to a minimum is a good thing
 
-			-- apply view order
-			-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+		local sortOrder = 1
+		parent = attr.object:GetParent()
+		while parent ~= nil do
+			if parent.SortOrder ~= nil then
+				if parent.SortOrder >= sortOrder then
+					sortOrder = parent.SortOrder + 1
+					break
+				end
+			end
+			parent = parent:GetParent()
+		end
+
+		-- apply view order
+		-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+		if attr.object.SortOrder then
 			if attr.object.SortOrder < 255 then
 				attr.object.SortOrder = sortOrder
 			end
-			-- if attr.object.debugName ~= nil then
-			-- 	System.Log(">> SET SORT ORDER (" .. attr.object.debugName .. ") : " .. attr.object.SortOrder)
-			-- elseif attr.object.Text then
-			-- 	System.Log(">> SET SORT ORDER (label: " .. attr.object.Text .. ") : " .. attr.object.SortOrder)
-			-- end
-
-			local t = {}
-			t.applySortOrderToChildren = function(n, sortOrder)
-				local children = n.Children
-				for _, child in ipairs(children) do
-					if child.SortOrder ~= nil then
-						-- SortOrder == 255 means elements are forced display on top, do not modify in that case
-						if child.SortOrder < 255 then
-							child.SortOrder = sortOrder
-						end
-						-- System.Log("child.SortOrder =" .. child.SortOrder)
-						-- if child.debugName ~= nil then
-						-- 	System.Log(">> SET CHILD SORT ORDER (" .. child.debugName .. ") : " .. child.SortOrder)
-						-- elseif child.Text then
-						-- 	System.Log(">> SET CHILD SORT ORDER (label: " .. child.Text .. ") : " .. child.SortOrder)
-						-- else
-						-- 	System.Log(">> SET CHILD SORT ORDER (?) : " .. child.SortOrder)
-						-- end
-					end
-					t.applySortOrderToChildren(child, sortOrder + 1)
-				end
-			end
-			t.applySortOrderToChildren(attr.object, sortOrder + 1)
+		else
+			sortOrder = sortOrder - 1
 		end
+
+		local t = {}
+		t.applySortOrderToChildren = function(n, sortOrder)
+			local children = n.Children
+			for _, child in ipairs(children) do
+				if child.SortOrder ~= nil then
+					-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+					if child.SortOrder < 255 then
+						child.SortOrder = sortOrder
+					end
+				end
+				t.applySortOrderToChildren(child, sortOrder + 1)
+			end
+		end
+		t.applySortOrderToChildren(attr.object, sortOrder + 1)
 
 		_parentDidResizeWrapper(self)
 	end
 
 	_parentDidResizeWrapper(self)
-	-- end
 
 	local function _nodeHasParent(self)
 		return self.object:GetParent() ~= nil

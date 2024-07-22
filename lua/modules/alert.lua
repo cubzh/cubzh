@@ -310,10 +310,6 @@ alert.create = function(self, text, config)
 
 	popup:setPositiveCallback("OK", function() end)
 
-	popup.bounce = function(_)
-		modal:bounce()
-	end
-
 	return popup
 end
 
