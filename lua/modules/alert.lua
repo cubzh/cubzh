@@ -20,58 +20,32 @@ alert.create = function(self, text, config)
 
 	local modal = require("modal")
 	local theme = require("uitheme").current
-	local ease = require("ease")
 
-	-- default config
-	local _config = {
+	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+	if not ok then
+		error("alert:create(config) - config error: " .. err, 2)
 	end
 
-	local ui = _config.uikit
+	local ui = config.uikit
 
 	local minButtonWidth = 100
 
 	local content = modal:createContent()
 	content.closeButton = false
 
-	content.idealReducedContentSize = function(content, _, _)
-		content:refresh()
-		return Number2(content.Width, content.Height)
-	end
-
-	local maxWidth = function()
-		return Screen.Width - theme.modalMargin * 2
-	end
-
-	local maxHeight = function()
-		return Screen.Height - 100
-	end
-
-	local position = function(modal, forceBounce)
-		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5, 0)
-
-		if not modal.updatedPosition or forceBounce then
-			modal.LocalPosition = p - { 0, 100, 0 }
-			modal.updatedPosition = true
-			ease:outElastic(modal, 0.3).LocalPosition = p
-		else
-			ease:cancel(modal)
-			modal.LocalPosition = p
-		end
-	end
-
-	local node = ui:createFrame(Color(0, 0, 0))
+	local node = ui:frame()
 	content.node = node
 
-	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
+	content.idealReducedContentSize = function(content, _, _)
+		content:refresh()
+		return Number2(node.Width, node.Height)
+	end
 
 	local label = ui:createText(text, Color.White)
 	label:setParent(node)
@@ -168,6 +142,20 @@ alert.create = function(self, text, config)
 		end
 	end
 
+	local maxWidth = function()
+		return Screen.Width - theme.modalMargin * 2
+	end
+
+	local maxHeight = function()
+		return Screen.Height - 100
+	end
+
+	local position = function(modal)
+		modal.pos = { Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5 }
+	end
+
+	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
+
 	---@type alertInstance
 	--- An [alertInstance] can be used to personalize its buttons.
 
@@ -200,8 +188,7 @@ alert.create = function(self, text, config)
 			if okButton then
 				okButton.Text = text
 			else
-				okButton = ui:createButton(text)
-				okButton:setColor(Color(161, 217, 0), Color(45, 57, 17), false)
+				okButton = ui:buttonPositive({ content = text })
 				okButton:setParent(node)
 				okButton.onRelease = function(_)
 					positiveCallback()
@@ -252,8 +239,7 @@ alert.create = function(self, text, config)
 			if negativeButton then
 				negativeButton.Text = text
 			else
-				negativeButton = ui:createButton(text)
-				negativeButton:setColor(Color(227, 52, 55), Color.White, false)
+				negativeButton = ui:buttonNegative({ content = text })
 				negativeButton:setParent(node)
 				negativeButton.onRelease = function(_)
 					negativeCallback()
@@ -303,7 +289,7 @@ alert.create = function(self, text, config)
 			if neutralButton then
 				neutralButton.Text = text
 			else
-				neutralButton = ui:createButton(text)
+				neutralButton = ui:buttonNeutral({ content = text })
 				neutralButton:setParent(node)
 				neutralButton.onRelease = function(_)
 					neutralCallback()
@@ -325,7 +311,7 @@ alert.create = function(self, text, config)
 	popup:setPositiveCallback("OK", function() end)
 
 	popup.bounce = function(_)
-		position(popup, true)
+		modal:bounce()
 	end
 
 	return popup
