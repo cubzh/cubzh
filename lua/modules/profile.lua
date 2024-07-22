@@ -6,6 +6,7 @@ systemApi = require("system_api", System)
 modal = require("modal")
 theme = require("uitheme").current
 uiAvatar = require("ui_avatar")
+str = require("str")
 
 -- CONSTANTS
 
@@ -175,7 +176,7 @@ profile.create = function(_, config)
 		local created = ui:createText("📰 ", Color.White)
 		created:setParent(cell)
 
-		local bioText = ui:createText(userInfo.bio, Color.White, "small")
+		local bioText = ui:createText(userInfo.bio, { color = Color.White, size = "small" })
 		bioText:setParent(cell)
 
 		local socialBtns = {}
@@ -270,7 +271,7 @@ profile.create = function(_, config)
 				created.Text = "📰"
 			end
 
-			bioText.Text = userInfo.bio or ""
+			bioText.Text = str:trimSpaces(userInfo.bio or "")
 
 			local charWidth
 			local emojiWidth
