@@ -280,8 +280,6 @@ mod.create = function(self, config)
 								LocalEvent:Send("avatar_editor_update", { eyesColorIndex = eyesColorIndex })
 
 								for _, b in ipairs(btns) do
-									print("b:", b)
-									print("b.head:", b.head)
 									b.head:setEyes({
 										color = avatar.eyeColors[avatarProperties.eyesColorIndex],
 									})

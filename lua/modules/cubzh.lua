@@ -1768,6 +1768,10 @@ function home()
 			Menu:ShowProfile({ player = Player })
 		end
 
+		btnFriends.onRelease = function()
+			Menu:ShowFriends()
+		end
+
 		bottomBar.parentDidResize = function(self)
 			self.Width = self.parent.Width
 			local btnWidth = self.Width / 5.0

@@ -421,9 +421,7 @@ function refreshDisplay()
 		end
 
 		chatBtn:hide()
-		-- friendsBtn:hide()
 		pezhBtn:hide()
-		-- profileFrame:hide()
 	else
 		if activeModal then
 			activeModal:show()
@@ -436,9 +434,7 @@ function refreshDisplay()
 		end
 
 		chatBtn:show()
-		-- friendsBtn:show()
 		pezhBtn:show()
-		-- profileFrame:show()
 	end
 end
 
@@ -911,14 +907,6 @@ textBubbleShape.parentDidResize = function(self)
 	self.pos = { PADDING, PADDING_BIG }
 end
 
--- friendsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
-
--- friendsBtn:setParent(topBar)
-
--- friendsShape = ui:createShape(bundle:Shape("shapes/friends_icon"))
--- friendsShape:setParent(friendsBtn)
--- friendsShape.parentDidResize = btnContentParentDidResize
-
 cubzhBtn.onPress = topBarBtnPress
 cubzhBtn.onCancel = topBarBtnRelease
 cubzhBtn.onRelease = function(self)
@@ -941,28 +929,6 @@ chatBtn.onRelease = function(self)
 		refreshChat()
 	end
 end
-
--- friendsBtn.onPress = topBarBtnPress
--- friendsBtn.onCancel = topBarBtnRelease
--- friendsBtn.onRelease = function(self)
--- 	topBarBtnRelease(self)
--- 	showModal(MODAL_KEYS.FRIENDS)
--- end
-
--- profileFrame = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
-
--- profileFrame:setParent(topBar)
-
--- profileFrame.onPress = topBarBtnPress
--- profileFrame.onCancel = topBarBtnRelease
--- profileFrame.onRelease = function(self)
--- 	topBarBtnRelease(self)
--- 	showModal(MODAL_KEYS.PROFILE)
--- end
-
--- avatar = ui:createFrame(Color.transparent)
--- avatar:setParent(profileFrame)
--- avatar.parentDidResize = btnContentParentDidResize
 
 -- PEZH
 
@@ -1123,13 +1089,6 @@ function getCubzhMenuModalContent()
 
 	local node = ui:createFrame()
 	content.node = node
-
-	-- local btnHome = ui:createButton("🏠 Home")
-	-- btnHome:setParent(node)
-
-	-- btnHome.onRelease = function()
-	-- 	System.GoHome()
-	-- end
 
 	local btnWorlds = ui:createButton("🌎 Worlds", { textSize = "big" })
 	btnWorlds:setColor(theme.colorExplore)
@@ -1617,17 +1576,6 @@ topBar.parentDidResize = function(self)
 	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width
 	connBtn.pos.X = cubzhBtn.pos.X - connBtn.Width
 
-	-- PROFILE BUTTON
-
-	-- profileFrame.Height = height
-	-- profileFrame.Width = height
-
-	-- FRIENDS BUTTON
-
-	-- friendsBtn.Height = height
-	-- friendsBtn.Width = height
-	-- friendsBtn.pos.X = profileFrame.pos.X + profileFrame.Width
-
 	-- PEZH BUTTON
 
 	pezhBtn.Height = height
@@ -1797,7 +1745,7 @@ menu.ShowFriends = function(_)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	friendsBtn:onRelease()
+	showModal(MODAL_KEYS.FRIENDS)
 	return true
 end
 

@@ -95,8 +95,6 @@ mod.getFriends = function(self, config, callback)
 		error("api:getFriends(config, callback): config error (" .. err .. ")", 2)
 	end
 
-	config = require("config"):merge(defaultConfig, config)
-
 	local u = url:parse(mod.kApiAddr .. "/users/" .. config.userID .. "/friends")
 
 	for _, field in ipairs(config.fields) do
@@ -148,61 +146,96 @@ end
 
 -- getSentFriendRequests ...
 -- callback(requests, err)
-mod.getSentFriendRequests = function(_, callback, fields)
+mod.getSentFriendRequests = function(self, config, callback)
+	if self ~= mod then
+		error("api:getSentFriendRequests(config, callback): use `:`", 2)
+	end
 	if type(callback) ~= "function" then
-		error("api:getSentFriendRequests(callback, [fields]) - callback must be a function", 2)
-		return
-	end
-	if fields ~= nil and type(fields) ~= "table" then
-		error("api:getSentFriendRequests(callback, [fields]) - fields must be a table or nil", 2)
+		error("api:getSentFriendRequests(config, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/users/self/friend-requests?status=sent"
+	local defaultConfig = {
+		fields = { "id" },
+	}
 
-	url = urlGetFields(url, fields)
-
-	local req = HTTP:Get(url, function(res)
-		if res.StatusCode ~= 200 then
-			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
-			return
-		end
-		local requests, err = JSON:Decode(res.Body)
-		if err ~= nil then
-			callback(nil, mod:error(res.StatusCode, "getSentFriendRequests JSON decode error: " .. err))
-			return
-		end
-		-- success
-		callback(requests)
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
 	end)
+
+	if not ok then
+		error("api:getSentFriendRequests(config, callback): config error (" .. err .. ")", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/users/self/friend-requests")
+
+	u:addQueryParameter("status", "sent")
+
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(resp)
+		if resp.StatusCode ~= 200 then
+			callback(nil, mod:error(resp.StatusCode, "could not get sent friend requests (" .. resp.StatusCode .. ")"))
+			return
+		end
+		local requests, err = JSON:Decode(resp.Body)
+		if err ~= nil then
+			callback(nil, mod:error(resp.StatusCode, "getSentFriendRequests JSON decode error: " .. err))
+			return
+		end
+		callback(requests) -- success
+	end)
+
 	return req
 end
 
 -- getReceivedFriendRequests ...
 -- callback(ok, reqs, errMsg)
-mod.getReceivedFriendRequests = function(_, callback, fields)
+mod.getReceivedFriendRequests = function(self, config, callback)
+	if self ~= mod then
+		error("api:getReceivedFriendRequests(config, callback): use `:`", 2)
+	end
 	if type(callback) ~= "function" then
-		error("api:getReceivedFriendRequests(callback, [fields]) - callback must be a function", 2)
-	end
-	if fields ~= nil and type(fields) ~= "table" then
-		error("api:getReceivedFriendRequests(callback, [fields]) - fields must be a table or nil", 2)
+		error("api:getReceivedFriendRequests(config, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/users/self/friend-requests?status=received"
+	local defaultConfig = {
+		fields = { "id" },
+	}
 
-	url = urlGetFields(url, fields)
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
 
-	local req = HTTP:Get(url, function(resp)
+	if not ok then
+		error("api:getReceivedFriendRequests(config, callback): config error (" .. err .. ")", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/users/self/friend-requests")
+
+	u:addQueryParameter("status", "received")
+
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get received requests (" .. resp.StatusCode .. ")")
+			callback(
+				nil,
+				mod:error(resp.StatusCode, "could not get received friend requests (" .. resp.StatusCode .. ")")
+			)
 			return
 		end
 		local requests, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "get received requests decode error: " .. err)
+			callback(nil, mod:error(resp.StatusCode, "getReceivedFriendRequests JSON decode error: " .. err))
 			return
 		end
-		callback(true, requests, nil) -- success
+		callback(requests) -- success
 	end)
+
 	return req
 end
 
