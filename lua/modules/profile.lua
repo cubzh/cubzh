@@ -101,18 +101,9 @@ profile.create = function(_, config)
 		requests = {}
 	end
 
-	local editBtn
-
 	local avatarNode = uiAvatar:get({ usernameOrId = username, ui = ui })
 	-- avatarNode:setColor(Color(255, 0, 0))
 	avatarNode:setParent(cell)
-
-	local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
-	editAvatarBtn:setParent(isLocal and profileNode or nil)
-
-	editAvatarBtn.onRelease = function()
-		-- editAvatarBtnOnReleaseCallback()
-	end
 
 	local userInfo = {
 		bio = "",
@@ -164,13 +155,59 @@ profile.create = function(_, config)
 
 		local node = ui:frame()
 
-		-- local usernameText = ui:createText(username, Color.White, "big")
-		-- usernameText:setParent(node)
+		local editAvatarBtn
+		local editBioBtn
+		local editLinksBtn
+
+		if isLocal then
+			editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
+			editAvatarBtn:setParent(cell)
+
+			editAvatarBtn.onRelease = function()
+				-- editAvatarBtnOnReleaseCallback()
+			end
+
+			editBioBtn = ui:buttonNeutral({ content = "✏️ Edit bio", textSize = "small" })
+			editBioBtn:setParent(cell)
+
+			editBioBtn.onRelease = function()
+				System.MultilineInput(
+					userInfo.bio,
+					"Your bio",
+					"Describe yourself with 140 characters",
+					"",
+					140,
+					function(text) -- done
+						userInfo.bio = text
+						local data = { bio = userInfo.bio }
+						-- TODO: we could use `api` instead of `require("system_api", System)`
+						require("system_api", System):patchUserInfo(data, function(err)
+							if err then
+								print("❌", err)
+							end
+						end)
+						node:setUserInfo()
+						ui:turnOn()
+					end,
+					function() -- cancel
+						ui:turnOn()
+					end
+				)
+				ui:turnOff()
+			end
+
+			editLinksBtn = ui:buttonNeutral({ content = "✏️ Edit links", textSize = "small" })
+			editLinksBtn:setParent(cell)
+
+			editLinksBtn.onRelease = function()
+				functions.setActiveNode(functions.createEditInfoNode())
+			end
+		end
 
 		local reputation = ui:createText("🏆 0", Color.White)
 		reputation:setParent(cell)
 
-		local friends = ui:createText("🙂 0", Color.White)
+		local friends = ui:createText("👥 0", Color.White)
 		friends:setParent(cell)
 
 		local created = ui:createText("📰 ", Color.White)
@@ -199,6 +236,10 @@ profile.create = function(_, config)
 
 			local totalHeight = reputation.Height
 
+			if editAvatarBtn then
+				totalHeight = totalHeight + editAvatarBtn.Height + padding
+			end
+
 			local listVisibleSocialButtons = {}
 			for _, v in pairs(socialBtns) do
 				if v:isVisible() then
@@ -211,26 +252,48 @@ profile.create = function(_, config)
 				totalHeight = totalHeight + bioText.Height + padding
 			end
 
+			if editBioBtn then
+				totalHeight = totalHeight + editBioBtn.Height + padding
+			end
+
 			if #listVisibleSocialButtons > 0 then
 				local btnListHeight = math.ceil(#listVisibleSocialButtons / 2) * (socialBtns.tiktok.Height + padding)
 				totalHeight = totalHeight + btnListHeight + padding
+			end
+
+			if editLinksBtn then
+				totalHeight = totalHeight + editLinksBtn.Height + padding
 			end
 
 			self.Height = totalHeight
 
 			local cursorY = self.Height
 
+			if editAvatarBtn then
+				cursorY = cursorY - editAvatarBtn.Height - padding
+				editAvatarBtn.pos = { self.Width * 0.5 - editAvatarBtn.Width * 0.5, cursorY }
+			end
+
 			-- stats
 			cursorY = cursorY - reputation.Height - padding
-			local bottomLineWidth = reputation.Width + padding + friends.Width + padding + created.Width
+			local bottomLineWidth = reputation.Width
+				+ theme.paddingBig
+				+ friends.Width
+				+ theme.paddingBig
+				+ created.Width
 
 			reputation.pos = { self.Width * 0.5 - bottomLineWidth * 0.5, cursorY }
-			friends.pos = { reputation.pos.X + reputation.Width + padding, cursorY }
-			created.pos = { friends.pos.X + friends.Width + padding, cursorY }
+			friends.pos = { reputation.pos.X + reputation.Width + theme.paddingBig, cursorY }
+			created.pos = { friends.pos.X + friends.Width + theme.paddingBig, cursorY }
 
 			if bioText.Text ~= "" then
 				bioText.pos = { self.Width * 0.5 - bioText.Width * 0.5, cursorY - bioText.Height - padding }
 				cursorY = bioText.pos.Y
+			end
+
+			if editBioBtn then
+				cursorY = cursorY - editBioBtn.Height - padding
+				editBioBtn.pos = { self.Width * 0.5 - editBioBtn.Width * 0.5, cursorY }
 			end
 
 			-- Place middle block (socials)
@@ -250,6 +313,11 @@ profile.create = function(_, config)
 					end
 				end
 			end
+
+			if editLinksBtn then
+				cursorY = cursorY - editLinksBtn.Height - padding
+				editLinksBtn.pos = { self.Width * 0.5 - editLinksBtn.Width * 0.5, cursorY }
+			end
 		end
 
 		node.setUserInfo = function(_)
@@ -257,7 +325,7 @@ profile.create = function(_, config)
 				return
 			end
 
-			friends.Text = "🙂 " .. tostring(userInfo.nbFriends)
+			friends.Text = "👥 " .. tostring(userInfo.nbFriends)
 
 			if userInfo.created ~= nil then
 				local creationDateIso = userInfo.created
@@ -326,40 +394,9 @@ profile.create = function(_, config)
 		return node
 	end
 
-	local createEditInfoNode = function()
+	functions.createEditInfoNode = function()
 		local node = ui:createFrame(Color(0, 0, 0, 0))
 		node.type = "EditInfoNode"
-
-		local bioTitle = ui:createText("✏️ Bio", theme.textColor)
-		bioTitle:setParent(node)
-
-		-- temporary button
-		local bioBtn = ui:buttonNeutral({ content = "Edit Bio" })
-		bioBtn:setParent(node)
-		bioBtn.onRelease = function()
-			System.MultilineInput(
-				userInfo.bio,
-				"Your bio",
-				"Describe yourself with 140 characters",
-				"",
-				140,
-				function(text) -- done
-					userInfo.bio = text
-					local data = { bio = userInfo.bio }
-					-- TODO: we could use `api` instead of `require("system_api", System)`
-					require("system_api", System):patchUserInfo(data, function(err)
-						if err then
-							print("❌", err)
-						end
-					end)
-					ui:turnOn()
-				end,
-				function() -- cancel
-					ui:turnOn()
-				end
-			)
-			ui:turnOff()
-		end
 
 		local removeURL = function(value)
 			local slashIndex = 0
@@ -490,11 +527,7 @@ profile.create = function(_, config)
 			local padding = theme.padding
 			local textInputHeight = discordLink.Height
 
-			self.Height = bioTitle.Height
-				+ padding
-				+ bioBtn.Height
-				+ padding
-				+ socialLinksTitle.Height
+			self.Height = socialLinksTitle.Height
 				+ padding
 				+ textInputHeight
 				+ padding -- discord
@@ -504,15 +537,8 @@ profile.create = function(_, config)
 				+ padding -- X
 				+ textInputHeight -- Github
 
-			bioTitle.pos.X = 0
-			bioTitle.pos.Y = self.Height - bioTitle.Height
-
-			bioBtn.pos.X = 0
-			bioBtn.pos.Y = bioTitle.pos.Y - bioBtn.Height - padding
-			bioBtn.Width = self.Width
-
 			socialLinksTitle.pos.X = 0
-			socialLinksTitle.pos.Y = bioBtn.pos.Y - socialLinksTitle.Height - padding
+			socialLinksTitle.pos.Y = self.Height - socialLinksTitle.Height
 
 			discordLogo.pos.X = 0
 			discordLogo.pos.Y = socialLinksTitle.pos.Y - textInputHeight - padding
@@ -557,40 +583,37 @@ profile.create = function(_, config)
 	infoNode = createInfoNode()
 	infoNode:setParent(nil)
 
-	local toggleEditOptions = function(btn)
-		if btn.Text == nil then
-			return
-		end
+	-- local toggleEditOptions = function(btn)
+	-- 	if btn.Text == nil then
+	-- 		return
+	-- 	end
 
-		editAvatarBtn:unselect()
-		if btn.Text == "✏️ Edit" then
-			btn.Text = "✅ Done"
+	-- 	-- editAvatarBtn:unselect()
+	-- 	if btn.Text == "✏️ Edit" then
+	-- 		btn.Text = "✅ Done"
 
-			editInfoBtnOnReleaseCallback()
-		else
-			btn.Text = "✏️ Edit"
+	-- 		editInfoBtnOnReleaseCallback()
+	-- 	else
+	-- 		btn.Text = "✏️ Edit"
 
-			content.tabs = nil
-			functions.setActiveNode(infoNode)
+	-- 		content.tabs = nil
+	-- 		functions.setActiveNode(infoNode)
 
-			infoNode:setUserInfo()
-		end
-	end
+	-- 		infoNode:setUserInfo()
+	-- 	end
+	-- end
 
-	editInfoBtnOnReleaseCallback = function(_)
-		content.tabs = nil
-		editAvatarBtn:unselect()
-		functions.setActiveNode(createEditInfoNode())
-	end
+	-- editInfoBtnOnReleaseCallback = function(_)
+	-- 	content.tabs = nil
+	-- 	-- editAvatarBtn:unselect()
+	-- 	functions.setActiveNode(createEditInfoNode())
+	-- end
 
 	local avatarRot = Number3(0, math.pi, 0)
 	local dragListener = nil
 	local avatarLoadedListener = nil
 
 	if isLocal then
-		editBtn = ui:buttonNeutral({ content = "✏️ Edit" })
-		editBtn:disable()
-
 		local coinsBtn = ui:buttonNeutral({ content = "💰 …", sound = "coin_1" })
 		coinsBtn.onRelease = function(_)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
@@ -608,7 +631,6 @@ profile.create = function(_, config)
 		end)
 
 		content.bottomRight = { coinsBtn }
-		content.bottomLeft = { editBtn }
 	else
 		local showCreationsBtn = ui:buttonNeutral({ content = "✨ Show Creations", textSize = "small" })
 		showCreationsBtn.onRelease = function()
@@ -708,7 +730,7 @@ profile.create = function(_, config)
 		local activeNodeWidthWithMargin = activeNode.Width + ACTIVE_NODE_MARGIN * 2
 		local activeNodeHeightWithMargin = activeNode.Height + ACTIVE_NODE_MARGIN * 2
 
-		totalHeight = activeNodeHeightWithMargin + (isLocal and editAvatarBtn.Height or 0)
+		totalHeight = activeNodeHeightWithMargin
 		totalWidth = math.max(activeNodeWidthWithMargin)
 
 		return totalWidth, totalHeight
@@ -799,7 +821,6 @@ profile.create = function(_, config)
 
 		-- force layout refresh
 		functions.refresh()
-
 		content:refreshModal()
 	end
 
@@ -838,13 +859,6 @@ profile.create = function(_, config)
 			-- update info node with user info we just received
 			if infoNode.setUserInfo ~= nil then
 				infoNode:setUserInfo()
-			end
-
-			if editBtn ~= nil and editBtn.enable ~= nil then
-				editBtn:enable()
-				editBtn.onRelease = function(btn)
-					toggleEditOptions(btn)
-				end
 			end
 
 			content:refreshModal()

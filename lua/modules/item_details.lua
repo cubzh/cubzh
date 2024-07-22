@@ -291,13 +291,6 @@ mod.createModalContent = function(_, config)
 				return
 			end
 
-			print("repo:", itemInfo.repo)
-			print("name:", itemInfo.name)
-			print("authorName:", itemInfo.authorName)
-			print("authorId:", itemInfo.authorId)
-			print("created:", itemInfo.created)
-			print("updated:", itemInfo.updated)
-
 			item.authorName = itemInfo.authorName
 			item.authorId = itemInfo.authorId
 			item.description = itemInfo.description
