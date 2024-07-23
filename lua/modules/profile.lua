@@ -120,6 +120,7 @@ profile.create = function(_, config)
 	local coinsBtn
 	local creationsBtn
 	local addFriendBtn
+	local acceptFriendBtn
 	local friendText
 	local doneBtn
 
@@ -625,16 +626,20 @@ profile.create = function(_, config)
 
 		local alreadyFriends = nil
 		local requestSent = nil
+		local requestReceived = nil
 
-		local updateFriendInfo = function()
+		functions.updateFriendInfo = function()
 			-- wait for both responses
-			if alreadyFriends == nil or requestSent == nil then
+			if alreadyFriends == nil or requestSent == nil or requestReceived == nil then
 				return
 			end
 
 			friendText:hide()
 			if addFriendBtn then
 				addFriendBtn:hide()
+			end
+			if acceptFriendBtn then
+				acceptFriendBtn:hide()
 			end
 
 			if alreadyFriends then
@@ -643,22 +648,36 @@ profile.create = function(_, config)
 			elseif requestSent then
 				friendText.Text = "Friend request sent! ✉️"
 				friendText:show()
+			elseif requestReceived then
+				if not acceptFriendBtn then
+					acceptFriendBtn = ui:buttonNeutral({ content = "Accept Friend! ✅", textSize = "small" })
+					acceptFriendBtn:setParent(nil)
+				end
+				acceptFriendBtn:show()
+
+				acceptFriendBtn.onRelease = function(btn)
+					btn:disable()
+					systemApi:replyToFriendRequest(userID, true, function(ok, err)
+						if ok == true and err == nil then
+							functions.checkFriendRelationShip()
+						else
+							btn:enable()
+						end
+					end)
+				end
 			else
 				if not addFriendBtn then
-					addFriendBtn = ui:buttonNeutral({ content = "➕ Friend 👥", textSize = "small" })
+					addFriendBtn = ui:buttonNeutral({ content = "Add Friend 👥", textSize = "small" })
 					addFriendBtn:setParent(nil)
 				end
+				addFriendBtn:show()
 
 				addFriendBtn.onRelease = function(btn)
 					btn:disable()
-					btn.text = "..."
 					require("system_api", System):sendFriendRequest(userID, function(ok, err)
 						if ok == true and err == nil then
-							btn.text = "Request sent!"
-							btn.onRelease = nil
-							btn:enable()
+							functions.checkFriendRelationShip()
 						else
-							btn.Text = "Add as Friend ➕"
 							btn:enable()
 						end
 					end)
@@ -668,39 +687,60 @@ profile.create = function(_, config)
 			functions.refreshBottomButtons()
 		end
 
-		-- check if the User is already a friend
-		local req = api:getFriends({ fields = { "id" } }, function(friends, err)
-			if err ~= nil then
-				return
-			end
-
-			alreadyFriends = false
-			for _, friend in pairs(friends) do
-				if friend.id == userID then
-					alreadyFriends = true
-					break
+		functions.checkFriendRelationShip = function()
+			-- check if the User is already a friend
+			local req = api:getFriends({ fields = { "id" } }, function(friends, err)
+				if err ~= nil then
+					return
 				end
-			end
-			updateFriendInfo()
-		end)
-		table.insert(requests, req)
 
-		-- check if a request was already sent
-		req = api:getSentFriendRequests({ fields = { "id" } }, function(requests, err)
-			if err ~= nil then
-				return
-			end
-
-			requestSent = false
-			for _, req in pairs(requests) do
-				if req.id == userID then
-					requestSent = true
-					break
+				alreadyFriends = false
+				for _, friend in pairs(friends) do
+					if friend.id == userID then
+						alreadyFriends = true
+						break
+					end
 				end
-			end
-			updateFriendInfo()
-		end)
-		table.insert(requests, req)
+				functions.updateFriendInfo()
+			end)
+			table.insert(requests, req)
+
+			-- check if a request was already sent
+			req = api:getSentFriendRequests({ fields = { "id" } }, function(requests, err)
+				if err ~= nil then
+					return
+				end
+
+				requestSent = false
+				for _, req in pairs(requests) do
+					if req.id == userID then
+						requestSent = true
+						break
+					end
+				end
+				functions.updateFriendInfo()
+			end)
+			table.insert(requests, req)
+
+			-- check if a request has been received
+			req = api:getReceivedFriendRequests({ fields = { "id" } }, function(requests, err)
+				if err ~= nil then
+					return
+				end
+
+				requestReceived = false
+				for _, req in pairs(requests) do
+					if req.id == userID then
+						requestReceived = true
+						break
+					end
+				end
+				functions.updateFriendInfo()
+			end)
+			table.insert(requests, req)
+		end
+
+		functions.checkFriendRelationShip()
 	end
 
 	functions.refresh = function()
@@ -734,6 +774,8 @@ profile.create = function(_, config)
 		local friend = friendText
 		if addFriendBtn and addFriendBtn:isVisible() then
 			friend = addFriendBtn
+		elseif acceptFriendBtn and acceptFriendBtn:isVisible() then
+			friend = acceptFriendBtn
 		end
 
 		if creationsBtn then
