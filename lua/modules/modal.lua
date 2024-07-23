@@ -348,9 +348,12 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 		local active = self.contentStack[#self.contentStack]
 		local firstContent = true
-		if active ~= nil and active.willResignActive ~= nil then
+
+		if active ~= nil then
 			firstContent = false
-			active:willResignActive()
+			if active.willResignActive ~= nil then
+				active:willResignActive()
+			end
 		end
 
 		table.insert(self.contentStack, content)

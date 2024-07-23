@@ -397,7 +397,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				if not avatar.loaded and cell.avatarRequests == nil then
 					local requests = avatar:load({ usernameOrId = user.username })
 					cell.avatarRequests = requests
-					print("RESUME LOAD, requests:", requests)
 				end
 				avatar:setParent(cell)
 
