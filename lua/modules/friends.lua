@@ -86,6 +86,16 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return Number2(width, height)
 	end
 
+	local function sortByLastSeenUsernameOrID(a, b)
+		if a.lastSeen ~= nil and b.lastSeen ~= nil then
+			return a.lastSeen > b.lastSeen
+		end
+		if a.username ~= nil and b.username ~= nil then
+			return a.username > b.username
+		end
+		return a.id > b.id
+	end
+
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 
 	node.onRemove = function()
@@ -193,9 +203,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 							table.insert(list, usr)
 						end
 					end
-					table.sort(list, function(a, b)
-						return a.username < b.username
-					end)
+					table.sort(list, sortByLastSeenUsernameOrID)
 					newListResponse(listID, list)
 				end)
 				table.insert(requests, req)
@@ -219,17 +227,11 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						end
 					end
 				end
+
+				table.sort(list, sortByLastSeenUsernameOrID)
+
 				newListResponse(listID, list)
-
-				local function sortByLastSeen(a, b)
-					if a.lastSeen ~= nil and b.lastSeen ~= nil then
-						return a.lastSeen > b.lastSeen
-					end
-					return a.id > b.id
-				end
-
-				table.sort(list, sortByLastSeen)
-			end, { "username", "id" })
+			end)
 			table.insert(requests, req)
 		end
 
