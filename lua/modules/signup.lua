@@ -1345,7 +1345,7 @@ signup.startFlow = function(self, config)
 				okBtn:setParent(drawer)
 				infoFrame:setParent(drawer)
 
-				avatarEditor = require("system_ui_avatar_editor", System):create({
+				avatarEditor = require("ui_avatar_editor"):create({
 					saveOnChangeIfLocalPlayer = true,
 					ui = ui,
 					requestHeightCallback = function(height)

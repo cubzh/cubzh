@@ -57,6 +57,7 @@ local avatarDidChange = function(change)
 	if apiUpdateTimer == nil then
 		apiUpdateTimer = Timer(1, false, function()
 			-- send API request
+			print("System:", System)
 			local api = require("system_api", System)
 
 			local data = {
