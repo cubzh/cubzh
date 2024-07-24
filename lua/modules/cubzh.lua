@@ -10,6 +10,7 @@ config = {
 	FRIEND_CELL_SIZE = 100,
 	TINY_PADDING = 2,
 	CELL_PADDING = 5,
+	LOAD_CONTENT_DELAY = 0.3,
 }
 
 Client.OnStart = function()
@@ -1050,6 +1051,10 @@ function home()
 				cell.thumbnail:setParent(nil)
 				cell.thumbnail = nil
 			end
+			if cell.loadThumbnailTimer then
+				cell.loadThumbnailTimer:Cancel()
+				cell.loadThumbnailTimer = nil
+			end
 			if cell.req then
 				cell.req:Cancel()
 				cell.req = nil
@@ -1070,7 +1075,7 @@ function home()
 				titleFrame.pos = { padding, padding }
 				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
-				local title = ui:createText("...", Color.White, "small")
+				local title = ui:createText("…", Color.White, "small")
 				title:setParent(titleFrame)
 				title.pos = { 2, 2 }
 
@@ -1103,35 +1108,37 @@ function home()
 					cell.thumbnail = thumbnail
 					recycleWorldCellShape(cell)
 				else
-					cell.req = api:getWorldThumbnail(world.id, function(img, err)
-						if err ~= nil then
-							return
+					cell.loadThumbnailTimer = Timer(config.LOAD_CONTENT_DELAY, function()
+						cell.req = api:getWorldThumbnail(world.id, function(img, err)
+							if err ~= nil then
+								return
+							end
+
+							local thumbnail = ui:frame({ image = img })
+							thumbnail:setParent(cell)
+							cell.thumbnail = thumbnail
+							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
+							recycleWorldCellShape(cell)
+							worldCellResizeFn(cell)
+						end)
+
+						-- placeholder shape, waiting for thumbnail
+						local item = table.remove(recycledWorldIcons)
+						if item == nil then
+							local shape = bundle:Shape("shapes/world_icon")
+							item = ui:createShape(shape, { spherized = true })
 						end
 
-						local thumbnail = ui:frame({ image = img })
-						thumbnail:setParent(cell)
-						cell.thumbnail = thumbnail
-						worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
-						recycleWorldCellShape(cell)
-						worldCellResizeFn(cell)
+						item:setParent(cell)
+						cell.shape = item
+						worldIcons[item] = true
 					end)
-
-					-- placeholder shape, waiting for thumbnail
-					local item = table.remove(recycledWorldIcons)
-					if item == nil then
-						local shape = bundle:Shape("shapes/world_icon")
-						item = ui:createShape(shape, { spherized = true })
-					end
-
-					item:setParent(cell)
-					cell.shape = item
-					worldIcons[item] = true
 				end
 
 				cell.world = world
 				cell.title.Text = world.title
 			else
-				cell.title.Text = "..."
+				cell.title.Text = "…"
 			end
 
 			cell.title.object.MaxWidth = cell.Width - (padding + config.TINY_PADDING) * 2
@@ -1189,6 +1196,10 @@ function home()
 
 		local function recycleItemCell(cell)
 			recycleItemCellLoadingShape(cell)
+			if cell.loadShapeTimer then
+				cell.loadShapeTimer:Cancel()
+				cell.loadShapeTimer = nil
+			end
 			if cell.req then
 				cell.req:Cancel()
 				cell.req = nil
@@ -1214,7 +1225,7 @@ function home()
 				titleFrame.pos = { padding, padding }
 				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
-				local title = ui:createText("...", Color.White, "small")
+				local title = ui:createText("…", Color.White, "small")
 				title:setParent(titleFrame)
 				title.pos = { 2, 2 }
 
@@ -1239,53 +1250,52 @@ function home()
 			end
 
 			cell.category = category or ""
+			cell.item = item
 
-			if item then
+			if cell.item then
+				local item = cell.item
 				local itemShape = itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name]
 				if itemShape ~= nil then
+					-- print("USE CACHED itemShape:", cell.category .. "_" .. item.repo .. "." .. item.name, itemShape)
 					itemShape:setParent(cell)
 					activeItemShapes[itemShape] = true
 					cell.itemShape = itemShape
 					recycleItemCellLoadingShape(cell)
 				else
-					cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
-						if obj == nil then
-							-- silent error, no print, just removing loading animation
-							-- local loadingCube = cell:getLoadingCube()
-							-- if loadingCube then
-							-- 	loadingCube:hide()
-							-- end
-							return
+					cell.loadShapeTimer = Timer(config.LOAD_CONTENT_DELAY, function()
+						cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
+							if obj == nil then
+								return
+							end
+
+							local itemShape = ui:createShape(obj, { spherized = true })
+							cell.itemShape = itemShape
+							itemShape:setParent(cell)
+							activeItemShapes[itemShape] = true
+							itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+
+							-- print("CACHE itemShape:", cell.category .. "_" .. item.repo .. "." .. item.name, itemShape)
+							itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name] = itemShape
+
+							recycleItemCellLoadingShape(cell)
+							cell:parentDidResize()
+						end)
+
+						-- placeholder shape, waiting for thumbnail
+						local loadingShape = table.remove(recycledItemLoadingShapes)
+						if loadingShape == nil then
+							local shape = bundle:Shape("shapes/world_icon")
+							loadingShape = ui:createShape(shape, { spherized = true })
 						end
 
-						local itemShape = ui:createShape(obj, { spherized = true })
-						cell.itemShape = itemShape
-						itemShape:setParent(cell)
-						activeItemShapes[itemShape] = true
-						itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
-
-						itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name] = itemShape
-
-						recycleItemCellLoadingShape(cell)
-						worldCellResizeFn(cell)
+						loadingShape:setParent(cell)
+						cell.loadingShape = loadingShape
+						itemLoadingShapes[loadingShape] = true
 					end)
-
-					-- placeholder shape, waiting for thumbnail
-					local loadingShape = table.remove(recycledItemLoadingShapes)
-					if loadingShape == nil then
-						local shape = bundle:Shape("shapes/world_icon")
-						loadingShape = ui:createShape(shape, { spherized = true })
-					end
-
-					loadingShape:setParent(cell)
-					cell.loadingShape = loadingShape
-					itemLoadingShapes[loadingShape] = true
 				end
-
-				cell.item = item
 				cell.title.Text = prettifyItemName(item.name)
 			else
-				cell.title.Text = "..."
+				cell.title.Text = "…"
 			end
 
 			cell.title.object.MaxWidth = cell.Width - (padding + config.TINY_PADDING) * 2
