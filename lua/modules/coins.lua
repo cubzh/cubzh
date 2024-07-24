@@ -26,7 +26,7 @@ coins.createModalContent = function(_, config)
 	local content = modal:createContent()
 	content.closeButton = true
 	content.title = "Bank Account"
-	content.icon = "💰"
+	content.icon = "🇵"
 
 	local node = ui:createFrame()
 	content.node = node

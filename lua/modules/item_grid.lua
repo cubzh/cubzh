@@ -296,7 +296,7 @@ itemGrid.create = function(_, config)
 								{ self.Width - self.likesFrame.Width, self.Height - self.likesFrame.Height }
 
 							self.priceLabel.object.MaxWidth = self.Width - theme.padding * 2
-							self.priceLabel.Text = "💰 0" -- 🪙
+							self.priceLabel.Text = "🇵 0" -- 🪙
 							self.priceFrame.Height = self.priceLabel.Height + theme.padding * 2
 							self.priceFrame.Width = self.priceLabel.Width + theme.padding * 2
 							self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }

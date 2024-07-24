@@ -603,7 +603,7 @@ profile.create = function(_, config)
 	local avatarLoadedListener = nil
 
 	if isLocal then
-		coinsBtn = ui:buttonNeutral({ content = "💰 …", sound = "coin_1" })
+		coinsBtn = ui:buttonNeutral({ content = "🇵 …", sound = "coin_1" })
 		coinsBtn.onRelease = function(_)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
 		end
@@ -613,10 +613,10 @@ profile.create = function(_, config)
 				return
 			end
 			if err then
-				coinsBtn.Text = "💰 0"
+				coinsBtn.Text = "🇵 0"
 				return
 			end
-			coinsBtn.Text = "💰 " .. math.floor(balance.total)
+			coinsBtn.Text = "🇵 " .. math.floor(balance.total)
 		end)
 	else
 		creationsBtn = ui:buttonSecondary({ content = "🛠️ Creations", textSize = "small" })
