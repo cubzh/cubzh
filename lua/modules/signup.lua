@@ -1731,10 +1731,10 @@ signup.startFlow = function(self, config)
 					-- Checks whether a magic key has been requested.
 					checks.askedMagicKey = function()
 						-- print("🟢 [askedMagicKey]")
-                        -- print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
-                        -- print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
-                        -- print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
-                        -- print("⚪️ [askedMagicKey] System.Username:", "[" .. System.Username .. "]")
+						-- print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
+						-- print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
+						-- print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
+						-- print("⚪️ [askedMagicKey] System.Username:", "[" .. System.Username .. "]")
 
 						System:DebugEvent("App checks if magic key has been requested")
 
@@ -1807,7 +1807,7 @@ signup.startFlow = function(self, config)
 
 							-- print("⚪️ [checkUserAccountComplete] API RESPONSE:")
 							-- for key, value in pairs(userInfo) do
-								-- print("⚪️ [checkUserAccountComplete] ->", key, value)
+							-- print("⚪️ [checkUserAccountComplete] ->", key, value)
 							-- end
 
 							-- ⚪️ username gaetan
@@ -1823,12 +1823,12 @@ signup.startFlow = function(self, config)
 							System.HasEmail = userInfo.hasEmail or false
 							-- System.HasPhoneNumber = userInfo.hasPhoneNumber or false
 
-							if System.Username ~= "" or System.HasEmail == true or System.HasPhoneNumber == true then
-                            -- print("🟢 -> login success")
+							if Client.LoggedIn then
+								-- print("🟢 -> login success")
 								internalLoginSuccess()
 							else
 								-- show signup
-                                -- print("🟢 -> createSignUpOrLoginStep")
+								-- print("🟢 -> createSignUpOrLoginStep")
 								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
 								signupFlow:push(createSignUpOrLoginStep())
 							end

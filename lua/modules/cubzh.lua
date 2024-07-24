@@ -140,8 +140,6 @@ Client.OnStart = function()
 	Sky.SkyColor = Color(121, 169, 255)
 	Sky.LightColor = Color(100, 100, 100)
 
-	titleScreen():show()
-
 	LocalEvent:Listen("signup_flow_avatar_preview", function()
 		titleScreen():hide()
 		avatar():show({ mode = "demo" })
@@ -217,6 +215,13 @@ Client.OnStart = function()
 	LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 		backgroundLogo.Offset = backgroundLogo.Offset + delta * dt * speed
 	end)
+
+	if Client.LoggedIn then
+		home():show()
+	else
+		titleScreen():show()
+	end
+	layoutCamera({ noAnimation = true })
 end
 
 Screen.DidResize = function()

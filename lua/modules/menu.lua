@@ -1,18 +1,18 @@
 local menu = {}
 
 bundle = require("bundle")
-loc = require("localize")
+-- loc = require("localize")
 -- str = require("str")
 ui = require("uikit").systemUI(System)
-uiAvatar = require("ui_avatar")
-avatarModule = require("avatar")
+-- uiAvatar = require("ui_avatar")
+-- avatarModule = require("avatar")
 modal = require("modal")
 theme = require("uitheme").current
 ease = require("ease")
 friends = require("friends")
 settings = require("settings")
 worlds = require("worlds")
-creations = require("creations")
+-- creations = require("creations")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
@@ -21,7 +21,9 @@ codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
 uiPointer = require("ui_pointer")
-conf = require("config")
+signup = require("signup")
+
+-- conf = require("config")
 
 -- CONSTANTS
 
@@ -1113,19 +1115,12 @@ function getCubzhMenuModalContent()
 		end
 	end
 
-	local btnMyCreations = ui:createButton("🏗️ My Creations", { textSize = "default" })
-	-- btnMyCreations:setColor(theme.colorCreate)
-	btnMyCreations:setParent(node)
-	btnMyCreations.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
+	local btnLeave = ui:buttonNegative({ content = "Leave", textSize = "default" })
+	btnLeave:setParent(node)
+	btnLeave.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
 
-	btnMyCreations.onRelease = function()
-		local modal = content:getModalIfContentIsActive()
-		if modal ~= nil then
-			local content = creations:createModalContent({ uikit = ui })
-			content.tabs[1].selected = true
-			content.tabs[1].action()
-			modal:push(content)
-		end
+	btnLeave.onRelease = function()
+		System:GoHome()
 	end
 
 	local buttons
@@ -1456,7 +1451,7 @@ function getCubzhMenuModalContent()
 	buttons = {
 		{ btnWorlds },
 		{ btnItems },
-		{ btnMyCreations },
+		{ btnLeave },
 	}
 
 	content.bottomCenter = { btnCode, btnHelp }
@@ -1504,7 +1499,7 @@ function getCubzhMenuModalContent()
 		return Number2(width, height)
 	end
 
-	btnMyCreations.parentDidResize = function(_)
+	btnLeave.parentDidResize = function(_)
 		local width = node.Width
 
 		for _, row in ipairs(buttons) do
@@ -1539,7 +1534,7 @@ function getCubzhMenuModalContent()
 	end
 
 	content.didBecomeActive = function()
-		btnMyCreations:parentDidResize()
+		btnLeave:parentDidResize()
 		showActionColumn()
 		if emailForm ~= nil then
 			emailForm:didBecomeActive()
@@ -1749,23 +1744,6 @@ menu.ShowFriends = function(_)
 	return true
 end
 
----@function HighlightFriends Highlights friends button in the top bar if possible. (if user is authenticated, and menu not already active)
---- Returns true on success, false otherwise.
----@code local menu = require("menu")
---- menu:HighlightFriends()
----@return boolean
-menu.HighlightFriends = function(_)
-	if menuSectionCanBeShown() == false then
-		return false
-	end
-	if pointer == nil then
-		pointer = uiPointer:create({ uikit = ui })
-	end
-	pointer:pointAt({ target = friendsBtn, from = "below" })
-
-	return true
-end
-
 ---@function HighlightCubzhMenu Highlights Cubzh button in the top bar if possible. (if user is authenticated, and menu not already active)
 --- Returns true on success, false otherwise.
 ---@code local menu = require("menu")
@@ -1934,7 +1912,7 @@ menu.OnAuthComplete = function(self, callback)
 	if type(callback) ~= "function" then
 		return
 	end
-	if System.Authenticated then
+	if Client.LoggedIn then
 		-- already authenticated, trigger callback now!
 		callback()
 	else
@@ -2090,43 +2068,46 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
 	end
 end)
 
-LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
-	if updates.skinColors ~= nil and avatar ~= nil then
-		avatarModule:setHeadColors(
-			avatar,
-			updates.skinColors.skin1,
-			updates.skinColors.skin2,
-			updates.skinColors.nose,
-			updates.skinColors.mouth
-		)
-	end
+-- NOTE: Used in Hub v3, when copying outfits from other players
+-- Let's see if we want to keep this or not.
 
-	if type(updates.eyesColor) == Type.Color and avatar ~= nil then
-		avatarModule:setEyesColor(avatar, updates.eyesColor)
-	end
+-- LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
+-- 	if updates.skinColors ~= nil and avatar ~= nil then
+-- 		avatarModule:setHeadColors(
+-- 			avatar,
+-- 			updates.skinColors.skin1,
+-- 			updates.skinColors.skin2,
+-- 			updates.skinColors.nose,
+-- 			updates.skinColors.mouth
+-- 		)
+-- 	end
 
-	if type(updates.noseColor) == Type.Color and avatar ~= nil then
-		avatarModule:setNoseColor(avatar, updates.noseColor)
-	end
+-- 	if type(updates.eyesColor) == Type.Color and avatar ~= nil then
+-- 		avatarModule:setEyesColor(avatar, updates.eyesColor)
+-- 	end
 
-	if type(updates.mouthColor) == Type.Color and avatar ~= nil then
-		avatarModule:setMouthColor(avatar, updates.mouthColor)
-	end
+-- 	if type(updates.noseColor) == Type.Color and avatar ~= nil then
+-- 		avatarModule:setNoseColor(avatar, updates.noseColor)
+-- 	end
 
-	if updates.outfit == true then
-		avatar:remove()
-		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
-		avatar.parentDidResize = btnContentParentDidResize
-		avatar:setParent(profileFrame)
-		topBar:parentDidResize()
-	end
-end)
+-- 	if type(updates.mouthColor) == Type.Color and avatar ~= nil then
+-- 		avatarModule:setMouthColor(avatar, updates.mouthColor)
+-- 	end
+
+-- 	if updates.outfit == true then
+-- 		avatar:remove()
+-- 		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
+-- 		avatar.parentDidResize = btnContentParentDidResize
+-- 		avatar:setParent(profileFrame)
+-- 		topBar:parentDidResize()
+-- 	end
+-- end)
 
 -- sign up / sign in flow
 
-function hideTopBar()
-	topBar:hide()
-end
+-- function hideTopBar()
+-- 	topBar:hide()
+-- end
 
 function showTopBar()
 	if Environment.CUBZH_MENU == "disabled" then
@@ -2148,43 +2129,6 @@ if Environment.CHAT_CONSOLE_DISPLAY == "always" then
 	refreshChat()
 end
 
--- print("menu System.Authenticated:", System.Authenticated)
--- if System.Authenticated then
--- 	LocalEvent:Send("signup_flow_login_success")
--- else
-local signupFlow = require("signup"):startFlow({
-	ui = ui,
-	avatarPreviewStep = function()
-		LocalEvent:Send("signup_flow_avatar_preview")
-		hideBottomBar()
-	end,
-	loginStep = function()
-		LocalEvent:Send("signup_flow_login")
-		hideBottomBar()
-	end,
-	signUpOrLoginStep = function()
-		LocalEvent:Send("signup_flow_start_or_login")
-		showBottomBar()
-	end,
-	loginSuccess = function()
-		showTopBar()
-		hideBottomBar()
-		authCompleted()
-		if activeFlow ~= nil then
-			activeFlow:remove()
-		end
-		LocalEvent:Send("signup_flow_login_success")
-	end,
-	avatarEditorStep = function()
-		LocalEvent:Send("signup_flow_avatar_editor")
-	end,
-	dobStep = function()
-		LocalEvent:Send("signup_flow_dob")
-	end,
-})
-activeFlow = signupFlow
--- end
-
 function getWorldInfo()
 	if getWorldInfoReq ~= nil then
 		getWorldInfoReq:Cancel()
@@ -2202,72 +2146,103 @@ function getWorldInfo()
 	end
 end
 
-Timer(0.1, function()
-	menu:OnAuthComplete(function()
-		-- if System.IsUserUnder13 then
-		-- 	local under13BadgeShape = bundle:Shape("shapes/under13_badge")
-		-- 	under13Badge = ui:createShape(under13BadgeShape)
-		-- 	under13Badge:setParent(profileFrame)
-		-- 	local ratio = under13Badge.Width / under13Badge.Height
-		-- 	under13Badge.Height = 10
-		-- 	under13Badge.Width = under13Badge.Height * ratio
-		-- 	under13Badge.parentDidResize = function(self)
-		-- 		local parent = self.parent
-		-- 		self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
-		-- 		under13BadgeShape.LocalPosition.Z = 50
-		-- 	end
-		-- 	under13Badge:parentDidResize()
-		-- end
+menu:OnAuthComplete(function()
+	showTopBar()
+	hideBottomBar()
 
-		if System.HasEmail == false then
-			showBadge("!")
+	if activeFlow ~= nil then
+		activeFlow:remove()
+	end
+
+	-- TODO: move this to signup flow (at the very end)
+
+	-- if System.IsUserUnder13 then
+	-- 	local under13BadgeShape = bundle:Shape("shapes/under13_badge")
+	-- 	under13Badge = ui:createShape(under13BadgeShape)
+	-- 	under13Badge:setParent(profileFrame)
+	-- 	local ratio = under13Badge.Width / under13Badge.Height
+	-- 	under13Badge.Height = 10
+	-- 	under13Badge.Width = under13Badge.Height * ratio
+	-- 	under13Badge.parentDidResize = function(self)
+	-- 		local parent = self.parent
+	-- 		self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
+	-- 		under13BadgeShape.LocalPosition.Z = 50
+	-- 	end
+	-- 	under13Badge:parentDidResize()
+	-- end
+
+	-- if System.HasEmail == false then
+	-- 	showBadge("!")
+	-- end
+
+	getWorldInfo()
+
+	-- connects client to server if it makes sense (maxPlayers > 1)
+	connect()
+
+	topBar:parentDidResize()
+	if chat then
+		chat:parentDidResize()
+	end
+
+	Timer(10.0, function()
+		-- request permission for remote notifications
+		local showInfoPopupFunc = function(yesCallback, laterCallback)
+			showAlert({
+				message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
+				positiveLabel = "Yes",
+				neutralLabel = "Later",
+				positiveCallback = function()
+					yesCallback()
+				end,
+				neutralCallback = function()
+					laterCallback()
+				end,
+			})
 		end
-
-		getWorldInfo()
-
-		-- connects client to server if it makes sense (maxPlayers > 1)
-		connect()
-
-		-- print("GET AVATAR FOR USER:", Player.Username)
-
-		-- avatar:remove()
-		-- avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
-		-- avatar.parentDidResize = btnContentParentDidResize
-		-- avatar:setParent(profileFrame)
-		topBar:parentDidResize()
-		if chat then
-			chat:parentDidResize()
-		end
-
-		Timer(10.0, function()
-			-- request permission for remote notifications
-			local showInfoPopupFunc = function(yesCallback, laterCallback)
-				showAlert({
-					message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
-					positiveLabel = "Yes",
-					neutralLabel = "Later",
-					positiveCallback = function()
-						yesCallback()
-					end,
-					neutralCallback = function()
-						laterCallback()
-					end,
-				})
-			end
-			sys_notifications:request(showInfoPopupFunc)
-		end)
-
-		-- check if there's an environment to launch, otherwise, listen for event
-		if System.HasEnvironmentToLaunch then
-			System:LaunchEnvironment()
-		else
-			LocalEvent:Listen(LocalEvent.Name.ReceivedEnvironmentToLaunch, function()
-				if System.HasEnvironmentToLaunch then
-					System:LaunchEnvironment()
-				end
-			end)
-		end
+		sys_notifications:request(showInfoPopupFunc)
 	end)
+
+	-- check if there's an environment to launch, otherwise, listen for event
+	if System.HasEnvironmentToLaunch then
+		System:LaunchEnvironment()
+	else
+		LocalEvent:Listen(LocalEvent.Name.ReceivedEnvironmentToLaunch, function()
+			if System.HasEnvironmentToLaunch then
+				System:LaunchEnvironment()
+			end
+		end)
+	end
+
+	LocalEvent:Send("signup_flow_login_success")
 end)
+
+if not Client.LoggedIn then
+	local signupFlow = signup:startFlow({
+		ui = ui,
+		avatarPreviewStep = function()
+			LocalEvent:Send("signup_flow_avatar_preview")
+			hideBottomBar()
+		end,
+		loginStep = function()
+			LocalEvent:Send("signup_flow_login")
+			hideBottomBar()
+		end,
+		signUpOrLoginStep = function()
+			LocalEvent:Send("signup_flow_start_or_login")
+			showBottomBar()
+		end,
+		loginSuccess = function()
+			authCompleted()
+		end,
+		avatarEditorStep = function()
+			LocalEvent:Send("signup_flow_avatar_editor")
+		end,
+		dobStep = function()
+			LocalEvent:Send("signup_flow_dob")
+		end,
+	})
+	activeFlow = signupFlow
+end
 
 return menu
