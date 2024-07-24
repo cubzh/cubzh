@@ -21,6 +21,10 @@ local avatarProperties = {
 	noseIndex = avatar.defaultNoseIndex,
 	eyesIndex = avatar.defaultEyesIndex,
 	eyesColorIndex = avatar.defaultEyesColorIndex,
+	hair = nil,
+	jacket = nil,
+	pants = nil,
+	boots = nil,
 }
 
 local cache = {
@@ -33,6 +37,56 @@ function filterDidChange(search, sort)
 	cache.sort = sort
 end
 
+local apiUpdateTimer = nil
+local avatarDidChange = function(change)
+	-- `change` argument is a table and can contain the following keys:
+	-- - skinColorIndex
+	-- - eyesColorIndex
+	-- - eyesIndex
+	-- - noseIndex
+	-- - hair
+	-- - jacket
+	-- - pants
+	-- - boots
+
+	-- Update avatarProperties with content of `change` table
+	for key, value in pairs(change) do
+		avatarProperties[key] = value
+	end
+
+	if apiUpdateTimer == nil then
+		apiUpdateTimer = Timer(1, false, function()
+			-- send API request
+			local api = require("system_api", System)
+
+			local data = {
+				skinColorIndex = avatarProperties.skinColorIndex,
+				eyesColorIndex = avatarProperties.eyesColorIndex,
+				eyesIndex = avatarProperties.eyesIndex,
+				noseIndex = avatarProperties.noseIndex,
+				hair = avatarProperties.hair,
+				jacket = avatarProperties.jacket,
+				pants = avatarProperties.pants,
+				boots = avatarProperties.boots,
+				-- Later, with premium account:
+				-- skinColor1
+				-- skinColor2
+				-- skinColorNose
+				-- skinColorMouth
+				-- eyesColor
+			}
+
+			api:updateAvatar(data, function(err, success)
+				print("[API UPDATE AVATAR] response [", err, "][", success, "]")
+			end)
+
+			-- destroy timer
+			apiUpdateTimer = nil
+		end)
+	end
+	-- else, timer is already running
+end
+
 mod.create = function(self, config)
 	if self ~= mod then
 		error("ui_avatar_editor:create(config) should be called with `:`", 2)
@@ -42,6 +96,7 @@ mod.create = function(self, config)
 		ui = ui, -- can only be used by System to override UI instance
 		margin = theme.padding,
 		requestHeightCallback = function(_) end, -- height
+		saveOnChangeIfLocalPlayer = false,
 	}
 
 	local ok, err = pcall(function()
@@ -79,7 +134,9 @@ mod.create = function(self, config)
 			})
 			btn.onRelease = function()
 				avatarProperties.skinColorIndex = skinColorIndex
-				LocalEvent:Send("avatar_editor_update", { skinColorIndex = skinColorIndex })
+				local change = { skinColorIndex = skinColorIndex }
+				avatarDidChange(change)
+				LocalEvent:Send("avatar_editor_update", change)
 			end
 			btn:setParent(categoryNode)
 			table.insert(btns, btn)
@@ -171,7 +228,9 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(cell)
-							LocalEvent:Send("avatar_editor_update", { hair = cell.fullName })
+							local change = { hair = cell.fullName }
+							avatarDidChange(change)
+							LocalEvent:Send("avatar_editor_update", change)
 						end,
 					})
 					categoryNode:setParent(node)
@@ -240,7 +299,9 @@ mod.create = function(self, config)
 
 						btn.onRelease = function()
 							avatarProperties.eyesIndex = eyesIndex
-							LocalEvent:Send("avatar_editor_update", { eyesIndex = eyesIndex })
+							local change = { eyesIndex = eyesIndex }
+							avatarDidChange(change)
+							LocalEvent:Send("avatar_editor_update", change)
 						end
 						btn:setParent(categoryNode)
 						table.insert(btns, btn)
@@ -277,7 +338,9 @@ mod.create = function(self, config)
 								-- 	mouth = colors.mouth,
 								-- })
 								avatarProperties.eyesColorIndex = eyesColorIndex
-								LocalEvent:Send("avatar_editor_update", { eyesColorIndex = eyesColorIndex })
+								local change = { eyesColorIndex = eyesColorIndex }
+								avatarDidChange(change)
+								LocalEvent:Send("avatar_editor_update", change)
 
 								for _, b in ipairs(btns) do
 									b.head:setEyes({
@@ -430,7 +493,9 @@ mod.create = function(self, config)
 						})
 						btn.onRelease = function()
 							avatarProperties.noseIndex = noseIndex
-							LocalEvent:Send("avatar_editor_update", { noseIndex = noseIndex })
+							local change = { noseIndex = noseIndex }
+							avatarDidChange(change)
+							LocalEvent:Send("avatar_editor_update", change)
 						end
 						btn:setParent(categoryNode)
 						table.insert(btns, btn)
@@ -500,7 +565,9 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(cell)
-							LocalEvent:Send("avatar_editor_update", { jacket = cell.fullName })
+							local change = { jacket = cell.fullName }
+							avatarDidChange(change)
+							LocalEvent:Send("avatar_editor_update", change)
 						end,
 					})
 					categoryNode:setParent(node)
@@ -531,7 +598,9 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(cell)
-							LocalEvent:Send("avatar_editor_update", { pants = cell.fullName })
+							local change = { pants = cell.fullName }
+							avatarDidChange(change)
+							LocalEvent:Send("avatar_editor_update", change)
 						end,
 					})
 					categoryNode:setParent(node)
@@ -562,7 +631,9 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(cell)
-							LocalEvent:Send("avatar_editor_update", { boots = cell.fullName })
+							local change = { boots = cell.fullName }
+							avatarDidChange(change)
+							LocalEvent:Send("avatar_editor_update", change)
 						end,
 					})
 					categoryNode:setParent(node)

@@ -693,7 +693,6 @@ signup.startFlow = function(self, config)
 					-- signupFlow:push(createAvatarEditorStep())
 
 					local phoneVerifCode = codeInput.Text
-					print("PHONE VERIF CODE:", phoneVerifCode)
 
 					api:patchUserInfo({ phoneVerifCode = phoneVerifCode }, function(err)
 						if err ~= nil then
@@ -701,7 +700,6 @@ signup.startFlow = function(self, config)
 							okBtn:enable()
 							return
 						end
-						print("PATCH USER INFO: OK")
 						internalLoginSuccess()
 					end)
 				end
@@ -871,7 +869,6 @@ signup.startFlow = function(self, config)
 					okBtn:disable()
 					-- signupFlow:push(createAvatarEditorStep())
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
-					print("PHONE NUMBER:", phoneNumber)
 
 					api:patchUserInfo({ phone = phoneNumber }, function(err)
 						if err ~= nil then
@@ -879,7 +876,6 @@ signup.startFlow = function(self, config)
 							okBtn:enable()
 							return
 						end
-						print("PATCH USER INFO: OK")
 						signupFlow:push(createVerifyPhoneNumberStep())
 					end)
 				end
@@ -1349,7 +1345,8 @@ signup.startFlow = function(self, config)
 				okBtn:setParent(drawer)
 				infoFrame:setParent(drawer)
 
-				avatarEditor = require("ui_avatar_editor"):create({
+				avatarEditor = require("system_ui_avatar_editor", System):create({
+					saveOnChangeIfLocalPlayer = true,
 					ui = ui,
 					requestHeightCallback = function(height)
 						drawer:updateConfig({
