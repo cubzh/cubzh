@@ -40,9 +40,7 @@ void main() {
 					filtering);
 	base.a = mix(base.r, base.a, colored);
 
-#if FONT_VARIANT_CUTOUT
 	if (base.a <= EPSILON) discard;
-#endif
 
 	vec4 color = vec4(mix(v_color0.rgb, base.rgb, colored), v_color0.a * base.a);
 
@@ -59,8 +57,8 @@ void main() {
 #else
 	gl_FragData[1] = vec4(encodeNormalUint(u_normal.xyz), LIGHTING_LIT_FLAG);
 #if FONT_VARIANT_LIGHTING_UNIFORM
-	gl_FragData[2] = vec4(u_lighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, u_lighting.x);
-	gl_FragData[3] = vec4(u_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, LIGHTING_LIT_FLAG);
+	gl_FragData[2] = vec4(emissive * VOXEL_LIGHT_RGB_PRE_FACTOR, lightValue);
+	gl_FragData[3] = vec4(emissive * VOXEL_LIGHT_RGB_POST_FACTOR, LIGHTING_LIT_FLAG);
 #else
 	gl_FragData[2] = VOXEL_LIGHT_DEFAULT_RGBS;
 	gl_FragData[3] = vec4(0.0, 0.0, 0.0, LIGHTING_LIT_FLAG);
