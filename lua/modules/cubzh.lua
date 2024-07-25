@@ -1132,6 +1132,7 @@ function home()
 						item:setParent(cell)
 						cell.shape = item
 						worldIcons[item] = true
+						cell:parentDidResize()
 					end)
 				end
 
@@ -1291,6 +1292,7 @@ function home()
 						loadingShape:setParent(cell)
 						cell.loadingShape = loadingShape
 						itemLoadingShapes[loadingShape] = true
+						cell:parentDidResize()
 					end)
 				end
 				cell.title.Text = prettifyItemName(item.name)
