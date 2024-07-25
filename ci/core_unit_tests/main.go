@@ -117,7 +117,7 @@ func buildAnRunCurrentDirectory() error {
 
 	// To know whether the execution succeeded, we need to force the evaluation
 	// of the pipeline after an using Sync, and then
-	ciContainer, err = ciContainer.Sync(ctx)
+	_ /*ciContainer*/, err = ciContainer.Sync(ctx)
 	if err != nil {
 		var execErr *dagger.ExecError
 		if errors.As(err, &execErr) {
