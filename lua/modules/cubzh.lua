@@ -61,7 +61,7 @@ Client.OnStart = function()
 
 		if avatarCameraFollowHomeScroll == true then
 			box:Fit(avatarCameraTarget, { recursive = true })
-			Camera:FitToScreen(box, 0.75)
+			Camera:FitToScreen(box, 0.5)
 		elseif avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
 			Camera:FitToScreen(box, 0.7)
@@ -93,7 +93,7 @@ Client.OnStart = function()
 		local h
 		local w
 		if avatarCameraFollowHomeScroll == true then
-			h = CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2
+			h = CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2 + Screen.SafeArea.Top * 2
 			w = avatarCameraX * 2
 		else
 			h = Screen.Height - drawerHeight - Screen.SafeArea.Top
@@ -124,10 +124,10 @@ Client.OnStart = function()
 
 		local targetX = 0
 		local targetY = Screen.SafeArea.Top
-		-- if avatarCameraFollowHomeScroll == true then
-		-- targetX = CONFIG.PROFILE_CELL_AVATAR_WIDTH
-		-- targetY = Screen.SafeArea.Top + CONFIG.CELL_PADDING
-		-- end
+		if avatarCameraFollowHomeScroll == true then
+			-- targetX = CONFIG.PROFILE_CELL_AVATAR_WIDTH
+			targetY = 0
+		end
 
 		if config.noAnimation then
 			Camera.TargetHeight = h
@@ -600,6 +600,13 @@ function avatar()
 
 	local emitter
 	local particlesColor = Color(0, 0, 0)
+
+	_avatar.setPosition = function(self, p)
+		if root == nil then
+			return
+		end
+		root.Position:Set(p)
+	end
 
 	_avatar.show = function(self, config)
 		if root ~= nil then
@@ -1764,7 +1771,8 @@ function home()
 				-- TODO: recycle
 			end,
 			scrollPositionDidChange = function(p)
-				-- print("pos:", p)
+				p = math.max(-Screen.SafeArea.Top, p)
+				avatar():setPosition(Number3(0, p * 0.2, 0))
 			end,
 		})
 		scroll:setParent(root)
