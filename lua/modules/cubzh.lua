@@ -4,7 +4,10 @@
 
 bundle = require("bundle")
 
-config = {
+local CONFIG = {
+	PROFILE_CELL_SIZE = 150,
+	PROFILE_CELL_AVATAR_WIDTH = 60,
+	PROFILE_CELL_AVATAR_HEIGHT = 120,
 	WORLD_CELL_SIZE = 150,
 	ITEM_CELL_SIZE = 150,
 	FRIEND_CELL_SIZE = 100,
@@ -37,6 +40,7 @@ Client.OnStart = function()
 	Camera.ViewOrder = 2
 
 	avatarCameraFollowHomeScroll = false
+	avatarCameraX = 0
 	-- homeScrollPosition = nil
 
 	function getAvatarCameraTargetPosition(h, w)
@@ -51,8 +55,6 @@ Client.OnStart = function()
 		Camera.TargetWidth = w
 		Camera.Height = h
 		Camera.Width = w
-		Camera.TargetX = 0
-		Camera.TargetY = 0
 
 		local box = Box()
 		local pos = Camera.Position:Copy()
@@ -81,8 +83,6 @@ Client.OnStart = function()
 		Camera.TargetWidth = _w
 		Camera.Height = _h
 		Camera.Width = _w
-		Camera.TargetX = 0
-		Camera.TargetY = 0
 		Camera.Position:Set(pos)
 
 		return targetPos
@@ -90,7 +90,12 @@ Client.OnStart = function()
 
 	local avatarCameraState = {}
 	function layoutCamera(config)
-		local h = Screen.Height - drawerHeight - Screen.SafeArea.Top
+		local h
+		if avatarCameraFollowHomeScroll == true then
+			h = CONFIG.PROFILE_CELL_SIZE
+		else
+			h = Screen.Height - drawerHeight - Screen.SafeArea.Top
+		end
 
 		if
 			avatarCameraState.h == h
@@ -114,13 +119,20 @@ Client.OnStart = function()
 
 		ease:cancel(Camera)
 
+		local targetX = 0
+		local targetY = Screen.SafeArea.Top
+		if avatarCameraFollowHomeScroll == true then
+			targetX = -CONFIG.PROFILE_CELL_AVATAR_WIDTH
+			targetY = Screen.SafeArea.Top + CONFIG.CELL_PADDING
+		end
+
 		if config.noAnimation then
 			Camera.TargetHeight = h
 			Camera.TargetWidth = Screen.Width
 			Camera.Height = h
 			Camera.Width = Screen.Width
-			Camera.TargetX = 0
-			Camera.TargetY = Screen.SafeArea.Top
+			Camera.TargetX = targetX
+			Camera.TargetY = targetY
 			Camera.Position:Set(p)
 			return
 		end
@@ -135,17 +147,14 @@ Client.OnStart = function()
 		anim.TargetWidth = Screen.Width
 		anim.Height = h
 		anim.Width = Screen.Width
-		anim.TargetX = 0
-		anim.TargetY = Screen.SafeArea.Top
+		anim.TargetX = targetX
+		anim.TargetY = targetY
 		anim.Position = p
 	end
 
 	Camera:SetModeFree()
 	Camera:SetParent(World)
 
-	Sky.AbyssColor = Color(120, 0, 178)
-	Sky.HorizonColor = Color(106, 73, 243)
-	Sky.SkyColor = Color(121, 169, 255)
 	Sky.LightColor = Color(100, 100, 100)
 
 	LocalEvent:Listen("signup_flow_avatar_preview", function()
@@ -913,9 +922,25 @@ function home()
 	local uiAvatar = require("ui_avatar")
 
 	local root
-	-- local didResizeFunction
-	-- local didResizeListener
-	-- local tickListener
+	local tickListener
+
+	_home.pause = function()
+		avatarCameraFollowHomeScroll = false
+		layoutCamera()
+
+		if tickListener then
+			tickListener:Pause()
+		end
+	end
+
+	_home.resume = function()
+		avatarCameraFollowHomeScroll = true
+		layoutCamera()
+
+		if tickListener then
+			tickListener:Resume()
+		end
+	end
 
 	_home.show = function()
 		if root ~= nil then
@@ -923,6 +948,8 @@ function home()
 		end
 
 		avatar():show({ mode = "user" })
+		avatarCameraFollowHomeScroll = true
+		layoutCamera()
 
 		root = ui:frame() -- { color = Color(255, 0, 0, 0.3) }
 		root.parentDidResize = function(self)
@@ -1075,7 +1102,7 @@ function home()
 
 			if cell == nil then
 				cell = ui:frameScrollCell()
-				cell.Width = config.WORLD_CELL_SIZE
+				cell.Width = CONFIG.WORLD_CELL_SIZE
 
 				local titleFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
 				titleFrame:setParent(cell)
@@ -1127,7 +1154,7 @@ function home()
 					worldIcons[item] = true
 					-- cell:parentDidResize() -- no parent yet
 
-					cell.loadThumbnailTimer = Timer(config.LOAD_CONTENT_DELAY, function()
+					cell.loadThumbnailTimer = Timer(CONFIG.LOAD_CONTENT_DELAY, function()
 						cell.req = api:getWorldThumbnail(world.id, function(img, err)
 							if err ~= nil then
 								return
@@ -1149,9 +1176,9 @@ function home()
 				cell.title.Text = "…"
 			end
 
-			cell.title.object.MaxWidth = cell.Width - (padding + config.TINY_PADDING) * 2
-			cell.titleFrame.Width = cell.title.Width + config.TINY_PADDING * 2
-			cell.titleFrame.Height = cell.title.Height + config.TINY_PADDING * 2
+			cell.title.object.MaxWidth = cell.Width - (padding + CONFIG.TINY_PADDING) * 2
+			cell.titleFrame.Width = cell.title.Width + CONFIG.TINY_PADDING * 2
+			cell.titleFrame.Height = cell.title.Height + CONFIG.TINY_PADDING * 2
 
 			return cell
 		end
@@ -1226,7 +1253,7 @@ function home()
 
 			if cell == nil then
 				cell = ui:frameScrollCell()
-				cell.Width = config.ITEM_CELL_SIZE
+				cell.Width = CONFIG.ITEM_CELL_SIZE
 
 				local titleFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
 				titleFrame:setParent(cell)
@@ -1282,7 +1309,7 @@ function home()
 					itemLoadingShapes[loadingShape] = true
 					-- cell:parentDidResize() -- no parent yet
 
-					cell.loadShapeTimer = Timer(config.LOAD_CONTENT_DELAY, function()
+					cell.loadShapeTimer = Timer(CONFIG.LOAD_CONTENT_DELAY, function()
 						cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
 							if obj == nil then
 								return
@@ -1307,9 +1334,9 @@ function home()
 				cell.title.Text = "…"
 			end
 
-			cell.title.object.MaxWidth = cell.Width - (padding + config.TINY_PADDING) * 2
-			cell.titleFrame.Width = cell.title.Width + config.TINY_PADDING * 2
-			cell.titleFrame.Height = cell.title.Height + config.TINY_PADDING * 2
+			cell.title.object.MaxWidth = cell.Width - (padding + CONFIG.TINY_PADDING) * 2
+			cell.titleFrame.Width = cell.title.Width + CONFIG.TINY_PADDING * 2
+			cell.titleFrame.Height = cell.title.Height + CONFIG.TINY_PADDING * 2
 
 			return cell
 		end
@@ -1351,7 +1378,7 @@ function home()
 
 			if cell == nil then
 				cell = ui:frameScrollCell()
-				cell.Width = config.FRIEND_CELL_SIZE
+				cell.Width = CONFIG.FRIEND_CELL_SIZE
 				cell.parentDidResize = worldCellResizeFn
 
 				cell.onPress = function(self)
@@ -1388,7 +1415,7 @@ function home()
 			{
 				title = "👥 Friends",
 				displayNumberOfEntries = true,
-				cellSize = config.FRIEND_CELL_SIZE,
+				cellSize = CONFIG.FRIEND_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local friend = dataFetcher.entities[index]
@@ -1435,7 +1462,7 @@ function home()
 			},
 			{
 				title = "✨ Featured Worlds",
-				cellSize = config.WORLD_CELL_SIZE,
+				cellSize = CONFIG.WORLD_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local world = dataFetcher.entities[index]
@@ -1451,7 +1478,7 @@ function home()
 			},
 			{
 				title = "😛 Fun with friends",
-				cellSize = config.WORLD_CELL_SIZE,
+				cellSize = CONFIG.WORLD_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local world = dataFetcher.entities[index]
@@ -1467,7 +1494,7 @@ function home()
 			},
 			{
 				title = "🤠 Playing solo",
-				cellSize = config.WORLD_CELL_SIZE,
+				cellSize = CONFIG.WORLD_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local world = dataFetcher.entities[index]
@@ -1483,7 +1510,7 @@ function home()
 			},
 			{
 				title = "🍏 New Items",
-				cellSize = config.ITEM_CELL_SIZE,
+				cellSize = CONFIG.ITEM_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local item = dataFetcher.entities[index]
@@ -1499,7 +1526,7 @@ function home()
 			},
 			{
 				title = "❤️ Top Rated",
-				cellSize = config.WORLD_CELL_SIZE,
+				cellSize = CONFIG.WORLD_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local world = dataFetcher.entities[index]
@@ -1515,7 +1542,7 @@ function home()
 			},
 			{
 				title = "⚔️ Popular Items",
-				cellSize = config.ITEM_CELL_SIZE,
+				cellSize = CONFIG.ITEM_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
 						local item = dataFetcher.entities[index]
@@ -1539,7 +1566,7 @@ function home()
 			local title = ui:createText("Title", Color.White)
 			title:setParent(cell)
 
-			cell.Height = title.Height + (category.cellSize or 100) + padding * 3 + config.CELL_PADDING * 2
+			cell.Height = title.Height + (category.cellSize or 100) + padding * 3 + CONFIG.CELL_PADDING * 2
 			cell.title = title
 			return cell
 		end
@@ -1549,20 +1576,18 @@ function home()
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 			padding = {
-				top = Screen.SafeArea.Top + config.CELL_PADDING,
-				bottom = config.CELL_PADDING,
-				left = config.CELL_PADDING,
-				right = config.CELL_PADDING,
+				top = Screen.SafeArea.Top + CONFIG.CELL_PADDING,
+				bottom = CONFIG.CELL_PADDING,
+				left = CONFIG.CELL_PADDING,
+				right = CONFIG.CELL_PADDING,
 			},
-			cellPadding = config.CELL_PADDING,
+			cellPadding = CONFIG.CELL_PADDING,
 			loadCell = function(index)
 				if index == 1 then
 					if profileCell == nil then
-						-- local homeAvatar = uiAvatar:get({ usernameOrId = Player.UserID, spherized = false })
-
-						-- profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						-- profileCell = ui:frame({ color = Color(0, 0, 0, 0.2) })
 						profileCell = ui:frame()
-						profileCell.Height = 150
+						profileCell.Height = CONFIG.PROFILE_CELL_SIZE
 
 						local usernameFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
 						usernameFrame:setParent(profileCell)
@@ -1579,6 +1604,8 @@ function home()
 							end
 							scroll:hide()
 							avatar():show({ mode = "user" })
+							avatarCameraFocus = "body" -- skin tab displayed first
+							home():pause()
 
 							drawer = require("drawer"):create({ ui = ui })
 
@@ -1590,6 +1617,7 @@ function home()
 							})
 							okBtn:setParent(drawer)
 							okBtn.onRelease = function()
+								home():resume()
 								drawer:remove()
 								if bottomBar then
 									bottomBar:show()
@@ -1637,13 +1665,11 @@ function home()
 						visitHouseBtn:setParent(profileCell)
 						visitHouseBtn:disable()
 
-						-- homeAvatar:setParent(profileCell)
-
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
 
 							usernameFrame.Width = username.Width + padding * 2
-							usernameFrame.Height = username.Height + config.TINY_PADDING * 2
+							usernameFrame.Height = username.Height + CONFIG.TINY_PADDING * 2
 
 							local infoWidth = math.max(username.Width, editAvatarBtn.Width, visitHouseBtn.Width)
 
@@ -1651,24 +1677,16 @@ function home()
 								usernameFrame.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2
 							)
 
-							local avatarWidth = 200
+							local avatarWidth = CONFIG.PROFILE_CELL_AVATAR_WIDTH
 
 							local totalWidth = infoWidth + avatarWidth + padding
 
-							-- homeAvatar.Height = self.Height * 0.9
-							-- homeAvatar.pos = {
-							-- 	self.Width * 0.5 - totalWidth * 0.5,
-							-- 	self.Height * 0.5 - homeAvatar.Height * 0.5,
-							-- }
-
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
-							-- local x = homeAvatar.pos.X + homeAvatar.Width + padding
-
 							local x = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth + padding
 
 							usernameFrame.pos = { x, y }
 
-							username.pos = { padding, config.TINY_PADDING }
+							username.pos = { padding, CONFIG.TINY_PADDING }
 							y = y - padding - editAvatarBtn.Height
 							editAvatarBtn.pos = { x, y }
 							y = y - padding - visitHouseBtn.Height
@@ -1708,8 +1726,8 @@ function home()
 							local scroll = ui:createScroll({
 								-- backgroundColor = Color(255, 255, 255),
 								backgroundColor = Color(43, 45, 49),
-								padding = config.CELL_PADDING,
-								cellPadding = config.CELL_PADDING,
+								padding = CONFIG.CELL_PADDING,
+								cellPadding = CONFIG.CELL_PADDING,
 								direction = "right",
 								loadCell = category.loadCell,
 								unloadCell = category.unloadCell,
@@ -1840,6 +1858,16 @@ function home()
 		if root == nil then
 			return
 		end
+
+		if tickListener then
+			tickListener:Remove()
+			tickListener = nil
+		end
+
+		root:remove()
+		root = nil
+
+		avatar():hide()
 	end
 
 	return _home
