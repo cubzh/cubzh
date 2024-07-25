@@ -1,5 +1,5 @@
 /*
- * Font fragment shader variant: lighting pass, linear depth, cutout
+ * Font fragment shader variant: lighting pass, linear depth
  */
  
 // Vertex lighting as color uniform
@@ -9,8 +9,5 @@
 // Multiple render target lighting and linear depth
 #define FONT_VARIANT_MRT_LIGHTING 1
 #define FONT_VARIANT_MRT_LINEAR_DEPTH 1
-
-// Cutout
-#define FONT_VARIANT_CUTOUT 1
 
 #include "./fs_font_common.sh"
