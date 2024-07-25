@@ -2350,6 +2350,7 @@ function createUI(system)
 			unloadCell = function(_, _, _) -- index, cell, userdata
 				return nil
 			end,
+			scrollPositionDidChange = nil,
 		}
 
 		local options = {
@@ -2357,6 +2358,7 @@ function createUI(system)
 				padding = { "number", "integer", "table" },
 				gradientColor = { "Color" },
 				userdata = { "*" },
+				scrollPositionDidChange = { "function" },
 			},
 		}
 
@@ -2444,6 +2446,19 @@ function createUI(system)
 
 		local scrollHandle = self:createFrame(Color(0, 0, 0, 0.5))
 		scrollHandle:setParent(node)
+
+		local function setScrollPosition(p, refresh)
+			if p == scrollPosition then
+				return
+			end
+			scrollPosition = p
+			if config.scrollPositionDidChange then
+				config.scrollPositionDidChange(scrollPosition)
+			end
+			if refresh and node.refresh then
+				node:refresh()
+			end
+		end
 
 		local endScrollIndicator
 		local beginScrollIndicator
@@ -2768,9 +2783,8 @@ function createUI(system)
 			return pos
 		end
 
-		node.setScrollPosition = function(self, newPosition)
-			scrollPosition = newPosition
-			self:refresh()
+		node.setScrollPosition = function(_, newPosition)
+			setScrollPosition(newPosition, true)
 		end
 
 		node.setScrollIndexVisible = function(self, index)
@@ -2833,7 +2847,7 @@ function createUI(system)
 				contentHeight = 0,
 				cellInfo = {},
 			}
-			scrollPosition = 0
+			setScrollPosition(0)
 		end
 
 		container.parentDidResizeSystem = function(_)
@@ -2873,7 +2887,8 @@ function createUI(system)
 		end
 
 		local previousSpeed
-		local refresh = false
+		local refresh
+		local p
 		l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 			if released == false and defuseScrollSpeedTimer ~= nil then
 				if lastTickSavedScrollPosition ~= nil and lastTickSavedScrollPosition ~= scrollPosition then
@@ -2891,20 +2906,22 @@ function createUI(system)
 			lastTickSavedScrollPosition = scrollPosition
 
 			if released == true then
+				refresh = false
+
 				if scrollSpeed ~= 0 then
-					scrollPosition = scrollPosition + scrollSpeed * dt
+					p = scrollPosition + scrollSpeed * dt
 
 					previousSpeed = scrollSpeed
 					scrollSpeed = scrollSpeed - (friction * scrollSpeed * dt)
 
-					cappedPosition = node:capPosition(scrollPosition)
-					if cappedPosition ~= scrollPosition then
-						local counterSpeed = (cappedPosition - scrollPosition)
+					cappedPosition = node:capPosition(p)
+					if cappedPosition ~= p then
+						local counterSpeed = (cappedPosition - p)
 						if counterSpeed * scrollSpeed < 0 then
 							scrollSpeed = scrollSpeed + counterSpeed
 						else
 							scrollSpeed = 0
-							scrollPosition = scrollPosition + counterSpeed * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED * dt
+							p = p + counterSpeed * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED * dt
 						end
 					end
 
@@ -2913,12 +2930,14 @@ function createUI(system)
 						scrollSpeed = 0
 					end
 
+					setScrollPosition(p)
 					refresh = true
 				else
 					cappedPosition = node:capPosition(scrollPosition)
 					if cappedPosition ~= scrollPosition then
 						local speed = (cappedPosition - scrollPosition) * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED
-						scrollPosition = scrollPosition + speed * dt
+						-- scrollPosition = scrollPosition + speed * dt
+						setScrollPosition(scrollPosition + speed * dt)
 						refresh = true
 					end
 				end

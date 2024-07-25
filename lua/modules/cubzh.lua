@@ -6,7 +6,7 @@ bundle = require("bundle")
 
 local CONFIG = {
 	PROFILE_CELL_SIZE = 150,
-	PROFILE_CELL_AVATAR_WIDTH = 60,
+	PROFILE_CELL_AVATAR_WIDTH = 100,
 	PROFILE_CELL_AVATAR_HEIGHT = 120,
 	WORLD_CELL_SIZE = 150,
 	ITEM_CELL_SIZE = 150,
@@ -61,7 +61,7 @@ Client.OnStart = function()
 
 		if avatarCameraFollowHomeScroll == true then
 			box:Fit(avatarCameraTarget, { recursive = true })
-			Camera:FitToScreen(box, 0.8)
+			Camera:FitToScreen(box, 0.75)
 		elseif avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
 			Camera:FitToScreen(box, 0.7)
@@ -91,10 +91,13 @@ Client.OnStart = function()
 	local avatarCameraState = {}
 	function layoutCamera(config)
 		local h
+		local w
 		if avatarCameraFollowHomeScroll == true then
-			h = CONFIG.PROFILE_CELL_SIZE
+			h = CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2
+			w = avatarCameraX * 2
 		else
 			h = Screen.Height - drawerHeight - Screen.SafeArea.Top
+			w = Screen.Width
 		end
 
 		if
@@ -107,7 +110,7 @@ Client.OnStart = function()
 			return
 		end
 
-		local p = getAvatarCameraTargetPosition(h, Screen.Width)
+		local p = getAvatarCameraTargetPosition(h, w)
 		if p == nil then
 			return
 		end
@@ -121,16 +124,16 @@ Client.OnStart = function()
 
 		local targetX = 0
 		local targetY = Screen.SafeArea.Top
-		if avatarCameraFollowHomeScroll == true then
-			targetX = -CONFIG.PROFILE_CELL_AVATAR_WIDTH
-			targetY = Screen.SafeArea.Top + CONFIG.CELL_PADDING
-		end
+		-- if avatarCameraFollowHomeScroll == true then
+		-- targetX = CONFIG.PROFILE_CELL_AVATAR_WIDTH
+		-- targetY = Screen.SafeArea.Top + CONFIG.CELL_PADDING
+		-- end
 
 		if config.noAnimation then
 			Camera.TargetHeight = h
-			Camera.TargetWidth = Screen.Width
+			Camera.TargetWidth = w
 			Camera.Height = h
-			Camera.Width = Screen.Width
+			Camera.Width = w
 			Camera.TargetX = targetX
 			Camera.TargetY = targetY
 			Camera.Position:Set(p)
@@ -144,9 +147,9 @@ Client.OnStart = function()
 		})
 
 		anim.TargetHeight = h
-		anim.TargetWidth = Screen.Width
+		anim.TargetWidth = w
 		anim.Height = h
-		anim.Width = Screen.Width
+		anim.Width = w
 		anim.TargetX = targetX
 		anim.TargetY = targetY
 		anim.Position = p
@@ -1683,6 +1686,7 @@ function home()
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
 							local x = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth + padding
+							avatarCameraX = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth * 0.5
 
 							usernameFrame.pos = { x, y }
 
@@ -1758,6 +1762,9 @@ function home()
 			end,
 			unloadCell = function(_, _)
 				-- TODO: recycle
+			end,
+			scrollPositionDidChange = function(p)
+				-- print("pos:", p)
 			end,
 		})
 		scroll:setParent(root)
