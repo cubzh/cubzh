@@ -12,7 +12,7 @@ ease = require("ease")
 friends = require("friends")
 settings = require("settings")
 worlds = require("worlds")
--- creations = require("creations")
+creations = require("creations")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
@@ -82,6 +82,7 @@ MODAL_KEYS = {
 	OUTFITS = 11,
 	WORLD = 12,
 	ITEM = 13,
+	CREATIONS = 14,
 }
 
 -- User account management
@@ -247,6 +248,10 @@ function showModal(key, config)
 		local config = config or {}
 		config.uikit = ui
 		content = require("item_details"):createModalContent(config)
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.CREATIONS then
+		-- TODO
+		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then
 		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
@@ -1890,6 +1895,19 @@ menu.ShowItem = function(self, config)
 	end
 
 	showModal(MODAL_KEYS.ITEM, config)
+	return true
+end
+
+---@function ShowCreations Shows user creations. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowCreations() -- shows user creations
+---@return boolean
+menu.ShowCreations = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.CREATIONS)
 	return true
 end
 
