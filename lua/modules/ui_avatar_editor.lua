@@ -77,8 +77,8 @@ local avatarDidChange = function(change)
 				-- eyesColor
 			}
 
-			api:updateAvatar(data, function(err, success)
-				print("[API UPDATE AVATAR] response [", err, "][", success, "]")
+			api:updateAvatar(data, function(_) -- err
+				-- TODO: update animation & retry on error?
 			end)
 
 			-- destroy timer

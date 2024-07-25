@@ -605,14 +605,16 @@ moduleMT.patchItem = function(self, itemID, data, callback)
 	return req
 end
 
+-- callback(err)
+-- err is nil on success and a string error message on failure
 moduleMT.updateAvatar = function(_, data, cb) -- data = { jacket="caillef.jacket", eyescolor={r=255, g=0, b=30} }
 	local url = mod.kApiAddr .. "/users/self/avatar"
 	local req = System:HttpPatch(url, {}, data, function(res)
 		if res.StatusCode ~= 200 then
-			cb("Error (" .. res.StatusCode .. "): can't update avatar.", false)
+			cb("Error (" .. res.StatusCode .. "): can't update avatar.")
 			return
 		end
-		cb(nil, true)
+		cb(nil) -- success
 	end)
 	return req
 end

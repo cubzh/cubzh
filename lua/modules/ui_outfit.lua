@@ -42,7 +42,7 @@ uiOutfit.createTryContent = function(_, config)
 			-- send API request to update user avatar
 			local data = {}
 			data[config.slot] = config.itemfullname
-			require("system_api", System):updateAvatar(data, function(err, _)
+			require("system_api", System):updateAvatar(data, function(err)
 				if err then
 					print("❌", err)
 					return
