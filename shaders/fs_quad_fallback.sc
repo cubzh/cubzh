@@ -9,4 +9,7 @@
 // No texture
 #define QUAD_VARIANT_TEX 0
 
+// No cutout
+#define QUAD_VARIANT_CUTOUT 0
+
 #include "./fs_quad_common.sh"

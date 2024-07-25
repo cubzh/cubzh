@@ -8,5 +8,6 @@
 
 // Textured
 #define QUAD_VARIANT_TEX 1
+#define QUAD_VARIANT_CUTOUT 0
 
 #include "./fs_quad_common.sh"

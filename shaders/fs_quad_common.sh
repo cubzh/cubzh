@@ -23,10 +23,13 @@ $input v_color0
 SAMPLER2D(s_fb1, 0);
 
 uniform vec4 u_params;
-uniform vec4 u_color1;
 	#define u_slice u_params.xy
 	#define u_uBorders u_params.zw
+#endif
+#if QUAD_VARIANT_TEX || QUAD_VARIANT_CUTOUT
+uniform vec4 u_color1;
 	#define u_vBorders u_color1.xy
+	#define u_cutout u_color1.z
 #endif
 
 void main() {
@@ -35,10 +38,11 @@ void main() {
 #if QUAD_VARIANT_MRT_LIGHTING || QUAD_VARIANT_TEX
 	//vec3 wnormal = normalize(-u_model[0][2].xyz);
 
-	float meta[6]; unpackQuadFullMetadata(v_metadata, meta);
+	float meta[7]; unpackQuadFullMetadata(v_metadata, meta);
 	float unlit = mix(LIGHTING_LIT_FLAG, LIGHTING_UNLIT_FLAG, meta[0]);
 	float unpack9SliceNormal = meta[1];
-	vec4 srgb = vec4(meta[2], meta[3], meta[4], meta[5]);
+	float cutout = meta[2];
+	vec4 srgb = vec4(meta[3], meta[4], meta[5], meta[6]);
 #endif
 
 #if QUAD_VARIANT_TEX
@@ -50,6 +54,10 @@ void main() {
 				   sliceUV(v_uv.y, vBorders, slice.y));
 	
 	color *= texture2D(s_fb1, uv);
+#endif
+
+#if QUAD_VARIANT_CUTOUT
+	if (color.a <= mix(-1.0, u_cutout, cutout)) discard;
 #endif
 
 #if QUAD_VARIANT_MRT_LIGHTING
