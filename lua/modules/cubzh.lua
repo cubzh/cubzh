@@ -1108,6 +1108,18 @@ function home()
 					cell.thumbnail = thumbnail
 					recycleWorldCellShape(cell)
 				else
+					-- placeholder shape, waiting for thumbnail
+					local item = table.remove(recycledWorldIcons)
+					if item == nil then
+						local shape = bundle:Shape("shapes/world_icon")
+						item = ui:createShape(shape, { spherized = true })
+					end
+
+					item:setParent(cell)
+					cell.shape = item
+					worldIcons[item] = true
+					-- cell:parentDidResize() -- no parent yet
+
 					cell.loadThumbnailTimer = Timer(config.LOAD_CONTENT_DELAY, function()
 						cell.req = api:getWorldThumbnail(world.id, function(img, err)
 							if err ~= nil then
@@ -1121,18 +1133,6 @@ function home()
 							recycleWorldCellShape(cell)
 							worldCellResizeFn(cell)
 						end)
-
-						-- placeholder shape, waiting for thumbnail
-						local item = table.remove(recycledWorldIcons)
-						if item == nil then
-							local shape = bundle:Shape("shapes/world_icon")
-							item = ui:createShape(shape, { spherized = true })
-						end
-
-						item:setParent(cell)
-						cell.shape = item
-						worldIcons[item] = true
-						cell:parentDidResize()
 					end)
 				end
 
@@ -1263,6 +1263,18 @@ function home()
 					cell.itemShape = itemShape
 					recycleItemCellLoadingShape(cell)
 				else
+					-- placeholder shape, waiting for thumbnail
+					local loadingShape = table.remove(recycledItemLoadingShapes)
+					if loadingShape == nil then
+						local shape = bundle:Shape("shapes/world_icon")
+						loadingShape = ui:createShape(shape, { spherized = true })
+					end
+
+					loadingShape:setParent(cell)
+					cell.loadingShape = loadingShape
+					itemLoadingShapes[loadingShape] = true
+					-- cell:parentDidResize() -- no parent yet
+
 					cell.loadShapeTimer = Timer(config.LOAD_CONTENT_DELAY, function()
 						cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
 							if obj == nil then
@@ -1281,18 +1293,6 @@ function home()
 							recycleItemCellLoadingShape(cell)
 							cell:parentDidResize()
 						end)
-
-						-- placeholder shape, waiting for thumbnail
-						local loadingShape = table.remove(recycledItemLoadingShapes)
-						if loadingShape == nil then
-							local shape = bundle:Shape("shapes/world_icon")
-							loadingShape = ui:createShape(shape, { spherized = true })
-						end
-
-						loadingShape:setParent(cell)
-						cell.loadingShape = loadingShape
-						itemLoadingShapes[loadingShape] = true
-						cell:parentDidResize()
 					end)
 				end
 				cell.title.Text = prettifyItemName(item.name)
