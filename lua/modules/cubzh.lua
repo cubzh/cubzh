@@ -36,6 +36,9 @@ Client.OnStart = function()
 	backgroundCamera.ViewOrder = 1
 	Camera.ViewOrder = 2
 
+	avatarCameraFollowHomeScroll = false
+	-- homeScrollPosition = nil
+
 	function getAvatarCameraTargetPosition(h, w)
 		if avatarCameraTarget == nil then
 			return nil
@@ -53,7 +56,11 @@ Client.OnStart = function()
 
 		local box = Box()
 		local pos = Camera.Position:Copy()
-		if avatarCameraFocus == "body" then
+
+		if avatarCameraFollowHomeScroll == true then
+			box:Fit(avatarCameraTarget, { recursive = true })
+			Camera:FitToScreen(box, 0.8)
+		elseif avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
 			Camera:FitToScreen(box, 0.7)
 		elseif avatarCameraFocus == "head" then
@@ -83,7 +90,7 @@ Client.OnStart = function()
 
 	local avatarCameraState = {}
 	function layoutCamera(config)
-		local h = Screen.Height - drawerHeight
+		local h = Screen.Height - drawerHeight - Screen.SafeArea.Top
 
 		if
 			avatarCameraState.h == h
@@ -113,7 +120,7 @@ Client.OnStart = function()
 			Camera.Height = h
 			Camera.Width = Screen.Width
 			Camera.TargetX = 0
-			Camera.TargetY = 0
+			Camera.TargetY = Screen.SafeArea.Top
 			Camera.Position:Set(p)
 			return
 		end
@@ -129,7 +136,7 @@ Client.OnStart = function()
 		anim.Height = h
 		anim.Width = Screen.Width
 		anim.TargetX = 0
-		anim.TargetY = 0
+		anim.TargetY = Screen.SafeArea.Top
 		anim.Position = p
 	end
 
@@ -915,7 +922,7 @@ function home()
 			return
 		end
 
-		-- backgroundCamera.On = false
+		avatar():show({ mode = "user" })
 
 		root = ui:frame() -- { color = Color(255, 0, 0, 0.3) }
 		root.parentDidResize = function(self)
@@ -1551,7 +1558,7 @@ function home()
 			loadCell = function(index)
 				if index == 1 then
 					if profileCell == nil then
-						local homeAvatar = uiAvatar:get({ usernameOrId = Player.UserID, spherized = false })
+						-- local homeAvatar = uiAvatar:get({ usernameOrId = Player.UserID, spherized = false })
 
 						-- profileCell = ui:frame({ color = Color(0, 0, 0, 0.5) })
 						profileCell = ui:frame()
@@ -1589,7 +1596,6 @@ function home()
 								end
 								scroll:show()
 								drawer = nil
-								avatar():hide()
 							end
 
 							avatarEditor = require("ui_avatar_editor"):create({
@@ -1631,7 +1637,7 @@ function home()
 						visitHouseBtn:setParent(profileCell)
 						visitHouseBtn:disable()
 
-						homeAvatar:setParent(profileCell)
+						-- homeAvatar:setParent(profileCell)
 
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
@@ -1644,16 +1650,21 @@ function home()
 							local infoHeight = math.max(
 								usernameFrame.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2
 							)
-							local totalWidth = infoWidth + homeAvatar.Width + padding
 
-							homeAvatar.Height = self.Height * 0.9
-							homeAvatar.pos = {
-								self.Width * 0.5 - totalWidth * 0.5,
-								self.Height * 0.5 - homeAvatar.Height * 0.5,
-							}
+							local avatarWidth = 200
+
+							local totalWidth = infoWidth + avatarWidth + padding
+
+							-- homeAvatar.Height = self.Height * 0.9
+							-- homeAvatar.pos = {
+							-- 	self.Width * 0.5 - totalWidth * 0.5,
+							-- 	self.Height * 0.5 - homeAvatar.Height * 0.5,
+							-- }
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
-							local x = homeAvatar.pos.X + homeAvatar.Width + padding
+							-- local x = homeAvatar.pos.X + homeAvatar.Width + padding
+
+							local x = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth + padding
 
 							usernameFrame.pos = { x, y }
 
@@ -1787,6 +1798,10 @@ function home()
 
 		btnFriends.onRelease = function()
 			Menu:ShowFriends()
+		end
+
+		btnCreate.onRelease = function()
+			Menu:ShowCreations()
 		end
 
 		bottomBar.parentDidResize = function(self)
