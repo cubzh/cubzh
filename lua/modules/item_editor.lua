@@ -1,5 +1,10 @@
+-- TODO:
+-- [ ] fix wearable edition
+-- [ ] fix palette display
+-- [ ] fix orientation cube display
+
 Config = {
-	Items = { "%item_name%", "cube_white", "cube_selector" },
+	Items = { "%item_name%" },
 	ChatAvailable = false,
 }
 
@@ -54,8 +59,6 @@ bodyParts = {
 
 bodyPartToWearablePart = {}
 bodyPartsBasePositions = {}
-
-__equipments = require("equipments.lua")
 
 -- returns an array of shapes
 -- `testFunc` is a function(shape) -> boolean
@@ -169,6 +172,8 @@ Client.OnStart = function()
 	gizmo = require("gizmo")
 	gizmo:setLayer(4)
 	gizmo:setScale(0.3)
+
+	bundle = require("bundle")
 
 	box_outline = require("box_outline")
 	ui = require("uikit")
@@ -443,7 +448,7 @@ Client.OnStart = function()
 	cameraRefresh = function()
 		-- clamp rotation between 90° and -90° on X
 		cameraCurrentState.cameraRotation.X =
-			math.clamp(cameraCurrentState.cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
+			clamp(cameraCurrentState.cameraRotation.X, -math.pi * 0.4999, math.pi * 0.4999)
 
 		Camera.Rotation = cameraCurrentState.cameraRotation
 
@@ -543,7 +548,7 @@ Client.OnStart = function()
 
 			if enableWearablePattern then
 				local str = "official.pattern" .. itemCategory
-				pattern = require("bundle").Shape(str)
+				pattern = bundle:Shape(str)
 				pattern.Physics = PhysicsMode.Disabled
 			end
 		end
@@ -641,7 +646,7 @@ Client.OnStart = function()
 	blocksAddedWithDrag = {}
 
 	-- a cube to show where the camera is looking at
-	blockHighlight = MutableShape(Items.cube_selector)
+	blockHighlight = bundle:MutableShape("shapes/cube_selector")
 	blockHighlight.PrivateDrawMode = 2 + (gridEnabled and 8 or 0) -- highlight
 	blockHighlight.Scale = 1 / (blockHighlight.Width - 1)
 	blockHighlight:SetParent(World)
@@ -942,8 +947,8 @@ didResize = function(_, _)
 		local size = paletteBtn.Width * 2 + ui_config.padding
 		orientationCube:setSize(size)
 		orientationCube:setScreenPosition(
-			editSubMenu.LocalPosition.X + editSubMenu.Width - size,
-			editSubMenu.LocalPosition.Y - size - ui_config.padding
+			editSubMenu.pos.X + editSubMenu.Width - size,
+			editSubMenu.pos.Y - size - ui_config.padding
 		)
 	end
 
@@ -1491,7 +1496,7 @@ initClientFunctions = function()
 		if impact ~= nil and impact.Object == shape and impact.Block ~= nil then
 			-- first time the mirror is placed since last removal
 			if mirrorShape == nil then
-				mirrorShape = Shape(Items.cube_white)
+				mirrorShape = bundle:Shape("shapes/cube_white")
 				mirrorShape.Pivot = { 0.5, 0.5, 0.5 }
 				mirrorShape.PrivateDrawMode = 1
 				mirrorShape.Physics = PhysicsMode.Disabled
@@ -1733,16 +1738,9 @@ function ui_init()
 	local padding = ui_config.padding
 	local btnColor = ui_config.btnColor
 	local btnColorSelected = ui_config.btnColorSelected
-	local btnColorDisabled = ui_config.btnColorDisabled
-	local btnTextColorDisabled = ui_config.btnTextColorDisabled
-	local btnColorMode = ui_config.btnColorMode
-	local btnColorModeSelected = ui_config.btnColorModeSelected
 
-	function createButton(text, color, colorSelected)
-		local btn = ui:createButton(text)
-		btn:setColor(color, Color.White)
-		btn:setColorSelected(colorSelected, Color.White)
-		btn:setColorDisabled(btnColorDisabled, btnTextColorDisabled)
+	function createButton(text)
+		local btn = ui:buttonNeutral({ content = text })
 		return btn
 	end
 
@@ -1804,55 +1802,44 @@ function ui_init()
 
 	-- MODE MENU (+ settings)
 
-	modeMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	modeMenu = ui:frameTextBackground()
 
-	editModeBtn = createButton("✏️", btnColorMode, btnColorModeSelected)
+	editModeBtn = ui:buttonNeutral({ content = "✏️" })
 	editModeBtn:setParent(modeMenu)
 	editModeBtn.onRelease = function()
 		setMode(mode.edit, nil)
 	end
 	editModeBtn:select()
 
-	placeModeBtn = createButton("👤", btnColorMode, btnColorModeSelected)
+	placeModeBtn = ui:buttonNeutral({ content = "👤" })
 	placeModeBtn:setParent(modeMenu)
 	placeModeBtn.onRelease = function()
 		setMode(mode.points, nil)
 	end
 
-	importBtn = createButton("📥", btnColor, btnColorSelected)
+	importBtn = ui:buttonSecondary({ content = "📥" })
 	importBtn:setParent(modeMenu)
+
+	local confirmImportAlert
 	importBtn.onRelease = function()
-		if confirmImportFrame then
+		if confirmImportAlert ~= nil then
 			return
 		end
-		local frame = ui:createFrame(Color.Black)
-		confirmImportFrame = frame
-		local text = ui:createText(
-			"Importing a shape will replace the current item. If you want to keep this item, create a new one.",
-			Color.White
+
+		confirmImportAlert = require("alert"):create(
+			"Importing a shape will replace the current item. If you want to keep this item, create a new one."
 		)
-		text:setParent(frame)
-		text.object.Anchor = { 0, 1 }
-		local acceptImportBtn = createButton("Import", Color.Green)
-		acceptImportBtn:setParent(frame)
-		acceptImportBtn.onRelease = function()
-			confirmImportFrame:remove()
-			confirmImportFrame = nil
+
+		confirmImportAlert:setNegativeCallback("Cancel", function()
+			confirmImportAlert:remove()
+			confirmImportAlert = nil
+		end)
+
+		confirmImportAlert:setPositiveCallback("Import", function()
+			confirmImportAlert:remove()
+			confirmImportAlert = nil
 			replaceShapeWithImportedShape()
-		end
-		local cancelImportBtn = createButton("Cancel", Color.Red)
-		cancelImportBtn:setParent(frame)
-		cancelImportBtn.onRelease = function()
-			confirmImportFrame:remove()
-			confirmImportFrame = nil
-		end
-		frame.Width = 300
-		text.object.MaxWidth = frame.Width - 10
-		frame.Height = text.Height + 15 + acceptImportBtn.Height
-		text.LocalPosition = Number3(5, frame.Height - 5, 0)
-		cancelImportBtn.LocalPosition = Number3(5, 5, 0)
-		acceptImportBtn.LocalPosition = Number3(frame.Width - acceptImportBtn.Width - 5, 5, 0)
-		frame.LocalPosition = Number3(Screen.Width / 2 - frame.Width / 2, Screen.Height / 2 - frame.Height / 2, 0)
+		end)
 	end
 
 	replaceShapeWithImportedShape = function()
@@ -1905,7 +1892,7 @@ function ui_init()
 		end)
 	end
 
-	screenshotBtn = createButton("📷", btnColor, btnColorSelected)
+	screenshotBtn = ui:buttonSecondary({ content = "📷" })
 	screenshotBtn:setParent(modeMenu)
 	screenshotBtn.onRelease = function()
 		if waitForScreenshot == true then
@@ -2007,7 +1994,7 @@ function ui_init()
 		end)
 	end
 
-	saveBtn = createButton("💾", btnColor, btnColorSelected)
+	saveBtn = ui:buttonSecondary({ content = "💾" })
 	saveBtn:setParent(modeMenu)
 	saveBtn.label = ui:createText("✅", Color.Black, "small")
 	saveBtn.label:setParent(saveBtn)
@@ -2046,7 +2033,7 @@ function ui_init()
 
 	-- CAMERA CONTROLS
 
-	recenterBtn = createButton("🎯", btnColor, btnColorSelected)
+	recenterBtn = ui:buttonSecondary({ content = "🎯" })
 	recenterBtn.onRelease = function()
 		if currentMode == mode.edit then
 			fitObjectToScreen(item, nil)
@@ -2068,7 +2055,7 @@ function ui_init()
 
 	-- EDIT MENU
 
-	editMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	editMenu = ui:frameTextBackground()
 	editMenuToggleBtns = {}
 	editMenuToggleSelected = nil
 	function editMenuToggleSelect(target)
@@ -2079,7 +2066,7 @@ function ui_init()
 		editMenuToggleSelected = target
 	end
 
-	addBlockBtn = createButton("➕", btnColor, btnColorSelected)
+	addBlockBtn = ui:buttonNeutral({ content = "➕" })
 	table.insert(editMenuToggleBtns, addBlockBtn)
 	addBlockBtn:setParent(editMenu)
 	addBlockBtn.onRelease = function()
@@ -2088,7 +2075,7 @@ function ui_init()
 	end
 	editMenuToggleSelect(addBlockBtn)
 
-	removeBlockBtn = createButton("➖", btnColor, btnColorSelected)
+	removeBlockBtn = ui:buttonNeutral({ content = "➖" })
 	table.insert(editMenuToggleBtns, removeBlockBtn)
 	removeBlockBtn:setParent(editMenu)
 	removeBlockBtn.onRelease = function()
@@ -2096,7 +2083,7 @@ function ui_init()
 		setMode(nil, editSubmode.remove)
 	end
 
-	replaceBlockBtn = createButton("🖌️", btnColor, btnColorSelected)
+	replaceBlockBtn = ui:buttonNeutral({ content = "🖌️" })
 	table.insert(editMenuToggleBtns, replaceBlockBtn)
 	replaceBlockBtn:setParent(editMenu)
 	replaceBlockBtn.onRelease = function()
@@ -2104,7 +2091,7 @@ function ui_init()
 		setMode(nil, editSubmode.paint)
 	end
 
-	selectShapeBtn = createButton("►", btnColor, btnColorSelected)
+	selectShapeBtn = ui:buttonNeutral({ content = "►" })
 	table.insert(editMenuToggleBtns, selectShapeBtn)
 	selectShapeBtn:setParent(editMenu)
 	selectShapeBtn.onRelease = function()
@@ -2112,7 +2099,7 @@ function ui_init()
 		setMode(nil, editSubmode.select)
 	end
 
-	mirrorBtn = createButton("🪞", btnColor, btnColorSelected)
+	mirrorBtn = ui:buttonNeutral({ content = "🪞" })
 	table.insert(editMenuToggleBtns, mirrorBtn)
 	mirrorBtn:setParent(editMenu)
 	mirrorBtn.onRelease = function()
@@ -2124,7 +2111,7 @@ function ui_init()
 		selectShapeBtn:disable()
 	end
 
-	pickColorBtn = createButton("🧪", btnColor, btnColorSelected)
+	pickColorBtn = ui:buttonNeutral({ content = "🧪" })
 	table.insert(editMenuToggleBtns, pickColorBtn)
 	pickColorBtn:setParent(editMenu)
 	pickColorBtn.onRelease = function()
@@ -2137,7 +2124,7 @@ function ui_init()
 		setMode(nil, editSubmode.pick)
 	end
 
-	paletteBtn = createButton("🎨", btnColor, btnColorSelected)
+	paletteBtn = ui:buttonNeutral({ content = "🎨" })
 	paletteBtn:setParent(editMenu)
 	paletteBtn.onRelease = function()
 		paletteDisplayed = not paletteDisplayed
@@ -2169,9 +2156,9 @@ function ui_init()
 
 	-- EDIT SUB MENU
 
-	editSubMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	editSubMenu = ui:frameTextBackground()
 
-	oneBlockBtn = createButton("⚀", btnColor, btnColorSelected)
+	oneBlockBtn = ui:buttonNeutral({ content = "⚀" })
 	oneBlockBtn:setParent(editSubMenu)
 	oneBlockBtn.onRelease = function()
 		oneBlockBtn:select()
@@ -2180,7 +2167,7 @@ function ui_init()
 	end
 	oneBlockBtn:select()
 
-	faceModeBtn = createButton("⚅", btnColor, btnColorSelected)
+	faceModeBtn = ui:buttonNeutral({ content = "⚅" })
 	faceModeBtn:setParent(editSubMenu)
 	faceModeBtn.onRelease = function()
 		oneBlockBtn:unselect()
@@ -2188,7 +2175,7 @@ function ui_init()
 		setFacemode(true)
 	end
 
-	redoBtn = createButton("↩️", btnColor, btnColorSelected)
+	redoBtn = ui:buttonNeutral({ content = "↩️" })
 	redoBtn:setParent(editSubMenu)
 	redoBtn.onRelease = function()
 		local lastRedoableShape = redoShapesStack[#redoShapesStack]
@@ -2202,7 +2189,7 @@ function ui_init()
 		end
 	end
 
-	undoBtn = createButton("↪️", btnColor, btnColorSelected)
+	undoBtn = ui:buttonNeutral({ content = "↪️" })
 	undoBtn:setParent(editSubMenu)
 	undoBtn.onRelease = function()
 		local lastUndoableShape = undoShapesStack[#undoShapesStack]
@@ -2217,7 +2204,7 @@ function ui_init()
 	end
 
 	gridEnabled = false
-	gridBtn = createButton("𐄳", btnColor, btnColorSelected)
+	gridBtn = ui:buttonNeutral({ content = "𐄳" })
 	gridBtn:setParent(editSubMenu)
 	gridBtn.onRelease = function()
 		gridEnabled = not gridEnabled
@@ -3203,26 +3190,12 @@ function post_item_load()
 
 		Player:SetParent(World)
 		Player.Scale = 1
-		-- local parents = __equipments.equipmentParent(Player, itemCategory)
-		-- local parent = parents
-		-- if type(parents) == "table" then
-		--     parent = parents[1]
-		-- end
-		-- Player.Position = -parent:GetPoint("origin").Position
-
-		-- itemPlusAvatarBtn:onRelease()
-		-- Timer(0.1, updateWearableSubShapesPosition)
-
-		-- avatarLoadedListener:Remove()
-		-- avatarLoadedListener = nil
-
-		-- print("🐞[AvatarLoaded] itemCategory:", itemCategory)
-
-		-- item.equipmentName = itemCategory
-		-- Player.equipments[itemCategory] = item
-		-- __equipments:place(Player, item)
 	end)
 
 	fitObjectToScreen(item, settings.cameraStartRotation) -- sets cameraCurrentState.target
 	refreshBlockHighlight()
+end
+
+function clamp(value, min, max)
+	return math.min(math.max(value, min), max)
 end

@@ -59,7 +59,7 @@ palette.create = function(_, uikit, btnColor)
 	node.didChangeSelection = nil -- function(self, color)
 	node.requiresEdit = nil -- function(self, index, color)
 
-	local bg = uikit:createFrame(Color(50, 50, 50, 200))
+	local bg = uikit:frameTextBackground()
 	bg.Width = 200
 	bg.Height = 200
 	bg:setParent(node)
@@ -73,7 +73,7 @@ palette.create = function(_, uikit, btnColor)
 		return self.background.Height
 	end
 
-	local editBtn = uikit:createButton("✏️")
+	local editBtn = uikit:buttonSecondary({ content = "✏️" })
 	if btnColor then
 		editBtn:setColor(btnColor)
 	end
@@ -85,7 +85,7 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	local addBtn = uikit:createButton("➕")
+	local addBtn = uikit:buttonSecondary({ content = "➕" })
 	if btnColor then
 		addBtn:setColor(btnColor)
 	end
@@ -99,7 +99,7 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	local deleteBtn = uikit:createButton("➖")
+	local deleteBtn = uikit:buttonSecondary({ content = "➖" })
 	if btnColor then
 		deleteBtn:setColor(btnColor)
 	end
@@ -141,7 +141,8 @@ palette.create = function(_, uikit, btnColor)
 
 		local colorsShape = MutableShape()
 		colorsShape.CollisionGroups = {}
-		local colors = uikit:createShape(colorsShape, { doNotFlip = true, perBlockCollisions = true })
+		local colors =
+			uikit:createShape(colorsShape, { spherized = false, doNotFlip = true, perBlockCollisions = true })
 		colors:setParent(self)
 
 		self.colors = colors
