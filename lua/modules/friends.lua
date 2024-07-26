@@ -722,6 +722,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 			helpPointer = nil
 		end
 		scroll:setScrollPosition(scrollPosition)
+		scroll:refresh()
 	end
 
 	node:resetList()
