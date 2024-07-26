@@ -44,9 +44,19 @@ Client.OnStart = function()
 	-- homeScrollPosition = nil
 
 	function getAvatarCameraTargetPosition(h, w)
+		-- print(
+		-- 	"getAvatarCameraTargetPosition, avatarCameraFollowHomeScroll:",
+		-- 	avatarCameraFollowHomeScroll and "true" or "false",
+		-- 	"avatarCameraFocus:",
+		-- 	avatarCameraFocus
+		-- )
+
 		if avatarCameraTarget == nil then
 			return nil
 		end
+
+		local savedRot = avatarCameraTarget.LocalRotation:Copy()
+		avatarCameraTarget.LocalRotation:Set(Number3.Zero)
 
 		local _w = Camera.TargetWidth
 		local _h = Camera.TargetHeight
@@ -85,6 +95,8 @@ Client.OnStart = function()
 		Camera.Width = _w
 		Camera.Position:Set(pos)
 
+		avatarCameraTarget.LocalRotation:Set(savedRot)
+
 		return targetPos
 	end
 
@@ -110,6 +122,8 @@ Client.OnStart = function()
 			return
 		end
 
+		ease:cancel(Camera)
+
 		local p = getAvatarCameraTargetPosition(h, w)
 		if p == nil then
 			return
@@ -119,8 +133,6 @@ Client.OnStart = function()
 		avatarCameraState.screenWidth = Screen.Width
 		avatarCameraState.focus = avatarCameraFocus
 		avatarCameraState.target = avatarCameraTarget
-
-		ease:cancel(Camera)
 
 		local targetX = 0
 		local targetY = Screen.SafeArea.Top
@@ -1646,6 +1658,13 @@ function home()
 
 											self.Height = drawerHeight
 
+											okBtn.pos = {
+												self.Width - okBtn.Width - padding,
+												self.Height + padding,
+											}
+
+											LocalEvent:Send("signup_drawer_height_update", drawerHeight)
+
 											if avatarEditor then
 												avatarEditor.Width = self.Width - padding * 2
 												avatarEditor.Height = drawerHeight
@@ -1653,14 +1672,6 @@ function home()
 													- padding * 2
 												avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
 											end
-
-											okBtn.pos = {
-												self.Width - okBtn.Width - padding,
-												self.Height + padding,
-											}
-
-											-- layoutInfoFrame()
-											LocalEvent:Send("signup_drawer_height_update", drawerHeight)
 										end,
 									})
 									drawer:bump()
