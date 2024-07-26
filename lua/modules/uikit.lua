@@ -1047,8 +1047,13 @@ function createUI(system)
 		node.pivot.LocalRotation:Set(0, 0, 0)
 
 		-- NOTE: Using AABB in pivot space to infer size & placement.
-		local aabb = Box()
-		aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
+		local aabb
+		if node._config.singleShapeToBeMutated then
+			aabb = node.shape.BoundingBox
+		else
+			aabb = Box()
+			aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
+		end
 
 		if not node._config.doNotFlip then
 			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
@@ -1439,6 +1444,11 @@ function createUI(system)
 			doNotFlip = false,
 			offset = Number3.Zero,
 			perBlockCollisions = false,
+			-- TEMPORARY WORKAROUND:
+			-- The new system to compute shape boundaries, including children is not working as expected
+			-- when dealing with MutableShape that are being modified after UI shape's creation.
+			-- singleShapeToBeMutated = true allows use the legacy system (shape.BoundingBox instead of box:Fit(shape))
+			singleShapeToBeMutated = false,
 		}
 
 		config = conf:merge(defaultConfig, config)
