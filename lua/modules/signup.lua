@@ -372,15 +372,17 @@ signup.startFlow = function(self, config)
 
 				local userCheckTimer = nil
 				local usernameCheckRequest = nil
+				local username = nil
+				local usernameKey = nil
 
 				usernameInput.onTextChange = function(self)
 					-- disable onTextChange while we normalize the text
 					local backup = self.onTextChange
 					self.onTextChange = nil
 
-					local username = str:normalize(self.Text)
-					username = str:lower(username)
-					self.Text = username
+					local s = str:normalize(self.Text)
+					s = str:lower(s)
+					self.Text = s
 
 					-- re-enable onTextChange
 					self.onTextChange = backup
@@ -405,10 +407,10 @@ signup.startFlow = function(self, config)
 
 					userCheckTimer = Timer(1.0, function()
 						-- check username
-						if username == "" then
+						if s == "" then
 							usernameLabel.Text = DEFAULT_LABEL
 						else
-							usernameCheckRequest = api:checkUsername(username, function(ok, response)
+							usernameCheckRequest = api:checkUsername(s, function(ok, response)
 								if ok == false or response == nil then
 									usernameLabel.Text = "❌ failed to validate username"
 								else
@@ -420,6 +422,8 @@ signup.startFlow = function(self, config)
 										usernameLabel.Text = "❌ username is inappropriate"
 									else
 										usernameLabel.Text = "✅ username is available"
+										username = s
+										usernameKey = response.key
 									end
 								end
 								-- re-layout drawer content following the change in usernameLabel.Text
@@ -438,26 +442,18 @@ signup.startFlow = function(self, config)
 				confirmButton.onRelease = function()
 					showLoading()
 					if usernameInput.Text ~= "" then
-						local req = api:login(
-							{ usernameOrEmail = config.usernameOrEmail, magickey = usernameInput.Text },
-							function(err, accountInfo)
-								if err == nil then
-									local userID = accountInfo.credentials["user-id"]
-									local username = accountInfo.username
-									local token = accountInfo.credentials.token
-
-									Player.UserID = userID
-									Player.Username = username
-									System:StoreCredentials(userID, token)
-
-									System.AskedForMagicKey = false
-									internalLoginSuccess()
-								else
-									usernameLabel.Text = "❌ " .. err
-									hideLoading()
-								end
+						local req = api:patchUserInfo({ username = username, usernameKey = usernameKey }, function(err)
+							if err == nil then
+								-- success
+								Player.Username = username
+								System.AskedForMagicKey = false
+								internalLoginSuccess()
+							else
+								-- failure
+								usernameLabel.Text = "❌ " .. err
+								hideLoading()
 							end
-						)
+						end)
 						table.insert(requests, req)
 					else
 						-- text input is empty
@@ -528,9 +524,13 @@ signup.startFlow = function(self, config)
 			end,
 			onRemove = function()
 				removeBackButton()
-				drawer:remove()
-				drawer = nil
-				config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				if drawer ~= nil then
+					drawer:remove()
+					drawer = nil
+				end
+				if config.onCancel ~= nil then
+					config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				end
 			end,
 		})
 		return step
@@ -1001,9 +1001,13 @@ signup.startFlow = function(self, config)
 			end,
 			onRemove = function()
 				removeBackButton()
-				drawer:remove()
-				drawer = nil
-				config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				if drawer ~= nil then
+					drawer:remove()
+					drawer = nil
+				end
+				if config.onCancel ~= nil then
+					config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				end
 			end,
 		})
 
@@ -1094,10 +1098,6 @@ signup.startFlow = function(self, config)
 				phoneInput:setParent(drawer)
 
 				okBtn.onRelease = function()
-					-- TEMPORARY HACK
-					-- signupFlow:push(createVerifyPhoneNumberStep())
-					-- return
-
 					okBtn:disable()
 					-- signupFlow:push(createAvatarEditorStep())
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
@@ -1698,9 +1698,13 @@ signup.startFlow = function(self, config)
 			end,
 			onRemove = function()
 				removeBackButton()
-				drawer:remove()
-				drawer = nil
-				config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				if drawer ~= nil then
+					drawer:remove()
+					drawer = nil
+				end
+				if config.onCancel ~= nil then
+					config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				end
 			end,
 		})
 
