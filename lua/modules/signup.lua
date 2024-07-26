@@ -975,6 +975,9 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+				Timer(0.2, function()
+					phoneInput:focus()
+				end)
 			end,
 			onExit = function() end,
 			onRemove = function() end,
