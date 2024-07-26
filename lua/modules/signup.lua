@@ -314,6 +314,228 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
+	-- Prompts the user for a username
+	local createUsernameInputStep = function(config)
+		local defaultConfig = {
+			username = "",
+		}
+		config = conf:merge(defaultConfig, config)
+
+		local requests = {}
+		local step = flow:createStep({
+			onEnter = function()
+				-- showBackButton()
+				showCoinsButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				local DEFAULT_LABEL = "How should we call you?"
+
+				local title = ui:createText(str:upperFirstChar(loc("username", "title")) .. " 🙂", Color.White)
+				title:setParent(drawer)
+
+				local loadingLabel = ui:createText(str:upperFirstChar(loc("loading...")), Color.White)
+				loadingLabel:setParent(drawer)
+				loadingLabel:hide()
+
+				local usernameLabel = ui:createText(DEFAULT_LABEL, Color.White, "default")
+				usernameLabel:setParent(drawer)
+
+				local usernameInput =
+					ui:createTextInput("", str:upperFirstChar(loc("username")), { textSize = "default" })
+				usernameInput:setParent(drawer)
+
+				local confirmButton = ui:buttonPositive({
+					content = "That is my username!",
+					-- textSize = "small",
+				})
+				confirmButton:setParent(drawer)
+
+				local function showLoading()
+					loadingLabel:show()
+					usernameLabel:hide()
+					usernameInput:hide()
+					confirmButton:hide()
+				end
+
+				local function hideLoading()
+					loadingLabel:hide()
+					usernameLabel:show()
+					usernameInput:show()
+					confirmButton:show()
+				end
+
+				local userCheckTimer = nil
+				local usernameCheckRequest = nil
+
+				usernameInput.onTextChange = function(self)
+					-- disable onTextChange while we normalize the text
+					local backup = self.onTextChange
+					self.onTextChange = nil
+
+					local username = str:normalize(self.Text)
+					username = str:lower(username)
+					self.Text = username
+
+					-- re-enable onTextChange
+					self.onTextChange = backup
+
+					-- use timer to avoid spamming the API
+
+					usernameLabel.Text = "⚙️ checking..."
+					-- re-layout drawer content following the change in usernameLabel.Text
+					-- TODO: !
+
+					-- Cancel previous request if any
+					if usernameCheckRequest ~= nil then
+						usernameCheckRequest:Cancel()
+						usernameCheckRequest = nil
+					end
+
+					if userCheckTimer ~= nil then
+						-- timer already exists, cancel it
+						userCheckTimer:Cancel()
+						userCheckTimer = nil
+					end
+
+					userCheckTimer = Timer(1.0, function()
+						-- check username
+						if username == "" then
+							usernameLabel.Text = DEFAULT_LABEL
+						else
+							usernameCheckRequest = api:checkUsername(username, function(ok, response)
+								if ok == false or response == nil then
+									usernameLabel.Text = "❌ failed to validate username"
+								else
+									if response.format == false then
+										usernameLabel.Text = "❌ invalid format"
+									elseif response.available == false then
+										usernameLabel.Text = "❌ username already taken"
+									elseif response.appropriate == false then
+										usernameLabel.Text = "❌ username is inappropriate"
+									else
+										usernameLabel.Text = "✅ username is available"
+									end
+								end
+								-- re-layout drawer content following the change in usernameLabel.Text
+								-- TODO: !!!
+								-- drawer:parentDidResize() -- doesn't work
+							end)
+						end
+					end)
+
+					-- if didStartTyping == false and self.Text ~= "" then
+					-- 	didStartTyping = true
+					-- 	System:DebugEvent("LOGIN_STARTED_TYPING_USERNAME")
+					-- end
+				end
+
+				confirmButton.onRelease = function()
+					showLoading()
+					if usernameInput.Text ~= "" then
+						local req = api:login(
+							{ usernameOrEmail = config.usernameOrEmail, magickey = usernameInput.Text },
+							function(err, accountInfo)
+								if err == nil then
+									local userID = accountInfo.credentials["user-id"]
+									local username = accountInfo.username
+									local token = accountInfo.credentials.token
+
+									Player.UserID = userID
+									Player.Username = username
+									System:StoreCredentials(userID, token)
+
+									System.AskedForMagicKey = false
+									internalLoginSuccess()
+								else
+									usernameLabel.Text = "❌ " .. err
+									hideLoading()
+								end
+							end
+						)
+						table.insert(requests, req)
+					else
+						-- text input is empty
+						usernameLabel.Text = "❌ Please enter a magic key"
+						hideLoading()
+					end
+				end
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						local padding = theme.paddingBig
+
+						-- local maxWidth = math.min(300, self.Width - padding * 2)
+						-- text.object.MaxWidth = maxWidth
+						-- secondaryText.object.MaxWidth = maxWidth
+
+						-- local w = math.min(self.Width, math.max(text.Width, confirmButton.Width, 300) + padding * 2)
+						local w = 300 + (padding * 2)
+
+						local availableWidth = w - padding * 2
+						usernameInput.Width = availableWidth
+
+						self.Width = w
+						self.Height = Screen.SafeArea.Bottom
+							+ title.Height
+							+ usernameLabel.Height
+							+ usernameInput.Height
+							+ confirmButton.Height
+							+ padding * 5
+
+						confirmButton.pos = {
+							self.Width * 0.5 - confirmButton.Width * 0.5,
+							Screen.SafeArea.Bottom + padding,
+						}
+
+						usernameInput.pos = {
+							self.Width * 0.5 - usernameInput.Width * 0.5,
+							confirmButton.pos.Y + confirmButton.Height + padding,
+						}
+
+						usernameLabel.pos = {
+							self.Width * 0.5 - usernameLabel.Width * 0.5,
+							usernameInput.pos.Y + usernameInput.Height + padding,
+						}
+
+						title.pos = {
+							self.Width * 0.5 - title.Width * 0.5,
+							usernameLabel.pos.Y + usernameLabel.Height + padding,
+						}
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
+					end,
+				})
+
+				drawer:show()
+				Timer(0.2, function()
+					usernameInput:focus()
+				end)
+			end,
+			onExit = function()
+				drawer:updateConfig({
+					layoutContent = function(_) end,
+				})
+				drawer:hide()
+			end,
+			onRemove = function()
+				removeBackButton()
+				drawer:remove()
+				drawer = nil
+				config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+			end,
+		})
+		return step
+	end
+
 	local createLoginOptionsStep = function(config)
 		local defaultConfig = {
 			username = "",
@@ -700,7 +922,7 @@ signup.startFlow = function(self, config)
 							okBtn:enable()
 							return
 						end
-						internalLoginSuccess()
+						signupFlow:push(createUsernameInputStep())
 					end)
 				end
 
@@ -771,8 +993,18 @@ signup.startFlow = function(self, config)
 					codeInput:focus()
 				end)
 			end,
-			onExit = function() end,
-			onRemove = function() end,
+			onExit = function()
+				drawer:updateConfig({
+					layoutContent = function(_) end,
+				})
+				drawer:hide()
+			end,
+			onRemove = function()
+				removeBackButton()
+				drawer:remove()
+				drawer = nil
+				config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+			end,
 		})
 
 		return step
