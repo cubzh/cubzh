@@ -251,8 +251,8 @@ palette.create = function(_, uikit, btnColor)
 		self.selectionFrame.Width = self._squareSize
 		self.selectionFrame.Height = self._squareSize
 
-		self.selectionFrame.LocalPosition.X = self.colors.pos.X + b.Coords.X * self._squareSize
-		self.selectionFrame.LocalPosition.Y = self.colors.pos.Y + self.colors.Height + b.Coords.Y * self._squareSize
+		self.selectionFrame.pos.X = self.colors.pos.X + b.Coords.X * self._squareSize
+		self.selectionFrame.pos.Y = self.colors.pos.Y + self.colors.Height + b.Coords.Y * self._squareSize
 	end
 
 	node._refresh = function(self)
@@ -305,8 +305,7 @@ palette.create = function(_, uikit, btnColor)
 
 		self.colors.Width = colorsWidth
 		self.colors.Height = colorsHeight
-
-		self.colors.pos = { self.padding, self.deleteBtn.LocalPosition.Y + self.deleteBtn.Height + self.padding, 0 }
+		self.colors.Depth = 1
 
 		colorsWidth = colorsWidth + self.padding * 2
 		local width = controlsWidth > colorsWidth and controlsWidth or colorsWidth
@@ -314,11 +313,11 @@ palette.create = function(_, uikit, btnColor)
 		self.background.Height = heightWithoutColors + self.colors.Height
 		self.background.Width = width
 
-		self.addBtn.LocalPosition = { width - self.padding - self.addBtn.Width, self.padding, 0 }
-		self.editBtn.LocalPosition =
-			{ self.addBtn.LocalPosition.X - self.editBtn.Width - self.padding, self.padding, 0 }
-		self.deleteBtn.LocalPosition =
-			{ self.editBtn.LocalPosition.X - self.deleteBtn.Width - self.padding, self.padding, 0 }
+		self.addBtn.pos = { width - self.padding - self.addBtn.Width, self.padding }
+		self.editBtn.pos = { self.addBtn.pos.X - self.editBtn.Width - self.padding, self.padding }
+		self.deleteBtn.pos = { self.editBtn.pos.X - self.deleteBtn.Width - self.padding, self.padding }
+
+		self.colors.pos = { self.padding, self.deleteBtn.pos.Y + self.deleteBtn.Height + self.padding }
 
 		self:_refreshSelectionFrame()
 
