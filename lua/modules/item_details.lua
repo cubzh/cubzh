@@ -143,10 +143,10 @@ mod.createModalContent = function(_, config)
 		-- backgroundColor = Color(0, 255, 0, 0.3),
 		-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 		padding = {
-			top = theme.padding,
-			bottom = theme.padding,
-			left = theme.padding,
-			right = theme.padding,
+			top = theme.scrollPadding,
+			bottom = theme.scrollPadding,
+			left = theme.scrollPadding,
+			right = theme.scrollPadding,
 		},
 		cellPadding = theme.padding,
 		loadCell = function(index)

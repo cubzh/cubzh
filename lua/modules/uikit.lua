@@ -1233,11 +1233,41 @@ function createUI(system)
 		return ui.frame(self, { quad = quad })
 	end
 
+	ui.frameTextBackground = function(self)
+		if self ~= ui then
+			error("ui:frameGenericContainer(): use `:`", 2)
+		end
+		local image = Data:FromBundle("images/text_background_dark.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
 		local image = Data:FromBundle("images/frame_dark.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	ui.frameCreationContainer = function(self)
+		if self ~= ui then
+			error("ui:frameGenericContainer(): use `:`", 2)
+		end
+		local image = Data:FromBundle("images/frame_creation.png")
 		local quad = Quad()
 		quad.Image = {
 			data = image,

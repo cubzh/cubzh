@@ -5,16 +5,15 @@ local itemGrid = {}
 -- MODULES
 local api = require("api")
 local theme = require("uitheme").current
-local conf = require("config")
 
 -- CONSTANTS
 local MIN_CELL_SIZE = 140
 local MAX_CELL_SIZE = 200
-local MIN_CELLS_PER_ROW = 2 -- prority over MIN_CELL_SIZE
+local MIN_CELLS_PER_ROW = 3 -- prority over MIN_CELL_SIZE
 
 itemGrid.create = function(_, config)
 	-- load config (overriding defaults)
-	local _config = {
+	local defaultConfig = {
 		-- shows search bar when true
 		searchBar = true,
 		--
@@ -32,13 +31,19 @@ itemGrid.create = function(_, config)
 		--
 		uikit = require("uikit"),
 		--
-		backgroundColor = Color(40, 40, 40),
+		backgroundColor = theme.buttonTextColor,
 		--
 		sort = "likes:desc",
 		--
-		cellPadding = theme.padding,
+		cellPadding = theme.cellPadding,
+		--
+		scrollPadding = theme.scrollPadding,
 		--
 		padding = 0,
+		--
+		displayPrice = false,
+		--
+		displayLikes = false,
 		--
 		onOpen = function(_) end,
 		--
@@ -46,7 +51,7 @@ itemGrid.create = function(_, config)
 	}
 
 	local ok, err = pcall(function()
-		config = conf:merge(_config, config, {
+		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				repo = { "string" },
 				categories = { "table" },
@@ -191,7 +196,7 @@ itemGrid.create = function(_, config)
 		direction = "down",
 		backgroundColor = config.backgroundColor or Color(0, 0, 0, 0),
 		cellPadding = config.cellPadding,
-		padding = config.padding,
+		padding = config.scrollPadding,
 		loadCell = function(index)
 			if index <= rows then
 				local row = table.remove(rowPool)
@@ -239,41 +244,46 @@ itemGrid.create = function(_, config)
 							cellSelector:setParent(nil)
 						end
 
-						local titleFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+						local titleFrame = ui:frameTextBackground()
 						titleFrame:setParent(cell)
+						titleFrame.pos = { theme.paddingTiny, theme.paddingTiny }
 						titleFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 						local title = ui:createText("…", Color.White, "small")
 						title:setParent(titleFrame)
 
-						title.pos = { theme.padding, theme.padding }
+						title.pos = { theme.paddingTiny, theme.paddingTiny }
 
 						cell.titleFrame = titleFrame
 						cell.title = title
 
-						local likesFrame = ui:frame({ color = Color(0, 0, 0, 0) })
-						likesFrame:setParent(cell)
-						likesFrame.LocalPosition.Z = config.uikit.kForegroundDepth
+						if config.displayLikes then
+							local likesFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+							likesFrame:setParent(cell)
+							likesFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
-						local likes = ui:createText("❤️ …", Color.White, "small")
-						likes:setParent(likesFrame)
+							local likes = ui:createText("❤️ …", Color.White, "small")
+							likes:setParent(likesFrame)
 
-						likes.pos = { theme.padding, theme.padding }
+							likes.pos = { theme.padding, theme.padding }
 
-						cell.likesFrame = likesFrame
-						cell.likesLabel = likes
+							cell.likesFrame = likesFrame
+							cell.likesLabel = likes
+						end
 
-						local priceFrame = ui:frame({ color = Color(0, 0, 0, 0) })
-						priceFrame:setParent(cell)
-						priceFrame.LocalPosition.Z = config.uikit.kForegroundDepth
+						if config.displayPrice then
+							local priceFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+							priceFrame:setParent(cell)
+							priceFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
-						local price = ui:createText("❤️ …", Color.White, "small")
-						price:setParent(priceFrame)
+							local price = ui:createText("❤️ …", Color.White, "small")
+							price:setParent(priceFrame)
 
-						price.pos = { theme.padding, theme.padding }
+							price.pos = { theme.padding, theme.padding }
 
-						cell.priceFrame = priceFrame
-						cell.priceLabel = price
+							cell.priceFrame = priceFrame
+							cell.priceLabel = price
+						end
 
 						cell.requests = {}
 						cell.item = nil
@@ -295,23 +305,29 @@ itemGrid.create = function(_, config)
 								self.item = nil
 							end
 
-							self.titleFrame.Width = self.Width
-							self.title.object.MaxWidth = self.titleFrame.Width - theme.padding * 2
+							self.title.object.MaxWidth = self.Width - theme.paddingTiny * 4
 							self.title.Text = improveNameFormat(entry.name)
-							self.titleFrame.Height = self.title.Height + theme.padding * 2
+							self.titleFrame.Height = self.title.Height + theme.paddingTiny * 2
+							self.titleFrame.Width = self.title.Width + theme.paddingTiny * 2
 
-							self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
-							self.likesLabel.Text = "❤️ " .. self.likes
-							self.likesFrame.Height = self.likesLabel.Height + theme.padding * 2
-							self.likesFrame.Width = self.likesLabel.Width + theme.padding * 2
-							self.likesFrame.pos =
-								{ self.Width - self.likesFrame.Width, self.Height - self.likesFrame.Height }
+							if self.likesFrame ~= nil then
+								self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
+								self.likesLabel.Text = "❤️ " .. self.likes
+								self.likesFrame.Height = self.likesLabel.Height + theme.padding * 2
+								self.likesFrame.Width = self.likesLabel.Width + theme.padding * 2
+								self.likesFrame.pos = {
+									self.Width - self.likesFrame.Width,
+									self.Height - self.likesFrame.Height,
+								}
+							end
 
-							self.priceLabel.object.MaxWidth = self.Width - theme.padding * 2
-							self.priceLabel.Text = "🇵 0" -- 🪙
-							self.priceFrame.Height = self.priceLabel.Height + theme.padding * 2
-							self.priceFrame.Width = self.priceLabel.Width + theme.padding * 2
-							self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }
+							if self.priceFrame ~= nil then
+								self.priceLabel.object.MaxWidth = self.Width - theme.padding * 2
+								self.priceLabel.Text = "🇵 0" -- 🪙
+								self.priceFrame.Height = self.priceLabel.Height + theme.padding * 2
+								self.priceFrame.Width = self.priceLabel.Width + theme.padding * 2
+								self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }
+							end
 
 							local req = Object:Load(self.fullName, function(obj)
 								if obj == nil then
@@ -381,7 +397,7 @@ itemGrid.create = function(_, config)
 
 	local function refreshEntries()
 		nbEntries = #entries
-		local w = scroll.Width - config.padding * 2 + config.cellPadding
+		local w = scroll.Width - config.scrollPadding * 2 + config.cellPadding
 		entriesPerRow = math.floor(w / MIN_CELL_SIZE)
 		entriesPerRow = math.max(MIN_CELLS_PER_ROW, entriesPerRow)
 		cellSize = w / entriesPerRow

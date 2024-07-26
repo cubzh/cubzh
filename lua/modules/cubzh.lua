@@ -1126,14 +1126,14 @@ function home()
 				cell = ui:frameScrollCell()
 				cell.Width = CONFIG.WORLD_CELL_SIZE
 
-				local titleFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+				local titleFrame = ui:frameTextBackground()
 				titleFrame:setParent(cell)
-				titleFrame.pos = { padding, padding }
+				titleFrame.pos = { padding + theme.paddingTiny, padding + theme.paddingTiny }
 				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 				local title = ui:createText("…", Color.White, "small")
 				title:setParent(titleFrame)
-				title.pos = { 2, 2 }
+				title.pos = { theme.paddingTiny, theme.paddingTiny }
 
 				cell.titleFrame = titleFrame
 				cell.title = title
@@ -1198,9 +1198,9 @@ function home()
 				cell.title.Text = "…"
 			end
 
-			cell.title.object.MaxWidth = cell.Width - (padding + CONFIG.TINY_PADDING) * 2
-			cell.titleFrame.Width = cell.title.Width + CONFIG.TINY_PADDING * 2
-			cell.titleFrame.Height = cell.title.Height + CONFIG.TINY_PADDING * 2
+			cell.title.object.MaxWidth = cell.Width - (padding + theme.paddingTiny * 2) * 2
+			cell.titleFrame.Width = cell.title.Width + theme.paddingTiny * 2
+			cell.titleFrame.Height = cell.title.Height + theme.paddingTiny * 2
 
 			return cell
 		end
@@ -1277,14 +1277,14 @@ function home()
 				cell = ui:frameScrollCell()
 				cell.Width = CONFIG.ITEM_CELL_SIZE
 
-				local titleFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+				local titleFrame = ui:frameTextBackground()
 				titleFrame:setParent(cell)
 				titleFrame.pos = { padding, padding }
 				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 				local title = ui:createText("…", Color.White, "small")
 				title:setParent(titleFrame)
-				title.pos = { 2, 2 }
+				title.pos = { theme.paddingTiny, theme.paddingTiny }
 
 				cell.titleFrame = titleFrame
 				cell.title = title
@@ -1356,9 +1356,9 @@ function home()
 				cell.title.Text = "…"
 			end
 
-			cell.title.object.MaxWidth = cell.Width - (padding + CONFIG.TINY_PADDING) * 2
-			cell.titleFrame.Width = cell.title.Width + CONFIG.TINY_PADDING * 2
-			cell.titleFrame.Height = cell.title.Height + CONFIG.TINY_PADDING * 2
+			cell.title.object.MaxWidth = cell.Width - (padding + theme.paddingTiny) * 2
+			cell.titleFrame.Width = cell.title.Width + theme.paddingTiny * 2
+			cell.titleFrame.Height = cell.title.Height + theme.paddingTiny * 2
 
 			return cell
 		end
@@ -1456,16 +1456,16 @@ function home()
 						friendCell.userID = friend.id
 						friendCell.username = friend.username
 
-						local usernameFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						local usernameFrame = ui:frameTextBackground()
 						usernameFrame:setParent(avatar)
 						usernameFrame.LocalPosition.Z = ui.kForegroundDepth
 
 						local username = ui:createText(friend.username, Color.White, "small")
 						username:setParent(usernameFrame)
-						username.pos = { 2, 2 }
+						username.pos = { theme.paddingTiny, theme.paddingTiny }
 
-						usernameFrame.Width = username.Width + 4
-						usernameFrame.Height = username.Height + 4
+						usernameFrame.Width = username.Width + theme.paddingTiny * 2
+						usernameFrame.Height = username.Height + theme.paddingTiny * 2
 
 						avatar.username = username
 						avatar.usernameFrame = usernameFrame
@@ -1611,11 +1611,12 @@ function home()
 						profileCell = ui:frame()
 						profileCell.Height = CONFIG.PROFILE_CELL_SIZE
 
-						local usernameFrame = ui:frame({ color = Color(0, 0, 0, 0.5) })
+						local usernameFrame = ui:frameTextBackground()
 						usernameFrame:setParent(profileCell)
 
 						local username = ui:createText(Player.Username, Color.White)
 						username:setParent(usernameFrame)
+						username.pos = { theme.paddingTiny, theme.paddingTiny }
 
 						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
 						editAvatarBtn:setParent(profileCell)
@@ -1689,8 +1690,8 @@ function home()
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
 
-							usernameFrame.Width = username.Width + padding * 2
-							usernameFrame.Height = username.Height + CONFIG.TINY_PADDING * 2
+							usernameFrame.Width = username.Width + theme.paddingTiny * 2
+							usernameFrame.Height = username.Height + theme.paddingTiny * 2
 
 							local infoWidth = math.max(username.Width, editAvatarBtn.Width, visitHouseBtn.Width)
 
@@ -1708,7 +1709,6 @@ function home()
 
 							usernameFrame.pos = { x, y }
 
-							username.pos = { padding, CONFIG.TINY_PADDING }
 							y = y - padding - editAvatarBtn.Height
 							editAvatarBtn.pos = { x, y }
 							y = y - padding - visitHouseBtn.Height
@@ -1747,7 +1747,8 @@ function home()
 
 							local scroll = ui:createScroll({
 								-- backgroundColor = Color(255, 255, 255),
-								backgroundColor = Color(43, 45, 49),
+								-- backgroundColor = Color(43, 45, 49),
+								backgroundColor = theme.buttonTextColor,
 								padding = CONFIG.CELL_PADDING,
 								cellPadding = CONFIG.CELL_PADDING,
 								direction = "right",

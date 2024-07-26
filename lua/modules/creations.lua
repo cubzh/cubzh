@@ -426,9 +426,26 @@ creations.createModalContent = function(_, config)
 		creationsContent.title = "Creations"
 		creationsContent.icon = "🏗️"
 
-		local grid = itemGrid:create({ minBlocks = 1, repo = Player.Username, categories = { "null" }, uikit = ui })
+		local node = ui:frame()
 
-		creationsContent.node = grid
+		local grid = itemGrid:create({
+			minBlocks = 1,
+			repo = Player.Username,
+			categories = { "null" },
+			sort = "updatedAt:desc",
+			uikit = ui,
+		})
+		grid:setParent(node)
+
+		local btnNew = ui:buttonPositive({ content = "✨ Create item ⚔️", padding = theme.padding })
+		btnNew:setParent(node)
+
+		node.parentDidResize = function(self)
+			grid.Width = self.Width
+			grid.Height = self.Height - btnNew.Height - theme.padding
+			grid.pos.Y = btnNew.Height + theme.padding
+			btnNew.pos = { self.Width * 0.5 - btnNew.Width * 0.5, 0 }
+		end
 
 		creationsContent.willResignActive = function(_)
 			grid:cancelRequestsAndTimers()
@@ -448,9 +465,6 @@ creations.createModalContent = function(_, config)
 				end
 			end
 		end
-
-		local btnNew = ui:buttonPositive({ content = "✨ New ⚔️" })
-		creationsContent.bottomCenter = { btnNew }
 
 		local newItem = function()
 			local m = creationsContent:getModalIfContentIsActive()
@@ -481,7 +495,8 @@ creations.createModalContent = function(_, config)
 				short = "⚔️",
 				action = function()
 					grid:setCategories({ "null" }, "items")
-					btnNew.Text = "✨ New ⚔️"
+					btnNew.Text = "✨ Create item ⚔️"
+					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
 					btnNew.onRelease = newItem
 				end,
 			},
@@ -490,7 +505,8 @@ creations.createModalContent = function(_, config)
 				short = "👕",
 				action = function()
 					grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
-					btnNew.Text = "✨ New 👕"
+					btnNew.Text = "✨ Create wearable 👕"
+					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
 					btnNew.onRelease = newWearable
 				end,
 			},
@@ -499,13 +515,14 @@ creations.createModalContent = function(_, config)
 				short = "🌎",
 				action = function()
 					grid:setCategories({ "null" }, "worlds")
-					btnNew.Text = "✨ New 🌎"
+					btnNew.Text = "✨ Create world 🌎"
+					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
 					btnNew.onRelease = newWorld
 				end,
 			},
 		}
 
-		creationsContent.node = grid
+		creationsContent.node = node
 
 		grid.onOpen = function(_, entity)
 			if config.onOpen then

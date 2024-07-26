@@ -498,7 +498,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	node._refreshTabs = function(self)
 		local nbTabs = #self._tabs
 		if nbTabs > 0 then
-			local eqWidth = (self.Width - theme.modalTabSpace * (nbTabs - 1)) / nbTabs
+			local eqWidth = ((self.Width - theme.padding * 2 + theme.modalTabSpace) / nbTabs) - theme.modalTabSpace
 			local fitsEqWidth = true
 			local largerTabWidth = 0
 			local w
@@ -513,7 +513,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 			local smallerTabsWidth = 0
 			if nbTabs > 1 and fitsEqWidth == false then
-				smallerTabsWidth = (self.Width - largerTabWidth - theme.modalTabSpace * (nbTabs - 1)) / (nbTabs - 1)
+				smallerTabsWidth = ((self.Width - theme.padding * 2 - largerTabWidth) / (nbTabs - 1))
+					- theme.modalTabSpace
 			end
 
 			local previous = nil
@@ -552,7 +553,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				if previous then
 					tab.pos.X = previous.pos.X + previous.Width + theme.modalTabSpace
 				else
-					tab.pos.X = 0
+					tab.pos.X = theme.padding
 				end
 				previous = tab
 			end
@@ -655,8 +656,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				end
 
 				tab:setParent(self.topBar)
-				tab.text = ui:createText(element.label, theme.textColor)
-				tab.short = ui:createText(element.short or ".", theme.textColor)
+				tab.text = ui:createText(element.label, theme.textColor, "default")
+				tab.short = ui:createText(element.short or ".", theme.textColor, "default")
 				tab.short:setParent(nil)
 				tab.action = element.action
 				tab.text:setParent(tab)
