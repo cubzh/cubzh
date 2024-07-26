@@ -134,12 +134,8 @@ mod.createModalContent = function(_, config)
 	description = ui:createText("description", Color.White, "small")
 	description:setParent(cell)
 
-	if createMode then
-		-- TODO
-	else -- explore mode
-		likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
-		likeBtn:setParent(cell)
-	end
+	likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
+	likeBtn:setParent(cell)
 
 	local scroll = ui:createScroll({
 		-- backgroundColor = Color(255, 0, 0),
@@ -182,9 +178,7 @@ mod.createModalContent = function(_, config)
 			description.Color = theme.textColor
 		end
 
-		if likes then
-			likes.Text = "❤️ " .. (item.likes and math.floor(item.likes) or 0)
-		elseif likeBtn then
+		if likeBtn then
 			likeBtn.Text = "❤️ " .. (item.likes and math.floor(item.likes) or 0)
 
 			likeBtn.onRelease = function()
@@ -377,14 +371,13 @@ mod.createModalContent = function(_, config)
 	end
 
 	privateFields.alignViewsAndLikes = function()
-		local likes = likes or likeBtn
-		local parent = likes.parent
+		local parent = likeBtn.parent
 		if parent == nil then
 			return
 		end
 
-		local viewAndLikesWidth = likes.Width
-		likes.pos.X = parent.Width * 0.5 - viewAndLikesWidth * 0.5
+		local viewAndLikesWidth = likeBtn.Width
+		likeBtn.pos.X = parent.Width * 0.5 - viewAndLikesWidth * 0.5
 	end
 
 	itemDetails._width = function(_)
@@ -421,14 +414,12 @@ mod.createModalContent = function(_, config)
 
 		description.object.MaxWidth = width
 
-		local likes = likes or likeBtn
-
 		local author = authorBtn
 		local singleLineHeight = math.max(by.Height, author.Height)
 
 		local contentHeight = itemArea.Height
 			+ padding
-			+ likes.Height -- views and likes
+			+ likeBtn.Height -- views and likes
 			+ theme.paddingBig
 			+ singleLineHeight -- author
 			+ padding
@@ -447,8 +438,8 @@ mod.createModalContent = function(_, config)
 		itemArea.pos.Y = y
 
 		-- view and likes
-		y = y - padding - likes.Height
-		likes.pos.Y = y
+		y = y - padding - likeBtn.Height
+		likeBtn.pos.Y = y
 		privateFields.alignViewsAndLikes()
 
 		-- author

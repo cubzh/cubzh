@@ -62,6 +62,9 @@ itemGrid.create = function(_, config)
 	local sortBy = config.sort
 
 	local grid = ui:createFrame(Color(40, 40, 40)) -- Color(255,0,0)
+
+	grid.onOpen = config.onOpen
+
 	local search = config.search
 
 	local timers = {}
@@ -216,8 +219,17 @@ itemGrid.create = function(_, config)
 						end
 
 						cell.onRelease = function()
-							if config.onOpen then
-								config.onOpen(cell)
+							if grid.onOpen then
+								local entity = {
+									type = "item",
+									id = cell.id,
+									repo = cell.repo,
+									name = cell.name,
+									likes = cell.likes,
+									liked = cell.liked,
+									category = cell.category,
+								}
+								grid:onOpen(entity)
 							else
 								cellSelector:setParent(nil)
 							end
@@ -329,6 +341,8 @@ itemGrid.create = function(_, config)
 							table.insert(self.requests, req)
 						end
 					end
+
+					cell.type = "item"
 
 					table.insert(row.cells, cell)
 
