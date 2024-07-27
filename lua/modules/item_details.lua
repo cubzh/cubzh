@@ -412,7 +412,7 @@ mod.createModalContent = function(_, config)
 		itemArea.Width = itemAreaWidth
 		itemArea.Height = itemAreaHeight
 
-		description.object.MaxWidth = width
+		description.object.MaxWidth = width - padding * 2
 
 		local author = authorBtn
 		local singleLineHeight = math.max(by.Height, author.Height)
@@ -444,24 +444,24 @@ mod.createModalContent = function(_, config)
 
 		-- author
 		y = y - theme.paddingBig - singleLineHeight * 0.5
-		by.pos = { 0, y - by.Height * 0.5 }
+		by.pos = { padding, y - by.Height * 0.5 }
 		authorBtn.pos = { by.pos.X + by.Width + padding, y - author.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
 
 		y = y - padding - singleLineHeight * 0.5
-		creationDate.pos = { 0, y - creationDate.Height * 0.5 }
+		creationDate.pos = { padding, y - creationDate.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
 
 		y = y - padding - singleLineHeight * 0.5
-		updateDate.pos = { 0, y - updateDate.Height * 0.5 }
+		updateDate.pos = { padding, y - updateDate.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
 
 		y = y - padding - singleLineHeight * 0.5
-		identifier.pos = { 0, y - identifier.Height * 0.5 }
+		identifier.pos = { padding, y - identifier.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
 
 		y = y - theme.paddingBig - description.Height
-		description.pos = { 0, y }
+		description.pos = { padding, y }
 
 		scroll.Width = self.Width
 		scroll.Height = self.Height -- - btnLaunch.Height - padding * 2
