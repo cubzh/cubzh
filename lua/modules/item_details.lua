@@ -111,6 +111,11 @@ mod.createModalContent = function(_, config)
 	local updateDate
 	local identifier
 
+	local btnEdit
+	local btnDuplicate
+	local btnExport
+	local btnArchive
+
 	local secondaryTextColor = Color(150, 150, 150)
 
 	itemArea = ui:frame({ color = Color(20, 20, 22) })
@@ -137,6 +142,67 @@ mod.createModalContent = function(_, config)
 	likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
 	likeBtn:setParent(cell)
 
+	if createMode then
+		btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
+		btnEdit:setParent(itemDetails)
+		btnEdit.onRelease = function()
+			System.LaunchItemEditor(itemFullName, category)
+		end
+
+		btnDuplicate = ui:buttonSecondary({ content = "📑 Duplicate", textSize = "default" })
+		btnDuplicate:setParent(itemDetails)
+		btnDuplicate.onRelease = function()
+			local m = itemDetailsContent:getModalIfContentIsActive()
+			if m ~= nil then
+				local what
+				if category == nil then
+					what = "item"
+				else
+					what = "wearable"
+				end
+				m:push(functions.createNewContent(what, itemFullName, grid, category))
+			end
+		end
+
+		btnExport = ui:buttonSecondary({ content = "📤", textSize = "default" })
+		btnExport:setParent(itemDetails)
+		btnExport.onRelease = function()
+			File:ExportItem(entity.repo, entity.name, "vox", function(err, message)
+				if err then
+					print("Error: " .. message)
+					return
+				end
+			end)
+		end
+
+		btnArchive = ui:buttonSecondary({ content = "🗑️", textSize = "default" })
+		btnArchive:setParent(itemDetails)
+		btnArchive.onRelease = function()
+			local str = "Are you sure you want to archive this item?"
+			local positive = function()
+				local data = { archived = true }
+				api:patchItem(entity.id, data, function(err, itm)
+					if err or not itm.archived then
+						require("menu"):ShowAlert({ message = "Could not archive item" }, System)
+						return
+					end
+					itemDetailsContent:pop()
+					grid:getItems()
+				end)
+			end
+			local negative = function() end
+			local alertConfig = {
+				message = str,
+				positiveLabel = "Yes",
+				positiveCallback = positive,
+				negativeLabel = "No",
+				negativeCallback = negative,
+			}
+
+			Menu:ShowAlert(alertConfig, System)
+		end
+	end
+
 	local scroll = ui:createScroll({
 		-- backgroundColor = Color(255, 0, 0),
 		backgroundColor = theme.buttonTextColor,
@@ -160,10 +226,6 @@ mod.createModalContent = function(_, config)
 
 	-- refreshes UI with what's in local config.item / item
 	privateFields.refreshItem = function()
-		if name ~= nil then
-			name.Text = item.name or ""
-		end
-
 		if createMode then
 			if item.description == nil or item.description == "" then
 				description.empty = true
@@ -464,7 +526,20 @@ mod.createModalContent = function(_, config)
 		description.pos = { padding, y }
 
 		scroll.Width = self.Width
-		scroll.Height = self.Height -- - btnLaunch.Height - padding * 2
+
+		if createMode then
+			scroll.Height = self.Height - btnEdit.Height - padding * 2
+			scroll.pos.Y = btnEdit.Height + padding * 2
+
+			local y = padding + btnEdit.Height * 0.5
+			btnEdit.pos = { self.Width - btnEdit.Width, y - btnEdit.Height * 0.5 }
+
+			btnDuplicate.pos = { 0, y - btnDuplicate.Height * 0.5 }
+			btnExport.pos = { btnDuplicate.pos.X + btnDuplicate.Width + padding, y - btnDuplicate.Height * 0.5 }
+			btnArchive.pos = { btnExport.pos.X + btnExport.Width + padding, y - btnDuplicate.Height * 0.5 }
+		else
+			scroll.Height = self.Height
+		end
 
 		scroll:flush()
 		scroll:refresh()
