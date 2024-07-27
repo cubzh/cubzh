@@ -1724,7 +1724,6 @@ function savePOI()
 end
 
 ui_config = {
-	groupBackgroundColor = Color(0, 0, 0, 150),
 	padding = 6,
 	btnColor = Color(120, 120, 120),
 	btnColorSelected = Color(97, 71, 206),
@@ -2243,7 +2242,7 @@ function ui_init()
 
 	-- PLACE MENU
 
-	placeMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	placeMenu = ui:frameTextBackground()
 	placeMenuToggleBtns = {}
 	function placeMenuToggleSelect(target)
 		for _, btn in ipairs(placeMenuToggleBtns) do
@@ -2320,7 +2319,7 @@ function ui_init()
 	placeMenu:parentDidResize()
 
 	-- MIRROR MENU
-	mirrorControls = ui:createFrame(ui_config.groupBackgroundColor)
+	mirrorControls = ui:frameTextBackground()
 	mirrorControls:hide()
 
 	mirrorGizmo = gizmo:create({
@@ -2381,7 +2380,7 @@ function ui_init()
 	mirrorControls:parentDidResize()
 
 	-- SELECT MENU
-	selectControls = ui:createFrame(ui_config.groupBackgroundColor)
+	selectControls = ui:frameTextBackground()
 	selectControls:hide()
 
 	selectToggleBtns = {}
@@ -2644,7 +2643,7 @@ function ui_init()
 		colliderMaxGizmo:setObject(colliderMaxObject)
 	end
 
-	collisionBoxMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	collisionBoxMenu = ui:frameTextBackground()
 	collisionBoxMenu:hide()
 
 	editingCollisionBoxText = ui:createText("Editing Collision Box...", Color.White)
@@ -2768,7 +2767,7 @@ function ui_init()
 
 	-- PLACE SUB MENU
 
-	placeSubMenu = ui:createFrame(ui_config.groupBackgroundColor)
+	placeSubMenu = ui:frameTextBackground()
 	placeSubMenuToggleBtns = {}
 	function placeSubMenuToggleSelect(target)
 		for _, btn in ipairs(placeSubMenuToggleBtns) do
@@ -3118,7 +3117,7 @@ function post_item_load()
 			shape:RemoveFromParent()
 		end
 
-		visibilityMenu = ui:createFrame(ui_config.groupBackgroundColor)
+		visibilityMenu = ui:frameTextBackground()
 
 		local onlyItemBtn = ui:createButton("⚅")
 		local itemPlusBodyPartBtn = ui:createButton("✋")
