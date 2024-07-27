@@ -346,13 +346,25 @@ signup.startFlow = function(self, config)
 				local usernameLabel = ui:createText(DEFAULT_LABEL, Color.White, "default")
 				usernameLabel:setParent(drawer)
 
-				local usernameInput =
-					ui:createTextInput("", str:upperFirstChar(loc("username")), { textSize = "default" })
+				local usernameInput = ui:createTextInput(
+					"",
+					str:upperFirstChar(loc("don't use your real name!")),
+					{ textSize = "default" }
+				)
 				usernameInput:setParent(drawer)
 
+				local secondaryText = ui:createText(
+					"Username must start with a letter (a-z) and can include letters (a-z) and numbers (0-9). ⚠️ Choose carefully, usernames can't be changed after account creation!",
+					{
+						color = Color(200, 200, 200),
+						size = "small",
+					}
+				)
+				secondaryText:setParent(drawer)
+
 				local confirmButton = ui:buttonPositive({
-					content = "That is my username!",
-					-- textSize = "small",
+					content = "This is it!",
+					padding = 10,
 				})
 				confirmButton:setParent(drawer)
 
@@ -476,6 +488,8 @@ signup.startFlow = function(self, config)
 						-- local w = math.min(self.Width, math.max(text.Width, confirmButton.Width, 300) + padding * 2)
 						local w = 300 + (padding * 2)
 
+						secondaryText.object.MaxWidth = w - padding * 2
+
 						local availableWidth = w - padding * 2
 						usernameInput.Width = availableWidth
 
@@ -484,17 +498,23 @@ signup.startFlow = function(self, config)
 							+ title.Height
 							+ usernameLabel.Height
 							+ usernameInput.Height
+							+ secondaryText.Height
 							+ confirmButton.Height
-							+ padding * 5
+							+ padding * 6
 
 						confirmButton.pos = {
 							self.Width * 0.5 - confirmButton.Width * 0.5,
 							Screen.SafeArea.Bottom + padding,
 						}
 
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							confirmButton.pos.Y + confirmButton.Height + padding,
+						}
+
 						usernameInput.pos = {
 							self.Width * 0.5 - usernameInput.Width * 0.5,
-							confirmButton.pos.Y + confirmButton.Height + padding,
+							secondaryText.pos.Y + secondaryText.Height + padding,
 						}
 
 						usernameLabel.pos = {
@@ -1475,8 +1495,14 @@ signup.startFlow = function(self, config)
 				showBackButton()
 				showCoinsButton()
 
-				infoFrame = ui:createFrame(Color(0, 0, 0, 0.3))
-				info = ui:createText(string.format("Change at least %d things to continue!", nbPartsToChange), {
+				infoFrame = ui:frameTextBackground()
+
+				local s = "Change at least %d things to continue!"
+				if nbPartsToChange == 1 then
+					s = "Change at least %d thing to continue!"
+				end
+
+				info = ui:createText(string.format(s, nbPartsToChange), {
 					color = Color.White,
 				})
 				info:setParent(infoFrame)
@@ -1510,7 +1536,12 @@ signup.startFlow = function(self, config)
 						info.text = "You're good to go!"
 						okBtn:enable()
 					else
-						info.text = string.format("Change %d more things to continue!", remaining)
+						local s = "Change %d more things to continue!"
+						if remaining == 1 then
+							s = "Change %d more thing to continue!"
+						end
+
+						info.text = string.format(s, remaining)
 					end
 				end
 
