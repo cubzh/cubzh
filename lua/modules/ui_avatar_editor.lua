@@ -227,8 +227,8 @@ mod.create = function(self, config)
 						search = cache.search,
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
-						onOpen = function(cell)
-							local change = { hair = cell.fullName }
+						onOpen = function(entity)
+							local change = { hair = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
 						end,
@@ -564,8 +564,8 @@ mod.create = function(self, config)
 						search = cache.search,
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
-						onOpen = function(cell)
-							local change = { jacket = cell.fullName }
+						onOpen = function(entity)
+							local change = { jacket = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
 						end,
@@ -597,8 +597,8 @@ mod.create = function(self, config)
 						search = cache.search,
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
-						onOpen = function(cell)
-							local change = { pants = cell.fullName }
+						onOpen = function(entity)
+							local change = { pants = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
 						end,
@@ -630,8 +630,8 @@ mod.create = function(self, config)
 						search = cache.search,
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
-						onOpen = function(cell)
-							local change = { boots = cell.fullName }
+						onOpen = function(entity)
+							local change = { boots = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
 						end,

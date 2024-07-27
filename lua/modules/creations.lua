@@ -524,7 +524,7 @@ creations.createModalContent = function(_, config)
 
 		creationsContent.node = node
 
-		grid.onOpen = function(_, entity)
+		grid.onOpen = function(entity)
 			if config.onOpen then
 				config.onOpen(creationsContent, cell)
 				return

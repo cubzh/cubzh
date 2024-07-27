@@ -230,11 +230,12 @@ itemGrid.create = function(_, config)
 									id = cell.id,
 									repo = cell.repo,
 									name = cell.name,
+									fullName = cell.repo .. "." .. cell.name,
 									likes = cell.likes,
 									liked = cell.liked,
 									category = cell.category,
 								}
-								grid:onOpen(entity)
+								grid.onOpen(entity)
 							else
 								cellSelector:setParent(nil)
 							end

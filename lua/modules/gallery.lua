@@ -62,7 +62,7 @@ gallery.createModalContent = function(_, config)
 	end)
 
 	-- called when a grid cell has been clicked
-	grid.onOpen = function(self, cell)
+	grid.onOpen = function(cell)
 		if config.onOpen then
 			return _config.onOpen(self, cell)
 		end

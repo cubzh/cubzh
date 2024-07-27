@@ -924,7 +924,7 @@ initPickWorld = function()
 	local content
 	uiPickWorld, content = require("creations"):createModal({
 		uikit = ui,
-		onOpen = function(_, cell)
+		onOpen = function(cell)
 			worldTitle = cell.title
 			worldID = cell.id
 			require("system_api", System):getWorld(worldID, { "mapBase64" }, function(err, data)
@@ -985,7 +985,7 @@ initPickMap = function()
 		end, function(m)
 			m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 }
 		end, {
-			onOpen = function(_, cell)
+			onOpen = function(cell)
 				local fullname = cell.repo .. "." .. cell.name
 				sendToServer(events.P_END_PREPARING, { mapName = fullname })
 				gallery:remove()
@@ -1363,7 +1363,7 @@ initDefaultMode = function()
 	menuBar:parentDidResize()
 
 	-- Gallery
-	local galleryOnOpen = function(_, cell)
+	local galleryOnOpen = function(cell)
 		local fullname = cell.repo .. "." .. cell.name
 		setState(states.SPAWNING_OBJECT, { fullname = fullname })
 	end
