@@ -87,7 +87,7 @@ creations.createModalContent = function(_, config)
 		if original == nil then
 			btnCreate = ui:createButton(buttonLabels[1])
 		else
-			btnCreate = ui:buttonNeutral({ content = "✨ Duplicate 📑" })
+			btnCreate = ui:createButton("✨ Duplicate 📑")
 		end
 		btnCreate:setColor(theme.colorPositive)
 		newContent.bottomCenter = { btnCreate }
@@ -526,24 +526,87 @@ creations.createModalContent = function(_, config)
 
 		grid.onOpen = function(entity)
 			if config.onOpen then
-				config.onOpen(entity)
+				config.onOpen(creationsContent, cell)
 				return
 			end
 
 			if entity.type == "item" then
-				local itemDetailsContent = itemDetails:createModalContent({
-					item = entity,
-					mode = "create",
-					uikit = ui,
-				})
+				local itemFullName = entity.repo .. "." .. entity.name
+				local category = entity.category
+
+				local itemDetailsContent =
+					itemDetails:createModalContent({ item = entity, mode = "create", uikit = ui })
+
+				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
+				btnEdit:setColor(theme.colorCreate)
+				btnEdit.onRelease = function()
+					System.LaunchItemEditor(itemFullName, category)
+				end
+
+				local btnDuplicate = ui:buttonSecondary({ content = "📑 Duplicate", textSize = "default" })
+				btnDuplicate.onRelease = function()
+					local m = itemDetailsContent:getModalIfContentIsActive()
+					if m ~= nil then
+						local what
+						if category == nil then
+							what = "item"
+						else
+							what = "wearable"
+						end
+						m:push(functions.createNewContent(what, itemFullName, grid, category))
+					end
+				end
+
+				local btnExport = ui:buttonSecondary({ content = "📤", textSize = "default" })
+				btnExport.onRelease = function()
+					File:ExportItem(entity.repo, entity.name, "vox", function(err, message)
+						if err then
+							print("Error: " .. message)
+							return
+						end
+					end)
+				end
+
+				local btnArchive = ui:buttonSecondary({ content = "🗑️", textSize = "default" })
+				btnArchive.onRelease = function()
+					local str = "Are you sure you want to archive this item?"
+					local positive = function()
+						local data = { archived = true }
+						api:patchItem(entity.id, data, function(err, itm)
+							if err or not itm.archived then
+								require("menu"):ShowAlert({ message = "Could not archive item" }, System)
+								return
+							end
+							itemDetailsContent:pop()
+							grid:getItems()
+						end)
+					end
+					local negative = function() end
+					local alertConfig = {
+						message = str,
+						positiveLabel = "Yes",
+						positiveCallback = positive,
+						negativeLabel = "No",
+						negativeCallback = negative,
+					}
+
+					require("menu"):ShowAlert(alertConfig, System)
+				end
+
+				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }
+				itemDetailsContent.bottomRight = { btnEdit }
+
+				itemDetailsContent.idealReducedContentSize = function(content, width, height)
+					content.Width = width
+					content.Height = height
+					return Number2(content.Width, content.Height)
+				end
 
 				local m = creationsContent:getModalIfContentIsActive()
 				if m ~= nil then
 					m:push(itemDetailsContent)
 				end
-			elseif entity.type == "world" then
-				-- TODO: review
-
+			elseif cell.type == "world" then
 				local worldDetailsContent = worldDetails:create({ mode = "create", title = cell.title, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
