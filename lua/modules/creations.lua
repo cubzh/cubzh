@@ -85,11 +85,10 @@ creations.createModalContent = function(_, config)
 
 		local btnCreate
 		if original == nil then
-			btnCreate = ui:createButton(buttonLabels[1])
+			btnCreate = ui:buttonPositive({ content = buttonLabels[1], padding = theme.padding })
 		else
-			btnCreate = ui:createButton("✨ Duplicate 📑")
+			btnCreate = ui:buttonPositive({ content = "✨ Duplicate 📑", padding = theme.padding })
 		end
-		btnCreate:setColor(theme.colorPositive)
 		newContent.bottomCenter = { btnCreate }
 
 		local templatePreview = ui:createShape(bundle:Shape(categoryShapes[currentCategory]), { spherized = true })
@@ -122,7 +121,7 @@ creations.createModalContent = function(_, config)
 		text:setParent(node)
 
 		if #categories > 1 then
-			nextTemplateBtn = ui:createButton("➡️")
+			nextTemplateBtn = ui:buttonNeutral({ content = "➡️" })
 			nextTemplateBtn:setParent(node)
 			nextTemplateBtn:setColor(theme.buttonColorSecondary)
 			nextTemplateBtn.onRelease = function()
@@ -140,7 +139,7 @@ creations.createModalContent = function(_, config)
 				templatePreview:setShape(bundle:Shape(categoryShapes[currentCategory]))
 			end
 
-			previousTemplateBtn = ui:createButton("⬅️")
+			previousTemplateBtn = ui:buttonNeutral({ content = "⬅️" })
 			previousTemplateBtn:setParent(node)
 			previousTemplateBtn:setColor(theme.buttonColorSecondary)
 			previousTemplateBtn.onRelease = function()
