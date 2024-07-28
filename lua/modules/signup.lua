@@ -1806,20 +1806,20 @@ signup.startFlow = function(self, config)
 		local step = flow:createStep({
 			onEnter = function()
 				if loadingFrame == nil then
-					loadingFrame = ui:createFrame(Color(0, 0, 0, 0.3))
+					loadingFrame = ui:frameTextBackground()
 
 					local text =
 						ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
 							color = Color.White,
 						})
 					text:setParent(loadingFrame)
-					text.pos = { theme.paddingBig, theme.paddingBig }
+					text.pos = { theme.padding, theme.padding }
 
 					loadingFrame.parentDidResize = function(self)
 						ease:cancel(self)
 
-						loadingFrame.Width = text.Width + theme.paddingBig * 2
-						loadingFrame.Height = text.Height + theme.paddingBig * 2
+						loadingFrame.Width = text.Width + theme.padding * 2
+						loadingFrame.Height = text.Height + theme.padding * 2
 
 						self.pos = {
 							Screen.Width * 0.5 - self.Width * 0.5,
