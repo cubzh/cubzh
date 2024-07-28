@@ -1822,7 +1822,7 @@ function getWorldInfo()
 		getWorldInfoReq = nil
 	end
 	if Environment.worldId ~= nil then
-		getWorldInfoReq = api:getWorld(Environment.worldId, { "likes", "liked" }, function(err, world)
+		getWorldInfoReq = api:getWorld(Environment.worldId, { "likes", "liked" }, function(world, err)
 			if err ~= nil then
 				return
 			end
