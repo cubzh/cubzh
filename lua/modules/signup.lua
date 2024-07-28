@@ -1868,11 +1868,10 @@ signup.startFlow = function(self, config)
 					--
 
 					checks.error = function(optionalErrorMsg)
-						print("🔴 [error] [", optionalErrorMsg, "]")
 						text.Text = ""
 						loadingFrame:hide()
 
-						local msgStr = "Error, something went wrong."
+						local msgStr = "Sorry, something went wrong. 😕"
 						if type(optionalErrorMsg) == "string" and optionalErrorMsg ~= "" then
 							msgStr = optionalErrorMsg
 						end
@@ -1880,36 +1879,32 @@ signup.startFlow = function(self, config)
 						-- Show error message with retry button
 						-- Click on button should call checks.minAppVersion()
 
+						local errorBox = ui:frameTextBackground()
 						local errorText = ui:createText(msgStr, { color = Color.White, size = "default" })
-						local retryBtn = ui:buttonNeutral({ content = "Retry", textSize = "big", padding = 10 })
-						local errorBox = ui:createFrame(Color(0, 0, 0, 0.70))
+						errorText:setParent(errorBox)
+						local retryBtn = ui:buttonNeutral({ content = "Retry", padding = theme.padding })
+						retryBtn:setParent(errorBox)
 
 						errorBox.parentDidResize = function(self)
 							ease:cancel(self)
 							self.Width = math.max(errorText.Width, retryBtn.Width) + theme.paddingBig * 2
-							self.Height = errorText.Height + retryBtn.Height + theme.paddingBig * 3
+							self.Height = errorText.Height + theme.padding + retryBtn.Height + theme.paddingBig * 2
+
+							retryBtn.pos = {
+								self.Width * 0.5 - retryBtn.Width * 0.5,
+								theme.paddingBig,
+							}
+
+							errorText.pos = {
+								self.Width * 0.5 - errorText.Width * 0.5,
+								retryBtn.pos.Y + retryBtn.Height + padding,
+							}
+
 							self.pos = {
 								Screen.Width * 0.5 - self.Width * 0.5,
 								Screen.Height / 5.0 - self.Height * 0.5,
 							}
 						end
-
-						errorText.parentDidResize = function(self)
-							self.pos = {
-								errorBox.Width * 0.5 - self.Width * 0.5,
-								retryBtn.Height + theme.paddingBig * 2,
-							}
-						end
-
-						retryBtn.parentDidResize = function(self)
-							self.pos = {
-								errorBox.Width * 0.5 - self.Width * 0.5,
-								theme.paddingBig,
-							}
-						end
-
-						errorText:setParent(errorBox)
-						retryBtn:setParent(errorBox)
 
 						errorBox:parentDidResize()
 
@@ -1926,8 +1921,6 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.minAppVersion = function()
-						-- print("🟢 [minAppVersion]")
-
 						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
 							if error ~= nil then
@@ -1954,9 +1947,6 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a user account exists locally.
 					checks.userAccountExists = function()
-						-- print("🟢 [userAccountExists]")
-						-- print("⚪️ [userAccountExists] System.HasCredentials", System.HasCredentials)
-
 						-- Update loading message
 						text.Text = "Looking for user account..."
 						loadingFrame:parentDidResize()
@@ -1975,8 +1965,6 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.createAccount = function()
-						-- print("🟢 [createAccount]")
-
 						System:DebugEvent("App creates new empty user account")
 
 						-- Update loading message
@@ -1997,12 +1985,6 @@ signup.startFlow = function(self, config)
 
 					-- Checks whether a magic key has been requested.
 					checks.askedMagicKey = function()
-						-- print("🟢 [askedMagicKey]")
-						-- print("⚪️ [askedMagicKey] System.HasCredentials  :", System.HasCredentials)
-						-- print("⚪️ [askedMagicKey] System.Authenticated   :", System.Authenticated)
-						-- print("⚪️ [askedMagicKey] System.AskedForMagicKey:", System.AskedForMagicKey)
-						-- print("⚪️ [askedMagicKey] System.Username:", "[" .. System.Username .. "]")
-
 						System:DebugEvent("App checks if magic key has been requested")
 
 						text.Text = "Checking magic key..."
@@ -2034,11 +2016,6 @@ signup.startFlow = function(self, config)
 					end
 
 					checks.checkUserAccountComplete = function()
-						-- print("🟢 [checkUserAccountComplete]")
-						-- print("⚪️ [checkUserAccountComplete] System.HasCredentials", System.HasCredentials)
-						-- print("⚪️ [checkUserAccountComplete] System.Authenticated:", System.Authenticated)
-						-- print("⚪️ [checkUserAccountComplete] System.UserID:", System.UserID)
-
 						text.Text = "Checking user info..."
 						loadingFrame:parentDidResize()
 
@@ -2072,30 +2049,15 @@ signup.startFlow = function(self, config)
 							-- No error. Meaning credentials are valid.
 							System.Authenticated = true -- [gaetan] not sure this field is useful...
 
-							-- print("⚪️ [checkUserAccountComplete] API RESPONSE:")
-							-- for key, value in pairs(userInfo) do
-							-- print("⚪️ [checkUserAccountComplete] ->", key, value)
-							-- end
-
-							-- ⚪️ username gaetan
-							-- ⚪️ hasEmail true
-							-- ⚪️ hasPassword false
-							-- ⚪️ hasDOB true
-							-- ⚪️ isUnder13 false
-							-- ⚪️ didCustomizeAvatar true
-							-- ⚪️ hasPhoneNumber false (TODO: server doesn't return this field yet)
-
 							-- Update values in System
 							System.Username = userInfo.username or ""
 							System.HasEmail = userInfo.hasEmail or false
 							-- System.HasPhoneNumber = userInfo.hasPhoneNumber or false
 
 							if Client.LoggedIn then
-								-- print("🟢 -> login success")
 								internalLoginSuccess()
 							else
 								-- show signup
-								-- print("🟢 -> createSignUpOrLoginStep")
 								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
 								signupFlow:push(createSignUpOrLoginStep())
 							end
