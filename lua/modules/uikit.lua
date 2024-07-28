@@ -3428,9 +3428,19 @@ function createUI(system)
 
 	ui.buttonNeutral = function(self, config)
 		config = config or {}
+
 		local image = Data:FromBundle("images/button_neutral_dark.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		image = Data:FromBundle("images/button_neutral_pressed.png")
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
@@ -3452,10 +3462,20 @@ function createUI(system)
 	ui.buttonPositive = function(self, config)
 		config = config or {}
 		config.textColor = theme.buttonPositiveTextColor
+		config.textColorPressed = theme.buttonPositiveTextColor
 
-		local image = Data:FromBundle("images/button_positive_dark.png")
+		local image = Data:FromBundle("images/button_positive.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		image = Data:FromBundle("images/button_positive_pressed.png")
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
@@ -3477,8 +3497,9 @@ function createUI(system)
 	ui.buttonNegative = function(self, config)
 		config = config or {}
 		config.textColor = theme.buttonNegativeTextColor
+		config.textColorPressed = theme.buttonNegativeTextColor
 
-		local image = Data:FromBundle("images/button_negative_dark.png")
+		local image = Data:FromBundle("images/button_negative.png")
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
 			data = image,
@@ -3486,6 +3507,16 @@ function createUI(system)
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
+
+		image = Data:FromBundle("images/button_negative_pressed.png")
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
 		return ui.button(self, config)
 	end
 
@@ -3526,6 +3557,16 @@ function createUI(system)
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
+
+		image = Data:FromBundle("images/button_secondary_pressed.png")
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
 		return ui.button(self, config)
 	end
 
