@@ -1082,7 +1082,11 @@ function home()
 				end
 
 				if dataFetcher.displayNumberOfEntries and dataFetcher.row and dataFetcher.title then
-					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+					if dataFetcher.nbEntities > 0 then
+						dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+					else
+						dataFetcher.row.title.Text = dataFetcher.title
+					end
 				end
 			end)
 		end
@@ -1231,7 +1235,11 @@ function home()
 				end
 
 				if dataFetcher.displayNumberOfEntries and dataFetcher.row and dataFetcher.title then
-					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+					if dataFetcher.nbEntities > 0 then
+						dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+					else
+						dataFetcher.row.title.Text = dataFetcher.title
+					end
 				end
 			end)
 		end
@@ -1385,7 +1393,11 @@ function home()
 				end
 
 				if dataFetcher.row and dataFetcher.title then
-					dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+					if dataFetcher.nbEntities > 0 then
+						dataFetcher.row.title.Text = dataFetcher.title .. " (" .. dataFetcher.nbEntities .. ")"
+					else
+						dataFetcher.row.title.Text = dataFetcher.title
+					end
 				end
 			end)
 		end
