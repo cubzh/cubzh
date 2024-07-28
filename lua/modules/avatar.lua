@@ -803,6 +803,20 @@ function avatar_load(self, config)
 			local mouthColor = nil
 			local eyesColor = nil
 
+			-- skin color index
+			if data.skinColorIndex ~= nil then
+				local colorValues = mod.skinColors[data.skinColorIndex]
+				skinColor = colorValues.skin1
+				skinColor2 = colorValues.skin2
+				noseColor = colorValues.nose
+				mouthColor = colorValues.mouth
+			end
+
+			-- eye color index
+			if data.eyesColorIndex ~= nil then
+				eyesColor = mod.eyeColors[data.eyesColorIndex]
+			end
+
 			if data.skinColor then
 				skinColor =
 					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
@@ -824,6 +838,8 @@ function avatar_load(self, config)
 					Color(math.floor(data.eyesColor.r), math.floor(data.eyesColor.g), math.floor(data.eyesColor.b))
 			end
 
+			-- Apply colors and eye/nose types
+
 			self:setColors({
 				skin1 = skinColor,
 				skin2 = skinColor2,
@@ -831,6 +847,16 @@ function avatar_load(self, config)
 				mouth = mouthColor,
 				eyes = eyesColor,
 			})
+
+			-- eyes index
+			if data.eyesIndex ~= nil then
+				self:setEyes({ index = data.eyesIndex, color = eyesColor })
+			end
+
+			-- nose index
+			if data.noseIndex ~= nil then
+				self:setNose({ index = data.noseIndex, color = noseColor })
+			end
 
 			-- print("data:", JSON:Encode(data))
 
