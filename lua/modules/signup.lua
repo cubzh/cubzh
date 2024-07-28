@@ -314,6 +314,352 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
+	-- Prompts the user for a phone number verif code
+	local createVerifyPhoneNumberStep = function()
+		local step = flow:createStep({
+			onEnter = function()
+				config.verifyPhoneNumberStep()
+
+				showBackButton()
+				showCoinsButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				local okBtn = ui:buttonPositive({
+					content = "Confirm",
+					textSize = "big",
+					unfocuses = false,
+					padding = 10,
+				})
+				okBtn:setParent(drawer)
+				-- okBtn:disable()
+
+				local text = ui:createText("What code did you receive?", {
+					color = Color.White,
+				})
+				text:setParent(drawer)
+
+				local codeInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
+					textSize = "big",
+					keyboardType = "oneTimeDigicode",
+					bottomMargin = okBtn.Height + padding * 2,
+					suggestions = false,
+				})
+				codeInput:setParent(drawer)
+
+				okBtn.onRelease = function()
+					okBtn:disable()
+
+					local phoneVerifCode = codeInput.Text
+
+					api:patchUserInfo({ phoneVerifCode = phoneVerifCode }, function(err)
+						if err ~= nil then
+							print("ERR:", err)
+							okBtn:enable()
+							return
+						end
+						internalLoginSuccess()
+					end)
+				end
+
+				codeInput.onTextChange = function(self)
+					local backup = self.onTextChange
+					self.onTextChange = nil
+					-- TODO: format?
+					-- TODO: debug event
+					self.onTextChange = backup
+				end
+
+				local secondaryText = ui:createText(
+					"You should receive it shortly! If not, please verify your phone number, or try later.",
+					{
+						color = Color(200, 200, 200),
+						size = "small",
+					}
+				)
+				secondaryText:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						local padding = theme.paddingBig
+
+						local maxWidth = math.min(300, self.Width - padding * 2)
+						text.object.MaxWidth = maxWidth
+						secondaryText.object.MaxWidth = maxWidth
+
+						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
+
+						local availableWidth = w - padding * 2
+						codeInput.Width = availableWidth
+
+						self.Width = w
+						self.Height = Screen.SafeArea.Bottom
+							+ okBtn.Height
+							+ text.Height
+							+ secondaryText.Height
+							+ codeInput.Height
+							+ padding * 5
+
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							Screen.SafeArea.Bottom + padding,
+						}
+						okBtn.pos = {
+							self.Width * 0.5 - okBtn.Width * 0.5,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						codeInput.pos = {
+							self.Width * 0.5 - codeInput.Width * 0.5,
+							okBtn.pos.Y + okBtn.Height + padding,
+						}
+						text.pos = {
+							self.Width * 0.5 - text.Width * 0.5,
+							codeInput.pos.Y + codeInput.Height + padding,
+						}
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
+					end,
+				})
+
+				drawer:show()
+				Timer(0.2, function()
+					codeInput:focus()
+				end)
+			end,
+			onExit = function()
+				drawer:updateConfig({
+					layoutContent = function(_) end,
+				})
+				drawer:hide()
+			end,
+			onRemove = function()
+				removeBackButton()
+				if drawer ~= nil then
+					drawer:remove()
+					drawer = nil
+				end
+				if config.onCancel ~= nil then
+					config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
+				end
+			end,
+		})
+
+		return step
+	end
+
+	-- Prompts the user for a phone number
+	local createPhoneNumberStep = function()
+		local step = flow:createStep({
+			onEnter = function()
+				config.phoneNumberStep()
+
+				showBackButton()
+				showCoinsButton()
+
+				-- DRAWER
+				if drawer ~= nil then
+					drawer:clear()
+				else
+					drawer = drawerModule:create({ ui = ui })
+				end
+
+				local okBtn = ui:buttonPositive({
+					content = "Confirm",
+					textSize = "big",
+					unfocuses = false,
+					padding = 10,
+				})
+				okBtn:setParent(drawer)
+				-- okBtn:disable()
+
+				local selectedPrefix = "1"
+
+				local text = ui:createText("Final step! What's your phone number?", {
+					color = Color.White,
+				})
+				text:setParent(drawer)
+
+				local proposedCountries = {
+					"US",
+					"CA",
+					"GB",
+					"DE",
+					"FR",
+					"IT",
+					"ES",
+					"NL",
+					"RU",
+					"CN",
+					"IN",
+					"JP",
+					"KR",
+					"AU",
+					"BR",
+					"MX",
+					"AR",
+					"ZA",
+					"SA",
+					"TR",
+					"ID",
+					"VN",
+					"TH",
+					"MY",
+					"PH",
+					"SG",
+					"AE",
+					"IL",
+					"UA",
+				}
+
+				local countryLabels = {}
+				local c
+				for _, countryCode in ipairs(proposedCountries) do
+					c = phonenumbers.countryCodes[countryCode]
+					if c ~= nil then
+						table.insert(countryLabels, c.code .. " +" .. c.prefix)
+					end
+				end
+
+				local countryInput = ui:createComboBox("US +1", countryLabels)
+				countryInput:setParent(drawer)
+
+				local phoneInput = ui:createTextInput("", str:upperFirstChar(loc("phone number")), {
+					textSize = "big",
+					keyboardType = "phone",
+					suggestions = false,
+					bottomMargin = okBtn.Height + padding * 2,
+				})
+				phoneInput:setParent(drawer)
+
+				okBtn.onRelease = function()
+					okBtn:disable()
+					-- signupFlow:push(createAvatarEditorStep())
+					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
+
+					api:patchUserInfo({ phone = phoneNumber }, function(err)
+						if err ~= nil then
+							print("ERR:", err)
+							okBtn:enable()
+							return
+						end
+						signupFlow:push(createVerifyPhoneNumberStep())
+					end)
+				end
+
+				local layoutPhoneInput = function()
+					phoneInput.Width = drawer.Width - theme.paddingBig * 2 - countryInput.Width - theme.padding
+					phoneInput.pos = {
+						countryInput.pos.X + countryInput.Width + theme.padding,
+						countryInput.pos.Y,
+					}
+				end
+
+				countryInput.onSelect = function(self, index)
+					System:DebugEvent("User did pick country for phone number")
+					self.Text = countryLabels[index] -- "FR +33"
+					-- find the position of the + char
+					local plusPos = string.find(self.Text, "+") -- 4
+					-- get the substring after the + char
+					local prefix = string.sub(self.Text, plusPos + 1) -- "33"
+					selectedPrefix = prefix
+					layoutPhoneInput()
+				end
+
+				phoneInput.onTextChange = function(self)
+					local backup = self.onTextChange
+					self.onTextChange = nil
+
+					local res = phonenumbers:extractCountryCode(self.Text)
+					if res.countryCode ~= nil then
+						self.Text = res.remainingNumber
+						countryInput.Text = res.countryCode .. " +" .. res.countryPrefix
+						selectedPrefix = res.countryPrefix
+						layoutPhoneInput()
+					end
+
+					self.onTextChange = backup
+				end
+
+				local secondaryText = ui:createText(
+					"Cubzh asks for phone numbers to secure accounts and fight against cheaters. Information kept private. 🔑",
+					{
+						color = Color(200, 200, 200),
+						size = "small",
+					}
+				)
+				secondaryText:setParent(drawer)
+
+				drawer:updateConfig({
+					layoutContent = function(self)
+						-- here, self.Height can be reduced, but not increased
+						-- TODO: enforce this within drawer module
+
+						local padding = theme.paddingBig
+						local smallPadding = theme.padding
+
+						local maxWidth = math.min(300, self.Width - padding * 2)
+						text.object.MaxWidth = maxWidth
+						secondaryText.object.MaxWidth = maxWidth
+
+						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
+
+						local availableWidth = w - padding * 2
+						countryInput.Height = phoneInput.Height
+						phoneInput.Width = availableWidth - countryInput.Width - smallPadding
+
+						self.Width = w
+						self.Height = Screen.SafeArea.Bottom
+							+ okBtn.Height
+							+ text.Height
+							+ secondaryText.Height
+							+ phoneInput.Height
+							+ padding * 5
+
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							Screen.SafeArea.Bottom + padding,
+						}
+						okBtn.pos = {
+							self.Width * 0.5 - okBtn.Width * 0.5,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+						countryInput.pos = {
+							padding,
+							okBtn.pos.Y + okBtn.Height + padding,
+						}
+						phoneInput.pos = {
+							countryInput.pos.X + countryInput.Width + smallPadding,
+							countryInput.pos.Y,
+						}
+						text.pos = {
+							self.Width * 0.5 - text.Width * 0.5,
+							countryInput.pos.Y + countryInput.Height + padding,
+						}
+
+						LocalEvent:Send("signup_drawer_height_update", self.Height)
+					end,
+				})
+
+				drawer:show()
+				Timer(0.2, function()
+					phoneInput:focus()
+				end)
+			end,
+			onExit = function() end,
+			onRemove = function() end,
+		})
+
+		return step
+	end
+
 	-- Prompts the user for a username
 	local createUsernameInputStep = function(config)
 		local defaultConfig = {
@@ -324,7 +670,7 @@ signup.startFlow = function(self, config)
 		local requests = {}
 		local step = flow:createStep({
 			onEnter = function()
-				-- showBackButton()
+				showBackButton()
 				showCoinsButton()
 
 				-- DRAWER
@@ -402,8 +748,7 @@ signup.startFlow = function(self, config)
 					-- use timer to avoid spamming the API
 
 					usernameLabel.Text = "⚙️ checking..."
-					-- re-layout drawer content following the change in usernameLabel.Text
-					-- TODO: !
+					-- TODO: re-layout drawer content following the change in usernameLabel.Text
 
 					-- Cancel previous request if any
 					if usernameCheckRequest ~= nil then
@@ -439,8 +784,7 @@ signup.startFlow = function(self, config)
 									end
 								end
 								-- re-layout drawer content following the change in usernameLabel.Text
-								-- TODO: !!!
-								-- drawer:parentDidResize() -- doesn't work
+								-- TODO: drawer:parentDidResize() -- doesn't work
 							end)
 						end
 					end)
@@ -459,7 +803,8 @@ signup.startFlow = function(self, config)
 								-- success
 								Player.Username = username
 								System.AskedForMagicKey = false
-								internalLoginSuccess()
+								-- internalLoginSuccess()
+								signupFlow:push(createPhoneNumberStep())
 							else
 								-- failure
 								usernameLabel.Text = "❌ " .. err
@@ -890,354 +1235,6 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createVerifyPhoneNumberStep = function()
-		local step = flow:createStep({
-			onEnter = function()
-				config.verifyPhoneNumberStep()
-
-				showBackButton()
-				showCoinsButton()
-
-				-- DRAWER
-				if drawer ~= nil then
-					drawer:clear()
-				else
-					drawer = drawerModule:create({ ui = ui })
-				end
-
-				local okBtn = ui:buttonPositive({
-					content = "Confirm",
-					textSize = "big",
-					unfocuses = false,
-					padding = 10,
-				})
-				okBtn:setParent(drawer)
-				-- okBtn:disable()
-
-				local text = ui:createText("What code did you receive?", {
-					color = Color.White,
-				})
-				text:setParent(drawer)
-
-				local codeInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
-					textSize = "big",
-					keyboardType = "oneTimeDigicode",
-					bottomMargin = okBtn.Height + padding * 2,
-					suggestions = false,
-				})
-				codeInput:setParent(drawer)
-
-				okBtn.onRelease = function()
-					-- TEMPORARY HACK
-					-- internalLoginSuccess()
-
-					okBtn:disable()
-					-- signupFlow:push(createAvatarEditorStep())
-
-					local phoneVerifCode = codeInput.Text
-
-					api:patchUserInfo({ phoneVerifCode = phoneVerifCode }, function(err)
-						if err ~= nil then
-							print("ERR:", err)
-							okBtn:enable()
-							return
-						end
-						signupFlow:push(createUsernameInputStep())
-					end)
-				end
-
-				codeInput.onTextChange = function(self)
-					local backup = self.onTextChange
-					self.onTextChange = nil
-					-- TODO: format?
-					-- TODO: debug event
-					self.onTextChange = backup
-				end
-
-				local secondaryText = ui:createText(
-					"You should receive it shortly! If not, please verify your phone number, or try later.",
-					{
-						color = Color(200, 200, 200),
-						size = "small",
-					}
-				)
-				secondaryText:setParent(drawer)
-
-				drawer:updateConfig({
-					layoutContent = function(self)
-						-- here, self.Height can be reduced, but not increased
-						-- TODO: enforce this within drawer module
-
-						local padding = theme.paddingBig
-
-						local maxWidth = math.min(300, self.Width - padding * 2)
-						text.object.MaxWidth = maxWidth
-						secondaryText.object.MaxWidth = maxWidth
-
-						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
-
-						local availableWidth = w - padding * 2
-						codeInput.Width = availableWidth
-
-						self.Width = w
-						self.Height = Screen.SafeArea.Bottom
-							+ okBtn.Height
-							+ text.Height
-							+ secondaryText.Height
-							+ codeInput.Height
-							+ padding * 5
-
-						secondaryText.pos = {
-							self.Width * 0.5 - secondaryText.Width * 0.5,
-							Screen.SafeArea.Bottom + padding,
-						}
-						okBtn.pos = {
-							self.Width * 0.5 - okBtn.Width * 0.5,
-							secondaryText.pos.Y + secondaryText.Height + padding,
-						}
-						codeInput.pos = {
-							self.Width * 0.5 - codeInput.Width * 0.5,
-							okBtn.pos.Y + okBtn.Height + padding,
-						}
-						text.pos = {
-							self.Width * 0.5 - text.Width * 0.5,
-							codeInput.pos.Y + codeInput.Height + padding,
-						}
-
-						LocalEvent:Send("signup_drawer_height_update", self.Height)
-					end,
-				})
-
-				drawer:show()
-				Timer(0.2, function()
-					codeInput:focus()
-				end)
-			end,
-			onExit = function()
-				drawer:updateConfig({
-					layoutContent = function(_) end,
-				})
-				drawer:hide()
-			end,
-			onRemove = function()
-				removeBackButton()
-				if drawer ~= nil then
-					drawer:remove()
-					drawer = nil
-				end
-				if config.onCancel ~= nil then
-					config.onCancel() -- TODO: can't stay here (step also removed when completing flow)
-				end
-			end,
-		})
-
-		return step
-	end
-
-	local createPhoneNumberStep = function()
-		local step = flow:createStep({
-			onEnter = function()
-				config.phoneNumberStep()
-
-				showBackButton()
-				showCoinsButton()
-
-				-- DRAWER
-				if drawer ~= nil then
-					drawer:clear()
-				else
-					drawer = drawerModule:create({ ui = ui })
-				end
-
-				local okBtn = ui:buttonPositive({
-					content = "Confirm",
-					textSize = "big",
-					unfocuses = false,
-					padding = 10,
-				})
-				okBtn:setParent(drawer)
-				-- okBtn:disable()
-
-				local selectedPrefix = "1"
-
-				local text = ui:createText("Final step! What's your phone number?", {
-					color = Color.White,
-				})
-				text:setParent(drawer)
-
-				local proposedCountries = {
-					"US",
-					"CA",
-					"GB",
-					"DE",
-					"FR",
-					"IT",
-					"ES",
-					"NL",
-					"RU",
-					"CN",
-					"IN",
-					"JP",
-					"KR",
-					"AU",
-					"BR",
-					"MX",
-					"AR",
-					"ZA",
-					"SA",
-					"TR",
-					"ID",
-					"VN",
-					"TH",
-					"MY",
-					"PH",
-					"SG",
-					"AE",
-					"IL",
-					"UA",
-				}
-
-				local countryLabels = {}
-				local c
-				for _, countryCode in ipairs(proposedCountries) do
-					c = phonenumbers.countryCodes[countryCode]
-					if c ~= nil then
-						table.insert(countryLabels, c.code .. " +" .. c.prefix)
-					end
-				end
-
-				local countryInput = ui:createComboBox("US +1", countryLabels)
-				countryInput:setParent(drawer)
-
-				local phoneInput = ui:createTextInput("", str:upperFirstChar(loc("phone number")), {
-					textSize = "big",
-					keyboardType = "phone",
-					suggestions = false,
-					bottomMargin = okBtn.Height + padding * 2,
-				})
-				phoneInput:setParent(drawer)
-
-				okBtn.onRelease = function()
-					okBtn:disable()
-					-- signupFlow:push(createAvatarEditorStep())
-					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
-
-					api:patchUserInfo({ phone = phoneNumber }, function(err)
-						if err ~= nil then
-							print("ERR:", err)
-							okBtn:enable()
-							return
-						end
-						signupFlow:push(createVerifyPhoneNumberStep())
-					end)
-				end
-
-				local layoutPhoneInput = function()
-					phoneInput.Width = drawer.Width - theme.paddingBig * 2 - countryInput.Width - theme.padding
-					phoneInput.pos = {
-						countryInput.pos.X + countryInput.Width + theme.padding,
-						countryInput.pos.Y,
-					}
-				end
-
-				countryInput.onSelect = function(self, index)
-					System:DebugEvent("User did pick country for phone number")
-					self.Text = countryLabels[index] -- "FR +33"
-					-- find the position of the + char
-					local plusPos = string.find(self.Text, "+") -- 4
-					-- get the substring after the + char
-					local prefix = string.sub(self.Text, plusPos + 1) -- "33"
-					selectedPrefix = prefix
-					layoutPhoneInput()
-				end
-
-				phoneInput.onTextChange = function(self)
-					local backup = self.onTextChange
-					self.onTextChange = nil
-
-					local res = phonenumbers:extractCountryCode(self.Text)
-					if res.countryCode ~= nil then
-						self.Text = res.remainingNumber
-						countryInput.Text = res.countryCode .. " +" .. res.countryPrefix
-						selectedPrefix = res.countryPrefix
-						layoutPhoneInput()
-					end
-
-					self.onTextChange = backup
-				end
-
-				local secondaryText = ui:createText(
-					"Cubzh asks for phone numbers to secure accounts and fight against cheaters. Information kept private. 🔑",
-					{
-						color = Color(200, 200, 200),
-						size = "small",
-					}
-				)
-				secondaryText:setParent(drawer)
-
-				drawer:updateConfig({
-					layoutContent = function(self)
-						-- here, self.Height can be reduced, but not increased
-						-- TODO: enforce this within drawer module
-
-						local padding = theme.paddingBig
-						local smallPadding = theme.padding
-
-						local maxWidth = math.min(300, self.Width - padding * 2)
-						text.object.MaxWidth = maxWidth
-						secondaryText.object.MaxWidth = maxWidth
-
-						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
-
-						local availableWidth = w - padding * 2
-						countryInput.Height = phoneInput.Height
-						phoneInput.Width = availableWidth - countryInput.Width - smallPadding
-
-						self.Width = w
-						self.Height = Screen.SafeArea.Bottom
-							+ okBtn.Height
-							+ text.Height
-							+ secondaryText.Height
-							+ phoneInput.Height
-							+ padding * 5
-
-						secondaryText.pos = {
-							self.Width * 0.5 - secondaryText.Width * 0.5,
-							Screen.SafeArea.Bottom + padding,
-						}
-						okBtn.pos = {
-							self.Width * 0.5 - okBtn.Width * 0.5,
-							secondaryText.pos.Y + secondaryText.Height + padding,
-						}
-						countryInput.pos = {
-							padding,
-							okBtn.pos.Y + okBtn.Height + padding,
-						}
-						phoneInput.pos = {
-							countryInput.pos.X + countryInput.Width + smallPadding,
-							countryInput.pos.Y,
-						}
-						text.pos = {
-							self.Width * 0.5 - text.Width * 0.5,
-							countryInput.pos.Y + countryInput.Height + padding,
-						}
-
-						LocalEvent:Send("signup_drawer_height_update", self.Height)
-					end,
-				})
-
-				drawer:show()
-				Timer(0.2, function()
-					phoneInput:focus()
-				end)
-			end,
-			onExit = function() end,
-			onRemove = function() end,
-		})
-
-		return step
-	end
-
 	local createDOBStep = function()
 		local step = flow:createStep({
 			onEnter = function()
@@ -1256,7 +1253,7 @@ signup.startFlow = function(self, config)
 				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
-					signupFlow:push(createPhoneNumberStep())
+					signupFlow:push(createUsernameInputStep())
 				end
 				okBtn:disable()
 
