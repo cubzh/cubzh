@@ -1307,8 +1307,7 @@ initDefaultMode = function()
 			text = "Reset all",
 			callback = function()
 				alertModal = require("alert"):create(
-					"Confirm that you want to remove all modifications and start from scratch.",
-					{ uikit = require("uikit") }
+					"Confirm that you want to remove all modifications and start from scratch."
 				)
 				alertModal:setPositiveCallback("Reset and pick a new map", function()
 					menuBar:hide()

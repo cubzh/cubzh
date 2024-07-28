@@ -286,7 +286,7 @@ function showAlert(config)
 		return
 	end
 
-	alertModal = alert:create(config.message or "", { uikit = ui })
+	alertModal = alert:create(config.message or "", { uikit = ui, background = false })
 	alertModal:setParent(alertBackground)
 
 	if config.positiveCallback then

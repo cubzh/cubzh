@@ -1678,9 +1678,25 @@ function home()
 							drawer:show()
 						end
 
-						local visitHouseBtn = ui:buttonNeutral({ content = "🏠 Visit house" })
+						local visitHouseBtn = ui:buttonNeutral({
+							content = "🏠 Visit house",
+							displayAsDisabled = true,
+						})
+						local comingSoonAlert
+						visitHouseBtn.onRelease = function(_)
+							if comingSoonAlert ~= nil then
+								return
+							end
+							comingSoonAlert = require("alert"):create(
+								"House customization is coming soon! Stay tuned to personalize your house and invite friends. 👥"
+							)
+
+							comingSoonAlert:setPositiveCallback("Cancel", function()
+								comingSoonAlert:remove()
+								comingSoonAlert = nil
+							end)
+						end
 						visitHouseBtn:setParent(profileCell)
-						visitHouseBtn:disable()
 
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width

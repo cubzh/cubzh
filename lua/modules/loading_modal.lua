@@ -13,7 +13,7 @@ loading.create = function(_, text, config)
 		config = require("config"):merge(defaultConfig, config)
 	end)
 	if not ok then
-		error("alert:create(config) - config error: " .. err, 2)
+		error("loading:create(config) - config error: " .. err, 2)
 	end
 
 	local ui = config.uikit

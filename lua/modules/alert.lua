@@ -20,9 +20,11 @@ alert.create = function(self, text, config)
 
 	local modal = require("modal")
 	local theme = require("uitheme").current
+	local ease = require("ease")
 
 	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
+		background = true,
 	}
 
 	local ok, err = pcall(function()
@@ -32,7 +34,28 @@ alert.create = function(self, text, config)
 		error("alert:create(config) - config error: " .. err, 2)
 	end
 
+	local ALERT_BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
+	local ALERT_BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
+
 	local ui = config.uikit
+
+	local alertBackground
+
+	if config.background then
+		alertBackground = ui:frame({ color = ALERT_BACKGROUND_COLOR_OFF })
+		alertBackground.pos.Z = ui.kAlertDepth
+		alertBackground.object.SortOrder = 240 -- in front of elements in default sort order (0)
+
+		alertBackground.parentDidResize = function(_)
+			alertBackground.Width = Screen.Width
+			alertBackground.Height = Screen.Height
+		end
+		alertBackground:parentDidResize()
+
+		alertBackground.onPress = function() end -- blocker
+		alertBackground.onRelease = function() end -- blocker
+		ease:linear(alertBackground, 0.22).Color = ALERT_BACKGROUND_COLOR_ON
+	end
 
 	local minButtonWidth = 100
 
@@ -104,7 +127,7 @@ alert.create = function(self, text, config)
 	end
 
 	node.refresh = function(self)
-		label.object.MaxWidth = math.min(500, Screen.Width * 0.7)
+		label.object.MaxWidth = math.min(400, Screen.Width * 0.8)
 
 		self.Width = computeWidth()
 		self.Height = computeHeight()
@@ -155,6 +178,21 @@ alert.create = function(self, text, config)
 	end
 
 	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
+
+	popup.onRemove = function(self)
+		popup:setParent(nil)
+
+		if alertBackground then
+			alertBackground.onPress = nil
+			alertBackground.onRelease = nil
+			ease:linear(alertBackground, 0.22, {
+				onDone = function()
+					alertBackground:remove()
+				end,
+			}).Color =
+				ALERT_BACKGROUND_COLOR_OFF
+		end
+	end
 
 	---@type alertInstance
 	--- An [alertInstance] can be used to personalize its buttons.
@@ -309,6 +347,10 @@ alert.create = function(self, text, config)
 	end
 
 	popup:setPositiveCallback("OK", function() end)
+
+	if alertBackground then
+		popup:setParent(alertBackground)
+	end
 
 	return popup
 end

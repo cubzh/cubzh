@@ -453,12 +453,12 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				btnPrimary.Text = "🌎 Join"
 				btnPrimary:show()
 				btnPrimary.onRelease = function()
-					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+					Menu:ShowAlert({ message = "Coming soon!" }, System)
 				end
 				btnSecondary.Text = "💬"
 				btnSecondary:show()
 				btnSecondary.onRelease = function()
-					require("menu"):ShowAlert({ message = "Coming soon!" }, System)
+					Menu:ShowAlert({ message = "Coming soon!" }, System)
 				end
 			elseif cellType == LIST.SEARCH then
 				btnPrimary.Text = "➕ Add friend"

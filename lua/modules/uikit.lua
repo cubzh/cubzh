@@ -3426,31 +3426,66 @@ function createUI(system)
 		return node
 	end
 
+	local btnNeutralQuadData
+	local btnNeutralPressedQuadData
+	local btnNeutralSelectedQuadData
+	local btnNeutralDisabledQuadData
 	ui.buttonNeutral = function(self, config)
 		config = config or {}
 
-		local image = Data:FromBundle("images/button_neutral_dark.png")
+		if btnNeutralQuadData == nil then
+			btnNeutralQuadData = Data:FromBundle("images/button_neutral.png")
+		end
+
+		if btnNeutralPressedQuadData == nil then
+			btnNeutralPressedQuadData = Data:FromBundle("images/button_neutral_pressed.png")
+		end
+
+		if btnNeutralSelectedQuadData == nil then
+			btnNeutralSelectedQuadData = Data:FromBundle("images/button_selected.png")
+		end
+
+		if btnNeutralDisabledQuadData == nil then
+			btnNeutralDisabledQuadData = Data:FromBundle("images/button_neutral_disabled.png")
+		end
+
+		local displayAsDisabled = false
+		if config.displayAsDisabled == true then
+			config.displayAsDisabled = nil -- remove from config as not expected in button config
+			displayAsDisabled = true
+
+			config.textColor = theme.buttonColorDisabled
+			config.textColorPressed = theme.buttonColorDisabled
+			config.textColorSelected = theme.buttonColorDisabled
+		end
+
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
-			data = image,
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
 
-		image = Data:FromBundle("images/button_neutral_pressed.png")
 		config.backgroundQuadPressed = Quad()
 		config.backgroundQuadPressed.Image = {
-			data = image,
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralPressedQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
 
-		image = Data:FromBundle("images/button_selected.png")
 		config.backgroundQuadSelected = Quad()
 		config.backgroundQuadSelected.Image = {
-			data = image,
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralSelectedQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		config.backgroundQuadDisabled = Quad()
+		config.backgroundQuadDisabled.Image = {
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralDisabledQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
@@ -3459,33 +3494,42 @@ function createUI(system)
 		return ui.button(self, config)
 	end
 
+	local btnPositiveQuadData
+	local btnPositivePressedQuadData
+	local btnPositiveDisabledQuadData
 	ui.buttonPositive = function(self, config)
 		config = config or {}
 		config.textColor = theme.buttonPositiveTextColor
 		config.textColorPressed = theme.buttonPositiveTextColor
 
-		local image = Data:FromBundle("images/button_positive.png")
+		if btnPositiveQuadData == nil then
+			btnPositiveQuadData = Data:FromBundle("images/button_positive.png")
+		end
 		config.backgroundQuad = Quad()
 		config.backgroundQuad.Image = {
-			data = image,
+			data = btnPositiveQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
 
-		image = Data:FromBundle("images/button_positive_pressed.png")
+		if btnPositivePressedQuadData == nil then
+			btnPositivePressedQuadData = Data:FromBundle("images/button_positive_pressed.png")
+		end
 		config.backgroundQuadPressed = Quad()
 		config.backgroundQuadPressed.Image = {
-			data = image,
+			data = btnPositivePressedQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
 
-		image = Data:FromBundle("images/button_disabled.png")
+		if btnPositiveDisabledQuadData == nil then
+			btnPositiveDisabledQuadData = Data:FromBundle("images/button_disabled.png")
+		end
 		config.backgroundQuadDisabled = Quad()
 		config.backgroundQuadDisabled.Image = {
-			data = image,
+			data = btnPositiveDisabledQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,

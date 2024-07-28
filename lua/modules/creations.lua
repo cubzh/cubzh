@@ -573,7 +573,7 @@ creations.createModalContent = function(_, config)
 						local data = { archived = true }
 						api:patchItem(entity.id, data, function(err, itm)
 							if err or not itm.archived then
-								require("menu"):ShowAlert({ message = "Could not archive item" }, System)
+								Menu:ShowAlert({ message = "Could not archive item" }, System)
 								return
 							end
 							itemDetailsContent:pop()
@@ -589,7 +589,7 @@ creations.createModalContent = function(_, config)
 						negativeCallback = negative,
 					}
 
-					require("menu"):ShowAlert(alertConfig, System)
+					Menu:ShowAlert(alertConfig, System)
 				end
 
 				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }
