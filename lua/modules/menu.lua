@@ -1,7 +1,7 @@
 local menu = {}
 
 bundle = require("bundle")
--- loc = require("localize")
+loc = require("localize")
 -- str = require("str")
 ui = require("uikit").systemUI(System)
 modal = require("modal")
@@ -1840,27 +1840,6 @@ menu:OnAuthComplete(function()
 		activeFlow:remove()
 	end
 
-	-- TODO: move this to signup flow (at the very end)
-
-	-- if System.IsUserUnder13 then
-	-- 	local under13BadgeShape = bundle:Shape("shapes/under13_badge")
-	-- 	under13Badge = ui:createShape(under13BadgeShape)
-	-- 	under13Badge:setParent(profileFrame)
-	-- 	local ratio = under13Badge.Width / under13Badge.Height
-	-- 	under13Badge.Height = 10
-	-- 	under13Badge.Width = under13Badge.Height * ratio
-	-- 	under13Badge.parentDidResize = function(self)
-	-- 		local parent = self.parent
-	-- 		self.pos = { parent.Width - self.Width - PADDING * 0.5, PADDING * 0.5 }
-	-- 		under13BadgeShape.LocalPosition.Z = 50
-	-- 	end
-	-- 	under13Badge:parentDidResize()
-	-- end
-
-	-- if System.HasEmail == false then
-	-- 	showBadge("!")
-	-- end
-
 	getWorldInfo()
 
 	-- connects client to server if it makes sense (maxPlayers > 1)
@@ -1898,6 +1877,16 @@ menu:OnAuthComplete(function()
 				System:LaunchEnvironment()
 			end
 		end)
+	end
+
+	if System.Under13DisclaimerNeedsApproval then
+		showAlert({
+			message = "⚠️ Be safe online! ⚠️\n\nDo NOT share personal details, watch out for phishing, scams and always think about who you're talking to.\n\nIf anything goes wrong, talk to someone you trust. 🙂",
+			positiveLabel = loc("Yes sure!"),
+			positiveCallback = function()
+				System.ApproveUnder13Disclaimer()
+			end,
+		})
 	end
 
 	LocalEvent:Send("signup_flow_login_success")
