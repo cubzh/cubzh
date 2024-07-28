@@ -134,7 +134,7 @@ mod.createModalContent = function(_, config)
 	description = ui:createText("description", Color.White, "small")
 	description:setParent(cell)
 
-	likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
+	likeBtn = ui:buttonNeutral({ content = "🤍 …", textSize = "small" })
 	likeBtn:setParent(cell)
 
 	local scroll = ui:createScroll({
@@ -179,7 +179,7 @@ mod.createModalContent = function(_, config)
 		end
 
 		if likeBtn then
-			likeBtn.Text = "❤️ " .. (item.likes and math.floor(item.likes) or 0)
+			likeBtn.Text = (item.liked == true and "❤️ " or "🤍 ") .. (item.likes and math.floor(item.likes) or 0)
 
 			likeBtn.onRelease = function()
 				item.liked = not item.liked
@@ -205,7 +205,7 @@ mod.createModalContent = function(_, config)
 				end
 
 				local nbLikes = (item.likes and math.floor(item.likes) or 0)
-				likeBtn.Text = "❤️ " .. nbLikes
+				likeBtn.Text = (item.liked == true and "❤️ " or "🤍 ") .. nbLikes
 
 				privateFields.alignViewsAndLikes()
 			end

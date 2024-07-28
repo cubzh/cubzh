@@ -114,7 +114,6 @@ mod.createModalContent = function(_, config)
 	local authorBtn
 	local author
 	local likeBtn
-	local likes
 	local editDescriptionBtn
 	local nameArea
 	local description
@@ -204,10 +203,10 @@ mod.createModalContent = function(_, config)
 	description = ui:createText("description", Color.White, "small")
 	description:setParent(cell)
 
-	if createMode then
-		likes = ui:createText("❤️ …", theme.textColor)
-		likes:setParent(cell)
+	likeBtn = ui:buttonNeutral({ content = "🤍 …", textSize = "small" })
+	likeBtn:setParent(cell)
 
+	if createMode then
 		editDescriptionBtn = ui:createButton("✏️")
 		editDescriptionBtn:setParent(cell)
 		editDescriptionBtn.onRelease = function()
@@ -249,9 +248,7 @@ mod.createModalContent = function(_, config)
 				ui:turnOff()
 			end
 		end
-	else -- explore mode
-		likeBtn = ui:buttonNeutral({ content = "❤️ …", textSize = "small" })
-		likeBtn:setParent(cell)
+		-- else -- explore mode
 	end
 
 	local scroll = ui:createScroll({
@@ -299,10 +296,9 @@ mod.createModalContent = function(_, config)
 			description.Color = theme.textColor
 		end
 
-		if likes then
-			likes.Text = "❤️ " .. (world.likes and math.floor(world.likes) or 0)
-		elseif likeBtn then
-			likeBtn.Text = "❤️ " .. (world.likes and math.floor(world.likes) or 0)
+		if likeBtn then
+			likeBtn.Text = (world.liked == true and "❤️ " or "🤍 ")
+				.. (world.likes and math.floor(world.likes) or 0)
 
 			likeBtn.onRelease = function()
 				world.liked = not world.liked
@@ -328,8 +324,7 @@ mod.createModalContent = function(_, config)
 				end
 
 				local nbLikes = (world.likes and math.floor(world.likes) or 0)
-
-				likeBtn.Text = "❤️ " .. nbLikes
+				likeBtn.Text = (world.liked == true and "❤️ " or "🤍 ") .. nbLikes
 
 				privateFields.alignViewsAndLikes()
 			end
@@ -462,14 +457,13 @@ mod.createModalContent = function(_, config)
 	end
 
 	privateFields.alignViewsAndLikes = function()
-		local likes = likes or likeBtn
-		local parent = likes.parent
+		local parent = likeBtn.parent
 		if parent == nil then
 			return
 		end
-		local viewAndLikesWidth = views.Width + theme.padding + likes.Width
+		local viewAndLikesWidth = views.Width + theme.padding + likeBtn.Width
 		views.pos.X = parent.Width * 0.5 - viewAndLikesWidth * 0.5
-		likes.pos.X = views.pos.X + views.Width + theme.padding
+		likeBtn.pos.X = views.pos.X + views.Width + theme.padding
 	end
 
 	worldDetails._width = function(_)
@@ -512,8 +506,7 @@ mod.createModalContent = function(_, config)
 
 		description.object.MaxWidth = width
 
-		local likes = likes or likeBtn
-		local viewAndLikesHeight = math.max(views.Height, likes.Height)
+		local viewAndLikesHeight = math.max(views.Height, likeBtn.Height)
 
 		local author = author or authorBtn
 		local singleLineHeight = math.max(by.Height, author.Height)
@@ -541,7 +534,7 @@ mod.createModalContent = function(_, config)
 		-- view and likes
 		y = y - padding - viewAndLikesHeight * 0.5
 		views.pos.Y = y - views.Height * 0.5
-		likes.pos.Y = y - likes.Height * 0.5
+		likeBtn.pos.Y = y - likeBtn.Height * 0.5
 		privateFields.alignViewsAndLikes()
 		y = y - viewAndLikesHeight * 0.5
 
