@@ -1208,14 +1208,17 @@ function createUI(system)
 		return node
 	end
 
+	local frameScrollCellQuadData
 	ui.frameScrollCell = function(self)
 		if self ~= ui then
 			error("ui:frameScrollCell(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/cell_dark.png")
+		if frameScrollCellQuadData == nil then
+			frameScrollCellQuadData = Data:FromBundle("images/cell_dark.png")
+		end
 		local quad = Quad()
 		quad.Image = {
-			data = image,
+			data = frameScrollCellQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
@@ -1223,14 +1226,17 @@ function createUI(system)
 		return ui.frame(self, { quad = quad })
 	end
 
+	local frameScrollSelectorQuadData
 	ui.frameScrollCellSelector = function(self)
 		if self ~= ui then
 			error("ui:frameScrollCellSelector(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/cell_selector.png")
+		if frameScrollSelectorQuadData == nil then
+			frameScrollSelectorQuadData = Data:FromBundle("images/cell_selector.png")
+		end
 		local quad = Quad()
 		quad.Image = {
-			data = image,
+			data = frameScrollSelectorQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
 			alpha = true,
@@ -1238,14 +1244,17 @@ function createUI(system)
 		return ui.frame(self, { quad = quad })
 	end
 
+	local frameTextBackgroundQuadData
 	ui.frameTextBackground = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/text_background_dark.png")
+		if frameTextBackgroundQuadData == nil then
+			frameTextBackgroundQuadData = Data:FromBundle("images/text_background_dark.png")
+		end
 		local quad = Quad()
 		quad.Image = {
-			data = image,
+			data = frameTextBackgroundQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
