@@ -1094,29 +1094,6 @@ function getCubzhMenuModalContent()
 	local node = ui:createFrame()
 	content.node = node
 
-	local btnWorlds = ui:createButton("🌎 Worlds", { textSize = "big" })
-	btnWorlds:setColor(theme.colorExplore)
-	btnWorlds:setParent(node)
-	btnWorlds.Height = CUBZH_MENU_MAIN_BUTTON_HEIGHT
-
-	btnWorlds.onRelease = function()
-		local modal = content:getModalIfContentIsActive()
-		if modal ~= nil then
-			modal:push(worlds:createModalContent({ uikit = ui }))
-		end
-	end
-
-	local btnItems = ui:createButton("⚔️ Items", { textSize = "default" })
-	btnItems:setParent(node)
-	btnItems.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
-
-	btnItems.onRelease = function()
-		local modal = content:getModalIfContentIsActive()
-		if modal ~= nil then
-			modal:push(require("gallery"):createModalContent({ uikit = ui }))
-		end
-	end
-
 	local btnLeave = ui:buttonNegative({ content = "Leave", textSize = "default" })
 	btnLeave:setParent(node)
 	btnLeave.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
@@ -1451,8 +1428,6 @@ function getCubzhMenuModalContent()
 	end
 
 	buttons = {
-		{ btnWorlds },
-		{ btnItems },
 		{ btnLeave },
 	}
 
