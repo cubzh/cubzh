@@ -937,7 +937,6 @@ end
 -- PEZH
 
 pezhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
-
 pezhBtn:setParent(topBar)
 
 pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin_2", { spherized = false, doNotFlip = true }))
@@ -1105,10 +1104,10 @@ function getCubzhMenuModalContent()
 	local buttons
 
 	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
-	local btnCode = ui:createButton(
-		dev and "🤓 Edit Code" or "🤓 Read Code",
-		{ textSize = "small", borders = false, underline = false, padding = true, shadow = false }
-	)
+	local btnCode = ui:buttonSecondary({
+		content = dev and "🤓 Edit Code" or "🤓 Read Code",
+		textSize = "small",
+	})
 	btnCode:setParent(node)
 
 	btnCode.onRelease = function()
@@ -1120,10 +1119,10 @@ function getCubzhMenuModalContent()
 		closeModal()
 	end
 
-	local btnHelp = ui:createButton(
-		"👾 Help!",
-		{ textSize = "small", borders = false, underline = false, padding = true, shadow = false }
-	)
+	local btnHelp = ui:buttonSecondary({
+		content = "👾 Help!",
+		textSize = "small",
+	})
 	btnHelp:setParent(node)
 
 	btnHelp.onRelease = function()
