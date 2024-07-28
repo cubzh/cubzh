@@ -41,16 +41,8 @@ Client.OnStart = function()
 
 	avatarCameraFollowHomeScroll = false
 	avatarCameraX = 0
-	-- homeScrollPosition = nil
 
 	function getAvatarCameraTargetPosition(h, w)
-		-- print(
-		-- 	"getAvatarCameraTargetPosition, avatarCameraFollowHomeScroll:",
-		-- 	avatarCameraFollowHomeScroll and "true" or "false",
-		-- 	"avatarCameraFocus:",
-		-- 	avatarCameraFocus
-		-- )
-
 		if avatarCameraTarget == nil then
 			return nil
 		end
@@ -117,6 +109,8 @@ Client.OnStart = function()
 			and avatarCameraState.screenWidth == Screen.Width
 			and avatarCameraState.focus == avatarCameraFocus
 			and avatarCameraState.target == avatarCameraTarget
+			and avatarCameraState.avatarCameraFollowHomeScroll == avatarCameraFollowHomeScroll
+			and (avatarCameraFollowHomeScroll == false or (avatarCameraState.avatarCameraX == avatarCameraX))
 		then
 			-- nothing changed, early return
 			return
@@ -133,6 +127,8 @@ Client.OnStart = function()
 		avatarCameraState.screenWidth = Screen.Width
 		avatarCameraState.focus = avatarCameraFocus
 		avatarCameraState.target = avatarCameraTarget
+		avatarCameraState.avatarCameraFollowHomeScroll = avatarCameraFollowHomeScroll
+		avatarCameraState.avatarCameraX = avatarCameraX
 
 		local targetX = 0
 		local targetY = Screen.SafeArea.Top
@@ -201,7 +197,6 @@ Client.OnStart = function()
 		drawerHeight = 0
 		titleScreen():hide()
 		home():show()
-		layoutCamera({ noAnimation = true })
 	end)
 
 	light = Light()
@@ -1705,6 +1700,8 @@ function home()
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
 							local x = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth + padding
+
+							local previousAvatarCameraX = avatarCameraX
 							avatarCameraX = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth * 0.5
 
 							usernameFrame.pos = { x, y }
@@ -1713,6 +1710,10 @@ function home()
 							editAvatarBtn.pos = { x, y }
 							y = y - padding - visitHouseBtn.Height
 							visitHouseBtn.pos = { x, y }
+
+							if previousAvatarCameraX ~= avatarCameraX then
+								layoutCamera()
+							end
 						end
 					end
 					return profileCell
