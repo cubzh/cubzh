@@ -24,7 +24,10 @@ defaultSize = 30
 
 function emptyFunc() end
 
-function setupNodeAvatar(node, avatar, ui)
+function setupNodeAvatar(node, avatar, config)
+	config = config or {}
+	local ui = config.ui or ui
+
 	local rotation = Rotation(0, math.rad(180), 0)
 
 	if node.body ~= nil then
@@ -33,28 +36,38 @@ function setupNodeAvatar(node, avatar, ui)
 		node.body = nil
 	end
 
-	local uiAvatar = ui:createShape(avatar, { spherized = true })
+	local uiAvatar = ui:createShape(avatar, { spherized = config.spherized or false })
 
 	uiAvatar:setParent(node)
 	uiAvatar.Head.LocalRotation:Set(Number3.Zero)
 	node.body = uiAvatar
-	node.body.Width = node.Width
 	node.body.pivot.LocalRotation:Set(rotation)
 
-	node.load = function(self, config)
-		avatar:load(config)
+	layoutBody(node)
+
+	node.load = function(_, config)
+		return avatar:load(config)
 	end
-	node.loadEquipment = function(self, config)
+	node.loadEquipment = function(_, config)
 		avatar:loadEquipment(config)
 	end
-	node.setColors = function(self, config)
+	node.setColors = function(_, config)
 		avatar:setColors(config)
 	end
-	node.setEyes = function(self, config)
+	node.setEyes = function(_, config)
 		avatar:setEyes(config)
 	end
-	node.setNose = function(self, config)
+	node.setNose = function(_, config)
 		avatar:setNose(config)
+	end
+end
+
+function layoutBody(self)
+	if self.body then
+		local bodyRatio = self.body.Width / self.body.Height
+		self.body.Height = self.Height
+		self.body.Width = self.body.Height * bodyRatio
+		self.body.pos = { self.Width * 0.5 - self.body.Width * 0.5, self.Height * 0.5 - self.body.Height * 0.5 }
 	end
 end
 
@@ -75,6 +88,7 @@ uiavatar.get = function(self, config)
 		didLoad = emptyFunc, -- can be multiple times when changing body parts
 		ui = ui, -- can only be used by System to override UI instance
 		eyeBlinks = true,
+		spherized = true,
 	}
 
 	ok, err = pcall(function()
@@ -126,21 +140,17 @@ uiavatar.get = function(self, config)
 	node._setWidth = function(self, v)
 		w = v
 		h = v -- spherized
-		if self.body then
-			self.body.Width = v
-		end
 		setWidth(self, v) -- spherized
 		setHeight(self, v) -- spherized
+		layoutBody(self)
 	end
 
 	node._setHeight = function(self, v)
 		w = v
 		h = v -- spherized
-		if self.body then
-			self.body.Height = v
-		end
 		setWidth(self, v) -- spherized
 		setHeight(self, v) -- spherized
+		layoutBody(self)
 	end
 
 	node.Width = config.size
@@ -148,7 +158,7 @@ uiavatar.get = function(self, config)
 	local avatarObject
 	avatarObject, requests =
 		avatar:get({ usernameOrId = config.usernameOrId, didLoad = didLoad, eyeBlinks = config.eyeBlinks })
-	setupNodeAvatar(node, avatarObject, config.ui)
+	setupNodeAvatar(node, avatarObject, config)
 
 	return node, requests
 end
@@ -157,6 +167,7 @@ end
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
 -- uikit: optional, allows to provide specific instance of uikit
+local headCache = {}
 uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 	local requests
 
@@ -188,7 +199,10 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 	end
 
 	if cachedHead ~= nil then
-		local uiHead = ui:createShape(Shape(cachedHead, { includeChildren = true }), { spherized = true })
+		local headCopy = Shape(cachedHead, { includeChildren = true })
+		headCopy.setEyes = cachedHead.setEyes
+
+		local uiHead = ui:createShape(headCopy, { spherized = true })
 		uiHead:setParent(node)
 		node.head = uiHead
 		node.head.Width = node.Width
@@ -198,8 +212,12 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 	else
 		local head
 		head, requests = avatar:getPlayerHead({ usernameOrId = usernameOrId })
+		-- headCache[usernameOrId] = head
 
-		local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = false })
+		-- local headCopy = Shape(head, { includeChildren = true })
+		-- headCopy.setEyes = head.setEyes
+
+		local uiHead = ui:createShape(head, { spherized = false })
 		uiHead:setParent(node)
 		node.head = uiHead
 		local ratio = node.head.Width / node.head.Height
@@ -212,29 +230,6 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 			self.Height = node.head.Width / ratio
 		end
 		node.head:parentDidResize()
-
-		-- , function(err, head)
-		-- 			if err then
-		-- 				print(err)
-		-- 				return
-		-- 			end
-		-- 			-- Optimized cache: If ID, try to get the username from the Players list. Cache keys can be username or ids
-		-- 			if type(usernameOrId) ~= "string" then
-		-- 				for _, p in pairs(Players) do
-		-- 					if p.UserID == usernameOrId then
-		-- 						usernameOrId = p.Username
-		-- 					end
-		-- 				end
-		-- 			end
-		-- 			headCache[usernameOrId] = head
-		-- 			local uiHead = ui:createShape(Shape(head, { includeChildren = true }), { spherized = true })
-		-- 			uiHead:setParent(node)
-		-- 			node.head = uiHead
-		-- 			node.head.Width = node.Width
-
-		-- 			local center = Number3(node.head.shape.Width, node.head.shape.Height, node.head.shape.Depth)
-		-- 			node.head.shape.Pivot = node.head.shape:BlockToLocal(center)
-		-- 		end)
 
 		node.onRemove = function()
 			for _, r in ipairs(requests) do
@@ -265,7 +260,38 @@ uiavatar.getHead = function(_, usernameOrId, size, uikit, config)
 		setHeight(self, v) -- spherized
 	end
 
+	-- node.load = function(self, config)
+	-- 	avatar:load(config)
+	-- end
+	-- node.loadEquipment = function(self, config)
+	-- 	avatar:loadEquipment(config)
+	-- end
+	node.setColors = function(self, config)
+		if self.head.shape.setColors then
+			self.head.shape:setColors(config)
+		end
+	end
+	node.setEyes = function(self, config)
+		if self.head.shape.setEyes then
+			self.head.shape:setEyes(config)
+		end
+	end
+	node.setNose = function(self, config)
+		if self.head.shape.setNose then
+			self.head.shape:setNose(config)
+		end
+	end
+
 	return node, requests
+end
+
+function _headAndShouldersLayoutBody(self)
+	if self.body then
+		local bodyRatio = self.body.Width / self.body.Height
+		self.body.Height = self.Height * 1.7
+		self.body.Width = self.body.Height * bodyRatio
+		self.body.pos = { self.Width * 0.5 - self.body.Width * 0.5, -self.body.Height * 0.4 }
+	end
 end
 
 -- returns uikit node + sent requests (table, can be nil)
@@ -278,15 +304,23 @@ uiavatar.getHeadAndShoulders = function(self, config)
 	end
 
 	local defaultConfig = {
+		backgroundColor = nil,
+		frame = nil,
 		usernameOrId = "", -- loading "empty" avatar from bundle when empty
 		size = defaultSize,
 		didLoad = emptyFunc, -- can be multiple times when changing body parts
 		ui = ui, -- can only be used by System to override UI instance
 		eyeBlinks = true,
+		spherized = true,
 	}
 
 	ok, err = pcall(function()
-		config = require("config"):merge(defaultConfig, config)
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				backgroundColor = { "Color" },
+				frame = { "table" },
+			},
+		})
 	end)
 	if not ok then
 		error("ui_avatar:getHeadAndShoulders(config) - config error: " .. err, 2)
@@ -295,7 +329,17 @@ uiavatar.getHeadAndShoulders = function(self, config)
 	local requests
 
 	local ui = config.ui
-	local node = ui:createFrame(Color(0, 0, 0, 0))
+
+	local frame
+	if config.frame ~= nil then
+		frame = config.frame
+	elseif config.backgroundColor ~= nil then
+		frame = ui:createFrame(config.backgroundColor)
+	else
+		frame = ui:frame()
+	end
+
+	local node = frame
 
 	node.IsMask = true
 	local w = 0
@@ -335,21 +379,31 @@ uiavatar.getHeadAndShoulders = function(self, config)
 	node._setWidth = function(self, v)
 		w = v
 		h = v -- spherized
-		if self.body then
-			self.body.Width = v
+		if config.spherized == true then
+			setWidth(self, v) -- spherized
+			setHeight(self, v) -- spherized
+			_headAndShouldersLayoutBody(self)
+		else
+			local ratio = w / h
+			setWidth(self, v)
+			setHeight(self, v * 1.0 / ratio)
+			_headAndShouldersLayoutBody(self)
 		end
-		setWidth(self, v) -- spherized
-		setHeight(self, v) -- spherized
 	end
 
 	node._setHeight = function(self, v)
 		w = v
 		h = v -- spherized
-		if self.body then
-			self.body.Height = v
+		if config.spherized == true then
+			setWidth(self, v)
+			setHeight(self, v)
+			_headAndShouldersLayoutBody(self)
+		else
+			local ratio = w / h
+			setHeight(self, v)
+			setWidth(self, v * ratio)
+			_headAndShouldersLayoutBody(self)
 		end
-		setWidth(self, v) -- spherized
-		setHeight(self, v) -- spherized
 	end
 
 	node.Width = config.size
@@ -357,92 +411,9 @@ uiavatar.getHeadAndShoulders = function(self, config)
 	local avatarObject
 	avatarObject, requests =
 		avatar:get({ usernameOrId = config.usernameOrId, didLoad = didLoad, eyeBlinks = config.eyeBlinks })
-	setupNodeAvatar(node, avatarObject, config.ui)
+	setupNodeAvatar(node, avatarObject, config)
 
 	return node, requests
-
-	-- local bodyDidLoad = function(err, avatarBody)
-	-- 	if err ~= nil then
-	-- 		error(err, 2)
-	-- 		return
-	-- 	end
-
-	-- 	local rotation = Rotation(0, math.rad(180), 0)
-
-	-- 	if node.body ~= nil then
-	-- 		rotation:Set(node.body.pivot.LocalRotation)
-	-- 		node.body:remove()
-	-- 		node.body = nil
-	-- 	end
-
-	-- 	-- local shape = Shape(avatarBody, { includeChildren = true })
-	-- 	local shape = avatarBody
-	-- 	shape.LocalPosition = Number3.Zero
-
-	-- 	-- -12 -> centered (body position set in animation cycle)
-	-- 	-- -14 -> from below shoulders
-	-- 	local uiBody = ui:createShape(shape, { spherized = false, offset = Number3(0, -18, 0) })
-	-- 	uiBody:setParent(node)
-	-- 	uiBody.Head.LocalRotation = { 0, 0, 0 }
-	-- 	node.body = uiBody
-	-- 	uiBody.ratio = uiBody.Width / uiBody.Height
-
-	-- 	-- NOTE: this needs to be improved, to programatically crop
-	-- 	-- perfectly around the head, considering hair / headsets, etc.
-	-- 	-- [gdevillele] _w field can be nil, I don't understand why
-	-- 	node.body.Width = (node._w or 0) * 1.1
-	-- 	node.body.Height = node.body.Width / uiBody.ratio
-
-	-- 	node.body.pivot.LocalRotation = rotation
-
-	-- 	node.body.pos = { 0, 0 }
-	-- end
-
-	-- _, requests = avatar:get(usernameOrId, nil, bodyDidLoad)
-
-	-- node.onRemove = function()
-	-- 	for _, r in ipairs(requests) do
-	-- 		r:Cancel()
-	-- 	end
-	-- end
-
-	-- node._width = function(self)
-	-- 	return self._w
-	-- end
-	-- node._height = function(self)
-	-- 	return self._h
-	-- end
-
-	-- local setWidth = node._setWidth
-	-- local setHeight = node._setHeight
-
-	-- node._setWidth = function(self, v)
-	-- 	self._w = v
-	-- 	self._h = v -- spherized
-	-- 	if self.body then
-	-- 		self.body.Width = v * 2
-	-- 		self.body.pos.X = -self.body.Width * 0.25
-	-- 		self.body.pos.Y = -self.body.Height * 0.5
-	-- 	end
-	-- 	setWidth(self, v) -- spherized
-	-- 	setHeight(self, v) -- spherized
-	-- end
-
-	-- node._setHeight = function(self, v)
-	-- 	self._w = v
-	-- 	self._h = v -- spherized
-	-- 	if self.body then
-	-- 		self.body.Width = v * 2
-	-- 		self.body.pos.X = -self.body.Width * 0.25
-	-- 		self.body.pos.Y = -self.body.Height * 0.5
-	-- 	end
-	-- 	setWidth(self, v) -- spherized
-	-- 	setHeight(self, v) -- spherized
-	-- end
-
-	-- node.Width = defaultSize
-
-	-- return node, requests
 end
 
 return uiavatar

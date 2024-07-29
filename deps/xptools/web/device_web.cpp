@@ -204,3 +204,7 @@ std::vector<std::string> vx::device::preferredLanguages() {
     languages.push_back("en-US");
     return languages;
 }
+
+void vx::device::refreshScreenOrientation() {
+    // does nothing on web
+}

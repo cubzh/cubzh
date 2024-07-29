@@ -72,6 +72,16 @@ void terminate();
 /// Returns true if device has a touch screen.
 bool hasTouchScreen();
 
+///
+void setScreenAllowedOrientation(const std::string &orientation);
+
+///
+const std::string& getScreenAllowedOrientation();
+
+/// Called when changing allowed orientation for the device
+/// to try again and pick possible orientation.
+void refreshScreenOrientation();
+
 /// Returns true if device has a mouse and a keyboard.
 bool hasMouseAndKeyboard();
 

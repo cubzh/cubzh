@@ -26,7 +26,7 @@ local orientationCubeMetatable = {
 				self:init()
 			end
 			camera.TargetX = x
-			camera.TargetY = y
+			camera.TargetY = Screen.Height - y - camera.Height
 		end,
 		setSize = function(self, size)
 			local camera = self.camera

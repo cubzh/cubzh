@@ -25,31 +25,36 @@ local EYES_PALETTE_INDEX = 6
 local NOSE_PALETTE_INDEX = 7
 local EYES_DARK_PALETTE_INDEX = 8
 
-bodyPartsNames = {
-	"Head",
-	"Body",
-	"RightArm",
-	"RightHand",
-	"LeftArm",
-	"LeftHand",
-	"RightLeg",
-	"LeftLeg",
-	"RightFoot",
-	"LeftFoot",
-	"EyeLidRight",
-	"EyeLidLeft",
-}
+-- bodyPartsNames = {
+-- 	"Head",
+-- 	"Body",
+-- 	"RightArm",
+-- 	"RightHand",
+-- 	"LeftArm",
+-- 	"LeftHand",
+-- 	"RightLeg",
+-- 	"LeftLeg",
+-- 	"RightFoot",
+-- 	"LeftFoot",
+-- 	"EyeLidRight",
+-- 	"EyeLidLeft",
+-- }
 
 cachedHead = bundle:Shape("shapes/head_skin2_v2")
 
 mod.eyeColors = {
+	Color(80, 80, 80),
 	Color(166, 142, 163),
 	Color(68, 172, 229),
 	Color(61, 204, 141),
 	Color(127, 80, 51),
 	Color(51, 38, 29),
 	Color(229, 114, 189),
+	Color(80, 80, 80),
 }
+
+local DEFAULT_EYES_COLOR_INDEX = 1
+mod.defaultEyesColorIndex = DEFAULT_EYES_COLOR_INDEX
 
 mod.skinColors = {
 	{
@@ -103,6 +108,7 @@ mod.skinColors = {
 }
 
 local DEFAULT_BODY_COLOR = 8
+mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR
 
 mod.eyes = {
 	{
@@ -281,6 +287,9 @@ mod.eyes = {
 	},
 }
 
+local DEFAULT_EYES_INDEX = 1
+mod.defaultEyesIndex = DEFAULT_EYES_INDEX
+
 mod.noses = {
 	{
 		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
@@ -289,6 +298,49 @@ mod.noses = {
 	},
 	{
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+	},
+	{},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+	},
+	{
+		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
+
+		{ x = 1, y = 3, c = NOSE_PALETTE_INDEX },
+		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
+		{ x = 3, y = 3, c = NOSE_PALETTE_INDEX },
 	},
 	{
 		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
@@ -304,9 +356,7 @@ mod.noses = {
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
 		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
 
-		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
 		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
-		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
 	},
 	{
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
@@ -318,19 +368,16 @@ mod.noses = {
 		{ x = 3, y = 3, c = NOSE_PALETTE_INDEX },
 	},
 	{
-		{ x = 1, y = 1, c = NOSE_PALETTE_INDEX },
 		{ x = 2, y = 1, c = NOSE_PALETTE_INDEX },
-		{ x = 3, y = 1, c = NOSE_PALETTE_INDEX },
 
 		{ x = 1, y = 2, c = NOSE_PALETTE_INDEX },
 		{ x = 2, y = 2, c = NOSE_PALETTE_INDEX },
 		{ x = 3, y = 2, c = NOSE_PALETTE_INDEX },
-
-		{ x = 2, y = 3, c = NOSE_PALETTE_INDEX },
 	},
 }
 
 local DEFAULT_NOSE_INDEX = 1
+mod.defaultNoseIndex = DEFAULT_NOSE_INDEX
 
 avatarPalette = Palette()
 avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin1) -- skin 1
@@ -581,18 +628,19 @@ mod.getPlayerHead = function(self, config)
 		error("avatar:getPlayerHead(config) - config error: " .. err, 2)
 	end
 
-	local head = Shape(cachedHead)
+	local head = MutableShape(cachedHead)
 	-- need custom functions for heads
 	-- head.load = avatar_load
 	-- head.loadEquipment = avatar_loadEquipment
-	-- head.setColors = avatar_setColors
-	-- head.setEyes = avatar_setEyes
-	-- head.setNose = avatar_setNose
+	head.setColors = avatar_setColors
+	head.setEyes = avatar_setEyes
+	head.setNose = avatar_setNose
 
 	local requests = {}
 	local palette = avatarPalette:Copy()
 
-	avatarPrivateFields[head] = { config = config, equipments = {}, requests = requests, palette = palette }
+	avatarPrivateFields[head] =
+		{ config = config, equipments = {}, requests = requests, palette = palette, isHead = true }
 
 	-- error("REVIEW getPlayerHead")
 	head.Name = "Head"
@@ -663,7 +711,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 		initAnimations(avatar)
 	end
 
-	avatar:setEyes({ index = 1 })
+	avatar:setEyes({ index = DEFAULT_EYES_INDEX, color = mod.eyeColors[DEFAULT_EYES_COLOR_INDEX] })
 	avatar:setNose({ index = DEFAULT_NOSE_INDEX })
 
 	local eyeLidRight = MutableShape()
@@ -678,6 +726,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	eyeLidRight.Scale.Z = 1
 	eyeLidRight.Scale.X = 3.2
 	eyeLidRight.Scale.Y = 0 -- 4.2
+	eyeLidRight.IsHidden = true
 	eyeLidRight.LocalPosition:Set(4, 5.1, 5.1)
 
 	local eyeLidLeft = Shape(eyeLidRight)
@@ -687,6 +736,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	eyeLidLeft.Scale.Z = 1
 	eyeLidLeft.Scale.X = 3.2
 	eyeLidLeft.Scale.Y = 0 -- 4.2
+	eyeLidLeft.IsHidden = true
 	eyeLidLeft.LocalPosition:Set(-4, 5.1, 5.1)
 
 	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
@@ -705,12 +755,16 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 				return
 			end
 			eyeLidRight.Scale.Y = 4.2
+			eyeLidRight.IsHidden = false
 			eyeLidLeft.Scale.Y = 4.2
+			eyeLidLeft.IsHidden = false
 			Timer(0.1, eyeBlinks.open)
 		end
 		eyeBlinks.open = function()
 			eyeLidRight.Scale.Y = 0
+			eyeLidRight.IsHidden = true
 			eyeLidLeft.Scale.Y = 0
+			eyeLidLeft.IsHidden = true
 			eyeBlinks.schedule()
 		end
 		eyeBlinks.schedule = function()
@@ -749,6 +803,20 @@ function avatar_load(self, config)
 			local mouthColor = nil
 			local eyesColor = nil
 
+			-- skin color index
+			if data.skinColorIndex ~= nil then
+				local colorValues = mod.skinColors[data.skinColorIndex]
+				skinColor = colorValues.skin1
+				skinColor2 = colorValues.skin2
+				noseColor = colorValues.nose
+				mouthColor = colorValues.mouth
+			end
+
+			-- eye color index
+			if data.eyesColorIndex ~= nil then
+				eyesColor = mod.eyeColors[data.eyesColorIndex]
+			end
+
 			if data.skinColor then
 				skinColor =
 					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
@@ -770,6 +838,8 @@ function avatar_load(self, config)
 					Color(math.floor(data.eyesColor.r), math.floor(data.eyesColor.g), math.floor(data.eyesColor.b))
 			end
 
+			-- Apply colors and eye/nose types
+
 			self:setColors({
 				skin1 = skinColor,
 				skin2 = skinColor2,
@@ -777,6 +847,16 @@ function avatar_load(self, config)
 				mouth = mouthColor,
 				eyes = eyesColor,
 			})
+
+			-- eyes index
+			if data.eyesIndex ~= nil then
+				self:setEyes({ index = data.eyesIndex, color = eyesColor })
+			end
+
+			-- nose index
+			if data.noseIndex ~= nil then
+				self:setNose({ index = data.noseIndex, color = noseColor })
+			end
 
 			-- print("data:", JSON:Encode(data))
 
@@ -796,6 +876,8 @@ function avatar_load(self, config)
 
 		table.insert(fields.requests, req)
 	end
+
+	return fields.requests
 end
 
 function _attachEquipmentToBodyPart(bodyPart, equipment, scale)
@@ -845,12 +927,15 @@ function avatar_loadEquipment(self, config)
 		-- allows to provide shape that's already been loaded
 		-- /!\ shape then managed by avatar, provide copy if needed
 		shape = nil,
+		bumpAnimation = false,
+		didAttachEquipmentParts = nil, -- function(equipmentParts)
 	}
 
 	ok, err = pcall(function()
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				shape = { "Shape", "MutableShape" },
+				didAttachEquipmentParts = { "function" },
 			},
 		})
 	end)
@@ -900,19 +985,35 @@ function avatar_loadEquipment(self, config)
 			if leftSleeve then
 				_attachEquipmentToBodyPart(self.LeftArm, leftSleeve)
 			end
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment, rightSleeve, leftSleeve })
+			end
 		elseif config.type == "pants" then
 			local leftLeg = equipment:GetChild(1)
 			currentEquipment.shapes = { equipment, leftLeg }
 			_attachEquipmentToBodyPart(self.RightLeg, equipment, 1.05)
 			_attachEquipmentToBodyPart(self.LeftLeg, leftLeg, 1.05)
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment, leftLeg })
+			end
 		elseif config.type == "boots" then
 			local leftFoot = equipment:GetChild(1)
 			currentEquipment.shapes = { equipment, leftFoot }
 			_attachEquipmentToBodyPart(self.RightFoot, equipment)
 			_attachEquipmentToBodyPart(self.LeftFoot, leftFoot)
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment, leftFoot })
+			end
 		elseif config.type == "hair" then
 			currentEquipment.shapes = { equipment }
 			_attachEquipmentToBodyPart(self.Head, equipment)
+
+			if config.didAttachEquipmentParts then
+				config.didAttachEquipmentParts({ equipment })
+			end
 		end
 	end
 
@@ -1004,7 +1105,12 @@ function avatar_setEyes(self, config)
 
 	if config.index ~= nil then
 		-- remove current eyes
-		local head = self.Head
+		local head
+		if fields.isHead == true then
+			head = self
+		else
+			head = self.Head
+		end
 		local b
 		for x = 4, head.Width - 5 do -- width -> left side when looking at face
 			for y = 3, head.Height - 5 do
@@ -1045,23 +1151,44 @@ function avatar_setNose(self, config)
 	})
 
 	if config.index ~= nil then
+		local nodeBlocks = {}
+
+		local nose = mod.noses[config.index]
+		for _, n in ipairs(nose) do
+			local x = 11 - n.x
+			local y = n.y + 2
+			if nodeBlocks[x] == nil then
+				nodeBlocks[x] = {}
+			end
+			nodeBlocks[x][y] = n.c
+		end
+
 		-- remove current nose
-		local head = self.Head
+		local head
+		if fields.isHead == true then
+			head = self
+		else
+			head = self.Head
+		end
 		local b
 		local depth = 12
 		for x = 8, head.Width - 9 do -- width -> left side when looking at face
 			for y = 3, head.Height - 5 do
-				b = head:GetBlock(x, y, depth)
-				if b ~= nil then
-					b:Remove()
+				if nodeBlocks[x][y] == nil then
+					b = head:GetBlock(x, y, depth)
+					if b ~= nil then
+						b:Remove()
+					end
+				else
+					b = head:GetBlock(x, y, depth)
+					if b == nil then
+						head:AddBlock(nodeBlocks[x][y], x, y, depth)
+					end
 				end
 			end
 		end
 
-		local nose = mod.noses[config.index]
-		for _, n in ipairs(nose) do
-			head:AddBlock(n.c, 11 - n.x, n.y + 2, depth)
-		end
+		-- NOTE: there seems to be an issue when removing then adding block at same position
 	end
 
 	if config.color ~= nil then

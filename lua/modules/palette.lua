@@ -59,7 +59,7 @@ palette.create = function(_, uikit, btnColor)
 	node.didChangeSelection = nil -- function(self, color)
 	node.requiresEdit = nil -- function(self, index, color)
 
-	local bg = uikit:createFrame(Color(50, 50, 50, 200))
+	local bg = uikit:frameTextBackground()
 	bg.Width = 200
 	bg.Height = 200
 	bg:setParent(node)
@@ -73,7 +73,7 @@ palette.create = function(_, uikit, btnColor)
 		return self.background.Height
 	end
 
-	local editBtn = uikit:createButton("✏️")
+	local editBtn = uikit:buttonSecondary({ content = "✏️" })
 	if btnColor then
 		editBtn:setColor(btnColor)
 	end
@@ -85,7 +85,7 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	local addBtn = uikit:createButton("➕")
+	local addBtn = uikit:buttonSecondary({ content = "➕" })
 	if btnColor then
 		addBtn:setColor(btnColor)
 	end
@@ -99,7 +99,7 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	local deleteBtn = uikit:createButton("➖")
+	local deleteBtn = uikit:buttonSecondary({ content = "➖" })
 	if btnColor then
 		deleteBtn:setColor(btnColor)
 	end
@@ -126,7 +126,16 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	local selectionFrame = uikit:createShape(selectionFrameShape, { doNotFlip = true })
+	-- NOTE: this is necessary for now, for bounding box to be correct right away, otherwise we have to wait for next frame.
+	-- This could certainly be fixed, refreshing bounding box dynamically when accessing it and when Shape is "dirty".
+	selectionFrameShape:RefreshModel()
+
+	local selectionFrame = uikit:createShape(selectionFrameShape, {
+		spherized = false,
+		doNotFlip = true,
+		singleShapeToBeMutated = true,
+	})
+	selectionFrame.debugName = "selectionFrame"
 	selectionFrame:setParent(node)
 	selectionFrame.Width = 40
 	selectionFrame.Height = 40
@@ -141,7 +150,12 @@ palette.create = function(_, uikit, btnColor)
 
 		local colorsShape = MutableShape()
 		colorsShape.CollisionGroups = {}
-		local colors = uikit:createShape(colorsShape, { doNotFlip = true, perBlockCollisions = true })
+		local colors = uikit:createShape(colorsShape, {
+			spherized = false,
+			doNotFlip = true,
+			perBlockCollisions = true,
+			singleShapeToBeMutated = true,
+		})
 		colors:setParent(self)
 
 		self.colors = colors
@@ -237,8 +251,8 @@ palette.create = function(_, uikit, btnColor)
 		self.selectionFrame.Width = self._squareSize
 		self.selectionFrame.Height = self._squareSize
 
-		self.selectionFrame.LocalPosition.X = self.colors.pos.X + b.Coords.X * self._squareSize
-		self.selectionFrame.LocalPosition.Y = self.colors.pos.Y + self.colors.Height + b.Coords.Y * self._squareSize
+		self.selectionFrame.pos.X = self.colors.pos.X + b.Coords.X * self._squareSize
+		self.selectionFrame.pos.Y = self.colors.pos.Y + self.colors.Height + b.Coords.Y * self._squareSize
 	end
 
 	node._refresh = function(self)
@@ -291,8 +305,7 @@ palette.create = function(_, uikit, btnColor)
 
 		self.colors.Width = colorsWidth
 		self.colors.Height = colorsHeight
-
-		self.colors.pos = { self.padding, self.deleteBtn.LocalPosition.Y + self.deleteBtn.Height + self.padding, 0 }
+		self.colors.Depth = 1
 
 		colorsWidth = colorsWidth + self.padding * 2
 		local width = controlsWidth > colorsWidth and controlsWidth or colorsWidth
@@ -300,11 +313,11 @@ palette.create = function(_, uikit, btnColor)
 		self.background.Height = heightWithoutColors + self.colors.Height
 		self.background.Width = width
 
-		self.addBtn.LocalPosition = { width - self.padding - self.addBtn.Width, self.padding, 0 }
-		self.editBtn.LocalPosition =
-			{ self.addBtn.LocalPosition.X - self.editBtn.Width - self.padding, self.padding, 0 }
-		self.deleteBtn.LocalPosition =
-			{ self.editBtn.LocalPosition.X - self.deleteBtn.Width - self.padding, self.padding, 0 }
+		self.addBtn.pos = { width - self.padding - self.addBtn.Width, self.padding }
+		self.editBtn.pos = { self.addBtn.pos.X - self.editBtn.Width - self.padding, self.padding }
+		self.deleteBtn.pos = { self.editBtn.pos.X - self.deleteBtn.Width - self.padding, self.padding }
+
+		self.colors.pos = { self.padding, self.deleteBtn.pos.Y + self.deleteBtn.Height + self.padding }
 
 		self:_refreshSelectionFrame()
 

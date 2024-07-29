@@ -72,25 +72,39 @@ colorPicker.create = function(_, config)
 
 	cursorModel:AddBlock(Color.Black, 2, 0, 0)
 	cursorModel:AddBlock(Color.Black, 2, 2, 0)
+	cursorModel:RefreshModel()
+
 	local _hsvCursor = Shape(cursorModel)
 	_hsvCursor.CollisionGroups = {}
-	local hueSliderCursor = uikit:createShape(_hueSliderCursor, { doNotFlip = true, perBlockCollisions = true })
+	local hueSliderCursor = uikit:createShape(_hueSliderCursor, {
+		doNotFlip = true,
+		perBlockCollisions = true,
+		singleShapeToBeMutated = true,
+	})
 	hueSliderCursor:setParent(node)
-	hueSliderCursor.LocalPosition.Z = -550 -- remove this once uikit better manages layers
+	hueSliderCursor.pos.Z = -550 -- remove this once uikit better manages layers
 
 	local alphaSliderCursor
 	if config.transparency then
 		local _alphaSliderCursor = Shape(_hueSliderCursor)
 		_alphaSliderCursor.CollisionGroups = {}
 
-		alphaSliderCursor = uikit:createShape(_alphaSliderCursor, { doNotFlip = true, perBlockCollisions = true })
+		alphaSliderCursor = uikit:createShape(_alphaSliderCursor, {
+			doNotFlip = true,
+			perBlockCollisions = true,
+			singleShapeToBeMutated = true,
+		})
 		alphaSliderCursor:setParent(node)
-		alphaSliderCursor.LocalPosition.Z = -550 -- remove this once uikit better manages layers
+		alphaSliderCursor.pos.Z = -550 -- remove this once uikit better manages layers
 	end
 
-	local hsvCursor = uikit:createShape(_hsvCursor, { doNotFlip = true, perBlockCollisions = true })
+	local hsvCursor = uikit:createShape(_hsvCursor, {
+		doNotFlip = true,
+		perBlockCollisions = true,
+		singleShapeToBeMutated = true,
+	})
 	hsvCursor:setParent(node)
-	hsvCursor.LocalPosition.Z = -550 -- remove this once uikit better manages layers
+	hsvCursor.pos.Z = -550 -- remove this once uikit better manages layers
 
 	node.currentAlpha = 255
 	node.previousColor = nil
@@ -115,10 +129,10 @@ colorPicker.create = function(_, config)
 		end
 	end
 
-	local bg = uikit:createFrame(Color(50, 50, 50, 200))
+	local bg = uikit:frameTextBackground()
 	bg:setParent(node)
 	node.background = bg
-	local closeBtn = uikit:createButton(config.closeBtnIcon)
+	local closeBtn = uikit:buttonNeutral({ content = config.closeBtnIcon })
 	if config.closeBtnColor then
 		closeBtn:setColor(config.closeBtnColor, Color.White)
 	end
@@ -169,7 +183,9 @@ colorPicker.create = function(_, config)
 		end
 	end
 
-	local uiPaletteShape = uikit:createShape(paletteShape, { doNotFlip = true })
+	paletteShape:RefreshModel()
+
+	local uiPaletteShape = uikit:createShape(paletteShape, { doNotFlip = true, singleShapeToBeMutated = true })
 	uiPaletteShape:setParent(node)
 
 	local function pickSV(x, y)
@@ -231,7 +247,13 @@ colorPicker.create = function(_, config)
 		hueShape:AddBlock(c, 0, h, 0)
 	end
 
-	local uiHueShape = uikit:createShape(hueShape, { doNotFlip = true, perBlockCollisions = true })
+	hueShape:RefreshModel()
+
+	local uiHueShape = uikit:createShape(hueShape, {
+		doNotFlip = true,
+		perBlockCollisions = true,
+		singleShapeToBeMutated = true,
+	})
 	uiHueShape:setParent(node)
 
 	local function pickH(_, y)
@@ -282,9 +304,14 @@ colorPicker.create = function(_, config)
 				finalShape:AddBlock((i + j) % 2 == 0 and Color.White or Color.Grey, i, j, 0)
 			end
 		end
+		finalShape:RefreshModel()
 
 		node.finalShape = finalShape
-		uiFinalShape = uikit:createShape(finalShape, { doNotFlip = true, perBlockCollisions = true })
+		uiFinalShape = uikit:createShape(finalShape, {
+			doNotFlip = true,
+			perBlockCollisions = true,
+			singleShapeToBeMutated = true,
+		})
 		uiFinalShape:setParent(node)
 	end
 
@@ -408,7 +435,12 @@ colorPicker.create = function(_, config)
 			)
 		end
 
-		bgAlphaColor = uikit:createShape(bgAlphaShape, { doNotFlip = true, perBlockCollisions = true })
+		bgAlphaShape:RefreshModel()
+		bgAlphaColor = uikit:createShape(bgAlphaShape, {
+			doNotFlip = true,
+			perBlockCollisions = true,
+			singleShapeToBeMutated = true,
+		})
 		bgAlphaColor:setParent(bgAlpha)
 		bgAlphaShape.CollisionGroups = {}
 
@@ -419,7 +451,12 @@ colorPicker.create = function(_, config)
 			shapeAlpha:AddBlock(c, 0, i - 1, 0)
 		end
 
-		alpha = uikit:createShape(shapeAlpha, { doNotFlip = true, perBlockCollisions = true })
+		shapeAlpha:RefreshModel()
+		alpha = uikit:createShape(shapeAlpha, {
+			doNotFlip = true,
+			perBlockCollisions = true,
+			singleShapeToBeMutated = true,
+		})
 		alpha:setParent(bgAlpha)
 		alpha.onPress = function(_, shape, block)
 			node.currentAlpha = shape.Palette[block.PaletteIndex].Color.A
@@ -427,11 +464,11 @@ colorPicker.create = function(_, config)
 			node:_didPickColor()
 		end
 
-		bgAlphaColor.LocalPosition = Number3(theme.padding, theme.padding, 0)
-		bgAlphaColor.LocalPosition.Z = -1
+		bgAlphaColor.pos = { theme.padding, theme.padding }
+		bgAlphaColor.pos.Z = -1
 
-		alpha.LocalPosition = Number3(theme.padding, theme.padding, 0)
-		alpha.LocalPosition.Z = bgAlphaColor.LocalPosition.Z - 1
+		alpha.pos = { theme.padding, theme.padding }
+		alpha.pos.Z = bgAlphaColor.pos.Z - 1
 	end
 
 	node._setColor = function(self, color)
@@ -525,15 +562,15 @@ colorPicker.create = function(_, config)
 		bg.Height = height
 
 		if config.colorPreview then
-			closeBtn.pos = Number3(bg.Width - columnWidth, 0, 0)
+			closeBtn.pos = { bg.Width - columnWidth, 0 }
 			if config.extraPadding then
-				closeBtn.pos = closeBtn.pos + { -padding, padding, 0 }
+				closeBtn.pos = closeBtn.pos + { -padding, padding }
 			end
 		else
-			closeBtn.pos = Number3(0, 0, 0)
+			closeBtn.pos = { 0, 0 }
 			closeBtn.Width = width
 			if config.extraPadding then
-				closeBtn.pos = closeBtn.pos + { padding, padding, 0 }
+				closeBtn.pos = closeBtn.pos + { padding, padding }
 				closeBtn.Width = closeBtn.Width - padding * 2
 			end
 		end
@@ -544,7 +581,7 @@ colorPicker.create = function(_, config)
 				uiFinalShape.Width = uiFinalShape.Width - padding * 2
 			end
 			uiFinalShape.Height = bottomBarHeight
-			uiFinalShape.LocalPosition = Number3(padding, padding, 0)
+			uiFinalShape.pos = { padding, padding }
 		end
 
 		if colorCode then
@@ -553,14 +590,14 @@ colorPicker.create = function(_, config)
 				colorCode.Width = colorCode.Width - padding * 2
 			end
 			colorCode.Height = bottomBarHeight
-			colorCode.LocalPosition = Number3(padding, padding, 0)
+			colorCode.pos = { padding, padding }
 		end
 
-		hexCodeBtn.LocalPosition = { padding, padding, 0 }
+		hexCodeBtn.pos = { padding, padding }
 
-		uiPaletteShape.pos = Number3(0, bg.Height - colorAreaSize, 0)
+		uiPaletteShape.pos = { 0, bg.Height - colorAreaSize }
 		if config.extraPadding then
-			uiPaletteShape.pos = uiPaletteShape.pos + { padding, -padding, 0 }
+			uiPaletteShape.pos = uiPaletteShape.pos + { padding, -padding }
 		end
 
 		uiPaletteShape.Width = colorAreaSize
@@ -568,7 +605,7 @@ colorPicker.create = function(_, config)
 
 		uiHueShape.Width = columnWidth
 		uiHueShape.Height = colorAreaSize
-		uiHueShape.pos = Number3(colorAreaSize + padding, bottomBarHeight + padding, 0)
+		uiHueShape.pos = { colorAreaSize + padding, bottomBarHeight + padding }
 		if config.extraPadding then
 			uiHueShape.pos = uiHueShape.pos + { padding, padding, 0 }
 		end
@@ -609,18 +646,18 @@ colorPicker.create = function(_, config)
 		if config.transparency then
 			bgAlpha.Width = columnWidth
 			bgAlpha.Height = colorAreaSize
-			bgAlpha.LocalPosition = Number3(colorAreaSize + columnWidth + padding, bottomBarHeight + padding * 2, 0)
+			bgAlpha.pos = { colorAreaSize + columnWidth + padding, bottomBarHeight + padding * 2 }
 
 			if config.extraPadding then
-				bgAlpha.LocalPosition.X = bgAlpha.LocalPosition.X + padding * 2
+				bgAlpha.pos.X = bgAlpha.pos.X + padding * 2
 			end
 
 			local r = self.currentAlpha / 255
 			local step = math.ceil(r * self.nbAlphaSteps) - 1
 			local stepHeight = bgAlpha.Height / self.nbAlphaSteps
-			alphaSliderCursor.LocalPosition = bgAlpha.LocalPosition
-				- { 0, alphaSliderCursor.Height * 0.5, 0 }
-				+ { 0, stepHeight * (step + 0.5), 0 }
+			alphaSliderCursor.pos = bgAlpha.pos
+				- { 0, alphaSliderCursor.Height * 0.5 }
+				+ { 0, stepHeight * (step + 0.5) }
 
 			bgAlphaColor.Width = bgAlpha.Width - 2 * padding
 			bgAlphaColor.Height = bgAlpha.Height - 2 * padding
@@ -698,9 +735,9 @@ colorPicker.create = function(_, config)
 			local r = self.currentAlpha / 255
 			local step = math.ceil(r * self.nbAlphaSteps) - 1
 			local stepHeight = bgAlpha.Height / self.nbAlphaSteps
-			alphaSliderCursor.LocalPosition = bgAlpha.LocalPosition
-				- { 0, alphaSliderCursor.Height * 0.5, 0 }
-				+ { 0, stepHeight * (step + 0.5), 0 }
+			alphaSliderCursor.pos = bgAlpha.pos
+				- { 0, alphaSliderCursor.Height * 0.5 }
+				+ { 0, stepHeight * (step + 0.5) }
 		end
 
 		local hue = 0.0 -- 0 to 360
@@ -712,9 +749,9 @@ colorPicker.create = function(_, config)
 			value = self.currentColor.Value
 		end
 
-		hueSliderCursor.pos = uiHueShape.LocalPosition
-			- { 0, hueSliderCursor.Height * 0.5, 0 }
-			+ { 0, uiHueShape.Height * hue / 360.0, 0 }
+		hueSliderCursor.pos = uiHueShape.pos
+			- { 0, hueSliderCursor.Height * 0.5 }
+			+ { 0, uiHueShape.Height * hue / 360.0 }
 		hsvCursor.pos.X = uiPaletteShape.pos.X - hsvCursor.Width * 0.5 + saturation * uiPaletteShape.Width
 		hsvCursor.pos.Y = uiPaletteShape.pos.Y - hsvCursor.Height * 0.5 + value * uiPaletteShape.Height
 	end

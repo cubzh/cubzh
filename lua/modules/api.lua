@@ -6,6 +6,9 @@ API module
 --
 
 local time = require("time")
+local url = require("url")
+
+-- TODO create url type
 
 local mod = {
 	kApiAddr = "https://api.cu.bzh", -- prod server
@@ -18,6 +21,12 @@ local errorMT = {
 		return t.message or ""
 	end,
 }
+
+mod.error = function(_, statusCode, message)
+	local err = { statusCode = statusCode, message = message }
+	setmetatable(err, errorMT)
+	return err
+end
 
 local function urlGetFields(url, fields)
 	if fields == nil then
@@ -32,12 +41,6 @@ local function urlGetFields(url, fields)
 		end
 	end
 	return url
-end
-
-mod.error = function(_, statusCode, message)
-	local err = { statusCode = statusCode, message = message }
-	setmetatable(err, errorMT)
-	return err
 end
 
 -- search Users by username substring
@@ -69,40 +72,57 @@ mod.searchUser = function(_, searchText, callback)
 	return req
 end
 
--- getFriends ...
--- callback(ok, friends, errMsg)
-mod.getFriends = function(_, callback, fields, config)
+-- getFriends
+-- callback(friends, err)
+mod.getFriends = function(self, config, callback)
+	if self ~= mod then
+		error("api:getFriends(config, callback): use `:`", 2)
+	end
 	if type(callback) ~= "function" then
-		error("api:getFriends(callback, [fields, config]) - callback must be a function", 2)
-	end
-	if fields ~= nil and type(fields) ~= "table" then
-		error("api:getFriends(callback, [fields, config]) - fields must be a table or nil", 2)
-	end
-	if config ~= nil and type(config) ~= "table" then
-		error("api:getFriends(callback, [fields, config]) - config must be a table or nil", 2)
+		error("api:getFriends(config, callback) - callback must be a function", 2)
 	end
 
 	local defaultConfig = {
 		userID = "self",
+		fields = { "id" },
 	}
 
-	config = require("config"):merge(defaultConfig, config)
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
 
-	local url = mod.kApiAddr .. "/users/" .. config.userID .. "/friends"
+	if not ok then
+		error("api:getFriends(config, callback): config error (" .. err .. ")", 2)
+	end
 
-	url = urlGetFields(url, fields)
+	local u = url:parse(mod.kApiAddr .. "/users/" .. config.userID .. "/friends")
 
-	local req = HTTP:Get(url, function(resp)
-		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get friends (" .. resp.StatusCode .. ")")
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(res)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		local friends, err = JSON:Decode(resp.Body)
+
+		local friends, err = JSON:Decode(res.Body)
+
+		for _, friend in ipairs(friends) do
+			if friend.created then
+				friend.created = time.iso8601_to_os_time(friend.created)
+			end
+			if friend.updated then
+				friend.updated = time.iso8601_to_os_time(friend.updated)
+			end
+		end
+
 		if err ~= nil then
-			callback(false, nil, "get friends decode error: " .. err)
+			callback(nil, mod:error(res.StatusCode, "getFriends JSON decode error: " .. err))
 			return
 		end
-		callback(true, friends, nil) -- success
+		callback(friends) -- success
 	end)
 	return req
 end
@@ -125,69 +145,106 @@ mod.getFriendCount = function(self, callback, config)
 end
 
 -- getSentFriendRequests ...
--- callback(ok, reqs, errMsg)
-mod.getSentFriendRequests = function(_, callback, fields)
+-- callback(requests, err)
+mod.getSentFriendRequests = function(self, config, callback)
+	if self ~= mod then
+		error("api:getSentFriendRequests(config, callback): use `:`", 2)
+	end
 	if type(callback) ~= "function" then
-		error("api:getSentFriendRequests(callback, [fields]) - callback must be a function", 2)
-		return
-	end
-	if fields ~= nil and type(fields) ~= "table" then
-		error("api:getSentFriendRequests(callback, [fields]) - fields must be a table or nil", 2)
+		error("api:getSentFriendRequests(config, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/users/self/friend-requests?status=sent"
+	local defaultConfig = {
+		fields = { "id" },
+	}
 
-	url = urlGetFields(url, fields)
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
 
-	local req = HTTP:Get(url, function(resp)
+	if not ok then
+		error("api:getSentFriendRequests(config, callback): config error (" .. err .. ")", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/users/self/friend-requests")
+
+	u:addQueryParameter("status", "sent")
+
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get sent requests (" .. resp.StatusCode .. ")")
+			callback(nil, mod:error(resp.StatusCode, "could not get sent friend requests (" .. resp.StatusCode .. ")"))
 			return
 		end
 		local requests, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "get sent requests decode error: " .. err)
+			callback(nil, mod:error(resp.StatusCode, "getSentFriendRequests JSON decode error: " .. err))
 			return
 		end
-		-- success
-		callback(true, requests, nil)
+		callback(requests) -- success
 	end)
+
 	return req
 end
 
 -- getReceivedFriendRequests ...
 -- callback(ok, reqs, errMsg)
-mod.getReceivedFriendRequests = function(_, callback, fields)
+mod.getReceivedFriendRequests = function(self, config, callback)
+	if self ~= mod then
+		error("api:getReceivedFriendRequests(config, callback): use `:`", 2)
+	end
 	if type(callback) ~= "function" then
-		error("api:getReceivedFriendRequests(callback, [fields]) - callback must be a function", 2)
-	end
-	if fields ~= nil and type(fields) ~= "table" then
-		error("api:getReceivedFriendRequests(callback, [fields]) - fields must be a table or nil", 2)
+		error("api:getReceivedFriendRequests(config, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/users/self/friend-requests?status=received"
+	local defaultConfig = {
+		fields = { "id" },
+	}
 
-	url = urlGetFields(url, fields)
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
 
-	local req = HTTP:Get(url, function(resp)
+	if not ok then
+		error("api:getReceivedFriendRequests(config, callback): config error (" .. err .. ")", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/users/self/friend-requests")
+
+	u:addQueryParameter("status", "received")
+
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get received requests (" .. resp.StatusCode .. ")")
+			callback(
+				nil,
+				mod:error(resp.StatusCode, "could not get received friend requests (" .. resp.StatusCode .. ")")
+			)
 			return
 		end
 		local requests, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "get received requests decode error: " .. err)
+			callback(nil, mod:error(resp.StatusCode, "getReceivedFriendRequests JSON decode error: " .. err))
 			return
 		end
-		callback(true, requests, nil) -- success
+		callback(requests) -- success
 	end)
+
 	return req
 end
 
 -- getUserInfo gets a user by its ID
--- callback(ok, user, errMsg)
+-- callback(userInfo, err)
+-- success: err == nil
 -- fields parameter is optional, it can be a table-- containing extra expected user fields:
 -- {"created", "nbFriends"}
+-- TODO: caller should have a way to check error code -> 401 means bad credentials for signup.lua (removing installed credentials)
 mod.getUserInfo = function(_, id, callback, fields)
 	if type(id) ~= "string" then
 		error("api:getUserInfo(userID, callback, [fields]) - userID must be a string", 2)
@@ -205,18 +262,18 @@ mod.getUserInfo = function(_, id, callback, fields)
 
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
-			callback(false, nil, "could not get user info (" .. resp.StatusCode .. ")")
+			callback(nil, mod:error(resp.StatusCode, "could not get user info (" .. resp.StatusCode .. ")"))
 			return
 		end
 		local usr, err = JSON:Decode(resp.Body)
 		if err ~= nil then
-			callback(false, nil, "get user info decode error: " .. err)
+			callback(nil, mod:error(resp.StatusCode, "getUserInfo JSON decode error: " .. err))
 			return
 		end
 		if usr.nbFriends ~= nil then
 			usr.nbFriends = math.floor(usr.nbFriends)
 		end
-		callback(true, usr, nil) -- success
+		callback(usr, nil) -- success
 	end)
 	return req
 end
@@ -267,9 +324,8 @@ end
 --- items: []Item (can be nil)
 ---
 
+-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
 mod.getItems = function(self, config, callback)
-	-- /itemdrafts?search=banana,gdevillele&page=1&perPage=100
-
 	if self ~= mod then
 		error("api:getItems(config, callback): use `:`", 2)
 	end
@@ -280,73 +336,65 @@ mod.getItems = function(self, config, callback)
 		error("api:getItems(config, callback): callback must be a function", 2)
 	end
 
-	local filterIsValid = function(k, v)
-		if type(k) == "string" then
-			if k == "search" and type(v) == "string" and v ~= "" then
-				return true
-			end
-			if k == "sortBy" and (type(v) == "string" or type(v) == "nil") then
-				return true
-			end
-			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
-				return true
-			end
-			if k == "page" and (type(v) == "number" or type(v) == "integer") then
-				return true
-			end
-			if k == "perPage" and (type(v) == "number" or type(v) == "integer") then
-				return true
-			end
-			if k == "category" then
-				return true
-			end
-			if k == "repo" then
-				return true
-			end
-			if k == "minBlock" and (type(v) == "number" or type(v) == "integer") then
-				return true
-			end
-		end
-		return false
+	local defaultConfig = {
+		category = "",
+		search = "",
+		sortBy = "updatedAt:desc", -- likes:desc
+		page = 1,
+		perPage = 50,
+		repo = "",
+		minBlock = nil,
+		fields = { "title", "created", "updated", "views", "likes" },
+	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				minBlock = { "integer" },
+				category = { "string", "table" },
+			},
+		})
+	end)
+
+	if not ok then
+		error("api:getItems(config, callback): config error (" .. err .. ")", 2)
 	end
 
-	-- parse filters
-	local queryParams = {}
-	for k, v in pairs(config) do
-		if filterIsValid(k, v) then
-			if type(v) == "table" then
-				for _, entry in ipairs(v) do
-					table.insert(queryParams, { key = k, value = tostring(entry) })
-				end
-			else
-				table.insert(queryParams, { key = k, value = tostring(v) })
-			end
+	local u = url:parse(mod.kApiAddr .. "/itemdrafts")
+
+	if type(config.category) == "string" then
+		u:addQueryParameter("category", config.category)
+	elseif type(config.category) == "table" then
+		for _, category in ipairs(config.category) do
+			u:addQueryParameter("category", category)
 		end
 	end
-
-	-- build URL
-	local url = mod.kApiAddr .. "/itemdrafts"
-	for i, param in ipairs(queryParams) do
-		if param.value ~= "" then
-			if i == 1 then
-				url = url .. "?"
-			else
-				url = url .. "&"
-			end
-			url = url .. param.key .. "=" .. param.value
-		end
+	u:addQueryParameter("repo", config.repo)
+	u:addQueryParameter("search", config.search)
+	u:addQueryParameter("sortBy", config.sortBy)
+	u:addQueryParameter("perPage", math.floor(config.perPage))
+	u:addQueryParameter("page", math.floor(config.page))
+	if config.minBlock ~= nil then
+		u:addQueryParameter("minBlock", math.floor(config.minBlock))
 	end
 
-	-- send request
-	local req = HTTP:Get(url, function(resp)
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(res)
 		-- check status code
-		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
 
 		-- decode body
-		local items, err = JSON:Decode(resp.Body)
+		local items, err = JSON:Decode(res.Body)
+		if err ~= nil then
+			callback(nil, mod:error(res.StatusCode, "getItems JSON decode error: " .. err))
+			return
+		end
 
 		for _, v in ipairs(items.results) do
 			v.created = time.iso8601_to_os_time(v.created)
@@ -356,209 +404,60 @@ mod.getItems = function(self, config, callback)
 			end
 		end
 
-		if err ~= nil then
-			callback("json decode error:" .. err, nil) -- failure
-			return
-		end
-		callback(nil, items.results) -- success
+		callback(items.results) -- success
 	end)
 	return req
 end
 
--- Lists world drafts using filter.
---
--- filter = {
---   repo = "caillef",
---   category = "fps",
--- }
--- NOTE: categories are not in place yet, but they would be useful,
--- keeping filter in place client side, waiting for backend to support it.
--- callback(error string or nil, items []World or nil)
-mod.getWorlds = function(_, filter, callback)
-	-- GET /worlddrafts?search=banana,gdevillele&page=1&perPage=100
-
-	if type(filter) ~= "table" then
-		error("api:getWorld(filter, callback) - filter must be a table", 2)
-	end
-	if type(callback) ~= "function" then
-		error("api:getWorld(filter, callback) - callback must be a function", 2)
-	end
-
-	local filterIsValid = function(k, v)
-		if type(k) == "string" then
-			if k == "search" and type(v) == "string" and v ~= "" then
-				return true
-			end
-			if k == "category" and (type(v) == "string" or (type(v) == "table" and #v > 0)) then
-				return true
-			end
-			if k == "page" or k == "perPage" then
-				return true
-			end
-			if k == "category" then
-				return true
-			end
-			if k == "repo" then
-				return true
-			end
-		end
-		return false
-	end
-
-	-- parse filters
-	local queryParams = {}
-	for k, v in pairs(filter) do
-		if filterIsValid(k, v) then
-			if type(v) == "table" then
-				for _, entry in ipairs(v) do
-					table.insert(queryParams, { key = k, value = tostring(entry) })
-				end
-			else
-				table.insert(queryParams, { key = k, value = tostring(v) })
-			end
-		end
-	end
-
-	-- build URL
-	local url = mod.kApiAddr .. "/worlddrafts"
-	for i, param in ipairs(queryParams) do
-		if param.value ~= "" then
-			if i == 1 then
-				url = url .. "?"
-			else
-				url = url .. "&"
-			end
-			url = url .. param.key .. "=" .. param.value
-		end
-	end
-
-	-- send request
-	local req = HTTP:Get(url, function(resp)
-		-- check status code
-		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
-			return
-		end
-
-		-- decode body
-		local data, err = JSON:Decode(resp.Body)
-		if err ~= nil then
-			callback("json decode error:" .. err, nil) -- failure
-			return
-		end
-
-		for _, v in ipairs(data.worlds) do
-			if v.created then
-				v.created = time.iso8601_to_os_time(v.created)
-			end
-			if v.updated then
-				v.updated = time.iso8601_to_os_time(v.updated)
-			end
-			if v.likes ~= nil then
-				v.likes = math.floor(v.likes)
-			else
-				v.likes = 0
-			end
-			if v.views ~= nil then
-				v.views = math.floor(v.views)
-			else
-				v.views = 0
-			end
-		end
-
-		callback(nil, data.worlds) -- success
-	end)
-	return req
-end
-
---- returns the published worlds in the specified category
---- config: table
---- 	list: string? (nil, "", "featured")
---- 	search: string?
----     perPage: integer?
----     page: integer? (default is 1)
----     sortBy: string? (nil, "", "updatedAt:desc", "likes:desc", "views:desc", ...)
---- callback: function(err, worlds)
----		err: string
----		worlds: []worlds
-mod.getPublishedWorlds = function(self, config, callback)
+--- returns worlds considering provided filters
+-- TODO: add filter for user world drafts
+-- callback(worlds, err)
+mod.getWorlds = function(self, config, callback)
 	if self ~= mod then
-		error("api:getPublishedWorlds(config, callback): use `:`", 2)
-	end
-	if type(config) ~= Type.table then
-		error("api:getPublishedWorlds(config, callback): config should be a table", 2)
+		error("api:getWorlds(config, callback): use `:`", 2)
 	end
 	if type(callback) ~= "function" then
-		error("api:getPublishedWorlds(config, callback): callback should be a function", 2)
-	end
-	if config.list ~= nil and config.list ~= "featured" and config.list ~= "recent" then
-		error('api:getPublishedWorlds(config, callback): config.list can only be "featured" or "recent"', 2)
-	end
-	if config.search ~= nil and type(config.search) ~= Type.string then
-		error("api:getPublishedWorlds(config, callback): config.search should be a string", 2)
-	end
-	-- sortBy (optional)
-	if config.sortBy ~= nil and type(config.sortBy) ~= Type.string then
-		error("api:getPublishedWorlds(config, callback): config.sortBy should be a string", 2)
+		error("api:getWorlds(config, callback): callback should be a function", 2)
 	end
 
-	-- construct query params string
-	local queryParams = ""
+	local defaultConfig = {
+		category = "",
+		search = "",
+		sortBy = "updatedAt:desc", -- likes:desc
+		page = 1,
+		perPage = 50,
+		fields = { "title", "created", "updated", "views", "likes" },
+	}
 
-	if type(config.list) == Type.string and #config.list > 0 then
-		queryParams = queryParams .. "category=" .. config.list
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+
+	if not ok then
+		error("api:getWorlds(config, callback): config error (" .. err .. ")", 2)
 	end
 
-	if type(config.search) == Type.string and #config.search > 0 then
-		-- if this isn't the 1st query param, we need to use a '&' separator
-		if #queryParams > 0 then
-			queryParams = queryParams .. "&"
-		end
-		queryParams = queryParams .. "search=" .. config.search
+	local u = url:parse(mod.kApiAddr .. "/worlds")
+
+	u:addQueryParameter("category", config.category)
+	u:addQueryParameter("search", config.search)
+	u:addQueryParameter("sortBy", config.sortBy)
+	u:addQueryParameter("perPage", math.floor(config.perPage))
+	u:addQueryParameter("page", math.floor(config.page))
+
+	for _, field in ipairs(config.fields) do
+		u:addQueryParameter("f", field)
 	end
 
-	if type(config.sortBy) == Type.string and #config.sortBy > 0 then
-		if #queryParams > 0 then
-			queryParams = queryParams .. "&"
-		end
-		queryParams = queryParams .. "sortBy=" .. config.sortBy
-	end
-
-	local perPageType = type(config.perPage)
-	if perPageType == Type.integer or perPageType == Type.number then
-		-- force perPage to be an integer
-		local perPageIntValue = math.floor(config.perPage)
-		if perPageIntValue > 0 then
-			if #queryParams > 0 then
-				queryParams = queryParams .. "&"
-			end
-			queryParams = queryParams .. "perPage=" .. perPageIntValue
-		end
-	end
-
-	local pageType = type(config.page)
-	if pageType == Type.integer or pageType == Type.number then
-		-- force page to be an integer
-		local pageIntValue = math.floor(config.page)
-		if pageIntValue > 0 then
-			if #queryParams > 0 then
-				queryParams = queryParams .. "&"
-			end
-			queryParams = queryParams .. "page=" .. pageIntValue
-		end
-	end
-
-	-- url example : https://api.cu.bzh/worlds?category=featured&search=monster
-	local url = mod.kApiAddr .. "/worlds?" .. queryParams
-	local req = HTTP:Get(url, function(res)
+	local req = HTTP:Get(u:toString(), function(res)
 		if res.StatusCode ~= 200 then
-			callback("http status not 200 (" .. res.StatusCode .. ")", nil)
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		-- decode body
+
 		local data, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			callback("json decode error:" .. err, nil) -- failure
+			callback(nil, mod:error(res.StatusCode, "getWorlds JSON decode error: " .. err))
 			return
 		end
 
@@ -580,46 +479,47 @@ mod.getPublishedWorlds = function(self, config, callback)
 				v.views = 0
 			end
 		end
-		callback(nil, data.results)
+		callback(data.results)
 	end)
 	return req
 end
 
 -- callback(error string or nil, World or nil)
 -- field=authorName
-mod.getWorld = function(_, worldID, fields, callback)
+mod.getWorld = function(self, worldID, fields, callback)
+	if self ~= mod then
+		error("api:getWorld(config, callback): use `:`", 2)
+	end
 	if type(fields) ~= "table" then
 		error("api:getWorld(worldID, fields, callback) - fields must be a table", 2)
 	end
-
 	if #fields < 1 then
 		error("api:getWorld(worldID, fields, callback) - fields must contain at least one entry", 2)
 	end
-
 	if type(callback) ~= "function" then
 		error("api:getWorld(worldID, fields, callback) - callback must be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/worlds/" .. worldID
+	local u = url:parse(mod.kApiAddr .. "/worlds/" .. worldID)
 
-	url = urlGetFields(url, fields)
+	for _, field in ipairs(fields) do
+		u:addQueryParameter("f", field)
+	end
 
 	-- send request
-	local req = HTTP:Get(url, function(resp)
+	local req = HTTP:Get(u:toString(), function(res)
 		-- check status code
-		if resp.StatusCode ~= 200 then
-			callback("http status not 200", nil)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
 
 		-- decode body
-		local data, err = JSON:Decode(resp.Body)
+		local world, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			callback("json decode error:" .. err, nil) -- failure
+			callback(nil, mod:error(res.StatusCode, "getWorld JSON decode error: " .. err))
 			return
 		end
-
-		local world = data
 
 		if world.created then
 			world.created = time.iso8601_to_os_time(world.created)
@@ -642,7 +542,7 @@ mod.getWorld = function(_, worldID, fields, callback)
 			world.liked = false
 		end
 
-		callback(nil, world) -- success
+		callback(world) -- success
 	end)
 	return req
 end
@@ -658,15 +558,15 @@ mod.getWorldThumbnail = function(self, worldID, callback)
 		error("api:getWorldThumbnail(worldID, callback): callback should be a function", 2)
 	end
 
-	local url = mod.kApiAddr .. "/world-thumbnail/" .. worldID
+	local u = url:parse(mod.kApiAddr .. "/worlds/" .. worldID .. "/thumbnail")
 
-	local req = HTTP:Get(url, function(res)
+	local req = HTTP:Get(u:toString(), function(res)
 		if res.StatusCode == 200 then
-			callback(nil, res.Body)
+			callback(res.Body)
 		elseif res.StatusCode == 400 then
-			callback("This world has no thumnail", nil)
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 		else
-			callback("Error " .. res.StatusCode .. ": " .. res.Body:ToString(), nil)
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 		end
 	end)
 
@@ -785,24 +685,60 @@ mod.getBalance = function(usernameOrCb, cb)
 	end)
 end
 
-mod.getItem = function(self, itemId, cb)
-	local url = self.kApiAddr .. "/items/" .. itemId
-	local req = HTTP:Get(url, function(resp)
-		if resp.StatusCode ~= 200 then
-			cb(self.error(resp.StatusCode, "could not get item info"), nil)
+mod.getItem = function(self, itemId, fields, callback)
+	if self ~= mod then
+		error("api:getItem(config, callback): use `:`", 2)
+	end
+	if type(fields) ~= "table" then
+		error("api:getItem(itemId, fields, callback) - fields must be a table", 2)
+	end
+	if #fields < 1 then
+		error("api:getItem(itemId, fields, callback) - fields must contain at least one entry", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:getItem(itemId, fields, callback) - callback must be a function", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/items/" .. itemId)
+
+	for _, field in ipairs(fields) do
+		u:addQueryParameter("f", field)
+	end
+
+	local req = HTTP:Get(u:toString(), function(res)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		-- parse response
-		local itmResp, err = JSON:Decode(resp.Body)
+
+		local item, err = JSON:Decode(res.Body)
 		if err ~= nil then
-			cb("json decode failed", nil)
+			callback(nil, mod:error(res.StatusCode, "getItem JSON decode error: " .. err))
 			return
 		end
-		--		if itmResp.item.likes == nil then itmResp.item.likes = 0 end
-		if itmResp.item.liked == nil then
-			itmResp.item.liked = false
+
+		if item.created then
+			item.created = time.iso8601_to_os_time(item.created)
 		end
-		cb(nil, itmResp.item)
+		if item.updated then
+			item.updated = time.iso8601_to_os_time(item.updated)
+		end
+		if item.likes ~= nil then
+			item.likes = math.floor(item.likes)
+		else
+			item.likes = 0
+		end
+		if item.views ~= nil then
+			item.views = math.floor(item.views)
+		else
+			item.views = 0
+		end
+		-- `liked` field is omitted if value is false
+		if item.liked == nil then
+			item.liked = false
+		end
+
+		callback(item) -- success
 	end)
 	return req
 end

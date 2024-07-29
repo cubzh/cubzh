@@ -86,6 +86,9 @@ localevent.name = {
 	ActiveTextInputClose = 55, -- callback: function()
 	ActiveTextInputDone = 56, -- callback: function()
 	ActiveTextInputNext = 57, -- callback: function()
+	UserAccountInfoRetrieved = 58, -- callback: function()
+	UserAccountUpdated = 59, -- callback: function() -- called when user account is updated (username, email, etc. added)
+	AppMinVersionChecked = 60, -- callback: function(err: string, ok: boolean)
 }
 localevent.Name = localevent.name
 
@@ -171,7 +174,7 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 	local isSystemProvided = false
 
 	-- extract `System` from `args` if present
-	if args[1] == System then
+	if rawequal(args[1], System) then
 		isSystemProvided = true
 		local newArgs = {}
 		for i, v in ipairs(args) do
@@ -329,7 +332,7 @@ localevent.Listen = function(self, name, callback, config)
 		error("LocalEvent:Listen - callback should be a function", 2)
 	end
 
-	local listener = { name = name, callback = callback, system = config.system == System }
+	local listener = { name = name, callback = callback, system = rawequal(config.system, System) }
 
 	-- top priority System listeners
 	if listener.system == true and config.topPriority == true then

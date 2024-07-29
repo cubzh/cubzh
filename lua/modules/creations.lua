@@ -4,29 +4,30 @@ creations.createModalContent = function(_, config)
 	local itemGrid = require("item_grid")
 	local itemDetails = require("item_details")
 	local worldDetails = require("world_details")
-	local pages = require("pages")
 	local theme = require("uitheme").current
 	local modal = require("modal")
-    local bundle = require("bundle")
+	local bundle = require("bundle")
 	local api = require("system_api", System)
 	local gridNeedRefresh = false
 
 	-- default config
-	local _config = {
+	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 		onOpen = nil,
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-		_config.onOpen = config.onOpen
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				onOpen = { "function" },
+			},
+		})
+	end)
+	if not ok then
+		error("creations:createModalContent(config) - config error: " .. err, 2)
 	end
 
-	local ui = _config.uikit
+	local ui = config.uikit
 
 	local functions = {}
 
@@ -84,15 +85,13 @@ creations.createModalContent = function(_, config)
 
 		local btnCreate
 		if original == nil then
-			btnCreate = ui:createButton(buttonLabels[1])
+			btnCreate = ui:buttonPositive({ content = buttonLabels[1], padding = theme.padding })
 		else
-			btnCreate = ui:createButton("✨ Duplicate 📑")
+			btnCreate = ui:buttonPositive({ content = "✨ Duplicate 📑", padding = theme.padding })
 		end
-		btnCreate:setColor(theme.colorPositive)
 		newContent.bottomCenter = { btnCreate }
 
-		local templatePreview =
-			ui:createShape(bundle:Shape(categoryShapes[currentCategory]), { spherized = true })
+		local templatePreview = ui:createShape(bundle:Shape(categoryShapes[currentCategory]), { spherized = true })
 		templatePreview:setParent(node)
 
 		templatePreview.pivot.LocalRotation = { -0.1, 0, -0.2 }
@@ -122,7 +121,7 @@ creations.createModalContent = function(_, config)
 		text:setParent(node)
 
 		if #categories > 1 then
-			nextTemplateBtn = ui:createButton("➡️")
+			nextTemplateBtn = ui:buttonNeutral({ content = "➡️" })
 			nextTemplateBtn:setParent(node)
 			nextTemplateBtn:setColor(theme.buttonColorSecondary)
 			nextTemplateBtn.onRelease = function()
@@ -140,7 +139,7 @@ creations.createModalContent = function(_, config)
 				templatePreview:setShape(bundle:Shape(categoryShapes[currentCategory]))
 			end
 
-			previousTemplateBtn = ui:createButton("⬅️")
+			previousTemplateBtn = ui:buttonNeutral({ content = "⬅️" })
 			previousTemplateBtn:setParent(node)
 			previousTemplateBtn:setColor(theme.buttonColorSecondary)
 			previousTemplateBtn.onRelease = function()
@@ -426,9 +425,26 @@ creations.createModalContent = function(_, config)
 		creationsContent.title = "Creations"
 		creationsContent.icon = "🏗️"
 
-		local grid = itemGrid:create({ minBlocks = 1, repo = Player.Username, categories = { "null" }, uikit = ui })
+		local node = ui:frame()
 
-		creationsContent.node = grid
+		local grid = itemGrid:create({
+			minBlocks = 1,
+			repo = Player.Username,
+			categories = { "null" },
+			sort = "updatedAt:desc",
+			uikit = ui,
+		})
+		grid:setParent(node)
+
+		local btnNew = ui:buttonPositive({ content = "✨ Create item ⚔️", padding = theme.padding })
+		btnNew:setParent(node)
+
+		node.parentDidResize = function(self)
+			grid.Width = self.Width
+			grid.Height = self.Height - btnNew.Height - theme.padding
+			grid.pos.Y = btnNew.Height + theme.padding
+			btnNew.pos = { self.Width * 0.5 - btnNew.Width * 0.5, 0 }
+		end
 
 		creationsContent.willResignActive = function(_)
 			grid:cancelRequestsAndTimers()
@@ -448,13 +464,6 @@ creations.createModalContent = function(_, config)
 				end
 			end
 		end
-
-		local pages = pages:create(ui)
-		creationsContent.bottomCenter = { pages }
-
-		local btnNew = ui:createButton("✨ New ⚔️")
-		btnNew:setColor(theme.colorPositive)
-		creationsContent.bottomRight = { btnNew }
 
 		local newItem = function()
 			local m = creationsContent:getModalIfContentIsActive()
@@ -485,7 +494,8 @@ creations.createModalContent = function(_, config)
 				short = "⚔️",
 				action = function()
 					grid:setCategories({ "null" }, "items")
-					btnNew.Text = "✨ New ⚔️"
+					btnNew.Text = "✨ Create item ⚔️"
+					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
 					btnNew.onRelease = newItem
 				end,
 			},
@@ -494,7 +504,8 @@ creations.createModalContent = function(_, config)
 				short = "👕",
 				action = function()
 					grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
-					btnNew.Text = "✨ New 👕"
+					btnNew.Text = "✨ Create wearable 👕"
+					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
 					btnNew.onRelease = newWearable
 				end,
 			},
@@ -503,50 +514,35 @@ creations.createModalContent = function(_, config)
 				short = "🌎",
 				action = function()
 					grid:setCategories({ "null" }, "worlds")
-					btnNew.Text = "✨ New 🌎"
+					btnNew.Text = "✨ Create world 🌎"
+					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
 					btnNew.onRelease = newWorld
 				end,
 			},
 		}
 
-		grid.onPaginationChange = function(page, nbPages)
-			pages:setNbPages(nbPages)
-			pages:setPage(page)
-		end
+		creationsContent.node = node
 
-		pages:setPageDidChange(function(page)
-			grid:setPage(page)
-		end)
-
-		creationsContent.node = grid
-
-		creationsContent.idealReducedContentSize = function(content, width, height)
-			local grid = content
-			grid.Width = width
-			grid.Height = height
-			grid:refresh()
-			return Number2(grid.Width, grid.Height)
-		end
-
-		grid.onOpen = function(_, cell)
+		grid.onOpen = function(entity)
 			if config.onOpen then
 				config.onOpen(creationsContent, cell)
 				return
 			end
-			if cell.type == "item" then
-				local itemFullName = cell.itemFullName
-				local category = cell.category
 
-				local itemDetailsContent = itemDetails:createModalContent({ mode = "create", uikit = ui })
-				itemDetailsContent:loadCell(cell)
+			if entity.type == "item" then
+				local itemFullName = entity.repo .. "." .. entity.name
+				local category = entity.category
 
-				local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
+				local itemDetailsContent =
+					itemDetails:createModalContent({ item = entity, mode = "create", uikit = ui })
+
+				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
 				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					System.LaunchItemEditor(itemFullName, category)
 				end
 
-				local btnDuplicate = ui:createButton("📑 Duplicate", { textSize = "default" })
+				local btnDuplicate = ui:buttonSecondary({ content = "📑 Duplicate", textSize = "default" })
 				btnDuplicate.onRelease = function()
 					local m = itemDetailsContent:getModalIfContentIsActive()
 					if m ~= nil then
@@ -560,9 +556,9 @@ creations.createModalContent = function(_, config)
 					end
 				end
 
-				local btnExport = ui:createButton("📤", { textSize = "default" })
+				local btnExport = ui:buttonSecondary({ content = "📤", textSize = "default" })
 				btnExport.onRelease = function()
-					File:ExportItem(cell.repo, cell.name, "vox", function(err, message)
+					File:ExportItem(entity.repo, entity.name, "vox", function(err, message)
 						if err then
 							print("Error: " .. message)
 							return
@@ -570,14 +566,14 @@ creations.createModalContent = function(_, config)
 					end)
 				end
 
-				local btnArchive = ui:createButton("🗑️", { textSize = "default" })
+				local btnArchive = ui:buttonSecondary({ content = "🗑️", textSize = "default" })
 				btnArchive.onRelease = function()
 					local str = "Are you sure you want to archive this item?"
 					local positive = function()
 						local data = { archived = true }
-						api:patchItem(cell.id, data, function(err, itm)
+						api:patchItem(entity.id, data, function(err, itm)
 							if err or not itm.archived then
-								require("menu"):ShowAlert({ message = "Could not archive item" }, System)
+								Menu:ShowAlert({ message = "Could not archive item" }, System)
 								return
 							end
 							itemDetailsContent:pop()
@@ -593,7 +589,7 @@ creations.createModalContent = function(_, config)
 						negativeCallback = negative,
 					}
 
-					require("menu"):ShowAlert(alertConfig, System)
+					Menu:ShowAlert(alertConfig, System)
 				end
 
 				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }

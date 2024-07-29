@@ -56,14 +56,14 @@ settings.createModalContent = function(_, config)
 	end
 	refreshVolumeLabel()
 
-	local volumeMinus = ui:createButton("➖")
+	local volumeMinus = ui:buttonSecondary({ content = "➖" })
 	volumeMinus.label = volumeLabel
 	volumeMinus.onRelease = function(_)
 		System.MasterVolume = math.max(System.MasterVolume - VOLUME_STEP, MIN_VOLUME)
 		refreshVolumeLabel()
 	end
 
-	local volumePlus = ui:createButton("➕")
+	local volumePlus = ui:buttonSecondary({ content = "➕" })
 	volumePlus.label = volumeLabel
 	volumePlus.onRelease = function(_)
 		System.MasterVolume = math.min(System.MasterVolume + VOLUME_STEP, MAX_VOLUME)
@@ -80,14 +80,14 @@ settings.createModalContent = function(_, config)
 	end
 	refreshSensitivityLabel()
 
-	local sensitivityMinus = ui:createButton("➖")
+	local sensitivityMinus = ui:buttonSecondary({ content = "➖" })
 	sensitivityMinus.label = sensitivityLabel
 	sensitivityMinus.onRelease = function(_)
 		System.Sensitivity = math.max(System.Sensitivity - SENSITIVITY_STEP, MIN_SENSITIVITY)
 		refreshSensitivityLabel()
 	end
 
-	local sensitivityPlus = ui:createButton("➕")
+	local sensitivityPlus = ui:buttonSecondary({ content = "➕" })
 	sensitivityPlus.label = sensitivityLabel
 	sensitivityPlus.onRelease = function(_)
 		System.Sensitivity = math.min(System.Sensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
@@ -104,14 +104,14 @@ settings.createModalContent = function(_, config)
 	end
 	refreshZoomSensitivityLabel()
 
-	local zoomSensitivityMinus = ui:createButton("➖")
+	local zoomSensitivityMinus = ui:buttonSecondary({ content = "➖" })
 	zoomSensitivityMinus.label = zoomSensitivityLabel
 	zoomSensitivityMinus.onRelease = function(_)
 		System.ZoomSensitivity = math.max(System.ZoomSensitivity - SENSITIVITY_STEP, MIN_SENSITIVITY)
 		refreshZoomSensitivityLabel()
 	end
 
-	local zoomSensitivityPlus = ui:createButton("➕")
+	local zoomSensitivityPlus = ui:buttonSecondary({ content = "➕" })
 	zoomSensitivityPlus.label = zoomSensitivityLabel
 	zoomSensitivityPlus.onRelease = function(_)
 		System.ZoomSensitivity = math.min(System.ZoomSensitivity + SENSITIVITY_STEP, MAX_SENSITIVITY)
@@ -123,8 +123,8 @@ settings.createModalContent = function(_, config)
 	-- RENDER QUALITY
 
 	local renderQualityLabel = ui:createText("", Color.White)
-	local rqMinus = ui:createButton("➖")
-	local rqPlus = ui:createButton("➕")
+	local rqMinus = ui:buttonSecondary({ content = "➖" })
+	local rqPlus = ui:buttonSecondary({ content = "➕" })
 
 	local function refreshRenderQualityLabel()
 		if System.RenderQualityTiersAvailable then
@@ -163,7 +163,7 @@ settings.createModalContent = function(_, config)
 	if Client.IsMobile then
 		local hapticFeedbackLabel = ui:createText("Haptic Feedback:", Color.White)
 
-		hapticFeedbackToggle = ui:createButton("ON")
+		hapticFeedbackToggle = ui:buttonNeutral({ content = "ON" })
 		if System.HapticFeedbackEnabled then
 			hapticFeedbackToggle.Text = "ON"
 			hapticFeedbackToggle:setColor(theme.colorPositive)
@@ -192,7 +192,7 @@ settings.createModalContent = function(_, config)
 	if Client.OSName == "Windows" then
 		local fullscreenLabel = ui:createText("Fullscreen:", Color.White)
 
-		fullscreenToggle = ui:createButton("ON")
+		fullscreenToggle = ui:buttonNeutral({ content = "ON" })
 		if System.Fullscreen then
 			fullscreenToggle.Text = "ON"
 			fullscreenToggle:setColor(theme.colorPositive)
@@ -221,7 +221,7 @@ settings.createModalContent = function(_, config)
 	cacheAndLogoutRow = {}
 
 	if _config.account == true then
-		local accountButton = ui:createButton("Account settings", { textSize = "small" })
+		local accountButton = ui:buttonNeutral({ content = "Account settings", textSize = "small" })
 		accountButton.onRelease = function(_)
 			local accountContent = modal:createContent()
 			accountContent.title = "Account"
@@ -230,7 +230,7 @@ settings.createModalContent = function(_, config)
 			local node = ui:createFrame()
 			accountContent.node = node
 
-			local logoutButton = ui:createButton("Logout", { textSize = "default" })
+			local logoutButton = ui:buttonNegative({ content = "Logout", textSize = "small" })
 			logoutButton:setColor(theme.colorNegative)
 			logoutButton:setParent(node)
 
@@ -258,7 +258,7 @@ settings.createModalContent = function(_, config)
 					text.pos.Y = self.Height - text.Height - theme.padding
 				end
 
-				local yes = ui:createButton("Yes! 🙂")
+				local yes = ui:buttonNeutral({ content = "Yes! 🙂" })
 				yes.onRelease = function()
 					local modal = logoutContent:getModalIfContentIsActive()
 					if modal then
@@ -271,10 +271,15 @@ settings.createModalContent = function(_, config)
 				accountContent:push(logoutContent)
 			end
 
-			local deleteButton = ui:createButton(
-				"Delete account",
-				{ textSize = "small", underline = true, borders = false, padding = false, shadow = false }
-			)
+			local deleteButton = ui:button({
+				content = "Delete account",
+				textSize = "small",
+				underline = true,
+				color = Color(0, 0, 0, 0),
+				borders = false,
+				padding = false,
+				shadow = false,
+			})
 			deleteButton:setColor(Color(0, 0, 0, 0), theme.colorNegative)
 			deleteButton:setParent(node)
 
@@ -379,7 +384,7 @@ settings.createModalContent = function(_, config)
 	end
 
 	if _config.clearCache == true then
-		local cacheButton = ui:createButton("Clear cache", { textSize = "small" })
+		local cacheButton = ui:buttonNeutral({ content = "Clear cache", textSize = "small" })
 		cacheButton.onRelease = function(_)
 			local clearCacheContent = modal:createContent()
 			clearCacheContent.title = "Settings"
@@ -390,7 +395,8 @@ settings.createModalContent = function(_, config)
 
 			local text = ui:createText(
 				"⚠️ Clearing all cached data from visited experiences, are you sure about this?",
-				Color.White
+				Color.White,
+				"default"
 			)
 			text.pos.X = theme.padding
 			text.pos.Y = theme.padding
@@ -405,7 +411,7 @@ settings.createModalContent = function(_, config)
 				return Number2(w, h)
 			end
 
-			local yes = ui:createButton("Yes, delete cache! 💀")
+			local yes = ui:buttonNeutral({ content = "Yes, delete cache! 💀" })
 			yes.onRelease = function()
 				System.ClearCache()
 				local done = ui:createText("✅ Done!", Color.White)

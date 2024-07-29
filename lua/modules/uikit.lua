@@ -11,16 +11,22 @@ UI_SHAPE_SCALE = 5
 LAYER_STEP = -0.1 -- children offset
 UI_FOREGROUND_DEPTH = -945
 UI_ALERT_DEPTH = -950
-BUTTON_PADDING = 4
+BUTTON_PADDING = 3
 BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
-COMBO_BOX_SELECTOR_SPEED = 400
+-- COMBO_BOX_SELECTOR_SPEED = 400
+
+DEFAULT_SLICE_9_SCALE = 1 -- 1.5
 
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
 SCROLL_DEFAULT_RIGIDITY = 0.99
-SCROLL_TIME_TO_TARGET = 0.1
-SCROLL_EPSILON = 0.01
+SCROLL_DEFAULT_FRICTION = 3
+SCROLL_SPEED_EPSILON = 1
+SCROLL_DRAG_EPSILON = 10
+SCROLL_DAMPENING_FACTOR = 0.2
+SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED = 20
+SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
 
 -- ENUMS
 
@@ -40,6 +46,7 @@ local NodeType = {
 
 -- MODULES
 
+bundle = require("bundle")
 codes = require("inputcodes")
 cleanup = require("cleanup")
 hierarchyActions = require("hierarchyactions")
@@ -79,9 +86,21 @@ function focus(node)
 	focused = node
 
 	if comboBoxSelector ~= nil then
-		if comboBoxSelector.close ~= nil then
-			comboBoxSelector:close()
-			comboBoxSelector = nil
+		local n = node
+		local close = true
+		while n ~= nil do
+			if n == comboBoxSelector then
+				close = false
+				break
+			end
+			n = n.parent
+		end
+
+		if close then
+			if comboBoxSelector.close ~= nil then
+				comboBoxSelector:close()
+				comboBoxSelector = nil
+			end
 		end
 	end
 
@@ -130,6 +149,11 @@ function createUI(system)
 
 	-- Node that's currently being pressed
 	local pressed = nil
+
+	-- Scroll nodes pressed but not yet dragged
+	-- NOTE: nested scrolls only work so far in moving along non-aligned axis (horizontal vs vertical)
+	-- pressed is assigned to scroll node when drag starts (considering epsilon)
+	local pressedScrolls = {}
 
 	-- keeping a reference on all text items,
 	-- to update fontsize when needed
@@ -284,10 +308,50 @@ function createUI(system)
 			attr.object.LocalPosition.Z = -UI_FAR * 0.45
 		end
 
-		if self.parentDidResizeWrapper then
-			self:parentDidResizeWrapper()
+		-- SORT ORDERS
+		-- TODO: review this, keeping number of different sort orders to a minimum is a good thing
+
+		local sortOrder = 1
+		parent = attr.object:GetParent()
+		while parent ~= nil do
+			if parent.SortOrder ~= nil then
+				if parent.SortOrder >= sortOrder then
+					sortOrder = parent.SortOrder + 1
+					break
+				end
+			end
+			parent = parent:GetParent()
 		end
+
+		-- apply view order
+		-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+		if attr.object.SortOrder then
+			if attr.object.SortOrder < 255 then
+				attr.object.SortOrder = sortOrder
+			end
+		else
+			sortOrder = sortOrder - 1
+		end
+
+		local t = {}
+		t.applySortOrderToChildren = function(n, sortOrder)
+			local children = n.Children
+			for _, child in ipairs(children) do
+				if child.SortOrder ~= nil then
+					-- SortOrder == 255 means elements are forced display on top, do not modify in that case
+					if child.SortOrder < 255 then
+						child.SortOrder = sortOrder
+					end
+				end
+				t.applySortOrderToChildren(child, sortOrder + 1)
+			end
+		end
+		t.applySortOrderToChildren(attr.object, sortOrder + 1)
+
+		_parentDidResizeWrapper(self)
 	end
+
+	_parentDidResizeWrapper(self)
 
 	local function _nodeHasParent(self)
 		return self.object:GetParent() ~= nil
@@ -307,9 +371,7 @@ function createUI(system)
 			toClean = {}
 		end
 
-		if type(t.onRemove) == "function" then
-			t:onRemove()
-		end
+		_onRemoveWrapper(t)
 
 		t:setParent(nil)
 
@@ -365,19 +427,67 @@ function createUI(system)
 			end
 		end
 
-		node.background.Color = colors[1]
-		if #node.borders > 0 then
-			node.borders[1].Color = colors[2]
-			node.borders[2].Color = colors[2]
-			node.borders[3].Color = colors[3]
-			node.borders[4].Color = colors[3]
+		if colors and node.background then
+			node.background.Color = colors[1]
+			if node.borders and #node.borders > 0 then
+				node.borders[1].Color = colors[2]
+				node.borders[2].Color = colors[2]
+				node.borders[3].Color = colors[3]
+				node.borders[4].Color = colors[3]
+			end
 		end
 
 		if node.underline ~= nil then
 			node.underline.Color = textColor
 		end
 
-		node.content.Color = textColor -- doesn't seem to be working
+		if node.content.Text then
+			node.content.Color = textColor
+		end
+	end
+
+	local function _buttonSetBackgroundQuad(node, quad)
+		if quad == nil then
+			return
+		end
+		if node.object == quad then
+			return
+		end
+		local background = quad
+		background.IsDoubleSided = false
+		_setupUIObject(background, true)
+		background._node = node
+
+		local previousObject = node.object
+		node.object = background
+		if previousObject ~= nil then
+			background.SortOrder = previousObject.SortOrder
+			node.object:SetParent(previousObject.Parent)
+			node.object.LocalPosition:Set(previousObject.LocalPosition)
+			node.object.LocalRotation:Set(previousObject.LocalRotation)
+
+			local toMove = {}
+			for _, child in ipairs(previousObject.Children) do
+				table.insert(toMove, child)
+			end
+			for _, child in ipairs(toMove) do
+				child:SetParent(node.object)
+			end
+			previousObject:RemoveFromParent()
+		end
+		node:_refresh()
+	end
+
+	local function _buttonRefreshBackground(node)
+		if node.state == State.Pressed then
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuadPressed)
+		elseif node.selected then
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuadSelected)
+		elseif node.disabled then
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuadDisabled)
+		else
+			_buttonSetBackgroundQuad(node, node.config.backgroundQuad)
+		end
 	end
 
 	local function _buttonRefresh(self)
@@ -389,8 +499,12 @@ function createUI(system)
 		local border = BUTTON_BORDER
 		local underlinePadding = 0
 
-		if self.config.padding == false then
+		local paddingType = type(self.config.padding)
+
+		if paddingType == "boolean" and self.config.padding == false then
 			padding = 0
+		elseif paddingType == "number" or paddingType == "integer" then
+			padding = self.config.padding
 		end
 
 		if self.config.borders == false then
@@ -425,19 +539,21 @@ function createUI(system)
 			totalHeight = content.Height + paddingAndBorder * 2 + underlinePadding
 		end
 
-		local background = self.background
+		local background = self.object
 		if background == nil then
 			return
 		end
 
-		background.Scale.X = totalWidth
-		background.Scale.Y = totalHeight
+		background.Width = totalWidth
+		background.Height = totalHeight
 
-		background.LocalPosition = { 0, 0, 0 }
+		if background.CollisionBox ~= nil then
+			background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+		end
 
 		content.LocalPosition = { totalWidth * 0.5 - content.Width * 0.5, totalHeight * 0.5 - content.Height * 0.5 }
 
-		if #self.borders > 0 then
+		if self.borders and #self.borders > 0 then
 			content.LocalPosition = { paddingLeft, paddingBottom, 0 }
 			local top = self.borders[1]
 			local right = self.borders[2]
@@ -480,7 +596,10 @@ function createUI(system)
 		end
 
 		self.state = State.Pressed
+
+		_buttonRefreshBackground(self)
 		_buttonRefreshColor(self)
+
 		if callback ~= nil then
 			callback(self, obj, block, pe)
 		end
@@ -494,7 +613,10 @@ function createUI(system)
 		end
 
 		self.state = State.Idle
+
+		_buttonRefreshBackground(self)
 		_buttonRefreshColor(self)
+
 		if callback ~= nil then
 			callback(self)
 		end
@@ -506,7 +628,10 @@ function createUI(system)
 		end
 
 		self.state = State.Idle
+
+		_buttonRefreshBackground(self)
 		_buttonRefreshColor(self)
+
 		if callback ~= nil then
 			callback(self)
 		end
@@ -759,13 +884,11 @@ function createUI(system)
 				t:_setWidth(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResizeWrapper ~= nil then
-						child:parentDidResizeWrapper()
-					end
+					_parentDidResizeWrapper(child)
 				end
 
 				if t.parent ~= nil then
-					t.parent:contentDidResizeWrapper()
+					_contentDidResizeWrapper(t.parent)
 				end
 			end
 		elseif k == "Height" then
@@ -777,20 +900,18 @@ function createUI(system)
 				t:_setHeight(v)
 
 				for _, child in pairs(t.children) do
-					if child.parentDidResizeWrapper ~= nil then
-						child:parentDidResizeWrapper()
-					end
+					_parentDidResizeWrapper(child)
 				end
 
 				if t.parent ~= nil then
-					t.parent:contentDidResizeWrapper()
+					_contentDidResizeWrapper(t.parent)
 				end
 			end
 		elseif k == "text" or k == "Text" then
 			if t._setText ~= nil then
 				if type(t._setText) == "function" then
 					local r = t:_setText(v)
-					t:contentDidResizeWrapper()
+					_contentDidResizeWrapper(t)
 					return r
 				end
 			else
@@ -808,8 +929,48 @@ function createUI(system)
 		end
 	end
 
+	local function _nodeShow(self)
+		if not self.object then
+			return
+		end
+		if self.parent.object then
+			self.object:SetParent(self.parent.object)
+		else
+			self.object:SetParent(rootFrame)
+		end
+		self.object.IsHidden = false
+	end
+
+	function _nodeHide(self)
+		if not self.object then
+			return
+		end
+		self.object:RemoveFromParent()
+		self.object.IsHidden = true
+	end
+
+	function _nodeToggle(self, show)
+		if show == nil then
+			show = self:isVisible() == false
+		end
+		if show then
+			self:show()
+		else
+			self:hide()
+		end
+	end
+
+	function _nodeIsVisible(self)
+		return self.object.IsHidden == false
+	end
+
+	function _nodeHasFocus(self)
+		return focused == self
+	end
+
 	local function _nodeCreate()
 		local node = {}
+
 		local m = {
 			attr = {
 				-- can be a Shape, Text, Object...
@@ -821,61 +982,18 @@ function createUI(system)
 				children = {},
 				parentDidResize = nil,
 				parentDidResizeSystem = nil,
-				parentDidResizeWrapper = function(self)
-					if self.parentDidResizeSystem ~= nil then
-						self:parentDidResizeSystem()
-					end
-					if self.parentDidResize ~= nil then
-						self:parentDidResize()
-					end
-				end,
-				contentDidResize = nil, -- user defined
+				contentDidResize = nil,
 				contentDidResizeSystem = nil,
-				contentDidResizeWrapper = function(self)
-					if self.contentDidResizeSystem ~= nil then
-						self:contentDidResizeSystem()
-					end
-					if self.contentDidResize ~= nil then
-						self:contentDidResize()
-					end
-				end,
+				onRemove = nil,
+				onRemoveSystem = nil,
 				setParent = _nodeSetParent,
 				hasParent = _nodeHasParent,
 				remove = privateFunctions._nodeRemovePublicWrapper,
-				show = function(self)
-					if not self.object then
-						return
-					end
-					if self.parent.object then
-						self.object:SetParent(self.parent.object)
-					else
-						self.object:SetParent(rootFrame)
-					end
-					self.object.IsHidden = false
-				end,
-				hide = function(self)
-					if not self.object then
-						return
-					end
-					self.object:RemoveFromParent()
-					self.object.IsHidden = true
-				end,
-				toggle = function(self, show)
-					if show == nil then
-						show = self:isVisible() == false
-					end
-					if show then
-						self:show()
-					else
-						self:hide()
-					end
-				end,
-				isVisible = function(self)
-					return self.object.IsHidden == false
-				end,
-				hasFocus = function(self)
-					return focused == self
-				end,
+				show = _nodeShow,
+				hide = _nodeHide,
+				toggle = _nodeToggle,
+				isVisible = _nodeIsVisible,
+				hasFocus = _nodeHasFocus,
 				-- returned when requesting Width if defined
 				-- can be a number or function(self) that returns a number
 				_width = nil,
@@ -929,8 +1047,13 @@ function createUI(system)
 		node.pivot.LocalRotation:Set(0, 0, 0)
 
 		-- NOTE: Using AABB in pivot space to infer size & placement.
-		local aabb = Box()
-		aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
+		local aabb
+		if node._config.singleShapeToBeMutated then
+			aabb = node.shape.BoundingBox
+		else
+			aabb = Box()
+			aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
+		end
 
 		if not node._config.doNotFlip then
 			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
@@ -1085,43 +1208,137 @@ function createUI(system)
 		return node
 	end
 
-	ui.createFrame = function(self, color, config)
+	local frameScrollCellQuadData
+	ui.frameScrollCell = function(self)
 		if self ~= ui then
-			error("ui:createFrame(color, config): use `:`", 2)
+			error("ui:frameScrollCell(): use `:`", 2)
 		end
-		if color ~= nil and type(color) ~= Type.Color then
-			error("ui:createFrame(color, config): color should be a Color or nil", 2)
+		if frameScrollCellQuadData == nil then
+			frameScrollCellQuadData = Data:FromBundle("images/cell_dark.png")
 		end
-		if config ~= nil and type(config) ~= Type.table then
-			error("ui:createFrame(color, config): config should be a table", 2)
+		local quad = Quad()
+		quad.Image = {
+			data = frameScrollCellQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	local frameScrollSelectorQuadData
+	ui.frameScrollCellSelector = function(self)
+		if self ~= ui then
+			error("ui:frameScrollCellSelector(): use `:`", 2)
+		end
+		if frameScrollSelectorQuadData == nil then
+			frameScrollSelectorQuadData = Data:FromBundle("images/cell_selector.png")
+		end
+		local quad = Quad()
+		quad.Image = {
+			data = frameScrollSelectorQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	local frameTextBackgroundQuadData
+	ui.frameTextBackground = function(self)
+		if self ~= ui then
+			error("ui:frameGenericContainer(): use `:`", 2)
+		end
+		if frameTextBackgroundQuadData == nil then
+			frameTextBackgroundQuadData = Data:FromBundle("images/text_background_dark.png")
+		end
+		local quad = Quad()
+		quad.Image = {
+			data = frameTextBackgroundQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	ui.frameGenericContainer = function(self)
+		if self ~= ui then
+			error("ui:frameGenericContainer(): use `:`", 2)
+		end
+		local image = Data:FromBundle("images/frame_dark.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	ui.frameCreationContainer = function(self)
+		if self ~= ui then
+			error("ui:frameGenericContainer(): use `:`", 2)
+		end
+		local image = Data:FromBundle("images/frame_creation.png")
+		local quad = Quad()
+		quad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.frame(self, { quad = quad })
+	end
+
+	ui.frame = function(self, config)
+		if self ~= ui then
+			error("ui:frame(config): use `:`", 2)
 		end
 
-		local _config = {
-			unfocuses = false, -- unfocused focused node when true
+		local defaultConfig = {
+			color = nil, -- can be a Color or Quad gradient table
 			image = nil,
+			quad = nil, -- allows to suply custom quad directly (takes priority over color or image)
+			-- transparent frame is created if color, image and quad are nil
+			unfocuses = false, -- unfocused focused node when true
 		}
 
-		if type(config.unfocuses) == "boolean" then
-			_config.unfocuses = config.unfocuses
-		end
+		local options = {
+			acceptTypes = {
+				color = { "Color", "table" },
+				image = { "Data" },
+				quad = { "Quad" },
+			},
+		}
 
-		color = color or Color(0, 0, 0, 0) -- default transparent frame
+		config = conf:merge(defaultConfig, config, options)
+
 		local node = _nodeCreate()
 		node.type = NodeType.Frame
 
-		node.config = _config
+		node.config = config
 
-		local background = Quad()
-		if node.config.image == nil then
-			background.Color = color
-			background.IsDoubleSided = false
+		local background
+
+		if config.quad ~= nil then
+			background = config.quad
 		else
-			background.Image = node.config.image
-			background.IsDoubleSided = true
+			background = Quad()
+			if config.image ~= nil then
+				background.Image = node.config.image
+				background.IsDoubleSided = true
+			else
+				if config.color == nil then
+					config.color = Color(0, 0, 0, 0) -- transparent
+				end
+				background.Color = config.color
+				background.IsDoubleSided = false
+			end
 		end
 
 		_setupUIObject(background)
-
 		node.object = background
 
 		background._node = node
@@ -1201,6 +1418,19 @@ function createUI(system)
 		return node
 	end
 
+	-- legacy
+	ui.createFrame = function(self, color, config)
+		local newConfig = config or {}
+		newConfig.color = color
+		if config.unfocuses ~= nil then
+			newConfig.unfocuses = config.unfocuses
+		end
+		if config.image ~= nil then
+			newConfig.image = config.image
+		end
+		return ui.frame(self, newConfig)
+	end
+
 	-- NOTES (needs proper documentation)
 	-- When the shapeNode needs to be rotated, prefer node.size accessor
 	-- Otherwise and when it's required to rely on precize (sharp edge) width & height, use node.width * node.height
@@ -1223,6 +1453,11 @@ function createUI(system)
 			doNotFlip = false,
 			offset = Number3.Zero,
 			perBlockCollisions = false,
+			-- TEMPORARY WORKAROUND:
+			-- The new system to compute shape boundaries, including children is not working as expected
+			-- when dealing with MutableShape that are being modified after UI shape's creation.
+			-- singleShapeToBeMutated = true allows use the legacy system (shape.BoundingBox instead of box:Fit(shape))
+			singleShapeToBeMutated = false,
 		}
 
 		config = conf:merge(defaultConfig, config)
@@ -1562,7 +1797,9 @@ function createUI(system)
 			textSize = "default",
 			multiline = false, -- not yet implemented
 			returnKeyType = "done", -- options: "default", "done", "send", "next"
-			keyboardType = "default", -- other options: "email", "phone", "numbers", "url", "ascii"
+			keyboardType = "default", -- other options: "email", "phone", "numbers", "url", "ascii", "oneTimeDigicode"
+			suggestions = false,
+			bottomMargin = 0, -- can be used to add extra margin above virtual keyboard
 		}
 
 		local config = {}
@@ -1851,7 +2088,7 @@ function createUI(system)
 			end
 		end
 
-		node.border.onDrag = function(self, pointerEvent)
+		node.border.onDrag = function(_, pointerEvent)
 			if node.disabled == true then
 				return
 			end
@@ -1916,11 +2153,13 @@ function createUI(system)
 			end
 			self.state = State.Focused
 
+			currentKeyboardTopMargin = config.bottomMargin
+
 			_textInputRefreshColor(self)
 			self:_refresh()
 
 			if focus(self) == false then
-				-- can't take focus, maybe it already had it
+				-- can't take focus, maybe it already has it
 				return
 			end
 
@@ -1945,6 +2184,7 @@ function createUI(system)
 				multiline = config.multiline,
 				returnKeyType = config.returnKeyType,
 				keyboardType = config.keyboardType,
+				suggestions = config.suggestions,
 				cursorStart = nil,
 				cursorEnd = nil,
 			})
@@ -2142,21 +2382,46 @@ function createUI(system)
 		return node
 	end
 
+	local SCROLL_ID = 0
 	ui.createScroll = function(self, config)
 		local defaultConfig = {
 			backgroundColor = Color(0, 0, 0, 0),
+			gradientColor = nil,
 			direction = "down", -- can also be "up", "left", "right"
 			cellPadding = 0,
+			padding = 0, -- padding around cells
 			rigidity = SCROLL_DEFAULT_RIGIDITY,
-			loadCell = function(_) -- index
+			friction = SCROLL_DEFAULT_FRICTION,
+			userdata = nil, -- can be used to provide extra context to loadCell / unloadCell
+			loadCell = function(_, _) -- index, userdata
 				return nil
 			end,
-			unloadCell = function(_, _) -- index, cell
+			unloadCell = function(_, _, _) -- index, cell, userdata
 				return nil
 			end,
+			scrollPositionDidChange = nil,
 		}
 
-		config = conf:merge(defaultConfig, config)
+		local options = {
+			acceptTypes = {
+				padding = { "number", "integer", "table" },
+				gradientColor = { "Color" },
+				userdata = { "*" },
+				scrollPositionDidChange = { "function" },
+			},
+		}
+
+		config = conf:merge(defaultConfig, config, options)
+
+		if type(config.padding) == "number" or type(config.padding) == "integer" then
+			local padding = config.padding
+			config.padding = {
+				top = padding,
+				bottom = padding,
+				left = padding,
+				right = padding,
+			}
+		end
 
 		local down = config.direction == "down"
 		local up = config.direction == "up"
@@ -2169,18 +2434,30 @@ function createUI(system)
 		node.isScrollArea = true
 		node.IsMask = true
 
+		SCROLL_ID = SCROLL_ID + 1
+		node.scrollID = SCROLL_ID
+
 		local listeners = {}
 		local l
 		local hovering = false
-		local activated = false
-		local dragging = false
-		local dragPointerIndex = nil -- pointerIndex used to drag
 
 		local cellPadding = config.cellPadding
+		local padding = config.padding
 
-		local container = self:createNode()
+		local friction = config.friction
+
+		local container = self:frame()
 		container:setParent(node)
 		node.container = container
+
+		container.parentDidResize = function(self)
+			local parent = self.parent
+			if vertical then
+				container.Width = parent.Width - padding.left - padding.right
+			else -- horizontal
+				container.Height = parent.Height - padding.top - padding.bottom
+			end
+		end
 
 		-- loaed cells
 		local cells = {}
@@ -2192,8 +2469,14 @@ function createUI(system)
 			cellInfo = {}, -- each entry: { top, bottom, left, right, width, height }
 		}
 
+		local released = true
 		local scrollPosition = 0
-		local targetScrollPosition = 0
+		local defuseScrollSpeedTimer = nil
+		local lastTickSavedScrollPosition = nil
+		-- local totalDragSinceLastTick = 0
+		local scrollSpeed = 0
+		local cappedPosition = nil
+		local dragStartScrollPosition = 0
 
 		local cell
 		local cellInfo
@@ -2213,48 +2496,167 @@ function createUI(system)
 		local scrollHandle = self:createFrame(Color(0, 0, 0, 0.5))
 		scrollHandle:setParent(node)
 
+		local function setScrollPosition(p, refresh)
+			if p == scrollPosition then
+				return
+			end
+			scrollPosition = p
+			if config.scrollPositionDidChange then
+				config.scrollPositionDidChange(scrollPosition)
+			end
+			if refresh and node.refresh then
+				node:refresh()
+			end
+		end
+
+		local endScrollIndicator
+		local beginScrollIndicator
+
+		if config.backgroundColor.A == 255 or config.gradientColor ~= nil then
+			local quad = Quad()
+			local opaque = Color(config.gradientColor or config.backgroundColor)
+			local transparent = Color(config.gradientColor or config.backgroundColor)
+			transparent.A = 0
+			if right then
+				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+			elseif left then
+				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+			elseif down then
+				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+			elseif up then
+				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+			end
+			endScrollIndicator = ui:frame({ quad = quad })
+			endScrollIndicator.object.SortOrder = 255
+			endScrollIndicator:setParent(node)
+
+			quad = Quad()
+			opaque = Color(config.backgroundColor)
+			transparent = Color(config.backgroundColor)
+			transparent.A = 0
+			if right then
+				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+			elseif left then
+				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+			elseif down then
+				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+			elseif up then
+				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+			end
+			beginScrollIndicator = ui:frame({ quad = quad })
+			beginScrollIndicator.object.SortOrder = 255
+			beginScrollIndicator:setParent(node)
+		end
+
+		local function loadCellInfo(cellIndex)
+			local cellInfo = cache.cellInfo[cellIndex]
+			local cell
+
+			if cellInfo == nil then
+				cell = config.loadCell(cellIndex, config.userdata)
+				if cell == nil then
+					-- reached the end of cells
+					return nil
+				end
+
+				if vertical then
+					cellInfo = { height = cell.Height }
+
+					if cache.contentHeight == 0 then
+						cache.contentHeight = cellInfo.height + padding.top + padding.bottom
+					else
+						cache.contentHeight = cache.contentHeight + cellInfo.height + cellPadding
+					end
+
+					if previousCellInfo ~= nil then
+						if down then
+							cellInfo.top = previousCellInfo.bottom - cellPadding
+						else -- up
+							cellInfo.top = previousCellInfo.top + cellPadding + cellInfo.height
+						end
+					else -- first cell
+						if down then
+							cellInfo.top = 0
+						else -- up
+							cellInfo.top = cellInfo.height
+						end
+					end
+
+					cellInfo.bottom = cellInfo.top - cellInfo.height
+				elseif horizontal then
+					cellInfo = { width = cell.Width }
+
+					if cache.contentWidth == 0 then
+						cache.contentWidth = cellInfo.width + padding.left + padding.right
+					else
+						cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
+					end
+
+					if previousCellInfo ~= nil then
+						if right then
+							cellInfo.left = previousCellInfo.right + cellPadding
+						else -- left
+							cellInfo.left = previousCellInfo.left - cellPadding + cellInfo.width
+						end
+					else -- first cell
+						if right then
+							cellInfo.left = 0
+						else -- left
+							cellInfo.left = -cellInfo.width
+						end
+					end
+
+					cellInfo.right = cellInfo.left + cellInfo.width
+				end
+
+				cache.cellInfo[cellIndex] = cellInfo
+			end
+
+			return cellInfo, cell
+		end
+
 		node.refresh = function()
 			if not vertical and not horizontal then
 				return
 			end
 
 			if vertical then
-				container.pos.X = 0
+				container.pos.X = padding.left
 			else -- horizontal
-				container.pos.Y = 0
+				container.pos.Y = padding.bottom
 			end
 
 			if down then
-				container.pos.Y = node.Height + scrollPosition
+				container.pos.Y = node.Height - padding.top + scrollPosition
 
 				loadTop = -scrollPosition + SCROLL_LOAD_MARGIN
 				loadBottom = loadTop - node.Height - SCROLL_LOAD_MARGIN * 2
 
-				unloadTop = -scrollPosition + SCROLL_UNLOAD_MARGIN
+				unloadTop = scrollPosition + SCROLL_UNLOAD_MARGIN
 				unloadBottom = loadTop - node.Height - SCROLL_UNLOAD_MARGIN * 2
 			elseif up then
-				container.pos.Y = 0 - scrollPosition
+				container.pos.Y = padding.bottom - scrollPosition
 
 				loadBottom = scrollPosition - SCROLL_LOAD_MARGIN
 				loadTop = loadBottom + node.Height + SCROLL_LOAD_MARGIN * 2
 
-				unloadBottom = scrollPosition - SCROLL_UNLOAD_MARGIN
+				unloadBottom = -scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadTop = loadBottom + node.Height + SCROLL_UNLOAD_MARGIN * 2
 			elseif right then
-				container.pos.X = 0 - scrollPosition
+				container.pos.X = padding.left + scrollPosition
 
-				loadLeft = scrollPosition - SCROLL_LOAD_MARGIN
+				loadLeft = -scrollPosition - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
 
-				unloadLeft = scrollPosition - SCROLL_UNLOAD_MARGIN
+				unloadLeft = -scrollPosition - SCROLL_UNLOAD_MARGIN
 				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
 			elseif left then
-				container.pos.X = node.Width + scrollPosition
+				container.pos.X = node.Width - padding.right - scrollPosition
 
-				loadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN
+				loadLeft = scrollPosition - node.Width - SCROLL_LOAD_MARGIN
 				loadRight = loadLeft + node.Width + SCROLL_LOAD_MARGIN * 2
 
-				unloadLeft = -scrollPosition - node.Width - SCROLL_LOAD_MARGIN * 2
+				unloadLeft = scrollPosition - node.Width - SCROLL_LOAD_MARGIN * 2
 				unloadRight = loadLeft + node.Width + SCROLL_UNLOAD_MARGIN * 2
 			end
 
@@ -2263,33 +2665,25 @@ function createUI(system)
 			previousCellInfo = nil
 
 			if vertical then
+				if endScrollIndicator then
+					endScrollIndicator.Height = 10
+					endScrollIndicator.Width = node.Width
+				end
+
+				if beginScrollIndicator then
+					beginScrollIndicator.Height = 10
+					beginScrollIndicator.Width = node.Width
+					beginScrollIndicator.pos.Y = node.Height - beginScrollIndicator.Height
+				end
+
 				while true do
-					cellInfo = cache.cellInfo[cellIndex]
-
+					cellInfo, cell = loadCellInfo(cellIndex)
 					if cellInfo == nil then
-						cell = config.loadCell(cellIndex)
-						if cell == nil then
-							-- reached the end of cells
-							break
-						end
-						cellInfo = { height = cell.Height }
-						if previousCellInfo ~= nil then
-							if down then
-								cellInfo.top = previousCellInfo.bottom - cellPadding
-							else -- up
-								cellInfo.top = previousCellInfo.top + cellPadding + cellInfo.height
-							end
-						else -- first cell
-							if down then
-								cellInfo.top = 0
-							else -- up
-								cellInfo.top = cellInfo.height
-							end
-						end
+						-- reached the end of cells
+						break
+					end
 
-						cellInfo.bottom = cellInfo.top - cellInfo.height
-						cache.cellInfo[cellIndex] = cellInfo
-
+					if cell ~= nil then
 						cells[cellIndex] = cell
 						cell:setParent(container)
 						cell.pos.Y = cellInfo.bottom
@@ -2304,7 +2698,7 @@ function createUI(system)
 					then
 						cell = cells[cellIndex]
 						if cell == nil then
-							cell = config.loadCell(cellIndex)
+							cell = config.loadCell(cellIndex, config.userdata)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then
@@ -2312,11 +2706,12 @@ function createUI(system)
 								cell.pos.Y = cellInfo.bottom
 								cell.pos.X = 0
 							end
+							cells[cellIndex] = cell
 						end
-					elseif cellInfo.top <= unloadBottom and cellInfo.bottom >= unloadTop then
+					elseif cellInfo.top <= unloadBottom or cellInfo.bottom >= unloadTop then
 						cell = cells[cellIndex]
 						if cell ~= nil then
-							config.unloadCell(cellIndex, cell)
+							config.unloadCell(cellIndex, cell, config.userdata)
 							cells[cellIndex] = nil
 						end
 
@@ -2330,39 +2725,25 @@ function createUI(system)
 					cellIndex = cellIndex + 1
 				end
 			else -- horizontal
+				if endScrollIndicator then
+					endScrollIndicator.Height = node.Height
+					endScrollIndicator.Width = 10
+					endScrollIndicator.pos.X = node.Width - endScrollIndicator.Width
+				end
+
+				if beginScrollIndicator then
+					beginScrollIndicator.Height = node.Height
+					beginScrollIndicator.Width = 10
+				end
+
 				while true do
-					cellInfo = cache.cellInfo[cellIndex]
-
+					cellInfo, cell = loadCellInfo(cellIndex)
 					if cellInfo == nil then
-						cell = config.loadCell(cellIndex)
-						if cell == nil then
-							-- reached the end of cells
-							break
-						end
-						cellInfo = { width = cell.Width }
-						if cache.contentWidth == 0 then
-							cache.contentWidth = cellInfo.width
-						else
-							cache.contentWidth = cache.contentWidth + cellInfo.width + cellPadding
-						end
+						-- reached the end of cells
+						break
+					end
 
-						if previousCellInfo ~= nil then
-							if right then
-								cellInfo.left = previousCellInfo.right + cellPadding
-							else -- left
-								cellInfo.left = previousCellInfo.left - cellPadding + cellInfo.width
-							end
-						else -- first cell
-							if right then
-								cellInfo.left = 0
-							else -- left
-								cellInfo.left = -cellInfo.width
-							end
-						end
-
-						cellInfo.right = cellInfo.left + cellInfo.width
-						cache.cellInfo[cellIndex] = cellInfo
-
+					if cell ~= nil then
 						cells[cellIndex] = cell
 						cell:setParent(container)
 						cell.pos.Y = 0
@@ -2377,7 +2758,13 @@ function createUI(system)
 					then
 						cell = cells[cellIndex]
 						if cell == nil then
-							cell = config.loadCell(cellIndex)
+							-- print(
+							-- 	"LOAD",
+							-- 	cellIndex,
+							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
+							-- 	"[" .. loadLeft .. " - " .. loadRight .. "]"
+							-- )
+							cell = config.loadCell(cellIndex, config.userdata)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then
@@ -2385,11 +2772,19 @@ function createUI(system)
 								cell.pos.Y = 0
 								cell.pos.X = cellInfo.left
 							end
+							cells[cellIndex] = cell
 						end
-					elseif cellInfo.right <= unloadLeft and cellInfo.left >= unloadRight then
+					elseif cellInfo.right <= unloadLeft or cellInfo.left >= unloadRight then
 						cell = cells[cellIndex]
 						if cell ~= nil then
-							config.unloadCell(cellIndex, cell)
+							-- print(
+							-- 	"UNLOAD",
+							-- 	cellIndex,
+							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
+							-- 	"[" .. unloadLeft .. " - " .. unloadRight .. "]"
+							-- )
+							-- TODO: FIX LOAD/UNLOAD, sometimes cells are loaded and unloaded during same frame
+							config.unloadCell(cellIndex, cell, config.userdata)
 							cells[cellIndex] = nil
 						end
 
@@ -2407,77 +2802,105 @@ function createUI(system)
 
 		node.applyScrollDelta = function(_, dx, dy)
 			if vertical then
-				node:setScrollPosition(targetScrollPosition + dy)
+				node:setScrollPosition(scrollPosition - dy)
 			elseif horizontal then
-				node:setScrollPosition(targetScrollPosition - dx)
+				node:setScrollPosition(scrollPosition - dx)
 			end
 		end
 
-		-- set scroll position
-		node.setScrollPosition = function(_, newPosition)
+		node.capPosition = function(_, pos)
 			if down then
-				newPosition = math.min(-100, math.max(0, newPosition))
-			elseif up then
-				newPosition = math.min(0, math.max(100, newPosition))
-			elseif right then
-				local limit = cache.contentWidth - node.Width
+				local limit = cache.contentHeight - node.Height
 				if limit < 0 then
 					limit = 0
 				end
-				newPosition = math.max(0, math.min(limit, newPosition)) -- correct
+				pos = math.min(limit, math.max(0, pos))
+			elseif up then
+				-- TODO: review
+				error("IMPLEMENT scroll capPosition for up direction")
+			elseif right then
+				local limit = node.Width - cache.contentWidth
+				if limit > 0 then
+					limit = 0
+				end
+				pos = math.max(limit, math.min(pos, 0))
 			elseif left then
-				newPosition = math.min(100, math.max(-100, newPosition))
+				-- TODO: review
+				error("IMPLEMENT scroll capPosition for left direction")
 			end
 
-			targetScrollPosition = newPosition
+			return pos
 		end
 
-		node.pushFront = function(_, cell)
-			-- for i = node.nbCells + 1, 2, -1 do
-			-- 	cells[i] = cells[i - 1]
-			-- 	cachedCellHeights[i] = cachedCellHeights[i - 1]
-			-- end
-			-- node.nbCells = node.nbCells + 1
-			-- node:pushCell(cell, 1)
+		node.setScrollPosition = function(_, newPosition)
+			setScrollPosition(newPosition, true)
+		end
+
+		node.setScrollIndexVisible = function(self, index)
+			local currentIndex = 1
+			local pos
+
+			while currentIndex < index do
+				cellInfo, cell = loadCellInfo(currentIndex)
+				if cellInfo == nil then
+					-- reached the end of cells
+					break
+				end
+
+				if vertical then
+					pos = cellInfo.bottom - cellInfo.height * 0.5
+				else
+					pos = cellInfo.left - cellInfo.width * 0.5
+				end
+
+				-- if cell ~= nil, it means it's just been created
+				-- it has to be parented to the container
+				if cell ~= nil then
+					cells[cellIndex] = cell
+					cell:setParent(container)
+				end
+
+				currentIndex = currentIndex + 1
+			end
+
+			if pos ~= nil then
+				if vertical then
+					pos = pos + self.Height * 0.5
+				else
+					pos = pos + self.Width * 0.5
+				end
+				self:setScrollPosition(pos)
+			end
 		end
 
 		node.flush = function(_)
-			-- for i = 1, node.nbCells do
-			-- 	if cells[i] then
-			-- 		config.unloadCell(cells[i])
-			-- 	end
-			-- end
-			-- node.nbCells = 0
-			-- cells = {}
-			-- cachedCellHeights = {}
+			local toRemove = {}
+			for index, _ in pairs(cells) do
+				table.insert(toRemove, index)
+			end
+
+			local indexToRemove = table.remove(toRemove)
+
+			while indexToRemove ~= nil do
+				local cell = cells[indexToRemove]
+				if cell ~= nil then
+					config.unloadCell(indexToRemove, cell, config.userdata)
+				end
+
+				indexToRemove = table.remove(toRemove)
+			end
+
+			cells = {}
+			cache = {
+				contentWidth = 0,
+				contentHeight = 0,
+				cellInfo = {},
+			}
+			setScrollPosition(0)
 		end
 
-		-- add cell at index, called automatically after onLoad callback
-		node.pushCell = function(_, cell, index, needRefresh)
-			-- needRefresh = needRefresh == nil and true or needRefresh
-			-- if cell == nil then
-			-- 	return
-			-- end
-			-- if index == nil then
-			-- 	index = node.nbCells + 1
-			-- end
-			-- cells[index] = cell
-			-- cell:setParent(container)
-			-- cachedCellHeights[index] = cell.Height
-			-- if index > node.nbCells then
-			-- 	node.nbCells = index
-			-- end
-			-- if needRefresh then
-			-- 	node:refresh()
-			-- end
-		end
-
-		node.parentDidResizeSystem = function(self)
-			self:refresh()
-		end
-
-		node.dragging = function()
-			return dragging
+		container.parentDidResizeSystem = function(_)
+			node:refresh()
 		end
 
 		node.containsPointer = function(self, pe)
@@ -2512,72 +2935,124 @@ function createUI(system)
 			return (x >= leftX and x <= rightX and y >= bottomY and y <= topY)
 		end
 
+		local previousSpeed
+		local refresh
+		local p
 		l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-			if targetScrollPosition ~= scrollPosition then
-				scrollPosition = scrollPosition
-					+ (targetScrollPosition - scrollPosition) * config.rigidity * dt * 1.0 / SCROLL_TIME_TO_TARGET
-				if math.abs(scrollPosition - targetScrollPosition) < SCROLL_EPSILON then
-					scrollPosition = targetScrollPosition
+			if released == false and defuseScrollSpeedTimer ~= nil then
+				if lastTickSavedScrollPosition ~= nil and lastTickSavedScrollPosition ~= scrollPosition then
+					scrollSpeed = (scrollPosition - lastTickSavedScrollPosition) * (1.0 / dt) -- * 0.1
+					-- print("scrollSpeed:", scrollSpeed, "released:", released and "YES" or "NO")
 				end
-				-- NOTE: possible optimization: refresh content less often, only the position
-				node:refresh()
+
+				defuseScrollSpeedTimer = defuseScrollSpeedTimer - dt
+				if defuseScrollSpeedTimer <= 0 then
+					scrollSpeed = 0
+					defuseScrollSpeedTimer = nil
+				end
+			end
+
+			lastTickSavedScrollPosition = scrollPosition
+
+			if released == true then
+				refresh = false
+
+				if scrollSpeed ~= 0 then
+					p = scrollPosition + scrollSpeed * dt
+
+					previousSpeed = scrollSpeed
+					scrollSpeed = scrollSpeed - (friction * scrollSpeed * dt)
+
+					cappedPosition = node:capPosition(p)
+					if cappedPosition ~= p then
+						local counterSpeed = (cappedPosition - p)
+						if counterSpeed * scrollSpeed < 0 then
+							scrollSpeed = scrollSpeed + counterSpeed
+						else
+							scrollSpeed = 0
+							p = p + counterSpeed * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED * dt
+						end
+					end
+
+					-- if sign has changed or speed close to 0, set scrollSpeed to 0
+					if previousSpeed * scrollSpeed < 0 or math.abs(scrollSpeed) < SCROLL_SPEED_EPSILON then
+						scrollSpeed = 0
+					end
+
+					setScrollPosition(p)
+					refresh = true
+				else
+					cappedPosition = node:capPosition(scrollPosition)
+					if cappedPosition ~= scrollPosition then
+						local speed = (cappedPosition - scrollPosition) * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED
+						-- scrollPosition = scrollPosition + speed * dt
+						setScrollPosition(scrollPosition + speed * dt)
+						refresh = true
+					end
+				end
+
+				if refresh then
+					node:refresh()
+					refresh = false
+				end
 			end
 		end, { system = system == true and System or nil, topPriority = true })
 		table.insert(listeners, l)
 
-		l = LocalEvent:Listen(LocalEvent.Name.PointerDown, function(pe)
-			if node:containsPointer(pe) then
-				dragPointerIndex = pe.Index
-				activated = true
-				unfocus()
-			end
-		end, { system = system == true and System or nil, topPriority = true })
-		table.insert(listeners, l)
+		local startPosition
+		-- NOTE: We should have an onPressSystem function for this, to let users
+		-- set their own onPress callback if needed, even on scroll nodes.
+		node.onPress = function(_, _, _, pointerEvent)
+			released = false
 
-		l = LocalEvent:Listen(LocalEvent.Name.PointerUp, function(pe)
-			if pe.Index ~= dragPointerIndex then
-				return
+			startPosition = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)
+			if vertical then
+				startPosition.X = 0
+			elseif horizontal then
+				startPosition.Y = 0
 			end
-			dragPointerIndex = nil
-			activated = false
-			dragging = false
-		end, { system = system == true and System or nil, topPriority = false })
-		table.insert(listeners, l)
 
-		l = LocalEvent:Listen(LocalEvent.Name.PointerCancel, function(pe)
-			if pe.Index ~= dragPointerIndex then
-				return
-			end
-			dragPointerIndex = nil
-			activated = false
-			dragging = false
-		end, { system = system == true and System or nil, topPriority = false })
-		table.insert(listeners, l)
+			defuseScrollSpeedTimer = nil
+			lastTickSavedScrollPosition = scrollPosition
+			dragStartScrollPosition = scrollPosition
+		end
 
-		-- TODO: scroll should remain under pointer,
-		-- not the case currently as we simply apply delta and cap position
-		l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-			if pe.Index ~= dragPointerIndex then
-				return
+		node.onDrag = function(self, pointerEvent)
+			local pos = Number2(pointerEvent.X * Screen.Width, pointerEvent.Y * Screen.Height)
+
+			local diff = 0
+			if vertical then
+				diff = pos.Y - startPosition.Y
+			elseif horizontal then
+				diff = pos.X - startPosition.X
 			end
-			if activated and dragging == false then
-				dragging = true
-				-- TODO: reactivate this once we better handle ui
-				-- layers above scroll areas.
-				-- Currently, when the alert modal is displayed, we can still scroll.
-				-- if pressed ~= nil then
-				-- 	if pressed._onCancel then
-				-- 		pressed:_onCancel()
-				-- 	end
-				-- 	pressed = nil
-				-- end
+
+			defuseScrollSpeedTimer = SCROLL_TIME_TO_DEFUSE_SPEED
+
+			local newPos = dragStartScrollPosition + diff
+			local capped = node:capPosition(newPos)
+			if newPos ~= capped then
+				local delta = newPos - capped
+				newPos = capped + delta * SCROLL_DAMPENING_FACTOR
 			end
-			if dragging then
-				node:applyScrollDelta(pe.DX, pe.DY)
-				return true -- catch event
+
+			self:setScrollPosition(newPos)
+
+			if pressed ~= self and math.abs(diff) >= SCROLL_DRAG_EPSILON then
+				if pressed._onCancel then
+					pressed:_onCancel()
+				end
+				pressed = self
 			end
-		end, { system = system == true and System or nil, topPriority = true })
-		table.insert(listeners, l)
+		end
+
+		node.onRelease = function(_)
+			released = true
+		end
+
+		node.onCancel = function(_)
+			released = true
+		end
 
 		if Client.IsMobile == false then
 			l = LocalEvent:Listen(LocalEvent.Name.PointerMove, function(pe)
@@ -2595,67 +3070,115 @@ function createUI(system)
 			table.insert(listeners, l)
 		end
 
-		node.onRemove = function()
+		node.onRemoveSystem = function(self)
 			for _, l in ipairs(listeners) do
 				l:Remove()
 			end
 			listeners = {}
+			self:flush()
 		end
 
 		node:refresh()
 		return node
-	end
+	end -- ui:button
 
-	ui.createButton = function(_, stringOrShape, config)
+	ui.button = function(self, config)
+		if self ~= ui then
+			error("ui:button(config): use `:`", 2)
+		end
+
 		local defaultConfig = {
-			borders = true,
+			-- CONTENT --
+			content = "BUTTON", -- can be string, Shape or uikit node
+			-- used if content is a string:
 			underline = false,
-			padding = true,
-			shadow = true,
 			textSize = "default",
-			sound = "button_1",
-			unfocuses = true, -- unfocused focused node when true
-			color = theme.buttonColor,
-			colorPressed = nil,
-			colorSelected = theme.buttonColorSelected,
-			colorDisabled = theme.buttonColorDisabled,
 			textColor = theme.buttonTextColor,
 			textColorPressed = nil,
 			textColorSelected = theme.buttonTextColorSelected,
 			textColorDisabled = theme.buttonTextColorDisabled,
+			padding = true, -- default padding when true, can also be a number
+
+			-- BACKGROUND --
+			-- quad used in priority for background
+			backgroundQuad = nil,
+			backgroundQuadPressed = nil,
+			backgroundQuadSelected = nil,
+			backgroundQuadDisabled = nil,
+			-- used to define background if quads not defined
+			borders = true, -- default borders when true, can also be a number (thickness)
+			shadow = true,
+			color = nil,
+			colorPressed = nil,
+			colorSelected = nil,
+			colorDisabled = nil,
+			-- radius = 5, -- not yet supported
+
+			-- OTHER PROPERTIES --
+			sound = "button_1",
+			unfocuses = true, -- unfocused focused node when true
+			debugName = nil,
 		}
 
 		local options = {
 			acceptTypes = {
-				colorPressed = { "Color" },
 				textColorPressed = { "Color" },
+				content = { "string", "Shape", "MutableShape", "table" },
+				backgroundQuad = { "Quad" },
+				backgroundQuadPressed = { "Quad" },
+				backgroundQuadSelected = { "Quad" },
+				backgroundQuadDisabled = { "Quad" },
+				color = { "Color" },
+				colorPressed = { "Color" },
+				colorSelected = { "Color" },
+				colorDisabled = { "Color" },
+				debugName = { "string" },
+				padding = { "boolean", "number", "integer" },
 			},
 		}
 
 		config = conf:merge(defaultConfig, config, options)
 
-		if config.colorPressed == nil then
-			config.colorPressed = Color(config.color)
-			config.colorPressed:ApplyBrightnessDiff(-0.15)
+		local content = config.content
+
+		if content == nil then
+			error("ui:button(config) - config.content should be a non-nil string, Shape or uikit node", 2)
 		end
 
-		if config.textColorPressed == nil then
-			config.textColorPressed = Color(config.textColor)
-			config.textColorPressed:ApplyBrightnessDiff(-0.15)
+		if config.backgroundQuad == nil and config.color == nil then
+			-- use default quad
+			config.backgroundQuad = Quad()
+			config.backgroundQuad.Color = theme.buttonColor
+
+			config.backgroundQuadPressed = Quad()
+			config.backgroundQuadPressed.Color = theme.buttonColorPressed
+
+			config.backgroundQuadSelected = Quad()
+			config.backgroundQuadSelected.Color = theme.buttonColorSelected
+
+			config.backgroundQuadDisabled = Quad()
+			config.backgroundQuadDisabled.Color = theme.buttonColorDisabled
+		end
+
+		if config.backgroundQuad ~= nil then
+			-- something to do?
+		elseif config.color ~= nil then
+			if config.colorPressed == nil then
+				config.colorPressed = Color(config.color)
+				config.colorPressed:ApplyBrightnessDiff(-0.15)
+			end
+		end
+
+		if type(content) == "string" then
+			if config.textColorPressed == nil then
+				config.textColorPressed = Color(config.textColor)
+				config.textColorPressed:ApplyBrightnessDiff(-0.15)
+			end
 		end
 
 		local theme = require("uitheme").current
 
-		if stringOrShape == nil then
-			error("ui:createButton(stringOrShape, config) expects a non-nil string or Shape", 2)
-		end
-
-		if type(stringOrShape) ~= "string" then
-			error("ui:createButton(stringOrShape, config) - stringOrShape can only be a string for now", 2)
-		end
-
 		local node = _nodeCreate()
-
 		node.config = config
 
 		node.contentDidResizeSystem = function(self)
@@ -2669,13 +3192,13 @@ function createUI(system)
 		node._onCancel = _buttonOnCancel
 		node._refresh = _buttonRefresh
 		node.state = State.Idle
-		node.object = Object()
+		-- node.object = Object()
 
 		node.fixedWidth = nil
 		node.fixedHeight = nil
 
 		node._width = function(self)
-			return self.background.LocalScale.X
+			return self.object.Width
 		end
 
 		node._setWidth = function(self, newWidth)
@@ -2684,7 +3207,7 @@ function createUI(system)
 		end
 
 		node._height = function(self)
-			return self.background.LocalScale.Y
+			return self.object.Height
 		end
 
 		node._setHeight = function(self, newHeight)
@@ -2693,7 +3216,7 @@ function createUI(system)
 		end
 
 		node._depth = function(self)
-			return self.background.LocalScale.Z
+			return self.object.Depth
 		end
 
 		node._text = function(self)
@@ -2701,7 +3224,9 @@ function createUI(system)
 		end
 
 		node._setText = function(self, str)
-			self.content.Text = str
+			if self.content.Text then
+				self.content.Text = str
+			end
 		end
 
 		node.setColor = function(self, background, text, doNotrefresh)
@@ -2771,44 +3296,64 @@ function createUI(system)
 		node:setColorSelected(config.colorSelected, config.textColorSelected, true)
 		node:setColorDisabled(config.colorDisabled, config.textColorDisabled, true)
 
-		local background = Quad()
-		background.Color = node.colors[1]
-		background.IsDoubleSided = false
-		_setupUIObject(background, true)
-		node.object:AddChild(background)
-		background._node = node
+		if config.backgroundQuad ~= nil then
+			local background = config.backgroundQuad
+			background.IsDoubleSided = false
+			_setupUIObject(background, true)
+			-- node.object:AddChild(background)
+			background._node = node
+			-- node.background = background
+			node.object = background
+		elseif config.color ~= nil then
+			local background = Quad()
+			background.Color = node.colors[1]
+			background.IsDoubleSided = false
+			_setupUIObject(background, true)
+			-- node.object:AddChild(background)
+			background._node = node
+			node.object = background
 
-		node.background = background
-		node.borders = {}
+			node.background = background
+			node.borders = {}
 
-		if config.borders then
-			local borderTop = Quad()
-			borderTop.Color = node.colors[2]
-			borderTop.IsDoubleSided = false
-			_setupUIObject(borderTop)
-			node.object:AddChild(borderTop)
-			table.insert(node.borders, borderTop)
+			if config.borders then
+				local borderTop = Quad()
+				borderTop.Color = node.colors[2]
+				borderTop.IsDoubleSided = false
+				_setupUIObject(borderTop)
+				node.object:AddChild(borderTop)
+				table.insert(node.borders, borderTop)
 
-			local borderRight = Quad()
-			borderRight.Color = node.colors[2]
-			borderRight.IsDoubleSided = false
-			_setupUIObject(borderRight)
-			node.object:AddChild(borderRight)
-			table.insert(node.borders, borderRight)
+				local borderRight = Quad()
+				borderRight.Color = node.colors[2]
+				borderRight.IsDoubleSided = false
+				_setupUIObject(borderRight)
+				node.object:AddChild(borderRight)
+				table.insert(node.borders, borderRight)
 
-			local borderBottom = Quad()
-			borderBottom.Color = node.colors[3]
-			borderBottom.IsDoubleSided = false
-			_setupUIObject(borderBottom)
-			node.object:AddChild(borderBottom)
-			table.insert(node.borders, borderBottom)
+				local borderBottom = Quad()
+				borderBottom.Color = node.colors[3]
+				borderBottom.IsDoubleSided = false
+				_setupUIObject(borderBottom)
+				node.object:AddChild(borderBottom)
+				table.insert(node.borders, borderBottom)
 
-			local borderLeft = Quad()
-			borderLeft.Color = node.colors[3]
-			borderLeft.IsDoubleSided = false
-			_setupUIObject(borderLeft)
-			node.object:AddChild(borderLeft)
-			table.insert(node.borders, borderLeft)
+				local borderLeft = Quad()
+				borderLeft.Color = node.colors[3]
+				borderLeft.IsDoubleSided = false
+				_setupUIObject(borderLeft)
+				node.object:AddChild(borderLeft)
+				table.insert(node.borders, borderLeft)
+			end
+
+			if config.shadow then
+				local shadow = Quad()
+				shadow.Color = Color(0, 0, 0, 20)
+				shadow.IsDoubleSided = false
+				_setupUIObject(shadow)
+				node.object:AddChild(shadow)
+				node.shadow = shadow
+			end
 		end
 
 		if config.underline and not config.borders then
@@ -2820,22 +3365,27 @@ function createUI(system)
 			node.underline = underline
 		end
 
-		if config.shadow then
-			local shadow = Quad()
-			shadow.Color = Color(0, 0, 0, 20)
-			shadow.IsDoubleSided = false
-			_setupUIObject(shadow)
-			node.object:AddChild(shadow)
-			node.shadow = shadow
+		if type(content) == "string" then
+			local n = ui:createText(content, { size = config.textSize })
+			n:setParent(node)
+			node.content = n
+		elseif type(content) == "Shape" or type(content) == "MutableShape" then
+			local n = ui:createShape(content, { spherized = false, doNotFlip = true })
+			n:setParent(node)
+			node.content = n
+		else
+			local ok = pcall(function()
+				content:setParent(node)
+				node.content = content
+			end)
+			if not ok then
+				error("ui:button(config) - config.content should be a non-nil string, Shape or uikit node", 2)
+			end
 		end
 
-		-- TODO: test stringOrShape type
-
-		local t = ui:createText(stringOrShape, { size = config.textSize }) -- color is nil here
-		t:setParent(node)
-		node.content = t
-
 		node:_refresh()
+
+		_buttonRefreshBackground()
 		_buttonRefreshColor(node) -- apply initial colors
 
 		node.onPress = function(_) end
@@ -2846,6 +3396,8 @@ function createUI(system)
 				return
 			end
 			self.selected = true
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -2854,6 +3406,8 @@ function createUI(system)
 				return
 			end
 			self.selected = false
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -2862,6 +3416,8 @@ function createUI(system)
 				return
 			end
 			self.disabled = false
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
@@ -2870,221 +3426,305 @@ function createUI(system)
 				return
 			end
 			self.disabled = true
+
+			_buttonRefreshBackground(self)
 			_buttonRefreshColor(self)
 		end
 
 		node:setParent(rootFrame)
-
 		return node
-	end -- createButton
+	end
+
+	local btnNeutralQuadData
+	local btnNeutralPressedQuadData
+	local btnNeutralSelectedQuadData
+	local btnNeutralDisabledQuadData
+	ui.buttonNeutral = function(self, config)
+		config = config or {}
+
+		if btnNeutralQuadData == nil then
+			btnNeutralQuadData = Data:FromBundle("images/button_neutral.png")
+		end
+
+		if btnNeutralPressedQuadData == nil then
+			btnNeutralPressedQuadData = Data:FromBundle("images/button_neutral_pressed.png")
+		end
+
+		if btnNeutralSelectedQuadData == nil then
+			btnNeutralSelectedQuadData = Data:FromBundle("images/button_selected.png")
+		end
+
+		if btnNeutralDisabledQuadData == nil then
+			btnNeutralDisabledQuadData = Data:FromBundle("images/button_neutral_disabled.png")
+		end
+
+		local displayAsDisabled = false
+		if config.displayAsDisabled == true then
+			config.displayAsDisabled = nil -- remove from config as not expected in button config
+			displayAsDisabled = true
+
+			config.textColor = theme.buttonColorDisabled
+			config.textColorPressed = theme.buttonColorDisabled
+			config.textColorSelected = theme.buttonColorDisabled
+		end
+
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralPressedQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		config.backgroundQuadSelected = Quad()
+		config.backgroundQuadSelected.Image = {
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralSelectedQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		config.backgroundQuadDisabled = Quad()
+		config.backgroundQuadDisabled.Image = {
+			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralDisabledQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		return ui.button(self, config)
+	end
+
+	local btnPositiveQuadData
+	local btnPositivePressedQuadData
+	local btnPositiveDisabledQuadData
+	ui.buttonPositive = function(self, config)
+		config = config or {}
+		config.textColor = theme.buttonPositiveTextColor
+		config.textColorPressed = theme.buttonPositiveTextColor
+
+		if btnPositiveQuadData == nil then
+			btnPositiveQuadData = Data:FromBundle("images/button_positive.png")
+		end
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = btnPositiveQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		if btnPositivePressedQuadData == nil then
+			btnPositivePressedQuadData = Data:FromBundle("images/button_positive_pressed.png")
+		end
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
+			data = btnPositivePressedQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		if btnPositiveDisabledQuadData == nil then
+			btnPositiveDisabledQuadData = Data:FromBundle("images/button_disabled.png")
+		end
+		config.backgroundQuadDisabled = Quad()
+		config.backgroundQuadDisabled.Image = {
+			data = btnPositiveDisabledQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		return ui.button(self, config)
+	end
+
+	ui.buttonNegative = function(self, config)
+		config = config or {}
+		config.textColor = theme.buttonNegativeTextColor
+		config.textColorPressed = theme.buttonNegativeTextColor
+
+		local image = Data:FromBundle("images/button_negative.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		image = Data:FromBundle("images/button_negative_pressed.png")
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		return ui.button(self, config)
+	end
+
+	ui.buttonMoney = function(self, config)
+		config = config or {}
+		local image = Data:FromBundle("images/button_money.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		return ui.button(self, config)
+	end
+
+	ui.buttonLink = function(self, config)
+		config = config or {}
+		config.borders = false
+		config.padding = false
+		config.underline = true
+		config.shadow = false
+		config.color = Color(0, 0, 0, 0)
+		config.textColor = theme.urlColor
+
+		return ui.button(self, config)
+	end
+
+	ui.buttonSecondary = function(self, config)
+		config = config or {}
+		config.textColor = config.textColor or theme.buttonSecondaryTextColor
+
+		local image = Data:FromBundle("images/button_secondary.png")
+		config.backgroundQuad = Quad()
+		config.backgroundQuad.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 } --[[, slice9Scale = 0.1 ]],
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		image = Data:FromBundle("images/button_secondary_pressed.png")
+		config.backgroundQuadPressed = Quad()
+		config.backgroundQuadPressed.Image = {
+			data = image,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+
+		return ui.button(self, config)
+	end
+
+	-- legacy
+	ui.createButton = function(_, content, config)
+		config = config or {}
+		config.content = content
+		return ui:button(config)
+	end -- createButton (legacy)
 
 	ui.createComboBox = function(self, stringOrShape, choices, config)
 		if choices == nil then
 			return
 		end
 
-		local btn = self:createButton(stringOrShape, config)
+		config = config or {}
+		config.content = stringOrShape
+
+		local btn = self:buttonNeutral(config)
 
 		btn.onSelect = function(_, _) end
 
 		btn.onRelease = function(_)
 			btn:disable()
 
-			local selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.parent)
+			local selector
+
+			local choiceOnRelease = function(self)
+				if self._choiceIndex == nil then
+					return
+				end
+				btn.selectedRow = self._choiceIndex
+				if btn.onSelect ~= nil then
+					btn:onSelect(self._choiceIndex)
+				end
+				if selector.close then
+					selector:close()
+				end
+			end
+
+			local choiceParentDidResize = function(self)
+				self.Width = self.parent.Width
+			end
+
+			local cells = {}
+
+			local scroll = ui:createScroll({
+				direction = "down",
+				cellPadding = 0,
+				padding = 0,
+				loadCell = function(index)
+					local choice = choices[index]
+					if choice then
+						local c = table.remove(cells)
+						if c ~= nil then
+							c.text = choice
+						else
+							c = ui:button({
+								content = choice,
+								borders = false,
+								shadow = false,
+								unfocuses = false,
+							})
+							c.parentDidResize = choiceParentDidResize
+							c.onRelease = choiceOnRelease
+						end
+						c._choiceIndex = index
+
+						if btn.selectedRow == c._choiceIndex then
+							c:select()
+						end
+
+						return c
+					end
+				end,
+				unloadCell = function(_, cell) -- index, cell
+					cell:setParent(nil)
+					table.insert(cells, cell)
+				end,
+			})
+
+			scroll.Height = 200
+			scroll.Width = 100
 
 			focus(nil)
+
+			selector = ui:createFrame(Color(0, 0, 0, 100))
+			selector:setParent(btn.parent)
+
+			scroll:setParent(selector)
+
 			comboBoxSelector = selector
 
-			local frame = ui:createFrame(Color(255, 255, 255))
-			frame:setParent(selector)
-			frame.IsMask = true
-			frame.pos = { theme.paddingTiny, theme.paddingTiny }
-			frame.Width = btn.Width + theme.padding * 2
-
-			local choiceButtons = {}
-
-			local container = ui:createFrame(Color.transparent)
-			container:setParent(frame)
-
-			local showBelow = false
-			local showAbove = false
-
-			local down = ui:createButton("⬇️", { borders = true, shadow = false, unfocuses = false })
-			-- NOTE: setting parent after hiding creates issues with collisions, it should not...
-			down:setParent(frame)
-			down.pos.Z = -20
-			down:hide()
-			down:disable()
-
-			local up = ui:createButton("⬆️", { borders = true, shadow = false, unfocuses = false })
-			up:setParent(frame)
-			up.pos.Z = -20
-			up:hide()
-			up:disable()
-
-			local dragged = false
-			local selectedBtn = nil
-			local totaldragY = 0
-
-			local function onDrag(_, pe)
-				totaldragY = totaldragY + pe.DY
-				if dragged == false and math.abs(totaldragY) > 5 then
-					dragged = true
-				end
-
-				if selectedBtn ~= nil then
-					selectedBtn:unselect()
-					selectedBtn = nil
-				end
-
-				container.pos.Y = container.pos.Y + pe.DY
-				if container.pos.Y >= 0 then
-					container.pos.Y = 0
-					if down:isVisible() then
-						down:hide()
-						down:disable()
-					end
-				end
-
-				if container.pos.Y + container.Height <= frame.Height then
-					container.pos.Y = frame.Height - container.Height
-					if up:isVisible() then
-						up:hide()
-						up:disable()
-					end
-				end
-
-				if down:isVisible() == false and container.pos.Y < 0 then
-					down:show()
-					down:enable()
-				end
-				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
-					up:show()
-					up:enable()
-				end
-			end
-
-			local function onRelease(self)
-				if dragged == false then
-					btn.selectedRow = self._choiceIndex
-					if btn.onSelect ~= nil then
-						btn:onSelect(self._choiceIndex)
-					end
-					if selector.close then
-						selector:close()
-					end
-				end
-				dragged = false
-			end
-
-			local function onPress(self)
-				dragged = false
-				totaldragY = 0
-				if selectedBtn ~= nil then
-					selectedBtn:unselect()
-				end
-				selectedBtn = self
-				self:select()
-			end
-
-			for i, choice in ipairs(choices) do
-				local c = ui:createButton(choice, { borders = false, shadow = false, unfocuses = false })
-				c:setParent(container)
-
-				c._onDrag = onDrag
-				c._choiceIndex = i
-
-				if selectedBtn == nil and btn.selectedRow ~= nil and i == btn.selectedRow then
-					c:select()
-					selectedBtn = c
-				end
-
-				c.onRelease = onRelease
-				c.onPress = onPress
-
-				table.insert(choiceButtons, c)
-			end
-
-			down.onPress = function()
-				showBelow = true
-			end
-			down.onRelease = function()
-				showBelow = false
-			end
-			down.onCancel = function()
-				showBelow = false
-			end
-
-			up.onPress = function()
-				showAbove = true
-			end
-			up.onRelease = function()
-				showAbove = false
-			end
-			up.onCancel = function()
-				showAbove = false
-			end
-
-			local comboTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-				if down:isVisible() == false and container.pos.Y < 0 then
-					down:show()
-					down:enable()
-				end
-				if up:isVisible() == false and container.pos.Y + container.Height > frame.Height then
-					up:show()
-					up:enable()
-				end
-
-				if showBelow then
-					container.pos.Y = container.pos.Y + dt * COMBO_BOX_SELECTOR_SPEED
-					if container.pos.Y >= 0 then
-						container.pos.Y = 0
-						down:onRelease()
-						down:hide()
-						down:disable()
-					end
-				end
-
-				if showAbove then
-					container.pos.Y = container.pos.Y - dt * COMBO_BOX_SELECTOR_SPEED
-					if container.pos.Y + container.Height <= frame.Height then
-						container.pos.Y = frame.Height - container.Height
-						up:onRelease()
-						up:hide()
-						up:disable()
-					end
-				end
-			end)
-
-			-- refresh
-
-			local absY = btn.pos.Y + btn.Height
-			local parent = btn.parent
-
-			while parent do
-				absY = absY + parent.pos.Y
-				parent = parent.parent
-			end
-
-			local contentHeight = 0
-
-			for _, c in ipairs(choiceButtons) do
-				contentHeight = contentHeight + c.Height
-			end
-
-			-- frame.Height = math.min(absY - Screen.SafeArea.Bottom, contentHeight)
-			frame.Height = math.min(
+			scroll.Height = math.min(
 				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
-				contentHeight
+				-- contentHeight,
+				300 -- max heigh for all combo boxes
 			)
 
-			frame.pos.Z = -10 -- render on front
+			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
 
-			selector.Height = frame.Height + theme.paddingTiny * 2
-			selector.Width = frame.Width + theme.paddingTiny * 2
+			selector.Height = scroll.Height + theme.paddingTiny * 2
+			selector.Width = scroll.Width + theme.paddingTiny * 2
 
-			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - frame.Height + theme.padding, 0)
+			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
 
 			parent = btn.parent
 			absPy = p.Y
@@ -3106,47 +3746,15 @@ function createUI(system)
 
 			selector.pos.Z = -10 -- render on front
 
-			container.Height = contentHeight
-			container.Width = frame.Width
-
-			local cursorY = container.Height
-			for _, c in ipairs(choiceButtons) do
-				c.Width = container.Width
-				c.pos.Y = cursorY - c.Height
-				cursorY = cursorY - c.Height
+			if btn.selectedRow then
+				scroll:setScrollIndexVisible(btn.selectedRow)
 			end
-
-			local selectionVisibilityOffset = 0
-			if selectedBtn ~= nil then
-				local visibleY = container.Height - frame.Height
-				if selectedBtn.pos.Y < visibleY then -- place button at center if not visible by default
-					selectionVisibilityOffset = visibleY
-						- selectedBtn.pos.Y
-						+ frame.Height * 0.5
-						- selectedBtn.Height * 0.5
-				end
-			end
-
-			container.pos.Y = frame.Height - container.Height + selectionVisibilityOffset
-			if container.pos.Y >= 0 then
-				container.pos.Y = 0
-			end
-			if container.pos.Y + container.Height <= frame.Height then
-				container.pos.Y = frame.Height - container.Height
-			end
-
-			up.pos = { 0, frame.Height - up.Height }
-			up.Width = frame.Width
-
-			down.pos = { 0, 0 }
-			down.Width = frame.Width
 
 			selector.close = function(_)
 				if comboBoxSelector == selector then
 					comboBoxSelector = nil
 				end
 				ease:cancel(selector)
-				comboTickListener:Remove()
 				selector:remove()
 				if btn.enable then
 					btn:enable()
@@ -3185,16 +3793,12 @@ function createUI(system)
 					end
 				end
 
-				if node.parent.contentDidResizeWrapper ~= nil then
-					node.parent:contentDidResizeWrapper()
-				end
+				_contentDidResizeWrapper(node.parent)
 			end
 		end
 
 		for _, child in pairs(rootChildren) do
-			if child.parentDidResizeWrapper ~= nil then
-				child:parentDidResizeWrapper()
-			end
+			_parentDidResizeWrapper(child)
 		end
 	end, { system = system == true and System or nil, topPriority = true })
 
@@ -3203,6 +3807,8 @@ function createUI(system)
 			return
 		end
 		-- TODO: only accept some indexed (no right mouse for example)
+
+		pressedScrolls = {}
 
 		local origin = Number3((pointerEvent.X - 0.5) * Screen.Width, (pointerEvent.Y - 0.5) * Screen.Height, 0)
 		local direction = { 0, 0, 1 }
@@ -3218,20 +3824,27 @@ function createUI(system)
 			return a.Distance < b.Distance
 		end)
 
+		local pressedCandidate = nil
+		local pressedCandidateImpact = nil
+
 		for _, impact in ipairs(impacts) do
 			skip = false
 
 			hitObject = impact.Shape or impact.Object
 
-			-- try to find parent ui object (when impact a child of a mutable shape)
+			-- try to find parent ui object (when impact is a child of a mutable shape)
 			while hitObject and not hitObject._node do
 				hitObject = hitObject:GetParent()
 			end
 
-			if hitObject and hitObject._node._onPress or hitObject._node._onRelease then
+			if
+				hitObject and (hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea)
+			then
 				-- check if hitObject is within a scroll
 				parent = hitObject._node.parent
 				while parent ~= nil do
+					-- skip action if node parented by scroll but not within area
+					-- note: a scroll can itself be within a scroll
 					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
 						skip = true
 						break
@@ -3240,24 +3853,39 @@ function createUI(system)
 				end
 
 				if skip == false then
-					pressed = hitObject._node
-
-					-- unfocus focused node, unless hit node.config.unfocused == false
-					if pressed ~= focused and pressed.config.unfocuses ~= false then
-						focus(nil)
-					end
-
-					if hitObject._node._onPress then
+					if hitObject._node.isScrollArea then
+						table.insert(pressedScrolls, hitObject._node)
 						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
 					end
-					if pressed.config.sound and pressed.config.sound ~= "" then
-						sfx(pressed.config.sound, { Spatialized = false })
+					if pressedCandidate == nil then
+						pressedCandidate = hitObject._node
+						pressedCandidateImpact = impact
 					end
-
-					pointerIndex = pointerEvent.Index
-					return true -- capture event, other listeners won't get it
 				end
 			end
+		end
+
+		if pressedCandidate ~= nil then
+			if not pressedCandidate.isScrollArea then
+				-- waiting for sufficiant drag delta to consider scroll as main pressed component
+				pressed = pressedCandidate
+			end
+
+			-- unfocus focused node, unless hit node.config.unfocused == false
+			if pressedCandidate ~= focused and pressedCandidate.config.unfocuses ~= false then
+				focus(nil)
+			end
+
+			if pressedCandidate.config.sound and pressedCandidate.config.sound ~= "" then
+				sfx(pressedCandidate.config.sound, { Spatialized = false })
+			end
+
+			if pressedCandidate._onPress then
+				pressedCandidate:_onPress(hitObject, pressedCandidateImpact.Block, pointerEvent)
+			end
+
+			pointerIndex = pointerEvent.Index
+			return true -- capture event, other listeners won't get it
 		end
 
 		-- did not touch anything, unfocus if focused node
@@ -3294,10 +3922,7 @@ function createUI(system)
 
 				parent = hitObject._node.parent
 				while parent ~= nil do
-					if
-						parent.isScrollArea == true
-						and (parent:dragging() or parent:containsPointer(pointerEvent) == false)
-					then
+					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
 						skip = true
 						break
 					end
@@ -3327,12 +3952,29 @@ function createUI(system)
 			return
 		end
 
+		local capture = false
+		for _, scroll in ipairs(pressedScrolls) do
+			capture = true -- at least one scroll capturing drag
+			if scroll._onDrag ~= nil then
+				scroll:_onDrag(pointerEvent)
+			end
+			if pressed == scroll then
+				pressedScrolls = {}
+				-- scroll took control, early return!
+				return true
+			end
+		end
+
 		local pressed = pressed
 		if pressed then
 			if pressed._onDrag then
 				pressed:_onDrag(pointerEvent)
 				return true -- capture only if onDrag is set on the node
 			end
+		end
+
+		if capture then
+			return true
 		end
 	end, { system = system == true and System or nil, topPriority = true })
 
@@ -3367,64 +4009,13 @@ function createUI(system)
 		end
 	end
 
-	ui.shrinkToFit = function(self, text, maxWidth)
-		if text.Width <= maxWidth then
-			return
-		end
-		local charWidth
-		local spaceWidth
-		local emojiWidth
-		local emojisPositions = {}
-		local firstEmojiUTF8Code = 0x2000
-
-		local pos = 1
-		for _, code in utf8.codes(text.Text) do
-			if code > firstEmojiUTF8Code then
-				table.insert(emojisPositions, i)
-			end
-			pos = pos + 1
-		end
-
-		do
-			local aChar = self:createText("a")
-			charWidth = aChar.Width
-			aChar:remove()
-			local aStr = self:createText("aa")
-			local strWidth = aStr.Width
-			aStr:remove()
-			spaceWidth = strWidth - 2 * charWidth
-			local anEmoji = self:createText("⬅️")
-			emojiWidth = anEmoji.Width
-			anEmoji:remove()
-		end
-
-		local currentWidth = 0
-		local nbChars = 0
-		local it = 1
-		for i = 1, #text.Text do
-			if i == emojisPositions[it] then
-				currentWidth = currentWidth + emojiWidth
-				it = it + 1
-			else
-				currentWidth = currentWidth + charWidth
-			end
-
-			if currentWidth + charWidth > maxWidth then
-				break
-			end
-			nbChars = nbChars + 1
-			currentWidth = currentWidth + spaceWidth
-		end
-
-		text.Text = text.Text:sub(1, nbChars) .. "…"
-	end
-
 	return ui
 end
 
 -- SHARED LISTENERS (for both shared an system UIs)
 
 currentKeyboardHeight = nil
+currentKeyboardTopMargin = 0 -- can be used to add extra margin above virtual keyboard
 
 function applyVirtualKeyboardOffset()
 	if currentKeyboardHeight == nil then
@@ -3448,7 +4039,7 @@ function applyVirtualKeyboardOffset()
 			keyboardToolbar = ui:createFrame(theme.modalTopBarColor)
 			keyboardToolbar.onPress = function() end -- blocker
 
-			local cutBtn = ui:createButton("✂️", { unfocuses = false })
+			local cutBtn = ui:buttonSecondary({ content = "✂️", unfocuses = false })
 			cutBtn:setParent(keyboardToolbar)
 			cutBtn.onRelease = function()
 				if focused.Text ~= nil then
@@ -3457,7 +4048,7 @@ function applyVirtualKeyboardOffset()
 				end
 			end
 
-			local copyBtn = ui:createButton("📑", { unfocuses = false })
+			local copyBtn = ui:buttonSecondary({ content = "📑", unfocuses = false })
 			copyBtn:setParent(keyboardToolbar)
 			copyBtn.onRelease = function()
 				if focused.Text ~= nil then
@@ -3465,7 +4056,7 @@ function applyVirtualKeyboardOffset()
 				end
 			end
 
-			local pasteBtn = ui:createButton("📋", { unfocuses = false })
+			local pasteBtn = ui:buttonSecondary({ content = "📋", unfocuses = false })
 			pasteBtn:setParent(keyboardToolbar)
 			pasteBtn.onRelease = function()
 				local s = System:GetFromClipboard()
@@ -3480,7 +4071,7 @@ function applyVirtualKeyboardOffset()
 			-- local redoBtn = ui:createButton("↩️", { unfocuses = false })
 			-- redoBtn:setParent(keyboardToolbar)
 
-			local closeBtn = ui:createButton("⬇️", { unfocuses = false })
+			local closeBtn = ui:buttonSecondary({ content = "⬇️", unfocuses = false })
 			closeBtn:setParent(keyboardToolbar)
 			closeBtn.onRelease = function()
 				focus(nil)
@@ -3500,7 +4091,7 @@ function applyVirtualKeyboardOffset()
 
 		local diff = 0
 
-		local bottomLine = currentKeyboardHeight + toolbarHeight + theme.paddingBig
+		local bottomLine = currentKeyboardHeight + toolbarHeight + currentKeyboardTopMargin + theme.paddingBig
 
 		if rootPos.Y < bottomLine then
 			diff = bottomLine - rootPos.Y
@@ -3594,12 +4185,50 @@ LocalEvent:Listen(LocalEvent.Name.VirtualKeyboardHidden, function()
 	end
 end, { system = System })
 
+-- GLOBAL FUNCTIONS USED BY ALL ENTITIES
+
+function _parentDidResizeWrapper(node)
+	if node == nil then
+		return
+	end
+	if node.parentDidResizeSystem ~= nil then
+		node:parentDidResizeSystem()
+	end
+	if node.parentDidResize ~= nil then
+		node:parentDidResize()
+	end
+end
+
+function _contentDidResizeWrapper(node)
+	if node == nil then
+		return
+	end
+	if node.contentDidResizeSystem ~= nil then
+		node:contentDidResizeSystem()
+	end
+	if node.contentDidResize ~= nil then
+		node:contentDidResize()
+	end
+end
+
+function _onRemoveWrapper(node)
+	if node == nil then
+		return
+	end
+	if node.onRemoveSystem ~= nil then
+		node:onRemoveSystem()
+	end
+	if node.onRemove ~= nil then
+		node:onRemove()
+	end
+end
+
 -- INIT
 
 sharedUI = createUI()
 
 sharedUI.systemUI = function(system)
-	if system ~= System then
+	if rawequal(system, System) == false then
 		error("can't access system UI", 2)
 	end
 

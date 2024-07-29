@@ -3,23 +3,20 @@ loading = {}
 loading.create = function(_, text, config)
 	local modal = require("modal")
 	local theme = require("uitheme").current
-	local ease = require("ease")
 
 	-- default config
-	local _config = {
+	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
-		sortOrder = 1 -- base sort order for the background frame, +1 for the texts
 	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+	if not ok then
+		error("loading:create(config) - config error: " .. err, 2)
 	end
 
-	local ui = _config.uikit
+	local ui = config.uikit
 
 	local minWidth = 200
 	local animationHeight = 20
@@ -41,27 +38,14 @@ loading.create = function(_, text, config)
 		return Screen.Height - 100
 	end
 
-	local position = function(modal, forceBounce)
-		local p = Number3(Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5, 0)
-
-		if not modal.updatedPosition or forceBounce then
-			modal.LocalPosition = p - { 0, 100, 0 }
-			modal.updatedPosition = true
-			ease:outElastic(modal, 0.3).LocalPosition = p
-		else
-			ease:cancel(modal)
-			modal.LocalPosition = p
-		end
+	local position = function(modal)
+		modal.pos = { Screen.Width * 0.5 - modal.Width * 0.5, Screen.Height * 0.5 - modal.Height * 0.5 }
 	end
 
-	local node = ui:createFrame(Color(0, 0, 0, 0))
-	node.object.SortOrder = _config.sortOrder
+	local node = ui:frame()
 	content.node = node
 
-	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
-
-	local label = ui:createText(text, Color.White)
-	label.object.SortOrder = _config.sortOrder + 1
+	local label = ui:createText("", Color.White)
 	label:setParent(node)
 	node.label = label
 
@@ -133,9 +117,7 @@ loading.create = function(_, text, config)
 		c3.object.Position.Z = 20
 	end
 
-	popup.bounce = function(_)
-		position(popup, true)
-	end
+	local popup = modal:create(content, maxWidth, maxHeight, position, ui)
 
 	popup.setText = function(self, text)
 		label.Text = text
@@ -143,7 +125,7 @@ loading.create = function(_, text, config)
 		node:refresh()
 	end
 
-	node:refresh()
+	popup:setText(text)
 
 	return popup
 end

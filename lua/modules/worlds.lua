@@ -70,7 +70,7 @@ worlds.createModalContent = function(_, config)
 		return Number2(grid.Width, grid.Height)
 	end
 
-	local onOpen = function(_, cell)
+	local onOpen = function(cell)
 		if cell.type ~= "world" then
 			return
 		end

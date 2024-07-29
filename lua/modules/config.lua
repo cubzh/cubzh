@@ -59,7 +59,7 @@ config.merge = function(self, defaults, overrides, options)
 				elseif opts.acceptTypes[k] ~= nil then
 					types = opts.acceptTypes[k]
 					for _, t in ipairs(types) do
-						if vType == t then
+						if vType == t or t == "*" then
 							conf[k] = v
 							overriden = true
 							break

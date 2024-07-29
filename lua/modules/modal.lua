@@ -1,9 +1,10 @@
---[[
-wip_modal module handles the "Work in Progress" modal.
-]]
---
+--- This modal allows to create uikit modals.
+--- Modals are UI elements that appear on top of the main application, blocking user interaction with the main interface.
 
 local modal = {}
+
+local ANIMATION_OFFSET = 50
+local ANIMATION_TIME = 0.22
 
 local modalContentMT = {
 	__index = function(t, k)
@@ -266,9 +267,11 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	-- a modal is always placed at top level when created
 	local node = ui:createNode()
 
+	local _position = Number3.Zero
+
 	content._attr.modal = node
-	node.contentStack = { content }
-	node.shouldRefreshContent = true
+	node.contentStack = {}
+	node.shouldRefreshContent = false
 
 	node.maxWidth = maxWidth
 	node.maxHeight = maxHeight
@@ -328,6 +331,12 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		self:refreshContent()
 	end
 
+	node.bounce = function(self)
+		ease:cancel(modal) -- cancel modal ease animations if any
+		self.LocalPosition = _position - { 0, ANIMATION_OFFSET, 0 }
+		ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
+	end
+
 	-- push new content page
 	node.push = function(self, content, skipRefresh)
 		if content == nil then
@@ -338,8 +347,13 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		content._attr.modal = self
 
 		local active = self.contentStack[#self.contentStack]
-		if active ~= nil and active.willResignActive ~= nil then
-			active:willResignActive()
+		local firstContent = true
+
+		if active ~= nil then
+			firstContent = false
+			if active.willResignActive ~= nil then
+				active:willResignActive()
+			end
 		end
 
 		table.insert(self.contentStack, content)
@@ -348,6 +362,16 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			if content.didBecomeActive ~= nil then
 				content:didBecomeActive()
 			end
+		end
+
+		if firstContent then
+			ease:cancel(modal) -- cancel modal ease animations if any
+			self.LocalPosition = _position - { 0, ANIMATION_OFFSET, 0 }
+			ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
+		else
+			ease:cancel(modal) -- cancel modal ease animations if any
+			self.LocalPosition = _position + { ANIMATION_OFFSET, 0, 0 }
+			ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
 		end
 	end
 
@@ -384,18 +408,23 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		collectgarbage("collect")
 
 		content = self.contentStack[#self.contentStack]
-		if content ~= nil and content.didBecomeActive ~= nil then
-			content:didBecomeActive()
+		if content ~= nil then
+			if content.didBecomeActive ~= nil then
+				content:didBecomeActive()
+			end
+			ease:cancel(modal) -- cancel modal ease animations if any
+			self.LocalPosition = _position - { ANIMATION_OFFSET, 0, 0 }
+			ease:outBack(self, ANIMATION_TIME).LocalPosition = _position
 		end
 	end
 
 	-- accessors
 	node._width = function(self)
-		return self.border.Width
+		return self.background.Width
 	end
 
 	node._height = function(self)
-		return self.border.Height
+		return self.background.Height
 	end
 
 	node._computeWidth = function(self)
@@ -418,6 +447,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 	node._updatePosition = function(self)
 		position(self)
+		_position = self.LocalPosition:Copy()
 	end
 
 	node._hideAllContentElements = function(_, content)
@@ -468,7 +498,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 	node._refreshTabs = function(self)
 		local nbTabs = #self._tabs
 		if nbTabs > 0 then
-			local eqWidth = (self.Width - theme.modalTabSpace * (nbTabs - 1)) / nbTabs
+			local eqWidth = ((self.Width - theme.padding * 2 + theme.modalTabSpace) / nbTabs) - theme.modalTabSpace
 			local fitsEqWidth = true
 			local largerTabWidth = 0
 			local w
@@ -483,7 +513,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 			local smallerTabsWidth = 0
 			if nbTabs > 1 and fitsEqWidth == false then
-				smallerTabsWidth = (self.Width - largerTabWidth - theme.modalTabSpace * (nbTabs - 1)) / (nbTabs - 1)
+				smallerTabsWidth = ((self.Width - theme.padding * 2 - largerTabWidth) / (nbTabs - 1))
+					- theme.modalTabSpace
 			end
 
 			local previous = nil
@@ -522,7 +553,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				if previous then
 					tab.pos.X = previous.pos.X + previous.Width + theme.modalTabSpace
 				else
-					tab.pos.X = 0
+					tab.pos.X = theme.padding
 				end
 				previous = tab
 			end
@@ -567,7 +598,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self._bottomRight = {}
 
 			if stackIndex > 1 then
-				local backBtn = ui:createButton("⬅️")
+				local backBtn = ui:buttonSecondary({ content = "⬅️", textColor = Color.White })
 				backBtn:setColor(theme.colorNegative)
 				backBtn.onRelease = function()
 					self:pop()
@@ -625,8 +656,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				end
 
 				tab:setParent(self.topBar)
-				tab.text = ui:createText(element.label, theme.textColor)
-				tab.short = ui:createText(element.short or ".", theme.textColor)
+				tab.text = ui:createText(element.label, theme.textColor, "default")
+				tab.short = ui:createText(element.short or ".", theme.textColor, "default")
 				tab.short:setParent(nil)
 				tab.action = element.action
 				tab.text:setParent(tab)
@@ -806,7 +837,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			self._title.Text = modalContent.title
 		end
 		if self._title and self._title.Width > availableWidthForTopCenter then
-			ui:shrinkToFit(self._title, availableWidthForTopCenter)
+			-- ui:shrinkToFit(self._title, availableWidthForTopCenter)
 			self._title.pos.X = topLeftElementsWidth + theme.padding
 			topCenterElementsWidth = self._title.Width
 			totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
@@ -847,14 +878,6 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				contentSize = contentSize + diff
 			end
 		end
-
-		-- border
-		self.border.Width = borderSize.Width
-		self.border.Height = borderSize.Height
-
-		-- shadow
-		self.shadow.Width = self.border.Width - theme.padding * 2
-		self.shadow.Height = theme.padding
 
 		-- background
 		self.background.Width = backgroundSize.Width
@@ -988,43 +1011,36 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		collectgarbage("collect")
 	end
 
-	local border = ui:createFrame(Color(120, 120, 120, 0))
-	border:setParent(node)
-	node.border = border
-
-	local shadow = ui:createFrame(Color(0, 0, 0, 20))
-	shadow:setParent(node)
-	shadow.LocalPosition = { theme.padding, -theme.padding, 0 }
-	node.shadow = shadow
-
 	-- background
-	local background = ui:createFrame(Color(0, 0, 0, 0.8))
+	local background = ui:frameGenericContainer()
 	background:setParent(node)
-	background.LocalPosition = { theme.modalBorder, theme.modalBorder, 0 }
+	background.pos = { 0, 0 }
 	node.background = background
 
 	-- top bar
-	local topBar = ui:createFrame(theme.modalTopBarColor)
+	local topBar = ui:frame()
 	topBar:setParent(background)
 	node.topBar = topBar
 
 	-- bottom bar
-	local bottomBar = ui:createFrame(theme.modalTopBarColor)
+	local bottomBar = ui:frame()
 	bottomBar:setParent(background)
 	node.bottomBar = bottomBar
 
 	-- close button
-	node.closeBtn = ui:createButton("❌")
+	node.closeBtn = ui:buttonSecondary({ content = "❌" })
 	node.closeBtn:setParent(topBar)
 	node.closeBtn.onRelease = function(_)
 		node:close()
 	end
 
-	node:_hideAllContentElements(content)
+	-- node:_hideAllContentElements(content)
 
-	-- do not refresh right away, as users could still be updating
-	-- content right after creating the modal.
-	node:_scheduleRefresh()
+	-- -- do not refresh right away, as users could still be updating
+	-- -- content right after creating the modal.
+	-- node:_scheduleRefresh()
+
+	node:push(content)
 
 	if content.didBecomeActive then
 		content:didBecomeActive()

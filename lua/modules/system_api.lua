@@ -159,7 +159,7 @@ mod.getMagicKey = function(_, usernameOrEmail, callback)
 	return req
 end
 
--- callback(err, credentials)
+-- callback(err, accountInfo)
 mod.login = function(_, config, callback)
 	local defaultConfig = {
 		usernameOrEmail = "",
@@ -175,7 +175,7 @@ mod.login = function(_, config, callback)
 		["password"] = config.password,
 	}
 
-	local req = System:HttpPost(url, body, function(resp)
+	local _ = System:HttpPost(url, body, function(resp)
 		if resp.StatusCode ~= 200 then
 			if resp.StatusCode >= 500 then
 				callback("internal server error", nil)
@@ -194,12 +194,21 @@ mod.login = function(_, config, callback)
 			return
 		end
 
-		callback(nil, res.credentials) -- success
+		callback(nil, res) -- success
 	end)
 end
 
 -- callback(err, credentials)
 mod.signUp = function(_, username, key, dob, callback)
+	if username == nil then
+		username = ""
+	end
+	if key == nil then
+		key = ""
+	end
+	if dob == nil then
+		dob = ""
+	end
 	if type(username) ~= "string" then
 		callback("1st arg must be a string")
 		return
@@ -275,11 +284,11 @@ end
 moduleMT.searchUser = function(_, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
-		api:error("api:getFriends(searchText, callback) - searchText must be a string", 2)
+		api:error("api:searchUser(searchText, callback) - searchText must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		api:error("api:getFriends(searchText, callback) - callback must be a function", 2)
+		api:error("api:searchUser(searchText, callback) - callback must be a function", 2)
 		return
 	end
 	local req = System:HttpGet(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
@@ -596,14 +605,16 @@ moduleMT.patchItem = function(self, itemID, data, callback)
 	return req
 end
 
+-- callback(err)
+-- err is nil on success and a string error message on failure
 moduleMT.updateAvatar = function(_, data, cb) -- data = { jacket="caillef.jacket", eyescolor={r=255, g=0, b=30} }
 	local url = mod.kApiAddr .. "/users/self/avatar"
 	local req = System:HttpPatch(url, {}, data, function(res)
 		if res.StatusCode ~= 200 then
-			cb("Error (" .. res.StatusCode .. "): can't update avatar.", false)
+			cb("Error (" .. res.StatusCode .. "): can't update avatar.")
 			return
 		end
-		cb(nil, true)
+		cb(nil) -- success
 	end)
 	return req
 end

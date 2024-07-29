@@ -203,19 +203,6 @@ vx::device::PerformanceTier vx::device::getPerformanceTier() {
         "iPhone13,2", // iPhone 12
         "iPhone13,3", // iPhone 12 Pro
         "iPhone13,4", // iPhone 12 Pro Max
-        "iPhone14,2", // iPhone 13 Pro
-        "iPhone14,3", // iPhone 13 Pro Max
-        "iPhone14,4", // iPhone 13 Mini
-        "iPhone14,5", // iPhone 13
-        "iPhone14,6", // iPhone SE 3rd Gen
-        "iPhone14,7", // iPhone 14
-        "iPhone14,8", // iPhone 14 Plus
-        "iPhone15,2", // iPhone 14 Pro
-        "iPhone15,3", // iPhone 14 Pro Max
-        "iPhone15,4", // iPhone 15
-        "iPhone15,5", // iPhone 15 Plus
-        "iPhone16,1", // iPhone 15 Pro
-        "iPhone16,2", // iPhone 15 Pro Max
         
         // iPad
         "iPad11,6",   // iPad 8th Gen (WiFi)
@@ -244,11 +231,28 @@ vx::device::PerformanceTier vx::device::getPerformanceTier() {
         "iPad14,6"    // iPad Pro 12.9 inch 6th Gen
     });
 
+    const std::unordered_set<std::string> highDevices({
+        "iPhone14,2", // iPhone 13 Pro
+        "iPhone14,3", // iPhone 13 Pro Max
+        "iPhone14,4", // iPhone 13 Mini
+        "iPhone14,5", // iPhone 13
+        "iPhone14,6", // iPhone SE 3rd Gen
+        "iPhone14,7", // iPhone 14
+        "iPhone14,8", // iPhone 14 Plus
+        "iPhone15,2", // iPhone 14 Pro
+        "iPhone15,3", // iPhone 14 Pro Max
+        "iPhone15,4", // iPhone 15
+        "iPhone15,5", // iPhone 15 Plus
+        "iPhone16,1", // iPhone 15 Pro
+        "iPhone16,2", // iPhone 15 Pro Max
+    });
+
     const std::string product = vx::device::hardwareProduct();
-    if (mediumDevices.find(product) != mediumDevices.end()) {
+    if (highDevices.find(product) != highDevices.end()) {
+        result = vx::device::PerformanceTier_High;
+    } else if (mediumDevices.find(product) != mediumDevices.end()) {
         result = vx::device::PerformanceTier_Medium;
     }
-    // else if ...
 
     return result;
 }
@@ -269,4 +273,8 @@ std::vector<std::string> vx::device::preferredLanguages() {
         languages.push_back([lang UTF8String]); // Convert each NSString to std::string and add to the vector
     }
     return languages;
+}
+
+void vx::device::refreshScreenOrientation() {
+    [UINavigationController attemptRotationToDeviceOrientation];
 }
