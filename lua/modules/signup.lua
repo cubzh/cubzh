@@ -2024,7 +2024,7 @@ signup.startFlow = function(self, config)
 								checks.error("Account creation failed")
 							else
 								System:StoreCredentials(credentials["user-id"], credentials.token)
-								System:DebugEvent("ACCOUNT_CREATED")
+								System:DebugEvent("App did receive account credentials")
 								-- Next sub-step: check if user account is complete
 								checks.checkUserAccountComplete()
 							end
