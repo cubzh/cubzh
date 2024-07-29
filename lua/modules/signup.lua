@@ -146,6 +146,7 @@ signup.startFlow = function(self, config)
 				}
 			end
 			backButton.onRelease = function(_)
+				System:DebugEvent("User presses BACK button")
 				signupFlow:back()
 			end
 			backButton.pos = { -backButton.Width, Screen.Height - Screen.SafeArea.Top - backButton.Height - padding }
@@ -360,11 +361,13 @@ signup.startFlow = function(self, config)
 				okBtn.onRelease = function()
 					okBtn:disable()
 
+					System:DebugEvent("User presses OK to submit verification code", { code = codeInput.Text })
+
 					local phoneVerifCode = codeInput.Text
 
 					api:patchUserInfo({ phoneVerifCode = phoneVerifCode }, function(err)
 						if err ~= nil then
-							print("ERR:", err)
+							System:DebugEvent("Request to verify phone number fails", { code = codeInput.Text })
 							okBtn:enable()
 							return
 						end
@@ -376,8 +379,9 @@ signup.startFlow = function(self, config)
 					local backup = self.onTextChange
 					self.onTextChange = nil
 					-- TODO: format?
-					-- TODO: debug event
 					self.onTextChange = backup
+
+					System:DebugEvent("User edits code input", { code = self.Text })
 				end
 
 				local secondaryTextStr =
@@ -554,6 +558,10 @@ signup.startFlow = function(self, config)
 				phoneInput:setParent(drawer)
 
 				okBtn.onRelease = function()
+					System:DebugEvent(
+						"User presses OK button to submit phone number",
+						{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
+					)
 					okBtn:disable()
 					-- signupFlow:push(createAvatarEditorStep())
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
@@ -566,7 +574,7 @@ signup.startFlow = function(self, config)
 
 					api:patchUserInfo(data, function(err)
 						if err ~= nil then
-							print("ERR:", err)
+							System:DebugEvent("Request to submit phone number fails")
 							okBtn:enable()
 							return
 						end
@@ -583,13 +591,18 @@ signup.startFlow = function(self, config)
 				end
 
 				countryInput.onSelect = function(self, index)
-					System:DebugEvent("User picks country for phone number")
 					self.Text = countryLabels[index] -- "FR +33"
 					-- find the position of the + char
 					local plusPos = string.find(self.Text, "+") -- 4
 					-- get the substring after the + char
 					local prefix = string.sub(self.Text, plusPos + 1) -- "33"
 					selectedPrefix = prefix
+
+					System:DebugEvent(
+						"User picks country for phone number",
+						{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
+					)
+
 					layoutPhoneInput()
 				end
 
@@ -604,6 +617,11 @@ signup.startFlow = function(self, config)
 						selectedPrefix = res.countryPrefix
 						layoutPhoneInput()
 					end
+
+					System:DebugEvent(
+						"User edits phone number",
+						{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
+					)
 
 					self.onTextChange = backup
 				end
@@ -811,31 +829,35 @@ signup.startFlow = function(self, config)
 						end
 					end)
 
-					-- if didStartTyping == false and self.Text ~= "" then
-					-- 	didStartTyping = true
-					-- 	System:DebugEvent("LOGIN_STARTED_TYPING_USERNAME")
-					-- end
+					System:DebugEvent("User edits username in text input", { username = self.Text })
 				end
 
 				confirmButton.onRelease = function()
 					showLoading()
 					if usernameInput.Text ~= "" then
+						System:DebugEvent(
+							"User presses OK button to submit username",
+							{ username = usernameInput.Text }
+						)
+
 						local req = api:patchUserInfo({ username = username, usernameKey = usernameKey }, function(err)
-							if err == nil then
-								-- success
-								Player.Username = username
-								System.AskedForMagicKey = false
-								signupFlow:push(createPhoneNumberStep())
-							else
+							if err ~= nil then
+								System:DebugEvent("Request to set username fails")
 								-- failure
 								usernameLabel.Text = "❌ " .. err
 								hideLoading()
+								return
 							end
+
+							-- success
+							Player.Username = username
+							System.AskedForMagicKey = false
+							signupFlow:push(createPhoneNumberStep())
 						end)
 						table.insert(requests, req)
 					else
 						-- text input is empty
-						usernameLabel.Text = "❌ Please enter a magic key"
+						usernameLabel.Text = "❌ Username can't be empty"
 						hideLoading()
 					end
 				end
@@ -1392,7 +1414,7 @@ signup.startFlow = function(self, config)
 				end
 
 				monthInput.onSelect = function(self, index)
-					System:DebugEvent("User selects DOB month")
+					System:DebugEvent("User selects DOB month", { month = index })
 					cache.dob.monthIndex = index
 					cache.dob.month = index
 					self.Text = monthNames[index]
@@ -1402,7 +1424,7 @@ signup.startFlow = function(self, config)
 				end
 
 				dayInput.onSelect = function(self, index)
-					System:DebugEvent("User selects DOB day")
+					System:DebugEvent("User selects DOB day", { day = index })
 					cache.dob.dayIndex = index
 					cache.dob.day = index
 					self.Text = dayNumbers[index]
@@ -1412,7 +1434,7 @@ signup.startFlow = function(self, config)
 				end
 
 				yearInput.onSelect = function(self, index)
-					System:DebugEvent("User selects DOB year")
+					System:DebugEvent("User selects DOB year", { year = years[index] })
 					cache.dob.yearIndex = index
 					cache.dob.year = years[index]
 					self.Text = yearStrings[index]
@@ -1440,23 +1462,25 @@ signup.startFlow = function(self, config)
 
 				okBtn.onRelease = function()
 					-- TODO: showLoading()
+					System:DebugEvent(
+						"User presses OK button on DOB form",
+						{ month = cache.dob.month, day = cache.dob.day, year = cache.dob.year }
+					)
 
 					-- construct date of birth string (mm-dd-yyyy)
 					local dobStr = string.format("%02d-%02d-%04d", cache.dob.month, cache.dob.day, cache.dob.year)
 
 					-- send API request to update user's date of birth
 					local req = api:patchUserInfo({ dob = dobStr }, function(err)
-						if err == nil then
-							-- success
-							-- Store information about user being <13yo
-							System.IsUserUnder13 = cache.dob.year > currentYear - 13
-							-- Go to next step
-							signupFlow:push(createUsernameInputStep())
-						else
-							-- failure
-							-- TODO: hideLoading()
-							-- TODO: error message?
+						if err ~= nil then
+							System:DebugEvent("Request to set DOB fails")
+							return
 						end
+
+						-- Store information about user being <13yo
+						System.IsUserUnder13 = cache.dob.year > currentYear - 13
+						-- Go to next step
+						signupFlow:push(createUsernameInputStep())
 					end)
 					table.insert(requests, req)
 				end
@@ -1559,6 +1583,7 @@ signup.startFlow = function(self, config)
 				okBtn = ui:buttonPositive({ content = "Done!", textSize = "big", padding = 10 })
 				okBtn.onRelease = function(_)
 					-- go to next step
+					System:DebugEvent("User presses OK button on avatar editor")
 					signupFlow:push(createDOBStep())
 				end
 				okBtn:disable()
@@ -1741,6 +1766,7 @@ signup.startFlow = function(self, config)
 				local okBtn = ui:buttonPositive({ content = "Ok, let's do this!", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
+					System:DebugEvent("User presses OK button on avatar presention")
 					signupFlow:push(createAvatarEditorStep())
 				end
 
@@ -1835,6 +1861,7 @@ signup.startFlow = function(self, config)
 				ease:outBack(startBtn, animationTime).pos = targetPos
 
 				startBtn.onRelease = function()
+					System:DebugEvent("User presses start button")
 					signupFlow:push(createAvatarPreviewStep())
 				end
 			end,
