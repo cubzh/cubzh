@@ -60,6 +60,16 @@ bodyParts = {
 bodyPartToWearablePart = {}
 bodyPartsBasePositions = {}
 
+utils.equipmentParents = function(_, player, itemCategory)
+	local parts = {
+		hair = player.Head,
+		jacket = { player.Body, player.RightArm, player.LeftArm },
+		pants = { player.RightLeg, player.LeftLeg },
+		boots = { player.RightFoot, player.LeftFoot },
+	}
+	return parts[itemCategory]
+end
+
 -- returns an array of shapes
 -- `testFunc` is a function(shape) -> boolean
 utils.findSubshapes = function(rootShape, testFunc)
@@ -95,30 +105,24 @@ local disableObject = function(object, v)
 	object.Physics = v and PhysicsMode.Disabled or PhysicsMode.TriggerPerBlock
 end
 
-local hideShapeSubshapes = function(shape, isHidden)
-	local count = shape.ChildrenCount
-	for i = 1, count do
-		disableObject(shape:GetChild(i), isHidden)
-	end
-end
-
 local playerHideSubshapes = function(isHidden)
 	local bodyParts = {
-		Player.Head,
-		Player.Body,
-		Player.LeftArm,
-		Player.LeftHand,
-		Player.RightArm,
-		Player.RightHand,
-		Player.LeftLeg,
-		Player.LeftFoot,
-		Player.RightLeg,
-		Player.RightFoot,
+		Player.Avatar.Head,
+		Player.Avatar.Body,
+		Player.Avatar.LeftArm,
+		Player.Avatar.LeftHand,
+		Player.Avatar.RightArm,
+		Player.Avatar.RightHand,
+		Player.Avatar.LeftLeg,
+		Player.Avatar.LeftFoot,
+		Player.Avatar.RightLeg,
+		Player.Avatar.RightFoot,
 	}
 	for _, bodyPart in ipairs(bodyParts) do
-		bodyPart.PrivateDrawMode = 0
-		disableObject(bodyPart, isHidden)
-		hideShapeSubshapes(bodyPart, isHidden)
+		require("hierarchyactions"):applyToDescendants(bodyPart, { includeRoot = true }, function(o)
+			o.PrivateDrawMode = 0
+			disableObject(o, isHidden)
+		end)
 	end
 end
 
@@ -127,44 +131,47 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 		error("wrong arguments")
 	end
 
-	if p_isWearable then
-		-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
-		if p_wearablePreviewMode == wearablePreviewMode.hide then
-			playerHideSubshapes(true)
-			local parents = __equipments.equipmentParent(Player, itemCategory)
-			local parentsType = type(parents)
-			if parentsType == "table" then
-				for _, parent in ipairs(parents) do
-					parent.PrivateDrawMode = 1
-					disableObject(parent, false)
-				end
-			elseif parentsType == "MutableShape" then
-				parents.PrivateDrawMode = 1
-				disableObject(parents, false)
-			else
-				error("unexpected 'parents' type:", parentsType)
-			end
-		elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
-			-- hide all avatar body parts and equipments
-			playerHideSubshapes(true)
-			-- show some of the avatar body parts based on the type of wearable being edited
-			local parents = __equipments.equipmentParent(Player, itemCategory)
-			local parentsType = type(parents)
-			if parentsType == "table" then
-				for _, parent in ipairs(parents) do
-					disableObject(parent, false)
-				end
-			elseif parentsType == "MutableShape" then
-				disableObject(parents, false)
-			else
-				error("unexpected 'parents' type:", parentsType)
-			end
-		elseif p_wearablePreviewMode == wearablePreviewMode.fullBody then
-			playerHideSubshapes(false)
-		end
-	else
+	if not p_isWearable then
 		-- item is not a wearable, so the player avatar should not be visible
 		playerHideSubshapes(true)
+		return
+	end
+
+	if p_wearablePreviewMode == wearablePreviewMode.fullBody then
+		playerHideSubshapes(false)
+		return
+	end
+
+	playerHideSubshapes(true)
+
+	-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
+	if p_wearablePreviewMode == wearablePreviewMode.hide then
+		local parents = utils:equipmentParents(Player, itemCategory)
+		local parentsType = type(parents)
+		if parentsType == "table" then
+			for _, parent in ipairs(parents) do
+				parent.PrivateDrawMode = 1
+				disableObject(parent, false)
+			end
+		elseif parentsType == "MutableShape" then
+			parents.PrivateDrawMode = 1
+			disableObject(parents, false)
+		else
+			error("unexpected 'parents' type:", parentsType)
+		end
+	elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
+		-- show some of the avatar body parts based on the type of wearable being edited
+		local parents = utils:equipmentParents(Player, itemCategory)
+		local parentsType = type(parents)
+		if parentsType == "table" then
+			for _, parent in ipairs(parents) do
+				disableObject(parent, false)
+			end
+		elseif parentsType == "MutableShape" then
+			disableObject(parents, false)
+		else
+			error("unexpected 'parents' type:", parentsType)
+		end
 	end
 end
 
@@ -411,7 +418,7 @@ Client.OnStart = function()
 	focusModeName = { "Others Visible", "Others Transparent", "Others Hidden" }
 
 	wearablePreviewMode = { hide = 1, bodyPart = 2, fullBody = 3 }
-	currentWearablePreviewMode = wearablePreviewMode.hide
+	currentWearablePreviewMode = wearablePreviewMode.bodyPart
 
 	currentMode = nil
 	currentEditSubmode = nil
@@ -578,7 +585,7 @@ Client.OnStart = function()
 	end, loadConfig)
 
 	updateWearableShapesPosition = function()
-		local parents = __equipments.equipmentParent(Player, itemCategory)
+		local parents = utils:equipmentParents(Player, itemCategory)
 		local parentsType = type(parents)
 
 		-- parents can be a Lua table (containing Shapes) or a Shape
@@ -612,7 +619,6 @@ Client.OnStart = function()
 			child.Rotation = parent.Rotation
 
 			if itemCategory ~= "jacket" then
-				fitObjectToScreen(item, nil)
 				return
 			end
 
@@ -3082,117 +3088,103 @@ function post_item_load()
 		return nbShapes
 	end
 
-	-- local avatarLoadedListener
-	-- avatarLoadedListener =
-	LocalEvent:listen(LocalEvent.Name.AvatarLoaded, function()
-		-- if equipment, show preview buttons
-		if not isWearable then
-			return
-		end
-
-		-- T-pose
-		for _, p in ipairs(bodyParts) do
-			if p == "RightArm" or p == "LeftArm" or p == "RightHand" or p == "LeftHand" then
-				Player[p].Rotation = Number3(0, 0, 0)
-			end
-			Player[p].IgnoreAnimations = true
-			Player[p].Physics = PhysicsMode.TriggerPerBlock
-		end
-		Player.Physics = PhysicsMode.Disabled
-
-		for _, shape in pairs(Player.equipments) do
-			shape.Physics = PhysicsMode.Trigger
-			for _, s in ipairs(shape.attachedParts or {}) do
-				s.Physics = PhysicsMode.Trigger
-			end
-		end
-
-		-- Remove Equipments
-		Player.equipments = Player.equipments or {}
-		if Player.equipments[itemCategory] then
-			local shape = Player.equipments[itemCategory]
-			for _, s in ipairs(shape.attachedParts or {}) do
-				s:RemoveFromParent()
-			end
-			shape:RemoveFromParent()
-		end
-
-		visibilityMenu = ui:frameTextBackground()
-
-		local onlyItemBtn = ui:createButton("⚅")
-		local itemPlusBodyPartBtn = ui:createButton("✋")
-		local itemPlusAvatarBtn = ui:createButton("👤")
-
-		-- Button for item alone
-		onlyItemBtn:setParent(visibilityMenu)
-		onlyItemBtn.onRelease = function(_)
-			-- update state of the 3 preview buttons
-			onlyItemBtn:select()
-			itemPlusBodyPartBtn:unselect()
-			itemPlusAvatarBtn:unselect()
-
-			-- update avatar visibility
-			currentWearablePreviewMode = wearablePreviewMode.hide
-			playerUpdateVisibility(isWearable, currentWearablePreviewMode)
-
-			-- update wearable item position
-			updateWearableShapesPosition()
-		end
-		onlyItemBtn:onRelease()
-
-		-- Button for item and parent body part
-		itemPlusBodyPartBtn:setParent(visibilityMenu)
-		itemPlusBodyPartBtn.onRelease = function(_)
-			-- update state of the 3 preview buttons
-			onlyItemBtn:unselect()
-			itemPlusBodyPartBtn:select()
-			itemPlusAvatarBtn:unselect()
-
-			-- update avatar visibility
-			currentWearablePreviewMode = wearablePreviewMode.bodyPart
-			playerUpdateVisibility(isWearable, currentWearablePreviewMode)
-
-			-- update wearable item position
-			updateWearableShapesPosition()
-		end
-
-		-- Button for item and full avatar
-		itemPlusAvatarBtn:setParent(visibilityMenu)
-		itemPlusAvatarBtn.onRelease = function(_)
-			-- update state of the 3 preview buttons
-			onlyItemBtn:unselect()
-			itemPlusBodyPartBtn:unselect()
-			itemPlusAvatarBtn:select()
-
-			-- update avatar visibility
-			currentWearablePreviewMode = wearablePreviewMode.fullBody
-			playerUpdateVisibility(isWearable, currentWearablePreviewMode)
-
-			-- update wearable item position
-			updateWearableShapesPosition()
-		end
-
-		visibilityMenu.refresh = function(self)
-			local padding = ui_config.padding
-
-			onlyItemBtn.pos = { padding, padding, 0 }
-			itemPlusBodyPartBtn.pos = onlyItemBtn.pos + { 0, onlyItemBtn.Height + padding, 0 }
-			itemPlusAvatarBtn.pos = itemPlusBodyPartBtn.pos + { 0, itemPlusBodyPartBtn.Height + padding, 0 }
-
-			w, h = computeContentSize(self)
-			self.Width = w + padding * 2
-			self.Height = h + padding * 2
-			self.pos = modeMenu.pos + { modeMenu.Width + padding, modeMenu.Height - self.Height, 0 }
-		end
-
-		visibilityMenu:refresh()
-
-		Player:SetParent(World)
-		Player.Scale = 1
-	end)
-
 	fitObjectToScreen(item, settings.cameraStartRotation) -- sets cameraCurrentState.target
 	refreshBlockHighlight()
+
+	-- if equipment, show preview buttons
+	if not isWearable then
+		return
+	end
+
+	-- T-pose
+	for _, p in ipairs(bodyParts) do
+		if p == "RightArm" or p == "LeftArm" or p == "RightHand" or p == "LeftHand" then
+			Player[p].Rotation = Number3(0, 0, 0)
+		end
+		Player[p].IgnoreAnimations = true
+		Player[p].Physics = PhysicsMode.TriggerPerBlock
+	end
+	Player.Physics = PhysicsMode.Disabled
+
+	visibilityMenu = ui:frameTextBackground()
+
+	local onlyItemBtn = ui:createButton("⚅")
+	itemPlusBodyPartBtn = ui:createButton("✋")
+	local itemPlusAvatarBtn = ui:createButton("👤")
+
+	-- Button for item alone
+	onlyItemBtn:setParent(visibilityMenu)
+	onlyItemBtn.onRelease = function(_)
+		-- update state of the 3 preview buttons
+		onlyItemBtn:select()
+		itemPlusBodyPartBtn:unselect()
+		itemPlusAvatarBtn:unselect()
+
+		-- update avatar visibility
+		currentWearablePreviewMode = wearablePreviewMode.hide
+		playerUpdateVisibility(isWearable, currentWearablePreviewMode)
+
+		-- update wearable item position
+		updateWearableShapesPosition()
+	end
+	onlyItemBtn:onRelease()
+
+	-- Button for item and parent body part
+	itemPlusBodyPartBtn:setParent(visibilityMenu)
+	itemPlusBodyPartBtn.onRelease = function(_)
+		-- update state of the 3 preview buttons
+		onlyItemBtn:unselect()
+		itemPlusBodyPartBtn:select()
+		itemPlusAvatarBtn:unselect()
+
+		-- update avatar visibility
+		currentWearablePreviewMode = wearablePreviewMode.bodyPart
+		playerUpdateVisibility(isWearable, currentWearablePreviewMode)
+
+		-- update wearable item position
+		updateWearableShapesPosition()
+	end
+
+	-- Button for item and full avatar
+	itemPlusAvatarBtn:setParent(visibilityMenu)
+	itemPlusAvatarBtn.onRelease = function(_)
+		-- update state of the 3 preview buttons
+		onlyItemBtn:unselect()
+		itemPlusBodyPartBtn:unselect()
+		itemPlusAvatarBtn:select()
+
+		-- update avatar visibility
+		currentWearablePreviewMode = wearablePreviewMode.fullBody
+		playerUpdateVisibility(isWearable, currentWearablePreviewMode)
+
+		-- update wearable item position
+		updateWearableShapesPosition()
+	end
+
+	visibilityMenu.refresh = function(self)
+		local padding = ui_config.padding
+
+		onlyItemBtn.pos = { padding, padding, 0 }
+		itemPlusBodyPartBtn.pos = onlyItemBtn.pos + { 0, onlyItemBtn.Height + padding, 0 }
+		itemPlusAvatarBtn.pos = itemPlusBodyPartBtn.pos + { 0, itemPlusBodyPartBtn.Height + padding, 0 }
+
+		w, h = computeContentSize(self)
+		self.Width = w + padding * 2
+		self.Height = h + padding * 2
+		self.pos = modeMenu.pos + { modeMenu.Width + padding, modeMenu.Height - self.Height, 0 }
+	end
+
+	visibilityMenu:refresh()
+
+	Player:SetParent(World)
+	Player.Scale = 1
+	-- remove current equipment
+	Player.Avatar:loadEquipment({ type = itemCategory })
+
+	-- need timer so that everything is loaded
+	Timer(1, function()
+		itemPlusBodyPartBtn:onRelease()
+	end)
 end
 
 function clamp(value, min, max)
