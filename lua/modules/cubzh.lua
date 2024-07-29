@@ -1860,7 +1860,7 @@ function home()
 			return btn
 		end
 
-		local btnHome = createBottomBarButton("Home", "images/logo.png")
+		-- local btnHome = createBottomBarButton("Home", "images/logo.png")
 		local btnExplore = createBottomBarButton("Explore", "images/icon-explore.png")
 		local btnProfile = createBottomBarButton("Profile", "images/icon-profile.png")
 		local btnFriends = createBottomBarButton("Friends", "images/icon-friends.png")
@@ -1880,25 +1880,22 @@ function home()
 
 		bottomBar.parentDidResize = function(self)
 			self.Width = self.parent.Width
-			local btnWidth = self.Width / 5.0
+			local btnWidth = self.Width / 4.0
 
-			local h = btnHome.content.Height + Screen.SafeArea.Bottom
+			local h = btnExplore.content.Height + Screen.SafeArea.Bottom
 
 			self.Height = h
-			btnHome.Height = h
 			btnExplore.Height = h
 			btnProfile.Height = h
 			btnFriends.Height = h
 			btnCreate.Height = h
 
-			btnHome.Width = btnWidth
 			btnExplore.Width = btnWidth
 			btnProfile.Width = btnWidth
 			btnFriends.Width = btnWidth
 			btnCreate.Width = btnWidth
 
-			btnHome.pos = { 0, 0 }
-			btnExplore.pos = btnHome.pos + { btnWidth, 0 }
+			btnExplore.pos = { 0, 0 }
 			btnCreate.pos = btnExplore.pos + { btnWidth, 0 }
 			btnProfile.pos = btnCreate.pos + { btnWidth, 0 }
 			btnFriends.pos = btnProfile.pos + { btnWidth, 0 }
