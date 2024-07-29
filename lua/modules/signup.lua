@@ -583,7 +583,7 @@ signup.startFlow = function(self, config)
 				end
 
 				countryInput.onSelect = function(self, index)
-					System:DebugEvent("User did pick country for phone number")
+					System:DebugEvent("User picks country for phone number")
 					self.Text = countryLabels[index] -- "FR +33"
 					-- find the position of the + char
 					local plusPos = string.find(self.Text, "+") -- 4
@@ -1140,7 +1140,7 @@ signup.startFlow = function(self, config)
 
 					if didStartTyping == false and self.Text ~= "" then
 						didStartTyping = true
-						System:DebugEvent("LOGIN_STARTED_TYPING_USERNAME")
+						System:DebugEvent("User starts typing username")
 					end
 				end
 
@@ -1392,7 +1392,7 @@ signup.startFlow = function(self, config)
 				end
 
 				monthInput.onSelect = function(self, index)
-					System:DebugEvent("User did select DOB month")
+					System:DebugEvent("User selects DOB month")
 					cache.dob.monthIndex = index
 					cache.dob.month = index
 					self.Text = monthNames[index]
@@ -1402,7 +1402,7 @@ signup.startFlow = function(self, config)
 				end
 
 				dayInput.onSelect = function(self, index)
-					System:DebugEvent("User did select DOB day")
+					System:DebugEvent("User selects DOB day")
 					cache.dob.dayIndex = index
 					cache.dob.day = index
 					self.Text = dayNumbers[index]
@@ -1412,7 +1412,7 @@ signup.startFlow = function(self, config)
 				end
 
 				yearInput.onSelect = function(self, index)
-					System:DebugEvent("User did select DOB year")
+					System:DebugEvent("User selects DOB year")
 					cache.dob.yearIndex = index
 					cache.dob.year = years[index]
 					self.Text = yearStrings[index]
@@ -1972,7 +1972,7 @@ signup.startFlow = function(self, config)
 						System:DebugEvent("App performs initial checks")
 						api:getMinAppVersion(function(error, minVersion)
 							if error ~= nil then
-								System:DebugEvent("Request to get min app version failed", { error = error })
+								System:DebugEvent("Request to get min app version fails", { error = error })
 								checks.error() -- Show error message with retry button
 								return
 							end
@@ -2024,7 +2024,7 @@ signup.startFlow = function(self, config)
 								checks.error("Account creation failed")
 							else
 								System:StoreCredentials(credentials["user-id"], credentials.token)
-								System:DebugEvent("App did receive account credentials")
+								System:DebugEvent("App receives account credentials")
 								-- Next sub-step: check if user account is complete
 								checks.checkUserAccountComplete()
 							end
@@ -2078,7 +2078,7 @@ signup.startFlow = function(self, config)
 						api:getUserInfo(System.UserID, function(userInfo, err)
 							if err ~= nil then
 								System:DebugEvent(
-									"Request to obtain user info with credentials failed",
+									"Request to obtain user info with credentials fails",
 									{ statusCode = err.statusCode, error = err.message }
 								)
 

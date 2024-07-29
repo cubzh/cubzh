@@ -307,7 +307,7 @@ mod.createModal = function(_, config)
 
 		if didStartTyping == false and self.Text ~= "" then
 			didStartTyping = true
-			System:DebugEvent("LOGIN_STARTED_TYPING_USERNAME")
+			System:DebugEvent("User starts typing username to login")
 		end
 	end
 
