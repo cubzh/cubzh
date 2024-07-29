@@ -1222,9 +1222,9 @@ signup.startFlow = function(self, config)
 					System.SavedUsernameOrEmail = usernameInput.Text
 
 					-- if user asked for magic key in the past, this is the best time to forget about it.
-					if System.AskedForMagicKey == false then
-						print("[STATEMENT NOT NEEDED] System.AskedForMagicKey = false")
-					end
+					-- if System.AskedForMagicKey == false then
+					-- 	print("[STATEMENT NOT NEEDED] System.AskedForMagicKey = false")
+					-- end
 					System.AskedForMagicKey = false
 
 					errorLabel.Text = ""
