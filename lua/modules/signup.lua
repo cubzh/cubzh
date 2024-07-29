@@ -2071,6 +2071,7 @@ signup.startFlow = function(self, config)
 							-- Update values in System
 							System.Username = userInfo.username or ""
 							System.HasEmail = userInfo.hasEmail or false
+							System.HasDOB = userInfo.hasDOB
 							System.IsUserUnder13 = userInfo.isUnder13
 							-- System.HasPhoneNumber = userInfo.hasPhoneNumber or false
 
