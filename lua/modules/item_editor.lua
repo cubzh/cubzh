@@ -547,7 +547,7 @@ Client.OnStart = function()
 			end
 
 			if enableWearablePattern then
-				local str = "official.pattern" .. itemCategory
+				local str = "shapes/pattern" .. itemCategory
 				pattern = bundle:Shape(str)
 				pattern.Physics = PhysicsMode.Disabled
 			end
