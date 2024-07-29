@@ -10,10 +10,13 @@ local theme = require("uitheme").current
 local MIN_CELL_SIZE = 140
 local MAX_CELL_SIZE = 200
 local MIN_CELLS_PER_ROW = 3 -- prority over MIN_CELL_SIZE
+local LOAD_CONTENT_DELAY = 0.3
 
 itemGrid.create = function(_, config)
 	-- load config (overriding defaults)
 	local defaultConfig = {
+		-- type of entities displayed
+		type = "items", -- "items", "worlds"
 		-- shows search bar when true
 		searchBar = true,
 		--
@@ -65,6 +68,7 @@ itemGrid.create = function(_, config)
 
 	local ui = config.uikit
 	local sortBy = config.sort
+	local type = config.type
 
 	local grid = ui:createFrame(Color(40, 40, 40)) -- Color(255,0,0)
 
@@ -221,20 +225,34 @@ itemGrid.create = function(_, config)
 							cellSelector:setParent(cell)
 							cellSelector.Width = cell.Width
 							cellSelector.Height = cell.Height
+							cellSelector.LocalPosition.Z = -1
 						end
 
 						cell.onRelease = function()
 							if grid.onOpen then
-								local entity = {
-									type = "item",
-									id = cell.id,
-									repo = cell.repo,
-									name = cell.name,
-									fullName = cell.repo .. "." .. cell.name,
-									likes = cell.likes,
-									liked = cell.liked,
-									category = cell.category,
-								}
+								local entity
+
+								if type == "items" then
+									entity = {
+										type = type,
+										id = cell.id,
+										repo = cell.repo,
+										name = cell.name,
+										fullName = cell.repo .. "." .. cell.name,
+										likes = cell.likes,
+										liked = cell.liked,
+										category = cell.category,
+									}
+								elseif type == "worlds" then
+									entity = {
+										type = type,
+										id = cell.id,
+										title = cell.title,
+										name = cell.name,
+										likes = cell.likes,
+										liked = cell.liked,
+									}
+								end
 								grid.onOpen(entity)
 							else
 								cellSelector:setParent(nil)
@@ -247,7 +265,11 @@ itemGrid.create = function(_, config)
 
 						local titleFrame = ui:frameTextBackground()
 						titleFrame:setParent(cell)
-						titleFrame.pos = { theme.paddingTiny, theme.paddingTiny }
+						if type == "items" then
+							titleFrame.pos = { theme.paddingTiny, theme.paddingTiny }
+						elseif type == "worlds" then
+							titleFrame.pos = { theme.paddingTiny * 2, theme.paddingTiny * 2 }
+						end
 						titleFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 						local title = ui:createText("…", Color.White, "small")
@@ -259,42 +281,48 @@ itemGrid.create = function(_, config)
 						cell.title = title
 
 						if config.displayLikes then
-							local likesFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+							local likesFrame = ui:frameTextBackground()
 							likesFrame:setParent(cell)
 							likesFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 							local likes = ui:createText("❤️ …", Color.White, "small")
 							likes:setParent(likesFrame)
 
-							likes.pos = { theme.padding, theme.padding }
+							likes.pos = { theme.paddingTiny, theme.paddingTiny }
 
 							cell.likesFrame = likesFrame
 							cell.likesLabel = likes
 						end
 
 						if config.displayPrice then
-							local priceFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+							local priceFrame = ui:frameTextBackground()
 							priceFrame:setParent(cell)
 							priceFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 							local price = ui:createText("❤️ …", Color.White, "small")
 							price:setParent(priceFrame)
 
-							price.pos = { theme.padding, theme.padding }
+							price.pos = { theme.paddingTiny, theme.paddingTiny }
 
 							cell.priceFrame = priceFrame
 							cell.priceLabel = price
 						end
 
 						cell.requests = {}
-						cell.item = nil
+						cell.timers = {}
 
 						cell.loadEntry = function(self, entry)
 							self.id = entry.id
-							self.repo = entry.repo
-							self.name = entry.name
-							self.fullName = self.repo .. "." .. self.name
-							self.category = entry.category
+
+							if type == "items" then
+								self.repo = entry.repo
+								self.name = entry.name
+								self.fullName = self.repo .. "." .. self.name
+								self.category = entry.category
+							elseif type == "world" then
+								self.title = entry.title
+							end
+
 							self.description = entry.description
 							self.created = entry.created
 							self.updated = entry.updated
@@ -307,59 +335,91 @@ itemGrid.create = function(_, config)
 							end
 
 							self.title.object.MaxWidth = self.Width - theme.paddingTiny * 4
-							self.title.Text = improveNameFormat(entry.name)
+							self.title.Text = entry.title or improveNameFormat(entry.name)
 							self.titleFrame.Height = self.title.Height + theme.paddingTiny * 2
 							self.titleFrame.Width = self.title.Width + theme.paddingTiny * 2
 
+							if self.mask then
+								self.mask.Width = self.Width
+								self.mask.Height = self.Height
+							end
+
 							if self.likesFrame ~= nil then
-								self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
-								self.likesLabel.Text = "❤️ " .. self.likes
-								self.likesFrame.Height = self.likesLabel.Height + theme.padding * 2
-								self.likesFrame.Width = self.likesLabel.Width + theme.padding * 2
-								self.likesFrame.pos = {
-									self.Width - self.likesFrame.Width,
-									self.Height - self.likesFrame.Height,
-								}
+								if self.likes == nil or self.likes == 0 then
+									self.likesFrame:hide()
+								else
+									self.likesFrame:show()
+									self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
+									self.likesLabel.Text = "❤️ " .. self.likes
+									self.likesFrame.Height = self.likesLabel.Height + theme.paddingTiny * 2
+									self.likesFrame.Width = self.likesLabel.Width + theme.paddingTiny * 2
+
+									if type == "items" then
+										self.likesFrame.pos = {
+											self.Width - self.likesFrame.Width - theme.paddingTiny,
+											self.Height - self.likesFrame.Height - theme.paddingTiny,
+										}
+									elseif type == "worlds" then
+										self.likesFrame.pos = {
+											self.Width - self.likesFrame.Width - theme.paddingTiny * 2,
+											self.Height - self.likesFrame.Height - theme.paddingTiny * 2,
+										}
+									end
+								end
 							end
 
 							if self.priceFrame ~= nil then
 								self.priceLabel.object.MaxWidth = self.Width - theme.padding * 2
 								self.priceLabel.Text = "🇵 0" -- 🪙
-								self.priceFrame.Height = self.priceLabel.Height + theme.padding * 2
-								self.priceFrame.Width = self.priceLabel.Width + theme.padding * 2
+								self.priceFrame.Height = self.priceLabel.Height + theme.paddingTiny * 2
+								self.priceFrame.Width = self.priceLabel.Width + theme.paddingTiny * 2
 								self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }
 							end
 
-							local req = Object:Load(self.fullName, function(obj)
-								if obj == nil then
-									-- silent error, no print, just removing loading animation
-									-- local loadingCube = cell:getLoadingCube()
-									-- if loadingCube then
-									-- 	loadingCube:hide()
-									-- end
-									return
-								end
+							if type == "item" then
+								local timer = Timer(LOAD_CONTENT_DELAY, function()
+									local req = Object:Load(self.fullName, function(obj)
+										if obj == nil then
+											-- silent error, no print, just removing loading animation
+											return
+										end
 
-								-- local loadingCube = cell:getLoadingCube()
-								-- if loadingCube then
-								-- 	loadingCube:hide()
-								-- end
+										local item = ui:createShape(obj, { spherized = true })
+										cell.item = item
+										item:setParent(cell) -- possible error here, cell destroyed?
 
-								local item = ui:createShape(obj, { spherized = true })
-								cell.item = item
-								item:setParent(cell) -- possible error here, cell destroyed?
+										item.pivot.LocalRotation = { -0.1, 0, -0.2 }
 
-								item.pivot.LocalRotation = { -0.1, 0, -0.2 }
+										-- setting Width sets Height & Depth as well when spherized
+										item.Width = cell.Width
+									end)
+									table.insert(self.requests, req)
+								end)
+								table.insert(self.timers, timer)
+							elseif type == "worlds" then
+								local timer = Timer(LOAD_CONTENT_DELAY, function()
+									local req = api:getWorldThumbnail(cell.id, function(img, err)
+										if err ~= nil then
+											-- silent error
+											return
+										end
 
-								-- setting Width sets Height & Depth as well when spherized
-								item.Width = cell.Width
-							end)
+										local thumbnail = ui:frame({ image = img })
+										thumbnail:setParent(cell)
+										thumbnail.Width = cell.Width - theme.paddingTiny * 2
+										thumbnail.Height = cell.Height - theme.paddingTiny * 2
+										thumbnail.pos = { theme.paddingTiny, theme.paddingTiny }
 
-							table.insert(self.requests, req)
+										cell.thumbnail = thumbnail
+									end)
+									table.insert(self.requests, req)
+								end)
+								table.insert(self.timers, timer)
+							end
 						end
 					end
 
-					cell.type = "item"
+					cell.type = type
 
 					table.insert(row.cells, cell)
 
@@ -381,12 +441,20 @@ itemGrid.create = function(_, config)
 				for _, req in ipairs(cell.requests) do
 					req:Cancel()
 				end
+				for _, timer in ipairs(cell.timers) do
+					timer:Cancel()
+				end
 				if cell.item then
 					cell.item:remove()
 					cell.item = nil
 				end
+				if cell.thumbnail then
+					cell.thumbnail:remove()
+					cell.thumbnail = nil
+				end
 				cell:setParent(nil)
 				cell.requests = {}
+				cell.timers = {}
 				activeCells[cell.entryIndex] = nil
 				table.insert(cellPool, cell)
 			end
@@ -417,6 +485,11 @@ itemGrid.create = function(_, config)
 		scroll:refresh()
 	end
 
+	local function setGridEntries(newEntries)
+		entries = newEntries or {}
+		refreshEntries()
+	end
+
 	scroll.parentDidResize = function(self)
 		local parent = self.parent
 		local y = parent.Height
@@ -442,38 +515,43 @@ itemGrid.create = function(_, config)
 	grid.getItems = function(self)
 		cancelRequestsAndTimers()
 
-		-- empty list
-		if self.setGridEntries ~= nil then
-			self:setGridEntries({})
-		end
+		if type == "items" then
+			local req = api:getItems({
+				minBlock = config.minBlocks,
+				repo = config.repo,
+				category = config.categories,
+				page = 1,
+				perPage = 25,
+				search = search,
+				sortBy = sortBy,
+			}, function(items, err)
+				if err then
+					-- silent error
+					return
+				end
 
-		local req = api:getItems({
-			minBlock = config.minBlocks,
-			repo = config.repo,
-			category = config.categories,
-			page = 1,
-			perPage = 25,
-			search = search,
-			sortBy = sortBy,
-		}, function(items, err)
-			if err then
-				print("Error: " .. err.message)
-				return
-			end
-			if self.setGridEntries ~= nil then
-				self:setGridEntries(items)
-			end
-		end)
-		addSentRequest(req)
-	end
+				setGridEntries(items)
+			end)
+			addSentRequest(req)
+		elseif type == "worlds" then
+			local req = api:getWorlds({
+				category = config.categories,
+				page = 1,
+				perPage = 25,
+				search = search,
+				sortBy = config.sortBy,
+				fields = { "title", "created", "updated", "views", "likes" },
+			}, function(worlds, err)
+				if err then
+					-- silent error
+					return
+				end
 
-	grid.setGridEntries = function(self, newEntries)
-		-- print("setGridEntries - nb entries:", #_entries)
-		if self ~= grid then
-			error("item_grid:setGridEntries(entries): use `:`", 2)
+				print("WORLDS:", #worlds)
+				setGridEntries(worlds)
+			end)
+			addSentRequest(req)
 		end
-		entries = newEntries or {}
-		refreshEntries()
 	end
 
 	local dt1 = 0.0
@@ -487,23 +565,6 @@ itemGrid.create = function(_, config)
 				cell.item.pivot.LocalRotation:Set(-0.1, dt1, -0.2)
 			end
 		end
-
-		-- local loadingCube
-		-- local center = grid.cellSize * 0.5
-		-- local loadingCubePos = { center + math.cos(dt4) * 20, center - math.sin(dt4) * 20, 0 }
-		-- for _, c in ipairs(cells) do
-		-- 	if c.getLoadingCube == nil then
-		-- 		return
-		-- 	end
-		-- 	loadingCube = c:getLoadingCube()
-		-- 	if loadingCube ~= nil and loadingCube:isVisible() then
-		-- 		loadingCube.pos = loadingCubePos
-		-- 	end
-
-		-- 	if c.item ~= nil and c.item.pivot ~= nil then
-		-- 		c.item.pivot.LocalRotation = { -0.1, dt1, -0.2 }
-		-- 	end
-		-- end
 	end)
 
 	grid:getItems()
