@@ -429,6 +429,7 @@ creations.createModalContent = function(_, config)
 
 		local grid = itemGrid:create({
 			minBlocks = 1,
+			type = "items",
 			repo = Player.Username,
 			categories = { "null" },
 			sort = "updatedAt:desc",
@@ -525,7 +526,7 @@ creations.createModalContent = function(_, config)
 
 		grid.onOpen = function(entity)
 			if config.onOpen then
-				config.onOpen(creationsContent, cell)
+				config.onOpen(creationsContent, entity)
 				return
 			end
 
@@ -605,7 +606,7 @@ creations.createModalContent = function(_, config)
 				if m ~= nil then
 					m:push(itemDetailsContent)
 				end
-			elseif cell.type == "world" then
+			elseif entity.type == "world" then
 				local worldDetailsContent = worldDetails:create({ mode = "create", title = cell.title, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
