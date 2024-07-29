@@ -719,6 +719,7 @@ signup.startFlow = function(self, config)
 					usernameLabel:hide()
 					usernameInput:hide()
 					confirmButton:hide()
+					secondaryText:hide()
 				end
 
 				local function hideLoading()
@@ -726,6 +727,7 @@ signup.startFlow = function(self, config)
 					usernameLabel:show()
 					usernameInput:show()
 					confirmButton:show()
+					secondaryText:show()
 				end
 
 				local userCheckTimer = nil
@@ -803,7 +805,6 @@ signup.startFlow = function(self, config)
 								-- success
 								Player.Username = username
 								System.AskedForMagicKey = false
-								-- internalLoginSuccess()
 								signupFlow:push(createPhoneNumberStep())
 							else
 								-- failure
@@ -870,6 +871,11 @@ signup.startFlow = function(self, config)
 						title.pos = {
 							self.Width * 0.5 - title.Width * 0.5,
 							usernameLabel.pos.Y + usernameLabel.Height + padding,
+						}
+
+						loadingLabel.pos = {
+							self.Width * 0.5 - loadingLabel.Width * 0.5,
+							self.Height * 0.5 - loadingLabel.Height * 0.5,
 						}
 
 						LocalEvent:Send("signup_drawer_height_update", self.Height)
