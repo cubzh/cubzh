@@ -512,6 +512,7 @@ itemGrid.create = function(_, config)
 	-- triggers request to obtain items
 	grid.getItems = function(self)
 		cancelRequestsAndTimers()
+		setGridEntries({})
 
 		if type == "items" then
 			local req = api:getItems({
