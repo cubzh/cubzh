@@ -339,7 +339,12 @@ signup.startFlow = function(self, config)
 				okBtn:setParent(drawer)
 				-- okBtn:disable()
 
-				local text = ui:createText("What code did you receive?", {
+				local textStr = "What code did you receive?"
+				if System.IsUserUnder13 == true then
+					textStr = "What code did your parent receive?"
+				end
+
+				local text = ui:createText(textStr, {
 					color = Color.White,
 				})
 				text:setParent(drawer)
@@ -375,13 +380,17 @@ signup.startFlow = function(self, config)
 					self.onTextChange = backup
 				end
 
-				local secondaryText = ui:createText(
-					"You should receive it shortly! If not, please verify your phone number, or try later.",
-					{
-						color = Color(200, 200, 200),
-						size = "small",
-					}
-				)
+				local secondaryTextStr =
+					"You should receive it shortly! If not, please verify your phone number, or try later."
+				if System.IsUserUnder13 == true then
+					secondaryTextStr =
+						"Your parent should receive it shortly! If not, please verify the phone number, or try later."
+				end
+
+				local secondaryText = ui:createText(secondaryTextStr, {
+					color = Color(200, 200, 200),
+					size = "small",
+				})
 				secondaryText:setParent(drawer)
 
 				drawer:updateConfig({
@@ -482,7 +491,12 @@ signup.startFlow = function(self, config)
 
 				local selectedPrefix = "1"
 
-				local text = ui:createText("Final step! What's your phone number?", {
+				local textStr = "Final step! What's your phone number?"
+				if System.IsUserUnder13 == true then
+					textStr = "Final step! What's your parent's phone number?"
+				end
+
+				local text = ui:createText(textStr, {
 					color = Color.White,
 				})
 				text:setParent(drawer)
@@ -544,7 +558,13 @@ signup.startFlow = function(self, config)
 					-- signupFlow:push(createAvatarEditorStep())
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
 
-					api:patchUserInfo({ phone = phoneNumber }, function(err)
+					-- construct user patch data
+					local data = { phone = phoneNumber }
+					if System.IsUserUnder13 == true then
+						data = { parentPhone = phoneNumber }
+					end
+
+					api:patchUserInfo(data, function(err)
 						if err ~= nil then
 							print("ERR:", err)
 							okBtn:enable()
@@ -1428,6 +1448,9 @@ signup.startFlow = function(self, config)
 					local req = api:patchUserInfo({ dob = dobStr }, function(err)
 						if err == nil then
 							-- success
+							-- Store information about user being <13yo
+							System.IsUserUnder13 = cache.dob.year > currentYear - 13
+							-- Go to next step
 							signupFlow:push(createUsernameInputStep())
 						else
 							-- failure
