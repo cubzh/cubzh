@@ -234,7 +234,7 @@ itemGrid.create = function(_, config)
 
 								if type == "items" then
 									entity = {
-										type = type,
+										type = "item",
 										id = cell.id,
 										repo = cell.repo,
 										name = cell.name,
@@ -245,7 +245,7 @@ itemGrid.create = function(_, config)
 									}
 								elseif type == "worlds" then
 									entity = {
-										type = type,
+										type = "world",
 										id = cell.id,
 										title = cell.title,
 										name = cell.name,
@@ -376,7 +376,7 @@ itemGrid.create = function(_, config)
 								self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }
 							end
 
-							if type == "item" then
+							if type == "items" then
 								local timer = Timer(LOAD_CONTENT_DELAY, function()
 									local req = Object:Load(self.fullName, function(obj)
 										if obj == nil then
@@ -418,8 +418,6 @@ itemGrid.create = function(_, config)
 							end
 						end
 					end
-
-					cell.type = type
 
 					table.insert(row.cells, cell)
 
@@ -547,7 +545,6 @@ itemGrid.create = function(_, config)
 					return
 				end
 
-				print("WORLDS:", #worlds)
 				setGridEntries(worlds)
 			end)
 			addSentRequest(req)
