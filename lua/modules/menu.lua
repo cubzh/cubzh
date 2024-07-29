@@ -224,14 +224,7 @@ function showModal(key, config)
 		content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
-		-- activeModal = require("world_details"):show({ ui = ui })
-
-		-- content = worlds:createModalContent({ uikit = ui })
-		-- activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
-
-		-- TODO: Implement world grid
-		-- (DISPLAYING ITEMS INSTEAD CURRENTLY, FOR DEBUG)
-		content = require("gallery"):createModalContent({ uikit = ui })
+		content = require("gallery"):createModalContent({ uikit = ui, type = "worlds", displayLikes = true })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLD then
 		local config = config or {}

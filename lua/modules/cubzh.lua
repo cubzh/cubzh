@@ -1866,6 +1866,10 @@ function home()
 		local btnFriends = createBottomBarButton("Friends", "images/icon-friends.png")
 		local btnCreate = createBottomBarButton("Create", "images/icon-create.png")
 
+		btnExplore.onRelease = function()
+			Menu:ShowWorlds()
+		end
+
 		btnProfile.onRelease = function()
 			Menu:ShowProfile({ player = Player })
 		end

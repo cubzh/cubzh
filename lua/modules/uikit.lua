@@ -16,7 +16,7 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 -- COMBO_BOX_SELECTOR_SPEED = 400
 
-DEFAULT_SLICE_9_SCALE = 1 -- 1.5
+DEFAULT_SLICE_9_SCALE = 0.5 * Screen.Density -- 1.5
 
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
@@ -1262,11 +1262,30 @@ function createUI(system)
 		return ui.frame(self, { quad = quad })
 	end
 
+	-- local frameMaskWithRoundCornersQuadData
+	-- ui.frameMaskWithRoundCorners = function(self)
+	-- 	if self ~= ui then
+	-- 		error("ui:frameGenericContainer(): use `:`", 2)
+	-- 	end
+	-- 	if frameMaskWithRoundCornersQuadData == nil then
+	-- 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
+	-- 	end
+	-- 	local quad = Quad()
+	-- 	quad.IsMask = true
+	-- 	quad.Image = {
+	-- 		data = frameMaskWithRoundCornersQuadData,
+	-- 		slice9 = { 0.5, 0.5 },
+	-- 		slice9Scale = DEFAULT_SLICE_9_SCALE,
+	-- 		cutout = true,
+	-- 	}
+	-- 	return ui.frame(self, { quad = quad })
+	-- end
+
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/frame_dark.png")
+		local image = Data:FromBundle("images/frame.png")
 		local quad = Quad()
 		quad.Image = {
 			data = image,
