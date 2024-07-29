@@ -30,7 +30,7 @@ int32_t device_timestampUnix(void);
 /// same as vx::device::timestampApple()
 int32_t device_timestampApple(void);
 
-/// Returns screen allowed orientation ("all", "portrait", "landscape", "landscapeLeft", "landscapeRight")
+/// Returns screen allowed orientation ("all", "portrait", "landscape")
 const char* device_screen_allowed_orientation(void);
 
 #ifdef __cplusplus
