@@ -179,8 +179,7 @@ void TrackingClient::_checkAndRefreshSession() {
 void TrackingClient::_sendKeepAliveEventIfNeeded() {
 #if !defined(P3S_NO_METRICS)
     if (_keep_alive_activated) {
-        const std::unordered_map<std::string, std::string> properties;
-        _trackEvent("Keep alive", properties);
+        _checkAndRefreshSession();
     }
     _operationQueue->schedule([](){
         TrackingClient::shared()._sendKeepAliveEventIfNeeded();
