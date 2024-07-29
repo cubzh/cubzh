@@ -84,6 +84,9 @@ private:
                      std::unordered_map<std::string, std::string> properties);
 
     //
+    void _checkAndRefreshSession();
+
+    //
     void _sendKeepAliveEventIfNeeded();
 
     /// utility function
