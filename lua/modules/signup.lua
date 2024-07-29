@@ -1236,6 +1236,7 @@ signup.startFlow = function(self, config)
 	end
 
 	local createDOBStep = function()
+		local requests = {}
 		local step = flow:createStep({
 			onEnter = function()
 				config.dobStep()
@@ -1252,9 +1253,6 @@ signup.startFlow = function(self, config)
 
 				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
-				okBtn.onRelease = function()
-					signupFlow:push(createUsernameInputStep())
-				end
 				okBtn:disable()
 
 				local text = ui:createText("Looking good! Now, what's your date of birth, in real life? 🎂", {
@@ -1414,6 +1412,26 @@ signup.startFlow = function(self, config)
 					okBtn:enable()
 				end
 
+				okBtn.onRelease = function()
+					-- TODO: showLoading()
+
+					-- construct date of birth string (mm-dd-yyyy)
+					local dobStr = string.format("%02d-%02d-%04d", cache.dob.month, cache.dob.day, cache.dob.year)
+
+					-- send API request to update user's date of birth
+					local req = api:patchUserInfo({ dob = dobStr }, function(err)
+						if err == nil then
+							-- success
+							signupFlow:push(createUsernameInputStep())
+						else
+							-- failure
+							-- TODO: hideLoading()
+							-- TODO: error message?
+						end
+					end)
+					table.insert(requests, req)
+				end
+
 				drawer:updateConfig({
 					layoutContent = function(self)
 						-- here, self.Height can be reduced, but not increased
@@ -1468,7 +1486,11 @@ signup.startFlow = function(self, config)
 
 				drawer:show()
 			end,
-			onExit = function() end,
+			onExit = function()
+				for _, req in ipairs(requests) do
+					req:Cancel()
+				end
+			end,
 			onRemove = function() end,
 		})
 
