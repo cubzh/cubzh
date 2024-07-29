@@ -932,6 +932,7 @@ function avatar_loadEquipment(self, config)
 		shape = nil,
 		bumpAnimation = false,
 		didAttachEquipmentParts = nil, -- function(equipmentParts)
+		preventAvatarLoadOverride = true, -- prevents overrides from ongoing avatar load (loading all equipments)
 	}
 
 	ok, err = pcall(function()
@@ -946,7 +947,9 @@ function avatar_loadEquipment(self, config)
 		error("loadEquipment(config) - config error: " .. err, 2)
 	end
 
-	fields.equipments_requested[config.type] = true
+	if config.preventAvatarLoadOverride then
+		fields.equipments_requested[config.type] = true
+	end
 
 	local currentEquipment = fields.equipments[config.type]
 	if currentEquipment == nil then

@@ -673,10 +673,10 @@ function avatar()
 			avatar:loadEquipment({ type = "pants", shape = pants[1] })
 			avatar:loadEquipment({ type = "boots", shape = boots[1] })
 		else
-			avatar:loadEquipment({ type = "hair", shape = defaultHair })
-			avatar:loadEquipment({ type = "jacket", shape = defaultJacket })
-			avatar:loadEquipment({ type = "pants", shape = defaultPants })
-			avatar:loadEquipment({ type = "boots", shape = defaultShoes })
+			avatar:loadEquipment({ type = "hair", shape = defaultHair, preventAvatarLoadOverride = false })
+			avatar:loadEquipment({ type = "jacket", shape = defaultJacket, preventAvatarLoadOverride = false })
+			avatar:loadEquipment({ type = "pants", shape = defaultPants, preventAvatarLoadOverride = false })
+			avatar:loadEquipment({ type = "boots", shape = defaultShoes, preventAvatarLoadOverride = false })
 		end
 
 		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
