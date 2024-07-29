@@ -696,7 +696,8 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	local requests = {}
 	local palette = avatarPalette:Copy()
 
-	avatarPrivateFields[avatar] = { config = config, equipments = {}, requests = requests, palette = palette }
+	avatarPrivateFields[avatar] =
+		{ config = config, equipments = {}, equipments_requested = {}, requests = requests, palette = palette }
 
 	local body = bundle:MutableShape("shapes/avatar.3zh")
 	body.Name = "Body"
@@ -790,6 +791,8 @@ function avatar_load(self, config)
 		config = fields.config
 	end
 
+	fields.equipments_requested = {}
+
 	if config.usernameOrId ~= nil and config.usernameOrId ~= "" then
 		local req = api.getAvatar(config.usernameOrId, function(err, data)
 			if err and config.didLoad then
@@ -860,16 +863,16 @@ function avatar_load(self, config)
 
 			-- print("data:", JSON:Encode(data))
 
-			if data.jacket then
+			if data.jacket and fields.equipments_requested["jacket"] ~= true then
 				self:loadEquipment({ type = "jacket", item = data.jacket })
 			end
-			if data.pants then
+			if data.pants and fields.equipments_requested["pants"] ~= true then
 				self:loadEquipment({ type = "pants", item = data.pants })
 			end
-			if data.hair then
+			if data.hair and fields.equipments_requested["hair"] ~= true then
 				self:loadEquipment({ type = "hair", item = data.hair })
 			end
-			if data.boots then
+			if data.boots and fields.equipments_requested["boots"] ~= true then
 				self:loadEquipment({ type = "boots", item = data.boots })
 			end
 		end)
@@ -942,6 +945,8 @@ function avatar_loadEquipment(self, config)
 	if not ok then
 		error("loadEquipment(config) - config error: " .. err, 2)
 	end
+
+	fields.equipments_requested[config.type] = true
 
 	local currentEquipment = fields.equipments[config.type]
 	if currentEquipment == nil then
