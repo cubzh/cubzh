@@ -99,6 +99,8 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     return;
 #else
 
+    vxlog_info("⭐️ TRACK EVENT: %s", eventType.c_str());
+
     _checkAndRefreshSession();
 
     std::string userAccountID;
