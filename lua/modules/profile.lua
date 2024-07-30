@@ -25,10 +25,15 @@ profile.create = function(_, config)
 		userID = "",
 		username = "",
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
+		editAvatar = nil,
 	}
 
 	local ok, err = pcall(function()
-		config = require("config"):merge(defaultConfig, config)
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				editAvatar = { "function" },
+			},
+		})
 	end)
 	if not ok then
 		error("profile:create(config) - config error: " .. err, 2)
@@ -167,11 +172,13 @@ profile.create = function(_, config)
 		local editLinksBtn
 
 		if isLocal then
-			editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
-			editAvatarBtn:setParent(node)
+			if config.editAvatar ~= nil then
+				editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
+				editAvatarBtn:setParent(node)
 
-			editAvatarBtn.onRelease = function()
-				-- editAvatarBtnOnReleaseCallback()
+				editAvatarBtn.onRelease = function()
+					config.editAvatar()
+				end
 			end
 
 			editBioBtn = ui:buttonNeutral({ content = "✏️ Edit bio", textSize = "small" })

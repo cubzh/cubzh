@@ -188,6 +188,13 @@ function showModal(key, config)
 	local content
 	if key == MODAL_KEYS.PROFILE then
 		local c = { uikit = ui }
+		if config.editAvatar ~= nil then
+			c.editAvatar = function()
+				closeModal()
+				config.editAvatar()
+			end
+		end
+
 		if config.player ~= nil then
 			c.username = config.player.Username
 			c.userID = config.player.UserID
@@ -1750,41 +1757,6 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
 		Client.ConnectingToServer()
 	end
 end)
-
--- NOTE: Used in Hub v3, when copying outfits from other players
--- Let's see if we want to keep this or not.
-
--- LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
--- 	if updates.skinColors ~= nil and avatar ~= nil then
--- 		avatarModule:setHeadColors(
--- 			avatar,
--- 			updates.skinColors.skin1,
--- 			updates.skinColors.skin2,
--- 			updates.skinColors.nose,
--- 			updates.skinColors.mouth
--- 		)
--- 	end
-
--- 	if type(updates.eyesColor) == Type.Color and avatar ~= nil then
--- 		avatarModule:setEyesColor(avatar, updates.eyesColor)
--- 	end
-
--- 	if type(updates.noseColor) == Type.Color and avatar ~= nil then
--- 		avatarModule:setNoseColor(avatar, updates.noseColor)
--- 	end
-
--- 	if type(updates.mouthColor) == Type.Color and avatar ~= nil then
--- 		avatarModule:setMouthColor(avatar, updates.mouthColor)
--- 	end
-
--- 	if updates.outfit == true then
--- 		avatar:remove()
--- 		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
--- 		avatar.parentDidResize = btnContentParentDidResize
--- 		avatar:setParent(profileFrame)
--- 		topBar:parentDidResize()
--- 	end
--- end)
 
 -- sign up / sign in flow
 
