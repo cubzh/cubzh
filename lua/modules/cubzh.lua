@@ -1417,7 +1417,10 @@ function home()
 				end
 
 				cell.onRelease = function(self)
-					Menu:ShowProfile({ id = self.userID, username = self.username })
+					Menu:ShowProfile({
+						id = self.userID,
+						username = self.username,
+					})
 				end
 
 				cell.onCancel = function(_)
@@ -1601,6 +1604,67 @@ function home()
 		end
 
 		local scroll
+
+		local function editAvatarFn()
+			if bottomBar then
+				bottomBar:hide()
+			end
+			scroll:hide()
+			avatar():show({ mode = "user" })
+			avatarCameraFocus = "body" -- skin tab displayed first
+			home():pause()
+
+			drawer = require("drawer"):create({ ui = ui })
+
+			local okBtn = ui:buttonPositive({
+				content = "Done!",
+				textSize = "big",
+				unfocuses = false,
+				padding = 5,
+			})
+			okBtn:setParent(drawer)
+			okBtn.onRelease = function()
+				home():resume()
+				drawer:remove()
+				if bottomBar then
+					bottomBar:show()
+				end
+				scroll:show()
+				drawer = nil
+			end
+
+			avatarEditor = require("ui_avatar_editor"):create({
+				ui = ui,
+				requestHeightCallback = function(height)
+					drawer:updateConfig({
+						layoutContent = function(self)
+							local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
+							drawerHeight = math.floor(math.min(Screen.Height * 0.6, drawerHeight))
+
+							self.Height = drawerHeight
+
+							okBtn.pos = {
+								self.Width - okBtn.Width - padding,
+								self.Height + padding,
+							}
+
+							LocalEvent:Send("signup_drawer_height_update", drawerHeight)
+
+							if avatarEditor then
+								avatarEditor.Width = self.Width - padding * 2
+								avatarEditor.Height = drawerHeight - Screen.SafeArea.Bottom - padding * 2
+								avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+							end
+						end,
+					})
+					drawer:bump()
+				end,
+			})
+
+			avatarEditor:setParent(drawer)
+			drawer:show()
+		end
+
 		scroll = ui:createScroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
@@ -1629,65 +1693,7 @@ function home()
 						editAvatarBtn:setParent(profileCell)
 
 						editAvatarBtn.onRelease = function(_)
-							if bottomBar then
-								bottomBar:hide()
-							end
-							scroll:hide()
-							avatar():show({ mode = "user" })
-							avatarCameraFocus = "body" -- skin tab displayed first
-							home():pause()
-
-							drawer = require("drawer"):create({ ui = ui })
-
-							local okBtn = ui:buttonPositive({
-								content = "Done!",
-								textSize = "big",
-								unfocuses = false,
-								padding = 5,
-							})
-							okBtn:setParent(drawer)
-							okBtn.onRelease = function()
-								home():resume()
-								drawer:remove()
-								if bottomBar then
-									bottomBar:show()
-								end
-								scroll:show()
-								drawer = nil
-							end
-
-							avatarEditor = require("ui_avatar_editor"):create({
-								ui = ui,
-								requestHeightCallback = function(height)
-									drawer:updateConfig({
-										layoutContent = function(self)
-											local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
-											drawerHeight = math.floor(math.min(Screen.Height * 0.6, drawerHeight))
-
-											self.Height = drawerHeight
-
-											okBtn.pos = {
-												self.Width - okBtn.Width - padding,
-												self.Height + padding,
-											}
-
-											LocalEvent:Send("signup_drawer_height_update", drawerHeight)
-
-											if avatarEditor then
-												avatarEditor.Width = self.Width - padding * 2
-												avatarEditor.Height = drawerHeight
-													- Screen.SafeArea.Bottom
-													- padding * 2
-												avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
-											end
-										end,
-									})
-									drawer:bump()
-								end,
-							})
-
-							avatarEditor:setParent(drawer)
-							drawer:show()
+							editAvatarFn()
 						end
 
 						local visitHouseBtn = ui:buttonNeutral({
@@ -1871,7 +1877,7 @@ function home()
 		end
 
 		btnProfile.onRelease = function()
-			Menu:ShowProfile({ player = Player })
+			Menu:ShowProfile({ player = Player, editAvatar = editAvatarFn })
 		end
 
 		btnFriends.onRelease = function()
