@@ -3106,6 +3106,25 @@ function createUI(system)
 			error("ui:button(config): use `:`", 2)
 		end
 
+		-- load neutral button preset when no style config provided
+		if
+			config == nil
+			or (
+				config.backgroundQuad == nil
+				and config.backgroundQuadPressed == nil
+				and config.backgroundQuadSelected == nil
+				and config.backgroundQuadDisabled == nil
+				and config.borders == nil
+				and config.shadow == nil
+				and config.color == nil
+				and config.colorPressed == nil
+				and config.colorSelected == nil
+				and config.colorDisabled == nil
+			)
+		then
+			return ui:buttonNeutral(config)
+		end
+
 		local defaultConfig = {
 			-- CONTENT --
 			content = "BUTTON", -- can be string, Shape or uikit node
@@ -3454,6 +3473,150 @@ function createUI(system)
 		return node
 	end
 
+	-- legacy
+	ui.createButton = function(_, content, config)
+		config = config or {}
+		config.content = content
+		return ui:button(config)
+	end -- createButton (legacy)
+
+	ui.createComboBox = function(self, stringOrShape, choices, config)
+		if choices == nil then
+			return
+		end
+
+		config = config or {}
+		config.content = stringOrShape
+
+		local btn = self:buttonNeutral(config)
+
+		btn.onSelect = function(_, _) end
+
+		btn.onRelease = function(_)
+			btn:disable()
+
+			local selector
+
+			local choiceOnRelease = function(self)
+				if self._choiceIndex == nil then
+					return
+				end
+				btn.selectedRow = self._choiceIndex
+				if btn.onSelect ~= nil then
+					btn:onSelect(self._choiceIndex)
+				end
+				if selector.close then
+					selector:close()
+				end
+			end
+
+			local choiceParentDidResize = function(self)
+				self.Width = self.parent.Width
+			end
+
+			local cells = {}
+
+			local scroll = ui:createScroll({
+				direction = "down",
+				cellPadding = 0,
+				padding = 0,
+				loadCell = function(index)
+					local choice = choices[index]
+					if choice then
+						local c = table.remove(cells)
+						if c ~= nil then
+							c.text = choice
+						else
+							c = ui:button({
+								content = choice,
+								borders = false,
+								shadow = false,
+								unfocuses = false,
+							})
+							c.parentDidResize = choiceParentDidResize
+							c.onRelease = choiceOnRelease
+						end
+						c._choiceIndex = index
+
+						if btn.selectedRow == c._choiceIndex then
+							c:select()
+						end
+
+						return c
+					end
+				end,
+				unloadCell = function(_, cell) -- index, cell
+					cell:setParent(nil)
+					table.insert(cells, cell)
+				end,
+			})
+
+			scroll.Height = 200
+			scroll.Width = 100
+
+			focus(nil)
+
+			selector = ui:createFrame(Color(0, 0, 0, 100))
+			selector:setParent(btn.parent)
+
+			scroll:setParent(selector)
+
+			comboBoxSelector = selector
+
+			scroll.Height = math.min(
+				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
+				-- contentHeight,
+				300 -- max heigh for all combo boxes
+			)
+
+			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
+
+			selector.Height = scroll.Height + theme.paddingTiny * 2
+			selector.Width = scroll.Width + theme.paddingTiny * 2
+
+			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
+
+			parent = btn.parent
+			absPy = p.Y
+			while parent do
+				absPy = absPy + parent.pos.Y
+				parent = parent.parent
+			end
+
+			local offset = 0
+			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
+				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
+			end
+			p.Y = p.Y + offset
+
+			selector.pos.X = p.X
+			selector.pos.Y = p.Y - 50
+
+			ease:outBack(selector, 0.22).pos = p
+
+			selector.pos.Z = -10 -- render on front
+
+			if btn.selectedRow then
+				scroll:setScrollIndexVisible(btn.selectedRow)
+			end
+
+			selector.close = function(_)
+				if comboBoxSelector == selector then
+					comboBoxSelector = nil
+				end
+				ease:cancel(selector)
+				selector:remove()
+				if btn.enable then
+					btn:enable()
+				end
+			end
+		end
+
+		return btn
+	end
+
+	-- PRESETS
+
 	local btnNeutralQuadData
 	local btnNeutralPressedQuadData
 	local btnNeutralSelectedQuadData
@@ -3640,148 +3803,6 @@ function createUI(system)
 		}
 
 		return ui.button(self, config)
-	end
-
-	-- legacy
-	ui.createButton = function(_, content, config)
-		config = config or {}
-		config.content = content
-		return ui:button(config)
-	end -- createButton (legacy)
-
-	ui.createComboBox = function(self, stringOrShape, choices, config)
-		if choices == nil then
-			return
-		end
-
-		config = config or {}
-		config.content = stringOrShape
-
-		local btn = self:buttonNeutral(config)
-
-		btn.onSelect = function(_, _) end
-
-		btn.onRelease = function(_)
-			btn:disable()
-
-			local selector
-
-			local choiceOnRelease = function(self)
-				if self._choiceIndex == nil then
-					return
-				end
-				btn.selectedRow = self._choiceIndex
-				if btn.onSelect ~= nil then
-					btn:onSelect(self._choiceIndex)
-				end
-				if selector.close then
-					selector:close()
-				end
-			end
-
-			local choiceParentDidResize = function(self)
-				self.Width = self.parent.Width
-			end
-
-			local cells = {}
-
-			local scroll = ui:createScroll({
-				direction = "down",
-				cellPadding = 0,
-				padding = 0,
-				loadCell = function(index)
-					local choice = choices[index]
-					if choice then
-						local c = table.remove(cells)
-						if c ~= nil then
-							c.text = choice
-						else
-							c = ui:button({
-								content = choice,
-								borders = false,
-								shadow = false,
-								unfocuses = false,
-							})
-							c.parentDidResize = choiceParentDidResize
-							c.onRelease = choiceOnRelease
-						end
-						c._choiceIndex = index
-
-						if btn.selectedRow == c._choiceIndex then
-							c:select()
-						end
-
-						return c
-					end
-				end,
-				unloadCell = function(_, cell) -- index, cell
-					cell:setParent(nil)
-					table.insert(cells, cell)
-				end,
-			})
-
-			scroll.Height = 200
-			scroll.Width = 100
-
-			focus(nil)
-
-			selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.parent)
-
-			scroll:setParent(selector)
-
-			comboBoxSelector = selector
-
-			scroll.Height = math.min(
-				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
-				-- contentHeight,
-				300 -- max heigh for all combo boxes
-			)
-
-			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
-
-			selector.Height = scroll.Height + theme.paddingTiny * 2
-			selector.Width = scroll.Width + theme.paddingTiny * 2
-
-			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
-
-			parent = btn.parent
-			absPy = p.Y
-			while parent do
-				absPy = absPy + parent.pos.Y
-				parent = parent.parent
-			end
-
-			local offset = 0
-			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
-				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
-			end
-			p.Y = p.Y + offset
-
-			selector.pos.X = p.X
-			selector.pos.Y = p.Y - 50
-
-			ease:outBack(selector, 0.22).pos = p
-
-			selector.pos.Z = -10 -- render on front
-
-			if btn.selectedRow then
-				scroll:setScrollIndexVisible(btn.selectedRow)
-			end
-
-			selector.close = function(_)
-				if comboBoxSelector == selector then
-					comboBoxSelector = nil
-				end
-				ease:cancel(selector)
-				selector:remove()
-				if btn.enable then
-					btn:enable()
-				end
-			end
-		end
-
-		return btn
 	end
 
 	-- LISTENERS
