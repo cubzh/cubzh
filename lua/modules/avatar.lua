@@ -687,6 +687,33 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	end
 
 	local avatar = Object()
+
+	local mt = System.GetMetatable(avatar)
+	mt.Shadow = false
+
+	local objectIndex = mt.__index
+	mt.__index = function(t, k)
+		if k == "Shadow" then
+			return mt[k]
+		end
+		return objectIndex(t, k)
+	end
+
+	local objectNewIndex = mt.__newindex
+	mt.__newindex = function(t, k, v)
+		if k == "Shadow" then
+			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
+				if o.Shadow == nil then
+					return
+				end
+				o.Shadow = v
+			end)
+			mt.Shadow = v
+			return
+		end
+		objectNewIndex(t, k, v)
+	end
+
 	avatar.load = avatar_load
 	avatar.loadEquipment = avatar_loadEquipment
 	avatar.setColors = avatar_setColors
