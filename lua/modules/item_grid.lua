@@ -24,9 +24,13 @@ itemGrid.create = function(_, config)
 		-- shows advanced filters button when true
 		advancedFilters = false,
 		-- used to filter categories when not nil
-		categories = nil, -- {"null", hair" ,"jacket", "pants", "boots"},
+		-- NOTE: when "featured" is provided, items displayed have to be in the featured category
+		-- for example, { "hair", "jacket", "featured" } will return featured hair and featured jacket items
+		categories = nil, -- {"null", "hair" ,"jacket", "pants", "boots", "featured"},
 		-- filter on particular repo
 		repo = nil,
+		-- filter on particular authorId (only works for worlds, use repo for items)
+		authorId = nil,
 		-- mode
 		minBlocks = 5,
 		--
@@ -36,7 +40,7 @@ itemGrid.create = function(_, config)
 		--
 		backgroundColor = theme.buttonTextColor,
 		--
-		sort = "likes:desc",
+		sort = "likes:desc", -- "likes:desc", "updatedAt:desc"
 		--
 		cellPadding = theme.cellPadding,
 		--
@@ -48,6 +52,8 @@ itemGrid.create = function(_, config)
 		--
 		displayLikes = false,
 		--
+		perPage = 25, -- TODO: offer to load more when reaching the end scroll
+		--
 		onOpen = function(_) end,
 		--
 		filterDidChange = function(_, _) end, -- (search, sort)
@@ -57,6 +63,7 @@ itemGrid.create = function(_, config)
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				repo = { "string" },
+				authorId = { "string" },
 				categories = { "table" },
 				sort = { "string" },
 			},
@@ -68,6 +75,53 @@ itemGrid.create = function(_, config)
 
 	local ui = config.uikit
 	local sortBy = config.sort
+
+	local currentToggleFilterOption = 2
+	local toggleFilterOptions = {
+		{
+			name = "likes",
+			sortBy = "likes:desc",
+			label = "♥️ Likes",
+		},
+		{
+			name = "recent",
+			sortBy = "updatedAt:desc",
+			label = "✨ Recent",
+		},
+	}
+
+	if sortBy == "likes:desc" then
+		currentToggleFilterOption = 1
+	elseif sortBy == "updatedAt:desc" then
+		currentToggleFilterOption = 2
+	end
+
+	if config.categories ~= nil then
+		for _, c in ipairs(config.categories) do
+			if c == "featured" then
+				-- insert featured filter AND remove from config.categories
+				-- (will be added dynamically when filter option is selected)
+				table.insert(toggleFilterOptions, {
+					name = "featured",
+					sortBy = "",
+					label = "⭐️ Featured",
+				})
+				currentToggleFilterOption = 3
+
+				local categories = config.categories
+				config.categories = {}
+				for _, category in ipairs(categories) do
+					if category ~= "featured" then
+						table.insert(config.categories, category)
+					end
+				end
+				break
+			end
+		end
+	end
+
+	sortBy = toggleFilterOptions[currentToggleFilterOption].sortBy
+
 	local type = config.type
 
 	local grid = ui:createFrame(Color(40, 40, 40)) -- Color(255,0,0)
@@ -109,8 +163,14 @@ itemGrid.create = function(_, config)
 		cancelRequestsAndTimers()
 	end
 
-	grid.setCategories = function(self, categories)
-		config.categories = categories
+	grid.setCategories = function(self, categories, newType)
+		if config.categories ~= nil then
+			config.categories = categories
+		end
+		if newType ~= nil then
+			config.type = newType
+			type = config.type
+		end
 		cancelRequestsAndTimers()
 		self:getItems()
 	end
@@ -140,21 +200,21 @@ itemGrid.create = function(_, config)
 		searchBar = ui:createTextInput(search, "search", { textSize = "small" })
 		searchBar:setParent(grid)
 
-		local s = "♥️ Likes"
-		if sortBy == "updatedAt:desc" then
-			s = "✨ Recent"
-		end
+		local s = toggleFilterOptions[currentToggleFilterOption].label
 
 		sortBtn = ui:buttonNeutral({ content = s, textSize = "small", textColor = Color.Black })
 		sortBtn:setParent(grid)
 		sortBtn.onRelease = function()
-			if sortBy == "likes:desc" then
-				sortBtn.Text = "✨ Recent"
-				sortBy = "updatedAt:desc"
-			elseif sortBy == "updatedAt:desc" then
-				sortBtn.Text = "♥️ Likes"
-				sortBy = "likes:desc"
+			currentToggleFilterOption = currentToggleFilterOption + 1
+			if currentToggleFilterOption > #toggleFilterOptions then
+				currentToggleFilterOption = 1
 			end
+
+			local filterOption = toggleFilterOptions[currentToggleFilterOption]
+
+			sortBtn.Text = filterOption.label
+			sortBy = filterOption.sortBy
+
 			config.filterDidChange(search, sortBy)
 			layoutSearchBar()
 			grid:getItems()
@@ -515,12 +575,20 @@ itemGrid.create = function(_, config)
 		setGridEntries({})
 
 		if type == "items" then
+			local categories = config.categories
+			if toggleFilterOptions[currentToggleFilterOption].name == "featured" then
+				categories = { "featured" }
+				for _, category in ipairs(config.categories) do
+					table.insert(categories, category)
+				end
+			end
+
 			local req = api:getItems({
 				minBlock = config.minBlocks,
 				repo = config.repo,
-				category = config.categories,
+				category = categories,
 				page = 1,
-				perPage = 25,
+				perPage = config.perPage,
 				search = search,
 				sortBy = sortBy,
 			}, function(items, err)
@@ -533,12 +601,18 @@ itemGrid.create = function(_, config)
 			end)
 			addSentRequest(req)
 		elseif type == "worlds" then
+			local category = ""
+			if toggleFilterOptions[currentToggleFilterOption].name == "featured" then
+				category = "featured"
+			end
+
 			local req = api:getWorlds({
-				category = config.categories,
+				authorId = config.authorId,
+				category = category,
 				page = 1,
-				perPage = 25,
+				perPage = config.perPage,
 				search = search,
-				sortBy = config.sortBy,
+				sortBy = sortBy,
 				fields = { "title", "created", "updated", "views", "likes" },
 			}, function(worlds, err)
 				if err then

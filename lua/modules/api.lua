@@ -421,6 +421,7 @@ mod.getWorlds = function(self, config, callback)
 	end
 
 	local defaultConfig = {
+		authorId = "",
 		category = "",
 		search = "",
 		sortBy = "updatedAt:desc", -- likes:desc
@@ -439,6 +440,7 @@ mod.getWorlds = function(self, config, callback)
 
 	local u = url:parse(mod.kApiAddr .. "/worlds")
 
+	u:addQueryParameter("authorid", config.authorId)
 	u:addQueryParameter("category", config.category)
 	u:addQueryParameter("search", config.search)
 	u:addQueryParameter("sortBy", config.sortBy)

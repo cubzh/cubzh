@@ -9,7 +9,7 @@ theme = require("uitheme").current
 ease = require("ease")
 friends = require("friends")
 settings = require("settings")
-worlds = require("worlds")
+-- worlds = require("worlds")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
@@ -40,7 +40,7 @@ PADDING = theme.padding
 PADDING_BIG = 9
 TOP_BAR_HEIGHT = 40
 
-CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
+-- CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
 -- VARS
@@ -224,7 +224,12 @@ function showModal(key, config)
 		content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
-		content = require("gallery"):createModalContent({ uikit = ui, type = "worlds", displayLikes = true })
+		content = require("gallery"):createModalContent({
+			uikit = ui,
+			type = "worlds",
+			displayLikes = true,
+			categories = { "featured" },
+		})
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLD then
 		local config = config or {}
