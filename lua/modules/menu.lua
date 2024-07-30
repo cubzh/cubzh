@@ -245,7 +245,6 @@ function showModal(key, config)
 		content = require("item_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CREATIONS then
-		-- TODO
 		content = require("creations"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then

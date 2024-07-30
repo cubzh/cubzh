@@ -9,6 +9,7 @@ local MAX_COLOR_SWATCH_SIZE = 100
 local PADDING = 4.0
 local CELL_PADDING = 4.0
 local SCROLL_PADDING = 4.0
+local ITEMS_PER_PAGE = 100
 
 privateFields = setmetatable({}, { __mode = "k" })
 
@@ -219,7 +220,8 @@ mod.create = function(self, config)
 						categoryNode:remove()
 					end
 					categoryNode = itemGrid:create({
-						categories = { "hair" },
+						categories = { "hair", "featured" },
+						perPage = ITEMS_PER_PAGE,
 						uikit = ui,
 						backgroundColor = theme.buttonTextColor,
 						cellPadding = CELL_PADDING,
@@ -559,7 +561,8 @@ mod.create = function(self, config)
 						categoryNode:remove()
 					end
 					categoryNode = itemGrid:create({
-						categories = { "jacket" },
+						categories = { "jacket", "featured" },
+						perPage = ITEMS_PER_PAGE,
 						uikit = ui,
 						search = cache.search,
 						sort = cache.sort,
@@ -592,7 +595,8 @@ mod.create = function(self, config)
 						categoryNode:remove()
 					end
 					categoryNode = itemGrid:create({
-						categories = { "pants" },
+						categories = { "pants", "featured" },
+						perPage = ITEMS_PER_PAGE,
 						uikit = ui,
 						search = cache.search,
 						sort = cache.sort,
@@ -625,7 +629,8 @@ mod.create = function(self, config)
 						categoryNode:remove()
 					end
 					categoryNode = itemGrid:create({
-						categories = { "boots" },
+						categories = { "boots", "featured" },
+						perPage = ITEMS_PER_PAGE,
 						uikit = ui,
 						search = cache.search,
 						sort = cache.sort,
