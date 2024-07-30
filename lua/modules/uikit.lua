@@ -2499,7 +2499,6 @@ function createUI(system)
 
 		local cell
 		local cellInfo
-		local previousCellInfo
 		local cellIndex
 
 		local loadTop
@@ -2568,6 +2567,10 @@ function createUI(system)
 		end
 
 		local function loadCellInfo(cellIndex)
+			local previousCellInfo
+			if cellIndex > 1 then
+				previousCellInfo = cache.cellInfo[cellIndex - 1]
+			end
 			local cellInfo = cache.cellInfo[cellIndex]
 			local cell
 
@@ -2681,7 +2684,6 @@ function createUI(system)
 
 			cellIndex = 1
 			cellInfo = nil
-			previousCellInfo = nil
 
 			if vertical then
 				if endScrollIndicator then
@@ -2708,8 +2710,6 @@ function createUI(system)
 						cell.pos.Y = cellInfo.bottom
 						cell.pos.X = 0
 					end
-
-					previousCellInfo = cellInfo
 
 					if
 						(cellInfo.bottom >= loadBottom and cellInfo.bottom <= loadTop)
@@ -2768,8 +2768,6 @@ function createUI(system)
 						cell.pos.Y = 0
 						cell.pos.X = cellInfo.left
 					end
-
-					previousCellInfo = cellInfo
 
 					if
 						(cellInfo.left >= loadLeft and cellInfo.left <= loadRight)
@@ -2872,11 +2870,8 @@ function createUI(system)
 					pos = cellInfo.left - cellInfo.width * 0.5
 				end
 
-				-- if cell ~= nil, it means it's just been created
-				-- it has to be parented to the container
 				if cell ~= nil then
-					cells[cellIndex] = cell
-					cell:setParent(container)
+					config.unloadCell(index, cell, config.userdata)
 				end
 
 				currentIndex = currentIndex + 1
@@ -2888,7 +2883,7 @@ function createUI(system)
 				else
 					pos = pos + self.Width * 0.5
 				end
-				self:setScrollPosition(pos)
+				self:setScrollPosition(-pos)
 			end
 		end
 
@@ -3540,6 +3535,8 @@ function createUI(system)
 
 						if btn.selectedRow == c._choiceIndex then
 							c:select()
+						else
+							c:unselect()
 						end
 
 						return c
@@ -3609,6 +3606,10 @@ function createUI(system)
 				if btn.enable then
 					btn:enable()
 				end
+				for _, cell in ipairs(cells) do
+					cell:remove()
+				end
+				cells = {}
 			end
 		end
 
