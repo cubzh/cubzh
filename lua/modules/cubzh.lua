@@ -1711,7 +1711,7 @@ function home()
 								"House customization is coming soon! Stay tuned to personalize your house and invite friends. 👥"
 							)
 
-							comingSoonAlert:setPositiveCallback("Cancel", function()
+							comingSoonAlert:setPositiveCallback("OK", function()
 								comingSoonAlert:remove()
 								comingSoonAlert = nil
 							end)
