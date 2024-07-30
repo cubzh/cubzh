@@ -1556,8 +1556,7 @@ signup.startFlow = function(self, config)
 		local infoFrame
 		local info
 		local avatarUpdateListener
-		-- local nbPartsToChange = 3
-		local nbPartsToChange = 1
+		local nbPartsToChange = 3
 		local partsChanged = {}
 
 		local step = flow:createStep({
