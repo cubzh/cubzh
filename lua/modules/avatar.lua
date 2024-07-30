@@ -107,8 +107,8 @@ mod.skinColors = {
 	},
 }
 
-local DEFAULT_BODY_COLOR = 8
-mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR
+local DEFAULT_BODY_COLOR_INDEX = 8
+mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR_INDEX
 
 mod.eyes = {
 	{
@@ -380,13 +380,13 @@ local DEFAULT_NOSE_INDEX = 1
 mod.defaultNoseIndex = DEFAULT_NOSE_INDEX
 
 avatarPalette = Palette()
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin1) -- skin 1
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin2) -- skin 2
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].skin1) -- skin 1
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].skin2) -- skin 2
 avatarPalette:AddColor(Color(231, 230, 208)) -- cloth
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].mouth) -- mouth
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].mouth) -- mouth
 avatarPalette:AddColor(Color(255, 255, 255)) -- eyes white
 avatarPalette:AddColor(Color(50, 50, 50)) -- eyes
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].nose) -- nose
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].nose) -- nose
 avatarPalette:AddColor(Color(10, 10, 10)) -- eyes dark
 
 function initAnimations(avatar)
@@ -800,26 +800,37 @@ function avatar_load(self, config)
 				return
 			end
 
-			local skinColor = nil
-			local skinColor2 = nil
-			local noseColor = nil
-			local mouthColor = nil
-			local eyesColor = nil
-
-			-- skin color index
-			if data.skinColorIndex ~= nil then
-				local colorValues = mod.skinColors[data.skinColorIndex]
-				skinColor = colorValues.skin1
-				skinColor2 = colorValues.skin2
-				noseColor = colorValues.nose
-				mouthColor = colorValues.mouth
+			-- eyes type (index)
+			local eyesTypeIndex = data.eyesIndex
+			if eyesTypeIndex == nil or eyesTypeIndex == 0 then
+				eyesTypeIndex = DEFAULT_EYES_INDEX
 			end
 
-			-- eye color index
-			if data.eyesColorIndex ~= nil then
-				eyesColor = mod.eyeColors[data.eyesColorIndex]
+			-- nose type (index)
+			local noseTypeIndex = data.noseIndex
+			if noseTypeIndex == nil or noseTypeIndex == 0 then
+				noseTypeIndex = DEFAULT_NOSE_INDEX
 			end
 
+			-- body colors (index)
+			local bodyColorsIndex = data.skinColorIndex
+			if bodyColorsIndex == nil or bodyColorsIndex == 0 then
+				bodyColorsIndex = DEFAULT_BODY_COLOR_INDEX
+			end
+			local colorValues = mod.skinColors[bodyColorsIndex]
+			local skinColor = colorValues.skin1
+			local skinColor2 = colorValues.skin2
+			local noseColor = colorValues.nose
+			local mouthColor = colorValues.mouth
+
+			-- eyes color (index)
+			local eyesColorIndex = data.eyesColorIndex
+			if eyesColorIndex == nil or eyesColorIndex == 0 then
+				eyesColorIndex = DEFAULT_EYES_COLOR_INDEX
+			end
+			local eyesColor = mod.eyeColors[eyesColorIndex]
+
+			-- override colors
 			if data.skinColor then
 				skinColor =
 					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
@@ -852,14 +863,10 @@ function avatar_load(self, config)
 			})
 
 			-- eyes index
-			if data.eyesIndex ~= nil then
-				self:setEyes({ index = data.eyesIndex, color = eyesColor })
-			end
+			self:setEyes({ index = eyesTypeIndex, color = eyesColor })
 
 			-- nose index
-			if data.noseIndex ~= nil then
-				self:setNose({ index = data.noseIndex, color = noseColor })
-			end
+			self:setNose({ index = noseTypeIndex, color = noseColor })
 
 			-- print("data:", JSON:Encode(data))
 
