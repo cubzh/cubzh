@@ -1117,7 +1117,7 @@ void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box
             Matrix4x4 child_mtx = mtx;
             matrix4x4_op_multiply(&child_mtx, child->mtx);
 
-            const Shape *s = (Shape *)t->ptr;
+            const Shape *s = (Shape *)child->ptr;
             const Box model = shape_get_model_aabb(s);
             const float3 offset = shape_get_pivot(s);
             Box aabb;
