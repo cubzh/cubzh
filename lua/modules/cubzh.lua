@@ -63,7 +63,9 @@ Client.OnStart = function()
 
 		if avatarCameraFollowHomeScroll == true then
 			box:Fit(avatarCameraTarget, { recursive = true })
-			Camera:FitToScreen(box, 0.5)
+			local cover = (CONFIG.PROFILE_CELL_SIZE * 0.8)
+				/ (CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2 + Screen.SafeArea.Top * 2)
+			Camera:FitToScreen(box, cover)
 		elseif avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
 			Camera:FitToScreen(box, 0.7)
