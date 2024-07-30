@@ -576,7 +576,7 @@ itemGrid.create = function(_, config)
 
 		if type == "items" then
 			local categories = config.categories
-			if toggleFilterOptions[currentToggleFilterOption].name == "featured" then
+			if search == "" and toggleFilterOptions[currentToggleFilterOption].name == "featured" then
 				categories = { "featured" }
 				for _, category in ipairs(config.categories) do
 					table.insert(categories, category)
@@ -602,7 +602,7 @@ itemGrid.create = function(_, config)
 			addSentRequest(req)
 		elseif type == "worlds" then
 			local category = ""
-			if toggleFilterOptions[currentToggleFilterOption].name == "featured" then
+			if search == "" and toggleFilterOptions[currentToggleFilterOption].name == "featured" then
 				category = "featured"
 			end
 
