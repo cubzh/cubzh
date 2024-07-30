@@ -59,7 +59,7 @@ setFromAIConfig = function(_, config, _quiet)
 	current.fog.color = c
 	current.fog.near = math.floor(config.fog.near)
 	current.fog.far = math.floor(config.fog.far)
-	current.fog.lightAbsorbtion = math.clamp(config.fog.lightAbsorbtion, 0, 1)
+	current.fog.lightAbsorbtion = math.max(0, math.min(config.fog.lightAbsorbtion, 1))
 	c = type(config.sun.color) == colorType and config.sun.color
 		or Color(math.floor(config.sun.color[1]), math.floor(config.sun.color[2]), math.floor(config.sun.color[3]))
 	current.sun.color = c
