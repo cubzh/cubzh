@@ -607,7 +607,8 @@ creations.createModalContent = function(_, config)
 					m:push(itemDetailsContent)
 				end
 			elseif entity.type == "world" then
-				local worldDetailsContent = worldDetails:create({ mode = "create", title = cell.title, uikit = ui })
+				local worldDetailsContent =
+					worldDetails:createModalContent({ mode = "create", world = entity, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
 					worldDetailsContent.title = updatedWorld.title
@@ -616,17 +617,15 @@ creations.createModalContent = function(_, config)
 					end
 				end
 
-				worldDetailsContent:loadCell(cell)
-
-				local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
+				local btnEditCode = ui:buttonSecondary({ content = "🤓 Code", textSize = "default" })
 				btnEditCode.onRelease = function()
-					System.EditWorldCode(cell.id)
+					System.EditWorldCode(entity.id)
 				end
 
-				local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
+				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
 				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
-					System.EditWorld(cell.id)
+					System.EditWorld(entity.id)
 				end
 
 				worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
