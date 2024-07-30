@@ -363,9 +363,16 @@ signup.startFlow = function(self, config)
 
 					System:DebugEvent("User presses OK to submit verification code", { code = codeInput.Text })
 
-					local phoneVerifCode = codeInput.Text
+					local verifCode = codeInput.Text
 
-					api:patchUserInfo({ phoneVerifCode = phoneVerifCode }, function(err)
+					local data = {}
+					if System.IsUserUnder13 == true then
+						data.parentPhoneVerifCode = verifCode
+					else
+						data.phoneVerifCode = verifCode
+					end
+
+					api:patchUserInfo(data, function(err)
 						if err ~= nil then
 							System:DebugEvent("Request to verify phone number fails", { code = codeInput.Text })
 							okBtn:enable()
