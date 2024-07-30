@@ -270,18 +270,16 @@ creations.createModalContent = function(_, config)
 						local itemFullName = item.repo .. "." .. item.name
 						-- local category = cell.category
 
-						local itemDetailsContent = itemDetails:createModalContent({ mode = "create", uikit = ui })
-
 						local cell = {}
-
 						cell.id = item.id
 						cell.name = item.name
 						cell.repo = item.repo
 						cell.description = ""
-						cell.itemFullName = itemFullName
+						cell.fullName = itemFullName
 						cell.created = item.created
 
-						itemDetailsContent:loadCell(cell)
+						local itemDetailsContent =
+							itemDetails:createModalContent({ mode = "create", uikit = ui, item = cell })
 
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit:setColor(theme.colorCreate)
