@@ -35,8 +35,9 @@ public:
     
     static WSConnection_SharedPtr make(const std::string& scheme,
                                        const std::string& addr,
-                                       const uint16_t& port);
-    
+                                       const uint16_t& port,
+                                       const std::string& path = "");
+
     ~WSConnection();
     
     Status getStatus() override;
@@ -55,6 +56,7 @@ public:
     // accessors
     const std::string& getHost() const;
     const uint16_t& getPort() const;
+    const std::string& getPath() const;
     const bool& getSecure() const;
 
     WSBackend getWsi();
@@ -65,7 +67,8 @@ public:
     /// notify the connection that it received data
     /// bytes must be copied!
     void receivedBytes(char *bytes, const size_t len, const bool isFinalFragment);
-    
+    void receivedWorkspace(char *bytes, const size_t len, const bool isFinalFragment);
+
     ///
     void setIsWriting(const bool isWriting);
     
@@ -96,7 +99,8 @@ private:
     void init(const WSConnection_SharedPtr& ref,
               const std::string& scheme,
               const std::string& addr,
-              const uint16_t& port);
+              const uint16_t& port,
+              const std::string& path);
     
     ///
     void _threadFunction();
@@ -119,6 +123,9 @@ private:
     
     /// server port to connect to
     uint16_t _serverPort;
+    
+    /// server path
+    std::string _serverPath;
     
     /// indicate whether SSL is used
     bool _secure;

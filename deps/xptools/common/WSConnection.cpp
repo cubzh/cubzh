@@ -26,9 +26,10 @@ using namespace vx;
 
 WSConnection_SharedPtr WSConnection::make(const std::string& scheme,
                                           const std::string& addr,
-                                          const uint16_t& port) {
+                                          const uint16_t& port,
+                                          const std::string& path) {
     WSConnection_SharedPtr conn(new WSConnection());
-    conn->init(conn, scheme, addr, port);
+    conn->init(conn, scheme, addr, port, path);
     return conn;
 }
 
@@ -36,6 +37,7 @@ WSConnection::WSConnection() : Connection(),
 _weakSelf(),
 _serverAddr(),
 _serverPort(),
+_serverPath(),
 _secure(false),
 _status(Status::IDLE),
 _statusMutex(),
@@ -148,7 +150,10 @@ void WSConnection::connect() {
     
     // construct string with scheme, address and port
     const std::string urlScheme = _secure ? "wss" : "ws";
-    const std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+    std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+    if (_serverPath != "") {
+        url = url + "/" + _serverPath;
+    }
     // vxlog_debug("[WSConnection::connect] %s", url.c_str());
     EmscriptenWebSocketCreateAttributes ws_attrs = {
         url.c_str(),
@@ -273,6 +278,10 @@ const uint16_t& WSConnection::getPort() const {
     return _serverPort;
 }
 
+const std::string& WSConnection::getPath() const {
+    return _serverPath;
+}
+
 const bool& WSConnection::getSecure() const {
     return _secure;
 }
@@ -340,6 +349,15 @@ void WSConnection::receivedBytes(char *bytes,
             }
         }
         _receivedBytesBuffer.clear();
+    }
+}
+
+void WSConnection::receivedWorkspace(char *bytes,
+                                     const size_t len,
+                                     const bool isFinalFragment) {
+    std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
+    if (delegate != nullptr) {
+        delegate->connectionDidReceiveWorkspace(*this, bytes);
     }
 }
 
@@ -439,13 +457,15 @@ bool WSConnection::doneWriting() {
 void WSConnection::init(const WSConnection_SharedPtr& ref,
                         const std::string& scheme,
                         const std::string& addr,
-                        const uint16_t& port) {
+                        const uint16_t& port,
+                        const std::string& path) {
     assert(scheme == "ws" || scheme == "wss");
     _weakSelf = ref;
 
     // _scheme = scheme;
     _serverAddr.assign(addr);
     _serverPort = port;
+    _serverPath.assign(path);
     if (scheme == "wss") { _secure = true; }
 }
 

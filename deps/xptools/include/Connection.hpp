@@ -209,7 +209,9 @@ public:
     
     /// Delegate owns the Payload (is responsible for its deletion)
     virtual void connectionDidReceive(Connection& conn, const Connection::Payload_SharedPtr& payload) = 0;
-    
+
+    virtual void connectionDidReceiveWorkspace(Connection& conn, const std::string& message) = 0;
+
     /// NOTE: The connection can be closed while never been established,
     /// it's possible to look at the status to get that information.
     virtual void connectionDidClose(Connection& conn) = 0;

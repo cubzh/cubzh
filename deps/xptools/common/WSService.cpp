@@ -498,6 +498,7 @@ void WSService::_serviceThreadFunction() {
             connectInfo.address = wsConn->getHost().c_str();
             connectInfo.host = ""; // crashes without it
             connectInfo.port = wsConn->getPort();
+            connectInfo.path = wsConn->getPath().c_str();
             connectInfo.userdata = new WSConnection_SharedPtr(wsConn);
             connectInfo.priority = 6;
             
@@ -749,14 +750,16 @@ int lws_callback_ws_join(struct lws *wsi,
                                 isFinalFragment,
                                 isBinary);
             
-            assert(isBinary);
-            
-            if (wsConn != nullptr) {
-                // notify the connection of the received bytes
-                // (this can trigger a delegate function)
-                wsConn->receivedBytes(reinterpret_cast<char*>(in), len, isFinalFragment);
+            if (isBinary) {
+                if (wsConn != nullptr) {
+                    // notify the connection of the received bytes
+                    // (this can trigger a delegate function)
+                    wsConn->receivedBytes(reinterpret_cast<char*>(in), len, isFinalFragment);
+                } else {
+                    vxlog_error("⚡️ [WSConnection][LWS_CALLBACK_CLIENT_RECEIVE] this is not supposed to happen");
+                }
             } else {
-                vxlog_error("⚡️ [WSConnection][LWS_CALLBACK_CLIENT_RECEIVE] this is not supposed to happen");
+                wsConn->receivedWorkspace(reinterpret_cast<char*>(in), len, true);
             }
             
             break;
