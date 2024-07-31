@@ -46,7 +46,6 @@ local NodeType = {
 
 -- MODULES
 
-bundle = require("bundle")
 codes = require("inputcodes")
 cleanup = require("cleanup")
 hierarchyActions = require("hierarchyactions")
@@ -1659,14 +1658,25 @@ function createUI(system)
 		end
 
 		if size ~= nil then
-			if type(size) ~= "string" or (size ~= "default" and size ~= "small" and size ~= "big") then
-				error('ui:createText(str, color, size) - size must be a string ("default", "small" or "big")', 2)
+			local sizeType = type(size)
+			if
+				(sizeType ~= "number" and sizeType ~= "integer" and sizeType ~= "string")
+				or (sizeType == "string" and (size ~= "default" and size ~= "small" and size ~= "big"))
+			then
+				error(
+					'ui:createText(str, color, size) - size must be a string ("default", "small" or "big") or number',
+					2
+				)
 			end
 			defaultConfig.size = size
 		end
 
 		local ok, err = pcall(function()
-			config = conf:merge(defaultConfig, config)
+			config = conf:merge(defaultConfig, config, {
+				acceptTypes = {
+					size = { "number", "integer", "string" },
+				},
+			})
 		end)
 		if not ok then
 			error("ui:createText(str, config) - config error: " .. err, 2)
@@ -1714,7 +1724,9 @@ function createUI(system)
 		t.BackgroundColor = config.backgroundColor
 		t.MaxDistance = camera.Far + 100
 
-		if config.size == "big" then
+		if type(config.size) == "number" or type(config.size) == "integer" then
+			t.FontSize = config.size
+		elseif config.size == "big" then
 			t.FontSize = currentFontSizeBig
 		elseif config.size == "small" then
 			t.FontSize = currentFontSizeSmall
@@ -1827,7 +1839,11 @@ function createUI(system)
 			config.textSize = configOrSize
 			config = conf:merge(defaultConfig, config)
 		elseif type(configOrSize) == "table" then
-			config = conf:merge(defaultConfig, configOrSize)
+			config = conf:merge(defaultConfig, configOrSize, {
+				acceptTypes = {
+					textSize = { "number", "integer", "string" },
+				},
+			})
 		else
 			config = conf:merge(defaultConfig, config)
 		end
@@ -3155,6 +3171,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
+				textSize = { "number", "integer", "string" },
 				textColorPressed = { "Color" },
 				content = { "string", "Shape", "MutableShape", "table" },
 				backgroundQuad = { "Quad" },
