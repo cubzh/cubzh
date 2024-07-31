@@ -85,28 +85,31 @@ MODAL_KEYS = {
 -- User account management
 
 function connect()
-	if Players.Max <= 1 then
-		return -- no need to connect when max players not > 1
-	end
-	if Client.Connected then
-		return -- already connected
-	end
-	if connectionIndicator:isVisible() then
-		return -- already trying to connect
-	end
+    if Environment.CUBZH_WORKSPACE_ID then
+        System:ConnectToWorkspace(Environment.CUBZH_WORKSPACE_ID)
+    end
+    if Players.Max <= 1 then
+        return -- no need to connect when max players not > 1
+    end
+    if Client.Connected then
+        return -- already connected
+    end
+    if connectionIndicator:isVisible() then
+        return -- already trying to connect
+    end
 
-	if connectionRetryTimer ~= nil then
-		connectionRetryTimer:Cancel()
-		connectionRetryTimer = nil
-	end
+    if connectionRetryTimer ~= nil then
+        connectionRetryTimer:Cancel()
+        connectionRetryTimer = nil
+    end
 
-	connBtn:show()
-	connectionIndicator:show()
-	noConnectionIndicator:hide()
+    connBtn:show()
+    connectionIndicator:show()
+    noConnectionIndicator:hide()
 
-	connectionIndicatorStartAnimation()
+    connectionIndicatorStartAnimation()
 
-	System:ConnectToServer()
+    System:ConnectToServer()
 end
 
 function startConnectTimer()
