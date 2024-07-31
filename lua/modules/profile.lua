@@ -274,7 +274,7 @@ profile.create = function(_, config)
 			end
 
 			if bioText.Text ~= "" then
-				bioText.object.MaxWidth = self.Width
+				bioText.object.MaxWidth = self.Width - padding * 2
 				totalHeight = totalHeight + bioText.Height + padding
 			end
 
@@ -866,10 +866,7 @@ profile.create = function(_, config)
 
 		if infoNode.parent ~= nil then
 			y = y - infoNode.Height - padding
-			infoNode.pos = {
-				self.Width * 0.5 - infoNode.Width * 0.5,
-				y,
-			}
+			infoNode.pos = { 0, y }
 		end
 
 		scroll:flush()
