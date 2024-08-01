@@ -3118,22 +3118,10 @@ function createUI(system)
 		end
 
 		-- load neutral button preset when no style config provided
-		if
-			config == nil
-			or (
-				config.backgroundQuad == nil
-				and config.backgroundQuadPressed == nil
-				and config.backgroundQuadSelected == nil
-				and config.backgroundQuadDisabled == nil
-				and config.borders == nil
-				and config.shadow == nil
-				and config.color == nil
-				and config.colorPressed == nil
-				and config.colorSelected == nil
-				and config.colorDisabled == nil
-			)
-		then
-			return ui:buttonNeutral(config)
+		if config == nil or (config.backgroundQuad == nil and config.color == nil) then
+			config = config or {}
+			config.color = Color(200, 200, 200)
+			-- return ui:buttonNeutral(config)
 		end
 
 		local defaultConfig = {
