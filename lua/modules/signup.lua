@@ -123,16 +123,6 @@ signup.startFlow = function(self, config)
 		end
 	end
 
-	local internalLoginSuccess = function()
-		-- Hide the coins balance button (top right corner)
-		-- The button is shown during the signup process,
-		-- but it should be hidden once the user is logged in,
-		-- because the top bar already displays the user's balance.
-		removeCoinsButton()
-
-		flowConfig.loginSuccess()
-	end
-
 	local function showBackButton()
 		if backButton == nil then
 			backButton = ui:buttonNegative({ content = "⬅️", textSize = "default" })
@@ -162,7 +152,9 @@ signup.startFlow = function(self, config)
 		end
 	end
 
-	local createMagicKeyInputStep = function(config)
+	local steps = {}
+
+	steps.createMagicKeyInputStep = function(config)
 		local defaultConfig = {
 			usernameOrEmail = "",
 		}
@@ -230,7 +222,12 @@ signup.startFlow = function(self, config)
 									System:StoreCredentials(userID, token)
 
 									System.AskedForMagicKey = false
-									internalLoginSuccess()
+
+									-- flush signup flow and restart credential checks (should go through now)
+									signupFlow:flush()
+									signupFlow:push(
+										steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true })
+									)
 								else
 									magicKeyLabel.Text = "❌ " .. err
 									hideLoading()
@@ -316,7 +313,7 @@ signup.startFlow = function(self, config)
 	end
 
 	-- Prompts the user for a phone number verif code
-	local createVerifyPhoneNumberStep = function()
+	steps.createVerifyPhoneNumberStep = function()
 		local step = flow:createStep({
 			onEnter = function()
 				config.verifyPhoneNumberStep()
@@ -378,7 +375,11 @@ signup.startFlow = function(self, config)
 							okBtn:enable()
 							return
 						end
-						internalLoginSuccess()
+						System:DebugEvent("Request to verify phone number succeeds", { code = codeInput.Text })
+
+						-- flush signup flow and restart credential checks (should go through now)
+						signupFlow:flush()
+						signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
 					end)
 				end
 
@@ -476,7 +477,7 @@ signup.startFlow = function(self, config)
 	end
 
 	-- Prompts the user for a phone number
-	local createPhoneNumberStep = function()
+	steps.createPhoneNumberStep = function()
 		local step = flow:createStep({
 			onEnter = function()
 				config.phoneNumberStep()
@@ -570,7 +571,7 @@ signup.startFlow = function(self, config)
 						{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
 					)
 					okBtn:disable()
-					-- signupFlow:push(createAvatarEditorStep())
+
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
 
 					-- construct user patch data
@@ -585,7 +586,7 @@ signup.startFlow = function(self, config)
 							okBtn:enable()
 							return
 						end
-						signupFlow:push(createVerifyPhoneNumberStep())
+						signupFlow:push(steps.createVerifyPhoneNumberStep())
 					end)
 				end
 
@@ -706,7 +707,7 @@ signup.startFlow = function(self, config)
 	end
 
 	-- Prompts the user for a username
-	local createUsernameInputStep = function(config)
+	steps.createUsernameInputStep = function(config)
 		local defaultConfig = {
 			username = "",
 		}
@@ -859,7 +860,7 @@ signup.startFlow = function(self, config)
 							-- success
 							Player.Username = username
 							System.AskedForMagicKey = false
-							signupFlow:push(createPhoneNumberStep())
+							signupFlow:push(steps.createPhoneNumberStep())
 						end)
 						table.insert(requests, req)
 					else
@@ -956,7 +957,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createLoginOptionsStep = function(config)
+	steps.createLoginOptionsStep = function(config)
 		local defaultConfig = {
 			username = "",
 			password = false,
@@ -973,7 +974,7 @@ signup.startFlow = function(self, config)
 				local title = ui:createText(str:upperFirstChar(loc("authentication", "title")) .. " 🔑", Color.White)
 				title:setParent(frame)
 
-				local errorLabel = ui:createText("", Color.White)
+				local errorLabel = ui:createText("", Color.Red)
 				errorLabel:setParent(frame)
 				errorLabel:hide()
 
@@ -1042,7 +1043,7 @@ signup.startFlow = function(self, config)
 							hideLoading()
 							if err == nil then
 								System.AskedForMagicKey = true
-								local step = createMagicKeyInputStep({ usernameOrEmail = config.username })
+								local step = steps.createMagicKeyInputStep({ usernameOrEmail = config.username })
 								signupFlow:push(step)
 							else
 								errorLabel.Text = "❌ Sorry, failed to send magic key"
@@ -1129,7 +1130,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createLoginStep = function()
+	steps.createLoginStep = function()
 		local requests = {}
 		local frame
 
@@ -1145,7 +1146,7 @@ signup.startFlow = function(self, config)
 				local title = ui:createText(str:upperFirstChar(loc("who are you?")) .. " 🙂", Color.White)
 				title:setParent(frame)
 
-				local errorLabel = ui:createText("", Color.Black)
+				local errorLabel = ui:createText("", Color.Red)
 				errorLabel:setParent(frame)
 				errorLabel:hide()
 
@@ -1204,7 +1205,7 @@ signup.startFlow = function(self, config)
 					if errorLabel.Text ~= "" then
 						errorLabel:show()
 						errorLabel.pos = {
-							theme.paddingBig,
+							self.Width * 0.5 - errorLabel.Width * 0.5,
 							y - theme.padding - errorLabel.Height,
 						}
 						y = errorLabel.pos.Y
@@ -1262,7 +1263,7 @@ signup.startFlow = function(self, config)
 						-- res.username, res.password, res.magickey
 						if err == nil then
 							-- NOTE: res.username is sanitized
-							local step = createLoginOptionsStep({
+							local step = steps.createLoginOptionsStep({
 								username = res.username,
 								password = res.password,
 								magickey = res.magickey,
@@ -1290,7 +1291,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createDOBStep = function()
+	steps.createDOBStep = function()
 		local requests = {}
 		local step = flow:createStep({
 			onEnter = function()
@@ -1487,7 +1488,7 @@ signup.startFlow = function(self, config)
 						-- Store information about user being <13yo
 						System.IsUserUnder13 = cache.dob.year > currentYear - 13
 						-- Go to next step
-						signupFlow:push(createUsernameInputStep())
+						signupFlow:push(steps.createUsernameInputStep())
 					end)
 					table.insert(requests, req)
 				end
@@ -1557,7 +1558,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createAvatarEditorStep = function()
+	steps.createAvatarEditorStep = function()
 		local avatarEditor
 		local okBtn
 		local infoFrame
@@ -1590,7 +1591,7 @@ signup.startFlow = function(self, config)
 				okBtn.onRelease = function(_)
 					-- go to next step
 					System:DebugEvent("User presses OK button on avatar editor")
-					signupFlow:push(createDOBStep())
+					signupFlow:push(steps.createDOBStep())
 				end
 				okBtn:disable()
 
@@ -1754,7 +1755,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createAvatarPreviewStep = function()
+	steps.createAvatarPreviewStep = function()
 		local step = flow:createStep({
 			onEnter = function()
 				config.avatarPreviewStep()
@@ -1773,7 +1774,7 @@ signup.startFlow = function(self, config)
 				okBtn:setParent(drawer)
 				okBtn.onRelease = function()
 					System:DebugEvent("User presses OK button on avatar presention")
-					signupFlow:push(createAvatarEditorStep())
+					signupFlow:push(steps.createAvatarEditorStep())
 				end
 
 				local text = ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
@@ -1822,7 +1823,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createSignUpOrLoginStep = function()
+	steps.createSignUpOrLoginStep = function()
 		local startBtn
 		local step = flow:createStep({
 			onEnter = function()
@@ -1843,7 +1844,7 @@ signup.startFlow = function(self, config)
 					end
 
 					loginBtn.onRelease = function()
-						signupFlow:push(createLoginStep())
+						signupFlow:push(steps.createLoginStep())
 					end
 				end
 				loginBtn:parentDidResize()
@@ -1868,7 +1869,7 @@ signup.startFlow = function(self, config)
 
 				startBtn.onRelease = function()
 					System:DebugEvent("User presses start button")
-					signupFlow:push(createAvatarPreviewStep())
+					signupFlow:push(steps.createAvatarPreviewStep())
 				end
 			end,
 			onExit = function()
@@ -1882,17 +1883,21 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	local createCheckAppVersionAndCredentialsStep = function()
+	steps.createCheckAppVersionAndCredentialsStep = function(config)
+		config = config or { onlyCheckUserInfo = false }
+
 		local loadingFrame
 		local step = flow:createStep({
 			onEnter = function()
+				removeBackButton()
+				removeCoinsButton()
+
 				if loadingFrame == nil then
 					loadingFrame = ui:frameTextBackground()
 
-					local text =
-						ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
-							color = Color.White,
-						})
+					local text = ui:createText("", {
+						color = Color.White,
+					})
 					text:setParent(loadingFrame)
 					text.pos = { theme.padding, theme.padding }
 
@@ -2084,7 +2089,7 @@ signup.startFlow = function(self, config)
 							local usernameOrEmail = System.SavedUsernameOrEmail
 							if type(usernameOrEmail) == "string" and usernameOrEmail ~= "" then
 								-- show magic key prompt
-								local step = createMagicKeyInputStep({ usernameOrEmail = usernameOrEmail })
+								local step = steps.createMagicKeyInputStep({ usernameOrEmail = usernameOrEmail })
 								signupFlow:push(step)
 							else
 								checks.error("failed to resume login with magic key")
@@ -2138,14 +2143,12 @@ signup.startFlow = function(self, config)
 							System.HasDOB = userInfo.hasDOB
 							System.IsUserUnder13 = userInfo.isUnder13
 
-							-- System.HasPhoneNumber = userInfo.hasPhoneNumber or false
-
 							if Client.LoggedIn then
-								internalLoginSuccess()
+								flowConfig.loginSuccess()
 							else
 								-- show signup
 								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
-								signupFlow:push(createSignUpOrLoginStep())
+								signupFlow:push(steps.createSignUpOrLoginStep())
 							end
 						end, {
 							"username",
@@ -2160,7 +2163,11 @@ signup.startFlow = function(self, config)
 					end
 
 					-- Start with the first sub-step
-					checks.minAppVersion()
+					if config.onlyCheckUserInfo then
+						checks.checkUserAccountComplete()
+					else
+						checks.minAppVersion()
+					end
 				end
 				loadingFrame:parentDidResize()
 			end,
@@ -2173,7 +2180,7 @@ signup.startFlow = function(self, config)
 		return step
 	end
 
-	signupFlow:push(createCheckAppVersionAndCredentialsStep())
+	signupFlow:push(steps.createCheckAppVersionAndCredentialsStep())
 
 	return signupFlow
 end
