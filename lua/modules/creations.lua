@@ -211,28 +211,21 @@ creations.createModalContent = function(_, config)
 							grid.needsToRefreshEntries = true
 						end
 
-						local worldDetailsContent =
-							worldDetails:create({ mode = "create", title = world.title, uikit = ui })
-
-						local cell = {}
-
-						cell.id = world.id
-						cell.title = world.title
-						cell.description = ""
-						cell.created = world.created
-						cell.item = { shape = bundle:Shape("shapes/world_icon") }
-
-						worldDetailsContent:loadCell(cell)
+						local worldDetailsContent = worldDetails:createModalContent({
+							mode = "create",
+							world = world,
+							uikit = ui,
+						})
 
 						local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
 						btnEditCode.onRelease = function()
-							System.EditWorldCode(cell.id)
+							System.EditWorldCode(world.id)
 						end
 
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
-							System.EditWorld(cell.id)
+							System.EditWorld(world.id)
 						end
 
 						worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
