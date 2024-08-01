@@ -1029,7 +1029,7 @@ function createUI(system)
 		end
 
 		if node.shape:GetParent() == nil then
-			node.shapeContainer:AddChild(node.shape)
+			node.pivot:AddChild(node.shape)
 		end
 		node.shape.LocalPosition:Set(Number3.Zero)
 		node.shape.LocalRotation:Set(Number3.Zero)
@@ -1037,7 +1037,6 @@ function createUI(system)
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
 		node.pivot.LocalPosition = Number3.Zero
-		node.shapeContainer.LocalPosition = Number3.Zero
 
 		-- the shape scale is always 1
 		-- in the context of a shape node, we always apply scale to the parent object
@@ -1077,7 +1076,7 @@ function createUI(system)
 			node.pivot.LocalPosition:Set(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
 
-		node.shapeContainer.LocalPosition:Set(-aabb.Center + node._config.offset)
+		node.shape.LocalPosition:Set(-aabb.Center + node._config.offset)
 		node.object.LocalScale = backupScale
 	end
 
@@ -1485,10 +1484,7 @@ function createUI(system)
 		node.object.LocalScale = UI_SHAPE_SCALE
 
 		node.pivot = Object()
-		node.shapeContainer = Object()
-
 		node.object:AddChild(node.pivot)
-		node.pivot:AddChild(node.shapeContainer)
 
 		-- _diameter defined within _refreshShapeNode
 		node.refresh = _refreshShapeNode
@@ -1603,7 +1599,7 @@ function createUI(system)
 			self.shape = shape
 			shape._node = self
 
-			node.shapeContainer:AddChild(shape)
+			node.pivot:AddChild(shape)
 			shape.LocalPosition = Number3.Zero
 
 			if doNotRefresh ~= true then
