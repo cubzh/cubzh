@@ -70,9 +70,10 @@ flow.create = function(self)
 		end
 	end
 
-	f.remove = function(self)
+	-- removes all steps
+	f.flush = function(self)
 		if self ~= f then
-			error("flow:remove() should be called with `:`", 2)
+			error("flow:removes() should be called with `:`", 2)
 		end
 
 		-- exit and remove current step
@@ -88,6 +89,13 @@ flow.create = function(self)
 			step:onRemove()
 			step = table.remove(self.steps)
 		end
+	end
+
+	f.remove = function(self)
+		if self ~= f then
+			error("flow:remove() should be called with `:`", 2)
+		end
+		self:flush()
 	end
 
 	return f
