@@ -1060,7 +1060,7 @@ function refreshChat()
 end
 
 function showChat(input)
-	if System.Authenticated == false and Environment.USER_AUTH ~= "disabled" then
+	if not Client.LoggedIn and Environment.USER_AUTH ~= "disabled" then
 		return
 	end
 	chatDisplayed = true
@@ -1357,7 +1357,7 @@ menu.IsActive = function(_)
 end
 
 function menuSectionCanBeShown()
-	if System.Authenticated == false then
+	if not Client.LoggedIn and Environment.USER_AUTH ~= "disabled" then
 		return false
 	end
 	if topBar:isVisible() == false then
