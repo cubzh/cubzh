@@ -1,70 +1,44 @@
---[[
-Generic gallery serving multiple purposes:
-- explore games
-- explore items
-- explore user creations (by category)
-]]
---
+--- This module is just an entity_grid wrapper, to create modal or modal content.
 
 local gallery = {}
 
 gallery.createModalContent = function(_, config)
 	local modal = require("modal")
 	local itemGrid = require("item_grid")
-	local itemDetails = require("item_details")
-	local pagesModule = require("pages")
-	-- load config (overriding defaults)
-	local _config = {
-		-- function triggered when opening cell
-		onOpen = nil,
-		--
-		uikit = require("uikit"),
-	}
 
-	if config then
-		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
-				_config[k] = config[k]
-			end
-		end
-		_config.onOpen = config.onOpen
+	local grid
+
+	local ok, err = pcall(function()
+		grid = itemGrid:create(config)
+	end)
+	if not ok then
+		error("gallery:create(config) - config error: " .. err, 2)
 	end
-
-	config = _config
 
 	local ui = config.uikit
 
 	local gridContent = modal:createContent()
-	gridContent.title = "Gallery"
-	gridContent.icon = "🗺️"
 
-	local grid = itemGrid:create({ categories = { "null" }, uikit = ui })
+	local title = "Unkown entities"
+	local icon = "❌"
+
+	if config.type == "items" then
+		title = "Items"
+		icon = "⚔️"
+	elseif config.type == "worlds" then
+		title = "Worlds"
+		icon = "🌎"
+	end
+
+	gridContent.title = title
+	gridContent.icon = icon
+	gridContent.node = grid
 	gridContent.node = grid
 
-	local pages = pagesModule:create(ui)
-	gridContent.bottomCenter = { pages }
-
-	gridContent.idealReducedContentSize = function(content, width, height)
-		local grid = content
-		grid.Width = width
-		grid.Height = height -- - content.pages.Height - theme.padding
-		-- grid:refresh() -- affects width and height (possibly reducing it)
-		return Number2(grid.Width, grid.Height)
-	end
-
-	grid.onPaginationChange = function(page, nbPages)
-		pages:setNbPages(nbPages)
-		pages:setPage(page)
-	end
-
-	pages:setPageDidChange(function(page)
-		grid:setPage(page)
-	end)
-
 	-- called when a grid cell has been clicked
-	grid.onOpen = function(cell)
+	grid.onOpen = function(entity)
 		if config.onOpen then
-			return _config.onOpen(self, cell)
+			return config.onOpen(entity)
 		end
 
 		local modalObj = gridContent:getModalIfContentIsActive()
@@ -72,15 +46,13 @@ gallery.createModalContent = function(_, config)
 			return
 		end
 
-		local itemDetailsContent = itemDetails:createModalContent({ uikit = ui })
-		itemDetailsContent:loadCell(cell)
-
-		itemDetailsContent.idealReducedContentSize = function(content, width, height)
-			content.Width = width
-			content.Height = height
-			return Number2(content.Width, content.Height)
+		if config.type == "items" then
+			local content = require("item_details"):createModalContent({ uikit = ui, item = entity })
+			modalObj:push(content)
+		elseif config.type == "worlds" then
+			local content = require("world_details"):createModalContent({ uikit = ui, world = entity })
+			modalObj:push(content)
 		end
-		modalObj:push(itemDetailsContent)
 	end
 
 	return gridContent
@@ -88,11 +60,7 @@ end
 
 gallery.create = function(self, maxWidth, maxHeight, position, config)
 	local content = self:createModalContent(config)
-
-	local modal = require("modal")
-
-	local _modal = modal:create(content, maxWidth, maxHeight, position)
-	return _modal
+	return require("modal"):create(content, maxWidth, maxHeight, position)
 end
 
 return gallery

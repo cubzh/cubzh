@@ -107,8 +107,8 @@ mod.skinColors = {
 	},
 }
 
-local DEFAULT_BODY_COLOR = 8
-mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR
+local DEFAULT_BODY_COLOR_INDEX = 8
+mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR_INDEX
 
 mod.eyes = {
 	{
@@ -380,13 +380,13 @@ local DEFAULT_NOSE_INDEX = 1
 mod.defaultNoseIndex = DEFAULT_NOSE_INDEX
 
 avatarPalette = Palette()
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin1) -- skin 1
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin2) -- skin 2
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].skin1) -- skin 1
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].skin2) -- skin 2
 avatarPalette:AddColor(Color(231, 230, 208)) -- cloth
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].mouth) -- mouth
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].mouth) -- mouth
 avatarPalette:AddColor(Color(255, 255, 255)) -- eyes white
 avatarPalette:AddColor(Color(50, 50, 50)) -- eyes
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].nose) -- nose
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].nose) -- nose
 avatarPalette:AddColor(Color(10, 10, 10)) -- eyes dark
 
 function initAnimations(avatar)
@@ -687,6 +687,33 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	end
 
 	local avatar = Object()
+
+	local mt = System.GetMetatable(avatar)
+	mt.Shadow = false
+
+	local objectIndex = mt.__index
+	mt.__index = function(t, k)
+		if k == "Shadow" then
+			return mt[k]
+		end
+		return objectIndex(t, k)
+	end
+
+	local objectNewIndex = mt.__newindex
+	mt.__newindex = function(t, k, v)
+		if k == "Shadow" then
+			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
+				if o.Shadow == nil then
+					return
+				end
+				o.Shadow = v
+			end)
+			mt.Shadow = v
+			return
+		end
+		objectNewIndex(t, k, v)
+	end
+
 	avatar.load = avatar_load
 	avatar.loadEquipment = avatar_loadEquipment
 	avatar.setColors = avatar_setColors
@@ -696,7 +723,8 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	local requests = {}
 	local palette = avatarPalette:Copy()
 
-	avatarPrivateFields[avatar] = { config = config, equipments = {}, requests = requests, palette = palette }
+	avatarPrivateFields[avatar] =
+		{ config = config, equipments = {}, equipments_requested = {}, requests = requests, palette = palette }
 
 	local body = bundle:MutableShape("shapes/avatar.3zh")
 	body.Name = "Body"
@@ -790,6 +818,8 @@ function avatar_load(self, config)
 		config = fields.config
 	end
 
+	fields.equipments_requested = {}
+
 	if config.usernameOrId ~= nil and config.usernameOrId ~= "" then
 		local req = api.getAvatar(config.usernameOrId, function(err, data)
 			if err and config.didLoad then
@@ -797,26 +827,37 @@ function avatar_load(self, config)
 				return
 			end
 
-			local skinColor = nil
-			local skinColor2 = nil
-			local noseColor = nil
-			local mouthColor = nil
-			local eyesColor = nil
-
-			-- skin color index
-			if data.skinColorIndex ~= nil then
-				local colorValues = mod.skinColors[data.skinColorIndex]
-				skinColor = colorValues.skin1
-				skinColor2 = colorValues.skin2
-				noseColor = colorValues.nose
-				mouthColor = colorValues.mouth
+			-- eyes type (index)
+			local eyesTypeIndex = data.eyesIndex
+			if eyesTypeIndex == nil or eyesTypeIndex == 0 then
+				eyesTypeIndex = DEFAULT_EYES_INDEX
 			end
 
-			-- eye color index
-			if data.eyesColorIndex ~= nil then
-				eyesColor = mod.eyeColors[data.eyesColorIndex]
+			-- nose type (index)
+			local noseTypeIndex = data.noseIndex
+			if noseTypeIndex == nil or noseTypeIndex == 0 then
+				noseTypeIndex = DEFAULT_NOSE_INDEX
 			end
 
+			-- body colors (index)
+			local bodyColorsIndex = data.skinColorIndex
+			if bodyColorsIndex == nil or bodyColorsIndex == 0 then
+				bodyColorsIndex = DEFAULT_BODY_COLOR_INDEX
+			end
+			local colorValues = mod.skinColors[bodyColorsIndex]
+			local skinColor = colorValues.skin1
+			local skinColor2 = colorValues.skin2
+			local noseColor = colorValues.nose
+			local mouthColor = colorValues.mouth
+
+			-- eyes color (index)
+			local eyesColorIndex = data.eyesColorIndex
+			if eyesColorIndex == nil or eyesColorIndex == 0 then
+				eyesColorIndex = DEFAULT_EYES_COLOR_INDEX
+			end
+			local eyesColor = mod.eyeColors[eyesColorIndex]
+
+			-- override colors
 			if data.skinColor then
 				skinColor =
 					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
@@ -849,27 +890,23 @@ function avatar_load(self, config)
 			})
 
 			-- eyes index
-			if data.eyesIndex ~= nil then
-				self:setEyes({ index = data.eyesIndex, color = eyesColor })
-			end
+			self:setEyes({ index = eyesTypeIndex, color = eyesColor })
 
 			-- nose index
-			if data.noseIndex ~= nil then
-				self:setNose({ index = data.noseIndex, color = noseColor })
-			end
+			self:setNose({ index = noseTypeIndex, color = noseColor })
 
 			-- print("data:", JSON:Encode(data))
 
-			if data.jacket then
+			if data.jacket and fields.equipments_requested["jacket"] ~= true then
 				self:loadEquipment({ type = "jacket", item = data.jacket })
 			end
-			if data.pants then
+			if data.pants and fields.equipments_requested["pants"] ~= true then
 				self:loadEquipment({ type = "pants", item = data.pants })
 			end
-			if data.hair then
+			if data.hair and fields.equipments_requested["hair"] ~= true then
 				self:loadEquipment({ type = "hair", item = data.hair })
 			end
-			if data.boots then
+			if data.boots and fields.equipments_requested["boots"] ~= true then
 				self:loadEquipment({ type = "boots", item = data.boots })
 			end
 		end)
@@ -929,6 +966,7 @@ function avatar_loadEquipment(self, config)
 		shape = nil,
 		bumpAnimation = false,
 		didAttachEquipmentParts = nil, -- function(equipmentParts)
+		preventAvatarLoadOverride = true, -- prevents overrides from ongoing avatar load (loading all equipments)
 	}
 
 	ok, err = pcall(function()
@@ -941,6 +979,10 @@ function avatar_loadEquipment(self, config)
 	end)
 	if not ok then
 		error("loadEquipment(config) - config error: " .. err, 2)
+	end
+
+	if config.preventAvatarLoadOverride then
+		fields.equipments_requested[config.type] = true
 	end
 
 	local currentEquipment = fields.equipments[config.type]

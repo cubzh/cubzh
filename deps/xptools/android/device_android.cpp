@@ -504,5 +504,36 @@ std::vector<std::string> vx::device::preferredLanguages() {
 }
 
 void vx::device::refreshScreenOrientation() {
-    // TODO: force refresh screen orientation
+    bool just_attached = false;
+    vx::tools::JniMethodInfo methodInfo;
+
+    std::string func;
+    if (getScreenAllowedOrientation() == "landscape") {
+        func = "setLandscape";
+    } else if (getScreenAllowedOrientation() == "portrait") {
+        func = "setPortrait";
+    } else {
+        func = "setDefaultOrientation";
+    }
+
+    if (!vx::tools::JNIUtils::getInstance()->getMethodInfo(&just_attached,
+                                                           &methodInfo,
+                                                           "com/voxowl/tools/Device",
+                                                           func.c_str(),
+                                                           "()V")) {
+        __android_log_print(ANDROID_LOG_ERROR,
+                            "Cubzh",
+                            "%s %d: error to get methodInfo",
+                            __FILE__,
+                            __LINE__);
+        assert(false); // crash the program
+    }
+
+    methodInfo.env->CallStaticVoidMethod(methodInfo.classID, methodInfo.methodID);
+
+    methodInfo.env->DeleteLocalRef(methodInfo.classID);
+
+    if (just_attached) {
+        vx::tools::JNIUtils::getInstance()->getJavaVM()->DetachCurrentThread();
+    }
 }

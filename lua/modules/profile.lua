@@ -25,10 +25,15 @@ profile.create = function(_, config)
 		userID = "",
 		username = "",
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
+		editAvatar = nil,
 	}
 
 	local ok, err = pcall(function()
-		config = require("config"):merge(defaultConfig, config)
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				editAvatar = { "function" },
+			},
+		})
 	end)
 	if not ok then
 		error("profile:create(config) - config error: " .. err, 2)
@@ -167,11 +172,13 @@ profile.create = function(_, config)
 		local editLinksBtn
 
 		if isLocal then
-			editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
-			editAvatarBtn:setParent(node)
+			if config.editAvatar ~= nil then
+				editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
+				editAvatarBtn:setParent(node)
 
-			editAvatarBtn.onRelease = function()
-				-- editAvatarBtnOnReleaseCallback()
+				editAvatarBtn.onRelease = function()
+					config.editAvatar()
+				end
 			end
 
 			editBioBtn = ui:buttonNeutral({ content = "✏️ Edit bio", textSize = "small" })
@@ -267,7 +274,7 @@ profile.create = function(_, config)
 			end
 
 			if bioText.Text ~= "" then
-				bioText.object.MaxWidth = self.Width
+				bioText.object.MaxWidth = self.Width - padding * 2
 				totalHeight = totalHeight + bioText.Height + padding
 			end
 
@@ -859,10 +866,7 @@ profile.create = function(_, config)
 
 		if infoNode.parent ~= nil then
 			y = y - infoNode.Height - padding
-			infoNode.pos = {
-				self.Width * 0.5 - infoNode.Width * 0.5,
-				y,
-			}
+			infoNode.pos = { 0, y }
 		end
 
 		scroll:flush()

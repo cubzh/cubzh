@@ -55,10 +55,6 @@ coins.createModalContent = function(_, config)
 
 	local entries = {}
 
-	local historyShowMoreBtn = ui:createButton("Show more >", { textSize = "small" })
-	historyShowMoreBtn:setParent(historyFrame)
-	historyShowMoreBtn:disable()
-
 	content.idealReducedContentSize = function(_, width, _)
 		width = math.min(width, 500)
 
@@ -77,10 +73,7 @@ coins.createModalContent = function(_, config)
 		historyFrame.Width = width
 		local historyFrameHeight = 100
 		if entries[1] then
-			historyFrameHeight = historyText.Height
-				+ entries[1].Height * 5
-				+ historyShowMoreBtn.Height
-				+ theme.padding * 3
+			historyFrameHeight = historyText.Height + entries[1].Height * 5 + theme.padding * 2
 		end
 		historyFrame.Height = historyFrameHeight
 		historyText.pos = { theme.padding, historyFrameHeight - theme.padding - historyText.Height, 0 }
@@ -92,7 +85,6 @@ coins.createModalContent = function(_, config)
 				0
 			)
 		end
-		historyShowMoreBtn.pos.X = width - historyShowMoreBtn.Width
 
 		historyFrame.pos = { 0, theme.padding, 0 }
 		balanceFrame.pos = { 0, historyFrame.pos.Y + historyFrame.Height + theme.padding, 0 }

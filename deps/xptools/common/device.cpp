@@ -52,9 +52,7 @@ static std::string screenAllowedOrientation = "all";
 void vx::device::setScreenAllowedOrientation(const std::string &orientation) {
     if (orientation == "all"
         || orientation == "portrait"
-        || orientation == "landscape"
-        || orientation == "landscapeLeft"
-        || orientation == "landscapeRight") {
+        || orientation == "landscape") {
         screenAllowedOrientation = orientation;
         refreshScreenOrientation();
     }

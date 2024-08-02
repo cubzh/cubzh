@@ -25,6 +25,7 @@ return {
 		"Sky",
 		"System",
 		"CollisionGroups",
+		"Data",
 	},
 
 	read_globals = {

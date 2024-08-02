@@ -640,7 +640,8 @@ moduleMT.patchUserInfo = function(_, info, callback)
 
 	for k, v in pairs(info) do
 		if not filterIsValid(k, v) then
-			api:error("system_api:patchUserInfo(info, callback): key or value is not valid: " .. k .. " " .. v, 2)
+			System:Log("INVALID FILTER: " .. k .. " " .. v)
+			api:error(401, "system_api:patchUserInfo(info, callback): key or value is not valid: " .. k .. " " .. v)
 		end
 	end
 

@@ -63,7 +63,9 @@ Client.OnStart = function()
 
 		if avatarCameraFollowHomeScroll == true then
 			box:Fit(avatarCameraTarget, { recursive = true })
-			Camera:FitToScreen(box, 0.5)
+			local cover = (CONFIG.PROFILE_CELL_SIZE * 0.8)
+				/ (CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2 + Screen.SafeArea.Top * 2)
+			Camera:FitToScreen(box, cover)
 		elseif avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
 			Camera:FitToScreen(box, 0.7)
@@ -673,10 +675,10 @@ function avatar()
 			avatar:loadEquipment({ type = "pants", shape = pants[1] })
 			avatar:loadEquipment({ type = "boots", shape = boots[1] })
 		else
-			avatar:loadEquipment({ type = "hair", shape = defaultHair })
-			avatar:loadEquipment({ type = "jacket", shape = defaultJacket })
-			avatar:loadEquipment({ type = "pants", shape = defaultPants })
-			avatar:loadEquipment({ type = "boots", shape = defaultShoes })
+			avatar:loadEquipment({ type = "hair", shape = defaultHair, preventAvatarLoadOverride = false })
+			avatar:loadEquipment({ type = "jacket", shape = defaultJacket, preventAvatarLoadOverride = false })
+			avatar:loadEquipment({ type = "pants", shape = defaultPants, preventAvatarLoadOverride = false })
+			avatar:loadEquipment({ type = "boots", shape = defaultShoes, preventAvatarLoadOverride = false })
 		end
 
 		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
@@ -1417,7 +1419,10 @@ function home()
 				end
 
 				cell.onRelease = function(self)
-					Menu:ShowProfile({ id = self.userID, username = self.username })
+					Menu:ShowProfile({
+						id = self.userID,
+						username = self.username,
+					})
 				end
 
 				cell.onCancel = function(_)
@@ -1601,6 +1606,67 @@ function home()
 		end
 
 		local scroll
+
+		local function editAvatarFn()
+			if bottomBar then
+				bottomBar:hide()
+			end
+			scroll:hide()
+			avatar():show({ mode = "user" })
+			avatarCameraFocus = "body" -- skin tab displayed first
+			home():pause()
+
+			drawer = require("drawer"):create({ ui = ui })
+
+			local okBtn = ui:buttonPositive({
+				content = "Done!",
+				textSize = "big",
+				unfocuses = false,
+				padding = 5,
+			})
+			okBtn:setParent(drawer)
+			okBtn.onRelease = function()
+				home():resume()
+				drawer:remove()
+				if bottomBar then
+					bottomBar:show()
+				end
+				scroll:show()
+				drawer = nil
+			end
+
+			avatarEditor = require("ui_avatar_editor"):create({
+				ui = ui,
+				requestHeightCallback = function(height)
+					drawer:updateConfig({
+						layoutContent = function(self)
+							local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
+							drawerHeight = math.floor(math.min(Screen.Height * 0.6, drawerHeight))
+
+							self.Height = drawerHeight
+
+							okBtn.pos = {
+								self.Width - okBtn.Width - padding,
+								self.Height + padding,
+							}
+
+							LocalEvent:Send("signup_drawer_height_update", drawerHeight)
+
+							if avatarEditor then
+								avatarEditor.Width = self.Width - padding * 2
+								avatarEditor.Height = drawerHeight - Screen.SafeArea.Bottom - padding * 2
+								avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
+							end
+						end,
+					})
+					drawer:bump()
+				end,
+			})
+
+			avatarEditor:setParent(drawer)
+			drawer:show()
+		end
+
 		scroll = ui:createScroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
@@ -1629,65 +1695,7 @@ function home()
 						editAvatarBtn:setParent(profileCell)
 
 						editAvatarBtn.onRelease = function(_)
-							if bottomBar then
-								bottomBar:hide()
-							end
-							scroll:hide()
-							avatar():show({ mode = "user" })
-							avatarCameraFocus = "body" -- skin tab displayed first
-							home():pause()
-
-							drawer = require("drawer"):create({ ui = ui })
-
-							local okBtn = ui:buttonPositive({
-								content = "Done!",
-								textSize = "big",
-								unfocuses = false,
-								padding = 5,
-							})
-							okBtn:setParent(drawer)
-							okBtn.onRelease = function()
-								home():resume()
-								drawer:remove()
-								if bottomBar then
-									bottomBar:show()
-								end
-								scroll:show()
-								drawer = nil
-							end
-
-							avatarEditor = require("ui_avatar_editor"):create({
-								ui = ui,
-								requestHeightCallback = function(height)
-									drawer:updateConfig({
-										layoutContent = function(self)
-											local drawerHeight = height + padding * 2 + Screen.SafeArea.Bottom
-											drawerHeight = math.floor(math.min(Screen.Height * 0.6, drawerHeight))
-
-											self.Height = drawerHeight
-
-											okBtn.pos = {
-												self.Width - okBtn.Width - padding,
-												self.Height + padding,
-											}
-
-											LocalEvent:Send("signup_drawer_height_update", drawerHeight)
-
-											if avatarEditor then
-												avatarEditor.Width = self.Width - padding * 2
-												avatarEditor.Height = drawerHeight
-													- Screen.SafeArea.Bottom
-													- padding * 2
-												avatarEditor.pos = { padding, Screen.SafeArea.Bottom + padding }
-											end
-										end,
-									})
-									drawer:bump()
-								end,
-							})
-
-							avatarEditor:setParent(drawer)
-							drawer:show()
+							editAvatarFn()
 						end
 
 						local visitHouseBtn = ui:buttonNeutral({
@@ -1703,7 +1711,7 @@ function home()
 								"House customization is coming soon! Stay tuned to personalize your house and invite friends. 👥"
 							)
 
-							comingSoonAlert:setPositiveCallback("Cancel", function()
+							comingSoonAlert:setPositiveCallback("OK", function()
 								comingSoonAlert:remove()
 								comingSoonAlert = nil
 							end)
@@ -1860,14 +1868,18 @@ function home()
 			return btn
 		end
 
-		local btnHome = createBottomBarButton("Home", "images/logo.png")
+		-- local btnHome = createBottomBarButton("Home", "images/logo.png")
 		local btnExplore = createBottomBarButton("Explore", "images/icon-explore.png")
 		local btnProfile = createBottomBarButton("Profile", "images/icon-profile.png")
 		local btnFriends = createBottomBarButton("Friends", "images/icon-friends.png")
 		local btnCreate = createBottomBarButton("Create", "images/icon-create.png")
 
+		btnExplore.onRelease = function()
+			Menu:ShowWorlds()
+		end
+
 		btnProfile.onRelease = function()
-			Menu:ShowProfile({ player = Player })
+			Menu:ShowProfile({ player = Player, editAvatar = editAvatarFn })
 		end
 
 		btnFriends.onRelease = function()
@@ -1880,25 +1892,22 @@ function home()
 
 		bottomBar.parentDidResize = function(self)
 			self.Width = self.parent.Width
-			local btnWidth = self.Width / 5.0
+			local btnWidth = self.Width / 4.0
 
-			local h = btnHome.content.Height + Screen.SafeArea.Bottom
+			local h = btnExplore.content.Height + Screen.SafeArea.Bottom
 
 			self.Height = h
-			btnHome.Height = h
 			btnExplore.Height = h
 			btnProfile.Height = h
 			btnFriends.Height = h
 			btnCreate.Height = h
 
-			btnHome.Width = btnWidth
 			btnExplore.Width = btnWidth
 			btnProfile.Width = btnWidth
 			btnFriends.Width = btnWidth
 			btnCreate.Width = btnWidth
 
-			btnHome.pos = { 0, 0 }
-			btnExplore.pos = btnHome.pos + { btnWidth, 0 }
+			btnExplore.pos = { 0, 0 }
 			btnCreate.pos = btnExplore.pos + { btnWidth, 0 }
 			btnProfile.pos = btnCreate.pos + { btnWidth, 0 }
 			btnFriends.pos = btnProfile.pos + { btnWidth, 0 }

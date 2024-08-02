@@ -16,7 +16,7 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 -- COMBO_BOX_SELECTOR_SPEED = 400
 
-DEFAULT_SLICE_9_SCALE = 1 -- 1.5
+DEFAULT_SLICE_9_SCALE = 0.5 * Screen.Density
 
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
@@ -46,7 +46,6 @@ local NodeType = {
 
 -- MODULES
 
-bundle = require("bundle")
 codes = require("inputcodes")
 cleanup = require("cleanup")
 hierarchyActions = require("hierarchyactions")
@@ -1030,7 +1029,7 @@ function createUI(system)
 		end
 
 		if node.shape:GetParent() == nil then
-			node.shapeContainer:AddChild(node.shape)
+			node.pivot:AddChild(node.shape)
 		end
 		node.shape.LocalPosition:Set(Number3.Zero)
 		node.shape.LocalRotation:Set(Number3.Zero)
@@ -1038,7 +1037,6 @@ function createUI(system)
 		local backupScale = node.object.LocalScale:Copy()
 		node.object.LocalScale = 1
 		node.pivot.LocalPosition = Number3.Zero
-		node.shapeContainer.LocalPosition = Number3.Zero
 
 		-- the shape scale is always 1
 		-- in the context of a shape node, we always apply scale to the parent object
@@ -1078,7 +1076,7 @@ function createUI(system)
 			node.pivot.LocalPosition:Set(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
 		end
 
-		node.shapeContainer.LocalPosition:Set(-aabb.Center + node._config.offset)
+		node.shape.LocalPosition:Set(-aabb.Center + node._config.offset)
 		node.object.LocalScale = backupScale
 	end
 
@@ -1262,11 +1260,30 @@ function createUI(system)
 		return ui.frame(self, { quad = quad })
 	end
 
+	-- local frameMaskWithRoundCornersQuadData
+	-- ui.frameMaskWithRoundCorners = function(self)
+	-- 	if self ~= ui then
+	-- 		error("ui:frameGenericContainer(): use `:`", 2)
+	-- 	end
+	-- 	if frameMaskWithRoundCornersQuadData == nil then
+	-- 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
+	-- 	end
+	-- 	local quad = Quad()
+	-- 	quad.IsMask = true
+	-- 	quad.Image = {
+	-- 		data = frameMaskWithRoundCornersQuadData,
+	-- 		slice9 = { 0.5, 0.5 },
+	-- 		slice9Scale = DEFAULT_SLICE_9_SCALE,
+	-- 		cutout = true,
+	-- 	}
+	-- 	return ui.frame(self, { quad = quad })
+	-- end
+
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/frame_dark.png")
+		local image = Data:FromBundle("images/frame.png")
 		local quad = Quad()
 		quad.Image = {
 			data = image,
@@ -1467,10 +1484,7 @@ function createUI(system)
 		node.object.LocalScale = UI_SHAPE_SCALE
 
 		node.pivot = Object()
-		node.shapeContainer = Object()
-
 		node.object:AddChild(node.pivot)
-		node.pivot:AddChild(node.shapeContainer)
 
 		-- _diameter defined within _refreshShapeNode
 		node.refresh = _refreshShapeNode
@@ -1585,7 +1599,7 @@ function createUI(system)
 			self.shape = shape
 			shape._node = self
 
-			node.shapeContainer:AddChild(shape)
+			node.pivot:AddChild(shape)
 			shape.LocalPosition = Number3.Zero
 
 			if doNotRefresh ~= true then
@@ -1640,14 +1654,25 @@ function createUI(system)
 		end
 
 		if size ~= nil then
-			if type(size) ~= "string" or (size ~= "default" and size ~= "small" and size ~= "big") then
-				error('ui:createText(str, color, size) - size must be a string ("default", "small" or "big")', 2)
+			local sizeType = type(size)
+			if
+				(sizeType ~= "number" and sizeType ~= "integer" and sizeType ~= "string")
+				or (sizeType == "string" and (size ~= "default" and size ~= "small" and size ~= "big"))
+			then
+				error(
+					'ui:createText(str, color, size) - size must be a string ("default", "small" or "big") or number',
+					2
+				)
 			end
 			defaultConfig.size = size
 		end
 
 		local ok, err = pcall(function()
-			config = conf:merge(defaultConfig, config)
+			config = conf:merge(defaultConfig, config, {
+				acceptTypes = {
+					size = { "number", "integer", "string" },
+				},
+			})
 		end)
 		if not ok then
 			error("ui:createText(str, config) - config error: " .. err, 2)
@@ -1695,7 +1720,9 @@ function createUI(system)
 		t.BackgroundColor = config.backgroundColor
 		t.MaxDistance = camera.Far + 100
 
-		if config.size == "big" then
+		if type(config.size) == "number" or type(config.size) == "integer" then
+			t.FontSize = config.size
+		elseif config.size == "big" then
 			t.FontSize = currentFontSizeBig
 		elseif config.size == "small" then
 			t.FontSize = currentFontSizeSmall
@@ -1808,7 +1835,11 @@ function createUI(system)
 			config.textSize = configOrSize
 			config = conf:merge(defaultConfig, config)
 		elseif type(configOrSize) == "table" then
-			config = conf:merge(defaultConfig, configOrSize)
+			config = conf:merge(defaultConfig, configOrSize, {
+				acceptTypes = {
+					textSize = { "number", "integer", "string" },
+				},
+			})
 		else
 			config = conf:merge(defaultConfig, config)
 		end
@@ -2480,7 +2511,6 @@ function createUI(system)
 
 		local cell
 		local cellInfo
-		local previousCellInfo
 		local cellIndex
 
 		local loadTop
@@ -2549,6 +2579,10 @@ function createUI(system)
 		end
 
 		local function loadCellInfo(cellIndex)
+			local previousCellInfo
+			if cellIndex > 1 then
+				previousCellInfo = cache.cellInfo[cellIndex - 1]
+			end
 			local cellInfo = cache.cellInfo[cellIndex]
 			local cell
 
@@ -2662,7 +2696,6 @@ function createUI(system)
 
 			cellIndex = 1
 			cellInfo = nil
-			previousCellInfo = nil
 
 			if vertical then
 				if endScrollIndicator then
@@ -2689,8 +2722,6 @@ function createUI(system)
 						cell.pos.Y = cellInfo.bottom
 						cell.pos.X = 0
 					end
-
-					previousCellInfo = cellInfo
 
 					if
 						(cellInfo.bottom >= loadBottom and cellInfo.bottom <= loadTop)
@@ -2749,8 +2780,6 @@ function createUI(system)
 						cell.pos.Y = 0
 						cell.pos.X = cellInfo.left
 					end
-
-					previousCellInfo = cellInfo
 
 					if
 						(cellInfo.left >= loadLeft and cellInfo.left <= loadRight)
@@ -2853,11 +2882,8 @@ function createUI(system)
 					pos = cellInfo.left - cellInfo.width * 0.5
 				end
 
-				-- if cell ~= nil, it means it's just been created
-				-- it has to be parented to the container
 				if cell ~= nil then
-					cells[cellIndex] = cell
-					cell:setParent(container)
+					config.unloadCell(index, cell, config.userdata)
 				end
 
 				currentIndex = currentIndex + 1
@@ -2869,7 +2895,7 @@ function createUI(system)
 				else
 					pos = pos + self.Width * 0.5
 				end
-				self:setScrollPosition(pos)
+				self:setScrollPosition(-pos)
 			end
 		end
 
@@ -3087,6 +3113,13 @@ function createUI(system)
 			error("ui:button(config): use `:`", 2)
 		end
 
+		-- load neutral button preset when no style config provided
+		if config == nil or (config.backgroundQuad == nil and config.color == nil) then
+			config = config or {}
+			config.color = Color(200, 200, 200)
+			-- return ui:buttonNeutral(config)
+		end
+
 		local defaultConfig = {
 			-- CONTENT --
 			content = "BUTTON", -- can be string, Shape or uikit node
@@ -3122,6 +3155,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
+				textSize = { "number", "integer", "string" },
 				textColorPressed = { "Color" },
 				content = { "string", "Shape", "MutableShape", "table" },
 				backgroundQuad = { "Quad" },
@@ -3435,6 +3469,156 @@ function createUI(system)
 		return node
 	end
 
+	-- legacy
+	ui.createButton = function(_, content, config)
+		config = config or {}
+		config.content = content
+		return ui:button(config)
+	end -- createButton (legacy)
+
+	ui.createComboBox = function(self, stringOrShape, choices, config)
+		if choices == nil then
+			return
+		end
+
+		config = config or {}
+		config.content = stringOrShape
+
+		local btn = self:buttonNeutral(config)
+
+		btn.onSelect = function(_, _) end
+
+		btn.onRelease = function(_)
+			btn:disable()
+
+			local selector
+
+			local choiceOnRelease = function(self)
+				if self._choiceIndex == nil then
+					return
+				end
+				btn.selectedRow = self._choiceIndex
+				if btn.onSelect ~= nil then
+					btn:onSelect(self._choiceIndex)
+				end
+				if selector.close then
+					selector:close()
+				end
+			end
+
+			local choiceParentDidResize = function(self)
+				self.Width = self.parent.Width
+			end
+
+			local cells = {}
+
+			local scroll = ui:createScroll({
+				direction = "down",
+				cellPadding = 0,
+				padding = 0,
+				loadCell = function(index)
+					local choice = choices[index]
+					if choice then
+						local c = table.remove(cells)
+						if c ~= nil then
+							c.text = choice
+						else
+							c = ui:button({
+								content = choice,
+								borders = false,
+								shadow = false,
+								unfocuses = false,
+							})
+							c.parentDidResize = choiceParentDidResize
+							c.onRelease = choiceOnRelease
+						end
+						c._choiceIndex = index
+
+						if btn.selectedRow == c._choiceIndex then
+							c:select()
+						else
+							c:unselect()
+						end
+
+						return c
+					end
+				end,
+				unloadCell = function(_, cell) -- index, cell
+					cell:setParent(nil)
+					table.insert(cells, cell)
+				end,
+			})
+
+			scroll.Height = 200
+			scroll.Width = 100
+
+			focus(nil)
+
+			selector = ui:createFrame(Color(0, 0, 0, 100))
+			selector:setParent(btn.parent)
+
+			scroll:setParent(selector)
+
+			comboBoxSelector = selector
+
+			scroll.Height = math.min(
+				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
+				-- contentHeight,
+				300 -- max heigh for all combo boxes
+			)
+
+			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
+
+			selector.Height = scroll.Height + theme.paddingTiny * 2
+			selector.Width = scroll.Width + theme.paddingTiny * 2
+
+			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
+
+			parent = btn.parent
+			absPy = p.Y
+			while parent do
+				absPy = absPy + parent.pos.Y
+				parent = parent.parent
+			end
+
+			local offset = 0
+			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
+				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
+			end
+			p.Y = p.Y + offset
+
+			selector.pos.X = p.X
+			selector.pos.Y = p.Y - 50
+
+			ease:outBack(selector, 0.22).pos = p
+
+			selector.pos.Z = -10 -- render on front
+
+			if btn.selectedRow then
+				scroll:setScrollIndexVisible(btn.selectedRow)
+			end
+
+			selector.close = function(_)
+				if comboBoxSelector == selector then
+					comboBoxSelector = nil
+				end
+				ease:cancel(selector)
+				selector:remove()
+				if btn.enable then
+					btn:enable()
+				end
+				for _, cell in ipairs(cells) do
+					cell:remove()
+				end
+				cells = {}
+			end
+		end
+
+		return btn
+	end
+
+	-- PRESETS
+
 	local btnNeutralQuadData
 	local btnNeutralPressedQuadData
 	local btnNeutralSelectedQuadData
@@ -3621,148 +3805,6 @@ function createUI(system)
 		}
 
 		return ui.button(self, config)
-	end
-
-	-- legacy
-	ui.createButton = function(_, content, config)
-		config = config or {}
-		config.content = content
-		return ui:button(config)
-	end -- createButton (legacy)
-
-	ui.createComboBox = function(self, stringOrShape, choices, config)
-		if choices == nil then
-			return
-		end
-
-		config = config or {}
-		config.content = stringOrShape
-
-		local btn = self:buttonNeutral(config)
-
-		btn.onSelect = function(_, _) end
-
-		btn.onRelease = function(_)
-			btn:disable()
-
-			local selector
-
-			local choiceOnRelease = function(self)
-				if self._choiceIndex == nil then
-					return
-				end
-				btn.selectedRow = self._choiceIndex
-				if btn.onSelect ~= nil then
-					btn:onSelect(self._choiceIndex)
-				end
-				if selector.close then
-					selector:close()
-				end
-			end
-
-			local choiceParentDidResize = function(self)
-				self.Width = self.parent.Width
-			end
-
-			local cells = {}
-
-			local scroll = ui:createScroll({
-				direction = "down",
-				cellPadding = 0,
-				padding = 0,
-				loadCell = function(index)
-					local choice = choices[index]
-					if choice then
-						local c = table.remove(cells)
-						if c ~= nil then
-							c.text = choice
-						else
-							c = ui:button({
-								content = choice,
-								borders = false,
-								shadow = false,
-								unfocuses = false,
-							})
-							c.parentDidResize = choiceParentDidResize
-							c.onRelease = choiceOnRelease
-						end
-						c._choiceIndex = index
-
-						if btn.selectedRow == c._choiceIndex then
-							c:select()
-						end
-
-						return c
-					end
-				end,
-				unloadCell = function(_, cell) -- index, cell
-					cell:setParent(nil)
-					table.insert(cells, cell)
-				end,
-			})
-
-			scroll.Height = 200
-			scroll.Width = 100
-
-			focus(nil)
-
-			selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.parent)
-
-			scroll:setParent(selector)
-
-			comboBoxSelector = selector
-
-			scroll.Height = math.min(
-				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
-				-- contentHeight,
-				300 -- max heigh for all combo boxes
-			)
-
-			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
-
-			selector.Height = scroll.Height + theme.paddingTiny * 2
-			selector.Width = scroll.Width + theme.paddingTiny * 2
-
-			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
-
-			parent = btn.parent
-			absPy = p.Y
-			while parent do
-				absPy = absPy + parent.pos.Y
-				parent = parent.parent
-			end
-
-			local offset = 0
-			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
-				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
-			end
-			p.Y = p.Y + offset
-
-			selector.pos.X = p.X
-			selector.pos.Y = p.Y - 50
-
-			ease:outBack(selector, 0.22).pos = p
-
-			selector.pos.Z = -10 -- render on front
-
-			if btn.selectedRow then
-				scroll:setScrollIndexVisible(btn.selectedRow)
-			end
-
-			selector.close = function(_)
-				if comboBoxSelector == selector then
-					comboBoxSelector = nil
-				end
-				ease:cancel(selector)
-				selector:remove()
-				if btn.enable then
-					btn:enable()
-				end
-			end
-		end
-
-		return btn
 	end
 
 	-- LISTENERS
