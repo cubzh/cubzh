@@ -735,11 +735,11 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onPress = nil
-					if t._onRelease == nil then
+					if t._onRelease == nil and t._onDrag == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
-				elseif v ~= nil then
+				else
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
@@ -768,11 +768,11 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onRelease = nil
-					if t._onPress == nil then
+					if t._onPress == nil and t._onDrag == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
-				elseif v ~= nil then
+				else
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
@@ -805,9 +805,30 @@ function createUI(system)
 				end
 			end
 		elseif k == "onDrag" then
-			t._onDrag = function(self, pe)
-				if v ~= nil then
-					v(self, pe)
+			if t.type == NodeType.Frame then
+				local background = t.background
+				if v == nil then
+					t._onDrag = nil
+					if t._onRelease == nil and t._onPress == nil then
+						background.Physics = PhysicsMode.Disabled
+						background.CollisionGroups = {}
+					end
+				else
+					background.Physics = PhysicsMode.Trigger
+					_setCollisionGroups(background)
+					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+					t._onDrag = function(self, pe)
+						v(self, pe)
+					end
+				end
+			else
+				if t._setCollider then
+					t:_setCollider(v ~= nil)
+				end
+				t._onDrag = function(self, pe)
+					if v ~= nil then
+						v(self, pe)
+					end
 				end
 			end
 		elseif k == "Pivot" then
@@ -3879,29 +3900,35 @@ function createUI(system)
 				hitObject = hitObject:GetParent()
 			end
 
-			if
-				hitObject and (hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea)
-			then
-				-- check if hitObject is within a scroll
-				parent = hitObject._node.parent
-				while parent ~= nil do
-					-- skip action if node parented by scroll but not within area
-					-- note: a scroll can itself be within a scroll
-					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
-						skip = true
-						break
+			if hitObject then
+				if hitObject._node._onDrag ~= nil and not hitObject._node.isScrollArea then
+					-- node can be dragged, taking control over eventual scroll parents
+					pressedScrolls = {}
+					pressedCandidate = hitObject._node
+					pressedCandidateImpact = impact
+					break
+				elseif hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea then
+					-- check if hitObject is within a scroll
+					parent = hitObject._node.parent
+					while parent ~= nil do
+						-- skip action if node parented by scroll but not within area
+						-- note: a scroll can itself be within a scroll
+						if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
+							skip = true
+							break
+						end
+						parent = parent.parent
 					end
-					parent = parent.parent
-				end
 
-				if skip == false then
-					if hitObject._node.isScrollArea then
-						table.insert(pressedScrolls, hitObject._node)
-						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
-					end
-					if pressedCandidate == nil then
-						pressedCandidate = hitObject._node
-						pressedCandidateImpact = impact
+					if skip == false then
+						if hitObject._node.isScrollArea then
+							table.insert(pressedScrolls, hitObject._node)
+							hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
+						end
+						if pressedCandidate == nil then
+							pressedCandidate = hitObject._node
+							pressedCandidateImpact = impact
+						end
 					end
 				end
 			end
