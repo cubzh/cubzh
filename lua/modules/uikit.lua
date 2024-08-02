@@ -3111,7 +3111,16 @@ function createUI(system)
 				if not hovering then
 					return false
 				end
-				node:applyScrollDelta(delta, delta)
+
+				local newPos = scrollPosition + delta
+				newPos = node:capPosition(newPos)
+
+				node:setScrollPosition(newPos)
+
+				defuseScrollSpeedTimer = nil
+				lastTickSavedScrollPosition = scrollPosition
+				dragStartScrollPosition = scrollPosition
+
 				return true
 			end, { system = system == true and System or nil, topPriority = true })
 			table.insert(listeners, l)
