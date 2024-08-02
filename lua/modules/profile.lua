@@ -107,8 +107,24 @@ profile.create = function(_, config)
 	end
 
 	local avatarNode = uiAvatar:get({ usernameOrId = username, ui = ui })
-	-- avatarNode:setColor(Color(255, 0, 0))
 	avatarNode:setParent(cell)
+
+	local avatarRot = Number3(0, math.pi, 0)
+	avatarNode.onDrag = function(self, pointerEvent)
+		if avatarNode.body.pivot ~= nil then
+			avatarRot.Y = avatarRot.Y - pointerEvent.DX * 0.02
+			avatarRot.X = avatarRot.X + pointerEvent.DY * 0.02
+
+			if avatarRot.X > math.pi * 0.4 then
+				avatarRot.X = math.pi * 0.4
+			end
+			if avatarRot.X < -math.pi * 0.4 then
+				avatarRot.X = -math.pi * 0.4
+			end
+
+			self.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
+		end
+	end
 
 	local userInfo = {
 		bio = "",
@@ -605,8 +621,6 @@ profile.create = function(_, config)
 	infoNode = createInfoNode()
 	infoNode:setParent(nil)
 
-	local avatarRot = Number3(0, math.pi, 0)
-	local dragListener = nil
 	local avatarLoadedListener = nil
 
 	if isLocal then
@@ -898,23 +912,6 @@ profile.create = function(_, config)
 	end
 
 	content.didBecomeActive = function()
-		dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pointerEvent)
-			if avatarNode.body.pivot ~= nil then
-				avatarRot.Y = avatarRot.Y - pointerEvent.DX * 0.02
-				avatarRot.X = avatarRot.X + pointerEvent.DY * 0.02
-
-				if avatarRot.X > math.pi * 0.4 then
-					avatarRot.X = math.pi * 0.4
-				end
-				if avatarRot.X < -math.pi * 0.4 then
-					avatarRot.X = -math.pi * 0.4
-				end
-
-				avatarNode.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
-				return true
-			end
-		end, { topPriority = true })
-
 		local fillUserInfo = function(usr, err)
 			if err ~= nil then
 				return
@@ -956,12 +953,6 @@ profile.create = function(_, config)
 	end
 
 	content.willResignActive = function()
-		-- stop listening for PointerDrag events
-		if dragListener ~= nil then
-			dragListener:Remove()
-			dragListener = nil
-		end
-
 		-- stop listening for AvatarLoaded events
 		if avatarLoadedListener then
 			avatarLoadedListener:Remove()
