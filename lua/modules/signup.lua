@@ -1023,6 +1023,41 @@ signup.startFlow = function(self, config)
 
 					passwordButton = ui:buttonNeutral({ content = "✅" })
 					passwordButton:setParent(frame)
+					passwordButton.onRelease = function()
+						showLoading()
+						if passwordInput.Text ~= "" then
+							local req = api:login(
+								{ usernameOrEmail = config.username, password = passwordInput.Text },
+								function(err, accountInfo)
+									if err == nil then
+										local userID = accountInfo.credentials["user-id"]
+										local username = accountInfo.username
+										local token = accountInfo.credentials.token
+
+										Player.UserID = userID
+										Player.Username = username
+										System:StoreCredentials(userID, token)
+
+										System.AskedForMagicKey = false
+
+										-- flush signup flow and restart credential checks (should go through now)
+										signupFlow:flush()
+										signupFlow:push(
+											steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true })
+										)
+									else
+										errorLabel.Text = "❌ " .. err
+										hideLoading()
+									end
+								end
+							)
+							table.insert(requests, req)
+						else
+							-- text input is empty
+							errorLabel.Text = "❌ Please enter a password"
+							hideLoading()
+						end
+					end
 				end
 
 				if config.magickey then
