@@ -68,16 +68,16 @@ Client.OnStart = function()
 			Camera:FitToScreen(box, cover)
 		elseif avatarCameraFocus == "body" then
 			box:Fit(avatarCameraTarget, { recursive = true })
-			Camera:FitToScreen(box, 0.7)
+			Camera:FitToScreen(box, { coverage = 1.2 })
 		elseif avatarCameraFocus == "head" then
 			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			Camera:FitToScreen(box, 0.5)
+			Camera:FitToScreen(box, { coverage = 1.4 })
 		elseif avatarCameraFocus == "eyes" then
 			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			Camera:FitToScreen(box, 0.6)
+			Camera:FitToScreen(box, { coverage = 1.5 })
 		elseif avatarCameraFocus == "nose" then
 			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			Camera:FitToScreen(box, 0.6)
+			Camera:FitToScreen(box, { coverage = 1.5 })
 		end
 
 		local targetPos = Camera.Position:Copy()
