@@ -123,7 +123,6 @@ creations.createModalContent = function(_, config)
 		if #categories > 1 then
 			nextTemplateBtn = ui:buttonNeutral({ content = "➡️" })
 			nextTemplateBtn:setParent(node)
-			nextTemplateBtn:setColor(theme.buttonColorSecondary)
 			nextTemplateBtn.onRelease = function()
 				currentCategory = currentCategory + 1
 				if currentCategory > #categories then
@@ -141,7 +140,6 @@ creations.createModalContent = function(_, config)
 
 			previousTemplateBtn = ui:buttonNeutral({ content = "⬅️" })
 			previousTemplateBtn:setParent(node)
-			previousTemplateBtn:setColor(theme.buttonColorSecondary)
 			previousTemplateBtn.onRelease = function()
 				currentCategory = currentCategory - 1
 				if currentCategory < 1 then
@@ -223,7 +221,6 @@ creations.createModalContent = function(_, config)
 						end
 
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
-						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
 							System.EditWorld(world.id)
 						end
@@ -275,7 +272,6 @@ creations.createModalContent = function(_, config)
 							itemDetails:createModalContent({ mode = "create", uikit = ui, item = cell })
 
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
-						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
 							System.LaunchItemEditor(itemFullName, newCategory)
 						end
@@ -531,7 +527,6 @@ creations.createModalContent = function(_, config)
 					itemDetails:createModalContent({ item = entity, mode = "create", uikit = ui })
 
 				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
-				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					System.LaunchItemEditor(itemFullName, category)
 				end
@@ -616,7 +611,6 @@ creations.createModalContent = function(_, config)
 				end
 
 				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
-				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					System.EditWorld(entity.id)
 				end
