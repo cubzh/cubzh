@@ -2134,7 +2134,7 @@ signup.startFlow = function(self, config)
 							-- Update values in System
 							System.Username = userInfo.username or ""
 							System.HasEmail = userInfo.hasEmail or false
-							System.HasVerifiedPhoneNumber = userInfo.hasPhoneNumber or false
+							System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber or false
 							System.IsPhoneExempted = userInfo.isPhoneExempted or false
 							System.HasDOB = userInfo.hasDOB
 							System.IsUserUnder13 = userInfo.isUnder13
@@ -2153,7 +2153,7 @@ signup.startFlow = function(self, config)
 							"hasDOB",
 							"isUnder13",
 							"didCustomizeAvatar",
-							"hasPhoneNumber",
+							"hasVerifiedPhoneNumber",
 							"isPhoneExempted",
 						})
 					end
