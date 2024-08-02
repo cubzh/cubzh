@@ -51,11 +51,6 @@ function insert(config)
 	return entry
 end
 
-loadedAvatars = {}
-LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function(p)
-	loadedAvatars[p] = true
-end)
-
 function showAvatar(entry)
 	if not entry.config.targetIsPlayer then
 		return
@@ -65,23 +60,20 @@ function showAvatar(entry)
 
 	player.Head.IsHidden = false
 	player.Head.IsHiddenSelf = false
-	player.EyeLidRight.IsHidden = false
-	player.EyeLidLeft.IsHidden = false
 	player.Body.IsHiddenSelf = false
-	player.RightArm.IsHidden = false
-	player.LeftArm.IsHidden = false
-	player.RightLeg.IsHidden = false
-	player.LeftLeg.IsHidden = false
-	if player.equipments then
-		for _, v in pairs(player.equipments) do
-			v.IsHiddenSelf = false
-			if v.attachedParts then
-				for _, v2 in ipairs(v.attachedParts) do
-					v2.IsHiddenSelf = false
-				end
-			end
-		end
-	end
+	player.RightArm.IsHiddenSelf = false
+	player.LeftArm.IsHiddenSelf = false
+	player.RightHand.IsHiddenSelf = false
+	player.LeftHand.IsHiddenSelf = false
+	player.RightLeg.IsHiddenSelf = false
+	player.LeftLeg.IsHiddenSelf = false
+	player.RightFoot.IsHiddenSelf = false
+	player.LeftFoot.IsHiddenSelf = false
+
+	player.Avatar:updateConfig({
+		eyeBlinks = true,
+		hiddenEquipments = {},
+	})
 end
 
 function hideAvatar(entry)
@@ -93,40 +85,20 @@ function hideAvatar(entry)
 
 	player.Head.IsHidden = false
 	player.Head.IsHiddenSelf = true
-	player.EyeLidRight.IsHidden = true
-	player.EyeLidLeft.IsHidden = true
 	player.Body.IsHiddenSelf = true
-	player.RightArm.IsHidden = true
-	player.LeftArm.IsHidden = true
-	player.RightLeg.IsHidden = true
-	player.LeftLeg.IsHidden = true
-	if loadedAvatars[player] == true and player.equipments then
-		for _, v in pairs(player.equipments) do
-			v.IsHiddenSelf = true
-			if v.attachedParts then
-				for _, v2 in ipairs(v.attachedParts) do
-					v2.IsHiddenSelf = true
-				end
-			end
-		end
-		return
-	end
+	player.RightArm.IsHiddenSelf = true
+	player.LeftArm.IsHiddenSelf = true
+	player.RightHand.IsHiddenSelf = true
+	player.LeftHand.IsHiddenSelf = true
+	player.RightLeg.IsHiddenSelf = true
+	player.LeftLeg.IsHiddenSelf = true
+	player.RightFoot.IsHiddenSelf = true
+	player.LeftFoot.IsHiddenSelf = true
 
-	local avatarLoadedListener
-	avatarLoadedListener = LocalEvent:Listen(LocalEvent.Name.AvatarLoaded, function(p)
-		if p ~= player then
-			return
-		end
-		for _, v in pairs(player.equipments) do
-			v.IsHiddenSelf = true
-			if v.attachedParts then
-				for _, v2 in ipairs(v.attachedParts) do
-					v2.IsHiddenSelf = true
-				end
-			end
-		end
-		avatarLoadedListener:Remove()
-	end)
+	player.Avatar:updateConfig({
+		eyeBlinks = false,
+		hiddenEquipments = { "hair", "jacket", "pants", "boots" },
+	})
 end
 
 function turnOffPhysics(camera)
@@ -262,7 +234,7 @@ cameraModes.setFirstPerson = function(self, config)
 	if config.offset then
 		camera.LocalPosition:Set(config.offset)
 	else
-		camera.LocalPosition:Set(0, 0, 0)
+		camera.LocalPosition:Set(Number3.Zero)
 	end
 
 	camera.LocalRotation:Set(0, 0, 0)
