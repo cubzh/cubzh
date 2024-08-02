@@ -604,6 +604,7 @@ avatarDefaultConfig = {
 	eyeBlinks = true,
 	defaultAnimations = true,
 	loadEquipments = true,
+	hiddenEquipments = {}, -- forces some equipments to be hidden e.g. hiddenEquipments = { "hair" }
 }
 
 -- Returns sent requests
@@ -661,7 +662,7 @@ end
 -- reference should be kept, not copying entries right after function call.
 -- replaced is optional, but can be provided to replace an existing avatar instead of creating a new one.
 -- LEGACY: config used to be usernameOrId
-mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated)
+mod.get = function(self, config, _, didLoadCallback_deprecated)
 	if self ~= mod then
 		error("avatar:get(config) should be called with `:`", 2)
 	end
@@ -719,6 +720,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	avatar.setColors = avatar_setColors
 	avatar.setEyes = avatar_setEyes
 	avatar.setNose = avatar_setNose
+	avatar.updateConfig = avatar_update_config
 
 	local requests = {}
 	local palette = avatarPalette:Copy()
@@ -771,36 +773,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 		o.Palette = palette
 	end)
 
-	if config.eyeBlinks then
-		local eyeBlinks = {}
-		eyeBlinks.close = function()
-			-- removing eyelids when head loses its parent
-			-- not ideal, but no easy way currently to detect when the avatar is destroyed
-			if eyeLidRight:GetParent() == nil or eyeLidRight:GetParent():GetParent() == nil then
-				eyeBlinks = nil
-				eyeLidRight:RemoveFromParent()
-				eyeLidLeft:RemoveFromParent()
-				return
-			end
-			eyeLidRight.Scale.Y = 4.2
-			eyeLidRight.IsHidden = false
-			eyeLidLeft.Scale.Y = 4.2
-			eyeLidLeft.IsHidden = false
-			Timer(0.1, eyeBlinks.open)
-		end
-		eyeBlinks.open = function()
-			eyeLidRight.Scale.Y = 0
-			eyeLidRight.IsHidden = true
-			eyeLidLeft.Scale.Y = 0
-			eyeLidLeft.IsHidden = true
-			eyeBlinks.schedule()
-		end
-		eyeBlinks.schedule = function()
-			Timer(3.0 + math.random() * 1.0, eyeBlinks.close)
-		end
-		eyeBlinks.schedule()
-	end
-
+	avatar:updateConfig()
 	avatar:load()
 
 	return avatar, requests
@@ -1057,6 +1030,12 @@ function avatar_loadEquipment(self, config)
 				config.didAttachEquipmentParts({ equipment })
 			end
 		end
+
+		if fields.hiddenEquipments and fields.hiddenEquipments[config.type] == true then
+			for _, s in ipairs(currentEquipment.shapes) do
+				s.IsHidden = true
+			end
+		end
 	end
 
 	if config.shape then
@@ -1238,6 +1217,83 @@ function avatar_setNose(self, config)
 		-- 	eyes = config.color,
 		-- })
 	end
+end
+
+function avatar_update_config(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:updateConfig(config) should be called with `:`", 2)
+	end
+
+	config = require("config"):merge(fields.config, config)
+
+	if config.eyeBlinks then
+		if fields.eyeBlinksTimer == nil then
+			local eyeLidRight = self.EyeLidRight
+			local eyeLidLeft = self.EyeLidLeft
+			if eyeLidRight == nil or eyeLidLeft == nil then
+				return
+			end
+
+			local eyeBlinks = {}
+			eyeBlinks.close = function()
+				-- removing eyelids when head loses its parent
+				-- not ideal, but no easy way currently to detect when the avatar is destroyed
+				if eyeLidRight:GetParent() == nil or eyeLidRight:GetParent():GetParent() == nil then
+					eyeBlinks = nil
+					eyeLidRight:RemoveFromParent()
+					eyeLidLeft:RemoveFromParent()
+					return
+				end
+				eyeLidRight.Scale.Y = 4.2
+				eyeLidRight.IsHidden = false
+				eyeLidLeft.Scale.Y = 4.2
+				eyeLidLeft.IsHidden = false
+				fields.eyeBlinksTimer = Timer(0.1, eyeBlinks.open)
+			end
+			eyeBlinks.open = function()
+				eyeLidRight.Scale.Y = 0
+				eyeLidRight.IsHidden = true
+				eyeLidLeft.Scale.Y = 0
+				eyeLidLeft.IsHidden = true
+				eyeBlinks.schedule()
+			end
+			eyeBlinks.schedule = function()
+				fields.eyeBlinksTimer = Timer(3.0 + math.random() * 1.0, eyeBlinks.close)
+			end
+			eyeBlinks.schedule()
+		end
+	else
+		if fields.eyeBlinksTimer ~= nil then
+			fields.eyeBlinksTimer:Cancel()
+			fields.eyeBlinksTimer = nil
+			local eyeLidRight = self.EyeLidRight
+			local eyeLidLeft = self.EyeLidLeft
+			if eyeLidRight == nil or eyeLidLeft == nil then
+				return
+			end
+			eyeLidRight.IsHidden = true
+			eyeLidLeft.IsHidden = true
+		end
+	end
+
+	fields.hiddenEquipments = {}
+
+	for _, equipment in ipairs(config.hiddenEquipments) do
+		fields.hiddenEquipments[equipment] = true
+	end
+
+	local hidden
+	for equipmentType, equipment in pairs(fields.equipments) do
+		if equipment.shapes then
+			hidden = fields.hiddenEquipments[equipmentType] == true
+			for _, s in ipairs(equipment.shapes) do
+				s.IsHidden = hidden
+			end
+		end
+	end
+
+	fields.config = config
 end
 
 -- EQUIPMENTS
