@@ -14,7 +14,23 @@ local CONFIG = {
 	TINY_PADDING = 2,
 	CELL_PADDING = 5,
 	LOAD_CONTENT_DELAY = 0.3,
+	AVATAR_DEFAULT_YAW = math.rad(-190),
+	AVATAR_DEFAULT_PITCH = 0,
 }
+
+local function avatarBox()
+	return Box({ -9.5, -13.5, -9.5 }, { 9.5, 13.5, 9.5 })
+end
+
+local function headBox()
+	return Box({ -6.5, -5.5, -6.5 }, { 6.5, 5.5, 6.5 })
+end
+
+local function feetBox()
+	return Box({ -4.5, -2, -2.5 }, { 4.5, 2, 2.5 })
+end
+
+homeAvatarY = 0
 
 Client.OnStart = function()
 	Screen.Orientation = "portrait" -- force portrait
@@ -42,7 +58,7 @@ Client.OnStart = function()
 	avatarCameraFollowHomeScroll = false
 	avatarCameraX = 0
 
-	function getAvatarCameraTargetPosition(h, w)
+	function getAvatarCameraTargetPosition(h, w, hWithoutMargin)
 		if avatarCameraTarget == nil then
 			return nil
 		end
@@ -60,24 +76,49 @@ Client.OnStart = function()
 
 		local box = Box()
 		local pos = Camera.Position:Copy()
+		local vCover = 1.0
+		local hCover = nil
 
 		if avatarCameraFollowHomeScroll == true then
-			box:Fit(avatarCameraTarget, { recursive = true })
-			local cover = (CONFIG.PROFILE_CELL_SIZE * 0.8)
-				/ (CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2 + Screen.SafeArea.Top * 2)
-			Camera:FitToScreen(box, cover)
+			box = avatarBox()
+			avatar():centerBody()
+			vCover = 0.92
 		elseif avatarCameraFocus == "body" then
-			box:Fit(avatarCameraTarget, { recursive = true })
-			Camera:FitToScreen(box, { coverage = 1.2 })
+			box = avatarBox()
+			avatar():centerBodyWithExtraRoomAbove()
+			vCover = 0.9
+			hCover = 1.2
 		elseif avatarCameraFocus == "head" then
-			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			Camera:FitToScreen(box, { coverage = 1.4 })
+			box = headBox()
+			avatar():centerHead()
+			vCover = 0.85
+			hCover = 0.8
 		elseif avatarCameraFocus == "eyes" then
-			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			Camera:FitToScreen(box, { coverage = 1.5 })
+			box = headBox()
+			avatar():centerHead()
+			vCover = 0.85
+			hCover = 0.8
 		elseif avatarCameraFocus == "nose" then
-			box:Fit(avatarCameraTarget.Head, { recursive = true })
-			Camera:FitToScreen(box, { coverage = 1.5 })
+			box = headBox()
+			avatar():centerHead()
+			vCover = 0.85
+			hCover = 0.8
+		elseif avatarCameraFocus == "feet" then
+			box = feetBox()
+			avatar():centerFeet()
+			vCover = 0.85
+			hCover = 0.7
+		end
+
+		vCover = (hWithoutMargin * vCover) / h
+		Camera:FitToScreen(box, { coverage = vCover, orientation = "vertical" })
+		if hCover ~= nil then
+			local d1 = Camera.Position.Z
+			Camera:FitToScreen(box, { coverage = hCover, orientation = "horizontal" })
+			local d2 = Camera.Position.Z
+			if d1 < d2 then -- restore d1 if distance more important than d2
+				Camera.Position.Z = d1
+			end
 		end
 
 		local targetPos = Camera.Position:Copy()
@@ -96,13 +137,16 @@ Client.OnStart = function()
 
 	local avatarCameraState = {}
 	function layoutCamera(config)
-		local h
+		local h, hWithoutMargin
 		local w
+
 		if avatarCameraFollowHomeScroll == true then
-			h = CONFIG.PROFILE_CELL_SIZE + CONFIG.CELL_PADDING * 2 + Screen.SafeArea.Top * 2
+			hWithoutMargin = CONFIG.PROFILE_CELL_SIZE
+			h = hWithoutMargin + CONFIG.CELL_PADDING * 2 + Screen.SafeArea.Top * 2
 			w = avatarCameraX * 2
 		else
-			h = Screen.Height - drawerHeight - Screen.SafeArea.Top
+			hWithoutMargin = Screen.Height - drawerHeight - Screen.SafeArea.Top
+			h = hWithoutMargin + Screen.SafeArea.Top * 2
 			w = Screen.Width
 		end
 
@@ -120,7 +164,7 @@ Client.OnStart = function()
 
 		ease:cancel(Camera)
 
-		local p = getAvatarCameraTargetPosition(h, w)
+		local p = getAvatarCameraTargetPosition(h, w, hWithoutMargin)
 		if p == nil then
 			return
 		end
@@ -133,11 +177,7 @@ Client.OnStart = function()
 		avatarCameraState.avatarCameraX = avatarCameraX
 
 		local targetX = 0
-		local targetY = Screen.SafeArea.Top
-		if avatarCameraFollowHomeScroll == true then
-			-- targetX = CONFIG.PROFILE_CELL_AVATAR_WIDTH
-			targetY = 0
-		end
+		local targetY = 0
 
 		if config.noAnimation then
 			Camera.TargetHeight = h
@@ -591,10 +631,11 @@ function avatar()
 	local defaultPants = bundle:Shape("shapes/default_pants")
 	local defaultShoes = bundle:Shape("shapes/default_shoes")
 
-	local yaw = math.rad(-190)
-	local pitch = 0
+	local yaw = CONFIG.AVATAR_DEFAULT_YAW
+	local pitch = CONFIG.AVATAR_DEFAULT_PITCH
 
 	local root
+	local dragListener
 	local listeners = {}
 
 	local function drag(dx, dy)
@@ -605,16 +646,83 @@ function avatar()
 		end
 	end
 
+	_avatar.drag = function(_, pe)
+		drag(pe.DX, pe.DY)
+	end
+
+	_avatar.resetRotation = function()
+		yaw = CONFIG.AVATAR_DEFAULT_YAW
+		pitch = CONFIG.AVATAR_DEFAULT_PITCH
+		drag(0, 0)
+	end
+
+	_avatar.setInternalDragListener = function(_, b)
+		if b then
+			if dragListener then
+				return
+			end
+			dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+				drag(pe.DX, pe.DY)
+			end)
+			table.insert(listeners, dragListener)
+		else
+			if dragListener == nil then
+				return
+			end
+			dragListener:Remove()
+			dragListener = nil
+		end
+	end
+
 	local mode = "demo" -- demo / user
 
 	local emitter
 	local particlesColor = Color(0, 0, 0)
 
-	_avatar.setPosition = function(self, p)
+	_avatar.setPosition = function(_, p)
 		if root == nil then
 			return
 		end
 		root.Position:Set(p)
+	end
+
+	_avatar.centerHead = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		local b = avatarBox()
+		local headB = headBox()
+		avatar.LocalPosition.Y = -b.Size.Y * 0.5
+			- avatar.Head.LocalPosition.Y
+			+ avatar.Head.Pivot.Y
+			- headB.Size.Y * 0.5
+	end
+
+	_avatar.centerBody = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		local b = avatarBox()
+		avatar.LocalPosition.Y = -b.Size.Y * 0.5
+	end
+
+	_avatar.centerBodyWithExtraRoomAbove = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		local b = avatarBox()
+		avatar.LocalPosition.Y = -b.Size.Y * 0.5 - 2
+	end
+
+	_avatar.centerFeet = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		avatar.LocalPosition.Y = -avatar.RightFoot.Height * 0.5 - 0.5 -- shoes have half a cube vertical offset
 	end
 
 	_avatar.show = function(self, config)
@@ -665,9 +773,7 @@ function avatar()
 		avatar.Animations.Walk:Stop()
 		avatar.Animations.Idle:Play()
 
-		local b = Box()
-		b:Fit(avatar, { recursive = true, ["local"] = true })
-		avatar.LocalPosition.Y = -b.Size.Y * 0.5
+		_avatar:centerBody()
 
 		if mode == "demo" then
 			avatar:loadEquipment({ type = "hair", shape = hairs[1] })
@@ -681,11 +787,8 @@ function avatar()
 			avatar:loadEquipment({ type = "boots", shape = defaultShoes, preventAvatarLoadOverride = false })
 		end
 
-		local l = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
-			drag(pe.DX, pe.DY)
-		end)
+		_avatar:setInternalDragListener(true)
 		drag(0, 0)
-		table.insert(listeners, l)
 
 		l = LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function()
 			layoutCamera()
@@ -707,6 +810,12 @@ function avatar()
 
 		l = LocalEvent:Listen("avatar_editor_should_focus_on_nose", function()
 			avatarCameraFocus = "nose"
+			layoutCamera()
+		end)
+		table.insert(listeners, l)
+
+		l = LocalEvent:Listen("avatar_editor_should_focus_on_feet", function()
+			avatarCameraFocus = "feet"
 			layoutCamera()
 		end)
 		table.insert(listeners, l)
@@ -945,6 +1054,9 @@ function home()
 
 	_home.pause = function()
 		avatarCameraFollowHomeScroll = false
+		avatar():setInternalDragListener(true)
+		avatar():setPosition(Number3.Zero)
+		avatar():resetRotation()
 		layoutCamera()
 
 		if tickListener then
@@ -954,6 +1066,9 @@ function home()
 
 	_home.resume = function()
 		avatarCameraFollowHomeScroll = true
+		avatar():setInternalDragListener(false)
+		avatar():setPosition(Number3(0, homeAvatarY, 0))
+		avatar():resetRotation()
 		layoutCamera()
 
 		if tickListener then
@@ -1684,6 +1799,13 @@ function home()
 						profileCell = ui:frame()
 						profileCell.Height = CONFIG.PROFILE_CELL_SIZE
 
+						local avatarTransparentFrame = ui:frame()
+						avatarTransparentFrame:setParent(profileCell)
+
+						avatarTransparentFrame.onDrag = function(_, pe)
+							avatar():drag(pe)
+						end
+
 						local usernameFrame = ui:frameTextBackground()
 						usernameFrame:setParent(profileCell)
 
@@ -1732,10 +1854,17 @@ function home()
 
 							local avatarWidth = CONFIG.PROFILE_CELL_AVATAR_WIDTH
 
+							avatarTransparentFrame.Width = avatarWidth + padding * 2 -- occupy a bit more space for easier drag inputs
+							avatarTransparentFrame.Height = self.Height
+
 							local totalWidth = infoWidth + avatarWidth + padding
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
-							local x = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth + padding
+							local x = self.Width * 0.5 - totalWidth * 0.5
+
+							avatarTransparentFrame.pos.X = x - padding * 2
+
+							x = x + avatarWidth + padding
 
 							local previousAvatarCameraX = avatarCameraX
 							avatarCameraX = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth * 0.5
@@ -1821,7 +1950,8 @@ function home()
 			end,
 			scrollPositionDidChange = function(p)
 				p = math.max(-Screen.SafeArea.Top, p)
-				avatar():setPosition(Number3(0, p * 0.2, 0))
+				homeAvatarY = p * 0.2
+				avatar():setPosition(Number3(0, homeAvatarY, 0))
 			end,
 		})
 		scroll:setParent(root)

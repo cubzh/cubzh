@@ -645,7 +645,7 @@ mod.create = function(self, config)
 					categories:parentDidResize()
 
 					config.requestHeightCallback(10000)
-					LocalEvent:Send("avatar_editor_should_focus_on_body")
+					LocalEvent:Send("avatar_editor_should_focus_on_feet")
 				end
 				return btn
 				-- elseif index == 10 then
