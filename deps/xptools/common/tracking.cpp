@@ -166,6 +166,7 @@ void TrackingClient::_trackEvent(const std::string& eventType,
 }
 
 void TrackingClient::_checkAndRefreshSession() {
+#ifndef P3S_NO_METRICS
     using namespace std::chrono;
     TrackingClient& tc = TrackingClient::shared();
     const uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -174,6 +175,7 @@ void TrackingClient::_checkAndRefreshSession() {
         tc._session_id = now;
     }
     tc._session_used_at = now;
+#endif
 }
 
 void TrackingClient::_sendKeepAliveEventIfNeeded() {
