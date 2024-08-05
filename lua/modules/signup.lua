@@ -301,6 +301,10 @@ signup.startFlow = function(self, config)
 				targetPos = frame.pos:Copy()
 				frame.pos.Y = frame.pos.Y - 50
 				ease:outBack(frame, animationTime).pos = targetPos
+				-- autofocus text input
+				Timer(0.2, function()
+					magicKeyInput:focus()
+				end)
 			end,
 			onExit = function()
 				for _, req in ipairs(requests) do
@@ -453,6 +457,7 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+				-- autofocus text input
 				Timer(0.2, function()
 					codeInput:focus()
 				end)
