@@ -1065,7 +1065,10 @@ signup.startFlow = function(self, config)
 						ui:createText(config.password and "or, send me a:" or "send me a:", Color.White, "default")
 					magicKeyLabel:setParent(frame)
 
-					magicKeyButton = ui:buttonPositive({ content = str:upperFirstChar(loc("✨ magic key ✨")) })
+					magicKeyButton = ui:buttonPositive({
+						content = str:upperFirstChar(loc("✨ magic key ✨")),
+						padding = theme.padding,
+					})
 					magicKeyButton:setParent(frame)
 
 					magicKeyButton.onRelease = function()

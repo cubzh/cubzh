@@ -323,12 +323,6 @@ mod.createModalContent = function(_, config)
 				end)
 				table.insert(requests, likeRequest)
 
-				if world.liked then
-					likeBtn:setColor(theme.colorPositive)
-				else
-					likeBtn:setColor(theme.buttonColor)
-				end
-
 				local nbLikes = (world.likes and math.floor(world.likes) or 0)
 				likeBtn.Text = (world.liked == true and "❤️ " or "🤍 ") .. nbLikes
 
@@ -383,17 +377,6 @@ mod.createModalContent = function(_, config)
 		-- update description text
 		if description ~= nil then
 			description.Text = world.description or ""
-		end
-
-		-- update like button
-		if world.liked ~= nil then
-			if likeBtn ~= nil and likeBtn.setColor ~= nil then
-				if world.liked then
-					likeBtn:setColor(theme.colorPositive)
-				else
-					likeBtn:setColor(theme.buttonColor)
-				end
-			end
 		end
 
 		local modal = content:getModalIfContentIsActive()

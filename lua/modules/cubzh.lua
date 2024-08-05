@@ -91,22 +91,22 @@ Client.OnStart = function()
 		elseif avatarCameraFocus == "head" then
 			box = headBox()
 			avatar():centerHead()
-			vCover = 0.85
+			vCover = 0.8
 			hCover = 0.8
 		elseif avatarCameraFocus == "eyes" then
 			box = headBox()
 			avatar():centerHead()
-			vCover = 0.85
+			vCover = 0.8
 			hCover = 0.8
 		elseif avatarCameraFocus == "nose" then
 			box = headBox()
 			avatar():centerHead()
-			vCover = 0.85
+			vCover = 0.8
 			hCover = 0.8
 		elseif avatarCameraFocus == "feet" then
 			box = feetBox()
 			avatar():centerFeet()
-			vCover = 0.85
+			vCover = 0.8
 			hCover = 0.7
 		end
 
@@ -1027,6 +1027,8 @@ function avatar()
 			l:Remove()
 		end
 		listeners = {}
+		dragListener = nil
+
 		root:RemoveFromParent()
 		root = nil
 
