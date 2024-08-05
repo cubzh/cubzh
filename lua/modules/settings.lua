@@ -230,7 +230,7 @@ settings.createModalContent = function(_, config)
 			local node = ui:createFrame()
 			accountContent.node = node
 
-			local logoutButton = ui:buttonNegative({ content = "Logout", textSize = "small" })
+			local logoutButton = ui:buttonNegative({ content = "Logout", textSize = "small", padding = theme.padding })
 			logoutButton:setColor(theme.colorNegative)
 			logoutButton:setParent(node)
 

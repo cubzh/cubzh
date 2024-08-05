@@ -215,12 +215,12 @@ creations.createModalContent = function(_, config)
 							uikit = ui,
 						})
 
-						local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
+						local btnEditCode = ui:buttonNeutral({ content = "🤓 Code", textSize = "default" })
 						btnEditCode.onRelease = function()
 							System.EditWorldCode(world.id)
 						end
 
-						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
+						local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "big" })
 						btnEdit.onRelease = function()
 							System.EditWorld(world.id)
 						end
