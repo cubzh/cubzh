@@ -36,6 +36,12 @@
 #define TRACKING_SERVER_PORT 443
 #define TRACKING_SERVER_SECURE true
 
+#if !defined(DEBUG)
+#define TRACKING_BRANCH "prod"
+#else
+#define TRACKING_BRANCH "debug"
+#endif
+
 //#endif
 
 #define NEW_SESSION_DELAY_MS 600000 // 10 minutes
@@ -99,7 +105,7 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     return;
 #else
 
-    vxlog_info("⭐️ TRACK EVENT: %s", eventType.c_str());
+    vxlog_info("⭐️ TRACK EVENT (%s): %s", TRACKING_BRANCH, eventType.c_str());
 
     _checkAndRefreshSession();
 
@@ -142,6 +148,8 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     vx::json::writeStringField(obj, "hw-model", vx::device::hardwareModel());
     vx::json::writeStringField(obj, "hw-product", vx::device::hardwareProduct());
     vx::json::writeIntField(obj, "hw-mem", vx::device::hardwareMemoryGB());
+
+    vx::json::writeStringField(obj, "_branch", std::string(TRACKING_BRANCH));
 
     char *s = cJSON_PrintUnformatted(obj);
     const std::string jsonStr = std::string(s);
