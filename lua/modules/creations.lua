@@ -204,6 +204,8 @@ creations.createModalContent = function(_, config)
 						btnCreate:enable()
 						input:enable()
 					else
+						System:DebugEvent("User creates a world", { ["world-id"] = world.id, title = world.title })
+
 						-- forces grid to refresh when coming back
 						if grid ~= nil then
 							grid.needsToRefreshEntries = true
@@ -252,6 +254,11 @@ creations.createModalContent = function(_, config)
 						btnCreate:enable()
 						input:enable()
 					else
+						System:DebugEvent(
+							"User creates an item",
+							{ ["item-id"] = item.id, repo = item.repo, name = item.name }
+						)
+
 						-- forces grid to refresh when coming back
 						if grid ~= nil then
 							grid.needsToRefreshEntries = true
