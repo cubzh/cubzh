@@ -415,6 +415,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				btnPrimary.Text = "✅ Accept"
 				btnPrimary:show()
 				btnPrimary.onRelease = function()
+					System:DebugEvent("User presses Accept Friend button")
 					local req = systemApi:replyToFriendRequest(cell.userID, true, function(ok, _)
 						if not ok then
 							return
@@ -464,6 +465,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				btnPrimary.Text = "➕ Add friend"
 				btnPrimary:show()
 				btnPrimary.onRelease = function()
+					System:DebugEvent("User presses Add Friend button")
 					local req = systemApi:sendFriendRequest(cell.userID, function(ok, _)
 						if not ok then
 							return

@@ -95,6 +95,7 @@ mod.createModalContent = function(_, config)
 	if not createMode then
 		btnLaunch = ui:buttonPositive({ content = "Start", textSize = "big", padding = 10 })
 		btnLaunch.onRelease = function()
+			System:DebugEvent("User presses Start button to launch world", { ["world-id"] = world.id })
 			URL:Open("https://app.cu.bzh?worldID=" .. world.id)
 		end
 		btnLaunch:setParent(worldDetails)
