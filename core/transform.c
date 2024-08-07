@@ -1105,7 +1105,10 @@ const float3 *transform_utils_get_acceleration(Transform *t) {
     }
 }
 
-void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box, bool applyTransaction) {
+void transform_utils_box_fit_recurse(Transform *t,
+                                     Matrix4x4 mtx,
+                                     Box *inout_box,
+                                     bool applyTransaction) {
     DoublyLinkedListNode *n = transform_get_children_iterator(t);
     Transform *child = NULL;
     while (n != NULL) {

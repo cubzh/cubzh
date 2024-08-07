@@ -26,7 +26,7 @@ local orientationCubeMetatable = {
 				self:init()
 			end
 			camera.TargetX = x
-			camera.TargetY = Screen.Height - y - camera.Height
+			camera.TargetY = Screen.Height - y - camera.TargetHeight
 		end,
 		setSize = function(self, size)
 			local camera = self.camera
@@ -35,8 +35,8 @@ local orientationCubeMetatable = {
 			end
 			camera.TargetWidth = size
 			camera.TargetHeight = size
-			camera.Width = size
-			camera.Height = size
+			camera.Width = size * 0.3 -- zoom IN on cube
+			camera.Height = camera.Width
 		end,
 		setRotation = function(self, cameraRotation)
 			local camera = self.camera
@@ -99,6 +99,7 @@ local orientationCubeMetatable = {
 			camera:SetParent(World)
 			camera.On = true
 			camera.Rotation = Camera.Rotation
+			camera.Projection = ProjectionMode.Orthographic
 
 			Object:Load("minadune.camera_gizmo", function(cube)
 				self.cube = cube
@@ -113,32 +114,32 @@ local orientationCubeMetatable = {
 				local textsInfo = {
 					{
 						text = "Front",
-						p = { 0, 0, cube.Depth * 0.51 },
+						p = { 0, 0, cube.Depth * 0.55 },
 						r = { 0, math.pi, 0 },
 					},
 					{
 						text = "Back",
-						p = { 0, 0, -cube.Depth * 0.51 },
+						p = { 0, 0, -cube.Depth * 0.55 },
 						r = { 0, 0, 0 },
 					},
 					{
 						text = "Top",
-						p = { 0, cube.Height * 0.51, 0 },
+						p = { 0, cube.Height * 0.55, 0 },
 						r = { math.pi / 2, 0, 0 },
 					},
 					{
 						text = "Bottom",
-						p = { 0, -cube.Height * 0.51, 0 },
+						p = { 0, -cube.Height * 0.55, 0 },
 						r = { -math.pi / 2, 0, 0 },
 					},
 					{
 						text = "Right",
-						p = { cube.Width * 0.51, 0, 0 },
+						p = { cube.Width * 0.55, 0, 0 },
 						r = { 0, -math.pi / 2, 0 },
 					},
 					{
 						text = "Left",
-						p = { -cube.Width * 0.51, 0, 0 },
+						p = { -cube.Width * 0.55, 0, 0 },
 						r = { 0, math.pi / 2, 0 },
 					},
 				}
@@ -153,6 +154,8 @@ local orientationCubeMetatable = {
 					t.Type = TextType.World
 					t.Text = data.text
 					t.Padding = 0
+					t.FontSize = 5.5
+					t.Font = Font.Noto
 					t.Color = Color.White
 					t.BackgroundColor = Color(0, 0, 0, 0)
 					t.Layers = self.layer

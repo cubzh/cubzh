@@ -224,7 +224,10 @@ void transform_utils_get_down(Transform *t, float3 *down, const bool refreshPare
 const float3 *transform_utils_get_velocity(Transform *t);
 const float3 *transform_utils_get_motion(Transform *t);
 const float3 *transform_utils_get_acceleration(Transform *t);
-void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box, bool applyTransaction);
+void transform_utils_box_fit_recurse(Transform *t,
+                                     Matrix4x4 mtx,
+                                     Box *inout_box,
+                                     bool applyTransaction);
 
 // MARK: - Misc. -
 void transform_set_animations_enabled(Transform *const t, const bool enabled);
