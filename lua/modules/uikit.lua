@@ -322,7 +322,7 @@ function createUI(system)
 			parent = parent:GetParent()
 		end
 
-		-- apply view order
+		-- apply sort order
 		-- SortOrder == 255 means elements are forced display on top, do not modify in that case
 		if attr.object.SortOrder then
 			if attr.object.SortOrder < 255 then
@@ -1052,53 +1052,46 @@ function createUI(system)
 		if node.shape:GetParent() == nil then
 			node.pivot:AddChild(node.shape)
 		end
-		node.shape.LocalPosition:Set(Number3.Zero)
-		node.shape.LocalRotation:Set(Number3.Zero)
-
-		local backupScale = node.object.LocalScale:Copy()
-		node.object.LocalScale = 1
-		node.pivot.LocalPosition = Number3.Zero
-
-		-- the shape scale is always 1
-		-- in the context of a shape node, we always apply scale to the parent object
 		node.shape.LocalScale = 1
 
-		node.pivot.LocalRotation:Set(0, 0, 0)
+		-- reset values for intermediary calculations, to use world AABB
+		local backupScale = node.object.LocalScale:Copy()
+		node.object.LocalScale = 1 -- node scale applied from node.Width/Height/Depth setters
+		node.shape.Position = Number3.Zero
+		node.shape.Rotation = Number3.Zero
+		node.pivot.LocalPosition = Number3.Zero
+		node.pivot.LocalRotation = Number3.Zero
+		
+		local aabb = Box()
+		aabb:Fit(node.shape, { recursive = true })
 
-		-- NOTE: Using AABB in pivot space to infer size & placement.
-		local aabb
-		if node._config.singleShapeToBeMutated then
-			aabb = node.shape.BoundingBox
-		else
-			aabb = Box()
-			aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
-		end
+		node.object.LocalScale = backupScale -- restore node scale
 
-		if not node._config.doNotFlip then
-			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
-		end
-
-		node._aabbWidth = aabb.Max.X - aabb.Min.X
-		node._aabbHeight = aabb.Max.Y - aabb.Min.Y
-		node._aabbDepth = aabb.Max.Z - aabb.Min.Z
+		node._aabbWidth = aabb.Size.X
+		node._aabbHeight = aabb.Size.Y
+		node._aabbDepth = aabb.Size.Z
 
 		if node._config.spherized then
 			node._diameter = math.sqrt(node._aabbWidth ^ 2 + node._aabbHeight ^ 2 + node._aabbDepth ^ 2)
 		end
 
-		-- center Shape within pivot
-		-- considering Shape's pivot but not modifying it
-		-- It could be important for shape's children placement.
+		-- center Shape within node.pivot, w/o modifying shape.Pivot,
+		-- as it could be important for shape's children placement.
 
+		if node._config.doNotFlip then
+			node.pivot.LocalRotation:Set(0, 0, 0)
+		else
+			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
+		end
 		if node._config.spherized then
-			local radius = node.Width * 0.5
+			local radius = node._diameter * 0.5
 			node.pivot.LocalPosition:Set(radius, radius, radius)
 		else
-			node.pivot.LocalPosition:Set(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
+			node.pivot.LocalPosition:Set(node._aabbWidth * 0.5, node._aabbHeight * 0.5, node._aabbDepth * 0.5)
 		end
 
 		node.shape.LocalPosition:Set(-aabb.Center + node._config.offset)
-		node.object.LocalScale = backupScale
+		node.shape.LocalRotation:Set(Number3.Zero)
 	end
 
 	local function _textInputRefreshColor(node)
@@ -1491,11 +1484,6 @@ function createUI(system)
 			doNotFlip = false,
 			offset = Number3.Zero,
 			perBlockCollisions = false,
-			-- TEMPORARY WORKAROUND:
-			-- The new system to compute shape boundaries, including children is not working as expected
-			-- when dealing with MutableShape that are being modified after UI shape's creation.
-			-- singleShapeToBeMutated = true allows use the legacy system (shape.BoundingBox instead of box:Fit(shape))
-			singleShapeToBeMutated = false,
 		}
 
 		config = conf:merge(defaultConfig, config)
@@ -2569,13 +2557,13 @@ function createUI(system)
 			local transparent = Color(config.gradientColor or config.backgroundColor)
 			transparent.A = 0
 			if right then
-				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "H", from = transparent, to = opaque }
 			elseif left then
-				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "H", from = opaque, to = transparent }
 			elseif down then
-				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "V", from = opaque, to = transparent }
 			elseif up then
-				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "V", from = transparent, to = opaque }
 			end
 			endScrollIndicator = ui:frame({ quad = quad })
 			endScrollIndicator.object.SortOrder = 255
@@ -2586,13 +2574,13 @@ function createUI(system)
 			transparent = Color(config.backgroundColor)
 			transparent.A = 0
 			if right then
-				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "H", from = opaque, to = transparent }
 			elseif left then
-				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "H", from = transparent, to = opaque }
 			elseif down then
-				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "V", from = transparent, to = opaque }
 			elseif up then
-				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "V", from = opaque, to = transparent }
 			end
 			beginScrollIndicator = ui:frame({ quad = quad })
 			beginScrollIndicator.object.SortOrder = 255

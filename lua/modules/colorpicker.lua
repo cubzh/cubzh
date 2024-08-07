@@ -78,7 +78,6 @@ colorPicker.create = function(_, config)
 	local hueSliderCursor = uikit:createShape(_hueSliderCursor, {
 		doNotFlip = true,
 		perBlockCollisions = true,
-		singleShapeToBeMutated = true,
 	})
 	hueSliderCursor:setParent(node)
 	hueSliderCursor.pos.Z = -550 -- remove this once uikit better manages layers
@@ -91,7 +90,6 @@ colorPicker.create = function(_, config)
 		alphaSliderCursor = uikit:createShape(_alphaSliderCursor, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		alphaSliderCursor:setParent(node)
 		alphaSliderCursor.pos.Z = -550 -- remove this once uikit better manages layers
@@ -100,7 +98,6 @@ colorPicker.create = function(_, config)
 	local hsvCursor = uikit:createShape(_hsvCursor, {
 		doNotFlip = true,
 		perBlockCollisions = true,
-		singleShapeToBeMutated = true,
 	})
 	hsvCursor:setParent(node)
 	hsvCursor.pos.Z = -550 -- remove this once uikit better manages layers
@@ -182,7 +179,7 @@ colorPicker.create = function(_, config)
 		end
 	end
 
-	local uiPaletteShape = uikit:createShape(paletteShape, { doNotFlip = true, singleShapeToBeMutated = true })
+	local uiPaletteShape = uikit:createShape(paletteShape, { doNotFlip = true })
 	uiPaletteShape:setParent(node)
 
 	local function pickSV(x, y)
@@ -247,7 +244,6 @@ colorPicker.create = function(_, config)
 	local uiHueShape = uikit:createShape(hueShape, {
 		doNotFlip = true,
 		perBlockCollisions = true,
-		singleShapeToBeMutated = true,
 	})
 	uiHueShape:setParent(node)
 
@@ -304,7 +300,6 @@ colorPicker.create = function(_, config)
 		uiFinalShape = uikit:createShape(finalShape, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		uiFinalShape:setParent(node)
 	end
@@ -432,7 +427,6 @@ colorPicker.create = function(_, config)
 		bgAlphaColor = uikit:createShape(bgAlphaShape, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		bgAlphaColor:setParent(bgAlpha)
 		bgAlphaShape.CollisionGroups = {}
@@ -447,7 +441,6 @@ colorPicker.create = function(_, config)
 		alpha = uikit:createShape(shapeAlpha, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		alpha:setParent(bgAlpha)
 		alpha.onPress = function(_, shape, block)
