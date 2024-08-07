@@ -129,7 +129,6 @@ palette.create = function(_, uikit, btnColor)
 	local selectionFrame = uikit:createShape(selectionFrameShape, {
 		spherized = false,
 		doNotFlip = true,
-		singleShapeToBeMutated = true,
 	})
 	selectionFrame.debugName = "selectionFrame"
 	selectionFrame:setParent(node)
@@ -150,7 +149,6 @@ palette.create = function(_, uikit, btnColor)
 			spherized = false,
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		colors:setParent(self)
 
