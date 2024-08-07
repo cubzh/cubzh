@@ -184,8 +184,11 @@ signup.startFlow = function(self, config)
 				local magicKeyLabel = ui:createText(magicKeyLabelText, Color.White, "default")
 				magicKeyLabel:setParent(frame)
 
-				local magicKeyInput =
-					ui:createTextInput("", str:upperFirstChar(loc("000000")), { textSize = "default" })
+				local magicKeyInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
+					textSize = "default",
+					keyboardType = "oneTimeDigicode",
+				})
+
 				magicKeyInput:setParent(frame)
 
 				local magicKeyButton = ui:buttonNeutral({ content = "✅" })
