@@ -38,7 +38,7 @@ signup.startFlow = function(self, config)
 	local loc = require("localize")
 	local phonenumbers = require("phonenumbers")
 	local str = require("str")
-	local bundle = require("bundle")
+	-- local bundle = require("bundle")
 
 	local theme = require("uitheme").current
 	local padding = theme.padding
