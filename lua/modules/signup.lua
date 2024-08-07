@@ -66,6 +66,11 @@ signup.startFlow = function(self, config)
 		nbAvatarPartsChanged = 0,
 	}
 
+	local callLoginSuccess = function()
+		System:DebugEvent("User logs in")
+		flowConfig.loginSuccess()
+	end
+
 	local function showCoinsButton()
 		-- not showing coins for now (waiting for marketplace implementation)
 
@@ -2183,7 +2188,7 @@ signup.startFlow = function(self, config)
 							System.IsUserUnder13 = userInfo.isUnder13
 
 							if Client.LoggedIn then
-								flowConfig.loginSuccess()
+								callLoginSuccess()
 							else
 								-- show signup
 								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
