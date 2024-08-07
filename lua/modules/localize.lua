@@ -26,34 +26,38 @@ end
 
 function _localize(l, key, context)
 	loadLanguage(l)
-	local v = loadedLanguages[l][key]
+	local val = loadedLanguages[l][key]
 
-	if v == nil then
+	if val == nil then
 		return nil
 	end
 
 	if type(context) == "string" then
-		if type(v) ~= "table" then
-			print("v is not a table")
-			return
-		end
-		v = v[context]
-		if type(v) == "string" then
-			return v
+		if type(val) == "table" then
+			val = val[context]
+			if type(val) == "string" then
+				return val
+			else
+				return nil
+			end
 		else
-			return nil
+			-- Fallback to the rest of the function
+			-- (`val` can be a string)
+			--
+			-- Debug log:
+			-- print("val is not a table", type(v), key)
 		end
 	end
 
 	-- no context
-	if type(v) == "string" then
-		return v
+	if type(val) == "string" then
+		return val
 	end
 
-	if type(v) ~= "table" then
-		v = v[1] -- get array's first entry
-		if type(v) == "string" then
-			return v
+	if type(val) ~= "table" then
+		val = val[1] -- get array's first entry
+		if type(val) == "string" then
+			return val
 		else
 			return nil
 		end

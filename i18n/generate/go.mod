@@ -1,3 +1,3 @@
 module cu.bzh/i18n/generate
 
-go 1.22.2
+go 1.22.6
