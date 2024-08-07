@@ -48,7 +48,8 @@ typedef void (*HostPlatormTextInput_RequestCallback)(const char *str,
                                                      bool multiline,
                                                      TextInputKeyboardType keyboardType,
                                                      TextInputReturnKeyType returnKeyType,
-                                                     bool suggestions);
+                                                     bool suggestions,
+                                                     bool readOnly);
 typedef void (*HostPlatormTextInput_UpdateCallback)(const char *str,
                                                     size_t strLen,
                                                     bool strDidchange,
