@@ -262,6 +262,13 @@ float float3_length(const float3 *f) {
     return sqrtf(f->x * f->x + f->y * f->y + f->z * f->z);
 }
 
+float float3_sqr_distance(const float3 *f1, const float3 *f2) {
+    const float dx = f2->x - f1->x;
+    const float dy = f2->y - f1->y;
+    const float dz = f2->z - f1->z;
+    return dx * dx + dy * dy + dz * dz;
+}
+
 float float3_distance(const float3 *f1, const float3 *f2) {
     const float dx = f2->x - f1->x;
     const float dy = f2->y - f1->y;
