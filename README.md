@@ -6,7 +6,7 @@
 </p>
 </picture>
 
-![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg?branch=main)
+![CI](https://github.com/cubzh/cubzh/actions/workflows/ci.yml/badge.svg)
 [![Join the chat at https://cu.bzh/discord](https://img.shields.io/discord/355905150528913409?color=%237289DA&label=cubzh&logo=discord&logoColor=white)](https://cu.bzh/discord)
 
 ## What is Cubzh?
