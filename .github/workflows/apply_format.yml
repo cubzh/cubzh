@@ -27,25 +27,25 @@ jobs:
           pull_number: ${{ github.event.issue.number }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - # get PR HEAD commit sha 
+
+      - # get PR HEAD commit sha
         # output is 'sha'
         name: Set PR HEAD commit to output
         id: get_commit
-        run: | 
-           prsha=$(echo $response | jq '.head.sha' | tr -d '"')
-           echo "::set-output name=sha::$prsha" 
-        env: 
+        run: |
+          prsha=$(echo $response | jq '.head.sha' | tr -d '"')
+          echo "::set-output name=sha::$prsha"
+        env:
           response: ${{ steps.get_PR.outputs.data }}
-      
+
       - # get PR branch name
         # output is 'ref'
         name: Set PR branch name to output
         id: get_branch
-        run: | 
-           prref=$(echo $response | jq '.head.ref' | tr -d '"')
-           echo "::set-output name=ref::$prref" 
-        env: 
+        run: |
+          prref=$(echo $response | jq '.head.ref' | tr -d '"')
+          echo "::set-output name=ref::$prref"
+        env:
           response: ${{ steps.get_PR.outputs.data }}
 
       - # Checkout PR HEAD commit (not the merge commit!)
@@ -53,25 +53,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ steps.get_commit.outputs.sha }}
-          lfs: 'true'
+          lfs: "true"
           token: ${{ secrets.BUZZZH_GITHUB_TOKEN }}
-      
-      - 
-        name: Setup Go
-        uses: actions/setup-go@v3
+
+      - name: Call formatting pipeline
+        uses: dagger/dagger-for-github@v6
         with:
-          go-version: '>=1.21'
-      
-      - 
-        name: Build Dagger program
-        working-directory: ./ci/format
-        run: go build -o format -v ./...
-      
-      - 
-        name: Run Dagger program
-        working-directory: ./ci/format
-        # after execution, we remove the executable so it doesn't get committed on the next step
-        run: ./format --apply-changes; rm ./format
+          args: format-core --src=.:lint-core -o .
+          cloud-token: p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0
 
       - # Create new commit with the changes
         name: Commit
@@ -89,12 +78,10 @@ jobs:
           create_branch: false
           branch: ${{ steps.get_branch.outputs.ref }} # name of branch
 
-      - 
-        name: Format done
+      - name: Format done
         if: steps.auto-commit.outputs.changes_detected == 'true'
         run: echo "Format done."
-        
-      - 
-        name: No need to format
+
+      - name: No need to format
         if: steps.auto-commit.outputs.changes_detected == 'false'
         run: echo "No need to format."

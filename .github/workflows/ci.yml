@@ -6,103 +6,58 @@ on:
       - main
 
 jobs:
-
-  # Lua Modules Linter
-  # -------------------------------------------------- 
-  lua_modules_linter:
+  # Lint Lua Modules
+  # --------------------------------------------------
+  lint_modules:
     name: Lua Modules (linter)
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '>=1.21'
-
-      - name: Git checkout
-        uses: actions/checkout@v4
-        with:
-            sparse-checkout: |
-              ci
-              lua
-
-      - name: Build & Run
-        working-directory: ./ci
-        env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
-        run: go run ./... linter
-
-
-  # Lua Modules Formater
-  # -------------------------------------------------- 
-  lua_modules_formater:
-    name: Lua Modules (formater)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '>=1.21'
-
-      - name: Git checkout
-        uses: actions/checkout@v4
-        with:
-            sparse-checkout: |
-              ci
-              lua
-
-      - name: Build & Run
-        working-directory: ./ci
-        env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
-        run: go run ./... formater
-
-
-  # Core Unit Tests
-  # -------------------------------------------------- 
-  core_unit_tests:
-    name: Core Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '>=1.21'
-
-      - name: Git checkout
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            ci
+            dagger.json
+            .dagger
+            lua
+      - name: Call Dagger
+        uses: dagger/dagger-for-github@v6
+        with:
+          args: lint-modules --src=.:modules
+          cloud-token: p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0
+
+  # Core Unit Tests
+  # --------------------------------------------------
+  test_core:
+    name: Core Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            dagger.json
+            .dagger
             core
             deps/libz
-          lfs: 'true'
-
-      - name: Build & Run Dagger program
-        working-directory: ./ci/core_unit_tests
-        env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
-        run: go run ./...
-
+          lfs: "true"
+      - name: Call Dagger
+        uses: dagger/dagger-for-github@v6
+        with:
+          args: test-core --src=.:test-core
+          cloud-token: p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0
 
   # Format
-  # -------------------------------------------------- 
-  format:
+  # --------------------------------------------------
+  lint_core:
     name: Core clang-format
     runs-on: ubuntu-latest
     steps:
-      - name: Git checkout
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          lfs: 'true'
-
-      - name: Setup Go
-        uses: actions/setup-go@v3
+          lfs: "true"
+      - name: Call Dagger
+        uses: dagger/dagger-for-github@v6
         with:
-          go-version: '>=1.21'
-
-      - name: Build & Run Dagger program
-        working-directory: ./ci/format
-        env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
-        run: go run ./...
-
+          args: lint-core --src=.:lint-core
+          cloud-token: p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0
