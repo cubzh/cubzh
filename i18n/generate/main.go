@@ -75,9 +75,13 @@ The value is a table when the top level key could be translated in different way
     "year": "",
     "years": "",
     "password": "",
-    "login": "",
+    "login": {
+		"button": "",
+	},
     "need help?": "",
-    "username": "",
+    "username": {
+		"title": "",
+	},
     "don't use your real name!": "",
     "sign up": {
         "button": "",

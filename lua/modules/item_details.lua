@@ -110,6 +110,7 @@ mod.createModalContent = function(_, config)
 	local creationDate
 	local updateDate
 	local identifier
+	local btnCopyIdentifier
 
 	local secondaryTextColor = Color(150, 150, 150)
 
@@ -124,6 +125,13 @@ mod.createModalContent = function(_, config)
 
 	identifier = ui:createText("🔗 identifier:", secondaryTextColor, "small")
 	identifier:setParent(cell)
+
+	btnCopyIdentifier = ui:buttonSecondary({ content = "📑", textSize = "small" })
+	btnCopyIdentifier:setParent(cell)
+
+	btnCopyIdentifier.onRelease = function()
+		Dev:CopyToClipboard(item.repo .. "." .. item.name)
+	end
 
 	by = ui:createText("🛠️ created by", secondaryTextColor, "small")
 	by:setParent(cell)
@@ -459,6 +467,11 @@ mod.createModalContent = function(_, config)
 		y = y - padding - singleLineHeight * 0.5
 		identifier.pos = { padding, y - identifier.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
+
+		btnCopyIdentifier.pos = {
+			identifier.pos.X + identifier.Width + padding,
+			identifier.Height * 0.5 - identifier.Height * 0.5,
+		}
 
 		y = y - theme.paddingBig - description.Height
 		description.pos = { padding, y }

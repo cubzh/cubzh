@@ -24,6 +24,7 @@
 		1033951D25626D130083F4C0 /* vxtime.h in Headers */ = {isa = PBXBuildFile; fileRef = 1033951C25626D130083F4C0 /* vxtime.h */; };
 		1033952325626D220083F4C0 /* vxtime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1033952225626D220083F4C0 /* vxtime.cpp */; };
 		1033952425626D220083F4C0 /* vxtime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1033952225626D220083F4C0 /* vxtime.cpp */; };
+		106ADEDF2C61701000964E91 /* textinput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10FF177F2BC3F02000A8E2E7 /* textinput.cpp */; };
 		10847CB5270EE8C6006A5E91 /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
 		10847CB8270EE8C6006A5E91 /* tracking.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93A325A384070030C45D /* tracking.hpp */; };
 		10847CB9270EE8C6006A5E91 /* crypto.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93F825A3C2330030C45D /* crypto.hpp */; };
@@ -168,6 +169,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		106ADEDB2C616F9A00964E91 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 853C9829286CEDD70072F14A /* libpng.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = A55DFB7715EBB44B007CCF00;
+			remoteInfo = "mac-static-libpng";
+		};
 		8553F41A2C074705000D53B4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853C9829286CEDD70072F14A /* libpng.xcodeproj */;
@@ -587,6 +595,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				106ADEDC2C616F9A00964E91 /* PBXTargetDependency */,
 			);
 			name = "xptools-macos-gameserver";
 			productName = xptools;
@@ -710,6 +719,7 @@
 			files = (
 				85D52F6D29D9EE2900070F19 /* URL.cpp in Sources */,
 				85FCECA428072D3200CD6115 /* WSBackend.cpp in Sources */,
+				106ADEDF2C61701000964E91 /* textinput.cpp in Sources */,
 				8518D09B27BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
 				85BB0198279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
 				850D25BA2AE11C7500B00B13 /* notifications.mm in Sources */,
@@ -830,6 +840,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		106ADEDC2C616F9A00964E91 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "mac-static-libpng";
+			targetProxy = 106ADEDB2C616F9A00964E91 /* PBXContainerItemProxy */;
+		};
 		8553F4232C074B7D000D53B4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = "mac-static-libpng";
@@ -859,9 +874,9 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../deps/libwebsockets/macos/include",
-					"$(PROJECT_DIR)/../../deps/libssl/macos/include",
-					"$(PROJECT_DIR)/../../deps/miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
+					"$(PROJECT_DIR)/../../libssl/macos/include",
+					"$(PROJECT_DIR)/../../miniaudio",
 				);
 			};
 			name = Debug;
@@ -882,9 +897,9 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../deps/libwebsockets/macos/include",
-					"$(PROJECT_DIR)/../../deps/libssl/macos/include",
-					"$(PROJECT_DIR)/../../deps/miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
+					"$(PROJECT_DIR)/../../libssl/macos/include",
+					"$(PROJECT_DIR)/../../miniaudio",
 				);
 			};
 			name = Release;

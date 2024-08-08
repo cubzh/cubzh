@@ -16,7 +16,7 @@ BUTTON_BORDER = 3
 BUTTON_UNDERLINE = 1
 -- COMBO_BOX_SELECTOR_SPEED = 400
 
-DEFAULT_SLICE_9_SCALE = 1 -- 1.5
+DEFAULT_SLICE_9_SCALE = 0.5 * Screen.Density
 
 SCROLL_LOAD_MARGIN = 50
 SCROLL_UNLOAD_MARGIN = 100
@@ -46,7 +46,6 @@ local NodeType = {
 
 -- MODULES
 
-bundle = require("bundle")
 codes = require("inputcodes")
 cleanup = require("cleanup")
 hierarchyActions = require("hierarchyactions")
@@ -323,7 +322,7 @@ function createUI(system)
 			parent = parent:GetParent()
 		end
 
-		-- apply view order
+		-- apply sort order
 		-- SortOrder == 255 means elements are forced display on top, do not modify in that case
 		if attr.object.SortOrder then
 			if attr.object.SortOrder < 255 then
@@ -736,11 +735,11 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onPress = nil
-					if t._onRelease == nil then
+					if t._onRelease == nil and t._onDrag == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
-				elseif v ~= nil then
+				else
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
@@ -769,11 +768,11 @@ function createUI(system)
 				local background = t.background
 				if v == nil then
 					t._onRelease = nil
-					if t._onPress == nil then
+					if t._onPress == nil and t._onDrag == nil then
 						background.Physics = PhysicsMode.Disabled
 						background.CollisionGroups = {}
 					end
-				elseif v ~= nil then
+				else
 					background.Physics = PhysicsMode.Trigger
 					_setCollisionGroups(background)
 					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
@@ -806,9 +805,30 @@ function createUI(system)
 				end
 			end
 		elseif k == "onDrag" then
-			t._onDrag = function(self, pe)
-				if v ~= nil then
-					v(self, pe)
+			if t.type == NodeType.Frame then
+				local background = t.background
+				if v == nil then
+					t._onDrag = nil
+					if t._onRelease == nil and t._onPress == nil then
+						background.Physics = PhysicsMode.Disabled
+						background.CollisionGroups = {}
+					end
+				else
+					background.Physics = PhysicsMode.Trigger
+					_setCollisionGroups(background)
+					background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
+					t._onDrag = function(self, pe)
+						v(self, pe)
+					end
+				end
+			else
+				if t._setCollider then
+					t:_setCollider(v ~= nil)
+				end
+				t._onDrag = function(self, pe)
+					if v ~= nil then
+						v(self, pe)
+					end
 				end
 			end
 		elseif k == "Pivot" then
@@ -1030,56 +1050,48 @@ function createUI(system)
 		end
 
 		if node.shape:GetParent() == nil then
-			node.shapeContainer:AddChild(node.shape)
+			node.pivot:AddChild(node.shape)
 		end
-		node.shape.LocalPosition:Set(Number3.Zero)
-		node.shape.LocalRotation:Set(Number3.Zero)
-
-		local backupScale = node.object.LocalScale:Copy()
-		node.object.LocalScale = 1
-		node.pivot.LocalPosition = Number3.Zero
-		node.shapeContainer.LocalPosition = Number3.Zero
-
-		-- the shape scale is always 1
-		-- in the context of a shape node, we always apply scale to the parent object
 		node.shape.LocalScale = 1
 
-		node.pivot.LocalRotation:Set(0, 0, 0)
+		-- reset values for intermediary calculations, to use world AABB
+		local backupScale = node.object.LocalScale:Copy()
+		node.object.LocalScale = 1 -- node scale applied from node.Width/Height/Depth setters
+		node.shape.Position = Number3.Zero
+		node.shape.Rotation = Number3.Zero
+		node.pivot.LocalPosition = Number3.Zero
+		node.pivot.LocalRotation = Number3.Zero
+		
+		local aabb = Box()
+		aabb:Fit(node.shape, { recursive = true })
 
-		-- NOTE: Using AABB in pivot space to infer size & placement.
-		local aabb
-		if node._config.singleShapeToBeMutated then
-			aabb = node.shape.BoundingBox
-		else
-			aabb = Box()
-			aabb:Fit(node.pivot, { recursive = true, ["local"] = true })
-		end
+		node.object.LocalScale = backupScale -- restore node scale
 
-		if not node._config.doNotFlip then
-			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
-		end
-
-		node._aabbWidth = aabb.Max.X - aabb.Min.X
-		node._aabbHeight = aabb.Max.Y - aabb.Min.Y
-		node._aabbDepth = aabb.Max.Z - aabb.Min.Z
+		node._aabbWidth = aabb.Size.X
+		node._aabbHeight = aabb.Size.Y
+		node._aabbDepth = aabb.Size.Z
 
 		if node._config.spherized then
 			node._diameter = math.sqrt(node._aabbWidth ^ 2 + node._aabbHeight ^ 2 + node._aabbDepth ^ 2)
 		end
 
-		-- center Shape within pivot
-		-- considering Shape's pivot but not modifying it
-		-- It could be important for shape's children placement.
+		-- center Shape within node.pivot, w/o modifying shape.Pivot,
+		-- as it could be important for shape's children placement.
 
+		if node._config.doNotFlip then
+			node.pivot.LocalRotation:Set(0, 0, 0)
+		else
+			node.pivot.LocalRotation:Set(0, math.pi, 0) -- shape's front facing camera
+		end
 		if node._config.spherized then
-			local radius = node.Width * 0.5
+			local radius = node._diameter * 0.5
 			node.pivot.LocalPosition:Set(radius, radius, radius)
 		else
-			node.pivot.LocalPosition:Set(node.Width * 0.5, node.Height * 0.5, node.Depth * 0.5)
+			node.pivot.LocalPosition:Set(node._aabbWidth * 0.5, node._aabbHeight * 0.5, node._aabbDepth * 0.5)
 		end
 
-		node.shapeContainer.LocalPosition:Set(-aabb.Center + node._config.offset)
-		node.object.LocalScale = backupScale
+		node.shape.LocalPosition:Set(-aabb.Center + node._config.offset)
+		node.shape.LocalRotation:Set(Number3.Zero)
 	end
 
 	local function _textInputRefreshColor(node)
@@ -1262,11 +1274,30 @@ function createUI(system)
 		return ui.frame(self, { quad = quad })
 	end
 
+	-- local frameMaskWithRoundCornersQuadData
+	-- ui.frameMaskWithRoundCorners = function(self)
+	-- 	if self ~= ui then
+	-- 		error("ui:frameGenericContainer(): use `:`", 2)
+	-- 	end
+	-- 	if frameMaskWithRoundCornersQuadData == nil then
+	-- 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
+	-- 	end
+	-- 	local quad = Quad()
+	-- 	quad.IsMask = true
+	-- 	quad.Image = {
+	-- 		data = frameMaskWithRoundCornersQuadData,
+	-- 		slice9 = { 0.5, 0.5 },
+	-- 		slice9Scale = DEFAULT_SLICE_9_SCALE,
+	-- 		cutout = true,
+	-- 	}
+	-- 	return ui.frame(self, { quad = quad })
+	-- end
+
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/frame_dark.png")
+		local image = Data:FromBundle("images/frame.png")
 		local quad = Quad()
 		quad.Image = {
 			data = image,
@@ -1453,11 +1484,6 @@ function createUI(system)
 			doNotFlip = false,
 			offset = Number3.Zero,
 			perBlockCollisions = false,
-			-- TEMPORARY WORKAROUND:
-			-- The new system to compute shape boundaries, including children is not working as expected
-			-- when dealing with MutableShape that are being modified after UI shape's creation.
-			-- singleShapeToBeMutated = true allows use the legacy system (shape.BoundingBox instead of box:Fit(shape))
-			singleShapeToBeMutated = false,
 		}
 
 		config = conf:merge(defaultConfig, config)
@@ -1467,10 +1493,7 @@ function createUI(system)
 		node.object.LocalScale = UI_SHAPE_SCALE
 
 		node.pivot = Object()
-		node.shapeContainer = Object()
-
 		node.object:AddChild(node.pivot)
-		node.pivot:AddChild(node.shapeContainer)
 
 		-- _diameter defined within _refreshShapeNode
 		node.refresh = _refreshShapeNode
@@ -1585,7 +1608,7 @@ function createUI(system)
 			self.shape = shape
 			shape._node = self
 
-			node.shapeContainer:AddChild(shape)
+			node.pivot:AddChild(shape)
 			shape.LocalPosition = Number3.Zero
 
 			if doNotRefresh ~= true then
@@ -1640,14 +1663,25 @@ function createUI(system)
 		end
 
 		if size ~= nil then
-			if type(size) ~= "string" or (size ~= "default" and size ~= "small" and size ~= "big") then
-				error('ui:createText(str, color, size) - size must be a string ("default", "small" or "big")', 2)
+			local sizeType = type(size)
+			if
+				(sizeType ~= "number" and sizeType ~= "integer" and sizeType ~= "string")
+				or (sizeType == "string" and (size ~= "default" and size ~= "small" and size ~= "big"))
+			then
+				error(
+					'ui:createText(str, color, size) - size must be a string ("default", "small" or "big") or number',
+					2
+				)
 			end
 			defaultConfig.size = size
 		end
 
 		local ok, err = pcall(function()
-			config = conf:merge(defaultConfig, config)
+			config = conf:merge(defaultConfig, config, {
+				acceptTypes = {
+					size = { "number", "integer", "string" },
+				},
+			})
 		end)
 		if not ok then
 			error("ui:createText(str, config) - config error: " .. err, 2)
@@ -1695,7 +1729,9 @@ function createUI(system)
 		t.BackgroundColor = config.backgroundColor
 		t.MaxDistance = camera.Far + 100
 
-		if config.size == "big" then
+		if type(config.size) == "number" or type(config.size) == "integer" then
+			t.FontSize = config.size
+		elseif config.size == "big" then
 			t.FontSize = currentFontSizeBig
 		elseif config.size == "small" then
 			t.FontSize = currentFontSizeSmall
@@ -1808,7 +1844,11 @@ function createUI(system)
 			config.textSize = configOrSize
 			config = conf:merge(defaultConfig, config)
 		elseif type(configOrSize) == "table" then
-			config = conf:merge(defaultConfig, configOrSize)
+			config = conf:merge(defaultConfig, configOrSize, {
+				acceptTypes = {
+					textSize = { "number", "integer", "string" },
+				},
+			})
 		else
 			config = conf:merge(defaultConfig, config)
 		end
@@ -2480,7 +2520,6 @@ function createUI(system)
 
 		local cell
 		local cellInfo
-		local previousCellInfo
 		local cellIndex
 
 		local loadTop
@@ -2518,13 +2557,13 @@ function createUI(system)
 			local transparent = Color(config.gradientColor or config.backgroundColor)
 			transparent.A = 0
 			if right then
-				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "H", from = transparent, to = opaque }
 			elseif left then
-				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "H", from = opaque, to = transparent }
 			elseif down then
-				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "V", from = opaque, to = transparent }
 			elseif up then
-				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "V", from = transparent, to = opaque }
 			end
 			endScrollIndicator = ui:frame({ quad = quad })
 			endScrollIndicator.object.SortOrder = 255
@@ -2535,13 +2574,13 @@ function createUI(system)
 			transparent = Color(config.backgroundColor)
 			transparent.A = 0
 			if right then
-				quad.Color = { gradient = "H", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "H", from = opaque, to = transparent }
 			elseif left then
-				quad.Color = { gradient = "H", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "H", from = transparent, to = opaque }
 			elseif down then
-				quad.Color = { gradient = "V", from = transparent, to = opaque, alpha = true }
+				quad.Color = { gradient = "V", from = transparent, to = opaque }
 			elseif up then
-				quad.Color = { gradient = "V", from = opaque, to = transparent, alpha = true }
+				quad.Color = { gradient = "V", from = opaque, to = transparent }
 			end
 			beginScrollIndicator = ui:frame({ quad = quad })
 			beginScrollIndicator.object.SortOrder = 255
@@ -2549,6 +2588,10 @@ function createUI(system)
 		end
 
 		local function loadCellInfo(cellIndex)
+			local previousCellInfo
+			if cellIndex > 1 then
+				previousCellInfo = cache.cellInfo[cellIndex - 1]
+			end
 			local cellInfo = cache.cellInfo[cellIndex]
 			local cell
 
@@ -2662,7 +2705,6 @@ function createUI(system)
 
 			cellIndex = 1
 			cellInfo = nil
-			previousCellInfo = nil
 
 			if vertical then
 				if endScrollIndicator then
@@ -2689,8 +2731,6 @@ function createUI(system)
 						cell.pos.Y = cellInfo.bottom
 						cell.pos.X = 0
 					end
-
-					previousCellInfo = cellInfo
 
 					if
 						(cellInfo.bottom >= loadBottom and cellInfo.bottom <= loadTop)
@@ -2749,8 +2789,6 @@ function createUI(system)
 						cell.pos.Y = 0
 						cell.pos.X = cellInfo.left
 					end
-
-					previousCellInfo = cellInfo
 
 					if
 						(cellInfo.left >= loadLeft and cellInfo.left <= loadRight)
@@ -2853,11 +2891,8 @@ function createUI(system)
 					pos = cellInfo.left - cellInfo.width * 0.5
 				end
 
-				-- if cell ~= nil, it means it's just been created
-				-- it has to be parented to the container
 				if cell ~= nil then
-					cells[cellIndex] = cell
-					cell:setParent(container)
+					config.unloadCell(index, cell, config.userdata)
 				end
 
 				currentIndex = currentIndex + 1
@@ -2869,7 +2904,7 @@ function createUI(system)
 				else
 					pos = pos + self.Width * 0.5
 				end
-				self:setScrollPosition(pos)
+				self:setScrollPosition(-pos)
 			end
 		end
 
@@ -3064,7 +3099,16 @@ function createUI(system)
 				if not hovering then
 					return false
 				end
-				node:applyScrollDelta(delta, delta)
+
+				local newPos = scrollPosition + delta
+				newPos = node:capPosition(newPos)
+
+				node:setScrollPosition(newPos)
+
+				defuseScrollSpeedTimer = nil
+				lastTickSavedScrollPosition = scrollPosition
+				dragStartScrollPosition = scrollPosition
+
 				return true
 			end, { system = system == true and System or nil, topPriority = true })
 			table.insert(listeners, l)
@@ -3085,6 +3129,13 @@ function createUI(system)
 	ui.button = function(self, config)
 		if self ~= ui then
 			error("ui:button(config): use `:`", 2)
+		end
+
+		-- load neutral button preset when no style config provided
+		if config == nil or (config.backgroundQuad == nil and config.color == nil) then
+			config = config or {}
+			config.color = Color(200, 200, 200)
+			-- return ui:buttonNeutral(config)
 		end
 
 		local defaultConfig = {
@@ -3122,6 +3173,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
+				textSize = { "number", "integer", "string" },
 				textColorPressed = { "Color" },
 				content = { "string", "Shape", "MutableShape", "table" },
 				backgroundQuad = { "Quad" },
@@ -3435,6 +3487,156 @@ function createUI(system)
 		return node
 	end
 
+	-- legacy
+	ui.createButton = function(_, content, config)
+		config = config or {}
+		config.content = content
+		return ui:button(config)
+	end -- createButton (legacy)
+
+	ui.createComboBox = function(self, stringOrShape, choices, config)
+		if choices == nil then
+			return
+		end
+
+		config = config or {}
+		config.content = stringOrShape
+
+		local btn = self:buttonNeutral(config)
+
+		btn.onSelect = function(_, _) end
+
+		btn.onRelease = function(_)
+			btn:disable()
+
+			local selector
+
+			local choiceOnRelease = function(self)
+				if self._choiceIndex == nil then
+					return
+				end
+				btn.selectedRow = self._choiceIndex
+				if btn.onSelect ~= nil then
+					btn:onSelect(self._choiceIndex)
+				end
+				if selector.close then
+					selector:close()
+				end
+			end
+
+			local choiceParentDidResize = function(self)
+				self.Width = self.parent.Width
+			end
+
+			local cells = {}
+
+			local scroll = ui:createScroll({
+				direction = "down",
+				cellPadding = 0,
+				padding = 0,
+				loadCell = function(index)
+					local choice = choices[index]
+					if choice then
+						local c = table.remove(cells)
+						if c ~= nil then
+							c.text = choice
+						else
+							c = ui:button({
+								content = choice,
+								borders = false,
+								shadow = false,
+								unfocuses = false,
+							})
+							c.parentDidResize = choiceParentDidResize
+							c.onRelease = choiceOnRelease
+						end
+						c._choiceIndex = index
+
+						if btn.selectedRow == c._choiceIndex then
+							c:select()
+						else
+							c:unselect()
+						end
+
+						return c
+					end
+				end,
+				unloadCell = function(_, cell) -- index, cell
+					cell:setParent(nil)
+					table.insert(cells, cell)
+				end,
+			})
+
+			scroll.Height = 200
+			scroll.Width = 100
+
+			focus(nil)
+
+			selector = ui:createFrame(Color(0, 0, 0, 100))
+			selector:setParent(btn.parent)
+
+			scroll:setParent(selector)
+
+			comboBoxSelector = selector
+
+			scroll.Height = math.min(
+				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
+				-- contentHeight,
+				300 -- max heigh for all combo boxes
+			)
+
+			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
+
+			selector.Height = scroll.Height + theme.paddingTiny * 2
+			selector.Width = scroll.Width + theme.paddingTiny * 2
+
+			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
+
+			parent = btn.parent
+			absPy = p.Y
+			while parent do
+				absPy = absPy + parent.pos.Y
+				parent = parent.parent
+			end
+
+			local offset = 0
+			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
+				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
+			end
+			p.Y = p.Y + offset
+
+			selector.pos.X = p.X
+			selector.pos.Y = p.Y - 50
+
+			ease:outBack(selector, 0.22).pos = p
+
+			selector.pos.Z = -10 -- render on front
+
+			if btn.selectedRow then
+				scroll:setScrollIndexVisible(btn.selectedRow)
+			end
+
+			selector.close = function(_)
+				if comboBoxSelector == selector then
+					comboBoxSelector = nil
+				end
+				ease:cancel(selector)
+				selector:remove()
+				if btn.enable then
+					btn:enable()
+				end
+				for _, cell in ipairs(cells) do
+					cell:remove()
+				end
+				cells = {}
+			end
+		end
+
+		return btn
+	end
+
+	-- PRESETS
+
 	local btnNeutralQuadData
 	local btnNeutralPressedQuadData
 	local btnNeutralSelectedQuadData
@@ -3623,148 +3825,6 @@ function createUI(system)
 		return ui.button(self, config)
 	end
 
-	-- legacy
-	ui.createButton = function(_, content, config)
-		config = config or {}
-		config.content = content
-		return ui:button(config)
-	end -- createButton (legacy)
-
-	ui.createComboBox = function(self, stringOrShape, choices, config)
-		if choices == nil then
-			return
-		end
-
-		config = config or {}
-		config.content = stringOrShape
-
-		local btn = self:buttonNeutral(config)
-
-		btn.onSelect = function(_, _) end
-
-		btn.onRelease = function(_)
-			btn:disable()
-
-			local selector
-
-			local choiceOnRelease = function(self)
-				if self._choiceIndex == nil then
-					return
-				end
-				btn.selectedRow = self._choiceIndex
-				if btn.onSelect ~= nil then
-					btn:onSelect(self._choiceIndex)
-				end
-				if selector.close then
-					selector:close()
-				end
-			end
-
-			local choiceParentDidResize = function(self)
-				self.Width = self.parent.Width
-			end
-
-			local cells = {}
-
-			local scroll = ui:createScroll({
-				direction = "down",
-				cellPadding = 0,
-				padding = 0,
-				loadCell = function(index)
-					local choice = choices[index]
-					if choice then
-						local c = table.remove(cells)
-						if c ~= nil then
-							c.text = choice
-						else
-							c = ui:button({
-								content = choice,
-								borders = false,
-								shadow = false,
-								unfocuses = false,
-							})
-							c.parentDidResize = choiceParentDidResize
-							c.onRelease = choiceOnRelease
-						end
-						c._choiceIndex = index
-
-						if btn.selectedRow == c._choiceIndex then
-							c:select()
-						end
-
-						return c
-					end
-				end,
-				unloadCell = function(_, cell) -- index, cell
-					cell:setParent(nil)
-					table.insert(cells, cell)
-				end,
-			})
-
-			scroll.Height = 200
-			scroll.Width = 100
-
-			focus(nil)
-
-			selector = ui:createFrame(Color(0, 0, 0, 100))
-			selector:setParent(btn.parent)
-
-			scroll:setParent(selector)
-
-			comboBoxSelector = selector
-
-			scroll.Height = math.min(
-				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
-				-- contentHeight,
-				300 -- max heigh for all combo boxes
-			)
-
-			scroll.pos = { theme.paddingTiny, theme.paddingTiny }
-
-			selector.Height = scroll.Height + theme.paddingTiny * 2
-			selector.Width = scroll.Width + theme.paddingTiny * 2
-
-			local p = Number3(btn.pos.X - theme.padding, btn.pos.Y + btn.Height - selector.Height + theme.padding, 0)
-
-			parent = btn.parent
-			absPy = p.Y
-			while parent do
-				absPy = absPy + parent.pos.Y
-				parent = parent.parent
-			end
-
-			local offset = 0
-			if absPy < Screen.SafeArea.Bottom + theme.paddingBig then
-				offset = Screen.SafeArea.Bottom + theme.paddingBig - absPy
-			end
-			p.Y = p.Y + offset
-
-			selector.pos.X = p.X
-			selector.pos.Y = p.Y - 50
-
-			ease:outBack(selector, 0.22).pos = p
-
-			selector.pos.Z = -10 -- render on front
-
-			if btn.selectedRow then
-				scroll:setScrollIndexVisible(btn.selectedRow)
-			end
-
-			selector.close = function(_)
-				if comboBoxSelector == selector then
-					comboBoxSelector = nil
-				end
-				ease:cancel(selector)
-				selector:remove()
-				if btn.enable then
-					btn:enable()
-				end
-			end
-		end
-
-		return btn
-	end
-
 	-- LISTENERS
 
 	LocalEvent:Listen(LocalEvent.Name.ScreenDidResize, function(_, _)
@@ -3837,29 +3897,35 @@ function createUI(system)
 				hitObject = hitObject:GetParent()
 			end
 
-			if
-				hitObject and (hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea)
-			then
-				-- check if hitObject is within a scroll
-				parent = hitObject._node.parent
-				while parent ~= nil do
-					-- skip action if node parented by scroll but not within area
-					-- note: a scroll can itself be within a scroll
-					if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
-						skip = true
-						break
+			if hitObject then
+				if hitObject._node._onDrag ~= nil and not hitObject._node.isScrollArea then
+					-- node can be dragged, taking control over eventual scroll parents
+					pressedScrolls = {}
+					pressedCandidate = hitObject._node
+					pressedCandidateImpact = impact
+					break
+				elseif hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea then
+					-- check if hitObject is within a scroll
+					parent = hitObject._node.parent
+					while parent ~= nil do
+						-- skip action if node parented by scroll but not within area
+						-- note: a scroll can itself be within a scroll
+						if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
+							skip = true
+							break
+						end
+						parent = parent.parent
 					end
-					parent = parent.parent
-				end
 
-				if skip == false then
-					if hitObject._node.isScrollArea then
-						table.insert(pressedScrolls, hitObject._node)
-						hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
-					end
-					if pressedCandidate == nil then
-						pressedCandidate = hitObject._node
-						pressedCandidateImpact = impact
+					if skip == false then
+						if hitObject._node.isScrollArea then
+							table.insert(pressedScrolls, hitObject._node)
+							hitObject._node:_onPress(hitObject, impact.Block, pointerEvent)
+						end
+						if pressedCandidate == nil then
+							pressedCandidate = hitObject._node
+							pressedCandidateImpact = impact
+						end
 					end
 				end
 			end

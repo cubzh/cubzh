@@ -9,7 +9,7 @@ theme = require("uitheme").current
 ease = require("ease")
 friends = require("friends")
 settings = require("settings")
-worlds = require("worlds")
+-- worlds = require("worlds")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
@@ -40,7 +40,7 @@ PADDING = theme.padding
 PADDING_BIG = 9
 TOP_BAR_HEIGHT = 40
 
-CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
+-- CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
 -- VARS
@@ -188,6 +188,13 @@ function showModal(key, config)
 	local content
 	if key == MODAL_KEYS.PROFILE then
 		local c = { uikit = ui }
+		if config.editAvatar ~= nil then
+			c.editAvatar = function()
+				closeModal()
+				config.editAvatar()
+			end
+		end
+
 		if config.player ~= nil then
 			c.username = config.player.Username
 			c.userID = config.player.UserID
@@ -224,14 +231,12 @@ function showModal(key, config)
 		content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
-		-- activeModal = require("world_details"):show({ ui = ui })
-
-		-- content = worlds:createModalContent({ uikit = ui })
-		-- activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
-
-		-- TODO: Implement world grid
-		-- (DISPLAYING ITEMS INSTEAD CURRENTLY, FOR DEBUG)
-		content = require("gallery"):createModalContent({ uikit = ui })
+		content = require("gallery"):createModalContent({
+			uikit = ui,
+			type = "worlds",
+			displayLikes = true,
+			categories = { "featured" },
+		})
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLD then
 		local config = config or {}
@@ -247,7 +252,6 @@ function showModal(key, config)
 		content = require("item_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CREATIONS then
-		-- TODO
 		content = require("creations"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then
@@ -1056,7 +1060,7 @@ function refreshChat()
 end
 
 function showChat(input)
-	if System.Authenticated == false and Environment.USER_AUTH ~= "disabled" then
+	if not Client.LoggedIn and Environment.USER_AUTH ~= "disabled" then
 		return
 	end
 	chatDisplayed = true
@@ -1353,7 +1357,7 @@ menu.IsActive = function(_)
 end
 
 function menuSectionCanBeShown()
-	if System.Authenticated == false then
+	if not Client.LoggedIn and Environment.USER_AUTH ~= "disabled" then
 		return false
 	end
 	if topBar:isVisible() == false then
@@ -1753,41 +1757,6 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
 		Client.ConnectingToServer()
 	end
 end)
-
--- NOTE: Used in Hub v3, when copying outfits from other players
--- Let's see if we want to keep this or not.
-
--- LocalEvent:Listen(LocalEvent.Name.LocalAvatarUpdate, function(updates)
--- 	if updates.skinColors ~= nil and avatar ~= nil then
--- 		avatarModule:setHeadColors(
--- 			avatar,
--- 			updates.skinColors.skin1,
--- 			updates.skinColors.skin2,
--- 			updates.skinColors.nose,
--- 			updates.skinColors.mouth
--- 		)
--- 	end
-
--- 	if type(updates.eyesColor) == Type.Color and avatar ~= nil then
--- 		avatarModule:setEyesColor(avatar, updates.eyesColor)
--- 	end
-
--- 	if type(updates.noseColor) == Type.Color and avatar ~= nil then
--- 		avatarModule:setNoseColor(avatar, updates.noseColor)
--- 	end
-
--- 	if type(updates.mouthColor) == Type.Color and avatar ~= nil then
--- 		avatarModule:setMouthColor(avatar, updates.mouthColor)
--- 	end
-
--- 	if updates.outfit == true then
--- 		avatar:remove()
--- 		avatar = uiAvatar:getHeadAndShoulders({ usernameOrId = Player.Username, size = cubzhBtn.Height, ui = ui })
--- 		avatar.parentDidResize = btnContentParentDidResize
--- 		avatar:setParent(profileFrame)
--- 		topBar:parentDidResize()
--- 	end
--- end)
 
 -- sign up / sign in flow
 

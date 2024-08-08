@@ -226,7 +226,7 @@ alert.create = function(self, text, config)
 			if okButton then
 				okButton.Text = text
 			else
-				okButton = ui:buttonPositive({ content = text })
+				okButton = ui:buttonPositive({ content = text, padding = theme.padding })
 				okButton:setParent(node)
 				okButton.onRelease = function(_)
 					positiveCallback()
@@ -277,7 +277,7 @@ alert.create = function(self, text, config)
 			if negativeButton then
 				negativeButton.Text = text
 			else
-				negativeButton = ui:buttonNegative({ content = text })
+				negativeButton = ui:buttonNegative({ content = text, padding = theme.padding })
 				negativeButton:setParent(node)
 				negativeButton.onRelease = function(_)
 					negativeCallback()
@@ -327,7 +327,7 @@ alert.create = function(self, text, config)
 			if neutralButton then
 				neutralButton.Text = text
 			else
-				neutralButton = ui:buttonNeutral({ content = text })
+				neutralButton = ui:buttonNeutral({ content = text, padding = theme.padding })
 				neutralButton:setParent(node)
 				neutralButton.onRelease = function(_)
 					neutralCallback()

@@ -36,6 +36,12 @@
 #define TRACKING_SERVER_PORT 443
 #define TRACKING_SERVER_SECURE true
 
+#if !defined(DEBUG)
+#define TRACKING_BRANCH "prod"
+#else
+#define TRACKING_BRANCH "debug"
+#endif
+
 //#endif
 
 #define NEW_SESSION_DELAY_MS 600000 // 10 minutes
@@ -65,13 +71,7 @@ TrackingClient::~TrackingClient() {}
 void TrackingClient::appDidBecomeActive() {
 #if !defined(P3S_NO_METRICS)
     _operationQueue->dispatch([](){
-        TrackingClient &tc = TrackingClient::shared();
-        tc._keep_alive_activated = true;
-        if (tc._session_id == 0 || tc._session_used_at - tc._session_id > NEW_SESSION_DELAY_MS) {
-            using namespace std::chrono;
-            tc._session_id = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            tc._session_used_at = tc._session_id;
-        }
+        TrackingClient::shared()._keep_alive_activated = true;
     });
 #endif
 }
@@ -105,8 +105,9 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     return;
 #else
 
-    using namespace std::chrono;
-    _session_used_at = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    vxlog_info("⭐️ TRACK EVENT (%s): %s", TRACKING_BRANCH, eventType.c_str());
+
+    _checkAndRefreshSession();
 
     std::string userAccountID;
     // It's ok not to have an account ID, it means user is not logged in yet.
@@ -148,6 +149,8 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     vx::json::writeStringField(obj, "hw-product", vx::device::hardwareProduct());
     vx::json::writeIntField(obj, "hw-mem", vx::device::hardwareMemoryGB());
 
+    vx::json::writeStringField(obj, "_branch", std::string(TRACKING_BRANCH));
+
     char *s = cJSON_PrintUnformatted(obj);
     const std::string jsonStr = std::string(s);
     free(s);
@@ -170,16 +173,23 @@ void TrackingClient::_trackEvent(const std::string& eventType,
 #endif
 }
 
+void TrackingClient::_checkAndRefreshSession() {
+#ifndef P3S_NO_METRICS
+    using namespace std::chrono;
+    TrackingClient& tc = TrackingClient::shared();
+    const uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    if (tc._session_id == 0 || now - tc._session_used_at > NEW_SESSION_DELAY_MS) {
+        // create new session starting now
+        tc._session_id = now;
+    }
+    tc._session_used_at = now;
+#endif
+}
+
 void TrackingClient::_sendKeepAliveEventIfNeeded() {
 #if !defined(P3S_NO_METRICS)
     if (_keep_alive_activated) {
-        using namespace std::chrono;
-        uint64_t t = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-        if (t - _session_used_at > KEEP_ALIVE_DELAY) {
-            _session_used_at = t;
-            std::unordered_map<std::string, std::string> properties;
-            _trackEvent("Keep alive", properties);
-        }
+        _checkAndRefreshSession();
     }
     _operationQueue->schedule([](){
         TrackingClient::shared()._sendKeepAliveEventIfNeeded();

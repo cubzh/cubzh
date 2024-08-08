@@ -894,11 +894,13 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 		-- bottom bar
 		if self.bottomBar.Height > 0 then
+			local extraBottomMargin = 2
+
 			self.bottomBar.Width = self.background.Width
 
 			previous = nil
 			for _, element in ipairs(self._bottomLeft) do
-				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5
+				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5 + extraBottomMargin
 				if previous then
 					element.pos.X = previous.pos.X + previous.Width + theme.padding
 				else
@@ -909,7 +911,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 			previous = nil
 			for _, element in ipairs(self._bottomCenter) do
-				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5
+				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5 + extraBottomMargin
 				if previous then
 					element.pos.X = previous.pos.X + previous.Width + theme.padding
 				else
@@ -920,7 +922,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 			previous = nil
 			for _, element in ipairs(self._bottomRight) do
-				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5
+				element.pos.Y = self.bottomBar.Height * 0.5 - element.Height * 0.5 + extraBottomMargin
 				if previous then
 					element.pos.X = previous.pos.X - element.Width - theme.padding
 				else

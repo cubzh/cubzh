@@ -10,10 +10,13 @@ local theme = require("uitheme").current
 local MIN_CELL_SIZE = 140
 local MAX_CELL_SIZE = 200
 local MIN_CELLS_PER_ROW = 3 -- prority over MIN_CELL_SIZE
+local LOAD_CONTENT_DELAY = 0.3
 
 itemGrid.create = function(_, config)
 	-- load config (overriding defaults)
 	local defaultConfig = {
+		-- type of entities displayed
+		type = "items", -- "items", "worlds"
 		-- shows search bar when true
 		searchBar = true,
 		--
@@ -21,9 +24,13 @@ itemGrid.create = function(_, config)
 		-- shows advanced filters button when true
 		advancedFilters = false,
 		-- used to filter categories when not nil
-		categories = nil, -- {"null", hair" ,"jacket", "pants", "boots"},
+		-- NOTE: when "featured" is provided, items displayed have to be in the featured category
+		-- for example, { "hair", "jacket", "featured" } will return featured hair and featured jacket items
+		categories = nil, -- {"null", "hair" ,"jacket", "pants", "boots", "featured"},
 		-- filter on particular repo
 		repo = nil,
+		-- filter on particular authorId (only works for worlds, use repo for items)
+		authorId = nil,
 		-- mode
 		minBlocks = 5,
 		--
@@ -33,7 +40,7 @@ itemGrid.create = function(_, config)
 		--
 		backgroundColor = theme.buttonTextColor,
 		--
-		sort = "likes:desc",
+		sort = "likes:desc", -- "likes:desc", "updatedAt:desc"
 		--
 		cellPadding = theme.cellPadding,
 		--
@@ -45,6 +52,8 @@ itemGrid.create = function(_, config)
 		--
 		displayLikes = false,
 		--
+		perPage = 25, -- TODO: offer to load more when reaching the end scroll
+		--
 		onOpen = function(_) end,
 		--
 		filterDidChange = function(_, _) end, -- (search, sort)
@@ -54,6 +63,7 @@ itemGrid.create = function(_, config)
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				repo = { "string" },
+				authorId = { "string" },
 				categories = { "table" },
 				sort = { "string" },
 			},
@@ -65,6 +75,54 @@ itemGrid.create = function(_, config)
 
 	local ui = config.uikit
 	local sortBy = config.sort
+
+	local currentToggleFilterOption = 2
+	local toggleFilterOptions = {
+		{
+			name = "likes",
+			sortBy = "likes:desc",
+			label = "♥️ Likes",
+		},
+		{
+			name = "recent",
+			sortBy = "updatedAt:desc",
+			label = "✨ Recent",
+		},
+	}
+
+	if sortBy == "likes:desc" then
+		currentToggleFilterOption = 1
+	elseif sortBy == "updatedAt:desc" then
+		currentToggleFilterOption = 2
+	end
+
+	if config.categories ~= nil then
+		for _, c in ipairs(config.categories) do
+			if c == "featured" then
+				-- insert featured filter AND remove from config.categories
+				-- (will be added dynamically when filter option is selected)
+				table.insert(toggleFilterOptions, {
+					name = "featured",
+					sortBy = "",
+					label = "⭐️ Featured",
+				})
+				currentToggleFilterOption = 3
+
+				local categories = config.categories
+				config.categories = {}
+				for _, category in ipairs(categories) do
+					if category ~= "featured" then
+						table.insert(config.categories, category)
+					end
+				end
+				break
+			end
+		end
+	end
+
+	sortBy = toggleFilterOptions[currentToggleFilterOption].sortBy
+
+	local type = config.type
 
 	local grid = ui:createFrame(Color(40, 40, 40)) -- Color(255,0,0)
 
@@ -105,8 +163,14 @@ itemGrid.create = function(_, config)
 		cancelRequestsAndTimers()
 	end
 
-	grid.setCategories = function(self, categories)
-		config.categories = categories
+	grid.setCategories = function(self, categories, newType)
+		if config.categories ~= nil then
+			config.categories = categories
+		end
+		if newType ~= nil then
+			config.type = newType
+			type = config.type
+		end
 		cancelRequestsAndTimers()
 		self:getItems()
 	end
@@ -136,21 +200,21 @@ itemGrid.create = function(_, config)
 		searchBar = ui:createTextInput(search, "search", { textSize = "small" })
 		searchBar:setParent(grid)
 
-		local s = "♥️ Likes"
-		if sortBy == "updatedAt:desc" then
-			s = "✨ Recent"
-		end
+		local s = toggleFilterOptions[currentToggleFilterOption].label
 
 		sortBtn = ui:buttonNeutral({ content = s, textSize = "small", textColor = Color.Black })
 		sortBtn:setParent(grid)
 		sortBtn.onRelease = function()
-			if sortBy == "likes:desc" then
-				sortBtn.Text = "✨ Recent"
-				sortBy = "updatedAt:desc"
-			elseif sortBy == "updatedAt:desc" then
-				sortBtn.Text = "♥️ Likes"
-				sortBy = "likes:desc"
+			currentToggleFilterOption = currentToggleFilterOption + 1
+			if currentToggleFilterOption > #toggleFilterOptions then
+				currentToggleFilterOption = 1
 			end
+
+			local filterOption = toggleFilterOptions[currentToggleFilterOption]
+
+			sortBtn.Text = filterOption.label
+			sortBy = filterOption.sortBy
+
 			config.filterDidChange(search, sortBy)
 			layoutSearchBar()
 			grid:getItems()
@@ -221,20 +285,34 @@ itemGrid.create = function(_, config)
 							cellSelector:setParent(cell)
 							cellSelector.Width = cell.Width
 							cellSelector.Height = cell.Height
+							cellSelector.LocalPosition.Z = -1
 						end
 
 						cell.onRelease = function()
 							if grid.onOpen then
-								local entity = {
-									type = "item",
-									id = cell.id,
-									repo = cell.repo,
-									name = cell.name,
-									fullName = cell.repo .. "." .. cell.name,
-									likes = cell.likes,
-									liked = cell.liked,
-									category = cell.category,
-								}
+								local entity
+
+								if type == "items" then
+									entity = {
+										type = "item",
+										id = cell.id,
+										repo = cell.repo,
+										name = cell.name,
+										fullName = cell.repo .. "." .. cell.name,
+										likes = cell.likes,
+										liked = cell.liked,
+										category = cell.category,
+									}
+								elseif type == "worlds" then
+									entity = {
+										type = "world",
+										id = cell.id,
+										title = cell.title.Text,
+										name = cell.name,
+										likes = cell.likes,
+										liked = cell.liked,
+									}
+								end
 								grid.onOpen(entity)
 							else
 								cellSelector:setParent(nil)
@@ -247,7 +325,11 @@ itemGrid.create = function(_, config)
 
 						local titleFrame = ui:frameTextBackground()
 						titleFrame:setParent(cell)
-						titleFrame.pos = { theme.paddingTiny, theme.paddingTiny }
+						if type == "items" then
+							titleFrame.pos = { theme.paddingTiny, theme.paddingTiny }
+						elseif type == "worlds" then
+							titleFrame.pos = { theme.paddingTiny * 2, theme.paddingTiny * 2 }
+						end
 						titleFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 						local title = ui:createText("…", Color.White, "small")
@@ -259,42 +341,48 @@ itemGrid.create = function(_, config)
 						cell.title = title
 
 						if config.displayLikes then
-							local likesFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+							local likesFrame = ui:frameTextBackground()
 							likesFrame:setParent(cell)
 							likesFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 							local likes = ui:createText("❤️ …", Color.White, "small")
 							likes:setParent(likesFrame)
 
-							likes.pos = { theme.padding, theme.padding }
+							likes.pos = { theme.paddingTiny, theme.paddingTiny }
 
 							cell.likesFrame = likesFrame
 							cell.likesLabel = likes
 						end
 
 						if config.displayPrice then
-							local priceFrame = ui:frame({ color = Color(0, 0, 0, 0) })
+							local priceFrame = ui:frameTextBackground()
 							priceFrame:setParent(cell)
 							priceFrame.LocalPosition.Z = config.uikit.kForegroundDepth
 
 							local price = ui:createText("❤️ …", Color.White, "small")
 							price:setParent(priceFrame)
 
-							price.pos = { theme.padding, theme.padding }
+							price.pos = { theme.paddingTiny, theme.paddingTiny }
 
 							cell.priceFrame = priceFrame
 							cell.priceLabel = price
 						end
 
 						cell.requests = {}
-						cell.item = nil
+						cell.timers = {}
 
 						cell.loadEntry = function(self, entry)
 							self.id = entry.id
-							self.repo = entry.repo
-							self.name = entry.name
-							self.fullName = self.repo .. "." .. self.name
-							self.category = entry.category
+
+							if type == "items" then
+								self.repo = entry.repo
+								self.name = entry.name
+								self.fullName = self.repo .. "." .. self.name
+								self.category = entry.category
+							elseif type == "world" then
+								self.title = entry.title
+							end
+
 							self.description = entry.description
 							self.created = entry.created
 							self.updated = entry.updated
@@ -307,59 +395,89 @@ itemGrid.create = function(_, config)
 							end
 
 							self.title.object.MaxWidth = self.Width - theme.paddingTiny * 4
-							self.title.Text = improveNameFormat(entry.name)
+							self.title.Text = entry.title or improveNameFormat(entry.name)
 							self.titleFrame.Height = self.title.Height + theme.paddingTiny * 2
 							self.titleFrame.Width = self.title.Width + theme.paddingTiny * 2
 
+							if self.mask then
+								self.mask.Width = self.Width
+								self.mask.Height = self.Height
+							end
+
 							if self.likesFrame ~= nil then
-								self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
-								self.likesLabel.Text = "❤️ " .. self.likes
-								self.likesFrame.Height = self.likesLabel.Height + theme.padding * 2
-								self.likesFrame.Width = self.likesLabel.Width + theme.padding * 2
-								self.likesFrame.pos = {
-									self.Width - self.likesFrame.Width,
-									self.Height - self.likesFrame.Height,
-								}
+								if self.likes == nil or self.likes == 0 then
+									self.likesFrame:hide()
+								else
+									self.likesFrame:show()
+									self.likesLabel.object.MaxWidth = self.Width - theme.padding * 2
+									self.likesLabel.Text = "❤️ " .. self.likes
+									self.likesFrame.Height = self.likesLabel.Height + theme.paddingTiny * 2
+									self.likesFrame.Width = self.likesLabel.Width + theme.paddingTiny * 2
+
+									if type == "items" then
+										self.likesFrame.pos = {
+											self.Width - self.likesFrame.Width - theme.paddingTiny,
+											self.Height - self.likesFrame.Height - theme.paddingTiny,
+										}
+									elseif type == "worlds" then
+										self.likesFrame.pos = {
+											self.Width - self.likesFrame.Width - theme.paddingTiny * 2,
+											self.Height - self.likesFrame.Height - theme.paddingTiny * 2,
+										}
+									end
+								end
 							end
 
 							if self.priceFrame ~= nil then
 								self.priceLabel.object.MaxWidth = self.Width - theme.padding * 2
 								self.priceLabel.Text = "🇵 0" -- 🪙
-								self.priceFrame.Height = self.priceLabel.Height + theme.padding * 2
-								self.priceFrame.Width = self.priceLabel.Width + theme.padding * 2
+								self.priceFrame.Height = self.priceLabel.Height + theme.paddingTiny * 2
+								self.priceFrame.Width = self.priceLabel.Width + theme.paddingTiny * 2
 								self.priceFrame.pos = { 0, self.Height - self.likesFrame.Height }
 							end
 
-							local req = Object:Load(self.fullName, function(obj)
-								if obj == nil then
-									-- silent error, no print, just removing loading animation
-									-- local loadingCube = cell:getLoadingCube()
-									-- if loadingCube then
-									-- 	loadingCube:hide()
-									-- end
-									return
-								end
+							if type == "items" then
+								local timer = Timer(LOAD_CONTENT_DELAY, function()
+									local req = Object:Load(self.fullName, function(obj)
+										if obj == nil then
+											-- silent error, no print, just removing loading animation
+											return
+										end
 
-								-- local loadingCube = cell:getLoadingCube()
-								-- if loadingCube then
-								-- 	loadingCube:hide()
-								-- end
+										local item = ui:createShape(obj, { spherized = true })
+										cell.item = item
+										item:setParent(cell) -- possible error here, cell destroyed?
 
-								local item = ui:createShape(obj, { spherized = true })
-								cell.item = item
-								item:setParent(cell) -- possible error here, cell destroyed?
+										item.pivot.LocalRotation = { -0.1, 0, -0.2 }
 
-								item.pivot.LocalRotation = { -0.1, 0, -0.2 }
+										-- setting Width sets Height & Depth as well when spherized
+										item.Width = cell.Width
+									end)
+									table.insert(self.requests, req)
+								end)
+								table.insert(self.timers, timer)
+							elseif type == "worlds" then
+								local timer = Timer(LOAD_CONTENT_DELAY, function()
+									local req = api:getWorldThumbnail(cell.id, function(img, err)
+										if err ~= nil then
+											-- silent error
+											return
+										end
 
-								-- setting Width sets Height & Depth as well when spherized
-								item.Width = cell.Width
-							end)
+										local thumbnail = ui:frame({ image = img })
+										thumbnail:setParent(cell)
+										thumbnail.Width = cell.Width - theme.paddingTiny * 2
+										thumbnail.Height = cell.Height - theme.paddingTiny * 2
+										thumbnail.pos = { theme.paddingTiny, theme.paddingTiny }
 
-							table.insert(self.requests, req)
+										cell.thumbnail = thumbnail
+									end)
+									table.insert(self.requests, req)
+								end)
+								table.insert(self.timers, timer)
+							end
 						end
 					end
-
-					cell.type = "item"
 
 					table.insert(row.cells, cell)
 
@@ -381,12 +499,20 @@ itemGrid.create = function(_, config)
 				for _, req in ipairs(cell.requests) do
 					req:Cancel()
 				end
+				for _, timer in ipairs(cell.timers) do
+					timer:Cancel()
+				end
 				if cell.item then
 					cell.item:remove()
 					cell.item = nil
 				end
+				if cell.thumbnail then
+					cell.thumbnail:remove()
+					cell.thumbnail = nil
+				end
 				cell:setParent(nil)
 				cell.requests = {}
+				cell.timers = {}
 				activeCells[cell.entryIndex] = nil
 				table.insert(cellPool, cell)
 			end
@@ -417,6 +543,11 @@ itemGrid.create = function(_, config)
 		scroll:refresh()
 	end
 
+	local function setGridEntries(newEntries)
+		entries = newEntries or {}
+		refreshEntries()
+	end
+
 	scroll.parentDidResize = function(self)
 		local parent = self.parent
 		local y = parent.Height
@@ -441,39 +572,58 @@ itemGrid.create = function(_, config)
 	-- triggers request to obtain items
 	grid.getItems = function(self)
 		cancelRequestsAndTimers()
+		setGridEntries({})
 
-		-- empty list
-		if self.setGridEntries ~= nil then
-			self:setGridEntries({})
-		end
-
-		local req = api:getItems({
-			minBlock = config.minBlocks,
-			repo = config.repo,
-			category = config.categories,
-			page = 1,
-			perPage = 25,
-			search = search,
-			sortBy = sortBy,
-		}, function(items, err)
-			if err then
-				print("Error: " .. err.message)
-				return
+		if type == "items" then
+			local categories = config.categories
+			if search == "" and toggleFilterOptions[currentToggleFilterOption].name == "featured" then
+				categories = { "featured" }
+				for _, category in ipairs(config.categories) do
+					table.insert(categories, category)
+				end
 			end
-			if self.setGridEntries ~= nil then
-				self:setGridEntries(items)
-			end
-		end)
-		addSentRequest(req)
-	end
 
-	grid.setGridEntries = function(self, newEntries)
-		-- print("setGridEntries - nb entries:", #_entries)
-		if self ~= grid then
-			error("item_grid:setGridEntries(entries): use `:`", 2)
+			local req = api:getItems({
+				minBlock = config.minBlocks,
+				repo = config.repo,
+				category = categories,
+				page = 1,
+				perPage = config.perPage,
+				search = search,
+				sortBy = sortBy,
+			}, function(items, err)
+				if err then
+					-- silent error
+					return
+				end
+
+				setGridEntries(items)
+			end)
+			addSentRequest(req)
+		elseif type == "worlds" then
+			local category = ""
+			if search == "" and toggleFilterOptions[currentToggleFilterOption].name == "featured" then
+				category = "featured"
+			end
+
+			local req = api:getWorlds({
+				authorId = config.authorId,
+				category = category,
+				page = 1,
+				perPage = config.perPage,
+				search = search,
+				sortBy = sortBy,
+				fields = { "title", "created", "updated", "views", "likes" },
+			}, function(worlds, err)
+				if err then
+					-- silent error
+					return
+				end
+
+				setGridEntries(worlds)
+			end)
+			addSentRequest(req)
 		end
-		entries = newEntries or {}
-		refreshEntries()
 	end
 
 	local dt1 = 0.0
@@ -487,23 +637,6 @@ itemGrid.create = function(_, config)
 				cell.item.pivot.LocalRotation:Set(-0.1, dt1, -0.2)
 			end
 		end
-
-		-- local loadingCube
-		-- local center = grid.cellSize * 0.5
-		-- local loadingCubePos = { center + math.cos(dt4) * 20, center - math.sin(dt4) * 20, 0 }
-		-- for _, c in ipairs(cells) do
-		-- 	if c.getLoadingCube == nil then
-		-- 		return
-		-- 	end
-		-- 	loadingCube = c:getLoadingCube()
-		-- 	if loadingCube ~= nil and loadingCube:isVisible() then
-		-- 		loadingCube.pos = loadingCubePos
-		-- 	end
-
-		-- 	if c.item ~= nil and c.item.pivot ~= nil then
-		-- 		c.item.pivot.LocalRotation = { -0.1, dt1, -0.2 }
-		-- 	end
-		-- end
 	end)
 
 	grid:getItems()

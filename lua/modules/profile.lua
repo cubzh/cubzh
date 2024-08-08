@@ -25,10 +25,15 @@ profile.create = function(_, config)
 		userID = "",
 		username = "",
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
+		editAvatar = nil,
 	}
 
 	local ok, err = pcall(function()
-		config = require("config"):merge(defaultConfig, config)
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				editAvatar = { "function" },
+			},
+		})
 	end)
 	if not ok then
 		error("profile:create(config) - config error: " .. err, 2)
@@ -102,8 +107,24 @@ profile.create = function(_, config)
 	end
 
 	local avatarNode = uiAvatar:get({ usernameOrId = username, ui = ui })
-	-- avatarNode:setColor(Color(255, 0, 0))
 	avatarNode:setParent(cell)
+
+	local avatarRot = Number3(0, math.pi, 0)
+	avatarNode.onDrag = function(self, pointerEvent)
+		if avatarNode.body.pivot ~= nil then
+			avatarRot.Y = avatarRot.Y - pointerEvent.DX * 0.02
+			avatarRot.X = avatarRot.X + pointerEvent.DY * 0.02
+
+			if avatarRot.X > math.pi * 0.4 then
+				avatarRot.X = math.pi * 0.4
+			end
+			if avatarRot.X < -math.pi * 0.4 then
+				avatarRot.X = -math.pi * 0.4
+			end
+
+			self.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
+		end
+	end
 
 	local userInfo = {
 		bio = "",
@@ -167,11 +188,13 @@ profile.create = function(_, config)
 		local editLinksBtn
 
 		if isLocal then
-			editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
-			editAvatarBtn:setParent(node)
+			if config.editAvatar ~= nil then
+				editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar", textSize = "small" })
+				editAvatarBtn:setParent(node)
 
-			editAvatarBtn.onRelease = function()
-				-- editAvatarBtnOnReleaseCallback()
+				editAvatarBtn.onRelease = function()
+					config.editAvatar()
+				end
 			end
 
 			editBioBtn = ui:buttonNeutral({ content = "✏️ Edit bio", textSize = "small" })
@@ -267,7 +290,7 @@ profile.create = function(_, config)
 			end
 
 			if bioText.Text ~= "" then
-				bioText.object.MaxWidth = self.Width
+				bioText.object.MaxWidth = self.Width - padding * 2
 				totalHeight = totalHeight + bioText.Height + padding
 			end
 
@@ -598,8 +621,6 @@ profile.create = function(_, config)
 	infoNode = createInfoNode()
 	infoNode:setParent(nil)
 
-	local avatarRot = Number3(0, math.pi, 0)
-	local dragListener = nil
 	local avatarLoadedListener = nil
 
 	if isLocal then
@@ -859,10 +880,7 @@ profile.create = function(_, config)
 
 		if infoNode.parent ~= nil then
 			y = y - infoNode.Height - padding
-			infoNode.pos = {
-				self.Width * 0.5 - infoNode.Width * 0.5,
-				y,
-			}
+			infoNode.pos = { 0, y }
 		end
 
 		scroll:flush()
@@ -894,23 +912,6 @@ profile.create = function(_, config)
 	end
 
 	content.didBecomeActive = function()
-		dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pointerEvent)
-			if avatarNode.body.pivot ~= nil then
-				avatarRot.Y = avatarRot.Y - pointerEvent.DX * 0.02
-				avatarRot.X = avatarRot.X + pointerEvent.DY * 0.02
-
-				if avatarRot.X > math.pi * 0.4 then
-					avatarRot.X = math.pi * 0.4
-				end
-				if avatarRot.X < -math.pi * 0.4 then
-					avatarRot.X = -math.pi * 0.4
-				end
-
-				avatarNode.body.pivot.LocalRotation = Rotation(avatarRot.X, 0, 0) * Rotation(0, avatarRot.Y, 0)
-				return true
-			end
-		end, { topPriority = true })
-
 		local fillUserInfo = function(usr, err)
 			if err ~= nil then
 				return
@@ -952,12 +953,6 @@ profile.create = function(_, config)
 	end
 
 	content.willResignActive = function()
-		-- stop listening for PointerDrag events
-		if dragListener ~= nil then
-			dragListener:Remove()
-			dragListener = nil
-		end
-
 		-- stop listening for AvatarLoaded events
 		if avatarLoadedListener then
 			avatarLoadedListener:Remove()

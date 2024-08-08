@@ -107,8 +107,8 @@ mod.skinColors = {
 	},
 }
 
-local DEFAULT_BODY_COLOR = 8
-mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR
+local DEFAULT_BODY_COLOR_INDEX = 8
+mod.defaultSkinColorIndex = DEFAULT_BODY_COLOR_INDEX
 
 mod.eyes = {
 	{
@@ -380,13 +380,13 @@ local DEFAULT_NOSE_INDEX = 1
 mod.defaultNoseIndex = DEFAULT_NOSE_INDEX
 
 avatarPalette = Palette()
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin1) -- skin 1
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].skin2) -- skin 2
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].skin1) -- skin 1
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].skin2) -- skin 2
 avatarPalette:AddColor(Color(231, 230, 208)) -- cloth
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].mouth) -- mouth
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].mouth) -- mouth
 avatarPalette:AddColor(Color(255, 255, 255)) -- eyes white
 avatarPalette:AddColor(Color(50, 50, 50)) -- eyes
-avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR].nose) -- nose
+avatarPalette:AddColor(mod.skinColors[DEFAULT_BODY_COLOR_INDEX].nose) -- nose
 avatarPalette:AddColor(Color(10, 10, 10)) -- eyes dark
 
 function initAnimations(avatar)
@@ -604,6 +604,7 @@ avatarDefaultConfig = {
 	eyeBlinks = true,
 	defaultAnimations = true,
 	loadEquipments = true,
+	hiddenEquipments = {}, -- forces some equipments to be hidden e.g. hiddenEquipments = { "hair" }
 }
 
 -- Returns sent requests
@@ -661,7 +662,7 @@ end
 -- reference should be kept, not copying entries right after function call.
 -- replaced is optional, but can be provided to replace an existing avatar instead of creating a new one.
 -- LEGACY: config used to be usernameOrId
-mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated)
+mod.get = function(self, config, _, didLoadCallback_deprecated)
 	if self ~= mod then
 		error("avatar:get(config) should be called with `:`", 2)
 	end
@@ -687,16 +688,45 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 	end
 
 	local avatar = Object()
+
+	local mt = System.GetMetatable(avatar)
+	mt.Shadow = false
+
+	local objectIndex = mt.__index
+	mt.__index = function(t, k)
+		if k == "Shadow" then
+			return mt[k]
+		end
+		return objectIndex(t, k)
+	end
+
+	local objectNewIndex = mt.__newindex
+	mt.__newindex = function(t, k, v)
+		if k == "Shadow" then
+			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
+				if o.Shadow == nil then
+					return
+				end
+				o.Shadow = v
+			end)
+			mt.Shadow = v
+			return
+		end
+		objectNewIndex(t, k, v)
+	end
+
 	avatar.load = avatar_load
 	avatar.loadEquipment = avatar_loadEquipment
 	avatar.setColors = avatar_setColors
 	avatar.setEyes = avatar_setEyes
 	avatar.setNose = avatar_setNose
+	avatar.updateConfig = avatar_update_config
 
 	local requests = {}
 	local palette = avatarPalette:Copy()
 
-	avatarPrivateFields[avatar] = { config = config, equipments = {}, requests = requests, palette = palette }
+	avatarPrivateFields[avatar] =
+		{ config = config, equipments = {}, equipments_requested = {}, requests = requests, palette = palette }
 
 	local body = bundle:MutableShape("shapes/avatar.3zh")
 	body.Name = "Body"
@@ -743,36 +773,7 @@ mod.get = function(self, config, replaced_deprecated, didLoadCallback_deprecated
 		o.Palette = palette
 	end)
 
-	if config.eyeBlinks then
-		local eyeBlinks = {}
-		eyeBlinks.close = function()
-			-- removing eyelids when head loses its parent
-			-- not ideal, but no easy way currently to detect when the avatar is destroyed
-			if eyeLidRight:GetParent() == nil or eyeLidRight:GetParent():GetParent() == nil then
-				eyeBlinks = nil
-				eyeLidRight:RemoveFromParent()
-				eyeLidLeft:RemoveFromParent()
-				return
-			end
-			eyeLidRight.Scale.Y = 4.2
-			eyeLidRight.IsHidden = false
-			eyeLidLeft.Scale.Y = 4.2
-			eyeLidLeft.IsHidden = false
-			Timer(0.1, eyeBlinks.open)
-		end
-		eyeBlinks.open = function()
-			eyeLidRight.Scale.Y = 0
-			eyeLidRight.IsHidden = true
-			eyeLidLeft.Scale.Y = 0
-			eyeLidLeft.IsHidden = true
-			eyeBlinks.schedule()
-		end
-		eyeBlinks.schedule = function()
-			Timer(3.0 + math.random() * 1.0, eyeBlinks.close)
-		end
-		eyeBlinks.schedule()
-	end
-
+	avatar:updateConfig()
 	avatar:load()
 
 	return avatar, requests
@@ -790,6 +791,8 @@ function avatar_load(self, config)
 		config = fields.config
 	end
 
+	fields.equipments_requested = {}
+
 	if config.usernameOrId ~= nil and config.usernameOrId ~= "" then
 		local req = api.getAvatar(config.usernameOrId, function(err, data)
 			if err and config.didLoad then
@@ -797,26 +800,37 @@ function avatar_load(self, config)
 				return
 			end
 
-			local skinColor = nil
-			local skinColor2 = nil
-			local noseColor = nil
-			local mouthColor = nil
-			local eyesColor = nil
-
-			-- skin color index
-			if data.skinColorIndex ~= nil then
-				local colorValues = mod.skinColors[data.skinColorIndex]
-				skinColor = colorValues.skin1
-				skinColor2 = colorValues.skin2
-				noseColor = colorValues.nose
-				mouthColor = colorValues.mouth
+			-- eyes type (index)
+			local eyesTypeIndex = data.eyesIndex
+			if eyesTypeIndex == nil or eyesTypeIndex == 0 then
+				eyesTypeIndex = DEFAULT_EYES_INDEX
 			end
 
-			-- eye color index
-			if data.eyesColorIndex ~= nil then
-				eyesColor = mod.eyeColors[data.eyesColorIndex]
+			-- nose type (index)
+			local noseTypeIndex = data.noseIndex
+			if noseTypeIndex == nil or noseTypeIndex == 0 then
+				noseTypeIndex = DEFAULT_NOSE_INDEX
 			end
 
+			-- body colors (index)
+			local bodyColorsIndex = data.skinColorIndex
+			if bodyColorsIndex == nil or bodyColorsIndex == 0 then
+				bodyColorsIndex = DEFAULT_BODY_COLOR_INDEX
+			end
+			local colorValues = mod.skinColors[bodyColorsIndex]
+			local skinColor = colorValues.skin1
+			local skinColor2 = colorValues.skin2
+			local noseColor = colorValues.nose
+			local mouthColor = colorValues.mouth
+
+			-- eyes color (index)
+			local eyesColorIndex = data.eyesColorIndex
+			if eyesColorIndex == nil or eyesColorIndex == 0 then
+				eyesColorIndex = DEFAULT_EYES_COLOR_INDEX
+			end
+			local eyesColor = mod.eyeColors[eyesColorIndex]
+
+			-- override colors
 			if data.skinColor then
 				skinColor =
 					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
@@ -849,27 +863,23 @@ function avatar_load(self, config)
 			})
 
 			-- eyes index
-			if data.eyesIndex ~= nil then
-				self:setEyes({ index = data.eyesIndex, color = eyesColor })
-			end
+			self:setEyes({ index = eyesTypeIndex, color = eyesColor })
 
 			-- nose index
-			if data.noseIndex ~= nil then
-				self:setNose({ index = data.noseIndex, color = noseColor })
-			end
+			self:setNose({ index = noseTypeIndex, color = noseColor })
 
 			-- print("data:", JSON:Encode(data))
 
-			if data.jacket then
+			if data.jacket and fields.equipments_requested["jacket"] ~= true then
 				self:loadEquipment({ type = "jacket", item = data.jacket })
 			end
-			if data.pants then
+			if data.pants and fields.equipments_requested["pants"] ~= true then
 				self:loadEquipment({ type = "pants", item = data.pants })
 			end
-			if data.hair then
+			if data.hair and fields.equipments_requested["hair"] ~= true then
 				self:loadEquipment({ type = "hair", item = data.hair })
 			end
-			if data.boots then
+			if data.boots and fields.equipments_requested["boots"] ~= true then
 				self:loadEquipment({ type = "boots", item = data.boots })
 			end
 		end)
@@ -929,6 +939,7 @@ function avatar_loadEquipment(self, config)
 		shape = nil,
 		bumpAnimation = false,
 		didAttachEquipmentParts = nil, -- function(equipmentParts)
+		preventAvatarLoadOverride = true, -- prevents overrides from ongoing avatar load (loading all equipments)
 	}
 
 	ok, err = pcall(function()
@@ -941,6 +952,10 @@ function avatar_loadEquipment(self, config)
 	end)
 	if not ok then
 		error("loadEquipment(config) - config error: " .. err, 2)
+	end
+
+	if config.preventAvatarLoadOverride then
+		fields.equipments_requested[config.type] = true
 	end
 
 	local currentEquipment = fields.equipments[config.type]
@@ -1013,6 +1028,12 @@ function avatar_loadEquipment(self, config)
 
 			if config.didAttachEquipmentParts then
 				config.didAttachEquipmentParts({ equipment })
+			end
+		end
+
+		if fields.hiddenEquipments and fields.hiddenEquipments[config.type] == true then
+			for _, s in ipairs(currentEquipment.shapes) do
+				s.IsHidden = true
 			end
 		end
 	end
@@ -1196,6 +1217,83 @@ function avatar_setNose(self, config)
 		-- 	eyes = config.color,
 		-- })
 	end
+end
+
+function avatar_update_config(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:updateConfig(config) should be called with `:`", 2)
+	end
+
+	config = require("config"):merge(fields.config, config)
+
+	if config.eyeBlinks then
+		if fields.eyeBlinksTimer == nil then
+			local eyeLidRight = self.EyeLidRight
+			local eyeLidLeft = self.EyeLidLeft
+			if eyeLidRight == nil or eyeLidLeft == nil then
+				return
+			end
+
+			local eyeBlinks = {}
+			eyeBlinks.close = function()
+				-- removing eyelids when head loses its parent
+				-- not ideal, but no easy way currently to detect when the avatar is destroyed
+				if eyeLidRight:GetParent() == nil or eyeLidRight:GetParent():GetParent() == nil then
+					eyeBlinks = nil
+					eyeLidRight:RemoveFromParent()
+					eyeLidLeft:RemoveFromParent()
+					return
+				end
+				eyeLidRight.Scale.Y = 4.2
+				eyeLidRight.IsHidden = false
+				eyeLidLeft.Scale.Y = 4.2
+				eyeLidLeft.IsHidden = false
+				fields.eyeBlinksTimer = Timer(0.1, eyeBlinks.open)
+			end
+			eyeBlinks.open = function()
+				eyeLidRight.Scale.Y = 0
+				eyeLidRight.IsHidden = true
+				eyeLidLeft.Scale.Y = 0
+				eyeLidLeft.IsHidden = true
+				eyeBlinks.schedule()
+			end
+			eyeBlinks.schedule = function()
+				fields.eyeBlinksTimer = Timer(3.0 + math.random() * 1.0, eyeBlinks.close)
+			end
+			eyeBlinks.schedule()
+		end
+	else
+		if fields.eyeBlinksTimer ~= nil then
+			fields.eyeBlinksTimer:Cancel()
+			fields.eyeBlinksTimer = nil
+			local eyeLidRight = self.EyeLidRight
+			local eyeLidLeft = self.EyeLidLeft
+			if eyeLidRight == nil or eyeLidLeft == nil then
+				return
+			end
+			eyeLidRight.IsHidden = true
+			eyeLidLeft.IsHidden = true
+		end
+	end
+
+	fields.hiddenEquipments = {}
+
+	for _, equipment in ipairs(config.hiddenEquipments) do
+		fields.hiddenEquipments[equipment] = true
+	end
+
+	local hidden
+	for equipmentType, equipment in pairs(fields.equipments) do
+		if equipment.shapes then
+			hidden = fields.hiddenEquipments[equipmentType] == true
+			for _, s in ipairs(equipment.shapes) do
+				s.IsHidden = hidden
+			end
+		end
+	end
+
+	fields.config = config
 end
 
 -- EQUIPMENTS

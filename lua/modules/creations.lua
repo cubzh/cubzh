@@ -123,7 +123,6 @@ creations.createModalContent = function(_, config)
 		if #categories > 1 then
 			nextTemplateBtn = ui:buttonNeutral({ content = "➡️" })
 			nextTemplateBtn:setParent(node)
-			nextTemplateBtn:setColor(theme.buttonColorSecondary)
 			nextTemplateBtn.onRelease = function()
 				currentCategory = currentCategory + 1
 				if currentCategory > #categories then
@@ -141,7 +140,6 @@ creations.createModalContent = function(_, config)
 
 			previousTemplateBtn = ui:buttonNeutral({ content = "⬅️" })
 			previousTemplateBtn:setParent(node)
-			previousTemplateBtn:setColor(theme.buttonColorSecondary)
 			previousTemplateBtn.onRelease = function()
 				currentCategory = currentCategory - 1
 				if currentCategory < 1 then
@@ -206,33 +204,27 @@ creations.createModalContent = function(_, config)
 						btnCreate:enable()
 						input:enable()
 					else
+						System:DebugEvent("User creates a world", { ["world-id"] = world.id, title = world.title })
+
 						-- forces grid to refresh when coming back
 						if grid ~= nil then
 							grid.needsToRefreshEntries = true
 						end
 
-						local worldDetailsContent =
-							worldDetails:create({ mode = "create", title = world.title, uikit = ui })
+						local worldDetailsContent = worldDetails:createModalContent({
+							mode = "create",
+							world = world,
+							uikit = ui,
+						})
 
-						local cell = {}
-
-						cell.id = world.id
-						cell.title = world.title
-						cell.description = ""
-						cell.created = world.created
-						cell.item = { shape = bundle:Shape("shapes/world_icon") }
-
-						worldDetailsContent:loadCell(cell)
-
-						local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
+						local btnEditCode = ui:buttonNeutral({ content = "🤓 Code", textSize = "default" })
 						btnEditCode.onRelease = function()
-							System.EditWorldCode(cell.id)
+							System.EditWorldCode(world.id)
 						end
 
-						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
-						btnEdit:setColor(theme.colorCreate)
+						local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "big" })
 						btnEdit.onRelease = function()
-							System.EditWorld(cell.id)
+							System.EditWorld(world.id)
 						end
 
 						worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
@@ -262,6 +254,11 @@ creations.createModalContent = function(_, config)
 						btnCreate:enable()
 						input:enable()
 					else
+						System:DebugEvent(
+							"User creates an item",
+							{ ["item-id"] = item.id, repo = item.repo, name = item.name }
+						)
+
 						-- forces grid to refresh when coming back
 						if grid ~= nil then
 							grid.needsToRefreshEntries = true
@@ -270,21 +267,18 @@ creations.createModalContent = function(_, config)
 						local itemFullName = item.repo .. "." .. item.name
 						-- local category = cell.category
 
-						local itemDetailsContent = itemDetails:createModalContent({ mode = "create", uikit = ui })
-
 						local cell = {}
-
 						cell.id = item.id
 						cell.name = item.name
 						cell.repo = item.repo
 						cell.description = ""
-						cell.itemFullName = itemFullName
+						cell.fullName = itemFullName
 						cell.created = item.created
 
-						itemDetailsContent:loadCell(cell)
+						local itemDetailsContent =
+							itemDetails:createModalContent({ mode = "create", uikit = ui, item = cell })
 
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
-						btnEdit:setColor(theme.colorCreate)
 						btnEdit.onRelease = function()
 							System.LaunchItemEditor(itemFullName, newCategory)
 						end
@@ -429,7 +423,10 @@ creations.createModalContent = function(_, config)
 
 		local grid = itemGrid:create({
 			minBlocks = 1,
+			type = "items",
+			displayLikes = true,
 			repo = Player.Username,
+			authorId = Player.UserID,
 			categories = { "null" },
 			sort = "updatedAt:desc",
 			uikit = ui,
@@ -525,7 +522,7 @@ creations.createModalContent = function(_, config)
 
 		grid.onOpen = function(entity)
 			if config.onOpen then
-				config.onOpen(creationsContent, cell)
+				config.onOpen(creationsContent, entity)
 				return
 			end
 
@@ -537,7 +534,6 @@ creations.createModalContent = function(_, config)
 					itemDetails:createModalContent({ item = entity, mode = "create", uikit = ui })
 
 				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
-				btnEdit:setColor(theme.colorCreate)
 				btnEdit.onRelease = function()
 					System.LaunchItemEditor(itemFullName, category)
 				end
@@ -605,8 +601,9 @@ creations.createModalContent = function(_, config)
 				if m ~= nil then
 					m:push(itemDetailsContent)
 				end
-			elseif cell.type == "world" then
-				local worldDetailsContent = worldDetails:create({ mode = "create", title = cell.title, uikit = ui })
+			elseif entity.type == "world" then
+				local worldDetailsContent =
+					worldDetails:createModalContent({ mode = "create", world = entity, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
 					worldDetailsContent.title = updatedWorld.title
@@ -615,17 +612,14 @@ creations.createModalContent = function(_, config)
 					end
 				end
 
-				worldDetailsContent:loadCell(cell)
-
-				local btnEditCode = ui:createButton("🤓 Code", { textSize = "default" })
+				local btnEditCode = ui:buttonSecondary({ content = "🤓 Code", textSize = "default" })
 				btnEditCode.onRelease = function()
-					System.EditWorldCode(cell.id)
+					System.EditWorldCode(entity.id)
 				end
 
-				local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
-				btnEdit:setColor(theme.colorCreate)
+				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
 				btnEdit.onRelease = function()
-					System.EditWorld(cell.id)
+					System.EditWorld(entity.id)
 				end
 
 				worldDetailsContent.bottomRight = { btnEdit, btnEditCode }

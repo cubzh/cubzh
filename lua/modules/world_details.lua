@@ -89,20 +89,27 @@ mod.createModalContent = function(_, config)
 		end
 	end
 
-	local btnLaunch = ui:buttonPositive({ content = "Start", textSize = "big", padding = 10 })
-	btnLaunch.onRelease = function()
-		URL:Open("https://app.cu.bzh?worldID=" .. world.id)
-	end
-	btnLaunch:setParent(worldDetails)
+	local btnLaunch
+	local btnServers
 
-	-- TODO: only display servers button if multiplayer
-	local btnServers = ui:buttonNeutral({ content = "Servers", textSize = "default" })
-	btnServers.onRelease = function()
-		local config = { worldID = world.id, title = world.title, uikit = ui }
-		local list = require("server_list"):create(config)
-		content:push(list)
+	if not createMode then
+		btnLaunch = ui:buttonPositive({ content = "Start", textSize = "big", padding = 10 })
+		btnLaunch.onRelease = function()
+			System:DebugEvent("User presses Start button to launch world", { ["world-id"] = world.id })
+			URL:Open("https://app.cu.bzh?worldID=" .. world.id)
+		end
+		btnLaunch:setParent(worldDetails)
+
+		-- TODO: only display servers button if multiplayer
+
+		btnServers = ui:buttonNeutral({ content = "Servers", textSize = "default" })
+		btnServers.onRelease = function()
+			local config = { worldID = world.id, title = world.title, uikit = ui }
+			local list = require("server_list"):create(config)
+			content:push(list)
+		end
+		btnServers:setParent(worldDetails)
 	end
-	btnServers:setParent(worldDetails)
 
 	local cell = ui:frame() -- { color = Color(100, 100, 100) }
 	cell.Height = 100
@@ -121,7 +128,7 @@ mod.createModalContent = function(_, config)
 	local creationDate
 	local updateDate
 
-	local thumbnailRatio = 16 / 9
+	local thumbnailRatio = 1 -- 16 / 9
 
 	local thumbnailArea = ui:frame({ color = Color(20, 20, 22) })
 	thumbnailArea:setParent(cell)
@@ -131,11 +138,11 @@ mod.createModalContent = function(_, config)
 		nameArea:setParent(worldDetails)
 
 		name = ui:createTextInput("", "World Name?")
-		name:setParent(nameArea)
+		name:setParent(cell)
 		name.pos = { 0, 0 }
 
-		editNameBtn = ui:buttonNeutral({ content = "✏️" })
-		editNameBtn:setParent(nameArea)
+		editNameBtn = ui:buttonSecondary({ content = "✏️" })
+		editNameBtn:setParent(cell)
 
 		local function focus()
 			name:focus()
@@ -144,7 +151,7 @@ mod.createModalContent = function(_, config)
 		local function submit()
 			local sanitized, err = api.checkWorldName(name.Text)
 			if err == nil then
-				local req = systemApi:patchWorld(worldDetails.id, { title = sanitized }, function(err, world)
+				local req = systemApi:patchWorld(world.id, { title = sanitized }, function(err, world)
 					if err == nil then
 						-- World update succeeded.
 						-- Notify that the content has changed.
@@ -207,13 +214,12 @@ mod.createModalContent = function(_, config)
 	likeBtn:setParent(cell)
 
 	if createMode then
-		editDescriptionBtn = ui:createButton("✏️")
+		editDescriptionBtn = ui:buttonSecondary({ content = "✏️ Edit description", textSize = "small" })
 		editDescriptionBtn:setParent(cell)
 		editDescriptionBtn.onRelease = function()
-			if System.MultilineInput ~= nil and worldDetails.description then
-				local description = worldDetails.description
+			if System.MultilineInput ~= nil then
 				if description.empty == true then
-					description = ""
+					description.Text = ""
 				end
 				System.MultilineInput(
 					description.Text,
@@ -288,6 +294,7 @@ mod.createModalContent = function(_, config)
 				description.Text = "Worlds are easier to find with a description!"
 				description.Color = theme.textColorSecondary
 			else
+				description.empty = false
 				description.Text = world.description
 				description.Color = theme.textColor
 			end
@@ -316,12 +323,6 @@ mod.createModalContent = function(_, config)
 					-- TODO: this request should return the refreshed number of likes
 				end)
 				table.insert(requests, likeRequest)
-
-				if world.liked then
-					likeBtn:setColor(theme.colorPositive)
-				else
-					likeBtn:setColor(theme.buttonColor)
-				end
 
 				local nbLikes = (world.likes and math.floor(world.likes) or 0)
 				likeBtn.Text = (world.liked == true and "❤️ " or "🤍 ") .. nbLikes
@@ -377,17 +378,6 @@ mod.createModalContent = function(_, config)
 		-- update description text
 		if description ~= nil then
 			description.Text = world.description or ""
-		end
-
-		-- update like button
-		if world.liked ~= nil then
-			if likeBtn ~= nil and likeBtn.setColor ~= nil then
-				if world.liked then
-					likeBtn:setColor(theme.colorPositive)
-				else
-					likeBtn:setColor(theme.buttonColor)
-				end
-			end
 		end
 
 		local modal = content:getModalIfContentIsActive()
@@ -504,7 +494,7 @@ mod.createModalContent = function(_, config)
 		thumbnailArea.Width = thumbnailWidth
 		thumbnailArea.Height = thumbnailHeight
 
-		description.object.MaxWidth = width
+		description.object.MaxWidth = width - padding * 2
 
 		local viewAndLikesHeight = math.max(views.Height, likeBtn.Height)
 
@@ -523,6 +513,14 @@ mod.createModalContent = function(_, config)
 			+ theme.paddingBig
 			+ description.Height
 
+		if name ~= nil then
+			contentHeight = contentHeight + name.Height + padding
+		end
+
+		if editDescriptionBtn then
+			contentHeight = contentHeight + editDescriptionBtn.Height + padding
+		end
+
 		cell.Height = contentHeight
 		cell.Width = width
 
@@ -540,32 +538,55 @@ mod.createModalContent = function(_, config)
 
 		-- author
 		y = y - theme.paddingBig - singleLineHeight * 0.5
-		by.pos = { 0, y - by.Height * 0.5 }
-		authorBtn.pos = { by.pos.X + by.Width + padding, y - author.Height * 0.5 }
+		by.pos = { padding, y - by.Height * 0.5 }
+		author.pos = { by.pos.X + by.Width + padding, y - author.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
 
 		y = y - padding - singleLineHeight * 0.5
-		creationDate.pos = { 0, y - creationDate.Height * 0.5 }
+		creationDate.pos = { padding, y - creationDate.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
 
 		y = y - padding - singleLineHeight * 0.5
-		updateDate.pos = { 0, y - updateDate.Height * 0.5 }
+		updateDate.pos = { padding, y - updateDate.Height * 0.5 }
 		y = y - singleLineHeight * 0.5
+
+		if name ~= nil then
+			y = y - padding - name.Height
+			name.pos = { padding, y }
+
+			local h = name.Height
+			name.Width = width - h - padding * 3
+
+			editNameBtn.Height = h
+			editNameBtn.Width = h
+			editNameBtn.pos = { name.pos.X + name.Width + padding, y }
+		end
 
 		y = y - theme.paddingBig - description.Height
-		description.pos = { 0, y }
+		description.pos = { padding, y }
+
+		if editDescriptionBtn ~= nil then
+			y = y - padding - editDescriptionBtn.Height
+			editDescriptionBtn.pos = { width * 0.5 - editDescriptionBtn.Width * 0.5, y }
+		end
 
 		scroll.Width = self.Width
-		scroll.Height = self.Height - btnLaunch.Height - padding * 2
 
-		local bottomButtonsWidth = btnServers.Width + padding + btnLaunch.Width
+		if btnLaunch then
+			scroll.Height = self.Height - btnLaunch.Height - padding * 2
 
-		btnServers.pos = {
-			width * 0.5 - bottomButtonsWidth * 0.5,
-			padding + btnLaunch.Height * 0.5 - btnServers.Height * 0.5,
-		}
-		btnLaunch.pos = { btnServers.pos.X + btnServers.Width + padding, padding }
-		scroll.pos.Y = btnLaunch.pos.Y + btnLaunch.Height + padding
+			local bottomButtonsWidth = btnServers.Width + padding + btnLaunch.Width
+
+			btnServers.pos = {
+				width * 0.5 - bottomButtonsWidth * 0.5,
+				padding + btnLaunch.Height * 0.5 - btnServers.Height * 0.5,
+			}
+			btnLaunch.pos = { btnServers.pos.X + btnServers.Width + padding, padding }
+			scroll.pos.Y = btnLaunch.pos.Y + btnLaunch.Height + padding
+		else
+			scroll.Height = self.Height
+			scroll.pos.Y = 0
+		end
 
 		scroll:flush()
 		scroll:refresh()

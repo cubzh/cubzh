@@ -1105,19 +1105,26 @@ const float3 *transform_utils_get_acceleration(Transform *t) {
     }
 }
 
-void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box) {
+void transform_utils_box_fit_recurse(Transform *t,
+                                     Matrix4x4 mtx,
+                                     Box *inout_box,
+                                     bool applyTransaction) {
     DoublyLinkedListNode *n = transform_get_children_iterator(t);
     Transform *child = NULL;
     while (n != NULL) {
         child = (Transform *)doubly_linked_list_node_pointer(n);
 
         if (transform_get_type(child) == ShapeTransform) {
+            Shape *s = (Shape *)child->ptr;
+
             transform_refresh(child, false, false); // refresh mtx for intra-frame calculations
+            if (applyTransaction) {
+                shape_apply_current_transaction(s, true);
+            }
 
             Matrix4x4 child_mtx = mtx;
             matrix4x4_op_multiply(&child_mtx, child->mtx);
 
-            const Shape *s = (Shape *)t->ptr;
             const Box model = shape_get_model_aabb(s);
             const float3 offset = shape_get_pivot(s);
             Box aabb;
@@ -1129,7 +1136,7 @@ void transform_utils_box_fit_recurse(Transform *t, Matrix4x4 mtx, Box *inout_box
                 box_op_merge(inout_box, &aabb, inout_box);
             }
 
-            transform_utils_box_fit_recurse(child, child_mtx, inout_box);
+            transform_utils_box_fit_recurse(child, child_mtx, inout_box, applyTransaction);
         }
 
         n = doubly_linked_list_node_next(n);

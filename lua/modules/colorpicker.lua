@@ -72,14 +72,12 @@ colorPicker.create = function(_, config)
 
 	cursorModel:AddBlock(Color.Black, 2, 0, 0)
 	cursorModel:AddBlock(Color.Black, 2, 2, 0)
-	cursorModel:RefreshModel()
 
 	local _hsvCursor = Shape(cursorModel)
 	_hsvCursor.CollisionGroups = {}
 	local hueSliderCursor = uikit:createShape(_hueSliderCursor, {
 		doNotFlip = true,
 		perBlockCollisions = true,
-		singleShapeToBeMutated = true,
 	})
 	hueSliderCursor:setParent(node)
 	hueSliderCursor.pos.Z = -550 -- remove this once uikit better manages layers
@@ -92,7 +90,6 @@ colorPicker.create = function(_, config)
 		alphaSliderCursor = uikit:createShape(_alphaSliderCursor, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		alphaSliderCursor:setParent(node)
 		alphaSliderCursor.pos.Z = -550 -- remove this once uikit better manages layers
@@ -101,7 +98,6 @@ colorPicker.create = function(_, config)
 	local hsvCursor = uikit:createShape(_hsvCursor, {
 		doNotFlip = true,
 		perBlockCollisions = true,
-		singleShapeToBeMutated = true,
 	})
 	hsvCursor:setParent(node)
 	hsvCursor.pos.Z = -550 -- remove this once uikit better manages layers
@@ -183,9 +179,7 @@ colorPicker.create = function(_, config)
 		end
 	end
 
-	paletteShape:RefreshModel()
-
-	local uiPaletteShape = uikit:createShape(paletteShape, { doNotFlip = true, singleShapeToBeMutated = true })
+	local uiPaletteShape = uikit:createShape(paletteShape, { doNotFlip = true })
 	uiPaletteShape:setParent(node)
 
 	local function pickSV(x, y)
@@ -247,12 +241,9 @@ colorPicker.create = function(_, config)
 		hueShape:AddBlock(c, 0, h, 0)
 	end
 
-	hueShape:RefreshModel()
-
 	local uiHueShape = uikit:createShape(hueShape, {
 		doNotFlip = true,
 		perBlockCollisions = true,
-		singleShapeToBeMutated = true,
 	})
 	uiHueShape:setParent(node)
 
@@ -304,13 +295,11 @@ colorPicker.create = function(_, config)
 				finalShape:AddBlock((i + j) % 2 == 0 and Color.White or Color.Grey, i, j, 0)
 			end
 		end
-		finalShape:RefreshModel()
 
 		node.finalShape = finalShape
 		uiFinalShape = uikit:createShape(finalShape, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		uiFinalShape:setParent(node)
 	end
@@ -435,11 +424,9 @@ colorPicker.create = function(_, config)
 			)
 		end
 
-		bgAlphaShape:RefreshModel()
 		bgAlphaColor = uikit:createShape(bgAlphaShape, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		bgAlphaColor:setParent(bgAlpha)
 		bgAlphaShape.CollisionGroups = {}
@@ -451,11 +438,9 @@ colorPicker.create = function(_, config)
 			shapeAlpha:AddBlock(c, 0, i - 1, 0)
 		end
 
-		shapeAlpha:RefreshModel()
 		alpha = uikit:createShape(shapeAlpha, {
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		alpha:setParent(bgAlpha)
 		alpha.onPress = function(_, shape, block)

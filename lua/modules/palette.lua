@@ -126,14 +126,9 @@ palette.create = function(_, uikit, btnColor)
 		end
 	end
 
-	-- NOTE: this is necessary for now, for bounding box to be correct right away, otherwise we have to wait for next frame.
-	-- This could certainly be fixed, refreshing bounding box dynamically when accessing it and when Shape is "dirty".
-	selectionFrameShape:RefreshModel()
-
 	local selectionFrame = uikit:createShape(selectionFrameShape, {
 		spherized = false,
 		doNotFlip = true,
-		singleShapeToBeMutated = true,
 	})
 	selectionFrame.debugName = "selectionFrame"
 	selectionFrame:setParent(node)
@@ -154,7 +149,6 @@ palette.create = function(_, uikit, btnColor)
 			spherized = false,
 			doNotFlip = true,
 			perBlockCollisions = true,
-			singleShapeToBeMutated = true,
 		})
 		colors:setParent(self)
 
