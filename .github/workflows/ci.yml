@@ -28,7 +28,7 @@ jobs:
       - name: Build & Run
         working-directory: ./ci
         env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+          DAGGER_CLOUD_TOKEN: "f5c1066f-95cf-466d-a3e6-586a29194a92"
         run: go run ./... linter
 
 
@@ -53,7 +53,7 @@ jobs:
       - name: Build & Run
         working-directory: ./ci
         env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+          DAGGER_CLOUD_TOKEN: "f5c1066f-95cf-466d-a3e6-586a29194a92"
         run: go run ./... formater
 
 
@@ -80,7 +80,7 @@ jobs:
       - name: Build & Run Dagger program
         working-directory: ./ci/core_unit_tests
         env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+          DAGGER_CLOUD_TOKEN: "f5c1066f-95cf-466d-a3e6-586a29194a92"
         run: go run ./...
 
 
@@ -103,6 +103,6 @@ jobs:
       - name: Build & Run Dagger program
         working-directory: ./ci/format
         env:
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+          DAGGER_CLOUD_TOKEN: "f5c1066f-95cf-466d-a3e6-586a29194a92"
         run: go run ./...
 
