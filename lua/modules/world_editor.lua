@@ -924,7 +924,7 @@ initPickWorld = function()
 	local content
 	uiPickWorld, content = require("creations"):createModal({
 		uikit = ui,
-		onOpen = function(cell)
+		onOpen = function(_, cell)
 			worldTitle = cell.title
 			worldID = cell.id
 			require("api"):getWorld(worldID, { "mapBase64" }, function(data, err)
