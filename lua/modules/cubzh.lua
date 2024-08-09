@@ -1,7 +1,3 @@
--- Modules = {
--- 	bundle = "bundle",
--- }
-
 bundle = require("bundle")
 
 local CONFIG = {
@@ -553,7 +549,6 @@ function avatar()
 
 	_avatar = {}
 
-	local bundle = require("bundle")
 	local avatarModule = require("avatar")
 
 	local hairs = {
@@ -1560,6 +1555,8 @@ function home()
 			table.insert(recycledFriendCells, cell)
 		end
 
+		local addFriendsCell
+
 		local categoryUnusedCells = {}
 		local categoryCells = {}
 		local categories = {
@@ -1602,6 +1599,28 @@ function home()
 						friendCell.avatar = avatar
 
 						return friendCell
+					elseif index == dataFetcher.nbEntities + 1 then
+						if addFriendsCell == nil then
+							addFriendsCell = ui:frameScrollCell()
+							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 2
+							addFriendsCell.parentDidResize = worldCellResizeFn
+
+							local btn = ui:buttonPositive({ content = "👥 Add Friends", padding = theme.padding })
+							btn:setParent(addFriendsCell)
+
+							btn.parentDidResize = function(self)
+								local parent = self.parent
+								self.pos = {
+									parent.Width * 0.5 - self.Width * 0.5,
+									theme.padding,
+								}
+							end
+
+							btn.onRelease = function()
+								Menu:ShowFriends()
+							end
+						end
+						return addFriendsCell
 					end
 				end,
 				unloadCell = function(_, cell)
