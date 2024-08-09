@@ -1061,7 +1061,7 @@ function createUI(system)
 		node.shape.Rotation = Number3.Zero
 		node.pivot.LocalPosition = Number3.Zero
 		node.pivot.LocalRotation = Number3.Zero
-		
+
 		local aabb = Box()
 		aabb:Fit(node.shape, { recursive = true })
 
@@ -2509,6 +2509,8 @@ function createUI(system)
 			cellInfo = {}, -- each entry: { top, bottom, left, right, width, height }
 		}
 
+		local firstRefresh = true
+
 		local released = true
 		local scrollPosition = 0
 		local defuseScrollSpeedTimer = nil
@@ -2836,6 +2838,20 @@ function createUI(system)
 					cellIndex = cellIndex + 1
 				end
 			end
+
+			if firstRefresh then
+				firstRefresh = false
+				if scrollPosition == 0 then
+					-- default scrollPosition can be set to something
+					-- else to center content when content size is smaller
+					-- than scroll size. In that case we need to refresh again.
+					scrollPosition = node:capPosition(scrollPosition)
+					if scrollPosition ~= 0 then
+						scrollSpeed = 0
+						node:refresh()
+					end
+				end
+			end
 		end
 
 		node.applyScrollDelta = function(_, dx, dy)
@@ -2848,20 +2864,28 @@ function createUI(system)
 
 		node.capPosition = function(_, pos)
 			if down then
-				local limit = cache.contentHeight - node.Height
-				if limit < 0 then
-					limit = 0
+				if cache.contentHeight < node.Height then
+					pos = -(node.Height - cache.contentHeight) * 0.5
+				else
+					local limit = cache.contentHeight - node.Height
+					if limit < 0 then
+						limit = 0
+					end
+					pos = math.min(limit, math.max(0, pos))
 				end
-				pos = math.min(limit, math.max(0, pos))
 			elseif up then
 				-- TODO: review
 				error("IMPLEMENT scroll capPosition for up direction")
 			elseif right then
-				local limit = node.Width - cache.contentWidth
-				if limit > 0 then
-					limit = 0
+				if cache.contentWidth < node.Width then
+					pos = (node.Width - cache.contentWidth) * 0.5
+				else
+					local limit = node.Width - cache.contentWidth
+					if limit > 0 then
+						limit = 0
+					end
+					pos = math.max(limit, math.min(pos, 0))
 				end
-				pos = math.max(limit, math.min(pos, 0))
 			elseif left then
 				-- TODO: review
 				error("IMPLEMENT scroll capPosition for left direction")
@@ -2904,7 +2928,8 @@ function createUI(system)
 				else
 					pos = pos + self.Width * 0.5
 				end
-				self:setScrollPosition(-pos)
+				pos = node:capPosition(-pos)
+				self:setScrollPosition(pos)
 			end
 		end
 
@@ -2931,7 +2956,10 @@ function createUI(system)
 				contentHeight = 0,
 				cellInfo = {},
 			}
+
+			firstRefresh = true
 			setScrollPosition(0)
+			scrollSpeed = 0
 		end
 
 		container.parentDidResizeSystem = function(_)
@@ -3020,7 +3048,6 @@ function createUI(system)
 					cappedPosition = node:capPosition(scrollPosition)
 					if cappedPosition ~= scrollPosition then
 						local speed = (cappedPosition - scrollPosition) * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED
-						-- scrollPosition = scrollPosition + speed * dt
 						setScrollPosition(scrollPosition + speed * dt)
 						refresh = true
 					end
