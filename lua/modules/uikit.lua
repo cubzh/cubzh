@@ -2363,14 +2363,7 @@ function createUI(system)
 			end
 		end
 
-		node._unfocus = function(self)
-			if self.state ~= State.Focused then
-				return
-			end
-
-			self.state = State.Idle
-			self.cursor:hide()
-
+		node._removeListeners = function(self)
 			if self.textInputUpdateListener ~= nil then
 				Client.OSTextInput:Close()
 				self.textInputUpdateListener:Remove()
@@ -2401,6 +2394,17 @@ function createUI(system)
 				self.tickListener:Remove()
 				self.tickListener = nil
 			end
+		end
+
+		node._unfocus = function(self)
+			if self.state ~= State.Focused then
+				return
+			end
+
+			self.state = State.Idle
+			self.cursor:hide()
+
+			self:_removeListeners()
 
 			_textInputRefreshColor(self)
 			self:_refresh()
@@ -2415,6 +2419,10 @@ function createUI(system)
 			if self:hasFocus() then
 				focus(nil)
 			end
+		end
+
+		node.onRemoveSystem = function(self)
+			self:_removeListeners()
 		end
 
 		node:setParent(rootFrame)
