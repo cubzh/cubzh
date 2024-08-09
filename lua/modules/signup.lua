@@ -2055,27 +2055,29 @@ signup.startFlow = function(self, config)
 
 					checks.minAppVersion = function()
 						System:DebugEvent("App performs initial checks")
-						api:getMinAppVersion(function(error, minVersion)
-							if error ~= nil then
-								System:DebugEvent("Request to get min app version fails", { error = error })
-								checks.error() -- Show error message with retry button
-								return
-							end
+						checks.userAccountExists()
 
-							local major, minor, patch = parseVersion(Client.AppVersion)
-							local minMajor, minMinor, minPatch = parseVersion(minVersion)
-							local appIsUpToDate = (major > minMajor)
-								or (major == minMajor and minor > minMinor)
-								or (major == minMajor and minor == minMinor and patch >= minPatch)
+						-- api:getMinAppVersion(function(error, minVersion)
+						-- 	if error ~= nil then
+						-- 		System:DebugEvent("Request to get min app version fails", { error = error })
+						-- 		checks.error() -- Show error message with retry button
+						-- 		return
+						-- 	end
 
-							if appIsUpToDate then
-								-- call next sub-step
-								checks.userAccountExists()
-							else
-								-- App is not up-to-date
-								checks.error("Cubzh app needs to be updated!")
-							end
-						end)
+						-- 	local major, minor, patch = parseVersion(Client.AppVersion)
+						-- 	local minMajor, minMinor, minPatch = parseVersion(minVersion)
+						-- 	local appIsUpToDate = (major > minMajor)
+						-- 		or (major == minMajor and minor > minMinor)
+						-- 		or (major == minMajor and minor == minMinor and patch >= minPatch)
+
+						-- 	if appIsUpToDate then
+						-- 		-- call next sub-step
+						-- 		checks.userAccountExists()
+						-- 	else
+						-- 		-- App is not up-to-date
+						-- 		checks.error("Cubzh app needs to be updated!")
+						-- 	end
+						-- end)
 					end
 
 					-- Checks whether a user account exists locally.
