@@ -1861,7 +1861,11 @@ menu:OnAuthComplete(function()
 	LocalEvent:Send("signup_flow_login_success")
 end)
 
-if not Client.LoggedIn then
+if Environment.USER_AUTH == "disabled" then
+	showTopBar()
+	topBar:parentDidResize()
+	hideBottomBar()
+elseif not Client.LoggedIn then
 	local signupFlow = signup:startFlow({
 		ui = ui,
 		avatarPreviewStep = function()
