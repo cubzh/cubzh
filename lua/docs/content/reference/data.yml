@@ -6,7 +6,7 @@ creatable: false
 blocks:
   - text: |
       [Data] is used to transfer raw pieces of information.
-      It is possible to access any byte of a Data instances using `[]`.
+      It is possible to access any byte of a Data instance by indexing `data[byteIndex]`.
 
   - subtitle: How to read a specific byte of a Data instance?
 
@@ -16,21 +16,48 @@ blocks:
         -- get the value of the 5th byte as a number
         local val = data[5]
       end)
+  
+  - subtitle: How to display an image data in a quad? (see [Quad](reference/quad).[Image](reference/quad#property-image) for more options)
+
+  - code: |
+      File:OpenAndReadAll(function(success, result)
+        quad.Image = result
+      end)
 
 properties:
-    - name: "Len"
+    - name: "Length"
       type: "number"
       description: "Number of bytes the [Data] contains."
       samples:
         - code: |
             HTTP:Get("cu.bzh", function(result)
             -- result type is Data
-              for i = 1, result.Len do
+              for i = 1, result.Length do
                 -- goes through every byte of the provided Data
               end
             end)
+    
+    - name: "Cursor"
+      type: "integer"
+      description: "Current cursor index inside [This]. The cursor advances whenever one of the read/write functions is used. It can also be set directly beforehand."
 
 functions:
+    - name: "FromBundle"
+      description: |
+          Opens and returns data of an asset in the app bundle.
+      arguments: 
+        - name: "filepath"
+          type: "string"
+      return:
+        - type: "Data"
+      samples:
+        - code: |
+            -- display the Cubzh logo from the app bundle
+            quad.Image = {
+              data=Data:FromBundle("images/logo.png"),
+              alpha=true
+            }
+
     - name: "ToString"
       description: |
           Returns the data as a string.
@@ -46,3 +73,155 @@ functions:
                   print("It's a Cubzh file!")
                 end
               end)
+    
+    - name: "ToTable"
+      description: |
+          Returns the data as a table.
+      return:
+        - type: "table"
+    
+    - name: "WriteByte"
+      description: "Writes the given byte (represented by an [integer](reference/integer) between `0` and `255`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteString"
+      description: "Writes the given [string](reference/string) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "string"
+    - name: "WriteInteger"
+      description: "Writes the given [integer](reference/integer) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteNumber"
+      description: "Writes the given [number](reference/number) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "number"
+    - name: "WriteNumber3"
+      description: "Writes the given [Number3](reference/number3) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "Number3"
+    - name: "WriteRotation"
+      description: "Writes the given [Rotation](reference/rotation) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "Rotation"
+    - name: "WriteColor"
+      description: "Writes the given [Color](reference/color) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "Color"
+    - name: "WritePhysicsMode"
+      description: "Writes the given [PhysicsMode](reference/object#property-physicsmode) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "PhysicsMode"
+    - name: "WriteInt8"
+      description: "Writes the given 8-bits integer (represented by an [integer](reference/integer) between `-128` and `127`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteInt16"
+      description: "Writes the given 16-bits integer (represented by an [integer](reference/integer) between `-32768` and `32767`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteInt32"
+      description: "Writes the given 32-bits integer (represented by an [integer](reference/integer) between `-2147483648` and `2147483647`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteUInt8"
+      description: "Writes the given unsigned 8-bits integer (represented by an [integer](reference/integer) between `0` and `255`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteUInt16"
+      description: "Writes the given unsigned 16-bits integer (represented by an [integer](reference/integer) between `0` and `65535`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteUInt32"
+      description: "Writes the given unsigned 32-bits integer (represented by an [integer](reference/integer) between `0` and `4294967295`) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "integer"
+    - name: "WriteFloat"
+      description: "Writes the given single-precision float (represented by a [number](reference/number)) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "number"
+    - name: "WriteDouble"
+      description: "Writes the given double-precision float (represented by a [number](reference/number)) at current cursor, and advances it."
+      arguments: 
+        - name: "value"
+          type: "number"
+
+    - name: "ReadByte"
+      description: "Reads a byte (represented by an [integer](reference/integer) between `0` and `255`) at current cursor, and advances it."
+      return:
+        - type: "integer"
+    - name: "ReadString"
+      description: "Reads a [string](reference/string) at current cursor, and advances it."
+      return:
+        - type: "string"
+    - name: "ReadInteger"
+      description: "Reads an [integer](reference/integer) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadNumber"
+      description: "Reads a [number](reference/number) at current cursor, and advances it."
+      return:
+          type: "number"
+    - name: "ReadNumber3"
+      description: "Reads a [Number3](reference/number3) at current cursor, and advances it."
+      return:
+          type: "Number3"
+    - name: "ReadRotation"
+      description: "Reads a [Rotation](reference/rotation) at current cursor, and advances it."
+      return:
+          type: "Rotation"
+    - name: "ReadColor"
+      description: "Reads a [Color](reference/color) at current cursor, and advances it."
+      return:
+          type: "Color"
+    - name: "ReadPhysicsMode"
+      description: "Reads a [PhysicsMode](reference/object#property-physicsmode) at current cursor, and advances it."
+      return:
+          type: "PhysicsMode"
+    - name: "ReadInt8"
+      description: "Reads an 8-bits integer (represented by an [integer](reference/integer) between `-128` and `127`) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadInt16"
+      description: "Reads a 16-bits integer (represented by an [integer](reference/integer) between `-32768` and `32767`) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadInt32"
+      description: "Reads a 32-bits integer (represented by an [integer](reference/integer) between `-2147483648` and `2147483647`) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadUInt8"
+      description: "Reads an unsigned 8-bits integer (represented by an [integer](reference/integer) between `0` and `255`) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadUInt16"
+      description: "Reads an unsigned 16-bits integer (represented by an [integer](reference/integer) between `0` and `65535`) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadUInt32"
+      description: "Reads an unsigned 32-bits integer (represented by an [integer](reference/integer) between `0` and `4294967295`) at current cursor, and advances it."
+      return:
+          type: "integer"
+    - name: "ReadFloat"
+      description: "Reads a single-precision float (represented by a [number](reference/number)) at current cursor, and advances it."
+      return:
+          type: "number"
+    - name: "ReadDouble"
+      description: "Reads a double-precision float (represented by a [number](reference/number)) at current cursor, and advances it."
+      return:
+          type: "number"
