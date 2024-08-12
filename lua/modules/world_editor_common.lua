@@ -742,7 +742,7 @@ common.loadWorld = function(mapBase64, config)
 			massLoading:load(objects, massLoadingConfig)
 		end
 		if ambience then
-			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
+			require("ai_ambience"):loadGeneration(ambience)
 		end
 		if not objects then
 			config.onDone()

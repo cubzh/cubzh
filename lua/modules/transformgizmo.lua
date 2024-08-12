@@ -32,11 +32,14 @@ end
 grid = Quad()
 grid.Height = 10000
 grid.Width = 10000
--- grid.IsUnlit = true
-grid.Color = Color(255, 255, 255, 254)
+grid.IsUnlit = true
 grid.Anchor = { 0.5, 0.5 }
--- grid.Image = bundle.Data("images/frame-black-32x32.png")
-grid.Image = bundle.Data("images/frame-white-32x32.png")
+
+grid.Image = {
+	data = bundle:Data("images/frame-white-32x32.png"),
+	alpha = true,
+}
+
 grid.Tiling = Number2(2000, 2000)
 
 defaultRadialHandleConfig = {
@@ -52,7 +55,10 @@ defaultRadialHandleConfig = {
 function addRadialHandle(root, config)
 	config = conf:merge(defaultRadialHandleConfig, config)
 
-	local btn = ui:createButton(config.text)
+	local btn = ui:buttonSecondary({ content = config.text })
+	local size = math.max(btn.Width, btn.Height)
+	btn.Width = size
+	btn.Height = size
 	btn:setParent(root)
 	btn.pos = -Number2(btn.Width, btn.Height) * 0.5
 
