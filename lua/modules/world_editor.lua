@@ -1,5 +1,6 @@
 local worldEditor = {}
 
+local sfx = require("sfx")
 local sendToServer = require("world_editor_server").sendToServer
 local worldEditorCommon = require("world_editor_common")
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
@@ -8,7 +9,9 @@ local loadWorld = worldEditorCommon.loadWorld
 local maps = worldEditorCommon.maps
 local events = worldEditorCommon.events
 
-local padding = require("uitheme").current.padding
+local theme = require("uitheme").current
+local padding = theme.padding
+
 local ambience = require("ambience")
 
 local worldTitle
@@ -19,7 +22,6 @@ local map
 local mapIndex = 1
 local mapName
 local mapGhost = false
-
 local snapGrid = 1
 
 local CameraMode = {
@@ -32,6 +34,14 @@ local GizmoOrientation = require("gizmo").Orientation
 local orientationMode = GizmoOrientation.Local
 
 local waitingForUUIDObj
+
+-- BUTTONS
+local settingsBtn
+local saveBtn
+local ambienceBtn
+local ambiencePanel
+local cameraBtn
+local addObjectBtn
 
 local TRAILS_COLORS = {
 	Color.Blue,
@@ -83,11 +93,11 @@ end
 
 local setSnapGridValue = function(value)
 	worldEditor.gizmo:setMoveSnap(value)
-	if value > 0 then
-		worldEditor.snapGridBtn.Text = string.format("𐄳 %d", value)
-	else
-		worldEditor.snapGridBtn.Text = string.format("𐄳 OFF")
-	end
+	-- if value > 0 then
+	-- 	worldEditor.snapGridBtn.Text = string.format("𐄳 %d", value)
+	-- else
+	-- 	worldEditor.snapGridBtn.Text = string.format("𐄳 OFF")
+	-- end
 	snapGrid = value
 end
 
@@ -548,7 +558,7 @@ local statesSettings = {
 			end
 			worldEditor.updateObjectUI:show()
 
-			worldEditor.showSettingsBtn:show()
+			settingsBtn:show()
 			worldEditor.menuBar:hide()
 
 			local physicsModeIcon
@@ -573,7 +583,7 @@ local statesSettings = {
 			Timer(0.15, function()
 				require("ease"):inOutQuad(obj, 0.15).Scale = currentScale
 			end)
-			require("sfx")("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
+			sfx("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
 			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
 
 			-- Translation gizmo
@@ -779,7 +789,7 @@ local statesSettings = {
 	[states.MAP_OFFSET] = {
 		onStateBegin = function()
 			-- close settings menu
-			worldEditor.showSettingsBtn:show()
+			worldEditor.settingsBtn:show()
 			worldEditor.menuBar:hide()
 
 			local mapPosition = map.Position:Copy()
@@ -1192,58 +1202,31 @@ initDefaultMode = function()
 	end
 	defaultStateUI:parentDidResize()
 
-	local defaultStateUIConfig = {
-		{
-			text = "➕ Object",
-			pos = function(btn)
-				return { Screen.Width * 0.5 - btn.Width * 0.5, padding * 2 }
-			end,
-			-- pos = function(btn) return { Screen.Width * 0.5 - btn.Width - padding * 0.5, padding * 2 } end,
-			state = states.GALLERY,
-			name = "addBtn",
-		},
-		-- {
-		-- 	text = "🖌 Map",
-		-- 	pos = function() return { Screen.Width * 0.5 + padding * 0.5, padding * 2 } end,
-		-- 	state = states.EDIT_MAP,
-		-- 	name = "editMapBtn"
-		-- }
-	}
-
-	for _, info in ipairs(defaultStateUIConfig) do
-		local btn = ui:createButton(info.text)
-		btn:setParent(worldEditor.defaultStateUI)
-		btn.parentDidResize = function(b)
-			b.pos = info.pos(b)
-		end
-		btn.Height = btn.Height * 1.5
-		btn:parentDidResize()
-		btn.onRelease = function()
-			if info.state then
-				setState(info.state)
-			end
-		end
-		worldEditor[info.name] = btn
+	local btn = ui:buttonSecondary({ content = "➕ Object", padding = padding })
+	btn.parentDidResize = function(self)
+		self.pos = { Screen.Width * 0.5 - self.Width * 0.5, Screen.SafeArea.Bottom + padding }
 	end
+	btn.onRelease = function()
+		setState(states.GALLERY)
+	end
+	btn:setParent(worldEditor.defaultStateUI)
 
 	-- Settings menu
 	local menuBar = require("ui_container"):createVerticalContainer(Color.DarkGrey)
 	worldEditor.menuBar = menuBar
 
-	local showSettingsBtn = ui:createButton("⚙️ Settings")
-	worldEditor.showSettingsBtn = showSettingsBtn
-	showSettingsBtn:setParent(worldEditor.editUI)
-	showSettingsBtn.onRelease = function()
-		showSettingsBtn:hide()
+	settingsBtn = ui:buttonSecondary({ content = "Settings ⚙️", textSize = "small" })
+	settingsBtn.onRelease = function()
+		settingsBtn:hide()
 		menuBar:show()
 	end
-	showSettingsBtn.parentDidResize = function()
-		showSettingsBtn.pos = {
-			Screen.Width - padding - showSettingsBtn.Width,
-			Screen.Height - showSettingsBtn.Height - Screen.SafeArea.Top - padding,
+	settingsBtn.parentDidResize = function()
+		settingsBtn.pos = {
+			Screen.Width - padding - settingsBtn.Width,
+			Screen.Height - settingsBtn.Height - Screen.SafeArea.Top - padding,
 		}
 	end
-	showSettingsBtn:parentDidResize()
+	settingsBtn:parentDidResize()
 
 	-- Map Scale frame
 	local frame = ui:createFrame()
@@ -1283,7 +1266,7 @@ initDefaultMode = function()
 			type = "button",
 			text = "❌ Close",
 			callback = function()
-				showSettingsBtn:show()
+				settingsBtn:show()
 				menuBar:hide()
 			end,
 		},
@@ -1318,12 +1301,11 @@ initDefaultMode = function()
 			type = "button",
 			text = "Reset all",
 			callback = function()
-				alertModal = require("alert"):create(
-					"Confirm that you want to remove all modifications and start from scratch."
-				)
+				alertModal =
+					require("alert"):create("Confirm that you want to remove all modifications and start from scratch.")
 				alertModal:setPositiveCallback("Reset and pick a new map", function()
 					menuBar:hide()
-					showSettingsBtn:show()
+					settingsBtn:show()
 					sendToServer(events.P_RESET_ALL)
 				end)
 				alertModal:setNegativeCallback("Cancel, I want to continue", function()
@@ -1338,9 +1320,7 @@ initDefaultMode = function()
 		},
 	}
 	for _, info in ipairs(menuSettingsConfig) do
-		if info.type == "separator" then
-			menuBar:pushSeparator()
-		elseif info.type == "gap" then
+		if info.type == "gap" then
 			menuBar:pushGap()
 		elseif info.type == "node" then
 			menuBar:pushElement(info.node)
@@ -1527,8 +1507,6 @@ initDefaultMode = function()
 			end
 			btn.onRelease = info.callback
 			bar:pushElement(btn)
-		elseif info.type == "separator" then
-			bar:pushSeparator()
 		elseif info.type == "gap" then
 			bar:pushGap()
 		end
@@ -1548,86 +1526,185 @@ initDefaultMode = function()
 
 	-- Top bar
 	local topBar = require("ui_container"):createHorizontalContainer()
-	topBar:setParent(worldEditor.editUI)
 	worldEditor.topBar = topBar
 	topBar.parentDidResize = function()
-		topBar.pos = { padding, Screen.Height - Screen.SafeArea.Top - topBar.Height }
+		topBar.pos = { padding, Screen.Height - Screen.SafeArea.Top - topBar.Height - padding }
 	end
+	topBar:setParent(worldEditor.editUI)
 
 	-- Ambience editor
-	local aiAmbienceContainer = require("ui_ai_ambience"):createNode()
-	aiAmbienceContainer:setParent(defaultStateUI)
-	aiAmbienceContainer.onNewAmbience = function(data)
-		sendToServer(events.P_SET_AMBIENCE, data)
+	ambienceBtn = ui:buttonSecondary({ content = "☀️ Ambience", textSize = "small" })
+	ambienceBtn.onRelease = function(self)
+		ambienceBtn:hide()
+		cameraBtn:hide()
+		ambiencePanel = ui:frameGenericContainer()
+		ambiencePanel.Width = 200
+		ambiencePanel.Height = 300
+
+		local title = ui:createText(self.Text, Color.White, "small")
+		title:setParent(ambiencePanel)
+
+		local btnClose = ui:buttonNegative({ content = "close", textSize = "small", padding = padding })
+		btnClose:setParent(ambiencePanel)
+
+		local aiInput = ui:createTextInput("", "Morning light, dawn…", { textSize = "small" })
+		aiInput:setParent(ambiencePanel)
+
+		local aiBtn = ui:buttonNeutral({ content = "✨", textSize = "small", padding = padding })
+		aiBtn:setParent(ambiencePanel)
+
+		local function generate()
+			aiInput:hide()
+			aiBtn:hide()
+
+			require("ai_ambience"):generate({
+				prompt = aiInput.Text,
+				onDone = function(generation)
+					sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
+					sendToServer(events.P_SET_AMBIENCE, generation)
+					aiInput:show()
+					aiBtn:show()
+				end,
+				onError = function(err)
+					print("❌", err)
+					aiInput:show()
+					aiBtn:show()
+				end,
+			})
+		end
+
+		aiInput.onSubmit = generate
+		aiBtn.onRelease = generate
+
+		btnClose.onRelease = function()
+			ambiencePanel:remove()
+			ambiencePanel = nil
+			ambienceBtn:show()
+			cameraBtn:show()
+		end
+
+		local scroll = ui:createScroll({
+			backgroundColor = theme.buttonTextColor,
+			loadCell = function(_, _) -- index, userdata
+				return nil
+			end,
+			unloadCell = function(_, _, _) -- index, cell, userdata
+				return nil
+			end,
+			cellPadding = padding,
+			padding = padding,
+		})
+		scroll:setParent(ambiencePanel)
+
+		ambiencePanel.parentDidResize = function(self)
+			self.pos = {
+				Screen.SafeArea.Left + padding,
+				Screen.Height - self.Height - Screen.SafeArea.Top - padding,
+			}
+
+			title.pos = {
+				self.Width * 0.5 - title.Width * 0.5,
+				self.Height - title.Height - padding,
+			}
+
+			aiInput.Width = self.Width - aiBtn.Width - padding * 3
+			local h = math.max(aiInput.Height, aiBtn.Height)
+			aiInput.Height = h
+			aiBtn.Height = h
+
+			aiInput.pos = {
+				padding,
+				title.pos.Y - h - padding,
+			}
+
+			aiBtn.pos = {
+				aiInput.pos.X + aiInput.Width + padding,
+				aiInput.pos.Y,
+			}
+
+			btnClose.pos = {
+				self.Width * 0.5 - btnClose.Width * 0.5,
+				padding,
+			}
+
+			scroll.pos.Y = btnClose.pos.Y + btnClose.Height + padding
+			scroll.pos.X = padding
+			scroll.Height = aiInput.pos.Y - padding - scroll.pos.Y
+			scroll.Width = self.Width - padding * 2
+		end
+		ambiencePanel:parentDidResize()
 	end
 
-	local topBarConfig = {
-		{
-			type = "node",
-			node = aiAmbienceContainer,
-		},
-		{ type = "gap" },
-		{
-			type = "button",
-			text = "🎥",
-			callback = function()
-				if cameraMode == CameraMode.THIRD_PERSON then
-					setCameraMode(CameraMode.FIRST_PERSON)
-				else
-					setCameraMode(CameraMode.THIRD_PERSON)
-				end
-			end,
-			name = "cameraModeBtn",
-		},
-		{ type = "gap" },
-		{
-			type = "button",
-			text = "🌎 World",
-			callback = function()
-				if orientationMode == GizmoOrientation.World then
-					setOrientationMode(GizmoOrientation.Local)
-				else
-					setOrientationMode(GizmoOrientation.World)
-				end
-			end,
-			name = "gizmoOrientationModeBtn",
-		},
-		{ type = "gap" },
-		{
-			type = "button",
-			text = "𐄳 1",
-			callback = function()
-				if snapGrid == 1 then
-					setSnapGridValue(map.Scale.X)
-				elseif snapGrid == map.Scale.X then
-					setSnapGridValue(0)
-				else
-					setSnapGridValue(1)
-				end
-			end,
-			name = "snapGridBtn",
-		},
-	}
-	for _, info in ipairs(topBarConfig) do
-		if info.type == "separator" then
-			topBar:pushSeparator()
-		elseif info.type == "gap" then
-			topBar:pushGap()
-		elseif info.type == "node" then
-			topBar:pushElement(info.node)
-		elseif info.type == "button" then
-			local btn = ui:createButton(info.text)
-			if info.color then
-				btn:setColor(info.color)
-			end
-			btn.onRelease = info.callback
-			if info.name then
-				worldEditor[info.name] = btn
-			end
-			topBar:pushElement(btn)
+	-- Camera
+	cameraBtn = ui:buttonSecondary({ content = "🎥", textSize = "small" })
+	cameraBtn.onRelease = function()
+		if cameraMode == CameraMode.THIRD_PERSON then
+			setCameraMode(CameraMode.FIRST_PERSON)
+		else
+			setCameraMode(CameraMode.THIRD_PERSON)
 		end
 	end
-	topBar:parentDidResize()
+	cameraBtn.parentDidResize = function()
+		ambienceBtn.pos = {
+			Screen.SafeArea.Left + padding,
+			Screen.Height - ambienceBtn.Height - Screen.SafeArea.Top - padding,
+		}
+
+		cameraBtn.pos = {
+			ambienceBtn.pos.X,
+			ambienceBtn.pos.Y - cameraBtn.Height - padding,
+		}
+	end
+	cameraBtn:parentDidResize()
+
+	-- local aiAmbienceContainer = require("ui_ai_ambience"):createNode()
+	-- aiAmbienceContainer:setParent(defaultStateUI)
+	-- aiAmbienceContainer.onNewAmbience = function(data)
+	-- 	sendToServer(events.P_SET_AMBIENCE, data)
+	-- end
+
+	-- local topBarConfig = {
+	-- 	{
+	-- 		type = "button",
+	-- 		text = "🎥",
+	-- 		callback = function()
+	-- 			if cameraMode == CameraMode.THIRD_PERSON then
+	-- 				setCameraMode(CameraMode.FIRST_PERSON)
+	-- 			else
+	-- 				setCameraMode(CameraMode.THIRD_PERSON)
+	-- 			end
+	-- 		end,
+	-- 		name = "cameraModeBtn",
+	-- 	},
+	-- 	{ type = "gap" },
+	-- 	{
+	-- 		type = "button",
+	-- 		text = "🌎 World",
+	-- 		callback = function()
+	-- 			if orientationMode == GizmoOrientation.World then
+	-- 				setOrientationMode(GizmoOrientation.Local)
+	-- 			else
+	-- 				setOrientationMode(GizmoOrientation.World)
+	-- 			end
+	-- 		end,
+	-- 		name = "gizmoOrientationModeBtn",
+	-- 	},
+	-- 	{ type = "gap" },
+	-- 	{
+	-- 		type = "button",
+	-- 		text = "𐄳 1",
+	-- 		callback = function()
+	-- 			if snapGrid == 1 then
+	-- 				setSnapGridValue(map.Scale.X)
+	-- 			elseif snapGrid == map.Scale.X then
+	-- 				setSnapGridValue(0)
+	-- 			else
+	-- 				setSnapGridValue(1)
+	-- 			end
+	-- 		end,
+	-- 		name = "snapGridBtn",
+	-- 	},
+	-- }
 
 	-- Edit Map
 	local editMapValidateBtn = ui:createButton("✅")
@@ -1778,7 +1855,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 			end
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
-		require("ui_ai_ambience"):setFromAIConfig(data, true)
+		require("ai_ambience"):loadGeneration(data)
 	elseif e.a == events.SET_MAP_SCALE then
 		local prevScale = map.Scale
 		local ratio = data.mapScale / prevScale
