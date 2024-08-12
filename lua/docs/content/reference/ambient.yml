@@ -21,3 +21,8 @@ properties:
           Overrides the ambient color to the given value, setting this disables dynamic ambient color.
 
           Set back to `nil` to switch back to dynamic ambient color which is based on scene lighting.
+    
+    - name: "Intensity"
+      type: "number"
+      description: |
+          Factor multiplying the light value of all [Shape](reference/shape)'s baked lighting. Default is `1.0`, a value of `0.0` would turn OFF the global light source inside baked lighting. Note that light blocks are not affected by this factor.
