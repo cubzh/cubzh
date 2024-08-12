@@ -178,18 +178,6 @@ properties:
               print("collision ended between", self, "and", other)
             end
 
-    - name: "OnPointerDrag"
-      type: "function"
-      description: |
-          Executed when the [Pointer] is dragged (moved while down). Receives a [PointerEvent] parameter, just like [Pointer.Drag](/reference/pointer#property-drag).
-
-          ([nil] by default)
-      samples:
-        - code: |
-            myObject.OnPointerDrag = function(pointerEvent)
-              print("dx:", pointerEvent.DX, "dy:", pointerEvent.DY)
-            end
-
     - name: "Position"
       type: "Number3"
       description: |
