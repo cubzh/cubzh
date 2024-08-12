@@ -6,6 +6,13 @@ description: |
 
     It has many uses in creating UI, building a 2D world, or creating special effects.
 
+    Code examples of [This]'s features can be found in the following worlds,
+    - `Quad Image Test`
+    - `Quad 9-Slice Test`
+    - `Quad Cutout Test`
+    - `Quad Gradient Test`
+    - `Quad Transparency Test`
+
 constructors: 
   - description: "Creates a Quad with default properties."
     samples:
@@ -24,16 +31,65 @@ properties:
     - name: "Color"
       type: "Color"
       description: |
-          Color of the quad, white by default.
+          Color of the quad, white by default. The color of each of the four vertices can also be set individually by passing a table of up to four colors.
+
+          [This].[Color] also features a helper to set up gradients: { gradient="H"/"V" or "X"/"Y", from=color1, to=color2 }.
+
+          An example of quad gradients can be seen in the world `Quad Gradient Test`.
+      
+      samples:
+        - code: |
+            -- quad color accepts a table of up to four colors
+            q.Color = { vcolor1, vcolor2, vcolor3, vcolor4 }
+
+            -- this sets all colors at once
+            q.Color = Color.Blue
+
+            -- use helper for a horizontal gradient
+            q.Color = { gradient="H", from=Color.Blue, to=Color.Red }
 
     - name: "Image"
-      type: "Data"
+      type: "Data" or "table"
       description: |
-          Assign with a compatible image `Data` to display it on the quad. Set it to `false` or `nil` to clear it.
+          Assign with a compatible image [Data](reference/data) to display it on the quad, with default settings. Set it to `false` or `nil` to clear it.
         
           When getting this value, it returns `true` if the quad is currently textured.
 
-          Note: currently, supporting transparency on a texture requires to flag the quad as transparent by giving it an alpha value less than 255, eg. `quad.Color.A = 254`.
+          Alternatively, you can assign a table to have full control over its options: `{ data, 9slice, 9sliceScale, alpha, cutout }`,
+          - `data` ([Data](reference/data)) is the image data you would normally set.
+          - `9slice` ([boolean](reference/boolean) or [Number2](reference/number2)) can be set to `true` to activate 9-slice with default UV slice (0.5, 0.5), it can also be set to a custom UV slice directly.
+          - `9sliceScale` ([number](reference/number)) is the scale of the 9-slice corners. It can be relevant to use points scaling here, with [Screen](reference/screen).[Density](reference/screen#property-density).
+          - `alpha` ([boolean](reference/boolean)) enables alpha-blending transparency, default `false`. Set this to `true` if you want Cubzh to use the image alpha.
+          - `cutout` ([boolean](reference/boolean) or [number](reference/number)) can be set to `true` to enable alpha cutout with default alpha `0.0`, or set to a custom cutout directly. This means all texels from the image with alpha value lower or equal to the cutout value will be ignored. This value is typically redundant with `alpha`, and unless you have a specific use-case in mind, you should use one or the other. Animating the cutout value is a great way of creating interesting visual effects.
+
+          Note: you can also enable transparency on a textured quad by giving it an alpha value less than 255, eg. `quad.Color.A = 254`. This however will have it be rendered in an order-independant transparency pass.
+
+          Code examples of [This].[Image]'s options can be found in the following worlds,
+          - `Quad Image Test`
+          - `Quad 9-Slice Test`
+          - `Quad Cutout Test`
+      samples:
+        - code: |
+            -- make an alpha-blended textured quad
+            q.Image = { data=d, alpha=true }
+
+            -- enable 9-slice with default parameters
+            q.Image = { data=d, slice9=true }
+
+            -- enable 9-slice with custom UV slice, default slice is { 0.5, 0.5 }
+            q.Image = { data=d, slice9={ 0.25, 0.5 } }
+
+            -- enable 9-slice with custom borders scale, default is 1.0
+            q.Image = { data=d, slice9Scale=2.0 }
+
+            -- can be combined
+            q.Image = { data=d, slice9={ 0.6, 0.0 }, slice9Scale=0.8, alpha=true }
+
+            -- make an opaque cutout quad with default value
+            q.Image = { data=d, cutout=true }
+
+            -- make an opaque cutout quad with custom value
+            q.Image = { data=d, cutout=0.2 }
 
     - name: "Width"
       type: "number"
