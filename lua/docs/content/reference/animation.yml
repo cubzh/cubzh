@@ -7,8 +7,8 @@ description: |
     For example, a running animation could temporarily toggle off the keyframes group bound to an arm to simultaneously play a wave animation on that arm.
 constructors: 
   - description: |
-        When created, an [Animation] can be given a name and a set of optional configuration `{ duration, mode, speed, count}`.
-        They are used to initialize the corresponding properties [Duration](#property-duration), [Mode](#property-mode), [Speed](#property-speed) and [Count](#property-count).
+        When created, an [Animation] can be given a name and a set of optional configuration `{ duration, speed, count}`.
+        They are used to initialize the corresponding properties [Duration](#property-duration), [Speed](#property-speed) and [Count](#property-count).
 
     arguments:
       - name: "name"
@@ -19,14 +19,6 @@ constructors:
         optional: true
 
 properties:
-  - name: "Mode"
-    type: "AnimationMode"
-    description: |
-        An [Animation] can function in three modes,
-        - `AnimationMode.Once` the animation plays one cycle and stops at the end of its duration.
-        - `AnimationMode.Loop` the animation will repeat at the end of each cycle until [Stop](#functions-stop) is called or, if [Count](#property-count) is set, for a specific number of cycles
-        - `AnimationMode.Mirror` the animation will repeat and reverse at the end of each cycle until [Stop](#functions-stop) is called or, if [Count](#property-count) is set, for a specific number of cycles
-    
   - name: "Duration"
     type: "number"
     description: "Duration in seconds of one animation cycle."
@@ -37,7 +29,7 @@ properties:
 
   - name: "Count"
     type: "number"
-    description: "Number of cycles to repeat if using [AnimationMode].[Loop](reference/animationmode#property-loop) or [AnimationMode].[Mirror](reference/animationmode#property-mirror)."
+    description: "Number of cycles to repeat the animation. The default count of `1` will play a full cycle once. Setting this to `0` will repeat the animation indefenitely."
 
   - name: "IsPlaying"
     type: "boolean"
