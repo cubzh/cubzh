@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:1.21.1-alpine3.18 AS build-env
+FROM --platform=linux/amd64 golang:1.22.6-alpine3.20 AS build-env
 
 RUN apk update && apk add --no-cache \ 
 	git \
@@ -26,7 +26,7 @@ RUN go build
 # This is like a production server but hot-refreshing 
 # of content is available for documentation-writing purposes.
 
-FROM --platform=linux/amd64 alpine:3.18 AS website-dev
+FROM --platform=linux/amd64 alpine:3.20 AS website-dev
 
 # then the executable
 COPY --from=builder /webserver/webserver /webserver
