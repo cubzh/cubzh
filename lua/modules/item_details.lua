@@ -106,6 +106,7 @@ mod.createModalContent = function(_, config)
 	local by
 	local authorBtn
 	local likeBtn
+	local editDescriptionBtn
 	local description
 	local creationDate
 	local updateDate
@@ -145,6 +146,49 @@ mod.createModalContent = function(_, config)
 	likeBtn = ui:buttonNeutral({ content = "🤍 …", textSize = "small" })
 	likeBtn:setParent(cell)
 
+	if createMode then
+		editDescriptionBtn = ui:buttonSecondary({ content = "✏️ Edit description", textSize = "small" })
+		editDescriptionBtn:setParent(cell)
+		editDescriptionBtn.onRelease = function()
+			if System.MultilineInput ~= nil then
+				if description.empty == true then
+					description.Text = ""
+				end
+				System.MultilineInput(
+					description.Text,
+					"Description",
+					"How would you describe that Item?",
+					"", -- regex
+					10000, -- max chars
+					function(text) -- done
+						ui:turnOn()
+						if text == "" then
+							description.empty = true
+							description.Text = "Worlds are easier to find with a description!"
+							description.Color = theme.textColorSecondary
+							local req = systemApi:patchItem(item.id, { description = "" }, function(_, _)
+								-- not handling response yet
+							end)
+							table.insert(requests, req)
+						else
+							description.empty = false
+							description.Text = text
+							description.Color = theme.textColor
+							local req = systemApi:patchItem(item.id, { description = text }, function(_, _)
+								-- not handling response yet
+							end)
+							table.insert(requests, req)
+						end
+					end,
+					function() -- cancel
+						ui:turnOn()
+					end
+				)
+				ui:turnOff()
+			end
+		end
+	end
+
 	local scroll = ui:createScroll({
 		-- backgroundColor = Color(255, 0, 0),
 		backgroundColor = theme.buttonTextColor,
@@ -175,9 +219,10 @@ mod.createModalContent = function(_, config)
 		if createMode then
 			if item.description == nil or item.description == "" then
 				description.empty = true
-				description.Text = "Worlds are easier to find with a description!"
+				description.Text = "Items are easier to find with a description!"
 				description.Color = theme.textColorSecondary
 			else
+				description.empty = false
 				description.Text = item.description
 				description.Color = theme.textColor
 			end
@@ -437,6 +482,10 @@ mod.createModalContent = function(_, config)
 			+ theme.paddingBig
 			+ description.Height
 
+		if editDescriptionBtn then
+			contentHeight = contentHeight + editDescriptionBtn.Height + padding
+		end
+
 		cell.Height = contentHeight
 		cell.Width = width
 
@@ -470,11 +519,16 @@ mod.createModalContent = function(_, config)
 
 		btnCopyIdentifier.pos = {
 			identifier.pos.X + identifier.Width + padding,
-			identifier.Height * 0.5 - identifier.Height * 0.5,
+			identifier.pos.Y + identifier.Height * 0.5 - identifier.Height * 0.5,
 		}
 
 		y = y - theme.paddingBig - description.Height
 		description.pos = { padding, y }
+
+		if editDescriptionBtn ~= nil then
+			y = y - padding - editDescriptionBtn.Height
+			editDescriptionBtn.pos = { width * 0.5 - editDescriptionBtn.Width * 0.5, y }
+		end
 
 		scroll.Width = self.Width
 		scroll.Height = self.Height -- - btnLaunch.Height - padding * 2
