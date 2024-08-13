@@ -49,7 +49,7 @@ properties:
             q.Color = { gradient="H", from=Color.Blue, to=Color.Red }
 
     - name: "Image"
-      type: "Data" or "table"
+      type: "Data"
       description: |
           Assign with a compatible image [Data](reference/data) to display it on the quad, with default settings. Set it to `false` or `nil` to clear it.
         

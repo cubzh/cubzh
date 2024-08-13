@@ -172,56 +172,56 @@ functions:
     - name: "ReadInteger"
       description: "Reads an [integer](reference/integer) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadNumber"
       description: "Reads a [number](reference/number) at current cursor, and advances it."
       return:
-          type: "number"
+        - type: "number"
     - name: "ReadNumber3"
       description: "Reads a [Number3](reference/number3) at current cursor, and advances it."
       return:
-          type: "Number3"
+        - type: "Number3"
     - name: "ReadRotation"
       description: "Reads a [Rotation](reference/rotation) at current cursor, and advances it."
       return:
-          type: "Rotation"
+        - type: "Rotation"
     - name: "ReadColor"
       description: "Reads a [Color](reference/color) at current cursor, and advances it."
       return:
-          type: "Color"
+        - type: "Color"
     - name: "ReadPhysicsMode"
       description: "Reads a [PhysicsMode](reference/object#property-physicsmode) at current cursor, and advances it."
       return:
-          type: "PhysicsMode"
+        - type: "PhysicsMode"
     - name: "ReadInt8"
       description: "Reads an 8-bits integer (represented by an [integer](reference/integer) between `-128` and `127`) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadInt16"
       description: "Reads a 16-bits integer (represented by an [integer](reference/integer) between `-32768` and `32767`) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadInt32"
       description: "Reads a 32-bits integer (represented by an [integer](reference/integer) between `-2147483648` and `2147483647`) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadUInt8"
       description: "Reads an unsigned 8-bits integer (represented by an [integer](reference/integer) between `0` and `255`) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadUInt16"
       description: "Reads an unsigned 16-bits integer (represented by an [integer](reference/integer) between `0` and `65535`) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadUInt32"
       description: "Reads an unsigned 32-bits integer (represented by an [integer](reference/integer) between `0` and `4294967295`) at current cursor, and advances it."
       return:
-          type: "integer"
+        - type: "integer"
     - name: "ReadFloat"
       description: "Reads a single-precision float (represented by a [number](reference/number)) at current cursor, and advances it."
       return:
-          type: "number"
+        - type: "number"
     - name: "ReadDouble"
       description: "Reads a double-precision float (represented by a [number](reference/number)) at current cursor, and advances it."
       return:
-          type: "number"
+        - type: "number"

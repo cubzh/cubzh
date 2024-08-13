@@ -1,6 +1,6 @@
 #!/bin/sh
 
-docker-compose -f docker-compose.yml -f docker-compose-test.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose-test.yml up -d --build
 
 IP=$(ifconfig | grep "inet " | grep -Fv 127.0.0.1 | awk '{print $2}')
 IP=$( cut -d $' ' -f 1 <<< $IP )
