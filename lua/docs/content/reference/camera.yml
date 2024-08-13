@@ -18,9 +18,9 @@ properties:
     - name: "FieldOfView"
       type: "number"
       description: |
-          Can be set to change Camera's vertical field of view.
+          Can be set to change Camera's minimum field of view, default value is 60 degrees.
 
-          The default value is 60 degrees.
+          The minimum field of view equates to the vertical field of view in landscape, or to the horizontal field of view in portrait. This is to ensure a consistent look&feel between screen orientations or aspect ratios.
 
       samples:
         - code: |
@@ -30,6 +30,18 @@ properties:
       type: "number"
       description: |
           Shortcut to [Camera.FieldOfView](#property-fieldofview).
+    
+    - name: "VerticalFOV"
+      read-only: true
+      type: "number"
+      description: |
+          Returns the vertical field of view, depending on current screen orientation. This is based on the minimum field of view [FieldOfView](#property-fieldofview).
+    
+    - name: "HorizontalFOV"
+      read-only: true
+      type: "number"
+      description: |
+          Returns the horizontal field of view, depending on current screen orientation. This is based on the minimum field of view [FieldOfView](#property-fieldofview).
 
     - name: "Layers"
       type: "table"
@@ -96,7 +108,9 @@ properties:
     - name: "ViewOrder"
       type: "integer"
       description: |
-          Integer between 1 and 255 used to order multiple cameras.
+          Integer between 1 and 255 used to order multiple cameras. Additional cameras created in Lua have a default value of `127`. The main `Camera` provided by Cubzh engine has a default value of `0`.
+
+          Note that as of version `0.1.1`, setting an orthographic camera's view order to be rendered before a perspective camera will make it use render scaling instead of points scaling (see [Camera](reference/camera)). This may be addressed in future updates.
 
     - name: "On"
       type: "boolean"
@@ -243,38 +257,27 @@ functions:
 
     - name: "FitToScreen"
       description: |
-          Fits the given [Shape] or [Box] to the screen. This function moves the camera back until the target fits on screen.
+          Fits the given [Shape] or [Box] to the screen, taking into account the camera's [Projection](#property-projection) mode. This function moves the camera back until the target fits on screen.
 
           For example, to fit an object at the center of the screen, first have the camera look at the target (`camera.Forward = target.Position - camera.Position`) before calling this function.
 
           Optional parameters:
-          - `screenRatio` indicates the percentage of the screen that should be covered by the target.
-          - `spherize` switches between box fit (false) and sphere fit (true), spherize can be useful if the function is used every frame on a moving object, for smoother motion, but the fit will be wider.
+          - `coverage` indicates how much of the screen should be covered by the target. You can use this to adjust the fit, increasing this value will effectively zoom in on the target, decreasing it will zoom out.
+          - `orientation` may be used to force the use of a single dimension, instead of automatically choosing the limiting dimension. Valid values are "vertical" or "horizontal".
       argument-sets:
         -
           - name: "target"
             type: "Shape"
-          - name: "screenRatio"
-            type: "number"
-            optional: true
-          - name: "spherize"
-            type: "boolean"
-            optional: true
-        -
-          - name: "box"
-            type: "Box"
-          - name: "screenRatio"
-            type: "number"
-            optional: true
-          - name: "spherize"
-            type: "boolean"
+          - name: "options"
+            type: "table"
             optional: true
       samples:
         - code: |
-            local myShape = Shape(R.usename.myShape)
-            Map:AddChild(myShape)
-            Camera:FitToScreen(myShape, 0.6, false)
-            -- the shape now covers 60% of the screen
+            -- make the camera look at the shape
+            Camera.Forward = myShape.Position - Camera.Position
+
+            -- make the shape's bounding box cover approximately 60% of the screen, depending on perspective
+            Camera:FitToScreen(myShape, { coverage=0.6 })
     
     - name: "WorldToScreen"
       description: |

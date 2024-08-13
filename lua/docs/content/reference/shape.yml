@@ -254,14 +254,6 @@ functions:
         You _do not_ need to call this function if:
         - ANY blocks, including light and transparent blocks, are added/removed at runtime
         - setting light or transparent property of an unused palette entry first, before adding blocks using that entry
-
-    - name: "ClearBakedLight"
-      description: |
-        Removes the shape baked lighting and frees up any memory used. It could be an optimization step for scenes pooling a large amount of shapes.
-
-      arguments:
-        - name: "callback"
-          type: "function"
       samples:
         - code: |
             Client.OnStart = function()
@@ -270,20 +262,11 @@ functions:
               -- refresh baked lighting for existing blocks
               Map:ComputeBakedLight(function() print("Map baked lighting done!") end)
             end
-    
-    - name: "FitToScreen"
-      description: |
-          Fits the [This] to the given [Camera]'s view'. This function moves the shape back until it fits on the camera view.
 
-          Optional parameters:
-          - `screenRatio` indicates the percentage of the screen that should be covered by the target.
-          - `spherize` switches between box fit (false) and sphere fit (true), spherize can be useful if the function is used every frame on a moving object, for smoother motion, but the fit will be wider.
+    - name: "ClearBakedLight"
+      description: |
+        Removes the shape baked lighting and frees up any memory used. It could be an optimization step for scenes pooling a large amount of shapes.
+
       arguments:
-        - name: "camera"
-          type: "Camera"
-        - name: "screenRatio"
-          type: "number"
-          optional: true
-        - name: "spherize"
-          type: "boolean"
-          optional: true
+        - name: "callback"
+          type: "function"

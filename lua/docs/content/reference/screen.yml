@@ -3,22 +3,50 @@ type: "Screen"
 description: |
     Screen represents the area on which the app is rendered.
 
+    There are two screen sizes,
+    - render size: the raw resolution of the render buffer, which scales with device properties and quality settings. Notably, higher quality settings will use higher render resolution.
+    - points size: a fixed size that depends on device screen density. For this reason, this is generally used to create UI scenes that have a consistent look&feel accross devices.
+
+    In Cubzh, orthographic cameras automatically use points scaling, while perspective cameras use render scaling. This may become an opt-in for coders in the future, instead of being automatic.
+    As of version `0.1.1`, the only exception to that rule is if an orthographic camera is forced to render before a perspective camera with [This].[ViewOrder](#property-vieworder), in which case, the orthographic camera will use render scaling. This may be addressed in future updates.
+
 properties:
+    - name: "Width"
+      type: "number"
+      description: "Screen's width, in points."
     - name: "Height"
       type: "number"
       description: "Screen's height, in points."
     - name: "Size"
       type: "Number2"
       description: "Screen's size (width, height), in points."
-    - name: "Width"
+    - name: "RenderWidth"
       type: "number"
-      description: "Screen's width, in points."
+      description: "Screen's render width, in pixels. This is the raw render resolution, which depends on device properties and quality settings."
+    - name: "RenderHeight"
+      type: "number"
+      description: "Screen's render height, in pixels. This is the raw render resolution, which depends on device properties and quality settings."
+    - name: "RenderSize"
+      type: "Number2"
+      description: "Screen's size (width, height), in pixels."
+    - name: "Density"
+      type: "number"
+      description: |
+          Screen's density. This is the factor used for points scaling accross Cubzh.
+          
+          You may use this value as a scaling factor for some UI elements, when their look&feel needs to be consistent accross devices. An example of that would be 9-slice scaling for [Quad](reference/quad) objects.
+    - name: "SafeArea"
+      type: "table"
+      description: |
+          Returns the margin on each side of the screen where, ideally, no UI element should be placed as they may overlap with some device features like a camera notch.
+
+          It is a table of four values using the following keys: `Top`, `Bottom`, `Left`, `Right`
 
 functions:
     - name: "DidResize"
       type: "function"
       description: |
-          Triggered when the Screen is resized.
+          Triggered when the Screen is resized. Passes the screen width and height in points as parameters.
       samples:
         - code: |
             Screen.DidResize = function(width, height)

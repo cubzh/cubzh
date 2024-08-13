@@ -40,7 +40,7 @@ properties:
           As a `TextType.World`, the text will be translated, rotated, and scaled like any other object in the scene, eg. a signpost.
           As a `TextType.Screen`, the text will be displayed in front of everything else, facing the camera from its position in the scene, eg. a text bubble above a player's head.
         
-          Note that it can be changed at any time. Some [This] fields are automatically expressed in world units or points based on the text type.
+          Note that it can be changed at any time. Some [This] fields are then expressed in world units or points based on the text type.
 
     - name: "Text"
       type: "string"
@@ -76,7 +76,7 @@ properties:
       type: "number"
       read-only: true
       description: |
-          Width of the [This] in points. Expressed in world units if the text type is `TextType.World`.
+          Width of the [This] with points scaling. Use this value if the text type is `TextType.Screen`, or if you are scaling your scene using [Screen](reference/screen).[Width](reference/screen#property-width) and [Screen](reference/screen).[Height](reference/screen#property-height) points values.
         
           This accounts for the total size including background frame, padding, and tail.
 
@@ -84,19 +84,37 @@ properties:
       type: "number"
       read-only: true
       description: |
-          Height of the [This] in points. Expressed in world units if the text type is `TextType.World`.
+          Height of the [This] with points scaling.  Use this value if the text type is `TextType.Screen`, or if you are scaling your scene using [Screen](reference/screen).[Width](reference/screen#property-width) and [Screen](reference/screen).[Height](reference/screen#property-height) points values.
+        
+          This accounts for the total size including background frame, padding, and tail.
+
+    - name: "RawWidth"
+      type: "number"
+      read-only: true
+      description: |
+          Width of the [This] in world units.
+        
+          This accounts for the total size including background frame, padding, and tail.
+
+    - name: "RawHeight"
+      type: "number"
+      read-only: true
+      description: |
+          Height of the [This] in world units.
         
           This accounts for the total size including background frame, padding, and tail.
 
     - name: "Padding"
       type: "number"
       description: |
-          Text padding over background in points, `8` by default. Expressed in world units if the text type is `TextType.World`.
+          Text padding over background in world units, `0.8` by default. Expressed in points if the text type is `TextType.Screen`.
 
     - name: "FontSize"
       type: "number"
       description: |
-          Font size in points, `22.0` by default. Expressed in world units if the text type is `TextType.World`.
+          Font size in world units, `2.2` by default. Expressed in points if the text type is `TextType.Screen`.
+
+          Built-in font point sizes can be accessed by setting the following strings: "default", "small", or "big". These sizes are internally calculated based on screen density, and can be used to maximize readability accross devices.
 
     - name: "Layers"
       type: "table"
@@ -106,16 +124,68 @@ properties:
     - name: "MaxWidth"
       type: "number"
       description: |
-          Maximum width in points beyond which the text will automatically break line, `0` by default (disabled). Expressed in world units if the text type is `TextType.World`.
+          Maximum width in world units beyond which the text will automatically break line, `0` by default (disabled). Expressed in points if the text type is `TextType.Screen`.
 
     - name: "IsUnlit"
       type: "boolean"
       description: |
           Whether or not the [This] should ignore scene lighting, `false` by default.
-
-    - name: "ScreenToWorldFactor"
-      type: "number"
+    
+    - name: "Font"
+      type: "Font"
       description: |
-        The factor applied to convert [This] fields from screen points to world units when swapping [Text.Type](#property-type).
-        
-        Note that this is not an instance field. It is accessible through [This] globally exposed variable: `Text.ScreenToWorldFactor`.
+          The font used by [This]'s text message. It can be one of the following,
+          - `Font.Pixel`: a pixel font which generally scales well whatever the size. It is lit by [Shape](reference/shape)'s baked lighting, and can be lit by [Light](reference/light) objects if the text's color is opaque. Internally, transparent texts using this font are rendered within an order-independant pass.
+          - `Font.Noto`: a vector font which will look smoother, but may not always scale well when displaying extremely big texts. It is lit by [Shape](reference/shape)'s baked lighting, but not by [Light](reference/light) objects. Internally, transparent texts using this font are rendered in an alpha-blending pass.
+
+    - name: "IsDoubleSided"
+      type: "boolean"
+      description: |
+          Whether or not the [This] should be visible from the back, `true` by default.
+
+functions:
+    - name: "GetCharacterSize"
+      arguments:
+        - name: "font"
+          type: "Font"
+        - name: "character"
+          type: "string"
+        - name: "points"
+          type: "boolean"
+          optional: true
+      return:
+        - type: "number"
+      description: |
+          Returns the size of a character for a given font (see [This].[Font](#property-font)). Note that this is a function of the global [Text] object.
+
+          Use the optional parameter `points` if you are working with points scaling. For example if the text type is `TextType.Screen`, or if you are scaling your scene using [Screen](reference/screen).[Width](reference/screen#property-width) and [Screen](reference/screen).[Height](reference/screen#property-height) points values.
+
+    - name: "LocalToCursor"
+      arguments:
+        - name: "localPos"
+          type: "Number3"
+        - name: "points"
+          type: "boolean"
+          optional: true
+      return:
+        - type: "Number2"
+        - type: "integer"
+      description: |
+          Snaps a given position in [This]'s local space to the nearest character gap, and returns it as a 2-dimensional cursor position `Number2`. Additionally returns the following character index in [This]'s text string.
+
+          Use the optional parameter `points` if you are working with points scaling. For example if the text type is `TextType.Screen`, or if you are scaling your scene using [Screen](reference/screen).[Width](reference/screen#property-width) and [Screen](reference/screen).[Height](reference/screen#property-height) points values.
+    
+    - name: "CharIndexToCursor"
+      arguments:
+        - name: "charIndex"
+          type: "integer"
+        - name: "points"
+          type: "boolean"
+          optional: true
+      return:
+        - type: "Number2"
+        - type: "integer"
+      description: |
+          Converts a given character index in [This]'s text string, into a 2-dimensional cursor position `Number2`. Additionally returns the following character index in [This]'s text string.
+
+          Use the optional parameter `points` if you are working with points scaling. For example if the text type is `TextType.Screen`, or if you are scaling your scene using [Screen](reference/screen).[Width](reference/screen#property-width) and [Screen](reference/screen).[Height](reference/screen#property-height) points values.

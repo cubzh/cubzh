@@ -178,18 +178,6 @@ properties:
               print("collision ended between", self, "and", other)
             end
 
-    - name: "OnPointerDrag"
-      type: "function"
-      description: |
-          Executed when the [Pointer] is dragged (moved while down). Receives a [PointerEvent] parameter, just like [Pointer.Drag](/reference/pointer#property-drag).
-
-          ([nil] by default)
-      samples:
-        - code: |
-            myObject.OnPointerDrag = function(pointerEvent)
-              print("dx:", pointerEvent.DX, "dy:", pointerEvent.DY)
-            end
-
     - name: "Position"
       type: "Number3"
       description: |
@@ -408,6 +396,24 @@ properties:
           Setting it is a way to rotate the [This].
 
 functions:
+    - name: "Load"
+      arguments:
+        - name: "itemName"
+          type: "string"
+        - name: "callback"
+          type: "function"
+        - name: "config"
+          type: "table"
+          optional: true
+      description: |
+          Loads the given item asynchronously and calls the callback once done. The parameter `itemName` follows the usual naming convention `user.item`.
+
+          This is a function of the global [This], to be called as `Object:Load(itemName, callback, config)`.
+
+          The `config` table options are as follows,
+          - `mutable` allows to create the item shapes as [MutableShape](reference/mutableshape) instead of [Shape](reference/shape). Default `false`.
+          - `bakedLight` allows to generate baked lighting for the item shapes. Default `false`.
+
     - name: "AddChild"
       arguments:
         - name: "child"
