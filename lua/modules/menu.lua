@@ -244,7 +244,7 @@ function showModal(key, config)
 		content = require("world_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
-		content = require("gallery"):createModalContent({ uikit = ui })
+		content = require("gallery"):createModalContent({ uikit = ui, type = "items", perPage = 100 })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEM then
 		local config = config or {}
