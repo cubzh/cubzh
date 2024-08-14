@@ -711,7 +711,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		end,
 	}
 
-	scroll = ui:createScroll(config)
+	scroll = ui:scroll(config)
 
 	scroll:setParent(node)
 	node.scroll = scroll

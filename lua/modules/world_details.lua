@@ -257,7 +257,7 @@ mod.createModalContent = function(_, config)
 		-- else -- explore mode
 	end
 
-	local scroll = ui:createScroll({
+	local scroll = ui:scroll({
 		-- backgroundColor = Color(255, 0, 0),
 		backgroundColor = theme.buttonTextColor,
 		-- backgroundColor = Color(0, 255, 0, 0.3),

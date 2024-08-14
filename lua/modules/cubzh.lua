@@ -1607,7 +1607,7 @@ function home()
 					elseif index == dataFetcher.nbEntities + 1 then
 						if addFriendsCell == nil then
 							addFriendsCell = ui:frameScrollCell()
-							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 2
+							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 3
 							addFriendsCell.parentDidResize = worldCellResizeFn
 
 							local btn = ui:buttonPositive({ content = "👥 Add Friends", padding = theme.padding })
@@ -1820,7 +1820,7 @@ function home()
 			drawer:show()
 		end
 
-		scroll = ui:createScroll({
+		scroll = ui:scroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 			padding = {
@@ -1958,7 +1958,7 @@ function home()
 								displayNumberOfEntries = category.displayNumberOfEntries,
 							}
 
-							local scroll = ui:createScroll({
+							local scroll = ui:scroll({
 								-- backgroundColor = Color(255, 255, 255),
 								-- backgroundColor = Color(43, 45, 49),
 								backgroundColor = theme.buttonTextColor,
@@ -1968,6 +1968,7 @@ function home()
 								loadCell = category.loadCell,
 								unloadCell = category.unloadCell,
 								userdata = dataFetcher,
+								centerContent = true,
 							})
 
 							dataFetcher.scroll = scroll

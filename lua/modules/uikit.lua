@@ -2431,7 +2431,7 @@ function createUI(system)
 	end
 
 	local SCROLL_ID = 0
-	ui.createScroll = function(self, config)
+	ui.scroll = function(self, config)
 		local defaultConfig = {
 			backgroundColor = Color(0, 0, 0, 0),
 			gradientColor = nil,
@@ -2441,6 +2441,7 @@ function createUI(system)
 			rigidity = SCROLL_DEFAULT_RIGIDITY,
 			friction = SCROLL_DEFAULT_FRICTION,
 			userdata = nil, -- can be used to provide extra context to loadCell / unloadCell
+			centerContent = false, -- center content when smaller than scroll area
 			loadCell = function(_, _) -- index, userdata
 				return nil
 			end,
@@ -2872,7 +2873,7 @@ function createUI(system)
 
 		node.capPosition = function(_, pos)
 			if down then
-				if cache.contentHeight < node.Height then
+				if cache.contentHeight < node.Height and config.centerContent then
 					pos = -(node.Height - cache.contentHeight) * 0.5
 				else
 					local limit = cache.contentHeight - node.Height
@@ -2885,7 +2886,7 @@ function createUI(system)
 				-- TODO: review
 				error("IMPLEMENT scroll capPosition for up direction")
 			elseif right then
-				if cache.contentWidth < node.Width then
+				if cache.contentWidth < node.Width and config.centerContent then
 					pos = (node.Width - cache.contentWidth) * 0.5
 				else
 					local limit = node.Width - cache.contentWidth
@@ -3159,7 +3160,8 @@ function createUI(system)
 
 		node:refresh()
 		return node
-	end -- ui:button
+	end -- ui:scroll
+	ui.createScroll = ui.scroll -- legacy
 
 	ui.button = function(self, config)
 		if self ~= ui then
@@ -3565,7 +3567,7 @@ function createUI(system)
 
 			local cells = {}
 
-			local scroll = ui:createScroll({
+			local scroll = ui:scroll({
 				direction = "down",
 				cellPadding = 0,
 				padding = 0,
