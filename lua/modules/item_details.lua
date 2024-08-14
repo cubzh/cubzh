@@ -212,10 +212,6 @@ mod.createModalContent = function(_, config)
 
 	-- refreshes UI with what's in local config.item / item
 	privateFields.refreshItem = function()
-		if name ~= nil then
-			name.Text = item.name or ""
-		end
-
 		if createMode then
 			if item.description == nil or item.description == "" then
 				description.empty = true
