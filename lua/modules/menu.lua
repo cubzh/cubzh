@@ -40,7 +40,7 @@ PADDING = theme.padding
 PADDING_BIG = 9
 TOP_BAR_HEIGHT = 40
 
--- CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
+CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
 -- VARS
@@ -244,7 +244,7 @@ function showModal(key, config)
 		content = require("world_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEMS then
-		content = require("gallery"):createModalContent({ uikit = ui })
+		content = require("gallery"):createModalContent({ uikit = ui, type = "items", perPage = 100 })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.ITEM then
 		local config = config or {}
@@ -1089,6 +1089,8 @@ refreshChat()
 -- CUBZH MENU CONTENT
 
 function getCubzhMenuModalContent()
+	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
+
 	local content = modal:createContent()
 	content.closeButton = true
 	content.title = "Cubzh"
@@ -1097,9 +1099,23 @@ function getCubzhMenuModalContent()
 	local node = ui:createFrame()
 	content.node = node
 
+	local btnItems
+	if dev then
+		btnItems = ui:buttonNeutral({ content = "Items", textSize = "default" })
+		btnItems:setParent(node)
+		btnItems.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
+
+		btnItems.onRelease = function()
+			if activeModal ~= nil then
+				local content = require("gallery"):createModalContent({ uikit = ui, type = "items", perPage = 100 })
+				activeModal:push(content)
+			end
+		end
+	end
+
 	local btnLeave = ui:buttonNegative({ content = "Leave", textSize = "default" })
 	btnLeave:setParent(node)
-	btnLeave.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
+	btnLeave.Height = CUBZH_MENU_MAIN_BUTTON_HEIGHT
 
 	btnLeave.onRelease = function()
 		System:GoHome()
@@ -1107,7 +1123,6 @@ function getCubzhMenuModalContent()
 
 	local buttons
 
-	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
 	local btnCode = ui:buttonSecondary({
 		content = dev and "🤓 Edit Code" or "🤓 Read Code",
 		textSize = "small",
@@ -1133,9 +1148,16 @@ function getCubzhMenuModalContent()
 		URL:Open("https://discord.gg/cubzh")
 	end
 
-	buttons = {
-		{ btnLeave },
-	}
+	if dev then
+		buttons = {
+			{ btnItems },
+			{ btnLeave },
+		}
+	else
+		buttons = {
+			{ btnLeave },
+		}
+	end
 
 	content.bottomCenter = { btnCode, btnHelp }
 

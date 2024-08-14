@@ -1133,12 +1133,17 @@ function home()
 
 		local function cellResizeFn(self)
 			self.Width = self.parent.Width
-			self.title.pos = { padding, self.Height - self.title.Height - padding }
+			self.title.pos = { padding * 2, self.Height - self.title.Height - padding }
 
 			if self.scroll then
 				self.scroll.pos = { padding, padding }
 				self.scroll.Height = self.Height - self.title.Height - padding * 3
 				self.scroll.Width = self.Width - padding * 2
+			end
+
+			if self.button then
+				self.button.pos.Y = self.title.pos.Y + self.title.Height * 0.5 - self.button.Height * 0.5
+				self.button.pos.X = self.Width - self.button.Width - padding * 2
 			end
 		end
 
@@ -1661,6 +1666,10 @@ function home()
 			},
 			{
 				title = "🍏 New Items",
+				buttonLabel = "all items",
+				buttonAction = function()
+					Menu:ShowItems()
+				end,
 				cellSize = CONFIG.ITEM_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
@@ -1693,6 +1702,10 @@ function home()
 			},
 			{
 				title = "⚔️ Popular Items",
+				buttonLabel = "all items",
+				buttonAction = function()
+					Menu:ShowItems()
+				end,
 				cellSize = CONFIG.ITEM_CELL_SIZE,
 				loadCell = function(index, dataFetcher)
 					if index <= dataFetcher.nbEntities then
@@ -1719,6 +1732,10 @@ function home()
 
 			cell.Height = title.Height + (category.cellSize or 100) + padding * 3 + CONFIG.CELL_PADDING * 2
 			cell.title = title
+
+			cell.button = ui:buttonLink({ content = "", textSize = "small" })
+			cell.button:setParent(cell)
+
 			return cell
 		end
 
@@ -1899,6 +1916,15 @@ function home()
 						categoryCells[categoryIndex] = cell
 
 						cell.title.Text = category.title
+
+						if category.buttonAction then
+							cell.button:show()
+							cell.button.Text = category.buttonLabel or "..."
+							cell.button.onRelease = category.buttonAction
+						else
+							cell.button:hide()
+							cell.button.onRelease = nil
+						end
 
 						if category.loadCell ~= nil then
 							if cell.scroll then
