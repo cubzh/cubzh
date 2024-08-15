@@ -1610,6 +1610,18 @@ function home()
 							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 3
 							addFriendsCell.parentDidResize = worldCellResizeFn
 
+							local data = Data:FromBundle("images/friends.png")
+							local quad = Quad()
+							quad.Image = {
+								data = data,
+								alpha = true,
+							}
+
+							local image = ui:frame({ quad = quad })
+							image.Width = CONFIG.FRIEND_CELL_SIZE * 3 - padding * 2
+							image.Height = image.Width * (1.0 / 3.0)
+							image:setParent(addFriendsCell)
+
 							local btn = ui:buttonPositive({ content = "👥 Add Friends", padding = theme.padding })
 							btn:setParent(addFriendsCell)
 
@@ -1618,6 +1630,10 @@ function home()
 								self.pos = {
 									parent.Width * 0.5 - self.Width * 0.5,
 									theme.padding,
+								}
+								image.pos = {
+									parent.Width * 0.5 - image.Width * 0.5,
+									parent.Height * 0.5 - image.Height * 0.5,
 								}
 							end
 
