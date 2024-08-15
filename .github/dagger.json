@@ -1,0 +1,12 @@
+{
+  "name": "github",
+  "sdk": "go",
+  "dependencies": [
+    {
+      "name": "gha",
+      "source": "github.com/shykes/gha@770b562f7a763e662fcde67ffbb102c4da5abc72"
+    }
+  ],
+  "source": ".",
+  "engineVersion": "v0.12.5"
+}
