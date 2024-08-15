@@ -2430,6 +2430,7 @@ function createUI(system)
 		return node
 	end
 
+	local sliderBarQuadData
 	ui.slider = function(self, config)
 		if self ~= ui then
 			error("ui:slider(config): use `:`", 2)
@@ -2441,8 +2442,8 @@ function createUI(system)
 			step = 1,
 			defaultValue = 5,
 			hapticFeedback = false,
-			barHeight = 10,
-			button = {
+			barHeight = 16,
+			button = { -- can be a button or a button config
 				content = " ",
 			},
 			onValueChange = function(_) -- callback(value)
@@ -2465,9 +2466,25 @@ function createUI(system)
 		local node = self:frame()
 		node.Width = 100
 
-		local bar = self:frame({ color = Color(30, 30, 30) })
+		if sliderBarQuadData == nil then
+			sliderBarQuadData = Data:FromBundle("images/slider_bar.png")
+		end
 
-		local btn = self:buttonNeutral(config.button)
+		local q = Quad()
+		q.Image = {
+			data = sliderBarQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			alpha = true,
+		}
+		local bar = ui.frame(self, { quad = q })
+
+		local btn
+		if config.button.type == NodeType.Button then
+			btn = config.button
+		else
+			btn = self:buttonNeutral(config.button)
+		end
 		btn:setParent(bar)
 
 		node.Height = btn.Height
@@ -2483,6 +2500,9 @@ function createUI(system)
 			if v ~= value then
 				value = v
 				config.onValueChange(value)
+				if config.hapticFeedback then
+					Client:HapticFeedback()
+				end
 			end
 
 			-- set button position
@@ -2522,6 +2542,9 @@ function createUI(system)
 			if newValue ~= value then
 				value = newValue
 				config.onValueChange(value)
+				if config.hapticFeedback then
+					Client:HapticFeedback()
+				end
 			end
 		end
 
@@ -2552,11 +2575,20 @@ function createUI(system)
 		node.onPress = function(self, _, _, pe)
 			local x = pointerEventToLocalX(self, pe)
 			setLocalX(x)
+			btn:_setState(State.Pressed)
 		end
 
 		node.onDrag = function(self, pe)
 			local x = pointerEventToLocalX(self, pe)
 			setLocalX(x)
+		end
+
+		node.onRelease = function()
+			btn:_setState(State.Idle)
+		end
+
+		node.onCancel = function()
+			btn:_setState(State.Idle)
 		end
 
 		return node
@@ -3611,6 +3643,12 @@ function createUI(system)
 
 		node.onPress = function(_) end
 		node.onRelease = function(_) end
+
+		node._setState = function(self, state)
+			self.state = state
+			_buttonRefreshBackground(self)
+			_buttonRefreshColor(self)
+		end
 
 		node.select = function(self)
 			if self.selected then
