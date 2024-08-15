@@ -1354,166 +1354,40 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
+				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = theme.padding })
 				okBtn:setParent(drawer)
-				okBtn:disable()
 
-				local text = ui:createText("Looking good! Now, what's your date of birth, in real life? 🎂", {
+				local text = ui:createText("How old are you?", {
 					color = Color.White,
 				})
 				text:setParent(drawer)
 
-				local secondaryText = ui:createText(
-					"Cubzh is an online social universe. We have to ask this to protect the young ones and will keep that information private. 🔑",
-					{
-						color = Color(200, 200, 200),
-						size = "small",
-					}
-				)
+				local age = ui:createText("🎂 12 🎂", {
+					color = Color.White,
+					size = "big",
+				})
+				age.object.Font = Font.Pixel
+				age.object.FontSize = age.object.FontSize * 2
+				age:setParent(drawer)
+
+				local ageSlider = ui:slider({
+					min = 0,
+					max = 99,
+					step = 1,
+					defaultValue = 12,
+					button = ui:buttonNeutral({ content = "🙂", padding = theme.padding }),
+					onValueChange = function(v)
+						age.Text = "🎂 " .. v .. " 🎂"
+						age.pos.X = drawer.Width * 0.5 - age.Width * 0.5
+					end,
+				})
+				ageSlider:setParent(drawer)
+
+				local secondaryText = ui:createText("Asking this to keep your online gaming experience safe and fun!", {
+					color = Color(200, 200, 200),
+					size = "small",
+				})
 				secondaryText:setParent(drawer)
-
-				local monthNames = {
-					str:upperFirstChar(loc("january")),
-					str:upperFirstChar(loc("february")),
-					str:upperFirstChar(loc("march")),
-					str:upperFirstChar(loc("april")),
-					str:upperFirstChar(loc("may")),
-					str:upperFirstChar(loc("june")),
-					str:upperFirstChar(loc("july")),
-					str:upperFirstChar(loc("august")),
-					str:upperFirstChar(loc("september")),
-					str:upperFirstChar(loc("october")),
-					str:upperFirstChar(loc("november")),
-					str:upperFirstChar(loc("december")),
-				}
-				local dayNumbers = {}
-				for i = 1, 31 do
-					table.insert(dayNumbers, "" .. i)
-				end
-
-				local years = {}
-				local yearStrings = {}
-				local currentYear = math.floor(tonumber(os.date("%Y")))
-				local currentMonth = math.floor(tonumber(os.date("%m")))
-				local currentDay = math.floor(tonumber(os.date("%d")))
-
-				for i = currentYear, currentYear - 100, -1 do
-					table.insert(years, i)
-					table.insert(yearStrings, "" .. i)
-				end
-
-				local function isLeapYear(year)
-					if year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0) then
-						return true
-					else
-						return false
-					end
-				end
-
-				local function nbDays(m)
-					if m == 2 then
-						if isLeapYear(m) then
-							return 29
-						else
-							return 28
-						end
-					else
-						local days = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
-						return days[m]
-					end
-				end
-
-				local monthInput = ui:createComboBox(str:upperFirstChar(loc("month")), monthNames)
-				monthInput:setParent(drawer)
-
-				local dayInput = ui:createComboBox(str:upperFirstChar(loc("day")), dayNumbers)
-				dayInput:setParent(drawer)
-
-				local yearInput = ui:createComboBox(str:upperFirstChar(loc("year")), yearStrings)
-				yearInput:setParent(drawer)
-
-				local checkDOB = function()
-					local r = true
-					local daysInMonth = nbDays(cache.dob.month)
-
-					if cache.dob.year == nil or cache.dob.month == nil or cache.dob.day == nil then
-						-- if config and config.errorIfIncomplete == true then
-						-- birthdayInfo.Text = "❌ " .. loc("required")
-						-- birthdayInfo.Color = theme.errorTextColor
-						r = false
-						-- else
-						-- 	birthdayInfo.Text = ""
-						-- end
-					elseif cache.dob.day < 0 or cache.dob.day > daysInMonth then
-						-- birthdayInfo.Text = "❌ invalid date"
-						-- birthdayInfo.Color = theme.errorTextColor
-						r = false
-					elseif
-						cache.dob.year > currentYear
-						or (cache.dob.year == currentYear and cache.dob.month > currentMonth)
-						or (
-							cache.dob.year == currentYear
-							and cache.dob.month == currentMonth
-							and cache.dob.day > currentDay
-						)
-					then
-						-- birthdayInfo.Text = "❌ users from the future not allowed"
-						-- birthdayInfo.Color = theme.errorTextColor
-						r = false
-						-- else
-						-- 	birthdayInfo.Text = ""
-					end
-
-					-- birthdayInfo.pos.X = node.Width - birthdayInfo.Width
-					return r
-				end
-
-				monthInput.onSelect = function(self, index)
-					System:DebugEvent("User selects DOB month", { month = index })
-					cache.dob.monthIndex = index
-					cache.dob.month = index
-					self.Text = monthNames[index]
-					if checkDOB() then
-						okBtn:enable()
-					end
-				end
-
-				dayInput.onSelect = function(self, index)
-					System:DebugEvent("User selects DOB day", { day = index })
-					cache.dob.dayIndex = index
-					cache.dob.day = index
-					self.Text = dayNumbers[index]
-					if checkDOB() then
-						okBtn:enable()
-					end
-				end
-
-				yearInput.onSelect = function(self, index)
-					System:DebugEvent("User selects DOB year", { year = years[index] })
-					cache.dob.yearIndex = index
-					cache.dob.year = years[index]
-					self.Text = yearStrings[index]
-					if checkDOB() then
-						okBtn:enable()
-					end
-				end
-
-				if cache.dob.monthIndex ~= nil then
-					monthInput.selectedRow = cache.dob.monthIndex
-					monthInput.Text = monthNames[cache.dob.monthIndex]
-				end
-				if cache.dob.dayIndex ~= nil then
-					dayInput.selectedRow = cache.dob.dayIndex
-					dayInput.Text = dayNumbers[cache.dob.dayIndex]
-				end
-				if cache.dob.yearIndex ~= nil then
-					yearInput.selectedRow = cache.dob.yearIndex
-					yearInput.Text = years[cache.dob.yearIndex]
-				end
-
-				if checkDOB() then
-					okBtn:enable()
-				end
 
 				okBtn.onRelease = function()
 					-- TODO: showLoading()
@@ -1546,7 +1420,6 @@ signup.startFlow = function(self, config)
 						-- TODO: enforce this within drawer module
 
 						local padding = theme.paddingBig
-						local smallPadding = theme.padding
 
 						local maxWidth = math.min(300, self.Width - padding * 2)
 						text.object.MaxWidth = maxWidth
@@ -1554,39 +1427,40 @@ signup.startFlow = function(self, config)
 
 						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
 
-						local availableWidthForInputs = w - padding * 2 - smallPadding * 2
-
-						monthInput.Width = availableWidthForInputs * 0.5
-						dayInput.Width = availableWidthForInputs * 0.2
-						yearInput.Width = availableWidthForInputs * 0.3
-
 						self.Width = w
 						self.Height = Screen.SafeArea.Bottom
 							+ okBtn.Height
-							+ monthInput.Height
+							+ ageSlider.Height
+							+ age.Height
 							+ text.Height
 							+ secondaryText.Height
-							+ padding * 5
+							+ padding * 6
 
-						okBtn.pos = { self.Width * 0.5 - okBtn.Width * 0.5, Screen.SafeArea.Bottom + padding }
 						secondaryText.pos = {
 							self.Width * 0.5 - secondaryText.Width * 0.5,
+							Screen.SafeArea.Bottom + padding,
+						}
+
+						okBtn.pos = {
+							self.Width * 0.5 - okBtn.Width * 0.5,
+							secondaryText.pos.Y + secondaryText.Height + padding,
+						}
+
+						ageSlider.Width = self.Width - padding * 2
+						ageSlider.pos = {
+							self.Width * 0.5 - ageSlider.Width * 0.5,
 							okBtn.pos.Y + okBtn.Height + padding,
 						}
-						monthInput.pos = {
-							padding,
-							secondaryText.pos.Y + secondaryText.Height + padding,
+
+						age.pos = {
+							self.Width * 0.5 - age.Width * 0.5,
+							ageSlider.pos.Y + ageSlider.Height + padding,
 						}
-						dayInput.pos = {
-							monthInput.pos.X + monthInput.Width + smallPadding,
-							secondaryText.pos.Y + secondaryText.Height + padding,
+
+						text.pos = {
+							self.Width * 0.5 - text.Width * 0.5,
+							age.pos.Y + age.Height + padding,
 						}
-						yearInput.pos = {
-							dayInput.pos.X + dayInput.Width + smallPadding,
-							secondaryText.pos.Y + secondaryText.Height + padding,
-						}
-						text.pos =
-							{ self.Width * 0.5 - text.Width * 0.5, monthInput.pos.Y + monthInput.Height + padding }
 
 						LocalEvent:Send("signup_drawer_height_update", self.Height)
 					end,
