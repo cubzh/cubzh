@@ -233,18 +233,38 @@ bool vx::fs::removeStorageFileOrDirectory(std::string relFilePath) {
 
 ///
 bool vx::fs::bundleFileExists(const std::string& relFilePath, bool& isDir) {
-    AAsset *asset = AAssetManager_open(vx::android::getAndroidAssetManager(), relFilePath.c_str(), 0);
-    if (asset != nullptr) {
-        // bundle file exists and is not a directory
-        isDir = false;
-        return true;
+    {
+        AAsset * const asset = AAssetManager_open(vx::android::getAndroidAssetManager(),
+                                                  relFilePath.c_str(),
+                                                  AASSET_MODE_UNKNOWN);
+        if (asset != nullptr) {
+            // free resource
+            AAsset_close(asset);
+            // bundle file exists and is not a directory
+            isDir = false;
+            return true;
+        }
     }
-    AAssetDir *assetDir = AAssetManager_openDir(vx::android::getAndroidAssetManager(), relFilePath.c_str());
-    if (assetDir != nullptr) {
-        // bundle file exists and is a directory
-        isDir = true;
-        return true;
+    {
+        AAssetDir * const assetDir = AAssetManager_openDir(vx::android::getAndroidAssetManager(),
+                                                           relFilePath.c_str());
+        if (assetDir != nullptr) {
+            // Directory may or may not exist, we need to list its content.
+            // Check if the directory contains any files
+            const char* firstFileName = AAssetDir_getNextFileName(assetDir);
+
+            // free resource
+            AAssetDir_close(assetDir);
+
+            // If firstFileName is NULL, the directory is empty or doesn't exist
+            if (firstFileName != nullptr) {
+                // bundle file exists and is a directory
+                isDir = true;
+                return true;
+            }
+        }
     }
+
     // bundle file doesn't exist
     return false;
 }
