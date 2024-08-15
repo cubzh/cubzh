@@ -2430,6 +2430,138 @@ function createUI(system)
 		return node
 	end
 
+	ui.slider = function(self, config)
+		if self ~= ui then
+			error("ui:slider(config): use `:`", 2)
+		end
+
+		local defaultConfig = {
+			min = 0,
+			max = 10,
+			step = 1,
+			defaultValue = 5,
+			hapticFeedback = false,
+			barHeight = 10,
+			button = {
+				content = " ",
+			},
+			onValueChange = function(_) -- callback(value)
+			end,
+		}
+
+		local ok, err = pcall(function()
+			config = conf:merge(defaultConfig, config)
+		end)
+		if not ok then
+			error("ui:slider(config) - config error: " .. err, 2)
+		end
+
+		local min = config.min
+		local max = config.max
+		local step = config.step
+		local steps = math.floor(((max - min) / config.step)) + 1
+		local value = math.min(config.max, math.max(config.min, config.defaultValue))
+
+		local node = self:frame()
+		node.Width = 100
+
+		local bar = self:frame({ color = Color(30, 30, 30) })
+
+		local btn = self:buttonNeutral(config.button)
+		btn:setParent(bar)
+
+		node.Height = btn.Height
+
+		local function setValue(v)
+			v = math.min(max, math.max(min, v))
+
+			v = v - min
+			local nSteps = math.floor((v + step * 0.5) / step)
+
+			v = min + step * nSteps
+
+			if v ~= value then
+				value = v
+				config.onValueChange(value)
+			end
+
+			-- set button position
+			local range = max - min
+			local pos = value - min
+			local percentage = pos / range
+
+			local minPos = btn.Width * 0.5
+			local maxPos = node.Width - btn.Width * 0.5
+			local d = maxPos - minPos
+
+			btn.pos.X = minPos + d * percentage - btn.Width * 0.5
+		end
+
+		local function setLocalX(x)
+			local minPos = btn.Width * 0.5
+			local maxPos = node.Width - btn.Width * 0.5
+			local newValue
+
+			if x <= minPos then
+				x = minPos
+				newValue = min
+			elseif x >= maxPos then
+				x = maxPos
+				newValue = max
+			else
+				x = x - minPos
+				local d = maxPos - minPos
+				local stepD = d / (steps - 1)
+				local nSteps = math.floor((x + (stepD * 0.5)) / stepD)
+
+				x = minPos + stepD * nSteps
+				newValue = min + step * nSteps
+			end
+
+			btn.pos.X = x - btn.Width * 0.5
+			if newValue ~= value then
+				value = newValue
+				config.onValueChange(value)
+			end
+		end
+
+		bar.parentDidResize = function(self)
+			local parent = self.parent
+			self.Width = parent.Width
+			self.Height = config.barHeight
+			self.pos.Y = parent.Height * 0.5 - self.Height * 0.5
+
+			btn.pos.Y = self.Height * 0.5 - btn.Height * 0.5
+			setValue(value)
+		end
+		bar:setParent(node)
+
+		local function pointerEventToLocalX(pressed, pe)
+			local pressedX = pressed.pos.X
+			local p = pressed.parent
+			while p ~= nil do
+				pressedX = pressedX + p.pos.X
+				p = p.parent
+			end
+			local x = pe.X * Screen.Width
+			x = x - pressedX
+			x = math.max(0, math.min(pressed.Width, x))
+			return x
+		end
+
+		node.onPress = function(self, _, _, pe)
+			local x = pointerEventToLocalX(self, pe)
+			setLocalX(x)
+		end
+
+		node.onDrag = function(self, pe)
+			local x = pointerEventToLocalX(self, pe)
+			setLocalX(x)
+		end
+
+		return node
+	end
+
 	local SCROLL_ID = 0
 	ui.scroll = function(self, config)
 		local defaultConfig = {
