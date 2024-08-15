@@ -3,7 +3,9 @@ local utils = require "luacheck.utils"
 
 local format = {}
 
-local color_support = not utils.is_windows or os.getenv("ANSICON")
+-- Cubzh HACK for making it work on Windows
+-- local color_support = not utils.is_windows or os.getenv("ANSICON")
+local color_support = true
 
 local function get_message_format(warning)
    local message_format = assert(stages.warnings[warning.code], "Unkown warning code " .. warning.code).message_format
