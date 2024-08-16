@@ -342,6 +342,23 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
+				local under13 = System.IsUserUnder13 == true
+
+				local textStr = "✉️ What code did you receive?"
+				local secondaryTextStr =
+					"You should receive it shortly! If not, please verify your phone number, or try later."
+
+				if under13 then
+					textStr = "✉️ A Link has been sent to your Parent or Guardian."
+					secondaryTextStr =
+						"You can wait here or come back later when you know the account's been approved! 🙂"
+				end
+
+				local text = ui:createText(textStr, {
+					color = Color.White,
+				})
+				text:setParent(drawer)
+
 				local okBtn = ui:buttonPositive({
 					content = "Confirm",
 					textSize = "big",
@@ -349,17 +366,6 @@ signup.startFlow = function(self, config)
 					padding = 10,
 				})
 				okBtn:setParent(drawer)
-				-- okBtn:disable()
-
-				local textStr = "What code did you receive?"
-				if System.IsUserUnder13 == true then
-					textStr = "What code did your parent receive?"
-				end
-
-				local text = ui:createText(textStr, {
-					color = Color.White,
-				})
-				text:setParent(drawer)
 
 				local codeInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
 					textSize = "big",
@@ -369,48 +375,53 @@ signup.startFlow = function(self, config)
 				})
 				codeInput:setParent(drawer)
 
-				okBtn.onRelease = function()
+				local loading = require("ui_loading_animation"):create({ ui = ui })
+				loading:setParent(drawer)
+				loading:hide()
+
+				if under13 then
+					okBtn:hide()
+					codeInput:hide()
+					loading:show()
+				else
 					okBtn:disable()
 
-					System:DebugEvent("User presses OK to submit verification code", { code = codeInput.Text })
+					okBtn.onRelease = function()
+						okBtn:disable()
 
-					local verifCode = codeInput.Text
+						System:DebugEvent("User presses OK to submit verification code", { code = codeInput.Text })
 
-					local data = {}
-					if System.IsUserUnder13 == true then
-						data.parentPhoneVerifCode = verifCode
-					else
-						data.phoneVerifCode = verifCode
+						local verifCode = codeInput.Text
+
+						local data = {}
+						if System.IsUserUnder13 == true then
+							data.parentPhoneVerifCode = verifCode
+						else
+							data.phoneVerifCode = verifCode
+						end
+
+						api:patchUserInfo(data, function(err)
+							if err ~= nil then
+								System:DebugEvent("Request to verify phone number fails", { code = codeInput.Text })
+								okBtn:enable()
+								return
+							end
+							System:DebugEvent("Request to verify phone number succeeds", { code = codeInput.Text })
+
+							-- flush signup flow and restart credential checks (should go through now)
+							signupFlow:flush()
+							signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
+						end)
 					end
 
-					api:patchUserInfo(data, function(err)
-						if err ~= nil then
-							System:DebugEvent("Request to verify phone number fails", { code = codeInput.Text })
-							okBtn:enable()
-							return
-						end
-						System:DebugEvent("Request to verify phone number succeeds", { code = codeInput.Text })
+					codeInput.onTextChange = function(self)
+						local backup = self.onTextChange
+						self.onTextChange = nil
+						-- TODO: format?
+						self.onTextChange = backup
 
-						-- flush signup flow and restart credential checks (should go through now)
-						signupFlow:flush()
-						signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
-					end)
-				end
-
-				codeInput.onTextChange = function(self)
-					local backup = self.onTextChange
-					self.onTextChange = nil
-					-- TODO: format?
-					self.onTextChange = backup
-
-					System:DebugEvent("User edits code input", { code = self.Text })
-				end
-
-				local secondaryTextStr =
-					"You should receive it shortly! If not, please verify your phone number, or try later."
-				if System.IsUserUnder13 == true then
-					secondaryTextStr =
-						"Your parent should receive it shortly! If not, please verify the phone number, or try later."
+						System:DebugEvent("User edits code input", { code = self.Text })
+					end
 				end
 
 				local secondaryText = ui:createText(secondaryTextStr, {
@@ -421,9 +432,6 @@ signup.startFlow = function(self, config)
 
 				drawer:updateConfig({
 					layoutContent = function(self)
-						-- here, self.Height can be reduced, but not increased
-						-- TODO: enforce this within drawer module
-
 						local padding = theme.paddingBig
 
 						local maxWidth = math.min(300, self.Width - padding * 2)
@@ -437,24 +445,41 @@ signup.startFlow = function(self, config)
 
 						self.Width = w
 						self.Height = Screen.SafeArea.Bottom
-							+ okBtn.Height
 							+ text.Height
 							+ secondaryText.Height
 							+ codeInput.Height
-							+ padding * 5
+							+ padding * 4
+
+						if okBtn:isVisible() then
+							self.Height = self.Height + okBtn.Height + padding
+						end
 
 						secondaryText.pos = {
 							self.Width * 0.5 - secondaryText.Width * 0.5,
 							Screen.SafeArea.Bottom + padding,
 						}
-						okBtn.pos = {
-							self.Width * 0.5 - okBtn.Width * 0.5,
-							secondaryText.pos.Y + secondaryText.Height + padding,
+
+						if okBtn:isVisible() then
+							okBtn.pos = {
+								self.Width * 0.5 - okBtn.Width * 0.5,
+								secondaryText.pos.Y + secondaryText.Height + padding,
+							}
+							codeInput.pos = {
+								self.Width * 0.5 - codeInput.Width * 0.5,
+								okBtn.pos.Y + okBtn.Height + padding,
+							}
+						else
+							codeInput.pos = {
+								self.Width * 0.5 - codeInput.Width * 0.5,
+								secondaryText.pos.Y + secondaryText.Height + padding,
+							}
+						end
+
+						loading.pos = {
+							self.Width * 0.5 - loading.Width * 0.5,
+							codeInput.pos.Y + codeInput.Height * 0.5 - loading.Height * 0.5,
 						}
-						codeInput.pos = {
-							self.Width * 0.5 - codeInput.Width * 0.5,
-							okBtn.pos.Y + okBtn.Height + padding,
-						}
+
 						text.pos = {
 							self.Width * 0.5 - text.Width * 0.5,
 							codeInput.pos.Y + codeInput.Height + padding,
@@ -518,9 +543,9 @@ signup.startFlow = function(self, config)
 
 				local selectedPrefix = "1"
 
-				local textStr = "Final step! What's your phone number?"
+				local textStr = "✨ Final step! What's your Phone Number?"
 				if System.IsUserUnder13 == true then
-					textStr = "Final step! What's your parent's phone number?"
+					textStr = "✨ Final step! Enter a Parent or Guardian Phone Number:"
 				end
 
 				local text = ui:createText(textStr, {
@@ -580,12 +605,20 @@ signup.startFlow = function(self, config)
 				})
 				phoneInput:setParent(drawer)
 
+				local loading = require("ui_loading_animation"):create({ ui = ui })
+				loading:setParent(drawer)
+				loading:hide()
+
 				okBtn.onRelease = function()
+					countryInput:hide()
+					phoneInput:hide()
+					loading:show()
+					okBtn:disable()
+
 					System:DebugEvent(
 						"User presses OK button to submit phone number",
 						{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
 					)
-					okBtn:disable()
 
 					local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
 
@@ -596,6 +629,10 @@ signup.startFlow = function(self, config)
 					end
 
 					api:patchUserInfo(data, function(err)
+						countryInput:show()
+						phoneInput:show()
+						loading:hide()
+
 						if err ~= nil then
 							System:DebugEvent("Request to submit phone number fails")
 							okBtn:enable()
@@ -649,13 +686,11 @@ signup.startFlow = function(self, config)
 					self.onTextChange = backup
 				end
 
-				local secondaryText = ui:createText(
-					"Cubzh asks for phone numbers to secure accounts and fight against cheaters. Information kept private. 🔑",
-					{
+				local secondaryText =
+					ui:createText("Needed to secure accounts and fight against cheaters. Kept private. 🔒", {
 						color = Color(200, 200, 200),
 						size = "small",
-					}
-				)
+					})
 				secondaryText:setParent(drawer)
 
 				drawer:updateConfig({
@@ -699,6 +734,10 @@ signup.startFlow = function(self, config)
 						phoneInput.pos = {
 							countryInput.pos.X + countryInput.Width + smallPadding,
 							countryInput.pos.Y,
+						}
+						loading.pos = {
+							self.Width * 0.5 - loading.Width * 0.5,
+							countryInput.pos.Y + countryInput.Height * 0.5 - loading.Height * 0.5,
 						}
 						text.pos = {
 							self.Width * 0.5 - text.Width * 0.5,
@@ -1362,7 +1401,10 @@ signup.startFlow = function(self, config)
 				})
 				text:setParent(drawer)
 
-				local age = ui:createText("🎂 12 🎂", {
+				cache.age = cache.age ~= nil and cache.age or 12
+				cache.ageStr = cache.ageStr or ("" .. cache.age)
+
+				local age = ui:createText("🎂 " .. cache.ageStr .. " 🎂", {
 					color = Color.White,
 					size = "big",
 				})
@@ -1370,14 +1412,11 @@ signup.startFlow = function(self, config)
 				age.object.FontSize = age.object.FontSize * 2
 				age:setParent(drawer)
 
-				cache.age = cache.age or 12
-				cache.ageStr = cache.ageStr or ("" .. cache.age)
-
 				local ageSlider = ui:slider({
 					min = 0,
 					max = 51,
 					step = 1,
-					defaultValue = cache.age or 12,
+					defaultValue = cache.age,
 					hapticFeedback = true,
 					button = ui:buttonNeutral({ content = "🙂", padding = theme.padding }),
 					onValueChange = function(v)
@@ -1424,7 +1463,8 @@ signup.startFlow = function(self, config)
 						System.IsUserUnder13 = cache.age < 13
 
 						-- Go to next step
-						signupFlow:push(steps.createUsernameInputStep())
+						-- signupFlow:push(steps.createUsernameInputStep())
+						signupFlow:push(steps.createPhoneNumberStep())
 					end)
 					table.insert(requests, req)
 				end
