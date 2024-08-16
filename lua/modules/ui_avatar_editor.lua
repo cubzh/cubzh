@@ -185,7 +185,7 @@ mod.create = function(self, config)
 		end
 	end
 
-	categories = ui:createScroll({
+	categories = ui:scroll({
 		backgroundColor = theme.buttonTextColor,
 		direction = "right",
 		cellPadding = CELL_PADDING,

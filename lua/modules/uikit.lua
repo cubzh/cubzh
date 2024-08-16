@@ -1061,7 +1061,7 @@ function createUI(system)
 		node.shape.Rotation = Number3.Zero
 		node.pivot.LocalPosition = Number3.Zero
 		node.pivot.LocalRotation = Number3.Zero
-		
+
 		local aabb = Box()
 		aabb:Fit(node.shape, { recursive = true })
 
@@ -2363,14 +2363,7 @@ function createUI(system)
 			end
 		end
 
-		node._unfocus = function(self)
-			if self.state ~= State.Focused then
-				return
-			end
-
-			self.state = State.Idle
-			self.cursor:hide()
-
+		node._removeListeners = function(self)
 			if self.textInputUpdateListener ~= nil then
 				Client.OSTextInput:Close()
 				self.textInputUpdateListener:Remove()
@@ -2401,6 +2394,17 @@ function createUI(system)
 				self.tickListener:Remove()
 				self.tickListener = nil
 			end
+		end
+
+		node._unfocus = function(self)
+			if self.state ~= State.Focused then
+				return
+			end
+
+			self.state = State.Idle
+			self.cursor:hide()
+
+			self:_removeListeners()
 
 			_textInputRefreshColor(self)
 			self:_refresh()
@@ -2417,13 +2421,17 @@ function createUI(system)
 			end
 		end
 
+		node.onRemoveSystem = function(self)
+			self:_removeListeners()
+		end
+
 		node:setParent(rootFrame)
 
 		return node
 	end
 
 	local SCROLL_ID = 0
-	ui.createScroll = function(self, config)
+	ui.scroll = function(self, config)
 		local defaultConfig = {
 			backgroundColor = Color(0, 0, 0, 0),
 			gradientColor = nil,
@@ -2433,6 +2441,7 @@ function createUI(system)
 			rigidity = SCROLL_DEFAULT_RIGIDITY,
 			friction = SCROLL_DEFAULT_FRICTION,
 			userdata = nil, -- can be used to provide extra context to loadCell / unloadCell
+			centerContent = false, -- center content when smaller than scroll area
 			loadCell = function(_, _) -- index, userdata
 				return nil
 			end,
@@ -2508,6 +2517,8 @@ function createUI(system)
 			contentHeight = 0,
 			cellInfo = {}, -- each entry: { top, bottom, left, right, width, height }
 		}
+
+		local firstRefresh = true
 
 		local released = true
 		local scrollPosition = 0
@@ -2836,6 +2847,20 @@ function createUI(system)
 					cellIndex = cellIndex + 1
 				end
 			end
+
+			if firstRefresh then
+				firstRefresh = false
+				if scrollPosition == 0 then
+					-- default scrollPosition can be set to something
+					-- else to center content when content size is smaller
+					-- than scroll size. In that case we need to refresh again.
+					scrollPosition = node:capPosition(scrollPosition)
+					if scrollPosition ~= 0 then
+						scrollSpeed = 0
+						node:refresh()
+					end
+				end
+			end
 		end
 
 		node.applyScrollDelta = function(_, dx, dy)
@@ -2848,20 +2873,28 @@ function createUI(system)
 
 		node.capPosition = function(_, pos)
 			if down then
-				local limit = cache.contentHeight - node.Height
-				if limit < 0 then
-					limit = 0
+				if cache.contentHeight < node.Height and config.centerContent then
+					pos = -(node.Height - cache.contentHeight) * 0.5
+				else
+					local limit = cache.contentHeight - node.Height
+					if limit < 0 then
+						limit = 0
+					end
+					pos = math.min(limit, math.max(0, pos))
 				end
-				pos = math.min(limit, math.max(0, pos))
 			elseif up then
 				-- TODO: review
 				error("IMPLEMENT scroll capPosition for up direction")
 			elseif right then
-				local limit = node.Width - cache.contentWidth
-				if limit > 0 then
-					limit = 0
+				if cache.contentWidth < node.Width and config.centerContent then
+					pos = (node.Width - cache.contentWidth) * 0.5
+				else
+					local limit = node.Width - cache.contentWidth
+					if limit > 0 then
+						limit = 0
+					end
+					pos = math.max(limit, math.min(pos, 0))
 				end
-				pos = math.max(limit, math.min(pos, 0))
 			elseif left then
 				-- TODO: review
 				error("IMPLEMENT scroll capPosition for left direction")
@@ -2904,7 +2937,8 @@ function createUI(system)
 				else
 					pos = pos + self.Width * 0.5
 				end
-				self:setScrollPosition(-pos)
+				pos = node:capPosition(-pos)
+				self:setScrollPosition(pos)
 			end
 		end
 
@@ -2931,7 +2965,10 @@ function createUI(system)
 				contentHeight = 0,
 				cellInfo = {},
 			}
+
+			firstRefresh = true
 			setScrollPosition(0)
+			scrollSpeed = 0
 		end
 
 		container.parentDidResizeSystem = function(_)
@@ -3020,7 +3057,6 @@ function createUI(system)
 					cappedPosition = node:capPosition(scrollPosition)
 					if cappedPosition ~= scrollPosition then
 						local speed = (cappedPosition - scrollPosition) * SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED
-						-- scrollPosition = scrollPosition + speed * dt
 						setScrollPosition(scrollPosition + speed * dt)
 						refresh = true
 					end
@@ -3124,7 +3160,8 @@ function createUI(system)
 
 		node:refresh()
 		return node
-	end -- ui:button
+	end -- ui:scroll
+	ui.createScroll = ui.scroll -- legacy
 
 	ui.button = function(self, config)
 		if self ~= ui then
@@ -3530,7 +3567,7 @@ function createUI(system)
 
 			local cells = {}
 
-			local scroll = ui:createScroll({
+			local scroll = ui:scroll({
 				direction = "down",
 				cellPadding = 0,
 				padding = 0,

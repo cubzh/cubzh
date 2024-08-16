@@ -256,7 +256,7 @@ itemGrid.create = function(_, config)
 	local cellSelector = ui:frameScrollCellSelector()
 	cellSelector:setParent(nil)
 
-	scroll = ui:createScroll({
+	scroll = ui:scroll({
 		direction = "down",
 		backgroundColor = config.backgroundColor or Color(0, 0, 0, 0),
 		cellPadding = config.cellPadding,

@@ -1,7 +1,3 @@
--- Modules = {
--- 	bundle = "bundle",
--- }
-
 bundle = require("bundle")
 
 local CONFIG = {
@@ -553,7 +549,6 @@ function avatar()
 
 	_avatar = {}
 
-	local bundle = require("bundle")
 	local avatarModule = require("avatar")
 
 	local hairs = {
@@ -1513,6 +1508,7 @@ function home()
 				dataFetcher.nbEntities = #friends
 
 				if dataFetcher.scroll then
+					dataFetcher.scroll:flush()
 					dataFetcher.scroll:refresh()
 				end
 
@@ -1565,6 +1561,8 @@ function home()
 			table.insert(recycledFriendCells, cell)
 		end
 
+		local addFriendsCell
+
 		local categoryUnusedCells = {}
 		local categoryCells = {}
 		local categories = {
@@ -1607,10 +1605,52 @@ function home()
 						friendCell.avatar = avatar
 
 						return friendCell
+					elseif index == dataFetcher.nbEntities + 1 then
+						if addFriendsCell == nil then
+							addFriendsCell = ui:frameScrollCell()
+							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 3
+							addFriendsCell.parentDidResize = worldCellResizeFn
+
+							local data = Data:FromBundle("images/friends.png")
+							local quad = Quad()
+							quad.Image = {
+								data = data,
+								alpha = true,
+							}
+
+							local image = ui:frame({ quad = quad })
+							image.Width = CONFIG.FRIEND_CELL_SIZE * 3 - padding * 2
+							image.Height = image.Width * (1.0 / 3.0)
+							image:setParent(addFriendsCell)
+
+							local btn = ui:buttonPositive({ content = "👥 Add Friends", padding = theme.padding })
+							btn:setParent(addFriendsCell)
+
+							btn.parentDidResize = function(self)
+								local parent = self.parent
+								self.pos = {
+									parent.Width * 0.5 - self.Width * 0.5,
+									theme.padding,
+								}
+								image.pos = {
+									parent.Width * 0.5 - image.Width * 0.5,
+									parent.Height * 0.5 - image.Height * 0.5,
+								}
+							end
+
+							btn.onRelease = function()
+								Menu:ShowFriends()
+							end
+						end
+						return addFriendsCell
 					end
 				end,
 				unloadCell = function(_, cell)
-					recycleFriendCell(cell)
+					if cell == addFriendsCell then
+						cell:setParent(nil)
+					else
+						recycleFriendCell(cell)
+					end
 				end,
 				extraSetup = function(dataFetcher)
 					requestFriends(dataFetcher)
@@ -1801,7 +1841,7 @@ function home()
 			drawer:show()
 		end
 
-		scroll = ui:createScroll({
+		scroll = ui:scroll({
 			-- backgroundColor = Color(0, 255, 0, 0.3),
 			-- gradientColor = Color(37, 23, 59), -- Color(155, 97, 250),
 			padding = {
@@ -1939,7 +1979,7 @@ function home()
 								displayNumberOfEntries = category.displayNumberOfEntries,
 							}
 
-							local scroll = ui:createScroll({
+							local scroll = ui:scroll({
 								-- backgroundColor = Color(255, 255, 255),
 								-- backgroundColor = Color(43, 45, 49),
 								backgroundColor = theme.buttonTextColor,
@@ -1949,6 +1989,7 @@ function home()
 								loadCell = category.loadCell,
 								unloadCell = category.unloadCell,
 								userdata = dataFetcher,
+								centerContent = true,
 							})
 
 							dataFetcher.scroll = scroll
