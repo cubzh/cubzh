@@ -1370,18 +1370,31 @@ signup.startFlow = function(self, config)
 				age.object.FontSize = age.object.FontSize * 2
 				age:setParent(drawer)
 
+				cache.age = cache.age or 12
+				cache.ageStr = cache.ageStr or ("" .. cache.age)
+
 				local ageSlider = ui:slider({
 					min = 0,
-					max = 99,
+					max = 51,
 					step = 1,
-					defaultValue = 12,
+					defaultValue = cache.age or 12,
+					hapticFeedback = true,
 					button = ui:buttonNeutral({ content = "🙂", padding = theme.padding }),
 					onValueChange = function(v)
-						age.Text = "🎂 " .. v .. " 🎂"
+						cache.age = v
+						cache.ageStr = "" .. v
+						if v >= 51 then
+							cache.ageStr = "50+"
+						end
+						age.Text = "🎂 " .. cache.ageStr .. " 🎂"
 						age.pos.X = drawer.Width * 0.5 - age.Width * 0.5
 					end,
 				})
 				ageSlider:setParent(drawer)
+
+				local loading = require("ui_loading_animation"):create({ ui = ui })
+				loading:setParent(drawer)
+				loading:hide()
 
 				local secondaryText = ui:createText("Asking this to keep your online gaming experience safe and fun!", {
 					color = Color(200, 200, 200),
@@ -1390,24 +1403,26 @@ signup.startFlow = function(self, config)
 				secondaryText:setParent(drawer)
 
 				okBtn.onRelease = function()
-					-- TODO: showLoading()
-					System:DebugEvent(
-						"User presses OK button on DOB form",
-						{ month = cache.dob.month, day = cache.dob.day, year = cache.dob.year }
-					)
+					loading:show()
+					ageSlider:hide()
+					okBtn:disable()
 
-					-- construct date of birth string (mm-dd-yyyy)
-					local dobStr = string.format("%02d-%02d-%04d", cache.dob.month, cache.dob.day, cache.dob.year)
+					-- -- NOTE: keeping "DOB" and not "age" in event name to compare with previous versions
+					System:DebugEvent("User presses OK button on DOB form", { age = cache.age, ageStr = cache.ageStr })
 
-					-- send API request to update user's date of birth
-					local req = api:patchUserInfo({ dob = dobStr }, function(err)
+					-- send API request to update user's age
+					local req = api:patchUserInfo({ age = cache.age }, function(err)
+						loading:hide()
+						ageSlider:show()
+						okBtn:enable()
+
 						if err ~= nil then
 							System:DebugEvent("Request to set DOB fails")
 							return
 						end
 
-						-- Store information about user being <13yo
-						System.IsUserUnder13 = cache.dob.year > currentYear - 13
+						System.IsUserUnder13 = cache.age < 13
+
 						-- Go to next step
 						signupFlow:push(steps.createUsernameInputStep())
 					end)
@@ -1450,6 +1465,11 @@ signup.startFlow = function(self, config)
 						ageSlider.pos = {
 							self.Width * 0.5 - ageSlider.Width * 0.5,
 							okBtn.pos.Y + okBtn.Height + padding,
+						}
+
+						loading.pos = {
+							ageSlider.pos.X + ageSlider.Width * 0.5 - loading.Width * 0.5,
+							ageSlider.pos.Y + ageSlider.Height * 0.5 - loading.Height * 0.5,
 						}
 
 						age.pos = {
