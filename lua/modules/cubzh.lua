@@ -1508,6 +1508,7 @@ function home()
 				dataFetcher.nbEntities = #friends
 
 				if dataFetcher.scroll then
+					dataFetcher.scroll:flush()
 					dataFetcher.scroll:refresh()
 				end
 
@@ -1645,7 +1646,11 @@ function home()
 					end
 				end,
 				unloadCell = function(_, cell)
-					recycleFriendCell(cell)
+					if cell == addFriendsCell then
+						cell:setParent(nil)
+					else
+						recycleFriendCell(cell)
+					end
 				end,
 				extraSetup = function(dataFetcher)
 					requestFriends(dataFetcher)
