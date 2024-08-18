@@ -2122,11 +2122,20 @@ signup.startFlow = function(self, config)
 
 							-- Update values in System
 							System.Username = userInfo.username or ""
-							System.HasEmail = userInfo.hasEmail or false
-							System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber or false
-							System.IsPhoneExempted = userInfo.isPhoneExempted or false
-							System.HasDOB = userInfo.hasDOB
-							System.IsUserUnder13 = userInfo.isUnder13
+							System.HasEmail = userInfo.hasEmail == true or false
+							System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true or false
+							System.IsPhoneExempted = userInfo.isPhoneExempted == true or false
+							System.HasDOB = userInfo.hasDOB == true or false
+							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true or false
+							System.IsUserUnder13 = userInfo.isUnder13 == true or false
+
+							print("userInfo.username:", userInfo.username)
+							print("userInfo.hasEmail:", userInfo.hasEmail)
+							print("userInfo.hasVerifiedPhoneNumber:", userInfo.hasVerifiedPhoneNumber)
+							print("userInfo.isPhoneExempted:", userInfo.isPhoneExempted)
+							print("userInfo.hasDOB:", userInfo.hasDOB)
+							print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
+							print("userInfo.isUnder13:", userInfo.isUnder13)
 
 							if Client.LoggedIn then
 								callLoginSuccess()
@@ -2140,6 +2149,7 @@ signup.startFlow = function(self, config)
 							"hasEmail",
 							"hasPassword",
 							"hasDOB",
+							"hasEstimatedDOB",
 							"isUnder13",
 							"didCustomizeAvatar",
 							"hasVerifiedPhoneNumber",
