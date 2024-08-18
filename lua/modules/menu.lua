@@ -9,7 +9,6 @@ theme = require("uitheme").current
 ease = require("ease")
 friends = require("friends")
 settings = require("settings")
--- worlds = require("worlds")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
@@ -19,8 +18,6 @@ sfx = require("sfx")
 logo = require("logo")
 uiPointer = require("ui_pointer")
 signup = require("signup")
-
--- conf = require("config")
 
 -- CONSTANTS
 
@@ -1099,9 +1096,25 @@ function getCubzhMenuModalContent()
 	local node = ui:createFrame()
 	content.node = node
 
+	local btnWorlds = ui:buttonNeutral({ content = "🌎 Worlds", textSize = "default", padding = theme.padding })
+	btnWorlds:setParent(node)
+	btnWorlds.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
+	btnWorlds.onRelease = function()
+		if activeModal ~= nil then
+			local content = require("gallery"):createModalContent({
+				uikit = ui,
+				type = "worlds",
+				displayLikes = true,
+				categories = { "featured" },
+				perPage = 100,
+			})
+			activeModal:push(content)
+		end
+	end
+
 	local btnItems
 	if dev then
-		btnItems = ui:buttonNeutral({ content = "Items", textSize = "default" })
+		btnItems = ui:buttonNeutral({ content = "⚔️ Items", textSize = "default", padding = theme.padding })
 		btnItems:setParent(node)
 		btnItems.Height = CUBZH_MENU_SECONDARY_BUTTON_HEIGHT
 
@@ -1150,11 +1163,13 @@ function getCubzhMenuModalContent()
 
 	if dev then
 		buttons = {
+			{ btnWorlds },
 			{ btnItems },
 			{ btnLeave },
 		}
 	else
 		buttons = {
+			{ btnWorlds },
 			{ btnLeave },
 		}
 	end
