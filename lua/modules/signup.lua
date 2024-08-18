@@ -132,7 +132,7 @@ signup.startFlow = function(self, config)
 
 	local function showBackButton()
 		if backButton == nil then
-			backButton = ui:buttonNegative({ content = "⬅️", textSize = "default" })
+			backButton = ui:buttonNegative({ content = "⬅️", textSize = "default", padding = theme.padding })
 			-- backButton = ui:createButton("⬅️", { textSize = "default" })
 			-- backButton:setColor(theme.colorNegative)
 			backButton.parentDidResize = function(self)
@@ -490,10 +490,13 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+
 				-- autofocus text input
-				Timer(0.2, function()
-					codeInput:focus()
-				end)
+				if codeInput:isVisible() then
+					Timer(0.2, function()
+						codeInput:focus()
+					end)
+				end
 			end,
 			onExit = function()
 				drawer:updateConfig({
@@ -1393,7 +1396,7 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = theme.padding })
+				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
 
 				local text = ui:createText("How old are you?", {
