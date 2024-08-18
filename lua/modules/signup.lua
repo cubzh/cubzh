@@ -384,7 +384,8 @@ signup.startFlow = function(self, config)
 					codeInput:hide()
 					loading:show()
 				else
-					okBtn:disable()
+					-- TODO: enable when code is 6 digits
+					-- okBtn:disable()
 
 					okBtn.onRelease = function()
 						okBtn:disable()
