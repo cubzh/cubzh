@@ -550,9 +550,9 @@ end
 
 loadAvatar = function(p)
 	if p.Avatar ~= nil then
-		p.Avatar:load({ usernameOrId = p.Username })
+		p.Avatar:load({ usernameOrId = p.UserID })
 	else
-		local avatar = require("avatar"):get({ usernameOrId = p.Username })
+		local avatar = require("avatar"):get({ usernameOrId = p.UserID })
 		avatar.didLoad = function(err, _)
 			if err then
 				return
