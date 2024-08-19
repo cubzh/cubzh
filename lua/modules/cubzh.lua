@@ -1876,6 +1876,10 @@ function home()
 						if Player.Username == "newbie" then
 							editUsernameBtn = ui:buttonNeutral({ content = "✏️" })
 							editUsernameBtn:setParent(profileCell)
+
+							editUsernameBtn.onRelease = function()
+								Menu:ShowUsernameForm()
+							end
 						end
 
 						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
