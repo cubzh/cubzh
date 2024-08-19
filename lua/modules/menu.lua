@@ -77,6 +77,7 @@ MODAL_KEYS = {
 	WORLD = 12,
 	ITEM = 13,
 	CREATIONS = 14,
+	USERNAME_FORM = 15,
 }
 
 -- User account management
@@ -253,6 +254,9 @@ function showModal(key, config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then
 		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.USERNAME_FORM then
+		content = require("username_form"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
@@ -1567,11 +1571,9 @@ menu.ShowWorld = function(self, config)
 	if self ~= menu then
 		error("Menu:ShowWorld(config): use `:`", 2)
 	end
-
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-
 	showModal(MODAL_KEYS.WORLD, config)
 	return true
 end
@@ -1598,11 +1600,9 @@ menu.ShowItem = function(self, config)
 	if self ~= menu then
 		error("Menu:ShowItem(config): use `:`", 2)
 	end
-
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-
 	showModal(MODAL_KEYS.ITEM, config)
 	return true
 end
@@ -1617,6 +1617,16 @@ menu.ShowCreations = function(_)
 		return false
 	end
 	showModal(MODAL_KEYS.CREATIONS)
+	return true
+end
+
+-- undocumented on purpose
+-- works only from home
+menu.ShowUsernameForm = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.USERNAME_FORM)
 	return true
 end
 
