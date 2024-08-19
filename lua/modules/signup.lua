@@ -1416,7 +1416,7 @@ signup.startFlow = function(self, config)
 
 				local ageSlider = ui:slider({
 					min = 0,
-					max = 51,
+					max = 41,
 					step = 1,
 					defaultValue = cache.age,
 					hapticFeedback = true,
@@ -1424,8 +1424,8 @@ signup.startFlow = function(self, config)
 					onValueChange = function(v)
 						cache.age = v
 						cache.ageStr = "" .. v
-						if v >= 51 then
-							cache.ageStr = "50+"
+						if v >= 41 then
+							cache.ageStr = "40+"
 						end
 						age.Text = "🎂 " .. cache.ageStr .. " 🎂"
 						age.pos.X = drawer.Width * 0.5 - age.Width * 0.5
@@ -2127,13 +2127,13 @@ signup.startFlow = function(self, config)
 							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true or false
 							System.IsUserUnder13 = userInfo.isUnder13 == true or false
 
-							print("userInfo.username:", userInfo.username)
-							print("userInfo.hasEmail:", userInfo.hasEmail)
-							print("userInfo.hasVerifiedPhoneNumber:", userInfo.hasVerifiedPhoneNumber)
-							print("userInfo.isPhoneExempted:", userInfo.isPhoneExempted)
-							print("userInfo.hasDOB:", userInfo.hasDOB)
-							print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
-							print("userInfo.isUnder13:", userInfo.isUnder13)
+							-- print("userInfo.username:", userInfo.username)
+							-- print("userInfo.hasEmail:", userInfo.hasEmail)
+							-- print("userInfo.hasVerifiedPhoneNumber:", userInfo.hasVerifiedPhoneNumber)
+							-- print("userInfo.isPhoneExempted:", userInfo.isPhoneExempted)
+							-- print("userInfo.hasDOB:", userInfo.hasDOB)
+							-- print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
+							-- print("userInfo.isUnder13:", userInfo.isUnder13)
 
 							if Client.LoggedIn then
 								callLoginSuccess()
