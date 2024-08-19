@@ -227,8 +227,7 @@ signup.startFlow = function(self, config)
 									local username = accountInfo.username
 									local token = accountInfo.credentials.token
 
-									Player.UserID = userID
-									Player.Username = username
+									System.Username = username
 									System:StoreCredentials(userID, token)
 
 									System.AskedForMagicKey = false
@@ -913,7 +912,7 @@ signup.startFlow = function(self, config)
 							end
 
 							-- success
-							Player.Username = username
+							System.Username = username
 							System.AskedForMagicKey = false
 							signupFlow:push(steps.createPhoneNumberStep())
 						end)
@@ -1090,8 +1089,7 @@ signup.startFlow = function(self, config)
 										local username = accountInfo.username
 										local token = accountInfo.credentials.token
 
-										Player.UserID = userID
-										Player.Username = username
+										System.Username = username
 										System:StoreCredentials(userID, token)
 
 										System.AskedForMagicKey = false
