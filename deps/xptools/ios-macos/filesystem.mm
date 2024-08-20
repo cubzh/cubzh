@@ -78,6 +78,12 @@ std::string dirname(const std::string& fname)
 
 ///
 static NSString *getStoragePath() {
+
+#if defined(__VX_CI_STORAGE_PATH)
+    // override absPath
+    return @__VX_CI_STORAGE_PATH;
+#endif
+
     #if TARGET_OS_IPHONE
         NSArray<NSString *> *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask , true);
         if (paths.firstObject == nil) {
@@ -252,6 +258,12 @@ std::string vx::fs::getBundleFilePath(const std::string& relFilePath) {
     absPath = [absPath stringByAppendingPathComponent:relPath];
 #endif
 
+#if defined(__VX_CI_BUNDLE_PATH)
+    // override absPath
+    absPath = @__VX_CI_BUNDLE_PATH;
+    absPath = [absPath stringByAppendingPathComponent:relPath];
+#endif
+
 #endif
 #endif
     
@@ -411,20 +423,8 @@ bool vx::fs::removeStorageFileOrDirectory(std::string relFilePath) {
 
 ///
 bool vx::fs::bundleFileExists(const std::string& relFilePath, bool& isDir) {
-    NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
-
-    NSString *relPath = [NSString stringWithUTF8String:relFilePath.c_str()];
-    if (relPath == nil) {
-        return false;
-    }
-
-    #if TARGET_OS_IPHONE
-        NSString *absPath = [bundlePath stringByAppendingPathComponent:relPath];
-    #elif TARGET_OS_MAC
-        NSString *absPath = [bundlePath stringByAppendingPathComponent:@"Contents"];
-        absPath = [absPath stringByAppendingPathComponent:@"Resources"];
-        absPath = [absPath stringByAppendingPathComponent:relPath];
-    #endif
+    const std::string absPathStr = vx::fs::getBundleFilePath(relFilePath);
+    NSString *absPath = [NSString stringWithUTF8String:absPathStr.c_str()];
 
     BOOL isDirectory = NO;
     BOOL fileExists = [[NSFileManager defaultManager] fileExistsAtPath:absPath isDirectory:&isDirectory];
@@ -437,7 +437,9 @@ bool vx::fs::bundleFileExists(const std::string& relFilePath, bool& isDir) {
 ///
 bool vx::fs::storageFileExists(const std::string& relFilePath, bool& isDir) {
 
-    BOOL fileExists = false;
+    BOOL fileExists = NO;
+    BOOL isDirectory = NO;
+    NSString *absoluteFilePath = nil;
 
     if (Helper::shared()->inMemoryStorage()) {
 
@@ -457,9 +459,8 @@ bool vx::fs::storageFileExists(const std::string& relFilePath, bool& isDir) {
         }
 
         // generate absolute file path
-        NSString *absoluteFilePath = [storagePath stringByAppendingPathComponent:relPath];
+        absoluteFilePath = [storagePath stringByAppendingPathComponent:relPath];
 
-        BOOL isDirectory = NO;
         fileExists = [[NSFileManager defaultManager] fileExistsAtPath:absoluteFilePath isDirectory:&isDirectory];
 
         isDir = isDirectory;

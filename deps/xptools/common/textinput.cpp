@@ -9,6 +9,9 @@
 #include "textinput.h"
 #include "textinput.hpp"
 
+// C
+#include <cstdint>
+// C++
 #include <iostream>
 #include <string>
 #include <codecvt>

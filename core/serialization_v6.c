@@ -772,8 +772,8 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
                                             uint16_t d,
                                             uint8_t paletteID,
                                             ColorPalette *shrinkPalette) {
-
-    uint32_t size = *((uint32_t *)cursor); // shape blocks chunk size
+    uint32_t size = 0;
+    memcpy(&size, cursor, sizeof(uint32_t));
     cursor = (void *)((uint32_t *)cursor + 1);
     SHAPE_COLOR_INDEX_INT_T colorIndex;
     ColorPalette *palette = shape_get_palette(shape);
@@ -1000,7 +1000,7 @@ uint32_t chunk_v6_read_shape(Stream *s,
                 shapeBlocksCursor = cursor;
 
                 // shape blocks chunk size
-                sizeRead = *((uint32_t *)cursor);
+                memcpy(&sizeRead, cursor, sizeof(uint32_t));
                 cursor = (void *)((uint32_t *)cursor + 1);
 
                 // skip chunk for now

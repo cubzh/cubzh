@@ -7,6 +7,8 @@
 
 #pragma once
 
+// C
+#include <cstdint>
 // C++
 #include <string>
 #include <vector>

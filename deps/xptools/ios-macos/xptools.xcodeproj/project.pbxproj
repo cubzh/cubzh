@@ -1048,6 +1048,8 @@
 					"$(inherited)",
 					DEBUG_EVENTS,
 					__VX_PLATFORM_MACOS,
+					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
+					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1074,6 +1076,8 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					__VX_PLATFORM_MACOS,
+					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
+					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (

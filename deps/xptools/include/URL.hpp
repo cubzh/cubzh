@@ -8,6 +8,8 @@
 
 #pragma once
 
+// C
+#include <cstdint>
 // C++
 #include <unordered_map>
 #include <unordered_set>
