@@ -1611,14 +1611,10 @@ function home()
 							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 3
 							addFriendsCell.parentDidResize = worldCellResizeFn
 
-							local data = Data:FromBundle("images/friends.png")
-							local quad = Quad()
-							quad.Image = {
-								data = data,
+							local image = ui:frame({ image = {
+								data = Data:FromBundle("images/friends.png"),
 								alpha = true,
-							}
-
-							local image = ui:frame({ quad = quad })
+							} })
 							image.Width = CONFIG.FRIEND_CELL_SIZE * 3 - padding * 2
 							image.Height = image.Width * (1.0 / 3.0)
 							image:setParent(addFriendsCell)
@@ -2067,14 +2063,10 @@ function home()
 
 			local content = ui:frame()
 
-			local data = Data:FromBundle(icon or "images/logo.png")
-			local quad = Quad()
-			quad.Image = {
-				data = data,
+			icon = ui:frame({ image = {
+				data = Data:FromBundle(icon or "images/logo.png"),
 				alpha = true,
-			}
-
-			icon = ui:frame({ quad = quad })
+			} })
 			icon.Width = 20
 			icon.Height = 20
 			icon:setParent(content)

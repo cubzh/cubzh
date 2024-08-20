@@ -1228,14 +1228,12 @@ function createUI(system)
 		if frameScrollCellQuadData == nil then
 			frameScrollCellQuadData = Data:FromBundle("images/cell_dark.png")
 		end
-		local quad = Quad()
-		quad.Image = {
+		return ui.frame(self, { image = {
 			data = frameScrollCellQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
-		}
-		return ui.frame(self, { quad = quad })
+		} })
 	end
 
 	local frameScrollSelectorQuadData
@@ -1246,82 +1244,69 @@ function createUI(system)
 		if frameScrollSelectorQuadData == nil then
 			frameScrollSelectorQuadData = Data:FromBundle("images/cell_selector.png")
 		end
-		local quad = Quad()
-		quad.Image = {
+		return ui.frame(self, { image = {
 			data = frameScrollSelectorQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
 			alpha = true,
-		}
-		return ui.frame(self, { quad = quad })
+		} })
 	end
 
 	local frameTextBackgroundQuadData
 	ui.frameTextBackground = function(self)
 		if self ~= ui then
-			error("ui:frameGenericContainer(): use `:`", 2)
+			error("ui:frameTextBackground(): use `:`", 2)
 		end
 		if frameTextBackgroundQuadData == nil then
 			frameTextBackgroundQuadData = Data:FromBundle("images/text_background_dark.png")
 		end
-		local quad = Quad()
-		quad.Image = {
+		return ui.frame(self, { image = {
 			data = frameTextBackgroundQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
-		}
-		return ui.frame(self, { quad = quad })
+		} })
 	end
 
-	-- local frameMaskWithRoundCornersQuadData
-	-- ui.frameMaskWithRoundCorners = function(self)
-	-- 	if self ~= ui then
-	-- 		error("ui:frameGenericContainer(): use `:`", 2)
-	-- 	end
-	-- 	if frameMaskWithRoundCornersQuadData == nil then
-	-- 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
-	-- 	end
-	-- 	local quad = Quad()
-	--  quad.IsDoubleSided = false
-	-- 	quad.IsMask = true
-	-- 	quad.Image = {
-	-- 		data = frameMaskWithRoundCornersQuadData,
-	-- 		slice9 = { 0.5, 0.5 },
-	-- 		slice9Scale = DEFAULT_SLICE_9_SCALE,
-	-- 		cutout = true,
-	-- 	}
-	-- 	return ui.frame(self, { quad = quad })
-	-- end
+	local frameMaskWithRoundCornersQuadData
+	ui.frameMaskWithRoundCorners = function(self)
+		if self ~= ui then
+			error("ui:frameMaskWithRoundCorners(): use `:`", 2)
+		end
+	 	if frameMaskWithRoundCornersQuadData == nil then
+	 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
+	 	end
+	 	return ui.frame(self, { image = {
+			data = frameMaskWithRoundCornersQuadData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = DEFAULT_SLICE_9_SCALE,
+			cutout = true,
+		    mask = true,
+		} })
+	end
 
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/frame.png")
-		local quad = Quad()
-		quad.Image = {
-			data = image,
+		return ui.frame(self, { image = {
+			data = Data:FromBundle("images/frame.png"),
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
-		}
-		return ui.frame(self, { quad = quad })
+			cutout = true,
+		} })
 	end
 
 	ui.frameCreationContainer = function(self)
 		if self ~= ui then
-			error("ui:frameGenericContainer(): use `:`", 2)
+			error("ui:frameCreationContainer(): use `:`", 2)
 		end
-		local image = Data:FromBundle("images/frame_creation.png")
-		local quad = Quad()
-		quad.Image = {
-			data = image,
+		return ui.frame(self, { image = {
+			data = Data:FromBundle("images/frame_creation.png"),
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
-		}
-		return ui.frame(self, { quad = quad })
+			cutout = true,
+		} })
 	end
 
 	ui.frame = function(self, config)
@@ -1332,16 +1317,17 @@ function createUI(system)
 		local defaultConfig = {
 			color = nil, -- can be a Color or Quad gradient table
 			image = nil,
-			quad = nil, -- allows to suply custom quad directly (takes priority over color or image)
-			-- transparent frame is created if color, image and quad are nil
+			-- transparent frame is created if color and image are nil
 			unfocuses = false, -- unfocused focused node when true
+			mask = false
 		}
 
 		local options = {
 			acceptTypes = {
 				color = { "Color", "table" },
-				image = { "Data" },
-				quad = { "Quad" },
+				image = { "Data", "table" },
+				unfocuses = { "boolean" },
+				mask = { "boolean" },
 			},
 		}
 
@@ -1352,21 +1338,16 @@ function createUI(system)
 
 		node.config = config
 
-		local background
-
-		if config.quad ~= nil then
-			background = config.quad
+		local background = Quad()
+		background.IsDoubleSided = false
+		background.IsMask = config.mask
+		if config.image ~= nil then
+			background.Image = node.config.image
 		else
-			background = Quad()
-			background.IsDoubleSided = false
-			if config.image ~= nil then
-				background.Image = node.config.image
-			else
-				if config.color == nil then
-					config.color = Color(0, 0, 0, 0) -- transparent
-				end
-				background.Color = config.color
+			if config.color == nil then
+				config.color = Color.Clear
 			end
+			background.Color = config.color
 		end
 
 		_setupUIObject(background)
@@ -1391,8 +1372,8 @@ function createUI(system)
 			if self ~= node then
 				error("frame:setColor(color): use `:`", 2)
 			end
-			if type(color) ~= Type.Color then
-				error("frame:setColor(color): color should be a Color", 2)
+			if type(color) ~= Type.Color and type(color) ~= "table" then
+				error("frame:setColor(color): color should be a Color or table (see Quad.Color reference)", 2)
 			end
 			self:_setColor(color)
 		end
@@ -1401,8 +1382,8 @@ function createUI(system)
 			if self ~= node then
 				error("frame:setImage(image): use `:`", 2)
 			end
-			if image ~= nil and type(image) ~= Type.Data then
-				error("frame:setImage(image): image should be a Data instance", 2)
+			if image ~= nil and type(image) ~= Type.Data and type(image) ~= "table" then
+				error("frame:setImage(image): image should be a Data or table (see Quad.Image reference)", 2)
 			end
 
 			self.background.Image = image
@@ -1431,13 +1412,6 @@ function createUI(system)
 		node._setHeight = function(self, v)
 			self.background.Height = v
 			self.background.CollisionBox = Box({ 0, 0, 0 }, { background.Width, background.Height, 0.1 })
-		end
-
-		if config ~= nil and config.image ~= nil then
-			if type(config.image) ~= Type.Data then
-				error("ui:createFrame(color, config): config.image should be a Data instance", 2)
-			end
-			node:setImage(config.image)
 		end
 
 		node.object.LocalPosition = { 0, 0, 0 }
@@ -2725,37 +2699,37 @@ function createUI(system)
 		local beginScrollIndicator
 
 		if config.backgroundColor.A == 255 or config.gradientColor ~= nil then
-			local quad = Quad()
 			local opaque = Color(config.gradientColor or config.backgroundColor)
 			local transparent = Color(config.gradientColor or config.backgroundColor)
 			transparent.A = 0
+			local scrollEdgeColor = opaque
 			if right then
-				quad.Color = { gradient = "H", from = transparent, to = opaque }
+				scrollEdgeColor = { gradient = "H", from = transparent, to = opaque }
 			elseif left then
-				quad.Color = { gradient = "H", from = opaque, to = transparent }
+				scrollEdgeColor = { gradient = "H", from = opaque, to = transparent }
 			elseif down then
-				quad.Color = { gradient = "V", from = opaque, to = transparent }
+				scrollEdgeColor = { gradient = "V", from = opaque, to = transparent }
 			elseif up then
-				quad.Color = { gradient = "V", from = transparent, to = opaque }
+				scrollEdgeColor = { gradient = "V", from = transparent, to = opaque }
 			end
-			endScrollIndicator = ui:frame({ quad = quad })
+			endScrollIndicator = ui:frame({ color = scrollEdgeColor })
 			endScrollIndicator.object.SortOrder = 255
 			endScrollIndicator:setParent(node)
 
-			quad = Quad()
 			opaque = Color(config.backgroundColor)
 			transparent = Color(config.backgroundColor)
 			transparent.A = 0
+			scrollEdgeColor = opaque
 			if right then
-				quad.Color = { gradient = "H", from = opaque, to = transparent }
+				scrollEdgeColor = { gradient = "H", from = opaque, to = transparent }
 			elseif left then
-				quad.Color = { gradient = "H", from = transparent, to = opaque }
+				scrollEdgeColor = { gradient = "H", from = transparent, to = opaque }
 			elseif down then
-				quad.Color = { gradient = "V", from = transparent, to = opaque }
+				scrollEdgeColor = { gradient = "V", from = transparent, to = opaque }
 			elseif up then
-				quad.Color = { gradient = "V", from = opaque, to = transparent }
+				scrollEdgeColor = { gradient = "V", from = opaque, to = transparent }
 			end
-			beginScrollIndicator = ui:frame({ quad = quad })
+			beginScrollIndicator = ui:frame({ color = scrollEdgeColor })
 			beginScrollIndicator.object.SortOrder = 255
 			beginScrollIndicator:setParent(node)
 		end
