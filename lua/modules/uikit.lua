@@ -1283,6 +1283,7 @@ function createUI(system)
 	-- 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
 	-- 	end
 	-- 	local quad = Quad()
+	--  quad.IsDoubleSided = false
 	-- 	quad.IsMask = true
 	-- 	quad.Image = {
 	-- 		data = frameMaskWithRoundCornersQuadData,
@@ -1357,15 +1358,14 @@ function createUI(system)
 			background = config.quad
 		else
 			background = Quad()
+			background.IsDoubleSided = false
 			if config.image ~= nil then
 				background.Image = node.config.image
-				background.IsDoubleSided = true
 			else
 				if config.color == nil then
 					config.color = Color(0, 0, 0, 0) -- transparent
 				end
 				background.Color = config.color
-				background.IsDoubleSided = false
 			end
 		end
 
@@ -1408,10 +1408,8 @@ function createUI(system)
 			self.background.Image = image
 			if image ~= nil then
 				self.background.Color = Color.White
-				self.background.IsDoubleSided = true
 			else
 				self.background.Color = color
-				self.background.IsDoubleSided = false
 			end
 		end
 
