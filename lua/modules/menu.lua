@@ -787,7 +787,7 @@ end
 if System.IsHomeAppRunning then
 	local settingsIcon = ui:frame({ image = {
 		data = Data:FromBundle("images/icon-settings.png"),
-		alpha = true,
+		cutout = true,
 	} })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
