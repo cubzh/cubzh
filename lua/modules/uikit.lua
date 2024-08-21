@@ -3854,7 +3854,8 @@ function createUI(system)
 			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			alpha = displayAsDisabled,
+			cutout = not displayAsDisabled,
 		}
 
 		config.backgroundQuadPressed = Quad()
@@ -3862,7 +3863,8 @@ function createUI(system)
 			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralPressedQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			alpha = displayAsDisabled,
+			cutout = not displayAsDisabled,
 		}
 
 		config.backgroundQuadSelected = Quad()
@@ -3870,7 +3872,8 @@ function createUI(system)
 			data = displayAsDisabled and btnNeutralDisabledQuadData or btnNeutralSelectedQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			alpha = displayAsDisabled,
+			cutout = not displayAsDisabled,
 		}
 
 		config.backgroundQuadDisabled = Quad()
@@ -3900,7 +3903,7 @@ function createUI(system)
 			data = btnPositiveQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			cutout = true,
 		}
 
 		if btnPositivePressedQuadData == nil then
@@ -3911,7 +3914,7 @@ function createUI(system)
 			data = btnPositivePressedQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			cutout = true,
 		}
 
 		if btnPositiveDisabledQuadData == nil then
@@ -3939,7 +3942,7 @@ function createUI(system)
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			cutout = true,
 		}
 
 		image = Data:FromBundle("images/button_negative_pressed.png")
@@ -3948,7 +3951,7 @@ function createUI(system)
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			cutout = true,
 		}
 
 		return ui.button(self, config)
@@ -3962,7 +3965,7 @@ function createUI(system)
 			data = image,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			cutout = true,
 		}
 		return ui.button(self, config)
 	end
