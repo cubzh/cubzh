@@ -10,15 +10,20 @@
 <body>
     <div class="background"></div>
     <div class="content">
+        <img class="logo" src="/img/logo.svg" alt="cubzh logo">
         <div id="container">
-            <h1>Cubzh | parent dashboard</h2>
+            <h1>Parent dashboard</h2>
             {{ if not .Approved }}
                 <p>You've been appointed as a parent or guardian for an account on Cubzh by a <strong>{{ .ChildAge }} year old</strong> on <strong>{{ .CreationDate }}</strong>. Use the button bellow to <strong>approve</strong> it:</p>
-                <a class="buttonPositive">Approve & Unlock account</a>
+                <form action="?approve=yes" method="post">
+                    <button type="submit" class="buttonPositive">Approve & Unlock account</button>
+                </form>
                 <p>By approving, you are agreeing to the <a href="https://cu.bzh/terms">Terms of Use</a> including arbitration clause and you are aknowledging the <a href="https://cu.bzh/privacy">Privacy Policy</a>.</p>
             {{ else }}
                 <p>You've been appointed as a parent or guardian for an account on Cubzh. The account is currently <strong>active</strong>, you can use the button bellow to suspend it:</p>
-                <a class="buttonNegative">Suspend account</a>
+                <form action="?approve=no" method="post">
+                    <button type="submit" class="buttonNegative">Suspend account</button>
+                </form>
             {{ end }}
             <h2>Options</h2>
             <p>Options can be changed anytime, just keep your dashboard link:  <a href="{{ .Link }}">{{ .Link }}</a></p>
@@ -27,7 +32,7 @@
                 <div class="checkboxesRow">
                     <div class="checkboxesCell">
                         <div class="checkbox-container">
-                            <input type="checkbox" id="checkbox1" class="checkbox" {{ if .Chat }}checked{{ end}}>
+                            <input type="checkbox" id="checkbox1" name="chat" class="checkbox" {{ if .Chat }}checked{{ end}}>
                             <label for="checkbox1"></label>
                         </div>
                     </div>
@@ -40,7 +45,7 @@
                 <div class="checkboxesRow">
                     <div class="checkboxesCell">
                         <div class="checkbox-container">
-                            <input type="checkbox" id="checkbox2" class="checkbox" {{ if .PrivateMessages }}checked{{ end }}>
+                            <input type="checkbox" id="checkbox2" name="private-messages" class="checkbox" {{ if .PrivateMessages }}checked{{ end }}>
                             <label for="checkbox2"></label>
                         </div>
                     </div>
@@ -49,6 +54,35 @@
                         <p>Enables private messages with friends.</p>
                     </div>
                 </div>
+
+                <script>
+                    // Get all checkboxes with the class 'myCheckboxes'
+                    const checkboxes = document.querySelectorAll('.checkbox');
+
+                    checkboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            const isChecked = this.checked;
+                            const checkboxName = this.name; // Get the name of the checkbox
+
+                            // Prepare data to be sent
+                            const data = new FormData();
+                            data.append(checkboxName, isChecked ? 'on' : 'off');
+
+                            // Send POST request using Fetch API
+                            fetch('?' + checkboxName + '=' + (isChecked ? "yes" : "no"), {
+                                method: 'POST',
+                                body: data,
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('Success:', data);
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                            });
+                        });
+                    });
+                </script>
             </div>
         </div>
     </div>

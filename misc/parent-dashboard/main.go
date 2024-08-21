@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -13,8 +16,10 @@ import (
 )
 
 const (
-	API_URL = "https://api.cu.bzh"
-	DEBUG   = true
+	API_URL        = "https://api.cu.bzh"
+	DEBUG          = false
+	serverCertFile = "/cubzh/certs/cu.bzh.chained.crt"
+	serverKeyFile  = "/cubzh/certs/cu.bzh.key"
 )
 
 var (
@@ -46,10 +51,10 @@ func main() {
 	r := chi.NewRouter()
 
 	// Middlewares
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// r.Use(middleware.RequestID)
+	// r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	// r.Use(middleware.Recoverer)
 
 	indexTmpl, err = template.New("index.html").ParseFiles("templates/index.html")
 	if err != nil {
@@ -73,13 +78,79 @@ func main() {
 	r.Handle("/img/*", fs)
 	r.Handle("/style.css", fs)
 
+	r.Post("/{dashboardID}/{key}", func(w http.ResponseWriter, r *http.Request) {
+		dashboardID := chi.URLParam(r, "dashboardID")
+		key := chi.URLParam(r, "key")
+
+		approve := r.URL.Query().Get("approve")
+		chat := r.URL.Query().Get("chat")
+		privateMessages := r.URL.Query().Get("private-messages")
+
+		info := DashboardInfo{
+			ParentalControlApproved:        nil,
+			ParentalControlChatAllowed:     nil,
+			ParentalControlMessagesAllowed: nil,
+		}
+
+		yes := true
+		no := false
+
+		if approve == "yes" {
+			info.ParentalControlApproved = &yes
+		} else if approve == "no" {
+			info.ParentalControlApproved = &no
+		}
+
+		if chat == "yes" {
+			info.ParentalControlChatAllowed = &yes
+		} else if chat == "no" {
+			info.ParentalControlChatAllowed = &no
+		}
+
+		if privateMessages == "yes" {
+			info.ParentalControlMessagesAllowed = &yes
+		} else if privateMessages == "no" {
+			info.ParentalControlMessagesAllowed = &no
+		}
+
+		jsonData, err := json.Marshal(info)
+		if err != nil {
+			internalError(w)
+			return
+		}
+
+		url := API_URL + "/dashboards/" + dashboardID + "/" + key
+
+		req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			internalError(w)
+			return
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			internalError(w)
+			return
+		}
+		defer resp.Body.Close()
+
+		// NOTE: no error handling for now, requests fail silently
+		if resp.StatusCode != http.StatusOK {
+			fmt.Println("⚠️ PATCH dashboard status code:", resp.StatusCode)
+		}
+
+		if approve != "" {
+			http.Redirect(w, r, "/"+dashboardID+"/"+key, http.StatusSeeOther)
+		}
+	})
+
 	// Serve HTML template
 	r.Get("/{dashboardID}/{key}", func(w http.ResponseWriter, r *http.Request) {
 		dashboardID := chi.URLParam(r, "dashboardID")
 		key := chi.URLParam(r, "key")
-
-		fmt.Println("DASHBOARD ID:", dashboardID)
-		fmt.Println("KEY:", key)
 
 		url := API_URL + "/dashboards/" + dashboardID + "/" + key
 
@@ -107,44 +178,72 @@ func main() {
 			return
 		}
 
-		decoder := json.NewDecoder(resp.Body)
-
-		var info DashboardInfo
-		err = decoder.Decode(&info)
-		if err != nil {
-			internalError(w)
-			return
-		}
-
-		content := DashboardContent{
-			Link:            "https://dashboard.cu.bzh/" + dashboardID + "/" + key,
-			Approved:        *info.ParentalControlApproved,
-			Chat:            *info.ParentalControlChatAllowed,
-			PrivateMessages: *info.ParentalControlMessagesAllowed,
-			ChildAge:        *info.ChildAge,
-			CreationDate:    info.CreatedAt.Format("January 02, 2006"),
-		}
-
-		if DEBUG { // re-parse template for live debug
-			indexTmpl, err = template.New("index.html").ParseFiles("templates/index.html")
-			if err != nil {
-				log.Fatalln("can't load index template")
-				return
-			}
-		}
-
-		err = indexTmpl.ExecuteTemplate(w, "index.html", content)
-		if err != nil {
-			internalError(w)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		index(w, resp.Body, dashboardID, key)
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 	})
 
-	http.ListenAndServe(":3000", r)
+	var tls bool = os.Getenv("SECURE_TRANSPORT") == "1"
+
+	if tls {
+		// listen on 80 for traffic to redirect
+		go func() {
+			if err := http.ListenAndServe(":80", http.HandlerFunc(redirectTLS)); err != nil {
+				log.Fatalf("ListenAndServe :80 error: %v", err)
+			}
+		}()
+		fmt.Println("✨ Parent dashboard running on port 443...")
+		log.Fatal(http.ListenAndServeTLS(":443", serverCertFile, serverKeyFile, nil))
+	} else {
+		fmt.Println("✨ Parent dashboard running on port 80...")
+		if DEBUG {
+			http.ListenAndServe(":3000", r)
+		} else {
+			http.ListenAndServe(":80", r)
+		}
+	}
+}
+
+func redirectTLS(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://dashboard.cu.bzh"+r.RequestURI, http.StatusMovedPermanently)
+}
+
+func index(w http.ResponseWriter, body io.ReadCloser, dashboardID, key string) {
+	var err error
+
+	decoder := json.NewDecoder(body)
+
+	var info DashboardInfo
+	err = decoder.Decode(&info)
+	if err != nil {
+		internalError(w)
+		return
+	}
+
+	content := DashboardContent{
+		Link:            "https://dashboard.cu.bzh/" + dashboardID + "/" + key,
+		Approved:        *info.ParentalControlApproved,
+		Chat:            *info.ParentalControlChatAllowed,
+		PrivateMessages: *info.ParentalControlMessagesAllowed,
+		ChildAge:        *info.ChildAge,
+		CreationDate:    info.CreatedAt.Format("January 02, 2006"),
+	}
+
+	if DEBUG { // re-parse template for live debug
+		indexTmpl, err = template.New("index.html").ParseFiles("templates/index.html")
+		if err != nil {
+			log.Fatalln("can't load index template")
+			return
+		}
+	}
+
+	err = indexTmpl.ExecuteTemplate(w, "index.html", content)
+	if err != nil {
+		internalError(w)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func notFound(w http.ResponseWriter) {

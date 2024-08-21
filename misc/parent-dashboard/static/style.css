@@ -16,6 +16,19 @@ body {
     user-select: none; /* Standard */
 }
 
+a:link,
+a:visited,
+a:active {
+    color: #615aff;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
 .background {
     position: absolute;
     top: 0;
@@ -47,7 +60,7 @@ h3 {
     position: relative;
     width: 90%;
     max-width: 500px;
-    margin-top: 20px;
+    margin-top: 0;
     margin-bottom: 20px;
     margin-left: auto;
     margin-right: auto;
@@ -56,6 +69,28 @@ h3 {
     text-align: center;
     /*            padding: 20px;*/
     border: solid 1px rgb(30, 30, 30);
+}
+
+.logo {
+    padding: 20px;
+    margin: 0;
+    display: block;
+    width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+button {
+    /* Reset default button styles */
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    outline: none;
+    cursor: pointer;
 }
 
 .buttonPositive {
