@@ -22,12 +22,19 @@ public:
                                         int userdata,
                                         void (*cb)(int, int, int));
     
+    static void createAccount(int provider,
+                                const char *playerAddress,
+                                const char *playerSigningKey,
+                                int userdata,
+                                void (*cb)(int, int));
+
     static void createBurner(int provider,
                              const char *playerAddress,
                              const char *playerSigningKey,
                              int userdata,
-                             void (*cb)(int, int));
-    
+                             void (*cb)(int, int, int));
+
+
     static void execute(int account, const char* calldataJson);
     
     static char *bytearraySerialize(const char* string);
@@ -46,7 +53,7 @@ public:
     static void onEntityUpdate(int client,
                                 int clause,
                                 int userdata,
-                                void (*cb)(int, int));
+                                void (*cb)(int, int, int));
 
     static char *accountAddress(int account);
 };
