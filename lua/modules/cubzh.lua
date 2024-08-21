@@ -1578,8 +1578,7 @@ function home()
 						local avatar = friendAvatarCache[index]
 						if avatar == nil then
 							avatar = uiAvatar:getHeadAndShoulders({
-								usernameOrId = friend.id,
-								backgroundColor = Color(49, 51, 57),
+								usernameOrId = friend.id
 							})
 							friendAvatarCache[index] = avatar
 						end
