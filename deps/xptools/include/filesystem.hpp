@@ -8,11 +8,15 @@
 
 #pragma once
 
+// C
+#include <cstdint>
+// C++
 #include <string>
 #include <functional>
 #include <map>
-#include <png.h>
 #include <vector>
+
+#include <png.h>
 
 namespace vx {
 namespace fs {
