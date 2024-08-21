@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cubzh | parent dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+    <div class="background"></div>
+    <div class="content">
+        <div id="container">
+            <h1>Cubzh | parent dashboard</h2>
+            {{ if not .Approved }}
+                <p>You've been appointed as a parent or guardian for an account on Cubzh by a <strong>{{ .ChildAge }} year old</strong> on <strong>{{ .CreationDate }}</strong>. Use the button bellow to <strong>approve</strong> it:</p>
+                <a class="buttonPositive">Approve & Unlock account</a>
+                <p>By approving, you are agreeing to the <a href="https://cu.bzh/terms">Terms of Use</a> including arbitration clause and you are aknowledging the <a href="https://cu.bzh/privacy">Privacy Policy</a>.</p>
+            {{ else }}
+                <p>You've been appointed as a parent or guardian for an account on Cubzh. The account is currently <strong>active</strong>, you can use the button bellow to suspend it:</p>
+                <a class="buttonNegative">Suspend account</a>
+            {{ end }}
+            <h2>Options</h2>
+            <p>Options can be changed anytime, just keep your dashboard link:  <a href="{{ .Link }}">{{ .Link }}</a></p>
+
+            <div class="checkboxes">
+                <div class="checkboxesRow">
+                    <div class="checkboxesCell">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="checkbox1" class="checkbox" {{ if .Chat }}checked{{ end}}>
+                            <label for="checkbox1"></label>
+                        </div>
+                    </div>
+                    <div class="checkboxesCell">
+                        <h3>In-Game Chat</h3>
+                        <p>Enables chat with other players while playing games. (not necessarily friend connections)</p>
+                    </div>
+                </div>
+
+                <div class="checkboxesRow">
+                    <div class="checkboxesCell">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="checkbox2" class="checkbox" {{ if .PrivateMessages }}checked{{ end }}>
+                            <label for="checkbox2"></label>
+                        </div>
+                    </div>
+                    <div class="checkboxesCell">
+                        <h3>Private messages</h3>
+                        <p>Enables private messages with friends.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
