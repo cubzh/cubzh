@@ -1248,7 +1248,7 @@ function createUI(system)
 			data = frameScrollSelectorQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
-			alpha = true,
+			cutout = true,
 		} })
 	end
 
