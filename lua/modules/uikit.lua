@@ -1232,7 +1232,7 @@ function createUI(system)
 			data = frameScrollCellQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
+			cutout = true,
 		} })
 	end
 
