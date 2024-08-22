@@ -420,7 +420,6 @@ function createUI(system)
 		local previousObject = node.object
 		node.object = background
 		if previousObject ~= nil then
-			background.SortOrder = previousObject.SortOrder
 			node.object:SetParent(previousObject.Parent)
 			node.object.LocalPosition:Set(previousObject.LocalPosition)
 			node.object.LocalRotation:Set(previousObject.LocalRotation)
@@ -2673,8 +2672,10 @@ function createUI(system)
 				scrollEdgeColor = { gradient = "V", from = transparent, to = opaque }
 			end
 			endScrollIndicator = ui:frame({ color = scrollEdgeColor })
-			endScrollIndicator.object.SortOrder = 255
 			endScrollIndicator:setParent(node)
+			-- TODO: here it would be ideal to request an extra offset eg. to the "setParent" function instead of offseting manually
+			-- for this to work, uiukit's Z ordering w/ shapes needs to be fixed (here, shapes are in front whatever we do)
+			endScrollIndicator.object.LocalPosition.Z = endScrollIndicator.object.LocalPosition.Z - 100
 
 			opaque = Color(config.backgroundColor)
 			transparent = Color(config.backgroundColor)
@@ -2690,8 +2691,8 @@ function createUI(system)
 				scrollEdgeColor = { gradient = "V", from = opaque, to = transparent }
 			end
 			beginScrollIndicator = ui:frame({ color = scrollEdgeColor })
-			beginScrollIndicator.object.SortOrder = 255
 			beginScrollIndicator:setParent(node)
+			beginScrollIndicator.object.LocalPosition.Z = beginScrollIndicator.object.LocalPosition.Z - 100
 		end
 
 		local function loadCellInfo(cellIndex)
