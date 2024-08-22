@@ -569,6 +569,7 @@ signup.startFlow = function(self, config)
 
 	-- Prompts the user for a phone number
 	steps.createPhoneNumberStep = function()
+		local skipOnFirstEnter = System.HasUnverifiedPhoneNumber
 		local step = flow:createStep({
 			onEnter = function()
 				config.phoneNumberStep()
@@ -804,6 +805,11 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+
+				if skipOnFirstEnter then
+					skipOnFirstEnter = false
+					signupFlow:push(steps.createVerifyPhoneNumberStep())
+				end
 			end,
 			onExit = function() end,
 			onRemove = function() end,
@@ -1952,15 +1958,18 @@ signup.startFlow = function(self, config)
 							System.Username = userInfo.username or ""
 							System.HasEmail = userInfo.hasEmail == true or false
 							System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true or false
+							System.HasUnverifiedPhoneNumber = userInfo.hasUnverifiedPhoneNumber == true or false
 							System.IsPhoneExempted = userInfo.isPhoneExempted == true or false
 							System.HasDOB = userInfo.hasDOB == true or false
 							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true or false
 							System.IsUserUnder13 = userInfo.isUnder13 == true or false
 							System.IsParentApproved = userInfo.isParentApproved == true or false
 
+							-- print("user id:", System.UserID)
 							-- print("userInfo.username:", userInfo.username)
 							-- print("userInfo.hasEmail:", userInfo.hasEmail)
 							-- print("userInfo.hasVerifiedPhoneNumber:", userInfo.hasVerifiedPhoneNumber)
+							-- print("userInfo.hasUnverifiedPhoneNumber:", userInfo.hasUnverifiedPhoneNumber)
 							-- print("userInfo.isPhoneExempted:", userInfo.isPhoneExempted)
 							-- print("userInfo.hasDOB:", userInfo.hasDOB)
 							-- print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
@@ -1982,6 +1991,7 @@ signup.startFlow = function(self, config)
 							"isParentApproved",
 							"didCustomizeAvatar",
 							"hasVerifiedPhoneNumber",
+							"hasUnverifiedPhoneNumber",
 							"isPhoneExempted",
 						})
 					end
