@@ -1880,6 +1880,16 @@ function home()
 							editUsernameBtn.onRelease = function()
 								Menu:ShowUsernameForm()
 							end
+
+							local l
+							l = LocalEvent:Listen("username_set", function()
+								username.Text = Player.Username
+								editUsernameBtn:remove()
+								editUsernameBtn = nil
+								profileCell:parentDidResize() -- layout
+								l:Remove()
+								l = nil
+							end)
 						end
 
 						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
@@ -2111,7 +2121,11 @@ function home()
 		end
 
 		btnCreate.onRelease = function()
-			Menu:ShowCreations()
+			if Player.Username == "newbie" then
+				Menu:ShowUsernameForm({ text = "A Username is mandatory to create, ready to pick one now?" })
+			else
+				Menu:ShowCreations()
+			end
 		end
 
 		bottomBar.parentDidResize = function(self)

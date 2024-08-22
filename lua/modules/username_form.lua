@@ -32,6 +32,7 @@ mod.createModalContent = function(_, config)
 
 	local defaultConfig = {
 		uikit = require("uikit"),
+		text = "Ready to pick a username?",
 	}
 
 	ok, err = pcall(function()
@@ -51,7 +52,7 @@ mod.createModalContent = function(_, config)
 	content.icon = "🙂"
 	content.node = node
 
-	local text = ui:createText("Ready to pick a username?", Color.White, "default")
+	local text = ui:createText(config.text, Color.White, "default")
 	text:setParent(node)
 
 	local instructions =
@@ -222,6 +223,11 @@ mod.createModalContent = function(_, config)
 			end
 			-- success
 			System.Username = username
+			LocalEvent:Send("username_set")
+			local modal = content:getModalIfContentIsActive()
+			if modal ~= nil then
+				modal:close()
+			end
 		end)
 	end
 

@@ -256,7 +256,9 @@ function showModal(key, config)
 		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.USERNAME_FORM then
-		content = require("username_form"):createModalContent({ uikit = ui })
+		local config = config or {}
+		config.uikit = ui
+		content = require("username_form"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
@@ -1622,11 +1624,11 @@ end
 
 -- undocumented on purpose
 -- works only from home
-menu.ShowUsernameForm = function(_)
+menu.ShowUsernameForm = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	showModal(MODAL_KEYS.USERNAME_FORM)
+	showModal(MODAL_KEYS.USERNAME_FORM, config)
 	return true
 end
 
