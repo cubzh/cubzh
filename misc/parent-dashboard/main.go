@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,10 +15,8 @@ import (
 )
 
 const (
-	API_URL        = "https://api.cu.bzh"
-	DEBUG          = false
-	serverCertFile = "/cubzh/certs/cu.bzh.chained.crt"
-	serverKeyFile  = "/cubzh/certs/cu.bzh.key"
+	API_URL = "https://api.cu.bzh"
+	DEBUG   = false
 )
 
 var (
@@ -185,24 +182,12 @@ func main() {
 		notFound(w)
 	})
 
-	var tls bool = os.Getenv("SECURE_TRANSPORT") == "1"
-
-	if tls {
-		// listen on 80 for traffic to redirect
-		go func() {
-			if err := http.ListenAndServe(":80", http.HandlerFunc(redirectTLS)); err != nil {
-				log.Fatalf("ListenAndServe :80 error: %v", err)
-			}
-		}()
-		fmt.Println("✨ Parent dashboard running on port 443...")
-		log.Fatal(http.ListenAndServeTLS(":443", serverCertFile, serverKeyFile, nil))
+	if DEBUG {
+		fmt.Println("✨ Parent dashboard running on port 3000...")
+		http.ListenAndServe(":3000", r)
 	} else {
 		fmt.Println("✨ Parent dashboard running on port 80...")
-		if DEBUG {
-			http.ListenAndServe(":3000", r)
-		} else {
-			http.ListenAndServe(":80", r)
-		}
+		http.ListenAndServe(":80", r)
 	}
 }
 
