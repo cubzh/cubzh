@@ -414,13 +414,17 @@ signup.startFlow = function(self, config)
 						end)
 					end
 
+					local didStartTyping = false
 					codeInput.onTextChange = function(self)
 						local backup = self.onTextChange
 						self.onTextChange = nil
 						-- TODO: format?
 						self.onTextChange = backup
 
-						System:DebugEvent("User edits code input", { code = self.Text })
+						if not didStartTyping and self.Text ~= "" then
+							didStartTyping = true
+							System:DebugEvent("User starts editing code input", { code = self.Text })
+						end
 					end
 				end
 
@@ -669,6 +673,7 @@ signup.startFlow = function(self, config)
 					layoutPhoneInput()
 				end
 
+				local didStartTyping = false
 				phoneInput.onTextChange = function(self)
 					local backup = self.onTextChange
 					self.onTextChange = nil
@@ -681,10 +686,13 @@ signup.startFlow = function(self, config)
 						layoutPhoneInput()
 					end
 
-					System:DebugEvent(
-						"User edits phone number",
-						{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
-					)
+					if not didStartTyping and self.Text ~= "" then
+						didStartTyping = true
+						System:DebugEvent(
+							"User starts editing phone number",
+							{ countryInput = countryInput.Text, phoneInput = phoneInput.Text }
+						)
+					end
 
 					self.onTextChange = backup
 				end
@@ -1008,9 +1016,9 @@ signup.startFlow = function(self, config)
 					self.Text = s
 					self.onTextChange = backup
 
-					if didStartTyping == false and self.Text ~= "" then
+					if not didStartTyping and self.Text ~= "" then
 						didStartTyping = true
-						System:DebugEvent("User starts typing username")
+						System:DebugEvent("User starts editing username")
 					end
 				end
 
