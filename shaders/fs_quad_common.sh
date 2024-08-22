@@ -59,6 +59,9 @@ void main() {
 #if QUAD_VARIANT_CUTOUT
 	if (color.a <= mix(-1.0, u_cutout, cutout)) discard;
 #endif
+#if QUAD_VARIANT_ALPHA == 0
+	color.a = 1.0;
+#endif
 
 #if QUAD_VARIANT_MRT_LIGHTING
 	gl_FragData[0] = color;

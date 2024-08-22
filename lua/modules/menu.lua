@@ -785,13 +785,10 @@ function removeBadge()
 end
 
 if System.IsHomeAppRunning then
-	local icon = Data:FromBundle("images/icon-settings.png")
-	local quad = Quad()
-	quad.Image = {
-		data = icon,
-		alpha = true,
-	}
-	local settingsIcon = ui:frame({ quad = quad })
+	local settingsIcon = ui:frame({ image = {
+		data = Data:FromBundle("images/icon-settings.png"),
+		cutout = true,
+	} })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)

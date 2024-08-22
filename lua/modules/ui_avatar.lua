@@ -298,6 +298,7 @@ end
 -- /!\ return table of requests does not contain all requests right away
 -- reference should be kept, not copying entries right after function call.
 -- uikit: optional, allows to provide specific instance of uikit
+-- TODO: remove unnecessary shapes (bottom half of avatar)
 uiavatar.getHeadAndShoulders = function(self, config)
 	if self ~= uiavatar then
 		error("ui_avatar:getHeadAndShoulders(config) should be called with `:`", 2)
@@ -333,10 +334,8 @@ uiavatar.getHeadAndShoulders = function(self, config)
 	local frame
 	if config.frame ~= nil then
 		frame = config.frame
-	elseif config.backgroundColor ~= nil then
-		frame = ui:createFrame(config.backgroundColor)
 	else
-		frame = ui:frame()
+		frame = ui:frame({ color = config.backgroundColor })
 	end
 
 	local node = frame

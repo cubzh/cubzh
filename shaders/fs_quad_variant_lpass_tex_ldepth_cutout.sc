@@ -10,4 +10,7 @@
 #define QUAD_VARIANT_TEX 1
 #define QUAD_VARIANT_CUTOUT 1
 
+// No alpha
+#define QUAD_VARIANT_ALPHA 0
+
 #include "./fs_quad_common.sh"

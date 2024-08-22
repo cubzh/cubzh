@@ -253,7 +253,7 @@ Client.OnStart = function()
 
 	backgroundQuad = Quad()
 	backgroundQuad.IsUnlit = true
-	backgroundQuad.IsDoubleSided = true
+	backgroundQuad.IsDoubleSided = false
 	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
 	backgroundQuad.Width = Screen.RenderWidth
 	backgroundQuad.Height = Screen.RenderHeight
@@ -264,7 +264,7 @@ Client.OnStart = function()
 
 	backgroundLogo = Quad()
 	backgroundLogo.IsUnlit = true
-	backgroundLogo.IsDoubleSided = true
+	backgroundLogo.IsDoubleSided = false
 	backgroundLogo.Color = Color(255, 255, 255, 0.1)
 	backgroundLogo.Image = logoTile
 	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
@@ -1578,8 +1578,7 @@ function home()
 						local avatar = friendAvatarCache[index]
 						if avatar == nil then
 							avatar = uiAvatar:getHeadAndShoulders({
-								usernameOrId = friend.id,
-								backgroundColor = Color(49, 51, 57),
+								usernameOrId = friend.id
 							})
 							friendAvatarCache[index] = avatar
 						end
@@ -1611,14 +1610,10 @@ function home()
 							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 3
 							addFriendsCell.parentDidResize = worldCellResizeFn
 
-							local data = Data:FromBundle("images/friends.png")
-							local quad = Quad()
-							quad.Image = {
-								data = data,
+							local image = ui:frame({ image = {
+								data = Data:FromBundle("images/friends.png"),
 								alpha = true,
-							}
-
-							local image = ui:frame({ quad = quad })
+							} })
 							image.Width = CONFIG.FRIEND_CELL_SIZE * 3 - padding * 2
 							image.Height = image.Width * (1.0 / 3.0)
 							image:setParent(addFriendsCell)
@@ -2067,14 +2062,10 @@ function home()
 
 			local content = ui:frame()
 
-			local data = Data:FromBundle(icon or "images/logo.png")
-			local quad = Quad()
-			quad.Image = {
-				data = data,
-				alpha = true,
-			}
-
-			icon = ui:frame({ quad = quad })
+			icon = ui:frame({ image = {
+				data = Data:FromBundle(icon or "images/logo.png"),
+				cutout = true,
+			} })
 			icon.Width = 20
 			icon.Height = 20
 			icon:setParent(content)

@@ -31,13 +31,14 @@ mod.create = function(self, config)
 	local node = ui:frame()
 
 	local nbFrames = 6
-	local q = Quad()
+	local animation = ui:frame()
+	local q = animation:getQuad()
 	q.Image = {
 		data = animationQuadData,
 		alpha = true,
 	}
+	q.Color = Color.White
 	q.Tiling = Number2(1, 1 / nbFrames)
-	local animation = ui:frame({ quad = q })
 	animation:setParent(node)
 
 	loadingInstances[animation] = q
