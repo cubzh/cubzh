@@ -327,6 +327,11 @@ signup.startFlow = function(self, config)
 
 	-- Prompts the user for a phone number verif code
 	steps.createVerifyPhoneNumberStep = function()
+		local checkParentApprovalDelay = 10 -- seconds
+		local checkParentApprovalRequest
+		local checkParentApprovalTimer
+		local verifyPhoneNumberRequest
+
 		local step = flow:createStep({
 			onEnter = function()
 				config.verifyPhoneNumberStep()
@@ -382,6 +387,32 @@ signup.startFlow = function(self, config)
 					okBtn:hide()
 					codeInput:hide()
 					loading:show()
+
+					local scheduler = {}
+					scheduler.checkParentApproval = function()
+						checkParentApprovalTimer = Timer(checkParentApprovalDelay, function()
+							checkParentApprovalTimer = nil
+							checkParentApprovalRequest = api:getUserInfo(System.UserID, function(userInfo, err)
+								checkParentApprovalRequest = nil
+								if err ~= nil then
+									scheduler.checkParentApproval()
+									return
+								end
+
+								print("userInfo.isParentApproved:", userInfo.isParentApproved)
+								System.IsParentApproved = userInfo.isParentApproved == true or false
+
+								if Client.LoggedIn then
+									callLoginSuccess()
+								else
+									scheduler.checkParentApproval()
+								end
+							end, {
+								"isParentApproved",
+							})
+						end)
+					end
+					scheduler.checkParentApproval()
 				else
 					-- TODO: enable when code is 6 digits
 					-- okBtn:disable()
@@ -400,7 +431,8 @@ signup.startFlow = function(self, config)
 							data.phoneVerifCode = verifCode
 						end
 
-						api:patchUserInfo(data, function(err)
+						verifyPhoneNumberRequest = api:patchUserInfo(data, function(err)
+							verifyPhoneNumberRequest = nil
 							if err ~= nil then
 								System:DebugEvent("Request to verify phone number fails", { code = codeInput.Text })
 								okBtn:enable()
@@ -507,6 +539,18 @@ signup.startFlow = function(self, config)
 					layoutContent = function(_) end,
 				})
 				drawer:hide()
+				if checkParentApprovalTimer ~= nil then
+					checkParentApprovalTimer:Cancel()
+					checkParentApprovalTimer = nil
+				end
+				if checkParentApprovalRequest ~= nil then
+					checkParentApprovalRequest:Remove()
+					checkParentApprovalRequest = nil
+				end
+				if verifyPhoneNumberRequest ~= nil then
+					verifyPhoneNumberRequest:Remove()
+					verifyPhoneNumberRequest = nil
+				end
 			end,
 			onRemove = function()
 				removeBackButton()
@@ -1886,6 +1930,7 @@ signup.startFlow = function(self, config)
 							System.HasDOB = userInfo.hasDOB == true or false
 							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true or false
 							System.IsUserUnder13 = userInfo.isUnder13 == true or false
+							System.IsParentApproved = userInfo.isParentApproved == true or false
 
 							-- print("userInfo.username:", userInfo.username)
 							-- print("userInfo.hasEmail:", userInfo.hasEmail)
@@ -1894,6 +1939,7 @@ signup.startFlow = function(self, config)
 							-- print("userInfo.hasDOB:", userInfo.hasDOB)
 							-- print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
 							-- print("userInfo.isUnder13:", userInfo.isUnder13)
+							-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
 
 							if Client.LoggedIn then
 								callLoginSuccess()
@@ -1909,6 +1955,7 @@ signup.startFlow = function(self, config)
 							"hasDOB",
 							"hasEstimatedDOB",
 							"isUnder13",
+							"isParentApproved",
 							"didCustomizeAvatar",
 							"hasVerifiedPhoneNumber",
 							"isPhoneExempted",
