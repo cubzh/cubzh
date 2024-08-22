@@ -1184,6 +1184,7 @@ signup.startFlow = function(self, config)
 	end
 
 	steps.createDOBStep = function()
+		local skipOnFirstEnter = System.HasDOB or System.HasEstimatedDOB
 		local requests = {}
 		local step = flow:createStep({
 			onEnter = function()
@@ -1333,6 +1334,11 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+
+				if skipOnFirstEnter then
+					skipOnFirstEnter = false
+					signupFlow:push(steps.createPhoneNumberStep())
+				end
 			end,
 			onExit = function()
 				for _, req in ipairs(requests) do
@@ -1346,6 +1352,7 @@ signup.startFlow = function(self, config)
 	end
 
 	steps.createAvatarEditorStep = function()
+		local skipOnFirstEnter = System.HasDOB or System.HasEstimatedDOB
 		local avatarEditor
 		local okBtn
 		local infoFrame
@@ -1528,6 +1535,11 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+
+				if skipOnFirstEnter then
+					skipOnFirstEnter = false
+					signupFlow:push(steps.createDOBStep())
+				end
 			end,
 			onExit = function()
 				drawer:hide()
@@ -1543,6 +1555,7 @@ signup.startFlow = function(self, config)
 	end
 
 	steps.createAvatarPreviewStep = function()
+		local skipOnFirstEnter = System.HasDOB or System.HasEstimatedDOB
 		local step = flow:createStep({
 			onEnter = function()
 				config.avatarPreviewStep()
@@ -1588,6 +1601,11 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
+
+				if skipOnFirstEnter then
+					skipOnFirstEnter = false
+					signupFlow:push(steps.createAvatarEditorStep())
+				end
 			end,
 			onExit = function()
 				drawer:updateConfig({
@@ -1611,10 +1629,13 @@ signup.startFlow = function(self, config)
 	end
 
 	steps.createSignUpOrLoginStep = function()
+		local skipOnFirstEnter = System.HasDOB or System.HasEstimatedDOB
 		local startBtn
 		local step = flow:createStep({
 			onEnter = function()
-				System:DebugEvent("App starts signup or login step")
+				if not skipOnFirstEnter then
+					System:DebugEvent("App starts signup or login step")
+				end
 
 				config.signUpOrLoginStep()
 
@@ -1656,6 +1677,11 @@ signup.startFlow = function(self, config)
 
 				startBtn.onRelease = function()
 					System:DebugEvent("User presses start button")
+					signupFlow:push(steps.createAvatarPreviewStep())
+				end
+
+				if skipOnFirstEnter then
+					skipOnFirstEnter = false
 					signupFlow:push(steps.createAvatarPreviewStep())
 				end
 			end,
@@ -1944,8 +1970,6 @@ signup.startFlow = function(self, config)
 							if Client.LoggedIn then
 								callLoginSuccess()
 							else
-								-- show signup
-								-- TODO: should we provide a config here? (hasBOB, didCustomizeAvatar, hasPhoneNumber)
 								signupFlow:push(steps.createSignUpOrLoginStep())
 							end
 						end, {
