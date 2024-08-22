@@ -1187,12 +1187,14 @@ function createUI(system)
 		if frameScrollCellQuadData == nil then
 			frameScrollCellQuadData = Data:FromBundle("images/cell_dark.png")
 		end
-		return ui.frame(self, { image = {
-			data = frameScrollCellQuadData,
-			slice9 = { 0.5, 0.5 },
-			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			cutout = true,
-		} })
+		return ui.frame(self, {
+			image = {
+				data = frameScrollCellQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				cutout = true,
+			},
+		})
 	end
 
 	local frameScrollSelectorQuadData
@@ -1203,12 +1205,14 @@ function createUI(system)
 		if frameScrollSelectorQuadData == nil then
 			frameScrollSelectorQuadData = Data:FromBundle("images/cell_selector.png")
 		end
-		return ui.frame(self, { image = {
-			data = frameScrollSelectorQuadData,
-			slice9 = { 0.5, 0.5 },
-			slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
-			cutout = true,
-		} })
+		return ui.frame(self, {
+			image = {
+				data = frameScrollSelectorQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE * 2,
+				cutout = true,
+			},
+		})
 	end
 
 	local frameTextBackgroundQuadData
@@ -1219,12 +1223,14 @@ function createUI(system)
 		if frameTextBackgroundQuadData == nil then
 			frameTextBackgroundQuadData = Data:FromBundle("images/text_background_dark.png")
 		end
-		return ui.frame(self, { image = {
-			data = frameTextBackgroundQuadData,
-			slice9 = { 0.5, 0.5 },
-			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			alpha = true,
-		} })
+		return ui.frame(self, {
+			image = {
+				data = frameTextBackgroundQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				alpha = true,
+			},
+		})
 	end
 
 	local frameMaskWithRoundCornersQuadData
@@ -1232,40 +1238,46 @@ function createUI(system)
 		if self ~= ui then
 			error("ui:frameMaskWithRoundCorners(): use `:`", 2)
 		end
-	 	if frameMaskWithRoundCornersQuadData == nil then
-	 		frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
-	 	end
-	 	return ui.frame(self, { image = {
-			data = frameMaskWithRoundCornersQuadData,
-			slice9 = { 0.5, 0.5 },
-			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			cutout = true,
-		    mask = true,
-		} })
+		if frameMaskWithRoundCornersQuadData == nil then
+			frameMaskWithRoundCornersQuadData = Data:FromBundle("images/cell_content_mask.png")
+		end
+		return ui.frame(self, {
+			image = {
+				data = frameMaskWithRoundCornersQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				cutout = true,
+				mask = true,
+			},
+		})
 	end
 
 	ui.frameGenericContainer = function(self)
 		if self ~= ui then
 			error("ui:frameGenericContainer(): use `:`", 2)
 		end
-		return ui.frame(self, { image = {
-			data = Data:FromBundle("images/frame.png"),
-			slice9 = { 0.5, 0.5 },
-			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			cutout = true,
-		} })
+		return ui.frame(self, {
+			image = {
+				data = Data:FromBundle("images/frame.png"),
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				cutout = true,
+			},
+		})
 	end
 
 	ui.frameCreationContainer = function(self)
 		if self ~= ui then
 			error("ui:frameCreationContainer(): use `:`", 2)
 		end
-		return ui.frame(self, { image = {
-			data = Data:FromBundle("images/frame_creation.png"),
-			slice9 = { 0.5, 0.5 },
-			slice9Scale = DEFAULT_SLICE_9_SCALE,
-			cutout = true,
-		} })
+		return ui.frame(self, {
+			image = {
+				data = Data:FromBundle("images/frame_creation.png"),
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				cutout = true,
+			},
+		})
 	end
 
 	ui.frame = function(self, config)
@@ -1278,7 +1290,7 @@ function createUI(system)
 			image = nil,
 			-- transparent frame is created if color and image are nil
 			unfocuses = false, -- unfocused focused node when true
-			mask = false
+			mask = false,
 		}
 
 		local options = {
@@ -1325,6 +1337,13 @@ function createUI(system)
 
 		node._setColor = function(self, color)
 			self.background.Color = color
+		end
+
+		node.getQuad = function(self)
+			if self ~= node then
+				error("frame:getQuad(): use `:`", 2)
+			end
+			return self.object
 		end
 
 		node.setColor = function(self, color)
@@ -2401,14 +2420,15 @@ function createUI(system)
 			sliderBarQuadData = Data:FromBundle("images/slider_bar.png")
 		end
 
-		local q = Quad()
+		local bar = ui:frame()
+		local q = bar:getQuad()
 		q.Image = {
 			data = sliderBarQuadData,
 			slice9 = { 0.5, 0.5 },
 			slice9Scale = DEFAULT_SLICE_9_SCALE,
 			alpha = true,
 		}
-		local bar = ui.frame(self, { quad = q })
+		q.Color = Color.White
 
 		local btn
 		if config.button.type == NodeType.Button then
