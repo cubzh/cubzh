@@ -550,9 +550,9 @@ end
 
 loadAvatar = function(p)
 	if p.Avatar ~= nil then
-		p.Avatar:load({ usernameOrId = p.Username })
+		p.Avatar:load({ usernameOrId = p.UserID })
 	else
-		local avatar = require("avatar"):get({ usernameOrId = p.Username })
+		local avatar = require("avatar"):get({ usernameOrId = p.UserID })
 		avatar.didLoad = function(err, _)
 			if err then
 				return
@@ -648,28 +648,12 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 	local objectNewIndex = mt.__newindex
 	mt.__newindex = function(t, k, v)
-		if k == "ID" or k == "UserID" or k == "BoundingBox" then
+		if k == "BoundingBox" then
 			mt[k] = v
 			return
 		end
-		if k == "Username" then
-			mt[k] = v
-
-			local privateFields = privateFields[t]
-			if privateFields == nil then
-				-- privateFields not supposed to be nil here
-				error("Player - internal error")
-				return
-			end
-
-			if privateFields.handle ~= nil then
-				privateFields.handle.Text = v
-			end
-
-			-- load avatar
-			loadAvatar(t)
-
-			return
+		if k == "Username" or k == "UserID" or k == "ID" then
+			error("Player." .. k .. " can't be modified", 2)
 		end
 		if k == "Avatar" then
 			if v == nil then

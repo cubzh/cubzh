@@ -40,6 +40,7 @@ return {
 		"Environment",
 		"Face",
 		"File",
+		"Font",
 		"HTTP",
 		"Items",
 		"JSON",

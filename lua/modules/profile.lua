@@ -107,7 +107,7 @@ profile.create = function(_, config)
 		requests = {}
 	end
 
-	local avatarNode = uiAvatar:get({ usernameOrId = username, ui = ui })
+	local avatarNode = uiAvatar:get({ usernameOrId = userID, ui = ui })
 	avatarNode:setParent(cell)
 
 	local avatarRot = Number3(0, math.pi, 0)

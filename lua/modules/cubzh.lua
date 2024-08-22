@@ -1872,6 +1872,26 @@ function home()
 						username:setParent(usernameFrame)
 						username.pos = { theme.paddingTiny, theme.paddingTiny }
 
+						local editUsernameBtn
+						if Player.Username == "newbie" then
+							editUsernameBtn = ui:buttonNeutral({ content = "✏️" })
+							editUsernameBtn:setParent(profileCell)
+
+							editUsernameBtn.onRelease = function()
+								Menu:ShowUsernameForm()
+							end
+
+							local l
+							l = LocalEvent:Listen("username_set", function()
+								username.Text = Player.Username
+								editUsernameBtn:remove()
+								editUsernameBtn = nil
+								profileCell:parentDidResize() -- layout
+								l:Remove()
+								l = nil
+							end)
+						end
+
 						local editAvatarBtn = ui:buttonNeutral({ content = "✏️ Edit avatar" })
 						editAvatarBtn:setParent(profileCell)
 
@@ -1905,11 +1925,20 @@ function home()
 							usernameFrame.Width = username.Width + theme.paddingTiny * 2
 							usernameFrame.Height = username.Height + theme.paddingTiny * 2
 
-							local infoWidth = math.max(username.Width, editAvatarBtn.Width, visitHouseBtn.Width)
+							local usernameWidth = usernameFrame.Width
+							local usernameHeight = usernameFrame.Height
+							if editUsernameBtn then
+								local size = math.max(editUsernameBtn.Width, editUsernameBtn.Height)
+								editUsernameBtn.Width = size
+								editUsernameBtn.Height = size
+								usernameWidth = usernameWidth + padding + editAvatarBtn.Width
+								usernameHeight = math.max(usernameHeight, editUsernameBtn.Height)
+							end
 
-							local infoHeight = math.max(
-								usernameFrame.Height + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2
-							)
+							local infoWidth = math.max(usernameWidth, editAvatarBtn.Width, visitHouseBtn.Width)
+
+							local infoHeight =
+								math.max(usernameHeight + editAvatarBtn.Height + visitHouseBtn.Height + padding * 2)
 
 							local avatarWidth = CONFIG.PROFILE_CELL_AVATAR_WIDTH
 
@@ -1918,7 +1947,7 @@ function home()
 
 							local totalWidth = infoWidth + avatarWidth + padding
 
-							local y = self.Height * 0.5 + infoHeight * 0.5 - username.Height
+							local y = self.Height * 0.5 + infoHeight * 0.5 - usernameHeight
 							local x = self.Width * 0.5 - totalWidth * 0.5
 
 							avatarTransparentFrame.pos.X = x - padding * 2
@@ -1928,7 +1957,13 @@ function home()
 							local previousAvatarCameraX = avatarCameraX
 							avatarCameraX = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth * 0.5
 
-							usernameFrame.pos = { x, y }
+							usernameFrame.pos = { x, y + usernameHeight * 0.5 - usernameFrame.Height * 0.5 }
+							if editUsernameBtn then
+								editUsernameBtn.pos = {
+									usernameFrame.pos.X + usernameFrame.Width + padding,
+									y + usernameHeight * 0.5 - editUsernameBtn.Height * 0.5,
+								}
+							end
 
 							y = y - padding - editAvatarBtn.Height
 							editAvatarBtn.pos = { x, y }
@@ -2086,7 +2121,11 @@ function home()
 		end
 
 		btnCreate.onRelease = function()
-			Menu:ShowCreations()
+			if Player.Username == "newbie" then
+				Menu:ShowUsernameForm({ text = "A Username is mandatory to create, ready to pick one now?" })
+			else
+				Menu:ShowCreations()
+			end
 		end
 
 		bottomBar.parentDidResize = function(self)

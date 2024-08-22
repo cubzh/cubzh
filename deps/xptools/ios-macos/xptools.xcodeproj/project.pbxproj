@@ -17,6 +17,67 @@
 		101554E72C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
 		101554E82C04D57E001E9057 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
 		101554E92C04D57E001E9057 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
+		102144F92C75E0C000099E38 /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
+		102144FA2C75E0C000099E38 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
+		102144FB2C75E0C000099E38 /* tracking.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93A325A384070030C45D /* tracking.hpp */; };
+		102144FC2C75E0C000099E38 /* LocalConnection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B2E27E3E006000575D5 /* LocalConnection.hpp */; };
+		102144FD2C75E0C000099E38 /* HttpCookie.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 851F2A3E2B63C44500E2863F /* HttpCookie.hpp */; };
+		102144FE2C75E0C000099E38 /* crypto.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93F825A3C2330030C45D /* crypto.hpp */; };
+		102144FF2C75E0C000099E38 /* xptools.h in Headers */ = {isa = PBXBuildFile; fileRef = 8534FDD1240E9762004B3494 /* xptools.h */; };
+		102145002C75E0C000099E38 /* WSTypes.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B6C27E4C99E000575D5 /* WSTypes.hpp */; };
+		102145012C75E0C000099E38 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
+		102145022C75E0C000099E38 /* WSConnection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B2F27E3E006000575D5 /* WSConnection.hpp */; };
+		102145032C75E0C000099E38 /* vxlog.h in Headers */ = {isa = PBXBuildFile; fileRef = 8559F24D244CFF9A00574528 /* vxlog.h */; };
+		102145042C75E0C000099E38 /* WSService.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B9127E85AF6000575D5 /* WSService.hpp */; };
+		102145052C75E0C000099E38 /* WSBackend.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85FCECA128072D3200CD6115 /* WSBackend.hpp */; };
+		102145062C75E0C000099E38 /* device.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10974C88244D66B6008153FE /* device.hpp */; };
+		102145072C75E0C000099E38 /* Connection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B2D27E3E006000575D5 /* Connection.hpp */; };
+		102145082C75E0C000099E38 /* OperationQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 858ABB8C2A52F5EE007AE641 /* OperationQueue.hpp */; };
+		102145092C75E0C000099E38 /* Channel.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B3927E3E10C000575D5 /* Channel.hpp */; };
+		1021450A2C75E0C000099E38 /* vxtime.h in Headers */ = {isa = PBXBuildFile; fileRef = 1033951C25626D130083F4C0 /* vxtime.h */; };
+		1021450B2C75E0C000099E38 /* preferences.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85AF77412AA1C40F007480C2 /* preferences.hpp */; };
+		1021450C2C75E0C000099E38 /* filesystem.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 8534FDD3240E978B004B3494 /* filesystem.hpp */; };
+		1021450D2C75E0C000099E38 /* process.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 855CB5DA28731FFE00072D5F /* process.hpp */; };
+		1021450E2C75E0C000099E38 /* WSServerConnection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B3027E3E006000575D5 /* WSServerConnection.hpp */; };
+		1021450F2C75E0C000099E38 /* Macros.h in Headers */ = {isa = PBXBuildFile; fileRef = 858ABB892A52F5E6007AE641 /* Macros.h */; };
+		102145102C75E0C000099E38 /* json.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 8518D0A127BA6DF100A438D6 /* json.hpp */; };
+		102145112C75E0C000099E38 /* filesystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 85E9224C24111875008B5D81 /* filesystem.h */; };
+		102145132C75E0C000099E38 /* HttpRequestOpts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FED02B2B0B5C6A00C68F6D /* HttpRequestOpts.cpp */; };
+		102145142C75E0C000099E38 /* WSBackend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FCECA028072D3200CD6115 /* WSBackend.cpp */; };
+		102145152C75E0C000099E38 /* ThreadManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09727BA6D9000A438D6 /* ThreadManager.cpp */; };
+		102145162C75E0C000099E38 /* HttpResponse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB0194279F3BAD000F1B10 /* HttpResponse.cpp */; };
+		102145172C75E0C000099E38 /* miniaudio_impl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 850623592877898C00B270A6 /* miniaudio_impl.mm */; };
+		102145182C75E0C000099E38 /* WSService.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B9427E85B03000575D5 /* WSService.cpp */; };
+		102145192C75E0C000099E38 /* vxtime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1033952225626D220083F4C0 /* vxtime.cpp */; };
+		1021451A2C75E0C000099E38 /* json.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09C27BA6DD900A438D6 /* json.cpp */; };
+		1021451B2C75E0C000099E38 /* filesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10E793642450137900B7E2E2 /* filesystem.cpp */; };
+		1021451C2C75E0C000099E38 /* notifications.mm in Sources */ = {isa = PBXBuildFile; fileRef = 85BD47D62A5DABAE00556C6E /* notifications.mm */; };
+		1021451D2C75E0C000099E38 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8506231628770DB700B270A6 /* audio.cpp */; };
+		1021451E2C75E0C000099E38 /* HttpCookie.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 851F2A412B63C45E00E2863F /* HttpCookie.cpp */; };
+		1021451F2C75E0C000099E38 /* HttpClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB0187279EFA0E000F1B10 /* HttpClient.cpp */; };
+		102145202C75E0C000099E38 /* WSServerConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B6827E47DAB000575D5 /* WSServerConnection.cpp */; };
+		102145212C75E0C000099E38 /* tracking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 853C93AC25A384290030C45D /* tracking.cpp */; };
+		102145222C75E0C000099E38 /* device_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8534FDD7240E9EAE004B3494 /* device_c.cpp */; };
+		102145232C75E0C000099E38 /* crypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 853C93FE25A3C2470030C45D /* crypto.cpp */; };
+		102145242C75E0C000099E38 /* vxlog.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8559F24F244D00C400574528 /* vxlog.mm */; };
+		102145252C75E0C000099E38 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
+		102145262C75E0C000099E38 /* device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85E6380B28F703C3001FC12F /* device.cpp */; };
+		102145272C75E0C000099E38 /* LocalConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3C27E3E4A9000575D5 /* LocalConnection.cpp */; };
+		102145282C75E0C000099E38 /* device-macos.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8534FDD5240E97D5004B3494 /* device-macos.mm */; };
+		102145292C75E0C000099E38 /* HttpRequest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB018F279F3B56000F1B10 /* HttpRequest.cpp */; };
+		1021452A2C75E0C000099E38 /* OperationQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 858ABB862A52F5CD007AE641 /* OperationQueue.cpp */; };
+		1021452B2C75E0C000099E38 /* URL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85D52F6A29D9EE2900070F19 /* URL.cpp */; };
+		1021452C2C75E0C000099E38 /* Connection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3D27E3E4AA000575D5 /* Connection.cpp */; };
+		1021452D2C75E0C000099E38 /* web-macos.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10EE2BC4272C091100EC374C /* web-macos.mm */; };
+		1021452E2C75E0C000099E38 /* process.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1022D09628AFBB5C00C1F1E9 /* process.cpp */; };
+		1021452F2C75E0C000099E38 /* filesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10974C89244D690C008153FE /* filesystem.mm */; };
+		102145302C75E0C000099E38 /* process-macos.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855CB5E12873204100072D5F /* process-macos.cpp */; };
+		102145312C75E0C000099E38 /* textinput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10FF177F2BC3F02000A8E2E7 /* textinput.cpp */; };
+		102145322C75E0C000099E38 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
+		102145332C75E0C000099E38 /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
+		102145342C75E0C000099E38 /* WSServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3E27E3E4AA000575D5 /* WSServer.cpp */; };
+		102145352C75E0C000099E38 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
+		102145372C75E0C000099E38 /* libpng-macos.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8553F41D2C074705000D53B4 /* libpng-macos.a */; };
 		1022D09428AF8EEF00C1F1E9 /* process-ios.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855CB5E4287320E200072D5F /* process-ios.cpp */; };
 		1022D09728AFBC8E00C1F1E9 /* process.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1022D09628AFBB5C00C1F1E9 /* process.cpp */; };
 		1022D09828AFBC8E00C1F1E9 /* process.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1022D09628AFBB5C00C1F1E9 /* process.cpp */; };
@@ -169,6 +230,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		102144F72C75E0C000099E38 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 853C9829286CEDD70072F14A /* libpng.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = A55DFB7715EBB44B007CCF00;
+			remoteInfo = "mac-static-libpng";
+		};
 		106ADEDB2C616F9A00964E91 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853C9829286CEDD70072F14A /* libpng.xcodeproj */;
@@ -237,6 +305,7 @@
 		101554DC2C04D57E001E9057 /* BZMD5.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BZMD5.hpp; sourceTree = "<group>"; };
 		101554DD2C04D57E001E9057 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON.c; sourceTree = "<group>"; };
 		101554DE2C04D57E001E9057 /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
+		1021453B2C75E0C000099E38 /* libxptools-macos-ci.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-macos-ci.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1022D09628AFBB5C00C1F1E9 /* process.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = process.cpp; sourceTree = "<group>"; };
 		102B2A1A2BD6A011006AF4F6 /* textinput.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = textinput.hpp; sourceTree = "<group>"; };
 		1033951C25626D130083F4C0 /* vxtime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vxtime.h; sourceTree = "<group>"; };
@@ -326,6 +395,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		102145362C75E0C000099E38 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				102145372C75E0C000099E38 /* libpng-macos.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		10847CCF270EE8C6006A5E91 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -387,6 +464,7 @@
 				8534FDC7240E92C1004B3494 /* libxptools-macos.a */,
 				8598D6C7240EF3FD008A6D4C /* libxptools-ios.a */,
 				10847CD4270EE8C6006A5E91 /* libxptools-macos-gameserver.a */,
+				1021453B2C75E0C000099E38 /* libxptools-macos-ci.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -517,6 +595,38 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
+		102144F82C75E0C000099E38 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				102144F92C75E0C000099E38 /* strings.hpp in Headers */,
+				102144FA2C75E0C000099E38 /* BZMD5.hpp in Headers */,
+				102144FB2C75E0C000099E38 /* tracking.hpp in Headers */,
+				102144FC2C75E0C000099E38 /* LocalConnection.hpp in Headers */,
+				102144FD2C75E0C000099E38 /* HttpCookie.hpp in Headers */,
+				102144FE2C75E0C000099E38 /* crypto.hpp in Headers */,
+				102144FF2C75E0C000099E38 /* xptools.h in Headers */,
+				102145002C75E0C000099E38 /* WSTypes.hpp in Headers */,
+				102145012C75E0C000099E38 /* cJSON.h in Headers */,
+				102145022C75E0C000099E38 /* WSConnection.hpp in Headers */,
+				102145032C75E0C000099E38 /* vxlog.h in Headers */,
+				102145042C75E0C000099E38 /* WSService.hpp in Headers */,
+				102145052C75E0C000099E38 /* WSBackend.hpp in Headers */,
+				102145062C75E0C000099E38 /* device.hpp in Headers */,
+				102145072C75E0C000099E38 /* Connection.hpp in Headers */,
+				102145082C75E0C000099E38 /* OperationQueue.hpp in Headers */,
+				102145092C75E0C000099E38 /* Channel.hpp in Headers */,
+				1021450A2C75E0C000099E38 /* vxtime.h in Headers */,
+				1021450B2C75E0C000099E38 /* preferences.hpp in Headers */,
+				1021450C2C75E0C000099E38 /* filesystem.hpp in Headers */,
+				1021450D2C75E0C000099E38 /* process.hpp in Headers */,
+				1021450E2C75E0C000099E38 /* WSServerConnection.hpp in Headers */,
+				1021450F2C75E0C000099E38 /* Macros.h in Headers */,
+				102145102C75E0C000099E38 /* json.hpp in Headers */,
+				102145112C75E0C000099E38 /* filesystem.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		10847CB4270EE8C6006A5E91 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -584,6 +694,24 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		102144F52C75E0C000099E38 /* xptools-macos-ci */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 102145382C75E0C000099E38 /* Build configuration list for PBXNativeTarget "xptools-macos-ci" */;
+			buildPhases = (
+				102144F82C75E0C000099E38 /* Headers */,
+				102145122C75E0C000099E38 /* Sources */,
+				102145362C75E0C000099E38 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				102144F62C75E0C000099E38 /* PBXTargetDependency */,
+			);
+			name = "xptools-macos-ci";
+			productName = xptools;
+			productReference = 1021453B2C75E0C000099E38 /* libxptools-macos-ci.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 		10847CB3270EE8C6006A5E91 /* xptools-macos-gameserver */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 10847CD1270EE8C6006A5E91 /* Build configuration list for PBXNativeTarget "xptools-macos-gameserver" */;
@@ -677,6 +805,7 @@
 				8534FDC6240E92C1004B3494 /* xptools-macos */,
 				8598D6C6240EF3FD008A6D4C /* xptools-ios */,
 				10847CB3270EE8C6006A5E91 /* xptools-macos-gameserver */,
+				102144F52C75E0C000099E38 /* xptools-macos-ci */,
 			);
 		};
 /* End PBXProject section */
@@ -713,6 +842,48 @@
 /* End PBXReferenceProxy section */
 
 /* Begin PBXSourcesBuildPhase section */
+		102145122C75E0C000099E38 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				102145132C75E0C000099E38 /* HttpRequestOpts.cpp in Sources */,
+				102145142C75E0C000099E38 /* WSBackend.cpp in Sources */,
+				102145152C75E0C000099E38 /* ThreadManager.cpp in Sources */,
+				102145162C75E0C000099E38 /* HttpResponse.cpp in Sources */,
+				102145172C75E0C000099E38 /* miniaudio_impl.mm in Sources */,
+				102145182C75E0C000099E38 /* WSService.cpp in Sources */,
+				102145192C75E0C000099E38 /* vxtime.cpp in Sources */,
+				1021451A2C75E0C000099E38 /* json.cpp in Sources */,
+				1021451B2C75E0C000099E38 /* filesystem.cpp in Sources */,
+				1021451C2C75E0C000099E38 /* notifications.mm in Sources */,
+				1021451D2C75E0C000099E38 /* audio.cpp in Sources */,
+				1021451E2C75E0C000099E38 /* HttpCookie.cpp in Sources */,
+				1021451F2C75E0C000099E38 /* HttpClient.cpp in Sources */,
+				102145202C75E0C000099E38 /* WSServerConnection.cpp in Sources */,
+				102145212C75E0C000099E38 /* tracking.cpp in Sources */,
+				102145222C75E0C000099E38 /* device_c.cpp in Sources */,
+				102145232C75E0C000099E38 /* crypto.cpp in Sources */,
+				102145242C75E0C000099E38 /* vxlog.mm in Sources */,
+				102145252C75E0C000099E38 /* cJSON.c in Sources */,
+				102145262C75E0C000099E38 /* device.cpp in Sources */,
+				102145272C75E0C000099E38 /* LocalConnection.cpp in Sources */,
+				102145282C75E0C000099E38 /* device-macos.mm in Sources */,
+				102145292C75E0C000099E38 /* HttpRequest.cpp in Sources */,
+				1021452A2C75E0C000099E38 /* OperationQueue.cpp in Sources */,
+				1021452B2C75E0C000099E38 /* URL.cpp in Sources */,
+				1021452C2C75E0C000099E38 /* Connection.cpp in Sources */,
+				1021452D2C75E0C000099E38 /* web-macos.mm in Sources */,
+				1021452E2C75E0C000099E38 /* process.cpp in Sources */,
+				1021452F2C75E0C000099E38 /* filesystem.mm in Sources */,
+				102145302C75E0C000099E38 /* process-macos.cpp in Sources */,
+				102145312C75E0C000099E38 /* textinput.cpp in Sources */,
+				102145322C75E0C000099E38 /* BZMD5.cpp in Sources */,
+				102145332C75E0C000099E38 /* strings.cpp in Sources */,
+				102145342C75E0C000099E38 /* WSServer.cpp in Sources */,
+				102145352C75E0C000099E38 /* WSConnection.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		10847CC2270EE8C6006A5E91 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -840,6 +1011,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		102144F62C75E0C000099E38 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "mac-static-libpng";
+			targetProxy = 102144F72C75E0C000099E38 /* PBXContainerItemProxy */;
+		};
 		106ADEDC2C616F9A00964E91 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = "mac-static-libpng";
@@ -858,6 +1034,63 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		102145392C75E0C000099E38 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9JFN8QQG65;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					DEBUG_EVENTS,
+					__VX_PLATFORM_MACOS,
+					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
+					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
+				OTHER_LDFLAGS = (
+					"-lcrypto",
+					"-lssl",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
+					"$(PROJECT_DIR)/../../libssl/macos/include",
+					"$(PROJECT_DIR)/../../miniaudio",
+				);
+			};
+			name = Debug;
+		};
+		1021453A2C75E0C000099E38 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9JFN8QQG65;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					__VX_PLATFORM_MACOS,
+					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
+					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
+				OTHER_LDFLAGS = (
+					"-lcrypto",
+					"-lssl",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
+					"$(PROJECT_DIR)/../../libssl/macos/include",
+					"$(PROJECT_DIR)/../../miniaudio",
+				);
+			};
+			name = Release;
+		};
 		10847CD2270EE8C6006A5E91 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1048,8 +1281,6 @@
 					"$(inherited)",
 					DEBUG_EVENTS,
 					__VX_PLATFORM_MACOS,
-					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
-					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1076,8 +1307,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					__VX_PLATFORM_MACOS,
-					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
-					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1149,6 +1378,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		102145382C75E0C000099E38 /* Build configuration list for PBXNativeTarget "xptools-macos-ci" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				102145392C75E0C000099E38 /* Debug */,
+				1021453A2C75E0C000099E38 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		10847CD1270EE8C6006A5E91 /* Build configuration list for PBXNativeTarget "xptools-macos-gameserver" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

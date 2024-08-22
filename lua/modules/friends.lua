@@ -385,7 +385,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				if avatar == nil then
 					local requests
 					avatar, requests =
-						uiAvatar:get({ usernameOrId = user.username, size = cell.Height * 0.95, ui = ui })
+						uiAvatar:get({ usernameOrId = user.id, size = cell.Height * 0.95, ui = ui })
 
 					cell.avatarRequests = requests
 					avatar.body.pivot.LocalRotation = Rotation(math.rad(-22), 0, 0) * Rotation(0, math.rad(145), 0)
