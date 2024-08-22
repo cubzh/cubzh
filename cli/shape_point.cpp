@@ -34,6 +34,10 @@ bool commandSetPoint(cxxopts::ParseResult parseResult, std::string& err) {
     }
 
     const std::vector<std::string>& args = parseResult.unmatched();
+    if (args.size() != 7) {
+        err.assign("7 arguments expected: point name, x, y, z, rx, ry, rz");
+        return false;
+    }
 
     const std::string pointName = args[0];
     // printf("point name: %s\n", pointName.c_str());
