@@ -237,8 +237,8 @@ typedef uint32_t ATLAS_COLOR_INDEX_INT_T;
 // complementary colors Dimensions of the data C-side: COLOR_ATLAS_SIZE * COLOR_ATLAS_SIZE / 2,
 // unique colors
 #define COLOR_ATLAS_SIZE 512
-#define ATLAS_COLOR_INDEX_MAX_COUNT 131072
-#define ATLAS_COLOR_INDEX_ERROR 0
+#define ATLAS_COLOR_INDEX_MAX_COUNT 131071 // 131072 - 1 for error color
+#define ATLAS_COLOR_INDEX_ERROR ATLAS_COLOR_INDEX_MAX_COUNT
 
 typedef uint8_t FACE_INDEX_INT_T;
 

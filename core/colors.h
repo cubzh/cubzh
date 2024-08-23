@@ -27,6 +27,7 @@ typedef struct RGBAColor {
 
 static const RGBAColor RGBAColor_clear = {0, 0, 0, 0};
 static const RGBAColor RGBAColor_black = {0, 0, 0, 255};
+static const RGBAColor RGBAColor_magenta = {255, 0, 255, 255};
 
 typedef struct {
     double r; // a fraction between 0 and 1
