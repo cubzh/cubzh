@@ -399,7 +399,7 @@ signup.startFlow = function(self, config)
 									return
 								end
 
-								print("userInfo.isParentApproved:", userInfo.isParentApproved)
+								-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
 								System.IsParentApproved = userInfo.isParentApproved == true or false
 
 								if Client.LoggedIn then
