@@ -1360,7 +1360,7 @@ initDefaultMode = function()
 	end
 	local initGallery
 	initGallery = function()
-		worldEditor.gallery = require("gallery"):create(function()
+		worldEditor.gallery = require("gallery"):create(function() -- maxWidth
 			if not Client.IsMobile then
 				return Screen.Width
 			else
@@ -1370,7 +1370,7 @@ initDefaultMode = function()
 					return Screen.Width * 0.5
 				end
 			end
-		end, function()
+		end, function() -- maxHeight
 			if not Client.IsMobile then
 				return Screen.Height * 0.4
 			else
@@ -1380,7 +1380,7 @@ initDefaultMode = function()
 					return Screen.Height
 				end
 			end
-		end, function(m)
+		end, function(m) -- position
 			if not Client.IsMobile then
 				m.pos = { Screen.Width * 0.5 - m.Width * 0.5, 0 }
 			else
@@ -1390,7 +1390,7 @@ initDefaultMode = function()
 					m.pos = { Screen.Width * 0.5, 0 }
 				end
 			end
-		end, { onOpen = galleryOnOpen })
+		end, { onOpen = galleryOnOpen, type = "items" })
 		worldEditor.gallery.didClose = function()
 			setState(states.DEFAULT)
 			initGallery()
@@ -1553,9 +1553,14 @@ initDefaultMode = function()
 		local aiBtn = ui:buttonNeutral({ content = "✨", textSize = "small", padding = padding })
 		aiBtn:setParent(ambiencePanel)
 
+		local loading = require("ui_loading_animation"):create({ ui = ui })
+		loading:setParent(ambiencePanel)
+		loading:hide()
+
 		local function generate()
 			aiInput:hide()
 			aiBtn:hide()
+			loading:show()
 
 			require("ai_ambience"):generate({
 				prompt = aiInput.Text,
@@ -1564,11 +1569,13 @@ initDefaultMode = function()
 					sendToServer(events.P_SET_AMBIENCE, generation)
 					aiInput:show()
 					aiBtn:show()
+					loading:hide()
 				end,
 				onError = function(err)
 					print("❌", err)
 					aiInput:show()
 					aiBtn:show()
+					loading:hide()
 				end,
 			})
 		end
@@ -1620,6 +1627,11 @@ initDefaultMode = function()
 			aiBtn.pos = {
 				aiInput.pos.X + aiInput.Width + padding,
 				aiInput.pos.Y,
+			}
+
+			loading.pos = {
+				self.Width * 0.5 - loading.Width * 0.5,
+				aiInput.pos.Y + aiBtn.Height * 0.5 - loading.Height * 0.5,
 			}
 
 			btnClose.pos = {
