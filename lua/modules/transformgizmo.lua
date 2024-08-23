@@ -7,6 +7,19 @@ conf = require("config")
 ease = require("ease")
 bundle = require("bundle")
 
+target = nil
+
+grid = Quad()
+grid.Height = 10000
+grid.Width = 10000
+grid.IsUnlit = true
+grid.Anchor = { 0.5, 0.5 }
+grid.Image = {
+	data = bundle:Data("images/frame-white-32x32.png"),
+	alpha = true,
+}
+grid.Tiling = Number2(2000, 2000)
+
 function updatePosition(self)
 	local config = self.config
 	if not config then
@@ -29,18 +42,41 @@ function updatePosition(self)
 	self.pos = { screenPos.X * Screen.Width, screenPos.Y * Screen.Height }
 end
 
-grid = Quad()
-grid.Height = 10000
-grid.Width = 10000
-grid.IsUnlit = true
-grid.Anchor = { 0.5, 0.5 }
+function showGrid()
+	if target == nil then
+		return
+	end
 
-grid.Image = {
-	data = bundle:Data("images/frame-white-32x32.png"),
-	alpha = true,
-}
+	grid:SetParent(World)
 
-grid.Tiling = Number2(2000, 2000)
+	local box = Box()
+	box:Fit(target, { recursive = true })
+
+	grid.Position = box.Center
+
+	updateGridRotation()
+end
+
+function updateGridRotation()
+	if target == nil then
+		return
+	end
+
+	local dotForward = math.abs(Camera.Forward:Dot(target.Forward))
+	local dotRight = math.abs(Camera.Forward:Dot(target.Right))
+	local dotUp = math.abs(Camera.Forward:Dot(target.Up))
+	local m = math.max(dotForward, dotRight, dotUp)
+
+	if Camera.Forward:Dot(target) then
+		if m == dotForward then
+			grid.Rotation = target.Rotation
+		elseif m == dotRight then
+			grid.Rotation = Rotation(0, math.pi * 0.5, 0) * target.Rotation
+		else
+			grid.Rotation = Rotation(math.pi * 0.5, 0, 0) * target.Rotation
+		end
+	end
+end
 
 defaultRadialHandleConfig = {
 	image = "",
@@ -50,6 +86,7 @@ defaultRadialHandleConfig = {
 	parentConfig = {},
 	onRelease = function() end,
 	onPress = function() end,
+	onDrag = function() end,
 }
 
 function addRadialHandle(root, config)
@@ -70,6 +107,7 @@ function addRadialHandle(root, config)
 
 	btn.onPress = config.onPress
 	btn.onRelease = config.onRelease
+	btn.onCancel = config.onRelease
 
 	btn.config = config
 
@@ -83,23 +121,25 @@ end
 defaultConfig = {
 	target = nil,
 	radius = 60,
-	offset = { 0, 0, 0 },
+	offset = Number3.Zero,
 }
 
 function startMove(self)
-	print("START MOVE")
 	local target = self.config.parentConfig.target
 	if not target then
 		return
 	end
-	print("target OK")
-	grid:SetParent(World)
-	grid.Position = target.Position
-	grid.Rotation = target.Rotation
+
+	--
 end
 
 function endMove(_)
-	grid:SetParent(nil)
+	-- grid:SetParent(nil)
+end
+
+function dragMove(_, pe)
+	-- local x = pointerEventToLocalX(self, pe)
+	-- setLocalX(x)
 end
 
 gizmo.create = function(self, config)
@@ -123,6 +163,8 @@ gizmo.create = function(self, config)
 
 	-- addRadialHandle(root, { text = "C", angle = 0, radius = 0 }) -- center?
 
+	target = config.target
+
 	addRadialHandle(root, {
 		text = "M",
 		angle = -140,
@@ -130,20 +172,25 @@ gizmo.create = function(self, config)
 		parentConfig = config,
 		onPress = startMove,
 		onRelease = endMove,
+		onDrag = dragMove,
 	})
 	addRadialHandle(root, { text = "R", angle = -90, radius = config.radius, parentConfig = config })
 	addRadialHandle(root, { text = "S", angle = -40, radius = config.radius, parentConfig = config })
-
 	addRadialHandle(root, { text = "P", angle = 40, radius = config.radius, parentConfig = config })
 
 	root.listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(_)
 		updatePosition(root)
+		updateGridRotation()
 	end)
+
+	showGrid()
 
 	root.onRemove = function()
 		root.listener:Remove()
 		root.listener = nil
 		root.config = nil
+		target = nil
+		grid:SetParent(nil)
 	end
 
 	return root
