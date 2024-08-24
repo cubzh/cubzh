@@ -26,7 +26,8 @@ return {
 		"System",
 		"CollisionGroups",
 		"Data",
-		"AI"
+		"AI",
+		"Server"
 	},
 
 	read_globals = {
