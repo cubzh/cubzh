@@ -1,3 +1,5 @@
+-- This modules allows to create planes and test how they collide with rays.
+
 local plane = {}
 
 local hit = function(self, ray)
@@ -32,6 +34,14 @@ local planeMetatable = {
 					normal = normal,
 					hit = hit,
 				},
+				_newindex = function(_, k, v)
+					if k == "origin" then
+						origin:Set(v)
+					elseif k == "normal" then
+						normal:Set(v)
+						normal:Normalize()
+					end
+				end,
 			}
 			setmetatable(planeInstance, planeInstanceMetatable)
 			return planeInstance
