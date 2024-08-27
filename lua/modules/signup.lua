@@ -1964,6 +1964,7 @@ signup.startFlow = function(self, config)
 							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true or false
 							System.IsUserUnder13 = userInfo.isUnder13 == true or false
 							System.IsParentApproved = userInfo.isParentApproved == true or false
+							System.IsChatEnabled = userInfo.isChatEnabled == true or false
 
 							-- print("user id:", System.UserID)
 							-- print("userInfo.username:", userInfo.username)
@@ -1975,6 +1976,7 @@ signup.startFlow = function(self, config)
 							-- print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
 							-- print("userInfo.isUnder13:", userInfo.isUnder13)
 							-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
+							-- print("userInfo.isChatEnabled:", userInfo.isChatEnabled)
 
 							if Client.LoggedIn then
 								callLoginSuccess()
@@ -1993,6 +1995,7 @@ signup.startFlow = function(self, config)
 							"hasVerifiedPhoneNumber",
 							"hasUnverifiedPhoneNumber",
 							"isPhoneExempted",
+							"isChatEnabled",
 						})
 					end
 
