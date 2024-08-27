@@ -180,8 +180,7 @@ signup.startFlow = function(self, config)
 				loadingLabel:setParent(frame)
 				loadingLabel:hide()
 
-				local magicKeyLabelText = "✉️ What code did you get?"
-				local magicKeyLabel = ui:createText(magicKeyLabelText, Color.White, "default")
+				local magicKeyLabel = ui:createText("✉️ What code did you get?", Color.White, "default")
 				magicKeyLabel:setParent(frame)
 
 				local magicKeyInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
