@@ -29,6 +29,7 @@ ColorAtlas *color_atlas_new(void) {
 
     color_atlas->wptr = NULL;
     color_atlas->availableIndices = fifo_list_new();
+    color_atlas->count = 0;
     color_atlas->size = COLOR_ATLAS_SIZE;
     color_atlas->dirty_slice_min = ATLAS_COLOR_INDEX_ERROR;
     color_atlas->dirty_slice_max = ATLAS_COLOR_INDEX_ERROR;
@@ -37,11 +38,6 @@ ColorAtlas *color_atlas_new(void) {
     const uint32_t nbColors = color_atlas->size * color_atlas->size / 2;
     color_atlas->colors = (RGBAColor *)malloc(sizeof(RGBAColor) * nbColors);
     color_atlas->complementaryColors = (RGBAColor *)malloc(sizeof(RGBAColor) * nbColors);
-
-    // reserve error index w/ black color
-    color_atlas->count = 1;
-    color_atlas->colors[ATLAS_COLOR_INDEX_ERROR] = RGBAColor_black;
-    color_atlas->complementaryColors[ATLAS_COLOR_INDEX_ERROR] = RGBAColor_black;
 
     return color_atlas;
 }

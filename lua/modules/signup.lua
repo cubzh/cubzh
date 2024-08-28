@@ -180,8 +180,7 @@ signup.startFlow = function(self, config)
 				loadingLabel:setParent(frame)
 				loadingLabel:hide()
 
-				local magicKeyLabelText = "✉️ What code did you get?"
-				local magicKeyLabel = ui:createText(magicKeyLabelText, Color.White, "default")
+				local magicKeyLabel = ui:createText("✉️ What code did you get?", Color.White, "default")
 				magicKeyLabel:setParent(frame)
 
 				local magicKeyInput = ui:createTextInput("", str:upperFirstChar(loc("000000")), {
@@ -399,7 +398,7 @@ signup.startFlow = function(self, config)
 									return
 								end
 
-								print("userInfo.isParentApproved:", userInfo.isParentApproved)
+								-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
 								System.IsParentApproved = userInfo.isParentApproved == true or false
 
 								if Client.LoggedIn then
@@ -1964,6 +1963,7 @@ signup.startFlow = function(self, config)
 							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true or false
 							System.IsUserUnder13 = userInfo.isUnder13 == true or false
 							System.IsParentApproved = userInfo.isParentApproved == true or false
+							System.IsChatEnabled = userInfo.isChatEnabled == true or false
 
 							-- print("user id:", System.UserID)
 							-- print("userInfo.username:", userInfo.username)
@@ -1975,6 +1975,7 @@ signup.startFlow = function(self, config)
 							-- print("userInfo.hasEstimatedDOB:", userInfo.hasEstimatedDOB)
 							-- print("userInfo.isUnder13:", userInfo.isUnder13)
 							-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
+							-- print("userInfo.isChatEnabled:", userInfo.isChatEnabled)
 
 							if Client.LoggedIn then
 								callLoginSuccess()
@@ -1993,6 +1994,7 @@ signup.startFlow = function(self, config)
 							"hasVerifiedPhoneNumber",
 							"hasUnverifiedPhoneNumber",
 							"isPhoneExempted",
+							"isChatEnabled",
 						})
 					end
 

@@ -444,7 +444,12 @@ function refreshDisplay()
 			alertModal:show()
 		end
 
-		chatBtn:show()
+		if System.IsChatEnabled then
+			chatBtn:show()
+		else
+			chatBtn:hide()
+		end
+
 		pezhBtn:show()
 	end
 end
@@ -785,10 +790,11 @@ function removeBadge()
 end
 
 if System.IsHomeAppRunning then
-	local settingsIcon = ui:frame({ image = {
-		data = Data:FromBundle("images/icon-settings.png"),
-		cutout = true,
-	} })
+	local settingsIcon =
+		ui:frame({ image = {
+			data = Data:FromBundle("images/icon-settings.png"),
+			cutout = true,
+		} })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
@@ -937,6 +943,10 @@ chatBtn.onRelease = function(self)
 		refreshChat()
 	end
 end
+
+-- hide chat button by default
+-- display when authenticated if System.IsChatEnabled
+chatBtn:hide()
 
 -- PEZH
 
@@ -1859,6 +1869,12 @@ menu:OnAuthComplete(function()
 
 	-- connects client to server if it makes sense (maxPlayers > 1)
 	connect()
+
+	if System.IsChatEnabled then
+		chatBtn:show()
+	else
+		chatBtn:hide()
+	end
 
 	topBar:parentDidResize()
 	if chat then
