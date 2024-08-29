@@ -21,7 +21,7 @@ int main(int argc, const char * argv[]) {
     cxxopts::Options options("Cubzh", "Tools for voxels.");
 
     options.add_options()
-    ("command", "command to use", cxxopts::value<std::string>())
+    ("command", "command to use: blocks,combine,setpoint", cxxopts::value<std::string>())
     ("i,input", "input files", cxxopts::value<std::vector<std::string>>())
     // ("n,name", "input file name", cxxopts::value<std::vector<std::string>>())
     ("o,output", "output file", cxxopts::value<std::string>())
@@ -30,7 +30,7 @@ int main(int argc, const char * argv[]) {
     options.parse_positional({"command"});
 
     auto result = options.parse(argc, argv);
-    
+
     if (result.count("command") == 0) {
         std::cout << options.help() << std::endl;
         exit(0);
