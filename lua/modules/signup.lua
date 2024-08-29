@@ -1207,14 +1207,25 @@ signup.startFlow = function(self, config)
 
 				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
+				okBtn:disable()
 
 				local text = ui:createText("How old are you?", {
 					color = Color.White,
 				})
 				text:setParent(drawer)
 
-				cache.age = cache.age ~= nil and cache.age or 12
-				cache.ageStr = cache.ageStr or ("" .. cache.age)
+				cache.age = cache.age ~= nil and cache.age or -1
+
+				local function setAgeStr()
+					if cache.age == -1 then
+						cache.ageStr = "?"
+					elseif cache.age >= 41 then
+						cache.ageStr = "40+"
+					else
+						cache.ageStr = "" .. cache.age
+					end
+				end
+				setAgeStr()
 
 				local age = ui:createText("🎂 " .. cache.ageStr .. " 🎂", {
 					color = Color.White,
@@ -1225,7 +1236,7 @@ signup.startFlow = function(self, config)
 				age:setParent(drawer)
 
 				local ageSlider = ui:slider({
-					min = 0,
+					min = -1,
 					max = 41,
 					step = 1,
 					defaultValue = cache.age,
@@ -1233,12 +1244,14 @@ signup.startFlow = function(self, config)
 					button = ui:buttonNeutral({ content = "🙂", padding = theme.padding }),
 					onValueChange = function(v)
 						cache.age = v
-						cache.ageStr = "" .. v
-						if v >= 41 then
-							cache.ageStr = "40+"
-						end
+						setAgeStr()
 						age.Text = "🎂 " .. cache.ageStr .. " 🎂"
 						age.pos.X = drawer.Width * 0.5 - age.Width * 0.5
+						if v > -1 then
+							okBtn:enable()
+						else
+							okBtn:disable()
+						end
 					end,
 				})
 				ageSlider:setParent(drawer)
