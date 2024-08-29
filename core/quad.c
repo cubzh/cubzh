@@ -241,7 +241,11 @@ uint32_t quad_get_vertex_color(const Quad *q, uint8_t idx) {
 }
 
 bool quad_uses_vertex_colors(const Quad *q) {
-    return _quad_get_flag(q, QUAD_FLAG_VCOLOR);
+    bool equals = true;
+    for (uint8_t i = 1; i < 4; ++i) {
+        equals &= q->rgba[i] == q->rgba[0];
+    }
+    return _quad_get_flag(q, QUAD_FLAG_VCOLOR) && equals == false;
 }
 
 void quad_set_layers(Quad *q, uint16_t value) {

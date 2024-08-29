@@ -42,9 +42,9 @@ alert.create = function(self, text, config)
 	local alertBackground
 
 	if config.background then
-		alertBackground = ui:frame({ color = ALERT_BACKGROUND_COLOR_OFF })
+		-- turn ON alpha-blending for the transparent background, to blend correctly w/ texts under it
+		alertBackground = ui:frame({ color = { ALERT_BACKGROUND_COLOR_OFF, alpha=true } })
 		alertBackground.pos.Z = ui.kAlertDepth
-		alertBackground.object.SortOrder = 240 -- in front of elements in default sort order (0)
 
 		alertBackground.parentDidResize = function(_)
 			alertBackground.Width = Screen.Width
