@@ -190,19 +190,24 @@ float emission = u_lightIntensity - illumination;
 	float fragBias = bias;
 #endif
 
+	bool lastCascade = true;
+
 #if LIGHT_VARIANT_TYPE_DIRECTIONAL
 	vec3 smUvDepth = clipToUvDepth(transformH(u_lightVP1, smWorld).xyz);
 #if LIGHT_VARIANT_SHADOW_CSM >= 2
 	bool cascade1 = all(lessThanEqual(smUvDepth, vec3_splat(1.0))) && all(greaterThanEqual(smUvDepth, vec3_splat(0.0)));
 	smUvDepth = cascade1 ? smUvDepth : clipToUvDepth(transformH(u_lightVP2, smWorld).xyz);
+	lastCascade = lastCascade && !cascade1;
 #endif
 #if LIGHT_VARIANT_SHADOW_CSM >= 3
 	bool cascade2 = all(lessThanEqual(smUvDepth, vec3_splat(1.0))) && all(greaterThanEqual(smUvDepth, vec3_splat(0.0)));
 	smUvDepth = cascade1 || cascade2 ? smUvDepth : clipToUvDepth(transformH(u_lightVP3, smWorld).xyz);
+	lastCascade = lastCascade && !cascade2;
 #endif
 #if LIGHT_VARIANT_SHADOW_CSM >= 4
 	bool cascade3 = all(lessThanEqual(smUvDepth, vec3_splat(1.0))) && all(greaterThanEqual(smUvDepth, vec3_splat(0.0)));
 	smUvDepth = cascade1 || cascade2 || cascade3 ? smUvDepth : clipToUvDepth(transformH(u_lightVP4, smWorld).xyz);
+	lastCascade = lastCascade && !cascade3;
 #endif
 #else
 	vec3 smUvDepth = clipToUvDepth(transformH(u_lightVP1, smWorld).xyz);
@@ -212,7 +217,7 @@ float emission = u_lightIntensity - illumination;
 
 #if LIGHT_VARIANT_TYPE_DIRECTIONAL && LIGHT_VARIANT_SHADOW_CSM >= 2
 	float shadow = overSampling ? 1.0 :
-			cascade1 ? getShadow(s_fb3, smUvDepth.xy, smUvDepth.z, bias, texelSize) :
+			cascade1 ? getShadow(s_fb3, smUvDepth.xy, smUvDepth.z, fragBias, texelSize) :
 #if LIGHT_VARIANT_SHADOW_CSM == 2
 			getShadow(s_fb4, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER, texelSize);
 #else
@@ -229,8 +234,8 @@ float emission = u_lightIntensity - illumination;
 #endif
 
 #if SHADOWMAP_SOFT_OVERSAMPLING
-	shadow = dist >= u_shadowFar ? mix(shadow, 1.0, smoothstep(SHADOWMAP_SOFT_OVERSAMPLING_EDGE_MAX, 1.0, max(smUvDepth.z, max(smUvDepth.x, smUvDepth.y)))) : shadow;
-	shadow = dist >= u_shadowFar ? mix(shadow, 1.0, 1.0 - smoothstep(0.0, SHADOWMAP_SOFT_OVERSAMPLING_EDGE_MIN, min(smUvDepth.z, min(smUvDepth.x, smUvDepth.y)))) : shadow;
+	shadow = lastCascade && dist >= u_shadowFar ? mix(shadow, 1.0, smoothstep(SHADOWMAP_SOFT_OVERSAMPLING_EDGE_MAX, 1.0, max(smUvDepth.z, max(smUvDepth.x, smUvDepth.y)))) : shadow;
+	shadow = lastCascade && dist >= u_shadowFar ? mix(shadow, 1.0, 1.0 - smoothstep(0.0, SHADOWMAP_SOFT_OVERSAMPLING_EDGE_MIN, min(smUvDepth.z, min(smUvDepth.x, smUvDepth.y)))) : shadow;
 #endif
 
 	lit *= max(shadow, SHADOWS_AMBIENT_FACTOR);
