@@ -25,8 +25,9 @@ public:
     
     // returns true if found
     static bool readStringField(const cJSON * const src, const std::string& field, std::string& value, bool canBeOmitted = false);
-    static void writeStringField(cJSON *dest, const std::string& field, const std::string& value);
-    
+    // returns true on success
+    static bool writeStringField(cJSON * const obj, const std::string& field, const std::string& value, bool omitIfEmpty = true);
+
     // returns true if found
     static bool readIntField(const cJSON *src, const std::string &field, int& value, bool canBeOmitted = false);
     static bool readUInt8Field(const cJSON *src, const std::string &field, uint8_t& value, bool canBeOmitted = false);

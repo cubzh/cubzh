@@ -38,18 +38,26 @@ bool json::readStringField(const cJSON *const src, const std::string& field, std
     return false;
 }
 
-void json::writeStringField(cJSON *dest, const std::string& field, const std::string& value) {
-    // omit if the input is empty
-    if (value.empty()) {
-        return;
+bool json::writeStringField(cJSON * const obj, const std::string& field, const std::string& value, bool omitIfEmpty) {
+    if (obj == nullptr) {
+        return false;
     }
 
-    cJSON *jstr = cJSON_CreateString(value.c_str());
-    if (jstr == nullptr) {
-        vxlog_error("can't create json string");
-        return;
+    if (field.empty()) {
+        return false;
     }
-    cJSON_AddItemToObject(dest, field.c_str(), jstr);
+
+    if (value.empty() && omitIfEmpty) {
+        return true; // success
+    }
+
+    cJSON * const item = cJSON_CreateString(value.c_str());
+    if (item == nullptr) {
+        vxlog_error("can't create json string");
+        return false; // failure
+    }
+    cJSON_AddItemToObject(obj, field.c_str(), item);
+    return true; // success
 }
 
 bool json::readIntField(const cJSON *src, const std::string &field, int &value, bool canBeOmitted) {
