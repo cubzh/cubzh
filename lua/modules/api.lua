@@ -804,7 +804,7 @@ mod.aiChatCompletions = function(messages, temperatureOrCb, cb)
 	headers["Content-Type"] = "application/json"
 
 	local body = {}
-	body.model = "gpt-3.5-turbo-0613"
+	body.model = "gpt-4o-mini"
 	body.messages = messages
 	body.temperature = temperature
 	HTTP:Post(url, headers, body, function(res)
