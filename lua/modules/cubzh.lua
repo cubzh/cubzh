@@ -1578,7 +1578,7 @@ function home()
 						local avatar = friendAvatarCache[index]
 						if avatar == nil then
 							avatar = uiAvatar:getHeadAndShoulders({
-								usernameOrId = friend.id
+								usernameOrId = friend.id,
 							})
 							friendAvatarCache[index] = avatar
 						end
@@ -1610,10 +1610,12 @@ function home()
 							addFriendsCell.Width = CONFIG.FRIEND_CELL_SIZE * 3
 							addFriendsCell.parentDidResize = worldCellResizeFn
 
-							local image = ui:frame({ image = {
-								data = Data:FromBundle("images/friends.png"),
-								alpha = true,
-							} })
+							local image = ui:frame({
+								image = {
+									data = Data:FromBundle("images/friends.png"),
+									alpha = true,
+								},
+							})
 							image.Width = CONFIG.FRIEND_CELL_SIZE * 3 - padding * 2
 							image.Height = image.Width * (1.0 / 3.0)
 							image:setParent(addFriendsCell)

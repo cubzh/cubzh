@@ -568,6 +568,10 @@ signup.startFlow = function(self, config)
 
 	-- Prompts the user for a phone number
 	steps.createPhoneNumberStep = function()
+		local checkDelay = 0.5
+		local checkTimer
+		local checkReq
+
 		local skipOnFirstEnter = System.HasUnverifiedPhoneNumber
 		local step = flow:createStep({
 			onEnter = function()
@@ -590,7 +594,9 @@ signup.startFlow = function(self, config)
 					padding = 10,
 				})
 				okBtn:setParent(drawer)
-				-- okBtn:disable()
+
+				local loading = require("ui_loading_animation"):create({ ui = ui })
+				loading:setParent(drawer)
 
 				local selectedPrefix = "1"
 
@@ -603,6 +609,20 @@ signup.startFlow = function(self, config)
 					color = Color.White,
 				})
 				text:setParent(drawer)
+
+				local status = ui:createText("", {
+					color = Color.White,
+				})
+				status:setParent(drawer)
+
+				local setStatus = function(str)
+					status.Text = str
+					local parent = status.parent
+					status.pos = {
+						parent.Width * 0.5 - status.Width * 0.5,
+						text.pos.Y + text.Height * 0.5 - status.Height * 0.5,
+					}
+				end
 
 				local proposedCountries = {
 					"US",
@@ -656,15 +676,68 @@ signup.startFlow = function(self, config)
 				})
 				phoneInput:setParent(drawer)
 
-				local loading = require("ui_loading_animation"):create({ ui = ui })
-				loading:setParent(drawer)
-				loading:hide()
+				local function checkPhoneNumber()
+					if checkReq ~= nil then
+						checkReq:Cancel()
+						checkReq = nil
+					end
+					if phoneInput.Text == "" then
+						if checkTimer then
+							checkTimer:Cancel()
+							checkTimer = nil
+						end
+						text:show()
+						loading:hide()
+						status:hide()
+						okBtn:disable()
+						return
+					end
+
+					loading:show()
+					text:hide()
+					status:hide()
+					okBtn:disable()
+
+					if checkTimer == nil then
+						checkTimer = Timer(checkDelay, function()
+							checkTimer = nil
+
+							local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
+							print("CHECKING PHONE NUMBER: ", phoneNumber)
+
+							checkReq = api:checkPhoneNumber(phoneNumber, function(resp, err)
+								status:show()
+								loading:hide()
+								okBtn:disable()
+
+								if err ~= nil then
+									setStatus(err.message)
+									return
+								end
+
+								if resp.isValid == true then
+									setStatus("All good! ✅")
+									okBtn:enable()
+								else
+									setStatus("All good! ✅")
+								end
+							end)
+						end)
+					else
+						checkTimer:Reset()
+					end
+				end
+
+				checkPhoneNumber()
 
 				okBtn.onRelease = function()
-					countryInput:hide()
-					phoneInput:hide()
-					loading:show()
+					countryInput:disable()
+					phoneInput:disable()
 					okBtn:disable()
+
+					loading:show()
+					text:hide()
+					status:hide()
 
 					System:DebugEvent(
 						"User presses OK button to submit phone number",
@@ -680,8 +753,10 @@ signup.startFlow = function(self, config)
 					end
 
 					api:patchUserInfo(data, function(err)
-						countryInput:show()
-						phoneInput:show()
+						countryInput:enable()
+						phoneInput:enable()
+
+						status:show()
 						loading:hide()
 
 						if err ~= nil then
@@ -715,6 +790,7 @@ signup.startFlow = function(self, config)
 					)
 
 					layoutPhoneInput()
+					checkPhoneNumber()
 				end
 
 				local didStartTyping = false
@@ -722,13 +798,18 @@ signup.startFlow = function(self, config)
 					local backup = self.onTextChange
 					self.onTextChange = nil
 
-					local res = phonenumbers:extractCountryCode(self.Text)
+					local text = phonenumbers:sanitize(self.Text)
+
+					local res = phonenumbers:extractCountryCode(text)
 					if res.countryCode ~= nil then
-						self.Text = res.remainingNumber
+						text = res.remainingNumber
 						countryInput.Text = res.countryCode .. " +" .. res.countryPrefix
 						selectedPrefix = res.countryPrefix
 						layoutPhoneInput()
 					end
+
+					-- TODO: maintain cursor position (passing cursor to phonenumbers:sanitize)
+					self.Text = text
 
 					if not didStartTyping and self.Text ~= "" then
 						didStartTyping = true
@@ -739,6 +820,7 @@ signup.startFlow = function(self, config)
 					end
 
 					self.onTextChange = backup
+					checkPhoneNumber()
 				end
 
 				local secondaryText =
@@ -759,6 +841,7 @@ signup.startFlow = function(self, config)
 						local maxWidth = math.min(300, self.Width - padding * 2)
 						text.object.MaxWidth = maxWidth
 						secondaryText.object.MaxWidth = maxWidth
+						status.object.MaxWidth = maxWidth
 
 						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
 
@@ -790,10 +873,17 @@ signup.startFlow = function(self, config)
 							countryInput.pos.X + countryInput.Width + smallPadding,
 							countryInput.pos.Y,
 						}
+
 						loading.pos = {
 							self.Width * 0.5 - loading.Width * 0.5,
-							countryInput.pos.Y + countryInput.Height * 0.5 - loading.Height * 0.5,
+							text.pos.Y + text.Height * 0.5 - loading.Height * 0.5,
 						}
+
+						status.pos = {
+							self.Width * 0.5 - status.Width * 0.5,
+							text.pos.Y + text.Height * 0.5 - status.Height * 0.5,
+						}
+
 						text.pos = {
 							self.Width * 0.5 - text.Width * 0.5,
 							countryInput.pos.Y + countryInput.Height + padding,
