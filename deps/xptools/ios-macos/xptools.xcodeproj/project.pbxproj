@@ -1044,8 +1044,9 @@
 					"$(inherited)",
 					DEBUG_EVENTS,
 					__VX_PLATFORM_MACOS,
-					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
-					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
+					"CI_BUNDLE_PATH=\"\\\"$SRCROOT/../../../../ci/bundle\\\"\"",
+					"CI_STORAGE_PATH=\"\\\"$SRCROOT/../../../../ci/storage\\\"\"",
+					"CI_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1072,8 +1073,9 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					__VX_PLATFORM_MACOS,
-					"__VX_CI_BUNDLE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/bundle\\\"\"",
-					"__VX_CI_STORAGE_PATH=\"\\\"/Users/gaetan/projects/voxowl/particubes-private/ci/storage\\\"\"",
+					"CI_BUNDLE_PATH=\"\\\"$SRCROOT/../../ci/bundle\\\"\"",
+					"CI_STORAGE_PATH=\"\\\"$SRCROOT/../../ci/storage\\\"\"",
+					"CI_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (

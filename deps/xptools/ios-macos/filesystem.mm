@@ -79,9 +79,9 @@ std::string dirname(const std::string& fname)
 ///
 static NSString *getStoragePath() {
 
-#if defined(__VX_CI_STORAGE_PATH)
+#if defined(CI_STORAGE_PATH)
     // override absPath
-    return @__VX_CI_STORAGE_PATH;
+    return @CI_STORAGE_PATH;
 #endif
 
     #if TARGET_OS_IPHONE
@@ -258,10 +258,14 @@ std::string vx::fs::getBundleFilePath(const std::string& relFilePath) {
     absPath = [absPath stringByAppendingPathComponent:relPath];
 #endif
 
-#if defined(__VX_CI_BUNDLE_PATH)
-    // override absPath
-    absPath = @__VX_CI_BUNDLE_PATH;
-    absPath = [absPath stringByAppendingPathComponent:relPath];
+#if defined(CI_BUNDLE_PATH)
+    if (relFilePath.compare(0, 8, "modules/") == 0) {
+        absPath = @CI_MODULES_PATH;
+        absPath = [absPath stringByAppendingPathComponent:relPath];
+    } else {
+        absPath = @CI_BUNDLE_PATH;
+        absPath = [absPath stringByAppendingPathComponent:relPath];
+    }
 #endif
 
 #endif
