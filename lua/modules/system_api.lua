@@ -661,9 +661,14 @@ moduleMT.patchUserInfo = function(_, info, callback)
 	end
 
 	local filterIsValid = function(k, v)
-		if type(k) ~= Type.string or type(v) ~= Type.string then
+        -- key must be a string
+		if type(k) ~= Type.string then
 			return false
 		end
+        if k == "age" then
+            return type(v) == Type.integer
+        end
+        -- update this:
 		return k == "bio" or k == "discord" or k == "x" or k == "tiktok" or k == "website"
 	end
 
