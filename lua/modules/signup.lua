@@ -703,7 +703,6 @@ signup.startFlow = function(self, config)
 							checkTimer = nil
 
 							local phoneNumber = "+" .. selectedPrefix .. phonenumbers:sanitize(phoneInput.Text)
-							print("CHECKING PHONE NUMBER: ", phoneNumber)
 
 							checkReq = api:checkPhoneNumber(phoneNumber, function(resp, err)
 								status:show()

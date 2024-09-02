@@ -661,14 +661,32 @@ moduleMT.patchUserInfo = function(_, info, callback)
 	end
 
 	local filterIsValid = function(k, v)
-        -- key must be a string
+		-- key must be a string
 		if type(k) ~= Type.string then
 			return false
 		end
-        if k == "age" then
-            return type(v) == Type.integer
-        end
-        -- update this:
+		-- supported value types
+		local fieldExpectedType = {
+			age = Type.integer,
+			bio = Type.string,
+			discord = Type.string,
+			dob = Type.string,
+			github = Type.string,
+			parentPhone = Type.string,
+			parentPhoneVerifCode = Type.string,
+			phone = Type.string,
+			phoneVerifCode = Type.string,
+			tiktok = Type.string,
+			username = Type.string,
+			usernameKey = Type.string,
+			website = Type.string,
+			x = Type.string,
+		}
+		local expectedType = fieldExpectedType[k]
+		if expectedType ~= nil then
+			return type(v) == expectedType
+		end
+		-- update this:
 		return k == "bio" or k == "discord" or k == "x" or k == "tiktok" or k == "website"
 	end
 
