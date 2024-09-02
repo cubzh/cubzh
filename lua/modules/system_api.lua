@@ -71,7 +71,7 @@ mod.checkUsername = function(_, username, callback)
 	return req
 end
 
--- callback(response, err) - response{ isValid = true, formattedPhoneNumber = "+12345678901" }
+-- callback(response, err) - response{ isValid = true, formattedNumber = "+12345678901" }
 mod.checkPhoneNumber = function(_, phoneNumber, callback)
 	if type(phoneNumber) ~= "string" then
 		error("system_api:checkPhoneNumber(phoneNumber, callback) - phoneNumber must be a string", 2)
