@@ -716,12 +716,6 @@ signup.startFlow = function(self, config)
 
 								if resp.isValid == true then
 									setStatus("All good! ✅")
-									-- update UI with formatted phone number received from server
-									local formattedNumber = resp.formattedNumber
-									if formattedNumber ~= phoneInput.Text then
-										phoneInput.skipNextPhoneNumberCheck = true
-										phoneInput.Text = formattedNumber
-									end
 									okBtn:enable()
 								else
 									setStatus("Number invalid. ❌")
@@ -827,11 +821,6 @@ signup.startFlow = function(self, config)
 
 					-- re-enable onTextChange
 					self.onTextChange = backup
-
-					if self.skipNextPhoneNumberCheck == true then
-						self.skipNextPhoneNumberCheck = nil
-						return
-					end
 
 					checkPhoneNumber()
 				end
