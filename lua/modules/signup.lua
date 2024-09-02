@@ -719,7 +719,7 @@ signup.startFlow = function(self, config)
 									setStatus("All good! ✅")
 									okBtn:enable()
 								else
-									setStatus("All good! ✅")
+									setStatus("Number invalid. ❌")
 								end
 							end)
 						end)
