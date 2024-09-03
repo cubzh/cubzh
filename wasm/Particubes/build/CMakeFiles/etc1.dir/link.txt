@@ -1,0 +1,2 @@
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emar qc libetc1.a "CMakeFiles/etc1.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bimg/3rdparty/etc1/etc1.cpp.o"
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emranlib libetc1.a

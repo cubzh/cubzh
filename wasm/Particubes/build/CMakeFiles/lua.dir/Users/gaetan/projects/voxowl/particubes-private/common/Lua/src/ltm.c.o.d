@@ -1,0 +1,33 @@
+CMakeFiles/lua.dir/Users/gaetan/projects/voxowl/particubes-private/common/Lua/src/ltm.c.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/common/Lua/src/ltm.c \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lprefix.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/string.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/string.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lua.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdarg.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/__stddef_max_align_t.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/luaconf.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/limits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/ldebug.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lstate.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lobject.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/llimits.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/ltm.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lzio.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lmem.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/signal.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/signal.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/ldo.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lstring.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lgc.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/ltable.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../common/Lua/src/lvm.h
