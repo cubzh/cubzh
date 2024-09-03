@@ -398,8 +398,11 @@ signup.startFlow = function(self, config)
 									return
 								end
 
-								-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
-								System.IsParentApproved = userInfo.isParentApproved == true or false
+								-- Update local user information
+								System.IsParentApproved = userInfo.isParentApproved == true
+								System.HasDOB = userInfo.hasDOB == true
+								System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true
+								System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true
 
 								if Client.LoggedIn then
 									callLoginSuccess()
@@ -408,6 +411,9 @@ signup.startFlow = function(self, config)
 								end
 							end, {
 								"isParentApproved",
+								"hasDOB",
+								"hasEstimatedDOB",
+								"hasVerifiedPhoneNumber",
 							})
 						end)
 					end
