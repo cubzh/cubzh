@@ -65,6 +65,8 @@ float float3_sqr_length(const float3 *f);
 
 /// computes and returns the length of a float3
 float float3_length(const float3 *f);
+
+float float3_sqr_distance(const float3 *f1, const float3 *f2);
 float float3_distance(const float3 *f1, const float3 *f2);
 
 /// normalizes a float3
