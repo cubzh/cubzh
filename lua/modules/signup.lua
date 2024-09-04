@@ -382,39 +382,98 @@ signup.startFlow = function(self, config)
 				loading:setParent(drawer)
 				loading:hide()
 
+				local refreshText = nil
+				-- local refreshBtn = nil
+
 				if under13 then
 					okBtn:hide()
 					codeInput:hide()
 					loading:show()
 
-					local scheduler = {}
+					refreshText = ui:createText("", {
+						color = Color.White,
+						size = "small",
+					})
+					refreshText:setParent(drawer)
+
+					refreshBtn = ui:buttonNeutral({
+						content = "🔁",
+						textSize = "small",
+					})
+					refreshBtn:setParent(drawer)
+
+					local scheduler = {
+						counter = checkParentApprovalDelay,
+						timer = nil,
+					}
+					scheduler.apiCall = function()
+						checkParentApprovalRequest = api:getUserInfo(System.UserID, function(userInfo, err)
+							checkParentApprovalRequest = nil
+							if err ~= nil then
+								scheduler.checkParentApproval()
+								return
+							end
+
+							-- Update local user information
+							System.IsParentApproved = userInfo.isParentApproved == true
+							System.HasDOB = userInfo.hasDOB == true
+							System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true
+							System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true
+
+							if Client.LoggedIn then
+								callLoginSuccess()
+							else
+								scheduler.checkParentApproval()
+							end
+						end, {
+							"isParentApproved",
+							"hasDOB",
+							"hasEstimatedDOB",
+							"hasVerifiedPhoneNumber",
+						})
+					end
+					scheduler.updateText = function(newText)
+						-- update refreshText
+						refreshText.Text = newText
+						refreshText.pos.X = (drawer.Width - refreshText.Width - refreshBtn.Width - padding) * 0.5
+						refreshBtn.pos = {
+							refreshText.pos.X + refreshText.Width + padding,
+							refreshText.pos.Y + (refreshText.Height - refreshBtn.Height) * 0.5,
+						}
+					end
 					scheduler.checkParentApproval = function()
-						checkParentApprovalTimer = Timer(checkParentApprovalDelay, function()
-							checkParentApprovalTimer = nil
-							checkParentApprovalRequest = api:getUserInfo(System.UserID, function(userInfo, err)
-								checkParentApprovalRequest = nil
-								if err ~= nil then
-									scheduler.checkParentApproval()
-									return
-								end
+						scheduler.updateText("Refreshing in" .. checkParentApprovalDelay .. "s ...")
+						-- reset time counter
+						scheduler.counter = checkParentApprovalDelay
+						--  start loop timer
+						if scheduler.timer ~= nil then
+							scheduler.timer:Cancel()
+							scheduler.timer = nil
+						end
+						scheduler.timer = Timer(1, true, function()
+							refreshBtn:enable()
 
-								-- Update local user information
-								System.IsParentApproved = userInfo.isParentApproved == true
-								System.HasDOB = userInfo.hasDOB == true
-								System.HasEstimatedDOB = userInfo.hasEstimatedDOB == true
-								System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true
+							scheduler.counter = scheduler.counter - 1
 
-								if Client.LoggedIn then
-									callLoginSuccess()
-								else
-									scheduler.checkParentApproval()
-								end
-							end, {
-								"isParentApproved",
-								"hasDOB",
-								"hasEstimatedDOB",
-								"hasVerifiedPhoneNumber",
-							})
+							-- update text
+							scheduler.updateText("Refreshing in " .. scheduler.counter .. "s ...")
+
+							refreshBtn.onRelease = function()
+								refreshBtn:disable()
+								scheduler.timer:Cancel()
+								scheduler.timer = nil
+								scheduler.updateText("Refreshing now!")
+								scheduler.apiCall()
+							end
+
+							if scheduler.counter <= 0 then
+								-- time's up
+								scheduler.timer:Cancel()
+								scheduler.timer = nil
+								scheduler.apiCall()
+							elseif scheduler.counter <= 1 then
+								scheduler.updateText("Refreshing now!")
+							end
 						end)
 					end
 					scheduler.checkParentApproval()
@@ -485,11 +544,20 @@ signup.startFlow = function(self, config)
 						codeInput.Width = availableWidth
 
 						self.Width = w
-						self.Height = Screen.SafeArea.Bottom
-							+ text.Height
-							+ secondaryText.Height
-							+ codeInput.Height
-							+ padding * 4
+						if refreshText ~= nil then
+							self.Height = Screen.SafeArea.Bottom
+								+ text.Height
+								+ secondaryText.Height
+								+ refreshText.Height
+								+ loading.Height
+								+ padding * 5
+						else
+							self.Height = Screen.SafeArea.Bottom
+								+ text.Height
+								+ secondaryText.Height
+								+ codeInput.Height
+								+ padding * 4
+						end
 
 						if okBtn:isVisible() then
 							self.Height = self.Height + okBtn.Height + padding
@@ -516,15 +584,34 @@ signup.startFlow = function(self, config)
 							}
 						end
 
-						loading.pos = {
-							self.Width * 0.5 - loading.Width * 0.5,
-							codeInput.pos.Y + codeInput.Height * 0.5 - loading.Height * 0.5,
-						}
+						if refreshText ~= nil then
+							-- refresh text is present
+							refreshText.pos = {
+								(self.Width - refreshText.Width - refreshBtn.Width - padding) * 0.5,
+								secondaryText.pos.Y + secondaryText.Height + padding,
+							}
 
-						text.pos = {
-							self.Width * 0.5 - text.Width * 0.5,
-							codeInput.pos.Y + codeInput.Height + padding,
-						}
+							refreshBtn.pos = {
+								refreshText.pos.X + refreshText.Width + padding,
+								refreshText.pos.Y + (refreshText.Height - refreshBtn.Height) * 0.5,
+							}
+
+							loading.pos = {
+								self.Width * 0.5 - loading.Width * 0.5,
+								refreshText.pos.Y + refreshText.Height + padding,
+							}
+
+							text.pos = {
+								self.Width * 0.5 - text.Width * 0.5,
+								loading.pos.Y + loading.Height + padding,
+							}
+						else
+							-- refresh text is not present
+							text.pos = {
+								self.Width * 0.5 - text.Width * 0.5,
+								codeInput.pos.Y + codeInput.Height + padding,
+							}
+						end
 
 						LocalEvent:Send("signup_drawer_height_update", self.Height)
 					end,

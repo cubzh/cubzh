@@ -43,7 +43,7 @@ alert.create = function(self, text, config)
 
 	if config.background then
 		-- turn ON alpha-blending for the transparent background, to blend correctly w/ texts under it
-		alertBackground = ui:frame({ color = { ALERT_BACKGROUND_COLOR_OFF, alpha=true } })
+		alertBackground = ui:frame({ color = { ALERT_BACKGROUND_COLOR_OFF, alpha = true } })
 		alertBackground.pos.Z = ui.kAlertDepth
 
 		alertBackground.parentDidResize = function(_)
