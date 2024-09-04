@@ -1028,36 +1028,35 @@ Shape *transform_utils_get_shape(Transform *t) {
 }
 
 void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
+    *out = *t->ltw;
+
     if (transform_get_type(t) == ShapeTransform) {
         const float3 pivot = shape_get_pivot((Shape *)t->ptr);
-        matrix4x4_set_translation(out, -pivot.x, -pivot.y, -pivot.z);
-        matrix4x4_op_multiply_2(t->ltw, out);
+        out->x4y1 -= t->ltw->x1y1 * pivot.x + t->ltw->x2y1 * pivot.y + t->ltw->x3y1 * pivot.z;
+        out->x4y2 -= t->ltw->x1y2 * pivot.x + t->ltw->x2y2 * pivot.y + t->ltw->x3y2 * pivot.z;
+        out->x4y3 -= t->ltw->x1y3 * pivot.x + t->ltw->x2y3 * pivot.y + t->ltw->x3y3 * pivot.z;
     } else if (transform_get_type(t) == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
-        matrix4x4_set_translation(out,
-                                  -quad_get_anchor_x(q) * quad_get_width(q),
-                                  -quad_get_anchor_y(q) * quad_get_height(q),
-                                  0.0f);
-        matrix4x4_op_multiply_2(t->ltw, out);
-    } else {
-        matrix4x4_copy(out, t->ltw);
+        const float anchorX = quad_get_anchor_x(q) * quad_get_width(q);
+        const float anchorY = quad_get_anchor_y(q) * quad_get_height(q);
+        out->x4y1 -= t->ltw->x1y1 * anchorX + t->ltw->x2y1 * anchorY;
+        out->x4y2 -= t->ltw->x1y2 * anchorX + t->ltw->x2y2 * anchorY;
+        out->x4y3 -= t->ltw->x1y3 * anchorX + t->ltw->x2y3 * anchorY;
     }
 }
 
 void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out) {
+    *out = *t->wtl;
+
     if (transform_get_type(t) == ShapeTransform) {
         const float3 pivot = shape_get_pivot((Shape *)t->ptr);
-        matrix4x4_set_translation(out, pivot.x, pivot.y, pivot.z);
-        matrix4x4_op_multiply(out, t->wtl);
+        out->x4y1 += pivot.x;
+        out->x4y2 += pivot.y;
+        out->x4y3 += pivot.z;
     } else if (transform_get_type(t) == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
-        matrix4x4_set_translation(out,
-                                  quad_get_anchor_x(q) * quad_get_width(q),
-                                  quad_get_anchor_y(q) * quad_get_height(q),
-                                  0.0f);
-        matrix4x4_op_multiply(out, t->wtl);
-    } else {
-        matrix4x4_copy(out, t->wtl);
+        out->x4y1 += quad_get_anchor_x(q) * quad_get_width(q);
+        out->x4y2 += quad_get_anchor_y(q) * quad_get_height(q);
     }
 }
 
