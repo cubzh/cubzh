@@ -389,58 +389,56 @@ RigidBody *transform_get_rigidbody(Transform *const t) {
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
                                                            Box *collider,
                                                            const bool refreshParents) {
-    RigidBody *rb = NULL;
     if (collider != NULL) {
         *collider = box_zero;
     }
 
-    // we can use collider cached in rtree leaf whenever possible, otherwise compute it
-    switch (transform_get_type(t)) {
-        case HierarchyTransform:
-            break;
-        case ShapeTransform: {
-            Shape *s = (Shape *)transform_get_ptr(t);
-            if (s != NULL) {
-                rb = transform_get_rigidbody(t);
-                if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                    if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) ||
-                        rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+    const TransformType type = transform_get_type(t);
+    if (type == HierarchyTransform) {
+        return NULL;
+    }
 
-                        shape_compute_world_collider(s, collider, refreshParents);
-                    } else {
-                        box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
+    RigidBody *rb = transform_get_rigidbody(t);
+    if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
+        // we can use collider cached in rtree leaf whenever possible, otherwise compute it
+        if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) ||
+            rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+
+            if (type == ShapeTransform) {
+                Shape *s = (Shape *)transform_get_ptr(t);
+                if (s != NULL) {
+                    shape_compute_world_collider(s, collider, refreshParents);
+                }
+            } else {
+                float3 offset = float3_zero;
+
+                if (type == QuadTransform) {
+                    Quad *q = (Quad *)transform_get_ptr(t);
+                    if (q != NULL) {
+                        offset.x = -quad_get_anchor_x(q) * quad_get_width(q);
+                        offset.y = -quad_get_anchor_y(q) * quad_get_height(q);
                     }
                 }
-            }
-            break;
-        }
-        default: {
-            rb = transform_get_rigidbody(t);
-            if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) ||
-                    rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
 
-                    if (rigidbody_is_dynamic(rb)) {
-                        transform_utils_box_to_dynamic_collider(
-                            t,
-                            rigidbody_get_collider(rb),
-                            collider,
-                            NULL,
-                            PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify,
-                            refreshParents);
-                    } else {
-                        transform_utils_box_to_static_collider(t,
-                                                               rigidbody_get_collider(rb),
-                                                               collider,
-                                                               NULL,
-                                                               false,
-                                                               refreshParents);
-                    }
+                if (rigidbody_is_dynamic(rb)) {
+                    transform_utils_box_to_dynamic_collider(
+                        t,
+                        rigidbody_get_collider(rb),
+                        collider,
+                        &offset,
+                        PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify,
+                        refreshParents);
                 } else {
-                    box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
+                    transform_utils_box_to_static_collider(t,
+                                                           rigidbody_get_collider(rb),
+                                                           collider,
+                                                           &offset,
+                                                           NoSquarify,
+                                                           refreshParents);
                 }
             }
-            break;
+        } else {
+            box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
         }
     }
 
