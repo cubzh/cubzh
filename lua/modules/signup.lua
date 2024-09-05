@@ -442,7 +442,6 @@ signup.startFlow = function(self, config)
 						-- }
 					end
 					scheduler.checkParentApproval = function()
-						scheduler.updateText("Refreshing in " .. checkParentApprovalDelay .. " …")
 						-- reset time counter
 						scheduler.counter = checkParentApprovalDelay
 						--  start loop timer
@@ -466,13 +465,12 @@ signup.startFlow = function(self, config)
 							-- 	scheduler.apiCall()
 							-- end
 
-							if scheduler.counter <= 0 then
+							if scheduler.counter < 1 then
 								-- time's up
+								scheduler.updateText("Refreshing now!")
 								scheduler.timer:Cancel()
 								scheduler.timer = nil
 								scheduler.apiCall()
-							elseif scheduler.counter <= 1 then
-								scheduler.updateText("Refreshing now!")
 							end
 						end)
 					end
