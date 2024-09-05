@@ -66,6 +66,7 @@ bool box_collide_epsilon(const Box *b1, const Box *b2, const float epsilon);
 bool box_contains(const Box *b, const float3 *f3);
 
 bool box_contains_epsilon(const Box *b, const float3 *f3, float epsilon);
+bool box_collide_epsilon3(const Box *b1, const Box *b2, const float3 *epsilon);
 
 void box_set_broadphase_box(const Box *b, const float3 *v, Box *bpBox);
 

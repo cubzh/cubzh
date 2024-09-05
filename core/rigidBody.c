@@ -424,7 +424,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                         &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
-                    if (box_collide(&modelBroadphase, &collider)) {
+                    if (box_collide_epsilon3(&modelBroadphase, &collider, &modelEpsilon)) {
                         // shapes may enable per-block collisions
                         if (hitPerBlock) {
                             swept = shape_box_cast(shape,
