@@ -44,11 +44,11 @@ end
 
 mod.checkUsername = function(_, username, callback)
 	if type(username) ~= "string" then
-		callback(false, "1st arg must be a string")
+		error("system_api:checkUsername(username, callback) - username must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		callback(false, "2nd arg must be a function")
+		error("system_api:checkUsername(username, callback) - callback must be a function", 2)
 		return
 	end
 	local url = mod.kApiAddr .. "/checks/username"
@@ -67,6 +67,35 @@ mod.checkUsername = function(_, username, callback)
 		end
 		-- response: {format = true, appropriate = true, available = true, key = "hash"}
 		callback(true, response) -- success
+	end)
+	return req
+end
+
+-- callback(response, err) - response{ isValid = true, formattedNumber = "+12345678901" }
+mod.checkPhoneNumber = function(_, phoneNumber, callback)
+	if type(phoneNumber) ~= "string" then
+		error("system_api:checkPhoneNumber(phoneNumber, callback) - phoneNumber must be a string", 2)
+		return
+	end
+	if type(callback) ~= "function" then
+		error("system_api:checkPhoneNumber(phoneNumber, callback) - callback must be a function", 2)
+		return
+	end
+	local url = mod.kApiAddr .. "/checks/phonenumber"
+	local body = {
+		phoneNumber = phoneNumber,
+	}
+	local req = System:HttpPost(url, body, function(resp)
+		if resp.StatusCode ~= 200 then
+			callback(nil, api:error(res.StatusCode, "could not check phone number"))
+			return
+		end
+		local response, err = JSON:Decode(resp.Body)
+		if err ~= nil then
+			callback(nil, api:error(res.StatusCode, "checkPhoneNumber JSON decode error: " .. err))
+			return
+		end
+		callback(response)
 	end)
 	return req
 end
@@ -284,11 +313,11 @@ end
 moduleMT.searchUser = function(_, searchText, callback)
 	-- validate arguments
 	if type(searchText) ~= "string" then
-		api:error("api:searchUser(searchText, callback) - searchText must be a string", 2)
+		error("system_api:searchUser(searchText, callback) - searchText must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		api:error("api:searchUser(searchText, callback) - callback must be a function", 2)
+		error("system_api:searchUser(searchText, callback) - callback must be a function", 2)
 		return
 	end
 	local req = System:HttpGet(mod.kApiAddr .. "/user-search-others/" .. searchText, function(resp)
@@ -310,7 +339,7 @@ end
 -- callback(ok, friends, errMsg)
 moduleMT.getFriends = function(_, callback)
 	if type(callback) ~= "function" then
-		api:error("api:getFriends(callback) - callback must be a function", 2)
+		error("api:getFriends(callback) - callback must be a function", 2)
 		return
 	end
 	local req = System:HttpGet(mod.kApiAddr .. "/friend-relations", function(resp)
@@ -332,7 +361,7 @@ end
 -- callback(ok, count, errMsg)
 moduleMT.getFriendCount = function(self, callback)
 	if type(callback) ~= "function" then
-		api:error("api:getFriendCount(callback) - callback must be a function", 2)
+		error("api:getFriendCount(callback) - callback must be a function", 2)
 		return
 	end
 	local req = self:getFriends(function(ok, friends)
@@ -350,11 +379,11 @@ end
 moduleMT.sendFriendRequest = function(_, userID, callback)
 	if type(userID) ~= "string" then
 		callback(false, "1st arg must be a string")
-		api:error("api:sendFriendRequest(userID, callback) - userID must be a string", 2)
+		error("api:sendFriendRequest(userID, callback) - userID must be a string", 2)
 		return
 	end
 	if type(callback) ~= "function" then
-		api:error("api:sendFriendRequest(userID, callback) - callback must be a function", 2)
+		error("api:sendFriendRequest(userID, callback) - callback must be a function", 2)
 		return
 	end
 	local url = mod.kApiAddr .. "/friend-request"
@@ -625,23 +654,46 @@ moduleMT.patchUserInfo = function(_, info, callback)
 	local url = mod.kApiAddr .. "/users/self"
 
 	if type(info) ~= Type.table then
-		api:error("system_api:patchUserInfo(info, callback): info should be a table", 2)
+		error("system_api:patchUserInfo(info, callback): info should be a table", 2)
 	end
 	if type(callback) ~= "function" then
-		api:error("system_api:patchUserInfo(info, callback): callback should be a function", 2)
+		error("system_api:patchUserInfo(info, callback): callback should be a function", 2)
 	end
 
 	local filterIsValid = function(k, v)
-		if type(k) ~= Type.string or type(v) ~= Type.string then
+		-- key must be a string
+		if type(k) ~= Type.string then
 			return false
 		end
+		-- supported value types
+		local fieldExpectedType = {
+			age = Type.integer,
+			bio = Type.string,
+			discord = Type.string,
+			dob = Type.string,
+			github = Type.string,
+			parentPhone = Type.string,
+			parentPhoneVerifCode = Type.string,
+			phone = Type.string,
+			phoneVerifCode = Type.string,
+			tiktok = Type.string,
+			username = Type.string,
+			usernameKey = Type.string,
+			website = Type.string,
+			x = Type.string,
+		}
+		local expectedType = fieldExpectedType[k]
+		if expectedType ~= nil then
+			return type(v) == expectedType
+		end
+		-- update this:
 		return k == "bio" or k == "discord" or k == "x" or k == "tiktok" or k == "website"
 	end
 
 	for k, v in pairs(info) do
 		if not filterIsValid(k, v) then
 			System:Log("INVALID FILTER: " .. k .. " " .. v)
-			api:error(401, "system_api:patchUserInfo(info, callback): key or value is not valid: " .. k .. " " .. v)
+			error("system_api:patchUserInfo(info, callback): key or value is not valid: " .. k .. " " .. v, 2)
 		end
 	end
 

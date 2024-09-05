@@ -223,8 +223,23 @@ end)
 mod.countries = countries
 mod.countryCodes = countryCodes
 
-function sanitize(phoneNumber)
-	return phoneNumber:gsub("[^%d+]", "")
+-- sanitize simply removes characters that aren't supposed
+-- to be seen in a phone number, this is for client side processing.
+-- Cubzh API using less permissive sanitation as phone numbers can
+-- used as unique IDs.
+function sanitize(phoneNumber, cursorPosition)
+	local charCount = 0
+	local newCursorPosition = cursorPosition
+	local sanitized = phoneNumber:gsub("([^%d+() \\.\\-])()", function(match, pos)
+		if newCursorPosition then
+			if pos <= cursorPosition then
+				charCount = charCount - #match
+				newCursorPosition = newCursorPosition - #match
+			end
+		end
+		return ""
+	end)
+	return sanitized, newCursorPosition
 end
 
 function extractCountryCode(phoneNumber)
@@ -283,8 +298,8 @@ mod.extractCountryCode = function(self, phoneNumber)
 	return extractCountryCode(phoneNumber)
 end
 
-mod.sanitize = function(_, phoneNumber)
-	return sanitize(phoneNumber)
+mod.sanitize = function(_, phoneNumber, cursorPosition)
+	return sanitize(phoneNumber, cursorPosition)
 end
 
 return mod
