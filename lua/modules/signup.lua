@@ -383,7 +383,6 @@ signup.startFlow = function(self, config)
 				loading:hide()
 
 				local refreshText = nil
-				-- local refreshBtn = nil
 
 				if under13 then
 					okBtn:hide()
@@ -391,16 +390,16 @@ signup.startFlow = function(self, config)
 					loading:show()
 
 					refreshText = ui:createText("", {
-						color = Color.White,
+						color = Color(255, 255, 255, 0.5),
 						size = "small",
 					})
 					refreshText:setParent(drawer)
 
-					refreshBtn = ui:buttonNeutral({
-						content = "🔁",
-						textSize = "small",
-					})
-					refreshBtn:setParent(drawer)
+					-- refreshBtn = ui:buttonNeutral({
+					-- 	content = "🔁",
+					-- 	textSize = "small",
+					-- })
+					-- refreshBtn:setParent(drawer)
 
 					local scheduler = {
 						counter = checkParentApprovalDelay,
@@ -435,14 +434,15 @@ signup.startFlow = function(self, config)
 					scheduler.updateText = function(newText)
 						-- update refreshText
 						refreshText.Text = newText
-						refreshText.pos.X = (drawer.Width - refreshText.Width - refreshBtn.Width - padding) * 0.5
-						refreshBtn.pos = {
-							refreshText.pos.X + refreshText.Width + padding,
-							refreshText.pos.Y + (refreshText.Height - refreshBtn.Height) * 0.5,
-						}
+						refreshText.pos.X = (drawer.Width - refreshText.Width) * 0.5
+						-- refreshText.pos.X = (drawer.Width - refreshText.Width - refreshBtn.Width - padding) * 0.5
+						-- refreshBtn.pos = {
+						-- 	refreshText.pos.X + refreshText.Width + padding,
+						-- 	refreshText.pos.Y + (refreshText.Height - refreshBtn.Height) * 0.5,
+						-- }
 					end
 					scheduler.checkParentApproval = function()
-						scheduler.updateText("Refreshing in" .. checkParentApprovalDelay .. "s ...")
+						scheduler.updateText("Refreshing in " .. checkParentApprovalDelay .. " …")
 						-- reset time counter
 						scheduler.counter = checkParentApprovalDelay
 						--  start loop timer
@@ -451,20 +451,20 @@ signup.startFlow = function(self, config)
 							scheduler.timer = nil
 						end
 						scheduler.timer = Timer(1, true, function()
-							refreshBtn:enable()
+							-- refreshBtn:enable()
 
 							scheduler.counter = scheduler.counter - 1
 
 							-- update text
-							scheduler.updateText("Refreshing in " .. scheduler.counter .. "s ...")
+							scheduler.updateText("Refreshing in " .. scheduler.counter .. " …")
 
-							refreshBtn.onRelease = function()
-								refreshBtn:disable()
-								scheduler.timer:Cancel()
-								scheduler.timer = nil
-								scheduler.updateText("Refreshing now!")
-								scheduler.apiCall()
-							end
+							-- refreshBtn.onRelease = function()
+							-- 	refreshBtn:disable()
+							-- 	scheduler.timer:Cancel()
+							-- 	scheduler.timer = nil
+							-- 	scheduler.updateText("Refreshing now!")
+							-- 	scheduler.apiCall()
+							-- end
 
 							if scheduler.counter <= 0 then
 								-- time's up
@@ -587,14 +587,19 @@ signup.startFlow = function(self, config)
 						if refreshText ~= nil then
 							-- refresh text is present
 							refreshText.pos = {
-								(self.Width - refreshText.Width - refreshBtn.Width - padding) * 0.5,
+								(drawer.Width - refreshText.Width) * 0.5,
 								secondaryText.pos.Y + secondaryText.Height + padding,
 							}
 
-							refreshBtn.pos = {
-								refreshText.pos.X + refreshText.Width + padding,
-								refreshText.pos.Y + (refreshText.Height - refreshBtn.Height) * 0.5,
-							}
+							-- refreshText.pos = {
+							-- 	(self.Width - refreshText.Width - refreshBtn.Width - padding) * 0.5,
+							-- 	secondaryText.pos.Y + secondaryText.Height + padding,
+							-- }
+
+							-- refreshBtn.pos = {
+							-- 	refreshText.pos.X + refreshText.Width + padding,
+							-- 	refreshText.pos.Y + (refreshText.Height - refreshBtn.Height) * 0.5,
+							-- }
 
 							loading.pos = {
 								self.Width * 0.5 - loading.Width * 0.5,
