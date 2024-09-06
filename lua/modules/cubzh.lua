@@ -12,6 +12,7 @@ local CONFIG = {
 	LOAD_CONTENT_DELAY = 0.3,
 	AVATAR_DEFAULT_YAW = math.rad(-190),
 	AVATAR_DEFAULT_PITCH = 0,
+	TINY_FONT_SCALE = 0.8,
 }
 
 local function avatarBox()
@@ -1177,6 +1178,14 @@ function home()
 				self.thumbnail.Width = self.Width - padding * 2
 				self.thumbnail.Height = self.Height - padding * 2
 			end
+
+			if self.likesFrame then
+				self.likesFrame.pos = {
+					padding + theme.paddingTiny,
+					self.Height - self.likesFrame.Height - padding - theme.paddingTiny,
+				}
+				self.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+			end
 		end
 
 		local function requestWorlds(dataFetcher, config)
@@ -1247,7 +1256,6 @@ function home()
 				local titleFrame = ui:frameTextBackground()
 				titleFrame:setParent(cell)
 				titleFrame.pos = { padding + theme.paddingTiny, padding + theme.paddingTiny }
-				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 				local title = ui:createText("…", Color.White, "small")
 				title:setParent(titleFrame)
@@ -1255,6 +1263,19 @@ function home()
 
 				cell.titleFrame = titleFrame
 				cell.title = title
+
+				-- LIKES
+				local likesFrame = ui:frameTextBackground()
+				likesFrame:setParent(cell)
+				likesFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+
+				local likes = ui:createText("…", Color.White, "small")
+				likes.object.Scale = CONFIG.TINY_FONT_SCALE
+				likes:setParent(likesFrame)
+				likes.pos = { theme.paddingTiny, theme.paddingTiny }
+
+				cell.likesFrame = likesFrame
+				cell.likes = likes
 
 				cell.parentDidResize = worldCellResizeFn
 
@@ -1312,13 +1333,40 @@ function home()
 
 				cell.world = world
 				cell.title.Text = world.title
+				local txt = ""
+				if world.likes and world.likes > 0 then
+					txt = txt .. "❤️ " .. world.likes
+				end
+				if world.views and world.views > 0 then
+					if txt ~= "" then
+						txt = txt .. " "
+					end
+					txt = txt .. "👁️ " .. world.views
+				end
+				if txt ~= "" then
+					cell.likes.Text = txt
+					cell.likesFrame:show()
+				else
+					cell.likesFrame:hide()
+				end
 			else
 				cell.title.Text = "…"
+				cell.likes.Text = "…"
 			end
 
 			cell.title.object.MaxWidth = cell.Width - (padding + theme.paddingTiny * 2) * 2
 			cell.titleFrame.Width = cell.title.Width + theme.paddingTiny * 2
 			cell.titleFrame.Height = cell.title.Height + theme.paddingTiny * 2
+
+			cell.likes.object.MaxWidth = (cell.Width - (padding + theme.paddingTiny * 2) * 2)
+				* (1.0 / CONFIG.TINY_FONT_SCALE)
+			cell.likesFrame.Width = cell.likes.Width + theme.paddingTiny * 2
+			cell.likesFrame.Height = cell.likes.Height + theme.paddingTiny * 2
+			cell.likesFrame.pos = {
+				padding + theme.paddingTiny,
+				cell.Height - cell.likesFrame.Height - padding - theme.paddingTiny,
+			}
+			cell.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 			return cell
 		end
