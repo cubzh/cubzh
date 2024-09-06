@@ -1581,25 +1581,35 @@ function home()
 								usernameOrId = friend.id,
 							})
 							friendAvatarCache[index] = avatar
+
+							local usernameFrame = ui:frameTextBackground()
+							usernameFrame:setParent(avatar)
+							usernameFrame.LocalPosition.Z = ui.kForegroundDepth
+
+							local username = ui:createText("", Color.White, "small")
+							username:setParent(usernameFrame)
+							username.pos = { theme.paddingTiny, theme.paddingTiny }
+
+							avatar.username = username
+							avatar.usernameFrame = usernameFrame
 						end
+
 						avatar:setParent(friendCell)
 
 						friendCell.userID = friend.id
 						friendCell.username = friend.username
 
-						local usernameFrame = ui:frameTextBackground()
-						usernameFrame:setParent(avatar)
-						usernameFrame.LocalPosition.Z = ui.kForegroundDepth
+						avatar.username.object.Scale = 1
+						avatar.username.Text = friend.username
+						-- username text scale to fit in the cell
+						local scale = math.min(
+							1,
+							(CONFIG.FRIEND_CELL_SIZE - padding * 2 - theme.paddingTiny * 2) / avatar.username.Width
+						)
+						avatar.username.object.Scale = scale
 
-						local username = ui:createText(friend.username, Color.White, "small")
-						username:setParent(usernameFrame)
-						username.pos = { theme.paddingTiny, theme.paddingTiny }
-
-						usernameFrame.Width = username.Width + theme.paddingTiny * 2
-						usernameFrame.Height = username.Height + theme.paddingTiny * 2
-
-						avatar.username = username
-						avatar.usernameFrame = usernameFrame
+						avatar.usernameFrame.Width = avatar.username.Width + theme.paddingTiny * 2
+						avatar.usernameFrame.Height = avatar.username.Height + theme.paddingTiny * 2
 
 						friendCell.avatar = avatar
 
