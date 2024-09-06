@@ -1,4 +1,5 @@
 bundle = require("bundle")
+time = require("time")
 
 local CONFIG = {
 	PROFILE_CELL_SIZE = 150,
@@ -1709,6 +1710,19 @@ function home()
 
 							avatar.username = username
 							avatar.usernameFrame = usernameFrame
+
+							-- LAST SEEN
+							local lastSeenFrame = ui:frameTextBackground()
+							lastSeenFrame:setParent(avatar)
+							lastSeenFrame.LocalPosition.Z = ui.kForegroundDepth
+
+							local lastSeen = ui:createText("", Color.White, "small")
+							lastSeen.object.Scale = CONFIG.TINY_FONT_SCALE
+							lastSeen:setParent(lastSeenFrame)
+							lastSeen.pos = { theme.paddingTiny, theme.paddingTiny }
+
+							avatar.lastSeenFrame = lastSeenFrame
+							avatar.lastSeen = lastSeen
 						end
 
 						avatar:setParent(friendCell)
@@ -1727,6 +1741,23 @@ function home()
 
 						avatar.usernameFrame.Width = avatar.username.Width + theme.paddingTiny * 2
 						avatar.usernameFrame.Height = avatar.username.Height + theme.paddingTiny * 2
+
+						local osTime = time.iso8601_to_os_time(friend.lastSeen)
+						local t, units = time.ago(osTime, {
+							years = false,
+							months = false,
+							seconds_label = "s",
+							minutes_label = "m",
+							hours_label = "h",
+							days_label = "d",
+						})
+						avatar.lastSeen.Text = "👁️ " .. t .. units .. " ago"
+						avatar.lastSeenFrame.Width = avatar.lastSeen.Width + theme.paddingTiny * 2
+						avatar.lastSeenFrame.Height = avatar.lastSeen.Height + theme.paddingTiny * 2
+						avatar.lastSeenFrame.pos.Y = CONFIG.FRIEND_CELL_SIZE
+							- avatar.lastSeenFrame.Height
+							- padding
+							- theme.paddingTiny
 
 						friendCell.avatar = avatar
 

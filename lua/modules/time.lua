@@ -2,6 +2,8 @@
 
 local time = {}
 
+local conf = require("config")
+
 -- `iso8601` argument is a string
 time.iso8601_to_os_time = function(iso8601)
 	-- print("iso8601>>", iso8601) -- 2023-01-31T13:03:01.681Z
@@ -35,35 +37,52 @@ time.iso8601_to_os_time = function(iso8601)
 	return timestamp - (offsetMinutes * 60)
 end
 
+local agoDefaultConfig = {
+	seconds = true,
+	minutes = true,
+	hours = true,
+	days = true,
+	months = true,
+	years = true,
+	seconds_label = "seconds",
+	minutes_label = "minutes",
+	hours_label = "hours",
+	days_label = "days",
+	months_label = "months",
+	years_label = "years",
+}
+
 -- returns number and unit type ("seconds", "minutes", "hours", "days", "months", "years") (string)
-time.ago = function(t)
+time.ago = function(t, config)
 	if t == nil then
 		error("time.ago - time parameter can't be nil", 2)
 	end
+
+	config = conf:merge(agoDefaultConfig, config)
 
 	local now = os.time(os.date("!*t")) -- GMT
 	local seconds = now - t
 	local r
 
 	if seconds < 0 then
-		return 0, "seconds"
-	elseif seconds > 31536000 then -- years
+		return 0, config.seconds_label
+	elseif seconds > 31536000 and config.years == true then -- years
 		r = math.floor((seconds / 31536000) * 10) / 10
-		return r, "years"
-	elseif seconds > 2628288 then -- months
+		return r, config.years_label
+	elseif seconds > 2628288 and config.months == true then -- months
 		r = math.floor(seconds / 2628288)
-		return r, "months"
-	elseif seconds > 86400 then -- days
+		return r, config.months_label
+	elseif seconds > 86400 and config.days == true then -- days
 		r = math.floor(seconds / 86400)
-		return r, "days"
-	elseif seconds > 3600 then -- hours
+		return r, config.days_label
+	elseif seconds > 3600 and config.hours == true then -- hours
 		r = math.floor(seconds / 3600)
-		return r, "hours"
-	elseif seconds > 60 then -- minutes
+		return r, config.hours_label
+	elseif seconds > 60 and config.minutes == true then -- minutes
 		r = math.floor(seconds / 60)
-		return r, "minutes"
+		return r, config.minutes_label
 	else
-		return seconds, "seconds"
+		return seconds, config.seconds_label
 	end
 end
 
