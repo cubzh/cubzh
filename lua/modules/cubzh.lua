@@ -1188,6 +1188,39 @@ function home()
 			end
 		end
 
+		local function itemCellResizeFn(self)
+			self.Height = self.parent.Height
+
+			if self.shape then
+				self.shape.pos = { 0, 0 }
+				self.shape.Height = self.Height
+				self.shape.Width = self.Width
+				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
+			if self.loadingShape then
+				self.loadingShape.pos = { 0, 0 }
+				self.loadingShape.Height = self.Height
+				self.loadingShape.Width = self.Width
+				self.loadingShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
+			if self.itemShape then
+				self.itemShape.pos = { 0, 0 }
+				self.itemShape.Height = self.Height
+				self.itemShape.Width = self.Width
+				self.itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
+			if self.likesFrame then
+				self.likesFrame.pos = {
+					padding,
+					self.Height - self.likesFrame.Height - padding,
+				}
+				self.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+			end
+		end
+
 		local function requestWorlds(dataFetcher, config)
 			if dataFetcher.req then
 				dataFetcher.req:Cancel()
@@ -1333,6 +1366,7 @@ function home()
 
 				cell.world = world
 				cell.title.Text = world.title
+
 				local txt = ""
 				if world.likes and world.likes > 0 then
 					txt = txt .. "❤️ " .. world.likes
@@ -1459,7 +1493,20 @@ function home()
 				cell.titleFrame = titleFrame
 				cell.title = title
 
-				cell.parentDidResize = worldCellResizeFn
+				-- LIKES
+				local likesFrame = ui:frameTextBackground()
+				likesFrame:setParent(cell)
+				likesFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+
+				local likes = ui:createText("…", Color.White, "small")
+				likes.object.Scale = CONFIG.TINY_FONT_SCALE
+				likes:setParent(likesFrame)
+				likes.pos = { theme.paddingTiny, theme.paddingTiny }
+
+				cell.likesFrame = likesFrame
+				cell.likes = likes
+
+				cell.parentDidResize = itemCellResizeFn
 
 				cell.onPress = function(self)
 					cellSelector:setParent(self)
@@ -1522,13 +1569,35 @@ function home()
 					end)
 				end
 				cell.title.Text = prettifyItemName(item.name)
+
+				local txt = ""
+				if item.likes and item.likes > 0 then
+					txt = txt .. "❤️ " .. item.likes
+				end
+				if txt ~= "" then
+					cell.likes.Text = txt
+					cell.likesFrame:show()
+				else
+					cell.likesFrame:hide()
+				end
 			else
 				cell.title.Text = "…"
+				cell.likes.Text = "…"
 			end
 
 			cell.title.object.MaxWidth = cell.Width - (padding + theme.paddingTiny) * 2
 			cell.titleFrame.Width = cell.title.Width + theme.paddingTiny * 2
 			cell.titleFrame.Height = cell.title.Height + theme.paddingTiny * 2
+
+			cell.likes.object.MaxWidth = (cell.Width - (padding + theme.paddingTiny * 2) * 2)
+				* (1.0 / CONFIG.TINY_FONT_SCALE)
+			cell.likesFrame.Width = cell.likes.Width + theme.paddingTiny * 2
+			cell.likesFrame.Height = cell.likes.Height + theme.paddingTiny * 2
+			cell.likesFrame.pos = {
+				padding,
+				cell.Height - cell.likesFrame.Height - padding,
+			}
+			cell.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 			return cell
 		end
