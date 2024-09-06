@@ -404,7 +404,7 @@ RtreeNode *_rtree_find_leaf(RtreeNode *start, Box *aabb, void *ptr, bool check) 
             child = (RtreeNode *)doubly_linked_list_node_pointer(n);
 
             // examine each potential node
-            if (check == false || box_collide(child->aabb, aabb)) {
+            if (check == false || box_collide_epsilon(child->aabb, aabb, EPSILON_COLLISION)) {
                 fifo_list_push(toExamine, child);
             }
 
@@ -941,7 +941,7 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                 collidesWith,
                                 excludeLeafPtrs,
                                 query,
-                                -EPSILON_COLLISION) > 0) {
+                                EPSILON_COLLISION) > 0) {
         hit = fifo_list_pop(query);
         while (hit != NULL) {
             swept = box_swept(stepOriginBox,

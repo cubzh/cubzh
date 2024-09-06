@@ -860,7 +860,7 @@ HitType scene_cast_box(Scene *sc,
                                                     &modelEpsilon);
 
                 box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
-                if (box_collide(&modelBroadphase, collider)) {
+                if (box_collide_epsilon(&modelBroadphase, collider, EPSILON_COLLISION)) {
                     // shapes may enable per-block collisions
                     if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
                         Block *block = NULL;
@@ -1000,7 +1000,7 @@ size_t scene_cast_all_box(Scene *sc,
                                                     &modelEpsilon);
 
                 box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
-                if (box_collide(&modelBroadphase, collider)) {
+                if (box_collide_epsilon(&modelBroadphase, collider, EPSILON_COLLISION)) {
                     // shapes may enable per-block collisions
                     if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
                         Block *block = NULL;

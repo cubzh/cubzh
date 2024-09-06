@@ -347,14 +347,14 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // previous query should be processed entirely
         vx_assert(fifo_list_pop(sceneQuery) == NULL);
 
-        // run collision query in r-tree w/ default inner epsilon
+        // run collision query in r-tree
         if (rtree_query_overlap_box(r,
                                     &broadphase,
                                     rb->groups,
                                     rb->collidesWith,
                                     NULL,
                                     sceneQuery,
-                                    -EPSILON_COLLISION) > 0) {
+                                    EPSILON_COLLISION) > 0) {
             RtreeNode *hit = fifo_list_pop(sceneQuery);
             Transform *hitLeaf;
             RigidBody *hitRb;
@@ -424,7 +424,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                         &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
-                    if (box_collide_epsilon3(&modelBroadphase, &collider, &modelEpsilon)) {
+                    if (box_collide_epsilon3(&modelBroadphase, &collider, modelEpsilon)) {
                         // shapes may enable per-block collisions
                         if (hitPerBlock) {
                             swept = shape_box_cast(shape,
@@ -781,8 +781,6 @@ void _rigidbody_trigger_tick(Scene *scene,
     vx_assert(fifo_list_pop(sceneQuery) == NULL);
 
     // run overlap query in r-tree
-    // Note: w/ an outer epsilon to let trigger rigidbody callbacks be called before a potential
-    // collision response from a dynamic rigidbody
     if (rtree_query_overlap_box(r,
                                 worldCollider,
                                 rb->groups,

@@ -1958,7 +1958,7 @@ float shape_box_cast(const Shape *s,
                 tmpBox.max.y += chunkOrigin.y;
                 tmpBox.max.z += chunkOrigin.z;
 
-                const bool collides = box_collide(&tmpBox, &broadPhaseBox);
+                const bool collides = box_collide_epsilon(&tmpBox, &broadPhaseBox, EPSILON_COLLISION);
                 if (leaf && collides) {
                     swept = box_swept(modelBox,
                                       modelVector,
@@ -2251,7 +2251,7 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
                 tmpBox.max.y += chunkOrigin.y;
                 tmpBox.max.z += chunkOrigin.z;
 
-                const bool collides = box_collide(modelBox, &tmpBox);
+                const bool collides = box_collide_epsilon(modelBox, &tmpBox, EPSILON_COLLISION);
                 if (leaf && collides) {
                     didHit = true;
                     if (out != NULL) {
