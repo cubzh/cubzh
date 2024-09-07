@@ -233,7 +233,7 @@ Client.OnStart = function()
 		layoutCamera()
 	end)
 
-	LocalEvent:Listen("signup_flow_login_success", function(height)
+	LocalEvent:Listen("signup_flow_login_success", function(_)
 		drawerHeight = 0
 		titleScreen():hide()
 		home():show()
@@ -1096,13 +1096,10 @@ function home()
 		local padding = theme.padding
 
 		local recycledWorldCells = {}
-		local recycledWorldIcons = {}
-		local worldIcons = {}
+		local recycledLoadingAnimations = {}
 		local worldThumbnails = {} -- cache for loaded world thumbnails
 
 		local recycledItemCells = {}
-		local recycledItemLoadingShapes = {}
-		local itemLoadingShapes = {}
 		local itemShapes = {} -- cache for loaded items
 		local activeItemShapes = {}
 
@@ -1115,16 +1112,8 @@ function home()
 		local t = 0.0
 		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 			t = t + dt
-			for icon, _ in pairs(worldIcons) do
-				icon.pivot.LocalRotation:Set(-0.1, t, -0.2)
-			end
-
 			for itemShape, _ in pairs(activeItemShapes) do
 				itemShape.pivot.LocalRotation:Set(-0.1, t, -0.2)
-			end
-
-			for loadingShape, _ in pairs(itemLoadingShapes) do
-				loadingShape.pivot.LocalRotation:Set(-0.1, t, -0.2)
 			end
 		end)
 
@@ -1154,11 +1143,11 @@ function home()
 				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
 			end
 
-			if self.loadingShape then
-				self.loadingShape.pos = { 0, 0 }
-				self.loadingShape.Height = self.Height
-				self.loadingShape.Width = self.Width
-				self.loadingShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			if self.loadingAnimation then
+				self.loadingAnimation.pos = {
+					self.Width * 0.5 - self.loadingAnimation.Width * 0.5,
+					self.Height * 0.5 - self.loadingAnimation.Height * 0.5,
+				}
 			end
 
 			if self.itemShape then
@@ -1199,11 +1188,11 @@ function home()
 				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
 			end
 
-			if self.loadingShape then
-				self.loadingShape.pos = { 0, 0 }
-				self.loadingShape.Height = self.Height
-				self.loadingShape.Width = self.Width
-				self.loadingShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			if self.loadingAnimation then
+				self.loadingAnimation.pos = {
+					self.Width * 0.5 - self.loadingAnimation.Width * 0.5,
+					self.Height * 0.5 - self.loadingAnimation.Height * 0.5,
+				}
 			end
 
 			if self.itemShape then
@@ -1253,17 +1242,16 @@ function home()
 			end)
 		end
 
-		local function recycleWorldCellShape(cell)
-			if cell.shape ~= nil then
-				cell.shape:setParent(nil)
-				table.insert(recycledWorldIcons, cell.shape)
-				worldIcons[cell.shape] = nil
-				cell.shape = nil
+		local function recycleCellLoadingAnimation(cell)
+			if cell.loadingAnimation ~= nil then
+				cell.loadingAnimation:setParent(nil)
+				table.insert(recycledLoadingAnimations, cell.loadingAnimation)
+				cell.loadingAnimation = nil
 			end
 		end
 
 		local function recycleWorldCell(cell)
-			recycleWorldCellShape(cell)
+			recycleCellLoadingAnimation(cell)
 			if cell.thumbnail ~= nil then
 				cell.thumbnail:setParent(nil)
 				cell.thumbnail = nil
@@ -1335,31 +1323,26 @@ function home()
 				if thumbnail ~= nil then
 					thumbnail:setParent(cell)
 					cell.thumbnail = thumbnail
-					recycleWorldCellShape(cell)
 				else
-					-- placeholder shape, waiting for thumbnail
-					local item = table.remove(recycledWorldIcons)
-					if item == nil then
-						local shape = bundle:Shape("shapes/world_icon")
-						item = ui:createShape(shape, { spherized = true })
+					local loadingAnimation = table.remove(recycledLoadingAnimations)
+					if loadingAnimation == nil then
+						loadingAnimation = require("ui_loading_animation"):create()
 					end
 
-					item:setParent(cell)
-					cell.shape = item
-					worldIcons[item] = true
-					-- cell:parentDidResize() -- no parent yet
+					loadingAnimation:setParent(cell)
+					cell.loadingAnimation = loadingAnimation
 
 					cell.loadThumbnailTimer = Timer(CONFIG.LOAD_CONTENT_DELAY, function()
 						cell.req = api:getWorldThumbnail(world.id, function(img, err)
+							recycleCellLoadingAnimation(cell)
 							if err ~= nil then
 								return
 							end
 
-							local thumbnail = ui:frame({ image = img })
+							local thumbnail = ui:frame({ image = img }) -- TODO: fix white flashes
 							thumbnail:setParent(cell)
 							cell.thumbnail = thumbnail
 							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
-							recycleWorldCellShape(cell)
 							worldCellResizeFn(cell)
 						end)
 					end)
@@ -1446,18 +1429,8 @@ function home()
 			end)
 		end
 
-		local function recycleItemCellLoadingShape(cell)
-			local loadingShape = cell.loadingShape
-			if loadingShape ~= nil then
-				loadingShape:setParent(nil)
-				table.insert(recycledItemLoadingShapes, loadingShape)
-				itemLoadingShapes[loadingShape] = nil
-				cell.loadingShape = nil
-			end
-		end
-
 		local function recycleItemCell(cell)
-			recycleItemCellLoadingShape(cell)
+			recycleCellLoadingAnimation(cell)
 			if cell.loadShapeTimer then
 				cell.loadShapeTimer:Cancel()
 				cell.loadShapeTimer = nil
@@ -1535,22 +1508,18 @@ function home()
 					itemShape:setParent(cell)
 					activeItemShapes[itemShape] = true
 					cell.itemShape = itemShape
-					recycleItemCellLoadingShape(cell)
 				else
-					-- placeholder shape, waiting for thumbnail
-					local loadingShape = table.remove(recycledItemLoadingShapes)
-					if loadingShape == nil then
-						local shape = bundle:Shape("shapes/world_icon")
-						loadingShape = ui:createShape(shape, { spherized = true })
+					local loadingAnimation = table.remove(recycledLoadingAnimations)
+					if loadingAnimation == nil then
+						loadingAnimation = require("ui_loading_animation"):create()
 					end
 
-					loadingShape:setParent(cell)
-					cell.loadingShape = loadingShape
-					itemLoadingShapes[loadingShape] = true
-					-- cell:parentDidResize() -- no parent yet
+					loadingAnimation:setParent(cell)
+					cell.loadingAnimation = loadingAnimation
 
 					cell.loadShapeTimer = Timer(CONFIG.LOAD_CONTENT_DELAY, function()
 						cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
+							recycleCellLoadingAnimation(cell)
 							if obj == nil then
 								return
 							end
@@ -1560,11 +1529,7 @@ function home()
 							itemShape:setParent(cell)
 							activeItemShapes[itemShape] = true
 							itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
-
-							-- print("CACHE itemShape:", cell.category .. "_" .. item.repo .. "." .. item.name, itemShape)
 							itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name] = itemShape
-
-							recycleItemCellLoadingShape(cell)
 							cell:parentDidResize()
 						end)
 					end)
@@ -1665,8 +1630,6 @@ function home()
 					cellSelector:setParent(nil)
 				end
 			end
-
-			-- worldIcons[item] = true
 			return cell
 		end
 
