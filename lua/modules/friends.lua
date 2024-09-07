@@ -86,16 +86,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 		return Number2(width, height)
 	end
 
-	local function sortByLastSeenUsernameOrID(a, b)
-		if a.lastSeen ~= nil and b.lastSeen ~= nil then
-			return a.lastSeen > b.lastSeen
-		end
-		if a.username ~= nil and b.username ~= nil then
-			return a.username > b.username
-		end
-		return a.id > b.id
-	end
-
 	local node = ui:createFrame(Color(0, 0, 0, 0))
 
 	node.onRemove = function()
@@ -203,7 +193,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 							table.insert(list, usr)
 						end
 					end
-					table.sort(list, sortByLastSeenUsernameOrID)
 					newListResponse(listID, list)
 				end)
 				table.insert(requests, req)
@@ -227,9 +216,6 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 						end
 					end
 				end
-
-				table.sort(list, sortByLastSeenUsernameOrID)
-
 				newListResponse(listID, list)
 			end)
 			table.insert(requests, req)
@@ -384,8 +370,7 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 				avatar = cachedAvatars[user.username]
 				if avatar == nil then
 					local requests
-					avatar, requests =
-						uiAvatar:get({ usernameOrId = user.id, size = cell.Height * 0.95, ui = ui })
+					avatar, requests = uiAvatar:get({ usernameOrId = user.id, size = cell.Height * 0.95, ui = ui })
 
 					cell.avatarRequests = requests
 					avatar.body.pivot.LocalRotation = Rotation(math.rad(-22), 0, 0) * Rotation(0, math.rad(145), 0)
