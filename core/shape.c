@@ -4274,6 +4274,9 @@ bool _shape_compute_size_and_origin(const Shape *shape,
                                     SHAPE_COORDS_INT_T *origin_z) {
 
     Index3DIterator *it = index3d_iterator_new(shape->chunks);
+    if (it == NULL) {
+        return false;
+    }
     if (index3d_iterator_pointer(it) == NULL) {
         *size_x = 0;
         *size_y = 0;
@@ -4281,6 +4284,7 @@ bool _shape_compute_size_and_origin(const Shape *shape,
         *origin_x = 0;
         *origin_y = 0;
         *origin_z = 0;
+        index3d_iterator_free(it);
         return false; // empty shape
     }
 
