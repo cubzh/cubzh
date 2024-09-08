@@ -1,4 +1,5 @@
 bundle = require("bundle")
+time = require("time")
 
 local CONFIG = {
 	PROFILE_CELL_SIZE = 150,
@@ -12,6 +13,7 @@ local CONFIG = {
 	LOAD_CONTENT_DELAY = 0.3,
 	AVATAR_DEFAULT_YAW = math.rad(-190),
 	AVATAR_DEFAULT_PITCH = 0,
+	TINY_FONT_SCALE = 0.8,
 }
 
 local function avatarBox()
@@ -231,7 +233,7 @@ Client.OnStart = function()
 		layoutCamera()
 	end)
 
-	LocalEvent:Listen("signup_flow_login_success", function(height)
+	LocalEvent:Listen("signup_flow_login_success", function(_)
 		drawerHeight = 0
 		titleScreen():hide()
 		home():show()
@@ -1094,13 +1096,10 @@ function home()
 		local padding = theme.padding
 
 		local recycledWorldCells = {}
-		local recycledWorldIcons = {}
-		local worldIcons = {}
+		local recycledLoadingAnimations = {}
 		local worldThumbnails = {} -- cache for loaded world thumbnails
 
 		local recycledItemCells = {}
-		local recycledItemLoadingShapes = {}
-		local itemLoadingShapes = {}
 		local itemShapes = {} -- cache for loaded items
 		local activeItemShapes = {}
 
@@ -1113,16 +1112,8 @@ function home()
 		local t = 0.0
 		tickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 			t = t + dt
-			for icon, _ in pairs(worldIcons) do
-				icon.pivot.LocalRotation:Set(-0.1, t, -0.2)
-			end
-
 			for itemShape, _ in pairs(activeItemShapes) do
 				itemShape.pivot.LocalRotation:Set(-0.1, t, -0.2)
-			end
-
-			for loadingShape, _ in pairs(itemLoadingShapes) do
-				loadingShape.pivot.LocalRotation:Set(-0.1, t, -0.2)
 			end
 		end)
 
@@ -1152,11 +1143,11 @@ function home()
 				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
 			end
 
-			if self.loadingShape then
-				self.loadingShape.pos = { 0, 0 }
-				self.loadingShape.Height = self.Height
-				self.loadingShape.Width = self.Width
-				self.loadingShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			if self.loadingAnimation then
+				self.loadingAnimation.pos = {
+					self.Width * 0.5 - self.loadingAnimation.Width * 0.5,
+					self.Height * 0.5 - self.loadingAnimation.Height * 0.5,
+				}
 			end
 
 			if self.itemShape then
@@ -1176,6 +1167,47 @@ function home()
 				self.thumbnail.pos = { padding, padding }
 				self.thumbnail.Width = self.Width - padding * 2
 				self.thumbnail.Height = self.Height - padding * 2
+			end
+
+			if self.likesFrame then
+				self.likesFrame.pos = {
+					padding + theme.paddingTiny,
+					self.Height - self.likesFrame.Height - padding - theme.paddingTiny,
+				}
+				self.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+			end
+		end
+
+		local function itemCellResizeFn(self)
+			self.Height = self.parent.Height
+
+			if self.shape then
+				self.shape.pos = { 0, 0 }
+				self.shape.Height = self.Height
+				self.shape.Width = self.Width
+				self.shape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
+			if self.loadingAnimation then
+				self.loadingAnimation.pos = {
+					self.Width * 0.5 - self.loadingAnimation.Width * 0.5,
+					self.Height * 0.5 - self.loadingAnimation.Height * 0.5,
+				}
+			end
+
+			if self.itemShape then
+				self.itemShape.pos = { 0, 0 }
+				self.itemShape.Height = self.Height
+				self.itemShape.Width = self.Width
+				self.itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
+			end
+
+			if self.likesFrame then
+				self.likesFrame.pos = {
+					padding,
+					self.Height - self.likesFrame.Height - padding,
+				}
+				self.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 			end
 		end
 
@@ -1210,17 +1242,16 @@ function home()
 			end)
 		end
 
-		local function recycleWorldCellShape(cell)
-			if cell.shape ~= nil then
-				cell.shape:setParent(nil)
-				table.insert(recycledWorldIcons, cell.shape)
-				worldIcons[cell.shape] = nil
-				cell.shape = nil
+		local function recycleCellLoadingAnimation(cell)
+			if cell.loadingAnimation ~= nil then
+				cell.loadingAnimation:setParent(nil)
+				table.insert(recycledLoadingAnimations, cell.loadingAnimation)
+				cell.loadingAnimation = nil
 			end
 		end
 
 		local function recycleWorldCell(cell)
-			recycleWorldCellShape(cell)
+			recycleCellLoadingAnimation(cell)
 			if cell.thumbnail ~= nil then
 				cell.thumbnail:setParent(nil)
 				cell.thumbnail = nil
@@ -1247,7 +1278,6 @@ function home()
 				local titleFrame = ui:frameTextBackground()
 				titleFrame:setParent(cell)
 				titleFrame.pos = { padding + theme.paddingTiny, padding + theme.paddingTiny }
-				titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 				local title = ui:createText("…", Color.White, "small")
 				title:setParent(titleFrame)
@@ -1255,6 +1285,19 @@ function home()
 
 				cell.titleFrame = titleFrame
 				cell.title = title
+
+				-- LIKES
+				local likesFrame = ui:frameTextBackground()
+				likesFrame:setParent(cell)
+				likesFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+
+				local likes = ui:createText("…", Color.White, "small")
+				likes.object.Scale = CONFIG.TINY_FONT_SCALE
+				likes:setParent(likesFrame)
+				likes.pos = { theme.paddingTiny, theme.paddingTiny }
+
+				cell.likesFrame = likesFrame
+				cell.likes = likes
 
 				cell.parentDidResize = worldCellResizeFn
 
@@ -1280,31 +1323,26 @@ function home()
 				if thumbnail ~= nil then
 					thumbnail:setParent(cell)
 					cell.thumbnail = thumbnail
-					recycleWorldCellShape(cell)
 				else
-					-- placeholder shape, waiting for thumbnail
-					local item = table.remove(recycledWorldIcons)
-					if item == nil then
-						local shape = bundle:Shape("shapes/world_icon")
-						item = ui:createShape(shape, { spherized = true })
+					local loadingAnimation = table.remove(recycledLoadingAnimations)
+					if loadingAnimation == nil then
+						loadingAnimation = require("ui_loading_animation"):create()
 					end
 
-					item:setParent(cell)
-					cell.shape = item
-					worldIcons[item] = true
-					-- cell:parentDidResize() -- no parent yet
+					loadingAnimation:setParent(cell)
+					cell.loadingAnimation = loadingAnimation
 
 					cell.loadThumbnailTimer = Timer(CONFIG.LOAD_CONTENT_DELAY, function()
 						cell.req = api:getWorldThumbnail(world.id, function(img, err)
+							recycleCellLoadingAnimation(cell)
 							if err ~= nil then
 								return
 							end
 
-							local thumbnail = ui:frame({ image = img })
+							local thumbnail = ui:frame({ image = img }) -- TODO: fix white flashes
 							thumbnail:setParent(cell)
 							cell.thumbnail = thumbnail
 							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
-							recycleWorldCellShape(cell)
 							worldCellResizeFn(cell)
 						end)
 					end)
@@ -1312,13 +1350,41 @@ function home()
 
 				cell.world = world
 				cell.title.Text = world.title
+
+				local txt = ""
+				if world.likes and world.likes > 0 then
+					txt = txt .. "❤️ " .. world.likes
+				end
+				if world.views and world.views > 0 then
+					if txt ~= "" then
+						txt = txt .. " "
+					end
+					txt = txt .. "👁️ " .. world.views
+				end
+				if txt ~= "" then
+					cell.likes.Text = txt
+					cell.likesFrame:show()
+				else
+					cell.likesFrame:hide()
+				end
 			else
 				cell.title.Text = "…"
+				cell.likes.Text = "…"
 			end
 
 			cell.title.object.MaxWidth = cell.Width - (padding + theme.paddingTiny * 2) * 2
 			cell.titleFrame.Width = cell.title.Width + theme.paddingTiny * 2
 			cell.titleFrame.Height = cell.title.Height + theme.paddingTiny * 2
+
+			cell.likes.object.MaxWidth = (cell.Width - (padding + theme.paddingTiny * 2) * 2)
+				* (1.0 / CONFIG.TINY_FONT_SCALE)
+			cell.likesFrame.Width = cell.likes.Width + theme.paddingTiny * 2
+			cell.likesFrame.Height = cell.likes.Height + theme.paddingTiny * 2
+			cell.likesFrame.pos = {
+				padding + theme.paddingTiny,
+				cell.Height - cell.likesFrame.Height - padding - theme.paddingTiny,
+			}
+			cell.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 			return cell
 		end
@@ -1363,18 +1429,8 @@ function home()
 			end)
 		end
 
-		local function recycleItemCellLoadingShape(cell)
-			local loadingShape = cell.loadingShape
-			if loadingShape ~= nil then
-				loadingShape:setParent(nil)
-				table.insert(recycledItemLoadingShapes, loadingShape)
-				itemLoadingShapes[loadingShape] = nil
-				cell.loadingShape = nil
-			end
-		end
-
 		local function recycleItemCell(cell)
-			recycleItemCellLoadingShape(cell)
+			recycleCellLoadingAnimation(cell)
 			if cell.loadShapeTimer then
 				cell.loadShapeTimer:Cancel()
 				cell.loadShapeTimer = nil
@@ -1411,7 +1467,20 @@ function home()
 				cell.titleFrame = titleFrame
 				cell.title = title
 
-				cell.parentDidResize = worldCellResizeFn
+				-- LIKES
+				local likesFrame = ui:frameTextBackground()
+				likesFrame:setParent(cell)
+				likesFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
+
+				local likes = ui:createText("…", Color.White, "small")
+				likes.object.Scale = CONFIG.TINY_FONT_SCALE
+				likes:setParent(likesFrame)
+				likes.pos = { theme.paddingTiny, theme.paddingTiny }
+
+				cell.likesFrame = likesFrame
+				cell.likes = likes
+
+				cell.parentDidResize = itemCellResizeFn
 
 				cell.onPress = function(self)
 					cellSelector:setParent(self)
@@ -1439,22 +1508,18 @@ function home()
 					itemShape:setParent(cell)
 					activeItemShapes[itemShape] = true
 					cell.itemShape = itemShape
-					recycleItemCellLoadingShape(cell)
 				else
-					-- placeholder shape, waiting for thumbnail
-					local loadingShape = table.remove(recycledItemLoadingShapes)
-					if loadingShape == nil then
-						local shape = bundle:Shape("shapes/world_icon")
-						loadingShape = ui:createShape(shape, { spherized = true })
+					local loadingAnimation = table.remove(recycledLoadingAnimations)
+					if loadingAnimation == nil then
+						loadingAnimation = require("ui_loading_animation"):create()
 					end
 
-					loadingShape:setParent(cell)
-					cell.loadingShape = loadingShape
-					itemLoadingShapes[loadingShape] = true
-					-- cell:parentDidResize() -- no parent yet
+					loadingAnimation:setParent(cell)
+					cell.loadingAnimation = loadingAnimation
 
 					cell.loadShapeTimer = Timer(CONFIG.LOAD_CONTENT_DELAY, function()
 						cell.req = Object:Load(item.repo .. "." .. item.name, function(obj)
+							recycleCellLoadingAnimation(cell)
 							if obj == nil then
 								return
 							end
@@ -1464,23 +1529,41 @@ function home()
 							itemShape:setParent(cell)
 							activeItemShapes[itemShape] = true
 							itemShape.pivot.LocalRotation:Set(-0.1, 0, -0.2)
-
-							-- print("CACHE itemShape:", cell.category .. "_" .. item.repo .. "." .. item.name, itemShape)
 							itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name] = itemShape
-
-							recycleItemCellLoadingShape(cell)
 							cell:parentDidResize()
 						end)
 					end)
 				end
 				cell.title.Text = prettifyItemName(item.name)
+
+				local txt = ""
+				if item.likes and item.likes > 0 then
+					txt = txt .. "❤️ " .. item.likes
+				end
+				if txt ~= "" then
+					cell.likes.Text = txt
+					cell.likesFrame:show()
+				else
+					cell.likesFrame:hide()
+				end
 			else
 				cell.title.Text = "…"
+				cell.likes.Text = "…"
 			end
 
 			cell.title.object.MaxWidth = cell.Width - (padding + theme.paddingTiny) * 2
 			cell.titleFrame.Width = cell.title.Width + theme.paddingTiny * 2
 			cell.titleFrame.Height = cell.title.Height + theme.paddingTiny * 2
+
+			cell.likes.object.MaxWidth = (cell.Width - (padding + theme.paddingTiny * 2) * 2)
+				* (1.0 / CONFIG.TINY_FONT_SCALE)
+			cell.likesFrame.Width = cell.likes.Width + theme.paddingTiny * 2
+			cell.likesFrame.Height = cell.likes.Height + theme.paddingTiny * 2
+			cell.likesFrame.pos = {
+				padding,
+				cell.Height - cell.likesFrame.Height - padding,
+			}
+			cell.titleFrame.LocalPosition.Z = -500 -- ui.kForegroundDepth
 
 			return cell
 		end
@@ -1547,8 +1630,6 @@ function home()
 					cellSelector:setParent(nil)
 				end
 			end
-
-			-- worldIcons[item] = true
 			return cell
 		end
 
@@ -1581,25 +1662,65 @@ function home()
 								usernameOrId = friend.id,
 							})
 							friendAvatarCache[index] = avatar
+
+							local usernameFrame = ui:frameTextBackground()
+							usernameFrame:setParent(avatar)
+							usernameFrame.LocalPosition.Z = ui.kForegroundDepth
+
+							local username = ui:createText("", Color.White, "small")
+							username:setParent(usernameFrame)
+							username.pos = { theme.paddingTiny, theme.paddingTiny }
+
+							avatar.username = username
+							avatar.usernameFrame = usernameFrame
+
+							-- LAST SEEN
+							local lastSeenFrame = ui:frameTextBackground()
+							lastSeenFrame:setParent(avatar)
+							lastSeenFrame.LocalPosition.Z = ui.kForegroundDepth
+
+							local lastSeen = ui:createText("", Color.White, "small")
+							lastSeen.object.Scale = CONFIG.TINY_FONT_SCALE
+							lastSeen:setParent(lastSeenFrame)
+							lastSeen.pos = { theme.paddingTiny, theme.paddingTiny }
+
+							avatar.lastSeenFrame = lastSeenFrame
+							avatar.lastSeen = lastSeen
 						end
+
 						avatar:setParent(friendCell)
 
 						friendCell.userID = friend.id
 						friendCell.username = friend.username
 
-						local usernameFrame = ui:frameTextBackground()
-						usernameFrame:setParent(avatar)
-						usernameFrame.LocalPosition.Z = ui.kForegroundDepth
+						avatar.username.object.Scale = 1
+						avatar.username.Text = friend.username
+						-- username text scale to fit in the cell
+						local scale = math.min(
+							1,
+							(CONFIG.FRIEND_CELL_SIZE - padding * 2 - theme.paddingTiny * 2) / avatar.username.Width
+						)
+						avatar.username.object.Scale = scale
 
-						local username = ui:createText(friend.username, Color.White, "small")
-						username:setParent(usernameFrame)
-						username.pos = { theme.paddingTiny, theme.paddingTiny }
+						avatar.usernameFrame.Width = avatar.username.Width + theme.paddingTiny * 2
+						avatar.usernameFrame.Height = avatar.username.Height + theme.paddingTiny * 2
 
-						usernameFrame.Width = username.Width + theme.paddingTiny * 2
-						usernameFrame.Height = username.Height + theme.paddingTiny * 2
-
-						avatar.username = username
-						avatar.usernameFrame = usernameFrame
+						local osTime = time.iso8601_to_os_time(friend.lastSeen)
+						local t, units = time.ago(osTime, {
+							years = false,
+							months = false,
+							seconds_label = "s",
+							minutes_label = "m",
+							hours_label = "h",
+							days_label = "d",
+						})
+						avatar.lastSeen.Text = "👁️ " .. t .. units .. " ago"
+						avatar.lastSeenFrame.Width = avatar.lastSeen.Width + theme.paddingTiny * 2
+						avatar.lastSeenFrame.Height = avatar.lastSeen.Height + theme.paddingTiny * 2
+						avatar.lastSeenFrame.pos.Y = CONFIG.FRIEND_CELL_SIZE
+							- avatar.lastSeenFrame.Height
+							- padding
+							- theme.paddingTiny
 
 						friendCell.avatar = avatar
 
