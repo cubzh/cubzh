@@ -209,11 +209,12 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					return
 				end
 				for _, usr in ipairs(users) do
-					if usr.username ~= "" then
-						-- if search, match the username
-						if not searchText or string.find(usr.username, searchText) then
-							table.insert(list, usr)
-						end
+					-- if search, match the username
+					if usr.username == "" then
+						usr.username = Players.DefaultUsername
+					end
+					if not searchText or string.find(usr.username, searchText) then
+						table.insert(list, usr)
 					end
 				end
 				newListResponse(listID, list)
