@@ -2,21 +2,48 @@
 
 local time = {}
 
--- `iso8601` argument is a string
+-- Function to safely call os.time and handle errors
+local function safe_os_time(t)
+	local success, result = pcall(os.time, t)
+	if not success then
+		-- on error, return nil
+		print("❌ Error calling os.time:", result)
+		return nil
+	end
+	return result
+end
+
+-- Arguments
+-- 1. `iso8601` (string)
+--
+-- Return value
+-- 1. timestamp in seconds (number) or nil on error
 time.iso8601_to_os_time = function(iso8601)
-	-- print("iso8601>>", iso8601) -- 2023-01-31T13:03:01.681Z
+	print("[GAETAN] iso8601>>", iso8601) -- 2023-01-31T13:03:01.681Z
 
 	-- Parse time which is in string format
 	local year, month, day, hour, minute, seconds, offsetsign, offsethour, offsetmin =
 		iso8601:match("(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%+%- ])(%d?%d?)%:?(%d?%d?)")
 
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
-	local epochShifted = os.time({ year = 1970, month = 1, day = 2, hour = 0 })
+	local epochShifted = safe_os_time({ year = 1970, month = 1, day = 2, hour = 0 })
+	if epochShifted == nil then
+		return nil -- error
+	end
 
 	local shift = 24 * 3600 -- # seconds in 24 hours
 
-	local timeParsed =
-		os.time({ year = year, month = month, day = day, hour = hour, min = minute, sec = math.floor(seconds) })
+	local timeParsed = safe_os_time({
+		year = year,
+		month = month,
+		day = day,
+		hour = hour,
+		min = minute,
+		sec = math.floor(seconds),
+	})
+	if timeParsed == nil then
+		return nil -- error
+	end
 
 	-- shifted 1 day to avoid dates before UNIX epoch (generates an error on Windows)
 	local timeShifted = timeParsed + shift
