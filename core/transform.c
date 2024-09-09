@@ -401,8 +401,8 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
     RigidBody *rb = transform_get_rigidbody(t);
     if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
         // we can use collider cached in rtree leaf whenever possible, otherwise compute it
-        if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) ||
-            rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+        if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) || rigidbody_get_collider_dirty(rb) ||
+            rigidbody_get_rtree_leaf(rb) == NULL) {
 
             if (type == ShapeTransform) {
                 Shape *s = (Shape *)transform_get_ptr(t);
@@ -1332,7 +1332,10 @@ static void _transform_refresh_rotation(Transform *t) {
     }
 }
 
-static void _transform_compute_SRT(Matrix4x4 *mtx, const float3 *s, Quaternion *r, const float3 *t) {
+static void _transform_compute_SRT(Matrix4x4 *mtx,
+                                   const float3 *s,
+                                   Quaternion *r,
+                                   const float3 *t) {
     quaternion_op_normalize(r);
 
     const float xx = r->y * r->y;

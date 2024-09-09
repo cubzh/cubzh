@@ -278,7 +278,7 @@ void shape_compute_world_collider(const Shape *s, Box *box, const bool refreshPa
 /// @param s shape model used as obstacle against a moving object
 /// @param modelBox moving object collider aligned with shape model space
 /// @param modelVector moving object velocity vector in shape model space
-/// @param epsilon collision tolerance in shape model space
+/// @param modelEpsilon collision tolerance in shape model space
 /// @param withReplacement typically true if used for simulation, false if used for cast/overlap
 /// @param normal axis where the first collision will occur
 /// @param extraReplacement filled only if PHYSICS_EXTRA_REPLACEMENTS is enabled
@@ -287,7 +287,7 @@ void shape_compute_world_collider(const Shape *s, Box *box, const bool refreshPa
 float shape_box_cast(const Shape *s,
                      const Box *modelBox,
                      const float3 *modelVector,
-                     const float3 *epsilon,
+                     const float3 *modelEpsilon,
                      const bool withReplacement,
                      float3 *normal,
                      float3 *extraReplacement,
@@ -307,7 +307,7 @@ bool shape_ray_cast(const Transform *t,
 bool shape_point_overlap(const Shape *s, const float3 *world);
 /// Overlaps a box in shape's model space against its blocks
 /// @return true if there is an overlap
-bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out);
+bool shape_box_overlap(const Shape *s, const Box *modelBox, const float3 *modelEpsilon, Box *out);
 
 // MARK: - Graphics -
 

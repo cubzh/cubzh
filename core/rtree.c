@@ -782,7 +782,7 @@ size_t rtree_query_overlap_func(Rtree *r,
                                 void *ptr,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 FifoList *results,
-                                float epsilon) {
+                                const float3 *epsilon) {
 
     FifoList *toExamine = fifo_list_new();
     DoublyLinkedListNode *n;
@@ -823,8 +823,8 @@ size_t rtree_query_overlap_func(Rtree *r,
     return hits;
 }
 
-bool _rtree_query_overlap_box_func(RtreeNode *rn, void *ptr, float epsilon) {
-    return box_collide_epsilon(rn->aabb, (Box *)ptr, epsilon);
+bool _rtree_query_overlap_box_func(RtreeNode *rn, void *ptr, const float3 *epsilon) {
+    return box_collide_epsilon3(rn->aabb, (Box *)ptr, epsilon);
 }
 
 size_t rtree_query_overlap_box(Rtree *r,
@@ -833,7 +833,7 @@ size_t rtree_query_overlap_box(Rtree *r,
                                uint16_t collidesWith,
                                const DoublyLinkedList *excludeLeafPtrs,
                                FifoList *results,
-                               float epsilon) {
+                               const float3 *epsilon) {
 
     return rtree_query_overlap_func(r,
                                     groups,
@@ -927,7 +927,8 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                           uint16_t collidesWith,
                                           void *optionalPtr,
                                           const DoublyLinkedList *excludeLeafPtrs,
-                                          DoublyLinkedList *results) {
+                                          DoublyLinkedList *results,
+                                          const float3 *epsilon) {
 
     float swept;
     RtreeNode *hit;
@@ -941,16 +942,10 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                 collidesWith,
                                 excludeLeafPtrs,
                                 query,
-                                EPSILON_COLLISION) > 0) {
+                                epsilon) > 0) {
         hit = fifo_list_pop(query);
         while (hit != NULL) {
-            swept = box_swept(stepOriginBox,
-                              step3,
-                              hit->aabb,
-                              &float3_epsilon_collision,
-                              false,
-                              NULL,
-                              NULL);
+            swept = box_swept(stepOriginBox, step3, hit->aabb, epsilon, false, NULL, NULL);
 
             if ((excludeLeafPtrs == NULL ||
                  doubly_linked_list_contains(excludeLeafPtrs, hit->leaf) == false)) {
@@ -980,7 +975,8 @@ size_t rtree_query_cast_all_box(Rtree *r,
                                 uint16_t groups,
                                 uint16_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
-                                DoublyLinkedList *results) {
+                                DoublyLinkedList *results,
+                                const float3 *epsilon) {
 
     return rtree_utils_broadphase_steps(r,
                                         aabb,
@@ -991,7 +987,8 @@ size_t rtree_query_cast_all_box(Rtree *r,
                                         rtree_query_cast_all_box_step_func,
                                         NULL,
                                         excludeLeafPtrs,
-                                        results);
+                                        results,
+                                        epsilon);
 }
 
 // MARK: Utils
@@ -1005,7 +1002,8 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
                                     pointer_rtree_broadphase_step_func func,
                                     void *optionalPtr,
                                     const DoublyLinkedList *excludeLeafPtrs,
-                                    DoublyLinkedList *results) {
+                                    DoublyLinkedList *results,
+                                    const float3 *epsilon) {
     vx_assert(results != NULL);
 
     Box broadPhaseBox, stepOriginBox = *originBox;
@@ -1030,7 +1028,8 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
                      collidesWith,
                      optionalPtr,
                      excludeLeafPtrs,
-                     results);
+                     results,
+                     epsilon);
 
         float3_op_add(&stepOriginBox.min, &step3);
         float3_op_add(&stepOriginBox.max, &step3);

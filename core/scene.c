@@ -336,7 +336,7 @@ void scene_refresh(Scene *sc, const TICK_DELTA_SEC_T dt, void *callbackData) {
                                     PHYSICS_GROUP_ALL_SYSTEM,
                                     NULL,
                                     awakeQuery,
-                                    EPSILON_COLLISION) > 0) {
+                                    &float3_epsilon_collision) > 0) {
             RtreeNode *hit = fifo_list_pop(awakeQuery);
             Transform *hitLeaf = NULL;
             RigidBody *hitRb = NULL;
@@ -814,7 +814,8 @@ HitType scene_cast_box(Scene *sc,
                                  PHYSICS_GROUP_NONE,
                                  groups,
                                  filterOutTransforms,
-                                 sceneQuery)) {
+                                 sceneQuery,
+                                 &float3_epsilon_collision)) {
 
         // sort query results by distance
         doubly_linked_list_sort_ascending(sceneQuery, rtree_utils_result_sort_func);
@@ -860,7 +861,7 @@ HitType scene_cast_box(Scene *sc,
                                                     &modelEpsilon);
 
                 box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
-                if (box_collide_epsilon(&modelBroadphase, collider, EPSILON_COLLISION)) {
+                if (box_collide_epsilon3(&modelBroadphase, collider, &modelEpsilon)) {
                     // shapes may enable per-block collisions
                     if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
                         Block *block = NULL;
@@ -959,7 +960,8 @@ size_t scene_cast_all_box(Scene *sc,
                                  PHYSICS_GROUP_NONE,
                                  groups,
                                  filterOutTransforms,
-                                 sceneQuery)) {
+                                 sceneQuery,
+                                 &float3_epsilon_collision)) {
 
         // process query results to confirm intersections w/ per-block and rotated colliders
         DoublyLinkedListNode *n = doubly_linked_list_first(sceneQuery);
@@ -1000,7 +1002,7 @@ size_t scene_cast_all_box(Scene *sc,
                                                     &modelEpsilon);
 
                 box_set_broadphase_box(&modelBox, &modelVector, &modelBroadphase);
-                if (box_collide_epsilon(&modelBroadphase, collider, EPSILON_COLLISION)) {
+                if (box_collide_epsilon3(&modelBroadphase, collider, &modelEpsilon)) {
                     // shapes may enable per-block collisions
                     if (hitShape != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
                         Block *block = NULL;
@@ -1095,12 +1097,13 @@ bool scene_overlap_box(Scene *sc,
                                 collidesWith,
                                 filterOutTransforms,
                                 sceneQuery,
-                                EPSILON_COLLISION) > 0) {
+                                &float3_epsilon_collision) > 0) {
         RtreeNode *hit = fifo_list_pop(sceneQuery);
         Transform *hitLeaf;
         RigidBody *hitRb;
         Shape *s;
         Box modelBox;
+        float3 modelEpsilon;
         while (hit != NULL) {
             hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
             vx_assert(rtree_node_is_leaf(hit));
@@ -1112,10 +1115,14 @@ bool scene_overlap_box(Scene *sc,
             if (s != NULL && rigidbody_uses_per_block_collisions(hitRb)) {
                 Matrix4x4 invModel;
                 transform_utils_get_model_wtl(hitLeaf, &invModel);
+                matrix4x4_op_multiply_vec_vector(&modelEpsilon,
+                                                 &float3_epsilon_collision,
+                                                 &invModel);
+                modelEpsilon = float3_mmax2(&modelEpsilon, &float3_epsilon_zero);
 
                 box_to_aabox2(aabb, &modelBox, &invModel, NULL, NoSquarify);
 
-                if (shape_box_overlap(s, &modelBox, NULL)) {
+                if (shape_box_overlap(s, &modelBox, &modelEpsilon, NULL)) {
                     if (results != NULL) {
                         OverlapResult *result = (OverlapResult *)malloc(sizeof(OverlapResult));
                         result->hitTr = hitLeaf;

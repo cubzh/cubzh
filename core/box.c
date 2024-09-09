@@ -97,10 +97,10 @@ bool box_collide_epsilon(const Box *b1, const Box *b2, const float epsilon) {
             b1->max.z > b2->min.z + epsilon && b1->min.z < b2->max.z - epsilon);
 }
 
-bool box_collide_epsilon3(const Box *b1, const Box *b2, const float3 epsilon) {
-    return (b1->max.x > b2->min.x + epsilon.x && b1->min.x < b2->max.x - epsilon.x &&
-            b1->max.y > b2->min.y + epsilon.y && b1->min.y < b2->max.y - epsilon.y &&
-            b1->max.z > b2->min.z + epsilon.z && b1->min.z < b2->max.z - epsilon.z);
+bool box_collide_epsilon3(const Box *b1, const Box *b2, const float3 *epsilon) {
+    return (b1->max.x > b2->min.x + epsilon->x && b1->min.x < b2->max.x - epsilon->x &&
+            b1->max.y > b2->min.y + epsilon->y && b1->min.y < b2->max.y - epsilon->y &&
+            b1->max.z > b2->min.z + epsilon->z && b1->min.z < b2->max.z - epsilon->z);
 }
 
 bool box_contains(const Box *b, const float3 *f3) {

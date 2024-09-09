@@ -58,7 +58,7 @@ void box_copy(Box *dest, const Box *src);
 bool box_equals(const Box *b1, const Box *b2, const float epsilon);
 
 bool box_collide_epsilon(const Box *b1, const Box *b2, const float epsilon);
-bool box_collide_epsilon3(const Box *b1, const Box *b2, const float3 epsilon);
+bool box_collide_epsilon3(const Box *b1, const Box *b2, const float3 *epsilon);
 
 // Returns true if box contains point
 bool box_contains(const Box *b, const float3 *f3);
