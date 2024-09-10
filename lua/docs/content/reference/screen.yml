@@ -64,5 +64,5 @@ functions:
           type: "string"
           optional: true
         - name: "transparentBackground"
-          type: "string"
+          type: "boolean"
           optional: true
