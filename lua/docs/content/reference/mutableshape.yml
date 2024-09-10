@@ -93,12 +93,16 @@ functions:
         - type: "boolean"
       samples:
       - code: |
+          -- providing an existing palette index
+          someMutableShape:AddBlock(1, 10, 10, 10)
+
+          -- providing a new color index
+          local newColorIdx = someMutableShape.Palette:AddColor(Color(200, 0, 200))
+          someMutableShape:AddBlock(newColorIdx, 10, 10, 10)
+
+          -- providing a Block instance
           local block = Block(Color(200, 0, 200), 10, 10, 10)
           someMutableShape:AddBlock(block)
-
-          -- AddBlock can also be called using
-          -- block's palette index and coordinates:
-          someMutableShape:AddBlock(1, 10, 10, 10)
 
           -- returns whether the block was added or not:
           local added = someMutableShape:AddBlock(1, 10, 10, 10)
