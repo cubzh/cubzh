@@ -1891,7 +1891,7 @@ void _chunk_entry_insert(DoublyLinkedList *chunks, Chunk *c, void *castData, flo
 float shape_box_cast(const Shape *s,
                      const Box *modelBox,
                      const float3 *modelVector,
-                     const float3 *epsilon,
+                     const float3 *modelEpsilon,
                      const bool withReplacement,
                      float3 *normal,
                      float3 *extraReplacement,
@@ -1914,7 +1914,15 @@ float shape_box_cast(const Shape *s,
 
     // select overlapped chunks
     DoublyLinkedList *chunksQuery = doubly_linked_list_new();
-    if (rtree_query_cast_all_box(s->rtree, modelBox, &unit, maxDist, 0, 1, NULL, chunksQuery) > 0) {
+    if (rtree_query_cast_all_box(s->rtree,
+                                 modelBox,
+                                 &unit,
+                                 maxDist,
+                                 0,
+                                 1,
+                                 NULL,
+                                 chunksQuery,
+                                 modelEpsilon) > 0) {
         // sort query results by distance
         doubly_linked_list_sort_ascending(chunksQuery, rtree_utils_result_sort_func);
 
@@ -1958,12 +1966,14 @@ float shape_box_cast(const Shape *s,
                 tmpBox.max.y += chunkOrigin.y;
                 tmpBox.max.z += chunkOrigin.z;
 
-                const bool collides = box_collide(&tmpBox, &broadPhaseBox);
+                const bool collides = box_collide_epsilon(&tmpBox,
+                                                          &broadPhaseBox,
+                                                          EPSILON_COLLISION);
                 if (leaf && collides) {
                     swept = box_swept(modelBox,
                                       modelVector,
                                       &tmpBox,
-                                      epsilon,
+                                      modelEpsilon,
                                       withReplacement,
                                       &tmpNormal,
                                       &tmpReplacement);
@@ -2216,7 +2226,7 @@ bool shape_point_overlap(const Shape *s, const float3 *world) {
     return false;
 }
 
-bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
+bool shape_box_overlap(const Shape *s, const Box *modelBox, const float3 *modelEpsilon, Box *out) {
     if (s == NULL || modelBox == NULL) {
         return false;
     }
@@ -2224,8 +2234,7 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
     // select overlapped chunks
     FifoList *chunksQuery = fifo_list_new();
     bool didHit = false;
-    if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, NULL, chunksQuery, EPSILON_COLLISION) >
-        0) {
+    if (rtree_query_overlap_box(s->rtree, modelBox, 0, 1, NULL, chunksQuery, modelEpsilon) > 0) {
 
         // examine query results, stop at first overlap
         RtreeNode *hit = fifo_list_pop(chunksQuery);
@@ -2251,7 +2260,7 @@ bool shape_box_overlap(const Shape *s, const Box *modelBox, Box *out) {
                 tmpBox.max.y += chunkOrigin.y;
                 tmpBox.max.z += chunkOrigin.z;
 
-                const bool collides = box_collide(modelBox, &tmpBox);
+                const bool collides = box_collide_epsilon(modelBox, &tmpBox, EPSILON_COLLISION);
                 if (leaf && collides) {
                     didHit = true;
                     if (out != NULL) {

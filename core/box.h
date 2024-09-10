@@ -57,14 +57,11 @@ void box_copy(Box *dest, const Box *src);
 
 bool box_equals(const Box *b1, const Box *b2, const float epsilon);
 
-// Returns true when 2 boxes collide, equivalent to box_collide_epsilon(b1, b2, -EPSILON_COLLISION)
-bool box_collide(const Box *b1, const Box *b2);
-
 bool box_collide_epsilon(const Box *b1, const Box *b2, const float epsilon);
+bool box_collide_epsilon3(const Box *b1, const Box *b2, const float3 *epsilon);
 
 // Returns true if box contains point
 bool box_contains(const Box *b, const float3 *f3);
-
 bool box_contains_epsilon(const Box *b, const float3 *f3, float epsilon);
 
 void box_set_broadphase_box(const Box *b, const float3 *v, Box *bpBox);

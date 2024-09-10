@@ -128,10 +128,6 @@ void test_box_collide(void) {
     Box *b = box_new_2(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     Box *c = box_new_2(2.0f, 4.0f, 1.0f, 14.0f, 16.0f, 13.0f);
 
-    TEST_CHECK(box_collide(a, b) == false);
-    TEST_CHECK(box_collide(c, b) == false);
-    TEST_CHECK(box_collide(a, c) == true);
-
     TEST_CHECK(box_collide_epsilon(a, b, EPSILON_COLLISION) == false);
     TEST_CHECK(box_collide_epsilon(c, b, EPSILON_COLLISION) == false);
     TEST_CHECK(box_collide_epsilon(a, c, EPSILON_COLLISION) == true);

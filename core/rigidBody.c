@@ -347,14 +347,14 @@ bool _rigidbody_dynamic_tick(Scene *scene,
         // previous query should be processed entirely
         vx_assert(fifo_list_pop(sceneQuery) == NULL);
 
-        // run collision query in r-tree w/ default inner epsilon
+        // run collision query in r-tree
         if (rtree_query_overlap_box(r,
                                     &broadphase,
                                     rb->groups,
                                     rb->collidesWith,
                                     NULL,
                                     sceneQuery,
-                                    -EPSILON_COLLISION) > 0) {
+                                    &float3_epsilon_collision) > 0) {
             RtreeNode *hit = fifo_list_pop(sceneQuery);
             Transform *hitLeaf;
             RigidBody *hitRb;
@@ -424,7 +424,7 @@ bool _rigidbody_dynamic_tick(Scene *scene,
                                                         &modelEpsilon);
 
                     box_set_broadphase_box(&modelBox, &modelDv, &modelBroadphase);
-                    if (box_collide(&modelBroadphase, &collider)) {
+                    if (box_collide_epsilon3(&modelBroadphase, &collider, &modelEpsilon)) {
                         // shapes may enable per-block collisions
                         if (hitPerBlock) {
                             swept = shape_box_cast(shape,
@@ -781,15 +781,13 @@ void _rigidbody_trigger_tick(Scene *scene,
     vx_assert(fifo_list_pop(sceneQuery) == NULL);
 
     // run overlap query in r-tree
-    // Note: w/ an outer epsilon to let trigger rigidbody callbacks be called before a potential
-    // collision response from a dynamic rigidbody
     if (rtree_query_overlap_box(r,
                                 worldCollider,
                                 rb->groups,
                                 rb->collidesWith,
                                 NULL,
                                 sceneQuery,
-                                EPSILON_COLLISION) > 0) {
+                                &float3_epsilon_collision) > 0) {
 
         const Shape *s = transform_utils_get_shape(t);
         const bool selfPerBlock = s != NULL && rigidbody_uses_per_block_collisions(rb);
@@ -805,6 +803,7 @@ void _rigidbody_trigger_tick(Scene *scene,
         Transform *hitLeaf;
         RigidBody *hitRb;
         Box box;
+        float3 modelEpsilon;
         while (hit != NULL) {
             hitLeaf = (Transform *)rtree_node_get_leaf_ptr(hit);
             vx_assert(rtree_node_is_leaf(hit));
@@ -840,12 +839,16 @@ void _rigidbody_trigger_tick(Scene *scene,
                                        &selfInvModel,
                                        &float3_zero,
                                        NoSquarify);
+            matrix4x4_op_multiply_vec_vector(&modelEpsilon,
+                                             &float3_epsilon_collision,
+                                             &selfInvModel);
+            modelEpsilon = float3_mmax2(&modelEpsilon, &float3_epsilon_zero);
 
             bool overlap1;
             if (selfPerBlock) {
-                overlap1 = shape_box_overlap(s, &box, NULL);
+                overlap1 = shape_box_overlap(s, &box, &modelEpsilon, NULL);
             } else {
-                overlap1 = box_collide_epsilon(&box, &selfCollider, EPSILON_COLLISION);
+                overlap1 = box_collide_epsilon3(&box, &selfCollider, &modelEpsilon);
             }
 
             // 2) check for overlap in hit model space (ignoring self shape per-block quality)
@@ -855,12 +858,19 @@ void _rigidbody_trigger_tick(Scene *scene,
                                        &hitInvModel,
                                        &float3_zero,
                                        NoSquarify);
+            matrix4x4_op_multiply_vec_vector(&modelEpsilon,
+                                             &float3_epsilon_collision,
+                                             &hitInvModel);
+            modelEpsilon = float3_mmax2(&modelEpsilon, &float3_epsilon_zero);
 
             bool overlap2;
             if (hitPerBlock) {
-                overlap2 = shape_box_overlap(hitShape, &box, &hitCollider); // out: block box
+                overlap2 = shape_box_overlap(hitShape,
+                                             &box,
+                                             &modelEpsilon,
+                                             &hitCollider); // out: block box
             } else {
-                overlap2 = box_collide_epsilon(&box, &hitCollider, EPSILON_COLLISION);
+                overlap2 = box_collide_epsilon3(&box, &hitCollider, &modelEpsilon);
             }
 
             // 3) if overlap in both spaces, trigger callbacks
@@ -1424,8 +1434,8 @@ void rigidbody_broadphase_world_to_model(const Matrix4x4 *invModel,
 
     box_to_aabox2(worldBox, outBox, invModel, &float3_zero, NoSquarify);
     matrix4x4_op_multiply_vec_vector(outVector, worldVector, invModel);
-    const float3 epsilon3 = (float3){epsilon, epsilon, epsilon};
-    matrix4x4_op_multiply_vec_vector(outEpsilon3, &epsilon3, invModel);
+    matrix4x4_op_multiply_vec_vector(outEpsilon3, &float3_epsilon_collision, invModel);
+    *outEpsilon3 = float3_mmax2(outEpsilon3, &float3_epsilon_zero);
 }
 
 // MARK: - Callbacks -

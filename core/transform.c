@@ -128,6 +128,7 @@ static void _transform_refresh_local_position(Transform *t);
 static void _transform_refresh_position(Transform *t);
 static void _transform_refresh_local_rotation(Transform *t);
 static void _transform_refresh_rotation(Transform *t);
+static void _transform_compute_SRT(Matrix4x4 *mtx, const float3 *s, Quaternion *r, const float3 *t);
 static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty);
 static bool _transform_vec_equals(const float3 *f,
                                   const float x,
@@ -388,58 +389,56 @@ RigidBody *transform_get_rigidbody(Transform *const t) {
 RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
                                                            Box *collider,
                                                            const bool refreshParents) {
-    RigidBody *rb = NULL;
     if (collider != NULL) {
         *collider = box_zero;
     }
 
-    // we can use collider cached in rtree leaf whenever possible, otherwise compute it
-    switch (transform_get_type(t)) {
-        case HierarchyTransform:
-            break;
-        case ShapeTransform: {
-            Shape *s = (Shape *)transform_get_ptr(t);
-            if (s != NULL) {
-                rb = transform_get_rigidbody(t);
-                if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                    if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) ||
-                        rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
+    const TransformType type = transform_get_type(t);
+    if (type == HierarchyTransform) {
+        return NULL;
+    }
 
-                        shape_compute_world_collider(s, collider, refreshParents);
-                    } else {
-                        box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
+    RigidBody *rb = transform_get_rigidbody(t);
+    if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
+        // we can use collider cached in rtree leaf whenever possible, otherwise compute it
+        if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) || rigidbody_get_collider_dirty(rb) ||
+            rigidbody_get_rtree_leaf(rb) == NULL) {
+
+            if (type == ShapeTransform) {
+                Shape *s = (Shape *)transform_get_ptr(t);
+                if (s != NULL) {
+                    shape_compute_world_collider(s, collider, refreshParents);
+                }
+            } else {
+                float3 offset = float3_zero;
+
+                if (type == QuadTransform) {
+                    Quad *q = (Quad *)transform_get_ptr(t);
+                    if (q != NULL) {
+                        offset.x = -quad_get_anchor_x(q) * quad_get_width(q);
+                        offset.y = -quad_get_anchor_y(q) * quad_get_height(q);
                     }
                 }
-            }
-            break;
-        }
-        default: {
-            rb = transform_get_rigidbody(t);
-            if (rb != NULL && collider != NULL && rigidbody_is_enabled(rb)) {
-                if (_transform_get_dirty(t, TRANSFORM_DIRTY_PHYSICS) ||
-                    rigidbody_get_collider_dirty(rb) || rigidbody_get_rtree_leaf(rb) == NULL) {
 
-                    if (rigidbody_is_dynamic(rb)) {
-                        transform_utils_box_to_dynamic_collider(
-                            t,
-                            rigidbody_get_collider(rb),
-                            collider,
-                            NULL,
-                            PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify,
-                            refreshParents);
-                    } else {
-                        transform_utils_box_to_static_collider(t,
-                                                               rigidbody_get_collider(rb),
-                                                               collider,
-                                                               NULL,
-                                                               false,
-                                                               refreshParents);
-                    }
+                if (rigidbody_is_dynamic(rb)) {
+                    transform_utils_box_to_dynamic_collider(
+                        t,
+                        rigidbody_get_collider(rb),
+                        collider,
+                        &offset,
+                        PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify,
+                        refreshParents);
                 } else {
-                    box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
+                    transform_utils_box_to_static_collider(t,
+                                                           rigidbody_get_collider(rb),
+                                                           collider,
+                                                           &offset,
+                                                           NoSquarify,
+                                                           refreshParents);
                 }
             }
-            break;
+        } else {
+            box_copy(collider, rtree_node_get_aabb(rigidbody_get_rtree_leaf(rb)));
         }
     }
 
@@ -951,12 +950,14 @@ void transform_utils_rotate_euler(Transform *t, const float3 *rot, float3 *resul
 void transform_utils_move_children(Transform *from, Transform *to, bool keepWorld) {
     size_t count = 0;
     Transform_Array children = transform_get_children_copy(from, &count);
-    for (size_t i = 0; i < count; ++i) {
-        if (transform_set_parent(children[i], to, keepWorld) == false) {
-            cclog_error("transform_utils_move_children - parent can't be set");
+    if (children != NULL) {
+        for (size_t i = 0; i < count; ++i) {
+            if (transform_set_parent(children[i], to, keepWorld) == false) {
+                cclog_error("transform_utils_move_children - parent can't be set");
+            }
         }
+        free(children);
     }
-    free(children);
 }
 
 void transform_utils_box_to_aabb(Transform *t,
@@ -1027,36 +1028,35 @@ Shape *transform_utils_get_shape(Transform *t) {
 }
 
 void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
+    *out = *t->ltw;
+
     if (transform_get_type(t) == ShapeTransform) {
         const float3 pivot = shape_get_pivot((Shape *)t->ptr);
-        matrix4x4_set_translation(out, -pivot.x, -pivot.y, -pivot.z);
-        matrix4x4_op_multiply_2(t->ltw, out);
+        out->x4y1 -= t->ltw->x1y1 * pivot.x + t->ltw->x2y1 * pivot.y + t->ltw->x3y1 * pivot.z;
+        out->x4y2 -= t->ltw->x1y2 * pivot.x + t->ltw->x2y2 * pivot.y + t->ltw->x3y2 * pivot.z;
+        out->x4y3 -= t->ltw->x1y3 * pivot.x + t->ltw->x2y3 * pivot.y + t->ltw->x3y3 * pivot.z;
     } else if (transform_get_type(t) == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
-        matrix4x4_set_translation(out,
-                                  -quad_get_anchor_x(q) * quad_get_width(q),
-                                  -quad_get_anchor_y(q) * quad_get_height(q),
-                                  0.0f);
-        matrix4x4_op_multiply_2(t->ltw, out);
-    } else {
-        matrix4x4_copy(out, t->ltw);
+        const float anchorX = quad_get_anchor_x(q) * quad_get_width(q);
+        const float anchorY = quad_get_anchor_y(q) * quad_get_height(q);
+        out->x4y1 -= t->ltw->x1y1 * anchorX + t->ltw->x2y1 * anchorY;
+        out->x4y2 -= t->ltw->x1y2 * anchorX + t->ltw->x2y2 * anchorY;
+        out->x4y3 -= t->ltw->x1y3 * anchorX + t->ltw->x2y3 * anchorY;
     }
 }
 
 void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out) {
+    *out = *t->wtl;
+
     if (transform_get_type(t) == ShapeTransform) {
         const float3 pivot = shape_get_pivot((Shape *)t->ptr);
-        matrix4x4_set_translation(out, pivot.x, pivot.y, pivot.z);
-        matrix4x4_op_multiply(out, t->wtl);
+        out->x4y1 += pivot.x;
+        out->x4y2 += pivot.y;
+        out->x4y3 += pivot.z;
     } else if (transform_get_type(t) == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
-        matrix4x4_set_translation(out,
-                                  quad_get_anchor_x(q) * quad_get_width(q),
-                                  quad_get_anchor_y(q) * quad_get_height(q),
-                                  0.0f);
-        matrix4x4_op_multiply(out, t->wtl);
-    } else {
-        matrix4x4_copy(out, t->wtl);
+        out->x4y1 += quad_get_anchor_x(q) * quad_get_width(q);
+        out->x4y2 += quad_get_anchor_y(q) * quad_get_height(q);
     }
 }
 
@@ -1332,26 +1332,52 @@ static void _transform_refresh_rotation(Transform *t) {
     }
 }
 
+static void _transform_compute_SRT(Matrix4x4 *mtx,
+                                   const float3 *s,
+                                   Quaternion *r,
+                                   const float3 *t) {
+    quaternion_op_normalize(r);
+
+    const float xx = r->y * r->y;
+    const float xy = r->y * r->z;
+    const float xz = r->y * r->x;
+    const float xw = -r->y * r->w;
+
+    const float yy = r->z * r->z;
+    const float yz = r->z * r->x;
+    const float yw = -r->z * r->w;
+
+    const float zz = r->x * r->x;
+    const float zw = -r->x * r->w;
+
+    mtx->x1y1 = s->x * (1.0f - 2.0f * (yy + zz));
+    mtx->x1y2 = s->x * (2.0f * (xy - zw));
+    mtx->x1y3 = s->x * (2.0f * (xz + yw));
+    mtx->x1y4 = 0.0f;
+
+    mtx->x2y1 = s->y * (2.0f * (xy + zw));
+    mtx->x2y2 = s->y * (1.0f - 2.0f * (xx + zz));
+    mtx->x2y3 = s->y * (2.0f * (yz - xw));
+    mtx->x2y4 = 0.0f;
+
+    mtx->x3y1 = s->z * (2.0f * (xz - yw));
+    mtx->x3y2 = s->z * (2.0f * (yz + xw));
+    mtx->x3y3 = s->z * (1.0f - 2.0f * (xx + yy));
+    mtx->x3y4 = 0.0f;
+
+    mtx->x4y1 = t->x;
+    mtx->x4y2 = t->y;
+    mtx->x4y3 = t->z;
+    mtx->x4y4 = 1.0f;
+}
+
 /// note: here, local transformations must be up-to-date
 static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
     const bool dirty = _transform_get_dirty(t, TRANSFORM_DIRTY_MTX);
 
     if (dirty) {
-        Matrix4x4 *mtx = matrix4x4_new_identity();
-
         /// compute local mtx
-        // 1) local scale
-        matrix4x4_set_scaleXYZ(t->mtx, t->localScale.x, t->localScale.y, t->localScale.z);
-
-        // 2) local rotation
-        quaternion_to_rotation_matrix(t->localRotation, mtx);
-        matrix4x4_op_multiply_2(mtx, t->mtx);
-
-        // 3) local translation
-        matrix4x4_set_translation(mtx, t->localPosition.x, t->localPosition.y, t->localPosition.z);
-        matrix4x4_op_multiply_2(mtx, t->mtx);
-
-        matrix4x4_free(mtx);
+        _transform_compute_SRT(t->mtx, &t->localScale, t->localRotation, &t->localPosition);
 
         _transform_reset_dirty(t, TRANSFORM_DIRTY_MTX);
 

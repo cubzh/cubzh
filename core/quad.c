@@ -126,6 +126,9 @@ uint32_t quad_get_data_hash(const Quad *q) {
 
 void quad_set_width(Quad *q, float value) {
     q->width = value;
+    if (float_isZero(q->anchorX, EPSILON_ZERO) == false) {
+        transform_set_physics_dirty(q->transform);
+    }
 }
 
 float quad_get_width(const Quad *q) {
@@ -134,6 +137,9 @@ float quad_get_width(const Quad *q) {
 
 void quad_set_height(Quad *q, float value) {
     q->height = value;
+    if (float_isZero(q->anchorY, EPSILON_ZERO) == false) {
+        transform_set_physics_dirty(q->transform);
+    }
 }
 
 float quad_get_height(const Quad *q) {
@@ -142,6 +148,7 @@ float quad_get_height(const Quad *q) {
 
 void quad_set_anchor_x(Quad *q, float value) {
     q->anchorX = value;
+    transform_set_physics_dirty(q->transform);
 }
 
 float quad_get_anchor_x(const Quad *q) {
@@ -150,6 +157,7 @@ float quad_get_anchor_x(const Quad *q) {
 
 void quad_set_anchor_y(Quad *q, float value) {
     q->anchorY = value;
+    transform_set_physics_dirty(q->transform);
 }
 
 float quad_get_anchor_y(const Quad *q) {

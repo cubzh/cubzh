@@ -38,7 +38,7 @@ extern "C" {
 typedef struct _Rtree Rtree;
 typedef struct _RtreeNode RtreeNode;
 typedef void (*pointer_rtree_recurse_func)(RtreeNode *rn);
-typedef bool (*pointer_rtree_query_overlap_func)(RtreeNode *rn, void *ptr, float epsilon);
+typedef bool (*pointer_rtree_query_overlap_func)(RtreeNode *rn, void *ptr, const float3 *epsilon);
 typedef bool (*pointer_rtree_query_cast_all_func)(RtreeNode *rn, void *ptr, float *distance);
 typedef size_t (*pointer_rtree_broadphase_step_func)(Rtree *r,
                                                      const Box *stepOriginBox,
@@ -49,7 +49,8 @@ typedef size_t (*pointer_rtree_broadphase_step_func)(Rtree *r,
                                                      uint16_t collidesWith,
                                                      void *optionalPtr,
                                                      const DoublyLinkedList *excludeLeafPtrs,
-                                                     DoublyLinkedList *results);
+                                                     DoublyLinkedList *results,
+                                                     const float3 *epsilon);
 
 typedef struct RtreeCastResult {
     RtreeNode *rtreeLeaf;
@@ -111,14 +112,14 @@ size_t rtree_query_overlap_func(Rtree *r,
                                 void *ptr,
                                 const DoublyLinkedList *excludeLeafPtrs,
                                 FifoList *results,
-                                float epsilon);
+                                const float3 *epsilon);
 size_t rtree_query_overlap_box(Rtree *r,
                                const Box *aabb,
                                uint16_t groups,
                                uint16_t collidesWith,
                                const DoublyLinkedList *excludeLeafPtrs,
                                FifoList *results,
-                               float epsilon);
+                               const float3 *epsilon);
 size_t rtree_query_cast_all_func(Rtree *r,
                                  uint16_t groups,
                                  uint16_t collidesWith,
@@ -141,7 +142,8 @@ size_t rtree_query_cast_all_box_step_func(Rtree *r,
                                           uint16_t collidesWith,
                                           void *optionalPtr,
                                           const DoublyLinkedList *excludeLeafPtrs,
-                                          DoublyLinkedList *results);
+                                          DoublyLinkedList *results,
+                                          const float3 *epsilon);
 size_t rtree_query_cast_all_box(Rtree *r,
                                 const Box *aabb,
                                 const float3 *unit,
@@ -149,7 +151,8 @@ size_t rtree_query_cast_all_box(Rtree *r,
                                 uint16_t groups,
                                 uint16_t collidesWith,
                                 const DoublyLinkedList *excludeLeafPtrs,
-                                DoublyLinkedList *results);
+                                DoublyLinkedList *results,
+                                const float3 *epsilon);
 
 /// MARK: - Utils -
 size_t rtree_utils_broadphase_steps(Rtree *r,
@@ -161,7 +164,8 @@ size_t rtree_utils_broadphase_steps(Rtree *r,
                                     pointer_rtree_broadphase_step_func func,
                                     void *optionalPtr,
                                     const DoublyLinkedList *excludeLeafPtrs,
-                                    DoublyLinkedList *results);
+                                    DoublyLinkedList *results,
+                                    const float3 *epsilon);
 bool rtree_utils_result_sort_func(DoublyLinkedListNode *n1, DoublyLinkedListNode *n2);
 
 /// MARK: - Debug -
