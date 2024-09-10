@@ -98,3 +98,11 @@ functions:
       - name: "light"
         type: "boolean"
         optional: true
+
+  - name: "Clear"
+    description: |
+        Returns the clear color (R:0, G:0, B:0, A:0). This is a property of the global table, and should be called as `Color.Clear`.
+  
+  - name: "Copy"
+    description: |
+        Returns a new [This] instance with the same color.
