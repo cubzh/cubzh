@@ -64,7 +64,7 @@ functions:
 
         Config table can contain any of the following: `{ recursive=boolean, local=boolean }`,
         - `recursive`: the box will also fit all of target's descendants models. Default is `false`.
-        - `localBox`: result box will be in target's local space. Default is `false`, returning a box in world space.
+        - `localBox`: result box will be in `target`'s parent local space. Default is `false`, returning a box in world space.
 
   - name: "Merge"
     arguments:
