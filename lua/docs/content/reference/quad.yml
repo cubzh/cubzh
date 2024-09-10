@@ -52,7 +52,7 @@ properties:
 
             -- make the quad use default transparency if any given color has alpha < 255
             local c = Color(255, 0, 0, 120)
-            q.Color.A = c
+            q.Color = c
             q.Color = { vcolor1, vcolor2, vcolor3, c }
 
             -- opt-in to alpha-blending, instead of default transparency, gives more accurate results but is slower
