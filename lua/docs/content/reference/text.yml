@@ -137,6 +137,7 @@ properties:
           The font used by [This]'s text message. It can be one of the following,
           - `Font.Pixel`: a pixel font which generally scales well whatever the size. It is lit by [Shape](reference/shape)'s baked lighting, and can be lit by [Light](reference/light) objects if the text's color is opaque. Internally, transparent texts using this font are rendered within an order-independant pass.
           - `Font.Noto`: a vector font which will look smoother, but may not always scale well when displaying extremely big texts. It is lit by [Shape](reference/shape)'s baked lighting, but not by [Light](reference/light) objects. Internally, transparent texts using this font are rendered in an alpha-blending pass.
+          - `Font.NotoMono`: same characteristics as the `Font.Noto` font, but with equal spacing between characters (monospace).
 
     - name: "IsDoubleSided"
       type: "boolean"
