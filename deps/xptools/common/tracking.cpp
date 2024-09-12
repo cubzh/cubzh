@@ -139,15 +139,6 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     vx::json::writeStringField(obj, "type", eventType);
     vx::json::writeStringField(obj, "user-id", userAccountID);
     vx::json::writeStringField(obj, "device-id", deviceID);
-    vx::json::writeStringField(obj, "platform", _getPlatformName());
-    vx::json::writeStringField(obj, "os-name", _getOSName());
-    vx::json::writeStringField(obj, "os-version", _getOSVersion());
-    vx::json::writeStringField(obj, "app-version", _getAppVersion());
-
-    vx::json::writeStringField(obj, "hw-brand", vx::device::hardwareBrand());
-    vx::json::writeStringField(obj, "hw-model", vx::device::hardwareModel());
-    vx::json::writeStringField(obj, "hw-product", vx::device::hardwareProduct());
-    vx::json::writeIntField(obj, "hw-mem", vx::device::hardwareMemoryGB());
 
     vx::json::writeStringField(obj, "_branch", std::string(TRACKING_BRANCH));
 
@@ -195,6 +186,48 @@ void TrackingClient::_sendKeepAliveEventIfNeeded() {
         TrackingClient::shared()._sendKeepAliveEventIfNeeded();
     }, KEEP_ALIVE_DELAY);
 #endif
+}
+
+void TrackingClient::trackProperties(std::unordered_map<std::string, std::string> properties) {
+    _checkAndRefreshSession();
+
+    std::string deviceID;
+    bool ok = _getDebugID(deviceID);
+    if (ok == false) {
+        vxlog_error("failed to get debug ID");
+        return;
+    }
+
+    cJSON *obj = cJSON_CreateObject();
+
+    if (_session_id > 0) {
+        vx::json::writeInt64Field(obj, "session_id", _session_id);
+    }
+    vx::json::writeStringField(obj, "device-id", deviceID);
+
+    for (auto pair : properties) {
+        vx::json::writeStringField(obj, pair.first, pair.second);
+    }
+
+    char *s = cJSON_PrintUnformatted(obj);
+    const std::string jsonStr = std::string(s);
+    free(s);
+
+    cJSON_Delete(obj);
+
+    HttpClient::shared().POST(this->_host,
+                              this->_port,
+                              "/properties",
+                              QueryParams(),
+                              this->_secure,
+                              HttpClient::noHeaders,
+                              jsonStr,
+                              [](HttpRequest_SharedPtr req) {
+//                                 vxlog_debug("[TRACK] CALLBACK: %s %d %s",
+//                                             req->getResponse().getSuccess() ? "OK" : "FAIL",
+//                                             req->getResponse().getStatusCode(),
+//                                             req->getResponse().getText().c_str());
+                              });
 }
 
 void TrackingClient::removeDebugID() {
@@ -406,25 +439,6 @@ bool TrackingClient::_getDebugID(std::string &debugID) const {
 
     debugID.assign(newDebugID);
     return true;
-}
-
-/// returns the name of the platform
-std::string TrackingClient::_getPlatformName() const {
-    return vx::device::platform();
-}
-
-/// returns the name of the OS
-std::string TrackingClient::_getOSName() const {
-    return vx::device::osName();
-}
-
-/// returns the version of the OS
-std::string TrackingClient::_getOSVersion() const {
-    return vx::device::osVersion();
-}
-
-std::string TrackingClient::_getAppVersion() const {
-    return vx::device::appVersionCached();
 }
 
 bool TrackingClient::_createCredentialsJsonWithDebugID(std::string &debugID) const {

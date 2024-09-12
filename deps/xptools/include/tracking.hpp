@@ -47,6 +47,8 @@ public:
     void trackEvent(const std::string& eventType,
                     std::unordered_map<std::string, std::string> properties);
 
+    void trackProperties(std::unordered_map<std::string, std::string> properties);
+
     /// flush debugID value from credentials.json
     void removeDebugID();
 
@@ -66,18 +68,6 @@ private:
     /// Creates (if necessary) and returns a debug ID.
     /// It is used as "device ID" for tracking.
     bool _getDebugID(std::string &debugID) const;
-
-    /// returns the name of the platform
-    std::string _getPlatformName() const;
-
-    /// returns the name of the OS
-    std::string _getOSName() const;
-
-    /// returns the version of the OS
-    std::string _getOSVersion() const;
-
-    /// returns the version of the App
-    std::string _getAppVersion() const;
 
     // always sent within _operationQueue
     void _trackEvent(const std::string& eventType,
