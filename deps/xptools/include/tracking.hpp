@@ -52,6 +52,9 @@ public:
     /// flush debugID value from credentials.json
     void removeDebugID();
 
+    void tickPerformanceCounters(const double dt);
+    void resetPerformanceCounters();
+
 private:
 
     ///
@@ -91,6 +94,9 @@ private:
     uint16_t _port;
     bool _secure;
     bool _keep_alive_activated;
+
+    /// total frame count, frame count below slow thresholds
+    uint64_t _frameCount, _frameCount_slowMinimum, _frameCount_slowGameplay;
 #endif
 };
 

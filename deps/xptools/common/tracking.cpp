@@ -47,6 +47,10 @@
 #define NEW_SESSION_DELAY_MS 600000 // 10 minutes
 #define KEEP_ALIVE_DELAY 60000 // 1 minute
 
+#define TRACKING_DT_SLOW_MINIMUM 0.05
+#define TRACKING_DT_SLOW_GAMEPLAY 1/30.0
+#define TRACKING_DT_SLOW_CONDITION 0.25f // a session is considered slow if >25% of frames are below threshold
+
 using namespace vx::tracking;
 
 TrackingClient* TrackingClient::_sharedInstance = nullptr;
@@ -139,6 +143,12 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     vx::json::writeStringField(obj, "type", eventType);
     vx::json::writeStringField(obj, "user-id", userAccountID);
     vx::json::writeStringField(obj, "device-id", deviceID);
+
+    // report slow session metrics
+    const bool slowGameplay = static_cast<float>(_frameCount_slowGameplay) / _frameCount > TRACKING_DT_SLOW_CONDITION;
+    const bool slowMinimum = static_cast<float>(_frameCount_slowMinimum) / _frameCount > TRACKING_DT_SLOW_CONDITION;
+    vx::json::writeBoolField(obj, "perf-slow-gameplay", slowGameplay);
+    vx::json::writeBoolField(obj, "perf-slow-minimum", slowMinimum);
 
     vx::json::writeStringField(obj, "_branch", std::string(TRACKING_BRANCH));
 
@@ -276,6 +286,24 @@ void TrackingClient::removeDebugID() {
     cJSON_Delete(jsonObj);
 }
 
+void TrackingClient::tickPerformanceCounters(const double dt) {
+#ifndef P3S_NO_METRICS
+    if (dt > TRACKING_DT_SLOW_MINIMUM) {
+        ++_frameCount_slowMinimum;
+    }
+    if (dt > TRACKING_DT_SLOW_GAMEPLAY) {
+        ++_frameCount_slowGameplay;
+    }
+    ++_frameCount;
+#endif
+}
+
+void TrackingClient::resetPerformanceCounters() {
+#ifndef P3S_NO_METRICS
+    _frameCount = _frameCount_slowMinimum = _frameCount_slowGameplay = 0;
+#endif
+}
+
 // --------------------------------------------------
 //
 // MARK: - Private -
@@ -300,6 +328,8 @@ TrackingClient::TrackingClient(const std::string& host,
     _operationQueue->schedule([](){
         TrackingClient::shared()._sendKeepAliveEventIfNeeded();
     }, KEEP_ALIVE_DELAY);
+
+    _frameCount = _frameCount_slowMinimum = _frameCount_slowGameplay = 0;
 #endif
 }
 
