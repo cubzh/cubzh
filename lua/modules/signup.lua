@@ -1393,22 +1393,30 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local okBtn = ui:buttonPositive({ content = "Confirm", textSize = "big", padding = 10 })
+				local okBtn = ui:buttonPositive({ content = "OK", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
 				okBtn:disable()
 
-				local text = ui:createText("How old are you?", {
+				local text = ui:createText("My age is…", {
 					color = Color.White,
+					font = Font.Pixel,
+					size = "big",
 				})
 				text:setParent(drawer)
+
+				local secondaryText = ui:createText("Please tell us your age, it will not affect gameplay.", {
+					color = Color(200, 200, 200),
+					size = "small",
+				})
+				secondaryText:setParent(drawer)
 
 				cache.age = cache.age ~= nil and cache.age or -1
 
 				local function setAgeStr()
 					if cache.age == -1 then
 						cache.ageStr = "?"
-					elseif cache.age >= 41 then
-						cache.ageStr = "40+"
+					elseif cache.age >= 22 then
+						cache.ageStr = "21+"
 					else
 						cache.ageStr = "" .. cache.age
 					end
@@ -1425,7 +1433,7 @@ signup.startFlow = function(self, config)
 
 				local ageSlider = ui:slider({
 					min = -1,
-					max = 41,
+					max = 22,
 					step = 1,
 					defaultValue = cache.age,
 					hapticFeedback = true,
@@ -1448,11 +1456,31 @@ signup.startFlow = function(self, config)
 				loading:setParent(drawer)
 				loading:hide()
 
-				local secondaryText = ui:createText("Asking this to keep your online gaming experience safe and fun!", {
+				local termsAndPrivacyText = ui:createText("By tapping OK you accept our", {
 					color = Color(200, 200, 200),
 					size = "small",
 				})
-				secondaryText:setParent(drawer)
+				termsAndPrivacyText:setParent(drawer)
+
+				local termsBtn = ui:buttonLink({ content = "Terms of Service", textSize = "small" })
+				termsBtn.onRelease = function()
+					System:DebugEvent("User presses Terms button")
+					URL:Open("https://cu.bzh/terms")
+				end
+				termsBtn:setParent(drawer)
+
+				local termsAndPrivacyAnd = ui:createText(" and ", {
+					color = Color(200, 200, 200),
+					size = "small",
+				})
+				termsAndPrivacyAnd:setParent(drawer)
+
+				local privacyBtn = ui:buttonLink({ content = "Privacy Policy", textSize = "small" })
+				privacyBtn.onRelease = function()
+					System:DebugEvent("User presses Privacy button")
+					URL:Open("https://cu.bzh/privacy")
+				end
+				privacyBtn:setParent(drawer)
 
 				okBtn.onRelease = function()
 					loading:show()
@@ -1502,16 +1530,39 @@ signup.startFlow = function(self, config)
 							+ age.Height
 							+ text.Height
 							+ secondaryText.Height
-							+ padding * 6
+							+ termsAndPrivacyText.Height
+							+ termsBtn.Height
+							+ padding * 7
 
-						secondaryText.pos = {
-							self.Width * 0.5 - secondaryText.Width * 0.5,
-							Screen.SafeArea.Bottom + padding,
+						local termsWidth = termsBtn.Width + termsAndPrivacyAnd.Width + privacyBtn.Width
+						local x = self.Width * 0.5 - termsWidth * 0.5
+						local y = Screen.SafeArea.Bottom + padding
+
+						termsBtn.pos = {
+							x,
+							y,
+						}
+						x = x + termsBtn.Width
+
+						termsAndPrivacyAnd.pos = {
+							x,
+							y,
+						}
+						x = x + termsAndPrivacyAnd.Width
+
+						privacyBtn.pos = {
+							x,
+							y,
+						}
+
+						termsAndPrivacyText.pos = {
+							self.Width * 0.5 - termsAndPrivacyText.Width * 0.5,
+							privacyBtn.pos.Y + privacyBtn.Height,
 						}
 
 						okBtn.pos = {
 							self.Width * 0.5 - okBtn.Width * 0.5,
-							secondaryText.pos.Y + secondaryText.Height + padding,
+							termsAndPrivacyText.pos.Y + termsAndPrivacyText.Height + padding,
 						}
 
 						ageSlider.Width = self.Width - padding * 2
@@ -1530,9 +1581,14 @@ signup.startFlow = function(self, config)
 							ageSlider.pos.Y + ageSlider.Height + padding,
 						}
 
+						secondaryText.pos = {
+							self.Width * 0.5 - secondaryText.Width * 0.5,
+							age.pos.Y + age.Height + padding,
+						}
+
 						text.pos = {
 							self.Width * 0.5 - text.Width * 0.5,
-							age.pos.Y + age.Height + padding,
+							secondaryText.pos.Y + secondaryText.Height + padding,
 						}
 
 						LocalEvent:Send("signup_drawer_height_update", self.Height)
