@@ -192,6 +192,24 @@ void cancelLocalNotification(const std::string &identifier) {
     [center removePendingNotificationRequestsWithIdentifiers:@[nsidentifier]];
 }
 
+vx::device::NotificationAuthorizationStatus vx::device::notificationAuthorizationStatus() {
+    __block NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
+        if (settings.authorizationStatus == UNAuthorizationStatusAuthorized) {
+            status = NotificationAuthorizationStatus_Authorized;
+        } else if (settings.authorizationStatus == UNAuthorizationStatusDenied) {
+            status = NotificationAuthorizationStatus_Denied;
+        } else {
+            status = NotificationAuthorizationStatus_NotDetermined;
+        }
+        dispatch_semaphore_signal(semaphore);
+    }];
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    return status;
+}
+
 vx::device::PerformanceTier vx::device::getPerformanceTier() {
     // https://gist.github.com/adamawolf/3048717
 
