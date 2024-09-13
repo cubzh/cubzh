@@ -4049,6 +4049,7 @@ function createUI(system)
 
 		local pressedCandidate = nil
 		local pressedCandidateImpact = nil
+		local withinScroll
 
 		for _, impact in ipairs(impacts) do
 			skip = false
@@ -4070,12 +4071,16 @@ function createUI(system)
 				elseif hitObject._node._onPress or hitObject._node._onRelease or hitObject._node.isScrollArea then
 					-- check if hitObject is within a scroll
 					parent = hitObject._node.parent
+					withinScroll = false
 					while parent ~= nil do
 						-- skip action if node parented by scroll but not within area
 						-- note: a scroll can itself be within a scroll
-						if parent.isScrollArea == true and parent:containsPointer(pointerEvent) == false then
-							skip = true
-							break
+						if parent.isScrollArea == true then
+							if parent:containsPointer(pointerEvent) == false then
+								skip = true
+								break
+							end
+							withinScroll = true
 						end
 						parent = parent.parent
 					end
@@ -4088,6 +4093,9 @@ function createUI(system)
 						if pressedCandidate == nil then
 							pressedCandidate = hitObject._node
 							pressedCandidateImpact = impact
+							if withinScroll == false then
+								break
+							end
 						end
 					end
 				end
