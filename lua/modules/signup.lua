@@ -71,58 +71,6 @@ signup.startFlow = function(self, config)
 		flowConfig.loginSuccess()
 	end
 
-	local function showCoinsButton()
-		-- not showing coins for now (waiting for marketplace implementation)
-
-		-- if coinsButton == nil then
-		-- 	local balanceContainer = ui:createFrame(Color(0, 0, 0, 0))
-		-- 	local coinShape = bundle:Shape("shapes/pezh_coin_2")
-		-- 	local coin = ui:createShape(coinShape, { spherized = false, doNotFlip = true })
-		-- 	coin:setParent(balanceContainer)
-
-		-- 	local l = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		-- 		coin.pivot.Rotation = coin.pivot.Rotation * Rotation(0, dt, 0)
-		-- 	end)
-		-- 	coin.onRemove = function()
-		-- 		l:Remove()
-		-- 	end
-
-		-- 	local balance = ui:createText("100", { color = Color(252, 220, 44), size = "default" })
-		-- 	balance:setParent(balanceContainer)
-		-- 	balanceContainer.parentDidResize = function(self)
-		-- 		local ratio = coin.Width / coin.Height
-		-- 		coin.Height = balance.Height
-		-- 		coin.Width = coin.Height * ratio
-		-- 		self.Width = coin.Width + balance.Width + theme.padding
-		-- 		self.Height = coin.Height
-
-		-- 		coin.pos = { 0, self.Height * 0.5 - coin.Height * 0.5 }
-		-- 		balance.pos = { coin.Width + theme.padding, self.Height * 0.5 - balance.Height * 0.5 }
-		-- 	end
-		-- 	balanceContainer:parentDidResize()
-
-		-- 	coinsButton = ui:buttonMoney({ content = balanceContainer, textSize = "default" })
-		-- 	-- coinsButton = ui:createButton(balanceContainer, { textSize = "default", borders = false })
-		-- 	-- coinsButton:setColor(Color(0, 0, 0, 0.4))
-		-- 	coinsButton.parentDidResize = function(self)
-		-- 		ease:cancel(self)
-		-- 		self.pos = {
-		-- 			Screen.Width - Screen.SafeArea.Right - self.Width - padding,
-		-- 			Screen.Height - Screen.SafeArea.Top - self.Height - padding,
-		-- 		}
-		-- 	end
-		-- 	coinsButton.onRelease = function(_)
-		-- 		-- display info bubble
-		-- 	end
-		-- 	coinsButton.pos = { Screen.Width, Screen.Height - Screen.SafeArea.Top - coinsButton.Height - padding }
-		-- 	ease:outSine(coinsButton, animationTime).pos = Number3(
-		-- 		Screen.Width - Screen.SafeArea.Right - coinsButton.Width - padding,
-		-- 		Screen.Height - Screen.SafeArea.Top - coinsButton.Height - padding,
-		-- 		0
-		-- 	)
-		-- end
-	end
-
 	local function removeCoinsButton()
 		if coinsButton ~= nil then
 			coinsButton:remove()
@@ -336,7 +284,6 @@ signup.startFlow = function(self, config)
 				config.verifyPhoneNumberStep()
 
 				showBackButton()
-				showCoinsButton()
 
 				-- DRAWER
 				if drawer ~= nil then
@@ -674,7 +621,6 @@ signup.startFlow = function(self, config)
 				config.phoneNumberStep()
 
 				showBackButton()
-				showCoinsButton()
 
 				-- DRAWER
 				if drawer ~= nil then
@@ -1384,7 +1330,6 @@ signup.startFlow = function(self, config)
 				config.dobStep()
 
 				showBackButton()
-				showCoinsButton()
 
 				-- DRAWER
 				if drawer ~= nil then
@@ -1628,7 +1573,6 @@ signup.startFlow = function(self, config)
 				config.avatarEditorStep()
 
 				showBackButton()
-				showCoinsButton()
 
 				infoFrame = ui:frameTextBackground()
 
