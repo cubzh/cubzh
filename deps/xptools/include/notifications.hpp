@@ -11,35 +11,50 @@
 // C++
 #include <chrono>
 #include <string>
+#include <functional>
 
 namespace vx {
 namespace notification {
 
-/**
- *
- */
-bool notificationsAvailable();
 
-/**
- *
- */
-bool shouldShowInfoPopup();
+typedef enum {
+    NotificationAuthorizationStatus_NotDetermined, // user's never been asked for authorization
+    NotificationAuthorizationStatus_Denied, // user clearly denied the service
+    NotificationAuthorizationStatus_Authorized,
+    NotificationAuthorizationStatus_NotSupported // when not supported on the platform
+} NotificationAuthorizationStatus;
 
-/**
- *
- */
-void requestRemotePush();
+typedef enum {
+    NotificationAuthorizationResponse_Error, // unknown error, doesn't mean user denied it
+    NotificationAuthorizationResponse_Authorized,
+    NotificationAuthorizationResponse_Denied,
+    NotificationAuthorizationResponse_NotSupported // when not supported on the platform
+} NotificationAuthorizationResponse;
 
-///
-/// Schedules local notification reminders (7, 15, 30 days).
-/// Returns true on success.
-bool scheduleAllLocalReminders(const std::string& title,
-                               const std::string& message);
+typedef std::function<void(NotificationAuthorizationResponse)> AuthorizationRequestCallback;
 
-///
-/// Cancels all local notification reminders.
-/// Returns true on success.
-bool cancelAllLocalReminders();
+// Returns current authorization status for push notifications.
+NotificationAuthorizationStatus remotePushAuthorizationStatus();
+
+// Shows system popup requesting user's authorization to receive push notifications
+void requestRemotePushAuthorization(AuthorizationRequestCallback callback);
+
+// Same as requestRemotePushAuthorization, but only triggers system popup
+// if auth status in not determined.
+// Triggers callback with proper response otherwise, not asking user for anything.
+void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback);
+
+void scheduleLocalNotification(const std::string &title,
+                               const std::string &body,
+                               const std::string &identifier,
+                               int days,
+                               int hours,
+                               int minutes,
+                               int seconds);
+
+void cancelLocalNotification(const std::string &identifier);
+
+
 
 }
 }

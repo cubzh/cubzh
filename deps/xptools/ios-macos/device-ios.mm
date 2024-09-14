@@ -154,62 +154,6 @@ void vx::device::hapticImpactHeavy() {
     [g impactOccurred];
 }
 
-void vx::device::scheduleLocalNotification(const std::string &title,
-                                           const std::string &body,
-                                           const std::string &identifier,
-                                           int days,
-                                           int hours,
-                                           int minutes,
-                                           int seconds) {
-    
-    UNMutableNotificationContent* content = [[UNMutableNotificationContent alloc] init];
-    
-    NSString *nstitle = [NSString stringWithCString:title.c_str() encoding:NSUTF8StringEncoding];
-    NSString *nsbody = [NSString stringWithCString:body.c_str() encoding:NSUTF8StringEncoding];
-    NSString *nsidentifier = [NSString stringWithCString:identifier.c_str() encoding:NSUTF8StringEncoding];
-    
-    content.title = [NSString localizedUserNotificationStringForKey:nstitle arguments:nil];
-    content.body = [NSString localizedUserNotificationStringForKey:nsbody arguments:nil];
-    
-    NSTimeInterval timeInterval = days * 86400 + hours * 3600 + minutes * 60 + seconds;
-    UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:timeInterval repeats:NO];
-    
-    UNNotificationRequest* request = [UNNotificationRequest
-           requestWithIdentifier:nsidentifier content:content trigger:trigger];
-    
-    UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
-    [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
-       if (error != nil) {
-           NSLog(@"could not schedule notification: %@", error.localizedDescription);
-       }
-    }];
-}
-
-void cancelLocalNotification(const std::string &identifier) {
-    NSString *nsidentifier = [NSString stringWithCString:identifier.c_str() encoding:NSUTF8StringEncoding];
-    
-    UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
-    [center removePendingNotificationRequestsWithIdentifiers:@[nsidentifier]];
-}
-
-vx::device::NotificationAuthorizationStatus vx::device::notificationAuthorizationStatus() {
-    __block NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-    [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
-        if (settings.authorizationStatus == UNAuthorizationStatusAuthorized) {
-            status = NotificationAuthorizationStatus_Authorized;
-        } else if (settings.authorizationStatus == UNAuthorizationStatusDenied) {
-            status = NotificationAuthorizationStatus_Denied;
-        } else {
-            status = NotificationAuthorizationStatus_NotDetermined;
-        }
-        dispatch_semaphore_signal(semaphore);
-    }];
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    return status;
-}
-
 vx::device::PerformanceTier vx::device::getPerformanceTier() {
     // https://gist.github.com/adamawolf/3048717
 
