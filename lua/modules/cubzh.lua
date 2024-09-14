@@ -1305,6 +1305,7 @@ function home()
 					cellSelector:setParent(self)
 					cellSelector.Width = self.Width
 					cellSelector.Height = self.Height
+					Client:HapticFeedback()
 				end
 
 				cell.onRelease = function(self)
@@ -1486,6 +1487,7 @@ function home()
 					cellSelector:setParent(self)
 					cellSelector.Width = self.Width
 					cellSelector.Height = self.Height
+					Client:HapticFeedback()
 				end
 
 				cell.onRelease = function(self)
@@ -1617,6 +1619,7 @@ function home()
 					cellSelector:setParent(self)
 					cellSelector.Width = self.Width
 					cellSelector.Height = self.Height
+					Client:HapticFeedback()
 				end
 
 				cell.onRelease = function(self)
@@ -2182,6 +2185,9 @@ function home()
 
 		local function createBottomBarButton(text, icon)
 			local btn = ui:frame({ color = Color(0, 0, 0) })
+			btn.onPress = function()
+				Client:HapticFeedback()
+			end
 
 			local content = ui:frame()
 

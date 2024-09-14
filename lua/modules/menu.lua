@@ -279,6 +279,8 @@ function showModal(key, config)
 			refreshChat()
 			triggerCallbacks()
 		end
+
+		sfx("whooshes_small_1")
 	end
 
 	refreshChat()
@@ -966,6 +968,7 @@ pezhBtn.onCancel = topBarBtnRelease
 pezhBtn.onRelease = function(self)
 	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.COINS)
+	sfx("coin_1")
 end
 
 -- CHAT

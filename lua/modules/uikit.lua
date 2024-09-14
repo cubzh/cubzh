@@ -3321,7 +3321,7 @@ function createUI(system)
 			-- radius = 5, -- not yet supported
 
 			-- OTHER PROPERTIES --
-			sound = "button_1",
+			sound = "",
 			unfocuses = true, -- unfocused focused node when true
 			debugName = nil,
 		}
