@@ -1,6 +1,8 @@
 local signup = {}
 
 signup.startFlow = function(self, config)
+	local sfx = require("sfx")
+
 	if self ~= signup then
 		error("signup:startFlow(config) should be called with `:`", 2)
 	end
@@ -1338,9 +1340,13 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
+				cache.age = cache.age ~= nil and cache.age or -1
+
 				local okBtn = ui:buttonPositive({ content = "OK", textSize = "big", padding = 10 })
 				okBtn:setParent(drawer)
-				okBtn:disable()
+				if cache.age == -1 then
+					okBtn:disable()
+				end
 
 				local text = ui:createText("My age is…", {
 					color = Color.White,
@@ -1354,8 +1360,6 @@ signup.startFlow = function(self, config)
 					size = "small",
 				})
 				secondaryText:setParent(drawer)
-
-				cache.age = cache.age ~= nil and cache.age or -1
 
 				local function setAgeStr()
 					if cache.age == -1 then
@@ -1384,6 +1388,7 @@ signup.startFlow = function(self, config)
 					hapticFeedback = true,
 					button = ui:buttonNeutral({ content = "🙂", padding = theme.padding }),
 					onValueChange = function(v)
+						sfx("keydown_1", { Volume = 0.3 })
 						cache.age = v
 						setAgeStr()
 						age.Text = "🎂 " .. cache.ageStr .. " 🎂"
@@ -1451,6 +1456,7 @@ signup.startFlow = function(self, config)
 						-- Go to next step
 						-- signupFlow:push(steps.createUsernameInputStep())
 						signupFlow:push(steps.createPhoneNumberStep())
+						sfx("whooshes_small_1", { Volume = 0.5 })
 					end)
 					table.insert(requests, req)
 				end
@@ -1592,6 +1598,7 @@ signup.startFlow = function(self, config)
 					-- go to next step
 					System:DebugEvent("User presses OK button on avatar editor")
 					signupFlow:push(steps.createDOBStep())
+					sfx("whooshes_small_1", { Volume = 0.5 })
 				end
 				okBtn:disable()
 
@@ -1781,6 +1788,7 @@ signup.startFlow = function(self, config)
 				okBtn.onRelease = function()
 					System:DebugEvent("User presses OK button on avatar presention")
 					signupFlow:push(steps.createAvatarEditorStep())
+					sfx("whooshes_small_1", { Volume = 0.5 })
 				end
 
 				local text = ui:createText("You need an AVATAR to visit Cubzh worlds! Let's create one now ok? 🙂", {
@@ -1884,6 +1892,7 @@ signup.startFlow = function(self, config)
 				startBtn.onRelease = function()
 					System:DebugEvent("User presses start button")
 					signupFlow:push(steps.createAvatarPreviewStep())
+					sfx("whooshes_small_1", { Volume = 0.5 })
 				end
 
 				if skipOnFirstEnter then

@@ -5,7 +5,7 @@ local sfx = {
 		Volume = 1,
 		Radius = 600,
 		MinRadius = 200,
-		Spatialized = true,
+		Spatialized = false,
 		Pitch = 1.0,
 	},
 }

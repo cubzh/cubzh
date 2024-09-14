@@ -256,7 +256,8 @@ Client.OnStart = function()
 	backgroundQuad = Quad()
 	backgroundQuad.IsUnlit = true
 	backgroundQuad.IsDoubleSided = false
-	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
+	backgroundQuad.Color = { gradient = "V", from = Color(208, 97, 255), to = Color(63, 95, 232) }
+
 	backgroundQuad.Width = Screen.RenderWidth
 	backgroundQuad.Height = Screen.RenderHeight
 	backgroundQuad.Anchor = { 0.5, 0.5 }
@@ -267,7 +268,7 @@ Client.OnStart = function()
 	backgroundLogo = Quad()
 	backgroundLogo.IsUnlit = true
 	backgroundLogo.IsDoubleSided = false
-	backgroundLogo.Color = Color(255, 255, 255, 0.1)
+	backgroundLogo.Color = { Color(17, 42, 150, 0.2), alpha = true }
 	backgroundLogo.Image = logoTile
 	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
 	backgroundLogo.Height = backgroundLogo.Width
