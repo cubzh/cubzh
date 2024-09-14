@@ -86,6 +86,11 @@ Client.OnStart = function()
 			avatar():centerBodyWithExtraRoomAbove()
 			vCover = 0.9
 			hCover = 1.2
+		elseif avatarCameraFocus == "bodyAndItem" then
+			box = avatarBox()
+			avatar():centerBodyWithExtraRoomAbove()
+			vCover = 0.9
+			hCover = 0.8
 		elseif avatarCameraFocus == "head" then
 			box = headBox()
 			avatar():centerHead()
@@ -208,22 +213,32 @@ Client.OnStart = function()
 
 	Sky.LightColor = Color(100, 100, 100)
 
+	LocalEvent:Listen("signup_push_notifications", function()
+		avatar():showPhone()
+		avatarCameraFocus = "bodyAndItem"
+		layoutCamera()
+	end)
+
 	LocalEvent:Listen("signup_flow_avatar_preview", function()
+		avatar():removeItem()
 		titleScreen():hide()
 		avatar():show({ mode = "demo" })
 	end)
 
 	LocalEvent:Listen("signup_flow_avatar_editor", function()
+		avatar():removeItem()
 		titleScreen():hide()
 		avatar():show({ mode = "user" })
 	end)
 
 	LocalEvent:Listen("signup_flow_dob", function()
+		avatar():removeItem()
 		avatarCameraFocus = "body"
 		layoutCamera()
 	end)
 
 	LocalEvent:Listen("signup_flow_start_or_login", function()
+		avatar():removeItem()
 		titleScreen():show()
 		avatar():hide()
 	end)
@@ -234,6 +249,7 @@ Client.OnStart = function()
 	end)
 
 	LocalEvent:Listen("signup_flow_login_success", function(_)
+		avatar():removeItem()
 		drawerHeight = 0
 		titleScreen():hide()
 		home():show()
@@ -633,6 +649,8 @@ function avatar()
 	local pitch = CONFIG.AVATAR_DEFAULT_PITCH
 
 	local root
+	local phone
+	local phoneTickListener
 	local dragListener
 	local listeners = {}
 
@@ -640,7 +658,13 @@ function avatar()
 		yaw = yaw - dx * 0.01
 		pitch = math.min(math.rad(45), math.max(math.rad(-45), pitch + dy * 0.01))
 		if root then
-			root.LocalRotation = Rotation(pitch, 0, 0) * Rotation(0, yaw, 0)
+			root.LocalRotation:Set(Rotation(pitch, 0, 0) * Rotation(0, yaw, 0))
+		end
+		if phone then
+			phone.LocalRotation:Set(Rotation(0, -yaw + math.rad(35), 0) * Rotation(math.rad(30), 0, 0))
+			if root.avatar then
+				root.avatar.LocalRotation:Set(Rotation(0, -yaw + math.rad(180), 0))
+			end
 		end
 	end
 
@@ -649,6 +673,10 @@ function avatar()
 	end
 
 	_avatar.resetRotation = function()
+		local avatar = root.avatar
+		if avatar then
+			avatar.LocalRotation:Set(0, 0, 0)
+		end
 		yaw = CONFIG.AVATAR_DEFAULT_YAW
 		pitch = CONFIG.AVATAR_DEFAULT_PITCH
 		drag(0, 0)
@@ -660,6 +688,9 @@ function avatar()
 				return
 			end
 			dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+				if phone then
+					return
+				end
 				drag(pe.DX, pe.DY)
 			end)
 			table.insert(listeners, dragListener)
@@ -682,6 +713,127 @@ function avatar()
 			return
 		end
 		root.Position:Set(p)
+	end
+
+	_avatar.removeItem = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		if phoneTickListener ~= nil then
+			phoneTickListener:Remove()
+			phoneTickListener = nil
+		end
+		if phone ~= nil then
+			phone:RemoveFromParent()
+			phone = nil
+		end
+		avatar.LocalPosition.Z = 0
+		_avatar:resetRotation()
+	end
+
+	_avatar.showPhone = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		if phone == nil then
+			phone = Object()
+			phone.shape = bundle:Shape("shapes/smartphone")
+			phone.shape.Pivot = phone.shape.Size * 0.5
+			phone.shape:SetParent(phone)
+			phone.shape.LocalPosition = Number3.Zero
+			phone.Scale = 0.8
+			phone:SetParent(root)
+		end
+
+		local b = avatarBox()
+		avatar.LocalPosition.Y = -b.Size.Y * 0.5
+		avatar.LocalPosition.Z = -10
+
+		phone.LocalPosition.Z = 10
+		phone.LocalPosition.Y = -5
+
+		if phoneTickListener == nil then
+			local triggerMin = 0.3
+			local triggerMax = 0.8
+			local life = 1.0
+			local trigger = triggerMin + math.random() * (triggerMax - triggerMin)
+			local emojis = {}
+			local recycled = {}
+			local toRemove = {}
+			local foundParticlesToRemove = false
+			local generated = 0
+			local progress
+			phoneTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+				for e, _ in pairs(emojis) do
+					e.life = e.life - dt
+					progress = math.max(0, life - e.life) / life
+					e.Scale = e.config.scale * math.sin(progress * math.pi)
+					if e.life <= 0 then
+						e:RemoveFromParent()
+						table.insert(toRemove, e)
+						foundParticlesToRemove = true
+					end
+				end
+
+				if foundParticlesToRemove then
+					for _, e in ipairs(toRemove) do
+						emojis[e] = nil
+						table.insert(recycled, e)
+					end
+					foundParticlesToRemove = false
+					toRemove = {}
+				end
+
+				trigger = trigger - dt
+				if trigger <= 0 then
+					Client:HapticFeedback()
+					ease:cancel(phone.shape)
+					phone.shape.Scale = 0.8
+					ease:outBack(phone.shape, 0.2).Scale = Number3.One
+
+					trigger = triggerMin + math.random() * (triggerMax - triggerMin)
+					local shapes = {
+						{ name = "shapes/heart", scale = 1.2, initRot = Rotation(0, 0, 0) },
+						{ name = "shapes/emojim", scale = 0.75, initRot = Rotation(0, math.rad(90), 0) },
+						{ name = "shapes/textbubble", scale = 1.0, initRot = Rotation(0, 0, 0) },
+						{ name = "shapes/pezh_coin_2", scale = 1.0, initRot = Rotation(0, 0, 0) },
+					}
+					local p
+					if generated >= 20 then
+						p = table.remove(recycled, math.random(1, #recycled))
+					end
+					if p == nil then
+						local index = math.random(1, 4)
+						local config = shapes[index]
+						p = bundle:Shape(config.name)
+						p.config = config
+						p.Scale = 0
+						p.Pivot = p.Size * 0.5
+						p.CollisionGroups = {}
+						p.CollidesWithGroups = {}
+						p.Physics = PhysicsMode.Dynamic
+
+						generated = generated + 1
+					end
+					p.life = life
+					emojis[p] = true
+					p:SetParent(phone)
+					p.Rotation:Set(p.config.initRot)
+					p.LocalPosition:Set(0, -2, -2)
+					local v = Number3(20, 0, 0)
+					v:Rotate(0, math.random() * math.pi, 0)
+					p.Velocity:Set(v + { 0, math.random(60, 70), 0 })
+					p.Acceleration = -Config.ConstantAcceleration - p.Velocity * 2
+				end
+			end)
+		end
+
+		_avatar:resetRotation()
+		yaw = math.rad(90)
+		drag(0, 0)
+		avatar.LocalRotation:Set(0, math.rad(30), 0)
 	end
 
 	_avatar.centerHead = function()

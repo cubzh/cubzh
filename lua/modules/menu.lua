@@ -12,7 +12,6 @@ settings = require("settings")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
-sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
@@ -280,7 +279,7 @@ function showModal(key, config)
 			triggerCallbacks()
 		end
 
-		sfx("whooshes_small_1")
+		sfx("whooshes_small_1", { Volume = 0.5 })
 	end
 
 	refreshChat()
@@ -968,7 +967,7 @@ pezhBtn.onCancel = topBarBtnRelease
 pezhBtn.onRelease = function(self)
 	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.COINS)
-	sfx("coin_1")
+	sfx("coin_1", { Volume = 0.75 })
 end
 
 -- CHAT
@@ -1884,22 +1883,25 @@ menu:OnAuthComplete(function()
 		chat:parentDidResize()
 	end
 
+	-- TODO: REVIEW THIS, WE MAY NOT NEED THAT TIMER ANYMORE
 	Timer(10.0, function()
-		-- request permission for remote notifications
-		local showInfoPopupFunc = function(yesCallback, laterCallback)
-			showAlert({
-				message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
-				positiveLabel = "Yes",
-				neutralLabel = "Later",
-				positiveCallback = function()
-					yesCallback()
-				end,
-				neutralCallback = function()
-					laterCallback()
-				end,
-			})
+		if System.NotificationStatus == "underdetermined" then
+			-- request permission for remote notifications
+			local showInfoPopupFunc = function(yesCallback, laterCallback)
+				showAlert({
+					message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
+					positiveLabel = "Yes",
+					neutralLabel = "Later",
+					positiveCallback = function()
+						yesCallback()
+					end,
+					neutralCallback = function()
+						laterCallback()
+					end,
+				})
+			end
+			System:NotificationRequestAuthorization()
 		end
-		sys_notifications:request(showInfoPopupFunc)
 	end)
 
 	-- check if there's an environment to launch, otherwise, listen for event
@@ -1953,6 +1955,9 @@ elseif not Client.LoggedIn then
 		end,
 		dobStep = function()
 			LocalEvent:Send("signup_flow_dob")
+		end,
+		pushNotificationsStep = function()
+			LocalEvent:Send("signup_push_notifications")
 		end,
 	})
 	activeFlow = signupFlow

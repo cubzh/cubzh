@@ -21,6 +21,20 @@
 #endif
 
 vx::notification::NotificationAuthorizationStatus vx::notification::remotePushAuthorizationStatus() {
+    char *s = readNotificationStatusFile();
+    if (s == nullptr) {
+        return NotificationAuthorizationStatus_NotDetermined;
+    }
+    if (strcmp(s, "postponed") == 0) {
+        free(s);
+        return NotificationAuthorizationStatus_Postponed;
+    }
+    if (strcmp(s, "set") != 0) {
+        free(s);
+        return NotificationAuthorizationStatus_NotDetermined;
+    }
+    free(s);
+
     __block NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
@@ -61,6 +75,7 @@ void vx::notification::requestRemotePushAuthorization(AuthorizationRequestCallba
 
         if (granted == NO) {
             dispatch_async(dispatch_get_main_queue(), ^{
+                setRemotePushAuthorization();
                 callback(NotificationAuthorizationResponse_Denied);
             });
             return;
@@ -88,6 +103,7 @@ void vx::notification::requestRemotePushAuthorization(AuthorizationRequestCallba
                 // Even though, now with user's authorization, we should be able to retry
                 // and obtain the token.
                 dispatch_async(dispatch_get_main_queue(), ^{
+                    setRemotePushAuthorization();
                     callback(NotificationAuthorizationResponse_Authorized);
                 });
             });
@@ -100,6 +116,9 @@ void vx::notification::requestRemotePushAuthorizationIfAuthStatusNotDetermined(A
     switch (s) {
         case NotificationAuthorizationStatus_NotDetermined:
             requestRemotePushAuthorization(callback);
+            break;
+        case NotificationAuthorizationStatus_Postponed:
+            callback(NotificationAuthorizationResponse_Postponed);
             break;
         case NotificationAuthorizationStatus_NotSupported:
             callback(NotificationAuthorizationResponse_NotSupported);
