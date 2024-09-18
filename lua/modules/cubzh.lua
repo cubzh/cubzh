@@ -1,5 +1,6 @@
 bundle = require("bundle")
 time = require("time")
+sfx = require("sfx")
 
 local CONFIG = {
 	PROFILE_CELL_SIZE = 150,
@@ -267,7 +268,7 @@ Client.OnStart = function()
 	Light.Ambient.SkyLightFactor = 0.2
 	Light.Ambient.DirectionalLightFactor = 0.5
 
-	local logoTile = bundle:Data("images/logo-tile-rotated.png")
+	local logoTile = Data:FromBundle("images/logo-tile-rotated.png")
 
 	backgroundQuad = Quad()
 	backgroundQuad.IsUnlit = true
@@ -1493,7 +1494,7 @@ function home()
 								return
 							end
 
-							local thumbnail = ui:frame({ image = img }) -- TODO: fix white flashes
+							local thumbnail = ui:frame({ image = img })
 							thumbnail:setParent(cell)
 							cell.thumbnail = thumbnail
 							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
@@ -2193,6 +2194,22 @@ function home()
 						end
 						visitHouseBtn:setParent(profileCell)
 
+						local bell = ui:frame({
+							image = {
+								data = Data:FromBundle("images/bell.png"),
+								alpha = true,
+							},
+						})
+						bell.Width = 32
+						bell.Height = 36
+						bell.onRelease = function()
+							Client:HapticFeedback()
+						end
+						bell.onRelease = function()
+							Menu:ShowNotifications()
+						end
+						bell:setParent(profileCell)
+
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
 
@@ -2222,14 +2239,14 @@ function home()
 							local totalWidth = infoWidth + avatarWidth + padding
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - usernameHeight
-							local x = self.Width * 0.5 - totalWidth * 0.5
+							local x = 0
 
 							avatarTransparentFrame.pos.X = x - padding * 2
 
 							x = x + avatarWidth + padding
 
 							local previousAvatarCameraX = avatarCameraX
-							avatarCameraX = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth * 0.5
+							avatarCameraX = padding + avatarWidth * 0.5
 
 							usernameFrame.pos = { x, y + usernameHeight * 0.5 - usernameFrame.Height * 0.5 }
 							if editUsernameBtn then
@@ -2247,6 +2264,11 @@ function home()
 							if previousAvatarCameraX ~= avatarCameraX then
 								layoutCamera()
 							end
+
+							bell.pos = {
+								self.Width - bell.Width - padding,
+								self.Height - bell.Height - padding,
+							}
 						end
 					end
 					return profileCell

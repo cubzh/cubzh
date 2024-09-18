@@ -668,7 +668,7 @@ signup.startFlow = function(self, config)
 				local buttonContent = ui:frame()
 				local line1 = ui:createText("Turn on Notifications!", { font = Font.Pixel, size = "big" })
 				line1:setParent(buttonContent)
-				local line2 = ui:createText("+100 💰 reward!", { font = Font.Pixel, size = "default" })
+				local line2 = ui:createText("+100 🇵 reward!", { font = Font.Pixel, size = "default" })
 				line2:setParent(buttonContent)
 				buttonContent.parentDidResize = function(self)
 					self.Width = math.max(line1.Width, line2.Width)
@@ -711,7 +711,7 @@ signup.startFlow = function(self, config)
 				})
 				title:setParent(drawer)
 
-				local text = ui:createText("You'll get a much better experience with push notifications.", {
+				local text = ui:createText("You'll get a much better experience with push notifications. ❗️", {
 					color = Color.White,
 				})
 				text:setParent(drawer)

@@ -77,6 +77,8 @@ MODAL_KEYS = {
 	ITEM = 13,
 	CREATIONS = 14,
 	USERNAME_FORM = 15,
+	VERIFY_ACCOUNT_FORM = 16,
+	NOTIFICATIONS = 17,
 }
 
 -- User account management
@@ -221,6 +223,9 @@ function showModal(key, config)
 	elseif key == MODAL_KEYS.COINS then
 		content = require("coins"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.NOTIFICATIONS then
+		content = require("notifications"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.MARKETPLACE then
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
@@ -279,7 +284,7 @@ function showModal(key, config)
 			triggerCallbacks()
 		end
 
-		sfx("whooshes_small_1", { Volume = 0.5 })
+		sfx("whooshes_small_1", { Volume = 0.5, Pitch = 2.0, Spatialized = false })
 	end
 
 	refreshChat()
@@ -967,7 +972,7 @@ pezhBtn.onCancel = topBarBtnRelease
 pezhBtn.onRelease = function(self)
 	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.COINS)
-	sfx("coin_1", { Volume = 0.75 })
+	sfx("coin_1", { Volume = 0.75, Pitch = 1.0, Spatialized = false })
 end
 
 -- CHAT
@@ -1507,6 +1512,19 @@ menu.ShowProfile = function(_, config)
 	return true
 end
 
+---@function ShowNotifications Shows received notications menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowNotifications()
+---@return boolean
+menu.ShowNotifications = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.NOTIFICATIONS)
+	return true
+end
+
 menu.ShowOutfits = function(_, player)
 	if menuSectionCanBeShown() == false then
 		return false
@@ -1882,27 +1900,6 @@ menu:OnAuthComplete(function()
 	if chat then
 		chat:parentDidResize()
 	end
-
-	-- TODO: REVIEW THIS, WE MAY NOT NEED THAT TIMER ANYMORE
-	Timer(10.0, function()
-		if System.NotificationStatus == "underdetermined" then
-			-- request permission for remote notifications
-			local showInfoPopupFunc = function(yesCallback, laterCallback)
-				showAlert({
-					message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
-					positiveLabel = "Yes",
-					neutralLabel = "Later",
-					positiveCallback = function()
-						yesCallback()
-					end,
-					neutralCallback = function()
-						laterCallback()
-					end,
-				})
-			end
-			System:NotificationRequestAuthorization()
-		end
-	end)
 
 	-- check if there's an environment to launch, otherwise, listen for event
 	if System.HasEnvironmentToLaunch then
