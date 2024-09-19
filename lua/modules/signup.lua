@@ -44,7 +44,6 @@ signup.startFlow = function(self, config)
 	local drawerModule = require("drawer")
 	local ease = require("ease")
 	local loc = require("localize")
-	-- local phonenumbers = require("phonenumbers")
 	local str = require("str")
 	-- local bundle = require("bundle")
 
@@ -698,7 +697,9 @@ signup.startFlow = function(self, config)
 				laterBtn:setParent(drawer)
 				laterBtn.onRelease = function()
 					System:NotificationPostponeAuthorization()
-					callLoginSuccess()
+					-- flush signup flow and restart credential checks (should go through now)
+					signupFlow:flush()
+					signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
 				end
 
 				-- local loading = require("ui_loading_animation"):create({ ui = ui })
@@ -720,7 +721,9 @@ signup.startFlow = function(self, config)
 					System:NotificationRequestAuthorization(function(response)
 						-- print("response:", response) -- "authorized", "denied", "error", "not_supported"
 						if response == "authorized" or response == "not_supported" or response == "error" then
-							callLoginSuccess()
+							-- flush signup flow and restart credential checks (should go through now)
+							signupFlow:flush()
+							signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
 							-- NOTE: we should probably do something in case of error
 							-- not sure how to test this (never got an error here)
 						elseif response == "denied" then

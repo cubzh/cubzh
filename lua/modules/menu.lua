@@ -264,6 +264,11 @@ function showModal(key, config)
 		config.uikit = ui
 		content = require("username_form"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.VERIFY_ACCOUNT_FORM then
+		local config = config or {}
+		config.uikit = ui
+		content = require("verify_account_form"):createModalContent(config)
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
 	if activeModal ~= nil then
@@ -1645,6 +1650,14 @@ menu.ShowCreations = function(_)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
+	if not System.IsPhoneExempted and not System.HasVerifiedPhoneNumber then
+		showModal(MODAL_KEYS.VERIFY_ACCOUNT_FORM, {})
+		return
+	end
+	if Player.Username == "newbie" then
+		Menu:ShowUsernameForm({ text = "A Username is mandatory to create, ready to pick one now?" })
+		return
+	end
 	showModal(MODAL_KEYS.CREATIONS)
 	return true
 end
@@ -1654,6 +1667,10 @@ end
 menu.ShowUsernameForm = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
+	end
+	if not System.IsPhoneExempted and not System.HasVerifiedPhoneNumber then
+		showModal(MODAL_KEYS.VERIFY_ACCOUNT_FORM, {})
+		return
 	end
 	showModal(MODAL_KEYS.USERNAME_FORM, config)
 	return true
