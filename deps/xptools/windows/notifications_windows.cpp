@@ -1,27 +1,34 @@
 
 #include "notifications.hpp"
 
-bool vx::notification::notificationsAvailable() {
-    // Notifications are not implemented yet for this platform.
+vx::notification::NotificationAuthorizationStatus vx::notification::
+    remotePushAuthorizationStatus() {
+    return vx::notification::NotificationAuthorizationStatus_NotSupported;
+}
+
+char *vx::notification::readNotificationStatusFile() {
+    return nullptr;
+}
+
+bool vx::notification::postponeRemotePushAuthorization() {
     return false;
 }
 
-bool vx::notification::shouldShowInfoPopup() {
-    // Notifications are not implemented yet for this platform.
+bool vx::notification::setRemotePushAuthorization() {
     return false;
 }
 
-void vx::notification::requestRemotePush() {
-    // Notifications are not implemented yet for this platform.
-}
+void vx::notification::requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
 
-bool vx::notification::scheduleAllLocalReminders(const std::string& title,
-                                                 const std::string& message) {
-    // TODO: implement me!
-    return false;
-}
+void vx::notification::requestRemotePushAuthorizationIfAuthStatusNotDetermined(
+    AuthorizationRequestCallback callback) {}
 
-bool vx::notification::cancelAllLocalReminders() {
-    // TODO: implement me!
-    return false;
-}
+void vx::notification::scheduleLocalNotification(const std::string& title,
+    const std::string& body,
+    const std::string& identifier,
+    int days,
+    int hours,
+    int minutes,
+    int seconds) {}
+
+void cancelLocalNotification(const std::string &identifier) {}
