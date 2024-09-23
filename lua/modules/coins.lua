@@ -92,7 +92,7 @@ coins.createModalContent = function(_, config)
 		return Number2(width, balanceFrame.pos.Y + balanceFrame.Height)
 	end
 
-	api.getBalance(function(err, balance)
+	api:getBalance(function(err, balance)
 		if not amountText.Text then
 			return
 		end
@@ -100,7 +100,7 @@ coins.createModalContent = function(_, config)
 			amountText.Text = "0"
 			return
 		end
-		amountText.Text = "" .. math.floor(balance.total)
+		amountText.Text = "" .. math.floor(balance.totalCoins)
 	end)
 
 	return content

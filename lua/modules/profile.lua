@@ -630,7 +630,7 @@ profile.create = function(_, config)
 			content:getModalIfContentIsActive():push(require("coins"):createModalContent({ uikit = ui }))
 		end
 
-		api.getBalance(function(err, balance)
+		api:getBalance(function(err, balance)
 			if not coinsBtn.Text then
 				return
 			end
@@ -638,7 +638,7 @@ profile.create = function(_, config)
 				coinsBtn.Text = "🇵 0"
 				return
 			end
-			coinsBtn.Text = "🇵 " .. math.floor(balance.total)
+			coinsBtn.Text = "🇵 " .. math.floor(balance.totalCoins)
 		end)
 	else
 		creationsBtn = ui:buttonSecondary({ content = "🛠️ Creations", textSize = "small" })
