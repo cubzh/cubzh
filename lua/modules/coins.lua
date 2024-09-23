@@ -57,12 +57,15 @@ coins.createModalContent = function(_, config)
 	amountText:setParent(balanceFrame)
 
 	local grantedText = ui:createText(string.format("grants: -"), { color = Color(252, 167, 27), size = "small" })
+	grantedText.object.Scale = 0.7
 	grantedText:setParent(balanceFrame)
 
 	local purchasedText = ui:createText(string.format("purchased: -"), { color = Color(252, 167, 27), size = "small" })
+	purchasedText.object.Scale = 0.7
 	purchasedText:setParent(balanceFrame)
 
 	local earnedText = ui:createText(string.format("earned: -"), { color = Color(252, 167, 27), size = "small" })
+	earnedText.object.Scale = 0.7
 	earnedText:setParent(balanceFrame)
 
 	local historyFrame = ui:frameTextBackground()
@@ -77,13 +80,16 @@ coins.createModalContent = function(_, config)
 
 	local function transactionCellParentDidResize(self)
 		self.Width = self.parent.Width
+		self.description.object.MaxWidth = self.parent.Width - self.op.Width - theme.paddingBig * 3
+		-- self.Height = math.max(self.description.Height, self.op.Height) + theme.padding * 2
+
 		self.op.pos = {
-			theme.padding,
-			self.Height - self.op.Height - theme.padding,
+			theme.paddingBig,
+			self.Height * 0.5 - self.op.Height * 0.5,
 		}
 		self.description.pos = {
-			theme.padding,
-			self.op.pos.Y - self.description.Height - theme.padding,
+			self.Width - self.description.Width - theme.paddingBig,
+			self.Height * 0.5 - self.description.Height * 0.5,
 		}
 	end
 
@@ -97,13 +103,17 @@ coins.createModalContent = function(_, config)
 			c.description:setParent(c)
 			c.parentDidResize = transactionCellParentDidResize
 		end
-		c.op.Text = string.format("%d", transaction.amount)
+		if transaction.amount > 0 then
+			c.op.Color = theme.colorPositive
+			c.op.Text = string.format("🇵 ⬅️ %d", transaction.amount)
+		else
+			c.op.Color = theme.colorNegative
+			c.op.Text = string.format("🇵 ➡️ %d", -transaction.amount)
+		end
 		c.description.Text = transaction.info.reason or ""
 		c.Height = 50
 		return c
 	end
-
-	-- [{"user_id":"4d558bc1-5700-4a0d-8c68-f05e0b97f3fd","transaction_id":"907180a0-7990-11ef-b23f-02420a0001a1","created_at":"2024-09-23T09:45:27.732Z","amount":5000000,"info":"{\"reason\":\"test\"}"},{"user_id":"4d558bc1-5700-4a0d-8c68-f05e0b97f3fd","transaction_id":"86cb412e-7990-11ef-b23f-02420a0001a1","created_at":"2024-09-23T09:45:11.543Z","amount":2000000,"info":"{\"reason\":\"test\"}"}]
 
 	local function recycleTransactionCell(cell)
 		cell:setParent(nil)
