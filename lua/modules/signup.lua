@@ -7,11 +7,6 @@ signup.startFlow = function(self, config)
 		error("signup:startFlow(config) should be called with `:`", 2)
 	end
 
-	-- print("NotificationStatus:", System.NotificationStatus) -- "underdetermined", "denied", "authorized"
-	-- System:NotificationRequestAuthorization(function(response)
-	-- 	print("response:", response) -- "authorized", "denied", "error", "not_supported"
-	-- end)
-
 	local conf = require("config")
 
 	local defaultConfig = {
@@ -772,11 +767,6 @@ signup.startFlow = function(self, config)
 				})
 
 				drawer:show()
-
-				-- if skipOnFirstEnter then
-				-- 	skipOnFirstEnter = false
-				-- 	signupFlow:push(steps.createVerifyPhoneNumberStep())
-				-- end
 			end,
 			onExit = function() end,
 			onRemove = function() end,
@@ -914,10 +904,17 @@ signup.startFlow = function(self, config)
 
 						System.IsUserUnder13 = cache.age < 13
 
-						-- Go to next step
-						-- signupFlow:push(steps.createUsernameInputStep())
-						signupFlow:push(steps.createPushNotificationsStep())
-						sfx("whooshes_small_1", { Volume = 0.5 })
+						if System.NotificationStatus == "underdetermined" then
+							-- Go to next step
+							-- signupFlow:push(steps.createUsernameInputStep())
+							signupFlow:push(steps.createPushNotificationsStep())
+							sfx("whooshes_small_1", { Volume = 0.5 })
+						else
+							-- notifications not supported or status already established
+							-- flush signup flow and restart credential checks (should go through now)
+							signupFlow:flush()
+							signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
+						end
 					end)
 					table.insert(requests, req)
 				end
