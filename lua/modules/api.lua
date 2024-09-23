@@ -658,33 +658,59 @@ mod.getAvatar = function(usernameOrId, cb)
 	return req
 end
 
-mod.getBalance = function(usernameOrCb, cb)
-	if type(usernameOrCb) == "function" then -- if self
-		cb = usernameOrCb
-		local url = mod.kApiAddr .. "/users/self/balance"
-		HTTP:Get(url, function(res)
-			if res.StatusCode ~= 200 then
-				cb("Error (" .. res.StatusCode .. "): can't get balance.")
-				return
-			end
-			cb(nil, JSON:Decode(res.Body))
-		end)
-		return
+-- callback(error string or nil, balance object or nil)
+--
+-- balance object:
+-- {
+-- 	"userID": "000000000-0000-0000-0000-000000000000",
+-- 	"grantedCoins": 0,
+-- 	"purchasedCoins": 0,
+-- 	"earnedCoins": 0,
+-- 	"totalCoins": 0,
+-- }
+mod.getBalance = function(_, cb)
+	local cbType = type(cb)
+	if cbType ~= "function" and cbType ~= "nil" then
+		error("getBalance(cb) - cb must be a function or nil", 2)
 	end
-	local username = usernameOrCb
-	mod.getUserId(username, function(err, id)
-		if err then
-			return cb(err)
+
+	local url = mod.kApiAddr .. "/users/self/balance"
+	HTTP:Get(url, function(res)
+		if res.StatusCode ~= 200 then
+			cb("Error (" .. res.StatusCode .. "): can't get balance.")
+			return
 		end
-		local url = mod.kApiAddr .. "/users/" .. id .. "/balance"
-		HTTP:Get(url, function(res)
-			if res.StatusCode ~= 200 then
-				cb("Error (" .. res.StatusCode .. "): can't get balance.")
-				return
-			end
-			cb(nil, JSON:Decode(res.Body))
-		end)
+		cb(nil, JSON:Decode(res.Body))
 	end)
+	return
+end
+
+-- callback(errorStringOrNil, transactionsArray)
+mod.getLastTransactions = function(_, limitOrCb, cb)
+	-- process arguments
+	if type(limitOrCb) == "function" then
+		cb = limitOrCb
+		limitOrCb = nil
+	end
+	if type(cb) ~= "function" then
+		return cb("Error: callback argument must be a function")
+	end
+	if type(limitOrCb) ~= "nil" and type(limitOrCb) ~= "number" then
+		return cb("limit argument must be a number")
+	end
+
+	local url = mod.kApiAddr .. "/users/self/transactions"
+	if limitOrCb ~= nil then
+		url = url .. "?limit=" .. math.floor(limitOrCb)
+	end
+	HTTP:Get(url, function(res)
+		if res.StatusCode ~= 200 then
+			cb("Error (" .. res.StatusCode .. "): can't get transactions.")
+			return
+		end
+		cb(nil, JSON:Decode(res.Body))
+	end)
+	return
 end
 
 mod.getItem = function(self, itemId, fields, callback)
