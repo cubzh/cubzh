@@ -16,7 +16,6 @@
 namespace vx {
 namespace notification {
 
-
 typedef enum {
     NotificationAuthorizationStatus_NotDetermined, // user's never been asked for authorization
     NotificationAuthorizationStatus_Denied, // user clearly denied the service
