@@ -1601,6 +1601,7 @@ function createUI(system)
 			color = Color(0, 0, 0),
 			backgroundColor = Color(0, 0, 0, 0),
 			size = "default",
+			font = Font.Noto,
 		}
 
 		local config = nil
@@ -1671,7 +1672,7 @@ function createUI(system)
 		local t = Text()
 		t.Anchor = { 0, 0 }
 		t.Type = TextType.World
-		t.Font = Font.Noto
+		t.Font = config.font
 		_setLayers(t)
 		t.Text = str
 		t.Padding = 0
@@ -3320,7 +3321,7 @@ function createUI(system)
 			-- radius = 5, -- not yet supported
 
 			-- OTHER PROPERTIES --
-			sound = "button_1",
+			sound = "",
 			unfocuses = true, -- unfocused focused node when true
 			debugName = nil,
 		}
@@ -4081,7 +4082,10 @@ function createUI(system)
 								break
 							end
 							withinScroll = true
+						elseif parent._onDrag ~= nil then
+							withinScroll = true
 						end
+
 						parent = parent.parent
 					end
 

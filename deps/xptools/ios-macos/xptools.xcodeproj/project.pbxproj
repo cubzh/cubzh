@@ -17,6 +17,10 @@
 		101554E72C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
 		101554E82C04D57E001E9057 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
 		101554E92C04D57E001E9057 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
+		101758B92C99C254008318A8 /* notifications.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101758B82C99C24E008318A8 /* notifications.cpp */; };
+		101758BA2C99C254008318A8 /* notifications.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101758B82C99C24E008318A8 /* notifications.cpp */; };
+		101758BB2C99C254008318A8 /* notifications.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101758B82C99C24E008318A8 /* notifications.cpp */; };
+		101758BC2C99C254008318A8 /* notifications.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101758B82C99C24E008318A8 /* notifications.cpp */; };
 		102144F92C75E0C000099E38 /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
 		102144FA2C75E0C000099E38 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
 		102144FB2C75E0C000099E38 /* tracking.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93A325A384070030C45D /* tracking.hpp */; };
@@ -305,6 +309,7 @@
 		101554DC2C04D57E001E9057 /* BZMD5.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BZMD5.hpp; sourceTree = "<group>"; };
 		101554DD2C04D57E001E9057 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON.c; sourceTree = "<group>"; };
 		101554DE2C04D57E001E9057 /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
+		101758B82C99C24E008318A8 /* notifications.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = notifications.cpp; sourceTree = "<group>"; };
 		1021453B2C75E0C000099E38 /* libxptools-macos-ci.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-macos-ci.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1022D09628AFBB5C00C1F1E9 /* process.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = process.cpp; sourceTree = "<group>"; };
 		102B2A1A2BD6A011006AF4F6 /* textinput.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = textinput.hpp; sourceTree = "<group>"; };
@@ -520,8 +525,8 @@
 				8506231628770DB700B270A6 /* audio.cpp */,
 				85471B3D27E3E4AA000575D5 /* Connection.cpp */,
 				853C93FE25A3C2470030C45D /* crypto.cpp */,
-				8534FDD7240E9EAE004B3494 /* device_c.cpp */,
 				85E6380B28F703C3001FC12F /* device.cpp */,
+				8534FDD7240E9EAE004B3494 /* device_c.cpp */,
 				10E793642450137900B7E2E2 /* filesystem.cpp */,
 				85BB0187279EFA0E000F1B10 /* HttpClient.cpp */,
 				851F2A412B63C45E00E2863F /* HttpCookie.cpp */,
@@ -530,6 +535,7 @@
 				85BB0194279F3BAD000F1B10 /* HttpResponse.cpp */,
 				8518D09C27BA6DD900A438D6 /* json.cpp */,
 				85471B3C27E3E4A9000575D5 /* LocalConnection.cpp */,
+				101758B82C99C24E008318A8 /* notifications.cpp */,
 				858ABB862A52F5CD007AE641 /* OperationQueue.cpp */,
 				1022D09628AFBB5C00C1F1E9 /* process.cpp */,
 				10C63D2A246C4F61003DEC3E /* strings.cpp */,
@@ -850,6 +856,7 @@
 				102145142C75E0C000099E38 /* WSBackend.cpp in Sources */,
 				102145152C75E0C000099E38 /* ThreadManager.cpp in Sources */,
 				102145162C75E0C000099E38 /* HttpResponse.cpp in Sources */,
+				101758BC2C99C254008318A8 /* notifications.cpp in Sources */,
 				102145172C75E0C000099E38 /* miniaudio_impl.mm in Sources */,
 				102145182C75E0C000099E38 /* WSService.cpp in Sources */,
 				102145192C75E0C000099E38 /* vxtime.cpp in Sources */,
@@ -896,6 +903,7 @@
 				850D25BA2AE11C7500B00B13 /* notifications.mm in Sources */,
 				85E6380E28F703C3001FC12F /* device.cpp in Sources */,
 				85471B9727E85B03000575D5 /* WSService.cpp in Sources */,
+				101758BA2C99C254008318A8 /* notifications.cpp in Sources */,
 				10847CC3270EE8C6006A5E91 /* vxtime.cpp in Sources */,
 				8518D0A027BA6DD900A438D6 /* json.cpp in Sources */,
 				10847CC4270EE8C6006A5E91 /* filesystem.cpp in Sources */,
@@ -932,6 +940,7 @@
 				85FCECA228072D3200CD6115 /* WSBackend.cpp in Sources */,
 				8518D09827BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
 				85BB0195279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
+				101758BB2C99C254008318A8 /* notifications.cpp in Sources */,
 				85454CE0288003D70047A26C /* miniaudio_impl.mm in Sources */,
 				85471B9527E85B03000575D5 /* WSService.cpp in Sources */,
 				1033952325626D220083F4C0 /* vxtime.cpp in Sources */,
@@ -974,6 +983,7 @@
 				85FCECA328072D3200CD6115 /* WSBackend.cpp in Sources */,
 				8506235A2877898C00B270A6 /* miniaudio_impl.mm in Sources */,
 				8518D09927BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
+				101758B92C99C254008318A8 /* notifications.cpp in Sources */,
 				85BB0196279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
 				85471B9627E85B03000575D5 /* WSService.cpp in Sources */,
 				1033952425626D220083F4C0 /* vxtime.cpp in Sources */,

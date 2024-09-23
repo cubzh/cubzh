@@ -1,5 +1,6 @@
 bundle = require("bundle")
 time = require("time")
+sfx = require("sfx")
 
 local CONFIG = {
 	PROFILE_CELL_SIZE = 150,
@@ -86,6 +87,11 @@ Client.OnStart = function()
 			avatar():centerBodyWithExtraRoomAbove()
 			vCover = 0.9
 			hCover = 1.2
+		elseif avatarCameraFocus == "bodyAndItem" then
+			box = avatarBox()
+			avatar():centerBodyWithExtraRoomAbove()
+			vCover = 0.9
+			hCover = 0.8
 		elseif avatarCameraFocus == "head" then
 			box = headBox()
 			avatar():centerHead()
@@ -208,22 +214,32 @@ Client.OnStart = function()
 
 	Sky.LightColor = Color(100, 100, 100)
 
+	LocalEvent:Listen("signup_push_notifications", function()
+		avatar():showPhone()
+		avatarCameraFocus = "bodyAndItem"
+		layoutCamera()
+	end)
+
 	LocalEvent:Listen("signup_flow_avatar_preview", function()
+		avatar():removeItem()
 		titleScreen():hide()
 		avatar():show({ mode = "demo" })
 	end)
 
 	LocalEvent:Listen("signup_flow_avatar_editor", function()
+		avatar():removeItem()
 		titleScreen():hide()
 		avatar():show({ mode = "user" })
 	end)
 
 	LocalEvent:Listen("signup_flow_dob", function()
+		avatar():removeItem()
 		avatarCameraFocus = "body"
 		layoutCamera()
 	end)
 
 	LocalEvent:Listen("signup_flow_start_or_login", function()
+		avatar():removeItem()
 		titleScreen():show()
 		avatar():hide()
 	end)
@@ -234,6 +250,7 @@ Client.OnStart = function()
 	end)
 
 	LocalEvent:Listen("signup_flow_login_success", function(_)
+		avatar():removeItem()
 		drawerHeight = 0
 		titleScreen():hide()
 		home():show()
@@ -251,12 +268,13 @@ Client.OnStart = function()
 	Light.Ambient.SkyLightFactor = 0.2
 	Light.Ambient.DirectionalLightFactor = 0.5
 
-	local logoTile = bundle:Data("images/logo-tile-rotated.png")
+	local logoTile = Data:FromBundle("images/logo-tile-rotated.png")
 
 	backgroundQuad = Quad()
 	backgroundQuad.IsUnlit = true
 	backgroundQuad.IsDoubleSided = false
-	backgroundQuad.Color = { gradient = "V", from = Color(166, 96, 255), to = Color(72, 102, 209) }
+	backgroundQuad.Color = { gradient = "V", from = Color(208, 97, 255), to = Color(63, 95, 232) }
+
 	backgroundQuad.Width = Screen.RenderWidth
 	backgroundQuad.Height = Screen.RenderHeight
 	backgroundQuad.Anchor = { 0.5, 0.5 }
@@ -267,7 +285,7 @@ Client.OnStart = function()
 	backgroundLogo = Quad()
 	backgroundLogo.IsUnlit = true
 	backgroundLogo.IsDoubleSided = false
-	backgroundLogo.Color = Color(255, 255, 255, 0.1)
+	backgroundLogo.Color = { Color(17, 42, 150, 0.2), alpha = true }
 	backgroundLogo.Image = logoTile
 	backgroundLogo.Width = math.max(Screen.RenderWidth, Screen.RenderHeight)
 	backgroundLogo.Height = backgroundLogo.Width
@@ -632,6 +650,8 @@ function avatar()
 	local pitch = CONFIG.AVATAR_DEFAULT_PITCH
 
 	local root
+	local phone
+	local phoneTickListener
 	local dragListener
 	local listeners = {}
 
@@ -639,7 +659,13 @@ function avatar()
 		yaw = yaw - dx * 0.01
 		pitch = math.min(math.rad(45), math.max(math.rad(-45), pitch + dy * 0.01))
 		if root then
-			root.LocalRotation = Rotation(pitch, 0, 0) * Rotation(0, yaw, 0)
+			root.LocalRotation:Set(Rotation(pitch, 0, 0) * Rotation(0, yaw, 0))
+		end
+		if phone then
+			phone.LocalRotation:Set(Rotation(0, -yaw + math.rad(35), 0) * Rotation(math.rad(30), 0, 0))
+			if root.avatar then
+				root.avatar.LocalRotation:Set(Rotation(0, -yaw + math.rad(180), 0))
+			end
 		end
 	end
 
@@ -648,6 +674,10 @@ function avatar()
 	end
 
 	_avatar.resetRotation = function()
+		local avatar = root.avatar
+		if avatar then
+			avatar.LocalRotation:Set(0, 0, 0)
+		end
 		yaw = CONFIG.AVATAR_DEFAULT_YAW
 		pitch = CONFIG.AVATAR_DEFAULT_PITCH
 		drag(0, 0)
@@ -659,6 +689,9 @@ function avatar()
 				return
 			end
 			dragListener = LocalEvent:Listen(LocalEvent.Name.PointerDrag, function(pe)
+				if phone then
+					return
+				end
 				drag(pe.DX, pe.DY)
 			end)
 			table.insert(listeners, dragListener)
@@ -681,6 +714,127 @@ function avatar()
 			return
 		end
 		root.Position:Set(p)
+	end
+
+	_avatar.removeItem = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		if phoneTickListener ~= nil then
+			phoneTickListener:Remove()
+			phoneTickListener = nil
+		end
+		if phone ~= nil then
+			phone:RemoveFromParent()
+			phone = nil
+		end
+		avatar.LocalPosition.Z = 0
+		_avatar:resetRotation()
+	end
+
+	_avatar.showPhone = function()
+		local avatar = root.avatar
+		if avatar == nil then
+			return
+		end
+		if phone == nil then
+			phone = Object()
+			phone.shape = bundle:Shape("shapes/smartphone")
+			phone.shape.Pivot = phone.shape.Size * 0.5
+			phone.shape:SetParent(phone)
+			phone.shape.LocalPosition = Number3.Zero
+			phone.Scale = 0.8
+			phone:SetParent(root)
+		end
+
+		local b = avatarBox()
+		avatar.LocalPosition.Y = -b.Size.Y * 0.5
+		avatar.LocalPosition.Z = -10
+
+		phone.LocalPosition.Z = 10
+		phone.LocalPosition.Y = -5
+
+		if phoneTickListener == nil then
+			local triggerMin = 0.3
+			local triggerMax = 0.8
+			local life = 1.0
+			local trigger = triggerMin + math.random() * (triggerMax - triggerMin)
+			local emojis = {}
+			local recycled = {}
+			local toRemove = {}
+			local foundParticlesToRemove = false
+			local generated = 0
+			local progress
+			phoneTickListener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+				for e, _ in pairs(emojis) do
+					e.life = e.life - dt
+					progress = math.max(0, life - e.life) / life
+					e.Scale = e.config.scale * math.sin(progress * math.pi)
+					if e.life <= 0 then
+						e:RemoveFromParent()
+						table.insert(toRemove, e)
+						foundParticlesToRemove = true
+					end
+				end
+
+				if foundParticlesToRemove then
+					for _, e in ipairs(toRemove) do
+						emojis[e] = nil
+						table.insert(recycled, e)
+					end
+					foundParticlesToRemove = false
+					toRemove = {}
+				end
+
+				trigger = trigger - dt
+				if trigger <= 0 then
+					Client:HapticFeedback()
+					ease:cancel(phone.shape)
+					phone.shape.Scale = 0.8
+					ease:outBack(phone.shape, 0.2).Scale = Number3.One
+
+					trigger = triggerMin + math.random() * (triggerMax - triggerMin)
+					local shapes = {
+						{ name = "shapes/heart", scale = 1.2, initRot = Rotation(0, 0, 0) },
+						{ name = "shapes/emojim", scale = 0.75, initRot = Rotation(0, math.rad(90), 0) },
+						{ name = "shapes/textbubble", scale = 1.0, initRot = Rotation(0, 0, 0) },
+						{ name = "shapes/pezh_coin_2", scale = 1.0, initRot = Rotation(0, 0, 0) },
+					}
+					local p
+					if generated >= 20 then
+						p = table.remove(recycled, math.random(1, #recycled))
+					end
+					if p == nil then
+						local index = math.random(1, 4)
+						local config = shapes[index]
+						p = bundle:Shape(config.name)
+						p.config = config
+						p.Scale = 0
+						p.Pivot = p.Size * 0.5
+						p.CollisionGroups = {}
+						p.CollidesWithGroups = {}
+						p.Physics = PhysicsMode.Dynamic
+
+						generated = generated + 1
+					end
+					p.life = life
+					emojis[p] = true
+					p:SetParent(phone)
+					p.Rotation:Set(p.config.initRot)
+					p.LocalPosition:Set(0, -2, -2)
+					local v = Number3(20, 0, 0)
+					v:Rotate(0, math.random() * math.pi, 0)
+					p.Velocity:Set(v + { 0, math.random(60, 70), 0 })
+					p.Acceleration = -Config.ConstantAcceleration - p.Velocity * 2
+				end
+			end)
+		end
+
+		_avatar:resetRotation()
+		yaw = math.rad(90)
+		drag(0, 0)
+		avatar.LocalRotation:Set(0, math.rad(30), 0)
 	end
 
 	_avatar.centerHead = function()
@@ -1305,6 +1459,7 @@ function home()
 					cellSelector:setParent(self)
 					cellSelector.Width = self.Width
 					cellSelector.Height = self.Height
+					Client:HapticFeedback()
 				end
 
 				cell.onRelease = function(self)
@@ -1339,7 +1494,7 @@ function home()
 								return
 							end
 
-							local thumbnail = ui:frame({ image = img }) -- TODO: fix white flashes
+							local thumbnail = ui:frame({ image = img })
 							thumbnail:setParent(cell)
 							cell.thumbnail = thumbnail
 							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
@@ -1486,6 +1641,7 @@ function home()
 					cellSelector:setParent(self)
 					cellSelector.Width = self.Width
 					cellSelector.Height = self.Height
+					Client:HapticFeedback()
 				end
 
 				cell.onRelease = function(self)
@@ -1617,6 +1773,7 @@ function home()
 					cellSelector:setParent(self)
 					cellSelector.Width = self.Width
 					cellSelector.Height = self.Height
+					Client:HapticFeedback()
 				end
 
 				cell.onRelease = function(self)
@@ -1995,6 +2152,16 @@ function home()
 							editUsernameBtn = ui:buttonNeutral({ content = "✏️" })
 							editUsernameBtn:setParent(profileCell)
 
+							local verifiedBadge = ui:createText("🇻", { size = "small" })
+							verifiedBadge.parentDidResize = function(self)
+								local parent = self.parent
+								self.pos = {
+									parent.Width - self.Width * 0.75,
+									parent.Height - self.Height * 0.75,
+								}
+							end
+							verifiedBadge:setParent(editUsernameBtn)
+
 							editUsernameBtn.onRelease = function()
 								Menu:ShowUsernameForm()
 							end
@@ -2037,6 +2204,38 @@ function home()
 						end
 						visitHouseBtn:setParent(profileCell)
 
+						local bell = ui:frame({
+							image = {
+								data = Data:FromBundle("images/bell.png"),
+								alpha = true,
+							},
+						})
+						bell.Width = 32
+						bell.Height = 36
+						bell.onRelease = function()
+							Client:HapticFeedback()
+						end
+
+						-- bell.onRelease = function()
+						-- Menu:ShowNotifications()
+						-- end
+
+						local comingSoonAlert
+						bell.onRelease = function(_)
+							if comingSoonAlert ~= nil then
+								return
+							end
+							comingSoonAlert =
+								require("alert"):create("Quick access to your notifications is coming soon! ❗️")
+
+							comingSoonAlert:setPositiveCallback("OK", function()
+								comingSoonAlert:remove()
+								comingSoonAlert = nil
+							end)
+						end
+
+						bell:setParent(profileCell)
+
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
 
@@ -2066,14 +2265,14 @@ function home()
 							local totalWidth = infoWidth + avatarWidth + padding
 
 							local y = self.Height * 0.5 + infoHeight * 0.5 - usernameHeight
-							local x = self.Width * 0.5 - totalWidth * 0.5
+							local x = 0
 
 							avatarTransparentFrame.pos.X = x - padding * 2
 
 							x = x + avatarWidth + padding
 
 							local previousAvatarCameraX = avatarCameraX
-							avatarCameraX = self.Width * 0.5 - totalWidth * 0.5 + avatarWidth * 0.5
+							avatarCameraX = padding + avatarWidth * 0.5
 
 							usernameFrame.pos = { x, y + usernameHeight * 0.5 - usernameFrame.Height * 0.5 }
 							if editUsernameBtn then
@@ -2091,6 +2290,11 @@ function home()
 							if previousAvatarCameraX ~= avatarCameraX then
 								layoutCamera()
 							end
+
+							bell.pos = {
+								self.Width - bell.Width - padding,
+								self.Height - bell.Height - padding,
+							}
 						end
 					end
 					return profileCell
@@ -2182,6 +2386,9 @@ function home()
 
 		local function createBottomBarButton(text, icon)
 			local btn = ui:frame({ color = Color(0, 0, 0) })
+			btn.onPress = function()
+				Client:HapticFeedback()
+			end
 
 			local content = ui:frame()
 
@@ -2235,11 +2442,7 @@ function home()
 		end
 
 		btnCreate.onRelease = function()
-			if Player.Username == "newbie" then
-				Menu:ShowUsernameForm({ text = "A Username is mandatory to create, ready to pick one now?" })
-			else
-				Menu:ShowCreations()
-			end
+			Menu:ShowCreations()
 		end
 
 		bottomBar.parentDidResize = function(self)

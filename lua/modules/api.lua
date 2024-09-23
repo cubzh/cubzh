@@ -685,30 +685,36 @@ mod.getBalance = function(_, cb)
 	return
 end
 
--- callback(errorStringOrNil, transactionsArray)
-mod.getLastTransactions = function(_, limitOrCb, cb)
-	-- process arguments
-	if type(limitOrCb) == "function" then
-		cb = limitOrCb
-		limitOrCb = nil
+mod.getTransactions = function(self, config)
+	if self ~= mod then
+		error("api:getTransactions(config): use `:`", 2)
 	end
-	if type(cb) ~= "function" then
-		return cb("Error: callback argument must be a function")
-	end
-	if type(limitOrCb) ~= "nil" and type(limitOrCb) ~= "number" then
-		return cb("limit argument must be a number")
+	local defaultConfig = {
+		limit = 100,
+		callback = function() end, -- callback(transactions, error)
+	}
+
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+
+	if not ok then
+		error("api:getTransactions(config): config error (" .. err .. ")", 2)
 	end
 
-	local url = mod.kApiAddr .. "/users/self/transactions"
-	if limitOrCb ~= nil then
-		url = url .. "?limit=" .. math.floor(limitOrCb)
-	end
+	local url = mod.kApiAddr .. "/users/self/transactions?limit=" .. math.floor(config.limit)
+
 	HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
-			cb("Error (" .. res.StatusCode .. "): can't get transactions.")
+			config.callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
 		end
-		cb(nil, JSON:Decode(res.Body))
+		local transactions, err = JSON:Decode(res.Body)
+		if err ~= nil then
+			config.callback(nil, mod:error(res.StatusCode, "getTransactions JSON decode error: " .. err))
+			return
+		end
+		config.callback(transactions)
 	end)
 	return
 end

@@ -576,20 +576,6 @@ void vx::device::hapticImpactHeavy() {}
 
 // Notifications
 
-void vx::device::scheduleLocalNotification(const std::string &title,
-                                           const std::string &body,
-                                           const std::string &identifier,
-                                           int days,
-                                           int hours,
-                                           int minutes,
-                                           int seconds) {
-    // local notifications not supported (yet?)
-}
-
-void vx::device::cancelLocalNotification(const std::string &identifier) {
-    // local notifications not supported (yet?)
-}
-
 void vx::device::openApplicationSettings() {
     // NOT IMPLEMENTED YET
 }

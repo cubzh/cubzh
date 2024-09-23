@@ -12,7 +12,6 @@ settings = require("settings")
 api = require("api")
 systemApi = require("system_api", System)
 alert = require("alert")
-sys_notifications = require("system_notifications", System)
 codes = require("inputcodes")
 sfx = require("sfx")
 logo = require("logo")
@@ -78,6 +77,8 @@ MODAL_KEYS = {
 	ITEM = 13,
 	CREATIONS = 14,
 	USERNAME_FORM = 15,
+	VERIFY_ACCOUNT_FORM = 16,
+	NOTIFICATIONS = 17,
 }
 
 -- User account management
@@ -222,6 +223,9 @@ function showModal(key, config)
 	elseif key == MODAL_KEYS.COINS then
 		content = require("coins"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.NOTIFICATIONS then
+		content = require("notifications"):createModalContent({ uikit = ui })
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.MARKETPLACE then
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
@@ -260,6 +264,11 @@ function showModal(key, config)
 		config.uikit = ui
 		content = require("username_form"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
+	elseif key == MODAL_KEYS.VERIFY_ACCOUNT_FORM then
+		local config = config or {}
+		config.uikit = ui
+		content = require("verify_account_form"):createModalContent(config)
+		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	end
 
 	if activeModal ~= nil then
@@ -279,6 +288,8 @@ function showModal(key, config)
 			refreshChat()
 			triggerCallbacks()
 		end
+
+		sfx("whooshes_small_1", { Volume = 0.5, Pitch = 2.0, Spatialized = false })
 	end
 
 	refreshChat()
@@ -966,6 +977,7 @@ pezhBtn.onCancel = topBarBtnRelease
 pezhBtn.onRelease = function(self)
 	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.COINS)
+	sfx("coin_1", { Volume = 0.75, Pitch = 1.0, Spatialized = false })
 end
 
 -- CHAT
@@ -1505,6 +1517,19 @@ menu.ShowProfile = function(_, config)
 	return true
 end
 
+---@function ShowNotifications Shows received notications menu if possible. (if user is authenticated, and menu not already active)
+--- Returns true on success, false otherwise.
+---@code local menu = require("menu")
+--- menu:ShowNotifications()
+---@return boolean
+menu.ShowNotifications = function(_)
+	if menuSectionCanBeShown() == false then
+		return false
+	end
+	showModal(MODAL_KEYS.NOTIFICATIONS)
+	return true
+end
+
 menu.ShowOutfits = function(_, player)
 	if menuSectionCanBeShown() == false then
 		return false
@@ -1625,6 +1650,18 @@ menu.ShowCreations = function(_)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
+	if not System.IsPhoneExempted and not System.HasVerifiedPhoneNumber then
+		local text = "A verified phone number is mandatory to create."
+		if System.IsUserUnder13 == true then
+			text = "A verified parent or guardian's phone number is mandatory to create."
+		end
+		showModal(MODAL_KEYS.VERIFY_ACCOUNT_FORM, { text = text })
+		return
+	end
+	if Player.Username == "newbie" then
+		Menu:ShowUsernameForm({ text = "A Username is mandatory to create, ready to pick one now?" })
+		return
+	end
 	showModal(MODAL_KEYS.CREATIONS)
 	return true
 end
@@ -1634,6 +1671,10 @@ end
 menu.ShowUsernameForm = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
+	end
+	if not System.IsPhoneExempted and not System.HasVerifiedPhoneNumber then
+		showModal(MODAL_KEYS.VERIFY_ACCOUNT_FORM, {})
+		return
 	end
 	showModal(MODAL_KEYS.USERNAME_FORM, config)
 	return true
@@ -1881,24 +1922,6 @@ menu:OnAuthComplete(function()
 		chat:parentDidResize()
 	end
 
-	Timer(10.0, function()
-		-- request permission for remote notifications
-		local showInfoPopupFunc = function(yesCallback, laterCallback)
-			showAlert({
-				message = "Enable notifications to receive messages from your friends, and know when your creations are liked.",
-				positiveLabel = "Yes",
-				neutralLabel = "Later",
-				positiveCallback = function()
-					yesCallback()
-				end,
-				neutralCallback = function()
-					laterCallback()
-				end,
-			})
-		end
-		sys_notifications:request(showInfoPopupFunc)
-	end)
-
 	-- check if there's an environment to launch, otherwise, listen for event
 	if System.HasEnvironmentToLaunch then
 		System:LaunchEnvironment()
@@ -1950,6 +1973,9 @@ elseif not Client.LoggedIn then
 		end,
 		dobStep = function()
 			LocalEvent:Send("signup_flow_dob")
+		end,
+		pushNotificationsStep = function()
+			LocalEvent:Send("signup_push_notifications")
 		end,
 	})
 	activeFlow = signupFlow

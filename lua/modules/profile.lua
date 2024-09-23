@@ -68,7 +68,12 @@ profile.create = function(_, config)
 	profileNode.Height = 200
 
 	local content = modal:createContent()
-	content.title = username
+
+	local title = username
+	if System.HasVerifiedPhoneNumber or System.IsPhoneExempted then
+		title = title .. " 🇻"
+	end
+	content.title = title
 	content.icon = "😛"
 	content.node = profileNode
 
