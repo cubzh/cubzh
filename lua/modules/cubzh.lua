@@ -2426,11 +2426,7 @@ function home()
 		end
 
 		btnCreate.onRelease = function()
-			if Player.Username == "newbie" then
-				Menu:ShowUsernameForm({ text = "A Username is mandatory to create, ready to pick one now?" })
-			else
-				Menu:ShowCreations()
-			end
+			Menu:ShowCreations()
 		end
 
 		bottomBar.parentDidResize = function(self)

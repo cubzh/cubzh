@@ -1651,7 +1651,11 @@ menu.ShowCreations = function(_)
 		return false
 	end
 	if not System.IsPhoneExempted and not System.HasVerifiedPhoneNumber then
-		showModal(MODAL_KEYS.VERIFY_ACCOUNT_FORM, {})
+		local text = "A verified phone number is mandatory to create."
+		if System.IsUserUnder13 == true then
+			text = "A verified parent or guardian's phone number is mandatory to create."
+		end
+		showModal(MODAL_KEYS.VERIFY_ACCOUNT_FORM, { text = text })
 		return
 	end
 	if Player.Username == "newbie" then

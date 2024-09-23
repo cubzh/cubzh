@@ -269,8 +269,9 @@ mod.createModalContent = function(_, config)
 
 	local defaultConfig = {
 		uikit = require("uikit"),
-		text = System.IsUserUnder13 == true and "Username setup requires a verified parent or guardian phone number."
-			or "Username setup requires a verified phone number.",
+		text = System.IsUserUnder13 == true
+				and "Setting up a username requires a verified parent or guardian's phone number."
+			or "Setting up a username requires a verified phone number.",
 	}
 
 	ok, err = pcall(function()
