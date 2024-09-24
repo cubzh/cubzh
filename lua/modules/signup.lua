@@ -724,6 +724,8 @@ signup.startFlow = function(self, config)
 						elseif response == "denied" then
 							-- TODO
 							print("DENIED: UPDATE BUTTON TO LEAD TO SETTINGS")
+							-- elseif response == "postponed" then
+							-- do nothing?
 						end
 					end)
 				end

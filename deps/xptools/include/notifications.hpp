@@ -70,7 +70,5 @@ void scheduleLocalNotification(const std::string &title,
 
 void cancelLocalNotification(const std::string &identifier);
 
-
-
 }
 }
