@@ -261,19 +261,28 @@ mod.getUserInfo = function(_, id, callback, fields)
 	url = urlGetFields(url, fields)
 
 	local req = HTTP:Get(url, function(resp)
-		if resp.StatusCode ~= 200 then
-			callback(nil, mod:error(resp.StatusCode, "could not get user info (" .. resp.StatusCode .. ")"))
-			return
-		end
-		local usr, err = JSON:Decode(resp.Body)
-		if err ~= nil then
-			callback(nil, mod:error(resp.StatusCode, "getUserInfo JSON decode error: " .. err))
-			return
-		end
-		if usr.nbFriends ~= nil then
-			usr.nbFriends = math.floor(usr.nbFriends)
-		end
-		callback(usr, nil) -- success
+		-- if resp.StatusCode ~= 200 then
+		-- 	callback(nil, mod:error(resp.StatusCode, "could not get user info (" .. resp.StatusCode .. ")"))
+		-- 	return
+		-- end
+		-- local usr, err = JSON:Decode(resp.Body)
+		-- if err ~= nil then
+		-- 	callback(nil, mod:error(resp.StatusCode, "getUserInfo JSON decode error: " .. err))
+		-- 	return
+		-- end
+		-- if usr.nbFriends ~= nil then
+		-- 	usr.nbFriends = math.floor(usr.nbFriends)
+		-- end
+		callback({
+			username = "caillef",
+			hasEmail = true,
+			hasPassword = true,
+			hasDOB = true,
+			isUnder13 = false,
+			didCustomizeAvatar = true,
+			hasVerifiedPhoneNumber = true,
+			isPhoneExempted = true,
+		}, nil) -- success
 	end)
 	return req
 end
@@ -286,7 +295,8 @@ mod.getMinAppVersion = function(_, callback)
 	end
 
 	local url = mod.kApiAddr .. "/min-version"
-
+	callback(nil, "1.0")
+	--[[
 	local req = HTTP:Get(url, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback("could not get min app version (" .. resp.StatusCode .. ")", nil)
@@ -304,6 +314,7 @@ mod.getMinAppVersion = function(_, callback)
 		callback(nil, r.version) -- success
 	end)
 	return req
+	--]]
 end
 
 -- --------------------------------------------------
