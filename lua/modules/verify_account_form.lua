@@ -96,8 +96,11 @@ local function createCodeVerifContent(ui)
 				System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true
 
 				if System.IsParentApproved then
-					-- TODO
-					print("CLOSE MODAL + REFRESH HOME")
+					LocalEvent:Send("account_verified")
+					local modal = content:getModalIfContentIsActive()
+					if modal then
+						modal:close()
+					end
 				else
 					scheduler.checkParentApproval()
 				end
@@ -165,9 +168,11 @@ local function createCodeVerifContent(ui)
 				end
 				System:DebugEvent("Request to verify phone number succeeds", { code = codeInput.Text })
 
+				System.HasVerifiedPhoneNumber = true
+
+				LocalEvent:Send("account_verified")
 				local modal = content:getModalIfContentIsActive()
 				if modal then
-					-- TODO refresh home (remove verified icons)
 					modal:close()
 				end
 			end)

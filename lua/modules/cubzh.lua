@@ -1,6 +1,5 @@
 bundle = require("bundle")
 time = require("time")
-sfx = require("sfx")
 
 local CONFIG = {
 	PROFILE_CELL_SIZE = 150,
@@ -2161,6 +2160,10 @@ function home()
 								}
 							end
 							verifiedBadge:setParent(editUsernameBtn)
+
+							LocalEvent:Listen("account_verified", function()
+								verifiedBadge:setParent(nil)
+							end)
 
 							editUsernameBtn.onRelease = function()
 								Menu:ShowUsernameForm()
