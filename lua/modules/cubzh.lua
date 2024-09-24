@@ -2151,20 +2151,6 @@ function home()
 							editUsernameBtn = ui:buttonNeutral({ content = "✏️" })
 							editUsernameBtn:setParent(profileCell)
 
-							local verifiedBadge = ui:createText("🇻", { size = "small" })
-							verifiedBadge.parentDidResize = function(self)
-								local parent = self.parent
-								self.pos = {
-									parent.Width - self.Width * 0.75,
-									parent.Height - self.Height * 0.75,
-								}
-							end
-							verifiedBadge:setParent(editUsernameBtn)
-
-							LocalEvent:Listen("account_verified", function()
-								verifiedBadge:setParent(nil)
-							end)
-
 							editUsernameBtn.onRelease = function()
 								Menu:ShowUsernameForm()
 							end

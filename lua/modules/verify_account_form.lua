@@ -212,6 +212,11 @@ local function createCodeVerifContent(ui)
 			secondaryText.pos.Y + secondaryText.Height + padding,
 		}
 
+		refreshText.pos = {
+			node.Width * 0.5 - refreshText.Width * 0.5,
+			okBtn.pos.Y + okBtn.Height * 0.5 - refreshText.Height * 0.5,
+		}
+
 		codeInput.Width = node.Width - padding * 2
 		codeInput.pos = {
 			node.Width * 0.5 - codeInput.Width * 0.5,
