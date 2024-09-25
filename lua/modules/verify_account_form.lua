@@ -68,6 +68,8 @@ local function createCodeVerifContent(ui)
 	loading:setParent(node)
 	loading:hide()
 
+	local refreshText
+
 	if under13 then
 		okBtn:hide()
 		codeInput:hide()
@@ -212,10 +214,12 @@ local function createCodeVerifContent(ui)
 			secondaryText.pos.Y + secondaryText.Height + padding,
 		}
 
-		refreshText.pos = {
-			node.Width * 0.5 - refreshText.Width * 0.5,
-			okBtn.pos.Y + okBtn.Height * 0.5 - refreshText.Height * 0.5,
-		}
+		if refreshText ~= nil then
+			refreshText.pos = {
+				node.Width * 0.5 - refreshText.Width * 0.5,
+				okBtn.pos.Y + okBtn.Height * 0.5 - refreshText.Height * 0.5,
+			}
+		end
 
 		codeInput.Width = node.Width - padding * 2
 		codeInput.pos = {
@@ -255,6 +259,7 @@ mod.createModalContent = function(_, config)
 	local checkDelay = 0.5
 	local checkTimer
 	local checkReq
+	local sendPhoneNumberReq
 	local selectedPrefix = "1"
 
 	local modal = require("modal")
@@ -274,6 +279,10 @@ mod.createModalContent = function(_, config)
 		if checkReq ~= nil then
 			checkReq:Cancel()
 			checkReq = nil
+		end
+		if sendPhoneNumberReq ~= nil then
+			sendPhoneNumberReq:Cancel()
+			sendPhoneNumberReq = nil
 		end
 	end
 
@@ -523,7 +532,8 @@ mod.createModalContent = function(_, config)
 			data = { parentPhone = phoneNumber }
 		end
 
-		api:patchUserInfo(data, function(err)
+		sendPhoneNumberReq = api:patchUserInfo(data, function(err)
+			sendPhoneNumberReq = nil
 			countryInput:enable()
 			phoneInput:enable()
 
