@@ -649,6 +649,7 @@ signup.startFlow = function(self, config)
 		-- local skipOnFirstEnter = System.HasUnverifiedPhoneNumber
 		local step = flow:createStep({
 			onEnter = function()
+				System:DebugEvent("App shows signup notification step")
 				config.pushNotificationsStep()
 				showBackButton()
 
@@ -691,6 +692,7 @@ signup.startFlow = function(self, config)
 				})
 				laterBtn:setParent(drawer)
 				laterBtn.onRelease = function()
+					System:DebugEvent("User presses LATER button in signup notification step")
 					System:NotificationPostponeAuthorization()
 					-- flush signup flow and restart credential checks (should go through now)
 					signupFlow:flush()
@@ -713,7 +715,15 @@ signup.startFlow = function(self, config)
 				text:setParent(drawer)
 
 				okBtn.onRelease = function()
+					if System.NotificationStatus == "denied" then
+						System:DebugEvent("User presses OPEN SETTINGS button in signup notification step")
+						System:OpenAppSettings()
+						return
+					end
+					System:DebugEvent("User presses OK button in signup notification step")
 					System:NotificationRequestAuthorization(function(response)
+						System:DebugEvent("App receives notification authorization response", { response = response })
+
 						-- print("response:", response) -- "authorized", "denied", "error", "not_supported"
 						if response == "authorized" or response == "not_supported" or response == "error" then
 							-- flush signup flow and restart credential checks (should go through now)
@@ -722,8 +732,7 @@ signup.startFlow = function(self, config)
 							-- NOTE: we should probably do something in case of error
 							-- not sure how to test this (never got an error here)
 						elseif response == "denied" then
-							-- TODO
-							print("DENIED: UPDATE BUTTON TO LEAD TO SETTINGS")
+							-- TODO: DENIED, BUTTON SHOULD NOW LEAD TO SETTINGS
 							-- elseif response == "postponed" then
 							-- do nothing?
 						end
