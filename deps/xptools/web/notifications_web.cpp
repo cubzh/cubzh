@@ -10,6 +10,8 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus() {
 
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
 
+void requestRemotePushToken() {}
+
 void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {}
 
 void scheduleLocalNotification(
