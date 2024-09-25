@@ -17,7 +17,7 @@ namespace vx {
 namespace notification {
 
 typedef enum {
-    NotificationAuthorizationStatus_NotDetermined, // user's never been asked for authorization
+    NotificationAuthorizationStatus_NotDetermined = 0, // user's never been asked for authorization
     NotificationAuthorizationStatus_Denied, // user clearly denied the service
     NotificationAuthorizationStatus_Authorized,
     NotificationAuthorizationStatus_Postponed,
@@ -25,7 +25,7 @@ typedef enum {
 } NotificationAuthorizationStatus;
 
 typedef enum {
-    NotificationAuthorizationResponse_Error, // unknown error, doesn't mean user denied it
+    NotificationAuthorizationResponse_Error = 0, // unknown error, doesn't mean user denied it
     NotificationAuthorizationResponse_Authorized,
     NotificationAuthorizationResponse_Denied,
     NotificationAuthorizationResponse_Postponed,
@@ -55,6 +55,10 @@ bool setRemotePushAuthorization();
 // Shows system popup requesting user's authorization to receive push notifications
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback);
 
+// Request remote push token, only if authorized
+// This should be done periodically as the token can expire.
+void requestRemotePushToken();
+
 // Same as requestRemotePushAuthorization, but only triggers system popup
 // if auth status in not determined.
 // Triggers callback with proper response otherwise, not asking user for anything.
@@ -70,7 +74,9 @@ void scheduleLocalNotification(const std::string &title,
 
 void cancelLocalNotification(const std::string &identifier);
 
-
+#if defined(__VX_PLATFORM_ANDROID)
+void didReplyToNotificationPermissionPopup(NotificationAuthorizationResponse response);
+#endif
 
 }
 }

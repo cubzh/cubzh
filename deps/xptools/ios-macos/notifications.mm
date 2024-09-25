@@ -20,7 +20,11 @@
 #import <dispatch/block.h>
 #endif
 
-vx::notification::NotificationAuthorizationStatus vx::notification::remotePushAuthorizationStatus() {
+namespace vx {
+namespace notification {
+
+
+NotificationAuthorizationStatus remotePushAuthorizationStatus() {
     char *s = readNotificationStatusFile();
     if (s == nullptr) {
         return NotificationAuthorizationStatus_NotDetermined;
@@ -57,13 +61,13 @@ vx::notification::NotificationAuthorizationStatus vx::notification::remotePushAu
 // #if TARGET_OS_MAC
 // #elif TARGET_OS_IPHONE
 
-void vx::notification::requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
+void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
     const UNAuthorizationOptions opts = (UNAuthorizationOptionAlert |
                                          UNAuthorizationOptionBadge |
                                          UNAuthorizationOptionSound);
 
     [[UNUserNotificationCenter currentNotificationCenter] requestAuthorizationWithOptions:opts completionHandler:^(const BOOL granted, NSError * _Nullable error) {
-        NSLog(@"[vx::notification::request] ERROR: %@", error.description);
+        NSLog(@"[request] ERROR: %@", error.description);
         vxlog_debug("push notif approved: %s", granted ? "YES" : "NO");
 
         if (error != nil) {
@@ -81,37 +85,34 @@ void vx::notification::requestRemotePushAuthorization(AuthorizationRequestCallba
             return;
         }
 
-        // get notification settings
-        [[UNUserNotificationCenter currentNotificationCenter] getNotificationSettingsWithCompletionHandler:
-         ^(UNNotificationSettings * _Nonnull settings) {
-            if (settings.authorizationStatus != UNAuthorizationStatusAuthorized) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    callback(NotificationAuthorizationResponse_Error);
-                });
-                return;
-            }
+        // GRANTED!
 
-            // must be called in main queue (iOS at least)
-            dispatch_async(dispatch_get_main_queue(), ^{
-#if TARGET_OS_IPHONE
-                [[UIApplication sharedApplication] registerForRemoteNotifications];
-#elif TARGET_OS_MAC
-                [[NSApplication sharedApplication] registerForRemoteNotifications];
-#endif
-                // NOTE: considering everything went well from this point,
-                // even though the system could still fail obtaining token.
-                // Even though, now with user's authorization, we should be able to retry
-                // and obtain the token.
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    setRemotePushAuthorization();
-                    callback(NotificationAuthorizationResponse_Authorized);
-                });
-            });
-        }];
+        // NOTE: push notifications and badges authorized by user,
+        // but token should still be requested, and it should be done
+        // periodically as it may expire.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            setRemotePushAuthorization();
+            callback(NotificationAuthorizationResponse_Authorized);
+        });
+
+        requestRemotePushToken();
     }];
 }
 
-void vx::notification::requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {
+void requestRemotePushToken() {
+    if (remotePushAuthorizationStatus() == NotificationAuthorizationStatus_Authorized) {
+        // must be called in main queue (iOS at least)
+        dispatch_async(dispatch_get_main_queue(), ^{
+#if TARGET_OS_IPHONE
+            [[UIApplication sharedApplication] registerForRemoteNotifications];
+#elif TARGET_OS_MAC
+            [[NSApplication sharedApplication] registerForRemoteNotifications];
+#endif
+        });
+    }
+}
+
+void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {
     NotificationAuthorizationStatus s = remotePushAuthorizationStatus();
     switch (s) {
         case NotificationAuthorizationStatus_NotDetermined:
@@ -132,7 +133,7 @@ void vx::notification::requestRemotePushAuthorizationIfAuthStatusNotDetermined(A
     }
 }
 
-void vx::notification::scheduleLocalNotification(const std::string &title,
+void scheduleLocalNotification(const std::string &title,
                                                  const std::string &body,
                                                  const std::string &identifier,
                                                  int days,
@@ -162,9 +163,12 @@ void vx::notification::scheduleLocalNotification(const std::string &title,
     }];
 }
 
-void vx::notification::cancelLocalNotification(const std::string &identifier) {
+void cancelLocalNotification(const std::string &identifier) {
     NSString *nsidentifier = [NSString stringWithCString:identifier.c_str() encoding:NSUTF8StringEncoding];
 
     UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
     [center removePendingNotificationRequestsWithIdentifiers:@[nsidentifier]];
+}
+
+}
 }
