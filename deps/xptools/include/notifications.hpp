@@ -55,6 +55,10 @@ bool setRemotePushAuthorization();
 // Shows system popup requesting user's authorization to receive push notifications
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback);
 
+// Request remote push token, only if authorized
+// This should be done periodically as the token can expire.
+void requestRemotePushToken();
+
 // Same as requestRemotePushAuthorization, but only triggers system popup
 // if auth status in not determined.
 // Triggers callback with proper response otherwise, not asking user for anything.
