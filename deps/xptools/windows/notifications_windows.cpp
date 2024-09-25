@@ -1,29 +1,21 @@
 
 #include "notifications.hpp"
 
-vx::notification::NotificationAuthorizationStatus vx::notification::
-    remotePushAuthorizationStatus() {
-    return vx::notification::NotificationAuthorizationStatus_NotSupported;
+namespace vx {
+namespace notification {
+
+NotificationAuthorizationStatus remotePushAuthorizationStatus() {
+    return NotificationAuthorizationStatus_NotSupported;
 }
 
-char *vx::notification::readNotificationStatusFile() {
-    return nullptr;
-}
+void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
 
-bool vx::notification::postponeRemotePushAuthorization() {
-    return false;
-}
-
-bool vx::notification::setRemotePushAuthorization() {
-    return false;
-}
-
-void vx::notification::requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
-
-void vx::notification::requestRemotePushAuthorizationIfAuthStatusNotDetermined(
+void requestRemotePushAuthorizationIfAuthStatusNotDetermined(
     AuthorizationRequestCallback callback) {}
 
-void vx::notification::scheduleLocalNotification(const std::string& title,
+void requestRemotePushToken() {}
+
+void scheduleLocalNotification(const std::string& title,
     const std::string& body,
     const std::string& identifier,
     int days,
@@ -32,3 +24,6 @@ void vx::notification::scheduleLocalNotification(const std::string& title,
     int seconds) {}
 
 void cancelLocalNotification(const std::string &identifier) {}
+
+} // namespace notification
+} // namespace vx
