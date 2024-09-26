@@ -420,6 +420,34 @@ void vx::device::hapticImpactHeavy() {
     }
 }
 
+vx::device::PerformanceTier vx::device::getPerformanceTier() {
+    bool just_attached = false;
+    vx::tools::JniMethodInfo methodInfo;
+
+    if (!vx::tools::JNIUtils::getInstance()->getMethodInfo(&just_attached,
+                                                           &methodInfo,
+                                                           "com/voxowl/tools/Device",
+                                                           "getPerformanceTier",
+                                                           "()I")) {
+        __android_log_print(ANDROID_LOG_ERROR,
+                            "Cubzh",
+                            "%s %d: error to get methodInfo",
+                            __FILE__,
+                            __LINE__);
+        assert(false); // crash the program
+    }
+
+    jint result = methodInfo.env->CallStaticIntMethod(methodInfo.classID, methodInfo.methodID);
+
+    methodInfo.env->DeleteLocalRef(methodInfo.classID);
+
+    if (just_attached) {
+        vx::tools::JNIUtils::getInstance()->getJavaVM()->DetachCurrentThread();
+    }
+
+    return static_cast<PerformanceTier>(result);
+}
+
 // Notifications
 
 void vx::device::openApplicationSettings() {
