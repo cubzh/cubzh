@@ -915,7 +915,10 @@ signup.startFlow = function(self, config)
 
 						System.IsUserUnder13 = cache.age < 13
 
-						if System.NotificationStatus == "underdetermined" then
+						local notificationStatus = System.NotificationStatus
+						System:DebugEvent("App gets notification status", { status = notificationStatus })
+
+						if notificationStatus == "underdetermined" then
 							-- Go to next step
 							-- signupFlow:push(steps.createUsernameInputStep())
 							signupFlow:push(steps.createPushNotificationsStep())
