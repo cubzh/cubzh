@@ -50,7 +50,7 @@
 
 #include "common.h"
 #include "bgfx_utils.h"
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 #include "camera.h"
 
 #include <map>

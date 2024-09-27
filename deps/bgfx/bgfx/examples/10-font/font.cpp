@@ -19,7 +19,7 @@
 
 #include <wchar.h>
 
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 
 namespace
 {

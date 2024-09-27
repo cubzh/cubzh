@@ -8,7 +8,7 @@
 #include "bgfx_utils.h"
 
 #include "vectordisplay.h"
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 
 namespace
 {

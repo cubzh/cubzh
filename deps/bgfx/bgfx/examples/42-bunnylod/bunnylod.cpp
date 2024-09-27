@@ -7,7 +7,7 @@
 #include <bx/file.h>
 #include "common.h"
 #include "bgfx_utils.h"
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 
 extern "C" void ProgressiveMesh(int vert_n, int vert_stride, const float *v, int tri_n, const int *tri, int *map, int *permutation);
 

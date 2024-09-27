@@ -7,7 +7,7 @@
 #include "bgfx_utils.h"
 #include <entry/input.h>
 #include <bx/string.h>
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 
 void cmdCreateWindow(const void* _userData);
 void cmdDestroyWindow(const void* _userData);
