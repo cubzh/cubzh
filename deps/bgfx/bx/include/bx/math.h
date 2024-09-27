@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2024 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
@@ -34,38 +34,19 @@ namespace bx
 		};
 	};
 
-	/// Structure initializer types.
-	namespace init
-	{
-		/// Fields are left uninitialized.
-		///
-		struct    NoneTag {};
-		constexpr NoneTag None;
-
-		/// Fields are initialized to zero.
-		///
-		struct    ZeroTag {};
-		constexpr ZeroTag Zero;
-
-		/// Fields are initialized to identity value.
-		///
-		struct    IdentityTag {};
-		constexpr IdentityTag Identity;
-	}
-
 	///
 	struct Vec3
 	{
 		Vec3() = delete;
 
 		///
-		Vec3(init::NoneTag);
+		Vec3(InitNoneTag);
 
 		///
-		constexpr Vec3(init::ZeroTag);
+		constexpr Vec3(InitZeroTag);
 
 		///
-		constexpr Vec3(init::IdentityTag);
+		constexpr Vec3(InitIdentityTag);
 
 		///
 		explicit constexpr Vec3(float _v);
@@ -82,13 +63,13 @@ namespace bx
 		Plane() = delete;
 
 		///
-		Plane(init::NoneTag);
+		Plane(InitNoneTag);
 
 		///
-		constexpr Plane(init::ZeroTag);
+		constexpr Plane(InitZeroTag);
 
 		///
-		constexpr Plane(init::IdentityTag);
+		constexpr Plane(InitIdentityTag);
 
 		///
 		constexpr Plane(Vec3 _normal, float _dist);
@@ -103,13 +84,13 @@ namespace bx
 		Quaternion() = delete;
 
 		///
-		Quaternion(init::NoneTag);
+		Quaternion(InitNoneTag);
 
 		///
-		constexpr Quaternion(init::ZeroTag);
+		constexpr Quaternion(InitZeroTag);
 
 		///
-		constexpr Quaternion(init::IdentityTag);
+		constexpr Quaternion(InitIdentityTag);
 
 		///
 		constexpr Quaternion(float _x, float _y, float _z, float _w);
@@ -119,11 +100,11 @@ namespace bx
 
 	/// Returns converted the argument _deg to radians.
 	///
-	BX_CONST_FUNC float toRad(float _deg);
+	BX_CONSTEXPR_FUNC float toRad(float _deg);
 
 	/// Returns converted the argument _rad to degrees.
 	///
-	BX_CONST_FUNC float toDeg(float _rad);
+	BX_CONSTEXPR_FUNC float toDeg(float _rad);
 
 	/// Reinterprets the bit pattern of _a as uint32_t.
 	///
@@ -193,9 +174,26 @@ namespace bx
 	///
 	/// @param[in] _a Value.
 	///
-	/// @returns -1 if `_a` less than zero, 0 if `_a` is equal to 0, or +1 if `_a` is greater than zero.
+	/// @returns -1 if `_a` is less than zero, 0 if `_a` is equal to 0, or +1 if `_a` is greater than zero.
 	///
 	BX_CONSTEXPR_FUNC float sign(float _a);
+
+	/// Returns `true` if the velue `_a` is negative.
+	///
+	/// @param[in] _a Value.
+	///
+	/// @returns `true` if `_a` is less than zero, otherwise returns `false`.
+	///
+	BX_CONSTEXPR_FUNC bool signBit(float _a);
+
+	/// Returns value with the magnitude `_value`, and the sign of `_sign`.
+	///
+	/// @param[in] _value Value.
+	/// @param[in] _sign Sign.
+	///
+	/// @returns Value with the magnitude `_value`, and the sign of `_sign`.
+	///
+	BX_CONSTEXPR_FUNC float copySign(float _value, float _sign);
 
 	/// Returns the absolute of _a.
 	///
@@ -205,7 +203,14 @@ namespace bx
 	///
 	BX_CONSTEXPR_FUNC float square(float _a);
 
-	/// Returns the cosine of the argument _a.
+	/// Returns the both sine and cosine of the argument _a.
+	///
+	/// @remarks The function calculates cosine, and then approximates sine based on the cosine
+	///   result. Therefore calculation of sine is less accurate than calling `bx::sin` function.
+	///
+	void sinCosApprox(float& _outSinApprox, float& _outCos, float _a);
+
+	/// Returns the sine of the argument _a.
 	///
 	BX_CONST_FUNC float sin(float _a);
 
@@ -272,8 +277,42 @@ namespace bx
 
 	/// Returns the base 2 logarithm of _a.
 	///
+	BX_CONST_FUNC float log2(float _a);
+
+	/// Count number of bits set.
+	///
 	template<typename Ty>
-	BX_CONST_FUNC Ty log2(Ty _a);
+	BX_CONSTEXPR_FUNC uint8_t countBits(Ty _val);
+
+	/// Count number of leading zeros.
+	///
+	template<typename Ty>
+	BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(Ty _val);
+
+	/// Count number of trailing zeros.
+	///
+	template<typename Ty>
+	BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(Ty _val);
+
+	/// Find first set.
+	///
+	template<typename Ty>
+	BX_CONSTEXPR_FUNC uint8_t findFirstSet(Ty _val);
+
+	/// Returns the next smallest integer base 2 logarithm of _a.
+	///
+	template<typename Ty>
+	BX_CONSTEXPR_FUNC uint8_t ceilLog2(Ty _a);
+
+	/// Returns the next biggest integer base 2 logarithm of _a.
+	///
+	template<typename Ty>
+	BX_CONSTEXPR_FUNC uint8_t floorLog2(Ty _a);
+
+	/// Returns the next smallest power of two value.
+	///
+	template<typename Ty>
+	BX_CONSTEXPR_FUNC Ty nextPow2(Ty _a);
 
 	/// Returns the square root of _a.
 	///
@@ -318,7 +357,7 @@ namespace bx
 
 	/// Returns the floating-point remainder of the division operation _a/_b.
 	///
-	BX_CONST_FUNC float mod(float _a, float _b);
+	BX_CONSTEXPR_FUNC float mod(float _a, float _b);
 
 	///
 	BX_CONSTEXPR_FUNC bool isEqual(float _a, float _b, float _epsilon);
@@ -327,7 +366,7 @@ namespace bx
 	BX_CONST_FUNC bool isEqual(const float* _a, const float* _b, uint32_t _num, float _epsilon);
 
 	///
-	BX_CONST_FUNC float wrap(float _a, float _wrap);
+	BX_CONSTEXPR_FUNC float wrap(float _a, float _wrap);
 
 	///
 	BX_CONSTEXPR_FUNC float step(float _edge, float _a);
@@ -348,11 +387,11 @@ namespace bx
 	BX_CONSTEXPR_FUNC float gain(float _time, float _gain);
 
 	///
-	BX_CONST_FUNC float angleDiff(float _a, float _b);
+	BX_CONSTEXPR_FUNC float angleDiff(float _a, float _b);
 
 	/// Returns shortest distance linear interpolation between two angles.
 	///
-	BX_CONST_FUNC float angleLerp(float _a, float _b, float _t);
+	BX_CONSTEXPR_FUNC float angleLerp(float _a, float _b, float _t);
 
 	///
 	template<typename Ty>

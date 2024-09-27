@@ -1,12 +1,13 @@
 /*
- * Copyright 2010-2023 Branimir Karadzic. All rights reserved.
+ * Copyright 2010-2024 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
 #ifndef BX_DEBUG_H_HEADER_GUARD
 #define BX_DEBUG_H_HEADER_GUARD
 
-#include "bx.h"
+#include <stdint.h> // uint32_t
+#include <stdarg.h> // va_list
 
 namespace bx
 {
