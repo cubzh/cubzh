@@ -208,7 +208,7 @@ BGFX_CHECK_CAPS(BGFX_CAPS_TEXTURE_READ_BACK, "Texture read-back is not supported
 
 ### Shadow sampler patch
 
-In `bgfx/scripts/shader.mk`, although we don't use yet glsl shaders, change the following in order to compile them.
+In `bgfx/scripts/shader.mk`, change the following in order to compile glsl shaders.
 ```
 ifeq ($(TARGET), 4)
 # CUBZH: issue w/ bgfxShadow2D and level -p 120
