@@ -1,20 +1,25 @@
 
 #include "notifications.hpp"
 
+namespace vx {
+    namespace notification {
+
 // Returns current authorization status for push notifications.
-vx::notification::NotificationAuthorizationStatus vx::notification::remotePushAuthorizationStatus() {
-	return vx::notification::NotificationAuthorizationStatus_NotSupported;
+NotificationAuthorizationStatus remotePushAuthorizationStatus() {
+	return NotificationAuthorizationStatus_NotSupported;
 }
 
 // Shows system popup requesting user's authorization to receive push notifications
-void vx::notification::requestRemotePushAuthorization(vx::notification::AuthorizationRequestCallback callback) {}
+void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
 
 // Same as requestRemotePushAuthorization, but only triggers system popup
 // if auth status in not determined.
 // Triggers callback with proper response otherwise, not asking user for anything.
-void vx::notification::requestRemotePushAuthorizationIfAuthStatusNotDetermined(vx::notification::AuthorizationRequestCallback callback) {}
+void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {}
 
-void vx::notification::scheduleLocalNotification(const std::string &title,
+void requestRemotePushToken() {}
+
+void scheduleLocalNotification(const std::string &title,
                                const std::string &body,
                                const std::string &identifier,
                                int days,
@@ -22,4 +27,7 @@ void vx::notification::scheduleLocalNotification(const std::string &title,
                                int minutes,
                                int seconds) {}
 
-void vx::notification::cancelLocalNotification(const std::string &identifier) {}
+void cancelLocalNotification(const std::string &identifier) {}
+
+    }
+}

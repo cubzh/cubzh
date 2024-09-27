@@ -68,6 +68,8 @@ local function createCodeVerifContent(ui)
 	loading:setParent(node)
 	loading:hide()
 
+	local refreshText
+
 	if under13 then
 		okBtn:hide()
 		codeInput:hide()
@@ -96,8 +98,11 @@ local function createCodeVerifContent(ui)
 				System.HasVerifiedPhoneNumber = userInfo.hasVerifiedPhoneNumber == true
 
 				if System.IsParentApproved then
-					-- TODO
-					print("CLOSE MODAL + REFRESH HOME")
+					LocalEvent:Send("account_verified")
+					local modal = content:getModalIfContentIsActive()
+					if modal then
+						modal:close()
+					end
 				else
 					scheduler.checkParentApproval()
 				end
@@ -165,9 +170,11 @@ local function createCodeVerifContent(ui)
 				end
 				System:DebugEvent("Request to verify phone number succeeds", { code = codeInput.Text })
 
+				System.HasVerifiedPhoneNumber = true
+
+				LocalEvent:Send("account_verified")
 				local modal = content:getModalIfContentIsActive()
 				if modal then
-					-- TODO refresh home (remove verified icons)
 					modal:close()
 				end
 			end)
@@ -207,6 +214,13 @@ local function createCodeVerifContent(ui)
 			secondaryText.pos.Y + secondaryText.Height + padding,
 		}
 
+		if refreshText ~= nil then
+			refreshText.pos = {
+				node.Width * 0.5 - refreshText.Width * 0.5,
+				okBtn.pos.Y + okBtn.Height * 0.5 - refreshText.Height * 0.5,
+			}
+		end
+
 		codeInput.Width = node.Width - padding * 2
 		codeInput.pos = {
 			node.Width * 0.5 - codeInput.Width * 0.5,
@@ -245,6 +259,7 @@ mod.createModalContent = function(_, config)
 	local checkDelay = 0.5
 	local checkTimer
 	local checkReq
+	local sendPhoneNumberReq
 	local selectedPrefix = "1"
 
 	local modal = require("modal")
@@ -264,6 +279,10 @@ mod.createModalContent = function(_, config)
 		if checkReq ~= nil then
 			checkReq:Cancel()
 			checkReq = nil
+		end
+		if sendPhoneNumberReq ~= nil then
+			sendPhoneNumberReq:Cancel()
+			sendPhoneNumberReq = nil
 		end
 	end
 
@@ -513,7 +532,8 @@ mod.createModalContent = function(_, config)
 			data = { parentPhone = phoneNumber }
 		end
 
-		api:patchUserInfo(data, function(err)
+		sendPhoneNumberReq = api:patchUserInfo(data, function(err)
+			sendPhoneNumberReq = nil
 			countryInput:enable()
 			phoneInput:enable()
 

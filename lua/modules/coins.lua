@@ -215,6 +215,12 @@ coins.createModalContent = function(_, config)
 				earnedText.Text = "earned: -"
 				return
 			end
+			System:DebugEvent("User shows bank account", {
+				totalCoins = balance.totalCoins,
+				grantedCoins = balance.grantedCoins,
+				purchasedCoins = balance.purchasedCoins,
+				earnedCoins = balance.earnedCoins,
+			})
 			amountText.Text = string.format("%d", balance.totalCoins)
 			grantedText.Text = string.format("grants: %d", balance.grantedCoins)
 			purchasedText.Text = string.format("purchased: %d", balance.purchasedCoins)

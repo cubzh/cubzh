@@ -70,9 +70,6 @@ profile.create = function(_, config)
 	local content = modal:createContent()
 
 	local title = username
-	if System.HasVerifiedPhoneNumber or System.IsPhoneExempted then
-		title = title .. " 🇻"
-	end
 	content.title = title
 	content.icon = "😛"
 	content.node = profileNode
@@ -140,6 +137,7 @@ profile.create = function(_, config)
 		github = "",
 		nbFriends = 0,
 		created = nil,
+		verified = false,
 	}
 
 	-- functions to create each node
@@ -931,6 +929,13 @@ profile.create = function(_, config)
 			userInfo.github = usr.github or ""
 			userInfo.nbFriends = usr.nbFriends or 0
 			userInfo.created = usr.created
+			userInfo.verified = usr.HasVerifiedPhoneNumber == true or usr.hasEmail == true
+
+			if userInfo.verified then
+				content.title = username .. " 🇻"
+			else
+				content.title = username
+			end
 
 			infoNode:setUserInfo()
 			content:refreshModal()
@@ -944,6 +949,8 @@ profile.create = function(_, config)
 			"x",
 			"tiktok",
 			"github",
+			"hasVerifiedPhoneNumber",
+			"hasEmail",
 		})
 		table.insert(requests, req)
 

@@ -675,14 +675,14 @@ mod.getBalance = function(_, cb)
 	end
 
 	local url = mod.kApiAddr .. "/users/self/balance"
-	HTTP:Get(url, function(res)
+	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
 			cb("Error (" .. res.StatusCode .. "): can't get balance.")
 			return
 		end
 		cb(nil, JSON:Decode(res.Body))
 	end)
-	return
+	return req
 end
 
 mod.getTransactions = function(self, config)
@@ -704,7 +704,7 @@ mod.getTransactions = function(self, config)
 
 	local url = mod.kApiAddr .. "/users/self/transactions?limit=" .. math.floor(config.limit)
 
-	HTTP:Get(url, function(res)
+	local req = HTTP:Get(url, function(res)
 		if res.StatusCode ~= 200 then
 			config.callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
 			return
@@ -716,7 +716,7 @@ mod.getTransactions = function(self, config)
 		end
 		config.callback(transactions)
 	end)
-	return
+	return req
 end
 
 mod.getItem = function(self, itemId, fields, callback)

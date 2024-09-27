@@ -25,19 +25,13 @@ namespace notification {
 
 
 NotificationAuthorizationStatus remotePushAuthorizationStatus() {
+    std::string _status = "";
+
     char *s = readNotificationStatusFile();
-    if (s == nullptr) {
-        return NotificationAuthorizationStatus_NotDetermined;
-    }
-    if (strcmp(s, "postponed") == 0) {
+    if (s != nullptr) {
+        _status = std::string(s); // "set" or "postponed"
         free(s);
-        return NotificationAuthorizationStatus_Postponed;
     }
-    if (strcmp(s, "set") != 0) {
-        free(s);
-        return NotificationAuthorizationStatus_NotDetermined;
-    }
-    free(s);
 
     __block NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
@@ -45,12 +39,22 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus() {
     [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
         if (settings.authorizationStatus == UNAuthorizationStatusAuthorized) {
             status = NotificationAuthorizationStatus_Authorized;
+            if (_status != "set") {
+                setRemotePushAuthorization();
+            }
         } else if (settings.authorizationStatus == UNAuthorizationStatusDenied) {
             status = NotificationAuthorizationStatus_Denied;
+            if (_status != "set") {
+                setRemotePushAuthorization();
+            }
         } else {
             // NOTE: considering UNAuthorizationStatusProvisional as "not determined"
             // we want clear approval
-            status = NotificationAuthorizationStatus_NotDetermined;
+            if (_status == "postponed") {
+                status = NotificationAuthorizationStatus_Postponed;
+            } else {
+                status = NotificationAuthorizationStatus_NotDetermined;
+            }
         }
         dispatch_semaphore_signal(semaphore);
     }];
