@@ -72,6 +72,8 @@ struct OcornutImguiContext
 			return;
 		}
 
+        //// CUBZH: let VXGameRenderer declare that view so that it can work with sort order
+        /*
 		bgfx::setViewName(m_viewId, "ImGui");
 		bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
 
@@ -87,6 +89,7 @@ struct OcornutImguiContext
 			bgfx::setViewTransform(m_viewId, NULL, ortho);
 			bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height) );
 		}
+        */
 
 		const ImVec2 clipPos   = _drawData->DisplayPos;       // (0,0) unless using multi-viewports
 		const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
