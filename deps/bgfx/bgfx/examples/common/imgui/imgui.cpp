@@ -467,7 +467,10 @@ struct OcornutImguiContext
 		m_last = now;
 		const double freq = double(bx::getHPFrequency() );
 		io.DeltaTime = float(frameTime/freq);
-
+        //// CUBZH: asserts in dear-imgui/imgui.cpp:ErrorCheckNewFrameSanityChecks() require a strictly positive dt
+        if (io.DeltaTime <= 0) {
+            io.DeltaTime = .001f;
+        }
 
 		io.AddMousePosEvent( (float)_mx, (float)_my);
 		io.AddMouseButtonEvent(ImGuiMouseButton_Left,   0 != (_button & IMGUI_MBUT_LEFT  ) );
