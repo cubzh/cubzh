@@ -19,6 +19,7 @@ https://github.com/voxowl/particubes-private/pull/1228
 https://github.com/voxowl/particubes-private/pull/2414
 https://github.com/voxowl/particubes-private/pull/2932
 https://github.com/voxowl/particubes-private/pull/3991
+https://github.com/cubzh/cubzh/pull/670
 
 ## Bgfx-imgui context
 
