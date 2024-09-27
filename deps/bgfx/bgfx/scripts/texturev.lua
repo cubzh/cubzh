@@ -1,4 +1,9 @@
-project ("texturev")
+--
+-- Copyright 2010-2024 Branimir Karadzic. All rights reserved.
+-- License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
+--
+
+project "texturev"
 	uuid (os.uuid("texturev") )
 	kind "ConsoleApp"
 
@@ -51,18 +56,32 @@ project ("texturev")
 		links   { "glfw3" }
 
 		configuration { "linux or freebsd" }
-			links {
-				"Xrandr",
-				"Xinerama",
-				"Xi",
-				"Xxf86vm",
-				"Xcursor",
-			}
+			if _OPTIONS["with-wayland"] then
+				links {
+					"wayland-egl",
+				}
+			else
+				links {
+					"Xrandr",
+					"Xinerama",
+					"Xi",
+					"Xxf86vm",
+					"Xcursor",
+				}
+			end
 
 		configuration { "osx*" }
 			linkoptions {
 				"-framework CoreVideo",
 			}
+
+		configuration {}
+	end
+
+	if _OPTIONS["with-libheif"] then
+		links {
+			"heif",
+		}
 
 		configuration {}
 	end

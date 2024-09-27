@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2024 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
@@ -11,10 +11,17 @@
 #	define KHR_SURFACE_EXTENSION_NAME VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
 #	define VK_IMPORT_INSTANCE_PLATFORM VK_IMPORT_INSTANCE_ANDROID
 #elif BX_PLATFORM_LINUX
+#	if defined(WL_EGL_PLATFORM)
+#		define VK_USE_PLATFORM_WAYLAND_KHR
+#	endif // defined(WL_EGL_PLATFORM)
 #	define VK_USE_PLATFORM_XLIB_KHR
 #	define VK_USE_PLATFORM_XCB_KHR
-//#	define VK_USE_PLATFORM_WAYLAND_KHR
-#	define KHR_SURFACE_EXTENSION_NAME VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#	if defined(WL_EGL_PLATFORM)
+#		define KHR_SURFACE_EXTENSION_NAME VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, \
+		VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#	else
+#		define KHR_SURFACE_EXTENSION_NAME VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#	endif // defined(WL_EGL_PLATFORM)
 #	define VK_IMPORT_INSTANCE_PLATFORM VK_IMPORT_INSTANCE_LINUX
 #elif BX_PLATFORM_WINDOWS
 #	define VK_USE_PLATFORM_WIN32_KHR
@@ -32,6 +39,21 @@
 #define VK_NO_STDINT_H
 #define VK_NO_PROTOTYPES
 #include <vulkan-local/vulkan.h>
+#include <vulkan-local/vulkan_beta.h>
+
+// vulkan.h pulls X11 crap...
+#if defined(None)
+#	undef None
+#endif // defined(None)
+
+#if defined(Success)
+#	undef Success
+#endif // defined(Success)
+
+#if defined(Status)
+#	undef Status
+#endif // defined(Status)
+
 #include "renderer.h"
 #include "debug_renderdoc.h"
 
@@ -48,6 +70,19 @@
 			/* VK_KHR_android_surface */                               \
 			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateAndroidSurfaceKHR); \
 
+#if defined(WL_EGL_PLATFORM)
+#define VK_IMPORT_INSTANCE_LINUX                                                              \
+			/* VK_KHR_wayland_surface */                                                      \
+			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateWaylandSurfaceKHR);                        \
+			VK_IMPORT_INSTANCE_FUNC(true,  vkGetPhysicalDeviceWaylandPresentationSupportKHR); \
+			/* VK_KHR_xlib_surface */                                                         \
+			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateXlibSurfaceKHR);                           \
+			VK_IMPORT_INSTANCE_FUNC(true,  vkGetPhysicalDeviceXlibPresentationSupportKHR);    \
+			/* VK_KHR_xcb_surface */                                                          \
+			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateXcbSurfaceKHR);                            \
+			VK_IMPORT_INSTANCE_FUNC(true,  vkGetPhysicalDeviceXcbPresentationSupportKHR);     \
+
+#else
 #define VK_IMPORT_INSTANCE_LINUX                                                           \
 			/* VK_KHR_xlib_surface */                                                      \
 			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateXlibSurfaceKHR);                        \
@@ -56,9 +91,7 @@
 			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateXcbSurfaceKHR);                         \
 			VK_IMPORT_INSTANCE_FUNC(true,  vkGetPhysicalDeviceXcbPresentationSupportKHR);  \
 
-//			/* VK_KHR_wayland_surface */
-//			VK_IMPORT_INSTANCE_FUNC(true,  vkCreateWaylandSurfaceKHR);
-//			VK_IMPORT_INSTANCE_FUNC(true,  vkGetPhysicalDeviceWaylandPresentationSupportKHR);
+#endif // defined(WL_EGL_PLATFORM)
 
 #define VK_IMPORT_INSTANCE_WINDOWS                                                          \
 			/* VK_KHR_win32_surface */                                                      \
@@ -356,6 +389,17 @@ VK_DESTROY_FUNC(DescriptorSet);
 		HashMap m_hashMap;
 	};
 
+	struct StagingBufferVK
+	{
+		VkBuffer m_buffer;
+		VkDeviceMemory m_deviceMem;
+
+		uint8_t* m_data;
+		uint32_t m_size;
+		uint32_t m_offset;
+		bool     m_isFromScratch;
+	};
+
 	class ScratchBufferVK
 	{
 	public:
@@ -367,17 +411,22 @@ VK_DESTROY_FUNC(DescriptorSet);
 		{
 		}
 
-		void create(uint32_t _size, uint32_t _count);
+		void create(uint32_t _size, uint32_t _count, VkBufferUsageFlags _usage, uint32_t align);
+		void createUniform(uint32_t _size, uint32_t _count);
+		void createStaging(uint32_t _size);
 		void destroy();
 		void reset();
-		uint32_t write(const void* _data, uint32_t _size);
+		uint32_t alloc(uint32_t _size, uint32_t _minAlign = 1);
+		uint32_t write(const void* _data, uint32_t _size, uint32_t _minAlign = 1);
 		void flush();
 
 		VkBuffer m_buffer;
 		VkDeviceMemory m_deviceMem;
+
 		uint8_t* m_data;
 		uint32_t m_size;
 		uint32_t m_pos;
+		uint32_t m_align;
 	};
 
 	struct BufferVK
@@ -672,7 +721,7 @@ VK_DESTROY_FUNC(DescriptorSet);
 	{
 		SwapChainVK()
 			: m_nwh(NULL)
-			, m_swapchain(VK_NULL_HANDLE)
+			, m_swapChain(VK_NULL_HANDLE)
 			, m_lastImageRenderedSemaphore(VK_NULL_HANDLE)
 			, m_lastImageAcquiredSemaphore(VK_NULL_HANDLE)
 			, m_backBufferColorMsaaImageView(VK_NULL_HANDLE)
@@ -713,8 +762,8 @@ VK_DESTROY_FUNC(DescriptorSet);
 		TextureFormat::Enum m_depthFormat;
 
 		VkSurfaceKHR   m_surface;
-		VkSwapchainKHR m_swapchain;
-		uint32_t       m_numSwapchainImages;
+		VkSwapchainKHR m_swapChain;
+		uint32_t       m_numSwapChainImages;
 		VkImageLayout  m_backBufferColorImageLayout[kMaxBackBuffers];
 		VkImage        m_backBufferColorImage[kMaxBackBuffers];
 		VkImageView    m_backBufferColorImageView[kMaxBackBuffers];

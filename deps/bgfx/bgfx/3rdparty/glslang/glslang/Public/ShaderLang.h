@@ -38,6 +38,7 @@
 #define _COMPILER_INTERFACE_INCLUDED_
 
 #include "../Include/ResourceLimits.h"
+#include "../Include/visibility.h"
 #include "../MachineIndependent/Versions.h"
 
 #include <cstring>
@@ -47,22 +48,6 @@
     #define C_DECL __cdecl
 #else
     #define C_DECL
-#endif
-
-#ifdef GLSLANG_IS_SHARED_LIBRARY
-    #ifdef _WIN32
-        #ifdef GLSLANG_EXPORTING
-            #define GLSLANG_EXPORT __declspec(dllexport)
-        #else
-            #define GLSLANG_EXPORT __declspec(dllimport)
-        #endif
-    #elif __GNUC__ >= 4
-        #define GLSLANG_EXPORT __attribute__((visibility("default")))
-    #endif
-#endif // GLSLANG_IS_SHARED_LIBRARY
-
-#ifndef GLSLANG_EXPORT
-#define GLSLANG_EXPORT
 #endif
 
 //
@@ -252,23 +237,25 @@ typedef enum {
 // Message choices for what errors and warnings are given.
 //
 enum EShMessages : unsigned {
-    EShMsgDefault          = 0,         // default is to give all required errors and extra warnings
-    EShMsgRelaxedErrors    = (1 << 0),  // be liberal in accepting input
-    EShMsgSuppressWarnings = (1 << 1),  // suppress all warnings, except those required by the specification
-    EShMsgAST              = (1 << 2),  // print the AST intermediate representation
-    EShMsgSpvRules         = (1 << 3),  // issue messages for SPIR-V generation
-    EShMsgVulkanRules      = (1 << 4),  // issue messages for Vulkan-requirements of GLSL for SPIR-V
-    EShMsgOnlyPreprocessor = (1 << 5),  // only print out errors produced by the preprocessor
-    EShMsgReadHlsl         = (1 << 6),  // use HLSL parsing rules and semantics
-    EShMsgCascadingErrors  = (1 << 7),  // get cascading errors; risks error-recovery issues, instead of an early exit
-    EShMsgKeepUncalled     = (1 << 8),  // for testing, don't eliminate uncalled functions
-    EShMsgHlslOffsets      = (1 << 9),  // allow block offsets to follow HLSL rules instead of GLSL rules
-    EShMsgDebugInfo        = (1 << 10), // save debug information
-    EShMsgHlslEnable16BitTypes  = (1 << 11), // enable use of 16-bit types in SPIR-V for HLSL
-    EShMsgHlslLegalization  = (1 << 12), // enable HLSL Legalization messages
-    EShMsgHlslDX9Compatible = (1 << 13), // enable HLSL DX9 compatible mode (for samplers and semantics)
-    EShMsgBuiltinSymbolTable = (1 << 14), // print the builtin symbol table
-    EShMsgEnhanced         = (1 << 15), // enhanced message readability
+    EShMsgDefault              = 0,         // default is to give all required errors and extra warnings
+    EShMsgRelaxedErrors        = (1 << 0),  // be liberal in accepting input
+    EShMsgSuppressWarnings     = (1 << 1),  // suppress all warnings, except those required by the specification
+    EShMsgAST                  = (1 << 2),  // print the AST intermediate representation
+    EShMsgSpvRules             = (1 << 3),  // issue messages for SPIR-V generation
+    EShMsgVulkanRules          = (1 << 4),  // issue messages for Vulkan-requirements of GLSL for SPIR-V
+    EShMsgOnlyPreprocessor     = (1 << 5),  // only print out errors produced by the preprocessor
+    EShMsgReadHlsl             = (1 << 6),  // use HLSL parsing rules and semantics
+    EShMsgCascadingErrors      = (1 << 7),  // get cascading errors; risks error-recovery issues, instead of an early exit
+    EShMsgKeepUncalled         = (1 << 8),  // for testing, don't eliminate uncalled functions
+    EShMsgHlslOffsets          = (1 << 9),  // allow block offsets to follow HLSL rules instead of GLSL rules
+    EShMsgDebugInfo            = (1 << 10), // save debug information
+    EShMsgHlslEnable16BitTypes = (1 << 11), // enable use of 16-bit types in SPIR-V for HLSL
+    EShMsgHlslLegalization     = (1 << 12), // enable HLSL Legalization messages
+    EShMsgHlslDX9Compatible    = (1 << 13), // enable HLSL DX9 compatible mode (for samplers and semantics)
+    EShMsgBuiltinSymbolTable   = (1 << 14), // print the builtin symbol table
+    EShMsgEnhanced             = (1 << 15), // enhanced message readability
+    EShMsgAbsolutePath         = (1 << 16), // Output Absolute path for messages
+    EShMsgDisplayErrorColumn   = (1 << 17), // Display error message column aswell as line
     LAST_ELEMENT_MARKER(EShMsgCount),
 };
 
@@ -318,8 +305,8 @@ typedef void* ShHandle;
 // Driver calls these to create and destroy compiler/linker
 // objects.
 //
-GLSLANG_EXPORT ShHandle ShConstructCompiler(const EShLanguage, int debugOptions);  // one per shader
-GLSLANG_EXPORT ShHandle ShConstructLinker(const EShExecutable, int debugOptions);  // one per shader pair
+GLSLANG_EXPORT ShHandle ShConstructCompiler(const EShLanguage, int /*debugOptions unused*/); // one per shader
+GLSLANG_EXPORT ShHandle ShConstructLinker(const EShExecutable, int /*debugOptions unused*/); // one per shader pair
 GLSLANG_EXPORT ShHandle ShConstructUniformMap();                 // one per uniform namespace (currently entire program object)
 GLSLANG_EXPORT void ShDestruct(ShHandle);
 
@@ -330,18 +317,14 @@ GLSLANG_EXPORT void ShDestruct(ShHandle);
 // The info-log should be written by ShCompile into
 // ShHandle, so it can answer future queries.
 //
-GLSLANG_EXPORT int ShCompile(
-    const ShHandle,
-    const char* const shaderStrings[],
-    const int numStrings,
-    const int* lengths,
-    const EShOptimizationLevel,
-    const TBuiltInResource *resources,
-    int debugOptions,
-    int defaultVersion = 110,            // use 100 for ES environment, overridden by #version in shader
-    bool forwardCompatible = false,      // give errors for use of deprecated features
-    EShMessages messages = EShMsgDefault // warnings and errors
-    );
+GLSLANG_EXPORT int ShCompile(const ShHandle, const char* const shaderStrings[], const int numStrings,
+                             const int* lengths, const EShOptimizationLevel, const TBuiltInResource* resources,
+                             int,                      // debugOptions unused
+                             int defaultVersion = 110, // use 100 for ES environment, overridden by #version in shader
+                             bool forwardCompatible = false,      // give errors for use of deprecated features
+                             EShMessages messages = EShMsgDefault, // warnings and errors
+                             const char* fileName = nullptr
+);
 
 GLSLANG_EXPORT int ShLinkExt(
     const ShHandle,               // linker object
@@ -512,6 +495,9 @@ public:
     GLSLANG_EXPORT void setAtomicCounterBlockSet(unsigned int set);
     GLSLANG_EXPORT void setAtomicCounterBlockBinding(unsigned int binding);
 
+    GLSLANG_EXPORT void addSourceText(const char* text, size_t len);
+    GLSLANG_EXPORT void setSourceFile(const char* file);
+
     // For setting up the environment (cleared to nothingness in the constructor).
     // These must be called so that parsing is done for the right source language and
     // target environment, either indirectly through TranslateEnvironment() based on
@@ -572,6 +558,9 @@ public:
 
     void setEnvInputVulkanRulesRelaxed() { environment.input.vulkanRulesRelaxed = true; }
     bool getEnvInputVulkanRulesRelaxed() const { return environment.input.vulkanRulesRelaxed; }
+
+    void setCompileOnly() { compileOnly = true; }
+    bool getCompileOnly() const { return compileOnly; }
 
     // Interface to #include handlers.
     //
@@ -722,13 +711,14 @@ protected:
 
     TEnvironment environment;
 
+    // Indicates this shader is meant to be used without linking
+    bool compileOnly = false;
+
     friend class TProgram;
 
 private:
     TShader& operator=(TShader&);
 };
-
-#if !defined(GLSLANG_WEB)
 
 //
 // A reflection database and its interface, consistent with the OpenGL API reflection queries.
@@ -743,6 +733,8 @@ public:
     GLSLANG_EXPORT int getBinding() const;
     GLSLANG_EXPORT void dump() const;
     static TObjectReflection badReflection() { return TObjectReflection(); }
+
+    GLSLANG_EXPORT unsigned int layoutLocation() const;
 
     std::string name;
     int offset;
@@ -846,8 +838,6 @@ public:
     virtual void addStage(EShLanguage stage, TIntermediate& stageIntermediate) = 0;
 };
 
-#endif // !GLSLANG_WEB
-
 // Make one TProgram per set of shaders that will get linked together.  Add all
 // the shaders that are to be linked together.  After calling shader.parse()
 // for all shaders, call link().
@@ -866,8 +856,6 @@ public:
     GLSLANG_EXPORT const char* getInfoDebugLog();
 
     TIntermediate* getIntermediate(EShLanguage stage) const { return intermediate[stage]; }
-
-#if !defined(GLSLANG_WEB)
 
     // Reflection Interface
 
@@ -961,7 +949,6 @@ public:
     // If resolver is not provided it uses the previous approach
     // and respects auto assignment and offsets.
     GLSLANG_EXPORT bool mapIO(TIoMapResolver* pResolver = nullptr, TIoMapper* pIoMapper = nullptr);
-#endif // !GLSLANG_WEB
 
 protected:
     GLSLANG_EXPORT bool linkStage(EShLanguage, EShMessages);
@@ -972,9 +959,7 @@ protected:
     TIntermediate* intermediate[EShLangCount];
     bool newedIntermediate[EShLangCount];      // track which intermediate were "new" versus reusing a singleton unit in a stage
     TInfoSink* infoSink;
-#if !defined(GLSLANG_WEB)
     TReflection* reflection;
-#endif
     bool linked;
 
 private:

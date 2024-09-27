@@ -1,5 +1,5 @@
 --
--- Copyright 2010-2023 Branimir Karadzic. All rights reserved.
+-- Copyright 2010-2024 Branimir Karadzic. All rights reserved.
 -- License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
 --
 
@@ -36,6 +36,10 @@ project ("example-common")
 		path.join(BGFX_DIR, "3rdparty/dear-imgui/**.h"),
 		path.join(BGFX_DIR, "examples/common/**.cpp"),
 		path.join(BGFX_DIR, "examples/common/**.h"),
+	}
+
+	defines {
+		"USE_ENTRY=1",
 	}
 
 	using_bx()

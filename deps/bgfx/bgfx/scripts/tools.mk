@@ -1,5 +1,5 @@
 #
-# Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+# Copyright 2011-2024 Branimir Karadzic. All rights reserved.
 # License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
 #
 
@@ -7,28 +7,22 @@ SILENT?=@
 
 THISDIR:=$(dir $(lastword $(MAKEFILE_LIST)))
 
-# UNAME:=$(shell uname)
-# ifeq ($(UNAME),$(filter Linux Darwin MINGW%,$(UNAME)))
-# CMD_MKDIR=mkdir -p "$(1)"
-# CMD_RMDIR=rm -r "$(1)"
-# ifeq ($(UNAME),$(filter Darwin,$(UNAME)))
-# OS=darwin
-# else ifeq ($(UNAME),$(filter MINGW%,$(UNAME)))
-# OS=windows
-# else
-# OS=linux
-# endif
-# else
-# CMD_MKDIR=cmd /C "if not exist "$(subst /,\,$(1))" mkdir "$(subst /,\,$(1))""
-# CMD_RMDIR=cmd /C "if exist "$(subst /,\,$(1))" rmdir /S /Q "$(subst /,\,$(1))""
-# OS=windows
-# endif
-
-# CUBZH: stuff above doesn't work. We just define mkdir/rmdir commands and
-# we'll set platform explicitely by doing: eg. export OS=windows before building shaders
-# See readme with shaders
+UNAME:=$(shell uname)
+ifeq ($(UNAME),$(filter Linux Darwin MINGW%,$(UNAME)))
 CMD_MKDIR=mkdir -p "$(1)"
 CMD_RMDIR=rm -r "$(1)"
+ifeq ($(UNAME),$(filter Darwin,$(UNAME)))
+OS=darwin
+else ifeq ($(UNAME),$(filter MINGW%,$(UNAME)))
+OS=windows
+else
+OS=linux
+endif
+else
+CMD_MKDIR=cmd /C "if not exist "$(subst /,\,$(1))" mkdir "$(subst /,\,$(1))""
+CMD_RMDIR=cmd /C "if exist "$(subst /,\,$(1))" rmdir /S /Q "$(subst /,\,$(1))""
+OS=windows
+endif
 
 SHADERC:="$(THISDIR)../tools/bin/$(OS)/shaderc"
 GEOMETRYC:="$(THISDIR)../tools/bin/$(OS)/geometryc"

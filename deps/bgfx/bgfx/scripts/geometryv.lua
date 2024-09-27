@@ -1,3 +1,8 @@
+--
+-- Copyright 2010-2024 Branimir Karadzic. All rights reserved.
+-- License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
+--
+
 project ("geometryv")
 	uuid (os.uuid("geometryv") )
 	kind "ConsoleApp"
@@ -51,13 +56,19 @@ project ("geometryv")
 		links   { "glfw3" }
 
 		configuration { "linux or freebsd" }
-			links {
-				"Xrandr",
-				"Xinerama",
-				"Xi",
-				"Xxf86vm",
-				"Xcursor",
-			}
+			if _OPTIONS["with-wayland"] then
+				links {
+					"wayland-egl",
+				}
+			else
+				links {
+					"Xrandr",
+					"Xinerama",
+					"Xi",
+					"Xxf86vm",
+					"Xcursor",
+				}
+			end
 
 		configuration { "osx*" }
 			linkoptions {
