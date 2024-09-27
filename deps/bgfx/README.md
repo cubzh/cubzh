@@ -140,7 +140,7 @@ bx::write(&writer
 ```
 
 ### MRT patch
-## Note: not necessary anymore as of PR 2414
+## Note: fixed as of PR 2414
 
 MRT are available starting from GLES30, but bgfx reports that GLES31 is necessary, which is incorrect
 
@@ -151,6 +151,7 @@ if (BX_ENABLED(BGFX_CONFIG_RENDERER_OPENGL || BGFX_CONFIG_RENDERER_OPENGLES >= 3
 ```
 
 ### Compute patch
+## Note: fixed as of Core PR 670
 
 We need to specify compute shaders ESSL (GLES shading language) version when using GLES
 

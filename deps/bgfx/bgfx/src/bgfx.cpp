@@ -5059,7 +5059,11 @@ namespace bgfx
 	uint32_t readTexture(TextureHandle _handle, void* _data, uint8_t _mip)
 	{
 		BX_ASSERT(NULL != _data, "_data can't be NULL");
-		BGFX_CHECK_CAPS(BGFX_CAPS_TEXTURE_READ_BACK, "Texture read-back is not supported!");
+        //// CUBZH: disabling this check if we enable BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION,
+        //// since readTexture can still perform using a readPixels instead, check renderer_gl readTexture()
+#ifndef BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION
+        BGFX_CHECK_CAPS(BGFX_CAPS_TEXTURE_READ_BACK, "Texture read-back is not supported!");
+#endif
 		return s_ctx->readTexture(_handle, _data, _mip);
 	}
 
