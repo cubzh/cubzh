@@ -105,40 +105,36 @@ void _javaRequestFirebaseToken() {
 namespace vx {
     namespace notification {
 
-        NotificationAuthorizationStatus remotePushAuthorizationStatus() {
-            char *cStr = readNotificationStatusFile();
-            if (cStr == nullptr) {
-                vxlog_debug("CUBZH_DEBUG %s", "NotDetermined (1)");
-                return NotificationAuthorizationStatus_NotDetermined;
-            }
-            std::string s(cStr);
-            free(cStr);
-            cStr = nullptr;
+NotificationAuthorizationStatus remotePushAuthorizationStatus() {
+    std::string _status = "";
 
-            if (s == "postponed") {
-                vxlog_debug("CUBZH_DEBUG %s", "Postponed");
-                return NotificationAuthorizationStatus_Postponed;
-            }
-            if (s != "set") {
-                vxlog_debug("CUBZH_DEBUG %s", "NotDetermined (2)");
-                return NotificationAuthorizationStatus_NotDetermined;
-            }
+    char *s = readNotificationStatusFile();
+    if (s != nullptr) {
+        _status = std::string(s); // "set" or "postponed"
+        free(s);
+        s = nullptr;
+    }
 
-            // permission status has been set by the user
-
-            NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
-            const bool granted = _javaPermissionGranted();
-            if (granted) {
-                vxlog_debug("CUBZH_DEBUG %s", "Authorized");
-                status = NotificationAuthorizationStatus_Authorized;
-            } else {
-                vxlog_debug("CUBZH_DEBUG %s", "Denied");
-                status = NotificationAuthorizationStatus_Denied;
-            }
-            return status;
+    NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
+    const bool granted = _javaPermissionGranted();
+    if (granted) {
+        status = NotificationAuthorizationStatus_Authorized;
+        if (_status != "set") {
+            setRemotePushAuthorization();
         }
+    } else {
+        if (_status == "postponed") {
+            status = NotificationAuthorizationStatus_Postponed;
+        } else if (_status == "set") {
+            status = NotificationAuthorizationStatus_Denied;
+        } else {
+            status = NotificationAuthorizationStatus_NotDetermined;
+        }
+    }
+    return status;
+}
 
-        void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
+void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
             // store callback
             storedCallback = callback;
             _javaRequestRemotePush();
