@@ -6721,7 +6721,10 @@ namespace bgfx { namespace gl
 					}
 
 					bx::write(&writer
-						, "#define texture2DLod    textureLod\n"
+                        //// CUBZH: this first line was added to patch back texture3DLod
+                        , "#define texture3DLodEXT texture3DLod\n"
+                          
+                          "#define texture2DLod    textureLod\n"
 						  "#define texture3DLod    textureLod\n"
 						  "#define textureCubeLod  textureLod\n"
 						  "#define texture2DGrad   textureGrad\n"
