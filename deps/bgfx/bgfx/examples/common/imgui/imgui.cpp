@@ -34,6 +34,7 @@
 #include "icons_font_awesome.ttf.h"
 
 #include "VXFont.hpp"
+#include "VXConfig.hpp"
 
 static const bgfx::EmbeddedShader s_embeddedShaders[] =
 {
@@ -395,13 +396,18 @@ struct OcornutImguiContext
 		io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
         */
 
+        //// CUBZH: font sampler mode to POINT, if using the pixel font
 		m_texture = bgfx::createTexture2D(
 			  (uint16_t)width
 			, (uint16_t)height
 			, false
 			, 1
 			, bgfx::TextureFormat::BGRA8
+#if DEARIMGUI_FONT == FontName_Pixel
+            , BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT
+#else
 			, 0
+#endif
 			, bgfx::copy(data, width*height*4)
 			);
 

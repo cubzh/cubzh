@@ -89,7 +89,7 @@ if (io.DeltaTime <= 0) {
 ### Point sampler mode
 
 In `bgfx/examples/common/imgui/imgui.cpp ~l.393`, make sure that `m_texture` is created using flags
-`BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT`
+`BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT` if using the pixel font
 
 ### Custom glyphs parameters
 
