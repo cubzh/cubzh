@@ -69,7 +69,7 @@ public:
     
     /// Performs the request and call the callback function
     void sendAsync();
-    
+
     /// Performs the request in the current thread (it's blocking!)
     void sendSync();
     
@@ -221,6 +221,17 @@ private:
 
     // cached values
     std::string _cache_pathAndQuery;
+
+    // ------------------
+    // platform specific
+    // ------------------
+
+    void _sendAsync(HttpRequest_SharedPtr httpReq);
+    void _cancel(HttpRequest_SharedPtr httpReq);
+
+    void *_platformObject;
+    void _attachPlatformObject(void *o);
+    void _detachPlatformObject();
 };
 
 }

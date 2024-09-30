@@ -22,6 +22,8 @@ _useLocalCache(false) {}
 
 HttpResponse::~HttpResponse() {}
 
+// TODO: remove get/set success
+// status code == 0 + empty body is enough
 void HttpResponse::setSuccess(const bool& success) {
     _success = success;
 }

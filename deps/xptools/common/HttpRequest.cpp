@@ -39,7 +39,9 @@ HttpRequest_SharedPtr HttpRequest::make(const std::string& method,
     return r;
 }
 
-HttpRequest::~HttpRequest() {}
+HttpRequest::~HttpRequest() {
+    _detachPlatformObject();
+}
 
 void HttpRequest::setCallback(HttpRequestCallback callback) {
     _callback = callback;
@@ -176,17 +178,7 @@ void HttpRequest::sendAsync() {
     // update status
     strongSelf->setStatus(HttpRequest::Status::PROCESSING);
 
-#ifdef __VX_USE_LIBWEBSOCKETS
-    // send request to WSService for processing
-    WSService::shared()->sendHttpRequest(strongSelf);
-#else // WASM / EMSCRIPTEN
-    // send request for processing
-    HttpRequest::_requestsMutex.lock();
-    HttpRequest::_requestsWaiting.push(strongSelf);
-    HttpRequest::_requestsMutex.unlock();
-
-    HttpRequest::_sendNextRequest(nullptr);
-#endif
+    _sendAsync(strongSelf);
 }
 
 #if !defined(__VX_USE_LIBWEBSOCKETS)
@@ -249,22 +241,12 @@ void HttpRequest::cancel() {
             return;
     }
 
-#ifdef __VX_USE_LIBWEBSOCKETS
-    WSService::shared()->cancelHttpRequest(this->_weakSelf.lock());
-#else // EMSCRIPTEN
-
-//    if (this->_fetch != nullptr) {
-//        // request is flying
-//        emscripten_fetch_close(this->_fetch); // cancel request
-//    } else {
-//        // req is not flying
-//    }
-
-    HttpRequest_SharedPtr strongReq = this->_weakSelf.lock();
-    if (strongReq != nullptr) {
-        HttpRequest::_sendNextRequest(strongReq);
+    HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
+    if (strongSelf == nullptr) {
+        return;
     }
-#endif
+
+    this->_cancel(strongSelf);
 }
 
 HttpResponse& HttpRequest::getResponse() {
@@ -373,7 +355,8 @@ _cachedResponse(),
 _statusMutex(),
 _status(Status::WAITING),
 _creationTime(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())),
-_cache_pathAndQuery() {}
+_cache_pathAndQuery(),
+_platformObject(nullptr) {}
 
 void HttpRequest::_init(const HttpRequest_SharedPtr& ref,
                         const std::string& method,
