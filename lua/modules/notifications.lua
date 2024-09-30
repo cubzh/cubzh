@@ -104,7 +104,9 @@ coins.createModalContent = function(_, config)
 
 	local okBtn
 
-	local function layout(width, height)
+	local functions = {}
+
+	functions.layout = function(width, height)
 		width = width or frame.parent.Width
 		height = height or frame.parent.Height
 
@@ -126,7 +128,7 @@ coins.createModalContent = function(_, config)
 		scroll.pos = { theme.padding, 0 }
 	end
 
-	local function createOpenSettingsBtn()
+	functions.createOpenSettingsBtn = function()
 		local padding = theme.padding
 		local buttonContent = ui:frame()
 		local line1 = ui:createText("⚙️ Open Settings", { font = Font.Pixel, size = "default" })
@@ -161,7 +163,7 @@ coins.createModalContent = function(_, config)
 		return btn
 	end
 
-	local function createTurnOnPushNotificationsBtn()
+	functions.createTurnOnPushNotificationsBtn = function()
 		local padding = theme.padding
 		local buttonContent = ui:frame()
 		local line1 = ui:createText("Turn ON Push Notifications", { font = Font.Pixel, size = "default" })
@@ -195,49 +197,65 @@ coins.createModalContent = function(_, config)
 					"App receives notification authorization response",
 					{ response = response, context = "notifications menu" }
 				)
-
-				-- print("response:", response) -- "authorized", "denied", "error", "not_supported"
-				if response == "authorized" then
-					okBtn:remove()
-					okBtn = nil
-					layout()
-				elseif response == "denied" then
-					okBtn:remove()
-					okBtn = createOpenSettingsBtn()
-					okBtn:setParent(node)
-					layout()
-				end
+				functions.refreshNotificationBtn()
 			end)
 		end
 
 		return btn
 	end
 
-	local notificationStatus = System.NotificationStatus
+	local previousNotificationStatus
+	functions.refreshNotificationBtn = function()
+		local notificationStatus = System.NotificationStatus
 
-	-- DEBUG:
-	-- notificationStatus = "underdetermined"
-	-- notificationStatus = "denied"
+		-- DEBUG:
+		-- local statuses = { "underdetermined", "postponed", "denied", "authorized" }
+		-- notificationStatus = statuses[math.random(1, #statuses)]
 
-	if notificationStatus == "underdetermined" or notificationStatus == "postponed" then
-		okBtn = createTurnOnPushNotificationsBtn()
-		okBtn:setParent(node)
-	elseif notificationStatus == "denied" then
-		okBtn = createOpenSettingsBtn()
-		okBtn:setParent(node)
+		if notificationStatus == previousNotificationStatus then
+			return
+		end
+
+		previousNotificationStatus = notificationStatus
+		if okBtn then
+			okBtn:remove()
+			okBtn = nil
+		end
+
+		if notificationStatus == "underdetermined" or notificationStatus == "postponed" then
+			okBtn = functions.createTurnOnPushNotificationsBtn()
+			okBtn:setParent(node)
+		elseif notificationStatus == "denied" then
+			okBtn = functions.createOpenSettingsBtn()
+			okBtn:setParent(node)
+		end
+
+		functions.layout()
 	end
+	functions.refreshNotificationBtn()
 
 	content.idealReducedContentSize = function(_, width, height)
 		width = math.min(width, 500)
-		layout(width, height)
+		functions.layout(width, height)
 		return Number2(width, height)
 	end
 
+	local appDidBecomeActiveListener
 	content.willResignActive = function()
+		if appDidBecomeActiveListener then
+			appDidBecomeActiveListener:Remove()
+			appDidBecomeActiveListener = nil
+		end
 		cancelRequests()
 	end
 
 	content.didBecomeActive = function()
+		if appDidBecomeActiveListener == nil then
+			appDidBecomeActiveListener = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, function()
+				functions.refreshNotificationBtn()
+			end)
+		end
+
 		req = api:getTransactions({ -- TODO: notifications
 			callback = function(transactions, err)
 				if err then
