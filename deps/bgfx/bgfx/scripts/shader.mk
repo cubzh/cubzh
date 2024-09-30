@@ -66,8 +66,8 @@ SHADER_PATH=shaders/essl
 else
 ifeq ($(TARGET), 4)
 # CUBZH: issue w/ bgfxShadow2D and level -p 120
-VS_FLAGS=--platform linux
-FS_FLAGS=--platform linux
+VS_FLAGS=--platform linux -p 120
+FS_FLAGS=--platform linux -p 120
 CS_FLAGS=--platform linux -p 430
 SHADER_PATH=shaders/glsl
 else
