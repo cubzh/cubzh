@@ -2205,22 +2205,8 @@ function home()
 							Client:HapticFeedback()
 						end
 
-						-- bell.onRelease = function()
-						-- Menu:ShowNotifications()
-						-- end
-
-						local comingSoonAlert
-						bell.onRelease = function(_)
-							if comingSoonAlert ~= nil then
-								return
-							end
-							comingSoonAlert =
-								require("alert"):create("Quick access to your notifications is coming soon! ❗️")
-
-							comingSoonAlert:setPositiveCallback("OK", function()
-								comingSoonAlert:remove()
-								comingSoonAlert = nil
-							end)
+						bell.onRelease = function()
+							Menu:ShowNotifications()
 						end
 
 						bell:setParent(profileCell)

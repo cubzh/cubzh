@@ -3,10 +3,18 @@ coins = {}
 -- Creates modal content to present user coins.
 -- (should be used to create or pushed within modal)
 coins.createModalContent = function(_, config)
+	local requests = {}
+	local function cancelRequests()
+		for _, r in ipairs(requests) do
+			r:Cancel()
+		end
+		requests = {}
+	end
+
 	local theme = require("uitheme").current
 	local modal = require("modal")
 	local conf = require("config")
-	-- local api = require("api")
+	local api = require("api") -- NOTE: use system api?
 
 	-- default config
 	local defaultConfig = {
@@ -25,31 +33,224 @@ coins.createModalContent = function(_, config)
 	local node = ui:createFrame()
 	content.node = node
 
-	local frame = ui:createFrame(theme.buttonTextColor)
+	local frame = ui:frameTextBackground()
 	frame:setParent(node)
-	local text = ui:createText("(WORK IN PROGRESS)", Color.White)
-	text:setParent(frame)
 
-	local entries = {}
+	local loadedTransactions = {}
+	local nbLoadedTransactions = 0
+	local recycledCells = {}
 
-	content.idealReducedContentSize = function(_, width, height)
-		width = math.min(width, 500)
+	local function transactionCellParentDidResize(self)
+		self.Width = self.parent.Width
+		self.description.object.MaxWidth = self.parent.Width - self.op.Width - theme.paddingBig * 3
+		-- self.Height = math.max(self.description.Height, self.op.Height) + theme.padding * 2
+
+		self.op.pos = {
+			theme.paddingBig,
+			self.Height * 0.5 - self.op.Height * 0.5,
+		}
+		self.description.pos = {
+			self.Width - self.description.Width - theme.paddingBig,
+			self.Height * 0.5 - self.description.Height * 0.5,
+		}
+	end
+
+	local function getTransactionCell(transaction)
+		local c = table.remove(recycledCells)
+		if c == nil then
+			c = ui:frameScrollCell()
+			c.op = ui:createText("", { color = Color.White, size = "small" })
+			c.op:setParent(c)
+			c.description = ui:createText("", { color = Color(150, 150, 150), size = "small" })
+			c.description:setParent(c)
+			c.parentDidResize = transactionCellParentDidResize
+		end
+		if transaction.amount > 0 then
+			c.op.Color = theme.colorPositive
+			c.op.Text = string.format("🇵 ⬅️ %d", transaction.amount)
+		else
+			c.op.Color = theme.colorNegative
+			c.op.Text = string.format("🇵 ➡️ %d", -transaction.amount)
+		end
+		c.description.Text = transaction.info.reason or ""
+		c.Height = 50
+		return c
+	end
+
+	local function recycleTransactionCell(cell)
+		cell:setParent(nil)
+		table.insert(recycledCells, cell)
+	end
+
+	local scroll = ui:scroll({
+		padding = {
+			top = theme.padding,
+			bottom = theme.padding,
+			left = 0,
+			right = 0,
+		},
+		cellPadding = theme.padding,
+		loadCell = function(index)
+			if index <= nbLoadedTransactions then
+				local c = getTransactionCell(loadedTransactions[index])
+				return c
+			end
+		end,
+		unloadCell = function(_, cell)
+			recycleTransactionCell(cell)
+		end,
+	})
+	scroll:setParent(frame)
+
+	local okBtn
+
+	local function layout(width, height)
+		width = width or frame.parent.Width
+		height = height or frame.parent.Height
 
 		frame.Width = width
 		local frameHeight = height
-		if entries[1] then
-			frameHeight = text.Height + entries[1].Height * 5 + theme.padding * 2
+
+		if okBtn ~= nil then
+			okBtn.Width = width - theme.padding * 2
+			frameHeight = frameHeight - okBtn.Height - theme.padding
+			okBtn.pos.X = width * 0.5 - okBtn.Width * 0.5
 		end
+
 		frame.Height = frameHeight
-		text.pos = { theme.padding, frameHeight - theme.padding - text.Height, 0 }
 
-		for k, entry in ipairs(entries) do
-			entry.pos = Number3(theme.padding, text.pos.Y - text.Height - theme.padding - (k - 1) * entry.Height, 0)
+		frame.pos = { 0, height - frameHeight, 0 }
+
+		scroll.Height = frame.Height
+		scroll.Width = frame.Width - theme.padding * 2
+		scroll.pos = { theme.padding, 0 }
+	end
+
+	local function createOpenSettingsBtn()
+		local padding = theme.padding
+		local buttonContent = ui:frame()
+		local line1 = ui:createText("⚙️ Open Settings", { font = Font.Pixel, size = "default" })
+		line1:setParent(buttonContent)
+		local line2 = ui:createText("➡️ Turn ON Push Notifications", { font = Font.Pixel, size = "default" })
+		line2:setParent(buttonContent)
+		buttonContent.parentDidResize = function(self)
+			line1.object.MaxWidth = self.parent.Width - padding * 2
+			line2.object.MaxWidth = self.parent.Width - padding * 2
+			self.Width = math.max(line1.Width, line2.Width)
+			self.Height = line1.Height + padding + line2.Height
+			line2.pos = {
+				self.Width * 0.5 - line2.Width * 0.5,
+				0,
+			}
+			line1.pos = {
+				self.Width * 0.5 - line1.Width * 0.5,
+				line2.pos.Y + line2.Height + padding,
+			}
 		end
 
-		frame.pos = { 0, theme.padding, 0 }
+		local btn = ui:buttonNeutral({
+			content = buttonContent,
+			padding = 10,
+		})
 
-		return Number2(width, frameHeight)
+		btn.onRelease = function()
+			System:DebugEvent("User presses OPEN SETTINGS button", { context = "notifications menu" })
+			System:OpenAppSettings()
+		end
+
+		return btn
+	end
+
+	local function createTurnOnPushNotificationsBtn()
+		local padding = theme.padding
+		local buttonContent = ui:frame()
+		local line1 = ui:createText("Turn ON Push Notifications", { font = Font.Pixel, size = "default" })
+		line1:setParent(buttonContent)
+		local line2 = ui:createText("+100 🇵 reward!", { font = Font.Pixel, size = "default" })
+		line2:setParent(buttonContent)
+		buttonContent.parentDidResize = function(self)
+			line1.object.MaxWidth = self.parent.Width - padding * 2
+			line2.object.MaxWidth = self.parent.Width - padding * 2
+			self.Width = math.max(line1.Width, line2.Width)
+			self.Height = line1.Height + padding + line2.Height
+			line2.pos = {
+				self.Width * 0.5 - line2.Width * 0.5,
+				0,
+			}
+			line1.pos = {
+				self.Width * 0.5 - line1.Width * 0.5,
+				line2.pos.Y + line2.Height + padding,
+			}
+		end
+
+		local btn = ui:buttonPositive({
+			content = buttonContent,
+			padding = 10,
+		})
+
+		btn.onRelease = function()
+			System:DebugEvent("User presses TURN ON notifications button", { context = "notifications menu" })
+			System:NotificationRequestAuthorization(function(response)
+				System:DebugEvent(
+					"App receives notification authorization response",
+					{ response = response, context = "notifications menu" }
+				)
+
+				-- print("response:", response) -- "authorized", "denied", "error", "not_supported"
+				if response == "authorized" then
+					okBtn:remove()
+					okBtn = nil
+					layout()
+				elseif response == "denied" then
+					okBtn:remove()
+					okBtn = createOpenSettingsBtn()
+					okBtn:setParent(node)
+					layout()
+				end
+			end)
+		end
+
+		return btn
+	end
+
+	local notificationStatus = System.NotificationStatus
+
+	-- DEBUG:
+	-- notificationStatus = "underdetermined"
+	-- notificationStatus = "denied"
+
+	if notificationStatus == "underdetermined" or notificationStatus == "postponed" then
+		okBtn = createTurnOnPushNotificationsBtn()
+		okBtn:setParent(node)
+	elseif notificationStatus == "denied" then
+		okBtn = createOpenSettingsBtn()
+		okBtn:setParent(node)
+	end
+
+	content.idealReducedContentSize = function(_, width, height)
+		width = math.min(width, 500)
+		layout(width, height)
+		return Number2(width, height)
+	end
+
+	content.willResignActive = function()
+		cancelRequests()
+	end
+
+	content.didBecomeActive = function()
+		req = api:getTransactions({ -- TODO: notifications
+			callback = function(transactions, err)
+				if err then
+					print("ERROR:", err)
+					return
+				end
+				loadedTransactions = transactions
+				nbLoadedTransactions = #loadedTransactions
+				scroll:flush()
+				scroll:refresh()
+			end,
+		})
+		table.insert(requests, req)
 	end
 
 	return content
