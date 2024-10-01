@@ -646,6 +646,7 @@ signup.startFlow = function(self, config)
 	end
 
 	steps.createPushNotificationsStep = function()
+		local appDidBecomeActiveListener
 		-- local skipOnFirstEnter = System.HasUnverifiedPhoneNumber
 		local step = flow:createStep({
 			onEnter = function()
@@ -660,30 +661,130 @@ signup.startFlow = function(self, config)
 					drawer = drawerModule:create({ ui = ui })
 				end
 
-				local buttonContent = ui:frame()
-				local line1 = ui:createText("Turn on Notifications!", { font = Font.Pixel, size = "big" })
-				line1:setParent(buttonContent)
-				local line2 = ui:createText("+100 🇵 reward!", { font = Font.Pixel, size = "default" })
-				line2:setParent(buttonContent)
-				buttonContent.parentDidResize = function(self)
-					self.Width = math.max(line1.Width, line2.Width)
-					self.Height = line1.Height + padding + line2.Height
-					line2.pos = {
-						self.Width * 0.5 - line2.Width * 0.5,
-						0,
-					}
-					line1.pos = {
-						self.Width * 0.5 - line1.Width * 0.5,
-						line2.pos.Y + line2.Height + padding,
-					}
+				local okBtn
+
+				local functions = {}
+
+				functions.layout = function()
+					drawer:layout()
+					drawer:show()
 				end
 
-				local okBtn = ui:buttonPositive({
-					content = buttonContent,
-					textSize = "big",
-					padding = 10,
-				})
-				okBtn:setParent(drawer)
+				functions.createOpenSettingsBtn = function()
+					local padding = theme.padding
+					local buttonContent = ui:frame()
+					local line1 = ui:createText("⚙️ Open Settings", { font = Font.Pixel, size = "default" })
+					line1:setParent(buttonContent)
+					local line2 = ui:createText("➡️ Turn ON Notifications", { font = Font.Pixel, size = "default" })
+					line2:setParent(buttonContent)
+					buttonContent.parentDidResize = function(self)
+						line1.object.MaxWidth = self.parent.Width - padding * 2
+						line2.object.MaxWidth = self.parent.Width - padding * 2
+						self.Width = math.max(line1.Width, line2.Width)
+						self.Height = line1.Height + padding + line2.Height
+						line2.pos = {
+							self.Width * 0.5 - line2.Width * 0.5,
+							0,
+						}
+						line1.pos = {
+							self.Width * 0.5 - line1.Width * 0.5,
+							line2.pos.Y + line2.Height + padding,
+						}
+					end
+
+					local btn = ui:buttonNeutral({
+						content = buttonContent,
+						padding = 10,
+					})
+
+					btn.onRelease = function()
+						System:DebugEvent("User presses OPEN SETTINGS button", { context = "signup" })
+						System:OpenAppSettings()
+					end
+
+					return btn
+				end
+
+				functions.createTurnOnPushNotificationsBtn = function()
+					local padding = theme.padding
+					local buttonContent = ui:frame()
+					local line1 = ui:createText("Turn ON Notifications!", { font = Font.Pixel, size = "big" })
+					line1:setParent(buttonContent)
+					local line2 = ui:createText("+100 🇵 reward!", { font = Font.Pixel, size = "default" })
+					line2:setParent(buttonContent)
+					buttonContent.parentDidResize = function(self)
+						line1.object.MaxWidth = self.parent.Width - padding * 2
+						line2.object.MaxWidth = self.parent.Width - padding * 2
+						self.Width = math.max(line1.Width, line2.Width)
+						self.Height = line1.Height + padding + line2.Height
+						line2.pos = {
+							self.Width * 0.5 - line2.Width * 0.5,
+							0,
+						}
+						line1.pos = {
+							self.Width * 0.5 - line1.Width * 0.5,
+							line2.pos.Y + line2.Height + padding,
+						}
+					end
+
+					local btn = ui:buttonPositive({
+						content = buttonContent,
+						padding = 10,
+					})
+
+					btn.onRelease = function()
+						btn:disable()
+						System:DebugEvent("User presses TURN ON notifications button", { context = "signup" })
+						System:NotificationRequestAuthorization(function(response)
+							System:DebugEvent(
+								"App receives notification authorization response",
+								{ response = response, context = "signup" }
+							)
+							Timer(0.1, functions.refreshNotificationBtn)
+							-- functions.refreshNotificationBtn()
+						end)
+					end
+
+					return btn
+				end
+
+				local previousNotificationStatus
+				functions.refreshNotificationBtn = function()
+					System:NotificationGetStatus(function(status)
+						if status == previousNotificationStatus then
+							return
+						end
+
+						previousNotificationStatus = status
+
+						if okBtn then
+							okBtn:remove()
+							okBtn = nil
+						end
+
+						if status == "underdetermined" then
+							okBtn = functions.createTurnOnPushNotificationsBtn()
+							okBtn:setParent(drawer)
+						elseif status == "denied" then
+							okBtn = functions.createOpenSettingsBtn()
+							okBtn:setParent(drawer)
+						else
+							-- done asking about notifications
+							signupFlow:flush()
+							signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
+							return
+						end
+
+						functions.layout()
+					end)
+				end
+				functions.refreshNotificationBtn()
+
+				if appDidBecomeActiveListener == nil then
+					appDidBecomeActiveListener = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, function()
+						functions.refreshNotificationBtn()
+					end)
+				end
 
 				local laterBtn = ui:buttonNegative({
 					content = "I'll do it later.",
@@ -699,9 +800,6 @@ signup.startFlow = function(self, config)
 					signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
 				end
 
-				-- local loading = require("ui_loading_animation"):create({ ui = ui })
-				-- loading:setParent(drawer)
-
 				local title = ui:createText("One last thing! 💬", {
 					color = Color.White,
 					font = Font.Pixel,
@@ -714,31 +812,6 @@ signup.startFlow = function(self, config)
 				})
 				text:setParent(drawer)
 
-				okBtn.onRelease = function()
-					if System.NotificationStatus == "denied" then
-						System:DebugEvent("User presses OPEN SETTINGS button in signup notification step")
-						System:OpenAppSettings()
-						return
-					end
-					System:DebugEvent("User presses OK button in signup notification step")
-					System:NotificationRequestAuthorization(function(response)
-						System:DebugEvent("App receives notification authorization response", { response = response })
-
-						-- print("response:", response) -- "authorized", "denied", "error", "not_supported"
-						if response == "authorized" or response == "not_supported" or response == "error" then
-							-- flush signup flow and restart credential checks (should go through now)
-							signupFlow:flush()
-							signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
-							-- NOTE: we should probably do something in case of error
-							-- not sure how to test this (never got an error here)
-						elseif response == "denied" then
-							-- TODO: DENIED, BUTTON SHOULD NOW LEAD TO SETTINGS
-							-- elseif response == "postponed" then
-							-- do nothing?
-						end
-					end)
-				end
-
 				drawer:updateConfig({
 					layoutContent = function(self)
 						local padding = theme.paddingBig
@@ -747,27 +820,39 @@ signup.startFlow = function(self, config)
 						text.object.MaxWidth = maxWidth
 						title.object.MaxWidth = maxWidth
 
-						local w = math.min(self.Width, math.max(text.Width, okBtn.Width, 300) + padding * 2)
+						local okBtnWidth = 0
+						if okBtn then
+							okBtnWidth = okBtn.Width
+						end
+
+						local w = math.min(self.Width, math.max(text.Width, okBtnWidth, 300) + padding * 2)
 
 						self.Width = w
 						self.Height = Screen.SafeArea.Bottom
-							+ okBtn.Height
 							+ laterBtn.Height
 							+ text.Height
 							+ title.Height
-							+ padding * 5
+							+ padding * 4
+
+						if okBtn then
+							self.Height = self.Height + okBtn.Height + padding
+						end
 
 						laterBtn.pos = {
 							self.Width * 0.5 - laterBtn.Width * 0.5,
 							Screen.SafeArea.Bottom + padding,
 						}
-						okBtn.pos = {
-							self.Width * 0.5 - okBtn.Width * 0.5,
-							laterBtn.pos.Y + laterBtn.Height + padding,
-						}
+						local previous = laterBtn
+						if okBtn then
+							okBtn.pos = {
+								self.Width * 0.5 - okBtn.Width * 0.5,
+								laterBtn.pos.Y + laterBtn.Height + padding,
+							}
+							previous = okBtn
+						end
 						text.pos = {
 							self.Width * 0.5 - text.Width * 0.5,
-							okBtn.pos.Y + okBtn.Height + padding,
+							previous.pos.Y + previous.Height + padding,
 						}
 						title.pos = {
 							self.Width * 0.5 - title.Width * 0.5,
@@ -779,7 +864,12 @@ signup.startFlow = function(self, config)
 
 				drawer:show()
 			end,
-			onExit = function() end,
+			onExit = function()
+				if appDidBecomeActiveListener then
+					appDidBecomeActiveListener:Remove()
+					appDidBecomeActiveListener = nil
+				end
+			end,
 			onRemove = function() end,
 		})
 
@@ -915,20 +1005,23 @@ signup.startFlow = function(self, config)
 
 						System.IsUserUnder13 = cache.age < 13
 
-						local notificationStatus = System.NotificationStatus
-						System:DebugEvent("App gets notification status", { status = notificationStatus })
+						System:NotificationGetStatus(function(status)
+							System:DebugEvent("App gets notification status", { status = status })
 
-						if notificationStatus == "underdetermined" then
-							-- Go to next step
-							-- signupFlow:push(steps.createUsernameInputStep())
-							signupFlow:push(steps.createPushNotificationsStep())
-							sfx("whooshes_small_1", { Volume = 0.5 })
-						else
-							-- notifications not supported or status already established
-							-- flush signup flow and restart credential checks (should go through now)
-							signupFlow:flush()
-							signupFlow:push(steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true }))
-						end
+							if status == "underdetermined" then
+								-- Go to next step
+								-- signupFlow:push(steps.createUsernameInputStep())
+								signupFlow:push(steps.createPushNotificationsStep())
+								sfx("whooshes_small_1", { Volume = 0.5 })
+							else
+								-- notifications not supported or status already established
+								-- flush signup flow and restart credential checks (should go through now)
+								signupFlow:flush()
+								signupFlow:push(
+									steps.createCheckAppVersionAndCredentialsStep({ onlyCheckUserInfo = true })
+								)
+							end
+						end)
 					end)
 					table.insert(requests, req)
 				end
@@ -1659,11 +1752,13 @@ signup.startFlow = function(self, config)
 							-- print("userInfo.isParentApproved:", userInfo.isParentApproved)
 							-- print("userInfo.isChatEnabled:", userInfo.isChatEnabled)
 
-							if Client.LoggedIn and System.NotificationStatus ~= "underdetermined" then
-								callLoginSuccess()
-							else
-								signupFlow:push(steps.createSignUpOrLoginStep())
-							end
+							System:NotificationGetStatus(function(status)
+								if Client.LoggedIn and status ~= "underdetermined" then
+									callLoginSuccess()
+								else
+									signupFlow:push(steps.createSignUpOrLoginStep())
+								end
+							end)
 						end, {
 							"username",
 							"hasEmail",

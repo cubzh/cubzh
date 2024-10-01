@@ -32,6 +32,7 @@ typedef enum {
     NotificationAuthorizationResponse_NotSupported // when not supported on the platform
 } NotificationAuthorizationResponse;
 
+typedef std::function<void(NotificationAuthorizationStatus)> StatusCallback;
 typedef std::function<void(NotificationAuthorizationResponse)> AuthorizationRequestCallback;
 
 // Triggers callback with current status

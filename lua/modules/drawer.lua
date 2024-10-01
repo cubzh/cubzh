@@ -71,6 +71,10 @@ mod.create = function(self, config)
 	end
 	container:parentDidResize()
 
+	drawer.layout = function(_)
+		container:parentDidResize()
+	end
+
 	-- local show = drawer.show
 	drawer.show = function(self)
 		local fields = privateFields[self]

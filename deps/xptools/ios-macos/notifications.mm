@@ -24,42 +24,37 @@ namespace vx {
 namespace notification {
 
 
-NotificationAuthorizationStatus remotePushAuthorizationStatus() {
-    std::string _status = "";
-
-    char *s = readNotificationStatusFile();
-    if (s != nullptr) {
-        _status = std::string(s); // "set" or "postponed"
-        free(s);
-    }
-
-    __block NotificationAuthorizationStatus status = NotificationAuthorizationStatus_NotDetermined;
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+void remotePushAuthorizationStatus(StatusCallback callback) {
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
-        if (settings.authorizationStatus == UNAuthorizationStatusAuthorized) {
-            status = NotificationAuthorizationStatus_Authorized;
-            if (_status != "set") {
-                setRemotePushAuthorization();
+        dispatch_async(dispatch_get_main_queue(), ^{
+            std::string _status = "";
+
+            char *s = readNotificationStatusFile();
+            if (s != nullptr) {
+                _status = std::string(s); // "set" or "postponed"
+                free(s);
             }
-        } else if (settings.authorizationStatus == UNAuthorizationStatusDenied) {
-            status = NotificationAuthorizationStatus_Denied;
-            if (_status != "set") {
-                setRemotePushAuthorization();
-            }
-        } else {
-            // NOTE: considering UNAuthorizationStatusProvisional as "not determined"
-            // we want clear approval
-            if (_status == "postponed") {
-                status = NotificationAuthorizationStatus_Postponed;
+
+            if (settings.authorizationStatus == UNAuthorizationStatusAuthorized) {
+                if (_status != "set") {
+                    setRemotePushAuthorization();
+                }
+                callback(NotificationAuthorizationStatus_Authorized);
+            } else if (settings.authorizationStatus == UNAuthorizationStatusDenied) {
+                if (_status != "set") {
+                    setRemotePushAuthorization();
+                }
+                callback(NotificationAuthorizationStatus_Denied);
             } else {
-                status = NotificationAuthorizationStatus_NotDetermined;
+                if (_status == "postponed") {
+                    callback(NotificationAuthorizationStatus_Postponed);
+                } else {
+                    callback(NotificationAuthorizationStatus_NotDetermined);
+                }
             }
-        }
-        dispatch_semaphore_signal(semaphore);
-    }];
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    return status;
+        });
+    }];;
 }
 
 // #if TARGET_OS_MAC
@@ -104,9 +99,9 @@ void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
 }
 
 void requestRemotePushToken() {
-    if (remotePushAuthorizationStatus() == NotificationAuthorizationStatus_Authorized) {
-        // must be called in main queue (iOS at least)
-        dispatch_async(dispatch_get_main_queue(), ^{
+    remotePushAuthorizationStatus([](NotificationAuthorizationStatus status){
+        if (status == NotificationAuthorizationStatus_Authorized) {
+            // already in main queue
 #if TARGET_OS_IPHONE
             [[UIApplication sharedApplication] registerForRemoteNotifications];
 #elif TARGET_OS_MAC

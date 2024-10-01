@@ -115,8 +115,9 @@ coins.createModalContent = function(_, config)
 
 		if okBtn ~= nil then
 			okBtn.Width = width - theme.padding * 2
-			frameHeight = frameHeight - okBtn.Height - theme.padding
+			frameHeight = frameHeight - okBtn.Height - theme.padding - theme.paddingTiny
 			okBtn.pos.X = width * 0.5 - okBtn.Width * 0.5
+			okBtn.pos.Y = theme.paddingTiny
 		end
 
 		frame.Height = frameHeight
@@ -206,31 +207,31 @@ coins.createModalContent = function(_, config)
 
 	local previousNotificationStatus
 	functions.refreshNotificationBtn = function()
-		local notificationStatus = System.NotificationStatus
+		System:NotificationGetStatus(function(status)
+			-- DEBUG:
+			-- local statuses = { "underdetermined", "postponed", "denied", "authorized" }
+			-- notificationStatus = statuses[math.random(1, #statuses)]
 
-		-- DEBUG:
-		-- local statuses = { "underdetermined", "postponed", "denied", "authorized" }
-		-- notificationStatus = statuses[math.random(1, #statuses)]
+			if status == previousNotificationStatus then
+				return
+			end
 
-		if notificationStatus == previousNotificationStatus then
-			return
-		end
+			previousNotificationStatus = status
+			if okBtn then
+				okBtn:remove()
+				okBtn = nil
+			end
 
-		previousNotificationStatus = notificationStatus
-		if okBtn then
-			okBtn:remove()
-			okBtn = nil
-		end
+			if status == "underdetermined" or status == "postponed" then
+				okBtn = functions.createTurnOnPushNotificationsBtn()
+				okBtn:setParent(node)
+			elseif status == "denied" then
+				okBtn = functions.createOpenSettingsBtn()
+				okBtn:setParent(node)
+			end
 
-		if notificationStatus == "underdetermined" or notificationStatus == "postponed" then
-			okBtn = functions.createTurnOnPushNotificationsBtn()
-			okBtn:setParent(node)
-		elseif notificationStatus == "denied" then
-			okBtn = functions.createOpenSettingsBtn()
-			okBtn:setParent(node)
-		end
-
-		functions.layout()
+			functions.layout()
+		end)
 	end
 	functions.refreshNotificationBtn()
 
