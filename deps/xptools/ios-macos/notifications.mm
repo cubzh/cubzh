@@ -112,29 +112,8 @@ void requestRemotePushToken() {
 #elif TARGET_OS_MAC
             [[NSApplication sharedApplication] registerForRemoteNotifications];
 #endif
-        });
-    }
-}
-
-void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {
-    NotificationAuthorizationStatus s = remotePushAuthorizationStatus();
-    switch (s) {
-        case NotificationAuthorizationStatus_NotDetermined:
-            requestRemotePushAuthorization(callback);
-            break;
-        case NotificationAuthorizationStatus_Postponed:
-            callback(NotificationAuthorizationResponse_Postponed);
-            break;
-        case NotificationAuthorizationStatus_NotSupported:
-            callback(NotificationAuthorizationResponse_NotSupported);
-            break;
-        case NotificationAuthorizationStatus_Denied:
-            callback(NotificationAuthorizationResponse_Denied);
-            break;
-        case NotificationAuthorizationStatus_Authorized:
-            callback(NotificationAuthorizationResponse_Authorized);
-            break;
-    }
+        }
+    });
 }
 
 void scheduleLocalNotification(const std::string &title,

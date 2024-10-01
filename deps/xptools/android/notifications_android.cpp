@@ -103,7 +103,7 @@ void _javaRequestFirebaseToken() {
 }
 
 namespace vx {
-    namespace notification {
+namespace notification {
 
 NotificationAuthorizationStatus remotePushAuthorizationStatus() {
     std::string _status = "";
@@ -135,41 +135,38 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus() {
 }
 
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
-            // store callback
-            storedCallback = callback;
-            _javaRequestRemotePush();
-        }
+    // store callback
+    storedCallback = callback;
+    _javaRequestRemotePush();
+}
 
-        void requestRemotePushToken() {
-            if (remotePushAuthorizationStatus() == NotificationAuthorizationStatus_Authorized) {
-                _javaRequestFirebaseToken();
-            }
-        }
-
-        void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {
-            // TODO: !!!
-        }
-
-        void scheduleLocalNotification(const std::string &title,
-                                       const std::string &body,
-                                       const std::string &identifier,
-                                       int days,
-                                       int hours,
-                                       int minutes,
-                                       int seconds) {
-            __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
-        }
-
-        void cancelLocalNotification(const std::string &identifier) {
-            __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
-        }
-
-        // Android-specific
-        void didReplyToNotificationPermissionPopup(NotificationAuthorizationResponse response) {
-            if (storedCallback != nullptr) {
-                storedCallback(response);
-            }
-        }
-
+void requestRemotePushToken() {
+    if (remotePushAuthorizationStatus() == NotificationAuthorizationStatus_Authorized) {
+        _javaRequestFirebaseToken();
     }
+}
+
+void scheduleLocalNotification(const std::string &title,
+                               const std::string &body,
+                               const std::string &identifier,
+                               int days,
+                               int hours,
+                               int minutes,
+                               int seconds) {
+    __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
+}
+
+void cancelLocalNotification(const std::string &identifier) {
+    __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
+}
+
+// Android-specific
+void didReplyToNotificationPermissionPopup(NotificationAuthorizationResponse response) {
+    if (storedCallback != nullptr) {
+        storedCallback(response);
+    }
+}
+
+
+}
 }

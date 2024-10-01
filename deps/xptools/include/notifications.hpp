@@ -34,8 +34,8 @@ typedef enum {
 
 typedef std::function<void(NotificationAuthorizationResponse)> AuthorizationRequestCallback;
 
-// Returns current authorization status for push notifications.
-NotificationAuthorizationStatus remotePushAuthorizationStatus();
+// Triggers callback with current status
+void remotePushAuthorizationStatus(StatusCallback callback);
 
 // ! \\ returned char* should be freed
 // ! \\ can return nullptr
@@ -58,11 +58,6 @@ void requestRemotePushAuthorization(AuthorizationRequestCallback callback);
 // Request remote push token, only if authorized
 // This should be done periodically as the token can expire.
 void requestRemotePushToken();
-
-// Same as requestRemotePushAuthorization, but only triggers system popup
-// if auth status in not determined.
-// Triggers callback with proper response otherwise, not asking user for anything.
-void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback);
 
 void scheduleLocalNotification(const std::string &title,
                                const std::string &body,
