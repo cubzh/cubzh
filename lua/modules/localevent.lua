@@ -87,6 +87,7 @@ localevent.name = {
 	ActiveTextInputDone = 56, -- callback: function()
 	ActiveTextInputNext = 57, -- callback: function()
 	AppDidBecomeActive = 58, -- callback: function()
+	DidReceivePushNotification = 59, -- callback: function(title, body, category, badge)
 }
 localevent.Name = localevent.name
 

@@ -134,7 +134,7 @@ coins.createModalContent = function(_, config)
 		local buttonContent = ui:frame()
 		local line1 = ui:createText("⚙️ Open Settings", { font = Font.Pixel, size = "default" })
 		line1:setParent(buttonContent)
-		local line2 = ui:createText("➡️ Turn ON Push Notifications", { font = Font.Pixel, size = "default" })
+		local line2 = ui:createText("➡️ Turn ON Notifications", { font = Font.Pixel, size = "default" })
 		line2:setParent(buttonContent)
 		buttonContent.parentDidResize = function(self)
 			line1.object.MaxWidth = self.parent.Width - padding * 2

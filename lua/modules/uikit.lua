@@ -1221,6 +1221,24 @@ function createUI(system)
 		})
 	end
 
+	local frameNotificationQuadData
+	ui.frameNotification = function(self)
+		if self ~= ui then
+			error("ui:frameNotification(): use `:`", 2)
+		end
+		if frameNotificationQuadData == nil then
+			frameNotificationQuadData = Data:FromBundle("images/notification.png")
+		end
+		return ui.frame(self, {
+			image = {
+				data = frameNotificationQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				alpha = true,
+			},
+		})
+	end
+
 	local frameMaskWithRoundCornersQuadData
 	ui.frameMaskWithRoundCorners = function(self)
 		if self ~= ui then
