@@ -1,5 +1,5 @@
 #
-# Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+# Copyright 2011-2024 Branimir Karadzic. All rights reserved.
 # License: https://github.com/bkaradzic/bimg/blob/master/LICENSE
 #
 
@@ -53,8 +53,6 @@ projgen: ## Generate project files for all configurations.
 	$(GENIE)                                --gcc=wasm            gmake
 	$(GENIE)                                --gcc=ios-arm         gmake
 	$(GENIE)                                --gcc=ios-arm64       gmake
-	$(GENIE)                                --gcc=ios-simulator   gmake
-	$(GENIE)                                --gcc=ios-simulator64 gmake
 	$(GENIE)                                --gcc=rpi             gmake
 
 .build/projects/gmake-android-arm:
@@ -156,9 +154,9 @@ vs2017: vs2017-debug32 vs2017-release32 vs2017-debug64 vs2017-release64 ## Build
 .build/projects/gmake-osx-x64:
 	$(GENIE) --gcc=osx-x64 gmake
 osx-x64-debug: .build/projects/gmake-osx-x64
-	make -C .build/projects/gmake-osx config=debug
+	make -C .build/projects/gmake-osx-x64 config=debug
 osx-x64-release: .build/projects/gmake-osx-x64
-	make -C .build/projects/gmake-osx config=release
+	make -C .build/projects/gmake-osx-x64 config=release
 osx-x64: osx-x64-debug osx-x64-release
 
 .build/projects/gmake-osx-arm64:
@@ -184,22 +182,6 @@ ios-arm64-debug: .build/projects/gmake-ios-arm64 ## Build - iOS ARM64 Debug
 ios-arm64-release: .build/projects/gmake-ios-arm64 ## Build - iOS ARM64 Release
 	$(MAKE) -R -C .build/projects/gmake-ios-arm64 config=release
 ios-arm64: ios-arm64-debug ios-arm64-release ## Build - iOS ARM64 Debug and Release
-
-.build/projects/gmake-ios-simulator:
-	$(GENIE) --gcc=ios-simulator gmake
-ios-simulator-debug: .build/projects/gmake-ios-simulator ## Build - iOS Simulator Debug
-	$(MAKE) -R -C .build/projects/gmake-ios-simulator config=debug
-ios-simulator-release: .build/projects/gmake-ios-simulator ## Build - iOS Simulator Release
-	$(MAKE) -R -C .build/projects/gmake-ios-simulator config=release
-ios-simulator: ios-simulator-debug ios-simulator-release ## Build - iOS Simulator Debug and Release
-
-.build/projects/gmake-ios-simulator64:
-	$(GENIE) --gcc=ios-simulator64 gmake
-ios-simulator64-debug: .build/projects/gmake-ios-simulator64 ## Build - iOS Simulator 64 Debug
-	$(MAKE) -R -C .build/projects/gmake-ios-simulator64 config=debug
-ios-simulator64-release: .build/projects/gmake-ios-simulator64 ## Build - iOS Simulator 64 Release
-	$(MAKE) -R -C .build/projects/gmake-ios-simulator64 config=release
-ios-simulator64: ios-simulator64-debug ios-simulator64-release ## Build - iOS Simulator 64 Debug and Release
 
 .build/projects/gmake-rpi:
 	$(GENIE) --gcc=rpi gmake

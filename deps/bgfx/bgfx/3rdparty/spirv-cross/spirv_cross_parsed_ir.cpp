@@ -370,6 +370,10 @@ void ParsedIR::set_decoration_string(ID id, Decoration decoration, const string 
 		dec.hlsl_semantic = argument;
 		break;
 
+	case DecorationUserTypeGOOGLE:
+		dec.user_type = argument;
+		break;
+
 	default:
 		break;
 	}
@@ -659,6 +663,9 @@ const string &ParsedIR::get_decoration_string(ID id, Decoration decoration) cons
 	case DecorationHlslSemanticGOOGLE:
 		return dec.hlsl_semantic;
 
+	case DecorationUserTypeGOOGLE:
+		return dec.user_type;
+
 	default:
 		return empty_string;
 	}
@@ -776,6 +783,8 @@ uint32_t ParsedIR::get_member_decoration(TypeID id, uint32_t index, Decoration d
 		return dec.stream;
 	case DecorationSpecId:
 		return dec.spec_id;
+	case DecorationMatrixStride:
+		return dec.matrix_stride;
 	case DecorationIndex:
 		return dec.index;
 	default:

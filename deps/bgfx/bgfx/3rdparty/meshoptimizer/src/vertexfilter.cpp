@@ -30,6 +30,9 @@
 // When targeting Wasm SIMD we can't use runtime cpuid checks so we unconditionally enable SIMD
 #if defined(__wasm_simd128__)
 #define SIMD_WASM
+// Prevent compiling other variant when wasm simd compilation is active
+#undef SIMD_NEON
+#undef SIMD_SSE
 #endif
 
 #endif // !MESHOPTIMIZER_NO_SIMD
@@ -1007,6 +1010,11 @@ void meshopt_encodeFilterExp(void* destination_, size_t count, size_t stride, in
 				component_exp[j] = (min_exp < e) ? e : min_exp;
 			}
 		}
+		else
+		{
+			// the code below assumes component_exp is initialized outside of the loop
+			assert(mode == meshopt_EncodeExpSharedComponent);
+		}
 
 		for (size_t j = 0; j < stride_float; ++j)
 		{
@@ -1017,7 +1025,6 @@ void meshopt_encodeFilterExp(void* destination_, size_t count, size_t stride, in
 
 			// compute renormalized rounded mantissa for each component
 			int mmask = (1 << 24) - 1;
-
 			int m = int(v[j] * optexp2(-exp) + (v[j] >= 0 ? 0.5f : -0.5f));
 
 			d[j] = (m & mmask) | (unsigned(exp) << 24);

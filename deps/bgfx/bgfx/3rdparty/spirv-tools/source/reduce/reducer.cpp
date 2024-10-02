@@ -17,7 +17,7 @@
 #include <cassert>
 #include <sstream>
 
-#include "source/reduce/cond_branch_to_simple_cond_branch_opp_finder.h"
+#include "source/reduce/conditional_branch_to_simple_cond_branch_opportunity_finder.h"
 #include "source/reduce/merge_blocks_reduction_opportunity_finder.h"
 #include "source/reduce/operand_to_const_reduction_opportunity_finder.h"
 #include "source/reduce/operand_to_dominating_id_reduction_opportunity_finder.h"

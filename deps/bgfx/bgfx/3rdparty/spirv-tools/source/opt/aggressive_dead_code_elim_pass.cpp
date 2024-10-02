@@ -134,7 +134,12 @@ void AggressiveDCEPass::AddStores(Function* func, uint32_t ptrId) {
         }
         break;
       // If default, assume it stores e.g. frexp, modf, function call
-      case spv::Op::OpStore:
+      case spv::Op::OpStore: {
+        const uint32_t kStoreTargetAddrInIdx = 0;
+        if (user->GetSingleWordInOperand(kStoreTargetAddrInIdx) == ptrId)
+          AddToWorklist(user);
+        break;
+      }
       default:
         AddToWorklist(user);
         break;
@@ -156,7 +161,8 @@ bool AggressiveDCEPass::AllExtensionsSupported() const {
            "Expecting an import of an extension's instruction set.");
     const std::string extension_name = inst.GetInOperand(0).AsString();
     if (spvtools::utils::starts_with(extension_name, "NonSemantic.") &&
-        extension_name != "NonSemantic.Shader.DebugInfo.100") {
+        (extension_name != "NonSemantic.Shader.DebugInfo.100") &&
+        (extension_name != "NonSemantic.DebugPrintf")) {
       return false;
     }
   }
@@ -437,6 +443,9 @@ std::vector<uint32_t> AggressiveDCEPass::GetLoadedVariablesFromFunctionCall(
     const Instruction* inst) {
   assert(inst->opcode() == spv::Op::OpFunctionCall);
   std::vector<uint32_t> live_variables;
+  // NOTE: we should only be checking function call parameters here, not the
+  // function itself, however, `IsPtr` will trivially return false for
+  // OpFunction
   inst->ForEachInId([this, &live_variables](const uint32_t* operand_id) {
     if (!IsPtr(*operand_id)) return;
     uint32_t var_id = GetVariableId(*operand_id);
@@ -937,6 +946,8 @@ Pass::Status AggressiveDCEPass::Process() {
 
 void AggressiveDCEPass::InitExtensions() {
   extensions_allowlist_.clear();
+
+  // clang-format off
   extensions_allowlist_.insert({
       "SPV_AMD_shader_explicit_vertex_parameter",
       "SPV_AMD_shader_trinary_minmax",
@@ -979,11 +990,13 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_NV_shader_image_footprint",
       "SPV_NV_shading_rate",
       "SPV_NV_mesh_shader",
+      "SPV_EXT_mesh_shader",
       "SPV_NV_ray_tracing",
       "SPV_KHR_ray_tracing",
       "SPV_KHR_ray_query",
       "SPV_EXT_fragment_invocation_density",
       "SPV_EXT_physical_storage_buffer",
+      "SPV_KHR_physical_storage_buffer",
       "SPV_KHR_terminate_invocation",
       "SPV_KHR_shader_clock",
       "SPV_KHR_vulkan_memory_model",
@@ -993,7 +1006,15 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_KHR_non_semantic_info",
       "SPV_KHR_uniform_group_instructions",
       "SPV_KHR_fragment_shader_barycentric",
+      "SPV_NV_bindless_texture",
+      "SPV_EXT_shader_atomic_float_add",
+      "SPV_EXT_fragment_shader_interlock",
+      "SPV_NV_compute_shader_derivatives",
+      "SPV_NV_cooperative_matrix",
+      "SPV_KHR_cooperative_matrix",
+      "SPV_KHR_ray_tracing_position_fetch"
   });
+  // clang-format on
 }
 
 Instruction* AggressiveDCEPass::GetHeaderBranch(BasicBlock* blk) {

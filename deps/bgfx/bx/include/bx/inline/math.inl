@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2024 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
@@ -14,12 +14,12 @@
 
 namespace bx
 {
-	inline BX_CONST_FUNC float toRad(float _deg)
+	inline BX_CONSTEXPR_FUNC float toRad(float _deg)
 	{
 		return _deg * kPi / 180.0f;
 	}
 
-	inline BX_CONST_FUNC float toDeg(float _rad)
+	inline BX_CONSTEXPR_FUNC float toDeg(float _rad)
 	{
 		return _rad * 180.0f / kPi;
 	}
@@ -55,7 +55,7 @@ namespace bx
 		//
 		const uint32_t tmp0   = uint32_sra(_value, 31);
 		const uint32_t tmp1   = uint32_neg(tmp0);
-		const uint32_t mask   = uint32_or(tmp1, 0x80000000);
+		const uint32_t mask   = uint32_or(tmp1, kFloatSignMask);
 		const uint32_t result = uint32_xor(_value, mask);
 		return result;
 	}
@@ -63,37 +63,37 @@ namespace bx
 	inline BX_CONST_FUNC bool isNan(float _f)
 	{
 		const uint32_t tmp = floatToBits(_f) & INT32_MAX;
-		return tmp > UINT32_C(0x7f800000);
+		return tmp > kFloatExponentMask;
 	}
 
 	inline BX_CONST_FUNC bool isNan(double _f)
 	{
 		const uint64_t tmp = doubleToBits(_f) & INT64_MAX;
-		return tmp > UINT64_C(0x7ff0000000000000);
+		return tmp > kDoubleExponentMask;
 	}
 
 	inline BX_CONST_FUNC bool isFinite(float _f)
 	{
 		const uint32_t tmp = floatToBits(_f) & INT32_MAX;
-		return tmp < UINT32_C(0x7f800000);
+		return tmp < kFloatExponentMask;
 	}
 
 	inline BX_CONST_FUNC bool isFinite(double _f)
 	{
 		const uint64_t tmp = doubleToBits(_f) & INT64_MAX;
-		return tmp < UINT64_C(0x7ff0000000000000);
+		return tmp < kDoubleExponentMask;
 	}
 
 	inline BX_CONST_FUNC bool isInfinite(float _f)
 	{
 		const uint32_t tmp = floatToBits(_f) & INT32_MAX;
-		return tmp == UINT32_C(0x7f800000);
+		return tmp == kFloatExponentMask;
 	}
 
 	inline BX_CONST_FUNC bool isInfinite(double _f)
 	{
 		const uint64_t tmp = doubleToBits(_f) & INT64_MAX;
-		return tmp == UINT64_C(0x7ff0000000000000);
+		return tmp == kDoubleExponentMask;
 	}
 
 	inline BX_CONSTEXPR_FUNC float floor(float _a)
@@ -138,6 +138,20 @@ namespace bx
 		return float( (0.0f < _a) - (0.0f > _a) );
 	}
 
+	inline BX_CONSTEXPR_FUNC bool signBit(float _a)
+	{
+		return -0.0f == _a ? 0.0f != _a : 0.0f > _a;
+	}
+
+	inline BX_CONSTEXPR_FUNC float copySign(float _value, float _sign)
+	{
+#if BX_COMPILER_MSVC
+		return signBit(_value) != signBit(_sign) ? -_value : _value;
+#else
+		return __builtin_copysign(_value, _sign);
+#endif // BX_COMPILER_MSVC
+	}
+
 	inline BX_CONSTEXPR_FUNC float abs(float _a)
 	{
 		return _a < 0.0f ? -_a : _a;
@@ -146,6 +160,20 @@ namespace bx
 	inline BX_CONSTEXPR_FUNC float square(float _a)
 	{
 		return _a * _a;
+	}
+
+	inline void sinCosApprox(float& _outSinApprox, float& _outCos, float _a)
+	{
+		const float aa     = _a - floor(_a*kInvPi2)*kPi2;
+		const float absA   = abs(aa);
+		const float cosA   = cos(absA);
+		const float cosASq = square(cosA);
+		const float tmp0   = sqrt(1.0f - cosASq);
+		const float tmp1   = aa > 0.0f && aa < kPi ? 1.0f : -1.0f;
+		const float sinA   = mul(tmp0, tmp1);
+
+		_outSinApprox = sinA;
+		_outCos = cosA;
 	}
 
 	inline BX_CONST_FUNC float sin(float _a)
@@ -198,63 +226,245 @@ namespace bx
 		return pow(2.0f, _a);
 	}
 
-	template<>
 	inline BX_CONST_FUNC float log2(float _a)
 	{
 		return log(_a) * kInvLogNat2;
 	}
 
 	template<>
-	inline BX_CONST_FUNC int32_t log2(int32_t _a)
+	inline BX_CONSTEXPR_FUNC uint8_t countBits(uint32_t _val)
 	{
-		return 31 - uint32_cntlz(_a);
+#if BX_COMPILER_GCC || BX_COMPILER_CLANG
+		return __builtin_popcount(_val);
+#else
+		const uint32_t tmp0   = uint32_srl(_val, 1);
+		const uint32_t tmp1   = uint32_and(tmp0, 0x55555555);
+		const uint32_t tmp2   = uint32_sub(_val, tmp1);
+		const uint32_t tmp3   = uint32_and(tmp2, 0xc30c30c3);
+		const uint32_t tmp4   = uint32_srl(tmp2, 2);
+		const uint32_t tmp5   = uint32_and(tmp4, 0xc30c30c3);
+		const uint32_t tmp6   = uint32_srl(tmp2, 4);
+		const uint32_t tmp7   = uint32_and(tmp6, 0xc30c30c3);
+		const uint32_t tmp8   = uint32_add(tmp3, tmp5);
+		const uint32_t tmp9   = uint32_add(tmp7, tmp8);
+		const uint32_t tmpA   = uint32_srl(tmp9, 6);
+		const uint32_t tmpB   = uint32_add(tmp9, tmpA);
+		const uint32_t tmpC   = uint32_srl(tmpB, 12);
+		const uint32_t tmpD   = uint32_srl(tmpB, 24);
+		const uint32_t tmpE   = uint32_add(tmpB, tmpC);
+		const uint32_t tmpF   = uint32_add(tmpD, tmpE);
+		const uint32_t result = uint32_and(tmpF, 0x3f);
+
+		return uint8_t(result);
+#endif // BX_COMPILER_*
+	}
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countBits(unsigned long long _val)
+	{
+#if BX_COMPILER_GCC || BX_COMPILER_CLANG
+		return __builtin_popcountll(_val);
+#else
+		const uint32_t lo = uint32_t(_val&UINT32_MAX);
+		const uint32_t hi = uint32_t(_val>>32);
+
+		return countBits<uint32_t>(lo)
+			+  countBits<uint32_t>(hi)
+			;
+#endif // BX_COMPILER_*
+	}
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countBits(unsigned long _val)
+	{
+		return countBits<unsigned long long>(_val);
+	}
+
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countBits(uint8_t  _val) { return countBits<uint32_t>(_val); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countBits(int8_t   _val) { return countBits<uint8_t >(_val); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countBits(uint16_t _val) { return countBits<uint32_t>(_val); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countBits(int16_t  _val) { return countBits<uint16_t>(_val); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countBits(int32_t  _val) { return countBits<uint32_t>(_val); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countBits(int64_t  _val) { return countBits<uint64_t>(_val); }
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(uint32_t _val)
+	{
+#if BX_COMPILER_GCC || BX_COMPILER_CLANG
+		return 0 == _val ? 32 : __builtin_clz(_val);
+#else
+		const uint32_t tmp0   = uint32_srl(_val, 1);
+		const uint32_t tmp1   = uint32_or(tmp0, _val);
+		const uint32_t tmp2   = uint32_srl(tmp1, 2);
+		const uint32_t tmp3   = uint32_or(tmp2, tmp1);
+		const uint32_t tmp4   = uint32_srl(tmp3, 4);
+		const uint32_t tmp5   = uint32_or(tmp4, tmp3);
+		const uint32_t tmp6   = uint32_srl(tmp5, 8);
+		const uint32_t tmp7   = uint32_or(tmp6, tmp5);
+		const uint32_t tmp8   = uint32_srl(tmp7, 16);
+		const uint32_t tmp9   = uint32_or(tmp8, tmp7);
+		const uint32_t tmpA   = uint32_not(tmp9);
+		const uint32_t result = uint32_cntbits(tmpA);
+
+		return uint8_t(result);
+#endif // BX_COMPILER_*
+	}
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(unsigned long long _val)
+	{
+#if BX_COMPILER_GCC || BX_COMPILER_CLANG
+		return 0 == _val ? 64 : __builtin_clzll(_val);
+#else
+		return _val & UINT64_C(0xffffffff00000000)
+			 ? countLeadingZeros<uint32_t>(uint32_t(_val>>32) )
+			 : countLeadingZeros<uint32_t>(uint32_t(_val) ) + 32
+			 ;
+#endif // BX_COMPILER_*
+	}
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(unsigned long _val)
+	{
+		return countLeadingZeros<unsigned long long>(_val);
+	}
+
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(uint8_t  _val) { return countLeadingZeros<uint32_t>(_val)-24; }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(int8_t   _val) { return countLeadingZeros<uint8_t >(_val);    }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(uint16_t _val) { return countLeadingZeros<uint32_t>(_val)-16; }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(int16_t  _val) { return countLeadingZeros<uint16_t>(_val);    }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(int32_t  _val) { return countLeadingZeros<uint32_t>(_val);    }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countLeadingZeros(int64_t  _val) { return countLeadingZeros<uint64_t>(_val);    }
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(uint32_t _val)
+	{
+#if BX_COMPILER_GCC || BX_COMPILER_CLANG
+		return 0 == _val ? 32 : __builtin_ctz(_val);
+#else
+		const uint32_t tmp0   = uint32_not(_val);
+		const uint32_t tmp1   = uint32_dec(_val);
+		const uint32_t tmp2   = uint32_and(tmp0, tmp1);
+		const uint32_t result = uint32_cntbits(tmp2);
+
+		return uint8_t(result);
+#endif // BX_COMPILER_*
+	}
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(unsigned long long _val)
+	{
+#if BX_COMPILER_GCC || BX_COMPILER_CLANG
+		return 0 == _val ? 64 : __builtin_ctzll(_val);
+#else
+		return _val & UINT64_C(0xffffffff)
+			? countTrailingZeros<uint32_t>(uint32_t(_val) )
+			: countTrailingZeros<uint32_t>(uint32_t(_val>>32) ) + 32
+			;
+#endif // BX_COMPILER_*
+	}
+
+	template<>
+	inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(unsigned long _val)
+	{
+		return countTrailingZeros<unsigned long long>(_val);
+	}
+
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(uint8_t  _val) { return bx::min<uint8_t>(8,  countTrailingZeros<uint32_t>(_val) ); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(int8_t   _val) { return             countTrailingZeros<uint8_t >(_val);   }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(uint16_t _val) { return bx::min<uint8_t>(16, countTrailingZeros<uint32_t>(_val) ); }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(int16_t  _val) { return             countTrailingZeros<uint16_t>(_val);   }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(int32_t  _val) { return             countTrailingZeros<uint32_t>(_val);   }
+	template<> inline BX_CONSTEXPR_FUNC uint8_t countTrailingZeros(int64_t  _val) { return             countTrailingZeros<uint64_t>(_val);   }
+
+	template<typename Ty>
+	inline BX_CONSTEXPR_FUNC uint8_t findFirstSet(Ty _x)
+	{
+		return Ty(0) == _x ? uint8_t(0) : countTrailingZeros<Ty>(_x) + 1;
+	}
+
+	template<typename Ty>
+	inline BX_CONSTEXPR_FUNC uint8_t ceilLog2(Ty _a)
+	{
+		BX_STATIC_ASSERT(isInteger<Ty>(), "Type Ty must be of integer type!");
+		return Ty(_a) < Ty(1) ? Ty(0) : sizeof(Ty)*8 - countLeadingZeros<Ty>(_a - 1);
+	}
+
+	template<typename Ty>
+	inline BX_CONSTEXPR_FUNC uint8_t floorLog2(Ty _a)
+	{
+		BX_STATIC_ASSERT(isInteger<Ty>(), "Type Ty must be of integer type!");
+		return Ty(_a) < Ty(1) ? Ty(0) : sizeof(Ty)*8 - 1 - countLeadingZeros<Ty>(_a);
+	}
+
+	template<typename Ty>
+	inline BX_CONSTEXPR_FUNC Ty nextPow2(Ty _a)
+	{
+		const uint8_t log2 = ceilLog2(_a);
+		BX_ASSERT(log2 < sizeof(Ty)*8
+			, "Type Ty cannot represent the next power-of-two value (1<<%u is larger than %u-bit type)."
+			, log2
+			, sizeof(Ty)*8
+			);
+		return Ty(1)<<log2;
 	}
 
 	inline BX_CONST_FUNC float rsqrtRef(float _a)
 	{
-		return pow(_a, -0.5f);
-	}
-
-	inline BX_CONST_FUNC float sqrtRef(float _a)
-	{
 		if (_a < kNearZero)
 		{
-			return 0.0f;
+			return kFloatInfinity;
 		}
 
-		return 1.0f/rsqrtRef(_a);
-	}
-
-	inline BX_CONST_FUNC float sqrtSimd(float _a)
-	{
-		const simd128_t aa    = simd_splat(_a);
-		const simd128_t sqrta = simd_sqrt(aa);
-		float result;
-		simd_stx(&result, sqrta);
-
-		return result;
-	}
-
-	inline BX_CONST_FUNC float sqrt(float _a)
-	{
-#if BX_CONFIG_SUPPORTS_SIMD
-		return sqrtSimd(_a);
-#else
-		return sqrtRef(_a);
-#endif // BX_CONFIG_SUPPORTS_SIMD
+		return pow(_a, -0.5f);
 	}
 
 	inline BX_CONST_FUNC float rsqrtSimd(float _a)
 	{
 		if (_a < kNearZero)
 		{
+			return kFloatInfinity;
+		}
+
+		const simd128_t aa = simd_splat(_a);
+#if BX_SIMD_NEON
+		const simd128_t rsqrta = simd_rsqrt_nr(aa);
+#else
+		const simd128_t rsqrta = simd_rsqrt_ni(aa);
+#endif // BX_SIMD_NEON
+
+		float result;
+		simd_stx(&result, rsqrta);
+
+		return result;
+	}
+
+	inline BX_CONST_FUNC float sqrtRef(float _a)
+	{
+		if (_a < 0.0F)
+		{
+			return bitsToFloat(kFloatExponentMask | kFloatMantissaMask);
+		}
+
+		return _a * pow(_a, -0.5f);
+	}
+
+	inline BX_CONST_FUNC float sqrtSimd(float _a)
+	{
+		if (_a < 0.0F)
+		{
+			return bitsToFloat(kFloatExponentMask | kFloatMantissaMask);
+		}
+		else if (_a < kNearZero)
+		{
 			return 0.0f;
 		}
 
-		const simd128_t aa     = simd_splat(_a);
-		const simd128_t rsqrta = simd_rsqrt_nr(aa);
+		const simd128_t aa   = simd_splat(_a);
+		const simd128_t sqrt = simd_sqrt(aa);
+
 		float result;
-		simd_stx(&result, rsqrta);
+		simd_stx(&result, sqrt);
 
 		return result;
 	}
@@ -265,6 +475,15 @@ namespace bx
 		return rsqrtSimd(_a);
 #else
 		return rsqrtRef(_a);
+#endif // BX_CONFIG_SUPPORTS_SIMD
+	}
+
+	inline BX_CONST_FUNC float sqrt(float _a)
+	{
+#if BX_CONFIG_SUPPORTS_SIMD
+		return sqrtSimd(_a);
+#else
+		return sqrtRef(_a);
 #endif // BX_CONFIG_SUPPORTS_SIMD
 	}
 
@@ -308,7 +527,7 @@ namespace bx
 		return 1.0f / _a;
 	}
 
-	inline BX_CONST_FUNC float mod(float _a, float _b)
+	inline BX_CONSTEXPR_FUNC float mod(float _a, float _b)
 	{
 		return _a - _b * floor(_a / _b);
 	}
@@ -334,7 +553,7 @@ namespace bx
 		return result;
 	}
 
-	inline BX_CONST_FUNC float wrap(float _a, float _wrap)
+	inline BX_CONSTEXPR_FUNC float wrap(float _a, float _wrap)
 	{
 		const float tmp0   = mod(_a, _wrap);
 		const float result = tmp0 < 0.0f ? _wrap + tmp0 : tmp0;
@@ -381,13 +600,13 @@ namespace bx
 		return bias(_time * 2.0f - 1.0f, 1.0f - _gain) * 0.5f + 0.5f;
 	}
 
-	inline BX_CONST_FUNC float angleDiff(float _a, float _b)
+	inline BX_CONSTEXPR_FUNC float angleDiff(float _a, float _b)
 	{
 		const float dist = wrap(_b - _a, kPi2);
 		return wrap(dist*2.0f, kPi2) - dist;
 	}
 
-	inline BX_CONST_FUNC float angleLerp(float _a, float _b, float _t)
+	inline BX_CONSTEXPR_FUNC float angleLerp(float _a, float _b, float _t)
 	{
 		return _a + angleDiff(_a, _b) * _t;
 	}
@@ -395,7 +614,7 @@ namespace bx
 	template<typename Ty>
 	inline Ty load(const void* _ptr)
 	{
-		Ty result(init::None);
+		Ty result(InitNone);
 		memCopy(&result, _ptr, sizeof(Ty) );
 		return result;
 	}
@@ -406,18 +625,18 @@ namespace bx
 		memCopy(_ptr, &_a, sizeof(Ty) );
 	}
 
-	inline Vec3::Vec3(init::NoneTag)
+	inline Vec3::Vec3(InitNoneTag)
 	{
 	}
 
-	constexpr Vec3::Vec3(init::ZeroTag)
+	constexpr Vec3::Vec3(InitZeroTag)
 		: x(0.0f)
 		, y(0.0f)
 		, z(0.0f)
 	{
 	}
 
-	constexpr Vec3::Vec3(init::IdentityTag)
+	constexpr Vec3::Vec3(InitIdentityTag)
 		: x(0.0f)
 		, y(0.0f)
 		, z(0.0f)
@@ -438,18 +657,18 @@ namespace bx
 	{
 	}
 
-	inline Plane::Plane(init::NoneTag)
-		: normal(init::None)
+	inline Plane::Plane(InitNoneTag)
+		: normal(InitNone)
 	{
 	}
 
-	constexpr Plane::Plane(init::ZeroTag)
-		: normal(init::Zero)
+	constexpr Plane::Plane(InitZeroTag)
+		: normal(InitZero)
 		, dist(0.0f)
 	{
 	}
 
-	constexpr Plane::Plane(init::IdentityTag)
+	constexpr Plane::Plane(InitIdentityTag)
 		: normal(0.0f, 1.0f, 0.0f)
 		, dist(0.0f)
 	{
@@ -461,11 +680,11 @@ namespace bx
 	{
 	}
 
-	inline Quaternion::Quaternion(init::NoneTag)
+	inline Quaternion::Quaternion(InitNoneTag)
 	{
 	}
 
-	constexpr Quaternion::Quaternion(init::ZeroTag)
+	constexpr Quaternion::Quaternion(InitZeroTag)
 		: x(0.0f)
 		, y(0.0f)
 		, z(0.0f)
@@ -473,7 +692,7 @@ namespace bx
 	{
 	}
 
-	constexpr Quaternion::Quaternion(init::IdentityTag)
+	constexpr Quaternion::Quaternion(InitIdentityTag)
 		: x(0.0f)
 		, y(0.0f)
 		, z(0.0f)
@@ -745,7 +964,7 @@ namespace bx
 
 	inline BX_CONST_FUNC Vec3 fromLatLong(float _u, float _v)
 	{
-		Vec3 result(init::None);
+		Vec3 result(InitNone);
 		const float phi   = _u * kPi2;
 		const float theta = _v * kPi;
 
@@ -1103,8 +1322,8 @@ namespace bx
 
 	inline void mtxFromNormal(float* _result, const Vec3& _normal, float _scale, const Vec3& _pos)
 	{
-		Vec3 tangent(init::None);
-		Vec3 bitangent(init::None);
+		Vec3 tangent(InitNone);
+		Vec3 bitangent(InitNone);
 		calcTangentFrame(tangent, bitangent, _normal);
 
 		store(&_result[ 0], mul(bitangent, _scale) );
@@ -1122,8 +1341,8 @@ namespace bx
 
 	inline void mtxFromNormal(float* _result, const Vec3& _normal, float _scale, const Vec3& _pos, float _angle)
 	{
-		Vec3 tangent(init::None);
-		Vec3 bitangent(init::None);
+		Vec3 tangent(InitNone);
+		Vec3 bitangent(InitNone);
 		calcTangentFrame(tangent, bitangent, _normal, _angle);
 
 		store(&_result[0], mul(bitangent, _scale) );
@@ -1188,7 +1407,7 @@ namespace bx
 
 	inline Vec3 mul(const Vec3& _vec, const float* _mat)
 	{
-		Vec3 result(init::None);
+		Vec3 result(InitNone);
 		result.x = _vec.x * _mat[0] + _vec.y * _mat[4] + _vec.z * _mat[ 8] + _mat[12];
 		result.y = _vec.x * _mat[1] + _vec.y * _mat[5] + _vec.z * _mat[ 9] + _mat[13];
 		result.z = _vec.x * _mat[2] + _vec.y * _mat[6] + _vec.z * _mat[10] + _mat[14];
@@ -1197,7 +1416,7 @@ namespace bx
 
 	inline Vec3 mulXyz0(const Vec3& _vec, const float* _mat)
 	{
-		Vec3 result(init::None);
+		Vec3 result(InitNone);
 		result.x = _vec.x * _mat[0] + _vec.y * _mat[4] + _vec.z * _mat[ 8];
 		result.y = _vec.x * _mat[1] + _vec.y * _mat[5] + _vec.z * _mat[ 9];
 		result.z = _vec.x * _mat[2] + _vec.y * _mat[6] + _vec.z * _mat[10];

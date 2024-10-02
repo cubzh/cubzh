@@ -1,9 +1,9 @@
 /*
- * Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2024 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 #include "entry/entry.h"
 #include "entry/cmd.h"
 #include "entry/dialog.h"

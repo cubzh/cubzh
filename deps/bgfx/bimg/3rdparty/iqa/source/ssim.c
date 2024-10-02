@@ -69,8 +69,7 @@ float iqa_ssim(const unsigned char *ref, const unsigned char *cmp, int w, int h,
     struct _map_reduce mr;
 
     /* Initialize algorithm parameters */
-    const int m = _min(w,h);
-    scale = _max( 1, _round( (float)m / 256.0f ) );
+    scale = _max( 1, _round( (float)_min(w,h) / 256.0f ) );
     if (args) {
         if(args->f)
             scale = args->f;

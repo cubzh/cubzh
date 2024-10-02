@@ -19,6 +19,7 @@ https://github.com/voxowl/particubes-private/pull/1228
 https://github.com/voxowl/particubes-private/pull/2414
 https://github.com/voxowl/particubes-private/pull/2932
 https://github.com/voxowl/particubes-private/pull/3991
+https://github.com/cubzh/cubzh/pull/670
 
 ## Bgfx-imgui context
 
@@ -89,7 +90,7 @@ if (io.DeltaTime <= 0) {
 ### Point sampler mode
 
 In `bgfx/examples/common/imgui/imgui.cpp ~l.393`, make sure that `m_texture` is created using flags
-`BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT`
+`BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT` if using the pixel font
 
 ### Custom glyphs parameters
 
@@ -139,7 +140,7 @@ bx::write(&writer
 ```
 
 ### MRT patch
-## Note: not necessary anymore as of PR 2414
+## Note: fixed as of PR 2414
 
 MRT are available starting from GLES30, but bgfx reports that GLES31 is necessary, which is incorrect
 
@@ -150,6 +151,7 @@ if (BX_ENABLED(BGFX_CONFIG_RENDERER_OPENGL || BGFX_CONFIG_RENDERER_OPENGLES >= 3
 ```
 
 ### Compute patch
+## Note: fixed as of Core PR 670
 
 We need to specify compute shaders ESSL (GLES shading language) version when using GLES
 
@@ -205,8 +207,9 @@ BGFX_CHECK_CAPS(BGFX_CAPS_TEXTURE_READ_BACK, "Texture read-back is not supported
 ```
 
 ### Shadow sampler patch
+## Note: fixed as of Core PR 670, to be tested
 
-In `bgfx/scripts/shader.mk`, although we don't use yet glsl shaders, change the following in order to compile them.
+In `bgfx/scripts/shader.mk`, change the following in order to compile glsl shaders.
 ```
 ifeq ($(TARGET), 4)
 # CUBZH: issue w/ bgfxShadow2D and level -p 120

@@ -156,8 +156,8 @@ public:
 	void destroyTtf(TrueTypeHandle _handle);
 
 	/// Return a font whose height is a fixed pixel size.
-	FontHandle createFontByPixelSize(TrueTypeHandle tth, uint32_t ttfontIndex, uint32_t pixelSize, uint32_t _fontType = FONT_TYPE_ALPHA,
-                                     uint16_t _glyphWidthPadding = 6, uint16_t glyphHeightPadding = 6);
+	FontHandle createFontByPixelSize(TrueTypeHandle _handle, uint32_t _typefaceIndex, uint32_t _pixelSize, uint32_t _fontType = FONT_TYPE_ALPHA,
+		uint16_t _glyphWidthPadding = 6, uint16_t glyphHeightPadding = 6);
 
 	/// Return a scaled child font whose height is a fixed pixel size.
 	FontHandle createScaledFontToPixelSize(FontHandle _baseFontHandle, uint32_t _pixelSize);

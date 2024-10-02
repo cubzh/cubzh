@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2023 Branimir Karadzic. All rights reserved.
+ * Copyright 2010-2024 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
@@ -300,11 +300,6 @@ namespace bx
 		const char* ptr = _str;
 		for (; 0 < _max && *ptr != '\0'; ++ptr, --_max) {};
 		return int32_t(ptr - _str);
-	}
-
-	int32_t strLen(const StringView& _str, int32_t _max)
-	{
-		return strLen(_str.getPtr(), min(_str.getLength(), _max) );
 	}
 
 	inline int32_t strCopy(char* _dst, int32_t _dstSize, const char* _src, int32_t _num)
@@ -734,12 +729,12 @@ namespace bx
 			int32_t width;
 			int32_t base;
 			int32_t prec;
-			char fill;
+			char    fill;
 			uint8_t bits;
-			bool left;
-			bool upper;
-			bool spec;
-			bool sign;
+			bool    left;
+			bool    upper;
+			bool    spec;
+			bool    sign;
 		};
 
 		static int32_t write(WriterI* _writer, const char* _str, int32_t _len, const Param& _param, Error* _err)
@@ -763,7 +758,7 @@ namespace bx
 				len--;
 			}
 
-			int32_t padding = _param.width > len ? _param.width - len - hasSign: 0;
+			const int32_t padding = _param.width > len ? _param.width - len - hasSign: 0;
 
 			if (!_param.left)
 			{
@@ -774,7 +769,24 @@ namespace bx
 					sign = '\0';
 				}
 
-				size += writeRep(_writer, _param.fill, max(0, padding), _err);
+				if (_param.width < _param.prec)
+				{
+					size += writeRep(_writer, _param.fill, max(0, padding), _err);
+				}
+				else
+				{
+					const int32_t maxPrec = max(_param.prec, len);
+					const int32_t fillLen = max(0, _param.width - maxPrec - hasSign);
+					size += writeRep(_writer, _param.fill, fillLen, _err);
+
+					if ('\0' != sign)
+					{
+						size += write(_writer, sign, _err);
+						sign = '\0';
+					}
+
+					size += writeRep(_writer, '0', max(0, padding-fillLen), _err);
+				}
 			}
 
 			if ('\0' != sign)
@@ -956,7 +968,7 @@ namespace bx
 			}
 			else if ('%' == ch)
 			{
-				// %[Flags][Width][.Precision][Leegth]Type
+				// %[Flags][Width][.Precision][Length]Type
 				read(&reader, ch, &err);
 
 				Param param;
@@ -1074,8 +1086,8 @@ namespace bx
 							{
 								case 'h': param.bits = sizeof(signed char  )*8; break;
 								case 'l': param.bits = sizeof(long long int)*8; break;
-								case '3':
-								case '6':
+
+								case '3': case '6':
 									read(&reader, ch, &err);
 									switch (ch)
 									{
@@ -1134,12 +1146,9 @@ namespace bx
 						};
 						break;
 
-					case 'e':
-					case 'E':
-					case 'f':
-					case 'F':
-					case 'g':
-					case 'G':
+					case 'e': case 'E':
+					case 'f': case 'F':
+					case 'g': case 'G':
 						param.upper = isUpper(ch);
 						size += write(_writer, va_arg(_argList, double), param, _err);
 						break;
@@ -1148,8 +1157,7 @@ namespace bx
 						size += write(_writer, va_arg(_argList, void*), param, _err);
 						break;
 
-					case 'x':
-					case 'X':
+					case 'x': case 'X':
 						param.base  = 16;
 						param.upper = isUpper(ch);
 						switch (param.bits)
@@ -1206,7 +1214,7 @@ namespace bx
 
 	int32_t vsnprintf(char* _out, int32_t _max, const char* _format, va_list _argList)
 	{
-		if (1 < _max)
+		if (0 < _max)
 		{
 			StaticMemoryBlockWriter writer(_out, uint32_t(_max) );
 
@@ -1216,15 +1224,14 @@ namespace bx
 			int32_t size = write(&writer, _format, argListCopy, &err);
 			va_end(argListCopy);
 
+			size += write(&writer, '\0', &err);
+
 			if (err.isOk() )
 			{
-				size += write(&writer, '\0', &err);
 				return size - 1 /* size without '\0' terminator */;
 			}
-			else
-			{
-				_out[_max-1] = '\0';
-			}
+
+			_out[_max-1] = '\0';
 		}
 
 		Error err;

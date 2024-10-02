@@ -14,8 +14,6 @@
 #include "bgfx-imgui.h"
 #include "../bgfx_utils.h"
 
-//#define USE_ENTRY 1
-
 #ifndef USE_ENTRY
 #	define USE_ENTRY 0
 #endif // USE_ENTRY
@@ -36,6 +34,7 @@
 #include "icons_font_awesome.ttf.h"
 
 #include "VXFont.hpp"
+#include "VXConfig.hpp"
 
 static const bgfx::EmbeddedShader s_embeddedShaders[] =
 {
@@ -68,10 +67,13 @@ struct OcornutImguiContext
 	void render(ImDrawData* _drawData)
 	{
 		// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-		int fb_width = (int)(_drawData->DisplaySize.x * _drawData->FramebufferScale.x);
-		int fb_height = (int)(_drawData->DisplaySize.y * _drawData->FramebufferScale.y);
-		if (fb_width <= 0 || fb_height <= 0)
+		int32_t dispWidth  = _drawData->DisplaySize.x * _drawData->FramebufferScale.x;
+		int32_t dispHeight = _drawData->DisplaySize.y * _drawData->FramebufferScale.y;
+		if (dispWidth  <= 0
+		||  dispHeight <= 0)
+		{
 			return;
+		}
 
         //// CUBZH: let VXGameRenderer declare that view so that it can work with sort order
         /*
@@ -90,7 +92,7 @@ struct OcornutImguiContext
 			bgfx::setViewTransform(m_viewId, NULL, ortho);
 			bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height) );
 		}
-         */
+        */
 
 		const ImVec2 clipPos   = _drawData->DisplayPos;       // (0,0) unless using multi-viewports
 		const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
@@ -142,11 +144,13 @@ struct OcornutImguiContext
 					if (NULL != cmd->TextureId)
 					{
 						union { ImTextureID ptr; struct { bgfx::TextureHandle handle; uint8_t flags; uint8_t mip; } s; } texture = { cmd->TextureId };
+
 						state |= 0 != (IMGUI_FLAGS_ALPHA_BLEND & texture.s.flags)
 							? BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
 							: BGFX_STATE_NONE
 							;
 						th = texture.s.handle;
+
 						if (0 != texture.s.mip)
 						{
 							const float lodEnabled[4] = { float(texture.s.mip), 1.0f, 0.0f, 0.0f };
@@ -166,8 +170,8 @@ struct OcornutImguiContext
 					clipRect.z = (cmd->ClipRect.z - clipPos.x) * clipScale.x;
 					clipRect.w = (cmd->ClipRect.w - clipPos.y) * clipScale.y;
 
-					if (clipRect.x <  fb_width
-					&&  clipRect.y <  fb_height
+					if (clipRect.x <  dispWidth
+					&&  clipRect.y <  dispHeight
 					&&  clipRect.z >= 0.0f
 					&&  clipRect.w >= 0.0f)
 					{
@@ -193,6 +197,8 @@ struct OcornutImguiContext
 
 	void create(float _fontSize, bx::AllocatorI* _allocator)
 	{
+		IMGUI_CHECKVERSION();
+
 		m_allocator = _allocator;
 
 		if (NULL == _allocator)
@@ -354,7 +360,8 @@ struct OcornutImguiContext
 
 		s_tex = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler);
 
-		uint8_t* data;
+
+        uint8_t* data;
 		int32_t width;
 		int32_t height;
         //// CUBZH: inject font
@@ -387,16 +394,20 @@ struct OcornutImguiContext
 		}
 
 		io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
-         */
+        */
 
-        //// CUBZH: font sampler mode to POINT
+        //// CUBZH: font sampler mode to POINT, if using the pixel font
 		m_texture = bgfx::createTexture2D(
 			  (uint16_t)width
 			, (uint16_t)height
 			, false
 			, 1
 			, bgfx::TextureFormat::BGRA8
-			, BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT
+#if DEARIMGUI_FONT == FontName_Pixel
+            , BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT
+#else
+			, 0
+#endif
 			, bgfx::copy(data, width*height*4)
 			);
 
@@ -471,14 +482,14 @@ struct OcornutImguiContext
 		io.AddMouseButtonEvent(ImGuiMouseButton_Left,   0 != (_button & IMGUI_MBUT_LEFT  ) );
 		io.AddMouseButtonEvent(ImGuiMouseButton_Right,  0 != (_button & IMGUI_MBUT_RIGHT ) );
 		io.AddMouseButtonEvent(ImGuiMouseButton_Middle, 0 != (_button & IMGUI_MBUT_MIDDLE) );
-		io.AddMouseWheelEvent(0.0f, _scroll); //// CUBZH: use absolute scroll, not a delta
+        io.AddMouseWheelEvent(0.0f, _scroll); //// CUBZH: use absolute scroll, not a delta
 
 #if USE_ENTRY
 		uint8_t modifiers = inputGetModifiersState();
-		io.AddKeyEvent(ImGuiKey_ModShift, 0 != (modifiers & (entry::Modifier::LeftShift | entry::Modifier::RightShift) ) );
-		io.AddKeyEvent(ImGuiKey_ModCtrl,  0 != (modifiers & (entry::Modifier::LeftCtrl  | entry::Modifier::RightCtrl ) ) );
-		io.AddKeyEvent(ImGuiKey_ModAlt,   0 != (modifiers & (entry::Modifier::LeftAlt   | entry::Modifier::RightAlt  ) ) );
-		io.AddKeyEvent(ImGuiKey_ModSuper, 0 != (modifiers & (entry::Modifier::LeftMeta  | entry::Modifier::RightMeta ) ) );
+		io.AddKeyEvent(ImGuiMod_Shift, 0 != (modifiers & (entry::Modifier::LeftShift | entry::Modifier::RightShift) ) );
+		io.AddKeyEvent(ImGuiMod_Ctrl,  0 != (modifiers & (entry::Modifier::LeftCtrl  | entry::Modifier::RightCtrl ) ) );
+		io.AddKeyEvent(ImGuiMod_Alt,   0 != (modifiers & (entry::Modifier::LeftAlt   | entry::Modifier::RightAlt  ) ) );
+		io.AddKeyEvent(ImGuiMod_Super, 0 != (modifiers & (entry::Modifier::LeftMeta  | entry::Modifier::RightMeta ) ) );
 		for (int32_t ii = 0; ii < (int32_t)entry::Key::Count; ++ii)
 		{
 			io.AddKeyEvent(m_keyMap[ii], inputGetKeyState(entry::Key::Enum(ii) ) );
@@ -518,13 +529,13 @@ static OcornutImguiContext s_ctx;
 static void* memAlloc(size_t _size, void* _userData)
 {
 	BX_UNUSED(_userData);
-	return BX_ALLOC(s_ctx.m_allocator, _size);
+	return bx::alloc(s_ctx.m_allocator, _size);
 }
 
 static void memFree(void* _ptr, void* _userData)
 {
 	BX_UNUSED(_userData);
-	BX_FREE(s_ctx.m_allocator, _ptr);
+	bx::free(s_ctx.m_allocator, _ptr);
 }
 
 void imguiCreate(float _fontSize, bx::AllocatorI* _allocator)
@@ -575,8 +586,22 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function"); // warning: 'int re
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunknown-pragmas")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits"); // warning: comparison is always true due to limited range of data type
-#define STBTT_malloc(_size, _userData) memAlloc(_size, _userData)
-#define STBTT_free(_ptr, _userData) memFree(_ptr, _userData)
+
+#define STBTT_ifloor(_a)   int32_t(bx::floor(_a) )
+#define STBTT_iceil(_a)    int32_t(bx::ceil(_a) )
+#define STBTT_sqrt(_a)     bx::sqrt(_a)
+#define STBTT_pow(_a, _b)  bx::pow(_a, _b)
+#define STBTT_fmod(_a, _b) bx::mod(_a, _b)
+#define STBTT_cos(_a)      bx::cos(_a)
+#define STBTT_acos(_a)     bx::acos(_a)
+#define STBTT_fabs(_a)     bx::abs(_a)
+#define STBTT_strlen(_str) bx::strLen(_str)
+
+#define STBTT_memcpy(_dst, _src, _numBytes) bx::memCopy(_dst, _src, _numBytes)
+#define STBTT_memset(_dst, _ch, _numBytes)  bx::memSet(_dst, _ch, _numBytes)
+#define STBTT_malloc(_size, _userData)      memAlloc(_size, _userData)
+#define STBTT_free(_ptr, _userData)         memFree(_ptr, _userData)
+
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb/stb_rect_pack.h>
 #define STB_TRUETYPE_IMPLEMENTATION

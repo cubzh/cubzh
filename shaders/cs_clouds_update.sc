@@ -34,7 +34,7 @@
 #define u_baseColorB params[4].z
 #define u_spread params[4].w
 
-BUFFER_WR(transforms, vec4, 0);
+BUFFER_WO(transforms, vec4, 0);
 BUFFER_RW(count, uint, 1);
 BUFFER_RO(params, vec4, 2);
 

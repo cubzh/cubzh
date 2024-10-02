@@ -6,7 +6,7 @@
 #include "./include/config.sh"
 
 BUFFER_RO(count, uint, 0);
-BUFFER_WR(indirectBuffer, uvec4, 1);
+BUFFER_WO(indirectBuffer, uvec4, 1);
 
 NUM_THREADS(1, 1, 1)
 void main() {
