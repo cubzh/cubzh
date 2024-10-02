@@ -2205,7 +2205,11 @@ function home()
 							Client:HapticFeedback()
 						end
 
+						local badge = require("notifications"):createBadge({ count = 42 })
+						badge:setParent(bell)
+
 						bell.onRelease = function()
+							print("NotificationCount:", require("user").NotificationCount)
 							Menu:ShowNotifications()
 						end
 
@@ -2374,6 +2378,7 @@ function home()
 			icon.Width = 20
 			icon.Height = 20
 			icon:setParent(content)
+			btn.icon = icon
 
 			local title = ui:createText(text, { size = "small", color = Color.White })
 			title:setParent(content)
@@ -2415,6 +2420,8 @@ function home()
 		btnFriends.onRelease = function()
 			Menu:ShowFriends()
 		end
+		local badge = require("notifications"):createBadge({ count = 3 })
+		badge:setParent(btnFriends.icon)
 
 		btnCreate.onRelease = function()
 			Menu:ShowCreations()

@@ -1,8 +1,57 @@
-coins = {}
+mod = {}
 
--- Creates modal content to present user coins.
--- (should be used to create or pushed within modal)
-coins.createModalContent = function(_, config)
+mod.createBadge = function(_, config)
+	local theme = require("uitheme").current
+	local defaultConfig = {
+		count = 42,
+		ui = require("uikit"),
+	}
+
+	ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config)
+	end)
+	if not ok then
+		error("notifications:createBadge(config) - config error: " .. err, 2)
+	end
+
+	local ui = config.ui
+
+	local badge = ui:frameNotificationBadge()
+	local badgeLabel = ui:createText("", { font = Font.Noto, size = "small", color = Color.White })
+	badgeLabel:setParent(badge)
+	badge.parentDidResize = function(self)
+		local parent = self.parent
+		if parent == nil then
+			return
+		end
+		self.Width = badgeLabel.Width + theme.paddingTiny * 2
+		self.Height = badgeLabel.Height
+		badgeLabel.pos = {
+			theme.paddingTiny,
+			1,
+		}
+		badge.pos.X = -self.Width * 0.5
+		badge.pos.Y = parent.Height * 0.8 - badge.Height * 0.5
+		badge.LocalPosition.Z = -900
+	end
+
+	badge.setCount = function(self, count)
+		config.count = count
+		badgeLabel.Text = "" .. count
+		if count == 0 then
+			self:hide()
+		else
+			self:show()
+			self:parentDidResize()
+		end
+	end
+
+	badge:setCount(config.count)
+
+	return badge
+end
+
+mod.createModalContent = function(_, config)
 	local requests = {}
 	local function cancelRequests()
 		for _, r in ipairs(requests) do
@@ -275,4 +324,4 @@ coins.createModalContent = function(_, config)
 	return content
 end
 
-return coins
+return mod
