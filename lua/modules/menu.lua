@@ -521,9 +521,6 @@ shareBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 shareBtn:setParent(actionColumn)
 
 shareBtn.onRelease = function()
-	-- if btnLinkTimer then
-	-- 	btnLinkTimer:Cancel()
-	-- end
 	Dev:CopyToClipboard(Dev.ServerURL)
 
 	if shareBtnConfirmation ~= nil then
@@ -748,21 +745,16 @@ actionColumn:parentDidResize()
 -- NOTIFICATION
 -- only one object, recycled
 
-local notificationIconSize = 30
+local notificationIconSize = 25
 local notificationIconPadding = theme.paddingBig
 local notificationPadding = theme.padding
 local notificationBottomPadding = 2
-local notificationSpaceBelowTitle = theme.paddingTiny
 local noticationTimer
 local notificationTick
 
 notificationFrame = ui:frameNotification()
 notificationFrame.Width = 200
 notificationFrame.Height = 100
-
-local notificationTitle = ui:createText("title", { size = "default", color = Color.White })
-notificationTitle.object.MaxWidth = 300
-notificationTitle:setParent(notificationFrame)
 
 local notificationText = ui:createText("text", { size = "small", color = Color.White })
 notificationText.object.MaxWidth = 300
@@ -815,19 +807,56 @@ local function refreshNotificationIcon(category)
 	notificationIcon:setParent(notificationFrame)
 end
 
+function absNodePos(node)
+	local p = node.pos:Copy()
+	local parent = node.parent
+	while parent ~= nil do
+		p.X = p.X + parent.pos.X
+		p.Y = p.Y + parent.pos.Y
+		parent = parent.parent
+	end
+	return p
+end
+
 function layoutNotification()
 	local parent = notificationFrame.parent
 	if parent == nil then
 		return
 	end
 
+	-- display notification between visible top bar icons
+	local startX = Screen.SafeArea.Left
+	local endX = Screen.Width - Screen.SafeArea.Right
+
+	if chatBtn:isVisible() then
+		local p = absNodePos(textBubbleShape)
+		startX = p.X + textBubbleShape.Width + PADDING
+	end
+
+	if pezhBtn:isVisible() then
+		local p = absNodePos(pezhShape)
+		endX = p.X - PADDING
+	elseif connBtn:isVisible() then
+		local p = absNodePos(connShape)
+		endX = p.X - PADDING
+	elseif cubzhBtn:isVisible() then
+		local shape = cubzhBtnShape or settingsIcon
+		local p = absNodePos(shape)
+		endX = p.X - PADDING
+	end
+
+	local availableWidth = endX - startX
+	local centerX = startX + availableWidth * 0.5
+
+	notificationText.object.MaxWidth = availableWidth - notificationIconSize - notificationIconPadding * 3 - 20 -- extra margin
+
 	notificationFrame.Height = math.max(
-		notificationIconSize + notificationPadding * 2,
-		notificationTitle.Height + notificationText.Height + notificationSpaceBelowTitle + notificationPadding * 2
+		notificationIconSize + notificationPadding * 4,
+		notificationText.Height + notificationPadding * 2
 	) + notificationBottomPadding
 
 	notificationFrame.Width = notificationIconSize
-		+ math.max(notificationText.Width, notificationTitle.Width)
+		+ notificationText.Width
 		+ notificationIconPadding * 2
 		+ notificationIconPadding
 
@@ -841,19 +870,14 @@ function layoutNotification()
 	end
 
 	local y = (notificationFrame.Height - notificationBottomPadding) * 0.5
-		- (notificationText.Height + notificationTitle.Height + notificationSpaceBelowTitle) * 0.5
+		- notificationText.Height * 0.5
 		+ notificationBottomPadding
 
 	notificationText.pos = { notificationIconSize + notificationIconPadding * 2, y }
 
-	notificationTitle.pos = {
-		notificationIconSize + notificationIconPadding * 2,
-		notificationText.pos.Y + notificationText.Height + notificationSpaceBelowTitle,
-	}
-
 	notificationFrame.pos = {
-		parent.Width * 0.5 - notificationFrame.Width * 0.5,
-		parent.Height - notificationFrame.Height - theme.padding,
+		centerX - notificationFrame.Width * 0.5,
+		parent.Height - System.SafeAreaTop - notificationFrame.Height - theme.padding,
 	}
 end
 
@@ -884,12 +908,11 @@ end
 
 notificationFrame:setParent(nil)
 
-function showNotification(title, text, category)
+function showNotification(_, text, category)
 	if noticationTimer ~= nil then
 		noticationTimer:Cancel()
 		noticationTimer = nil
 	end
-	notificationTitle.Text = title
 	notificationText.Text = text
 
 	refreshNotificationIcon(category)

@@ -31,7 +31,7 @@ mod.createBadge = function(_, config)
 			1,
 		}
 		badge.pos.X = -self.Width * 0.5
-		badge.pos.Y = parent.Height * 0.8 - badge.Height * 0.5
+		badge.pos.Y = parent.Height * 0.9 - badge.Height * 0.5
 		badge.LocalPosition.Z = -900
 	end
 
