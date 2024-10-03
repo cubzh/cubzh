@@ -115,7 +115,7 @@ size_t getFileSize(FILE *fp);
 
 /// Returns a memory buffer with the content of a file.
 /// The returned buffer cannot be cast directly into a NULL-terminated string (char*)
-/// because it doesn't end with a NULL char. See function `getFileTextContent`.
+/// because it doesn't end with a NULL char. See function `getFileTextContentAndClose`.
 /// After this function returned, the file descriptor is not valid anymore.
 /// (it has been fclose-d)
 /// @param fp a valid FILE pointer.
@@ -126,12 +126,12 @@ void *getFileContent(FILE *fp, size_t *outDataSize);
 /// After this function returned, the file descriptor is not valid anymore.
 /// (it has been fclose-d)
 /// @param fd a valid FILE pointer.
-char *getFileTextContent(FILE *fd);
+char *getFileTextContentAndClose(FILE *fd);
 
 /// Returns a null-terminated string and closes the provided file
 /// @param fd a valid FILE pointer.
 /// @param textContent file output as a string
-bool getFileTextContentAsString(FILE *fd, std::string &textContent);
+bool getFileTextContentAsStringAndClose(FILE *fd, std::string &textContent);
 
 //// Writes data into a png file with standard compression
 /// @param filename in storage, w/o extension
