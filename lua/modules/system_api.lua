@@ -8,6 +8,7 @@
 local time = require("time")
 local api = require("api")
 local conf = require("config")
+local url = require("url")
 
 local mod = {
 	kApiAddr = api.kApiAddr,
@@ -703,6 +704,78 @@ moduleMT.patchUserInfo = function(_, info, callback)
 			return
 		end
 		callback(nil)
+	end)
+	return req
+end
+
+-- callback(notifications or { count = 42 }, err)
+mod.getNotifications = function(self, config, callback)
+	if self ~= mod then
+		error("api:getNotifications(config, callback): use `:`", 2)
+	end
+	if type(callback) ~= "function" then
+		error("api:getNotifications(config, callback) - callback must be a function", 2)
+	end
+
+	local defaultConfig = {
+		category = nil, -- string
+		read = nil, -- boolean
+		returnCount = nil, -- only returns count if `true` { count = 42}
+	}
+
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				category = { "string" },
+				read = { "boolean" },
+				returnCount = { "boolean" },
+			},
+		})
+	end)
+
+	if not ok then
+		error("api:getNotifications(config, callback): config error (" .. err .. ")", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/users/self/notifications")
+
+	if config.category ~= nil then
+		u:addQueryParameter("category", config.category)
+	end
+	if config.read ~= nil then
+		u:addQueryParameter("read", config.read == true and "true" or "false")
+	end
+	if config.returnCount ~= nil then
+		u:addQueryParameter("returnCount", config.returnCount == true and "true" or "false")
+	end
+
+	local req = System:HttpGet(u:toString(), function(res)
+		if res.StatusCode ~= 200 then
+			callback(nil, mod:error(res.StatusCode, "status code: " .. res.StatusCode))
+			return
+		end
+
+		local data, err = JSON:Decode(res.Body)
+		if err ~= nil then
+			callback(nil, mod:error(res.StatusCode, "getNotifications JSON decode error: " .. err))
+			return
+		end
+
+		if config.returnCount == true then
+			if data.count ~= nil then
+				callback(math.floor(data.count))
+			else
+				callback(nil, mod:error(res.StatusCode, "returned count is nil"))
+			end
+			return
+		end
+
+		for _, v in ipairs(data) do
+			if v.created then
+				v.created = time.iso8601_to_os_time(v.created)
+			end
+		end
+		callback(data)
 	end)
 	return req
 end

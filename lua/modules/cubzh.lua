@@ -1204,6 +1204,9 @@ function home()
 	local root
 	local tickListener
 
+	local notificationsReq
+	local friendNotificationsReq
+
 	_home.pause = function()
 		avatarCameraFollowHomeScroll = false
 		avatar():setInternalDragListener(true)
@@ -2205,11 +2208,21 @@ function home()
 							Client:HapticFeedback()
 						end
 
-						local badge = require("notifications"):createBadge({ count = 42 })
+						local badge = require("notifications"):createBadge({ count = 0 })
 						badge:setParent(bell)
+						if notificationsReq ~= nil then
+							notificationsReq:Cancel()
+						end
+						notificationsReq = require("user"):getUnreadNotificationCount({
+							callback = function(count, err)
+								if err ~= nil then
+									return
+								end
+								badge:setCount(count)
+							end,
+						})
 
 						bell.onRelease = function()
-							print("NotificationCount:", require("user").NotificationCount)
 							Menu:ShowNotifications()
 						end
 
@@ -2420,8 +2433,20 @@ function home()
 		btnFriends.onRelease = function()
 			Menu:ShowFriends()
 		end
-		local badge = require("notifications"):createBadge({ count = 3 })
+		local badge = require("notifications"):createBadge({ count = 0 })
 		badge:setParent(btnFriends.icon)
+		if friendNotificationsReq ~= nil then
+			friendNotificationsReq:Cancel()
+		end
+		friendNotificationsReq = require("user"):getUnreadNotificationCount({
+			category = "social",
+			callback = function(count, err)
+				if err ~= nil then
+					return
+				end
+				badge:setCount(count)
+			end,
+		})
 
 		btnCreate.onRelease = function()
 			Menu:ShowCreations()
@@ -2464,6 +2489,16 @@ function home()
 		if tickListener then
 			tickListener:Remove()
 			tickListener = nil
+		end
+
+		if notificationsReq ~= nil then
+			notificationsReq:Cancel()
+			notificationsReq = nil
+		end
+
+		if friendNotificationsReq ~= nil then
+			friendNotificationsReq:Cancel()
+			friendNotificationsReq = nil
 		end
 
 		root:remove()

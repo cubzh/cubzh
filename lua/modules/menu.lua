@@ -877,7 +877,7 @@ function layoutNotification()
 
 	notificationFrame.pos = {
 		centerX - notificationFrame.Width * 0.5,
-		parent.Height - System.SafeAreaTop - notificationFrame.Height - theme.padding,
+		parent.Height - System.SafeAreaTop - notificationFrame.Height - theme.paddingTiny,
 	}
 end
 

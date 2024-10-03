@@ -63,7 +63,8 @@ mod.createModalContent = function(_, config)
 	local theme = require("uitheme").current
 	local modal = require("modal")
 	local conf = require("config")
-	local api = require("api") -- NOTE: use system api?
+	local systemApi = require("system_api", System)
+	local time = require("time")
 
 	-- default config
 	local defaultConfig = {
@@ -85,48 +86,103 @@ mod.createModalContent = function(_, config)
 	local frame = ui:frameTextBackground()
 	frame:setParent(node)
 
-	local loadedTransactions = {}
-	local nbLoadedTransactions = 0
+	local loadedNotifications = {}
+	local nbLoadedNotifications = 0
 	local recycledCells = {}
 
-	local function transactionCellParentDidResize(self)
+	local function notificationCellParentDidResize(self)
 		self.Width = self.parent.Width
-		self.description.object.MaxWidth = self.parent.Width - self.op.Width - theme.paddingBig * 3
+		self.description.object.MaxWidth = self.parent.Width - self.when.Width - theme.paddingBig * 3
+
+		-- self.Height = math.max(self.description.Height, self.icon.Height + theme.paddingTiny + self.when.Height) + theme.padding * 2
 		-- self.Height = math.max(self.description.Height, self.op.Height) + theme.padding * 2
 
-		self.op.pos = {
+		local infoHeight = self.when.Height
+		if self.icon then
+			infoHeight = infoHeight + self.icon.Height + theme.paddingTiny
+		end
+		local y = self.Height * 0.5 - infoHeight * 0.5
+		self.when.pos = {
 			theme.paddingBig,
-			self.Height * 0.5 - self.op.Height * 0.5,
+			y,
 		}
+		if self.icon then
+			y = y + self.when.Height + theme.paddingTiny
+			self.icon.pos = {
+				theme.paddingBig,
+				y,
+			}
+		end
 		self.description.pos = {
 			self.Width - self.description.Width - theme.paddingBig,
 			self.Height * 0.5 - self.description.Height * 0.5,
 		}
 	end
 
-	local function getTransactionCell(transaction)
+	local quadData = {}
+	local function getNotificationCell(notification)
 		local c = table.remove(recycledCells)
 		if c == nil then
 			c = ui:frameScrollCell()
-			c.op = ui:createText("", { color = Color.White, size = "small" })
-			c.op:setParent(c)
-			c.description = ui:createText("", { color = Color(150, 150, 150), size = "small" })
+			c.when = ui:createText("", { color = Color(150, 150, 150), size = "small" })
+			c.when.object.Scale = 0.8
+			c.when:setParent(c)
+			c.description = ui:createText("", { color = Color(240, 240, 240), size = "small" })
 			c.description:setParent(c)
-			c.parentDidResize = transactionCellParentDidResize
+			c.parentDidResize = notificationCellParentDidResize
 		end
-		if transaction.amount > 0 then
-			c.op.Color = theme.colorPositive
-			c.op.Text = string.format("🇵 ⬅️ %d", transaction.amount)
+
+		if c.icon ~= nil then
+			c.icon:remove()
+		end
+
+		local img
+		if notification.category == "money" then
+			img = "images/icon-pezh.png"
+		elseif notification.category == "social" then
+			img = "images/icon-friends.png"
+		elseif notification.category == "like" then
+			img = "images/icon-like.png"
 		else
-			c.op.Color = theme.colorNegative
-			c.op.Text = string.format("🇵 ➡️ %d", -transaction.amount)
+			img = "images/icon-alert.png"
 		end
-		c.description.Text = transaction.info.reason or ""
-		c.Height = 50
+		local data = quadData[img]
+		if data == nil then
+			data = Data:FromBundle(img)
+			quadData[img] = data
+		end
+
+		c.icon = ui:frame({
+			image = {
+				data = data,
+				cutout = true,
+			},
+		})
+		c.icon.Width = 22
+		c.icon.Height = 22
+		c.icon:setParent(c)
+
+		local t, units = time.ago(notification.created, {
+			years = false,
+			months = false,
+			seconds_label = "s",
+			minutes_label = "m",
+			hours_label = "h",
+			days_label = "d",
+		})
+		c.when.Text = "" .. t .. units .. " ago"
+
+		c.description.Text = notification.message or ""
+
+		c.Height = math.max(c.description.Height, c.icon.Height + theme.paddingTiny + c.when.Height) + theme.padding * 2
+
+		-- TODO: Height should be computed in parent did resize
+		-- Scroll should get it after it's been computed...
+		-- Problem: some cells are not even added to parent if outside bounds
 		return c
 	end
 
-	local function recycleTransactionCell(cell)
+	local function recycleNotificationCell(cell)
 		cell:setParent(nil)
 		table.insert(recycledCells, cell)
 	end
@@ -140,13 +196,13 @@ mod.createModalContent = function(_, config)
 		},
 		cellPadding = theme.padding,
 		loadCell = function(index)
-			if index <= nbLoadedTransactions then
-				local c = getTransactionCell(loadedTransactions[index])
+			if index <= nbLoadedNotifications then
+				local c = getNotificationCell(loadedNotifications[index])
 				return c
 			end
 		end,
 		unloadCell = function(_, cell)
-			recycleTransactionCell(cell)
+			recycleNotificationCell(cell)
 		end,
 	})
 	scroll:setParent(frame)
@@ -306,18 +362,16 @@ mod.createModalContent = function(_, config)
 			end)
 		end
 
-		req = api:getTransactions({ -- TODO: notifications
-			callback = function(transactions, err)
-				if err then
-					print("ERROR:", err)
-					return
-				end
-				loadedTransactions = transactions
-				nbLoadedTransactions = #loadedTransactions
-				scroll:flush()
-				scroll:refresh()
-			end,
-		})
+		req = systemApi:getNotifications({}, function(notifications, err)
+			if err then
+				return
+			end
+			loadedNotifications = notifications
+			nbLoadedNotifications = #notifications
+			scroll:flush()
+			scroll:refresh()
+		end)
+
 		table.insert(requests, req)
 	end
 
