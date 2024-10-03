@@ -48,7 +48,7 @@ void remotePushAuthorizationStatus(StatusCallback callback);
 // "set" -> user did approve or deny (ask system, can be updated anytime in the settings)
 char* readNotificationStatusFile();
 
-// Should be called when user explicitely postpones
+// Should be called when user explicitly postpones
 // remote push notification authorization.
 // Returns true on success (saving information in .notificationStatus file)
 bool postponeRemotePushAuthorization();

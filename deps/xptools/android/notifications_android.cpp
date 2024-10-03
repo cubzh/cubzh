@@ -105,7 +105,11 @@ void _javaRequestFirebaseToken() {
 namespace vx {
 namespace notification {
 
-NotificationAuthorizationStatus remotePushAuthorizationStatus() {
+void setBadgeCount(int count) {
+    // TODO: implement me!
+}
+
+void remotePushAuthorizationStatus(StatusCallback callback) {
     std::string _status = "";
 
     char *s = readNotificationStatusFile();
@@ -131,7 +135,7 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus() {
             status = NotificationAuthorizationStatus_NotDetermined;
         }
     }
-    return status;
+    callback(status);
 }
 
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
@@ -141,9 +145,12 @@ void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
 }
 
 void requestRemotePushToken() {
-    if (remotePushAuthorizationStatus() == NotificationAuthorizationStatus_Authorized) {
-        _javaRequestFirebaseToken();
-    }
+    remotePushAuthorizationStatus([](NotificationAuthorizationStatus status){
+        if (status == NotificationAuthorizationStatus_Authorized) {
+            // TODO: check we are in the correct thread?
+            _javaRequestFirebaseToken();
+        }
+    });
 }
 
 void scheduleLocalNotification(const std::string &title,
