@@ -154,17 +154,8 @@ function createUI(system)
 	-- pressed is assigned to scroll node when drag starts (considering epsilon)
 	local pressedScrolls = {}
 
-	-- keeping a reference on all text items,
-	-- to update fontsize when needed
-	local texts = {}
-
 	-- each Text gets a unique ID
 	local nodeID = 1
-
-	-- keeping current font size (based on screen size & density)
-	local currentFontSize = Text.FontSizeDefault
-	local currentFontSizeBig = Text.FontSizeBig
-	local currentFontSizeSmall = Text.FontSizeSmall
 
 	local pointerDownListener
 	local pointerUpListener
@@ -333,9 +324,6 @@ function createUI(system)
 		_onRemoveWrapper(t)
 
 		t:setParent(nil)
-
-		-- in case node is a Text
-		texts[t._id] = nil
 
 		if pressed == t then
 			pressed = nil
@@ -1639,7 +1627,6 @@ function createUI(system)
 		end
 
 		local node = _nodeCreate()
-		texts[node._id] = node
 
 		node._text = function(self)
 			return self.object.Text
@@ -1683,11 +1670,11 @@ function createUI(system)
 		if type(config.size) == "number" or type(config.size) == "integer" then
 			t.FontSize = config.size
 		elseif config.size == "big" then
-			t.FontSize = currentFontSizeBig
+			t.FontSize = Text.FontSizeBig
 		elseif config.size == "small" then
-			t.FontSize = currentFontSizeSmall
+			t.FontSize = Text.FontSizeSmall
 		else
-			t.FontSize = currentFontSize
+			t.FontSize = Text.FontSizeDefault
 		end
 
 		t.IsUnlit = true
@@ -3996,30 +3983,6 @@ function createUI(system)
 		camera.Height = Screen.Height
 
 		rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR }
-
-		if
-			currentFontSize ~= Text.FontSizeDefault
-			or currentFontSizeBig ~= Text.FontSizeBig
-			or currentFontSizeSmall ~= Text.FontSizeSmall
-		then
-			currentFontSize = Text.FontSizeDefault
-			currentFontSizeBig = Text.FontSizeBig
-			currentFontSizeSmall = Text.FontSizeSmall
-
-			for _, node in pairs(texts) do
-				if node.object and node.object.FontSize then
-					if node.fontsize == nil or node.fontsize == "default" then
-						node.object.FontSize = currentFontSize
-					elseif node.fontsize == "big" then
-						node.object.FontSize = currentFontSizeBig
-					elseif node.fontsize == "small" then
-						node.object.FontSize = currentFontSizeSmall
-					end
-				end
-
-				_contentDidResizeWrapper(node.parent)
-			end
-		end
 
 		for _, child in pairs(rootChildren) do
 			_parentDidResizeWrapper(child)
