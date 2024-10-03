@@ -1205,7 +1205,9 @@ function home()
 	local tickListener
 
 	local notificationsReq
+	local notificationCountListener
 	local friendNotificationsReq
+	local friendNotificationCountListener
 
 	_home.pause = function()
 		avatarCameraFollowHomeScroll = false
@@ -2210,17 +2212,28 @@ function home()
 
 						local badge = require("notifications"):createBadge({ count = 0 })
 						badge:setParent(bell)
-						if notificationsReq ~= nil then
-							notificationsReq:Cancel()
+
+						local function refreshBellCount()
+							if notificationsReq ~= nil then
+								notificationsReq:Cancel()
+							end
+							notificationsReq = require("user"):getUnreadNotificationCount({
+								callback = function(count, err)
+									notificationsReq = nil
+									if err ~= nil then
+										return
+									end
+									badge:setCount(count)
+								end,
+							})
 						end
-						notificationsReq = require("user"):getUnreadNotificationCount({
-							callback = function(count, err)
-								if err ~= nil then
-									return
-								end
-								badge:setCount(count)
-							end,
-						})
+
+						if notificationCountListener == nil then
+							notificationCountListener =
+								LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshBellCount)
+						end
+
+						refreshBellCount()
 
 						bell.onRelease = function()
 							Menu:ShowNotifications()
@@ -2433,20 +2446,32 @@ function home()
 		btnFriends.onRelease = function()
 			Menu:ShowFriends()
 		end
+
 		local badge = require("notifications"):createBadge({ count = 0 })
 		badge:setParent(btnFriends.icon)
-		if friendNotificationsReq ~= nil then
-			friendNotificationsReq:Cancel()
+
+		local function refreshFriendsBadge()
+			if friendNotificationsReq ~= nil then
+				friendNotificationsReq:Cancel()
+			end
+			friendNotificationsReq = require("user"):getUnreadNotificationCount({
+				category = "social",
+				callback = function(count, err)
+					friendNotificationsReq = nil
+					if err ~= nil then
+						return
+					end
+					badge:setCount(count)
+				end,
+			})
 		end
-		friendNotificationsReq = require("user"):getUnreadNotificationCount({
-			category = "social",
-			callback = function(count, err)
-				if err ~= nil then
-					return
-				end
-				badge:setCount(count)
-			end,
-		})
+
+		if friendNotificationCountListener == nil then
+			friendNotificationCountListener =
+				LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshFriendsBadge)
+		end
+
+		refreshFriendsBadge()
 
 		btnCreate.onRelease = function()
 			Menu:ShowCreations()
@@ -2495,10 +2520,18 @@ function home()
 			notificationsReq:Cancel()
 			notificationsReq = nil
 		end
+		if notificationCountListener ~= nil then
+			notificationCountListener:Cancel()
+			notificationCountListener = nil
+		end
 
 		if friendNotificationsReq ~= nil then
 			friendNotificationsReq:Cancel()
 			friendNotificationsReq = nil
+		end
+		if friendNotificationCountListener ~= nil then
+			friendNotificationCountListener:Cancel()
+			friendNotificationCountListener = nil
 		end
 
 		root:remove()

@@ -2748,7 +2748,7 @@ function createUI(system)
 			local cell
 
 			if cellInfo == nil then
-				cell = config.loadCell(cellIndex, config.userdata)
+				cell = config.loadCell(cellIndex, config.userdata, container)
 				if cell == nil then
 					-- reached the end of cells
 					return nil
@@ -2890,7 +2890,7 @@ function createUI(system)
 					then
 						cell = cells[cellIndex]
 						if cell == nil then
-							cell = config.loadCell(cellIndex, config.userdata)
+							cell = config.loadCell(cellIndex, config.userdata, container)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then
@@ -2954,7 +2954,7 @@ function createUI(system)
 							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
 							-- 	"[" .. loadLeft .. " - " .. loadRight .. "]"
 							-- )
-							cell = config.loadCell(cellIndex, config.userdata)
+							cell = config.loadCell(cellIndex, config.userdata, container)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then

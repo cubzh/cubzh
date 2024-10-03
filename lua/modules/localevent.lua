@@ -88,6 +88,7 @@ localevent.name = {
 	ActiveTextInputNext = 57, -- callback: function()
 	AppDidBecomeActive = 58, -- callback: function()
 	DidReceivePushNotification = 59, -- callback: function(title, body, category, badge)
+	NotificationCountDidChange = 60, -- callback: function() -- doesn't provide count, API request should be sent to obtain it.
 }
 localevent.Name = localevent.name
 
@@ -133,6 +134,7 @@ limited[localevent.name.OnChat] = true
 limited[localevent.name.CppMenuStateChanged] = true
 limited[localevent.name.LocalAvatarUpdate] = true
 limited[localevent.name.OnWorldObjectLoad] = true
+limited[localevent.name.NotificationCountDidChange] = true
 
 reservedToSystem = {}
 reservedToSystem[localevent.name.KeyboardInput] = true
@@ -143,6 +145,7 @@ reservedToSystem[localevent.name.ServerConnectionFailed] = true
 reservedToSystem[localevent.name.ServerConnectionStart] = true
 reservedToSystem[localevent.name.ChatMessage] = true
 reservedToSystem[localevent.name.ChatMessageACK] = true
+reservedToSystem[localevent.name.DidReceivePushNotification] = true
 
 mt = {
 	__tostring = function()

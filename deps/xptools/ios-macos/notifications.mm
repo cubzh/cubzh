@@ -44,15 +44,16 @@ int badgeCount() {
 }
 
 void setBadgeCount(int count) {
+#if TARGET_OS_IPHONE
     // Ensure count is non-negative
     count = MAX(count, 0);
-#if TARGET_OS_IPHONE
     [UIApplication sharedApplication].applicationIconBadgeNumber = count;
 #elif TARGET_OS_MAC
-    if (count == 0) {
-        [[UNUserNotificationCenter currentNotificationCenter] removeAllDeliveredNotifications];
-    }
-    // don't do anything if count != 0 we can't set the count on macOS
+    // No matter the count -> remove badge.
+    // it's not possible yet to get the right number of notification in the Notification Center
+    // it doesn't match with what's been read within the app.
+    // We would need to mark notifications as read by ID, but the server doesn't return that kind of information yet.
+    [[UNUserNotificationCenter currentNotificationCenter] removeAllDeliveredNotifications];
 #endif
 }
 

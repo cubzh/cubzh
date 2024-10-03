@@ -780,4 +780,52 @@ mod.getNotifications = function(self, config, callback)
 	return req
 end
 
+mod.readNotifications = function(self, config)
+	if self ~= mod then
+		error("api:readNotifications(config): use `:`", 2)
+	end
+
+	local defaultConfig = {
+		category = nil, -- string
+		callback = nil, -- function(err)
+	}
+
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultConfig, config, {
+			acceptTypes = {
+				category = { "string" },
+				callback = { "function" },
+			},
+		})
+	end)
+
+	if not ok then
+		error("api:readNotifications(config): config error (" .. err .. ")", 2)
+	end
+
+	local u = url:parse(mod.kApiAddr .. "/users/self/notifications")
+
+	if config.category ~= nil then
+		u:addQueryParameter("category", config.category)
+	end
+	u:addQueryParameter("read", "false")
+
+	local body = {
+		read = true,
+	}
+
+	local req = System:HttpPatch(u:toString(), body, function(res)
+		if res.StatusCode ~= 200 then
+			if config.callback ~= nil then
+				config.callback(mod:error(res.StatusCode, "status code: " .. res.StatusCode))
+			end
+			return
+		end
+		if config.callback ~= nil then
+			config.callback(nil)
+		end
+	end)
+	return req
+end
+
 return mod

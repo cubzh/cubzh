@@ -92,10 +92,6 @@ mod.createModalContent = function(_, config)
 
 	local function notificationCellParentDidResize(self)
 		self.Width = self.parent.Width
-		self.description.object.MaxWidth = self.parent.Width - self.when.Width - theme.paddingBig * 3
-
-		-- self.Height = math.max(self.description.Height, self.icon.Height + theme.paddingTiny + self.when.Height) + theme.padding * 2
-		-- self.Height = math.max(self.description.Height, self.op.Height) + theme.padding * 2
 
 		local infoHeight = self.when.Height
 		if self.icon then
@@ -120,7 +116,7 @@ mod.createModalContent = function(_, config)
 	end
 
 	local quadData = {}
-	local function getNotificationCell(notification)
+	local function getNotificationCell(notification, containerWidth)
 		local c = table.remove(recycledCells)
 		if c == nil then
 			c = ui:frameScrollCell()
@@ -172,13 +168,11 @@ mod.createModalContent = function(_, config)
 		})
 		c.when.Text = "" .. t .. units .. " ago"
 
+		c.description.object.MaxWidth = containerWidth - c.when.Width - theme.paddingBig * 3
 		c.description.Text = notification.message or ""
 
 		c.Height = math.max(c.description.Height, c.icon.Height + theme.paddingTiny + c.when.Height) + theme.padding * 2
 
-		-- TODO: Height should be computed in parent did resize
-		-- Scroll should get it after it's been computed...
-		-- Problem: some cells are not even added to parent if outside bounds
 		return c
 	end
 
@@ -195,9 +189,9 @@ mod.createModalContent = function(_, config)
 			right = 0,
 		},
 		cellPadding = theme.padding,
-		loadCell = function(index)
+		loadCell = function(index, _, container) -- TODO: use container to create cell with right constraints
 			if index <= nbLoadedNotifications then
-				local c = getNotificationCell(loadedNotifications[index])
+				local c = getNotificationCell(loadedNotifications[index], container.Width)
 				return c
 			end
 		end,
@@ -370,6 +364,15 @@ mod.createModalContent = function(_, config)
 			nbLoadedNotifications = #notifications
 			scroll:flush()
 			scroll:refresh()
+
+			systemApi:readNotifications({
+				callback = function(err)
+					if err == nil then
+						System.NotificationCount = 0 -- removes icon badge
+						LocalEvent:Send(LocalEvent.Name.NotificationCountDidChange)
+					end
+				end,
+			})
 		end)
 
 		table.insert(requests, req)
