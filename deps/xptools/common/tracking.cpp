@@ -202,8 +202,7 @@ void TrackingClient::removeDebugID() {
     if (credsFile == nullptr) {
         return;
     }
-    // getFileTextContent closes the file
-    char *content = fs::getFileTextContent(credsFile);
+    char *content = fs::getFileTextContentAndClose(credsFile);
     if (content == nullptr) {
         return;
     }
@@ -277,8 +276,7 @@ bool TrackingClient::_getUserAccountID(std::string &accountID) const {
     if (credsFile == nullptr) {
         return false;
     }
-    // getFileTextContent closes the file
-    char *content = fs::getFileTextContent(credsFile);
+    char *content = fs::getFileTextContentAndClose(credsFile);
     if (content == nullptr) {
         return false;
     }
@@ -329,8 +327,7 @@ bool TrackingClient::_getDebugID(std::string &debugID) const {
         // Try to create a credentials.json file with debugID in it.
         return this->_createCredentialsJsonWithDebugID(debugID);
     }
-    // getFileTextContent closes the file
-    char *content = fs::getFileTextContent(credsFile);
+    char *content = fs::getFileTextContentAndClose(credsFile);
     if (content == nullptr) {
         return false;
     }

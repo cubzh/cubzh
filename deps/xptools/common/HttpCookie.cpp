@@ -216,8 +216,7 @@ bool CookieStore::_loadFromDisk() {
         return false;
     }
     std::string jsonStr;
-    const bool ok = vx::fs::getFileTextContentAsString(fd, jsonStr);
-    fclose(fd);
+    const bool ok = vx::fs::getFileTextContentAsStringAndClose(fd, jsonStr);
     fd = nullptr;
     if (ok == false) {
         return false;

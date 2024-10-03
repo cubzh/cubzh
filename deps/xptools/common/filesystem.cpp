@@ -55,8 +55,8 @@ void *vx::fs::getFileContent(FILE *fp, size_t *outDataSize) {
 }
 
 /// Returns a null-terminated string containing the content of a text file.
-/// @param fd a valid FILE pointer.
-char *vx::fs::getFileTextContent(FILE *fd) {
+/// @param fd a valid FILE pointer, closed by this function
+char *vx::fs::getFileTextContentAndClose(FILE *fd) {
     if (fd == nullptr) {
         return nullptr;
     }
@@ -84,8 +84,8 @@ char *vx::fs::getFileTextContent(FILE *fd) {
     return textContent;
 }
 
-bool vx::fs::getFileTextContentAsString(FILE *fd, std::string &textContent) {
-    char *text = getFileTextContent(fd);
+bool vx::fs::getFileTextContentAsStringAndClose(FILE *fd, std::string &textContent) {
+    char *text = getFileTextContentAndClose(fd);
     if (text == nullptr) {
         return false;
     }
