@@ -24,36 +24,18 @@
 namespace vx {
 namespace notification {
 
-int badgeCount() {
-#if TARGET_OS_IPHONE
-    return static_cast<int>([UIApplication sharedApplication].applicationIconBadgeNumber);
-#elif TARGET_OS_MAC
-    __block int count = 0;
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-
-    [[UNUserNotificationCenter currentNotificationCenter] getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
-        count = static_cast<int>(notifications.count);
-        dispatch_semaphore_signal(semaphore);
-    }];
-
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    return count;
-#else
-    return 0;
-#endif
-}
-
 void setBadgeCount(int count) {
-#if TARGET_OS_IPHONE
     // Ensure count is non-negative
     count = MAX(count, 0);
+#if TARGET_OS_IPHONE
     [UIApplication sharedApplication].applicationIconBadgeNumber = count;
 #elif TARGET_OS_MAC
-    // No matter the count -> remove badge.
-    // it's not possible yet to get the right number of notification in the Notification Center
-    // it doesn't match with what's been read within the app.
-    // We would need to mark notifications as read by ID, but the server doesn't return that kind of information yet.
-    [[UNUserNotificationCenter currentNotificationCenter] removeAllDeliveredNotifications];
+    if (count == 0) {
+        [[NSApp dockTile] setBadgeLabel:@""];
+    } else {
+        [[NSApp dockTile] setBadgeLabel:[NSString stringWithFormat:@"%d", count]];
+        [[NSApp dockTile] display];
+    }
 #endif
 }
 
