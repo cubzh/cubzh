@@ -831,23 +831,23 @@ function avatar_load(self, config)
 			local eyesColor = mod.eyeColors[eyesColorIndex]
 
 			-- override colors
-			if data.skinColorIndex == -1 and data.skinColor then
+			if data.skinColorIndex == 0 and data.skinColor then
 				skinColor =
 					Color(math.floor(data.skinColor.r), math.floor(data.skinColor.g), math.floor(data.skinColor.b))
 			end
-			if data.skinColorIndex == -1 and data.skinColor2 then
+			if data.skinColorIndex == 0 and data.skinColor2 then
 				skinColor2 =
 					Color(math.floor(data.skinColor2.r), math.floor(data.skinColor2.g), math.floor(data.skinColor2.b))
 			end
-			if data.skinColorIndex == -1 and data.noseColor then
+			if data.skinColorIndex == 0 and data.noseColor then
 				noseColor =
 					Color(math.floor(data.noseColor.r), math.floor(data.noseColor.g), math.floor(data.noseColor.b))
 			end
-			if data.skinColorIndex == -1 and data.mouthColor then
+			if data.skinColorIndex == 0 and data.mouthColor then
 				mouthColor =
 					Color(math.floor(data.mouthColor.r), math.floor(data.mouthColor.g), math.floor(data.mouthColor.b))
 			end
-			if data.eyesColorIndex == -1 and data.eyesColor then
+			if data.eyesColorIndex == 0 and data.eyesColor then
 				eyesColor =
 					Color(math.floor(data.eyesColor.r), math.floor(data.eyesColor.g), math.floor(data.eyesColor.b))
 			end
