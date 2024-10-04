@@ -1205,9 +1205,9 @@ function home()
 	local tickListener
 
 	local notificationsReq
-	local notificationCountListener
+	local notificationCountListeners
 	local friendNotificationsReq
-	local friendNotificationCountListener
+	local friendNotificationCountListeners
 
 	_home.pause = function()
 		avatarCameraFollowHomeScroll = false
@@ -2228,9 +2228,12 @@ function home()
 							})
 						end
 
-						if notificationCountListener == nil then
-							notificationCountListener =
-								LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshBellCount)
+						if notificationCountListeners == nil then
+							notificationCountListeners = {}
+							local l = LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshBellCount)
+							table.insert(notificationCountListeners, l)
+							l = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, refreshBellCount)
+							table.insert(notificationCountListeners, l)
 						end
 
 						refreshBellCount()
@@ -2466,9 +2469,12 @@ function home()
 			})
 		end
 
-		if friendNotificationCountListener == nil then
-			friendNotificationCountListener =
-				LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshFriendsBadge)
+		if friendNotificationCountListeners == nil then
+			friendNotificationCountListeners = {}
+			local l = LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshFriendsBadge)
+			table.insert(friendNotificationCountListeners, l)
+			l = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, refreshFriendsBadge)
+			table.insert(friendNotificationCountListeners, l)
 		end
 
 		refreshFriendsBadge()
@@ -2520,18 +2526,22 @@ function home()
 			notificationsReq:Cancel()
 			notificationsReq = nil
 		end
-		if notificationCountListener ~= nil then
-			notificationCountListener:Cancel()
-			notificationCountListener = nil
+		if notificationCountListeners ~= nil then
+			for _, l in ipairs(notificationCountListeners) do
+				l:Cancel()
+			end
+			notificationCountListeners = nil
 		end
 
 		if friendNotificationsReq ~= nil then
 			friendNotificationsReq:Cancel()
 			friendNotificationsReq = nil
 		end
-		if friendNotificationCountListener ~= nil then
-			friendNotificationCountListener:Cancel()
-			friendNotificationCountListener = nil
+		if friendNotificationCountListeners ~= nil then
+			for _, l in ipairs(friendNotificationCountListeners) do
+				l:Cancel()
+			end
+			friendNotificationCountListeners = nil
 		end
 
 		root:remove()
