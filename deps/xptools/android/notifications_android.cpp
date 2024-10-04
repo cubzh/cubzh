@@ -102,11 +102,37 @@ void _javaRequestFirebaseToken() {
     }
 }
 
+void _setBadgeCount(int count) {
+    bool just_attached = false;
+    vx::tools::JniMethodInfo methodInfo;
+
+    if (!vx::tools::JNIUtils::getInstance()->getMethodInfo(&just_attached,
+                                                           &methodInfo,
+                                                           "com/voxowl/tools/Notifications",
+                                                           "setBadgeCount",
+                                                           "(I)V")) {
+        __android_log_print(ANDROID_LOG_ERROR,
+                            "Cubzh",
+                            "%s %d: error to get methodInfo",
+                            __FILE__,
+                            __LINE__);
+        assert(false); // crash the program
+    }
+
+    methodInfo.env->CallStaticVoidMethod(methodInfo.classID, methodInfo.methodID, count);
+
+    methodInfo.env->DeleteLocalRef(methodInfo.classID);
+
+    if (just_attached) {
+        vx::tools::JNIUtils::getInstance()->getJavaVM()->DetachCurrentThread();
+    }
+}
+
 namespace vx {
 namespace notification {
 
 void setBadgeCount(int count) {
-    // TODO: implement me!
+    _setBadgeCount(count);
 }
 
 void remotePushAuthorizationStatus(StatusCallback callback) {
