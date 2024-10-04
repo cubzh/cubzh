@@ -354,28 +354,31 @@ mod.createModalContent = function(_, config)
 			appDidBecomeActiveListener = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, function()
 				functions.refreshNotificationBtn()
 			end)
+
+			-- NOTE: didBecomeActive is called twice
+			-- calling getNotifications within this block to avoid doing it twice.
+			-- TODO: fix this `didBecomeActive` issue, could be an important optimization in other modals
+			req = systemApi:getNotifications({}, function(notifications, err)
+				if err then
+					return
+				end
+				loadedNotifications = notifications
+				nbLoadedNotifications = #notifications
+				scroll:flush()
+				scroll:refresh()
+
+				systemApi:readNotifications({
+					callback = function(err)
+						if err == nil then
+							System.NotificationCount = 0 -- removes icon badge
+							LocalEvent:Send(LocalEvent.Name.NotificationCountDidChange)
+						end
+					end,
+				})
+			end)
+
+			table.insert(requests, req)
 		end
-
-		req = systemApi:getNotifications({}, function(notifications, err)
-			if err then
-				return
-			end
-			loadedNotifications = notifications
-			nbLoadedNotifications = #notifications
-			scroll:flush()
-			scroll:refresh()
-
-			systemApi:readNotifications({
-				callback = function(err)
-					if err == nil then
-						System.NotificationCount = 0 -- removes icon badge
-						LocalEvent:Send(LocalEvent.Name.NotificationCountDidChange)
-					end
-				end,
-			})
-		end)
-
-		table.insert(requests, req)
 	end
 
 	return content
