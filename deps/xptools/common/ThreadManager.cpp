@@ -46,5 +46,6 @@ bool ThreadManager::isMainThreadSet() const {
 }
 
 bool ThreadManager::isMainThreadOrMainThreadNotSet() const {
+    // vxlog_warning(">>> set: %s main: %s", _mainThreadIDIsSet ? "YES" : "NO", std::this_thread::get_id() == _mainThreadID ? "YES" : "NO");
     return _mainThreadIDIsSet == false || std::this_thread::get_id() == _mainThreadID;
 }

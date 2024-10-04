@@ -32,10 +32,21 @@ typedef enum {
     NotificationAuthorizationResponse_NotSupported // when not supported on the platform
 } NotificationAuthorizationResponse;
 
+typedef std::function<void(NotificationAuthorizationStatus)> StatusCallback;
 typedef std::function<void(NotificationAuthorizationResponse)> AuthorizationRequestCallback;
 
-// Returns current authorization status for push notifications.
-NotificationAuthorizationStatus remotePushAuthorizationStatus();
+//
+void setNeedsToPushToken(bool b);
+
+//
+bool needsToPushToken();
+
+
+// Sets badge count
+void setBadgeCount(int count);
+
+// Triggers callback with current status
+void remotePushAuthorizationStatus(StatusCallback callback);
 
 // ! \\ returned char* should be freed
 // ! \\ can return nullptr
@@ -44,7 +55,7 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus();
 // "set" -> user did approve or deny (ask system, can be updated anytime in the settings)
 char* readNotificationStatusFile();
 
-// Should be called when user explicitely postpones
+// Should be called when user explicitly postpones
 // remote push notification authorization.
 // Returns true on success (saving information in .notificationStatus file)
 bool postponeRemotePushAuthorization();
@@ -58,11 +69,6 @@ void requestRemotePushAuthorization(AuthorizationRequestCallback callback);
 // Request remote push token, only if authorized
 // This should be done periodically as the token can expire.
 void requestRemotePushToken();
-
-// Same as requestRemotePushAuthorization, but only triggers system popup
-// if auth status in not determined.
-// Triggers callback with proper response otherwise, not asking user for anything.
-void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback);
 
 void scheduleLocalNotification(const std::string &title,
                                const std::string &body,

@@ -48,6 +48,23 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 	content.title = "Friends"
 	content.icon = "😛"
 
+	content.didBecomeActive = function()
+		systemApi:readNotifications({
+			category = "social",
+			callback = function(err)
+				if err == nil then
+					LocalEvent:Send(LocalEvent.Name.NotificationCountDidChange)
+					systemApi:getNotifications({ returnCount = true, read = false }, function(count, err)
+						if err == nil then
+							-- NOTE: on macOS, setting count to whatever value removes the badge
+							System.NotificationCount = count
+						end
+					end)
+				end
+			end,
+		})
+	end
+
 	local scroll
 	local searchText
 	local loading = true

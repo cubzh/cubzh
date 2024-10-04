@@ -521,9 +521,6 @@ shareBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 shareBtn:setParent(actionColumn)
 
 shareBtn.onRelease = function()
-	-- if btnLinkTimer then
-	-- 	btnLinkTimer:Cancel()
-	-- end
 	Dev:CopyToClipboard(Dev.ServerURL)
 
 	if shareBtnConfirmation ~= nil then
@@ -745,6 +742,214 @@ actionColumn.parentDidResize = function(_)
 end
 actionColumn:parentDidResize()
 
+-- NOTIFICATION
+-- only one object, recycled
+
+local notificationIconSize = 25
+local notificationIconPadding = theme.paddingBig
+local notificationPadding = theme.padding
+local notificationBottomPadding = 2
+local noticationTimer
+local notificationTick
+
+notificationFrame = ui:frameNotification()
+notificationFrame.Width = 200
+notificationFrame.Height = 100
+
+local notificationText = ui:createText("text", { size = "small", color = Color.White })
+notificationText.object.MaxWidth = 300
+notificationText:setParent(notificationFrame)
+
+local notificationIcon
+
+local previousCategory
+local notificationIconGeneric
+local notificationIconMoney
+local notificationIconLike
+local notificationIconSocial
+local function refreshNotificationIcon(category)
+	category = category or "generic"
+	if category == previousCategory then
+		return
+	end
+	previousCategory = category
+	if notificationIcon ~= nil then
+		notificationIcon:setParent(nil)
+	end
+	if category == "money" then
+		if notificationIconMoney == nil then
+			notificationIconMoney =
+				ui:createShape(bundle:Shape("shapes/pezh_coin_2"), { spherized = false, doNotFlip = true })
+		end
+		notificationIcon = notificationIconMoney
+	elseif category == "like" then
+		if notificationIconLike == nil then
+			notificationIconLike = ui:createShape(bundle:Shape("shapes/heart"), { spherized = false, doNotFlip = true })
+		end
+		notificationIcon = notificationIconLike
+	elseif category == "social" then
+		if notificationIconSocial == nil then
+			notificationIconSocial =
+				ui:createShape(bundle:Shape("shapes/friends_icon"), { spherized = false, doNotFlip = true })
+		end
+		notificationIcon = notificationIconSocial
+	else
+		if notificationIconGeneric == nil then
+			notificationIconGeneric =
+				ui:createShape(bundle:Shape("shapes/alert_badge"), { spherized = false, doNotFlip = true })
+		end
+		notificationIcon = notificationIconGeneric
+	end
+
+	notificationIcon:setParent(nil)
+	notificationIcon.Width = notificationIconSize
+	notificationIcon.Height = notificationIconSize
+	notificationIcon:setParent(notificationFrame)
+end
+
+function absNodePos(node)
+	local p = node.pos:Copy()
+	local parent = node.parent
+	while parent ~= nil do
+		p.X = p.X + parent.pos.X
+		p.Y = p.Y + parent.pos.Y
+		parent = parent.parent
+	end
+	return p
+end
+
+function layoutNotification()
+	local parent = notificationFrame.parent
+	if parent == nil then
+		return
+	end
+
+	-- display notification between visible top bar icons
+	local startX = Screen.SafeArea.Left
+	local endX = Screen.Width - Screen.SafeArea.Right
+
+	if chatBtn:isVisible() then
+		local p = absNodePos(textBubbleShape)
+		startX = p.X + textBubbleShape.Width + PADDING
+	end
+
+	if pezhBtn:isVisible() then
+		local p = absNodePos(pezhShape)
+		endX = p.X - PADDING
+	elseif connBtn:isVisible() then
+		local p = absNodePos(connShape)
+		endX = p.X - PADDING
+	elseif cubzhBtn:isVisible() then
+		local shape = cubzhBtnShape or settingsIcon
+		local p = absNodePos(shape)
+		endX = p.X - PADDING
+	end
+
+	local availableWidth = endX - startX
+	local centerX = startX + availableWidth * 0.5
+
+	notificationText.object.MaxWidth = availableWidth - notificationIconSize - notificationIconPadding * 3 - 20 -- extra margin
+
+	notificationFrame.Height = math.max(
+		notificationIconSize + notificationPadding * 4,
+		notificationText.Height + notificationPadding * 2
+	) + notificationBottomPadding
+
+	notificationFrame.Width = notificationIconSize
+		+ notificationText.Width
+		+ notificationIconPadding * 2
+		+ notificationIconPadding
+
+	if notificationIcon ~= nil then
+		notificationIcon.pos = {
+			notificationIconPadding,
+			(notificationFrame.Height - notificationBottomPadding) * 0.5
+				- notificationIconSize * 0.5
+				+ notificationBottomPadding,
+		}
+	end
+
+	local y = (notificationFrame.Height - notificationBottomPadding) * 0.5
+		- notificationText.Height * 0.5
+		+ notificationBottomPadding
+
+	notificationText.pos = { notificationIconSize + notificationIconPadding * 2, y }
+
+	notificationFrame.pos = {
+		centerX - notificationFrame.Width * 0.5,
+		parent.Height - System.SafeAreaTop - notificationFrame.Height - theme.paddingTiny,
+	}
+end
+
+function bumpNotification()
+	ease:cancel(notificationFrame.pos)
+	local posY = notificationFrame.pos.Y
+	notificationFrame.pos.Y = notificationFrame.pos.Y + 100
+	ease:outBack(notificationFrame.pos, 0.3).Y = posY
+end
+
+function hideNotification()
+	notificationFrame.onRelease = nil
+	noticationTimer:Cancel()
+	noticationTimer = nil
+	ease:linear(notificationFrame.pos, 0.2, {
+		onDone = function()
+			notificationFrame:setParent(nil)
+			notificationTick:Remove()
+			notificationTick = nil
+		end,
+	}).Y =
+		Screen.Height
+end
+
+notificationFrame.parentDidResize = function()
+	layoutNotification()
+end
+
+notificationFrame:setParent(nil)
+
+function showNotification(_, text, category)
+	if noticationTimer ~= nil then
+		noticationTimer:Cancel()
+		noticationTimer = nil
+	end
+	notificationText.Text = text
+
+	refreshNotificationIcon(category)
+
+	if category == "money" then
+		sfx("coin_1", { Volume = 0.5, Pitch = 1.0, Spatialized = false })
+	else
+		sfx("buttonpositive_3", { Volume = 0.5, Pitch = 1.0, Spatialized = false })
+	end
+
+	notificationFrame.onRelease = function()
+		hideNotification()
+		if category == "money" then
+			pezhBtn:onRelease()
+		end
+	end
+
+	if notificationFrame.parent ~= background then
+		notificationFrame:setParent(background)
+		notificationFrame.pos.Z = -50
+	else
+		layoutNotification()
+	end
+	bumpNotification()
+	noticationTimer = Timer(4.0, function()
+		hideNotification()
+	end)
+
+	if notificationTick == nil then
+		notificationTick = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			if notificationIcon ~= nil then
+				notificationIcon.pivot.Rotation = notificationIcon.pivot.Rotation * Rotation(0, dt * 3.0, 0)
+			end
+		end)
+	end
+end
+
 -- TOP BAR
 
 topBar = ui:createFrame(Color(0, 0, 0, 0.7))
@@ -964,7 +1169,7 @@ chatBtn:hide()
 pezhBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 pezhBtn:setParent(topBar)
 
-pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin_2", { spherized = false, doNotFlip = true }))
+pezhShape = ui:createShape(bundle:Shape("shapes/pezh_coin_2"), { spherized = false, doNotFlip = true })
 pezhShape:setParent(pezhBtn)
 pezhShape.parentDidResize = btnContentParentDidResize
 
@@ -1853,6 +2058,10 @@ LocalEvent:Listen(LocalEvent.Name.ServerConnectionStart, function()
 	if Client.ConnectingToServer then
 		Client.ConnectingToServer()
 	end
+end)
+
+LocalEvent:Listen(LocalEvent.Name.DidReceivePushNotification, function(title, body, category, _)
+	showNotification(title, body, category)
 end)
 
 -- sign up / sign in flow

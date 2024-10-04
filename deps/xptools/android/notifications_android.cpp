@@ -102,10 +102,40 @@ void _javaRequestFirebaseToken() {
     }
 }
 
-namespace vx {
-    namespace notification {
+void _setBadgeCount(int count) {
+    bool just_attached = false;
+    vx::tools::JniMethodInfo methodInfo;
 
-NotificationAuthorizationStatus remotePushAuthorizationStatus() {
+    if (!vx::tools::JNIUtils::getInstance()->getMethodInfo(&just_attached,
+                                                           &methodInfo,
+                                                           "com/voxowl/tools/Notifications",
+                                                           "setBadgeCount",
+                                                           "(I)V")) {
+        __android_log_print(ANDROID_LOG_ERROR,
+                            "Cubzh",
+                            "%s %d: error to get methodInfo",
+                            __FILE__,
+                            __LINE__);
+        assert(false); // crash the program
+    }
+
+    methodInfo.env->CallStaticVoidMethod(methodInfo.classID, methodInfo.methodID, count);
+
+    methodInfo.env->DeleteLocalRef(methodInfo.classID);
+
+    if (just_attached) {
+        vx::tools::JNIUtils::getInstance()->getJavaVM()->DetachCurrentThread();
+    }
+}
+
+namespace vx {
+namespace notification {
+
+void setBadgeCount(int count) {
+    _setBadgeCount(count);
+}
+
+void remotePushAuthorizationStatus(StatusCallback callback) {
     std::string _status = "";
 
     char *s = readNotificationStatusFile();
@@ -131,45 +161,45 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus() {
             status = NotificationAuthorizationStatus_NotDetermined;
         }
     }
-    return status;
+    callback(status);
 }
 
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {
-            // store callback
-            storedCallback = callback;
-            _javaRequestRemotePush();
-        }
+    // store callback
+    storedCallback = callback;
+    _javaRequestRemotePush();
+}
 
-        void requestRemotePushToken() {
-            if (remotePushAuthorizationStatus() == NotificationAuthorizationStatus_Authorized) {
-                _javaRequestFirebaseToken();
-            }
+void requestRemotePushToken() {
+    remotePushAuthorizationStatus([](NotificationAuthorizationStatus status){
+        if (status == NotificationAuthorizationStatus_Authorized) {
+            // TODO: check we are in the correct thread?
+            _javaRequestFirebaseToken();
         }
+    });
+}
 
-        void requestRemotePushAuthorizationIfAuthStatusNotDetermined(AuthorizationRequestCallback callback) {
-            // TODO: !!!
-        }
+void scheduleLocalNotification(const std::string &title,
+                               const std::string &body,
+                               const std::string &identifier,
+                               int days,
+                               int hours,
+                               int minutes,
+                               int seconds) {
+    __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
+}
 
-        void scheduleLocalNotification(const std::string &title,
-                                       const std::string &body,
-                                       const std::string &identifier,
-                                       int days,
-                                       int hours,
-                                       int minutes,
-                                       int seconds) {
-            __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
-        }
+void cancelLocalNotification(const std::string &identifier) {
+    __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
+}
 
-        void cancelLocalNotification(const std::string &identifier) {
-            __android_log_print(ANDROID_LOG_ERROR,"Cubzh","%s %d: %s is not implemented", __FILE__, __LINE__, __FUNCTION__);
-        }
-
-        // Android-specific
-        void didReplyToNotificationPermissionPopup(NotificationAuthorizationResponse response) {
-            if (storedCallback != nullptr) {
-                storedCallback(response);
-            }
-        }
-
+// Android-specific
+void didReplyToNotificationPermissionPopup(NotificationAuthorizationResponse response) {
+    if (storedCallback != nullptr) {
+        storedCallback(response);
     }
+}
+
+
+}
 }

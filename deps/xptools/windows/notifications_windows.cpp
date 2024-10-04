@@ -10,9 +10,6 @@ NotificationAuthorizationStatus remotePushAuthorizationStatus() {
 
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
 
-void requestRemotePushAuthorizationIfAuthStatusNotDetermined(
-    AuthorizationRequestCallback callback) {}
-
 void requestRemotePushToken() {}
 
 void scheduleLocalNotification(const std::string& title,

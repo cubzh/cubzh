@@ -1221,6 +1221,42 @@ function createUI(system)
 		})
 	end
 
+	local frameNotificationQuadData
+	ui.frameNotification = function(self)
+		if self ~= ui then
+			error("ui:frameNotification(): use `:`", 2)
+		end
+		if frameNotificationQuadData == nil then
+			frameNotificationQuadData = Data:FromBundle("images/notification.png")
+		end
+		return ui.frame(self, {
+			image = {
+				data = frameNotificationQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				alpha = true,
+			},
+		})
+	end
+
+	local frameNotificationBadgeQuadData
+	ui.frameNotificationBadge = function(self)
+		if self ~= ui then
+			error("ui:frameNotification(): use `:`", 2)
+		end
+		if frameNotificationBadgeQuadData == nil then
+			frameNotificationBadgeQuadData = Data:FromBundle("images/notification_badge.png")
+		end
+		return ui.frame(self, {
+			image = {
+				data = frameNotificationBadgeQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				alpha = true,
+			},
+		})
+	end
+
 	local frameMaskWithRoundCornersQuadData
 	ui.frameMaskWithRoundCorners = function(self)
 		if self ~= ui then
@@ -2712,7 +2748,7 @@ function createUI(system)
 			local cell
 
 			if cellInfo == nil then
-				cell = config.loadCell(cellIndex, config.userdata)
+				cell = config.loadCell(cellIndex, config.userdata, container)
 				if cell == nil then
 					-- reached the end of cells
 					return nil
@@ -2854,7 +2890,7 @@ function createUI(system)
 					then
 						cell = cells[cellIndex]
 						if cell == nil then
-							cell = config.loadCell(cellIndex, config.userdata)
+							cell = config.loadCell(cellIndex, config.userdata, container)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then
@@ -2918,7 +2954,7 @@ function createUI(system)
 							-- 	"[" .. cellInfo.left .. " - " .. cellInfo.right .. "]",
 							-- 	"[" .. loadLeft .. " - " .. loadRight .. "]"
 							-- )
-							cell = config.loadCell(cellIndex, config.userdata)
+							cell = config.loadCell(cellIndex, config.userdata, container)
 							-- here if cell == nil, it means cell already loaded once now gone
 							-- let's just not display anything in this area.
 							if cell ~= nil then

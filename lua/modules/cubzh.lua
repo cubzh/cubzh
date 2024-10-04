@@ -1204,6 +1204,11 @@ function home()
 	local root
 	local tickListener
 
+	local notificationsReq
+	local notificationCountListeners
+	local friendNotificationsReq
+	local friendNotificationCountListeners
+
 	_home.pause = function()
 		avatarCameraFollowHomeScroll = false
 		avatar():setInternalDragListener(true)
@@ -2205,22 +2210,36 @@ function home()
 							Client:HapticFeedback()
 						end
 
-						-- bell.onRelease = function()
-						-- Menu:ShowNotifications()
-						-- end
+						local badge = require("notifications"):createBadge({ count = 0 })
+						badge:setParent(bell)
 
-						local comingSoonAlert
-						bell.onRelease = function(_)
-							if comingSoonAlert ~= nil then
-								return
+						local function refreshBellCount()
+							if notificationsReq ~= nil then
+								notificationsReq:Cancel()
 							end
-							comingSoonAlert =
-								require("alert"):create("Quick access to your notifications is coming soon! ❗️")
+							notificationsReq = require("user"):getUnreadNotificationCount({
+								callback = function(count, err)
+									notificationsReq = nil
+									if err ~= nil then
+										return
+									end
+									badge:setCount(count)
+								end,
+							})
+						end
 
-							comingSoonAlert:setPositiveCallback("OK", function()
-								comingSoonAlert:remove()
-								comingSoonAlert = nil
-							end)
+						if notificationCountListeners == nil then
+							notificationCountListeners = {}
+							local l = LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshBellCount)
+							table.insert(notificationCountListeners, l)
+							l = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, refreshBellCount)
+							table.insert(notificationCountListeners, l)
+						end
+
+						refreshBellCount()
+
+						bell.onRelease = function()
+							Menu:ShowNotifications()
 						end
 
 						bell:setParent(profileCell)
@@ -2388,6 +2407,7 @@ function home()
 			icon.Width = 20
 			icon.Height = 20
 			icon:setParent(content)
+			btn.icon = icon
 
 			local title = ui:createText(text, { size = "small", color = Color.White })
 			title:setParent(content)
@@ -2430,6 +2450,35 @@ function home()
 			Menu:ShowFriends()
 		end
 
+		local badge = require("notifications"):createBadge({ count = 0 })
+		badge:setParent(btnFriends.icon)
+
+		local function refreshFriendsBadge()
+			if friendNotificationsReq ~= nil then
+				friendNotificationsReq:Cancel()
+			end
+			friendNotificationsReq = require("user"):getUnreadNotificationCount({
+				category = "social",
+				callback = function(count, err)
+					friendNotificationsReq = nil
+					if err ~= nil then
+						return
+					end
+					badge:setCount(count)
+				end,
+			})
+		end
+
+		if friendNotificationCountListeners == nil then
+			friendNotificationCountListeners = {}
+			local l = LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshFriendsBadge)
+			table.insert(friendNotificationCountListeners, l)
+			l = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, refreshFriendsBadge)
+			table.insert(friendNotificationCountListeners, l)
+		end
+
+		refreshFriendsBadge()
+
 		btnCreate.onRelease = function()
 			Menu:ShowCreations()
 		end
@@ -2471,6 +2520,28 @@ function home()
 		if tickListener then
 			tickListener:Remove()
 			tickListener = nil
+		end
+
+		if notificationsReq ~= nil then
+			notificationsReq:Cancel()
+			notificationsReq = nil
+		end
+		if notificationCountListeners ~= nil then
+			for _, l in ipairs(notificationCountListeners) do
+				l:Cancel()
+			end
+			notificationCountListeners = nil
+		end
+
+		if friendNotificationsReq ~= nil then
+			friendNotificationsReq:Cancel()
+			friendNotificationsReq = nil
+		end
+		if friendNotificationCountListeners ~= nil then
+			for _, l in ipairs(friendNotificationCountListeners) do
+				l:Cancel()
+			end
+			friendNotificationCountListeners = nil
 		end
 
 		root:remove()
