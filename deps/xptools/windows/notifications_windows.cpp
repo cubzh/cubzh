@@ -4,8 +4,8 @@
 namespace vx {
 namespace notification {
 
-NotificationAuthorizationStatus remotePushAuthorizationStatus() {
-    return NotificationAuthorizationStatus_NotSupported;
+void remotePushAuthorizationStatus(StatusCallback callback) {
+    callback(NotificationAuthorizationStatus_NotSupported);
 }
 
 void requestRemotePushAuthorization(AuthorizationRequestCallback callback) {}
@@ -21,6 +21,8 @@ void scheduleLocalNotification(const std::string& title,
     int seconds) {}
 
 void cancelLocalNotification(const std::string &identifier) {}
+
+void setBadgeCount(int count) {}
 
 } // namespace notification
 } // namespace vx

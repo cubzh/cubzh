@@ -5,8 +5,8 @@ namespace vx {
     namespace notification {
 
 // Returns current authorization status for push notifications.
-NotificationAuthorizationStatus remotePushAuthorizationStatus() {
-	return NotificationAuthorizationStatus_NotSupported;
+void remotePushAuthorizationStatus(StatusCallback callback) {
+	callback(NotificationAuthorizationStatus_NotSupported);
 }
 
 // Shows system popup requesting user's authorization to receive push notifications
@@ -23,6 +23,8 @@ void scheduleLocalNotification(const std::string &title,
                                int seconds) {}
 
 void cancelLocalNotification(const std::string &identifier) {}
+
+void setBadgeCount(int count) {}
 
     }
 }

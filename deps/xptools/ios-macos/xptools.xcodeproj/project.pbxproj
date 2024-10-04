@@ -113,6 +113,10 @@
 		10974C8B244D690C008153FE /* filesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10974C89244D690C008153FE /* filesystem.mm */; };
 		10974C8F244D6AB1008153FE /* device-ios.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10974C8C244D6916008153FE /* device-ios.mm */; };
 		10974C90244D6D69008153FE /* device.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10974C88244D66B6008153FE /* device.hpp */; };
+		10C541292CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
+		10C5412A2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
+		10C5412B2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
+		10C5412C2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
 		10C63D2C246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		10C63D2D246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; };
 		10C63D2E246C4F61003DEC3E /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
@@ -319,6 +323,7 @@
 		10974C88244D66B6008153FE /* device.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = device.hpp; sourceTree = "<group>"; };
 		10974C89244D690C008153FE /* filesystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = filesystem.mm; sourceTree = "<group>"; };
 		10974C8C244D6916008153FE /* device-ios.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "device-ios.mm"; sourceTree = "<group>"; };
+		10C541282CA70FBD008CB6C7 /* HttpRequest.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HttpRequest.mm; sourceTree = "<group>"; };
 		10C63D2A246C4F61003DEC3E /* strings.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = strings.cpp; sourceTree = "<group>"; };
 		10C63D2B246C4F61003DEC3E /* strings.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = strings.hpp; sourceTree = "<group>"; };
 		10C63D2F246C59FD003DEC3E /* strings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = strings.h; sourceTree = "<group>"; };
@@ -559,6 +564,7 @@
 				10974C8C244D6916008153FE /* device-ios.mm */,
 				8534FDD5240E97D5004B3494 /* device-macos.mm */,
 				10974C89244D690C008153FE /* filesystem.mm */,
+				10C541282CA70FBD008CB6C7 /* HttpRequest.mm */,
 				850623592877898C00B270A6 /* miniaudio_impl.mm */,
 				85BD47D62A5DABAE00556C6E /* notifications.mm */,
 				855CB5E4287320E200072D5F /* process-ios.cpp */,
@@ -878,6 +884,7 @@
 				102145292C75E0C000099E38 /* HttpRequest.cpp in Sources */,
 				1021452A2C75E0C000099E38 /* OperationQueue.cpp in Sources */,
 				1021452B2C75E0C000099E38 /* URL.cpp in Sources */,
+				10C5412C2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */,
 				1021452C2C75E0C000099E38 /* Connection.cpp in Sources */,
 				1021452D2C75E0C000099E38 /* web-macos.mm in Sources */,
 				1021452E2C75E0C000099E38 /* process.cpp in Sources */,
@@ -913,6 +920,7 @@
 				10847CC6270EE8C6006A5E91 /* device_c.cpp in Sources */,
 				10847CC8270EE8C6006A5E91 /* crypto.cpp in Sources */,
 				10847CC9270EE8C6006A5E91 /* vxlog.mm in Sources */,
+				10C5412B2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */,
 				85471B4227E3E4AA000575D5 /* LocalConnection.cpp in Sources */,
 				10EE2BC9272C098A00EC374C /* web-macos.mm in Sources */,
 				85BB0193279F3B56000F1B10 /* HttpRequest.cpp in Sources */,
@@ -962,6 +970,7 @@
 				85BB0190279F3B56000F1B10 /* HttpRequest.cpp in Sources */,
 				858ABB872A52F5CD007AE641 /* OperationQueue.cpp in Sources */,
 				85D52F6B29D9EE2900070F19 /* URL.cpp in Sources */,
+				10C541292CA70FBD008CB6C7 /* HttpRequest.mm in Sources */,
 				85471B4327E3E4AA000575D5 /* Connection.cpp in Sources */,
 				10EE2BC5272C091100EC374C /* web-macos.mm in Sources */,
 				1022D09928AFBC8E00C1F1E9 /* process.cpp in Sources */,
@@ -1005,6 +1014,7 @@
 				85BB0191279F3B56000F1B10 /* HttpRequest.cpp in Sources */,
 				858ABBC12A531836007AE641 /* OperationQueue.cpp in Sources */,
 				85D52F6C29D9EE2900070F19 /* URL.cpp in Sources */,
+				10C5412A2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */,
 				85471B4427E3E4AA000575D5 /* Connection.cpp in Sources */,
 				10974C8B244D690C008153FE /* filesystem.mm in Sources */,
 				1022D09728AFBC8E00C1F1E9 /* process.cpp in Sources */,
