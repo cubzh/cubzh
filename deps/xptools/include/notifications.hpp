@@ -35,6 +35,13 @@ typedef enum {
 typedef std::function<void(NotificationAuthorizationStatus)> StatusCallback;
 typedef std::function<void(NotificationAuthorizationResponse)> AuthorizationRequestCallback;
 
+//
+void setNeedsToPushToken(bool b);
+
+//
+bool needsToPushToken();
+
+
 // Sets badge count
 void setBadgeCount(int count);
 

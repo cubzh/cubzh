@@ -10,6 +10,18 @@
 #include "filesystem.hpp"
 #include "filesystem.h"
 
+void vx::notification::setNeedsToPushToken(bool b) {
+    if (b) {
+        c_writeStorageFileTextContent(".notificationNeedsToPushToken", "1");
+    } else {
+        c_removeStorageFile(".notificationNeedsToPushToken");
+    }
+}
+
+bool vx::notification::needsToPushToken() {
+    return c_storageFileExists(".notificationNeedsToPushToken", nullptr);
+}
+
 char* vx::notification::readNotificationStatusFile() {
     return c_readStorageFileTextContent(".notificationStatus");
 }

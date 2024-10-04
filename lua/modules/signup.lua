@@ -1754,6 +1754,9 @@ signup.startFlow = function(self, config)
 
 							System:NotificationGetStatus(function(status)
 								if Client.LoggedIn and status ~= "underdetermined" then
+									if status == "authorized" then
+										System:NotificationRefreshPushToken()
+									end
 									callLoginSuccess()
 								else
 									signupFlow:push(steps.createSignUpOrLoginStep())
