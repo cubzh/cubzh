@@ -6,7 +6,7 @@ namespace vx {
 
 void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
     HttpRequest::_requestsMutex.lock();
-    HttpRequest::_requestsWaiting.push(strongSelf);
+    HttpRequest::_requestsWaiting.push(httpReq);
     HttpRequest::_requestsMutex.unlock();
     HttpRequest::_sendNextRequest(nullptr);
 }
@@ -19,8 +19,8 @@ void HttpRequest::_cancel(HttpRequest_SharedPtr httpReq) {
     //        // req is not flying
     //    }
 
-    if (strongReq != nullptr) {
-        HttpRequest::_sendNextRequest(strongReq);
+    if (httpReq != nullptr) {
+        HttpRequest::_sendNextRequest(httpReq);
     }
 }
 
