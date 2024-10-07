@@ -2492,6 +2492,10 @@ function createUI(system)
 			btn.pos.X = minPos + d * percentage - btn.Width * 0.5
 		end
 
+		node.setValue = function(_, v)
+			setValue(v)
+		end
+
 		local function setLocalX(x)
 			local minPos = btn.Width * 0.5
 			local maxPos = node.Width - btn.Width * 0.5
