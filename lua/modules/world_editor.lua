@@ -2,7 +2,10 @@ local worldEditor = {}
 
 sfx = require("sfx")
 ease = require("ease")
+
+local server = require("world_editor_server")
 local sendToServer = require("world_editor_server").sendToServer
+
 local worldEditorCommon = require("world_editor_common")
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
 
@@ -1356,6 +1359,93 @@ initDefaultMode = function()
 		loading:setParent(ambiencePanel)
 		loading:hide()
 
+		local cell = ui:frame()
+
+		local sunLabel = ui:createText("☀️ Sun", { size = "small", color = Color.White })
+		sunLabel:setParent(cell)
+
+		local sunRotationYLabel = ui:createText("0  ", { font = Font.Pixel, size = "default", color = Color.White })
+		sunRotationYLabel:setParent(cell)
+
+		-- local ambience = server.getAmbience()
+
+		local sunRotationSlider = ui:slider({
+			defaultValue = 180, -- TODO: fix ambience first then get current value
+			min = 0,
+			max = 360,
+			step = 1,
+			button = {
+				content = "  ",
+			},
+			onValueChange = function(v)
+				sunRotationYLabel.Text = "" .. v
+				local ambience = server.getAmbience()
+				if ambience.sun.rotation then
+					ambience.sun.rotation[2] = math.rad(v)
+					sendToServer(events.P_SET_AMBIENCE, ambience)
+					require("ai_ambience"):loadGeneration(ambience)
+				end
+			end,
+		})
+		sunRotationSlider:setParent(cell)
+
+		local sunRotationXLabel = ui:createText("0  ", { font = Font.Pixel, size = "default", color = Color.White })
+		sunRotationXLabel:setParent(cell)
+
+		local sunRotationXSlider = ui:slider({
+			defaultValue = 0, -- TODO: fix ambience first then get current value
+			min = -90,
+			max = 90,
+			step = 1,
+			button = {
+				content = "  ",
+			},
+			onValueChange = function(v)
+				sunRotationXLabel.Text = "" .. v
+				local ambience = server.getAmbience()
+				if ambience.sun.rotation then
+					ambience.sun.rotation[1] = math.rad(v)
+					sendToServer(events.P_SET_AMBIENCE, ambience)
+					require("ai_ambience"):loadGeneration(ambience)
+				end
+			end,
+		})
+		sunRotationXSlider:setParent(cell)
+
+		cell.Height = sunLabel.Height
+			+ theme.paddingTiny
+			+ sunRotationSlider.Height
+			+ theme.paddingTiny
+			+ sunRotationXSlider.Height
+
+		cell.parentDidResize = function(self)
+			local parent = self.parent
+			self.Width = parent.Width
+
+			local y = self.Height - sunLabel.Height
+			sunLabel.pos = { 0, y }
+			y = y - theme.paddingTiny - sunRotationSlider.Height
+
+			sunRotationSlider.Width = self.Width - sunRotationYLabel.Width - theme.padding
+			sunRotationSlider.pos = { 0, y }
+
+			sunRotationYLabel.pos = {
+				sunRotationSlider.pos.X + sunRotationSlider.Width + theme.padding,
+				sunRotationSlider.pos.Y + sunRotationSlider.Height * 0.5 - sunRotationYLabel.Height * 0.5,
+			}
+			y = y - theme.paddingTiny - sunRotationYLabel.Height
+
+			sunRotationXSlider.Width = self.Width - sunRotationYLabel.Width - theme.padding
+			sunRotationXSlider.pos = { 0, y }
+
+			sunRotationXLabel.pos = {
+				sunRotationXSlider.pos.X + sunRotationXSlider.Width + theme.padding,
+				sunRotationXSlider.pos.Y + sunRotationXSlider.Height * 0.5 - sunRotationXLabel.Height * 0.5,
+			}
+		end
+
+		cell:setParent(nil)
+
 		local function generate()
 			aiInput:hide()
 			aiBtn:hide()
@@ -1366,6 +1456,7 @@ initDefaultMode = function()
 				onDone = function(generation)
 					sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
 					sendToServer(events.P_SET_AMBIENCE, generation)
+					sunRotationSlider:setValue(math.floor(math.deg(generation.sun.rotation[2])))
 					aiInput:show()
 					aiBtn:show()
 					loading:hide()
@@ -1391,10 +1482,13 @@ initDefaultMode = function()
 
 		local scroll = ui:createScroll({
 			backgroundColor = theme.buttonTextColor,
-			loadCell = function(_, _) -- index, userdata
-				return nil
+			loadCell = function(index, _) -- index, userdata
+				if index == 1 then
+					return cell
+				end
 			end,
-			unloadCell = function(_, _, _) -- index, cell, userdata
+			unloadCell = function(_, cell, _) -- index, cell, userdata
+				cell:setParent(nil)
 				return nil
 			end,
 			cellPadding = padding,
