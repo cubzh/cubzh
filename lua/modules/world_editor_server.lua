@@ -210,6 +210,10 @@ local funcs = {
 
 local server = {}
 
+server.getAmbience = function()
+	return ambience
+end
+
 if FAKE_SERVER then -- local server for singleplayer
 	math.randomseed(Time.UnixMilli() % 10000)
 

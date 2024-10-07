@@ -641,6 +641,7 @@ local loadObject = function(obj, objInfo, config)
 	local boxSize = k.Size * scale
 	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr
 		and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
+	turnOnShadows = true
 
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
 		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
@@ -679,7 +680,7 @@ local defaultLoadWorldConfig = {
 	onDone = nil,
 	fullnameItemKey = "fullname",
 	optimisations = {
-		minimum_item_size_for_shadows = 40,
+		minimum_item_size_for_shadows = 1,
 	},
 }
 
@@ -742,7 +743,7 @@ common.loadWorld = function(mapBase64, config)
 			massLoading:load(objects, massLoadingConfig)
 		end
 		if ambience then
-			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
+			require("ai_ambience"):loadGeneration(ambience)
 		end
 		if not objects then
 			config.onDone()

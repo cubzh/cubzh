@@ -2528,7 +2528,7 @@ function home()
 		end
 		if notificationCountListeners ~= nil then
 			for _, l in ipairs(notificationCountListeners) do
-				l:Cancel()
+				l:Remove()
 			end
 			notificationCountListeners = nil
 		end
@@ -2539,7 +2539,7 @@ function home()
 		end
 		if friendNotificationCountListeners ~= nil then
 			for _, l in ipairs(friendNotificationCountListeners) do
-				l:Cancel()
+				l:Remove()
 			end
 			friendNotificationCountListeners = nil
 		end
