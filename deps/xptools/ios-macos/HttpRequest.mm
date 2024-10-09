@@ -14,6 +14,32 @@
 // xptools
 #include "vxlog.h"
 
+@interface NetworkManager : NSObject
+@property (nonatomic, strong, readonly) NSURLSession *session;
++ (instancetype)sharedManager;
+@end
+
+@implementation NetworkManager
+@synthesize session = _session;
++ (instancetype)sharedManager {
+    static NetworkManager *sharedManager = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedManager = [[self alloc] init];
+    });
+    return sharedManager;
+}
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        configuration.HTTPShouldSetCookies = NO;
+        _session = [NSURLSession sessionWithConfiguration:configuration];
+    }
+    return self;
+}
+@end
+
 namespace vx {
 
 void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
@@ -45,7 +71,10 @@ void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
             [request setHTTPBody:bodyData];
         }
 
-        NSURLSession *session = [NSURLSession sharedSession];
+        // DO NOT USE DEFAULT COOKIE STORE
+        // NSURLSession *session = [NSURLSession sharedSession];
+        NSURLSession *session = [NetworkManager sharedManager].session;
+
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (error) {
@@ -66,7 +95,7 @@ void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
                 std::unordered_map<std::string, std::string> responseHeaders;
                 for (NSString *key in headers) {
                     NSString *value = headers[key];
-                    responseHeaders[key.UTF8String] = value.UTF8String;
+                    responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
                 }
                 httpReq->getResponse().setHeaders(responseHeaders);
 
