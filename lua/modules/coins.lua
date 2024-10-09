@@ -110,7 +110,7 @@ coins.createModalContent = function(_, config)
 			c.op.Color = theme.colorNegative
 			c.op.Text = string.format("🇵 ➡️ %d", -transaction.amount)
 		end
-		c.description.Text = transaction.info.reason or ""
+		c.description.Text = transaction.info.description or transaction.info.reason or ""
 		c.Height = 50
 		return c
 	end
