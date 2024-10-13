@@ -111,9 +111,6 @@ local get = function(leaderboard, config)
 						return a.score > b.score -- descending order
 					end)
 					for _, s in ipairs(scores) do
-						if s.userID == Player.UserID then
-							scores.user = s
-						end
 						if s.value ~= nil then
 							s.value = Data(s.value, { format = "base64" }):Decode()
 						end
