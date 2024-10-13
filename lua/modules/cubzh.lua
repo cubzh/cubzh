@@ -2157,6 +2157,7 @@ function home()
 							editUsernameBtn:setParent(profileCell)
 
 							editUsernameBtn.onRelease = function()
+								Menu:sendHomeDebugEvent("User presses EDIT USERNAME button")
 								Menu:ShowUsernameForm()
 							end
 
@@ -2175,15 +2176,17 @@ function home()
 						editAvatarBtn:setParent(profileCell)
 
 						editAvatarBtn.onRelease = function(_)
+							Menu:sendHomeDebugEvent("User presses EDIT AVATAR button")
 							editAvatarFn()
 						end
 
 						local visitHouseBtn = ui:buttonNeutral({
 							content = "🏠 Visit house",
-							displayAsDisabled = true,
+							-- displayAsDisabled = true,
 						})
 						local comingSoonAlert
 						visitHouseBtn.onRelease = function(_)
+							Menu:sendHomeDebugEvent("User presses VISIT HOUSE button")
 							if comingSoonAlert ~= nil then
 								return
 							end
@@ -2206,9 +2209,6 @@ function home()
 						})
 						bell.Width = 32
 						bell.Height = 36
-						bell.onRelease = function()
-							Client:HapticFeedback()
-						end
 
 						local badge = require("notifications"):createBadge({ count = 0 })
 						badge:setParent(bell)
@@ -2238,7 +2238,12 @@ function home()
 
 						refreshBellCount()
 
+						bell.onPress = function()
+							Client:HapticFeedback()
+						end
+
 						bell.onRelease = function()
+							Menu:sendHomeDebugEvent("User presses NOTIFICATIONS button")
 							Menu:ShowNotifications()
 						end
 
@@ -2439,14 +2444,17 @@ function home()
 		local btnCreate = createBottomBarButton("Create", "images/icon-create.png")
 
 		btnExplore.onRelease = function()
+			Menu:sendHomeDebugEvent("User presses EXPLORE button")
 			Menu:ShowWorlds()
 		end
 
 		btnProfile.onRelease = function()
+			Menu:sendHomeDebugEvent("User presses PROFILE button")
 			Menu:ShowProfile({ player = Player, editAvatar = editAvatarFn })
 		end
 
 		btnFriends.onRelease = function()
+			Menu:sendHomeDebugEvent("User presses FRIENDS button")
 			Menu:ShowFriends()
 		end
 
@@ -2480,6 +2488,7 @@ function home()
 		refreshFriendsBadge()
 
 		btnCreate.onRelease = function()
+			Menu:sendHomeDebugEvent("User presses CREATE button")
 			Menu:ShowCreations()
 		end
 

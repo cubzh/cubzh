@@ -1180,6 +1180,7 @@ pezhShape.parentDidResize = btnContentParentDidResize
 pezhBtn.onPress = topBarBtnPress
 pezhBtn.onCancel = topBarBtnRelease
 pezhBtn.onRelease = function(self)
+	System:DebugEvent("User presses COINS button", { context = "top bar" })
 	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.COINS)
 	sfx("coin_1", { Volume = 0.75, Pitch = 1.0, Spatialized = false })
@@ -1943,6 +1944,14 @@ menu.ShowAlert = function(_, config, system)
 		error("menu:ShowAlert requires System privileges")
 	end
 	showAlert(config)
+end
+
+menu.sendHomeDebugEvent = function(_, name, properties)
+	if System.IsHomeAppRunning then
+		properties = properties or {}
+		properties.context = "home"
+		System:DebugEvent(name, properties)
+	end
 end
 
 local mt = {
