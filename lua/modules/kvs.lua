@@ -87,7 +87,7 @@ local metatable = {
 		return "[KeyValueStore (class)]"
 	end,
 	__type = 60,
-	__call = function(self, storeName)
+	__call = function(_, storeName)
 		if type(storeName) ~= "string" then
 			error("store name should be a string", 2)
 		end
@@ -112,9 +112,5 @@ local metatable = {
 }
 
 setmetatable(mod, metatable)
-
-mod.Debug = function(self, obj)
-	return System:Debug(obj)
-end
 
 return mod

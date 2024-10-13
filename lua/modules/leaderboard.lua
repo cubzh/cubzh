@@ -14,9 +14,22 @@
 local mod = {}
 
 local conf = require("config")
+local time = require("time")
+local url = require("url")
+
+local API_ADDR = "https://api.cu.bzh"
 
 local privateFields = setmetatable({}, { __mode = "k" })
 
+-- leaderboard:get({
+-- 	friends = true,
+--  mode = "neighbors", -- options: "best", "neighbors"
+-- 	limit = 20,
+--  callback = function(scores, err)
+-- })
+-- scores:
+-- [{"userID":"4d558bc1-5700-4a0d-8c68-f05e0b97f3fd","score":72046,"value":"BgVtaWxlcwGS7+nqOXnePw==","updated":"2024-10-12T17:17:02.385Z"}]
+-- scores.user (if not nil) is a reference to local user's score.
 local get = function(leaderboard, config)
 	local fields = privateFields[leaderboard]
 	if fields == nil then
@@ -42,7 +55,50 @@ local get = function(leaderboard, config)
 		error("leaderboard:get(config) - config error: " .. err, 2)
 	end
 
-	-- HTTP REQUEST
+	local u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
+	u:addQueryParameter("mode", config.mode)
+	u:addQueryParameter("limit", math.floor(config.limit))
+	u:addQueryParameter("friends", config.friends and "true" or "false")
+
+	local req = System:HttpGet(u:toString(), function(res)
+		if res.StatusCode ~= 200 then
+			if config.callback then
+				config.callback(nil, "status code: " .. res.StatusCode)
+			end
+			return
+		end
+		if config.callback then
+			-- print("RES:", res.Body:ToString())
+
+			-- decode body
+			local scores, err = JSON:Decode(res.Body)
+			if err ~= nil then
+				-- json decode error
+				callback(nil, "internal server error")
+				return
+			end
+
+			table.sort(scores, function(a, b)
+				return a.score > b.score -- descending order
+			end)
+
+			for _, s in ipairs(scores) do
+				if s.userID == Player.UserID then
+					scores.user = s
+				end
+				if s.value ~= nil then
+					s.value = Data(s.value, { format = "base64" }):Decode()
+				end
+				if s.updated then
+					s.updated = time.iso8601_to_os_time(s.updated)
+				end
+			end
+
+			config.callback(scores)
+		end
+	end)
+
+	return req
 end
 
 -- leaderboard:set({
@@ -84,11 +140,17 @@ local set = function(leaderboard, config)
 	end
 	config.score = math.floor(config.score)
 
+	local valueB64 = nil
+	if config.value ~= nil then
+		local valueData = Data(config.value)
+		valueB64 = valueData:ToString({ format = "base64" })
+	end
+
 	local body
 	ok, err = pcall(function()
 		body = JSON:Encode({
 			score = config.score,
-			value = config.value,
+			value = valueB64,
 			override = config.override,
 		})
 	end)
@@ -96,9 +158,10 @@ local set = function(leaderboard, config)
 		error("leaderboard:set(config) - could not encode score: " .. err, 2)
 	end
 
-	local url = "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name .. "/" .. Player.UserID
+	local u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
 
-	local req = System:HttpPost(url, body, function(res)
+	local req = System:HttpPost(u:toString(), body, function(res)
+		-- print("STATUS:", res.StatusCode)
 		if res.StatusCode ~= 200 then
 			if config.callback then
 				config.callback(false)
@@ -149,9 +212,5 @@ local metatable = {
 }
 
 setmetatable(mod, metatable)
-
-mod.Debug = function(self, obj)
-	return System:Debug(obj)
-end
 
 return mod
