@@ -41,12 +41,16 @@ local get = function(leaderboard, config)
 		mode = "best", -- "best", "neighbors"
 		limit = 20,
 		friends = false,
+		-- userID: can be nil, "self" or a user ID
+		-- nil by default, ignores other configuration fields when set and returns only one score.
+		userID = nil,
 		callback = nil,
 	}
 
 	local ok, err = pcall(function()
 		config = conf:merge(defaultConfig, config, {
 			acceptTypes = {
+				userID = { "string" },
 				callback = { "function" },
 			},
 		})
@@ -55,10 +59,16 @@ local get = function(leaderboard, config)
 		error("leaderboard:get(config) - config error: " .. err, 2)
 	end
 
-	local u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
-	u:addQueryParameter("mode", config.mode)
-	u:addQueryParameter("limit", math.floor(config.limit))
-	u:addQueryParameter("friends", config.friends and "true" or "false")
+	local u
+
+	if config.userID ~= nil then
+		u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name .. "/" .. config.userID)
+	else
+		u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
+		u:addQueryParameter("mode", config.mode)
+		u:addQueryParameter("limit", math.floor(config.limit))
+		u:addQueryParameter("friends", config.friends and "true" or "false")
+	end
 
 	local req = System:HttpGet(u:toString(), function(res)
 		if res.StatusCode ~= 200 then
@@ -70,31 +80,50 @@ local get = function(leaderboard, config)
 		if config.callback then
 			-- print("RES:", res.Body:ToString())
 
-			-- decode body
-			local scores, err = JSON:Decode(res.Body)
-			if err ~= nil then
-				-- json decode error
-				callback(nil, "internal server error")
-				return
+			if config.userID ~= nil then -- one score
+				local score = JSON:Decode(res.Body)
+				if err ~= nil then
+					if config.callback then
+						config.callback(nil, "internal server error")
+					end
+					return
+				end
+				if config.callback then
+					if score.value ~= nil then
+						score.value = Data(score.value, { format = "base64" }):Decode()
+					end
+					if score.updated then
+						score.updated = time.iso8601_to_os_time(score.updated)
+					end
+					config.callback(score)
+				end
+			else -- array of scores
+				local scores, err = JSON:Decode(res.Body)
+				if err ~= nil then
+					if config.callback then
+						config.callback(nil, "internal server error")
+					end
+					return
+				end
+
+				if config.callback then
+					table.sort(scores, function(a, b)
+						return a.score > b.score -- descending order
+					end)
+					for _, s in ipairs(scores) do
+						if s.userID == Player.UserID then
+							scores.user = s
+						end
+						if s.value ~= nil then
+							s.value = Data(s.value, { format = "base64" }):Decode()
+						end
+						if s.updated then
+							s.updated = time.iso8601_to_os_time(s.updated)
+						end
+					end
+					config.callback(scores)
+				end
 			end
-
-			table.sort(scores, function(a, b)
-				return a.score > b.score -- descending order
-			end)
-
-			for _, s in ipairs(scores) do
-				if s.userID == Player.UserID then
-					scores.user = s
-				end
-				if s.value ~= nil then
-					s.value = Data(s.value, { format = "base64" }):Decode()
-				end
-				if s.updated then
-					s.updated = time.iso8601_to_os_time(s.updated)
-				end
-			end
-
-			config.callback(scores)
 		end
 	end)
 
