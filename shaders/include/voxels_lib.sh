@@ -183,7 +183,7 @@ vec4 getVertexNormal(int face) {
 		u_facesOffsets[offsetIdx + 1].w,
 		u_facesOffsets[offsetIdx + 2].w
 	);
-	return vec4(normalize(normal), 0.0);
+	return vec4(normal, 0.0);
 }
 
 vec2 getUV(float idx, float width, float height) {
