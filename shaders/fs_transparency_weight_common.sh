@@ -37,7 +37,7 @@ $input v_color0, v_texcoord0, v_texcoord1
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/utils_lib.sh"
-#if VOXEL_VARIANT_DRAWMODES
+#if VOXEL_VARIANT_DRAWMODE_OVERRIDES
 #include "./include/drawmodes_lib.sh"
 #include "./include/voxels_uniforms_fs.sh"
 #endif
@@ -92,7 +92,7 @@ void main() {
 	if (color.a <= v_cutout) discard;
 #endif
 
-#elif VOXEL_VARIANT_DRAWMODES
+#elif VOXEL_VARIANT_DRAWMODE_OVERRIDES
 	color = getGridColor(v_model, color, u_gridRGB, u_gridScaleMag, v_clipZ);
 #endif // OIT_VARIANT_FONT
 

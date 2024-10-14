@@ -14,7 +14,8 @@
 #define VOXEL_VARIANT_MRT_SHADOW_PACK 1
 #define VOXEL_VARIANT_MRT_SHADOW_SAMPLE 0
 
-// No draw modes
-#define VOXEL_VARIANT_DRAWMODES 0
+// No draw mode
+#define VOXEL_VARIANT_DRAWMODE_OVERRIDES 0
+#define VOXEL_VARIANT_DRAWMODE_OUTLINE 0
 
 #include "./vs_voxels_common.sh"
