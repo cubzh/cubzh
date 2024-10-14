@@ -3,7 +3,7 @@
  */
 
 // Non-default draw modes
-#define VOXEL_VARIANT_DRAWMODES 1
+#define VOXEL_VARIANT_DRAWMODE_OVERRIDES 1
 
 // No texture
 #define OIT_VARIANT_TEX 0

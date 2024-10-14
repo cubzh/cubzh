@@ -5,7 +5,7 @@ $input v_color0, v_color1, v_texcoord0, v_texcoord1
 	#define v_clipZ v_texcoord0.w
 	#define v_model v_texcoord1.xyz
 	#define v_linearDepth v_texcoord1.w
-#elif VOXEL_VARIANT_DRAWMODES
+#elif VOXEL_VARIANT_DRAWMODE_OVERRIDES
 $input v_color0, v_texcoord0, v_texcoord1
 	#define v_model v_texcoord0.xyz
 	#define v_clipZ v_texcoord0.w
@@ -15,7 +15,7 @@ $input v_color0
 
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
-#if VOXEL_VARIANT_DRAWMODES
+#if VOXEL_VARIANT_DRAWMODE_OVERRIDES
 #include "./include/drawmodes_lib.sh"
 #include "./include/voxels_uniforms_fs.sh"
 #elif VOXEL_VARIANT_MRT_LIGHTING
@@ -23,7 +23,7 @@ $input v_color0
 #endif
 
 void main() {
-#if VOXEL_VARIANT_DRAWMODES
+#if VOXEL_VARIANT_DRAWMODE_OVERRIDES
 	vec4 color = getGridColor(v_model, v_color0, u_gridRGB, u_gridScaleMag, v_clipZ);
 #else
 	vec4 color = v_color0;

@@ -106,84 +106,26 @@ vec4 getDebugColor(vec4 color, int face, vec3 clip) {
 #endif // DEBUG_FACE
 }
 
-vec4 getVertexPosition(vec3 centerPos, int offsetIdx) {
-	vec3 res = centerPos;
-#if DEBUG_POS_NO_UNIFORM
-	if(face == 0) {
-		if(mod4 == 0) {
-			res += vec3(0.0, 0.5, -.5);
-		} else if(mod4 == 1) {
-			res += vec3(0.0, -.5, -.5);
-		} else if(mod4 == 2) {
-			res += vec3(0.0, -.5, 0.5);
-		} else if(mod4 == 3) {
-			res += vec3(0.0, 0.5, 0.5);
-		}
-	} else if(face == 1) {
-		if(mod4 == 0) {
-			res += vec3(0.0, -.5, -.5);
-		} else if(mod4 == 1) {
-			res += vec3(0.0, 0.5, -.5);
-		} else if(mod4 == 2) {
-			res += vec3(0.0, 0.5, 0.5);
-		} else if(mod4 == 3) {
-			res += vec3(0.0, -.5, 0.5);
-		}
-	} else if(face == 2) {
-		if(mod4 == 0) {
-			res += vec3(-.5, 0.5, 0.0);
-		} else if(mod4 == 1) {
-			res += vec3(-.5, -.5, 0.0);
-		} else if(mod4 == 2) {
-			res += vec3(0.5, -.5, 0.0);
-		} else if(mod4 == 3) {
-			res += vec3(0.5, 0.5, 0.0);
-		}
-	} else if(face == 3) {
-		if(mod4 == 0) {
-			res += vec3(-.5, -.5, 0.0);
-		} else if(mod4 == 1) {
-			res += vec3(-.5, 0.5, 0.0);
-		} else if(mod4 == 2) {
-			res += vec3(0.5, 0.5, 0.0);
-		} else if(mod4 == 3) {
-			res += vec3(0.5, -.5, 0.0);
-		}
-	} else if(face == 4) {
-		if(mod4 == 0) {
-			res += vec3(0.5, 0.0, -.5);
-		} else if(mod4 == 1) {
-			res += vec3(0.5, 0.0, 0.5);
-		} else if(mod4 == 2) {
-			res += vec3(-.5, 0.0, 0.5);
-		} else if(mod4 == 3) {
-			res += vec3(-.5, 0.0, -.5);
-		}
-	} else if(face == 5) {
-		if(mod4 == 0) {
-			res += vec3(-.5, 0.0, -.5);
-		} else if(mod4 == 1) {
-			res += vec3(-.5, 0.0, 0.5);
-		} else if(mod4 == 2) {
-			res += vec3(0.5, 0.0, 0.5);
-		} else if(mod4 == 3) {
-			res += vec3(0.5, 0.0, -.5);
-		}
-	}
+vec3 getVertexNormal(int face) {
+#if BGFX_SHADER_LANGUAGE_GLSL
+	vec3 facesNormal[6];
+	facesNormal[0] = vec3(1.0, 0.0, 0.0);	// FACE_RIGHT
+	facesNormal[1] = vec3(-1.0, 0.0, 0.0);// FACE_LEFT
+	facesNormal[2] = vec3(0.0, 0.0, 1.0); // FACE_FRONT
+	facesNormal[3] = vec3(0.0, 0.0, -1.0);// FACE_BACK
+	facesNormal[4] = vec3(0.0, 1.0, 0.0); // FACE_TOP
+	facesNormal[5] = vec3(0.0, -1.0, 0.0); // FACE_DOWN
 #else
-	res += u_facesOffsets[offsetIdx].xyz;
-#endif // DEBUG_POS_NO_UNIFORM
-	return vec4(res, 1.0);
-}
-
-vec4 getVertexNormal(int face) {
-	int offsetIdx = 4 * face;
-	vec3 normal = vec3(
-		u_facesOffsets[offsetIdx].w,
-		u_facesOffsets[offsetIdx + 1].w,
-		u_facesOffsets[offsetIdx + 2].w
-	);
-	return vec4(normalize(normal), 0.0);
+	const vec3 facesNormal[6] = {
+		vec3(1.0, 0.0, 0.0), // FACE_RIGHT
+		vec3(-1.0, 0.0, 0.0),// FACE_LEFT
+		vec3(0.0, 0.0, 1.0), // FACE_FRONT
+		vec3(0.0, 0.0, -1.0),// FACE_BACK
+		vec3(0.0, 1.0, 0.0), // FACE_TOP
+		vec3(0.0, -1.0, 0.0) // FACE_DOWN
+	};
+#endif
+	return facesNormal[face];
 }
 
 vec2 getUV(float idx, float width, float height) {
@@ -196,11 +138,7 @@ vec2 getUV(float idx, float width, float height) {
 
 vec3 getNeighbourVoxelUVW(vec3 centerPos, int face) {
 	int offsetIdx = 4 * face;
-	vec3 offset = vec3(
-		u_facesOffsets[offsetIdx].w,
-		u_facesOffsets[offsetIdx + 1].w,
-		u_facesOffsets[offsetIdx + 2].w
-	);
+	vec3 offset = getVertexNormal(face) * 0.5;
 	vec4 world = u_mapInverseScale * mul(u_model[0], vec4(floor(centerPos + offset), 1.0));
 	return world.xyz / u_mapSize;
 }

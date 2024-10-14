@@ -10,6 +10,6 @@
 #define VOXEL_VARIANT_MRT_LINEAR_DEPTH 0
 
 // No draw modes
-#define VOXEL_VARIANT_DRAWMODES 0
+#define VOXEL_VARIANT_DRAWMODE_OVERRIDES 0
 
 #include "./fs_voxels_common.sh"
