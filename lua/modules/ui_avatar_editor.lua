@@ -18,10 +18,10 @@ function contentMaxHeight()
 end
 
 local avatarProperties = {
-	skinColorIndex = avatar.defaultSkinColorIndex,
-	noseIndex = avatar.defaultNoseIndex,
-	eyesIndex = avatar.defaultEyesIndex,
-	eyesColorIndex = avatar.defaultEyesColorIndex,
+	skinColorIndex = nil,
+	noseIndex = nil,
+	eyesIndex = nil,
+	eyesColorIndex = nil,
 	hair = nil,
 	jacket = nil,
 	pants = nil,
