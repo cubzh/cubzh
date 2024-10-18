@@ -4,6 +4,7 @@ ui = require("uikit")
 theme = require("uitheme").current
 avatar = require("avatar")
 itemGrid = require("item_grid")
+sfx = require("sfx")
 
 local MAX_COLOR_SWATCH_SIZE = 100
 local PADDING = 4.0
@@ -230,6 +231,7 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(entity)
+							sfx("waterdrop_4", { Volume = 0.3, Pitch = 2.0, Spatialized = false })
 							local change = { hair = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
@@ -568,6 +570,7 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(entity)
+							sfx("waterdrop_4", { Volume = 0.3, Pitch = 2.0, Spatialized = false })
 							local change = { jacket = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
@@ -602,6 +605,7 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(entity)
+							sfx("waterdrop_4", { Volume = 0.3, Pitch = 2.0, Spatialized = false })
 							local change = { pants = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
@@ -636,6 +640,7 @@ mod.create = function(self, config)
 						sort = cache.sort,
 						filterDidChange = filterDidChange,
 						onOpen = function(entity)
+							sfx("waterdrop_4", { Volume = 0.3, Pitch = 2.0, Spatialized = false })
 							local change = { boots = entity.fullName }
 							avatarDidChange(change)
 							LocalEvent:Send("avatar_editor_update", change)
