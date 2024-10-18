@@ -385,14 +385,14 @@ mt.__index.create = function(_, maxWidth, maxHeight, position, uikit)
 					-- cell:setColor(Color(63, 63, 63))
 				end
 
-				avatar = cachedAvatars[user.username]
+				avatar = cachedAvatars[user.id]
 				if avatar == nil then
 					local requests
 					avatar, requests = uiAvatar:get({ usernameOrId = user.id, size = cell.Height * 0.95, ui = ui })
 
 					cell.avatarRequests = requests
 					avatar.body.pivot.LocalRotation = Rotation(math.rad(-22), 0, 0) * Rotation(0, math.rad(145), 0)
-					cachedAvatars[user.username] = avatar
+					cachedAvatars[user.id] = avatar
 
 					avatar.didLoad = function()
 						avatar.loaded = true
