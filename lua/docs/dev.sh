@@ -23,7 +23,7 @@ echo "WORKDIR: $PWD"
 
 docker rm -f lua-docs
 
-docker-compose -f "$PWD"/lua/docs/docker-compose.yml -f "$PWD"/lua/docs/docker-compose-dev.yml up -d --build
+docker compose -f "$PWD"/lua/docs/docker-compose.yml -f "$PWD"/lua/docs/docker-compose-dev.yml up -d --build
 
 URL=$(docker ps --format="{{.Ports}}\t{{.Names}}" | grep lua-docs | sed -En "s|0.0.0.0:([0-9]+).*|http://$IP:\1|p")
 
