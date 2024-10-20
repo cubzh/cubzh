@@ -53,7 +53,9 @@
 						{{ else if .AudioList }}
 							{{ range .AudioList }}
 								<div class="audioPlayer">
-									<audio controls src="{{ .file }}"></audio>
+									<audio controls src="{{ .file }}">
+										<source src="{{ .file }}" type="audio/ogg" />
+									</audio>
 									{{ .title }}
 								</div>
 							{{ end }}
@@ -178,16 +180,16 @@
 					{{ end }}
 				{{ end }}
 
-				{{ if or .Functions .BaseFunctions}} 
+				{{ if or .Functions .BaseFunctions}}
 				<h2><a id="functions" href="#functions">Functions</a></h2>
-					
+
 					{{ range $index, $function := .Functions }}
 						{{ if not $function.Hide }}
 							<a id="functions-{{ GetAnchorLink .Name }}"></a>
 							<div class="object-element-tbl">
 								<div class="object-element-header">
-									{{ if .ArgumentSets}} 
-										<!-- display several lines for function prototype 
+									{{ if .ArgumentSets}}
+										<!-- display several lines for function prototype
 											when different sets of arguments are accepted. -->
 										{{ range $index, $arguments := .ArgumentSets }}<!--
 											--><div class="set-of-arguments"><!--
@@ -288,8 +290,8 @@
 								<a id="functions-{{ GetAnchorLink .Name }}"></a>
 								<div class="object-element-tbl">
 									<div class="object-element-header">
-										{{ if .ArgumentSets}} 
-											<!-- display several lines for function prototype 
+										{{ if .ArgumentSets}}
+											<!-- display several lines for function prototype
 												when different sets of arguments are accepted. -->
 											{{ range $index, $arguments := .ArgumentSets }}<!--
 												--><div class="set-of-arguments"><!--

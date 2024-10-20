@@ -1,3 +1,17 @@
+FROM alpine:3.20 AS audio-converter
+
+RUN apk update && apk add --no-cache \
+	ffmpeg \
+	&& rm -rf /var/cache/apk/*
+
+COPY ./bundle/audio /audio_input
+RUN mkdir /audio_output
+
+# WORKDIR /audio_input
+RUN find /audio_input -name '*.ogg' -exec sh -c 'ffmpeg -i "$1" "/audio_output/$(basename "${1%.ogg}.mp3")"' _ {} \;
+
+#################################
+
 FROM --platform=linux/amd64 golang:1.23.2-alpine3.20 AS build-env
 
 RUN apk update && apk add --no-cache \
@@ -9,6 +23,7 @@ COPY ./lua/docs/webserver /webserver
 COPY ./lua/docs/content /www
 COPY ./lua/docs/parser /parser
 COPY ./lua/modules /modules
+COPY --from=audio-converter /audio_output /www/audio
 
 RUN cd /parser && ./parse.sh
 
