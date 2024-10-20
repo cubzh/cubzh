@@ -1,13 +1,25 @@
-version: '3.1'
+version: "3.1"
 services:
-  lua-docs:
-    build:
-      target: build-env
-    ports:
-      - 80
-    volumes:
-      - ./content:/www
-      - ./parser:/parser
-      - ../modules:/modules
-      - ./webserver:/webserver
-      
+    lua-docs:
+        build:
+            target: build-env
+        ports:
+            - 80
+        volumes:
+            - ./parser:/parser
+            - ../modules:/modules
+            - ./webserver:/webserver
+            # We mount /content into /www (except for the "audio" directory)
+            # - ./content:/www
+            - ./content/404.yml:/www/404.yml
+            - ./content/cubzh-file-format.md:/www/cubzh-file-format.md
+            - ./content/cubzhcheatsheet.yml:/www/cubzhcheatsheet.yml
+            - ./content/guides:/www/guides
+            - ./content/images:/www/images
+            - ./content/index.yml:/www/index.yml
+            - ./content/js:/www/js
+            - ./content/media:/www/media
+            - ./content/modules:/www/modules
+            - ./content/reference:/www/reference
+            - ./content/style:/www/style
+            - ./content/templates:/www/templates
