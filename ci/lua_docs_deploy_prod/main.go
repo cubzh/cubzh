@@ -145,7 +145,10 @@ func deployLuaDocs() error {
 	// get repo root directory
 	// (including only the /lua directory, and excluding everything else)
 	rootDir := client.Host().Directory(".", dagger.HostDirectoryOpts{
-		Include: []string{"./lua"},
+		Include: []string{
+			"./lua",
+			"./bundle/audio",
+		},
 	})
 	if rootDir == nil {
 		return errors.New("root directory not found")

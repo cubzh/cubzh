@@ -1,42 +1,41 @@
 name: Deploy to production
 
 on:
-  push:
-    branches: 
-      - main
+    push:
+        branches:
+            - main
 
 jobs:
+    # Deploy Lua documentation
+    # --------------------------------------------------
+    deploy_lua_docs:
+        name: Deploy Lua documentation
+        runs-on: ubuntu-latest
+        steps:
+            - name: Git checkout
+              uses: actions/checkout@v3
+              with:
+                  lfs: "true"
 
-  # Deploy Lua documentation
-  # -------------------------------------------------- 
-  deploy_lua_docs:
-    name: Deploy Lua documentation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v3
-        with:
-          lfs: 'true'
+            - name: Setup Go
+              uses: actions/setup-go@v3
+              with:
+                  go-version: ">=1.23"
+                  cache: true
+                  cache-dependency-path: ./ci/lua_docs_deploy_prod/go.sum
 
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '>=1.21'
-          cache: true
-          cache-dependency-path: ./ci/lua_docs_deploy_prod/go.sum
+            - name: Build Dagger program
+              working-directory: ./ci/lua_docs_deploy_prod
+              run: go build -o deploy -v ./...
 
-      - name: Build Dagger program
-        working-directory: ./ci/lua_docs_deploy_prod
-        run: go build -o deploy -v ./...
-
-      - name: Run Dagger program
-        env: # Or as an environment variable
-          _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
-          DOCKER_REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
-          DOCKER_REGISTRY_TOKEN: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
-          LUA_DOCS_DOCKER_IMAGE_NAME: ${{ secrets.LUA_DOCS_DOCKER_IMAGE_NAME }}
-          LUA_DOCS_SRV_SSH_URL: ${{ secrets.LUA_DOCS_SRV_SSH_URL }}
-          LUA_DOCS_SRV_SSH_PRIVATEKEY: ${{ secrets.LUA_DOCS_SRV_SSH_PRIVATEKEY }}
-          LUA_DOCS_SRV_SSH_KNOWNHOSTS: ${{ secrets.LUA_DOCS_SRV_SSH_KNOWNHOSTS }}
-        working-directory: ./ci/lua_docs_deploy_prod
-        run: ./deploy
+            - name: Run Dagger program
+              env: # Or as an environment variable
+                  _EXPERIMENTAL_DAGGER_CLOUD_TOKEN: "p.eyJ1IjogIjFiZjEwMmRjLWYyZmQtNDVhNi1iNzM1LTgxNzI1NGFkZDU2ZiIsICJpZCI6ICI4ZmZmNmZkMi05MDhiLTQ4YTEtOGQ2Zi1iZWEyNGRkNzk4MTkifQ.l1Sf1gB37veXUWhxOgmjvjYcrh32NiuovbMxvjVI7Z0"
+                  DOCKER_REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
+                  DOCKER_REGISTRY_TOKEN: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+                  LUA_DOCS_DOCKER_IMAGE_NAME: ${{ secrets.LUA_DOCS_DOCKER_IMAGE_NAME }}
+                  LUA_DOCS_SRV_SSH_URL: ${{ secrets.LUA_DOCS_SRV_SSH_URL }}
+                  LUA_DOCS_SRV_SSH_PRIVATEKEY: ${{ secrets.LUA_DOCS_SRV_SSH_PRIVATEKEY }}
+                  LUA_DOCS_SRV_SSH_KNOWNHOSTS: ${{ secrets.LUA_DOCS_SRV_SSH_KNOWNHOSTS }}
+              working-directory: ./ci/lua_docs_deploy_prod
+              run: ./deploy
