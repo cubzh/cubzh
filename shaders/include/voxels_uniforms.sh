@@ -1,7 +1,6 @@
 #ifndef __VOXELS_UNIFORM_SH__
 #define __VOXELS_UNIFORM_SH__
 
-uniform vec4 u_facesOffsets[24];
 #if VOXEL_VARIANT_LIGHTING_UNIFORM
 uniform vec4 u_lighting;
 #endif

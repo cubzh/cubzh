@@ -52,7 +52,7 @@ void main() {
 
 #if VOXEL_VARIANT_MRT_LIGHTING
 #if VOXEL_VARIANT_UNLIT == 0
-	vec3 wnormal = mul(u_model[0], getVertexNormal(face)).xyz;
+	vec3 wnormal = normalize(mul(u_model[0], vec4(getVertexNormal(face), 0.0)).xyz);
 #endif // VOXEL_VARIANT_UNLIT == 0
 #if VOXEL_VARIANT_MRT_LINEAR_DEPTH
 	vec4 view = mul(u_modelView, model);
