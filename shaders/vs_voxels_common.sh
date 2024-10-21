@@ -1,3 +1,6 @@
+#define IS_SHADOW_PASS (VOXEL_VARIANT_MRT_SHADOW_PACK || VOXEL_VARIANT_MRT_SHADOW_SAMPLE)
+#define IS_DRAWMODES (VOXEL_VARIANT_DRAWMODE_OVERRIDES || VOXEL_VARIANT_DRAWMODE_OUTLINE)
+
 $input a_position, a_texcoord0
 #if VOXEL_VARIANT_MRT_LIGHTING
 $output v_color0, v_color1, v_texcoord0, v_texcoord1
@@ -6,7 +9,7 @@ $output v_color0, v_color1, v_texcoord0, v_texcoord1
 	#define v_clipZ v_texcoord0.w
 	#define v_model v_texcoord1.xyz
 	#define v_linearDepth v_texcoord1.w
-#elif VOXEL_VARIANT_MRT_TRANSPARENCY || VOXEL_VARIANT_DRAWMODES
+#elif VOXEL_VARIANT_MRT_TRANSPARENCY || IS_DRAWMODES
 $output v_color0, v_texcoord0, v_texcoord1
 	#define v_model v_texcoord0.xyz
 	#define v_clipZ v_texcoord0.w
@@ -22,11 +25,9 @@ $output v_color0
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
 
-#define IS_SHADOW_PASS (VOXEL_VARIANT_MRT_SHADOW_PACK || VOXEL_VARIANT_MRT_SHADOW_SAMPLE)
-
-#if !IS_SHADOW_PASS
+#if IS_SHADOW_PASS == 0 && VOXEL_VARIANT_DRAWMODE_OUTLINE == 0
 SAMPLER2D(s_palette, 0);
-#endif // !IS_SHADOW_PASS
+#endif
 
 #define a_colorIdx a_position.w
 #define a_metadata a_texcoord0.x
@@ -50,20 +51,48 @@ void main() {
 
 #else // IS_SHADOW_PASS
 
+#if VOXEL_VARIANT_DRAWMODE_OUTLINE
+	vec3 cnormal = normalize(mul(u_modelViewProj, vec4(getVertexNormal(face), 0.0)).xyz);
+	vec2 offset = 2.0 * u_outlineThickness / u_projSize;
+	clip.xy += cnormal.xy * offset * clip.w;
+#endif
+
 #if VOXEL_VARIANT_MRT_LIGHTING
 #if VOXEL_VARIANT_UNLIT == 0
-	vec3 wnormal = mul(u_model[0], getVertexNormal(face)).xyz;
+	vec3 wnormal = normalize(mul(u_model[0], vec4(getVertexNormal(face), 0.0)).xyz);
 #endif // VOXEL_VARIANT_UNLIT == 0
 #if VOXEL_VARIANT_MRT_LINEAR_DEPTH
 	vec4 view = mul(u_modelView, model);
 #endif // VOXEL_VARIANT_MRT_LINEAR_DEPTH
 #endif // VOXEL_VARIANT_MRT_LIGHTING
 
+#if VOXEL_VARIANT_DRAWMODE_OUTLINE
+
+	float aoValue = 0.0;
+	vec4 color = u_outlineRGBA;
+	vec4 comp = CLEAR;
+
+#else // VOXEL_VARIANT_DRAWMODE_OUTLINE
+
 #if ENABLE_AO
 	float aoValue = AO_GRADIENT[aoIdx];
 #else
 	float aoValue = 0.0;
 #endif // ENABLE_AO
+
+	vec2 paletteUV = getPaletteUV(a_colorIdx);
+	vec4 color = texture2DLod(s_palette, paletteUV, 0.0);
+#if DEBUG_FACE > 0
+	color = getDebugColor(color, face, clip.xyz / clip.w);
+#endif
+
+#if AO_COLOR == 4
+	vec4 comp = texture2DLod(s_palette, vec2(paletteUV.x, paletteUV.y + 1.0 / u_paletteSize), 0.0);
+#else
+	vec4 comp = CLEAR;
+#endif
+
+#endif // VOXEL_VARIANT_DRAWMODE_OUTLINE
 
 #if VOXEL_VARIANT_UNLIT
 	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
@@ -79,18 +108,7 @@ void main() {
 	voxelLight.x *= u_bakedIntensity;
 #endif
 
-	vec2 paletteUV = getPaletteUV(a_colorIdx);
-	vec4 color = texture2DLod(s_palette, paletteUV, 0.0);
-#if DEBUG_FACE > 0
-	color = getDebugColor(color, face, clip.xyz / clip.w);
-#endif
-#if AO_COLOR == 4
-	vec4 comp = texture2DLod(s_palette, vec2(paletteUV.x, paletteUV.y + 1.0 / u_paletteSize), 0.0);
-#else
-	vec4 comp = CLEAR;
-#endif
-
-#if VOXEL_VARIANT_DRAWMODES
+#if VOXEL_VARIANT_DRAWMODE_OVERRIDES
 	float aStep = step(1.0, u_alphaOverride);
 	color.w = mix(u_alphaOverride, color.w, aStep);
 	aoValue = mix(0.0, aoValue, aStep);
@@ -116,7 +134,7 @@ void main() {
 
 	gl_Position = clip;
 	v_color0 = vcolor;
-#if VOXEL_VARIANT_DRAWMODES || VOXEL_VARIANT_MRT_TRANSPARENCY
+#if VOXEL_VARIANT_DRAWMODE_OVERRIDES || VOXEL_VARIANT_MRT_TRANSPARENCY
 	v_model = model.xyz;
 	v_clipZ = clip.z;
 #endif

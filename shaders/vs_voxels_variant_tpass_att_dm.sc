@@ -1,5 +1,5 @@
 /*
- * Voxels vertex shader variant: vlit, transparency pass, draw modes
+ * Voxels vertex shader variant: vlit, transparency pass, draw mode overrides
  */
 
 // Lighting as 2D texture
@@ -14,7 +14,8 @@
 #define VOXEL_VARIANT_MRT_SHADOW_PACK 0
 #define VOXEL_VARIANT_MRT_SHADOW_SAMPLE 0
 
-// Non-default draw modes
-#define VOXEL_VARIANT_DRAWMODES 1
+// Draw mode overrides
+#define VOXEL_VARIANT_DRAWMODE_OVERRIDES 1
+#define VOXEL_VARIANT_DRAWMODE_OUTLINE 0
 
 #include "./vs_voxels_common.sh"

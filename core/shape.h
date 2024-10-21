@@ -64,6 +64,7 @@ typedef uint8_t ShapeDrawMode;
 #define SHAPE_DRAWMODE_HIGHLIGHT 2
 #define SHAPE_DRAWMODE_GREY 4
 #define SHAPE_DRAWMODE_GRID 8
+#define SHAPE_DRAWMODE_OUTLINE 16
 
 Shape *shape_make(void);
 Shape *shape_make_2(const bool isMutable);
