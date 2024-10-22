@@ -22,7 +22,7 @@
 using namespace vx;
 
 #if defined(__VX_PLATFORM_WASM)
-#define CUBZH_WASM_MAX_CONCURRENT_REQS 3
+#define CUBZH_WASM_MAX_CONCURRENT_REQS 50
 std::queue<HttpRequest_SharedPtr> HttpRequest::_requestsWaiting = std::queue<HttpRequest_SharedPtr>();
 std::unordered_set<HttpRequest_SharedPtr> HttpRequest::_requestsFlying = std::unordered_set<HttpRequest_SharedPtr>();
 std::mutex HttpRequest::_requestsMutex;
