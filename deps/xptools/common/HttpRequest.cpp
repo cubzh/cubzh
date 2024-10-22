@@ -486,86 +486,76 @@ void HttpRequest::_processAsync() {
         return;
     }
 
-    assert(this->_method == "GET" || this->_method == "POST" || this->_method == "PATCH");
+    assert(strongSelf->_method == "GET" || strongSelf->_method == "POST" || strongSelf->_method == "PATCH");
 
-    vx::OperationQueue::getMain()->dispatch([strongSelf](){
+    HttpRequest_SharedPtr *sptrRef = new HttpRequest_SharedPtr(strongSelf);
+    if (sptrRef == nullptr || (*sptrRef) == nullptr) {
+        vxlog_error("HttpRequest aborted. Object is already released. (2)");
+        return;
+    }
 
-        const Status status = strongSelf->getStatus();
-        if (status != Status::PROCESSING) {
-            return;
+    const std::string url = strongSelf->constructURLString();
+
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+
+    // store reference to the HttpRequest
+    attr.userData = static_cast<void *>(sptrRef);
+
+    // set HTTP method
+    strcpy(attr.requestMethod, strongSelf->_method.c_str());
+
+    // write custom headers
+    {
+        // +1 is for the trailing NULL pointer
+        const int headersBufferSize = sizeof(char*) * ((strongSelf->getHeaders().size() * 2) + 1);
+        attr.requestHeaders = (char**)malloc(headersBufferSize);
+
+        const char * const *arr = attr.requestHeaders;
+        char **arr2 = (char **)arr;
+
+        int index = 0;
+        for (const auto& kv : strongSelf->getHeaders()) {
+            arr2[index] = (char*)kv.first.c_str();
+            index++;
+            arr2[index] = (char*)kv.second.c_str();
+            index++;
         }
+        arr2[index] = nullptr; // trailing NULL
+    }
 
-        assert(strongSelf->_method == "GET" || strongSelf->_method == "POST" || strongSelf->_method == "PATCH");
+    // HTTP request body
+    if (strongSelf->_method == "POST" || strongSelf->_method == "PATCH") {
+        // define request body
+        attr.requestData = strongSelf->_bodyBytes.c_str();
+        attr.requestDataSize = strongSelf->_bodyBytes.size();
+    } else if (strongSelf->_method == "GET") {
+        // no request body
+        attr.requestData = NULL;
+        attr.requestDataSize = 0;
+    }
 
-        HttpRequest_SharedPtr *sptrRef = new HttpRequest_SharedPtr(strongSelf);
-        if (sptrRef == nullptr || (*sptrRef) == nullptr) {
-            vxlog_error("HttpRequest aborted. Object is already released. (2)");
-            return;
-        }
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
 
-        const std::string url = strongSelf->constructURLString();
+    // callbacks
+    attr.onsuccess = HttpRequest::downloadSucceeded;
+    attr.onerror = HttpRequest::downloadFailed;
 
-        emscripten_fetch_attr_t attr;
-        emscripten_fetch_attr_init(&attr);
+    emscripten_fetch_t * const fetch = emscripten_fetch(&attr, url.c_str());
 
-        // store reference to the HttpRequest
-        attr.userData = static_cast<void *>(sptrRef);
+    // free headers array
+    {
+        char **arr = (char **)attr.requestHeaders;
+        free(arr);
+        attr.requestHeaders = nullptr;
+    }
 
-        // set HTTP method
-        strcpy(attr.requestMethod, strongSelf->_method.c_str());
-
-        // write custom headers
-        {
-            // +1 is for the trailing NULL pointer
-            const int headersBufferSize = sizeof(char*) * ((strongSelf->getHeaders().size() * 2) + 1);
-            attr.requestHeaders = (char**)malloc(headersBufferSize);
-
-            const char * const *arr = attr.requestHeaders;
-            char **arr2 = (char **)arr;
-
-            int index = 0;
-            for (const auto& kv : strongSelf->getHeaders()) {
-                arr2[index] = (char*)kv.first.c_str();
-                index++;
-                arr2[index] = (char*)kv.second.c_str();
-                index++;
-            }
-            arr2[index] = nullptr; // trailing NULL
-        }
-
-        // HTTP request body
-        if (strongSelf->_method == "POST" || strongSelf->_method == "PATCH") {
-            // define request body
-            attr.requestData = strongSelf->_bodyBytes.c_str();
-            attr.requestDataSize = strongSelf->_bodyBytes.size();
-        } else if (strongSelf->_method == "GET") {
-            // no request body
-            attr.requestData = NULL;
-            attr.requestDataSize = 0;
-        }
-
-        attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-
-        // callbacks
-        attr.onsuccess = HttpRequest::downloadSucceeded;
-        attr.onerror = HttpRequest::downloadFailed;
-
-        emscripten_fetch_t * const fetch = emscripten_fetch(&attr, url.c_str());
-
-        // free headers array
-        {
-            char **arr = (char **)attr.requestHeaders;
-            free(arr);
-            attr.requestHeaders = nullptr;
-        }
-
-        // store fetch handle in HttpRequest object
-        if (fetch != nullptr) {
-            strongSelf->_fetch = fetch;
-        } else {
-            vxlog_error("fetch is NULL. Error is not handled yet.");
-        }
-    });
+    // store fetch handle in HttpRequest object
+    if (fetch != nullptr) {
+        strongSelf->_fetch = fetch;
+    } else {
+        vxlog_error("fetch is NULL. Error is not handled yet.");
+    }
 }
 
 #endif
