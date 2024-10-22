@@ -1,63 +1,64 @@
-local sfx = {
-	pool = {},
-	defaultConfig = {
-		Position = Number3(0, 0, 0),
-		Volume = 1,
-		Radius = 600,
-		MinRadius = 200,
-		Spatialized = false,
-		Pitch = 1.0,
-	},
+local sfx = {}
+
+local pool = {}
+local defaultConfig = {
+	Position = Number3.Zero,
+	Volume = 1,
+	Radius = 600,
+	MinRadius = 200,
+	Spatialized = false,
+	Pitch = 1.0,
 }
 
-local mt = {
-	__call = function(self, name, config)
-		local sfxPool = self.pool
+local function recycleASAfterDelay(delay, poolName, as)
+	Timer(delay, function()
+		table.insert(pool[poolName], as)
+	end)
+end
 
-		local recycled
-		local pool = sfxPool[name]
-		if pool == nil then
-			sfxPool[name] = {}
+local as
+local recycled
+
+local mt = {
+	__call = function(_, name, config)
+		if pool[name] == nil then
+			pool[name] = {}
 		else
-			recycled = table.remove(pool)
+			recycled = table.remove(pool[name])
 		end
 
 		if recycled ~= nil then
-			recycled.Position = config.Position or self.defaultConfig.Position
-			recycled.Volume = config.Volume or self.defaultConfig.Volume
-			recycled.Radius = config.Radius or self.defaultConfig.Radius
-			recycled.MinRadius = config.MinRadius or self.defaultConfig.MinRadius
+			recycled.Position = config.Position or defaultConfig.Position
+			recycled.Volume = config.Volume or defaultConfig.Volume
+			recycled.Radius = config.Radius or defaultConfig.Radius
+			recycled.MinRadius = config.MinRadius or defaultConfig.MinRadius
 			if config.Spatialized ~= nil then
 				recycled.Spatialized = config.Spatialized
 			else
-				recycled.Spatialized = self.defaultConfig.Spatialized
+				recycled.Spatialized = defaultConfig.Spatialized
 			end
-			recycled.Pitch = config.Pitch or self.defaultConfig.Pitch
+			recycled.Pitch = config.Pitch or defaultConfig.Pitch
 			recycled:Play()
-			Timer(recycled.Length + 0.1, function()
-				table.insert(sfxPool[name], recycled)
-			end)
+			recycleASAfterDelay(recycled.Length + 0.1, name, recycled)
 			return
 		end
 
-		local as = AudioSource()
+		as = AudioSource()
 		as.Sound = name
-		as.Position = config.Position or self.defaultConfig.Position
-		as.Volume = config.Volume or self.defaultConfig.Volume
-		as.Radius = config.Radius or self.defaultConfig.Radius
-		as.MinRadius = config.MinRadius or self.defaultConfig.MinRadius
+		as.Position = config.Position or defaultConfig.Position
+		as.Volume = config.Volume or defaultConfig.Volume
+		as.Radius = config.Radius or defaultConfig.Radius
+		as.MinRadius = config.MinRadius or defaultConfig.MinRadius
 		if config.Spatialized ~= nil then
 			as.Spatialized = config.Spatialized
 		else
-			as.Spatialized = self.defaultConfig.Spatialized
+			as.Spatialized = defaultConfig.Spatialized
 		end
-		as.Pitch = config.Pitch or self.defaultConfig.Pitch
+		as.Pitch = config.Pitch or defaultConfig.Pitch
 		as:SetParent(World)
 		as:Play()
 
-		Timer(as.Length + 0.1, function()
-			table.insert(sfxPool[name], as)
-		end)
+		recycleASAfterDelay(as.Length + 0.1, name, as)
 	end,
 }
 
