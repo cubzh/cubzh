@@ -12,12 +12,10 @@ void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
 }
 
 void HttpRequest::_cancel(HttpRequest_SharedPtr httpReq) {
-    //    if (this->_fetch != nullptr) {
-    //        // request is flying
-    //        emscripten_fetch_close(this->_fetch); // cancel request
-    //    } else {
-    //        // req is not flying
-    //    }
+    if (this->_fetch != nullptr) { // request is flying
+        emscripten_fetch_close(this->_fetch); // cancel request
+        this->_fetch = nullptr;
+    }
 
     if (httpReq != nullptr) {
         HttpRequest::_sendNextRequest(httpReq);

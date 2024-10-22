@@ -423,7 +423,7 @@ void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
     fetch->userData = nullptr;
 
     if (strongReq->_fetch == nullptr) {
-        vxlog_debug("🔥 request callback already called");
+        vxlog_debug("🔥 request callback already called or request was cancelled");
         return;
     }
 
