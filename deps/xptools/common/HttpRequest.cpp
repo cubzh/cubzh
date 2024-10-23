@@ -422,6 +422,11 @@ void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
     sptrRef = nullptr;
     fetch->userData = nullptr;
 
+    if (strongReq->getStatus() == Status::CANCELLED) {
+    	// vxlog_debug("🔥 request was cancelled %p", strongReq.get());
+     	return;
+    }
+
     if (strongReq->_fetch == nullptr) {
         vxlog_debug("🔥 request callback already called");
         return;
