@@ -9,6 +9,7 @@
 #pragma once
 
 // C++
+#include <string>
 #include <thread>
 
 namespace vx {
@@ -32,6 +33,9 @@ public:
 
     /// Returns true if in main thread or if main thread not yet set
     bool isMainThreadOrMainThreadNotSet() const;
+
+    /// Logs current (caller) thread
+    void log(const std::string prefix) const;
 
 private:
     

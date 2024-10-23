@@ -43,9 +43,9 @@ typedef std::function<void(HttpRequest_SharedPtr req)> HttpRequestCallback;
 typedef std::unordered_map<std::string, std::string> HttpHeaders;
 
 class HttpRequest final {
-    
+
 public:
-    
+
     ///
     enum Status {
         WAITING = 1, // waiting to be sent
@@ -55,7 +55,7 @@ public:
         DONE = 5,
         CAN_BE_DESTROYED = 6, // after callback has been called
     };
-    
+
     /// Factory method
     static HttpRequest_SharedPtr make(const std::string& method,
                                       const std::string& host,
@@ -66,16 +66,16 @@ public:
 
     /// Destructor
     virtual ~HttpRequest();
-    
+
     /// Performs the request and call the callback function
     void sendAsync();
 
     /// Performs the request in the current thread (it's blocking!)
     void sendSync();
-    
+
     ///
     void cancel();
-    
+
     ///
     HttpResponse& getResponse();
 
@@ -87,16 +87,16 @@ public:
     HttpResponse& getCachedResponse();
 
     // Accessors
-    
+
     /// callback function will be called in the LWS service thread
     /// (not the main thread or calling thread)
     /// Note: it is best not to perform heavy tasks in this callback, so the
     /// LWS service thread is not slowed down.
     void setCallback(HttpRequestCallback callback);
-    
+
     ///
     bool callCallback();
-    
+
     inline const std::string& getMethod() const { return _method; }
     inline const std::string& getHost() const { return _host; }
     inline const std::string& getPath() const { return _path; }
@@ -109,7 +109,7 @@ public:
 
     ///
     void setBodyBytes(const std::string& bytes);
-    
+
     ///
     const std::string& getBodyBytes() const;
 
@@ -127,13 +127,13 @@ public:
 
     // Returns current status (thread safe)
     Status getStatus();
-    
+
     // Sets status (thread safe)
     void setStatus(const Status status);
-    
+
     inline void setWritten(const size_t& n) { _written = n; }
     inline size_t getWritten() { return _written; }
-    
+
 #if defined(__VX_PLATFORM_WASM)
     static void downloadSucceeded(emscripten_fetch_t * const fetch);
     static void downloadFailed(emscripten_fetch_t * const fetch);
@@ -149,7 +149,7 @@ public:
 
     /// generate URL string
     std::string constructURLString();
-    
+
 private:
 
 #if defined(__VX_PLATFORM_WASM)
@@ -161,7 +161,7 @@ private:
 
     /// Constructor
     HttpRequest();
-    
+
     /// Init
     void _init(const HttpRequest_SharedPtr& ref,
                const std::string& method,
@@ -173,7 +173,7 @@ private:
 
     ///
     HttpRequest_WeakPtr _weakSelf;
-    
+
 #if defined(__VX_PLATFORM_WASM)
     /// sends HTTP request asynchronously
     void _processAsync();
@@ -183,7 +183,7 @@ private:
 #else
     void _useCachedResponse();
 #endif
-    
+
     /// Request fields
     std::string _method;
     std::string _host;
@@ -193,19 +193,19 @@ private:
     bool _secure;
     HttpRequestOpts _opts;
     std::unordered_map<std::string, std::string> _headers;
-    
+
     // POST request
     std::string _bodyBytes;
     // keeping track of written bytes,
     // bodies can be sent using several lws calls
     size_t _written;
-    
+
     ///
     HttpRequestCallback _callback;
-    
+
     /// indicates whether the callback has been called
     bool _callbackCalled;
-    
+
     /// HttpResponse
     HttpResponse _response;
 
@@ -226,8 +226,8 @@ private:
     // platform specific
     // ------------------
 
-    void _sendAsync(HttpRequest_SharedPtr httpReq);
-    void _cancel(HttpRequest_SharedPtr httpReq);
+    void _sendAsync();
+    void _cancel();
 
     void *_platformObject;
     void _attachPlatformObject(void *o);

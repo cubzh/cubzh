@@ -8,8 +8,9 @@
 
 #include "ThreadManager.hpp"
 
-// C
+// C++
 #include <cassert>
+#include <sstream>
 
 // xptools
 #include "vxlog.h"
@@ -48,4 +49,10 @@ bool ThreadManager::isMainThreadSet() const {
 bool ThreadManager::isMainThreadOrMainThreadNotSet() const {
     // vxlog_warning(">>> set: %s main: %s", _mainThreadIDIsSet ? "YES" : "NO", std::this_thread::get_id() == _mainThreadID ? "YES" : "NO");
     return _mainThreadIDIsSet == false || std::this_thread::get_id() == _mainThreadID;
+}
+
+void ThreadManager::log(const std::string prefix) const {
+    std::ostringstream oss;
+    oss << prefix << " Thread ID ["<< std::this_thread::get_id() <<"]";
+    vxlog_warning(oss.str().c_str());
 }
