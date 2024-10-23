@@ -101,9 +101,8 @@ WSService::~WSService() {
         }
         free(_lws_protocols);
     }
-#ifdef __VX_USE_LIBWEBSOCKETS
-    // ...
-#else
+
+#ifdef __EMSCRIPTEN__
     emscripten_websocket_deinitialize();
 #endif
 }
@@ -175,8 +174,9 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
         // whether a write is pending, and call lws_callback_on_writable().
         lws_cancel_service_pt(wsi);
     }
-#else
+#endif
 
+#ifdef __EMSCRIPTEN__
 #define WASM_WEBSOCKET_WRITE_BUFFER_SIZE 512
     static char* buffer[WASM_WEBSOCKET_WRITE_BUFFER_SIZE];
     WSBackend wsi = wsConn->getWsi();

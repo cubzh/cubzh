@@ -26,9 +26,7 @@
 #define VX_HTTPS_SCHEME "https"
 #define VX_HTTP_SCHEME "http"
 
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else // EMSCRIPTEN
-// emscripten Fetch API
+#ifdef __EMSCRIPTEN__
 #include <emscripten/fetch.h>
 #endif
 

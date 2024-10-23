@@ -205,6 +205,9 @@ private:
 class ConnectionDelegate {
 public:
     ///
+    virtual ~ConnectionDelegate() = default;
+
+    ///
     virtual void connectionDidEstablish(Connection& conn) = 0;
     
     /// Delegate owns the Payload (is responsible for its deletion)
