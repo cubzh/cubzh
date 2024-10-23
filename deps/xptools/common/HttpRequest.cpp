@@ -48,7 +48,9 @@ void HttpRequest::setCallback(HttpRequestCallback callback) {
 }
 
 bool HttpRequest::callCallback() {
-    HttpRequest_SharedPtr strongSelf = _weakSelf.lock();
+	// vx::ThreadManager::shared().log("HttpRequest::callCallback");
+
+    HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
         return false;
     }
@@ -137,6 +139,8 @@ const std::string& HttpRequest::getPathAndQuery() {
 }
 
 void HttpRequest::sendAsync() {
+	// vx::ThreadManager::shared().log("HttpRequest::sendAsync");
+
     HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
         return;
@@ -187,10 +191,10 @@ void HttpRequest::sendAsync() {
     // update status
     strongSelf->setStatus(HttpRequest::Status::PROCESSING);
 
-    _sendAsync(strongSelf);
+    strongSelf->_sendAsync(strongSelf);
 }
 
-#if !defined(__VX_USE_LIBWEBSOCKETS)
+#if defined(__VX_PLATFORM_WASM)
 void HttpRequest::_sendNextRequest(HttpRequest_SharedPtr reqToRemove) {
     HttpRequest_SharedPtr reqToSend = nullptr;
 
@@ -203,13 +207,10 @@ void HttpRequest::_sendNextRequest(HttpRequest_SharedPtr reqToRemove) {
     while (HttpRequest::_requestsFlying.size() < CUBZH_WASM_MAX_CONCURRENT_REQS && HttpRequest::_requestsWaiting.empty() == false) {
         reqToSend = _requestsWaiting.front();
         _requestsWaiting.pop();
-        if (reqToSend->getStatus() != Status::PROCESSING) {
-            // vxlog_debug("⚡️🔥 cannot send req. Status: %d", reqToSend->getStatus());
-            reqToSend = nullptr;
-        } else {
-            // vxlog_debug("⚡️ add req to <flying> %d", reqToSend->getStatus());
-            _requestsFlying.insert(reqToSend);
-            reqToSend->_processAsync();
+        if (reqToSend->getStatus() == Status::PROCESSING) {
+        	// request is still waiting to be sent (it has not been cancelled)
+         	_requestsFlying.insert(reqToSend);
+          	reqToSend->_processAsync();
         }
     }
 
@@ -276,7 +277,7 @@ HttpResponse& HttpRequest::getCachedResponse() {
     return this->_cachedResponse;
 }
 
-void HttpRequest::setCachedResponse(const bool success, 
+void HttpRequest::setCachedResponse(const bool success,
                                     const uint16_t statusCode,
                                     const std::unordered_map<std::string, std::string>& headers,
                                     const std::string bytes) {
@@ -354,8 +355,7 @@ std::string HttpRequest::constructURLString() {
 
 HttpRequest::HttpRequest() :
 _weakSelf(),
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else
+#if defined(__VX_PLATFORM_WASM)
 _fetch(nullptr),
 #endif
 _method(),
@@ -409,10 +409,7 @@ void HttpRequest::_useCachedResponse() {
     strongSelf->_response.setUseLocalCache(strongSelf->_cachedResponse.getUseLocalCache());
 }
 
-#endif
-
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else // EMSCRIPTEN
+#else // defined(__VX_PLATFORM_WASM)
 
 void HttpRequest::downloadSucceeded(emscripten_fetch_t * const fetch) {
     HttpRequest::downloadCommon(fetch, true);
@@ -423,6 +420,8 @@ void HttpRequest::downloadFailed(emscripten_fetch_t * const fetch) {
 }
 
 void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
+	// vxlog_debug("🔥 fetch %d %p %s", fetch->id, fetch, success ? "success" : "fail");
+
     // retrieve pointer on request shared_ptr
     HttpRequest_SharedPtr *sptrRef = static_cast<HttpRequest_SharedPtr *>(fetch->userData);
     if (sptrRef == nullptr) {
@@ -459,7 +458,7 @@ void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
     const std::string bytes = std::string(fetch->data, fetch->numBytes);
 
     // free fetch memory
-    emscripten_fetch_close(fetch);
+    const EMSCRIPTEN_RESULT closeResult = emscripten_fetch_close(fetch); // TODO: consider return value
     fetch = nullptr;
     strongReq->_fetch = nullptr;
 
