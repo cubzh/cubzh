@@ -62,47 +62,56 @@ bool HttpRequest::callCallback() {
     }
     strongSelf->_callbackCalled = true;
 
-    // call response middleware
-    {
-        auto respMiddleware = HttpClient::shared().getCallbackMiddleware();
-        if (respMiddleware != nullptr) {
-            respMiddleware(strongSelf);
-        }
-    }
+#if defined(__VX_PLATFORM_WASM)
+    vx::OperationQueue::getMain()->dispatch([strongSelf](){
+#endif
 
-    // Process Set-Cookie headers received
-    {
-        auto headers = strongSelf->getResponse().getHeaders();
-        // maybe we should remove the headers once they are processed
-        for (auto header : headers) {
-            // cubzh_test_cookie=yumyum; Domain=cu.bzh; HttpOnly; Secure
-            if (header.first == "set-cookie") {
-                vx::http::Cookie c;
-                const bool ok = vx::http::Cookie::parseSetCookieHeader(header.second, c);
-                if (ok) {
-                    vx::http::CookieStore::shared().setCookie(c);
-                }
+// call response middleware
+{
+    auto respMiddleware = HttpClient::shared().getCallbackMiddleware();
+    if (respMiddleware != nullptr) {
+        respMiddleware(strongSelf);
+    }
+}
+
+// Process Set-Cookie headers received
+{
+    auto headers = strongSelf->getResponse().getHeaders();
+    // maybe we should remove the headers once they are processed
+    for (auto header : headers) {
+        // cubzh_test_cookie=yumyum; Domain=cu.bzh; HttpOnly; Secure
+        if (header.first == "set-cookie") {
+            vx::http::Cookie c;
+            const bool ok = vx::http::Cookie::parseSetCookieHeader(header.second, c);
+            if (ok) {
+                vx::http::CookieStore::shared().setCookie(c);
             }
         }
     }
+}
 
 #if !defined(__VX_PLATFORM_WASM)
-    // if ETag was valid, we use the cached response
-    if (strongSelf->getResponse().getStatusCode() == HTTP_NOT_MODIFIED) {
-        strongSelf->_useCachedResponse();
-    }
+// if ETag was valid, we use the cached response
+if (strongSelf->getResponse().getStatusCode() == HTTP_NOT_MODIFIED) {
+    strongSelf->_useCachedResponse();
+}
 
-    // Store response in cache (if conditions are met)
-    // optim possible: if it was a 304, we don't need to update the response bytes in the cache
-    const bool ok = vx::HttpClient::shared().cacheHttpResponse(strongSelf);
-    if (ok) {
-        // vxlog_debug("HTTP response cached : %s", strongSelf->constructURLString().c_str());
-    }
+// Store response in cache (if conditions are met)
+// optim possible: if it was a 304, we don't need to update the response bytes in the cache
+const bool ok = vx::HttpClient::shared().cacheHttpResponse(strongSelf);
+if (ok) {
+    // vxlog_debug("HTTP response cached : %s", strongSelf->constructURLString().c_str());
+}
 #endif
 
-    if (this->_callback != nullptr) {
-        this->_callback(strongSelf);
-    }
+if (strongSelf->_callback != nullptr) {
+    strongSelf->_callback(strongSelf);
+}
+
+#if defined(__VX_PLATFORM_WASM)
+    });
+#endif
+
     return true;
 }
 
@@ -223,30 +232,40 @@ void HttpRequest::sendSync() {
 }
 
 void HttpRequest::cancel() {
-    const Status previousStatus = this->getStatus();
+	// vx::ThreadManager::shared().log("HttpRequest::cancel");
 
-    this->setStatus(HttpRequest::Status::CANCELLED);
-
-    switch (previousStatus) {
-        case Status::WAITING:
-        case Status::PROCESSING:
-            // continue to actually cancel the request
-            break;
-        case Status::FAILED:
-        case Status::CANCELLED:
-        case Status::DONE:
-        case Status::CAN_BE_DESTROYED:
-            // only set status
-            // nothing else to do, request is done anyway
-            return;
-    }
-
-    HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
+	HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
         return;
     }
 
-    this->_cancel(strongSelf);
+#if defined(__VX_PLATFORM_WASM)
+    vx::OperationQueue::getMain()->dispatch([strongSelf](){
+#endif
+
+        const Status previousStatus = strongSelf->getStatus();
+
+        strongSelf->setStatus(HttpRequest::Status::CANCELLED);
+
+        switch (previousStatus) {
+            case Status::WAITING:
+            case Status::PROCESSING:
+                // continue to actually cancel the request
+                break;
+            case Status::FAILED:
+            case Status::CANCELLED:
+            case Status::DONE:
+            case Status::CAN_BE_DESTROYED:
+                // only set status
+                // nothing else to do, request is done anyway
+                return;
+        }
+
+        strongSelf->_cancel();
+
+#if defined(__VX_PLATFORM_WASM)
+    });
+#endif
 }
 
 HttpResponse& HttpRequest::getResponse() {
