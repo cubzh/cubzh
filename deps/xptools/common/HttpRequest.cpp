@@ -191,7 +191,7 @@ void HttpRequest::sendAsync() {
     // update status
     strongSelf->setStatus(HttpRequest::Status::PROCESSING);
 
-    strongSelf->_sendAsync(strongSelf);
+    strongSelf->_sendAsync();
 }
 
 #if defined(__VX_PLATFORM_WASM)
@@ -219,6 +219,8 @@ void HttpRequest::_sendNextRequest(HttpRequest_SharedPtr reqToRemove) {
 #endif
 
 void HttpRequest::sendSync() {
+	// TODO: get strong reference
+
     std::mutex *mtx = new std::mutex();
     mtx->lock();
 

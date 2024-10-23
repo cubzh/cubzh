@@ -9,6 +9,7 @@
 #pragma once
 
 // C++
+#include <string>
 #include <thread>
 
 namespace vx {

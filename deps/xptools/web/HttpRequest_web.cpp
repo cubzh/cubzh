@@ -4,9 +4,9 @@
 
 namespace vx {
 
-void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
+void HttpRequest::_sendAsync() {
 
-	// ensure <self> has not been released
+	// ensure `self` has not been released
 	HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
         return;
@@ -18,7 +18,7 @@ void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
     HttpRequest::_sendNextRequest(nullptr);
 }
 
-void HttpRequest::_cancel(HttpRequest_SharedPtr httpReq) {
+void HttpRequest::_cancel() {
 
 	// ensure `self` has not been released
 	HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();

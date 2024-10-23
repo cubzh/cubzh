@@ -42,7 +42,12 @@
 
 namespace vx {
 
-void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
+void HttpRequest::_sendAsync() {
+    HttpRequest_SharedPtr httpReq = this->_weakSelf.lock();
+    if (httpReq == nullptr) {
+        return;
+    }
+
     @autoreleasepool {
         NSString *urlString = [NSString stringWithUTF8String:httpReq->constructURLString().c_str()];
         NSURL *url = [NSURL URLWithString:urlString];
@@ -117,12 +122,17 @@ void HttpRequest::_sendAsync(HttpRequest_SharedPtr httpReq) {
     }
 }
 
-void HttpRequest::_cancel(HttpRequest_SharedPtr httpReq) {
-    if (_platformObject == nullptr) {
+void HttpRequest::_cancel() {
+    HttpRequest_SharedPtr httpReq = this->_weakSelf.lock();
+    if (httpReq == nullptr) {
         return;
     }
-    [(__bridge NSURLSessionDataTask*)_platformObject cancel];
-    _detachPlatformObject();
+
+    if (httpReq->_platformObject == nullptr) {
+        return;
+    }
+    [(__bridge NSURLSessionDataTask*)httpReq->_platformObject cancel];
+    httpReq->_detachPlatformObject();
 }
 
 void HttpRequest::_attachPlatformObject(void *o) {

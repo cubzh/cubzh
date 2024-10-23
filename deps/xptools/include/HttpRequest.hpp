@@ -226,8 +226,8 @@ private:
     // platform specific
     // ------------------
 
-    void _sendAsync(HttpRequest_SharedPtr httpReq);
-    void _cancel(HttpRequest_SharedPtr httpReq);
+    void _sendAsync();
+    void _cancel();
 
     void *_platformObject;
     void _attachPlatformObject(void *o);

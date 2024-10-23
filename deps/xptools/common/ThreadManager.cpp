@@ -8,8 +8,9 @@
 
 #include "ThreadManager.hpp"
 
-// C
+// C++
 #include <cassert>
+#include <sstream>
 
 // xptools
 #include "vxlog.h"
