@@ -30,6 +30,15 @@ end
 
 homeAvatarY = 0
 
+-- main menu HTTP requests to be canceled when changing scene (opening item or world)
+httpRequests = {}
+local function cancelHTTPRequests()
+	for _, req in ipairs(httpRequests) do
+		req:Cancel()
+	end
+	httpRequests = {}
+end
+
 Client.OnStart = function()
 	Screen.Orientation = "portrait" -- force portrait
 
@@ -1467,7 +1476,7 @@ function home()
 				end
 
 				cell.onRelease = function(self)
-					Menu:ShowWorld({ world = self.world })
+					Menu:ShowWorld({ world = self.world, onOpenWorld = cancelHTTPRequests })
 				end
 
 				cell.onCancel = function(_)
@@ -1504,6 +1513,7 @@ function home()
 							worldThumbnails[cell.category .. "_" .. world.id] = thumbnail
 							worldCellResizeFn(cell)
 						end)
+						table.insert(httpRequests, cell.req)
 					end)
 				end
 
@@ -1692,6 +1702,7 @@ function home()
 							itemShapes[cell.category .. "_" .. item.repo .. "." .. item.name] = itemShape
 							cell:parentDidResize()
 						end)
+						table.insert(httpRequests, cell.req)
 					end)
 				end
 				cell.title.Text = prettifyItemName(item.name)
@@ -2445,7 +2456,7 @@ function home()
 
 		btnExplore.onRelease = function()
 			Menu:sendHomeDebugEvent("User presses EXPLORE button")
-			Menu:ShowWorlds()
+			Menu:ShowWorlds({ onOpenWorld = cancelHTTPRequests })
 		end
 
 		btnProfile.onRelease = function()

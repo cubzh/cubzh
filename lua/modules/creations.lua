@@ -14,12 +14,14 @@ creations.createModalContent = function(_, config)
 	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 		onOpen = nil,
+		onOpenWorld = nil
 	}
 
 	local ok, err = pcall(function()
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				onOpen = { "function" },
+				onOpenWorld = { "function" }
 			},
 		})
 	end)
@@ -28,6 +30,7 @@ creations.createModalContent = function(_, config)
 	end
 
 	local ui = config.uikit
+	local onOpenWorld = config.onOpenWorld
 
 	local functions = {}
 
@@ -280,6 +283,10 @@ creations.createModalContent = function(_, config)
 
 						local btnEdit = ui:createButton("✏️ Edit", { textSize = "big" })
 						btnEdit.onRelease = function()
+							if type(onOpenWorld) == "function" then
+								onOpenWorld()
+							end
+
 							System.LaunchItemEditor(itemFullName, newCategory)
 						end
 
@@ -535,6 +542,10 @@ creations.createModalContent = function(_, config)
 
 				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
 				btnEdit.onRelease = function()
+					if type(onOpenWorld) == "function" then
+						onOpenWorld()
+					end
+
 					System.LaunchItemEditor(itemFullName, category)
 				end
 
@@ -655,7 +666,7 @@ creations.createModal = function(_, config)
 
 	local content = modal:createContent()
 
-	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen })
+	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen, onOpenWorld = config.onOpenWorld })
 
 	creationsContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
