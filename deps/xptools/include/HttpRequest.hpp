@@ -26,7 +26,7 @@
 #define VX_HTTPS_SCHEME "https"
 #define VX_HTTP_SCHEME "http"
 
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
 #include <emscripten/fetch.h>
 #endif
 

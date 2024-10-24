@@ -59,7 +59,7 @@ Connection::Status WSConnection::getStatus() {
     return _status;
 }
 
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
 EM_BOOL onopen(int eventType,
                const EmscriptenWebSocketOpenEvent *websocketEvent,
                void *userdata) {
@@ -268,7 +268,7 @@ void WSConnection::_destroy() {
 }
 #endif
 
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
 
 void WSConnection::_init() {
     if (emscripten_websocket_is_supported() == false) {

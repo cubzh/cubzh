@@ -8,12 +8,12 @@
 
 #pragma once
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 #include "libwebsockets.h"
 typedef lws *WSBackend;
 #endif
 
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
 #include <emscripten/websocket.h>
 typedef EMSCRIPTEN_WEBSOCKET_T WSBackend;
 #endif

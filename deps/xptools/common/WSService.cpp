@@ -102,7 +102,7 @@ WSService::~WSService() {
         free(_lws_protocols);
     }
 
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
     emscripten_websocket_deinitialize();
 #endif
 }
@@ -176,7 +176,7 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
     }
 #endif
 
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
 #define WASM_WEBSOCKET_WRITE_BUFFER_SIZE 512
     static char* buffer[WASM_WEBSOCKET_WRITE_BUFFER_SIZE];
     WSBackend wsi = wsConn->getWsi();
