@@ -23,7 +23,7 @@ using namespace vx;
 
 #if defined(__VX_PLATFORM_WASM)
 #define CUBZH_WASM_MAX_CONCURRENT_REQS 50
-std::queue<HttpRequest_SharedPtr> HttpRequest::_requestsWaiting = std::queue<HttpRequest_SharedPtr>();
+std::stack<HttpRequest_SharedPtr> HttpRequest::_requestsWaiting = std::stack<HttpRequest_SharedPtr>();
 std::unordered_set<HttpRequest_SharedPtr> HttpRequest::_requestsFlying = std::unordered_set<HttpRequest_SharedPtr>();
 std::mutex HttpRequest::_requestsMutex;
 #endif
@@ -205,7 +205,7 @@ void HttpRequest::_sendNextRequest(HttpRequest_SharedPtr reqToRemove) {
     }
 
     while (HttpRequest::_requestsFlying.size() < CUBZH_WASM_MAX_CONCURRENT_REQS && HttpRequest::_requestsWaiting.empty() == false) {
-        reqToSend = _requestsWaiting.front();
+        reqToSend = _requestsWaiting.top(); // serve latest request first
         _requestsWaiting.pop();
         if (reqToSend->getStatus() == Status::PROCESSING) {
         	// request is still waiting to be sent (it has not been cancelled)

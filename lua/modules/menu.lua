@@ -230,7 +230,7 @@ function showModal(key, config)
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CUBZH_MENU then
-		content = getCubzhMenuModalContent()
+		content = getCubzhMenuModalContent(config.onOpenWorld)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
 		content = require("gallery"):createModalContent({
@@ -238,6 +238,7 @@ function showModal(key, config)
 			type = "worlds",
 			displayLikes = true,
 			categories = { "featured" },
+			onOpenWorld = config.onOpenWorld
 		})
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLD then
@@ -254,7 +255,7 @@ function showModal(key, config)
 		content = require("item_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CREATIONS then
-		content = require("creations"):createModalContent({ uikit = ui })
+		content = require("creations"):createModalContent({ uikit = ui, onOpenWorld = config.onOpenWorld })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then
 		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
@@ -1316,7 +1317,7 @@ refreshChat()
 
 -- CUBZH MENU CONTENT
 
-function getCubzhMenuModalContent()
+function getCubzhMenuModalContent(onOpenWorld)
 	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
 
 	local content = modal:createContent()
@@ -1338,6 +1339,7 @@ function getCubzhMenuModalContent()
 				displayLikes = true,
 				categories = { "featured" },
 				perPage = 100,
+				onOpenWorld = onOpenWorld
 			})
 			activeModal:push(content)
 		end
@@ -1351,7 +1353,12 @@ function getCubzhMenuModalContent()
 
 		btnItems.onRelease = function()
 			if activeModal ~= nil then
-				local content = require("gallery"):createModalContent({ uikit = ui, type = "items", perPage = 100 })
+				local content = require("gallery"):createModalContent({
+					uikit = ui,
+					type = "items",
+					perPage = 100,
+					onOpenWorld = onOpenWorld
+				})
 				activeModal:push(content)
 			end
 		end
@@ -1794,11 +1801,11 @@ end
 ---@code local menu = require("menu")
 --- menu:ShowWorlds() -- shows worlds gallery
 ---@return boolean
-menu.ShowWorlds = function(_)
+menu.ShowWorlds = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	showModal(MODAL_KEYS.WORLDS)
+	showModal(MODAL_KEYS.WORLDS, config)
 	return true
 end
 
@@ -1823,11 +1830,11 @@ end
 ---@code local menu = require("menu")
 --- menu:ShowItems() -- shows items gallery
 ---@return boolean
-menu.ShowItems = function(_)
+menu.ShowItems = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	showModal(MODAL_KEYS.ITEMS)
+	showModal(MODAL_KEYS.ITEMS, config)
 	return true
 end
 

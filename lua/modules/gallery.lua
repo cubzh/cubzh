@@ -50,7 +50,7 @@ gallery.createModalContent = function(_, config)
 			local content = require("item_details"):createModalContent({ uikit = ui, item = entity })
 			modalObj:push(content)
 		elseif config.type == "worlds" then
-			local content = require("world_details"):createModalContent({ uikit = ui, world = entity })
+			local content = require("world_details"):createModalContent({ uikit = ui, world = entity, onOpenWorld = config.onOpenWorld })
 			modalObj:push(content)
 		end
 	end
