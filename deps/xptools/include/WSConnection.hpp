@@ -11,13 +11,13 @@
 #include <thread>
 
 // websockets
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 // libwebsockets
 #include "libwebsockets.h"
 #endif
 
 // emscripten API
-#ifdef __EMSCRIPTEN__
+#if defined(__VX_PLATFORM_WASM)
 #include <emscripten/websocket.h>
 #endif
 
@@ -60,7 +60,7 @@ public:
     const bool& getSecure() const;
     std::string getURL() const;
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
     WSBackend getWsi();
     // std::mutex& getWsiMutex();
     // modifiers
@@ -134,11 +134,9 @@ private:
 
     // REQUIRED ONLY WHEN USING LIBWEBSOCKETS:
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
     /// lws connection handler
     WSBackend _wsi;
-
-    ///
     std::mutex _wsiMutex;
 #endif
 
@@ -160,14 +158,6 @@ private:
     // Total bytes written for current Payload
     // (including header and metadata)
     size_t _written;
-
-
-
-#ifdef __VX_USE_LIBWEBSOCKETS
-    
-#else // EMSCRIPTEN
-
-#endif
 
     // PLATFORM SPECIFIC
 

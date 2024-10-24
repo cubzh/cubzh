@@ -15,7 +15,7 @@
 #include "vxlog.h"
 #include "ThreadManager.hpp"
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
 #include "WSService.hpp"
 #endif
 
@@ -36,8 +36,13 @@ _serverPort(),
 _secure(false),
 _status(Status::IDLE),
 _statusMutex(),
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_PLATFORM_WASM)
+_wsi(0),
+#endif
+#if defined(__VX_USE_LIBWEBSOCKETS)
 _wsi(nullptr),
+#endif
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
 _wsiMutex(),
 #endif
 _receivedBytesBuffer(),
@@ -148,8 +153,11 @@ void WSConnection::reset() {
     
     _receivedBytesBuffer.clear();
     
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     setWsi(nullptr);
+#endif
+#if defined(__VX_PLATFORM_WASM)
+    setWsi(0);
 #endif
 }
 
@@ -225,13 +233,15 @@ std::string WSConnection::getURL() const {
 
 // PLATFORM SPECIFIC
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
+WSBackend WSConnection::getWsi() {
+    std::lock_guard<std::mutex> lock(_wsiMutex);
+    return _wsi;
+}
 
-void WSConnection::_init() {}
-
-void WSConnection::_connect() {
-// send WSConnection to WSService for processing
-WSService::shared()->requestWSConnection(_weakSelf.lock());
+void WSConnection::setWsi(WSBackend wsi) {
+    std::lock_guard<std::mutex> lock(_wsiMutex);
+    _wsi = wsi;
 }
 
 void WSConnection::_writePayload(const Payload_SharedPtr& p) {
@@ -242,6 +252,16 @@ void WSConnection::_writePayload(const Payload_SharedPtr& p) {
     // notify WSService that bytes are waiting to be written
     WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
 }
+#endif
+
+#if defined(__VX_USE_LIBWEBSOCKETS)
+
+void WSConnection::_init() {}
+
+void WSConnection::_connect() {
+// send WSConnection to WSService for processing
+WSService::shared()->requestWSConnection(_weakSelf.lock());
+}
 
 void WSConnection::_close() {
     // Cancel polling of WSService.
@@ -249,16 +269,6 @@ void WSConnection::_close() {
     // connection has been closed and disconnect the underlying TCP connection.
     _payloadsToWrite.push(Payload::createDummy());
     WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
-}
-
-WSBackend WSConnection::getWsi() {
-    std::lock_guard<std::mutex> lock(_wsiMutex);
-    return _wsi;
-}
-
-void WSConnection::setWsi(WSBackend wsi) {
-    std::lock_guard<std::mutex> lock(_wsiMutex);
-    _wsi = wsi;
 }
 
 void WSConnection::_destroy() {
