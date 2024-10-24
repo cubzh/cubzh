@@ -27,6 +27,7 @@
 #define VX_HTTP_SCHEME "http"
 
 #if defined(__VX_PLATFORM_WASM)
+#include <stack>
 #include <emscripten/fetch.h>
 #endif
 
@@ -151,7 +152,7 @@ public:
 private:
 
 #if defined(__VX_PLATFORM_WASM)
-    static std::queue<HttpRequest_SharedPtr> _requestsWaiting;
+    static std::stack<HttpRequest_SharedPtr> _requestsWaiting;
     static std::unordered_set<HttpRequest_SharedPtr> _requestsFlying;
     static std::mutex _requestsMutex;
     static void _sendNextRequest(HttpRequest_SharedPtr reqToRemove);

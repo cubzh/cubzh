@@ -25,7 +25,6 @@ mod.createModalContent = function(_, config)
 		},
 		mode = "explore", -- "explore" / "create"
 		uikit = require("uikit"),
-		onOpenItem = nil
 	}
 
 	local ok, err = pcall(function()

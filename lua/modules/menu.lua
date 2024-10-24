@@ -184,8 +184,6 @@ function showModal(key, config)
 		activeModalKey = nil
 	end
 
-	print("menu.showModal", config.onOpenWorld)
-
 	local content
 	if key == MODAL_KEYS.PROFILE then
 		local c = { uikit = ui }
@@ -1807,7 +1805,6 @@ menu.ShowWorlds = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	print("menu.ShowWorlds", config.onOpenWorld)
 	showModal(MODAL_KEYS.WORLDS, config)
 	return true
 end
@@ -1833,11 +1830,11 @@ end
 ---@code local menu = require("menu")
 --- menu:ShowItems() -- shows items gallery
 ---@return boolean
-menu.ShowItems = function(_)
+menu.ShowItems = function(_, config)
 	if menuSectionCanBeShown() == false then
 		return false
 	end
-	showModal(MODAL_KEYS.ITEMS)
+	showModal(MODAL_KEYS.ITEMS, config)
 	return true
 end
 
