@@ -14,15 +14,12 @@
 // xptools
 #include "vxlog.h"
 #include "ThreadManager.hpp"
+
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
 #include "WSService.hpp"
+#endif
 
 using namespace vx;
-
-// --------------------------------------------------
-//
-// MARK: - Public -
-//
-// --------------------------------------------------
 
 WSConnection_SharedPtr WSConnection::make(const std::string& scheme,
                                           const std::string& addr,
@@ -39,36 +36,27 @@ _serverPort(),
 _secure(false),
 _status(Status::IDLE),
 _statusMutex(),
-#ifdef __VX_USE_LIBWEBSOCKETS
-_wsi(nullptr),
-#else // EMSCRIPTEN
+#if defined(__VX_PLATFORM_WASM)
 _wsi(0),
 #endif
+#if defined(__VX_USE_LIBWEBSOCKETS)
+_wsi(nullptr),
+#endif
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
 _wsiMutex(),
+#endif
 _receivedBytesBuffer(),
 _isWriting(false),
 _isWritingMutex(),
 _payloadsToWrite(),
 _payloadBeingWritten(nullptr),
-_written(0) {
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else // EMSCRIPTEN
-    if (emscripten_websocket_is_supported() == false) {
-        vxlog_error("[WSConnection::WSConnection] Websockets are not supported by EMSCRIPTEN here!");
-    }
-#endif
+_written(0),
+_platformObject(nullptr) {
+    _init();
 }
 
 WSConnection::~WSConnection() {
-    
-    // free all payloads waiting, if there are any
-    _payloadsToWrite.clear();
-    _payloadBeingWritten = nullptr;
-    
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else // EMSCRIPTEN
-#endif
-    vxlog_debug("[WSConnection] deleted");
+    _destroy();
 }
 
 Connection::Status WSConnection::getStatus() {
@@ -76,9 +64,7 @@ Connection::Status WSConnection::getStatus() {
     return _status;
 }
 
-#ifdef __VX_USE_LIBWEBSOCKETS
-
-#else // EMSCRIPTEN
+#if defined(__VX_PLATFORM_WASM)
 EM_BOOL onopen(int eventType,
                const EmscriptenWebSocketOpenEvent *websocketEvent,
                void *userdata) {
@@ -138,31 +124,7 @@ EM_BOOL onmessage(int eventType,
 #endif
 
 void WSConnection::connect() {
-#ifdef __VX_USE_LIBWEBSOCKETS
-    
-#else // EMSCRIPTEN
-    
-    // free _wsi if it was allocated
-    emscripten_websocket_close(_wsi, 1000, ""); // 1000 means CLOSE_NORMAL
-    emscripten_websocket_delete(_wsi);
-    
-    // construct string with scheme, address and port
-    const std::string urlScheme = _secure ? "wss" : "ws";
-    const std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
-    // vxlog_debug("[WSConnection::connect] %s", url.c_str());
-    EmscriptenWebSocketCreateAttributes ws_attrs = {
-        url.c_str(),
-        NULL, //"binary",
-        EM_FALSE // on main thread
-    };
-    _wsi = emscripten_websocket_new(&ws_attrs);
-    emscripten_websocket_set_onopen_callback(_wsi, this, onopen);
-    emscripten_websocket_set_onerror_callback(_wsi, this, onerror);
-    emscripten_websocket_set_onclose_callback(_wsi, this, onclose);
-    emscripten_websocket_set_onmessage_callback(_wsi, this, onmessage);
-#endif
-    // send WSConnection to WSService for processing
-    WSService::shared()->requestWSConnection(_weakSelf.lock());
+    _connect();
 }
 
 bool WSConnection::isClosed() {
@@ -191,9 +153,10 @@ void WSConnection::reset() {
     
     _receivedBytesBuffer.clear();
     
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     setWsi(nullptr);
-#else
+#endif
+#if defined(__VX_PLATFORM_WASM)
     setWsi(0);
 #endif
 }
@@ -219,21 +182,8 @@ void WSConnection::close() {
         _status = Status::CLOSED;
     }
 
-#if defined(__VX_USE_LIBWEBSOCKETS)
-    
-    // Cancel polling of WSService.
-    // This will make the lws callback function trigger, it will notice the
-    // connection has been closed and disconnect the underlying TCP connection.
-    _payloadsToWrite.push(Payload::createDummy());
-    WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
+    _close();
 
-#else // __VX_NETWORKING_EMSCRIPTEN
-    
-    emscripten_websocket_close(_wsi, 1000, ""); // 1000 means CLOSE_NORMAL
-    emscripten_websocket_delete(_wsi);
-    
-#endif
-    
     // notify delegate
     std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
     if (delegate != nullptr) {
@@ -248,7 +198,7 @@ void WSConnection::closeOnError() {
             vxlog_error("can't close closed connection");
             return;
         }
-        
+
         if (_status == Status::IDLE) {
             _status = Status::CLOSED_INITIAL_CONNECTION_FAILURE;
             // vxlog_debug("WSConnection::closeOnError -> INITIAL CONNECTION FAILURE");
@@ -257,7 +207,7 @@ void WSConnection::closeOnError() {
             vxlog_debug("WSConnection::closeOnError -> ERROR");
         }
     }
-    
+
     // notify delegate
     std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
     if (delegate != nullptr) {
@@ -277,19 +227,100 @@ const bool& WSConnection::getSecure() const {
     return _secure;
 }
 
+std::string WSConnection::getURL() const {
+    return std::string(_secure ? "wss" : "ws") + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+}
+
+// PLATFORM SPECIFIC
+
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
 WSBackend WSConnection::getWsi() {
     std::lock_guard<std::mutex> lock(_wsiMutex);
     return _wsi;
 }
 
-//std::mutex& WSConnection::getWsiMutex() {
-//    return _wsiMutex;
-//}
-
 void WSConnection::setWsi(WSBackend wsi) {
     std::lock_guard<std::mutex> lock(_wsiMutex);
     _wsi = wsi;
 }
+
+void WSConnection::_writePayload(const Payload_SharedPtr& p) {
+    // push Payload to channel
+    // they will be read by LWS callback
+    _payloadsToWrite.push(p);
+
+    // notify WSService that bytes are waiting to be written
+    WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
+}
+#endif
+
+#if defined(__VX_USE_LIBWEBSOCKETS)
+
+void WSConnection::_init() {}
+
+void WSConnection::_connect() {
+// send WSConnection to WSService for processing
+WSService::shared()->requestWSConnection(_weakSelf.lock());
+}
+
+void WSConnection::_close() {
+    // Cancel polling of WSService.
+    // This will make the lws callback function trigger, it will notice the
+    // connection has been closed and disconnect the underlying TCP connection.
+    _payloadsToWrite.push(Payload::createDummy());
+    WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
+}
+
+void WSConnection::_destroy() {
+    // free all payloads waiting, if there are any
+    _payloadsToWrite.clear();
+    _payloadBeingWritten = nullptr;
+}
+#endif
+
+#if defined(__VX_PLATFORM_WASM)
+
+void WSConnection::_init() {
+    if (emscripten_websocket_is_supported() == false) {
+        vxlog_error("[WSConnection::WSConnection] Websockets are not supported by EMSCRIPTEN here!");
+    }
+}
+
+void WSConnection::_connect() {
+// free _wsi if it was allocated
+emscripten_websocket_close(_wsi, 1000, ""); // 1000 means CLOSE_NORMAL
+emscripten_websocket_delete(_wsi);
+
+// construct string with scheme, address and port
+const std::string urlScheme = _secure ? "wss" : "ws";
+const std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+// vxlog_debug("[WSConnection::connect] %s", url.c_str());
+EmscriptenWebSocketCreateAttributes ws_attrs = {
+    url.c_str(),
+    NULL, //"binary",
+    EM_FALSE // on main thread
+};
+_wsi = emscripten_websocket_new(&ws_attrs);
+emscripten_websocket_set_onopen_callback(_wsi, this, onopen);
+emscripten_websocket_set_onerror_callback(_wsi, this, onerror);
+emscripten_websocket_set_onclose_callback(_wsi, this, onclose);
+emscripten_websocket_set_onmessage_callback(_wsi, this, onmessage);
+
+// send WSConnection to WSService for processing
+WSService::shared()->requestWSConnection(_weakSelf.lock());
+}
+
+void WSConnection::_close() {
+    emscripten_websocket_close(_wsi, 1000, ""); // 1000 means CLOSE_NORMAL
+    emscripten_websocket_delete(_wsi);
+}
+
+void WSConnection::_destroy() {
+    // free all payloads waiting, if there are any
+    _payloadsToWrite.clear();
+    _payloadBeingWritten = nullptr;
+}
+#endif
 
 Connection::Payload_SharedPtr WSConnection::_getPayloadToWrite() {
     // payload to write should be in _payloadBeingWritten
@@ -353,21 +384,12 @@ bool WSConnection::isWriting() {
     return _isWriting;
 }
 
-// --------------------------------------------------
-// MARK: - Payload Writer -
-// --------------------------------------------------
-
 void WSConnection::pushPayloadToWrite(const Payload_SharedPtr& p) {
     if (this->getStatus() != Status::OK) {
         vxlog_warning("[WSConnection::pushPayloadToWrite] writing in a closed connection");
         return;
     }
-    // push Payload to channel
-    // they will be read by LWS callback
-    _payloadsToWrite.push(p);
-    
-    // notify WSService that bytes are waiting to be written
-    WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
+    _writePayload(p);
 }
 
 size_t WSConnection::write(char *buf, size_t len, bool& isFirstFragment, bool& partial) {
@@ -432,23 +454,13 @@ bool WSConnection::doneWriting() {
     return _getPayloadToWrite() == nullptr;
 }
 
-// --------------------------------------------------
-// MARK: - Private -
-// --------------------------------------------------
-
 void WSConnection::init(const WSConnection_SharedPtr& ref,
                         const std::string& scheme,
                         const std::string& addr,
                         const uint16_t& port) {
-    assert(scheme == "ws" || scheme == "wss");
+    // assert(scheme == "ws" || scheme == "wss");
     _weakSelf = ref;
-
-    // _scheme = scheme;
     _serverAddr.assign(addr);
     _serverPort = port;
     if (scheme == "wss") { _secure = true; }
 }
-
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else // EMSCRIPTEN
-#endif

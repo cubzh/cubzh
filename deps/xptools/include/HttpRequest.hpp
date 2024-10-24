@@ -26,9 +26,7 @@
 #define VX_HTTPS_SCHEME "https"
 #define VX_HTTP_SCHEME "http"
 
-#ifdef __VX_USE_LIBWEBSOCKETS
-#else // EMSCRIPTEN
-// emscripten Fetch API
+#if defined(__VX_PLATFORM_WASM)
 #include <emscripten/fetch.h>
 #endif
 

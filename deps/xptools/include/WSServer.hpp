@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map>
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wall"
 #pragma clang diagnostic ignored "-Wextra"
@@ -41,7 +41,7 @@ protected:
 private:
 };
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 ///
 class WSServer final {

@@ -28,7 +28,7 @@
 
 using namespace vx;
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 // used in the callback for uncommon headers
 typedef struct {
     lws *wsi;
@@ -42,7 +42,7 @@ typedef struct {
 //
 // --------------------------------------------------
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 int lws_callback_http(struct lws *wsi,
                       enum lws_callback_reasons reason,
@@ -70,7 +70,7 @@ WSService *WSService::shared() {
     if (WSService::_sharedInstance == nullptr) {
         WSService::_sharedInstance = new WSService();
         WSService::_sharedInstance->_init();
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
         const int logs = 0; // LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_DEBUG | LLL_EXT
         lws_set_log_level(logs, nullptr);
 #endif
@@ -101,16 +101,15 @@ WSService::~WSService() {
         }
         free(_lws_protocols);
     }
-#ifdef __VX_USE_LIBWEBSOCKETS
-    // ...
-#else
+
+#if defined(__VX_PLATFORM_WASM)
     emscripten_websocket_deinitialize();
 #endif
 }
 
 void WSService::sendHttpRequest(HttpRequest_SharedPtr httpReq) {
     if (httpReq == nullptr) { return; }
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     _httpRequestWaitingQueue.push(httpReq);
     {
         std::lock_guard<std::mutex> lock(_contextMutex);
@@ -123,7 +122,7 @@ void WSService::sendHttpRequest(HttpRequest_SharedPtr httpReq) {
 
 void WSService::cancelHttpRequest(HttpRequest_SharedPtr httpReq) {
     if (httpReq == nullptr) { return; }
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     {
         std::lock_guard<std::mutex> lock(_contextMutex);
         if (_contextReady) {
@@ -135,7 +134,7 @@ void WSService::cancelHttpRequest(HttpRequest_SharedPtr httpReq) {
 
 void WSService::requestWSConnection(WSConnection_SharedPtr wsConn) {
     if (wsConn == nullptr) { return; }
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     _wsConnectionWaitingQueue.push(wsConn);
     {
         std::lock_guard<std::mutex> lock(_contextMutex);
@@ -154,8 +153,8 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
         return;
     }
     
-#ifdef __VX_USE_LIBWEBSOCKETS
-    
+#if defined(__VX_USE_LIBWEBSOCKETS)
+
     // if this connection is already writing, we don't need to trigger the
     // lws "writable" callback.
     if (wsConn->isWriting() == true) {
@@ -175,8 +174,9 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
         // whether a write is pending, and call lws_callback_on_writable().
         lws_cancel_service_pt(wsi);
     }
-#else
+#endif
 
+#if defined(__VX_PLATFORM_WASM)
 #define WASM_WEBSOCKET_WRITE_BUFFER_SIZE 512
     static char* buffer[WASM_WEBSOCKET_WRITE_BUFFER_SIZE];
     WSBackend wsi = wsConn->getWsi();
@@ -193,7 +193,7 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
 #endif
 }
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 std::vector<WSConnection_WeakPtr>& WSService::getWSConnectionsActive() {
     return _wsConnectionsActive;
 }
@@ -210,7 +210,7 @@ const std::vector<lws_token_indexes>& WSService::getHeadersToParse() {
 // --------------------------------------------------
 
 WSService::WSService() :
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 _httpRequestWaitingQueue(),
 _wsConnectionWaitingQueue(),
 _wsConnectionsActive(),
@@ -321,7 +321,7 @@ void WSService::_init() {
 }
 
 void WSService::_serviceThreadFunction() {
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     // construct protocols array
     {
         assert(_lws_protocols == nullptr);
@@ -564,7 +564,7 @@ void WSService::_serviceThreadFunction() {
 //
 // --------------------------------------------------
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 int lws_callback_ws_join(struct lws *wsi,
                          enum lws_callback_reasons reason,
                          void *user,

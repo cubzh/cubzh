@@ -11,11 +11,13 @@
 #include <thread>
 
 // websockets
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 // libwebsockets
 #include "libwebsockets.h"
-#else
+#endif
+
 // emscripten API
+#if defined(__VX_PLATFORM_WASM)
 #include <emscripten/websocket.h>
 #endif
 
@@ -48,7 +50,7 @@ public:
     // sets Status == OK
     // called by WSService
     void established();
-    
+
     bool isClosed() override;
     void connect() override;
     
@@ -56,12 +58,15 @@ public:
     const std::string& getHost() const;
     const uint16_t& getPort() const;
     const bool& getSecure() const;
+    std::string getURL() const;
 
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
     WSBackend getWsi();
     // std::mutex& getWsiMutex();
     // modifiers
     void setWsi(WSBackend wsi);
-    
+#endif
+
     /// notify the connection that it received data
     /// bytes must be copied!
     void receivedBytes(char *bytes, const size_t len, const bool isFinalFragment);
@@ -126,37 +131,46 @@ private:
     /// Indicates wether the connection is closed
     Status _status;
     std::mutex _statusMutex;
-    
+
+    // REQUIRED ONLY WHEN USING LIBWEBSOCKETS:
+
+#if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
     /// lws connection handler
     WSBackend _wsi;
-    
-    ///
     std::mutex _wsiMutex;
-    
+#endif
+
     /// buffer for received bytes
     std::string _receivedBytesBuffer;
-    
+
     /// `true` means "not currently writing
     bool _isWriting;
-    
+
     ///
     std::mutex _isWritingMutex;
-    
+
     ///
     Channel<Connection::Payload_SharedPtr> _payloadsToWrite;
-    
+
     ///
     Connection::Payload_SharedPtr _payloadBeingWritten;
-    
+
     // Total bytes written for current Payload
     // (including header and metadata)
     size_t _written;
-    
-#ifdef __VX_USE_LIBWEBSOCKETS
-    
-#else // EMSCRIPTEN
 
-#endif
+    // PLATFORM SPECIFIC
+
+    void _init();
+    void _connect();
+    void _writePayload(const Payload_SharedPtr& p);
+    // void _readPayload(); // reads next payload
+    void _close();
+    void _destroy();
+
+    void *_platformObject;
+    void _attachPlatformObject(void *o);
+    void _detachPlatformObject();
 };
 
 } // namespace vx

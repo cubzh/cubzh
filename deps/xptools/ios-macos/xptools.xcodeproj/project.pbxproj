@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1005120A2CC6A77500B16FB1 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
+		1005120B2CC6A77500B16FB1 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
+		1005120C2CC6A77500B16FB1 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
+		1005120D2CC6A77500B16FB1 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
+		100512112CC6BECB00B16FB1 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
+		100512122CC6BECB00B16FB1 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
 		101554E02C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
 		101554E12C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
 		101554E22C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
@@ -177,8 +183,6 @@
 		85471B4627E3E4AA000575D5 /* WSServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3E27E3E4AA000575D5 /* WSServer.cpp */; };
 		85471B4727E3E4AA000575D5 /* WSServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3E27E3E4AA000575D5 /* WSServer.cpp */; };
 		85471B4827E3E4AA000575D5 /* WSServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3E27E3E4AA000575D5 /* WSServer.cpp */; };
-		85471B4927E3E4AA000575D5 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
-		85471B4A27E3E4AA000575D5 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
 		85471B4B27E3E4AA000575D5 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
 		85471B6927E47DAB000575D5 /* WSServerConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B6827E47DAB000575D5 /* WSServerConnection.cpp */; };
 		85471B6A27E47DAB000575D5 /* WSServerConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B6827E47DAB000575D5 /* WSServerConnection.cpp */; };
@@ -187,8 +191,6 @@
 		85471B6E27E4C99F000575D5 /* WSTypes.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B6C27E4C99E000575D5 /* WSTypes.hpp */; };
 		85471B9227E85AF6000575D5 /* WSService.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B9127E85AF6000575D5 /* WSService.hpp */; };
 		85471B9327E85AF6000575D5 /* WSService.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B9127E85AF6000575D5 /* WSService.hpp */; };
-		85471B9527E85B03000575D5 /* WSService.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B9427E85B03000575D5 /* WSService.cpp */; };
-		85471B9627E85B03000575D5 /* WSService.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B9427E85B03000575D5 /* WSService.cpp */; };
 		85471B9727E85B03000575D5 /* WSService.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B9427E85B03000575D5 /* WSService.cpp */; };
 		8553F4242C074B8D000D53B4 /* libpng-macos.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8553F41D2C074705000D53B4 /* libpng-macos.a */; };
 		8553F4272C074BA8000D53B4 /* libpng-ios.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8553F41F2C074705000D53B4 /* libpng-ios.a */; };
@@ -309,6 +311,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		100512092CC6A77500B16FB1 /* WSConnection.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WSConnection.mm; sourceTree = "<group>"; };
 		101554DB2C04D57E001E9057 /* BZMD5.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BZMD5.cpp; sourceTree = "<group>"; };
 		101554DC2C04D57E001E9057 /* BZMD5.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BZMD5.hpp; sourceTree = "<group>"; };
 		101554DD2C04D57E001E9057 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON.c; sourceTree = "<group>"; };
@@ -565,6 +568,7 @@
 				8534FDD5240E97D5004B3494 /* device-macos.mm */,
 				10974C89244D690C008153FE /* filesystem.mm */,
 				10C541282CA70FBD008CB6C7 /* HttpRequest.mm */,
+				100512092CC6A77500B16FB1 /* WSConnection.mm */,
 				850623592877898C00B270A6 /* miniaudio_impl.mm */,
 				85BD47D62A5DABAE00556C6E /* notifications.mm */,
 				855CB5E4287320E200072D5F /* process-ios.cpp */,
@@ -873,6 +877,7 @@
 				1021451E2C75E0C000099E38 /* HttpCookie.cpp in Sources */,
 				1021451F2C75E0C000099E38 /* HttpClient.cpp in Sources */,
 				102145202C75E0C000099E38 /* WSServerConnection.cpp in Sources */,
+				1005120D2CC6A77500B16FB1 /* WSConnection.mm in Sources */,
 				102145212C75E0C000099E38 /* tracking.cpp in Sources */,
 				102145222C75E0C000099E38 /* device_c.cpp in Sources */,
 				102145232C75E0C000099E38 /* crypto.cpp in Sources */,
@@ -921,6 +926,7 @@
 				10847CC8270EE8C6006A5E91 /* crypto.cpp in Sources */,
 				10847CC9270EE8C6006A5E91 /* vxlog.mm in Sources */,
 				10C5412B2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */,
+				1005120C2CC6A77500B16FB1 /* WSConnection.mm in Sources */,
 				85471B4227E3E4AA000575D5 /* LocalConnection.cpp in Sources */,
 				10EE2BC9272C098A00EC374C /* web-macos.mm in Sources */,
 				85BB0193279F3B56000F1B10 /* HttpRequest.cpp in Sources */,
@@ -950,7 +956,6 @@
 				85BB0195279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
 				101758BB2C99C254008318A8 /* notifications.cpp in Sources */,
 				85454CE0288003D70047A26C /* miniaudio_impl.mm in Sources */,
-				85471B9527E85B03000575D5 /* WSService.cpp in Sources */,
 				1033952325626D220083F4C0 /* vxtime.cpp in Sources */,
 				8518D09D27BA6DD900A438D6 /* json.cpp in Sources */,
 				10E793652450137900B7E2E2 /* filesystem.cpp in Sources */,
@@ -959,6 +964,7 @@
 				851F2A422B63C45E00E2863F /* HttpCookie.cpp in Sources */,
 				85BB0188279EFA0E000F1B10 /* HttpClient.cpp in Sources */,
 				85471B6927E47DAB000575D5 /* WSServerConnection.cpp in Sources */,
+				1005120A2CC6A77500B16FB1 /* WSConnection.mm in Sources */,
 				853C93AD25A384290030C45D /* tracking.cpp in Sources */,
 				8534FDD8240E9EAE004B3494 /* device_c.cpp in Sources */,
 				853C93FF25A3C2470030C45D /* crypto.cpp in Sources */,
@@ -980,7 +986,7 @@
 				101554E02C04D57E001E9057 /* BZMD5.cpp in Sources */,
 				10C63D2C246C4F61003DEC3E /* strings.cpp in Sources */,
 				85471B4627E3E4AA000575D5 /* WSServer.cpp in Sources */,
-				85471B4927E3E4AA000575D5 /* WSConnection.cpp in Sources */,
+				100512112CC6BECB00B16FB1 /* WSConnection.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -994,7 +1000,6 @@
 				8518D09927BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
 				101758B92C99C254008318A8 /* notifications.cpp in Sources */,
 				85BB0196279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
-				85471B9627E85B03000575D5 /* WSService.cpp in Sources */,
 				1033952425626D220083F4C0 /* vxtime.cpp in Sources */,
 				8518D09E27BA6DD900A438D6 /* json.cpp in Sources */,
 				10E793662450137900B7E2E2 /* filesystem.cpp in Sources */,
@@ -1003,6 +1008,7 @@
 				851F2A432B63C45E00E2863F /* HttpCookie.cpp in Sources */,
 				85BB0189279EFA0E000F1B10 /* HttpClient.cpp in Sources */,
 				85471B6A27E47DAB000575D5 /* WSServerConnection.cpp in Sources */,
+				1005120B2CC6A77500B16FB1 /* WSConnection.mm in Sources */,
 				853C93AE25A384290030C45D /* tracking.cpp in Sources */,
 				8598D6D0240EF46B008A6D4C /* device_c.cpp in Sources */,
 				853C940025A3C2470030C45D /* crypto.cpp in Sources */,
@@ -1024,7 +1030,7 @@
 				101554E12C04D57E001E9057 /* BZMD5.cpp in Sources */,
 				85471B4727E3E4AA000575D5 /* WSServer.cpp in Sources */,
 				1022D09428AF8EEF00C1F1E9 /* process-ios.cpp in Sources */,
-				85471B4A27E3E4AA000575D5 /* WSConnection.cpp in Sources */,
+				100512122CC6BECB00B16FB1 /* WSConnection.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1207,7 +1213,6 @@
 					"DEBUG=1",
 					CLIENT_ENV,
 					DEBUG_LOCAL_GAME,
-					__VX_USE_LIBWEBSOCKETS,
 					"PROJECT_LUA_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
 					"PROJECT_BUNDLE_PATH=\"\\\"$SRCROOT/../../../../cubzh/bundle\\\"\"",
 				);
@@ -1217,8 +1222,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1274,7 +1279,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					CLIENT_ENV,
 					DEBUG_LOCAL_GAME,
-					__VX_USE_LIBWEBSOCKETS,
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1282,8 +1286,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;

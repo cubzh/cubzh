@@ -14,7 +14,7 @@
 // xptools
 #include "vxlog.h"
 #include "HttpClient.hpp"
-#include "WSService.hpp"
+// #include "WSService.hpp"
 #include "ThreadManager.hpp"
 #include "OperationQueue.hpp"
 #include "HttpCookie.hpp"
@@ -411,7 +411,9 @@ void HttpRequest::_useCachedResponse() {
     strongSelf->_response.setUseLocalCache(strongSelf->_cachedResponse.getUseLocalCache());
 }
 
-#else // defined(__VX_PLATFORM_WASM)
+#endif
+
+#if defined(__VX_PLATFORM_WASM)
 
 void HttpRequest::downloadSucceeded(emscripten_fetch_t * const fetch) {
     HttpRequest::downloadCommon(fetch, true);

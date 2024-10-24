@@ -22,7 +22,7 @@
 #include "BZMD5.hpp"
 #include "cJSON.h"
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wall"

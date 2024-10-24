@@ -22,7 +22,7 @@
 
 using namespace vx;
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 //
 // functions' prototypes
@@ -71,7 +71,7 @@ WSServerDelegate::~WSServerDelegate() {}
 //
 // --------------------------------------------------
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 WSServer::WSServer(const uint16_t listenPort,
                    const bool secure,
