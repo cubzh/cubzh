@@ -10,7 +10,7 @@
 
 // using namespace vx;
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 //WSBackend::WSBackend(lws* wsi) :
 //_wsi(wsi) {

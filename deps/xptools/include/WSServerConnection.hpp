@@ -17,7 +17,7 @@
 
 namespace vx {
 
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
 class WSServer;
 class WSServerConnection;

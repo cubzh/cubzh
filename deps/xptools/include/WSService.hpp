@@ -13,7 +13,7 @@
 #include <unordered_map>
 
 // websockets
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 // libwebsockets
 #include "libwebsockets.h"
 #else
@@ -64,7 +64,7 @@ public:
     ///
     void scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn);
     
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
     ///
     std::vector<WSConnection_WeakPtr>& getWSConnectionsActive();
 
@@ -90,7 +90,7 @@ private:
     
     // fields
     
-#ifdef __VX_USE_LIBWEBSOCKETS
+#if defined(__VX_USE_LIBWEBSOCKETS)
 
     ///
     std::vector<lws_token_indexes> _headersToParse;

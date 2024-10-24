@@ -39,15 +39,13 @@
 - (instancetype)initWithWSConnection:(vx::WSConnection*)conn {
     self = [super init];
     if (self) {
-        NSLog(@"WebSocket connection INIT");
+        // NSLog(@"WebSocket connection INIT");
         _conn = conn;
-
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
         _session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
         NSString *str = [NSString stringWithUTF8String:conn->getURL().c_str()];
         _url = [NSURL URLWithString:str];
-
-        NSLog(@"WebSocket connection URL: %@", _url);
+        // NSLog(@"WebSocket connection URL: %@", _url);
     }
     return self;
 }
@@ -69,11 +67,9 @@
 -(void)connect {
     [self close];
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSLog(@"WebSocket connection CONNECT");
-
+        // NSLog(@"WebSocket connection CONNECT");
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
         self.session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
-
         self.task = [self.session webSocketTaskWithURL:self.url];
         [[self task] resume];
     });
@@ -108,11 +104,8 @@
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.task sendMessage:msg completionHandler:^(NSError * _Nullable error) {
             if (error) {
-                NSLog(@"Error sending message: %@", error);
+                NSLog(@"WebSocket connection ERROR sending message: %@", error);
             }
-//            else {
-//                NSLog(@"WebSocket connection MESSAGE SENT");
-//            }
         }];
     });
 }
