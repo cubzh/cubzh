@@ -1,6 +1,6 @@
 {
-  "APIHost": "https://api.cu.bzh:443",
-  "GameServerTag": "139bbf84",
-  "Version": "0.1.8",
-  "Commit": ""
+	"APIHost": "https://api.cu.bzh:443",
+	"GameServerTag": "139bbf84",
+	"Version": "0.1.9",
+	"Commit": ""
 }
