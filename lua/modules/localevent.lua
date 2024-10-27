@@ -89,6 +89,7 @@ localevent.name = {
 	AppDidBecomeActive = 58, -- callback: function()
 	DidReceivePushNotification = 59, -- callback: function(title, body, category, badge)
 	NotificationCountDidChange = 60, -- callback: function() -- doesn't provide count, API request should be sent to obtain it.
+	WorldRequested = 61, -- callback: function() -- doesn't provide information about what world for privacy purposes
 }
 localevent.Name = localevent.name
 
