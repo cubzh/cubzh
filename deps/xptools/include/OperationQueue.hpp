@@ -103,12 +103,6 @@ private:
     /// scheduled tasks queue
     std::map<uint64_t,fp_t> _queueScheduled;
     
-    /// mutex for tasks queue
-    std::mutex _lock;
-    
-    ///
-    std::thread _thread;
-    
     /// queue type
     Type _type;
     
@@ -116,13 +110,14 @@ private:
     /// This is used for managing the background thread
     /// of certain queues.
     State _state;
-    
-    ///
+
     void startThreadIfNeeded();
-    
-    ///
+#ifndef __VX_SINGLE_THREAD
+    std::mutex _lock;
+    std::thread _thread;
+
     void threadFunction();
-    
+#endif
 };
 
 }

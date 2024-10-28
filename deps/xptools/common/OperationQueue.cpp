@@ -8,7 +8,17 @@
 #include "OperationQueue.hpp"
 
 #include <queue>
+
+#ifdef __VX_SINGLE_THREAD
+#define LOCK_GUARD
+#define LOCK
+#define UNLOCK
+#else
 #include <thread>
+#define LOCK_GUARD const std::lock_guard<std::mutex> locker(this->_lock);
+#define LOCK std::unique_lock<std::mutex> lock(_lock);
+#define UNLOCK lock.unlock();
+#endif
 
 #define MAX_OPERATIONS_PER_CYCLE 10
 #define SLEEP_TIME_BETWEEN_CYCLES 16 // in ms
@@ -30,17 +40,25 @@ OperationQueue *OperationQueue::getServerMain() {
 }
 
 OperationQueue *OperationQueue::getBackground() {
+#ifdef __VX_SINGLE_THREAD
+    return _mainQueue;
+#else
     if (_backgroundQueue == nullptr) {
         _backgroundQueue = new OperationQueue(Type::async);
     }
     return _backgroundQueue;
+#endif
 }
 
 OperationQueue *OperationQueue::getSlowBackground() {
+#ifdef __VX_SINGLE_THREAD
+    return _mainQueue;
+#else
     if (_slowBackgroundQueue == nullptr) {
         _slowBackgroundQueue = new OperationQueue(Type::async);
     }
     return _slowBackgroundQueue;
+#endif
 }
 
 OperationQueue::OperationQueue(Type type) :
@@ -48,8 +66,10 @@ _queue(),
 _queueScheduled() {
     _type = type;
     _state = State::idle;
+#ifndef __VX_SINGLE_THREAD
     // create a thread object that doesn't represent an execution thread
     _thread = std::thread();
+#endif
 }
 
 OperationQueue::~OperationQueue() {
@@ -59,7 +79,7 @@ OperationQueue::~OperationQueue() {
 /// dispatch and copy
 void OperationQueue::dispatch(const fp_t& op) {
     {
-        const std::lock_guard<std::mutex> locker(this->_lock);
+        LOCK_GUARD
         _queue.push_back(op);
     }
     this->startThreadIfNeeded();
@@ -68,7 +88,7 @@ void OperationQueue::dispatch(const fp_t& op) {
 /// dispatch and move
 void OperationQueue::dispatch(fp_t&& op) {
     {
-        const std::lock_guard<std::mutex> locker(this->_lock);
+        LOCK_GUARD
         _queue.push_back(std::move(op));
     }
     this->startThreadIfNeeded();
@@ -77,7 +97,7 @@ void OperationQueue::dispatch(fp_t&& op) {
 /// dispatch (in front of queue) and copy
 void OperationQueue::dispatchFirst(const fp_t& op) {
     {
-        const std::lock_guard<std::mutex> locker(this->_lock);
+        LOCK_GUARD
         _queue.push_front(op);
     }
     this->startThreadIfNeeded();
@@ -86,7 +106,7 @@ void OperationQueue::dispatchFirst(const fp_t& op) {
 /// dispatch (in front of queue) and move
 void OperationQueue::dispatchFirst(fp_t&& op) {
     {
-        const std::lock_guard<std::mutex> locker(this->_lock);
+        LOCK_GUARD
         _queue.push_front(std::move(op));
     }
     this->startThreadIfNeeded();
@@ -94,7 +114,7 @@ void OperationQueue::dispatchFirst(fp_t&& op) {
 
 void OperationQueue::schedule(const fp_t& op, uint64_t ms) {
     {
-        const std::lock_guard<std::mutex> locker(this->_lock);
+        LOCK_GUARD
         using namespace std::chrono;
         system_clock::time_point tp = system_clock::now() + milliseconds(ms);
         time_t t = system_clock::to_time_t(tp);
@@ -105,7 +125,7 @@ void OperationQueue::schedule(const fp_t& op, uint64_t ms) {
 
 void OperationQueue::schedule(const fp_t&& op, uint64_t ms) {
     {
-        const std::lock_guard<std::mutex> locker(this->_lock);
+        LOCK_GUARD
         using namespace std::chrono;
         uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
         uint64_t date = now + ms;
@@ -117,7 +137,7 @@ void OperationQueue::schedule(const fp_t&& op, uint64_t ms) {
 void OperationQueue::callFirstDispatchedBlocks(size_t n) {
     bool skipScheduled = false;
     while (n > 0) {
-        std::unique_lock<std::mutex> lock(_lock); // constructor does lock mutex
+        LOCK
 
         if (skipScheduled == false && _queueScheduled.empty() == false) {
             using namespace std::chrono;
@@ -129,7 +149,7 @@ void OperationQueue::callFirstDispatchedBlocks(size_t n) {
                 _queueScheduled.erase(_queueScheduled.begin());
                 // unlock before calling op()
                 // because op() could need to add something in the queue
-                lock.unlock();
+                UNLOCK
                 op();
                 
                 --n;
@@ -140,14 +160,14 @@ void OperationQueue::callFirstDispatchedBlocks(size_t n) {
         }
         
         if (_queue.empty()) {
-            lock.unlock();
+            UNLOCK
             break;
         } else {
             fp_t op = std::move(_queue.front());
             _queue.pop_front();
             // unlock before calling op()
             // because op() could need to add something in the queue
-            lock.unlock();
+            UNLOCK
             op();
         }
         
@@ -171,10 +191,13 @@ OperationQueue *OperationQueue::_slowBackgroundQueue = nullptr;
 
 ///
 void OperationQueue::startThreadIfNeeded() {
+#ifdef __VX_SINGLE_THREAD
+    return;
+#else
     if (_type != Type::async) {
         return; // only async operation queues can have a thread
     }
-    const std::lock_guard<std::mutex> locker(_lock);
+    LOCK_GUARD
     if (_state != State::runningInBackground) {
         _state = State::runningInBackground;
         if (_thread.joinable()) {
@@ -182,9 +205,10 @@ void OperationQueue::startThreadIfNeeded() {
         }
         _thread = std::thread(&OperationQueue::threadFunction, this);
     } // else thread is already running
+#endif
 }
 
-///
+#ifndef __VX_SINGLE_THREAD
 void OperationQueue::threadFunction() {
     std::unique_lock<std::mutex> locker(_lock, std::defer_lock);
     uint64_t now;
@@ -235,3 +259,4 @@ void OperationQueue::threadFunction() {
         std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME_BETWEEN_CYCLES));
     }
 }
+#endif
