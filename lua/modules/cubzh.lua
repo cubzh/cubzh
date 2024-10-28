@@ -39,6 +39,10 @@ local function cancelHTTPRequests()
 	httpRequests = {}
 end
 
+LocalEvent:Listen(LocalEvent.Name.WorldRequested, function()
+	cancelHTTPRequests()
+end)
+
 Client.OnStart = function()
 	Screen.Orientation = "portrait" -- force portrait
 
@@ -1476,7 +1480,7 @@ function home()
 				end
 
 				cell.onRelease = function(self)
-					Menu:ShowWorld({ world = self.world, onOpenWorld = cancelHTTPRequests })
+					Menu:ShowWorld({ world = self.world })
 				end
 
 				cell.onCancel = function(_)
@@ -2456,7 +2460,7 @@ function home()
 
 		btnExplore.onRelease = function()
 			Menu:sendHomeDebugEvent("User presses EXPLORE button")
-			Menu:ShowWorlds({ onOpenWorld = cancelHTTPRequests })
+			Menu:ShowWorlds()
 		end
 
 		btnProfile.onRelease = function()

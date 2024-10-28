@@ -17,7 +17,6 @@ mod.createModalContent = function(_, config)
 		},
 		mode = "explore", -- "explore" / "create"
 		uikit = require("uikit"),
-		onOpenWorld = nil
 	}
 
 	local ok, err = pcall(function()
@@ -29,7 +28,6 @@ mod.createModalContent = function(_, config)
 				-- 	likes = { "integer" },
 				-- 	liked = { "boolean" },
 				-- },
-				onOpenWorld = { "function" }
 			},
 		})
 	end)
@@ -78,7 +76,6 @@ mod.createModalContent = function(_, config)
 	content.title = config.world.title
 	content.icon = "🌎"
 	content.node = worldDetails
-	content.onOpenWorld = config.onOpenWorld
 
 	content.didBecomeActive = function()
 		for _, listener in ipairs(listeners) do
@@ -98,10 +95,6 @@ mod.createModalContent = function(_, config)
 	if not createMode then
 		btnLaunch = ui:buttonPositive({ content = "Start", textSize = "big", padding = 10 })
 		btnLaunch.onRelease = function()
-			if type(content.onOpenWorld) == "function" then
-				content.onOpenWorld()
-			end
-
 			System:DebugEvent("User presses Start button to launch world", { ["world-id"] = world.id })
 			URL:Open("https://app.cu.bzh?worldID=" .. world.id)
 		end

@@ -230,7 +230,7 @@ function showModal(key, config)
 		content = require("gallery"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CUBZH_MENU then
-		content = getCubzhMenuModalContent(config.onOpenWorld)
+		content = getCubzhMenuModalContent()
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLDS then
 		content = require("gallery"):createModalContent({
@@ -238,7 +238,6 @@ function showModal(key, config)
 			type = "worlds",
 			displayLikes = true,
 			categories = { "featured" },
-			onOpenWorld = config.onOpenWorld
 		})
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.WORLD then
@@ -255,7 +254,7 @@ function showModal(key, config)
 		content = require("item_details"):createModalContent(config)
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.CREATIONS then
-		content = require("creations"):createModalContent({ uikit = ui, onOpenWorld = config.onOpenWorld })
+		content = require("creations"):createModalContent({ uikit = ui })
 		activeModal = modal:create(content, maxModalWidth, maxModalHeight, updateModalPosition, ui)
 	elseif key == MODAL_KEYS.SETTINGS then
 		content = settings:createModalContent({ clearCache = true, account = true, uikit = ui })
@@ -1317,7 +1316,7 @@ refreshChat()
 
 -- CUBZH MENU CONTENT
 
-function getCubzhMenuModalContent(onOpenWorld)
+function getCubzhMenuModalContent()
 	local dev = System.LocalUserIsAuthor and System.ServerIsInDevMode
 
 	local content = modal:createContent()
@@ -1339,7 +1338,6 @@ function getCubzhMenuModalContent(onOpenWorld)
 				displayLikes = true,
 				categories = { "featured" },
 				perPage = 100,
-				onOpenWorld = onOpenWorld
 			})
 			activeModal:push(content)
 		end
@@ -1357,7 +1355,6 @@ function getCubzhMenuModalContent(onOpenWorld)
 					uikit = ui,
 					type = "items",
 					perPage = 100,
-					onOpenWorld = onOpenWorld
 				})
 				activeModal:push(content)
 			end
