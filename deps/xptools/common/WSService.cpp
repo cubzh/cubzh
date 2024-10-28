@@ -11,6 +11,15 @@
 #include <algorithm>
 #include <cassert>
 
+#if defined(__VX_SINGLE_THREAD) || !defined(__VX_USE_LIBWEBSOCKETS)
+#define LOCK_GUARD_CONTEXT
+#define LOCK_GUARD_INTERRUPTED
+#else
+#include <thread>
+#define LOCK_GUARD_CONTEXT std::lock_guard<std::mutex> lock(_contextMutex);
+#define LOCK_GUARD_INTERRUPTED std::lock_guard<std::mutex> lock(_serviceThreadInterruptedMutex);
+#endif
+
 // xptools
 #include "vxlog.h"
 #include "HttpRequest.hpp"
@@ -79,10 +88,11 @@ WSService *WSService::shared() {
 }
 
 WSService::~WSService() {
+#if !defined(__VX_SINGLE_THREAD) && defined(__VX_USE_LIBWEBSOCKETS)
     // stop service thread
     if (_serviceThread.joinable()) {
         {
-            std::lock_guard<std::mutex> lock(_serviceThreadInterruptedMutex);
+            LOCK_GUARD_INTERRUPTED
             assert(_serviceThreadInterrupted == false);
             _serviceThreadInterrupted = true;
         }
@@ -91,6 +101,7 @@ WSService::~WSService() {
     } else {
         vxlog_error("[~WSService] this should not happen");
     }
+#endif
     
     // TODO: make sure _lws_context is freed
     
@@ -112,7 +123,7 @@ void WSService::sendHttpRequest(HttpRequest_SharedPtr httpReq) {
 #if defined(__VX_USE_LIBWEBSOCKETS)
     _httpRequestWaitingQueue.push(httpReq);
     {
-        std::lock_guard<std::mutex> lock(_contextMutex);
+        LOCK_GUARD_CONTEXT
         if (_contextReady) {
             lws_cancel_service(_lws_context);
         }
@@ -124,7 +135,7 @@ void WSService::cancelHttpRequest(HttpRequest_SharedPtr httpReq) {
     if (httpReq == nullptr) { return; }
 #if defined(__VX_USE_LIBWEBSOCKETS)
     {
-        std::lock_guard<std::mutex> lock(_contextMutex);
+        LOCK_GUARD_CONTEXT
         if (_contextReady) {
             lws_cancel_service(_lws_context);
         }
@@ -137,7 +148,7 @@ void WSService::requestWSConnection(WSConnection_SharedPtr wsConn) {
 #if defined(__VX_USE_LIBWEBSOCKETS)
     _wsConnectionWaitingQueue.push(wsConn);
     {
-        std::lock_guard<std::mutex> lock(_contextMutex);
+        LOCK_GUARD_CONTEXT
         if (_contextReady) {
             lws_cancel_service(_lws_context);
         }
@@ -167,7 +178,7 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
         vxlog_error("[WSService::scheduleWSConnectionWrite] connection is NULL");
         return;
     }
-    std::lock_guard<std::mutex> lock(_contextMutex);
+    LOCK_GUARD_CONTEXT
     if (_contextReady) {
         // this will trigger a call of the callback function, with the reason
         // LWS_CALLBACK_EVENT_WAIT_CANCELLED. There, we'll be able to check
@@ -217,13 +228,15 @@ _wsConnectionsActive(),
 #else
 _wsConnections(),
 #endif
+#if !defined(__VX_SINGLE_THREAD) && defined(__VX_USE_LIBWEBSOCKETS)
 _serviceThread(),
-_serviceThreadInterrupted(false),
+_contextMutex(),
 _serviceThreadInterruptedMutex(),
+#endif
+_serviceThreadInterrupted(false),
 _lws_protocols(nullptr),
 _lws_context(nullptr),
-_contextReady(false),
-_contextMutex() {
+_contextReady(false) {
 #if defined(__VX_USE_LIBWEBSOCKETS)
     _headersToParse.push_back(WSI_TOKEN_GET_URI);
     _headersToParse.push_back(WSI_TOKEN_POST_URI);
@@ -317,11 +330,17 @@ _contextMutex() {
 }
 
 void WSService::_init() {
+#if defined(__VX_USE_LIBWEBSOCKETS)
+#if defined(__VX_SINGLE_THREAD)
+    _serviceThreadFunction();
+#else
     _serviceThread = std::thread(&WSService::_serviceThreadFunction, this);
+#endif
+#endif
 }
 
-void WSService::_serviceThreadFunction() {
 #if defined(__VX_USE_LIBWEBSOCKETS)
+void WSService::_serviceThreadFunction() {
     // construct protocols array
     {
         assert(_lws_protocols == nullptr);
@@ -433,7 +452,7 @@ void WSService::_serviceThreadFunction() {
     }
     
     {
-        std::lock_guard<std::mutex> lock(_contextMutex);
+        LOCK_GUARD_CONTEXT
         _contextReady = true;
     }
     
@@ -541,7 +560,7 @@ void WSService::_serviceThreadFunction() {
         
         // update value of `interrupted`
         {
-            std::lock_guard<std::mutex> lock(_serviceThreadInterruptedMutex);
+            LOCK_GUARD_INTERRUPTED
             interrupted = _serviceThreadInterrupted;
         }
     }
@@ -555,8 +574,8 @@ void WSService::_serviceThreadFunction() {
     // ctx = nullptr;
 
     WSSERVICE_DEBUG_LOG("[WSService] thread exited (_serviceThreadFunction)");
-#endif
 }
+#endif
 
 // --------------------------------------------------
 //

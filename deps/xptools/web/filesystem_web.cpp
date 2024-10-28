@@ -137,10 +137,6 @@ EM_JS(void, js_fs_import_file, (), {
     input.click();
 });
 
-EM_JS(void, js_fs_sync_to_disk, (), {
-    fs_sync_to_disk();
-});
-
 EM_JS(void, js_fs_share_file, (const char *filePath, const char *fileName, const char *mimeType), {
     let jsFilePath = UTF8ToString(filePath);
     let jsFileName = UTF8ToString(fileName);
@@ -513,8 +509,9 @@ bool vx::fs::removeStorageFilesWithPrefix(const std::string& directory, const st
 }
 
 void vx::fs::syncFSToDisk() {
-    // calls a Javascript binding
-    js_fs_sync_to_disk();
+    EM_ASM(
+        fs_sync_to_disk();
+    );
 }
 
 // --------------------------------------------------
