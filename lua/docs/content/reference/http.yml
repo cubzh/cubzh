@@ -3,15 +3,14 @@ type: "HTTP"
 
 creatable: false
 description: |
-    [HTTP] allows you to send HTTP requests. This feature is only available in the Server functions.
-    If you want to send a request from the Client, you first need to send an Event to the Server. The server will take care of the HTTP request and send back information to the Client.
+    [HTTP] allows you to send HTTP requests.
 
 functions:
     - name: "Get"
       description: |
           Sends a GET HTTP request to the specified url. The request is asynchronous.
           The callback is called after receiving a response from the server.
-      argument-sets: 
+      argument-sets:
         -
           - name: "url"
             type: "string"
@@ -23,7 +22,7 @@ functions:
       samples:
           - code: |
               local url = "https://mybestapi.com/api/users" -- replace with the URL you want to request
-              
+
               HTTP:Get(url, function(res)
                 if res.StatusCode ~= 200 then
                   print("Error " .. res.StatusCode)
@@ -42,13 +41,13 @@ functions:
           Sends a POST HTTP request to the specified url. The request is asynchronous.
           If body is a table, it is JSON encoded before being sent. Otherwise it is sent as a string or raw [Data].
           The callback is called after receiving a response from the server.
-      argument-sets: 
+      argument-sets:
         -
           - name: "url"
             type: "string"
           - name: "headers"
             type: "table"
-            optional: true  
+            optional: true
           - name: "body"
             type: "table"
           - name: "callback"
@@ -83,7 +82,7 @@ functions:
               local body = {}
               body.name = "Bob"
               body.age = 28
-              
+
               HTTP:Post(url, headers, body, function(res)
                 if res.StatusCode ~= 200 then
                   print("Error " .. res.StatusCode)
