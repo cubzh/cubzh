@@ -196,6 +196,7 @@
 												-->{{ if $index }}<span class="variation">{{ end}}<!--
 												-->{{ if $function.Return }}<!--
 													-->{{ range $index, $value := $function.Return }}<!--
+														-->{{ if gt $index 0 }}, {{ end }}<!--
 														-->{{ $route := GetTypeRoute .Type }}<!--
 														-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
 														-->{{ .Type }}<!--
@@ -298,6 +299,7 @@
 													-->{{ if $index }}<span class="variation">{{ end}}<!--
 													-->{{ if $function.Return }}<!--
 														-->{{ range $index, $value := $function.Return }}<!--
+															-->{{ if gt $index 0 }}, {{ end }}<!--
 															-->{{ $route := GetTypeRoute .Type }}<!--
 															-->{{ if $route }}<a href="{{ $route }}" class="type">{{ else }}<span class="type">{{ end }}<!--
 															-->{{ .Type }}<!--
