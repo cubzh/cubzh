@@ -23,9 +23,10 @@ using namespace vx;
 
 WSConnection_SharedPtr WSConnection::make(const std::string& scheme,
                                           const std::string& addr,
-                                          const uint16_t& port) {
+                                          const uint16_t& port,
+                                          const std::string& path) {
     WSConnection_SharedPtr conn(new WSConnection());
-    conn->init(conn, scheme, addr, port);
+    conn->init(conn, scheme, addr, port, path);
     return conn;
 }
 
@@ -33,6 +34,7 @@ WSConnection::WSConnection() : Connection(),
 _weakSelf(),
 _serverAddr(),
 _serverPort(),
+_serverPath(),
 _secure(false),
 _status(Status::IDLE),
 _statusMutex(),
@@ -223,12 +225,27 @@ const uint16_t& WSConnection::getPort() const {
     return _serverPort;
 }
 
+const std::string& WSConnection::getPath() const {
+    return _serverPath;
+}
+
 const bool& WSConnection::getSecure() const {
     return _secure;
 }
 
 std::string WSConnection::getURL() const {
-    return std::string(_secure ? "wss" : "ws") + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+    std::string url;
+    if (_secure) {
+        url.append("wss");
+    } else {
+        url.append("ws");
+    }
+    url.append("://");
+    url.append(_serverAddr);
+    url.append(":");
+    url.append(std::to_string(_serverPort));
+    url.append(_serverPath);
+    return url;
 }
 
 // PLATFORM SPECIFIC
@@ -457,10 +474,12 @@ bool WSConnection::doneWriting() {
 void WSConnection::init(const WSConnection_SharedPtr& ref,
                         const std::string& scheme,
                         const std::string& addr,
-                        const uint16_t& port) {
+                        const uint16_t& port,
+                        const std::string& path) {
     // assert(scheme == "ws" || scheme == "wss");
     _weakSelf = ref;
     _serverAddr.assign(addr);
     _serverPort = port;
+    _serverPath.assign(path);
     if (scheme == "wss") { _secure = true; }
 }
