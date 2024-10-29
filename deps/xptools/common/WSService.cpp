@@ -509,13 +509,15 @@ void WSService::_serviceThreadFunction() {
             lws_client_connect_info connectInfo;
             memset(&connectInfo, 0, sizeof(connectInfo)); // otherwise uninitialized garbage
             connectInfo.context = _lws_context;
-            connectInfo.protocol = P3S_LWS_PROTOCOL_WS_JOIN;
+            connectInfo.protocol = nullptr; // no sub-protocol
+            connectInfo.local_protocol_name = P3S_LWS_PROTOCOL_WS_JOIN;
             // if method is NULL then a WebSocket upgrade will be attempted,
             // if method is NOT NULL, it will be a regular HTTP(S) request.
             connectInfo.method = nullptr;
             connectInfo.address = wsConn->getHost().c_str();
             connectInfo.host = ""; // crashes without it
             connectInfo.port = wsConn->getPort();
+            connectInfo.path = wsConn->getPath().c_str();
             connectInfo.userdata = new WSConnection_SharedPtr(wsConn);
             connectInfo.priority = 6;
 
