@@ -3,14 +3,14 @@ type: "JSON"
 
 creatable: false
 description: |
-    [JSON] allows you to encode Lua table as JSON string and decode JSON string as Lua table.
+    [JSON] allows you to encode a Lua table into a JSON string and decode a JSON string into a Lua table.
 
 functions:
     - name: "Encode"
       description: |
-          Takes a Lua table as parameter and returns an encoded string.
-          This function handles basic types (number, string, boolean, tables) and skip functions.
-      argument-sets: 
+          Takes a Lua table as parameter and returns a json encoded string.
+          This function handles basic types (number, string, boolean, tables) and skips functions.
+      argument-sets:
         -
           - name: "data"
             type: "table"
@@ -27,16 +27,25 @@ functions:
 
     - name: "Decode"
       description: |
-          Takes a string as parameter and returns a Lua table.
-      argument-sets: 
+          Decode takes a json string as parameter and returns a Lua table.
+          It also returns an error ([string]) when the provided string can't be decoded.
+      argument-sets:
         -
           - name: "encodedString"
             type: "string"
       return:
         - type: "table"
+        - type: "string"
       samples:
           - code: |
-              local jsonstring = "{\"body\":\"A message.\",\"status_code\":200}"
+              local jsonstring = "{\"body\":\"Test message\",\"status_code\":200}"
               local data = JSON:Decode(jsonstring)
-              print(data.status_code, data.body)
-              -- prints "200.0 A message."
+              print(data.body, "- status:", data.status_code)
+              -- prints "Test message - status: 200"
+
+              -- error handling:
+              local jsonstring = "{\"body\":\"Test message\",\"status_code\":200" -- missing '}' at the end
+              local data, err = JSON:Decode(jsonstring)
+              if err ~= nil then
+                print("could not decode jsonstring, error:", err)
+              end
