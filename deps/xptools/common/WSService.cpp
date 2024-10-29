@@ -515,7 +515,7 @@ void WSService::_serviceThreadFunction() {
             // if method is NOT NULL, it will be a regular HTTP(S) request.
             connectInfo.method = nullptr;
             connectInfo.address = wsConn->getHost().c_str();
-            connectInfo.host = ""; // crashes without it
+            connectInfo.host = wsConn->getHost().c_str();
             connectInfo.port = wsConn->getPort();
             connectInfo.path = wsConn->getPath().c_str();
             connectInfo.userdata = new WSConnection_SharedPtr(wsConn);
