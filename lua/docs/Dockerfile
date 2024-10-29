@@ -15,9 +15,28 @@ RUN find /audio_input -name '*.ogg' -exec sh -c 'ffmpeg -i "$1" "/audio_output/$
 FROM --platform=linux/amd64 golang:1.23.2-alpine3.20 AS build-env
 
 RUN apk update && apk add --no-cache \
-	git \
-	lua5.3 \
-	&& rm -rf /var/cache/apk/*
+    git \
+    lua5.3 \
+    lua5.3-dev \
+    gcc \
+    libc-dev \
+    make \
+    wget \
+    unzip \
+    && rm -rf /var/cache/apk/*
+
+# Install LuaRocks
+RUN wget https://luarocks.org/releases/luarocks-3.9.2.tar.gz \
+    && tar zxpf luarocks-3.9.2.tar.gz \
+    && cd luarocks-3.9.2 \
+    && ./configure --with-lua-include=/usr/include/lua5.3 \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf luarocks-3.9.2* \
+    && rm -rf /var/cache/apk/*
+
+RUN luarocks install yaml
 
 COPY ./lua/docs/webserver /webserver
 COPY ./lua/docs/content /www
