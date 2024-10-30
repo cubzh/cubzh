@@ -8,7 +8,6 @@
 #pragma once
 
 // C++
-#include <thread>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -84,9 +83,10 @@ private:
     
     ///
     void _init();
-    
-    ///
+
+#if defined(__VX_USE_LIBWEBSOCKETS)
     void _serviceThreadFunction();
+#endif
     
     // fields
     
@@ -111,18 +111,22 @@ private:
     std::unordered_set<WSConnection_SharedPtr> _wsConnections;
     
 #endif
-    
-    ///
-    std::mutex _wsiNotifyMutex;
-    
-    ///
+
+#if !defined(__VX_SINGLE_THREAD) && defined(__VX_USE_LIBWEBSOCKETS)
     std::thread _serviceThread;
+    std::mutex _serviceThreadInterruptedMutex;
+
+    /// Mutex to protect accesses to:
+    /// _contextReady
+    /// lws_cancel_service calls
+    std::mutex _contextMutex;
+#endif
     
     ///
     bool _serviceThreadInterrupted;
     
     ///
-    std::mutex _serviceThreadInterruptedMutex;
+
     
     ///
     struct lws_protocols **_lws_protocols;
@@ -132,11 +136,6 @@ private:
     
     ///
     bool _contextReady;
-    
-    /// Mutex to protect accesses to:
-    /// _contextReady
-    /// lws_cancel_service calls
-    std::mutex _contextMutex;
 };
 
 } // namespace vx
