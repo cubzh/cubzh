@@ -454,11 +454,47 @@ void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
         return;
     }
 
+    // retrieve response status code
     const uint16_t httpStatusCode = fetch->status;
     if (success == false && (httpStatusCode >= 100 && httpStatusCode <= 599)) {
         success = true;
     }
 
+    // retrieve response headers
+    const size_t headersSize = emscripten_fetch_get_response_headers_length(fetch);
+    if (headersSize > 0) {
+        const size_t bufSize = headersSize + 1;
+        char* buf = static_cast<char*>(malloc(bufSize));
+        if (buf != nullptr) {
+            const size_t elemsCount = emscripten_fetch_get_response_headers(fetch, buf, bufSize);
+
+            char **headers = emscripten_fetch_unpack_response_headers(buf);
+            if (headers != nullptr) {
+                int i = 0;
+                char* str = nullptr;
+                std::string key, value;
+                std::unordered_map<std::string, std::string> responseHeaders;
+
+                while (i == 0 || str != nullptr) {
+                    str = headers[i];
+                    if (str != nullptr) {
+                        if (i % 2 == 0) { // even
+                            key.assign(str);
+                        } else { // odd
+                            value.assign(str);
+                            responseHeaders[key] = value;
+                        }
+                    }
+                    i += 1;
+                }
+                strongReq->getResponse().setHeaders(responseHeaders);
+
+                emscripten_fetch_free_unpacked_response_headers(headers);
+            }
+        }
+    }
+
+    // retrieve response data
     const std::string bytes = std::string(fetch->data, fetch->numBytes);
 
     // free fetch memory
