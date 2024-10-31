@@ -186,7 +186,7 @@ float quad_get_tiling_v(const Quad *q) {
 
 void quad_set_offset_u(Quad *q, float value) {
     if (_quad_get_flag(q, QUAD_FLAG_9SLICE) == false) {
-        q->offsetU = value;
+        q->offsetU = WRAP01(value);
     }
 }
 
@@ -196,7 +196,7 @@ float quad_get_offset_u(const Quad *q) {
 
 void quad_set_offset_v(Quad *q, float value) {
     if (_quad_get_flag(q, QUAD_FLAG_9SLICE) == false) {
-        q->offsetV = value;
+        q->offsetV = WRAP01(value);
     }
 }
 
