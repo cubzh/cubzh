@@ -53,7 +53,6 @@
 		102145102C75E0C000099E38 /* json.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 8518D0A127BA6DF100A438D6 /* json.hpp */; };
 		102145112C75E0C000099E38 /* filesystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 85E9224C24111875008B5D81 /* filesystem.h */; };
 		102145132C75E0C000099E38 /* HttpRequestOpts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FED02B2B0B5C6A00C68F6D /* HttpRequestOpts.cpp */; };
-		102145142C75E0C000099E38 /* WSBackend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FCECA028072D3200CD6115 /* WSBackend.cpp */; };
 		102145152C75E0C000099E38 /* ThreadManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09727BA6D9000A438D6 /* ThreadManager.cpp */; };
 		102145162C75E0C000099E38 /* HttpResponse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB0194279F3BAD000F1B10 /* HttpResponse.cpp */; };
 		102145172C75E0C000099E38 /* miniaudio_impl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 850623592877898C00B270A6 /* miniaudio_impl.mm */; };
@@ -229,9 +228,6 @@
 		85E6380D28F703C3001FC12F /* device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85E6380B28F703C3001FC12F /* device.cpp */; };
 		85E6380E28F703C3001FC12F /* device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85E6380B28F703C3001FC12F /* device.cpp */; };
 		85E9224D24111875008B5D81 /* filesystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 85E9224C24111875008B5D81 /* filesystem.h */; };
-		85FCECA228072D3200CD6115 /* WSBackend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FCECA028072D3200CD6115 /* WSBackend.cpp */; };
-		85FCECA328072D3200CD6115 /* WSBackend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FCECA028072D3200CD6115 /* WSBackend.cpp */; };
-		85FCECA428072D3200CD6115 /* WSBackend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FCECA028072D3200CD6115 /* WSBackend.cpp */; };
 		85FCECA528072D3200CD6115 /* WSBackend.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85FCECA128072D3200CD6115 /* WSBackend.hpp */; };
 		85FCECA628072D3200CD6115 /* WSBackend.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85FCECA128072D3200CD6115 /* WSBackend.hpp */; };
 		85FED02C2B0B5C6A00C68F6D /* HttpRequestOpts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FED02B2B0B5C6A00C68F6D /* HttpRequestOpts.cpp */; };
@@ -401,7 +397,6 @@
 		85D52F6A29D9EE2900070F19 /* URL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = URL.cpp; sourceTree = "<group>"; };
 		85E6380B28F703C3001FC12F /* device.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = device.cpp; sourceTree = "<group>"; };
 		85E9224C24111875008B5D81 /* filesystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = filesystem.h; sourceTree = "<group>"; };
-		85FCECA028072D3200CD6115 /* WSBackend.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WSBackend.cpp; sourceTree = "<group>"; };
 		85FCECA128072D3200CD6115 /* WSBackend.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = WSBackend.hpp; sourceTree = "<group>"; };
 		85FED0252B0AB80F00C68F6D /* HttpRequestOpts.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HttpRequestOpts.hpp; sourceTree = "<group>"; };
 		85FED02B2B0B5C6A00C68F6D /* HttpRequestOpts.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = HttpRequestOpts.cpp; sourceTree = "<group>"; };
@@ -551,7 +546,6 @@
 				8518D09727BA6D9000A438D6 /* ThreadManager.cpp */,
 				853C93AC25A384290030C45D /* tracking.cpp */,
 				85D52F6A29D9EE2900070F19 /* URL.cpp */,
-				85FCECA028072D3200CD6115 /* WSBackend.cpp */,
 				85471B3F27E3E4AA000575D5 /* WSConnection.cpp */,
 				85471B3E27E3E4AA000575D5 /* WSServer.cpp */,
 				85471B6827E47DAB000575D5 /* WSServerConnection.cpp */,
@@ -863,7 +857,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				102145132C75E0C000099E38 /* HttpRequestOpts.cpp in Sources */,
-				102145142C75E0C000099E38 /* WSBackend.cpp in Sources */,
 				102145152C75E0C000099E38 /* ThreadManager.cpp in Sources */,
 				102145162C75E0C000099E38 /* HttpResponse.cpp in Sources */,
 				101758BC2C99C254008318A8 /* notifications.cpp in Sources */,
@@ -908,7 +901,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				85D52F6D29D9EE2900070F19 /* URL.cpp in Sources */,
-				85FCECA428072D3200CD6115 /* WSBackend.cpp in Sources */,
 				106ADEDF2C61701000964E91 /* textinput.cpp in Sources */,
 				8518D09B27BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
 				85BB0198279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
@@ -951,7 +943,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				85FED02C2B0B5C6A00C68F6D /* HttpRequestOpts.cpp in Sources */,
-				85FCECA228072D3200CD6115 /* WSBackend.cpp in Sources */,
 				8518D09827BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
 				85BB0195279F3BAD000F1B10 /* HttpResponse.cpp in Sources */,
 				101758BB2C99C254008318A8 /* notifications.cpp in Sources */,
@@ -995,7 +986,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				85FED02D2B0B5C6A00C68F6D /* HttpRequestOpts.cpp in Sources */,
-				85FCECA328072D3200CD6115 /* WSBackend.cpp in Sources */,
 				8506235A2877898C00B270A6 /* miniaudio_impl.mm in Sources */,
 				8518D09927BA6D9000A438D6 /* ThreadManager.cpp in Sources */,
 				101758B92C99C254008318A8 /* notifications.cpp in Sources */,
