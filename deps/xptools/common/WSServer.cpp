@@ -51,7 +51,7 @@ struct vhd_minimal_server_echo {
 
     int *interrupted;
     int *options;
-    
+
     vx::WSServer* wsserver;
 };
 
@@ -92,7 +92,7 @@ _lws_pvo(),
 _lws_interrupted(0),
 _lws_options(0),
 _lws_process_n(0) {
-    
+
     // pvo
     _lws_pvo_wsserver = {
         nullptr,
@@ -100,7 +100,7 @@ _lws_process_n(0) {
         "wsserver", // pvo name
         reinterpret_cast<const char *>(this) // pvo value
     };
-    
+
     _lws_pvo_options = {
         &_lws_pvo_wsserver,
         nullptr,
@@ -145,13 +145,13 @@ static struct lws_protocols protocols[] = {
 
 void WSServer::listen() {
     vxlog_trace("[WSServer] start listening... %d %s", _listenPort, _secure ? "(wss)" : "(ws)");
-    
+
     // TODO: gdevillele: define protocols here
-    
+
     // const int protoCount = 1;
     // const int arraySize = protoCount + 1;
     // struct lws_protocols** protocols = reinterpret_cast<struct lws_protocols**>(malloc(sizeof(struct lws_protocols*) * arraySize));
-    
+
     struct lws_context_creation_info info;
 
     /* for LLL_ verbosity above NOTICE to be built into lws,
@@ -162,10 +162,10 @@ void WSServer::listen() {
     /* | LLL_DEBUG */;
     const int logs = 0; // LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE
     lws_set_log_level(logs, nullptr);
-    
+
     lwsl_user("LWS minimal ws client echo + permessage-deflate + multifragment bulk message\n");
     lwsl_user("   lws-minimal-ws-client-echo [-n (no exts)] [-p port] [-o (once)]\n");
-    
+
     memset(&info, 0, sizeof info); /* otherwise uninitialized garbage */
     info.port = _listenPort;
     info.protocols = protocols;
@@ -176,19 +176,19 @@ void WSServer::listen() {
     info.options = (LWS_SERVER_OPTION_VALIDATE_UTF8 |
                     LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT |
                     LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE);
-#ifdef ONLINE_GAMESERVER
+#if defined(ONLINE_GAMESERVER)
     info.server_ssl_cert_mem = _tlsCertificate.c_str();
     info.server_ssl_cert_mem_len = static_cast<int>(_tlsCertificate.length());
     info.server_ssl_private_key_mem = _tlsPrivateKey.c_str();
     info.server_ssl_private_key_mem_len = static_cast<int>(_tlsPrivateKey.length());
 #endif
     info.vhost_name = "servers-eu-1.cu.bzh"; // TODO: should be dynamic, later
-    
+
     // TCP keep-alive
     // info.ka_time = 500; // 500sec
     // info.ka_probes = 20; // nb of retries
     // info.ka_interval = 5; // interval between retries
-    
+
     _lws_context = lws_create_context(&info);
     if (_lws_context == nullptr) {
         vxlog_error("[WSServer::listen] lws init failed");
@@ -215,22 +215,22 @@ WSServerConnection_SharedPtr* WSServer::createNewConnection(WSBackend wsi) {
     if (wsi == nullptr) {
         return nullptr;
     }
-    
+
     // TODO: remove 2nd argument
     WSServerConnection *newConnPtr = new WSServerConnection(this, wsi);
     if (newConnPtr == nullptr) {
         return nullptr;
     }
-    
+
     WSServerConnection_SharedPtr *conn = new WSServerConnection_SharedPtr(newConnPtr);
     if (conn == nullptr) {
         delete newConnPtr;
         return nullptr;
     }
-    
+
     // add new connection to the collection of active connections
     _activeConnections.push_back(WSServerConnection_WeakPtr(*conn));
-    
+
     return conn;
 }
 
@@ -239,13 +239,13 @@ void WSServer::scheduleWrite(WSServerConnection* conn) {
         vxlog_error("[WSServer::scheduleWrite] connection is NULL");
         return;
     }
-    
+
     // if this connection is already writing, we don't need to trigger the
     // lws "writable" callback.
     if (conn->isWriting() == true) {
         return;
     }
-    
+
     //
     lws* wsi = conn->getWsi();
     if (wsi == nullptr) {
@@ -285,9 +285,9 @@ static int lws_callback(struct lws *wsi,
                         void *user,
                         void *in,
                         size_t len) {
-    
+
     struct vhd_minimal_server_echo *vhd = reinterpret_cast<struct vhd_minimal_server_echo *>(lws_protocol_vh_priv_get(lws_get_vhost(wsi), lws_get_protocol(wsi)));
-    
+
     WSServerConnection_SharedPtr conn = nullptr;
     switch (reason) {
         case LWS_CALLBACK_ESTABLISHED:
@@ -307,10 +307,10 @@ static int lws_callback(struct lws *wsi,
         default:
             break;
     }
-    
+
     switch (reason) {
             vxlog_debug("[WSServer] lws_callback %d", reason);
-        
+
         case LWS_CALLBACK_PROTOCOL_INIT: {
             // vxlog_debug("[WSServer] LWS_CALLBACK_PROTOCOL_INIT");
             // this is called once per protocol/vhost (incoming connection) tuple
@@ -320,10 +320,10 @@ static int lws_callback(struct lws *wsi,
             if (vhd == nullptr) {
                 return -1;
             }
-            
+
             vhd->context = lws_get_context(wsi);
             vhd->vhost = lws_get_vhost(wsi);
-            
+
             // get the pointers we were passed in pvo
             const struct lws_protocol_vhost_options *pvo = reinterpret_cast<const struct lws_protocol_vhost_options *>(in);
             vhd->interrupted = const_cast<int*>(reinterpret_cast<const int*>(lws_pvo_search(pvo, "interrupted")->value));
@@ -338,16 +338,16 @@ static int lws_callback(struct lws *wsi,
             break;
         }
         case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
-            
+
             if (vhd != nullptr && vhd->wsserver != nullptr) {
                 std::vector<WSServerConnection_WeakPtr>& conns = vhd->wsserver->getActiveConnections();
                 std::vector<WSServerConnection_WeakPtr>::iterator it;
-                
+
                 // remove expired weak pointers
                 conns.erase(std::remove_if(conns.begin(), conns.end(), [](WSServerConnection_WeakPtr ptr){
                     return ptr.expired();
                 }), conns.end());
-                
+
                 // loop over active connections and call `lws_callback_on_writable` if necessary
                 for (it = conns.begin(); it != conns.end(); it++) {
                     WSServerConnection_SharedPtr strong = (*it).lock();
@@ -375,7 +375,7 @@ static int lws_callback(struct lws *wsi,
                 vxlog_error("LWS_CALLBACK_ESTABLISHED : failed to create new connection");
                 return -1;
             }
-            
+
             // notify WSServerDelegate of the new connection
             WSServerDelegate *wssDelegate = vhd->wsserver->getDelegate();
             if (wssDelegate != nullptr) {
@@ -387,18 +387,18 @@ static int lws_callback(struct lws *wsi,
                     // NOTE2: connection should be removed from active connections
                 }
             }
-            
+
             // notify Connection's delegate
             std::shared_ptr<ConnectionDelegate> connDelegate = (*connPtr)->getDelegate().lock();
             if (connDelegate != nullptr) {
                 connDelegate->connectionDidEstablish(*(connPtr->get()));
             }
-            
+
             // store connection reference into the wsi
             lws_set_wsi_user(wsi, connPtr);
             break;
         }
-            
+
         case LWS_CALLBACK_RECEIVE: {
             // this callback can be called multiple times for a single message
             // receive (when the message is larger than WS_SERVER_RX_BUFFER_SIZE)
@@ -427,14 +427,14 @@ static int lws_callback(struct lws *wsi,
             // vxlog_debug("[WSServer] LWS_CALLBACK_SERVER_WRITEABLE");
             if (conn != nullptr) {
                 if (conn->doneWriting() == false) {
-                    
+
                     static char buf[LWS_PRE + WS_WRITE_BUF_SIZE];
                     char *start = &(buf[LWS_PRE]); // buf + LWS_PRE
-                    
+
                     bool firstFragment;
                     bool partial;
                     const size_t len_to_write = conn->write(start, WS_WRITE_BUF_SIZE, firstFragment, partial);
-                    
+
                     int writeMode = 0;
                     // vxlog_debug("WS write: --- %d/%d - writing %d", alreadyWritten, totalPayloadLen, len_to_write);
                     if (firstFragment) {
@@ -461,12 +461,12 @@ static int lws_callback(struct lws *wsi,
                                                            reinterpret_cast<uint8_t *>(start),
                                                            len_to_write,
                                                            wp);
-                    
+
                     if (bytesJustWritten < static_cast<int>(len_to_write)) {
                         // Error, connection is dead.
                         return 1;
                     }
-                    
+
                     if (conn->doneWriting() == false) {
                         std::lock_guard<std::mutex> lock(vhd->wsserver->getContextMutex());
                         lws_callback_on_writable(wsi); // request additional write
@@ -515,10 +515,10 @@ static int lws_callback(struct lws *wsi,
         case LWS_CALLBACK_CONNECTING: // 105
             // Nothing to do but keeping empty cases on purpose
             break;
-            
+
         default:
             vxlog_error("lws_callback case not handled: %d", reason);
-            
+
             // TODO: disconnect gracefully
             //pss = dynamic_cast<struct per_session_data *>(user); // per_session_data would have to be class to do this
             //if (pss != nullptr) {
@@ -528,10 +528,10 @@ static int lws_callback(struct lws *wsi,
             //        conn->close()
             //    }
             //}
-            
+
             return -1;
     }
-    
+
     return 0;
 }
 

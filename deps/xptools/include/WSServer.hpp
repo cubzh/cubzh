@@ -35,7 +35,7 @@ public:
     virtual ~WSServerDelegate();
     
     ///
-    virtual bool didEstablishNewConnection(std::shared_ptr<Connection> newIncomingConn) = 0;
+    virtual bool didEstablishNewConnection(Connection_SharedPtr newIncomingConn) = 0;
     
 protected:
 private:

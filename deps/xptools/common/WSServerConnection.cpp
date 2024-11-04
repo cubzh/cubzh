@@ -66,9 +66,9 @@ void WSServerConnection::close() {
         }
         _status = Status::CLOSED;
     }
-    
+
     _setWsi(nullptr);
-    
+
     // notify delegate
     std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
     if (delegate != nullptr) {
@@ -89,9 +89,9 @@ void WSServerConnection::closeOnError() {
             _status = Status::CLOSED_ON_ERROR;
         }
     }
-    
+
     _setWsi(nullptr);
-    
+
     // notify delegate
     std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
     if (delegate != nullptr) {
@@ -121,7 +121,7 @@ void WSServerConnection::receivedBytes(char *bytes,
     if (len > 0) {
         _receivedBytesBuffer.append(bytes, len);
     }
-    
+
     if (isFinalFragment) {
         // notify delegate
         std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
@@ -130,9 +130,9 @@ void WSServerConnection::receivedBytes(char *bytes,
             if (bytes != nullptr) {
                 memcpy(bytes, _receivedBytesBuffer.c_str(), _receivedBytesBuffer.size());
                 Payload_SharedPtr pld = Payload::decode(bytes, _receivedBytesBuffer.size());
-                
+
                 pld->step("WSServerConnection::receivedBytes");
-                
+
                 delegate->connectionDidReceive(*this, pld);
             } else {
                 vxlog_error("[WSConnection::receivedBytes] dropped bytes");
@@ -158,35 +158,35 @@ bool WSServerConnection::isWriting() {
 
 Connection::Payload_SharedPtr WSServerConnection::_getPayloadToWrite() {
     // payload to write should be in _payloadBeingWritten
-    
+
     if (_payloadBeingWritten != nullptr &&
         _written == _payloadBeingWritten->totalSize()) {
         _payloadBeingWritten = nullptr;
     }
-    
+
     if (_payloadBeingWritten == nullptr) {
         // try popping payload from channel
         _payloadsToWrite.pop(_payloadBeingWritten);
-        
+
         // _payloadBeingWritten remains NULL if nothing was popped
-        
+
         if (_payloadBeingWritten != nullptr) {
             _written = 0;
             _payloadBeingWritten->step("start writing out (server)");
         }
     }
-    
+
     return _payloadBeingWritten;
 }
 
 void WSServerConnection::pushPayloadToWrite(const Payload_SharedPtr& p) {
-    
+
     p->step("WSServerConnection::write");
-    
+
     // push Payload to channel
     // they will be read by LWS callback
     _payloadsToWrite.push(p);
-    
+
     // notify WSServer that some bytes are waiting to be written
     _server->scheduleWrite(this);
 }
@@ -194,57 +194,57 @@ void WSServerConnection::pushPayloadToWrite(const Payload_SharedPtr& p) {
 size_t WSServerConnection::write(char *buf, size_t len, bool& isFirstFragment, bool& partial) {
     isFirstFragment = false;
     partial = true;
-    
+
     Payload_SharedPtr payload = _getPayloadToWrite();
     if (payload == nullptr) {
         return 0;
     }
-    
+
     // TODO: should createMetadataIfNull be thread safe?
     if (payload->createMetadataIfNull() == false) {
         return 0;
     }
-    
+
     char *cursor = nullptr;
     isFirstFragment = _written == 0;
-    
+
     size_t toWrite;
     size_t n = 0;
     bool exit = false;
-    
+
     cursor = buf;
-    
+
     size_t metadataSize = payload->metadataSize();
-    
+
     if (_written < metadataSize) {
         toWrite = metadataSize - _written;
         if (toWrite > len) {
             toWrite = len;
             exit = true;
         }
-        
+
         memcpy(cursor, payload->getMetadata() + _written, toWrite);
-        
+
         cursor += toWrite;
         n += toWrite;
         _written += toWrite;
     }
-    
+
     if (exit) {
         return n;
     }
-    
+
     size_t contentWritten = _written - metadataSize;
-    
+
     toWrite = payload->contentSize() - contentWritten;
     if (toWrite > (len-n)) { toWrite = (len-n); } // (len-n) is the current "write capacity"
-    
+
     // NOTE: we could compress (using zlib deflate) when size is big enough (>~42 bytes?)
     // https://stackoverflow.com/a/63699295
     memcpy(cursor, payload->getContent() + contentWritten, toWrite);
     n += toWrite;
     _written += toWrite;
-    
+
     partial = _written < payload->totalSize();
     return n;
 }

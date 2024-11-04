@@ -102,9 +102,9 @@ WSService::~WSService() {
         vxlog_error("[~WSService] this should not happen");
     }
 #endif
-    
+
     // TODO: make sure _lws_context is freed
-    
+
     // free lws protocols
     if (_lws_protocols != nullptr) {
         for (int i = 0; i < P3S_LWS_PROTOCOL_COUNT; i++) {
@@ -163,7 +163,7 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
     if (wsConn == nullptr) {
         return;
     }
-    
+
 #if defined(__VX_USE_LIBWEBSOCKETS)
 
     // if this connection is already writing, we don't need to trigger the
@@ -171,7 +171,7 @@ void WSService::scheduleWSConnectionWrite(WSConnection_SharedPtr wsConn) {
     if (wsConn->isWriting() == true) {
         return;
     }
-    
+
     //
     lws *wsi = wsConn->getWsi();
     if (wsi == nullptr) {
@@ -344,14 +344,14 @@ void WSService::_serviceThreadFunction() {
     // construct protocols array
     {
         assert(_lws_protocols == nullptr);
-        
+
         const int protoCount = P3S_LWS_PROTOCOL_COUNT;
         _lws_protocols = reinterpret_cast<struct lws_protocols**>(malloc(sizeof(struct lws_protocols*) * (protoCount + 1)));
         if (_lws_protocols == nullptr) {
             vxlog_error("[WSService] failed to create protocols struct");
             return;
         }
-        
+
         _lws_protocols[0] = reinterpret_cast<struct lws_protocols*>(malloc(sizeof(struct lws_protocols)));
         if (_lws_protocols[0] == nullptr) {
             vxlog_error("[WSService] failed to create protocols[0] struct");
@@ -365,7 +365,7 @@ void WSService::_serviceThreadFunction() {
         _lws_protocols[0]->id = 0;
         _lws_protocols[0]->user = nullptr; // userdata pointer
         _lws_protocols[0]->tx_packet_size = 0;
-        
+
         _lws_protocols[1] = reinterpret_cast<struct lws_protocols*>(malloc(sizeof(struct lws_protocols)));
         if (_lws_protocols[1] == nullptr) {
             vxlog_error("[WSService] failed to create protocols[1] struct");
@@ -379,15 +379,14 @@ void WSService::_serviceThreadFunction() {
         _lws_protocols[1]->id = 0;
         _lws_protocols[1]->user = nullptr; // userdata pointer
         _lws_protocols[1]->tx_packet_size = 0;
-        
+
         _lws_protocols[protoCount] = nullptr; // marks the end of array
     }
-    
+
     // construct pvo
-    
+
     struct lws_protocol_vhost_options _lws_pvo_interrupted;
     struct lws_protocol_vhost_options _lws_pvo;
-    
 //    // pvo
 //    _lws_pvo_wsserver = {
 //        nullptr,
@@ -416,9 +415,9 @@ void WSService::_serviceThreadFunction() {
         P3S_LWS_PROTOCOL_WS_JOIN, // protocol name we belong to on this vhost
         ""                        // ignored
     };
-    
+
     // construct lws_context
-    
+
     // Create context
     lws_context_creation_info ctxInfo;
     memset(&ctxInfo, 0, sizeof(ctxInfo)); // otherwise uninitialized garbage
@@ -433,7 +432,7 @@ void WSService::_serviceThreadFunction() {
     ctxInfo.client_ssl_ca_mem = nullptr;
     ctxInfo.client_ssl_ca_mem_len = 0;
     ctxInfo.pvo = &_lws_pvo;
-    
+
     // ctxInfo.client_ssl_ca_mem = particubes_wildcard_ca_cert;
     // ctxInfo.client_ssl_ca_mem_len = static_cast<unsigned int>(strlen(particubes_wildcard_ca_cert));
 
@@ -445,23 +444,23 @@ void WSService::_serviceThreadFunction() {
     // ctxInfo.ssl_ca_filepath = "/Users/gaetan/Desktop/ca_cert.pem";
     // ctxInfo.ssl_cert_filepath = nullptr;
     // ctxInfo.ssl_private_key_filepath = nullptr;
-    
+
     _lws_context = lws_create_context(&ctxInfo);
     if (_lws_context == nullptr) {
         vxlog_error("[WSService] failed to create LWS context");
     }
-    
+
     {
         LOCK_GUARD_CONTEXT
         _contextReady = true;
     }
-    
+
     bool interrupted = false;
     int n = 0;
     HttpRequest_SharedPtr httpReq = nullptr;
     WSConnection_SharedPtr wsConn = nullptr;
     while (interrupted == false && n >= 0) {
-        
+
         // check if there is a http request to send
         if (_httpRequestWaitingQueue.pop(httpReq)) {
             // init connection
@@ -482,7 +481,7 @@ void WSService::_serviceThreadFunction() {
             connectInfo.path = httpReq->getPathAndQuery().c_str();
             connectInfo.port = httpReq->getPort();
             connectInfo.userdata = new HttpRequest_SharedPtr(httpReq);
-            
+
             // 0, or a combination of LCCSCF_ flags
             if (httpReq->getSecure()) {
                 connectInfo.ssl_connection = (LCCSCF_USE_SSL |
@@ -491,7 +490,7 @@ void WSService::_serviceThreadFunction() {
             } else {
                 connectInfo.ssl_connection = 0;
             }
-            
+
             lws* wsi = lws_client_connect_via_info(&connectInfo);
             if (wsi == nullptr) {
                 vxlog_error("HttpRequest failed %s", httpReq->getPath().c_str());
@@ -503,7 +502,7 @@ void WSService::_serviceThreadFunction() {
             }
             httpReq = nullptr; // release
         }
-        
+
         // check if there is a WSConnection waiting to connect
         if (_wsConnectionWaitingQueue.pop(wsConn)) {
             // init connection
@@ -519,7 +518,7 @@ void WSService::_serviceThreadFunction() {
             connectInfo.port = wsConn->getPort();
             connectInfo.userdata = new WSConnection_SharedPtr(wsConn);
             connectInfo.priority = 6;
-            
+
             // 0, or a combination of LCCSCF_ flags
             if (wsConn->getSecure()) {
                 connectInfo.ssl_connection = (LCCSCF_USE_SSL |
@@ -528,7 +527,7 @@ void WSService::_serviceThreadFunction() {
             } else {
                 connectInfo.ssl_connection = 0;
             }
-            
+
             lws *wsi = lws_client_connect_via_info(&connectInfo);
             if (wsi != nullptr) {
 //                // associate wsi to WSConnection
@@ -545,31 +544,31 @@ void WSService::_serviceThreadFunction() {
                 // not processing other HttpRequests and WSConnections.
                 continue;
             }
-            
+
             // insert connection in collection of active connections
             WSConnection_WeakPtr weakConn(wsConn);
             _wsConnectionsActive.push_back(weakConn);
-            
+
             wsConn = nullptr; // release
         }
-        
+
         // service the lws context
         // /!\ If it crashes here, please check config.json doesn't contain
         // HTTPS but only HTTP.
         n = lws_service(_lws_context, 0);
-        
+
         // update value of `interrupted`
         {
             LOCK_GUARD_INTERRUPTED
             interrupted = _serviceThreadInterrupted;
         }
     }
-    
+
     // if n < 0 it means the lws service returned an error
     // if interrupted == true it means the app stopped the processing
-    
+
     // TODO: gdevillele: cleanup/destroy lws_context
-    
+
     // lws_context_destroy(ctx);
     // ctx = nullptr;
 
@@ -590,7 +589,7 @@ int lws_callback_ws_join(struct lws *wsi,
                          void *in,
                          size_t len) {
     // WSSERVICE_DEBUG_LOG("⚡️ [WSConnection] lws callback %d", reason);
-    
+
     WSConnection_SharedPtr wsConn = nullptr;
     switch (reason) {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
@@ -611,7 +610,7 @@ int lws_callback_ws_join(struct lws *wsi,
         default:
             break;
     }
-    
+
     switch (reason) {
         case LWS_CALLBACK_PROTOCOL_INIT: {
             // WSSERVICE_DEBUG_LOG("⚡️ [WSConnection] LWS_CALLBACK_PROTOCOL_INIT");
@@ -627,7 +626,7 @@ int lws_callback_ws_join(struct lws *wsi,
             const struct lws_protocol_vhost_options* pvo = reinterpret_cast<const struct lws_protocol_vhost_options *>(in);
             const struct lws_protocol_vhost_options* pvo_wsservice = lws_pvo_search(pvo, "WSServicePtr");
             vhd->wsservice = const_cast<WSService*>(reinterpret_cast<const WSService*>(pvo_wsservice->value));
-            
+
             break;
         }
         case LWS_CALLBACK_PROTOCOL_DESTROY: {
@@ -636,19 +635,19 @@ int lws_callback_ws_join(struct lws *wsi,
             // it's done automatically
             break;
         }
-        case LWS_CALLBACK_EVENT_WAIT_CANCELLED: { // 71            
+        case LWS_CALLBACK_EVENT_WAIT_CANCELLED: { // 71
             void* vhd_ptr = lws_protocol_vh_priv_get(lws_get_vhost(wsi), lws_get_protocol(wsi));
             struct vx::WSService::ws_vhd *vhd = reinterpret_cast<struct vx::WSService::ws_vhd *>(vhd_ptr);
             if (vhd != nullptr) {
-                
+
                 std::vector<WSConnection_WeakPtr>& activeConnections = vhd->wsservice->getWSConnectionsActive();
                 std::vector<WSConnection_WeakPtr>::iterator it;
-                
+
                 // remove expired weak pointers
                 activeConnections.erase(std::remove_if(activeConnections.begin(), activeConnections.end(), [](WSConnection_WeakPtr ptr){
                     return ptr.expired();
                 }), activeConnections.end());
-                
+
                 // loop over active connections and call `lws_callback_on_writable` if necessary
                 for (it = activeConnections.begin(); it != activeConnections.end(); it++) {
                     WSConnection_SharedPtr strong = (*it).lock();
@@ -679,7 +678,7 @@ int lws_callback_ws_join(struct lws *wsi,
         }
         case LWS_CALLBACK_CLIENT_ESTABLISHED: {
             WSSERVICE_DEBUG_LOG("⚡️ [WSConnection] LWS_CALLBACK_CLIENT_ESTABLISHED");
-            
+
             // call delegate function
             if (wsConn != nullptr) {
                 wsConn->established();
@@ -690,11 +689,11 @@ int lws_callback_ws_join(struct lws *wsi,
             } else {
                 vxlog_error("⚡️ [WSConnection][LWS_CALLBACK_CLIENT_ESTABLISHED] this is not supposed to happen");
             }
-        
+
             {
                 lws_callback_on_writable(wsi);
             }
-            
+
             break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE: {
@@ -702,14 +701,14 @@ int lws_callback_ws_join(struct lws *wsi,
             // pop bytes that are waiting to be written
             if (wsConn != nullptr) {
                 if (wsConn->doneWriting() == false) {
-                    
+
                     static char buf[LWS_PRE + WS_WRITE_BUF_SIZE];
                     char *start = &(buf[LWS_PRE]); // buf + LWS_PRE
-                    
+
                     bool firstFragment;
                     bool partial;
                     const size_t len_to_write = wsConn->write(start, WS_WRITE_BUF_SIZE, firstFragment, partial);
-                    
+
                     int writeMode = 0;
                     // WSSERVICE_DEBUG_LOG("WS write: -----");
                     if (firstFragment) {
@@ -730,14 +729,14 @@ int lws_callback_ws_join(struct lws *wsi,
                             writeMode = LWS_WRITE_CONTINUATION; // last fragment
                         }
                     }
-                    
+
                     lws_write_protocol wp = static_cast<lws_write_protocol>(writeMode);
-                    
+
                     const int bytesJustWritten = lws_write(wsi,
                                                            reinterpret_cast<uint8_t *>(start),
                                                            len_to_write,
                                                            wp);
-                    
+
                     if (bytesJustWritten < static_cast<int>(len_to_write)) {
                         // Error, connection is dead.
                         return 1;
@@ -760,16 +759,16 @@ int lws_callback_ws_join(struct lws *wsi,
         case LWS_CALLBACK_CLIENT_RECEIVE: {
             const bool isFinalFragment = lws_is_final_fragment(wsi) != 0;
             const bool isBinary = lws_frame_is_binary(wsi) != 0;
-            
+
             WSSERVICE_DEBUG_LOG("⚡️ [WSConnection] LWS_CALLBACK_CLIENT_RECEIVE: %4d (rpp %5d, first %d, last %d, bin %d)",
                                 static_cast<int>(len),
                                 static_cast<int>(lws_remaining_packet_payload(wsi)),
                                 lws_is_first_fragment(wsi) != 0,
                                 isFinalFragment,
                                 isBinary);
-            
+
             assert(isBinary);
-            
+
             if (wsConn != nullptr) {
                 // notify the connection of the received bytes
                 // (this can trigger a delegate function)
@@ -777,7 +776,7 @@ int lws_callback_ws_join(struct lws *wsi,
             } else {
                 vxlog_error("⚡️ [WSConnection][LWS_CALLBACK_CLIENT_RECEIVE] this is not supposed to happen");
             }
-            
+
             break;
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
@@ -790,7 +789,7 @@ int lws_callback_ws_join(struct lws *wsi,
             } else {
                 vxlog_error("⚡️ [WSConnection][LWS_CALLBACK_CLIENT_CONNECTION_ERROR] this is not supposed to happen");
             }
-            
+
             break;
         }
         case LWS_CALLBACK_CLIENT_CLOSED: {
@@ -809,7 +808,7 @@ int lws_callback_ws_join(struct lws *wsi,
             WSSERVICE_DEBUG_LOG("⚡️ [WSConnection] LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER");
             break;
         }
-            
+
         case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: // 2
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG: // 9
         case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: // 17
@@ -832,13 +831,13 @@ int lws_callback_ws_join(struct lws *wsi,
             // WSSERVICE_DEBUG_LOG("lws_callback_ws_join case: %d", reason);
             // Nothing to do but keeping empty cases on purpose
             break;
-            
+
         default:
             vxlog_error("lws_callback_ws_join case not handled: %d", reason);
             // TODO: cleanup?
             return -1;
     }
-    
+
     return 0;
 }
 
@@ -880,7 +879,7 @@ int lws_callback_http(struct lws *wsi,
                       void *in,
                       size_t len) {
     // WSSERVICE_DEBUG_LOG("🌎 callback_http %d", reason);
-    
+
     HttpRequest_SharedPtr req = nullptr;
     switch (reason) {
         case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
@@ -904,24 +903,24 @@ int lws_callback_http(struct lws *wsi,
         default:
             break;
     }
-    
+
     switch (reason) {
-            
+
         case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
             // SSL_CTX* sslctx = reinterpret_cast<SSL_CTX*>(user);
             break;
         }
-            
+
         case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
             X509_STORE_CTX_set_error(reinterpret_cast<X509_STORE_CTX*>(user), X509_V_OK);
             break;
         }
-            
+
         case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS: {
             // SSL_CTX* sslctx = reinterpret_cast<SSL_CTX*>(user);
             break;
         }
-            
+
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
             WSSERVICE_DEBUG_LOG("🌎 callback : LWS_CALLBACK_CLIENT_CONNECTION_ERROR");
             // failure without even managing to connect to the server
@@ -931,24 +930,24 @@ int lws_callback_http(struct lws *wsi,
             }
             break;
         }
-            
+
         case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
             // get server IP address
             // char buf[128]; lws_get_peer_simple(wsi, buf, sizeof(buf));
-            
+
             // get HTTP response status code
             const uint16_t httpStatus = lws_http_client_http_response(wsi); // status should be global
             // store HTTP status code in HttpResponse
             req->getResponse().setStatusCode(httpStatus);
-            
+
             break;
         }
-            
+
         case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: { // you only need this if you need to do Basic Auth
-            
+
             unsigned char **p = static_cast<unsigned char **>(in);
             unsigned char *end = (*p) + len;
-            
+
             // write custom headers
             std::string key;
             for (const auto& kv : req->getHeaders()) {
@@ -964,19 +963,19 @@ int lws_callback_http(struct lws *wsi,
                     break;
                 }
             }
-            
+
             if (req->getMethod() == "GET") {
-                
+
                 // nothing for now
-                
+
             } else if (req->getMethod() == "POST" || req->getMethod() == "PATCH") {
-                
+
                 const int err = lws_add_http_header_content_length(wsi, req->getBodyBytes().size(), p, end);
                 if (err != 0) {
                     // error
                     vxlog_error("HTTP : failed to write header");
                 }
-                
+
                 // Tell lws we are going to send the body next...
                 if (lws_http_is_redirected_to_get(wsi) == false) {
                     lws_client_http_body_pending(wsi, 1);
@@ -988,31 +987,31 @@ int lws_callback_http(struct lws *wsi,
             }
             break;
         }
-            
+
         case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: { // chunks of chunked content, with header removed
             WSSERVICE_DEBUG_LOG("🌎 callback : LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ");
-            
+
             // retrieve response bytes and append them in the HttpResponse
             const ::std::string bytes = ::std::string(static_cast<char*>(in), static_cast<int>(len));
             req->getResponse().appendBytes(bytes);
-            
+
             return 0; // don't passthru
         }
         case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: { // uninterpreted http content
             // WSSERVICE_DEBUG_LOG("🌎 callback : LWS_CALLBACK_RECEIVE_CLIENT_HTTP");
-            
+
             char buffer[1024 + LWS_PRE];
             char *px = buffer + LWS_PRE;
             int lenx = sizeof(buffer) - LWS_PRE;
-            
+
             int ret = lws_http_client_read(wsi, &px, &lenx); // calls LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ ?
             if (ret < 0) { // error
                 return -1;
             }
-            
+
             return 0; // don't passthru
         }
-            
+
         case LWS_CALLBACK_HTTP_BODY: {
             // WSSERVICE_DEBUG_LOG("🌎 callback : LWS_CALLBACK_HTTP_BODY");
             break;
@@ -1023,7 +1022,7 @@ int lws_callback_http(struct lws *wsi,
         }
         case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE: {
             // WSSERVICE_DEBUG_LOG("🌎 callback : LWS_CALLBACK_CLIENT_HTTP_WRITEABLE");
-            
+
             if (lws_http_is_redirected_to_get(wsi)) {
                 // success because it reached the server
                 // it's just that we don't expect redirects,
@@ -1033,12 +1032,12 @@ int lws_callback_http(struct lws *wsi,
                 req->callCallback();
                 return 1; // close connection
             }
-            
+
             // Buffer for writing POST request body
             // NOTE (gdevillele) : apparently with LWS_WRITE_HTTP we don't need the LWS_PRE bytes
             static char buf[LWS_PRE + BODY_BUF_SIZE];
             char *start = &(buf[LWS_PRE]); // buf + LWS_PRE
-            
+
             const size_t totalRequestLen = req->getBodyBytes().size();
             const size_t alreadyWritten = req->getWritten();
             const size_t to_write = totalRequestLen - alreadyWritten;
@@ -1046,7 +1045,7 @@ int lws_callback_http(struct lws *wsi,
             lws_write_protocol wp = partial ? LWS_WRITE_HTTP : LWS_WRITE_HTTP_FINAL;
 
             // WSSERVICE_DEBUG_LOG("🌎 WRITEABLE %d %d %d (partial: %s)", totalRequestLen, alreadyWritten, to_write, partial ? "true" : "false");
-            
+
             const int len_to_write = static_cast<int>(partial ? BODY_BUF_SIZE : to_write);
             memcpy(start, req->getBodyBytes().c_str() + alreadyWritten, len_to_write);
             const int bytesJustWritten = lws_write(wsi,
@@ -1057,9 +1056,9 @@ int lws_callback_http(struct lws *wsi,
                 // Error, connection is dead.
                 return 1;
             }
-            
+
             req->setWritten(alreadyWritten + bytesJustWritten);
-            
+
             if (partial) {
                 lws_callback_on_writable(wsi); // request additional write
             } else {
@@ -1067,7 +1066,7 @@ int lws_callback_http(struct lws *wsi,
             }
             return 0;
         }
-            
+
         case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
         case LWS_CALLBACK_CLOSED_CLIENT_HTTP: { // 45
             // WSSERVICE_DEBUG_LOG("🌎 callback : LWS_CALLBACK_COMPLETED_CLIENT_HTTP");
@@ -1083,7 +1082,7 @@ int lws_callback_http(struct lws *wsi,
             }
             break;
         }
-            
+
         case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: { // 2
             std::unordered_map<std::string, std::string> headers;
             std::string key;
@@ -1130,14 +1129,14 @@ int lws_callback_http(struct lws *wsi,
             hWSI.wsi = wsi;
             hWSI.headers = &headers;
             lws_hdr_custom_name_foreach(wsi, headerCustomForEach, static_cast<void *>(&hWSI));
-            
+
             req->getResponse().setHeaders(std::move(headers));
-            
+
             // lws_hdr_custom_name_foreach(wsi, headerCustomForEach, nullptr);
-            
+
             break;
         }
-            
+
         case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: // 17
         case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: // 19
         case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: // 20
@@ -1157,13 +1156,13 @@ int lws_callback_http(struct lws *wsi,
         case LWS_CALLBACK_CONNECTING: // 105
             // Nothing to do but keeping empty cases on purpose
             break;
-            
+
         default:
             vxlog_error("lws_callback_http case not handled: %d", reason);
             // TODO: cleanup?
             return -1;
     }
-    
+
     return 0;
 }
 

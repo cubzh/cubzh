@@ -96,7 +96,7 @@ EM_BOOL onclose(int eventType,
     if (wsConn == nullptr) {
         return false;
     }
-    
+
     // Websocket close codes : https://github.com/Luka967/websocket-close-codes
     if (websocketEvent->code != 1000) {
         // error
@@ -145,14 +145,14 @@ void WSConnection::reset() {
         std::lock_guard<std::mutex> lock(_statusMutex);
         _status = Status::IDLE;
     }
-    
+
     // free all payloads waiting, if there are any
     _payloadsToWrite.clear();
     _payloadBeingWritten = nullptr;
     _written = 0;
-    
+
     _receivedBytesBuffer.clear();
-    
+
 #if defined(__VX_USE_LIBWEBSOCKETS)
     setWsi(nullptr);
 #endif
@@ -259,8 +259,8 @@ void WSConnection::_writePayload(const Payload_SharedPtr& p) {
 void WSConnection::_init() {}
 
 void WSConnection::_connect() {
-// send WSConnection to WSService for processing
-WSService::shared()->requestWSConnection(_weakSelf.lock());
+    // send WSConnection to WSService for processing
+    WSService::shared()->requestWSConnection(_weakSelf.lock());
 }
 
 void WSConnection::_close() {
@@ -287,27 +287,27 @@ void WSConnection::_init() {
 }
 
 void WSConnection::_connect() {
-// free _wsi if it was allocated
-emscripten_websocket_close(_wsi, 1000, ""); // 1000 means CLOSE_NORMAL
-emscripten_websocket_delete(_wsi);
+    // free _wsi if it was allocated
+    emscripten_websocket_close(_wsi, 1000, ""); // 1000 means CLOSE_NORMAL
+    emscripten_websocket_delete(_wsi);
 
-// construct string with scheme, address and port
-const std::string urlScheme = _secure ? "wss" : "ws";
-const std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
-// vxlog_debug("[WSConnection::connect] %s", url.c_str());
-EmscriptenWebSocketCreateAttributes ws_attrs = {
-    url.c_str(),
-    NULL, //"binary",
-    EM_FALSE // on main thread
-};
-_wsi = emscripten_websocket_new(&ws_attrs);
-emscripten_websocket_set_onopen_callback(_wsi, this, onopen);
-emscripten_websocket_set_onerror_callback(_wsi, this, onerror);
-emscripten_websocket_set_onclose_callback(_wsi, this, onclose);
-emscripten_websocket_set_onmessage_callback(_wsi, this, onmessage);
+    // construct string with scheme, address and port
+    const std::string urlScheme = _secure ? "wss" : "ws";
+    const std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+    // vxlog_debug("[WSConnection::connect] %s", url.c_str());
+    EmscriptenWebSocketCreateAttributes ws_attrs = {
+        url.c_str(),
+        NULL, //"binary",
+        EM_FALSE // on main thread
+    };
+    _wsi = emscripten_websocket_new(&ws_attrs);
+    emscripten_websocket_set_onopen_callback(_wsi, this, onopen);
+    emscripten_websocket_set_onerror_callback(_wsi, this, onerror);
+    emscripten_websocket_set_onclose_callback(_wsi, this, onclose);
+    emscripten_websocket_set_onmessage_callback(_wsi, this, onmessage);
 
-// send WSConnection to WSService for processing
-WSService::shared()->requestWSConnection(_weakSelf.lock());
+    // send WSConnection to WSService for processing
+    WSService::shared()->requestWSConnection(_weakSelf.lock());
 }
 
 void WSConnection::_close() {
@@ -324,24 +324,24 @@ void WSConnection::_destroy() {
 
 Connection::Payload_SharedPtr WSConnection::_getPayloadToWrite() {
     // payload to write should be in _payloadBeingWritten
-    
-    if (_payloadBeingWritten != nullptr && 
+
+    if (_payloadBeingWritten != nullptr &&
         _written == _payloadBeingWritten->totalSize()) {
         _payloadBeingWritten = nullptr;
     }
-    
+
     if (_payloadBeingWritten == nullptr) {
         // try popping payload from channel
         _payloadsToWrite.pop(_payloadBeingWritten);
-        
+
         // _payloadBeingWritten remains NULL if nothing was popped
-        
+
         if (_payloadBeingWritten != nullptr) {
             _written = 0;
             _payloadBeingWritten->step("start writing out (client)");
         }
     }
-    
+
     return _payloadBeingWritten;
 }
 
@@ -352,7 +352,7 @@ void WSConnection::receivedBytes(char *bytes,
     if (len > 0) {
         _receivedBytesBuffer.append(bytes, len);
     }
-    
+
     if (isFinalFragment) {
         // notify delegate
         std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
@@ -362,9 +362,9 @@ void WSConnection::receivedBytes(char *bytes,
                 memcpy(bytes, _receivedBytesBuffer.c_str(), _receivedBytesBuffer.size());
 
                 Payload_SharedPtr pld = Payload::decode(bytes, _receivedBytesBuffer.size());
-                
+
                 pld->step("WSConnection::receivedBytes");
-                
+
                 delegate->connectionDidReceive(*this, pld);
             } else {
                 vxlog_error("[WSConnection::receivedBytes] dropped bytes");
@@ -395,57 +395,57 @@ void WSConnection::pushPayloadToWrite(const Payload_SharedPtr& p) {
 size_t WSConnection::write(char *buf, size_t len, bool& isFirstFragment, bool& partial) {
     isFirstFragment = false;
     partial = true;
-    
+
     Payload_SharedPtr payload = _getPayloadToWrite();
     if (payload == nullptr) {
         return 0;
     }
-    
+
     // TODO: should createMetadataIfNull be thread safe?
     if (payload->createMetadataIfNull() == false) {
         return 0;
     }
-    
+
     char *cursor = nullptr;
     isFirstFragment = _written == 0;
-    
+
     size_t toWrite;
     size_t n = 0;
     bool exit = false;
-    
+
     cursor = buf;
-    
+
     size_t metadataSize = payload->metadataSize();
-    
+
     if (_written < metadataSize) {
         toWrite = metadataSize - _written;
         if (toWrite > len) {
             toWrite = len;
             exit = true;
         }
-        
+
         memcpy(cursor, payload->getMetadata() + _written, toWrite);
-        
+
         cursor += toWrite;
         n += toWrite;
         _written += toWrite;
     }
-    
+
     if (exit) {
         return n;
     }
-    
+
     size_t contentWritten = _written - metadataSize;
-    
+
     toWrite = payload->contentSize() - contentWritten;
     if (toWrite > (len-n)) { toWrite = (len-n); } // (len-n) is the current "write capacity"
-    
+
     // NOTE: we could compress (using zlib deflate) when size is big enough (>~42 bytes?)
     // https://stackoverflow.com/a/63699295
     memcpy(cursor, payload->getContent() + contentWritten, toWrite);
     n += toWrite;
     _written += toWrite;
-    
+
     partial = _written < payload->totalSize();
     return n;
 }

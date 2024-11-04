@@ -54,7 +54,7 @@ int vxlog_with_va_list(const int severity,
                        const char *format,
                        va_list args);
 
-#define vxlog_trace(...) vxlog(VX_LOG_SEVERITY_TRACE, NULL, 0, __VA_ARGS__)
+#define vxlog_trace(...) vxlog(VX_LOG_SEVERITY_TRACE, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #define vxlog_debug(...) vxlog(VX_LOG_SEVERITY_DEBUG, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #define vxlog_info(...) vxlog(VX_LOG_SEVERITY_INFO, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #define vxlog_warning(...) vxlog(VX_LOG_SEVERITY_WARNING, __FILE_NAME__, __LINE__, __VA_ARGS__)
