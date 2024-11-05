@@ -26,6 +26,7 @@ camera.TargetHeight = Screen.Height
 
 target = nil
 onChange = nil
+onDone = nil
 radialMenu = nil -- radial menu node
 tickListener = nil
 
@@ -248,6 +249,7 @@ function endMove(_)
 	moveTargetStartPos = nil
 
 	lockGrid = false
+	onDone(target)
 end
 
 function dragMove(_, pointerEvent)
@@ -282,6 +284,7 @@ end
 function endRot(_)
 	rotStartX = nil
 	rotTargetStartRot = nil
+	onDone(target)
 end
 
 function dragRot(_, pointerEvent)
@@ -311,6 +314,7 @@ end
 function endScale(_)
 	scaleStartY = nil
 	scaleTargetStartScale = nil
+	onDone(target)
 end
 
 function dragScale(_, pointerEvent)
@@ -331,6 +335,7 @@ defaultConfig = {
 	target = nil,
 	radius = RADIAL_MENU_DEFAULT_RADIUS,
 	onChange = function(_) end, -- target
+	onDone = function(_) end, -- target
 }
 
 gizmo.create = function(self, config)
@@ -352,6 +357,7 @@ gizmo.create = function(self, config)
 
 	target = config.target
 	onChange = config.onChange
+	onDone = config.onDone
 
 	if radialMenu == nil then
 		radialMenu = ui:createNode()
