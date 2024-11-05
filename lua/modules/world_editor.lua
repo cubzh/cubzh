@@ -1,7 +1,109 @@
 local worldEditor = {}
 
-sfx = require("sfx")
-ease = require("ease")
+local sfx = require("sfx")
+local ease = require("ease")
+
+function requireSkybox()
+	local skybox = {}
+	skybox.load = function(config, func)
+		local defaultConfig = {
+			scale = 1000,
+			url = "https://e7.pngegg.com/pngimages/57/621/png-clipart-skybox-texture-mapping-panorama-others-texture-atmosphere.png",
+		}
+
+		local url = config.url or defaultConfig.url
+		local scale = config.scale or defaultConfig.scale
+		if func == nil then
+			func = function(obj)
+				obj:SetParent(Camera)
+				obj.Tick = function(self)
+					self.Rotation = Rotation(0, 0, 0)
+					self.Position = Camera.Position - Number3(self.Scale.X, self.Scale.Y, -self.Scale.Z) / 2
+				end
+			end
+		end
+
+		HTTP:Get(url, function(data)
+			if data.StatusCode ~= 200 then
+				error("Error: " .. data.StatusCode)
+			end
+
+			local image = data.Body
+			local object = Object()
+
+			object.Scale = scale
+
+			local back = Quad()
+			back.Image = image
+			back.Size = Number2(1, 1)
+			back.Tiling = Number2(0.25, 0.3335)
+			back.Offset = Number2(0, 0.3335)
+			back:SetParent(object)
+			back.IsUnlit = true
+
+			local left = Quad()
+			left.Image = image
+			left.Size = Number2(1, 1)
+			left.Tiling = Number2(0.25, 0.3335)
+			left.Offset = Number2(0.25, 0.3335)
+			left.Position = back.Position + Number3(1, 0, 0)
+			left.Rotation.Y = math.pi / 2
+			left:SetParent(object)
+			left.IsUnlit = true
+
+			local front = Quad()
+			front.Image = image
+			front.Size = Number2(1, 1)
+			front.Tiling = Number2(0.25, 0.3335)
+			front.Offset = Number2(0.5, 0.3335)
+			front.Position = back.Position + Number3(1, 0, -1)
+			front.Rotation.Y = math.pi
+			front:SetParent(object)
+			front.IsUnlit = true
+
+			local right = Quad()
+			right.Image = image
+			right.Size = Number2(1, 1)
+			right.Tiling = Number2(0.25, 0.3335)
+			right.Offset = Number2(0.75, 0.3335)
+			right.Position = back.Position + Number3(0, 0, -1)
+			right.Rotation.Y = -math.pi / 2
+			right:SetParent(object)
+			right.IsUnlit = true
+
+			local down = Quad()
+			down.Image = image
+			down.Size = Number2(1, 1 * 1.001)
+			down.Tiling = Number2(0.25, 0.3335)
+			down.Offset = Number2(0.25, 0.6668)
+			down.Position = back.Position + Number3(-1 * 0.001, 1 * 0.002, 0)
+			down.Rotation = Rotation(math.pi / 2, math.pi / 2, 0)
+			down:SetParent(object)
+			down.IsUnlit = true
+
+			local up = Quad()
+			up.Image = image
+			up.Size = Number2(1, 1)
+			up.Tiling = Number2(0.25, 0.3335)
+			up.Offset = Number2(0.25, 0)
+			up.Position = back.Position + Number3(1, 1, 0)
+			up.Rotation = Rotation(-math.pi / 2, math.pi / 2, 0)
+			up:SetParent(object)
+			up.IsUnlit = true
+
+			object:SetParent(Camera)
+			object.Tick = function(self)
+				self.Rotation:Set(0, 0, 0)
+				self.Position = Camera.Position - Number3(self.Scale.X, self.Scale.Y, -self.Scale.Z) / 2
+			end
+
+			func(object)
+		end)
+	end
+	return skybox
+end
+
+local skybox = requireSkybox()
 
 local server = require("world_editor_server")
 local sendToServer = require("world_editor_server").sendToServer
@@ -33,8 +135,6 @@ local CameraMode = {
 }
 local cameraMode = CameraMode.THIRD_PERSON
 
-local waitingForUUIDObj
-
 -- BUTTONS
 local settingsBtn
 -- local saveBtn
@@ -44,21 +144,10 @@ local cameraBtn
 local addObjectBtn
 local transformGizmo
 
-local TRAILS_COLORS = {
-	Color.Blue,
-	Color.Red,
-	Color.Green,
-	Color.Yellow,
-	Color.Grey,
-	Color.Purple,
-	Color.Beige,
-	Color.Yellow,
-	Color.Brown,
-	Color.Pink,
-}
-local OBJECTS_COLLISION_GROUP = 7
+local TRAIL_COLOR = Color.White
+local OBJECTS_COLLISION_GROUP = CollisionGroups(7)
 
-local setCameraMode = function(mode)
+local function setCameraMode(mode)
 	cameraMode = mode
 	if mode == CameraMode.THIRD_PERSON then
 		Camera:SetModeThirdPerson()
@@ -72,13 +161,13 @@ local setCameraMode = function(mode)
 	end
 end
 
-local getObjectInfoTable = function(obj)
+local function getObjectInfoTable(obj)
 	return {
 		uuid = obj.uuid,
 		fullname = obj.fullname,
-		Position = obj.Position or Number3(0, 0, 0),
-		Rotation = obj.Rotation or Number3(0, 0, 0),
-		Scale = obj.Scale or Number3(1, 1, 1),
+		Position = obj.Position or Number3.Zero,
+		Rotation = obj.Rotation or Number3.Zero,
+		Scale = obj.Scale or Number3.One,
 		Name = obj.Name or obj.fullname,
 		Physics = obj.realPhysicsMode or PhysicsMode.StaticPerBlock,
 	}
@@ -88,6 +177,7 @@ end
 
 local pressedObject
 local selectedObject
+local waitingForUUIDObj
 
 local states = {
 	LOADING = 1,
@@ -107,7 +197,7 @@ local states = {
 local setState
 local state
 
-clearWorld = function()
+local function clearWorld()
 	Player:RemoveFromParent()
 	if map then
 		map:RemoveFromParent()
@@ -121,15 +211,14 @@ clearWorld = function()
 	ambience:set(ambience.noon)
 end
 
-local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
-	syncMulti = syncMulti == nil and true or syncMulti
+local function setObjectPhysicsMode(obj, physicsMode)
 	if not obj then
-		print("Error: tried to set physics mode on nil object")
+		print("⚠️ can't set physics mode on nil object")
 		return
 	end
 	obj.realPhysicsMode = physicsMode
 	obj:Recurse(function(o)
-		if typeof(o) == "Object" then
+		if o.Physics == nil then
 			return
 		end
 		-- If disabled, keep trigger to allow raycast
@@ -139,16 +228,10 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 			o.Physics = physicsMode
 		end
 	end, { includeRoot = true })
-	if syncMulti then
-		sendToServer(events.P_EDIT_OBJECT, {
-			uuid = obj.uuid,
-			Physics = obj.realPhysicsMode,
-		})
-	end
 end
 
 function objectHitTest(pe)
-	local impact = pe:CastRay({ OBJECTS_COLLISION_GROUP })
+	local impact = pe:CastRay(OBJECTS_COLLISION_GROUP)
 	local obj = impact.Object
 	-- obj can be a sub-Shape of an object,
 	-- find first parent node that's editable:
@@ -158,12 +241,28 @@ function objectHitTest(pe)
 	return obj
 end
 
+local didTryPickObject = false
+local pickObjectCameraState = {}
 function tryPickObjectDown(pe)
+	didTryPickObject = true
+	-- saving camera state, to avoid picking object after
+	-- a rotation or position change between down and up
+	pickObjectCameraState.pos = Camera.Position:Copy()
+	pickObjectCameraState.rot = Camera.Rotation:Copy()
 	local obj = objectHitTest(pe)
 	pressedObject = obj
 end
 
 function tryPickObjectUp(pe)
+	if didTryPickObject == false then
+		return
+	end
+	if math.abs(Camera.Rotation:Angle(pickObjectCameraState.rot)) > 0 then
+		return
+	end
+
+	didTryPickObject = false
+
 	if pressedObject == nil then
 		setState(states.DEFAULT)
 		return
@@ -226,8 +325,8 @@ local unfreezeObject = function(obj)
 		if typeof(o) == "Object" then
 			return
 		end
-		o.CollisionGroups = { OBJECTS_COLLISION_GROUP }
-		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
+		o.CollisionGroups = OBJECTS_COLLISION_GROUP
+		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + OBJECTS_COLLISION_GROUP
 	end, { includeRoot = true })
 end
 
@@ -241,8 +340,8 @@ local spawnObject = function(data, onDone)
 			if typeof(o) == "Object" then
 				return
 			end
-			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
-			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
+			o.CollisionGroups = CollisionGroups(3) + OBJECTS_COLLISION_GROUP
+			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + OBJECTS_COLLISION_GROUP
 			o:ResetCollisionBox()
 		end, { includeRoot = true })
 		if obj.uuid ~= -1 then
@@ -285,8 +384,8 @@ local spawnObject = function(data, onDone)
 			if typeof(o) == "Object" then
 				return
 			end
-			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
-			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
+			o.CollisionGroups = CollisionGroups(3) + OBJECTS_COLLISION_GROUP
+			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + OBJECTS_COLLISION_GROUP
 			o:ResetCollisionBox()
 		end, { includeRoot = true })
 
@@ -315,7 +414,7 @@ local editObject = function(objInfo)
 	end
 
 	if objInfo.Physics then
-		setObjectPhysicsMode(obj, objInfo.Physics, true)
+		setObjectPhysicsMode(obj, objInfo.Physics)
 	end
 
 	local alpha = objInfo.alpha
@@ -474,7 +573,7 @@ local statesSettings = {
 			local placingObj = worldEditor.placingObj
 
 			-- place and rotate object
-			local impact = pe:CastRay(Map.CollisionGroups + { OBJECTS_COLLISION_GROUP }, placingObj)
+			local impact = pe:CastRay(Map.CollisionGroups + OBJECTS_COLLISION_GROUP, placingObj)
 			if not impact then
 				return
 			end
@@ -558,7 +657,7 @@ local statesSettings = {
 				ease:inOutQuad(obj, 0.15).Scale = currentScale
 			end)
 			sfx("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
-			obj.trail = require("trail"):create(Player, obj, TRAILS_COLORS[Player.ID], 0.5)
+			obj.trail = require("trail"):create(Player, obj, TRAIL_COLOR, 0.5)
 
 			transformGizmo = require("transformgizmo"):create({
 				target = selectedObject,
@@ -570,6 +669,7 @@ local statesSettings = {
 						Scale = target.Scale,
 					})
 				end,
+				onDone = function(target) end,
 			})
 		end,
 		tick = function() end,
@@ -845,6 +945,11 @@ initPickWorld = function()
 				sendToServer(events.P_LOAD_WORLD, { mapBase64 = mapBase64 })
 				uiPickWorld:close()
 				worldEditor.uiPickWorld = nil
+
+				Clouds.On = false
+				-- local textureURL = "https://i.ibb.co/hgRhk0t/Standard-Cube-Map.png"
+				-- local textureURL = "https://files.cu.bzh/skyboxes/green-mushrooms.png"
+				-- skybox.load({ url = textureURL }, function(obj) end)
 			end)
 		end,
 	})
@@ -884,11 +989,11 @@ initPickMap = function()
 		-- Gallery to pick a map
 		local gallery
 		gallery = require("gallery"):create(function()
-			return Screen.Width
+			return Screen.Width - theme.padding * 2
 		end, function()
-			return Screen.Height * 0.5
+			return Screen.Height * 0.8
 		end, function(m)
-			m.pos = { Screen.Width / 2 - m.Width / 2, Screen.Height * 0.2 }
+			m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.2 }
 		end, {
 			onOpen = function(cell)
 				local fullname = cell.repo .. "." .. cell.name
@@ -1163,35 +1268,16 @@ initDefaultMode = function()
 	local initGallery
 	initGallery = function()
 		worldEditor.gallery = require("gallery"):create(function() -- maxWidth
-			if not Client.IsMobile then
-				return Screen.Width
-			else
-				if Screen.Height > Screen.Width then -- portrait mode
-					return Screen.Width
-				else -- landscape mode
-					return Screen.Width * 0.5
-				end
-			end
+			return Screen.Width - Screen.SafeArea.Right - Screen.SafeArea.Left - theme.padding * 2
 		end, function() -- maxHeight
-			if not Client.IsMobile then
-				return Screen.Height * 0.4
-			else
-				if Screen.Height > Screen.Width then -- portrait mode
-					return Screen.Height * 0.5
-				else -- landscape mode
-					return Screen.Height
-				end
-			end
+			return Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.padding * 2
 		end, function(m) -- position
-			if not Client.IsMobile then
-				m.pos = { Screen.Width * 0.5 - m.Width * 0.5, 0 }
-			else
-				if Screen.Height > Screen.Width then -- portrait mode
-					m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.5 - m.Height * 0.5 }
-				else -- landscape mode
-					m.pos = { Screen.Width * 0.5, 0 }
-				end
-			end
+			m.pos = {
+				Screen.Width * 0.5 - m.Width * 0.5,
+				Screen.SafeArea.Bottom
+					+ (Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom) * 0.5
+					- m.Height * 0.5,
+			}
 		end, { onOpen = galleryOnOpen, type = "items" })
 		worldEditor.gallery.didClose = function()
 			setState(states.DEFAULT)
@@ -1258,19 +1344,19 @@ initDefaultMode = function()
 				local obj = selectedObject
 				if btn.Text == "⚅" then
 					obj:TextBubble("CollisionMode: Static")
-					setObjectPhysicsMode(obj, PhysicsMode.Static, true)
+					setObjectPhysicsMode(obj, PhysicsMode.Static)
 					btn.Text = "⚀"
 				elseif btn.Text == "⚀" then
 					obj:TextBubble("CollisionMode: Trigger")
-					setObjectPhysicsMode(obj, PhysicsMode.Trigger, true)
+					setObjectPhysicsMode(obj, PhysicsMode.Trigger)
 					btn.Text = "►"
 				elseif btn.Text == "►" then
 					obj:TextBubble("CollisionMode: Disabled")
-					setObjectPhysicsMode(obj, PhysicsMode.Disabled, true)
+					setObjectPhysicsMode(obj, PhysicsMode.Disabled)
 					btn.Text = "❌"
 				else
 					obj:TextBubble("CollisionMode: StaticPerBlock")
-					setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock, true)
+					setObjectPhysicsMode(obj, PhysicsMode.StaticPerBlock)
 					btn.Text = "⚅"
 				end
 			end,
@@ -1369,19 +1455,24 @@ initDefaultMode = function()
 
 		-- local ambience = server.getAmbience()
 
+		local sliderHandleSize = 30
+
+		local sliderButton = ui:buttonNeutral({ content = "" })
+		sliderButton.Height = sliderHandleSize
+		sliderButton.Width = sliderHandleSize
+
 		local sunRotationSlider = ui:slider({
 			defaultValue = 180, -- TODO: fix ambience first then get current value
 			min = 0,
 			max = 360,
 			step = 1,
-			button = {
-				content = "  ",
-			},
+			button = sliderButton,
 			onValueChange = function(v)
 				sunRotationYLabel.Text = "" .. v
 				local ambience = server.getAmbience()
 				if ambience.sun.rotation then
-					ambience.sun.rotation[2] = math.rad(v)
+					-- print("ambience.sun.rotation:", type(ambience.sun.rotation))
+					ambience.sun.rotation.Y = math.rad(v)
 					sendToServer(events.P_SET_AMBIENCE, ambience)
 					require("ai_ambience"):loadGeneration(ambience)
 				end
@@ -1392,19 +1483,21 @@ initDefaultMode = function()
 		local sunRotationXLabel = ui:createText("0  ", { font = Font.Pixel, size = "default", color = Color.White })
 		sunRotationXLabel:setParent(cell)
 
+		local sliderButton = ui:buttonNeutral({ content = "" })
+		sliderButton.Height = sliderHandleSize
+		sliderButton.Width = sliderHandleSize
+
 		local sunRotationXSlider = ui:slider({
 			defaultValue = 0, -- TODO: fix ambience first then get current value
 			min = -90,
 			max = 90,
 			step = 1,
-			button = {
-				content = "  ",
-			},
+			button = sliderButton,
 			onValueChange = function(v)
 				sunRotationXLabel.Text = "" .. v
 				local ambience = server.getAmbience()
 				if ambience.sun.rotation then
-					ambience.sun.rotation[1] = math.rad(v)
+					ambience.sun.rotation.X = math.rad(v)
 					sendToServer(events.P_SET_AMBIENCE, ambience)
 					require("ai_ambience"):loadGeneration(ambience)
 				end
@@ -1412,11 +1505,48 @@ initDefaultMode = function()
 		})
 		sunRotationXSlider:setParent(cell)
 
+		local fogLabel = ui:createText("☁️ Fog (near/far)", { size = "small", color = Color.White })
+		fogLabel:setParent(cell)
+
+		local sliderButton = ui:buttonNeutral({ content = "" })
+		sliderButton.Height = sliderHandleSize
+		sliderButton.Width = sliderHandleSize
+
+		local fogNearSlider = ui:slider({
+			defaultValue = 0, -- TODO: fix ambience first then get current value
+			min = -90,
+			max = 90,
+			step = 1,
+			button = sliderButton,
+			onValueChange = function(v) end,
+		})
+		fogNearSlider:setParent(cell)
+
+		local sliderButton = ui:buttonNeutral({ content = "" })
+		sliderButton.Height = sliderHandleSize
+		sliderButton.Width = sliderHandleSize
+
+		local fogFarSlider = ui:slider({
+			defaultValue = 0, -- TODO: fix ambience first then get current value
+			min = -90,
+			max = 90,
+			step = 1,
+			button = sliderButton,
+			onValueChange = function(v) end,
+		})
+		fogFarSlider:setParent(cell)
+
 		cell.Height = sunLabel.Height
 			+ theme.paddingTiny
-			+ sunRotationSlider.Height
+			+ sliderHandleSize
 			+ theme.paddingTiny
-			+ sunRotationXSlider.Height
+			+ sliderHandleSize
+			+ theme.paddingTiny
+			+ fogLabel.Height
+			+ theme.paddingTiny
+			+ sliderHandleSize
+			+ theme.paddingTiny
+			+ sliderHandleSize
 
 		cell.parentDidResize = function(self)
 			local parent = self.parent
@@ -1424,24 +1554,35 @@ initDefaultMode = function()
 
 			local y = self.Height - sunLabel.Height
 			sunLabel.pos = { 0, y }
-			y = y - theme.paddingTiny - sunRotationSlider.Height
+			y = y - theme.paddingTiny - sliderHandleSize
 
 			sunRotationSlider.Width = self.Width - sunRotationYLabel.Width - theme.padding
 			sunRotationSlider.pos = { 0, y }
 
 			sunRotationYLabel.pos = {
 				sunRotationSlider.pos.X + sunRotationSlider.Width + theme.padding,
-				sunRotationSlider.pos.Y + sunRotationSlider.Height * 0.5 - sunRotationYLabel.Height * 0.5,
+				sunRotationSlider.pos.Y + sliderHandleSize * 0.5 - sunRotationYLabel.Height * 0.5,
 			}
-			y = y - theme.paddingTiny - sunRotationYLabel.Height
+			y = y - theme.paddingTiny - sliderHandleSize
 
 			sunRotationXSlider.Width = self.Width - sunRotationYLabel.Width - theme.padding
 			sunRotationXSlider.pos = { 0, y }
 
 			sunRotationXLabel.pos = {
 				sunRotationXSlider.pos.X + sunRotationXSlider.Width + theme.padding,
-				sunRotationXSlider.pos.Y + sunRotationXSlider.Height * 0.5 - sunRotationXLabel.Height * 0.5,
+				sunRotationXSlider.pos.Y + sliderHandleSize * 0.5 - sunRotationXLabel.Height * 0.5,
 			}
+			y = y - theme.paddingTiny - fogLabel.Height
+
+			fogLabel.pos = { 0, y }
+
+			y = y - theme.paddingTiny - sliderHandleSize
+			fogNearSlider.Width = self.Width - sunRotationYLabel.Width - theme.padding
+			fogNearSlider.pos = { 0, y }
+
+			y = y - theme.paddingTiny - sliderHandleSize
+			fogFarSlider.Width = self.Width - sunRotationYLabel.Width - theme.padding
+			fogFarSlider.pos = { 0, y }
 		end
 
 		cell:setParent(nil)
@@ -1655,7 +1796,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 				if obj.trail then
 					obj.trail:remove()
 				end
-				obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
+				obj.trail = require("trail"):create(sender, obj, TRAIL_COLOR, 0.5)
 			end)
 		end
 	elseif e.a == events.EDIT_OBJECT and not isLocalPlayer then
@@ -1672,7 +1813,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		if obj.trail then
 			obj.trail:remove()
 		end
-		obj.trail = require("trail"):create(sender, obj, TRAILS_COLORS[sender.ID], 0.5)
+		obj.trail = require("trail"):create(sender, obj, TRAIL_COLOR, 0.5)
 	elseif e.a == events.END_EDIT_OBJECT then
 		local obj = objects[data.uuid]
 		if not obj then
@@ -1707,7 +1848,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 				if obj.trail then
 					obj.trail:remove()
 				end
-				obj.trail = require("trail"):create(player, obj, TRAILS_COLORS[pID], 0.5)
+				obj.trail = require("trail"):create(player, obj, TRAIL_COLOR, 0.5)
 			end
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
