@@ -499,7 +499,7 @@ function initAnimations(avatar)
 	end
 
 	local yOffset = 0.4
-	local animIdle = Animation("Idle", { speed = 0.5, loops = 0 })
+	local animIdle = Animation("Idle", { speed = 0.5, loops = 0, priority = 0 })
 	local idle_keyframes_data = {
 		{ name = "LeftLeg", time = 0.0, position = leftLegOrigin, rotation = { 0, 0, 0 } },
 		{ name = "LeftLeg", time = 0.5, position = leftLegOrigin + { 0.0, yOffset, 0.0 }, rotation = { 0, 0, 0 } },
@@ -796,7 +796,7 @@ function avatar_load(self, config)
 	if config.usernameOrId ~= nil and config.usernameOrId ~= "" then
 		local req = api.getAvatar(config.usernameOrId, function(err, data)
 			if err and config.didLoad then
-				config.didLoad(err)
+				config.didLoad(err, nil)
 				return
 			end
 
@@ -885,6 +885,11 @@ function avatar_load(self, config)
 		end)
 
 		table.insert(fields.requests, req)
+	end
+
+	-- args: error, avatar
+	if config.didLoad ~= nil then
+		config.didLoad(nil, self)
 	end
 
 	return fields.requests
