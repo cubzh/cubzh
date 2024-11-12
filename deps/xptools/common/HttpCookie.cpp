@@ -37,59 +37,70 @@ _value(),
 _secure(true),
 _httpOnly(true) {}
 
-bool Cookie::parseSetCookieHeader(const std::string &setCookieHeader, Cookie &cookie) {
-    // Note: here is what a set-cookie header looks like:
-    // "cubzh_test_cookie=yumyum; Domain=cu.bzh; HttpOnly; Secure"
+bool Cookie::parseSetCookieHeader(const std::string &setCookieHeader, std::vector<Cookie> &cookies) {
+    // Split the setCookieHeader by commas to isolate individual cookies
+    std::istringstream cookieStream(setCookieHeader);
+    std::string singleCookieStr;
 
-    Cookie c;
+    // Parse each cookie separated by comma
+    while (std::getline(cookieStream, singleCookieStr, ',')) {
+        Cookie c;
+        std::istringstream stream(singleCookieStr);
+        std::string directive;
+        bool isFirstDirective = true;
 
-    std::istringstream stream(setCookieHeader);
-    std::string directive;
-    unsigned int counter = 0;
+        while (std::getline(stream, directive, ';')) {
+            // Remove leading and trailing whitespaces
+            const size_t firstNonSpace = directive.find_first_not_of(' ');
+            const size_t lastNonSpace = directive.find_last_not_of(' ');
 
-    while (std::getline(stream, directive, ';')) {
-        counter += 1;
-
-        // Remove leading and trailing whitespaces
-        const size_t firstNonSpace = directive.find_first_not_of(' ');
-        const size_t lastNonSpace = directive.find_last_not_of(' ');
-
-        if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
-            directive = directive.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
-        }
-
-        // Split directive into key and value
-        size_t equalsPos = directive.find('=');
-        std::string key;
-        std::string value;
-
-        if (equalsPos != std::string::npos) {
-            key = directive.substr(0, equalsPos);
-            value = directive.substr(equalsPos + 1);
-        } else {
-            key = directive;
-            value = "";
-        }
-
-        if (counter == 1) {
-            c.setName(key);
-            c.setValue(value);
-        } else {
-            if (key == "Domain") {
-                c.setDomain(value);
-            } else if (key == "HttpOnly" && value.empty()) {
-                c.setHttpOnly(true);
-            } else if (key == "Secure" && value.empty()) {
-                c.setSecure(true);
+            if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
+                directive = directive.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
             }
-            // ...
+
+            // Split directive into key and value
+            size_t equalsPos = directive.find('=');
+            std::string key;
+            std::string value;
+
+            if (equalsPos != std::string::npos) {
+                key = directive.substr(0, equalsPos);
+                value = directive.substr(equalsPos + 1);
+            } else {
+                key = directive;
+                value = "";
+            }
+
+            if (isFirstDirective) {
+                // The first directive contains the cookie name and value
+                c.setName(key);
+                c.setValue(value);
+                isFirstDirective = false;
+            } else {
+                // Process cookie attributes
+                if (key == "Domain") {
+                    c.setDomain(value);
+                } else if (key == "Path") {
+                    c.setPath(value);
+                } else if (key == "HttpOnly" && value.empty()) {
+                    c.setHttpOnly(true);
+                } else if (key == "Secure" && value.empty()) {
+                    c.setSecure(true);
+                }
+                // else if (key == "Max-Age") {
+                //     c.setMaxAge(std::stoi(value));
+                // }
+                // Additional cookie attributes can be handled here
+            }
         }
 
-        printf(">> COOKIE element: [%s] [%s]\n", key.c_str(), value.c_str());
+        // c.log();
+
+        // Add parsed cookie to the cookies vector
+        cookies.push_back(std::move(c));
     }
 
-    cookie = std::move(c);
-    return true;
+    return true; // success
 }
 
 // CookieStore

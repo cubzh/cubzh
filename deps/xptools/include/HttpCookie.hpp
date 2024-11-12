@@ -11,6 +11,7 @@
 // C++
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace vx {
 namespace http {
@@ -18,7 +19,7 @@ namespace http {
 class Cookie final {
 public:
     // Returns true on success
-    static bool parseSetCookieHeader(const std::string& setCookieHeader, Cookie &cookie);
+    static bool parseSetCookieHeader(const std::string &setCookieHeader, std::vector<Cookie> &cookie);
 
     Cookie();
     // ~Cookie();
@@ -29,6 +30,7 @@ public:
     inline void setValue(const std::string &nv) {_value = nv;}
     inline void setSecure(const bool &nv) {_secure = nv;}
     inline void setHttpOnly(const bool &nv) {_httpOnly = nv;}
+    // inline void setMaxAge(const int &nv) {_maxAge = nv;}
 
     inline const std::string& getDomain() const {return _domain;}
     inline const std::string& getPath() const {return _path;}
@@ -36,12 +38,19 @@ public:
     inline const std::string& getValue() const {return _value;}
     inline const bool& getSecure() const {return _secure;}
     inline const bool& getHttpOnly() const {return _httpOnly;}
+    // inline const int& getMaxAge() const {return _maxAge;}
 
     // Override the equality operator
     bool operator==(const Cookie& other) const {
         return (this->_domain == other.getDomain() &&
                 this->_path == other.getPath() &&
                 this->_name == other.getName());
+    }
+
+    inline void log() const {
+        printf("[COOKIE] %s %s %s %s Secure=%s HttpOnly=%s\n",
+               getDomain().c_str(), getPath().c_str(), getName().c_str(), getValue().c_str(),
+               getSecure() ? "YES" : "NO", getHttpOnly() ? "YES" : "NO");
     }
 
 private:
@@ -51,6 +60,7 @@ private:
     std::string _value;
     bool _secure;
     bool _httpOnly;
+    // int _maxAge;
 };
 
 }

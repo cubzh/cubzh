@@ -83,10 +83,12 @@ bool HttpRequest::callCallback() {
     for (auto header : headers) {
         // cubzh_test_cookie=yumyum; Domain=cu.bzh; HttpOnly; Secure
         if (header.first == "set-cookie") {
-            vx::http::Cookie c;
-            const bool ok = vx::http::Cookie::parseSetCookieHeader(header.second, c);
+            std::vector<vx::http::Cookie> cookies;
+            const bool ok = vx::http::Cookie::parseSetCookieHeader(header.second, cookies);
             if (ok) {
-                vx::http::CookieStore::shared().setCookie(c);
+                for (vx::http::Cookie c : cookies) {
+                    vx::http::CookieStore::shared().setCookie(c);
+                }
             }
         }
     }
