@@ -14,7 +14,6 @@
 // xptools
 #include "vxlog.h"
 #include "HttpClient.hpp"
-// #include "WSService.hpp"
 #include "ThreadManager.hpp"
 #include "OperationQueue.hpp"
 #include "HttpCookie.hpp"
@@ -48,7 +47,7 @@ void HttpRequest::setCallback(HttpRequestCallback callback) {
 }
 
 bool HttpRequest::callCallback() {
-	// vx::ThreadManager::shared().log("HttpRequest::callCallback");
+    // vx::ThreadManager::shared().log("HttpRequest::callCallback");
 
     HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
@@ -68,49 +67,47 @@ bool HttpRequest::callCallback() {
     vx::OperationQueue::getMain()->dispatch([strongSelf](){
 #endif
 
-// call response middleware
-{
-    auto respMiddleware = HttpClient::shared().getCallbackMiddleware();
-    if (respMiddleware != nullptr) {
-        respMiddleware(strongSelf);
-    }
-}
+        // call response middleware
+        {
+            auto respMiddleware = HttpClient::shared().getCallbackMiddleware();
+            if (respMiddleware != nullptr) {
+                respMiddleware(strongSelf);
+            }
+        }
 
-// Process Set-Cookie headers received
-{
-    auto headers = strongSelf->getResponse().getHeaders();
-    // maybe we should remove the headers once they are processed
-    for (auto header : headers) {
-        // cubzh_test_cookie=yumyum; Domain=cu.bzh; HttpOnly; Secure
-        if (header.first == "set-cookie") {
-            std::vector<vx::http::Cookie> cookies;
-            const bool ok = vx::http::Cookie::parseSetCookieHeader(header.second, cookies);
-            if (ok) {
-                for (vx::http::Cookie c : cookies) {
-                    vx::http::CookieStore::shared().setCookie(c);
+        // Process Set-Cookie headers received & store cookies in the CookieStore
+        {
+            const std::unordered_map<std::string, std::string> headers = strongSelf->getResponse().getHeaders();
+            for (auto header : headers) {
+                if (header.first == "set-cookie") {
+                    std::vector<vx::http::Cookie> cookies;
+                    const bool ok = vx::http::Cookie::parseSetCookieHeader(header.second, cookies);
+                    if (ok) {
+                        for (vx::http::Cookie c : cookies) {
+                            vx::http::CookieStore::shared().setCookie(c);
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
 #if !defined(__VX_PLATFORM_WASM)
-// if ETag was valid, we use the cached response
-if (strongSelf->getResponse().getStatusCode() == HTTP_NOT_MODIFIED) {
-    strongSelf->_useCachedResponse();
-}
+        // if ETag was valid, we use the cached response
+        if (strongSelf->getResponse().getStatusCode() == HTTP_NOT_MODIFIED) {
+            strongSelf->_useCachedResponse();
+        }
 
-// Store response in cache (if conditions are met)
-// optim possible: if it was a 304, we don't need to update the response bytes in the cache
-const bool ok = vx::HttpClient::shared().cacheHttpResponse(strongSelf);
-if (ok) {
-    // vxlog_debug("HTTP response cached : %s", strongSelf->constructURLString().c_str());
-}
+        // Store response in cache (if conditions are met)
+        // optim possible: if it was a 304, we don't need to update the response bytes in the cache
+        const bool ok = vx::HttpClient::shared().cacheHttpResponse(strongSelf);
+        if (ok) {
+            // vxlog_debug("HTTP response cached : %s", strongSelf->constructURLString().c_str());
+        }
 #endif
 
-if (strongSelf->_callback != nullptr) {
-    strongSelf->_callback(strongSelf);
-}
+        if (strongSelf->_callback != nullptr) {
+            strongSelf->_callback(strongSelf);
+        }
 
 #if defined(__VX_PLATFORM_WASM)
     });
@@ -141,7 +138,7 @@ const std::string& HttpRequest::getPathAndQuery() {
 }
 
 void HttpRequest::sendAsync() {
-	// vx::ThreadManager::shared().log("HttpRequest::sendAsync");
+    // vx::ThreadManager::shared().log("HttpRequest::sendAsync");
 
     HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
@@ -210,9 +207,9 @@ void HttpRequest::_sendNextRequest(HttpRequest_SharedPtr reqToRemove) {
         reqToSend = _requestsWaiting.top(); // serve latest request first
         _requestsWaiting.pop();
         if (reqToSend->getStatus() == Status::PROCESSING) {
-        	// request is still waiting to be sent (it has not been cancelled)
-         	_requestsFlying.insert(reqToSend);
-          	reqToSend->_processAsync();
+            // request is still waiting to be sent (it has not been cancelled)
+            _requestsFlying.insert(reqToSend);
+            reqToSend->_processAsync();
         }
     }
 
@@ -221,7 +218,7 @@ void HttpRequest::_sendNextRequest(HttpRequest_SharedPtr reqToRemove) {
 #endif
 
 void HttpRequest::sendSync() {
-	// TODO: get strong reference
+    // TODO: get strong reference
 
     std::mutex *mtx = new std::mutex();
     mtx->lock();
@@ -237,9 +234,9 @@ void HttpRequest::sendSync() {
 }
 
 void HttpRequest::cancel() {
-	// vx::ThreadManager::shared().log("HttpRequest::cancel");
+    // vx::ThreadManager::shared().log("HttpRequest::cancel");
 
-	HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
+    HttpRequest_SharedPtr strongSelf = this->_weakSelf.lock();
     if (strongSelf == nullptr) {
         return;
     }
@@ -426,7 +423,7 @@ void HttpRequest::downloadFailed(emscripten_fetch_t * const fetch) {
 }
 
 void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
-	// vxlog_debug("🔥 fetch %d %p %s", fetch->id, fetch, success ? "success" : "fail");
+    // vxlog_debug("🔥 fetch %d %p %s", fetch->id, fetch, success ? "success" : "fail");
 
     // retrieve pointer on request shared_ptr
     HttpRequest_SharedPtr *sptrRef = static_cast<HttpRequest_SharedPtr *>(fetch->userData);
@@ -447,8 +444,8 @@ void HttpRequest::downloadCommon(emscripten_fetch_t *fetch, bool success) {
     fetch->userData = nullptr;
 
     if (strongReq->getStatus() == Status::CANCELLED) {
-    	// vxlog_debug("🔥 request was cancelled %p", strongReq.get());
-     	return;
+        // vxlog_debug("🔥 request was cancelled %p", strongReq.get());
+        return;
     }
 
     if (strongReq->_fetch == nullptr) {
