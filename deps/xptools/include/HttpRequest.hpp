@@ -22,9 +22,15 @@
 #include "HttpResponse.hpp"
 #include "URL.hpp"
 
-// local macros
+// schemes
 #define VX_HTTPS_SCHEME "https"
 #define VX_HTTP_SCHEME "http"
+
+// HTTP methods
+#define VX_HTTPMETHOD_GET "GET"
+#define VX_HTTPMETHOD_POST "POST"
+#define VX_HTTPMETHOD_PATCH "PATCH"
+#define VX_HTTPMETHOD_DELETE "DELETE"
 
 #if defined(__VX_PLATFORM_WASM)
 #include <stack>
