@@ -62,9 +62,9 @@ local get = function(leaderboard, config)
 	local u
 
 	if config.userID ~= nil then
-		u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name .. "/" .. config.userID)
+		u = url:parse(API_ADDR .. "/privileged/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name .. "/" .. config.userID)
 	else
-		u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
+		u = url:parse(API_ADDR .. "/privileged/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
 		u:addQueryParameter("mode", config.mode)
 		u:addQueryParameter("limit", math.floor(config.limit))
 		u:addQueryParameter("friends", config.friends and "true" or "false")
@@ -184,7 +184,7 @@ local set = function(leaderboard, config)
 		error("leaderboard:set(config) - could not encode score: " .. err, 2)
 	end
 
-	local u = url:parse(API_ADDR .. "/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
+	local u = url:parse(API_ADDR .. "/privileged/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
 
 	local req = System:HttpPost(u:toString(), body, function(res)
 		-- print("STATUS:", res.StatusCode)

@@ -32,7 +32,7 @@ mod.deleteUser = function(_, callback)
 		callback(false, "1st arg must be a function")
 		return
 	end
-	local url = mod.kApiAddr .. "/users/self"
+	local url = mod.kApiAddr .. "/privileged/users/self"
 	local req = System:HttpDelete(url, {}, function(resp)
 		if resp.StatusCode ~= 200 then
 			callback(false, "http status not 200")
@@ -737,7 +737,7 @@ mod.getNotifications = function(self, config, callback)
 		error("api:getNotifications(config, callback): config error (" .. err .. ")", 2)
 	end
 
-	local u = url:parse(mod.kApiAddr .. "/users/self/notifications")
+	local u = url:parse(mod.kApiAddr .. "/privileged/users/self/notifications")
 
 	if config.category ~= nil then
 		u:addQueryParameter("category", config.category)
@@ -803,7 +803,7 @@ mod.readNotifications = function(self, config)
 		error("api:readNotifications(config): config error (" .. err .. ")", 2)
 	end
 
-	local u = url:parse(mod.kApiAddr .. "/users/self/notifications")
+	local u = url:parse(mod.kApiAddr .. "/privileged/users/self/notifications")
 
 	if config.category ~= nil then
 		u:addQueryParameter("category", config.category)
