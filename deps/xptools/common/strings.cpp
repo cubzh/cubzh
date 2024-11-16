@@ -144,6 +144,14 @@ std::string vx::str::trimPrefix(const std::string& str, const std::string& prefi
     }
 }
 
+bool vx::str::replacePrefix(std::string& str, const std::string& prefix, const std::string& newPrefix) {
+    if (hasPrefix(str, prefix) == false) {
+        return false;
+    }
+    str = newPrefix + trimPrefix(str, prefix);
+    return true;
+}
+
 bool vx::str::hasSuffix(const std::string& str, const std::string& suffix) {
     if (str.length() >= suffix.length()) {
        return (str.rfind(suffix) == (str.length() - suffix.length()));

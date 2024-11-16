@@ -17,6 +17,7 @@
 #include "ThreadManager.hpp"
 #include "OperationQueue.hpp"
 #include "HttpCookie.hpp"
+#include "strings.hpp"
 
 using namespace vx;
 
@@ -346,7 +347,48 @@ void HttpRequest::setStatus(const HttpRequest::Status status) {
 std::string HttpRequest::constructURLString() {
     const std::string scheme = _secure ? VX_HTTPS_SCHEME : VX_HTTP_SCHEME;
     // construct URL string
-    const std::string urlStr = scheme + "://" + _host + ":" + std::to_string(_port) + getPathAndQuery();
+    // std::string urlStr = scheme + "://" + _host + ":" + std::to_string(_port) + getPathAndQuery();
+    std::string urlStr = scheme + "://" + _host + getPathAndQuery();
+
+#if defined(__VX_REWRITE_URLS_FOR_DISCORD)
+    bool edited = vx::str::replacePrefix(urlStr, "https://api.cu.bzh", "/.proxy/api-cu-bzh");
+    if (edited) {
+        return urlStr;
+    }
+    edited = vx::str::replacePrefix(urlStr, "https://debug.cu.bzh", "/.proxy/debug-cu-bzh");
+    if (edited) {
+        return urlStr;
+    }
+    edited = vx::str::replacePrefix(urlStr, "https://ping-eu.cu.bzh", "/.proxy/pingeu-cu-bzh");
+    if (edited) {
+        return urlStr;
+    }
+    edited = vx::str::replacePrefix(urlStr, "https://ping-us.cu.bzh", "/.proxy/pingus-cu-bzh");
+    if (edited) {
+        return urlStr;
+    }
+    edited = vx::str::replacePrefix(urlStr, "https://ping-sg.cu.bzh", "/.proxy/pingsg-cu-bzh");
+    if (edited) {
+        return urlStr;
+    }
+    edited = vx::str::replacePrefix(urlStr, "https://files.cu.bzh", "/.proxy/files-cu-bzh");
+    if (edited) {
+        return urlStr;
+    }
+    // other domains
+    // Parse _host and count the (sub)domain elements
+    std::vector<std::string> elems = vx::str::splitString(_host, ".");
+    size_t elemsCount = elems.size();
+    // 2/3/4-elements (sub)domains are supported
+    if (elemsCount == 2) {
+        urlStr = "/.proxy/dd/" + elems[0] + "/" +elems[1] + getPathAndQuery();
+    } else if (elemsCount == 3) {
+        urlStr = "/.proxy/ddd/" + elems[0] + "/" + elems[1] + "/" + elems[2] + getPathAndQuery();
+    } else if (elemsCount == 4) {
+        urlStr = "/.proxy/dddd/" + elems[0] + "/" + elems[1] + "/" + elems[2] + "/" + elems[3] + getPathAndQuery();
+    }
+#endif
+    
     return urlStr;
 }
 

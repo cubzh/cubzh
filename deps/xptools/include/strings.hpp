@@ -67,6 +67,10 @@ bool hasPrefix(const std::string& str, const std::string& prefix);
 ///
 std::string trimPrefix(const std::string& str, const std::string& prefix);
 
+/// Modifies the provided string str
+/// Returns false if the str doesn't have the prefix
+bool replacePrefix(std::string& str, const std::string& prefix, const std::string& newPrefix);
+
 /// Returns true if `suffix` is a suffix of `str`, false otherwise.
 bool hasSuffix(const std::string& str, const std::string& suffix);
 
