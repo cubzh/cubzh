@@ -14,6 +14,7 @@
 // xptools
 #include "vxlog.h"
 #include "ThreadManager.hpp"
+#include "strings.hpp"
 
 #if defined(__VX_USE_LIBWEBSOCKETS) || defined(__VX_PLATFORM_WASM)
 #include "WSService.hpp"
@@ -229,6 +230,7 @@ const bool& WSConnection::getSecure() const {
 
 std::string WSConnection::getURL() const {
     return std::string(_secure ? "wss" : "ws") + "://" + _serverAddr + ":" + std::to_string(_serverPort);
+    // return std::string(_secure ? "wss" : "ws") + "://" + _serverAddr;
 }
 
 // PLATFORM SPECIFIC
@@ -459,8 +461,33 @@ void WSConnection::init(const WSConnection_SharedPtr& ref,
                         const std::string& addr,
                         const uint16_t& port) {
     // assert(scheme == "ws" || scheme == "wss");
-    _weakSelf = ref;
-    _serverAddr.assign(addr);
+    std::string addrToUse = addr;
+
+#if defined(__VX_REWRITE_URLS_FOR_DISCORD)
+    std::string portStr = std::to_string(port);
+    // /ddd/{subdomain}/{sub}/{sa}
+    bool edited = false;
+    if (!edited) {
+        edited = vx::str::replacePrefix(addrToUse,
+                                        "servers-eu-1.cu.bzh",
+                                        "1219341016524525670.discordsays.com/.proxy/dddp/servers-eu-1/cu/bzh/"+portStr);
+    }
+    if (!edited) {
+        edited = vx::str::replacePrefix(addrToUse,
+                                        "servers-us-1.cu.bzh",
+                                        "1219341016524525670.discordsays.com/.proxy/dddp/servers-us-1/cu/bzh/"+portStr);
+    }
+    if (!edited) {
+        edited = vx::str::replacePrefix(addrToUse,
+                                        "servers-sg-2.cu.bzh",
+                                        "1219341016524525670.discordsays.com/.proxy/dddp/servers-sg-2/cu/bzh/"+portStr);
+    }
+    _serverPort = 443;
+#else
     _serverPort = port;
+#endif
+
+    _weakSelf = ref;
+    _serverAddr.assign(addrToUse);
     if (scheme == "wss") { _secure = true; }
 }
