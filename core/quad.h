@@ -23,7 +23,7 @@ void quad_release(Quad *q);
 void quad_free(Quad *q); // called in transform_release, does not free transform
 
 Transform *quad_get_transform(const Quad *q);
-void quad_copy_data(Quad *q, const void *data, uint32_t size);
+void quad_set_data(Quad *q, Weakptr *data, uint32_t size);
 void *quad_get_data(const Quad *q);
 uint32_t quad_get_data_size(const Quad *q);
 uint32_t quad_get_data_hash(const Quad *q);
