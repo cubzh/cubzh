@@ -1,5 +1,4 @@
-
-local json = require "json"
+local json = require("json")
 
 local exe = arg[0]
 local file = arg[1]
@@ -30,7 +29,7 @@ local doc = {
 	name = "",
 	keywords = {},
 	description = {},
-	types = {}
+	types = {},
 }
 
 --[[
@@ -76,12 +75,20 @@ local doc =  {
 		}
 	}
 }
-]]--
+]]
+--
 
--- returns name & remaining string 
+-- returns name & remaining string
 -- or nil if can't parse name
 function parseName(s)
-	prefix, name, optional = string.match(s, "([%s]*)([a-zA-Z][a-zA-Z0-9]*)([?]?)")
+	local prefix, name, optional
+	if string.match(s, "^[%s]*%.%.%.") then
+		prefix = string.match(s, "^([%s]*)")
+		name = "..."
+		optional = string.match(s:sub(prefix:len() + 3), "^([?])")
+	else
+		prefix, name, optional = string.match(s, "^([%s]*)([a-zA-Z][a-zA-Z0-9]*)([?]?)")
+	end
 	if name ~= nil then
 		s = s:sub(prefix:len() + name:len() + 1)
 		return name, s, optional == "?"
@@ -90,7 +97,7 @@ end
 
 -- returns text or nil if can't parse inline text
 function parseInlineText(s)
-	text = string.match(s, "[%s]*([^\n\r\t]+)")
+	text = string.match(s, "[ ]*([^\n\r]+)")
 	return text
 end
 
@@ -98,7 +105,7 @@ function parseTypes(s)
 	local prefix, type = string.match(s, "([%s]*)([a-zA-Z][a-zA-Z0-9]*)")
 
 	if type ~= nil then
-		local types = {type}
+		local types = { type }
 		s = s:sub(prefix:len() + type:len() + 1)
 
 		while true do
@@ -201,7 +208,7 @@ local currentDescription = doc.description
 local currentDescriptionBlockType = "text"
 
 function ensureType()
-	if currentType == nil then 
+	if currentType == nil then
 		currentType = {}
 		table.insert(doc.types, currentType)
 		currentType.name = moduleName
@@ -219,14 +226,12 @@ function appendDescription(text)
 
 		-- fields (function param or return) support simple text descriptions
 		-- (not rich ones with typed blocks)
-		currentField.description = currentField.description == nil 
-									and text 
-									or currentField.description .. "\n" .. text
+		currentField.description = currentField.description == nil and text or currentField.description .. "\n" .. text
 
 		return
 	end
 
-	if currentDescription ~= nil then 
+	if currentDescription ~= nil then
 		if #currentDescription == 0 or currentDescription[#currentDescription][currentDescriptionBlockType] == nil then
 			local block = {}
 			block[currentDescriptionBlockType] = text
@@ -239,8 +244,9 @@ function appendDescription(text)
 end
 
 function printDescription(desc)
-
-	if desc == nil then return end
+	if desc == nil then
+		return
+	end
 
 	if type(desc) == "string" then
 		print("\27[02m" .. desc .. "\27[0m")
@@ -248,20 +254,17 @@ function printDescription(desc)
 	end
 
 	for _, block in ipairs(desc) do
-		if block.text ~= nil then 
+		if block.text ~= nil then
 			print("\27[02m" .. block.text .. "\27[0m")
 		end
 	end
 end
 
-
 lines = {}
-for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
-
+for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^\n\r]*)") do
 	table.insert(lines, prefix .. line)
 	typeToken, line = parseTypeToken(line)
 	if typeToken then
-
 		currentType = {}
 		table.insert(doc.types, currentType)
 		currentType.description = {}
@@ -275,7 +278,9 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 		currentProperty = nil
 
 		name, line = parseName(line)
-		if name == nil then error("a type needs a name") end
+		if name == nil then
+			error("a type needs a name")
+		end
 		currentType.name = name
 
 		goto continue
@@ -284,7 +289,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 	functionToken, line = parseFunctionToken(line)
 	if functionToken then
 		ensureType()
-		currentFunction = {params={{}}, description = {}, ret = {}}
+		currentFunction = { params = { {} }, description = {}, ret = {} }
 		currentDescription = currentFunction.description
 		currentDescriptionBlockType = "text"
 		currentProperty = nil
@@ -305,7 +310,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 	propToken, line = parsePropertyToken(line)
 	if propToken then
 		ensureType()
-		currentProperty = {description = {}}
+		currentProperty = { description = {} }
 		currentDescription = currentProperty.description
 		currentDescriptionBlockType = "text"
 		currentFunction = nil
@@ -339,7 +344,6 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 		local currentSet = currentFunction.params[#currentFunction.params]
 		table.insert(currentSet, currentField)
 
-
 		name, line, optional = parseName(line)
 		if name ~= nil then
 			currentField.optional = optional
@@ -348,7 +352,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 			types, line = parseTypes(line)
 			if types ~= nil then
 				currentField.types = types
-				
+
 				text = parseInlineText(line)
 				if text ~= nil then
 					appendDescription(text)
@@ -377,13 +381,13 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 				appendDescription(text)
 			end
 		end
-		
+
 		goto continue
 	end
 
 	token, line = parseCodeToken(line)
 	if token then
-		if currentDescription ~= nil then 
+		if currentDescription ~= nil then
 			currentField = nil
 			currentDescriptionBlockType = "code"
 			local block = {}
@@ -394,7 +398,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^%-][^\n\r\t]+)") do
 
 	token, line = parseTextToken(line)
 	if token then
-		if currentDescription ~= nil then 
+		if currentDescription ~= nil then
 			currentField = nil
 			currentDescriptionBlockType = "text"
 			local block = {}
@@ -480,4 +484,3 @@ if output ~= nil then
 else
 	print(json.encode(doc))
 end
-
