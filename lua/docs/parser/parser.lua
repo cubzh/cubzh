@@ -98,7 +98,7 @@ end
 -- returns text or nil if can't parse inline text
 function parseInlineText(s)
 	text = string.match(s, "[ ]*([^\n\r]+)")
-	return text
+	return text or ""
 end
 
 function parseTypes(s)
@@ -233,12 +233,25 @@ function appendDescription(text)
 
 	if currentDescription ~= nil then
 		if #currentDescription == 0 or currentDescription[#currentDescription][currentDescriptionBlockType] == nil then
-			local block = {}
-			block[currentDescriptionBlockType] = text
-			table.insert(currentDescription, block)
+			if text ~= "" then
+				local block = {}
+				block[currentDescriptionBlockType] = text
+				table.insert(currentDescription, block)
+			end
 		else
 			local block = currentDescription[#currentDescription]
-			block[currentDescriptionBlockType] = block[currentDescriptionBlockType] .. "\n" .. text
+			if text == "" then
+				if block[currentDescriptionBlockType] ~= "" then
+					block.addEmptyLine = true
+				end
+			else
+				local cr = "\n"
+				if block.addEmptyLine then
+					cr = "\n\n"
+					block.addEmptyLine = nil
+				end
+				block[currentDescriptionBlockType] = block[currentDescriptionBlockType] .. cr .. text
+			end
 		end
 	end
 end
@@ -300,9 +313,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^\n\r]*)") do
 		if name ~= nil then
 			currentFunction.name = name
 			text = parseInlineText(line)
-			if text ~= nil then
-				appendDescription(text)
-			end
+			appendDescription(text)
 		end
 		goto continue
 	end
@@ -324,9 +335,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^\n\r]*)") do
 			if types ~= nil then
 				currentProperty.types = types
 				text = parseInlineText(line)
-				if text ~= nil then
-					appendDescription(text)
-				end
+				appendDescription(text)
 			end
 		end
 		goto continue
@@ -354,9 +363,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^\n\r]*)") do
 				currentField.types = types
 
 				text = parseInlineText(line)
-				if text ~= nil then
-					appendDescription(text)
-				end
+				appendDescription(text)
 			end
 		end
 		goto continue
@@ -377,9 +384,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^\n\r]*)") do
 		if types ~= nil then
 			currentField.types = types
 			text = parseInlineText(line)
-			if text ~= nil then
-				appendDescription(text)
-			end
+			appendDescription(text)
 		end
 
 		goto continue
@@ -408,9 +413,7 @@ for prefix, line in string.gmatch(content, "[%s]*(%-%-%-)([^\n\r]*)") do
 	end
 
 	text = parseInlineText(line)
-	if text ~= nil then
-		appendDescription(text)
-	end
+	appendDescription(text)
 
 	::continue::
 end
