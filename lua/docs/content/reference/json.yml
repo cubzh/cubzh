@@ -3,14 +3,17 @@ type: "JSON"
 
 creatable: false
 description: |
-    [JSON] allows you to encode Lua table as JSON string and decode JSON string as Lua table.
+    [JSON] allows you to encode a Lua [table] into a JSON [string] and decode a JSON [string] or [Data] into a Lua [table].
 
 functions:
     - name: "Encode"
       description: |
-          Takes a Lua table as parameter and returns an encoded string.
-          This function handles basic types (number, string, boolean, tables) and skip functions.
-      argument-sets: 
+          Takes a Lua [table] as parameter and returns a json encoded string.
+          This function handles basic types ([number], [string], [boolean], [table]s) and skips unsupported types.
+          For arrays ([table]s with sequential integer keys), all values must be of supported types.
+          For objects ([table]s with [string] keys), values of unsupported types are skipped.
+          Supported types are: [number], [string], [boolean], and [table].
+      argument-sets:
         -
           - name: "data"
             type: "table"
@@ -27,16 +30,29 @@ functions:
 
     - name: "Decode"
       description: |
-          Takes a string as parameter and returns a Lua table.
-      argument-sets: 
+          Decode takes a json [string] or [Data] instance as parameter and returns a Lua [table].
+          It also returns an error ([string]) when the provided string can't be decoded.
+          Numbers are automatically converted to [integer]s when they have no decimal part.
+      argument-sets:
         -
           - name: "encodedString"
             type: "string"
+        -
+          - name: "encodedData"
+            type: "data"
       return:
         - type: "table"
+        - type: "string"
       samples:
           - code: |
-              local jsonstring = "{\"body\":\"A message.\",\"status_code\":200}"
+              local jsonstring = "{\"body\":\"Test message\",\"status_code\":200}"
               local data = JSON:Decode(jsonstring)
-              print(data.status_code, data.body)
-              -- prints "200.0 A message."
+              print(data.body, "- status:", data.status_code)
+              -- prints "Test message - status: 200"
+
+              -- error handling:
+              local jsonstring = "{\"body\":\"Test message\",\"status_code\":200" -- missing '}' at the end
+              local data, err = JSON:Decode(jsonstring)
+              if err ~= nil then
+                print("could not decode jsonstring, error:", err)
+              end
