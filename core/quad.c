@@ -8,8 +8,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
 
-#include "zlib.h"
+#include "weakptr.h"
 
 #define QUAD_FLAG_NONE 0
 #define QUAD_FLAG_DOUBLESIDED 1
@@ -23,7 +24,7 @@
 struct _Quad {
     Transform *transform;
     uint32_t *rgba;
-    void *data;
+    Weakptr *data;
     uint32_t size;          /* 4 bytes */
     uint32_t hash;          /* 4 bytes */
     float width, height;    /* 2x4 bytes */
@@ -86,7 +87,7 @@ void quad_release(Quad *q) {
 
 void quad_free(Quad *q) {
     if (q->data != NULL) {
-        free(q->data);
+        weakptr_release(q->data);
     }
     free(q->rgba);
     free(q);
@@ -96,15 +97,18 @@ Transform *quad_get_transform(const Quad *q) {
     return q->transform;
 }
 
-void quad_copy_data(Quad *q, const void *data, uint32_t size) {
-    if (q->data != NULL) {
-        free(q->data);
+void quad_set_data(Quad *q, Weakptr *data, uint32_t size) {
+    if (q->data == data) {
+        return;
+    } else if (q->data != NULL) {
+        weakptr_release(q->data);
     }
-    if (data != NULL && size > 0) {
-        q->data = malloc(size);
-        memcpy(q->data, data, size);
+    const void *payload = weakptr_get(data);
+    if (payload != NULL && size > 0) {
+        weakptr_retain(data);
+        q->data = data;
         q->size = size;
-        q->hash = (uint32_t)crc32(0, q->data, (uInt)q->size);
+        q->hash = (uint32_t)crc32(0, payload, (uInt)q->size);
     } else {
         q->data = NULL;
         q->size = 0;
@@ -113,7 +117,7 @@ void quad_copy_data(Quad *q, const void *data, uint32_t size) {
 }
 
 void *quad_get_data(const Quad *q) {
-    return q->data;
+    return weakptr_get(q->data);
 }
 
 uint32_t quad_get_data_size(const Quad *q) {
