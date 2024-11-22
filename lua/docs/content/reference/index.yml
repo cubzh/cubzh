@@ -30,6 +30,7 @@ blocks:
         - "<a href=\"/reference/json\">JSON</a>"
         - "<a href=\"/reference/keyvaluestore\">KeyValueStore</a>"
         - "<a href=\"/reference/light\">Light</a>"
+        - "<a href=\"/reference/localevent\">LocalEvent</a>"
         - "<a href=\"/reference/map\">Map</a>"
         - "<a href=\"/reference/mutableshape\">MutableShape</a>"
         - "<a href=\"/reference/number2\">Number2</a>"

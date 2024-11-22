@@ -1,0 +1,18 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "LocalEvent"
+extends: ""
+description: |
+    LocalEvent is a shortcut to require("localevent"). See [localevent module](/modules/localevent).
+
+blocks:
+  - text: |
+      `LocalEvent` is a shortcut to `require("localevent")`. See [localevent module](/modules/localevent).
+
+  - code: |
+      -- example, using LocalEvent:Listen instead of require("localevent"):Listen
+      local listener = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+        -- execute something in loop
+      end)
+      listener:Pause() -- pauses the listener
+      listener:Resume() -- resumes listening
+      listener:Remove() -- removes listener (listener shouldn't be used after this)

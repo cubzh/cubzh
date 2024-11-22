@@ -1,10 +1,36 @@
---[[
-LocalEvent code. (https://docs.cu.bzh/reference/localevent)
+--- This module allows to send or listen for local events.
+--- The difference with [Event]s is that they're not sent to the server or other clients and only meant to be consumed locally.
 
-A listener callback can return true to capture an event,
-and avoid triggering following ones on the same even name.
-]]
---
+--- A local event is sent with a name and any number of arguments, like so:
+
+---@code
+--- LocalEvent:Send("some_name", "foo", "bar", 123)
+
+---@text
+--- Corresponding listeners can be declared like this:
+
+---@code
+--- local l = LocalEvent:Listener("some_name", function(a, b, c)
+--- 	-- prints "foo", "bar", 123 when calling
+--- 	-- `LocalEvent:Send("some_name", "foo", "bar", 123)`
+--- 	print(a, b, c)
+--- end)
+---
+--- -- Listeners created first receive events first by default.
+--- -- A listener can return `true` to capture the event
+--- -- and prevent next listeners from receiving it too.
+--- local l = LocalEvent:Listener("some_name", function(a, b, c)
+--- 	print(a, b, c)
+--- 	return true
+--- end)
+---
+--- -- An optional config table can be provided when creating a listener
+--- -- For now the only supported config field is `topPriority`.
+--- -- Setting `config.topPriority` allows to be become the first receiving
+--- -- listener even if not created first.
+--- local l = LocalEvent:Listener("some_name", function(a, b, c)
+--- 	print(a, b, c) -- print happens before other "some_name" listener callbacks
+--- end, { topPriority = true })
 
 -- indexed by event name,
 -- each entry contains listeners in insertion order
@@ -238,7 +264,18 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 	return captured
 end
 
---
+---@function Send Sends an event with provided name and any number of arguments.
+--- It returns a [boolean], true if the event has been captured by one of the listeners.
+---@param self localevent
+---@param name string
+---@param ... any
+---@return boolean
+---@code
+--- local localevent = require("localevent")
+--- localevent:Send("some_name", "foo", "bar", 123)
+---
+--- local captured = localevent:Send("some_other_name", math.random(1,10))
+--- print("event has been captured:", captured == true and "YES" or "NO")
 localevent.Send = function(self, name, ...)
 	if self ~= localevent then
 		error("LocalEvent:Send should be called with `:`", 2)
@@ -258,10 +295,6 @@ localevent.Send = function(self, name, ...)
 	return captured
 end
 localevent.send = localevent.Send
-
--- ------------------------------
--- (REGULAR) LISTENER
--- ------------------------------
 
 local listenerMT = {
 	__tostring = function()
@@ -327,6 +360,25 @@ topPrioritySystemListenerMT.__index.resume = topPrioritySystemListenerMT.__index
 -- (can't prevent other top priority listeners to be added in front afterwards)
 -- LocalEvent:Listen("eventName", callback, { topPriority = true })
 -- config.system can be set to System table to register listener as "system listener".
+
+---@function Listen Listen returns a new [listener] for the provided event name.
+--- The [listener] will trigger the provided callback when the event is sent.
+---
+--- [listener]s created first receive events first by default.
+---
+--- The optional `config` parameter allows to request top priority delivery through `config.topPriority`.
+---@param self localevent
+---@param name string
+---@param callback function
+---@param config? table
+---@return listener
+---@code
+--- local localevent = require("localevent")
+--- local l = localevent:Listen("some_name", function(a, b, c)
+--- 	print(a, b, c)
+--- )
+--- localevent:Send("some_name", "foo", "bar", 123)
+--- -- prints "foo bar 123"
 localevent.Listen = function(self, name, callback, config)
 	if self ~= localevent then
 		error("LocalEvent:Listen should be called with `:`", 2)
@@ -364,5 +416,38 @@ localevent.Listen = function(self, name, callback, config)
 	return listener
 end
 localevent.listen = localevent.Listen
+
+---@type listener
+
+---@function Remove Removes the listener.
+---@param self listener
+---@code
+--- local localevent = require("localevent")
+--- local listener = localevent:Listen(LocalEvent.Name.Tick, function(dt)
+--- 	-- execute something in loop
+--- end)
+--- listener:Remove() -- callback will never be called again after this
+
+---@function Pause Pauses the listener.
+---@param self listener
+---@code
+--- local localevent = require("localevent")
+--- local listener = localevent:Listen(LocalEvent.Name.Tick, function(dt)
+--- 	-- execute something in loop
+--- end)
+--- listener:Pause()
+--- -- callback will not be triggered again until listener:Resume()
+
+---@function Resume Makes the listener listen for events again if it was paused.
+---@param self listener
+---@code
+--- local localevent = require("localevent")
+--- local listener = localevent:Listen(LocalEvent.Name.Tick, function(dt)
+--- 	-- execute something in loop
+--- end)
+--- listener:Pause()
+--- -- callback not be triggered when events are sent
+--- listener:Resume()
+--- -- callback triggered as soon as an new event is sent
 
 return localevent
