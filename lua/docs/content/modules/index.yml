@@ -2,42 +2,113 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "modules", "
 title: "Modules"
 description: "A list of modules available in Cubzh."
 blocks:
-    - text: "A module is a script that can be loaded using `require`."
-    - code: |
-        -- uikit is a module that can be used to build user interfaces.
-        -- Here's how you can use it to display a button:
-        uikit = require("uikit")
-        local btn = uikit:createButton("this is a button")
-        btn.onRelease = function() print("clicked") end
-    - text: "Modules follow these simple rules:"
-    - list:
-        - When required, a module always returns a single table
-        - Each module uses its own sandboxed environment, meaning it can't access variables defined in the main script or other modules, even globals.
-        - When a module is required several times, the returned table is always the exact same reference
     - text: |
-        Currently, only modules packaged with the application can be used, they're all [open-source](https://github.com/cubzh/cubzh/tree/main/lua/modules) and documented on this page.
-    - subtitle: "Featured modules:"
+        A module is a Lua script that can be loaded into your main script.
+        Each module exposes functionalities that can easily be reused from one script to another instead of reimplementing them.
+
+        There are 2 types of modules in Cubzh:
+    - list:
+        - <b>local modules</b>, bundled with the application
+        - <b>modules hosted on <a href="https://github.com">github.com</a></b>
+
+    - text: |
+        All modules can be declared and thus imported through the `Modules` [table].
+        Local modules specifically can also be imported calling `require` wherever you need within your script.
+
+    - code: |
+        -- When declaring modules within the Modules table,
+        -- modules get imported before the script starts and made
+        -- accessible as global variables through provided aliases.
+        Modules = {
+        	multi = "multi", -- local module
+        	skybox = "github.com/Nanskip/cubzh-modules/skybox:8aa8b62", -- specific version from github
+        	fifo = "github.com/aduermael/modzh/fifo", -- latest version from github
+        }
+
+        Client.OnStart = function()
+        	-- we can create a FIFO list using the imported fifo module
+        	-- (`fifo` global declared using `fifo =` within Modules)
+        	local list = fifo()
+        	list:push("foo")
+        	print(list:pop()) -- prints "foo"
+
+        	-- uikit is a local module, so even though it hasn't been
+        	-- declared within Modules, it can be imported using `require`.
+        	-- This module can be used to build user interfaces:
+        	uikit = require("uikit")
+        	local btn = uikit:createButton("this is a button")
+        	btn.onRelease = function() print("clicked") end
+        end
+
+    - text: "Things you might want to know about modules:"
+    - list:
+        - A module is always a table.
+        - Each module uses its own sandboxed environment, meaning it can't access variables defined within the main script or other modules, even globals.
+        - When a module is required several times, the returned table is always the exact same reference.
+
+    - subtitle: "Local modules."
     - list:
         - "<a href=\"/modules/ai\">ai</a>"
+        - "<a href=\"/modules/alert\">alert</a>"
         - "<a href=\"/modules/ease\">ease</a>"
         - "<a href=\"/modules/explode\">explode</a>"
         - "<a href=\"/modules/localevent\">localevent</a>"
         - "<a href=\"/modules/multi\">multi</a>"
-        - "<a href=\"/modules/particles\">particles</a>"
-        - "<a href=\"/modules/sfx\">sfx</a>"
-        - "<a href=\"/modules/uikit\">uikit</a>"
-        - "<a href=\"/modules/uitheme\">uitheme</a>"
-
-    - subtitle: "Other available modules:"
-
-    - list:
-        - "<a href=\"/modules/alert\">alert</a>"
-        - "<a href=\"/modules/api\">api</a>"
-        - "<a href=\"/modules/cleanup\">cleanup</a>"
-        - "<a href=\"/modules/colorpicker\">colorpicker</a>"
-        - "<a href=\"/modules/equipments\">equipments</a>"
-        - "<a href=\"/modules/orientationcube\">orientationcube</a>"
-        - "<a href=\"/modules/palette\">palette</a>"
-        - "<a href=\"/modules/plane\">plane</a>"
         - "<a href=\"/modules/time\">time</a>"
 
+    - text: |
+        There are more local modules that are not yet documented, you can check them out [here](https://github.com/cubzh/cubzh/tree/main/lua/modules).
+
+    - subtitle: "Search Github modules."
+
+    - text: |
+        There will soon be a way to search the Github module index. If you're wondering about the existence of a Github module, you can ask for help on [Cubzh's Discord server](https://cu.bzh/discord).
+
+    - subtitle: "Create your own modules."
+
+    - text: |
+        Creating modules is a great practice, it makes your scripts smaller and more modular and thus easier to maintain. It also benefits the whole community as other developers can use them, you'll get credit and rewards from the platforms when that happens!
+
+        All modules have to be structured this way:
+
+    - code: |
+        -- A module should return a table.
+        -- Here it's called "module" but you can call it however you want
+        module = {}
+
+        -- variables and functions within the module but not exposed
+        -- as module fields won't be visible from the outside,
+        -- they're private to the module itself.
+        local counter = 0
+        function incr()
+        	counter = counter + 1
+        end
+
+        -- all module table fields will be accessible when using the module.
+        module.test = function()
+        	incr()
+        	print("test function called!", counter)
+        end
+
+        return module
+
+    - text: |
+        To distribute your module, you need to put it in a repository on Github. The name of the lua file doesn't matter. If you put it on `github.com/username/module-repository`, you'll then import it using that URL.
+
+        If you put it within child directories, then you'll need to complete the URL with the path to it like `github.com/username/module-repository/path/to/dir`.
+
+        You'll also need to add a `cubzh.mod` JSON file next to your script file(s). For now it doesn't offer much configuration options but you can at least use it to indicate who the contributors are (Cubzh usernames). The information will be used to distribute rewards fairly.
+
+        `cubzh.mod` example: `{"contributors": [{ "aduermael": 0.3 }, { "gdevillele": 0.7 } ]}`
+
+        <b>How to use your module within a script:</b>
+
+    - code: |
+        Modules = {
+        	myModule = "github.com/username/module-repository"
+        }
+        Pointer.Click = function()
+        	-- prints "test function called! 1"
+        	-- then "test function called! 2", etc.
+        	myModule.test()
+        end
