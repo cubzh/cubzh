@@ -3,7 +3,7 @@ type: "HTTP"
 
 creatable: false
 description: |
-    [HTTP] can be used to send send HTTP requests.
+    [HTTP] can be used to send HTTP requests.
 
 functions:
     - name: "Get"
