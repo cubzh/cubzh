@@ -71,7 +71,9 @@ func main() {
 	}
 	// secure transport
 	var envSecureTransport bool = os.Getenv("PCUBES_SECURE_TRANSPORT") == "1"
-	fmt.Println("[env] secure transport:", envSecureTransport)
+
+	fmt.Println("secure transport:", envSecureTransport)
+	fmt.Println("debug:", debug)
 
 	err := parseContent()
 	if err != nil {

@@ -1,12 +1,27 @@
--- WORLK IN PROGRESS
--- This module helps implementing efficient
--- multiplayer sync depending on use cases.
+--- This module activates simple real-time multiplayer synchronization.
+--- It covers many situations but keep in mind that for advanced use cases you can always go with your own custom implementation, using [Event]s.
+---
+--- Synchonizing players is rather simple:
 
--- So far, only synchronizes players.
+---@code
+--- require("multi")
+---
+--- Client.OnPlayerJoin = function(p)
+--- 	if p == Player then
+--- 		-- local is already in World, early eaturn
+--- 		return
+--- 	end
+--- 	p:SetParent(World)
+--- 	print(p.Username .. " joined!")
+--- end
+---
+--- Client.OnPlayerLeave = function(p)
+--- 	if p ~= Player then
+--- 		p:RemoveFromParent()
+--- 		print(p.Username .. " just left!")
+--- 	end
+--- end
 
----------------
--- CONSTANTS --
----------------
 
 local SYNC_DELAY_TRIGGER = 66 -- sync every 66ms
 local SYNC_DELAY_FORCED = 5000 -- force sync even if nothing moved
@@ -69,9 +84,7 @@ local ACTION = {
 	PLAYER_ACTION = 2,
 }
 
----------------
--- VARIABLES --
----------------
+-- VARIABLES:
 
 local actionCallbacks = {}
 local teleportTriggerDistance = 0
@@ -520,9 +533,7 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 	receive(e)
 end)
 
-----------------
--- DEPRECATED --
-----------------
+-- DEPRECATED:
 
 local function deprecateFunction(name)
 	local displayed = false

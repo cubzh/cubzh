@@ -1,0 +1,5 @@
+keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+type: "any"
+basic-type: true
+description: |
+    [any] is not a Lua type. When you see it in the documentation it only means any type is accepted.
