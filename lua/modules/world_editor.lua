@@ -2,6 +2,7 @@ local worldEditor = {}
 
 local sfx = require("sfx")
 local ease = require("ease")
+local ui = require("uikit")
 
 function requireSkybox()
 	local skybox = {}
@@ -112,6 +113,7 @@ local worldEditorCommon = require("world_editor_common")
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
 
 local loadWorld = worldEditorCommon.loadWorld
+local saveWorld = worldEditorCommon.saveWorld
 local maps = worldEditorCommon.maps
 local events = worldEditorCommon.events
 
@@ -143,6 +145,8 @@ local ambiencePanel
 local cameraBtn
 local addObjectBtn
 local transformGizmo
+
+local trail
 
 local TRAIL_COLOR = Color.White
 local OBJECTS_COLLISION_GROUP = CollisionGroups(7)
@@ -190,7 +194,6 @@ local states = {
 	OBJECT_SELECTED = 8,
 	DUPLICATE_OBJECT = 9,
 	DESTROY_OBJECT = 10,
-	EDIT_MAP = 11,
 	MAP_OFFSET = 12,
 }
 
@@ -270,14 +273,6 @@ function tryPickObjectUp(pe)
 	local obj = objectHitTest(pe)
 	if obj ~= pressedObject then
 		setState(states.DEFAULT)
-		return
-	end
-	if obj.editedBy == Player then
-		-- already editing object
-		return
-	end
-	if obj.editedBy ~= nil then
-		-- object is being edited by someone else
 		return
 	end
 	pressedObject = nil
@@ -461,30 +456,22 @@ local statesSettings = {
 	[states.LOADING] = {
 		onStateBegin = function()
 			initPickMap()
-			initPickWorld()
-			initDefaultMode()
 			worldEditor.uiPickMap:hide()
-			worldEditor.editUI:hide()
-			worldEditor.defaultStateUI:hide()
 			ambience:set(ambience.noon)
 			require("object_skills").addStepClimbing(Player)
-
 			setState(states.PICK_WORLD)
 			require("controls"):turnOff()
-			Player.Motion = { 0, 0, 0 }
+			Player.Motion:Set(Number3.Zero)
 		end,
 	},
 	[states.PICK_WORLD] = {
 		onStateBegin = function()
-			worldEditor.uiPickWorld:show()
+			uiShowWorldPicker()
 			require("controls"):turnOff()
-			Player.Motion = { 0, 0, 0 }
+			Player.Motion:Set(Number3.Zero)
 		end,
 		onStateEnd = function()
-			if worldEditor.uiPickWorld then
-				worldEditor.uiPickWorld:close()
-				worldEditor.uiPickWorld = nil
-			end
+			uiRemoveWorldPicker()
 		end,
 	},
 	[states.PICK_MAP] = {
@@ -510,11 +497,10 @@ local statesSettings = {
 	[states.DEFAULT] = {
 		onStateBegin = function()
 			require("controls"):turnOn()
-			worldEditor.editUI:show()
-			worldEditor.defaultStateUI:show()
+			uiShowDefaultMenu()
 		end,
 		onStateEnd = function()
-			worldEditor.defaultStateUI:hide()
+			uiHideDefaultMenu()
 		end,
 		pointerDown = function(pe)
 			tryPickObjectDown(pe)
@@ -607,7 +593,6 @@ local statesSettings = {
 					Rotation = placingObj.Rotation,
 				})
 			end
-			placingObj.editedBy = Player
 			setState(states.OBJECT_SELECTED, placingObj)
 		end,
 		pointerWheelPriority = function(delta)
@@ -618,16 +603,11 @@ local statesSettings = {
 	},
 	[states.OBJECT_SELECTED] = {
 		onStateBegin = function(obj)
-			if obj.uuid ~= -1 then
-				sendToServer(events.P_START_EDIT_OBJECT, { uuid = obj.uuid })
-			end
-			obj.editedBy = Player
 			selectedObject = obj
 			require("box_gizmo"):toggle(obj, Color.White)
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				selectedObject.Name = o.Text
-				sendToServer(events.P_EDIT_OBJECT, { uuid = selectedObject.uuid, Name = o.Text })
 			end
 			worldEditor.updateObjectUI:show()
 
@@ -657,7 +637,11 @@ local statesSettings = {
 				ease:inOutQuad(obj, 0.15).Scale = currentScale
 			end)
 			sfx("waterdrop_3", { Spatialized = false, Pitch = 1 + math.random() * 0.1 })
-			obj.trail = require("trail"):create(Player, obj, TRAIL_COLOR, 0.5)
+
+			if trail ~= nil then
+				trail:remove()
+			end
+			trail = require("trail"):create(Player, obj, TRAIL_COLOR, 0.5)
 
 			transformGizmo = require("transformgizmo"):create({
 				target = selectedObject,
@@ -689,9 +673,13 @@ local statesSettings = {
 				unfreezeObject(selectedObject)
 			end
 
+			if trail ~= nil then
+				trail:remove()
+			end
+
 			require("box_gizmo"):toggle(nil)
 			worldEditor.updateObjectUI:hide()
-			sendToServer(events.P_END_EDIT_OBJECT, { uuid = selectedObject.uuid })
+			saveWorld()
 			selectedObject = nil
 		end,
 		pointerWheelPriority = function(delta)
@@ -719,7 +707,6 @@ local statesSettings = {
 				obj.Position = previousObj.Position + Number3(5, 0, 5)
 				obj.Rotation = previousObj.Rotation
 				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(obj))
-				obj.editedBy = Player
 				setState(states.OBJECT_SELECTED, obj)
 			end)
 		end,
@@ -742,56 +729,6 @@ local statesSettings = {
 			worldEditor.updateObjectUI:hide()
 		end,
 	},
-	[states.EDIT_MAP] = {
-		onStateBegin = function()
-			worldEditor.selectedColor = Color.Grey
-			local block = MutableShape()
-			worldEditor.handBlock = block
-			block:AddBlock(worldEditor.selectedColor, 0, 0, 0)
-			Player:EquipRightHand(block)
-			block.Scale = 5
-			block.LocalPosition = { 1.5, 1.5, 1.5 }
-			worldEditor.editMapValidateBtn:show()
-			worldEditor.colorPicker:show()
-		end,
-		onStateEnd = function()
-			Player:EquipRightHand(nil)
-			worldEditor.editMapValidateBtn:hide()
-			worldEditor.colorPicker:hide()
-		end,
-		pointerUp = function(pe)
-			local impact = pe:CastRay(nil, Player)
-			if not impact or not impact.Block or impact.Object ~= map then
-				return
-			end
-			if pe.Index == 4 then
-				local pos = impact.Block.Coords
-				sendToServer(events.P_REMOVE_BLOCK, { pos = pos })
-				impact.Block:Remove()
-			elseif pe.Index == 5 then
-				impact.Block:AddNeighbor(worldEditor.selectedColor, impact.FaceTouched)
-				local pos = impact.Block.Coords:Copy()
-				if impact.FaceTouched == Face.Front then
-					pos.Z = pos.Z + 1
-				elseif impact.FaceTouched == Face.Back then
-					pos.Z = pos.Z - 1
-				elseif impact.FaceTouched == Face.Top then
-					pos.Y = pos.Y + 1
-				elseif impact.FaceTouched == Face.Bottom then
-					pos.Y = pos.Y - 1
-				elseif impact.FaceTouched == Face.Right then
-					pos.X = pos.X + 1
-				elseif impact.FaceTouched == Face.Left then
-					pos.X = pos.X - 1
-				end
-				local color = worldEditor.selectedColor
-				sendToServer(events.P_PLACE_BLOCK, {
-					pos = pos,
-					color = color,
-				})
-			end
-		end,
-	},
 	[states.MAP_OFFSET] = {
 		onStateBegin = function()
 			-- close settings menu
@@ -801,7 +738,6 @@ local statesSettings = {
 			local mapPosition = map.Position:Copy()
 
 			-- Offset buttons
-			local ui = require("uikit")
 			local mainContainer = require("ui_container"):createVerticalContainer()
 			worldEditor.offsetMainContainer = mainContainer
 
@@ -848,7 +784,7 @@ local statesSettings = {
 				mainContainer:pushGap()
 			end
 
-			local validateMapOffsetBtn = require("uikit"):createButton("✅")
+			local validateMapOffsetBtn = ui:createButton("✅")
 			worldEditor.validateMapOffsetBtn = validateMapOffsetBtn
 			validateMapOffsetBtn.pos =
 				{ Screen.Width * 0.5 - validateMapOffsetBtn.Width * 0.5, validateMapOffsetBtn.Height }
@@ -922,13 +858,16 @@ for localEventName, listenerName in pairs(listeners) do
 	end, { topPriority = false })
 end
 
-initPickWorld = function()
-	local ui = require("uikit")
-
-	local uiPickWorld
+local worldPicker
+function uiShowWorldPicker()
+	if worldPicker ~= nil then
+		return
+	end
 	local content
-	uiPickWorld, content = require("creations"):createModal({
+	worldPicker, content = require("creations"):createModal({
 		uikit = ui,
+		categories = { "worlds" },
+		title = "Open World...",
 		onOpen = function(_, cell)
 			worldTitle = cell.title
 			worldID = cell.id
@@ -942,26 +881,48 @@ initPickWorld = function()
 					setState(states.PICK_MAP)
 					return
 				end
-				sendToServer(events.P_LOAD_WORLD, { mapBase64 = mapBase64 })
-				uiPickWorld:close()
-				worldEditor.uiPickWorld = nil
+
+				loadWorld(mapBase64, {
+					onDone = function()
+						setState(states.DEFAULT)
+						startDefaultMode()
+					end,
+					onLoad = function(obj, data)
+						if data == "Map" then
+							if map then
+								map:RemoveFromParent()
+							end
+							map = obj
+							return
+						end
+						data.obj = obj
+						spawnObject(data)
+					end,
+				})
 
 				Clouds.On = false
 				-- local textureURL = "https://i.ibb.co/hgRhk0t/Standard-Cube-Map.png"
-				-- local textureURL = "https://files.cu.bzh/skyboxes/green-mushrooms.png"
+				-- local textureURL = "https://files.cu.bzh/skyboxes/green-mushrooms512.png"
+				local textureURL = "https://files.cu.bzh/skyboxes/skybox_2.png"
 				-- skybox.load({ url = textureURL }, function(obj) end)
 			end)
 		end,
 	})
-	content.tabs[3].selected = true
-	content.tabs[3].action()
-	worldEditor.uiPickWorld = uiPickWorld
+	-- content.tabs[3].selected = true
+	-- content.tabs[3].action()
+	-- worldEditor.uiPickWorld = uiPickWorld
+end
+
+function uiRemoveWorldPicker()
+	if worldPicker == nil then
+		return
+	end
+	worldPicker:remove()
+	worldPicker = nil
 end
 
 initPickMap = function()
-	local ui = require("uikit")
-
-	local uiPickMap = ui:createFrame()
+	local uiPickMap = ui:frame()
 	local previousBtn = ui:createButton("<")
 	previousBtn:setParent(uiPickMap)
 	previousBtn.onRelease = function()
@@ -1089,26 +1050,13 @@ startDefaultMode = function()
 	end
 end
 
-initDefaultMode = function()
-	local ui = require("uikit")
-
-	-- Edit UI, always visible after picking a map
-	local editUI = ui:createFrame()
-	worldEditor.editUI = editUI
-	editUI.parentDidResize = function()
-		editUI.Width = Screen.Width
-		editUI.Height = Screen.Height
+local uiDefaultMenu
+function uiShowDefaultMenu()
+	if uiDefaultMenu ~= nil then
+		uiDefaultMenu:show()
+		return
 	end
-	editUI:parentDidResize()
-
-	-- Default UI, add btn
-	local defaultStateUI = ui:createFrame()
-	worldEditor.defaultStateUI = defaultStateUI
-	defaultStateUI.parentDidResize = function()
-		defaultStateUI.Width = Screen.Width
-		defaultStateUI.Height = Screen.Height
-	end
-	defaultStateUI:parentDidResize()
+	uiDefaultMenu = ui:createNode()
 
 	addObjectBtn = ui:buttonSecondary({ content = "➕ Object", padding = padding })
 	addObjectBtn.parentDidResize = function(self)
@@ -1117,7 +1065,7 @@ initDefaultMode = function()
 	addObjectBtn.onRelease = function()
 		setState(states.GALLERY)
 	end
-	addObjectBtn:setParent(worldEditor.defaultStateUI)
+	addObjectBtn:setParent(uiDefaultMenu)
 
 	-- Settings menu
 	local menuBar = require("ui_container"):createVerticalContainer(Color.DarkGrey)
@@ -1310,7 +1258,6 @@ initDefaultMode = function()
 
 		objects[placingObj.uuid] = placingObj
 		sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
-		placingObj.editedBy = Player
 		setState(states.OBJECT_SELECTED, placingObj)
 	end
 	placingValidateBtn.parentDidResize = function()
@@ -1411,14 +1358,6 @@ initDefaultMode = function()
 	updateObjectUI:hide()
 	updateObjectUI:parentDidResize()
 	worldEditor.updateObjectUI = updateObjectUI
-
-	-- Top bar
-	local topBar = require("ui_container"):createHorizontalContainer()
-	worldEditor.topBar = topBar
-	topBar.parentDidResize = function()
-		topBar.pos = { padding, Screen.Height - Screen.SafeArea.Top - topBar.Height - padding }
-	end
-	topBar:setParent(worldEditor.editUI)
 
 	-- Ambience editor
 	ambienceBtn = ui:buttonSecondary({ content = "☀️ Ambience", textSize = "small" })
@@ -1702,53 +1641,11 @@ initDefaultMode = function()
 		}
 	end
 	cameraBtn:parentDidResize()
+end
 
-	-- Edit Map
-	local editMapValidateBtn = ui:createButton("✅")
-	editMapValidateBtn.onRelease = function()
-		setState(states.DEFAULT)
-	end
-	editMapValidateBtn.parentDidResize = function()
-		editMapValidateBtn.pos = { Screen.Width * 0.5 - editMapValidateBtn.Width * 0.5, placingCancelBtn.Height * 2 }
-	end
-	editMapValidateBtn:parentDidResize()
-	editMapValidateBtn:hide()
-	worldEditor.editMapValidateBtn = editMapValidateBtn
-
-	local picker = require("colorpicker"):create({
-		closeBtnIcon = "",
-		uikit = ui,
-		transparency = false,
-		colorPreview = false,
-		maxWidth = function()
-			if Client.IsMobile and Screen.Height > Screen.Width then -- portrait mode
-				return Screen.Width * 0.4
-			end
-			return Screen.Width * 0.5
-		end,
-	})
-	picker.parentDidResize = function()
-		if not Client.IsMobile then
-			picker.pos = { Screen.Width - picker.Width, -20 }
-		else
-			local actionButton1 = require("controls"):getActionButton(1)
-			if not actionButton1 then
-				error("Action1 button does not exist", 2)
-				return
-			end
-			picker.pos = { Screen.Width - picker.Width - padding, actionButton1.pos.Y + actionButton1.Height + padding }
-		end
-	end
-	picker:parentDidResize()
-	picker.closeBtn:remove()
-	picker.closeBtn = nil
-	picker:setColor(Color.Grey)
-	picker:hide()
-	worldEditor.colorPicker = picker
-
-	picker.didPickColor = function(_, color)
-		worldEditor.selectedColor = color
-		worldEditor.handBlock.Palette[1].Color = color
+function uiHideDefaultMenu()
+	if uiDefaultMenu ~= nil then
+		uiDefaultMenu:hide()
 	end
 end
 
@@ -1761,71 +1658,10 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		loadMap(data.mapName, data.mapScale or MAP_SCALE_DEFAULT, function()
 			setState(states.DEFAULT)
 		end)
-	elseif e.a == events.SYNC then
-		if state == states.PICK_WORLD then -- joining
-			loadWorld(data.mapBase64, {
-				onDone = function()
-					setState(states.DEFAULT)
-					startDefaultMode()
-				end,
-				onLoad = function(obj, data)
-					if data == "Map" then
-						if map then
-							map:RemoveFromParent()
-						end
-						map = obj
-						return
-					end
-					obj.editedBy = nil
-					data.obj = obj
-					spawnObject(data)
-				end,
-			})
-		end
-	elseif e.a == events.PLACE_OBJECT then
-		if isLocalPlayer then
-			waitingForUUIDObj.uuid = e.data.uuid
-			objects[waitingForUUIDObj.uuid] = waitingForUUIDObj
-			objects[-1] = nil
-			sendToServer(events.P_START_EDIT_OBJECT, { uuid = e.data.uuid })
-			waitingForUUIDObj = nil
-		else
-			spawnObject(data, function()
-				local obj = objects[data.uuid]
-				obj.editedBy = sender
-				if obj.trail then
-					obj.trail:remove()
-				end
-				obj.trail = require("trail"):create(sender, obj, TRAIL_COLOR, 0.5)
-			end)
-		end
 	elseif e.a == events.EDIT_OBJECT and not isLocalPlayer then
 		editObject(data)
 	elseif e.a == events.REMOVE_OBJECT then
 		removeObject(data)
-	elseif e.a == events.START_EDIT_OBJECT then
-		local obj = objects[data.uuid]
-		if not obj or isLocalPlayer then
-			return
-		end
-		freezeObject(obj)
-		obj.editedBy = sender
-		if obj.trail then
-			obj.trail:remove()
-		end
-		obj.trail = require("trail"):create(sender, obj, TRAIL_COLOR, 0.5)
-	elseif e.a == events.END_EDIT_OBJECT then
-		local obj = objects[data.uuid]
-		if not obj then
-			print("can't end edit object")
-			return
-		end
-		unfreezeObject(obj)
-		if obj.trail then
-			obj.trail:remove()
-			obj.trail = nil
-		end
-		obj.editedBy = nil
 	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
 		local color = data.color
 		map:AddBlock(color, data.pos.X, data.pos.Y, data.pos.Z)
@@ -1834,22 +1670,6 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
 		if b then
 			b:Remove()
-		end
-	elseif e.a == events.PLAYER_ACTIVITY then
-		for pIDUserID, t in pairs(data.activity) do
-			if t and t.editing then
-				local pID = tonumber(string.sub(pIDUserID, 1, 1))
-				local obj = objects[t.editing]
-				local player = Players[pID]
-				if not obj or obj.editedBy == player then
-					return
-				end
-				obj.editedBy = player
-				if obj.trail then
-					obj.trail:remove()
-				end
-				obj.trail = require("trail"):create(player, obj, TRAIL_COLOR, 0.5)
-			end
 		end
 	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
 		require("ai_ambience"):loadGeneration(data)
@@ -1898,7 +1718,7 @@ Timer(30, true, function()
 		return
 	end
 	-- ask for auto save every 30 seconds, if no changes since last save, server does not answer
-	sendToServer(events.P_SAVE_WORLD)
+	saveWorld()
 end)
 
 setState(states.LOADING)
