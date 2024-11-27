@@ -2,6 +2,12 @@ local common = {}
 
 common.MAP_SCALE_DEFAULT = 5
 
+local loaded = {
+	b64 = nil,
+	map = nil,
+	world = nil,
+}
+
 common.maps = {
 	"aduermael.hills",
 	"aduermael.base_250x40x250",
@@ -658,7 +664,9 @@ end
 
 local loadMap = function(d, n, didLoad)
 	Object:Load(d, function(j)
-		map = MutableShape(j, { includeChildren = true })
+		local map = MutableShape(j, { includeChildren = true })
+		loaded.map = map
+
 		map.Scale = n or 5
 		map:Recurse(function(o)
 			o.CollisionGroups = Map.CollisionGroups
@@ -694,15 +702,22 @@ common.loadWorld = function(mapBase64, config)
 	})
 
 	local world = common.deserializeWorld(mapBase64)
+	loaded = {
+		b64 = mapBase64,
+		map = nil,
+		world = world,
+	}
+
 	local loadObjectsBlocksAndAmbience = function()
 		if config.skipMap then
 			Map.Scale = world.mapScale or 5
-			map = Map
+			loaded.map = Map
 		else
 			if config.onLoad then
-				config.onLoad(map, "Map")
+				config.onLoad(loaded.map, "Map")
 			end
 		end
+		local map = loaded.map
 		local blocks = world.blocks
 		local objects = world.objects
 		local ambience = world.ambience
@@ -753,6 +768,31 @@ common.loadWorld = function(mapBase64, config)
 		loadMap(world.mapName, world.mapScale, loadObjectsBlocksAndAmbience)
 	else
 		loadObjectsBlocksAndAmbience()
+	end
+end
+
+common.saveWorld = function()
+	if loaded.world == nil then
+		return
+	end
+	local b64 = serializeWorldBase64(loaded.world)
+	if b64 ~= loaded.b64 then
+		print("SAVING...")
+		-- print("WORLD DID CHANGE:\n\nNEW:", b64)
+		-- print("\n\nLOADED:", loaded.b64)
+
+		-- -- could be move to world_editor_server, not sure System works on the server (must enable the file in require.cpp)
+		-- require("system_api", System):patchWorld(worldID, { mapBase64 = mapBase64 }, function(err, world)
+		-- 	if world and world.mapBase64 == mapBase64 then
+		-- 		print("World '" .. worldTitle .. "' saved")
+		-- 	else
+		-- 		if err then
+		-- 			print("Error while saving world: ", JSON:Encode(err))
+		-- 		else
+		-- 			print("Error while saving world")
+		-- 		end
+		-- 	end
+		-- end)
 	end
 end
 

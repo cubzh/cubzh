@@ -104,70 +104,70 @@ local funcs = {
 		end
 		return data
 	end,
-	[events.P_START_EDIT_OBJECT] = function(sender, data)
-		if data.uuid == -1 then
-			return data
-		end
-		playerActivity[tostring(sender.ID) .. sender.UserID] = {
-			editing = data.uuid,
-		}
-		return data
-	end,
-	[events.P_END_EDIT_OBJECT] = function(sender, data)
-		playerActivity[tostring(sender.ID) .. sender.UserID] = {
-			editing = nil,
-		}
-		local newMapBase64 = serializeWorld(getWorldState())
-		if newMapBase64 ~= previousAutoSaveMapBase64 then
-			print("Autosaving...")
-			previousAutoSaveMapBase64 = newMapBase64
+	-- [events.P_START_EDIT_OBJECT] = function(sender, data)
+	-- 	if data.uuid == -1 then
+	-- 		return data
+	-- 	end
+	-- 	playerActivity[tostring(sender.ID) .. sender.UserID] = {
+	-- 		editing = data.uuid,
+	-- 	}
+	-- 	return data
+	-- end,
+	-- [events.P_END_EDIT_OBJECT] = function(sender, data)
+	-- 	playerActivity[tostring(sender.ID) .. sender.UserID] = {
+	-- 		editing = nil,
+	-- 	}
+	-- 	local newMapBase64 = serializeWorld(getWorldState())
+	-- 	if newMapBase64 ~= previousAutoSaveMapBase64 then
+	-- 		print("Autosaving...")
+	-- 		previousAutoSaveMapBase64 = newMapBase64
 
-			if FAKE_SERVER then
-				LocalEvent:Send(
-					LocalEvent.Name.DidReceiveEvent,
-					{ a = events.SAVE_WORLD, data = { mapBase64 = newMapBase64 }, pID = Player.ID }
-				)
-			else
-				local e = Event()
-				e.a = events.SAVE_WORLD
-				e.data = { mapBase64 = newMapBase64 }
-				e.pID = sender.ID
-				e:SendTo(sender)
-			end
-		end
-		return data
-	end,
+	-- 		if FAKE_SERVER then
+	-- 			LocalEvent:Send(
+	-- 				LocalEvent.Name.DidReceiveEvent,
+	-- 				{ a = events.SAVE_WORLD, data = { mapBase64 = newMapBase64 }, pID = Player.ID }
+	-- 			)
+	-- 		else
+	-- 			local e = Event()
+	-- 			e.a = events.SAVE_WORLD
+	-- 			e.data = { mapBase64 = newMapBase64 }
+	-- 			e.pID = sender.ID
+	-- 			e:SendTo(sender)
+	-- 		end
+	-- 	end
+	-- 	return data
+	-- end,
 	[events.P_SET_AMBIENCE] = function(_, data)
 		ambience = data
 		return data
 	end,
-	[events.P_LOAD_WORLD] = function(_, data)
-		local t = deserializeWorld(data.mapBase64)
-		mapName = t.mapName
-		mapScale = t.mapScale or MAP_SCALE_DEFAULT
-		ambience = t.ambience
-		if t.objects then
-			for _, o in ipairs(t.objects) do
-				serverObjects[o.uuid] = o
-			end
-		end
-		if t.blocks then
-			for _, v in ipairs(t.blocks) do
-				blocks[v[1]] = v[2]
-			end
-		end
-		if FAKE_SERVER then
-			LocalEvent:Send(
-				LocalEvent.Name.DidReceiveEvent,
-				{ a = events.SYNC, data = { mapBase64 = serializeWorld(getWorldState()) }, pID = Player.ID }
-			)
-		else
-			local e = Event()
-			e.a = events.SYNC
-			e.data = { mapBase64 = serializeWorld(getWorldState()) }
-			e:SendTo(Players)
-		end
-	end,
+	-- [events.P_LOAD_WORLD] = function(_, data)
+	-- 	local t = deserializeWorld(data.mapBase64)
+	-- 	mapName = t.mapName
+	-- 	mapScale = t.mapScale or MAP_SCALE_DEFAULT
+	-- 	ambience = t.ambience
+	-- 	if t.objects then
+	-- 		for _, o in ipairs(t.objects) do
+	-- 			serverObjects[o.uuid] = o
+	-- 		end
+	-- 	end
+	-- 	if t.blocks then
+	-- 		for _, v in ipairs(t.blocks) do
+	-- 			blocks[v[1]] = v[2]
+	-- 		end
+	-- 	end
+	-- 	if FAKE_SERVER then
+	-- 		LocalEvent:Send(
+	-- 			LocalEvent.Name.DidReceiveEvent,
+	-- 			{ a = events.SYNC, data = { mapBase64 = serializeWorld(getWorldState()) }, pID = Player.ID }
+	-- 		)
+	-- 	else
+	-- 		local e = Event()
+	-- 		e.a = events.SYNC
+	-- 		e.data = { mapBase64 = serializeWorld(getWorldState()) }
+	-- 		e:SendTo(Players)
+	-- 	end
+	-- end,
 	[events.P_SET_MAP_SCALE] = function(sender, data)
 		local ratio = data.mapScale / mapScale
 		for _, o in pairs(serverObjects) do
@@ -250,50 +250,6 @@ if FAKE_SERVER then -- local server for singleplayer
 		)
 	end)
 else
-	--TODO: use LocalEvents (OnPlayerJoin, DidReceiveEvent are never sent)
-	--TODO: Server.OnStart in the game require world_editor_server with FAKE_SERVER=false
-	Server.OnStart = function()
-		math.randomseed(Time.UnixMilli() % 10000)
-
-		Timer(3, true, function()
-			local e = Event()
-			e.a = events.PLAYER_ACTIVITY
-			e.data = {
-				activity = playerActivity,
-			}
-			e:SendTo(Players)
-		end)
-	end
-
-	Server.OnPlayerJoin = function(p)
-		if not master then
-			master = p
-		end
-		local e = Event()
-		e.a = events.MASTER
-		e.data = JSON:Encode({ id = master.ID, username = master.Username })
-		e:SendTo(p)
-
-		if mapName then
-			local e = Event()
-			e.a = events.SYNC
-			e.data = { mapBase64 = serializeWorld(getWorldState()) }
-			e:SendTo(p)
-		end
-	end
-
-	Server.OnPlayerLeave = function(p)
-		playerActivity[p.ID] = nil
-		if p == master then
-			print("Master player left")
-			for k, p in pairs(Players) do
-				print("New master is ", p.name)
-				master = p
-				return
-			end
-		end
-	end
-
 	Server.DidReceiveEvent = function(e)
 		local func = funcs[e.a]
 		local data = e.data

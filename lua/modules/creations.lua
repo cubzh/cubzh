@@ -684,7 +684,12 @@ creations.createModal = function(_, config)
 
 	local content = modal:createContent()
 
-	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen })
+	local creationsContent = creations:createModalContent({
+		uikit = ui,
+		onOpen = config.onOpen,
+		categories = config.categories,
+		title = config.title,
+	})
 
 	creationsContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
