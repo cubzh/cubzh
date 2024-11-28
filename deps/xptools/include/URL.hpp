@@ -61,14 +61,21 @@ public:
 
 private:
 
-    ///
-    static bool _parseURLString(const std::string& urlString,
-                                std::string& outScheme,
-                                std::string& outHost,
-                                uint16_t& outPort,
-                                std::string& outPath,
-                                QueryParams& outQueryParams,
-                                const std::string& defaultScheme);
+    /// Parses a URL string into a URL object
+    /// Returns an error message (on success, it is an empty string)
+    static std::string _parseURLString(const std::string& urlString,
+                                       const std::string& defaultScheme,
+                                       URL &url);
+
+    /// Parses a URL string into its elements (host, port, path, ...)
+    /// Returns an error message (on success, it is an empty string)
+    static std::string _parseURLString(const std::string& urlString,
+                                       const std::string& defaultScheme,
+                                       std::string& outScheme,
+                                       std::string& outHost,
+                                       uint16_t& outPort,
+                                       std::string& outPath,
+                                       QueryParams& outQueryParams);
 
     /// default constructor
     URL();

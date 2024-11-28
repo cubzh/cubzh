@@ -13,6 +13,7 @@
 // xptools
 #include "URL.hpp"
 #include "strings.hpp"
+#include "vxlog.h"
 
 using namespace vx;
 
@@ -20,13 +21,10 @@ using namespace vx;
 
 URL URL::make(const std::string &urlString, const std::string& defaultScheme) {
     URL url;
-    url._isValid = URL::_parseURLString(urlString,
-                                        url._scheme,
-                                        url._host,
-                                        url._port,
-                                        url._path,
-                                        url._queryParams,
-                                        defaultScheme);
+    const std::string error = URL::_parseURLString(urlString, defaultScheme, url);
+    if (error != "") {
+        vxlog_debug("❌ URL NOT VALID: %s (%s)", error.c_str(), urlString.c_str());
+    }
     return url;
 }
 
@@ -65,15 +63,29 @@ void URL::setQuery(QueryParams&& queryParams) {
     this->_queryParams = queryParams;
 }
 
-bool URL::_parseURLString(const std::string& urlString,
-                          std::string& outScheme,
-                          std::string& outHost,
-                          uint16_t& outPort,
-                          std::string& outPath,
-                          QueryParams& outQueryParams,
-                          const std::string& defaultScheme) {
+std::string URL::_parseURLString(const std::string& urlString,
+                                 const std::string& defaultScheme,
+                                 URL &url) {
+    const std::string err = URL::_parseURLString(urlString,
+                                                 defaultScheme,
+                                                 url._scheme,
+                                                 url._host,
+                                                 url._port,
+                                                 url._path,
+                                                 url._queryParams);
+    url._isValid = err.empty();
+    return err;
+}
+
+std::string URL::_parseURLString(const std::string& urlString,
+                                 const std::string& defaultScheme,
+                                 std::string& outScheme,
+                                 std::string& outHost,
+                                 uint16_t& outPort,
+                                 std::string& outPath,
+                                 QueryParams& outQueryParams) {
     if (urlString.empty()) {
-        return false;
+        return "url string is empty";
     }
 
     std::string urlStringToParse = urlString;
@@ -91,7 +103,7 @@ bool URL::_parseURLString(const std::string& urlString,
     std::smatch url_match;
     const bool regexOk = std::regex_match(urlStringToParse, url_match, url_regex);
     if (regexOk == false) {
-        return false;
+        return "regex check failed";
     }
 
     // std::cout << "Protocol: " << url_match[2].str() << std::endl;
@@ -124,12 +136,12 @@ bool URL::_parseURLString(const std::string& urlString,
             } else if (outScheme == "cubzh") {
                 outPort = CUBZH_PORT;
             } else {
-                return false; // not supported, return an error
+                return "port missing with unsupported scheme"; // not supported, return an error
             }
         } else { // ':' is present
             std::vector<std::string> elements = vx::str::splitString(outHost, ":");
             if (elements.size() != 2) {
-                return false; // error
+                return "too many : characters found"; // error
             }
             const std::string portStr = elements.back();
             outPort = std::stoi(portStr);
@@ -165,5 +177,5 @@ bool URL::_parseURLString(const std::string& urlString,
         }
     }
 
-    return true;
+    return ""; // success
 }
