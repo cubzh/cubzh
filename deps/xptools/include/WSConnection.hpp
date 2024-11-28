@@ -25,6 +25,7 @@
 #include "Channel.hpp"
 #include "Connection.hpp"
 #include "WSBackend.hpp"
+#include "URL.hpp"
 
 namespace vx {
 
@@ -34,6 +35,8 @@ typedef std::weak_ptr<WSConnection> WSConnection_WeakPtr;
 
 class WSConnection final : public Connection {
 public:
+
+    static WSConnection_SharedPtr make(const URL& url);
 
     static WSConnection_SharedPtr make(const std::string& scheme,
                                        const std::string& addr,

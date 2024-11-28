@@ -22,6 +22,10 @@
 
 using namespace vx;
 
+WSConnection_SharedPtr WSConnection::make(const URL& url) {
+    return WSConnection::make(url.scheme(), url.host(), url.port(), url.path());
+}
+
 WSConnection_SharedPtr WSConnection::make(const std::string& scheme,
                                           const std::string& addr,
                                           const uint16_t& port,
@@ -310,9 +314,7 @@ void WSConnection::_connect() {
     emscripten_websocket_delete(_wsi);
 
     // construct string with scheme, address and port
-    const std::string urlScheme = _secure ? "wss" : "ws";
-    const std::string url = urlScheme + "://" + _serverAddr + ":" + std::to_string(_serverPort);
-    // vxlog_debug("[WSConnection::connect] %s", url.c_str());
+    const std::string url = this->getURL();
     EmscriptenWebSocketCreateAttributes ws_attrs = {
         url.c_str(),
         NULL, //"binary",
@@ -472,6 +474,45 @@ bool WSConnection::doneWriting() {
     return _getPayloadToWrite() == nullptr;
 }
 
+#if defined(__VX_REWRITE_URLS_FOR_DISCORD)
+static bool rewriteURLForDiscordProxy(std::string &addrToUse, std::string &path, std::string domain) {
+
+    if (vx::str::contains(addrToUse, ":")) {
+        return false;
+    }
+
+    if (vx::str::hasPrefix(addrToUse, domain) == false) {
+        return false;
+    }
+
+    const std::string newAddrToUse = __VX_CUBZH_DISCORD_PROXY;
+
+    // update the path (using Discord Proxy)
+
+    // parse domain
+    std::vector<std::string> domainElements = vx::str::splitString(domain, ".");
+    std::string discordProxyPrefix = "";
+    if (domainElements.size() == 2) {
+        discordProxyPrefix = "dd";
+    } else if (domainElements.size() == 3) {
+        discordProxyPrefix = "ddd";
+    } else {
+        return false;
+    }
+
+    std::string newPath = "/.proxy/" + discordProxyPrefix;
+    for (std::string elem : domainElements) {
+        newPath += "/" + elem;
+    }
+    newPath += path;
+
+    addrToUse = newAddrToUse;
+    path = newPath;
+
+    return true;
+}
+#endif
+
 void WSConnection::init(const WSConnection_SharedPtr& ref,
                         const std::string& scheme,
                         const std::string& addr,
@@ -479,25 +520,24 @@ void WSConnection::init(const WSConnection_SharedPtr& ref,
                         const std::string& path) {
     // assert(scheme == "ws" || scheme == "wss");
     std::string addrToUse = addr;
+    std::string pathToUse = path;
+
+    // A non-empty path must start with '/'
+    if (path.empty() == false) {
+        assert(vx::str::hasPrefix(path, "/"));
+    }
 
 #if defined(__VX_REWRITE_URLS_FOR_DISCORD)
-    std::string portStr = std::to_string(port);
     // /ddd/{subdomain}/{sub}/{sa}
     bool edited = false;
     if (!edited) {
-        edited = vx::str::replacePrefix(addrToUse,
-                                        "servers-eu-1.cu.bzh",
-                                        "1219341016524525670.discordsays.com/.proxy/dddp/servers-eu-1/cu/bzh/"+portStr);
+        edited = rewriteURLForDiscordProxy(addrToUse, pathToUse, "servers-eu-1.cu.bzh");
     }
     if (!edited) {
-        edited = vx::str::replacePrefix(addrToUse,
-                                        "servers-us-1.cu.bzh",
-                                        "1219341016524525670.discordsays.com/.proxy/dddp/servers-us-1/cu/bzh/"+portStr);
+        edited = rewriteURLForDiscordProxy(addrToUse, pathToUse, "servers-us-1.cu.bzh");
     }
     if (!edited) {
-        edited = vx::str::replacePrefix(addrToUse,
-                                        "servers-sg-2.cu.bzh",
-                                        "1219341016524525670.discordsays.com/.proxy/dddp/servers-sg-2/cu/bzh/"+portStr);
+        edited = rewriteURLForDiscordProxy(addrToUse, pathToUse, "servers-sg-2.cu.bzh");
     }
     _serverPort = 443;
 #else
@@ -506,6 +546,6 @@ void WSConnection::init(const WSConnection_SharedPtr& ref,
 
     _weakSelf = ref;
     _serverAddr.assign(addrToUse);
-    _serverPath.assign(path);
+    _serverPath.assign(pathToUse);
     if (scheme == "wss") { _secure = true; }
 }
