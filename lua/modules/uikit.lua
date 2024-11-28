@@ -3325,6 +3325,7 @@ function createUI(system)
 			content = "BUTTON", -- can be string, Shape or uikit node
 			-- used if content is a string:
 			underline = false,
+			textFont = Font.Noto,
 			textSize = "default",
 			textColor = theme.buttonTextColor,
 			textColorPressed = nil,
@@ -3600,7 +3601,7 @@ function createUI(system)
 		end
 
 		if type(content) == "string" then
-			local n = ui:createText(content, { size = config.textSize })
+			local n = ui:createText(content, { size = config.textSize, font = config.textFont })
 			n:setParent(node)
 			node.content = n
 		elseif type(content) == "Shape" or type(content) == "MutableShape" then

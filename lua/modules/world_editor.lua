@@ -3,6 +3,7 @@ local worldEditor = {}
 local sfx = require("sfx")
 local ease = require("ease")
 local ui = require("uikit")
+local ambience = require("ambience")
 
 function requireSkybox()
 	local skybox = {}
@@ -111,19 +112,14 @@ local sendToServer = require("world_editor_server").sendToServer
 
 local worldEditorCommon = require("world_editor_common")
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
+local uuidv4 = worldEditorCommon.uuidv4
 
 local loadWorld = worldEditorCommon.loadWorld
-local saveWorld = worldEditorCommon.saveWorld
 local maps = worldEditorCommon.maps
 local events = worldEditorCommon.events
 
 local theme = require("uitheme").current
 local padding = theme.padding
-
-local ambience = require("ambience")
-
-local worldTitle
-local worldID
 
 local objects = {}
 local map
@@ -181,7 +177,6 @@ end
 
 local pressedObject
 local selectedObject
-local waitingForUUIDObj
 
 local states = {
 	LOADING = 1,
@@ -231,6 +226,11 @@ local function setObjectPhysicsMode(obj, physicsMode)
 			o.Physics = physicsMode
 		end
 	end)
+
+	worldEditorCommon.updateObject({
+		uuid = obj.uuid,
+		physics = physicsMode,
+	})
 end
 
 function objectHitTest(pe)
@@ -339,9 +339,7 @@ local spawnObject = function(data, onDone)
 			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + OBJECTS_COLLISION_GROUP
 			o:ResetCollisionBox()
 		end)
-		if obj.uuid ~= -1 then
-			objects[obj.uuid] = obj
-		end
+		objects[obj.uuid] = obj
 		if onDone then
 			onDone(obj)
 		end
@@ -353,7 +351,8 @@ local spawnObject = function(data, onDone)
 			print("Can't load", fullname)
 			return
 		end
-		local uuid = data.uuid
+
+		local uuid = uuidv4()
 		local fullname = data.fullname
 		local name = data.Name
 		local position = data.Position or Number3(0, 0, 0)
@@ -388,9 +387,9 @@ local spawnObject = function(data, onDone)
 		obj.fullname = fullname
 		obj.Name = name or fullname
 
-		if obj.uuid ~= -1 then
-			objects[obj.uuid] = obj
-		end
+		objects[obj.uuid] = obj
+		worldEditorCommon.addObject(obj)
+
 		if onDone then
 			onDone(obj)
 		end
@@ -416,11 +415,6 @@ local editObject = function(objInfo)
 	if alpha ~= nil then
 		setObjectAlpha(obj, alpha)
 	end
-end
-
-local removeObject = function(objInfo)
-	objects[objInfo.uuid]:RemoveFromParent()
-	objects[objInfo.uuid] = nil
 end
 
 toggleMapGhost = function(activate)
@@ -523,9 +517,7 @@ local statesSettings = {
 	[states.SPAWNING_OBJECT] = {
 		onStateBegin = function(data)
 			worldEditor.rotationShift = data.rotationShift or 0
-			data.uuid = -1
 			spawnObject(data, function(obj)
-				waitingForUUIDObj = obj
 				setState(states.PLACING_OBJECT, obj)
 			end)
 		end,
@@ -585,12 +577,11 @@ local statesSettings = {
 
 			if not objects[placingObj.uuid] then
 				objects[placingObj.uuid] = placingObj
-				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
 			else
-				sendToServer(events.P_EDIT_OBJECT, {
+				worldEditorCommon.updateObject({
 					uuid = placingObj.uuid,
-					Position = placingObj.Position,
-					Rotation = placingObj.Rotation,
+					position = placingObj.Position,
+					rotation = placingObj.Rotation,
 				})
 			end
 			setState(states.OBJECT_SELECTED, placingObj)
@@ -645,15 +636,15 @@ local statesSettings = {
 
 			transformGizmo = require("transformgizmo"):create({
 				target = selectedObject,
-				onChange = function(target)
-					sendToServer(events.P_EDIT_OBJECT, {
+				onChange = function(target) end,
+				onDone = function(target)
+					worldEditorCommon.updateObject({
 						uuid = target.uuid,
-						Position = target.Position,
-						Rotation = target.Rotation,
-						Scale = target.Scale,
+						position = target.Position,
+						rotation = target.Rotation,
+						scale = target.Scale,
 					})
 				end,
-				onDone = function(target) end,
 			})
 		end,
 		tick = function() end,
@@ -685,7 +676,10 @@ local statesSettings = {
 		pointerWheelPriority = function(delta)
 			selectedObject:RotateWorld(Number3(0, 1, 0), math.pi * 0.0625 * (delta > 0 and 1 or -1))
 			selectedObject.Rotation = selectedObject.Rotation -- trigger OnSetCallback
-			sendToServer(events.P_EDIT_OBJECT, { uuid = selectedObject.uuid, Rotation = selectedObject.Rotation })
+			worldEditorCommon.updateObject({
+				uuid = selectedObject.uuid,
+				rotation = target.Rotation,
+			})
 			return true
 		end,
 	},
@@ -698,15 +692,12 @@ local statesSettings = {
 				return
 			end
 			local data = getObjectInfoTable(obj)
-			data.uuid = nil
+			data.uuid = uuidv4()
 			data.rotationShift = worldEditor.rotationShift or 0
-			data.uuid = -1
 			local previousObj = obj
 			spawnObject(data, function(obj)
-				waitingForUUIDObj = obj
 				obj.Position = previousObj.Position + Number3(5, 0, 5)
 				obj.Rotation = previousObj.Rotation
-				sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(obj))
 				setState(states.OBJECT_SELECTED, obj)
 			end)
 		end,
@@ -716,17 +707,20 @@ local statesSettings = {
 	},
 	[states.DESTROY_OBJECT] = {
 		onStateBegin = function(uuid)
+			worldEditor.updateObjectUI:hide()
 			local obj = objects[uuid]
 			if not obj then
 				print("Error: can't remove this object")
 				setState(states.DEFAULT)
 				return
 			end
-			sendToServer(events.P_REMOVE_OBJECT, { uuid = uuid })
+			obj:RemoveFromParent()
+			objects[uuid] = nil
+			worldEditorCommon.removeObject(uuid)
 			setState(states.DEFAULT)
 		end,
 		onStateEnd = function()
-			worldEditor.updateObjectUI:hide()
+			saveWorld()
 		end,
 	},
 	[states.MAP_OFFSET] = {
@@ -869,9 +863,7 @@ function uiShowWorldPicker()
 		categories = { "worlds" },
 		title = "Open World...",
 		onOpen = function(_, cell)
-			worldTitle = cell.title
-			worldID = cell.id
-			require("api"):getWorld(worldID, { "mapBase64" }, function(data, err)
+			require("api"):getWorld(cell.id, { "mapBase64" }, function(data, err)
 				if err then
 					print(err)
 					return
@@ -882,7 +874,10 @@ function uiShowWorldPicker()
 					return
 				end
 
-				loadWorld(mapBase64, {
+				loadWorld({
+					b64 = mapBase64,
+					title = cell.title,
+					worldID = cell.id,
 					onDone = function()
 						setState(states.DEFAULT)
 						startDefaultMode()
@@ -901,9 +896,10 @@ function uiShowWorldPicker()
 				})
 
 				Clouds.On = false
+
 				-- local textureURL = "https://i.ibb.co/hgRhk0t/Standard-Cube-Map.png"
 				-- local textureURL = "https://files.cu.bzh/skyboxes/green-mushrooms512.png"
-				local textureURL = "https://files.cu.bzh/skyboxes/skybox_2.png"
+				-- local textureURL = "https://files.cu.bzh/skyboxes/skybox_2.png"
 				-- skybox.load({ url = textureURL }, function(obj) end)
 			end)
 		end,
@@ -958,7 +954,7 @@ initPickMap = function()
 		end, {
 			onOpen = function(cell)
 				local fullname = cell.repo .. "." .. cell.name
-				sendToServer(events.P_END_PREPARING, { mapName = fullname })
+				-- sendToServer(events.P_END_PREPARING, { mapName = fullname })
 				gallery:remove()
 			end,
 		})
@@ -971,7 +967,7 @@ initPickMap = function()
 	local validateBtn = ui:createButton("Start editing this map")
 	validateBtn:setParent(uiPickMap)
 	validateBtn.onRelease = function()
-		sendToServer(events.P_END_PREPARING, { mapName = mapName })
+		-- sendToServer(events.P_END_PREPARING, { mapName = mapName })
 	end
 
 	uiPickMap.parentDidResize = function()
@@ -1128,9 +1124,10 @@ function uiShowDefaultMenu()
 		{ type = "gap" },
 		{
 			type = "button",
-			text = "📑 Save World",
-			serverEvent = events.P_SAVE_WORLD,
-			name = "saveWorldBtn",
+			text = "📑 Save",
+			callback = function()
+				saveWorld()
+			end,
 		},
 		{ type = "gap" },
 		{
@@ -1257,7 +1254,6 @@ function uiShowDefaultMenu()
 		unfreezeObject(placingObj)
 
 		objects[placingObj.uuid] = placingObj
-		sendToServer(events.P_PLACE_OBJECT, getObjectInfoTable(placingObj))
 		setState(states.OBJECT_SELECTED, placingObj)
 	end
 	placingValidateBtn.parentDidResize = function()
@@ -1365,8 +1361,6 @@ function uiShowDefaultMenu()
 		ambienceBtn:hide()
 		cameraBtn:hide()
 		ambiencePanel = ui:frameGenericContainer()
-		ambiencePanel.Width = 200
-		ambiencePanel.Height = 300
 
 		local title = ui:createText(self.Text, Color.White, "small")
 		title:setParent(ambiencePanel)
@@ -1380,6 +1374,26 @@ function uiShowDefaultMenu()
 		local aiBtn = ui:buttonNeutral({ content = "✨", textSize = "small", padding = padding })
 		aiBtn:setParent(ambiencePanel)
 
+		local skyboxLabel = ui:createText("Include skybox:", Color(150, 150, 150), "small")
+		skyboxLabel:setParent(ambiencePanel)
+
+		local includeSkybox = true
+		local skyboxBtn = ui:buttonSecondary({
+			textFont = Font.Pixel,
+			content = "✅",
+			textSize = "default",
+			padding = 2,
+		})
+		skyboxBtn.onRelease = function(self)
+			includeSkybox = not includeSkybox
+			if includeSkybox then
+				self.Text = "✅"
+			else
+				self.Text = "  "
+			end
+		end
+		skyboxBtn:setParent(ambiencePanel)
+
 		local loading = require("ui_loading_animation"):create({ ui = ui })
 		loading:setParent(ambiencePanel)
 		loading:hide()
@@ -1391,8 +1405,6 @@ function uiShowDefaultMenu()
 
 		local sunRotationYLabel = ui:createText("0  ", { font = Font.Pixel, size = "default", color = Color.White })
 		sunRotationYLabel:setParent(cell)
-
-		-- local ambience = server.getAmbience()
 
 		local sliderHandleSize = 30
 
@@ -1408,11 +1420,11 @@ function uiShowDefaultMenu()
 			button = sliderButton,
 			onValueChange = function(v)
 				sunRotationYLabel.Text = "" .. v
-				local ambience = server.getAmbience()
+				local ambience = worldEditorCommon.getAmbience()
 				if ambience.sun.rotation then
 					-- print("ambience.sun.rotation:", type(ambience.sun.rotation))
 					ambience.sun.rotation.Y = math.rad(v)
-					sendToServer(events.P_SET_AMBIENCE, ambience)
+					worldEditorCommon.updateAmbience(ambience)
 					require("ai_ambience"):loadGeneration(ambience)
 				end
 			end,
@@ -1434,10 +1446,10 @@ function uiShowDefaultMenu()
 			button = sliderButton,
 			onValueChange = function(v)
 				sunRotationXLabel.Text = "" .. v
-				local ambience = server.getAmbience()
+				local ambience = worldEditorCommon.getAmbience()
 				if ambience.sun.rotation then
 					ambience.sun.rotation.X = math.rad(v)
-					sendToServer(events.P_SET_AMBIENCE, ambience)
+					worldEditorCommon.updateAmbience(ambience)
 					require("ai_ambience"):loadGeneration(ambience)
 				end
 			end,
@@ -1531,15 +1543,48 @@ function uiShowDefaultMenu()
 			aiBtn:hide()
 			loading:show()
 
+			local prompt = aiInput.Text
+
 			require("ai_ambience"):generate({
 				prompt = aiInput.Text,
-				onDone = function(generation)
-					sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
-					sendToServer(events.P_SET_AMBIENCE, generation)
-					sunRotationSlider:setValue(math.floor(math.deg(generation.sun.rotation[2])))
-					aiInput:show()
-					aiBtn:show()
-					loading:hide()
+				onDone = function(generation, loadedAmbiance)
+					-- sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
+					-- worldEditorCommon.updateAmbience(loadedAmbiance)
+					-- sunRotationSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.Y)))
+					-- sunRotationXSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.X)))
+					-- aiInput:show()
+					-- aiBtn:show()
+					-- loading:hide()
+					-- saveWorld()
+
+					local body = {}
+					body.prompt = prompt
+					print("prompt:", body.prompt)
+
+					local headers = {}
+					headers["Content-Type"] = "application/json"
+
+					HTTP:Post("http://localhost", headers, body, function(res)
+						print("skybox generation:", res.StatusCode)
+						if res.StatusCode == 200 then
+							local body = JSON:Decode(res.Body:ToString())
+							print("body.url:", body.url)
+							local textureURL = "http://localhost" .. body.url
+							skybox.load({ url = textureURL }, function(obj)
+								sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
+								worldEditorCommon.updateAmbience(loadedAmbiance)
+								sunRotationSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.Y)))
+								sunRotationXSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.X)))
+								aiInput:show()
+								aiBtn:show()
+								loading:hide()
+								saveWorld()
+							end)
+						end
+					end)
+
+					-- local textureURL = "https://files.cu.bzh/skyboxes/skybox_2.png"
+					-- skybox.load({ url = textureURL }, function(obj) end)
 				end,
 				onError = function(err)
 					print("❌", err)
@@ -1577,6 +1622,17 @@ function uiShowDefaultMenu()
 		scroll:setParent(ambiencePanel)
 
 		ambiencePanel.parentDidResize = function(self)
+			self.Width = 200
+
+			if addObjectBtn ~= nil then
+				self.Height = math.min(
+					500,
+					Screen.Height - Screen.SafeArea.Bottom - Screen.SafeArea.Top - addObjectBtn.Height - padding * 3
+				)
+			else
+				self.Height = math.min(500, Screen.Height - Screen.SafeArea.Bottom - Screen.SafeArea.Top - padding * 2)
+			end
+
 			self.pos = {
 				Screen.SafeArea.Left + padding,
 				Screen.Height - self.Height - Screen.SafeArea.Top - padding,
@@ -1607,6 +1663,16 @@ function uiShowDefaultMenu()
 				aiInput.pos.Y + aiBtn.Height * 0.5 - loading.Height * 0.5,
 			}
 
+			skyboxBtn.pos = {
+				aiBtn.pos.X + aiBtn.Width - skyboxBtn.Width,
+				aiInput.pos.Y - skyboxBtn.Height - padding,
+			}
+
+			skyboxLabel.pos = {
+				skyboxBtn.pos.X - skyboxLabel.Width - padding,
+				skyboxBtn.pos.Y + skyboxBtn.Height * 0.5 - skyboxLabel.Height * 0.5,
+			}
+
 			btnClose.pos = {
 				self.Width * 0.5 - btnClose.Width * 0.5,
 				padding,
@@ -1614,7 +1680,7 @@ function uiShowDefaultMenu()
 
 			scroll.pos.Y = btnClose.pos.Y + btnClose.Height + padding
 			scroll.pos.X = padding
-			scroll.Height = aiInput.pos.Y - padding - scroll.pos.Y
+			scroll.Height = aiInput.pos.Y - skyboxBtn.Height - padding * 2 - scroll.pos.Y
 			scroll.Width = self.Width - padding * 2
 		end
 		ambiencePanel:parentDidResize()
@@ -1658,21 +1724,6 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		loadMap(data.mapName, data.mapScale or MAP_SCALE_DEFAULT, function()
 			setState(states.DEFAULT)
 		end)
-	elseif e.a == events.EDIT_OBJECT and not isLocalPlayer then
-		editObject(data)
-	elseif e.a == events.REMOVE_OBJECT then
-		removeObject(data)
-	elseif e.a == events.PLACE_BLOCK and not isLocalPlayer then
-		local color = data.color
-		map:AddBlock(color, data.pos.X, data.pos.Y, data.pos.Z)
-		map:RefreshModel()
-	elseif e.a == events.REMOVE_BLOCK and not isLocalPlayer then
-		local b = map:GetBlock(data.pos.X, data.pos.Y, data.pos.Z)
-		if b then
-			b:Remove()
-		end
-	elseif e.a == events.SET_AMBIENCE and not isLocalPlayer then
-		require("ai_ambience"):loadGeneration(data)
 	elseif e.a == events.SET_MAP_SCALE then
 		local prevScale = map.Scale
 		local ratio = data.mapScale / prevScale
@@ -1692,34 +1743,20 @@ LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
 		setState(states.DEFAULT)
 		clearWorld()
 		setState(states.PICK_MAP)
-	elseif e.a == events.SAVE_WORLD then
-		local mapBase64 = data.mapBase64
-		if mapBase64 == nil then
-			print("Received nil from server")
-			return
-		end
-		-- could be move to world_editor_server, not sure System works on the server (must enable the file in require.cpp)
-		require("system_api", System):patchWorld(worldID, { mapBase64 = mapBase64 }, function(err, world)
-			if world and world.mapBase64 == mapBase64 then
-				print("World '" .. worldTitle .. "' saved")
-			else
-				if err then
-					print("Error while saving world: ", JSON:Encode(err))
-				else
-					print("Error while saving world")
-				end
-			end
-		end)
 	end
 end)
 
-Timer(30, true, function()
-	if state < states.DEFAULT then
-		return
+local autoSaveTimer = nil
+function saveWorld()
+	if autoSaveTimer ~= nil then
+		autoSaveTimer:Cancel()
 	end
-	-- ask for auto save every 30 seconds, if no changes since last save, server does not answer
-	saveWorld()
-end)
+	if state >= states.DEFAULT then
+		worldEditorCommon.saveWorld()
+	end
+	autoSaveTimer = Timer(30, saveWorld)
+end
+autoSaveTimer = Timer(30, saveWorld)
 
 setState(states.LOADING)
 
