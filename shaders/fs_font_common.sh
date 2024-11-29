@@ -17,6 +17,8 @@ $input v_color0, v_texcoord0
 #include "./include/voxels_lib.sh"
 #endif
 
+uniform vec4 u_params;
+	#define weight u_params.x
 #if FONT_VARIANT_LIGHTING_UNIFORM
 uniform vec4 u_lighting;
 	#define lightValue u_lighting.x
@@ -42,7 +44,17 @@ void main() {
 
 	if (base.a <= EPSILON) discard;
 
-	vec4 color = vec4(mix(v_color0.rgb, base.rgb, colored), v_color0.a * base.a);
+	// TODO params
+	float outlineThickness = 0.0;
+	float outlineSoftness = 0.0;
+	vec3 outlineColor = vec3(0.0, 0.0, 0.0);
+
+	float alpha = smoothstep(1.0 - weight - TEXT_SOFTNESS, 1.0 - weight + TEXT_SOFTNESS, base.r);
+	float outline = smoothstep(outlineThickness - outlineSoftness, outlineThickness + outlineSoftness, base.r);
+	vec3 rgb = mix(outlineColor, v_color0.rgb, outline);
+	base = mix(vec4(rgb, alpha), base, colored);
+
+	vec4 color = vec4(base.rgb, v_color0.a * base.a);
 
 #if FONT_VARIANT_LIGHTING_UNIFORM && FONT_VARIANT_MRT_LIGHTING == 0 && FONT_VARIANT_UNLIT == 0
 	color = getNonVolumeVertexLitColor(color, lightValue, emissive, ambient, v_clipZ);
