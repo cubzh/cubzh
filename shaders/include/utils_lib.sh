@@ -89,12 +89,14 @@ vec4 transform(mat4 mtx, vec3 p) {
 	return mul(mtx, vec4(p, 1.0));
 }
 
-vec4 unpackFloat(float f) {
-	const vec4 shift = vec4(1.0, 255.0, 65025.0, 160581375.0);
-	const vec4 mask = vec4(1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0, 0.0);
-	vec4 res = fract(f * shift);
-	res -= res.yzww * mask;
-	return res;
+vec3 unpackFloatToRgb(float f) {
+	float unpack = f;
+	float b = floor((unpack + UNPACK_FUDGE) / 65536.0);
+	unpack -= b * 65536.0;
+	float g = floor((unpack + UNPACK_FUDGE) / 256.0);
+	float r = unpack - g * 256.0;
+
+	return vec3(r / 255.0, g / 255.0, b / 255.0);
 }
 
 float rgb2Luma(vec3 rgb) {
