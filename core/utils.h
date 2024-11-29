@@ -60,6 +60,9 @@ bool utils_is_float3_to_coords_inbounds(const float x, const float y, const floa
 FACE_INDEX_INT_T utils_aligned_normal_to_face(const float3 *normal);
 FACE_INDEX_INT_T utils_face_swapped(const FACE_INDEX_INT_T face);
 
+uint8_t utils_pack_normalized_float(float value);
+float utils_unpack_normalized_float(uint8_t value);
+
 // MARK: - Axes mask -
 
 typedef enum {
