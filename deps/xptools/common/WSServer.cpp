@@ -146,8 +146,6 @@ static struct lws_protocols protocols[] = {
 void WSServer::listen() {
     vxlog_trace("[WSServer] start listening... %d %s", _listenPort, _secure ? "(wss)" : "(ws)");
 
-    // TODO: gdevillele: define protocols here
-
     // const int protoCount = 1;
     // const int arraySize = protoCount + 1;
     // struct lws_protocols** protocols = reinterpret_cast<struct lws_protocols**>(malloc(sizeof(struct lws_protocols*) * arraySize));
@@ -170,19 +168,25 @@ void WSServer::listen() {
     info.port = _listenPort;
     info.protocols = protocols;
     info.pvo = &_lws_pvo;
-    // if (!lws_cmdline_option(argc, argv, "-n"))
-    //     info.extensions = extensions;
     info.pt_serv_buf_size = 32 * 1024;
     info.options = (LWS_SERVER_OPTION_VALIDATE_UTF8 |
-                    LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT |
                     LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE);
+    if (_secure) {
+        info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
 #if defined(ONLINE_GAMESERVER)
-    info.server_ssl_cert_mem = _tlsCertificate.c_str();
-    info.server_ssl_cert_mem_len = static_cast<int>(_tlsCertificate.length());
-    info.server_ssl_private_key_mem = _tlsPrivateKey.c_str();
-    info.server_ssl_private_key_mem_len = static_cast<int>(_tlsPrivateKey.length());
+        if (_tlsCertificate.empty() == false) {
+            info.server_ssl_cert_mem = _tlsCertificate.c_str();
+            info.server_ssl_cert_mem_len = static_cast<int>(_tlsCertificate.length());
+        }
+        if (_tlsPrivateKey.empty() == false) {
+            info.server_ssl_private_key_mem = _tlsPrivateKey.c_str();
+            info.server_ssl_private_key_mem_len = static_cast<int>(_tlsPrivateKey.length());
+        }
 #endif
-    info.vhost_name = "servers-eu-1.cu.bzh"; // TODO: should be dynamic, later
+    }
+    
+    // should be dynamic, later... or maybe we should remove it altogether
+    // info.vhost_name = "servers-eu-1.cu.bzh";
 
     // TCP keep-alive
     // info.ka_time = 500; // 500sec
@@ -280,12 +284,74 @@ std::vector<WSServerConnection_WeakPtr>& WSServer::getActiveConnections() {
 //
 // --------------------------------------------------
 
+static std::string reasonToString(const int reason) {
+    switch (reason) {
+        case LWS_CALLBACK_ESTABLISHED:
+            return "LWS_CALLBACK_ESTABLISHED";
+        case LWS_CALLBACK_CLOSED_HTTP:
+            return "LWS_CALLBACK_CLOSED_HTTP";
+        case LWS_CALLBACK_RECEIVE:
+            return "LWS_CALLBACK_RECEIVE";
+        case LWS_CALLBACK_SERVER_WRITEABLE:
+            return "LWS_CALLBACK_SERVER_WRITEABLE";
+        case LWS_CALLBACK_CLOSED:
+            return "LWS_CALLBACK_CLOSED";
+        case LWS_CALLBACK_PROTOCOL_INIT:
+            return "LWS_CALLBACK_PROTOCOL_INIT";
+        case LWS_CALLBACK_PROTOCOL_DESTROY:
+            return "LWS_CALLBACK_PROTOCOL_DESTROY";
+        case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+            return "LWS_CALLBACK_EVENT_WAIT_CANCELLED";
+        case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
+            return "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS";
+        case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+            return "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS";
+        case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
+            return "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH";
+        case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+            return "LWS_CALLBACK_FILTER_NETWORK_CONNECTION";
+        case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+            return "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED";
+        case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
+            return "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION";
+        case LWS_CALLBACK_WSI_CREATE:
+            return "LWS_CALLBACK_WSI_CREATE";
+        case LWS_CALLBACK_WSI_DESTROY:
+            return "LWS_CALLBACK_WSI_DESTROY";
+        case LWS_CALLBACK_GET_THREAD_ID:
+            return "LWS_CALLBACK_GET_THREAD_ID";
+        case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+            return "LWS_CALLBACK_CLOSED_CLIENT_HTTP";
+        case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+            return "LWS_CALLBACK_HTTP_BIND_PROTOCOL";
+        case LWS_CALLBACK_ADD_HEADERS:
+            return "LWS_CALLBACK_ADD_HEADERS";
+        case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
+            return "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL";
+        case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
+            return "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE";
+        case LWS_CALLBACK_VHOST_CERT_AGING:
+            return "LWS_CALLBACK_VHOST_CERT_AGING";
+        case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
+            return "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL";
+        case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL:
+            return "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL";
+        case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
+            return "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL";
+        case LWS_CALLBACK_CONNECTING:
+            return "LWS_CALLBACK_CONNECTING";
+        default:
+            return "<UNKNOWN_REASON>";
+    }
+}
+
 static int lws_callback(struct lws *wsi,
                         enum lws_callback_reasons reason,
                         void *user,
                         void *in,
                         size_t len) {
-
+    vxlog_trace("[WSServer] lws_callback: %s", reasonToString(reason).c_str());
+    
     struct vhd_minimal_server_echo *vhd = reinterpret_cast<struct vhd_minimal_server_echo *>(lws_protocol_vh_priv_get(lws_get_vhost(wsi), lws_get_protocol(wsi)));
 
     WSServerConnection_SharedPtr conn = nullptr;
@@ -309,8 +375,6 @@ static int lws_callback(struct lws *wsi,
     }
 
     switch (reason) {
-            vxlog_debug("[WSServer] lws_callback %d", reason);
-
         case LWS_CALLBACK_PROTOCOL_INIT: {
             // vxlog_debug("[WSServer] LWS_CALLBACK_PROTOCOL_INIT");
             // this is called once per protocol/vhost (incoming connection) tuple
@@ -496,6 +560,7 @@ static int lws_callback(struct lws *wsi,
             break;
         }
         case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: // 2
+        case LWS_CALLBACK_CLOSED_HTTP: // 5
         case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: // 17
         case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: // 19
         case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: // 20
