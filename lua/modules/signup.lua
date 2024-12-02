@@ -176,9 +176,10 @@ signup.startFlow = function(self, config)
 									local username = accountInfo.username
 									local token = accountInfo.credentials.token
 
-									System.Username = username
+									if type(username) == "string" and username ~= "" then
+										System.Username = username
+									end
 									System:StoreCredentials(userID, token)
-
 									System.AskedForMagicKey = false
 
 									-- flush signup flow and restart credential checks (should go through now)
@@ -276,7 +277,7 @@ signup.startFlow = function(self, config)
 
 	steps.createLoginOptionsStep = function(config)
 		local defaultConfig = {
-			username = "",
+			identifier = "",
 			password = false,
 			magickey = false,
 		}
@@ -348,7 +349,7 @@ signup.startFlow = function(self, config)
 						showLoading()
 						if passwordInput.Text ~= "" then
 							local req = api:login(
-								{ usernameOrEmail = config.username, password = passwordInput.Text },
+								{ usernameOrEmail = config.identifier, password = passwordInput.Text }, -- TODO: rename usernameOrEmail to identifier
 								function(err, accountInfo)
 									if err == nil then
 										local userID = accountInfo.credentials["user-id"]
@@ -393,11 +394,11 @@ signup.startFlow = function(self, config)
 
 					magicKeyButton.onRelease = function()
 						showLoading()
-						local req = api:getMagicKey(config.username, function(err, _)
+						local req = api:getMagicKey(config.identifier, function(err, _)
 							hideLoading()
 							if err == nil then
 								System.AskedForMagicKey = true
-								local step = steps.createMagicKeyInputStep({ usernameOrEmail = config.username })
+								local step = steps.createMagicKeyInputStep({ usernameOrEmail = config.identifier })
 								signupFlow:push(step)
 							else
 								errorLabel.Text = "❌ Sorry, failed to send magic key"
@@ -508,7 +509,7 @@ signup.startFlow = function(self, config)
 				loadingLabel:setParent(frame)
 				loadingLabel:hide()
 
-				local usernameInput = ui:createTextInput("", str:upperFirstChar(loc("username or email")))
+				local usernameInput = ui:createTextInput("", str:upperFirstChar(loc("username, phone, or email")))
 				usernameInput:setParent(frame)
 
 				local didStartTyping = false
@@ -618,7 +619,7 @@ signup.startFlow = function(self, config)
 						if err == nil then
 							-- NOTE: res.username is sanitized
 							local step = steps.createLoginOptionsStep({
-								username = res.username,
+								identifier = res.identifier,
 								password = res.password,
 								magickey = res.magickey,
 							})
