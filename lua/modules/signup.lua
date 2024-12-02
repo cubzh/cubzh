@@ -1558,7 +1558,7 @@ signup.startFlow = function(self, config)
 						-- Show error message with retry button
 						-- Click on button should call checks.minAppVersion()
 
-						local errorBox = ui:frameTextBackground()
+						local errorBox = ui:frameGenericContainer()
 						local errorText = ui:createText(msgStr, { color = Color.White, size = "default" })
 						errorText:setParent(errorBox)
 						local retryBtn = ui:buttonNeutral({ content = "Retry", padding = theme.padding })
@@ -1566,6 +1566,7 @@ signup.startFlow = function(self, config)
 
 						errorBox.parentDidResize = function(self)
 							ease:cancel(self)
+							errorText.object.MaxWidth = math.min(500, Screen.Width * 0.8)
 							self.Width = math.max(errorText.Width, retryBtn.Width) + theme.paddingBig * 2
 							self.Height = errorText.Height + theme.padding + retryBtn.Height + theme.paddingBig * 2
 
@@ -1581,7 +1582,7 @@ signup.startFlow = function(self, config)
 
 							self.pos = {
 								Screen.Width * 0.5 - self.Width * 0.5,
-								Screen.Height / 5.0 - self.Height * 0.5,
+								Screen.Height * 0.5 - self.Height * 0.5,
 							}
 						end
 
@@ -1592,6 +1593,78 @@ signup.startFlow = function(self, config)
 							errorBox:remove()
 							-- call the first sub-step again
 							checks.minAppVersion()
+						end
+
+						local targetPos = errorBox.pos:Copy()
+						errorBox.pos.Y = errorBox.pos.Y - 50
+						ease:outBack(errorBox, animationTime).pos = targetPos
+					end
+
+					checks.requestAppUpdate = function()
+						text.Text = ""
+						loadingFrame:hide()
+
+						local errorBox = ui:frameGenericContainer()
+						local errorText = ui:createText(
+							"Good news! A new version of Cubzh is available!",
+							{ color = Color.White, size = "default" }
+						)
+						errorText:setParent(errorBox)
+
+						local updateBtn = ui:buttonPositive({ content = "Update", padding = theme.paddingBig })
+						updateBtn:setParent(errorBox)
+
+						errorBox.parentDidResize = function(self)
+							ease:cancel(self)
+							errorText.object.MaxWidth = math.min(500, Screen.Width * 0.8)
+
+							self.Width = math.max(errorText.Width, updateBtn.Width) + theme.paddingBig * 2
+							self.Height = errorText.Height + theme.padding + updateBtn.Height + theme.paddingBig * 2
+
+							updateBtn.pos = {
+								self.Width * 0.5 - updateBtn.Width * 0.5,
+								theme.paddingBig,
+							}
+
+							errorText.pos = {
+								self.Width * 0.5 - errorText.Width * 0.5,
+								updateBtn.pos.Y + updateBtn.Height + padding,
+							}
+
+							self.pos = {
+								Screen.Width * 0.5 - self.Width * 0.5,
+								Screen.Height * 0.5 - self.Height * 0.5,
+							}
+						end
+
+						errorBox:parentDidResize()
+
+						updateBtn.onRelease = function()
+							local OSName = Client.OSName:lower()
+							local installSource = Client.InstallSource
+							print("OSName", OSName)
+							print("installSource:", installSource)
+
+							if installSource == "Steam" then
+								System:OpenURL("https://store.steampowered.com/app/1386770")
+							elseif installSource == "iOS App Store" then
+								System:OpenURL("https://apps.apple.com/app/cubzh/id1478257849")
+                            elseif installSource == "Google Play" then
+								System:OpenURL("https://play.google.com/store/apps/details?id=com.voxowl.pcubes.android")
+							elseif OSName == "ios" then
+								System:OpenURL("https://apps.apple.com/app/cubzh/id1478257849")
+							elseif OSName == "android" then
+								System:OpenURL("https://play.google.com/store/apps/details?id=com.voxowl.pcubes.android")
+							elseif OSName == "macos" then
+								System:OpenURL("https://apps.apple.com/app/cubzh/id1478257849")
+							elseif OSName == "windows" then
+								System:OpenURL("https://apps.apple.com/app/cubzh/id1478257849")
+							elseif OSName == "wasm" then
+								System:OpenURL("https://apps.apple.com/app/cubzh/id1478257849")
+							end
+
+							-- errorBox:remove()
+							-- checks.minAppVersion()
 						end
 
 						local targetPos = errorBox.pos:Copy()
@@ -1614,12 +1687,14 @@ signup.startFlow = function(self, config)
 								or (major == minMajor and minor > minMinor)
 								or (major == minMajor and minor == minMinor and patch >= minPatch)
 
+							appIsUpToDate = false
+
 							if appIsUpToDate then
 								-- call next sub-step
 								checks.userAccountExists()
 							else
 								-- App is not up-to-date
-								checks.error("Cubzh app needs to be updated!")
+								checks.requestAppUpdate()
 							end
 						end)
 					end
