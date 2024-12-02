@@ -6,7 +6,7 @@ defaultOptions = {
 	acceptTypes = {}, -- { fieldName : { "Number3", "Object" }}
 }
 
-config.merge = function(self, defaults, overrides, options)
+config.merge = function(self, defaults, overrides, options, showIgnoring)
 	if self ~= config then
 		error("config:merge should be called with `:`", 2)
 	end
@@ -67,7 +67,7 @@ config.merge = function(self, defaults, overrides, options)
 					end
 				end
 			end
-			if overriden == false then
+			if overriden == false and showIgnoring then
 				print("⚠️ config:merge - overrides key ignored: " .. k)
 			end
 		end
