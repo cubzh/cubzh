@@ -27,8 +27,8 @@ THISDIR:=$(dir $(lastword $(MAKEFILE_LIST)))
 # CUBZH: stuff above doesn't work. We just define mkdir/rmdir commands and
 # we'll set platform explicitely by doing: eg. export OS=windows before building shaders
 # See readme with shaders
-CMD_MKDIR=cmd /C "if not exist "$(subst /,\,$(1))" mkdir "$(subst /,\,$(1))""
-CMD_RMDIR=cmd /C "if exist "$(subst /,\,$(1))" rmdir /S /Q "$(subst /,\,$(1))""
+CMD_MKDIR=mkdir -p "$(1)"
+CMD_RMDIR=rm -r "$(1)"
 
 SHADERC:="$(THISDIR)../tools/bin/$(OS)/shaderc"
 GEOMETRYC:="$(THISDIR)../tools/bin/$(OS)/geometryc"
