@@ -217,18 +217,30 @@ namespace bgfx
 					}
 #endif // BGFX_CONFIG_MEMORY_TRACKING
 
-					return ::malloc(_size);
+					void* ptr = ::malloc(_size);
+					BX_ASSERT(NULL != ptr, "Out of memory!");
+
+					return ptr;
 				}
 
-				return bx::alignedAlloc(this, _size, _align, bx::Location(_file, _line) );
+				void* ptr = bx::alignedAlloc(this, _size, _align, bx::Location(_file, _line) );
+				BX_ASSERT(NULL != ptr, "Out of memory!");
+
+				return ptr;
 			}
 
 			if (kNaturalAlignment >= _align)
 			{
-				return ::realloc(_ptr, _size);
+				void* ptr = ::realloc(_ptr, _size);
+				BX_ASSERT(NULL != ptr, "Out of memory!");
+
+				return ptr;
 			}
 
-			return bx::alignedRealloc(this, _ptr, _size, _align, bx::Location(_file, _line) );
+			void* ptr = bx::alignedRealloc(this, _ptr, _size, _align, bx::Location(_file, _line) );
+			BX_ASSERT(NULL != ptr, "Out of memory!");
+
+			return ptr;
 		}
 
 		void checkLeaks();
@@ -1313,10 +1325,8 @@ namespace bgfx
 
 		m_draw.clear(_flags);
 		m_bind.clear(_flags);
-		if (_flags & BGFX_DISCARD_STATE)
-		{
-			m_uniformBegin = m_uniformEnd;
-		}
+
+		m_uniformBegin = m_uniformEnd;
 	}
 
 	void EncoderImpl::dispatch(ViewId _id, ProgramHandle _handle, uint32_t _numX, uint32_t _numY, uint32_t _numZ, uint8_t _flags)
@@ -5059,11 +5069,7 @@ namespace bgfx
 	uint32_t readTexture(TextureHandle _handle, void* _data, uint8_t _mip)
 	{
 		BX_ASSERT(NULL != _data, "_data can't be NULL");
-        //// CUBZH: disabling this check if we enable BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION,
-        //// since readTexture can still perform using a readPixels instead, check renderer_gl readTexture()
-#ifndef BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION
-        BGFX_CHECK_CAPS(BGFX_CAPS_TEXTURE_READ_BACK, "Texture read-back is not supported!");
-#endif
+		BGFX_CHECK_CAPS(BGFX_CAPS_TEXTURE_READ_BACK, "Texture read-back is not supported!");
 		return s_ctx->readTexture(_handle, _data, _mip);
 	}
 

@@ -21,7 +21,7 @@
 #include <entry/input.h>
 #include <entry/cmd.h>
 #include <entry/dialog.h>
-#include "imgui/bgfx-imgui.h"
+#include <imgui/imgui.h>
 #include <bgfx_utils.h>
 
 #include <tinystl/allocator.h>

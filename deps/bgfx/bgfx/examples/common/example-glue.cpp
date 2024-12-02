@@ -3,7 +3,7 @@
  * License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 #include "entry/entry.h"
 #include "entry/cmd.h"
 #include "entry/dialog.h"
@@ -290,6 +290,8 @@ void showExampleDialog(entry::AppI* _app, const char* _errorText)
 			}
 		}
 	}
+#else
+	ImGui::Text("Renderer: %s", bgfx::getRendererName(bgfx::getRendererType()));
 #endif // 0
 
 	const bgfx::Stats* stats = bgfx::getStats();

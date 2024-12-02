@@ -11,12 +11,16 @@
 #include <dear-imgui/imgui.h>
 #include <dear-imgui/imgui_internal.h>
 
-#include "bgfx-imgui.h"
+#include "imgui.h"
 #include "../bgfx_utils.h"
 
 #ifndef USE_ENTRY
 #	define USE_ENTRY 0
 #endif // USE_ENTRY
+
+#ifndef USE_LOCAL_STB
+#	define USE_LOCAL_STB 1
+#endif // USE_LOCAL_STB
 
 #if USE_ENTRY
 #	include "../entry/entry.h"
@@ -32,9 +36,6 @@
 #include "robotomono_regular.ttf.h"
 #include "icons_kenney.ttf.h"
 #include "icons_font_awesome.ttf.h"
-
-#include "VXFont.hpp"
-#include "VXConfig.hpp"
 
 static const bgfx::EmbeddedShader s_embeddedShaders[] =
 {
@@ -75,8 +76,6 @@ struct OcornutImguiContext
 			return;
 		}
 
-        //// CUBZH: let VXGameRenderer declare that view so that it can work with sort order
-        /*
 		bgfx::setViewName(m_viewId, "ImGui");
 		bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
 
@@ -92,7 +91,6 @@ struct OcornutImguiContext
 			bgfx::setViewTransform(m_viewId, NULL, ortho);
 			bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height) );
 		}
-        */
 
 		const ImVec2 clipPos   = _drawData->DisplayPos;       // (0,0) unless using multi-viewports
 		const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
@@ -141,7 +139,7 @@ struct OcornutImguiContext
 					bgfx::TextureHandle th = m_texture;
 					bgfx::ProgramHandle program = m_program;
 
-					if (NULL != cmd->TextureId)
+					if (ImU64(0) != cmd->TextureId)
 					{
 						union { ImTextureID ptr; struct { bgfx::TextureHandle handle; uint8_t flags; uint8_t mip; } s; } texture = { cmd->TextureId };
 
@@ -208,6 +206,7 @@ struct OcornutImguiContext
 		}
 
 		m_viewId = 255;
+		m_lastScroll = 0;
 		m_last = bx::getHPCounter();
 
 		ImGui::SetAllocatorFunctions(memAlloc, memFree, NULL);
@@ -360,13 +359,9 @@ struct OcornutImguiContext
 
 		s_tex = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler);
 
-
-        uint8_t* data;
+		uint8_t* data;
 		int32_t width;
 		int32_t height;
-        //// CUBZH: inject font
-        vx::Font::shared()->loadFonts(&data, &width, &height);
-        /*
 		{
 			ImFontConfig config;
 			config.FontDataOwnedByAtlas = false;
@@ -394,20 +389,14 @@ struct OcornutImguiContext
 		}
 
 		io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
-        */
 
-        //// CUBZH: font sampler mode to POINT, if using the pixel font
 		m_texture = bgfx::createTexture2D(
 			  (uint16_t)width
 			, (uint16_t)height
 			, false
 			, 1
 			, bgfx::TextureFormat::BGRA8
-#if DEARIMGUI_FONT == FontName_Pixel
-            , BGFX_TEXTURE_NONE|BGFX_SAMPLER_MIN_POINT|BGFX_SAMPLER_MAG_POINT
-#else
 			, 0
-#endif
 			, bgfx::copy(data, width*height*4)
 			);
 
@@ -451,7 +440,7 @@ struct OcornutImguiContext
 		  int32_t _mx
 		, int32_t _my
 		, uint8_t _button
-		, float _scroll
+		, int32_t _scroll
 		, int _width
 		, int _height
 		, int _inputChar
@@ -473,16 +462,13 @@ struct OcornutImguiContext
 		m_last = now;
 		const double freq = double(bx::getHPFrequency() );
 		io.DeltaTime = float(frameTime/freq);
-        //// CUBZH: asserts in dear-imgui/imgui.cpp:ErrorCheckNewFrameSanityChecks() require a strictly positive dt
-        if (io.DeltaTime <= 0) {
-            io.DeltaTime = .001f;
-        }
 
 		io.AddMousePosEvent( (float)_mx, (float)_my);
 		io.AddMouseButtonEvent(ImGuiMouseButton_Left,   0 != (_button & IMGUI_MBUT_LEFT  ) );
 		io.AddMouseButtonEvent(ImGuiMouseButton_Right,  0 != (_button & IMGUI_MBUT_RIGHT ) );
 		io.AddMouseButtonEvent(ImGuiMouseButton_Middle, 0 != (_button & IMGUI_MBUT_MIDDLE) );
-        io.AddMouseWheelEvent(0.0f, _scroll); //// CUBZH: use absolute scroll, not a delta
+		io.AddMouseWheelEvent(0.0f, (float)(_scroll - m_lastScroll) );
+		m_lastScroll = _scroll;
 
 #if USE_ENTRY
 		uint8_t modifiers = inputGetModifiersState();
@@ -518,6 +504,7 @@ struct OcornutImguiContext
 	bgfx::UniformHandle u_imageLodEnabled;
 	ImFont* m_font[ImGui::Font::Count];
 	int64_t m_last;
+	int32_t m_lastScroll;
 	bgfx::ViewId m_viewId;
 #if USE_ENTRY
 	ImGuiKey m_keyMap[(int)entry::Key::Count];
@@ -548,7 +535,7 @@ void imguiDestroy()
 	s_ctx.destroy();
 }
 
-void imguiBeginFrame(int32_t _mx, int32_t _my, uint8_t _button, float _scroll, uint16_t _width, uint16_t _height, int _inputChar, bgfx::ViewId _viewId)
+void imguiBeginFrame(int32_t _mx, int32_t _my, uint8_t _button, int32_t _scroll, uint16_t _width, uint16_t _height, int _inputChar, bgfx::ViewId _viewId)
 {
 	s_ctx.beginFrame(_mx, _my, _button, _scroll, _width, _height, _inputChar, _viewId);
 }
@@ -581,29 +568,29 @@ namespace ImGui
 
 } // namespace ImGui
 
+#if USE_LOCAL_STB
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // error C4505: '' : unreferenced local function has been removed
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function"); // warning: 'int rect_width_compare(const void*, const void*)' defined but not used
-BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunknown-pragmas")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits"); // warning: comparison is always true due to limited range of data type
 
-#define STBTT_ifloor(_a)   int32_t(bx::floor(_a) )
-#define STBTT_iceil(_a)    int32_t(bx::ceil(_a) )
-#define STBTT_sqrt(_a)     bx::sqrt(_a)
-#define STBTT_pow(_a, _b)  bx::pow(_a, _b)
-#define STBTT_fmod(_a, _b) bx::mod(_a, _b)
-#define STBTT_cos(_a)      bx::cos(_a)
-#define STBTT_acos(_a)     bx::acos(_a)
-#define STBTT_fabs(_a)     bx::abs(_a)
-#define STBTT_strlen(_str) bx::strLen(_str)
+#	define STBTT_ifloor(_a)   int32_t(bx::floor(_a) )
+#	define STBTT_iceil(_a)    int32_t(bx::ceil(_a) )
+#	define STBTT_sqrt(_a)     bx::sqrt(_a)
+#	define STBTT_pow(_a, _b)  bx::pow(_a, _b)
+#	define STBTT_fmod(_a, _b) bx::mod(_a, _b)
+#	define STBTT_cos(_a)      bx::cos(_a)
+#	define STBTT_acos(_a)     bx::acos(_a)
+#	define STBTT_fabs(_a)     bx::abs(_a)
+#	define STBTT_strlen(_str) bx::strLen(_str)
 
-#define STBTT_memcpy(_dst, _src, _numBytes) bx::memCopy(_dst, _src, _numBytes)
-#define STBTT_memset(_dst, _ch, _numBytes)  bx::memSet(_dst, _ch, _numBytes)
-#define STBTT_malloc(_size, _userData)      memAlloc(_size, _userData)
-#define STBTT_free(_ptr, _userData)         memFree(_ptr, _userData)
+#	define STBTT_memcpy(_dst, _src, _numBytes) bx::memCopy(_dst, _src, _numBytes)
+#	define STBTT_memset(_dst, _ch, _numBytes)  bx::memSet(_dst, _ch, _numBytes)
+#	define STBTT_malloc(_size, _userData)      memAlloc(_size, _userData)
+#	define STBTT_free(_ptr, _userData)         memFree(_ptr, _userData)
 
-#define STB_RECT_PACK_IMPLEMENTATION
-#include <stb/stb_rect_pack.h>
-#define STB_TRUETYPE_IMPLEMENTATION
-#include <stb/stb_truetype.h>
-BX_PRAGMA_DIAGNOSTIC_POP();
+#	define STB_RECT_PACK_IMPLEMENTATION
+#	include <stb/stb_rect_pack.h>
+#	define STB_TRUETYPE_IMPLEMENTATION
+#	include <stb/stb_truetype.h>
+#endif // USE_LOCAL_STB

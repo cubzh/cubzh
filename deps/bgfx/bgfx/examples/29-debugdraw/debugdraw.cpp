@@ -9,7 +9,7 @@
 #include <entry/input.h>
 #include <debugdraw/debugdraw.h>
 #include "camera.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 #include <bx/uint32_t.h>
 

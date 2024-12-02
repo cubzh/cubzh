@@ -29,7 +29,7 @@
 #include <bimg/decode.h>
 
 #include "entry/entry.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 #include "nanovg/nanovg.h"
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();

@@ -22,7 +22,7 @@ namespace stl = tinystl;
 #include <bx/file.h>
 #include "entry/entry.h"
 #include "camera.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 namespace bgfx
 {

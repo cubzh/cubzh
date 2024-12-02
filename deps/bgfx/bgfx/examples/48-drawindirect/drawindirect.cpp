@@ -11,7 +11,7 @@
 
 #include "common.h"
 #include "bgfx_utils.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 namespace
 {
@@ -376,7 +376,7 @@ public:
 				// This is done here for demonstration purposes
 
 				// The model matrix for each instance is also set on compute
-				// you could modify this to, eg, do frustrum culling on the GPU
+				// you could modify this to, eg, do frustum culling on the GPU
 				float ud[4] = { float(m_nDrawElements), float(m_sideSize), float(time), 0 };
 				uint32_t numToDraw = (m_sideSize*m_sideSize);
 

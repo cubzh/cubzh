@@ -17,7 +17,7 @@
 #include "entry/entry.h"
 #include "camera.h"
 #include "bgfx_utils.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 namespace bgfx
 {

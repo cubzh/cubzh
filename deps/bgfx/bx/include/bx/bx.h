@@ -216,6 +216,9 @@ namespace bx
 	template<typename Ty>
 	constexpr bool isPowerOf2(Ty _a);
 
+	/// Returns true if it's evaluated as constexpr.
+	constexpr bool isConstantEvaluated();
+
 	/// Returns a value of type `Ty` by reinterpreting the object representation of `FromT`.
 	template <typename Ty, typename FromT>
 	constexpr Ty bitCast(const FromT& _from);
@@ -223,7 +226,7 @@ namespace bx
 	/// Performs `static_cast` of value `_from`, and in debug build runtime verifies/asserts
 	/// that the value didn't change.
 	template<typename Ty, typename FromT>
-	constexpr Ty narrowCast(const FromT& _from, Location _location = Location::current() );
+	Ty narrowCast(const FromT& _from, Location _location = Location::current() );
 
 	/// Copy memory block.
 	///

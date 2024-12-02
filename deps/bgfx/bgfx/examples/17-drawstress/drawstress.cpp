@@ -9,7 +9,7 @@
 #include <bx/uint32_t.h>
 #include <bx/thread.h>
 #include <bx/os.h>
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 #include <bgfx/embedded_shader.h>
 

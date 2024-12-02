@@ -6,7 +6,7 @@
 #include "common.h"
 #include "bgfx_utils.h"
 #include "camera.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 namespace
 {

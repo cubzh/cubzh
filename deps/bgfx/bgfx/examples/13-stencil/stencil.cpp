@@ -11,7 +11,7 @@
 #include <bx/file.h>
 
 #include "camera.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 namespace bgfx
 {

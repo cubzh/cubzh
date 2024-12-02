@@ -7,7 +7,7 @@
 #include <bx/file.h>
 #include "common.h"
 #include "bgfx_utils.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 extern "C" void ProgressiveMesh(int vert_n, int vert_stride, const float *v, int tri_n, const int *tri, int *map, int *permutation);
 
@@ -68,11 +68,15 @@ public:
 	static void remapIndices(uint32_t* _indices, uint32_t _num)
 	{
 		uint32_t target = 0;
-		for (uint32_t i = 0; i < _num; i++) {
+		for (uint32_t i = 0; i < _num; i++)
+		{
 			uint32_t map = _indices[i];
-			if (i != map) {
+			if (i != map)
+			{
 				_indices[i] = _indices[map];
-			} else {
+			}
+			else
+			{
 				_indices[i] = target;
 				++target;
 			}

@@ -13,7 +13,7 @@
 #include "font/font_manager.h"
 #include "font/text_metrics.h"
 #include "font/text_buffer_manager.h"
-#include "imgui/bgfx-imgui.h"
+#include "imgui/imgui.h"
 
 namespace
 {
