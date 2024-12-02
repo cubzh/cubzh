@@ -37,6 +37,8 @@
 #include "icons_kenney.ttf.h"
 #include "icons_font_awesome.ttf.h"
 
+#include "VXFont.hpp"
+
 static const bgfx::EmbeddedShader s_embeddedShaders[] =
 {
 	BGFX_EMBEDDED_SHADER(vs_ocornut_imgui),
@@ -365,6 +367,9 @@ struct OcornutImguiContext
 		uint8_t* data;
 		int32_t width;
 		int32_t height;
+        //// CUBZH: inject font
+        vx::Font::shared()->loadFonts(&data, &width, &height);
+        /*
 		{
 			ImFontConfig config;
 			config.FontDataOwnedByAtlas = false;
@@ -392,6 +397,7 @@ struct OcornutImguiContext
 		}
 
 		io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
+        */
 
 		m_texture = bgfx::createTexture2D(
 			  (uint16_t)width
