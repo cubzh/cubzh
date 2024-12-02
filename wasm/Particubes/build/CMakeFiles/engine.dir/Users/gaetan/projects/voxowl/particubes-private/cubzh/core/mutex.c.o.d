@@ -1,0 +1,21 @@
+CMakeFiles/engine.dir/Users/gaetan/projects/voxowl/particubes-private/cubzh/core/mutex.c.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/cubzh/core/mutex.c \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/mutex.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/pthread.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/sched.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/time.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/time.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdbool.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/alloca.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/cclog.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdio.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/wasi/api.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stddef.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/__stddef_max_align_t.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h

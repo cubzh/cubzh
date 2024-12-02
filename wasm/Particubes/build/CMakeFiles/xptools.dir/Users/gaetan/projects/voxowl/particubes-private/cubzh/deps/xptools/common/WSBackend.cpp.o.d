@@ -1,0 +1,37 @@
+CMakeFiles/xptools.dir/Users/gaetan/projects/voxowl/particubes-private/cubzh/deps/xptools/common/WSBackend.cpp.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/cubzh/deps/xptools/common/WSBackend.cpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/deps/xptools/include/WSBackend.hpp \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/websocket.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/__config_site \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/memory.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/string.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/string.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/string.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/cubzh/deps/xptools/include/strings.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/emscripten.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/em_asm.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/em_macros.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/em_types.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/em_js.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/promise.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/alloca.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/wget.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/version.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/html5.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/pthread.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/sched.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/time.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/time.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/eventloop.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/console.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/emscripten/html5_webgl.h

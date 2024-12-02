@@ -1,0 +1,24 @@
+CMakeFiles/engine.dir/Users/gaetan/projects/voxowl/particubes-private/cubzh/core/blockChange.c.o: \
+  /Users/gaetan/projects/voxowl/particubes-private/cubzh/core/blockChange.c \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/blockChange.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/config.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/assert.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/stdlib.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/cache/sysroot/include/alloca.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/block.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/lib/clang/17/include/stdbool.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/color_palette.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/color_atlas.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/colors.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/float3.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/fifo_list.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/function_pointers.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/hash_uint32_int.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/weakptr.h \
+  /Users/gaetan/projects/voxowl/particubes-private/wasm/Particubes/../../cubzh/core/int3.h
