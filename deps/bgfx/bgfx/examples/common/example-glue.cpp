@@ -3,7 +3,7 @@
  * License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
-#include "imgui/imgui.h"
+#include "imgui/bgfx-imgui.h"
 #include "entry/entry.h"
 #include "entry/cmd.h"
 #include "entry/dialog.h"

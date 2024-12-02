@@ -29,7 +29,7 @@
 #include <common.h>
 #include <camera.h>
 #include <bgfx_utils.h>
-#include <imgui/imgui.h>
+#include "imgui/bgfx-imgui.h"
 #include <bx/rng.h>
 #include <bx/os.h>
 

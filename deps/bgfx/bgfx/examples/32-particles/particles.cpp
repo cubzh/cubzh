@@ -10,7 +10,7 @@
 
 #include <camera.h>
 #include <debugdraw/debugdraw.h>
-#include <imgui/imgui.h>
+#include "imgui/bgfx-imgui.h"
 
 #include <bx/rng.h>
 #include <bx/easing.h>
