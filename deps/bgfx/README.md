@@ -20,7 +20,7 @@ https://github.com/voxowl/particubes-private/pull/2414
 https://github.com/voxowl/particubes-private/pull/2932
 https://github.com/voxowl/particubes-private/pull/3991
 https://github.com/cubzh/cubzh/pull/670
-https://github.com/cubzh/cubzh/pull/721
+https://github.com/cubzh/cubzh/pull/721 + https://github.com/cubzh/cubzh/pull/722
 
 ## Bgfx-imgui context
 
@@ -220,6 +220,10 @@ CS_FLAGS=--platform linux -p 430
 SHADER_PATH=shaders/glsl
 else
 ```
+
+### Safari workaround
+
+https://github.com/cubzh/cubzh/pull/722
 
 ## MTL renderer
 
