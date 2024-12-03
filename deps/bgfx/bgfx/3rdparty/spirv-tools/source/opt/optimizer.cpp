@@ -462,13 +462,6 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag,
     RegisterPass(CreateConvertRelaxedToHalfPass());
   } else if (pass_name == "relax-float-ops") {
     RegisterPass(CreateRelaxFloatOpsPass());
-  } else if (pass_name == "inst-debug-printf") {
-    // This private option is not for user consumption.
-    // It is here to assist in debugging and fixing the debug printf
-    // instrumentation pass.
-    // For users who wish to utilize debug printf, see the white paper at
-    // https://www.lunarg.com/wp-content/uploads/2021/08/Using-Debug-Printf-02August2021.pdf
-    RegisterPass(CreateInstDebugPrintfPass(7, 23));
   } else if (pass_name == "simplify-instructions") {
     RegisterPass(CreateSimplificationPass());
   } else if (pass_name == "ssa-rewrite") {
@@ -571,6 +564,26 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag,
              pass_args.c_str());
       return false;
     }
+  } else if (pass_name == "struct-packing") {
+    if (pass_args.size() == 0) {
+      Error(consumer(), nullptr, {},
+            "--struct-packing requires a name:rule argument.");
+      return false;
+    }
+
+    auto separator_pos = pass_args.find(':');
+    if (separator_pos == std::string::npos || separator_pos == 0 ||
+        separator_pos + 1 == pass_args.size()) {
+      Errorf(consumer(), nullptr, {},
+             "Invalid argument for --struct-packing: %s", pass_args.c_str());
+      return false;
+    }
+
+    const std::string struct_name = pass_args.substr(0, separator_pos);
+    const std::string rule_name = pass_args.substr(separator_pos + 1);
+
+    RegisterPass(
+        CreateStructPackingPass(struct_name.c_str(), rule_name.c_str()));
   } else if (pass_name == "switch-descriptorset") {
     if (pass_args.size() == 0) {
       Error(consumer(), nullptr, {},
@@ -1020,12 +1033,6 @@ Optimizer::PassToken CreateUpgradeMemoryModelPass() {
       MakeUnique<opt::UpgradeMemoryModel>());
 }
 
-Optimizer::PassToken CreateInstDebugPrintfPass(uint32_t desc_set,
-                                               uint32_t shader_id) {
-  return MakeUnique<Optimizer::PassToken::Impl>(
-      MakeUnique<opt::InstDebugPrintfPass>(desc_set, shader_id));
-}
-
 Optimizer::PassToken CreateConvertRelaxedToHalfPass() {
   return MakeUnique<Optimizer::PassToken::Impl>(
       MakeUnique<opt::ConvertToHalfPass>());
@@ -1150,6 +1157,14 @@ Optimizer::PassToken CreateFixFuncCallArgumentsPass() {
 Optimizer::PassToken CreateTrimCapabilitiesPass() {
   return MakeUnique<Optimizer::PassToken::Impl>(
       MakeUnique<opt::TrimCapabilitiesPass>());
+}
+
+Optimizer::PassToken CreateStructPackingPass(const char* structToPack,
+                                             const char* packingRule) {
+  return MakeUnique<Optimizer::PassToken::Impl>(
+      MakeUnique<opt::StructPackingPass>(
+          structToPack,
+          opt::StructPackingPass::ParsePackingRuleFromString(packingRule)));
 }
 
 Optimizer::PassToken CreateSwitchDescriptorSetPass(uint32_t from, uint32_t to) {

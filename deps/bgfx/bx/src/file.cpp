@@ -75,7 +75,8 @@ namespace bx
 	  || BX_PLATFORM_EMSCRIPTEN \
 	  || BX_PLATFORM_IOS        \
 	  || BX_PLATFORM_OSX        \
-	  || BX_PLATFORM_VISIONOS
+	  || BX_PLATFORM_VISIONOS   \
+		|| BX_PLATFORM_NX
 #		define fseeko64 fseeko
 #		define ftello64 ftello
 #	elif BX_PLATFORM_PS4
@@ -864,14 +865,18 @@ namespace bx
 			return false;
 		}
 
-#if BX_CRT_MSVC
+#if BX_CRT_MSVC || BX_CRT_MINGW
 		int32_t result = -1;
 		FileInfo fi;
 		if (stat(fi, _filePath) )
 		{
 			if (FileType::Dir == fi.type)
 			{
+#	if BX_CRT_MINGW
+				result = ::rmdir(_filePath.getCPtr() );
+#	else
 				result = ::_rmdir(_filePath.getCPtr() );
+#	endif // BX_CRT_MINGW
 			}
 			else
 			{

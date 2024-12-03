@@ -39,7 +39,6 @@ end
 
 dofile "bx.lua"
 dofile "bin2c.lua"
-dofile "lemon.lua"
 
 project "bx.test"
 	kind "ConsoleApp"
@@ -86,6 +85,15 @@ project "bx.test"
 	configuration { "osx*" }
 		links {
 			"Cocoa.framework",
+		}
+
+	configuration { "wasm" }
+		buildoptions {
+			"-fwasm-exceptions",
+		}
+		linkoptions {
+			"-fwasm-exceptions",
+			"-s STACK_SIZE=262144",
 		}
 
 	configuration {}

@@ -747,18 +747,6 @@ Optimizer::PassToken CreateReduceLoadSizePass(
 // them into a single instruction where possible.
 Optimizer::PassToken CreateCombineAccessChainsPass();
 
-// Create a pass to instrument OpDebugPrintf instructions.
-// This pass replaces all OpDebugPrintf instructions with instructions to write
-// a record containing the string id and the all specified values into a special
-// printf output buffer (if space allows). This pass is designed to support
-// the printf validation in the Vulkan validation layers.
-//
-// The instrumentation will write buffers in debug descriptor set |desc_set|.
-// It will write |shader_id| in each output record to identify the shader
-// module which generated the record.
-Optimizer::PassToken CreateInstDebugPrintfPass(uint32_t desc_set,
-                                               uint32_t shader_id);
-
 // Create a pass to upgrade to the VulkanKHR memory model.
 // This pass upgrades the Logical GLSL450 memory model to Logical VulkanKHR.
 // Additionally, it modifies memory, image, atomic and barrier operations to
@@ -955,6 +943,15 @@ Optimizer::PassToken CreateFixFuncCallArgumentsPass();
 // This should be fine in most cases, but could yield to incorrect results if
 // the unknown capability interacts with one of the trimmed capabilities.
 Optimizer::PassToken CreateTrimCapabilitiesPass();
+
+// Creates a struct-packing pass.
+// This pass re-assigns all offset layout decorators to tightly pack
+// the struct with OpName matching `structToPack` according to the given packing
+// rule. Accepted packing rules are: std140, std140EnhancedLayout, std430,
+// std430EnhancedLayout, hlslCbuffer, hlslCbufferPackOffset, scalar,
+// scalarEnhancedLayout.
+Optimizer::PassToken CreateStructPackingPass(const char* structToPack,
+                                             const char* packingRule);
 
 // Creates a switch-descriptorset pass.
 // This pass changes any DescriptorSet decorations with the value |ds_from| to

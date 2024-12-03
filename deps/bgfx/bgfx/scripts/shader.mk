@@ -65,7 +65,6 @@ CS_FLAGS=--platform android -p 300_es
 SHADER_PATH=shaders/essl
 else
 ifeq ($(TARGET), 4)
-# CUBZH: issue w/ bgfxShadow2D and level -p 120
 VS_FLAGS=--platform linux -p 120
 FS_FLAGS=--platform linux -p 120
 CS_FLAGS=--platform linux -p 430

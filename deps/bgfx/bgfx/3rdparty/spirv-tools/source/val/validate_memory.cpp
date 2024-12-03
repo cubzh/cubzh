@@ -463,7 +463,9 @@ spv_result_t ValidateVariable(ValidationState_t& _, const Instruction* inst) {
     const auto initializer_id = inst->GetOperandAs<uint32_t>(initializer_index);
     const auto initializer = _.FindDef(initializer_id);
     const auto is_module_scope_var =
-        initializer && (initializer->opcode() == spv::Op::OpVariable) &&
+        initializer &&
+        (initializer->opcode() == spv::Op::OpVariable ||
+         initializer->opcode() == spv::Op::OpUntypedVariableKHR) &&
         (initializer->GetOperandAs<spv::StorageClass>(storage_class_index) !=
          spv::StorageClass::Function);
     const auto is_constant =
@@ -1160,6 +1162,23 @@ spv_result_t ValidateStore(ValidationState_t& _, const Instruction* inst) {
         object_type->opcode() != spv::Op::OpTypeMatrix) {
       return _.diag(SPV_ERROR_INVALID_ID, inst)
              << "8- or 16-bit stores must be a scalar, vector or matrix type";
+    }
+  }
+
+  if (spvIsVulkanEnv(_.context()->target_env) &&
+      !_.options()->before_hlsl_legalization) {
+    const auto isForbiddenType = [](const Instruction* type_inst) {
+      auto opcode = type_inst->opcode();
+      return opcode == spv::Op::OpTypeImage ||
+             opcode == spv::Op::OpTypeSampler ||
+             opcode == spv::Op::OpTypeSampledImage ||
+             opcode == spv::Op::OpTypeAccelerationStructureKHR;
+    };
+    if (_.ContainsType(object_type->id(), isForbiddenType)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << _.VkErrorID(6924)
+             << "Cannot store to OpTypeImage, OpTypeSampler, "
+                "OpTypeSampledImage, or OpTypeAccelerationStructureKHR objects";
     }
   }
 
