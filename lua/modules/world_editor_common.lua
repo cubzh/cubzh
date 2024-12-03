@@ -2,6 +2,15 @@ local common = {}
 
 common.MAP_SCALE_DEFAULT = 5
 
+local loaded = {
+	b64 = nil,
+	map = nil,
+	world = nil,
+	title = nil,
+	worldID = nil,
+	ambience = nil,
+}
+
 common.maps = {
 	"aduermael.hills",
 	"aduermael.base_250x40x250",
@@ -18,27 +27,6 @@ common.maps = {
 common.events = {
 	P_END_PREPARING = "pep",
 	END_PREPARING = "ep",
-	P_PLACE_OBJECT = "ppo",
-	PLACE_OBJECT = "po",
-	P_EDIT_OBJECT = "peo",
-	EDIT_OBJECT = "eo",
-	P_REMOVE_OBJECT = "pro",
-	REMOVE_OBJECT = "ro",
-	P_PLACE_BLOCK = "ppb",
-	PLACE_BLOCK = "pb",
-	P_REMOVE_BLOCK = "prb",
-	REMOVE_BLOCK = "rb",
-	P_START_EDIT_OBJECT = "pseo",
-	START_EDIT_OBJECT = "seo",
-	P_END_EDIT_OBJECT = "peeo",
-	END_EDIT_OBJECT = "eeo",
-	SYNC = "s",
-	MASTER = "m",
-	PLAYER_ACTIVITY = "pa",
-	P_SET_AMBIENCE = "psa",
-	SET_AMBIENCE = "sa",
-	P_LOAD_WORLD = "plw",
-	LOAD_WORLD = "lw",
 	P_SET_MAP_SCALE = "psms",
 	SET_MAP_SCALE = "sms",
 	P_RESET_ALL = "pra",
@@ -183,11 +171,13 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["sun.rotation"] = {
 		"sur",
 		function(d, v)
-			d:WriteFloat(v[1])
-			d:WriteFloat(v[2])
+			d:WriteFloat(v.X)
+			d:WriteFloat(v.Y)
 		end,
 		function(d)
-			return Number2(d:ReadFloat(), d:ReadFloat())
+			local x = d:ReadFloat()
+			local y = d:ReadFloat()
+			return Rotation(x, y, 0)
 		end,
 	},
 	["ambient.skyLightFactor"] = {
@@ -272,9 +262,10 @@ local writeChunkAmbience = function(d, ambience)
 		end
 	end
 	local nbFields = #fieldsList
+
 	d:WriteUInt8(nbFields)
 	for _, value in ipairs(fieldsList) do
-		d:WriteString(value[1])
+		d:WriteString(value[1]) -- no need to write size because all keys are 3 letters
 		local serializeFunction = value[3]
 		serializeFunction(d, value[2])
 	end
@@ -316,6 +307,7 @@ local readChunkAmbience = function(d)
 	return ambience
 end
 
+-- grouping objects by fullname
 local groupObjects = function(objects)
 	local t = {}
 	local nbGroups = 0
@@ -394,7 +386,7 @@ local writeChunkObjects = function(d, objects)
 				d:WriteString(object.Name)
 				nbFields = nbFields + 1
 			end
-			if object.Physics and object.Physics ~= PhysicsMode.StaticPerBlock then
+			if object.Physics ~= nil then
 				d:WriteString("pm")
 				d:WritePhysicsMode(object.Physics)
 				nbFields = nbFields + 1
@@ -502,46 +494,9 @@ local readChunkObjects = function(d)
 	return objects
 end
 
-local writeChunkBlocks = function(d, blocks)
-	if blocks == nil then
-		error("can't serialize blocks chunk", 2)
-		return false
-	end
-	d:WriteByte(SERIALIZED_CHUNKS_ID.BLOCKS)
-	local cursorLengthField = d.Cursor
-	d:WriteUInt16(0) -- temporary write size
-	-- chunk
-	-- CHUNK_ID 1
-	-- CHUNK_SIZE UInt16
-	-- NB_BLOCKS UInt16
-	d:WriteUInt16(0) -- temporary write size
-	local nbBlocks = 0
-	for _, v in ipairs(blocks) do
-		local key, color = v[1], v[2]
-		d:WriteUInt16(#key) -- key size
-		d:WriteString(key) -- key
-		if type(color) == "number" and color == -1 then
-			d:WriteUInt8(0) -- block removed
-			nbBlocks = nbBlocks + 1
-		elseif type(color) == "Color" then
-			d:WriteUInt8(1) -- block added
-			d:WriteColor(color)
-			nbBlocks = nbBlocks + 1
-		end
-	end
-
-	local size = d.Cursor - cursorLengthField
-	d.Cursor = cursorLengthField
-	d:WriteUInt16(size)
-	d:WriteUInt16(nbBlocks)
-	d.Cursor = d.Length
-
-	return true
-end
-
 local readChunkBlocks = function(d)
 	local blocks = {}
-	d:ReadUInt16() -- skip length
+	d:ReadUInt16()
 	local nbBlocks = d:ReadUInt16()
 	for _ = 1, nbBlocks do
 		local keyLength = d:ReadUInt16()
@@ -576,9 +531,6 @@ local serializeWorldBase64 = function(world)
 	end
 	if world.objects and #world.objects > 0 then
 		writeChunkObjects(d, world.objects)
-	end
-	if world.blocks and #world.blocks > 0 then
-		writeChunkBlocks(d, world.blocks)
 	end
 	return d:ToString({ format = "base64" })
 end
@@ -619,10 +571,6 @@ common.deserializeWorld = function(str)
 	return deserializeWorldBase64(str)
 end
 
-common.posToStr = function(pos)
-	return tostring(math.floor(pos.X + pos.Y * 1000 + pos.Z * 1000000))
-end
-
 common.uuidv4 = function()
 	local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
 	return string.gsub(template, "[xy]", function(c)
@@ -641,6 +589,7 @@ local loadObject = function(obj, objInfo, config)
 	local boxSize = k.Size * scale
 	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr
 		and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
+	turnOnShadows = true
 
 	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
 		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
@@ -657,7 +606,9 @@ end
 
 local loadMap = function(d, n, didLoad)
 	Object:Load(d, function(j)
-		map = MutableShape(j, { includeChildren = true })
+		local map = MutableShape(j, { includeChildren = true })
+		loaded.map = map
+
 		map.Scale = n or 5
 		require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
 			o.CollisionGroups = Map.CollisionGroups
@@ -673,36 +624,163 @@ local loadMap = function(d, n, didLoad)
 	end)
 end
 
+common.addObject = function(obj)
+	if loaded == nil then
+		return
+	end
+	if obj.uuid == nil then
+		return
+	end
+
+	table.insert(loaded.world.objects, obj)
+	loaded.objectsByUUID[obj.uuid] = obj
+end
+
+defaultUpdateConfig = {
+	uuid = nil,
+	position = nil,
+	rotation = nil,
+	scale = nil,
+	name = nil,
+	physics = nil,
+}
+
+common.updateObject = function(config)
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultUpdateConfig, config, {
+			acceptTypes = {
+				uuid = { "string" },
+				position = { "Number3" },
+				rotation = { "Rotation" },
+				scale = { "Number3", "number", "integer" },
+				name = { "string" },
+				physics = { "PhysicsMode" },
+			},
+		})
+	end)
+	if not ok then
+		error("world_loader:updateObject(config) - config error: " .. err, 2)
+	end
+	if config.uuid == nil then
+		-- uuid can't be nil
+		return
+	end
+	local objectsByUUID = loaded.objectsByUUID
+	if objectsByUUID == nil then
+		-- can't find objects
+		return
+	end
+	local object = objectsByUUID[config.uuid]
+	if object == nil then
+		-- can't find object for uuid
+		return
+	end
+	if config.position ~= nil then
+		object.Position = config.position:Copy()
+	end
+	if config.rotation ~= nil then
+		object.Rotation = config.rotation:Copy()
+	end
+	if config.scale ~= nil then
+		if type(config.scale) == "Number3" then
+			object.Scale = config.scale:Copy()
+		else
+			object.Scale = config.scale
+		end
+	end
+	if config.physics ~= nil then
+		object.Physics = config.physics
+	end
+	if config.name ~= nil then
+		object.Name = config.name
+	end
+end
+
+common.removeObject = function(uuid)
+	local objectsByUUID = loaded.objectsByUUID
+	local objects = loaded.world.objects
+	if objectsByUUID == nil then
+		-- can't find objects
+		return
+	end
+	local obj = objectsByUUID[uuid]
+	if obj == nil then
+		return
+	end
+	objectsByUUID[uuid] = nil
+	for i, o in ipairs(objects) do
+		if o.uuid == uuid then
+			table.remove(objects, i)
+			break
+		end
+	end
+end
+
+common.updateAmbience = function(ambience)
+	if loaded.world == nil then
+		return
+	end
+	loaded.world.ambience = ambience
+end
+
+common.getAmbience = function()
+	return loaded.world.ambience
+end
+
 local defaultLoadWorldConfig = {
 	skipMap = false,
 	onLoad = nil,
 	onDone = nil,
 	fullnameItemKey = "fullname",
 	optimisations = {
-		minimum_item_size_for_shadows = 40,
+		minimum_item_size_for_shadows = 1,
 	},
+	b64 = "",
+	title = nil,
+	worldID = nil,
 }
 
-common.loadWorld = function(mapBase64, config)
-	if #mapBase64 == 0 then
+common.loadWorld = function(config)
+	local ok, err = pcall(function()
+		config = require("config"):merge(defaultLoadWorldConfig, config, {
+			acceptTypes = {
+				b64 = { "string" },
+				title = { "string" },
+				worldID = { "string" },
+				onLoad = { "function" },
+				onDone = { "function" },
+			},
+		})
+	end)
+	if not ok then
+		error("world_editor_common:loadWorld(config) - config error: " .. err, 2)
+	end
+
+	if #config.b64 == 0 then
 		return
 	end
 
-	config = require("config"):merge(defaultLoadWorldConfig, config, {
-		acceptTypes = { onLoad = { "function" }, onDone = { "function" } },
-	})
+	local world = common.deserializeWorld(config.b64)
+	loaded = {
+		b64 = config.b64,
+		title = config.title,
+		worldID = config.worldID,
+		map = nil,
+		world = world,
+		objectsByUUID = {},
+	}
 
-	local world = common.deserializeWorld(mapBase64)
 	local loadObjectsBlocksAndAmbience = function()
 		if config.skipMap then
 			Map.Scale = world.mapScale or 5
-			map = Map
+			loaded.map = Map
 		else
 			if config.onLoad then
-				config.onLoad(map, "Map")
+				config.onLoad(loaded.map, "Map")
 			end
 		end
-		local blocks = world.blocks
+		local map = loaded.map
+		local blocks = world.blocks -- deprecated
 		local objects = world.objects
 		local ambience = world.ambience
 		if blocks then
@@ -723,6 +801,12 @@ common.loadWorld = function(mapBase64, config)
 			map:RefreshModel()
 		end
 		if objects then
+			for i, o in ipairs(objects) do
+				if o.uuid then
+					loaded.objectsByUUID[o.uuid] = o
+				end
+			end
+
 			local minimum_item_size_for_shadows = config.optimisations.minimum_item_size_for_shadows
 			if minimum_item_size_for_shadows ~= nil then
 				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows
@@ -730,7 +814,6 @@ common.loadWorld = function(mapBase64, config)
 			end
 			local massLoading = require("massloading")
 			local onLoad = function(obj, data)
-				data.currentlyEditedBy = nil
 				loadObject(obj, data, config)
 				config.onLoad(obj, data)
 			end
@@ -742,7 +825,7 @@ common.loadWorld = function(mapBase64, config)
 			massLoading:load(objects, massLoadingConfig)
 		end
 		if ambience then
-			require("ui_ai_ambience"):setFromAIConfig(ambience, true)
+			require("ai_ambience"):loadGeneration(ambience)
 		end
 		if not objects then
 			config.onDone()
@@ -752,6 +835,30 @@ common.loadWorld = function(mapBase64, config)
 		loadMap(world.mapName, world.mapScale, loadObjectsBlocksAndAmbience)
 	else
 		loadObjectsBlocksAndAmbience()
+	end
+end
+
+common.saveWorld = function()
+	if loaded.world == nil then
+		return
+	end
+	local b64 = serializeWorldBase64(loaded.world)
+	if b64 ~= loaded.b64 then
+		loaded.b64 = b64
+		print("SAVING...")
+		require("system_api", System):patchWorld(loaded.worldID, { mapBase64 = b64 }, function(err, world)
+			if world and world.mapBase64 == b64 then
+				print(loaded.title .. " SAVED")
+			else
+				if err then
+					print("Error while saving world: ", JSON:Encode(err))
+				else
+					print("Error while saving world")
+				end
+			end
+		end)
+	else
+		print("NO CHANGES")
 	end
 end
 

@@ -2492,6 +2492,10 @@ function createUI(system)
 			btn.pos.X = minPos + d * percentage - btn.Width * 0.5
 		end
 
+		node.setValue = function(_, v)
+			setValue(v)
+		end
+
 		local function setLocalX(x)
 			local minPos = btn.Width * 0.5
 			local maxPos = node.Width - btn.Width * 0.5
@@ -3321,6 +3325,7 @@ function createUI(system)
 			content = "BUTTON", -- can be string, Shape or uikit node
 			-- used if content is a string:
 			underline = false,
+			textFont = Font.Noto,
 			textSize = "default",
 			textColor = theme.buttonTextColor,
 			textColorPressed = nil,
@@ -3596,7 +3601,7 @@ function createUI(system)
 		end
 
 		if type(content) == "string" then
-			local n = ui:createText(content, { size = config.textSize })
+			local n = ui:createText(content, { size = config.textSize, font = config.textFont })
 			n:setParent(node)
 			node.content = n
 		elseif type(content) == "Shape" or type(content) == "MutableShape" then
