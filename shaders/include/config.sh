@@ -180,6 +180,9 @@
 // from the legacy shader & iOS app =)
 #define GRID_THICKNESS_FACTOR .001745331024
 
+//// TEXT
+#define TEXT_SOFTNESS 0.12
+
 //// GENERAL
 // UV go from 0 to 1, edge to edge of the texture ; when computing texel index, we need to apply an offset
 #define TEXEL_OFFSET 0.5
