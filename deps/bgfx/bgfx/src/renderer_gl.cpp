@@ -1483,7 +1483,7 @@ namespace bgfx { namespace gl
 				);
 		}
         /// CUBZH: workaround for Safari (+ Discord iOS which uses Safari)
-#if defined(__VX_REWRITE_URLS_FOR_DISCORD)
+#if defined(__VX_PLATFORM_WASM)
         else if (_target == GL_TEXTURE_2D)
         {
             if (_data != nullptr)
@@ -1669,7 +1669,7 @@ namespace bgfx { namespace gl
 		else
 		{
             /// CUBZH: workaround for Safari (+ Discord iOS which uses Safari)
-#if defined(__VX_REWRITE_URLS_FOR_DISCORD)
+#if defined(__VX_PLATFORM_WASM)
             if (target == GL_TEXTURE_2D)
             {
                 glTexStorage2D(target, _mipmaps ? 5u : 1u, internalFmt, _dim, _dim);
@@ -5814,7 +5814,7 @@ namespace bgfx { namespace gl
 			const uint16_t numSides = ti.numLayers * (imageContainer.m_cubeMap ? 6 : 1);
 
             /// CUBZH: workaround for Safari (+ Discord iOS which uses Safari)
-#if defined(__VX_REWRITE_URLS_FOR_DISCORD)
+#if defined(__VX_PLATFORM_WASM)
             if (target == GL_TEXTURE_2D)
             {
                 glTexStorage2D(target, ti.numMips, internalFmt, ti.width, ti.height);
