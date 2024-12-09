@@ -12,7 +12,7 @@ RUN find /audio_input -name '*.ogg' -exec sh -c 'ffmpeg -i "$1" "/audio_output/$
 
 #################################
 
-FROM --platform=linux/amd64 golang:1.23.2-alpine3.20 AS build-env
+FROM --platform=linux/amd64 golang:1.23.3-alpine3.20 AS build-env
 
 RUN apk update && apk add --no-cache \
 	git \
