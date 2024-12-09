@@ -14,6 +14,8 @@ creations.createModalContent = function(_, config)
 	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 		onOpen = nil,
+		categories = { "items", "wearables", "worlds" },
+		title = "Creations",
 	}
 
 	local ok, err = pcall(function()
@@ -416,7 +418,7 @@ creations.createModalContent = function(_, config)
 
 	local createCreationsContent = function()
 		local creationsContent = modal:createContent()
-		creationsContent.title = "Creations"
+		creationsContent.title = config.title
 		creationsContent.icon = "🏗️"
 
 		local node = ui:frame()
@@ -485,38 +487,62 @@ creations.createModalContent = function(_, config)
 
 		btnNew.onRelease = newItem
 
-		creationsContent.tabs = {
-			{
-				label = "⚔️ Items",
-				short = "⚔️",
-				action = function()
-					grid:setCategories({ "null" }, "items")
-					btnNew.Text = "✨ Create item ⚔️"
-					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-					btnNew.onRelease = newItem
-				end,
-			},
-			{
-				label = "👕 Wearables",
-				short = "👕",
-				action = function()
-					grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
-					btnNew.Text = "✨ Create wearable 👕"
-					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-					btnNew.onRelease = newWearable
-				end,
-			},
-			{
-				label = "🌎 Worlds",
-				short = "🌎",
-				action = function()
-					grid:setCategories({ "null" }, "worlds")
-					btnNew.Text = "✨ Create world 🌎"
-					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-					btnNew.onRelease = newWorld
-				end,
-			},
-		}
+		if #config.categories > 1 then
+			creationsContent.tabs = {}
+			for _, category in ipairs(config.categories) do
+				if category == "items" then
+					table.insert(creationsContent.tabs, {
+						label = "⚔️ Items",
+						short = "⚔️",
+						action = function()
+							grid:setCategories({ "null" }, "items")
+							btnNew.Text = "✨ Create item ⚔️"
+							btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+							btnNew.onRelease = newItem
+						end,
+					})
+				elseif category == "wearables" then
+					table.insert(creationsContent.tabs, {
+						label = "👕 Wearables",
+						short = "👕",
+						action = function()
+							grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
+							btnNew.Text = "✨ Create wearable 👕"
+							btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+							btnNew.onRelease = newWearable
+						end,
+					})
+				elseif category == "worlds" then
+					table.insert(creationsContent.tabs, {
+						label = "🌎 Worlds",
+						short = "🌎",
+						action = function()
+							grid:setCategories({ "null" }, "worlds")
+							btnNew.Text = "✨ Create world 🌎"
+							btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+							btnNew.onRelease = newWorld
+						end,
+					})
+				end
+			end
+		elseif #config.categories == 1 then
+			if config.categories[1] == "items" then
+				grid:setCategories({ "null" }, "items")
+				btnNew.Text = "✨ Create item ⚔️"
+				btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+				btnNew.onRelease = newItem
+			elseif config.categories[1] == "wearables" then
+				grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
+				btnNew.Text = "✨ Create wearable 👕"
+				btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+				btnNew.onRelease = newWearable
+			elseif config.categories[1] == "worlds" then
+				grid:setCategories({ "null" }, "worlds")
+				btnNew.Text = "✨ Create world 🌎"
+				btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+				btnNew.onRelease = newWorld
+			end
+		end
 
 		creationsContent.node = node
 
@@ -655,7 +681,12 @@ creations.createModal = function(_, config)
 
 	local content = modal:createContent()
 
-	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen })
+	local creationsContent = creations:createModalContent({
+		uikit = ui,
+		onOpen = config.onOpen,
+		categories = config.categories,
+		title = config.title,
+	})
 
 	creationsContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
