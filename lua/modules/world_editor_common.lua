@@ -845,10 +845,10 @@ common.saveWorld = function()
 	local b64 = serializeWorldBase64(loaded.world)
 	if b64 ~= loaded.b64 then
 		loaded.b64 = b64
-		print("SAVING...")
+		-- print("SAVING...")
 		require("system_api", System):patchWorld(loaded.worldID, { mapBase64 = b64 }, function(err, world)
 			if world and world.mapBase64 == b64 then
-				print(loaded.title .. " SAVED")
+				-- print(loaded.title .. " SAVED")
 			else
 				if err then
 					print("Error while saving world: ", JSON:Encode(err))
@@ -858,7 +858,7 @@ common.saveWorld = function()
 			end
 		end)
 	else
-		print("NO CHANGES")
+		-- print("NO CHANGES")
 	end
 end
 

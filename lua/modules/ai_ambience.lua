@@ -52,6 +52,7 @@ mod.loadGeneration = function(self, gen)
 	current.sun.rotation.Y = gen.sun.rotation.Y ~= nil and gen.sun.rotation.Y or gen.sun.rotation[2]
 
 	ambience:set(current)
+	return current
 end
 
 mod.generate = function(self, config)
@@ -69,6 +70,7 @@ More examples:\n\n\
 One meter is 6 units, to be considered when setting fog near and far values.\n\
 Sun rotation represents rotations around Y and X axis, in that order, in radians. (Y = 0 means sun is south, Y = pi / 2 means sun is west)',
 		prompt = "",
+		loadWhenDone = true,
 		onDone = function(_) end, -- callback(generation)
 		onError = function(_) end, -- callback(err)
 	}
@@ -101,12 +103,14 @@ Sun rotation represents rotations around Y and X axis, in that order, in radians
 		gen.prompt = config.prompt
 		gen.version = 1
 
-		ok = pcall(function()
-			mod:loadGeneration(gen)
-		end)
-		if not ok then
-			config.onError("internal error: couldn't load generation")
-			return
+		if config.loadWhenDone == true then
+			ok = pcall(function()
+				mod:loadGeneration(gen)
+			end)
+			if not ok then
+				config.onError("internal error: couldn't load generation")
+				return
+			end
 		end
 
 		config.onDone(gen, current)
