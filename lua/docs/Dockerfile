@@ -1,4 +1,4 @@
-FROM alpine:3.20 AS audio-converter
+FROM alpine:3.21 AS audio-converter
 
 RUN apk update && apk add --no-cache \
 	ffmpeg \
@@ -12,7 +12,7 @@ RUN find /audio_input -name '*.ogg' -exec sh -c 'ffmpeg -i "$1" "/audio_output/$
 
 #################################
 
-FROM --platform=linux/amd64 golang:1.23.2-alpine3.20 AS build-env
+FROM --platform=linux/amd64 golang:1.23.4-alpine3.21 AS build-env
 
 RUN apk update && apk add --no-cache \
 	git \
@@ -41,7 +41,7 @@ RUN go build
 # This is like a production server but hot-refreshing
 # of content is available for documentation-writing purposes.
 
-FROM --platform=linux/amd64 alpine:3.20 AS website-dev
+FROM --platform=linux/amd64 alpine:3.21 AS website-dev
 
 # then the executable
 COPY --from=builder /webserver/webserver /webserver
