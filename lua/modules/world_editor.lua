@@ -1549,6 +1549,7 @@ function uiShowDefaultMenu()
 
 			require("ai_ambience"):generate({
 				prompt = aiInput.Text,
+				loadWhenDone = false,
 				onDone = function(generation, loadedAmbiance)
 					-- sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
 					-- worldEditorCommon.updateAmbience(loadedAmbiance)
@@ -1558,6 +1559,11 @@ function uiShowDefaultMenu()
 					-- aiBtn:show()
 					-- loading:hide()
 					-- saveWorld()
+
+					print("prompt:", prompt)
+
+					prompt = "SYSTEM: Generate a skybox in pixel art style. Do NOT include ground details, just empty sky volume, include skyline details only if specified.\n\nPROMPT: "
+						.. prompt
 
 					local body = {}
 					body.prompt = prompt
@@ -1569,6 +1575,8 @@ function uiShowDefaultMenu()
 					HTTP:Post("http://localhost", headers, body, function(res)
 						print("skybox generation:", res.StatusCode)
 						if res.StatusCode == 200 then
+							loadedAmbiance = require("ai_ambience"):loadGeneration(generation)
+
 							local body = JSON:Decode(res.Body:ToString())
 							print("body.url:", body.url)
 							local textureURL = "http://localhost" .. body.url
