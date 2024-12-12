@@ -131,10 +131,8 @@ local menu = require("menu")
 -- including script load error ones.
 require("chat")
 
--- local _isMobile = Client.IsMobile
--- local _isPC = Client.IsPC
-local _isMobile = Client.IsMobile or Client.HasTouchScreen
-local _isPC = Client.IsPC and not Client.HasTouchScreen
+local _isMobile = Client.IsMobile
+local _isPC = Client.IsPC
 
 local _pointerIndexWithin = function(index, ...)
 	local indexes = { ... }

@@ -54,7 +54,7 @@ EM_JS(bool, navigator_has_touch, (), {
                 return !!mQ.matches;
             } else if ('orientation' in screen || 'orientation' in window) {
                 return true; // deprecated, but good fallback
-            } 
+            }
         } else {
             // Only as a last resort, fall back to user agent sniffing
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent);
@@ -97,6 +97,10 @@ EM_JS(char*, paste, (), {
             return "";
         }
     });
+});
+
+EM_JS(bool, JS_isMobile, (), {
+	return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 });
 
 }
@@ -150,13 +154,14 @@ bool vx::device::hasMouseAndKeyboard() {
     return navigator_has_mouse_and_keyboard();
 }
 
+// Web browsers can be on mobile or desktop
+
 bool vx::device::isMobile() {
-    return false;
+    return JS_isMobile();
 }
 
-// web browsers only supported on PC
 bool vx::device::isPC() {
-    return true;
+    return JS_isMobile() == false;
 }
 
 bool vx::device::isConsole() {
