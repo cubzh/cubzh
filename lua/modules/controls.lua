@@ -131,8 +131,10 @@ local menu = require("menu")
 -- including script load error ones.
 require("chat")
 
-local _isMobile = Client.IsMobile
-local _isPC = Client.IsPC
+-- local _isMobile = Client.IsMobile
+-- local _isPC = Client.IsPC
+local _isMobile = Client.IsMobile or Client.HasTouchScreen
+local _isPC = Client.IsPC and not Client.HasTouchScreen
 
 local _pointerIndexWithin = function(index, ...)
 	local indexes = { ... }
@@ -592,7 +594,7 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 					_state.dirpad.pivot.LocalRotation = o.dirPadRot
 				end,
 			}).dirPadRot =
-				{ 0, 0, 0 }
+			{ 0, 0, 0 }
 
 			_state.dirpad.arrowLeft.Palette[1].Color = config.iconOffColor
 			_state.dirpad.arrowRight.Palette[1].Color = config.iconOffColor
