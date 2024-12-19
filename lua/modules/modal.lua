@@ -633,7 +633,11 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 
 			if modalContent.title ~= nil and type(modalContent.title) == "string" then
-				local title = ui:createText(modalContent.title, theme.textColor)
+				local title = ui:createText(modalContent.title, {
+					color = theme.textColor,
+					outline = 0.4,
+					-- bold = true,
+				})
 				title:setParent(self.topBar)
 				table.insert(self._topCenter, title)
 				self._title = title

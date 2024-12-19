@@ -70,7 +70,10 @@ alert.create = function(self, text, config)
 		return Number2(node.Width, node.Height)
 	end
 
-	local label = ui:createText(text, Color.White)
+	local label = ui:createText(text, {
+		color = Color.White,
+		alignment = "center",
+	})
 	label:setParent(node)
 
 	-- buttons are displayed in that order:

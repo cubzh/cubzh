@@ -1626,6 +1626,12 @@ function createUI(system)
 			backgroundColor = Color(0, 0, 0, 0),
 			size = "default",
 			font = Font.Noto,
+			alignment = "left", -- "left" / "center" / "right"
+			outline = 0.0,
+			outlineColor = Color.Black,
+			italic = false,
+			bold = false,
+			weight = nil, -- "regular", "bold", "light" (takes priority over bold value)
 		}
 
 		local config = nil
@@ -1702,6 +1708,21 @@ function createUI(system)
 		t.Color = config.color
 		t.BackgroundColor = config.backgroundColor
 		t.MaxDistance = camera.Far + 100
+
+		if config.outline > 0 then
+			t.DrawMode = {
+				outline = {
+					weight = config.outline,
+					color = config.outlineColor,
+				},
+			}
+		end
+
+		t.Format = {
+			weight = config.bold and "bold" or "regular",
+			slant = config.italic and "italic" or "regular",
+			alignment = config.alignment,
+		}
 
 		if type(config.size) == "number" or type(config.size) == "integer" then
 			t.FontSize = config.size
