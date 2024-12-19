@@ -1450,7 +1450,11 @@ function home()
 				titleFrame:setParent(cell)
 				titleFrame.pos = { padding + theme.paddingTiny, padding + theme.paddingTiny }
 
-				local title = ui:createText("…", Color.White, "small")
+				local title = ui:createText("…", {
+					color = Color.White,
+					size = "small",
+					bold = true,
+				})
 				title:setParent(titleFrame)
 				title.pos = { theme.paddingTiny, theme.paddingTiny }
 
@@ -1843,7 +1847,10 @@ function home()
 							usernameFrame:setParent(avatar)
 							usernameFrame.LocalPosition.Z = ui.kForegroundDepth
 
-							local username = ui:createText("", Color.White, "small")
+							local username = ui:createText("", {
+								color = Color.White,
+								size = "small",
+							})
 							username:setParent(usernameFrame)
 							username.pos = { theme.paddingTiny, theme.paddingTiny }
 
@@ -1855,7 +1862,12 @@ function home()
 							lastSeenFrame:setParent(avatar)
 							lastSeenFrame.LocalPosition.Z = ui.kForegroundDepth
 
-							local lastSeen = ui:createText("", Color.White, "small")
+							local lastSeen = ui:createText("", {
+								color = Color.White,
+								size = "small",
+								italic = true,
+							})
+
 							lastSeen.object.Scale = CONFIG.TINY_FONT_SCALE
 							lastSeen:setParent(lastSeenFrame)
 							lastSeen.pos = { theme.paddingTiny, theme.paddingTiny }
@@ -2061,7 +2073,11 @@ function home()
 			cell = ui:frameGenericContainer()
 			cell.parentDidResize = cellResizeFn
 
-			local title = ui:createText("Title", Color.White)
+			local title = ui:createText("Title", {
+				color = Color.White,
+				size = "default",
+				outline = 0.2,
+			})
 			title:setParent(cell)
 
 			cell.Height = title.Height + (category.cellSize or 100) + padding * 3 + CONFIG.CELL_PADDING * 2
@@ -2159,10 +2175,15 @@ function home()
 							avatar():drag(pe)
 						end
 
-						local usernameFrame = ui:frameTextBackground()
+						local usernameFrame = ui:frame()
+						-- local usernameFrame = ui:frameTextBackground()
 						usernameFrame:setParent(profileCell)
 
-						local username = ui:createText(Player.Username, Color.White)
+						local username = ui:createText(Player.Username, {
+							color = Color.White,
+							size = "default",
+							outline = 0.2,
+						})
 						username:setParent(usernameFrame)
 						username.pos = { theme.paddingTiny, theme.paddingTiny }
 

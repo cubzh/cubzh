@@ -50,7 +50,9 @@ settings.createModalContent = function(_, config)
 
 	-- VOLUME
 
-	local volumeLabel = ui:createText("", Color.White)
+	local volumeLabel = ui:createText("", {
+		color = Color.White,
+	})
 	local function refreshVolumeLabel()
 		volumeLabel.Text = string.format("Volume: %.2f ", System.MasterVolume)
 	end
@@ -74,7 +76,9 @@ settings.createModalContent = function(_, config)
 
 	-- SENSITIVITY
 
-	local sensitivityLabel = ui:createText("", Color.White)
+	local sensitivityLabel = ui:createText("", {
+		color = Color.White,
+	})
 	local function refreshSensitivityLabel()
 		sensitivityLabel.Text = string.format("Sensitivity: %.1f ", System.Sensitivity)
 	end
@@ -98,7 +102,9 @@ settings.createModalContent = function(_, config)
 
 	-- ZOOM SENSITIVITY
 
-	local zoomSensitivityLabel = ui:createText("", Color.White)
+	local zoomSensitivityLabel = ui:createText("", {
+		color = Color.White,
+	})
 	local function refreshZoomSensitivityLabel()
 		zoomSensitivityLabel.Text = string.format("Zoom sensitivity: %.1f ", System.ZoomSensitivity)
 	end
@@ -122,7 +128,9 @@ settings.createModalContent = function(_, config)
 
 	-- RENDER QUALITY
 
-	local renderQualityLabel = ui:createText("", Color.White)
+	local renderQualityLabel = ui:createText("", {
+		color = Color.White,
+	})
 	local rqMinus = ui:buttonSecondary({ content = "➖" })
 	local rqPlus = ui:buttonSecondary({ content = "➕" })
 
