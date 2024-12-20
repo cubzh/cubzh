@@ -32,7 +32,6 @@ extern "C" {
 
 // FRAMES
 
-#define MAX_TICK_DELTA_MS 50.0
 #define TICK_DELTA_MS_T double
 #define TICK_DELTA_SEC_T double
 

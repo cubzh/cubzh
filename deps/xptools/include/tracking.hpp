@@ -47,8 +47,13 @@ public:
     void trackEvent(const std::string& eventType,
                     std::unordered_map<std::string, std::string> properties);
 
+    void trackProperties(std::unordered_map<std::string, std::string> properties);
+
     /// flush debugID value from credentials.json
     void removeDebugID();
+
+    void tickPerformanceCounters(const double dt);
+    void resetPerformanceCounters();
 
 private:
 
@@ -66,18 +71,6 @@ private:
     /// Creates (if necessary) and returns a debug ID.
     /// It is used as "device ID" for tracking.
     bool _getDebugID(std::string &debugID) const;
-
-    /// returns the name of the platform
-    std::string _getPlatformName() const;
-
-    /// returns the name of the OS
-    std::string _getOSName() const;
-
-    /// returns the version of the OS
-    std::string _getOSVersion() const;
-
-    /// returns the version of the App
-    std::string _getAppVersion() const;
 
     // always sent within _operationQueue
     void _trackEvent(const std::string& eventType,
@@ -101,6 +94,9 @@ private:
     uint16_t _port;
     bool _secure;
     bool _keep_alive_activated;
+
+    /// total frame count, frame count below slow thresholds
+    uint64_t _frameCount, _frameCount_slowMinimum, _frameCount_slowGameplay;
 #endif
 };
 
