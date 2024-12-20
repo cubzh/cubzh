@@ -9,14 +9,19 @@ $input v_color0, v_texcoord0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/font_lib.sh"
-#if FONT_VARIANT_LIGHTING_UNIFORM
 #include "./include/utils_lib.sh"
+#if FONT_VARIANT_LIGHTING_UNIFORM
 #include "./include/game_uniforms.sh"
 #include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
 #endif
 
+uniform vec4 u_params;
+	#define weight u_params.x
+	#define softness u_params.y
+	#define outlineColor u_params.z
+	#define outlineWeight u_params.w
 #if FONT_VARIANT_LIGHTING_UNIFORM
 uniform vec4 u_lighting;
 	#define lightValue u_lighting.x
@@ -42,7 +47,13 @@ void main() {
 
 	if (base.a <= EPSILON) discard;
 
-	vec4 color = vec4(mix(v_color0.rgb, base.rgb, colored), v_color0.a * base.a);
+	float totalWeight = 1.0 - clamp(weight + outlineWeight, 0, 1.0 - 2.5 * softness);
+	float alpha = smoothstep(totalWeight - softness, totalWeight + softness, base.r);
+	float outline = smoothstep(1.0 - weight - 2.0 * softness, 1.0 - weight, base.r);
+	vec3 rgb = mix(unpackFloatToRgb(outlineColor), v_color0.rgb, outline);
+	base = mix(vec4(rgb, alpha), base, colored);
+
+	vec4 color = vec4(base.rgb, v_color0.a * base.a);
 
 #if FONT_VARIANT_LIGHTING_UNIFORM && FONT_VARIANT_MRT_LIGHTING == 0 && FONT_VARIANT_UNLIT == 0
 	color = getNonVolumeVertexLitColor(color, lightValue, emissive, ambient, v_clipZ);
