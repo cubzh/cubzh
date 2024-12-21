@@ -129,6 +129,9 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     vx::json::writeStringField(obj, "os-name", vx::device::osName());
     vx::json::writeStringField(obj, "os-version", vx::device::osVersion());
     vx::json::writeStringField(obj, "app-version", vx::device::appVersionCached());
+    if (vx::device::appBuildTargetCached().empty() == false) {
+        vx::json::writeStringField(obj, "app-build-target", vx::device::appBuildTargetCached());
+    }
 
     vx::json::writeStringField(obj, "hw-brand", vx::device::hardwareBrand());
     vx::json::writeStringField(obj, "hw-model", vx::device::hardwareModel());

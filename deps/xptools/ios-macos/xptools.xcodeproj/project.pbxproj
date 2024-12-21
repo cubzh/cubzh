@@ -138,6 +138,68 @@
 		8506234E2877881000B270A6 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8506234D2877881000B270A6 /* AVFoundation.framework */; };
 		850623502877881F00B270A6 /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8506234F2877881F00B270A6 /* AVFAudio.framework */; };
 		8506235A2877898C00B270A6 /* miniaudio_impl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 850623592877898C00B270A6 /* miniaudio_impl.mm */; };
+		850BDE702D19EC0F00A85B76 /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
+		850BDE712D19EC0F00A85B76 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
+		850BDE722D19EC0F00A85B76 /* tracking.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93A325A384070030C45D /* tracking.hpp */; };
+		850BDE732D19EC0F00A85B76 /* LocalConnection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B2E27E3E006000575D5 /* LocalConnection.hpp */; };
+		850BDE742D19EC0F00A85B76 /* HttpCookie.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 851F2A3E2B63C44500E2863F /* HttpCookie.hpp */; };
+		850BDE752D19EC0F00A85B76 /* crypto.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 853C93F825A3C2330030C45D /* crypto.hpp */; };
+		850BDE762D19EC0F00A85B76 /* xptools.h in Headers */ = {isa = PBXBuildFile; fileRef = 8534FDD1240E9762004B3494 /* xptools.h */; };
+		850BDE772D19EC0F00A85B76 /* WSTypes.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B6C27E4C99E000575D5 /* WSTypes.hpp */; };
+		850BDE782D19EC0F00A85B76 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
+		850BDE792D19EC0F00A85B76 /* WSConnection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B2F27E3E006000575D5 /* WSConnection.hpp */; };
+		850BDE7A2D19EC0F00A85B76 /* vxlog.h in Headers */ = {isa = PBXBuildFile; fileRef = 8559F24D244CFF9A00574528 /* vxlog.h */; };
+		850BDE7B2D19EC0F00A85B76 /* WSService.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B9127E85AF6000575D5 /* WSService.hpp */; };
+		850BDE7C2D19EC0F00A85B76 /* WSBackend.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85FCECA128072D3200CD6115 /* WSBackend.hpp */; };
+		850BDE7D2D19EC0F00A85B76 /* device.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10974C88244D66B6008153FE /* device.hpp */; };
+		850BDE7E2D19EC0F00A85B76 /* Connection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B2D27E3E006000575D5 /* Connection.hpp */; };
+		850BDE7F2D19EC0F00A85B76 /* OperationQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 858ABB8C2A52F5EE007AE641 /* OperationQueue.hpp */; };
+		850BDE802D19EC0F00A85B76 /* Channel.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B3927E3E10C000575D5 /* Channel.hpp */; };
+		850BDE812D19EC0F00A85B76 /* vxtime.h in Headers */ = {isa = PBXBuildFile; fileRef = 1033951C25626D130083F4C0 /* vxtime.h */; };
+		850BDE822D19EC0F00A85B76 /* preferences.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85AF77412AA1C40F007480C2 /* preferences.hpp */; };
+		850BDE832D19EC0F00A85B76 /* filesystem.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 8534FDD3240E978B004B3494 /* filesystem.hpp */; };
+		850BDE842D19EC0F00A85B76 /* process.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 855CB5DA28731FFE00072D5F /* process.hpp */; };
+		850BDE852D19EC0F00A85B76 /* WSServerConnection.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 85471B3027E3E006000575D5 /* WSServerConnection.hpp */; };
+		850BDE862D19EC0F00A85B76 /* Macros.h in Headers */ = {isa = PBXBuildFile; fileRef = 858ABB892A52F5E6007AE641 /* Macros.h */; };
+		850BDE872D19EC0F00A85B76 /* json.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 8518D0A127BA6DF100A438D6 /* json.hpp */; };
+		850BDE882D19EC0F00A85B76 /* filesystem.h in Headers */ = {isa = PBXBuildFile; fileRef = 85E9224C24111875008B5D81 /* filesystem.h */; };
+		850BDE8A2D19EC0F00A85B76 /* HttpRequestOpts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85FED02B2B0B5C6A00C68F6D /* HttpRequestOpts.cpp */; };
+		850BDE8B2D19EC0F00A85B76 /* ThreadManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09727BA6D9000A438D6 /* ThreadManager.cpp */; };
+		850BDE8C2D19EC0F00A85B76 /* HttpResponse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB0194279F3BAD000F1B10 /* HttpResponse.cpp */; };
+		850BDE8D2D19EC0F00A85B76 /* notifications.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101758B82C99C24E008318A8 /* notifications.cpp */; };
+		850BDE8E2D19EC0F00A85B76 /* miniaudio_impl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 850623592877898C00B270A6 /* miniaudio_impl.mm */; };
+		850BDE8F2D19EC0F00A85B76 /* vxtime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1033952225626D220083F4C0 /* vxtime.cpp */; };
+		850BDE902D19EC0F00A85B76 /* json.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09C27BA6DD900A438D6 /* json.cpp */; };
+		850BDE912D19EC0F00A85B76 /* filesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10E793642450137900B7E2E2 /* filesystem.cpp */; };
+		850BDE922D19EC0F00A85B76 /* notifications.mm in Sources */ = {isa = PBXBuildFile; fileRef = 85BD47D62A5DABAE00556C6E /* notifications.mm */; };
+		850BDE932D19EC0F00A85B76 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8506231628770DB700B270A6 /* audio.cpp */; };
+		850BDE942D19EC0F00A85B76 /* HttpCookie.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 851F2A412B63C45E00E2863F /* HttpCookie.cpp */; };
+		850BDE952D19EC0F00A85B76 /* HttpClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB0187279EFA0E000F1B10 /* HttpClient.cpp */; };
+		850BDE962D19EC0F00A85B76 /* WSServerConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B6827E47DAB000575D5 /* WSServerConnection.cpp */; };
+		850BDE972D19EC0F00A85B76 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
+		850BDE982D19EC0F00A85B76 /* tracking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 853C93AC25A384290030C45D /* tracking.cpp */; };
+		850BDE992D19EC0F00A85B76 /* device_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8534FDD7240E9EAE004B3494 /* device_c.cpp */; };
+		850BDE9A2D19EC0F00A85B76 /* crypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 853C93FE25A3C2470030C45D /* crypto.cpp */; };
+		850BDE9B2D19EC0F00A85B76 /* vxlog.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8559F24F244D00C400574528 /* vxlog.mm */; };
+		850BDE9C2D19EC0F00A85B76 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
+		850BDE9D2D19EC0F00A85B76 /* device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85E6380B28F703C3001FC12F /* device.cpp */; };
+		850BDE9E2D19EC0F00A85B76 /* LocalConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3C27E3E4A9000575D5 /* LocalConnection.cpp */; };
+		850BDE9F2D19EC0F00A85B76 /* device-macos.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8534FDD5240E97D5004B3494 /* device-macos.mm */; };
+		850BDEA02D19EC0F00A85B76 /* HttpRequest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85BB018F279F3B56000F1B10 /* HttpRequest.cpp */; };
+		850BDEA12D19EC0F00A85B76 /* OperationQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 858ABB862A52F5CD007AE641 /* OperationQueue.cpp */; };
+		850BDEA22D19EC0F00A85B76 /* URL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85D52F6A29D9EE2900070F19 /* URL.cpp */; };
+		850BDEA32D19EC0F00A85B76 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
+		850BDEA42D19EC0F00A85B76 /* Connection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3D27E3E4AA000575D5 /* Connection.cpp */; };
+		850BDEA52D19EC0F00A85B76 /* web-macos.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10EE2BC4272C091100EC374C /* web-macos.mm */; };
+		850BDEA62D19EC0F00A85B76 /* process.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1022D09628AFBB5C00C1F1E9 /* process.cpp */; };
+		850BDEA72D19EC0F00A85B76 /* filesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10974C89244D690C008153FE /* filesystem.mm */; };
+		850BDEA82D19EC0F00A85B76 /* process-macos.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855CB5E12873204100072D5F /* process-macos.cpp */; };
+		850BDEA92D19EC0F00A85B76 /* textinput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10FF177F2BC3F02000A8E2E7 /* textinput.cpp */; };
+		850BDEAA2D19EC0F00A85B76 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
+		850BDEAB2D19EC0F00A85B76 /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
+		850BDEAC2D19EC0F00A85B76 /* WSServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3E27E3E4AA000575D5 /* WSServer.cpp */; };
+		850BDEAD2D19EC0F00A85B76 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
+		850BDEAF2D19EC0F00A85B76 /* libpng-macos.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8553F41D2C074705000D53B4 /* libpng-macos.a */; };
 		850D25BA2AE11C7500B00B13 /* notifications.mm in Sources */ = {isa = PBXBuildFile; fileRef = 85BD47D62A5DABAE00556C6E /* notifications.mm */; };
 		8518D09827BA6D9000A438D6 /* ThreadManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09727BA6D9000A438D6 /* ThreadManager.cpp */; };
 		8518D09927BA6D9000A438D6 /* ThreadManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8518D09727BA6D9000A438D6 /* ThreadManager.cpp */; };
@@ -250,6 +312,13 @@
 			remoteGlobalIDString = A55DFB7715EBB44B007CCF00;
 			remoteInfo = "mac-static-libpng";
 		};
+		850BDE6E2D19EC0F00A85B76 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 853C9829286CEDD70072F14A /* libpng.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = A55DFB7715EBB44B007CCF00;
+			remoteInfo = "mac-static-libpng";
+		};
 		8553F41A2C074705000D53B4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853C9829286CEDD70072F14A /* libpng.xcodeproj */;
@@ -339,13 +408,14 @@
 		8506234D2877881000B270A6 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		8506234F2877881F00B270A6 /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
 		850623592877898C00B270A6 /* miniaudio_impl.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = miniaudio_impl.mm; sourceTree = "<group>"; };
+		850BDEB32D19EC0F00A85B76 /* libxptools-macos-epicgames.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-macos-epicgames.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8518D09627BA6D7C00A438D6 /* ThreadManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ThreadManager.hpp; sourceTree = "<group>"; };
 		8518D09727BA6D9000A438D6 /* ThreadManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ThreadManager.cpp; sourceTree = "<group>"; };
 		8518D09C27BA6DD900A438D6 /* json.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = json.cpp; sourceTree = "<group>"; };
 		8518D0A127BA6DF100A438D6 /* json.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = json.hpp; sourceTree = "<group>"; };
 		851F2A3E2B63C44500E2863F /* HttpCookie.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HttpCookie.hpp; sourceTree = "<group>"; };
 		851F2A412B63C45E00E2863F /* HttpCookie.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = HttpCookie.cpp; sourceTree = "<group>"; };
-		8534FDC7240E92C1004B3494 /* libxptools-macos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-macos.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8534FDC7240E92C1004B3494 /* libxptools-macos-steam.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-macos-steam.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8534FDD1240E9762004B3494 /* xptools.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xptools.h; sourceTree = "<group>"; };
 		8534FDD3240E978B004B3494 /* filesystem.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = filesystem.hpp; sourceTree = "<group>"; };
 		8534FDD5240E97D5004B3494 /* device-macos.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = "device-macos.mm"; sourceTree = "<group>"; };
@@ -382,7 +452,7 @@
 		858ABB862A52F5CD007AE641 /* OperationQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OperationQueue.cpp; sourceTree = "<group>"; };
 		858ABB892A52F5E6007AE641 /* Macros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Macros.h; sourceTree = "<group>"; };
 		858ABB8C2A52F5EE007AE641 /* OperationQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = OperationQueue.hpp; sourceTree = "<group>"; };
-		8598D6C7240EF3FD008A6D4C /* libxptools-ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-ios.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8598D6C7240EF3FD008A6D4C /* libxptools-ios-appstore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libxptools-ios-appstore.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		85AF77412AA1C40F007480C2 /* preferences.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = preferences.hpp; sourceTree = "<group>"; };
 		85BB0187279EFA0E000F1B10 /* HttpClient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = HttpClient.cpp; sourceTree = "<group>"; };
 		85BB018C279EFA7C000F1B10 /* HttpClient.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HttpClient.hpp; sourceTree = "<group>"; };
@@ -416,6 +486,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				10847CD0270EE8C6006A5E91 /* libpng-macos.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		850BDEAE2D19EC0F00A85B76 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				850BDEAF2D19EC0F00A85B76 /* libpng-macos.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,10 +547,11 @@
 		8534FDC8240E92C1004B3494 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8534FDC7240E92C1004B3494 /* libxptools-macos.a */,
-				8598D6C7240EF3FD008A6D4C /* libxptools-ios.a */,
+				8534FDC7240E92C1004B3494 /* libxptools-macos-steam.a */,
+				8598D6C7240EF3FD008A6D4C /* libxptools-ios-appstore.a */,
 				10847CD4270EE8C6006A5E91 /* libxptools-macos-gameserver.a */,
 				1021453B2C75E0C000099E38 /* libxptools-macos-ci.a */,
+				850BDEB32D19EC0F00A85B76 /* libxptools-macos-epicgames.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -669,6 +748,38 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		850BDE6F2D19EC0F00A85B76 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				850BDE702D19EC0F00A85B76 /* strings.hpp in Headers */,
+				850BDE712D19EC0F00A85B76 /* BZMD5.hpp in Headers */,
+				850BDE722D19EC0F00A85B76 /* tracking.hpp in Headers */,
+				850BDE732D19EC0F00A85B76 /* LocalConnection.hpp in Headers */,
+				850BDE742D19EC0F00A85B76 /* HttpCookie.hpp in Headers */,
+				850BDE752D19EC0F00A85B76 /* crypto.hpp in Headers */,
+				850BDE762D19EC0F00A85B76 /* xptools.h in Headers */,
+				850BDE772D19EC0F00A85B76 /* WSTypes.hpp in Headers */,
+				850BDE782D19EC0F00A85B76 /* cJSON.h in Headers */,
+				850BDE792D19EC0F00A85B76 /* WSConnection.hpp in Headers */,
+				850BDE7A2D19EC0F00A85B76 /* vxlog.h in Headers */,
+				850BDE7B2D19EC0F00A85B76 /* WSService.hpp in Headers */,
+				850BDE7C2D19EC0F00A85B76 /* WSBackend.hpp in Headers */,
+				850BDE7D2D19EC0F00A85B76 /* device.hpp in Headers */,
+				850BDE7E2D19EC0F00A85B76 /* Connection.hpp in Headers */,
+				850BDE7F2D19EC0F00A85B76 /* OperationQueue.hpp in Headers */,
+				850BDE802D19EC0F00A85B76 /* Channel.hpp in Headers */,
+				850BDE812D19EC0F00A85B76 /* vxtime.h in Headers */,
+				850BDE822D19EC0F00A85B76 /* preferences.hpp in Headers */,
+				850BDE832D19EC0F00A85B76 /* filesystem.hpp in Headers */,
+				850BDE842D19EC0F00A85B76 /* process.hpp in Headers */,
+				850BDE852D19EC0F00A85B76 /* WSServerConnection.hpp in Headers */,
+				850BDE862D19EC0F00A85B76 /* Macros.h in Headers */,
+				850BDE872D19EC0F00A85B76 /* json.hpp in Headers */,
+				850BDE882D19EC0F00A85B76 /* filesystem.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8534FDC3240E92C1004B3494 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -740,9 +851,27 @@
 			productReference = 10847CD4270EE8C6006A5E91 /* libxptools-macos-gameserver.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		8534FDC6240E92C1004B3494 /* xptools-macos */ = {
+		850BDE6C2D19EC0F00A85B76 /* xptools-macos-epicgames */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8534FDCB240E92C1004B3494 /* Build configuration list for PBXNativeTarget "xptools-macos" */;
+			buildConfigurationList = 850BDEB02D19EC0F00A85B76 /* Build configuration list for PBXNativeTarget "xptools-macos-epicgames" */;
+			buildPhases = (
+				850BDE6F2D19EC0F00A85B76 /* Headers */,
+				850BDE892D19EC0F00A85B76 /* Sources */,
+				850BDEAE2D19EC0F00A85B76 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				850BDE6D2D19EC0F00A85B76 /* PBXTargetDependency */,
+			);
+			name = "xptools-macos-epicgames";
+			productName = xptools;
+			productReference = 850BDEB32D19EC0F00A85B76 /* libxptools-macos-epicgames.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		8534FDC6240E92C1004B3494 /* xptools-macos-steam */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8534FDCB240E92C1004B3494 /* Build configuration list for PBXNativeTarget "xptools-macos-steam" */;
 			buildPhases = (
 				8534FDC3240E92C1004B3494 /* Headers */,
 				8534FDC4240E92C1004B3494 /* Sources */,
@@ -753,14 +882,14 @@
 			dependencies = (
 				8553F4232C074B7D000D53B4 /* PBXTargetDependency */,
 			);
-			name = "xptools-macos";
+			name = "xptools-macos-steam";
 			productName = xptools;
-			productReference = 8534FDC7240E92C1004B3494 /* libxptools-macos.a */;
+			productReference = 8534FDC7240E92C1004B3494 /* libxptools-macos-steam.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		8598D6C6240EF3FD008A6D4C /* xptools-ios */ = {
+		8598D6C6240EF3FD008A6D4C /* xptools-ios-appstore */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8598D6CF240EF3FD008A6D4C /* Build configuration list for PBXNativeTarget "xptools-ios" */;
+			buildConfigurationList = 8598D6CF240EF3FD008A6D4C /* Build configuration list for PBXNativeTarget "xptools-ios-appstore" */;
 			buildPhases = (
 				8598D6C3240EF3FD008A6D4C /* Sources */,
 				8598D6C4240EF3FD008A6D4C /* Frameworks */,
@@ -771,9 +900,9 @@
 			dependencies = (
 				8553F4262C074BA2000D53B4 /* PBXTargetDependency */,
 			);
-			name = "xptools-ios";
+			name = "xptools-ios-appstore";
 			productName = "xptools-ios";
-			productReference = 8598D6C7240EF3FD008A6D4C /* libxptools-ios.a */;
+			productReference = 8598D6C7240EF3FD008A6D4C /* libxptools-ios-appstore.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
@@ -812,8 +941,9 @@
 			);
 			projectRoot = "";
 			targets = (
-				8534FDC6240E92C1004B3494 /* xptools-macos */,
-				8598D6C6240EF3FD008A6D4C /* xptools-ios */,
+				8534FDC6240E92C1004B3494 /* xptools-macos-steam */,
+				850BDE6C2D19EC0F00A85B76 /* xptools-macos-epicgames */,
+				8598D6C6240EF3FD008A6D4C /* xptools-ios-appstore */,
 				10847CB3270EE8C6006A5E91 /* xptools-macos-gameserver */,
 				102144F52C75E0C000099E38 /* xptools-macos-ci */,
 			);
@@ -938,6 +1068,49 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		850BDE892D19EC0F00A85B76 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				850BDE8A2D19EC0F00A85B76 /* HttpRequestOpts.cpp in Sources */,
+				850BDE8B2D19EC0F00A85B76 /* ThreadManager.cpp in Sources */,
+				850BDE8C2D19EC0F00A85B76 /* HttpResponse.cpp in Sources */,
+				850BDE8D2D19EC0F00A85B76 /* notifications.cpp in Sources */,
+				850BDE8E2D19EC0F00A85B76 /* miniaudio_impl.mm in Sources */,
+				850BDE8F2D19EC0F00A85B76 /* vxtime.cpp in Sources */,
+				850BDE902D19EC0F00A85B76 /* json.cpp in Sources */,
+				850BDE912D19EC0F00A85B76 /* filesystem.cpp in Sources */,
+				850BDE922D19EC0F00A85B76 /* notifications.mm in Sources */,
+				850BDE932D19EC0F00A85B76 /* audio.cpp in Sources */,
+				850BDE942D19EC0F00A85B76 /* HttpCookie.cpp in Sources */,
+				850BDE952D19EC0F00A85B76 /* HttpClient.cpp in Sources */,
+				850BDE962D19EC0F00A85B76 /* WSServerConnection.cpp in Sources */,
+				850BDE972D19EC0F00A85B76 /* WSConnection.mm in Sources */,
+				850BDE982D19EC0F00A85B76 /* tracking.cpp in Sources */,
+				850BDE992D19EC0F00A85B76 /* device_c.cpp in Sources */,
+				850BDE9A2D19EC0F00A85B76 /* crypto.cpp in Sources */,
+				850BDE9B2D19EC0F00A85B76 /* vxlog.mm in Sources */,
+				850BDE9C2D19EC0F00A85B76 /* cJSON.c in Sources */,
+				850BDE9D2D19EC0F00A85B76 /* device.cpp in Sources */,
+				850BDE9E2D19EC0F00A85B76 /* LocalConnection.cpp in Sources */,
+				850BDE9F2D19EC0F00A85B76 /* device-macos.mm in Sources */,
+				850BDEA02D19EC0F00A85B76 /* HttpRequest.cpp in Sources */,
+				850BDEA12D19EC0F00A85B76 /* OperationQueue.cpp in Sources */,
+				850BDEA22D19EC0F00A85B76 /* URL.cpp in Sources */,
+				850BDEA32D19EC0F00A85B76 /* HttpRequest.mm in Sources */,
+				850BDEA42D19EC0F00A85B76 /* Connection.cpp in Sources */,
+				850BDEA52D19EC0F00A85B76 /* web-macos.mm in Sources */,
+				850BDEA62D19EC0F00A85B76 /* process.cpp in Sources */,
+				850BDEA72D19EC0F00A85B76 /* filesystem.mm in Sources */,
+				850BDEA82D19EC0F00A85B76 /* process-macos.cpp in Sources */,
+				850BDEA92D19EC0F00A85B76 /* textinput.cpp in Sources */,
+				850BDEAA2D19EC0F00A85B76 /* BZMD5.cpp in Sources */,
+				850BDEAB2D19EC0F00A85B76 /* strings.cpp in Sources */,
+				850BDEAC2D19EC0F00A85B76 /* WSServer.cpp in Sources */,
+				850BDEAD2D19EC0F00A85B76 /* WSConnection.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8534FDC4240E92C1004B3494 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1036,6 +1209,11 @@
 			isa = PBXTargetDependency;
 			name = "mac-static-libpng";
 			targetProxy = 106ADEDB2C616F9A00964E91 /* PBXContainerItemProxy */;
+		};
+		850BDE6D2D19EC0F00A85B76 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "mac-static-libpng";
+			targetProxy = 850BDE6E2D19EC0F00A85B76 /* PBXContainerItemProxy */;
 		};
 		8553F4232C074B7D000D53B4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1148,6 +1326,63 @@
 					ONLINE_GAMESERVER,
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
+					"$(PROJECT_DIR)/../../libssl/macos/include",
+					"$(PROJECT_DIR)/../../miniaudio",
+				);
+			};
+			name = Release;
+		};
+		850BDEB12D19EC0F00A85B76 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9JFN8QQG65;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					DEBUG_EVENTS,
+					__VX_PLATFORM_MACOS,
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_epicgamesstore\\\"\"",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
+				OTHER_LDFLAGS = (
+					"-lcrypto",
+					"-lssl",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
+					"$(PROJECT_DIR)/../../libssl/macos/include",
+					"$(PROJECT_DIR)/../../miniaudio",
+				);
+			};
+			name = Debug;
+		};
+		850BDEB22D19EC0F00A85B76 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9JFN8QQG65;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					__VX_PLATFORM_MACOS,
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_epicgamesstore\\\"\"",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
+				OTHER_LDFLAGS = (
+					"-lcrypto",
+					"-lssl",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
@@ -1302,6 +1537,7 @@
 					"$(inherited)",
 					DEBUG_EVENTS,
 					__VX_PLATFORM_MACOS,
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_steam\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1329,6 +1565,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					__VX_PLATFORM_MACOS,
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_steam\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1356,7 +1593,10 @@
 					"$(inherited)",
 					"$(SDKROOT)/System/iOSSupport/System/Library/Frameworks",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"__VX_APP_BUILD_TARGET=\"\\\"ios_appstore\\\"\"",
+				);
 				HEADER_SEARCH_PATHS = "";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1382,7 +1622,10 @@
 					"$(inherited)",
 					"$(SDKROOT)/System/iOSSupport/System/Library/Frameworks",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"__VX_APP_BUILD_TARGET=\"\\\"ios_appstore\\\"\"",
+				);
 				HEADER_SEARCH_PATHS = "";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1420,6 +1663,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		850BDEB02D19EC0F00A85B76 /* Build configuration list for PBXNativeTarget "xptools-macos-epicgames" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				850BDEB12D19EC0F00A85B76 /* Debug */,
+				850BDEB22D19EC0F00A85B76 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		8534FDC2240E92C1004B3494 /* Build configuration list for PBXProject "xptools" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1429,7 +1681,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8534FDCB240E92C1004B3494 /* Build configuration list for PBXNativeTarget "xptools-macos" */ = {
+		8534FDCB240E92C1004B3494 /* Build configuration list for PBXNativeTarget "xptools-macos-steam" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8534FDCC240E92C1004B3494 /* Debug */,
@@ -1438,7 +1690,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8598D6CF240EF3FD008A6D4C /* Build configuration list for PBXNativeTarget "xptools-ios" */ = {
+		8598D6CF240EF3FD008A6D4C /* Build configuration list for PBXNativeTarget "xptools-ios-appstore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8598D6CD240EF3FD008A6D4C /* Debug */,

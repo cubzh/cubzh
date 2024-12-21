@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8598D6C6240EF3FD008A6D4C"
-               BuildableName = "libxptools-ios.a"
-               BlueprintName = "xptools-ios"
+               BuildableName = "libxptools-ios-appstore.a"
+               BlueprintName = "xptools-ios-appstore"
                ReferencedContainer = "container:xptools.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -51,8 +51,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8598D6C6240EF3FD008A6D4C"
-            BuildableName = "libxptools-ios.a"
-            BlueprintName = "xptools-ios"
+            BuildableName = "libxptools-ios-appstore.a"
+            BlueprintName = "xptools-ios-appstore"
             ReferencedContainer = "container:xptools.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

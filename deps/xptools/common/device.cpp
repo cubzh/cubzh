@@ -69,3 +69,7 @@ void vx::device::setScreenAllowedOrientation(const std::string &orientation) {
 const std::string& vx::device::getScreenAllowedOrientation() {
     return screenAllowedOrientation;
 }
+
+std::string vx::device::appBuildTarget() {
+    return __VX_APP_BUILD_TARGET;
+}

@@ -130,10 +130,6 @@ uint16_t vx::device::appBuildNumber() {
     return buildNumber;
 }
 
-std::string vx::device::appBuildTarget() {
-	return __VX_APP_BUILD_TARGET; // "wasm" or "wasm-discord"
-}
-
 std::string vx::device::hardwareBrand() {
     return "";
 }

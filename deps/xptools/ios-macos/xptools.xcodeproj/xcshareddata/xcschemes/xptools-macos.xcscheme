@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8534FDC6240E92C1004B3494"
-               BuildableName = "libxptools-macos.a"
-               BlueprintName = "xptools-macos"
+               BuildableName = "libxptools-macos-steam.a"
+               BlueprintName = "xptools-macos-steam"
                ReferencedContainer = "container:xptools.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -51,8 +51,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8534FDC6240E92C1004B3494"
-            BuildableName = "libxptools-macos.a"
-            BlueprintName = "xptools-macos"
+            BuildableName = "libxptools-macos-steam.a"
+            BlueprintName = "xptools-macos-steam"
             ReferencedContainer = "container:xptools.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
