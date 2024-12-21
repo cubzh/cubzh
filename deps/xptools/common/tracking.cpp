@@ -20,29 +20,15 @@
 
 #include "HttpClient.hpp"
 
-//#ifdef DEBUG
-//
-//// disable tracking in debug builds
-//#define P3S_NO_METRICS
-//
-//// TODO: later we will have a "dev" target for Debug builds analytics
-//#define TRACKING_SERVER_ADDR "debug_dev.cu.bzh" // "localhost"
-//#define TRACKING_SERVER_PORT 1443 // 8080
-//#define TRACKING_SERVER_SECURE true // false
-//
-//#else // RELEASE
-
 #define TRACKING_SERVER_ADDR "debug.cu.bzh"
 #define TRACKING_SERVER_PORT 443
 #define TRACKING_SERVER_SECURE true
 
-#if !defined(DEBUG)
-#define TRACKING_BRANCH "prod"
-#else
+#if defined(DEBUG)
 #define TRACKING_BRANCH "debug"
+#else
+#define TRACKING_BRANCH "prod"
 #endif
-
-//#endif
 
 #define NEW_SESSION_DELAY_MS 600000 // 10 minutes
 #define KEEP_ALIVE_DELAY 60000 // 1 minute
@@ -100,7 +86,7 @@ void TrackingClient::trackEvent(const std::string &eventType,
 
 void TrackingClient::_trackEvent(const std::string& eventType,
                                  std::unordered_map<std::string, std::string> properties) {
-#ifdef P3S_NO_METRICS
+#if defined(P3S_NO_METRICS)
     // do nothing
     return;
 #else
@@ -139,10 +125,10 @@ void TrackingClient::_trackEvent(const std::string& eventType,
     vx::json::writeStringField(obj, "type", eventType);
     vx::json::writeStringField(obj, "user-id", userAccountID);
     vx::json::writeStringField(obj, "device-id", deviceID);
-    vx::json::writeStringField(obj, "platform", _getPlatformName());
-    vx::json::writeStringField(obj, "os-name", _getOSName());
-    vx::json::writeStringField(obj, "os-version", _getOSVersion());
-    vx::json::writeStringField(obj, "app-version", _getAppVersion());
+    vx::json::writeStringField(obj, "platform", vx::device::platform());
+    vx::json::writeStringField(obj, "os-name", vx::device::osName());
+    vx::json::writeStringField(obj, "os-version", vx::device::osVersion());
+    vx::json::writeStringField(obj, "app-version", vx::device::appVersionCached());
 
     vx::json::writeStringField(obj, "hw-brand", vx::device::hardwareBrand());
     vx::json::writeStringField(obj, "hw-model", vx::device::hardwareModel());
@@ -174,7 +160,7 @@ void TrackingClient::_trackEvent(const std::string& eventType,
 }
 
 void TrackingClient::_checkAndRefreshSession() {
-#ifndef P3S_NO_METRICS
+#if !defined(P3S_NO_METRICS)
     using namespace std::chrono;
     TrackingClient& tc = TrackingClient::shared();
     const uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -403,25 +389,6 @@ bool TrackingClient::_getDebugID(std::string &debugID) const {
 
     debugID.assign(newDebugID);
     return true;
-}
-
-/// returns the name of the platform
-std::string TrackingClient::_getPlatformName() const {
-    return vx::device::platform();
-}
-
-/// returns the name of the OS
-std::string TrackingClient::_getOSName() const {
-    return vx::device::osName();
-}
-
-/// returns the version of the OS
-std::string TrackingClient::_getOSVersion() const {
-    return vx::device::osVersion();
-}
-
-std::string TrackingClient::_getAppVersion() const {
-    return vx::device::appVersionCached();
 }
 
 bool TrackingClient::_createCredentialsJsonWithDebugID(std::string &debugID) const {
