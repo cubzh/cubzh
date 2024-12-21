@@ -28,6 +28,14 @@ const std::string& vx::device::appBuildNumberCached() {
     return value;
 }
 
+const std::string& vx::device::appBuildTargetCached() {
+    static std::string value;
+    if (value.empty()) {
+        value = vx::device::appBuildTarget();
+    }
+    return value;
+}
+
 int32_t vx::device::timestampUnix() {
     const std::time_t t = std::time(nullptr);
     const int32_t result = static_cast<int32_t>(t);
