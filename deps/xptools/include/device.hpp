@@ -42,6 +42,9 @@ std::string osVersion();
 /// Returns the version of the application
 std::string appVersion();
 
+/// Returns the name of the build target
+std::string appBuildTarget();
+
 /// Returns the build number (also called "revision") of the application
 uint16_t appBuildNumber();
 
@@ -67,6 +70,10 @@ const std::string& appVersionCached();
 /// same as appBuildNumber() but the value is computed only the first time the function is called,
 /// and the value is returned as a string reference.
 const std::string& appBuildNumberCached();
+
+/// same as appBuildTarget() but the value is computed only the first time the function is called,
+/// and the value is returned as a string reference.
+const std::string& appBuildTargetCached();
 
 /// Exits application (does not work on all systems)
 void terminate();

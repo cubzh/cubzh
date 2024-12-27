@@ -28,6 +28,14 @@ const std::string& vx::device::appBuildNumberCached() {
     return value;
 }
 
+const std::string& vx::device::appBuildTargetCached() {
+    static std::string value;
+    if (value.empty()) {
+        value = vx::device::appBuildTarget();
+    }
+    return value;
+}
+
 int32_t vx::device::timestampUnix() {
     const std::time_t t = std::time(nullptr);
     const int32_t result = static_cast<int32_t>(t);
@@ -60,4 +68,8 @@ void vx::device::setScreenAllowedOrientation(const std::string &orientation) {
 
 const std::string& vx::device::getScreenAllowedOrientation() {
     return screenAllowedOrientation;
+}
+
+std::string vx::device::appBuildTarget() {
+    return __VX_APP_BUILD_TARGET;
 }

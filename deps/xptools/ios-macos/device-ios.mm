@@ -165,7 +165,7 @@ vx::device::PerformanceTier vx::device::getPerformanceTier() {
         "iPhone13,2", // iPhone 12
         "iPhone13,3", // iPhone 12 Pro
         "iPhone13,4", // iPhone 12 Pro Max
-        
+
         // iPad
         "iPad11,6",   // iPad 8th Gen (WiFi)
         "iPad11,7",   // iPad 8th Gen (WiFi+Cellular)
