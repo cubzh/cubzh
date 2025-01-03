@@ -36,10 +36,10 @@ typedef struct _VertexBuffer VertexBuffer;
 typedef struct _Chunk Chunk;
 typedef struct _Rtree Rtree;
 
-typedef struct _LoadShapeSettings {
+typedef struct _ShapeSettings {
     bool lighting;
     bool isMutable;
-} LoadShapeSettings;
+} ShapeSettings;
 
 #define POINT_OF_INTEREST_ORIGIN "origin" // legacy
 #define POINT_OF_INTEREST_HAND "Hand"     //

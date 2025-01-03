@@ -76,8 +76,8 @@ typedef void (*pointer_transform_destroyed_func)(const uint16_t id, void *manage
 typedef Transform **Transform_Array;
 
 /// MARK: - Lifecycle -
-Transform *transform_make(TransformType type);
-Transform *transform_make_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn);
+Transform *transform_new(TransformType type);
+Transform *transform_new_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn);
 void transform_init_ID_thread_safety(void);
 uint16_t transform_get_id(const Transform *t);
 /// Increases ref count and returns false if the retain count can't be increased
@@ -190,6 +190,7 @@ const Matrix4x4 *transform_get_mtx(Transform *t);
 /// Utils function do not refresh matrices, so that the caller may decide whether or not it's
 /// necessary. Typically, you may call a refresh if you are in an intra-frame computation context
 /// (eg. Lua functions)
+void transform_utils_compute_SRT(Matrix4x4 *mtx, const float3 *s, Quaternion *r, const float3 *t);
 void transform_utils_position_ltw(Transform *t, const float3 *pos, float3 *result);
 void transform_utils_position_wtl(Transform *t, const float3 *pos, float3 *result);
 void transform_utils_vector_ltw(Transform *t, const float3 *pos, float3 *result);
@@ -232,6 +233,7 @@ void transform_utils_box_fit_recurse(Transform *t,
                                      Matrix4x4 mtx,
                                      Box *inout_box,
                                      bool applyTransaction);
+void transform_utils_set_mtx(Transform *t, const Matrix4x4 *mtx);
 
 // MARK: - Misc. -
 void transform_set_animations_enabled(Transform *const t, const bool enabled);

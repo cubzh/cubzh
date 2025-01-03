@@ -128,7 +128,6 @@ static void _transform_refresh_local_position(Transform *t);
 static void _transform_refresh_position(Transform *t);
 static void _transform_refresh_local_rotation(Transform *t);
 static void _transform_refresh_rotation(Transform *t);
-static void _transform_compute_SRT(Matrix4x4 *mtx, const float3 *s, Quaternion *r, const float3 *t);
 static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty);
 static bool _transform_vec_equals(const float3 *f,
                                   const float x,
@@ -166,7 +165,7 @@ static void _transform_free(Transform *const t);
 
 // MARK: - Lifecycle -
 
-Transform *transform_make(TransformType type) {
+Transform *transform_new(TransformType type) {
     Transform *t = (Transform *)malloc(sizeof(Transform));
     if (t == NULL) {
         return NULL;
@@ -199,8 +198,8 @@ Transform *transform_make(TransformType type) {
     return t;
 }
 
-Transform *transform_make_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn) {
-    Transform *t = transform_make(type);
+Transform *transform_new_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn) {
+    Transform *t = transform_new(type);
     t->ptr = ptr;
     t->ptr_free = ptrFreeFn;
     return t;
@@ -878,6 +877,45 @@ const Matrix4x4 *transform_get_mtx(Transform *t) {
 
 /// MARK: - Utils -
 
+void transform_utils_compute_SRT(Matrix4x4 *mtx,
+                                 const float3 *s,
+                                 Quaternion *r,
+                                 const float3 *t) {
+    quaternion_op_normalize(r);
+
+    const float xx = r->y * r->y;
+    const float xy = r->y * r->z;
+    const float xz = r->y * r->x;
+    const float xw = -r->y * r->w;
+
+    const float yy = r->z * r->z;
+    const float yz = r->z * r->x;
+    const float yw = -r->z * r->w;
+
+    const float zz = r->x * r->x;
+    const float zw = -r->x * r->w;
+
+    mtx->x1y1 = s->x * (1.0f - 2.0f * (yy + zz));
+    mtx->x1y2 = s->x * (2.0f * (xy - zw));
+    mtx->x1y3 = s->x * (2.0f * (xz + yw));
+    mtx->x1y4 = 0.0f;
+
+    mtx->x2y1 = s->y * (2.0f * (xy + zw));
+    mtx->x2y2 = s->y * (1.0f - 2.0f * (xx + zz));
+    mtx->x2y3 = s->y * (2.0f * (yz - xw));
+    mtx->x2y4 = 0.0f;
+
+    mtx->x3y1 = s->z * (2.0f * (xz - yw));
+    mtx->x3y2 = s->z * (2.0f * (yz + xw));
+    mtx->x3y3 = s->z * (1.0f - 2.0f * (xx + yy));
+    mtx->x3y4 = 0.0f;
+
+    mtx->x4y1 = t->x;
+    mtx->x4y2 = t->y;
+    mtx->x4y3 = t->z;
+    mtx->x4y4 = 1.0f;
+}
+
 void transform_utils_position_ltw(Transform *t, const float3 *pos, float3 *result) {
     matrix4x4_op_multiply_vec_point(result, pos, t->ltw);
 }
@@ -1171,6 +1209,20 @@ void transform_utils_box_fit_recurse(Transform *t,
     }
 }
 
+void transform_utils_set_mtx(Transform *t, const Matrix4x4 *mtx) {
+    transform_set_local_position(t, mtx->x4y1, mtx->x4y2, mtx->x4y3);
+
+    Matrix4x4 rot; matrix4x4_get_rotation(mtx, &rot);
+    Quaternion q; rotation_matrix_to_quaternion(&rot, &q);
+    transform_set_local_rotation(t, &q);
+
+    float3 scale; matrix4x4_get_scaleXYZ(mtx, &scale);
+    transform_set_local_scale_vec(t, &scale);
+
+    *t->mtx = *mtx;
+    _transform_reset_dirty(t, TRANSFORM_DIRTY_MTX);
+}
+
 // MARK: - Misc. -
 
 void transform_set_animations_enabled(Transform *const t, const bool enabled) {
@@ -1366,52 +1418,13 @@ static void _transform_refresh_rotation(Transform *t) {
     }
 }
 
-static void _transform_compute_SRT(Matrix4x4 *mtx,
-                                   const float3 *s,
-                                   Quaternion *r,
-                                   const float3 *t) {
-    quaternion_op_normalize(r);
-
-    const float xx = r->y * r->y;
-    const float xy = r->y * r->z;
-    const float xz = r->y * r->x;
-    const float xw = -r->y * r->w;
-
-    const float yy = r->z * r->z;
-    const float yz = r->z * r->x;
-    const float yw = -r->z * r->w;
-
-    const float zz = r->x * r->x;
-    const float zw = -r->x * r->w;
-
-    mtx->x1y1 = s->x * (1.0f - 2.0f * (yy + zz));
-    mtx->x1y2 = s->x * (2.0f * (xy - zw));
-    mtx->x1y3 = s->x * (2.0f * (xz + yw));
-    mtx->x1y4 = 0.0f;
-
-    mtx->x2y1 = s->y * (2.0f * (xy + zw));
-    mtx->x2y2 = s->y * (1.0f - 2.0f * (xx + zz));
-    mtx->x2y3 = s->y * (2.0f * (yz - xw));
-    mtx->x2y4 = 0.0f;
-
-    mtx->x3y1 = s->z * (2.0f * (xz - yw));
-    mtx->x3y2 = s->z * (2.0f * (yz + xw));
-    mtx->x3y3 = s->z * (1.0f - 2.0f * (xx + yy));
-    mtx->x3y4 = 0.0f;
-
-    mtx->x4y1 = t->x;
-    mtx->x4y2 = t->y;
-    mtx->x4y3 = t->z;
-    mtx->x4y4 = 1.0f;
-}
-
 /// note: here, local transformations must be up-to-date
 static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
     const bool dirty = _transform_get_dirty(t, TRANSFORM_DIRTY_MTX);
 
     if (dirty) {
         /// compute local mtx
-        _transform_compute_SRT(t->mtx, &t->localScale, t->localRotation, &t->localPosition);
+        transform_utils_compute_SRT(t->mtx, &t->localScale, t->localRotation, &t->localPosition);
 
         _transform_reset_dirty(t, TRANSFORM_DIRTY_MTX);
 

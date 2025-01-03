@@ -152,7 +152,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             const LoadShapeSettings *const shapeSettings,
+                             const ShapeSettings *const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette *filePalette,
                              uint8_t paletteID,
@@ -820,7 +820,7 @@ uint32_t chunk_v6_read_shape_process_blocks(void *cursor,
 uint32_t chunk_v6_read_shape(Stream *s,
                              Shape **shape,
                              DoublyLinkedList *shapes,
-                             const LoadShapeSettings *const shapeSettings,
+                             const ShapeSettings *const shapeSettings,
                              ColorAtlas *colorAtlas,
                              ColorPalette *filePalette,
                              uint8_t paletteID,
@@ -2020,8 +2020,8 @@ bool create_shape_buffers(DoublyLinkedList *shapesBuffers,
 
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
-                                               const AssetType filterMask,
-                                               const LoadShapeSettings *const shapeSettings) {
+                                               const ASSET_MASK_T filter,
+                                               const ShapeSettings *const shapeSettings) {
 
     uint8_t i;
     if (stream_read_uint8(s, &i) == false) {
@@ -2094,7 +2094,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                  chunkID == P3S_CHUNK_ID_PALETTE_LEGACY);
                 paletteID = PALETTE_ID_CUSTOM;
 
-                if (filterMask == AssetType_Any || (filterMask & AssetType_Palette) > 0) {
+                if ((filter & AssetType_Palette) != 0) {
                     Asset *asset = malloc(sizeof(Asset));
                     if (asset == NULL) {
                         cclog_error("error while reading palette");
@@ -2149,8 +2149,7 @@ DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                 // shrink box once all blocks were added to update box origin
                 shape_reset_box(shape);
 
-                if (filterMask == AssetType_Any ||
-                    (filterMask & (AssetType_Shape | AssetType_Object)) > 0) {
+                if ((filter & AssetType_Shape) != 0) {
                     Asset *asset = malloc(sizeof(Asset));
                     if (asset == NULL) {
                         cclog_error("error while allocating asset (shape)");
