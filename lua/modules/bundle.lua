@@ -33,7 +33,7 @@ bundle.Shape = function(self, relPath, config)
 	if hasExtension(relPath) == false then
 		relPath = relPath .. ".3zh"
 	end
-	local data = bundle:Data(relPath)
+	local data = Data:FromBundle(relPath)
 	if data == nil then
 		error("bundle:Shape(relPath, config) - couldn't load file from bundle at " .. relPath, 2)
 	end
@@ -60,27 +60,17 @@ bundle.MutableShape = function(self, relPath, config)
 	if hasExtension(relPath) == false then
 		relPath = relPath .. ".3zh"
 	end
-	local data = bundle:Data(relPath)
+	local data = Data:FromBundle(relPath)
 	if data == nil then
 		error("bundle:MutableShape(relPath, config) - couldn't load file from bundle at " .. relPath, 2)
 	end
 	return MutableShape(data, config)
 end
 
----@function Data reads a file from the local app bundle.
----@param relPath string
----@return Data
----@code
---- local bundle = require("bundle")
---- local data = bundle:Data("path/to/data.ext")
+-- DEPRECATED (january 2025)
 bundle.Data = function(self, relPath)
-	if self ~= bundle then
-		error("bundle:Data(relPath) should be called with `:`", 2)
-	end
-	if type(relPath) ~= "string" then
-		error("bundle:Data(relPath) - relPath should be a string", 2)
-	end
-	return System.DataFromBundle(relPath)
+	print("bundle:Data(relPath) is deprecated, please use Data:FromBundle(relPath) instead")
+	return Data:FromBundle(relPath)
 end
 
 return bundle

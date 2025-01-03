@@ -63,7 +63,7 @@ bool commandSetPoint(cxxopts::ParseResult parseResult, std::string& err) {
     Stream *stream = stream_new_file_read(fd);
     ColorAtlas *colorAtlas = color_atlas_new();
 
-    LoadShapeSettings settings = {
+    ShapeSettings settings = {
         .lighting = false,
         .isMutable = true
     };
