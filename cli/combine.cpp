@@ -15,7 +15,7 @@
 #include "shape.h"
 #include "stream.h"
 #include "color_atlas.h"
-#include "magicavoxel.h"
+#include "serialization_vox.h"
 
 bool command_combine(cxxopts::ParseResult parseResult, std::string& err) {
 
@@ -62,10 +62,10 @@ bool command_combine(cxxopts::ParseResult parseResult, std::string& err) {
         
         Shape *shape = nullptr;
         
-        enum serialization_magicavoxel_error error = serialization_vox_to_shape(s,
-                                                                                &shape,
-                                                                                true,
-                                                                                colorAtlas);
+        enum serialization_vox_error error = serialization_vox_load(s,
+                                                                    &shape,
+                                                                    true,
+                                                                    colorAtlas);
         
         if (shape != nullptr) {
             shapes[index] = shape;
@@ -86,11 +86,11 @@ bool command_combine(cxxopts::ParseResult parseResult, std::string& err) {
         if (dst == nullptr) {
             err = std::string("can't create ") + output_path;
         } else {
-            const bool success = serialization_shapes_to_vox(shapes, (size_t)index, dst);
+            const bool success = serialization_vox_save_shapes(shapes, (size_t) index, dst);
             if (success == false) {
                 err = std::string("can't export to ") + output_path;
             }
-            // serialization_save_vox(shapes.at(0), dst);
+            // serialization_vox_save(shapes.at(0), dst);
             fclose(dst);
         }
     }
