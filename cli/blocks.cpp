@@ -15,7 +15,7 @@
 #include "shape.h"
 #include "stream.h"
 #include "color_atlas.h"
-#include "magicavoxel.h"
+#include "serialization_vox.h"
 #include "serialization.h"
 
 bool count_blocks(cxxopts::ParseResult parseResult, std::string& err) {
@@ -45,25 +45,26 @@ bool count_blocks(cxxopts::ParseResult parseResult, std::string& err) {
     ColorAtlas * const colorAtlas = color_atlas_new();
     Stream * const stream = stream_new_file_read(fd); // Stream is responsible for fclose-ing the file descriptor
 
-    const LoadShapeSettings shapeSettings = {
+    const ShapeSettings shapeSettings = {
         .lighting = false,
         .isMutable = false
     };
 
     const bool allowLegacy = true; // support .pcubes files
-    DoublyLinkedList *assets = serialization_load_assets(stream,
-                                                         "",
-                                                         AssetType_Shape,
-                                                         colorAtlas,
-                                                         &shapeSettings,
-                                                         allowLegacy);
-    // `stream` is freed here (done by `serialization_load_assets`)
-    // `stream` took care of fclose-ing `fd`
-    if (assets == NULL) {
+    DoublyLinkedList *assets = NULL;
+    if (serialization_load_assets(stream,
+                                  NULL,
+                                  AssetType_Shape,
+                                  colorAtlas,
+                                  &shapeSettings,
+                                  allowLegacy,
+                                  &assets) == false) {
         color_atlas_free(colorAtlas);
         err.assign("can't load assets");
         return false;
     }
+    // `stream` is freed by `serialization_load_assets`
+    // `stream` took care of fclose-ing `fd`
     
     size_t blockCount = 0;
     

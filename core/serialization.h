@@ -20,6 +20,33 @@ extern "C" {
 #include "shape.h"
 #include "stream.h"
 
+// MARK: - Generic load -
+
+typedef enum {
+    DataFormat_Unsupported,
+    DataFormat_Error,
+    DataFormat_3ZH,
+    DataFormat_VOX,
+    DataFormat_GLTF // TODO: DataFormat_GLTF_incomplete/partial? materials will have URIs, need to get the assets separately
+    // TODO: DataFormat_PNG, DataFormat_JPEG, DataFormat_GIF ?
+} DataFormat;
+
+/// Look at given generic buffer and deserialize it, if it is a supported format
+/// @param buffer not freed by this function
+/// @param filter only requested asset type will be allocated
+/// @param shapeSettings optional
+/// @param out must be a NULL pointer, allocated based on a supported data format,\n
+///     - DataFormat_Unsupported: NULL\n
+///     - DataFormat_Error: NULL\n
+///     - DataFormat_3ZH: DoublyLinkedList*\n
+///     - DataFormat_VOX: Shape*\n
+///     - DataFormat_GLTF: DoublyLinkedList*\n
+/// @returns data format used to deserialize
+DataFormat serialization_load_data(const void *buffer, const size_t size, const ASSET_MASK_T filter,
+                                   const ShapeSettings *shapeSettings, void **out);
+
+//MARK: - 3ZH files -
+
 #define MAGIC_BYTES "CUBZH!"
 #define MAGIC_BYTES_SIZE 6
 
@@ -81,34 +108,31 @@ static const PCColorEncodingFormat defaultColorEncoding = 1; // PCColorType1 4 x
 // future color encoding formats
 // ...
 
-/// Returns 0 on success, 1 otherwise.
-/// This function doesn't close the file descriptor, you probably want to close
-/// it in the calling context, when an error occurs.
-uint8_t readMagicBytes(Stream *s);
-uint8_t readMagicBytesLegacy(Stream *s);
+bool readMagicBytes(Stream *s, bool allowLegacy); // does not free s
 
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
                                 ColorAtlas *colorAtlas,
-                                LoadShapeSettings *shapeSettings,
+                                ShapeSettings *shapeSettings,
                                 const bool allowLegacy);
 
 Shape *assets_get_root_shape(DoublyLinkedList *list, bool remove);
 
-/// Load assets (shapes) from Stream and return it as a list
-/// - Parameters:
-///   - s: the input stream
-///   - fullname: the fullname of the item represented by the stream (optional)
-///   - filterMask: ...
-///   - colorAtlas: ...
-///   - shapeSettings: ...
-///   - allowLegacy: if true, .pcubes files will be supported as well
-DoublyLinkedList *serialization_load_assets(Stream *s,
-                                            const char *fullname,
-                                            AssetType filterMask,
-                                            ColorAtlas *colorAtlas,
-                                            const LoadShapeSettings *const settings,
-                                            const bool allowLegacy);
+/// Load assets from a 3ZH or PCUBES file
+/// @param stream freed by this function
+/// @param fullname optional
+/// @param filter only requested asset type will be allocated
+/// @param colorAtlas optional, linked w/ shapes if present (NOT thread-safe)
+/// @param shapeSettings optional
+/// @param allowLegacy if true, .pcubes files will be supported as well
+/// @param out must be a NULL pointer
+bool serialization_load_assets(Stream *stream,
+                               const char *fullname,
+                               ASSET_MASK_T filter,
+                               ColorAtlas *colorAtlas,
+                               const ShapeSettings *shapeSettings,
+                               const bool allowLegacy,
+                               DoublyLinkedList **out);
 void serialization_assets_free_func(void *ptr);
 
 /// serialize a shape w/ its palette

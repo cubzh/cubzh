@@ -4,7 +4,7 @@
 //  Created by Gaetan de Villele on June 06, 2022.
 // -------------------------------------------------------------
 
-#include "magicavoxel.h"
+#include "serialization_vox.h"
 
 #include <string.h>
 
@@ -99,20 +99,20 @@ bool _writeDictEntry(const char *key, const char *value, FILE *const out) {
     return true;
 }
 
-bool serialization_save_vox(Shape *src, FILE *const out) {
+bool serialization_vox_save(Shape *src, FILE *const out) {
     Shape **shapes = (Shape **)malloc(sizeof(Shape *));
     if (shapes == NULL) {
         return false;
     }
     shapes[0] = src;
 
-    bool success = serialization_shapes_to_vox(shapes, 1, out);
+    bool success = serialization_vox_save_shapes(shapes, 1, out);
     free(shapes);
 
     return success;
 }
 
-bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *const out) {
+bool serialization_vox_save_shapes(Shape **shapes, const size_t nbShapes, FILE *const out) {
     SHAPE_SIZE_INT3_T shape_size;
 
     if (out == NULL) {
@@ -603,14 +603,11 @@ bool serialization_shapes_to_vox(Shape **shapes, const size_t nbShapes, FILE *co
     return true;
 }
 
-enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
-                                                                Shape **out,
-                                                                const bool isMutable,
-                                                                ColorAtlas *colorAtlas) {
-
-    vx_assert(s != NULL);
-    vx_assert(out != NULL);
-    vx_assert(*out == NULL);
+enum serialization_vox_error serialization_vox_load(Stream *s,
+                                                    Shape **out,
+                                                    const bool isMutable,
+                                                    ColorAtlas *colorAtlas) {
+    vx_assert_d(*out == NULL);
 
     // read magic bytes
     if (_readExpectedBytes(s, VOX_MAGIC_BYTES, VOX_MAGIC_BYTES_SIZE) == false) {
@@ -666,7 +663,7 @@ enum serialization_magicavoxel_error serialization_vox_to_shape(Stream *s,
     uint32_t sizeY = 0;
     uint32_t sizeZ = 0;
 
-    enum serialization_magicavoxel_error err = no_error;
+    enum serialization_vox_error err = no_error;
 
     size_t blocksPosition = 0;
     RGBAColor *colors = malloc(sizeof(RGBAColor) * VOX_MAX_NB_COLORS);

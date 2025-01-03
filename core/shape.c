@@ -230,7 +230,7 @@ Shape *shape_make(void) {
 
     s->worldAABB = NULL;
 
-    s->transform = transform_make_with_ptr(ShapeTransform, s, _shape_void_free);
+    s->transform = transform_new_with_ptr(ShapeTransform, s, _shape_void_free);
     s->pivot = float3_new_zero();
 
     s->chunks = index3d_new();

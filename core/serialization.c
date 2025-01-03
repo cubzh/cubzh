@@ -12,41 +12,85 @@
 #include "cclog.h"
 #include "serialization_v5.h"
 #include "serialization_v6.h"
+#include "serialization_vox.h"
+#include "serialization_gltf.h"
 #include "stream.h"
 #include "transform.h"
+#include "camera.h"
+#include "light.h"
 #include "zlib.h"
 
-// Returns 0 on success, 1 otherwise.
-// This function doesn't close the file descriptor, you probably want to close
-// it in the calling context, when an error occurs.
-uint8_t readMagicBytes(Stream *s) {
-    char current = 0;
-    for (int i = 0; i < MAGIC_BYTES_SIZE; i++) {
-        if (stream_read(s, &current, sizeof(char), 1) == false) {
+// MARK: - Generic load -
+
+#define MAGIC_GLTF 0x46546C67
+#define MAGIC_VOX 0x564F5820
+
+DataFormat serialization_load_data(const void *buffer, const size_t size, const ASSET_MASK_T filter,
+                                   const ShapeSettings *shapeSettings, void **out) {
+    vx_assert_d(*out == NULL);
+
+    Stream *stream = stream_new_buffer_read(buffer, size);
+
+    // external formats
+    {
+        uint32_t magic;
+        if (stream_read_uint32(stream, &magic) == false) {
             cclog_error("failed to read magic byte");
-            return 1; // error
+            stream_free(stream);
+            return DataFormat_Unsupported;
         }
-        if (current != MAGIC_BYTES[i]) {
-            cclog_error("incorrect magic bytes");
-            return 1; // error
+
+        if (magic == MAGIC_VOX) {
+            const DataFormat format = serialization_vox_load(stream, (Shape **)out, shapeSettings->isMutable, NULL) != no_error ?
+                                      DataFormat_VOX : DataFormat_Error;
+            stream_free(stream);
+            return format;
+        } else if (magic == MAGIC_GLTF) {
+            const DataFormat format = serialization_gltf_load(buffer, size, filter, (DoublyLinkedList **)out) ?
+                                      DataFormat_GLTF : DataFormat_Error;
+            stream_free(stream);
+            return format;
         }
     }
-    return 0; // ok
+
+    // 3ZH and PCUBES
+    if (readMagicBytes(stream, true)) {
+        if (serialization_load_assets(stream, NULL, filter, NULL, shapeSettings, true, (DoublyLinkedList **)out)) { // frees stream
+            return DataFormat_3ZH;
+        } else {
+            return DataFormat_Error;
+        }
+    }
+
+    return DataFormat_Unsupported;
 }
 
-uint8_t readMagicBytesLegacy(Stream *s) {
+//MARK: - 3ZH files -
+
+bool _readMagicBytes(Stream *s, uint8_t size, const char *magic) {
     char current = 0;
-    for (int i = 0; i < MAGIC_BYTES_SIZE_LEGACY; i++) {
+    for (int i = 0; i < size; i++) {
         if (stream_read(s, &current, sizeof(char), 1) == false) {
             cclog_error("failed to read magic byte");
-            return 1; // error
+            return false;
         }
-        if (current != MAGIC_BYTES_LEGACY[i]) {
+        if (current != magic[i]) {
             cclog_error("incorrect magic bytes");
-            return 1; // error
+            return false;
         }
     }
-    return 0; // ok
+    return true;
+}
+
+bool readMagicBytes(Stream *s, bool allowLegacy) {
+    if (_readMagicBytes(s, MAGIC_BYTES_SIZE, MAGIC_BYTES)) {
+        return true;
+    }
+    if (allowLegacy) {
+        stream_set_cursor_position(s, 0);
+        return _readMagicBytes(s, MAGIC_BYTES_SIZE_LEGACY, MAGIC_BYTES_LEGACY);
+    }
+    return false;
 }
 
 Shape *assets_get_root_shape(DoublyLinkedList *list, bool remove) {
@@ -72,102 +116,101 @@ Shape *assets_get_root_shape(DoublyLinkedList *list, bool remove) {
 Shape *serialization_load_shape(Stream *s,
                                 const char *fullname,
                                 ColorAtlas *colorAtlas,
-                                LoadShapeSettings *shapeSettings,
+                                ShapeSettings *shapeSettings,
                                 const bool allowLegacy) {
-    DoublyLinkedList *assets = serialization_load_assets(s,
-                                                         fullname,
-                                                         AssetType_Shape,
-                                                         colorAtlas,
-                                                         shapeSettings,
-                                                         allowLegacy);
-    // s is NULL if it could not be loaded
-    if (assets == NULL) {
-        return NULL;
+    DoublyLinkedList *assets = NULL;
+    if (serialization_load_assets(s,
+                                  fullname,
+                                  AssetType_Shape,
+                                  colorAtlas,
+                                  shapeSettings,
+                                  allowLegacy,
+                                  &assets)) {
+        Shape *shape = assets_get_root_shape(assets, true);
+
+        // do not keep ownership on sub-objects + free unused palette
+        doubly_linked_list_flush(assets, serialization_assets_free_func);
+        doubly_linked_list_free(assets);
+
+        return shape;
     }
-    Shape *shape = assets_get_root_shape(assets, true);
 
-    // do not keep ownership on sub-objects + free unused palette
-    doubly_linked_list_flush(assets, serialization_assets_free_func);
-    doubly_linked_list_free(assets);
-
-    return shape;
+    return NULL;
 }
 
-DoublyLinkedList *serialization_load_assets(Stream *s,
-                                            const char *fullname,
-                                            AssetType filterMask,
-                                            ColorAtlas *colorAtlas,
-                                            const LoadShapeSettings *const shapeSettings,
-                                            const bool allowLegacy) {
-    if (s == NULL) {
+bool serialization_load_assets(Stream *stream,
+                               const char *fullname,
+                               ASSET_MASK_T filter,
+                               ColorAtlas *colorAtlas,
+                               const ShapeSettings *const shapeSettings,
+                               const bool allowLegacy,
+                               DoublyLinkedList **out) {
+    vx_assert_d(*out == NULL);
+
+    if (stream == NULL) {
         cclog_error("can't load asset from NULL Stream");
-        return NULL; // error
+        return false;
     }
 
     // read magic bytes
-    if (readMagicBytes(s) != 0) {
-        if (allowLegacy) {
-            stream_set_cursor_position(s, 0);
-            if (readMagicBytesLegacy(s) != 0) {
-                stream_free(s);
-                return NULL;
-            }
-        } else {
-            stream_free(s);
-            return NULL;
-        }
+    if (readMagicBytes(stream, allowLegacy) == false) {
+        goto return_error;
     }
 
     // read file format
     uint32_t fileFormatVersion = 0;
-    if (stream_read_uint32(s, &fileFormatVersion) == false) {
+    if (stream_read_uint32(stream, &fileFormatVersion) == false) {
         cclog_error("failed to read file format version");
-        stream_free(s);
-        return NULL;
+        goto return_error;
     }
-
-    DoublyLinkedList *list = NULL;
 
     switch (fileFormatVersion) {
         case 5: {
-            list = doubly_linked_list_new();
-            Shape *shape = serialization_v5_load_shape(s, shapeSettings, colorAtlas);
-            Asset *asset = malloc(sizeof(Asset));
-            if (asset == NULL) {
-                stream_free(s);
-                return NULL;
+            if ((filter & AssetType_Shape) != 0) {
+                *out = doubly_linked_list_new();
+                Shape *shape = serialization_v5_load_shape(stream, shapeSettings, colorAtlas);
+                Asset *asset = malloc(sizeof(Asset));
+                if (asset == NULL) {
+                    goto return_error;
+                }
+                asset->ptr = shape;
+                asset->type = AssetType_Shape;
+                doubly_linked_list_push_last(*out, asset);
             }
-            asset->ptr = shape;
-            asset->type = AssetType_Shape;
-            doubly_linked_list_push_last(list, asset);
             break;
         }
         case 6: {
-            list = serialization_load_assets_v6(s, colorAtlas, filterMask, shapeSettings);
+            *out = serialization_load_assets_v6(stream, colorAtlas, filter, shapeSettings);
             break;
         }
         default: {
             cclog_error("file format version not supported: %d", fileFormatVersion);
-            break;
+            goto return_error;
         }
     }
 
-    stream_free(s);
-    s = NULL;
-
-    if (list != NULL && doubly_linked_list_node_count(list) == 0) {
-        doubly_linked_list_free(list);
-        list = NULL;
+    if (*out != NULL && doubly_linked_list_node_count(*out) == 0) {
+        doubly_linked_list_free(*out);
+        *out = NULL;
         cclog_error("[serialization_load_assets] no resources found");
+        goto return_error;
     }
 
     // set fullname if containing a root shape
-    Shape *shape = assets_get_root_shape(list, false);
+    Shape *shape = assets_get_root_shape(*out, false);
     if (shape != NULL) {
         shape_set_fullname(shape, fullname);
     }
 
-    return list;
+    goto return_success;
+
+    return_error:
+    stream_free(stream);
+    return false;
+
+    return_success:
+    stream_free(stream);
+    return true;
 }
 
 void serialization_assets_free_func(void *ptr) {
@@ -181,6 +224,12 @@ void serialization_assets_free_func(void *ptr) {
             break;
         case AssetType_Palette:
             color_palette_release((ColorPalette *)a->ptr);
+            break;
+        case AssetType_Camera:
+            camera_release((Camera *)a->ptr);
+            break;
+        case AssetType_Light:
+            light_release((Light *)a->ptr);
             break;
         default:
             break;
@@ -258,7 +307,7 @@ bool get_preview_data(const char *filepath, void **imageData, uint32_t *size) {
     Stream *s = stream_new_file_read(fd);
 
     // read magic bytes
-    if (readMagicBytes(s) != 0) {
+    if (readMagicBytes(s, true) == false) {
         cclog_error("failed to read magic bytes (%s)", filepath);
         stream_free(s); // closes underlying file
         return false;
