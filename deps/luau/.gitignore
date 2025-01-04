@@ -3,3 +3,24 @@
 
 # Ignore ./src directory (which exists only during build)
 src/
+
+# /build/
+# /build[.-]*/
+# /out
+# /cmake/
+# /cmake[.-]*/
+# /coverage/
+# /.vs/
+# /.vscode/
+# /fuzz/luau.pb.*
+# /crash-*
+# /default.prof*
+# /fuzz-*
+# /luau
+# /luau-tests
+# /luau-analyze
+# /luau-bytecode
+# /luau-compile
+# __pycache__
+# .cache
+# .clangd
