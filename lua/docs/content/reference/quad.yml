@@ -149,7 +149,9 @@ properties:
     - name: "Shadow"
       type: boolean
       description: |
-          Whether or not the quad should be affected by light shadow casters in matching layers.
+          Whether or not the quad should cast shadows onto other lit objects. [Light](reference/light) objects set as shadow casters will affect all quads in matching layers (see [Light](reference/light).[CastsShadows](/reference/light#property-castsshadows)).
+
+          Note that whether or not the quad is affected by lights and shadows from other objects depends on the separate property [This].[IsUnlit](/reference/quad#property-isunlit).
 
     - name: "Layers"
       type: "table"
@@ -159,7 +161,7 @@ properties:
     - name: "IsUnlit"
       type: "boolean"
       description: |
-          Whether or not the [This] should ignore scene lighting, `false` by default.
+          Whether or not the quad should ignore scene lighting, `false` by default. If `true`, the quad won't be affected by any light and shadows from other objects.
     
     - name: "IsMask"
       type: "boolean"
