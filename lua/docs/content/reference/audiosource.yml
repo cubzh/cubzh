@@ -45,7 +45,9 @@ properties:
     - name: "Sound"
       type: "string"
       description: |
-          `AudioSource`'s sound file reference. It must be in the list of available built-in sounds.
+          `AudioSource`'s sound file reference. When assigning a file name as string, it must be in the list of available built-in sounds.
+
+          You can also assign a [Data](/reference/data) object to use any external sound.
       samples:
           - code: |
               local as = AudioSource()
