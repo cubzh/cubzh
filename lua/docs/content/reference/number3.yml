@@ -69,6 +69,62 @@ properties:
           end
           -- Using Length instead of SquaredLength would give the same results,
           -- but it would have to internally compute 2 square roots for nothing.
+    
+  - name: "One"
+    type: "Number3"
+    description: |
+        Shortcut to `Number3(1, 1, 1)`.
+
+        This is a property of the global [This], to be called as `Number3.One`.
+      
+  - name: "Zero"
+    type: "Number3"
+    description: |
+        Shortcut to `Number3(0, 0, 0)`.
+
+        This is a property of the global [This], to be called as `Number3.Zero`.
+  
+  - name: "Right"
+    type: "Number3"
+    description: |
+        Shortcut to unit vector `Number3(1, 0, 0)`.
+
+        This is a property of the global [This], to be called as `Number3.Right`.
+  
+  - name: "Left"
+    type: "Number3"
+    description: |
+        Shortcut to unit vector `Number3(-1, 0, 0)`.
+
+        This is a property of the global [This], to be called as `Number3.Left`.
+  
+  - name: "Up"
+    type: "Number3"
+    description: |
+        Shortcut to unit vector `Number3(0, 1, 0)`.
+
+        This is a property of the global [This], to be called as `Number3.Up`.
+  
+  - name: "Down"
+    type: "Number3"
+    description: |
+        Shortcut to unit vector `Number3(0, -1, 0)`.
+
+        This is a property of the global [This], to be called as `Number3.Down`.
+  
+  - name: "Forward"
+    type: "Number3"
+    description: |
+        Shortcut to unit vector `Number3(0, 0, 1)`.
+
+        This is a property of the global [This], to be called as `Number3.Forward`.
+  
+  - name: "Backward"
+    type: "Number3"
+    description: |
+        Shortcut to unit vector `Number3(0, 0, -1)`.
+
+        This is a property of the global [This], to be called as `Number3.Backward`.
 
 functions:
   - name: "Copy"
