@@ -47,6 +47,48 @@ properties:
     type: "number"
     description: |
       Squared magnitude of the `Number2`.
+  
+  - name: "One"
+    type: "Number2"
+    description: |
+        Shortcut to `Number2(1, 1)`.
+
+        This is a property of the global [This], to be called as `Number2.One`.
+      
+  - name: "Zero"
+    type: "Number2"
+    description: |
+        Shortcut to `Number2(0, 0)`.
+
+        This is a property of the global [This], to be called as `Number2.Zero`.
+  
+  - name: "Right"
+    type: "Number2"
+    description: |
+        Shortcut to unit vector `Number2(1, 0)`.
+
+        This is a property of the global [This], to be called as `Number2.Right`.
+  
+  - name: "Left"
+    type: "Number2"
+    description: |
+        Shortcut to unit vector `Number2(-1, 0)`.
+
+        This is a property of the global [This], to be called as `Number2.Left`.
+  
+  - name: "Up"
+    type: "Number2"
+    description: |
+        Shortcut to unit vector `Number2(0, 1)`.
+
+        This is a property of the global [This], to be called as `Number2.Up`.
+  
+  - name: "Down"
+    type: "Number2"
+    description: |
+        Shortcut to unit vector `Number2(0, -1)`.
+
+        This is a property of the global [This], to be called as `Number2.Down`.
 
 functions:
   - name: "Copy"
