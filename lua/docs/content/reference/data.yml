@@ -25,7 +25,7 @@ blocks:
       end)
   
   - text: |
-      See [Quad](reference/quad).[Image](reference/quad#property-image) for more options such as transparency, cutout, and 9-slice.
+      See [Quad](/reference/quad).[Image](/reference/quad#property-image) for more options such as transparency, cutout, and 9-slice.
 
 properties:
     - name: "Length"

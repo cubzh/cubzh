@@ -141,7 +141,7 @@ properties:
     - name: "Shadow"
       type: boolean
       description: |
-          Whether or not the shape should cast shadows onto other lit objects. [Light](reference/light) objects set as shadow casters will affect all shapes in matching layers (see [Light](reference/light).[CastsShadows](/reference/light#property-castsshadows)).
+          Whether or not the shape should cast shadows onto other lit objects. [Light](/reference/light) objects set as shadow casters will affect all shapes in matching layers (see [Light](/reference/light).[CastsShadows](/reference/light#property-castsshadows)).
 
           Note that whether or not the shape is affected by lights and shadows from other objects depends on the separate property [This].[IsUnlit](/reference/quad#property-isunlit).
 
