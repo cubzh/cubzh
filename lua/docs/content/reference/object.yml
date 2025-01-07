@@ -463,6 +463,8 @@ functions:
       arguments: 
         - name: "index"
           type: "integer"
+      return:
+        - type: "Object"
       samples:
         - code: |
             if o.ChildrenCount > 0 then
@@ -471,6 +473,8 @@ functions:
 
     - name: "GetParent"
       description: "Get [This]'s parent."
+      return:
+        - type: "Object"
       samples:
         - code: |
             print(myObject:GetParent())

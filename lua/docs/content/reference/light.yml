@@ -81,7 +81,9 @@ properties:
     - name: "CastsShadows"
       type: "boolean"
       description: |
-          Enables the light source as a shadow caster. Cubzh may limit the number of light shadow casters in a scene based on each player's device.
+          Enables the light source as a shadow caster. Every shadow-enabled object in matching layers will cast a shadow onto other lit objects.
+          
+          Cubzh will automatically limit the number of simultaneous light shadow casters in a scene based on each player's device.
 
           ⚠️ Currently, only directional lights ([This].[Type](/reference/light#property-type)) have shadow-casting capability.
 

@@ -2,7 +2,7 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
 type: "Ambient"
 extends: ""
 description: |
-    `Ambient` defines a number of general lighting and color properties.
+    `Ambient` defines a number of general lighting and color properties. It is only accessible through [Light](/reference/light).[This].
 
 properties:
     - name: "SkyLightFactor"
@@ -25,4 +25,4 @@ properties:
     - name: "Intensity"
       type: "number"
       description: |
-          Factor multiplying the light value of all [Shape](reference/shape)'s baked lighting. Default is `1.0`, a value of `0.0` would turn OFF the global light source inside baked lighting. Note that light blocks are not affected by this factor.
+          Factor multiplying the light value of all [Shape](/reference/shape)'s baked lighting. Default is `1.0`, a value of `0.0` would turn OFF the global light source inside baked lighting. Note that light blocks are not affected by this factor.

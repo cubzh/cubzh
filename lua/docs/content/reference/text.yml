@@ -143,6 +143,50 @@ properties:
       type: "boolean"
       description: |
           Whether or not the [This] should be visible from the back, `true` by default.
+    
+    - name: "Format"
+      type: "table"
+      description: |
+        Enable and configure text formatting using this property. Setting this to `nil` resets text format to default.
+
+        Supported keys: `{ alignment=<value>, weight=<value>, slant=<value> }`,
+        - `alignment` can be one of `"left"` (default), `"center"`, or `"right"`.
+        - `weight` as a number between `0.0` and `2.0` (default `1.0`). The weight of the font controls how light or heavy it looks. You can also use the preset values `"bold"`, `"regular"` or `"light"`, which are simply equivalent to a weight of `1.2`, `1.0`, and `0.9` respectively.
+        - `slant` as a number between `-1.0` and `1.0` (default `0.0`). The slant of the font controls how tilted the text is to the right or left. The preset values `"italic"` and `"regular"` can be used, they are equivalent to a slant of `0.2` and `0.0` respectively.
+      
+        All these options can be set at runtime or animated individually.
+
+        Check the world `Text Format Showcase` to experiment with these options.
+      samples:
+        - code: |
+            -- make a centered bold text
+            t.Format = { alignment="center", weight="bold" }
+
+            -- make a bold italic text
+            t.Format = { weight="bold", slant="italic" }
+
+            -- make a text using some custom weight and slant
+            t.Format = { weight=1.5, slant=-0.1 }
+
+    - name: "DrawMode"
+      type: "table"
+      description: |
+        Enable and configure draw modes using this property. Setting this to `nil` disables all draw modes.
+
+        As of version 0.1.12, one draw mode is supported: `{ outline={ <options> } }`
+        
+        Outline options are,
+        - `weight` as a number between 0.0 and 1.0, disabling the outline at 0.0 to the maximum weight allowed by the font at 1.0.
+        - `color` as a [Color](/reference/color) object.
+
+        All these options can be set at runtime or animated individually.
+
+        Check the world `Text Format Showcase` to experiment with these options.
+      samples:
+        - code: |
+            t.DrawMode = {
+              outline = { weight=0.5, color=Color(10, 15, 200) }
+            }
 
 functions:
     - name: "GetCharacterSize"

@@ -6,7 +6,7 @@ creatable: false
 blocks:
   - text: |
       [Data] is used to transfer raw pieces of information.
-      It is possible to access any byte of a Data instance by indexing `data[byteIndex]`.
+      It is possible to access any byte of a Data instance by indexing `data\[byteIndex\]`.
 
   - subtitle: How to read a specific byte of a Data instance?
 
@@ -17,12 +17,15 @@ blocks:
         local val = data[5]
       end)
   
-  - subtitle: How to display an image data in a quad? (see [Quad](reference/quad).[Image](reference/quad#property-image) for more options)
+  - subtitle: How to display an image data in a quad?
 
   - code: |
       File:OpenAndReadAll(function(success, result)
         quad.Image = result
       end)
+  
+  - text: |
+      See [Quad](/reference/quad).[Image](/reference/quad#property-image) for more options such as transparency, cutout, and 9-slice.
 
 properties:
     - name: "Length"
