@@ -30,6 +30,7 @@ xptools.a:
 	-I $(LIBSSL_DIR) \
 	-I $(LIBZ_INCLUDE_DIR)
 	(cd ../common; gcc -std=c++11 -D__VX_PLATFORM_LINUX -D__VX_USE_LIBWEBSOCKETS -DDEBUG -c *.cpp \
+	-D __VX_APP_BUILD_TARGET='"$(__VX_APP_BUILD_TARGET)"' \
 	-I . \
 	-I ../include \
 	-I ../deps \
