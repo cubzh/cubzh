@@ -15,10 +15,10 @@
 #include <cstdint>
 #include <iomanip> // Include for std::setw and std::setfill
 
-using namespace vx::crypto;
+#include <zlib.h>
 
 //
-// Utility functions
+// Local utility functions
 //
 
 unsigned int random_char() {
@@ -80,4 +80,8 @@ std::string vx::crypto::generate_uuid_v4() {
 
 std::string vx::crypto::empty_uuid_v4() {
     return "00000000-0000-0000-0000-000000000000";
+}
+
+uint32_t vx::crypto::crc32(const uint32_t crc, const void * const buf, const uint32_t len) {
+    return static_cast<uint32_t>(::crc32(crc, static_cast<const Bytef*>(buf), static_cast<uInt>(len)));
 }
