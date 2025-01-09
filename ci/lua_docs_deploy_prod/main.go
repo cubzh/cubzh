@@ -78,20 +78,28 @@ func main() {
 
 	// Parse SSH connection URL
 	{
-		urlRes, err := url.Parse(LUA_DOCS_SRV_SSH_URL)
+		parsedURL, err := url.Parse(LUA_DOCS_SRV_SSH_URL)
 		if err != nil {
 			fmt.Println("❌ Error:", err.Error())
 			os.Exit(1) // failure
 		}
 
-		LUA_DOCS_SRV_SSH_USER = urlRes.User.String()
-		LUA_DOCS_SRV_SSH_HOST = urlRes.Hostname()
-		LUA_DOCS_SRV_SSH_PORT = urlRes.Port()
+		LUA_DOCS_SRV_SSH_USER = parsedURL.User.String()
+		LUA_DOCS_SRV_SSH_HOST = parsedURL.Hostname()
+		LUA_DOCS_SRV_SSH_PORT = parsedURL.Port()
 
-		if len(LUA_DOCS_SRV_SSH_USER) == 0 ||
-			len(LUA_DOCS_SRV_SSH_HOST) == 0 ||
-			len(LUA_DOCS_SRV_SSH_PORT) == 0 {
-			fmt.Println("❌ Error: failed to parse LUA_DOCS_SRV_SSH_URL")
+		if len(LUA_DOCS_SRV_SSH_USER) == 0 {
+			fmt.Println("❌ Error: LUA_DOCS_SRV_SSH_USER is empty")
+			os.Exit(1) // failure
+		}
+
+		if len(LUA_DOCS_SRV_SSH_HOST) == 0 {
+			fmt.Println("❌ Error: LUA_DOCS_SRV_SSH_HOST is empty")
+			os.Exit(1) // failure
+		}
+
+		if len(LUA_DOCS_SRV_SSH_PORT) == 0 {
+			fmt.Println("❌ Error: LUA_DOCS_SRV_SSH_PORT is empty")
 			os.Exit(1) // failure
 		}
 	}
