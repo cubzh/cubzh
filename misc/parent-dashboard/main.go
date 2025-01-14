@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	API_URL = "https://api.cu.bzh"
-	DEBUG   = false
+	LISTEN_ADDR = ":80"
+	API_URL     = "https://api.cu.bzh"
+	DEBUG       = false
 )
 
 var (
@@ -187,7 +188,7 @@ func main() {
 		http.ListenAndServe(":3000", r)
 	} else {
 		fmt.Println("✨ Parent dashboard running on port 80...")
-		http.ListenAndServe(":80", r)
+		http.ListenAndServe(LISTEN_ADDR, r)
 	}
 }
 
