@@ -1093,12 +1093,7 @@ bool debug_rtree_integrity_check(Rtree *r) {
                 success = false;
             }
             t = (Transform *)rn->leaf;
-            if (transform_get_type(t) == ShapeTransform) {
-                s = (Shape *)transform_get_ptr(t);
-                rb = shape_get_rigidbody(s);
-            } else {
-                rb = NULL;
-            }
+            rb = transform_get_rigidbody(t);
             if (rb != NULL) {
                 rbLeaf = rigidbody_get_rtree_leaf(rb);
                 if (rbLeaf != NULL) {

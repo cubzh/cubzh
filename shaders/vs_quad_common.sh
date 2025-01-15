@@ -4,10 +4,9 @@ $input a_position, a_normal, a_texcoord0, a_color0
 #if IS_SHADOW_PASS
 
 #if QUAD_VARIANT_TEX && QUAD_VARIANT_CUTOUT
-$output v_color0, v_texcoord0
+$output v_color0
 	#define v_depth v_color0.x
 	#define v_uv v_color0.yz
-	#define v_normal v_texcoord0.xyz
 #elif QUAD_VARIANT_MRT_SHADOW_PACK
 $output v_color0
 	#define v_depth v_color0.x
@@ -57,7 +56,6 @@ void main() {
 	v_depth = clip.z / clip.w;
 #endif
 #if QUAD_VARIANT_TEX && QUAD_VARIANT_CUTOUT
-	v_normal = a_normal;
 	v_uv = a_texcoord0.xy;
 #endif
 

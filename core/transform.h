@@ -67,7 +67,8 @@ typedef enum {
     LightTransform,
     WorldTextTransform,
     AudioSourceTransform,
-    AudioListenerTransform
+    AudioListenerTransform,
+    MeshTransform
 } TransformType;
 
 typedef bool (*pointer_transform_recurse_func)(Transform *t, void *ptr);
@@ -202,24 +203,24 @@ void transform_utils_rotation_euler_wtl(Transform *t, const float3 *rot, float3 
 void transform_utils_rotate(Transform *t, Quaternion *q, Quaternion *result, bool isLocal);
 void transform_utils_rotate_euler(Transform *t, const float3 *rot, float3 *result, bool isLocal);
 void transform_utils_move_children(Transform *from, Transform *to, bool keepWorld);
-void transform_utils_box_to_aabb(Transform *t,
-                                 const Box *b,
-                                 Box *aab,
-                                 const float3 *offset,
-                                 SquarifyType squarify,
-                                 const bool refreshParents);
-void transform_utils_box_to_static_collider(Transform *t,
-                                            const Box *b,
-                                            Box *aab,
-                                            const float3 *offset,
-                                            SquarifyType squarify,
-                                            const bool refreshParents);
-void transform_utils_box_to_dynamic_collider(Transform *t,
-                                             const Box *b,
-                                             Box *aab,
-                                             const float3 *offset,
-                                             SquarifyType squarify,
-                                             const bool refreshParents);
+void transform_utils_aabox_local_to_world(Transform *t,
+                                          const Box *b,
+                                          Box *aab,
+                                          const float3 *offset,
+                                          SquarifyType squarify,
+                                          const bool refreshParents);
+void transform_utils_aabox_local_to_static_collider(Transform *t,
+                                                    const Box *b,
+                                                    Box *aab,
+                                                    const float3 *offset,
+                                                    SquarifyType squarify,
+                                                    const bool refreshParents);
+void transform_utils_aabox_local_to_dynamic_collider(Transform *t,
+                                                     const Box *b,
+                                                     Box *aab,
+                                                     const float3 *offset,
+                                                     SquarifyType squarify,
+                                                     const bool refreshParents);
 Shape *transform_utils_get_shape(Transform *t);
 void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out);
 void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out);

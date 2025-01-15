@@ -19,6 +19,7 @@
 #include "quad.h"
 #include "scene.h"
 #include "utils.h"
+#include "mesh.h"
 
 #define TRANSFORM_DIRTY_NONE 0
 // local mtx, ltw & wtl matrices are dirty, and children down the hierarchy need refresh
@@ -415,23 +416,21 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
             rigidbody_get_rtree_leaf(rb) == NULL) {
 
             if (type == ShapeTransform) {
-                Shape *s = (Shape *)transform_get_ptr(t);
-                if (s != NULL) {
-                    shape_compute_world_collider(s, collider, refreshParents);
-                }
+                shape_compute_world_collider((Shape *)transform_get_ptr(t), collider, refreshParents);
             } else {
                 float3 offset = float3_zero;
 
                 if (type == QuadTransform) {
-                    Quad *q = (Quad *)transform_get_ptr(t);
-                    if (q != NULL) {
-                        offset.x = -quad_get_anchor_x(q) * quad_get_width(q);
-                        offset.y = -quad_get_anchor_y(q) * quad_get_height(q);
-                    }
+                    const Quad *q = (Quad *)transform_get_ptr(t);
+                    offset.x = -quad_get_anchor_x(q) * quad_get_width(q);
+                    offset.y = -quad_get_anchor_y(q) * quad_get_height(q);
+                } else if (type == MeshTransform) {
+                    const float3 pivot = mesh_get_pivot((Mesh *)transform_get_ptr(t));
+                    offset = (float3){ -pivot.x, -pivot.y, -pivot.z };
                 }
 
                 if (rigidbody_is_dynamic(rb)) {
-                    transform_utils_box_to_dynamic_collider(
+                    transform_utils_aabox_local_to_dynamic_collider(
                         t,
                         rigidbody_get_collider(rb),
                         collider,
@@ -439,12 +438,12 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
                         PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify,
                         refreshParents);
                 } else {
-                    transform_utils_box_to_static_collider(t,
-                                                           rigidbody_get_collider(rb),
-                                                           collider,
-                                                           &offset,
-                                                           NoSquarify,
-                                                           refreshParents);
+                    transform_utils_aabox_local_to_static_collider(t,
+                                                                   rigidbody_get_collider(rb),
+                                                                   collider,
+                                                                   &offset,
+                                                                   NoSquarify,
+                                                                   refreshParents);
                 }
             }
         } else {
@@ -1026,12 +1025,12 @@ void transform_utils_move_children(Transform *from, Transform *to, bool keepWorl
     }
 }
 
-void transform_utils_box_to_aabb(Transform *t,
-                                 const Box *b,
-                                 Box *aab,
-                                 const float3 *offset,
-                                 SquarifyType squarify,
-                                 const bool refreshParents) {
+void transform_utils_aabox_local_to_world(Transform *t,
+                                          const Box *b,
+                                          Box *aab,
+                                          const float3 *offset,
+                                          SquarifyType squarify,
+                                          const bool refreshParents) {
 
     transform_refresh(t, false, refreshParents); // refresh ltw for intra-frame calculations
 #if TRANSFORM_AABOX_AABB_MODE == 0
@@ -1045,12 +1044,12 @@ void transform_utils_box_to_aabb(Transform *t,
 #endif
 }
 
-void transform_utils_box_to_static_collider(Transform *t,
-                                            const Box *b,
-                                            Box *aab,
-                                            const float3 *offset,
-                                            SquarifyType squarify,
-                                            const bool refreshParents) {
+void transform_utils_aabox_local_to_static_collider(Transform *t,
+                                                    const Box *b,
+                                                    Box *aab,
+                                                    const float3 *offset,
+                                                    SquarifyType squarify,
+                                                    const bool refreshParents) {
 
     transform_refresh(t, false, refreshParents); // refresh ltw for intra-frame calculations
 #if TRANSFORM_AABOX_STATIC_COLLIDER_MODE == 0
@@ -1064,12 +1063,12 @@ void transform_utils_box_to_static_collider(Transform *t,
 #endif
 }
 
-void transform_utils_box_to_dynamic_collider(Transform *t,
-                                             const Box *b,
-                                             Box *aab,
-                                             const float3 *offset,
-                                             SquarifyType squarify,
-                                             const bool refreshParents) {
+void transform_utils_aabox_local_to_dynamic_collider(Transform *t,
+                                                     const Box *b,
+                                                     Box *aab,
+                                                     const float3 *offset,
+                                                     SquarifyType squarify,
+                                                     const bool refreshParents) {
 
     transform_refresh(t, false, refreshParents); // refresh ltw for intra-frame calculations
 #if TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE == 0
@@ -1096,12 +1095,15 @@ Shape *transform_utils_get_shape(Transform *t) {
 void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
     *out = *t->ltw;
 
-    if (transform_get_type(t) == ShapeTransform) {
-        const float3 pivot = shape_get_pivot((Shape *)t->ptr);
+    const TransformType type = transform_get_type(t);
+
+    if (type == ShapeTransform || type == MeshTransform) {
+        const float3 pivot = type == ShapeTransform ? shape_get_pivot((Shape *)t->ptr) :
+                             mesh_get_pivot((Mesh *)t->ptr);
         out->x4y1 -= t->ltw->x1y1 * pivot.x + t->ltw->x2y1 * pivot.y + t->ltw->x3y1 * pivot.z;
         out->x4y2 -= t->ltw->x1y2 * pivot.x + t->ltw->x2y2 * pivot.y + t->ltw->x3y2 * pivot.z;
         out->x4y3 -= t->ltw->x1y3 * pivot.x + t->ltw->x2y3 * pivot.y + t->ltw->x3y3 * pivot.z;
-    } else if (transform_get_type(t) == QuadTransform) {
+    } else if (type == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
         const float anchorX = quad_get_anchor_x(q) * quad_get_width(q);
         const float anchorY = quad_get_anchor_y(q) * quad_get_height(q);
@@ -1114,12 +1116,15 @@ void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
 void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out) {
     *out = *t->wtl;
 
-    if (transform_get_type(t) == ShapeTransform) {
-        const float3 pivot = shape_get_pivot((Shape *)t->ptr);
+    const TransformType type = transform_get_type(t);
+
+    if (type == ShapeTransform || type == MeshTransform) {
+        const float3 pivot = type == ShapeTransform ? shape_get_pivot((Shape *)t->ptr) :
+                             mesh_get_pivot((Mesh *)t->ptr);
         out->x4y1 += pivot.x;
         out->x4y2 += pivot.y;
         out->x4y3 += pivot.z;
-    } else if (transform_get_type(t) == QuadTransform) {
+    } else if (type == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
         out->x4y1 += quad_get_anchor_x(q) * quad_get_width(q);
         out->x4y2 += quad_get_anchor_y(q) * quad_get_height(q);
@@ -1180,19 +1185,22 @@ void transform_utils_box_fit_recurse(Transform *t,
     while (n != NULL) {
         child = (Transform *)doubly_linked_list_node_pointer(n);
 
-        if (transform_get_type(child) == ShapeTransform) {
-            Shape *s = (Shape *)child->ptr;
+        const TransformType type = transform_get_type(child);
+
+        if (type == ShapeTransform || type == MeshTransform) {
 
             transform_refresh(child, false, false); // refresh mtx for intra-frame calculations
-            if (applyTransaction) {
-                shape_apply_current_transaction(s, true);
+            if (type == ShapeTransform && applyTransaction) {
+                shape_apply_current_transaction((Shape *)child->ptr, true);
             }
 
             Matrix4x4 child_mtx = mtx;
             matrix4x4_op_multiply(&child_mtx, child->mtx);
 
-            const Box model = shape_get_model_aabb(s);
-            const float3 offset = shape_get_pivot(s);
+            const Box model = type == ShapeTransform ? shape_get_model_aabb((Shape *)child->ptr) :
+                              *mesh_get_model_aabb((Mesh *)child->ptr);
+            const float3 offset = type == ShapeTransform ? shape_get_pivot((Shape *)child->ptr) :
+                                  mesh_get_pivot((Mesh *)child->ptr);
             Box aabb;
             box_to_aabox2(&model, &aabb, &child_mtx, &offset, NoSquarify);
 

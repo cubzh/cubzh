@@ -1,7 +1,6 @@
-$input v_color0, v_texcoord0
+$input v_color0
 	#define v_depth v_color0.x
 	#define v_uv v_color0.yz
-	#define v_normal v_texcoord0.xyz
 
 /*
  * Pack-depth fragment shader w/ texture cutout
