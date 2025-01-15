@@ -958,33 +958,33 @@ bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T 
            coords.y < shape->bbMax.y && coords.z >= shape->bbMin.z && coords.z < shape->bbMax.z;
 }
 
-void shape_box_to_aabox(const Shape *s,
-                        const Box *box,
-                        Box *aabox,
-                        bool isCollider,
-                        const bool refreshParents) {
-    if (s == NULL || box == NULL || aabox == NULL)
+void shape_aabox_model_to_world(const Shape *s,
+                                const Box *model,
+                                Box *world,
+                                bool isCollider,
+                                const bool refreshParents) {
+    if (s == NULL || model == NULL || world == NULL)
         return;
 
     if (isCollider) {
         if (rigidbody_is_dynamic(shape_get_rigidbody(s))) {
-            transform_utils_box_to_dynamic_collider(s->transform,
-                                                    box,
-                                                    aabox,
-                                                    s->pivot,
-                                                    PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify
-                                                                                      : NoSquarify,
-                                                    refreshParents);
+            transform_utils_aabox_local_to_dynamic_collider(s->transform,
+                                                            model,
+                                                            world,
+                                                            s->pivot,
+                                                            PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify
+                                                                                              : NoSquarify,
+                                                            refreshParents);
         } else {
-            transform_utils_box_to_static_collider(s->transform,
-                                                   box,
-                                                   aabox,
-                                                   s->pivot,
-                                                   NoSquarify,
-                                                   refreshParents);
+            transform_utils_aabox_local_to_static_collider(s->transform,
+                                                           model,
+                                                           world,
+                                                           s->pivot,
+                                                           NoSquarify,
+                                                           refreshParents);
         }
     } else {
-        transform_utils_box_to_aabb(s->transform, box, aabox, s->pivot, NoSquarify, refreshParents);
+        transform_utils_aabox_local_to_world(s->transform, model, world, s->pivot, NoSquarify, refreshParents);
     }
 }
 
@@ -1013,8 +1013,6 @@ void shape_get_local_aabb(const Shape *s, Box *box) {
     if (s == NULL || box == NULL)
         return;
 
-    *box = shape_get_model_aabb(s);
-
     const Box model = shape_get_model_aabb(s);
     transform_refresh(s->transform, false, true); // refresh mtx for intra-frame calculations
     box_to_aabox2(&model, box, transform_get_mtx(s->transform), s->pivot, false);
@@ -1023,7 +1021,7 @@ void shape_get_local_aabb(const Shape *s, Box *box) {
 bool shape_get_world_aabb(Shape *s, Box *box, const bool refreshParents) {
     if (s->worldAABB == NULL || transform_is_any_dirty(s->transform)) {
         const Box model = shape_get_model_aabb(s);
-        shape_box_to_aabox(s, &model, box, false, refreshParents);
+        shape_aabox_model_to_world(s, &model, box, false, refreshParents);
         if (s->worldAABB == NULL) {
             s->worldAABB = box_new_copy(box);
         } else {
@@ -1840,7 +1838,7 @@ void shape_compute_world_collider(const Shape *s, Box *box, const bool refreshPa
         return;
     Box collider = rigidbody_uses_per_block_collisions(rb) ? shape_get_model_aabb(s)
                                                            : *rigidbody_get_collider(rb);
-    shape_box_to_aabox(s, &collider, box, true, refreshParents);
+    shape_aabox_model_to_world(s, &collider, box, true, refreshParents);
 }
 
 typedef struct {
