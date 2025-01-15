@@ -30,7 +30,7 @@
 // shape_paint_block
 // shape_get_chunk_and_position_within
 // shape_get_max_fixed_size
-// shape_box_to_aabox
+// shape_aabox_model_to_world
 // shape_get_local_aabb
 // shape_get_world_aabb
 // shape_compute_size_and_origin

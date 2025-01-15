@@ -17,6 +17,7 @@
 #include "transform.h"
 #include "light.h"
 #include "camera.h"
+#include "mesh.h"
 
 bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_MASK_T filter, DoublyLinkedList **out) {
     vx_assert_d(*out == NULL);
@@ -42,7 +43,6 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
     cgltf_data *data;
     const cgltf_result result = cgltf_parse(&options, buffer, size, &data);
-
     switch(result) {
         case cgltf_result_success:
             break;
@@ -77,6 +77,41 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
             return false;
     }
 
+    const cgltf_result buffersResult = cgltf_load_buffers(&options, data, NULL);
+    switch(buffersResult) {
+        case cgltf_result_success:
+            break;
+        case cgltf_result_data_too_short:
+            cclog_error("GLTF buffers failed: data too short");
+            return false;
+        case cgltf_result_unknown_format:
+            cclog_error("GLTF buffers failed: unknown format");
+            return false;
+        case cgltf_result_invalid_json:
+            cclog_error("GLTF buffers failed: invalid JSON");
+            return false;
+        case cgltf_result_invalid_gltf:
+            cclog_error("GLTF buffers failed: invalid GLTF");
+            return false;
+        case cgltf_result_invalid_options:
+            cclog_error("GLTF buffers failed: invalid options");
+            return false;
+        case cgltf_result_file_not_found:
+            cclog_error("GLTF buffers failed: file not found");
+            return false;
+        case cgltf_result_io_error:
+            cclog_error("GLTF buffers failed: IO error");
+            return false;
+        case cgltf_result_out_of_memory:
+            cclog_error("GLTF buffers failed: out of memory");
+            return false;
+        case cgltf_result_legacy_gltf:
+            cclog_error("GLTF buffers failed: legacy GLTF");
+            return false;
+        default:
+            return false;
+    }
+
     *out = doubly_linked_list_new();
 
     // Note: we build all possible node hierarchies from the global nodes list, and ignore scenes ;
@@ -85,10 +120,10 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
     Transform **transforms = malloc(data->nodes_count * sizeof(Transform*));
 
     // first pass, create transforms
-    for (cgltf_size j = 0; j < data->nodes_count; ++j) {
-        const cgltf_node *node = &data->nodes[j];
+    for (cgltf_size i = 0; i < data->nodes_count; ++i) {
+        const cgltf_node *node = &data->nodes[i];
 
-        transforms[j] = NULL;
+        transforms[i] = NULL;
 
         // select type, skip if filtered out
         if (node->mesh != NULL) {
@@ -96,9 +131,186 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                 continue;
             }
 
-            // TODO
-            transforms[j] = transform_new(PointTransform);
-            transform_set_name(transforms[j], "debug_gltf_mesh");
+            // map each primitive to a separate mesh transform
+            for (size_t j = 0; j < node->mesh->primitives_count; ++j) {
+                const cgltf_primitive* primitive = &node->mesh->primitives[j];
+                
+                const cgltf_attribute* posAttr = NULL;
+                const cgltf_attribute* normalAttr = NULL;
+                const cgltf_attribute* uvAttr = NULL;
+                const cgltf_attribute* colorAttr = NULL;
+                
+                for (size_t i = 0; i < primitive->attributes_count; i++) {
+                    switch (primitive->attributes[i].type) {
+                        case cgltf_attribute_type_position:
+                            posAttr = &primitive->attributes[i];
+                            break;
+                        case cgltf_attribute_type_normal:
+                            normalAttr = &primitive->attributes[i];
+                            break;
+                        case cgltf_attribute_type_texcoord:
+                            uvAttr = &primitive->attributes[i];
+                            break;
+                        case cgltf_attribute_type_color:
+                            colorAttr = &primitive->attributes[i];
+                            break;
+                        case cgltf_attribute_type_tangent:
+                        case cgltf_attribute_type_joints:
+                        case cgltf_attribute_type_weights:
+                        case cgltf_attribute_type_custom:
+                        case cgltf_attribute_type_invalid:
+                            break;
+                    }
+                }
+                
+                if (posAttr) {
+                    const cgltf_accessor* posAccessor = posAttr->data;
+                    const cgltf_accessor* normalAccessor = normalAttr ? normalAttr->data : NULL;
+                    const cgltf_accessor* uvAccessor = uvAttr ? uvAttr->data : NULL;
+                    const cgltf_accessor* colorAccessor = colorAttr ? colorAttr->data : NULL;
+
+                    const uint32_t vertexCount = (uint32_t)posAccessor->count;
+                    Vertex* vertices = (Vertex*)malloc(vertexCount * sizeof(Vertex));
+                    
+                    for (size_t k = 0; k < vertexCount; ++k) {
+                        cgltf_accessor_read_float(posAccessor, k, &vertices[k].x, 3);
+
+                        vertices[k].unused = 0.0f;
+                        
+                        if (normalAccessor != NULL) {
+                            cgltf_accessor_read_float(normalAccessor, k, &vertices[k].nx, 3);
+                        } else {
+                            vertices[k].nx = 0.0f;
+                            vertices[k].ny = 0.0f;
+                            vertices[k].nz = 0.0f;
+                        }
+                        
+                        if (uvAccessor != NULL) {
+                            cgltf_accessor_read_float(uvAccessor, k, &vertices[k].u, 2);
+                        } else {
+                            vertices[k].u = 0.0f;
+                            vertices[k].v = 0.0f;
+                        }
+
+                        if (colorAccessor != NULL) {
+                            float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+                            cgltf_accessor_read_float(colorAccessor, k, color,
+                                                      colorAccessor->type == cgltf_type_vec3 ? 3 : 4);
+                            
+                            vertices[k].rgba = utils_uint8_to_rgba(
+                                (uint8_t)(color[0] * 255.0f),
+                                (uint8_t)(color[1] * 255.0f),
+                                (uint8_t)(color[2] * 255.0f),
+                                (uint8_t)(color[3] * 255.0f)
+                            );
+                        } else {
+                            vertices[k].rgba = 0xFFFFFFFF;
+                        }
+                    }
+
+                    void *indices = NULL;
+                    uint32_t ibCount = 0;
+                    PrimitiveType primitiveType = PrimitiveType_Triangles;
+                    if (primitive->indices != NULL) {
+                        const cgltf_accessor* indexAccessor = primitive->indices;
+                        const bool index32 = indexAccessor->count > UINT16_MAX;
+
+                        indices = malloc(indexAccessor->count * (index32 ? sizeof(uint32_t) : sizeof(uint16_t)));
+                        ibCount = indexAccessor->count;
+                        
+                        cgltf_size index;
+                        for (size_t k = 0; k < indexAccessor->count; ++k) {
+                            index = cgltf_accessor_read_index(indexAccessor, k);
+                            if (index32) {
+                                ((uint32_t*)indices)[k] = (uint32_t)index;
+                            } else {
+                                ((uint16_t*)indices)[k] = (uint16_t)index;
+                            }
+                        }
+                    } else {
+                        switch(primitive->type) {
+                            case cgltf_primitive_type_points: {
+                                primitiveType = PrimitiveType_Points;
+                                break;
+                            }
+                            case cgltf_primitive_type_lines: {
+                                primitiveType = PrimitiveType_Lines;
+                                break;
+                            }
+                            case cgltf_primitive_type_line_loop: {
+                                // convert line loop to line strip by adding an extra index to close the loop
+                                primitiveType = PrimitiveType_LineStrip;
+                                const bool index32 = vertexCount > UINT16_MAX;
+                                ibCount = vertexCount + 1;
+                                indices = malloc(ibCount * (index32 ? sizeof(uint32_t) : sizeof(uint16_t)));
+                                
+                                // generate sequential indices and add first vertex at the end
+                                for (uint32_t l = 0; l < vertexCount; ++l) {
+                                    if (index32) {
+                                        ((uint32_t*)indices)[l] = l;
+                                    } else {
+                                        ((uint16_t*)indices)[l] = l;
+                                    }
+                                }
+                                if (index32) {
+                                    ((uint32_t*)indices)[vertexCount] = 0;
+                                } else {
+                                    ((uint16_t*)indices)[vertexCount] = 0;
+                                }
+                                break;
+                            }
+                            case cgltf_primitive_type_line_strip:
+                                primitiveType = PrimitiveType_LineStrip;
+                                break;
+                            case cgltf_primitive_type_triangles:
+                                primitiveType = PrimitiveType_Triangles;
+                                break;
+                            case cgltf_primitive_type_triangle_strip:
+                                primitiveType = PrimitiveType_TriangleStrip;
+                                break;
+                            case cgltf_primitive_type_triangle_fan: {
+                                // convert triangle fan to regular triangles
+                                primitiveType = PrimitiveType_Triangles;
+                                const uint32_t triCount = vertexCount - 2;
+                                const bool index32 = vertexCount > UINT16_MAX;
+                                ibCount = triCount * 3;
+                                indices = malloc(ibCount * (index32 ? sizeof(uint32_t) : sizeof(uint16_t)));
+
+                                for (uint32_t l = 0; l < triCount; l++) {
+                                    if (index32) {
+                                        ((uint32_t*)indices)[l * 3] = 0;            // center vertex
+                                        ((uint32_t*)indices)[l * 3 + 1] = l + 1;    // current vertex
+                                        ((uint32_t*)indices)[l * 3 + 2] = l + 2;    // next vertex
+                                    } else {
+                                        ((uint16_t*)indices)[l * 3] = 0;            // center vertex
+                                        ((uint16_t*)indices)[l * 3 + 1] = l + 1;    // current vertex
+                                        ((uint16_t*)indices)[l * 3 + 2] = l + 2;    // next vertex
+                                    }
+                                }
+                                break;
+                            }
+                            default:
+                                vx_assert_d(false);
+                                break;
+                        }
+                    }
+                    
+                    Mesh* mesh = mesh_new();
+                    mesh_set_vertex_buffer(mesh, vertices, posAccessor->count);
+                    mesh_set_index_buffer(mesh, indices, ibCount);
+                    mesh_set_primitive_type(mesh, primitiveType);
+                    mesh_set_front_ccw(mesh, false);
+                    mesh_reset_model_aabb(mesh);
+                    
+                    Transform* meshTransform = mesh_get_transform(mesh);
+                    if (j == 0) {
+                        transforms[i] = meshTransform;
+                    } else {
+                        transform_set_parent(meshTransform, transforms[i], false);
+                    }
+                    transform_set_name(meshTransform, node->name);
+                }
+            }
         } else if (node->light != NULL) {
             if ((filter & AssetType_Light) == 0) {
                 continue;
@@ -124,8 +336,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
             light_set_angle(l, node->light->spot_outer_cone_angle);
             light_set_hardness(l, node->light->spot_inner_cone_angle / node->light->spot_outer_cone_angle);
 
-            transforms[j] = light_get_transform(l);
-            transform_set_name(transforms[j], node->light->name);
+            transforms[i] = light_get_transform(l);
+            transform_set_name(transforms[i], node->light->name);
         } else if (node->camera != NULL) {
             if ((filter & AssetType_Camera) == 0) {
                 continue;
@@ -158,30 +370,30 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     break;
             }
 
-            transforms[j] = camera_get_view_transform(c);
-            transform_set_name(transforms[j], node->camera->name);
+            transforms[i] = camera_get_view_transform(c);
+            transform_set_name(transforms[i], node->camera->name);
         } else {
             if ((filter & AssetType_Object) == 0) {
                 continue;
             }
 
-            transforms[j] = transform_new(PointTransform);
-            transform_set_name(transforms[j], node->name);
+            transforms[i] = transform_new(PointTransform);
+            transform_set_name(transforms[i], node->name);
         }
-        vx_assert_d(transforms[j] != NULL);
+        vx_assert_d(transforms[i] != NULL);
 
         // set transform
         if (node->has_matrix) {
-            transform_utils_set_mtx(transforms[j], (const Matrix4x4 *)node->matrix);
+            transform_utils_set_mtx(transforms[i], (const Matrix4x4 *)node->matrix);
         } else {
             if (node->has_translation) {
-                transform_set_local_position_vec(transforms[j], (const float3 *)node->translation);
+                transform_set_local_position_vec(transforms[i], (const float3 *)node->translation);
             }
             if (node->has_rotation) {
-                transform_set_local_rotation_vec(transforms[j], (const float4 *)node->rotation);
+                transform_set_local_rotation_vec(transforms[i], (const float4 *)node->rotation);
             }
             if (node->has_scale) {
-                transform_set_local_scale_vec(transforms[j], (const float3 *)node->scale);
+                transform_set_local_scale_vec(transforms[i], (const float3 *)node->scale);
             }
         }
     }
@@ -206,11 +418,10 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                         asset->type = AssetType_Light;
                         asset->ptr = transform_get_ptr(transforms[j]);
                         break;
-                    // TODO
-                    /*case MeshTransform:
+                    case MeshTransform:
                         asset->type = AssetType_Mesh;
                         asset->ptr = transform_get_ptr(transforms[j]);
-                        break;*/
+                        break;
                     default:
                         vx_assert_d(false); // if not supported, should've been skipped already
                         continue;
