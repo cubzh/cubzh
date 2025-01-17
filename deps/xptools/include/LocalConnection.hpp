@@ -72,7 +72,7 @@ private:
     
     // fields
     
-    /// Indicates wether the connection is closed
+    /// Indicates whether the connection is closed
     Status _status;
     std::mutex _statusMutex;
     
