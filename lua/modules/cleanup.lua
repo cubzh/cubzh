@@ -33,8 +33,11 @@ local metatable = {
 		local meta
 		local k
 		local m
+		local skip
 
 		while current ~= nil do
+			skip = false
+
 			if current.step == 0 then
 				-- clean metatable
 				meta = getmetatable(current.t)
@@ -42,10 +45,8 @@ local metatable = {
 				if meta ~= nil and type(meta) == "table" then
 					current.m = meta
 					current.step = 1
-					-- goto continue
 				else
 					current.step = 2
-					-- goto continue
 				end
 			elseif current.step == 1 then -- cleaning metatable
 				m = current.m
@@ -69,15 +70,21 @@ local metatable = {
 									-- print("found cycle ref (1)")
 									m[k] = nil
 									-- k = next(m, k) -- k unused after set
-									goto continue
+									skip = true
+									break
 								end
+							end
+							if skip == true then
+								break
 							end
 							current.k = k
 							current.cleaningChildren = true
 							table.insert(stack, { t = m[k], m = nil, step = 0, k = nil, cleaningChildren = false })
 							cursor = cursor + 1
 							current = stack[cursor]
-							goto continue
+
+							skip = true
+							break
 						end
 					else
 						m[k] = nil
@@ -85,8 +92,10 @@ local metatable = {
 					end
 				end
 
-				current.k = nil
-				current.step = 2
+				if skip == false then
+					current.k = nil
+					current.step = 2
+				end
 			elseif current.step == 2 then -- cleaning table
 				t = current.t
 
@@ -109,15 +118,21 @@ local metatable = {
 									-- print("found cycle ref (2)")
 									t[k] = nil
 									-- k = next(t, k) -- k unused after set
-									goto continue
+									skip = true
+									break
 								end
+							end
+							if skip == true then
+								break
 							end
 							current.k = k
 							current.cleaningChildren = true
 							table.insert(stack, { t = t[k], m = nil, step = 0, k = nil, cleaningChildren = false })
 							cursor = cursor + 1
 							current = stack[cursor]
-							goto continue
+
+							skip = true
+							break
 						end
 					else
 						t[k] = nil
@@ -125,15 +140,15 @@ local metatable = {
 					end
 				end
 
-				cursor = cursor - 1
-				if cursor == 0 then
-					current = nil
-				else
-					current = stack[cursor]
+				if skip == false then
+					cursor = cursor - 1
+					if cursor == 0 then
+						current = nil
+					else
+						current = stack[cursor]
+					end
 				end
 			end
-
-			::continue::
 		end
 
 		if ERROR_ON_ACCESS_AFTER_CLEANUP then

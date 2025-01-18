@@ -2,6 +2,24 @@
 
 -- CONSTANTS
 
+-- TMP: replace bitwise operator, supported in Lua 5.3 but not Luau
+-- local bit32 = require("bit32")
+local band = bit32.band
+
+-- local function band(a, b)
+-- 	local result = 0
+-- 	local bitval = 1
+-- 	while a > 0 and b > 0 do
+-- 		if a % 2 == 1 and b % 2 == 1 then
+-- 			result = result + bitval
+-- 		end
+-- 		bitval = bitval * 2
+-- 		a = math.floor(a / 2)
+-- 		b = math.floor(b / 2)
+-- 	end
+-- 	return result
+-- end
+
 UI_FAR = 1000
 UI_LAYER = 12
 UI_LAYER_SYSTEM = 13
@@ -2323,9 +2341,13 @@ function createUI(system)
 							end
 						end
 
-						local cmd = (modifiers & codes.modifiers.Cmd) > 0
-						local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
-						local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
+						local cmd = band(modifiers, codes.modifiers.Cmd) > 0
+						local ctrl = band(modifiers, codes.modifiers.Ctrl) > 0
+						local option = band(modifiers, codes.modifiers.Option) > 0 -- option is alt
+
+						-- local cmd = (modifiers & codes.modifiers.Cmd) > 0
+						-- local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
+						-- local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
 
 						if cmd or ctrl or option then
 							return false
