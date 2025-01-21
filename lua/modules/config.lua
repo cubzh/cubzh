@@ -68,7 +68,11 @@ config.merge = function(self, defaults, overrides, options)
 				end
 			end
 			if overriden == false then
-				print("⚠️ config:merge - overrides key ignored: " .. k)
+				-- TODO: overriding anyway for now, uncomment warning and remove following lines when types are fixed
+				-- print("⚠️ config:merge - overrides key ignored: " .. k)
+				print("⚠️ config:merge - accepting key waiting for types to be fixed: " .. k)
+				conf[k] = v
+				overriden = true
 			end
 		end
 	end

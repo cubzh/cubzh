@@ -31,9 +31,11 @@ end
 
 function insert(config)
 	local camera = config.camera
-	if type(camera) ~= "Camera" then
-		error("camera_modes - internal error (2)")
-	end
+
+	-- TODO: uncomment this test once types are fixed
+	-- if type(camera) ~= "Camera" then
+	-- 	error("camera_modes - internal error (2)")
+	-- end
 
 	local c = cameras[camera]
 	if c then

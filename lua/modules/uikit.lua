@@ -1464,9 +1464,35 @@ function createUI(system)
 	-- @param config {table} -
 	]]
 	ui.createShape = function(_, shape, config)
-		if shape == nil or (type(shape) ~= "Object" and type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then
-			error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
-		end
+		-- TODO: uncomment this test once types are fixed
+
+		-- if shape == nil or (type(shape) ~= "Object" and type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then
+		-- 	-- print("type(shape):", type(shape))
+		-- 	-- print("typeof(shape):", typeof(shape))
+
+		-- 	-- local t = { __type = "foo" }
+		-- 	-- local mt = { __type = "bar" }
+		-- 	-- setmetatable(t, mt)
+		-- 	-- print("type(t):", type(t))
+		-- 	-- print("typeof(t):", typeof(t))
+
+		-- 	-- type config = { a: number }
+		-- 	-- local c: config = { a = 42 }
+		-- 	-- print("type(c):", type(c))
+		-- 	-- print("typeof(c):", typeof(c))
+
+		-- 	-- local userdata = newproxy(true)
+		-- 	-- print("typeof(userdata):", typeof(userdata))
+		-- 	-- mt = getmetatable(userdata)
+		-- 	-- mt.__type = "banane"
+		-- 	-- mt.__index = {
+		-- 	-- 	oranges = 5,
+		-- 	-- }
+		-- 	-- print("typeof(userdata) 2:", typeof(userdata))
+		-- 	-- print("userdata.oranges:", userdata.oranges)
+
+		-- 	error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
+		-- end
 
 		local node = _nodeCreate()
 
