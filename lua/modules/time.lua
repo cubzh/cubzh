@@ -94,8 +94,8 @@ time.monthToString = function(self, month)
 	if self ~= time then
 		error("time:monthToString(month): use `:`", 2)
 	end
-	if type(month) ~= Type.integer then
-		error("time:monthToString(month): month should be an integer", 2)
+	if type(month) ~= "number" then
+		error("time:monthToString(month): month should be a number", 2)
 	end
 
 	local months = {
@@ -112,7 +112,7 @@ time.monthToString = function(self, month)
 		"November",
 		"December",
 	}
-	return months[month]
+	return months[math.floor(month)]
 end
 
 ---@function iso8601ToTable Converts iso8601 time into a table with year, month and other fields
@@ -123,7 +123,7 @@ time.iso8601ToTable = function(self, isoTime)
 	if self ~= time then
 		error("time:iso8601ToTable(isoTime): use `:`", 2)
 	end
-	if type(isoTime) ~= Type.string then
+	if type(isoTime) ~= "string" then
 		error("time:iso8601ToTable(isoTime): isoTime should be an string", 2)
 	end
 

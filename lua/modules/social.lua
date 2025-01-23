@@ -5,7 +5,7 @@ social.enablePlayerClickMenu = function()
 		local impacts = Ray(pe.Position, pe.Direction):Cast(nil, nil, false)
 		local player
 		for _, impact in ipairs(impacts) do
-			if impact.Object and type(impact.Object) == "Player" then
+			if impact.Object and typeof(impact.Object) == "Player" then
 				player = impact.Object
 				break
 			end

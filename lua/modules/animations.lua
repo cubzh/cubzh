@@ -124,10 +124,9 @@ animationsMT.__newindex = function(t, k, v)
 		error("Animations." .. k .. " is read-only")
 	end
 
-	-- TODO: uncomment this test once types are fixed
-	-- if v ~= nil and type(v) ~= "Animation" then
-	-- 	error("Animations." .. k .. " should be of type Animation", 2)
-	-- end
+	if v ~= nil and typeof(v) ~= "Animation" then
+	        error("Animations." .. k .. " should be of type Animation", 2)
+	end
 
 	-- TODO: REMOVE CALLBACKS
 

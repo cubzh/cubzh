@@ -14,7 +14,7 @@ alert.create = function(self, text, config)
 	if self ~= alert then
 		error("alert:create(text): use `:`", 2)
 	end
-	if type(text) ~= Type.string then
+	if type(text) ~= "string" then
 		error("alert:create(text): text should be a string", 2)
 	end
 
@@ -211,7 +211,7 @@ alert.create = function(self, text, config)
 		if self ~= popup then
 			error("alert:setPositiveCallback(text, callback): use `:`", 2)
 		end
-		if text == nil or type(text) ~= Type.string then
+		if text == nil or type(text) ~= "string" then
 			error("alert:setPositiveCallback(text, callback): text should be a string", 2)
 		end
 		if callback ~= nil and type(callback) ~= Type["function"] then
@@ -262,7 +262,7 @@ alert.create = function(self, text, config)
 		if self ~= popup then
 			error("alert:setNegativeCallback(text, callback): use `:`", 2)
 		end
-		if text == nil or type(text) ~= Type.string then
+		if text == nil or type(text) ~= "string" then
 			error("alert:setNegativeCallback(text, callback): text should be a string", 2)
 		end
 		if callback ~= nil and type(callback) ~= Type["function"] then
@@ -312,7 +312,7 @@ alert.create = function(self, text, config)
 		if self ~= popup then
 			error("alert:setNeutralCallback(text, callback): use `:`", 2)
 		end
-		if text == nil or type(text) ~= Type.string then
+		if text == nil or type(text) ~= "string" then
 			error("alert:setNeutralCallback(text, callback): text should be a string", 2)
 		end
 		if callback ~= nil and type(callback) ~= Type["function"] then

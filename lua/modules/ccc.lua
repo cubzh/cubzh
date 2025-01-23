@@ -95,10 +95,10 @@ mod.set = function(self, config)
 	local offset = currentConfig.offset or Number3.Zero
 	local target = currentConfig.target
 
-	local targetIsPlayer = type(target) == "Player"
-	-- local targetHasRotation = type(target) == "Object" or type(target) == "Shape" or type(target) == "MutableShape"
+	local targetIsPlayer = typeof(target) == "Player"
+	-- local targetHasRotation = typeof(target) == "Object" or typeof(target) == "Shape" or typeof(target) == "MutableShape"
 
-	if type(target) == "Number3" then
+	if typeof(target) == "Number3" then
 		target = { Position = target }
 	end
 

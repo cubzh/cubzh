@@ -1,7 +1,7 @@
 local plane = {}
 
 local hit = function(self, ray)
-	if type(ray) ~= "Ray" then
+	if typeof(ray) ~= "Ray" then
 		error("plane:hit(ray) - ray parameter should be a Ray")
 	end
 

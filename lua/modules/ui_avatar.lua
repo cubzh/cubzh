@@ -29,6 +29,7 @@ function setupNodeAvatar(node, avatar, config)
 	local ui = config.ui or ui
 
 	local rotation = Rotation(0, math.rad(180), 0)
+	-- local rotation = Rotation(math.rad(180), 0, 0)
 
 	if node.body ~= nil then
 		rotation:Set(node.body.pivot.LocalRotation)
@@ -42,6 +43,7 @@ function setupNodeAvatar(node, avatar, config)
 	uiAvatar.Head.LocalRotation:Set(Number3.Zero)
 	node.body = uiAvatar
 	node.body.pivot.LocalRotation:Set(rotation)
+	-- node.body.pivot.LocalRotation = rotation
 
 	layoutBody(node)
 

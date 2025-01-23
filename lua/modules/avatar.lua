@@ -1123,7 +1123,7 @@ function avatar_setEyes(self, config)
 
 	config = require("config"):merge({}, config, {
 		acceptTypes = {
-			index = { "integer" },
+			index = { "number" },
 			color = { "Color" },
 		},
 	})
@@ -1170,7 +1170,7 @@ function avatar_setNose(self, config)
 
 	config = require("config"):merge({}, config, {
 		acceptTypes = {
-			index = { "integer" },
+			index = { "number" },
 			color = { "Color" },
 		},
 	})

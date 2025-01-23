@@ -236,7 +236,7 @@ function createUI(system)
 
 	local function _setupUIObject(object, collides)
 		object:Recurse(function(o)
-			if type(o) == "Object" then
+			if typeof(o) == "Object" then
 				return
 			end
 			_setLayers(o)
@@ -466,7 +466,7 @@ function createUI(system)
 
 		if paddingType == "boolean" and self.config.padding == false then
 			padding = 0
-		elseif paddingType == "number" or paddingType == "integer" then
+		elseif paddingType == "number" then
 			padding = self.config.padding
 		end
 
@@ -803,17 +803,17 @@ function createUI(system)
 			elseif t.object.Anchor ~= nil then
 				if type(v) == "table" then
 					t.object.Anchor = Number2(v[1], v[2])
-				elseif type(v) == "Number3" then
+				elseif typeof(v) == "Number3" then
 					t.object.Anchor = Number2(v.X, v.Y)
 				end
 			end
 			-- TODO: node could use a separate internal object when it needs a pivot, to be type-agnostic
 		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
 			local isNumber = function(val)
-				return type(val) == "number" or type(val) == "integer"
+				return type(val) == "number"
 			end
 
-			if type(v) ~= "table" and type(v) ~= "Number2" and type(v) ~= "Number3" then
+			if type(v) ~= "table" and typeof(v) ~= "Number2" and typeof(v) ~= "Number3" then
 				error("uikit: node." .. k .. " must be a Number2", 2)
 			end
 			if type(v) == "table" then
@@ -828,7 +828,7 @@ function createUI(system)
 			local obj = t.object
 			local z = obj.LocalPosition.Z
 			-- convert to Number3
-			if type(v) == "Number2" then
+			if typeof(v) == "Number2" then
 				v = Number3(v.X, v.Y, 0)
 			elseif type(v) == "table" and #v == 2 then
 				v = Number3(v[1], v[2], 0)
@@ -836,13 +836,13 @@ function createUI(system)
 			obj.LocalPosition = v -- v is a Number3
 			obj.LocalPosition.Z = z -- restore Z (layer)
 		elseif k == "size" or k == "Size" then
-			if type(v) == "number" or type(v) == "integer" then
+			if type(v) == "number" then
 				v = Number2(v, v)
 			end
 			if type(v) == "table" and v[1] ~= nil and v[2] ~= nil then
 				v = Number2(v[1], v[2])
 			end
-			if type(v) ~= "Number2" then
+			if typeof(v) ~= "Number2" then
 				error(k .. " must be a Number2", 2)
 			end
 			if not pcall(function()
@@ -1391,7 +1391,7 @@ function createUI(system)
 			if self ~= node then
 				error("frame:setColor(color): use `:`", 2)
 			end
-			if type(color) ~= Type.Color and type(color) ~= "table" then
+			if typeof(color) ~= "Color" and type(color) ~= "table" then
 				error("frame:setColor(color): color should be a Color or table (see Quad.Color reference)", 2)
 			end
 			self:_setColor(color)
@@ -1401,7 +1401,7 @@ function createUI(system)
 			if self ~= node then
 				error("frame:setImage(image): use `:`", 2)
 			end
-			if image ~= nil and type(image) ~= Type.Data and type(image) ~= "table" then
+			if image ~= nil and typeof(image) ~= "Data" and type(image) ~= "table" then
 				error("frame:setImage(image): image should be a Data or table (see Quad.Image reference)", 2)
 			end
 
@@ -1466,7 +1466,7 @@ function createUI(system)
 	ui.createShape = function(_, shape, config)
 		-- TODO: uncomment this test once types are fixed
 
-		-- if shape == nil or (type(shape) ~= "Object" and type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then
+		-- if shape == nil or (typeof(shape) ~= "Object" and typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape") then
 		-- 	-- print("type(shape):", type(shape))
 		-- 	-- print("typeof(shape):", typeof(shape))
 
@@ -1679,7 +1679,7 @@ function createUI(system)
 
 		local config = nil
 		if configOrcolor ~= nil then
-			if type(configOrcolor) == Type.Color then
+			if typeof(configOrcolor) == "Color" then
 				defaultConfig.color = configOrcolor
 			else
 				config = configOrcolor
@@ -1689,7 +1689,7 @@ function createUI(system)
 		if size ~= nil then
 			local sizeType = type(size)
 			if
-				(sizeType ~= "number" and sizeType ~= "integer" and sizeType ~= "string")
+				(sizeType ~= "number" and sizeType ~= "string")
 				or (sizeType == "string" and (size ~= "default" and size ~= "small" and size ~= "big"))
 			then
 				error(
@@ -1703,7 +1703,7 @@ function createUI(system)
 		local ok, err = pcall(function()
 			config = conf:merge(defaultConfig, config, {
 				acceptTypes = {
-					size = { "number", "integer", "string" },
+					size = { "number", "string" },
 				},
 			})
 		end)
@@ -1767,7 +1767,7 @@ function createUI(system)
 			alignment = config.alignment,
 		}
 
-		if type(config.size) == "number" or type(config.size) == "integer" then
+		if type(config.size) == "number" then
 			t.FontSize = config.size
 		elseif config.size == "big" then
 			t.FontSize = Text.FontSizeBig
@@ -1791,14 +1791,14 @@ function createUI(system)
 			if self ~= node then
 				error("text:select(start, end) should be called with `:`", 2)
 			end
-			if type(cursorStart) ~= "integer" then
-				error("text:select(start, end) - start should be an integer", 2)
+			if type(cursorStart) ~= "number" then
+				error("text:select(start, end) - start should be a number", 2)
 			end
 			if cursorEnd == nil then
 				cursorEnd = cursorStart
 			end
-			if type(cursorEnd) ~= "integer" then
-				error("text:select(start, end) - end should be an integer", 2)
+			if type(cursorEnd) ~= "number" then
+				error("text:select(start, end) - end should be a number", 2)
 			end
 		end
 
@@ -1807,7 +1807,7 @@ function createUI(system)
 			if self ~= node then
 				error("text:localPositionToCursor(pos) should be called with `:`", 2)
 			end
-			local posType = type(pos)
+			local posType = typeof(pos)
 			if posType ~= "Number2" and posType ~= "table" then
 				error("text:localPositionToCursor(pos) - pos should be a Number2 or table with 2 numbers", 2)
 			end
@@ -1831,8 +1831,8 @@ function createUI(system)
 			if self ~= node then
 				error("text:charIndexToCursor(charIndex) should be called with `:`", 2)
 			end
-			if type(charIndex) ~= "integer" then
-				error("text:charIndexToCursor(charIndex) - charIndex should be an integer", 2)
+			if type(charIndex) ~= "number" then
+				error("text:charIndexToCursor(charIndex) - charIndex should be a number", 2)
 			end
 
 			local t = self.object
@@ -1884,7 +1884,7 @@ function createUI(system)
 		elseif type(configOrSize) == "table" then
 			config = conf:merge(defaultConfig, configOrSize, {
 				acceptTypes = {
-					textSize = { "number", "integer", "string" },
+					textSize = { "number", "string" },
 				},
 			})
 		else
@@ -2660,7 +2660,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
-				padding = { "number", "integer", "table" },
+				padding = { "number", "table" },
 				gradientColor = { "Color" },
 				userdata = { "*" },
 				scrollPositionDidChange = { "function" },
@@ -2669,7 +2669,7 @@ function createUI(system)
 
 		config = conf:merge(defaultConfig, config, options)
 
-		if type(config.padding) == "number" or type(config.padding) == "integer" then
+		if type(config.padding) == "number" then
 			local padding = config.padding
 			config.padding = {
 				top = padding,
@@ -3419,7 +3419,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
-				textSize = { "number", "integer", "string" },
+				textSize = { "number", "string" },
 				textColorPressed = { "Color" },
 				content = { "string", "Shape", "MutableShape", "table" },
 				backgroundQuad = { "Quad" },
@@ -3431,7 +3431,7 @@ function createUI(system)
 				colorSelected = { "Color" },
 				colorDisabled = { "Color" },
 				debugName = { "string" },
-				padding = { "boolean", "number", "integer" },
+				padding = { "boolean", "number" },
 			},
 		}
 
@@ -3529,7 +3529,7 @@ function createUI(system)
 
 		node.setColor = function(self, background, text, doNotrefresh)
 			if background ~= nil then
-				if type(background) ~= "Color" then
+				if typeof(background) ~= "Color" then
 					error("setColor - first parameter (background color) should be a Color", 2)
 				end
 				node.colors = { Color(background), Color(background), Color(background) }
@@ -3537,7 +3537,7 @@ function createUI(system)
 				node.colors[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 			end
 			if text ~= nil then
-				if type(text) ~= "Color" then
+				if typeof(text) ~= "Color" then
 					error("setColor - second parameter (text color) should be a Color", 2)
 				end
 				node.textColor = Color(text)
@@ -3667,7 +3667,7 @@ function createUI(system)
 			local n = ui:createText(content, { size = config.textSize })
 			n:setParent(node)
 			node.content = n
-		elseif type(content) == "Shape" or type(content) == "MutableShape" then
+		elseif typeof(content) == "Shape" or typeof(content) == "MutableShape" then
 			local n = ui:createShape(content, { spherized = false, doNotFlip = true })
 			n:setParent(node)
 			node.content = n
