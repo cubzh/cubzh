@@ -8,9 +8,6 @@
 
 #pragma once
 
-// C++
-#include <string>
-
 namespace vx {
 
 class Process final {
