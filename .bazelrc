@@ -1,0 +1,4 @@
+
+# Enable experimental cc_static_library()
+# It is used in `deps/luau/BUILD`
+common --experimental_cc_static_library
