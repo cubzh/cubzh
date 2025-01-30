@@ -27,6 +27,10 @@ void filo_list_uint16_push(FiloListUInt16 *list, uint16_t i);
 // false if list is empty or NULL
 bool filo_list_uint16_pop(FiloListUInt16 *list, uint16_t *i);
 
+FiloListUInt16Node *filo_list_uint16_get_first(FiloListUInt16 *list);
+FiloListUInt16Node *filo_list_uint16_node_next(FiloListUInt16Node *node);
+uint16_t filo_list_uint16_node_get_value(FiloListUInt16Node *node);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

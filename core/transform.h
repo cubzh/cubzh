@@ -237,6 +237,8 @@ bool transform_is_animations_enabled(Transform *const t);
 float transform_get_shadow_decal(Transform *t);
 void transform_set_shadow_decal(Transform *t, float size);
 
+void transform_recycle_id(const uint16_t id);
+
 /// MARK: - Debug -
 #if DEBUG_TRANSFORM
 int debug_transform_get_refresh_calls(void);

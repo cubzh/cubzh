@@ -1184,6 +1184,12 @@ void transform_set_shadow_decal(Transform *t, float size) {
     t->shadowDecalSize = size;
 }
 
+void transform_recycle_id(const uint16_t id) {
+    // NOTE: We could probably expose a version that doesn't use the mutex lock
+    // for managers that recycle IDs while clearly accounting for thread context.
+    _transform_recycle_id(id);
+}
+
 // MARK: - Private functions -
 
 static uint16_t _transform_get_valid_id(void) {
@@ -1650,6 +1656,11 @@ static void _transform_free(Transform *const t) {
 
     if (t->managed != NULL && transform_destroyed_callback != NULL) {
         transform_destroyed_callback(t->id, t->managed);
+    } else {
+        // Only recycle transform ID if transform destruction isn't managed.
+        // Otherwise, it's the responsability of the manager to trigger recycling,
+        // when done dealing with potential cleanup operations involving the ID.
+        _transform_recycle_id(t->id);
     }
     weakptr_release(t->managed);
 
@@ -1682,8 +1693,6 @@ static void _transform_free(Transform *const t) {
     quaternion_free(t->rotation);
 
     weakptr_invalidate(t->wptr);
-
-    _transform_recycle_id(t->id);
     free(t);
 }
 
