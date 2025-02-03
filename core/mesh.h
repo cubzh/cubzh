@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include "transform.h"
+#include "material.h"
 
 typedef struct {
     float x, y, z, unused;
@@ -57,8 +58,10 @@ bool mesh_get_world_aabb(Mesh *m, Box *box, const bool refreshParents);
 void mesh_set_layers(Mesh *m, const uint16_t value);
 uint16_t mesh_get_layers(const Mesh *m);
 void mesh_fit_collider_to_bounding_box(const Mesh *m);
-void mesh_set_opaque(Mesh *m, const bool value);
-bool mesh_is_opaque(const Mesh *m);
+void mesh_set_material(Mesh* m, Material* material);
+Material* mesh_get_material(const Mesh* m);
+void mesh_set_shadow(Mesh *m, bool value);
+bool mesh_has_shadow(const Mesh *m);
 
 #ifdef __cplusplus
 }

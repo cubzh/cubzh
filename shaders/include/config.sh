@@ -107,6 +107,8 @@
 #define LIGHT_SPECULAR 0.1f
 #define LIGHT_PHONG_SHININESS 16
 #define LIGHT_BLINN_SHININESS 32 // for equivalence, 2 to 4 times shininess in Phong
+// PBR lights intensity multiplier, to make it somewhat equivalent to non-PBR
+#define LIGHT_PBR_INTENSITY 1.5
 // Condition encoded in normal.xy to set a fragment as translucent (light affects it from any direction)
 // Translucency factor (portion of light used) is encoded in normal.y
 #define LIGHT_FRAGMENT_TRANSLUCENT vec2(1.0, 1.0)
@@ -185,7 +187,7 @@
 #define TEXEL_OFFSET 0.5
 // Fudging the index helps to avoid precision errors, observed on GLES
 #define IDX_FUDGE 0.1
-#define UNPACK_FUDGE 0.5
+#define UNPACK_FUDGE 0.1
 // Compute worker group size, 128 is the minimum for GLES/Vulkan (GL = 256, DX/Metal/etc = 512)
 #define COMPUTE_GROUP_SIZE 128
 // Where applicable will compare floats in the range provided by this epsilon (inclusive)
