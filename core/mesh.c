@@ -12,12 +12,13 @@
 
 #define MESH_FLAG_NONE 0
 #define MESH_FLAG_CCW 1 // front triangles are CCW
-#define MESH_FLAG_OPAQUE 2
+#define MESH_FLAG_SHADOW 2
 
 struct _Mesh {
     Transform* transform;
     Vertex* vb;
     void* ib;
+    Material* material;
     float3 *pivot;
     Box *bb;
     Box *worldAABB;
@@ -57,6 +58,7 @@ Mesh* mesh_new(void) {
     m->transform = transform_new_with_ptr(MeshTransform, m, &_mesh_void_free);
     m->vb = NULL;
     m->ib = NULL;
+    m->material = NULL;
     m->pivot = float3_new_zero();
     m->bb = box_new();
     m->worldAABB = NULL;
@@ -65,7 +67,7 @@ Mesh* mesh_new(void) {
     m->hash = 0;
     m->layers = 1; // CAMERA_LAYERS_DEFAULT
     m->primitiveType = PrimitiveType_Triangles;
-    m->flags = MESH_FLAG_CCW | MESH_FLAG_OPAQUE;
+    m->flags = MESH_FLAG_CCW;
     return m;
 }
 
@@ -83,6 +85,9 @@ void mesh_free(Mesh *m) {
     }
     if (m->ib != NULL) {
         free(m->ib);
+    }
+    if (m->material != NULL) {
+        material_release(m->material);
     }
     float3_free(m->pivot);
     box_free(m->bb);
@@ -242,9 +247,33 @@ void mesh_fit_collider_to_bounding_box(const Mesh *m) {
 }
 
 void mesh_set_opaque(Mesh *m, const bool value) {
-    _mesh_toggle_flag(m, MESH_FLAG_OPAQUE, value);
+    if (m->material != NULL) {
+        material_set_opaque(m->material, value);
+    }
 }
 
 bool mesh_is_opaque(const Mesh *m) {
-    return _mesh_get_flag(m, MESH_FLAG_OPAQUE);
+    return m->material != NULL ? material_is_opaque(m->material) : true;
+}
+
+void mesh_set_material(Mesh* m, Material* material) {
+    if (m->material != NULL) {
+        material_release(m->material);
+    }
+    m->material = material;
+    if (material != NULL) {
+        material_retain(material);
+    }
+}
+
+Material* mesh_get_material(const Mesh* m) {
+    return m->material;
+}
+
+void mesh_set_shadow(Mesh *m, bool value) {
+    _mesh_toggle_flag(m, MESH_FLAG_SHADOW, value);
+}
+
+bool mesh_has_shadow(const Mesh *m) {
+    return _mesh_get_flag(m, MESH_FLAG_SHADOW);
 }

@@ -9,4 +9,7 @@
 // No alpha
 #define MESH_VARIANT_ALPHA 0
 
+// No cutout
+#define MESH_VARIANT_CUTOUT 0
+
 #include "./fs_mesh_common.sh"

@@ -116,8 +116,8 @@
 #define LIGHTING_LIT_FLAG 0.0
 // For deferred lighting, pre-lit fragments already have applied their individual lighting,
 // and only need the additive lights contribution
-#define LIGHTING_PRELIT_FLAG 0.5
-#define LIGHTING_UNLIT_FLAG 1.0
+#define LIGHTING_PRELIT_FLAG 1.0
+#define LIGHTING_UNLIT_FLAG 2.0
 // Minimum amount of light colors used for shadows
 #define SHADOWS_AMBIENT_FACTOR 0.17
 // Epsilon between fragment depth & shadowmap depth when checking for shadows, it goes from a minimum when NdotL is 1
@@ -185,7 +185,7 @@
 #define TEXEL_OFFSET 0.5
 // Fudging the index helps to avoid precision errors, observed on GLES
 #define IDX_FUDGE 0.1
-#define UNPACK_FUDGE 0.5
+#define UNPACK_FUDGE 0.1
 // Compute worker group size, 128 is the minimum for GLES/Vulkan (GL = 256, DX/Metal/etc = 512)
 #define COMPUTE_GROUP_SIZE 128
 // Where applicable will compare floats in the range provided by this epsilon (inclusive)

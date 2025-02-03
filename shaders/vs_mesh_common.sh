@@ -37,8 +37,11 @@ void main() {
 
 #else // IS_SHADOW_PASS
 
+#if MESH_VARIANT_MRT_LIGHTING
 #if MESH_VARIANT_MRT_LINEAR_DEPTH
     vec4 view = mul(u_modelView, model);
+#endif
+    vec3 wnormal = normalize(mul(u_model[0], vec4(a_normal, 0.0)).xyz);
 #endif
     
     gl_Position = clip;
@@ -48,7 +51,7 @@ void main() {
 #if MESH_VARIANT_MRT_LINEAR_DEPTH
     v_linearDepth = view.z;
 #endif
-    v_normal = a_normal;
+    v_normal = wnormal;
 #endif // MESH_VARIANT_MRT_LIGHTING
 
 #endif // IS_SHADOW_PASS
